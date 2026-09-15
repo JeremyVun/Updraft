@@ -339,7 +339,8 @@ function frame(now: number): void {
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
   rain.update(dt, shower, rig.camera, wind.breeze);
-  starlings.update(dt, params.dusk ?? story.dusk, glider.departing ? glider.position : null);
+  const joining = glider.departing && glider.position.distanceTo(child.position) < 200 ? glider.position : null;
+  starlings.update(dt, params.dusk ?? story.dusk, joining);
   water.update(rig.camera);
   post.render(time);
 
