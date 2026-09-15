@@ -140,6 +140,7 @@ export function applyPalette(life: number, dusk: number, shower = 0): void {
   }
   veil(p, shower);
   u.uShower.value = shower;
+
   u.uSunColor.value.copy(p.sun);
   u.uSkyZenith.value.copy(p.zenith);
   u.uSkyHorizon.value.copy(p.horizon);
@@ -148,6 +149,7 @@ export function applyPalette(life: number, dusk: number, shower = 0): void {
   u.uGroundBounce.value.copy(p.bounce);
   u.uFogDensity.value = p.fog;
   u.uNight.value = THREE.MathUtils.smoothstep(dusk, 1.45, 1.95);
+  u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * u.uNight.value) + 0.22 * shower;
   const [az, el] = lightAngles(dusk);
   sunDirection(az, el, u.uSunDir.value);
 }

@@ -48,6 +48,8 @@ export const atmo = {
     uRainbow: { value: 0 },
     /** A passing shower, 0 dry to 1: wet sheen on the grass. */
     uShower: { value: 0 },
+    /** Mist lying in the low ground, 0 clear to 1: thick in the still world and after dark. */
+    uMist: { value: 0 },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },
@@ -108,6 +110,7 @@ uniform float uNight;
 uniform float uWorldLife;
 uniform float uMirrorPass;
 uniform float uShower;
+uniform float uMist;
 uniform vec2 uCloudShift;
 uniform vec4 uDomain;
 uniform vec4 uGroundDomain;
@@ -192,7 +195,8 @@ vec4 fogOf(vec3 wpos) {
   float dist = length(rd);
   rd /= dist;
   float heightFactor = exp(-max(wpos.y, 0.0) * 0.06);
-  float amt = 1.0 - exp(-dist * uFogDensity * (0.55 + 0.65 * heightFactor));
+  float mist = uMist * exp(-max(min(wpos.y, cameraPosition.y), 0.0) * 0.22);
+  float amt = 1.0 - exp(-dist * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075));
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
 }
