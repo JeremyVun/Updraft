@@ -326,6 +326,13 @@ export class HillsChapter implements Chapter {
       s.distance = this.beat === 'inside' ? 72 : 50;
       s.height = this.beat === 'inside' ? 40 : 24;
       this.pace = 0.2;
+      if (this.beat === 'inside') {
+        const lift = THREE.MathUtils.smootherstep(this.t, 7, 45);
+        s.target.y += lift * 110;
+        s.height += lift * 25;
+        s.distance += lift * 20;
+        this.pace = 0.2 - lift * 0.1;
+      }
       this.focus.copy(c);
       return;
     }
