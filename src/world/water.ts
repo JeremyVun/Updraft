@@ -89,12 +89,14 @@ float whitecaps(vec2 xz, vec2 flow, float storm) {
     float h = hash12(id + float(k) * 17.3);
     float life = fract(uTime / LIFE + h);
     float wave = floor(uTime / LIFE + h);
-    if (hash12(id + wave * 3.1) > storm) continue;
+    float chance = hash12(id + wave * 3.1);
+    if (chance > storm) continue;
     vec2 centre = (id + 0.25 + 0.5 * vec2(hash12(id + wave), hash12(id - wave))) * CELL - shift;
     vec2 d = xz - centre - flow * life * 0.04;
-    vec2 local = vec2(dot(d, dir), dot(d, vec2(-dir.y, dir.x))) / (vec2(1.0, 0.36) * (0.6 + 0.5 * h));
-    float grow = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.35, life);
-    caps = max(caps, (1.0 - smoothstep(0.3, 1.0, length(local))) * grow);
+    vec2 local = vec2(dot(d, dir), dot(d, vec2(-dir.y, dir.x))) / (0.6 + 0.5 * h);
+    local /= vec2(local.x > 0.0 ? 0.7 : 1.7, 0.4);
+    float grow = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.35, life) * smoothstep(chance, chance + 0.25, storm);
+    caps = max(caps, (1.0 - smoothstep(0.1, 1.0, length(local))) * grow);
   }
   return caps;
 }
@@ -129,8 +131,8 @@ void main() {
   }
   float gust = wind.z * inside;
   float speed = length(flow);
-  float rough = smoothstep(1.2, 7.5, speed);
-  float storm = clamp(smoothstep(9.0, 28.0, speed) + smoothstep(0.3, 1.2, gust), 0.0, 1.0);
+  float rough = max(smoothstep(1.2, 7.5, speed), smoothstep(0.0, 0.5, gust));
+  float storm = clamp(smoothstep(7.0, 18.0, speed) + smoothstep(0.1, 0.5, gust), 0.0, 1.0);
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(-ground, 0.0);
@@ -189,7 +191,7 @@ void main() {
     vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
     vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
     float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
-    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.55 * smoothstep(0.9, 2.0, bedDepth) * smoothstep(5.0, 3.0, bedDepth));
+    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * smoothstep(4.0, 2.5, bedDepth));
 
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
     float sunDown = max(-sunIn.y, 0.2);
@@ -221,7 +223,7 @@ void main() {
   vec3 col = mix(body, refl, F) + sun;
 
   float foam = surf.x;
-  if (storm > 0.0) foam = max(foam, foamLace(whitecaps(xz, flow, storm * 0.9), xz * 1.6, Footprint(fp.dx * 1.6, fp.dy * 1.6)));
+  if (storm > 0.0) foam = max(foam, foamLace(whitecaps(xz, flow, storm * 0.9), xz * 3.5, Footprint(fp.dx * 3.5, fp.dy * 3.5)));
   col = mix(col, foamColor(V, sh), clamp(foam, 0.0, 1.0));
 
   col = applyFog(col, vWorld);

@@ -32,7 +32,7 @@ void main() {
   vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
   float grassMask = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
   vec3 alb = mix(sand, uGround * (0.85 + 0.3 * grain), grassMask);
-  float shore = shoreDistance(vWorld.xz);
+  float shore = h < 2.5 ? shoreDistance(vWorld.xz) : 1e3;
   Footprint fp = footprintOf(vWorld.xz);
   bool beach = shore < 6.0 && grassMask < 1.0;
   vec4 swash = beach ? beachSwash(vWorld.xz, shore, -normalize(n.xz + 1e-5), fp) * (1.0 - grassMask) : vec4(0.0);
