@@ -9,6 +9,7 @@ import { Glider } from './glider/glider';
 import { ROUTE } from './story/hills';
 import { Journey } from './story/journey';
 import { Fireflies } from './fx/fireflies';
+import { SeaLife } from './fx/sealife';
 import { Boat } from './traveller/boat';
 import { Drawing } from './traveller/drawing';
 import { Traveller } from './traveller/traveller';
@@ -120,6 +121,8 @@ const drawing = new Drawing();
 scene.add(drawing.mesh);
 const fireflies = new Fireflies(wind);
 scene.add(fireflies.mesh);
+const sealife = new SeaLife(wind, rig.camera);
+sealife.objects.forEach((o) => scene.add(o));
 const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage });
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
@@ -207,6 +210,17 @@ let last = performance.now();
 let frames = 0;
 let fpsWindowStart = last;
 let fps = 0;
+let qaWhaleAt = 8;
+
+/** `?whale`: a whale surfaces ahead and to the left of the boat every 40 s, and fish keep leaping by it. */
+function whaleForQa(): void {
+  sealife.fishNear(boat.position, 1);
+  if (time < qaWhaleAt) return;
+  qaWhaleAt = time + 40;
+  const fx = Math.sin(boat.yaw);
+  const fz = Math.cos(boat.yaw);
+  sealife.surfaceWhale(new THREE.Vector3(boat.position.x + fx * 125 + fz * 26, 0, boat.position.z + fz * 125 - fx * 26), boat.yaw - 0.3);
+}
 
 function frame(now: number): void {
   const realDt = (now - last) / 1000;
@@ -279,6 +293,8 @@ function frame(now: number): void {
   walls.update(rig.camera);
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
+  if (params.whale) whaleForQa();
+  sealife.update(dt, time);
   water.update(rig.camera);
   post.render(time);
 
@@ -309,5 +325,5 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain };
+if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, sealife };
 requestAnimationFrame(frame);

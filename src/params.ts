@@ -31,4 +31,6 @@ export const params = {
   dusk: num('dusk'),
   /** Start later in the story: `crossing`, `hills` or `summit`. */
   chapter: q.get('chapter'),
+  /** QA: a whale surfaces ahead of the crossing a few seconds in (and again every so often), fish leap by the boat. */
+  whale: q.has('whale'),
 };
