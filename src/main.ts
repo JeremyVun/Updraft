@@ -10,6 +10,7 @@ import { ROUTE } from './story/hills';
 import { takeCues } from './story/cues';
 import { Journey } from './story/journey';
 import { Fireflies } from './fx/fireflies';
+import { Murmuration } from './fx/murmuration';
 import { Rain } from './fx/rain';
 import { Boat } from './traveller/boat';
 import { Drawing } from './traveller/drawing';
@@ -124,6 +125,8 @@ const fireflies = new Fireflies(wind);
 scene.add(fireflies.mesh);
 const rain = new Rain();
 scene.add(rain.mesh);
+const starlings = new Murmuration();
+scene.add(starlings.mesh);
 const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage });
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
@@ -308,6 +311,7 @@ function frame(now: number): void {
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
   rain.update(dt, shower, rig.camera, wind.breeze);
+  starlings.update(dt, params.dusk ?? story.dusk, glider.departing ? glider.position : null);
   water.update(rig.camera);
   post.render(time);
 
