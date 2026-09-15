@@ -7,6 +7,7 @@ import { Gulls } from './gulls';
 import type { Habitat } from './habitat';
 import type { Rng } from './motion';
 import { Rabbits } from './rabbits';
+import { Sheep } from './sheep';
 import { Songbirds } from './songbirds';
 import type { Stimuli } from './stimuli';
 import { Voices, type AudioOut } from './voices';
@@ -19,6 +20,8 @@ export interface SpawnRegion {
   songbirds?: number;
   gulls?: number;
   butterflies?: number;
+  /** One flock of this many, lambs among them, in the pasture field nearest the region's centre. */
+  sheep?: number;
   seed?: number;
 }
 
@@ -29,6 +32,7 @@ export interface CreatureEnv {
   walker: THREE.Vector3 | null;
   life(x: number, z: number): number;
   breeze: number;
+  night: number;
   audio: AudioOut | null;
 }
 
@@ -39,6 +43,7 @@ export class Creatures {
   readonly songbirds: Songbirds;
   readonly gulls: Gulls;
   readonly butterflies: Butterflies;
+  readonly sheep: Sheep;
   private readonly voices = new Voices();
   private readonly stimuli: Stimuli;
   private readonly gustPoint = new THREE.Vector3();
@@ -53,7 +58,8 @@ export class Creatures {
     this.songbirds = new Songbirds(habitat);
     this.gulls = new Gulls(habitat);
     this.butterflies = new Butterflies(habitat);
-    this.group.add(this.rabbits.mesh, this.songbirds.mesh, this.gulls.mesh, this.butterflies.mesh);
+    this.sheep = new Sheep(habitat);
+    this.group.add(this.rabbits.mesh, this.songbirds.mesh, this.gulls.mesh, this.butterflies.mesh, this.sheep.mesh);
     this.stimuli = {
       wind,
       sample: { x: 0, z: 0, energy: 0, lift: 0 },
@@ -65,6 +71,7 @@ export class Creatures {
       walker: null,
       life: () => 1,
       breeze: 1,
+      night: 0,
       voices: this.voices,
     };
   }
@@ -96,6 +103,9 @@ export class Creatures {
       const kind = i % 20 < 9 ? 0 : i % 20 < 15 ? 1 : 2;
       this.butterflies.add(patches[i % patches.length], kind, Math.floor(rand() * 1e9));
     }
+    const sheep = region.sheep ?? 0;
+    const [fold] = sheep ? this.spots(rand, region, 1, 0, (x, z) => this.sheep.pasture(x, z), (x, z) => this.sheep.room(x, z)) : [];
+    if (fold) this.sheep.addFlock(fold[0], fold[1], sheep, Math.floor(rand() * 1e9));
   }
 
   private warrenScore(x: number, z: number): number {
@@ -138,6 +148,7 @@ export class Creatures {
     s.walker = env.walker;
     s.life = env.life;
     s.breeze = env.breeze;
+    s.night = env.night;
     s.gustAt = input.present && input.gust > 4 ? this.gustPoint.copy(input.world) : null;
     const up = s.updraft;
     if (input.present && input.down && input.charge > 0) {
@@ -152,5 +163,6 @@ export class Creatures {
     this.songbirds.update(dt, time, s);
     this.gulls.update(dt, time, s);
     this.butterflies.update(dt, time, s);
+    this.sheep.update(dt, time, s);
   }
 }
