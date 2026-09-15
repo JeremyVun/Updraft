@@ -41,7 +41,7 @@ import { Walls } from './world/walls';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
 import { surfUniforms } from './world/water/surf';
-import { WINDOW, followWindow, onWindowMove } from './world/window';
+import { WINDOW, followWindow, onWindowMove, windowCentre } from './world/window';
 
 declare global {
   interface Window {
@@ -110,6 +110,17 @@ const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 const petals = new Petals(renderer);
 scene.add(petals.mesh);
+const allFlowers = [...FLOWER_PATCHES, ...hillFlowers];
+const petalsHomedAt = new THREE.Vector2(1e9, 1e9);
+/** Keeps the petals in the flower patches near the window, so gusts lift colour wherever the journey is. */
+function homePetals(): void {
+  const [cx, cz] = windowCentre();
+  if (Math.hypot(cx - petalsHomedAt.x, cz - petalsHomedAt.y) < 60) return;
+  petalsHomedAt.set(cx, cz);
+  const near = allFlowers.filter((f) => Math.hypot(f.x - cx, f.z - cz) < 190);
+  petals.rehome(near, cz < -600 ? 0.12 : 1);
+}
+homePetals();
 const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
 const glider = new Glider(wind, tree.canopy);
@@ -266,6 +277,7 @@ function frame(now: number): void {
   u.uCloudShift.value.addScaledVector(wind.breeze, dt * 2.2);
   clouds.update();
 
+  homePetals();
   petals.update(dt, input.down && input.present ? input.world : null, input.charge);
   const pointerWorld = input.present ? input.world : null;
   lines.update(dt, pointerWorld, input.gust, input.down ? pointerWorld : null, input.charge);
@@ -342,5 +354,5 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage };
+if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass };
 requestAnimationFrame(frame);

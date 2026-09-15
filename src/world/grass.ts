@@ -177,9 +177,9 @@ void main() {
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
   float angle = gr_rand(s) * 6.2831853;
   float curve = 0.12 + 0.28 * gr_rand(s);
-  float flower = step(gr_rand(s), surf.z * 0.28) * step(0.5, life);
+  float flower = step(gr_rand(s), surf.z * 0.1) * step(0.5, life);
   float petal = gr_rand(s);
-  h *= 1.0 + flower * 0.18;
+  h *= 1.0 + flower * (0.2 + 0.5 * pasture);
   vec3 rootPos = vec3(root2.x, groundH - 0.12, root2.y);
 
   vec4 ground = groundAt(root2);
@@ -226,7 +226,7 @@ void main() {
   vT = t;
   vBend = wa;
   vFar = smoothstep(60.0, 170.0, dist);
-  vec3 bloom = petal < 0.4 ? vec3(1.0, 0.8, 0.14) : petal < 0.7 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
+  vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
   vFlower = vec4(mix(stillGrey(bloom), bloom, life), flower);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;

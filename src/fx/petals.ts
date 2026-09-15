@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
-import { FLOWER_PATCHES } from '../world/landmarks';
+import { FLOWER_PATCHES, type FlowerPatch } from '../world/landmarks';
 import { mulberry32 } from '../world/noise';
 
 const W = 128;
@@ -158,17 +158,20 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-/** Petals start in flower patches, so a gust over a patch throws up a burst of colour. */
-function initialState(): { pos: Float32Array; vel: Float32Array } {
+/** Petals live in flower patches, so a gust over a patch throws up a burst of colour. */
+function seedHomes(patches: readonly FlowerPatch[], pos: Float32Array, share = 1): void {
   const rand = mulberry32(7);
-  const pos = new Float32Array(COUNT * 4);
-  const vel = new Float32Array(COUNT * 4);
+  const living = Math.round(COUNT * share);
   for (let i = 0; i < COUNT; i++) {
+    if (i >= living) {
+      pos.set([0, -80, 0, 1e4], i * 4);
+      continue;
+    }
     let x = 0;
     let z = 0;
     let h = -1;
     for (let tries = 0; tries < 30 && h < GRASS_LINE + 1.2; tries++) {
-      const { x: px, z: pz, radius: r } = FLOWER_PATCHES[Math.floor(rand() * FLOWER_PATCHES.length)];
+      const { x: px, z: pz, radius: r } = patches[Math.floor(rand() * patches.length)];
       const a = rand() * Math.PI * 2;
       const d = r * Math.sqrt(-2 * Math.log(1 - rand() * 0.95)) * 0.6;
       x = px + Math.cos(a) * d;
@@ -176,8 +179,15 @@ function initialState(): { pos: Float32Array; vel: Float32Array } {
       h = heightAt(x, z);
     }
     pos.set([x, h + 0.2, z, 5 + rand() * 70], i * 4);
-    vel.set([0, 0, 0, rand()], i * 4);
   }
+}
+
+function initialState(): { pos: Float32Array; vel: Float32Array } {
+  const rand = mulberry32(11);
+  const pos = new Float32Array(COUNT * 4);
+  const vel = new Float32Array(COUNT * 4);
+  seedHomes(FLOWER_PATCHES, pos);
+  for (let i = 0; i < COUNT; i++) vel.set([0, 0, 0, rand()], i * 4);
   return { pos, vel };
 }
 
@@ -197,11 +207,13 @@ export class Petals {
   private readonly renderMat: THREE.ShaderMaterial;
   /** x, z, strength 0..1, radius. */
   private readonly updraft = new THREE.Vector4(0, 0, 0, 8);
+  private readonly home: THREE.DataTexture;
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);
     const { pos, vel } = initialState();
     const home = dataTexture(pos.slice());
+    this.home = home;
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {
       uSrc: { value: null },
     });
@@ -245,6 +257,16 @@ export class Petals {
   }
 
   /** `at` is the updraft centre while the player holds; the funnel fades out over a second or two after release. */
+  /**
+   * Moves the petals' patches to `patches` (the flowers near the window), so gusts inland lift petals too.
+   * `share` is how many of them live there; the rest wait out of sight, for sparser flowers in the short pasture.
+   */
+  rehome(patches: readonly FlowerPatch[], share = 1): void {
+    if (!patches.length) return;
+    seedHomes(patches, this.home.image.data as Float32Array, share);
+    this.home.needsUpdate = true;
+  }
+
   update(dt: number, at: THREE.Vector3 | null, charge: number): void {
     if (at && charge > 0) {
       this.updraft.x += (at.x - this.updraft.x) * (this.updraft.z < 0.05 ? 1 : 1 - Math.exp(-dt * 6));
