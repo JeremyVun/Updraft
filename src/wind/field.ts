@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
-import { DOMAIN } from '../world/island';
+import { atmo } from '../world/atmosphere';
+import { WINDOW, onWindowMove } from '../world/window';
 import {
   ADVECT_FRAG,
   BEND_FRAG,
@@ -11,6 +12,7 @@ import {
   MAX_SPLATS,
   PRESSURE_FRAG,
   SCALE_FRAG,
+  SHIFT_FRAG,
   VORTICITY_FRAG,
 } from './shaders';
 
@@ -66,6 +68,8 @@ export class WindField {
   private readonly advectMat: THREE.ShaderMaterial;
   private readonly bendMat: THREE.ShaderMaterial;
   private readonly scaleMat: THREE.ShaderMaterial;
+  private readonly shiftMat: THREE.ShaderMaterial;
+  private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
 
   constructor(private readonly renderer: THREE.WebGLRenderer, res = 256) {
     this.res = res;
@@ -78,7 +82,7 @@ export class WindField {
     this.readTarget = simTarget(READ_RES, READ_RES, THREE.FloatType, THREE.NearestFilter);
 
     const texel = { value: new THREE.Vector2(1 / res, 1 / res) };
-    const domain = { value: new THREE.Vector4(DOMAIN.min, DOMAIN.min, 1 / DOMAIN.size, 1 / DOMAIN.size) };
+    const domain = atmo.uniforms.uDomain;
     const dt = { value: STEP };
 
     this.forceMat = simMaterial(FORCE_FRAG, {
@@ -124,6 +128,12 @@ export class WindField {
       uDamping: { value: 3.2 },
     });
     this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } });
+    this.shiftMat = simMaterial(SHIFT_FRAG, {
+      uSrc: { value: null },
+      uOffset: { value: new THREE.Vector2() },
+      uOutside: { value: new THREE.Vector4() },
+    });
+    onWindowMove((dx, dz) => this.shift(dx, dz));
 
     for (const rt of [this.vel.read, this.vel.write, this.bend.read, this.bend.write, this.pressure.read, this.pressure.write]) {
       this.gpu.clear(rt);
@@ -198,15 +208,35 @@ export class WindField {
     this.bend.swap();
   }
 
+  /** Keeps the air where it is in the world when the window moves by (dx, dz) world units. */
+  private shift(dx: number, dz: number): void {
+    const su = this.shiftMat.uniforms;
+    su.uOffset.value.set(dx / WINDOW.size, dz / WINDOW.size);
+    for (const [pp, outside] of [
+      [this.vel, new THREE.Vector4(this.breeze.x, this.breeze.y, 0, 0)],
+      [this.bend, new THREE.Vector4(0, 0, 0, 0)],
+    ] as const) {
+      su.uSrc.value = pp.texture;
+      su.uOutside.value.copy(outside);
+      this.gpu.run(this.shiftMat, pp.write);
+      pp.swap();
+    }
+    this.gpu.clear(this.pressure.read);
+  }
+
   private readBack(): void {
     if (this.reading) return;
     this.scaleMat.uniforms.uSrc.value = this.vel.texture;
     this.scaleMat.uniforms.uScale.value = 1;
     this.gpu.run(this.scaleMat, this.readTarget);
     this.reading = true;
+    const window = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
     this.renderer
       .readRenderTargetPixelsAsync(this.readTarget, 0, 0, READ_RES, READ_RES, this.readBuffer)
-      .then(() => this.cpu.set(this.readBuffer))
+      .then(() => {
+        this.cpu.set(this.readBuffer);
+        this.cpuWindow = window;
+      })
       .catch(() => {})
       .finally(() => {
         this.reading = false;
@@ -215,8 +245,9 @@ export class WindField {
 
   /** Wind at a world position, bilinear over the CPU copy (one or two frames behind the GPU). */
   sample(x: number, z: number, out: WindSample): WindSample {
-    const fx = ((x - DOMAIN.min) / DOMAIN.size) * READ_RES - 0.5;
-    const fz = ((z - DOMAIN.min) / DOMAIN.size) * READ_RES - 0.5;
+    const w = this.cpuWindow;
+    const fx = ((x - w.minX) / w.size) * READ_RES - 0.5;
+    const fz = ((z - w.minZ) / w.size) * READ_RES - 0.5;
     const x0 = Math.max(0, Math.min(READ_RES - 2, Math.floor(fx)));
     const z0 = Math.max(0, Math.min(READ_RES - 2, Math.floor(fz)));
     const tx = Math.max(0, Math.min(1, fx - x0));

@@ -27,12 +27,12 @@ void main() {
 
 /** The rest of the archipelago: grey, lifeless islands resting in the haze, waiting to be restored. */
 const ISLANDS: [number, number, number, number, number][] = [
-  [-720, -980, 170, 42, 1],
-  [-260, -1350, 110, 26, 2],
-  [520, -1150, 210, 55, 3],
-  [1400, -520, 120, 22, 4],
-  [-1350, -300, 160, 30, 5],
-  [900, -1500, 90, 20, 6],
+  [-1150, -380, 150, 30, 1],
+  [-1700, 140, 190, 40, 2],
+  [1250, -320, 120, 24, 3],
+  [1800, 60, 210, 44, 4],
+  [-2300, -700, 160, 28, 5],
+  [2400, -650, 140, 26, 6],
 ];
 
 export function createDistantIslands(): THREE.Mesh {

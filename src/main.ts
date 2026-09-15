@@ -10,17 +10,20 @@ import { params } from './params';
 import { Post } from './post/post';
 import { createWindDebug } from './wind/debug';
 import { WindField, type WindSample } from './wind/field';
-import { atmo } from './world/atmosphere';
+import { CLOUD_SPAN, atmo } from './world/atmosphere';
 import { CloudShadows } from './world/clouds';
 import { createDistantIslands } from './world/distant';
-import { createGrass } from './world/grass';
-import { bakeGround } from './world/ground';
-import { heightAt, makeHeightTexture } from './world/island';
+import { Grass } from './world/grass';
+import { GroundBakes, type BakeInputs } from './world/ground';
+import { heightAt } from './world/island';
+import { FLOWER_PATCHES, ROCKS, TREE } from './world/landmarks';
+import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
-import { createTerrain } from './world/terrain';
+import { Terrain } from './world/terrain';
 import { createWater } from './world/water';
+import { followWindow, onWindowMove } from './world/window';
 
 declare global {
   interface Window {
@@ -38,29 +41,47 @@ if (params.shot) document.body.classList.add('shot');
 
 const scene = new THREE.Scene();
 const rig = new CameraRig();
+const aimDir = new THREE.Vector3();
+/** Where the window should be centred: well ahead of the camera, on the ground it is looking at. */
+function windowAim(): [number, number] {
+  rig.camera.updateMatrixWorld();
+  rig.camera.getWorldDirection(aimDir);
+  aimDir.y = 0;
+  if (aimDir.lengthSq() < 1e-6) aimDir.set(0, 0, -1);
+  aimDir.normalize();
+  return [rig.camera.position.x + aimDir.x * 100, rig.camera.position.z + aimDir.z * 100];
+}
 const wind = new WindField(renderer);
 const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
-atmo.uniforms.uHeightTex.value = makeHeightTexture();
 const tree = createTree();
-atmo.uniforms.uGroundTex.value = bakeGround(renderer, tree.canopy);
+const bakes = new GroundBakes(renderer);
+const bakeInputs: BakeInputs = {
+  occluders: tree.canopy,
+  clearings: [...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })), { x: TREE.x, z: TREE.z, radius: 1.6 }],
+  flowers: FLOWER_PATCHES,
+};
+onWindowMove(() => bakes.bake(bakeInputs));
+followWindow(...windowAim(), true);
 const clouds = new CloudShadows(renderer);
 scene.add(createSky());
-scene.add(createTerrain());
+const terrain = new Terrain(wind.breeze);
+scene.add(terrain.mesh);
 scene.add(createWater());
 scene.add(createRocks());
 scene.add(createDistantIslands());
 scene.add(tree.group);
-const grass = createGrass();
-scene.add(grass.mesh);
+const grass = new Grass();
+scene.add(grass.group);
 const petals = new Petals(renderer);
 scene.add(petals.mesh);
 const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
 const glider = params.noGlider ? null : new Glider(wind, tree.canopy);
 glider?.objects.forEach((o) => scene.add(o));
-if (params.debug === 'wind') scene.add(createWindDebug());
+const windDebug = params.debug === 'wind' ? createWindDebug() : null;
+if (windDebug) scene.add(windDebug);
 
 const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
 let pixelRatio = maxPixelRatio;
@@ -122,6 +143,8 @@ function adaptQuality(now: number): void {
   }
 }
 
+const heightParity = params.shot ? measureHeightParity(renderer) : 0;
+
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 let time = 0;
 let veilLifted = false;
@@ -169,6 +192,12 @@ function frame(now: number): void {
   sound.update(dt, soundState);
 
   rig.update(dt, time, glider?.position ?? null);
+  rig.camera.updateMatrixWorld();
+  followWindow(...windowAim());
+  const cam = rig.camera.position;
+  u.uCloudDomain.value.set(cam.x - CLOUD_SPAN / 2, cam.z - CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN);
+  terrain.update(rig.camera);
+  grass.update(rig.camera);
   post.render(time);
 
   frames++;
@@ -187,8 +216,10 @@ function frame(now: number): void {
       fps: Math.round(fps),
       calls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
-      blades: grass.count,
+      blades: grass.bladesDrawn,
+      leaves: terrain.leaves,
       ratio: pixelRatio,
+      heightParity,
     };
     if (time > 0.75) window.__ready = true;
   }

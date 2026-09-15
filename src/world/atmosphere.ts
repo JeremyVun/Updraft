@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { params } from '../params';
-import { DOMAIN } from './island';
+import { WINDOW, onWindowMove } from './window';
 
 const [sunAz, sunEl] = params.sun ?? [52, 13];
 
@@ -10,8 +10,14 @@ function sunDirection(azDeg: number, elDeg: number): THREE.Vector3 {
   return new THREE.Vector3(-Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 }
 
-/** Cloud shadows are baked each frame into a texture covering this square around the island. */
-const CLOUD_SPAN = 1400;
+/** Cloud shadows are baked each frame into a texture covering this square around the camera. */
+export const CLOUD_SPAN = 1400;
+
+function windowDomain(): THREE.Vector4 {
+  return new THREE.Vector4(WINDOW.minX, WINDOW.minZ, 1 / WINDOW.size, 1 / WINDOW.size);
+}
+
+onWindowMove(() => atmo.uniforms.uDomain.value.set(WINDOW.minX, WINDOW.minZ, 1 / WINDOW.size, 1 / WINDOW.size));
 
 function hdr(hex: string, intensity: number): THREE.Color {
   return new THREE.Color(hex).multiplyScalar(intensity);
@@ -33,11 +39,15 @@ export const atmo = {
     uGroundBounce: { value: hdr('#a4895c', 0.22) },
     uFogDensity: { value: 0.0011 },
     uCloudShift: { value: new THREE.Vector2() },
-    uDomain: { value: new THREE.Vector4(DOMAIN.min, DOMAIN.min, 1 / DOMAIN.size, 1 / DOMAIN.size) },
+    /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
+    uDomain: { value: windowDomain() },
+    /** The window the ground bake was made for; it can lag `uDomain` while a re-bake is under way. */
+    uGroundDomain: { value: windowDomain() },
     uWindTex: { value: null as THREE.Texture | null },
     uBendTex: { value: null as THREE.Texture | null },
     uHeightTex: { value: null as THREE.Texture | null },
     uGroundTex: { value: null as THREE.Texture | null },
+    uSurfaceTex: { value: null as THREE.Texture | null },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
   },
@@ -81,10 +91,12 @@ uniform vec3 uGroundBounce;
 uniform float uFogDensity;
 uniform vec2 uCloudShift;
 uniform vec4 uDomain;
+uniform vec4 uGroundDomain;
 uniform sampler2D uWindTex;
 uniform sampler2D uBendTex;
 uniform sampler2D uHeightTex;
 uniform sampler2D uGroundTex;
+uniform sampler2D uSurfaceTex;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -94,12 +106,23 @@ vec2 domainUv(vec2 xz) {
   return (xz - uDomain.xy) * uDomain.zw;
 }
 
-/** xyz: terrain normal, w: sun visibility from the baked hill shadows (1 outside the island). */
+bool insideUv(vec2 uv) {
+  return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+}
+
+/** xyz: terrain normal, w: sun visibility from the baked hill shadows (open sky outside the window). */
 vec4 groundAt(vec2 xz) {
-  vec2 uv = domainUv(xz);
-  if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return vec4(0.0, 1.0, 0.0, 1.0);
+  vec2 uv = (xz - uGroundDomain.xy) * uGroundDomain.zw;
+  if (!insideUv(uv)) return vec4(0.0, 1.0, 0.0, 1.0);
   vec4 g = texture(uGroundTex, uv);
   return vec4(normalize(g.xyz * 2.0 - 1.0), g.w);
+}
+
+/** x: open ground (0 under rocks and trunks), y: spare, z: wildflowers, w: spare. Baked with the ground. */
+vec4 surfaceAt(vec2 xz) {
+  vec2 uv = (xz - uGroundDomain.xy) * uGroundDomain.zw;
+  if (!insideUv(uv)) return vec4(1.0, 0.0, 0.0, 0.0);
+  return texture(uSurfaceTex, uv);
 }
 
 vec3 skyColor(vec3 d) {

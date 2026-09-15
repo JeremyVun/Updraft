@@ -146,6 +146,17 @@ void main() {
   gl_FragColor = s;
 }`;
 
+export const SHIFT_FRAG = /* glsl */ `
+uniform sampler2D uSrc;
+uniform vec2 uOffset;
+uniform vec4 uOutside;
+in vec2 vUv;
+void main() {
+  vec2 uv = vUv + uOffset;
+  bool inside = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+  gl_FragColor = inside ? texture(uSrc, uv) : uOutside;
+}`;
+
 export const SCALE_FRAG = /* glsl */ `
 uniform sampler2D uSrc;
 uniform float uScale;

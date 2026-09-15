@@ -1,6 +1,6 @@
 # Updraft
 
-Browser game where you play the wind (Three.js + TypeScript + Vite). Overview: `docs/project.md`. Look: `docs/styles.md`. Milestones: `docs/roadmap.md`. The wind field every system reads: `docs/contracts/wind.md`.
+Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `docs/journey.md` first: the vision, Jeremy's brief in his words, the story and the build plan.** Overview: `docs/project.md`. Look: `docs/styles.md`. Milestones: `docs/roadmap.md`. The wind field every system reads: `docs/contracts/wind.md`.
 
 ## Commands
 

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { atmo } from '../world/atmosphere';
-import { DOMAIN } from '../world/island';
+import { WINDOW } from '../world/window';
 
-/** `?debug=wind`: the wind field drawn on a translucent sheet above the island. Hue is direction, brightness is speed. */
+/** `?debug=wind`: the wind field drawn on a translucent sheet above the window. Hue is direction, brightness is speed. */
 export function createWindDebug(): THREE.Mesh {
   const mat = new THREE.ShaderMaterial({
     uniforms: { uWindTex: atmo.uniforms.uWindTex },
@@ -30,13 +30,18 @@ export function createWindDebug(): THREE.Mesh {
     transparent: true,
     depthWrite: false,
   });
-  const geo = new THREE.PlaneGeometry(DOMAIN.size, DOMAIN.size);
+  const geo = new THREE.PlaneGeometry(1, 1);
   geo.rotateX(-Math.PI / 2);
-  geo.translate(DOMAIN.min + DOMAIN.size / 2, 18, DOMAIN.min + DOMAIN.size / 2);
+  geo.translate(0.5, 0, 0.5);
   const uv = geo.attributes.uv as THREE.BufferAttribute;
   const pos = geo.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < uv.count; i++) {
-    uv.setXY(i, (pos.getX(i) - DOMAIN.min) / DOMAIN.size, (pos.getZ(i) - DOMAIN.min) / DOMAIN.size);
-  }
-  return new THREE.Mesh(geo, mat);
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i));
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;
+  mesh.onBeforeRender = () => {
+    mesh.position.set(WINDOW.minX, 18, WINDOW.minZ);
+    mesh.scale.set(WINDOW.size, 1, WINDOW.size);
+    mesh.updateMatrixWorld();
+  };
+  return mesh;
 }
