@@ -10,8 +10,8 @@ export interface AudioOut {
 export class Voices {
   private out: AudioOut | null = null;
   private readonly rand = mulberry32(404);
-  private lastCheep = 0;
-  private lastCry = 0;
+  private lastCheep = -Infinity;
+  private lastCry = -Infinity;
 
   setOutput(out: AudioOut | null): void {
     this.out = out;
@@ -54,7 +54,7 @@ export class Voices {
       osc.frequency.exponentialRampToValueAtTime(f0 * (1.15 + rand() * 0.2), t0 + 0.035);
       osc.frequency.exponentialRampToValueAtTime(f0 * 0.95, t0 + 0.06);
       const env = ctx.createGain();
-      const peak = 0.03 * loudness;
+      const peak = 0.04 * loudness;
       env.gain.setValueAtTime(0, t0);
       env.gain.linearRampToValueAtTime(peak, t0 + 0.005);
       env.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
@@ -95,7 +95,7 @@ export class Voices {
       depth.gain.value = 18;
       vibrato.connect(depth).connect(osc.frequency);
       const env = ctx.createGain();
-      const peak = 0.018 * loudness;
+      const peak = 0.06 * loudness;
       env.gain.setValueAtTime(0, t0);
       env.gain.linearRampToValueAtTime(peak, t0 + 0.03);
       env.gain.setValueAtTime(peak, t0 + len * 0.45);

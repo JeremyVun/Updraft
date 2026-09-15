@@ -34,8 +34,8 @@ vec3 shadeCreature(vec3 alb, vec3 N, vec3 world, float ao, float fuzz, float thi
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
   float edge = 1.0 - clamp(dot(N, V), 0.0, 1.0);
   float rim = pow(edge, 2.0);
-  vec3 bounce = mix(vec3(0.2, 0.17, 0.07) * (1.0 - air * 0.6), uSkyAmbient * 1.05, N.y * 0.5 + 0.5);
-  vec3 col = alb * (bounce * ao + uSunColor * wrap * wrap * sun * 0.8);
+  vec3 bounce = mix(vec3(0.24, 0.2, 0.09) * (1.0 - air * 0.6), uSkyAmbient, N.y * 0.5 + 0.5);
+  vec3 col = alb * (bounce * ao + uSunColor * (wrap * wrap * 0.8 + 0.05) * sun);
   col += alb * uSunColor * sun * (thin * back * 0.9 + fuzz * back * edge * 0.3);
   col += uSunColor * rim * fuzz * (0.1 + 1.1 * back) * smoothstep(-0.5, 0.45, ndl) * sun * (0.3 + 0.7 * alb);
   return col;

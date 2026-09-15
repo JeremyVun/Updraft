@@ -74,6 +74,7 @@ void main() {
     p += NECK;
   }
   if (part == ${TAIL}) {
+    p.x *= 1.0 + 0.7 * iPerch.w * smoothstep(-0.14, -0.3, p.z);
     p -= TAIL_BASE;
     p = rotX(p, iWing.z);
     n = rotX(n, iWing.z);
@@ -143,11 +144,11 @@ function birdGeometry(): THREE.BufferGeometry {
     part: WING_L,
     mat: WING,
     at: [0.095, 0.26, 0.04],
-    offset: [0.13, 0, -0.035],
-    size: [0.14, 0.014, 0.07],
+    offset: [0.14, 0, -0.045],
+    size: [0.15, 0.015, 0.095],
     shape: (u) => {
       const s = Math.max(u.x, 0);
-      u.z = u.z * (1 - 0.4 * s) - 0.45 * s * s;
+      u.z = u.z * (1 - 0.35 * s) - 0.3 * s * s;
     },
     blend: (u) => u.x * 0.5 + 0.5,
   };
@@ -159,6 +160,7 @@ function birdGeometry(): THREE.BufferGeometry {
         mat: PLUMAGE,
         at: [0, 0.2, 0],
         size: [0.12, 0.12, 0.165],
+        detail: 3,
         shape: (u: THREE.Vector3) => {
           if (u.z < 0) {
             u.x *= 1 + 0.3 * u.z;
@@ -174,6 +176,7 @@ function birdGeometry(): THREE.BufferGeometry {
         mat: FACE,
         at: [0, 0.315, 0.11],
         size: [0.093, 0.088, 0.095],
+        detail: 3,
         blend: (u: THREE.Vector3) => smoothstep(-0.05, 0.5, -u.y * 0.9 + u.z * 0.45),
       },
       {
@@ -259,6 +262,7 @@ interface Flock {
   home: { x: number; z: number; radius: number };
   mode: Mode;
   timer: number;
+  nextChirp: number;
   centreX: number;
   centreZ: number;
 }
@@ -307,7 +311,16 @@ export class Songbirds {
   /** Adds a flock of `size` birds foraging around (x, z) and ranging over `radius`. */
   addFlock(x: number, z: number, size: number, radius: number, seed: number): void {
     const rand = mulberry32(seed);
-    const flock: Flock = { birds: [], rand, home: { x, z, radius }, mode: 'ground', timer: range(rand, 6, 16), centreX: x, centreZ: z };
+    const flock: Flock = {
+      birds: [],
+      rand,
+      home: { x, z, radius },
+      mode: 'ground',
+      timer: range(rand, 6, 16),
+      nextChirp: range(rand, 3, 15),
+      centreX: x,
+      centreZ: z,
+    };
     for (let i = 0; i < size && this.birds.length < this.instances.capacity; i++) {
       const [back, breast, cap] = PLUMAGES[Math.floor(rand() * PLUMAGES.length)];
       let bx = x;
@@ -375,8 +388,17 @@ export class Songbirds {
       if (flock.mode !== 'flight') {
         const threat = this.threat(flock, s);
         flock.timer -= dt;
+        flock.nextChirp -= dt;
         if (threat) this.takeoff(flock, threat);
         else if (flock.timer <= 0) this.takeoff(flock, null);
+        else if (flock.nextChirp <= 0) {
+          flock.nextChirp = range(flock.rand, 9, 26);
+          const b = flock.birds[Math.floor(flock.rand() * flock.birds.length)];
+          b.headGoal = 0;
+          b.next = Math.max(b.next, 0.4);
+          scratch.set(b.x, b.y, b.z);
+          s.voices.cheep(screenPan(s.camera, scratch), 0.6 / (1 + scratch.distanceTo(s.camera.position) / 45));
+        }
       }
       for (const b of flock.birds) {
         if (b.mode === 'flight') this.fly(b, dt, s);
@@ -470,7 +492,8 @@ export class Songbirds {
         new THREE.Vector3(end.x - dx * 0.25 + sideX * arc * 0.7, end.y + climb * 0.5 + 0.8, end.z - dz * 0.25 + sideZ * arc * 0.7),
         new THREE.Vector3(end.x, end.y, end.z),
       );
-      b.duration = Math.max(1.6, b.path.getLength() / range(b.rand, 7, 9));
+      const length = b.path.getLength();
+      b.duration = Math.max(1.6, length / (range(b.rand, 7.5, 9.5) + length * 0.07));
     });
   }
 
@@ -492,8 +515,9 @@ export class Songbirds {
       const pz = z + Math.sin(a) * d;
       if (!this.habitat.forage(px, pz)) continue;
       const moved = Math.hypot(px - flock.centreX, pz - flock.centreZ);
-      const away = threat ? Math.min(Math.hypot(px - threat.x, pz - threat.z), 20) * 0.1 : 0;
-      const score = -this.habitat.grassHeight(px, pz) * 2 + away + (moved > 8 ? 1 : 0) + rand();
+      const fromThreat = threat ? Math.hypot(px - threat.x, pz - threat.z) : Infinity;
+      if (fromThreat < 14) continue;
+      const score = -this.habitat.grassHeight(px, pz) * 2 + Math.min(fromThreat, 24) * 0.05 + (moved > 8 ? 1 : 0) + rand();
       if (score > bestScore) {
         bestScore = score;
         best = [px, pz];

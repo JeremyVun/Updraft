@@ -146,7 +146,7 @@ function rabbitGeometry(): THREE.BufferGeometry {
   };
   const eye: BlobSpec = { part: EYE, mat: EYE_MAT, at: [0.168, 0.76, 0.46], size: [0.06, 0.068, 0.064] };
   const haunch: BlobSpec = { part: BODY, mat: FUR, at: [0.17, 0.28, -0.24], size: [0.16, 0.2, 0.25], blend: (u) => smoothstep(-0.3, -0.9, u.y) * 0.6 };
-  const hind: BlobSpec = { part: HIND_L, mat: FUR, at: [0.19, 0.055, -0.13], size: [0.085, 0.06, 0.25], blend: (u) => smoothstep(0.1, -0.6, u.y) };
+  const hind: BlobSpec = { part: HIND_L, mat: FUR, at: [0.19, 0.055, -0.1], size: [0.085, 0.06, 0.22], blend: (u) => smoothstep(0.1, -0.6, u.y) };
   const front: BlobSpec = { part: FRONT_L, mat: FUR, at: [0.1, 0.075, 0.31], size: [0.058, 0.08, 0.075], blend: () => 0.45 };
   return merge(
     [
@@ -225,7 +225,8 @@ interface Rabbit {
   fleeing: boolean;
   hop: Hop | null;
   pause: number;
-  alarm: number;
+  /** Looking up at rising air rather than across the meadow. */
+  gazeUp: boolean;
   lookX: number;
   lookZ: number;
   squash: Spring;
@@ -306,7 +307,7 @@ export class Rabbits {
       fleeing: false,
       hop: null,
       pause: 0,
-      alarm: 0,
+      gazeUp: false,
       lookX: 0,
       lookZ: 0,
       squash: new Spring(),
@@ -359,13 +360,16 @@ export class Rabbits {
 
   update(dt: number, time: number, s: Stimuli): void {
     const sample = s.sample;
+    const up = s.updraft;
     this.list.forEach((r, i) => {
       s.wind.sample(r.x, r.z, sample);
       const speed = Math.hypot(sample.x, sample.z);
-      let threat = sample.energy * 1.7 + Math.max(0, speed - 7) / 7;
+      const toUpdraft = up.strength > 0.02 ? Math.hypot(up.x - r.x, up.z - r.z) : Infinity;
+      const curious = toUpdraft < 24 && toUpdraft > 3.5;
+      let threat = sample.energy * 1.7 + (curious ? 0 : Math.max(0, speed - 7) / 7);
+      if (toUpdraft <= 3.5) threat = Math.max(threat, 0.5);
       if (s.glider) threat += Math.max(0, 1 - Math.hypot(s.glider.x - r.x, s.glider.y - r.y, s.glider.z - r.z) / 5);
-      r.alarm = Math.max(threat, r.alarm - dt * 0.5);
-      this.react(r, threat, speed, sample.x, sample.z, s);
+      this.react(r, threat, speed, sample.x, sample.z, curious, s);
       this.behave(r, dt);
       this.pose(r, dt, time, speed);
       this.write(r, i);
@@ -373,7 +377,7 @@ export class Rabbits {
     this.instances.commit(this.list.length);
   }
 
-  private react(r: Rabbit, threat: number, speed: number, wx: number, wz: number, s: Stimuli): void {
+  private react(r: Rabbit, threat: number, speed: number, wx: number, wz: number, curious: boolean, s: Stimuli): void {
     if (threat > 0.85 && !r.fleeing) {
       let ax = wx / Math.max(speed, 1e-3);
       let az = wz / Math.max(speed, 1e-3);
@@ -397,15 +401,12 @@ export class Rabbits {
       if (r.activity === 'crouch') r.timer = Math.max(r.timer, 0.7);
       return;
     }
-    const up = s.updraft;
-    if (up.strength > 0.12 && r.activity !== 'crouch' && !r.hop) {
-      const d = Math.hypot(up.x - r.x, up.z - r.z);
-      if (d < 24 && d > 2) {
-        r.activity = 'look';
-        r.timer = Math.max(r.timer, 1.2);
-        r.lookX = up.x;
-        r.lookZ = up.z;
-      }
+    if (curious && r.activity !== 'crouch' && !r.hop) {
+      r.activity = 'look';
+      r.timer = Math.max(r.timer, 1.2);
+      r.lookX = s.updraft.x;
+      r.lookZ = s.updraft.z;
+      r.gazeUp = true;
     }
   }
 
@@ -438,6 +439,7 @@ export class Rabbits {
       const a = r.yaw + (rand() - 0.5) * 2.4;
       r.lookX = r.x + Math.sin(a) * 10;
       r.lookZ = r.z + Math.cos(a) * 10;
+      r.gazeUp = false;
     }
     r.groomEar = rand() < 0.5 ? -1 : 1;
   }
@@ -462,6 +464,7 @@ export class Rabbits {
           r.timer = range(r.rand, 1.5, 3);
           r.lookX = r.x - Math.sin(r.yaw) * 10;
           r.lookZ = r.z - Math.cos(r.yaw) * 10;
+          r.gazeUp = false;
         } else {
           this.choose(r);
         }
@@ -563,8 +566,8 @@ export class Rabbits {
       ear = 0.2;
     } else if (act === 'look') {
       sitUp = 1;
-      headPitch = -0.1;
-      ear = -0.12;
+      headPitch = r.gazeUp ? -0.45 : -0.1;
+      ear = r.gazeUp ? -0.55 : -0.12;
       spread = 0.04;
     } else if (act === 'crouch') {
       crouch = 1;

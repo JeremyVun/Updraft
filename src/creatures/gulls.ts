@@ -321,13 +321,13 @@ export class Gulls {
       const toUp = Math.hypot(up.x - g.x, up.z - g.z);
       const drawn = up.strength > 0.08 && toUp < 110 ? Math.min(1, up.strength * 2.5) : 0;
       g.thermal = ease(g.thermal, drawn, drawn > g.thermal ? 2.5 : 0.25, dt);
-      const inColumn = g.thermal * (1 - THREE.MathUtils.smoothstep(toUp, 12, 30));
+      const inColumn = g.thermal * (1 - THREE.MathUtils.smoothstep(toUp, 20, 34));
 
       g.orbit += (g.orbitDir * g.speed * dt) / g.orbitRadius;
       let tx = this.home.x + Math.cos(g.orbit) * g.orbitRadius + Math.sin(time * 0.05 + g.seed * 9) * 12;
       let tz = this.home.z + Math.sin(g.orbit) * g.orbitRadius + Math.cos(time * 0.04 + g.seed * 7) * 12;
       if (g.thermal > 0.05) {
-        const ring = 7 + g.seed * 5;
+        const ring = 11 + g.seed * 7;
         const a = Math.atan2(g.z - up.z, g.x - up.x) + g.orbitDir * 0.7;
         const cx = up.x + Math.cos(a) * ring;
         const cz = up.z + Math.sin(a) * ring;

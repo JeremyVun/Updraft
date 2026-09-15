@@ -86,8 +86,8 @@ void main() {
     bool top = gl_FrontFacing;
     if (kind == 0) {
       alb = vec3(0.96, 0.95, 0.9);
-      alb = mix(alb, vec3(0.2, 0.2, 0.22), smoothstep(0.62, 0.75, uv.x) * smoothstep(0.62, 0.8, uv.y) * step(fore, hind) * (top ? 1.0 : 0.3));
-      alb = mix(alb, vec3(0.22, 0.2, 0.2), (1.0 - smoothstep(0.05, 0.075, length(uv - vec2(0.52, 0.6)))) * (top ? 1.0 : 0.5));
+      alb = mix(alb, vec3(0.12, 0.12, 0.14), smoothstep(0.55, 0.68, uv.x) * smoothstep(0.55, 0.75, uv.y) * step(fore, hind) * (top ? 1.0 : 0.4));
+      alb = mix(alb, vec3(0.14, 0.12, 0.12), (1.0 - smoothstep(0.06, 0.085, length(uv - vec2(0.5, 0.58)))) * (top ? 1.0 : 0.5));
     } else if (kind == 1) {
       alb = mix(vec3(1.0, 0.93, 0.5), vec3(0.95, 0.96, 0.62), uv.y);
       alb = mix(alb, vec3(1.0, 0.55, 0.15), 1.0 - smoothstep(0.03, 0.05, length(uv - vec2(0.45, 0.55))));
@@ -122,7 +122,7 @@ function butterflyGeometry(): THREE.BufferGeometry {
     geo.setAttribute('aMat', new THREE.BufferAttribute(uv, 2));
     return tag(geo, part);
   });
-  const body = blob({ part: BODY, mat: 0, at: [0, 0, 0.0], size: [0.016, 0.016, 0.1], detail: 1 });
+  const body = blob({ part: BODY, mat: 0, at: [0, 0, 0.0], size: [0.022, 0.022, 0.11], detail: 1 });
   return merge([...wings.map((w) => w.toNonIndexed()), body.toNonIndexed()]);
 }
 
@@ -193,7 +193,7 @@ export class Butterflies {
       rand,
       seed: rand(),
       kind,
-      size: range(rand, 0.95, 1.2),
+      size: range(rand, 1.2, 1.5),
       patch,
       x,
       y: this.top(x, z) + range(rand, 0.3, 1.5),
