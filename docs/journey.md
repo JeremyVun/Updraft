@@ -29,10 +29,10 @@ A wordless story in one continuous world. No cuts, no text: it is told through l
 1. **The still island (dawn).** The world has gone still. With no wind, the islands have faded grey and quiet: flat colourless grass, a bare tree, a glassy sea. On a small grey island a child in a mustard hooded coat and a long red scarf sits by a beached boat with a limp sail, holding a paper plane folded from a crayon drawing.
 2. **The wind returns.** The player's first gesture is the first breeze in a long time. The scarf lifts. The plane slips from the child's hand and the player carries it; the child runs after it, laughing. Wherever the wind flows over the land, colour and life come back: grass greens, flowers open, rabbits come out, birds return, and at last the tree leafs out.
 3. **Playing catch.** The child throws the plane; the player carries it; it lands; the child fetches it and throws again. Petals, updrafts and birds all join in. When the island is alive, the child pushes the boat into the water.
-4. **The crossing (late morning).** The player fills the patchwork sail. Gulls follow the boat, fish jump, a whale surfaces far off. Green hills rise out of the haze ahead.
-5. **The hills (afternoon).** The boat grounds on a mainland beach below grey hills. When the player sends a gust inland, a wave of green rolls across the hills to the horizon. Endless rolling pasture, dry-stone walls, sheep, a ruined cottage, soft showers and rainbows. The child walks inland, throwing the plane ahead and following it.
-6. **The last hill (sunset).** On the highest hill the child sits and unfolds the plane. The crayon drawing shows these same hills, a sun and a small figure. The child holds it up to the view, then lets it go. The player lifts it on an updraft into the sunset, where it joins a flock of birds.
-7. **Night.** Fireflies rise out of the grass, the stars come out, and the camera slowly lifts away.
+4. **The crossing (late morning).** The child sits facing the island they brought back and waves goodbye while a rainbow comes down on it; then turns to the way ahead and the camera swings round behind the sail. The player fills the patchwork sail. Gulls circle the boat, fish jump, a whale surfaces, breathes and dives. Grey hills rise out of the haze ahead.
+5. **The hills (golden afternoon into sunset).** The boat grounds on a mainland beach below grey hills. When the player sends a gust inland, a wave of green rolls across the hills to the horizon; rabbits, finches, butterflies and sheep appear as it passes. Endless rolling pasture, dry-stone walls with finches on them, wildflowers, skylarks. The child walks inland, throwing the plane ahead and following it, while the sun sinks.
+6. **The last hill (sunset).** Over the crest of the last hill the child sits and unfolds the plane. It is a crayon drawing of these hills, the sun, a small figure in yellow with a red scarf — and a white cottage with a red door. The real cottage is below, smoke rising, right under the sun. The child holds the drawing up to it, folds it, and lets the plane go into the sunset.
+7. **Night.** The stars come out, fireflies rise from the grass, the cottage windows glow. The child walks down to the cottage; the red door opens, and closes behind them.
 
 No fail states anywhere. Every beat waits for the player; nothing is timed.
 
@@ -54,9 +54,13 @@ No fail states anywhere. Every beat waits for the player; nothing is timed.
 
 ## Build order
 
-1. Engine: shared noise, world height function, moving window, GPU grass.
-2. The traveller and the paper plane on the island.
-3. Life and the grey start.
-4. The boat and the crossing.
-5. The hills: terrain, walls, sheep, showers, the green wave.
-6. Time of day, the ending, music.
+1. Engine: shared noise, world height function, moving window, GPU grass. **Done.**
+2. The traveller and the paper plane on the island. **Done.**
+3. Life and the grey start. **Done.**
+4. The boat and the crossing. **Done:** farewell and rainbow, gull escort, the new sea (surf, swash, seabed, glitter, mirror). Whale and fish being built by a subagent (branch `sealife`).
+5. The hills: terrain, walls, the green wave, creatures waking with it, wildflowers. **Done;** sheep being built by a subagent (branch `sheep`).
+6. Time of day, the ending, music. **Done:** sunset along the walk, the drawing, release, night, the cottage; music follows the story (warming pad, skylarks, crickets, an owl, phrases for the moments).
+
+Next ideas, in rough order: merge sheep and sea life and trigger the whale from the crossing; a soft passing shower in the hills; murmuration at dusk; the plane joining birds in the sunset; performance on phones (grass fill at high pixel ratios is the main cost; the adaptive resolution absorbs it).
+
+Testing shortcuts: `?chapter=crossing|hills|summit` start later in the story; `?dusk=0..2` overrides the time of day.
