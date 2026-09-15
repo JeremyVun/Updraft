@@ -111,6 +111,7 @@ function lightAngles(dusk: number): [number, number] {
 export function applyPalette(life: number, dusk: number): void {
   const u = atmo.uniforms;
   const k = THREE.MathUtils.smootherstep(life, 0, 1);
+  u.uWorldLife.value = k;
   const day = mixInto(dayMix, STILL, ALIVE, k);
   let p = day;
   if (dusk > 0) {

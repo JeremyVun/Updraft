@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
+import { REFLECTION_LAYER } from './water/reflection';
 
 const VERT = /* glsl */ `
 out vec3 vDir;
@@ -60,5 +61,6 @@ export function createSky(): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;
+  mesh.layers.enable(REFLECTION_LAYER);
   return mesh;
 }

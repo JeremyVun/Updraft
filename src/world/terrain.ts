@@ -3,6 +3,8 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
 import { GRASS_LINE, HEIGHTFIELD_GLSL } from './heightfield';
+import { REFLECTION_LAYER } from './water/reflection';
+import { SURF_GLSL, surfUniforms } from './water/surf';
 
 const SEGMENTS = 32;
 const ROOT = 2048;
@@ -16,6 +18,7 @@ const FIELD_TO = 172;
 
 const VERT = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
+uniform float uMirrorPass;
 in vec3 aNode;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -26,7 +29,8 @@ void main() {
   float hx = worldHeight(p + vec2(e, 0.0));
   float hz = worldHeight(p + vec2(0.0, e));
   vNormal = normalize(vec3(h - hx, e, h - hz));
-  vec3 world = vec3(p.x, h - position.y * (0.6 + aNode.z * 0.03), p.y);
+  float meadowTop = uMirrorPass * smoothstep(${GRASS_LINE.toFixed(2)}, ${(GRASS_LINE + 1.5).toFixed(2)}, h) * 1.1;
+  vec3 world = vec3(p.x, h + meadowTop - position.y * (0.6 + aNode.z * 0.03), p.y);
   vWorld = world;
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
@@ -36,6 +40,7 @@ ${ATMO_GLSL}
 ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
 ${GRASS_GLSL}
+${SURF_GLSL}
 uniform vec3 uSand;
 uniform vec3 uWetSand;
 uniform vec3 uGround;
@@ -53,15 +58,19 @@ void main() {
   float grain = mix(0.5, vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5, detail);
   float ripples = mix(0.5, sin(dot(xz, vec2(0.9, 0.45)) * 2.2 + vnoise(xz * 0.3) * 6.0) * 0.5 + 0.5, detail);
   vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
-  float wet = smoothstep(0.45, 0.05, h);
-  vec3 alb = mix(sand, uWetSand, wet * 0.8);
+  float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
+  Footprint fp = footprintOf(xz);
+  float shore = h < 2.5 ? shoreDistance(xz) : 1e3;
+  bool beach = shore < 6.0 && grassy < 1.0;
+  vec4 swash = beach ? beachSwash(xz, shore, -normalize(n.xz + 1e-5), fp) * (1.0 - grassy) : vec4(0.0);
+  float wet = max(swash.z, smoothstep(5.0, 0.0, shore) * 0.5) * (1.0 - grassy);
+  vec3 alb = mix(sand, uWetSand, wet * 0.85);
   float slope = 1.0 - n.y;
 
   vec4 surf = surfaceAt(xz);
-  float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
   alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
-  float far = smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz));
+  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), uMirrorPass);
   vec3 tint = grassTint(xz);
   vec4 fld = fieldAt(xz);
   float hay = step(fld.y, 0.22) * fld.w;
@@ -95,6 +104,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float back = pow(max(dot(-V, uSunDir), 0.0), 4.0) * grassy * far;
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun) + uSunColor * tint * back * 0.45 * sun;
+  if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -156,6 +166,7 @@ export class Terrain {
       uniforms: {
         ...atmo.uniforms,
         ...grassUniforms,
+        ...surfUniforms,
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
         uGround: { value: new THREE.Color('#2e3f22') },
@@ -166,6 +177,7 @@ export class Terrain {
     });
     this.mesh = new THREE.Mesh(this.geo, mat);
     this.mesh.frustumCulled = false;
+    this.mesh.layers.enable(REFLECTION_LAYER);
   }
 
   get leaves(): number {

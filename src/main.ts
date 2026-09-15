@@ -35,8 +35,10 @@ import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
 import { COTTAGE } from './world/heightfield';
 import { Walls } from './world/walls';
-import { createWater } from './world/water';
-import { followWindow, onWindowMove } from './world/window';
+import { Water } from './world/water';
+import { REFLECTION_LAYER } from './world/water/reflection';
+import { surfUniforms } from './world/water/surf';
+import { WINDOW, followWindow, onWindowMove } from './world/window';
 
 declare global {
   interface Window {
@@ -80,10 +82,12 @@ const bakeInputs: BakeInputs = {
   ],
   flowers: [...FLOWER_PATCHES, ...hillFlowers],
 };
+const water = new Water(renderer, scene, wind.breeze, bakes.height.texture);
 const bakedSun = atmo.uniforms.uSunDir.value.clone();
 onWindowMove(() => {
   bakedSun.copy(atmo.uniforms.uSunDir.value);
   bakes.bake(bakeInputs);
+  water.bakeShore(WINDOW.size);
 });
 followWindow(...windowAim(), true);
 const life = new LifeField(renderer);
@@ -91,7 +95,7 @@ const clouds = new CloudShadows(renderer);
 scene.add(createSky());
 const terrain = new Terrain(wind.breeze);
 scene.add(terrain.mesh);
-scene.add(createWater());
+scene.add(water.mesh);
 scene.add(createRocks());
 scene.add(createDistantIslands());
 scene.add(tree.group);
@@ -111,6 +115,7 @@ const child = new Traveller(wind);
 child.objects.forEach((o) => scene.add(o));
 const boat = new Boat(wind);
 boat.objects.forEach((o) => scene.add(o));
+for (const o of [...glider.objects, ...boat.objects, ...child.objects]) if (o !== child.shadow) o.traverse((c) => c.layers.enable(REFLECTION_LAYER));
 const drawing = new Drawing();
 scene.add(drawing.mesh);
 const fireflies = new Fireflies(wind);
@@ -228,6 +233,7 @@ function frame(now: number): void {
     bakes.bake(bakeInputs);
   }
   post.saturation = 0.62 + 0.38 * story.worldLife;
+  surfUniforms.uSeaState.value = story.breeze;
 
   const u = atmo.uniforms;
   u.uTime.value = time;
@@ -273,6 +279,7 @@ function frame(now: number): void {
   walls.update(rig.camera);
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
+  water.update(rig.camera);
   post.render(time);
 
   frames++;
@@ -302,5 +309,5 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures };
+if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain };
 requestAnimationFrame(frame);

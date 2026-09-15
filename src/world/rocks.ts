@@ -4,6 +4,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { ROCKS } from './landmarks';
 import { createNoise2D } from './noise';
+import { REFLECTION_LAYER } from './water/reflection';
 
 const VERT = /* glsl */ `
 out vec3 vWorld;
@@ -77,5 +78,7 @@ export function createRocks(): THREE.Mesh {
       uMoss: { value: new THREE.Color('#5d7336') },
     },
   });
-  return new THREE.Mesh(mergeGeometries(parts), mat);
+  const mesh = new THREE.Mesh(mergeGeometries(parts), mat);
+  mesh.layers.enable(REFLECTION_LAYER);
+  return mesh;
 }
