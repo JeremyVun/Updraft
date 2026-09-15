@@ -22,6 +22,7 @@ const BILL = 1;
 const EYE_MAT = 2;
 const WING = 3;
 
+const SIZE = 1.1;
 const SHOULDER = [0.09, 0.05, 0.1] as const;
 const here = new THREE.Vector3();
 const INNER_SPAN = 0.52;
@@ -73,7 +74,7 @@ void main() {
   if (part == ${TAIL}) p.x *= 1.0 + max(-iAtt.x, 0.0) * 1.2;
   p = rotZ(rotX(p, iAtt.x), iAtt.y);
   n = rotZ(rotX(n, iAtt.x), iAtt.y);
-  vec3 world = rotY(p, iPos.w) + iPos.xyz;
+  vec3 world = rotY(p * ${SIZE.toFixed(2)}, iPos.w) + iPos.xyz;
   vWorld = world;
   vNormal = rotY(n, iPos.w);
   vMat = aMat;
@@ -326,7 +327,7 @@ export class Gulls {
       let tx = g.homeX + Math.cos(g.orbit) * g.orbitRadius + Math.sin(time * 0.05 + g.seed * 9) * 12;
       let tz = g.homeZ + Math.sin(g.orbit) * g.orbitRadius + Math.cos(time * 0.04 + g.seed * 7) * 12;
       if (g.thermal > 0.05) {
-        const ring = 11 + g.seed * 7;
+        const ring = 13 + g.seed * 7;
         const a = Math.atan2(g.z - up.z, g.x - up.x) + g.orbitDir * 0.7;
         const cx = up.x + Math.cos(a) * ring;
         const cz = up.z + Math.sin(a) * ring;
@@ -341,7 +342,7 @@ export class Gulls {
         const dx = g.x - c.centre.x;
         const dz = g.z - c.centre.z;
         const d = Math.max(Math.hypot(dx, dz), 1e-3);
-        const reach = c.radius + 12;
+        const reach = c.radius + 10;
         if (d < reach && g.y < c.centre.y + c.radius + 3) {
           const k = (1 - d / reach) * 4;
           steerX += (dx / d) * k;
@@ -350,7 +351,7 @@ export class Gulls {
         }
       }
       const want = Math.atan2(steerX, steerZ);
-      const turnRate = 0.32 + g.thermal * 0.9 + Math.min(avoid, 1) * 0.9;
+      const turnRate = 0.32 + g.thermal * 1.2 + Math.min(avoid, 1) * 0.9;
       const diff = wrapAngle(want - g.yaw);
       const turn = THREE.MathUtils.clamp(diff * 1.2, -turnRate, turnRate);
       g.yaw += turn * dt;
@@ -376,13 +377,13 @@ export class Gulls {
 
       const ground = Math.max(this.habitat.ground(g.x, g.z), 0);
       const cruise = g.altitude + Math.sin(time * 0.07 + g.seed * 11) * 4;
-      const lift = w.lift * 1.2 + inColumn * (1.4 + up.strength * 2.2);
+      const lift = w.lift * 1.2 + inColumn * (0.9 + up.strength * 1.3);
       const floor = Math.max(ground + 12, this.clearance(g.x, g.z, ground + 12));
       const target = Math.max(cruise, floor);
       let vy = THREE.MathUtils.clamp((target - g.y) * 0.25, -1.4, g.y < floor ? 3 : 1.2);
       if (lift > 0.1) vy = Math.max(vy, lift);
       if (g.y > 44) vy = Math.min(vy, (44 - g.y) * 0.5);
-      if (inColumn > 0.1 && g.y > floor && here.set(g.x, g.y, g.z).project(s.camera).y > 0.6) vy = Math.min(vy, 0);
+      if (inColumn > 0.1 && g.y > floor && here.set(g.x, g.y, g.z).project(s.camera).y > 0.72) vy = Math.min(vy, 0);
       g.climb = ease(g.climb, vy, 1.5, dt);
 
       g.nextFlap -= dt;
@@ -394,7 +395,7 @@ export class Gulls {
 
       const fx = Math.sin(g.yaw);
       const fz = Math.cos(g.yaw);
-      const speed = g.speed * (1 + g.thermal * 0.5 * THREE.MathUtils.smoothstep(toUp, 15, 40));
+      const speed = g.speed * (1 + g.thermal * THREE.MathUtils.smoothstep(toUp, 18, 45));
       g.x += (fx * speed + g.pushX) * dt;
       g.z += (fz * speed + g.pushZ) * dt;
       g.y += g.climb * dt;

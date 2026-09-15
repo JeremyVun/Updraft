@@ -89,10 +89,10 @@ void main() {
       alb = mix(alb, vec3(0.12, 0.12, 0.14), smoothstep(0.55, 0.68, uv.x) * smoothstep(0.55, 0.75, uv.y) * step(fore, hind) * (top ? 1.0 : 0.4));
       alb = mix(alb, vec3(0.14, 0.12, 0.12), (1.0 - smoothstep(0.06, 0.085, length(uv - vec2(0.5, 0.58)))) * (top ? 1.0 : 0.5));
     } else if (kind == 1) {
-      alb = mix(vec3(1.0, 0.93, 0.5), vec3(0.95, 0.96, 0.62), uv.y);
+      alb = mix(vec3(1.0, 0.9, 0.22), vec3(0.93, 0.95, 0.42), uv.y);
       alb = mix(alb, vec3(1.0, 0.55, 0.15), 1.0 - smoothstep(0.03, 0.05, length(uv - vec2(0.45, 0.55))));
     } else {
-      alb = top ? mix(vec3(0.34, 0.5, 0.95), vec3(0.55, 0.7, 1.0), uv.x) : vec3(0.78, 0.76, 0.72);
+      alb = top ? mix(vec3(0.16, 0.34, 0.95), vec3(0.4, 0.6, 1.0), uv.x) : vec3(0.78, 0.76, 0.72);
       alb = mix(alb, vec3(0.97, 0.96, 0.94), rim * 0.9);
       if (!top) alb = mix(alb, vec3(1.0, 0.55, 0.2), (1.0 - smoothstep(0.03, 0.05, abs(shape - 0.82))) * step(hind, fore) * 0.8);
     }
