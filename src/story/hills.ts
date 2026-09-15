@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { mainlandCoastZ } from '../world/heightfield';
 import { heightAt } from '../world/island';
+import { MOON, sunDirection } from '../world/palette';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { cue } from './cues';
@@ -62,6 +63,7 @@ export class HillsChapter implements Chapter {
   private readonly horizon = new THREE.Vector3(20, 40, -1600);
   private readonly fwd = new THREE.Vector3();
   private readonly eyeAt = new THREE.Vector3();
+  private readonly moon = sunDirection(MOON.az, MOON.el);
 
   constructor(private readonly cast: Cast) {
     const { child, plane } = cast;
@@ -327,11 +329,13 @@ export class HillsChapter implements Chapter {
       s.height = this.beat === 'inside' ? 40 : 24;
       this.pace = 0.2;
       if (this.beat === 'inside') {
-        const lift = THREE.MathUtils.smootherstep(this.t, 7, 45);
-        s.target.y += lift * 110;
-        s.height += lift * 25;
-        s.distance += lift * 20;
-        this.pace = 0.2 - lift * 0.1;
+        const lift = THREE.MathUtils.smootherstep(this.t, 7, 50);
+        if (lift > 0) {
+          s.eye = this.eyeAt.copy(s.target).addScaledVector(s.from, s.distance).setY(s.target.y + s.height + lift * 18);
+          const toMoon = this.sky.copy(this.moon).setY(0).normalize();
+          s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
+        }
+        this.pace = 0.2 - lift * 0.12;
       }
       this.focus.copy(c);
       return;

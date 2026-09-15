@@ -112,12 +112,15 @@ export function sunDirection(azDeg: number, elDeg: number, out = new THREE.Vecto
   return out.set(-Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 }
 
+/** Where the moon hangs at night (azimuth, elevation in degrees). */
+export const MOON = { az: -38, el: 24 } as const;
+
 /** Where the light comes from for a time of day: the sun sinks into the north-west, then the moon takes over. */
 function lightAngles(dusk: number): [number, number] {
   if (params.sun) return [params.sun[0], params.sun[1]];
   if (dusk <= 1) return [THREE.MathUtils.lerp(52, 32, dusk), THREE.MathUtils.lerp(13, 3.2, dusk)];
   if (dusk <= 1.5) return [32, THREE.MathUtils.lerp(3.2, -2.5, (dusk - 1) / 0.5)];
-  return [-38, 24];
+  return [MOON.az, MOON.el];
 }
 
 /**
