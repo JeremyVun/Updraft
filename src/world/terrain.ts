@@ -19,15 +19,37 @@ const FIELD_TO = 172;
 const VERT = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
 uniform float uMirrorPass;
+uniform sampler2D uHeightTex;
+uniform vec4 uDomain;
 in vec3 aNode;
 out vec3 vWorld;
 out vec3 vNormal;
+
+/** The window's height bake where it has one (much cheaper than the height function), the function beyond it. */
+float groundHeight(vec2 q) {
+  vec2 uv = (q - uDomain.xy) * uDomain.zw;
+  if (any(lessThan(uv, vec2(0.003))) || any(greaterThan(uv, vec2(0.997)))) return worldHeight(q);
+#ifdef HEIGHT_FILTERABLE
+  return textureLod(uHeightTex, uv, 0.0).r;
+#else
+  vec2 size = vec2(textureSize(uHeightTex, 0));
+  vec2 t = uv * size - 0.5;
+  ivec2 i = ivec2(floor(t));
+  vec2 f = fract(t);
+  float a = texelFetch(uHeightTex, i, 0).r;
+  float b = texelFetch(uHeightTex, i + ivec2(1, 0), 0).r;
+  float c = texelFetch(uHeightTex, i + ivec2(0, 1), 0).r;
+  float d = texelFetch(uHeightTex, i + ivec2(1, 1), 0).r;
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+#endif
+}
+
 void main() {
   vec2 p = aNode.xy + position.xz * aNode.z;
   float e = aNode.z / ${SEGMENTS}.0;
-  float h = worldHeight(p);
-  float hx = worldHeight(p + vec2(e, 0.0));
-  float hz = worldHeight(p + vec2(0.0, e));
+  float h = groundHeight(p);
+  float hx = groundHeight(p + vec2(e, 0.0));
+  float hz = groundHeight(p + vec2(0.0, e));
   vNormal = normalize(vec3(h - hx, e, h - hz));
   float meadowTop = uMirrorPass * smoothstep(${GRASS_LINE.toFixed(2)}, ${(GRASS_LINE + 1.5).toFixed(2)}, h) * 1.1;
   vec3 world = vec3(p.x, h + meadowTop - position.y * (0.6 + aNode.z * 0.03), p.y);
@@ -49,10 +71,26 @@ uniform vec2 uBreeze;
 in vec3 vWorld;
 in vec3 vNormal;
 
+/** The land as the sea mirrors it: blurred and broken up by ripples, so flat meadow and sand colours are enough. */
+vec3 mirrorShade(vec3 n, vec2 xz, float h) {
+  float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h);
+  float life = lifeAt(xz);
+  vec3 meadow = mix(uGrassRoot, mix(uTipLush, vec3(0.22, 0.4, 0.09), pastureAt(xz)), 0.62);
+  vec3 alb = mix(uSand, meadow, grassy);
+  alb = mix(stillGrey(alb), alb, 0.45 + 0.55 * life);
+  alb = mix(alb, uRock * 0.9, smoothstep(0.42, 0.6, 1.0 - n.y));
+  float sun = groundAt(xz).w * cloudShadow(xz);
+  return applyFog(alb * (hemiLight(n) + uSunColor * max(dot(n, uSunDir), 0.0) * sun), vWorld);
+}
+
 void main() {
   vec3 n = normalize(vNormal);
   vec2 xz = vWorld.xz;
   float h = vWorld.y;
+  if (uMirrorPass > 0.5) {
+    gl_FragColor = vec4(mirrorShade(n, xz, h), 1.0);
+    return;
+  }
   float dist = length(vWorld - cameraPosition);
   float detail = 1.0 - smoothstep(60.0, 260.0, dist);
   float grain = mix(0.5, vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5, detail);
@@ -151,7 +189,7 @@ export class Terrain {
   private readonly camPos = new THREE.Vector3();
   private count = 0;
 
-  constructor(breeze: THREE.Vector2) {
+  constructor(breeze: THREE.Vector2, heightFilterable: boolean) {
     const template = leafTemplate(SEGMENTS);
     this.geo = new THREE.InstancedBufferGeometry();
     this.geo.index = template.index;
@@ -174,6 +212,7 @@ export class Terrain {
         uBreeze: { value: breeze },
       },
       side: THREE.DoubleSide,
+      defines: heightFilterable ? { HEIGHT_FILTERABLE: '' } : {},
     });
     this.mesh = new THREE.Mesh(this.geo, mat);
     this.mesh.frustumCulled = false;

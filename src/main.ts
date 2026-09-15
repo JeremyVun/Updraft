@@ -94,7 +94,7 @@ followWindow(...windowAim(), true);
 const life = new LifeField(renderer);
 const clouds = new CloudShadows(renderer);
 scene.add(createSky());
-const terrain = new Terrain(wind.breeze);
+const terrain = new Terrain(wind.breeze, bakes.filterable);
 scene.add(terrain.mesh);
 scene.add(water.mesh);
 scene.add(createRocks());

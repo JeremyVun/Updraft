@@ -132,11 +132,13 @@ export class GroundBakes {
   private readonly groundMat: THREE.ShaderMaterial;
   private readonly surfaceMat: THREE.ShaderMaterial;
   private reading = 0;
+  /** Whether the float height bake can be filtered linearly on this device. */
+  readonly filterable: boolean;
 
   constructor(private readonly renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);
-    const filterable = renderer.extensions.has('OES_texture_float_linear');
-    this.height = simTarget(RES, RES, THREE.FloatType, filterable ? THREE.LinearFilter : THREE.NearestFilter);
+    this.filterable = renderer.extensions.has('OES_texture_float_linear');
+    this.height = simTarget(RES, RES, THREE.FloatType, this.filterable ? THREE.LinearFilter : THREE.NearestFilter);
     this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain });
     this.groundMat = simMaterial(GROUND_FRAG, {
       uHeightTex: { value: this.height.texture },

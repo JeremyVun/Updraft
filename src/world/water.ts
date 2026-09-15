@@ -243,7 +243,7 @@ export class Water {
   private readonly shore: ShoreBake;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
-    this.reflection = new PlanarReflection(renderer, scene, 0.35);
+    this.reflection = new PlanarReflection(renderer, scene, 0.25);
     this.shore = new ShoreBake(renderer, height);
     surfUniforms.uShoreTex.value = this.shore.target.texture;
     const mat = new THREE.ShaderMaterial({
