@@ -55,7 +55,7 @@ void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
   float dist = length(cameraPosition - centre);
-  float bank = 0.65 + 0.45 * wave;
+  float bank = 0.8 + 0.22 * wave;
   float size = max(0.16 * bank, dist * 0.0015 * bank) * step(jitter, uPresence);
   float flap = sin(uTime * 18.0 + jitter * 30.0);
   vec2 corner = position.xy;

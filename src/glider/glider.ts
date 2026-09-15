@@ -64,6 +64,8 @@ function paperPlane(): THREE.BufferGeometry {
 }
 
 const SCALE = 0.85;
+/** How long a wingtip trail lingers in the air. */
+const TRAIL_SECONDS = 1.6;
 
 /** A paper glider carried by the wind. It glides forward, sinks slowly, rides gusts and updrafts, and never leaves the island for long. */
 export class Glider {
@@ -96,6 +98,12 @@ export class Glider {
   private readonly prev = new THREE.Vector3();
   private readonly tipL: Ribbon = { points: [], alpha: 0.35, width: 0.12 };
   private readonly tipR: Ribbon = { points: [], alpha: 0.35, width: 0.12 };
+  /** When each trail point was laid, so a fast plane's trail stays short instead of stringing back to where it was thrown. */
+  private readonly laid = new Map<Ribbon, number[]>([
+    [this.tipL, []],
+    [this.tipR, []],
+  ]);
+  private clock = 0;
   private readonly scratch = new THREE.Vector3();
 
   constructor(
@@ -164,6 +172,7 @@ export class Glider {
     this.yaw = Math.atan2(velocity.x, velocity.z);
     this.tipL.points.length = 0;
     this.tipR.points.length = 0;
+    for (const laid of this.laid.values()) laid.length = 0;
   }
 
   depart(heading: THREE.Vector3): void {
@@ -176,6 +185,7 @@ export class Glider {
   }
 
   update(dt: number, time: number): void {
+    this.clock = time;
     if (this.held) {
       this.placeHeld();
       return;
@@ -332,12 +342,21 @@ export class Glider {
   private updateTrail(trail: Ribbon, side: number, speed: number): void {
     const tip = this.scratch.set(side * 1.15 * SCALE, 0.16 * SCALE, -0.95 * SCALE).applyMatrix4(this.group.matrixWorld);
     const pts = trail.points;
+    const laid = this.laid.get(trail)!;
     const n = pts.length;
     if (n < 2 || pts[n - 2].distanceTo(tip) > 0.5) {
       pts.push(tip.clone());
-      if (pts.length > 56) pts.shift();
+      laid.push(this.clock);
+      if (pts.length > 56) {
+        pts.shift();
+        laid.shift();
+      }
     } else {
       pts[n - 1].copy(tip);
+    }
+    while (pts.length > 2 && this.clock - laid[0] > TRAIL_SECONDS) {
+      pts.shift();
+      laid.shift();
     }
     trail.alpha = 0.3 * Math.min(1, speed / 6) * (this.airborne ? 1 : 0.2);
   }
