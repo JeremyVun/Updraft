@@ -10,6 +10,7 @@ import { ROUTE } from './story/hills';
 import { takeCues } from './story/cues';
 import { Journey } from './story/journey';
 import { Fireflies } from './fx/fireflies';
+import { Rain } from './fx/rain';
 import { Boat } from './traveller/boat';
 import { Drawing } from './traveller/drawing';
 import { Traveller } from './traveller/traveller';
@@ -121,6 +122,8 @@ const drawing = new Drawing();
 scene.add(drawing.mesh);
 const fireflies = new Fireflies(wind);
 scene.add(fireflies.mesh);
+const rain = new Rain();
+scene.add(rain.mesh);
 const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage });
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
@@ -180,6 +183,7 @@ const soundState: SoundState = {
   night: 0,
   sea: 1,
   meadow: 0,
+  shower: 0,
   cues: [],
 };
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -243,7 +247,8 @@ function frame(now: number): void {
   wind.step(dt, time);
   life.update(dt);
   tree.life.value += (Math.min(1, life.at(TREE.x, TREE.z) * 1.15) - tree.life.value) * (1 - Math.exp(-dt * 0.8));
-  applyPalette(story.worldLife, params.dusk ?? story.dusk);
+  const shower = params.shower ?? story.shower;
+  applyPalette(story.worldLife, params.dusk ?? story.dusk, shower);
   if (bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.006) {
     bakedSun.copy(atmo.uniforms.uSunDir.value);
     bakes.bake(bakeInputs);
@@ -289,6 +294,7 @@ function frame(now: number): void {
   soundState.sea = 1 - THREE.MathUtils.smoothstep(inland, 20, 260);
   soundState.meadow = THREE.MathUtils.smoothstep(inland, 60, 200);
   soundState.cues = takeCues();
+  soundState.shower = shower;
   sound.update(dt, soundState);
 
   rig.update(dt, time, story.shot, story.pace);
@@ -301,6 +307,7 @@ function frame(now: number): void {
   walls.update(rig.camera);
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
+  rain.update(dt, shower, rig.camera, wind.breeze);
   water.update(rig.camera);
   post.render(time);
 

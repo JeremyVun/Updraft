@@ -67,6 +67,22 @@ const NIGHT: Palette = {
   fog: 0.0014,
 };
 
+/** A passing shower: the sun still out but veiled, the sky grey and bright, the haze thick. */
+function veil(p: Palette, shower: number): void {
+  if (shower <= 0) return;
+  const grey = (c: THREE.Color, k: number, lift: number) => {
+    const l = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+    c.lerp(tmp.setRGB(l, l, l * 1.04), k * shower).multiplyScalar(1 + lift * shower);
+  };
+  p.sun.multiplyScalar(1 - 0.4 * shower);
+  grey(p.zenith, 0.55, 0.1);
+  grey(p.horizon, 0.35, 0.08);
+  grey(p.horizonSun, 0.25, 0);
+  grey(p.ambient, 0.3, 0.12);
+  p.fog *= 1 + 1.4 * shower;
+}
+const tmp = new THREE.Color();
+
 const blank = (): Palette => ({
   sun: new THREE.Color(),
   zenith: new THREE.Color(),
@@ -106,9 +122,9 @@ function lightAngles(dusk: number): [number, number] {
 
 /**
  * Sets sky, light and haze from how alive the world is (0 still, 1 living) and the time of day
- * (`dusk`: 0 golden afternoon, 1 sunset, 1.5 last light, 2 night).
+ * (`dusk`: 0 golden afternoon, 1 sunset, 1.5 last light, 2 night), veiled by a passing `shower` (0..1).
  */
-export function applyPalette(life: number, dusk: number): void {
+export function applyPalette(life: number, dusk: number, shower = 0): void {
   const u = atmo.uniforms;
   const k = THREE.MathUtils.smootherstep(life, 0, 1);
   u.uWorldLife.value = k;
@@ -119,6 +135,8 @@ export function applyPalette(life: number, dusk: number): void {
     else if (dusk <= 1.5) p = mixInto(outMix, SUNSET, DUSK, (dusk - 1) / 0.5);
     else p = mixInto(outMix, DUSK, NIGHT, THREE.MathUtils.smoothstep(dusk, 1.5, 2));
   }
+  veil(p, shower);
+  u.uShower.value = shower;
   u.uSunColor.value.copy(p.sun);
   u.uSkyZenith.value.copy(p.zenith);
   u.uSkyHorizon.value.copy(p.horizon);

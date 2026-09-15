@@ -55,6 +55,9 @@ export class Journey {
   get focus(): THREE.Vector3 {
     return this.chapter.focus;
   }
+  get shower(): number {
+    return this.chapter.shower ?? 0;
+  }
   get rainbow(): number {
     return this.chapter.rainbow ?? 0;
   }

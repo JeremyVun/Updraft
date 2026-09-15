@@ -46,6 +46,8 @@ export const atmo = {
     uMirrorPass: { value: 0 },
     /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
     uRainbow: { value: 0 },
+    /** A passing shower, 0 dry to 1: wet sheen on the grass. */
+    uShower: { value: 0 },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },
@@ -105,6 +107,7 @@ uniform float uFogDensity;
 uniform float uNight;
 uniform float uWorldLife;
 uniform float uMirrorPass;
+uniform float uShower;
 uniform vec2 uCloudShift;
 uniform vec4 uDomain;
 uniform vec4 uGroundDomain;

@@ -27,6 +27,8 @@ const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)),
 
 const WAVE_SPEED = 85;
 const WAVE_REACH = 3600;
+/** The sun shower on the walk: it gathers, falls steadily, then drifts away (seconds). */
+const SHOWER = { gather: 10, fall: 30, clear: 16 };
 
 /**
  * The hills. The child steps ashore onto grey pasture; the player's first gust inland sends a wave of green
@@ -40,12 +42,14 @@ export class HillsChapter implements Chapter {
   readonly worldLife = 1;
   pace = 0.35;
   dusk = 0;
+  shower = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly focus = new THREE.Vector3();
   private play: Play = 'carry';
   private leg = 0;
   private beatStart = 0;
   private waveStart = 0;
+  private showerStart = -1;
   private holdUntil = 0;
   private duskTarget = 0;
   private now = 0;
@@ -122,6 +126,12 @@ export class HillsChapter implements Chapter {
     const progress = THREE.MathUtils.clamp((c.position.z - LANDING.y) / (SUMMIT.y - LANDING.y), 0, 1);
     this.duskTarget = Math.max(this.duskTarget, progress * progress * 0.92);
     this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    if (this.showerStart < 0 && this.beat === 'walk' && this.leg >= 3) this.showerStart = this.now;
+    if (this.showerStart >= 0) {
+      const t = this.now - this.showerStart;
+      const { gather, fall, clear } = SHOWER;
+      this.shower = t < gather ? THREE.MathUtils.smoothstep(t, 0, gather) : 1 - THREE.MathUtils.smoothstep(t, gather + fall, gather + fall + clear);
+    }
     const wave = life.regions.wave;
     if (wave.z >= 0) wave.z = Math.min(WAVE_REACH, wave.z + dt * WAVE_SPEED * Math.min(1, 0.3 + (this.now - this.waveStart) * 0.25));
 

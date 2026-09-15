@@ -237,6 +237,7 @@ uniform vec3 uSunColor;
 uniform vec3 uSkyAmbient;
 uniform vec3 uGroundBounce;
 uniform vec3 uGrassRoot;
+uniform float uShower;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vSideDir;
@@ -268,7 +269,8 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 4.0);
   vec3 trans = uSunColor * vTint * back * vT * vT * 0.9;
   vec3 H = normalize(uSunDir + V);
-  float spec = pow(max(dot(N, H), 0.0), 24.0) * (0.16 + 0.5 * flattened) * vT;
+  alb *= 1.0 - 0.14 * uShower;
+  float spec = pow(max(dot(N, H), 0.0), 24.0 + 40.0 * uShower) * (0.16 + 0.5 * flattened + 0.9 * uShower) * vT;
   vec3 ambient = mix(uGroundBounce, uSkyAmbient, N.y * 0.5 + 0.5);
 
   vec3 col = alb * ambient * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * vSun;

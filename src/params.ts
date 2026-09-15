@@ -29,6 +29,8 @@ export const params = {
   msaa: num('msaa'),
   /** Time of day override: 0 afternoon, 1 sunset, 2 night. */
   dusk: num('dusk'),
+  /** Shower override, 0 dry to 1. */
+  shower: num('shower'),
   /** Start later in the story: `crossing`, `hills` or `summit`. */
   chapter: q.get('chapter'),
 };

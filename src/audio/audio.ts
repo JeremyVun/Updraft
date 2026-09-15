@@ -28,6 +28,8 @@ export interface SoundState {
   sea: number;
   /** 1 out over the green hills, where skylarks sing. */
   meadow: number;
+  /** A passing shower, 0 dry to 1. */
+  shower: number;
   cues: Cue[];
 }
 
@@ -115,6 +117,8 @@ export class Soundscape {
   private activity = 0;
   private muted = false;
   private padFilter!: BiquadFilterNode;
+  private rainGain!: GainNode;
+  private patterGain!: GainNode;
   private nextCricket = 0;
   private nextOwl = 20;
   private nextLark = 8;
@@ -170,6 +174,8 @@ export class Soundscape {
 
     const [seaGain] = this.noiseLayer('lowpass', 380, 0.5, 0);
     this.seaGain = seaGain;
+    [this.rainGain] = this.noiseLayer('highpass', 2600, 0.5, 0.2);
+    [this.patterGain] = this.noiseLayer('bandpass', 900, 0.7, 0.3);
 
     this.padGain = ctx.createGain();
     this.padGain.gain.value = 0.0;
@@ -329,6 +335,8 @@ export class Soundscape {
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
     this.breezeGain.gain.setTargetAtTime(0.1 + s.breeze * 0.12, now, 0.5);
+    this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
+    this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
     this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea), now, 0.3);
     this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + g * 1100, now, tc);
@@ -361,7 +369,7 @@ export class Soundscape {
       this.owl(now + 0.1, Math.random() * 1.2 - 0.6);
       this.nextOwl = now + 25 + Math.random() * 30;
     }
-    if (s.meadow > 0.5 && s.night < 0.2 && now > this.nextLark) {
+    if (s.meadow > 0.5 && s.night < 0.2 && s.shower < 0.2 && now > this.nextLark) {
       this.skylark(now + 0.1, Math.random() * 1.4 - 0.7, 0.01 * s.meadow);
       this.nextLark = now + 6 + Math.random() * 10;
     }

@@ -37,6 +37,8 @@ export interface Chapter {
   /** Where the camera's attention is, for things like sound. */
   readonly focus: THREE.Vector3;
   readonly done: boolean;
+  /** A passing shower, 0 dry to 1. */
+  readonly shower?: number;
   /** How strongly a rainbow shows opposite the sun, 0..1. */
   readonly rainbow?: number;
   /** Where the gulls should circle, or null to leave them to their own coast. */
