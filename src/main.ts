@@ -138,7 +138,23 @@ const rain = new Rain();
 scene.add(rain.mesh);
 const starlings = new Murmuration();
 scene.add(starlings.mesh);
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage });
+/** The nearest rabbit or finch to a point, for the child to glance at as they pass. */
+function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3): boolean {
+  let best = radius * radius;
+  let found = false;
+  for (const set of [creatures, hillCreatures]) {
+    for (const animal of [...set.rabbits.state, ...set.songbirds.state]) {
+      const d = (animal.x - x) ** 2 + (animal.z - z) ** 2;
+      if (d < best) {
+        best = d;
+        out.set(animal.x, animal.y + 0.35, animal.z);
+        found = true;
+      }
+    }
+  }
+  return found;
+}
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, nearby: nearbyCreature });
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
 if (windDebug) scene.add(windDebug);

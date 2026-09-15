@@ -63,6 +63,9 @@ export class HillsChapter implements Chapter {
   private readonly horizon = new THREE.Vector3(20, 40, -1600);
   private readonly fwd = new THREE.Vector3();
   private readonly eyeAt = new THREE.Vector3();
+  private readonly watched = new THREE.Vector3();
+  private watchUntil = 0;
+  private nextLook = 0;
   private readonly moon = sunDirection(MOON.az, MOON.el);
 
   constructor(private readonly cast: Cast) {
@@ -165,6 +168,16 @@ export class HillsChapter implements Chapter {
     const t = this.target();
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 30 && this.leg < ROUTE.length - 1) this.leg++;
     const nearSummit = this.leg === ROUTE.length - 1 && Math.hypot(c.position.x - SUMMIT.x, c.position.z - SUMMIT.y) < 40;
+
+    if (time > this.nextLook) {
+      this.nextLook = time + 2;
+      if (this.cast.nearby(c.position.x, c.position.z, 9, this.watched)) this.watchUntil = time + 3.5;
+    }
+    if (time < this.watchUntil) {
+      c.lookAt = this.watched;
+      if (this.play === 'watch' && p.landed) this.fetch();
+      return;
+    }
 
     if (this.play === 'watch') {
       c.lookAt = p.position;

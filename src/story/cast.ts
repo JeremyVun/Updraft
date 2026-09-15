@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
@@ -21,6 +21,8 @@ export interface Cast {
   tree: Tree;
   drawing: Drawing;
   cottage: Cottage;
+  /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
+  nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }
 
 /** What a chapter tells the rest of the game each frame. */
