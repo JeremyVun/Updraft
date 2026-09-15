@@ -37,7 +37,7 @@ void main() {
   vec2 q = world * 0.02 - uBreeze * uTime * 0.02;
   float gust = fbm(q);
   float veer = (vnoise(q * 0.6 + 11.3) - 0.5) * 0.7;
-  vec2 target = normalize(dir + perp * veer) * base * (0.3 + 2.3 * gust * gust);
+  vec2 target = base > 1e-3 ? normalize(dir + perp * veer) * base * (0.3 + 2.3 * gust * gust) : vec2(0.0);
   v += (target - v) * (1.0 - exp(-uDt * uRelax));
 
   for (int i = 0; i < ${MAX_SPLATS}; i++) {

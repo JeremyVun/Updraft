@@ -1,17 +1,28 @@
 import * as THREE from 'three';
 import { params } from './params';
 
-const BASE_POS = new THREE.Vector3(3, 23, 70);
-const BASE_TARGET = new THREE.Vector3(-4, 4, -21);
 const MIN_HFOV = 64;
+/** The camera always looks roughly north, from a little east of south. */
+const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 
+export interface Shot {
+  /** The point the camera looks at. */
+  target: THREE.Vector3;
+  /** Horizontal distance from the target. */
+  distance: number;
+  /** Height above the target. */
+  height: number;
+}
+
+/** Glides between shots the story asks for, breathing gently, never cutting. */
 export class CameraRig {
   readonly camera = new THREE.PerspectiveCamera(38, 1, 0.5, 7000);
-  private readonly focus = new THREE.Vector3();
-  private readonly smoothFocus = new THREE.Vector3();
-  private readonly pos = new THREE.Vector3();
-  private readonly target = new THREE.Vector3();
   private readonly fixed: boolean;
+  private readonly target = new THREE.Vector3(-4, 4, -21);
+  private distance = 92;
+  private height = 19;
+  private readonly look = new THREE.Vector3();
+  private readonly lift = new THREE.Vector3();
 
   constructor() {
     this.fixed = params.cam !== null;
@@ -20,8 +31,7 @@ export class CameraRig {
       this.camera.position.set(x, y, z);
       this.camera.lookAt(tx ?? 0, ty ?? 0, tz ?? 0);
     } else {
-      this.camera.position.copy(BASE_POS);
-      this.camera.lookAt(BASE_TARGET);
+      this.place(0);
     }
   }
 
@@ -34,24 +44,32 @@ export class CameraRig {
     this.camera.updateProjectionMatrix();
   }
 
-  /** Drifts gently and leans toward the point of interest, rising and easing back when it climbs, so it stays in frame. */
-  update(dt: number, time: number, interest: THREE.Vector3 | null): void {
+  /** Jumps straight to a shot (used once at the start). */
+  cut(shot: Shot): void {
     if (this.fixed) return;
-    this.focus.set(0, 0, 0);
-    if (interest) {
-      this.focus.set(
-        THREE.MathUtils.clamp((interest.x - BASE_TARGET.x) * 0.2, -12, 12),
-        Math.min(Math.max(0, interest.y - 12) * 0.45, 10),
-        THREE.MathUtils.clamp((interest.z - BASE_TARGET.z) * 0.12, -8, 8),
-      );
-    }
-    this.smoothFocus.lerp(this.focus, 1 - Math.exp(-dt * 0.7));
-    const breathe = Math.sin(time * 0.11) * 1.2;
-    const sway = Math.sin(time * 0.07 + 1.3) * 2.0;
-    const climb = this.smoothFocus.y;
-    this.pos.set(BASE_POS.x + this.smoothFocus.x + sway, BASE_POS.y + climb * 0.7 + breathe, BASE_POS.z + this.smoothFocus.z + climb * 0.9);
-    this.target.set(BASE_TARGET.x + this.smoothFocus.x, BASE_TARGET.y + climb, BASE_TARGET.z + this.smoothFocus.z);
-    this.camera.position.copy(this.pos);
-    this.camera.lookAt(this.target);
+    this.target.copy(shot.target);
+    this.distance = shot.distance;
+    this.height = shot.height;
+    this.place(0);
+  }
+
+  update(dt: number, time: number, shot: Shot, pace = 0.6): void {
+    if (this.fixed) return;
+    const k = 1 - Math.exp(-dt * pace);
+    this.target.lerp(shot.target, k);
+    this.distance += (shot.distance - this.distance) * k * 0.8;
+    this.height += (shot.height - this.height) * k * 0.8;
+    this.place(time);
+  }
+
+  private place(time: number): void {
+    const breathe = Math.sin(time * 0.11) * 0.012 * this.distance;
+    const sway = Math.sin(time * 0.07 + 1.3) * 0.02 * this.distance;
+    this.camera.position
+      .copy(this.target)
+      .addScaledVector(FROM, this.distance)
+      .add(this.lift.set(sway, this.height + breathe, 0));
+    this.look.copy(this.target);
+    this.camera.lookAt(this.look);
   }
 }

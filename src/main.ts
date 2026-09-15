@@ -4,6 +4,8 @@ import { CameraRig } from './camera';
 import { Petals } from './fx/petals';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
+import { IslandChapter } from './story/island';
+import { Traveller } from './traveller/traveller';
 import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
@@ -78,8 +80,12 @@ const petals = new Petals(renderer);
 scene.add(petals.mesh);
 const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
-const glider = params.noGlider ? null : new Glider(wind, tree.canopy);
-glider?.objects.forEach((o) => scene.add(o));
+const glider = new Glider(wind, tree.canopy);
+glider.objects.forEach((o) => scene.add(o));
+const child = new Traveller(wind);
+child.objects.forEach((o) => scene.add(o));
+const story = new IslandChapter(child, glider, wind, input);
+rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
 if (windDebug) scene.add(windDebug);
 
@@ -161,11 +167,13 @@ function frame(now: number): void {
 
   renderer.info.reset();
   const veer = Math.sin(time * 0.021) * 0.35;
-  wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(2.6);
+  wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(2.6 * story.breeze);
 
   input.update(dt, rig.camera, wind);
-  if (input.present) glider?.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.down ? input.charge : 0, dt);
-  glider?.update(dt, time);
+  if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.down ? input.charge : 0, dt);
+  story.update(dt, time);
+  child.update(dt);
+  glider.update(dt, time);
   wind.step(dt, time);
 
   const u = atmo.uniforms;
@@ -188,10 +196,10 @@ function frame(now: number): void {
   soundState.overLand = heightAt(input.world.x, input.world.z) > 0.5;
   const b = wind.sample(-6, -14, breezeSample);
   soundState.breeze = Math.min(1, Math.hypot(b.x, b.z) / 6);
-  soundState.gliderLift = glider?.lift ?? 0;
+  soundState.gliderLift = glider.lift;
   sound.update(dt, soundState);
 
-  rig.update(dt, time, glider?.position ?? null);
+  rig.update(dt, time, story.shot, story.beat === 'still' ? 0.8 : 0.45);
   rig.camera.updateMatrixWorld();
   followWindow(...windowAim());
   const cam = rig.camera.position;
@@ -226,5 +234,5 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound };
+if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story };
 requestAnimationFrame(frame);
