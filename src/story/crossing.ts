@@ -35,7 +35,7 @@ export class CrossingChapter implements Chapter {
   private readonly ahead = new THREE.Vector3();
   private readonly from = new THREE.Vector3();
   private time = 0;
-  private facingBack = 1;
+  private facingBack = 0;
   private nextWave = 3.5;
 
   constructor(private readonly cast: Cast) {
@@ -51,7 +51,7 @@ export class CrossingChapter implements Chapter {
     this.time += dt;
     const { child, boat, plane } = this.cast;
     const farewell = this.time < FAREWELL;
-    this.facingBack = farewell ? 1 : Math.max(0, this.facingBack - dt / 1.6);
+    this.facingBack = farewell ? Math.min(1, this.facingBack + dt / 2.2) : Math.max(0, this.facingBack - dt / 1.6);
     const turn = this.facingBack * this.facingBack * (3 - 2 * this.facingBack);
     child.ride(boat.seat(this.seat), boat.yaw + Math.PI * turn);
     plane.hold(child.handPosition(this.hand), child.yaw);
