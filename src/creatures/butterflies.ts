@@ -97,7 +97,7 @@ void main() {
       if (!top) alb = mix(alb, vec3(1.0, 0.55, 0.2), (1.0 - smoothstep(0.03, 0.05, abs(shape - 0.82))) * step(hind, fore) * 0.8);
     }
     alb *= 1.0 - veins;
-    thin = 1.0;
+    thin = 0.7;
   }
   vec3 col = shadeCreature(alb, N, vWorld, 1.0, 0.3, thin, 0.6);
   gl_FragColor = vec4(applyFog(col, vWorld), alpha);
@@ -178,10 +178,7 @@ export class Butterflies {
     this.mesh.frustumCulled = false;
   }
 
-  get count(): number {
-    return this.list.length;
-  }
-
+  /** Adds a butterfly of `kind` (0 white, 1 pale yellow, 2 blue) that keeps to `patch`. */
   add(patch: FlowerPatch, kind: number, seed: number): void {
     if (this.list.length >= this.instances.capacity) return;
     const rand = mulberry32(seed);
@@ -304,7 +301,7 @@ export class Butterflies {
     const want = b.lift - above;
     b.vx += (dx / Math.max(d, 1e-3)) * pull + (rand() - 0.5) * 1.3;
     b.vz += (dz / Math.max(d, 1e-3)) * pull + (rand() - 0.5) * 1.3;
-    b.vy += 0.55 + THREE.MathUtils.clamp(want, -0.8, 1) * 0.5 + (rand() - 0.5) * 0.4;
+    b.vy += 0.55 + THREE.MathUtils.clamp(want, -1.6, 1) * 0.5 + (rand() - 0.5) * 0.4;
   }
 
   private decide(b: Butterfly, top: number): void {

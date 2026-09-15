@@ -27,6 +27,8 @@ export interface Habitat {
   readonly perches: readonly Perch[];
   /** Base of the tree the perches belong to; they sway with it. */
   readonly treeBase: THREE.Vector3;
+  /** Leafy spheres that flying creatures keep clear of. */
+  readonly canopy: readonly Canopy[];
 }
 
 const lushNoise = createNoise2D(5);
@@ -58,8 +60,8 @@ function canopyPerches(canopy: readonly Canopy[]): Perch[] {
   const p = new THREE.Vector3();
   canopy.forEach((c, ci) => {
     for (let tries = 0, made = 0; tries < 60 && made < 5; tries++) {
-      dir.set(rand() * 2 - 1, 0.35 + rand() * 0.65, rand() * 2 - 1).normalize();
-      p.copy(c.centre).addScaledVector(dir, c.radius * 0.92);
+      dir.set(rand() * 2 - 1, 0.5 + rand() * 0.8, rand() * 2 - 1).normalize();
+      p.copy(c.centre).addScaledVector(dir, c.radius * 0.98);
       const buried = canopy.some((o, oi) => oi !== ci && p.distanceTo(o.centre) < o.radius * 0.9);
       if (buried) continue;
       perches.push({ x: p.x, y: p.y, z: p.z, yaw: Math.atan2(dir.x, dir.z), swaySeed: (ci / canopy.length) * 6 });
@@ -78,5 +80,6 @@ export function islandHabitat(canopy: readonly Canopy[]): Habitat {
     flowers: FLOWER_PATCHES,
     perches: canopyPerches(canopy),
     treeBase: new THREE.Vector3(TREE.x, heightAt(TREE.x, TREE.z), TREE.z),
+    canopy,
   };
 }

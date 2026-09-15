@@ -215,6 +215,8 @@ function gullGeometry(): THREE.BufferGeometry {
 interface Gull {
   rand: Rng;
   seed: number;
+  homeX: number;
+  homeZ: number;
   x: number;
   y: number;
   z: number;
@@ -247,7 +249,6 @@ export class Gulls {
   readonly mesh: THREE.Mesh;
   private readonly instances: Instances;
   private readonly list: Gull[] = [];
-  private home = { x: 0, z: 0, radius: 50 };
 
   constructor(
     private readonly habitat: Habitat,
@@ -270,13 +271,9 @@ export class Gulls {
     this.mesh.frustumCulled = false;
   }
 
-  get count(): number {
-    return this.list.length;
-  }
-
+  /** Adds a gull soaring over a region centred on (x, z). */
   add(x: number, z: number, radius: number, seed: number): void {
     if (this.list.length >= this.instances.capacity) return;
-    this.home = { x, z, radius };
     const rand = mulberry32(seed);
     const orbit = rand() * Math.PI * 2;
     const orbitRadius = range(rand, 0.45, 1) * radius;
@@ -284,10 +281,12 @@ export class Gulls {
     this.list.push({
       rand,
       seed: rand(),
+      homeX: x,
+      homeZ: z,
       x: x + Math.cos(orbit) * orbitRadius,
       y: range(rand, 18, 28),
       z: z + Math.sin(orbit) * orbitRadius,
-      yaw: orbit + orbitDir * Math.PI * 0.5,
+      yaw: Math.atan2(-Math.sin(orbit) * orbitDir, Math.cos(orbit) * orbitDir),
       speed: range(rand, 7, 9),
       climb: 0,
       bank: 0,
@@ -324,8 +323,8 @@ export class Gulls {
       const inColumn = g.thermal * (1 - THREE.MathUtils.smoothstep(toUp, 20, 34));
 
       g.orbit += (g.orbitDir * g.speed * dt) / g.orbitRadius;
-      let tx = this.home.x + Math.cos(g.orbit) * g.orbitRadius + Math.sin(time * 0.05 + g.seed * 9) * 12;
-      let tz = this.home.z + Math.sin(g.orbit) * g.orbitRadius + Math.cos(time * 0.04 + g.seed * 7) * 12;
+      let tx = g.homeX + Math.cos(g.orbit) * g.orbitRadius + Math.sin(time * 0.05 + g.seed * 9) * 12;
+      let tz = g.homeZ + Math.sin(g.orbit) * g.orbitRadius + Math.cos(time * 0.04 + g.seed * 7) * 12;
       if (g.thermal > 0.05) {
         const ring = 11 + g.seed * 7;
         const a = Math.atan2(g.z - up.z, g.x - up.x) + g.orbitDir * 0.7;
@@ -334,20 +333,36 @@ export class Gulls {
         tx += (cx - tx) * g.thermal;
         tz += (cz - tz) * g.thermal;
       }
-      const want = Math.atan2(tx - g.x, tz - g.z);
-      const turnRate = 0.32 + g.thermal * 0.9;
+      const toTarget = Math.max(Math.hypot(tx - g.x, tz - g.z), 1e-3);
+      let steerX = (tx - g.x) / toTarget;
+      let steerZ = (tz - g.z) / toTarget;
+      let avoid = 0;
+      for (const c of this.habitat.canopy) {
+        const dx = g.x - c.centre.x;
+        const dz = g.z - c.centre.z;
+        const d = Math.max(Math.hypot(dx, dz), 1e-3);
+        const reach = c.radius + 12;
+        if (d < reach && g.y < c.centre.y + c.radius + 3) {
+          const k = (1 - d / reach) * 4;
+          steerX += (dx / d) * k;
+          steerZ += (dz / d) * k;
+          avoid = Math.max(avoid, k);
+        }
+      }
+      const want = Math.atan2(steerX, steerZ);
+      const turnRate = 0.32 + g.thermal * 0.9 + Math.min(avoid, 1) * 0.9;
       const diff = wrapAngle(want - g.yaw);
       const turn = THREE.MathUtils.clamp(diff * 1.2, -turnRate, turnRate);
       g.yaw += turn * dt;
 
-      const brush = input.present && input.gust > 3 ? screenBrush(s.camera, here.set(g.x, g.y, g.z), input.prevNdc, input.ndc, 0.12) : 0;
+      const brush = input.present && input.gust > 3 ? screenBrush(s.camera, here.set(g.x, g.y, g.z), input.prevNdc, input.ndc, 0.16) : 0;
       const windSpeed = Math.hypot(w.x, w.z);
       const gusty = w.energy + Math.max(0, windSpeed - 6) * 0.06;
       if (brush > 0) {
-        const k = 1 - Math.exp(-dt * 8 * brush);
-        g.pushX += (input.gustDir.x * input.gust * 0.8 - g.pushX) * k;
-        g.pushZ += (input.gustDir.y * input.gust * 0.8 - g.pushZ) * k;
-        g.wobble += brush * input.gust * 0.05;
+        const k = 1 - Math.exp(-dt * 16 * brush);
+        g.pushX += (input.gustDir.x * input.gust * 0.9 - g.pushX) * k;
+        g.pushZ += (input.gustDir.y * input.gust * 0.9 - g.pushZ) * k;
+        g.wobble += brush * input.gust * 0.08;
         g.flapping = Math.max(g.flapping, 1.4);
       }
       if (gusty > 0.15) {
@@ -357,16 +372,17 @@ export class Gulls {
       }
       g.pushX *= Math.exp(-dt * 0.6);
       g.pushZ *= Math.exp(-dt * 0.6);
-      g.wobble *= Math.exp(-dt * 1.5);
+      g.wobble = Math.min(g.wobble, 1.4) * Math.exp(-dt * 1.5);
 
       const ground = Math.max(this.habitat.ground(g.x, g.z), 0);
       const cruise = g.altitude + Math.sin(time * 0.07 + g.seed * 11) * 4;
       const lift = w.lift * 1.2 + inColumn * (1.4 + up.strength * 2.2);
-      const target = Math.max(cruise, ground + 12);
-      let vy = THREE.MathUtils.clamp((target - g.y) * 0.25, -1.4, 1.2);
+      const floor = Math.max(ground + 12, this.clearance(g.x, g.z, ground + 12));
+      const target = Math.max(cruise, floor);
+      let vy = THREE.MathUtils.clamp((target - g.y) * 0.25, -1.4, g.y < floor ? 3 : 1.2);
       if (lift > 0.1) vy = Math.max(vy, lift);
       if (g.y > 44) vy = Math.min(vy, (44 - g.y) * 0.5);
-      if (inColumn > 0.1 && here.set(g.x, g.y, g.z).project(s.camera).y > 0.6) vy = Math.min(vy, 0);
+      if (inColumn > 0.1 && g.y > floor && here.set(g.x, g.y, g.z).project(s.camera).y > 0.6) vy = Math.min(vy, 0);
       g.climb = ease(g.climb, vy, 1.5, dt);
 
       g.nextFlap -= dt;
@@ -414,6 +430,16 @@ export class Gulls {
       this.instances.set(2, i, inner, outer, g.sweep, g.headYaw);
     });
     this.instances.commit(this.list.length);
+  }
+
+  /** Raises a flight height so a gull climbs over the tree's crown well before reaching it. */
+  private clearance(x: number, z: number, height: number): number {
+    let y = height;
+    for (const c of this.habitat.canopy) {
+      const near = 1 - THREE.MathUtils.smoothstep(Math.hypot(x - c.centre.x, z - c.centre.z), c.radius + 3, c.radius + 16);
+      if (near > 0) y = Math.max(y, height + (c.centre.y + c.radius + 4 - height) * near);
+    }
+    return y;
   }
 
   get state(): { x: number; y: number; z: number; thermal: number }[] {

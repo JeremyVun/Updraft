@@ -284,6 +284,7 @@ export class Songbirds {
   private readonly flocks: Flock[] = [];
   private readonly birds: Bird[] = [];
   private readonly taken = new Set<Perch>();
+  private readonly eye = new THREE.Vector3();
 
   constructor(
     private readonly habitat: Habitat,
@@ -302,10 +303,6 @@ export class Songbirds {
     });
     this.mesh = new THREE.Mesh(this.instances.geometry, material);
     this.mesh.frustumCulled = false;
-  }
-
-  get count(): number {
-    return this.birds.length;
   }
 
   /** Adds a flock of `size` birds foraging around (x, z) and ranging over `radius`. */
@@ -384,6 +381,7 @@ export class Songbirds {
   }
 
   update(dt: number, time: number, s: Stimuli): void {
+    this.eye.copy(s.camera.position);
     for (const flock of this.flocks) {
       if (flock.mode !== 'flight') {
         const threat = this.threat(flock, s);
@@ -394,8 +392,7 @@ export class Songbirds {
         else if (flock.nextChirp <= 0) {
           flock.nextChirp = range(flock.rand, 9, 26);
           const b = flock.birds[Math.floor(flock.rand() * flock.birds.length)];
-          b.headGoal = 0;
-          b.next = Math.max(b.next, 0.4);
+          b.tail.velocity += 9;
           scratch.set(b.x, b.y, b.z);
           s.voices.cheep(screenPan(s.camera, scratch), 0.6 / (1 + scratch.distanceTo(s.camera.position) / 45));
         }
@@ -497,9 +494,15 @@ export class Songbirds {
     });
   }
 
+  /** A free perch away from the disturbance, preferring the side of the canopy the player is looking at. */
   private freePerch(rand: Rng, threat: { x: number; z: number } | null): Perch | null {
     const free = this.habitat.perches.filter((p) => !this.taken.has(p) && (!threat || Math.hypot(p.x - threat.x, p.z - threat.z) > 8));
-    return free.length ? free[Math.floor(rand() * free.length)] : null;
+    const eye = this.eye;
+    const base = this.habitat.treeBase;
+    const toEye = Math.atan2(eye.x - base.x, eye.z - base.z);
+    const seen = free.filter((p) => Math.cos(p.yaw - toEye) > 0.3);
+    const pool = seen.length ? seen : free;
+    return pool.length ? pool[Math.floor(rand() * pool.length)] : null;
   }
 
   /** Somewhere open in the flock's range, away from the disturbance, preferring short grass where they can be seen. */
@@ -683,7 +686,7 @@ export class Songbirds {
     inst.set(0, i, b.x, b.y, b.z, b.yaw);
     inst.set(1, i, b.pitch, b.roll, b.headYaw, b.headPitch);
     inst.set(2, i, b.flap, b.fold, b.tail.value, b.squash.value);
-    inst.set(3, i, b.sway, b.perch?.swaySeed ?? b.destPerch?.swaySeed ?? 0, ground * 3.6 + (b.mode === 'perch' ? 1.5 : 0), air);
+    inst.set(3, i, b.sway, b.perch?.swaySeed ?? b.destPerch?.swaySeed ?? 0, ground * 3.6 + (b.mode === 'perch' ? 2 : 0), air);
     inst.set(4, i, b.back.r, b.back.g, b.back.b, b.cap);
     inst.set(5, i, b.breast.r, b.breast.g, b.breast.b, b.puff);
   }

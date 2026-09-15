@@ -280,10 +280,6 @@ export class Rabbits {
     this.mesh.frustumCulled = false;
   }
 
-  get count(): number {
-    return this.list.length;
-  }
-
   /** Adds a rabbit living around (x, z); returns false if there is no meadow nearby. */
   add(x: number, z: number, seed: number, white = false): boolean {
     if (this.list.length >= this.instances.capacity) return false;
