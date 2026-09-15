@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import { heightAt } from '../world/island';
 
 const LENGTH = 4.8;
@@ -162,10 +163,15 @@ export class Boat {
   private readonly sailMat: THREE.ShaderMaterial;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  /** Foam left on the water behind the hull. */
+  private readonly wake = new RibbonBatch(90, '#eef0ef', 0.5);
+  private readonly wakeTrail: Ribbon = { points: [], alpha: 0, width: 2.8 };
+  private readonly stern = new THREE.Vector3();
   private roll = 0;
   private pitch = 0;
   private boom = 0;
   private time = 0;
+  private fade = 0;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -195,7 +201,7 @@ export class Boat {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.group];
+    return [this.group, this.wake.mesh];
   }
 
   beach(x: number, z: number, yaw: number): void {
@@ -259,6 +265,28 @@ export class Boat {
     this.sailMat.uniforms.uFill.value += ((relX >= 0 ? 1 : -1) * (0.15 + fill * 0.75) - this.sailMat.uniforms.uFill.value) * (1 - Math.exp(-dt * 3));
     this.sailMat.uniforms.uFlutter.value = 0.25 + (1 - fill) * 0.8;
     this.pose(dt);
+    this.updateWake(dt);
+  }
+
+  /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
+  private updateWake(dt: number): void {
+    const pts = this.wakeTrail.points;
+    const moving = this.afloat && !this.grounded && this.speed > 0.6;
+    this.stern.set(this.position.x - Math.sin(this.yaw) * 1.5, 0.05, this.position.z - Math.cos(this.yaw) * 1.5);
+    const n = pts.length;
+    if (moving && (n < 2 || pts[n - 2].distanceTo(this.stern) > 1.6)) {
+      pts.push(this.stern.clone());
+      if (pts.length > 26) pts.shift();
+    } else if (n > 0) {
+      pts[n - 1].copy(this.stern);
+    }
+    if (!moving && pts.length > 1 && this.fade > 0.5) {
+      pts.shift();
+      this.fade = 0;
+    }
+    this.fade += dt;
+    this.wakeTrail.alpha = moving ? Math.min(0.3, this.speed * 0.035) : 0.1;
+    this.wake.update([this.wakeTrail]);
   }
 
   private pose(_dt: number): void {
