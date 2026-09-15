@@ -17,12 +17,20 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SURF_GLSL}
 uniform sampler2D uRipple;
+uniform sampler2D uMirror;
+uniform mat4 uMirrorMatrix;
 uniform vec2 uBreeze;
 uniform vec3 uDeep;
 uniform vec3 uAbsorb;
 uniform vec3 uSand;
 uniform vec3 uWetSand;
 in vec3 vWorld;
+
+/** The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. */
+vec3 mirrored(vec3 R, float lod) {
+  vec4 p = uMirrorMatrix * vec4(vWorld + R * 48.0, 1.0);
+  return textureLod(uMirror, p.xy / p.w, lod).rgb;
+}
 
 /** Ripple slopes carried along by the wind; two phases cross-fade so the drift never stretches the pattern. */
 vec3 driftingRipples(vec2 p, vec2 drift, float period) {
@@ -137,14 +145,17 @@ void main() {
   float a0 = 0.05 + 0.04 * rough + 0.05 * storm;
   float a1 = 0.035 + 0.06 * rough + 0.1 * storm;
   float a2 = 0.045 + 0.08 * rough + 0.16 * storm;
-  vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2;
-  float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2;
+  vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
+  vec3 swell = vec3(sw.rg * 2.0 - 1.0, max(sw.b - dot(sw.rg * 2.0 - 1.0, sw.rg * 2.0 - 1.0), 0.0));
+  const float A_SWELL = 0.07;
+  vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2 + swell.xy * A_SWELL;
+  float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
   if (offshore < 40.0) {
     surf = surfWaves(xz, offshore, depth, surfBlur, fp);
-    swellAmp = 0.16 * smoothstep(4.5, 1.6, depth) * smoothstep(0.0, 1.5, offshore) * smoothstep(17.0, 5.0, offshore);
+    swellAmp = 0.13 * smoothstep(4.5, 1.6, depth) * smoothstep(0.0, 1.5, offshore) * smoothstep(17.0, 5.0, offshore);
     vec2 toSea = -vec2(shoreDistance(xz + vec2(0.5, 0.0)) + offshore, shoreDistance(xz + vec2(0.0, 0.5)) + offshore) * 2.0;
     slope += toSea * surf.z * swellAmp;
   }
@@ -155,9 +166,11 @@ void main() {
 
   float nv = max(dot(N, V), 0.02);
   vec3 R = reflect(-V, N);
-  R.y = abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv);
-  vec3 refl = mirrored(vWorld, R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0));
-  refl = mix(skyColor(R), refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.3 * rough - 0.25 * storm);
+  R = normalize(vec3(R.x, abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv), R.z));
+  vec3 sky = skyColor(R);
+  // Capped just above the open sky: the mirrored sun disc would bloom, and the glitter draws the sun instead.
+  vec3 refl = min(mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0)), sky * 1.25 + 0.1);
+  refl = mix(sky, refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.3 * rough - 0.25 * storm);
   float roughness = sqrt(sqrt(alpha2));
   float F = 0.02 + (max(1.0 - roughness * 1.4, 0.02) - 0.02) * pow(1.0 - nv, 5.0);
 
@@ -175,15 +188,15 @@ void main() {
     float ripples = sin(dot(bedXZ, vec2(0.9, 0.45)) * 2.2 + vnoise(bedXZ * 0.3) * 6.0) * 0.5 + 0.5;
     vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
     vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
-    float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.06 + 3.1) * 0.75 + vnoise(bedXZ * 0.21) * 0.25) * smoothstep(0.9, 2.2, bedDepth);
-    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.7);
+    float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
+    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.55 * smoothstep(0.9, 2.0, bedDepth) * smoothstep(5.0, 3.0, bedDepth));
 
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
     float sunDown = max(-sunIn.y, 0.2);
     float sunVis = cloudShadow(bedXZ) * groundAt(bedXZ).w;
-    float light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.5);
-    light *= smoothstep(180.0, 40.0, dist);
-    vec3 sunBed = uSunColor * max(uSunDir.y, 0.0) * 0.8 * exp(-uAbsorb * bedDepth / sunDown) * sunVis * (0.7 + 2.2 * light);
+    float light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
+    light *= smoothstep(220.0, 60.0, dist);
+    vec3 sunBed = uSunColor * max(uSunDir.y, 0.0) * 0.8 * exp(-uAbsorb * bedDepth / sunDown) * sunVis * (0.6 + 4.0 * light);
     vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
     vec3 seen = bed * (sunBed + skyBed) * exp(-uAbsorb * path);
     body = mix(body, seen, exp(-path * 0.2) * smoothstep(9.0, 6.0, bedDepth));
@@ -198,12 +211,12 @@ void main() {
   float nl = max(dot(N, L), 0.0);
   float fh = 0.02 + 0.98 * pow(1.0 - max(dot(V, H), 0.0), 5.0);
   float vis = smithVis(nv, nl, alpha2) * nl * fh;
-  float facet = min(ggx(max(dot(N, H), 0.0), alpha2) * vis, 12.0);
+  float facet = min(ggx(max(dot(N, H), 0.0), alpha2) * vis, 5.0);
   float tan2 = (1.0 - H.y * H.y) / max(H.y * H.y, 1e-4);
   float glitter = exp(-tan2 / (0.008 + unresolved));
-  float resolved = smoothstep(0.7, 0.1, footprint);
-  float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * resolved);
-  vec3 sun = uSunColor * (facet * 0.12 + glitter * vis * mix(0.3, 0.08, resolved) + sparkle) * sh;
+  float crisp = smoothstep(0.7, 0.1, footprint);
+  float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
+  vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 
   vec3 col = mix(body, refl, F) + sun;
 
@@ -222,7 +235,6 @@ export class Water {
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2) {
     this.reflection = new PlanarReflection(renderer, scene, 0.35);
-    surfUniforms.uMirrorMatrix.value = this.reflection.matrix;
     scene.add(createCanopyProxy());
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
@@ -231,9 +243,12 @@ export class Water {
         ...atmo.uniforms,
         ...surfUniforms,
         uRipple: { value: rippleTexture() },
+        uMirror: { value: this.reflection.target.texture },
+        uMirrorMatrix: { value: this.reflection.matrix },
         uBreeze: { value: breeze },
         uDeep: { value: new THREE.Color('#0d4a66') },
         uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },
+        // The beach's sand (terrain.ts), so the seabed meets it at the waterline without a seam.
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
       },
@@ -246,9 +261,6 @@ export class Water {
 
   /** Renders the mirror image for this frame; call after the camera has moved, before the scene is drawn. */
   update(camera: THREE.PerspectiveCamera): void {
-    // The beach reads the mirror too, so it must not while it is being drawn into it.
-    surfUniforms.uMirror.value = null;
     this.reflection.render(camera);
-    surfUniforms.uMirror.value = this.reflection.target.texture;
   }
 }

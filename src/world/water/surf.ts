@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { bakeShoreDistance } from './shore';
 import { laceTexture } from './textures';
 
@@ -6,8 +5,6 @@ import { laceTexture } from './textures';
 export const surfUniforms = {
   uLace: { value: laceTexture() },
   uShoreTex: { value: bakeShoreDistance() },
-  uMirror: { value: null as THREE.Texture | null },
-  uMirrorMatrix: { value: new THREE.Matrix4() },
 };
 
 /**
@@ -17,8 +14,6 @@ export const surfUniforms = {
 export const SURF_GLSL = /* glsl */ `
 uniform sampler2D uLace;
 uniform sampler2D uShoreTex;
-uniform sampler2D uMirror;
-uniform mat4 uMirrorMatrix;
 
 const float SURF_PERIOD = 7.5;
 const float SURF_UP = 0.3;
@@ -34,12 +29,6 @@ struct Footprint {
 
 Footprint footprintOf(vec2 xz) {
   return Footprint(dFdx(xz), dFdy(xz));
-}
-
-/** The world mirrored in the water, seen along reflected ray R from wpos; nearby content is taken ~48 units out. */
-vec3 mirrored(vec3 wpos, vec3 R, float lod) {
-  vec4 p = uMirrorMatrix * vec4(wpos + R * 48.0, 1.0);
-  return min(textureLod(uMirror, p.xy / p.w, lod).rgb, vec3(3.0));
 }
 
 /** Signed distance to the waterline: positive inland, negative out to sea. */
@@ -121,15 +110,14 @@ vec3 surfWaves(vec2 xz, float offshore, float depth, float aa, Footprint fp) {
   float cycle = surfCycle(xz);
   float phase = cycle + offshore / BORE_SPACING;
   float s = fract(phase);
-  const float FACE = 0.12;
-  float t = clamp((s - 1.0 + FACE) / FACE, 0.0, 1.0);
-  float back = exp(-3.0 * s);
-  float height = back + (1.0 - exp(-3.0)) * t * t * (3.0 - 2.0 * t);
-  float slope = (-3.0 * back + (1.0 - exp(-3.0)) * 6.0 * t * (1.0 - t) / FACE) / BORE_SPACING;
+  float u = s < 0.5 ? s : s - 1.0;
+  float width = u < 0.0 ? 0.07 : 0.2;
+  float height = exp(-u * u / (width * width));
+  float slope = -2.0 * u / (width * width) * height / BORE_SPACING;
 
-  float wave = floor(phase + 0.1);
-  float breaking = smoothstep(1.9, 0.5, depth) * smoothstep(0.2, 0.6, vnoise(xz * 0.045 + wave * 3.1));
-  float trail = s > 0.9 ? smoothstep(0.94 - aa, 0.955, s) : exp(-s * 4.0);
+  float wave = floor(phase + 0.5);
+  float breaking = smoothstep(1.9, 0.5, depth) * smoothstep(0.3, 0.62, vnoise(xz * 0.09 + wave * 3.1));
+  float trail = u < 0.0 ? smoothstep(-0.05 - aa, -0.03, u) : exp(-u * 5.0);
   float wash = smoothstep(1.4, 0.0, offshore) * exp(-fract(cycle) * 3.0) * 0.6 * smoothstep(0.2, 0.55, vnoise(xz * 0.07 + floor(cycle) * 1.7));
   float foam = foamLace(max(breaking * trail, wash), xz + hash12(vec2(wave, 4.3)) * 37.0, fp);
   return vec3(foam, height, slope);
@@ -153,7 +141,7 @@ vec3 shadeSwash(vec3 col, vec4 swash, vec3 wpos, float sunVis) {
   R.y = abs(R.y);
   col = mix(col, skyColor(R), F * 0.6 * (sheet + swash.z * 0.3));
   vec3 H = normalize(uSunDir + V);
-  col += uSunColor * pow(max(dot(N, H), 0.0), 300.0) * (sheet + swash.z * 0.4) * 4.0 * sunVis;
+  col += uSunColor * pow(max(dot(N, H), 0.0), 150.0) * (sheet + swash.z * 0.4) * 0.8 * sunVis;
   return mix(col, foamColor(V, sunVis), swash.y);
 }
 `;

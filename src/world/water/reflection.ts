@@ -5,6 +5,8 @@ export const REFLECTION_LAYER = 1;
 
 const BIAS = new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
 const UP = new THREE.Vector3(0, 1, 0);
+/** A hair above the sea, so the seabed right at the waterline never shows in the mirror. */
+const CLIP_POINT = new THREE.Vector3(0, 0.02, 0);
 
 /**
  * The world above y = 0 seen through a mirror under the sea, rendered at reduced resolution with mipmaps
@@ -57,7 +59,7 @@ export class PlanarReflection {
     this.matrix.copy(BIAS).multiply(cam.projectionMatrix).multiply(cam.matrixWorldInverse);
 
     // Oblique near plane at the sea surface, so nothing below the water shows in the mirror.
-    this.plane.setFromNormalAndCoplanarPoint(UP, new THREE.Vector3(0, 0.02, 0)).applyMatrix4(cam.matrixWorldInverse);
+    this.plane.setFromNormalAndCoplanarPoint(UP, CLIP_POINT).applyMatrix4(cam.matrixWorldInverse);
     this.clipPlane.set(this.plane.normal.x, this.plane.normal.y, this.plane.normal.z, this.plane.constant);
     const e = cam.projectionMatrix.elements;
     this.q.set((Math.sign(this.clipPlane.x) + e[8]) / e[0], (Math.sign(this.clipPlane.y) + e[9]) / e[5], -1, (1 + e[10]) / e[14]);
