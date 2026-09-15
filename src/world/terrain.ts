@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, grassUniforms } from './grass';
+import { FIELDS_GLSL } from './fields';
 import { GRASS_LINE, HEIGHTFIELD_GLSL } from './heightfield';
 
 const SEGMENTS = 32;
@@ -32,6 +33,8 @@ void main() {
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${HEIGHTFIELD_GLSL}
+${FIELDS_GLSL}
 ${GRASS_GLSL}
 uniform vec3 uSand;
 uniform vec3 uWetSand;
@@ -59,6 +62,12 @@ void main() {
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
   float far = smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz));
   vec3 tint = grassTint(xz);
+  vec4 fld = fieldAt(xz);
+  float hay = step(fld.y, 0.22) * fld.w;
+  float rush = step(0.86, fld.y) * fld.w;
+  tint *= 0.92 + 0.16 * fract(fld.y * 7.3) * fld.w;
+  tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
+  tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
   vec3 field = mix(uGrassRoot, tint, 0.62) * (0.9 + 0.16 * fbm(xz * 0.09 + 31.0));
   vec2 dUv = domainUv(xz);
   float flattened = insideUv(dUv) ? smoothstep(0.3, 1.0, length(texture(uBendTex, dUv).xy)) : 0.0;
@@ -72,6 +81,9 @@ void main() {
   alb = mix(stillGrey(alb) * 1.04, alb, 0.45 + 0.55 * life);
   alb = mix(alb, mix(under, field, far), grassy);
   alb = mix(alb, uRock * (0.8 + 0.4 * grain), smoothstep(0.42, 0.6, slope));
+  float lineWidth = max(0.5, dist * 0.0024);
+  float wallLine = (1.0 - smoothstep(lineWidth * 0.45, lineWidth, fld.x)) * fld.z * fld.w;
+  alb = mix(alb, vec3(0.14, 0.14, 0.12) * mix(1.0, 0.75, far), wallLine * 0.85);
 
   vec4 g = groundAt(xz);
   float sun = g.w * cloudShadow(xz);

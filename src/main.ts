@@ -27,6 +27,7 @@ import { createRocks } from './world/rocks';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
+import { Walls } from './world/walls';
 import { createWater } from './world/water';
 import { followWindow, onWindowMove } from './world/window';
 
@@ -80,6 +81,8 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
+const walls = new Walls();
+scene.add(walls.mesh);
 const petals = new Petals(renderer);
 scene.add(petals.mesh);
 const lines = new WindLines(wind);
@@ -217,6 +220,7 @@ function frame(now: number): void {
   u.uCloudDomain.value.set(cam.x - CLOUD_SPAN / 2, cam.z - CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN);
   terrain.update(rig.camera);
   grass.update(rig.camera);
+  walls.update(rig.camera);
   post.render(time);
 
   frames++;
@@ -237,6 +241,7 @@ function frame(now: number): void {
       triangles: renderer.info.render.triangles,
       blades: grass.bladesDrawn,
       leaves: terrain.leaves,
+      stones: walls.stones,
       ratio: pixelRatio,
       heightParity,
     };

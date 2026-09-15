@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { WindField, WindSample } from '../wind/field';
+import { fieldAt, type FieldSample } from '../world/fields';
 import { heightAt } from '../world/island';
 import { ROCKS, TREE } from '../world/landmarks';
 import { buildChild, type Rig } from './body';
@@ -64,6 +65,9 @@ export class Traveller {
   private headYaw = 0;
   private headPitch = 0;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  private readonly field: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 };
+  /** Height of the clamber over a stone wall, 0 on open ground. */
+  private hop = 0;
   private readonly prev = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
@@ -269,6 +273,9 @@ export class Traveller {
     }
     this.gait += (step / (this.speed > 4 ? 1.5 : 1.1)) * Math.PI;
     p.set(nx, Math.max(nextH, 0), nz);
+    const f = fieldAt(nx, nz, this.field);
+    const over = f.wall && f.presence > 0.5 ? 1 - THREE.MathUtils.smoothstep(f.edge, 0.2, 1.1) : 0;
+    this.hop += (over * 1.25 - this.hop) * (1 - Math.exp(-dt * 14));
   }
 
   /** When the child stops closing on the goal, pick a waypoint off to the side and go round. */
@@ -409,7 +416,7 @@ export class Traveller {
 
     const sit = this.sit;
     r.root.position.copy(this.position);
-    r.root.position.y += lift - crouch - sit * 0.5;
+    r.root.position.y += lift - crouch - sit * 0.5 + this.hop;
     r.root.rotation.set(0, this.yaw, 0);
     r.body.position.y = 0.62 + this.bob + Math.sin(t * 2.2) * 0.008;
     r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1, bodyY, 0);

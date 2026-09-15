@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { GRASS_LINE } from './heightfield';
+import { FIELDS_GLSL } from './fields';
+import { GRASS_LINE, HEIGHTFIELD_GLSL } from './heightfield';
 import { heightAt } from './island';
 import { WINDOW } from './window';
 
@@ -56,6 +57,8 @@ export const grassUniforms = {
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
+${HEIGHTFIELD_GLSL}
+${FIELDS_GLSL}
 ${GRASS_GLSL}
 in vec2 aTile;
 uniform float uSide;
@@ -119,6 +122,9 @@ void main() {
   keep *= edge > 0.85 ? 1.0 : edge * edge * tufts;
   keep *= smoothstep(0.55, 0.7, hn.b);
   keep *= surfaceAt(root2).x;
+  vec4 fld = fieldAt(root2);
+  float walled = fld.z * step(0.5, fld.w);
+  if (walled > 0.5 && fld.x < 0.72) keep = 0.0;
   if (rank >= keep) { collapse(); return; }
 
   float side01 = position.x;
@@ -132,6 +138,10 @@ void main() {
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
   float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush);
   h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
+  float hay = step(fld.y, 0.22) * fld.w;
+  float rush = step(0.86, fld.y) * fld.w;
+  float wallTuft = walled * (1.0 - smoothstep(0.9, 2.4, fld.x));
+  h *= 1.0 + hay * 1.5 + rush * 1.2 + wallTuft * 1.8;
   h *= mix(0.72, 1.0, life);
   h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
@@ -171,7 +181,9 @@ void main() {
   vNormal = length(nrm) > 1e-4 ? normalize(nrm) : vec3(0.0, 1.0, 0.0);
   vSideDir = sideDir * side01;
   vGroundN = ground.xyz;
-  vec3 tint = grassTint(root2) * (0.8 + 0.4 * seed);
+  vec3 tint = grassTint(root2) * (0.8 + 0.4 * seed) * (0.92 + 0.16 * fract(fld.y * 7.3) * fld.w);
+  tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
+  tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
   vTint = mix(stillGrey(tint), tint, life);
   vFringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);

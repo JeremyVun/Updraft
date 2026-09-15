@@ -6,13 +6,13 @@
 
 const HASH_OFFSET = 1 << 20;
 
-function pcg(v: number): number {
+export function pcg(v: number): number {
   const state = (Math.imul(v, 747796405) + 2891336453) >>> 0;
   const word = Math.imul((state >>> ((state >>> 28) + 4)) ^ state, 277803737) >>> 0;
   return ((word >>> 22) ^ word) >>> 0;
 }
 
-function hash2(ix: number, iy: number): number {
+export function hash2(ix: number, iy: number): number {
   return pcg((ix + HASH_OFFSET + pcg(iy + HASH_OFFSET)) >>> 0);
 }
 
