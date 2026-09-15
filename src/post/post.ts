@@ -10,6 +10,7 @@ const GRADE = {
     tDiffuse: { value: null },
     uTime: { value: 0 },
     uExposure: { value: 1.0 },
+    uSaturation: { value: 1.0 },
     uResolution: { value: new THREE.Vector2(1, 1) },
   },
   vertexShader: /* glsl */ `
@@ -22,6 +23,7 @@ const GRADE = {
     uniform sampler2D tDiffuse;
     uniform float uTime;
     uniform float uExposure;
+    uniform float uSaturation;
     uniform vec2 uResolution;
     varying vec2 vUv;
 
@@ -53,7 +55,7 @@ const GRADE = {
       vec3 highTint = vec3(1.06, 1.0, 0.9);
       float k = smoothstep(0.02, 0.9, lum);
       hdr *= mix(shadowTint, highTint, k);
-      hdr = mix(vec3(lum), hdr, 1.1);
+      hdr = mix(vec3(lum) * mix(vec3(0.96, 0.98, 1.03), vec3(1.0), uSaturation), hdr, 1.1 * uSaturation);
 
       vec3 col = aces(hdr);
       col *= 1.0 - smoothstep(0.18, 0.75, r2) * 0.4;
@@ -100,6 +102,11 @@ export class Post {
     this.composer.setPixelRatio(pixelRatio);
     this.composer.setSize(width, height);
     this.grade.uniforms.uResolution.value.set(width * pixelRatio, height * pixelRatio);
+  }
+
+  /** 0 is the grey still world, 1 full colour. */
+  set saturation(value: number) {
+    this.grade.uniforms.uSaturation.value = value;
   }
 
   render(time: number): void {

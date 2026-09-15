@@ -27,6 +27,6 @@ export const params = {
   grass: num('grass'),
   /** MSAA sample count for the scene render (default 4). */
   msaa: num('msaa'),
-  /** Hide the glider (for clean grass shots). */
-  noGlider: q.has('noglider'),
+  /** Start later in the story: `crossing` or `hills`. */
+  chapter: q.get('chapter'),
 };

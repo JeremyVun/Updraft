@@ -27,7 +27,8 @@ void main() {
   float strata = sin(vWorld.y * 3.2 + vnoise(vWorld.xz * 0.6) * 4.0) * 0.5 + 0.5;
   vec3 alb = uStone * (0.75 + 0.35 * grain) * (0.92 + 0.12 * strata);
   float moss = smoothstep(0.55, 0.85, n.y + (grain - 0.5) * 0.5);
-  alb = mix(alb, uMoss * (0.8 + 0.4 * grain), moss);
+  vec3 mossCol = uMoss * (0.8 + 0.4 * grain);
+  alb = mix(alb, mix(stillGrey(mossCol), mossCol, lifeAt(vWorld.xz)), moss);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   float ndl = max(dot(n, uSunDir), 0.0);
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);

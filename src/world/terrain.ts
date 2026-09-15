@@ -65,6 +65,11 @@ void main() {
   float waves = fbm(xz * 0.016 - uBreeze * uTime * 0.016);
   field *= 0.88 + 0.24 * waves + 0.35 * flattened;
   vec3 under = uGround * (0.85 + 0.3 * grain);
+  float life = lifeAt(xz);
+  field = mix(stillGrey(field), field, life);
+  under = mix(stillGrey(under), under, life);
+  tint = mix(stillGrey(tint), tint, life);
+  alb = mix(stillGrey(alb) * 1.04, alb, 0.45 + 0.55 * life);
   alb = mix(alb, mix(under, field, far), grassy);
   alb = mix(alb, uRock * (0.8 + 0.4 * grain), smoothstep(0.42, 0.6, slope));
 

@@ -48,6 +48,11 @@ export const atmo = {
     uHeightTex: { value: null as THREE.Texture | null },
     uGroundTex: { value: null as THREE.Texture | null },
     uSurfaceTex: { value: null as THREE.Texture | null },
+    uLifeTex: { value: null as THREE.Texture | null },
+    /** Still island centre (x, z), radius, and how fully it counts as restored. */
+    uIslandLife: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
+    uLifeWave: { value: new THREE.Vector4(0, 0, -1, 1) },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
   },
@@ -97,6 +102,9 @@ uniform sampler2D uBendTex;
 uniform sampler2D uHeightTex;
 uniform sampler2D uGroundTex;
 uniform sampler2D uSurfaceTex;
+uniform sampler2D uLifeTex;
+uniform vec4 uIslandLife;
+uniform vec4 uLifeWave;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -116,6 +124,24 @@ vec4 groundAt(vec2 xz) {
   if (!insideUv(uv)) return vec4(0.0, 1.0, 0.0, 1.0);
   vec4 g = texture(uGroundTex, uv);
   return vec4(normalize(g.xyz * 2.0 - 1.0), g.w);
+}
+
+/** How alive the land is, 0 (grey and still) to 1: the life field in the window, and regions the story has restored. */
+float regionLife(vec2 xz) {
+  float island = length(xz - uIslandLife.xy) < uIslandLife.z ? uIslandLife.w : 0.0;
+  float d = length(xz - uLifeWave.xy);
+  float wave = uLifeWave.z < 0.0 ? 0.0 : clamp((uLifeWave.z - d) / uLifeWave.w, 0.0, 1.0);
+  return max(island, wave);
+}
+float lifeAt(vec2 xz) {
+  vec2 uv = domainUv(xz);
+  float local = insideUv(uv) ? texture(uLifeTex, uv).r : 0.0;
+  return max(local, regionLife(xz));
+}
+
+/** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */
+vec3 stillGrey(vec3 c) {
+  return vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))) * vec3(1.0, 0.97, 0.9) * 0.92;
 }
 
 /** x: open ground (0 under rocks and trunks), y: spare, z: wildflowers, w: spare. Baked with the ground. */

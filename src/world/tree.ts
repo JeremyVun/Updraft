@@ -65,6 +65,7 @@ const LEAF_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWAY_GLSL}
 uniform vec3 uCrown;
+uniform float uTreeLife;
 in vec4 aLeaf;
 in vec4 aShade;
 out vec2 vUv;
@@ -82,7 +83,9 @@ void main() {
   vec2 corner = vec2(position.x * c.x - position.y * c.y, position.x * c.y + position.y * c.x);
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  float size = 0.7 + fract(seed * 7.1) * 0.45;
+  float bloom = smoothstep(0.35 + fract(seed * 5.3) * 0.45, 0.45 + fract(seed * 5.3) * 0.45, uTreeLife);
+  float size = (0.7 + fract(seed * 7.1) * 0.45) * bloom;
+  if (bloom <= 0.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   vec3 world = centre + (right * corner.x + up * corner.y) * size;
   vUv = position.xy;
   vWorld = world;
@@ -196,13 +199,15 @@ function grow(base: THREE.Vector3): { limbs: Limb[]; canopy: Canopy[] } {
 export interface Tree {
   group: THREE.Group;
   canopy: Canopy[];
+  /** 0 bare, 1 in full leaf; leaves open at staggered moments in between. */
+  life: { value: number };
 }
 
 export function createTree(): Tree {
   const base = new THREE.Vector3(TREE.x, heightAt(TREE.x, TREE.z), TREE.z);
   const { limbs, canopy } = grow(base);
   const crown = canopy.reduce((acc, c) => acc.add(c.centre), new THREE.Vector3()).divideScalar(canopy.length);
-  const shared = { ...atmo.uniforms, uBase: { value: base }, uCrown: { value: crown } };
+  const shared = { ...atmo.uniforms, uBase: { value: base }, uCrown: { value: crown }, uTreeLife: { value: 0 } };
 
   const barkGeo = limbs.map((l, i) => tube(l, i === 0 ? 12 : 7, i === 0 ? 14 : 8));
   const bark = new THREE.Mesh(
@@ -256,5 +261,5 @@ export function createTree(): Tree {
 
   const group = new THREE.Group();
   group.add(bark, foliage);
-  return { group, canopy };
+  return { group, canopy, life: shared.uTreeLife };
 }

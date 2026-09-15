@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { params } from './params';
+import { heightAt } from './world/island';
 
 const MIN_HFOV = 64;
 /** The camera always looks roughly north, from a little east of south. */
@@ -69,6 +70,9 @@ export class CameraRig {
       .copy(this.target)
       .addScaledVector(FROM, this.distance)
       .add(this.lift.set(sway, this.height + breathe, 0));
+    const pos = this.camera.position;
+    const clear = Math.max(heightAt(pos.x, pos.z), heightAt(pos.x, pos.z - 6), 0) + 2.8;
+    if (pos.y < clear) pos.y = clear;
     this.look.copy(this.target);
     this.camera.lookAt(this.look);
   }

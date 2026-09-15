@@ -33,10 +33,17 @@ uniform vec3 uGrassRoot;
 uniform vec3 uTipLush;
 uniform vec3 uTipDry;
 uniform vec3 uTipCool;
+/** 1 on the mainland's grazed pasture, 0 on the island's wild meadow. */
+float pastureAt(vec2 xz) {
+  return smoothstep(-600.0, -660.0, xz.y);
+}
 vec3 grassTint(vec2 xz) {
   float dry = smoothstep(0.58, 0.76, fbm(xz * 0.022 + vec2(3.1, 7.7)));
   float cool = smoothstep(0.5, 0.68, fbm(xz * 0.041 - vec2(5.3, 1.9))) * (1.0 - dry);
-  return mix(mix(uTipLush, uTipDry, dry * 0.85), uTipCool, cool * 0.5);
+  vec3 meadow = mix(mix(uTipLush, uTipDry, dry * 0.85), uTipCool, cool * 0.5);
+  vec3 emerald = mix(vec3(0.16, 0.36, 0.07), vec3(0.3, 0.46, 0.09), fbm(xz * 0.03 + 11.0));
+  emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);
+  return mix(meadow, emerald, pastureAt(xz));
 }
 `;
 
@@ -120,7 +127,12 @@ void main() {
   float lush = fbm(root2 * 0.035 + 17.0);
   float shortPatch = smoothstep(0.52, 0.68, fbm(root2 * 0.05 - 23.0));
   float fringe = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 2.2).toFixed(2)}, groundH);
+  float life = lifeAt(root2);
+  float pasture = pastureAt(root2);
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
+  float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush);
+  h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
+  h *= mix(0.72, 1.0, life);
   h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
   float angle = gr_rand(s) * 6.2831853;
@@ -134,7 +146,7 @@ void main() {
 
   vec2 facing = vec2(cos(angle), sin(angle));
   float ph = seed * 43.1;
-  float flutterAmp = (0.04 + 0.012 * sp) * (0.6 + 0.4 * t);
+  float flutterAmp = (0.04 + 0.012 * sp) * (0.6 + 0.4 * t) * mix(0.3, 1.0, life);
   vec2 flutter = vec2(sin(uTime * (2.7 + seed * 2.1) + ph), sin(uTime * (2.1 + seed * 1.6) + ph * 1.7)) * flutterAmp;
   vec2 wb = bend.xy + flutter;
   float wa = length(wb);
@@ -159,7 +171,8 @@ void main() {
   vNormal = length(nrm) > 1e-4 ? normalize(nrm) : vec3(0.0, 1.0, 0.0);
   vSideDir = sideDir * side01;
   vGroundN = ground.xyz;
-  vTint = grassTint(root2) * (0.8 + 0.4 * seed);
+  vec3 tint = grassTint(root2) * (0.8 + 0.4 * seed);
+  vTint = mix(stillGrey(tint), tint, life);
   vFringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
   vFog = fogOf(world);

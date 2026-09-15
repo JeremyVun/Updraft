@@ -47,6 +47,8 @@ export class Traveller {
   readonly shadow: THREE.Mesh;
   yaw = 0;
   sitting = true;
+  /** Carried by something else (the boat): placed each frame by `ride`, no walking. */
+  riding = false;
   /** Where the child is looking, if anywhere in particular. */
   lookAt: THREE.Vector3 | null = null;
   private readonly rig: Rig;
@@ -108,6 +110,20 @@ export class Traveller {
     this.scarf.reset(this.rig.neck.getWorldPosition(this.tmp));
   }
 
+  ride(at: THREE.Vector3, yaw: number): void {
+    this.riding = true;
+    this.sitting = true;
+    this.goal = null;
+    this.position.copy(at);
+    this.yaw = yaw;
+  }
+
+  dismount(): void {
+    this.riding = false;
+    this.sitting = false;
+    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+  }
+
   walkTo(x: number, z: number, run = false, onArrive?: () => void, near = 0.6): void {
     this.sitting = false;
     this.goal = { x, z, run, onArrive, near, best: Infinity, since: 0 };
@@ -161,7 +177,7 @@ export class Traveller {
     this.time += dt;
     const p = this.position;
     this.prev.copy(p);
-    this.updateGoal(dt);
+    if (!this.riding) this.updateGoal(dt);
     this.updateAction(dt);
 
     const w = this.wind.sample(p.x, p.z, this.sample);
@@ -179,7 +195,7 @@ export class Traveller {
     this.pose(dt);
 
     const moved = Math.hypot(p.x - this.prev.x, p.z - this.prev.z);
-    if (moved > 0.01 && !this.sitting) {
+    if (moved > 0.01 && !this.sitting && !this.riding) {
       this.wind.addSplat({
         ax: this.prev.x,
         az: this.prev.z,
@@ -196,11 +212,11 @@ export class Traveller {
 
     const neck = this.rig.neck.getWorldPosition(this.tmp);
     const centre = this.tmp2.set(p.x, p.y + (this.sitting ? 0.7 : 1.1), p.z);
-    this.scarf.update(dt, neck, centre, 0.52, w, Math.max(heightAt(p.x, p.z), 0), p);
+    this.scarf.update(dt, neck, centre, 0.52, w, this.riding ? p.y - 0.2 : Math.max(heightAt(p.x, p.z), 0), p);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
-    this.shadowMat.uniforms.uOpacity.value = 0.3;
+    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3;
   }
 
   private updateGoal(dt: number): void {
@@ -241,7 +257,8 @@ export class Traveller {
         nz = r.z + (oz / od) * keep;
       }
     }
-    if (heightAt(nx, nz) < 0.35) {
+    const nextH = heightAt(nx, nz);
+    if (nextH < 0.2 && nextH < heightAt(p.x, p.z)) {
       this.speed = 0;
       if (this.goal) {
         const arrive = this.goal.onArrive;
@@ -251,7 +268,7 @@ export class Traveller {
       return;
     }
     this.gait += (step / (this.speed > 4 ? 1.5 : 1.1)) * Math.PI;
-    p.set(nx, heightAt(nx, nz), nz);
+    p.set(nx, Math.max(nextH, 0), nz);
   }
 
   /** When the child stops closing on the goal, pick a waypoint off to the side and go round. */

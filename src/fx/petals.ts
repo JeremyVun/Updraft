@@ -117,7 +117,7 @@ void main() {
   vec3 t1 = normalize(cross(n, abs(n.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
   vec3 t2 = cross(n, t1);
   float kind = step(0.8, fract(seed * 7.31));
-  float size = kind > 0.5 ? 0.13 : 0.21 + seed * 0.11;
+  float size = (kind > 0.5 ? 0.13 : 0.21 + seed * 0.11) * smoothstep(0.45, 0.85, lifeAt(p.xz));
   vec3 world = p.xyz + (t1 * position.x + t2 * position.y * 0.62) * size;
   vCorner = position.xy;
   vWorld = world;
