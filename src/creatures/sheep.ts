@@ -125,7 +125,7 @@ void main() {
   vLocal = position;
   vMat = aMat;
   vFleece = iLook.rgb;
-  vMark = iMark;
+  vMark = part == ${BODY} ? iMark : vec4(0.0);
   gl_Position = projectionMatrix * nudgedView(world, uNudge * smoothstep(0.15, 0.6, position.y));
 }`;
 
