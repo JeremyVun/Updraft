@@ -20,7 +20,7 @@ import { createRocks } from './world/rocks';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { createTerrain } from './world/terrain';
-import { createWater } from './world/water';
+import { Water } from './world/water';
 
 declare global {
   interface Window {
@@ -48,7 +48,8 @@ atmo.uniforms.uGroundTex.value = bakeGround(renderer, tree.canopy);
 const clouds = new CloudShadows(renderer);
 scene.add(createSky());
 scene.add(createTerrain());
-scene.add(createWater());
+const water = new Water(renderer, scene, wind.breeze);
+scene.add(water.mesh);
 scene.add(createRocks());
 scene.add(createDistantIslands());
 scene.add(tree.group);
@@ -169,6 +170,7 @@ function frame(now: number): void {
   sound.update(dt, soundState);
 
   rig.update(dt, time, glider?.position ?? null);
+  water.update(rig.camera);
   post.render(time);
 
   frames++;

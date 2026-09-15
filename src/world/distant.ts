@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { createNoise2D } from './noise';
+import { REFLECTION_LAYER } from './water/reflection';
 
 const VERT = /* glsl */ `
 out vec3 vWorld;
@@ -55,5 +56,6 @@ export function createDistantIslands(): THREE.Mesh {
   const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: { ...atmo.uniforms } });
   const mesh = new THREE.Mesh(mergeGeometries(parts), mat);
   mesh.frustumCulled = false;
+  mesh.layers.enable(REFLECTION_LAYER);
   return mesh;
 }

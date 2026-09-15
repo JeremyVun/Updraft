@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { mulberry32 } from './noise';
+import { createCanopyProxy } from './water/canopy';
+import { PlanarReflection } from './water/reflection';
+import { SURF_GLSL, surfUniforms } from './water/surf';
+import { rippleTexture } from './water/textures';
 
 const VERT = /* glsl */ `
 out vec3 vWorld;
@@ -12,31 +15,91 @@ void main() {
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${SURF_GLSL}
+uniform sampler2D uRipple;
+uniform vec2 uBreeze;
 uniform vec3 uDeep;
-uniform vec3 uShallow;
-uniform vec3 uSeabed;
-uniform vec3 uFoam;
+uniform vec3 uAbsorb;
+uniform vec3 uSand;
+uniform vec3 uWetSand;
 in vec3 vWorld;
 
-vec2 swellGrad(vec2 p, float t) {
-  vec2 g = vec2(0.0);
-  const int N = 5;
-  vec2 dirs[N] = vec2[](vec2(0.94, 0.34), vec2(0.62, 0.78), vec2(0.99, -0.12), vec2(0.35, 0.94), vec2(0.8, -0.6));
-  float freqs[N] = float[](0.21, 0.34, 0.52, 0.77, 1.13);
-  float amps[N] = float[](0.09, 0.06, 0.045, 0.03, 0.02);
-  for (int i = 0; i < N; i++) {
-    float ph = dot(dirs[i], p) * freqs[i] - t * sqrt(9.8 * freqs[i]) * 0.55;
-    g += dirs[i] * amps[i] * freqs[i] * cos(ph) * 3.0;
-  }
-  return g;
+/** Ripple slopes carried along by the wind; two phases cross-fade so the drift never stretches the pattern. */
+vec3 driftingRipples(vec2 p, vec2 drift, float period) {
+  float t = uTime / period;
+  float ph0 = fract(t);
+  float ph1 = fract(t + 0.5);
+  float w = abs(1.0 - 2.0 * ph0);
+  vec4 a = texture(uRipple, p - drift * ph0 * period + hash12(vec2(floor(t), 1.7)) * 7.3);
+  vec4 b = texture(uRipple, p - drift * ph1 * period + hash12(vec2(floor(t + 0.5), 5.1)) * 7.3);
+  vec4 r = mix(a, b, w);
+  vec2 slope = (r.rg * 2.0 - 1.0) / sqrt(w * w + (1.0 - w) * (1.0 - w));
+  float variance = max(r.b - dot(r.rg * 2.0 - 1.0, r.rg * 2.0 - 1.0), 0.0);
+  return vec3(slope, variance);
 }
 
-uniform sampler2D uRipple;
+/** Bright web of light the waves focus onto the seabed. */
+float caustics(vec2 p, vec2 warp, Footprint fp) {
+  vec2 a = p * 0.16 + warp + vec2(uTime * 0.017, uTime * 0.011);
+  mat2 turn = mat2(0.8, -0.6, 0.6, 0.8);
+  vec2 b = turn * p * 0.19 - warp * 0.7 - vec2(uTime * 0.013, -uTime * 0.019);
+  float c = min(textureGrad(uLace, a, fp.dx * 0.16, fp.dy * 0.16).g, textureGrad(uLace, b, turn * fp.dx * 0.19, turn * fp.dy * 0.19).g);
+  return smoothstep(0.55, 1.0, c);
+}
 
-vec2 rippleGrad(vec2 p, float t, vec2 flow) {
-  vec2 a = texture(uRipple, p * 0.043 - flow * t * 0.004 + vec2(t * 0.011, 0.0)).rg * 2.0 - 1.0;
-  vec2 b = texture(uRipple, p * 0.117 - flow * t * 0.009 - vec2(0.0, t * 0.019)).rg * 2.0 - 1.0;
-  return a * 1.1 + b * 0.8;
+/**
+ * Sun glints too small to resolve: world-space cells that flash briefly, as many as the glitter lobe allows.
+ * Cells never shrink below a few pixels and two sizes blend, so the sparkle twinkles instead of crawling.
+ */
+float glintCells(vec2 xz, float cell, float density) {
+  vec2 p = xz / cell;
+  vec2 id = floor(p);
+  float h = hash12(id + cell * 17.3);
+  vec2 centre = vec2(hash12(id + 3.1), hash12(id + 8.7)) * 0.5 + 0.25;
+  float spot = smoothstep(0.3, 0.0, length(fract(p) - centre));
+  float life = fract(uTime * (0.8 + 1.2 * h) + h * 23.0);
+  float flash = smoothstep(0.0, 0.06, life) * smoothstep(0.32, 0.06, life);
+  return spot * flash * step(1.0 - density, fract(h * 91.7));
+}
+
+float glints(vec2 xz, float footprint, float density) {
+  float level = log2(max(footprint * 8.0, 0.1));
+  float l0 = floor(level);
+  float f = level - l0;
+  return mix(glintCells(xz, exp2(l0), density), glintCells(xz, exp2(l0 + 1.0), density), f);
+}
+
+/** Short-lived whitecaps, stretched along the wind and carried a little way by it; storm is the chance per cell. */
+float whitecaps(vec2 xz, vec2 flow, float storm) {
+  const float CELL = 4.5;
+  const float LIFE = 2.0;
+  vec2 dir = flow / max(length(flow), 1e-3);
+  float caps = 0.0;
+  for (int k = 0; k < 2; k++) {
+    vec2 shift = vec2(float(k) * 0.5 * CELL);
+    vec2 id = floor((xz + shift) / CELL);
+    float h = hash12(id + float(k) * 17.3);
+    float life = fract(uTime / LIFE + h);
+    float wave = floor(uTime / LIFE + h);
+    if (hash12(id + wave * 3.1) > storm) continue;
+    vec2 centre = (id + 0.25 + 0.5 * vec2(hash12(id + wave), hash12(id - wave))) * CELL - shift;
+    vec2 d = xz - centre - flow * life * 0.04;
+    vec2 local = vec2(dot(d, dir), dot(d, vec2(-dir.y, dir.x))) / (vec2(1.0, 0.36) * (0.6 + 0.5 * h));
+    float grow = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.35, life);
+    caps = max(caps, (1.0 - smoothstep(0.3, 1.0, length(local))) * grow);
+  }
+  return caps;
+}
+
+float ggx(float nh, float a2) {
+  float d = nh * nh * (a2 - 1.0) + 1.0;
+  return a2 / (3.14159 * d * d);
+}
+
+float smithVis(float nv, float nl, float a2) {
+  float gv = nl * sqrt(nv * nv * (1.0 - a2) + a2);
+  float gl = nv * sqrt(nl * nl * (1.0 - a2) + a2);
+  return 0.5 / max(gv + gl, 1e-4);
 }
 
 void main() {
@@ -45,112 +108,147 @@ void main() {
   vec3 V = toCam / dist;
   vec2 xz = vWorld.xz;
   vec2 uv = domainUv(xz);
-  bool inDomain = all(greaterThan(uv, vec2(0.0))) && all(lessThan(uv, vec2(1.0)));
+  vec2 edge = min(uv, 1.0 - uv);
+  float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
+  Footprint fp = footprintOf(xz);
+  float footprint = max(length(fp.dx), length(fp.dy));
 
   vec4 wind = texture(uWindTex, clamp(uv, 0.0, 1.0));
-  float windSp = length(wind.xy);
-  float gustRough = smoothstep(3.0, 14.0, windSp);
-  float near = exp(-dist * 0.0032);
+  vec2 flow = wind.xy;
+  if (inside < 1.0) {
+    float g = fbm(xz * 0.02 - uBreeze * uTime * 0.02);
+    flow = mix(uBreeze * (0.3 + 2.3 * g * g), wind.xy, inside);
+  }
+  float gust = wind.z * inside;
+  float speed = length(flow);
+  float rough = smoothstep(1.2, 7.5, speed);
+  float storm = clamp(smoothstep(9.0, 28.0, speed) + smoothstep(0.3, 1.2, gust), 0.0, 1.0);
 
-  float swellVar = 0.45 + 0.9 * vnoise(xz * 0.013 + vec2(uTime * 0.03, 0.0));
-  vec2 g = swellGrad(xz, uTime) * mix(0.35, 1.0, near) * swellVar;
-  g += rippleGrad(xz, uTime, wind.xy) * (0.06 + 0.2 * gustRough) * mix(0.35, 1.0, near);
-  vec3 N = normalize(vec3(-g.x, 1.0, -g.y));
-
-  float ground = inDomain ? texture(uHeightTex, uv).r : -12.0;
+  float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(-ground, 0.0);
+  vec4 bedN = groundAt(xz);
+  float offshore = mix(60.0, -shoreDistance(xz), inside);
+  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
 
-  float sh = cloudShadow(xz) * groundAt(xz).w;
-  vec3 light = hemiLight(vec3(0.0, 1.0, 0.0)) * 0.8 + uSunColor * max(uSunDir.y, 0.0) * 0.9 * sh;
-  vec3 body = mix(uShallow, uDeep, 1.0 - exp(-depth * 0.32));
-  body = mix(uSeabed, body, smoothstep(0.0, 1.6, depth) * 0.75 + 0.25);
-  body *= light;
-  body *= 1.0 - gustRough * 0.18;
+  vec2 drift = flow * 0.22;
+  vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1);
+  vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
+  vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
+  float a0 = 0.05 + 0.04 * rough + 0.05 * storm;
+  float a1 = 0.035 + 0.06 * rough + 0.1 * storm;
+  float a2 = 0.045 + 0.08 * rough + 0.16 * storm;
+  vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2;
+  float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2;
 
-  float cosV = max(dot(N, V), 0.0);
-  float F = 0.02 + 0.98 * pow(1.0 - cosV, 5.0);
+  vec3 surf = vec3(0.0);
+  float swellAmp = 0.0;
+  if (offshore < 40.0) {
+    surf = surfWaves(xz, offshore, depth, surfBlur, fp);
+    swellAmp = 0.16 * smoothstep(4.5, 1.6, depth) * smoothstep(0.0, 1.5, offshore) * smoothstep(17.0, 5.0, offshore);
+    vec2 toSea = -vec2(shoreDistance(xz + vec2(0.5, 0.0)) + offshore, shoreDistance(xz + vec2(0.0, 0.5)) + offshore) * 2.0;
+    slope += toSea * surf.z * swellAmp;
+  }
+  slope *= 1.0 - smoothstep(1.5, 0.0, offshore) * 0.7;
+  vec3 N = normalize(vec3(-slope.x, 1.0, -slope.y));
+  float unresolved = hidden * 2.0 + 0.004 + 0.02 * rough + 0.05 * storm;
+  float alpha2 = 0.0012 + unresolved + footprint * footprint * 0.00002;
+
+  float nv = max(dot(N, V), 0.02);
   vec3 R = reflect(-V, N);
-  vec3 refl = skyColor(normalize(vec3(R.x, max(abs(R.y), mix(0.16, 0.0, near)), R.z)));
+  R.y = abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv);
+  vec3 refl = mirrored(vWorld, R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0));
+  refl = mix(skyColor(R), refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.3 * rough - 0.25 * storm);
+  float roughness = sqrt(sqrt(alpha2));
+  float F = 0.02 + (max(1.0 - roughness * 1.4, 0.02) - 0.02) * pow(1.0 - nv, 5.0);
 
-  float sharp = mix(160.0, 2200.0, near);
-  float spec = pow(max(dot(R, uSunDir), 0.0), sharp) * mix(2.5, 14.0, near);
-  spec += pow(max(dot(R, uSunDir), 0.0), 40.0) * 0.25;
+  float sh = cloudShadow(xz) * bedN.w;
+  vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
+  vec3 body = uDeep * scatterLight;
+  if (depth < 9.0) {
+    vec3 T = refract(-V, N, 0.75);
+    float tDown = max(-T.y, 0.25);
+    vec2 bedXZ = xz + T.xz / tDown * depth * 0.8;
+    float bedDepth = max(-mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
+    float path = bedDepth / tDown;
 
-  vec3 col = mix(body, refl, F) + uSunColor * spec * sh;
+    float grain = vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5;
+    float ripples = sin(dot(bedXZ, vec2(0.9, 0.45)) * 2.2 + vnoise(bedXZ * 0.3) * 6.0) * 0.5 + 0.5;
+    vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
+    vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
+    float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.06 + 3.1) * 0.75 + vnoise(bedXZ * 0.21) * 0.25) * smoothstep(0.9, 2.2, bedDepth);
+    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.7);
 
-  float shoreBand = smoothstep(1.4, 0.0, depth) * (inDomain ? 1.0 : 0.0);
-  float waves = sin(depth * 5.0 - uTime * 1.6 + vnoise(xz * 0.35) * 5.0) * 0.5 + 0.5;
-  float foam = shoreBand * smoothstep(0.55, 0.95, waves * (0.6 + 0.6 * vnoise(xz * 2.2 + uTime * 0.2)));
-  foam = max(foam, smoothstep(0.28, 0.0, depth) * (inDomain ? 0.85 : 0.0) * (0.6 + 0.4 * vnoise(xz * 3.0 - uTime * 0.5)));
-  col = mix(col, uFoam * light, clamp(foam, 0.0, 1.0));
+    vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
+    float sunDown = max(-sunIn.y, 0.2);
+    float sunVis = cloudShadow(bedXZ) * groundAt(bedXZ).w;
+    float light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.5);
+    light *= smoothstep(180.0, 40.0, dist);
+    vec3 sunBed = uSunColor * max(uSunDir.y, 0.0) * 0.8 * exp(-uAbsorb * bedDepth / sunDown) * sunVis * (0.7 + 2.2 * light);
+    vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
+    vec3 seen = bed * (sunBed + skyBed) * exp(-uAbsorb * path);
+    body = mix(body, seen, exp(-path * 0.2) * smoothstep(9.0, 6.0, bedDepth));
+  }
+  float crest = surf.y * swellAmp * 6.0;
+  float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);
+  body += vec3(0.1, 0.55, 0.45) * uSunColor * crest * (0.02 + 0.3 * backlit) * sh;
+  body *= 1.0 - rough * 0.15 - storm * 0.25;
+
+  vec3 L = uSunDir;
+  vec3 H = normalize(L + V);
+  float nl = max(dot(N, L), 0.0);
+  float fh = 0.02 + 0.98 * pow(1.0 - max(dot(V, H), 0.0), 5.0);
+  float vis = smithVis(nv, nl, alpha2) * nl * fh;
+  float facet = min(ggx(max(dot(N, H), 0.0), alpha2) * vis, 12.0);
+  float tan2 = (1.0 - H.y * H.y) / max(H.y * H.y, 1e-4);
+  float glitter = exp(-tan2 / (0.008 + unresolved));
+  float resolved = smoothstep(0.7, 0.1, footprint);
+  float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * resolved);
+  vec3 sun = uSunColor * (facet * 0.12 + glitter * vis * mix(0.3, 0.08, resolved) + sparkle) * sh;
+
+  vec3 col = mix(body, refl, F) + sun;
+
+  float foam = surf.x;
+  if (storm > 0.0) foam = max(foam, foamLace(whitecaps(xz, flow, storm * 0.9), xz * 1.6, Footprint(fp.dx * 1.6, fp.dy * 1.6)));
+  col = mix(col, foamColor(V, sh), clamp(foam, 0.0, 1.0));
 
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-/** Tiling ripple slopes from a sum of waves with whole-number wave counts, so the texture wraps seamlessly. */
-function rippleTexture(res = 256): THREE.DataTexture {
-  const rand = mulberry32(3);
-  const waves: [number, number, number, number][] = [];
-  while (waves.length < 56) {
-    const kx = Math.round((rand() * 2 - 1) * 26);
-    const ky = Math.round((rand() * 2 - 1) * 26);
-    const k = Math.hypot(kx, ky);
-    if (k < 3) continue;
-    waves.push([kx, ky, 1 / Math.pow(k, 1.25), rand() * Math.PI * 2]);
-  }
-  const gx = new Float32Array(res * res);
-  const gy = new Float32Array(res * res);
-  let max = 0;
-  for (let j = 0; j < res; j++) {
-    for (let i = 0; i < res; i++) {
-      const u = i / res;
-      const v = j / res;
-      let dx = 0;
-      let dy = 0;
-      for (const [kx, ky, a, ph] of waves) {
-        const c = Math.cos(2 * Math.PI * (kx * u + ky * v) + ph) * a;
-        dx += c * kx;
-        dy += c * ky;
-      }
-      gx[j * res + i] = dx;
-      gy[j * res + i] = dy;
-      max = Math.max(max, Math.abs(dx), Math.abs(dy));
-    }
-  }
-  const data = new Uint8Array(res * res * 4);
-  for (let i = 0; i < res * res; i++) {
-    data[i * 4] = Math.round((gx[i] / max) * 127.5 + 127.5);
-    data[i * 4 + 1] = Math.round((gy[i] / max) * 127.5 + 127.5);
-    data[i * 4 + 3] = 255;
-  }
-  const tex = new THREE.DataTexture(data, res, res, THREE.RGBAFormat);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.magFilter = THREE.LinearFilter;
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
-  tex.generateMipmaps = true;
-  tex.anisotropy = 8;
-  tex.needsUpdate = true;
-  return tex;
-}
+/** The sea: a plane at y = 0 shaded with the seabed, surf, wind-driven ripples, sun glitter and a mirror of the world. */
+export class Water {
+  readonly mesh: THREE.Mesh;
+  private readonly reflection: PlanarReflection;
 
-export function createWater(): THREE.Mesh {
-  const mat = new THREE.ShaderMaterial({
-    vertexShader: VERT,
-    fragmentShader: FRAG,
-    uniforms: {
-      ...atmo.uniforms,
-      uRipple: { value: rippleTexture() },
-      uDeep: { value: new THREE.Color('#0c4262') },
-      uShallow: { value: new THREE.Color('#33aca6') },
-      uSeabed: { value: new THREE.Color('#d8c9a0') },
-      uFoam: { value: new THREE.Color('#f4efe4') },
-    },
-  });
-  const geo = new THREE.PlaneGeometry(9000, 9000, 1, 1);
-  geo.rotateX(-Math.PI / 2);
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.frustumCulled = false;
-  return mesh;
+  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2) {
+    this.reflection = new PlanarReflection(renderer, scene, 0.35);
+    surfUniforms.uMirrorMatrix.value = this.reflection.matrix;
+    scene.add(createCanopyProxy());
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      uniforms: {
+        ...atmo.uniforms,
+        ...surfUniforms,
+        uRipple: { value: rippleTexture() },
+        uBreeze: { value: breeze },
+        uDeep: { value: new THREE.Color('#0d4a66') },
+        uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },
+        uSand: { value: new THREE.Color('#e6d2a6') },
+        uWetSand: { value: new THREE.Color('#a48c66') },
+      },
+    });
+    const geo = new THREE.PlaneGeometry(9000, 9000, 1, 1);
+    geo.rotateX(-Math.PI / 2);
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.frustumCulled = false;
+  }
+
+  /** Renders the mirror image for this frame; call after the camera has moved, before the scene is drawn. */
+  update(camera: THREE.PerspectiveCamera): void {
+    // The beach reads the mirror too, so it must not while it is being drawn into it.
+    surfUniforms.uMirror.value = null;
+    this.reflection.render(camera);
+    surfUniforms.uMirror.value = this.reflection.target.texture;
+  }
 }

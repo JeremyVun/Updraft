@@ -4,6 +4,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { TREE } from './landmarks';
 import { createNoise2D, mulberry32 } from './noise';
+import { REFLECTION_LAYER } from './water/reflection';
 
 interface Limb {
   curve: THREE.QuadraticBezierCurve3;
@@ -256,5 +257,6 @@ export function createTree(): Tree {
 
   const group = new THREE.Group();
   group.add(bark, foliage);
+  group.traverse((o) => o.layers.enable(REFLECTION_LAYER));
   return { group, canopy };
 }
