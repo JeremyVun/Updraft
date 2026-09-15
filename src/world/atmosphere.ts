@@ -44,6 +44,8 @@ export const atmo = {
     uWorldLife: { value: 0 },
     /** 1 while the sea's mirror image is drawn: the ground paints its meadow instead of waiting for blades. */
     uMirrorPass: { value: 0 },
+    /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
+    uRainbow: { value: 0 },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },

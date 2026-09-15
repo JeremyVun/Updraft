@@ -37,5 +37,9 @@ export interface Chapter {
   /** Where the camera's attention is, for things like sound. */
   readonly focus: THREE.Vector3;
   readonly done: boolean;
+  /** How strongly a rainbow shows opposite the sun, 0..1. */
+  readonly rainbow?: number;
+  /** Where the gulls should circle, or null to leave them to their own coast. */
+  readonly escort?: THREE.Vector3 | null;
   update(dt: number, time: number): void;
 }

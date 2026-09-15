@@ -253,6 +253,7 @@ export class Gulls {
   readonly mesh: THREE.Mesh;
   private readonly instances: Instances;
   private readonly list: Gull[] = [];
+  private escort: THREE.Vector3 | null = null;
 
   constructor(
     private readonly habitat: Habitat,
@@ -334,9 +335,11 @@ export class Gulls {
       g.thermal = ease(g.thermal, drawn, drawn > g.thermal ? 2.5 : 0.25, dt);
       const inColumn = g.thermal * (1 - THREE.MathUtils.smoothstep(toUp, 20, 34));
 
-      g.orbit += (g.orbitDir * g.speed * dt) / g.orbitRadius;
-      let tx = g.homeX + Math.cos(g.orbit) * g.orbitRadius + Math.sin(time * 0.05 + g.seed * 9) * 12;
-      let tz = g.homeZ + Math.sin(g.orbit) * g.orbitRadius + Math.cos(time * 0.04 + g.seed * 7) * 12;
+      const escort = this.escort;
+      const radius = escort ? 12 + g.seed * 12 : g.orbitRadius;
+      g.orbit += (g.orbitDir * g.speed * dt) / radius;
+      let tx = (escort ? escort.x : g.homeX) + Math.cos(g.orbit) * radius + Math.sin(time * 0.05 + g.seed * 9) * (escort ? 4 : 12);
+      let tz = (escort ? escort.z : g.homeZ) + Math.sin(g.orbit) * radius + Math.cos(time * 0.04 + g.seed * 7) * (escort ? 4 : 12);
       if (g.thermal > 0.05) {
         const ring = 13 + g.seed * 7;
         const a = Math.atan2(g.z - up.z, g.x - up.x) + g.orbitDir * 0.7;
@@ -387,7 +390,7 @@ export class Gulls {
       g.wobble = Math.min(g.wobble, 1.4) * Math.exp(-dt * 1.5);
 
       const ground = Math.max(this.habitat.ground(g.x, g.z), 0);
-      const cruise = g.altitude + Math.sin(time * 0.07 + g.seed * 11) * 4;
+      const cruise = (this.escort ? 12 + g.seed * 7 : g.altitude) + Math.sin(time * 0.07 + g.seed * 11) * 4;
       const lift = w.lift * 1.2 + inColumn * (0.9 + up.strength * 1.3);
       const floor = Math.max(ground + 12, this.clearance(g.x, g.z, ground + 12));
       const target = Math.max(cruise, floor);
@@ -443,6 +446,11 @@ export class Gulls {
       shown++;
     }
     this.instances.commit(shown);
+  }
+
+  /** Circles low over `point` (a boat, say) until called with null; then each gull goes back to its own coast. */
+  follow(point: THREE.Vector3 | null): void {
+    this.escort = point;
   }
 
   /** Comes in from far out over the sea, heading for its circle. */

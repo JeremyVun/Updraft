@@ -17,6 +17,8 @@ export interface Shot {
   from?: THREE.Vector3;
   /** An exact camera position; overrides distance, height and from. */
   eye?: THREE.Vector3;
+  /** The camera travels with a steadily moving target (a boat) and only eases the framing, so it never trails. */
+  carry?: boolean;
 }
 
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
@@ -26,6 +28,8 @@ export class CameraRig {
   private readonly eye = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly wantEye = new THREE.Vector3();
+  private readonly lastTarget = new THREE.Vector3();
+  private readonly moved = new THREE.Vector3();
 
   constructor() {
     this.fixed = params.cam !== null;
@@ -58,12 +62,19 @@ export class CameraRig {
     if (this.fixed) return;
     this.desired(shot, this.eye);
     this.look.copy(shot.target);
+    this.lastTarget.copy(shot.target);
     this.place(0);
   }
 
   update(dt: number, time: number, shot: Shot, pace = 0.6): void {
     if (this.fixed) return;
     const k = 1 - Math.exp(-dt * pace);
+    this.moved.subVectors(shot.target, this.lastTarget);
+    this.lastTarget.copy(shot.target);
+    if (shot.carry && this.moved.lengthSq() < 1) {
+      this.eye.add(this.moved);
+      this.look.add(this.moved);
+    }
     this.eye.lerp(this.desired(shot, this.wantEye), k);
     this.look.lerp(shot.target, k);
     this.place(time);

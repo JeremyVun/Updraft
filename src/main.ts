@@ -221,6 +221,8 @@ function frame(now: number): void {
   input.update(dt, rig.camera, wind);
   if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.down ? input.charge : 0, dt);
   story.update(dt, time);
+  creatures.gulls.follow(story.escort);
+  atmo.uniforms.uRainbow.value = story.rainbow;
   boat.update(dt);
   child.update(dt);
   glider.update(dt, time);

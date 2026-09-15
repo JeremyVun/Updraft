@@ -12,7 +12,28 @@ void main() {
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uRainbow;
 in vec3 vDir;
+
+vec3 spectrum(float t) {
+  return clamp(vec3(1.6 - abs(t - 0.95) * 3.0, 1.4 - abs(t - 0.55) * 3.2, 1.3 - abs(t - 0.12) * 3.4), 0.0, 1.0);
+}
+
+/** Light added by a rainbow round the point opposite the sun: the bright primary bow, a faint reversed secondary, and the darker band between. */
+vec3 rainbow(vec3 d, vec3 sky) {
+  float a = degrees(acos(clamp(dot(d, -uSunDir), -1.0, 1.0)));
+  float p = (a - 40.2) / 2.6;
+  float primary = smoothstep(0.0, 0.25, p) * smoothstep(1.0, 0.7, p);
+  float q = (53.8 - a) / 3.2;
+  float secondary = smoothstep(0.0, 0.4, q) * smoothstep(1.0, 0.6, q) * 0.16;
+  float inside = smoothstep(40.5, 30.0, a) * smoothstep(0.0, 20.0, a) * 0.05;
+  float gap = smoothstep(42.4, 43.4, a) * smoothstep(51.0, 50.0, a) * 0.07;
+  float along = atan(d.x + uSunDir.x, d.z + uSunDir.z);
+  float patchy = 0.55 + 0.45 * smoothstep(0.3, 0.7, fbm(vec2(along * 2.2, uTime * 0.004)));
+  float fade = smoothstep(-0.01, 0.05, d.y) * patchy * uRainbow;
+  vec3 light = uSunColor * 0.16;
+  return (spectrum(clamp(p, 0.0, 1.0)) * primary + spectrum(clamp(q, 0.0, 1.0)) * secondary) * light * fade * 1.8 + sky * (inside - gap) * fade;
+}
 
 float cloudDensity(vec2 p) {
   float n = fbm(p * vec2(0.55, 1.1)) * 0.7 + fbm(p * 2.3 + 7.0) * 0.3;
@@ -24,6 +45,7 @@ void main() {
   vec3 col = skyColor(d);
   float sd = dot(d, uSunDir);
   col += uSunColor * smoothstep(0.99955, 0.99975, sd) * 14.0;
+  if (uRainbow > 0.0) col += rainbow(d, col);
 
   if (d.y > 0.0) {
     vec2 p = d.xz / (d.y + 0.06) * 1.2 + uCloudShift * 0.003;
@@ -54,7 +76,7 @@ export function createSky(): THREE.Mesh {
   const mat = new THREE.ShaderMaterial({
     vertexShader: VERT,
     fragmentShader: FRAG,
-    uniforms: { ...atmo.uniforms },
+    uniforms: { ...atmo.uniforms, uRainbow: atmo.uniforms.uRainbow },
     side: THREE.BackSide,
     depthWrite: false,
   });

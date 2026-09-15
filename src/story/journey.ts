@@ -55,6 +55,12 @@ export class Journey {
   get focus(): THREE.Vector3 {
     return this.chapter.focus;
   }
+  get rainbow(): number {
+    return this.chapter.rainbow ?? 0;
+  }
+  get escort(): THREE.Vector3 | null {
+    return this.chapter.escort ?? null;
+  }
   get current(): Chapter {
     return this.chapter;
   }
