@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { FIELDS_GLSL } from './fields';
+import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
 import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, LAST_HILL } from './heightfield';
 import { heightAt } from './island';
+import { shaderFbm, smoothstep } from './noise';
 import { WINDOW } from './window';
 
 const TILE = 8;
@@ -48,6 +49,31 @@ vec3 grassTint(vec2 xz) {
 }
 `;
 
+const fieldSample: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 };
+
+/** Typical blade height at (x, z): the vertex shader's formula without the per-blade randomness. */
+export function grassHeightAt(x: number, z: number): number {
+  const groundH = heightAt(x, z);
+  if (groundH < GRASS_LINE - 0.6) return 0;
+  const lush = shaderFbm(x * 0.035 + 17, z * 0.035 + 17);
+  const shortPatch = smoothstep(0.52, 0.68, shaderFbm(x * 0.05 - 23, z * 0.05 - 23));
+  const fringe = smoothstep(GRASS_LINE - 0.6, GRASS_LINE + 2.2, groundH);
+  const pasture = smoothstep(-600, -660, z);
+  let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
+  if (pasture <= 0) return h;
+  h += (0.41 + 0.26 * lush - h) * pasture;
+  const f = fieldAt(x, z, fieldSample);
+  const grazed = Math.max(
+    1 - smoothstep(45, 95, Math.hypot(x - LAST_HILL.x, z - LAST_HILL.z)),
+    1 - smoothstep(14, 30, Math.hypot(x - COTTAGE.x, z - COTTAGE.z)),
+  );
+  const walled = f.wall && f.presence >= 0.5 ? 1 : 0;
+  const hay = (f.kind <= 0.22 ? 1 : 0) * f.presence * (1 - grazed);
+  const rush = (f.kind >= 0.86 ? 1 : 0) * f.presence * (1 - grazed);
+  const wallTuft = walled * (1 - smoothstep(0.9, 2.4, f.edge));
+  return h * (1 + hay * 1.5 + rush * 1.2 + wallTuft * 1.8) * (1 - 0.5 * grazed);
+}
+
 export const grassUniforms = {
   uGrassRoot: { value: new THREE.Color('#15291d') },
   uTipLush: { value: new THREE.Color('#7d9a3c') },
@@ -79,6 +105,7 @@ out float vBend;
 out float vFringe;
 out float vSun;
 out float vFar;
+out vec4 vFlower;
 
 uint gr_hash(uvec2 v) {
   v = v * 1664525u + 1013904223u;
@@ -121,7 +148,8 @@ void main() {
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
   keep *= edge > 0.85 ? 1.0 : edge * edge * tufts;
   keep *= smoothstep(0.55, 0.7, hn.b);
-  keep *= surfaceAt(root2).x;
+  vec4 surf = surfaceAt(root2);
+  keep *= surf.x;
   vec4 fld = fieldAt(root2);
   float walled = fld.z * step(0.5, fld.w);
   if (walled > 0.5 && fld.x < 0.72) keep = 0.0;
@@ -149,6 +177,9 @@ void main() {
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
   float angle = gr_rand(s) * 6.2831853;
   float curve = 0.12 + 0.28 * gr_rand(s);
+  float flower = step(gr_rand(s), surf.z * 0.28) * step(0.5, life);
+  float petal = gr_rand(s);
+  h *= 1.0 + flower * 0.18;
   vec3 rootPos = vec3(root2.x, groundH - 0.12, root2.y);
 
   vec4 ground = groundAt(root2);
@@ -177,6 +208,7 @@ void main() {
   vec3 tangent = vec3(dir.x * sin(sA), cos(sA), dir.y * sin(sA));
   vec3 sideDir = vec3(-facing.y, 0.0, facing.x);
   float w = width * (1.0 - smoothstep(0.3, 1.0, t) * 0.85);
+  w = mix(w, width * (t > 0.72 ? 1.9 : 0.3), flower);
   vec3 world = rootPos + spine + sideDir * side01 * w * 0.5;
 
   vec3 nrm = cross(sideDir, tangent);
@@ -194,6 +226,8 @@ void main() {
   vT = t;
   vBend = wa;
   vFar = smoothstep(60.0, 170.0, dist);
+  vec3 bloom = petal < 0.4 ? vec3(1.0, 0.8, 0.14) : petal < 0.7 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
+  vFlower = vec4(mix(stillGrey(bloom), bloom, life), flower);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
 
@@ -214,6 +248,7 @@ in float vBend;
 in float vFringe;
 in float vSun;
 in float vFar;
+in vec4 vFlower;
 
 void main() {
   vec3 V = normalize(cameraPosition - vWorld);
@@ -226,6 +261,7 @@ void main() {
   vec3 alb = mix(root, vTint, smoothstep(0.0, 0.95, vT));
   float flattened = smoothstep(0.3, 1.0, vBend) * vT;
   alb = mix(alb, alb * 1.45 + vec3(0.05, 0.06, 0.035), flattened);
+  alb = mix(alb, vFlower.rgb, vFlower.a * smoothstep(0.66, 0.78, vT));
 
   float ao = mix(mix(mix(0.7, 0.22, vFringe), 1.0, smoothstep(0.0, 0.8, vT)), 1.0, vFar * 0.75);
   float diff = clamp(dot(N, uSunDir) * 0.6 + 0.4, 0.0, 1.0);

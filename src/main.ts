@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
 import { CameraRig } from './camera';
+import { Creatures } from './creatures/creatures';
+import { islandHabitat, mainlandHabitat } from './creatures/habitat';
 import { Petals } from './fx/petals';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
+import { ROUTE } from './story/hills';
 import { Journey } from './story/journey';
 import { Fireflies } from './fx/fireflies';
 import { Boat } from './traveller/boat';
@@ -23,7 +26,7 @@ import { GroundBakes, type BakeInputs } from './world/ground';
 import { LifeField } from './world/life';
 import { applyPalette } from './world/palette';
 import { heightAt } from './world/island';
-import { FLOWER_PATCHES, ROCKS, TREE } from './world/landmarks';
+import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
 import { createTree } from './world/tree';
@@ -66,6 +69,7 @@ const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
 const tree = createTree();
+const hillFlowers = wildflowersAlong(ROUTE);
 const bakes = new GroundBakes(renderer);
 const bakeInputs: BakeInputs = {
   occluders: tree.canopy,
@@ -74,7 +78,7 @@ const bakeInputs: BakeInputs = {
     { x: TREE.x, z: TREE.z, radius: 1.6 },
     { x: COTTAGE.x, z: COTTAGE.z, radius: 6.5 },
   ],
-  flowers: FLOWER_PATCHES,
+  flowers: [...FLOWER_PATCHES, ...hillFlowers],
 };
 const bakedSun = atmo.uniforms.uSunDir.value.clone();
 onWindowMove(() => {
@@ -115,6 +119,19 @@ const story = new Journey({ child, plane: glider, boat, wind, input, life, tree,
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
 if (windDebug) scene.add(windDebug);
+const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
+creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
+creatures.spawn({ x: 0, z: 0, radius: 30, songbirds: 11, seed: 3 });
+creatures.spawn({ x: -6, z: -14, radius: 55, gulls: 5, seed: 2 });
+scene.add(creatures.group);
+const homesInHills = [...ROUTE.map((p, i) => ({ x: p.x + (i % 2 ? 14 : -14), z: p.y })), { x: COTTAGE.x + 6, z: COTTAGE.z + 26 }];
+const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera);
+hillCreatures.spawn({ x: 10, z: -680, radius: 70, gulls: 4, seed: 21 });
+homesInHills.forEach((h, i) => {
+  const last = i === homesInHills.length - 1;
+  hillCreatures.spawn({ x: h.x, z: h.z, radius: 26, rabbits: 2, songbirds: i % 2 === 0 || last ? 4 : 0, butterflies: last ? 0 : 6, seed: 30 + i });
+});
+scene.add(hillCreatures.group);
 
 const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
 let pixelRatio = maxPixelRatio;
@@ -223,6 +240,17 @@ function frame(now: number): void {
   const pointerWorld = input.present ? input.world : null;
   lines.update(dt, pointerWorld, input.gust, input.down ? pointerWorld : null, input.charge);
   cursor.update(input.gust, input.charge, input.down);
+  const creatureEnv = {
+    camera: rig.camera,
+    input,
+    glider: glider.position,
+    walker: child.visible ? child.position : null,
+    life: (x: number, z: number) => life.at(x, z),
+    breeze: story.breeze,
+    audio: sound.output,
+  };
+  creatures.update(dt, time, creatureEnv);
+  hillCreatures.update(dt, time, creatureEnv);
 
   const riseNow = input.ndc.x - input.prevNdc.x + (input.ndc.y - input.prevNdc.y);
   soundState.rise += (Math.sign(riseNow) - soundState.rise) * (Math.abs(riseNow) > 1e-4 ? 0.3 : 0);
@@ -274,5 +302,5 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story };
+if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures };
 requestAnimationFrame(frame);

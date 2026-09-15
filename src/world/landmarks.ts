@@ -1,4 +1,6 @@
-import { GRASS_LINE, heightAt } from './island';
+import { fieldAt, type FieldSample } from './fields';
+import { COTTAGE } from './heightfield';
+import { GRASS_LINE, heightAt, slopeAt } from './island';
 import { mulberry32 } from './noise';
 
 export interface Rock {
@@ -68,4 +70,27 @@ export function openGround(x: number, z: number): number {
     if (d < 1) open = Math.min(open, d * d);
   }
   return open;
+}
+
+/** Wildflower patches in the pastures either side of a path across the mainland, clear of walls and the cottage. */
+export function wildflowersAlong(path: readonly { x: number; y: number }[], perLeg = 9, spread = 42): FlowerPatch[] {
+  const rand = mulberry32(19);
+  const field: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 };
+  const patches: FlowerPatch[] = [];
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    for (let made = 0, tries = 0; made < perLeg && tries < perLeg * 12; tries++) {
+      const t = rand();
+      const x = a.x + (b.x - a.x) * t + (rand() * 2 - 1) * spread;
+      const z = a.y + (b.y - a.y) * t + (rand() * 2 - 1) * spread;
+      const radius = 2 + rand() * 2.5;
+      const f = fieldAt(x, z, field);
+      if (f.wall && f.edge < radius + 1.5) continue;
+      if (slopeAt(x, z) > 0.6 || Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < COTTAGE.radius + 8) continue;
+      patches.push({ x, z, radius });
+      made++;
+    }
+  }
+  return patches;
 }

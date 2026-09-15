@@ -84,6 +84,47 @@ export function fbm(noise: Noise2D, x: number, y: number, octaves: number): numb
   return sum / norm;
 }
 
+const fract = (x: number) => x - Math.floor(x);
+
+function hash12(x: number, y: number): number {
+  let a = fract(x * 0.1031);
+  let b = fract(y * 0.1031);
+  let c = a;
+  const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
+  a += d;
+  b += d;
+  c += d;
+  return fract((a + b) * c);
+}
+
+function vnoise(x: number, y: number): number {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+  const a = hash12(ix, iy);
+  const b = hash12(ix + 1, iy);
+  const c = hash12(ix, iy + 1);
+  const d = hash12(ix + 1, iy + 1);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+
+/** The `fbm` of NOISE_GLSL (world/atmosphere.ts), for CPU lookups that must agree with shaders. */
+export function shaderFbm(x: number, y: number): number {
+  let s = 0;
+  let a = 0.5;
+  for (let i = 0; i < 4; i++) {
+    s += a * vnoise(x, y);
+    const nx = 1.6 * x - 1.2 * y;
+    y = 1.2 * x + 1.6 * y;
+    x = nx;
+    a *= 0.5;
+  }
+  return s / 0.9375;
+}
+
 export function smoothstep(e0: number, e1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);

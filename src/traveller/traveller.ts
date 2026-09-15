@@ -95,6 +95,10 @@ export class Traveller {
     return [this.rig.root, this.scarf.mesh, this.shadow];
   }
 
+  get visible(): boolean {
+    return this.rig.root.visible;
+  }
+
   set visible(on: boolean) {
     for (const o of this.objects) o.visible = on;
   }
