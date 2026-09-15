@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
 import { CameraRig } from './camera';
+import { Creatures } from './creatures/creatures';
+import { islandHabitat } from './creatures/habitat';
 import { Petals } from './fx/petals';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
@@ -60,6 +62,10 @@ const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
 const glider = params.noGlider ? null : new Glider(wind, tree.canopy);
 glider?.objects.forEach((o) => scene.add(o));
+const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
+creatures.spawn({ x: 0, z: 2, radius: 28, rabbits: 6, songbirds: 11, butterflies: 26 });
+creatures.spawn({ x: -6, z: -14, radius: 55, gulls: 5, seed: 2 });
+scene.add(creatures.group);
 if (params.debug === 'wind') scene.add(createWindDebug());
 
 const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
@@ -156,6 +162,7 @@ function frame(now: number): void {
   const pointerWorld = input.present ? input.world : null;
   lines.update(dt, pointerWorld, input.gust, input.down ? pointerWorld : null, input.charge);
   cursor.update(input.gust, input.charge, input.down);
+  creatures.update(dt, time, { camera: rig.camera, input, glider: glider?.position ?? null, audio: sound.output });
 
   const riseNow = input.ndc.x - input.prevNdc.x + (input.ndc.y - input.prevNdc.y);
   soundState.rise += (Math.sign(riseNow) - soundState.rise) * (Math.abs(riseNow) > 1e-4 ? 0.3 : 0);
@@ -195,5 +202,5 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound };
+if (params.shot) window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, creatures };
 requestAnimationFrame(frame);
