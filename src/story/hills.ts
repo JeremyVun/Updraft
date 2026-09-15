@@ -4,6 +4,7 @@ import { mainlandCoastZ } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
+import { cue } from './cues';
 
 type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'summit' | 'unfold' | 'gaze' | 'fold' | 'release' | 'nightfall' | 'home' | 'inside';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
@@ -134,6 +135,7 @@ export class HillsChapter implements Chapter {
     this.waveStart = this.now;
     life.regions.wave.set(c.position.x, c.position.z, 0, 90);
     c.cheer();
+    cue('wave');
   }
 
   private walkOn(): void {
@@ -221,7 +223,10 @@ export class HillsChapter implements Chapter {
 
     if (this.beat === 'summit') {
       c.lookAt = this.sky;
-      if (c.sitting && this.t > 3.5) this.to('unfold');
+      if (c.sitting && this.t > 3.5) {
+        this.to('unfold');
+        cue('unfold');
+      }
     } else if (this.beat === 'unfold') {
       drawing.open = Math.min(1, drawing.open + dt * 0.9);
       c.presenting = Math.min(1, c.presenting + dt * 1.5);
@@ -244,6 +249,7 @@ export class HillsChapter implements Chapter {
         c.throwToward(faceX, faceZ, () => {
           p.launch(c.handPosition(this.hand), this.tmp.set(TOWARD_SUNSET.x * 6, 6.5, TOWARD_SUNSET.y * 6));
           p.depart(this.tmp.set(TOWARD_SUNSET.x, 0, TOWARD_SUNSET.y));
+          cue('release');
         });
       }
       c.lookAt = p.position;
@@ -261,6 +267,7 @@ export class HillsChapter implements Chapter {
         c.standUp();
         c.walkTo(cottage.doorstep.x, cottage.doorstep.z, false, () => {
           cottage.openDoor(true);
+          cue('home');
           this.to('inside');
         }, 0.5);
       }

@@ -4,6 +4,7 @@ import type { WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
 import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
+import { cue } from './cues';
 
 type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'toBoat' | 'push' | 'aboard';
 type Play = 'watch' | 'fetch' | 'hold';
@@ -67,7 +68,10 @@ export class IslandChapter implements Chapter {
     const { child: c, plane: p } = this.cast;
 
     if (this.beat === 'still') {
-      if (this.cast.input.gust > 5) this.breezeTarget = 1;
+      if (this.cast.input.gust > 5 && this.breezeTarget === 0) {
+        this.breezeTarget = 1;
+        cue('breeze');
+      }
       const w = this.cast.wind.sample(c.position.x, c.position.z, this.sample);
       if (this.breezeTarget > 0) this.stillSince += dt;
       if (w.energy > 0.15 || Math.hypot(w.x, w.z) > 6 || this.stillSince > 5) this.loosen(time);
@@ -90,7 +94,10 @@ export class IslandChapter implements Chapter {
       this.sinceLifeCheck = 0;
       const island = life.regions.island;
       this.islandLife = life.mean((x, z) => Math.hypot(x - island.x, z - island.y) < island.z && heightAt(x, z) > 0.4);
-      if (!this.restored && this.islandLife > 0.78) this.restored = true;
+      if (!this.restored && this.islandLife > 0.78) {
+        this.restored = true;
+        cue('restored');
+      }
     }
     const region = life.regions.island;
     if (this.restored) region.w = Math.min(1, region.w + dt * 0.12);

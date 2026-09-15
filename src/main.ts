@@ -7,6 +7,7 @@ import { Petals } from './fx/petals';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
 import { ROUTE } from './story/hills';
+import { takeCues } from './story/cues';
 import { Journey } from './story/journey';
 import { Fireflies } from './fx/fireflies';
 import { Boat } from './traveller/boat';
@@ -33,7 +34,7 @@ import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
-import { COTTAGE } from './world/heightfield';
+import { COTTAGE, mainlandCoastZ } from './world/heightfield';
 import { Walls } from './world/walls';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
@@ -167,7 +168,20 @@ window.addEventListener('keydown', (e) => {
     setSound(soundButton.dataset.on !== 'true');
   }
 });
-const soundState: SoundState = { gust: 0, pan: 0, rise: 0, charge: 0, overLand: false, breeze: 0, gliderLift: 0 };
+const soundState: SoundState = {
+  gust: 0,
+  pan: 0,
+  rise: 0,
+  charge: 0,
+  overLand: false,
+  breeze: 0,
+  gliderLift: 0,
+  life: 0,
+  night: 0,
+  sea: 1,
+  meadow: 0,
+  cues: [],
+};
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
 function resize(): void {
@@ -269,6 +283,12 @@ function frame(now: number): void {
   const b = wind.sample(-6, -14, breezeSample);
   soundState.breeze = Math.min(1, Math.hypot(b.x, b.z) / 6);
   soundState.gliderLift = glider.lift;
+  soundState.life = story.worldLife;
+  soundState.night = atmo.uniforms.uNight.value;
+  const inland = mainlandCoastZ(story.focus.x) - story.focus.z;
+  soundState.sea = 1 - THREE.MathUtils.smoothstep(inland, 20, 260);
+  soundState.meadow = THREE.MathUtils.smoothstep(inland, 60, 200);
+  soundState.cues = takeCues();
   sound.update(dt, soundState);
 
   rig.update(dt, time, story.shot, story.pace);

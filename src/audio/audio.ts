@@ -1,4 +1,10 @@
-/** Everything is synthesised: filtered noise for air and sea, a slow pad, and chimes that follow the player's gestures. */
+import type { Cue } from '../story/cues';
+
+/**
+ * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
+ * that follow the player's gestures, skylarks over the hills, crickets and an owl at night, and short phrases that
+ * answer the story's moments.
+ */
 
 export interface SoundState {
   /** Player gust speed, 0..~26. */
@@ -14,6 +20,15 @@ export interface SoundState {
   breeze: number;
   /** How hard the glider is being lifted, 0..1. */
   gliderLift: number;
+  /** How alive the world is, 0 grey and still to 1. */
+  life: number;
+  /** 0 by day, 1 at full night. */
+  night: number;
+  /** How close the sea is: 1 on the island and at sea, falling away inland. */
+  sea: number;
+  /** 1 out over the green hills, where skylarks sing. */
+  meadow: number;
+  cues: Cue[];
 }
 
 const SCALE = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88];
@@ -25,6 +40,17 @@ const CHORDS = [
 ];
 const CHORD_SECONDS = 11;
 const PULSE = 60 / 96 / 2;
+
+/** The story's phrases as [midi, beats] pairs, in the pad's D major. */
+const PHRASES: Record<Cue, [number, number][]> = {
+  breeze: [[74, 1], [78, 1], [81, 2]],
+  restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
+  wave: [[57, 1], [62, 1], [66, 1], [69, 1], [74, 2], [78, 2], [81, 4]],
+  unfold: [[74, 2], [78, 1], [81, 1], [83, 2], [81, 1], [78, 1], [76, 2], [78, 1], [74, 3], [0, 2], [71, 1], [74, 1], [76, 2], [78, 1], [76, 1], [74, 4]],
+  release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
+  home: [[62, 2], [66, 2], [69, 2], [74, 6]],
+};
+const PHRASE_BEAT: Record<Cue, number> = { breeze: 0.3, restored: 0.22, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -88,6 +114,10 @@ export class Soundscape {
   private lastGlider = 0;
   private activity = 0;
   private muted = false;
+  private padFilter!: BiquadFilterNode;
+  private nextCricket = 0;
+  private nextOwl = 20;
+  private nextLark = 8;
 
   get running(): boolean {
     return this.ctx?.state === 'running' && !this.muted;
@@ -147,6 +177,7 @@ export class Soundscape {
     padFilter.type = 'lowpass';
     padFilter.frequency.value = 1100;
     padFilter.Q.value = 0.3;
+    this.padFilter = padFilter;
     this.padGain.connect(padFilter);
     padFilter.connect(this.master);
     padFilter.connect(this.reverb);
@@ -228,6 +259,62 @@ export class Soundscape {
     }
   }
 
+  /** A short tone with its own envelope, for birds and insects. */
+  private tone(freq: number, to: number, when: number, length: number, level: number, pan: number, wet: number, type: OscillatorType = 'sine'): void {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, when);
+    o.frequency.exponentialRampToValueAtTime(to, when + length);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(level, when + Math.min(0.02, length * 0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001, when + length);
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = pan;
+    o.connect(g).connect(panner).connect(this.master);
+    if (wet > 0) {
+      const send = ctx.createGain();
+      send.gain.value = wet;
+      panner.connect(send).connect(this.reverb);
+    }
+    o.start(when);
+    o.stop(when + length + 0.05);
+  }
+
+  /** A field cricket: three quick pulses of a high tone. */
+  private cricket(when: number, pan: number, level: number): void {
+    const f = 4300 + Math.random() * 600;
+    for (let i = 0; i < 3; i++) this.tone(f, f * 0.98, when + i * 0.045, 0.03, level, pan, 0.15);
+  }
+
+  /** A tawny owl far off: a soft hoo, a pause, a long wavering hoooo. */
+  private owl(when: number, pan: number): void {
+    this.tone(390, 370, when, 0.35, 0.05, pan, 0.8);
+    this.tone(395, 360, when + 1.1, 1.3, 0.045, pan, 0.8);
+  }
+
+  /** A skylark high over the hills: a run of quick, bright, tumbling notes. */
+  private skylark(when: number, pan: number, level: number): void {
+    let t = when;
+    const notes = 18 + Math.floor(Math.random() * 20);
+    for (let i = 0; i < notes; i++) {
+      const f = 2600 + Math.random() * 2400;
+      const len = 0.04 + Math.random() * 0.06;
+      this.tone(f, f * (0.9 + Math.random() * 0.25), t, len, level * (0.6 + Math.random() * 0.4), pan, 0.35);
+      t += len + Math.random() * 0.05;
+    }
+  }
+
+  private phrase(name: Cue): void {
+    const beat = PHRASE_BEAT[name];
+    let at = this.nextPulse() + 0.05;
+    for (const [midi, beats] of PHRASES[name]) {
+      if (midi > 0) this.chime(midi, name === 'unfold' ? 0.55 : 0.5, 0, at, Math.max(2.2, beats * beat * 3));
+      at += beats * beat;
+    }
+  }
+
   private nextPulse(): number {
     const now = this.ctx!.currentTime;
     return Math.ceil(now / PULSE) * PULSE;
@@ -242,7 +329,7 @@ export class Soundscape {
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
     this.breezeGain.gain.setTargetAtTime(0.1 + s.breeze * 0.12, now, 0.5);
-    this.seaGain.gain.setTargetAtTime(0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37), now, 0.3);
+    this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea), now, 0.3);
     this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + g * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime(s.pan * 0.7, now, tc);
@@ -261,7 +348,23 @@ export class Soundscape {
         voice.gain.gain.setTargetAtTime(0.25, now, 2.5);
       });
     }
-    this.padGain.gain.setTargetAtTime(0.05 + this.activity * 0.09, now, 1.5);
+    this.padGain.gain.setTargetAtTime((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night) + this.activity * 0.09, now, 1.5);
+    this.padFilter.frequency.setTargetAtTime(500 + 700 * s.life - 250 * s.night, now, 2);
+
+    for (const name of s.cues) this.phrase(name);
+
+    if (s.night > 0.3 && now > this.nextCricket) {
+      this.cricket(now + 0.05, Math.random() * 1.6 - 0.8, 0.012 * s.night);
+      this.nextCricket = now + 0.25 + Math.random() * (1.6 - s.night);
+    }
+    if (s.night > 0.7 && now > this.nextOwl) {
+      this.owl(now + 0.1, Math.random() * 1.2 - 0.6);
+      this.nextOwl = now + 25 + Math.random() * 30;
+    }
+    if (s.meadow > 0.5 && s.night < 0.2 && now > this.nextLark) {
+      this.skylark(now + 0.1, Math.random() * 1.4 - 0.7, 0.01 * s.meadow);
+      this.nextLark = now + 6 + Math.random() * 10;
+    }
 
     const gusting = s.gust > 7;
     if (gusting) {
