@@ -6,6 +6,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). Overview: `
 
 - `npm run dev` (serves http://127.0.0.1:5230/), `npm run typecheck`, `npm run build`.
 - Visual QA: `node tools/play.mjs <out-prefix> '<json steps>'` drives real pointer gestures (swipe, hold, move) in local Chrome with the GPU and saves screenshots; `VIDEO=1` also records a webm. Run it against a dev server; see the header for step syntax. Put output in `/tmp`.
+- Deploy: `tools/deploy.sh` builds and uploads `dist/` as static assets of the Cloudflare Worker `updraft` (`wrangler.jsonc`), live at https://updraft.perch-admin.workers.dev. Needs `CLOUDFLARE_API_TOKEN` (Workers Scripts Edit), a clean tree and the `main` branch, because every deploy goes to production.
 
 ## Query params
 
