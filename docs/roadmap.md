@@ -13,16 +13,20 @@ One island at golden hour. Passes when a new player grins within 30 seconds with
 - Wind and music generated from the player's gestures.
 - 60 fps on an Apple Silicon Mac at native resolution. Measured at 60 fps on an M4 Pro at pixel ratio 2 in headless Chrome.
 
-Open for M1: sound has only been checked for errors, not listened to; touch devices are untested.
+Jeremy played it (2026-09-16): sound is good and touch works beautifully.
 
-## M2: restoration loop
+## M2: the journey (built, local, not yet deployed)
 
-A grey island brought back to life by moving seeds and rain with the wind. Flowers and saplings appear where seeds settle; trees start to act as windbreaks.
+Jeremy's brief for this milestone and the story as built are in `journey.md`: a wordless story from a grey, still island across the sea to endless green hills and a cottage at night. The restoration is simpler than first planned: wind itself brings life back (no seeds, rain or fire elements), which keeps the one verb.
 
-## M3: the traveller and the archipelago
+- The traveller (a child with a paper plane), the grey still world and life returning where the wind goes.
+- The crossing by boat: farewell under a rainbow, gulls, a whale and fish (whale and fish on a subagent branch).
+- The mainland: streamed terrain, grass, field patchwork, dry-stone walls, wildflowers; the green wave; a sun shower; a murmuration at sunset.
+- Creatures: rabbits, finches, gulls, butterflies (sheep on a subagent branch).
+- Time of day from golden afternoon to night; the drawing, the release, the cottage, the moon.
+- A new sea: surf and swash, seabed, glitter, mirror.
+- Music that follows the story.
 
-The traveller, a sequence of islands, fire and dunes as elements, and optional wind trials.
+## Later
 
-## M4: depth
-
-Weather and time of day, a persistent world map, fuller music and sound.
+Optional wind trials, a persistent world, more islands; performance on phones (grass fill at high pixel ratios is the main cost).
