@@ -50,6 +50,8 @@ export class Traveller {
   sitting = true;
   /** Carried by something else (the boat): placed each frame by `ride`, no walking. */
   riding = false;
+  /** 0..1: both hands holding the drawing up in front. */
+  presenting = 0;
   /** Where the child is looking, if anywhere in particular. */
   lookAt: THREE.Vector3 | null = null;
   private readonly rig: Rig;
@@ -91,6 +93,18 @@ export class Traveller {
 
   get objects(): THREE.Object3D[] {
     return [this.rig.root, this.scarf.mesh, this.shadow];
+  }
+
+  set visible(on: boolean) {
+    for (const o of this.objects) o.visible = on;
+  }
+
+  /** Where the drawing is held when presenting: up in front of the face at arm's length. */
+  presentPoint(out: THREE.Vector3): THREE.Vector3 {
+    const up = this.sitting ? 1.95 : 2.45;
+    const fx = Math.sin(this.yaw);
+    const fz = Math.cos(this.yaw);
+    return out.set(this.position.x + fx * 0.95 - fz * 0.45, this.position.y + up, this.position.z + fz * 0.95 + fx * 0.45);
   }
 
   get busy(): boolean {
@@ -407,6 +421,14 @@ export class Traveller {
       crouch = 0.1 * lean;
     }
 
+    if (this.presenting > 0.01) {
+      const k = this.presenting;
+      armLX = THREE.MathUtils.lerp(armLX, -2.25, k);
+      armRX = THREE.MathUtils.lerp(armRX, -2.25, k);
+      armLZ = THREE.MathUtils.lerp(armLZ, 0.25, k);
+      armRZ = THREE.MathUtils.lerp(armRZ, -0.25, k);
+    }
+
     const brace = this.brace;
     if (brace > 0.02 && !a) {
       armLX = THREE.MathUtils.lerp(armLX, -2.7, brace);
@@ -423,8 +445,9 @@ export class Traveller {
     r.body.scale.set(1, 1 + Math.sin(t * 2.2) * 0.012, 1);
     r.legL.rotation.set(swing * legAmp * (1 - sit) - sit * 1.45, 0, -0.05 - sit * 0.15);
     r.legR.rotation.set(-swing * legAmp * (1 - sit) - sit * 1.45, 0, 0.05 + sit * 0.15);
-    r.armL.rotation.set(armLX * (1 - sit) - sit * 0.3, 0, armLZ);
-    r.armR.rotation.set(armRX * (1 - sit * (a ? 0 : 1)) - sit * 0.5, 0, armRZ);
+    const armsFree = a || this.presenting > 0.01 ? 0 : 1;
+    r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
+    r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
 
     let wantYaw = Math.sin(t * 0.37) * 0.35;
     let wantPitch = Math.sin(t * 0.23) * 0.08;

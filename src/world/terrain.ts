@@ -59,6 +59,7 @@ void main() {
 
   vec4 surf = surfaceAt(xz);
   float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
+  alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
   float far = smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz));
   vec3 tint = grassTint(xz);

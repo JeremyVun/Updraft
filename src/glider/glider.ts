@@ -78,6 +78,8 @@ export class Glider {
   held = false;
   /** Seconds it has lain still since it last flew. */
   restTime = 0;
+  /** Set once it has been let go at the end: it climbs away along this heading and never comes back. */
+  departing: THREE.Vector3 | null = null;
   /** It banks around and comes home once it strays this far from `home`. */
   readonly home = new THREE.Vector3(-6, 0, -14);
   homeRadius = 50;
@@ -164,11 +166,21 @@ export class Glider {
     this.tipR.points.length = 0;
   }
 
+  depart(heading: THREE.Vector3): void {
+    this.departing = heading.clone().normalize();
+  }
+
+  set visible(on: boolean) {
+    this.group.visible = on;
+    this.trails.mesh.visible = on;
+  }
+
   update(dt: number, time: number): void {
     if (this.held) {
       this.placeHeld();
       return;
     }
+    if (this.departing) this.thrust = Math.max(this.thrust, 5.2);
     const p = this.position;
     const v = this.velocity;
     const w = this.wind.sample(p.x, p.z, this.sample);
@@ -195,8 +207,13 @@ export class Glider {
     const vyTarget = resting ? 0 : liftForce - 2.4;
     v.y += (vyTarget - v.y) * (1 - Math.exp(-dt * 1.4));
 
+    if (this.departing) {
+      const k = 1 - Math.exp(-dt * 0.6);
+      v.x += (this.departing.x * 9 - v.x) * k;
+      v.z += (this.departing.z * 9 - v.z) * k;
+    }
     const r = Math.hypot(p.x - this.home.x, p.z - this.home.z);
-    if (r > this.homeRadius) {
+    if (r > this.homeRadius && !this.departing) {
       const pull = Math.min((r - this.homeRadius) * 0.5, 14) * dt;
       v.x -= ((p.x - this.home.x) / r) * pull;
       v.z -= ((p.z - this.home.z) / r) * pull;
@@ -205,7 +222,7 @@ export class Glider {
       v.x -= ((p.x - this.home.x) / r) * 1.4 * dt;
       v.z -= ((p.z - this.home.z) / r) * 1.4 * dt;
     }
-    if (p.y > 32) v.y -= (p.y - 32) * dt * 1.5;
+    if (p.y > 32 && !this.departing) v.y -= (p.y - 32) * dt * 1.5;
     for (const o of this.obstacles) {
       const d = this.scratch.subVectors(p, o.centre);
       const len = d.length();

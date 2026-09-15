@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL } from './fields';
-import { GRASS_LINE, HEIGHTFIELD_GLSL } from './heightfield';
+import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, LAST_HILL } from './heightfield';
 import { heightAt } from './island';
 import { WINDOW } from './window';
 
@@ -136,12 +136,14 @@ void main() {
   float life = lifeAt(root2);
   float pasture = pastureAt(root2);
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
-  float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush);
+  float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush) * step(95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
   h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
-  float hay = step(fld.y, 0.22) * fld.w;
-  float rush = step(0.86, fld.y) * fld.w;
+  float grazed = max(1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0))),
+                     1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0))));
+  float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
+  float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   float wallTuft = walled * (1.0 - smoothstep(0.9, 2.4, fld.x));
-  h *= 1.0 + hay * 1.5 + rush * 1.2 + wallTuft * 1.8;
+  h *= (1.0 + hay * 1.5 + rush * 1.2 + wallTuft * 1.8) * mix(1.0, 0.5, grazed);
   h *= mix(0.72, 1.0, life);
   h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;

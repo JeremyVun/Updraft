@@ -13,6 +13,7 @@ export class CrossingChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   readonly pace = 0.4;
+  readonly dusk = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 6.5 };
   readonly focus = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();

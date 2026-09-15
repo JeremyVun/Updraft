@@ -38,6 +38,8 @@ export const atmo = {
     uSkyAmbient: { value: hdr('#8fb2dc', 0.5) },
     uGroundBounce: { value: hdr('#a4895c', 0.22) },
     uFogDensity: { value: 0.0011 },
+    /** 0 by day, 1 at full night: stars, fireflies, lit windows. */
+    uNight: { value: 0 },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },
@@ -94,6 +96,7 @@ uniform vec3 uSkyHorizonSun;
 uniform vec3 uSkyAmbient;
 uniform vec3 uGroundBounce;
 uniform float uFogDensity;
+uniform float uNight;
 uniform vec2 uCloudShift;
 uniform vec4 uDomain;
 uniform vec4 uGroundDomain;

@@ -37,6 +37,15 @@ void main() {
     vec3 cloudCol = mix(lit, shade, smoothstep(0.1, 0.9, thick));
     col = mix(col, cloudCol, c * 0.9);
   }
+  if (uNight > 0.0 && d.y > 0.0) {
+    vec3 sd3 = d * 260.0;
+    vec3 cell = floor(sd3);
+    float h = hash12(cell.xy * 1.37 + cell.z * 7.13);
+    float star = step(0.9965, h) * smoothstep(0.55, 0.1, length(fract(sd3) - 0.5));
+    float twinkle = 0.65 + 0.35 * sin(uTime * (1.5 + h * 4.0) + h * 40.0);
+    float band = smoothstep(0.35, 0.0, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78))))) * fbm(d.xz * 9.0 + d.y * 4.0);
+    col += (vec3(0.9, 0.93, 1.0) * star * twinkle * 3.5 + vec3(0.45, 0.5, 0.75) * band * 0.18) * uNight * smoothstep(0.0, 0.12, d.y);
+  }
   gl_FragColor = vec4(col, 1.0);
 }`;
 

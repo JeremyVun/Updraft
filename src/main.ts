@@ -5,7 +5,9 @@ import { Petals } from './fx/petals';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
 import { Journey } from './story/journey';
+import { Fireflies } from './fx/fireflies';
 import { Boat } from './traveller/boat';
+import { Drawing } from './traveller/drawing';
 import { Traveller } from './traveller/traveller';
 import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
@@ -27,6 +29,8 @@ import { createRocks } from './world/rocks';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
+import { Cottage } from './world/cottage';
+import { COTTAGE } from './world/heightfield';
 import { Walls } from './world/walls';
 import { createWater } from './world/water';
 import { followWindow, onWindowMove } from './world/window';
@@ -65,10 +69,18 @@ const tree = createTree();
 const bakes = new GroundBakes(renderer);
 const bakeInputs: BakeInputs = {
   occluders: tree.canopy,
-  clearings: [...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })), { x: TREE.x, z: TREE.z, radius: 1.6 }],
+  clearings: [
+    ...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })),
+    { x: TREE.x, z: TREE.z, radius: 1.6 },
+    { x: COTTAGE.x, z: COTTAGE.z, radius: 6.5 },
+  ],
   flowers: FLOWER_PATCHES,
 };
-onWindowMove(() => bakes.bake(bakeInputs));
+const bakedSun = atmo.uniforms.uSunDir.value.clone();
+onWindowMove(() => {
+  bakedSun.copy(atmo.uniforms.uSunDir.value);
+  bakes.bake(bakeInputs);
+});
 followWindow(...windowAim(), true);
 const life = new LifeField(renderer);
 const clouds = new CloudShadows(renderer);
@@ -83,6 +95,8 @@ const grass = new Grass();
 scene.add(grass.group);
 const walls = new Walls();
 scene.add(walls.mesh);
+const cottage = new Cottage(wind);
+cottage.objects.forEach((o) => scene.add(o));
 const petals = new Petals(renderer);
 scene.add(petals.mesh);
 const lines = new WindLines(wind);
@@ -93,7 +107,11 @@ const child = new Traveller(wind);
 child.objects.forEach((o) => scene.add(o));
 const boat = new Boat(wind);
 boat.objects.forEach((o) => scene.add(o));
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree });
+const drawing = new Drawing();
+scene.add(drawing.mesh);
+const fireflies = new Fireflies(wind);
+scene.add(fireflies.mesh);
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage });
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
 if (windDebug) scene.add(windDebug);
@@ -187,7 +205,11 @@ function frame(now: number): void {
   wind.step(dt, time);
   life.update(dt);
   tree.life.value += (Math.min(1, life.at(TREE.x, TREE.z) * 1.15) - tree.life.value) * (1 - Math.exp(-dt * 0.8));
-  applyPalette(story.worldLife);
+  applyPalette(story.worldLife, params.dusk ?? story.dusk);
+  if (bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.006) {
+    bakedSun.copy(atmo.uniforms.uSunDir.value);
+    bakes.bake(bakeInputs);
+  }
   post.saturation = 0.62 + 0.38 * story.worldLife;
 
   const u = atmo.uniforms;
@@ -221,6 +243,8 @@ function frame(now: number): void {
   terrain.update(rig.camera);
   grass.update(rig.camera);
   walls.update(rig.camera);
+  cottage.update(dt, rig.camera);
+  fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
   post.render(time);
 
   frames++;

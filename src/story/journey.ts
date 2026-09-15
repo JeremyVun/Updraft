@@ -20,18 +20,19 @@ export class Journey {
   constructor(private readonly cast: Cast) {
     this.chapter = new IslandChapter(cast);
     const start = params.chapter;
-    if (start === 'crossing' || start === 'hills') {
+    if (start === 'crossing' || start === 'hills' || start === 'summit') {
       cast.life.regions.island.w = 1;
       cast.boat.beach(BOAT_BERTH.x, BOAT_BERTH.z - 4, Math.PI);
       cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
       cast.boat.launch();
       this.begin('crossing');
-      if (start === 'hills') {
+      if (start === 'hills' || start === 'summit') {
         const z = mainlandCoastZ(LANDING.x) + 3;
         cast.boat.beach(LANDING.x, z, Math.PI);
         cast.boat.grounded = true;
         cast.child.place(LANDING.x, z - 3, Math.PI);
         this.begin('hills');
+        if (start === 'summit') (this.chapter as HillsChapter).skipToSummit();
       }
     }
   }
@@ -44,6 +45,9 @@ export class Journey {
   }
   get worldLife(): number {
     return this.chapter.worldLife;
+  }
+  get dusk(): number {
+    return this.chapter.dusk;
   }
   get pace(): number {
     return this.chapter.pace;

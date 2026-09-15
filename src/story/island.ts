@@ -25,6 +25,7 @@ export class IslandChapter implements Chapter {
   worldLife = 0;
   restored = false;
   pace = 0.8;
+  readonly dusk = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 9 };
   readonly focus = new THREE.Vector3();
   private play: Play = 'watch';

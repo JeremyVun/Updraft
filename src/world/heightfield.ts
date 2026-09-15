@@ -119,14 +119,29 @@ function mainlandHeight(x: number, z: number): number {
   const broad = gfbm(x * 0.0042, z * 0.0042, 3, 13);
   const mid = gfbm(x * 0.012, z * 0.012, 3, 14);
   const swell = Math.max(0, 16 + 26 * broad + 7 * mid);
-  const lastHill = 52 * Math.exp(-((x - 20) ** 2 + (z + 1520) ** 2) / (2 * 150 ** 2));
+  const r2 = (x - 20) ** 2 + (z + 1520) ** 2;
+  const lastHill = 36 * Math.exp(-r2 / (2 * 62 ** 2)) + 22 * Math.exp(-r2 / (2 * 190 ** 2));
   h += land * (rise * swell + lastHill);
   h -= smoothstep(0, 70, -inland) * 8;
   return h;
 }
 
-export function worldHeight(x: number, z: number): number {
+function rawHeight(x: number, z: number): number {
   return smax(islandHeight(x, z), mainlandHeight(x, z), 4);
+}
+
+/** The top of the last hill, where the journey ends. */
+export const LAST_HILL = { x: 20, z: -1508 } as const;
+
+/** The cottage below the last hill sits on a levelled pad. */
+export const COTTAGE = { x: -65, z: -1664, radius: 13 } as const;
+export const COTTAGE_Y = rawHeight(COTTAGE.x, COTTAGE.z);
+
+export function worldHeight(x: number, z: number): number {
+  const h = rawHeight(x, z);
+  const d = Math.hypot(x - COTTAGE.x, z - COTTAGE.z);
+  if (d > COTTAGE.radius * 2) return h;
+  return h + (COTTAGE_Y - h) * smoothstep(COTTAGE.radius * 2, COTTAGE.radius, d);
 }
 
 export const HEIGHTFIELD_GLSL = /* glsl */ `
@@ -174,6 +189,9 @@ float gfbm(vec2 p, int octaves, float seed) {
   }
   return sum / norm;
 }
+float sq(float x) {
+  return x * x;
+}
 float hf_smin(float a, float b, float k) {
   float h = max(k - abs(a - b), 0.0) / k;
   return min(a, b) - h * h * k * 0.25;
@@ -196,8 +214,8 @@ float hf_island(vec2 p) {
   float land = smoothstep(10.0, -14.0, d);
   float h = land * 2.7 - 1.5;
   float hills = gfbm(p * 0.02, 3, 2.0) * 0.5 + 0.5;
-  float ridge = exp(-(pow(p.x + 16.0, 2.0) + pow(p.y + 34.0, 2.0)) / (2.0 * 400.0));
-  float knoll = exp(-(pow(p.x - 26.0, 2.0) + pow(p.y + 6.0, 2.0)) / (2.0 * 144.0));
+  float ridge = exp(-(sq(p.x + 16.0) + sq(p.y + 34.0)) / (2.0 * 400.0));
+  float knoll = exp(-(sq(p.x - 26.0) + sq(p.y + 6.0)) / (2.0 * 144.0));
   h += land * land * (pow(max(hills, 0.0), 1.7) * 7.0 + ridge * 13.0 + knoll * 4.5);
   h += land * (1.0 - land) * 1.2 * (gfbm(p * 0.06, 2, 3.0) * 0.5 + 0.5);
   h -= smoothstep(0.0, 55.0, d) * 7.5;
@@ -216,12 +234,15 @@ float hf_mainland(vec2 p) {
   float broad = gfbm(p * 0.0042, 3, 13.0);
   float mid = gfbm(p * 0.012, 3, 14.0);
   float swell = max(0.0, 16.0 + 26.0 * broad + 7.0 * mid);
-  float lastHill = 52.0 * exp(-(pow(p.x - 20.0, 2.0) + pow(p.y + 1520.0, 2.0)) / (2.0 * 22500.0));
+  float r2 = sq(p.x - 20.0) + sq(p.y + 1520.0);
+  float lastHill = 36.0 * exp(-r2 / (2.0 * 3844.0)) + 22.0 * exp(-r2 / (2.0 * 36100.0));
   h += land * (rise * swell + lastHill);
   h -= smoothstep(0.0, 70.0, -inland) * 8.0;
   return h;
 }
 float worldHeight(vec2 p) {
-  return hf_smax(hf_island(p), hf_mainland(p), 4.0);
+  float h = hf_smax(hf_island(p), hf_mainland(p), 4.0);
+  float d = length(p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)}));
+  return mix(h, ${COTTAGE_Y.toFixed(4)}, 1.0 - smoothstep(${COTTAGE.radius.toFixed(1)}, ${(COTTAGE.radius * 2).toFixed(1)}, d));
 }
 `;

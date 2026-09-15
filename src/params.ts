@@ -27,6 +27,8 @@ export const params = {
   grass: num('grass'),
   /** MSAA sample count for the scene render (default 4). */
   msaa: num('msaa'),
-  /** Start later in the story: `crossing` or `hills`. */
+  /** Time of day override: 0 afternoon, 1 sunset, 2 night. */
+  dusk: num('dusk'),
+  /** Start later in the story: `crossing`, `hills` or `summit`. */
   chapter: q.get('chapter'),
 };
