@@ -140,9 +140,36 @@ function thatch(): THREE.BufferGeometry {
   return geo;
 }
 
+const SPILL_VERT = /* glsl */ `
+out vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+/** Lamplight falling out of the open door across the grass: brightest at the threshold, spreading and fading. */
+const SPILL_FRAG = /* glsl */ `
+uniform float uNight;
+uniform float uOpen;
+in vec2 vUv;
+void main() {
+  float across = abs(vUv.x - 0.5) * 2.0;
+  float a = (1.0 - smoothstep(0.25, 1.0, across)) * (1.0 - smoothstep(0.0, 1.0, vUv.y)) * smoothstep(0.0, 0.06, vUv.y);
+  gl_FragColor = vec4(vec3(1.0, 0.66, 0.3) * a * a * uOpen * uNight * 1.4, 1.0);
+}`;
+
+function spillGeometry(front: number): THREE.BufferGeometry {
+  const geo = new THREE.BufferGeometry();
+  const reach = 7;
+  geo.setAttribute('position', new THREE.Float32BufferAttribute([-0.62, 0.3, front, 0.62, 0.3, front, -2.6, 0.3, front + reach, 2.6, 0.3, front + reach], 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 1, 1], 2));
+  geo.setIndex([0, 2, 1, 1, 2, 3]);
+  return geo;
+}
+
 /**
  * The whitewashed cottage below the last hill: thatch, a red door, windows that glow as night falls, and chimney
- * smoke that drifts with whatever wind is blowing.
+ * smoke that drifts with whatever wind is blowing. When the door opens at night, lamplight spills out over the grass.
  */
 export class Cottage {
   readonly group = new THREE.Group();
@@ -157,6 +184,7 @@ export class Cottage {
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private doorOpen = 0;
   private doorTarget = 0;
+  private readonly spill: THREE.ShaderMaterial;
   private spawn = 0;
 
   constructor(private readonly wind: WindField) {
@@ -187,6 +215,18 @@ export class Cottage {
     this.door.add(new THREE.Mesh(doorGeo, mat));
     this.door.position.set(-0.62, 0, front + 0.06);
     this.group.add(this.door);
+    this.spill = new THREE.ShaderMaterial({
+      vertexShader: SPILL_VERT,
+      fragmentShader: SPILL_FRAG,
+      uniforms: { uNight: atmo.uniforms.uNight, uOpen: { value: 0 } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const spill = new THREE.Mesh(spillGeometry(front + 0.1), this.spill);
+    spill.renderOrder = 6;
+    this.group.add(spill);
 
     this.group.position.copy(this.position);
     this.group.rotation.y = Math.atan2(20 - COTTAGE.x, -1520 - COTTAGE.z);
@@ -235,6 +275,7 @@ export class Cottage {
     if (far) return;
     this.doorOpen += (this.doorTarget - this.doorOpen) * (1 - Math.exp(-dt * 2.2));
     this.door.rotation.y = -this.doorOpen * 1.7;
+    this.spill.uniforms.uOpen.value = Math.min(1, this.doorOpen * 1.6);
 
     const w = this.wind.sample(this.chimney.x, this.chimney.z, this.sample);
     this.spawn += dt;
