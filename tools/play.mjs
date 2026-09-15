@@ -7,8 +7,48 @@
 //   env: BASE (default http://127.0.0.1:5230/), QUERY (appended), W/H viewport (default 1600x900),
 //        VIDEO=1 records <prefix>.webm of the whole session (headless screencast, lower quality than shots)
 // Prints stats (`window.__stats`) at the end and writes <prefix>-console.log on errors.
+// Runs take a machine-wide lock (/tmp/updraft-chromium.lock) so parallel agents capture one at a time.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
+
+const LOCK = '/tmp/updraft-chromium.lock';
+function alive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function acquireLock() {
+  for (;;) {
+    try {
+      fs.mkdirSync(LOCK);
+      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
+      return;
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+      let holder = 0;
+      try {
+        holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0;
+      } catch {}
+      let stale = holder ? !alive(holder) : false;
+      try {
+        if (!holder) stale = Date.now() - fs.statSync(LOCK).mtimeMs > 10000;
+      } catch {}
+      if (stale) fs.rmSync(LOCK, { recursive: true, force: true });
+      else await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+}
+function releaseLock() {
+  try {
+    if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
+  } catch {}
+}
+process.on('exit', releaseLock);
+process.on('SIGINT', () => process.exit(130));
+process.on('SIGTERM', () => process.exit(143));
 
 const [prefix, stepsJson = '[{"shot":"still"}]'] = process.argv.slice(2);
 if (!prefix) {
@@ -20,6 +60,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const width = Number(process.env.W ?? 1600);
 const height = Number(process.env.H ?? 900);
 
+await acquireLock();
 const browser = await chromium.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   headless: true,

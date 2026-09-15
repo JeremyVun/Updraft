@@ -93,6 +93,11 @@ export class Soundscape {
     return this.ctx?.state === 'running' && !this.muted;
   }
 
+  /** The live audio graph for other modules' sounds: connect to `bus` (dry) and optionally `reverb` (wet). Null until sound starts or while muted. */
+  get output(): { ctx: AudioContext; bus: AudioNode; reverb: AudioNode } | null {
+    return this.running && this.ctx ? { ctx: this.ctx, bus: this.master, reverb: this.reverb } : null;
+  }
+
   /** Must be called from a user gesture. */
   start(): void {
     if (this.ctx) {

@@ -1,4 +1,4 @@
-import { heightAt } from './island';
+import { GRASS_LINE, heightAt } from './island';
 import { mulberry32 } from './noise';
 
 export interface Rock {
@@ -41,6 +41,24 @@ export const ROCKS: Rock[] = [
   ...scatter(18, 28, 2, 3, 1.4, 15),
   ...scatter(-34, -14, 2, 3, 1.3, 16),
 ].filter((r) => heightAt(r.x, r.z) > -0.8);
+
+export interface FlowerPatch {
+  x: number;
+  z: number;
+  radius: number;
+}
+
+/** Where wildflowers grow: petals rest here, and butterflies and rabbits visit. */
+export const FLOWER_PATCHES: FlowerPatch[] = (() => {
+  const rand = mulberry32(7);
+  const patches: FlowerPatch[] = [];
+  while (patches.length < 34) {
+    const x = -62 + rand() * 120;
+    const z = -58 + rand() * 96;
+    if (heightAt(x, z) > GRASS_LINE + 2.2) patches.push({ x, z, radius: 2 + rand() * 3.5 });
+  }
+  return patches;
+})();
 
 /** 0 inside a rock or the tree's footprint, 1 in the open. */
 export function openGround(x: number, z: number): number {

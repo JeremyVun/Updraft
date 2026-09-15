@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
+import { FLOWER_PATCHES } from '../world/landmarks';
 import { mulberry32 } from '../world/noise';
 
 const W = 128;
@@ -160,12 +161,6 @@ void main() {
 /** Petals start in flower patches, so a gust over a patch throws up a burst of colour. */
 function initialState(): { pos: Float32Array; vel: Float32Array } {
   const rand = mulberry32(7);
-  const patches: [number, number, number][] = [];
-  while (patches.length < 34) {
-    const x = -62 + rand() * 120;
-    const z = -58 + rand() * 96;
-    if (heightAt(x, z) > GRASS_LINE + 2.2) patches.push([x, z, 2 + rand() * 3.5]);
-  }
   const pos = new Float32Array(COUNT * 4);
   const vel = new Float32Array(COUNT * 4);
   for (let i = 0; i < COUNT; i++) {
@@ -173,7 +168,7 @@ function initialState(): { pos: Float32Array; vel: Float32Array } {
     let z = 0;
     let h = -1;
     for (let tries = 0; tries < 30 && h < GRASS_LINE + 1.2; tries++) {
-      const [px, pz, r] = patches[Math.floor(rand() * patches.length)];
+      const { x: px, z: pz, radius: r } = FLOWER_PATCHES[Math.floor(rand() * FLOWER_PATCHES.length)];
       const a = rand() * Math.PI * 2;
       const d = r * Math.sqrt(-2 * Math.log(1 - rand() * 0.95)) * 0.6;
       x = px + Math.cos(a) * d;
