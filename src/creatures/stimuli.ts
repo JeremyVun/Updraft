@@ -21,6 +21,8 @@ export interface Stimuli {
   life(x: number, z: number): number;
   /** The prevailing breeze, 0 still to 1 blowing. */
   breeze: number;
+  /** 0 by day, 1 at full night, when grazing animals lie down to sleep. */
+  night: number;
   voices: Voices;
 }
 

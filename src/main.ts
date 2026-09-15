@@ -170,6 +170,17 @@ homesInHills.forEach((h, i) => {
   const last = i === homesInHills.length - 1;
   hillCreatures.spawn({ x: h.x, z: h.z, radius: 26, rabbits: 2, songbirds: i % 2 === 0 || last ? 4 : 0, butterflies: last ? 0 : 6, seed: 30 + i });
 });
+const sheepFolds = [
+  { x: -10, z: -755, sheep: 6 },
+  { x: 28, z: -766, sheep: 4 },
+  { x: -22, z: -916, sheep: 5 },
+  { x: 18, z: -980, sheep: 5 },
+  { x: 30, z: -1098, sheep: 4 },
+  { x: 24, z: -1198, sheep: 4 },
+  { x: 19, z: -1489, sheep: 5 },
+  { x: COTTAGE.x - 15, z: COTTAGE.z + 20, sheep: 6 },
+];
+sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
 scene.add(hillCreatures.group);
 
 const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
@@ -305,6 +316,7 @@ function frame(now: number): void {
     walker: child.visible ? child.position : null,
     life: (x: number, z: number) => life.at(x, z),
     breeze: story.breeze,
+    night: atmo.uniforms.uNight.value,
     audio: sound.output,
   };
   creatures.update(dt, time, creatureEnv);
