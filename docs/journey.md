@@ -61,6 +61,8 @@ No fail states anywhere. Every beat waits for the player; nothing is timed.
 5. The hills: terrain, walls, the green wave, creatures waking with it, wildflowers. **Done;** sheep being built by a subagent (branch `sheep`).
 6. Time of day, the ending, music. **Done:** sunset along the walk, the drawing, release, night, the cottage; music follows the story (warming pad, skylarks, crickets, an owl, phrases for the moments).
 
-Next ideas, in rough order: merge sheep and sea life and trigger the whale from the crossing; a soft passing shower in the hills; murmuration at dusk; the plane joining birds in the sunset; performance on phones (grass fill at high pixel ratios is the main cost; the adaptive resolution absorbs it).
+Done since: the sun shower on the walk, the murmuration at sunset (the released plane draws it), mist in the still world, lamplight from the cottage door, the moon at the end, petals and wildflowers inland, a wake behind the boat.
+
+Next ideas, in rough order: merge sheep and sea life and trigger the whale from the crossing; a full playthrough for pacing; performance on phones (grass fill at high pixel ratios is the main cost; the adaptive resolution absorbs it).
 
 Testing shortcuts: `?chapter=crossing|hills|summit` start later in the story; `?dusk=0..2` overrides the time of day.
