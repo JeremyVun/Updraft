@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Updraft</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="veil"></div>
+    <button id="sound" aria-label="Sound" aria-pressed="false" data-on="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="speaker" d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+        <path class="wave wave-1" d="M15 9.2c1.1.8 1.1 4.8 0 5.6" />
+        <path class="wave wave-2" d="M17.6 7c2.4 1.9 2.4 8.1 0 10" />
+        <path class="mute" d="M15.5 9.5l5 5m0-5l-5 5" />
+      </svg>
+    </button>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# secrets and local tool state; this repo is public
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+.wrangler
+*.pem
+*.key
+
+# editor and QA scratch
+.vscode
+.idea
+*.webm

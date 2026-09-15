@@ -1,0 +1,297 @@
+/** Everything is synthesised: filtered noise for air and sea, a slow pad, and chimes that follow the player's gestures. */
+
+export interface SoundState {
+  /** Player gust speed, 0..~26. */
+  gust: number;
+  /** Pointer position across the screen, -1..1. */
+  pan: number;
+  /** Gesture direction on screen: +1 moving up/right, -1 down/left. */
+  rise: number;
+  /** Updraft charge while holding, 0..1. */
+  charge: number;
+  overLand: boolean;
+  /** Natural breeze strength near the island, 0..1. */
+  breeze: number;
+  /** How hard the glider is being lifted, 0..1. */
+  gliderLift: number;
+}
+
+const SCALE = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88];
+const CHORDS = [
+  [50, 57, 64, 66],
+  [47, 54, 57, 62],
+  [43, 50, 59, 66],
+  [45, 52, 59, 64],
+];
+const CHORD_SECONDS = 11;
+const PULSE = 60 / 96 / 2;
+
+const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
+
+function pinkNoise(ctx: AudioContext, seconds: number): AudioBuffer {
+  const buffer = ctx.createBuffer(2, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buffer.getChannelData(ch);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < d.length; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.969 * b2 + white * 0.153852;
+      b3 = 0.8665 * b3 + white * 0.3104856;
+      b4 = 0.55 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.016898;
+      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+      b6 = white * 0.115926;
+    }
+  }
+  return buffer;
+}
+
+function impulse(ctx: AudioContext, seconds: number): AudioBuffer {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const buffer = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buffer.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (i < ctx.sampleRate * 0.012 ? i / (ctx.sampleRate * 0.012) : 1);
+    }
+  }
+  return buffer;
+}
+
+export class Soundscape {
+  private ctx: AudioContext | null = null;
+  private master!: GainNode;
+  private reverb!: GainNode;
+  private noise!: AudioBuffer;
+  private breezeGain!: GainNode;
+  private breezeFilter!: BiquadFilterNode;
+  private gustGain!: GainNode;
+  private gustFilter!: BiquadFilterNode;
+  private gustPan!: StereoPannerNode;
+  private whistleGain!: GainNode;
+  private whistleFilter!: BiquadFilterNode;
+  private rustleGain!: GainNode;
+  private seaGain!: GainNode;
+  private liftGain!: GainNode;
+  private liftFilter!: BiquadFilterNode;
+  private padVoices: { osc: OscillatorNode[]; gain: GainNode }[] = [];
+  private padGain!: GainNode;
+  private chord = -1;
+  private noteIndex = 4;
+  private lastNote = 0;
+  private lastArp = 0;
+  private wasGusting = false;
+  private prevGliderLift = 0;
+  private lastGlider = 0;
+  private activity = 0;
+  private muted = false;
+
+  get running(): boolean {
+    return this.ctx?.state === 'running' && !this.muted;
+  }
+
+  /** Must be called from a user gesture. */
+  start(): void {
+    if (this.ctx) {
+      void this.ctx.resume();
+      return;
+    }
+    const ctx = new AudioContext();
+    this.ctx = ctx;
+    this.noise = pinkNoise(ctx, 6);
+
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.ratio.value = 3;
+    comp.connect(ctx.destination);
+    this.master = ctx.createGain();
+    this.master.gain.value = 0;
+    this.master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.8);
+    this.master.connect(comp);
+
+    const convolver = ctx.createConvolver();
+    convolver.buffer = impulse(ctx, 4.5);
+    this.reverb = ctx.createGain();
+    this.reverb.gain.value = 0.55;
+    this.reverb.connect(convolver).connect(this.master);
+
+    [this.breezeGain, this.breezeFilter] = this.noiseLayer('lowpass', 520, 0.4, 0);
+    const breezeLfo = ctx.createOscillator();
+    const breezeLfoGain = ctx.createGain();
+    breezeLfo.frequency.value = 0.07;
+    breezeLfoGain.gain.value = 180;
+    breezeLfo.connect(breezeLfoGain).connect(this.breezeFilter.frequency);
+    breezeLfo.start();
+
+    this.gustPan = ctx.createStereoPanner();
+    this.gustPan.connect(this.master);
+    [this.gustGain, this.gustFilter] = this.noiseLayer('bandpass', 400, 1.1, 0.25, this.gustPan);
+    [this.whistleGain, this.whistleFilter] = this.noiseLayer('bandpass', 1200, 14, 0.1, this.gustPan);
+    [this.rustleGain] = this.noiseLayer('highpass', 2800, 0.6, 0.05, this.gustPan);
+    [this.liftGain, this.liftFilter] = this.noiseLayer('bandpass', 300, 3, 0.3);
+
+    const [seaGain] = this.noiseLayer('lowpass', 380, 0.5, 0);
+    this.seaGain = seaGain;
+
+    this.padGain = ctx.createGain();
+    this.padGain.gain.value = 0.0;
+    const padFilter = ctx.createBiquadFilter();
+    padFilter.type = 'lowpass';
+    padFilter.frequency.value = 1100;
+    padFilter.Q.value = 0.3;
+    this.padGain.connect(padFilter);
+    padFilter.connect(this.master);
+    padFilter.connect(this.reverb);
+    for (let v = 0; v < 4; v++) {
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(this.padGain);
+      const osc = [0, 1].map((k) => {
+        const o = ctx.createOscillator();
+        o.type = k === 0 ? 'triangle' : 'sine';
+        o.detune.value = k === 0 ? -6 : 7;
+        o.connect(gain);
+        o.start();
+        return o;
+      });
+      this.padVoices.push({ osc, gain });
+    }
+  }
+
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (!this.ctx) return;
+    this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.25);
+  }
+
+  private noiseLayer(
+    type: BiquadFilterType,
+    freq: number,
+    q: number,
+    reverbSend: number,
+    out?: AudioNode,
+  ): [GainNode, BiquadFilterNode] {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    src.loopStart = Math.random() * 3;
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = freq;
+    filter.Q.value = q;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    src.connect(filter).connect(gain);
+    gain.connect(out ?? this.master);
+    if (reverbSend > 0) {
+      const send = ctx.createGain();
+      send.gain.value = reverbSend;
+      gain.connect(send).connect(this.reverb);
+    }
+    src.start(0, Math.random() * 5);
+    return [gain, filter];
+  }
+
+  private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2): void {
+    const ctx = this.ctx!;
+    const out = ctx.createGain();
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = Math.max(-0.8, Math.min(0.8, pan));
+    out.connect(panner);
+    panner.connect(this.master);
+    const send = ctx.createGain();
+    send.gain.value = 0.9;
+    panner.connect(send).connect(this.reverb);
+    const f = hz(midi);
+    const partials: [number, number][] = [[1, 1], [2.0, 0.28], [3.01, 0.1], [4.2, 0.04]];
+    for (const [ratio, amp] of partials) {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f * ratio;
+      const g = ctx.createGain();
+      const peak = velocity * amp * 0.16;
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(peak, when + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + decay / ratio);
+      o.connect(g).connect(out);
+      o.start(when);
+      o.stop(when + decay + 0.1);
+    }
+  }
+
+  private nextPulse(): number {
+    const now = this.ctx!.currentTime;
+    return Math.ceil(now / PULSE) * PULSE;
+  }
+
+  update(dt: number, s: SoundState): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    const tc = 0.08;
+    const g = Math.min(s.gust / 26, 1);
+    this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
+
+    this.breezeGain.gain.setTargetAtTime(0.1 + s.breeze * 0.12, now, 0.5);
+    this.seaGain.gain.setTargetAtTime(0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37), now, 0.3);
+    this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55, now, tc);
+    this.gustFilter.frequency.setTargetAtTime(260 + g * 1100, now, tc);
+    this.gustPan.pan.setTargetAtTime(s.pan * 0.7, now, tc);
+    this.whistleGain.gain.setTargetAtTime(Math.max(0, g - 0.55) * 0.12, now, tc);
+    this.whistleFilter.frequency.setTargetAtTime(900 + g * 900, now, tc);
+    this.rustleGain.gain.setTargetAtTime(s.overLand ? Math.pow(g, 1.2) * 0.2 : 0, now, tc);
+    this.liftGain.gain.setTargetAtTime(s.charge * 0.35, now, 0.15);
+    this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500, now, 0.2);
+
+    const chord = Math.floor(now / CHORD_SECONDS) % CHORDS.length;
+    if (chord !== this.chord) {
+      this.chord = chord;
+      this.padVoices.forEach((voice, i) => {
+        const f = hz(CHORDS[chord][i]);
+        voice.osc.forEach((o) => o.frequency.setTargetAtTime(f, now, 1.2));
+        voice.gain.gain.setTargetAtTime(0.25, now, 2.5);
+      });
+    }
+    this.padGain.gain.setTargetAtTime(0.05 + this.activity * 0.09, now, 1.5);
+
+    const gusting = s.gust > 7;
+    if (gusting) {
+      const interval = s.gust > 17 ? PULSE : PULSE * 2;
+      const at = this.nextPulse();
+      if (!this.wasGusting || at - this.lastNote >= interval - 1e-3) {
+        if (at > this.lastNote + 1e-3) {
+          const step = (s.rise >= 0 ? 1 : -1) * (s.gust > 18 ? 2 : 1);
+          this.noteIndex += step;
+          if (this.noteIndex > SCALE.length - 1) this.noteIndex -= 5;
+          if (this.noteIndex < 0) this.noteIndex += 5;
+          this.chime(SCALE[this.noteIndex], 0.45 + g * 0.55, s.pan, at);
+          this.lastNote = at;
+        }
+      }
+    }
+    this.wasGusting = gusting;
+
+    if (s.charge > 0.2) {
+      const interval = PULSE * (s.charge > 0.7 ? 1 : 2);
+      const at = this.nextPulse();
+      if (at - this.lastArp >= interval - 1e-3) {
+        const chordTones = CHORDS[this.chord].map((m) => m + 12);
+        const tone = chordTones[Math.floor((now / interval) % chordTones.length)] + (s.charge > 0.6 ? 12 : 0);
+        this.chime(tone, 0.25 + s.charge * 0.35, s.pan, at, 1.6);
+        this.lastArp = at;
+      }
+    }
+
+    if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5) {
+      const base = CHORDS[this.chord][0] + 24;
+      this.chime(base, 0.4, 0, this.nextPulse(), 1.8);
+      this.chime(base + 7, 0.35, 0, this.nextPulse() + PULSE, 2.2);
+      this.lastGlider = now;
+    }
+    this.prevGliderLift = s.gliderLift;
+  }
+}

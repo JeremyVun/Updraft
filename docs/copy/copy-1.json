@@ -1,0 +1,7 @@
+{
+    "title": "Updraft",
+    "keepWorkingTitle": true,
+    "titleAlternatives": [],
+    "soundButtonLabel": "Sound",
+    "notes": "Updraft names the rising air the player creates. Sound stays the same in both states; aria-pressed reports whether sound is on."
+}
