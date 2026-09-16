@@ -351,14 +351,23 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 9. **The island chain: built.** `ISLES` in the heightfield, the chapters sequenced in `story/journey.ts`
    (island → toLines → lines → toMeadow → meadow → toHome → home), the crossing generalised to take a route and a
    haze, the old hills chapter split into `story/meadow.ts` and `story/home.ts`, the dry-stone walls deleted.
-10. **The crane: built.** `creatures/crane.ts` — a 16-bone rigged colt: three neck capsules that read as a tube,
-    wings split into arm and hand so the fold tucks and the hand whips a beat behind in flight, feet that stay
-    flat when planted and extend when trailing, eyes with catchlights. The palette is derived in **linear** space,
-    which was the real cause of it washing out to cream: the renderer is `NoToneMapping` with a linear sun near
-    2.7, so any albedo written as if it were sRGB clips. Falling now lags along the flock's line first so the gap
-    in the V opens where you can see it, flaps in bursts with sinking between them, and banks and slews because it
-    cannot hold a line. Remaining: the colt does not tilt to the terrain slope (no creature here does), and where
-    it lands the island grass is taller than it is.
+10. **The crane colt: rebuilt (2026-09-17).** `creatures/crane.ts` with `creatures/colt/body.ts` (geometry, 18 bones)
+    and `creatures/colt/shader.ts`. It is drawn the way a child would draw a crane chick: a round downy body, a big
+    round head on a soft two-segment neck, large dark eyes with lids that blink, a short pink bill with a jaw that
+    opens on each call, a cowlick on the crown that trails on a spring, stubby wings whose hand carries the first
+    scalloped quills, and pink legs too long for it. Albedos are linear and it is never greyed with the land (it
+    only exists after the island is whole, and the sea has no life field). What it does: breathes, blinks,
+    glances (at the child more often as the bond rises), preens, pecks, shakes after landing, begs with a flutter
+    when the child comes back or stands over it, sits down when left standing, tucks its head to rest, dozes off
+    on a long calm carry, shivers and folds its head into its shoulders when frightened and only calms down when
+    the child is near. It rides **on** the child: tucked under the right arm against the coat (visible from behind,
+    where the camera lives), or perched on the right shoulder beside the hood, jostled by the child's starts and
+    stops and bobbing with their gait; it is lifted from the ground, climbs over the shoulder into the hood, and
+    hops down again, never teleported. The fall keeps the flock's line first, then flaps in bursts that pitch it
+    up and sags between them, loses control in the last stretch and goes into the grass on its side; three tries
+    to get up right it and fail. `tryToFly` is a crouch, three rising hops and a stumble; `soar` glides with the
+    wings held and flares into a run on landing; `leave` climbs out with a beat that slows as it finds its
+    strength.
 
 10b. **Superseded note from when it was half built:** `creatures/crane.ts` is a rigged colt (body, neck, head and bill, folded wings,
     two-jointed legs) driven by bone matrices, with fallen / carried / hooded / following states and a bond that
