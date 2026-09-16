@@ -198,8 +198,8 @@ export class HillsChapter implements Chapter {
     const c = this.cast.child;
     const t = this.target();
     const angle = Math.atan2(t.x - c.position.x, t.y - c.position.z) + (Math.random() - 0.5) * 0.5;
-    c.throwToward(c.position.x + Math.sin(angle) * 20, c.position.z + Math.cos(angle) * 20, () => {
-      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 8.5, 5.2, Math.cos(angle) * 8.5));
+    c.throwToward(c.position.x + Math.sin(angle) * 26, c.position.z + Math.cos(angle) * 26, () => {
+      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 9.4, 5.2, Math.cos(angle) * 9.4));
       this.play = 'watch';
       c.lookAt = this.cast.plane.position;
     });
@@ -217,7 +217,7 @@ export class HillsChapter implements Chapter {
       c.pickUp(() => {
         p.hold(c.handPosition(this.hand), c.yaw);
         this.play = 'hold';
-        this.holdUntil = this.now + 1.2 + Math.random() * 1.2;
+        this.holdUntil = this.now + 0.7 + Math.random() * 0.9;
       });
     }, 1.2);
   }
