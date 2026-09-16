@@ -10,9 +10,9 @@ const all: Readback<unknown>[] = [];
 /** Fences of the last frames, oldest first; the pipeline is allowed to be this many frames deep. */
 const frameSyncs: WebGLSync[] = [];
 /**
- * Three, not two: in the rooms where the grass is the room the GPU runs a frame further behind than the display
- * pipeline, and waiting on a fence it has not reached yet is a hundred-millisecond stall in the middle of a walk.
- * Costing the wind and life copies one more frame of staleness is not something any of them can feel.
+ * Three, not two: under load the GPU runs a frame further behind than the display pipeline, and a fence it has
+ * not reached yet means the copies are skipped instead of delivered. Costing them one more frame of age is worth
+ * four times as many deliveries in the meadow (65 in fourteen seconds at two, 257 at three).
  */
 const PIPELINE_DEPTH = 3;
 let frameGl: WebGL2RenderingContext | null = null;
