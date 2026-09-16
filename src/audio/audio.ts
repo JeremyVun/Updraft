@@ -59,12 +59,16 @@ const PHRASES: Record<Cue, [number, number][]> = {
   skein: [[86, 2], [83, 2], [81, 3], [78, 2], [76, 4]],
   /** The fall: the same shape turned downward, and it does not resolve. */
   fallen: [[81, 2], [76, 2], [71, 3], [69, 2], [66, 6], [64, 8]],
+  /** The air dies: low, slow and unanswered, under a room that has gone quiet. */
+  becalmed: [[57, 4], [54, 5], [52, 8]],
+  /** And the sail fills: the same notes, the other way up, and the music comes back with them. */
+  filled: [[54, 1], [57, 1], [62, 1], [66, 2], [69, 4]],
   wave: [[57, 1], [62, 1], [66, 1], [69, 1], [74, 2], [78, 2], [81, 4]],
   unfold: [[74, 2], [78, 1], [81, 1], [83, 2], [81, 1], [78, 1], [76, 2], [78, 1], [74, 3], [0, 2], [71, 1], [74, 1], [76, 2], [78, 1], [76, 1], [74, 4]],
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
 };
-const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -398,10 +402,10 @@ export class Soundscape {
     const g = Math.min(s.gust / 26, 1);
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
-    this.breezeGain.gain.setTargetAtTime(0.1 + s.breeze * 0.12, now, 0.5);
+    this.breezeGain.gain.setTargetAtTime(0.02 + s.breeze * 0.2, now, 0.5);
     this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
     this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
-    this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea), now, 0.3);
+    this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
     this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + g * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime(s.pan * 0.7, now, tc);

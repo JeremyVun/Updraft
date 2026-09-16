@@ -113,7 +113,8 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
-const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z), 190, 50));
+/** Hung over the middle of the island: the north beach is left clear, so the boat waiting on it can be seen. */
+const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46));
 scene.add(washing.group);
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
@@ -384,6 +385,9 @@ function frame(now: number): void {
   u.uBendTex.value = wind.bendTexture;
   u.uCloudShift.value.addScaledVector(wind.breeze, dt * 2.2);
 
+  /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
+  washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
+
   homePetals();
   petals.update(dt, input.down && input.present ? input.world : null, input.charge);
   const pointerWorld = input.present ? input.world : null;
@@ -408,7 +412,8 @@ function frame(now: number): void {
   soundState.pan = input.ndc.x;
   soundState.charge = input.down ? input.charge : 0;
   soundState.overLand = heightAt(input.world.x, input.world.z) > 0.5;
-  const b = wind.sample(-6, -14, breezeSample);
+  /** The wind where the story is, not where it started: the rooms past the first island are most of the game. */
+  const b = wind.sample(story.focus.x, story.focus.z, breezeSample);
   soundState.breeze = Math.min(1, Math.hypot(b.x, b.z) / 6);
   soundState.gliderLift = glider.lift;
   soundState.life = story.worldLife;

@@ -20,8 +20,10 @@ const ROUTE = [
   new THREE.Vector2(14, -400),
 ];
 
-/** How near the boat the plane has to land before the child takes the hint. */
-const BOARDING = 14;
+/** How near the boat either of them has to be before the child takes the hint and pushes off. */
+const BOARDING = 22;
+/** And if the washing is more interesting than the boat, they go anyway after this long on the last stretch. */
+const LAST_LEG_PATIENCE = 50;
 
 type Beat = 'ashore' | 'wonder' | 'walk' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
@@ -47,6 +49,7 @@ export class LinesChapter implements Chapter {
   private now = 0;
   private cheered = false;
   private flown = false;
+  private lastLegAt = 0;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly crest = new THREE.Vector3(14, 17, -360);
@@ -79,7 +82,25 @@ export class LinesChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now = time;
     const { child: c, plane: p, boat } = this.cast;
-    if (!p.departing) p.home.set(c.position.x, 0, c.position.z - 20);
+    /**
+     * Over the top of the hill the plane's home moves to the boat on the far beach, so however the player blows
+     * it about it drifts down there — and chasing it is how they find the way off the island.
+     */
+    if (!p.departing) {
+      const last = this.leg === ROUTE.length - 1;
+      if (last) {
+        p.home.set(boat.position.x, 0, boat.position.z);
+        p.homeRadius = 22;
+      } else {
+        const t = this.target();
+        const dx = t.x - c.position.x;
+        const dz = t.y - c.position.z;
+        const d = Math.hypot(dx, dz) || 1;
+        const reach = Math.min(d, 18);
+        p.home.set(c.position.x + (dx / d) * reach, 0, c.position.z + (dz / d) * reach);
+        p.homeRadius = 20;
+      }
+    }
 
     switch (this.beat) {
       case 'ashore':
@@ -143,6 +164,7 @@ export class LinesChapter implements Chapter {
     const t = this.target();
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 16 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
+    if (last && this.lastLegAt === 0) this.lastLegAt = time;
 
     if (this.play === 'watch') {
       c.lookAt = p.position;
@@ -161,9 +183,11 @@ export class LinesChapter implements Chapter {
       c.lookAt = p.position;
       if (!p.landed && p.airborne) this.play = 'watch';
     } else if (this.play === 'hold' && !c.busy) {
+      if (last) c.lookAt = boat.position;
       const nearBoat = Math.hypot(p.position.x - boat.position.x, p.position.z - boat.position.z) < BOARDING;
       const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
-      if (last && (nearBoat || childNear || this.now - this.beatStart > 260)) this.board();
+      const waited = this.lastLegAt > 0 && time - this.lastLegAt > LAST_LEG_PATIENCE;
+      if (last && (nearBoat || childNear || waited)) this.board();
       else if (time > this.holdUntil) this.throwAhead();
     }
   }
@@ -254,8 +278,21 @@ export class LinesChapter implements Chapter {
     const fz = c.z * (1 - pw) + p.z * pw - 4;
     const ground = Math.max(heightAt(fx, fz), 0);
     s.target.set(fx, ground + 3.5, fz);
-    s.distance = 25 + Math.hypot(p.x - c.x, p.z - c.z) * 0.45;
-    s.height = s.distance * 0.28;
+    /** Capped: on a hill this crowded, a wide shot is a shot with the child somewhere behind a sheet in it. */
+    s.distance = Math.min(30, 18 + Math.hypot(p.x - c.x, p.z - c.z) * 0.4);
+    s.height = s.distance * 0.32;
+    /**
+     * Coming over the crest, the shot opens out and takes in the far beach with the boat on it. Otherwise the
+     * child walks down the back of the hill into a frame that shows the player nothing they can act on.
+     */
+    const b = this.cast.boat.position;
+    const over = THREE.MathUtils.smoothstep(this.crest.z + 6 - c.z, 0, 32);
+    if (over > 0) {
+      /** Rising rather than pulling back: from further away there is only more washing between them and us. */
+      s.target.lerp(this.tmp.set(b.x, Math.max(b.y, 0) + 2, b.z), 0.15 * over);
+      s.distance += Math.hypot(b.x - fx, b.z - fz) * 0.1 * over;
+      s.height += 3 * over;
+    }
     this.pace = 0.4;
     this.focus.set(fx, ground, fz);
   }

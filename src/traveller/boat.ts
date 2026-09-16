@@ -192,6 +192,11 @@ export class Boat {
   grounded = false;
   /** False while the route still passes close to land, so rounding a headland is not mistaken for arriving. */
   canGround = true;
+  /**
+   * How far the world's own wind has gone out of the sails, 0 normal to 1 dead calm. At 1 the boat has no way
+   * of its own at all and only the wind the player makes moves it.
+   */
+  becalmed = 0;
   private readonly sailPivot = new THREE.Group();
   private readonly sailMat: THREE.ShaderMaterial;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
@@ -257,6 +262,12 @@ export class Boat {
     return this.boom >= 0 ? 1 : -1;
   }
 
+  /** World position of the middle of the sail, for anyone who needs to look at it. */
+  sailPoint(out: THREE.Vector3): THREE.Vector3 {
+    this.group.updateMatrixWorld(true);
+    return out.set(0, 2.2, 0.55).applyMatrix4(this.group.matrixWorld);
+  }
+
   /** World position of the seat, where the child rides. */
   seat(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
@@ -274,8 +285,8 @@ export class Boat {
     const windSpeed = Math.hypot(w.x, w.z);
 
     if (this.afloat && !this.grounded) {
-      const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + 4.2 + w.energy * 6;
-      this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * 0.45));
+      const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + 4.2 * (1 - this.becalmed) + w.energy * 6;
+      this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * (0.45 + this.becalmed * 0.3)));
       if (this.steerFor) {
         const want = Math.atan2(this.steerFor.x - p.x, this.steerFor.y - p.z);
         let dy = want - this.yaw;
@@ -301,8 +312,10 @@ export class Boat {
     const targetBoom = THREE.MathUtils.clamp(-Math.atan2(relX, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
     this.boom += (targetBoom - this.boom) * (1 - Math.exp(-dt * 1.5));
     const fill = Math.min(1, windSpeed / 9 + w.energy * 0.4) * (this.afloat ? 1 : 0.35);
-    this.sailMat.uniforms.uFill.value += ((relX >= 0 ? 1 : -1) * (0.15 + fill * 0.75) - this.sailMat.uniforms.uFill.value) * (1 - Math.exp(-dt * 3));
-    this.sailMat.uniforms.uFlutter.value = 0.25 + (1 - fill) * 0.8;
+    /** Becalmed, the sail hangs dead off the boom: no belly left in it and nothing for it to flutter on. */
+    const slack = 0.15 * (1 - this.becalmed * 0.88);
+    this.sailMat.uniforms.uFill.value += ((relX >= 0 ? 1 : -1) * (slack + fill * 0.75) - this.sailMat.uniforms.uFill.value) * (1 - Math.exp(-dt * 3));
+    this.sailMat.uniforms.uFlutter.value = (0.25 + (1 - fill) * 0.8) * (1 - this.becalmed * 0.7);
     this.pose(dt);
     this.updateWake(dt);
   }

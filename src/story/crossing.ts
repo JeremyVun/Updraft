@@ -101,6 +101,7 @@ export class CrossingChapter implements Chapter {
     this.storm = opts.storm ?? 0;
     this.shower = this.storm > 0 ? Math.max(0, this.storm - 0.2) * 1.25 : 0;
     this.nextWhale = this.whaleAt ?? 0;
+    cast.boat.becalmed = 0;
     cast.boat.steerFor = this.route[0];
     cast.boat.canGround = this.route.length === 1;
     cast.boat.grounded = false;

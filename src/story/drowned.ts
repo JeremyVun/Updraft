@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
+import type { WindSample } from '../wind/field';
 import { DROWNED_CHANNEL, SPIRE } from '../world/drowned';
 import type { Cast, Chapter } from './cast';
+import { cue } from './cues';
 
 /** How near a waypoint counts as rounded. */
 const ROUNDED = 20;
@@ -9,8 +11,14 @@ const ROUNDED = 20;
 const SPIRE_NEAR = 80;
 /** The squall takes the plane once it has been building this long, and the drift ends a while after. */
 const GATHER_AT = 0.55;
+/** Where in the village the air dies and they stop. */
+const STILL_AT = 0.32;
+/** How much wind the player has to put into the sail before the boat has way on it again. */
+const FILL_NEEDED = 22;
+/** They are never stranded: long after anyone has stopped trying, the air comes back on its own. */
+const STILL_LIMIT = 90;
 
-type Beat = 'enter' | 'drift' | 'gather' | 'snatch' | 'after';
+type Beat = 'enter' | 'drift' | 'still' | 'gather' | 'snatch' | 'after';
 
 /**
  * The drowned village. They come in at dusk over what used to be somebody's town and drift through it: ridges and
@@ -22,7 +30,7 @@ type Beat = 'enter' | 'drift' | 'gather' | 'snatch' | 'after';
  */
 export class DrownedChapter implements Chapter {
   beat: Beat = 'enter';
-  readonly breeze = 1;
+  breeze = 1;
   readonly worldLife = 1;
   pace = 0.4;
   haze = 0.6;
@@ -41,10 +49,14 @@ export class DrownedChapter implements Chapter {
   private readonly look = new THREE.Vector3();
   private readonly from = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private quarter = 1;
+  private filled = 0;
+  private stirred = false;
 
   constructor(private readonly cast: Cast) {
     const { boat, plane } = cast;
+    boat.becalmed = 0;
     boat.steerFor = DROWNED_CHANNEL[0];
     boat.canGround = false;
     boat.grounded = false;
@@ -101,7 +113,11 @@ export class DrownedChapter implements Chapter {
         if (this.t > 9) this.to('drift');
         break;
       case 'drift':
-        if (through > GATHER_AT) this.to('gather');
+        if (!this.stirred && through > STILL_AT) this.becalm();
+        else if (through > GATHER_AT) this.to('gather');
+        break;
+      case 'still':
+        this.hold(dt);
         break;
       case 'gather':
         /** The storm is what takes it, so it has to be a storm first: the player watches it come for half a minute. */
@@ -128,16 +144,54 @@ export class DrownedChapter implements Chapter {
     const gathering = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
     const want = gathering ? 1 : 0;
     this.storm += (want - this.storm) * (1 - Math.exp(-dt * 0.06));
+    /**
+     * The air goes out of the village before the storm comes into it. The world's own wind dies with it, so the
+     * water goes to glass and the only thing left moving anywhere is whatever the player does.
+     */
+    const still = this.beat === 'still';
+    const boat = this.cast.boat;
+    boat.becalmed += ((still ? 1 : 0) - boat.becalmed) * (1 - Math.exp(-dt * (still ? 0.7 : 1.1)));
+    this.breeze += ((still ? 0 : 1) - this.breeze) * (1 - Math.exp(-dt * (still ? 0.6 : 0.5)));
     this.dusk = 0.75 + through * 0.25 + this.storm * 0.35;
-    this.haze = 0.6 + this.storm * 0.28;
+    this.haze = 0.6 + this.storm * 0.28 + (1 - this.breeze) * 0.12;
     this.shower = Math.max(0, this.storm - 0.25) * 1.2;
-    const quiet = this.beat === 'snatch' ? 1 : this.beat === 'after' ? 0.85 : 0.3 + this.storm * 0.45;
+    const quiet = this.beat === 'snatch' ? 1 : this.beat === 'after' ? 0.85 : still ? 0.92 : 0.3 + this.storm * 0.45;
     this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.8));
+  }
+
+  /**
+   * The boat stops between the rooftops and the sail hangs dead. Nothing is explained and nothing is asked in
+   * words: the sail is the biggest thing in the frame, the child looks up at it, and the only wind left in the
+   * world is the player's. It is the first time the journey needs them rather than answering them.
+   */
+  private becalm(): void {
+    this.to('still');
+    this.filled = 0;
+    cue('becalmed');
+  }
+
+  private hold(dt: number): void {
+    const { boat, wind } = this.cast;
+    const w = wind.sample(boat.position.x, boat.position.z, this.air);
+    const fx = Math.sin(boat.yaw);
+    const fz = Math.cos(boat.yaw);
+    const push = Math.max(0, w.x * fx + w.z * fz) * 0.62 + Math.abs(w.x * fz - w.z * fx) * 0.3 + w.energy * 6;
+    this.filled += Math.max(0, push - 0.8) * dt;
+    if (this.t > 6 && (this.filled > FILL_NEEDED || this.t > STILL_LIMIT)) {
+      this.stirred = true;
+      this.to('drift');
+      cue('filled');
+    }
   }
 
   /** What the child is looking at: the spire while it is near, otherwise the houses going by. */
   private watch(): void {
     const { child: c, boat, plane: p } = this.cast;
+    if (this.beat === 'still') {
+      /** Up at the sail, and the player's eye goes where the child's does. */
+      c.lookAt = boat.sailPoint(this.look);
+      return;
+    }
     if (this.beat === 'snatch') {
       c.lookAt = p.position;
       return;
@@ -197,6 +251,18 @@ export class DrownedChapter implements Chapter {
       s.distance = 17;
       s.height = 3.6;
       this.pace = 1;
+      this.focus.copy(boat.position);
+      return;
+    }
+    if (this.beat === 'still') {
+      /** Astern and low, with the slack sail filling the middle of the frame: the one thing there is to act on. */
+      this.quarter += (-boat.sailSide - this.quarter) * 0.03;
+      const astern = boat.yaw + Math.PI + this.quarter * 0.9;
+      s.from = this.from.set(Math.sin(astern), 0, Math.cos(astern));
+      s.target.copy(boat.sailPoint(this.tmp));
+      s.distance = 15;
+      s.height = 2.8;
+      this.pace = 0.5;
       this.focus.copy(boat.position);
       return;
     }

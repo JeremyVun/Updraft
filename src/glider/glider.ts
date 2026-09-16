@@ -87,9 +87,14 @@ export class Glider {
   departing: THREE.Vector3 | null = null;
   /** How wet it is, 0 dry to 1 sodden: the storm soaks it and the player's wind dries it out again. */
   readonly soggy = { value: 0 };
-  /** It banks around and comes home once it strays this far from `home`. */
+  /**
+   * Where the game would like the player to go next. The plane leans that way as it flies and banks back to it
+   * when it strays past `homeRadius`, so following it is the same thing as getting on with the story.
+   */
   readonly home = new THREE.Vector3(-6, 0, -14);
   homeRadius = 50;
+  /** False while it is down on the water, where the child cannot go and fetch it. */
+  private aground = true;
   private readonly body: THREE.Mesh;
   private readonly shadow: THREE.Mesh;
   private readonly shadowMat: THREE.ShaderMaterial;
@@ -152,7 +157,7 @@ export class Glider {
   }
 
   get landed(): boolean {
-    return !this.held && this.restTime > 1.2;
+    return !this.held && this.restTime > 1.2 && this.aground;
   }
 
   /** Keeps the plane in a hand, nose along `yaw`, tilted a little up. */
@@ -213,12 +218,31 @@ export class Glider {
     this.airborne = !resting;
     this.restTime = resting && Math.hypot(this.velocity.x, this.velocity.z) < 1.5 ? this.restTime + dt : 0;
 
+    this.aground = ground > 0;
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
     const glide = resting ? 0 : 3.2;
     const grip = resting ? 0.15 : 1.4 + w.energy * 1.5;
-    v.x += (w.x + fx * glide - v.x) * (1 - Math.exp(-dt * grip));
-    v.z += (w.z + fz * glide - v.z) * (1 - Math.exp(-dt * grip));
+    /**
+     * It leans toward wherever the story wants them next, and leans harder the higher it is: send it up and it
+     * comes down nearer whatever there is to do. Over water it turns for land whatever height it is at, because
+     * a paper plane sitting out on the sea is the one thing in this game the player cannot answer.
+     */
+    let gx = fx;
+    let gz = fz;
+    const steer = this.departing ? 0 : this.aground ? Math.min(0.5, altitude / 30) : 0.7;
+    const dx = this.home.x - p.x;
+    const dz = this.home.z - p.z;
+    const toHome = Math.hypot(dx, dz);
+    if (steer > 0 && toHome > 3) {
+      gx += (dx / toHome - fx) * steer;
+      gz += (dz / toHome - fz) * steer;
+      const n = Math.hypot(gx, gz) || 1;
+      gx /= n;
+      gz /= n;
+    }
+    v.x += (w.x + gx * glide - v.x) * (1 - Math.exp(-dt * grip));
+    v.z += (w.z + gz * glide - v.z) * (1 - Math.exp(-dt * grip));
     const vyTarget = resting ? 0 : liftForce - 2.4;
     v.y += (vyTarget - v.y) * (1 - Math.exp(-dt * 1.4));
 
@@ -233,9 +257,17 @@ export class Glider {
       v.x -= ((p.x - this.home.x) / r) * pull;
       v.z -= ((p.z - this.home.z) / r) * pull;
     }
-    if (resting && ground < 0 && r > 1) {
-      v.x -= ((p.x - this.home.x) / r) * 1.4 * dt;
-      v.z -= ((p.z - this.home.z) / r) * 1.4 * dt;
+    /** Nothing is ever lost: a plane down on the water is picked up again by a gust of its own and flies back. */
+    if (resting && !this.aground) {
+      if (this.restTime > 0.9) {
+        this.thrust = Math.max(this.thrust, 5);
+        this.restTime = 0;
+        v.y = Math.max(v.y, 2.4);
+      }
+      if (r > 1) {
+        v.x -= ((p.x - this.home.x) / r) * 3.2 * dt;
+        v.z -= ((p.z - this.home.z) / r) * 3.2 * dt;
+      }
     }
     if (p.y > 32 && !this.departing) v.y -= (p.y - 32) * dt * 1.5;
     for (const o of this.obstacles) {

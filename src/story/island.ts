@@ -68,6 +68,7 @@ export class IslandChapter implements Chapter {
   private watchUntil = 0;
   private nextLook = 0;
   private readonly watched = new THREE.Vector3();
+  private readonly flat = new THREE.Vector3(TREE.x, 10, TREE.z);
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
@@ -79,6 +80,14 @@ export class IslandChapter implements Chapter {
     const top = cast.tree.canopy.reduce((a, c) => (c.centre.y > a.y ? c.centre : a), cast.tree.canopy[0].centre);
     this.canopyTop.copy(top);
     this.frame();
+  }
+
+  /**
+   * The grass around the tree is walked down while they are up there, so a child shorter than the grass is not
+   * swallowed by it at the one moment the game asks the player to look at them.
+   */
+  get trodden(): THREE.Vector3 | null {
+    return this.beat === 'toTree' || this.beat === 'atTree' ? this.flat : null;
   }
 
   /** Only catch and the first breeze answer the player; the rest of the island is the story playing itself out. */
@@ -264,14 +273,33 @@ export class IslandChapter implements Chapter {
     cue('delight');
   }
 
+  /**
+   * Throws lean toward whatever is still grey, so a player who has not worked out that the wind brings the
+   * island back to life is carried around the rest of it by the game they are already playing. The lean is
+   * gentle and randomised: catch has to stay a game of catch, not a tour.
+   */
   private throwNext(time: number): void {
     const c = this.cast.child;
     const aim = this.beat === 'leaving' ? this.cast.boat.position : ISLAND;
     const spread = this.beat === 'leaving' ? 0.7 : 1.8;
     const toAim = Math.atan2(aim.x - c.position.x, aim.z - c.position.z);
-    let angle = toAim + (Math.random() - 0.5) * spread;
-    const reach = 18 + Math.random() * 16;
-    if (c.position.z + Math.cos(angle) * reach < PLAY_LIMIT) angle = Math.PI - angle;
+    const tries = this.beat === 'play' && !this.restored ? 6 : 1;
+    let angle = toAim;
+    let reach = 26;
+    let best = -Infinity;
+    for (let i = 0; i < tries; i++) {
+      let a = toAim + (Math.random() - 0.5) * spread;
+      const r = 18 + Math.random() * 16;
+      /** Past the ridge the camera loses them, so anything aimed over it is reflected back down the island. */
+      if (c.position.z + Math.cos(a) * r < PLAY_LIMIT) a = Math.PI - a;
+      const score =
+        tries === 1 ? 0 : 1 - this.cast.life.at(c.position.x + Math.sin(a) * r, c.position.z + Math.cos(a) * r) + Math.random() * 0.2;
+      if (score > best) {
+        best = score;
+        angle = a;
+        reach = r;
+      }
+    }
     c.throwToward(c.position.x + Math.sin(angle) * reach, c.position.z + Math.cos(angle) * reach, () => {
       const dir = this.tmp.set(Math.sin(angle), 0, Math.cos(angle));
       this.cast.plane.launch(c.handPosition(this.hand), dir.multiplyScalar(7.5).setY(4.8));
@@ -286,9 +314,32 @@ export class IslandChapter implements Chapter {
   private farewell(): void {
     this.beat = 'toTree';
     this.beatStart = this.now;
-    const c = this.cast.child;
+    const { child: c, plane: p } = this.cast;
     c.lookAt = this.canopyTop;
-    c.walkTo(TREE.x + 1.5, TREE.z + 3.2, true, () => {
+    const dx = TREE.x - c.position.x;
+    const dz = TREE.z - c.position.z;
+    const d = Math.hypot(dx, dz) || 1;
+    /**
+     * The plane goes up the hill first and waits over the tree. Nobody is marched anywhere: the child sets off
+     * after it the way they have been doing all along, and the player has already learnt that is how it works.
+     */
+    if (p.held && d > 14) {
+      p.home.set(TREE.x, 0, TREE.z);
+      p.homeRadius = 12;
+      const reach = Math.min(d - 4, 26);
+      c.throwToward(c.position.x + (dx / d) * reach, c.position.z + (dz / d) * reach, () => {
+        p.launch(c.handPosition(this.hand), this.tmp.set((dx / d) * 8.4, 5.2, (dz / d) * 8.4));
+        c.lookAt = p.position;
+        this.climb();
+      });
+      return;
+    }
+    this.climb();
+  }
+
+  private climb(): void {
+    const c = this.cast.child;
+    c.walkTo(TREE.x + 1.1, TREE.z + 2.4, true, () => {
       this.beat = 'atTree';
       this.beatStart = this.now;
       c.faceToward(TREE.x, TREE.z, 1);
@@ -300,7 +351,8 @@ export class IslandChapter implements Chapter {
     const { child: c, boat } = this.cast;
     const t = this.now - this.beatStart;
     if (this.beat === 'toTree') {
-      c.lookAt = this.canopyTop;
+      const p = this.cast.plane;
+      c.lookAt = p.airborne && !p.landed ? p.position : this.canopyTop;
     } else if (this.beat === 'atTree') {
       c.lookAt = t < 4 ? this.canopyTop : this.horizon;
       if (t > 4 && t < 4.2) c.faceToward(this.horizon.x, this.horizon.z, 0.2);
@@ -488,9 +540,15 @@ export class IslandChapter implements Chapter {
       return;
     }
     if (this.beat === 'atTree') {
-      s.target.set(c.x, c.y + 3, c.z - 14);
-      s.distance = 30;
-      s.height = 7;
+      /**
+       * Low and close, standing off to the side of the line from the trunk to the child: from straight back the
+       * tree filled the frame and the child was somewhere behind it.
+       */
+      const dx = c.x - TREE.x;
+      const dz = c.z - TREE.z;
+      const d = Math.hypot(dx, dz) || 1;
+      s.eye = this.eye.set(c.x - (dz / d) * 6.5, c.y + 4.2, c.z + (dx / d) * 6.5);
+      s.target.set(c.x, c.y + 1.55, c.z - 1.2);
       this.pace = 0.35;
       this.focus.copy(c);
       return;

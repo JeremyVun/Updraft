@@ -25,7 +25,11 @@ void main() {
   vec3 side = normalize(cross(up, along));
 
   vec3 pegged = aAnchor + along * (position.x * aShape.x);
-  if (distance(aAnchor, cameraPosition) > uVeil.x + 40.0) {
+  /**
+   * Dropped only once it is far enough out to sea to be long gone in the veil. It used to be culled against the
+   * veil itself, which moves while a chapter settles, so whole bands of washing blinked in and out of the frame.
+   */
+  if (distance(aAnchor, cameraPosition) > 430.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vWorld = pegged;
     vNormal = up;
@@ -57,13 +61,36 @@ void main() {
 
 const CLOTH_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform vec4 uSubject;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vColor;
 in vec2 vUv;
 in float vSwing;
 
+/** Interleaved gradient noise: a dither pattern that holds still on screen instead of crawling. */
+float clothDither(vec2 p) {
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
 void main() {
+  /**
+   * Washing standing between the camera and the child dissolves out of the way. On a hill strung with two
+   * hundred lines they would otherwise lose sight of who they are playing, which is the one thing this game
+   * must never let happen.
+   */
+  if (uSubject.w > 0.5) {
+    vec3 toSubject = uSubject.xyz - cameraPosition;
+    float reach = length(toSubject);
+    vec3 dir = toSubject / max(reach, 0.001);
+    vec3 toHere = vWorld - cameraPosition;
+    float along = dot(toHere, dir);
+    if (along > 0.4 && along < reach - 1.0) {
+      float side = length(toHere - dir * along);
+      float hide = 1.0 - smoothstep(1.1, 3.2, side);
+      if (hide > 0.02 && clothDither(gl_FragCoord.xy) < hide) discard;
+    }
+  }
   vec3 N = normalize(vNormal);
   vec3 V = normalize(cameraPosition - vWorld);
   if (!gl_FrontFacing) N = -N;
@@ -117,6 +144,10 @@ const CLOTH_COLOURS = [
   new THREE.Color('#e2dccd'),
   new THREE.Color('#f7f3ea'),
   new THREE.Color('#d9d2c4'),
+  new THREE.Color('#efe9dc'),
+  new THREE.Color('#e6e0d2'),
+  new THREE.Color('#f2ece0'),
+  new THREE.Color('#ded7c8'),
   new THREE.Color('#c08a7e'),
   new THREE.Color('#d8bb84'),
   new THREE.Color('#9fb0bd'),
@@ -158,6 +189,8 @@ function ropeGeometry(spec: LineSpec): THREE.BufferGeometry {
  */
 export class WashingLines {
   readonly group = new THREE.Group();
+  /** Who must stay in sight: x, y, z and 1 while it applies. The washing in front of them gives way. */
+  readonly subject = new THREE.Vector4();
   private readonly clothMat: THREE.ShaderMaterial;
 
   constructor(specs: readonly LineSpec[], seed = 91) {
@@ -168,7 +201,7 @@ export class WashingLines {
       fragmentShader: WOOD_FRAG,
     });
     this.clothMat = new THREE.ShaderMaterial({
-      uniforms: atmo.uniforms,
+      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
@@ -201,7 +234,7 @@ export class WashingLines {
         /** Mostly sheets, wide and long; a third of the pieces are small things pegged up between them. */
         const small = rand() < 0.3;
         const width = small ? 0.5 + rand() * 0.6 : 1.8 + rand() * 1.8;
-        const drop = small ? 0.55 + rand() * 0.6 : 1.5 + rand() * 1.5;
+        const drop = small ? 0.5 + rand() * 0.55 : 1.4 + rand() * 1.3;
         const step = (width + 0.5 + rand() * 1.3) / span;
         if (t + step > 0.96) break;
         onLine(spec, t, point);
@@ -255,7 +288,8 @@ export function lineField(centre: THREE.Vector2, count: number, spread = 24, see
     const az = z - Math.cos(bearing) * run * 0.5;
     const bx = x + Math.sin(bearing) * run * 0.5;
     const bz = z + Math.cos(bearing) * run * 0.5;
-    const top = 2.9 + rand() * 1.5;
+    /** Hung high, and at every height: the hems clear the grass and the child walks in under the sheets. */
+    const top = 4.2 + rand() * 1.7;
     if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
     specs.push({
       a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
