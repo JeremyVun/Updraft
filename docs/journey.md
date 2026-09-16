@@ -84,6 +84,26 @@ On the becalmed stretch (2026-09-17):
 > whenever we do add the becalmed stretch, it should be visually and audibly clear to the player whats happening
 > and what they need to do."
 
+On leading the player, variety, the colt and the music (2026-09-17, verbatim):
+
+> "I'd also like you to think more about the visual design and how we lead the player. For example, is there a way
+> to very tastefully arrange the clothes lines to 'funnel' the player towards the points of interest without it
+> being obvious. I'm also wondering what else we can add to the island of lines to make it more varied and
+> interesting, not just the same set of clothes lines over and over again. Basically visual polish on each island
+> and also ensuring that a child playing the game can actually figure out how to finish the game all the way
+> through."
+
+> "rethink the baby crane model so it's cuter, fully animated, and rides seamlessly and cohesively with the child.
+> whether it's climbing ontop of the child's hoodie, or trying to fly, or animating while being held. Right now it
+> looks like a plucked turkey when it falls from the sky (it needs to be improved)."
+
+> "I'm also looking to make sure there's a part of the game where the player acting as the wind helps the baby
+> crane fly down and reunite with their parents. This should be a pivotal, emotional scene."
+
+> "I think different music for each island, or for each emotive phase of the game would be great. Right now it's
+> the same music throughout the entire game (the music is great, but it gets too repetitive when its played whe
+> whole way through)."
+
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
 
 And: "Anything you want to prototype and explore, go ahead. we can always iterate or trim what doesn't work."
