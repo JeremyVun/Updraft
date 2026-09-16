@@ -14,7 +14,7 @@ const frameSyncs: WebGLSync[] = [];
  * not reached yet means the copies are skipped instead of delivered. Costing them one more frame of age is worth
  * four times as many deliveries in the meadow (65 in fourteen seconds at two, 257 at three).
  */
-const PIPELINE_DEPTH = 3;
+const PIPELINE_DEPTH = Number(new URLSearchParams(location.search).get('depth') ?? 3);
 let frameGl: WebGL2RenderingContext | null = null;
 let nextForceAt = 0;
 let lastDelivery = 0;
@@ -23,7 +23,7 @@ const COSTLY_WAIT_MS = 2000;
 const CHEAP_WAIT_MS = 250;
 const COSTLY_MS = 6;
 /** How old the CPU copies may get before one blocking delivery is worth a hitch. */
-const STALE_MS = 500;
+const STALE_MS = Number(new URLSearchParams(location.search).get('stale') ?? 2000);
 export const readbackStats = { skipped: 0, forced: 0, delivered: 0, worstMs: 0 };
 
 /**

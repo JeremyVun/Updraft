@@ -23,6 +23,7 @@ import { shaderFbm, smoothstep } from './noise';
 import { WINDOW } from './window';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
+const PROBE = new Set((new URLSearchParams(location.search).get('probe') ?? '').split(','));
 const TILE = 8;
 /** Tiles switch level of detail only this far past a ring, wider than the camera's breathing. */
 const LOD_BAND = 3;
@@ -227,9 +228,25 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
+/**
+ * What the blade's shading needs that is the same for every fragment of the blade: its root colour, its ambient
+ * occlusion as a line in t, and how flat the wind has laid it. Computed per vertex (`tint`, `groundH`, `dist`, `wa`
+ * in scope) so the fragment shader, which runs several times per pixel under multisampling, does not.
+ */
+const BLADE_SHADE_GLSL = /* glsl */ `
+  float fringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
+  float far = smoothstep(60.0, 170.0, dist);
+  vRoot = mix(mix(tint * 0.55, uGrassRoot, fringe), mix(uGrassRoot, tint, 0.62), far);
+  float aoLow = mix(0.7, 0.22, fringe);
+  float aoFar = far * 0.75;
+  vAo = vec2(mix(aoLow, 1.0, aoFar), (1.0 - aoFar) * (1.0 - aoLow));
+  vFlat = smoothstep(0.3, 1.0, wa);
+`;
+
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
 in vec2 aTile;
+uniform vec3 uGrassRoot;
 uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
 uniform sampler2D uTintTex;
@@ -245,10 +262,10 @@ out vec3 vGroundN;
 out vec3 vTint;
 out vec4 vFog;
 out float vT;
-out float vBend;
-out float vFringe;
+out float vFlat;
+out vec3 vRoot;
+out vec2 vAo;
 out float vSun;
-out float vFar;
 out vec4 vFlower;
 
 void collapse() {
@@ -319,14 +336,13 @@ void main() {
   vNormal = length(nrm) > 1e-4 ? normalize(nrm) : vec3(0.0, 1.0, 0.0);
   vSideDir = sideDir * side01;
   vGroundN = ground.xyz;
-  vTint = mix(stillGrey(tintIn.rgb), tintIn.rgb, life);
-  vFringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
+  vec3 tint = mix(stillGrey(tintIn.rgb), tintIn.rgb, life);
+  vTint = tint;
+  ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
   vFog = fogOf(world);
   vWorld = world;
   vT = t;
-  vBend = wa;
-  vFar = smoothstep(60.0, 170.0, dist);
   vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
   vFlower = vec4(mix(stillGrey(bloom), bloom, life), flower);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
@@ -354,10 +370,10 @@ out vec3 vGroundN;
 out vec3 vTint;
 out vec4 vFog;
 out float vT;
-out float vBend;
-out float vFringe;
+out float vFlat;
+out vec3 vRoot;
+out vec2 vAo;
 out float vSun;
-out float vFar;
 out vec4 vFlower;
 
 void collapse() {
@@ -454,14 +470,13 @@ void main() {
   vec3 tint = grassTint(root2) * (0.8 + 0.4 * seed) * (0.92 + 0.16 * fract(fld.y * 7.3) * fld.w);
   tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
   tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
-  vTint = mix(stillGrey(tint), tint, life);
-  vFringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
+  tint = mix(stillGrey(tint), tint, life);
+  vTint = tint;
+  ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
   vFog = fogOf(world);
   vWorld = world;
   vT = t;
-  vBend = wa;
-  vFar = smoothstep(60.0, 170.0, dist);
   vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
   vFlower = vec4(mix(stillGrey(bloom), bloom, life), flower);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
@@ -472,7 +487,6 @@ uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform vec3 uSkyAmbient;
 uniform vec3 uGroundBounce;
-uniform vec3 uGrassRoot;
 uniform float uShower;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -481,10 +495,10 @@ in vec3 vGroundN;
 in vec3 vTint;
 in vec4 vFog;
 in float vT;
-in float vBend;
-in float vFringe;
+in float vFlat;
+in vec3 vRoot;
+in vec2 vAo;
 in float vSun;
-in float vFar;
 in vec4 vFlower;
 
 void main() {
@@ -494,15 +508,15 @@ void main() {
   N = normalize(N + vSideDir * 0.35 + vec3(0.0, 1e-3, 0.0));
   N = normalize(mix(N, vGroundN, 0.5) + vec3(0.0, 1e-3, 0.0));
 
-  vec3 root = mix(mix(vTint * 0.55, uGrassRoot, vFringe), mix(uGrassRoot, vTint, 0.62), vFar);
-  vec3 alb = mix(root, vTint, smoothstep(0.0, 0.95, vT));
-  float flattened = smoothstep(0.3, 1.0, vBend) * vT;
+  vec3 alb = mix(vRoot, vTint, smoothstep(0.0, 0.95, vT));
+  float flattened = vFlat * vT;
   alb = mix(alb, alb * 1.45 + vec3(0.05, 0.06, 0.035), flattened);
   alb = mix(alb, vFlower.rgb, vFlower.a * smoothstep(0.66, 0.78, vT));
 
-  float ao = mix(mix(mix(0.7, 0.22, vFringe), 1.0, smoothstep(0.0, 0.8, vT)), 1.0, vFar * 0.75);
+  float ao = vAo.x + vAo.y * smoothstep(0.0, 0.8, vT);
   float diff = clamp(dot(N, uSunDir) * 0.6 + 0.4, 0.0, 1.0);
-  float back = pow(max(dot(-V, uSunDir), 0.0), 4.0);
+  float toward = max(dot(-V, uSunDir), 0.0);
+  float back = (toward * toward) * (toward * toward);
   vec3 trans = uSunColor * vTint * back * vT * vT * 0.9;
   vec3 H = normalize(uSunDir + V);
   alb *= 1.0 - 0.14 * uShower;
@@ -564,6 +578,7 @@ export class Grass {
   private readonly quad = new FullScreenQuad();
   /** `?blades=direct`: the per-vertex blade shader, for before/after comparison with the table. */
   private readonly direct = params.blades === 'direct';
+  private probeFrame = 0;
 
   constructor() {
     const touch = window.matchMedia('(pointer: coarse)').matches;
@@ -574,7 +589,7 @@ export class Grass {
       const spec = { ...base, reach: base.reach * reachScale };
       spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(spec.reach, prevReach));
       prevReach = spec.reach;
-      const template = bladeTemplate(spec.segments);
+      const template = bladeTemplate(PROBE.has('seg3') ? 3 : spec.segments);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
       geo.setAttribute('position', template.attributes.position);
@@ -616,7 +631,7 @@ export class Grass {
       });
       const mat = new THREE.ShaderMaterial({
         vertexShader: this.direct ? VERT_DIRECT : VERT,
-        fragmentShader: FRAG,
+        fragmentShader: PROBE.has('frag0') ? 'in vec3 vTint; in vec4 vFog; void main() { gl_FragColor = vec4(mix(vTint, vFog.rgb, vFog.a), 1.0); }' : PROBE.has('vary') ? 'in vec3 vWorld; in vec3 vNormal; in vec3 vSideDir; in vec3 vGroundN; in vec3 vTint; in vec4 vFog; in float vT; in float vFlat; in vec3 vRoot; in vec2 vAo; in float vSun; in vec4 vFlower; void main() { gl_FragColor = vec4(vTint + (vNormal + vSideDir + vGroundN + vRoot) * 0.001 + vWorld * 0.0001 + vFog.rgb * vFog.a + vec3(vT + vFlat + vAo.x + vAo.y + vSun) * 0.001 + vFlower.rgb * vFlower.a, 1.0); }' : FRAG,
         uniforms: {
           ...atmo.uniforms,
           ...grassUniforms,
@@ -688,6 +703,7 @@ export class Grass {
 
   /** Picks the tiles to draw for this camera; call `bake` afterwards, before the scene is drawn. */
   update(camera: THREE.Camera): void {
+    this.group.visible = !PROBE.has('nograss');
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
     const cx = camera.position.x;
@@ -708,13 +724,17 @@ export class Grass {
         this.sphere.center.set(mx, heightAt(mx, mz) + 1.5, mz);
         this.sphere.radius = TILE * 0.75 + 4;
         if (!this.frustum.intersectsSphere(this.sphere)) continue;
-        const lod = this.lods[this.lodFor(tx * 100003 + tz, d)];
+        const li = this.lodFor(tx * 100003 + tz, d);
+        if (PROBE.has('lod0') && li !== 0) continue;
+        if (PROBE.has('lod12') && li === 0) continue;
+        const lod = this.lods[li];
         if (lod.count >= lod.spec.maxTiles) continue;
         lod.tiles.array[lod.count * 2] = tx * TILE;
         lod.tiles.array[lod.count * 2 + 1] = tz * TILE;
         lod.count++;
       }
     }
+    if (PROBE.has('counts') && ++this.probeFrame === 300) console.warn('lodcounts ' + this.lods.map((l) => l.count).join(' '));
     for (const l of this.lods) {
       l.tiles.clearUpdateRanges();
       l.tiles.addUpdateRange(0, l.count * 2);
@@ -726,7 +746,7 @@ export class Grass {
 
   /** Fills each level's blade table for the tiles `update` picked. */
   bake(renderer: THREE.WebGLRenderer): void {
-    if (this.direct) return;
+    if (this.direct || PROBE.has('nobake')) return;
     const prev = renderer.getRenderTarget();
     for (const l of this.lods) {
       if (!l.count) continue;

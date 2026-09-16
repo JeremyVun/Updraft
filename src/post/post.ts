@@ -65,6 +65,7 @@ void main() {
   gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(40.0));
 }`;
 
+const PROBE = new Set((new URLSearchParams(location.search).get('probe') ?? '').split(','));
 function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({ vertexShader: QUAD_VERT, fragmentShader, uniforms, depthTest: false, depthWrite: false });
 }
@@ -136,7 +137,7 @@ export class Post {
     r.setRenderTarget(this.clean);
     this.quad.render(r);
 
-    this.bloom.render(r, this.clean, this.clean, 0, false);
+    if (!PROBE.has('nobloom')) this.bloom.render(r, this.clean, this.clean, 0, false);
 
     this.gradeMat.uniforms.uTime.value = time;
     this.quad.material = this.gradeMat;

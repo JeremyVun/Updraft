@@ -17,6 +17,37 @@ import {
   VORTICITY_FRAG,
 } from './shaders';
 
+/**
+ * Two Jacobi relaxations in one pass, bit for bit what two passes of PRESSURE_FRAG produce: each neighbour's
+ * relaxed pressure is rebuilt from the same texels (neighbour positions clamped to the grid first, as sampling
+ * clamps them) and rounded to half float as the intermediate target would have rounded it. Half the passes,
+ * and each pass on a tiled GPU costs a fixed load and store on top of its pixels.
+ */
+const PRESSURE2_FRAG = /* glsl */ `
+uniform sampler2D uPressure;
+uniform sampler2D uDivergence;
+uniform vec2 uTexel;
+in vec2 vUv;
+float relaxed(vec2 uv) {
+  float L = texture(uPressure, uv - vec2(uTexel.x, 0.0)).x;
+  float R = texture(uPressure, uv + vec2(uTexel.x, 0.0)).x;
+  float B = texture(uPressure, uv - vec2(0.0, uTexel.y)).x;
+  float T = texture(uPressure, uv + vec2(0.0, uTexel.y)).x;
+  float div = texture(uDivergence, uv).x;
+  float p = (L + R + B + T - div) * 0.25;
+  return unpackHalf2x16(packHalf2x16(vec2(p, 0.0))).x;
+}
+void main() {
+  vec2 lo = 0.5 * uTexel;
+  vec2 hi = 1.0 - lo;
+  float L = relaxed(clamp(vUv - vec2(uTexel.x, 0.0), lo, hi));
+  float R = relaxed(clamp(vUv + vec2(uTexel.x, 0.0), lo, hi));
+  float B = relaxed(clamp(vUv - vec2(0.0, uTexel.y), lo, hi));
+  float T = relaxed(clamp(vUv + vec2(0.0, uTexel.y), lo, hi));
+  float div = texture(uDivergence, vUv).x;
+  gl_FragColor = vec4((L + R + B + T - div) * 0.25, 0.0, 0.0, 1.0);
+}`;
+
 /** A push of air along a segment, in world units. See docs/contracts/wind.md. */
 export interface Splat {
   ax: number;
@@ -41,6 +72,7 @@ export interface WindSample {
   lift: number;
 }
 
+const PROBE = new Set((new URLSearchParams(location.search).get('probe') ?? '').split(','));
 const READ_RES = 128;
 const STEP = 1 / 60;
 
@@ -72,6 +104,7 @@ export class WindField {
   private readonly vorticityMat: THREE.ShaderMaterial;
   private readonly divergenceMat: THREE.ShaderMaterial;
   private readonly pressureMat: THREE.ShaderMaterial;
+  private readonly pressure2Mat: THREE.ShaderMaterial;
   private readonly gradientMat: THREE.ShaderMaterial;
   private readonly advectMat: THREE.ShaderMaterial;
   private readonly bendMat: THREE.ShaderMaterial;
@@ -127,6 +160,11 @@ export class WindField {
       uDivergence: { value: this.divergence.texture },
       uTexel: texel,
     });
+    this.pressure2Mat = simMaterial(PRESSURE2_FRAG, {
+      uPressure: { value: null },
+      uDivergence: { value: this.divergence.texture },
+      uTexel: texel,
+    });
     this.gradientMat = simMaterial(GRADIENT_FRAG, { uPressure: { value: null }, uVel: { value: null }, uTexel: texel });
     this.advectMat = simMaterial(ADVECT_FRAG, {
       uVel: { value: null },
@@ -171,7 +209,7 @@ export class WindField {
   /** Runs the substeps that fit `dt`, capped: a slow frame must not multiply the sim and get slower still. */
   step(dt: number, time: number): void {
     const steps = Math.min(this.maxSubsteps, Math.max(1, Math.round(dt / STEP)));
-    for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
+    if (!PROBE.has('nosim')) for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
     this.splats.length = 0;
     this.readBack();
   }
@@ -204,9 +242,11 @@ export class WindField {
     this.scaleMat.uniforms.uScale.value = 0.8;
     this.gpu.run(this.scaleMat, this.pressure.write);
     this.pressure.swap();
-    for (let i = 0; i < this.iterations; i++) {
-      this.pressureMat.uniforms.uPressure.value = this.pressure.texture;
-      this.gpu.run(this.pressureMat, this.pressure.write);
+    const fused = PROBE.has('jacobi1') ? 0 : Math.floor(this.iterations / 2);
+    for (let i = 0; i < this.iterations - fused; i++) {
+      const mat = i < fused ? this.pressure2Mat : this.pressureMat;
+      mat.uniforms.uPressure.value = this.pressure.texture;
+      this.gpu.run(mat, this.pressure.write);
       this.pressure.swap();
     }
 

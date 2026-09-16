@@ -13,6 +13,8 @@ const SLOW_MS = 17.6;
 const SMOOTH_MS = 17.2;
 const REVIEW_MS = 1500;
 const SETTLE_MS = 2500;
+/** A level just climbed into shows whether it fits within a second; every further second spent finding out is spent hitching. */
+const SETTLE_UP_MS = 1000;
 const CLIMB_MS = 12000;
 
 /**
@@ -33,7 +35,7 @@ export class Quality {
 
   /** Opens at the highest level within the pixel budget for a `width` × `height` view (and `startRatio`); the rest is climbed into. */
   constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
-    startRatio = Math.min(startRatio, Math.sqrt(OPENING_PIXELS / Math.max(1, width * height)));
+    if (!location.search.includes('nocap')) startRatio = Math.min(startRatio, Math.sqrt(OPENING_PIXELS / Math.max(1, width * height)));
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples });
     this.levels.push({ ratio: 1, samples });
     if (samples > 2) this.levels.push({ ratio: 1, samples: 2 });
@@ -56,7 +58,8 @@ export class Quality {
     if (this.locked) return;
     this.recent.push(intervalMs);
     if (this.recent.length > RECENT) this.recent.shift();
-    if (now - this.lastReview < REVIEW_MS || now - this.changedAt < SETTLE_MS || this.recent.length < 8) return;
+    const settle = this.lastStepUp ? SETTLE_UP_MS : SETTLE_MS;
+    if (now - this.lastReview < REVIEW_MS || now - this.changedAt < settle || this.recent.length < 8) return;
     this.lastReview = now;
     const sorted = [...this.recent].sort((a, b) => a - b);
     const kept = sorted.slice(0, Math.max(1, Math.floor(sorted.length * 0.95)));
