@@ -48,7 +48,7 @@ const FLOOR = 0.006 * SIZE;
  * where it can be seen from every side. In the hood it perches on the shoulders behind the head, peeking round
  * the hood on the side the camera is on.
  */
-const ARMS = new THREE.Vector3(-0.6, -0.04, -0.2);
+const ARMS = new THREE.Vector3(-0.7, 0.0, -0.2);
 const ARMS_YAW = 0.15;
 const HOOD = new THREE.Vector3(-0.26, 0.15, -0.43);
 /** The climb from the arms into the hood goes up over the right shoulder, outside the hood. */
@@ -331,6 +331,7 @@ export class Crane {
 
   /** Set down to walk at the child's heel. */
   follow(): void {
+    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
     if (this.carried) {
       this.startHandoff(this.shown, null, false, 0.55, 0.35, 'hop');
       this.settle = 0.2;
@@ -338,6 +339,7 @@ export class Crane {
       this.landedAt = this.time;
     } else if (this.state !== 'following') this.settle = 0.6;
     this.state = 'following';
+    this.visible = true;
     this.fear = Math.min(this.fear, 0.2);
   }
 
@@ -603,9 +605,10 @@ export class Crane {
     if (gap < 3) this.fear = Math.max(0.15, this.fear - dt * 0.12);
     if (this.time > this.nextCall) {
       this.call(false);
-      this.nextCall = this.time + (this.fear > 0.6 ? 3 : 7) + Math.random() * 2;
+      this.nextCall = this.time + (this.fear > 0.6 ? 3.6 : 7) + Math.random() * 2;
     }
     this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.begging(gap);
   }
 
   private walk(dt: number, child: THREE.Vector3): void {
@@ -657,12 +660,19 @@ export class Crane {
     }
     /** Wings out for balance when it runs, the way a chick that cannot fly still uses them. */
     this.flap = ease(this.flap, this.p.hurry > 0.5 ? 0.75 : 0, 5, dt);
-    /** A chick that is fond of you flutters when you come back to it. */
-    if (this.bond > 0.3 && gap < 1.8 && this.childSpeed > 0.8 && this.time > this.nextBeg && this.settle < 0.9) {
-      this.beg = 1.4;
-      this.nextBeg = this.time + 9;
-    }
     this.position.y = ground;
+    this.begging(gap);
+  }
+
+  /** A chick flutters and reaches up when someone it trusts comes back to it, or stands right over it. */
+  private begging(gap: number): void {
+    if (this.time < this.nextBeg || this.fear > 0.5) return;
+    const returning = this.bond > 0.3 && gap < 1.8 && this.childSpeed > 0.8;
+    const overIt = gap < 1.5 && this.childSpeed < 0.3;
+    if (returning || overIt) {
+      this.beg = 1.4;
+      this.nextBeg = this.time + (overIt ? 4.5 : 9);
+    }
   }
 
   /** A crouch and a look up, then everything it has straight up, three times, and a stumble when it comes down. */
@@ -792,7 +802,7 @@ export class Crane {
 
   /** Stretches up and opens its bill, two or three times; the sound is the story's to make. */
   private call(longing: boolean): void {
-    this.callT = longing ? 1.4 : 0.8;
+    this.callT = longing ? 1.4 : 0.8 - this.fear * 0.25;
     this.callLong = longing;
   }
 
@@ -857,7 +867,7 @@ export class Crane {
 
     /** What it is doing, as weights; every one eased so that no change of state is a cut. */
     const hunch = this.fear * (this.carried ? 0.35 : 1) * (1 - this.effort);
-    const calling = this.callT > 0 ? Math.sin(Math.min(1, this.callT / (this.callLong ? 1.4 : 0.8)) * Math.PI) ** 0.5 : 0;
+    const calling = this.callT > 0 ? Math.sin(Math.min(1, this.callT / (this.callLong ? 1.4 : 0.8 - this.fear * 0.25)) * Math.PI) ** 0.5 : 0;
     p.sit = ease(p.sit, riding ? (s === 'hooded' ? 0.75 : 0.9) : flying || h ? (lifting ? 0.4 : 0) : settled, riding ? 3 : 4, dt);
     p.held = ease(p.held, riding || climbing ? 1 : 0, 5, dt);
     p.hooded = ease(p.hooded, s === 'hooded' && !h ? 1 : 0, 4, dt);
@@ -940,7 +950,7 @@ export class Crane {
     }
 
     const stand = 1 - tuck;
-    const bodyRest = riding || climbing ? 0.11 : lerp(0.085, reach, stand);
+    const bodyRest = riding || climbing ? 0.11 : lerp(0.072, reach, stand);
     const breathe = Math.sin(this.breath) * (0.012 + this.fear * 0.008 + this.puff * 0.01);
     const body = n[BODY];
     body.position.y = bodyRest + this.glide * 0.06 + this.effort * 0.02 + breathe * 0.4 + (afoot ? Math.abs(Math.cos(this.stride)) * 0.006 * p.hurry : 0);
@@ -956,20 +966,21 @@ export class Crane {
     let b = 0.45;
     let head = 0;
     a = lerp(a, -1.2, p.curl);
-    b = lerp(b, 1.05, p.curl);
-    head = lerp(head, 0.3, p.curl);
+    b = lerp(b, 1.6, p.curl);
+    head = lerp(head, 0.15, p.curl);
     a = lerp(a, -0.08, p.tall);
     b = lerp(b, 0.02, p.tall);
     head = lerp(head, -0.2 - calling * 0.45, p.tall);
-    a = lerp(a, -1.3, p.hunch);
-    b = lerp(b, 1.25, p.hunch);
-    head = lerp(head, 0.35, p.hunch);
+    /** Frightened, the head is pulled down into the shoulders: the neck folds flat instead of standing. */
+    a = lerp(a, -1.35, p.hunch);
+    b = lerp(b, 2.1, p.hunch);
+    head = lerp(head, 0.25, p.hunch);
     const heldNeck = p.held * (1 - p.curl) * (1 - p.sleep);
     a = lerp(a, -0.15 + p.hooded * 0.05, heldNeck);
     b = lerp(b, 0.05, heldNeck);
     head = lerp(head, -0.1, heldNeck);
-    a = lerp(a, -1.4, p.sleep);
-    b = lerp(b, 1.45, p.sleep);
+    a = lerp(a, -1.5, p.sleep);
+    b = lerp(b, 1.9, p.sleep);
     head = lerp(head, 0.5, p.sleep);
     a = lerp(a, 1.02, p.reach);
     b = lerp(b, 0.38, p.reach);
@@ -993,7 +1004,11 @@ export class Crane {
     let wantPitch = this.glancePitch;
     const target = this.lookAt ?? (this.glanceChild ? this.want : null);
     if (target) {
-      this.to.copy(target).sub(this.eye(this.tmp2));
+      this.to.copy(target);
+      /** Told to watch someone standing near it, it looks at their face, not their boots. */
+      const near = Math.hypot(target.x - this.shown.x, target.z - this.shown.z) < 4;
+      if (this.lookAt && near && Math.abs(target.y - Math.max(heightAt(target.x, target.z), 0)) < 0.6) this.to.y += 1.9;
+      this.to.sub(this.eye(this.tmp2));
       wantYaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - this.shownYaw), -1.4, 1.4);
       wantPitch = -clamp(Math.atan2(this.to.y, Math.hypot(this.to.x, this.to.z)), -1.1, 0.9) - rootPitch;
     }

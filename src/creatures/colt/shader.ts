@@ -86,6 +86,6 @@ void main() {
   vec3 col = shadeCreature(alb, N, vWorld, 0.84, fuzz, thin, uAir);
   /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */
   if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * catchlight(N, vWorld);
-  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+  /** Never greyed with the land: it arrives after the island is whole, and the sea it crosses has no life field. */
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;

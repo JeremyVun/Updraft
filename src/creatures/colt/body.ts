@@ -35,9 +35,9 @@ export const SKELETON: [bone: number, parent: number, at: V3][] = [
   [TUFT, HEAD, [0, 0.044, -0.004]],
   [TAIL, BODY, [0, 0.024, -0.096]],
   [WING_L, BODY, [0.062, 0.028, 0.012]],
-  [HAND_L, WING_L, [0.094, 0, -0.012]],
+  [HAND_L, WING_L, [0.11, 0, -0.012]],
   [WING_R, BODY, [-0.062, 0.028, 0.012]],
-  [HAND_R, WING_R, [-0.094, 0, -0.012]],
+  [HAND_R, WING_R, [-0.11, 0, -0.012]],
   [THIGH_L, BODY, [0.036, -0.036, -0.01]],
   [SHIN_L, THIGH_L, [0, -THIGH, 0]],
   [FOOT_L, SHIN_L, [0, -SHIN, 0]],
@@ -158,8 +158,8 @@ export function coltGeometry(): THREE.BufferGeometry {
       part: WING_L,
       mat: QUILL,
       at,
-      size: [0.056, 0.011, 0.045],
-      offset: [0.046, 0, -0.01],
+      size: [0.066, 0.011, 0.045],
+      offset: [0.054, 0, -0.01],
       shape: (u) => {
         const s = Math.max(0, u.x);
         u.y *= 1 - 0.35 * s;
@@ -171,9 +171,9 @@ export function coltGeometry(): THREE.BufferGeometry {
     WING_R,
   );
   for (const [spin, reach] of [
-    [-0.5, 0.046],
-    [-0.15, 0.048],
-    [0.22, 0.042],
+    [-0.5, 0.058],
+    [-0.15, 0.061],
+    [0.22, 0.053],
   ]) {
     pair(
       {
