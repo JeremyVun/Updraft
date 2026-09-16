@@ -23,7 +23,6 @@ import { shaderFbm, smoothstep } from './noise';
 import { WINDOW } from './window';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
-const PROBE = new Set((new URLSearchParams(location.search).get('probe') ?? '').split(','));
 const TILE = 8;
 /** Tiles switch level of detail only this far past a ring, wider than the camera's breathing. */
 const LOD_BAND = 3;
@@ -578,7 +577,6 @@ export class Grass {
   private readonly quad = new FullScreenQuad();
   /** `?blades=direct`: the per-vertex blade shader, for before/after comparison with the table. */
   private readonly direct = params.blades === 'direct';
-  private probeFrame = 0;
 
   constructor() {
     const touch = window.matchMedia('(pointer: coarse)').matches;
@@ -589,7 +587,7 @@ export class Grass {
       const spec = { ...base, reach: base.reach * reachScale };
       spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(spec.reach, prevReach));
       prevReach = spec.reach;
-      const template = bladeTemplate(PROBE.has('seg3') ? 3 : spec.segments);
+      const template = bladeTemplate(spec.segments);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
       geo.setAttribute('position', template.attributes.position);
@@ -631,7 +629,7 @@ export class Grass {
       });
       const mat = new THREE.ShaderMaterial({
         vertexShader: this.direct ? VERT_DIRECT : VERT,
-        fragmentShader: PROBE.has('frag0') ? 'in vec3 vTint; in vec4 vFog; void main() { gl_FragColor = vec4(mix(vTint, vFog.rgb, vFog.a), 1.0); }' : PROBE.has('vary') ? 'in vec3 vWorld; in vec3 vNormal; in vec3 vSideDir; in vec3 vGroundN; in vec3 vTint; in vec4 vFog; in float vT; in float vFlat; in vec3 vRoot; in vec2 vAo; in float vSun; in vec4 vFlower; void main() { gl_FragColor = vec4(vTint + (vNormal + vSideDir + vGroundN + vRoot) * 0.001 + vWorld * 0.0001 + vFog.rgb * vFog.a + vec3(vT + vFlat + vAo.x + vAo.y + vSun) * 0.001 + vFlower.rgb * vFlower.a, 1.0); }' : FRAG,
+        fragmentShader: FRAG,
         uniforms: {
           ...atmo.uniforms,
           ...grassUniforms,
@@ -703,7 +701,6 @@ export class Grass {
 
   /** Picks the tiles to draw for this camera; call `bake` afterwards, before the scene is drawn. */
   update(camera: THREE.Camera): void {
-    this.group.visible = !PROBE.has('nograss');
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
     const cx = camera.position.x;
@@ -725,8 +722,6 @@ export class Grass {
         this.sphere.radius = TILE * 0.75 + 4;
         if (!this.frustum.intersectsSphere(this.sphere)) continue;
         const li = this.lodFor(tx * 100003 + tz, d);
-        if (PROBE.has('lod0') && li !== 0) continue;
-        if (PROBE.has('lod12') && li === 0) continue;
         const lod = this.lods[li];
         if (lod.count >= lod.spec.maxTiles) continue;
         lod.tiles.array[lod.count * 2] = tx * TILE;
@@ -734,7 +729,6 @@ export class Grass {
         lod.count++;
       }
     }
-    if (PROBE.has('counts') && ++this.probeFrame === 300) console.warn('lodcounts ' + this.lods.map((l) => l.count).join(' '));
     for (const l of this.lods) {
       l.tiles.clearUpdateRanges();
       l.tiles.addUpdateRange(0, l.count * 2);
@@ -746,7 +740,7 @@ export class Grass {
 
   /** Fills each level's blade table for the tiles `update` picked. */
   bake(renderer: THREE.WebGLRenderer): void {
-    if (this.direct || PROBE.has('nobake')) return;
+    if (this.direct) return;
     const prev = renderer.getRenderTarget();
     for (const l of this.lods) {
       if (!l.count) continue;

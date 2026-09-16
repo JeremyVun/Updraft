@@ -72,7 +72,6 @@ export interface WindSample {
   lift: number;
 }
 
-const PROBE = new Set((new URLSearchParams(location.search).get('probe') ?? '').split(','));
 const READ_RES = 128;
 const STEP = 1 / 60;
 
@@ -209,7 +208,7 @@ export class WindField {
   /** Runs the substeps that fit `dt`, capped: a slow frame must not multiply the sim and get slower still. */
   step(dt: number, time: number): void {
     const steps = Math.min(this.maxSubsteps, Math.max(1, Math.round(dt / STEP)));
-    if (!PROBE.has('nosim')) for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
+    for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
     this.splats.length = 0;
     this.readBack();
   }
@@ -242,7 +241,7 @@ export class WindField {
     this.scaleMat.uniforms.uScale.value = 0.8;
     this.gpu.run(this.scaleMat, this.pressure.write);
     this.pressure.swap();
-    const fused = PROBE.has('jacobi1') ? 0 : Math.floor(this.iterations / 2);
+    const fused = Math.floor(this.iterations / 2);
     for (let i = 0; i < this.iterations - fused; i++) {
       const mat = i < fused ? this.pressure2Mat : this.pressureMat;
       mat.uniforms.uPressure.value = this.pressure.texture;
