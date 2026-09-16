@@ -27,18 +27,38 @@ Jeremy's brief for this milestone and the story as built are in `journey.md`: a 
 - A new sea: surf and swash, seabed, glitter, mirror.
 - Music that follows the story.
 
-## M3: the dream (in progress)
+## M3: the dream (the journey plays end to end)
 
-The journey rebuilt as six rooms with a companion, per `journey.md`. Room 1 is done; the rest follow in order.
+The journey rebuilt as a chain of islands with a companion, per `journey.md`, which is the anchor for all of it.
+Every room below is built and playable; what is left is polish, pacing and the turn of the year.
 
-- The island made legible: the boat in the cove and in frame from the first second, play kept south of the ridge, the child chasing and laughing, the boat afloat properly, the restoration held back and then released all at once. **Done.**
-- The companion system and the fledgling crane: the flock, the fall, carrying, riding, the bond, the first glide, the flight.
-- The crossing in fog: ninety seconds, blind, the whale close alongside.
-- The alp: Swiss rather than Irish — no walls or paddock fences, spruce stands and hay barns, a snow-capped range on the horizon to give the distance depth. Ends at the tree line.
-- The drowned wood: the flooded valley, the long dusk drift, the storm, losing the plane.
-- The dark: wind that fans light instead of grass, the lost fledgling, finding and drying the plane.
-- The last hill: the flight, the flock, and the existing ending.
+- **The still island.** Made legible: the boat in frame from the first second, play kept south of the ridge, the
+  throws leaning toward whatever is still grey so catch finds the rest of the island, the restoration held back
+  and released all at once. The skein, the fall, and the child carrying the colt from there. **Done.**
+- **The island of lines.** A small green whaleback strung with washing, hung around the walk so the open ground
+  is always the way on; shirts, gowns and trousers among the sheets; a red door on the crest; baskets on the
+  sand. **Done.**
+- **The meadow.** The green wave, the long walk, the sun shower, the crest where the family is seen wheeling, and
+  the colt's first glide on an updraft the player holds. **Done.**
+- **The drowned village.** The dusk drift between rooftops, the becalming where the player is the wind in the
+  sail, and the storm taking the paper plane. **Done.**
+- **The dark wood.** Wind that fans light instead of grass, the colt frightened out of the hood and found by
+  putting light on it, the plane found sodden and dried. Nobody can be stranded there. **Done.**
+- **The long crossing.** The exhale: whales, dolphins, fish, and the night ending somewhere along it. **Done.**
+- **Home.** The last hill, the reunion staged in four beats, the drawing, the release and the red door. **Done.**
+- **The companion.** A crane colt rebuilt as a round downy chick that rides under the arm and on the shoulder,
+  climbs into the hood, tries and fails, glides, hides and flies. **Done.**
+- **Music.** A mood per room, gliding between them.
+
+## Next
+
+- The meadow's frame time: it saturates the GPU at render scale 1 and the governor answers by going soft.
+- A playthrough for pacing: about eighteen minutes, no room over five.
+- The turn of the year beyond the grass — the trees, the flowers, the sky and the light.
+- More of the loose nonsense `journey.md` asks for: chimneys with no house, a bed in the meadow, a piano at the
+  tide line. And two islands never built: the sky mirror and the autumn birches.
 
 ## Later
 
-Optional wind trials, a persistent world, more islands; performance on phones (grass fill at high pixel ratios is the main cost).
+Optional wind trials, a persistent world, more islands; performance on phones (grass fill at high pixel ratios is
+the main cost).
