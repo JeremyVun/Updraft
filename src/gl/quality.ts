@@ -37,6 +37,13 @@ export class Quality {
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples });
     this.levels.push({ ratio: 1, samples });
     if (samples > 2) this.levels.push({ ratio: 1, samples: 2 });
+    /**
+     * Below one device pixel per pixel, and softer for it. Only a machine that is already missing every other
+     * refresh ever gets here, and in a game this slow a soft frame that arrives is worth more than a sharp one
+     * that does not: a saturated GPU also starves the readbacks the wind and the life are read back through.
+     */
+    this.levels.push({ ratio: 0.85, samples: Math.min(samples, 2) });
+    this.levels.push({ ratio: 0.72, samples: Math.min(samples, 2) });
     this.index = Math.max(0, this.levels.findIndex((l) => l.ratio <= startRatio));
   }
 

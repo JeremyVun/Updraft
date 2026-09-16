@@ -9,7 +9,12 @@ interface Pending<T> {
 const all: Readback<unknown>[] = [];
 /** Fences of the last frames, oldest first; the pipeline is allowed to be this many frames deep. */
 const frameSyncs: WebGLSync[] = [];
-const PIPELINE_DEPTH = 2;
+/**
+ * Three, not two: in the rooms where the grass is the room the GPU runs a frame further behind than the display
+ * pipeline, and waiting on a fence it has not reached yet is a hundred-millisecond stall in the middle of a walk.
+ * Costing the wind and life copies one more frame of staleness is not something any of them can feel.
+ */
+const PIPELINE_DEPTH = 3;
 let frameGl: WebGL2RenderingContext | null = null;
 let nextForceAt = 0;
 /** A forced delivery that blocked for long is not repeated for this long; a cheap one much sooner. */
