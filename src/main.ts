@@ -350,6 +350,8 @@ function frame(now: number): void {
   child.update(dt);
   glider.update(dt, time);
   flock.update(dt, time);
+  /** The arm comes down over it while it is being carried, and lifts again when it is not. */
+  child.cradle += ((crane.state === 'carried' && crane.visible ? 1 : 0) - child.cradle) * (1 - Math.exp(-dt * 2.5));
   if (crane.state === 'carried') crane.carry(child.armsPoint(craneAt), child.yaw);
   else if (crane.state === 'hooded') crane.carry(child.hoodPoint(craneAt), child.yaw, true);
   /** The colt reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */

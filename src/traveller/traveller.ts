@@ -112,6 +112,12 @@ export class Traveller {
     return out.set(this.position.x + fx * 0.95 - fz * 0.45, this.position.y + up, this.position.z + fz * 0.95 + fx * 0.45);
   }
 
+  /**
+   * How much the right arm is clamped in against the body to hold something under it, 0 to 1. Eased, so it is
+   * taken up and given back at the speed of picking something up rather than snapping.
+   */
+  cradle = 0;
+
   /** Where something small is held against the chest, in both arms. */
   armsPoint(out: THREE.Vector3): THREE.Vector3 {
     const fx = Math.sin(this.yaw);
@@ -482,6 +488,11 @@ export class Traveller {
     r.body.scale.set(1, 1 + Math.sin(t * 2.2) * 0.012, 1);
     r.legL.rotation.set(swing * legAmp * (1 - sit) - sit * 1.45, 0, -0.05 - sit * 0.15);
     r.legR.rotation.set(-swing * legAmp * (1 - sit) - sit * 1.45, 0, 0.05 + sit * 0.15);
+    /** Nothing rides on a child who is not holding it: the arm comes down over whatever is under it. */
+    if (!a && this.cradle > 0.001) {
+      armRX = THREE.MathUtils.lerp(armRX * 0.35, -0.5, this.cradle);
+      armRZ = THREE.MathUtils.lerp(armRZ, -0.03, this.cradle);
+    }
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
     r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
     r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
