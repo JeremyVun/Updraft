@@ -215,6 +215,48 @@ function ropeGeometry(spec: LineSpec): THREE.BufferGeometry {
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 10, 0.022, 4, false);
 }
 
+const PAINT_FRAG = /* glsl */ `
+${ATMO_GLSL}
+uniform vec3 uPaint;
+in vec3 vWorld;
+in vec3 vNormal;
+void main() {
+  vec3 N = normalize(vNormal);
+  float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
+  vec3 paint = uPaint * (0.92 + vnoise(vWorld.xz * 6.0 + vWorld.y * 9.0) * 0.16);
+  vec3 col = paint * (hemiLight(N) + uSunColor * max(dot(N, uSunDir), 0.0) * 0.75 * sun);
+  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
+/**
+ * A door standing in the grass with nothing behind it and nothing on the other side of it. Nobody remarks on it
+ * and nothing happens if you walk round it; it is only the dream handing over another piece of home, and it
+ * gives the top of the hill something to be the top of.
+ */
+export function redDoor(x: number, z: number, yaw: number): THREE.Group {
+  const group = new THREE.Group();
+  const foot = Math.max(heightAt(x, z), 0);
+  const frame = (w: number, h: number, dy: number, dx: number) =>
+    new THREE.BoxGeometry(w, h, 0.22).translate(dx, dy + h / 2, 0);
+  const jambs = mergeGeometries([frame(0.17, 3.05, 0, -0.66), frame(0.17, 3.05, 0, 0.66), frame(1.49, 0.2, 3.05, 0)]);
+  const panel = new THREE.BoxGeometry(1.15, 2.9, 0.1).translate(0, 1.47, 0.02);
+  const paint = (colour: string) =>
+    new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color(colour) } },
+      vertexShader: WOOD_VERT,
+      fragmentShader: PAINT_FRAG,
+    });
+  /** The same white and the same red as the cottage at the end of the journey. Nobody is told that either. */
+  group.add(new THREE.Mesh(jambs, paint('#ebe4d4')));
+  group.add(new THREE.Mesh(panel, paint('#b5362c')));
+  const knob = new THREE.SphereGeometry(0.06, 8, 6).translate(0.4, 1.5, 0.08);
+  group.add(new THREE.Mesh(knob, paint('#b99a52')));
+  group.position.set(x, foot - 0.1, z);
+  group.rotation.y = yaw;
+  return group;
+}
+
 /**
  * Lines of washing hung out with nobody there: the first piece of home the dream hands over. Poles and rope are
  * ordinary geometry; every sheet is one instance of a quad that reads the wind field in its vertex shader, so a

@@ -40,7 +40,7 @@ import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
 import { Crane } from './creatures/crane';
 import { CraneFlock } from './creatures/flock';
-import { WashingLines, lineField } from './world/lines';
+import { WashingLines, lineField, redDoor } from './world/lines';
 import { LINES_WALK } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { DarkWood } from './world/wood';
@@ -114,6 +114,10 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
+/** A door standing on the crest with nothing behind it: the dream leaving another piece of home lying about. */
+const door = redDoor(23, -357, 0.32);
+scene.add(door);
+
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46, 17, LINES_WALK));
 scene.add(washing.group);

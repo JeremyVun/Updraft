@@ -170,7 +170,9 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    are the two clearest sights on the island. Nobody is ever told any of this.
    Not everything on a line is a bedsheet: shirts with sleeves, nightgowns that flare at the hem, trousers whose
    hem rides up into two legs, and small things pegged between them, plus pegs at every corner and a forked prop
-   under the lines that sag. Still wanted: baskets, a peg bag, a red door standing in the grass.
+   under the lines that sag. **A red door stands on the crest** with nothing behind it and nothing on the other
+   side — painted the same white and the same red as the cottage at the end of the journey, which nobody is told
+   either. Still wanted: baskets and a peg bag.
 3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year. The green wave rolls out, and the long
    walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the colt's first
    glide on the player's updraft.
