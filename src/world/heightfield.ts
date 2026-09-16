@@ -103,38 +103,109 @@ function islandHeight(x: number, z: number): number {
   return h;
 }
 
-/** Where the mainland meets the sea: a wandering east-west line, land to the north (−z). */
-export function mainlandCoastZ(x: number): number {
-  return -700 + 46 * gfbm(x * 0.0032, 0.5, 2, 11) + 14 * gnoise(x * 0.012, 3.3);
+/**
+ * The chain of islands. Each lies further north than the last with a stretch of sea between, and the stretches
+ * shrink as home gets nearer, so the world closes in. The still island keeps its own shape; the rest are ellipses.
+ */
+export const ISLES = {
+  lines: { x: 14, z: -330, rx: 70, rz: 56 },
+  meadow: { x: 10, z: -880, rx: 340, rz: 300 },
+  drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
+  wood: { x: -30, z: -1800, rx: 130, rz: 115 },
+  home: { x: -45, z: -2120, rx: 190, rz: 165 },
+} as const;
+
+type Isle = (typeof ISLES)[keyof typeof ISLES];
+
+/** Roughly how far outside an island's coast a point lies, in world units; negative on land. */
+function isleCoast(x: number, z: number, c: Isle, wobble: number, seed: number): number {
+  const n = gfbm(x / (c.rx * 0.9), z / (c.rz * 0.9), 3, seed);
+  const ex = (x - c.x) / c.rx;
+  const ez = (z - c.z) / c.rz;
+  return (Math.hypot(ex, ez) - 1 - n * wobble) * Math.min(c.rx, c.rz) * 0.8;
 }
 
-/** The endless green hills: a beach or low cliffs at the coast, then broad rolling pasture rising inland. */
-function mainlandHeight(x: number, z: number): number {
-  const inland = mainlandCoastZ(x) - z;
+/** The island of lines: one steep bare dome, cropped short, so the washing is the only thing on it. */
+function linesHeight(x: number, z: number): number {
+  const c = ISLES.lines;
+  const d = isleCoast(x, z, c, 0.16, 21);
+  const land = smoothstep(8, -20, d);
+  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  let h = land * 3.2 - 1.4;
+  h += land * land * (Math.max(0, 1 - r * r) * 15 + (gfbm(x * 0.02, z * 0.02, 3, 22) * 0.5 + 0.5) * 5);
+  return h - smoothstep(0, 60, d) * 8;
+}
+
+/** The meadow: the broad rolling pasture, now bounded by its own coast on every side. */
+function meadowHeight(x: number, z: number): number {
+  const inland = -isleCoast(x, z, ISLES.meadow, 0.08, 11);
   const land = smoothstep(-12, 16, inland);
   let h = land * 4.8 - 1.6;
-  const cliffs = smoothstep(0.0, 0.3, gfbm(x * 0.006, 7.7, 2, 12));
+  const cliffs = smoothstep(0, 0.3, gfbm(x * 0.006, 7.7, 2, 12));
   h += cliffs * smoothstep(-3, 7, inland) * 8;
   const rise = smoothstep(10, 260, inland);
   const broad = gfbm(x * 0.0042, z * 0.0042, 3, 13);
   const mid = gfbm(x * 0.012, z * 0.012, 3, 14);
-  const swell = Math.max(0, 16 + 26 * broad + 7 * mid);
-  const r2 = (x - 20) ** 2 + (z + 1520) ** 2;
-  const lastHill = 36 * Math.exp(-r2 / (2 * 62 ** 2)) + 22 * Math.exp(-r2 / (2 * 190 ** 2));
-  h += land * (rise * swell + lastHill);
-  h -= smoothstep(0, 70, -inland) * 8;
-  return h;
+  h += land * rise * Math.max(0, 16 + 26 * broad + 7 * mid);
+  return h - smoothstep(0, 70, -inland) * 8;
 }
 
-function rawHeight(x: number, z: number): number {
-  return smax(islandHeight(x, z), mainlandHeight(x, z), 4);
+/** The drowned village: mud banks and shallows, most of it just under the water it is sailed across. */
+function drownedHeight(x: number, z: number): number {
+  const d = isleCoast(x, z, ISLES.drowned, 0.14, 31);
+  const land = smoothstep(20, -30, d);
+  const lumps = gfbm(x * 0.013, z * 0.013, 3, 32);
+  return land * (0.5 + lumps * 2.3) - 1.9 - smoothstep(0, 80, d) * 6;
+}
+
+/** The dark wood: small, steep and close, the least room of any island. */
+function woodHeight(x: number, z: number): number {
+  const c = ISLES.wood;
+  const d = isleCoast(x, z, c, 0.2, 41);
+  const land = smoothstep(8, -18, d);
+  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  let h = land * 3.5 - 1.5;
+  h += land * land * (Math.max(0, 1 - r * r) * 22 + (gfbm(x * 0.03, z * 0.03, 3, 42) * 0.5 + 0.5) * 5);
+  return h - smoothstep(0, 60, d) * 7;
 }
 
 /** The top of the last hill, where the journey ends. */
-export const LAST_HILL = { x: 20, z: -1508 } as const;
+export const LAST_HILL = { x: -30, z: -2060 } as const;
+
+/** Home: one long hill to come over, with the cottage in the valley beyond it. */
+function homeHeight(x: number, z: number): number {
+  const d = isleCoast(x, z, ISLES.home, 0.1, 51);
+  const land = smoothstep(10, -22, d);
+  let h = land * 4 - 1.6;
+  h += land * land * (14 + gfbm(x * 0.006, z * 0.006, 3, 52) * 12);
+  const r2 = (x - LAST_HILL.x) ** 2 + (z - LAST_HILL.z) ** 2;
+  h += land * (34 * Math.exp(-r2 / (2 * 58 ** 2)) + 18 * Math.exp(-r2 / (2 * 170 ** 2)));
+  return h - smoothstep(0, 70, d) * 8;
+}
+
+/** The meadow's south coast, where the boat comes ashore: kept as a function of x for the story and the camera. */
+export function mainlandCoastZ(x: number): number {
+  const c = ISLES.meadow;
+  const ex = Math.min(1, Math.abs(x - c.x) / c.rx);
+  const n = gfbm(x / (c.rx * 0.9), (c.z + c.rz) / (c.rz * 0.9), 3, 11);
+  return c.z + c.rz * (1 + n * 0.08) * Math.sqrt(Math.max(0, 1 - ex * ex));
+}
+
+/** How far inside the meadow's coast a point lies; negative outside it. */
+export function meadowInset(x: number, z: number): number {
+  return -isleCoast(x, z, ISLES.meadow, 0.08, 11);
+}
+
+function rawHeight(x: number, z: number): number {
+  let h = smax(islandHeight(x, z), linesHeight(x, z), 6);
+  h = smax(h, meadowHeight(x, z), 6);
+  h = smax(h, drownedHeight(x, z), 6);
+  h = smax(h, woodHeight(x, z), 6);
+  return smax(h, homeHeight(x, z), 6);
+}
 
 /** The cottage below the last hill sits on a levelled pad. */
-export const COTTAGE = { x: -65, z: -1664, radius: 13 } as const;
+export const COTTAGE = { x: -70, z: -2124, radius: 13 } as const;
 export const COTTAGE_Y = rawHeight(COTTAGE.x, COTTAGE.z);
 
 export function worldHeight(x: number, z: number): number {
@@ -221,11 +292,28 @@ float hf_island(vec2 p) {
   h -= smoothstep(0.0, 55.0, d) * 7.5;
   return h;
 }
-float mainlandCoastZ(float x) {
-  return -700.0 + 46.0 * gfbm(vec2(x * 0.0032, 0.5), 2, 11.0) + 14.0 * gnoise(vec2(x * 0.012, 3.3));
+float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
+  float n = gfbm(p / (r * 0.9), 3, seed);
+  vec2 e = (p - c) / r;
+  return (length(e) - 1.0 - n * wobble) * min(r.x, r.y) * 0.8;
 }
-float hf_mainland(vec2 p) {
-  float inland = mainlandCoastZ(p.x) - p.y;
+float hf_lines(vec2 p) {
+  vec2 c = vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0);
+  vec2 r = vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0);
+  float d = hf_isleCoast(p, c, r, 0.16, 21.0);
+  float land = smoothstep(8.0, -20.0, d);
+  float rr = length((p - c) / r);
+  float h = land * 3.2 - 1.4;
+  h += land * land * (max(0.0, 1.0 - rr * rr) * 15.0 + (gfbm(p * 0.02, 3, 22.0) * 0.5 + 0.5) * 5.0);
+  return h - smoothstep(0.0, 60.0, d) * 8.0;
+}
+float meadowInset(vec2 p) {
+  return -hf_isleCoast(p, vec2(${ISLES.meadow.x}.0, ${ISLES.meadow.z}.0), vec2(${ISLES.meadow.rx}.0, ${ISLES.meadow.rz}.0), 0.08, 11.0);
+}
+float hf_meadow(vec2 p) {
+  vec2 c = vec2(${ISLES.meadow.x}.0, ${ISLES.meadow.z}.0);
+  vec2 r = vec2(${ISLES.meadow.rx}.0, ${ISLES.meadow.rz}.0);
+  float inland = -hf_isleCoast(p, c, r, 0.08, 11.0);
   float land = smoothstep(-12.0, 16.0, inland);
   float h = land * 4.8 - 1.6;
   float cliffs = smoothstep(0.0, 0.3, gfbm(vec2(p.x * 0.006, 7.7), 2, 12.0));
@@ -233,15 +321,44 @@ float hf_mainland(vec2 p) {
   float rise = smoothstep(10.0, 260.0, inland);
   float broad = gfbm(p * 0.0042, 3, 13.0);
   float mid = gfbm(p * 0.012, 3, 14.0);
-  float swell = max(0.0, 16.0 + 26.0 * broad + 7.0 * mid);
-  float r2 = sq(p.x - 20.0) + sq(p.y + 1520.0);
-  float lastHill = 36.0 * exp(-r2 / (2.0 * 3844.0)) + 22.0 * exp(-r2 / (2.0 * 36100.0));
-  h += land * (rise * swell + lastHill);
-  h -= smoothstep(0.0, 70.0, -inland) * 8.0;
-  return h;
+  h += land * rise * max(0.0, 16.0 + 26.0 * broad + 7.0 * mid);
+  return h - smoothstep(0.0, 70.0, -inland) * 8.0;
+}
+float hf_drowned(vec2 p) {
+  vec2 c = vec2(${ISLES.drowned.x}.0, ${ISLES.drowned.z}.0);
+  vec2 r = vec2(${ISLES.drowned.rx}.0, ${ISLES.drowned.rz}.0);
+  float d = hf_isleCoast(p, c, r, 0.14, 31.0);
+  float land = smoothstep(20.0, -30.0, d);
+  float lumps = gfbm(p * 0.013, 3, 32.0);
+  return land * (0.5 + lumps * 2.3) - 1.9 - smoothstep(0.0, 80.0, d) * 6.0;
+}
+float hf_wood(vec2 p) {
+  vec2 c = vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0);
+  vec2 r = vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0);
+  float d = hf_isleCoast(p, c, r, 0.2, 41.0);
+  float land = smoothstep(8.0, -18.0, d);
+  float rr = length((p - c) / r);
+  float h = land * 3.5 - 1.5;
+  h += land * land * (max(0.0, 1.0 - rr * rr) * 22.0 + (gfbm(p * 0.03, 3, 42.0) * 0.5 + 0.5) * 5.0);
+  return h - smoothstep(0.0, 60.0, d) * 7.0;
+}
+float hf_home(vec2 p) {
+  vec2 c = vec2(${ISLES.home.x}.0, ${ISLES.home.z}.0);
+  vec2 r = vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0);
+  float d = hf_isleCoast(p, c, r, 0.1, 51.0);
+  float land = smoothstep(10.0, -22.0, d);
+  float h = land * 4.0 - 1.6;
+  h += land * land * (14.0 + gfbm(p * 0.006, 3, 52.0) * 12.0);
+  float r2 = sq(p.x - ${LAST_HILL.x}.0) + sq(p.y - (${LAST_HILL.z}.0));
+  h += land * (34.0 * exp(-r2 / (2.0 * 3364.0)) + 18.0 * exp(-r2 / (2.0 * 28900.0)));
+  return h - smoothstep(0.0, 70.0, d) * 8.0;
 }
 float worldHeight(vec2 p) {
-  float h = hf_smax(hf_island(p), hf_mainland(p), 4.0);
+  float h = hf_smax(hf_island(p), hf_lines(p), 6.0);
+  h = hf_smax(h, hf_meadow(p), 6.0);
+  h = hf_smax(h, hf_drowned(p), 6.0);
+  h = hf_smax(h, hf_wood(p), 6.0);
+  h = hf_smax(h, hf_home(p), 6.0);
   float d = length(p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)}));
   return mix(h, ${COTTAGE_Y.toFixed(4)}, 1.0 - smoothstep(${COTTAGE.radius.toFixed(1)}, ${(COTTAGE.radius * 2).toFixed(1)}, d));
 }

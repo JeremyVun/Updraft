@@ -2,7 +2,13 @@ import * as THREE from 'three';
 import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
-import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, LAST_HILL } from './heightfield';
+import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL } from './heightfield';
+
+/** The island of lines is cropped to the quick, so the washing is the only thing standing on it. */
+function croppedAt(x: number, z: number): number {
+  const d = Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz);
+  return 1 - smoothstep(0.78, 1.12, d);
+}
 import { heightAt } from './island';
 import { shaderFbm, smoothstep } from './noise';
 import { WINDOW } from './window';
@@ -62,18 +68,16 @@ export function grassHeightAt(x: number, z: number): number {
   const fringe = smoothstep(GRASS_LINE - 0.6, GRASS_LINE + 2.2, groundH);
   const pasture = smoothstep(-600, -660, z);
   let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
-  if (pasture <= 0) return h;
+  if (pasture <= 0) return h * (1 - 0.74 * croppedAt(x, z));
   h += (0.41 + 0.26 * lush - h) * pasture;
   const f = fieldAt(x, z, fieldSample);
   const grazed = Math.max(
     1 - smoothstep(45, 95, Math.hypot(x - LAST_HILL.x, z - LAST_HILL.z)),
     1 - smoothstep(14, 30, Math.hypot(x - COTTAGE.x, z - COTTAGE.z)),
   );
-  const walled = f.wall && f.presence >= 0.5 ? 1 : 0;
   const hay = (f.kind <= 0.22 ? 1 : 0) * f.presence * (1 - grazed);
   const rush = (f.kind >= 0.86 ? 1 : 0) * f.presence * (1 - grazed);
-  const wallTuft = walled * (1 - smoothstep(0.9, 2.4, f.edge));
-  return h * (1 + hay * 1.5 + rush * 1.2 + wallTuft * 1.8) * (1 - 0.5 * grazed);
+  return h * (1 + hay * 1.5 + rush * 1.2) * (1 - 0.5 * grazed) * (1 - 0.74 * croppedAt(x, z));
 }
 
 export const grassUniforms = {
@@ -153,8 +157,6 @@ void main() {
   vec4 surf = surfaceAt(root2);
   keep *= surf.x;
   vec4 fld = fieldAt(root2);
-  float walled = fld.z * step(0.5, fld.w);
-  if (walled > 0.5 && fld.x < 0.72) keep = 0.0;
   if (rank >= keep) { collapse(); return; }
 
   float side01 = position.x;
@@ -172,8 +174,8 @@ void main() {
                      1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0))));
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  float wallTuft = walled * (1.0 - smoothstep(0.9, 2.4, fld.x));
-  h *= (1.0 + hay * 1.5 + rush * 1.2 + wallTuft * 1.8) * mix(1.0, 0.5, grazed);
+  float cropped = 1.0 - smoothstep(0.78, 1.12, length((root2 - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * (1.0 - 0.74 * cropped);
   h *= mix(0.72, 1.0, life);
   h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;

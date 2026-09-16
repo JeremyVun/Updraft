@@ -156,8 +156,9 @@ export class WindField {
     if (this.splats.length < MAX_SPLATS) this.splats.push(splat);
   }
 
+  /** Runs the substeps that fit `dt`, at most two: a slow frame must not triple the sim and get slower still. */
   step(dt: number, time: number): void {
-    const steps = Math.min(3, Math.max(1, Math.round(dt / STEP)));
+    const steps = Math.min(2, Math.max(1, Math.round(dt / STEP)));
     for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
     this.splats.length = 0;
     this.readBack();

@@ -33,6 +33,8 @@ export const params = {
   shower: num('shower'),
   /** Start later in the story: `crossing`, `hills` or `summit`. */
   chapter: q.get('chapter'),
+  /** QA: an on-screen readout of frame times, quality level and readbacks, for phones. */
+  stats: q.has('stats'),
   /** QA: a whale surfaces ahead of the crossing a few seconds in (and again every so often), fish leap by the boat. */
   whale: q.has('whale'),
   /** Prototype: hangs the island of lines' washing over the still island. */

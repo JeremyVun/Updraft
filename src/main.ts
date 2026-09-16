@@ -6,7 +6,7 @@ import { islandHabitat, mainlandHabitat } from './creatures/habitat';
 import { Petals } from './fx/petals';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
-import { ROUTE } from './story/hills';
+import { ROUTE } from './story/meadow';
 import { takeCues } from './story/cues';
 import { Journey } from './story/journey';
 import { Fireflies } from './fx/fireflies';
@@ -22,6 +22,7 @@ import { params } from './params';
 import { gpuIdle, precompile, precompileSim, warmRender } from './gl/boot';
 import { Quality } from './gl/quality';
 import { endFrame, pollReadbacks, readbackStats } from './gl/readback';
+import { createReadout, percentile } from './gl/readout';
 import { Post } from './post/post';
 import { createWindDebug } from './wind/debug';
 import { WindField, type WindSample } from './wind/field';
@@ -41,8 +42,7 @@ import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
-import { COTTAGE, mainlandCoastZ } from './world/heightfield';
-import { Walls } from './world/walls';
+import { COTTAGE, ISLES, mainlandCoastZ } from './world/heightfield';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
 import { surfUniforms } from './world/water/surf';
@@ -108,10 +108,8 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
-const walls = new Walls();
-scene.add(walls.mesh);
-const washing = params.lines ? new WashingLines(lineField(new THREE.Vector2(-8, -18), 30)) : null;
-if (washing) scene.add(washing.group);
+const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z), 80, 58));
+scene.add(washing.group);
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 const petals = new Petals(renderer);
@@ -171,7 +169,10 @@ creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
 creatures.spawn({ x: 0, z: 0, radius: 30, songbirds: 11, seed: 3 });
 creatures.spawn({ x: -6, z: -14, radius: 55, gulls: 5, seed: 2 });
 scene.add(creatures.group);
-const homesInHills = [...ROUTE.map((p, i) => ({ x: p.x + (i % 2 ? 14 : -14), z: p.y })), { x: COTTAGE.x + 6, z: COTTAGE.z + 26 }];
+const homesInHills = [
+  ...ROUTE.map((p: THREE.Vector2, i: number) => ({ x: p.x + (i % 2 ? 14 : -14), z: p.y })),
+  { x: COTTAGE.x + 6, z: COTTAGE.z + 26 },
+];
 const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera);
 hillCreatures.spawn({ x: 10, z: -680, radius: 70, gulls: 4, seed: 21 });
 homesInHills.forEach((h, i) => {
@@ -184,21 +185,23 @@ const sheepFolds = [
   { x: -22, z: -916, sheep: 5 },
   { x: 18, z: -980, sheep: 5 },
   { x: 30, z: -1098, sheep: 4 },
-  { x: 24, z: -1198, sheep: 4 },
-  { x: 19, z: -1489, sheep: 5 },
+  { x: 24, z: -1150, sheep: 4 },
+  { x: 6, z: -1130, sheep: 5 },
   { x: COTTAGE.x - 15, z: COTTAGE.z + 20, sheep: 6 },
 ];
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
 scene.add(hillCreatures.group);
 
 const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
-let pixelRatio = maxPixelRatio;
+/** Phones open at a modest scale and climb if they prove smooth; opening at full scale costs seconds of crawl. */
+const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 const post = new Post(renderer, scene, rig.camera, params.msaa ?? (maxPixelRatio >= 1.75 ? 2 : 4));
-const quality = new Quality(maxPixelRatio, post.samples, params.ratio !== null || params.msaa !== null, (level) => {
+const quality = new Quality(maxPixelRatio, post.samples, coarsePointer && params.ratio === null ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
   pixelRatio = level.ratio;
   post.samples = level.samples;
   resize();
 });
+let pixelRatio = quality.level.ratio;
 
 const sound = new Soundscape();
 const soundButton = document.getElementById('sound') as HTMLButtonElement;
@@ -264,6 +267,9 @@ let fpsWindowStart = last;
 let fps = 0;
 let sinceLightBake = 0;
 let qaWhaleAt = 8;
+const readout = params.stats ? createReadout() : null;
+const intervals: number[] = [];
+let bootMs = 0;
 
 /** `?whale`: a whale surfaces ahead and to the left of the boat every 40 s, and fish keep leaping by it. */
 function whaleForQa(): void {
@@ -300,6 +306,7 @@ function frame(now: number): void {
   tree.life.value += (Math.min(1, life.at(TREE.x, TREE.z) * 1.15) - tree.life.value) * (1 - Math.exp(-dt * 0.8));
   const shower = params.shower ?? story.shower;
   applyPalette(story.worldLife, params.dusk ?? story.dusk, shower);
+  atmo.uniforms.uMist.value = Math.max(atmo.uniforms.uMist.value, story.haze);
   sinceLightBake++;
   if (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004) {
     sinceLightBake = 0;
@@ -360,7 +367,6 @@ function frame(now: number): void {
   clouds.update();
   terrain.update(rig.camera);
   grass.update(rig.camera);
-  walls.update(rig.camera);
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
   rain.update(dt, shower, rig.camera, wind.breeze);
@@ -373,10 +379,24 @@ function frame(now: number): void {
   endFrame(renderer);
 
   frames++;
+  if (readout) {
+    intervals.push(realDt * 1000);
+    if (intervals.length > 120) intervals.shift();
+  }
   if (now - fpsWindowStart > 1500) {
     fps = (frames * 1000) / (now - fpsWindowStart);
     frames = 0;
     fpsWindowStart = now;
+    if (readout) {
+      const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+      readout([
+        `fps ${fps.toFixed(0)}  frame p50 ${percentile(intervals, 0.5).toFixed(0)} p90 ${percentile(intervals, 0.9).toFixed(0)} max ${Math.max(...intervals).toFixed(0)} ms`,
+        `scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
+        `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms`,
+        `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
+        `boot ${bootMs.toFixed(0)} ms  ${story.name}`,
+      ]);
+    }
   }
   if (time > 0.4 && !veilLifted) {
     veilLifted = true;
@@ -389,7 +409,6 @@ function frame(now: number): void {
       triangles: renderer.info.render.triangles,
       blades: grass.bladesDrawn,
       leaves: terrain.leaves,
-      stones: walls.stones,
       ratio: pixelRatio,
       samples: post.samples,
       readbacksSkipped: readbackStats.skipped,
@@ -412,6 +431,7 @@ if (params.shot) {
  * parallel, the window bakes, one warm frame uploads the world, and the loop starts only once the GPU is idle.
  */
 async function boot(): Promise<void> {
+  const started = performance.now();
   await precompile(renderer, scene, rig.camera, post.sceneTarget);
   await precompileSim(renderer, bakes.ground);
   followWindow(...windowAim(), true);
@@ -419,6 +439,7 @@ async function boot(): Promise<void> {
   warmRender(renderer, scene, rig.camera, post.sceneTarget);
   post.render(0);
   await gpuIdle(renderer);
+  bootMs = performance.now() - started;
   last = performance.now();
   requestAnimationFrame(frame);
 }

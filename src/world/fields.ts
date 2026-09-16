@@ -1,9 +1,9 @@
 /**
- * The mainland's fields: a warped Voronoi patchwork, each field with its own character, most boundaries walled
- * in dry stone. Written in TypeScript (for placing stones and letting the child clamber over) and GLSL (for grass
- * and terrain). Needs HEIGHTFIELD_GLSL for the hash and the coastline.
+ * The meadow's fields: a warped Voronoi patchwork, each field with its own character, unwalled and unfenced, read only as
+ * variation in the sward. Written in TypeScript (for placing things) and GLSL (for grass and terrain). Needs
+ * HEIGHTFIELD_GLSL for the hash and the coastline.
  */
-import { gnoise, hash2, mainlandCoastZ, pcg } from './heightfield';
+import { gnoise, hash2, pcg, meadowInset } from './heightfield';
 
 /** Field size in world units. */
 export const FIELD = 56;
@@ -29,7 +29,7 @@ function warp(x: number, z: number): [number, number] {
 }
 
 export function fieldAt(x: number, z: number, out: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 }): FieldSample {
-  const inland = mainlandCoastZ(x) - z;
+  const inland = meadowInset(x, z);
   out.presence = Math.min(1, Math.max(0, (inland - SHORE) / 30));
   const [wx, wz] = warp(x, z);
   const px = wx / FIELD;
@@ -100,7 +100,7 @@ vec2 fl_site(ivec2 c) {
 }
 /** x: distance to the nearest boundary (world units), y: field kind 0..1, z: 1 if walled, w: presence on the mainland. */
 vec4 fieldAt(vec2 p) {
-  float inland = mainlandCoastZ(p.x) - p.y;
+  float inland = meadowInset(p);
   float presence = clamp((inland - ${SHORE}.0) / 30.0, 0.0, 1.0);
   if (presence <= 0.0) return vec4(99.0, 0.0, 0.0, 0.0);
   vec2 q = fl_warp(p) / ${FIELD}.0;

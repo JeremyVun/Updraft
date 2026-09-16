@@ -43,6 +43,8 @@ export interface Chapter {
   readonly done: boolean;
   /** A passing shower, 0 dry to 1. */
   readonly shower?: number;
+  /** Haze thick enough to hide what is ahead, 0 to 1. */
+  readonly haze?: number;
   /** How strongly a rainbow shows opposite the sun, 0..1. */
   readonly rainbow?: number;
   /** Where the gulls should circle, or null to leave them to their own coast. */

@@ -1,0 +1,224 @@
+import * as THREE from 'three';
+import type { Shot } from '../camera';
+import { ISLES, LAST_HILL } from '../world/heightfield';
+import { heightAt } from '../world/island';
+import { MOON, sunDirection } from '../world/palette';
+import type { Cast, Chapter } from './cast';
+import { cue } from './cues';
+
+type Beat = 'ashore' | 'climb' | 'summit' | 'unfold' | 'gaze' | 'fold' | 'release' | 'nightfall' | 'home' | 'inside';
+
+/** The crest of the last hill, where the ground falls away and the cottage comes into view. */
+const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
+/** From the summit the sun sets over the cottage, to the north-west. */
+const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)), -Math.cos(THREE.MathUtils.degToRad(32)));
+
+/**
+ * Home. The last island: up over the crest of the final hill with the fledgling, and the valley below holds a white
+ * cottage with a red door. The child unfolds the plane and it is a drawing of this, lets it go into the sunset,
+ * and walks down to the lit window as night comes on.
+ */
+export class HomeChapter implements Chapter {
+  beat: Beat = 'ashore';
+  readonly breeze = 1;
+  readonly worldLife = 1;
+  pace = 0.35;
+  dusk = 0.85;
+  readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
+  readonly focus = new THREE.Vector3();
+  private beatStart = 0;
+  private duskTarget = 0.85;
+  private now = 0;
+  private readonly hand = new THREE.Vector3();
+  private readonly tmp = new THREE.Vector3();
+  private readonly held = new THREE.Vector3();
+  private readonly behind = new THREE.Vector3();
+  private readonly sky = new THREE.Vector3();
+  private readonly fwd = new THREE.Vector3();
+  private readonly eyeAt = new THREE.Vector3();
+  private readonly moon = sunDirection(MOON.az, MOON.el);
+
+  constructor(private readonly cast: Cast) {
+    const { child, plane } = cast;
+    cast.life.regions.island.set(ISLES.home.x, ISLES.home.z, 230, 1);
+    plane.homeRadius = 70;
+    child.dismount();
+    const from = child.position;
+    child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
+  }
+
+  get done(): boolean {
+    return false;
+  }
+
+  /** For testing the ending: straight to the top of the hill, plane in hand. */
+  skipToSummit(): void {
+    const { child, plane } = this.cast;
+    child.stop();
+    child.place(SUMMIT.x + 5, SUMMIT.y + 26, Math.PI);
+    child.standUp();
+    plane.hold(child.handPosition(this.hand), child.yaw);
+    this.climb();
+  }
+
+  private to(beat: Beat): void {
+    this.beat = beat;
+    this.beatStart = this.now;
+  }
+
+  private get t(): number {
+    return this.now - this.beatStart;
+  }
+
+  private climb(): void {
+    const c = this.cast.child;
+    this.to('climb');
+    c.lookAt = null;
+    c.walkTo(SUMMIT.x, SUMMIT.y, false, () => {
+      c.faceToward(SUMMIT.x + TOWARD_SUNSET.x, SUMMIT.y + TOWARD_SUNSET.y, 1);
+      c.sitDown();
+      this.to('summit');
+      this.duskTarget = 1;
+    }, 0.8);
+  }
+
+  update(dt: number, time: number): void {
+    this.now = time;
+    const { child: c, plane: p } = this.cast;
+    if (this.beat === 'ashore' || this.beat === 'climb') {
+      c.lookAt = this.sky.set(c.position.x + TOWARD_SUNSET.x * 60, c.position.y + 22, c.position.z + TOWARD_SUNSET.y * 60);
+    } else {
+      this.updateEnding(dt);
+    }
+    this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    this.frame();
+  }
+
+  private forward(): THREE.Vector3 {
+    const yaw = this.cast.child.yaw;
+    return this.fwd.set(Math.sin(yaw), 0, Math.cos(yaw));
+  }
+
+  /** The drawing, the farewell to the plane, nightfall and the red door. */
+  private updateEnding(dt: number): void {
+    const { child: c, plane: p, drawing, cottage } = this.cast;
+    const faceX = c.position.x + TOWARD_SUNSET.x * 10;
+    const faceZ = c.position.z + TOWARD_SUNSET.y * 10;
+    this.sky.set(c.position.x + TOWARD_SUNSET.x * 60, c.position.y + 22, c.position.z + TOWARD_SUNSET.y * 60);
+
+    if (this.beat === 'summit') {
+      c.lookAt = this.sky;
+      if (c.sitting && this.t > 3.5) {
+        this.to('unfold');
+        cue('unfold');
+      }
+    } else if (this.beat === 'unfold') {
+      drawing.open = Math.min(1, drawing.open + dt * 0.9);
+      c.presenting = Math.min(1, c.presenting + dt * 1.5);
+      p.visible = drawing.open < 0.35;
+      if (drawing.open >= 1) this.to('gaze');
+    } else if (this.beat === 'gaze') {
+      c.lookAt = c.presentPoint(this.held);
+      if (this.t > 9) this.to('fold');
+    } else if (this.beat === 'fold') {
+      drawing.open = Math.max(0, drawing.open - dt * 1.1);
+      c.presenting = Math.max(0, c.presenting - dt * 1.4);
+      p.visible = drawing.open < 0.35;
+      if (drawing.open <= 0) {
+        this.to('release');
+        c.standUp();
+        c.faceToward(faceX, faceZ, 1);
+      }
+    } else if (this.beat === 'release') {
+      if (this.t > 1.2 && p.held && !c.busy) {
+        c.throwToward(faceX, faceZ, () => {
+          p.launch(c.handPosition(this.hand), this.tmp.set(TOWARD_SUNSET.x * 6, 6.5, TOWARD_SUNSET.y * 6));
+          p.depart(this.tmp.set(TOWARD_SUNSET.x, 0, TOWARD_SUNSET.y));
+          cue('release');
+        });
+      }
+      c.lookAt = p.position;
+      if (!p.held && this.t > 3 && this.t < 3.05) c.cheer();
+      if (this.t > 12) {
+        this.to('nightfall');
+        c.sitDown();
+        this.duskTarget = 2;
+      }
+    } else if (this.beat === 'nightfall') {
+      c.lookAt = this.sky;
+      if (p.position.distanceTo(c.position) > 160) p.visible = false;
+      if (this.t > 26) {
+        this.to('home');
+        c.standUp();
+        c.walkTo(cottage.doorstep.x, cottage.doorstep.z, false, () => {
+          cottage.openDoor(true);
+          cue('home');
+          this.to('inside');
+        }, 0.5);
+      }
+    } else if (this.beat === 'home') {
+      c.lookAt = cottage.position;
+    } else if (this.beat === 'inside') {
+      if (this.t > 1.2 && this.t < 1.25) c.walkTo(cottage.position.x, cottage.position.z, false, undefined, 0.3);
+      if (this.t > 2.6) c.visible = false;
+      if (this.t > 4.2) cottage.openDoor(false);
+    }
+
+    const at = c.presentPoint(this.held);
+    drawing.place(at, this.behind.copy(at).addScaledVector(this.forward(), -6), this.now);
+  }
+
+  private frame(): void {
+    const c = this.cast.child.position;
+    const p = this.cast.plane.position;
+    const s = this.shot;
+    s.from = undefined;
+    s.eye = undefined;
+    if (this.beat === 'unfold' || this.beat === 'gaze' || this.beat === 'fold') {
+      const cot = this.cast.cottage.position;
+      const fwd = this.forward();
+      s.eye = this.eyeAt.set(c.x - fwd.x * 4 - fwd.z * 0.45, c.y + 4.2, c.z - fwd.z * 4 + fwd.x * 0.45);
+      s.target.set(cot.x, cot.y + 6, cot.z);
+      this.pace = 0.6;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'summit' || this.beat === 'release' || this.beat === 'nightfall') {
+      const fwd = this.forward();
+      s.from = this.behind.copy(fwd).negate();
+      const lift = this.beat === 'release' ? Math.min(12, Math.max(0, p.y - c.y - 4) * 0.4) : 0;
+      s.target.set(c.x + fwd.x * 14, c.y + 1.5 + lift, c.z + fwd.z * 14);
+      s.distance = this.beat === 'nightfall' ? 30 : 24;
+      s.height = this.beat === 'nightfall' ? 8 : 5.5;
+      this.pace = 0.3;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'home' || this.beat === 'inside') {
+      const cot = this.cast.cottage.position;
+      s.target.set(c.x * 0.35 + cot.x * 0.65, cot.y + 2.5, c.z * 0.35 + cot.z * 0.65);
+      s.from = this.behind.set(SUMMIT.x - cot.x, 0, SUMMIT.y - cot.z).normalize();
+      s.distance = this.beat === 'inside' ? 72 : 50;
+      s.height = this.beat === 'inside' ? 40 : 24;
+      this.pace = 0.2;
+      if (this.beat === 'inside') {
+        const lift = THREE.MathUtils.smootherstep(this.t, 7, 50);
+        if (lift > 0) {
+          s.eye = this.eyeAt.copy(s.target).addScaledVector(s.from, s.distance).setY(s.target.y + s.height + lift * 18);
+          const toMoon = this.sky.copy(this.moon).setY(0).normalize();
+          s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
+        }
+        this.pace = 0.2 - lift * 0.12;
+      }
+      this.focus.copy(c);
+      return;
+    }
+    const ground = Math.max(heightAt(c.x, c.z), 0);
+    s.target.set(c.x, ground + 3, c.z - 6);
+    s.distance = 34;
+    s.height = 11;
+    this.pace = 0.35;
+    this.focus.set(c.x, ground, c.z);
+  }
+}

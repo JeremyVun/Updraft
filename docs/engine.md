@@ -33,7 +33,7 @@ If the GPU stays behind (a saturated device, or another process on the GPU), the
 
 ## Quality governor (`src/gl/quality.ts`)
 
-A ladder of levels: render scale from the device's pixel ratio (capped at 2) down to 1 in steps of 0.25, then multisampling 4 → 2. Every 1.5 s it looks at the last 90 real frame intervals: if their trimmed mean (top 5% dropped) is over 17.6 ms it steps down (two steps when far over); after 12 s with the 90th percentile under 17.2 ms it steps back up, and a step down that undoes a recent step up doubles that wait, so levels never oscillate. The trim means a single hitch (a window move, a tab switch) never costs quality; the mean catches a GPU that misses every other refresh, which percentiles hide. `?ratio=` or `?msaa=` lock it for QA.
+A ladder of levels: render scale from the device's pixel ratio (capped at 2) down to 1 in steps of 0.25, then multisampling 4 → 2. Every 1.5 s it looks at the last 90 real frame intervals: if their trimmed mean (top 5% dropped) is over 17.6 ms it steps down (two steps when far over); after 12 s with the 90th percentile under 17.2 ms it steps back up, and a step down that undoes a recent step up doubles that wait, so levels never oscillate. The trim means a single hitch (a window move, a tab switch) never costs quality; the mean catches a GPU that misses every other refresh, which percentiles hide. Touch devices open at a scale of 1.25 and climb from there, since opening at the full 2× costs seconds of crawl before the first step down. `?ratio=` or `?msaa=` lock it for QA.
 
 ## Post chain (`src/post/post.ts`)
 
@@ -44,6 +44,10 @@ One multisampled half-float scene target; one resolve pass that also clamps NaN/
 - Window moves (`followWindow`) re-bake the height, surface and light of the window and shift the wind, lean and life textures, all in the same frame. Whole-texel steps keep everything aligned.
 - The light bake alone re-runs whenever the sun has moved by more than 0.0004 rad, at most every third frame. The old threshold (0.006 rad) let long sunset shadows jump several units at each re-bake, which read as a flicker on the walk inland.
 - Grass tiles pick their level of detail with hysteresis (3 units past a ring), so the camera's breathing never reshuffles the blades of tiles sitting on a ring.
+
+## On a phone
+
+`?stats` draws a small readout (frame percentiles, quality level, readback counts, draw calls, boot time) for devices without a debugger. The costs that do not shrink with resolution matter most there: the wind simulation (about 35 passes of 256² per substep), the life, cloud and petal passes, and bloom. The sim never runs more than two substeps a frame, so a slow frame cannot multiply its own cost.
 
 ## Measuring
 

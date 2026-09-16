@@ -29,10 +29,12 @@ export class Quality {
   private climbMs = CLIMB_MS;
   private lastStepUp = false;
 
-  constructor(maxRatio: number, samples: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
+  /** `startRatio` picks the opening level (the highest whose scale is no more than it); the rest is climbed into. */
+  constructor(maxRatio: number, samples: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples });
     this.levels.push({ ratio: 1, samples });
     if (samples > 2) this.levels.push({ ratio: 1, samples: 2 });
+    this.index = Math.max(0, this.levels.findIndex((l) => l.ratio <= startRatio));
   }
 
   get level(): QualityLevel {

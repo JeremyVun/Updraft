@@ -99,16 +99,21 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-/** Faded domestic colours: bleached whites, a worn red, ochre, a washed-out blue, sage, dusty pink. */
+/**
+ * Washed-out linen, not bunting. Mostly whites and creams gone grey with use, with a few faded colours among
+ * them; anything saturated reads as flags at a festival rather than somebody's laundry.
+ */
 const CLOTH_COLOURS = [
-  new THREE.Color('#f2ece0'),
-  new THREE.Color('#e8e2d2'),
-  new THREE.Color('#c85a49'),
-  new THREE.Color('#e3a63c'),
-  new THREE.Color('#7ea2b8'),
-  new THREE.Color('#9aae82'),
-  new THREE.Color('#dda6a0'),
-  new THREE.Color('#f6f1e6'),
+  new THREE.Color('#f4efe4'),
+  new THREE.Color('#ece6d8'),
+  new THREE.Color('#e2dccd'),
+  new THREE.Color('#f7f3ea'),
+  new THREE.Color('#d9d2c4'),
+  new THREE.Color('#c08a7e'),
+  new THREE.Color('#d8bb84'),
+  new THREE.Color('#9fb0bd'),
+  new THREE.Color('#a9b79a'),
+  new THREE.Color('#e0bdb6'),
 ];
 
 export interface LineSpec {
@@ -186,10 +191,10 @@ export class WashingLines {
       let t = 0.05 + rand() * 0.06;
       while (t < 0.94) {
         /** Mostly sheets, wide and long; a third of the pieces are small things pegged up between them. */
-        const small = rand() < 0.34;
-        const width = small ? 0.45 + rand() * 0.5 : 1.3 + rand() * 1.5;
-        const drop = small ? 0.5 + rand() * 0.5 : 1.1 + rand() * 1.3;
-        const step = (width + 0.35 + rand() * 0.9) / span;
+        const small = rand() < 0.3;
+        const width = small ? 0.5 + rand() * 0.6 : 1.8 + rand() * 1.8;
+        const drop = small ? 0.55 + rand() * 0.6 : 1.5 + rand() * 1.5;
+        const step = (width + 0.5 + rand() * 1.3) / span;
         if (t + step > 0.96) break;
         onLine(spec, t, point);
         onLine(spec, t + step, next);
@@ -225,15 +230,16 @@ export class WashingLines {
   readonly count: number;
 }
 
-/** A run of lines strung across a slope, each between two poles, fanning roughly across the prevailing wind. */
-export function lineField(centre: THREE.Vector2, count: number, seed = 17): LineSpec[] {
+/** Lines strung all over a hillside, each between two poles, hung the way you would hang washing to dry. */
+export function lineField(centre: THREE.Vector2, count: number, spread = 24, seed = 17): LineSpec[] {
   const rand = mulberry32(seed);
   const specs: LineSpec[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count * 4 && specs.length < count; i++) {
     const angle = rand() * Math.PI * 2;
-    const reach = 5 + rand() * 24;
+    const reach = spread * Math.sqrt(rand());
     const x = centre.x + Math.cos(angle) * reach;
-    const z = centre.y + Math.sin(angle) * reach;
+    const z = centre.y + Math.sin(angle) * reach * 0.8;
+    if (heightAt(x, z) < 2.5) continue;
     const run = 9 + rand() * 11;
     /** Lines run roughly across the prevailing wind, the way you would hang washing to dry. */
     const bearing = 1.1 + (rand() - 0.5) * 1.1;
@@ -242,6 +248,7 @@ export function lineField(centre: THREE.Vector2, count: number, seed = 17): Line
     const bx = x + Math.sin(bearing) * run * 0.5;
     const bz = z + Math.cos(bearing) * run * 0.5;
     const top = 2.9 + rand() * 1.5;
+    if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
     specs.push({
       a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
       b: new THREE.Vector3(bx, Math.max(heightAt(bx, bz), 0) + top * (0.85 + rand() * 0.3), bz),
