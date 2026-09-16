@@ -150,6 +150,9 @@ export class Journey {
   get music(): Mood {
     return this.chapter.music ?? 'sea';
   }
+  get season(): number {
+    return this.chapter.season ?? 0.3;
+  }
   get rainbow(): number {
     return this.chapter.rainbow ?? 0;
   }
@@ -178,6 +181,7 @@ export class Journey {
       case 'toLines':
         return new CrossingChapter(cast, {
           route: ROUTES.toLines,
+          season: 0.14,
           lookBack: FIRST_ISLAND,
           farewell: 30,
           rainbow: true,
@@ -187,13 +191,13 @@ export class Journey {
       case 'lines':
         return new LinesChapter(cast);
       case 'toMeadow':
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.75 });
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.75, season: 0.26 });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'drowned':
         return new DrownedChapter(cast);
       case 'toWood':
-        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1, music: 'wood' });
+        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1, music: 'wood', season: 0.7 });
       case 'wood':
         return new WoodChapter(cast);
       case 'toHome':
@@ -205,6 +209,7 @@ export class Journey {
           whaleAt: 55,
           whaleEvery: 150,
           dolphins: true,
+          season: 0.92,
         });
       case 'home':
         return new HomeChapter(cast);

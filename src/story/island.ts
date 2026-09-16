@@ -38,6 +38,7 @@ export class IslandChapter implements Chapter {
   readonly dusk = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 9 };
   readonly music = 'still' as const;
+  readonly season = 0.08;
   readonly focus = new THREE.Vector3();
   private play: Play = 'watch';
   private breezeTarget = 0;

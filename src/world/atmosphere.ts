@@ -45,6 +45,11 @@ export const atmo = {
     uNight: { value: 0 },
     /** How much of the world has come back to life, 0 grey and still to 1: sets the colour of the open sea. */
     uWorldLife: { value: 0 },
+    /**
+     * How far through the turn of the year the story has got, 0 late autumn to 1 the frozen night at the end.
+     * It only ever rises. The grass keeps the green it is loved for and ages inside it.
+     */
+    uSeason: { value: 0 },
     /** 1 while the sea's mirror image is drawn: the ground paints its meadow instead of waiting for blades. */
     uMirrorPass: { value: 0 },
     /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
@@ -124,6 +129,7 @@ uniform vec3 uGroundBounce;
 uniform float uFogDensity;
 uniform float uNight;
 uniform float uWorldLife;
+uniform float uSeason;
 uniform float uMirrorPass;
 uniform float uShower;
 uniform float uMist;

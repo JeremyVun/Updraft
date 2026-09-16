@@ -52,6 +52,7 @@ export class MeadowChapter implements Chapter {
   shower = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly music = 'meadow' as const;
+  readonly season = 0.32;
   readonly focus = new THREE.Vector3();
   private play: Play = 'carry';
   private leg = 0;

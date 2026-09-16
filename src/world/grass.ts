@@ -64,10 +64,13 @@ float woodFloorAt(vec2 xz) {
 vec3 grassTint(vec2 xz) {
   float dry = smoothstep(0.58, 0.76, fbm(xz * 0.022 + vec2(3.1, 7.7)));
   float cool = smoothstep(0.5, 0.68, fbm(xz * 0.041 - vec2(5.3, 1.9))) * (1.0 - dry);
+  /** The year turning: more of the hillside goes over to seed, and the green that is left goes colder. */
+  dry = clamp(dry + uSeason * 0.3, 0.0, 1.0);
   vec3 meadow = mix(mix(uTipLush, uTipDry, dry * 0.85), uTipCool, cool * 0.5);
   vec3 emerald = mix(vec3(0.16, 0.36, 0.07), vec3(0.3, 0.46, 0.09), fbm(xz * 0.03 + 11.0));
   emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);
-  return mix(meadow, emerald, pastureAt(xz));
+  vec3 tint = mix(meadow, emerald, pastureAt(xz));
+  return mix(tint, mix(tint, vec3(0.4, 0.41, 0.31), 0.28) * 0.93, uSeason);
 }
 `;
 

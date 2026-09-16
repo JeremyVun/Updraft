@@ -431,7 +431,11 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 13. **More nonsense:** baskets and pegs on the island of lines; a red door standing in the grass; chimneys with no
     house; a bed made up in the meadow; a line strung between two rocks at sea; a piano at the tide line the wind
     plays. The point is that none of it makes sense and none of it is explained.
-14. **The turn of the year:** age the palette island by island, late autumn through to a frozen night.
+14. **The turn of the year: begun.** Every chapter names a `season`, 0 late autumn on the still island to 1 on
+    the frozen night at the end, eased between rooms in `main.ts` like the sky so no room change cuts. It reaches
+    the grass so far (`uSeason` in `atmosphere.ts`, `grassTint` in `grass.ts`): more of the hillside goes over to
+    seed and the green that is left goes colder, while keeping the green the game is loved for. Still to age: the
+    trees, the flowers, the sky palette itself, and the light.
 
 ## Testing shortcuts
 

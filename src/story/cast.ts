@@ -58,6 +58,8 @@ export interface Chapter {
   readonly hush?: number;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
+  /** How far through the turn of the year this room is, 0 late autumn to 1 the frozen night. It only rises. */
+  readonly season?: number;
   /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
   readonly scripted?: boolean;
   /** How strongly a rainbow shows opposite the sun, 0..1. */

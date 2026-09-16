@@ -293,7 +293,7 @@ let heightParity = 0;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
-const shown = { dusk: NaN, haze: NaN, shower: NaN };
+const shown = { dusk: NaN, haze: NaN, shower: NaN, season: NaN };
 function ease(from: number, to: number, rate: number, dt: number): number {
   return Number.isNaN(from) ? to : from + (to - from) * (1 - Math.exp(-dt * rate));
 }
@@ -365,6 +365,9 @@ function frame(now: number): void {
   const dusk = params.dusk ?? ease(shown.dusk, story.dusk, 0.5, dt);
   const haze = ease(shown.haze, story.haze, 0.6, dt);
   const shower = params.shower ?? ease(shown.shower, story.shower, 0.8, dt);
+  /** The year turns island by island and never goes back; like the sky, it is eased so no room change cuts. */
+  atmo.uniforms.uSeason.value = ease(shown.season, story.season, 0.35, dt);
+  shown.season = atmo.uniforms.uSeason.value;
   const storm = story.current.storm ?? 0;
   /** Whether the story is standing on anything: several things only belong over land, and the journey is mostly sea. */
   const overLand = THREE.MathUtils.smoothstep(heightAt(story.focus.x, story.focus.z), -1.5, 2.5);

@@ -23,6 +23,8 @@ export interface CrossingOpts {
   route: THREE.Vector2[];
   /** Which room's music the crossing is played to; the open sea by default. */
   music?: Mood;
+  /** How far through the year the crossing is: between the room behind them and the one ahead. */
+  season?: number;
   /** What the child rides facing and waves at as it falls astern, or nothing to face the way ahead throughout. */
   lookBack?: THREE.Vector3 | null;
   farewell?: number;
@@ -60,6 +62,7 @@ export class CrossingChapter implements Chapter {
   readonly focus = new THREE.Vector3();
   readonly escort = new THREE.Vector3();
   readonly music: Mood;
+  readonly season: number;
   private readonly route: THREE.Vector2[];
   private readonly lookBack: THREE.Vector3 | null;
   private readonly farewellFor: number;
@@ -93,6 +96,7 @@ export class CrossingChapter implements Chapter {
   ) {
     this.route = opts.route;
     this.music = opts.music ?? 'sea';
+    this.season = opts.season ?? 0.3;
     this.lookBack = opts.lookBack ?? null;
     this.farewellFor = this.lookBack ? (opts.farewell ?? 30) : 0;
     this.wantsRainbow = opts.rainbow ?? false;

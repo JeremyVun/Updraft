@@ -51,6 +51,7 @@ export class HomeChapter implements Chapter {
   dusk = 0.85;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly music = 'home' as const;
+  readonly season = 1;
   readonly focus = new THREE.Vector3();
   private beatStart = 0;
   private duskTarget = 0.85;
