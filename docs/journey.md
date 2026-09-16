@@ -65,4 +65,6 @@ Done since: the sun shower on the walk, the murmuration at sunset (the released 
 
 Next ideas, in rough order: merge sheep and sea life and trigger the whale from the crossing; a full playthrough for pacing; performance on phones (grass fill at high pixel ratios is the main cost; the adaptive resolution absorbs it).
 
+Pacing, measured by a scripted playthrough (2026-09-16, before the walk was quickened): the island takes about 3 minutes of steady gusting to bring back, the farewell half a minute, the crossing just under 2, the walk inland 8, and the ending (drawing, release, night, home) 2. About 16 minutes in all, at 59 fps average.
+
 Testing shortcuts: `?chapter=crossing|hills|summit` start later in the story; `?dusk=0..2` overrides the time of day.
