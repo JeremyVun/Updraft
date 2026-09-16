@@ -41,6 +41,7 @@ import { createRocks } from './world/rocks';
 import { Crane } from './creatures/crane';
 import { CraneFlock } from './creatures/flock';
 import { WashingLines, lineField } from './world/lines';
+import { LINES_WALK } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { DarkWood } from './world/wood';
 import { createTree } from './world/tree';
@@ -113,8 +114,8 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
-/** Hung over the middle of the island: the north beach is left clear, so the boat waiting on it can be seen. */
-const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46));
+/** Hung around the walk over the island, so the open ground through it is always the way on. */
+const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46, 17, LINES_WALK));
 scene.add(washing.group);
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));

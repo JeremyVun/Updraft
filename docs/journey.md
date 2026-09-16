@@ -161,9 +161,16 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    at once. Then the skein comes over and the colt falls — see below. **Built.**
 2. **The island of lines** (`story/lines.ts`, `world/lines.ts`) — a green whaleback strung pole to pole with
    washing hung out with nobody there. One gust lifts a whole band of sheets at once and the child runs through
-   them after the plane. The first piece of home the dream hands over. **Built, and too big** — see Jeremy's words
-   above. It also reads as short-cropped next to the still island, which he has noticed and does not like
-   (`croppedAt` in `world/grass.ts` takes 74% off the blade height over the whole ellipse).
+   them after the plane. The first piece of home the dream hands over. **Built, and now the right size.**
+   The washing does the leading: it is hung *around* the walk (`lineField` takes `LINES_WALK`), so there is always
+   an open alley through it and the way on is the open ground, while the view to either side is cloth. The alley
+   breathes between four and eight paces wide, opens out at the crest where the far shore comes into view, and is
+   strung across overhead — high lines with wide pieces on them, hung clear of a child's head — so the corridor is
+   enclosed without being blocked. Both beaches are left bare, so arriving and the boat waiting on the far side
+   are the two clearest sights on the island. Nobody is ever told any of this.
+   Not everything on a line is a bedsheet: shirts with sleeves, nightgowns that flare at the hem, trousers whose
+   hem rides up into two legs, and small things pegged between them, plus pegs at every corner and a forked prop
+   under the lines that sag. Still wanted: baskets, a peg bag, a red door standing in the grass.
 3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year. The green wave rolls out, and the long
    walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the colt's first
    glide on the player's updraft.

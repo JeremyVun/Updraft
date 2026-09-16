@@ -12,13 +12,16 @@ export const LINES_BERTH = new THREE.Vector3(14, 0, -408);
 /**
  * Up over the top of the island and down the other side. It is a hundred paces of ground, not a crossing: the
  * room is meant to swallow them in washing, so the way weaves between the lines rather than covering distance.
+ * The washing is hung around it (`lineField` takes this same path), leaving an alley that wanders the way a
+ * person would: wherever the child is standing, the open ground is the way on, and nobody is ever told so.
  */
-const ROUTE = [
+export const LINES_WALK = [
   new THREE.Vector2(-4, -322),
   new THREE.Vector2(32, -350),
   new THREE.Vector2(-4, -380),
   new THREE.Vector2(14, -400),
 ];
+const ROUTE = LINES_WALK;
 
 /** How near the boat either of them has to be before the child takes the hint and pushes off. */
 const BOARDING = 22;
