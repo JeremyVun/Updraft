@@ -17,10 +17,13 @@ const frameSyncs: WebGLSync[] = [];
 const PIPELINE_DEPTH = 3;
 let frameGl: WebGL2RenderingContext | null = null;
 let nextForceAt = 0;
+let lastDelivery = 0;
 /** A forced delivery that blocked for long is not repeated for this long; a cheap one much sooner. */
 const COSTLY_WAIT_MS = 2000;
 const CHEAP_WAIT_MS = 250;
 const COSTLY_MS = 6;
+/** How old the CPU copies may get before one blocking delivery is worth a hitch. */
+const STALE_MS = 500;
 export const readbackStats = { skipped: 0, forced: 0, delivered: 0, worstMs: 0 };
 
 /**
@@ -88,6 +91,7 @@ export class Readback<T> {
       gl.deleteBuffer(next.buffer);
       gl.deleteSync(next.sync);
       readbackStats.delivered++;
+      lastDelivery = performance.now();
       this.onData(this.data, next.tag);
     }
   }
@@ -105,9 +109,11 @@ export function endFrame(renderer: THREE.WebGLRenderer): void {
  * Call after the frame's CPU-only work and before its first GPU command. Finished readbacks are delivered when
  * the GPU has also finished the frame before last (the display pipeline is normally two frames deep); mapping
  * while it is further behind blocks until it catches up.
- * When the GPU stays behind (it is saturated), one such blocking delivery is accepted now and then rather than
- * letting the CPU copies go stale: every quarter second while they prove cheap, every two seconds while they
- * block for long, whatever the frame rate. The quality governor is meanwhile taking the load off the GPU.
+ * When the GPU stays behind (it is saturated) and nothing has been delivered for half a second, one such
+ * blocking delivery is accepted rather than letting the CPU copies go stale — but no oftener than every quarter
+ * second while they prove cheap, or every two seconds while they block for long, whatever the frame rate. While
+ * deliveries are landing on their own nothing is forced at all. The quality governor is meanwhile taking the
+ * load off the GPU.
  */
 export function pollReadbacks(): void {
   let forced = false;
@@ -115,7 +121,8 @@ export function pollReadbacks(): void {
   if (frameSyncs.length >= PIPELINE_DEPTH && frameGl) {
     const status = frameGl.clientWaitSync(frameSyncs[0], 0, 0);
     if (status !== frameGl.ALREADY_SIGNALED && status !== frameGl.CONDITION_SATISFIED) {
-      if (started < nextForceAt) {
+      /** Only worth a hitch if the copies have actually gone stale: while deliveries are landing, they have not. */
+      if (started < nextForceAt || started - lastDelivery < STALE_MS) {
         readbackStats.skipped++;
         return;
       }
