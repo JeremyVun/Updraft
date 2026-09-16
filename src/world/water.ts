@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mainlandCoastZ } from './heightfield';
 import { PlanarReflection } from './water/reflection';
@@ -241,6 +242,7 @@ export class Water {
   readonly mesh: THREE.Mesh;
   private readonly reflection: PlanarReflection;
   private readonly shore: ShoreBake;
+  private frame = 0;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
     this.reflection = new PlanarReflection(renderer, scene, 0.25);
@@ -274,11 +276,15 @@ export class Water {
     this.shore.bake(windowSize);
   }
 
-  /** Renders the mirror image for this frame; call after the camera has moved, before the scene is drawn. */
-  update(camera: THREE.PerspectiveCamera): void {
-    if (camera.position.z < mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT) return;
+  /**
+   * Renders the mirror image on alternate frames (the world is drawn again for it, and a one-frame lag in a
+   * reflection under a gliding camera cannot be seen); call after the camera has moved, before the scene is drawn.
+   */
+  update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
+    if (!params.mirror || camera.position.z < mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT) return;
+    if (this.frame++ % params.mirror) return;
     atmo.uniforms.uMirrorPass.value = 1;
-    this.reflection.render(camera);
+    this.reflection.render(camera, before, after);
     atmo.uniforms.uMirrorPass.value = 0;
   }
 }

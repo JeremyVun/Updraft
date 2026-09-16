@@ -37,6 +37,8 @@ import { heightAt } from './world/island';
 import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
+import { Crane } from './creatures/crane';
+import { CraneFlock } from './creatures/flock';
 import { WashingLines, lineField } from './world/lines';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
@@ -74,7 +76,7 @@ function windowAim(): [number, number] {
   aimDir.normalize();
   return [rig.camera.position.x + aimDir.x * 100, rig.camera.position.z + aimDir.z * 100];
 }
-const wind = new WindField(renderer);
+const wind = new WindField(renderer, params.lite ? { res: 128, iterations: 12, maxSubsteps: 1 } : {});
 const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
@@ -108,7 +110,7 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
-const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z), 80, 58));
+const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z), 190, 128));
 scene.add(washing.group);
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
@@ -160,7 +162,12 @@ function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3
 }
 const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, nearby: nearbyCreature });
+const crane = new Crane();
+crane.objects.forEach((o) => scene.add(o));
+const flock = new CraneFlock();
+scene.add(flock.mesh);
+const craneAt = new THREE.Vector3();
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, crane, flock, nearby: nearbyCreature });
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' ? createWindDebug() : null;
 if (windDebug) scene.add(windDebug);
@@ -196,7 +203,7 @@ const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
 /** Phones open at a modest scale and climb if they prove smooth; opening at full scale costs seconds of crawl. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 const post = new Post(renderer, scene, rig.camera, params.msaa ?? (maxPixelRatio >= 1.75 ? 2 : 4));
-const quality = new Quality(maxPixelRatio, post.samples, coarsePointer && params.ratio === null ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
+const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, coarsePointer ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
   pixelRatio = level.ratio;
   post.samples = level.samples;
   resize();
@@ -241,6 +248,8 @@ const soundState: SoundState = {
   sea: 1,
   meadow: 0,
   shower: 0,
+  hush: 0,
+  scripted: false,
   cues: [],
 };
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -266,9 +275,11 @@ let frames = 0;
 let fpsWindowStart = last;
 let fps = 0;
 let sinceLightBake = 0;
+let frameIndex = 0;
 let qaWhaleAt = 8;
 const readout = params.stats ? createReadout() : null;
 const intervals: number[] = [];
+const cpuTimes: number[] = [];
 let bootMs = 0;
 
 /** `?whale`: a whale surfaces ahead and to the left of the boat every 40 s, and fish keep leaping by it. */
@@ -282,6 +293,13 @@ function whaleForQa(): void {
 }
 
 function frame(now: number): void {
+  if (params.hold !== null && frameIndex >= params.hold) {
+    post.render(time);
+    endFrame(renderer);
+    requestAnimationFrame(frame);
+    return;
+  }
+  const cpuStart = performance.now();
   const realDt = (now - last) / 1000;
   quality.frame(now, now - last);
   last = now;
@@ -289,9 +307,11 @@ function frame(now: number): void {
   time += dt;
 
   renderer.info.reset();
+  frameIndex++;
   const veer = Math.sin(time * 0.021) * 0.35;
   wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(2.6 * story.breeze);
 
+  input.muted = story.current.scripted ?? false;
   input.update(dt, rig.camera, wind);
   if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.down ? input.charge : 0, dt);
   story.update(dt, time);
@@ -300,13 +320,19 @@ function frame(now: number): void {
   boat.update(dt);
   child.update(dt);
   glider.update(dt, time);
+  flock.update(dt, time);
+  if (crane.state === 'carried') crane.carry(child.armsPoint(craneAt), child.yaw);
+  else if (crane.state === 'hooded') crane.carry(child.hoodPoint(craneAt), child.yaw, true);
+  crane.update(dt, time, child.position, input.down ? input.charge : 0);
   pollReadbacks();
   wind.step(dt, time);
   life.update(dt);
   tree.life.value += (Math.min(1, life.at(TREE.x, TREE.z) * 1.15) - tree.life.value) * (1 - Math.exp(-dt * 0.8));
   const shower = params.shower ?? story.shower;
   applyPalette(story.worldLife, params.dusk ?? story.dusk, shower);
-  atmo.uniforms.uMist.value = Math.max(atmo.uniforms.uMist.value, story.haze);
+  /** How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler. */
+  const haze = story.haze;
+  atmo.uniforms.uVeil.value.set(900 - 780 * haze, 0.002 + 0.03 * haze);
   sinceLightBake++;
   if (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004) {
     sinceLightBake = 0;
@@ -356,6 +382,8 @@ function frame(now: number): void {
   soundState.sea = 1 - THREE.MathUtils.smoothstep(inland, 20, 260);
   soundState.meadow = THREE.MathUtils.smoothstep(inland, 60, 200);
   soundState.cues = takeCues();
+  soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
+  soundState.scripted = story.current.scripted ?? false;
   soundState.shower = shower;
   sound.update(dt, soundState);
 
@@ -367,6 +395,7 @@ function frame(now: number): void {
   clouds.update();
   terrain.update(rig.camera);
   grass.update(rig.camera);
+  grass.bake(renderer);
   cottage.update(dt, rig.camera);
   fireflies.update(dt, atmo.uniforms.uNight.value, story.focus);
   rain.update(dt, shower, rig.camera, wind.breeze);
@@ -374,14 +403,18 @@ function frame(now: number): void {
   starlings.update(dt, params.dusk ?? story.dusk, joining);
   if (params.whale) whaleForQa();
   sealife.update(dt, time);
-  water.update(rig.camera);
+  water.update(rig.camera, (mirrorCamera) => terrain.beginMirror(mirrorCamera), () => terrain.endMirror());
   post.render(time);
   endFrame(renderer);
 
   frames++;
   if (readout) {
     intervals.push(realDt * 1000);
-    if (intervals.length > 120) intervals.shift();
+    cpuTimes.push(performance.now() - cpuStart);
+    if (intervals.length > 120) {
+      intervals.shift();
+      cpuTimes.shift();
+    }
   }
   if (now - fpsWindowStart > 1500) {
     fps = (frames * 1000) / (now - fpsWindowStart);
@@ -391,6 +424,7 @@ function frame(now: number): void {
       const size = renderer.getDrawingBufferSize(new THREE.Vector2());
       readout([
         `fps ${fps.toFixed(0)}  frame p50 ${percentile(intervals, 0.5).toFixed(0)} p90 ${percentile(intervals, 0.9).toFixed(0)} max ${Math.max(...intervals).toFixed(0)} ms`,
+        `cpu (js in frame) p50 ${percentile(cpuTimes, 0.5).toFixed(1)} p90 ${percentile(cpuTimes, 0.9).toFixed(1)} ms${params.lite ? '  LITE' : ''}`,
         `scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
         `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms`,
         `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
@@ -404,6 +438,7 @@ function frame(now: number): void {
   }
   if (params.shot) {
     window.__stats = {
+      frame: frameIndex,
       fps: Math.round(fps),
       calls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
@@ -423,7 +458,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing };
 }
 
 /**

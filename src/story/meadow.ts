@@ -6,7 +6,7 @@ import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { cue } from './cues';
 
-type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /** The way inland, across the meadow to its far shore. */
@@ -21,6 +21,11 @@ export const ROUTE = [
 ];
 /** Where the boat is waiting on the far shore. Nobody put it there, and nobody remarks on it. */
 export const FAR_SHORE = new THREE.Vector3(-6, 0, -1172);
+
+/** The high ground on the walk, where the haze thins and you are told, without a word, where you are going. */
+const CREST_LEG = 2;
+/** Where the colt's family is wheeling up a thermal, far off over the north end of the island. */
+const GATHERING = { x: -26, z: -1010, base: 66, radius: 30 };
 
 const WAVE_SPEED = 85;
 const WAVE_REACH = 3600;
@@ -39,6 +44,7 @@ export class MeadowChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   pace = 0.35;
+  haze = 0.55;
   dusk = 0;
   shower = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
@@ -57,6 +63,9 @@ export class MeadowChapter implements Chapter {
   private readonly watched = new THREE.Vector3();
   private watchUntil = 0;
   private nextLook = 0;
+  private crestDone = false;
+  private nextCall = 0;
+  private readonly far = new THREE.Vector3(GATHERING.x, GATHERING.base + 24, GATHERING.z);
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
@@ -66,6 +75,10 @@ export class MeadowChapter implements Chapter {
     cast.life.regions.island.set(LANDING.x, LANDING.y, 70, 1);
     const up = mainlandCoastZ(LANDING.x) - 14;
     child.walkTo(LANDING.x - 2, up, false, () => this.to('waiting'), 0.8);
+  }
+
+  get scripted(): boolean {
+    return this.beat !== 'walk' && this.beat !== 'waiting';
   }
 
   get done(): boolean {
@@ -116,6 +129,9 @@ export class MeadowChapter implements Chapter {
       case 'walk':
         this.updateWalk(time);
         break;
+      case 'crest':
+        this.updateCrest(time);
+        break;
       case 'push':
         if (this.t > 0.9 && !boat.afloat) boat.launch();
         if (this.t > 2.3) {
@@ -140,6 +156,7 @@ export class MeadowChapter implements Chapter {
           ? THREE.MathUtils.smoothstep(t, 0, gather)
           : 1 - THREE.MathUtils.smoothstep(t, gather + fall, gather + fall + clear);
     }
+    if (this.beat !== 'crest') this.haze += (0.55 - this.haze) * (1 - Math.exp(-dt * 0.25));
     const wave = life.regions.wave;
     if (wave.z >= 0) wave.z = Math.min(WAVE_REACH, wave.z + dt * WAVE_SPEED * Math.min(1, 0.3 + (this.now - this.waveStart) * 0.25));
 
@@ -166,11 +183,43 @@ export class MeadowChapter implements Chapter {
     return ROUTE[Math.min(this.leg, ROUTE.length - 1)];
   }
 
+  /**
+   * The one moment the dream tells you what you are doing. The child tops the rise, the haze thins, and far to the
+   * north the colt's family is turning on a thermal. The colt calls to them. Nothing answers, and they walk on.
+   */
+  private updateCrest(time: number): void {
+    const { child: c, crane, flock } = this.cast;
+    c.lookAt = this.far;
+    crane.watch(this.far);
+    this.haze += (0.1 - this.haze) * (1 - Math.exp(-0.016 * 1.2));
+    if (this.t > 2.4 && time > this.nextCall) {
+      cue('calling');
+      this.nextCall = time + 4.5 + Math.random();
+    }
+    if (this.t > 15) {
+      flock.clear();
+      crane.watch(null);
+      this.to('walk');
+      this.play = 'hold';
+      this.holdUntil = time + 0.8;
+    }
+  }
+
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat } = this.cast;
     const t = this.target();
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 30 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
+
+    if (!this.crestDone && this.leg >= CREST_LEG && this.play === 'hold' && !c.busy) {
+      this.crestDone = true;
+      this.to('crest');
+      c.stop();
+      c.faceToward(GATHERING.x, GATHERING.z, 1);
+      this.cast.flock.circle(GATHERING.x, GATHERING.z, GATHERING.base, GATHERING.radius);
+      this.nextCall = time + 2.4;
+      return;
+    }
 
     if (time > this.nextLook && this.play === 'watch') {
       this.nextLook = time + 7;
@@ -247,6 +296,15 @@ export class MeadowChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
+    if (this.beat === 'crest') {
+      const ground = Math.max(heightAt(c.x, c.z), 0);
+      s.target.set(c.x * 0.72 + this.far.x * 0.28, ground + 4 + Math.min(this.t * 0.3, 2.6), c.z * 0.72 + this.far.z * 0.28);
+      s.distance = 22;
+      s.height = 5;
+      this.pace = 0.3;
+      this.focus.copy(c);
+      return;
+    }
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
       s.target.set((c.x + b.x) / 2, b.y + 2.2, (c.z + b.z) / 2 - 2);

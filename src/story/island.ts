@@ -6,7 +6,7 @@ import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
-type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'leaving' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'skein' | 'toCrane' | 'near' | 'kneel' | 'gather' | 'leaving' | 'toBoat' | 'push' | 'aboard';
 type Play = 'watch' | 'fetch' | 'hold';
 
 /** Where the child sits at the start: the beach on the island's south shore, looking out to sea. */
@@ -33,6 +33,8 @@ export class IslandChapter implements Chapter {
   worldLife = 0;
   restored = false;
   pace = 0.8;
+  readonly haze = 0.85;
+  hush = 0;
   readonly dusk = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 9 };
   readonly focus = new THREE.Vector3();
@@ -54,6 +56,15 @@ export class IslandChapter implements Chapter {
   private sinceLifeCheck = 0;
   private islandLife = 0;
   private restoredAt = 0;
+  private dropped = false;
+  private downAt = -1;
+  private nextCall = 0;
+  private hushWanted = 0;
+  private readonly fallen = new THREE.Vector3();
+  private readonly left = new THREE.Vector3();
+  /** Fixed side-on direction for the fall shot, chosen once so the camera never swings mid-drop. */
+  private readonly watchFrom = new THREE.Vector3();
+  private readonly eye = new THREE.Vector3();
   private watchUntil = 0;
   private nextLook = 0;
   private readonly watched = new THREE.Vector3();
@@ -68,6 +79,11 @@ export class IslandChapter implements Chapter {
     const top = cast.tree.canopy.reduce((a, c) => (c.centre.y > a.y ? c.centre : a), cast.tree.canopy[0].centre);
     this.canopyTop.copy(top);
     this.frame();
+  }
+
+  /** Only catch and the first breeze answer the player; the rest of the island is the story playing itself out. */
+  get scripted(): boolean {
+    return this.beat !== 'still' && this.beat !== 'play' && this.beat !== 'leaving';
   }
 
   get done(): boolean {
@@ -92,16 +108,32 @@ export class IslandChapter implements Chapter {
       this.updatePlay(time);
       if (this.restored && this.play === 'hold' && !c.busy) this.farewell();
     } else if (this.beat === 'leaving') {
+      /**
+       * The plane's home moves to the boat, so however the player blows it about it always drifts back down there.
+       * Chasing it then *is* walking to the boat, instead of wandering off across the island after it.
+       */
+      const berth = this.cast.boat.position;
+      p.home.set(berth.x, 0, berth.z);
+      p.homeRadius = 24;
       this.updatePlay(time);
       const b = this.cast.boat.position;
       const planeNear = Math.hypot(p.position.x - b.x, p.position.z - b.z) < BOARDING;
       const childNear = Math.hypot(c.position.x - b.x, c.position.z - b.z) < BOARDING;
       const waited = time - this.beatStart;
       // Nothing is ever stuck: if the plane will not come down by the boat, the child goes anyway.
-      if (!c.busy && (((planeNear || childNear) && this.play === 'hold') || waited > 70)) this.board();
+      if (!c.busy && (((planeNear || childNear) && this.play === 'hold') || waited > 50)) this.board();
     } else {
       this.updateFarewell(time);
     }
+
+    /**
+     * The music gets out of the way when the skein appears and does not properly return until they are at sea:
+     * after the fall the island stays subdued, so the crossing feels like coming up for air.
+     */
+    const quiet = this.beat === 'skein' || this.beat === 'toCrane' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather';
+    const after = this.dropped && (this.beat === 'leaving' || this.beat === 'toBoat' || this.beat === 'push');
+    this.hushWanted = quiet ? (this.dropped ? 1 : 0.55) : after ? 0.45 : 0;
+    this.hush += (this.hushWanted - this.hush) * (1 - Math.exp(-dt * 0.9));
 
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
@@ -183,9 +215,11 @@ export class IslandChapter implements Chapter {
         c.cheer();
       }
     } else if (this.play === 'hold') {
-      if (!this.restored && (w.energy > 0.55 || Math.hypot(w.x, w.z) > 15)) {
+      /** Catch carries on after the island is whole: during `leaving` the throws are what lead them to the boat. */
+      const playing = this.beat === 'play' || this.beat === 'leaving';
+      if (playing && (w.energy > 0.55 || Math.hypot(w.x, w.z) > 15)) {
         this.snatch(time);
-      } else if (!this.restored && time > this.holdUntil && !c.busy) {
+      } else if (playing && time > this.holdUntil && !c.busy) {
         this.throwNext(time);
       } else {
         c.lookAt = this.beat === 'leaving' ? this.cast.boat.position : null;
@@ -262,7 +296,7 @@ export class IslandChapter implements Chapter {
     }, 0.8);
   }
 
-  private updateFarewell(_time: number): void {
+  private updateFarewell(time: number): void {
     const { child: c, boat } = this.cast;
     const t = this.now - this.beatStart;
     if (this.beat === 'toTree') {
@@ -271,12 +305,60 @@ export class IslandChapter implements Chapter {
       c.lookAt = t < 4 ? this.canopyTop : this.horizon;
       if (t > 4 && t < 4.2) c.faceToward(this.horizon.x, this.horizon.z, 0.2);
       if (t > 8.5) {
-        this.beat = 'leaving';
+        this.beat = 'skein';
         this.beatStart = this.now;
-        this.play = 'hold';
-        this.holdUntil = this.now + 1.2;
-        c.lookAt = boat.position;
+        /** Low enough to read as birds and not specks, coming over their head and going on north without them. */
+        this.cast.flock.pass(c.position.x + 2, c.position.z + 2, 40, Math.PI - 0.2, 15, 105);
+        c.lookAt = this.cast.flock.head;
+        cue('skein');
       }
+    } else if (this.beat === 'skein') {
+      const { crane, flock } = this.cast;
+      c.lookAt = this.dropped ? crane.position : flock.head;
+      /**
+       * The bird at the back of the V is the one that cannot hold on, and it goes when it is right overhead, so
+       * the whole fall happens in front of the player. The flock does not come back for it.
+       */
+      if (!this.dropped && flock.tail(this.left).z < c.position.z + 2) {
+        this.findFallen(c.position.x, c.position.z);
+        if (flock.dropOne(this.left)) {
+          this.dropped = true;
+          crane.plummet(this.left, this.fallen, 8.5, flock.heading);
+          cue('fallen');
+          /** Square on to the line of the fall, on whichever side is clear of the tree they are standing under. */
+          const fx = this.fallen.x - this.left.x;
+          const fz = this.fallen.z - this.left.z;
+          const len = Math.hypot(fx, fz) || 1;
+          this.watchFrom.set(-fz / len, 0, fx / len);
+          const toChild = this.watchFrom.x * (c.position.x - this.fallen.x) + this.watchFrom.z * (c.position.z - this.fallen.z);
+          if (toChild > 0) this.watchFrom.negate();
+        }
+      }
+      /** It lands. The child does not move for a moment, and then runs. */
+      /** It calls the whole way down and keeps calling on the ground. Nothing else is making a sound. */
+      if (this.dropped && !crane.carried && time > this.nextCall) {
+        cue('distress');
+        this.nextCall = time + (crane.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
+      }
+      if (this.dropped && crane.grounded && this.downAt < 0) this.downAt = this.now;
+      /** The player is left alone with it for a moment before the child moves. */
+      if (this.downAt > 0 && this.now - this.downAt > 3.4 && !c.busy) {
+        this.beat = 'toCrane';
+        this.beatStart = this.now;
+        const dx = crane.position.x - c.position.x;
+        const dz = crane.position.z - c.position.z;
+        const d = Math.hypot(dx, dz) || 1;
+        c.walkTo(crane.position.x - (dx / d) * 4.5, crane.position.z - (dz / d) * 4.5, true, () => this.slowDown(), 1.2);
+      }
+    } else if (this.beat === 'toCrane' || this.beat === 'near' || this.beat === 'kneel') {
+      c.lookAt = this.cast.crane.position;
+      if (this.dropped && !this.cast.crane.carried && time > this.nextCall) {
+        cue('distress');
+        this.nextCall = time + 2.1 + Math.random() * 0.6;
+      }
+      if (this.beat === 'kneel' && t > 1.5 && !c.busy) this.gather();
+    } else if (this.beat === 'gather') {
+      c.lookAt = this.cast.crane.eye(this.tmp);
     } else if (this.beat === 'push') {
       if (t > 0.9 && !boat.afloat) boat.launch();
       if (t > 2.3) {
@@ -284,6 +366,57 @@ export class IslandChapter implements Chapter {
         c.ride(boat.seat(this.tmp), boat.yaw);
       }
     }
+  }
+
+  /**
+   * Where the colt comes down: open ground between the child and the boat, so it is always on the near side of
+   * the ridge and on the way they are going. Never over the hill, where the player could not see any of it.
+   */
+  private findFallen(x: number, z: number): void {
+    const b = this.cast.boat.position;
+    const dx = b.x - x;
+    const dz = b.z - z;
+    const len = Math.hypot(dx, dz) || 1;
+    for (const reach of [17, 13, 9, 6]) {
+      const fx = x + (dx / len) * reach + 3;
+      const fz = z + (dz / len) * reach;
+      if (heightAt(fx, fz) > 2) {
+        this.fallen.set(fx, Math.max(heightAt(fx, fz), 0), fz);
+        return;
+      }
+    }
+    this.fallen.set(x + 4, Math.max(heightAt(x + 4, z + 4), 0), z + 4);
+  }
+
+  /** The last few steps are walked, not run: you do not charge at something that small and frightened. */
+  private slowDown(): void {
+    const { child: c, crane } = this.cast;
+    this.beat = 'near';
+    this.beatStart = this.now;
+    c.walkTo(crane.position.x, crane.position.z - 1.15, false, () => {
+      this.beat = 'kneel';
+      this.beatStart = this.now;
+      c.faceToward(crane.position.x, crane.position.z, 1);
+      crane.watch(c.position);
+    }, 0.9);
+  }
+
+  /** Kneels, gathers the colt up in both arms, and from here on carries it. */
+  private gather(): void {
+    const { child: c, crane } = this.cast;
+    this.beat = 'gather';
+    this.beatStart = this.now;
+    c.faceToward(this.fallen.x, this.fallen.z, 1);
+    c.pickUp(() => {
+      crane.carry(c.armsPoint(this.tmp), c.yaw);
+      crane.bind(0.3);
+      crane.watch(null);
+      this.beat = 'leaving';
+      this.beatStart = this.now;
+      this.play = 'hold';
+      this.holdUntil = this.now + 1.4;
+      c.lookAt = this.cast.boat.position;
+    });
   }
 
   /** The plane has come down by the boat: the child fetches it, then leans on the bow and pushes off. */
@@ -313,6 +446,47 @@ export class IslandChapter implements Chapter {
       return;
     }
     s.from = undefined;
+    s.eye = undefined;
+    if (this.beat === 'skein') {
+      /** Planted beside the child, looking up: whatever is up there is what you are made to watch. */
+      const { crane, flock } = this.cast;
+      if (this.dropped) {
+        /**
+         * Once it is falling the camera stands square on to the drop and rides down with it, so the colt is
+         * always centred. Anchoring on the child left the whole fall above the top of the frame.
+         */
+        const k = crane.position;
+        /** Square on while it is in the air; lifted and looking down once it is in the grass, or the grass hides it. */
+        const ground = Math.max(heightAt(k.x, k.z), 0);
+        const settled = crane.grounded ? 1 : 0;
+        const out = 12 - settled * 2;
+        s.eye = this.eye.set(
+          k.x + this.watchFrom.x * out,
+          Math.max(k.y + 1.8, ground + 2.6 + settled * 3.4),
+          k.z + this.watchFrom.z * out,
+        );
+        s.target.copy(k).setY(k.y + settled * 0.3);
+        /** Snaps onto the fall rather than gliding to it: by the time a slow camera arrived it was half over. */
+        this.pace = 7;
+      } else {
+        s.eye = this.eye.set(c.x - 4.6, c.y + 2.4, c.z + 13);
+        s.target.copy(this.tmp.set(c.x, c.y + 1.7, c.z)).lerp(flock.head, 0.62);
+        this.pace = 0.9;
+      }
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'toCrane' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather') {
+      const k = this.cast.crane.position;
+      const close = this.beat === 'kneel' || this.beat === 'gather';
+      s.eye = undefined;
+      s.target.set((c.x + k.x) / 2, Math.max(c.y, k.y) + (close ? 0.75 : 1.1), (c.z + k.z) / 2);
+      s.distance = close ? 6.5 : 14;
+      s.height = close ? 1.9 : 4;
+      this.pace = 0.6;
+      this.focus.copy(k);
+      return;
+    }
     if (this.beat === 'atTree') {
       s.target.set(c.x, c.y + 3, c.z - 14);
       s.distance = 30;

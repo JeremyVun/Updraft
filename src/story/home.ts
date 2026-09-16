@@ -23,6 +23,7 @@ export class HomeChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   pace = 0.35;
+  readonly haze = 0.5;
   dusk = 0.85;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly focus = new THREE.Vector3();
@@ -45,6 +46,11 @@ export class HomeChapter implements Chapter {
     child.dismount();
     const from = child.position;
     child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
+  }
+
+  /** The ending is watched, not played: only the updraft that sends the plane off answers the player. */
+  get scripted(): boolean {
+    return this.beat !== 'release';
   }
 
   get done(): boolean {

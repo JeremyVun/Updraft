@@ -5,13 +5,19 @@ import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
-/** The steep little island's south beach, where the boat runs ashore. */
-export const LINES_LANDING = new THREE.Vector2(14, -277);
+/** The island's south beach, where the boat runs ashore. */
+export const LINES_LANDING = new THREE.Vector2(14, -239);
 /** The boat is drawn up on the far shore before they get there. Nobody put it there. */
-export const LINES_BERTH = new THREE.Vector3(14, 0, -386);
+export const LINES_BERTH = new THREE.Vector3(14, 0, -479);
 
-/** Up over the top of the island and down the other side, through the washing. */
-const ROUTE = [new THREE.Vector2(6, -312), new THREE.Vector2(22, -346), new THREE.Vector2(14, -374)];
+/** A wandering way up over the top of the island and down the other side, weaving through the washing. */
+const ROUTE = [
+  new THREE.Vector2(-10, -270),
+  new THREE.Vector2(40, -310),
+  new THREE.Vector2(-20, -360),
+  new THREE.Vector2(30, -410),
+  new THREE.Vector2(10, -458),
+];
 
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 14;
@@ -29,6 +35,7 @@ export class LinesChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   pace = 0.4;
+  readonly haze = 0.85;
   readonly dusk = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 10 };
   readonly focus = new THREE.Vector3();
@@ -40,16 +47,20 @@ export class LinesChapter implements Chapter {
   private cheered = false;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
-  private readonly crest = new THREE.Vector3(14, 30, -330);
+  private readonly crest = new THREE.Vector3(14, 34, -360);
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
     /** Only the first island was ever grey: everywhere the child reaches after it is already living. */
-    cast.life.regions.island.set(ISLES.lines.x, ISLES.lines.z, 86, 1);
+    cast.life.regions.island.set(ISLES.lines.x, ISLES.lines.z, 190, 1);
     plane.homeRadius = 48;
     child.dismount();
     boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
     child.walkTo(LINES_LANDING.x - 2, LINES_LANDING.y - 12, false, () => this.to('wonder'), 0.9);
+  }
+
+  get scripted(): boolean {
+    return this.beat !== 'walk';
   }
 
   get done(): boolean {
@@ -107,7 +118,7 @@ export class LinesChapter implements Chapter {
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat, wind } = this.cast;
     const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 18 && this.leg < ROUTE.length - 1) this.leg++;
+    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 24 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
     if (this.play === 'watch') {
@@ -129,7 +140,7 @@ export class LinesChapter implements Chapter {
     } else if (this.play === 'hold' && !c.busy) {
       const nearBoat = Math.hypot(p.position.x - boat.position.x, p.position.z - boat.position.z) < BOARDING;
       const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
-      if (last && (nearBoat || childNear || this.now - this.beatStart > 150)) this.board();
+      if (last && (nearBoat || childNear || this.now - this.beatStart > 260)) this.board();
       else if (time > this.holdUntil) this.throwAhead();
     }
   }

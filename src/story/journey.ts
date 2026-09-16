@@ -18,10 +18,10 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(70, 56),
     new THREE.Vector2(104, 22),
     new THREE.Vector2(106, -90),
-    new THREE.Vector2(60, -230),
+    new THREE.Vector2(60, -195),
     LINES_LANDING,
   ],
-  toMeadow: [new THREE.Vector2(14, -430), new THREE.Vector2(10, -520), LANDING],
+  toMeadow: [new THREE.Vector2(14, -505), new THREE.Vector2(10, -545), LANDING],
   toHome: [
     new THREE.Vector2(-6, -1240),
     new THREE.Vector2(-16, -1440),

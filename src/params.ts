@@ -12,6 +12,8 @@ function num(key: string): number | null {
   return raw !== null && Number.isFinite(Number(raw)) ? Number(raw) : null;
 }
 
+const lite = q.has('lite') ? q.get('lite') !== '0' : window.matchMedia('(pointer: coarse)').matches;
+
 export const params = {
   /** Set by the QA tools: exposes `window.__game`, `__stats`, `__ready` and steps time at a fixed rate. */
   shot: q.has('shot'),
@@ -33,6 +35,16 @@ export const params = {
   shower: num('shower'),
   /** Start later in the story: `crossing`, `hills` or `summit`. */
   chapter: q.get('chapter'),
+  /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). On by default for touch devices; `lite=0` forces it off. */
+  lite,
+  /** How often the sea's reflection is drawn: every frame (1), alternate frames (2, the lite default; a one-frame lag is faintly visible in still comparisons), or never (0, QA). */
+  mirror: q.get('mirror') !== null ? Number(q.get('mirror')) || 0 : lite ? 2 : 1,
+  /** QA: `mirrorlod=full` gives the sea's mirror the main view's terrain detail instead of a coarser set, for comparison. */
+  mirrorlod: q.get('mirrorlod') ?? 'coarse',
+  /** QA: `blades=direct` uses the old per-vertex grass shader instead of the blade table, for before/after comparison. */
+  blades: q.get('blades') ?? 'table',
+  /** QA: `hold=<frame>` freezes the world after that frame (it keeps drawing the same state), so two runs can capture the very same frame. */
+  hold: num('hold'),
   /** QA: an on-screen readout of frame times, quality level and readbacks, for phones. */
   stats: q.has('stats'),
   /** QA: a whale surfaces ahead of the crossing a few seconds in (and again every so often), fish leap by the boat. */

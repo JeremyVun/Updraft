@@ -6,6 +6,8 @@ export interface QualityLevel {
 }
 
 const RECENT = 90;
+/** Pixels the opening level may render; the level climbs from there if frames prove smooth. */
+const OPENING_PIXELS = 2.2e6;
 /** Trimmed mean interval above which the frame is judged over budget (a saturated GPU alternates 16.7 and 33 ms). */
 const SLOW_MS = 17.6;
 const SMOOTH_MS = 17.2;
@@ -29,8 +31,9 @@ export class Quality {
   private climbMs = CLIMB_MS;
   private lastStepUp = false;
 
-  /** `startRatio` picks the opening level (the highest whose scale is no more than it); the rest is climbed into. */
-  constructor(maxRatio: number, samples: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
+  /** Opens at the highest level within the pixel budget for a `width` × `height` view (and `startRatio`); the rest is climbed into. */
+  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
+    startRatio = Math.min(startRatio, Math.sqrt(OPENING_PIXELS / Math.max(1, width * height)));
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples });
     this.levels.push({ ratio: 1, samples });
     if (samples > 2) this.levels.push({ ratio: 1, samples: 2 });
@@ -46,7 +49,7 @@ export class Quality {
     if (this.locked) return;
     this.recent.push(intervalMs);
     if (this.recent.length > RECENT) this.recent.shift();
-    if (now - this.lastReview < REVIEW_MS || now - this.changedAt < SETTLE_MS || this.recent.length < RECENT / 2) return;
+    if (now - this.lastReview < REVIEW_MS || now - this.changedAt < SETTLE_MS || this.recent.length < 8) return;
     this.lastReview = now;
     const sorted = [...this.recent].sort((a, b) => a - b);
     const kept = sorted.slice(0, Math.max(1, Math.floor(sorted.length * 0.95)));

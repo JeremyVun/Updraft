@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
+import type { Crane } from '../creatures/crane';
+import type { CraneFlock } from '../creatures/flock';
 import type { Boat } from '../traveller/boat';
 import type { SeaLife } from '../fx/sealife';
 import type { Drawing } from '../traveller/drawing';
@@ -23,6 +25,9 @@ export interface Cast {
   drawing: Drawing;
   cottage: Cottage;
   sealife: SeaLife;
+  /** The crane colt that cannot keep up with its flock, and the flock that goes on without it. */
+  crane: Crane;
+  flock: CraneFlock;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }
@@ -45,6 +50,10 @@ export interface Chapter {
   readonly shower?: number;
   /** Haze thick enough to hide what is ahead, 0 to 1. */
   readonly haze?: number;
+  /** How far the music pulls back, so a moment can be heard on its own. */
+  readonly hush?: number;
+  /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
+  readonly scripted?: boolean;
   /** How strongly a rainbow shows opposite the sun, 0..1. */
   readonly rainbow?: number;
   /** Where the gulls should circle, or null to leave them to their own coast. */

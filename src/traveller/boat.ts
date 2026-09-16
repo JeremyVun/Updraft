@@ -252,6 +252,11 @@ export class Boat {
     this.speed = 0.8;
   }
 
+  /** Which side the sail is swung out to: +1 to starboard, -1 to port. */
+  get sailSide(): number {
+    return this.boom >= 0 ? 1 : -1;
+  }
+
   /** World position of the seat, where the child rides. */
   seat(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);

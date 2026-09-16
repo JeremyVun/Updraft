@@ -108,7 +108,7 @@ function islandHeight(x: number, z: number): number {
  * shrink as home gets nearer, so the world closes in. The still island keeps its own shape; the rest are ellipses.
  */
 export const ISLES = {
-  lines: { x: 14, z: -330, rx: 70, rz: 56 },
+  lines: { x: 14, z: -360, rx: 152, rz: 124 },
   meadow: { x: 10, z: -880, rx: 340, rz: 300 },
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
@@ -132,7 +132,7 @@ function linesHeight(x: number, z: number): number {
   const land = smoothstep(8, -20, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = land * 3.2 - 1.4;
-  h += land * land * (Math.max(0, 1 - r * r) * 15 + (gfbm(x * 0.02, z * 0.02, 3, 22) * 0.5 + 0.5) * 5);
+  h += land * land * (Math.max(0, 1 - r * r) * 26 + (gfbm(x * 0.012, z * 0.012, 3, 22) * 0.5 + 0.5) * 11);
   return h - smoothstep(0, 60, d) * 8;
 }
 
@@ -304,7 +304,7 @@ float hf_lines(vec2 p) {
   float land = smoothstep(8.0, -20.0, d);
   float rr = length((p - c) / r);
   float h = land * 3.2 - 1.4;
-  h += land * land * (max(0.0, 1.0 - rr * rr) * 15.0 + (gfbm(p * 0.02, 3, 22.0) * 0.5 + 0.5) * 5.0);
+  h += land * land * (max(0.0, 1.0 - rr * rr) * 26.0 + (gfbm(p * 0.012, 3, 22.0) * 0.5 + 0.5) * 11.0);
   return h - smoothstep(0.0, 60.0, d) * 8.0;
 }
 float meadowInset(vec2 p) {

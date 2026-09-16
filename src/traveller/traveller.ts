@@ -111,6 +111,22 @@ export class Traveller {
     return out.set(this.position.x + fx * 0.95 - fz * 0.45, this.position.y + up, this.position.z + fz * 0.95 + fx * 0.45);
   }
 
+  /** Where something small is held against the chest, in both arms. */
+  armsPoint(out: THREE.Vector3): THREE.Vector3 {
+    const fx = Math.sin(this.yaw);
+    const fz = Math.cos(this.yaw);
+    const up = this.sitting ? 1.05 : 1.34;
+    return out.set(this.position.x + fx * 0.36, this.position.y + up, this.position.z + fz * 0.36);
+  }
+
+  /** Where a passenger rides in the hood, behind the head. */
+  hoodPoint(out: THREE.Vector3): THREE.Vector3 {
+    const fx = Math.sin(this.yaw);
+    const fz = Math.cos(this.yaw);
+    const up = this.sitting ? 1.5 : 1.78;
+    return out.set(this.position.x - fx * 0.2, this.position.y + up, this.position.z - fz * 0.2);
+  }
+
   get busy(): boolean {
     return this.goal !== null || this.action !== null;
   }

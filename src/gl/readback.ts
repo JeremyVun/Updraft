@@ -11,9 +11,10 @@ const all: Readback<unknown>[] = [];
 const frameSyncs: WebGLSync[] = [];
 const PIPELINE_DEPTH = 2;
 let frameGl: WebGL2RenderingContext | null = null;
-let closedFrames = 0;
-let patience = 2;
-const MAX_PATIENCE = 30;
+let nextForceAt = 0;
+/** A forced delivery that blocked for long is not repeated for this long; a cheap one much sooner. */
+const COSTLY_WAIT_MS = 2000;
+const CHEAP_WAIT_MS = 250;
 const COSTLY_MS = 6;
 export const readbackStats = { skipped: 0, forced: 0, delivered: 0, worstMs: 0 };
 
@@ -99,17 +100,17 @@ export function endFrame(renderer: THREE.WebGLRenderer): void {
  * Call after the frame's CPU-only work and before its first GPU command. Finished readbacks are delivered when
  * the GPU has also finished the frame before last (the display pipeline is normally two frames deep); mapping
  * while it is further behind blocks until it catches up.
- * When the GPU stays behind (it is saturated), one such blocking delivery is accepted every `patience` frames
- * rather than letting the CPU copies go stale; the spacing jumps to a third of a second while those deliveries
- * prove costly, and the quality governor is meanwhile taking the load off the GPU.
+ * When the GPU stays behind (it is saturated), one such blocking delivery is accepted now and then rather than
+ * letting the CPU copies go stale: every quarter second while they prove cheap, every two seconds while they
+ * block for long, whatever the frame rate. The quality governor is meanwhile taking the load off the GPU.
  */
 export function pollReadbacks(): void {
   let forced = false;
+  const started = performance.now();
   if (frameSyncs.length >= PIPELINE_DEPTH && frameGl) {
     const status = frameGl.clientWaitSync(frameSyncs[0], 0, 0);
     if (status !== frameGl.ALREADY_SIGNALED && status !== frameGl.CONDITION_SATISFIED) {
-      closedFrames++;
-      if (closedFrames < patience) {
+      if (started < nextForceAt) {
         readbackStats.skipped++;
         return;
       }
@@ -117,10 +118,8 @@ export function pollReadbacks(): void {
       readbackStats.forced++;
     }
   }
-  closedFrames = 0;
-  const started = performance.now();
   for (const r of all) r.poll();
   const cost = performance.now() - started;
   if (cost > readbackStats.worstMs) readbackStats.worstMs = cost;
-  if (forced) patience = cost > COSTLY_MS ? MAX_PATIENCE : Math.max(2, patience - 1);
+  if (forced) nextForceAt = started + cost + (cost > COSTLY_MS ? COSTLY_WAIT_MS : CHEAP_WAIT_MS);
 }

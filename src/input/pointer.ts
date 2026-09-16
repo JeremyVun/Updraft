@@ -17,6 +17,11 @@ export class PointerInput {
   /** Updraft charge, 0..1. */
   charge = 0;
   present = false;
+  /**
+   * Set while the story is playing a beat out on its own. The pointer still tracks, but it puts nothing into the
+   * wind, so a scripted moment is not undercut by the player's own gusts whooshing and rippling the water.
+   */
+  muted = false;
   down = false;
 
   private readonly eventNdc = new THREE.Vector2();
@@ -94,7 +99,7 @@ export class PointerInput {
 
   update(dt: number, camera: THREE.Camera, wind: WindField): void {
     this.screenSpeed *= Math.exp(-dt * 10);
-    if (!this.present) {
+    if (!this.present || this.muted) {
       this.hasPrev = false;
       this.gust *= Math.exp(-dt * 6);
       this.charge = Math.max(0, this.charge - dt * 1.5);

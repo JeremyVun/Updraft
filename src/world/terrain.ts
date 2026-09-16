@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
@@ -9,7 +10,10 @@ import { SURF_GLSL, surfUniforms } from './water/surf';
 const SEGMENTS = 32;
 const ROOT = 2048;
 const MIN_NODE = 32;
-const SPLIT = 1.6;
+/** Leaves stop splitting at this distance factor; the lite world splits less, so far hills carry fewer height evaluations. */
+const SPLIT = params.lite ? 1.1 : 1.6;
+/** The sea's mirror sees the land at quarter size through ripples, so its leaves split far less. */
+const MIRROR_SPLIT = params.mirrorlod === 'full' ? SPLIT : 0.7;
 const REACH = 4096;
 const MAX_LEAVES = 2048;
 /** Where the blades thin out; from here the terrain paints the meadow. Matches the grass's last level of detail. */
@@ -179,25 +183,38 @@ function leafTemplate(s: number): THREE.BufferGeometry {
  * The ground, to the horizon: a quadtree of square leaves around the camera, finer near it, each a 32×32 grid
  * whose heights come from the shared height function on the GPU. Skirts hide cracks between sizes.
  */
+interface LeafSet {
+  geo: THREE.InstancedBufferGeometry;
+  nodes: THREE.InstancedBufferAttribute;
+  count: number;
+}
+
 export class Terrain {
   readonly mesh: THREE.Mesh;
-  private readonly nodes: THREE.InstancedBufferAttribute;
-  private readonly geo: THREE.InstancedBufferGeometry;
+  private readonly main: LeafSet;
+  private readonly mirror: LeafSet;
   private readonly frustum = new THREE.Frustum();
   private readonly matrix = new THREE.Matrix4();
   private readonly box = new THREE.Box3();
   private readonly camPos = new THREE.Vector3();
-  private count = 0;
+  private filling: LeafSet;
+  private split = SPLIT;
 
   constructor(breeze: THREE.Vector2, heightFilterable: boolean) {
     const template = leafTemplate(SEGMENTS);
-    this.geo = new THREE.InstancedBufferGeometry();
-    this.geo.index = template.index;
-    this.geo.setAttribute('position', template.attributes.position);
-    this.nodes = new THREE.InstancedBufferAttribute(new Float32Array(MAX_LEAVES * 3), 3);
-    this.nodes.setUsage(THREE.DynamicDrawUsage);
-    this.geo.setAttribute('aNode', this.nodes);
-    this.geo.instanceCount = 0;
+    const makeSet = (): LeafSet => {
+      const geo = new THREE.InstancedBufferGeometry();
+      geo.index = template.index;
+      geo.setAttribute('position', template.attributes.position);
+      const nodes = new THREE.InstancedBufferAttribute(new Float32Array(MAX_LEAVES * 3), 3);
+      nodes.setUsage(THREE.DynamicDrawUsage);
+      geo.setAttribute('aNode', nodes);
+      geo.instanceCount = 0;
+      return { geo, nodes, count: 0 };
+    };
+    this.main = makeSet();
+    this.mirror = makeSet();
+    this.filling = this.main;
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
@@ -214,29 +231,46 @@ export class Terrain {
       side: THREE.DoubleSide,
       defines: heightFilterable ? { HEIGHT_FILTERABLE: '' } : {},
     });
-    this.mesh = new THREE.Mesh(this.geo, mat);
+    this.mesh = new THREE.Mesh(this.main.geo, mat);
     this.mesh.frustumCulled = false;
     this.mesh.layers.enable(REFLECTION_LAYER);
   }
 
   get leaves(): number {
-    return this.count;
+    return this.main.count;
   }
 
+  /** Picks the leaves for the main view. */
   update(camera: THREE.Camera): void {
+    this.fill(this.main, camera, SPLIT);
+  }
+
+  /** Picks a coarser set of leaves for the sea's mirror camera and draws it until `endMirror`. */
+  beginMirror(camera: THREE.Camera): void {
+    this.fill(this.mirror, camera, MIRROR_SPLIT);
+    this.mesh.geometry = this.mirror.geo;
+  }
+
+  endMirror(): void {
+    this.mesh.geometry = this.main.geo;
+  }
+
+  private fill(set: LeafSet, camera: THREE.Camera, split: number): void {
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
     this.camPos.copy(camera.position);
-    this.count = 0;
+    this.filling = set;
+    this.split = split;
+    set.count = 0;
     const x0 = Math.floor((this.camPos.x - REACH) / ROOT) * ROOT;
     const z0 = Math.floor((this.camPos.z - REACH) / ROOT) * ROOT;
     for (let z = z0; z < this.camPos.z + REACH; z += ROOT) {
       for (let x = x0; x < this.camPos.x + REACH; x += ROOT) this.visit(x, z, ROOT);
     }
-    this.nodes.clearUpdateRanges();
-    this.nodes.addUpdateRange(0, this.count * 3);
-    this.nodes.needsUpdate = true;
-    this.geo.instanceCount = this.count;
+    set.nodes.clearUpdateRanges();
+    set.nodes.addUpdateRange(0, set.count * 3);
+    set.nodes.needsUpdate = true;
+    set.geo.instanceCount = set.count;
   }
 
   private visit(x: number, z: number, size: number): void {
@@ -244,7 +278,7 @@ export class Terrain {
     this.box.max.set(x + size, 110, z + size);
     if (!this.frustum.intersectsBox(this.box)) return;
     const d = this.box.distanceToPoint(this.camPos);
-    if (size > MIN_NODE && d < size * SPLIT) {
+    if (size > MIN_NODE && d < size * this.split) {
       const half = size / 2;
       this.visit(x, z, half);
       this.visit(x + half, z, half);
@@ -252,11 +286,12 @@ export class Terrain {
       this.visit(x + half, z + half, half);
       return;
     }
-    if (this.count >= MAX_LEAVES) return;
-    const a = this.nodes.array as Float32Array;
-    a[this.count * 3] = x;
-    a[this.count * 3 + 1] = z;
-    a[this.count * 3 + 2] = size;
-    this.count++;
+    const set = this.filling;
+    if (set.count >= MAX_LEAVES) return;
+    const a = set.nodes.array as Float32Array;
+    a[set.count * 3] = x;
+    a[set.count * 3 + 1] = z;
+    a[set.count * 3 + 2] = size;
+    set.count++;
   }
 }

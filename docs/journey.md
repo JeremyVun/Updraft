@@ -50,7 +50,11 @@ What the journey is *about*: **something small trusted the child, and the child 
 
 Principles:
 - **Beauty first, and beauty from simulation.** Light, colour and motion come from shaders and the live wind, not from a pile of assets. Every new thing must match the grass and the golden light; if it doesn't, it isn't finished.
-- **Wordless, and voiceless.** No text on screen, ever, in the story. The child and the crane never make a sound — no laughing, no crying, no chirping. Other animals and the world are as loud as they like; the two travellers are silent, and everything they feel is carried by the body, the light and the music. Meaning is carried by light, colour, music, the child's body language, where the child looks, and the drawing on the paper plane.
+- **Wordless, and almost voiceless.** No text on screen, ever. The child never makes a sound at all. The colt is
+  silent too, **except at a handful of critical moments** — when it is in distress, or when it is warning the child
+  and the player of something. Because everything else is silent, those few small cries land like nothing else in
+  the game. They are the only voice in the story, so they are never spent on anything ordinary. Other animals and
+  the world are as loud as they like. Meaning is carried by light, colour, music, the child's body language, where the child looks, and the drawing on the paper plane.
 - **The player pushes what they see.** Wind reaches what is under the cursor on screen.
 - **Never let the player lose the thread.** The subject is always in frame. If the child or the plane would go behind terrain, the camera answers. A player who stops understanding what to do is the only real failure state this game has.
 - **Nothing is lost, nothing is failed.** Things drift home, the child waits, the world only grows more alive.
@@ -84,20 +88,92 @@ The grass keeps the green it is loved for — it just ages. Colour returns to th
 
 ## The story: the islands
 
-Every room is an island and every crossing is shorter than the last, so the world closes in as home gets nearer. Each island is bounded by sea on every side, so you can always see its edges and always know you are getting somewhere — which is exactly what the endless mainland hills could never do. Home is an island too: not a continent to arrive at, just a small place with the light on.
+Every room is an island, bounded by sea on every side, so you can always see its edges and always know you are
+getting somewhere. Home is an island too: not a continent to arrive at, just a small place with the light on.
 
-1. **The still island** — grey, dawn, late autumn, no wind. The child and the paper plane, the boat in the cove. The first gesture is the first breeze in a long time; colour comes back green going gold wherever the wind goes; everywhere the child arrives something small happens; and when the island is whole the whole frame lifts at once. A flock of cranes crosses overhead, going on ahead. One small one cannot keep up and comes down in the grass. The child gathers it up, and the player leads them to the boat. **Built.**
-2. **The island of lines** — a steep little island strung pole to pole with washing lines: sheets, cloth, flags, paper, all hung out with nobody there. One gust fills a hundred of them at once. Bright, cold, windy, loud with colour — the first delight after the grey, and the first piece of home the dream hands over. Short.
-3. **The meadow** — the last warm afternoon of the year. Endless grass going to seed, wildflowers, skylarks, a sun shower, the green wave rolling out. Unfenced and unnamed. Where the fledgling first glides, on the player's updraft. The high point.
-4. **The drowned village** — the long dusk drift. Sailing between rooftops, a church spire, the tops of trees, a weathervane still turning, herons standing on chimneys, leaves on black water. Homes the water took. This is the room that makes a lit window mean something. The storm gathers and takes the plane.
-5. **The dark wood** — the first winter storm, at night. The wind stops bending grass and starts breathing on light: embers and fireflies fanned into a trail the child follows. The fledgling is lost in the dark and is found by lighting where it hides. The plane is found snagged and sodden, and the wind dries it.
-6. **The lamplit island** — clear, frozen, stars. Flock calls overhead; the child holds the fledgling up, the player raises an updraft, and it flies. The flock comes down for it. The child watches it go, alone — then turns, and below is a white cottage with a red door, smoke rising, one lit window. The drawing, the release into the night with the murmuration behind it, and the door.
+**Crossings vary.** There is no rule that each one is shorter than the last — that was a tidy idea that cost the
+sea its best sequence. Some are short blind hops between islands that are almost touching. At least one is long
+and open and full of life, and it earns its length by being the exhale after the worst part of the journey.
 
-Two more islands are wanted and slot in as short interludes once the spine works: **the sky mirror**, a salt flat under an inch of water where the sky is doubled and the child appears to walk on cloud, and **the autumn birches**, an island of gold leaves the wind strips and drifts.
+**The player must never be able to see the next island.** A veil (`uVeil` in `world/atmosphere.ts`) dissolves the
+world past a distance each chapter chooses, and it ignores height, unlike the ground mist. From the first island
+the second is a smudge on the horizon and nothing more. Chapters set `haze`: about 0.85 on the small islands,
+0.55 on the meadow.
 
-Other fragments of home for the dream to manifest, to be used wherever they land best: a single red door standing in the grass with nothing behind it; chimneys smoking with no house under them; a made bed in the middle of the meadow with the sheets lifting; a washing line strung between two rocks out in open water with one small sheet on it; a bell or wind chimes the wind rings; scarecrows that are not people.
+1. **The still island** (`story/island.ts`) — grey, dawn, late autumn, no wind. The child and the paper plane, the
+   boat in the cove. The first gesture is the first breeze in a long time; colour comes back wherever the wind
+   goes; everywhere the child arrives something small happens; and when the island is whole the whole frame lifts
+   at once. Then the skein comes over and the colt falls — see below. **Built.**
+2. **The island of lines** (`story/lines.ts`, `world/lines.ts`) — a green whaleback strung pole to pole with
+   washing hung out with nobody there. One gust lifts a whole band of sheets at once and the child runs through
+   them after the plane. The first piece of home the dream hands over. **Built.**
+3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year. The green wave rolls out, and the long
+   walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the colt's first
+   glide on the player's updraft.
+4. **The drowned village** — the long dusk drift between rooftops, a spire, treetops, a turning weathervane,
+   herons on chimneys. Homes the water took. The storm gathers and takes the plane. **Terrain only.**
+5. **The dark wood** — the first winter storm, at night. The wind stops bending grass and starts breathing on
+   light: embers and fireflies fanned into a trail the child follows. The colt is lost in the dark and is found by
+   lighting where it hides. **Terrain only.**
+6. **The long crossing** — the intermission, and the only crossing that takes its time. They come out of the dark
+   wood onto open water at first light, and the sea is alive: whales, a pod of dolphins running with the boat,
+   fish, birds. Nothing is asked of the player except to sail. After the storm and the dark, this is the room
+   where you are allowed to breathe. **Not built** — dolphins do not exist yet; `fx/sealife/` has the whale and
+   the fish.
+7. **Home** (`story/home.ts`) — clear, frozen, stars. The colt flies on the player's updraft and the flock comes
+   down for it. Then the drawing, the release, and the red door. **Built.**
 
-No fail states anywhere. Every beat waits for the player; nothing is timed.
+Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, and
+whether there is a whale. `story/journey.ts` runs the order: island → toLines → lines → toMeadow → meadow →
+toHome → home, with the drowned village and the dark wood to be inserted before home.
+
+Two more islands are wanted as short interludes: **the sky mirror**, a salt flat under an inch of water where the
+sky is doubled, and **the autumn birches**, an island of gold leaves the wind strips.
+
+Other fragments of home for the dream to manifest: a red door standing in the grass with nothing behind it;
+chimneys smoking with no house; a bed made up in the meadow; a line strung between two rocks at sea; a piano at the
+tide line the wind plays. None of it makes sense and none of it is explained. That is the point.
+
+## The crest: where the player is told what they are doing
+
+Halfway across the meadow the ground rises, and this is the one moment the dream orientates you. The child tops
+the rise and stops. **The haze thins** — the chapter eases its `haze` from 0.55 down to 0.1 — and the world opens
+out as far as the far shore. Away to the north, the colt's family is **wheeling up a thermal**, a slow column of
+cranes turning in the light, the way cranes do before they go on.
+
+The colt calls to them. Not the distress call: lower, longer, twice, with hope in it rather than panic. Nothing
+answers. The column keeps turning. After a while the child walks on and the haze closes again behind them.
+
+No words, no marker, no objective text: you simply now know where you are going and what you are carrying. And
+because the gathering lies the same way as home, it quietly sets up the ending, where it turns out you were
+walking the child home the whole time.
+
+## The fall, beat by beat
+
+The moment the whole game turns on. It is staged deliberately and nothing about it is incidental.
+
+1. The island is whole. The child climbs to the tree and looks out at the horizon.
+2. **The skein comes over**, 40 units up — low enough to read as birds, not specks — on a bearing that takes it
+   right over the child's head and on north without them. Music: a thin high phrase going away from you. The
+   music begins pulling back from this moment (`hush` 0.55).
+3. The camera plants itself at the child's shoulder and looks up past them. The player watches the sky **with**
+   the child, never instead of them.
+4. **The bird at the back of the V is the one that cannot hold on**, and it goes when it is directly overhead, so
+   none of it happens off screen. The colt takes over from exactly where that bird was.
+5. **The camera stands square on to the line of the fall** — on whichever side is clear of the tree — and snaps
+   onto it rather than gliding, because by the time a slow camera arrived the fall was half over. It rides down
+   with the colt so it is always centred, with the V receding above it, and lifts to look down once it is in the
+   grass, where the grass would otherwise hide it.
+6. **It falls for eight and a half seconds.** Not like a stone: at first it is still almost with them, sinking and
+   falling behind, and only once it has lost the formation does the ground come up. Wings going the whole way,
+   sagging each time it tries to climb and cannot. It calls, over and over, all the way down. Music is out of the
+   way by now (`hush` 1) — the cries are almost the only thing you can hear.
+7. It lands on the near side of the ridge, always in view. It tries three times to get up, each weaker, and stops.
+   It keeps calling.
+8. **The child does not move for three and a half seconds.** The player is left alone with it.
+9. Then they run — and pull up short, four metres away. The last steps are walked. They stop, face it, kneel, and
+   wait a beat while it looks at them. Only then do they gather it up. You do not charge at something that small.
+10. From here they carry it, and the music comes back at sea, on the crossing, as an intermission.
 
 ## The companion
 
@@ -117,16 +193,20 @@ The crane's arc is flight: flaps and drops, then glides, then cannot help in the
 
 ## World layout (one coordinate space; the camera looks roughly north, −z)
 
-Each island sits further north than the last, with open sea between. Crossings shorten as home gets nearer.
+The chain is in `ISLES` in `world/heightfield.ts`, written twice (TypeScript and GLSL) like the rest of the terrain.
+Each island lies further north than the last with sea between, and the stretches shrink as home gets nearer.
 
-- **The still island:** the ellipse centred near (−6, −14), about 60 by 44. The child starts on the south shore; the boat waits in the south-east cove at (8.5, 21.5), in frame from the first second. The ridge and the tree are north-west, at (−16, −34) and (−15, −31); play stays south of the ridge, so nothing happens off camera.
-- **The island of lines:** small and steep, north across the first crossing.
-- **The meadow:** large and open — the existing mainland terrain, bounded by coast on every side instead of streaming on forever.
-- **The drowned village:** a shallow flooded basin, sailed rather than walked.
-- **The dark wood:** thick and close, the smallest island of all.
-- **Home:** the cottage island, the last one.
+| room | centre | size | sea before it |
+| --- | --- | --- | --- |
+| the still island | (−6, −14) | 60 × 44, its own hand-made shape | — |
+| the island of lines | (14, −330) | 70 × 56, a low green whaleback | 216 |
+| the meadow | (10, −880) | 340 × 300, the old rolling pasture, now bounded | 194 |
+| the drowned village | (−10, −1440) | 210 × 175, nearly all of it under water | 85 |
+| the dark wood | (−30, −1800) | 130 × 115, the smallest of them | 70 |
+| home | (−45, −2120) | 190 × 165, one long hill and the cottage beyond | 40 |
 
-Concrete coordinates are settled island by island as each is built; the mainland terrain around z ≈ −700 becomes the meadow.
+The still island keeps the south-east cove at (8.5, 21.5). The last hill is at (−30, −2060) and the cottage at
+(−70, −2124), so the sun now sets into open sea past the cottage: home is an island like all the others.
 
 ## Systems this needs
 
@@ -140,7 +220,16 @@ Concrete coordinates are settled island by island as each is built; the mainland
 - **Creatures.** Songbirds, gulls, rabbits, butterflies, sheep, goats, fish, a whale, herons, a murmuration, fireflies, and the crane flock.
 - **Distance that reads.** Open ground with nothing on the horizon looked flat and streamed in badly. Every island wants a far silhouette with atmospheric perspective — the next island in the chain, standing out of the haze — and verticals in the middle distance. Being able to see where you are going next is the point of an archipelago.
 - **Light on the wind.** In the dark room, gusts and updrafts fan embers and fireflies into brightness and carry them.
-- **Music.** Layers join as the world comes back, fuller in the hills, thin and low in the wood, almost gone in the dark, whole at the end.
+- **Music.** Layers join as the world comes back, fuller in the hills, thin and low in the wood, almost gone in
+  the dark, whole at the end. Chapters can pull it back entirely with `hush` so a moment is heard on its own; the
+  fall does this, and the music returns on the crossing that follows.
+- **The colt's voice.** `peep()` in `audio/audio.ts`, fired by the `distress` and `calling` cues. Distress is high
+  and panicky; calling out to the flock is lower, longer and hopeful. Kept for those moments and nothing else.
+- **The player's wind stops during a scripted beat.** Chapters expose `scripted` for the beats the story plays out
+  on its own. While it is set, `PointerInput.muted` puts nothing into the wind field at all: no chimes, no whoosh,
+  no ripples on the water, no wind lines, and nothing the player does can blow the paper plane out of the scene.
+  The pointer still tracks, and control returns the instant the beat ends. A scripted moment has to be allowed to
+  land without the player accidentally performing over the top of it.
 
 ## What the first build got wrong (fixed)
 
@@ -163,17 +252,50 @@ Concrete coordinates are settled island by island as each is built; the mainland
 5. The hills: terrain, the green wave, creatures, wildflowers, sheep, the sun shower, the murmuration. **Done**, to be reworked into the meadow.
 6. Time of day, the drawing, the release, night, the cottage, music. **Done.**
 7. **The island, made legible.** **Done.**
-8. **Cloth on the wind, and the island of lines:** the generalised cloth shader, poles and catenary lines, hung sheets that fill and snap, pieces that tear loose and fly. **Prototyped** (`src/world/lines.ts`, `?lines` hangs it over the still island). What it proved: a gust visibly lifts a whole *band* of washing as it rolls through, which is the effect the room is for. What it still needs: colours desaturated toward linen (the current palette reads as bunting, not laundry), a billow curve so a lifted sheet keeps a belly instead of going edge-on and disappearing, and above all its own island — over the still island's tall grass the lines are half-buried decoration, and they need bare, short-cropped slopes to be the subject.
-9. **The companion system and the crane:** flock, fall, carry, ride, bond, glide, flight.
-10. **The crossings:** shorter, blind in haze, each island appearing out of nothing; the whale close alongside.
-11. **The meadow:** bound the mainland into an island, drop the walls and field patchwork, age the palette toward the last warm day of the year.
-12. **The drowned village:** flooded basin, rooftops, spire, treetops, herons, the drift, the storm, losing the plane.
-13. **The dark wood:** light on the wind, the lost fledgling, finding and drying the plane.
-14. **Home:** the flight, the flock, and the existing ending.
+8. **Cloth on the wind, and the island of lines: built.** `world/lines.ts` and `story/lines.ts`; the island is
+   cropped short so the washing is the only thing standing on it. Still to do: a billow curve so a lifted sheet
+   keeps a belly instead of going edge-on, baskets and pegs and other things nobody left there, and a sun angle
+   that does not leave the camera-facing slope in shadow. Original prototype note: the generalised cloth shader, poles and catenary lines, hung sheets that fill and snap, pieces that tear loose and fly. **Prototyped** (`src/world/lines.ts`, `?lines` hangs it over the still island). What it proved: a gust visibly lifts a whole *band* of washing as it rolls through, which is the effect the room is for. What it still needs: colours desaturated toward linen (the current palette reads as bunting, not laundry), a billow curve so a lifted sheet keeps a belly instead of going edge-on and disappearing, and above all its own island — over the still island's tall grass the lines are half-buried decoration, and they need bare, short-cropped slopes to be the subject.
+9. **The island chain: built.** `ISLES` in the heightfield, the chapters sequenced in `story/journey.ts`
+   (island → toLines → lines → toMeadow → meadow → toHome → home), the crossing generalised to take a route and a
+   haze, the old hills chapter split into `story/meadow.ts` and `story/home.ts`, the dry-stone walls deleted.
+10. **The crane: built.** `creatures/crane.ts` — a 16-bone rigged colt: three neck capsules that read as a tube,
+    wings split into arm and hand so the fold tucks and the hand whips a beat behind in flight, feet that stay
+    flat when planted and extend when trailing, eyes with catchlights. The palette is derived in **linear** space,
+    which was the real cause of it washing out to cream: the renderer is `NoToneMapping` with a linear sun near
+    2.7, so any albedo written as if it were sRGB clips. Falling now lags along the flock's line first so the gap
+    in the V opens where you can see it, flaps in bursts with sinking between them, and banks and slews because it
+    cannot hold a line. Remaining: the colt does not tilt to the terrain slope (no creature here does), and where
+    it lands the island grass is taller than it is.
+
+10b. **Superseded note from when it was half built:** `creatures/crane.ts` is a rigged colt (body, neck, head and bill, folded wings,
+    two-jointed legs) driven by bone matrices, with fallen / carried / hooded / following states and a bond that
+    only rises. `creatures/flock.ts` is the skein that goes over. The island chapter now runs the beat: the flock
+    crosses once the island is whole, one bird cannot hold formation and comes down, and the child gathers it up
+    and carries it from there. Still to do: the first glide on an updraft, the flight at the end, riding in the
+    hood on the walks, and tuning — the colt still reads cream rather than cinnamon when backlit.
+
+    **The fall is the moment the whole game turns on, so it is staged deliberately.** The skein comes over the
+    child's head low enough to read as birds. The camera plants itself at their shoulder and looks up past them,
+    so the player watches the sky *with* them rather than instead of them. The bird at the back of the V is the one
+    that goes, and it goes when it is directly overhead, so none of it happens off screen. It takes eight and a
+    half seconds to come down, wings going the whole way, sagging each time it tries to climb and cannot. It lands
+    on the near side of the ridge. Then it tries three times to get up, each try weaker, and stops. The child
+    stands still for two seconds and then runs. Music marks both: a thin high phrase going away for the skein, the
+    same shape turned downward for the fall, and it does not resolve.
+11. **The drowned village:** rooftops, spire, treetops, herons, the drift, the storm, losing the plane. Until it is
+    built the last crossing sails straight over its mud banks without stopping.
+12. **The dark wood:** light on the wind, the lost fledgling, finding and drying the plane.
+12b. **The long crossing:** dolphins running with the boat, whales, first light on open water. The exhale after
+    the dark. Needs a dolphin pod in `fx/sealife/` alongside the existing whale and fish.
+13. **More nonsense:** baskets and pegs on the island of lines; a red door standing in the grass; chimneys with no
+    house; a bed made up in the meadow; a line strung between two rocks at sea; a piano at the tide line the wind
+    plays. The point is that none of it makes sense and none of it is explained.
+14. **The turn of the year:** age the palette island by island, late autumn through to a frozen night.
 
 ## Testing shortcuts
 
-`?chapter=crossing|hills|summit` start later in the story; `?dusk=0..2` overrides the time of day; `?shower=0..1` forces the rain; `?debug=wind` draws the wind field.
+`?chapter=lines|washing|meadow|summit` start later in the story (`crossing` and `hills` still work as aliases); `?dusk=0..2` overrides the time of day; `?shower=0..1` forces the rain; `?debug=wind` draws the wind field.
 
 ## Pacing
 

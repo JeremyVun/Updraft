@@ -30,6 +30,10 @@ export interface SoundState {
   meadow: number;
   /** A passing shower, 0 dry to 1. */
   shower: number;
+  /** How far the music pulls back, 0 normal to 1 almost gone, so a moment can be heard on its own. */
+  hush: number;
+  /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
+  scripted: boolean;
   cues: Cue[];
 }
 
@@ -45,15 +49,22 @@ const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
 const PHRASES: Record<Cue, [number, number][]> = {
+  /** Never played: the colt's voice is its own, not a musical phrase. */
+  distress: [],
+  calling: [],
   breeze: [[74, 1], [78, 1], [81, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
+  /** High and thin and going away from you, the way a skein sounds when you look up too late. */
+  skein: [[86, 2], [83, 2], [81, 3], [78, 2], [76, 4]],
+  /** The fall: the same shape turned downward, and it does not resolve. */
+  fallen: [[81, 2], [76, 2], [71, 3], [69, 2], [66, 6], [64, 8]],
   wave: [[57, 1], [62, 1], [66, 1], [69, 1], [74, 2], [78, 2], [81, 4]],
   unfold: [[74, 2], [78, 1], [81, 1], [83, 2], [81, 1], [78, 1], [76, 2], [78, 1], [74, 3], [0, 2], [71, 1], [74, 1], [76, 2], [78, 1], [76, 1], [74, 4]],
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
 };
-const PHRASE_BEAT: Record<Cue, number> = { breeze: 0.3, delight: 0.14, restored: 0.22, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -313,6 +324,58 @@ export class Soundscape {
     }
   }
 
+  /**
+   * The colt's voice. It is the only sound either traveller ever makes, so it is kept for the few moments that
+   * matter: a small bird calling for a family that is not coming back. Thin, high, and pitched to be heard over
+   * nothing at all.
+   */
+  private peep(loudness = 1, longing = false): void {
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime + 0.02;
+    const out = ctx.createGain();
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = (Math.random() - 0.5) * 0.3;
+    out.connect(panner);
+    panner.connect(this.master);
+    const send = ctx.createGain();
+    send.gain.value = 0.8;
+    panner.connect(send).connect(this.reverb);
+
+    /** Calling out to them is lower and longer than calling for help: less panic in it, and more hope. */
+    const calls = longing ? 2 : 2 + Math.floor(Math.random() * 2);
+    let at = t0;
+    for (let i = 0; i < calls; i++) {
+      const len = (longing ? 0.4 : 0.16) + Math.random() * 0.08;
+      const f = (longing ? 880 : 1250) + Math.random() * 420 - i * 60;
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f * 0.72, at);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);
+      const waver = ctx.createOscillator();
+      waver.frequency.value = 17 + Math.random() * 6;
+      const depth = ctx.createGain();
+      depth.gain.value = f * 0.035;
+      waver.connect(depth).connect(osc.frequency);
+      const throat = ctx.createBiquadFilter();
+      throat.type = 'bandpass';
+      throat.frequency.value = f * 1.5;
+      throat.Q.value = 2.2;
+      const env = ctx.createGain();
+      const peak = 0.075 * loudness * (1 - i * 0.16);
+      env.gain.setValueAtTime(0, at);
+      env.gain.linearRampToValueAtTime(peak, at + 0.03);
+      env.gain.setValueAtTime(peak, at + len * 0.5);
+      env.gain.exponentialRampToValueAtTime(0.0001, at + len);
+      osc.connect(throat).connect(env).connect(out);
+      osc.start(at);
+      osc.stop(at + len + 0.05);
+      waver.start(at);
+      waver.stop(at + len + 0.05);
+      at += len + (longing ? 0.34 : 0.1) + Math.random() * 0.07;
+    }
+  }
+
   private phrase(name: Cue): void {
     const beat = PHRASE_BEAT[name];
     let at = this.nextPulse() + 0.05;
@@ -357,10 +420,19 @@ export class Soundscape {
         voice.gain.gain.setTargetAtTime(0.25, now, 2.5);
       });
     }
-    this.padGain.gain.setTargetAtTime((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night) + this.activity * 0.09, now, 1.5);
+    const hush = 1 - 0.92 * s.hush;
+    this.padGain.gain.setTargetAtTime(
+      ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night) + this.activity * 0.09) * hush,
+      now,
+      s.hush > 0.5 ? 0.7 : 1.5,
+    );
     this.padFilter.frequency.setTargetAtTime(500 + 700 * s.life - 250 * s.night, now, 2);
 
-    for (const name of s.cues) this.phrase(name);
+    for (const name of s.cues) {
+      if (name === 'distress') this.peep(1);
+      else if (name === 'calling') this.peep(0.95, true);
+      else this.phrase(name);
+    }
 
     if (s.night > 0.3 && now > this.nextCricket) {
       this.cricket(now + 0.05, Math.random() * 1.6 - 0.8, 0.012 * s.night);
@@ -375,7 +447,8 @@ export class Soundscape {
       this.nextLark = now + 6 + Math.random() * 10;
     }
 
-    const gusting = s.gust > 7;
+    /** The chimes are the player's own voice in the music, so they only answer gestures that are doing something. */
+    const gusting = s.gust > 7 && !s.scripted;
     if (gusting) {
       const interval = s.gust > 17 ? PULSE : PULSE * 2;
       const at = this.nextPulse();
@@ -392,7 +465,7 @@ export class Soundscape {
     }
     this.wasGusting = gusting;
 
-    if (s.charge > 0.2) {
+    if (s.charge > 0.2 && !s.scripted) {
       const interval = PULSE * (s.charge > 0.7 ? 1 : 2);
       const at = this.nextPulse();
       if (at - this.lastArp >= interval - 1e-3) {
@@ -403,7 +476,7 @@ export class Soundscape {
       }
     }
 
-    if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5) {
+    if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5 && !s.scripted) {
       const base = CHORDS[this.chord][0] + 24;
       this.chime(base, 0.4, 0, this.nextPulse(), 1.8);
       this.chime(base + 7, 0.35, 0, this.nextPulse() + PULSE, 2.2);

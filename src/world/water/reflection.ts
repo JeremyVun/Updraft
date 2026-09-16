@@ -37,7 +37,12 @@ export class PlanarReflection {
     this.camera.layers.set(REFLECTION_LAYER);
   }
 
-  render(view: THREE.PerspectiveCamera): void {
+  /** The mirror camera, valid after `render`; systems that draw differently in the mirror read it. */
+  get mirrorCamera(): THREE.PerspectiveCamera {
+    return this.camera;
+  }
+
+  render(view: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
     const r = this.renderer;
     r.getDrawingBufferSize(this.size);
     const w = Math.max(1, Math.round(this.size.x * this.scale));
@@ -70,9 +75,11 @@ export class PlanarReflection {
     e[14] = this.clipPlane.w;
     cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
 
+    before?.(cam);
     const prev = r.getRenderTarget();
     r.setRenderTarget(this.target);
     r.render(this.scene, cam);
     r.setRenderTarget(prev);
+    after?.();
   }
 }

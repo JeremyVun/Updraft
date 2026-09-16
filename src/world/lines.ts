@@ -25,6 +25,14 @@ void main() {
   vec3 side = normalize(cross(up, along));
 
   vec3 pegged = aAnchor + along * (position.x * aShape.x);
+  if (distance(aAnchor, cameraPosition) > uVeil.x + 40.0) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vWorld = pegged;
+    vNormal = up;
+    vColor = aColor;
+    vSwing = 0.0;
+    return;
+  }
   vec2 w = texture(uWindTex, domainUv(pegged.xz)).xy;
   float speed = length(w);
   vec3 gust = speed > 0.001 ? vec3(w.x, 0.0, w.y) / speed : side;

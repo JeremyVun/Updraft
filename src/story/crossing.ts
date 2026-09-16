@@ -63,6 +63,10 @@ export class CrossingChapter implements Chapter {
   private whaleCalled = false;
   private watching = 0;
   private leg = 0;
+  /** Which side of the stern the camera rides on; eased, so it never snaps across when the boom swings. */
+  private quarter = 1;
+  private nextGlance = 8;
+  private glanceUntil = 0;
 
   constructor(
     private readonly cast: Cast,
@@ -118,10 +122,17 @@ export class CrossingChapter implements Chapter {
         child.wave();
         this.nextWave = this.time + 5 + Math.random() * 3;
       }
+    } else if (this.time < this.glanceUntil) {
+      /** Long stretches of open water, and something small in your arms: of course you look down at it. */
+      child.lookAt = this.cast.crane.carried ? this.cast.crane.eye(this.ahead) : null;
     } else {
       const look = Math.sin(this.time * 0.13) * 30;
       this.ahead.set(boat.position.x + look, 12, boat.position.z - 200);
       child.lookAt = this.ahead;
+      if (this.time > this.nextGlance && this.cast.crane.carried) {
+        this.glanceUntil = this.time + 3.5 + Math.random() * 2.5;
+        this.nextGlance = this.glanceUntil + 9 + Math.random() * 8;
+      }
     }
 
     if (this.whaleAt !== null && !this.whaleCalled && this.time > this.whaleAt) {
@@ -162,10 +173,17 @@ export class CrossingChapter implements Chapter {
       this.shot.height = THREE.MathUtils.lerp(4.5, 6.5, swing);
       this.pace = 1.2;
     } else {
-      this.shot.from = undefined;
-      this.shot.target.set(boat.position.x + fx * 7, 2.8, boat.position.z + fz * 7);
-      this.shot.distance = 24;
-      this.shot.height = 6.5;
+      /**
+       * Off the stern quarter, on whichever side the sail is not, and low enough to see the child's face and what
+       * they are holding. Dead astern put the sail straight through them and showed nothing but their back.
+       */
+      this.quarter += (-boat.sailSide - this.quarter) * 0.02;
+      const bearing = boat.yaw + Math.PI + this.quarter * 0.66;
+      this.shot.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
+      const seat = this.cast.child.position;
+      this.shot.target.set(seat.x + fx * 2.5, seat.y + 1.15, seat.z + fz * 2.5);
+      this.shot.distance = 15;
+      this.shot.height = 3.4;
       this.pace = 0.4;
     }
 

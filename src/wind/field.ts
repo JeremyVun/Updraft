@@ -42,8 +42,16 @@ export interface WindSample {
 }
 
 const READ_RES = 128;
-const PRESSURE_ITERATIONS = 24;
 const STEP = 1 / 60;
+
+export interface WindOptions {
+  /** Grid resolution; 256 by default. */
+  res?: number;
+  /** Jacobi pressure iterations per substep; 24 by default. */
+  iterations?: number;
+  /** Substeps a frame may run; 2 by default. */
+  maxSubsteps?: number;
+}
 
 export class WindField {
   readonly res: number;
@@ -70,9 +78,13 @@ export class WindField {
   private readonly scaleMat: THREE.ShaderMaterial;
   private readonly shiftMat: THREE.ShaderMaterial;
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
+  private readonly iterations: number;
+  private readonly maxSubsteps: number;
 
-  constructor(renderer: THREE.WebGLRenderer, res = 256) {
+  constructor(renderer: THREE.WebGLRenderer, { res = 256, iterations = 24, maxSubsteps = 2 }: WindOptions = {}) {
     this.res = res;
+    this.iterations = iterations;
+    this.maxSubsteps = maxSubsteps;
     this.gpu = new GpuRunner(renderer);
     this.vel = new PingPong(res, res);
     this.bend = new PingPong(res, res);
@@ -156,9 +168,9 @@ export class WindField {
     if (this.splats.length < MAX_SPLATS) this.splats.push(splat);
   }
 
-  /** Runs the substeps that fit `dt`, at most two: a slow frame must not triple the sim and get slower still. */
+  /** Runs the substeps that fit `dt`, capped: a slow frame must not multiply the sim and get slower still. */
   step(dt: number, time: number): void {
-    const steps = Math.min(2, Math.max(1, Math.round(dt / STEP)));
+    const steps = Math.min(this.maxSubsteps, Math.max(1, Math.round(dt / STEP)));
     for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
     this.splats.length = 0;
     this.readBack();
@@ -192,7 +204,7 @@ export class WindField {
     this.scaleMat.uniforms.uScale.value = 0.8;
     this.gpu.run(this.scaleMat, this.pressure.write);
     this.pressure.swap();
-    for (let i = 0; i < PRESSURE_ITERATIONS; i++) {
+    for (let i = 0; i < this.iterations; i++) {
       this.pressureMat.uniforms.uPressure.value = this.pressure.texture;
       this.gpu.run(this.pressureMat, this.pressure.write);
       this.pressure.swap();
