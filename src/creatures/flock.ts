@@ -143,6 +143,8 @@ export class CraneFlock {
     }
     this.dir.set(Math.sin(bearing), 0, Math.cos(bearing));
     this.lead.set(x, height, z).addScaledVector(this.dir, -from);
+    /** The skein is put away once it has flown far enough from where it came in, not from wherever one last fell. */
+    this.dropped.copy(this.lead);
     this.thermal = null;
     this.flying = true;
     this.mesh.visible = true;

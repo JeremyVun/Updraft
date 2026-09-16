@@ -38,6 +38,7 @@ vec3 shadeCreature(vec3 alb, vec3 N, vec3 world, float ao, float fuzz, float thi
   vec3 col = alb * (bounce * ao + uSunColor * (wrap * wrap * 0.8 + 0.05) * sun);
   col += alb * uSunColor * sun * (thin * back * 0.9 + fuzz * back * edge * 0.3);
   col += uSunColor * rim * fuzz * (0.1 + 1.1 * back) * smoothstep(-0.5, 0.45, ndl) * sun * (0.3 + 0.7 * alb);
+  col += alb * emberLight(world, N);
   return col;
 }
 

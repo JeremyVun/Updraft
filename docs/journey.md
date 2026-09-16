@@ -38,6 +38,25 @@ On the setting, rejecting both Ireland and Switzerland:
 
 On the islands: "love all of these ideas, especially the island of lines! It's very surreal and dreamlike. Like the kid is dreaming of home, and it's manifesting."
 
+On the island of lines, after it was built far too large (2026-09-17):
+
+> "i think the island of lines is way too big now. What i really meant was it should evoke a feeling like they are
+> lost and overwhelmed by everything on that island, but what ended up happening was that a massive island was
+> created."
+
+**Overwhelmed, not vast.** The feeling is being swallowed by somebody's washing, not crossing a landmass. Density
+is the lever, not area: keep the lines and shrink the ground under them. `ISLES.lines` is currently 152 × 124 and
+should be nearer the 70 × 56 this document first asked for.
+
+On the colt being hard to see in deep grass, when a session was busy trying to fix it:
+
+> "It's ok if the colt is somewhat swallowed by the grass. It's somewhat clear enough that a bird landed in the
+> grass. and the child going over to it and pausing does signal enough. The fact that it is difficult to see
+> actually kind of helps give the feeling of a little baby bird that's lost"
+
+So: half lost in the grass is how a fledgling that cannot fly is supposed to look. Where the child goes and where
+they stop is the signal, not the bird's silhouette. Do not spend effort making it legible.
+
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
 
 And: "Anything you want to prototype and explore, go ahead. we can always iterate or trim what doesn't work."
@@ -106,26 +125,39 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    at once. Then the skein comes over and the colt falls — see below. **Built.**
 2. **The island of lines** (`story/lines.ts`, `world/lines.ts`) — a green whaleback strung pole to pole with
    washing hung out with nobody there. One gust lifts a whole band of sheets at once and the child runs through
-   them after the plane. The first piece of home the dream hands over. **Built.**
+   them after the plane. The first piece of home the dream hands over. **Built, and too big** — see Jeremy's words
+   above. It also reads as short-cropped next to the still island, which he has noticed and does not like
+   (`croppedAt` in `world/grass.ts` takes 74% off the blade height over the whole ellipse).
 3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year. The green wave rolls out, and the long
    walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the colt's first
    glide on the player's updraft.
-4. **The drowned village** — the long dusk drift between rooftops, a spire, treetops, a turning weathervane,
-   herons on chimneys. Homes the water took. The storm gathers and takes the plane. **Terrain only.**
-5. **The dark wood** — the first winter storm, at night. The wind stops bending grass and starts breathing on
-   light: embers and fireflies fanned into a trail the child follows. The colt is lost in the dark and is found by
-   lighting where it hides. **Terrain only.**
-6. **The long crossing** — the intermission, and the only crossing that takes its time. They come out of the dark
-   wood onto open water at first light, and the sea is alive: whales, a pod of dolphins running with the boat,
-   fish, birds. Nothing is asked of the player except to sail. After the storm and the dark, this is the room
-   where you are allowed to breathe. **Not built** — dolphins do not exist yet; `fx/sealife/` has the whale and
-   the fish.
+4. **The drowned village** (`story/drowned.ts`, `world/drowned.ts`) — the long dusk drift between rooftops, a
+   spire, treetops, a turning weathervane, herons on chimneys, autumn leaves on black water. Homes the water took.
+   Then the storm gathers and takes the paper plane out of the child's hand, and they reach after it and it is
+   gone. **Built.** The drift *is* the crossing: there is no separate one before it.
+5. **The dark wood** (`story/wood.ts`, `world/wood.ts`, `fx/embers.ts`) — the first winter storm, at night. There
+   is no grass to bend and nothing to throw, so the wind does the only other thing it can do: it breathes on fire.
+   The player fans embers awake out of the leaf litter and the child walks on for exactly as long as there is
+   light, and stops the moment it goes out. Halfway up, the storm frightens the colt out of the hood; it goes to
+   ground off the path and calls, and the only way to find it is to put light on it. The plane is found sodden in
+   the leaves further on and dried in the wind. **Built.**
+6. **The long crossing** (`story/crossing.ts` with `dolphins` and `duskTo`) — the intermission, and the only
+   crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
+   night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
+   birds. Nothing is asked of the player except to sail. **Built** — `fx/sealife/dolphin.ts`.
 7. **Home** (`story/home.ts`) — clear, frozen, stars. The colt flies on the player's updraft and the flock comes
    down for it. Then the drawing, the release, and the red door. **Built.**
 
-Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, and
-whether there is a whale. `story/journey.ts` runs the order: island → toLines → lines → toMeadow → meadow →
-toHome → home, with the drowned village and the dark wood to be inserted before home.
+Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, a
+whale, a pod of dolphins, a storm, and where the time of day ends up. `story/journey.ts` runs the order:
+island → toLines → lines → toMeadow → meadow → drowned → toWood → wood → toHome → home.
+
+**Only the first island was ever grey.** Everything north of `LIVING_BEYOND` (`world/atmosphere.ts`) is already
+living before the child reaches it, so nothing snaps into colour underfoot when a chapter starts — that pop was a
+real bug and it is what `uLivingBeyond` exists to prevent. The meadow is the one island held back from it
+(`life.regions.waiting`), because its green wave is a beat the player causes. In the same spirit, `main.ts` eases
+the time of day, the haze and the rain toward whatever the current chapter asks for rather than taking them from
+it, so a chapter change is never a cut in the sky.
 
 Two more islands are wanted as short interludes: **the sky mirror**, a salt flat under an inch of water where the
 sky is doubled, and **the autumn birches**, an island of gold leaves the wind strips.
@@ -189,7 +221,10 @@ Things that raise the bond, all of them things the player causes or witnesses:
 - It is frightened and the child stays.
 - It is lost and found.
 
-The crane's arc is flight: flaps and drops, then glides, then cannot help in the dark, then flies. Later companions get their own single arc of the same shape — one fear, faced once, caused by the player.
+The crane's arc is flight: flaps and drops, then glides, then cannot help in the dark, then flies. Where it rides
+matters as much as the arc: in the arms across the sea and after the dark, walking at heel on the short bare island
+of lines, and in the hood on the long walks, where meadow grass three feet deep would swallow it. It comes down
+only where the camera comes down with it. Later companions get their own single arc of the same shape — one fear, faced once, caused by the player.
 
 ## World layout (one coordinate space; the camera looks roughly north, −z)
 
@@ -199,14 +234,18 @@ Each island lies further north than the last with sea between, and the stretches
 | room | centre | size | sea before it |
 | --- | --- | --- | --- |
 | the still island | (−6, −14) | 60 × 44, its own hand-made shape | — |
-| the island of lines | (14, −330) | 70 × 56, a low green whaleback | 216 |
-| the meadow | (10, −880) | 340 × 300, the old rolling pasture, now bounded | 194 |
-| the drowned village | (−10, −1440) | 210 × 175, nearly all of it under water | 85 |
-| the dark wood | (−30, −1800) | 130 × 115, the smallest of them | 70 |
+| the island of lines | (14, −360) | 152 × 124, a steep bare dome, cropped short | 178 |
+| the meadow | (10, −880) | 340 × 300, the old rolling pasture, now bounded | 196 |
+| the drowned village | (−10, −1440) | 210 × 175, all of it well under water | 85 |
+| the dark wood | (−30, −1800) | 130 × 115, the smallest of them, on a long shelving shore | 70 |
 | home | (−45, −2120) | 190 × 165, one long hill and the cottage beyond | 40 |
 
 The still island keeps the south-east cove at (8.5, 21.5). The last hill is at (−30, −2060) and the cottage at
 (−70, −2124), so the sun now sets into open sea past the cottage: home is an island like all the others.
+
+Home is only 40 units of sea past the wood, which is nowhere near enough water for the long crossing to feel long.
+Rather than move home, the route stands a long way out west and comes back (`ROUTES.toHome` in `story/journey.ts`,
+about 650 units). The veil hides everything either side of it, so it reads as open ocean and not as a detour.
 
 ## Systems this needs
 
@@ -225,6 +264,15 @@ The still island keeps the south-east cove at (8.5, 21.5). The last hill is at (
   fall does this, and the music returns on the crossing that follows.
 - **The colt's voice.** `peep()` in `audio/audio.ts`, fired by the `distress` and `calling` cues. Distress is high
   and panicky; calling out to the flock is lower, longer and hopeful. Kept for those moments and nothing else.
+  Where they are spent: `calling` at the meadow crest when the family is wheeling and nothing answers, and again at
+  the very end when something does; `distress` only in the dark wood, where the calling out of the dark *is* how
+  the player finds it. Nowhere else.
+- **Light on the wind.** `fx/embers.ts`. Gust energy is breath on a coal: it wakes sparks in the leaf litter, they
+  ride the wind and go out again. `uEmberLight` in `atmosphere.ts` carries the hot centroid, so creatures and the
+  wood are genuinely lit by it — which is what makes finding the colt in the dark a thing the player does rather
+  than a thing they watch.
+- **Trodden grass.** `uTrodden`: a soft, noise-warped patch pressed flat where somebody sat down in it, so a
+  fledgling in a meadow three feet deep is not swallowed whole. Used for the colt's first flight and the last one.
 - **The player's wind stops during a scripted beat.** Chapters expose `scripted` for the beats the story plays out
   on its own. While it is set, `PointerInput.muted` puts nothing into the wind field at all: no chimes, no whoosh,
   no ripples on the water, no wind lines, and nothing the player does can blow the paper plane out of the scene.
@@ -283,11 +331,23 @@ The still island keeps the south-east cove at (8.5, 21.5). The last hill is at (
     on the near side of the ridge. Then it tries three times to get up, each try weaker, and stops. The child
     stands still for two seconds and then runs. Music marks both: a thin high phrase going away for the skein, the
     same shape turned downward for the fall, and it does not resolve.
-11. **The drowned village:** rooftops, spire, treetops, herons, the drift, the storm, losing the plane. Until it is
-    built the last crossing sails straight over its mud banks without stopping.
-12. **The dark wood:** light on the wind, the lost fledgling, finding and drying the plane.
-12b. **The long crossing:** dolphins running with the boat, whales, first light on open water. The exhale after
-    the dark. Needs a dolphin pod in `fx/sealife/` alongside the existing whale and fish.
+11. **The drowned village: built.** `world/drowned.ts` (27 houses on a drowned street grid, a spire with a
+    weathervane that spins up in the squall, five herons that flush off the chimneys as the boat comes by, drowned
+    tree crowns, leaves riding the water) and `story/drowned.ts` (the drift, the gathering storm, the plane taken).
+    The island's seabed was dropped to about 7 units down: the sea shader paints sand and caustics wherever it can
+    see the bottom, and a drowned village over turquoise shallows reads as a holiday.
+12. **The dark wood: built.** `world/wood.ts` (about 2,700 instanced bare winter trees whose every branch is one
+    camera-facing ribbon, a wet leaf floor, deadfall, all of it heaving on the live wind), `fx/embers.ts` (the
+    light the player makes) and `story/wood.ts`. Grass is cropped to nothing over the island or it grows straight
+    through the room. The wood's coast was shelved out because the first version came out of the sea as a cliff
+    and a child in the dark could not get off the boat.
+12b. **The long crossing: built.** `fx/sealife/dolphin.ts` — a pod that surges fore and aft of the boat in
+    desynchronised lanes, porpoises in real ballistic arcs, and puts two riders on the bow wave. The route stands
+    a long way out west into open water and comes back, because after the wood the point of it is not to arrive.
+12c. **The crane's arc: built.** The glide is `Crane.soar`, on wind sampled **at the colt's own position**, so the
+    player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the colt is set
+    down in the grass, tries by itself and fails, the child sits down to watch, and there is nothing else on
+    screen. The flight at the end is `Crane.leave` — the one thing in the game that is allowed to go away.
 13. **More nonsense:** baskets and pegs on the island of lines; a red door standing in the grass; chimneys with no
     house; a bed made up in the meadow; a line strung between two rocks at sea; a piano at the tide line the wind
     plays. The point is that none of it makes sense and none of it is explained.
@@ -295,7 +355,14 @@ The still island keeps the south-east cove at (8.5, 21.5). The last hill is at (
 
 ## Testing shortcuts
 
-`?chapter=lines|washing|meadow|summit` start later in the story (`crossing` and `hills` still work as aliases); `?dusk=0..2` overrides the time of day; `?shower=0..1` forces the rain; `?debug=wind` draws the wind field.
+`?chapter=` starts later in the story: `crossing` (or `lines`), `washing`, `meadow` (or `hills`), `drowned` (or
+`village`), `wood` (or `dark`), `sea` (or `dolphins`), `summit` (or `home`). Every start past the first island puts
+the colt in the child's arms and cuts the camera straight to the chapter's own shot. `?dusk=0..2` overrides the
+time of day; `?shower=0..1` forces the rain; `?grass=0` clears the grass; `?debug=wind` draws the wind field.
+
+`tools/play.mjs` takes its query in the `QUERY` environment variable **without a leading `?`** — it is appended
+after `?shot=1&`, so a `?` there silently breaks the first parameter and you end up judging a night scene in
+daylight.
 
 ## Pacing
 

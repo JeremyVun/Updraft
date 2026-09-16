@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { ISLES } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
@@ -45,14 +44,13 @@ export class LinesChapter implements Chapter {
   private holdUntil = 0;
   private now = 0;
   private cheered = false;
+  private flown = false;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly crest = new THREE.Vector3(14, 34, -360);
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
-    /** Only the first island was ever grey: everywhere the child reaches after it is already living. */
-    cast.life.regions.island.set(ISLES.lines.x, ISLES.lines.z, 190, 1);
     plane.homeRadius = 48;
     child.dismount();
     boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
@@ -87,11 +85,7 @@ export class LinesChapter implements Chapter {
       case 'wonder':
         /** A moment looking up the hill at all of it before the game starts again. */
         c.lookAt = this.crest;
-        if (this.t > 4.5 && !c.busy) {
-          this.to('walk');
-          this.play = 'carry';
-          this.throwAhead();
-        }
+        if (this.t > 4.5 && !c.busy) this.setDown();
         break;
       case 'walk':
         this.updateWalk(time);
@@ -111,12 +105,39 @@ export class LinesChapter implements Chapter {
     this.frame();
   }
 
+  /** The first thing they do on solid ground is put it down, so it can walk the hill on its own legs. */
+  private setDown(): void {
+    const { child: c, crane } = this.cast;
+    c.lookAt = crane.eye(this.tmp);
+    c.pickUp(() => {
+      crane.follow();
+      crane.bind(0.08);
+      c.lookAt = null;
+      this.to('walk');
+      this.play = 'carry';
+      this.throwAhead();
+    });
+  }
+
   private target(): THREE.Vector2 {
     return ROUTE[Math.min(this.leg, ROUTE.length - 1)];
   }
 
   private updateWalk(time: number): void {
-    const { child: c, plane: p, boat, wind } = this.cast;
+    const { child: c, plane: p, boat, wind, crane } = this.cast;
+    if (crane.flying) {
+      /** If the player finds out here that they can fly it, everything else on the hill can wait. */
+      c.stop();
+      c.lookAt = crane.position;
+      if (!this.flown) {
+        this.flown = true;
+        c.cheer();
+        cue('delight');
+        crane.bind(0.2);
+      }
+      return;
+    }
+    this.flown = false;
     const t = this.target();
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 24 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
@@ -179,13 +200,19 @@ export class LinesChapter implements Chapter {
   }
 
   private board(): void {
-    const { child: c, boat } = this.cast;
+    const { child: c, boat, crane } = this.cast;
     this.to('toBoat');
     c.lookAt = null;
     c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
-      this.to('push');
-      c.faceToward(boat.position.x, boat.position.z, 1);
-      c.push();
+      c.faceToward(crane.position.x, crane.position.z, 1);
+      c.lookAt = crane.eye(this.tmp);
+      c.pickUp(() => {
+        crane.carry(c.armsPoint(this.tmp), c.yaw);
+        c.lookAt = null;
+        this.to('push');
+        c.faceToward(boat.position.x, boat.position.z, 1);
+        c.push();
+      });
     }, 0.5);
   }
 
@@ -200,6 +227,16 @@ export class LinesChapter implements Chapter {
       s.height = 6.5;
       this.pace = 0.35;
       this.focus.copy(b);
+      return;
+    }
+    if (this.cast.crane.flying) {
+      const k = this.cast.crane.position;
+      const ground = Math.max(heightAt(k.x, k.z), 0);
+      s.target.set(c.x * 0.35 + k.x * 0.65, Math.max(ground + 1.8, k.y * 0.8 + ground * 0.2), c.z * 0.35 + k.z * 0.65);
+      s.distance = 20 + Math.hypot(k.x - c.x, k.z - c.z) * 0.6;
+      s.height = 5 + (k.y - ground) * 0.5;
+      this.pace = 0.5;
+      this.focus.copy(k);
       return;
     }
     if (this.beat === 'ashore' || this.beat === 'wonder') {

@@ -11,6 +11,7 @@ type Action =
   | { kind: 'pickup'; t: number; onDone: () => void }
   | { kind: 'cheer'; t: number }
   | { kind: 'wave'; t: number }
+  | { kind: 'reach'; t: number }
   | { kind: 'push'; t: number };
 
 interface Goal {
@@ -201,6 +202,11 @@ export class Traveller {
     if (!this.action) this.action = { kind: 'wave', t: 0 };
   }
 
+  /** Both hands after something the wind has taken: the one gesture in the story that does not get what it wants. */
+  reach(): void {
+    this.action = { kind: 'reach', t: 0 };
+  }
+
   push(): void {
     this.action = { kind: 'push', t: 0 };
   }
@@ -387,6 +393,7 @@ export class Traveller {
       }
     } else if (a.kind === 'cheer' && a.t > 1.3) this.action = null;
     else if (a.kind === 'wave' && a.t > 1.8) this.action = null;
+    else if (a.kind === 'reach' && a.t > 4.2) this.action = null;
     else if (a.kind === 'push' && a.t > 2.4) this.action = null;
   }
 
@@ -437,6 +444,13 @@ export class Traveller {
       const up = Math.min(1, a.t * 4) * Math.min(1, (1.8 - a.t) * 4);
       armRX = -2.6 * up;
       armRZ = 0.3 + Math.sin(a.t * 12) * 0.35 * up;
+    } else if (a?.kind === 'reach') {
+      /** Straight out and then slowly down: the arms give up a long time after the rest of them does. */
+      const out = Math.min(1, a.t * 5) * (1 - THREE.MathUtils.smoothstep(a.t, 1.6, 4.2));
+      armLX = armRX = -2.45 * out;
+      armLZ = 0.4 * out;
+      armRZ = -0.4 * out;
+      bodyX = -0.22 * out;
     } else if (a?.kind === 'push') {
       const lean = Math.min(1, a.t * 2) * Math.min(1, (2.4 - a.t) * 2);
       bodyX = 0.75 * lean;

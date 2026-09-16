@@ -150,21 +150,28 @@ function meadowHeight(x: number, z: number): number {
   return h - smoothstep(0, 70, -inland) * 8;
 }
 
-/** The drowned village: mud banks and shallows, most of it just under the water it is sailed across. */
+/**
+ * The drowned village: mud banks well under the water it is sailed across. It is deep on purpose — the sea shader
+ * paints a sandy bed and caustics wherever it can see the bottom, and a drowned village over turquoise shallows
+ * reads as a holiday. The banks only come near enough the surface to ghost the water paler in a few places.
+ */
 function drownedHeight(x: number, z: number): number {
   const d = isleCoast(x, z, ISLES.drowned, 0.14, 31);
   const land = smoothstep(20, -30, d);
   const lumps = gfbm(x * 0.013, z * 0.013, 3, 32);
-  return land * (0.5 + lumps * 2.3) - 1.9 - smoothstep(0, 80, d) * 6;
+  return land * (0.5 + lumps * 2.3) - 6.5 - smoothstep(0, 80, d) * 2;
 }
 
-/** The dark wood: small, steep and close, the least room of any island. */
+/**
+ * The dark wood: small, steep and close, the least room of any island. Its coast shelves out a long way, because
+ * the first version came out of the sea as a cliff and a child in the dark could not get off the boat.
+ */
 function woodHeight(x: number, z: number): number {
   const c = ISLES.wood;
   const d = isleCoast(x, z, c, 0.2, 41);
-  const land = smoothstep(8, -18, d);
+  const land = smoothstep(16, -38, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
-  let h = land * 3.5 - 1.5;
+  let h = land * 2.6 - 1.5;
   h += land * land * (Math.max(0, 1 - r * r) * 22 + (gfbm(x * 0.03, z * 0.03, 3, 42) * 0.5 + 0.5) * 5);
   return h - smoothstep(0, 60, d) * 7;
 }
@@ -330,15 +337,15 @@ float hf_drowned(vec2 p) {
   float d = hf_isleCoast(p, c, r, 0.14, 31.0);
   float land = smoothstep(20.0, -30.0, d);
   float lumps = gfbm(p * 0.013, 3, 32.0);
-  return land * (0.5 + lumps * 2.3) - 1.9 - smoothstep(0.0, 80.0, d) * 6.0;
+  return land * (0.5 + lumps * 2.3) - 6.5 - smoothstep(0.0, 80.0, d) * 2.0;
 }
 float hf_wood(vec2 p) {
   vec2 c = vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0);
   vec2 r = vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.2, 41.0);
-  float land = smoothstep(8.0, -18.0, d);
+  float land = smoothstep(16.0, -38.0, d);
   float rr = length((p - c) / r);
-  float h = land * 3.5 - 1.5;
+  float h = land * 2.6 - 1.5;
   h += land * land * (max(0.0, 1.0 - rr * rr) * 22.0 + (gfbm(p * 0.03, 3, 42.0) * 0.5 + 0.5) * 5.0);
   return h - smoothstep(0.0, 60.0, d) * 7.0;
 }

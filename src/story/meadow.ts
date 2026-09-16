@@ -6,7 +6,7 @@ import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { cue } from './cues';
 
-type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /** The way inland, across the meadow to its far shore. */
@@ -33,6 +33,9 @@ const WAVE_REACH = 3600;
 const SHOWER = { gather: 10, fall: 30, clear: 16 };
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 16;
+/** How long the colt is left trying, and how often it has a go, before the child gives up and carries it on. */
+const TRY_FOR = 75;
+const TRY_EVERY = 5.5;
 
 /**
  * The meadow: the last warm afternoon of the year. The child steps ashore onto grey pasture and the player's first
@@ -64,7 +67,14 @@ export class MeadowChapter implements Chapter {
   private watchUntil = 0;
   private nextLook = 0;
   private crestDone = false;
+  private tryDone = false;
+  private cheeredFlight = false;
+  /** Where the grass is pressed flat while they sit in it, so the colt is not lost in a field taller than it is. */
+  trodden: THREE.Vector3 | null = null;
+  private nextTry = 0;
   private nextCall = 0;
+  private readonly onColt = new THREE.Vector3();
+  private readonly side = new THREE.Vector3();
   private readonly far = new THREE.Vector3(GATHERING.x, GATHERING.base + 24, GATHERING.z);
 
   constructor(private readonly cast: Cast) {
@@ -72,13 +82,12 @@ export class MeadowChapter implements Chapter {
     plane.homeRadius = 70;
     child.dismount();
     boat.beach(FAR_SHORE.x, FAR_SHORE.z, 0.2);
-    cast.life.regions.island.set(LANDING.x, LANDING.y, 70, 1);
     const up = mainlandCoastZ(LANDING.x) - 14;
     child.walkTo(LANDING.x - 2, up, false, () => this.to('waiting'), 0.8);
   }
 
   get scripted(): boolean {
-    return this.beat !== 'walk' && this.beat !== 'waiting';
+    return this.beat !== 'walk' && this.beat !== 'waiting' && this.beat !== 'try' && this.beat !== 'glide';
   }
 
   get done(): boolean {
@@ -132,6 +141,12 @@ export class MeadowChapter implements Chapter {
       case 'crest':
         this.updateCrest(time);
         break;
+      case 'try':
+        this.updateTry(time);
+        break;
+      case 'glide':
+        this.updateGlide();
+        break;
       case 'push':
         if (this.t > 0.9 && !boat.afloat) boat.launch();
         if (this.t > 2.3) {
@@ -173,10 +188,98 @@ export class MeadowChapter implements Chapter {
     cue('wave');
   }
 
+  /**
+   * The walk is long and the grass is over the colt's head, so it rides in the hood, where it is in every frame
+   * and can watch the plane go over. It only comes down where the camera comes down with it.
+   */
   private walkOn(): void {
+    const { child: c, crane } = this.cast;
+    crane.carry(c.hoodPoint(this.tmp), c.yaw, true);
+    crane.bind(0.06);
     this.to('walk');
     this.play = 'carry';
     this.throwAhead();
+  }
+
+  /**
+   * The beat the whole game turns on after the fall. The colt has just watched its family go up without it. Now it
+   * is set down in the grass in front of the child, faces the wind and tries, and cannot. The child sits down to
+   * watch, the plane stays in their hand, and there is nothing else on screen — so sooner or later the player
+   * holds the wind under it, and finds out that they are the reason it can fly. Nothing is asked and nothing is
+   * failed: if the player never does it, the child eventually gathers it up and walks on, and it will try again.
+   */
+  private updateTry(time: number): void {
+    const { child: c, crane } = this.cast;
+    if (crane.flying) {
+      this.to('glide');
+      return;
+    }
+    c.lookAt = crane.eye(this.onColt);
+    if (time > this.nextTry && !crane.carried) {
+      crane.tryToFly();
+      this.nextTry = time + TRY_EVERY;
+      /** They settle in to watch it, but only before it has ever managed it: after that they stay on their feet. */
+      if (this.t > TRY_EVERY * 1.5 && crane.flights === 0 && !c.sitting && !c.busy) c.sitDown();
+    }
+    if (this.t > TRY_FOR && !c.busy) {
+      if (c.sitting) {
+        c.standUp();
+        return;
+      }
+      this.walkTo(crane.position, () => {
+        this.gatherUp(() => {
+          crane.carry(c.hoodPoint(this.tmp), c.yaw, true);
+          this.trodden = null;
+          this.to('walk');
+          this.play = 'hold';
+          this.holdUntil = this.now + 1;
+        });
+      });
+    }
+  }
+
+  /**
+   * It is up. Everything else in the world can wait until it comes down — and when it does, the child goes to it,
+   * and the beat starts again, because a player who has just found out they can fly it will want to do it again.
+   */
+  private updateGlide(): void {
+    const { child: c, crane } = this.cast;
+    c.lookAt = crane.position;
+    if (crane.flying) {
+      if (c.sitting && !c.busy) c.standUp();
+      return;
+    }
+    if (c.busy || c.sitting) return;
+    if (crane.flights === 1 && !this.cheeredFlight) {
+      this.cheeredFlight = true;
+      c.cheer();
+      cue('delight');
+      crane.bind(0.2);
+      return;
+    }
+    if (Math.hypot(crane.position.x - c.position.x, crane.position.z - c.position.z) > 4) {
+      this.walkTo(crane.position, undefined);
+      return;
+    }
+    c.faceToward(crane.position.x, crane.position.z, 1);
+    this.to('try');
+    this.nextTry = this.now + 3.5;
+  }
+
+  private walkTo(at: THREE.Vector3, then: (() => void) | undefined): void {
+    this.cast.child.walkTo(at.x, at.z, true, then, 2.2);
+  }
+
+  /** Crouches, gathers the colt into the arms, and stands up again. */
+  private gatherUp(then: () => void): void {
+    const { child: c, crane } = this.cast;
+    c.faceToward(crane.position.x, crane.position.z, 1);
+    c.lookAt = crane.eye(this.onColt);
+    c.pickUp(() => {
+      crane.carry(c.armsPoint(this.tmp), c.yaw);
+      c.lookAt = null;
+      then();
+    });
   }
 
   private target(): THREE.Vector2 {
@@ -211,6 +314,28 @@ export class MeadowChapter implements Chapter {
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 30 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
+    if (this.cast.crane.flying) {
+      this.to('glide');
+      return;
+    }
+    if (this.crestDone && !this.tryDone && this.leg >= CREST_LEG + 1 && this.play === 'hold' && !c.busy) {
+      this.tryDone = true;
+      c.stop();
+      this.to('try');
+      this.nextTry = 1e9;
+      /** It comes out of the hood and is set down in front of them, and then it is on its own. */
+      /** Wide enough to take the camera as well as the two of them, or the near grass fills the whole frame. */
+      this.trodden = new THREE.Vector3(c.position.x + Math.sin(c.yaw) * 1.4, 12, c.position.z + Math.cos(c.yaw) * 1.4);
+      c.pickUp(() => {
+        const { crane } = this.cast;
+        crane.position.set(c.position.x + Math.sin(c.yaw) * 2.4, 0, c.position.z + Math.cos(c.yaw) * 2.4);
+        crane.yaw = c.yaw + Math.PI;
+        crane.follow();
+        c.faceToward(crane.position.x, crane.position.z, 1);
+        this.nextTry = this.now + 2.5;
+      });
+      return;
+    }
     if (!this.crestDone && this.leg >= CREST_LEG && this.play === 'hold' && !c.busy) {
       this.crestDone = true;
       this.to('crest');
@@ -284,9 +409,11 @@ export class MeadowChapter implements Chapter {
     this.to('toBoat');
     c.lookAt = null;
     c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
-      this.to('push');
-      c.faceToward(boat.position.x, boat.position.z, 1);
-      c.push();
+      this.gatherUp(() => {
+        this.to('push');
+        c.faceToward(boat.position.x, boat.position.z, 1);
+        c.push();
+      });
     }, 0.5);
   }
 
@@ -296,6 +423,35 @@ export class MeadowChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
+    if (this.beat === 'try' || this.beat === 'glide') {
+      /**
+       * Side on and low. Over the child's shoulder the colt is behind their back and under the grass; from here
+       * they are both in profile, with the colt clear against the sky the moment it leaves the ground.
+       */
+      const k = this.cast.crane.position;
+      /**
+       * Down in the grass, on the colt. While it is on the ground the camera stands off to one side so the child
+       * cannot hide it; as it climbs the camera swings in behind their shoulder, so the player ends up watching
+       * the sky with the child — the frame of the fall, turned the other way up.
+       */
+      const gap = Math.hypot(k.x - c.x, k.z - c.z);
+      const ground = Math.max(heightAt(k.x, k.z), 0);
+      const up = THREE.MathUtils.clamp((k.y - ground) / 3.5, 0, 1);
+      const toChild = gap > 0.5 ? Math.atan2(c.x - k.x, c.z - k.z) : this.cast.child.yaw + Math.PI;
+      const bearing = toChild + 1.15 * (1 - up);
+      s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+      s.target.set(k.x, k.y + 0.4, k.z);
+      /**
+       * The camera stays down at head height on the ground whatever the colt does, so that once it is up the
+       * frame is looking up at it with sky behind it. Hung a fixed distance above the colt instead, it follows
+       * the colt into the air and the background is always grass — which is the opposite of the point.
+       */
+      s.distance = 9.5 + gap * 0.35;
+      s.height = THREE.MathUtils.clamp(ground + 2.6 - k.y, -9, 2.6);
+      this.pace = 0.5;
+      this.focus.copy(k);
+      return;
+    }
     if (this.beat === 'crest') {
       const ground = Math.max(heightAt(c.x, c.z), 0);
       s.target.set(c.x * 0.72 + this.far.x * 0.28, ground + 4 + Math.min(this.t * 0.3, 2.6), c.z * 0.72 + this.far.z * 0.28);

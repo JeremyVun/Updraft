@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { params } from '../params';
 import { WINDOW, onWindowMove } from './window';
 
+/** North of this z the world is already living: the sea between the first island and the second. */
+export const LIVING_BEYOND = -150;
+
 const [sunAz, sunEl] = params.sun ?? [52, 13];
 
 function sunDirection(azDeg: number, elDeg: number): THREE.Vector3 {
@@ -68,6 +71,14 @@ export const atmo = {
     uLifeTex: { value: null as THREE.Texture | null },
     /** Still island centre (x, z), radius, and how fully it counts as restored. */
     uIslandLife: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** Land north of this z is already living: only the first island was ever grey. */
+    uLivingBeyond: { value: LIVING_BEYOND },
+    /** An island held back from that, waiting for its own green wave: centre (x, z) and radii, or radii 0. */
+    uWaiting: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** The light the player has made out of the embers: where it is (xyz) and how strong (w). */
+    uEmberLight: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** A patch of grass someone has pressed flat: centre (x, z), radius, and how flat, 0 to 1. */
+    uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
     uLifeWave: { value: new THREE.Vector4(0, 0, -1, 1) },
     uCloudTex: { value: null as THREE.Texture | null },
@@ -127,6 +138,10 @@ uniform sampler2D uGroundTex;
 uniform sampler2D uSurfaceTex;
 uniform sampler2D uLifeTex;
 uniform vec4 uIslandLife;
+uniform float uLivingBeyond;
+uniform vec4 uWaiting;
+uniform vec4 uTrodden;
+uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
@@ -149,17 +164,47 @@ vec4 groundAt(vec2 xz) {
   return vec4(normalize(g.xyz * 2.0 - 1.0), g.w);
 }
 
-/** How alive the land is, 0 (grey and still) to 1: the life field in the window, and regions the story has restored. */
+/**
+ * How alive the land is, 0 (grey and still) to 1: the life field in the window, and what the story has restored.
+ * Only the first island was ever grey, so everything further north is living before the child ever reaches it and
+ * nothing snaps into colour underfoot. One island can be held back from that, waiting for its own green wave.
+ */
 float regionLife(vec2 xz) {
   float island = length(xz - uIslandLife.xy) < uIslandLife.z ? uIslandLife.w : 0.0;
+  float ahead = xz.y < uLivingBeyond ? 1.0 : 0.0;
+  if (uWaiting.z > 0.0 && length((xz - uWaiting.xy) / uWaiting.zw) < 1.0) ahead = 0.0;
   float d = length(xz - uLifeWave.xy);
   float wave = uLifeWave.z < 0.0 ? 0.0 : clamp((uLifeWave.z - d) / uLifeWave.w, 0.0, 1.0);
-  return max(island, wave);
+  return max(max(island, ahead), wave);
 }
+/**
+ * How much of its height a blade keeps here. Grass this deep swallows anything small standing in it, so where the
+ * story needs a creature to be seen the ground it is on is pressed flat, the way a child sitting down flattens it.
+ */
+float troddenAt(vec2 xz) {
+  if (uTrodden.w <= 0.0) return 1.0;
+  vec2 d = xz - uTrodden.xy;
+  /** Warped by noise, or a pressed patch reads as a mown circle rather than somewhere somebody sat down. */
+  float r = length(d) / uTrodden.z * (0.78 + 0.5 * fbm(d * 0.22));
+  return 1.0 - uTrodden.w * 0.6 * (1.0 - smoothstep(0.1, 1.05, r));
+}
+
 float lifeAt(vec2 xz) {
   vec2 uv = domainUv(xz);
   float local = insideUv(uv) ? texture(uLifeTex, uv).r : 0.0;
   return max(local, regionLife(xz));
+}
+
+/**
+ * The one light in the dark wood, and the player made it. Embers fanned bright enough show what is near them, so
+ * the way through and the thing hiding off it are found by putting light on them and by nothing else.
+ */
+vec3 emberLight(vec3 world, vec3 N) {
+  if (uEmberLight.w <= 0.0) return vec3(0.0);
+  vec3 d = uEmberLight.xyz - world;
+  float dist = length(d);
+  float fall = uEmberLight.w / (1.0 + dist * dist * 0.055);
+  return vec3(1.0, 0.54, 0.2) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.55 + 0.45, 0.0, 1.0);
 }
 
 /** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */

@@ -20,6 +20,7 @@ void main() {
 
 const PAPER_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uSodden;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vPaper;
@@ -27,12 +28,14 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 alb = vec3(0.96, 0.93, 0.87);
+  /** Wet paper: dark, blotched and heavy, and it stops glowing when the light is behind it. */
+  alb = mix(alb, vec3(0.19, 0.185, 0.175) * (0.75 + 0.5 * vnoise(vPaper * 7.0)), uSodden);
   float ruled = 1.0 - smoothstep(0.0, 0.05, abs(fract(vPaper.y * 9.0) - 0.5) - 0.42);
   alb = mix(alb, vec3(0.55, 0.7, 0.95), ruled * 0.3);
   float margin = 1.0 - smoothstep(0.0, 0.025, abs(vPaper.x - 0.72));
   alb = mix(alb, vec3(0.95, 0.45, 0.45), margin * 0.35);
   float ndl = dot(N, uSunDir);
-  float through = max(-ndl, 0.0) * 0.45;
+  float through = max(-ndl, 0.0) * 0.45 * (1.0 - uSodden);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through)) + uSunColor * rim * 0.22;
   col = applyFog(col, vWorld);
@@ -82,6 +85,8 @@ export class Glider {
   restTime = 0;
   /** Set once it has been let go at the end: it climbs away along this heading and never comes back. */
   departing: THREE.Vector3 | null = null;
+  /** How wet it is, 0 dry to 1 sodden: the storm soaks it and the player's wind dries it out again. */
+  readonly soggy = { value: 0 };
   /** It banks around and comes home once it strays this far from `home`. */
   readonly home = new THREE.Vector3(-6, 0, -14);
   homeRadius = 50;
@@ -113,7 +118,7 @@ export class Glider {
     const mat = new THREE.ShaderMaterial({
       vertexShader: PAPER_VERT,
       fragmentShader: PAPER_FRAG,
-      uniforms: { ...atmo.uniforms },
+      uniforms: { ...atmo.uniforms, uSodden: this.soggy },
       side: THREE.DoubleSide,
     });
     this.body = new THREE.Mesh(paperPlane(), mat);

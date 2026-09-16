@@ -3,6 +3,7 @@ import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Crane } from '../creatures/crane';
+import type { Embers } from '../fx/embers';
 import type { CraneFlock } from '../creatures/flock';
 import type { Boat } from '../traveller/boat';
 import type { SeaLife } from '../fx/sealife';
@@ -28,6 +29,8 @@ export interface Cast {
   /** The crane colt that cannot keep up with its flock, and the flock that goes on without it. */
   crane: Crane;
   flock: CraneFlock;
+  /** The embers in the leaf litter of the dark wood: the only light the player can make there. */
+  embers: Embers;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }
@@ -56,6 +59,12 @@ export interface Chapter {
   readonly scripted?: boolean;
   /** How strongly a rainbow shows opposite the sun, 0..1. */
   readonly rainbow?: number;
+  /** The winter storm, 0 calm to 1: how hard the trees and the village are being worked over. */
+  readonly storm?: number;
+  /** A patch of grass to press flat so something small in it can be seen: centre (x, z) and radius. */
+  readonly trodden?: THREE.Vector3 | null;
+  /** How awake the embers in the leaf litter are, 0 none to 1: the only light in the dark wood. */
+  readonly embers?: number;
   /** Where the gulls should circle, or null to leave them to their own coast. */
   readonly escort?: THREE.Vector3 | null;
   update(dt: number, time: number): void;

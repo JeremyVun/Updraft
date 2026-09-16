@@ -4,6 +4,20 @@ import { heightAt } from '../world/island';
 import { CREATURE_GLSL } from './shading';
 import { blob, merge, mirrored, type BlobSpec, type V3 } from './shapes';
 import { ease, easeAngle, wrapAngle } from './motion';
+import type { WindSample } from '../wind/field';
+
+/** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
+const LIFT_TO_HOPE = 0.18;
+const LIFT_TO_FLY = 0.5;
+/** It never climbs further above the ground than this, so a glide can never take it out of the frame. */
+const CEILING = 7.5;
+/** Nothing it can do keeps it up longer than this. */
+const GLIDE_FOR = 9;
+/**
+ * Built at life size, then nudged up a little so it reads from the camera the game is played at. Only a little:
+ * half lost in the grass is how a fledgling that cannot fly is supposed to look.
+ */
+const SIZE = 1.4;
 
 const BONES = 16;
 const [ROOT, BODY, NECK_A, NECK_B, NECK_C, HEAD, WING_L, HAND_L, WING_R, HAND_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R] =
@@ -88,7 +102,8 @@ void main() {
     thin = 0.0;
   }
   vec3 col = shadeCreature(alb, N, vWorld, 0.82, fuzz, thin, uAir);
-  if (m == ${EYE}) col += uSunColor * catchlight(N, vWorld) * 0.9;
+  /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */
+  if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * catchlight(N, vWorld);
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -294,7 +309,7 @@ function craneGeometry(): THREE.BufferGeometry {
   return merge(specs.map((spec) => blob(spec)));
 }
 
-export type CraneState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding';
+export type CraneState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding' | 'leaving';
 
 /**
  * The crane colt: too young to keep up with its flock, carried and walked and finally flown. The only other
@@ -331,6 +346,17 @@ export class Crane {
   private readonly fallDrift = new THREE.Vector3();
   private roll = 0;
   private slew = 0;
+  /** Vertical speed while it is in the air on the player's updraft. */
+  private air = 0;
+  private glideT = 0;
+  /** How much it is asking to go: an updraft near it makes it look up and half-open its wings. */
+  private hope = 0;
+  private hopT = 0;
+  private landedAt = 0;
+  /** How many times the player has put it in the air. It has never flown before the first. */
+  flights = 0;
+  private leaveYaw = 0;
+  private climb = 0;
 
   constructor() {
     const node = (parent: THREE.Object3D, x: number, y: number, z: number) => {
@@ -367,7 +393,7 @@ export class Crane {
     for (let i = 0; i < BONES; i++) this.bones.push(new THREE.Matrix4());
 
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uBones: { value: this.bones }, uNudge: { value: 1.5 }, uAir: { value: 0 } },
+      uniforms: { ...atmo.uniforms, uBones: { value: this.bones }, uNudge: { value: 2.4 }, uAir: { value: 0 } },
       vertexShader: VERT,
       fragmentShader: FRAG,
     });
@@ -417,6 +443,38 @@ export class Crane {
     return this.state === 'downed' || this.state === 'fallen';
   }
 
+  /** Up on the player's wind. */
+  get flying(): boolean {
+    return this.state === 'gliding';
+  }
+
+  /** How near it is to going: 0 nothing under it, 1 about to leave the ground. Its wings show this. */
+  get hoping(): number {
+    return this.hope;
+  }
+
+  /**
+   * Let go for good. Once the player's wind has it up, it stops being carried by them and starts flying: it climbs
+   * away on its own and it does not come back. Nothing else in the game is allowed to leave.
+   */
+  leave(bearing: number): void {
+    if (this.state === 'leaving') return;
+    this.state = 'leaving';
+    this.leaveYaw = bearing;
+    this.climb = 0;
+    this.flights++;
+  }
+
+  /** On its way and not coming back. */
+  get gone(): boolean {
+    return this.state === 'leaving';
+  }
+
+  /** A few hard flaps and hops on the spot: it is trying to get up by itself, and it cannot. */
+  tryToFly(): void {
+    if (this.state === 'following' || this.state === 'fallen') this.hopT = 2.4;
+  }
+
   /** Riding with the child, in the arms or in the hood. */
   get carried(): boolean {
     return this.state === 'carried' || this.state === 'hooded';
@@ -439,6 +497,16 @@ export class Crane {
     this.visible = true;
   }
 
+  /** Gone to ground and staying there: hunched as small as it can make itself, in the dark, waiting to be found. */
+  cower(): void {
+    this.state = 'fallen';
+    this.settle = 1;
+    this.flap = 0;
+    this.effort = 0;
+    this.hopT = 0;
+    this.visible = true;
+  }
+
   /** Set down to walk at the child's heel. */
   follow(): void {
     if (this.state !== 'following') this.settle = 0.6;
@@ -454,22 +522,99 @@ export class Crane {
     this.lookAt = target;
   }
 
-  update(dt: number, time: number, child: THREE.Vector3, lift: number): void {
+  update(dt: number, time: number, child: THREE.Vector3, wind: WindSample): void {
     this.time = time;
     this.mesh.visible = this.visible;
     if (!this.visible) return;
 
-    if (this.state === 'following') this.walk(dt, child);
+    const afoot = this.state === 'following' || this.state === 'fallen';
+    /** It only ever goes up on wind that is actually under it, so the player learns where to hold the pointer. */
+    const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
+    this.hope = ease(this.hope, afoot ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY) : 0, 2.5, dt);
+
+    if (this.state === 'leaving') this.climbOut(dt);
+    else if (this.state === 'gliding') this.soar(dt, wind);
+    else if (this.state === 'following') this.walk(dt, child);
     else if (this.state === 'fallen') this.settle = Math.min(1, this.settle + dt * 0.5);
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
 
-    /** The player's updraft gets under it: it half-flies, and loves it more each time. */
-    this.glide = ease(this.glide, this.state === 'following' || this.state === 'fallen' ? lift : 0, 3, dt);
-    if (this.glide > 0.35 && this.state === 'fallen') this.state = 'following';
+    /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
+    if (afoot && lift > LIFT_TO_FLY && this.hopT <= 0 && time - this.landedAt > 1.6) this.takeOff();
+
+    this.glide = ease(this.glide, this.state === 'gliding' ? 1 : this.hope * 0.5, 3, dt);
     this.mat.uniforms.uAir.value =
-      this.state === 'falling' ? THREE.MathUtils.clamp((this.position.y - this.fallTo.y) / 6, 0, 1) : 0;
+      this.state === 'falling'
+        ? THREE.MathUtils.clamp((this.position.y - this.fallTo.y) / 6, 0, 1)
+        : this.state === 'gliding'
+          ? THREE.MathUtils.clamp((this.position.y - Math.max(heightAt(this.position.x, this.position.z), 0)) / 4, 0, 1)
+          : 0;
     this.pose(dt);
+  }
+
+  /** Climbing away north, finding its own strength as it goes, until the night has it. */
+  private climbOut(dt: number): void {
+    this.climb = Math.min(1, this.climb + dt * 0.3);
+    this.yaw = easeAngle(this.yaw, this.leaveYaw, 0.7, dt);
+    const speed = 3.4 + this.climb * 7.5;
+    this.position.x += Math.sin(this.yaw) * speed * dt;
+    this.position.z += Math.cos(this.yaw) * speed * dt;
+    this.position.y += (3.1 - this.climb * 1.1) * dt;
+    this.flap = 1;
+    this.effort = 0.45 + 0.3 * Math.max(0, Math.sin(this.flapPhase));
+    this.roll = Math.sin(this.time * 0.6) * 0.18;
+    if (this.position.y > 150) this.visible = false;
+  }
+
+  private takeOff(): void {
+    this.state = 'gliding';
+    this.glideT = 0;
+    this.air = 2.4;
+    this.settle = 0;
+    this.flights++;
+  }
+
+  /**
+   * The colt on the wing, for as long as the player can hold it there. It is not flying — it is being flown, and
+   * the moment the updraft stops it sinks. This is where a player finds out they are the reason it can go home.
+   */
+  private soar(dt: number, wind: WindSample): void {
+    this.glideT += dt;
+    const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
+    const room = 1 - THREE.MathUtils.smoothstep(this.position.y - ground, CEILING - 2, CEILING);
+    const fading = 1 - THREE.MathUtils.smoothstep(this.glideT, GLIDE_FOR - 2.5, GLIDE_FOR);
+    this.air += (wind.lift * 9 * room * fading - 3.4) * dt;
+    this.air = THREE.MathUtils.clamp(this.air, -3.2, 3.6);
+    this.position.y += this.air * dt;
+
+    /** It cannot steer: it goes where the air goes, sliding downwind and turning to face its own drift. */
+    const drift = 0.22 + this.glide * 0.3;
+    let vx = wind.x * drift + Math.sin(this.yaw) * 1.1;
+    let vz = wind.z * drift + Math.cos(this.yaw) * 1.1;
+    /** Capped, so a hard gust cannot carry it out of the frame and lose the player the only thing they care about. */
+    const speed = Math.hypot(vx, vz);
+    if (speed > 2.6) {
+      vx *= 2.6 / speed;
+      vz *= 2.6 / speed;
+    }
+    this.position.x += vx * dt;
+    this.position.z += vz * dt;
+    if (Math.hypot(wind.x, wind.z) > 0.6) {
+      this.yaw = easeAngle(this.yaw, Math.atan2(wind.x, wind.z), 1.1, dt);
+    }
+    this.roll = ease(this.roll, Math.sin(this.time * 0.9) * 0.22, 2, dt);
+    this.flap = ease(this.flap, this.air > 0.4 ? 0.85 : 0.2, 3, dt);
+    this.effort = Math.max(0, this.air) * 0.2;
+
+    if (this.position.y <= ground) {
+      this.position.y = ground;
+      this.state = 'following';
+      this.landedAt = this.time;
+      this.roll = 0;
+      this.effort = 0;
+      /** It goes up because of the player and comes down safe because of the player, and it knows. */
+      this.bind(0.12);
+    }
   }
 
   /** The descent: it loses height fast at first, then flattens out and half-crashes into the grass. */
@@ -522,6 +667,17 @@ export class Crane {
   }
 
   private walk(dt: number, child: THREE.Vector3): void {
+    if (this.hopT > 0) {
+      /** Everything it has, straight up, and it gets a foot off the ground: the reason the player tries at all. */
+      this.hopT -= dt;
+      const burst = Math.max(0, Math.sin((2.4 - this.hopT) * Math.PI * 1.7));
+      this.effort = burst;
+      this.flap = Math.max(this.flap, burst);
+      this.settle = 0;
+      this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0) + burst * burst * 0.3;
+      return;
+    }
+    this.effort = 0;
     const keep = 2.6 - this.bond * 1.4;
     const dx = child.x - this.position.x;
     const dz = child.z - this.position.z;
@@ -555,13 +711,14 @@ export class Crane {
     const n = this.nodes;
     const lerp = THREE.MathUtils.lerp;
     const clamp = THREE.MathUtils.clamp;
-    const flying = this.state === 'falling';
+    const flying = this.state === 'falling' || this.state === 'gliding' || this.state === 'leaving';
     this.root.position.copy(this.position);
+    this.root.scale.setScalar(SIZE);
     this.root.rotation.order = 'YXZ';
     this.root.rotation.set(flying ? -0.3 + this.effort * 0.85 : 0, this.yaw, this.roll);
 
     const held = this.carried;
-    const sit = held ? 1 : this.grounded ? this.settle : 0;
+    const sit = held || flying ? (held ? 1 : 0) : this.grounded ? this.settle : 0;
     const afoot = flying || held ? 0 : 1 - this.settle;
 
     const bob = Math.sin(this.stride * 2) * 0.012 * afoot;
@@ -574,7 +731,7 @@ export class Crane {
     n[BODY].rotation.z = Math.sin(this.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, this.effort);
 
     /** The neck is the whole character: folded back over the shoulders, the standing S, or stretched out. */
-    const tall = clamp((this.lookAt ? 0.6 : 0) + this.effort + (held ? 0.5 : 0) + this.glide * 0.4, 0, 1);
+    const tall = clamp((this.lookAt ? 0.6 : 0) + this.effort + (held ? 0.5 : 0) + this.glide * 0.4 + this.hope * 0.6, 0, 1);
     const curl = sit * (1 - tall * 0.75);
     const reach = flying ? 1 : clamp(this.flap * 0.7, 0, 1);
     const sway = Math.sin(t * 1.05) * 0.022 + Math.sin(this.stride * 2 + 0.7) * 0.028 * afoot;
@@ -606,7 +763,7 @@ export class Crane {
 
     this.flapPhase += dt * (6 + this.glide * 4 + this.effort * 9 + (flying ? 4 : 0));
     /** Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late. */
-    const spread = clamp(this.flap * 0.3 + this.glide + this.effort * 1.3 + (flying ? 1 : 0), 0, 1);
+    const spread = clamp(this.flap * 0.3 + this.glide + this.effort * 1.3 + this.hope * 0.55 + (flying ? 1 : 0), 0, 1);
     const power = spread * (1 - this.glide * 0.75);
     const beat = Math.sin(this.flapPhase) * power;
     const lag = Math.sin(this.flapPhase - 0.75) * power;
@@ -640,8 +797,8 @@ export class Crane {
       th = lerp(th, 0.7, this.glide);
       sh = lerp(sh, 0.5, this.glide);
       ft = lerp(ft, 0.9, this.glide);
-      if (flying) {
-        /** Legs trailing, neck out straight: everything it has, and still going down. */
+      if (this.state === 'falling' || this.state === 'leaving') {
+        /** Legs trailing, neck out straight: everything it has. */
         th = 1.35;
         sh = 0.28;
         ft = 1.5;

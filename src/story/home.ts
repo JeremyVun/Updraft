@@ -1,12 +1,32 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { ISLES, LAST_HILL } from '../world/heightfield';
+import { LAST_HILL } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import { MOON, sunDirection } from '../world/palette';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
-type Beat = 'ashore' | 'climb' | 'summit' | 'unfold' | 'gaze' | 'fold' | 'release' | 'nightfall' | 'home' | 'inside';
+type Beat =
+  | 'ashore'
+  | 'climb'
+  | 'summit'
+  | 'setDown'
+  | 'flying'
+  | 'gone'
+  | 'unfold'
+  | 'gaze'
+  | 'fold'
+  | 'release'
+  | 'nightfall'
+  | 'home'
+  | 'inside';
+
+/** North, where the flock went and where the colt has been trying to get to since the first island. */
+const NORTH = Math.PI;
+/** The flock comes over of its own accord after this long, calling, to tell the player what is being asked of them. */
+const PROMPT_AT = 55;
+/** And if the player still never lifts it, the night wind does, because nothing in this game is ever failed. */
+const RELENT_AT = 130;
 
 /** The crest of the last hill, where the ground falls away and the cottage comes into view. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
@@ -38,19 +58,27 @@ export class HomeChapter implements Chapter {
   private readonly fwd = new THREE.Vector3();
   private readonly eyeAt = new THREE.Vector3();
   private readonly moon = sunDirection(MOON.az, MOON.el);
+  private readonly side = new THREE.Vector3();
+  private readonly onColt = new THREE.Vector3();
+  trodden: THREE.Vector3 | null = null;
+  hush = 0;
+  private nextCall = 0;
+  private flockCalled = false;
 
   constructor(private readonly cast: Cast) {
     const { child, plane } = cast;
-    cast.life.regions.island.set(ISLES.home.x, ISLES.home.z, 230, 1);
     plane.homeRadius = 70;
     child.dismount();
     const from = child.position;
     child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
   }
 
-  /** The ending is watched, not played: only the updraft that sends the plane off answers the player. */
+  /**
+   * The ending is watched, not played, with two exceptions — and they are the two that matter. The player puts the
+   * colt into the air for the last time, and the player sends the paper plane away.
+   */
   get scripted(): boolean {
-    return this.beat !== 'release';
+    return this.beat !== 'release' && this.beat !== 'flying' && this.beat !== 'setDown';
   }
 
   get done(): boolean {
@@ -97,8 +125,72 @@ export class HomeChapter implements Chapter {
       this.updateEnding(dt);
     }
     this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    if (this.beat !== 'setDown' && this.beat !== 'flying') this.hush += (0 - this.hush) * (1 - Math.exp(-dt * 0.5));
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
+  }
+
+  /** They stand it in the grass facing north, and step back off it, and that is all they can do for it. */
+  private setDown(): void {
+    const { child: c, crane } = this.cast;
+    this.to('setDown');
+    /** The last of the light: it goes while the sun is still going, and the night comes on after it. */
+    this.duskTarget = 1.15;
+    c.standUp();
+    const x = c.position.x + Math.sin(c.yaw) * 2.2;
+    const z = c.position.z + Math.cos(c.yaw) * 2.2;
+    this.trodden = new THREE.Vector3(x, 12, z);
+    c.lookAt = crane.eye(this.onColt);
+    c.pickUp(() => {
+      crane.position.set(x, Math.max(heightAt(x, z), 0), z);
+      crane.yaw = NORTH;
+      crane.follow();
+      c.faceToward(x, z, 1);
+      this.to('flying');
+      this.nextCall = this.now + 3;
+    });
+  }
+
+  /**
+   * The last thing the player does, and the thing the whole journey has been teaching them to do. It calls north
+   * and nothing answers, the way nothing answered at the crest. Then the player raises the wind under it, and this
+   * time it does not come down — and out of the dark its family comes down for it.
+   */
+  private updateFlight(dt: number): void {
+    const { child: c, crane, flock } = this.cast;
+    c.lookAt = crane.gone || crane.flying ? crane.position : crane.eye(this.onColt);
+    this.hush += ((crane.gone ? 0 : 0.7) - this.hush) * (1 - Math.exp(-dt * 0.8));
+    if (this.beat !== 'flying') return;
+
+    if (!crane.gone && this.now > this.nextCall) {
+      cue('calling');
+      this.nextCall = this.now + 5.5 + Math.random() * 2;
+    }
+    /** They come over calling, whether or not the player has worked it out: an answer, and a nudge. */
+    if (!this.flockCalled && this.t > PROMPT_AT) {
+      this.flockCalled = true;
+      flock.pass(c.position.x, c.position.z, c.position.y + 38, NORTH, 13, 190);
+      cue('skein');
+    }
+    const ground = Math.max(heightAt(crane.position.x, crane.position.z), 0);
+    const up = crane.position.y - ground;
+    if (crane.flying && up > 4.5) this.away();
+    else if (this.t > RELENT_AT && !crane.gone) this.away();
+  }
+
+  /** It goes. The skein comes down for it out of the night and takes it in, and they go north together. */
+  private away(): void {
+    const { child: c, crane, flock } = this.cast;
+    if (crane.gone) return;
+    crane.leave(NORTH);
+    if (!this.flockCalled) {
+      this.flockCalled = true;
+      cue('skein');
+    }
+    flock.pass(c.position.x, c.position.z, Math.max(crane.position.y + 20, c.position.y + 34), NORTH, 13, 150);
+    cue('calling');
+    this.to('gone');
+    c.cheer();
   }
 
   private forward(): THREE.Vector3 {
@@ -115,7 +207,14 @@ export class HomeChapter implements Chapter {
 
     if (this.beat === 'summit') {
       c.lookAt = this.sky;
-      if (c.sitting && this.t > 3.5) {
+      if (c.sitting && this.t > 4.5 && !c.busy) this.setDown();
+    } else if (this.beat === 'setDown' || this.beat === 'flying') {
+      this.updateFlight(dt);
+    } else if (this.beat === 'gone') {
+      c.lookAt = this.cast.flock.head;
+      if (this.t > 13 && !c.busy) {
+        c.sitDown();
+        c.faceToward(faceX, faceZ, 1);
         this.to('unfold');
         cue('unfold');
       }
@@ -187,6 +286,41 @@ export class HomeChapter implements Chapter {
       s.eye = this.eyeAt.set(c.x - fwd.x * 4 - fwd.z * 0.45, c.y + 4.2, c.z - fwd.z * 4 + fwd.x * 0.45);
       s.target.set(cot.x, cot.y + 6, cot.z);
       this.pace = 0.6;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'setDown' || this.beat === 'flying') {
+      /** The same frame as the meadow and the same frame as the fall: over their shoulder, looking up past them. */
+      const k = this.cast.crane.position;
+      const ground = Math.max(heightAt(k.x, k.z), 0);
+      const gap = Math.hypot(k.x - c.x, k.z - c.z);
+      const rise = THREE.MathUtils.clamp((k.y - ground) / 4, 0, 1);
+      const toChild = gap > 0.5 ? Math.atan2(c.x - k.x, c.z - k.z) : this.cast.child.yaw + Math.PI;
+      s.from = this.side.set(Math.sin(toChild + 1.1 * (1 - rise)), 0, Math.cos(toChild + 1.1 * (1 - rise)));
+      s.target.set(k.x, k.y + 0.4, k.z);
+      /**
+       * The camera stays down at head height on the ground whatever the colt does, so that once it is up the
+       * frame is looking up at it with sky behind it. Hung a fixed distance above the colt instead, it follows
+       * the colt into the air and the background is always grass — which is the opposite of the point.
+       */
+      s.distance = 14 + gap * 0.4;
+      s.height = THREE.MathUtils.clamp(ground + 2.8 - k.y, -9, 2.8);
+      this.pace = 0.45;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'gone') {
+      /**
+       * Anchored on the child for good now. What matters here is not where the colt has got to but the face of the
+       * person who let it go, so the camera stays behind them and only tilts up after it.
+       */
+      const k = this.cast.crane.position;
+      const toColt = Math.atan2(k.x - c.x, k.z - c.z);
+      s.from = this.side.set(-Math.sin(toColt), 0, -Math.cos(toColt));
+      s.target.set(c.x, c.y + 2.2 + Math.min(15, Math.max(0, k.y - c.y) * 0.55), c.z);
+      s.distance = 17;
+      s.height = 3.5;
+      this.pace = 0.4;
       this.focus.copy(c);
       return;
     }

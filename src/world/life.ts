@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
 import { Readback } from '../gl/readback';
-import { atmo } from './atmosphere';
+import { LIVING_BEYOND, atmo } from './atmosphere';
+import { ISLES } from './heightfield';
 import { WINDOW, onWindowMove } from './window';
 
 const RES = 256;
@@ -51,12 +52,15 @@ export interface LifeRegions {
   island: THREE.Vector4;
   /** Origin (x, z), current radius and softness of the green wave rolling over the mainland. */
   wave: THREE.Vector4;
+  /** The one island held back from the living world until its wave rolls: centre (x, z) and radii. */
+  waiting: THREE.Vector4;
 }
 
 export class LifeField {
   readonly regions: LifeRegions = {
     island: new THREE.Vector4(-6, -14, 78, 0),
     wave: new THREE.Vector4(0, -700, -1, 90),
+    waiting: atmo.uniforms.uWaiting.value,
   };
   private readonly gpu: GpuRunner;
   private readonly life = new PingPong(RES, RES, THREE.HalfFloatType, THREE.LinearFilter);
@@ -89,6 +93,8 @@ export class LifeField {
     atmo.uniforms.uLifeTex.value = this.life.texture;
     atmo.uniforms.uIslandLife.value = this.regions.island;
     atmo.uniforms.uLifeWave.value = this.regions.wave;
+    /** The meadow is the one island that waits: its inland stays grey until the player's wave rolls over it. */
+    this.regions.waiting.set(ISLES.meadow.x, ISLES.meadow.z, ISLES.meadow.rx - 34, ISLES.meadow.rz - 34);
     onWindowMove((dx, dz) => {
       this.shiftMat.uniforms.uSrc.value = this.life.texture;
       this.shiftMat.uniforms.uOffset.value.set(dx / WINDOW.size, dz / WINDOW.size);
@@ -139,12 +145,16 @@ export class LifeField {
     return n ? sum / n : 0;
   }
 
+  /** Mirrors `regionLife` in `ATMO_GLSL`; keep the two in step. */
   private regionLife(x: number, z: number): number {
     const is = this.regions.island;
     const island = Math.hypot(x - is.x, z - is.y) < is.z ? is.w : 0;
+    const wt = this.regions.waiting;
+    const held = wt.z > 0 && Math.hypot((x - wt.x) / wt.z, (z - wt.y) / wt.w) < 1;
+    const ahead = z < LIVING_BEYOND && !held ? 1 : 0;
     const wv = this.regions.wave;
     const d = Math.hypot(x - wv.x, z - wv.y);
     const wave = wv.z < 0 ? 0 : Math.min(1, Math.max(0, (wv.z - d) / wv.w));
-    return Math.max(island, wave);
+    return Math.max(Math.max(island, ahead), wave);
   }
 }

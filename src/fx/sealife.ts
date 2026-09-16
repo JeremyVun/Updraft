@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { WindField } from '../wind/field';
 import { REFLECTION_LAYER } from '../world/water/reflection';
+import { Dolphins } from './sealife/dolphin';
 import { Fish } from './sealife/fish';
 import { Marks } from './sealife/marks';
 import { Spray } from './sealife/spray';
@@ -16,6 +17,7 @@ export class SeaLife {
   private readonly slicks = new Marks();
   private readonly wake: WhaleWake;
   private readonly fish: Fish;
+  private readonly pod = new Dolphins();
   private readonly seen = new THREE.Vector3();
 
   constructor(wind: WindField, camera: THREE.Camera) {
@@ -24,7 +26,7 @@ export class SeaLife {
     this.fish = new Fish(camera, this.spray, this.foam);
     this.slicks.mesh.renderOrder = 2;
     this.foam.mesh.renderOrder = 3;
-    this.objects = [this.body.mesh, this.body.ghost, this.fish.mesh, this.slicks.mesh, this.foam.mesh, this.spray.mesh];
+    this.objects = [this.body.mesh, this.body.ghost, this.fish.mesh, this.slicks.mesh, this.foam.mesh, this.spray.mesh, ...this.pod.objects];
     for (const o of [this.body.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
   }
 
@@ -44,6 +46,11 @@ export class SeaLife {
     return this.seen;
   }
 
+  /** Keeps a pod of dolphins running with a boat at `near` on bearing `heading`; null sends them away. */
+  dolphinsWith(near: THREE.Vector3 | null, heading: number): void {
+    this.pod.run(near, heading);
+  }
+
   /** How often fish leap around `near` (0 none .. 1 lively); the story sets this each frame. */
   fishNear(near: THREE.Vector3 | null, liveliness: number): void {
     this.fish.setNear(near, liveliness);
@@ -55,6 +62,7 @@ export class SeaLife {
     this.foam.update(time);
     this.slicks.update(time);
     this.fish.update(dt, time);
+    this.pod.update(dt, time);
     this.spray.update(dt);
   }
 }

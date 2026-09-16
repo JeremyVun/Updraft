@@ -26,9 +26,17 @@ export interface CrossingOpts {
   rainbow?: boolean;
   /** When the whale comes up ahead, or nothing for a crossing without one. */
   whaleAt?: number | null;
+  /** How often it comes up again after that, for a crossing long enough to want a second one. */
+  whaleEvery?: number;
+  /** A pod runs with the boat the whole way. */
+  dolphins?: boolean;
   /** Haze thick enough to hide where they are going, 0 to 1. */
   haze?: number;
   dusk?: number;
+  /** Where the time of day ends up, if this crossing is long enough to change it: the last one ends the night. */
+  duskTo?: number;
+  /** The winter storm, 0 calm to 1: the short hop into the wood is sailed through the worst of it. */
+  storm?: number;
 }
 
 /**
@@ -40,8 +48,10 @@ export class CrossingChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   pace = 0.4;
-  readonly dusk: number;
+  dusk: number;
   readonly haze: number;
+  readonly storm: number;
+  shower: number;
   rainbow = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 6.5, carry: true };
   readonly focus = new THREE.Vector3();
@@ -51,6 +61,11 @@ export class CrossingChapter implements Chapter {
   private readonly farewellFor: number;
   private readonly wantsRainbow: boolean;
   private readonly whaleAt: number | null;
+  private readonly whaleEvery: number;
+  private readonly wantsDolphins: boolean;
+  private readonly duskFrom: number;
+  private readonly duskTo: number;
+  private nextWhale = 0;
   private readonly seat = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3();
@@ -77,8 +92,15 @@ export class CrossingChapter implements Chapter {
     this.farewellFor = this.lookBack ? (opts.farewell ?? 30) : 0;
     this.wantsRainbow = opts.rainbow ?? false;
     this.whaleAt = opts.whaleAt ?? null;
+    this.whaleEvery = opts.whaleEvery ?? 0;
+    this.wantsDolphins = opts.dolphins ?? false;
     this.haze = opts.haze ?? 0;
-    this.dusk = opts.dusk ?? 0;
+    this.duskFrom = opts.dusk ?? 0;
+    this.duskTo = opts.duskTo ?? this.duskFrom;
+    this.dusk = this.duskFrom;
+    this.storm = opts.storm ?? 0;
+    this.shower = this.storm > 0 ? Math.max(0, this.storm - 0.2) * 1.25 : 0;
+    this.nextWhale = this.whaleAt ?? 0;
     cast.boat.steerFor = this.route[0];
     cast.boat.canGround = this.route.length === 1;
     cast.boat.grounded = false;
@@ -135,14 +157,21 @@ export class CrossingChapter implements Chapter {
       }
     }
 
-    if (this.whaleAt !== null && !this.whaleCalled && this.time > this.whaleAt) {
+    if (this.whaleAt !== null && this.time > this.nextWhale && (!this.whaleCalled || this.whaleEvery > 0)) {
       this.whaleCalled = true;
+      this.nextWhale = this.whaleEvery > 0 ? this.time + this.whaleEvery : 1e9;
       const fx0 = Math.sin(boat.yaw);
       const fz0 = Math.cos(boat.yaw);
-      this.spot.set(boat.position.x + fx0 * 58 - fz0 * 17, 0, boat.position.z + fz0 * 58 + fx0 * 17);
-      sealife.surfaceWhale(this.spot, boat.yaw - 0.3);
+      const side = this.whaleEvery > 0 && Math.random() < 0.5 ? -1 : 1;
+      this.spot.set(boat.position.x + fx0 * 58 - fz0 * 17 * side, 0, boat.position.z + fz0 * 58 + fx0 * 17 * side);
+      sealife.surfaceWhale(this.spot, boat.yaw - 0.3 * side);
     }
     sealife.fishNear(boat.position, farewell ? 0.25 : 1);
+    sealife.dolphinsWith(this.wantsDolphins ? boat.position : null, boat.yaw);
+    /** The night ends somewhere out here, by degrees, with nobody watching for it. */
+    if (this.duskTo !== this.duskFrom) {
+      this.dusk = THREE.MathUtils.lerp(this.duskFrom, this.duskTo, this.progress());
+    }
     const whale = sealife.whale;
     if (whale && !farewell) child.lookAt = whale;
     this.watching = whale && !farewell ? Math.min(1, this.watching + dt * 0.5) : Math.max(0, this.watching - dt * 0.5);
@@ -151,6 +180,18 @@ export class CrossingChapter implements Chapter {
     this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? 0.3 : 0.06)));
 
     this.frame(back);
+  }
+
+  /** How much of the route is behind them, 0 to 1. */
+  private progress(): number {
+    const legs = this.route.length - 1;
+    if (legs <= 0) return 1;
+    const wp = this.route[this.leg];
+    const prev = this.route[Math.max(0, this.leg - 1)];
+    const span = Math.hypot(wp.x - prev.x, wp.y - prev.y) || 1;
+    const { boat } = this.cast;
+    const gone = 1 - Math.min(1, Math.hypot(boat.position.x - wp.x, boat.position.z - wp.y) / span);
+    return THREE.MathUtils.clamp((this.leg + gone) / legs, 0, 1);
   }
 
   /** Behind the sail, looking the way they are going; swung round to face what they are leaving, during a farewell. */

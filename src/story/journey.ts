@@ -8,8 +8,21 @@ import { HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
 import { MeadowChapter } from './meadow';
+import { DrownedChapter } from './drowned';
+import { WoodChapter } from './wood';
+import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 
-export type ChapterName = 'island' | 'toLines' | 'lines' | 'toMeadow' | 'meadow' | 'toHome' | 'home';
+export type ChapterName =
+  | 'island'
+  | 'toLines'
+  | 'lines'
+  | 'toMeadow'
+  | 'meadow'
+  | 'drowned'
+  | 'toWood'
+  | 'wood'
+  | 'toHome'
+  | 'home';
 
 /** Where the boat goes on each crossing. Each one is shorter and hazier than the last. */
 const ROUTES: Record<string, THREE.Vector2[]> = {
@@ -22,16 +35,27 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     LINES_LANDING,
   ],
   toMeadow: [new THREE.Vector2(14, -505), new THREE.Vector2(10, -545), LANDING],
+  /** Out of the village and straight into the wood, in the dark and the worst of the weather. */
+  toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
+  /**
+   * The long way round. They come out of the wood before dawn and stand well out into open water, and the night
+   * ends somewhere along it. It is the only crossing that goes anywhere but straight, because after the wood the
+   * point of it is not to arrive.
+   */
   toHome: [
-    new THREE.Vector2(-6, -1240),
-    new THREE.Vector2(-16, -1440),
-    new THREE.Vector2(-28, -1700),
-    new THREE.Vector2(-40, -1900),
+    new THREE.Vector2(-70, -1926),
+    new THREE.Vector2(-160, -1948),
+    new THREE.Vector2(-252, -1944),
+    new THREE.Vector2(-318, -1904),
+    new THREE.Vector2(-334, -1986),
+    new THREE.Vector2(-268, -2038),
+    new THREE.Vector2(-160, -2024),
+    new THREE.Vector2(-86, -1986),
     new THREE.Vector2(-45, -1958),
   ],
 };
 
-const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toHome', 'home'];
+const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'drowned', 'toWood', 'wood', 'toHome', 'home'];
 
 /**
  * Runs the chapters in order and speaks for whichever is current. `?chapter=` starts later in the story for
@@ -53,6 +77,15 @@ export class Journey {
     } else if (start === 'meadow' || start === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
+    } else if (start === 'drowned' || start === 'village') {
+      this.sail(-6, -1176, Math.PI);
+      this.begin('drowned');
+    } else if (start === 'wood' || start === 'dark') {
+      this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
+      this.begin('wood');
+    } else if (start === 'sea' || start === 'dolphins') {
+      this.sail(WOOD_BERTH.x, WOOD_BERTH.z + 6, Math.PI);
+      this.begin('toHome');
     } else if (start === 'summit' || start === 'home') {
       this.land(-45, -1958, -45, -1968);
       this.begin('home');
@@ -67,6 +100,7 @@ export class Journey {
     cast.boat.beach(x, z, yaw);
     cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
     cast.boat.launch();
+    this.withColt();
   }
 
   /** Puts the boat ashore with the child beside it, as if a crossing had just ended. */
@@ -76,6 +110,15 @@ export class Journey {
     cast.boat.beach(bx, bz, Math.PI);
     cast.boat.grounded = true;
     cast.child.place(cx, cz, Math.PI);
+    this.withColt();
+  }
+
+  /** Everywhere past the first island the child is carrying the colt, so every test start has to start that way. */
+  private withColt(): void {
+    const { cast } = this;
+    cast.crane.visible = true;
+    cast.crane.bond = 0.5;
+    cast.crane.carry(cast.child.armsPoint(new THREE.Vector3()), cast.child.yaw);
   }
 
   get shot(): Shot {
@@ -142,8 +185,22 @@ export class Journey {
         return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.75 });
       case 'meadow':
         return new MeadowChapter(cast);
+      case 'drowned':
+        return new DrownedChapter(cast);
+      case 'toWood':
+        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1 });
+      case 'wood':
+        return new WoodChapter(cast);
       case 'toHome':
-        return new CrossingChapter(cast, { route: ROUTES.toHome, haze: 0.85, dusk: 0.8 });
+        return new CrossingChapter(cast, {
+          route: ROUTES.toHome,
+          haze: 0.5,
+          dusk: 1.85,
+          duskTo: 0.25,
+          whaleAt: 55,
+          whaleEvery: 150,
+          dolphins: true,
+        });
       case 'home':
         return new HomeChapter(cast);
       default:
