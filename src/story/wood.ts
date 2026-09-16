@@ -42,6 +42,7 @@ export class WoodChapter implements Chapter {
   embers = 0;
   /** Carried, because the walk up the wood is slow and continuous and an eased camera trails below the child. */
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5, carry: true };
+  readonly music = 'wood' as const;
   readonly focus = new THREE.Vector3();
   private leg = 0;
   private now = 0;

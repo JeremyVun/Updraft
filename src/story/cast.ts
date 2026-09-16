@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
@@ -55,6 +56,8 @@ export interface Chapter {
   readonly haze?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
+  /** Which room's music this chapter is played to. */
+  readonly music?: Mood;
   /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
   readonly scripted?: boolean;
   /** How strongly a rainbow shows opposite the sun, 0..1. */

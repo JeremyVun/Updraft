@@ -41,6 +41,7 @@ export class LinesChapter implements Chapter {
   readonly haze = 0.85;
   readonly dusk = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 10 };
+  readonly music = 'lines' as const;
   readonly focus = new THREE.Vector3();
   private play: Play = 'carry';
   private leg = 0;

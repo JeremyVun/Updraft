@@ -151,17 +151,18 @@ export class CraneFlock {
   }
 
   /**
-   * A distant gathering, spiralling up a thermal the way cranes do before they go on. Meant to be seen from a long
-   * way off and understood without a word: that is where the others are.
+   * A gathering, spiralling up a thermal the way cranes do before they go on. Meant to be understood without a
+   * word: that is where the others are. `rise` is how far the column climbs — wide and tall for one seen from
+   * across the meadow, short and close for one that has come down over your head.
    */
-  circle(x: number, z: number, base: number, radius: number, count = 26): void {
+  circle(x: number, z: number, base: number, radius: number, count = 26, rise = 46): void {
     this.birds.length = 0;
     const c = Math.min(count, MAX);
     for (let i = 0; i < c; i++) {
       this.birds.push({
         offset: new THREE.Vector3(
           (i / c) * Math.PI * 2 + Math.random() * 0.4,
-          (i / c) * 46 + Math.random() * 8,
+          (i / c) * rise + Math.random() * rise * 0.17,
           0.85 + Math.random() * 0.3,
         ),
         phase: Math.random() * 6.28,

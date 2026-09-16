@@ -11,7 +11,9 @@ type Beat =
   | 'climb'
   | 'summit'
   | 'setDown'
+  | 'tries'
   | 'flying'
+  | 'answered'
   | 'gone'
   | 'unfold'
   | 'gaze'
@@ -27,6 +29,8 @@ const NORTH = Math.PI;
 const PROMPT_AT = 55;
 /** And if the player still never lifts it, the night wind does, because nothing in this game is ever failed. */
 const RELENT_AT = 130;
+/** How long the flock wheels overhead once it has come down, before they all go north together. */
+const REUNION = 9;
 
 /** The crest of the last hill, where the ground falls away and the cottage comes into view. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
@@ -46,6 +50,7 @@ export class HomeChapter implements Chapter {
   readonly haze = 0.5;
   dusk = 0.85;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
+  readonly music = 'home' as const;
   readonly focus = new THREE.Vector3();
   private beatStart = 0;
   private duskTarget = 0.85;
@@ -64,6 +69,8 @@ export class HomeChapter implements Chapter {
   hush = 0;
   private nextCall = 0;
   private flockCalled = false;
+  private tried = 0;
+  private readonly gathering = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
     const { child, plane } = cast;
@@ -78,7 +85,13 @@ export class HomeChapter implements Chapter {
    * colt into the air for the last time, and the player sends the paper plane away.
    */
   get scripted(): boolean {
-    return this.beat !== 'release' && this.beat !== 'flying' && this.beat !== 'setDown';
+    return (
+      this.beat !== 'release' &&
+      this.beat !== 'setDown' &&
+      this.beat !== 'tries' &&
+      this.beat !== 'flying' &&
+      this.beat !== 'answered'
+    );
   }
 
   get done(): boolean {
@@ -125,7 +138,8 @@ export class HomeChapter implements Chapter {
       this.updateEnding(dt);
     }
     this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * 0.22));
-    if (this.beat !== 'setDown' && this.beat !== 'flying') this.hush += (0 - this.hush) * (1 - Math.exp(-dt * 0.5));
+    const staged = this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered';
+    if (!staged) this.hush += (0 - this.hush) * (1 - Math.exp(-dt * 0.5));
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
   }
@@ -146,7 +160,7 @@ export class HomeChapter implements Chapter {
       crane.yaw = NORTH;
       crane.follow();
       c.faceToward(x, z, 1);
-      this.to('flying');
+      this.to('tries');
       this.nextCall = this.now + 3;
     });
   }
@@ -159,7 +173,47 @@ export class HomeChapter implements Chapter {
   private updateFlight(dt: number): void {
     const { child: c, crane, flock } = this.cast;
     c.lookAt = crane.gone || crane.flying ? crane.position : crane.eye(this.onColt);
-    this.hush += ((crane.gone ? 0 : 0.7) - this.hush) * (1 - Math.exp(-dt * 0.8));
+    const quiet = crane.gone || this.beat === 'answered' ? 0 : 0.7;
+    this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.8));
+
+    /**
+     * It tries by itself first, twice, and drops both times. Nothing else in the scene moves while it does. The
+     * player is not told they are needed: they are shown that nobody else can do this.
+     */
+    const ground = Math.max(heightAt(crane.position.x, crane.position.z), 0);
+    const up = crane.position.y - ground;
+    /** A player who works it out during the colt's own attempts is never made to wait for the beat to finish. */
+    if ((this.beat === 'tries' || this.beat === 'flying') && crane.flying && up > 4.5) {
+      this.answered();
+      return;
+    }
+
+    if (this.beat === 'tries') {
+      if (this.t > 2 && this.tried < 1) {
+        this.tried = 1;
+        crane.tryToFly();
+      }
+      if (this.t > 6 && this.tried < 2) {
+        this.tried = 2;
+        crane.tryToFly();
+      }
+      if (this.t > 8 && this.now > this.nextCall) {
+        cue('calling');
+        this.nextCall = this.now + 6;
+      }
+      if (this.t > 10.5) this.to('flying');
+      return;
+    }
+
+    /** They have come down for it. It is still the player holding it up there, and they hold it all the way. */
+    if (this.beat === 'answered') {
+      if (this.now > this.nextCall) {
+        cue('calling');
+        this.nextCall = this.now + 4.5 + Math.random();
+      }
+      if (this.t > REUNION) this.away();
+      return;
+    }
     if (this.beat !== 'flying') return;
 
     if (!crane.gone && this.now > this.nextCall) {
@@ -172,10 +226,25 @@ export class HomeChapter implements Chapter {
       flock.pass(c.position.x, c.position.z, c.position.y + 38, NORTH, 13, 190);
       cue('skein');
     }
-    const ground = Math.max(heightAt(crane.position.x, crane.position.z), 0);
-    const up = crane.position.y - ground;
-    if (crane.flying && up > 4.5) this.away();
-    else if (this.t > RELENT_AT && !crane.gone) this.away();
+    if (this.t > RELENT_AT && !crane.gone) this.answered();
+  }
+
+  /**
+   * It is up, and this time something answers. The family comes down out of the night and wheels low over the
+   * hill around it — the one moment in the journey where the thing that was asked for is given, in full, on
+   * screen. The music comes back here and nowhere earlier.
+   */
+  private answered(): void {
+    const { child: c, flock } = this.cast;
+    this.to('answered');
+    /**
+     * Wheeling a little way off to the north rather than straight overhead: a column of cranes turning in the
+     * sky is only legible side on, and directly above the child it is a tower nobody can see the top of.
+     */
+    this.gathering.set(c.position.x + 5, c.position.y + 8, c.position.z - 34);
+    flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, 22, 22, 20);
+    this.nextCall = this.now + 1.2;
+    cue('lifted');
   }
 
   /** It goes. The skein comes down for it out of the night and takes it in, and they go north together. */
@@ -208,7 +277,7 @@ export class HomeChapter implements Chapter {
     if (this.beat === 'summit') {
       c.lookAt = this.sky;
       if (c.sitting && this.t > 4.5 && !c.busy) this.setDown();
-    } else if (this.beat === 'setDown' || this.beat === 'flying') {
+    } else if (this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered') {
       this.updateFlight(dt);
     } else if (this.beat === 'gone') {
       c.lookAt = this.cast.flock.head;
@@ -289,7 +358,21 @@ export class HomeChapter implements Chapter {
       this.focus.copy(c);
       return;
     }
-    if (this.beat === 'setDown' || this.beat === 'flying') {
+    if (this.beat === 'answered') {
+      /**
+       * Tilted up into the sky the family is wheeling in, with the child small at the bottom of the frame and
+       * the colt climbing through the middle of it. The whole point of the shot is how much sky there is.
+       */
+      const k = this.cast.crane.position;
+      const g = this.gathering;
+      s.from = undefined;
+      s.eye = this.eyeAt.set(c.x + 3.4, c.y + 3.2, c.z + 10.5);
+      s.target.set(g.x, g.y + 2, g.z);
+      this.pace = 0.32;
+      this.focus.copy(k);
+      return;
+    }
+    if (this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying') {
       /** The same frame as the meadow and the same frame as the fall: over their shoulder, looking up past them. */
       const k = this.cast.crane.position;
       const ground = Math.max(heightAt(k.x, k.z), 0);

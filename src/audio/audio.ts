@@ -32,19 +32,50 @@ export interface SoundState {
   shower: number;
   /** How far the music pulls back, 0 normal to 1 almost gone, so a moment can be heard on its own. */
   hush: number;
+  /** Which room's music is playing. */
+  music: Mood;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
   scripted: boolean;
   cues: Cue[];
 }
 
-const SCALE = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88];
-const CHORDS = [
-  [50, 57, 64, 66],
-  [47, 54, 57, 62],
-  [43, 50, 59, 66],
-  [45, 52, 59, 64],
-];
-const CHORD_SECONDS = 11;
+/**
+ * Each room has its own music. Same instrument, same key family, different weather: the chords it turns over,
+ * how long it holds each one, how bright the pad is allowed to be, how loud it sits, and the notes the player's
+ * own gestures ring out of it. The voices glide between them over a couple of seconds, so a room change is a
+ * modulation rather than a new track starting.
+ */
+export type Mood = 'still' | 'lines' | 'meadow' | 'drowned' | 'wood' | 'sea' | 'home';
+
+interface MoodMusic {
+  chords: number[][];
+  /** How long each chord is held. */
+  seconds: number;
+  /** Where the pad's low-pass sits before life and night move it. */
+  cutoff: number;
+  /** How loud the pad sits in this room, 1 being the meadow. */
+  level: number;
+  /** The notes the player's gestures ring. */
+  scale: number[];
+}
+
+const MOODS: Record<Mood, MoodMusic> = {
+  /** Open fifths with no third in them: nothing has been decided yet, and nothing is moving. */
+  still: { chords: [[50, 57, 62, 69], [45, 52, 57, 64]], seconds: 16, cutoff: 680, level: 0.8, scale: [62, 64, 69, 71, 74, 76, 81, 83, 86] },
+  /** The first delight in the journey, and the brightest thing in it. */
+  lines: { chords: [[50, 57, 64, 71], [43, 50, 59, 66], [45, 52, 61, 66], [47, 54, 57, 62]], seconds: 9, cutoff: 1500, level: 1, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
+  /** The last warm afternoon of the year: the fullest the music gets before the dark. */
+  meadow: { chords: [[50, 57, 64, 66], [47, 54, 57, 62], [43, 50, 59, 66], [45, 52, 59, 64]], seconds: 8.5, cutoff: 1600, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88] },
+  /** Suspended, hollow, never landing on a third: homes the water took. */
+  drowned: { chords: [[47, 54, 59, 66], [45, 52, 57, 64], [43, 50, 57, 62], [42, 49, 57, 64]], seconds: 13, cutoff: 820, level: 0.85, scale: [59, 62, 64, 66, 69, 71, 74, 76, 78, 81] },
+  /** A drone and the semitone above it, turning over and never resolving. Barely music at all. */
+  wood: { chords: [[38, 45, 50, 57], [38, 45, 51, 58]], seconds: 15, cutoff: 440, level: 0.65, scale: [50, 53, 57, 60, 62, 65, 69, 72] },
+  /** Out of the dark and into open water, with the bass climbing under it. */
+  sea: { chords: [[45, 52, 57, 64], [43, 50, 59, 66], [50, 57, 64, 71], [47, 54, 61, 69]], seconds: 11, cutoff: 1300, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86] },
+  /** Clear, frozen and resolved: the only room whose chords come home. */
+  home: { chords: [[50, 57, 62, 69], [43, 50, 59, 66], [45, 52, 61, 64], [50, 57, 64, 71]], seconds: 10, cutoff: 1450, level: 1.15, scale: [62, 66, 69, 71, 74, 78, 81, 83, 86, 90] },
+};
+
 const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
@@ -63,12 +94,14 @@ const PHRASES: Record<Cue, [number, number][]> = {
   becalmed: [[57, 4], [54, 5], [52, 8]],
   /** And the sail fills: the same notes, the other way up, and the music comes back with them. */
   filled: [[54, 1], [57, 1], [62, 1], [66, 2], [69, 4]],
+  /** It has the air under it at last. The one phrase in the game that is allowed to sound like an answer. */
+  lifted: [[62, 1], [66, 1], [69, 1], [74, 2], [78, 1], [81, 1], [86, 4], [83, 2], [86, 6]],
   wave: [[57, 1], [62, 1], [66, 1], [69, 1], [74, 2], [78, 2], [81, 4]],
   unfold: [[74, 2], [78, 1], [81, 1], [83, 2], [81, 1], [78, 1], [76, 2], [78, 1], [74, 3], [0, 2], [71, 1], [74, 1], [76, 2], [78, 1], [76, 1], [74, 4]],
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
 };
-const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -124,6 +157,7 @@ export class Soundscape {
   private padVoices: { osc: OscillatorNode[]; gain: GainNode }[] = [];
   private padGain!: GainNode;
   private chord = -1;
+  private mood: Mood | null = null;
   private noteIndex = 4;
   private lastNote = 0;
   private lastArp = 0;
@@ -415,22 +449,26 @@ export class Soundscape {
     this.liftGain.gain.setTargetAtTime(s.charge * 0.35, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500, now, 0.2);
 
-    const chord = Math.floor(now / CHORD_SECONDS) % CHORDS.length;
-    if (chord !== this.chord) {
+    const mood = MOODS[s.music] ?? MOODS.meadow;
+    const chord = Math.floor(now / mood.seconds) % mood.chords.length;
+    if (chord !== this.chord || s.music !== this.mood) {
+      /** A room change glides the voices to their new notes rather than cutting: the chord bends into the next. */
+      const glide = s.music !== this.mood ? 3.5 : 1.2;
       this.chord = chord;
+      this.mood = s.music;
       this.padVoices.forEach((voice, i) => {
-        const f = hz(CHORDS[chord][i]);
-        voice.osc.forEach((o) => o.frequency.setTargetAtTime(f, now, 1.2));
+        const f = hz(mood.chords[chord][i]);
+        voice.osc.forEach((o) => o.frequency.setTargetAtTime(f, now, glide));
         voice.gain.gain.setTargetAtTime(0.25, now, 2.5);
       });
     }
     const hush = 1 - 0.92 * s.hush;
     this.padGain.gain.setTargetAtTime(
-      ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night) + this.activity * 0.09) * hush,
+      ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night) + this.activity * 0.09) * hush * mood.level,
       now,
       s.hush > 0.5 ? 0.7 : 1.5,
     );
-    this.padFilter.frequency.setTargetAtTime(500 + 700 * s.life - 250 * s.night, now, 2);
+    this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     for (const name of s.cues) {
       if (name === 'distress') this.peep(1);
@@ -460,9 +498,9 @@ export class Soundscape {
         if (at > this.lastNote + 1e-3) {
           const step = (s.rise >= 0 ? 1 : -1) * (s.gust > 18 ? 2 : 1);
           this.noteIndex += step;
-          if (this.noteIndex > SCALE.length - 1) this.noteIndex -= 5;
+          if (this.noteIndex > mood.scale.length - 1) this.noteIndex -= 5;
           if (this.noteIndex < 0) this.noteIndex += 5;
-          this.chime(SCALE[this.noteIndex], 0.45 + g * 0.55, s.pan, at);
+          this.chime(mood.scale[Math.min(this.noteIndex, mood.scale.length - 1)], 0.45 + g * 0.55, s.pan, at);
           this.lastNote = at;
         }
       }
@@ -473,7 +511,7 @@ export class Soundscape {
       const interval = PULSE * (s.charge > 0.7 ? 1 : 2);
       const at = this.nextPulse();
       if (at - this.lastArp >= interval - 1e-3) {
-        const chordTones = CHORDS[this.chord].map((m) => m + 12);
+        const chordTones = mood.chords[this.chord % mood.chords.length].map((m) => m + 12);
         const tone = chordTones[Math.floor((now / interval) % chordTones.length)] + (s.charge > 0.6 ? 12 : 0);
         this.chime(tone, 0.25 + s.charge * 0.35, s.pan, at, 1.6);
         this.lastArp = at;
@@ -481,7 +519,7 @@ export class Soundscape {
     }
 
     if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5 && !s.scripted) {
-      const base = CHORDS[this.chord][0] + 24;
+      const base = mood.chords[this.chord % mood.chords.length][0] + 24;
       this.chime(base, 0.4, 0, this.nextPulse(), 1.8);
       this.chime(base + 7, 0.35, 0, this.nextPulse() + PULSE, 2.2);
       this.lastGlider = now;

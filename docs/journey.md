@@ -184,8 +184,14 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
    birds. Nothing is asked of the player except to sail. **Built** — `fx/sealife/dolphin.ts`.
-7. **Home** (`story/home.ts`) — clear, frozen, stars. The colt flies on the player's updraft and the flock comes
-   down for it. Then the drawing, the release, and the red door. **Built.**
+7. **Home** (`story/home.ts`) — clear, frozen, stars. **The reunion**, staged in four beats: the child stands the
+   colt in the grass and steps back; it **tries twice by itself and drops both times**, so the player is shown
+   rather than told that nobody else can do this; it calls north and nothing answers; and then the player raises
+   the wind under it and holds it there. The moment it has the air, **the family comes down out of the night and
+   wheels low over the hill** — a short, close thermal column a little to the north, framed from the child's
+   shoulder so the sky is most of the frame — and the music, held back since the wood, comes back with it. The
+   player is still holding the updraft through the whole reunion: they do not watch it happen, they are the reason
+   it happens. Then they go north together. After that the drawing, the release, and the red door. **Built.**
 
 Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, a
 whale, a pod of dolphins, a storm, and where the time of day ends up. `story/journey.ts` runs the order:
@@ -301,6 +307,13 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 - **Music.** Layers join as the world comes back, fuller in the hills, thin and low in the wood, almost gone in
   the dark, whole at the end. Chapters can pull it back entirely with `hush` so a moment is heard on its own; the
   fall does this, and the music returns on the crossing that follows.
+- **A room, a mood.** Every chapter names a `music` mood (`audio/audio.ts`) and each one has its own chords, its
+  own pace, its own brightness, its own weight in the mix and its own scale for the chimes the player's gestures
+  ring: open fifths that decide nothing on the still island, the brightest thing in the game on the island of
+  lines, the fullest on the meadow, suspended and hollow over the drowned village, a drone and the semitone above
+  it in the wood, a climbing bass at sea, and the only chords that come home at the end. The voices glide between
+  moods over three and a half seconds, so a room change is a modulation and never a new track starting. One piece
+  of music for eighteen minutes was the complaint; this is the answer.
 - **The colt's voice.** `peep()` in `audio/audio.ts`, fired by the `distress` and `calling` cues. Distress is high
   and panicky; calling out to the flock is lower, longer and hopeful. Kept for those moments and nothing else.
   Where they are spent: `calling` at the meadow crest when the family is wheeling and nothing answers, and again at

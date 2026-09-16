@@ -257,6 +257,7 @@ const soundState: SoundState = {
   charge: 0,
   overLand: false,
   breeze: 0,
+  music: 'still' as const,
   gliderLift: 0,
   life: 0,
   night: 0,
@@ -422,6 +423,7 @@ function frame(now: number): void {
   const inland = mainlandCoastZ(story.focus.x) - story.focus.z;
   soundState.sea = 1 - overLand * THREE.MathUtils.smoothstep(inland, 20, 260);
   soundState.meadow = overLand * THREE.MathUtils.smoothstep(inland, 60, 200);
+  soundState.music = story.music;
   soundState.cues = takeCues();
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
   soundState.scripted = story.current.scripted ?? false;

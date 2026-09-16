@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
 
@@ -20,6 +21,8 @@ const SAIL_BEARING = Math.atan2(0.075, 1);
 export interface CrossingOpts {
   /** Waypoints out to open water and on to the far shore; the bow may only ground on the last one. */
   route: THREE.Vector2[];
+  /** Which room's music the crossing is played to; the open sea by default. */
+  music?: Mood;
   /** What the child rides facing and waves at as it falls astern, or nothing to face the way ahead throughout. */
   lookBack?: THREE.Vector3 | null;
   farewell?: number;
@@ -56,6 +59,7 @@ export class CrossingChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 6.5, carry: true };
   readonly focus = new THREE.Vector3();
   readonly escort = new THREE.Vector3();
+  readonly music: Mood;
   private readonly route: THREE.Vector2[];
   private readonly lookBack: THREE.Vector3 | null;
   private readonly farewellFor: number;
@@ -88,6 +92,7 @@ export class CrossingChapter implements Chapter {
     opts: CrossingOpts,
   ) {
     this.route = opts.route;
+    this.music = opts.music ?? 'sea';
     this.lookBack = opts.lookBack ?? null;
     this.farewellFor = this.lookBack ? (opts.farewell ?? 30) : 0;
     this.wantsRainbow = opts.rainbow ?? false;

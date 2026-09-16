@@ -39,6 +39,7 @@ export class DrownedChapter implements Chapter {
   storm = 0;
   hush = 0.3;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
+  readonly music = 'drowned' as const;
   readonly focus = new THREE.Vector3();
   private leg = 0;
   private now = 0;

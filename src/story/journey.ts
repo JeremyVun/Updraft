@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
 import { params } from '../params';
 import { mainlandCoastZ } from '../world/heightfield';
@@ -145,6 +146,10 @@ export class Journey {
   get haze(): number {
     return this.chapter.haze ?? 0;
   }
+  /** Crossings take the music of wherever they are going, so the sea is never silent between two rooms. */
+  get music(): Mood {
+    return this.chapter.music ?? 'sea';
+  }
   get rainbow(): number {
     return this.chapter.rainbow ?? 0;
   }
@@ -188,7 +193,7 @@ export class Journey {
       case 'drowned':
         return new DrownedChapter(cast);
       case 'toWood':
-        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1 });
+        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1, music: 'wood' });
       case 'wood':
         return new WoodChapter(cast);
       case 'toHome':

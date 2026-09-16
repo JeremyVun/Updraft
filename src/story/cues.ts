@@ -1,5 +1,5 @@
 /** Story moments the music answers. */
-export type Cue = 'breeze' | 'delight' | 'restored' | 'skein' | 'fallen' | 'distress' | 'calling' | 'becalmed' | 'filled' | 'wave' | 'unfold' | 'release' | 'home';
+export type Cue = 'breeze' | 'delight' | 'restored' | 'skein' | 'fallen' | 'distress' | 'calling' | 'becalmed' | 'filled' | 'lifted' | 'wave' | 'unfold' | 'release' | 'home';
 
 const pending: Cue[] = [];
 
