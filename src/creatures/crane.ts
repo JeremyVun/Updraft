@@ -1,10 +1,35 @@
 import * as THREE from 'three';
-import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
-import { CREATURE_GLSL } from './shading';
-import { blob, merge, mirrored, type BlobSpec, type V3 } from './shapes';
-import { ease, easeAngle, wrapAngle } from './motion';
+import { ease, easeAngle, wrapAngle, Spring } from './motion';
 import type { WindSample } from '../wind/field';
+import {
+  BODY,
+  BONES,
+  FOOT_L,
+  FOOT_R,
+  HAND_L,
+  HAND_R,
+  HEAD,
+  JAW,
+  NECK_A,
+  NECK_B,
+  ROOT,
+  SHIN,
+  SHIN_L,
+  SHIN_R,
+  SIZE,
+  SKELETON,
+  TAIL,
+  THIGH,
+  THIGH_L,
+  THIGH_R,
+  TUFT,
+  WING_L,
+  WING_R,
+  coltGeometry,
+} from './colt/body';
+import { COLT_FRAG, COLT_VERT } from './colt/shader';
 
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
 const LIFT_TO_HOPE = 0.18;
@@ -13,307 +38,51 @@ const LIFT_TO_FLY = 0.5;
 const CEILING = 7.5;
 /** Nothing it can do keeps it up longer than this. */
 const GLIDE_FOR = 9;
-/**
- * Built at life size, then nudged up a little so it reads from the camera the game is played at. Only a little:
- * half lost in the grass is how a fledgling that cannot fly is supposed to look.
- */
-const SIZE = 1.4;
-
-const BONES = 16;
-const [ROOT, BODY, NECK_A, NECK_B, NECK_C, HEAD, WING_L, HAND_L, WING_R, HAND_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R] =
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
-const COAT = 0;
-const QUILL = 1;
-const BILL = 2;
-const SHANK = 3;
-const EYE = 4;
-
-const VERT = /* glsl */ `
-${ATMO_GLSL}
-${CREATURE_GLSL}
-uniform mat4 uBones[${BONES}];
-uniform float uNudge;
-in float aPart;
-in vec2 aMat;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec2 vMat;
-out vec3 vDown;
-void main() {
-  mat4 b = uBones[int(aPart + 0.5)];
-  vec4 world = b * vec4(position, 1.0);
-  vWorld = world.xyz;
-  vNormal = normalize(mat3(b) * normal);
-  vMat = aMat;
-  /** Mottling in rest space, offset per part, so the down does not swim as the colt moves. */
-  vDown = position * 27.0 + aPart * 5.3;
-  gl_Position = projectionMatrix * nudgedView(vWorld, uNudge);
-}`;
-
-const FRAG = /* glsl */ `
-${ATMO_GLSL}
-${CREATURE_GLSL}
-uniform float uAir;
-in vec3 vWorld;
-in vec3 vNormal;
-in vec2 vMat;
-in vec3 vDown;
-
-/** Linear, and dark: the golden sun here is worth about 2.7, so anything lighter comes out of it cream. */
-const vec3 SEPIA = vec3(0.08, 0.042, 0.025);
-const vec3 RUST = vec3(0.19, 0.088, 0.04);
-const vec3 CINNAMON = vec3(0.285, 0.185, 0.095);
-const vec3 CREAM = vec3(0.4, 0.37, 0.285);
-const vec3 HORN = vec3(0.34, 0.3, 0.21);
-const vec3 TIP = vec3(0.085, 0.072, 0.062);
-const vec3 LEG = vec3(0.055, 0.05, 0.047);
-const vec3 IRIS = vec3(0.004, 0.004, 0.005);
-
-/** Rusty over the back and crown, cinnamon on the flanks, cream under the throat and belly. */
-vec3 coat(float k) {
-  vec3 c = mix(SEPIA, RUST, smoothstep(0.0, 0.3, k));
-  c = mix(c, CINNAMON, smoothstep(0.26, 0.62, k));
-  return mix(c, CREAM, smoothstep(0.6, 1.0, k));
-}
-
-void main() {
-  vec3 N = normalize(vNormal);
-  int m = int(vMat.x + 0.5);
-  float k = vMat.y;
-  float mottle = 0.89 + 0.2 * vnoise(vDown.xz + vDown.y);
-  vec3 alb = coat(k) * mottle;
-  float fuzz = 0.18;
-  float thin = 0.12;
-  if (m == ${QUILL}) {
-    fuzz = 0.22;
-    thin = 0.55;
-  } else if (m == ${BILL}) {
-    alb = mix(HORN, TIP, k);
-    fuzz = 0.05;
-    thin = 0.3;
-  } else if (m == ${SHANK}) {
-    alb = LEG;
-    fuzz = 0.04;
-    thin = 0.04;
-  } else if (m == ${EYE}) {
-    alb = IRIS;
-    fuzz = 0.0;
-    thin = 0.0;
-  }
-  vec3 col = shadeCreature(alb, N, vWorld, 0.82, fuzz, thin, uAir);
-  /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */
-  if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * catchlight(N, vWorld);
-  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+const HOP_FOR = 2.6;
+const FLOOR = 0.006 * SIZE;
 
 /**
- * A colt is all legs and neck with a small body: the bare shank is a third of its height, the neck carries a head
- * half the width of the body, and the bill is a straight dagger longer than the skull.
+ * Where it sits on the child, in the child's frame (x to their left, z forward), from the point the child offers.
+ * The arms point is inside the coat and the hood point is inside the hood, and the camera is nearly always behind
+ * the child, so the colt is carried the way a child carries a hen: tucked under the right arm against the coat,
+ * where it can be seen from every side. In the hood it perches on the shoulders behind the head, peeking round
+ * the hood on the side the camera is on.
  */
-function craneGeometry(): THREE.BufferGeometry {
-  const at: V3 = [0, 0, 0];
-  const specs: BlobSpec[] = [];
-  const pair = (spec: BlobSpec, right: number) => specs.push(spec, mirrored(spec, right));
-
-  specs.push({
-    part: BODY,
-    mat: COAT,
-    at,
-    size: [0.058, 0.063, 0.123],
-    detail: 3,
-    shape: (u) => {
-      const back = Math.max(0, -u.z);
-      const front = Math.max(0, u.z);
-      u.x *= 1 - 0.42 * back * back;
-      u.y *= 1 - 0.3 * back * back;
-      u.y += back * back * 0.32;
-      u.y -= front * front * 0.1;
-      if (u.y < 0) u.y *= 1 + 0.12 * front;
-    },
-    blend: (u) => 0.56 - u.y * 0.33 + Math.max(0, u.z) * 0.08,
-  });
-  /** Fills the hollow where the neck leaves the shoulders, so the neck grows out of the body. */
-  specs.push({
-    part: BODY,
-    mat: COAT,
-    at,
-    size: [0.042, 0.042, 0.05],
-    offset: [0, 0.022, 0.07],
-    blend: (u) => 0.66 - u.y * 0.2,
-  });
-  specs.push({
-    part: BODY,
-    mat: COAT,
-    at,
-    size: [0.028, 0.024, 0.047],
-    offset: [0, 0.043, -0.12],
-    rot: [0.4, 0, 0],
-    shape: (u) => {
-      const tip = Math.max(0, -u.z);
-      u.x *= 1 - 0.5 * tip;
-      u.y *= 1 - 0.45 * tip;
-    },
-    blend: (u) => 0.42 - u.y * 0.12,
-  });
-  /** Feathered thighs: the down hangs over the top of the leg, so the bare shank starts halfway down. */
-  pair(
-    {
-      part: BODY,
-      mat: COAT,
-      at,
-      size: [0.024, 0.028, 0.036],
-      offset: [0.037, -0.034, -0.016],
-      blend: (u) => 0.68 - u.y * 0.1,
-    },
-    BODY,
-  );
-
-  /** Capsules, not beads: a straight-sided tube with rounded caps, overlapping its neighbours end to end. */
-  const neck = (part: number, r: number, half: number, rise: number): BlobSpec => ({
-    part,
-    mat: COAT,
-    at,
-    size: [r, half, r],
-    offset: [0, rise, 0],
-    shape: (u) => {
-      const s = Math.min(1 / Math.max(Math.sqrt(Math.max(1 - u.y * u.y, 0)), 0.42), 2.2) * (1 - 0.07 * u.y);
-      u.x *= s;
-      u.z *= s;
-    },
-    blend: (u) => 0.48 + u.z * 0.3,
-  });
-  specs.push(neck(NECK_A, 0.0208, 0.056, 0.032), neck(NECK_B, 0.0196, 0.054, 0.031), neck(NECK_C, 0.0184, 0.052, 0.03));
-
-  specs.push({
-    part: HEAD,
-    mat: COAT,
-    at,
-    size: [0.029, 0.0295, 0.037],
-    offset: [0, 0.008, 0.004],
-    detail: 3,
-    shape: (u) => {
-      u.y -= Math.max(0, u.z) * 0.12;
-    },
-    blend: (u) => 0.4 - u.y * 0.36 + Math.max(0, u.z) * 0.2,
-  });
-  specs.push({
-    part: HEAD,
-    mat: BILL,
-    at,
-    size: [0.0105, 0.0098, 0.05],
-    offset: [0, 0.002, 0.076],
-    shape: (u) => {
-      const tip = Math.max(0, u.z);
-      u.x *= 1 - 0.84 * tip;
-      u.y *= 1 - 0.78 * tip;
-      u.y -= tip * tip * 0.06;
-    },
-    blend: (u) => Math.max(0, u.z) ** 2,
-  });
-  pair(
-    { part: HEAD, mat: EYE, at, size: [0.0078, 0.0085, 0.0078], offset: [0.0228, 0.016, 0.0268], detail: 1 },
-    HEAD,
-  );
-
-  pair(
-    {
-      part: WING_L,
-      mat: QUILL,
-      at,
-      size: [0.058, 0.0115, 0.054],
-      offset: [0.054, 0, -0.008],
-      shape: (u) => {
-        const s = Math.max(0, u.x);
-        u.z *= 1 - 0.24 * s;
-        u.y *= 1 - 0.3 * s;
-        u.z -= 0.3 * s;
-      },
-      blend: (u) => 0.68 - Math.max(0, u.x) * 0.24,
-    },
-    WING_R,
-  );
-  /** The hand carries the primaries: it folds away at rest and makes the point of the spread wing. */
-  pair(
-    {
-      part: HAND_L,
-      mat: QUILL,
-      at,
-      size: [0.062, 0.0085, 0.045],
-      offset: [0.058, 0, -0.017],
-      shape: (u) => {
-        const s = Math.max(0, u.x);
-        u.y *= 1 - 0.6 * s * s;
-        u.z *= 1 - 0.42 * s;
-        u.z -= 0.6 * s * s;
-      },
-      blend: (u) => 0.32 - Math.max(0, u.x) * 0.32,
-    },
-    HAND_R,
-  );
-
-  pair(
-    {
-      part: THIGH_L,
-      mat: SHANK,
-      at,
-      size: [0.0125, 0.072, 0.0125],
-      offset: [0, -0.066, 0],
-      detail: 1,
-      shape: (u) => {
-        const s = 0.72 + 0.56 * ((u.y + 1) * 0.5);
-        u.x *= s;
-        u.z *= s;
-      },
-    },
-    THIGH_R,
-  );
-  pair({ part: SHIN_L, mat: SHANK, at, size: [0.0135, 0.0135, 0.0135], offset: [0, 0.003, 0], detail: 1 }, SHIN_R);
-  pair(
-    {
-      part: SHIN_L,
-      mat: SHANK,
-      at,
-      size: [0.0102, 0.058, 0.0102],
-      offset: [0, -0.055, 0],
-      detail: 1,
-      shape: (u) => {
-        const s = 1 + 0.12 * u.y;
-        u.x *= s;
-        u.z *= s;
-      },
-    },
-    SHIN_R,
-  );
-  const toe = (spin: number, reach: number, thick: number): BlobSpec => ({
-    part: FOOT_L,
-    mat: SHANK,
-    at,
-    size: [thick, 0.0058, reach],
-    offset: [0, -0.004, reach * 0.82],
-    rot: [0, spin, 0],
-    detail: 1,
-    shape: (u) => {
-      const tip = Math.max(0, u.z);
-      u.x *= 1 - 0.55 * tip;
-      u.y *= 1 - 0.4 * tip;
-    },
-  });
-  for (const t of [toe(0, 0.037, 0.008), toe(0.62, 0.032, 0.0072), toe(-0.58, 0.031, 0.0072)]) pair(t, FOOT_R);
-  pair(
-    { part: FOOT_L, mat: SHANK, at, size: [0.0055, 0.005, 0.014], offset: [0, -0.003, -0.012], detail: 1 },
-    FOOT_R,
-  );
-
-  return merge(specs.map((spec) => blob(spec)));
-}
+const ARMS = new THREE.Vector3(-0.7, 0.0, -0.2);
+const ARMS_YAW = 0.15;
+const HOOD = new THREE.Vector3(-0.26, 0.15, -0.43);
+/** The climb from the arms into the hood goes up over the right shoulder, outside the hood. */
+const SHOULDER = new THREE.Vector3(-0.62, 0.42, 0.18);
 
 export type CraneState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding' | 'leaving';
 
+interface Handoff {
+  from: THREE.Vector3;
+  via: THREE.Vector3 | null;
+  /** Whether `from` and `via` are in the child's frame (a ride) or the world (the ground). */
+  local: boolean;
+  t: number;
+  dur: number;
+  lift: number;
+  kind: 'lift' | 'climb' | 'hop' | 'dash';
+}
+
+const smooth = (x: number) => THREE.MathUtils.smoothstep(x, 0, 1);
+const clamp = THREE.MathUtils.clamp;
+const lerp = THREE.MathUtils.lerp;
+
+function rotY(v: THREE.Vector3, yaw: number): THREE.Vector3 {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const x = v.x * c + v.z * s;
+  v.z = -v.x * s + v.z * c;
+  v.x = x;
+  return v;
+}
+
 /**
  * The crane colt: too young to keep up with its flock, carried and walked and finally flown. The only other
- * character in the story, and like the child it never makes a sound.
+ * character in the story, and like the child it never makes a sound, except when it is lost.
  */
 export class Crane {
   readonly position = new THREE.Vector3();
@@ -322,82 +91,117 @@ export class Crane {
   /** How close it stays and how often it looks up at the child: only ever rises. */
   bond = 0;
   visible = false;
+  /** How many times the player has put it in the air. It has never flown before the first. */
+  flights = 0;
+
   private readonly root = new THREE.Object3D();
   private readonly nodes: THREE.Object3D[] = [];
   private readonly mesh: THREE.Mesh;
   private readonly mat: THREE.ShaderMaterial;
   private readonly bones: THREE.Matrix4[] = [];
-  private readonly to = new THREE.Vector3();
-  private readonly want = new THREE.Vector3();
-  private stride = 0;
-  private flap = 0;
-  private flapPhase = 0;
-  private settle = 0;
-  private lookAt: THREE.Vector3 | null = null;
+  /** Where it is drawn, which lags the story's `position` while it is being lifted, climbing or set down. */
+  private readonly shown = new THREE.Vector3();
+  private readonly prevShown = new THREE.Vector3();
+  private shownYaw = 0;
   private time = 0;
+  private lookAt: THREE.Vector3 | null = null;
+
+  /** The point on the child it rides, and how that point is moving, so it is jostled the way a passenger is. */
+  private readonly anchor = new THREE.Vector3();
+  private anchorYaw = 0;
+  private readonly anchorPrev = new THREE.Vector3();
+  private readonly anchorVel = new THREE.Vector3();
+  private readonly jostle = new THREE.Vector3();
+  private readonly jostleVel = new THREE.Vector3();
+  private gait = 0;
+  private bob = 0;
+  private rideFor = 0;
+  private calm = 0;
+  private doze = 0;
+  private wriggle = 0;
+  private nextWriggle = 0;
+  private hand: Handoff | null = null;
+
+  private stride = 0;
+  private flapPhase = 0;
+  private flap = 0;
+  private effort = 0;
+  private settle = 0;
   private glide = 0;
+  private roll = 0;
+  private pitch = 0;
+  private slew = 0;
   private fallT = 0;
   private fallFor = 1;
   private readonly fallFrom = new THREE.Vector3();
   private readonly fallTo = new THREE.Vector3();
-  private struggle = 0;
-  private effort = 0;
-  /** Control point that keeps it on the flock's line at first, so you see it drop back out of the V. */
   private readonly fallDrift = new THREE.Vector3();
-  private roll = 0;
-  private slew = 0;
-  /** Vertical speed while it is in the air on the player's updraft. */
+  private struggle = 0;
+  /** On its side after the landing, until the first try rights it. */
+  private flop = 0;
   private air = 0;
   private glideT = 0;
-  /** How much it is asking to go: an updraft near it makes it look up and half-open its wings. */
   private hope = 0;
   private hopT = 0;
+  private hopLift = 0;
   private landedAt = 0;
-  /** How many times the player has put it in the air. It has never flown before the first. */
-  flights = 0;
+  private landing = 0;
   private leaveYaw = 0;
   private climb = 0;
+  private notice = 0;
+  private readonly childPrev = new THREE.Vector3();
+  private childSpeed = 0;
+
+  private fear = 0;
+  private blink = 0;
+  private blinkT = 0;
+  private nextBlink = 1.5;
+  private preen = 0;
+  private preenSide = 1;
+  private nextPreen = 6;
+  private shake = 0;
+  private peck = 0;
+  private nextPeck = 4;
+  private beg = 0;
+  private nextBeg = 0;
+  private callT = 0;
+  private callLong = false;
+  private nextCall = 0;
+  private breath = 0;
+  private puff = 0;
+  private glanceYaw = 0;
+  private glancePitch = 0;
+  private glanceChild = false;
+  private nextGlance = 0;
+  private headYaw = 0;
+  private headPitch = 0;
+  private readonly tuft = new Spring();
+
+  /** Smoothed pose weights, so nothing it does ever snaps. */
+  private readonly p = { sit: 0, held: 0, hooded: 0, hunch: 0, curl: 0, tall: 0, reach: 0, spread: 0, sleep: 0, hurry: 0 };
+
+  private readonly to = new THREE.Vector3();
+  private readonly from = new THREE.Vector3();
+  private readonly want = new THREE.Vector3();
+  private readonly tmp = new THREE.Vector3();
+  private readonly tmp2 = new THREE.Vector3();
 
   constructor() {
-    const node = (parent: THREE.Object3D, x: number, y: number, z: number) => {
+    this.nodes[ROOT] = this.root;
+    for (const [bone, parent, [x, y, z]] of SKELETON) {
       const o = new THREE.Object3D();
       o.position.set(x, y, z);
-      parent.add(o);
-      return o;
-    };
-    this.nodes[ROOT] = this.root;
-    const body = node(this.root, 0, 0.265, 0);
-    this.nodes[BODY] = body;
-    const neckA = node(body, 0, 0.048, 0.062);
-    this.nodes[NECK_A] = neckA;
-    const neckB = node(neckA, 0, 0.068, 0.004);
-    this.nodes[NECK_B] = neckB;
-    const neckC = node(neckB, 0, 0.065, 0.004);
-    this.nodes[NECK_C] = neckC;
-    this.nodes[HEAD] = node(neckC, 0, 0.06, 0.006);
-    for (const [wing, hand, side] of [
-      [WING_L, HAND_L, 1],
-      [WING_R, HAND_R, -1],
-    ] as const) {
-      this.nodes[wing] = node(body, side * 0.047, 0.032, 0.008);
-      this.nodes[hand] = node(this.nodes[wing], side * 0.112, -0.002, -0.012);
-    }
-    for (const [thigh, shin, foot, side] of [
-      [THIGH_L, SHIN_L, FOOT_L, 1],
-      [THIGH_R, SHIN_R, FOOT_R, -1],
-    ] as const) {
-      this.nodes[thigh] = node(body, side * 0.04, -0.03, -0.014);
-      this.nodes[shin] = node(this.nodes[thigh], 0, -0.132, 0);
-      this.nodes[foot] = node(this.nodes[shin], 0, -0.112, 0);
+      this.nodes[parent].add(o);
+      this.nodes[bone] = o;
     }
     for (let i = 0; i < BONES; i++) this.bones.push(new THREE.Matrix4());
 
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uBones: { value: this.bones }, uNudge: { value: 2.4 }, uAir: { value: 0 } },
-      vertexShader: VERT,
-      fragmentShader: FRAG,
+      uniforms: { ...atmo.uniforms, uBones: { value: this.bones }, uNudge: { value: 2.4 }, uAir: { value: 0 }, uBlink: { value: 0 } },
+      vertexShader: COLT_VERT,
+      fragmentShader: COLT_FRAG,
     });
-    this.mesh = new THREE.Mesh(craneGeometry(), this.mat);
+    this.mesh = new THREE.Mesh(coltGeometry(), this.mat);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
   }
@@ -428,10 +232,15 @@ export class Crane {
     this.fallT = 0;
     this.roll = 0;
     this.slew = 0;
+    this.hand = null;
     this.state = 'falling';
     this.visible = true;
     this.position.copy(from);
+    this.shown.copy(from);
     this.yaw = line;
+    this.shownYaw = line;
+    this.fear = 0.5;
+    this.nextCall = this.time + 0.6;
   }
 
   /** How hard it is still trying to get up, 1 at the moment it lands and 0 once it gives in. */
@@ -472,7 +281,11 @@ export class Crane {
 
   /** A few hard flaps and hops on the spot: it is trying to get up by itself, and it cannot. */
   tryToFly(): void {
-    if (this.state === 'following' || this.state === 'fallen') this.hopT = 2.4;
+    if ((this.state === 'following' || this.state === 'fallen') && this.hopT <= 0) {
+      this.state = 'following';
+      this.hopT = HOP_FOR;
+      this.hopLift = 0;
+    }
   }
 
   /** Riding with the child, in the arms or in the hood. */
@@ -483,6 +296,7 @@ export class Crane {
   /** Comes down out of the flock and lands in the grass, too tired to go on. */
   fall(x: number, z: number, yaw: number): void {
     this.position.set(x, Math.max(heightAt(x, z), 0), z);
+    this.shown.copy(this.position);
     this.yaw = yaw;
     this.state = 'fallen';
     this.settle = 1;
@@ -491,7 +305,12 @@ export class Crane {
 
   /** Riding in the child's arms or hood; the caller gives the world point each frame. */
   carry(at: THREE.Vector3, yaw: number, hooded = false): void {
-    this.state = hooded ? 'hooded' : 'carried';
+    const next: CraneState = hooded ? 'hooded' : 'carried';
+    const was = this.state;
+    this.anchor.copy(at);
+    this.anchorYaw = yaw;
+    if (was !== next) this.beginRide(was, next);
+    this.state = next;
     this.position.copy(at);
     this.yaw = yaw;
     this.visible = true;
@@ -499,18 +318,29 @@ export class Crane {
 
   /** Gone to ground and staying there: hunched as small as it can make itself, in the dark, waiting to be found. */
   cower(): void {
+    if (this.carried) this.startHandoff(this.shown, null, false, 1.1, 0.5, 'dash');
     this.state = 'fallen';
     this.settle = 1;
     this.flap = 0;
     this.effort = 0;
     this.hopT = 0;
+    this.fear = 1;
     this.visible = true;
+    this.nextCall = this.time + 1.5;
   }
 
   /** Set down to walk at the child's heel. */
   follow(): void {
-    if (this.state !== 'following') this.settle = 0.6;
+    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    if (this.carried) {
+      this.startHandoff(this.shown, null, false, 0.55, 0.35, 'hop');
+      this.settle = 0.2;
+      this.shake = 0;
+      this.landedAt = this.time;
+    } else if (this.state !== 'following') this.settle = 0.6;
     this.state = 'following';
+    this.visible = true;
+    this.fear = Math.min(this.fear, 0.2);
   }
 
   /** A moment shared: the bond only ever goes up. */
@@ -522,34 +352,78 @@ export class Crane {
     this.lookAt = target;
   }
 
+  /** Where the child should look to meet its eye. */
+  eye(out: THREE.Vector3): THREE.Vector3 {
+    this.nodes[HEAD].updateMatrixWorld(true);
+    return out.setFromMatrixPosition(this.nodes[HEAD].matrixWorld);
+  }
+
   update(dt: number, time: number, child: THREE.Vector3, wind: WindSample): void {
     this.time = time;
     this.mesh.visible = this.visible;
     if (!this.visible) return;
+    dt = Math.min(dt, 0.05);
+    this.childSpeed = ease(this.childSpeed, dt > 0 ? Math.min(8, this.tmp.copy(child).sub(this.childPrev).length() / dt) : 0, 8, dt);
+    this.childPrev.copy(child);
 
     const afoot = this.state === 'following' || this.state === 'fallen';
     /** It only ever goes up on wind that is actually under it, so the player learns where to hold the pointer. */
     const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
-    this.hope = ease(this.hope, afoot ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY) : 0, 2.5, dt);
+    this.hope = ease(this.hope, afoot && this.hopT <= 0 ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY) : 0, 2.5, dt);
 
     if (this.state === 'leaving') this.climbOut(dt);
-    else if (this.state === 'gliding') this.soar(dt, wind);
+    else if (this.state === 'gliding') this.soar(dt, wind, child);
     else if (this.state === 'following') this.walk(dt, child);
-    else if (this.state === 'fallen') this.settle = Math.min(1, this.settle + dt * 0.5);
+    else if (this.state === 'fallen') this.rest(dt, child);
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
+    else this.ride(dt);
 
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
-    if (afoot && lift > LIFT_TO_FLY && this.hopT <= 0 && time - this.landedAt > 1.6) this.takeOff();
+    if (afoot && lift > LIFT_TO_FLY && this.hopT <= 0 && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
 
     this.glide = ease(this.glide, this.state === 'gliding' ? 1 : this.hope * 0.5, 3, dt);
     this.mat.uniforms.uAir.value =
       this.state === 'falling'
-        ? THREE.MathUtils.clamp((this.position.y - this.fallTo.y) / 6, 0, 1)
-        : this.state === 'gliding'
-          ? THREE.MathUtils.clamp((this.position.y - Math.max(heightAt(this.position.x, this.position.z), 0)) / 4, 0, 1)
+        ? clamp((this.shown.y - this.fallTo.y) / 6, 0, 1)
+        : this.state === 'gliding' || this.state === 'leaving'
+          ? clamp((this.shown.y - Math.max(heightAt(this.shown.x, this.shown.z), 0)) / 4, 0, 1)
           : 0;
+    this.live(dt, child);
+    this.place(dt);
     this.pose(dt);
+  }
+
+  private beginRide(was: CraneState, next: CraneState): void {
+    this.rideFor = 0;
+    this.doze = 0;
+    this.calm = 0;
+    this.anchorPrev.copy(this.anchor);
+    this.anchorVel.set(0, 0, 0);
+    this.jostle.set(0, 0, 0);
+    this.jostleVel.set(0, 0, 0);
+    this.nextWriggle = this.time + 4 + Math.random() * 4;
+    if (was === 'flying' || !this.visible) {
+      this.hand = null;
+      return;
+    }
+    const from = this.toLocal(this.shown, this.tmp);
+    if (was === 'carried' && next === 'hooded') this.startHandoff(from, SHOULDER, true, 0.95, 0.12, 'climb');
+    else if (was === 'hooded' && next === 'carried') this.startHandoff(from, SHOULDER, true, 0.8, 0.1, 'climb');
+    else this.startHandoff(from, null, true, 0.5, 0.22, 'lift');
+    this.fear = Math.min(this.fear, 0.25);
+  }
+
+  private startHandoff(from: THREE.Vector3, via: THREE.Vector3 | null, local: boolean, dur: number, lift: number, kind: Handoff['kind']): void {
+    this.hand = { from: from.clone(), via: via ? via.clone() : null, local, t: 0, dur, lift, kind };
+  }
+
+  private toLocal(world: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    return rotY(out.copy(world).sub(this.anchor), -this.anchorYaw);
+  }
+
+  private toWorld(local: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    return rotY(out.copy(local), this.anchorYaw).add(this.anchor);
   }
 
   /** Climbing away north, finding its own strength as it goes, until the night has it. */
@@ -561,8 +435,11 @@ export class Crane {
     this.position.z += Math.cos(this.yaw) * speed * dt;
     this.position.y += (3.1 - this.climb * 1.1) * dt;
     this.flap = 1;
-    this.effort = 0.45 + 0.3 * Math.max(0, Math.sin(this.flapPhase));
-    this.roll = Math.sin(this.time * 0.6) * 0.18;
+    /** Frantic at first, then long steady strokes: the beat of a bird that has found out it can. */
+    this.flapPhase += dt * (11 - this.climb * 4);
+    this.effort = 0.55 + 0.25 * Math.max(0, Math.sin(this.flapPhase));
+    this.roll = ease(this.roll, Math.sin(this.time * 0.6) * 0.16, 2, dt);
+    this.pitch = ease(this.pitch, -0.35 + Math.sin(this.flapPhase) * 0.06, 4, dt);
     if (this.position.y > 150) this.visible = false;
   }
 
@@ -572,19 +449,20 @@ export class Crane {
     this.air = 2.4;
     this.settle = 0;
     this.flights++;
+    this.fear = 0;
   }
 
   /**
    * The colt on the wing, for as long as the player can hold it there. It is not flying — it is being flown, and
    * the moment the updraft stops it sinks. This is where a player finds out they are the reason it can go home.
    */
-  private soar(dt: number, wind: WindSample): void {
+  private soar(dt: number, wind: WindSample, child: THREE.Vector3): void {
     this.glideT += dt;
     const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
     const room = 1 - THREE.MathUtils.smoothstep(this.position.y - ground, CEILING - 2, CEILING);
     const fading = 1 - THREE.MathUtils.smoothstep(this.glideT, GLIDE_FOR - 2.5, GLIDE_FOR);
     this.air += (wind.lift * 9 * room * fading - 3.4) * dt;
-    this.air = THREE.MathUtils.clamp(this.air, -3.2, 3.6);
+    this.air = clamp(this.air, -3.2, 3.6);
     this.position.y += this.air * dt;
 
     /** It cannot steer: it goes where the air goes, sliding downwind and turning to face its own drift. */
@@ -602,211 +480,588 @@ export class Crane {
     if (Math.hypot(wind.x, wind.z) > 0.6) {
       this.yaw = easeAngle(this.yaw, Math.atan2(wind.x, wind.z), 1.1, dt);
     }
-    this.roll = ease(this.roll, Math.sin(this.time * 0.9) * 0.22, 2, dt);
-    this.flap = ease(this.flap, this.air > 0.4 ? 0.85 : 0.2, 3, dt);
-    this.effort = Math.max(0, this.air) * 0.2;
+    this.roll = ease(this.roll, Math.sin(this.time * 0.9) * 0.2, 2, dt);
+    /** Nose up while the air carries it, down as it sinks: the whole bird tells you which way it is going. */
+    this.pitch = ease(this.pitch, clamp(-this.air * 0.16, -0.45, 0.35), 3, dt);
+    const climbing = this.air > 0.4;
+    this.flap = ease(this.flap, climbing ? 0.8 : 0.15, 3, dt);
+    this.flapPhase += dt * (climbing ? 7 : 3);
+    this.effort = Math.max(0, this.air) * 0.18;
+    /** It looks down at the one who is watching it fly. */
+    if (Math.random() < dt * 0.5) this.glanceAt(child, 1.9, 2.5);
 
     if (this.position.y <= ground) {
       this.position.y = ground;
       this.state = 'following';
       this.landedAt = this.time;
+      this.landing = 0.75;
       this.roll = 0;
+      this.pitch = 0;
       this.effort = 0;
+      this.settle = 0;
       /** It goes up because of the player and comes down safe because of the player, and it knows. */
       this.bind(0.12);
     }
   }
 
-  /** The descent: it loses height fast at first, then flattens out and half-crashes into the grass. */
+  /**
+   * The descent. Along the flock's line at first, sinking; then away from it and down. Every burst of flapping
+   * lifts it a little and pitches it up, and every time the burst gives out it sags, drops a wing and slews.
+   * By the end it has no control left at all and goes into the grass on its side.
+   */
   private descend(dt: number): void {
     this.fallT = Math.min(1, this.fallT + dt / this.fallFor);
     const k = this.fallT;
-    /** Bursts of flapping with sinking between them, so every drop the player sees has a visible cause. */
-    const phase = k * Math.PI * 5.4;
-    const burst = Math.max(0, Math.sin(phase)) ** 0.7;
+    const phase = ((k * this.fallFor) / 2.05) * Math.PI * 2;
+    const burst = THREE.MathUtils.smoothstep(Math.sin(phase), -0.1, 0.55);
     this.effort = burst;
     this.flap = 0.3 + burst * 0.7;
+    this.flapPhase += dt * (5 + burst * 8);
 
-    /** Quadratic through the drift point: along the flock's line at first, then away from it and down. */
     const u = 1 - k;
     const drop = this.fallFrom.y - this.fallTo.y;
     this.position.set(
       u * u * this.fallFrom.x + 2 * u * k * this.fallDrift.x + k * k * this.fallTo.x,
-      u * u * this.fallFrom.y + 2 * u * k * this.fallDrift.y + k * k * this.fallTo.y + burst * 0.075 * u * drop,
+      u * u * this.fallFrom.y + 2 * u * k * this.fallDrift.y + k * k * this.fallTo.y + burst * 0.07 * u * drop,
       u * u * this.fallFrom.z + 2 * u * k * this.fallDrift.z + k * k * this.fallTo.z,
     );
     const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
     this.position.y = Math.max(this.position.y, ground);
 
-    /** It cannot hold a line: a wing drops, it slews off course, it hauls itself level and loses it again. */
-    this.roll = Math.sin(phase * 0.63 + 0.8) * 0.8 * (1 - burst * 0.45);
-    this.slew = Math.sin(phase * 0.41) * 0.55;
+    const losing = THREE.MathUtils.smoothstep(k, 0.86, 1);
+    this.roll = Math.sin(phase * 0.63 + 0.8) * (0.45 + 0.45 * k) * (1 - burst * 0.5) + losing * 1.35;
+    this.pitch = lerp(0.42 + 0.2 * k, -0.4, burst) + losing * 0.3;
+    this.slew = Math.sin(phase * 0.41) * 0.5;
     const travel = Math.atan2(this.fallTo.x - this.fallFrom.x, this.fallTo.z - this.fallFrom.z);
     const line = Math.atan2(this.fallDrift.x - this.fallFrom.x, this.fallDrift.z - this.fallFrom.z);
-    this.yaw = line + Math.atan2(Math.sin(travel - line), Math.cos(travel - line)) * k + this.slew;
+    this.yaw = line + wrapAngle(travel - line) * k + this.slew;
+    if (this.time > this.nextCall) {
+      this.call(false);
+      this.nextCall = this.time + 1.2 + Math.random() * 0.5;
+    }
 
     if (this.fallT >= 1) {
       this.state = 'downed';
       this.struggle = 0;
-      this.settle = 0;
+      this.settle = 1;
+      this.flop = 1;
       this.roll = 0;
+      this.pitch = 0;
       this.position.y = ground;
+      this.fear = 0.9;
+      this.puff = 1;
     }
   }
 
-  /** On the ground: three goes at getting airborne again, each weaker, and then it stops trying. */
+  /** On the ground: three goes at getting up, each weaker than the last, and then it stops trying. */
   private struggling(dt: number): void {
     this.struggle = Math.min(1, this.struggle + dt / 9);
-    const burst = Math.max(0, Math.sin(this.struggle * Math.PI * 3)) * (1 - this.struggle);
-    this.effort = burst;
-    this.flap = burst;
+    const s = this.struggle;
+    let rise = 0;
+    let amp = 0;
+    for (const [start, strength] of [
+      [0.05, 1],
+      [0.38, 0.72],
+      [0.7, 0.45],
+    ]) {
+      const w = (s - start) / 0.2;
+      if (w >= 0 && w <= 1) {
+        rise = Math.sin(w * Math.PI) ** 0.8 * strength;
+        amp = strength;
+      }
+    }
+    this.effort = rise;
+    this.flap = rise > 0.05 ? 1 : 0;
+    this.flapPhase += dt * (4 + rise * 14);
+    /** The first push is what rights it; after that it is upright and simply cannot stay up. */
+    this.flop = Math.max(0, Math.min(this.flop, 1 - s * 4));
+    this.settle = 1 - rise;
     const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
-    this.position.y = ground + burst * burst * 0.22;
-    this.settle = Math.min(1, this.settle + dt * 0.25 * this.struggle);
-    if (this.struggle >= 1) this.state = 'fallen';
+    this.position.y = ground + rise * rise * 0.1 * amp;
+    if (rise > 0.3) {
+      this.stride += dt * 9 * amp;
+      this.position.x += Math.sin(this.yaw) * dt * 0.35 * amp;
+      this.position.z += Math.cos(this.yaw) * dt * 0.35 * amp;
+    }
+    this.roll = ease(this.roll, rise > 0.05 ? Math.sin(this.stride * 0.5) * 0.25 * amp : 0, 4, dt);
+    if (rise < 0.05 && this.time > this.nextCall) {
+      this.call(false);
+      this.nextCall = this.time + 2 + Math.random() * 0.8;
+    }
+    if (this.struggle >= 1) {
+      this.state = 'fallen';
+      this.settle = 1;
+      this.flop = 0;
+      this.fear = 0.7;
+    }
+  }
+
+  /** Down and staying down, in the grass or in the dark, calling now and then and watching for the child. */
+  private rest(dt: number, child: THREE.Vector3): void {
+    this.settle = Math.min(1, this.settle + dt * 0.5);
+    this.effort = 0;
+    const gap = Math.hypot(child.x - this.position.x, child.z - this.position.z);
+    /** It stays frightened until the child is there. That is what the child is for. */
+    if (gap < 3) this.fear = Math.max(0.15, this.fear - dt * 0.12);
+    if (this.time > this.nextCall) {
+      this.call(false);
+      this.nextCall = this.time + (this.fear > 0.6 ? 3.6 : 7) + Math.random() * 2;
+    }
+    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.begging(gap);
   }
 
   private walk(dt: number, child: THREE.Vector3): void {
+    const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
     if (this.hopT > 0) {
-      /** Everything it has, straight up, and it gets a foot off the ground: the reason the player tries at all. */
-      this.hopT -= dt;
-      const burst = Math.max(0, Math.sin((2.4 - this.hopT) * Math.PI * 1.7));
-      this.effort = burst;
-      this.flap = Math.max(this.flap, burst);
-      this.settle = 0;
-      this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0) + burst * burst * 0.3;
+      this.hopping(dt, ground);
+      return;
+    }
+    if (this.landing > 0) {
+      /** Flares, hits the ground running, and takes two or three steps to stop. */
+      this.landing -= dt;
+      const run = clamp(this.landing / 0.75, 0, 1);
+      this.stride += dt * 13 * run;
+      this.position.x += Math.sin(this.yaw) * 1.6 * run * dt;
+      this.position.z += Math.cos(this.yaw) * 1.6 * run * dt;
+      this.flap = ease(this.flap, run, 5, dt);
+      this.effort = ease(this.effort, 0, 6, dt);
+      this.p.hurry = run;
+      this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+      if (this.landing <= 0) this.shake = 0.7;
       return;
     }
     this.effort = 0;
-    const keep = 2.6 - this.bond * 1.4;
+    const keep = 2.6 - this.bond * 1.6;
     const dx = child.x - this.position.x;
     const dz = child.z - this.position.z;
     const gap = Math.hypot(dx, dz);
-    const hurry = THREE.MathUtils.clamp((gap - keep) / 6, 0, 1);
-    const speed = hurry * (1.4 + 2.6 * hurry);
-    if (gap > 0.2) {
-      const want = Math.atan2(dx, dz);
-      this.yaw = easeAngle(this.yaw, want, 5 + 4 * hurry, dt);
-    }
+    /** It is a beat behind: it notices the child has gone before it goes after them. */
+    if (gap > keep + 0.6 && this.childSpeed > 1) this.notice = Math.min(0.45, this.notice + dt);
+    else this.notice = Math.max(0, this.notice - dt * 2);
+    const hurry = this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
+    this.p.hurry = ease(this.p.hurry, hurry, 4, dt);
+    const speed = this.p.hurry * (1.5 + 2.9 * this.p.hurry);
+    if (gap > 0.2 && speed > 0.05) this.yaw = easeAngle(this.yaw, Math.atan2(dx, dz), 5 + 4 * hurry, dt);
     if (speed > 0.02) {
       this.position.x += Math.sin(this.yaw) * speed * dt;
       this.position.z += Math.cos(this.yaw) * speed * dt;
-      this.stride += dt * (5 + speed * 2.6);
-      this.settle = Math.max(0, this.settle - dt * 2);
+      this.stride += dt * (6 + speed * 2.8);
+      this.settle = Math.max(0, this.settle - dt * 2.5);
     } else {
-      this.settle = Math.min(1, this.settle + dt * 1.4);
+      /** Stands a while, then sits down where it is, and sooner the more it trusts them to come back. */
+      this.settle = Math.min(1, this.settle + dt * (0.12 + this.bond * 0.1));
+      if (gap > 0.6 && gap < 3.5 && this.settle < 0.5) this.yaw = easeAngle(this.yaw, Math.atan2(dx, dz), 1.2, dt);
+      /** Left standing, it now and then stretches up and calls for the family that is not there. */
+      if (this.childSpeed < 0.3 && this.time > this.nextCall && !this.lookAt) {
+        this.call(true);
+        this.nextCall = this.time + 11 + Math.random() * 7;
+      }
     }
-    this.flap = ease(this.flap, hurry > 0.55 ? 1 : 0, 6, dt);
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    /** Wings out for balance when it runs, the way a chick that cannot fly still uses them. */
+    this.flap = ease(this.flap, this.p.hurry > 0.5 ? 0.75 : 0, 5, dt);
+    this.position.y = ground;
+    this.begging(gap);
   }
 
-  /** Where the child should look to meet its eye. */
-  eye(out: THREE.Vector3): THREE.Vector3 {
-    this.nodes[HEAD].updateMatrixWorld(true);
-    return out.setFromMatrixPosition(this.nodes[HEAD].matrixWorld);
+  /** A chick flutters and reaches up when someone it trusts comes back to it, or stands right over it. */
+  private begging(gap: number): void {
+    if (this.time < this.nextBeg || this.fear > 0.5) return;
+    const returning = this.bond > 0.3 && gap < 1.8 && this.childSpeed > 0.8;
+    const overIt = gap < 1.5 && this.childSpeed < 0.3;
+    if (returning || overIt) {
+      this.beg = 1.4;
+      this.nextBeg = this.time + (overIt ? 4.5 : 9);
+    }
+  }
+
+  /** A crouch and a look up, then everything it has straight up, three times, and a stumble when it comes down. */
+  private hopping(dt: number, ground: number): void {
+    this.hopT -= dt;
+    const t = HOP_FOR - this.hopT;
+    let hop = 0;
+    if (t < 0.5) {
+      this.effort = 0.3;
+      this.flap = ease(this.flap, 0.5, 6, dt);
+      this.settle = ease(this.settle, 0.45, 8, dt);
+    } else if (t < 2.05) {
+      const w = (t - 0.5) / 0.5;
+      const n = Math.floor(w);
+      hop = Math.max(0, Math.sin((w - n) * Math.PI)) ** 1.3 * (0.13 + n * 0.11);
+      this.effort = 1;
+      this.flap = 1;
+      this.flapPhase += dt * 17;
+      this.settle = 0;
+      this.roll = ease(this.roll, Math.sin(w * Math.PI * 2) * 0.2, 6, dt);
+    } else {
+      this.effort = ease(this.effort, 0, 8, dt);
+      this.flap = ease(this.flap, 0, 6, dt);
+      this.roll = ease(this.roll, 0, 5, dt);
+      this.stride += dt * 8;
+      if (this.hopT <= 0.3 && this.shake <= 0 && this.hopT > 0.25) this.shake = 0.6;
+    }
+    this.hopLift = ease(this.hopLift, hop, 30, dt);
+    this.position.y = ground + this.hopLift;
+    if (this.hopT <= 0) {
+      this.landedAt = this.time;
+      this.settle = 0;
+    }
+  }
+
+  /** Riding: shifting its weight, dozing off on a long quiet stretch, and watching what the child watches. */
+  private ride(dt: number): void {
+    this.rideFor += dt;
+    this.effort = 0;
+    this.flap = ease(this.flap, 0, 6, dt);
+    if (dt > 0) {
+      this.tmp.copy(this.anchor).sub(this.anchorPrev).divideScalar(dt);
+      const acc = this.tmp2.copy(this.tmp).sub(this.anchorVel).divideScalar(dt);
+      acc.clampLength(0, 40);
+      this.anchorVel.copy(this.tmp);
+      /** Jostled the way a passenger is: it lags every start and stop, and settles again on a spring. */
+      this.jostleVel.addScaledVector(acc, -0.15 * dt).addScaledVector(this.jostle, -90 * dt).addScaledVector(this.jostleVel, -12 * dt);
+      this.jostle.addScaledVector(this.jostleVel, dt).clampLength(0, 0.12);
+      const jolt = acc.length();
+      this.calm = ease(this.calm, jolt < 2.5 ? 1 : 0, jolt < 2.5 ? 0.25 : 8, dt);
+    }
+    this.anchorPrev.copy(this.anchor);
+    const speed = Math.hypot(this.anchorVel.x, this.anchorVel.z);
+    const walking = clamp(speed / 2.4, 0, 1);
+    const running = clamp((speed - 2.6) / 2.8, 0, 1);
+    /** The child bobs with every step and the point they hold it at does not, so the bob is put back here. */
+    this.gait += ((speed * dt) / (speed > 4 ? 1.5 : 1.1)) * Math.PI;
+    this.bob = Math.abs(Math.cos(this.gait)) * (0.06 + 0.07 * running) * 1.12 * walking;
+
+    const dozy = this.state === 'carried' && this.bond > 0.45 && this.rideFor > 22 && this.calm > 0.85 && this.fear < 0.3;
+    this.doze = ease(this.doze, dozy ? 1 : 0, dozy ? 0.15 : 3, dt);
+    if (this.time > this.nextWriggle && this.doze < 0.5 && this.hand === null) {
+      this.wriggle = 0.8;
+      this.nextWriggle = this.time + 7 + Math.random() * 8;
+    }
+    this.wriggle = Math.max(0, this.wriggle - dt);
+    if (this.lookAt && this.state === 'hooded' && this.time > this.nextCall) {
+      /** In the hood with the family in sight: it stretches up and calls to them, and nothing answers. */
+      this.call(true);
+      this.nextCall = this.time + 5 + Math.random() * 1.5;
+    }
+  }
+
+  /** Everything that keeps it alive when nothing is happening: blinking, breathing, glancing, preening, shaking. */
+  private live(dt: number, child: THREE.Vector3): void {
+    const busy = this.state === 'falling' || this.state === 'downed' || this.state === 'leaving' || this.hopT > 0;
+    this.nextBlink -= dt;
+    if (this.nextBlink <= 0 && this.blinkT <= 0) {
+      this.blinkT = 0.16;
+      this.nextBlink = Math.random() < 0.25 ? 0.25 : 1.8 + Math.random() * 3.5;
+    }
+    if (this.blinkT > 0) {
+      this.blinkT -= dt;
+      this.blink = Math.sin(clamp(this.blinkT / 0.16, 0, 1) * Math.PI);
+    } else this.blink = 0;
+
+    if (this.time > this.nextGlance && !this.lookAt) {
+      const atChild = Math.random() < 0.25 + this.bond * 0.55;
+      if (atChild) this.glanceAt(child, 1.9, 0);
+      else {
+        this.glanceChild = false;
+        this.glanceYaw = (Math.random() - 0.5) * 2.2;
+        this.glancePitch = (Math.random() - 0.5) * 0.6;
+      }
+      this.nextGlance = this.time + 1.5 + Math.random() * 4;
+    }
+
+    const idle = !busy && this.fear < 0.35 && this.hand === null && (this.settle > 0.7 || this.carried) && this.doze < 0.3;
+    this.nextPreen -= dt;
+    if (idle && this.nextPreen <= 0 && this.preen <= 0 && this.callT <= 0) {
+      this.preen = 1.8;
+      this.preenSide = Math.random() < 0.5 ? 1 : -1;
+      this.nextPreen = 9 + Math.random() * 12;
+    }
+    this.preen = Math.max(0, this.preen - dt);
+    this.nextPeck -= dt;
+    if (!busy && !this.carried && this.settle < 0.4 && this.p.hurry < 0.1 && this.nextPeck <= 0 && this.fear < 0.35) {
+      this.peck = 0.7;
+      this.nextPeck = 5 + Math.random() * 7;
+    }
+    this.peck = Math.max(0, this.peck - dt);
+    this.shake = Math.max(0, this.shake - dt);
+    this.beg = Math.max(0, this.beg - dt);
+    this.callT = Math.max(0, this.callT - dt);
+    this.fear = Math.max(0, this.fear - dt * (this.carried ? 0.08 : 0.01));
+    /** Breathing hard after the fall, slow and deep asleep, quick when it is frightened. */
+    this.puff = Math.max(0, this.puff - dt * 0.05);
+    const rate = lerp(0.9 + this.fear * 1.4 + this.puff * 1.6 + this.effort * 1.2, 0.45, this.doze);
+    this.breath += dt * rate * Math.PI * 2;
+  }
+
+  private glanceAt(target: THREE.Vector3, up: number, hold: number): void {
+    this.glanceChild = true;
+    this.want.copy(target).setY(target.y + up);
+    if (hold > 0) this.nextGlance = this.time + hold;
+  }
+
+  /** Stretches up and opens its bill, two or three times; the sound is the story's to make. */
+  private call(longing: boolean): void {
+    this.callT = longing ? 1.4 : 0.8 - this.fear * 0.25;
+    this.callLong = longing;
+  }
+
+  /** Works out where to draw it this frame: on the ground, on the child, or on the way between the two. */
+  private place(dt: number): void {
+    this.prevShown.copy(this.shown);
+    const rest = this.tmp;
+    let restYaw = this.yaw;
+    if (this.carried) {
+      const offset = this.tmp2.copy(this.state === 'hooded' ? HOOD : ARMS).add(this.jostle);
+      /** Shifting its weight: it leans out to one side and back. */
+      offset.x += Math.sin(this.wriggle * Math.PI * 2.5) * 0.05 * Math.min(1, this.wriggle * 3);
+      this.toWorld(offset, rest);
+      rest.y += this.bob;
+      restYaw = this.anchorYaw + (this.state === 'carried' ? ARMS_YAW : 0);
+    } else rest.copy(this.position);
+
+    const h = this.hand;
+    if (h) {
+      h.t += dt;
+      const k = smooth(clamp(h.t / h.dur, 0, 1));
+      const from = h.local ? this.toWorld(h.from, this.from) : this.from.copy(h.from);
+      const via = h.via ? (h.local ? this.toWorld(h.via, this.to) : this.to.copy(h.via)) : null;
+      if (via) {
+        const u = 1 - k;
+        this.shown.set(
+          u * u * from.x + 2 * u * k * via.x + k * k * rest.x,
+          u * u * from.y + 2 * u * k * via.y + k * k * rest.y,
+          u * u * from.z + 2 * u * k * via.z + k * k * rest.z,
+        );
+      } else {
+        this.shown.lerpVectors(from, rest, k);
+        this.shown.y += Math.sin(k * Math.PI) * h.lift;
+      }
+      /** Faces the way it is going on the climb, and turns to its seat as it arrives. */
+      const going = this.tmp2.copy(rest).sub(from);
+      const travel = Math.hypot(going.x, going.z) > 0.15 ? Math.atan2(going.x, going.z) : restYaw;
+      this.shownYaw = easeAngle(this.shownYaw, k < 0.6 && h.kind !== 'lift' ? travel : restYaw, 9, dt);
+      if (h.t >= h.dur) {
+        this.hand = null;
+        if (h.kind === 'hop') this.shake = 0.6;
+      }
+    } else {
+      this.shown.copy(rest);
+      this.shownYaw = this.carried ? easeAngle(this.shownYaw, restYaw, 14, dt) : restYaw;
+    }
   }
 
   private pose(dt: number): void {
     const t = this.time;
     const n = this.nodes;
-    const lerp = THREE.MathUtils.lerp;
-    const clamp = THREE.MathUtils.clamp;
-    const flying = this.state === 'falling' || this.state === 'gliding' || this.state === 'leaving';
-    this.root.position.copy(this.position);
+    const p = this.p;
+    const s = this.state;
+    const h = this.hand;
+    const flying = s === 'falling' || s === 'gliding' || s === 'leaving';
+    const riding = this.carried && !h;
+    const climbing = h !== null && h.kind === 'climb';
+    const lifting = h !== null && (h.kind === 'lift' || h.kind === 'hop');
+    const dashing = h !== null && h.kind === 'dash';
+    const afoot = s === 'following' && !h && this.landing <= 0;
+    const settled = this.grounded || s === 'following' ? this.settle : 0;
+
+    /** What it is doing, as weights; every one eased so that no change of state is a cut. */
+    const hunch = this.fear * (this.carried ? 0.35 : 1) * (1 - this.effort);
+    const calling = this.callT > 0 ? Math.sin(Math.min(1, this.callT / (this.callLong ? 1.4 : 0.8 - this.fear * 0.25)) * Math.PI) ** 0.5 : 0;
+    p.sit = ease(p.sit, riding ? (s === 'hooded' ? 0.75 : 0.9) : flying || h ? (lifting ? 0.4 : 0) : settled, riding ? 3 : 4, dt);
+    p.held = ease(p.held, riding || climbing ? 1 : 0, 5, dt);
+    p.hooded = ease(p.hooded, s === 'hooded' && !h ? 1 : 0, 4, dt);
+    p.hunch = ease(p.hunch, hunch, 2, dt);
+    p.sleep = ease(p.sleep, this.doze, 1.5, dt);
+    p.reach = ease(p.reach, flying || dashing ? 1 : 0, 4, dt);
+    const alert = clamp((this.lookAt ? 0.5 : 0) + this.hope * 0.7 + calling * 1.2 + this.beg * 0.5 + (this.hopT > HOP_FOR - 0.5 ? 0.9 : 0), 0, 1);
+    p.tall = ease(p.tall, alert * (1 - p.reach), 5, dt);
+    const drowsy = settled * (0.55 + this.bond * 0.2) * (1 - this.fear) * (1 - alert);
+    p.curl = ease(p.curl, s === 'falling' ? 1 - this.effort : drowsy + this.doze * 0.6, 3, dt);
+    const spread =
+      clamp(
+        this.flap * 0.35 +
+          this.glide +
+          this.effort * 1.3 +
+          this.hope * 0.55 +
+          (flying ? 1 : 0) +
+          (climbing || lifting ? 0.45 : 0) +
+          this.beg * 0.4 +
+          (this.shake > 0 ? 0.35 : 0),
+        0,
+        1,
+      ) *
+      (1 - p.hunch * 0.6 * (1 - this.effort));
+    p.spread = ease(p.spread, spread, 7, dt);
+    const shaking = this.shake > 0 ? Math.sin(t * 36) * Math.min(1, this.shake * 4) * 0.5 : 0;
+    const tremble = p.hunch * 0.6 + this.fear * (this.carried ? 0.15 : 0.3);
+
+    this.root.position.copy(this.shown);
     this.root.scale.setScalar(SIZE);
     this.root.rotation.order = 'YXZ';
-    this.root.rotation.set(flying ? -0.3 + this.effort * 0.85 : 0, this.yaw, this.roll);
+    let rootPitch = flying ? this.pitch : 0;
+    if (riding || climbing) rootPitch = lerp(rootPitch, s === 'hooded' && !climbing ? -0.22 : climbing ? 0.3 : -0.28, p.held);
+    if (lifting) rootPitch = -0.15;
+    let rootRoll = flying ? this.roll : this.roll * (1 - p.sit * 0.5);
+    rootRoll += this.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
+    this.root.rotation.set(rootPitch, this.shownYaw, rootRoll);
 
-    const held = this.carried;
-    const sit = held || flying ? (held ? 1 : 0) : this.grounded ? this.settle : 0;
-    const afoot = flying || held ? 0 : 1 - this.settle;
-
-    const bob = Math.sin(this.stride * 2) * 0.012 * afoot;
-    /** Carried, the whole bird sits in the arms: the body drops to the hold and only the neck comes up out of it. */
-    const rest = held ? 0.16 : 0.265 - sit * 0.152;
-    n[BODY].position.y = rest + bob + Math.sin(t * 1.7) * 0.003 + this.glide * 0.09 + this.effort * 0.025;
-    n[BODY].position.z = held ? 0.22 : -sit * 0.012;
-    n[BODY].rotation.x =
-      -0.05 - this.glide * 0.12 + sit * 0.03 - (held ? 0.25 : 0) + (flying ? 0.18 : 0) + Math.sin(this.stride * 2 + 1) * 0.02 * afoot;
-    n[BODY].rotation.z = Math.sin(this.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, this.effort);
-
-    /** The neck is the whole character: folded back over the shoulders, the standing S, or stretched out. */
-    const tall = clamp((this.lookAt ? 0.6 : 0) + this.effort + (held ? 0.5 : 0) + this.glide * 0.4 + this.hope * 0.6, 0, 1);
-    const curl = sit * (1 - tall * 0.75);
-    const reach = flying ? 1 : clamp(this.flap * 0.7, 0, 1);
-    const sway = Math.sin(t * 1.05) * 0.022 + Math.sin(this.stride * 2 + 0.7) * 0.028 * afoot;
-    let a = lerp(lerp(-0.3, -1.25, curl), -0.03, tall);
-    let b = lerp(lerp(0.5, 0.95, curl), 0.08, tall);
-    let c = lerp(lerp(0.12, 0.35, curl), -0.02, tall);
-    a = lerp(a, 1.1, reach);
-    b = lerp(b, 0.3, reach);
-    c = lerp(c, 0.15, reach);
-    a += sway;
-    b += sway * 0.6;
-    n[NECK_A].rotation.x = a;
-    n[NECK_B].rotation.x = b;
-    n[NECK_C].rotation.x = c;
-
-    const neckPitch = a + b + c;
-    let pitch = (flying ? 0.02 : lerp(0.06, 0.45, curl)) - neckPitch;
-    let yaw = Math.sin(t * 0.43) * 0.22 * (1 - curl * 0.7);
-    if (this.lookAt) {
-      this.to.copy(this.lookAt).sub(this.eye(this.want));
-      yaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - this.yaw), -1.3, 1.3);
-      pitch = -clamp(Math.atan2(this.to.y, Math.hypot(this.to.x, this.to.z)), -0.8, 0.8) - neckPitch;
-    }
-    /** A long neck turns with the head, or the colt looks like it is wearing its head sideways. */
-    const turn = yaw * 0.5;
-    n[NECK_B].rotation.y = turn * 0.45;
-    n[NECK_C].rotation.y = turn * 0.55;
-    n[HEAD].rotation.set(pitch, yaw - turn, 0);
-
-    this.flapPhase += dt * (6 + this.glide * 4 + this.effort * 9 + (flying ? 4 : 0));
-    /** Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late. */
-    const spread = clamp(this.flap * 0.3 + this.glide + this.effort * 1.3 + this.hope * 0.55 + (flying ? 1 : 0), 0, 1);
-    const power = spread * (1 - this.glide * 0.75);
-    const beat = Math.sin(this.flapPhase) * power;
-    const lag = Math.sin(this.flapPhase - 0.75) * power;
-    const sweep = lerp(1.32, 0.14, spread);
-    const roll = lerp(-0.2, 0.2, spread) + beat * 0.95;
-    const handSweep = lerp(0.88, -0.06, spread) - Math.max(0, lag) * 0.3;
-    const handRoll = lerp(0.12, 0, spread) + lag * 0.55;
-    const twist = -this.glide * 0.12;
-    n[WING_L].rotation.set(twist, sweep, roll);
-    n[WING_R].rotation.set(twist, -sweep, -roll);
-    n[HAND_L].rotation.set(0, handSweep, handRoll);
-    n[HAND_R].rotation.set(0, -handSweep, -handRoll);
-
+    /** Legs first: standing, the body sits on whichever leg is planted, so the feet never sink or float. */
+    const tuck = Math.max(p.sit, p.held);
+    let reach = 0;
     for (const [thigh, shin, foot, side, phase] of [
       [THIGH_L, SHIN_L, FOOT_L, 1, 0],
       [THIGH_R, SHIN_R, FOOT_R, -1, Math.PI],
     ] as const) {
-      const swing = Math.sin(this.stride + phase) * afoot;
-      const up = Math.max(0, Math.cos(this.stride + phase)) * afoot;
-      let th = 0.3 + swing * 0.5 + this.effort * 0.25;
-      let sh = -0.36 + up - swing * 0.2;
-      let ft = up * 0.5;
-      /** Folded away to nothing: the heel comes up under the breast and the shank lies back along the belly. */
-      th = lerp(th, -1.18, sit);
-      sh = lerp(sh, 2.7, sit);
-      ft = lerp(ft, 1.3, sit);
+      const stepping = afoot || this.landing > 0 || (s === 'downed' && this.effort > 0.3) ? 1 - p.sit : 0;
+      const swing = Math.sin(this.stride + phase) * stepping;
+      const up = Math.max(0, Math.cos(this.stride + phase)) * stepping;
+      let th = 0.35 - swing * 0.5 - up * 0.35;
+      let sh = -0.7 + up * 1.15 + swing * 0.15;
+      let ft = -(th + sh) + up * 0.55;
+      /** Folded away to nothing: the ankle goes back and the foot lies forward under the belly. */
+      th = lerp(th, 1.25, tuck);
+      sh = lerp(sh, -2.65, tuck);
+      ft = lerp(ft, 1.35, tuck);
       /** Every push leaves the legs hanging: they straighten as it comes off the ground and fold as it drops. */
-      th = lerp(th, 0.12, this.effort);
-      sh = lerp(sh, -0.14, this.effort);
-      ft = lerp(ft, 0.4, this.effort);
-      th = lerp(th, 0.7, this.glide);
-      sh = lerp(sh, 0.5, this.glide);
-      ft = lerp(ft, 0.9, this.glide);
-      if (this.state === 'falling' || this.state === 'leaving') {
-        /** Legs trailing, neck out straight: everything it has. */
-        th = 1.35;
-        sh = 0.28;
-        ft = 1.5;
+      const dangle = clamp(this.effort + (lifting ? 0.6 : 0) + this.hopLift * 4, 0, 1) * (1 - p.held * 0.7);
+      th = lerp(th, 0.55, dangle);
+      sh = lerp(sh, -0.3, dangle);
+      ft = lerp(ft, 0.5, dangle);
+      const trail = clamp(this.glide + (s === 'falling' || s === 'leaving' || dashing ? 1 : 0), 0, 1);
+      th = lerp(th, 1.45, trail);
+      sh = lerp(sh, -0.15, trail);
+      ft = lerp(ft, 1.4, trail);
+      if (this.landing > 0) {
+        const flare = clamp(this.landing / 0.75, 0, 1);
+        th = lerp(th, -0.5, flare * 0.6);
+        sh = lerp(sh, -0.4, flare * 0.6);
       }
-      n[thigh].rotation.set(th, 0, -side * 0.09 * (1 - sit));
+      if (climbing) {
+        th = 0.2 + Math.sin(t * 22 + phase) * 0.5;
+        sh = -1.0 + Math.cos(t * 22 + phase) * 0.5;
+        ft = 0.6;
+      }
+      n[thigh].rotation.set(th, 0, -side * 0.06 * (1 - tuck));
       n[shin].rotation.x = sh;
       n[foot].rotation.x = ft;
+      const planted = FLOOR / SIZE + 0.036 + THIGH * Math.cos(th) + SHIN * Math.cos(th + sh);
+      reach = Math.max(reach, planted);
     }
+
+    const stand = 1 - tuck;
+    const bodyRest = riding || climbing ? 0.11 : lerp(0.072, reach, stand);
+    const breathe = Math.sin(this.breath) * (0.012 + this.fear * 0.008 + this.puff * 0.01);
+    const body = n[BODY];
+    body.position.y = bodyRest + this.glide * 0.06 + this.effort * 0.02 + breathe * 0.4 + (afoot ? Math.abs(Math.cos(this.stride)) * 0.006 * p.hurry : 0);
+    body.position.z = 0;
+    body.rotation.x =
+      -0.04 + p.sit * 0.04 - p.hunch * 0.12 + (this.peck > 0 ? Math.sin(Math.min(1, this.peck / 0.7) * Math.PI) * 0.25 : 0) + p.hurry * 0.12 - this.beg * 0.1;
+    body.rotation.z =
+      Math.sin(this.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, this.effort) + Math.sin(this.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, this.wriggle * 3);
+    body.scale.set(1 + breathe * 0.6, 1 + breathe * 1.2, 1 + breathe * 0.8);
+
+    /** The neck is the whole character: the S of a bird at ease, tucked back into the shoulders, or stretched. */
+    let a = -0.35;
+    let b = 0.45;
+    let head = 0;
+    a = lerp(a, -1.2, p.curl);
+    b = lerp(b, 1.6, p.curl);
+    head = lerp(head, 0.15, p.curl);
+    a = lerp(a, -0.08, p.tall);
+    b = lerp(b, 0.02, p.tall);
+    head = lerp(head, -0.2 - calling * 0.45, p.tall);
+    /** Frightened, the head is pulled down into the shoulders: the neck folds flat instead of standing. */
+    a = lerp(a, -1.35, p.hunch);
+    b = lerp(b, 2.1, p.hunch);
+    head = lerp(head, 0.25, p.hunch);
+    const heldNeck = p.held * (1 - p.curl) * (1 - p.sleep);
+    a = lerp(a, -0.15 + p.hooded * 0.05, heldNeck);
+    b = lerp(b, 0.05, heldNeck);
+    head = lerp(head, -0.1, heldNeck);
+    a = lerp(a, -1.5, p.sleep);
+    b = lerp(b, 1.9, p.sleep);
+    head = lerp(head, 0.5, p.sleep);
+    a = lerp(a, 1.02, p.reach);
+    b = lerp(b, 0.38, p.reach);
+    head = lerp(head, 0, p.reach);
+    if (this.peck > 0) {
+      const pk = Math.sin(Math.min(1, this.peck / 0.7) * Math.PI);
+      a += pk * 0.9;
+      b += pk * 0.5;
+      head += pk * 0.5 + Math.sin(t * 40) * 0.08 * pk;
+    }
+    const sway = Math.sin(t * 1.05) * 0.02 * (1 - p.reach) + (afoot ? Math.sin(this.stride * 2 + 0.7) * 0.05 * p.hurry : 0);
+    /** A wingbeat pulls the head down a little; a passenger's head lags every jolt the child gives it. */
+    const jolt = this.carried ? this.jostle.z * 3 : 0;
+    a += sway + jolt;
+    b += sway * 0.6 - this.effort * Math.max(0, Math.sin(this.flapPhase)) * 0.08;
+    n[NECK_A].rotation.x = a;
+    n[NECK_B].rotation.x = b;
+
+    /** Where the head points: the target it was given, the child, or wherever it last glanced. */
+    let wantYaw = this.glanceYaw;
+    let wantPitch = this.glancePitch;
+    const target = this.lookAt ?? (this.glanceChild ? this.want : null);
+    if (target) {
+      this.to.copy(target);
+      /** Told to watch someone standing near it, it looks at their face, not their boots. */
+      const near = Math.hypot(target.x - this.shown.x, target.z - this.shown.z) < 4;
+      if (this.lookAt && near && Math.abs(target.y - Math.max(heightAt(target.x, target.z), 0)) < 0.6) this.to.y += 1.9;
+      this.to.sub(this.eye(this.tmp2));
+      wantYaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - this.shownYaw), -1.4, 1.4);
+      wantPitch = -clamp(Math.atan2(this.to.y, Math.hypot(this.to.x, this.to.z)), -1.1, 0.9) - rootPitch;
+    }
+    if (this.preen > 0) {
+      const pr = Math.sin(Math.min(1, this.preen / 1.8) * Math.PI) ** 0.6;
+      wantYaw = lerp(wantYaw, 1.55 * this.preenSide, pr);
+      wantPitch = lerp(wantPitch, 0.85 + Math.sin(t * 34) * 0.1, pr);
+    }
+    if (this.doze > 0.5) {
+      wantYaw = lerp(wantYaw, 1.5, p.sleep);
+      wantPitch = lerp(wantPitch, 0.4, p.sleep);
+    }
+    if (this.callT > 0) {
+      wantYaw *= 1 - calling * 0.6;
+      wantPitch = lerp(wantPitch, this.callLong ? -0.7 : -0.35, calling);
+    }
+    const rate = this.lookAt ? 6 : 5;
+    this.headYaw = ease(this.headYaw, wantYaw * (1 - p.reach * 0.7), rate, dt);
+    this.headPitch = ease(this.headPitch, wantPitch * (1 - p.reach * 0.6), rate, dt);
+    const turn = this.headYaw * 0.45;
+    n[NECK_B].rotation.y = turn;
+    const headPitch = head + this.headPitch - a - b + Math.sin(t * 33) * 0.04 * tremble;
+    n[HEAD].rotation.set(headPitch, this.headYaw - turn + Math.sin(t * 29) * 0.05 * tremble, Math.sin(t * 0.7) * 0.04 * (1 - p.reach));
+    /** The bill opens on each note of a call, and a little with every hard breath after the fall. */
+    const note = this.callLong ? Math.max(0, Math.sin(this.callT * Math.PI * 1.45)) : Math.max(0, Math.sin(this.callT * Math.PI * 3.8));
+    n[JAW].rotation.x = calling * note * 0.42 + this.puff * 0.08 * Math.max(0, Math.sin(this.breath));
+    /** The tuft trails what the head does: flicks up as it drops, lies down as it rises. */
+    const vy = dt > 0 ? (this.shown.y - this.prevShown.y) / dt : 0;
+    n[TUFT].rotation.x = -0.1 + this.tuft.step(clamp(vy * 0.35 + this.headPitch * 0.3, -0.7, 0.7), 140, 11, dt) + Math.sin(t * 27) * 0.06 * tremble;
+    n[TAIL].rotation.x = this.beg * Math.sin(t * 15) * 0.25 + this.bond * 0.15 * (1 - p.hunch) - p.hunch * 0.3 - this.glide * 0.3 - p.sleep * 0.15;
+
+    this.flapPhase += dt * (5 + this.glide * 3 + (afoot ? p.hurry * 6 : 0));
+    /** Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late. */
+    let power = p.spread * (1 - this.glide * 0.8) * (this.effort > 0.02 || this.flap > 0.3 || flying ? 1 : 0.35);
+    let beatPhase = this.flapPhase;
+    if (this.beg > 0 || climbing) {
+      beatPhase = t * 24;
+      power = Math.max(power, 0.35);
+    }
+    const beat = Math.sin(beatPhase) * power;
+    const lag = Math.sin(beatPhase - 0.75) * power;
+    const sweep = lerp(1.35, 0.1, p.spread) + p.hunch * 0.12;
+    const roll = lerp(-0.22 - p.hunch * 0.15, 0.15, p.spread) + beat * 0.95 + shaking * 0.4 + (this.landing > 0 ? clamp(this.landing / 0.75, 0, 1) * 0.6 : 0);
+    const handSweep = lerp(0.9, -0.05, p.spread) - Math.max(0, lag) * 0.3;
+    const handRoll = lerp(0.1, 0, p.spread) + lag * 0.55 + this.glide * Math.sin(t * 3.1) * 0.06;
+    const twist = -this.glide * 0.12 + this.effort * 0.1 * Math.max(0, Math.sin(this.flapPhase));
+    const preenLift = this.preen > 0 ? Math.sin(Math.min(1, this.preen / 1.8) * Math.PI) * 0.25 : 0;
+    n[WING_L].rotation.set(twist, sweep, roll + (this.preenSide > 0 ? preenLift : 0));
+    n[WING_R].rotation.set(twist, -sweep, -roll - (this.preenSide < 0 ? preenLift : 0));
+    n[HAND_L].rotation.set(0, handSweep, handRoll);
+    n[HAND_R].rotation.set(0, -handSweep, -handRoll);
+
+    this.mat.uniforms.uBlink.value = Math.max(this.blink, p.sleep) - this.fear * 0.2 * (1 - p.sleep);
 
     this.root.updateMatrixWorld(true);
     for (let i = 0; i < BONES; i++) this.bones[i].copy(n[i].matrixWorld);
