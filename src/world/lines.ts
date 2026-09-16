@@ -215,6 +215,28 @@ function ropeGeometry(spec: LineSpec): THREE.BufferGeometry {
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 10, 0.022, 4, false);
 }
 
+/**
+ * A line strung between two poles standing in open water, miles from any island, with somebody's washing on it.
+ * It is the same nonsense as the door: the dream repeating a piece of home where there is nothing to hang it on.
+ * They are placed on the crossings, where the player has nothing to do but look at the sea.
+ */
+export function seaLines(): LineSpec[] {
+  const rand = mulberry32(404);
+  const at: [number, number, number][] = [
+    [128, -118, 0.9],
+    [-298, -1962, 2.3],
+  ];
+  return at.map(([x, z, yaw]) => {
+    const run = 7.5 + rand() * 3;
+    const top = 3.6 + rand() * 0.8;
+    return {
+      a: new THREE.Vector3(x - Math.sin(yaw) * run * 0.5, top, z - Math.cos(yaw) * run * 0.5),
+      b: new THREE.Vector3(x + Math.sin(yaw) * run * 0.5, top * (0.9 + rand() * 0.2), z + Math.cos(yaw) * run * 0.5),
+      sag: 0.3 + rand() * 0.25,
+    };
+  });
+}
+
 const PAINT_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uPaint;
