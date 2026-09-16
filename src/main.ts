@@ -40,8 +40,8 @@ import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
 import { Crane } from './creatures/crane';
 import { CraneFlock } from './creatures/flock';
-import { WashingLines, lineField, redDoor, seaLines } from './world/lines';
-import { LINES_WALK } from './story/lines';
+import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
+import { LINES_WALK, LINES_LANDING } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { DarkWood } from './world/wood';
 import { createTree } from './world/tree';
@@ -114,6 +114,9 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
+/** Left on the sand where the boat comes in, so the first thing the island says is that somebody was here. */
+scene.add(baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3));
+
 /** A door standing on the crest with nothing behind it: the dream leaving another piece of home lying about. */
 const door = redDoor(23, -357, 0.32);
 scene.add(door);

@@ -251,6 +251,46 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
+/** A shared material for the painted and woven things that are not cloth, rope or pole. */
+function painted(colour: string): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color(colour) } },
+    vertexShader: WOOD_VERT,
+    fragmentShader: PAINT_FRAG,
+  });
+}
+
+/**
+ * Washing baskets left on the sand where the boat comes in — one on its side, the rest waiting. Nothing is in
+ * them and nobody comes back for them. They are on the beach and not up in the grass because everything smaller
+ * than a child drowns in that grass, and the first thing this island has to say is that somebody was here.
+ */
+export function baskets(x: number, z: number): THREE.Mesh {
+  const rand = mulberry32(57);
+  const parts: THREE.BufferGeometry[] = [];
+  const at: [number, number, number][] = [
+    [0, 0, 0],
+    [2.6, -1.4, 1.1],
+    [-3.1, 1.2, 2.4],
+  ];
+  at.forEach(([dx, dz, spin], i) => {
+    const r = 0.5 + rand() * 0.12;
+    const h = 0.42 + rand() * 0.1;
+    const wall = new THREE.CylinderGeometry(r, r * 0.78, h, 11, 1, true);
+    const base = new THREE.CircleGeometry(r * 0.78, 11).rotateX(-Math.PI / 2).translate(0, -h / 2, 0);
+    const rim = new THREE.TorusGeometry(r, 0.035, 5, 12).rotateX(Math.PI / 2).translate(0, h / 2, 0);
+    const basket = mergeGeometries([wall, base, rim]);
+    /** One of them has been knocked over and nobody has stood it up again. */
+    if (i === 1) basket.rotateX(Math.PI * 0.46);
+    basket.rotateY(spin);
+    const foot = Math.max(heightAt(x + dx, z + dz), 0);
+    parts.push(basket.translate(x + dx, foot + (i === 1 ? r * 0.58 : h / 2), z + dz));
+  });
+  const mesh = new THREE.Mesh(mergeGeometries(parts), painted('#b89a5e'));
+  mesh.material.side = THREE.DoubleSide;
+  return mesh;
+}
+
 /**
  * A door standing in the grass with nothing behind it and nothing on the other side of it. Nobody remarks on it
  * and nothing happens if you walk round it; it is only the dream handing over another piece of home, and it
@@ -263,12 +303,7 @@ export function redDoor(x: number, z: number, yaw: number): THREE.Group {
     new THREE.BoxGeometry(w, h, 0.22).translate(dx, dy + h / 2, 0);
   const jambs = mergeGeometries([frame(0.17, 3.05, 0, -0.66), frame(0.17, 3.05, 0, 0.66), frame(1.49, 0.2, 3.05, 0)]);
   const panel = new THREE.BoxGeometry(1.15, 2.9, 0.1).translate(0, 1.47, 0.02);
-  const paint = (colour: string) =>
-    new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color(colour) } },
-      vertexShader: WOOD_VERT,
-      fragmentShader: PAINT_FRAG,
-    });
+  const paint = painted;
   /** The same white and the same red as the cottage at the end of the journey. Nobody is told that either. */
   group.add(new THREE.Mesh(jambs, paint('#ebe4d4')));
   group.add(new THREE.Mesh(panel, paint('#b5362c')));
