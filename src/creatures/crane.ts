@@ -800,8 +800,8 @@ export class Crane {
     if (hold > 0) this.nextGlance = this.time + hold;
   }
 
-  /** Stretches up and opens its bill, two or three times; the sound is the story's to make. */
-  private call(longing: boolean): void {
+  /** Stretches up and opens its bill, two or three times; the sound is the story's to make, at the same moment. */
+  call(longing: boolean): void {
     this.callT = longing ? 1.4 : 0.8 - this.fear * 0.25;
     this.callLong = longing;
   }

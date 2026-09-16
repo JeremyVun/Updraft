@@ -231,6 +231,7 @@ export class WoodChapter implements Chapter {
     c.lookAt = crane.position;
     if (time > this.nextCall) {
       cue('distress');
+      crane.call(false);
       this.nextCall = time + 3.4 + Math.random() * 1.6;
     }
     /** A glimmer where it is hiding, and then, much later, enough of one to have found it. */

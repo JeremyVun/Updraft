@@ -392,6 +392,7 @@ export class IslandChapter implements Chapter {
       /** It calls the whole way down and keeps calling on the ground. Nothing else is making a sound. */
       if (this.dropped && !crane.carried && time > this.nextCall) {
         cue('distress');
+        crane.call(false);
         this.nextCall = time + (crane.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
       }
       if (this.dropped && crane.grounded && this.downAt < 0) this.downAt = this.now;
@@ -408,6 +409,7 @@ export class IslandChapter implements Chapter {
       c.lookAt = this.cast.crane.position;
       if (this.dropped && !this.cast.crane.carried && time > this.nextCall) {
         cue('distress');
+        this.cast.crane.call(false);
         this.nextCall = time + 2.1 + Math.random() * 0.6;
       }
       if (this.beat === 'kneel' && t > 1.5 && !c.busy) this.gather();

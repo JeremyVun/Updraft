@@ -200,6 +200,7 @@ export class HomeChapter implements Chapter {
       }
       if (this.t > 8 && this.now > this.nextCall) {
         cue('calling');
+        crane.call(true);
         this.nextCall = this.now + 6;
       }
       if (this.t > 10.5) this.to('flying');
@@ -210,6 +211,7 @@ export class HomeChapter implements Chapter {
     if (this.beat === 'answered') {
       if (this.now > this.nextCall) {
         cue('calling');
+        this.cast.crane.call(true);
         this.nextCall = this.now + 4.5 + Math.random();
       }
       if (this.t > REUNION) this.away();

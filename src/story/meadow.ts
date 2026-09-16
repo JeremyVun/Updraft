@@ -299,6 +299,7 @@ export class MeadowChapter implements Chapter {
     this.haze += (0.1 - this.haze) * (1 - Math.exp(-0.016 * 1.2));
     if (this.t > 2.4 && time > this.nextCall) {
       cue('calling');
+      crane.call(true);
       this.nextCall = time + 4.5 + Math.random();
     }
     if (this.t > 15) {
