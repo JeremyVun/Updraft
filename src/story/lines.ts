@@ -5,17 +5,19 @@ import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
 /** The island's south beach, where the boat runs ashore. */
-export const LINES_LANDING = new THREE.Vector2(14, -239);
+export const LINES_LANDING = new THREE.Vector2(14, -308);
 /** The boat is drawn up on the far shore before they get there. Nobody put it there. */
-export const LINES_BERTH = new THREE.Vector3(14, 0, -479);
+export const LINES_BERTH = new THREE.Vector3(14, 0, -408);
 
-/** A wandering way up over the top of the island and down the other side, weaving through the washing. */
+/**
+ * Up over the top of the island and down the other side. It is a hundred paces of ground, not a crossing: the
+ * room is meant to swallow them in washing, so the way weaves between the lines rather than covering distance.
+ */
 const ROUTE = [
-  new THREE.Vector2(-10, -270),
-  new THREE.Vector2(40, -310),
-  new THREE.Vector2(-20, -360),
-  new THREE.Vector2(30, -410),
-  new THREE.Vector2(10, -458),
+  new THREE.Vector2(-4, -322),
+  new THREE.Vector2(32, -350),
+  new THREE.Vector2(-4, -380),
+  new THREE.Vector2(14, -400),
 ];
 
 /** How near the boat the plane has to land before the child takes the hint. */
@@ -47,11 +49,11 @@ export class LinesChapter implements Chapter {
   private flown = false;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
-  private readonly crest = new THREE.Vector3(14, 34, -360);
+  private readonly crest = new THREE.Vector3(14, 17, -360);
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
-    plane.homeRadius = 48;
+    plane.homeRadius = 30;
     child.dismount();
     boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
     child.walkTo(LINES_LANDING.x - 2, LINES_LANDING.y - 12, false, () => this.to('wonder'), 0.9);
@@ -139,7 +141,7 @@ export class LinesChapter implements Chapter {
     }
     this.flown = false;
     const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 24 && this.leg < ROUTE.length - 1) this.leg++;
+    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 16 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
     if (this.play === 'watch') {
@@ -174,8 +176,8 @@ export class LinesChapter implements Chapter {
     const tx = t instanceof THREE.Vector2 ? t.x : t.x;
     const tz = t instanceof THREE.Vector2 ? t.y : t.z;
     const angle = Math.atan2(tx - c.position.x, tz - c.position.z) + (Math.random() - 0.5) * 0.7;
-    c.throwToward(c.position.x + Math.sin(angle) * 22, c.position.z + Math.cos(angle) * 22, () => {
-      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 8.6, 5.4, Math.cos(angle) * 8.6));
+    c.throwToward(c.position.x + Math.sin(angle) * 16, c.position.z + Math.cos(angle) * 16, () => {
+      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 7.4, 5.4, Math.cos(angle) * 7.4));
       this.play = 'watch';
       this.cheered = false;
       c.lookAt = this.cast.plane.position;
@@ -240,9 +242,9 @@ export class LinesChapter implements Chapter {
       return;
     }
     if (this.beat === 'ashore' || this.beat === 'wonder') {
-      s.target.set(c.x, Math.max(heightAt(c.x, c.z), 0) + 6, c.z - 16);
-      s.distance = 40;
-      s.height = 11;
+      s.target.set(c.x, Math.max(heightAt(c.x, c.z), 0) + 5, c.z - 12);
+      s.distance = 30;
+      s.height = 8;
       this.pace = 0.3;
       this.focus.copy(c);
       return;
@@ -252,8 +254,8 @@ export class LinesChapter implements Chapter {
     const fz = c.z * (1 - pw) + p.z * pw - 4;
     const ground = Math.max(heightAt(fx, fz), 0);
     s.target.set(fx, ground + 3.5, fz);
-    s.distance = 32 + Math.hypot(p.x - c.x, p.z - c.z) * 0.5;
-    s.height = s.distance * 0.3;
+    s.distance = 25 + Math.hypot(p.x - c.x, p.z - c.z) * 0.45;
+    s.height = s.distance * 0.28;
     this.pace = 0.4;
     this.focus.set(fx, ground, fz);
   }

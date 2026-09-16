@@ -113,7 +113,7 @@ scene.add(createDistantIslands());
 scene.add(tree.group);
 const grass = new Grass();
 scene.add(grass.group);
-const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z), 190, 128));
+const washing = new WashingLines(lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z), 190, 50));
 scene.add(washing.group);
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
