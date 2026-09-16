@@ -45,8 +45,11 @@ On the island of lines, after it was built far too large (2026-09-17):
 > created."
 
 **Overwhelmed, not vast.** The feeling is being swallowed by somebody's washing, not crossing a landmass. Density
-is the lever, not area: keep the lines and shrink the ground under them. `ISLES.lines` is currently 152 × 124 and
-should be nearer the 70 × 56 this document first asked for.
+is the lever, not area: keep the lines and shrink the ground under them. **Done** (2026-09-17): `ISLES.lines` is
+70 × 56, a low whaleback about 135 by 105 paces of dry land with a crown 17 up. The same 190 lines are packed into
+a 46-unit spread over the middle of it, hung high (poles 4.2–5.9) so the hems clear the grass and the child walks
+in under the sheets. The north beach is deliberately left bare, so the boat waiting on it can be seen from the
+descent. The grass is only lightly grazed now (`croppedAt` takes 34% off, not 74%), which is what Jeremy asked for.
 
 On the colt being hard to see in deep grass, when a session was busy trying to fix it:
 
@@ -56,6 +59,30 @@ On the colt being hard to see in deep grass, when a session was busy trying to f
 
 So: half lost in the grass is how a fledgling that cannot fly is supposed to look. Where the child goes and where
 they stop is the signal, not the bird's silhouette. Do not spend effort making it legible.
+
+On the plane, and on never losing the thread (2026-09-17):
+
+> "to help the player figure out where they want to go, the plane should tend to fly towards what they next need
+> to do or go. e.g. if i make it fly quite high, as it's floating back down, it'll tend to steer towards where the
+> player needs to go to continue the game. [...] I've found the boat on the other side of the island of lines, but
+> i can't figure out how to get the child to go into it and row. The plane also tends to just get stuck in the
+> water instead of steering back to land, or to a 'target', and i have to wind it back. It's a bit annoying."
+
+> "when i say sweating the details, i mean stuff like making sure that the child and the characters are still
+> legible and visible at all times. For example, at the other side of the island of lines, it's not clear how i
+> get to the next island, and when the child goes down the hill on the far side, they aren't appearing in my
+> camera anymore. It's not enough to think about it programmatically, we have to think about things from the
+> perspective of what a child playing this game might see and feel."
+
+On the becalmed stretch (2026-09-17):
+
+> "maybe we can have a part where you get stuck because there's no wind, and you as the player have to be the wind
+> in the sails of the boat. I think that would be cool if done well."
+
+> "maybe not too early as part of the first crossing though. Let it auto pilot that stretch. We can do it a bit
+> later maybe so it feels like things are getting a bit more 'scary' and the child needs to become braver. But
+> whenever we do add the becalmed stretch, it should be visually and audibly clear to the player whats happening
+> and what they need to do."
 
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
 
@@ -75,7 +102,16 @@ Principles:
   the game. They are the only voice in the story, so they are never spent on anything ordinary. Other animals and
   the world are as loud as they like. Meaning is carried by light, colour, music, the child's body language, where the child looks, and the drawing on the paper plane.
 - **The player pushes what they see.** Wind reaches what is under the cursor on screen.
-- **Never let the player lose the thread.** The subject is always in frame. If the child or the plane would go behind terrain, the camera answers. A player who stops understanding what to do is the only real failure state this game has.
+- **Never let the player lose the thread.** The subject is always in frame, and this is enforced, not hoped for.
+  `CameraRig` measures the ground along its own line of sight and answers it — coming in closer first, and rising
+  only if that is not enough, because a camera that solves every hill by climbing ends up looking down on the game
+  from somewhere over it. The washing on the island of lines dissolves where it stands between the camera and the
+  child, for the same reason. A player who stops understanding what to do is the only real failure state this game
+  has.
+- **The plane is the signpost.** It leans toward wherever the story wants the player next — the current waypoint,
+  the tree, the boat — and leans harder the higher it is, so a throw that goes up comes down nearer whatever there
+  is to do. Over water it turns for land whatever height it is at, and a plane that does come down on the sea
+  picks itself up on a gust of its own and flies back. Nothing the player has to go and retrieve, ever.
 - **Nothing is lost, nothing is failed.** Things drift home, the child waits, the world only grows more alive.
 - **Teach by accident.** The player should discover that they lead the child, rather than be shown it. Everywhere the child arrives, something small and delightful happens.
 - **Calm pacing.** Beats wait for the player; transitions are slow and continuous; the camera glides.
@@ -133,8 +169,11 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    glide on the player's updraft.
 4. **The drowned village** (`story/drowned.ts`, `world/drowned.ts`) — the long dusk drift between rooftops, a
    spire, treetops, a turning weathervane, herons on chimneys, autumn leaves on black water. Homes the water took.
-   Then the storm gathers and takes the paper plane out of the child's hand, and they reach after it and it is
-   gone. **Built.** The drift *is* the crossing: there is no separate one before it.
+   A third of the way through **the air dies**: the boat loses way between two gable ends, the sail hangs dead off
+   the boom, the water goes to glass and the world goes quiet, and nothing moves again until the player puts wind
+   in the sail themselves. It is the first time the journey needs them rather than answering them, and it is the
+   held breath before the weather. Then the storm gathers and takes the paper plane out of the child's hand, and
+   they reach after it and it is gone. **Built.** The drift *is* the crossing: there is no separate one before it.
 5. **The dark wood** (`story/wood.ts`, `world/wood.ts`, `fx/embers.ts`) — the first winter storm, at night. There
    is no grass to bend and nothing to throw, so the wind does the only other thing it can do: it breathes on fire.
    The player fans embers awake out of the leaf litter and the child walks on for exactly as long as there is
@@ -234,7 +273,7 @@ Each island lies further north than the last with sea between, and the stretches
 | room | centre | size | sea before it |
 | --- | --- | --- | --- |
 | the still island | (−6, −14) | 60 × 44, its own hand-made shape | — |
-| the island of lines | (14, −360) | 152 × 124, a steep bare dome, cropped short | 178 |
+| the island of lines | (14, −360) | 70 × 56, a low whaleback under its washing | 246 |
 | the meadow | (10, −880) | 340 × 300, the old rolling pasture, now bounded | 196 |
 | the drowned village | (−10, −1440) | 210 × 175, all of it well under water | 85 |
 | the dark wood | (−30, −1800) | 130 × 115, the smallest of them, on a long shelving shore | 70 |
@@ -273,6 +312,11 @@ about 650 units). The veil hides everything either side of it, so it reads as op
   than a thing they watch.
 - **Trodden grass.** `uTrodden`: a soft, noise-warped patch pressed flat where somebody sat down in it, so a
   fledgling in a meadow three feet deep is not swallowed whole. Used for the colt's first flight and the last one.
+- **Being the wind in the sails.** `Boat.becalmed` takes away the steady drive the boat otherwise sails on, so
+  only what the player puts into the sail moves it. The drowned village spends it (`STILL_AT`, `FILL_NEEDED`): the
+  chapter eases its own `breeze` to nothing so the sea, the grass and the sound go with it, hushes the music to
+  almost nothing, holds the sail slack in the middle of the frame and has the child look up at it. About six good
+  gusts gets them under way; after 90 seconds the air comes back on its own, because nobody is ever stranded.
 - **The player's wind stops during a scripted beat.** Chapters expose `scripted` for the beats the story plays out
   on its own. While it is set, `PointerInput.muted` puts nothing into the wind field at all: no chimes, no whoosh,
   no ripples on the water, no wind lines, and nothing the player does can blow the paper plane out of the scene.

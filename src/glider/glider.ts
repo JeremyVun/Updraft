@@ -164,6 +164,7 @@ export class Glider {
   hold(at: THREE.Vector3, yaw: number): void {
     this.held = true;
     this.restTime = 0;
+    this.departing = null;
     this.position.copy(at);
     this.velocity.set(0, 0, 0);
     this.yaw = yaw;
@@ -175,6 +176,8 @@ export class Glider {
   launch(from: THREE.Vector3, velocity: THREE.Vector3): void {
     this.held = false;
     this.restTime = 0;
+    /** A new flight is never still the old one: the ending asks for `depart` again after it launches. */
+    this.departing = null;
     this.position.copy(from);
     this.prev.copy(from);
     this.velocity.copy(velocity);
