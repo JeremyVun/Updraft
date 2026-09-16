@@ -33,7 +33,7 @@ If the GPU stays behind (a saturated device, or another process on the GPU), the
 
 ## Quality governor (`src/gl/quality.ts`)
 
-A ladder of levels: render scale from the device's pixel ratio (capped at 2) down to 1 in steps of 0.25, then multisampling 4 → 2, then render scale 0.85 and 0.72 below one device pixel. Those last two rungs matter more than they look: the meadow saturates the GPU at 1600 × 900 even at scale 1, and a saturated GPU also starves the readbacks above — p90 33 ms with 36 deliveries in 12 s and a 110 ms stall every two seconds became p90 16.7 with 257 deliveries and no stall, purely by letting the governor drop to 0.85. A soft frame that arrives beats a sharp one that does not. Every 1.5 s it looks at the last 90 real frame intervals: if their trimmed mean (top 5% dropped) is over 17.6 ms it steps down (two steps when far over); after 12 s with the 90th percentile under 17.2 ms it steps back up, and a step down that undoes a recent step up doubles that wait, so levels never oscillate. The trim means a single hitch (a window move, a tab switch) never costs quality; the mean catches a GPU that misses every other refresh, which percentiles hide. It opens at the highest level that renders no more than about 2.2 million pixels (touch devices at most 1.25×) and climbs from there, since opening at the full 2× costs seconds of crawl before the first step down; it judges after 1.5 s even at a crawl, not after a fixed number of frames. `?ratio=` or `?msaa=` lock it for QA.
+A level just climbed into is reviewed after a second rather than the usual two and a half, because every extra second spent finding out it does not fit is a second spent hitching. A ladder of levels: render scale from the device's pixel ratio (capped at 2) down to 1 in steps of 0.25, then multisampling 4 → 2, then render scale 0.85 and 0.72 below one device pixel. Those last two rungs matter more than they look: the meadow saturates the GPU at 1600 × 900 even at scale 1, and a saturated GPU also starves the readbacks above — p90 33 ms with 36 deliveries in 12 s and a 110 ms stall every two seconds became p90 16.7 with 257 deliveries and no stall, purely by letting the governor drop to 0.85. A soft frame that arrives beats a sharp one that does not. Every 1.5 s it looks at the last 90 real frame intervals: if their trimmed mean (top 5% dropped) is over 17.6 ms it steps down (two steps when far over); after 12 s with the 90th percentile under 17.2 ms it steps back up, and a step down that undoes a recent step up doubles that wait, so levels never oscillate. The trim means a single hitch (a window move, a tab switch) never costs quality; the mean catches a GPU that misses every other refresh, which percentiles hide. It opens at the highest level that renders no more than about 2.2 million pixels (touch devices at most 1.25×) and climbs from there, since opening at the full 2× costs seconds of crawl before the first step down; it judges after 1.5 s even at a crawl, not after a fixed number of frames. `?ratio=` or `?msaa=` lock it for QA.
 
 ## Post chain (`src/post/post.ts`)
 
@@ -49,6 +49,19 @@ One multisampled half-float scene target; one resolve pass that also clamps NaN/
 - Grass tiles pick their level of detail with hysteresis (3 units past a ring), so the camera's breathing never reshuffles the blades of tiles sitting on a ring.
 
 ## On a phone
+
+## Where the frame went (2026-09-17)
+
+The meadow was the one room that could not hold 60 at render scale 1, and two things were paying for it. The
+pressure solve ran one Jacobi relaxation per pass; it now runs **two relaxations in one pass**, bit for bit what
+two passes produced — each neighbour's relaxed pressure is rebuilt from the same texels, with neighbour positions
+clamped as sampling clamps them, and rounded to half float as the intermediate target would have rounded it — so
+the sim costs half the passes, and a pass on a tiled GPU carries a fixed load and store on top of its pixels. And
+the blade's root colour, its ambient occlusion and how flat the wind has laid it were computed per fragment,
+which under multisampling is several times per pixel; they are per-blade quantities and are now computed **once
+per vertex** (`BLADE_SHADE_GLSL`, shared by the table and direct paths). Median of three back-to-back runs at
+`ratio=1&msaa=2`: p90 33.3 ms → 16.8, frames over 25 ms in twelve seconds about 89 → 70, the same frame
+pixel-for-pixel. The island of lines and the drowned village were already locked at 16.7 and stayed there.
 
 `?stats` draws a small readout (frame percentiles, CPU time inside the frame, quality level, readback counts, draw calls, boot time) for devices without a debugger. Touch devices run the lite tier by default (`?lite=0` to compare): 128² wind with 12 pressure iterations and one substep, a quarter of the grass at 0.7× reach, and far terrain that splits less. The costs that do not shrink with resolution matter most there: the wind simulation (about 35 passes of 256² per substep), the life, cloud and petal passes, and bloom. The sim never runs more than two substeps a frame, so a slow frame cannot multiply its own cost.
 
