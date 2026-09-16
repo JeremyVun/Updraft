@@ -15,6 +15,14 @@ const ENOUGH = 1.2;
 /** How near the light has to come to the hiding place, and how much of it there has to be, to show what is there. */
 const FOUND = 12;
 const FOUND_HEAT = 0.5;
+/**
+ * Nobody is ever stranded in the dark. After this long with nothing burning, the wood wakes a few coals of its
+ * own — a glimmer to walk toward, never a path — and after a long time lost, enough of them that the colt is
+ * found. The player still brings the light; the room only refuses to let the game end here.
+ */
+const UNAIDED = 35;
+const LOST_GLIMMER = 40;
+const LOST_RELENT = 170;
 /** How near a waypoint counts as reached. */
 const REACHED = 7;
 
@@ -97,6 +105,7 @@ export class WoodChapter implements Chapter {
     }
     this.light.copy(c.position);
     this.lit = embers.brightest(this.light);
+    this.darkFor = this.lit < ENOUGH ? this.darkFor + dt : 0;
     this.embers = this.beat === 'ashore' ? 0.4 : 1;
 
     switch (this.beat) {
@@ -164,6 +173,18 @@ export class WoodChapter implements Chapter {
       return;
     }
 
+    /**
+     * Left long enough in the dark with nothing happening, the leaf litter starts waking on its own ahead of
+     * them and keeps waking until the player takes it back over. A first gust from them ends it at once: this is
+     * for somebody who has run out of ideas, and it gets out of their way the moment they have one.
+     */
+    if (this.cast.input.gust > 9) this.unaided = false;
+    else if (this.darkFor > UNAIDED) this.unaided = true;
+    if (this.unaided && this.now > this.nextKindle) {
+      this.cast.embers.kindle(t.x, t.y, 5, 8, 0.72);
+      this.nextKindle = this.now + 2.6;
+    }
+
     if (this.lit < ENOUGH) {
       if (c.moving) c.stop();
       c.lookAt = this.lit > 0 ? this.light : null;
@@ -184,6 +205,9 @@ export class WoodChapter implements Chapter {
 
   private aimed = 0;
   private moored = false;
+  private darkFor = 0;
+  private unaided = false;
+  private nextKindle = 0;
 
   /** The storm's worst gust, and the colt is out of the hood and gone before the child can close a hand on it. */
   private bolt(): void {
@@ -207,6 +231,12 @@ export class WoodChapter implements Chapter {
     if (time > this.nextCall) {
       cue('distress');
       this.nextCall = time + 3.4 + Math.random() * 1.6;
+    }
+    /** A glimmer where it is hiding, and then, much later, enough of one to have found it. */
+    if (this.t > LOST_GLIMMER && time > this.nextKindle) {
+      const hard = this.t > LOST_RELENT;
+      this.cast.embers.kindle(HIDING.x, HIDING.z, hard ? 2.5 : 4, hard ? 5 : 2, hard ? 0.6 : 0.36);
+      this.nextKindle = time + (hard ? 2.5 : 8);
     }
     if (c.busy || c.moving) return;
     if (this.cast.embers.heatNear(HIDING.x, HIDING.z, FOUND) > FOUND_HEAT) {

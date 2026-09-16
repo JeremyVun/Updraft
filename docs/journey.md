@@ -187,6 +187,11 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    light, and stops the moment it goes out. Halfway up, the storm frightens the colt out of the hood; it goes to
    ground off the path and calls, and the only way to find it is to put light on it. The plane is found sodden in
    the leaves further on and dried in the wind. **Built.**
+   **And nobody is ever stranded here**, which was the one place in the game a player could be. After half a
+   minute with nothing burning the litter starts waking on its own ahead of them and keeps waking until the
+   player's own first gust takes it back over; while the colt is lost, a glimmer comes up where it is hiding after
+   forty seconds, and after three minutes enough of one that it is found. The player still brings the light. The
+   room only refuses to let the game end here.
 6. **The long crossing** (`story/crossing.ts` with `dolphins` and `duskTo`) — the intermission, and the only
    crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,

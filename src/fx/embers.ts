@@ -100,6 +100,26 @@ export class Embers {
   }
 
   /**
+   * Wakes a few coals somewhere on its own, without the player. The wood does this only when they have been
+   * left with nothing to go on for a long time — it is the room breathing, not a hint, and it never does enough
+   * to walk a child anywhere by itself unless the story asks for that much.
+   */
+  kindle(x: number, z: number, radius: number, count: number, heat: number): void {
+    let woken = 0;
+    for (const s of this.sparks) {
+      if (woken >= count) break;
+      if (s.heat > LIT) continue;
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * radius;
+      s.p.set(x + Math.cos(a) * r, 0, z + Math.sin(a) * r);
+      s.p.y = Math.max(heightAt(s.p.x, s.p.z), 0) + 0.1 + Math.random() * 0.22;
+      s.v.set(0, 0, 0);
+      s.heat = heat * (0.85 + Math.random() * 0.3);
+      woken++;
+    }
+  }
+
+  /**
    * Where the light is, for the child to walk toward: the hot centroid of everything still burning. Returns how
    * much light there is, so the story can tell the difference between a trail worth following and one spark.
    */
