@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
+import { Readback } from '../gl/readback';
 import { atmo } from '../world/atmosphere';
 import { WINDOW, onWindowMove } from '../world/window';
 import {
@@ -54,9 +55,8 @@ export class WindField {
   private readonly curl: THREE.WebGLRenderTarget;
   private readonly divergence: THREE.WebGLRenderTarget;
   private readonly readTarget: THREE.WebGLRenderTarget;
+  private readonly readback: Readback<{ minX: number; minZ: number; size: number }>;
   private readonly cpu = new Float32Array(READ_RES * READ_RES * 4);
-  private readonly readBuffer = new Float32Array(READ_RES * READ_RES * 4);
-  private reading = false;
   private splats: Splat[] = [];
 
   private readonly forceMat: THREE.ShaderMaterial;
@@ -71,7 +71,7 @@ export class WindField {
   private readonly shiftMat: THREE.ShaderMaterial;
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
 
-  constructor(private readonly renderer: THREE.WebGLRenderer, res = 256) {
+  constructor(renderer: THREE.WebGLRenderer, res = 256) {
     this.res = res;
     this.gpu = new GpuRunner(renderer);
     this.vel = new PingPong(res, res);
@@ -80,6 +80,10 @@ export class WindField {
     this.curl = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.divergence = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.readTarget = simTarget(READ_RES, READ_RES, THREE.FloatType, THREE.NearestFilter);
+    this.readback = new Readback(renderer, READ_RES, READ_RES, (data, window) => {
+      this.cpu.set(data);
+      this.cpuWindow = window;
+    });
 
     const texel = { value: new THREE.Vector2(1 / res, 1 / res) };
     const domain = atmo.uniforms.uDomain;
@@ -225,22 +229,11 @@ export class WindField {
   }
 
   private readBack(): void {
-    if (this.reading) return;
+    if (!this.readback.ready) return;
     this.scaleMat.uniforms.uSrc.value = this.vel.texture;
     this.scaleMat.uniforms.uScale.value = 1;
     this.gpu.run(this.scaleMat, this.readTarget);
-    this.reading = true;
-    const window = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
-    this.renderer
-      .readRenderTargetPixelsAsync(this.readTarget, 0, 0, READ_RES, READ_RES, this.readBuffer)
-      .then(() => {
-        this.cpu.set(this.readBuffer);
-        this.cpuWindow = window;
-      })
-      .catch(() => {})
-      .finally(() => {
-        this.reading = false;
-      });
+    this.readback.request(this.readTarget, { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size });
   }
 
   /** Wind at a world position, bilinear over the CPU copy (one or two frames behind the GPU). */

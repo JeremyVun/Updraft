@@ -46,13 +46,14 @@ const PULSE = 60 / 96 / 2;
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
 const PHRASES: Record<Cue, [number, number][]> = {
   breeze: [[74, 1], [78, 1], [81, 2]],
+  delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
   wave: [[57, 1], [62, 1], [66, 1], [69, 1], [74, 2], [78, 2], [81, 4]],
   unfold: [[74, 2], [78, 1], [81, 1], [83, 2], [81, 1], [78, 1], [76, 2], [78, 1], [74, 3], [0, 2], [71, 1], [74, 1], [76, 2], [78, 1], [76, 1], [74, 4]],
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
 };
-const PHRASE_BEAT: Record<Cue, number> = { breeze: 0.3, restored: 0.22, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { breeze: 0.3, delight: 0.14, restored: 0.22, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 

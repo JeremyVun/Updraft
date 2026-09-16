@@ -33,4 +33,5 @@ The closest existing game is thatgamecompany's *Flower* (2009), which also has y
 - `src/glider/`: the paper glider.
 - `src/input/`: pointer gestures and the cursor ring.
 - `src/audio/`: generated soundscape and music (Web Audio, no sound files).
-- `src/post/`: bloom and the final grade.
+- `src/post/`: the image chain (scene target, resolve, bloom, grade).
+- `src/gl/`: the engine layer under everything: boot (shader precompile, warm frame), non-blocking GPU readbacks, the quality governor, the simulation-pass helpers. `engine.md`.

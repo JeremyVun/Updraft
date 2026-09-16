@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
+import { Readback } from '../gl/readback';
 import { atmo } from './atmosphere';
 import { WINDOW, onWindowMove } from './window';
 
@@ -63,13 +64,17 @@ export class LifeField {
   private readonly lifeMat: THREE.ShaderMaterial;
   private readonly shiftMat: THREE.ShaderMaterial;
   private readonly copyMat: THREE.ShaderMaterial;
+  private readonly readback: Readback<{ minX: number; minZ: number; size: number }>;
   private readonly cpu = new Float32Array(READ_RES * READ_RES * 4);
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
-  private reading = false;
   private sinceRead = 0;
 
-  constructor(private readonly renderer: THREE.WebGLRenderer) {
+  constructor(renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);
+    this.readback = new Readback(renderer, READ_RES, READ_RES, (data, window) => {
+      this.cpu.set(data);
+      this.cpuWindow = window;
+    }, 2);
     this.lifeMat = simMaterial(LIFE_FRAG, {
       uLife: { value: null },
       uWindTex: atmo.uniforms.uWindTex,
@@ -101,23 +106,11 @@ export class LifeField {
     atmo.uniforms.uLifeTex.value = this.life.texture;
 
     this.sinceRead += dt;
-    if (this.reading || this.sinceRead < 0.25) return;
+    if (this.sinceRead < 0.25 || !this.readback.ready) return;
     this.sinceRead = 0;
     this.copyMat.uniforms.uSrc.value = this.life.texture;
     this.gpu.run(this.copyMat, this.readTarget);
-    this.reading = true;
-    const window = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
-    const buffer = new Float32Array(READ_RES * READ_RES * 4);
-    this.renderer
-      .readRenderTargetPixelsAsync(this.readTarget, 0, 0, READ_RES, READ_RES, buffer)
-      .then(() => {
-        this.cpu.set(buffer);
-        this.cpuWindow = window;
-      })
-      .catch(() => {})
-      .finally(() => {
-        this.reading = false;
-      });
+    this.readback.request(this.readTarget, { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size });
   }
 
   /** Life at a world position as the shaders see it (one or two readbacks behind). */

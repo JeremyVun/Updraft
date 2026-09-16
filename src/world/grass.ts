@@ -8,6 +8,8 @@ import { shaderFbm, smoothstep } from './noise';
 import { WINDOW } from './window';
 
 const TILE = 8;
+/** Tiles switch level of detail only this far past a ring, wider than the camera's breathing. */
+const LOD_BAND = 3;
 
 interface LodSpec {
   /** Blades per tile side. */
@@ -315,6 +317,7 @@ export class Grass {
   private readonly matrix = new THREE.Matrix4();
   private readonly sphere = new THREE.Sphere();
   private readonly land = new Map<number, boolean>();
+  private readonly lodOf = new Map<number, number>();
 
   constructor() {
     const touch = window.matchMedia('(pointer: coarse)').matches;
@@ -374,6 +377,25 @@ export class Grass {
     return v;
   }
 
+  /**
+   * The level for a tile at distance d, with hysteresis: a tile only changes level once it is well past the
+   * boundary, so the camera's breathing never reshuffles the blades of tiles sitting on a ring.
+   */
+  private lodFor(key: number, d: number): number {
+    const prev = this.lodOf.get(key);
+    let level = prev ?? LODS.findIndex((l) => d < l.reach);
+    if (level < 0) level = LODS.length - 1;
+    if (prev !== undefined) {
+      while (level > 0 && d < LODS[level - 1].reach - LOD_BAND) level--;
+      while (level < LODS.length - 1 && d > LODS[level].reach + LOD_BAND) level++;
+    }
+    if (level !== prev) {
+      if (this.lodOf.size > 60000) this.lodOf.clear();
+      this.lodOf.set(key, level);
+    }
+    return level;
+  }
+
   update(camera: THREE.Camera): void {
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
@@ -395,7 +417,7 @@ export class Grass {
         this.sphere.center.set(mx, heightAt(mx, mz) + 1.5, mz);
         this.sphere.radius = TILE * 0.75 + 4;
         if (!this.frustum.intersectsSphere(this.sphere)) continue;
-        const lod = this.lods.find((l) => d < l.spec.reach) ?? this.lods[this.lods.length - 1];
+        const lod = this.lods[this.lodFor(tx * 100003 + tz, d)];
         if (lod.count >= lod.spec.maxTiles) continue;
         lod.tiles.array[lod.count * 2] = tx * TILE;
         lod.tiles.array[lod.count * 2 + 1] = tz * TILE;

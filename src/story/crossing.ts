@@ -7,8 +7,23 @@ export const LANDING = new THREE.Vector2(10, -700);
 
 /** The restored island, as the child looks back at it. */
 const ISLAND = new THREE.Vector3(-8, 9, -18);
-/** How long the child sits facing the island, waving, before turning to the way ahead. */
-const FAREWELL = 26;
+/**
+ * Out of the cove, round the east of the island past the islet, then north to the mainland. The farewell happens
+ * under way on the first legs, with the island passing astern.
+ */
+const ROUTE: THREE.Vector2[] = [
+  new THREE.Vector2(34, 44),
+  new THREE.Vector2(70, 56),
+  new THREE.Vector2(104, 22),
+  new THREE.Vector2(106, -90),
+  new THREE.Vector2(72, -250),
+  LANDING,
+];
+/** How near a waypoint counts as rounded. */
+const ROUNDED = 22;
+
+/** How long the child rides facing the island they brought back, waving, before turning to the way ahead. */
+const FAREWELL = 30;
 /** How long the rainbow lingers over the island once the boat sets out. */
 const RAINBOW_FOR = 70;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
@@ -44,9 +59,23 @@ export class CrossingChapter implements Chapter {
   private readonly spot = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
 
+  private leg = 0;
+
   constructor(private readonly cast: Cast) {
-    cast.boat.steerFor = LANDING.clone();
+    cast.boat.steerFor = ROUTE[0];
+    cast.boat.canGround = false;
     cast.plane.homeRadius = 1e9;
+  }
+
+  /** Steers waypoint to waypoint; only the last leg, out in open water, is allowed to run the bow ashore. */
+  private steer(): void {
+    const { boat } = this.cast;
+    const wp = ROUTE[this.leg];
+    if (this.leg < ROUTE.length - 1 && Math.hypot(boat.position.x - wp.x, boat.position.z - wp.y) < ROUNDED) {
+      this.leg++;
+      boat.steerFor = ROUTE[this.leg];
+      boat.canGround = this.leg === ROUTE.length - 1;
+    }
   }
 
   get done(): boolean {
@@ -55,11 +84,14 @@ export class CrossingChapter implements Chapter {
 
   update(dt: number): void {
     this.time += dt;
+    this.steer();
     const { child, boat, plane } = this.cast;
     const farewell = this.time < FAREWELL;
     this.facingBack = farewell ? Math.min(1, this.facingBack + dt / 2.2) : Math.max(0, this.facingBack - dt / 1.6);
     const turn = this.facingBack * this.facingBack * (3 - 2 * this.facingBack);
-    child.ride(boat.seat(this.seat), boat.yaw + Math.PI * turn);
+    const toIsland = Math.atan2(ISLAND.x - boat.position.x, ISLAND.z - boat.position.z);
+    const round = Math.atan2(Math.sin(toIsland - boat.yaw), Math.cos(toIsland - boat.yaw));
+    child.ride(boat.seat(this.seat), boat.yaw + round * turn);
     plane.hold(child.handPosition(this.hand), child.yaw);
 
     if (farewell) {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GpuRunner, simMaterial, simTarget } from '../gl/gpu';
+import { Readback } from '../gl/readback';
 import { atmo } from './atmosphere';
 import { HEIGHTFIELD_GLSL } from './heightfield';
 import { setHeightGrid } from './island';
@@ -120,8 +121,8 @@ function nearest<T>(items: T[], at: (t: T) => [number, number], max: number): T[
 }
 
 /**
- * Bakes the window's terrain height and normal (float, also copied back to the CPU), its sun visibility,
- * and its surface mask. Re-run whenever the window moves.
+ * Bakes the window's terrain height and normal (float, also copied back to the CPU), its surface mask, and
+ * its sun visibility. The terrain bakes re-run whenever the window moves; the light bake also whenever the sun moves.
  */
 export class GroundBakes {
   readonly height: THREE.WebGLRenderTarget;
@@ -131,14 +132,25 @@ export class GroundBakes {
   private readonly heightMat: THREE.ShaderMaterial;
   private readonly groundMat: THREE.ShaderMaterial;
   private readonly surfaceMat: THREE.ShaderMaterial;
-  private reading = 0;
+  private readonly readback: Readback<{ minX: number; minZ: number; size: number }>;
+  private readonly grids = [new Float32Array(RES * RES * 4), new Float32Array(RES * RES * 4)];
+  private gridInUse = 0;
+  private wanted: { minX: number; minZ: number; size: number } | null = null;
+  private heightUnread = false;
   /** Whether the float height bake can be filtered linearly on this device. */
   readonly filterable: boolean;
 
-  constructor(private readonly renderer: THREE.WebGLRenderer) {
+  constructor(renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);
     this.filterable = renderer.extensions.has('OES_texture_float_linear');
     this.height = simTarget(RES, RES, THREE.FloatType, this.filterable ? THREE.LinearFilter : THREE.NearestFilter);
+    this.readback = new Readback(renderer, RES, RES, (data, window) => {
+      if (window !== this.wanted) return;
+      const grid = this.grids[1 - this.gridInUse];
+      grid.set(data);
+      this.gridInUse = 1 - this.gridInUse;
+      setHeightGrid({ data: grid, ...window, res: RES, stride: 4 });
+    }, 2);
     this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain });
     this.groundMat = simMaterial(GROUND_FRAG, {
       uHeightTex: { value: this.height.texture },
@@ -159,15 +171,10 @@ export class GroundBakes {
     atmo.uniforms.uSurfaceTex.value = this.surface.texture;
   }
 
-  /** Bakes for the current window (`atmo.uniforms.uDomain` must already match `WINDOW`). */
+  /** Bakes everything for the current window (`atmo.uniforms.uDomain` must already match `WINDOW`). */
   bake(inputs: BakeInputs): void {
     this.gpu.run(this.heightMat, this.height);
-
-    const occluders = nearest(inputs.occluders, (o) => [o.centre.x, o.centre.z], MAX_OCCLUDERS);
-    const gu = this.groundMat.uniforms;
-    gu.uOccluderCount.value = occluders.length;
-    occluders.forEach((o, i) => gu.uOccluders.value[i].set(o.centre.x, o.centre.y, o.centre.z, o.radius));
-    this.gpu.run(this.groundMat, this.ground);
+    this.bakeLight(inputs);
 
     const su = this.surfaceMat.uniforms;
     const clearings = nearest(inputs.clearings, (c) => [c.x, c.z], MAX_SHAPES);
@@ -179,18 +186,21 @@ export class GroundBakes {
     this.gpu.run(this.surfaceMat, this.surface);
 
     atmo.uniforms.uGroundDomain.value.copy(atmo.uniforms.uDomain.value);
-    this.readBack();
+    this.wanted = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
+    this.heightUnread = !this.readback.request(this.height, this.wanted);
   }
 
-  private readBack(): void {
-    const ticket = ++this.reading;
-    const window = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
-    const buffer = new Float32Array(RES * RES * 4);
-    this.renderer
-      .readRenderTargetPixelsAsync(this.height, 0, 0, RES, RES, buffer)
-      .then(() => {
-        if (ticket === this.reading) setHeightGrid({ data: buffer, ...window, res: RES, stride: 4 });
-      })
-      .catch(() => {});
+  /** Once a frame: retries the height readback if every slot was busy when the window moved. */
+  tick(): void {
+    if (this.heightUnread && this.wanted) this.heightUnread = !this.readback.request(this.height, this.wanted);
+  }
+
+  /** Re-marches the sun over the baked height: cheap enough to follow the sun as it sinks. */
+  bakeLight(inputs: BakeInputs): void {
+    const occluders = nearest(inputs.occluders, (o) => [o.centre.x, o.centre.z], MAX_OCCLUDERS);
+    const gu = this.groundMat.uniforms;
+    gu.uOccluderCount.value = occluders.length;
+    occluders.forEach((o, i) => gu.uOccluders.value[i].set(o.centre.x, o.centre.y, o.centre.z, o.radius));
+    this.gpu.run(this.groundMat, this.ground);
   }
 }

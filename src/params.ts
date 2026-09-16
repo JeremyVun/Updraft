@@ -35,4 +35,6 @@ export const params = {
   chapter: q.get('chapter'),
   /** QA: a whale surfaces ahead of the crossing a few seconds in (and again every so often), fish leap by the boat. */
   whale: q.has('whale'),
+  /** Prototype: hangs the island of lines' washing over the still island. */
+  lines: q.has('lines'),
 };

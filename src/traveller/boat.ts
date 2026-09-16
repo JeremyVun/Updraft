@@ -8,6 +8,10 @@ import { heightAt } from '../world/island';
 const LENGTH = 4.8;
 const BEAM = 0.95;
 const DEPTH = 0.62;
+/** Floorboards, laid across the ribs. They sit above the waterline, so the sea is never seen inside the hull. */
+const FLOOR_Y = -0.24;
+/** How deep the hull floats: local y 0 rides this far above the sea, putting the waterline below the floorboards. */
+const DRAFT = 0.42;
 
 const HULL_VERT = /* glsl */ `
 in vec3 color;
@@ -132,6 +136,33 @@ function hull(): THREE.BufferGeometry {
   return geo;
 }
 
+/** The floorboards: a flat deck lofted to the inside of the hull at the height the boards are laid. */
+function floorboards(): THREE.BufferGeometry {
+  const U = 18;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const width = (u: number) => BEAM * (1 - Math.pow(u, 3.2)) * (0.7 + 0.3 * Math.sin(u * Math.PI));
+  const depth = (u: number) => DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI));
+  const sheer = (u: number) => 0.28 * u * u;
+  for (let i = 0; i <= U; i++) {
+    const u = i / U;
+    const drop = (sheer(u) - FLOOR_Y) / (depth(u) * (1 - 0.5 * u * u));
+    const sin = Math.min(1, Math.max(0, drop)) ** (1 / 0.7);
+    const half = width(u) * Math.sqrt(Math.max(0, 1 - sin * sin));
+    const z = (u - 0.45) * LENGTH;
+    pos.push(-half, FLOOR_Y, z, half, FLOOR_Y, z);
+  }
+  for (let i = 0; i < U; i++) {
+    const a = i * 2;
+    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function sailGeometry(): THREE.BufferGeometry {
   const geo = new THREE.PlaneGeometry(1, 1, 10, 12);
   const pos = geo.attributes.position as THREE.BufferAttribute;
@@ -159,6 +190,8 @@ export class Boat {
   steerFor: THREE.Vector2 | null = null;
   /** True once the bow has run up onto a shore while sailing. */
   grounded = false;
+  /** False while the route still passes close to land, so rounding a headland is not mistaken for arriving. */
+  canGround = true;
   private readonly sailPivot = new THREE.Group();
   private readonly sailMat: THREE.ShaderMaterial;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
@@ -183,10 +216,11 @@ export class Boat {
     const wood = new THREE.Color('#9a6a42');
     const trim = new THREE.Color('#5d3d27');
     const shell = paint(hull(), wood);
+    const deck = paint(floorboards(), trim);
     const thwart = paint(new THREE.BoxGeometry(1.7, 0.08, 0.34).translate(0, 0.02, -0.25), trim);
     const mast = paint(new THREE.CylinderGeometry(0.06, 0.08, 4.6, 8).translate(0, 2.2, 0.55), trim);
     const boomBar = paint(new THREE.CylinderGeometry(0.04, 0.04, 2.8, 6).rotateZ(Math.PI / 2).translate(-1.35, 0.78, 0.55), trim);
-    this.group.add(new THREE.Mesh(mergeGeometries([shell, thwart, mast]), hullMat));
+    this.group.add(new THREE.Mesh(mergeGeometries([shell, deck, thwart, mast]), hullMat));
 
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
@@ -205,7 +239,7 @@ export class Boat {
   }
 
   beach(x: number, z: number, yaw: number): void {
-    this.position.set(x, Math.max(heightAt(x, z), 0) + 0.35, z);
+    this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
     this.yaw = yaw;
     this.afloat = false;
     this.speed = 0;
@@ -246,7 +280,7 @@ export class Boat {
       p.x += (fx * this.speed + w.x * 0.06) * dt;
       p.z += (fz * this.speed + w.z * 0.06) * dt;
       const ahead = heightAt(p.x + fx * 2.2, p.z + fz * 2.2);
-      if (ahead > -0.25) {
+      if (this.canGround && ahead > -0.25) {
         this.grounded = true;
         this.speed = 0;
       }
@@ -255,8 +289,8 @@ export class Boat {
     const heel = this.afloat ? THREE.MathUtils.clamp(across * 0.018, -0.22, 0.22) : 0;
     this.roll += (heel + Math.sin(this.time * 1.3) * (this.afloat ? 0.05 : 0.0) - this.roll) * (1 - Math.exp(-dt * 2));
     this.pitch += ((this.afloat ? Math.sin(this.time * 0.9 + 1) * 0.04 - this.speed * 0.004 : -0.05) - this.pitch) * (1 - Math.exp(-dt * 2));
-    const bob = this.afloat ? Math.sin(this.time * 1.1) * 0.12 + Math.sin(this.time * 2.3) * 0.04 : 0;
-    p.y = this.afloat ? bob + 0.34 : Math.max(heightAt(p.x, p.z), 0) + 0.45;
+    const bob = this.afloat ? Math.sin(this.time * 1.1) * 0.045 + Math.sin(this.time * 2.3) * 0.02 : 0;
+    p.y = this.afloat ? bob + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const relX = w.x * fz - w.z * fx;
     const targetBoom = THREE.MathUtils.clamp(-Math.atan2(relX, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);

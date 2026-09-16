@@ -177,7 +177,8 @@ export class Traveller {
   }
 
   cheer(): void {
-    if (!this.action) this.action = { kind: 'cheer', t: 0 };
+    const busy = this.action && this.action.kind !== 'wave' && this.action.kind !== 'cheer';
+    if (!busy) this.action = { kind: 'cheer', t: 0 };
   }
 
   wave(): void {
@@ -410,10 +411,12 @@ export class Traveller {
       armLX = -0.8 * down;
     } else if (a?.kind === 'cheer') {
       const up = Math.sin(Math.min(1, a.t / 1.3) * Math.PI);
-      armLX = armRX = -2.9 * Math.min(1, up * 1.6);
-      armLZ = -0.4 * up;
-      armRZ = 0.4 * up;
-      lift = Math.max(0, Math.sin(a.t * 9)) * 0.22 * up;
+      armLX = armRX = -3.1 * Math.min(1, up * 1.8);
+      armLZ = -0.55 * up;
+      armRZ = 0.55 * up;
+      lift = Math.max(0, Math.sin(a.t * 7.5)) * 0.46 * up;
+      bodyY = Math.sin(a.t * 5.2) * 0.3 * up;
+      bodyX = -0.3 * up;
     } else if (a?.kind === 'wave') {
       const up = Math.min(1, a.t * 4) * Math.min(1, (1.8 - a.t) * 4);
       armRX = -2.6 * up;

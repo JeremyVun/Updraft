@@ -1,11 +1,12 @@
 # Updraft
 
-Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `docs/journey.md` first: the vision, Jeremy's brief in his words, the story and the build plan.** Overview: `docs/project.md`. Look: `docs/styles.md`. Milestones: `docs/roadmap.md`. The wind field every system reads: `docs/contracts/wind.md`; the ground, its life and what lives on it: `docs/contracts/world.md`.
+Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `docs/journey.md` first: the vision, Jeremy's brief in his words, the story and the build plan.** Overview: `docs/project.md`. Look: `docs/styles.md`. Milestones: `docs/roadmap.md`. The wind field every system reads: `docs/contracts/wind.md`; the ground, its life and what lives on it: `docs/contracts/world.md`. How a frame is produced and kept smooth (boot, frame order, readbacks, quality, post): `docs/engine.md`.
 
 ## Commands
 
 - `npm run dev` (serves http://127.0.0.1:5230/), `npm run typecheck`, `npm run build`.
 - Visual QA: `node tools/play.mjs <out-prefix> '<json steps>'` drives real pointer gestures (swipe, hold, move) in local Chrome with the GPU and saves screenshots; `VIDEO=1` also records a webm. Run it against a dev server; see the header for step syntax. Put output in `/tmp`. `node tools/playthrough.mjs` prints the steps for a whole automated playthrough (10-15 minutes; it holds the browser lock).
+- Performance: `node tools/perf.mjs <frames|gl|cpu|flicker> [seconds] [query]` measures frame intervals and hitches, blocking WebGL calls, a CPU profile, or frame-to-frame image spikes (flicker) from inside the running game. Numbers are inflated while any other process uses the GPU; check for busy Chrome processes first.
 - Deploy: `tools/deploy.sh` builds and uploads `dist/` as static assets of the Cloudflare Worker `updraft` (`wrangler.jsonc`), live at https://updraft.perch-admin.workers.dev. Needs `CLOUDFLARE_API_TOKEN` (Workers Scripts Edit), a clean tree and the `main` branch, because every deploy goes to production.
 
 ## Query params
@@ -14,6 +15,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 
 ## Where things are
 
+- Engine layer (boot, readbacks, quality governor, sim-pass helpers): `src/gl/`. Post chain: `src/post/post.ts`.
 - Shared shader uniforms and GLSL (sky, fog, lighting, cloud shadows, domain helpers): `src/world/atmosphere.ts`. Include `ATMO_GLSL` once per shader stage.
 - Island shape and height lookups: `src/world/island.ts`. Tree and rock placement: `src/world/landmarks.ts`.
 - Player-facing text drafts and approvals: `docs/copy/`.

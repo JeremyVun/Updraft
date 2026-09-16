@@ -30,7 +30,7 @@ RGBA half float on the same grid. `xy` is the lean vector of the grass (directio
 2. `main.ts` sets `wind.breeze` (the prevailing breeze vector, about 2.6 units/s, slowly veering).
 3. `wind.step(dt, time)` runs 1 to 3 substeps of 1/60 s: force (breeze and splats; splats only in the first substep), curl, vorticity confinement, divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass spring.
 4. `main.ts` copies the current textures into `atmo.uniforms` after the step. Textures ping-pong, so never keep a texture reference from an earlier frame.
-5. The step ends with an asynchronous readback of a 128 × 128 copy. `wind.sample(x, z, out)` reads that copy bilinearly. It is one or two frames behind the GPU and covers the same domain.
+5. The step ends by requesting a readback of a 128 × 128 copy (`src/gl/readback.ts`), which lands at the next frame's `pollReadbacks()` once the GPU has finished it, without the CPU ever waiting. `wind.sample(x, z, out)` reads that copy bilinearly. It is normally one or two frames behind the GPU; when the GPU is saturated it can fall a few more frames behind (see `docs/engine.md`). It covers the domain that was current when it was requested.
 
 ## Splats
 

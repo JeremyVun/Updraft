@@ -22,7 +22,7 @@ export class Journey {
     const start = params.chapter;
     if (start === 'crossing' || start === 'hills' || start === 'summit') {
       cast.life.regions.island.w = 1;
-      cast.boat.beach(BOAT_BERTH.x, BOAT_BERTH.z - 4, Math.PI);
+      cast.boat.beach(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
       cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
       cast.boat.launch();
       this.begin('crossing');

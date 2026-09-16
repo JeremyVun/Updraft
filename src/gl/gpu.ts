@@ -8,14 +8,19 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
+/** Every simulation and bake material made so far, so they can all be compiled up front (see gl/boot.ts). */
+export const simMaterials: THREE.ShaderMaterial[] = [];
+
 export function simMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
+  const material = new THREE.ShaderMaterial({
     vertexShader: QUAD_VERT,
     fragmentShader,
     uniforms,
     depthTest: false,
     depthWrite: false,
   });
+  simMaterials.push(material);
+  return material;
 }
 
 export function simTarget(
