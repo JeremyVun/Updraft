@@ -13,6 +13,8 @@ const FAREWELL = 26;
 const RAINBOW_FOR = 70;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
 const SWING = 9;
+/** When the whale comes up, far ahead and off to one side, so the boat sails past it. */
+const WHALE_AT = 52;
 /** The camera's usual bearing, from the default shot: behind the boat, looking north. */
 const SAIL_BEARING = Math.atan2(0.075, 1);
 
@@ -37,6 +39,10 @@ export class CrossingChapter implements Chapter {
   private time = 0;
   private facingBack = 0;
   private nextWave = 3.5;
+  private whaleCalled = false;
+  private watching = 0;
+  private readonly spot = new THREE.Vector3();
+  private readonly look = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
     cast.boat.steerFor = LANDING.clone();
@@ -68,6 +74,19 @@ export class CrossingChapter implements Chapter {
       child.lookAt = this.ahead;
     }
 
+    const { sealife } = this.cast;
+    if (!this.whaleCalled && this.time > WHALE_AT) {
+      this.whaleCalled = true;
+      const fx0 = Math.sin(boat.yaw);
+      const fz0 = Math.cos(boat.yaw);
+      this.spot.set(boat.position.x + fx0 * 132 - fz0 * 19, 0, boat.position.z + fz0 * 132 + fx0 * 19);
+      sealife.surfaceWhale(this.spot, boat.yaw - 0.3);
+    }
+    sealife.fishNear(boat.position, farewell ? 0.25 : 1);
+    const whale = sealife.whale;
+    if (whale && !farewell) child.lookAt = whale;
+    this.watching = whale && !farewell ? Math.min(1, this.watching + dt * 0.5) : Math.max(0, this.watching - dt * 0.5);
+
     const wanted = this.time < RAINBOW_FOR ? 1 : 0;
     this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? 0.3 : 0.06)));
 
@@ -84,6 +103,9 @@ export class CrossingChapter implements Chapter {
     this.shot.distance = THREE.MathUtils.lerp(21, 24, swing);
     this.shot.height = THREE.MathUtils.lerp(2.5, 6.5, swing);
     this.pace = farewell ? 0.4 : swing < 1 ? 1.2 : 0.4;
+    if (this.watching > 0 && whale) {
+      this.shot.target.lerp(this.look.set(whale.x, Math.max(whale.y, 1.5), whale.z), this.watching * 0.08);
+    }
     this.focus.copy(boat.position);
     this.escort.set(boat.position.x, 0, boat.position.z);
   }

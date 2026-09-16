@@ -3,6 +3,7 @@ import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Boat } from '../traveller/boat';
+import type { SeaLife } from '../fx/sealife';
 import type { Drawing } from '../traveller/drawing';
 import type { Traveller } from '../traveller/traveller';
 import type { WindField } from '../wind/field';
@@ -21,6 +22,7 @@ export interface Cast {
   tree: Tree;
   drawing: Drawing;
   cottage: Cottage;
+  sealife: SeaLife;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }
