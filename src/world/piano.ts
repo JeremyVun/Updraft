@@ -92,8 +92,10 @@ void main() {
 
   float grain = vnoise(vec2(vWorld.x * 2.3 + vWorld.z * 2.3, vWorld.y * 34.0));
   vec3 albedo = vTint * (0.85 + 0.3 * grain);
-  /** Whatever faces the sky has had a summer of it: the lid and the top have gone grey and chalky. */
-  albedo = mix(albedo, albedo * 1.3 + vec3(0.035, 0.032, 0.026), smoothstep(0.25, 0.9, N.y) * 0.28);
+  /** Whatever faces the sky has had a summer of it: the lid and the top have gone grey and chalky. Only what
+      has colour in it to lose, though — ebony that came up chalky read as another piece of pale wood. */
+  float chalk = smoothstep(0.015, 0.08, dot(albedo, vec3(0.33)));
+  albedo = mix(albedo, albedo * 1.3 + vec3(0.035, 0.032, 0.026) * chalk, smoothstep(0.25, 0.9, N.y) * 0.28);
   /** And whatever is down in the grass has gone green and damp at the foot. */
   albedo = mix(albedo, mix(albedo, vec3(0.1, 0.13, 0.06), 0.5), 1.0 - smoothstep(0.0, 0.45, vWorld.y - uFoot));
   albedo *= 0.78 + 0.22 * abs(N.y);
@@ -153,10 +155,11 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number): 
 
 const WOOD = new THREE.Color('#6a4a2e');
 const WOOD_DARK = new THREE.Color('#4f3724');
+const WOOD_WORN = new THREE.Color('#7d5b39');
 const BRASS = new THREE.Color('#a8872f');
 const CAVITY = new THREE.Color('#120d0a');
-const IVORY = new THREE.Color('#e9e0c8');
-const EBONY = new THREE.Color('#231f1c');
+const IVORY = new THREE.Color('#ece0be');
+const EBONY = new THREE.Color('#1c1815');
 
 /** The case, the stool and everything that is not a key: one mesh, tinted part by part. */
 function caseGeometry(): THREE.BufferGeometry {
@@ -181,8 +184,8 @@ function caseGeometry(): THREE.BufferGeometry {
   /** The music desk, leaning back with nothing on it, on the ledge above the keys. */
   const desk = box(WIDTH * 0.66, 0.42, 0.03, 0, 0, 0);
   desk.rotateX(-0.11);
-  add(desk.translate(0, 1.06, front + 0.07), WOOD_DARK, 0.5);
-  add(box(WIDTH * 0.7, 0.035, 0.11, 0, 1.04, front + 0.05), WOOD);
+  add(desk.translate(0, 1.06, front + 0.07), WOOD_WORN, 0.5);
+  add(box(WIDTH * 0.7, 0.035, 0.11, 0, 1.04, front + 0.05), WOOD_WORN);
 
   /** The top stands open: a dark slot with the tuning pins in it, and the lid up over the back of the case. */
   add(box(WIDTH - 0.16, 0.14, DEPTH - 0.14, 0, TOP - 0.15, 0), CAVITY, 0);

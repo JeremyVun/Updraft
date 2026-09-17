@@ -33,7 +33,7 @@ export class PianoStop {
   private readonly onto = new THREE.Vector3();
   private readonly mid = new THREE.Vector3();
   /** Round to the sunward side of the piano's front, so the case is rimmed and the child is in profile. */
-  private readonly side = new THREE.Vector3(Math.sin(piano.yaw + 0.55), 0, Math.cos(piano.yaw + 0.55));
+  private readonly side = new THREE.Vector3(Math.sin(piano.yaw + 0.75), 0, Math.cos(piano.yaw + 0.75));
 
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
@@ -131,8 +131,8 @@ export class PianoStop {
     this.mid.lerpVectors(piano.keys, piano.seat, 0.3);
     shot.target.set(this.mid.x, piano.keys.y + 0.3, this.mid.z);
     shot.from = this.side;
-    shot.distance = near ? 9 : 17;
-    shot.height = near ? 2.7 : 5.5;
+    shot.distance = near ? 7.5 : 13;
+    shot.height = near ? 2 : 4;
   }
 
   private give(child: Cast['child']): void {
