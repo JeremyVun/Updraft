@@ -197,7 +197,7 @@ let nextBugle = 0;
 let swanBeat = 0;
 const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
-scene.add(flock.mesh);
+flock.objects.forEach((o) => scene.add(o));
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
