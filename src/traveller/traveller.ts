@@ -206,8 +206,11 @@ export class Traveller {
     return (hand === 0 ? this.rig.handR : this.rig.handL).getWorldPosition(out);
   }
 
+  /** Set while the child is in the middle of something with somebody else (gathering the cygnet up, setting it down), so the story waits for it like any other action. */
+  engaged = false;
+
   get busy(): boolean {
-    return this.goal !== null || this.action !== null;
+    return this.goal !== null || this.action !== null || this.engaged;
   }
 
   get moving(): boolean {

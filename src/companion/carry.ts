@@ -302,6 +302,7 @@ export class Carry {
     this.duet?.update(dt);
     if (this.duet?.done) this.duet = null;
     c.armsFull = this.leading || this.onBody > 0.5;
+    c.engaged = this.duet !== null;
     if (!this.duet) this.answer(dt);
 
     if (this.leading) {
@@ -461,7 +462,10 @@ export class Carry {
   }
 
   private play(name: string, beats: Beat[], onDone?: () => void): void {
+    /** Asked again for what it is already doing, it carries on rather than starting over. */
+    if (this.duet && this.duet.name === name) return;
     this.duet = new Duet(name, beats, onDone);
+    this.child.engaged = true;
   }
 }
 
