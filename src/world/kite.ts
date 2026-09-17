@@ -272,10 +272,11 @@ export class Kite {
   update(dt: number, time: number, camera: THREE.Camera): void {
     const away = Math.hypot(camera.position.x - this.anchor.x, camera.position.z - this.anchor.z);
     this.group.visible = away < 300;
-    if (!this.group.visible || dt < 1e-4) {
-      this.asleep = this.asleep || !this.group.visible;
+    if (!this.group.visible) {
+      this.asleep = true;
       return;
     }
+    if (dt < 1e-4) return;
     const k = tuning.linesToys;
     const air = this.wind.sample(KITE_AT.x, KITE_AT.z, this.sample);
     const speed = Math.hypot(air.x, air.z);
@@ -291,8 +292,12 @@ export class Kite {
     const swing = k.swoop * (0.35 + 0.65 * strength);
     const bank = Math.cos(this.phase) * swing * rate;
 
-    /** Gust energy is the pull you feel in the string: it climbs on it, overshoots, and settles back. */
-    const want = 0.52 + 0.24 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08) + Math.cos(this.phase * 2) * swing * 0.3;
+    /**
+     * Gust energy is the pull you feel in the string: it climbs on it, overshoots and settles back. And in a
+     * real calm nothing is holding it up at all, so it sinks and hangs on whatever breeze is left.
+     */
+    const holding = 0.35 + 0.65 * THREE.MathUtils.smoothstep(speed, 0.2, 1.6);
+    const want = (0.52 + 0.24 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08)) * holding + Math.cos(this.phase * 2) * swing * 0.3;
     this.elevVel += (want - this.elev) * k.climbSpring * dt;
     this.elevVel *= Math.exp(-dt * k.climbDamping);
     this.elev = THREE.MathUtils.clamp(this.elev + this.elevVel * dt, 0.12, 1.05);
