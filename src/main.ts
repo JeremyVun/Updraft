@@ -42,7 +42,9 @@ import { Crane } from './creatures/crane';
 import { CraneFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
 import { piano } from './world/piano';
-import { LINES_WALK, LINES_LANDING } from './story/lines';
+import { Kite } from './world/kite';
+import { Pinwheels } from './world/pinwheels';
+import { LINES_WALK, LINES_LANDING, LINES_BERTH } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { DarkWood } from './world/wood';
 import { createTree } from './world/tree';
@@ -133,6 +135,11 @@ const washing = new WashingLines([
   ...seaLines(),
 ]);
 scene.add(washing.group);
+/** The child who is not there: one kite standing over the far beach, and pinwheels along the walk. */
+const kite = new Kite(wind, LINES_BERTH);
+scene.add(kite.group);
+const pinwheels = new Pinwheels(wind, LINES_WALK);
+scene.add(pinwheels.group);
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
 const wood = new DarkWood(wind);
@@ -475,6 +482,8 @@ function frame(now: number): void {
   village.update(dt, time, boat.position, storm);
   piano.update(dt, time, rig.camera, wind, sound.output);
   wood.update(dt, time, rig.camera, storm);
+  kite.update(dt, time, rig.camera);
+  pinwheels.update(dt, rig.camera, sound.output);
   /** Fireflies rise out of grass, not out of the sea, and they do not fly in a gale. */
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6), story.focus);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
@@ -541,7 +550,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life, piano };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, kite, pinwheels, village, wood, embers, boat, life, piano };
 }
 
 /**

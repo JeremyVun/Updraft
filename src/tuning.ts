@@ -79,6 +79,29 @@ export const tuning = {
     /** Wind speed that lifts a sheet all the way to horizontal; the breeze alone lifts it `wind.breeze` / this. */
     fullSwingSpeed: 18,
   },
+  /** The kite over the far beach and the pinwheels along the walk: the child nobody has seen. */
+  linesToys: {
+    /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */
+    stringLength: 34,
+    /** How high the kite rides in the island's own breeze, in radians above the horizon from its tie-off. */
+    flyAngle: 0.42,
+    /** How wide it swings its figure of eight, in radians, and how fast that turns over, in radians a second. */
+    swoop: 0.42,
+    swoopRate: 0.26,
+    /** Radians of climb per unit of gust energy reaching the kite, and the spring that answers it. */
+    gustClimb: 0.16,
+    climbSpring: 2.4,
+    climbDamping: 2.2,
+    /** Pinwheels: radians a second of spin per unit of wind through the wheel. */
+    spinPerSpeed: 1.55,
+    /** How fast a wheel takes the wind up and how slowly it gives it back, per second. A gust has to linger. */
+    spinUp: 3.2,
+    spinDown: 0.6,
+    /** How quickly a wheel turns on its stick to face the wind. */
+    veerRate: 1.2,
+    /** Seconds of turning a spinning wheel smears over: what makes a gust visible running down a row. */
+    smearSeconds: 0.075,
+  },
   petals: {
     /** Share of the 8192 petals alive on the still island, and in the short pasture past z = -600. */
     stillIslandShare: 0.7,

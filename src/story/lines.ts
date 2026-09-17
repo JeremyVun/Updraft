@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
+import { KITE_AT } from '../world/kite';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
@@ -55,6 +56,7 @@ export class LinesChapter implements Chapter {
   private cheered = false;
   private flown = false;
   private lastLegAt = 0;
+  private lookedUp = 0;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly crest = new THREE.Vector3(14, 17, -360);
@@ -195,6 +197,10 @@ export class LinesChapter implements Chapter {
       if (last && (nearBoat || childNear || waited)) this.board();
       else if (time > this.holdUntil) this.throwAhead();
     }
+
+    /** Coming over the top, the kite standing over the far beach catches their eye, and the player's with it. */
+    if (this.lookedUp === 0 && c.position.z < this.crest.z) this.lookedUp = time + 3;
+    if (time < this.lookedUp) c.lookAt = KITE_AT;
   }
 
   private readonly tmp2 = { x: 0, z: 0, energy: 0, lift: 0 };
