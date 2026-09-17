@@ -191,10 +191,32 @@ Done on `cygnet`:
 - The probe (`companion/probe.ts`, `__game.probe.report()` / `.trace`): body jerk, turn rate, mitten gap, foot
   slip, ground.
 
-Still to do: wire the swans' raft into the meadow crest once `cygnet-swans` lands; merge `cygnet-look`; the wind
-bond's story floors (`mind.trust`) per chapter; re-voice the two cries; a pose-and-timing pass by an Opus 5 agent
-over `cygnet/pose.ts`, `carry.ts` timings, the child's kneel, and the satchel's shape; per-room behaviour; a full
-playthrough; an independent visual verdict; fold this file into `journey.md`.
+Merged from Opus 5 agents: `cygnet-look` (down shells, fan-closing wing, grey palette, `SIZE` 1.42, complete, with
+a report) and `cygnet-swans` (white swans: skein, wheel, raft on the water, take-off; cut off by the session limit
+on 2026-09-18 before its final polish and report; its uncommitted work was committed as WIP and merged; it
+typechecks and builds). The crest now calls `flock.rest()` on the far bay and `flock.lift()` north.
+
+Interrupted by the same limit before they had changed anything: `cygnet-look2` and `cygnet-pose` (worktrees exist,
+no commits). Their briefs are the next two parcels and are summarised here so they can be relaunched:
+- **Look pass two** (owns `cygnet/body.ts`, `parts.ts`, `shader.ts`, the child's geometry in `traveller/body.ts`):
+  more swan in it (longer slender neck, longer flatter bill, lores that read at 3-5 units); the folded wing's
+  coverts read as hard plates and should be one soft downy teardrop; it goes charcoal in shade and should stay pale
+  silver-fawn in every light; `sleek` needs a directional lay, `wet` reads soapy; `grown` must read at game
+  distance; an open-topped satchel the cygnet sits IN; puffy sleeves, soft elbow, mittens with thumbs.
+- **Pose and timing pass** (owns `cygnet/pose.ts`, `wings.ts`, `gait.ts`, numbers in `mind.ts`, `ride.ts`,
+  `carry.ts`, the child's kneel/lean/arm feel in `traveller.ts`, sockets in `traveller/body.ts`, the look of the
+  mechanics in `cygnet.ts`): every pose and act is an engineer's sketch; the kneel tips the coat like a rigid bell;
+  the held-out "regard" covers the child's face from the front.
+- **Swans follow-up**: from the real crest (20 up, 370 units from the bay) the raft is a few white pixels. It needs
+  a size it can be given for that shot, or to be staged nearer; then its own final polish.
+
+Gates on the merged branch (2026-09-18): 21 of 27 pass. Misses, all marginal and all from refitting to the bigger
+bird: gather jerk 0.021 and gap 0.065, a 0.098 turn while it waits, set-down jerk 0.024 and gap 0.082, walk turn
+0.10. The pose pass retunes these; none is a visible pop.
+
+Still to do: the three parcels above; re-listen to the re-voiced cries and the foley (nobody has heard them yet);
+per-room behaviour; a full playthrough; an independent visual verdict; fold this file into `journey.md`; merge to
+`main` (which has moved on: `src/tuning.ts` and petals work from other sessions touch `main.ts`).
 
 Found on the way, and decided:
 - **The satchel is its seat on the walks, not the hood.** The hood is worn up, and anything held in front of a bell
