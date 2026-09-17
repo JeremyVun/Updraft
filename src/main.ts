@@ -187,7 +187,7 @@ sealife.objects.forEach((o) => scene.add(o));
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => scene.add(o));
 const flock = new SwanFlock();
-scene.add(flock.mesh);
+flock.objects.forEach((o) => scene.add(o));
 const cygnetAt = new THREE.Vector3();
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const emberAt = new THREE.Vector3();

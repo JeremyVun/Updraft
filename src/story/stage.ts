@@ -113,6 +113,24 @@ export class StageChapter implements Chapter {
         k.plummet(this.tmp.set(to.x - 10, to.y + 40, to.z + 30), to, 8.5, c.yaw);
         return true;
       }
+      case 'skein': {
+        flock.pass(c.position.x, c.position.z, 40, c.yaw, 15, 90);
+        c.lookAt = flock.head;
+        return true;
+      }
+      case 'circle': {
+        const p = ahead(34);
+        flock.circle(p.x, p.z, Math.max(heightAt(p.x, p.z), 0) + 22, 20, 20, 16);
+        return true;
+      }
+      case 'afloat': {
+        /** The stage stands just inside the meadow's south beach; this is the open water beyond it, short of the lines. */
+        flock.rest(c.position.x + 6, c.position.z + 105, 15, 14);
+        return true;
+      }
+      case 'lift':
+        flock.lift(Math.PI);
+        return true;
       case 'walk':
       case 'run': {
         const p = ahead(14);
