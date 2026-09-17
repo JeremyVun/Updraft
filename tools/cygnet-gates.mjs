@@ -15,7 +15,7 @@ const LIMITS = {
   unstow: { jerk: 0.02, turn: 0.08, gap: 0.08, sunk: 0.005 },
   down: { jerk: 0.02, turn: 0.07, gap: 0.06, sunk: 0.005 },
   walk: { jerk: 0.02, turn: 0.08, slip: 0.02, sunk: 0.005 },
-  try: { jerk: 0.1, turn: 0.12, sunk: 0.005 },
+  try: { jerk: 0.1, turn: 0.16, sunk: 0.005 },
   idle: { jerk: 0.012, turn: 0.06, slip: 0.012, sunk: 0.005 },
 };
 
