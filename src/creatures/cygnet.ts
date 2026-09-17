@@ -301,6 +301,11 @@ export class Cygnet {
     }
   }
 
+  /** Dozed off on a long quiet carry. */
+  get asleep(): boolean {
+    return this.doze > 0.6;
+  }
+
   /** How frightened it is, 0 to 1. */
   get frightened(): number {
     return this.fear;

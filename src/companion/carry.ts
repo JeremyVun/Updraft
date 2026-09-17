@@ -302,6 +302,7 @@ export class Carry {
     this.duet?.update(dt);
     if (this.duet?.done) this.duet = null;
     c.armsFull = this.leading || this.onBody > 0.5;
+    if (!this.duet) this.answer(dt);
 
     if (this.leading) {
       if (this.goal) {
@@ -338,6 +339,42 @@ export class Carry {
   }
 
   private held = false;
+  private mindful = 0;
+  private wasAsleep = false;
+  private wasAct: string | null = null;
+
+  /**
+   * The child's half of the small things: a head tipped into a nuzzle, a hunch over it when it is frightened, a look
+   * down when it goes to sleep or cranes round their shoulder. Each is a second or two and then the child goes back
+   * to whatever the story had them doing. It is these, more than the big moments, that make them two.
+   */
+  private answer(dt: number): void {
+    const { child: c, cygnet: k } = this;
+    if (!k.visible || !k.carried) {
+      if (this.mindful > 0) this.relax();
+      return;
+    }
+    const act = k.mind.act;
+    const asleep = k.asleep;
+    if (act !== this.wasAct && (act === 'nuzzle' || act === 'peer' || act === 'flinch')) this.mindful = act === 'peer' ? 1.4 : 2.4;
+    if (asleep && !this.wasAsleep) this.mindful = 2.6;
+    this.wasAct = act;
+    this.wasAsleep = asleep;
+    if (this.mindful <= 0) return;
+    this.mindful -= dt;
+    c.lookAt = k.eye(this.regardAt);
+    /** In the arms its head is at their left shoulder, so that is the way their own head goes. */
+    c.tilt = act === 'nuzzle' ? -0.2 : 0;
+    c.lean = k.frightened > 0.45 && k.seat === 'cradle' ? 0.1 : 0;
+    if (this.mindful <= 0) this.relax();
+  }
+
+  private relax(): void {
+    this.mindful = 0;
+    this.child.tilt = 0;
+    this.child.lean = 0;
+    this.child.lookAt = null;
+  }
   private goal: THREE.Vector3 | null = null;
   private goalK = 0;
   private dip = 0;
