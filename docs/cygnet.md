@@ -170,6 +170,33 @@ as a cygnet's thin whistle. Adults: distant bugling and wing whistle as the skei
   (no pops, ever); never below the ground; never out of frame in a glide.
 - **Visual verdicts** at real camera distance and close up, per the model-routing rules, then Jeremy's.
 
+## Status (update as it moves)
+
+Done on `cygnet`: names; the QA stage (`?chapter=stage`, `story/stage.ts`: `play(name)`, `look(view)`, a free close
+camera); one smooth skin with a 21-bone skeleton (`cygnet/body.ts`); the child's elbows, two-bone arm IK
+(`reachFor`, `reachLocal`), kneel, lean, head tilt and sockets (`traveller/body.ts`, `traveller.ts`); placement
+(`cygnet/ride.ts`: ground, seat, in the hands, surface path over the shoulder, all read live); the shared moments
+(`companion/carry.ts` on `companion/duet.ts`: `gatherUp`, `setDown`, `stow`, `unstow`); the probe
+(`companion/probe.ts`, `__game.probe.report()` / `.trace`).
+
+Found on the way, and decided:
+- **The satchel is its seat on the walks, not the hood.** The hood is worn up, and anything held in front of a bell
+  coat is invisible from the game camera, which lives behind the child. In the open satchel on the child's back it
+  is in every frame, facing the way they go, able to look back at the player's wind, and it is what cygnets do:
+  ride on a back. In the arms (across the chest, head to the child's left) is for tender moments and the boat.
+- **It gets into the hands by itself.** A kneeling child's hands stop about half a unit above the grass; bending the
+  rigid coat further tips it over like a plank. So the hands are offered low and held still, and the cygnet hops up
+  into them. Nothing is done to it. After the fall this is its fourth try at getting up, and the one that works,
+  because someone is there.
+- The child's arms now show: shoulders moved out to the coat's surface, arms resting on it, red mittens. This
+  changes the child's silhouette a little and needs Jeremy's eye.
+- Probe numbers to hold (worst over gather, stow, unstow, set-down): body jerk under 0.02 units/frame², turn under
+  0.07 rad/frame, mitten gap under 0.06, never below ground. Pops found so far all came from a pose weight that
+  switched instead of easing; every new weight must be eased.
+
+In flight: Opus 5 agents on `cygnet-look` (model, wing fold, down shader) and `cygnet-swans` (adult swans, the raft
+on the water, take-off), each in `/private/tmp/updraft-cygnet-{look,swans}`.
+
 ## Build order
 
 1. Rename and re-seat: `Crane` → `Cygnet`, `CraneFlock` → `SwanFlock`, `colt/` → `cygnet/`, `cast.cygnet`; story
