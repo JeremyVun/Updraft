@@ -545,7 +545,7 @@ function outOfTune(midi: number): number {
 
 /**
  * The upright piano standing in the meadow, which the wind plays. Felted hammers gone soft, a case that has been
- * out in the weather, and three strings to a note that have drifted apart: a dull, warm tone with a little beating
+ * out in the weather, and strings that have drifted apart from each other: a dull, warm tone with a little beating
  * in it and the knock of the action underneath. Synthesised like everything else here; nothing is sampled.
  */
 export class PianoStrings {
@@ -559,10 +559,6 @@ export class PianoStrings {
     this.out = out;
     this.knock = null;
     this.ends.fill(0);
-  }
-
-  get live(): boolean {
-    return this.out !== null;
   }
 
   /** One note: `velocity` 0..1 for how hard the wind struck it, `level` for how near the listener is. */
