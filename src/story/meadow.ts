@@ -62,7 +62,7 @@ export class MeadowChapter implements Chapter {
   readonly worldLife = 1;
   pace = 0.35;
   haze = 0.55;
-  hush = 0;
+  private beatHush = 0;
   dusk = 0;
   shower = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
@@ -128,7 +128,7 @@ export class MeadowChapter implements Chapter {
 
   /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
   get hush(): number {
-    return this.piano.hush;
+    return Math.max(this.beatHush, this.piano.hush);
   }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
@@ -248,7 +248,7 @@ export class MeadowChapter implements Chapter {
     if (this.beat !== 'crest') this.haze += (0.55 - this.haze) * (1 - Math.exp(-dt * 0.25));
     /** The fullest music in the game pulls back for the crest, so two bird voices are all there is to hear. */
     const quiet = this.beat === 'crest' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
-    this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.5));
+    this.beatHush += (quiet - this.beatHush) * (1 - Math.exp(-dt * 0.5));
     const wave = life.regions.wave;
     if (wave.z >= 0) wave.z = Math.min(WAVE_REACH, wave.z + dt * WAVE_SPEED * Math.min(1, 0.3 + (this.now - this.waveStart) * 0.25));
 
