@@ -3,7 +3,7 @@ import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 
-export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above';
+export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
@@ -19,6 +19,9 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   'k-back': { bearing: Math.PI, distance: 1.5, height: 0.2, on: 'cygnet' },
   'k-34': { bearing: 0.7, distance: 1.4, height: 0.3, on: 'cygnet' },
   'k-above': { bearing: 0.5, distance: 1.1, height: 1.2, on: 'cygnet' },
+  /** The whole bird in frame, and from under its own eye line, which is the only way to see its feet. */
+  'k-full': { bearing: 0.8, distance: 1.9, height: -0.12, on: 'cygnet' },
+  'k-low': { bearing: 1.1, distance: 1.5, height: -0.4, on: 'cygnet' },
   top: { bearing: Math.PI, distance: 1.2, height: 6, on: 'both' },
 };
 
