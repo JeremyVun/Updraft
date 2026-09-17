@@ -31,6 +31,10 @@ const KEY_Y = 0.8;
 /** Where a key is hinged, back under the case, and how far it reaches out from there. */
 const KEY_BACK = 0.3;
 const KEY_LEN = 0.46;
+/** The stool, close enough in that whoever is on it is plainly at the keyboard rather than beside it. */
+const STOOL_Z = 1.06;
+/** A sitting pose drops the body half a unit, so the point they are put on has to be that far above the stool. */
+const SEAT_LIFT = 0.5;
 
 /** The keyboard runs from C3 to C7. A key's index is its midi note less this. */
 const LOW_MIDI = 48;
@@ -104,7 +108,9 @@ void main() {
   float spec = pow(max(dot(N, H), 0.0), 34.0) * vGloss;
   /** It stands with its back to a low sun like everything else here, so its edge is where the light is. */
   float rim = pow(1.0 - max(dot(N, V), 0.0), 2.6) * max(dot(-V, uSunDir), 0.0);
-  vec3 col = albedo * hemiLight(N) + (albedo * uSunColor * max(dot(N, uSunDir), 0.0) * 0.75 + uSunColor * (spec + rim * 0.3)) * sun;
+  /** And the face turned away from the sun is not black: bare wood in a field takes the light off the grass. */
+  float wrap = pow(clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0), 1.7);
+  vec3 col = albedo * (hemiLight(N) * 1.12 + uGroundBounce * 0.75) + (albedo * uSunColor * wrap * 0.9 + uSunColor * (spec + rim * 0.85)) * sun;
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -153,9 +159,10 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number): 
   return new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z);
 }
 
-const WOOD = new THREE.Color('#6a4a2e');
-const WOOD_DARK = new THREE.Color('#4f3724');
-const WOOD_WORN = new THREE.Color('#7d5b39');
+/** A summer of weather has taken it back to bare wood: warm, dry and bleached, never the varnish it once had. */
+const WOOD = new THREE.Color('#a8865c');
+const WOOD_DARK = new THREE.Color('#7f6544');
+const WOOD_WORN = new THREE.Color('#c0a47c');
 const BRASS = new THREE.Color('#a8872f');
 const CAVITY = new THREE.Color('#120d0a');
 const IVORY = new THREE.Color('#ece0be');
@@ -207,8 +214,8 @@ function caseGeometry(): THREE.BufferGeometry {
       stool.push(leg.translate(sx * 0.26, 0, sz * 0.16));
     }
   }
-  const placed = mergeGeometries(stool).rotateY(0.3);
-  add(placed.translate(0.06, 0, 1.28), WOOD_DARK, 0.25);
+  const placed = mergeGeometries(stool).rotateY(0.14);
+  add(placed.translate(0.06, 0, STOOL_Z), WOOD_DARK, 0.25);
 
   return mergeGeometries(parts);
 }
@@ -309,7 +316,7 @@ export class Piano {
     this.group.add(shell, keys);
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
-    this.local(0.06, 0.46, 1.26, this.seat);
+    this.local(0.06, 0.5 + SEAT_LIFT, STOOL_Z, this.seat);
     this.local(0.16, 0, 2.25, this.stand);
     for (let i = 0; i < QUEUE; i++) this.queue.push({ at: 0, midi: 60, velocity: 0, source: 'breeze', active: false });
   }
