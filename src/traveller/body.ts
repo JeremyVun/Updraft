@@ -83,8 +83,8 @@ export interface Rig {
 
 export type SocketName = 'cradle' | 'satchel' | 'shoulder' | 'lap';
 
-export const UPPER_ARM = 0.25;
-export const FOREARM = 0.28;
+export const UPPER_ARM = 0.29;
+export const FOREARM = 0.32;
 
 /**
  * A small child about 2.3 units tall: bell-shaped mustard raincoat, pointed hood, red mittens and scarf knot,
@@ -175,8 +175,8 @@ export function buildChild(): Rig {
     return o;
   };
   const sockets = {
-    cradle: socket(body, 0, 0.86, 0.47),
-    satchel: socket(body, 0, 0.76, -0.5),
+    cradle: socket(body, 0, 0.8, 0.56),
+    satchel: socket(body, 0, 0.8, -0.56),
     shoulder: socket(body, -0.3, 1.04, -0.02),
     lap: socket(body, 0, 0.16, 0.52),
   };

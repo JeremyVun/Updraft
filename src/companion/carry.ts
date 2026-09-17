@@ -5,7 +5,7 @@ import { Duet, type Beat } from './duet';
 
 const UP = new THREE.Vector3(0, 1, 0);
 /** Where the hands hold it out to look at it, and where they bring it in to, in the frame of the child's body. */
-const PRESENT = new THREE.Vector3(0, 0.8, 0.56);
+const PRESENT = new THREE.Vector3(0, 0.68, 0.6);
 /** A mitten rests against the outside of what it holds, not at the middle of it. */
 const PALM = 0.07;
 /** How far from it the child kneels. */

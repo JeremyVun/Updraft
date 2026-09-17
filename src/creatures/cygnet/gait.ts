@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SIZE } from './body';
 
 interface Foot {
   /** Where the ankle is over the ground, in the world. While planted this does not move: that is the whole point. */
@@ -16,7 +17,7 @@ interface Foot {
 const foot = (): Foot => ({ at: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), planted: true, swing: 0, lift: 0, wasUp: false });
 
 /** How far either side of its middle the feet come down: wider than the hips, which is what makes it a waddle. */
-const TRACK = 0.078;
+const TRACK = 0.078 * SIZE;
 const STANCE = 0.6;
 /** Steps a second, per foot, past which it is no longer stepping. */
 const PATTER = 4.5;
@@ -86,7 +87,7 @@ export class Gait {
      * Past about nine a second they stop being steps: it patters, feet a blur under it and wings out, and nothing
      * about that is planted. Below that every foot is put down and left where it is.
      */
-    const stride = 0.11 + 0.04 * this.pace;
+    const stride = (0.11 + 0.04 * this.pace) * SIZE;
     const stepping = speed > 0.06 || turned > 0.004;
     const rate = speed / (stride * 2);
     this.pattering += ((rate > PATTER ? 1 : 0) - this.pattering) * (1 - Math.exp(-dt * 10));
@@ -104,8 +105,8 @@ export class Gait {
         /** Carried along under the body: back while it is down, forward through the air. */
         const a = mine * Math.PI * 2;
         f.planted = false;
-        f.at.copy(home).addScaledVector(this.fwd, Math.cos(a) * 0.075);
-        f.lift = Math.max(0, -Math.sin(a)) * 0.05;
+        f.at.copy(home).addScaledVector(this.fwd, Math.cos(a) * 0.075 * SIZE);
+        f.lift = Math.max(0, -Math.sin(a)) * 0.05 * SIZE;
         if (f.lift <= 0 && f.wasUp) this.footfalls++;
         f.wasUp = f.lift > 0;
       } else if (stepping) {
@@ -121,13 +122,13 @@ export class Gait {
           f.to.copy(home).addScaledVector(this.fwd, stillToGo + STANCE * stride);
           const k = f.swing * f.swing * (3 - 2 * f.swing);
           f.at.lerpVectors(f.from, f.to, k);
-          f.lift = Math.sin(f.swing * Math.PI) * (0.03 + 0.02 * this.pace);
+          f.lift = Math.sin(f.swing * Math.PI) * (0.03 + 0.02 * this.pace) * SIZE;
         } else if (!f.planted) {
           f.planted = true;
           f.lift = 0;
           this.footfalls++;
         }
-      } else if (f.planted && f.at.distanceTo(home) > 0.06 && this.other(i).planted && this.idle > 0.12) {
+      } else if (f.planted && f.at.distanceTo(home) > 0.06 * SIZE && this.other(i).planted && this.idle > 0.12) {
         /** Standing, a foot left out of place is shuffled back under it, one at a time. */
         f.planted = false;
         f.from.copy(f.at);
@@ -137,7 +138,7 @@ export class Gait {
         f.to.copy(home);
         const k = f.swing * f.swing * (3 - 2 * f.swing);
         f.at.lerpVectors(f.from, f.to, k);
-        f.lift = Math.sin(f.swing * Math.PI) * 0.025;
+        f.lift = Math.sin(f.swing * Math.PI) * 0.025 * SIZE;
         if (f.swing >= 1) {
           f.planted = true;
           f.lift = 0;
