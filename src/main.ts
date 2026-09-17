@@ -42,9 +42,13 @@ import { createRocks } from './world/rocks';
 import { Crane } from './creatures/crane';
 import { CraneFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
-import { LINES_WALK, LINES_LANDING } from './story/lines';
+import { piano } from './world/piano';
+import { Kite } from './world/kite';
+import { Pinwheels } from './world/pinwheels';
+import { LINES_WALK, LINES_LANDING, LINES_BERTH } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { DarkWood } from './world/wood';
+import { AutumnBirches } from './world/birches';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
@@ -96,6 +100,7 @@ const bakeInputs: BakeInputs = {
     ...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })),
     { x: TREE.x, z: TREE.z, radius: 1.6 },
     { x: COTTAGE.x, z: COTTAGE.z, radius: 6.5 },
+    piano.clearing,
   ],
   flowers: [...FLOWER_PATCHES, ...hillFlowers],
 };
@@ -124,16 +129,26 @@ scene.add(baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3));
 const door = redDoor(23, -357, 0.32);
 scene.add(door);
 
+/** And an upright piano standing in the meadow grass, off the walk, which the wind plays. */
+scene.add(piano.group);
+
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 const washing = new WashingLines([
   ...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46, 17, LINES_WALK),
   ...seaLines(),
 ]);
 scene.add(washing.group);
+/** The child who is not there: one kite standing over the far beach, and pinwheels along the walk. */
+const kite = new Kite(wind, LINES_BERTH);
+scene.add(kite.group);
+const pinwheels = new Pinwheels(wind, LINES_WALK);
+scene.add(pinwheels.group);
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
 const wood = new DarkWood(wind);
 wood.objects.forEach((o) => scene.add(o));
+const birches = new AutumnBirches(renderer, wind);
+birches.objects.forEach((o) => scene.add(o));
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 const petals = new Petals(renderer, tuning.petals.stillIslandShare);
@@ -197,7 +212,7 @@ scene.add(flock.mesh);
 const craneAt = new THREE.Vector3();
 const craneAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, crane, flock, embers, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, crane, flock, embers, birches, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 rig.cut(story.shot);
@@ -423,6 +438,8 @@ function frame(now: number): void {
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
+  /** And so do the birches, for the same reason. */
+  birches.subject.copy(washing.subject);
 
   homePetals();
   petals.update(dt, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
@@ -477,7 +494,11 @@ function frame(now: number): void {
   grass.bake(renderer);
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm);
+  piano.update(dt, time, rig.camera, wind, sound.output);
   wood.update(dt, time, rig.camera, storm);
+  kite.update(dt, time, rig.camera);
+  pinwheels.update(dt, rig.camera, sound.output);
+  birches.update(dt, rig.camera, child.visible ? child.position : null);
   /** Fireflies rise out of grass, not out of the sea, and they do not fly in a gale. */
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6), story.focus);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
@@ -544,7 +565,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, kite, pinwheels, village, wood, embers, boat, life, piano, birches };
 }
 
 /**

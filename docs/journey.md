@@ -279,10 +279,9 @@ waits for the water-shading session, because it is built on the sea.
 
 | piece | state |
 | --- | --- |
-| *all three below* | merged together on branch `rooms` (`/private/tmp/updraft-rooms`), which typechecks and builds. Not on `main`: `main` has carried 30-odd files of other sessions' uncommitted work since the fork, and the merge waits for them to commit. One polish pass over all three is running on `rooms`. |
-| the autumn birches | first pass done (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`), its agent cut off by the session limit just short of its report. Orchestrator's look: the best of the three — gold crowns against the low sun, the swing, and the stripped island seen from the north beach are all right. To fix: the leaf litter also draws over the meadow (a bug the agent had just found); the floor under the trees is near-black with confetti squares on it and wants to be a warm lit carpet of leaf-shaped leaves; a gust does not yet visibly tear a cloud off the crowns from the player's camera. |
-| kite and pinwheels on the island of lines | first pass done (`world/kite.ts`, `world/pinwheels.ts`), agent cut off the same way. Orchestrator's look: the string running down to the boat from the crest does its job, and a gust does run down a row of wheels. To fix: the kite is a white dart and reads as *the paper plane*, which is the one thing it must not be mistaken for — it wants to be an unmistakable diamond with a bow tail and the door's red on it, and a little bigger from the crest; the wheels at rest read as grey bow-ties rather than paper pinwheels. |
-| the piano on the meadow | first pass done on branch `piano` (`world/piano.ts`, `story/piano.ts`, `PianoStrings` in `audio.ts`), not yet on `main`. It works: the wind plays runs, chords and stray notes in the meadow's scale, the child sits and listens, nobody is held up. Orchestrator's look at it: it reads as a piano, but it is a near-black box at walking distance and needs bleached, sun-catching wood to belong in the golden light; the seated shot comes in too close and too steep and loses the sky; the child sits side-on to the keys rather than facing them; nobody has heard the tone yet (Jeremy's ear needed). Second pass to do together with **the cygnet walking the keys** (`Piano.walkKeys` is built and waiting) once the cygnet lands. |
+| the autumn birches | **built** and accepted on a look at its screenshots (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`). Known weak spot: a gust lands where the cursor meets the ground, which from the walking camera is often far up the ride, so the cloud it tears off can be small in frame. |
+| kite and pinwheels on the island of lines | **built** and accepted (`world/kite.ts`, `world/pinwheels.ts`): a red-footed paper diamond with a bow tail tied off beside the boat, and rows of two-tone paper wheels a gust runs down. The kite flies leaning rather than upright, because its spine lies along its string. |
+| the piano on the meadow | **built** and accepted to look at (`world/piano.ts`, `story/piano.ts`, `PianoStrings` in `audio.ts`): bleached wood, the child on the stool at the keys, framed wide. **Nobody has heard it yet** — the tone was synthesised blind and needs Jeremy's ear. Still to do once the cygnet lands: the bird walking the keys (`Piano.walkKeys` is built and waiting). |
 | the sleeping island | waiting on the cygnet |
 | the sky mirror | waiting on the water session |
 
@@ -298,6 +297,15 @@ wind brought the colour back; here it takes the last of the year away, and nothi
 because every gesture is a gust. The fragment of home is **a swing on a branch with nobody on it**: the wind pushes
 it, the child climbs on, and the player finds they are pushing a child on a swing. The fledgling chases leaves
 (bond). This is also where a second companion would join, later.
+
+**Built** (2026-09-17): `ISLES.birches` at (0, −1120), 60 × 50, a low crest with a bare beach at each end;
+`world/birches.ts` (about 170 instanced birches on a tree table the strip is written into, a canopy of gold tufts
+that the wind takes off tuft by tuft, a leaf floor that runs before a gust and bursts up round the child's knees,
+and the swing), `fx/leaves.ts` (the leaves themselves: on the branch, in the air, down, and up again on the next
+gust, never back on the tree) and `story/birches.ts`. Every tree's strip only rises; the prevailing breeze alone
+trickles. The crossing `toBirches` is a short blind hop off the meadow's far shore, and the drowned village's
+drift now begins from the birches' north beach. Music mood `birches`: slower than the meadow, falling a step each
+chord and never coming back up.
 
 **The sleeping island** — approved by Jeremy, including the one call that nothing answers. After the dark wood,
 before dawn. **The one room where the player leads the bird.**
@@ -587,8 +595,8 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 
 ## Testing shortcuts
 
-`?chapter=` starts later in the story: `crossing` (or `lines`), `washing`, `meadow` (or `hills`), `drowned` (or
-`village`), `wood` (or `dark`), `sea` (or `dolphins`), `summit` (or `home`). Every start past the first island puts
+`?chapter=` starts later in the story: `crossing` (or `lines`), `washing`, `meadow` (or `hills`), `birches` (or
+`autumn`), `drowned` (or `village`), `wood` (or `dark`), `sea` (or `dolphins`), `summit` (or `home`). Every start past the first island puts
 the colt in the child's arms and cuts the camera straight to the chapter's own shot. `?dusk=0..2` overrides the
 time of day; `?shower=0..1` forces the rain; `?grass=0` clears the grass; `?debug=wind` draws the wind field.
 
