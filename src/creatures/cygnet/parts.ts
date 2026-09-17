@@ -29,7 +29,7 @@ export interface FeatherSpec {
 export function feather(s: FeatherSpec): THREE.BufferGeometry {
   const rows = s.rows ?? 6;
   const around = s.around ?? 8;
-  const thick = s.thick ?? s.width * 0.3;
+  const thick = s.thick ?? s.width * 0.14;
   const pale = s.pale ?? 1;
   const turn = new THREE.Euler(0, s.spin, s.lift ?? 0, 'YZX');
   const v = new THREE.Vector3();
@@ -45,11 +45,13 @@ export function feather(s: FeatherSpec): THREE.BufferGeometry {
   };
   for (let i = 0; i < rows; i++) {
     const u = i / (rows - 1);
+    const tip = Math.min(1, Math.max(0, (u - 0.52) / 0.48));
     const w = s.width * (0.05 + 0.95 * Math.sin(Math.PI * u ** 0.85) ** 0.8);
     const h = thick * (0.32 + 0.68 * (1 - u));
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
-      push(u * s.length, Math.sin(a) * h, Math.cos(a) * w, u);
+      /** Only the last of the vane goes pale, the way a real tip does, instead of fading the whole feather. */
+      push(u * s.length, Math.sin(a) * h, Math.cos(a) * w, tip * tip * (3.0 - 2.0 * tip));
     }
   }
   for (let i = 0; i < rows - 1; i++) {

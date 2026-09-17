@@ -103,8 +103,9 @@ function skin(): Station[] {
     body(0, -0.002, 0.146, 0.118, 0.142),
     body(0.058, 0.004, 0.142, 0.118, 0.138),
     body(0.106, 0.024, 0.13, 0.112, 0.126),
-    body(0.138, 0.052, 0.107, 0.094, 0.108),
-    body(0.157, 0.082, 0.082, 0.072, 0.09, [BODY, NECK_1, 0.35]),
+    body(0.128, 0.046, 0.108, 0.094, 0.112),
+    /** Never further forward than the neck itself: a spine that goes forward and back folds the skin over here. */
+    body(0.142, 0.072, 0.086, 0.076, 0.096, [BODY, NECK_1, 0.3]),
   ];
   const radius = [0.068, 0.062, 0.058, 0.055, 0.053, 0.052, 0.052, 0.054, 0.058];
   for (let i = 0; i < 4; i++) {
@@ -129,9 +130,10 @@ function skin(): Station[] {
     head(0.048, 0.015, 0.1, 0.092, 0.102),
     head(0.078, 0.02, 0.106, 0.098, 0.104),
     head(0.109, 0.019, 0.101, 0.094, 0.095),
-    head(0.136, 0.014, 0.082, 0.078, 0.076),
-    head(0.157, 0.007, 0.05, 0.048, 0.046),
-    head(0.168, 0.0, 0.006, 0.006, 0.006),
+    head(0.134, 0.014, 0.084, 0.08, 0.078),
+    head(0.152, 0.008, 0.062, 0.06, 0.058),
+    head(0.164, 0.003, 0.034, 0.033, 0.032),
+    head(0.172, 0.0, 0.005, 0.005, 0.005),
   );
   return st;
 }
@@ -147,13 +149,14 @@ function bill(bone: number, y: number, up: number, down: number, half: number, r
     skin: [bone, bone, 0],
   });
   return [
-    ring(0, 0, 0.1, 0.25),
-    ring(0.012, 0, 0.98, 1),
-    ring(reach * 0.34, 0.004, 1, 0.88),
-    ring(reach * 0.62, 0.011, 1.02, 0.7),
-    ring(reach * 0.84, 0.019, 0.98, 0.54),
-    ring(reach * 0.95, 0.026, 0.76, 0.42),
-    ring(reach, 0.031, 0.1, 0.12),
+    ring(0, 0, 0.12, 0.25),
+    ring(0.012, 0, 0.95, 1),
+    ring(reach * 0.3, 0.004, 1, 0.9),
+    ring(reach * 0.55, 0.01, 1.02, 0.76),
+    ring(reach * 0.74, 0.017, 0.99, 0.6),
+    ring(reach * 0.88, 0.024, 0.86, 0.45),
+    ring(reach * 0.96, 0.03, 0.56, 0.28),
+    ring(reach, 0.034, 0.08, 0.1),
   ];
 }
 
@@ -168,7 +171,7 @@ export function cygnetDownGeometry(): THREE.BufferGeometry {
 
 function parts(down: boolean): THREE.BufferGeometry[] {
   const out: THREE.BufferGeometry[] = [];
-  const coat = (spec: LoftSpec) => out.push(still(loft(down ? { ...spec, around: Math.round((spec.around ?? 16) * 0.72) } : spec)));
+  const coat = (spec: LoftSpec) => out.push(still(loft(down ? { ...spec, around: Math.round((spec.around ?? 16) * 0.66) } : spec)));
   const rigid = (spec: BlobSpec) => out.push(still(skinned(blob(down ? { ...spec, detail: Math.max(1, (spec.detail ?? 2) - 1) } : spec))));
   const pair = (spec: BlobSpec, right: number) => {
     rigid(spec);
@@ -178,7 +181,7 @@ function parts(down: boolean): THREE.BufferGeometry[] {
   coat({
     stations: skin(),
     mat: COAT,
-    around: 28,
+    around: 26,
     smooth: 2,
     /**
      * Darker down along the back, the rump, the nape and the crown; palest on the belly, breast, throat and cheeks.
@@ -199,20 +202,21 @@ function parts(down: boolean): THREE.BufferGeometry[] {
       at: REST[THIGH_L],
       size: [0.044, THIGH * 0.8, 0.052],
       offset: [0, -THIGH * 0.34, 0.004],
+      detail: 1,
       blend: (u) => 0.5 - u.y * 0.14,
     },
     THIGH_R,
   );
   if (down) return out;
 
-  out.push(still(loft({ stations: bill(HEAD, 0.05, 0.026, 0.01, 0.045, 0.108), mat: BILL, around: 14, smooth: 1, blend: (t) => Math.max(0, (t - 0.8) / 0.2) })));
+  out.push(still(loft({ stations: bill(HEAD, 0.05, 0.026, 0.01, 0.041, 0.116), mat: BILL, around: 14, smooth: 1, blend: (t) => Math.max(0, (t - 0.8) / 0.2) })));
   out.push(
-    still(loft({ stations: bill(JAW, 0.036, 0.009, 0.012, 0.04, 0.1), mat: BILL, around: 14, smooth: 1, blend: (t) => Math.max(0, (t - 0.8) / 0.2) * 0.4 })),
+    still(loft({ stations: bill(JAW, 0.036, 0.009, 0.012, 0.036, 0.107), mat: BILL, around: 14, smooth: 1, blend: (t) => Math.max(0, (t - 0.8) / 0.2) * 0.4 })),
   );
   pair({ part: HEAD, mat: EYE, at: EYE_AT, size: [EYE_R * 0.78, EYE_R, EYE_R * 0.96], detail: 2 }, HEAD);
 
-  pair({ part: SHIN_L, mat: SHANK, at: REST[SHIN_L], size: [0.018, SHIN / 2 + 0.012, 0.021], offset: [0, -SHIN / 2 + 0.004, 0], detail: 2 }, SHIN_R);
-  pair({ part: FOOT_L, mat: SHANK, at: REST[FOOT_L], size: [0.021, 0.019, 0.024], offset: [0, -0.003, 0.004], detail: 2 }, FOOT_R);
+  pair({ part: SHIN_L, mat: SHANK, at: REST[SHIN_L], size: [0.018, SHIN / 2 + 0.012, 0.021], offset: [0, -SHIN / 2 + 0.004, 0], detail: 1 }, SHIN_R);
+  pair({ part: FOOT_L, mat: SHANK, at: REST[FOOT_L], size: [0.021, 0.019, 0.024], offset: [0, -0.003, 0.004], detail: 1 }, FOOT_R);
   const foot = {
     part: FOOT_L,
     mat: SHANK,
@@ -252,12 +256,12 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
     { at: at(0.302, -0.016, -0.035), rx: 0.004, up: 0.004, down: 0.004, skin: [HAND_L, HAND_L, 0] },
   ];
   const coat = (spec: LoftSpec) => (down ? loft({ ...spec, around: 9 }) : loft(spec));
-  wing.push(coat({ stations: arm, mat: COAT, around: 12, smooth: 1, side: [0, 0, -1], blend: (_t, a) => 0.44 - Math.sin(a) * 0.24 }));
+  wing.push(coat({ stations: arm, mat: COAT, around: 12, smooth: 1, side: [0, 0, -1], blend: (_t, a) => 0.6 - Math.sin(a) * 0.22 }));
 
   /** Shut, every vane lines up along its own bone, so the fan closes and the tips run on past the wrist to the tail. */
   const SHUT = 0.14;
   const vane = (spec: Parameters<typeof feather>[0]) =>
-    wing.push(skinned(feather({ ...spec, close: SHUT - spec.spin, rows: down ? 4 : 6, around: down ? 6 : 8 })));
+    wing.push(skinned(feather({ ...spec, close: SHUT - spec.spin, rows: down ? 4 : 6, around: 6 })));
   if (!down) {
     for (let i = 0; i < 5; i++) {
       const k = i / 4;
@@ -266,7 +270,7 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
         mat: QUILL,
         root: at(0.254 + k * 0.046, -0.012 - k * 0.003, -0.016 - k * 0.006),
         length: 0.118 + k * 0.04,
-        width: 0.04 - k * 0.006,
+        width: 0.03 - k * 0.004,
         spin: 1.06 - k * 0.6,
         lift: -0.03 - k * 0.04,
         pale: 0.85 + k * 0.15,
@@ -279,7 +283,7 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
         mat: QUILL,
         root: at(0.19 + k * 0.058, -0.008 - k * 0.003, -0.01 - k * 0.004),
         length: 0.088 + k * 0.026,
-        width: 0.042 - k * 0.002,
+        width: 0.032 - k * 0.002,
         spin: 1.4 - k * 0.2,
         lift: -0.02,
         pale: 0.5 + k * 0.3,
@@ -292,12 +296,12 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
     vane({
       part: k < 0.4 ? WING_L : FORE_L,
       mat: COAT,
-      root: at(0.128 + k * 0.112, 0.01 - k * 0.006, -0.004 - k * 0.01),
-      length: 0.07 + k * 0.024,
-      width: 0.046 - k * 0.006,
+      root: at(0.166 + k * 0.078, 0.008 - k * 0.005, -0.006 - k * 0.008),
+      length: 0.066 + k * 0.022,
+      width: 0.03 - k * 0.004,
       spin: 1.46 - k * 0.16,
       lift: 0.04,
-      thick: 0.016,
+      thick: 0.009,
       pale: 0.42,
     });
   }
@@ -306,12 +310,12 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
     vane({
       part: k < 0.6 ? WING_L : FORE_L,
       mat: COAT,
-      root: at(0.124 + k * 0.096, 0.024 - k * 0.008, 0.012 - k * 0.01),
-      length: 0.056 + k * 0.016,
-      width: 0.05 - k * 0.006,
+      root: at(0.16 + k * 0.07, 0.022 - k * 0.008, 0.008 - k * 0.008),
+      length: 0.054 + k * 0.016,
+      width: 0.032 - k * 0.004,
       spin: 1.4 - k * 0.12,
       lift: 0.14,
-      thick: 0.018,
+      thick: 0.011,
       pale: 0.3,
     });
   }

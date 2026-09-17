@@ -12,8 +12,8 @@ const DOWN = 0.03;
 /** Strands to a unit of rest space: fine enough to read as down from a metre and a half away. */
 const STRAND = 300;
 /** Shells stop being drawn before they are too small to survive the pixel grid. */
-export const DOWN_NEAR = 5.5;
-export const DOWN_FAR = 15;
+export const DOWN_NEAR = 9;
+export const DOWN_FAR = 21;
 
 const vec3 = (v: V3) => `vec3(${v[0].toFixed(5)}, ${v[1].toFixed(5)}, ${v[2].toFixed(5)})`;
 
@@ -42,7 +42,7 @@ out vec3 vRest;
 /** No down where the bill leaves the face or around the eye, and finer on the head than on the body. */
 float downLength(vec3 rest) {
   vec3 q = vec3(abs(rest.x), rest.y, rest.z);
-  float k = smoothstep(0.026, 0.068, distance(q, ${vec3(EYE_AT)}));
+  float k = smoothstep(0.018, 0.046, distance(q, ${vec3(EYE_AT)}));
   k *= smoothstep(0.02, 0.072, distance(q, ${vec3(LORE_AT)}));
   return k * (1.0 - 0.4 * smoothstep(0.30, 0.46, rest.y));
 }
@@ -90,6 +90,7 @@ export const CYGNET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
 uniform float uAir;
+uniform float uBlink;
 uniform float uWet;
 uniform float uGrown;
 uniform float uStrand;
@@ -146,7 +147,7 @@ vec3 coat(float k, float fleck) {
   float t = clamp(k + (fleck - 0.5) * 0.2, 0.0, 1.0);
   vec3 c = mix(mix(NAPE, DOVE, smoothstep(0.0, 0.52, t)), MILK, smoothstep(0.46, 1.0, t));
   /** The white comes through where the down is already palest — breast, cheeks, flanks — and the back stays grey. */
-  return mix(c, SNOW, uGrown * smoothstep(0.34, 0.9, t * 0.86 + fleck * 0.3));
+  return mix(c, SNOW, uGrown * smoothstep(0.5, 0.97, t * 0.85 + fleck * 0.28));
 }
 
 void main() {
@@ -176,7 +177,8 @@ void main() {
     /** The web is thin enough to glow when the sun is behind it. */
     thin = 0.15 + k * 0.6;
   } else if (m == ${EYE}) {
-    alb = IRIS;
+    /** Shut, what is left of the eye is a lid: down-coloured, with only the crease of it still dark. */
+    alb = mix(IRIS, coat(0.55, fleck) * 0.5, clamp(uBlink, 0.0, 1.0));
     fuzz = 0.0;
     thin = 0.0;
   } else {
@@ -186,7 +188,7 @@ void main() {
     vec3 d = q - ${vec3(LORE_AT)} - ab * clamp(dot(q - ${vec3(LORE_AT)}, ab) / dot(ab, ab), 0.0, 1.0);
     alb *= mix(1.0, 0.42, (1.0 - smoothstep(0.012, 0.032, length(d))) * smoothstep(0.02, 0.05, abs(vRest.x)));
   }
-  alb *= mix(1.0, 0.5, uWet);
+  alb *= mix(1.0, 0.44, uWet);
 #ifdef SHELL
   /** Down is dark at the root and catches everything at the tip, which is the whole of why a coat looks soft. */
   alb *= mix(0.55, 1.08, vShell);
@@ -196,11 +198,13 @@ void main() {
 #endif
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
   if (uWet > 0.0 && m != ${EYE}) {
+    /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
     vec3 V = normalize(cameraPosition - vWorld);
-    col += uSunColor * pow(max(dot(N, normalize(V + uSunDir)), 0.0), 30.0) * uWet * 0.5 * cloudShadow(vWorld.xz);
+    float gloss = pow(max(dot(N, normalize(V + uSunDir)), 0.0), 64.0) * (0.25 + 0.75 * pow(1.0 - max(dot(N, V), 0.0), 2.0));
+    col += uSunColor * gloss * uWet * 0.55 * cloudShadow(vWorld.xz);
   }
   /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */
-  if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * pow(catchlight(N, vWorld), 2.4);
+  if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * pow(catchlight(N, vWorld), 2.4) * (1.0 - clamp(uBlink, 0.0, 1.0));
   /** Never greyed with the land: it arrives after the island is whole, and the sea it crosses has no life field. */
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -282,10 +286,10 @@ export function applyLook(mat: THREE.ShaderMaterial, look: Look): void {
   u.uWet.value = look.wet;
   u.uGrown.value = look.grown;
   u.uFold.value = 1 - look.wingOpen;
-  u.uDown.value = DOWN * (1 + look.fluff * 0.7 - look.sleek * 0.52) * (1 - look.wet * 0.6);
+  u.uDown.value = DOWN * (1 + look.fluff * 0.7 - look.sleek * 0.52) * (1 - look.wet * 0.55);
   u.uStrand.value = STRAND * (1 + look.sleek * 0.22);
   u.uFat.value = 0.82 - look.wet * 0.2;
-  u.uClump.value = look.wet * 0.42;
+  u.uClump.value = look.wet * 0.3;
   const speed = look.wind.length();
   /** The coat streams along the real wind and saturates, so a gale only ever lays it flat, never blows it off. */
   const bend = speed > 0.001 ? Math.min(0.9, speed * 0.17) / speed : 0;

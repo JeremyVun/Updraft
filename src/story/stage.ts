@@ -16,7 +16,7 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   /** Round the cygnet itself: bearings are from the way it is facing. */
   'k-front': { bearing: 0, distance: 1.5, height: 0.05, on: 'cygnet' },
   'k-side': { bearing: Math.PI / 2, distance: 1.5, height: 0.05, on: 'cygnet' },
-  'k-back': { bearing: Math.PI, distance: 1.5, height: 0.2, on: 'cygnet' },
+  'k-back': { bearing: Math.PI, distance: 1.7, height: -0.05, on: 'cygnet' },
   'k-34': { bearing: 0.7, distance: 1.4, height: 0.3, on: 'cygnet' },
   'k-above': { bearing: 0.5, distance: 1.1, height: 1.2, on: 'cygnet' },
   /** The whole bird in frame, and from under its own eye line, which is the only way to see its feet. */
