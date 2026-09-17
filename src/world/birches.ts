@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { FallenLeaves, LEAF_COUNT, LEAF_TINT_GLSL } from '../fx/leaves';
+import { FallenLeaves, LEAF_COUNT, LEAF_SHAPE_GLSL, LEAF_TINT_GLSL } from '../fx/leaves';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -15,6 +15,12 @@ const TREE_LINE = 2.3;
 const RIDE = 7;
 /** Leaves on one tree. They are hidden one by one as it is stripped, so this is how much gold a tree has to lose. */
 const LEAVES_PER_TREE = 420;
+/** The floor is scattered over a grid of cells that follows the camera and stands still in the world. */
+const LITTER_CELL = 0.5;
+const LITTER_GRID = 180;
+const LITTER_REACH = 44;
+/** How near the island the camera has to be before its floor and its loose leaves exist at all. */
+const FLOOR_RANGE = ISLE.rx + 90;
 
 /** The south beach, where the boat runs ashore. */
 export const BIRCHES_LANDING = new THREE.Vector2(3, -1074);
@@ -233,6 +239,7 @@ uniform vec4 uWade;
 in vec2 aCell;
 out vec3 vWorld;
 out vec3 vNormal;
+out vec3 vSide;
 out vec2 vCard;
 out float vSeed;
 void main() {
@@ -240,14 +247,18 @@ void main() {
   float r1 = hash12(cell);
   float r2 = hash12(cell + 19.7);
   float r3 = hash12(cell + 71.3);
-  vec2 p = (cell + vec2(r1, r2)) * ${glsl(0.55)};
+  vec2 p = (cell + vec2(r1, r2)) * ${glsl(LITTER_CELL)};
   vec2 uv = domainUv(p);
   float away = distance(p, cameraPosition.xz);
   /** Thick everywhere, and drifted deep where the ground dips and along the foot of the trees. */
-  float drift = 0.34 + 0.86 * fbm(p * 0.09 + 3.3);
+  float drift = 0.62 + 0.8 * fbm(p * 0.09 + 3.3);
   /** Only this island has a floor of leaves on it; the meadow it follows keeps its own grass. */
-  drift *= 1.0 - smoothstep(0.82, 1.06, length((p - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)})));
-  if (r3 > drift || away > 26.0 || !insideUv(uv)) {
+  float isle = length((p - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)}));
+  drift *= 1.0 - smoothstep(0.74, 1.02, isle);
+  /** Far off, fewer and larger: the carpet has to reach the trees at the edge of the frame without the count. */
+  float far = smoothstep(12.0, ${glsl(LITTER_REACH)}, away);
+  drift *= 1.0 - 0.55 * far;
+  if (r3 > drift || away > ${glsl(LITTER_REACH)} || !insideUv(uv)) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
@@ -274,10 +285,11 @@ void main() {
   float a = r1 * 6.2831 + run * 3.0 + wade * 5.0;
   vec3 t1 = normalize(cross(n, vec3(cos(a), 0.0, sin(a))));
   vec3 t2 = normalize(mix(cross(n, t1), vec3(cos(a), 0.4, sin(a)), min(1.0, run * 0.5 + wade)));
-  float size = ${glsl(tuning.birches.leafSize)} * (1.1 + 0.8 * r2);
-  vWorld = base + (t1 * position.x + t2 * position.y * 0.8) * size;
+  float size = ${glsl(tuning.birches.leafSize)} * (1.25 + 0.9 * r2) * (1.0 + 0.9 * far);
+  vWorld = base + (t1 * position.x * 1.45 + t2 * position.y) * size;
   vNormal = normalize(n + t1 * 0.25);
-  vCard = position.xy;
+  vSide = t1;
+  vCard = position.xy * 2.0;
   vSeed = r2;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
@@ -285,19 +297,24 @@ void main() {
 const LITTER_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${LEAF_TINT_GLSL}
+${LEAF_SHAPE_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
+in vec3 vSide;
 in vec2 vCard;
 in float vSeed;
 void main() {
-  float r = length(vec2(vCard.x * 1.25, vCard.y - 0.12 * vCard.x * vCard.x));
-  if (r > 1.0 - 0.12 * sin(atan(vCard.y, vCard.x) * 7.0 + vSeed * 20.0)) discard;
-  vec3 N = normalize(vNormal);
-  /** Leaves that have been down a while: drier, browner, and darker where they lie thickest. */
-  vec3 alb = birchLeaf(fract(vSeed * 7.13 + 0.25), 0.85) * (0.72 + 0.32 * vSeed);
+  if (birchLeafEdge(vCard, vSeed) < 0.0) discard;
+  vec3 N = leafCurl(normalize(vNormal), normalize(vSide), vCard, 0.7);
+  vec3 V = normalize(cameraPosition - vWorld);
+  /** Leaves that have been down a while: drier and browner than the crowns, but the same gold underneath. */
+  vec3 alb = leafVeins(birchLeaf(mix(0.22, 1.0, fract(vSeed * 7.13 + 0.25)), 0.95) * (0.86 + 0.26 * vSeed), vCard);
   /** Never fully in shadow: a floor of gold gives its own light back, which is most of what this room is lit by. */
-  float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.3);
-  vec3 col = alb * (hemiLight(N) * vec3(1.15, 1.05, 0.85) + uSunColor * max(dot(N, uSunDir), 0.0) * sun * 0.75 + uGroundBounce * 0.8);
+  float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.35);
+  /** And the ones tipped up on their edges take the low sun through them, the same as the ones still up there. */
+  float through = pow(max(dot(-V, uSunDir), 0.0), 2.0) * (0.35 + 0.65 * (1.0 - abs(dot(N, uSunDir))));
+  vec3 col = alb * (hemiLight(N) * vec3(1.2, 1.08, 0.86) + uSunColor * max(dot(N, uSunDir), 0.0) * sun * 0.9 + uGroundBounce * 0.9);
+  col += alb * alb * uSunColor * through * sun * 0.9;
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -517,6 +534,7 @@ export class AutumnBirches {
   private readonly table: Float32Array;
   private readonly treeTex: THREE.DataTexture;
   private readonly leaves: FallenLeaves;
+  private readonly litterMesh: THREE.Mesh;
   private readonly litterMat: THREE.ShaderMaterial;
   private readonly wade = new THREE.Vector4(1e6, 1e6, 2.2, 0);
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -560,9 +578,9 @@ export class AutumnBirches {
     });
 
     this.objects.push(this.canopy(rand, variants, shared));
-    const litter = this.litter(shared);
-    this.litterMat = litter.material as THREE.ShaderMaterial;
-    this.objects.push(litter);
+    this.litterMesh = this.litter(shared);
+    this.litterMat = this.litterMesh.material as THREE.ShaderMaterial;
+    this.objects.push(this.litterMesh);
 
     const tree = this.trees[this.trees.length - 1];
     const limb = new THREE.Vector3(SWING_LIMB.x, SWING_LIMB.y + 0.006, SWING_LIMB.z).multiplyScalar(tree.scale);
@@ -652,7 +670,7 @@ export class AutumnBirches {
   }
 
   private litter(shared: Record<string, THREE.IUniform>): THREE.Mesh {
-    const side = 100;
+    const side = LITTER_GRID;
     const card = new THREE.PlaneGeometry(1, 1);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = card.index;
@@ -716,10 +734,14 @@ export class AutumnBirches {
   }
 
   update(dt: number, camera: THREE.Camera, walker: THREE.Vector3 | null): void {
-    const here = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z) < ISLE.rx + 240;
+    const away = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z);
+    /** The gold crowns are worth seeing from the meadow's far shore; the floor and the loose leaves are not. */
+    const here = away < ISLE.rx + 240;
+    const near = away < FLOOR_RANGE;
     for (const o of this.objects) o.visible = here;
-    this.leaves.mesh.visible = here;
-    if (!here) return;
+    this.litterMesh.visible = near;
+    this.leaves.mesh.visible = near;
+    if (!near) return;
 
     const { stripRate, stripTrickle, gripSpeed, stripSpeed } = tuning.birches;
     for (const tree of this.trees) {
@@ -741,9 +763,9 @@ export class AutumnBirches {
     } else {
       this.wade.w = 0;
     }
-    this.litterMat.uniforms.uLitterCell.value.set(Math.round(camera.position.x / 0.55), Math.round(camera.position.z / 0.55));
+    this.litterMat.uniforms.uLitterCell.value.set(Math.round(camera.position.x / LITTER_CELL), Math.round(camera.position.z / LITTER_CELL));
 
     const shaking = this.shaking > 0.01 ? { x: SWING_TREE.x, z: SWING_TREE.y, radius: 9, strength: this.shaking * 0.5 } : null;
-    this.leaves.update(dt, here, walker, speed, shaking);
+    this.leaves.update(dt, near, walker, speed, shaking);
   }
 }

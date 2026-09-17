@@ -1,11 +1,22 @@
 import * as THREE from 'three';
 import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
+import { ISLES } from '../world/heightfield';
 import { mulberry32 } from '../world/noise';
 import { glsl, tuning } from '../tuning';
 
-const W = 128;
-const H = 128;
+const W = 160;
+const H = 160;
+const ISLE = ISLES.birches;
+
+/**
+ * How far out of the birch island a point lies: 1 at its own coast. Nothing of this room is allowed past it, so
+ * a leaf that goes out over the water thins away and is gone rather than turning up in the next room's grass.
+ */
+const ISLE_GLSL = /* glsl */ `
+float birchIsleR(vec2 xz) {
+  return length((xz - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)}));
+}`;
 /** How many leaves of the birch island are simulated at once: the ones that come off and the ones on the floor. */
 export const LEAF_COUNT = W * H;
 
@@ -23,6 +34,27 @@ vec3 birchLeaf(float pick, float depth) {
          : pick < 0.99 ? russet
          : late;
   return mix(c * 0.5, c, depth);
+}`;
+
+/**
+ * One leaf drawn on a card that runs from the stalk at −1 to the tip at 1: ovate, pointed and finely toothed,
+ * with a midrib and side veins, and curled across itself so it never reads as a flat scrap of paper.
+ */
+export const LEAF_SHAPE_GLSL = /* glsl */ `
+float birchLeafEdge(vec2 c, float seed) {
+  float t = clamp(c.y * 0.5 + 0.5, 0.0, 1.0);
+  float wide = 0.72 * pow(1.0 - t, 0.8) * pow(min(t * 2.6, 1.0), 0.5);
+  wide *= 1.0 - 0.12 * sin(t * (21.0 + 9.0 * seed) + seed * 31.0);
+  return max(wide, step(t, 0.11) * 0.045) - abs(c.x);
+}
+vec3 leafVeins(vec3 col, vec2 c) {
+  float rib = 1.0 - smoothstep(0.015, 0.07, abs(c.x));
+  float side = smoothstep(0.4, 0.5, abs(fract(c.y * 3.1 + abs(c.x) * 1.5) - 0.5));
+  return col * (1.0 - 0.2 * rib - 0.09 * side);
+}
+/** A leaf is never flat: it keeps a curl across the midrib, so one edge takes the sun and the other does not. */
+vec3 leafCurl(vec3 n, vec3 side, vec2 c, float amount) {
+  return normalize(n + side * c.x * amount);
 }`;
 
 /**
@@ -59,7 +91,7 @@ void main() {
   vec4 v = texture(uVel, vUv);
   float seed = v.w;
   vec2 uv = domainUv(p.xz);
-  if (!insideUv(uv)) {
+  if (p.w > 1.5 || !insideUv(uv)) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, seed);
     return;
   }
@@ -107,6 +139,7 @@ uniform sampler2D uHeightTex;
 uniform vec4 uDomain;
 in vec2 vUv;
 ${NOISE_GLSL}
+${ISLE_GLSL}
 vec2 domainUv(vec2 xz) { return (xz - uDomain.xy) * uDomain.zw; }
 bool insideUv(vec2 uv) { return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0))); }
 ${RELEASE_GLSL}
@@ -115,7 +148,7 @@ void main() {
   vec4 p = texture(uPos, vUv);
   vec4 v = texture(uVel, vUv);
   vec2 uv = domainUv(p.xz);
-  if (!insideUv(uv)) {
+  if (p.w > 1.5 || !insideUv(uv)) {
     gl_FragColor = p;
     return;
   }
@@ -131,23 +164,26 @@ void main() {
   /** On the sea they lie flat on the water and go with it, the way they do over the village further north. */
   p.y = max(p.y, max(ground, 0.0) + (ground < 0.0 ? 0.03 : 0.06));
   p.y = min(p.y, 70.0);
+  if (birchIsleR(p.xz) > 1.3) p.w = 2.0;
   gl_FragColor = p;
 }`;
 
 const RENDER_VERT = /* glsl */ `
 ${ATMO_GLSL}
+${ISLE_GLSL}
 uniform sampler2D uPos;
 uniform sampler2D uVel;
 in vec2 aRef;
 out vec2 vCorner;
 out vec3 vWorld;
 out vec3 vNormal;
+out vec3 vSide;
 out float vSeed;
 
 void main() {
   vec4 p = texture(uPos, aRef);
   vec4 v = texture(uVel, aRef);
-  if (p.w < 0.5) {
+  if (p.w < 0.5 || p.w > 1.5) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
@@ -161,14 +197,16 @@ void main() {
   vec3 n = normalize(mix(vec3(0.0, 1.0, 0.0), tumble, above));
   vec3 t1 = normalize(cross(n, abs(n.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
   vec3 t2 = cross(n, t1);
-  /** Half, because this card is two units across where the litter's is one. */
   /** Half, because this card is two units across where the litter's is one; bigger while it is in the air. */
   float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (0.85 + 0.7 * fract(seed * 5.7)) * (1.0 + 0.55 * above);
   /** One leaf on the lens is a gold blind across the whole room, so the last metre of them thins away. */
   size *= smoothstep(0.5, 2.6, distance(cameraPosition, p.xyz));
-  vWorld = p.xyz + (t1 * position.x + t2 * position.y * 0.78) * size;
+  /** And one blown out over the water goes to nothing before it is far enough out to be somebody else's leaf. */
+  size *= 1.0 - smoothstep(1.06, 1.28, birchIsleR(p.xz));
+  vWorld = p.xyz + (t1 * position.x * 1.45 + t2 * position.y) * size;
   vCorner = position.xy;
   vNormal = n;
+  vSide = t1;
   vSeed = seed;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
@@ -176,20 +214,20 @@ void main() {
 const RENDER_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${LEAF_TINT_GLSL}
+${LEAF_SHAPE_GLSL}
 in vec2 vCorner;
 in vec3 vWorld;
 in vec3 vNormal;
+in vec3 vSide;
 in float vSeed;
 
 void main() {
-  /** A birch leaf: a rounded triangle with a point on it, drawn once and tumbled by the vertex shader. */
   vec2 c = vCorner;
-  float r = length(vec2(c.x * 1.25, c.y - 0.12 * c.x * c.x));
-  if (r > 1.0 - 0.12 * sin(atan(c.y, c.x) * 7.0 + vSeed * 20.0)) discard;
-  vec3 N = normalize(vNormal);
+  if (birchLeafEdge(c, vSeed) < 0.0) discard;
+  vec3 N = leafCurl(normalize(vNormal), normalize(vSide), c, 0.55);
   vec3 V = normalize(cameraPosition - vWorld);
   if (dot(N, V) < 0.0) N = -N;
-  vec3 alb = birchLeaf(fract(vSeed * 7.13), 1.0);
+  vec3 alb = leafVeins(birchLeaf(fract(vSeed * 7.13), 1.0), c);
   float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.3);
   float wrap = abs(dot(N, uSunDir)) * 0.4 + 0.42;
   float through = pow(max(dot(-V, uSunDir), 0.0), 2.5) * (0.4 + 0.6 * (1.0 - abs(dot(N, uSunDir))));

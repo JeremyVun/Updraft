@@ -62,11 +62,14 @@ uniform vec3 uTipCool;
 float pastureAt(vec2 xz) {
   return smoothstep(-600.0, -660.0, xz.y);
 }
+/** 1 under the birches, where the floor is fallen gold and the little grass left in it has gone over with the year. */
+float birchFloorAt(vec2 xz) {
+  return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
+}
 /** How much of its height a blade keeps on the cropped islands: grazed on the lines, shorter under the birches. */
 float croppedAt(vec2 xz) {
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
-  float birches = 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
-  return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birches);
+  return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz));
 }
 /** 1 over the dark wood, where the floor is leaf litter and nothing grows tall enough to hide it. */
 float woodFloorAt(vec2 xz) {
@@ -81,6 +84,7 @@ vec3 grassTint(vec2 xz) {
   vec3 emerald = mix(vec3(0.16, 0.36, 0.07), vec3(0.3, 0.46, 0.09), fbm(xz * 0.03 + 11.0));
   emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);
   vec3 tint = mix(meadow, emerald, pastureAt(xz));
+  tint = mix(tint, vec3(0.44, 0.31, 0.11), birchFloorAt(xz) * 0.72);
   return mix(tint, mix(tint, vec3(0.4, 0.41, 0.31), 0.28) * 0.93, uSeason);
 }
 `;
