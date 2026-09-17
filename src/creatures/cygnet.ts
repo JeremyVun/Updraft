@@ -1,19 +1,16 @@
 import * as THREE from 'three';
-import { atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
-import { ease, easeAngle, wrapAngle, Spring } from './motion';
+import { ease, easeAngle, wrapAngle } from './motion';
 import type { WindSample } from '../wind/field';
 import {
   BODY,
   BONES,
   FOOT_L,
   FOOT_R,
-  HAND_L,
-  HAND_R,
   HEAD,
   JAW,
-  NECK_A,
-  NECK_B,
+  NECK,
+  REST,
   ROOT,
   SHIN,
   SHIN_L,
@@ -24,12 +21,10 @@ import {
   THIGH,
   THIGH_L,
   THIGH_R,
-  TUFT,
-  WING_L,
-  WING_R,
   cygnetGeometry,
 } from './cygnet/body';
-import { CYGNET_FRAG, CYGNET_VERT } from './cygnet/shader';
+import { applyLook, cygnetMaterial, newLook } from './cygnet/shader';
+import { poseWings } from './cygnet/wings';
 
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
 const LIFT_TO_HOPE = 0.18;
@@ -99,6 +94,10 @@ export class Cygnet {
   private readonly mesh: THREE.Mesh;
   private readonly mat: THREE.ShaderMaterial;
   private readonly bones: THREE.Matrix4[] = [];
+  /** How its surface looks this frame, as far as that follows from how it feels: set here, drawn by the shader. */
+  readonly look = newLook();
+  /** Takes a vertex from the rest space the mesh is authored in to each bone's own. */
+  private readonly unbind: THREE.Matrix4[] = [];
   /** Where it is drawn, which lags the story's `position` while it is being lifted, climbing or set down. */
   private readonly shown = new THREE.Vector3();
   private readonly prevShown = new THREE.Vector3();
@@ -175,7 +174,9 @@ export class Cygnet {
   private nextGlance = 0;
   private headYaw = 0;
   private headPitch = 0;
-  private readonly tuft = new Spring();
+
+  /** QA: keeps it on its feet, and sets any bone's rotation over the top of the pose, so a shape can be found by hand. */
+  readonly debug: { stand: boolean; bones: Record<number, [number, number, number]> } = { stand: false, bones: {} };
 
   /** Smoothed pose weights, so nothing it does ever snaps. */
   private readonly p = { sit: 0, held: 0, hooded: 0, hunch: 0, curl: 0, tall: 0, reach: 0, spread: 0, sleep: 0, hurry: 0 };
@@ -194,13 +195,12 @@ export class Cygnet {
       this.nodes[parent].add(o);
       this.nodes[bone] = o;
     }
-    for (let i = 0; i < BONES; i++) this.bones.push(new THREE.Matrix4());
+    for (let i = 0; i < BONES; i++) {
+      this.bones.push(new THREE.Matrix4());
+      this.unbind.push(new THREE.Matrix4().makeTranslation(-REST[i][0], -REST[i][1], -REST[i][2]));
+    }
 
-    this.mat = new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uBones: { value: this.bones }, uNudge: { value: 2.4 }, uAir: { value: 0 }, uBlink: { value: 0 } },
-      vertexShader: CYGNET_VERT,
-      fragmentShader: CYGNET_FRAG,
-    });
+    this.mat = cygnetMaterial(this.bones);
     this.mesh = new THREE.Mesh(cygnetGeometry(), this.mat);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
@@ -383,7 +383,7 @@ export class Cygnet {
     if (afoot && lift > LIFT_TO_FLY && this.hopT <= 0 && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
 
     this.glide = ease(this.glide, this.state === 'gliding' ? 1 : this.hope * 0.5, 3, dt);
-    this.mat.uniforms.uAir.value =
+    this.look.air =
       this.state === 'falling'
         ? clamp((this.shown.y - this.fallTo.y) / 6, 0, 1)
         : this.state === 'gliding' || this.state === 'leaving'
@@ -613,6 +613,10 @@ export class Cygnet {
 
   private walk(dt: number, child: THREE.Vector3): void {
     const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
+    if (this.debug.stand) {
+      this.position.y = ground;
+      return;
+    }
     if (this.hopT > 0) {
       this.hopping(dt, ground);
       return;
@@ -863,6 +867,7 @@ export class Cygnet {
     const lifting = h !== null && (h.kind === 'lift' || h.kind === 'hop');
     const dashing = h !== null && h.kind === 'dash';
     const afoot = s === 'following' && !h && this.landing <= 0;
+    if (this.debug.stand) this.settle = 0;
     const settled = this.grounded || s === 'following' ? this.settle : 0;
 
     /** What it is doing, as weights; every one eased so that no change of state is a cut. */
@@ -996,8 +1001,10 @@ export class Cygnet {
     const jolt = this.carried ? this.jostle.z * 3 : 0;
     a += sway + jolt;
     b += sway * 0.6 - this.effort * Math.max(0, Math.sin(this.flapPhase)) * 0.08;
-    n[NECK_A].rotation.x = a;
-    n[NECK_B].rotation.x = b;
+    n[NECK[0]].rotation.x = a * 0.55;
+    n[NECK[1]].rotation.x = a * 0.45;
+    n[NECK[2]].rotation.x = b * 0.5;
+    n[NECK[3]].rotation.x = b * 0.5;
 
     /** Where the head points: the target it was given, the child, or wherever it last glanced. */
     let wantYaw = this.glanceYaw;
@@ -1029,15 +1036,13 @@ export class Cygnet {
     this.headYaw = ease(this.headYaw, wantYaw * (1 - p.reach * 0.7), rate, dt);
     this.headPitch = ease(this.headPitch, wantPitch * (1 - p.reach * 0.6), rate, dt);
     const turn = this.headYaw * 0.45;
-    n[NECK_B].rotation.y = turn;
+    n[NECK[2]].rotation.y = turn * 0.5;
+    n[NECK[3]].rotation.y = turn * 0.5;
     const headPitch = head + this.headPitch - a - b + Math.sin(t * 33) * 0.04 * tremble;
     n[HEAD].rotation.set(headPitch, this.headYaw - turn + Math.sin(t * 29) * 0.05 * tremble, Math.sin(t * 0.7) * 0.04 * (1 - p.reach));
     /** The bill opens on each note of a call, and a little with every hard breath after the fall. */
     const note = this.callLong ? Math.max(0, Math.sin(this.callT * Math.PI * 1.45)) : Math.max(0, Math.sin(this.callT * Math.PI * 3.8));
     n[JAW].rotation.x = calling * note * 0.42 + this.puff * 0.08 * Math.max(0, Math.sin(this.breath));
-    /** The tuft trails what the head does: flicks up as it drops, lies down as it rises. */
-    const vy = dt > 0 ? (this.shown.y - this.prevShown.y) / dt : 0;
-    n[TUFT].rotation.x = -0.1 + this.tuft.step(clamp(vy * 0.35 + this.headPitch * 0.3, -0.7, 0.7), 140, 11, dt) + Math.sin(t * 27) * 0.06 * tremble;
     n[TAIL].rotation.x = this.beg * Math.sin(t * 15) * 0.25 + this.bond * 0.15 * (1 - p.hunch) - p.hunch * 0.3 - this.glide * 0.3 - p.sleep * 0.15;
 
     this.flapPhase += dt * (5 + this.glide * 3 + (afoot ? p.hurry * 6 : 0));
@@ -1050,20 +1055,27 @@ export class Cygnet {
     }
     const beat = Math.sin(beatPhase) * power;
     const lag = Math.sin(beatPhase - 0.75) * power;
-    const sweep = lerp(1.35, 0.1, p.spread) + p.hunch * 0.12;
-    const roll = lerp(-0.22 - p.hunch * 0.15, 0.15, p.spread) + beat * 0.95 + shaking * 0.4 + (this.landing > 0 ? clamp(this.landing / 0.75, 0, 1) * 0.6 : 0);
-    const handSweep = lerp(0.9, -0.05, p.spread) - Math.max(0, lag) * 0.3;
-    const handRoll = lerp(0.1, 0, p.spread) + lag * 0.55 + this.glide * Math.sin(t * 3.1) * 0.06;
     const twist = -this.glide * 0.12 + this.effort * 0.1 * Math.max(0, Math.sin(this.flapPhase));
     const preenLift = this.preen > 0 ? Math.sin(Math.min(1, this.preen / 1.8) * Math.PI) * 0.25 : 0;
-    n[WING_L].rotation.set(twist, sweep, roll + (this.preenSide > 0 ? preenLift : 0));
-    n[WING_R].rotation.set(twist, -sweep, -roll - (this.preenSide < 0 ? preenLift : 0));
-    n[HAND_L].rotation.set(0, handSweep, handRoll);
-    n[HAND_R].rotation.set(0, -handSweep, -handRoll);
+    poseWings(n, {
+      open: p.spread,
+      beat,
+      lag,
+      twist,
+      clamp: p.hunch,
+      raise: [this.preenSide > 0 ? preenLift : 0, this.preenSide < 0 ? preenLift : 0],
+      shake: shaking + (this.landing > 0 ? clamp(this.landing / 0.75, 0, 1) * 1.5 : 0),
+    });
 
-    this.mat.uniforms.uBlink.value = Math.max(this.blink, p.sleep) - this.fear * 0.2 * (1 - p.sleep);
+    const look = this.look;
+    look.blink = Math.max(this.blink, p.sleep) - this.fear * 0.2 * (1 - p.sleep);
+    look.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - this.fear), 0, 1);
+    look.sleek = clamp(this.fear * 0.8 + p.reach * 0.5, 0, 1);
+    look.wingOpen = p.spread;
+    applyLook(this.mat, look);
 
+    for (const [bone, r] of Object.entries(this.debug.bones)) n[Number(bone)].rotation.set(r[0], r[1], r[2]);
     this.root.updateMatrixWorld(true);
-    for (let i = 0; i < BONES; i++) this.bones[i].copy(n[i].matrixWorld);
+    for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);
   }
 }

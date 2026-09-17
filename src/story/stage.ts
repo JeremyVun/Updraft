@@ -3,7 +3,7 @@ import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 
-export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top';
+export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
@@ -13,6 +13,12 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   side: { bearing: Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
   'far-side': { bearing: -Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
   close: { bearing: 0.7, distance: 2.3, height: 0.5, on: 'cygnet' },
+  /** Round the cygnet itself: bearings are from the way it is facing. */
+  'k-front': { bearing: 0, distance: 1.5, height: 0.05, on: 'cygnet' },
+  'k-side': { bearing: Math.PI / 2, distance: 1.5, height: 0.05, on: 'cygnet' },
+  'k-back': { bearing: Math.PI, distance: 1.5, height: 0.2, on: 'cygnet' },
+  'k-34': { bearing: 0.7, distance: 1.4, height: 0.3, on: 'cygnet' },
+  'k-above': { bearing: 0.5, distance: 1.1, height: 1.2, on: 'cygnet' },
   top: { bearing: Math.PI, distance: 1.2, height: 6, on: 'both' },
 };
 
@@ -50,7 +56,7 @@ export class StageChapter implements Chapter {
 
   look(view: StageView): void {
     this.view = view;
-    this.facing = this.cast.child.yaw;
+    this.facing = view.startsWith('k-') ? this.cast.cygnet.yaw : this.cast.child.yaw;
   }
 
   /** Everything the two of them can do, by name. Unknown names are reported rather than ignored. */
@@ -64,6 +70,16 @@ export class StageChapter implements Chapter {
         k.position.set(p.x, Math.max(heightAt(p.x, p.z), 0), p.z);
         k.yaw = c.yaw + Math.PI;
         k.follow();
+        return true;
+      }
+      case 'solo': {
+        /** By itself, well clear of the child, side on to the sun, for looking at the model. */
+        const p = ahead(2, 5);
+        k.position.set(p.x, Math.max(heightAt(p.x, p.z), 0), p.z);
+        k.yaw = c.yaw + Math.PI / 2;
+        k.follow();
+        k.debug.stand = true;
+        k.watch(this.tmp.set(p.x + Math.sin(k.yaw) * 30, p.y + 0.5, p.z + Math.cos(k.yaw) * 30).clone());
         return true;
       }
       case 'gather':

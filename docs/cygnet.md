@@ -7,12 +7,22 @@ is deleted.
 
 ## Who does the work
 
-Jeremy's global model routing sends visual work to Astra or Opus 5. Asked whether that binds this feature, he left
-the decision to the owning session (his words are in `journey.md`). Decision: the owning Fable session models,
-animates and reviews its own captures, because this bar is only reached by a tight look-and-fix loop held by one
-owner; a fresh Opus 5 agent gives an independent visual verdict at each milestone in the build order, as one
-bounded parcel with no follow-ups; Jeremy gives the final one. The global rules are left as they are until this
-feature shows whether they should change. Product copy is not involved.
+Jeremy's global model routing sends visual work to Astra or Opus 5, and says why: to keep the expensive grind of
+iterating on a look off Fable, while a Fable lead still looks at results, accepts or rejects them and writes what it
+saw into the next brief. Asked whether that binds this feature, Jeremy left the decision to the owning session (his
+words are in `journey.md`). Decision:
+
+- **The owning Fable session** holds the design and this document, builds the systems (the child's arm IK and
+  sockets, the duet timeline, attention, feelings and the behaviour scheduler, locomotion and flight mechanics, the
+  wind relationship, sound, the stage and the numeric gates), wires the story, looks at a handful of captures at
+  each checkpoint, and decides what is accepted.
+- **Opus 5 agents** do the visual production: the model, the down shader and palette, the adult swans, and the
+  pose and timing passes that are judged by eye. Each gets one complete bounded parcel, its own worktree forked
+  from `cygnet` under `/private/tmp`, its own dev-server port and `/tmp` prefix, and is never sent a follow-up; a
+  further pass is a new agent with a new brief that carries the findings forward.
+- The seams between the two are small files with a stated contract: `cygnet/body.ts` (skeleton, rest space,
+  `HOLDS`), `cygnet/shader.ts` (`Look`, `cygnetMaterial`, `applyLook`), `cygnet/wings.ts` (`WingPose`, `poseWings`).
+- Jeremy gives the final verdict. Product copy is not involved.
 
 ## What the story gains
 
