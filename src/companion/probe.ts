@@ -21,13 +21,18 @@ export class Probe {
   private readonly c1 = new THREE.Vector3();
   private readonly c2 = new THREE.Vector3();
   private frames = 0;
+  private slipNow = 0;
   /** Every frame since the last reset, for finding out what happened round a bad one. */
   readonly trace: string[] = [];
   private readonly rel = new THREE.Vector3();
   private readonly body = new THREE.Vector3();
   private readonly turnNow = new THREE.Quaternion();
   private readonly acc = new THREE.Vector3();
-  private readonly worst: Record<'jerk' | 'turn' | 'gap' | 'sunk', Worst> = {
+  private readonly footWas = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly footNow = new THREE.Vector3();
+  private readonly stood = [false, false];
+  private readonly worst: Record<'jerk' | 'turn' | 'gap' | 'sunk' | 'slip', Worst> = {
+    slip: { value: 0, at: '' },
     jerk: { value: 0, at: '' },
     turn: { value: 0, at: '' },
     gap: { value: 0, at: '' },
@@ -61,12 +66,23 @@ export class Probe {
     const where = `${time.toFixed(2)}s ${k.state} ${this.carry.playing}`;
     /** While it rides, what matters is how it moves against the child, not over the ground. */
     const c = this.child.position;
+    this.slipNow = 0;
+    /** A foot that is down must not move: how far either one slid this frame while it was meant to be planted. */
+    for (const side of [0, 1] as const) {
+      const planted = k.footAt(side, this.footNow);
+      if (planted && this.stood[side] && this.frames >= 2) {
+        this.note('slip', this.footNow.distanceTo(this.footWas[side]), where);
+        this.slipNow = Math.max(this.slipNow, this.footNow.distanceTo(this.footWas[side]));
+      }
+      this.stood[side] = planted;
+      this.footWas[side].copy(this.footNow);
+    }
     if (this.frames >= 2) {
       this.acc.copy(p).addScaledVector(this.p1, -2).add(this.p2);
       if (k.carried) this.acc.sub(this.rel.copy(c).addScaledVector(this.c1, -2).add(this.c2));
       this.note('jerk', this.acc.length(), where);
       this.note('turn', q.angleTo(this.q1), where);
-      this.trace.push(`${where} jerk ${this.acc.length().toFixed(4)} turn ${q.angleTo(this.q1).toFixed(4)} d ${this.acc.x.toFixed(3)},${this.acc.y.toFixed(3)},${this.acc.z.toFixed(3)} ${k.mind.act ?? '-'} ${k.mind.interest}`);
+      this.trace.push(`${where} jerk ${this.acc.length().toFixed(4)} turn ${q.angleTo(this.q1).toFixed(4)} slip ${this.slipNow.toFixed(4)} d ${this.acc.x.toFixed(3)},${this.acc.y.toFixed(3)},${this.acc.z.toFixed(3)} ${k.mind.act ?? '-'} ${k.mind.interest}`);
     }
     const gap = this.carry.contactGap;
     if (gap !== null) this.note('gap', gap, where);

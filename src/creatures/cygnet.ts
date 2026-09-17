@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { heightAt } from '../world/island';
 import { ease, easeAngle, wrapAngle } from './motion';
 import type { WindSample } from '../wind/field';
-import { BODY, BONES, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
+import { BODY, BONES, FOOT_L, FOOT_R, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
+import { Gait } from './cygnet/gait';
 import { Mind, type Senses } from './cygnet/mind';
 import { Poser, type Drives } from './cygnet/pose';
 import { applyLook, cygnetMaterial, newLook } from './cygnet/shader';
@@ -15,12 +16,20 @@ const LIFT_TO_FLY = 0.5;
 const CEILING = 7.5;
 /** Nothing it can do keeps it up longer than this. */
 const GLIDE_FOR = 9;
-const HOP_FOR = 2.6;
+const HOP_FOR = 3.4;
+/** How long a try at flying is a run, before it turns into a fall. */
+const RUN_UNTIL = 2.3;
 
 /** Other places a hand can go on it, in its body's own frame: under the breast and under the rump, for holding it across the chest. */
 const GRIPS = { breast: [0, -0.1, 0.12], rump: [0, -0.09, -0.13] } as const;
 
-export type CygnetState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding' | 'leaving';
+/** Something it just did that can be heard. The cygnet only says what happened; the sound of it is made elsewhere. */
+export interface Heard {
+  kind: 'step' | 'flap' | 'flutter' | 'shake' | 'tumble' | 'rustle' | 'plunge' | 'paddle';
+  amount: number;
+}
+
+export type CygnetState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'perched' | 'swimming' | 'gliding' | 'leaving';
 
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
@@ -33,6 +42,9 @@ export class Cygnet {
   readonly position = new THREE.Vector3();
   yaw = 0;
   state: CygnetState = 'flying';
+  /** What it did this frame that makes a sound; whoever plays them empties the list. */
+  readonly heard: Heard[] = [];
+
   /** What it notices, how it feels, and what it does of its own accord. */
   readonly mind = new Mind();
   /**
@@ -76,10 +88,20 @@ export class Cygnet {
   readonly seating = new Ride();
   private time = 0;
   private readonly poser = new Poser();
+  private readonly gait = new Gait();
   private readonly senses: Senses;
   private readonly drives: Drives;
   private readonly windNow = { x: 0, z: 0, energy: 0, lift: 0 };
   private hurry = 0;
+  private readonly swimAim = new THREE.Vector3();
+  private swum = 0;
+  /** 1 as it goes under on the way in, falling away as it bobs back up. */
+  private dunk = 0;
+  private swimSpeed = 0;
+  private nextPaddle = 0;
+  private gaitStale = true;
+  private actWas: Drives['act'] = null;
+  private nextRustle = 0;
 
   private rideFor = 0;
   private calm = 0;
@@ -110,6 +132,8 @@ export class Cygnet {
   private hope = 0;
   private hopT = 0;
   private hopLift = 0;
+  /** 0 to 1: down on its breast with its tail in the air, after a try that did not work or a landing it got wrong. */
+  private faceplant = 0;
   private landedAt = 0;
   private landing = 0;
   private leaveYaw = 0;
@@ -177,10 +201,11 @@ export class Cygnet {
       locked: false,
     };
     this.drives = {
-      time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false,
-      settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, flop: 0, doze: 0, wriggle: 0,
+      time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
+      settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
       puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
       act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wind: { x: 0, z: 0 },
+      gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
     };
     this.mat = cygnetMaterial(this.bones);
     this.mesh = new THREE.Mesh(cygnetGeometry(), this.mat);
@@ -321,7 +346,10 @@ export class Cygnet {
       this.seating.held = false;
       this.seating.snap();
     } else if (this.seating.held) this.seating.go({ seat, held: false }, 'settle', 0.35);
-    else if (riding) this.seating.go({ seat }, 'climb', 1.7);
+    else if (riding) {
+      this.seating.go({ seat }, 'climb', 1.7);
+      this.heard.push({ kind: 'flutter', amount: 0.5 });
+    }
     else this.seating.go({ seat }, 'lift', 0.6, 0.18);
     this.fear = Math.min(this.fear, 0.25);
   }
@@ -332,7 +360,10 @@ export class Cygnet {
    */
   takeUp(hop = false): void {
     this.state = 'carried';
-    if (hop) this.seating.go({ seat: null, held: true }, 'hop', 0.6, 0.14);
+    if (hop) {
+      this.seating.go({ seat: null, held: true }, 'hop', 0.6, 0.14);
+      this.heard.push({ kind: 'flutter', amount: 0.7 });
+    }
     else this.seating.go({ seat: null, held: true }, 'settle', 0.25);
     this.settle = 0;
     this.hopT = 0;
@@ -387,6 +418,50 @@ export class Cygnet {
     this.fear = Math.min(this.fear, 0.2);
   }
 
+  /**
+   * Standing on something that is not the ground and may be moving, like the side of the boat. Whoever put it there
+   * says where that is every frame. Getting there from the child's arms is a hop of its own.
+   */
+  perch(at: THREE.Vector3, yaw: number): void {
+    if (this.state !== 'perched') {
+      if (this.carried) {
+        this.seating.go({ seat: null, held: false }, 'hop', 0.6, 0.16);
+        this.heard.push({ kind: 'flutter', amount: 0.6 });
+      } else if (this.state === 'swimming') {
+        this.seating.go({ seat: null, held: false }, 'hop', 0.7, 0.3);
+        this.heard.push({ kind: 'flutter', amount: 0.9 });
+        this.mind.perform('shake', 1.1);
+      }
+      this.state = 'perched';
+      this.settle = 0;
+    }
+    this.position.copy(at);
+    this.yaw = yaw;
+  }
+
+  /**
+   * Into the water, and swimming for the place it is given, which whoever is sailing beside it moves along. It has
+   * never done this before the first time, and goes in like a dropped loaf.
+   */
+  swimTo(target: THREE.Vector3): void {
+    if (this.state !== 'swimming') {
+      this.seating.go({ seat: null, held: false }, 'hop', 0.75, 0.22);
+      this.position.set(target.x, 0, target.z);
+      this.state = 'swimming';
+      this.swum = 0;
+      this.dunk = 1;
+      this.swims++;
+      this.mind.wet = 1;
+    }
+    this.swimAim.copy(target);
+  }
+
+  /** How many times it has taken to the water, and how far behind the place it is making for it has fallen. */
+  swims = 0;
+  get astern(): number {
+    return this.state === 'swimming' ? Math.hypot(this.swimAim.x - this.position.x, this.swimAim.z - this.position.z) : 0;
+  }
+
   /** A moment shared: the bond only ever goes up. */
   bind(amount: number): void {
     this.bond = Math.min(1, this.bond + amount);
@@ -394,6 +469,12 @@ export class Cygnet {
 
   watch(target: THREE.Vector3 | null): void {
     this.mind.told = target;
+  }
+
+  /** QA: where a foot is in the world and whether it is meant to be standing still, left (0) or right (1). */
+  footAt(side: 0 | 1, out: THREE.Vector3): boolean {
+    this.nodes[side === 0 ? FOOT_L : FOOT_R].getWorldPosition(out);
+    return this.drives.gait.on && this.gait.feet[side].planted;
   }
 
   /** QA: which way up its body is, in the world. */
@@ -424,6 +505,8 @@ export class Cygnet {
     if (this.state === 'leaving') this.climbOut(dt);
     else if (this.state === 'gliding') this.soar(dt, wind, child);
     else if (this.state === 'following') this.walk(dt, child);
+    else if (this.state === 'swimming') this.paddling(dt);
+    else if (this.state === 'perched') this.effort = 0;
     else if (this.state === 'fallen') this.rest(dt, child);
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
@@ -516,7 +599,8 @@ export class Cygnet {
       this.position.y = ground;
       this.state = 'following';
       this.landedAt = this.time;
-      this.landing = 0.75;
+      this.landing = 0.75 + 0.5 / Math.max(1, this.flights);
+      this.heard.push({ kind: 'tumble', amount: 0.4 });
       this.roll = 0;
       this.pitch = 0;
       this.effort = 0;
@@ -564,6 +648,7 @@ export class Cygnet {
 
     if (this.fallT >= 1) {
       this.state = 'downed';
+      this.heard.push({ kind: 'tumble', amount: 1 });
       this.struggle = 0;
       this.settle = 1;
       this.flop = 1;
@@ -654,7 +739,14 @@ export class Cygnet {
       this.effort = ease(this.effort, 0, 6, dt);
       this.hurry = run;
       this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
-      if (this.landing <= 0) this.mind.perform('shake');
+      /** Its first landings end on its breast; it gets better at them, and never good. */
+      const clumsy = 1 / Math.max(1, this.flights);
+      this.faceplant = clumsy * Math.sin(clamp(1 - this.landing / 0.75, 0, 1) * Math.PI) ** 0.7;
+      if (this.landing <= 0) {
+        this.faceplant = 0;
+        this.mind.perform('shake');
+        this.mind.startle(0);
+      }
       return;
     }
     this.effort = 0;
@@ -670,7 +762,7 @@ export class Cygnet {
     const hurry = seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
     this.hurry = ease(this.hurry, hurry, 4, dt);
     const speed = this.hurry * (1.5 + 2.9 * this.hurry);
-    if (gap > 0.2 && speed > 0.05) this.yaw = easeAngle(this.yaw, Math.atan2(dx, dz), 5 + 4 * hurry, dt);
+    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 5 + 4 * hurry, 2.6 + 3.4 * hurry, dt);
     if (speed > 0.02) {
       this.position.x += Math.sin(this.yaw) * speed * dt;
       this.position.z += Math.cos(this.yaw) * speed * dt;
@@ -679,7 +771,7 @@ export class Cygnet {
     } else {
       /** Stands a while, then sits down where it is, and sooner the more it trusts them to come back. */
       this.settle = Math.min(1, this.settle + dt * (0.12 + this.bond * 0.1));
-      if (gap > 0.6 && gap < 3.5 && this.settle < 0.5) this.yaw = easeAngle(this.yaw, Math.atan2(dx, dz), 1.2, dt);
+      if (gap > 0.6 && gap < 3.5 && this.settle < 0.5) this.turnTo(Math.atan2(dx, dz), 1.2, 1.4, dt);
       /** Left standing, it now and then stretches up and calls for the family that is not there. */
       if (this.childSpeed < 0.3 && this.time > this.nextCall && !this.mind.told) {
         this.call(true);
@@ -700,6 +792,46 @@ export class Cygnet {
     this.begging(gap);
   }
 
+  /** Turns toward a bearing no faster than its feet can take it round: a body that spins over planted feet is sliding. */
+  private turnTo(bearing: number, rate: number, limit: number, dt: number): void {
+    const step = wrapAngle(bearing - this.yaw) * (1 - Math.exp(-rate * dt));
+    this.yaw += clamp(step, -limit * dt, limit * dt);
+  }
+
+  /**
+   * Afloat. It makes for the place it was given at its own best speed, which is not much, works harder the further
+   * behind it falls, and rides whatever the sea is doing. Nothing about this can go wrong: it floats.
+   */
+  private paddling(dt: number): void {
+    this.swum += dt;
+    const entering = this.seating.move !== null;
+    if (!entering && this.dunk === 1) {
+      this.heard.push({ kind: 'plunge', amount: 1 });
+      this.dunk = 0.999;
+    }
+    if (!entering) this.dunk = Math.max(0, this.dunk - dt * 1.1);
+    const dx = this.swimAim.x - this.position.x;
+    const dz = this.swimAim.z - this.position.z;
+    const gap = Math.hypot(dx, dz);
+    const want = entering ? 0 : clamp(gap * 1.1, 0, 2.3);
+    this.swimSpeed = ease(this.swimSpeed, want, 1.6, dt);
+    if (gap > 0.15) this.turnTo(Math.atan2(dx, dz), 3, 2.2, dt);
+    this.position.x += Math.sin(this.yaw) * this.swimSpeed * dt;
+    this.position.z += Math.cos(this.yaw) * this.swimSpeed * dt;
+    /** Down with the plunge and up again past where it floats, then the sea's own slow lift. */
+    const bobbing = Math.sin(this.time * 1.3 + 0.7) * 0.03 + Math.sin(this.time * 2.7) * 0.012;
+    this.position.y = bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;
+    this.effort = ease(this.effort, clamp((gap - 2.5) / 4, 0, 0.6), 2, dt);
+    this.flap = ease(this.flap, this.effort > 0.3 ? 0.5 : 0, 3, dt);
+    this.hurry = clamp(this.swimSpeed / 2.3, 0, 1);
+    this.stride += dt * (2.5 + this.swimSpeed * 3.2);
+    if (this.time > this.nextPaddle && this.swimSpeed > 0.3) {
+      this.heard.push({ kind: 'paddle', amount: this.hurry });
+      this.nextPaddle = this.time + 0.62 / (0.5 + this.hurry);
+    }
+    this.settle = 0;
+  }
+
   /** A chick flutters and reaches up when someone it trusts comes back to it, or stands right over it. */
   private begging(gap: number): void {
     if (this.time < this.nextBeg || this.fear > 0.5) return;
@@ -716,31 +848,45 @@ export class Cygnet {
     this.hopT -= dt;
     const t = HOP_FOR - this.hopT;
     let hop = 0;
+    let run = 0;
     if (t < 0.5) {
+      /** It gathers itself: a crouch, a look up, wings coming off its back. */
       this.effort = 0.3;
       this.flap = ease(this.flap, 0.5, 6, dt);
       this.settle = ease(this.settle, 0.45, 8, dt);
-    } else if (t < 2.05) {
-      const w = (t - 0.5) / 0.5;
-      const n = Math.floor(w);
-      hop = Math.max(0, Math.sin((w - n) * Math.PI)) ** 1.3 * (0.13 + n * 0.11);
+    } else if (t < RUN_UNTIL) {
+      /** The run: feet slapping, wings going as hard as they will, and each bound a little higher than the last. */
+      const w = (t - 0.5) / (RUN_UNTIL - 0.5);
+      run = 0.8 + 2.6 * w;
+      const bound = (t - 0.5) / 0.42;
+      hop = Math.max(0, Math.sin((bound - Math.floor(bound)) * Math.PI)) ** 1.3 * (0.05 + w * 0.2);
       this.effort = 1;
       this.flap = 1;
       this.flapPhase += dt * 17;
       this.settle = 0;
-      this.roll = ease(this.roll, Math.sin(w * Math.PI * 2) * 0.2, 6, dt);
+      this.roll = ease(this.roll, Math.sin(bound * Math.PI) * 0.16, 6, dt);
     } else {
+      /** And it is not enough. It comes down on its breast, slides, and lies there a moment before it sits up. */
+      const w = (t - RUN_UNTIL) / (HOP_FOR - RUN_UNTIL);
+      if (this.faceplant === 0) this.heard.push({ kind: 'tumble', amount: 0.55 });
+      run = 2.2 * Math.max(0, 1 - w * 3.2);
+      this.faceplant = Math.max(0.001, Math.sin(Math.min(1, w * 1.35) * Math.PI) ** 0.6);
       this.effort = ease(this.effort, 0, 8, dt);
-      this.flap = ease(this.flap, 0, 6, dt);
+      this.flap = ease(this.flap, 0.25 * (1 - w), 6, dt);
       this.roll = ease(this.roll, 0, 5, dt);
-      this.stride += dt * 8;
-      if (this.hopT <= 0.3 && this.hopT > 0.25) this.mind.perform('shake');
+      if (this.hopT <= 0.35 && this.hopT > 0.3) this.mind.perform('shake');
     }
+    this.hurry = ease(this.hurry, run > 0.1 ? 1 : 0, 8, dt);
+    this.position.x += Math.sin(this.yaw) * run * dt;
+    this.position.z += Math.cos(this.yaw) * run * dt;
     this.hopLift = ease(this.hopLift, hop, 30, dt);
-    this.position.y = ground + this.hopLift;
+    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0) + this.hopLift;
     if (this.hopT <= 0) {
       this.landedAt = this.time;
       this.settle = 0;
+      this.faceplant = 0;
+      /** The first thing it does afterwards is look at whoever was watching. */
+      this.mind.startle(0);
     }
   }
 
@@ -796,7 +942,7 @@ export class Cygnet {
     s.cold = w.cold;
     s.rain = w.rain;
     s.dark = w.dark;
-    s.where = this.carried ? 'riding' : st === 'following' ? 'afoot' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
+    s.where = this.carried ? 'riding' : st === 'following' || st === 'perched' ? 'afoot' : st === 'swimming' ? 'riding' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
     s.locked = this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
     s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3;
     this.mind.update(dt, s);
@@ -825,6 +971,8 @@ export class Cygnet {
     d.leaving = st === 'leaving';
     d.afoot = st === 'following';
     d.downed = st === 'downed';
+    d.afloat = st === 'swimming' && this.seating.move === null;
+    d.perched = st === 'perched';
     d.settle = this.grounded || st === 'following' ? this.settle : 0;
     d.fear = this.fear;
     d.bond = this.bond;
@@ -836,6 +984,7 @@ export class Cygnet {
     d.hopLift = this.hopLift;
     d.crouch = this.hopT > HOP_FOR - 0.5 ? 1 : 0;
     d.landing = clamp(this.landing / 0.75, 0, 1);
+    d.faceplant = this.faceplant;
     d.flop = this.flop;
     d.doze = this.doze;
     d.wriggle = this.wriggle;
@@ -864,8 +1013,47 @@ export class Cygnet {
     d.actYaw = wrapAngle(Math.atan2(m.actAt.x - this.position.x, m.actAt.z - this.position.z) - yaw);
     this.aim(yaw);
 
+    /** On its own feet and not hopping, its legs belong to the ground it is walking on. */
+    const walking = st === 'following' && this.hopT <= 0 && this.landing <= 0 && this.seating.move === null && !this.seating.held;
+    d.gait.on = walking;
+    if (walking) {
+      const g = this.gait;
+      g.update(dt, this.position, this.yaw, heightAt);
+      for (let i = 0; i < g.footfalls; i++) this.heard.push({ kind: 'step', amount: 0.6 + g.pace * 0.6 });
+      for (const [i, f] of g.feet.entries()) {
+        const out = d.gait.feet[i];
+        const rx = (f.at.x - this.position.x) / SIZE;
+        const rz = (f.at.z - this.position.z) / SIZE;
+        out.x = rx * cy - rz * sy;
+        out.z = rx * sy + rz * cy;
+        out.y = (f.at.y - this.position.y) / SIZE;
+      }
+      d.gait.sway = g.sway;
+      d.gait.roll = g.roll;
+      d.gait.twist = g.twist;
+      d.gait.dip = g.dip;
+      d.gait.pace = g.pace;
+    } else this.gaitStale = true;
+    if (walking && this.gaitStale) {
+      this.gait.reset(this.position, this.yaw);
+      this.gaitStale = false;
+    }
+
+    const strokeWas = Math.floor(this.flapPhase / (Math.PI * 2));
     this.flapPhase += dt * (5 + this.glide * 3 + (st === 'following' ? this.hurry * 6 : 0));
     d.flapPhase = this.flapPhase;
+    const beating = Math.max(this.effort, this.flap * 0.7);
+    if (beating > 0.3 && Math.floor(this.flapPhase / (Math.PI * 2)) !== strokeWas) this.heard.push({ kind: 'flap', amount: beating });
+    if (m.act !== this.actWas) {
+      if (m.act === 'shake') this.heard.push({ kind: 'shake', amount: 1 });
+      else if (m.act === 'bowled') this.heard.push({ kind: 'flutter', amount: 0.9 });
+      else if (m.act === 'ask') this.heard.push({ kind: 'flutter', amount: 0.5 });
+      this.actWas = m.act;
+    }
+    if (this.seating.move?.kind === 'climb' && this.time > this.nextRustle) {
+      this.heard.push({ kind: 'rustle', amount: 1 });
+      this.nextRustle = this.time + 0.16 + Math.random() * 0.14;
+    }
 
     this.root.scale.setScalar(SIZE);
     const posed = this.poser.update(n, d, dt);

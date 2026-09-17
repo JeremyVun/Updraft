@@ -38,9 +38,11 @@ import { heightAt } from './world/island';
 import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
+import { Foley, type Surface } from './audio/foley';
 import { Carry } from './companion/carry';
 import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
+import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
 import { LINES_WALK, LINES_LANDING } from './story/lines';
@@ -190,6 +192,9 @@ const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => scene.add(o));
 cygnet.mount = child;
 const carry = new Carry(child, cygnet);
+const foley = new Foley();
+let nextBugle = 0;
+let swanBeat = 0;
 const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 scene.add(flock.mesh);
@@ -373,6 +378,35 @@ function frame(now: number): void {
   /** The cygnet reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
   cygnet.update(dt, time, child.position, wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir));
   carry.after();
+  foley.setOutput(sound.output);
+  const heardPan = screenPan(rig.camera, cygnet.position);
+  for (const h of cygnet.heard) {
+    if (h.kind === 'step') {
+      const under: Surface = child.riding && cygnet.position.distanceToSquared(boat.position) < 9 ? 'wood' : heightAt(cygnet.position.x, cygnet.position.z) < 0.9 ? 'sand' : 'grass';
+      foley.step(under, h.amount, heardPan);
+    } else if (h.kind === 'flap') foley.flap(h.amount, heardPan);
+    else if (h.kind === 'flutter') foley.flutter(6, h.amount, heardPan);
+    else if (h.kind === 'shake') foley.shake(heardPan, cygnet.mind.wet);
+    else if (h.kind === 'tumble') foley.tumble(h.amount, heardPan);
+    else if (h.kind === 'plunge') foley.plunge(heardPan);
+    else if (h.kind === 'paddle') foley.paddle(h.amount, heardPan);
+    else foley.rustle(h.amount, heardPan);
+  }
+  cygnet.heard.length = 0;
+  /** The grown swans are heard before they are seen: the throb of their wings, and now and then one of them calling. */
+  if (flock.active) {
+    const far = THREE.MathUtils.clamp(flock.head.distanceTo(rig.camera.position) / 320, 0, 1);
+    const swanPan = screenPan(rig.camera, flock.head);
+    swanBeat += dt * 3.4;
+    if (swanBeat > Math.PI * 2 && far < 0.75) {
+      swanBeat -= Math.PI * 2;
+      foley.wingbeat(swanPan, far);
+    }
+    if (time > nextBugle) {
+      foley.bugle(swanPan + (Math.random() - 0.5) * 0.4, far, 0.8 + Math.random() * 0.4);
+      nextBugle = time + 1.6 + Math.random() * 4.5;
+    }
+  }
   probe?.update(time);
   pollReadbacks();
   wind.step(dt, time);

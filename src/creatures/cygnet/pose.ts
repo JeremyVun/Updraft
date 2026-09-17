@@ -1,6 +1,6 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { ease } from '../motion';
-import { BODY, FOOT_L, FOOT_R, HEAD, JAW, NECK, SHIN, SHIN_L, SHIN_R, SIZE, TAIL, THIGH, THIGH_L, THIGH_R } from './body';
+import { BODY, FOOT_L, FOOT_R, HEAD, JAW, NECK, SHIN, SHIN_L, SHIN_R, SIZE, SKELETON, SOLE, TAIL, THIGH, THIGH_L, THIGH_R } from './body';
 import type { Act } from './mind';
 import type { MoveKind, Seat } from './ride';
 import { poseWings } from './wings';
@@ -24,6 +24,9 @@ export interface Drives {
   /** Walking or standing on its own feet, as opposed to down in the grass, riding or flying. */
   afoot: boolean;
   downed: boolean;
+  /** Swimming, and standing on something that is not the ground. */
+  afloat: boolean;
+  perched: boolean;
   /** How far it has sat down where it stands, 0..1. */
   settle: number;
   fear: number;
@@ -38,6 +41,8 @@ export interface Drives {
   crouch: number;
   /** 1 at touchdown, running out to 0 as it stops. */
   landing: number;
+  /** Down on its breast, tail up, 0..1. */
+  faceplant: number;
   flop: number;
   doze: number;
   wriggle: number;
@@ -60,6 +65,11 @@ export interface Drives {
   blink: number;
   /** The wind on it in its own frame (x to its left, z ahead), units per second. */
   wind: { x: number; z: number };
+  /**
+   * Walking on planted feet: where each ankle has to be (left, then right) in the frame of its origin, and how the
+   * body rides over them. `on` is whether any of this applies.
+   */
+  gait: { on: boolean; feet: [{ x: number; y: number; z: number }, { x: number; y: number; z: number }]; sway: number; roll: number; twist: number; dip: number; pace: number };
 }
 
 export interface Posed {
@@ -75,6 +85,9 @@ export interface Posed {
 }
 
 const FLOOR = 0.006 * SIZE;
+/** Where the hips are on the body, from the skeleton, and how high the body stands when both legs are comfortably bent. */
+const HIP = SKELETON.find(([bone]) => bone === THIGH_L)![2];
+const STANDING = -HIP[1] + (THIGH + SHIN) * 0.75 + SOLE;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -94,12 +107,17 @@ export class Poser {
     spread: 0,
     sleep: 0,
     land: 0,
+    plant: 0,
+    swim: 0,
+    walk: 0,
   };
   /** One eased weight per thing it can be doing, so one act can fade out while the next fades in. */
   private readonly acts = new Map<Act, number>();
   private headYaw = 0;
   private headPitch = 0;
   private neckYaw = 0;
+  private readonly unturn = new THREE.Quaternion();
+  private readonly ankle = new THREE.Vector3();
   private readonly out: Posed = { bodyLift: 0.11, rootPitch: 0, rootRoll: 0, blink: 0, fluff: 0, sleek: 0, wingOpen: 0 };
 
   update(n: THREE.Object3D[], d: Drives, dt: number): Posed {
@@ -126,6 +144,8 @@ export class Poser {
     p.climb = ease(p.climb, climbing ? 1 : 0, 7, dt);
     p.lifted = ease(p.lifted, lifting && !d.inHands ? 1 : 0, 9, dt);
     p.land = ease(p.land, d.landing, 14, dt);
+    p.plant = ease(p.plant, d.faceplant, 16, dt);
+    p.swim = ease(p.swim, d.afloat ? 1 : 0, 5, dt);
     const alert = clamp((d.gaze.firm ? 0.5 : 0) + d.hope * 0.7 + d.call.env * 1.2 + p.beg * 0.5 + d.crouch * 0.9 + act('into-wind') * 0.6 + act('ask') + act('peer') + act('look-about') * 0.4, 0, 1);
     p.tall = ease(p.tall, alert * (1 - p.reach), 5, dt);
     const drowsy = d.settle * (0.55 + d.bond * 0.2) * (1 - d.fear) * (1 - alert);
@@ -133,7 +153,7 @@ export class Poser {
     const shake = act('shake');
     const spread =
       clamp(
-        d.flap * 0.35 + d.glide + d.effort * 1.3 + d.hope * 0.55 + (flying ? 1 : 0) + (climbing || lifting ? 0.45 : 0) + p.beg * 0.4 + shake * 0.35 + act('ask') * 0.6 + act('into-wind') * 0.3 + act('bowled') * 0.8,
+        d.flap * 0.35 + d.glide + d.effort * 1.3 + d.hope * 0.55 + (flying ? 1 : 0) + (climbing || lifting ? 0.45 : 0) + p.beg * 0.4 + shake * 0.35 + act('ask') * 0.6 + act('into-wind') * 0.3 + act('bowled') * 0.8 + p.plant * 0.7,
         0,
         1,
       ) *
@@ -143,7 +163,7 @@ export class Poser {
     const tremble = p.hunch * 0.6 + d.fear * (d.carried ? 0.15 : 0.3) + d.cold * 0.35;
 
     /** A seat tips it back by itself; only the climb and a hop add anything of their own. */
-    let rootPitch = (flying ? d.pitch : 0) - 0.55 * p.climb - 0.15 * p.lifted;
+    let rootPitch = (flying ? d.pitch : 0) - 0.55 * p.climb - 0.15 * p.lifted + 0.85 * p.plant;
     let rootRoll = flying ? d.roll : d.roll * (1 - p.sit * 0.5);
     rootRoll += d.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
     /** Braced, it leans into the wind; knocked over, it goes with it. */
@@ -155,6 +175,19 @@ export class Poser {
 
     const tuck = Math.max(p.sit, p.held);
     const stretch = act('stretch');
+    p.walk = ease(p.walk, d.gait.on && afoot && d.faceplant <= 0 ? 1 : 0, 8, dt);
+    const walk = p.walk * (1 - tuck);
+    const bodyY = lerp(0.072, STANDING - d.gait.dip, 1 - tuck);
+    const nibble = act('nibble');
+    const body = n[BODY];
+    body.rotation.x = -0.04 + p.sit * 0.04 - p.hunch * 0.12 + nibble * 0.25 + d.hurry * 0.12 - p.beg * 0.1 + stretch * 0.12;
+    body.rotation.z =
+      Math.sin(d.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, d.effort) +
+      Math.sin(d.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, d.wriggle * 3) +
+      act('peer') * 0.22 * d.actSide +
+      d.gait.roll * walk;
+    body.rotation.y = d.gait.twist * walk + Math.sin(d.stride) * 0.06 * p.swim;
+    this.unturn.setFromEuler(body.rotation).invert();
     let reach = 0;
     for (const [thigh, shin, foot, side, phase] of [
       [THIGH_L, SHIN_L, FOOT_L, 1, 0],
@@ -188,13 +221,39 @@ export class Poser {
       th = lerp(th, 0.2 + Math.sin(t * 22 + phase) * 0.5, p.climb);
       sh = lerp(sh, -1.0 + Math.cos(t * 22 + phase) * 0.5, p.climb);
       ft = lerp(ft, 0.6, p.climb);
+      /** Afloat, the legs trail and push alternately, mostly out of sight. */
+      th = lerp(th, 0.95 + Math.sin(d.stride + phase) * 0.45, p.swim);
+      sh = lerp(sh, -0.6 - Math.cos(d.stride + phase) * 0.4, p.swim);
+      ft = lerp(ft, 0.9 + Math.sin(d.stride + phase) * 0.5, p.swim);
       /** A stretch: one leg straight out behind, with the wing on the same side. */
       if (side === d.actSide) {
         th = lerp(th, 1.3, stretch * (1 - tuck));
         sh = lerp(sh, -0.25, stretch * (1 - tuck));
         ft = lerp(ft, 1.0, stretch * (1 - tuck));
       }
-      n[thigh].rotation.set(th, 0, -side * (0.06 + act('brace') * 0.2) * (1 - tuck));
+      let splay = -side * (0.06 + act('brace') * 0.2) * (1 - tuck);
+      if (walk > 0.001) {
+        /** The ankle goes where the foot was planted, whatever the body is doing over it. */
+        const at = d.gait.feet[side === 1 ? 0 : 1];
+        /** In the body's own frame, because the hips roll and swing with the waddle and the foot must not. */
+        const to = this.ankle.set(at.x - d.gait.sway * walk, at.y + SOLE - bodyY, at.z).applyQuaternion(this.unturn);
+        const dx = to.x - HIP[0] * side;
+        const dy = Math.min(-0.02, to.y - HIP[1]);
+        const dz = to.z - HIP[2];
+        const r = clamp(Math.hypot(dy, dz), Math.abs(THIGH - SHIN) + 0.004, THIGH + SHIN - 0.002);
+        const line = Math.atan2(-dz, -dy);
+        const hipAngle = Math.acos(clamp((THIGH * THIGH + r * r - SHIN * SHIN) / (2 * THIGH * r), -1, 1));
+        const knee = Math.acos(clamp((THIGH * THIGH + SHIN * SHIN - r * r) / (2 * THIGH * SHIN), -1, 1));
+        const ikTh = line + hipAngle;
+        const ikSh = -(Math.PI - knee);
+        th = lerp(th, ikTh, walk);
+        sh = lerp(sh, ikSh, walk);
+        /** Flat on the ground while it is down; toes trailing as it comes up, reaching as it goes down. */
+        const lifted = clamp((at.y - 0.002) / 0.05, 0, 1);
+        ft = lerp(ft, -(ikTh + ikSh) + lifted * 0.7, walk);
+        splay = lerp(splay, Math.atan2(dx, -dy), walk);
+      }
+      n[thigh].rotation.set(th, 0, splay);
       n[shin].rotation.x = sh;
       n[foot].rotation.x = ft;
       if (side !== d.actSide || stretch < 0.05) reach = Math.max(reach, FLOOR / SIZE + 0.036 + THIGH * Math.cos(th) + SHIN * Math.cos(th + sh));
@@ -203,10 +262,9 @@ export class Poser {
     const stand = 1 - tuck;
     /** On its own feet the body stands on whichever leg is planted; carried, it rests on its keel. Eased between the two, never switched. */
     p.afoot = ease(p.afoot, d.carried ? 0 : 1, 9, dt);
-    const bodyRest = lerp(0.11, lerp(0.072, reach, stand), p.afoot);
+    /** Afloat it rides with the water a little under halfway up its body. */
+    const bodyRest = lerp(lerp(0.11, lerp(lerp(0.072, reach, stand), bodyY, p.walk), p.afoot), 0.035, p.swim);
     const breathe = Math.sin(d.breath) * (0.012 + d.fear * 0.008 + d.puff * 0.01);
-    const nibble = act('nibble');
-    const body = n[BODY];
     body.position.y =
       bodyRest +
       d.glide * 0.06 +
@@ -215,12 +273,8 @@ export class Poser {
       (act('flinch') * 0.03 + act('brace') * 0.035) * p.afoot +
       Math.abs(Math.sin(t * 11)) * 0.02 * act('ask') +
       (afoot ? Math.abs(Math.cos(d.stride)) * 0.006 * d.hurry : 0);
+    body.position.x = d.gait.sway * walk;
     body.position.z = 0;
-    body.rotation.x = -0.04 + p.sit * 0.04 - p.hunch * 0.12 + nibble * 0.25 + d.hurry * 0.12 - p.beg * 0.1 + stretch * 0.12;
-    body.rotation.z =
-      Math.sin(d.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, d.effort) +
-      Math.sin(d.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, d.wriggle * 3) +
-      act('peer') * 0.22 * d.actSide;
     body.scale.set(1 + breathe * 0.6, 1 + breathe * 1.2, 1 + breathe * 0.8);
 
     /** The neck is the whole character: the S of a bird at ease, tucked back into the shoulders, or stretched. */
@@ -252,6 +306,10 @@ export class Poser {
     b += nibble * 0.5 + act('preen-breast') * 1.5 + stretch * 0.1 + act('brace') * 0.3;
     head += nibble * (0.5 + Math.sin(t * 40) * 0.08) + act('preen-breast') * (0.7 + Math.sin(t * 31) * 0.1) - act('yawn') * 0.4 - stretch * 0.3;
     a -= act('preen-back') * 0.75;
+    /** On its breast the neck is flung out along the ground in front of it. */
+    a = lerp(a, 0.75, p.plant);
+    b = lerp(b, -0.55, p.plant);
+    head = lerp(head, -0.2, p.plant);
     const sway = Math.sin(t * 1.05) * 0.02 * (1 - p.reach) + (afoot ? Math.sin(d.stride * 2 + 0.7) * 0.05 * d.hurry : 0);
     /** A wingbeat pulls the head down a little; a passenger's head lags every jolt the child gives it. */
     a += sway + d.jostle * 3;
@@ -290,7 +348,7 @@ export class Poser {
     n[NECK[3]].rotation.y = this.neckYaw * 0.35;
     const snap = act('snap') * Math.max(0, Math.sin(d.actK * Math.PI * 2 - 0.6));
     const headPitch = head + this.headPitch - a - b + Math.sin(t * 33) * 0.04 * tremble + snap * 0.2;
-    n[HEAD].rotation.set(headPitch, this.headYaw - this.neckYaw + Math.sin(t * 29) * 0.05 * tremble - shaking * 0.5, Math.sin(t * 0.7) * 0.04 * (1 - p.reach) + act('nuzzle') * 0.3);
+    n[HEAD].rotation.set(headPitch, this.headYaw - this.neckYaw - d.gait.twist * walk * 0.8 + Math.sin(t * 29) * 0.05 * tremble - shaking * 0.5, Math.sin(t * 0.7) * 0.04 * (1 - p.reach) + act('nuzzle') * 0.3 - d.gait.roll * walk * 0.8);
     /** The bill opens on each note of a call, with every hard breath after the fall, in a yawn, and to snap at what goes past. */
     n[JAW].rotation.x = d.call.env * d.call.note * 0.42 + d.puff * 0.08 * Math.max(0, Math.sin(d.breath)) + act('yawn') * 0.5 + snap * 0.35;
     n[TAIL].rotation.set(

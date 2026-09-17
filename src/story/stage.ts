@@ -45,6 +45,10 @@ export class StageChapter implements Chapter {
   private facing = 0;
   private readonly tmp = new THREE.Vector3();
   private offering = false;
+  /** While set, it swims after a point that paces up and down just off the beach. */
+  private swimming = false;
+  private readonly swimAt = new THREE.Vector3();
+  private clock = 0;
 
   constructor(private readonly cast: Cast) {
     const { child, cygnet } = cast;
@@ -96,6 +100,22 @@ export class StageChapter implements Chapter {
         k.watch(this.tmp.set(p.x + Math.sin(k.yaw) * 30, p.y + 0.5, p.z + Math.cos(k.yaw) * 30).clone());
         return true;
       }
+      case 'shore': {
+        /** Down to the water's edge, the child facing the sea, for anything to do with swimming. */
+        let z = c.position.z;
+        while (heightAt(c.position.x, z) > 0.35 && z < c.position.z + 60) z += 0.5;
+        c.place(c.position.x, z - 1.5, 0);
+        this.facing = c.yaw;
+        this.play('ground');
+        return true;
+      }
+      case 'swim':
+        this.swimming = true;
+        return true;
+      case 'ashore':
+        this.swimming = false;
+        k.follow();
+        return true;
       case 'kneel':
         c.faceToward(k.position.x, k.position.z, 1);
         c.kneeling = 1;
@@ -174,8 +194,14 @@ export class StageChapter implements Chapter {
     }
   }
 
-  update(): void {
+  update(dt: number): void {
     const { child: c, cygnet: k } = this.cast;
+    this.clock += dt;
+    if (this.swimming) {
+      let z = c.position.z;
+      while (heightAt(c.position.x, z) > -0.4 && z < c.position.z + 40) z += 0.5;
+      k.swimTo(this.swimAt.set(c.position.x + Math.sin(this.clock * 0.35) * 6, 0, z + 2.5));
+    }
     if (this.offering) {
       c.reachFor(0, k.grip('bellyL', this.tmp));
       c.reachFor(1, k.grip('bellyR', this.tmp));
