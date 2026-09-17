@@ -3,7 +3,7 @@ import type { WindField, WindSample } from '../wind/field';
 import { fieldAt, type FieldSample } from '../world/fields';
 import { heightAt } from '../world/island';
 import { ROCKS, TREE } from '../world/landmarks';
-import { buildChild, type Rig } from './body';
+import { buildChild, FOREARM, UPPER_ARM, type Rig, type SocketName } from './body';
 import { Scarf } from './scarf';
 
 type Action =
@@ -55,6 +55,12 @@ export class Traveller {
   presenting = 0;
   /** Where the child is looking, if anywhere in particular. */
   lookAt: THREE.Vector3 | null = null;
+  /** Down on their knees with the hem of the coat on the ground, 0 to 1: the height a child talks to something small at. */
+  kneeling = 0;
+  /** Extra forward lean of the body, radians, for bending over what they are holding or reaching for. */
+  lean = 0;
+  /** The head tipped toward a shoulder, radians, positive toward their own right. */
+  tilt = 0;
   private readonly rig: Rig;
   private goal: Goal | null = null;
   private action: Action | null = null;
@@ -67,6 +73,26 @@ export class Traveller {
   private bob = 0;
   private headYaw = 0;
   private headPitch = 0;
+  private kneel = 0;
+  private leanNow = 0;
+  private tiltNow = 0;
+  /** Where each mitten has been asked to be, in the world, and how far it has got there (0 the pose's own arm, 1 on the point). */
+  private readonly reachAt = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly reachWant = [0, 0];
+  private readonly reachInBody = [false, false];
+  private readonly reachNow = [0, 0];
+  private readonly ik = {
+    target: new THREE.Vector3(),
+    dir: new THREE.Vector3(),
+    pole: new THREE.Vector3(),
+    elbow: new THREE.Vector3(),
+    upper: new THREE.Quaternion(),
+    fore: new THREE.Quaternion(),
+    bend: new THREE.Quaternion(),
+    down: new THREE.Vector3(0, -1, 0),
+    u: new THREE.Vector3(),
+    f: new THREE.Vector3(),
+  };
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly field: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 };
   /** Height of the clamber over a stone wall, 0 on open ground. */
@@ -112,26 +138,49 @@ export class Traveller {
     return out.set(this.position.x + fx * 0.95 - fz * 0.45, this.position.y + up, this.position.z + fz * 0.95 + fx * 0.45);
   }
 
-  /**
-   * How much the right arm is clamped in against the body to hold something under it, 0 to 1. Eased, so it is
-   * taken up and given back at the speed of picking something up rather than snapping.
-   */
-  cradle = 0;
-
-  /** Where something small is held against the chest, in both arms. */
-  armsPoint(out: THREE.Vector3): THREE.Vector3 {
-    const fx = Math.sin(this.yaw);
-    const fz = Math.cos(this.yaw);
-    const up = this.sitting ? 1.05 : 1.34;
-    return out.set(this.position.x + fx * 0.36, this.position.y + up, this.position.z + fz * 0.36);
+  /** A place on the child's own body where a companion rides; it moves with every bone above it. */
+  socket(name: SocketName): THREE.Object3D {
+    return this.rig.sockets[name];
   }
 
-  /** Where a passenger rides in the hood, behind the head. */
-  hoodPoint(out: THREE.Vector3): THREE.Vector3 {
-    const fx = Math.sin(this.yaw);
-    const fz = Math.cos(this.yaw);
-    const up = this.sitting ? 1.5 : 1.78;
-    return out.set(this.position.x - fx * 0.2, this.position.y + up, this.position.z - fz * 0.2);
+  /**
+   * Puts a mitten on a point in the world and keeps it there until told otherwise (`null`). The hand is eased onto
+   * the point and off it again, and the elbow finds its own place, so the caller only ever says where.
+   * `hand` 0 is the one on their left (+x in their own frame), 1 the one on their right.
+   */
+  reachFor(hand: 0 | 1, target: THREE.Vector3 | null): void {
+    if (target) {
+      this.reachAt[hand].copy(target);
+      this.reachInBody[hand] = false;
+    }
+    this.reachWant[hand] = target ? 1 : 0;
+  }
+
+  /** The same, for a point that moves with the child (something they are carrying): given in the frame of their body. */
+  reachLocal(hand: 0 | 1, target: THREE.Vector3): void {
+    this.reachAt[hand].copy(target);
+    this.reachWant[hand] = 1;
+    this.reachInBody[hand] = true;
+  }
+
+  /** A world point in the frame of the child's body, as posed this frame. */
+  toBody(world: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    return this.rig.body.worldToLocal(out.copy(world));
+  }
+
+  fromBody(local: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    return this.rig.body.localToWorld(out.copy(local));
+  }
+
+  /** How nearly a mitten has arrived on the point it was sent to, 0 to 1. */
+  reached(hand: 0 | 1): number {
+    return this.reachNow[hand];
+  }
+
+  /** World position of either mitten. */
+  mitten(hand: 0 | 1, out: THREE.Vector3): THREE.Vector3 {
+    this.rig.root.updateMatrixWorld(true);
+    return (hand === 0 ? this.rig.handR : this.rig.handL).getWorldPosition(out);
   }
 
   get busy(): boolean {
@@ -416,8 +465,11 @@ export class Traveller {
 
     let armLX = -swing * armAmp;
     let armRX = swing * armAmp;
-    let armLZ = -0.12 - 0.1 * running;
-    let armRZ = 0.12 + 0.1 * running;
+    let armLZ = -0.4 - 0.1 * running;
+    let armRZ = 0.4 + 0.1 * running;
+    /** Elbows: a little bent at rest, pumping when they run, and folded by whatever the arms are doing. */
+    let elbowL = 0.3 + 0.75 * running + Math.max(0, swing) * 0.5 * moving;
+    let elbowR = 0.3 + 0.75 * running + Math.max(0, -swing) * 0.5 * moving;
     let bodyX = 0.12 * moving + 0.16 * running;
     let bodyY = 0;
     let lift = 0;
@@ -438,6 +490,7 @@ export class Traveller {
       crouch = 0.28 * down;
       armRX = -1.2 * down;
       armLX = -0.8 * down;
+      elbowL = elbowR = 0.3 + 0.5 * down;
     } else if (a?.kind === 'cheer') {
       const up = Math.sin(Math.min(1, a.t / 1.3) * Math.PI);
       armLX = armRX = -3.1 * Math.min(1, up * 1.8);
@@ -466,8 +519,10 @@ export class Traveller {
 
     if (this.presenting > 0.01) {
       const k = this.presenting;
-      armLX = THREE.MathUtils.lerp(armLX, -2.25, k);
-      armRX = THREE.MathUtils.lerp(armRX, -2.25, k);
+      armLX = THREE.MathUtils.lerp(armLX, -1.75, k);
+      armRX = THREE.MathUtils.lerp(armRX, -1.75, k);
+      elbowL = THREE.MathUtils.lerp(elbowL, 0.9, k);
+      elbowR = THREE.MathUtils.lerp(elbowR, 0.9, k);
       armLZ = THREE.MathUtils.lerp(armLZ, 0.25, k);
       armRZ = THREE.MathUtils.lerp(armRZ, -0.25, k);
     }
@@ -480,22 +535,24 @@ export class Traveller {
     }
 
     const sit = this.sit;
+    this.kneel = damp(this.kneel, this.kneeling, 3.2, dt || 1);
+    this.leanNow = damp(this.leanNow, this.lean, 4, dt || 1);
+    this.tiltNow = damp(this.tiltNow, this.tilt, 4, dt || 1);
+    const kneel = this.kneel * (1 - sit);
     r.root.position.copy(this.position);
-    r.root.position.y += lift - crouch - sit * 0.5 + this.hop;
+    r.root.position.y += lift - crouch - sit * 0.5 - kneel * 0.5 + this.hop;
     r.root.rotation.set(0, this.yaw, 0);
     r.body.position.y = 0.62 + this.bob + Math.sin(t * 2.2) * 0.008;
-    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1, bodyY, 0);
+    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1 + kneel * 0.16 + this.leanNow, bodyY, 0);
     r.body.scale.set(1, 1 + Math.sin(t * 2.2) * 0.012, 1);
-    r.legL.rotation.set(swing * legAmp * (1 - sit) - sit * 1.45, 0, -0.05 - sit * 0.15);
-    r.legR.rotation.set(-swing * legAmp * (1 - sit) - sit * 1.45, 0, 0.05 + sit * 0.15);
-    /** Nothing rides on a child who is not holding it: the arm comes down over whatever is under it. */
-    if (!a && this.cradle > 0.001) {
-      armRX = THREE.MathUtils.lerp(armRX * 0.35, -0.5, this.cradle);
-      armRZ = THREE.MathUtils.lerp(armRZ, -0.03, this.cradle);
-    }
+    /** Kneeling, the shins go back under the coat and the hem settles on the ground round them. */
+    r.legL.rotation.set(swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.5, 0, -0.05 - sit * 0.15);
+    r.legR.rotation.set(-swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.5, 0, 0.05 + sit * 0.15);
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
     r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
     r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
+    r.foreL.rotation.set(-elbowL, 0, 0);
+    r.foreR.rotation.set(-elbowR, 0, 0);
 
     let wantYaw = Math.sin(t * 0.37) * 0.35;
     let wantPitch = Math.sin(t * 0.23) * 0.08;
@@ -511,8 +568,45 @@ export class Traveller {
     }
     this.headYaw = damp(this.headYaw, wantYaw, 5, dt || 1);
     this.headPitch = damp(this.headPitch, wantPitch, 5, dt || 1);
-    r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05);
+    r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05 + this.tiltNow);
     r.eyes.scale.set(1, this.blink > 0 ? 0.15 : 1, 1);
     r.root.updateMatrixWorld(true);
+    for (const hand of [0, 1] as const) {
+      const want = this.reachWant[hand];
+      this.reachNow[hand] = damp(this.reachNow[hand], want, want > this.reachNow[hand] ? 5 : 3.5, dt || 1);
+      if (this.reachNow[hand] > 0.001) this.solveArm(hand);
+    }
+    r.root.updateMatrixWorld(true);
+  }
+
+  /**
+   * Two-bone reach, in the body's own frame. The elbow goes out and back and a little down, where a child's elbow
+   * goes; a point too far away is reached toward at full stretch rather than refused.
+   */
+  private solveArm(hand: 0 | 1): void {
+    const r = this.rig;
+    const k = this.ik;
+    const upper = hand === 0 ? r.armR : r.armL;
+    const fore = hand === 0 ? r.foreR : r.foreL;
+    const side = hand === 0 ? 1 : -1;
+    const target = (this.reachInBody[hand] ? k.target.copy(this.reachAt[hand]) : r.body.worldToLocal(k.target.copy(this.reachAt[hand]))).sub(upper.position);
+    /** The solve is to the wrist; the mitten's middle is a little beyond it. */
+    const a = UPPER_ARM;
+    const b = FOREARM - 0.04;
+    const span = THREE.MathUtils.clamp(target.length(), Math.abs(a - b) + 0.02, a + b - 0.004);
+    k.dir.copy(target).normalize();
+    const along = (a * a - b * b + span * span) / (2 * span);
+    const out = Math.sqrt(Math.max(0, a * a - along * along));
+    k.pole.set(side * 0.75, -0.45, -0.5);
+    k.pole.addScaledVector(k.dir, -k.pole.dot(k.dir)).normalize();
+    k.elbow.copy(k.dir).multiplyScalar(along).addScaledVector(k.pole, out);
+    k.u.copy(k.elbow).normalize();
+    k.f.copy(k.dir).multiplyScalar(span).sub(k.elbow).normalize();
+    k.upper.setFromUnitVectors(k.down, k.u);
+    k.bend.setFromUnitVectors(k.u, k.f);
+    k.fore.copy(k.upper).invert().multiply(k.bend).multiply(k.upper);
+    const w = this.reachNow[hand];
+    upper.quaternion.slerp(k.upper, w);
+    fore.quaternion.slerp(k.fore, w);
   }
 }

@@ -195,8 +195,8 @@ export class MeadowChapter implements Chapter {
    * and can watch the plane go over. It only comes down where the camera comes down with it.
    */
   private walkOn(): void {
-    const { child: c, cygnet } = this.cast;
-    cygnet.carry(c.hoodPoint(this.tmp), c.yaw, true);
+    const { cygnet } = this.cast;
+    cygnet.rideIn('satchel');
     cygnet.bind(0.06);
     this.to('walk');
     this.play = 'carry';
@@ -230,7 +230,7 @@ export class MeadowChapter implements Chapter {
       }
       this.walkTo(cygnet.position, () => {
         this.gatherUp(() => {
-          cygnet.carry(c.hoodPoint(this.tmp), c.yaw, true);
+          cygnet.rideIn('satchel');
           this.trodden = null;
           this.to('walk');
           this.play = 'hold';
@@ -278,7 +278,7 @@ export class MeadowChapter implements Chapter {
     c.faceToward(cygnet.position.x, cygnet.position.z, 1);
     c.lookAt = cygnet.eye(this.onCygnet);
     c.pickUp(() => {
-      cygnet.carry(c.armsPoint(this.tmp), c.yaw);
+      cygnet.rideIn('cradle');
       c.lookAt = null;
       then();
     });

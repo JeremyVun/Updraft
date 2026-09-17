@@ -464,7 +464,7 @@ export class IslandChapter implements Chapter {
     this.beatStart = this.now;
     c.faceToward(this.fallen.x, this.fallen.z, 1);
     c.pickUp(() => {
-      cygnet.carry(c.armsPoint(this.tmp), c.yaw);
+      cygnet.rideIn('cradle');
       cygnet.bind(0.3);
       cygnet.watch(null);
       this.beat = 'leaving';

@@ -69,7 +69,7 @@ export class WoodChapter implements Chapter {
     plane.visible = false;
     plane.soggy.value = 1;
     child.dismount();
-    cygnet.carry(child.hoodPoint(this.tmp), child.yaw, true);
+    cygnet.rideIn('satchel');
     child.walkTo(WOOD_LANDING.x, WOOD_LANDING.y - 14, false, () => this.to('first'), 1.4);
   }
 
@@ -246,7 +246,7 @@ export class WoodChapter implements Chapter {
       c.walkTo(HIDING.x, HIDING.z + 1.2, false, () => {
         c.faceToward(HIDING.x, HIDING.z, 1);
         c.pickUp(() => {
-          cygnet.carry(c.armsPoint(this.tmp), c.yaw);
+          cygnet.rideIn('cradle');
           /** Carried in the arms from here, not the hood. After the dark it is not put down again for a while. */
           cygnet.bind(0.35);
           this.to('walk');

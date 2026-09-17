@@ -8,6 +8,7 @@ import {
   FOOT_L,
   FOOT_R,
   HEAD,
+  HOLDS,
   JAW,
   NECK,
   REST,
@@ -24,6 +25,7 @@ import {
   cygnetGeometry,
 } from './cygnet/body';
 import { applyLook, cygnetMaterial, newLook } from './cygnet/shader';
+import { Ride, type Mount, type Seat } from './cygnet/ride';
 import { poseWings } from './cygnet/wings';
 
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
@@ -36,44 +38,13 @@ const GLIDE_FOR = 9;
 const HOP_FOR = 2.6;
 const FLOOR = 0.006 * SIZE;
 
-/**
- * Where it sits on the child, in the child's frame (x to their left, z forward), from the point the child offers.
- * The arms point is inside the coat and the hood point is inside the hood, and the camera is nearly always behind
- * the child, so the cygnet is carried the way a child carries a hen: tucked under the right arm against the coat,
- * where it can be seen from every side. In the hood it perches on the shoulders behind the head, peeking round
- * the hood on the side the camera is on.
- */
-const ARMS = new THREE.Vector3(-0.7, 0.0, -0.2);
-const ARMS_YAW = 0.15;
-const HOOD = new THREE.Vector3(-0.26, 0.15, -0.43);
-/** The climb from the arms into the hood goes up over the right shoulder, outside the hood. */
-const SHOULDER = new THREE.Vector3(-0.62, 0.42, 0.18);
+/** Other places a hand can go on it, in its body's own frame: under the breast and under the rump, for holding it across the chest. */
+const GRIPS = { breast: [0, -0.1, 0.12], rump: [0, -0.09, -0.13] } as const;
 
 export type CygnetState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding' | 'leaving';
 
-interface Handoff {
-  from: THREE.Vector3;
-  via: THREE.Vector3 | null;
-  /** Whether `from` and `via` are in the child's frame (a ride) or the world (the ground). */
-  local: boolean;
-  t: number;
-  dur: number;
-  lift: number;
-  kind: 'lift' | 'climb' | 'hop' | 'dash';
-}
-
-const smooth = (x: number) => THREE.MathUtils.smoothstep(x, 0, 1);
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
-
-function rotY(v: THREE.Vector3, yaw: number): THREE.Vector3 {
-  const c = Math.cos(yaw);
-  const s = Math.sin(yaw);
-  const x = v.x * c + v.z * s;
-  v.z = -v.x * s + v.z * c;
-  v.x = x;
-  return v;
-}
 
 /**
  * The cygnet: too young to keep up with its flock, carried and walked and finally flown. The only other
@@ -86,6 +57,7 @@ export class Cygnet {
   /** How close it stays and how often it looks up at the child: only ever rises. */
   bond = 0;
   visible = false;
+  private wasVisible = false;
   /** How many times the player has put it in the air. It has never flown before the first. */
   flights = 0;
 
@@ -98,28 +70,17 @@ export class Cygnet {
   readonly look = newLook();
   /** Takes a vertex from the rest space the mesh is authored in to each bone's own. */
   private readonly unbind: THREE.Matrix4[] = [];
-  /** Where it is drawn, which lags the story's `position` while it is being lifted, climbing or set down. */
-  private readonly shown = new THREE.Vector3();
-  private readonly prevShown = new THREE.Vector3();
-  private shownYaw = 0;
+  /** Where it is drawn: on the ground, on the child, in their hands, or on the way between. */
+  readonly seating = new Ride();
   private time = 0;
   private lookAt: THREE.Vector3 | null = null;
 
-  /** The point on the child it rides, and how that point is moving, so it is jostled the way a passenger is. */
-  private readonly anchor = new THREE.Vector3();
-  private anchorYaw = 0;
-  private readonly anchorPrev = new THREE.Vector3();
-  private readonly anchorVel = new THREE.Vector3();
-  private readonly jostle = new THREE.Vector3();
-  private readonly jostleVel = new THREE.Vector3();
-  private gait = 0;
-  private bob = 0;
   private rideFor = 0;
   private calm = 0;
   private doze = 0;
   private wriggle = 0;
   private nextWriggle = 0;
-  private hand: Handoff | null = null;
+  private bodyLift = 0.11;
 
   private stride = 0;
   private flapPhase = 0;
@@ -182,10 +143,11 @@ export class Cygnet {
   private readonly p = { sit: 0, held: 0, hooded: 0, hunch: 0, curl: 0, tall: 0, reach: 0, spread: 0, sleep: 0, hurry: 0 };
 
   private readonly to = new THREE.Vector3();
-  private readonly from = new THREE.Vector3();
   private readonly want = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
+  private readonly tilt = new THREE.Quaternion();
+  private readonly tiltBy = new THREE.Euler(0, 0, 0, 'YXZ');
 
   constructor() {
     this.nodes[ROOT] = this.root;
@@ -232,13 +194,13 @@ export class Cygnet {
     this.fallT = 0;
     this.roll = 0;
     this.slew = 0;
-    this.hand = null;
     this.state = 'falling';
     this.visible = true;
     this.position.copy(from);
-    this.shown.copy(from);
     this.yaw = line;
-    this.shownYaw = line;
+    this.seating.seat = null;
+    this.seating.held = false;
+    this.seating.snap();
     this.fear = 0.5;
     this.nextCall = this.time + 0.6;
   }
@@ -296,29 +258,81 @@ export class Cygnet {
   /** Comes down out of the flock and lands in the grass, too tired to go on. */
   fall(x: number, z: number, yaw: number): void {
     this.position.set(x, Math.max(heightAt(x, z), 0), z);
-    this.shown.copy(this.position);
     this.yaw = yaw;
+    this.seating.seat = null;
+    this.seating.snap();
     this.state = 'fallen';
     this.settle = 1;
     this.visible = true;
   }
 
-  /** Riding in the child's arms or hood; the caller gives the world point each frame. */
-  carry(at: THREE.Vector3, yaw: number, hooded = false): void {
-    const next: CygnetState = hooded ? 'hooded' : 'carried';
+  /** Who carries it. Set once; every seat is a place on their body. */
+  set mount(m: Mount) {
+    this.seating.mount = m;
+  }
+
+  /** Which seat it is in, if it is riding. */
+  get seat(): Seat | null {
+    return this.carried ? this.seating.seat : null;
+  }
+
+  /**
+   * Riding on the child: held across the chest, or in the satchel on their back. Going from one to the other it
+   * climbs over their shoulder; from anywhere else it is simply gathered up (the shared moments in `companion/`
+   * do that properly, with the child's hands; this is the plain version for story starts and fallbacks).
+   */
+  rideIn(seat: Seat): void {
+    const next: CygnetState = seat === 'satchel' ? 'hooded' : 'carried';
     const was = this.state;
-    this.anchor.copy(at);
-    this.anchorYaw = yaw;
-    if (was !== next) this.beginRide(was, next);
+    if (was === next && this.seating.seat === seat) return;
+    const riding = this.carried;
     this.state = next;
-    this.position.copy(at);
-    this.yaw = yaw;
+    this.rideFor = 0;
+    this.doze = 0;
+    this.nextWriggle = this.time + 4 + Math.random() * 4;
     this.visible = true;
+    if (was === 'flying' || !this.wasVisible) {
+      this.seating.seat = seat;
+      this.seating.held = false;
+      this.seating.snap();
+    } else if (riding) this.seating.go({ seat }, 'climb', 1.7);
+    else this.seating.go({ seat }, 'lift', 0.6, 0.18);
+    this.fear = Math.min(this.fear, 0.25);
+  }
+
+  /**
+   * In the child's hands. From here until `release` or `rideIn`, whoever is holding it says where it is every frame
+   * (`seating.hold`), so it goes exactly where the mittens go.
+   */
+  takeUp(): void {
+    this.state = 'carried';
+    this.seating.go({ seat: null, held: true }, 'settle', 0.25);
+    this.settle = 0;
+    this.hopT = 0;
+  }
+
+  /** Put down: it is standing wherever the hands left it. */
+  release(): void {
+    this.position.copy(this.seating.shown.p);
+    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.yaw = this.seating.yaw;
+    this.seating.go({ seat: null, held: false }, 'settle', 0.2);
+    this.state = 'following';
+    this.settle = 0.1;
+    this.landedAt = this.time;
+  }
+
+  /** Where a holding hand goes, in the world: under the belly either side, on the back, under the breast or the rump. */
+  grip(name: keyof typeof GRIPS | keyof typeof HOLDS, out: THREE.Vector3): THREE.Vector3 {
+    const body = this.nodes[BODY];
+    body.updateWorldMatrix(true, false);
+    const at = name in GRIPS ? GRIPS[name as keyof typeof GRIPS] : HOLDS[name as keyof typeof HOLDS];
+    return out.set(at[0], at[1], at[2]).applyMatrix4(body.matrixWorld);
   }
 
   /** Gone to ground and staying there: hunched as small as it can make itself, in the dark, waiting to be found. */
   cower(): void {
-    if (this.carried) this.startHandoff(this.shown, null, false, 1.1, 0.5, 'dash');
+    if (this.carried) this.seating.go({ seat: null }, 'dash', 1.1, 0.5);
     this.state = 'fallen';
     this.settle = 1;
     this.flap = 0;
@@ -333,7 +347,7 @@ export class Cygnet {
   follow(): void {
     this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
     if (this.carried) {
-      this.startHandoff(this.shown, null, false, 0.55, 0.35, 'hop');
+      this.seating.go({ seat: null }, 'hop', 0.55, 0.35);
       this.settle = 0.2;
       this.shake = 0;
       this.landedAt = this.time;
@@ -361,6 +375,7 @@ export class Cygnet {
   update(dt: number, time: number, child: THREE.Vector3, wind: WindSample): void {
     this.time = time;
     this.mesh.visible = this.visible;
+    this.wasVisible = this.visible;
     if (!this.visible) return;
     dt = Math.min(dt, 0.05);
     this.childSpeed = ease(this.childSpeed, dt > 0 ? Math.min(8, this.tmp.copy(child).sub(this.childPrev).length() / dt) : 0, 8, dt);
@@ -377,7 +392,7 @@ export class Cygnet {
     else if (this.state === 'fallen') this.rest(dt, child);
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
-    else this.ride(dt);
+    else this.passenger(dt);
 
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     if (afoot && lift > LIFT_TO_FLY && this.hopT <= 0 && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
@@ -385,45 +400,16 @@ export class Cygnet {
     this.glide = ease(this.glide, this.state === 'gliding' ? 1 : this.hope * 0.5, 3, dt);
     this.look.air =
       this.state === 'falling'
-        ? clamp((this.shown.y - this.fallTo.y) / 6, 0, 1)
+        ? clamp((this.seating.shown.p.y - this.fallTo.y) / 6, 0, 1)
         : this.state === 'gliding' || this.state === 'leaving'
-          ? clamp((this.shown.y - Math.max(heightAt(this.shown.x, this.shown.z), 0)) / 4, 0, 1)
+          ? clamp((this.seating.shown.p.y - Math.max(heightAt(this.seating.shown.p.x, this.seating.shown.p.z), 0)) / 4, 0, 1)
           : 0;
     this.live(dt, child);
-    this.place(dt);
+    this.seating.tick(dt);
+    this.seating.stand(this.position, this.yaw);
+    this.seating.update(dt, this.bodyLift);
+    if (this.carried && this.seating.riding && !this.seating.move) this.position.copy(this.seating.shown.p);
     this.pose(dt);
-  }
-
-  private beginRide(was: CygnetState, next: CygnetState): void {
-    this.rideFor = 0;
-    this.doze = 0;
-    this.calm = 0;
-    this.anchorPrev.copy(this.anchor);
-    this.anchorVel.set(0, 0, 0);
-    this.jostle.set(0, 0, 0);
-    this.jostleVel.set(0, 0, 0);
-    this.nextWriggle = this.time + 4 + Math.random() * 4;
-    if (was === 'flying' || !this.visible) {
-      this.hand = null;
-      return;
-    }
-    const from = this.toLocal(this.shown, this.tmp);
-    if (was === 'carried' && next === 'hooded') this.startHandoff(from, SHOULDER, true, 0.95, 0.12, 'climb');
-    else if (was === 'hooded' && next === 'carried') this.startHandoff(from, SHOULDER, true, 0.8, 0.1, 'climb');
-    else this.startHandoff(from, null, true, 0.5, 0.22, 'lift');
-    this.fear = Math.min(this.fear, 0.25);
-  }
-
-  private startHandoff(from: THREE.Vector3, via: THREE.Vector3 | null, local: boolean, dur: number, lift: number, kind: Handoff['kind']): void {
-    this.hand = { from: from.clone(), via: via ? via.clone() : null, local, t: 0, dur, lift, kind };
-  }
-
-  private toLocal(world: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-    return rotY(out.copy(world).sub(this.anchor), -this.anchorYaw);
-  }
-
-  private toWorld(local: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-    return rotY(out.copy(local), this.anchorYaw).add(this.anchor);
   }
 
   /** Climbing away north, finding its own strength as it goes, until the night has it. */
@@ -713,32 +699,14 @@ export class Cygnet {
   }
 
   /** Riding: shifting its weight, dozing off on a long quiet stretch, and watching what the child watches. */
-  private ride(dt: number): void {
+  private passenger(dt: number): void {
     this.rideFor += dt;
     this.effort = 0;
     this.flap = ease(this.flap, 0, 6, dt);
-    if (dt > 0) {
-      this.tmp.copy(this.anchor).sub(this.anchorPrev).divideScalar(dt);
-      const acc = this.tmp2.copy(this.tmp).sub(this.anchorVel).divideScalar(dt);
-      acc.clampLength(0, 40);
-      this.anchorVel.copy(this.tmp);
-      /** Jostled the way a passenger is: it lags every start and stop, and settles again on a spring. */
-      this.jostleVel.addScaledVector(acc, -0.15 * dt).addScaledVector(this.jostle, -90 * dt).addScaledVector(this.jostleVel, -12 * dt);
-      this.jostle.addScaledVector(this.jostleVel, dt).clampLength(0, 0.12);
-      const jolt = acc.length();
-      this.calm = ease(this.calm, jolt < 2.5 ? 1 : 0, jolt < 2.5 ? 0.25 : 8, dt);
-    }
-    this.anchorPrev.copy(this.anchor);
-    const speed = Math.hypot(this.anchorVel.x, this.anchorVel.z);
-    const walking = clamp(speed / 2.4, 0, 1);
-    const running = clamp((speed - 2.6) / 2.8, 0, 1);
-    /** The child bobs with every step and the point they hold it at does not, so the bob is put back here. */
-    this.gait += ((speed * dt) / (speed > 4 ? 1.5 : 1.1)) * Math.PI;
-    this.bob = Math.abs(Math.cos(this.gait)) * (0.06 + 0.07 * running) * 1.12 * walking;
-
+    this.calm = this.seating.calm;
     const dozy = this.state === 'carried' && this.bond > 0.45 && this.rideFor > 22 && this.calm > 0.85 && this.fear < 0.3;
     this.doze = ease(this.doze, dozy ? 1 : 0, dozy ? 0.15 : 3, dt);
-    if (this.time > this.nextWriggle && this.doze < 0.5 && this.hand === null) {
+    if (this.time > this.nextWriggle && this.doze < 0.5 && this.seating.move === null) {
       this.wriggle = 0.8;
       this.nextWriggle = this.time + 7 + Math.random() * 8;
     }
@@ -774,7 +742,7 @@ export class Cygnet {
       this.nextGlance = this.time + 1.5 + Math.random() * 4;
     }
 
-    const idle = !busy && this.fear < 0.35 && this.hand === null && (this.settle > 0.7 || this.carried) && this.doze < 0.3;
+    const idle = !busy && this.fear < 0.35 && this.seating.move === null && (this.settle > 0.7 || this.carried) && this.doze < 0.3;
     this.nextPreen -= dt;
     if (idle && this.nextPreen <= 0 && this.preen <= 0 && this.callT <= 0) {
       this.preen = 1.8;
@@ -810,61 +778,16 @@ export class Cygnet {
     this.callLong = longing;
   }
 
-  /** Works out where to draw it this frame: on the ground, on the child, or on the way between the two. */
-  private place(dt: number): void {
-    this.prevShown.copy(this.shown);
-    const rest = this.tmp;
-    let restYaw = this.yaw;
-    if (this.carried) {
-      const offset = this.tmp2.copy(this.state === 'hooded' ? HOOD : ARMS).add(this.jostle);
-      /** Shifting its weight: it leans out to one side and back. */
-      offset.x += Math.sin(this.wriggle * Math.PI * 2.5) * 0.05 * Math.min(1, this.wriggle * 3);
-      this.toWorld(offset, rest);
-      rest.y += this.bob;
-      restYaw = this.anchorYaw + (this.state === 'carried' ? ARMS_YAW : 0);
-    } else rest.copy(this.position);
-
-    const h = this.hand;
-    if (h) {
-      h.t += dt;
-      const k = smooth(clamp(h.t / h.dur, 0, 1));
-      const from = h.local ? this.toWorld(h.from, this.from) : this.from.copy(h.from);
-      const via = h.via ? (h.local ? this.toWorld(h.via, this.to) : this.to.copy(h.via)) : null;
-      if (via) {
-        const u = 1 - k;
-        this.shown.set(
-          u * u * from.x + 2 * u * k * via.x + k * k * rest.x,
-          u * u * from.y + 2 * u * k * via.y + k * k * rest.y,
-          u * u * from.z + 2 * u * k * via.z + k * k * rest.z,
-        );
-      } else {
-        this.shown.lerpVectors(from, rest, k);
-        this.shown.y += Math.sin(k * Math.PI) * h.lift;
-      }
-      /** Faces the way it is going on the climb, and turns to its seat as it arrives. */
-      const going = this.tmp2.copy(rest).sub(from);
-      const travel = Math.hypot(going.x, going.z) > 0.15 ? Math.atan2(going.x, going.z) : restYaw;
-      this.shownYaw = easeAngle(this.shownYaw, k < 0.6 && h.kind !== 'lift' ? travel : restYaw, 9, dt);
-      if (h.t >= h.dur) {
-        this.hand = null;
-        if (h.kind === 'hop') this.shake = 0.6;
-      }
-    } else {
-      this.shown.copy(rest);
-      this.shownYaw = this.carried ? easeAngle(this.shownYaw, restYaw, 14, dt) : restYaw;
-    }
-  }
-
   private pose(dt: number): void {
     const t = this.time;
     const n = this.nodes;
     const p = this.p;
     const s = this.state;
-    const h = this.hand;
+    const h = this.seating.move;
     const flying = s === 'falling' || s === 'gliding' || s === 'leaving';
-    const riding = this.carried && !h;
+    const riding = this.carried && !h && !this.seating.held;
     const climbing = h !== null && h.kind === 'climb';
-    const lifting = h !== null && (h.kind === 'lift' || h.kind === 'hop');
+    const lifting = this.seating.held || (h !== null && (h.kind === 'lift' || h.kind === 'hop'));
     const dashing = h !== null && h.kind === 'dash';
     const afoot = s === 'following' && !h && this.landing <= 0;
     if (this.debug.stand) this.settle = 0;
@@ -901,15 +824,16 @@ export class Cygnet {
     const shaking = this.shake > 0 ? Math.sin(t * 36) * Math.min(1, this.shake * 4) * 0.5 : 0;
     const tremble = p.hunch * 0.6 + this.fear * (this.carried ? 0.15 : 0.3);
 
-    this.root.position.copy(this.shown);
+    const shownYaw = this.seating.yaw;
+    this.root.position.copy(this.seating.shown.p);
     this.root.scale.setScalar(SIZE);
-    this.root.rotation.order = 'YXZ';
     let rootPitch = flying ? this.pitch : 0;
-    if (riding || climbing) rootPitch = lerp(rootPitch, s === 'hooded' && !climbing ? -0.22 : climbing ? 0.3 : -0.28, p.held);
-    if (lifting) rootPitch = -0.15;
+    /** A seat tips it back by itself; only the climb and being lifted add anything of their own. */
+    if (climbing) rootPitch = lerp(rootPitch, -0.55, p.held);
+    if (lifting && !this.seating.held) rootPitch = -0.15;
     let rootRoll = flying ? this.roll : this.roll * (1 - p.sit * 0.5);
     rootRoll += this.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
-    this.root.rotation.set(rootPitch, this.shownYaw, rootRoll);
+    this.root.quaternion.copy(this.seating.shown.q).multiply(this.tilt.setFromEuler(this.tiltBy.set(rootPitch, 0, rootRoll)));
 
     /** Legs first: standing, the body sits on whichever leg is planted, so the feet never sink or float. */
     const tuck = Math.max(p.sit, p.held);
@@ -959,6 +883,7 @@ export class Cygnet {
     const breathe = Math.sin(this.breath) * (0.012 + this.fear * 0.008 + this.puff * 0.01);
     const body = n[BODY];
     body.position.y = bodyRest + this.glide * 0.06 + this.effort * 0.02 + breathe * 0.4 + (afoot ? Math.abs(Math.cos(this.stride)) * 0.006 * p.hurry : 0);
+    this.bodyLift = body.position.y * SIZE;
     body.position.z = 0;
     body.rotation.x =
       -0.04 + p.sit * 0.04 - p.hunch * 0.12 + (this.peck > 0 ? Math.sin(Math.min(1, this.peck / 0.7) * Math.PI) * 0.25 : 0) + p.hurry * 0.12 - this.beg * 0.1;
@@ -998,7 +923,7 @@ export class Cygnet {
     }
     const sway = Math.sin(t * 1.05) * 0.02 * (1 - p.reach) + (afoot ? Math.sin(this.stride * 2 + 0.7) * 0.05 * p.hurry : 0);
     /** A wingbeat pulls the head down a little; a passenger's head lags every jolt the child gives it. */
-    const jolt = this.carried ? this.jostle.z * 3 : 0;
+    const jolt = this.carried ? this.seating.jostle.z * 3 : 0;
     a += sway + jolt;
     b += sway * 0.6 - this.effort * Math.max(0, Math.sin(this.flapPhase)) * 0.08;
     n[NECK[0]].rotation.x = a * 0.55;
@@ -1013,10 +938,10 @@ export class Cygnet {
     if (target) {
       this.to.copy(target);
       /** Told to watch someone standing near it, it looks at their face, not their boots. */
-      const near = Math.hypot(target.x - this.shown.x, target.z - this.shown.z) < 4;
+      const near = Math.hypot(target.x - this.seating.shown.p.x, target.z - this.seating.shown.p.z) < 4;
       if (this.lookAt && near && Math.abs(target.y - Math.max(heightAt(target.x, target.z), 0)) < 0.6) this.to.y += 1.9;
       this.to.sub(this.eye(this.tmp2));
-      wantYaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - this.shownYaw), -1.4, 1.4);
+      wantYaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - shownYaw), -1.4, 1.4);
       wantPitch = -clamp(Math.atan2(this.to.y, Math.hypot(this.to.x, this.to.z)), -1.1, 0.9) - rootPitch;
     }
     if (this.preen > 0) {

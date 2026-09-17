@@ -186,9 +186,9 @@ const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => scene.add(o));
+cygnet.mount = child;
 const flock = new SwanFlock();
 scene.add(flock.mesh);
-const cygnetAt = new THREE.Vector3();
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const emberAt = new THREE.Vector3();
 const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, embers, nearby: nearbyCreature });
@@ -353,10 +353,6 @@ function frame(now: number): void {
   child.update(dt);
   glider.update(dt, time);
   flock.update(dt, time);
-  /** The arm comes down over it while it is being carried, and lifts again when it is not. */
-  child.cradle += ((cygnet.state === 'carried' && cygnet.visible ? 1 : 0) - child.cradle) * (1 - Math.exp(-dt * 2.5));
-  if (cygnet.state === 'carried') cygnet.carry(child.armsPoint(cygnetAt), child.yaw);
-  else if (cygnet.state === 'hooded') cygnet.carry(child.hoodPoint(cygnetAt), child.yaw, true);
   /** The cygnet reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
   cygnet.update(dt, time, child.position, wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir));
   pollReadbacks();

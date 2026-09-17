@@ -124,7 +124,7 @@ export class Journey {
     const { cast } = this;
     cast.cygnet.visible = true;
     cast.cygnet.bond = 0.5;
-    cast.cygnet.carry(cast.child.armsPoint(new THREE.Vector3()), cast.child.yaw);
+    cast.cygnet.rideIn('cradle');
   }
 
   get shot(): Shot {

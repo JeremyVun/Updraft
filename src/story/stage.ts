@@ -43,6 +43,7 @@ export class StageChapter implements Chapter {
   /** The views are laid out round the way the child faced when the view was chosen, so a turning child does not swing the camera. */
   private facing = 0;
   private readonly tmp = new THREE.Vector3();
+  private offering = false;
 
   constructor(private readonly cast: Cast) {
     const { child, cygnet } = cast;
@@ -52,6 +53,13 @@ export class StageChapter implements Chapter {
     cygnet.visible = true;
     cygnet.bond = 0.5;
     this.play('ground');
+  }
+
+  /** QA: how far each mitten is from the place on the cygnet it was sent to, in world units. */
+  get contactError(): [number, number] {
+    const { child: c, cygnet: k } = this.cast;
+    const a = new THREE.Vector3();
+    return [c.mitten(0, a).distanceTo(k.grip('bellyL', this.tmp)), c.mitten(1, a).distanceTo(k.grip('bellyR', this.tmp))];
   }
 
   look(view: StageView): void {
@@ -82,15 +90,33 @@ export class StageChapter implements Chapter {
         k.watch(this.tmp.set(p.x + Math.sin(k.yaw) * 30, p.y + 0.5, p.z + Math.cos(k.yaw) * 30).clone());
         return true;
       }
+      case 'kneel':
+        c.faceToward(k.position.x, k.position.z, 1);
+        c.kneeling = 1;
+        return true;
+      case 'rise':
+        c.kneeling = 0;
+        c.lean = 0;
+        this.offering = false;
+        c.reachFor(0, null);
+        c.reachFor(1, null);
+        return true;
+      case 'offer':
+        /** Both mittens under its belly, wherever it is and however it moves. */
+        c.faceToward(k.position.x, k.position.z, 1);
+        c.kneeling = 1;
+        c.lean = 0.35;
+        this.offering = true;
+        return true;
       case 'gather':
         c.faceToward(k.position.x, k.position.z, 1);
-        c.pickUp(() => k.carry(c.armsPoint(this.tmp), c.yaw));
+        c.pickUp(() => k.rideIn('cradle'));
         return true;
       case 'arms':
-        k.carry(c.armsPoint(this.tmp), c.yaw);
+        k.rideIn('cradle');
         return true;
-      case 'hood':
-        k.carry(c.hoodPoint(this.tmp), c.yaw, true);
+      case 'satchel':
+        k.rideIn('satchel');
         return true;
       case 'down':
         c.pickUp(() => k.follow());
@@ -139,6 +165,10 @@ export class StageChapter implements Chapter {
 
   update(): void {
     const { child: c, cygnet: k } = this.cast;
+    if (this.offering) {
+      c.reachFor(0, k.grip('bellyL', this.tmp));
+      c.reachFor(1, k.grip('bellyR', this.tmp));
+    }
     const v = VIEWS[this.view];
     const s = this.shot;
     const at = k.eye(this.tmp);

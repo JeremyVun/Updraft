@@ -238,7 +238,7 @@ export class LinesChapter implements Chapter {
       c.faceToward(cygnet.position.x, cygnet.position.z, 1);
       c.lookAt = cygnet.eye(this.tmp);
       c.pickUp(() => {
-        cygnet.carry(c.armsPoint(this.tmp), c.yaw);
+        cygnet.rideIn('cradle');
         c.lookAt = null;
         this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);
