@@ -4,10 +4,15 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
 import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL } from './heightfield';
 
-/** The grass on the island of lines is grazed a little shorter, so the washing stands clear of it. */
+/**
+ * How much of its height a blade keeps on the two islands that are cropped: the island of lines is grazed a
+ * little shorter so the washing stands clear of it, and the birches are shorter still so their fallen leaves are
+ * the floor. Mirrors `croppedAt` in the blade shaders; keep them in step.
+ */
 function croppedAt(x: number, z: number): number {
-  const d = Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz);
-  return 1 - smoothstep(0.78, 1.12, d);
+  const lines = 1 - smoothstep(0.78, 1.12, Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz));
+  const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
+  return (1 - 0.34 * lines) * (1 - 0.62 * birches);
 }
 
 /**
@@ -57,6 +62,12 @@ uniform vec3 uTipCool;
 float pastureAt(vec2 xz) {
   return smoothstep(-600.0, -660.0, xz.y);
 }
+/** How much of its height a blade keeps on the cropped islands: grazed on the lines, shorter under the birches. */
+float croppedAt(vec2 xz) {
+  float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
+  float birches = 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
+  return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birches);
+}
 /** 1 over the dark wood, where the floor is leaf litter and nothing grows tall enough to hide it. */
 float woodFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.7, 1.05, length((xz - vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0)) / vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0)));
@@ -95,7 +106,7 @@ export function grassHeightAt(x: number, z: number): number {
   const fringe = smoothstep(GRASS_LINE - 0.6, GRASS_LINE + 2.2, groundH);
   const pasture = smoothstep(-600, -660, z);
   let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
-  if (pasture <= 0) return h * (1 - 0.34 * croppedAt(x, z)) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
+  if (pasture <= 0) return h * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
   h += (0.41 + 0.26 * lush - h) * pasture;
   const f = fieldAt(x, z, fieldSample);
   const grazed = Math.max(
@@ -104,7 +115,7 @@ export function grassHeightAt(x: number, z: number): number {
   );
   const hay = (f.kind <= 0.22 ? 1 : 0) * f.presence * (1 - grazed);
   const rush = (f.kind >= 0.86 ? 1 : 0) * f.presence * (1 - grazed);
-  return h * (1 + hay * 1.5 + rush * 1.2) * (1 - 0.5 * grazed) * (1 - 0.34 * croppedAt(x, z)) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
+  return h * (1 + hay * 1.5 + rush * 1.2) * (1 - 0.5 * grazed) * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
 }
 
 export const grassUniforms = {
@@ -203,8 +214,7 @@ void main() {
                      1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0))));
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  float cropped = 1.0 - smoothstep(0.78, 1.12, length((root2 - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * (1.0 - 0.34 * cropped) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
   float angle = gr_rand(s) * 6.2831853;
   float curve = 0.12 + 0.28 * gr_rand(s);
@@ -421,8 +431,7 @@ void main() {
                      1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0))));
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  float cropped = 1.0 - smoothstep(0.78, 1.12, length((root2 - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * (1.0 - 0.34 * cropped) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
   h *= mix(0.72, 1.0, life);
   h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
   float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;

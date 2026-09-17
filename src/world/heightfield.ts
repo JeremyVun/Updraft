@@ -133,6 +133,7 @@ export const ISLES = {
     rx: MEADOW_SCULPTED.rx * MEADOW_SCALE,
     rz: MEADOW_SCULPTED.rz * MEADOW_SCALE,
   },
+  birches: { x: 0, z: -1120, rx: 60, rz: 50 },
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
   home: { x: -45, z: -2120, rx: 190, rz: 165 },
@@ -172,6 +173,18 @@ function meadowHeight(wx: number, wz: number): number {
   const mid = gfbm(x * 0.012, z * 0.012, 3, 14);
   h += land * rise * Math.max(0, 16 + 26 * broad + 7 * mid);
   return h - smoothstep(0, 70, -inland) * 8;
+}
+
+/** The autumn birches: a small low island between the meadow and the village, domed and shelving to bare beaches. */
+function birchesHeight(x: number, z: number): number {
+  const c = ISLES.birches;
+  const d = isleCoast(x, z, c, 0.13, 61);
+  /** A long shallow ramp out of the water on both ends: a beach a boat runs up and a slope a camera can see down. */
+  const land = smoothstep(18, -38, d);
+  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  let h = land * 3.4 - 1.6;
+  h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (gfbm(x * 0.028, z * 0.028, 3, 62) * 0.5 + 0.5) * 3.2);
+  return h - smoothstep(0, 36, d) * 8;
 }
 
 /**
@@ -232,6 +245,7 @@ export function meadowInset(wx: number, wz: number): number {
 function rawHeight(x: number, z: number): number {
   let h = smax(islandHeight(x, z), linesHeight(x, z), 6);
   h = smax(h, meadowHeight(x, z), 6);
+  h = smax(h, birchesHeight(x, z), 6);
   h = smax(h, drownedHeight(x, z), 6);
   h = smax(h, woodHeight(x, z), 6);
   return smax(h, homeHeight(x, z), 6);
@@ -362,6 +376,16 @@ float hf_meadow(vec2 world) {
   h += land * rise * max(0.0, 16.0 + 26.0 * broad + 7.0 * mid);
   return h - smoothstep(0.0, 70.0, -inland) * 8.0;
 }
+float hf_birches(vec2 p) {
+  vec2 c = vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0);
+  vec2 r = vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0);
+  float d = hf_isleCoast(p, c, r, 0.13, 61.0);
+  float land = smoothstep(18.0, -38.0, d);
+  float rr = length((p - c) / r);
+  float h = land * 3.4 - 1.6;
+  h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.birchesCrest)} + (gfbm(p * 0.028, 3, 62.0) * 0.5 + 0.5) * 3.2);
+  return h - smoothstep(0.0, 36.0, d) * 8.0;
+}
 float hf_drowned(vec2 p) {
   vec2 c = vec2(${ISLES.drowned.x}.0, ${ISLES.drowned.z}.0);
   vec2 r = vec2(${ISLES.drowned.rx}.0, ${ISLES.drowned.rz}.0);
@@ -394,6 +418,7 @@ float hf_home(vec2 p) {
 float worldHeight(vec2 p) {
   float h = hf_smax(hf_island(p), hf_lines(p), 6.0);
   h = hf_smax(h, hf_meadow(p), 6.0);
+  h = hf_smax(h, hf_birches(p), 6.0);
   h = hf_smax(h, hf_drowned(p), 6.0);
   h = hf_smax(h, hf_wood(p), 6.0);
   h = hf_smax(h, hf_home(p), 6.0);

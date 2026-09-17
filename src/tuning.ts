@@ -37,6 +37,8 @@ export const tuning = {
     meadowLength: 400,
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
+    /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
+    birchesCrest: 5.2,
   },
   colt: {
     /**
@@ -74,6 +76,25 @@ export const tuning = {
     stayFor: 45,
     /** How far the room's music pulls back while they are sitting at it. */
     hush: 0.5,
+  },
+  birches: {
+    /** Gust energy and wind speed at which a leaf with an average grip on it lets go of the branch. */
+    gripEnergy: 0.5,
+    gripSpeed: 7,
+    /** Leaves shed per second by the prevailing breeze alone, as a share of what is left on the tree. */
+    trickle: 0.0016,
+    /** How fast a tree goes bare: per second of a full gust standing in it, and per second of breeze. */
+    stripRate: 0.55,
+    stripTrickle: 0.0016,
+    /** Wind speed at which stripping is in full flood; below `gripSpeed` the breeze only trickles. */
+    stripSpeed: 15,
+    /** How wide a fallen leaf is, in world units. */
+    leafSize: 0.22,
+    /** How hard the swing is pushed by the air along its travel, and by a gust however it is blowing. */
+    swingPush: 0.8,
+    swingGust: 3.8,
+    /** How long a swing takes to die away when nobody is pushing it (seconds to lose most of it). */
+    swingDamping: 0.13,
   },
   washing: {
     /** Wind speed that lifts a sheet all the way to horizontal; the breeze alone lifts it `wind.breeze` / this. */

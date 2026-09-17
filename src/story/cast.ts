@@ -11,6 +11,7 @@ import type { SeaLife } from '../fx/sealife';
 import type { Drawing } from '../traveller/drawing';
 import type { Traveller } from '../traveller/traveller';
 import type { WindField } from '../wind/field';
+import type { AutumnBirches } from '../world/birches';
 import type { Cottage } from '../world/cottage';
 import type { LifeField } from '../world/life';
 import type { Tree } from '../world/tree';
@@ -32,6 +33,8 @@ export interface Cast {
   flock: CraneFlock;
   /** The embers in the leaf litter of the dark wood: the only light the player can make there. */
   embers: Embers;
+  /** The island of gold birches, its leaves and the swing hanging on the crest. */
+  birches: AutumnBirches;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }

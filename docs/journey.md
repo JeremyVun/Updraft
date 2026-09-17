@@ -279,7 +279,7 @@ waits for the water-shading session, because it is built on the sea.
 
 | piece | state |
 | --- | --- |
-| the autumn birches | building (wave 1) |
+| the autumn birches | **built** (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`) |
 | kite and pinwheels on the island of lines | building (wave 1) |
 | the piano on the meadow | building (wave 1) |
 | the sleeping island | waiting on the cygnet |
@@ -297,6 +297,15 @@ wind brought the colour back; here it takes the last of the year away, and nothi
 because every gesture is a gust. The fragment of home is **a swing on a branch with nobody on it**: the wind pushes
 it, the child climbs on, and the player finds they are pushing a child on a swing. The fledgling chases leaves
 (bond). This is also where a second companion would join, later.
+
+**Built** (2026-09-17): `ISLES.birches` at (0, −1120), 60 × 50, a low crest with a bare beach at each end;
+`world/birches.ts` (about 170 instanced birches on a tree table the strip is written into, a canopy of gold tufts
+that the wind takes off tuft by tuft, a leaf floor that runs before a gust and bursts up round the child's knees,
+and the swing), `fx/leaves.ts` (the leaves themselves: on the branch, in the air, down, and up again on the next
+gust, never back on the tree) and `story/birches.ts`. Every tree's strip only rises; the prevailing breeze alone
+trickles. The crossing `toBirches` is a short blind hop off the meadow's far shore, and the drowned village's
+drift now begins from the birches' north beach. Music mood `birches`: slower than the meadow, falling a step each
+chord and never coming back up.
 
 **The sleeping island** — approved by Jeremy, including the one call that nothing answers. After the dark wood,
 before dawn. **The one room where the player leads the bird.**
@@ -586,8 +595,8 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 
 ## Testing shortcuts
 
-`?chapter=` starts later in the story: `crossing` (or `lines`), `washing`, `meadow` (or `hills`), `drowned` (or
-`village`), `wood` (or `dark`), `sea` (or `dolphins`), `summit` (or `home`). Every start past the first island puts
+`?chapter=` starts later in the story: `crossing` (or `lines`), `washing`, `meadow` (or `hills`), `birches` (or
+`autumn`), `drowned` (or `village`), `wood` (or `dark`), `sea` (or `dolphins`), `summit` (or `home`). Every start past the first island puts
 the colt in the child's arms and cuts the camera straight to the chapter's own shot. `?dusk=0..2` overrides the
 time of day; `?shower=0..1` forces the rain; `?grass=0` clears the grass; `?debug=wind` draws the wind field.
 
