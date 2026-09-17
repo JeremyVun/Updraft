@@ -5,6 +5,15 @@ The companion becomes a swan cygnet and is rebuilt as the game's co-star. Jeremy
 `/private/tmp/updraft-cygnet`. When it ships, the lasting parts of this file fold into `journey.md` and this file
 is deleted.
 
+## Who does the work
+
+Jeremy's global model routing sends visual work to Astra or Opus 5. Asked whether that binds this feature, he left
+the decision to the owning session (his words are in `journey.md`). Decision: the owning Fable session models,
+animates and reviews its own captures, because this bar is only reached by a tight look-and-fix loop held by one
+owner; a fresh Opus 5 agent gives an independent visual verdict at each milestone in the build order, as one
+bounded parcel with no follow-ups; Jeremy gives the final one. The global rules are left as they are until this
+feature shows whether they should change. Product copy is not involved.
+
 ## What the story gains
 
 The ugly duckling: a grey, clumsy thing that fell out of a line of white birds. Nobody says it, but the ending
@@ -81,6 +90,40 @@ Adult swans are other animals and may be loud: bugling, and the whistle of their
   watches the meadow go by; it goes quiet and low over the drowned village; it hides in the wood; it sleeps on
   the long crossing; it cannot keep still at home.
 
+### 2b. The wind is somebody, and the cygnet is the only one who knows
+
+Yes, it reacts to the player's wind, and the way it reacts is its arc. The child never acknowledges the player.
+The cygnet does: it looks **into** the wind, up to where a gust came from, as if someone were there. It has two
+bonds, one with the child and one with the wind, and the second is what the ending spends: at home it opens its
+wings and waits for the player, because by then it trusts them to hold it up.
+
+- *Afraid of it* (first island, the lines): a gust flattens it, it flinches and patters to the child's feet, and
+  the child shields it. A sheet snapping beside it sends it under the coat.
+- *Curious* (the meadow): it snaps at wind lines and petals going past, leans into a steady wind with its eyes
+  shut and its down streaming, and half-opens its wings to feel the lift. Its first glide happens here.
+- *Playing* (after the wood): it asks for it. A look up, wings out, a little run, a look up again.
+- *Trust* (home): it stands in the pressed grass, opens its wings, and waits.
+- Always: the down ruffles along the real wind; a hard gust makes it brace, and a harder one bowls it over a step,
+  after which it shakes and looks indignant. Riding, it squints and tucks into the collar.
+- Never a torment: fear from the player's wind is capped and spent once per gust, it always ends at the child,
+  and a sheltered cygnet only ruffles. A player who keeps blowing on it gets a bird that hides, not one that suffers.
+
+### 2c. The brave swim
+
+It has never been in the water: it fell before it ever came down on any. On the first crossings it watches the
+sea from the child's arms, stretches down toward its own reflection over the gunwale and pulls back. In the
+drowned village it will not look at the black water at all.
+
+The swim belongs on **the long crossing**, the exhale after the dark wood, at dawn. The child went into the dark
+first so that it would not have to; now it does something brave with the child watching. Dolphins come alongside.
+It climbs onto the gunwale, looks at the water, looks at the child, and the child does nothing except stay. It
+goes in badly, bobs up like a cork, shakes its head, and paddles. Then it is swimming beside the boat, in the
+boat's lee, neck up, and the child hangs an arm over the side near it. The player is the wind in the sail, so how
+hard they blow sets the pace: too hard and the boat draws ahead, it paddles flat out with its wings half up, and
+the child looks back; ease off and it draws level again. Nothing fails. When it tires it comes to the side and is
+lifted in, soaked and proud, and is dried under the scarf. At home it swims the last stretch to the beach beside
+the boat, which is the first time the player sees it go somewhere on its own and the quiet promise of the ending.
+
 ### 3. A body built to be looked at closely
 
 - Cygnet proportions drawn the way a child would: pear-shaped body low to the ground, a soft neck long enough to
@@ -123,9 +166,10 @@ as a cygnet's thin whistle. Adults: distant bugling and wing whistle as the skei
    and docs text; no behaviour change. Stage and gates scaffold.
 2. Child rig: elbows, arm IK, kneel, sockets. Cygnet rides sockets. Gates for contact and penetration.
 3. Cygnet body, down shader, palette; adult swans.
-4. Locomotion and flight vocabulary.
-5. Mind: attention, feelings, scheduler, social referencing.
+4. Locomotion, swimming and flight vocabulary.
+5. Mind: attention, feelings, scheduler, social referencing, the bond with the wind.
 6. Duets, in story order: gather up, set down, hood, the small ones.
 7. Sound.
-8. Story changes: the bay at the crest, white skein, reunion; per-room behaviour.
+8. Story changes: the family resting on the far bay at the crest (Jeremy's pick), white skein, reunion, the brave
+   swim on the long crossing and the swim ashore at home; per-room behaviour.
 9. Full playthrough, visual verdicts, fold this into `journey.md`, merge.

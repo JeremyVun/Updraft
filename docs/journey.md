@@ -117,6 +117,15 @@ the plan for it is `docs/cygnet.md`:
 > it's own emotions, thoughts, and liveliness. Especially with teh way it interacts with the child, it should look
 > completely seamless and cohesive. This is a big piece of work that requires extreme attention to deail"
 
+> "I'm also thinking that there could be a nice moment in the game where the little swan cygnet has their brave
+> moment to swim by themselves next to the child, maybe a bit later in the game where it makes sense. Have a think
+> as well about whether the swan cygnet should react to the players 'wind'"
+
+On who does the visual work, when asked whether his model-routing rules (visual work only by Astra or Opus 5)
+should bind the Fable session he gave the cygnet to: "I'm relying on you to make the right decision about what
+works best. All i care about is that we get a great quality experience for the kids who will play this game. [...]
+I care most about visual and animation quality, and attention to detail when it comes to this kind of stuff."
+
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
 
 And: "Anything you want to prototype and explore, go ahead. we can always iterate or trim what doesn't work."
