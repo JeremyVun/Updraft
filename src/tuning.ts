@@ -64,8 +64,8 @@ export const tuning = {
     breezeMost: 15,
     breezeSpeed: 1.3,
     /** How far a key dips as it sounds, and how long it takes to come back up. */
-    dip: 0.03,
-    dipRelease: 0.24,
+    dip: 0.045,
+    dipRelease: 0.3,
     /** How near the camera has to be for the piano to sound at all, and where it is loudest. */
     heardWithin: 62,
     heardFully: 16,
