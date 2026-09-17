@@ -83,7 +83,7 @@ void main() {
    * Paper one side, colour the other, the way a sheet is folded into a pinwheel: because every vane is scooped,
    * a turning wheel shows both at once and flickers between them. The pin in the middle holds it all on.
    */
-  vec3 sail = gl_FrontFacing ? vec3(0.95, 0.92, 0.86) : vTint;
+  vec3 sail = gl_FrontFacing ? mix(vec3(0.95, 0.92, 0.86), vTint, 0.28) : vTint;
   vec3 paper = mix(sail, vec3(0.34, 0.29, 0.22), vPin) * (0.72 + 0.28 * smoothstep(0.12, 0.42, vRadius));
   float through = max(-ndl, 0.0) * 0.5;
   vec3 col = paper * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.75) * sun);
@@ -188,7 +188,7 @@ const ROWS: Row[] = [
 ];
 
 /** Faded reds and a dusty ochre: the door's red at its strongest, and nothing at all at a fairground. */
-const SAIL_TINTS = ['#c4695c', '#e6dac2', '#b5362c', '#d8c6a8', '#c98d7c', '#efe7d8'];
+const SAIL_TINTS = ['#c4695c', '#e6dac2', '#b5362c', '#d8c6a8', '#c98d7c', '#b5362c'];
 
 /** The point a fraction `t` along the path, and the direction the path runs there. */
 function pointAt(path: readonly THREE.Vector2[], t: number, out: THREE.Vector2, dir: THREE.Vector2): void {

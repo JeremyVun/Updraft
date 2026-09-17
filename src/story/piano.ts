@@ -133,7 +133,7 @@ export class PianoStop {
     shot.target.set(this.mid.x, piano.keys.y + 0.3, this.mid.z);
     shot.from = this.side;
     shot.distance = near ? 15 : 20;
-    shot.height = near ? 2.8 : 5;
+    shot.height = near ? 2.1 : 5;
   }
 
   private give(child: Cast['child']): void {
