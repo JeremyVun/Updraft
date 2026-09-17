@@ -296,9 +296,9 @@ export class BirchesChapter implements Chapter {
       /** Three-quarters on to the swing, low: the one shot in the room that is about a face and not a hillside. */
       const seat = this.cast.birches.swing.seat(this.seat);
       s.from = this.from;
-      s.target.set(seat.x * 0.5 + c.x * 0.5, Math.max(heightAt(seat.x, seat.z), 0) + 2.4, seat.z * 0.5 + c.z * 0.5);
-      s.distance = 15;
-      s.height = 3.4;
+      s.target.set(seat.x, seat.y + 0.9, seat.z);
+      s.distance = 14;
+      s.height = 2.6;
       this.pace = 0.4;
       this.focus.copy(seat);
       return;

@@ -245,6 +245,8 @@ void main() {
   float away = distance(p, cameraPosition.xz);
   /** Thick everywhere, and drifted deep where the ground dips and along the foot of the trees. */
   float drift = 0.34 + 0.86 * fbm(p * 0.09 + 3.3);
+  /** Only this island has a floor of leaves on it; the meadow it follows keeps its own grass. */
+  drift *= 1.0 - smoothstep(0.82, 1.06, length((p - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)})));
   if (r3 > drift || away > 26.0 || !insideUv(uv)) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
@@ -706,13 +708,6 @@ export class AutumnBirches {
       state.set([tree.x + Math.cos(yaw) * lx + Math.sin(yaw) * lz, tree.y + ly, tree.z - Math.sin(yaw) * lx + Math.cos(yaw) * lz, 0], i * 4);
     }
     return state;
-  }
-
-  /** How bare the island is, 0 to 1: only ever used to know how much of the year is left, never to gate anything. */
-  get stripped(): number {
-    let sum = 0;
-    for (const t of this.trees) sum += t.strip;
-    return this.trees.length ? sum / this.trees.length : 0;
   }
 
   /** Shakes the leaves out of the tree the swing hangs from, while somebody is swinging on it. */

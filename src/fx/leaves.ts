@@ -5,7 +5,7 @@ import { mulberry32 } from '../world/noise';
 import { glsl, tuning } from '../tuning';
 
 const W = 128;
-const H = 64;
+const H = 128;
 /** How many leaves of the birch island are simulated at once: the ones that come off and the ones on the floor. */
 export const LEAF_COUNT = W * H;
 
@@ -87,8 +87,8 @@ void main() {
 
   vec2 turb = vec2(vnoise(p.xz * 0.4 + uTime * 0.9 + seed * 17.0), vnoise(p.zx * 0.4 - uTime * 0.8 + seed * 29.0)) - 0.5;
   bool afloat = ground < 0.0 && above < 0.25;
-  vec2 hTarget = w.xy * (afloat ? 0.12 : 0.8 + 0.25 * seed) + turb * (1.8 + sp * 0.4);
-  float fall = afloat ? 0.0 : 1.0 + 0.7 * seed;
+  vec2 hTarget = w.xy * (afloat ? 0.12 : 0.85 + 0.25 * seed) + turb * (1.1 + sp * 0.22);
+  float fall = afloat ? 0.0 : 0.75 + 0.5 * seed;
   vec3 target = vec3(hTarget.x, lift * (0.8 + 0.5 * fract(seed * 13.7)) - fall + turb.y * 1.2, hTarget.y);
   if (wade > 0.25) {
     vec2 away = normalize(p.xz - uWade.xy + vec2(1e-3));
@@ -162,7 +162,10 @@ void main() {
   vec3 t1 = normalize(cross(n, abs(n.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
   vec3 t2 = cross(n, t1);
   /** Half, because this card is two units across where the litter's is one. */
-  float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (0.85 + 0.7 * fract(seed * 5.7));
+  /** Half, because this card is two units across where the litter's is one; bigger while it is in the air. */
+  float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (0.85 + 0.7 * fract(seed * 5.7)) * (1.0 + 0.55 * above);
+  /** One leaf on the lens is a gold blind across the whole room, so the last metre of them thins away. */
+  size *= smoothstep(0.5, 2.6, distance(cameraPosition, p.xyz));
   vWorld = p.xyz + (t1 * position.x + t2 * position.y * 0.78) * size;
   vCorner = position.xy;
   vNormal = n;
