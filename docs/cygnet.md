@@ -172,12 +172,29 @@ as a cygnet's thin whistle. Adults: distant bugling and wing whistle as the skei
 
 ## Status (update as it moves)
 
-Done on `cygnet`: names; the QA stage (`?chapter=stage`, `story/stage.ts`: `play(name)`, `look(view)`, a free close
-camera); one smooth skin with a 21-bone skeleton (`cygnet/body.ts`); the child's elbows, two-bone arm IK
-(`reachFor`, `reachLocal`), kneel, lean, head tilt and sockets (`traveller/body.ts`, `traveller.ts`); placement
-(`cygnet/ride.ts`: ground, seat, in the hands, surface path over the shoulder, all read live); the shared moments
-(`companion/carry.ts` on `companion/duet.ts`: `gatherUp`, `setDown`, `stow`, `unstow`); the probe
-(`companion/probe.ts`, `__game.probe.report()` / `.trace`).
+Done on `cygnet`:
+- Names; the QA stage (`?chapter=stage`, `story/stage.ts`: `play(name)` including `act:<name>`, `shore`, `swim`;
+  `look(view)`; a free close camera).
+- One smooth skin on a 21-bone skeleton (`cygnet/body.ts`), authored in one rest space, two-bone skinning.
+- The child: elbows, two-bone arm IK (`reachFor`, `reachLocal`), kneel, lean, head tilt, sockets, the plane tucked
+  in the satchel while the arms are full (`traveller/body.ts`, `traveller.ts`).
+- Placement (`cygnet/ride.ts`): ground, seat, in the hands, the surface path over the shoulder, all read live.
+- Shared moments (`companion/carry.ts` on `companion/duet.ts`): `gatherUp`, `setDown(onDone, facing)`, `stow`,
+  `unstow`; every chapter now uses them instead of a bow and a teleport.
+- The brain/body split: `cygnet/mind.ts` (attention, feelings, acts, the bond with the wind), `cygnet/pose.ts`
+  (`Drives` in, bones out; the file a pose pass owns), `cygnet/gait.ts` (planted feet at a walk, a patter when it
+  hurries, steps when it turns), `cygnet.ts` (states and mechanics: fall, run-up and face-plant, glide, clumsy
+  landings, perch, swim, leave).
+- Sound: `audio/foley.ts` (steps by surface, flaps, flutter, shake, tumble, rustle, plunge, paddle; swans' bugle
+  and wingbeat), driven by `cygnet.heard` events from `main.ts`. The two cries are unchanged so far.
+- Story: the brave swim on the long crossing (`CrossingOpts.swimAt`, `crossing.ts`).
+- The probe (`companion/probe.ts`, `__game.probe.report()` / `.trace`): body jerk, turn rate, mitten gap, foot
+  slip, ground.
+
+Still to do: wire the swans' raft into the meadow crest once `cygnet-swans` lands; merge `cygnet-look`; the wind
+bond's story floors (`mind.trust`) per chapter; re-voice the two cries; a pose-and-timing pass by an Opus 5 agent
+over `cygnet/pose.ts`, `carry.ts` timings, the child's kneel, and the satchel's shape; per-room behaviour; a full
+playthrough; an independent visual verdict; fold this file into `journey.md`.
 
 Found on the way, and decided:
 - **The satchel is its seat on the walks, not the hood.** The hood is worn up, and anything held in front of a bell

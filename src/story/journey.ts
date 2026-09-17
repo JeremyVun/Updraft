@@ -214,6 +214,7 @@ export class Journey {
           whaleAt: 55,
           whaleEvery: 150,
           dolphins: true,
+          swimAt: 0.42,
           season: 0.92,
         });
       case 'home':

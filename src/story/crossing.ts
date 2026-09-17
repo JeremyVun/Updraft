@@ -42,7 +42,16 @@ export interface CrossingOpts {
   duskTo?: number;
   /** The winter storm, 0 calm to 1: the short hop into the wood is sailed through the worst of it. */
   storm?: number;
+  /** How far along the route the cygnet takes to the water by itself, for the one crossing where it does. */
+  swimAt?: number;
 }
+
+/** How long it stands on the side of the boat making up its mind, how long it swims, and how long it dries off on the side afterwards. */
+const ON_THE_SIDE = 7;
+const SWIM_FOR = 46;
+const DRYING = 3.2;
+/** How far behind the boat it can fall before the boat is made to wait for it. Nothing is ever left behind. */
+const WAIT_FOR_IT = 6.5;
 
 /**
  * A crossing. The boat follows its waypoints and the player fills the sail; the child looks back at whatever is
@@ -89,6 +98,12 @@ export class CrossingChapter implements Chapter {
   private quarter = 1;
   private nextGlance = 8;
   private glanceUntil = 0;
+  private readonly swimAt: number | null;
+  private swim: 'before' | 'restless' | 'side' | 'in' | 'drying' | 'done' = 'before';
+  private swimT = 0;
+  private swimSide = 1;
+  private readonly beside = new THREE.Vector3();
+  private readonly water = new THREE.Vector3();
 
   constructor(
     private readonly cast: Cast,
@@ -110,6 +125,7 @@ export class CrossingChapter implements Chapter {
     this.storm = opts.storm ?? 0;
     this.shower = this.storm > 0 ? Math.max(0, this.storm - 0.2) * 1.25 : 0;
     this.nextWhale = this.whaleAt ?? 0;
+    this.swimAt = opts.swimAt ?? null;
     cast.boat.becalmed = 0;
     cast.boat.steerFor = this.route[0];
     cast.boat.canGround = this.route.length === 1;
@@ -186,10 +202,76 @@ export class CrossingChapter implements Chapter {
     if (whale && !farewell) child.lookAt = whale;
     this.watching = whale && !farewell ? Math.min(1, this.watching + dt * 0.5) : Math.max(0, this.watching - dt * 0.5);
 
+    if (this.swimAt !== null) this.braveSwim(dt);
+
     const wanted = this.wantsRainbow && this.time < RAINBOW_FOR ? 1 : 0;
     this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? 0.3 : 0.06)));
 
     this.frame(back);
+  }
+
+  /**
+   * The cygnet's own brave thing. The child went into the dark first so that it would not have to; out here in the
+   * morning, with the child watching and doing nothing but staying, it goes into the water by itself. The player is
+   * the wind in the sail, so how hard they blow is how hard it has to swim, and the boat will always wait.
+   */
+  private braveSwim(dt: number): void {
+    const { child, boat, cygnet, carry } = this.cast;
+    this.swimT += dt;
+    const left = this.from.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
+    const seat = boat.seat(this.seat);
+    /** Where it stands on the side of the boat, and the water beside that: on the side the camera is on. */
+    this.beside.copy(seat).addScaledVector(left, this.swimSide * 0.82).setY(boat.position.y + 0.1);
+    this.water.copy(seat).addScaledVector(left, this.swimSide * 2.3).setY(0);
+    const to = (next: typeof this.swim) => {
+      this.swim = next;
+      this.swimT = 0;
+    };
+    if (this.swim === 'before') {
+      if (this.progress() > this.swimAt! && cygnet.seat === 'cradle' && !carry.busy) {
+        this.swimSide = this.quarter > 0 ? -1 : 1;
+        to('restless');
+      }
+    } else if (this.swim === 'restless') {
+      /** It has been looking over the side since the first crossing. This time it does not look away. */
+      cygnet.watch(this.water);
+      child.lookAt = cygnet.eye(this.ahead);
+      if (this.swimT > 5) to('side');
+    } else if (this.swim === 'side') {
+      cygnet.perch(this.beside, boat.yaw + (this.swimSide * Math.PI) / 2);
+      /** The water, then the child, then the water. The child does nothing at all, which is the right thing. */
+      cygnet.watch(this.swimT % 3.2 < 1.9 ? this.water : child.face(this.look));
+      child.lookAt = cygnet.eye(this.ahead);
+      if (this.swimT > ON_THE_SIDE) {
+        cygnet.watch(null);
+        to('in');
+      }
+    } else if (this.swim === 'in') {
+      cygnet.swimTo(this.water);
+      child.lookAt = cygnet.position;
+      /** Too much wind and the boat draws ahead of it; before it is left behind, the boat waits. */
+      const behind = cygnet.astern;
+      boat.becalmed += ((behind > WAIT_FOR_IT ? 0.9 : behind > 3.5 ? 0.45 : 0.15) - boat.becalmed) * (1 - Math.exp(-dt * 0.8));
+      /** An arm hung over the side near it, whenever it is near enough for that to mean anything. */
+      const hand = this.swimSide > 0 ? 0 : 1;
+      if (behind < 1.6) child.reachFor(hand, this.look.copy(cygnet.position).setY(0.35).lerp(this.beside, 0.55));
+      else child.reachFor(hand, null);
+      if (this.swimT > SWIM_FOR || this.progress() > 0.93) {
+        child.reachFor(hand, null);
+        cygnet.bind(0.25);
+        cygnet.mind.trust(0.7);
+        to('drying');
+      }
+    } else if (this.swim === 'drying') {
+      /** Back up onto the side in a flurry, shaken out from bill to tail, and then into the arms, soaked and proud. */
+      cygnet.perch(this.beside, boat.yaw - (this.swimSide * Math.PI) / 2);
+      boat.becalmed += (0 - boat.becalmed) * (1 - Math.exp(-dt * 0.6));
+      child.lookAt = cygnet.eye(this.ahead);
+      if (this.swimT > DRYING) {
+        cygnet.rideIn('cradle');
+        to('done');
+      }
+    } else boat.becalmed += (0 - boat.becalmed) * (1 - Math.exp(-dt * 0.6));
   }
 
   /** How much of the route is behind them, 0 to 1. */
