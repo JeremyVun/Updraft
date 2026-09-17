@@ -104,7 +104,7 @@ void main() {
 const SAILS = 6;
 const SECTOR = (Math.PI * 2) / SAILS;
 /** The gap between one sail and the next, so the wheel reads as folded paper rather than a disc. */
-const GAP = 0.13;
+const GAP = 0.08;
 const HUB = 0.09;
 
 /**
@@ -250,7 +250,7 @@ export class Pinwheels {
       }
     }
 
-    const wheel = wheelGeometry(1, 0.34);
+    const wheel = wheelGeometry(1, 0.5);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = wheel.index;
     geo.attributes.position = wheel.attributes.position;
