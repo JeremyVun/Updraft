@@ -366,7 +366,9 @@ class Flutter {
     this.gain.gain.value = 0;
     src.connect(this.band).connect(trem).connect(this.gain);
     this.gain.connect(out.bus);
-    this.gain.connect(out.reverb);
+    const wet = ctx.createGain();
+    wet.gain.value = 0.25;
+    this.gain.connect(wet).connect(out.reverb);
     src.start();
     this.rate.start();
   }

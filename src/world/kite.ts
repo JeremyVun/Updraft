@@ -192,6 +192,7 @@ export class Kite {
   private readonly cordPoints: THREE.Vector3[] = [];
   private readonly tailBatch = new RibbonBatch(TAIL_POINTS, '#f0e7d4', 0.95);
   private readonly ribbon: Ribbon;
+  private readonly ribbons: Ribbon[];
   private readonly bows: THREE.Mesh;
   private readonly bowPos: Float32Array;
   private readonly bowNormals: Float32Array;
@@ -241,6 +242,7 @@ export class Kite {
       this.was.push(new THREE.Vector3());
     }
     this.ribbon = { points: this.tail, alpha: 1, width: 0.12 };
+    this.ribbons = [this.ribbon];
 
     this.bowPos = new Float32Array(BOWS * 18);
     this.bowNormals = new Float32Array(BOWS * 18);
@@ -371,7 +373,7 @@ export class Kite {
         this.tail[i].copy(this.tail[i - 1]).addScaledVector(this.a, step / d);
       }
     }
-    this.tailBatch.update([this.ribbon]);
+    this.tailBatch.update(this.ribbons);
     this.dressTail();
   }
 
