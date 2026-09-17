@@ -70,7 +70,7 @@ export const tuning = {
     /** How quickly a wheel turns on its stick to face the wind. */
     veerRate: 1.2,
     /** Seconds of turning a spinning wheel smears over: what makes a gust visible running down a row. */
-    smearSeconds: 0.055,
+    smearSeconds: 0.075,
   },
   petals: {
     /** Share of the 8192 petals alive on the still island, and in the short pasture past z = -600. */
