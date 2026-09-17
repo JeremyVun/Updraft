@@ -384,9 +384,10 @@ export class Soundscape {
     let at = t0;
     for (let i = 0; i < calls; i++) {
       const len = (longing ? 0.4 : 0.16) + Math.random() * 0.08;
-      const f = (longing ? 880 : 1250) + Math.random() * 420 - i * 60;
+      /** A cygnet's note is a thin whistle, well above where a crane chick's sat. */
+      const f = (longing ? 1480 : 2050) + Math.random() * 380 - i * 70;
       const osc = ctx.createOscillator();
-      osc.type = 'triangle';
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(f * 0.72, at);
       osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
       osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);

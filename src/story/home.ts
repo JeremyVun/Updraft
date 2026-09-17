@@ -120,6 +120,7 @@ export class HomeChapter implements Chapter {
 
   private climb(): void {
     const c = this.cast.child;
+    this.cast.cygnet.mind.trust(0.8);
     this.to('climb');
     c.lookAt = null;
     /** Up the hill it rides on their back, where it can be seen and can see. */

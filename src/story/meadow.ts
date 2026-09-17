@@ -196,6 +196,8 @@ export class MeadowChapter implements Chapter {
    */
   private walkOn(): void {
     const { cygnet, carry } = this.cast;
+    /** By the meadow it has stopped being afraid of the wind and started being curious about it. */
+    cygnet.mind.trust(0.35);
     carry.stow();
     cygnet.bind(0.06);
     this.to('walk');
@@ -253,6 +255,8 @@ export class MeadowChapter implements Chapter {
     }
     if (c.busy || c.sitting) return;
     if (cygnet.flights === 1 && !this.cheeredFlight) {
+      /** It went up on the wind and came down safe. After that the wind is something to ask for. */
+      cygnet.mind.trust(0.66);
       this.cheeredFlight = true;
       c.cheer();
       cue('delight');
