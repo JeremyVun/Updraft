@@ -78,7 +78,7 @@ void main() {
   float away = length(toCam);
   vec3 c = cross(aTangent, toCam / max(away, 0.001));
   vec3 side = c / max(length(c), 1e-4);
-  vWorld = position + side * aEdge * max(0.02, away * 0.0016);
+  vWorld = position + side * aEdge * max(0.012, away * 0.0007);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -86,18 +86,18 @@ const CORD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
 void main() {
-  vec3 col = vec3(0.84, 0.8, 0.72) * (hemiLight(vec3(0.0, 1.0, 0.0)) + uSunColor * 0.35);
+  vec3 col = vec3(0.7, 0.66, 0.58) * (hemiLight(vec3(0.0, 1.0, 0.0)) + uSunColor * 0.3);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
 /** Local space: +y is the nose, +z the face the wind pushes on. The paper is bowed back off its two spars. */
-const NOSE = 1.45;
-const FOOT = 1.25;
-const HALF = 0.82;
+const NOSE = 1.6;
+const FOOT = 1.4;
+const HALF = 1.0;
 const SHOULDER = 0.2;
 const BOWS = 6;
 const TAIL_POINTS = 14;
-const TAIL_LENGTH = 5.2;
+const TAIL_LENGTH = 7;
 const CORD_POINTS = 18;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -240,7 +240,7 @@ export class Kite {
       this.tail.push(new THREE.Vector3());
       this.was.push(new THREE.Vector3());
     }
-    this.ribbon = { points: this.tail, alpha: 1, width: 0.09 };
+    this.ribbon = { points: this.tail, alpha: 1, width: 0.12 };
 
     this.bowPos = new Float32Array(BOWS * 18);
     this.bowNormals = new Float32Array(BOWS * 18);
@@ -260,6 +260,11 @@ export class Kite {
     this.bows.frustumCulled = false;
     this.group.add(this.bows);
     KITE_AT.copy(this.anchor).add(this.a.set(0, 14, -6));
+  }
+
+  /** Where it is in the sky, for the story and for QA. */
+  get position(): THREE.Vector3 {
+    return KITE_AT;
   }
 
   update(dt: number, time: number, camera: THREE.Camera): void {
@@ -345,18 +350,19 @@ export class Kite {
     this.c.set(-air.z, 0, air.x);
     if (this.c.lengthSq() < 1e-6) this.c.set(1, 0, 0);
     this.c.normalize();
-    const lash = 0.8 + speed * 0.55;
+    /** Paper on a string has almost no weight and all drag: it goes where the air goes, and quickly. */
+    const lash = 2 + speed * 1.2;
     for (let i = 1; i < TAIL_POINTS; i++) {
       const p = this.tail[i];
       const q = this.was[i];
       const vx = (p.x - q.x) / dt;
       const vy = (p.y - q.y) / dt;
       const vz = (p.z - q.z) / dt;
-      const wag = Math.sin(time * 7 + i * 0.9) * lash;
+      const wag = Math.sin(time * 6 + i * 0.9) * lash;
       q.copy(p);
-      p.x += vx * dt * 0.99 + ((air.x - vx) * 3.4 + this.c.x * wag) * dt * dt;
-      p.y += vy * dt * 0.99 + ((air.lift * 1.6 - vy) * 3.4 - 5.4) * dt * dt;
-      p.z += vz * dt * 0.99 + ((air.z - vz) * 3.4 + this.c.z * wag) * dt * dt;
+      p.x += vx * dt * 0.99 + ((air.x - vx) * 8 + this.c.x * wag) * dt * dt;
+      p.y += vy * dt * 0.99 + ((air.lift * 1.6 - vy) * 8 - 3.4) * dt * dt;
+      p.z += vz * dt * 0.99 + ((air.z - vz) * 8 + this.c.z * wag) * dt * dt;
     }
     for (let pass = 0; pass < 3; pass++) {
       for (let i = 1; i < TAIL_POINTS; i++) {
@@ -384,8 +390,8 @@ export class Kite {
         const dir = s === 0 ? -1 : 1;
         for (let v = 0; v < 3; v++) {
           const j = o + s * 9 + v * 3;
-          const out = v === 2 ? 0 : 0.23 * dir;
-          const along = v === 0 ? 0.15 : v === 1 ? -0.15 : 0;
+          const out = v === 2 ? 0 : 0.34 * dir;
+          const along = v === 0 ? 0.2 : v === 1 ? -0.2 : 0;
           this.bowPos[j] = p.x + this.b.x * out + this.a.x * along;
           this.bowPos[j + 1] = p.y + this.b.y * out + this.a.y * along;
           this.bowPos[j + 2] = p.z + this.b.z * out + this.a.z * along;
