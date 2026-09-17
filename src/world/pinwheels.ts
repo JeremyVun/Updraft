@@ -7,8 +7,14 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
 
+const SAILS = 4;
+const SECTOR = (Math.PI * 2) / SAILS;
+/** The gap between one sail and the next, so the wheel reads as folded paper rather than a disc. */
+const GAP = 0.16;
+const HUB = 0.11;
+
 /**
- * Paper wheels on sticks. Every wheel is one instance of the same six sails; the CPU keeps its spin phase, how
+ * Paper wheels on sticks. Every wheel is one instance of the same four sails; the CPU keeps its spin phase, how
  * far it has smeared and which way it has turned to face the wind, and the vertex shader does the rest.
  *
  * The smear is what makes the wind visible: a sail is swept back through the angle it turned during a shutter's
@@ -24,9 +30,10 @@ in float aSweep;
 in float aTone;
 out vec3 vWorld;
 out vec3 vNormal;
-out vec3 vPaper;
+out vec3 vTint;
 out float vCover;
 out float vRadius;
+out float vPin;
 
 void main() {
   float ang = aState.x - aState.y * (1.0 - aSweep);
@@ -42,9 +49,10 @@ void main() {
   vec3 up = vec3(0.0, 1.0, 0.0);
   vWorld = aPos + (side * spun.x + up * spun.y + face * spun.z) * aState.w;
   vNormal = side * spunN.x + up * spunN.y + face * spunN.z;
-  vPaper = mix(vec3(0.95, 0.92, 0.86), aTint, aTone);
+  vTint = aTint;
+  vPin = aTone;
   /** A sail swept over a wider angle than it covers is that much thinner on the eye. */
-  vCover = ${glsl(Math.PI / 3)} / (${glsl(Math.PI / 3)} + aState.y);
+  vCover = ${glsl(SECTOR)} / (${glsl(SECTOR)} + aState.y);
   vRadius = length(position.xy);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
@@ -53,9 +61,10 @@ const WHEEL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
-in vec3 vPaper;
+in vec3 vTint;
 in float vCover;
 in float vRadius;
+in float vPin;
 
 /** Interleaved gradient noise: a dither that holds still on screen instead of crawling. */
 float wheelDither(vec2 p) {
@@ -70,8 +79,12 @@ void main() {
   float ndl = dot(N, uSunDir);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
 
-  /** Creased and grubby where the paper was folded in to the pin, and clean paper out at the rim. */
-  vec3 paper = vPaper * (0.72 + 0.28 * smoothstep(0.12, 0.42, vRadius));
+  /**
+   * Paper one side, colour the other, the way a sheet is folded into a pinwheel: because every vane is scooped,
+   * a turning wheel shows both at once and flickers between them. The pin in the middle holds it all on.
+   */
+  vec3 sail = gl_FrontFacing ? vec3(0.95, 0.92, 0.86) : vTint;
+  vec3 paper = mix(sail, vec3(0.34, 0.29, 0.22), vPin) * (0.72 + 0.28 * smoothstep(0.12, 0.42, vRadius));
   float through = max(-ndl, 0.0) * 0.5;
   vec3 col = paper * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.75) * sun);
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
@@ -101,18 +114,13 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-const SAILS = 6;
-const SECTOR = (Math.PI * 2) / SAILS;
-/** The gap between one sail and the next, so the wheel reads as folded paper rather than a disc. */
-const GAP = 0.08;
-const HUB = 0.09;
-
 /**
- * One wheel: six sails, each a square of paper with a corner folded in to the pin, so it is flat at the hub and
- * scooped at the rim. The scoop is what the wind pushes on, and it is what catches the low sun on one side.
+ * One wheel: four sails, each a square of paper with a corner folded in to the pin, so it is flat at the hub and
+ * scooped at the rim. The scoop is what the wind pushes on, and it is what catches the low sun on one side. The
+ * pin head sits in the middle of them, which is the other half of what says pinwheel rather than rosette.
  */
 function wheelGeometry(radius: number, pitch: number): THREE.BufferGeometry {
-  const steps = 2;
+  const steps = 3;
   const verts: number[] = [];
   const sweeps: number[] = [];
   const tones: number[] = [];
@@ -125,11 +133,12 @@ function wheelGeometry(radius: number, pitch: number): THREE.BufferGeometry {
       const r = HUB + (radius - HUB) * uu;
       for (let v = 0; v <= steps; v++) {
         const vv = v / steps;
-        const ang = base + (SECTOR - GAP) * vv;
+        /** Pinched to almost nothing where it is pinned and full width out at the rim: a vane, not a petal. */
+        const ang = base + (SECTOR - GAP) * vv * (0.18 + 0.82 * uu);
         const z = pitch * (vv - 0.5) * 2 * Math.pow(uu, 1.3);
         verts.push(Math.cos(ang) * r, Math.sin(ang) * r, z);
         sweeps.push(vv);
-        tones.push(s % 2);
+        tones.push(0);
       }
     }
     for (let u = 0; u < steps; u++) {
@@ -138,6 +147,17 @@ function wheelGeometry(radius: number, pitch: number): THREE.BufferGeometry {
         index.push(a, a + steps + 1, a + 1, a + 1, a + steps + 1, a + steps + 2);
       }
     }
+  }
+  const pin = (verts.length / 3) | 0;
+  verts.push(0, 0, pitch * 0.34);
+  sweeps.push(1);
+  tones.push(1);
+  for (let i = 0; i <= 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    verts.push(Math.cos(a) * HUB * 1.25, Math.sin(a) * HUB * 1.25, pitch * 0.16);
+    sweeps.push(1);
+    tones.push(1);
+    if (i > 0) index.push(pin, pin + i, pin + i + 1);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
@@ -243,14 +263,14 @@ export class Pinwheels {
         const top = 1.8 + rand() * 0.4;
         this.wheels.push({ x, z, ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });
         positions.push(x, ground + top, z);
-        states.push(0, 0, 0, 0.29 + rand() * 0.07);
+        states.push(0, 0, 0, 0.38 + rand() * 0.09);
         tint.set(SAIL_TINTS[Math.floor(rand() * SAIL_TINTS.length)]);
         tints.push(tint.r, tint.g, tint.b);
         sticks.push(stickGeometry(x, z, ground, top, rand));
       }
     }
 
-    const wheel = wheelGeometry(1, 0.5);
+    const wheel = wheelGeometry(1, 0.42);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = wheel.index;
     geo.attributes.position = wheel.attributes.position;
@@ -308,7 +328,8 @@ export class Pinwheels {
       this.state[o] = w.phase;
       /** A wheel only smears once it is really going: turning gently it stays crisp paper. */
       this.state[o + 1] = THREE.MathUtils.clamp(w.omega * k.smearSeconds - 0.14, 0, SECTOR);
-      this.state[o + 2] = w.yaw;
+      /** Canted a little toward whoever is watching: a wheel exactly edge-on is a stick with nothing on it. */
+      this.state[o + 2] = w.yaw + THREE.MathUtils.clamp(wrap(Math.atan2(camera.position.x - w.x, camera.position.z - w.z) - w.yaw), -0.45, 0.45);
       if (w.omega > loudest) loudest = w.omega;
     }
     this.stateAttr.needsUpdate = true;

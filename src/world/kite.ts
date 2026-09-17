@@ -22,7 +22,11 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-/** The same notebook page the paper plane is folded from: faint rules, and one red line down the margin. */
+/**
+ * Notebook paper on two sticks. `vPaper.xy` is the place on the kite itself, so the sail carries the one thing
+ * that says kite and not paper plane at any distance: a cross of spars, and the foot of it cut from the faded
+ * red the door is painted. `vPaper.z` marks the bows on the tail that are cut from the same red.
+ */
 const PAPER_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
@@ -31,11 +35,14 @@ in vec3 vPaper;
 void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 alb = vec3(0.96, 0.93, 0.87);
-  float rule = 1.0 - smoothstep(0.004, 0.02, abs(fract(vPaper.y * 8.0) - 0.5));
-  alb = mix(alb, vec3(0.62, 0.72, 0.9), rule * 0.45);
-  float margin = 1.0 - smoothstep(0.004, 0.018, abs(vPaper.x - 0.7));
-  alb = mix(alb, vec3(0.71, 0.21, 0.17), max(margin * 0.85, vPaper.z));
+  vec3 alb = vec3(0.93, 0.89, 0.81);
+  float rule = 1.0 - smoothstep(0.006, 0.03, abs(fract(vPaper.y * 2.4) - 0.5));
+  alb = mix(alb, vec3(0.62, 0.72, 0.9), rule * 0.4);
+  float red = max(smoothstep(0.06, -0.12, vPaper.y), vPaper.z);
+  alb = mix(alb, vec3(0.56, 0.17, 0.13), red);
+  float spine = 1.0 - smoothstep(0.045, 0.085, abs(vPaper.x));
+  float cross = 1.0 - smoothstep(0.045, 0.085, abs(vPaper.y));
+  alb = mix(alb, vec3(0.40, 0.34, 0.26), max(spine, cross) * 0.8 * (1.0 - vPaper.z));
   float ndl = dot(N, uSunDir);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   float through = max(-ndl, 0.0) * 0.5;
@@ -90,35 +97,37 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-/** Local space: +y is the nose, +z the face the wind pushes on. The paper is bowed back off its two spars. */
+/**
+ * Local space: the origin is where the two spars cross, +y is the nose, +z the face the wind pushes on. Short
+ * above the cross and long below it, which is the shape everybody draws when they draw a kite.
+ */
 const NOSE = 1.6;
-const FOOT = 1.4;
-const HALF = 1.0;
-const SHOULDER = 0.2;
-const BOWS = 6;
-const TAIL_POINTS = 14;
-const TAIL_LENGTH = 7;
+const FOOT = 2.9;
+const HALF = 1.72;
+const BOWS = 7;
+const TAIL_POINTS = 16;
+const TAIL_LENGTH = 9;
 const CORD_POINTS = 18;
 const UP = new THREE.Vector3(0, 1, 0);
 
 function sailGeometry(): THREE.BufferGeometry {
   const nose: [number, number, number] = [0, NOSE, 0];
-  const left: [number, number, number] = [-HALF, SHOULDER, 0];
-  const right: [number, number, number] = [HALF, SHOULDER, 0];
+  const left: [number, number, number] = [-HALF, 0, 0];
+  const right: [number, number, number] = [HALF, 0, 0];
   const foot: [number, number, number] = [0, -FOOT, 0];
-  const belly: [number, number, number] = [0, SHOULDER, -0.19];
+  const belly: [number, number, number] = [0, 0, -0.26];
   const tris = [nose, left, belly, nose, belly, right, left, foot, belly, belly, foot, right];
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tris.flat()), 3));
-  geo.setAttribute('aPaper', new THREE.BufferAttribute(new Float32Array(tris.flatMap(([x, y]) => [0.5 + x * 0.42, 0.5 + y * 0.3, 0])), 3));
+  geo.setAttribute('aPaper', new THREE.BufferAttribute(new Float32Array(tris.flatMap(([x, y]) => [x, y, 0])), 3));
   geo.computeVertexNormals();
   return geo;
 }
 
 /** The two sticks the paper is stretched over, standing a little proud of it. */
 function sparGeometry(): THREE.BufferGeometry {
-  const spine = new THREE.BoxGeometry(0.035, NOSE + FOOT, 0.03).translate(0, (NOSE - FOOT) / 2, 0.025);
-  const cross = new THREE.BoxGeometry(HALF * 2, 0.03, 0.03).translate(0, SHOULDER, 0.025);
+  const spine = new THREE.BoxGeometry(0.05, NOSE + FOOT, 0.04).translate(0, (NOSE - FOOT) / 2, 0.035);
+  const cross = new THREE.BoxGeometry(HALF * 2, 0.045, 0.04).translate(0, 0, 0.035);
   return mergeGeometries([spine, cross]);
 }
 
@@ -211,6 +220,8 @@ export class Kite {
   private elevVel = 0;
   private reach = 0.75;
   private roll = 0;
+  /** How far round its string it has swung to show its face, in radians. */
+  private shown = 0;
   private phase = 0;
   private asleep = true;
 
@@ -241,17 +252,17 @@ export class Kite {
       this.tail.push(new THREE.Vector3());
       this.was.push(new THREE.Vector3());
     }
-    this.ribbon = { points: this.tail, alpha: 1, width: 0.12 };
+    this.ribbon = { points: this.tail, alpha: 1, width: 0.16 };
     this.ribbons = [this.ribbon];
 
     this.bowPos = new Float32Array(BOWS * 18);
     this.bowNormals = new Float32Array(BOWS * 18);
     const paperOf = new Float32Array(BOWS * 18);
     for (let i = 0; i < BOWS * 6; i++) {
-      /** Every third bow is cut from the red the door is painted, and the rest are plain page. */
-      paperOf[i * 3] = 0.25;
-      paperOf[i * 3 + 1] = 0.3 + ((i / 6) | 0) * 0.09;
-      paperOf[i * 3 + 2] = ((i / 6) | 0) % 3 === 1 ? 0.8 : 0;
+      /** Every other bow is cut from the red the door is painted, and the rest are plain page. */
+      paperOf[i * 3] = 0.6;
+      paperOf[i * 3 + 1] = 1;
+      paperOf[i * 3 + 2] = ((i / 6) | 0) % 2 === 1 ? 1 : 0;
     }
     const bowGeo = new THREE.BufferGeometry();
     bowGeo.setAttribute('position', new THREE.BufferAttribute(this.bowPos, 3).setUsage(THREE.DynamicDrawUsage));
@@ -310,9 +321,9 @@ export class Kite {
     const flat = Math.cos(this.elev) * span;
     KITE_AT.set(this.anchor.x + Math.sin(flown) * flat, this.anchor.y + Math.sin(this.elev) * span, this.anchor.z + Math.cos(flown) * flat);
     /** Whatever the player does to it, it stays in the air: the string is the only thing holding it down. */
-    KITE_AT.y = Math.max(KITE_AT.y, Math.max(heightAt(KITE_AT.x, KITE_AT.z), 0) + 2.5);
+    KITE_AT.y = Math.max(KITE_AT.y, Math.max(heightAt(KITE_AT.x, KITE_AT.z), 0) + FOOT + 1.2);
 
-    this.face();
+    this.face(dt, camera);
     if (this.asleep) {
       this.asleep = false;
       this.settle(air.x, air.z);
@@ -322,14 +333,21 @@ export class Kite {
   }
 
   /** Nose up the string, belly into the wind, banked into whichever way it is swinging. */
-  private face(): void {
+  private face(dt: number, camera: THREE.Camera): void {
     this.yAxis.subVectors(KITE_AT, this.anchor).normalize();
     this.xAxis.copy(this.yAxis).cross(UP).normalize();
     this.zAxis.crossVectors(this.xAxis, this.yAxis).normalize();
     this.basis.makeBasis(this.xAxis, this.yAxis, this.zAxis);
+    /**
+     * And it swings round on its string until it is showing its face to whoever is watching. A kite edge-on is a
+     * white sliver, which is the one thing this one must never be: it is here to be recognised from the crest.
+     */
+    this.a.subVectors(camera.position, KITE_AT);
+    const want = Math.atan2(this.a.dot(this.xAxis), Math.max(this.a.dot(this.zAxis), 0.001));
+    this.shown += (THREE.MathUtils.clamp(want, -0.95, 0.95) - this.shown) * (1 - Math.exp(-dt * 0.9));
     this.sail.position.copy(KITE_AT);
     this.sail.quaternion.setFromRotationMatrix(this.basis);
-    this.sail.rotateY(this.roll * 0.6);
+    this.sail.rotateY(this.shown + this.roll * 0.6);
     this.sail.rotateZ(-this.roll);
     this.sail.updateMatrixWorld();
   }
@@ -397,8 +415,8 @@ export class Kite {
         const dir = s === 0 ? -1 : 1;
         for (let v = 0; v < 3; v++) {
           const j = o + s * 9 + v * 3;
-          const out = v === 2 ? 0 : 0.34 * dir;
-          const along = v === 0 ? 0.2 : v === 1 ? -0.2 : 0;
+          const out = v === 2 ? 0 : 0.52 * dir;
+          const along = v === 0 ? 0.3 : v === 1 ? -0.3 : 0;
           this.bowPos[j] = p.x + this.b.x * out + this.a.x * along;
           this.bowPos[j + 1] = p.y + this.b.y * out + this.a.y * along;
           this.bowPos[j + 2] = p.z + this.b.z * out + this.a.z * along;
