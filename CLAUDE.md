@@ -20,5 +20,6 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - Shared shader uniforms and GLSL (sky, fog, lighting, cloud shadows, domain helpers): `src/world/atmosphere.ts`. Include `ATMO_GLSL` once per shader stage.
 - Island shape and height lookups: `src/world/island.ts`. Tree and rock placement: `src/world/landmarks.ts`.
 - Rooms with their own world module: the island of lines `src/world/lines.ts`, the drowned village `src/world/drowned.ts`, the dark wood `src/world/wood.ts`. Each is driven by its chapter in `src/story/`.
+- The sea: `src/world/water.ts` (a grid centred on the camera, fine where the swell is geometry and opening out to the horizon). The swell is `src/world/water/swell.ts`, the one place its waves are defined: the shader displaces the mesh by them and `swellAt` gives anything that floats the same surface.
 - The light the player makes in the dark wood: `src/fx/embers.ts`, carried to every shader as `uEmberLight`.
 - Player-facing text drafts and approvals: `docs/copy/`.

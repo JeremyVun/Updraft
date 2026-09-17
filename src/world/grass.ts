@@ -24,27 +24,38 @@ import { WINDOW } from './window';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 const TILE = 8;
-/** Tiles switch level of detail only this far past a ring, wider than the camera's breathing. */
-const LOD_BAND = 3;
+/** Cells per tile side of the finest grid. Every blade lives in one of these cells, whichever level draws it. */
+const FINE = 32;
+/** No blade, flowering and laid flat by the wind, reaches further from its root than this. */
+const MAX_BLADE = 6;
+/** A blade about to be thinned away shrinks into the ground over this many metres of camera travel. */
+const SHRINK_BAND = 7;
 
+/**
+ * The levels draw one population of blades, not three. Level 1 holds one chosen blade from every 2x2 block of
+ * level 0's cells and level 2 one from every pair of level 1's, and the chosen blades carry the lowest ranks, so
+ * by the time thinning has brought a tile down to the next level's density the blades left standing are exactly
+ * the ones that level draws. A tile changing level changes nothing on screen. `gr_cell` and `gr_rank` in
+ * BLADE_LOD_GLSL hold the other half of this; the grids here must stay 32x32, 16x16 and 8x16.
+ */
 interface LodSpec {
-  /** Blades per tile side. */
-  side: number;
+  /** Blades per tile, across and down. */
+  cols: number;
+  rows: number;
   segments: number;
-  /** Tiles nearer than this (to the camera, on the ground) use this level. */
+  /** Tiles wholly beyond the previous level's reach, and not beyond this one's, use this level. */
   reach: number;
-  /** Where this level thins toward the next, as fractions of `reach`. */
+  /** Where the meadow starts thinning toward the next level (or, for the last, sinking away), as a fraction of `reach`. */
   thinFrom: number;
-  /** Density of the next level relative to this one (0 for the last, which fades out). */
-  nextDensity: number;
+  /** Blade width once the meadow has thinned to this level, making up for the blades that are gone. */
   widthScale: number;
   maxTiles: number;
 }
 
 const LODS: LodSpec[] = [
-  { side: 32, segments: 6, reach: 52, thinFrom: 0.72, nextDensity: (17 * 17) / (32 * 32), widthScale: 1, maxTiles: 700 },
-  { side: 17, segments: 5, reach: 112, thinFrom: 0.84, nextDensity: (10 * 10) / (17 * 17), widthScale: 1.35, maxTiles: 1100 },
-  { side: 10, segments: 4, reach: 176, thinFrom: 0.82, nextDensity: 0, widthScale: 1.9, maxTiles: 1600 },
+  { cols: 32, rows: 32, segments: 6, reach: 52, thinFrom: 0.85, widthScale: 1, maxTiles: 700 },
+  { cols: 16, rows: 16, segments: 5, reach: 112, thinFrom: 0.84, widthScale: 1.55, maxTiles: 1100 },
+  { cols: 8, rows: 16, segments: 4, reach: 176, thinFrom: 0.8, widthScale: 1.7, maxTiles: 1600 },
 ];
 
 /** The meadow palette and tint pattern, shared with the terrain so far grass matches the blades. */
@@ -136,6 +147,62 @@ float gr_rand(inout uint s) {
 }
 `;
 
+/** Which blade a level's slot draws and the rank that decides when it is thinned away (see LodSpec). */
+const BLADE_LOD_GLSL = /* glsl */ `
+uniform ivec2 uGrid;
+uniform int uLevel;
+const int GR_ORIGIN = 1 << 20;
+ivec2 gr_pick4(ivec2 q) {
+  uint h = gr_hash(uvec2(q) + 7919u);
+  return q * 2 + ivec2(int(h & 1u), int((h >> 1u) & 1u));
+}
+ivec2 gr_pick2(ivec2 q) {
+  uint h = gr_hash(uvec2(q) + 104729u);
+  return ivec2(q.x * 2 + int(h & 1u), q.y);
+}
+/** The fine cell (offset by GR_ORIGIN so it is never negative) whose blade this level's slot \`id\` of the tile draws. */
+ivec2 gr_cell(ivec2 tileCell, int id) {
+  ivec2 q = tileCell * uGrid + ivec2(id % uGrid.x, id / uGrid.x);
+  if (uLevel == 0) return q + GR_ORIGIN;
+  if (uLevel == 1) return gr_pick4(q + (GR_ORIGIN >> 1));
+  return gr_pick4(gr_pick2(q + ivec2(GR_ORIGIN >> 2, GR_ORIGIN >> 1)));
+}
+float gr_rank(ivec2 cell, float r) {
+  ivec2 q1 = cell >> 1;
+  if (gr_pick4(q1) != cell) return 0.25 + 0.75 * r;
+  ivec2 q2 = ivec2(q1.x >> 1, q1.y);
+  return gr_pick2(q2) == q1 ? 0.125 * r : 0.125 + 0.125 * r;
+}
+`;
+
+/**
+ * How much of the meadow stands at a distance from the eye, and how wide its blades are there. Both depend on the
+ * distance alone, never on the level drawing the blade, so nothing steps where the levels meet.
+ */
+const BLADE_THIN_GLSL = /* glsl */ `
+uniform vec2 uGrassEye;
+uniform vec4 uRings;
+uniform vec2 uSink;
+uniform vec2 uLevelDensity;
+uniform vec2 uLevelWidth;
+uniform vec2 uClose;
+uniform float uShrinkBand;
+uniform float uDensity;
+float densityAt(float dist) {
+  return mix(mix(1.0, uLevelDensity.x, smoothstep(uRings.x, uRings.y, dist)), uLevelDensity.y, smoothstep(uRings.z, uRings.w, dist));
+}
+float widthAt(float dist) {
+  return mix(mix(1.0, uLevelWidth.x, smoothstep(uRings.x, uRings.y, dist)), uLevelWidth.y, smoothstep(uRings.z, uRings.w, dist));
+}
+/** 0..1 size of a blade: it shrinks, whole, over the last metres before thinning removes it, and the far edge sinks away. \`share\` is the blade's fixed part of what thinning keeps. */
+float standing(float rank, float share, float dist) {
+  float here = densityAt(dist) * share;
+  float ahead = densityAt(dist + uShrinkBand) * share;
+  float grown = smoothstep(0.0, 1.0, (here - rank) / max(here - ahead, 1e-5));
+  return grown * (1.0 - smoothstep(uSink.x, uSink.y, dist));
+}
+`;
+
 /**
  * The blade table: everything about a blade that does not change from vertex to vertex or frame to frame is
  * computed once per blade here, into four texels, instead of once per vertex in the blade shader (thirteen
@@ -149,11 +216,10 @@ ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
 ${GRASS_GLSL}
 ${BLADE_RAND_GLSL}
+${BLADE_LOD_GLSL}
 uniform sampler2D uTiles;
 uniform int uTileCount;
-uniform float uSide;
 uniform float uTileSize;
-uniform float uWidthScale;
 layout(location = 0) out vec4 oRoot;
 layout(location = 1) out vec4 oShape;
 layout(location = 2) out vec4 oTint;
@@ -161,8 +227,7 @@ layout(location = 3) out vec4 oFlower;
 
 void main() {
   int b = int(gl_FragCoord.y) * ${TABLE_WIDTH} + int(gl_FragCoord.x);
-  int side = int(uSide);
-  int per = side * side;
+  int per = uGrid.x * uGrid.y;
   int tileIndex = b / per;
   oRoot = vec4(0.0, 0.0, 0.0, 2.0);
   oShape = vec4(0.0);
@@ -170,13 +235,10 @@ void main() {
   oFlower = vec4(0.0);
   if (tileIndex >= uTileCount) return;
   vec2 tile = texelFetch(uTiles, ivec2(tileIndex, 0), 0).xy;
-  int id = b - tileIndex * per;
-  vec2 cell = vec2(float(id % side), float(id / side));
-  vec2 tileCell = floor(tile / uTileSize + 0.5);
-  uvec2 key = uvec2(ivec2(tileCell * uSide + cell) + ivec2(1 << 20));
-  uint s = gr_hash(key);
-  vec2 root2 = tile + (cell + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / uSide);
-  float rank = gr_rand(s);
+  ivec2 cell = gr_cell(ivec2(floor(tile / uTileSize + 0.5)), b - tileIndex * per);
+  uint s = gr_hash(uvec2(cell));
+  vec2 root2 = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
+  float rank = gr_rank(cell, gr_rand(s));
 
   vec2 uv = domainUv(root2);
   if (!insideUv(uv)) return;
@@ -205,7 +267,7 @@ void main() {
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   float cropped = 1.0 - smoothstep(0.78, 1.12, length((root2 - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
   h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * (1.0 - 0.34 * cropped) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
-  float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
+  float width = 0.15 + 0.1 * gr_rand(s);
   float angle = gr_rand(s) * 6.2831853;
   float curve = 0.12 + 0.28 * gr_rand(s);
   float flowerRand = step(gr_rand(s), surf.z * 0.1);
@@ -250,10 +312,7 @@ uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
 uniform sampler2D uTintTex;
 uniform sampler2D uFlowerTex;
-uniform float uReach;
-uniform float uThinFrom;
-uniform float uNextDensity;
-uniform float uDensity;
+${BLADE_THIN_GLSL}
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vSideDir;
@@ -277,23 +336,22 @@ void main() {
   vec2 root2 = root.xy;
   float groundH = root.z;
   float rank = root.w;
-  float dist = length(root2 - cameraPosition.xz);
-  float thin = smoothstep(uReach * uThinFrom, uReach, dist);
-  float keep = mix(1.0, uNextDensity, thin) * uDensity;
-  if (rank >= keep) { collapse(); return; }
+  float dist = length(root2 - uGrassEye);
+  float thinned = densityAt(dist);
+  if (rank >= thinned * uDensity) { collapse(); return; }
   vec4 shape = texelFetch(uShapeTex, at, 0);
-  keep *= shape.x;
-  if (rank >= keep) { collapse(); return; }
+  float share = uDensity * shape.x;
+  if (rank >= thinned * share) { collapse(); return; }
   vec4 tintIn = texelFetch(uTintTex, at, 0);
   vec4 fl = texelFetch(uFlowerTex, at, 0);
 
   float side01 = position.x;
-  float t = position.y;
+  float t = mix(position.y, position.z, smoothstep(uClose.x, uClose.y, dist));
   float seed = fl.x;
   float life = lifeAt(root2);
-  float h = shape.y * mix(0.72, 1.0, life);
-  h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
-  float width = shape.z;
+  float stand = standing(rank, share, dist);
+  float h = shape.y * mix(0.72, 1.0, life) * stand;
+  float width = shape.z * widthAt(dist) * stand;
   float angle = shape.w;
   float curve = tintIn.w;
   float flower = fl.y * step(0.5, life);
@@ -354,14 +412,10 @@ ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
 ${GRASS_GLSL}
 ${BLADE_RAND_GLSL}
+${BLADE_LOD_GLSL}
+${BLADE_THIN_GLSL}
 in vec2 aTile;
-uniform float uSide;
 uniform float uTileSize;
-uniform float uReach;
-uniform float uThinFrom;
-uniform float uNextDensity;
-uniform float uWidthScale;
-uniform float uDensity;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vSideDir;
@@ -380,34 +434,29 @@ void collapse() {
 }
 
 void main() {
-  int side = int(uSide);
-  int id = gl_InstanceID % (side * side);
-  vec2 cell = vec2(float(id % side), float(id / side));
-  vec2 tileCell = floor(aTile / uTileSize + 0.5);
-  uvec2 key = uvec2(ivec2(tileCell * uSide + cell) + ivec2(1 << 20));
-  uint s = gr_hash(key);
-  vec2 root2 = aTile + (cell + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / uSide);
-  float rank = gr_rand(s);
+  ivec2 cell = gr_cell(ivec2(floor(aTile / uTileSize + 0.5)), gl_InstanceID % (uGrid.x * uGrid.y));
+  uint s = gr_hash(uvec2(cell));
+  vec2 root2 = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
+  float rank = gr_rank(cell, gr_rand(s));
 
   vec2 uv = domainUv(root2);
   if (!insideUv(uv)) { collapse(); return; }
-  float dist = length(root2 - cameraPosition.xz);
-  float thin = smoothstep(uReach * uThinFrom, uReach, dist);
-  float keep = mix(1.0, uNextDensity, thin) * uDensity;
-  if (rank >= keep) { collapse(); return; }
+  float dist = length(root2 - uGrassEye);
+  float thinned = densityAt(dist);
+  if (rank >= thinned * uDensity) { collapse(); return; }
   vec4 hn = texture(uHeightTex, uv);
   float groundH = hn.r;
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
-  keep *= edge > 0.85 ? 1.0 : edge * edge * tufts;
-  keep *= smoothstep(0.55, 0.7, hn.b);
+  float share = uDensity * (edge > 0.85 ? 1.0 : edge * edge * tufts);
+  share *= smoothstep(0.55, 0.7, hn.b);
   vec4 surf = surfaceAt(root2);
-  keep *= surf.x;
+  share *= surf.x;
   vec4 fld = fieldAt(root2);
-  if (rank >= keep) { collapse(); return; }
+  if (rank >= thinned * share) { collapse(); return; }
 
   float side01 = position.x;
-  float t = position.y;
+  float t = mix(position.y, position.z, smoothstep(uClose.x, uClose.y, dist));
   float seed = gr_rand(s);
   float lush = fbm(root2 * 0.035 + 17.0);
   float shortPatch = smoothstep(0.52, 0.68, fbm(root2 * 0.05 - 23.0));
@@ -423,9 +472,9 @@ void main() {
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   float cropped = 1.0 - smoothstep(0.78, 1.12, length((root2 - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
   h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * (1.0 - 0.34 * cropped) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
-  h *= mix(0.72, 1.0, life);
-  h *= 1.0 - smoothstep(uReach * 0.8, uReach, dist) * step(uNextDensity, 0.001);
-  float width = (0.15 + 0.1 * gr_rand(s)) * uWidthScale;
+  float stand = standing(rank, share, dist);
+  h *= mix(0.72, 1.0, life) * stand;
+  float width = (0.15 + 0.1 * gr_rand(s)) * widthAt(dist) * stand;
   float angle = gr_rand(s) * 6.2831853;
   float curve = 0.12 + 0.28 * gr_rand(s);
   float flower = step(gr_rand(s), surf.z * 0.1) * step(0.5, life);
@@ -501,38 +550,46 @@ in float vSun;
 in vec4 vFlower;
 
 void main() {
+  // Multisampling evaluates a sliver of a blade outside its own edges, where t extrapolates far past 1 and lights a pixel like a spark.
+  float T = clamp(vT, 0.0, 1.0);
+  float sun = clamp(vSun, 0.0, 1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 N = normalize(vNormal);
   if (dot(N, V) < 0.0) N = -N;
   N = normalize(N + vSideDir * 0.35 + vec3(0.0, 1e-3, 0.0));
   N = normalize(mix(N, vGroundN, 0.5) + vec3(0.0, 1e-3, 0.0));
 
-  vec3 alb = mix(vRoot, vTint, smoothstep(0.0, 0.95, vT));
-  float flattened = vFlat * vT;
+  vec3 alb = mix(vRoot, vTint, smoothstep(0.0, 0.95, T));
+  float flattened = vFlat * T;
   alb = mix(alb, alb * 1.45 + vec3(0.05, 0.06, 0.035), flattened);
-  alb = mix(alb, vFlower.rgb, vFlower.a * smoothstep(0.66, 0.78, vT));
+  alb = mix(alb, vFlower.rgb, vFlower.a * smoothstep(0.66, 0.78, T));
 
-  float ao = vAo.x + vAo.y * smoothstep(0.0, 0.8, vT);
+  float ao = vAo.x + vAo.y * smoothstep(0.0, 0.8, T);
   float diff = clamp(dot(N, uSunDir) * 0.6 + 0.4, 0.0, 1.0);
   float toward = max(dot(-V, uSunDir), 0.0);
   float back = (toward * toward) * (toward * toward);
-  vec3 trans = uSunColor * vTint * back * vT * vT * 0.9;
+  vec3 trans = uSunColor * vTint * back * T * T * 0.9;
   vec3 H = normalize(uSunDir + V);
   alb *= 1.0 - 0.14 * uShower;
-  float spec = pow(max(dot(N, H), 0.0), 24.0 + 40.0 * uShower) * (0.16 + 0.5 * flattened + 0.9 * uShower) * vT;
+  float spec = pow(max(dot(N, H), 0.0), 24.0 + 40.0 * uShower) * (0.16 + 0.5 * flattened + 0.9 * uShower) * T;
   vec3 ambient = mix(uGroundBounce, uSkyAmbient, N.y * 0.5 + 0.5);
 
-  vec3 col = alb * ambient * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * vSun;
+  vec3 col = alb * ambient * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * sun;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), 1.0);
 }`;
 
-function bladeTemplate(segments: number): THREE.BufferGeometry {
+/**
+ * x is the side, y the height along the blade. z is the height the vertex slides to as the blade nears the next
+ * level: the lowest segment closes up, leaving the next level's blade exactly (one segment fewer).
+ */
+function bladeTemplate(segments: number, closes: boolean): THREE.BufferGeometry {
   const pos: number[] = [];
   for (let i = 0; i < segments; i++) {
     const t = i / segments;
-    pos.push(-1, t, 0, 1, t, 0);
+    const closed = closes ? Math.max(i - 1, 0) / (segments - 1) : t;
+    pos.push(-1, t, closed, 1, t, closed);
   }
-  pos.push(0, 1, 0);
+  pos.push(0, 1, 1);
   const index: number[] = [];
   for (let i = 0; i < segments - 1; i++) {
     const a = i * 2;
@@ -556,9 +613,11 @@ interface Lod {
   count: number;
 }
 
-/** Tiles a level can hold: the ring between its reach and the previous level's, with room to spare. */
+/** Tiles a level can hold: every tile touching the ring between its reach and the previous level's. */
 function tileCapacity(reach: number, prevReach: number): number {
-  return Math.ceil((Math.PI * (reach * reach - prevReach * prevReach)) / (TILE * TILE) * 1.25) + 8;
+  const outer = reach + TILE * 1.5;
+  const inner = Math.max(0, prevReach - TILE * 1.5);
+  return Math.ceil((Math.PI * (outer * outer - inner * inner)) / (TILE * TILE)) + 8;
 }
 
 /**
@@ -571,34 +630,50 @@ export class Grass {
   private readonly lods: Lod[] = [];
   private readonly frustum = new THREE.Frustum();
   private readonly matrix = new THREE.Matrix4();
-  private readonly sphere = new THREE.Sphere();
-  private readonly land = new Map<number, boolean>();
-  private readonly lodOf = new Map<number, number>();
+  private readonly bounds = new Map<number, THREE.Sphere | null>();
   private readonly quad = new FullScreenQuad();
+  /** Where thinning is measured from: the camera `update` picked tiles for, on the ground plane. */
+  private readonly eye = { value: new THREE.Vector2() };
+  /** On a meadow sown sparsely (`uDensity`, the lite tier) the finer levels hold nothing but blades that never show, so tiles start at the first level that holds them all. */
+  private finest = 0;
   /** `?blades=direct`: the per-vertex blade shader, for before/after comparison with the table. */
   private readonly direct = params.blades === 'direct';
+  private readonly coarsest = Math.min(params.grasslod ?? LODS.length - 1, LODS.length - 1);
 
   constructor() {
     const touch = window.matchMedia('(pointer: coarse)').matches;
     const density = Math.min(1, params.grass ?? (params.lite ? 0.25 : touch ? 0.55 : 1));
     const reachScale = params.lite ? 0.7 : 1;
+    const specs = LODS.map((base) => ({ ...base, reach: base.reach * reachScale }));
+    const last = specs[specs.length - 1];
+    const thinning = {
+      uGrassEye: this.eye,
+      uRings: { value: new THREE.Vector4(specs[0].reach * specs[0].thinFrom, specs[0].reach, specs[1].reach * specs[1].thinFrom, specs[1].reach) },
+      uSink: { value: new THREE.Vector2(last.reach * last.thinFrom, last.reach) },
+      uLevelDensity: { value: new THREE.Vector2(...specs.slice(1).map((l) => (l.cols * l.rows) / (FINE * FINE))) },
+      uLevelWidth: { value: new THREE.Vector2(...specs.slice(1).map((l) => l.widthScale)) },
+      uShrinkBand: { value: SHRINK_BAND * reachScale },
+      uDensity: { value: density },
+    };
+    while (this.finest < this.coarsest && density <= thinning.uLevelDensity.value.getComponent(this.finest)) this.finest++;
     let prevReach = 0;
-    for (const base of LODS) {
-      const spec = { ...base, reach: base.reach * reachScale };
-      spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(spec.reach, prevReach));
+    for (const [level, spec] of specs.entries()) {
+      const blades = spec.cols * spec.rows;
+      if (level < this.finest) spec.maxTiles = 1;
+      spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach, level === this.finest ? 0 : prevReach));
       prevReach = spec.reach;
-      const template = bladeTemplate(spec.segments);
+      const template = bladeTemplate(spec.segments, level < specs.length - 1);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
       geo.setAttribute('position', template.attributes.position);
       const tileArray = new Float32Array(spec.maxTiles * 2);
-      const tiles = new THREE.InstancedBufferAttribute(tileArray, 2, false, spec.side * spec.side);
+      const tiles = new THREE.InstancedBufferAttribute(tileArray, 2, false, blades);
       tiles.setUsage(THREE.DynamicDrawUsage);
       geo.setAttribute('aTile', tiles);
       geo.instanceCount = 0;
       const tileTex = new THREE.DataTexture(tileArray, spec.maxTiles, 1, THREE.RGFormat, THREE.FloatType);
       tileTex.minFilter = tileTex.magFilter = THREE.NearestFilter;
-      const rows = Math.ceil((spec.maxTiles * spec.side * spec.side) / TABLE_WIDTH);
+      const rows = Math.ceil((spec.maxTiles * blades) / TABLE_WIDTH);
       const table = new THREE.WebGLRenderTarget(TABLE_WIDTH, rows, {
         count: 4,
         type: THREE.FloatType,
@@ -620,9 +695,9 @@ export class Grass {
           ...grassUniforms,
           uTiles: { value: tileTex },
           uTileCount: { value: 0 },
-          uSide: { value: spec.side },
           uTileSize: { value: TILE },
-          uWidthScale: { value: spec.widthScale },
+          uGrid: { value: new THREE.Vector2(spec.cols, spec.rows) },
+          uLevel: { value: level },
         },
         depthTest: false,
         depthWrite: false,
@@ -637,13 +712,11 @@ export class Grass {
           uShapeTex: { value: table.textures[1] },
           uTintTex: { value: table.textures[2] },
           uFlowerTex: { value: table.textures[3] },
-          uSide: { value: spec.side },
+          ...thinning,
+          uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
           uTileSize: { value: TILE },
-          uWidthScale: { value: spec.widthScale },
-          uReach: { value: spec.reach },
-          uThinFrom: { value: spec.thinFrom },
-          uNextDensity: { value: spec.nextDensity },
-          uDensity: { value: density },
+          uGrid: { value: new THREE.Vector2(spec.cols, spec.rows) },
+          uLevel: { value: level },
         },
         side: THREE.DoubleSide,
       });
@@ -655,48 +728,34 @@ export class Grass {
   }
 
   get bladesDrawn(): number {
-    return this.lods.reduce((n, l) => n + l.count * l.spec.side * l.spec.side, 0);
+    return this.lods.reduce((n, l) => n + l.count * l.spec.cols * l.spec.rows, 0);
   }
 
-  private hasLand(tx: number, tz: number): boolean {
+  /** The sphere holding every blade a tile could grow, or null where it has no land. Sized from the ground under the whole tile: on a cliff the corners stand metres above and below the middle. */
+  private boundsOf(tx: number, tz: number): THREE.Sphere | null {
     const key = tx * 100003 + tz;
-    let v = this.land.get(key);
+    let v = this.bounds.get(key);
     if (v === undefined) {
       const x = tx * TILE;
       const z = tz * TILE;
-      v = false;
+      let land = false;
+      let low = Infinity;
+      let high = -Infinity;
       for (const [ox, oz] of [[0.5, 0.5], [0, 0], [1, 0], [0, 1], [1, 1], [0.5, 0], [0, 0.5], [1, 0.5], [0.5, 1]]) {
         const sx = x + ox * TILE;
         const sz = z + oz * TILE;
+        const h = heightAt(sx, sz);
+        low = Math.min(low, h);
+        high = Math.max(high, h);
         /** The dark wood has its own floor of leaves and roots, and no blade there is ever drawn tall enough to see. */
-        if (heightAt(sx, sz) > GRASS_LINE - 0.8 && woodFloorAt(sx, sz) < 0.9) {
-          v = true;
-          break;
-        }
+        if (h > GRASS_LINE - 0.8 && woodFloorAt(sx, sz) < 0.9) land = true;
       }
-      if (this.land.size > 60000) this.land.clear();
-      this.land.set(key, v);
+      const rise = (high - low) / 2 + MAX_BLADE / 2;
+      v = land ? new THREE.Sphere(new THREE.Vector3(x + TILE / 2, (low + high + MAX_BLADE) / 2, z + TILE / 2), Math.hypot(TILE * 0.7072 + MAX_BLADE * 0.6, rise) + 1) : null;
+      if (this.bounds.size > 60000) this.bounds.clear();
+      this.bounds.set(key, v);
     }
     return v;
-  }
-
-  /**
-   * The level for a tile at distance d, with hysteresis: a tile only changes level once it is well past the
-   * boundary, so the camera's breathing never reshuffles the blades of tiles sitting on a ring.
-   */
-  private lodFor(key: number, d: number): number {
-    const prev = this.lodOf.get(key);
-    let level = prev ?? this.lods.findIndex((l) => d < l.spec.reach);
-    if (level < 0) level = this.lods.length - 1;
-    if (prev !== undefined) {
-      while (level > 0 && d < this.lods[level - 1].spec.reach - LOD_BAND) level--;
-      while (level < this.lods.length - 1 && d > this.lods[level].spec.reach + LOD_BAND) level++;
-    }
-    if (level !== prev) {
-      if (this.lodOf.size > 60000) this.lodOf.clear();
-      this.lodOf.set(key, level);
-    }
-    return level;
   }
 
   /** Picks the tiles to draw for this camera; call `bake` afterwards, before the scene is drawn. */
@@ -705,6 +764,7 @@ export class Grass {
     this.frustum.setFromProjectionMatrix(this.matrix);
     const cx = camera.position.x;
     const cz = camera.position.z;
+    this.eye.value.set(cx, cz);
     const reach = this.lods[this.lods.length - 1].spec.reach;
     for (const l of this.lods) l.count = 0;
     const x0 = Math.floor((Math.max(cx - reach, WINDOW.minX)) / TILE);
@@ -715,13 +775,14 @@ export class Grass {
       for (let tx = x0; tx <= x1; tx++) {
         const mx = (tx + 0.5) * TILE;
         const mz = (tz + 0.5) * TILE;
-        const d = Math.hypot(mx - cx, mz - cz) - TILE * 0.7;
-        if (d > reach) continue;
-        if (!this.hasLand(tx, tz)) continue;
-        this.sphere.center.set(mx, heightAt(mx, mz) + 1.5, mz);
-        this.sphere.radius = TILE * 0.75 + 4;
-        if (!this.frustum.intersectsSphere(this.sphere)) continue;
-        const li = this.lodFor(tx * 100003 + tz, d);
+        const nearest = Math.hypot(mx - cx, mz - cz) - TILE * 0.7072;
+        if (nearest > reach) continue;
+        const bounds = this.boundsOf(tx, tz);
+        if (!bounds || !this.frustum.intersectsSphere(bounds)) continue;
+        /** A level can stand in for a tile only once every blade in it has thinned to that level; a finer one always can. */
+        let li = this.finest;
+        while (li < this.coarsest && nearest > this.lods[li].spec.reach) li++;
+        while (li > this.finest && this.lods[li].count >= this.lods[li].spec.maxTiles) li--;
         const lod = this.lods[li];
         if (lod.count >= lod.spec.maxTiles) continue;
         lod.tiles.array[lod.count * 2] = tx * TILE;
@@ -734,7 +795,7 @@ export class Grass {
       l.tiles.addUpdateRange(0, l.count * 2);
       l.tiles.needsUpdate = true;
       l.tileTex.needsUpdate = true;
-      l.geo.instanceCount = l.count * l.spec.side * l.spec.side;
+      l.geo.instanceCount = l.count * l.spec.cols * l.spec.rows;
     }
   }
 

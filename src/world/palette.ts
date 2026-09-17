@@ -81,6 +81,28 @@ function veil(p: Palette, shower: number): void {
   grey(p.ambient, 0.3, 0.12);
   p.fog *= 1 + 1.4 * shower;
 }
+
+/**
+ * The squall, which takes two things: the warmth out of the colours, so the safe afternoon hues go to slate
+ * while a sky that is already cold is left alone, and the daylight, of which a night has none left to lose.
+ */
+function bruise(p: Palette, storm: number, night: number): void {
+  if (storm <= 0) return;
+  const dim = storm * (1 - night);
+  const chill = (c: THREE.Color, k: number, d: number) => {
+    const l = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+    const warmth = THREE.MathUtils.clamp((c.r - c.b) / Math.max(l, 1e-4), 0, 1);
+    c.lerp(tmp.setRGB(l * 0.84, l * 0.93, l * 1.08), k * storm * warmth).multiplyScalar(1 - d * dim);
+  };
+  chill(p.sun, 0.9, 0.45);
+  chill(p.zenith, 0.7, 0.32);
+  chill(p.horizon, 0.85, 0.3);
+  chill(p.horizonSun, 0.95, 0.4);
+  chill(p.ambient, 0.7, 0.22);
+  chill(p.bounce, 0.8, 0.32);
+  p.fog *= 1 + storm;
+}
+
 const tmp = new THREE.Color();
 
 const blank = (): Palette => ({
@@ -125,9 +147,10 @@ function lightAngles(dusk: number): [number, number] {
 
 /**
  * Sets sky, light and haze from how alive the world is (0 still, 1 living) and the time of day
- * (`dusk`: 0 golden afternoon, 1 sunset, 1.5 last light, 2 night), veiled by a passing `shower` (0..1).
+ * (`dusk`: 0 golden afternoon, 1 sunset, 1.5 last light, 2 night), veiled by a passing `shower` (0..1)
+ * and drained by a `storm` (0..1).
  */
-export function applyPalette(life: number, dusk: number, shower = 0): void {
+export function applyPalette(life: number, dusk: number, shower = 0, storm = 0): void {
   const u = atmo.uniforms;
   const k = THREE.MathUtils.smootherstep(life, 0, 1);
   u.uWorldLife.value = k;
@@ -139,6 +162,9 @@ export function applyPalette(life: number, dusk: number, shower = 0): void {
     else p = mixInto(outMix, DUSK, NIGHT, THREE.MathUtils.smoothstep(dusk, 1.5, 2));
   }
   veil(p, shower);
+  const night = THREE.MathUtils.smoothstep(dusk, 1.45, 1.95);
+  /** After the shower, which brightens as it greys: in a squall the weather takes the light, it does not lift it. */
+  bruise(p, storm, night);
   u.uShower.value = shower;
 
   u.uSunColor.value.copy(p.sun);
@@ -148,7 +174,7 @@ export function applyPalette(life: number, dusk: number, shower = 0): void {
   u.uSkyAmbient.value.copy(p.ambient);
   u.uGroundBounce.value.copy(p.bounce);
   u.uFogDensity.value = p.fog;
-  u.uNight.value = THREE.MathUtils.smoothstep(dusk, 1.45, 1.95);
+  u.uNight.value = night;
   u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * u.uNight.value) + 0.22 * shower;
   const [az, el] = lightAngles(dusk);
   sunDirection(az, el, u.uSunDir.value);

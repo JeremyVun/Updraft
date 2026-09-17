@@ -243,7 +243,10 @@ vec3 hemiLight(vec3 n) {
 
 /** Sun let through by the drifting clouds, baked each frame by world/clouds.ts. */
 float cloudShadow(vec2 xz) {
-  return texture(uCloudTex, (xz - uCloudDomain.xy) * uCloudDomain.zw).r;
+  vec2 uv = (xz - uCloudDomain.xy) * uCloudDomain.zw;
+  vec2 edge = min(uv, 1.0 - uv);
+  /** Past the sheet the edge texel would streak out over the world as a hard wedge, so it opens to clear sky. */
+  return mix(1.0, texture(uCloudTex, clamp(uv, 0.0, 1.0)).r, smoothstep(0.0, 0.04, min(edge.x, edge.y)));
 }
 
 /** rgb: haze colour toward this point, a: how much haze covers it. Cheap enough to evaluate per vertex. */

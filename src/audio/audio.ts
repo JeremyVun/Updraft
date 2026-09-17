@@ -80,9 +80,10 @@ const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
 const PHRASES: Record<Cue, [number, number][]> = {
-  /** Never played: the colt's voice is its own, not a musical phrase. */
+  /** Never played: the cranes' voices are their own, not musical phrases. */
   distress: [],
   calling: [],
+  bugle: [],
   breeze: [[74, 1], [78, 1], [81, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
@@ -101,7 +102,7 @@ const PHRASES: Record<Cue, [number, number][]> = {
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
 };
-const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -414,6 +415,58 @@ export class Soundscape {
     }
   }
 
+  /**
+   * The grown cranes, a long way off: a rolling bugle with a rattle in it, two or three of them overlapping and
+   * nearly all of it reverb. It is the only voice in the game lower than the colt's, so when the colt answers it
+   * the answer sounds exactly as small as it is.
+   */
+  private bugle(): void {
+    const ctx = this.ctx!;
+    const birds = 2 + Math.floor(Math.random() * 2);
+    for (let b = 0; b < birds; b++) {
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = (Math.random() - 0.5) * 0.7;
+      panner.connect(this.master);
+      const send = ctx.createGain();
+      send.gain.value = 1.5;
+      panner.connect(send).connect(this.reverb);
+      let at = ctx.currentTime + 0.05 + b * (0.2 + Math.random() * 0.45);
+      for (let i = 0; i < 2; i++) {
+        const len = 0.5 + Math.random() * 0.22;
+        const f = 460 + Math.random() * 110 - i * 30;
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f * 0.8, at);
+        osc.frequency.exponentialRampToValueAtTime(f * 1.06, at + len * 0.22);
+        osc.frequency.exponentialRampToValueAtTime(f * 0.84, at + len);
+        /** The rattle: a crane's call is a trill rolled in the throat, never a clean tone. */
+        const roll = ctx.createOscillator();
+        roll.frequency.value = 31 + Math.random() * 11;
+        const depth = ctx.createGain();
+        depth.gain.value = 0.5;
+        const trill = ctx.createGain();
+        trill.gain.value = 0.5;
+        roll.connect(depth).connect(trill.gain);
+        const throat = ctx.createBiquadFilter();
+        throat.type = 'bandpass';
+        throat.frequency.value = f * 2.4;
+        throat.Q.value = 1.3;
+        const env = ctx.createGain();
+        const peak = 0.055;
+        env.gain.setValueAtTime(0, at);
+        env.gain.linearRampToValueAtTime(peak, at + 0.07);
+        env.gain.setValueAtTime(peak, at + len * 0.62);
+        env.gain.exponentialRampToValueAtTime(0.0001, at + len);
+        osc.connect(throat).connect(trill).connect(env).connect(panner);
+        osc.start(at);
+        osc.stop(at + len + 0.05);
+        roll.start(at);
+        roll.stop(at + len + 0.05);
+        at += len + 0.12 + Math.random() * 0.1;
+      }
+    }
+  }
+
   private phrase(name: Cue): void {
     const beat = PHRASE_BEAT[name];
     let at = this.nextPulse() + 0.05;
@@ -473,6 +526,7 @@ export class Soundscape {
     for (const name of s.cues) {
       if (name === 'distress') this.peep(1);
       else if (name === 'calling') this.peep(0.95, true);
+      else if (name === 'bugle') this.bugle();
       else this.phrase(name);
     }
 

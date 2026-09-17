@@ -41,12 +41,12 @@ A splat pushes air along the segment from `(ax, az)` to `(bx, bz)`, with a Gauss
 - `swirl`: tangential acceleration around the end point `b`, peaking at about 0.7 × radius. It spins the grass and the wind lines.
 - `lift`: updraft added per second around `b`.
 
-Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, swirl and lift while pressed and held still) and the glider's wake when it skims low.
+Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and lift in the middle of circles traced with the cursor: `charge` winds up with how fast the stroke's heading turns, `tuning.pointer.twirlFrom`/`twirlFull`, and runs down when the circling stops. Nothing needs a button press) and the glider's wake when it skims low.
 
 ## Deliberate exceptions
 
 These effects bypass the field on purpose. Keep them explicit when changing any of them.
 
 - **Pushing the glider.** The field is pushed where the cursor meets the ground, but the glider flies well above that point. A stroke that passes over the glider on screen pushes it directly (`Glider.brush`), so the player pushes what they see.
-- **The updraft funnel for petals.** Petals spiral up an explicit funnel around the held point (`Petals.update`, `uUpdraft`: centre, strength, radius). They are drawn in along the ground and spill out at the top. The funnel fades over about 1.5 s after release.
+- **The updraft funnel for petals.** Petals spiral up an explicit funnel around the middle of the traced circles (`input.updraftAt`) (`Petals.update`, `uUpdraft`: centre, strength, radius). They are drawn in along the ground and spill out at the top. The funnel fades over about 1.5 s after release.
 - **Brushing gulls.** Gulls also fly far above the ground point the stroke pushes, so a stroke that passes over a gull on screen shoves it directly (`Gulls.update`, `screenBrush`), and it flaps to recover.

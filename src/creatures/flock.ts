@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { easeAngle } from './motion';
 import { CREATURE_GLSL } from './shading';
 import { blob, merge, type V3 } from './shapes';
 
 const MAX = 26;
+/** How fast a skein travels when it is going somewhere. */
+const SPEED = 19;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -45,7 +48,8 @@ in float vFade;
 void main() {
   if (vFade <= 0.01) discard;
   vec3 N = normalize(vNormal);
-  vec3 col = shadeCreature(vec3(0.72, 0.68, 0.64), N, vWorld, 0.9, 0.7, 0.6, 1.0);
+  /** Slate grey, the way a crane is: pale birds in a pale sky are no birds at all at this distance. */
+  vec3 col = shadeCreature(vec3(0.56, 0.54, 0.53), N, vWorld, 0.9, 0.7, 0.6, 1.0);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
@@ -68,14 +72,17 @@ export class CraneFlock {
   readonly mesh: THREE.Mesh;
   private readonly place: THREE.InstancedBufferAttribute;
   private readonly beat: THREE.InstancedBufferAttribute;
-  private readonly birds: { offset: THREE.Vector3; phase: number; fade: number }[] = [];
+  /** `slot` is where a bird is heading in the V while a gathering strings itself out; null once it is a line. */
+  private readonly birds: { offset: THREE.Vector3; slot: THREE.Vector3 | null; yaw: number; phase: number; fade: number }[] = [];
   private readonly lead = new THREE.Vector3();
   private readonly dir = new THREE.Vector3(0, 0, -1);
   private flying = false;
-  private readonly speed = 19;
+  private speed = SPEED;
   /** Centre and radius of a thermal the flock is wheeling up, or null when it is flying a line. */
   private thermal: { x: number; z: number; r: number; base: number } | null = null;
   private turn = 0;
+  /** How fast the air is carrying the whole flock upward: a thermal lifts it, a line climbs out on it. */
+  private climb = 0;
   /** Set when a bird has dropped out, so the story knows where it came down. */
   readonly dropped = new THREE.Vector3();
 
@@ -109,7 +116,7 @@ export class CraneFlock {
     return Math.atan2(this.dir.x, this.dir.z);
   }
 
-  /** Where the head of the skein is, for the child to watch it go over. */
+  /** What to watch the flock by: the head of the skein, or the foot of the column a gathering is turning up. */
   get head(): THREE.Vector3 {
     return this.lead;
   }
@@ -128,34 +135,38 @@ export class CraneFlock {
     );
   }
 
+  /** Where the i-th bird flies in the V: the leader in front, the rest falling back from it in pairs. */
+  private slot(i: number): THREE.Vector3 {
+    const side = i === 0 ? 0 : i % 2 === 0 ? 1 : -1;
+    const rank = Math.ceil(i / 2);
+    return new THREE.Vector3(side * rank * 3.1, (Math.random() - 0.5) * 1.6, -rank * 4.4 - Math.random() * 1.2);
+  }
+
   /** Sends a skein over, passing above (x, z) at the given height on the given bearing, from `from` units back. */
-  pass(x: number, z: number, height: number, bearing: number, count = 15, from = 115): void {
+  pass(x: number, z: number, height: number, bearing: number, count = 15, from = 115, climb = 0): void {
     this.birds.length = 0;
     const c = Math.min(count, MAX);
     for (let i = 0; i < c; i++) {
-      const side = i === 0 ? 0 : i % 2 === 0 ? 1 : -1;
-      const rank = Math.ceil(i / 2);
-      this.birds.push({
-        offset: new THREE.Vector3(side * rank * 3.1, (Math.random() - 0.5) * 1.6, -rank * 4.4 - Math.random() * 1.2),
-        phase: Math.random() * 6.28 + rank * 0.5,
-        fade: 1,
-      });
+      this.birds.push({ offset: this.slot(i), slot: null, yaw: bearing, phase: Math.random() * 6.28 + i * 0.25, fade: 1 });
     }
+    this.speed = SPEED;
     this.dir.set(Math.sin(bearing), 0, Math.cos(bearing));
     this.lead.set(x, height, z).addScaledVector(this.dir, -from);
     /** The skein is put away once it has flown far enough from where it came in, not from wherever one last fell. */
     this.dropped.copy(this.lead);
     this.thermal = null;
+    this.climb = climb;
     this.flying = true;
     this.mesh.visible = true;
   }
 
   /**
    * A gathering, spiralling up a thermal the way cranes do before they go on. Meant to be understood without a
-   * word: that is where the others are. `rise` is how far the column climbs — wide and tall for one seen from
-   * across the meadow, short and close for one that has come down over your head.
+   * word: that is where the others are. `rise` is how far apart in height the column strings them — wide and
+   * tall for one seen from across the meadow, short and close for one that has come down over your head — and
+   * `climb` is how fast the thermal carries the whole column up.
    */
-  circle(x: number, z: number, base: number, radius: number, count = 26, rise = 46): void {
+  circle(x: number, z: number, base: number, radius: number, count = 26, rise = 46, climb = 0): void {
     this.birds.length = 0;
     const c = Math.min(count, MAX);
     for (let i = 0; i < c; i++) {
@@ -165,6 +176,8 @@ export class CraneFlock {
           (i / c) * rise + Math.random() * rise * 0.17,
           0.85 + Math.random() * 0.3,
         ),
+        slot: null,
+        yaw: 0,
         phase: Math.random() * 6.28,
         fade: 1,
       });
@@ -172,8 +185,38 @@ export class CraneFlock {
     this.thermal = { x, z, r: radius, base };
     this.lead.set(x, base, z);
     this.turn = 0;
+    this.climb = climb;
     this.flying = true;
     this.mesh.visible = true;
+  }
+
+  /**
+   * The gathering goes on without the one it left behind. Each bird glides out of the wheel into its place in
+   * the V, and turns onto the new heading as it gets there, so the family never cuts from one shape to the other.
+   */
+  goOn(bearing: number, climb: number, speed: number, time: number): void {
+    const t = this.thermal;
+    if (!t) return;
+    this.speed = speed;
+    const cy = Math.cos(bearing);
+    const sy = Math.sin(bearing);
+    let mid = 0;
+    for (const b of this.birds) mid += b.offset.y / this.birds.length;
+    this.dir.set(sy, 0, cy);
+    this.lead.set(t.x, t.base + mid, t.z);
+    this.dropped.copy(this.lead);
+    for (const b of this.birds) {
+      const a = b.offset.x + this.turn;
+      const dx = t.x + Math.cos(a) * t.r * b.offset.z - this.lead.x;
+      const dy = t.base + b.offset.y + Math.sin(time * 0.3 + b.phase) * 2.5 - this.lead.y;
+      const dz = t.z + Math.sin(a) * t.r * b.offset.z - this.lead.z;
+      b.offset.set(cy * dx - sy * dz, dy, sy * dx + cy * dz);
+    }
+    /** Whoever is furthest along the new heading already leads, so nobody flies back through the flock. */
+    const order = this.birds.map((_, i) => i).sort((a, b) => this.birds[b].offset.z - this.birds[a].offset.z);
+    order.forEach((bird, place) => (this.birds[bird].slot = this.slot(place)));
+    this.thermal = null;
+    this.climb = climb;
   }
 
   /** Stops whatever the flock is doing and puts it away. */
@@ -188,13 +231,16 @@ export class CraneFlock {
   private wheel(dt: number, time: number): void {
     const t = this.thermal!;
     this.turn += dt * 0.22;
+    t.base += this.climb * dt;
+    this.lead.set(t.x, t.base, t.z);
     let drawn = 0;
     for (const b of this.birds) {
       const a = b.offset.x + this.turn;
       const x = t.x + Math.cos(a) * t.r * b.offset.z;
       const z = t.z + Math.sin(a) * t.r * b.offset.z;
       const y = t.base + b.offset.y + Math.sin(time * 0.3 + b.phase) * 2.5;
-      this.place.setXYZW(drawn, x, y, z, a + Math.PI * 0.5);
+      b.yaw = a + Math.PI * 0.5;
+      this.place.setXYZW(drawn, x, y, z, b.yaw);
       this.beat.setXYZW(drawn, time * 2.6 + b.phase, b.fade, 0, 0);
       drawn++;
     }
@@ -230,6 +276,7 @@ export class CraneFlock {
       return;
     }
     this.lead.addScaledVector(this.dir, this.speed * dt);
+    this.lead.y += this.climb * dt;
     const yaw = Math.atan2(this.dir.x, this.dir.z);
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
@@ -237,12 +284,16 @@ export class CraneFlock {
     let anyVisible = false;
     for (const b of this.birds) {
       if (b.fade <= 0) continue;
+      if (b.slot) {
+        b.offset.lerp(b.slot, 1 - Math.exp(-dt * 0.5));
+        b.yaw = easeAngle(b.yaw, yaw, 1.1, dt);
+      } else b.yaw = yaw;
       const ox = b.offset.x * cy + b.offset.z * sy;
       const oz = -b.offset.x * sy + b.offset.z * cy;
       const x = this.lead.x + ox;
       const z = this.lead.z + oz;
       const y = this.lead.y + b.offset.y + Math.sin(time * 0.6 + b.phase) * 0.6;
-      this.place.setXYZW(drawn, x, y, z, yaw);
+      this.place.setXYZW(drawn, x, y, z, b.yaw);
       this.beat.setXYZW(drawn, time * 3.4 + b.phase, b.fade, 0, 0);
       drawn++;
       anyVisible = true;

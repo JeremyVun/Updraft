@@ -5,7 +5,7 @@ import { tuning } from '../tuning';
 
 const T = tuning.pointer;
 
-/** Turns pointer motion into wind: gusts along the path, and an updraft while pressed and held still. */
+/** Turns pointer motion into wind: gusts along the path, and an updraft in the middle of circles traced with it. */
 export class PointerInput {
   readonly world = new THREE.Vector3();
   /** Pointer in normalised device coordinates this frame and last frame. */
@@ -14,8 +14,10 @@ export class PointerInput {
   /** Current gust speed in world units/s after shaping (0 when idle), and its direction on the ground. */
   gust = 0;
   readonly gustDir = new THREE.Vector2(1, 0);
-  /** Updraft charge, 0..1. */
+  /** Updraft charge, 0..1: wound up by tracing circles, and running down as soon as the circling stops. */
   charge = 0;
+  /** The middle of the circles being traced, where the air rises. */
+  readonly updraftAt = new THREE.Vector3();
   present = false;
   /**
    * Set while the story is playing a beat out on its own. The pointer still tracks, but it puts nothing into the
@@ -30,9 +32,9 @@ export class PointerInput {
   private readonly vel = new THREE.Vector2();
   private readonly instVel = new THREE.Vector2();
   private readonly ray = new THREE.Raycaster();
-  private lastEvent = { x: 0, y: 0, t: 0 };
-  private screenSpeed = 0;
-  private stillTime = 0;
+  private heading: number | null = null;
+  private spin = 0;
+  private sinceHeading = 0;
   private listeners: ((kind: 'down' | 'up') => void)[] = [];
 
   constructor(private readonly el: HTMLElement) {
@@ -64,11 +66,6 @@ export class PointerInput {
   private move(e: PointerEvent): void {
     const rect = this.el.getBoundingClientRect();
     this.eventNdc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
-    const now = performance.now();
-    const dt = Math.max(1, now - this.lastEvent.t) / 1000;
-    const inst = Math.hypot(e.clientX - this.lastEvent.x, e.clientY - this.lastEvent.y) / dt;
-    this.screenSpeed = this.screenSpeed * 0.6 + Math.min(inst, 5000) * 0.4;
-    this.lastEvent = { x: e.clientX, y: e.clientY, t: now };
     if (!this.present) this.hasPrev = false;
     this.present = true;
   }
@@ -97,10 +94,42 @@ export class PointerInput {
     out.y = 0;
   }
 
+  /**
+   * Winds the updraft up while the cursor goes round and round. It reads how fast the stroke's heading is turning on
+   * screen, so the size of the circles does not matter, a straight stroke counts for nothing, and scribbling back
+   * and forth (a heading that flips rather than turns) counts for nothing either.
+   */
+  private twirl(dt: number, camera: THREE.Camera): void {
+    const aspect = camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1;
+    const dx = (this.ndc.x - this.prevNdc.x) * aspect;
+    const dy = this.ndc.y - this.prevNdc.y;
+    /** Pointer events do not arrive every frame, so the turn is timed from the last frame that had one. */
+    this.sinceHeading += dt;
+    if (Math.hypot(dx, dy) > 0.002) {
+      const heading = Math.atan2(dy, dx);
+      let turning = 0;
+      if (this.heading !== null) {
+        const turned = Math.atan2(Math.sin(heading - this.heading), Math.cos(heading - this.heading));
+        if (Math.abs(turned) < 1.2) turning = turned / this.sinceHeading;
+      }
+      this.spin += (turning - this.spin) * (1 - Math.exp(-this.sinceHeading * 5));
+      this.heading = heading;
+      this.sinceHeading = 0;
+    } else if (this.sinceHeading > 0.15) {
+      this.spin *= Math.exp(-dt * 5);
+    }
+    const want = THREE.MathUtils.smoothstep(Math.abs(this.spin), T.twirlFrom, T.twirlFull);
+    if (want > this.charge) this.charge = Math.min(want, this.charge + dt * T.chargeRate * want);
+    else this.charge = Math.max(want, this.charge - dt * T.dischargeRate);
+    const settle = this.charge < 0.05 ? 1 : 1 - Math.exp(-dt * 2);
+    this.updraftAt.lerp(this.world, settle);
+  }
+
   update(dt: number, camera: THREE.Camera, wind: WindField): void {
-    this.screenSpeed *= Math.exp(-dt * 10);
     if (!this.present || this.muted) {
       this.hasPrev = false;
+      this.heading = null;
+      this.spin = 0;
       this.gust *= Math.exp(-dt * 6);
       this.charge = Math.max(0, this.charge - dt * 1.5);
       return;
@@ -139,21 +168,19 @@ export class PointerInput {
       });
     }
 
-    const still = this.down && this.screenSpeed < T.holdScreenSpeed;
-    this.stillTime = still ? this.stillTime + dt : 0;
-    if (this.stillTime > 0.12) this.charge = Math.min(1, this.charge + dt * T.chargeRate);
-    else this.charge = Math.max(0, this.charge - dt * T.dischargeRate);
-    if (this.charge > 0.01 && this.down) {
+    this.twirl(dt, camera);
+    if (this.charge > 0.01) {
+      /** No swirl of its own: the strokes going round it are already turning the air, the way the player drew it. */
       wind.addSplat({
-        ax: this.world.x,
-        az: this.world.z,
-        bx: this.world.x,
-        bz: this.world.z,
+        ax: this.updraftAt.x,
+        az: this.updraftAt.z,
+        bx: this.updraftAt.x,
+        bz: this.updraftAt.z,
         vx: 0,
         vz: 0,
         radius: 5 + this.charge * 4,
         energy: 0,
-        swirl: 16 + this.charge * 30,
+        swirl: 0,
         lift: 1.0 + this.charge * 2.2,
       });
     }

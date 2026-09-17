@@ -145,7 +145,7 @@ export class CrossingChapter implements Chapter {
       const toBack = Math.atan2(back.x - boat.position.x, back.z - boat.position.z);
       seatYaw += Math.atan2(Math.sin(toBack - boat.yaw), Math.cos(toBack - boat.yaw)) * turn;
     }
-    child.ride(boat.seat(this.seat), seatYaw);
+    child.ride(boat.seat(this.seat), seatYaw, boat.roll, boat.pitch);
     plane.hold(child.handPosition(this.hand), child.yaw);
 
     if (farewell && back) {

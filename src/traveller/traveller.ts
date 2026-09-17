@@ -51,6 +51,8 @@ export class Traveller {
   sitting = true;
   /** Carried by something else (the boat): placed each frame by `ride`, no walking. */
   riding = false;
+  private rideRoll = 0;
+  private ridePitch = 0;
   /** 0..1: both hands holding the drawing up in front. */
   presenting = 0;
   /** Where the child is looking, if anywhere in particular. */
@@ -79,6 +81,8 @@ export class Traveller {
 
   constructor(private readonly wind: WindField) {
     this.rig = buildChild();
+    /** Yaw first, then the tilt of whatever is carrying them, the same order the boat lies in. */
+    this.rig.root.rotation.order = 'YXZ';
     this.shadowMat = new THREE.ShaderMaterial({
       vertexShader: /* glsl */ `out vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: SHADOW_FRAG,
@@ -155,12 +159,15 @@ export class Traveller {
     this.scarf.reset(this.rig.neck.getWorldPosition(this.tmp));
   }
 
-  ride(at: THREE.Vector3, yaw: number): void {
+  ride(at: THREE.Vector3, yaw: number, roll = 0, pitch = 0): void {
     this.riding = true;
     this.sitting = true;
     this.goal = null;
     this.position.copy(at);
     this.yaw = yaw;
+    /** A rider takes only some of what the hull does: they ride it out nearer upright than the boat lies. */
+    this.rideRoll = roll * 0.55;
+    this.ridePitch = pitch * 0.55;
   }
 
   dismount(): void {
@@ -482,7 +489,7 @@ export class Traveller {
     const sit = this.sit;
     r.root.position.copy(this.position);
     r.root.position.y += lift - crouch - sit * 0.5 + this.hop;
-    r.root.rotation.set(0, this.yaw, 0);
+    r.root.rotation.set(this.riding ? this.ridePitch : 0, this.yaw, this.riding ? this.rideRoll : 0);
     r.body.position.y = 0.62 + this.bob + Math.sin(t * 2.2) * 0.008;
     r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1, bodyY, 0);
     r.body.scale.set(1, 1 + Math.sin(t * 2.2) * 0.012, 1);

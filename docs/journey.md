@@ -279,9 +279,10 @@ waits for the water-shading session, because it is built on the sea.
 
 | piece | state |
 | --- | --- |
-| the autumn birches | building (wave 1) |
-| kite and pinwheels on the island of lines | building (wave 1) |
-| the piano on the meadow | building (wave 1) |
+| *all three below* | merged together on branch `rooms` (`/private/tmp/updraft-rooms`), which typechecks and builds. Not on `main`: `main` has carried 30-odd files of other sessions' uncommitted work since the fork, and the merge waits for them to commit. One polish pass over all three is running on `rooms`. |
+| the autumn birches | first pass done (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`), its agent cut off by the session limit just short of its report. Orchestrator's look: the best of the three — gold crowns against the low sun, the swing, and the stripped island seen from the north beach are all right. To fix: the leaf litter also draws over the meadow (a bug the agent had just found); the floor under the trees is near-black with confetti squares on it and wants to be a warm lit carpet of leaf-shaped leaves; a gust does not yet visibly tear a cloud off the crowns from the player's camera. |
+| kite and pinwheels on the island of lines | first pass done (`world/kite.ts`, `world/pinwheels.ts`), agent cut off the same way. Orchestrator's look: the string running down to the boat from the crest does its job, and a gust does run down a row of wheels. To fix: the kite is a white dart and reads as *the paper plane*, which is the one thing it must not be mistaken for — it wants to be an unmistakable diamond with a bow tail and the door's red on it, and a little bigger from the crest; the wheels at rest read as grey bow-ties rather than paper pinwheels. |
+| the piano on the meadow | first pass done on branch `piano` (`world/piano.ts`, `story/piano.ts`, `PianoStrings` in `audio.ts`), not yet on `main`. It works: the wind plays runs, chords and stray notes in the meadow's scale, the child sits and listens, nobody is held up. Orchestrator's look at it: it reads as a piano, but it is a near-black box at walking distance and needs bleached, sun-catching wood to belong in the golden light; the seated shot comes in too close and too steep and loses the sky; the child sits side-on to the keys rather than facing them; nobody has heard the tone yet (Jeremy's ear needed). Second pass to do together with **the cygnet walking the keys** (`Piano.walkKeys` is built and waiting) once the cygnet lands. |
 | the sleeping island | waiting on the cygnet |
 | the sky mirror | waiting on the water session |
 

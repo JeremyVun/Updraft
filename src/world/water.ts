@@ -5,14 +5,69 @@ import { mainlandCoastZ } from './heightfield';
 import { PlanarReflection } from './water/reflection';
 import { ShoreBake } from './water/shore';
 import { SURF_GLSL, surfUniforms } from './water/surf';
+import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { rippleTexture } from './water/textures';
 
+/** Vertex spacing of the sea near the camera, and how far that even spacing reaches before the mesh opens out. */
+const STEP = 1.9;
+const EVEN = 110;
+const REACH = 4600;
+
+/**
+ * A grid centred on the camera, evenly spaced where the swell is real geometry and opening out geometrically
+ * beyond it, so one mesh carries both the water at the bow and the water at the horizon.
+ */
+function seaGrid(segments: number): THREE.BufferGeometry {
+  const half = segments / 2;
+  const even = Math.round(EVEN / STEP);
+  const grow = (REACH / EVEN) ** (1 / (half - even));
+  const axis: number[] = [];
+  for (let i = -half; i <= half; i++) {
+    const n = Math.abs(i);
+    const d = n <= even ? n * STEP : EVEN * grow ** (n - even);
+    axis.push(Math.sign(i) * d);
+  }
+  const n = axis.length;
+  const position = new Float32Array(n * n * 3);
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      position[(j * n + i) * 3] = axis[i];
+      position[(j * n + i) * 3 + 2] = axis[j];
+    }
+  }
+  const index = new Uint32Array((n - 1) * (n - 1) * 6);
+  let k = 0;
+  for (let j = 0; j < n - 1; j++) {
+    for (let i = 0; i < n - 1; i++) {
+      const a = j * n + i;
+      index.set([a, a + n, a + 1, a + 1, a + n, a + n + 1], k);
+      k += 6;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  geo.setIndex(new THREE.BufferAttribute(index, 1));
+  return geo;
+}
+
 const VERT = /* glsl */ `
+${ATMO_GLSL}
+${SWELL_GLSL}
 out vec3 vWorld;
+/** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
+out vec3 vSwell;
 void main() {
-  vec4 w = modelMatrix * vec4(position, 1.0);
-  vWorld = w.xyz;
-  gl_Position = projectionMatrix * viewMatrix * w;
+  vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
+  vec2 xz = w.xz;
+  float height = swellHeight(xz, length(cameraPosition.xz - xz));
+  const float E = 1.5;
+  vec3 at = swellShift(xz, height);
+  vec3 along = vec3(E, 0.0, 0.0) + swellShift(xz + vec2(E, 0.0), height) - at;
+  vec3 across = vec3(0.0, 0.0, E) + swellShift(xz + vec2(0.0, E), height) - at;
+  vec3 n = normalize(cross(across, along));
+  vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
+  vWorld = w + at;
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
 const FRAG = /* glsl */ `
@@ -27,11 +82,18 @@ uniform vec3 uAbsorb;
 uniform vec3 uSand;
 uniform vec3 uWetSand;
 in vec3 vWorld;
+in vec3 vSwell;
 
-/** The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. */
-vec3 mirrored(vec3 R, float lod) {
+/**
+ * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
+ * argument is 0 where that lands off the mirror, whose border texel would otherwise streak across the water.
+ */
+vec3 mirrored(vec3 R, float lod, out float seen) {
   vec4 p = uMirrorMatrix * vec4(vWorld + R * 48.0, 1.0);
-  return textureLod(uMirror, p.xy / p.w, lod).rgb;
+  vec2 uv = p.xy / p.w;
+  vec2 edge = min(uv, 1.0 - uv);
+  seen = p.w > 0.0 ? smoothstep(0.0, 0.06, min(edge.x, edge.y)) : 0.0;
+  return textureLod(uMirror, clamp(uv, 0.0, 1.0), lod).rgb;
 }
 
 /** Ripple slopes carried along by the wind; two phases cross-fade so the drift never stretches the pattern. */
@@ -127,15 +189,18 @@ void main() {
   vec2 xz = vWorld.xz;
   vec2 uv = domainUv(xz);
   vec2 edge = min(uv, 1.0 - uv);
-  float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
+  /** Wide, because the wind beyond the window is only an approximation of it and the join must not show. */
+  float inside = smoothstep(0.0, 0.11, min(edge.x, edge.y));
   Footprint fp = footprintOf(xz);
   float footprint = max(length(fp.dx), length(fp.dy));
 
   vec4 wind = texture(uWindTex, clamp(uv, 0.0, 1.0));
   vec2 flow = wind.xy;
   if (inside < 1.0) {
+    /** Beyond the window there is only the prevailing breeze. Held near its own strength, or the join shows as
+        a band of rougher water across the sea; the cat's paw below is what keeps the open water from going even. */
     float g = fbm(xz * 0.02 - uBreeze * uTime * 0.02);
-    flow = mix(uBreeze * (0.3 + 2.3 * g * g), wind.xy, inside);
+    flow = mix(uBreeze * (0.75 + 0.5 * g), wind.xy, inside);
   }
   float gust = wind.z * inside;
   float speed = length(flow);
@@ -162,8 +227,9 @@ void main() {
   float a2 = 0.045 * calm + 0.115 * rough + 0.16 * storm;
   vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
   vec3 swell = vec3(sw.rg * 2.0 - 1.0, max(sw.b - dot(sw.rg * 2.0 - 1.0, sw.rg * 2.0 - 1.0), 0.0));
-  float A_SWELL = 0.07 * calm * (1.0 + 0.9 * uSquall);
-  vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2 + swell.xy * A_SWELL;
+  /** The painted swell gives way to the modelled one as it comes close enough to the camera to be geometry. */
+  float A_SWELL = 0.07 * calm * (1.0 - vSwell.z);
+  vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2 + swell.xy * A_SWELL + vSwell.xy;
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
 
   vec3 surf = vec3(0.0);
@@ -184,14 +250,17 @@ void main() {
   vec3 R = reflect(-V, N);
   R = normalize(vec3(R.x, abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv), R.z));
   vec3 sky = skyColor(R);
+  float seen;
+  vec3 mirror = mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0), seen);
   // Capped just above the open sky: the mirrored sun disc would bloom, and the glitter draws the sun instead.
-  vec3 refl = min(mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0)), sky * 1.25 + 0.1);
+  vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen);
   refl = mix(sky, refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.17 * rough - 0.18 * storm);
   // Facet masking dims a rough sea seen edge-on; capped, or a gust punches a hole of a different colour in it.
   float roughness = min(sqrt(sqrt(alpha2)), 0.42);
   float F = 0.02 + (max(1.0 - roughness * 1.4, 0.02) - 0.02) * pow(1.0 - nv, 5.0);
 
-  float sh = cloudShadow(xz) * bedN.w;
+  /** The land's baked shade stops at the window; beyond it the edge texel would streak out as a hard wedge. */
+  float sh = cloudShadow(xz) * mix(1.0, bedN.w, inside);
   vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
   vec3 body = uDeep * scatterLight;
   if (depth < 9.0) {
@@ -270,6 +339,7 @@ export class Water {
       uniforms: {
         ...atmo.uniforms,
         ...surfUniforms,
+        ...swellUniforms,
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
         uMirrorMatrix: { value: this.reflection.matrix },
@@ -281,9 +351,7 @@ export class Water {
         uWetSand: { value: new THREE.Color('#a48c66') },
       },
     });
-    const geo = new THREE.PlaneGeometry(9000, 9000, 1, 1);
-    geo.rotateX(-Math.PI / 2);
-    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh = new THREE.Mesh(seaGrid(params.lite ? 128 : 192), mat);
     this.mesh.frustumCulled = false;
   }
 
@@ -297,6 +365,8 @@ export class Water {
    * reflection under a gliding camera cannot be seen); call after the camera has moved, before the scene is drawn.
    */
   update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
+    /** Snapped to the even part of the grid, so the vertices carrying the swell never slide through it. */
+    this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
     if (!params.mirror || camera.position.z < mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT) return;
     if (this.frame++ % params.mirror) return;
     atmo.uniforms.uMirrorPass.value = 1;
