@@ -314,7 +314,7 @@ export class MeadowChapter implements Chapter {
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat } = this.cast;
     const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 30 && this.leg < ROUTE.length - 1) this.leg++;
+    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
     if (this.cast.crane.flying) {
@@ -382,8 +382,12 @@ export class MeadowChapter implements Chapter {
     const tx = 'x' in t ? t.x : 0;
     const tz = t instanceof THREE.Vector2 ? t.y : t.z;
     const angle = Math.atan2(tx - c.position.x, tz - c.position.z) + (Math.random() - 0.5) * 0.5;
-    c.throwToward(c.position.x + Math.sin(angle) * 26, c.position.z + Math.cos(angle) * 26, () => {
-      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 9.4, 5.2, Math.cos(angle) * 9.4));
+    /**
+     * The longest walk in the game, over open ground: it is thrown a good way out ahead and they go after it
+     * without dawdling. A measured playthrough spent five minutes on the last stretch alone at the old stride.
+     */
+    c.throwToward(c.position.x + Math.sin(angle) * 34, c.position.z + Math.cos(angle) * 34, () => {
+      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 10.6, 5.2, Math.cos(angle) * 10.6));
       this.play = 'watch';
       c.lookAt = this.cast.plane.position;
     });
@@ -401,7 +405,7 @@ export class MeadowChapter implements Chapter {
       c.pickUp(() => {
         p.hold(c.handPosition(this.hand), c.yaw);
         this.play = 'hold';
-        this.holdUntil = this.now + 0.7 + Math.random() * 0.9;
+        this.holdUntil = this.now + 0.4 + Math.random() * 0.55;
       });
     }, 1.2);
   }
