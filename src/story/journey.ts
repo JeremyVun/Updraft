@@ -101,7 +101,7 @@ export class Journey {
     cast.boat.beach(x, z, yaw);
     cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
     cast.boat.launch();
-    this.withColt();
+    this.withCygnet();
   }
 
   /** Puts the boat ashore with the child beside it, as if a crossing had just ended. */
@@ -111,15 +111,15 @@ export class Journey {
     cast.boat.beach(bx, bz, Math.PI);
     cast.boat.grounded = true;
     cast.child.place(cx, cz, Math.PI);
-    this.withColt();
+    this.withCygnet();
   }
 
-  /** Everywhere past the first island the child is carrying the colt, so every test start has to start that way. */
-  private withColt(): void {
+  /** Everywhere past the first island the child is carrying the cygnet, so every test start has to start that way. */
+  private withCygnet(): void {
     const { cast } = this;
-    cast.crane.visible = true;
-    cast.crane.bond = 0.5;
-    cast.crane.carry(cast.child.armsPoint(new THREE.Vector3()), cast.child.yaw);
+    cast.cygnet.visible = true;
+    cast.cygnet.bond = 0.5;
+    cast.cygnet.carry(cast.child.armsPoint(new THREE.Vector3()), cast.child.yaw);
   }
 
   get shot(): Shot {

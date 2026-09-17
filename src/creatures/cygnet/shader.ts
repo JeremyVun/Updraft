@@ -2,7 +2,7 @@ import { ATMO_GLSL } from '../../world/atmosphere';
 import { CREATURE_GLSL } from '../shading';
 import { BILL, BONES, EYE, EYE_AT, QUILL, SHANK } from './body';
 
-export const COLT_VERT = /* glsl */ `
+export const CYGNET_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
 uniform mat4 uBones[${BONES}];
@@ -28,12 +28,12 @@ void main() {
   vWorld = world.xyz;
   vNormal = normalize(mat3(b) * n);
   vMat = aMat;
-  /** Mottling in rest space, offset per part, so the down does not swim as the colt moves. */
+  /** Mottling in rest space, offset per part, so the down does not swim as the cygnet moves. */
   vDown = position * 31.0 + aPart * 5.3;
   gl_Position = projectionMatrix * nudgedView(vWorld, uNudge);
 }`;
 
-export const COLT_FRAG = /* glsl */ `
+export const CYGNET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
 uniform float uAir;

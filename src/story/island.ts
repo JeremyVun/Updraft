@@ -6,7 +6,7 @@ import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
-type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'skein' | 'toCrane' | 'near' | 'kneel' | 'gather' | 'leaving' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'skein' | 'toCygnet' | 'near' | 'kneel' | 'gather' | 'leaving' | 'toBoat' | 'push' | 'aboard';
 type Play = 'watch' | 'fetch' | 'hold';
 
 /** Where the child sits at the start: the beach on the island's south shore, looking out to sea. */
@@ -141,7 +141,7 @@ export class IslandChapter implements Chapter {
      * The music gets out of the way when the skein appears and does not properly return until they are at sea:
      * after the fall the island stays subdued, so the crossing feels like coming up for air.
      */
-    const quiet = this.beat === 'skein' || this.beat === 'toCrane' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather';
+    const quiet = this.beat === 'skein' || this.beat === 'toCygnet' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather';
     const after = this.dropped && (this.beat === 'leaving' || this.beat === 'toBoat' || this.beat === 'push');
     this.hushWanted = quiet ? (this.dropped ? 1 : 0.55) : after ? 0.45 : 0;
     this.hush += (this.hushWanted - this.hush) * (1 - Math.exp(-dt * 0.9));
@@ -367,8 +367,8 @@ export class IslandChapter implements Chapter {
         cue('skein');
       }
     } else if (this.beat === 'skein') {
-      const { crane, flock } = this.cast;
-      c.lookAt = this.dropped ? crane.position : flock.head;
+      const { cygnet, flock } = this.cast;
+      c.lookAt = this.dropped ? cygnet.position : flock.head;
       /**
        * The bird at the back of the V is the one that cannot hold on, and it goes when it is right overhead, so
        * the whole fall happens in front of the player. The flock does not come back for it.
@@ -377,7 +377,7 @@ export class IslandChapter implements Chapter {
         this.findFallen(c.position.x, c.position.z);
         if (flock.dropOne(this.left)) {
           this.dropped = true;
-          crane.plummet(this.left, this.fallen, 8.5, flock.heading);
+          cygnet.plummet(this.left, this.fallen, 8.5, flock.heading);
           cue('fallen');
           /** Square on to the line of the fall, on whichever side is clear of the tree they are standing under. */
           const fx = this.fallen.x - this.left.x;
@@ -390,31 +390,31 @@ export class IslandChapter implements Chapter {
       }
       /** It lands. The child does not move for a moment, and then runs. */
       /** It calls the whole way down and keeps calling on the ground. Nothing else is making a sound. */
-      if (this.dropped && !crane.carried && time > this.nextCall) {
+      if (this.dropped && !cygnet.carried && time > this.nextCall) {
         cue('distress');
-        crane.call(false);
-        this.nextCall = time + (crane.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
+        cygnet.call(false);
+        this.nextCall = time + (cygnet.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
       }
-      if (this.dropped && crane.grounded && this.downAt < 0) this.downAt = this.now;
+      if (this.dropped && cygnet.grounded && this.downAt < 0) this.downAt = this.now;
       /** The player is left alone with it for a moment before the child moves. */
       if (this.downAt > 0 && this.now - this.downAt > 3.4 && !c.busy) {
-        this.beat = 'toCrane';
+        this.beat = 'toCygnet';
         this.beatStart = this.now;
-        const dx = crane.position.x - c.position.x;
-        const dz = crane.position.z - c.position.z;
+        const dx = cygnet.position.x - c.position.x;
+        const dz = cygnet.position.z - c.position.z;
         const d = Math.hypot(dx, dz) || 1;
-        c.walkTo(crane.position.x - (dx / d) * 4.5, crane.position.z - (dz / d) * 4.5, true, () => this.slowDown(), 1.2);
+        c.walkTo(cygnet.position.x - (dx / d) * 4.5, cygnet.position.z - (dz / d) * 4.5, true, () => this.slowDown(), 1.2);
       }
-    } else if (this.beat === 'toCrane' || this.beat === 'near' || this.beat === 'kneel') {
-      c.lookAt = this.cast.crane.position;
-      if (this.dropped && !this.cast.crane.carried && time > this.nextCall) {
+    } else if (this.beat === 'toCygnet' || this.beat === 'near' || this.beat === 'kneel') {
+      c.lookAt = this.cast.cygnet.position;
+      if (this.dropped && !this.cast.cygnet.carried && time > this.nextCall) {
         cue('distress');
-        this.cast.crane.call(false);
+        this.cast.cygnet.call(false);
         this.nextCall = time + 2.1 + Math.random() * 0.6;
       }
       if (this.beat === 'kneel' && t > 1.5 && !c.busy) this.gather();
     } else if (this.beat === 'gather') {
-      c.lookAt = this.cast.crane.eye(this.tmp);
+      c.lookAt = this.cast.cygnet.eye(this.tmp);
     } else if (this.beat === 'push') {
       if (t > 0.9 && !boat.afloat) boat.launch();
       if (t > 2.3) {
@@ -425,7 +425,7 @@ export class IslandChapter implements Chapter {
   }
 
   /**
-   * Where the colt comes down: open ground between the child and the boat, so it is always on the near side of
+   * Where the cygnet comes down: open ground between the child and the boat, so it is always on the near side of
    * the ridge and on the way they are going. Never over the hill, where the player could not see any of it.
    */
   private findFallen(x: number, z: number): void {
@@ -446,27 +446,27 @@ export class IslandChapter implements Chapter {
 
   /** The last few steps are walked, not run: you do not charge at something that small and frightened. */
   private slowDown(): void {
-    const { child: c, crane } = this.cast;
+    const { child: c, cygnet } = this.cast;
     this.beat = 'near';
     this.beatStart = this.now;
-    c.walkTo(crane.position.x, crane.position.z - 1.15, false, () => {
+    c.walkTo(cygnet.position.x, cygnet.position.z - 1.15, false, () => {
       this.beat = 'kneel';
       this.beatStart = this.now;
-      c.faceToward(crane.position.x, crane.position.z, 1);
-      crane.watch(c.position);
+      c.faceToward(cygnet.position.x, cygnet.position.z, 1);
+      cygnet.watch(c.position);
     }, 0.9);
   }
 
-  /** Kneels, gathers the colt up in both arms, and from here on carries it. */
+  /** Kneels, gathers the cygnet up in both arms, and from here on carries it. */
   private gather(): void {
-    const { child: c, crane } = this.cast;
+    const { child: c, cygnet } = this.cast;
     this.beat = 'gather';
     this.beatStart = this.now;
     c.faceToward(this.fallen.x, this.fallen.z, 1);
     c.pickUp(() => {
-      crane.carry(c.armsPoint(this.tmp), c.yaw);
-      crane.bind(0.3);
-      crane.watch(null);
+      cygnet.carry(c.armsPoint(this.tmp), c.yaw);
+      cygnet.bind(0.3);
+      cygnet.watch(null);
       this.beat = 'leaving';
       this.beatStart = this.now;
       this.play = 'hold';
@@ -505,16 +505,16 @@ export class IslandChapter implements Chapter {
     s.eye = undefined;
     if (this.beat === 'skein') {
       /** Planted beside the child, looking up: whatever is up there is what you are made to watch. */
-      const { crane, flock } = this.cast;
+      const { cygnet, flock } = this.cast;
       if (this.dropped) {
         /**
-         * Once it is falling the camera stands square on to the drop and rides down with it, so the colt is
+         * Once it is falling the camera stands square on to the drop and rides down with it, so the cygnet is
          * always centred. Anchoring on the child left the whole fall above the top of the frame.
          */
-        const k = crane.position;
+        const k = cygnet.position;
         /** Square on while it is in the air; lifted and looking down once it is in the grass, or the grass hides it. */
         const ground = Math.max(heightAt(k.x, k.z), 0);
-        const settled = crane.grounded ? 1 : 0;
+        const settled = cygnet.grounded ? 1 : 0;
         const out = 12 - settled * 2;
         s.eye = this.eye.set(
           k.x + this.watchFrom.x * out,
@@ -532,8 +532,8 @@ export class IslandChapter implements Chapter {
       this.focus.copy(c);
       return;
     }
-    if (this.beat === 'toCrane' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather') {
-      const k = this.cast.crane.position;
+    if (this.beat === 'toCygnet' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather') {
+      const k = this.cast.cygnet.position;
       const close = this.beat === 'kneel' || this.beat === 'gather';
       s.eye = undefined;
       s.target.set((c.x + k.x) / 2, Math.max(c.y, k.y) + (close ? 0.75 : 1.1), (c.z + k.z) / 2);

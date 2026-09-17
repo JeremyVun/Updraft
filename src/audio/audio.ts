@@ -80,7 +80,7 @@ const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
 const PHRASES: Record<Cue, [number, number][]> = {
-  /** Never played: the colt's voice is its own, not a musical phrase. */
+  /** Never played: the cygnet's voice is its own, not a musical phrase. */
   distress: [],
   calling: [],
   breeze: [[74, 1], [78, 1], [81, 2]],
@@ -363,7 +363,7 @@ export class Soundscape {
   }
 
   /**
-   * The colt's voice. It is the only sound either traveller ever makes, so it is kept for the few moments that
+   * The cygnet's voice. It is the only sound either traveller ever makes, so it is kept for the few moments that
    * matter: a small bird calling for a family that is not coming back. Thin, high, and pitched to be heard over
    * nothing at all.
    */

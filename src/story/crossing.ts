@@ -156,12 +156,12 @@ export class CrossingChapter implements Chapter {
       }
     } else if (this.time < this.glanceUntil) {
       /** Long stretches of open water, and something small in your arms: of course you look down at it. */
-      child.lookAt = this.cast.crane.carried ? this.cast.crane.eye(this.ahead) : null;
+      child.lookAt = this.cast.cygnet.carried ? this.cast.cygnet.eye(this.ahead) : null;
     } else {
       const look = Math.sin(this.time * 0.13) * 30;
       this.ahead.set(boat.position.x + look, 12, boat.position.z - 200);
       child.lookAt = this.ahead;
-      if (this.time > this.nextGlance && this.cast.crane.carried) {
+      if (this.time > this.nextGlance && this.cast.cygnet.carried) {
         this.glanceUntil = this.time + 3.5 + Math.random() * 2.5;
         this.nextGlance = this.glanceUntil + 9 + Math.random() * 8;
       }

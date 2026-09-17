@@ -49,7 +49,7 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-function craneShape(): THREE.BufferGeometry {
+function swanShape(): THREE.BufferGeometry {
   const at: V3 = [0, 0, 0];
   const parts = [
     blob({ part: 0, mat: 0, at, size: [0.11, 0.1, 0.62], detail: 1, shape: (u) => { u.z *= 1 + Math.max(0, u.z) * 0.5; } }),
@@ -61,10 +61,10 @@ function craneShape(): THREE.BufferGeometry {
 }
 
 /**
- * A skein of cranes going over, high up and holding its V. The reason the whole journey happens: one of them
+ * A skein of swans going over, high up and holding its V. The reason the whole journey happens: one of them
  * cannot keep up.
  */
-export class CraneFlock {
+export class SwanFlock {
   readonly mesh: THREE.Mesh;
   private readonly place: THREE.InstancedBufferAttribute;
   private readonly beat: THREE.InstancedBufferAttribute;
@@ -80,7 +80,7 @@ export class CraneFlock {
   readonly dropped = new THREE.Vector3();
 
   constructor() {
-    const base = craneShape();
+    const base = swanShape();
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = base.index;
     for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
@@ -151,7 +151,7 @@ export class CraneFlock {
   }
 
   /**
-   * A gathering, spiralling up a thermal the way cranes do before they go on. Meant to be understood without a
+   * A gathering, spiralling up a thermal the way the flock does before they go on. Meant to be understood without a
    * word: that is where the others are. `rise` is how far the column climbs — wide and tall for one seen from
    * across the meadow, short and close for one that has come down over your head.
    */
@@ -204,7 +204,7 @@ export class CraneFlock {
   }
 
   /**
-   * The last bird in the skein loses the formation. Returns where it was when it fell out, so the colt can take
+   * The last bird in the skein loses the formation. Returns where it was when it fell out, so the cygnet can take
    * over from exactly that point in the sky and come down in view.
    */
   dropOne(out: THREE.Vector3): boolean {

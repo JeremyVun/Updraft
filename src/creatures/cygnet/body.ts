@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import { blob, merge, mirrored, type BlobSpec, type V3 } from '../shapes';
 
 /**
- * A crane colt a few weeks old, the way a child would draw one: a round downy body, a big round head on a soft
+ * A swan cygnet a few weeks old, the way a child would draw one: a round downy body, a big round head on a soft
  * neck, enormous dark eyes, a short pink bill, stubby wings with the first quills just coming in, and legs far too
  * long for it. Everything about the adult (the dagger bill, the long rigid neck, the wide wings) is what it does
  * not have yet, and that is what makes it look like it needs carrying.
@@ -66,7 +66,7 @@ function neckSegment(part: number, r0: number, r1: number, half: number): BlobSp
   };
 }
 
-export function coltGeometry(): THREE.BufferGeometry {
+export function cygnetGeometry(): THREE.BufferGeometry {
   const at: V3 = [0, 0, 0];
   const specs: BlobSpec[] = [];
   const pair = (spec: BlobSpec, right: number) => specs.push(spec, mirrored(spec, right));

@@ -3,9 +3,9 @@ import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
-import type { Crane } from '../creatures/crane';
+import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
-import type { CraneFlock } from '../creatures/flock';
+import type { SwanFlock } from '../creatures/flock';
 import type { Boat } from '../traveller/boat';
 import type { SeaLife } from '../fx/sealife';
 import type { Drawing } from '../traveller/drawing';
@@ -27,9 +27,9 @@ export interface Cast {
   drawing: Drawing;
   cottage: Cottage;
   sealife: SeaLife;
-  /** The crane colt that cannot keep up with its flock, and the flock that goes on without it. */
-  crane: Crane;
-  flock: CraneFlock;
+  /** The cygnet that cannot keep up with its flock, and the flock that goes on without it. */
+  cygnet: Cygnet;
+  flock: SwanFlock;
   /** The embers in the leaf litter of the dark wood: the only light the player can make there. */
   embers: Embers;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */

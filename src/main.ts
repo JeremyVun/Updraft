@@ -38,8 +38,8 @@ import { heightAt } from './world/island';
 import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
-import { Crane } from './creatures/crane';
-import { CraneFlock } from './creatures/flock';
+import { Cygnet } from './creatures/cygnet';
+import { SwanFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
 import { LINES_WALK, LINES_LANDING } from './story/lines';
 import { DrownedVillage } from './world/drowned';
@@ -184,14 +184,14 @@ function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3
 }
 const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
-const crane = new Crane();
-crane.objects.forEach((o) => scene.add(o));
-const flock = new CraneFlock();
+const cygnet = new Cygnet();
+cygnet.objects.forEach((o) => scene.add(o));
+const flock = new SwanFlock();
 scene.add(flock.mesh);
-const craneAt = new THREE.Vector3();
-const craneAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+const cygnetAt = new THREE.Vector3();
+const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, crane, flock, embers, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, embers, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 rig.cut(story.shot);
@@ -354,11 +354,11 @@ function frame(now: number): void {
   glider.update(dt, time);
   flock.update(dt, time);
   /** The arm comes down over it while it is being carried, and lifts again when it is not. */
-  child.cradle += ((crane.state === 'carried' && crane.visible ? 1 : 0) - child.cradle) * (1 - Math.exp(-dt * 2.5));
-  if (crane.state === 'carried') crane.carry(child.armsPoint(craneAt), child.yaw);
-  else if (crane.state === 'hooded') crane.carry(child.hoodPoint(craneAt), child.yaw, true);
-  /** The colt reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
-  crane.update(dt, time, child.position, wind.sample(crane.position.x, crane.position.z, craneAir));
+  child.cradle += ((cygnet.state === 'carried' && cygnet.visible ? 1 : 0) - child.cradle) * (1 - Math.exp(-dt * 2.5));
+  if (cygnet.state === 'carried') cygnet.carry(child.armsPoint(cygnetAt), child.yaw);
+  else if (cygnet.state === 'hooded') cygnet.carry(child.hoodPoint(cygnetAt), child.yaw, true);
+  /** The cygnet reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
+  cygnet.update(dt, time, child.position, wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir));
   pollReadbacks();
   wind.step(dt, time);
   life.update(dt);
@@ -524,7 +524,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, washing, village, wood, embers, boat, life };
 }
 
 /**

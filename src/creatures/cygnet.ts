@@ -27,9 +27,9 @@ import {
   TUFT,
   WING_L,
   WING_R,
-  coltGeometry,
-} from './colt/body';
-import { COLT_FRAG, COLT_VERT } from './colt/shader';
+  cygnetGeometry,
+} from './cygnet/body';
+import { CYGNET_FRAG, CYGNET_VERT } from './cygnet/shader';
 
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
 const LIFT_TO_HOPE = 0.18;
@@ -44,7 +44,7 @@ const FLOOR = 0.006 * SIZE;
 /**
  * Where it sits on the child, in the child's frame (x to their left, z forward), from the point the child offers.
  * The arms point is inside the coat and the hood point is inside the hood, and the camera is nearly always behind
- * the child, so the colt is carried the way a child carries a hen: tucked under the right arm against the coat,
+ * the child, so the cygnet is carried the way a child carries a hen: tucked under the right arm against the coat,
  * where it can be seen from every side. In the hood it perches on the shoulders behind the head, peeking round
  * the hood on the side the camera is on.
  */
@@ -54,7 +54,7 @@ const HOOD = new THREE.Vector3(-0.26, 0.15, -0.43);
 /** The climb from the arms into the hood goes up over the right shoulder, outside the hood. */
 const SHOULDER = new THREE.Vector3(-0.62, 0.42, 0.18);
 
-export type CraneState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding' | 'leaving';
+export type CygnetState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'gliding' | 'leaving';
 
 interface Handoff {
   from: THREE.Vector3;
@@ -81,13 +81,13 @@ function rotY(v: THREE.Vector3, yaw: number): THREE.Vector3 {
 }
 
 /**
- * The crane colt: too young to keep up with its flock, carried and walked and finally flown. The only other
+ * The cygnet: too young to keep up with its flock, carried and walked and finally flown. The only other
  * character in the story, and like the child it never makes a sound, except when it is lost.
  */
-export class Crane {
+export class Cygnet {
   readonly position = new THREE.Vector3();
   yaw = 0;
-  state: CraneState = 'flying';
+  state: CygnetState = 'flying';
   /** How close it stays and how often it looks up at the child: only ever rises. */
   bond = 0;
   visible = false;
@@ -198,10 +198,10 @@ export class Crane {
 
     this.mat = new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, uBones: { value: this.bones }, uNudge: { value: 2.4 }, uAir: { value: 0 }, uBlink: { value: 0 } },
-      vertexShader: COLT_VERT,
-      fragmentShader: COLT_FRAG,
+      vertexShader: CYGNET_VERT,
+      fragmentShader: CYGNET_FRAG,
     });
-    this.mesh = new THREE.Mesh(coltGeometry(), this.mat);
+    this.mesh = new THREE.Mesh(cygnetGeometry(), this.mat);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
   }
@@ -305,7 +305,7 @@ export class Crane {
 
   /** Riding in the child's arms or hood; the caller gives the world point each frame. */
   carry(at: THREE.Vector3, yaw: number, hooded = false): void {
-    const next: CraneState = hooded ? 'hooded' : 'carried';
+    const next: CygnetState = hooded ? 'hooded' : 'carried';
     const was = this.state;
     this.anchor.copy(at);
     this.anchorYaw = yaw;
@@ -394,7 +394,7 @@ export class Crane {
     this.pose(dt);
   }
 
-  private beginRide(was: CraneState, next: CraneState): void {
+  private beginRide(was: CygnetState, next: CygnetState): void {
     this.rideFor = 0;
     this.doze = 0;
     this.calm = 0;
@@ -453,7 +453,7 @@ export class Crane {
   }
 
   /**
-   * The colt on the wing, for as long as the player can hold it there. It is not flying — it is being flown, and
+   * The cygnet on the wing, for as long as the player can hold it there. It is not flying — it is being flown, and
    * the moment the updraft stops it sinks. This is where a player finds out they are the reason it can go home.
    */
   private soar(dt: number, wind: WindSample, child: THREE.Vector3): void {
