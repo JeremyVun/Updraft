@@ -49,8 +49,8 @@ export const tuning = {
   },
   piano: {
     /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */
-    gustFrom: 0.24,
-    gustFull: 1.2,
+    gustFrom: 0.2,
+    gustFull: 0.75,
     /** Notes in a run, from a breath to a full gust, and the seconds between them at each. */
     runLeast: 3,
     runMost: 9,
@@ -67,8 +67,8 @@ export const tuning = {
     dip: 0.03,
     dipRelease: 0.24,
     /** How near the camera has to be for the piano to sound at all, and where it is loudest. */
-    heardWithin: 95,
-    heardFully: 26,
+    heardWithin: 62,
+    heardFully: 16,
     /** Seconds the child sits with nothing played before they walk on, and the longest they ever stay. */
     listenFor: 8,
     stayFor: 45,

@@ -307,7 +307,7 @@ export class Piano {
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
     this.local(0.06, 0.46, 1.26, this.seat);
-    this.local(0.16, 0, 2.05, this.stand);
+    this.local(0.16, 0, 2.25, this.stand);
     for (let i = 0; i < QUEUE; i++) this.queue.push({ at: 0, midi: 60, velocity: 0, source: 'breeze', active: false });
   }
 
@@ -317,7 +317,7 @@ export class Piano {
 
   /** How much of the grass around its feet is pressed away, so nothing grows through the case or over the keys. */
   get clearing(): { x: number; z: number; radius: number } {
-    return { x: this.group.position.x, z: this.group.position.z + 0.35, radius: 2 };
+    return { x: this.group.position.x, z: this.group.position.z + 0.35, radius: 1.5 };
   }
 
   /** The last time the player's own wind rang a note out of it. */

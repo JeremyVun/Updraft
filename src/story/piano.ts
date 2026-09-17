@@ -62,7 +62,7 @@ export class PianoStop {
       case 'ahead':
         if (Math.hypot(c.position.x - piano.stand.x, c.position.z - piano.stand.z) < NOTICE) {
           c.stop();
-          c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 1);
+          c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 0.7);
           this.to('walking');
         }
         break;

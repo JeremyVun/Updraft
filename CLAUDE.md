@@ -21,4 +21,5 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - Island shape and height lookups: `src/world/island.ts`. Tree and rock placement: `src/world/landmarks.ts`.
 - Rooms with their own world module: the island of lines `src/world/lines.ts`, the drowned village `src/world/drowned.ts`, the dark wood `src/world/wood.ts`. Each is driven by its chapter in `src/story/`.
 - The light the player makes in the dark wood: `src/fx/embers.ts`, carried to every shader as `uEmberLight`.
+- The piano the wind plays, standing in the meadow: `src/world/piano.ts` (case, keys, wind sampling, the notes it finds), with the child's optional stop at it in `src/story/piano.ts` and its tone in `audio/audio.ts` (`PianoStrings`).
 - Player-facing text drafts and approvals: `docs/copy/`.

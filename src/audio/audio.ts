@@ -598,7 +598,7 @@ export class PianoStrings {
     felt.frequency.exponentialRampToValueAtTime(Math.min(6000, 460 + f), t0 + 0.7);
     felt.connect(panner);
 
-    const peak = 0.09 * velocity * level;
+    const peak = 0.1 * velocity * level;
     /** Two strings a few cents apart on the fundamental, so every note beats slowly against itself. */
     const partials: [number, number][] = [[1, 0.52], [1, 0.52], [2.004, 0.4], [3.02, 0.15], [4.05, 0.06]];
     partials.forEach(([ratio, amp], i) => {
