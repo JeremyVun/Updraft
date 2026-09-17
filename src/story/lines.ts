@@ -198,7 +198,7 @@ export class LinesChapter implements Chapter {
       else if (time > this.holdUntil) this.throwAhead();
     }
 
-    /** Coming over the top, the kite standing over the far beach catches their eye, and so the player's. */
+    /** Coming over the top, the kite standing over the far beach catches their eye, and the player's with it. */
     if (this.lookedUp === 0 && c.position.z < this.crest.z) this.lookedUp = time + 3;
     if (time < this.lookedUp) c.lookAt = KITE_AT;
   }
