@@ -374,6 +374,8 @@ function frame(now: number): void {
   notice.light = atmo.uniforms.uEmberLight.value.w > 0.15 ? emberAt : null;
   notice.dark = atmo.uniforms.uNight.value;
   notice.rain = shown.shower || 0;
+  /** The white comes through its grey as the year turns: none on the first island, plain to see by the last. */
+  cygnet.look.grown = THREE.MathUtils.smoothstep(atmo.uniforms.uSeason.value, 0.4, 1);
   notice.cold = THREE.MathUtils.clamp((atmo.uniforms.uSeason.value - 0.5) * 1.6 + atmo.uniforms.uNight.value * 0.3, 0, 1);
   /** The cygnet reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
   cygnet.update(dt, time, child.position, wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir));

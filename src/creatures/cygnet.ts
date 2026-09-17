@@ -909,7 +909,7 @@ export class Cygnet {
     this.effort = 0;
     this.flap = ease(this.flap, 0, 6, dt);
     this.calm = this.seating.calm;
-    const dozy = this.state === 'carried' && this.bond > 0.45 && this.rideFor > 22 && this.calm > 0.85 && this.fear < 0.3;
+    const dozy = this.seating.riding && this.bond > 0.45 && this.rideFor > 22 && this.calm > 0.85 && this.fear < 0.3;
     this.doze = ease(this.doze, dozy ? 1 : 0, dozy ? 0.15 : 3, dt);
     if (this.time > this.nextWriggle && this.doze < 0.5 && this.seating.move === null) {
       this.wriggle = 0.8;
