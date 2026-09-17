@@ -162,11 +162,19 @@ export class SwanFlock {
    * close for one that has come down over your head.
    */
   circle(x: number, z: number, base: number, radius: number, count = 26, rise = 46): void {
-    this.birds.length = 0;
     const c = Math.min(count, MAX);
+    /** Any of them already in the air keep their place in the sky and swing into the wheel rather than cutting to it. */
+    const flying = this.mode === 'skein' || this.mode === 'wheel' ? this.birds.filter((b) => b.fade > 0) : [];
+    this.birds.length = 0;
     for (let i = 0; i < c; i++) {
-      const b = this.blank(0);
-      b.offset.set((i / c) * Math.PI * 2 + Math.random() * 0.4, (i / c) * rise + Math.random() * rise * 0.17, 0.85 + Math.random() * 0.3);
+      const b = flying[i] ?? this.blank(0);
+      const a = (i / c) * Math.PI * 2 + Math.random() * 0.4;
+      b.offset.set(a, (i / c) * rise + Math.random() * rise * 0.17, 0.85 + Math.random() * 0.3);
+      b.hold = flying[i] ? 0 : 1;
+      if (!flying[i]) {
+        b.at.set(x + Math.cos(a) * radius * b.offset.z, base + b.offset.y, z + Math.sin(a) * radius * b.offset.z);
+        b.yaw = -a;
+      }
       this.birds.push(b);
     }
     this.pool = { x, z, r: radius, base };
@@ -364,10 +372,12 @@ export class SwanFlock {
       b.beat += dt * BEAT * 0.94;
       b.flap = ease(b.flap, 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(time * 0.29 + b.seed * 4)), 1.2, dt);
       b.bob = stroke(b.beat) * -0.055 * b.flap;
-      b.at.set(t.x + Math.cos(a) * r, t.base + b.offset.y + Math.sin(time * 0.3 + b.seed) * 2.5, t.z + Math.sin(a) * r);
+      const to = tmp.set(t.x + Math.cos(a) * r, t.base + b.offset.y + Math.sin(time * 0.3 + b.seed) * 2.5, t.z + Math.sin(a) * r);
+      b.hold = ease(b.hold, 1, 0.35, dt);
+      b.at.lerp(to, 1 - Math.exp(-dt * (0.6 + 7 * b.hold)));
       /** The wheel runs clockwise against its own angle, so they face along it and hold a bank into the turn. */
-      b.yaw = -a;
-      b.roll = ease(b.roll, 0.42 + 0.06 * Math.sin(time * 0.7 + b.seed), 1.5, dt);
+      b.yaw = -a + wrapAngle(b.yaw + a) * (1 - b.hold);
+      b.roll = ease(b.roll, (0.42 + 0.06 * Math.sin(time * 0.7 + b.seed)) * b.hold, 1.5, dt);
       b.pitch = ease(b.pitch, -0.04, 2, dt);
       b.neck.lerp(tmp4.set(FLY[0], FLY[1], FLY[2], 0), 1 - Math.exp(-dt * 2));
       b.headYaw = ease(b.headYaw, 0, 1.5, dt);
