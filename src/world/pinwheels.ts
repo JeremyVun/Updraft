@@ -338,6 +338,7 @@ class Flutter {
   private readonly gain: GainNode;
   private readonly band: BiquadFilterNode;
   private readonly rate: OscillatorNode;
+  private quiet = false;
 
   constructor(out: AudioOut) {
     const { ctx } = out;
@@ -374,6 +375,7 @@ class Flutter {
   }
 
   update(omega: number, away: number): void {
+    this.quiet = false;
     const near = 1 - THREE.MathUtils.smoothstep(away, 14, 60);
     const level = THREE.MathUtils.smoothstep(omega, 2.5, 22) * near * 0.05;
     this.gain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.12);
@@ -382,6 +384,8 @@ class Flutter {
   }
 
   silence(): void {
+    if (this.quiet) return;
+    this.quiet = true;
     this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2);
   }
 }

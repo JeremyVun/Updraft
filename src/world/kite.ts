@@ -280,7 +280,7 @@ export class Kite {
     const k = tuning.linesToys;
     const air = this.wind.sample(KITE_AT.x, KITE_AT.z, this.sample);
     const speed = Math.hypot(air.x, air.z);
-    const strength = THREE.MathUtils.smoothstep(speed, 0.4, 9);
+    const strength = THREE.MathUtils.smoothstep(speed, 0.5, 5);
 
     if (speed > 0.25) {
       const turn = Math.atan2(air.x, air.z) - this.azimuth;
@@ -289,18 +289,18 @@ export class Kite {
     /** A kite never hangs still: it wanders a slow figure of eight, and the harder it blows the wider it swings. */
     const rate = k.swoopRate + strength * 0.22;
     this.phase += dt * rate;
-    const swing = k.swoop * (0.35 + 0.65 * strength);
+    const swing = k.swoop * (0.55 + 0.45 * strength);
     const bank = Math.cos(this.phase) * swing * rate;
 
     /**
      * Gust energy is the pull you feel in the string: it climbs on it, overshoots and settles back. And in a
      * real calm nothing is holding it up at all, so it sinks and hangs on whatever breeze is left.
      */
-    const holding = 0.35 + 0.65 * THREE.MathUtils.smoothstep(speed, 0.2, 1.6);
-    const want = (0.52 + 0.24 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08)) * holding + Math.cos(this.phase * 2) * swing * 0.3;
+    const holding = 0.4 + 0.6 * THREE.MathUtils.smoothstep(speed, 0.05, 0.5);
+    const want = (0.66 + 0.18 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08)) * holding + Math.cos(this.phase * 2) * swing * 0.3;
     this.elevVel += (want - this.elev) * k.climbSpring * dt;
     this.elevVel *= Math.exp(-dt * k.climbDamping);
-    this.elev = THREE.MathUtils.clamp(this.elev + this.elevVel * dt, 0.12, 1.05);
+    this.elev = THREE.MathUtils.clamp(this.elev + this.elevVel * dt, 0.12, 1.0);
     const taut = 0.72 + 0.25 * THREE.MathUtils.smoothstep(speed + air.energy * 4, 1, 12);
     this.reach += (taut - this.reach) * (1 - Math.exp(-dt * 1.4));
     this.roll += (bank - this.roll) * (1 - Math.exp(-dt * 2.5));
