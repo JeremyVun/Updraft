@@ -6,7 +6,7 @@ import { BODY, BONES, FOOT_L, FOOT_R, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, c
 import { Gait } from './cygnet/gait';
 import { Mind, type Senses } from './cygnet/mind';
 import { Poser, type Drives } from './cygnet/pose';
-import { applyLook, cygnetMaterial, newLook } from './cygnet/shader';
+import { applyLook, cygnetMaterial, downShells, newLook } from './cygnet/shader';
 import { Ride, type Mount, type Seat } from './cygnet/ride';
 
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
@@ -213,6 +213,8 @@ export class Cygnet {
     this.mesh = new THREE.Mesh(cygnetGeometry(), this.mat);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
+    /** The coat hangs off the skin as a child of it, so it is shown, hidden and drawn with the bird and never apart. */
+    this.mesh.add(downShells(this.mat));
   }
 
   get objects(): THREE.Object3D[] {

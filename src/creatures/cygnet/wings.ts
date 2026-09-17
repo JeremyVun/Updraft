@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { FORE_L, FORE_R, HAND_L, HAND_R, WING_L, WING_R } from './body';
 
 /** What the rest of the cygnet asks of its wings each frame. Everything here is already eased by the caller. */
@@ -19,18 +19,61 @@ export interface WingPose {
   shake: number;
 }
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/**
+ * Where an arm bone points in the mesh's own rest space, rather than on its parent: roll about its own length first,
+ * then elevation, then sweep toward the tail. Saying it this way means a fold can be drawn by eye — each bone put
+ * where it should end up — instead of solved through whatever the bone above it is doing.
+ */
+type Aim = [twist: number, lift: number, sweep: number];
 
-/** Sets the six wing bones. Folded, the arm lies back along the flank, the forearm comes forward and the hand goes back over the rump. */
+/** Out to the side, barely swept, with a little camber along it. */
+const SPREAD: Aim[] = [
+  [0.05, 0.17, -0.15],
+  [0.0, 0.21, -0.04],
+  [-0.06, 0.2, 0.1],
+];
+/**
+ * Shut: the whole wing rolls over so that its top faces out, and lies back along the upper flank with the vanes
+ * running on past the wrist to the tail. The roll is what stops a folded wing reading as a plank stuck on the side.
+ */
+const FOLD: Aim[] = [
+  [1.25, 0.14, 1.3],
+  [1.3, 0.05, 1.64],
+  [1.3, -0.06, 1.9],
+];
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const euler = new THREE.Euler(0, 0, 0, 'YZX');
+const aim = [new THREE.Quaternion(), new THREE.Quaternion(), new THREE.Quaternion()];
+const local = new THREE.Quaternion();
+
+/** Sets the six wing bones for both sides. Every output is continuous in every input, so a wing can never pop. */
 export function poseWings(n: THREE.Object3D[], w: WingPose): void {
-  const sweep = lerp(1.35, 0.1, w.open) + w.clamp * 0.12;
-  const roll = lerp(-0.22 - w.clamp * 0.15, 0.15, w.open) + w.beat * 0.95 + w.shake * 0.4;
-  const handSweep = lerp(0.9, -0.05, w.open) - Math.max(0, w.lag) * 0.3;
-  const handRoll = lerp(0.1, 0, w.open) + w.lag * 0.55;
-  n[WING_L].rotation.set(w.twist, sweep, roll + w.raise[0]);
-  n[WING_R].rotation.set(w.twist, -sweep, -roll - w.raise[1]);
-  n[FORE_L].rotation.set(0, -handSweep * 1.6, 0);
-  n[FORE_R].rotation.set(0, handSweep * 1.6, 0);
-  n[HAND_L].rotation.set(0, handSweep * 1.7, handRoll);
-  n[HAND_R].rotation.set(0, -handSweep * 1.7, -handRoll);
+  const open = w.open;
+  const shut = 1 - open;
+  for (const side of [1, -1]) {
+    const bones = side > 0 ? [WING_L, FORE_L, HAND_L] : [WING_R, FORE_R, HAND_R];
+    const raise = side > 0 ? w.raise[0] : w.raise[1];
+    for (let i = 0; i < 3; i++) {
+      let twist = lerp(FOLD[i][0], SPREAD[i][0], open);
+      let lift = lerp(FOLD[i][1], SPREAD[i][1], open);
+      let sweep = lerp(FOLD[i][2], SPREAD[i][2], open);
+      /** The arm leads the stroke and the hand comes through after it, which is the whole shape of a wingbeat. */
+      lift += (i === 0 ? w.beat * 0.86 : i === 1 ? w.beat * 0.34 + w.lag * 0.5 : w.lag * 0.82) * open;
+      /** The hand swings forward over the top of the stroke and trails at the bottom. */
+      sweep -= (i === 0 ? w.beat * 0.06 : w.lag * 0.22) * open;
+      twist += w.twist * (0.6 + i * 0.5) + (i === 2 ? w.lag * 0.3 : 0) * open;
+      /** Clamped in, it is tighter than merely folded: swept further back and pulled down onto the flank. */
+      sweep += w.clamp * 0.13 * shut;
+      lift -= w.clamp * 0.07;
+      twist += w.clamp * 0.1 * shut;
+      lift += raise * (i === 0 ? 1 : 0.35) + w.shake * (0.3 + i * 0.12);
+      twist += w.shake * 0.35;
+      /** The right wing is the left one seen in a mirror: the roll survives it, the sweep and the elevation turn over. */
+      euler.set(twist, sweep * side, lift * side);
+      aim[i].setFromEuler(euler);
+      if (i === 0) n[bones[0]].quaternion.copy(aim[0]);
+      else n[bones[i]].quaternion.copy(local.copy(aim[i - 1]).invert().multiply(aim[i]));
+    }
+  }
 }

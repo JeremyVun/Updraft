@@ -1,7 +1,21 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { CREATURE_GLSL } from '../shading';
-import { BILL, BONES, EYE, EYE_AT, QUILL, SHANK } from './body';
+import type { V3 } from '../shapes';
+import { BILL, BONES, EYE, EYE_AT, LORE_AT, QUILL, SHANK, cygnetDownGeometry } from './body';
+
+/** How many times the coat is drawn over itself. Each shell keeps fewer strands, so the coat thins out into the air. */
+const SHELLS = 8;
+
+/** How long the down stands off the skin, in world units, before anything it is feeling changes it. */
+const DOWN = 0.03;
+/** Strands to a unit of rest space: fine enough to read as down from a metre and a half away. */
+const STRAND = 300;
+/** The coat lies down again over this range, before its strands are too small to survive the pixel grid. */
+const DOWN_NEAR = 9;
+const DOWN_FAR = 21;
+
+const vec3 = (v: V3) => `vec3(${v[0].toFixed(5)}, ${v[1].toFixed(5)}, ${v[2].toFixed(5)})`;
 
 export const CYGNET_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -9,15 +23,42 @@ ${CREATURE_GLSL}
 uniform mat4 uBones[${BONES}];
 uniform float uNudge;
 uniform float uBlink;
+uniform float uFold;
+uniform float uDown;
+uniform float uRuffle;
+uniform vec3 uFlow;
 in vec4 aSkin;
 in vec2 aMat;
+in vec4 aFan;
+#ifdef SHELL
+in float aShell;
+out float vShell;
+#endif
 out vec3 vWorld;
 out vec3 vNormal;
 out vec2 vMat;
 out vec3 vRest;
+
+/** No down where the bill leaves the face or around the eye, and finer on the head than on the body. */
+float downLength(vec3 rest) {
+  vec3 q = vec3(abs(rest.x), rest.y, rest.z);
+  float k = smoothstep(0.018, 0.046, distance(q, ${vec3(EYE_AT)}));
+  k *= smoothstep(0.02, 0.072, distance(q, ${vec3(LORE_AT)}));
+  return k * (1.0 - 0.4 * smoothstep(0.30, 0.46, rest.y));
+}
+
 void main() {
   vec3 p = position;
   vec3 n = normal;
+  /**
+   * A vane swings about its own quill before anything else, in the flat rest plane of the wing, so that shutting
+   * the wing closes the fan; whatever roll the arm bones then have carries the shut fan onto the flank edge on.
+   */
+  if (aFan.w != 0.0) {
+    float a = aFan.w * uFold;
+    p = aFan.xyz + rotY(p - aFan.xyz, a);
+    n = rotY(n, a);
+  }
   if (int(aMat.x + 0.5) == ${EYE}) {
     /** The lids close by sinking the eye into the head and flattening it: what is left is down-coloured head. */
     vec3 c = vec3(sign(p.x) * ${EYE_AT[0].toFixed(4)}, ${EYE_AT[1].toFixed(4)}, ${EYE_AT[2].toFixed(4)});
@@ -27,9 +68,19 @@ void main() {
   mat4 a = uBones[int(aSkin.x + 0.5)];
   mat4 b = uBones[int(aSkin.y + 0.5)];
   float w = aSkin.z;
-  vec4 world = mix(a * vec4(p, 1.0), b * vec4(p, 1.0), w);
-  vWorld = world.xyz;
-  vNormal = normalize(mix(mat3(a) * n, mat3(b) * n, w));
+  vec3 world = mix((a * vec4(p, 1.0)).xyz, (b * vec4(p, 1.0)).xyz, w);
+  vec3 N = normalize(mix(mat3(a) * n, mat3(b) * n, w));
+#ifdef SHELL
+  /** Strands are too fine to survive the pixel grid from far off, so the coat lies down again as the camera leaves. */
+  float len = uDown * downLength(position) * (1.0 - smoothstep(${DOWN_NEAR.toFixed(1)}, ${DOWN_FAR.toFixed(1)}, distance(cameraPosition, world)));
+  float ruffle = 1.0 + uRuffle * sin(uTime * 6.5 + dot(position, vec3(41.0, 23.0, 31.0)));
+  vec3 tip = N * (len * aShell * ruffle) + uFlow * (len * aShell * aShell);
+  world += tip;
+  N = normalize(N + tip * 9.0);
+  vShell = aShell;
+#endif
+  vWorld = world;
+  vNormal = N;
   vMat = aMat;
   vRest = position;
   gl_Position = projectionMatrix * nudgedView(vWorld, uNudge);
@@ -39,55 +90,121 @@ export const CYGNET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
 uniform float uAir;
+uniform float uBlink;
+uniform float uWet;
+uniform float uGrown;
+uniform float uStrand;
+uniform float uFat;
+uniform float uClump;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vMat;
 in vec3 vRest;
+#ifdef SHELL
+in float vShell;
+#endif
 
-/** Linear, and lower than they look: the golden sun here is worth about 2.7. Grey, but a warm grey, so it belongs to the light it stands in. */
-const vec3 DUSK = vec3(0.075, 0.07, 0.069);
-const vec3 DOVE = vec3(0.15, 0.145, 0.142);
-const vec3 MILK = vec3(0.31, 0.3, 0.285);
-const vec3 SLATE = vec3(0.04, 0.04, 0.046);
-const vec3 NAIL = vec3(0.2, 0.14, 0.13);
-const vec3 LEG = vec3(0.058, 0.056, 0.06);
-const vec3 VANE = vec3(0.27, 0.26, 0.255);
-const vec3 VANE_TIP = vec3(0.46, 0.45, 0.43);
+/**
+ * Linear, and far lower than they look: the golden sun here is worth about 2.7, so anything pale burns out to white.
+ * A cygnet is grey — but a warm grey, cool in shadow, so it belongs to the light it stands in.
+ */
+const vec3 NAPE = vec3(0.034, 0.033, 0.034);
+const vec3 DOVE = vec3(0.066, 0.066, 0.072);
+const vec3 MILK = vec3(0.118, 0.118, 0.124);
+const vec3 SNOW = vec3(0.34, 0.338, 0.33);
+const vec3 SLATE = vec3(0.022, 0.021, 0.026);
+const vec3 NAIL = vec3(0.058, 0.042, 0.042);
+const vec3 LEG = vec3(0.026, 0.025, 0.03);
+const vec3 VANE = vec3(0.062, 0.062, 0.07);
+const vec3 VANE_TIP = vec3(0.108, 0.108, 0.109);
 const vec3 IRIS = vec3(0.004, 0.004, 0.005);
 
-vec3 down(float k) {
-  vec3 c = mix(DUSK, DOVE, smoothstep(0.0, 0.5, k));
-  return mix(c, MILK, smoothstep(0.45, 1.0, k));
+float hash13(vec3 p) {
+  p = fract(p * 0.1031);
+  p += dot(p, p.zyx + 31.32);
+  return fract((p.x + p.y) * p.z);
+}
+
+vec3 hash33(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.xxy + p.yxx) * p.zyx);
+}
+
+/** One strand to a cell of rest space, each its own length, tapering to nothing: true at the height it still fills. */
+bool strand(vec3 rest, float t) {
+  vec3 q = rest * uStrand;
+  vec3 c = floor(q);
+  vec3 f = fract(q) - 0.5;
+  float h = hash13(c + 9.1);
+  /** Soaked, most of the coat sticks together and the rest hangs in points. */
+  if (h < uClump) return false;
+  float g = t / mix(0.55, 1.0, h);
+  return g <= 1.0 && length(f - (hash33(c) - 0.5) * 0.44) < uFat * (1.0 - g * g * 0.97);
+}
+
+vec3 coat(float k, float fleck) {
+  float t = clamp(k + (fleck - 0.5) * 0.2, 0.0, 1.0);
+  vec3 c = mix(mix(NAPE, DOVE, smoothstep(0.0, 0.52, t)), MILK, smoothstep(0.46, 1.0, t));
+  /** The white comes through where the down is already palest — breast, cheeks, flanks — and the back stays grey. */
+  return mix(c, SNOW, uGrown * smoothstep(0.5, 0.97, t * 0.85 + fleck * 0.28));
 }
 
 void main() {
+#ifdef SHELL
+  if (!strand(vRest, vShell)) discard;
+#endif
   vec3 N = normalize(vNormal);
   int m = int(vMat.x + 0.5);
   float k = vMat.y;
-  float mottle = 0.9 + 0.2 * vnoise(vRest.xz * 46.0 + vRest.y * 31.0);
-  vec3 alb = down(k) * mottle;
-  float fuzz = 0.22;
-  float thin = 0.12;
+  float fleck = 0.5 * vnoise(vRest.xz * 130.0 + vRest.y * 83.0) + 0.5 * vnoise(vRest.zy * 44.0 + vRest.x * 31.0);
+  vec3 alb = coat(k, fleck);
+  float fuzz = 0.3;
+  float thin = 0.14;
+  float ao = 0.84;
   if (m == ${QUILL}) {
-    alb = mix(VANE, VANE_TIP, k);
-    fuzz = 0.2;
-    thin = 0.5;
+    alb = mix(mix(VANE, VANE_TIP, k), SNOW, uGrown * smoothstep(0.45, 0.95, k));
+    fuzz = 0.3;
+    thin = 0.45;
+    ao = 0.96;
   } else if (m == ${BILL}) {
     alb = mix(SLATE, NAIL, k);
     fuzz = 0.04;
     thin = 0.2;
   } else if (m == ${SHANK}) {
-    alb = LEG * (1.0 + k * 0.6);
+    alb = LEG * (1.0 + k * 0.3);
     fuzz = 0.05;
-    thin = k * 0.5;
+    /** The web is thin enough to glow when the sun is behind it. */
+    thin = 0.15 + k * 0.6;
   } else if (m == ${EYE}) {
-    alb = IRIS;
+    /** Shut, what is left of the eye is a lid: down-coloured, with only the crease of it still dark. */
+    alb = mix(IRIS, coat(0.55, fleck) * 0.5, clamp(uBlink, 0.0, 1.0));
     fuzz = 0.0;
     thin = 0.0;
+  } else {
+    /** The bare dark skin between bill and eye that gives a swan its face; barely there on a bird this young. */
+    vec3 q = vec3(abs(vRest.x), vRest.y, vRest.z);
+    vec3 ab = ${vec3(EYE_AT)} - ${vec3(LORE_AT)};
+    vec3 d = q - ${vec3(LORE_AT)} - ab * clamp(dot(q - ${vec3(LORE_AT)}, ab) / dot(ab, ab), 0.0, 1.0);
+    alb *= mix(1.0, 0.42, (1.0 - smoothstep(0.012, 0.032, length(d))) * smoothstep(0.02, 0.05, abs(vRest.x)));
   }
-  vec3 col = shadeCreature(alb, N, vWorld, 0.84, fuzz, thin, uAir);
+  alb *= mix(1.0, 0.44, uWet);
+#ifdef SHELL
+  /** Down is dark at the root and catches everything at the tip, which is the whole of why a coat looks soft. */
+  alb *= mix(0.64, 1.06, vShell);
+  ao = mix(0.5, 1.0, vShell);
+  fuzz = 0.38;
+  thin = 0.34;
+#endif
+  vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
+  if (uWet > 0.0 && m != ${EYE}) {
+    /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
+    vec3 V = normalize(cameraPosition - vWorld);
+    float gloss = pow(max(dot(N, normalize(V + uSunDir)), 0.0), 64.0) * (0.25 + 0.75 * pow(1.0 - max(dot(N, V), 0.0), 2.0));
+    col += uSunColor * gloss * uWet * 0.55 * cloudShadow(vWorld.xz);
+  }
   /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */
-  if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * catchlight(N, vWorld);
+  if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * pow(catchlight(N, vWorld), 2.4) * (1.0 - clamp(uBlink, 0.0, 1.0));
   /** Never greyed with the land: it arrives after the island is whole, and the sea it crosses has no life field. */
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -116,15 +233,66 @@ export function newLook(): Look {
   return { blink: 0, air: 0, fluff: 0, sleek: 0, wet: 0, grown: 0, wingOpen: 0, wind: new THREE.Vector2() };
 }
 
+/**
+ * The skin, and on `userData.down` the same shader again as shells for the coat to be pushed out of. Both share one
+ * set of uniforms, so `applyLook` writes each value once.
+ */
 export function cygnetMaterial(bones: THREE.Matrix4[]): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, uBones: { value: bones }, uNudge: { value: 2.4 }, uAir: { value: 0 }, uBlink: { value: 0 } },
+  const uniforms = {
+    ...atmo.uniforms,
+    uBones: { value: bones },
+    uNudge: { value: 2.4 },
+    uAir: { value: 0 },
+    uBlink: { value: 0 },
+    uFold: { value: 1 },
+    uDown: { value: DOWN },
+    uFlow: { value: new THREE.Vector3(0, -0.3, 0) },
+    uRuffle: { value: 0 },
+    uStrand: { value: STRAND },
+    uFat: { value: 0.82 },
+    uClump: { value: 0 },
+    uWet: { value: 0 },
+    uGrown: { value: 0 },
+  };
+  const skin = new THREE.ShaderMaterial({ uniforms, vertexShader: CYGNET_VERT, fragmentShader: CYGNET_FRAG });
+  skin.userData.down = new THREE.ShaderMaterial({
+    uniforms,
     vertexShader: CYGNET_VERT,
     fragmentShader: CYGNET_FRAG,
+    defines: { SHELL: '' },
   });
+  return skin;
+}
+
+/** The coat itself: the skinned coat drawn over again, each copy pushed a little further out along its own normal. */
+export function downShells(skin: THREE.ShaderMaterial): THREE.Mesh {
+  const base = cygnetDownGeometry();
+  const geo = new THREE.InstancedBufferGeometry();
+  geo.index = base.index;
+  for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
+  const height = new Float32Array(SHELLS);
+  for (let i = 0; i < SHELLS; i++) height[i] = (i + 1) / SHELLS;
+  geo.setAttribute('aShell', new THREE.InstancedBufferAttribute(height, 1));
+  geo.instanceCount = SHELLS;
+  const mesh = new THREE.Mesh(geo, skin.userData.down as THREE.ShaderMaterial);
+  mesh.frustumCulled = false;
+  return mesh;
 }
 
 export function applyLook(mat: THREE.ShaderMaterial, look: Look): void {
-  mat.uniforms.uBlink.value = look.blink;
-  mat.uniforms.uAir.value = look.air;
+  const u = mat.uniforms;
+  u.uBlink.value = look.blink;
+  u.uAir.value = look.air;
+  u.uWet.value = look.wet;
+  u.uGrown.value = look.grown;
+  u.uFold.value = 1 - look.wingOpen;
+  u.uDown.value = DOWN * (1 + look.fluff * 0.7 - look.sleek * 0.52) * (1 - look.wet * 0.55);
+  u.uStrand.value = STRAND * (1 + look.sleek * 0.22);
+  u.uFat.value = 0.82 - look.wet * 0.2;
+  u.uClump.value = look.wet * 0.3;
+  const speed = look.wind.length();
+  /** The coat streams along the real wind and saturates, so a gale only ever lays it flat, never blows it off. */
+  const bend = speed > 0.001 ? Math.min(0.9, speed * 0.17) / speed : 0;
+  u.uFlow.value.set(look.wind.x * bend, -0.3 - look.wet * 0.3, look.wind.y * bend);
+  u.uRuffle.value = Math.min(0.45, speed * 0.07);
 }
