@@ -38,6 +38,8 @@ import { heightAt } from './world/island';
 import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
+import { Carry } from './companion/carry';
+import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { SwanFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
@@ -187,11 +189,13 @@ sealife.objects.forEach((o) => scene.add(o));
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => scene.add(o));
 cygnet.mount = child;
+const carry = new Carry(child, cygnet);
+const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 scene.add(flock.mesh);
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, embers, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 rig.cut(story.shot);
@@ -353,8 +357,11 @@ function frame(now: number): void {
   child.update(dt);
   glider.update(dt, time);
   flock.update(dt, time);
+  carry.update(dt);
   /** The cygnet reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
   cygnet.update(dt, time, child.position, wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir));
+  carry.after();
+  probe?.update(time);
   pollReadbacks();
   wind.step(dt, time);
   life.update(dt);
@@ -520,7 +527,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, washing, village, wood, embers, boat, life };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, village, wood, embers, boat, life };
 }
 
 /**

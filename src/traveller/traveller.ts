@@ -39,6 +39,23 @@ void main() {
 
 const damp = (a: number, b: number, rate: number, dt: number) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
+/** Eases toward a target without ever starting or stopping abruptly: for anything a passenger is riding on. */
+class Glide {
+  value = 0;
+  private velocity = 0;
+  step(target: number, time: number, dt: number): number {
+    if (dt <= 0) return this.value;
+    const w = 2 / time;
+    const x = w * dt;
+    const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+    const change = this.value - target;
+    const temp = (this.velocity + w * change) * dt;
+    this.velocity = (this.velocity - w * temp) * decay;
+    this.value = target + (change + temp) * decay;
+    return this.value;
+  }
+}
+
 /**
  * The child. Moves over the terrain toward goals, plays a handful of actions, and reacts on its own to the wind:
  * scarf and hem in the air, bracing in strong gusts, eyes on the paper plane.
@@ -73,9 +90,10 @@ export class Traveller {
   private bob = 0;
   private headYaw = 0;
   private headPitch = 0;
-  private kneel = 0;
-  private leanNow = 0;
-  private tiltNow = 0;
+  private readonly kneel = new Glide();
+  private readonly leanNow = new Glide();
+  private readonly tiltNow = new Glide();
+  private readonly reachGlide = [new Glide(), new Glide()];
   /** Where each mitten has been asked to be, in the world, and how far it has got there (0 the pose's own arm, 1 on the point). */
   private readonly reachAt = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly reachWant = [0, 0];
@@ -161,6 +179,11 @@ export class Traveller {
     this.reachAt[hand].copy(target);
     this.reachWant[hand] = 1;
     this.reachInBody[hand] = true;
+  }
+
+  /** Where the child's face is, for something small to look up at. */
+  face(out: THREE.Vector3): THREE.Vector3 {
+    return this.rig.head.getWorldPosition(out);
   }
 
   /** A world point in the frame of the child's body, as posed this frame. */
@@ -535,15 +558,14 @@ export class Traveller {
     }
 
     const sit = this.sit;
-    this.kneel = damp(this.kneel, this.kneeling, 3.2, dt || 1);
-    this.leanNow = damp(this.leanNow, this.lean, 4, dt || 1);
-    this.tiltNow = damp(this.tiltNow, this.tilt, 4, dt || 1);
-    const kneel = this.kneel * (1 - sit);
+    const kneel = this.kneel.step(this.kneeling, 0.55, dt) * (1 - sit);
+    const leanNow = this.leanNow.step(this.lean, 0.4, dt);
+    const tiltNow = this.tiltNow.step(this.tilt, 0.4, dt);
     r.root.position.copy(this.position);
     r.root.position.y += lift - crouch - sit * 0.5 - kneel * 0.5 + this.hop;
     r.root.rotation.set(0, this.yaw, 0);
     r.body.position.y = 0.62 + this.bob + Math.sin(t * 2.2) * 0.008;
-    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1 + kneel * 0.16 + this.leanNow, bodyY, 0);
+    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1 + kneel * 0.16 + leanNow, bodyY, 0);
     r.body.scale.set(1, 1 + Math.sin(t * 2.2) * 0.012, 1);
     /** Kneeling, the shins go back under the coat and the hem settles on the ground round them. */
     r.legL.rotation.set(swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.5, 0, -0.05 - sit * 0.15);
@@ -568,12 +590,11 @@ export class Traveller {
     }
     this.headYaw = damp(this.headYaw, wantYaw, 5, dt || 1);
     this.headPitch = damp(this.headPitch, wantPitch, 5, dt || 1);
-    r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05 + this.tiltNow);
+    r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05 + tiltNow);
     r.eyes.scale.set(1, this.blink > 0 ? 0.15 : 1, 1);
     r.root.updateMatrixWorld(true);
     for (const hand of [0, 1] as const) {
-      const want = this.reachWant[hand];
-      this.reachNow[hand] = damp(this.reachNow[hand], want, want > this.reachNow[hand] ? 5 : 3.5, dt || 1);
+      this.reachNow[hand] = THREE.MathUtils.clamp(this.reachGlide[hand].step(this.reachWant[hand], 0.45, dt), 0, 1);
       if (this.reachNow[hand] > 0.001) this.solveArm(hand);
     }
     r.root.updateMatrixWorld(true);
@@ -590,9 +611,8 @@ export class Traveller {
     const fore = hand === 0 ? r.foreR : r.foreL;
     const side = hand === 0 ? 1 : -1;
     const target = (this.reachInBody[hand] ? k.target.copy(this.reachAt[hand]) : r.body.worldToLocal(k.target.copy(this.reachAt[hand]))).sub(upper.position);
-    /** The solve is to the wrist; the mitten's middle is a little beyond it. */
     const a = UPPER_ARM;
-    const b = FOREARM - 0.04;
+    const b = FOREARM;
     const span = THREE.MathUtils.clamp(target.length(), Math.abs(a - b) + 0.02, a + b - 0.004);
     k.dir.copy(target).normalize();
     const along = (a * a - b * b + span * span) / (2 * span);

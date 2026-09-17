@@ -175,7 +175,7 @@ export function buildChild(): Rig {
     return o;
   };
   const sockets = {
-    cradle: socket(body, 0, 0.6, 0.5),
+    cradle: socket(body, 0, 0.86, 0.47),
     satchel: socket(body, 0, 0.76, -0.5),
     shoulder: socket(body, -0.3, 1.04, -0.02),
     lap: socket(body, 0, 0.16, 0.52),

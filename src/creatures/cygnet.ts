@@ -140,7 +140,7 @@ export class Cygnet {
   readonly debug: { stand: boolean; bones: Record<number, [number, number, number]> } = { stand: false, bones: {} };
 
   /** Smoothed pose weights, so nothing it does ever snaps. */
-  private readonly p = { sit: 0, held: 0, hooded: 0, hunch: 0, curl: 0, tall: 0, reach: 0, spread: 0, sleep: 0, hurry: 0 };
+  private readonly p = { afoot: 1, beg: 0, climb: 0, lifted: 0, sit: 0, held: 0, hooded: 0, hunch: 0, curl: 0, tall: 0, reach: 0, spread: 0, sleep: 0, hurry: 0 };
 
   private readonly to = new THREE.Vector3();
   private readonly want = new THREE.Vector3();
@@ -250,7 +250,12 @@ export class Cygnet {
     }
   }
 
-  /** Riding with the child, in the arms or in the hood. */
+  /** How frightened it is, 0 to 1. */
+  get frightened(): number {
+    return this.fear;
+  }
+
+  /** Riding with the child, in the arms or in the satchel. */
   get carried(): boolean {
     return this.state === 'carried' || this.state === 'hooded';
   }
@@ -295,7 +300,8 @@ export class Cygnet {
       this.seating.seat = seat;
       this.seating.held = false;
       this.seating.snap();
-    } else if (riding) this.seating.go({ seat }, 'climb', 1.7);
+    } else if (this.seating.held) this.seating.go({ seat, held: false }, 'settle', 0.35);
+    else if (riding) this.seating.go({ seat }, 'climb', 1.7);
     else this.seating.go({ seat }, 'lift', 0.6, 0.18);
     this.fear = Math.min(this.fear, 0.25);
   }
@@ -304,19 +310,24 @@ export class Cygnet {
    * In the child's hands. From here until `release` or `rideIn`, whoever is holding it says where it is every frame
    * (`seating.hold`), so it goes exactly where the mittens go.
    */
-  takeUp(): void {
+  takeUp(hop = false): void {
     this.state = 'carried';
-    this.seating.go({ seat: null, held: true }, 'settle', 0.25);
+    if (hop) this.seating.go({ seat: null, held: true }, 'hop', 0.6, 0.14);
+    else this.seating.go({ seat: null, held: true }, 'settle', 0.25);
     this.settle = 0;
     this.hopT = 0;
   }
 
-  /** Put down: it is standing wherever the hands left it. */
-  release(): void {
-    this.position.copy(this.seating.shown.p);
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+  /** Where a seat would have it this frame, for whoever is carrying it there by hand. */
+  seatFrame(seat: Seat, out: { p: THREE.Vector3; q: THREE.Quaternion }): { p: THREE.Vector3; q: THREE.Quaternion } {
+    return this.seating.frameOf(seat, this.bodyLift, out);
+  }
+
+  /** Off the hands and onto the grass at `spot`, with a hop: it gets down by itself, the way it got up. */
+  release(spot: THREE.Vector3): void {
+    this.position.set(spot.x, Math.max(heightAt(spot.x, spot.z), 0), spot.z);
     this.yaw = this.seating.yaw;
-    this.seating.go({ seat: null, held: false }, 'settle', 0.2);
+    this.seating.go({ seat: null, held: false }, 'hop', 0.55, 0.1);
     this.state = 'following';
     this.settle = 0.1;
     this.landedAt = this.time;
@@ -366,6 +377,17 @@ export class Cygnet {
     this.lookAt = target;
   }
 
+  /** QA: the pose weights and the body's height on its origin, for finding what moved when something jerks. */
+  get poseLine(): string {
+    const p = this.p;
+    return `lift ${this.bodyLift.toFixed(4)} sit ${p.sit.toFixed(3)} held ${p.held.toFixed(3)} afoot ${p.afoot.toFixed(3)} move ${this.seating.move?.kind ?? '-'} seat ${this.seating.seat ?? '-'}${this.seating.held ? ' hands' : ''}`;
+  }
+
+  /** QA: which way up its body is, in the world. */
+  bodyTurn(out: THREE.Quaternion): THREE.Quaternion {
+    return this.nodes[BODY].getWorldQuaternion(out);
+  }
+
   /** Where the child should look to meet its eye. */
   eye(out: THREE.Vector3): THREE.Vector3 {
     this.nodes[HEAD].updateMatrixWorld(true);
@@ -405,11 +427,8 @@ export class Cygnet {
           ? clamp((this.seating.shown.p.y - Math.max(heightAt(this.seating.shown.p.x, this.seating.shown.p.z), 0)) / 4, 0, 1)
           : 0;
     this.live(dt, child);
-    this.seating.tick(dt);
-    this.seating.stand(this.position, this.yaw);
-    this.seating.update(dt, this.bodyLift);
-    if (this.carried && this.seating.riding && !this.seating.move) this.position.copy(this.seating.shown.p);
     this.pose(dt);
+    if (this.carried && this.seating.riding && !this.seating.move) this.position.copy(this.seating.shown.p);
   }
 
   /** Climbing away north, finding its own strength as it goes, until the night has it. */
@@ -802,7 +821,7 @@ export class Cygnet {
     p.hunch = ease(p.hunch, hunch, 2, dt);
     p.sleep = ease(p.sleep, this.doze, 1.5, dt);
     p.reach = ease(p.reach, flying || dashing ? 1 : 0, 4, dt);
-    const alert = clamp((this.lookAt ? 0.5 : 0) + this.hope * 0.7 + calling * 1.2 + this.beg * 0.5 + (this.hopT > HOP_FOR - 0.5 ? 0.9 : 0), 0, 1);
+    const alert = clamp((this.lookAt ? 0.5 : 0) + this.hope * 0.7 + calling * 1.2 + p.beg * 0.5 + (this.hopT > HOP_FOR - 0.5 ? 0.9 : 0), 0, 1);
     p.tall = ease(p.tall, alert * (1 - p.reach), 5, dt);
     const drowsy = settled * (0.55 + this.bond * 0.2) * (1 - this.fear) * (1 - alert);
     p.curl = ease(p.curl, s === 'falling' ? 1 - this.effort : drowsy + this.doze * 0.6, 3, dt);
@@ -814,7 +833,7 @@ export class Cygnet {
           this.hope * 0.55 +
           (flying ? 1 : 0) +
           (climbing || lifting ? 0.45 : 0) +
-          this.beg * 0.4 +
+          p.beg * 0.4 +
           (this.shake > 0 ? 0.35 : 0),
         0,
         1,
@@ -825,17 +844,17 @@ export class Cygnet {
     const tremble = p.hunch * 0.6 + this.fear * (this.carried ? 0.15 : 0.3);
 
     const shownYaw = this.seating.yaw;
-    this.root.position.copy(this.seating.shown.p);
     this.root.scale.setScalar(SIZE);
     let rootPitch = flying ? this.pitch : 0;
     /** A seat tips it back by itself; only the climb and being lifted add anything of their own. */
-    if (climbing) rootPitch = lerp(rootPitch, -0.55, p.held);
-    if (lifting && !this.seating.held) rootPitch = -0.15;
+    p.climb = ease(p.climb, climbing ? 1 : 0, 7, dt);
+    p.lifted = ease(p.lifted, lifting && !this.seating.held ? 1 : 0, 9, dt);
+    rootPitch += -0.55 * p.climb - 0.15 * p.lifted;
     let rootRoll = flying ? this.roll : this.roll * (1 - p.sit * 0.5);
     rootRoll += this.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
-    this.root.quaternion.copy(this.seating.shown.q).multiply(this.tilt.setFromEuler(this.tiltBy.set(rootPitch, 0, rootRoll)));
 
     /** Legs first: standing, the body sits on whichever leg is planted, so the feet never sink or float. */
+    p.beg = ease(p.beg, Math.min(1, this.beg), 8, dt);
     const tuck = Math.max(p.sit, p.held);
     let reach = 0;
     for (const [thigh, shin, foot, side, phase] of [
@@ -879,14 +898,16 @@ export class Cygnet {
     }
 
     const stand = 1 - tuck;
-    const bodyRest = riding || climbing ? 0.11 : lerp(0.072, reach, stand);
+    /** On its own feet the body stands on whichever leg is planted; carried, it rests on its keel. Eased between the two, never switched. */
+    p.afoot = ease(p.afoot, this.carried ? 0 : 1, 9, dt);
+    const bodyRest = lerp(0.11, lerp(0.072, reach, stand), p.afoot);
     const breathe = Math.sin(this.breath) * (0.012 + this.fear * 0.008 + this.puff * 0.01);
     const body = n[BODY];
     body.position.y = bodyRest + this.glide * 0.06 + this.effort * 0.02 + breathe * 0.4 + (afoot ? Math.abs(Math.cos(this.stride)) * 0.006 * p.hurry : 0);
     this.bodyLift = body.position.y * SIZE;
     body.position.z = 0;
     body.rotation.x =
-      -0.04 + p.sit * 0.04 - p.hunch * 0.12 + (this.peck > 0 ? Math.sin(Math.min(1, this.peck / 0.7) * Math.PI) * 0.25 : 0) + p.hurry * 0.12 - this.beg * 0.1;
+      -0.04 + p.sit * 0.04 - p.hunch * 0.12 + (this.peck > 0 ? Math.sin(Math.min(1, this.peck / 0.7) * Math.PI) * 0.25 : 0) + p.hurry * 0.12 - p.beg * 0.1;
     body.rotation.z =
       Math.sin(this.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, this.effort) + Math.sin(this.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, this.wriggle * 3);
     body.scale.set(1 + breathe * 0.6, 1 + breathe * 1.2, 1 + breathe * 0.8);
@@ -968,15 +989,16 @@ export class Cygnet {
     /** The bill opens on each note of a call, and a little with every hard breath after the fall. */
     const note = this.callLong ? Math.max(0, Math.sin(this.callT * Math.PI * 1.45)) : Math.max(0, Math.sin(this.callT * Math.PI * 3.8));
     n[JAW].rotation.x = calling * note * 0.42 + this.puff * 0.08 * Math.max(0, Math.sin(this.breath));
-    n[TAIL].rotation.x = this.beg * Math.sin(t * 15) * 0.25 + this.bond * 0.15 * (1 - p.hunch) - p.hunch * 0.3 - this.glide * 0.3 - p.sleep * 0.15;
+    n[TAIL].rotation.x = p.beg * Math.sin(t * 15) * 0.25 + this.bond * 0.15 * (1 - p.hunch) - p.hunch * 0.3 - this.glide * 0.3 - p.sleep * 0.15;
 
     this.flapPhase += dt * (5 + this.glide * 3 + (afoot ? p.hurry * 6 : 0));
     /** Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late. */
     let power = p.spread * (1 - this.glide * 0.8) * (this.effort > 0.02 || this.flap > 0.3 || flying ? 1 : 0.35);
     let beatPhase = this.flapPhase;
-    if (this.beg > 0 || climbing) {
+    const flutter = Math.max(p.beg, p.climb);
+    if (flutter > 0.01) {
       beatPhase = t * 24;
-      power = Math.max(power, 0.35);
+      power = Math.max(power, 0.35 * flutter);
     }
     const beat = Math.sin(beatPhase) * power;
     const lag = Math.sin(beatPhase - 0.75) * power;
@@ -999,6 +1021,12 @@ export class Cygnet {
     look.wingOpen = p.spread;
     applyLook(this.mat, look);
 
+    /** Placed last, once the pose knows how high the body rides on its origin, so a seat or a hand holds the body itself. */
+    this.seating.tick(dt);
+    this.seating.stand(this.position, this.yaw);
+    this.seating.update(dt, this.bodyLift);
+    this.root.position.copy(this.seating.shown.p);
+    this.root.quaternion.copy(this.seating.shown.q).multiply(this.tilt.setFromEuler(this.tiltBy.set(rootPitch, 0, rootRoll)));
     for (const [bone, r] of Object.entries(this.debug.bones)) n[Number(bone)].rotation.set(r[0], r[1], r[2]);
     this.root.updateMatrixWorld(true);
     for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);

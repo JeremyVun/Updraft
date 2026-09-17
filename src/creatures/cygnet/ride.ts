@@ -150,6 +150,12 @@ export class Ride {
     this.fresh = false;
   }
 
+  /** Where it would be, and which way up, if it were sitting in a seat right now: for hands to bring it there exactly. */
+  frameOf(seat: Seat, lift: number, out: Frame): Frame {
+    this.resolve(out, seat, lift, false);
+    return out;
+  }
+
   private resolve(out: Frame, where: Seat | 'held' | null, lift: number, live: boolean): void {
     if (where === 'held') {
       out.p.copy(this.hands.p);

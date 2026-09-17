@@ -69,12 +69,12 @@ export class StageChapter implements Chapter {
 
   /** Everything the two of them can do, by name. Unknown names are reported rather than ignored. */
   play(name: string): boolean {
-    const { child: c, cygnet: k, flock } = this.cast;
+    const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
     switch (name) {
       case 'ground': {
-        const p = ahead(1.5, 0.3);
+        const p = ahead(0.95, 0.1);
         k.position.set(p.x, Math.max(heightAt(p.x, p.z), 0), p.z);
         k.yaw = c.yaw + Math.PI;
         k.follow();
@@ -109,8 +109,13 @@ export class StageChapter implements Chapter {
         this.offering = true;
         return true;
       case 'gather':
-        c.faceToward(k.position.x, k.position.z, 1);
-        c.pickUp(() => k.rideIn('cradle'));
+        carry.gatherUp();
+        return true;
+      case 'stow':
+        carry.stow();
+        return true;
+      case 'unstow':
+        carry.unstow();
         return true;
       case 'arms':
         k.rideIn('cradle');
@@ -119,7 +124,7 @@ export class StageChapter implements Chapter {
         k.rideIn('satchel');
         return true;
       case 'down':
-        c.pickUp(() => k.follow());
+        carry.setDown();
         return true;
       case 'try':
         k.tryToFly();
