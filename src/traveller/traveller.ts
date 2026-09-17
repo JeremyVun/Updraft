@@ -214,10 +214,20 @@ export class Traveller {
     return this.goal !== null;
   }
 
-  /** World position of the right mitten, where the plane is held. */
+  /**
+   * Set by whoever fills the child's arms. With both arms round something, the paper plane rides in the satchel
+   * instead, nose up over their shoulder; when the arms are free again it goes back to the hand.
+   */
+  armsFull = false;
+  private stowed = 0;
+
+  /** Where the plane is held: in the mitten, or tucked in the satchel while the arms are full. */
   handPosition(out: THREE.Vector3): THREE.Vector3 {
     this.rig.root.updateMatrixWorld(true);
-    return this.rig.handR.getWorldPosition(out);
+    this.rig.handR.getWorldPosition(out);
+    if (this.stowed < 0.001) return out;
+    const tucked = this.rig.sockets.satchel.localToWorld(this.tmp2.set(0.16, 0.2, 0.02));
+    return out.lerp(tucked, this.stowed);
   }
 
   place(x: number, z: number, yaw: number): void {
@@ -315,6 +325,7 @@ export class Traveller {
       this.nextBlink = 2 + Math.random() * 4;
     }
 
+    this.stowed = damp(this.stowed, this.armsFull ? 1 : 0, 3, dt);
     this.pose(dt);
 
     const moved = Math.hypot(p.x - this.prev.x, p.z - this.prev.z);

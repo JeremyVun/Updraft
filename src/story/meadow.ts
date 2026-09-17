@@ -191,12 +191,12 @@ export class MeadowChapter implements Chapter {
   }
 
   /**
-   * The walk is long and the grass is over the cygnet's head, so it rides in the hood, where it is in every frame
+   * The walk is long and the grass is over the cygnet's head, so it rides in the satchel on their back, where it is in every frame
    * and can watch the plane go over. It only comes down where the camera comes down with it.
    */
   private walkOn(): void {
-    const { cygnet } = this.cast;
-    cygnet.rideIn('satchel');
+    const { cygnet, carry } = this.cast;
+    carry.stow();
     cygnet.bind(0.06);
     this.to('walk');
     this.play = 'carry';
@@ -230,7 +230,7 @@ export class MeadowChapter implements Chapter {
       }
       this.walkTo(cygnet.position, () => {
         this.gatherUp(() => {
-          cygnet.rideIn('satchel');
+          this.cast.carry.stow();
           this.trodden = null;
           this.to('walk');
           this.play = 'hold';
@@ -274,11 +274,8 @@ export class MeadowChapter implements Chapter {
 
   /** Crouches, gathers the cygnet into the arms, and stands up again. */
   private gatherUp(then: () => void): void {
-    const { child: c, cygnet } = this.cast;
-    c.faceToward(cygnet.position.x, cygnet.position.z, 1);
-    c.lookAt = cygnet.eye(this.onCygnet);
-    c.pickUp(() => {
-      cygnet.rideIn('cradle');
+    const { child: c, carry } = this.cast;
+    carry.gatherUp(() => {
       c.lookAt = null;
       then();
     });
@@ -326,17 +323,11 @@ export class MeadowChapter implements Chapter {
       c.stop();
       this.to('try');
       this.nextTry = 1e9;
-      /** It comes out of the hood and is set down in front of them, and then it is on its own. */
+      /** It comes out of the satchel and is set down in front of them, and then it is on its own. */
       /** Wide enough to take the camera as well as the two of them, or the near grass fills the whole frame. */
       this.trodden = new THREE.Vector3(c.position.x + Math.sin(c.yaw) * 1.4, 12, c.position.z + Math.cos(c.yaw) * 1.4);
-      c.pickUp(() => {
-        const { cygnet } = this.cast;
-        cygnet.position.set(c.position.x + Math.sin(c.yaw) * 2.4, 0, c.position.z + Math.cos(c.yaw) * 2.4);
-        cygnet.yaw = c.yaw + Math.PI;
-        cygnet.follow();
-        c.faceToward(cygnet.position.x, cygnet.position.z, 1);
-        this.nextTry = this.now + 2.5;
-      });
+      const { carry } = this.cast;
+      carry.unstow(() => carry.setDown(() => (this.nextTry = this.now + 2.5)));
       return;
     }
     if (!this.crestDone && this.leg >= CREST_LEG && this.play === 'hold' && !c.busy) {

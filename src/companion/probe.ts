@@ -86,7 +86,7 @@ export class Probe {
     }
     const gap = this.carry.contactGap;
     if (gap !== null) this.note('gap', gap, where);
-    if (!k.carried && k.state !== 'falling' && k.state !== 'gliding' && k.state !== 'leaving') {
+    if (!k.carried && k.state !== 'falling' && k.state !== 'gliding' && k.state !== 'leaving' && k.state !== 'swimming' && k.state !== 'perched') {
       const feet = k.seating.shown.p;
       this.note('sunk', Math.max(0, Math.max(heightAt(feet.x, feet.z), 0) - feet.y), where);
     }

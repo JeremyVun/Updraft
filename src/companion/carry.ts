@@ -175,8 +175,11 @@ export class Carry {
     ], onDone);
   }
 
-  /** Down on the knees, it is lowered to the grass in both hands, steps off, and the hands come away. */
-  setDown(onDone?: () => void): void {
+  /**
+   * Down on the knees, it is lowered to the grass in both hands, steps off, and the hands come away. `facing` is the
+   * way it should be standing when it is left there, if that matters.
+   */
+  setDown(onDone?: () => void, facing?: number): void {
     const { child: c, cygnet: k } = this;
     const spot = new THREE.Vector3();
     const leanFrom = { value: 0 };
@@ -201,6 +204,7 @@ export class Carry {
           c.lean = 0.42 * kk;
           this.centre.lerpVectors(this.centreFrom, OFFER, kk);
           this.pitch = lerp(-0.18, 0, kk);
+          if (facing !== undefined) this.relYaw = lerpAngle(this.relYawFrom, facing - c.yaw, kk);
         },
       },
       {
@@ -297,6 +301,7 @@ export class Carry {
     const { child: c, cygnet: k } = this;
     this.duet?.update(dt);
     if (this.duet?.done) this.duet = null;
+    c.armsFull = this.leading || this.onBody > 0.5;
 
     if (this.leading) {
       if (this.goal) {

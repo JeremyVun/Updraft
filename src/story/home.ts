@@ -122,6 +122,8 @@ export class HomeChapter implements Chapter {
     const c = this.cast.child;
     this.to('climb');
     c.lookAt = null;
+    /** Up the hill it rides on their back, where it can be seen and can see. */
+    if (this.cast.cygnet.seat === 'cradle') this.cast.carry.stow();
     c.walkTo(SUMMIT.x, SUMMIT.y, false, () => {
       c.faceToward(SUMMIT.x + TOWARD_SUNSET.x, SUMMIT.y + TOWARD_SUNSET.y, 1);
       c.sitDown();
@@ -155,15 +157,15 @@ export class HomeChapter implements Chapter {
     const x = c.position.x + Math.sin(c.yaw) * 2.2;
     const z = c.position.z + Math.cos(c.yaw) * 2.2;
     this.trodden = new THREE.Vector3(x, 12, z);
-    c.lookAt = cygnet.eye(this.onCygnet);
-    c.pickUp(() => {
-      cygnet.position.set(x, Math.max(heightAt(x, z), 0), z);
-      cygnet.yaw = NORTH;
-      cygnet.follow();
-      c.faceToward(x, z, 1);
+    const { carry } = this.cast;
+    const stood = () => {
+      c.faceToward(cygnet.position.x, cygnet.position.z, 1);
       this.to('tries');
       this.nextCall = this.now + 3;
-    });
+    };
+    const down = () => carry.setDown(stood, NORTH);
+    if (cygnet.seat === 'satchel') carry.unstow(down);
+    else down();
   }
 
   /**

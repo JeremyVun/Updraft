@@ -135,10 +135,8 @@ export class LinesChapter implements Chapter {
 
   /** The first thing they do on solid ground is put it down, so it can walk the hill on its own legs. */
   private setDown(): void {
-    const { child: c, cygnet } = this.cast;
-    c.lookAt = cygnet.eye(this.tmp);
-    c.pickUp(() => {
-      cygnet.follow();
+    const { child: c, cygnet, carry } = this.cast;
+    carry.setDown(() => {
       cygnet.bind(0.08);
       c.lookAt = null;
       this.to('walk');
@@ -231,14 +229,11 @@ export class LinesChapter implements Chapter {
   }
 
   private board(): void {
-    const { child: c, boat, cygnet } = this.cast;
+    const { child: c, boat } = this.cast;
     this.to('toBoat');
     c.lookAt = null;
     c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
-      c.faceToward(cygnet.position.x, cygnet.position.z, 1);
-      c.lookAt = cygnet.eye(this.tmp);
-      c.pickUp(() => {
-        cygnet.rideIn('cradle');
+      this.cast.carry.gatherUp(() => {
         c.lookAt = null;
         this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);

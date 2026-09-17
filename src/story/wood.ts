@@ -69,7 +69,8 @@ export class WoodChapter implements Chapter {
     plane.visible = false;
     plane.soggy.value = 1;
     child.dismount();
-    cygnet.rideIn('satchel');
+    if (cygnet.seat === 'cradle') cast.carry.stow();
+    else cygnet.rideIn('satchel');
     child.walkTo(WOOD_LANDING.x, WOOD_LANDING.y - 14, false, () => this.to('first'), 1.4);
   }
 
@@ -244,10 +245,8 @@ export class WoodChapter implements Chapter {
     if (this.cast.embers.heatNear(HIDING.x, HIDING.z, FOUND) > FOUND_HEAT) {
       this.to('found');
       c.walkTo(HIDING.x, HIDING.z + 1.2, false, () => {
-        c.faceToward(HIDING.x, HIDING.z, 1);
-        c.pickUp(() => {
-          cygnet.rideIn('cradle');
-          /** Carried in the arms from here, not the hood. After the dark it is not put down again for a while. */
+        /** Carried in the arms from here, not on their back. After the dark it is not put down again for a while. */
+        this.cast.carry.gatherUp(() => {
           cygnet.bind(0.35);
           this.to('walk');
         });

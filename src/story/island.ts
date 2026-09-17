@@ -412,7 +412,6 @@ export class IslandChapter implements Chapter {
         this.cast.cygnet.call(false);
         this.nextCall = time + 2.1 + Math.random() * 0.6;
       }
-      if (this.beat === 'kneel' && t > 1.5 && !c.busy) this.gather();
     } else if (this.beat === 'gather') {
       c.lookAt = this.cast.cygnet.eye(this.tmp);
     } else if (this.beat === 'push') {
@@ -449,24 +448,19 @@ export class IslandChapter implements Chapter {
     const { child: c, cygnet } = this.cast;
     this.beat = 'near';
     this.beatStart = this.now;
-    c.walkTo(cygnet.position.x, cygnet.position.z - 1.15, false, () => {
-      this.beat = 'kneel';
-      this.beatStart = this.now;
-      c.faceToward(cygnet.position.x, cygnet.position.z, 1);
-      cygnet.watch(c.position);
-    }, 0.9);
+    c.walkTo(cygnet.position.x, cygnet.position.z - 1.3, false, () => this.gather(), 0.9);
   }
 
-  /** Kneels, gathers the cygnet up in both arms, and from here on carries it. */
+  /**
+   * Down on their knees, hands held out low and kept still. It has tried three times to get up by itself; with
+   * somebody there it tries once more, and this time it gets as far as their hands. From here on it is carried.
+   */
   private gather(): void {
-    const { child: c, cygnet } = this.cast;
-    this.beat = 'gather';
+    const { child: c, cygnet, carry } = this.cast;
+    this.beat = 'kneel';
     this.beatStart = this.now;
-    c.faceToward(this.fallen.x, this.fallen.z, 1);
-    c.pickUp(() => {
-      cygnet.rideIn('cradle');
+    carry.gatherUp(() => {
       cygnet.bind(0.3);
-      cygnet.watch(null);
       this.beat = 'leaving';
       this.beatStart = this.now;
       this.play = 'hold';

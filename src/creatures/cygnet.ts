@@ -132,6 +132,8 @@ export class Cygnet {
   private hope = 0;
   private hopT = 0;
   private hopLift = 0;
+  private runBearing = 0;
+  private awayFromChild = 0;
   /** 0 to 1: down on its breast with its tail in the air, after a try that did not work or a landing it got wrong. */
   private faceplant = 0;
   private landedAt = 0;
@@ -286,12 +288,16 @@ export class Cygnet {
     return this.state === 'leaving';
   }
 
-  /** A few hard flaps and hops on the spot: it is trying to get up by itself, and it cannot. */
-  tryToFly(): void {
+  /**
+   * A run at it: feet slapping, wings going, a bound or two, and down on its breast. It is trying to get up by
+   * itself, and it cannot. It runs the way it is told, or else away from the child, who is watching.
+   */
+  tryToFly(bearing?: number): void {
     if ((this.state === 'following' || this.state === 'fallen') && this.hopT <= 0) {
       this.state = 'following';
       this.hopT = HOP_FOR;
       this.hopLift = 0;
+      this.runBearing = bearing ?? this.awayFromChild;
     }
   }
 
@@ -496,6 +502,7 @@ export class Cygnet {
     dt = Math.min(dt, 0.05);
     this.childSpeed = ease(this.childSpeed, dt > 0 ? Math.min(8, this.tmp.copy(child).sub(this.childPrev).length() / dt) : 0, 8, dt);
     this.childPrev.copy(child);
+    this.awayFromChild = Math.atan2(this.position.x - child.x, this.position.z - child.z);
 
     const afoot = this.state === 'following' || this.state === 'fallen';
     /** It only ever goes up on wind that is actually under it, so the player learns where to hold the pointer. */
@@ -849,6 +856,7 @@ export class Cygnet {
     const t = HOP_FOR - this.hopT;
     let hop = 0;
     let run = 0;
+    this.turnTo(this.runBearing, 6, 4.5, dt);
     if (t < 0.5) {
       /** It gathers itself: a crouch, a look up, wings coming off its back. */
       this.effort = 0.3;
