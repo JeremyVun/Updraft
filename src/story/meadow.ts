@@ -24,8 +24,17 @@ export const FAR_SHORE = new THREE.Vector3(-6, 0, -1172);
 
 /** The high ground on the walk, where the haze thins and you are told, without a word, where you are going. */
 const CREST_LEG = 2;
-/** Where the cygnet's family is wheeling up a thermal, far off over the north end of the island. */
-const GATHERING = { x: -26, z: -1010, base: 66, radius: 30 };
+/**
+ * Where the cygnet's family is resting: on the dark water of the bay off the far shore, clear of the beach and of the
+ * boat that is waiting there, where the crest looks straight down on them.
+ */
+const GATHERING = (() => {
+  const x = -74;
+  let z = -1090;
+  while (heightAt(x, z) > -1.2 && z > -1500) z -= 4;
+  return { x, z: z - 28, radius: 17 };
+})();
+const NORTH = Math.PI;
 
 const WAVE_SPEED = 85;
 const WAVE_REACH = 3600;
@@ -69,6 +78,7 @@ export class MeadowChapter implements Chapter {
   private watchUntil = 0;
   private nextLook = 0;
   private crestDone = false;
+  private lifted = false;
   private tryDone = false;
   private cheeredFlight = false;
   /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
@@ -77,7 +87,7 @@ export class MeadowChapter implements Chapter {
   private nextCall = 0;
   private readonly onCygnet = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
-  private readonly far = new THREE.Vector3(GATHERING.x, GATHERING.base + 24, GATHERING.z);
+  private readonly far = new THREE.Vector3(GATHERING.x, 1.5, GATHERING.z);
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
@@ -291,7 +301,8 @@ export class MeadowChapter implements Chapter {
 
   /**
    * The one moment the dream tells you what you are doing. The child tops the rise, the haze thins, and far to the
-   * north the cygnet's family is turning on a thermal. The cygnet calls to them. Nothing answers, and they walk on.
+   * north the cygnet's family is resting on the water of the bay. The cygnet calls to them. They are too far to hear;
+   * after a while they run across the water, lift off and go north, and the two of them walk on.
    */
   private updateCrest(time: number): void {
     const { child: c, cygnet, flock } = this.cast;
@@ -303,8 +314,13 @@ export class MeadowChapter implements Chapter {
       cygnet.call(true);
       this.nextCall = time + 4.5 + Math.random();
     }
-    if (this.t > 15) {
-      flock.clear();
+    /** They go while the two of them are still watching, so the last of it is a line of white going away. */
+    if (this.t > 10 && !this.lifted) {
+      this.lifted = true;
+      flock.lift(NORTH);
+    }
+    if (this.lifted) this.far.copy(flock.head);
+    if (this.t > 19) {
       cygnet.watch(null);
       this.to('walk');
       this.play = 'hold';
@@ -339,7 +355,7 @@ export class MeadowChapter implements Chapter {
       this.to('crest');
       c.stop();
       c.faceToward(GATHERING.x, GATHERING.z, 1);
-      this.cast.flock.circle(GATHERING.x, GATHERING.z, GATHERING.base, GATHERING.radius);
+      this.cast.flock.rest(GATHERING.x, GATHERING.z, GATHERING.radius);
       this.nextCall = time + 2.4;
       return;
     }
