@@ -79,8 +79,8 @@ export const tuning = {
   },
   birches: {
     /** Gust energy and wind speed at which a leaf with an average grip on it lets go of the branch. */
-    gripEnergy: 0.5,
-    gripSpeed: 7,
+    gripEnergy: 0.28,
+    gripSpeed: 5.5,
     /** Leaves shed per second by the prevailing breeze alone, as a share of what is left on the tree. */
     trickle: 0.0016,
     /** How fast a tree goes bare: per second of a full gust standing in it, and per second of breeze. */

@@ -5,8 +5,8 @@ import { ISLES } from '../world/heightfield';
 import { mulberry32 } from '../world/noise';
 import { glsl, tuning } from '../tuning';
 
-const W = 160;
-const H = 160;
+const W = 192;
+const H = 192;
 const ISLE = ISLES.birches;
 
 /**
@@ -102,8 +102,8 @@ void main() {
   if (p.w < 0.5) {
     /** Still on the branch: it holds on until the air takes it, and then it goes out on the gust that took it. */
     if (letsGo(w, p.xz, seed)) {
-      vec2 gone = w.xy * (0.5 + 0.4 * seed);
-      gl_FragColor = vec4(gone.x, 0.6 + w.z * 1.4, gone.y, seed);
+      vec2 gone = w.xy * (0.9 + 0.7 * seed);
+      gl_FragColor = vec4(gone.x, 2.4 + w.z * 4.5, gone.y, seed);
       return;
     }
     gl_FragColor = vec4(0.0, 0.0, 0.0, seed);
@@ -112,21 +112,22 @@ void main() {
 
   float above = p.y - max(ground, 0.0);
   float resting = step(above, 0.14);
-  float lift = w.z * (1.7 + 1.5 * seed) + smoothstep(9.0, 19.0, sp) * 1.5 + w.w * (2.2 + 1.6 * seed);
+  float lift = w.z * (2.8 + 2.2 * seed) + smoothstep(6.0, 17.0, sp) * 2.2 + w.w * (2.2 + 1.6 * seed);
   /** A child walking into a drift of them sends the lot up round their knees. */
   float wade = uWade.w * (1.0 - smoothstep(uWade.z * 0.45, uWade.z, length(p.xz - uWade.xy)));
   bool grabbed = resting < 0.5 || lift > 0.5 + seed * 0.5 || wade > 0.25;
 
   vec2 turb = vec2(vnoise(p.xz * 0.4 + uTime * 0.9 + seed * 17.0), vnoise(p.zx * 0.4 - uTime * 0.8 + seed * 29.0)) - 0.5;
   bool afloat = ground < 0.0 && above < 0.25;
-  vec2 hTarget = w.xy * (afloat ? 0.12 : 0.85 + 0.25 * seed) + turb * (1.1 + sp * 0.22);
-  float fall = afloat ? 0.0 : 0.75 + 0.5 * seed;
+  /** A leaf never makes the speed of the air that took it: it lags, and what it loses it turns into tumbling. */
+  vec2 hTarget = w.xy * (afloat ? 0.12 : 0.55 + 0.3 * seed) + turb * (1.3 + sp * 0.3);
+  float fall = afloat ? 0.0 : 0.62 + 0.45 * seed;
   vec3 target = vec3(hTarget.x, lift * (0.8 + 0.5 * fract(seed * 13.7)) - fall + turb.y * 1.2, hTarget.y);
   if (wade > 0.25) {
     vec2 away = normalize(p.xz - uWade.xy + vec2(1e-3));
     target = vec3(away.x * (2.0 + 3.0 * seed), 2.2 + 2.4 * seed, away.y * (2.0 + 3.0 * seed));
   }
-  float k = 1.0 - exp(-uDt * (1.8 + seed * 1.4 + wade * 6.0));
+  float k = 1.0 - exp(-uDt * (1.3 + seed * 1.2 + wade * 6.0));
   v.xyz = grabbed ? mix(v.xyz, target, k) : v.xyz * exp(-uDt * 9.0);
   gl_FragColor = v;
 }`;
@@ -200,7 +201,10 @@ void main() {
   /** Half, because this card is two units across where the litter's is one; bigger while it is in the air. */
   float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (0.85 + 0.7 * fract(seed * 5.7)) * (1.0 + 0.55 * above);
   /** One leaf on the lens is a gold blind across the whole room, so the last metre of them thins away. */
-  size *= smoothstep(0.5, 2.6, distance(cameraPosition, p.xyz));
+  float away = distance(cameraPosition, p.xyz);
+  size *= smoothstep(0.5, 2.6, away);
+  /** The player's gusts land a long way up the ride, and a cloud that far off has to be drawn bigger to read. */
+  size *= 1.0 + 1.1 * smoothstep(18.0, 75.0, away);
   /** And one blown out over the water goes to nothing before it is far enough out to be somebody else's leaf. */
   size *= 1.0 - smoothstep(1.06, 1.28, birchIsleR(p.xz));
   vWorld = p.xyz + (t1 * position.x * 1.45 + t2 * position.y) * size;

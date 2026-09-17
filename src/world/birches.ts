@@ -21,6 +21,8 @@ const LITTER_GRID = 180;
 const LITTER_REACH = 44;
 /** How near the island the camera has to be before its floor and its loose leaves exist at all. */
 const FLOOR_RANGE = ISLE.rx + 90;
+/** Seconds a tuft the wind has just taken stays in the air on its way out of the crown. */
+const SHED_FLIGHT = 2.4;
 
 /** The south beach, where the boat runs ashore. */
 export const BIRCHES_LANDING = new THREE.Vector2(3, -1074);
@@ -63,6 +65,8 @@ interface Birch {
   variant: number;
   /** How much of its gold is gone, 0 to 1. It only ever rises. */
   strip: number;
+  /** How much of it is in the air right now: what the last few seconds took off, decaying as that lands. */
+  shed: number;
 }
 
 /** The tree's own frame, read once from the tree table and used by everything drawn on it. */
@@ -70,9 +74,11 @@ const BIRCH_TREE_GLSL = /* glsl */ `
 uniform sampler2D uTrees;
 vec4 birchT;
 vec4 birchS;
+vec4 birchF;
 void rootBirch(int i) {
   birchT = texelFetch(uTrees, ivec2(i, 0), 0);
   birchS = texelFetch(uTrees, ivec2(i, 1), 0);
+  birchF = texelFetch(uTrees, ivec2(i, 2), 0);
 }
 /**
  * A point on the unit tree put where the tree stands, and bent by the air at its foot. A birch is a whip: it
@@ -172,12 +178,24 @@ out float vSeed;
 out float vDepth;
 void main() {
   rootBirch(int(aTuft.x));
-  /** Every leaf has its own place in the queue; the tree strips through them and never puts one back. */
-  if (aLeaf.w < birchS.z) {
+  /**
+   * Every leaf has its own place in the queue; the tree strips through them and never puts one back. The ones
+   * the last second or two took are not simply gone: they are still in the air, going downwind off the branch
+   * they were on, which is the whole of what a gust looks like in this room.
+   */
+  float gone = birchS.z - aLeaf.w;
+  float flight = gone > 0.0 ? gone / max(birchF.x, 1e-5) : 0.0;
+  if (gone > 0.0 && flight >= 1.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
   vec3 centre = birchPlace(aLeaf.xyz);
+  if (flight > 0.0) {
+    vec2 uv = domainUv(centre.xz);
+    vec2 air = insideUv(uv) ? texture(uWindTex, uv).xy : vec2(0.0);
+    float s = flight * ${glsl(SHED_FLIGHT)};
+    centre += vec3(air.x * s * 0.55, 0.9 * s - 1.05 * s * s, air.y * s * 0.55);
+  }
   float away = distance(centre, cameraPosition);
   /** Far trees keep their gold: the tufts thin out, and the ones left grow to cover for them. */
   float keep = 1.0 - 0.4 * smoothstep(uDetail.x, uDetail.y, away);
@@ -189,7 +207,9 @@ void main() {
     return;
   }
   float size = aTuft.y * fade * (1.0 + 0.45 * smoothstep(uDetail.x, uDetail.y, away));
-  float spin = aTuft.z * 40.0 + sin(uTime * (1.1 + fract(aTuft.z * 7.0)) + aTuft.z * 20.0) * 0.25;
+  /** What is in the air thins away as it goes, so the cloud has no edge and nothing ever pops out of the frame. */
+  size *= 1.0 - smoothstep(0.55, 1.0, flight);
+  float spin = aTuft.z * 40.0 + sin(uTime * (1.1 + fract(aTuft.z * 7.0)) + aTuft.z * 20.0) * 0.25 + flight * (4.0 + 6.0 * fract(aTuft.z * 3.3));
   vec2 c = vec2(cos(spin), sin(spin));
   vec2 corner = vec2(position.x * c.x - position.y * c.y, position.x * c.y + position.y * c.x);
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
@@ -549,8 +569,8 @@ export class AutumnBirches {
     this.place(rand);
 
     const width = Math.max(this.trees.length, 1);
-    this.table = new Float32Array(width * 2 * 4);
-    this.treeTex = new THREE.DataTexture(this.table, width, 2, THREE.RGBAFormat, THREE.FloatType);
+    this.table = new Float32Array(width * 3 * 4);
+    this.treeTex = new THREE.DataTexture(this.table, width, 3, THREE.RGBAFormat, THREE.FloatType);
     this.treeTex.needsUpdate = true;
     const shared = {
       ...atmo.uniforms,
@@ -612,12 +632,12 @@ export class AutumnBirches {
         /** The wind has been at the shore trees all their lives: shorter and thinner down by the water. */
         const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
         const scale = (12 + rand() * 6) * (0.6 + 0.4 * shelter);
-        this.trees.push({ x, y: y - 0.25, z, scale, yaw: rand() * 6.2831, variant: Math.floor(rand() * 4), strip: 0 });
+        this.trees.push({ x, y: y - 0.25, z, scale, yaw: rand() * 6.2831, variant: Math.floor(rand() * 4), strip: 0, shed: 0 });
       }
     }
     /** And the big one on the crest, which is the only reason anybody stops here. */
     const y = heightAt(SWING_TREE.x, SWING_TREE.y);
-    this.trees.push({ x: SWING_TREE.x, y: y - 0.3, z: SWING_TREE.y, scale: SWING_SCALE, yaw: 0, variant: 4, strip: 0 });
+    this.trees.push({ x: SWING_TREE.x, y: y - 0.3, z: SWING_TREE.y, scale: SWING_SCALE, yaw: 0, variant: 4, strip: 0, shed: 0 });
   }
 
   private writeTable(): void {
@@ -625,6 +645,7 @@ export class AutumnBirches {
     this.trees.forEach((t, i) => {
       this.table.set([t.x, t.y, t.z, t.scale], i * 4);
       this.table.set([Math.cos(t.yaw), Math.sin(t.yaw), t.strip, (i * 0.618034) % 1], (n + i) * 4);
+      this.table.set([t.shed, 0, 0, 0], (n * 2 + i) * 4);
     });
     this.treeTex.needsUpdate = true;
   }
@@ -703,8 +724,8 @@ export class AutumnBirches {
    */
   private leafState(rand: () => number, variants: { tips: THREE.Vector3[] }[]): Float32Array {
     const state = new Float32Array(LEAF_COUNT * 4);
-    const near = this.trees.filter((t) => walkDistance(t.x, t.z) < 22);
-    const drifts = Math.floor(LEAF_COUNT * 0.12);
+    const near = this.trees.filter((t) => walkDistance(t.x, t.z) < 17);
+    const drifts = Math.floor(LEAF_COUNT * 0.04);
     for (let i = 0; i < LEAF_COUNT; i++) {
       if (i < drifts) {
         const a = rand() * Math.PI * 2;
@@ -715,7 +736,7 @@ export class AutumnBirches {
         state.set([x, Math.max(heightAt(x, z), 0) + 0.05, z, 1], i * 4);
         continue;
       }
-      const pool = near.length && rand() < 0.68 ? near : this.trees;
+      const pool = near.length && rand() < 0.86 ? near : this.trees;
       const tree = pool[Math.floor(rand() * pool.length)];
       const tips = variants[tree.variant].tips;
       const tip = tips[Math.floor(rand() * tips.length)];
@@ -744,13 +765,17 @@ export class AutumnBirches {
     if (!near) return;
 
     const { stripRate, stripTrickle, gripSpeed, stripSpeed } = tuning.birches;
+    const land = Math.exp(-dt / SHED_FLIGHT);
     for (const tree of this.trees) {
+      tree.shed *= land;
       if (tree.strip >= 0.985) continue;
       const w = this.wind.sample(tree.x, tree.z, this.air);
       const speed = Math.hypot(w.x, w.z);
       const gust = Math.min(1, w.energy * 0.85) + Math.min(1, Math.max(0, (speed - gripSpeed) / (stripSpeed - gripSpeed)));
       const shaken = tree.variant === 4 ? this.shaking * 0.06 : 0;
+      const was = tree.strip;
       tree.strip = Math.min(0.985, tree.strip + (stripTrickle + shaken + stripRate * gust) * dt);
+      tree.shed += tree.strip - was;
     }
     this.writeTable();
 
