@@ -209,9 +209,9 @@ function parts(down: boolean): THREE.BufferGeometry[] {
   );
   if (down) return out;
 
-  out.push(still(loft({ stations: bill(HEAD, 0.05, 0.026, 0.01, 0.041, 0.116), mat: BILL, around: 14, smooth: 1, blend: (t) => Math.max(0, (t - 0.8) / 0.2) })));
+  out.push(still(loft({ stations: bill(HEAD, 0.05, 0.026, 0.01, 0.041, 0.116), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) })));
   out.push(
-    still(loft({ stations: bill(JAW, 0.036, 0.009, 0.012, 0.036, 0.107), mat: BILL, around: 14, smooth: 1, blend: (t) => Math.max(0, (t - 0.8) / 0.2) * 0.4 })),
+    still(loft({ stations: bill(JAW, 0.036, 0.009, 0.012, 0.036, 0.107), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) * 0.4 })),
   );
   pair({ part: HEAD, mat: EYE, at: EYE_AT, size: [EYE_R * 0.78, EYE_R, EYE_R * 0.96], detail: 2 }, HEAD);
 
@@ -261,7 +261,7 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
   /** Shut, every vane lines up along its own bone, so the fan closes and the tips run on past the wrist to the tail. */
   const SHUT = 0.14;
   const vane = (spec: Parameters<typeof feather>[0]) =>
-    wing.push(skinned(feather({ ...spec, close: SHUT - spec.spin, rows: down ? 4 : 6, around: 6 })));
+    wing.push(skinned(feather({ ...spec, close: SHUT - spec.spin, rows: down ? 4 : 6, around: down ? 6 : 8 })));
   if (!down) {
     for (let i = 0; i < 5; i++) {
       const k = i / 4;
@@ -290,34 +290,40 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
       });
     }
   }
-  /** Coverts: short, round and downy, and rooted out past the flank so none of them ever cuts through the body. */
-  for (let i = 0; i < 4; i++) {
-    const k = i / 3;
-    vane({
-      part: k < 0.4 ? WING_L : FORE_L,
-      mat: COAT,
-      root: at(0.166 + k * 0.078, 0.008 - k * 0.005, -0.006 - k * 0.008),
-      length: 0.066 + k * 0.022,
-      width: 0.03 - k * 0.004,
-      spin: 1.46 - k * 0.16,
-      lift: 0.04,
-      thick: 0.009,
-      pale: 0.42,
-    });
-  }
-  for (let i = 0; i < 3; i++) {
-    const k = i / 2;
-    vane({
-      part: k < 0.6 ? WING_L : FORE_L,
-      mat: COAT,
-      root: at(0.16 + k * 0.07, 0.022 - k * 0.008, 0.008 - k * 0.008),
-      length: 0.054 + k * 0.016,
-      width: 0.032 - k * 0.004,
-      spin: 1.4 - k * 0.12,
-      lift: 0.14,
-      thick: 0.011,
-      pale: 0.3,
-    });
+  /**
+   * Coverts: short, round and down-coloured, rooted clear of the arm's own surface rather than half sunk in it.
+   * They are left out of the coat itself: a shell pushed off a blade thinner than the coat is long comes through
+   * the other side of it, and a wing covered in that reads as dirt.
+   */
+  if (!down) {
+    for (let i = 0; i < 4; i++) {
+      const k = i / 3;
+      vane({
+        part: k < 0.4 ? WING_L : FORE_L,
+        mat: COAT,
+        root: at(0.158 + k * 0.086, 0.03 - k * 0.02, -0.006 - k * 0.008),
+        length: 0.068 + k * 0.024,
+        width: 0.032 - k * 0.004,
+        spin: 1.46 - k * 0.16,
+        lift: -0.1,
+        thick: 0.012,
+        pale: 0.42,
+      });
+    }
+    for (let i = 0; i < 3; i++) {
+      const k = i / 2;
+      vane({
+        part: k < 0.6 ? WING_L : FORE_L,
+        mat: COAT,
+        root: at(0.15 + k * 0.072, 0.048 - k * 0.02, 0.01 - k * 0.008),
+        length: 0.054 + k * 0.016,
+        width: 0.034 - k * 0.004,
+        spin: 1.4 - k * 0.12,
+        lift: -0.06,
+        thick: 0.014,
+        pale: 0.3,
+      });
+    }
   }
   for (const g of wing) {
     out.push(still(g));

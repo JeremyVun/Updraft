@@ -29,7 +29,7 @@ export interface FeatherSpec {
 export function feather(s: FeatherSpec): THREE.BufferGeometry {
   const rows = s.rows ?? 6;
   const around = s.around ?? 8;
-  const thick = s.thick ?? s.width * 0.14;
+  const thick = s.thick ?? s.width * 0.18;
   const pale = s.pale ?? 1;
   const turn = new THREE.Euler(0, s.spin, s.lift ?? 0, 'YZX');
   const v = new THREE.Vector3();

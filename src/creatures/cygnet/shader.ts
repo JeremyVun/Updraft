@@ -11,9 +11,9 @@ const SHELLS = 8;
 const DOWN = 0.03;
 /** Strands to a unit of rest space: fine enough to read as down from a metre and a half away. */
 const STRAND = 300;
-/** Shells stop being drawn before they are too small to survive the pixel grid. */
-export const DOWN_NEAR = 9;
-export const DOWN_FAR = 21;
+/** The coat lies down again over this range, before its strands are too small to survive the pixel grid. */
+const DOWN_NEAR = 9;
+const DOWN_FAR = 21;
 
 const vec3 = (v: V3) => `vec3(${v[0].toFixed(5)}, ${v[1].toFixed(5)}, ${v[2].toFixed(5)})`;
 
@@ -164,8 +164,8 @@ void main() {
   float ao = 0.84;
   if (m == ${QUILL}) {
     alb = mix(mix(VANE, VANE_TIP, k), SNOW, uGrown * smoothstep(0.45, 0.95, k));
-    fuzz = 0.2;
-    thin = 0.34;
+    fuzz = 0.3;
+    thin = 0.45;
     ao = 0.96;
   } else if (m == ${BILL}) {
     alb = mix(SLATE, NAIL, k);
@@ -191,8 +191,8 @@ void main() {
   alb *= mix(1.0, 0.44, uWet);
 #ifdef SHELL
   /** Down is dark at the root and catches everything at the tip, which is the whole of why a coat looks soft. */
-  alb *= mix(0.55, 1.08, vShell);
-  ao = mix(0.42, 1.0, vShell);
+  alb *= mix(0.64, 1.06, vShell);
+  ao = mix(0.5, 1.0, vShell);
   fuzz = 0.38;
   thin = 0.34;
 #endif
