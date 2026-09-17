@@ -104,6 +104,19 @@ On leading the player, variety, the colt and the music (2026-09-17, verbatim):
 > the same music throughout the entire game (the music is great, but it gets too repetitive when its played whe
 > whole way through)."
 
+On the companion becoming a swan cygnet (2026-09-17, verbatim). This supersedes "fledgling crane" everywhere below;
+the plan for it is `docs/cygnet.md`:
+
+> "Unfortunately, the child's companion / baby crane looks too much like a chicken. is there a cuter baby bird
+> species we can make it?"
+
+> "yea i think a swan cygnet will work a lot better. Ugly duckling is exactly the feel i think this should go. As
+> the child's companion, the swan cygnet is a co star in this game so all it's animations, sounds, behaviour, poses,
+> how it flaps, falls/tumbles from the sky at the start, how it climbs ontop of the child, is carried by the child
+> need to be super high quality, seamless and beyond reproach. It should feel like another real character with
+> it's own emotions, thoughts, and liveliness. Especially with teh way it interacts with the child, it should look
+> completely seamless and cohesive. This is a big piece of work that requires extreme attention to deail"
+
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
 
 And: "Anything you want to prototype and explore, go ahead. we can always iterate or trim what doesn't work."
