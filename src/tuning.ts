@@ -47,6 +47,34 @@ export const tuning = {
     /** Seconds the colt is left trying in the meadow before the child gathers it up and walks on. */
     tryFor: 60,
   },
+  piano: {
+    /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */
+    gustFrom: 0.24,
+    gustFull: 1.2,
+    /** Notes in a run, from a breath to a full gust, and the seconds between them at each. */
+    runLeast: 3,
+    runMost: 9,
+    spaceSlow: 0.2,
+    spaceFast: 0.075,
+    /** Rising air held over the keys that rolls a chord, and how often it rolls another while it is held. */
+    liftFrom: 0.45,
+    chordEvery: 3.4,
+    /** Seconds between the single notes the prevailing breeze alone finds, and the wind speed it needs. */
+    breezeLeast: 7,
+    breezeMost: 15,
+    breezeSpeed: 1.3,
+    /** How far a key dips as it sounds, and how long it takes to come back up. */
+    dip: 0.03,
+    dipRelease: 0.24,
+    /** How near the camera has to be for the piano to sound at all, and where it is loudest. */
+    heardWithin: 95,
+    heardFully: 26,
+    /** Seconds the child sits with nothing played before they walk on, and the longest they ever stay. */
+    listenFor: 8,
+    stayFor: 45,
+    /** How far the room's music pulls back while they are sitting at it. */
+    hush: 0.5,
+  },
   washing: {
     /** Wind speed that lifts a sheet all the way to horizontal; the breeze alone lifts it `wind.breeze` / this. */
     fullSwingSpeed: 18,

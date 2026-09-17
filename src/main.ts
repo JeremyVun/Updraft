@@ -41,6 +41,7 @@ import { createRocks } from './world/rocks';
 import { Crane } from './creatures/crane';
 import { CraneFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
+import { piano } from './world/piano';
 import { LINES_WALK, LINES_LANDING } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { DarkWood } from './world/wood';
@@ -94,6 +95,7 @@ const bakeInputs: BakeInputs = {
     ...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })),
     { x: TREE.x, z: TREE.z, radius: 1.6 },
     { x: COTTAGE.x, z: COTTAGE.z, radius: 6.5 },
+    piano.clearing,
   ],
   flowers: [...FLOWER_PATCHES, ...hillFlowers],
 };
@@ -121,6 +123,9 @@ scene.add(baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3));
 /** A door standing on the crest with nothing behind it: the dream leaving another piece of home lying about. */
 const door = redDoor(23, -357, 0.32);
 scene.add(door);
+
+/** And an upright piano standing in the meadow grass, off the walk, which the wind plays. */
+scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 const washing = new WashingLines([
@@ -468,6 +473,7 @@ function frame(now: number): void {
   grass.bake(renderer);
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm);
+  piano.update(dt, time, rig.camera, wind, sound.output);
   wood.update(dt, time, rig.camera, storm);
   /** Fireflies rise out of grass, not out of the sea, and they do not fly in a gale. */
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6), story.focus);
@@ -535,7 +541,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life, piano };
 }
 
 /**
