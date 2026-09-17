@@ -297,7 +297,7 @@ export class Kite {
      * real calm nothing is holding it up at all, so it sinks and hangs on whatever breeze is left.
      */
     const holding = 0.4 + 0.6 * THREE.MathUtils.smoothstep(speed, 0.05, 0.5);
-    const want = (0.66 + 0.18 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08)) * holding + Math.cos(this.phase * 2) * swing * 0.3;
+    const want = (0.61 + 0.18 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08)) * holding + Math.cos(this.phase * 2) * swing * 0.3;
     this.elevVel += (want - this.elev) * k.climbSpring * dt;
     this.elevVel *= Math.exp(-dt * k.climbDamping);
     this.elev = THREE.MathUtils.clamp(this.elev + this.elevVel * dt, 0.12, 1.0);
