@@ -240,7 +240,7 @@ export class Kite {
       this.tail.push(new THREE.Vector3());
       this.was.push(new THREE.Vector3());
     }
-    this.ribbon = { points: this.tail, alpha: 1, width: 0.05 };
+    this.ribbon = { points: this.tail, alpha: 1, width: 0.09 };
 
     this.bowPos = new Float32Array(BOWS * 18);
     this.bowNormals = new Float32Array(BOWS * 18);
@@ -384,8 +384,8 @@ export class Kite {
         const dir = s === 0 ? -1 : 1;
         for (let v = 0; v < 3; v++) {
           const j = o + s * 9 + v * 3;
-          const out = v === 2 ? 0 : 0.15 * dir;
-          const along = v === 0 ? 0.1 : v === 1 ? -0.1 : 0;
+          const out = v === 2 ? 0 : 0.23 * dir;
+          const along = v === 0 ? 0.15 : v === 1 ? -0.15 : 0;
           this.bowPos[j] = p.x + this.b.x * out + this.a.x * along;
           this.bowPos[j + 1] = p.y + this.b.y * out + this.a.y * along;
           this.bowPos[j + 2] = p.z + this.b.z * out + this.a.z * along;

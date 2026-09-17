@@ -63,7 +63,7 @@ float wheelDither(vec2 p) {
 }
 
 void main() {
-  if (vCover < 0.999 && wheelDither(gl_FragCoord.xy) > max(vCover, 0.55)) discard;
+  if (vCover < 0.999 && wheelDither(gl_FragCoord.xy) > max(vCover, 0.6)) discard;
   vec3 N = normalize(vNormal);
   if (!gl_FrontFacing) N = -N;
   vec3 V = normalize(cameraPosition - vWorld);
@@ -229,7 +229,8 @@ export class Pinwheels {
       pointAt(path, row.t, on, dir);
       const nx = dir.y * row.side;
       const nz = -dir.x * row.side;
-      const spacing = 1.15 + rand() * 0.3;
+      /** Set well apart: the wind is read per wheel off a coarse grid, and a gust has to arrive one at a time. */
+      const spacing = 1.7 + rand() * 0.45;
       const lean = (rand() - 0.5) * 0.35;
       for (let i = 0; i < row.count; i++) {
         const along = (i - (row.count - 1) / 2) * spacing;
@@ -238,11 +239,11 @@ export class Pinwheels {
         const z = on.y + dir.y * along + nz * out;
         const ground = heightAt(x, z);
         if (ground < 2) continue;
-        /** Pushed in at whatever height a child's arm reached, and all of them a little out of true. */
-        const top = 1.32 + rand() * 0.34;
+        /** Long enough to stand the wheel clear of grass this deep, and all of them a little out of true. */
+        const top = 1.8 + rand() * 0.4;
         this.wheels.push({ x, z, ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });
         positions.push(x, ground + top, z);
-        states.push(0, 0, 0, 0.26 + rand() * 0.07);
+        states.push(0, 0, 0, 0.29 + rand() * 0.07);
         tint.set(SAIL_TINTS[Math.floor(rand() * SAIL_TINTS.length)]);
         tints.push(tint.r, tint.g, tint.b);
         sticks.push(stickGeometry(x, z, ground, top, rand));
@@ -305,7 +306,8 @@ export class Pinwheels {
       if (w.phase > 6.283185) w.phase -= 6.283185;
       const o = i * 4;
       this.state[o] = w.phase;
-      this.state[o + 1] = Math.min(SECTOR, w.omega * k.smearSeconds);
+      /** A wheel only smears once it is really going: turning gently it stays crisp paper. */
+      this.state[o + 1] = THREE.MathUtils.clamp(w.omega * k.smearSeconds - 0.14, 0, SECTOR);
       this.state[o + 2] = w.yaw;
       if (w.omega > loudest) loudest = w.omega;
     }
