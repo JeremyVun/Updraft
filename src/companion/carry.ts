@@ -265,6 +265,12 @@ export class Carry {
     ], onDone);
   }
 
+  /** Where the child's hands are while they are being held out to it, for it to look at; null the rest of the time. */
+  offering(out: THREE.Vector3): THREE.Vector3 | null {
+    if (!this.duet || !this.leading || this.cygnet.carried) return null;
+    return this.child.mitten(0, out).add(this.child.mitten(1, this.a)).multiplyScalar(0.5);
+  }
+
   /** QA: how far the worse of the two mittens is from the place on its body it should be resting, or null when they are not holding it. */
   get contactGap(): number | null {
     const { child: c } = this;

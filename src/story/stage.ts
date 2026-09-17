@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
+import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
 
 export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above';
@@ -72,6 +73,11 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    if (name.startsWith('act:')) {
+      /** Anything it does of its own accord, by name and on demand: `act:preen-wing`, `act:bowled`. */
+      k.mind.perform(name.slice(4) as Act, Number.NaN);
+      return true;
+    }
     switch (name) {
       case 'ground': {
         const p = ahead(0.95, 0.1);

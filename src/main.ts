@@ -194,6 +194,8 @@ const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 scene.add(flock.mesh);
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+const handsAt = new THREE.Vector3();
+const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
 const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
@@ -358,6 +360,16 @@ function frame(now: number): void {
   glider.update(dt, time);
   flock.update(dt, time);
   carry.update(dt);
+  const notice = cygnet.world;
+  child.face(notice.face);
+  notice.hands = carry.offering(handsAt);
+  notice.plane = glider.position.distanceToSquared(cygnet.position) < 400 ? glider.position : null;
+  notice.creature = nearbyCreature(cygnet.position.x, cygnet.position.z, 7, creatureAt) ? creatureAt : null;
+  notice.flock = flock.active ? flock.head : null;
+  notice.light = atmo.uniforms.uEmberLight.value.w > 0.15 ? emberAt : null;
+  notice.dark = atmo.uniforms.uNight.value;
+  notice.rain = shown.shower || 0;
+  notice.cold = THREE.MathUtils.clamp((atmo.uniforms.uSeason.value - 0.5) * 1.6 + atmo.uniforms.uNight.value * 0.3, 0, 1);
   /** The cygnet reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
   cygnet.update(dt, time, child.position, wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir));
   carry.after();

@@ -66,7 +66,7 @@ export class Probe {
       if (k.carried) this.acc.sub(this.rel.copy(c).addScaledVector(this.c1, -2).add(this.c2));
       this.note('jerk', this.acc.length(), where);
       this.note('turn', q.angleTo(this.q1), where);
-      this.trace.push(`${where} jerk ${this.acc.length().toFixed(4)} turn ${q.angleTo(this.q1).toFixed(4)} d ${this.acc.x.toFixed(3)},${this.acc.y.toFixed(3)},${this.acc.z.toFixed(3)} ${k.poseLine}`);
+      this.trace.push(`${where} jerk ${this.acc.length().toFixed(4)} turn ${q.angleTo(this.q1).toFixed(4)} d ${this.acc.x.toFixed(3)},${this.acc.y.toFixed(3)},${this.acc.z.toFixed(3)} ${k.mind.act ?? '-'} ${k.mind.interest}`);
     }
     const gap = this.carry.contactGap;
     if (gap !== null) this.note('gap', gap, where);
