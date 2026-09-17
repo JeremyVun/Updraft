@@ -55,7 +55,9 @@ export const tuning = {
   linesToys: {
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */
     stringLength: 34,
-    /** How wide the kite swings its figure of eight, in radians, and how many turns a second at rest. */
+    /** How high the kite rides in the island's own breeze, in radians above the horizon from its tie-off. */
+    flyAngle: 0.42,
+    /** How wide it swings its figure of eight, in radians, and how fast that turns over, in radians a second. */
     swoop: 0.42,
     swoopRate: 0.26,
     /** Radians of climb per unit of gust energy reaching the kite, and the spring that answers it. */
