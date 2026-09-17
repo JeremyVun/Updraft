@@ -1,0 +1,136 @@
+import * as THREE from 'three';
+import type { Shot } from '../camera';
+import { heightAt } from '../world/island';
+import type { Cast, Chapter } from './cast';
+
+export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top';
+
+/** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
+const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
+  game: { bearing: Math.PI, distance: 15, height: 5.2, on: 'both' },
+  behind: { bearing: Math.PI, distance: 5.5, height: 1.4, on: 'both' },
+  front: { bearing: 0, distance: 5.5, height: 1.0, on: 'both' },
+  side: { bearing: Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
+  'far-side': { bearing: -Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
+  close: { bearing: 0.7, distance: 2.3, height: 0.5, on: 'cygnet' },
+  top: { bearing: Math.PI, distance: 1.2, height: 6, on: 'both' },
+};
+
+/**
+ * QA only (`?chapter=stage`): the child and the cygnet on open ground under the game's own light, with nothing else
+ * going on, so that every pose, behaviour and shared moment can be played by name and looked at from close up.
+ * `__game.story.current.play(name)` and `.look(view)` drive it from the capture tools.
+ */
+export class StageChapter implements Chapter {
+  readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5.2, from: new THREE.Vector3(0, 0, 1), free: true };
+  readonly breeze = 0.3;
+  readonly worldLife = 1;
+  readonly pace = 8;
+  readonly focus = new THREE.Vector3();
+  readonly done = false;
+  readonly haze = 0.2;
+  readonly music = 'meadow' as const;
+  readonly trodden = new THREE.Vector3();
+  dusk = 0;
+  view: StageView = 'behind';
+  private readonly home = new THREE.Vector3();
+  /** The views are laid out round the way the child faced when the view was chosen, so a turning child does not swing the camera. */
+  private facing = 0;
+  private readonly tmp = new THREE.Vector3();
+
+  constructor(private readonly cast: Cast) {
+    const { child, cygnet } = cast;
+    this.home.copy(child.position);
+    this.facing = child.yaw;
+    child.standUp();
+    cygnet.visible = true;
+    cygnet.bond = 0.5;
+    this.play('ground');
+  }
+
+  look(view: StageView): void {
+    this.view = view;
+    this.facing = this.cast.child.yaw;
+  }
+
+  /** Everything the two of them can do, by name. Unknown names are reported rather than ignored. */
+  play(name: string): boolean {
+    const { child: c, cygnet: k, flock } = this.cast;
+    const ahead = (d: number, side = 0) =>
+      this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    switch (name) {
+      case 'ground': {
+        const p = ahead(1.5, 0.3);
+        k.position.set(p.x, Math.max(heightAt(p.x, p.z), 0), p.z);
+        k.yaw = c.yaw + Math.PI;
+        k.follow();
+        return true;
+      }
+      case 'gather':
+        c.faceToward(k.position.x, k.position.z, 1);
+        c.pickUp(() => k.carry(c.armsPoint(this.tmp), c.yaw));
+        return true;
+      case 'arms':
+        k.carry(c.armsPoint(this.tmp), c.yaw);
+        return true;
+      case 'hood':
+        k.carry(c.hoodPoint(this.tmp), c.yaw, true);
+        return true;
+      case 'down':
+        c.pickUp(() => k.follow());
+        return true;
+      case 'try':
+        k.tryToFly();
+        return true;
+      case 'cower':
+        k.cower();
+        return true;
+      case 'call':
+        k.call(false);
+        return true;
+      case 'long-call':
+        k.call(true);
+        return true;
+      case 'fall': {
+        const to = ahead(6, 2).clone();
+        flock.pass(c.position.x, c.position.z, 40, c.yaw, 15, 20);
+        k.plummet(this.tmp.set(to.x - 10, to.y + 40, to.z + 30), to, 8.5, c.yaw);
+        return true;
+      }
+      case 'walk':
+      case 'run': {
+        const p = ahead(14);
+        c.walkTo(p.x, p.z, name === 'run');
+        return true;
+      }
+      case 'back':
+        c.walkTo(this.home.x, this.home.z, false);
+        return true;
+      case 'sit':
+        c.sitDown();
+        return true;
+      case 'stand':
+        c.standUp();
+        return true;
+      case 'leave':
+        k.leave(c.yaw);
+        return true;
+      default:
+        console.warn(`stage: nothing called "${name}"`);
+        return false;
+    }
+  }
+
+  update(): void {
+    const { child: c, cygnet: k } = this.cast;
+    const v = VIEWS[this.view];
+    const s = this.shot;
+    const at = k.eye(this.tmp);
+    if (v.on === 'cygnet') s.target.copy(at);
+    else s.target.set((c.position.x + at.x) / 2, (c.position.y + 1.2 + at.y) / 2, (c.position.z + at.z) / 2);
+    const bearing = this.facing + v.bearing;
+    s.eye = (s.eye ?? new THREE.Vector3()).set(s.target.x + Math.sin(bearing) * v.distance, s.target.y + v.height, s.target.z + Math.cos(bearing) * v.distance);
+    this.focus.copy(c.position);
+    this.trodden.set(c.position.x, 7, c.position.z);
+  }
+}

@@ -10,6 +10,7 @@ import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
 import { MeadowChapter } from './meadow';
 import { DrownedChapter } from './drowned';
+import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 
@@ -23,7 +24,8 @@ export type ChapterName =
   | 'toWood'
   | 'wood'
   | 'toHome'
-  | 'home';
+  | 'home'
+  | 'stage';
 
 /** Where the boat goes on each crossing. Each one is shorter and hazier than the last. */
 const ROUTES: Record<string, THREE.Vector2[]> = {
@@ -87,6 +89,9 @@ export class Journey {
     } else if (start === 'sea' || start === 'dolphins') {
       this.sail(WOOD_BERTH.x, WOOD_BERTH.z + 6, Math.PI);
       this.begin('toHome');
+    } else if (start === 'stage') {
+      this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
+      this.begin('stage');
     } else if (start === 'summit' || start === 'home') {
       this.land(-45, -1958, -45, -1968);
       this.begin('home');
@@ -213,6 +218,8 @@ export class Journey {
         });
       case 'home':
         return new HomeChapter(cast);
+      case 'stage':
+        return new StageChapter(cast);
       default:
         return new IslandChapter(cast);
     }
