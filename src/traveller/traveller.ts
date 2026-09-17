@@ -126,6 +126,13 @@ export class Traveller {
     return out.set(this.position.x + fx * 0.36, this.position.y + up, this.position.z + fz * 0.36);
   }
 
+  /**
+   * On a swing: how much of the pose it takes over, 0 to 1, and where in the pumping they are, -1 tucked at the
+   * back of the arc to 1 with their legs out at the front of it.
+   */
+  swing = 0;
+  kick = 0;
+
   /** Where a passenger rides in the hood, behind the head. */
   hoodPoint(out: THREE.Vector3): THREE.Vector3 {
     const fx = Math.sin(this.yaw);
@@ -496,6 +503,15 @@ export class Traveller {
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
     r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
     r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
+    if (this.swing > 0.01) {
+      /** Hands on the ropes, and the legs going: the joy is in the body, because there is never a sound. */
+      const k = this.kick * this.swing;
+      r.legL.rotation.x -= k * 0.95;
+      r.legR.rotation.x -= k * 0.95;
+      r.body.rotation.x -= k * 0.4;
+      r.armL.rotation.set(-1.35 * this.swing, 0, -0.3 * this.swing);
+      r.armR.rotation.set(-1.35 * this.swing, 0, 0.3 * this.swing);
+    }
 
     let wantYaw = Math.sin(t * 0.37) * 0.35;
     let wantPitch = Math.sin(t * 0.23) * 0.08;

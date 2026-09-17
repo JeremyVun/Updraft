@@ -11,7 +11,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 
 ## Query params
 
-`shot` (set by the tools: fixed 1/60 s steps, `window.__game`, `window.__stats`, `window.__ready`, hides the interface), `cam=x,y,z,tx,ty,tz`, `sun=azimuthDeg,elevationDeg`, `ratio=<pixel ratio>` (fixes render scale, disables the automatic step-down), `msaa=<samples>`, `grass=<density multiplier>`, `dusk=<0 afternoon … 1 sunset … 2 night>`, `shower=<0..1>` (forces the passing rain), `storm=<0..1>` (forces the squall: the sea gets up, the weathervane spins, the herons go), `whale` (a whale surfaces near the boat every 40 s), `chapter=lines|washing|meadow|drowned|wood|sea|summit` (start later in the story; `crossing`, `hills`, `village`, `dark`, `dolphins` and `home` are aliases), `debug=wind` (draws the wind field over the island).
+`shot` (set by the tools: fixed 1/60 s steps, `window.__game`, `window.__stats`, `window.__ready`, hides the interface), `cam=x,y,z,tx,ty,tz`, `sun=azimuthDeg,elevationDeg`, `ratio=<pixel ratio>` (fixes render scale, disables the automatic step-down), `msaa=<samples>`, `grass=<density multiplier>`, `dusk=<0 afternoon … 1 sunset … 2 night>`, `shower=<0..1>` (forces the passing rain), `storm=<0..1>` (forces the squall: the sea gets up, the weathervane spins, the herons go), `whale` (a whale surfaces near the boat every 40 s), `chapter=lines|washing|meadow|birches|drowned|wood|sea|summit` (start later in the story; `crossing`, `hills`, `autumn`, `village`, `dark`, `dolphins` and `home` are aliases), `debug=wind` (draws the wind field over the island).
 
 ## Where things are
 
@@ -19,6 +19,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - Engine layer (boot, readbacks, quality governor, sim-pass helpers): `src/gl/`. Post chain: `src/post/post.ts`.
 - Shared shader uniforms and GLSL (sky, fog, lighting, cloud shadows, domain helpers): `src/world/atmosphere.ts`. Include `ATMO_GLSL` once per shader stage.
 - Island shape and height lookups: `src/world/island.ts`. Tree and rock placement: `src/world/landmarks.ts`.
-- Rooms with their own world module: the island of lines `src/world/lines.ts`, the drowned village `src/world/drowned.ts`, the dark wood `src/world/wood.ts`. Each is driven by its chapter in `src/story/`.
+- Rooms with their own world module: the island of lines `src/world/lines.ts`, the autumn birches `src/world/birches.ts`, the drowned village `src/world/drowned.ts`, the dark wood `src/world/wood.ts`. Each is driven by its chapter in `src/story/`.
+- The gold the player takes off the birches: `src/fx/leaves.ts`, a leaf that leaves its branch and never goes back.
 - The light the player makes in the dark wood: `src/fx/embers.ts`, carried to every shader as `uEmberLight`.
 - Player-facing text drafts and approvals: `docs/copy/`.

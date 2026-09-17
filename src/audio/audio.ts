@@ -45,7 +45,7 @@ export interface SoundState {
  * own gestures ring out of it. The voices glide between them over a couple of seconds, so a room change is a
  * modulation rather than a new track starting.
  */
-export type Mood = 'still' | 'lines' | 'meadow' | 'drowned' | 'wood' | 'sea' | 'home';
+export type Mood = 'still' | 'lines' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sea' | 'home';
 
 interface MoodMusic {
   chords: number[][];
@@ -66,6 +66,8 @@ const MOODS: Record<Mood, MoodMusic> = {
   lines: { chords: [[50, 57, 64, 71], [43, 50, 59, 66], [45, 52, 61, 66], [47, 54, 57, 62]], seconds: 9, cutoff: 1500, level: 1, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
   /** The last warm afternoon of the year: the fullest the music gets before the dark. */
   meadow: { chords: [[50, 57, 64, 66], [47, 54, 57, 62], [43, 50, 59, 66], [45, 52, 59, 64]], seconds: 8.5, cutoff: 1600, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88] },
+  /** Slower than the meadow and a step lower each time round: warm, falling, and it never comes back up. */
+  birches: { chords: [[50, 57, 62, 66], [48, 55, 62, 67], [47, 54, 59, 66], [45, 52, 59, 64]], seconds: 11, cutoff: 1250, level: 0.95, scale: [62, 64, 66, 69, 71, 72, 74, 76, 78, 81, 83] },
   /** Suspended, hollow, never landing on a third: homes the water took. */
   drowned: { chords: [[47, 54, 59, 66], [45, 52, 57, 64], [43, 50, 57, 62], [42, 49, 57, 64]], seconds: 13, cutoff: 820, level: 0.85, scale: [59, 62, 64, 66, 69, 71, 74, 76, 78, 81] },
   /** A drone and the semitone above it, turning over and never resolving. Barely music at all. */

@@ -9,9 +9,11 @@ import { HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
 import { FAR_SHORE, MeadowChapter } from './meadow';
+import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
+import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
 
 export type ChapterName =
   | 'island'
@@ -19,6 +21,8 @@ export type ChapterName =
   | 'lines'
   | 'toMeadow'
   | 'meadow'
+  | 'toBirches'
+  | 'birches'
   | 'drowned'
   | 'toWood'
   | 'wood'
@@ -36,6 +40,8 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     LINES_LANDING,
   ],
   toMeadow: [new THREE.Vector2(14, -505), new THREE.Vector2(10, -545), LANDING],
+  /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
+  toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), BIRCHES_LANDING],
   /** Out of the village and straight into the wood, in the dark and the worst of the weather. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /**
@@ -56,7 +62,7 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
 };
 
-const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'drowned', 'toWood', 'wood', 'toHome', 'home'];
+const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'toWood', 'wood', 'toHome', 'home'];
 
 /**
  * Runs the chapters in order and speaks for whichever is current. `?chapter=` starts later in the story for
@@ -78,8 +84,12 @@ export class Journey {
     } else if (start === 'meadow' || start === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
+    } else if (start === 'birches' || start === 'autumn') {
+      this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
+      this.begin('birches');
     } else if (start === 'drowned' || start === 'village') {
-      this.sail(FAR_SHORE.x, FAR_SHORE.z - 4, Math.PI);
+      /** The drift into the village begins where the birches end: off their north beach, not the meadow's. */
+      this.sail(BIRCHES_BERTH.x, BIRCHES_BERTH.z - 6, Math.PI);
       this.begin('drowned');
     } else if (start === 'wood' || start === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
@@ -194,6 +204,10 @@ export class Journey {
         return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.75, season: 0.26 });
       case 'meadow':
         return new MeadowChapter(cast);
+      case 'toBirches':
+        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'birches' });
+      case 'birches':
+        return new BirchesChapter(cast);
       case 'drowned':
         return new DrownedChapter(cast);
       case 'toWood':
