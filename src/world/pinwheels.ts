@@ -70,9 +70,8 @@ void main() {
   float ndl = dot(N, uSunDir);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
 
-  vec3 paper = vPaper * (0.94 + vnoise(vWorld.xz * 40.0 + vWorld.y * 9.0) * 0.12);
-  /** Creased where the paper was folded in to the pin, and grubby where a hand held it. */
-  paper *= 0.72 + 0.28 * smoothstep(0.12, 0.42, vRadius);
+  /** Creased and grubby where the paper was folded in to the pin, and clean paper out at the rim. */
+  vec3 paper = vPaper * (0.72 + 0.28 * smoothstep(0.12, 0.42, vRadius));
   float through = max(-ndl, 0.0) * 0.5;
   vec3 col = paper * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.75) * sun);
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
@@ -83,9 +82,10 @@ const STICK_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
 void main() {
-  vWorld = position;
-  vNormal = normalize(normal);
-  gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vWorld = w.xyz;
+  vNormal = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
 const STICK_FRAG = /* glsl */ `
