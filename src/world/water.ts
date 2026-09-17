@@ -81,7 +81,7 @@ float glints(vec2 xz, float footprint, float density) {
 
 /** Short-lived whitecaps, stretched along the wind and carried a little way by it; storm is the chance per cell. */
 float whitecaps(vec2 xz, vec2 flow, float storm) {
-  const float CELL = 4.5;
+  const float CELL = 3.4;
   const float LIFE = 2.0;
   vec2 dir = flow / max(length(flow), 1e-3);
   float caps = 0.0;
@@ -101,6 +101,12 @@ float whitecaps(vec2 xz, vec2 flow, float storm) {
     caps = max(caps, (1.0 - smoothstep(0.1, 1.0, length(local))) * grow);
   }
   return caps;
+}
+
+/** Wind lands in streaks, not discs: a mask stretched along the flow, so a gust leaves a cat's paw. */
+float catsPaw(vec2 xz, vec2 along) {
+  vec2 p = vec2(dot(xz, along) - uTime * 2.5, dot(xz, vec2(-along.y, along.x)) * 3.2) * 0.03;
+  return 0.45 + 1.1 * (vnoise(p) * 0.7 + vnoise(p * 2.9 + 5.1) * 0.3);
 }
 
 float ggx(float nh, float a2) {
@@ -133,8 +139,12 @@ void main() {
   }
   float gust = wind.z * inside;
   float speed = length(flow);
-  float rough = max(smoothstep(1.2, 7.5, speed), smoothstep(0.0, 0.5, gust));
-  float storm = clamp(smoothstep(7.0, 18.0, speed) + smoothstep(0.1, 0.5, gust), 0.0, 1.0);
+  vec2 along = normalize(flow + vec2(1e-4, 0.0));
+  float paw = catsPaw(xz, along);
+  // The player only ruffles the water; the weather is what runs the sea.
+  float rough = clamp(max(max(smoothstep(1.2, 7.5, speed), smoothstep(0.12, 1.1, gust)) * paw, uSquall), 0.0, 1.0);
+  // Breaking water needs a sea running, not a moment's stroke, so only the hardest gusts fleck it.
+  float storm = clamp(max(smoothstep(18.0, 34.0, speed) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(-ground, 0.0);
@@ -147,12 +157,12 @@ void main() {
   vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
   vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
   float calm = 0.2 + 0.8 * uSeaState;
-  float a0 = 0.05 * calm + 0.04 * rough + 0.05 * storm;
-  float a1 = 0.035 * calm + 0.06 * rough + 0.1 * storm;
-  float a2 = 0.045 * calm + 0.08 * rough + 0.16 * storm;
+  float a0 = 0.05 * calm + 0.055 * rough + 0.05 * storm;
+  float a1 = 0.035 * calm + 0.085 * rough + 0.1 * storm;
+  float a2 = 0.045 * calm + 0.115 * rough + 0.16 * storm;
   vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
   vec3 swell = vec3(sw.rg * 2.0 - 1.0, max(sw.b - dot(sw.rg * 2.0 - 1.0, sw.rg * 2.0 - 1.0), 0.0));
-  float A_SWELL = 0.07 * calm;
+  float A_SWELL = 0.07 * calm * (1.0 + 0.9 * uSquall);
   vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2 + swell.xy * A_SWELL;
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
 
@@ -166,7 +176,8 @@ void main() {
   }
   slope *= 1.0 - smoothstep(1.5, 0.0, offshore) * 0.7;
   vec3 N = normalize(vec3(-slope.x, 1.0, -slope.y));
-  float unresolved = hidden * 2.0 + 0.004 + 0.02 * rough + 0.05 * storm;
+  // Rain takes the shine off water: too fine to resolve into rings, it shows as a matte over the whole sea.
+  float unresolved = hidden * 2.0 + 0.004 + 0.02 * rough + 0.05 * storm + 0.018 * uShower;
   float alpha2 = 0.0012 + unresolved + footprint * footprint * 0.00002;
 
   float nv = max(dot(N, V), 0.02);
@@ -175,8 +186,9 @@ void main() {
   vec3 sky = skyColor(R);
   // Capped just above the open sky: the mirrored sun disc would bloom, and the glitter draws the sun instead.
   vec3 refl = min(mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0)), sky * 1.25 + 0.1);
-  refl = mix(sky, refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.3 * rough - 0.25 * storm);
-  float roughness = sqrt(sqrt(alpha2));
+  refl = mix(sky, refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.17 * rough - 0.18 * storm);
+  // Facet masking dims a rough sea seen edge-on; capped, or a gust punches a hole of a different colour in it.
+  float roughness = min(sqrt(sqrt(alpha2)), 0.42);
   float F = 0.02 + (max(1.0 - roughness * 1.4, 0.02) - 0.02) * pow(1.0 - nv, 5.0);
 
   float sh = cloudShadow(xz) * bedN.w;
@@ -209,7 +221,7 @@ void main() {
   float crest = surf.y * swellAmp * 6.0;
   float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);
   body += vec3(0.1, 0.55, 0.45) * uSunColor * crest * (0.02 + 0.3 * backlit) * sh;
-  body *= 1.0 - rough * 0.15 - storm * 0.25;
+  body *= 1.0 - rough * 0.08 - storm * 0.15;
 
   vec3 L = uSunDir;
   vec3 H = normalize(L + V);
@@ -226,7 +238,11 @@ void main() {
   vec3 col = mix(body, refl, F) + sun;
 
   float foam = surf.x;
-  if (storm > 0.0) foam = max(foam, foamLace(whitecaps(xz, flow, storm * 0.9), xz * 3.5, Footprint(fp.dx * 3.5, fp.dy * 3.5)));
+  if (storm > 0.0) {
+    // Water breaks on the steep face the wind is driving, so the foam goes there and not evenly over the sea.
+    float face = 0.4 + 0.75 * smoothstep(0.02, 0.22, -dot(slope, along));
+    foam = max(foam, foamLace(whitecaps(xz, flow, storm * 0.9) * face, xz * 3.5, Footprint(fp.dx * 3.5, fp.dy * 3.5)));
+  }
   col = mix(col, foamColor(V, sh), clamp(foam, 0.0, 1.0));
 
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);

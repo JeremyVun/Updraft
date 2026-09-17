@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import type { WindField } from '../wind/field';
 import { heightAt } from '../world/island';
+import { tuning } from '../tuning';
 
-const MAX_GUST = 26;
-const HOLD_SCREEN_SPEED = 90;
+const T = tuning.pointer;
 
 /** Turns pointer motion into wind: gusts along the path, and an updraft while pressed and held still. */
 export class PointerInput {
@@ -118,10 +118,10 @@ export class PointerInput {
     const dx = this.world.x - this.prev.x;
     const dz = this.world.z - this.prev.z;
     this.vel.lerp(this.instVel.set(dx / dt, dz / dt), 1 - Math.exp(-dt * 30));
-    const raw = this.vel.length() * (this.down ? 0.19 : 0.15);
-    const speed = MAX_GUST * Math.tanh(raw / MAX_GUST);
+    const raw = this.vel.length() * (this.down ? T.pressedGain : T.hoverGain);
+    const speed = T.maxGust * Math.tanh(raw / T.maxGust);
     this.gust = speed;
-    if (speed > 0.6) {
+    if (speed > T.minGust) {
       const nx = this.vel.x / this.vel.length();
       const nz = this.vel.y / this.vel.length();
       this.gustDir.set(nx, nz);
@@ -139,10 +139,10 @@ export class PointerInput {
       });
     }
 
-    const still = this.down && this.screenSpeed < HOLD_SCREEN_SPEED;
+    const still = this.down && this.screenSpeed < T.holdScreenSpeed;
     this.stillTime = still ? this.stillTime + dt : 0;
-    if (this.stillTime > 0.12) this.charge = Math.min(1, this.charge + dt * 0.55);
-    else this.charge = Math.max(0, this.charge - dt * 1.2);
+    if (this.stillTime > 0.12) this.charge = Math.min(1, this.charge + dt * T.chargeRate);
+    else this.charge = Math.max(0, this.charge - dt * T.dischargeRate);
     if (this.charge > 0.01 && this.down) {
       wind.addSplat({
         ax: this.world.x,

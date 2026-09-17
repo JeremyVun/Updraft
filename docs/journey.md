@@ -46,7 +46,7 @@ On the island of lines, after it was built far too large (2026-09-17):
 
 **Overwhelmed, not vast.** The feeling is being swallowed by somebody's washing, not crossing a landmass. Density
 is the lever, not area: keep the lines and shrink the ground under them. **Done** (2026-09-17): `ISLES.lines` is
-70 × 56, a low whaleback about 135 by 105 paces of dry land with a crown 17 up. The same 190 lines are packed into
+70 × 56, a low whaleback about 135 by 105 paces of dry land with a crown 17 up (since lowered to about 10, `tuning.world.linesDome`, after Jeremy found it too tall). The same 190 lines are packed into
 a 46-unit spread over the middle of it, hung high (poles 4.2–5.9) so the hems clear the grass and the child walks
 in under the sheets. The north beach is deliberately left bare, so the boat waiting on it can be seen from the
 descent. The grass is only lightly grazed now (`croppedAt` takes 34% off, not 74%), which is what Jeremy asked for.
@@ -105,6 +105,36 @@ On leading the player, variety, the colt and the music (2026-09-17, verbatim):
 > whole way through)."
 
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
+
+On new rooms (2026-09-17, verbatim), answering a list of five proposals — see "Rooms still to come":
+
+> "1. The sky mirror sounds like a cool idea to experiment with. almost like something out of spirited away.
+> 2. The sleeping island is a really cool idea! and you get to play as the bird! great idea. So the child starts
+> falling asleep, gets tired, weary, and the bird gets distressed and has to go and find a way to wake them up?
+> flesh this idea out more.
+> 3. Good idea, add this one in. You'r right, we don't have a transition from the meadows into an autumn before
+> the forest.
+> 4. The fog idea is cool, could this be added onto one of the other rooms? It does't feel like it'd work well as
+> it's own room that you travel to on a boat
+> 5. The wind harp is cool, but maybe it can be like a point of interest on the meadows level instead of it's own
+> level.
+> - coudl we add some pin wheels and kites to the island of lines? what do you think? or nah?"
+
+Approving all of it, and handing over the build (2026-09-17, verbatim):
+
+> "great direction and feedback. all approved from me with below thoughts,
+>
+> On the sleeping island room, i would make the paper aeroplane "disabled", whether it gets "blown into a tree and
+> stuck" or the "child holds it with them", i would want something else to be blown around by teh player to guide
+> the bird. You mentioned a feather, but im open to anything else that fits the theme as well. I'm also seeing the
+> bed as being surrounded by fragments of a "bedroom" but in an abstract dreamlike manner (maybe even something
+> upside down).
+>
+> And yes, it's being rebuilt as a swan cygnet.
+>
+> Because you seem to understand a good direction for where to take the rooms, I am giving you ownership over
+> building all of this out. As you orchestrate the work, I would like you to do some quick visual inspection to
+> ensure quality, otherwise opus 5 is just doing who knows what without any oversight."
 
 And: "Anything you want to prototype and explore, go ahead. we can always iterate or trim what doesn't work."
 
@@ -238,12 +268,109 @@ real bug and it is what `uLivingBeyond` exists to prevent. The meadow is the one
 the time of day, the haze and the rain toward whatever the current chapter asks for rather than taking them from
 it, so a chapter change is never a cut in the sky.
 
-Two more islands are wanted as short interludes: **the sky mirror**, a salt flat under an inch of water where the
-sky is doubled, and **the autumn birches**, an island of gold leaves the wind strips.
+## Rooms still to come
+
+Jeremy approved all of this on 2026-09-17 and gave the orchestrating session ownership of building it. How it is
+being built: each piece is one bounded parcel given to an Opus 5 agent in its own worktree under `/private/tmp`
+(`updraft-birches`, `updraft-linestoys`, `updraft-piano`, later `updraft-sleep` and `updraft-mirror`); the
+orchestrator looks at a handful of screenshots from each before accepting it, and merges to `main` itself. The
+sleeping island waits for the swan cygnet rebuild to land, because it is built on the companion; the sky mirror
+waits for the water-shading session, because it is built on the sea.
+
+| piece | state |
+| --- | --- |
+| the autumn birches | building (wave 1) |
+| kite and pinwheels on the island of lines | building (wave 1) |
+| the piano on the meadow | building (wave 1) |
+| the sleeping island | waiting on the cygnet |
+| the sky mirror | waiting on the water session |
+
+The companion is now **a swan cygnet** (Jeremy, 2026-09-17), not a crane colt; wherever this document says colt or
+crane, read cygnet and swans. The order the rooms would give:
+island → lines → meadow → **birches** → drowned → wood → **the sleeping island** → the long crossing, with **the
+sky mirror** as a stop on it → home. About two minutes each, so the whole runs nearer 24 minutes than 18.
+
+**The autumn birches** — approved by Jeremy, between the meadow and the drowned village. Deep autumn: the step
+from the last warm afternoon to the dusk and the storm, which the arc did not have. An island of gold birches, and
+the player's gusts strip the leaves off in clouds. The trees stay bare afterwards. On the first island the player's
+wind brought the colour back; here it takes the last of the year away, and nothing the player does can avoid it,
+because every gesture is a gust. The fragment of home is **a swing on a branch with nobody on it**: the wind pushes
+it, the child climbs on, and the player finds they are pushing a child on a swing. The fledgling chases leaves
+(bond). This is also where a second companion would join, later.
+
+**The sleeping island** — approved by Jeremy, including the one call that nothing answers. After the dark wood,
+before dawn. **The one room where the player leads the bird.**
+- *Why they sleep.* The child has been up all night in a storm. A short hop from the wood there is a small frosted
+  island with **a bed made up in the grass** in a hollow, and a ground fog pooling round it. Every other fragment
+  of home is harmless. This is the one that asks them to stop. The child climbs in, the fledgling on the blanket.
+  They are plainly only asleep — breathing, the scarf rising and falling — so what worries the player is not the
+  child but what is coming for them: the fog thickens, frost creeps in across the grass toward the bed, and the
+  light goes blue. Winter has caught up.
+- *The bird tries by itself.* It tugs the scarf, begs with a flutter, pushes under the child's hand. The child
+  turns over. If the player blows on the bed, the blanket lifts and the child pulls it tighter: answered, and no
+  use. Then it **calls once — the low hopeful call from the meadow crest, not the distress cry — and nothing
+  answers**, exactly as nothing answered there. (Calls and is refused twice, by its family and by the child; the
+  third time, at the end, something answers. This spends the voice one more time than the rule above allows, so
+  it is Jeremy's call.)
+- *A bedroom that is not there.* The bed stands among fragments of the child's room, none of them joined to
+  anything: a rug and a few floorboards under it that give out into frosted grass; a bedside lamp, lit, the one
+  warm light in the blue; **a window frame standing by itself beside the bed with its curtains drawn**; and
+  overhead, things the wrong way up — a chair and a desk hanging from the fog as if the ceiling were a floor, a
+  ceiling lamp growing up out of the grass on its flex. Nothing is explained.
+- *The plane is out of play* (Jeremy). The child falls asleep holding it against their chest, the way you hold
+  something you are not going to let go of. It is not lost and nobody has to fetch it.
+- *A feather leads the bird.* When the player blows on the bed to wake the child, the pillow gives up a puff of
+  down and **one long white feather**, which hangs in the air. The cygnet's parents are white. It looks at the
+  feather, and at the child, and follows it. The child follows a paper plane with home drawn on it; the bird
+  follows a white feather: each of them is led by a scrap of where they belong. **The controls do not change at
+  all** — the player blows a light thing along and somebody follows it, and like the plane it leans toward where
+  the story wants them and never has to be fetched — so nothing new is taught. It is slower and floatier than the
+  plane. The camera comes down to the bird's eye level and the same world is enormous.
+- *Its fear is leaving the child.* It has never once been out of their sight. It stops at the edge of the trodden
+  grass and looks back, twice, before it goes. Uphill the fog shuts behind it and the bed is gone; it sits down
+  and shivers, which until now only the child being near could stop. Here a soft breeze from the player ruffles
+  its down and it gets up. The player is its company on this walk. (After a few seconds it gets up regardless.)
+- *The fog is this room's.* The player's gestures carve clear lanes through it that close again slowly, so the
+  climb is made a few paces of clear air at a time. The grass is short and frosted so a small bird stays legible.
+- *What wakes the child is morning, and the bird brings it.* The hilltop stands out of the fog into the first
+  sun. The player raises an updraft and the bird glides — alone, by its own choice, the longest glide yet —
+  down the slope to the bed. The wind that carries it is the wind that tears the fog open, so **a lane of
+  sunlight follows the bird down the hill**, the frost going out of the grass under it. The same wind throws the
+  curtains open, and the light comes **through the bedroom window** onto the child's face, the way morning
+  actually wakes a child, as the bird tumbles onto the blanket. They wake up warm with a bird in their lap.
+- *What it is for.* In the wood the child went into the dark to find the bird with light. Here the bird goes out
+  alone and brings the light back. And it is the first time it flies *to* the child, which is what makes it
+  flying *away* from them at the end cost something. The flight arc becomes: flaps and drops, glides a few
+  metres, cannot help in the dark, glides alone because someone needs it to, flies.
+- *Nobody is stranded.* The sun rises and burns the hollow clear by itself after a couple of minutes.
+- The long crossing then begins in the sunrise the bird brought, so it is still the exhale.
+
+**The sky mirror** — to experiment with. A flat under an inch of water where the sky is doubled, reached partway
+along the long crossing, **at the end of the day** rather than at dawn (dawn now belongs to the sleeping island):
+the boat grounds, the child steps out onto the sky, the sun goes down and the stars come out above and below,
+which hands over to the frozen night at home. The first room where being still is what is answered: any gesture
+ripples the reflection away, and when the player stops the sky comes back whole. The reflection holds things that
+are not there — the cottage with its window lit and nothing standing above it; the family wheeling in the water
+before they are in the sky. The fledgling meets its own reflection and opens its wings at it. Both new stops sit
+out west on the detour `ROUTES.toHome` already makes, which gives the detour a reason.
+
+**Points of interest, not rooms:**
+- *The wind harp, on the meadow* (Jeremy: not its own level). A piano standing in the grass before the crest,
+  which the wind plays, on the meadow mood's own chime scale so it cannot sound wrong; the room's music pulls
+  back near it so the player hears themselves. The bird hops along the keys. It replaces "a piano at the tide
+  line".
+- *One kite and a few pinwheels, on the island of lines.* One kite, not a sky of them — many kites is a festival,
+  and a festival has people at it. It flies with nobody holding it, tied off beside the boat on the far beach, so
+  it stands over the washing and marks the way on from the crest: the far side of that island is where players
+  lost the thread. Paper pinwheels planted in low rows along the edges of the alley, like something a child put
+  there: a gust runs down a row one wheel at a time, which shows the wind travelling and edges the path without
+  looking like a path. Washing is the grown-up who is not there; these are the child who is not. Paper and linen
+  colours, the door's red at most — the first palette here already read as bunting once.
+- *The fog and the bells* were folded into the sleeping island (the fog) and dropped (the bells).
 
 Other fragments of home for the dream to manifest: a red door standing in the grass with nothing behind it;
-chimneys smoking with no house; a bed made up in the meadow; a line strung between two rocks at sea; a piano at the
-tide line the wind plays. None of it makes sense and none of it is explained. That is the point.
+chimneys smoking with no house; a line strung between two rocks at sea. (The bed and the piano have places now:
+see "Rooms still to come".) None of it makes sense and none of it is explained. That is the point.
 
 ## The crest: where the player is told what they are doing
 
@@ -314,8 +441,8 @@ Each island lies further north than the last with sea between, and the stretches
 | --- | --- | --- | --- |
 | the still island | (−6, −14) | 60 × 44, its own hand-made shape | — |
 | the island of lines | (14, −360) | 70 × 56, a low whaleback under its washing | 246 |
-| the meadow | (10, −880) | 340 × 300, the old rolling pasture, now bounded | 196 |
-| the drowned village | (−10, −1440) | 210 × 175, all of it well under water | 85 |
+| the meadow | (10, −780) | 227 × 200, the old rolling pasture, now bounded: a two-thirds scale model of the 340 × 300 it was sculpted as (`tuning.world.meadowLength`, `meadowPoint` in `world/heightfield.ts`) | 196 |
+| the drowned village | (−10, −1440) | 210 × 175, all of it well under water | 285 |
 | the dark wood | (−30, −1800) | 130 × 115, the smallest of them, on a long shelving shore | 70 |
 | home | (−45, −2120) | 190 × 165, one long hill and the cottage beyond | 40 |
 

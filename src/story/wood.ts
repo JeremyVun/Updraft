@@ -262,6 +262,7 @@ export class WoodChapter implements Chapter {
     p.visible = true;
     p.soggy.value = 1;
     p.launch(this.tmp.set(SODDEN.x, Math.max(heightAt(SODDEN.x, SODDEN.y), 0) + 0.1, SODDEN.y), this.side.set(0, 0, 0));
+    p.home.set(SODDEN.x, 0, SODDEN.y);
     this.leg = WOOD_PATH.length - 2;
   }
 

@@ -1,31 +1,36 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { mainlandCoastZ } from '../world/heightfield';
+import { mainlandCoastZ, meadowPoint } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { cue } from './cues';
+import { tuning } from '../tuning';
 
 type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
-/** The way inland, across the meadow to its far shore. */
+/** The way inland, across the meadow to its far shore, in the coordinates the meadow was sculpted in. */
 export const ROUTE = [
-  new THREE.Vector2(6, -660),
-  new THREE.Vector2(-18, -740),
-  new THREE.Vector2(-40, -830),
-  new THREE.Vector2(-4, -930),
-  new THREE.Vector2(30, -1020),
-  new THREE.Vector2(12, -1100),
-  new THREE.Vector2(-6, -1148),
-];
+  [6, -660],
+  [-18, -740],
+  [-40, -830],
+  [-4, -930],
+  [30, -1020],
+  [12, -1100],
+  [-6, -1148],
+].map(([x, z]) => {
+  const p = meadowPoint(x, z);
+  return new THREE.Vector2(p.x, p.z);
+});
+const shore = meadowPoint(-6, -1172);
 /** Where the boat is waiting on the far shore. Nobody put it there, and nobody remarks on it. */
-export const FAR_SHORE = new THREE.Vector3(-6, 0, -1172);
+export const FAR_SHORE = new THREE.Vector3(shore.x, 0, shore.z);
 
 /** The high ground on the walk, where the haze thins and you are told, without a word, where you are going. */
 const CREST_LEG = 2;
 /** Where the colt's family is wheeling up a thermal, far off over the north end of the island. */
-const GATHERING = { x: -26, z: -1010, base: 66, radius: 30 };
+const GATHERING = { ...meadowPoint(-26, -1010), base: 66, radius: 30 };
 
 const WAVE_SPEED = 85;
 const WAVE_REACH = 3600;
@@ -34,7 +39,7 @@ const SHOWER = { gather: 10, fall: 30, clear: 16 };
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 16;
 /** How long the colt is left trying, and how often it has a go, before the child gives up and carries it on. */
-const TRY_FOR = 75;
+const TRY_FOR = tuning.colt.tryFor;
 const TRY_EVERY = 5.5;
 
 /**
@@ -123,7 +128,24 @@ export class MeadowChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now = time;
     const { child: c, plane: p, life, input, boat } = this.cast;
-    if (!p.departing) p.home.set(c.position.x, 0, c.position.z - 25);
+    /**
+     * The plane leans toward the next waypoint, and on the last leg toward the boat itself. Aimed simply north of
+     * the child it made for open water at the far shore, sat on the sea and held the child at the water's edge.
+     */
+    if (!p.departing) {
+      if (this.leg === ROUTE.length - 1) {
+        p.home.set(boat.position.x, 0, boat.position.z);
+        p.homeRadius = 26;
+      } else {
+        const t = this.target();
+        const dx = t.x - c.position.x;
+        const dz = t.y - c.position.z;
+        const d = Math.hypot(dx, dz) || 1;
+        const reach = Math.min(d, 25);
+        p.home.set(c.position.x + (dx / d) * reach, 0, c.position.z + (dz / d) * reach);
+        p.homeRadius = 70;
+      }
+    }
 
     switch (this.beat) {
       case 'ashore':

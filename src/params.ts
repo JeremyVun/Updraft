@@ -33,6 +33,8 @@ export const params = {
   dusk: num('dusk'),
   /** Shower override, 0 dry to 1. */
   shower: num('shower'),
+  /** Storm override, 0 calm to 1 the full squall: the sea gets up, the weathervane spins, the herons go. */
+  storm: num('storm'),
   /** Start later in the story: `crossing`, `washing`, `meadow`, `drowned`, `wood`, `sea` or `summit`. */
   chapter: q.get('chapter'),
   /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). On by default for touch devices; `lite=0` forces it off. */

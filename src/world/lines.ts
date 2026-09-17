@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32, smoothstep } from './noise';
 import { heightAt } from './island';
+import { glsl, tuning } from '../tuning';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -56,7 +57,7 @@ void main() {
   float lean = dot(gust, side) >= 0.0 ? 1.0 : -1.0;
 
   /** The sheet hinges on the line: still wind hangs it straight down, a full gust lifts it toward horizontal. */
-  float swing = clamp(speed / 9.0, 0.0, 1.0);
+  float swing = clamp(speed / ${glsl(tuning.washing.fullSwingSpeed)}, 0.0, 1.0);
   swing *= 0.35 + 0.65 * hang;
   float ripple = sin(uTime * (4.0 + aShape.z) + position.x * 6.5 - hang * 5.0 + aShape.w);
   swing = clamp(swing + ripple * 0.035 * (0.3 + swing), 0.0, 1.05);
