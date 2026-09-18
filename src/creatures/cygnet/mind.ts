@@ -45,7 +45,8 @@ export type Act =
   | 'into-wind'
   | 'ask'
   | 'nuzzle'
-  | 'peer';
+  | 'peer'
+  | 'delve';
 
 interface ActSpec {
   dur: number;
@@ -74,6 +75,11 @@ const IDLE: Partial<Record<Act, ActSpec>> = {
   'look-about': { dur: 2.4, rest: 4.5, where: anywhere, urge: (m, s) => (0.5 + m.feel.curious * 0.8 + m.feel.fear * 0.6) * (s.where === 'riding' ? 1.5 : 1) },
   nuzzle: { dur: 2.2, rest: 26, where: riding, urge: (m) => m.bond * m.feel.content * 1.2 },
   peer: { dur: 2.6, rest: 9, where: riding, urge: (m, s) => (s.childSpeed > 0.5 ? 1.1 : 0.35) * m.feel.curious },
+  /**
+   * Head down into something loose and rummaging about in it, with its whole back end going. Nothing chooses this
+   * for itself: it is what a heap of leaves is for, and the birches ask for it by name.
+   */
+  delve: { dur: 2.4, rest: 0.8, where: afoot, urge: () => 0 },
 };
 
 const REACTIONS: Record<'flinch' | 'brace' | 'bowled' | 'into-wind' | 'ask' | 'snap', number> = {

@@ -186,6 +186,7 @@ export class Poser {
       Math.sin(d.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, d.effort) +
       Math.sin(d.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, d.wriggle * 3) +
       act('peer') * 0.22 * d.actSide +
+      Math.sin(t * 15) * 0.3 * act('delve') +
       d.gait.roll * walk;
     body.rotation.y = d.gait.twist * walk + Math.sin(d.stride) * 0.06 * p.swim;
     this.unturn.setFromEuler(body.rotation).invert();
@@ -315,6 +316,15 @@ export class Poser {
     a = lerp(a, 0.75, p.plant);
     b = lerp(b, -0.55, p.plant);
     head = lerp(head, -0.2, p.plant);
+    /**
+     * Rummaging. The neck goes right down and in, so the head is under whatever it is standing in, and everything
+     * behind it is going: the tail whips, the body rocks, and the head comes up for air twice on its way out.
+     */
+    const delve = act('delve');
+    const digging = Math.sin(t * 13) * 0.18 + Math.max(0, Math.sin(d.actK * Math.PI * 3.1)) * 0.5;
+    a += delve * (1.5 + digging);
+    b += delve * (1.0 + digging * 0.6);
+    head += delve * (1.1 + Math.sin(t * 17) * 0.12);
     const sway = Math.sin(t * 1.05) * 0.02 * (1 - p.reach) + (afoot ? Math.sin(d.stride * 2 + 0.7) * 0.05 * d.hurry : 0);
     /** A wingbeat pulls the head down a little; a passenger's head lags every jolt the child gives it. */
     a += sway + d.jostle * 3;
@@ -333,6 +343,8 @@ export class Poser {
     wantYaw = lerp(wantYaw, 2.5 * d.actSide, act('preen-back'));
     wantPitch = lerp(wantPitch, 0.55 + Math.sin(t * 34) * 0.08, act('preen-back'));
     wantYaw = lerp(wantYaw, 0, Math.max(act('preen-breast'), nibble, act('yawn')));
+    wantYaw = lerp(wantYaw, Math.sin(t * 9) * 0.55, delve);
+    wantPitch = lerp(wantPitch, 0.95, delve);
     wantYaw = lerp(wantYaw, Math.sin(d.actK * Math.PI * 2) * 1.25, act('look-about'));
     wantYaw = lerp(wantYaw, clamp(d.actYaw, -1.3, 1.3), act('snap'));
     /** In the arms its left side is against the child, so that is where a nuzzle goes: up under their chin. */
@@ -396,4 +408,4 @@ export class Poser {
   }
 }
 
-const ACTS: Act[] = ['preen-breast', 'preen-wing', 'preen-back', 'nibble', 'stretch', 'yawn', 'shake', 'wag', 'look-about', 'snap', 'flinch', 'brace', 'bowled', 'into-wind', 'ask', 'nuzzle', 'peer'];
+const ACTS: Act[] = ['preen-breast', 'preen-wing', 'preen-back', 'nibble', 'stretch', 'yawn', 'shake', 'wag', 'look-about', 'snap', 'flinch', 'brace', 'bowled', 'into-wind', 'ask', 'nuzzle', 'peer', 'delve'];

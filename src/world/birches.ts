@@ -12,7 +12,7 @@ const ISLE = ISLES.birches;
 /** Below this the shore is bare sand, so both beaches read as beaches and the boat is never behind a tree. */
 const TREE_LINE = 2.3;
 /** No trunk stands this near the walk: the ride stays open all the way over the island. */
-const RIDE = 7;
+const RIDE = 8.5;
 /** Leaves on one tree. They are hidden one by one as it is stripped, so this is how much gold a tree has to lose. */
 const LEAVES_PER_TREE = 420;
 /** The floor is scattered over a grid of cells that follows the camera and stands still in the world. */
@@ -226,7 +226,7 @@ void main() {
   float keep = 1.0 - 0.4 * smoothstep(uDetail.x, uDetail.y, away);
   float fade = clamp((keep - aTuft.w) * 6.0, 0.0, 1.0);
   /** And a crown the camera has walked into is a gold wall across the whole view, so it thins out of the way. */
-  fade *= smoothstep(3.5, 13.0, away);
+  fade *= smoothstep(5.0, 17.0, away);
   if (fade <= 0.001) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
@@ -617,6 +617,9 @@ export class AutumnBirches {
   /** Who is wading through the leaves: x, z, how far it reaches, and how fast they are going. */
   private readonly wade = new THREE.Vector4(1e6, 1e6, 2.1, 0);
   private readonly focus = new THREE.Vector3(ISLE.x, 0, ISLE.z);
+  /** Something that has just gone into the heap, and the seconds left of it: it outranks anybody merely walking. */
+  private readonly kicking = new THREE.Vector4(1e6, 1e6, 3, 0);
+  private kickFor = 0;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly walker = new THREE.Vector3();
   private readonly lastWalker = new THREE.Vector3(1e6, 0, 1e6);
@@ -908,6 +911,15 @@ export class AutumnBirches {
     this.shaking = amount;
   }
 
+  /**
+   * Something has just gone into the leaves. They go up round it and come down again over the next second, and the
+   * floor is left with a hole where the heap was, exactly as if the wind had burst it: the heap does not come back.
+   */
+  kick(x: number, z: number, radius: number, strength: number): void {
+    this.kicking.set(x, z, radius, strength);
+    this.kickFor = 0.7;
+  }
+
   update(dt: number, camera: THREE.Camera, walker: THREE.Vector3 | null): void {
     const away = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z);
     /** The gold crowns are worth seeing from the meadow's far shore; the floor and the loose leaves are not. */
@@ -943,6 +955,10 @@ export class AutumnBirches {
     } else {
       this.wade.w = 0;
       this.focus.copy(camera.position);
+    }
+    this.kickFor = Math.max(0, this.kickFor - dt);
+    if (this.kickFor > 0) {
+      this.wade.set(this.kicking.x, this.kicking.y, this.kicking.z, this.kicking.w * Math.min(1, this.kickFor / 0.35));
     }
     this.litterMat.uniforms.uLitterCell.value.set(Math.round(camera.position.x / LITTER_CELL), Math.round(camera.position.z / LITTER_CELL));
 

@@ -41,6 +41,11 @@ const lerp = THREE.MathUtils.lerp;
 export class Cygnet {
   readonly position = new THREE.Vector3();
   yaw = 0;
+  /**
+   * Somewhere it has gone off to by itself: a leaf that skittered past, a heap worth looking into. While this is
+   * set it makes for it at its own speed and forgets about keeping with the child, and it clears when it arrives.
+   */
+  errand: THREE.Vector3 | null = null;
   state: CygnetState = 'flying';
   /** False where the story will not have it flown at all: in the dark wood it stays on the ground whatever the wind does. */
   mayFly = true;
@@ -771,15 +776,18 @@ export class Cygnet {
     }
     this.effort = 0;
     /** Frightened, it wants to be right at their feet, and runs there. */
-    const seeking = this.mind.seeking;
-    const keep = seeking ? 0.6 : 2.6 - this.bond * 1.6;
-    const dx = child.x - this.position.x;
-    const dz = child.z - this.position.z;
+    const seeking = this.mind.seeking && !this.errand;
+    /** Off on something of its own, it makes for that instead, and nothing about the child comes into it. */
+    const goal = this.errand ?? child;
+    const keep = this.errand ? 0.3 : seeking ? 0.6 : 2.6 - this.bond * 1.6;
+    const dx = goal.x - this.position.x;
+    const dz = goal.z - this.position.z;
     const gap = Math.hypot(dx, dz);
+    if (this.errand && gap < 0.45) this.errand = null;
     /** It is a beat behind: it notices the child has gone before it goes after them. */
     if (gap > keep + 0.6 && this.childSpeed > 1) this.notice = Math.min(0.45, this.notice + dt);
     else this.notice = Math.max(0, this.notice - dt * 2);
-    const hurry = seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
+    const hurry = this.errand ? clamp((gap - keep) / 1.0, 0, 1) : seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
     this.hurry = ease(this.hurry, hurry, 4, dt);
     const speed = this.hurry * (1.5 + 2.9 * this.hurry);
     if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
