@@ -30,7 +30,7 @@ float loreMask(vec3 rest) {
   /** Stops short of the eye: run it the whole way and the mark becomes a halo, and the eye a cartoon. */
   ab *= 0.7;
   float t = clamp(dot(r, ab) / dot(ab, ab), 0.0, 1.0);
-  float wide = mix(0.011, 0.019, t);
+  float wide = mix(0.012, 0.022, t);
   return (1.0 - smoothstep(wide, wide + 0.012, length(r - ab * t))) * smoothstep(0.008, 0.03, q.x);
 }
 `;
@@ -64,7 +64,7 @@ out float vFade;
 float downLength(vec3 rest) {
   vec3 q = vec3(abs(rest.x), rest.y, rest.z);
   float k = smoothstep(0.018, 0.046, distance(q, ${vec3(EYE_AT)}));
-  k *= 1.0 - 0.92 * loreMask(rest);
+  k *= 1.0 - loreMask(rest);
   return k * (1.0 - 0.4 * smoothstep(0.30, 0.46, rest.y));
 }
 
@@ -334,7 +334,7 @@ export function applyLook(mat: THREE.ShaderMaterial, look: Look): void {
   u.uFat.value = 0.82 - look.wet * 0.3;
   u.uClump.value = look.wet * 0.55;
   /** Laid back along the bird, and harder still when it is soaked, when every strand goes the same way. */
-  const lay = look.sleek * 0.9 + look.wet * 0.7;
+  const lay = look.sleek * 0.9 + look.wet * 0.55;
   u.uLay.value.set(0, -0.3 * lay, -lay);
   const speed = look.wind.length();
   /** The coat streams along the real wind and saturates, so a gale only ever lays it flat, never blows it off. */
