@@ -523,7 +523,8 @@ export class WoodChapter implements Chapter {
     const ex = c.x + 1.1 - dx * 0.8;
     const ez = c.z + 13 - dz * 0.8;
     s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 4.2, ez);
-    this.pace = near ? 0.35 : 0.9;
+    /** The camera is quick to the fright and slow through the searching, which is how the two feel. */
+    this.pace = this.beat === 'bolt' ? 1.1 : near ? 0.45 : 0.9;
     this.focus.copy(c);
   }
 }
