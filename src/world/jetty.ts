@@ -90,7 +90,8 @@ void main() {
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);
   float sun = cloudShadow(vWorld.xz);
   vec3 col = alb * (hemiLight(n) + uSunColor * mix(ndl, wrap, 0.3) * sun);
-  vec3 lamp = vec3(1.0, 0.62, 0.28) * (0.3 + 4.2 * uNight);
+  /** Kept under the cottage windows: the light the child is walking toward is the one that should carry. */
+  vec3 lamp = vec3(1.0, 0.62, 0.28) * (0.3 + 3.1 * uNight);
   col = mix(col, lamp, vGlow);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -115,10 +116,10 @@ void main() {
   float up = max(uSunDir.y, 0.12);
   vec2 q = vWorld.xz + uSunDir.xz * (${glsl(DECK)} / up);
   float lz = q.y - ${glsl(MID_Z)};
-  float half = ${glsl(SHAFT_HALF)} + ${glsl(HEAD.half - SHAFT_HALF)} * smoothstep(${glsl(HEAD.from - 1)}, ${glsl(HEAD.from + 0.7)}, lz);
+  float wide = ${glsl(SHAFT_HALF)} + ${glsl(HEAD.half - SHAFT_HALF)} * smoothstep(${glsl(HEAD.from - 1)}, ${glsl(HEAD.from + 0.7)}, lz);
   /** The further the sun has to carry it, the softer its edge. */
   float pen = 0.16 + 0.1 * (${glsl(DECK)} / up);
-  float cover = (1.0 - smoothstep(half - pen, half + pen, abs(q.x - ${glsl(HOME_JETTY.x)})))
+  float cover = (1.0 - smoothstep(wide - pen, wide + pen, abs(q.x - ${glsl(HOME_JETTY.x)})))
     * smoothstep(${glsl(-HALF_LENGTH)} - pen, ${glsl(-HALF_LENGTH)} + pen, lz)
     * (1.0 - smoothstep(${glsl(HALF_LENGTH)} - pen, ${glsl(HALF_LENGTH)} + pen, lz));
   float shade = cover * 0.55 * smoothstep(0.0, 0.14, uSunDir.y) * cloudShadow(vWorld.xz) * (1.0 - fogOf(vWorld).a);
@@ -158,6 +159,7 @@ const WOOD = {
   red: new THREE.Color('#b5362c'),
   rope: new THREE.Color('#b6a382'),
   withy: new THREE.Color('#9c8150'),
+  fresh: new THREE.Color('#a79579'),
   zinc: new THREE.Color('#61808a'),
   iron: new THREE.Color('#38312a'),
   glass: new THREE.Color('#ffcf85'),
@@ -174,7 +176,8 @@ function planks(rand: () => number): Part[] {
     geo.rotateZ((rand() - 0.5) * 0.016);
     geo.rotateY((rand() - 0.5) * 0.01);
     geo.translate((rand() - 0.5) * 0.04, DECK - PLANK.thick / 2 + (rand() - 0.5) * 0.02, lz);
-    out.push(part(geo, WOOD.plank.clone().lerp(WOOD.worn, rand() * 0.75)));
+    /** Here and there a board has been taken up and put back in wood that has not had its weather yet. */
+    out.push(part(geo, rand() < 0.07 ? WOOD.fresh : WOOD.plank.clone().lerp(WOOD.worn, rand() * 0.8)));
   }
   return out;
 }
@@ -186,12 +189,11 @@ function frame(rand: () => number): Part[] {
   for (let i = 0; i < BENTS; i++) {
     const lz = -HALF_LENGTH + 0.9 + (i * (HALF_LENGTH * 2 - 1.9)) / (BENTS - 1);
     const x = halfAt(lz) - 0.19;
-    const tall = i >= BENTS - 2 ? 0.1 : 0;
     for (const side of [-1, 1]) {
       const wx = HOME_JETTY.x + side * x;
       const wz = MID_Z + lz;
       const foot = Math.min(heightAt(wx, wz), DECK - 0.5) - 0.3;
-      const height = top + tall - foot;
+      const height = top - foot;
       const pile = new THREE.CylinderGeometry(0.115, 0.15, height, 8);
       pile.rotateY(rand() * 3);
       pile.translate(side * x + (rand() - 0.5) * 0.05, foot + height / 2, lz + (rand() - 0.5) * 0.05);
