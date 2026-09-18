@@ -225,7 +225,7 @@ export class WoodChapter implements Chapter {
            * A coal in the litter between them and it, within the throw of its light: the way to find a bird in
            * the dark is the only thing they have done all night, done once more toward where the calling is.
            */
-          this.hearth = embers.lay(HIDING.x + (c.position.x - HIDING.x) * 0.42, HIDING.z + (c.position.z - HIDING.z) * 0.3);
+          this.hearth = embers.lay(HIDING.x + (c.position.x - HIDING.x) * 0.26, HIDING.z + (c.position.z - HIDING.z) * 0.18);
         }
         break;
       case 'lost':

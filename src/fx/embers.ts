@@ -353,9 +353,9 @@ export class Embers {
     for (let i = 0; i < COALS; i++) {
       const c = this.coals[i];
       const j = (SPARKS + i) * 4;
-      const breathe = c.live && !c.lit ? (0.3 + 0.16 * Math.sin(time * 1.6 + c.seed)) * (0.55 + 0.45 * c.wake) : 0;
+      const breathe = c.live && !c.lit ? (0.42 + 0.2 * Math.sin(time * 1.6 + c.seed)) * (0.6 + 0.4 * c.wake) : 0;
       const shown = c.live ? (c.lit ? Math.min(1.2, c.heat + c.flare * 0.35) : breathe) * this.presence : 0;
-      const size = c.live ? (c.lit ? 0.42 + c.heat * 0.16 + c.flare * 0.22 : 0.3) : 0;
+      const size = c.live ? (c.lit ? 0.42 + c.heat * 0.16 + c.flare * 0.22 : 0.36) : 0;
       sizes[SPARKS + i] = size;
       data[j] = c.p.x;
       /** Stood clear of the floor, because a glow centred on the ground is cut in half by it. */
@@ -364,11 +364,12 @@ export class Embers {
       data[j + 3] = shown;
       if (!c.live || !c.lit) continue;
       const power = (c.heat + c.flare * t.flareLight) * t.coalLight;
+      /** Falls off with distance, so a fire left far behind stops counting as light to walk by. */
       const reach = power / (1 + c.p.distanceToSquared(near) * 0.0025);
       if (reach > best) {
         best = reach;
         this.centre.copy(c.p);
-        this.lit = power;
+        this.lit = reach;
       }
     }
     if (best <= 0) {
