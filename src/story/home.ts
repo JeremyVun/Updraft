@@ -38,12 +38,12 @@ const RELENT_AT = 130;
 /** Seconds the family has been wheeling before the cygnet lets go of the player's wind and flies by itself. */
 const FLEDGES_AFTER = 3;
 /** How near the wheel it has to get before the family takes it in and they all go north together. */
-const JOIN_AT = 9;
+const JOIN_AT = 8;
 /** How fast the family flies off with it, and how it climbs as it goes: slow enough that the small one can hold on. */
-const LEAVE_SPEED = 9;
-const LEAVE_CLIMB = 1.1;
-/** Seconds the child watches them go before sitting down with the plane. */
-const WATCHES_FOR = 14;
+const LEAVE_SPEED = 11;
+const LEAVE_CLIMB = 1;
+/** Seconds the child watches them go before sitting down with the plane: long enough for the V to grow small. */
+const WATCHES_FOR = 16;
 /** The camera comes round to the drawing before the sheet starts to open, and the sheet opens slowly. */
 const SETTLE_FOR = 4;
 const UNFOLD_RATE = 0.32;
@@ -69,8 +69,18 @@ const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JET
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
 /** From the summit the sun sets over the cottage, to the north-west. */
 const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)), -Math.cos(THREE.MathUtils.degToRad(32)));
-/** The camera's side of the summit while the cygnet flies its circuit: south, with the family wheeling to the north beyond it. */
-const FROM_SOUTH = new THREE.Vector3(0.14, 0, 1).normalize();
+/**
+ * The camera's side of the summit from the circuit to the last of them in the sky: nearly square on from the south,
+ * because that is the line the family leaves along, and a shot that holds it needs no swing when they go.
+ */
+const FROM_SOUTH = new THREE.Vector3(0.05, 0, 1).normalize();
+/**
+ * The bearing from the child it comes round to hang on: out to one side and a little toward the camera, away from
+ * the low sun, so it hangs clear of their head against open sky and the child turns to it and is seen in profile.
+ */
+const HANGS_ON = 1.15;
+/** Seconds the small one takes to come into the last place of the V, carried north with the family while it does. */
+const SLIPS_IN = 5;
 
 /**
  * Home. The last island: up over the crest of the final hill with the fledgling, and the valley below holds a white
@@ -109,8 +119,12 @@ export class HomeChapter implements Chapter {
   private flockCalled = false;
   private tried = 0;
   private called = false;
+  private turned = false;
   private answeredBack = false;
   private leftAt = 0;
+  /** When the small one started taking its place in the line, and how far it was from it when it did. */
+  private slipAt = 0;
+  private readonly slipBy = new THREE.Vector3();
   private readonly gathering = new THREE.Vector3();
   /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
   private coaxFrom = 0;
@@ -266,7 +280,7 @@ export class HomeChapter implements Chapter {
      */
     if (this.beat === 'answered') {
       if (this.t > FLEDGES_AFTER) {
-        cygnet.fledge();
+        cygnet.fledge(c.position, HANGS_ON);
         this.to('fledge');
       }
       return;
@@ -328,6 +342,11 @@ export class HomeChapter implements Chapter {
   private updateFledge(): void {
     const { child: c, cygnet, flock } = this.cast;
     c.lookAt = cygnet.position;
+    /** They turn to it as it breaks out of the circuit, so it comes round to a face and not to the back of a head. */
+    if (!this.turned && this.t > tuning.fledge.loopFor) {
+      this.turned = true;
+      c.faceToward(c.position.x + Math.sin(HANGS_ON) * 8, c.position.z + Math.cos(HANGS_ON) * 8, 1);
+    }
     const phase = cygnet.fledgePhase;
     if (phase === 'turn' && !this.called) {
       this.called = true;
@@ -343,8 +362,16 @@ export class HomeChapter implements Chapter {
       cygnet.join((out) => {
         if (!flock.active) return null;
         if (flock.wheeling) return out.copy(flock.head);
-        /** The last place in the V: the one it fell out of over the first island. */
-        return flock.tail(out).addScaledVector(flock.direction, -4.4).add(this.tmp.set(flock.direction.z, 0.3, -flock.direction.x).multiplyScalar(2.2));
+        /**
+         * The last place in the V: the one it fell out of over the first island. It is never chased across the sky
+         * — the place is taken from wherever it was when they broke, and closed on while they carry it north.
+         */
+        flock.nextSlot(out);
+        if (this.slipAt === 0) {
+          this.slipAt = this.now;
+          this.slipBy.subVectors(cygnet.position, out);
+        }
+        return out.addScaledVector(this.slipBy, 1 - THREE.MathUtils.smoothstep(this.now - this.slipAt, 0, SLIPS_IN));
       });
       this.to('gone');
     }
@@ -496,17 +523,22 @@ export class HomeChapter implements Chapter {
     }
     if (this.beat === 'fledge') {
       /**
-       * From the south of the summit, low, looking north over the child at the cygnet flying its circuit, with
-       * the family wheeling in the sky beyond: the child, the small one and the family in one frame.
+       * From the south of the summit, at the child's own head height, looking north past them at the small one
+       * flying its circuit with the family wheeling beyond: all three in one frame, and the rest of it sky. The
+       * frame opens out as the circuit does, so what widens is the flight and not the camera's opinion of it.
        */
       const k = this.cast.cygnet.position;
-      const gap = Math.hypot(k.x - c.x, k.z - c.z);
+      const f = tuning.fledge;
+      const open = THREE.MathUtils.smoothstep(this.t / (f.loopFor + f.swingFor), 0, 1);
+      /** And in again as it breaks off the circuit, so the goodbye is nearer than anything else in the sequence. */
+      const near = THREE.MathUtils.smoothstep(this.t, f.loopFor, f.loopFor + f.swingFor);
       s.from = FROM_SOUTH;
-      s.target.set(c.x + (k.x - c.x) * 0.6, c.y + 1.2 + (k.y - c.y - 1.2) * 0.6, c.z + (k.z - c.z) * 0.6);
-      s.distance = 11 + gap * 0.3;
-      s.height = THREE.MathUtils.clamp(c.y + 2.4 - s.target.y, -8, 3);
-      this.pace = 0.5;
-      this.focus.copy(c);
+      s.target.set(c.x, c.y + 1.7 + THREE.MathUtils.clamp((k.y - c.y) * 0.5, 0, 5), c.z + f.offset);
+      s.distance = 14 + 4.5 * open - 4 * near;
+      s.height = THREE.MathUtils.clamp(c.y + 2.6 - s.target.y, -9, 2);
+      /** It arrives on this framing rather than gliding onto it for a third of the circuit, and then it settles. */
+      this.pace = 0.45 + 0.8 * (1 - open);
+      this.focus.copy(k);
       return;
     }
     if (this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying') {
@@ -535,13 +567,17 @@ export class HomeChapter implements Chapter {
        * person who let it go, so the camera stays behind them and only tilts up after it.
        */
       const k = this.cast.cygnet.visible ? this.cast.cygnet.position : this.cast.flock.head;
-      const toCygnet = Math.atan2(k.x - c.x, k.z - c.z);
-      s.from = this.side.set(-Math.sin(toCygnet), 0, -Math.cos(toCygnet));
-      /** Once they are out of sight the frame comes back down to the child, who is what the shot was about. */
-      const lift = this.cast.cygnet.visible ? Math.min(15, Math.max(0, k.y - c.y) * 0.55) : 0;
-      s.target.set(c.x, c.y + 2.2 + lift, c.z);
+      s.from = FROM_SOUTH;
       s.distance = 17;
-      s.height = 3.5;
+      /**
+       * The camera tilts a little over half the way up to them and no further, so the child is always in the lower
+       * frame and the family always in the upper. Going, they sink toward the horizon by themselves; nothing has to
+       * crane after them, and once they are out of sight the frame is back on the child, who the shot was about.
+       */
+      const eye = c.y + 3.4;
+      const elevation = this.cast.cygnet.visible ? (k.y - eye) / Math.max(20, Math.hypot(k.x - c.x, k.z - c.z) + s.distance) : 0;
+      s.target.set(c.x, eye + s.distance * THREE.MathUtils.clamp(elevation * 0.55, -0.1, 0.5), c.z);
+      s.height = eye - s.target.y;
       this.pace = 0.4;
       this.focus.copy(c);
       return;

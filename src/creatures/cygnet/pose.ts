@@ -36,6 +36,10 @@ export interface Drives {
   flap: number;
   flapPhase: number;
   glide: number;
+  /** How far it has taken its eye off the line of flight to look at something: 0 head and neck straight out ahead. */
+  look: number;
+  /** How far its legs are carried up in the line of flight rather than hanging under it. */
+  tucked: number;
   hope: number;
   hopLift: number;
   crouch: number;
@@ -140,7 +144,8 @@ export class Poser {
     p.stowed = ease(p.stowed, d.seat === 'satchel' && riding ? 1 : 0, 4, dt);
     p.hunch = ease(p.hunch, hunch, act('flinch') > p.hunch ? 14 : 2, dt);
     p.sleep = ease(p.sleep, d.doze, 1.5, dt);
-    p.reach = ease(p.reach, flying || dashing ? 1 : 0, 4, dt);
+    /** Reaching out along the line of flight is what a flying bird's neck does — until it turns to look at somebody. */
+    p.reach = ease(p.reach, flying || dashing ? 1 - d.look * 0.8 : 0, 4, dt);
     p.beg = ease(p.beg, Math.min(1, d.beg), 8, dt);
     p.climb = ease(p.climb, climbing ? 1 : 0, 7, dt);
     p.lifted = ease(p.lifted, lifting && !d.inHands ? 1 : 0, 9, dt);
@@ -210,7 +215,7 @@ export class Poser {
       th = lerp(th, 0.55, dangle);
       sh = lerp(sh, -0.3, dangle);
       ft = lerp(ft, 0.5, dangle);
-      const trail = clamp(d.glide + (d.falling || d.leaving || dashing ? 1 : 0), 0, 1);
+      const trail = clamp(d.glide + d.tucked + (d.falling || d.leaving || dashing ? 1 : 0), 0, 1);
       th = lerp(th, 1.45, trail);
       sh = lerp(sh, -0.15, trail);
       ft = lerp(ft, 1.4, trail);
