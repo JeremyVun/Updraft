@@ -179,8 +179,9 @@ session that built it died; a new session took over from this file. What the mer
   straight after in the same place: `tuning.crest`). This branch had the family resting on the far bay (Jeremy's
   pick, because swans do not ride thermals), which from the real crest was a few white pixels. Merged: the close
   scene, played by the swans (`SwanFlock.circle(..., climb)` and a new `SwanFlock.goOn`, which hands each bird a V
-  slot and lets it ease across). **Open for Jeremy:** whether a resting-then-lifting family can or should be staged
-  close instead; the swans agent was asked for an opinion.
+  slot and lets it ease across). **Settled 2026-09-18** (Jeremy: "I do agree that the raft of swans on a pond is
+  better"): the wheel is gone from the crest and the family rests on a pond dug in the hollow beyond the rise.
+  `circle`/`goOn` stay in the flock for the reunion at home.
 - Gusts count as lift under the cygnet (`tuning.colt.gustLift`), as they did for the colt: cursor movement is the
   only verb. The home summit's `coax` swirl follows the cygnet.
 - The birches carry it in the satchel (`carry.stow()` on setting off).

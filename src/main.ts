@@ -58,6 +58,7 @@ import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
 import { COTTAGE, ISLES, mainlandCoastZ, meadowPoint } from './world/heightfield';
+import { Pond } from './world/pond';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
 import { surfUniforms } from './world/water/surf';
@@ -121,6 +122,8 @@ scene.add(createSky());
 const terrain = new Terrain(wind.breeze, bakes.filterable);
 scene.add(terrain.mesh);
 scene.add(water.mesh);
+const pond = new Pond();
+pond.objects.forEach((o) => scene.add(o));
 scene.add(createRocks());
 scene.add(createDistantIslands());
 scene.add(tree.group);
@@ -632,7 +635,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, kite, pinwheels, village, wood, embers, boat, life, piano, birches };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, kite, pinwheels, village, wood, embers, boat, life, piano, birches, pond };
 }
 
 /**

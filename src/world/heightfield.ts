@@ -274,12 +274,40 @@ function rawHeight(x: number, z: number): number {
   return smax(h, homeHeight(x, z), 6);
 }
 
+/**
+ * The pond in the hollow beyond the meadow's crest, where the cygnet's family is resting. It is dug out of ground
+ * that was already a hollow, so the walk comes over the rise and looks down onto it with the white birds on it.
+ */
+export const POND = { x: 8, z: -789, rx: 15.5, rz: 13 } as const;
+/** How far the middle is dug below the water, and how far the bank stands above it at the rim of the ellipse. */
+const POND_BED = 2.6;
+const POND_BANK = 1.1;
+/** The still water's surface, taken from the hollow it was dug in so the pond belongs to the ground around it. */
+export const POND_LEVEL = rawHeight(POND.x, POND.z) - 0.5;
+
+/** How far out of the middle of the pond a point lies, 1 at the rim of its ellipse, wandering so it is not drawn. */
+export function pondOut(x: number, z: number): number {
+  const d = Math.hypot((x - POND.x) / POND.rx, (z - POND.z) / POND.rz);
+  return d * (1 + 0.16 * gfbm(x * 0.05, z * 0.05, 2, 71));
+}
+
+/**
+ * The bowl. The bank is raised as well as the middle dug out, so the water is held by ground on every side of it
+ * and never runs out into the hollow the pond was put in.
+ */
+function pondHeight(h: number, x: number, z: number): number {
+  const d = pondOut(x, z);
+  if (d > 1.4) return h;
+  const bed = POND_LEVEL + POND_BANK * d * d - POND_BED * (1 - d * d);
+  return h + (bed - h) * smoothstep(1.4, 0.9, d);
+}
+
 /** The cottage below the last hill sits on a levelled pad. */
 export const COTTAGE = { x: -70, z: -2124, radius: 13 } as const;
 export const COTTAGE_Y = rawHeight(COTTAGE.x, COTTAGE.z);
 
 export function worldHeight(x: number, z: number): number {
-  const h = rawHeight(x, z);
+  const h = pondHeight(rawHeight(x, z), x, z);
   const d = Math.hypot(x - COTTAGE.x, z - COTTAGE.z);
   if (d > COTTAGE.radius * 2) return h;
   return h + (COTTAGE_Y - h) * smoothstep(COTTAGE.radius * 2, COTTAGE.radius, d);
@@ -442,6 +470,24 @@ float hf_home(vec2 p) {
   h += land * (34.0 * exp(-r2 / (2.0 * 3364.0)) + inland * 18.0 * exp(-r2 / (2.0 * 28900.0)));
   return h - smoothstep(0.0, 70.0, d) * 8.0;
 }
+/** How far out of the middle of the pond a point lies; mirrors pondOut in TypeScript. */
+float pondOut(vec2 p) {
+  vec2 c = vec2(${POND.x}.0, ${POND.z}.0);
+  vec2 r = vec2(${glsl(POND.rx)}, ${glsl(POND.rz)});
+  return length((p - c) / r) * (1.0 + 0.16 * gfbm(p * 0.05, 2, 71.0));
+}
+/** 0 where the pond's water stands over the ground, so no meadow grows up through the surface of it. */
+float pondDry(vec2 p, float groundH) {
+  float o = pondOut(p);
+  if (o > 1.0) return 1.0;
+  return mix(1.0, smoothstep(${glsl(POND_LEVEL - 0.05)}, ${glsl(POND_LEVEL + 0.2)}, groundH), smoothstep(1.0, 0.9, o));
+}
+float hf_pond(float h, vec2 p) {
+  float d = pondOut(p);
+  if (d > 1.4) return h;
+  float bed = ${glsl(POND_LEVEL)} + ${glsl(POND_BANK)} * d * d - ${glsl(POND_BED)} * (1.0 - d * d);
+  return mix(h, bed, smoothstep(1.4, 0.9, d));
+}
 float worldHeight(vec2 p) {
   float h = hf_smax(hf_island(p), hf_lines(p), 6.0);
   h = hf_smax(h, hf_meadow(p), 6.0);
@@ -449,6 +495,7 @@ float worldHeight(vec2 p) {
   h = hf_smax(h, hf_drowned(p), 6.0);
   h = hf_smax(h, hf_wood(p), 6.0);
   h = hf_smax(h, hf_home(p), 6.0);
+  h = hf_pond(h, p);
   float d = length(p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)}));
   return mix(h, ${COTTAGE_Y.toFixed(4)}, 1.0 - smoothstep(${COTTAGE.radius.toFixed(1)}, ${(COTTAGE.radius * 2).toFixed(1)}, d));
 }

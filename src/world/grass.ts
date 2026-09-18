@@ -3,7 +3,7 @@ import { params } from '../params';
 import { glsl } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
-import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL } from './heightfield';
+import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, POND_LEVEL, pondOut } from './heightfield';
 
 /**
  * How much of its height a blade keeps on the two islands that are cropped: the island of lines is grazed a
@@ -127,15 +127,25 @@ function troddenAt(x: number, z: number): number {
   return 1 - t.w * 0.6 * (1 - smoothstep(0.1, 1.05, r));
 }
 
+/** Mirrors `pondDry` in `HEIGHTFIELD_GLSL`; keep the two in step. */
+function pondDry(x: number, z: number, groundH: number): number {
+  const o = pondOut(x, z);
+  if (o > 1) return 1;
+  return 1 + (smoothstep(POND_LEVEL - 0.05, POND_LEVEL + 0.2, groundH) - 1) * smoothstep(1, 0.9, o);
+}
+
 /** Typical blade height at (x, z): the vertex shader's formula without the per-blade randomness. */
 export function grassHeightAt(x: number, z: number): number {
   const groundH = heightAt(x, z);
   if (groundH < GRASS_LINE - 0.6) return 0;
+  const dry = pondDry(x, z, groundH);
+  if (dry <= 0) return 0;
   const lush = shaderFbm(x * 0.035 + 17, z * 0.035 + 17);
   const shortPatch = smoothstep(0.52, 0.68, shaderFbm(x * 0.05 - 23, z * 0.05 - 23));
   const fringe = smoothstep(GRASS_LINE - 0.6, GRASS_LINE + 2.2, groundH);
   const pasture = smoothstep(-600, -660, z);
   let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
+  h *= dry;
   if (pasture <= 0) return h * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
   h += (0.41 + 0.26 * lush - h) * pasture;
   const f = fieldAt(x, z, fieldSample);
@@ -276,7 +286,7 @@ void main() {
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
   float keep = edge > 0.85 ? 1.0 : edge * edge * tufts;
-  keep *= smoothstep(0.55, 0.7, hn.b);
+  keep *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH);
   vec4 surf = surfaceAt(root2);
   keep *= surf.x;
   vec4 fld = fieldAt(root2);
@@ -478,7 +488,7 @@ void main() {
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
   float share = uDensity * (edge > 0.85 ? 1.0 : edge * edge * tufts);
-  share *= smoothstep(0.55, 0.7, hn.b);
+  share *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH);
   vec4 surf = surfaceAt(root2);
   share *= surf.x;
   vec4 fld = fieldAt(root2);

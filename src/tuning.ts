@@ -42,13 +42,13 @@ export const tuning = {
     tighten: 0.72,
     flare: 1.7,
     /** Seconds after the colt's first failed try before the invitation begins, and over which it grows insistent. */
-    coaxAfter: 4,
-    coaxRamp: 22,
+    coaxAfter: 2.2,
+    coaxRamp: 10,
     /** The invitation's loops: turns a second, their radius, how high they climb, and how brightly they show. */
-    coaxLoops: 0.62,
-    coaxRadius: 0.9,
-    coaxHeight: 2.2,
-    coaxAlpha: 0.45,
+    coaxLoops: 0.85,
+    coaxRadius: 1.0,
+    coaxHeight: 2.6,
+    coaxAlpha: 0.72,
     /** Seconds of winding in one invitation, and of quiet after it before it comes round again. */
     coaxWind: 3.4,
     coaxGap: 2.2,
@@ -79,29 +79,27 @@ export const tuning = {
     birchesCrest: 5.2,
   },
   crest: {
-    /** How far ahead of the child the colt's family is wheeling, and how far to the east of the way ahead. */
-    ahead: 46,
-    aside: 10,
-    /**
-     * Swans do not ride thermals. The family flies a low heavy circuit over the meadow: `base` is how high it is
-     * held, `spread` the whole depth of it, `climb` the little it gains while it waits for the last of them.
-     */
-    base: 15,
-    climb: 0.4,
-    radius: 16,
-    spread: 6,
-    /** How fast they go once they have turned north, and how hard they climb out: the going has to be seen. */
+    /** The family resting on the pond beyond the crest: how many of them, and how wide the raft is spread. */
+    family: 15,
+    raft: 6.5,
+    /** How far the haze is allowed to lift at the crest. Thinner than this and the next island shows through it. */
+    haze: 0.42,
+    /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
+    answers: 1.3,
+    looks: 11,
+    /** How far back from the waterline the child stops, and how long they stand there before the family goes. */
+    standOff: 3.6,
+    goes: 3.2,
+    /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
     leaves: 15,
     leaveClimb: 3.4,
-    /** Seconds in: the colt answers them, they string out and go north, and the child sets it down after them. */
-    answers: 1.3,
-    goes: 9.5,
-    setsDown: 17.5,
-    /** How far in front of the child the colt is put down, and how long it waits before its first try. */
-    setDownAt: 2.8,
-    firstTry: 2.2,
+    /** Seconds after the family has gone before the child kneels and sets the cygnet down after them. */
+    setsDown: 8.5,
+    /** How far in front of the child the cygnet is put down, and how long it waits before its first try. */
+    setDownAt: 2.6,
+    firstTry: 2,
     /** Seconds it keeps its eyes on the sky they left by, after which they are out of sight for good. */
-    watches: 5,
+    watches: 7,
   },
   colt: {
     /**

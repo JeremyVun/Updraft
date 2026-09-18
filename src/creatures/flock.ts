@@ -12,11 +12,17 @@ const BEAT = 2.15;
 const CRUISE = 19;
 /** How fast they fly the circuit before they go: slower than travelling, but still a swan's flying speed. */
 const WHEEL = 12;
-/** How high the widest part of a swan floats: the rest of the body is under the sea and the sea hides it. */
+/** How high the widest part of a swan floats: the rest of the body is under the water and the water hides it. */
 const FLOAT = 0.03;
+/** How long a ring goes out from a swan that has settled or shifted its weight, and how far it opens. */
+const RING_FOR = 2.6;
+const RING_TO = 2.4;
 /** The run before a swan is airborne, and how fast it is going by the end of it. */
 const RUN = 2.9;
 const RUN_SPEED = 15;
+/** A pond is not the sea: there is only so much water to run along, so the run is shorter and slower on one. */
+const POND_RUN = 2.2;
+const POND_RUN_SPEED = 11;
 
 /** The neck's pitch at its root, middle and head, how far it leans to one side, and the head's own pitch on top. */
 type Neck = readonly [number, number, number, number, number];
@@ -69,6 +75,8 @@ interface Bird {
   rate: number;
   /** How closely it is holding its station: 0 straight after a take-off, 1 once the skein has formed. */
   hold: number;
+  /** How far through a ring of its own it is, or negative when it is not making one. */
+  ring: number;
 }
 
 const tmp = new THREE.Vector3();
@@ -81,6 +89,7 @@ const tmp4 = new THREE.Vector4();
 export class SwanFlock {
   readonly mesh: THREE.Mesh;
   readonly wake: THREE.Mesh;
+  private readonly wakeUniforms: Record<string, THREE.IUniform>;
   readonly objects: THREE.Object3D[];
   private readonly swans: Instances;
   private readonly wakes: Instances;
@@ -90,6 +99,14 @@ export class SwanFlock {
   private mode: Mode = 'idle';
   /** Centre and radius of the wheel they are turning, or of the water they are sitting on. */
   private pool = { x: 0, z: 0, r: 0, base: 0 };
+  /**
+   * The surface a raft is floating on: the sea at y = 0, or a pond's still water further up the hill. Still water
+   * carries no swell, so the wakes lie flat on it instead of riding one.
+   */
+  private level = 0;
+  /** How long the take-off run is on the water they are sitting on, and how fast they are going by the end of it. */
+  private runFor = RUN;
+  private runSpeed = RUN_SPEED;
   private turn = 0;
   /** How fast the wheel is coming round, and the bank that speed and radius ask for. */
   private spin = 0;
@@ -105,7 +122,7 @@ export class SwanFlock {
   readonly dropped = new THREE.Vector3();
 
   constructor() {
-    this.swans = new Instances(swanGeometry(), MAX, ['iPos', 'iAir', 'iNeck', 'iBody']);
+    this.swans = new Instances(swanGeometry(), MAX, ['iPos', 'iAir', 'iNeck', 'iBody', 'iSteady']);
     this.swans.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
     this.mesh = new THREE.Mesh(this.swans.geometry, swanMaterial());
     this.mesh.frustumCulled = false;
@@ -114,6 +131,7 @@ export class SwanFlock {
     this.wakes = new Instances(wakeQuad(), WAKES, ['iWake', 'iWash']);
     this.wakes.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
     this.wake = new THREE.Mesh(this.wakes.geometry, wakeMaterial());
+    this.wakeUniforms = (this.wake.material as THREE.ShaderMaterial).uniforms;
     this.wake.frustumCulled = false;
     this.wake.visible = false;
     this.wake.renderOrder = 3;
@@ -179,6 +197,7 @@ export class SwanFlock {
       this.birds.push(b);
     }
     if (ailing && this.birds.length) this.birds[this.birds.length - 1].labour = 1e-4;
+    this.level = 0;
     this.speed = CRUISE;
     this.climb = 0;
     /** The skein is put away once it has flown far enough from where it came in, not from wherever one last fell. */
@@ -208,6 +227,7 @@ export class SwanFlock {
       }
       this.birds.push(b);
     }
+    this.level = 0;
     this.pool = { x, z, r: radius, base };
     /** A swan's circuit is flown, not floated: the wheel turns at the speed it would take to fly round it. */
     this.spin = WHEEL / Math.max(radius, 4);
@@ -251,7 +271,10 @@ export class SwanFlock {
    * A raft of them resting on open water, drifting and turning, most with their necks up, one or two asleep with
    * their heads on their backs. Sea level is y = 0; they sit in it and the sea hides everything below the waterline.
    */
-  rest(x: number, z: number, radius: number, count = 14): void {
+  rest(x: number, z: number, radius: number, count = 14, level = 0): void {
+    this.level = level;
+    this.runFor = level > 0 ? POND_RUN : RUN;
+    this.runSpeed = level > 0 ? POND_RUN_SPEED : RUN_SPEED;
     this.birds.length = 0;
     const c = Math.min(count, MAX);
     const bearing = Math.random() * Math.PI * 2;
@@ -261,7 +284,7 @@ export class SwanFlock {
       for (let tries = 0; tries < 24; tries++) {
         const a = Math.random() * Math.PI * 2;
         const d = Math.random() ** 0.8 * radius;
-        b.at.set(x + Math.cos(a) * d * 1.15, FLOAT, z + Math.sin(a) * d * 0.75);
+        b.at.set(x + Math.cos(a) * d * 1.15, level + FLOAT, z + Math.sin(a) * d * 0.75);
         if (this.birds.every((o) => o.at.distanceToSquared(b.at) > 2.1)) break;
       }
       b.fold = 1;
@@ -274,10 +297,10 @@ export class SwanFlock {
       b.until = range(Math.random, 3, 12);
       this.birds.push(b);
     }
-    this.pool = { x, z, r: radius, base: 0 };
+    this.pool = { x, z, r: radius, base: level };
     this.bearing = bearing;
     this.launched = -1;
-    this.lead.set(x, FLOAT, z);
+    this.lead.set(x, level + FLOAT, z);
     this.start('raft');
   }
 
@@ -285,7 +308,7 @@ export class SwanFlock {
    * The raft goes: the long pattering run across the water, one after another, and then they are up and gathering
    * into a skein on `bearing`. Nothing else stops them, so this is also how a raft puts itself away.
    */
-  lift(bearing = this.bearing): void {
+  lift(bearing = this.bearing, speed = CRUISE, climb = 0): void {
     if (this.mode !== 'raft' || this.launched >= 0) return;
     this.launched = 0;
     this.bearing = bearing;
@@ -303,15 +326,16 @@ export class SwanFlock {
       const rank = Math.ceil(i / 2);
       this.birds[i].offset.set(side * rank * 3.1, (Math.random() - 0.5) * 1.6, -rank * 4.4 - Math.random() * 1.2);
     }
-    this.lead.set(this.pool.x, FLOAT, this.pool.z);
+    this.lead.set(this.pool.x, this.level + FLOAT, this.pool.z);
     this.dropped.copy(this.lead);
-    this.speed = CRUISE;
-    this.climb = 0;
+    this.speed = speed;
+    this.climb = climb;
   }
 
   /** Stops whatever the flock is doing and puts it away. */
   clear(): void {
     this.mode = 'idle';
+    this.level = 0;
     this.launched = -1;
     this.mesh.visible = false;
     this.wake.visible = false;
@@ -372,11 +396,14 @@ export class SwanFlock {
       side: Math.random() < 0.5 ? -1 : 1,
       rate: range(Math.random, 0.93, 1.07),
       hold: 0,
+      ring: -1,
     };
   }
 
   private start(mode: Mode): void {
     this.mode = mode;
+    this.wakeUniforms.uLevel.value = this.level;
+    this.wakeUniforms.uStill.value = this.level > 0 ? 1 : 0;
     this.mesh.visible = true;
     this.wake.visible = mode === 'raft';
   }
@@ -503,11 +530,18 @@ export class SwanFlock {
       const push = b.speed * (1 + rear * 3.5);
       b.at.x += Math.sin(b.yaw) * push * dt;
       b.at.z += Math.cos(b.yaw) * push * dt;
-      b.at.y = FLOAT + rear * 0.16 + Math.sin(time * 0.87 + b.seed) * 0.022 + Math.sin(time * 1.43 + b.seed * 1.7) * 0.012;
+      b.at.y = this.level + FLOAT + rear * 0.16 + Math.sin(time * 0.87 + b.seed) * 0.022 + Math.sin(time * 1.43 + b.seed * 1.7) * 0.012;
       b.roll = ease(b.roll, Math.sin(time * 0.64 + b.seed * 2) * 0.05, 1, dt);
       b.pitch = ease(b.pitch, -rear * 0.3 + Math.sin(time * 0.93 + b.seed * 3) * 0.03, 2.5, dt);
       b.feet = 1;
       b.step = 0;
+      /** Every shift of a swan's weight goes out across still water as a ring, which is how you know it is still. */
+      if (b.ring < 0) {
+        if (Math.random() < dt * (0.1 + rear * 1.6 + b.speed)) b.ring = 0;
+      } else {
+        b.ring += dt;
+        if (b.ring > RING_FOR) b.ring = -1;
+      }
     }
   }
 
@@ -553,10 +587,10 @@ export class SwanFlock {
         continue;
       }
       b.run = t;
-      const running = t < RUN;
+      const running = t < this.runFor;
       if (running) {
-        const k = Math.min(1, t / RUN);
-        b.speed = ease(b.speed, RUN_SPEED * (0.15 + 0.85 * k), 2.5, dt);
+        const k = Math.min(1, t / this.runFor);
+        b.speed = ease(b.speed, this.runSpeed * (0.15 + 0.85 * k), 2.5, dt);
         b.fold = ease(b.fold, 0, 8, dt);
         b.flap = ease(b.flap, 1, 6, dt);
         /** The run is not cruising: the wings go hard and shallow until it has the speed to fly. */
@@ -565,7 +599,7 @@ export class SwanFlock {
         b.at.x += Math.sin(b.yaw) * b.speed * dt;
         b.at.z += Math.cos(b.yaw) * b.speed * dt;
         b.step += dt * 5.4;
-        b.at.y = FLOAT + k * 0.3 + Math.max(0, Math.sin(b.step * Math.PI)) * 0.06;
+        b.at.y = this.level + FLOAT + k * 0.3 + Math.max(0, Math.sin(b.step * Math.PI)) * 0.06;
         b.pitch = ease(b.pitch, -0.16, 3, dt);
         b.roll = ease(b.roll, 0, 3, dt);
         /** The legs stay down the whole run: the feet are what it is running on. */
@@ -576,8 +610,8 @@ export class SwanFlock {
         continue;
       }
       airborne++;
-      const climb = Math.min(1, (t - RUN) / 7);
-      b.speed = ease(b.speed, CRUISE, 0.6, dt);
+      const climb = Math.min(1, (t - this.runFor) / 7);
+      b.speed = ease(b.speed, this.speed, 0.6, dt);
       b.beat += dt * BEAT * (1 + 0.4 * (1 - climb));
       b.flap = 1;
       b.feet = ease(b.feet, 0, 1.2, dt);
@@ -601,9 +635,9 @@ export class SwanFlock {
     }
     /** The V's apex only starts running once the first of them is up, and then it climbs out ahead of the rest. */
     if (airborne > 0) {
-      this.lead.x += Math.sin(yaw) * CRUISE * dt;
-      this.lead.z += Math.cos(yaw) * CRUISE * dt;
-      this.lead.y = Math.min(this.lead.y + 2.4 * dt, 34);
+      this.lead.x += Math.sin(yaw) * this.speed * dt;
+      this.lead.z += Math.cos(yaw) * this.speed * dt;
+      this.lead.y = Math.min(this.lead.y + (2.4 + this.climb) * dt, this.level + 46);
     }
     if (airborne === this.birds.length && this.lead.distanceToSquared(this.dropped) > 300 * 300) {
       this.mode = 'skein';
@@ -623,7 +657,7 @@ export class SwanFlock {
     b.headPitch = ease(b.headPitch, ALERT[4], 2, dt);
     b.headYaw = ease(b.headYaw, 0, 2, dt);
     b.yaw += wrapAngle(this.bearing - b.yaw) * Math.min(1, dt * 1.2);
-    b.at.y = FLOAT + Math.sin(time * 0.87 + b.seed) * 0.022;
+    b.at.y = this.level + FLOAT + Math.sin(time * 0.87 + b.seed) * 0.022;
     b.at.x += Math.sin(b.yaw) * b.speed * dt;
     b.at.z += Math.cos(b.yaw) * b.speed * dt;
     b.feet = 1;
@@ -637,6 +671,7 @@ export class SwanFlock {
       this.swans.set(1, drawn, b.pitch, b.roll, b.beat, b.flap);
       this.swans.set(2, drawn, b.neck.x, b.neck.y, b.neck.z, b.neck.w);
       this.swans.set(3, drawn, b.fold, b.headYaw, b.headPitch, b.feet);
+      this.swans.set(4, drawn, b.bob, 0, 0, 0);
       drawn++;
     }
     this.swans.commit(drawn);
@@ -648,11 +683,20 @@ export class SwanFlock {
     let n = 0;
     for (const b of this.birds) {
       if (n + 3 > WAKES) break;
-      const moving = b.run > 0 && b.run < RUN + 0.6;
-      const wash = moving ? 0.5 : 0.34;
+      const moving = b.run > 0 && b.run < this.runFor + 0.6;
+      /** Water a bird has just left goes on being disturbed: the wash stays under it for a moment after it lifts. */
+      const left = b.run > this.runFor ? Math.max(0, 1 - (b.run - this.runFor) / 0.6) : 1;
+      const wash = (moving ? 0.5 : 0.34) * (b.run > 0 ? left : Math.max(0, 1 - Math.max(0, b.at.y - this.level - 0.1) * 4));
       this.wakes.set(0, n, b.at.x - Math.sin(b.yaw) * (moving ? 0.9 : 0.25), b.at.z - Math.cos(b.yaw) * (moving ? 0.9 : 0.25), 0.86 + (moving ? 1.3 : 0), 0.36);
-      this.wakes.set(1, n, b.yaw, wash * Math.max(0, 1 - Math.max(0, b.at.y - 0.1) * 4), 0, 0);
+      this.wakes.set(1, n, b.yaw, wash, 0, 0);
       n++;
+      if (b.ring >= 0 && n < WAKES) {
+        const k = b.ring / RING_FOR;
+        const r = 0.5 + k * RING_TO;
+        this.wakes.set(0, n, b.at.x, b.at.z, r, r);
+        this.wakes.set(1, n, 0, (1 - k) * (1 - k) * 0.5 * Math.min(1, k * 6), 2, 0);
+        n++;
+      }
       if (!moving) continue;
       for (let i = 0; i < 2; i++) {
         const k = b.step - i * 0.5;

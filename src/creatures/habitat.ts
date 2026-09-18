@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { fieldAt, type FieldSample } from '../world/fields';
 import { COTTAGE, mainlandCoastZ } from '../world/heightfield';
+import { POND_LEVEL, pondOut } from '../world/heightfield';
 import { GRASS_LINE, heightAt, slopeAt } from '../world/island';
 import { grassHeightAt } from '../world/grass';
 import { FLOWER_PATCHES, TREE, openGround, type FlowerPatch } from '../world/landmarks';
@@ -34,12 +35,17 @@ export interface Habitat {
   readonly canopy: readonly Canopy[];
 }
 
+/** The pond is water: nothing that walks is put on it, and nothing that walks wanders out onto it. */
+function dry(x: number, z: number): boolean {
+  return pondOut(x, z) > 1.05 || heightAt(x, z) > POND_LEVEL + 0.3;
+}
+
 function meadow(x: number, z: number): boolean {
-  return heightAt(x, z) > GRASS_LINE + 0.5 && openGround(x, z) > 0.97 && slopeAt(x, z) < 0.75;
+  return heightAt(x, z) > GRASS_LINE + 0.5 && openGround(x, z) > 0.97 && slopeAt(x, z) < 0.75 && dry(x, z);
 }
 
 function forage(x: number, z: number): boolean {
-  return heightAt(x, z) > GRASS_LINE + 0.1 && openGround(x, z) > 0.9 && slopeAt(x, z) < 0.9;
+  return heightAt(x, z) > GRASS_LINE + 0.1 && openGround(x, z) > 0.9 && slopeAt(x, z) < 0.9 && dry(x, z);
 }
 
 /** Perches on the outer, upper surface of the canopy, where birds sit against the sky. */
@@ -114,8 +120,8 @@ export function mainlandHabitat(flowers: readonly FlowerPatch[], perchCentres: r
   return {
     ground: heightAt,
     grassHeight: grassHeightAt,
-    meadow: (x, z) => onPasture(x, z) && heightAt(x, z) > GRASS_LINE + 1 && slopeAt(x, z) < 0.75 && clearOfWalls(x, z, 1.6),
-    forage: (x, z) => onPasture(x, z) && heightAt(x, z) > GRASS_LINE + 1 && slopeAt(x, z) < 0.9 && clearOfWalls(x, z, 1),
+    meadow: (x, z) => onPasture(x, z) && heightAt(x, z) > GRASS_LINE + 1 && slopeAt(x, z) < 0.75 && clearOfWalls(x, z, 1.6) && dry(x, z),
+    forage: (x, z) => onPasture(x, z) && heightAt(x, z) > GRASS_LINE + 1 && slopeAt(x, z) < 0.9 && clearOfWalls(x, z, 1) && dry(x, z),
     flowers,
     perches,
     treeBase: new THREE.Vector3(mid.x, 1e4, mid.z),
