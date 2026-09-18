@@ -100,6 +100,9 @@ export class Journey {
     } else if (start === 'stage') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
       this.begin('stage');
+    } else if (start === 'jetty') {
+      this.moor();
+      this.begin('home');
     } else if (start === 'summit' || start === 'home') {
       this.moor();
       this.begin('home');

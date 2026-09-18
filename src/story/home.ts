@@ -61,10 +61,10 @@ const CREDITS_AT = 26;
  * The jetty on the south beach: out from the shore over the water, with a deck the child walks in along. The one
  * arrival in the journey that has somewhere built for it, which is how you know it is home.
  */
-export const HOME_JETTY = { x: -45, shoreZ: -1950, endZ: -1927, halfWidth: 1.2, deck: 0.7 } as const;
+export const HOME_JETTY = { x: -45, shoreZ: -1954, endZ: -1927, halfWidth: 1.2, deck: 0.7 } as const;
 /** Where the boat comes alongside the end of it and lies, bow to the east. */
 export const HOME_MOORING = { x: -45.5, z: -1925.4, yaw: Math.PI / 2 } as const;
-const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ + 1, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
+const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
 /** The crest of the last hill, where the ground falls away and the cottage comes into view. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
 /** From the summit the sun sets over the cottage, to the north-west. */
@@ -123,8 +123,8 @@ export class HomeChapter implements Chapter {
     child.decks = [JETTY_DECK];
     child.dismount();
     /** Out of the boat onto the end of the jetty, in along it to the sand, and then up. */
-    child.place(HOME_JETTY.x, HOME_JETTY.endZ + 0.3, NORTH);
-    child.walkTo(HOME_JETTY.x, HOME_JETTY.shoreZ - 4, false, () => {
+    child.place(HOME_JETTY.x, HOME_JETTY.endZ - 0.4, NORTH);
+    child.walkTo(HOME_JETTY.x, HOME_JETTY.shoreZ - 3, false, () => {
       const from = child.position;
       child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
     }, 1);

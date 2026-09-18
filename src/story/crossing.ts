@@ -52,6 +52,8 @@ export interface CrossingOpts {
 const ON_THE_SIDE = 7;
 const SWIM_FOR = 46;
 const DRYING = 3.2;
+/** How far along the route it is back in the child's arms at the latest, dried, well before the jetty. */
+const SWIM_ENDS_BY = 0.84;
 /** How far behind the boat it can fall before the boat is made to wait for it. Nothing is ever left behind. */
 const WAIT_FOR_IT = 6.5;
 
@@ -259,7 +261,7 @@ export class CrossingChapter implements Chapter {
       const hand = this.swimSide > 0 ? 0 : 1;
       if (behind < 1.6) child.reachFor(hand, this.look.copy(cygnet.position).setY(0.35).lerp(this.beside, 0.55));
       else child.reachFor(hand, null);
-      if (this.swimT > SWIM_FOR || this.progress() > 0.93) {
+      if (this.swimT > SWIM_FOR || this.progress() > SWIM_ENDS_BY) {
         child.reachFor(hand, null);
         cygnet.bind(0.25);
         cygnet.mind.trust(0.7);
