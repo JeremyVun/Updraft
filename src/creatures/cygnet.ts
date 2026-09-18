@@ -1111,7 +1111,8 @@ export class Cygnet {
     s.cold = w.cold;
     s.rain = w.rain;
     s.dark = w.dark;
-    s.where = this.carried ? 'riding' : st === 'following' || st === 'perched' ? 'afoot' : st === 'swimming' ? 'riding' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
+    /** On the side of the boat it is riding too: a gust may ruffle it there, but never bowl it off the gunwale into the sea. */
+    s.where = this.carried || st === 'perched' || st === 'swimming' ? 'riding' : st === 'following' ? 'afoot' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
     s.locked = this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
     s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3;
     this.mind.update(dt, s);
