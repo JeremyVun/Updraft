@@ -336,6 +336,9 @@ export class WoodChapter implements Chapter {
     this.bolted = true;
     c.stop();
     for (const coal of this.cast.embers.coals) if (coal.lit) coal.heat *= 0.55;
+    /** The next coal up the path goes out with it: while the bird is lost there is nothing else to blow on. */
+    if (this.ahead) this.cast.embers.douse(this.ahead);
+    this.ahead = null;
     this.ran.copy(c.position);
     this.ran.y = Math.max(heightAt(this.ran.x, this.ran.z), 0) + 0.5;
     cygnet.position.copy(this.ran);

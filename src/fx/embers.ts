@@ -164,6 +164,15 @@ export class Embers {
     return this.caught.splice(0, this.caught.length);
   }
 
+  /** Takes a coal out of play, for when the room needs the only thing glowing to be somewhere else. */
+  douse(coal: Coal): void {
+    coal.live = false;
+    coal.lit = false;
+    coal.heat = 0;
+    coal.flare = 0;
+    coal.wake = 0;
+  }
+
   clearCoals(): void {
     for (const c of this.coals) {
       c.live = false;
