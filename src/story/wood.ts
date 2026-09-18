@@ -15,8 +15,8 @@ const SODDEN = new THREE.Vector2(-37, -1848);
 /** How much light there has to be before the child will trust it enough to move. */
 const ENOUGH = 1.2;
 /** How near the light has to come to the hiding place, and how much of it there has to be, to show what is there. */
-const FOUND = 8;
-const FOUND_HEAT = 1.6;
+const FOUND = 5;
+const FOUND_HEAT = 2.4;
 /**
  * Nobody is ever stranded in the dark. After this long with nothing burning, the wood wakes a few coals of its
  * own — a glimmer to walk toward, never a path — and after a long time lost, enough of them that the cygnet is
