@@ -47,7 +47,7 @@ void main() {
   vec3 col = mix(vec3(1.0, 0.22, 0.04), vec3(1.0, 0.66, 0.26), smoothstep(0.15, 0.9, vHeat));
   col = mix(col, vec3(1.0, 0.86, 0.6), vCoal * smoothstep(0.7, 1.6, vHeat) * 0.3);
   vec4 f = fogOf(vWorld);
-  gl_FragColor = vec4(col * (1.0 + 2.2 * vHeat) * (1.0 - f.a * 0.75), a);
+  gl_FragColor = vec4(col * (1.0 + (2.2 - vCoal * 1.35) * vHeat) * (1.0 - f.a * 0.75), a);
 }`;
 
 interface Spark {
@@ -337,11 +337,13 @@ export class Embers {
       const j = (SPARKS + i) * 4;
       const breathe = c.live && !c.lit ? (0.3 + 0.16 * Math.sin(time * 1.6 + c.seed)) * (0.55 + 0.45 * c.wake) : 0;
       const shown = c.live ? (c.lit ? Math.min(1.2, c.heat + c.flare * 0.35) : breathe) * this.presence : 0;
+      const size = c.live ? (c.lit ? 0.42 + c.heat * 0.16 + c.flare * 0.22 : 0.3) : 0;
+      sizes[SPARKS + i] = size;
       data[j] = c.p.x;
-      data[j + 1] = c.p.y + (c.lit ? 0.2 + c.flare * 0.05 : 0.05);
+      /** Stood clear of the floor, because a glow centred on the ground is cut in half by it. */
+      data[j + 1] = c.p.y + size * 0.8;
       data[j + 2] = c.p.z;
       data[j + 3] = shown;
-      sizes[SPARKS + i] = c.live ? (c.lit ? 0.42 + c.heat * 0.16 + c.flare * 0.22 : 0.3) : 0;
       if (!c.live || !c.lit) continue;
       const power = (c.heat + c.flare * t.flareLight) * t.coalLight;
       const reach = power / (1 + c.p.distanceToSquared(near) * 0.0025);

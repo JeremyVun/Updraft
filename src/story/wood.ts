@@ -15,8 +15,8 @@ const SODDEN = new THREE.Vector2(-37, -1848);
 /** How much light there has to be before the child will trust it enough to move. */
 const ENOUGH = 1.2;
 /** How near the light has to come to the hiding place, and how much of it there has to be, to show what is there. */
-const FOUND = 12;
-const FOUND_HEAT = 0.5;
+const FOUND = 8;
+const FOUND_HEAT = 1.6;
 /**
  * Nobody is ever stranded in the dark. After this long with nothing burning, the wood wakes a few coals of its
  * own — a glimmer to walk toward, never a path — and after a long time lost, enough of them that the cygnet is
@@ -213,7 +213,7 @@ export class WoodChapter implements Chapter {
         break;
       case 'walk':
         this.follow();
-        if (this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < 34) this.bolt();
+        if (!this.bolted && this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < 30) this.bolt();
         break;
       case 'bolt':
         this.bolting();
@@ -333,6 +333,7 @@ export class WoodChapter implements Chapter {
   private bolt(): void {
     const { child: c, cygnet } = this.cast;
     this.to('bolt');
+    this.bolted = true;
     c.stop();
     for (const coal of this.cast.embers.coals) if (coal.lit) coal.heat *= 0.3;
     this.ran.copy(c.position);
@@ -363,6 +364,7 @@ export class WoodChapter implements Chapter {
   }
 
   private cowering = false;
+  private bolted = false;
 
   /**
    * It is somewhere out there in the dark and it is calling, and the only way to find it is to put light on it.
@@ -479,8 +481,8 @@ export class WoodChapter implements Chapter {
       const bearing = Math.atan2(c.x - HIDING.x, c.z - HIDING.z) + 1.5;
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       s.target.set(c.x * 0.5 + HIDING.x * 0.5, ground + 1.6, c.z * 0.5 + HIDING.z * 0.5);
-      s.distance = 13;
-      s.height = 4;
+      s.distance = 18;
+      s.height = 7;
       this.pace = 0.35;
       this.focus.copy(c);
       return;
