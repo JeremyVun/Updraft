@@ -82,3 +82,17 @@ And, a little later:
    only the wind, the sea, the crickets and the owl are left. Then the credits roll up from the bottom, with a
    faint breathing "play again" in the corner.
 7. **Grass on the home island**: lusher than the pasture, and the summit no longer half-grazed.
+
+## Status (2026-09-18)
+
+On `main`: the shelving shore and the shorter route; the jetty's deck and mooring (`HOME_JETTY`, `HOME_MOORING` in
+`story/home.ts`, `Boat.mooring`, `Traveller.decks`; `?chapter=jetty` starts moored with the walk in to do) — the
+jetty itself is not built yet, the child walks in on an invisible deck; the dolphins (merged from `end-dolphins`:
+`tuning.dolphins`, `Boat.nudge`, `Dolphins.spotlight`); the cygnet's `fledging` state and `join`; the restructured
+beats, cameras and timings in `home.ts`; the lush home grass; the finale (`Soundscape.finale`, cue `finale`,
+`SoundState.silence`, everything musical on one `musicBus`) and the credits (`#credits`, `#again` in `index.html`,
+copy in `docs/copy/copy-2.json`, awaiting Jeremy's verdict).
+
+In flight: the fledging's visual pass (Opus 5, `/private/tmp/updraft-end-fledge`). Still to do: the jetty model
+(Opus 5 parcel: piles, planks, a post, something left on it that says somebody lives here; the boat comes
+alongside its end bow to the east), then one full run from `?chapter=sea` through the credits to check the whole.
