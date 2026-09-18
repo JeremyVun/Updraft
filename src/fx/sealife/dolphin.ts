@@ -1050,7 +1050,7 @@ export class Dolphins {
     const d = s.d;
     if (s.phase === 'out') {
       this.glide(s, 7, s.side * 11, 0.85, dt);
-      if (s.t > 3.6) {
+      if (s.t > 3.6 && (Math.abs(s.across) > 8 || s.t > 7)) {
         s.phase = 'run';
         s.t = 0;
         d.held = null;
@@ -1095,7 +1095,7 @@ export class Dolphins {
     const d = s.d;
     if (s.phase === 'out') {
       this.glide(s, -16, s.side * 7, 0.8, dt);
-      if (s.t > 3.2) {
+      if (s.t > 3.2 && (s.along < -9 || s.t > 7)) {
         s.phase = 'run';
         s.t = 0;
         d.held = null;
@@ -1115,10 +1115,16 @@ export class Dolphins {
       d.tilt = -s.side * 1.5;
       if (!s.hit) {
         this.glide(s, SHOVE_ALONG, s.side * SHOVE_ACROSS, 1.1, dt);
-        if (s.t > 3.5 || (Math.abs(s.across) < SHOVE_ACROSS + 0.12 && s.along > SHOVE_ALONG - 0.5)) {
+        if (Math.abs(s.across) < SHOVE_ACROSS + 0.12 && s.along > SHOVE_ALONG - 0.5) {
           s.hit = true;
           s.t = 0;
           this.onShove?.(s.side, 1);
+        } else if (s.t > 6) {
+          /** It could not get alongside; the boat is never shoved by a dolphin that is not there. */
+          s.phase = 'back';
+          s.t = 0;
+          d.held = -1.8;
+          d.tilt = null;
         }
       } else {
         /** The boat leaps away from it and it slides back down the planking, still looking up. */
