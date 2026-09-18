@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
+import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
 import { CREATURE_GLSL } from '../shading';
 import { BILL, EYE, FEET, FOOT, HEAD, NECK, NECK_AT, NECK_LEN, PLUME, SHOULDER, SPAN, TAIL, TAIL_AT, VANE, WING_L, WING_R } from './body';
 
@@ -193,6 +194,7 @@ void main() {
 
 const WAKE_VERT = /* glsl */ `
 ${ATMO_GLSL}
+${SWELL_GLSL}
 in vec4 iWake;
 in vec4 iWash;
 out vec2 vUv;
@@ -202,7 +204,10 @@ out float vKind;
 void main() {
   float c = cos(iWash.x), s = sin(iWash.x);
   vec3 local = vec3(position.x * iWake.w, 0.0, position.z * iWake.z);
-  vWorld = vec3(iWake.x + c * local.x + s * local.z, 0.03, iWake.y - s * local.x + c * local.z);
+  vec2 flat = vec2(iWake.x + c * local.x + s * local.z, iWake.y - s * local.x + c * local.z);
+  /** A wake is on the water, not on the plane the water would lie in: it rides the swell like everything else. */
+  vec3 ride = swellShift(flat, swellHeight(flat, distance(cameraPosition.xz, flat)));
+  vWorld = vec3(flat.x + ride.x, 0.04 + ride.y, flat.y + ride.z);
   vUv = position.xz;
   vFade = iWash.y;
   vKind = iWash.z;
@@ -231,7 +236,7 @@ export function swanMaterial(): THREE.ShaderMaterial {
 
 export function wakeMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: atmo.uniforms,
+    uniforms: { ...atmo.uniforms, ...swellUniforms },
     vertexShader: WAKE_VERT,
     fragmentShader: WAKE_FRAG,
     transparent: true,
