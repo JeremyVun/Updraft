@@ -643,31 +643,45 @@ export class PianoStrings {
     panner.connect(dry).connect(out.bus);
     panner.connect(wet).connect(out.reverb);
 
-    /** Felt: the harder it is hit the brighter it starts, and all of it goes dull within the first half second. */
+    /** Felt: the harder it is hit the brighter it starts, and the brightness is gone within the first second. */
     const felt = ctx.createBiquadFilter();
     felt.type = 'lowpass';
-    felt.Q.value = 0.7;
-    felt.frequency.setValueAtTime(Math.min(9000, 620 + f * 1.4 + velocity * 2900), t0);
-    felt.frequency.exponentialRampToValueAtTime(Math.min(6000, 460 + f), t0 + 0.7);
+    felt.Q.value = 0.5;
+    felt.frequency.setValueAtTime(Math.min(12000, 900 + f * 3 + velocity * 6500), t0);
+    felt.frequency.exponentialRampToValueAtTime(Math.min(7000, 700 + f * 2.2), t0 + 0.9);
     felt.connect(panner);
 
-    const peak = 0.1 * velocity * level;
-    /** Two strings a few cents apart on the fundamental, so every note beats slowly against itself. */
-    const partials: [number, number][] = [[1, 0.52], [1, 0.52], [2.004, 0.4], [3.02, 0.15], [4.05, 0.06]];
-    partials.forEach(([ratio, amp], i) => {
-      const o = ctx.createOscillator();
-      o.type = i < 2 ? 'triangle' : 'sine';
-      o.frequency.value = f * ratio;
-      if (i < 2) o.detune.value = i === 0 ? -3.5 : 3.5;
-      const g = ctx.createGain();
-      const life = decay / (1 + i * 0.55);
-      g.gain.setValueAtTime(0, t0);
-      g.gain.linearRampToValueAtTime(peak * amp, t0 + 0.008 + 0.012 * (1 - velocity));
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + life);
-      o.connect(g).connect(felt);
-      o.start(t0);
-      o.stop(t0 + life + 0.05);
-    });
+    const peak = 0.085 * velocity * level;
+    /**
+     * What makes a struck string a piano and not an organ: a dozen partials, each a little sharper than a true
+     * harmonic because the wire is stiff; the ones the hammer's striking point cancels left weak; every partial
+     * dropping fast at first and then ringing on quietly; and the high ones gone long before the low ones.
+     */
+    const stiffness = 0.00018 * Math.pow(2, (midi - 48) / 9);
+    const count = midi < 60 ? 12 : midi < 72 ? 9 : 6;
+    for (let n = 1; n <= count; n++) {
+      const pf = f * n * Math.sqrt(1 + stiffness * n * n);
+      if (pf > 11000) break;
+      const struck = Math.abs(Math.sin((n * Math.PI) / 8.3));
+      const amp = (struck * (0.35 + 0.65 * velocity ** (n * 0.18))) / Math.pow(n, 1.15);
+      const life = decay / (1 + (n - 1) * 0.42);
+      const strings = n <= 3 ? 2 : 1;
+      for (let k = 0; k < strings; k++) {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = pf;
+        if (strings === 2) o.detune.value = k === 0 ? -2.2 : 2.6;
+        const g = ctx.createGain();
+        const top = (peak * amp) / strings;
+        g.gain.setValueAtTime(0, t0);
+        g.gain.linearRampToValueAtTime(top, t0 + 0.004);
+        g.gain.exponentialRampToValueAtTime(top * 0.3, t0 + 0.06 + life * 0.09);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + life);
+        o.connect(g).connect(felt);
+        o.start(t0);
+        o.stop(t0 + life + 0.05);
+      }
+    }
 
     if (!this.knock) {
       const len = Math.floor(ctx.sampleRate * 0.12);
@@ -687,6 +701,19 @@ export class PianoStrings {
     thump.gain.setValueAtTime(0.05 * velocity * level, t0);
     thump.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
     src.connect(wood).connect(thump).connect(panner);
+    /** The hammer itself: a few milliseconds of bright noise on the front of the note, which is most of its bite. */
+    const hammer = ctx.createBufferSource();
+    hammer.buffer = this.knock;
+    const bite = ctx.createBiquadFilter();
+    bite.type = 'bandpass';
+    bite.frequency.value = Math.min(6000, 1400 + f * 2);
+    bite.Q.value = 0.8;
+    const click = ctx.createGain();
+    click.gain.setValueAtTime(0.09 * velocity * velocity * level, t0);
+    click.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
+    hammer.connect(bite).connect(click).connect(panner);
+    hammer.start(t0);
+    hammer.stop(t0 + 0.05);
     src.start(t0);
     src.stop(t0 + 0.12);
   }
