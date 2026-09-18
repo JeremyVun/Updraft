@@ -88,6 +88,8 @@ const PHRASES: Record<Cue, [number, number][]> = {
   calling: [],
   bugle: [],
   breeze: [[74, 1], [78, 1], [81, 2]],
+  /** A coal takes in the dark wood: three notes up out of the drone, the only lift the room's music is allowed. */
+  kindled: [[62, 1], [69, 1], [74, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
   /** High and thin and going away from you, the way a skein sounds when you look up too late. */
@@ -105,7 +107,7 @@ const PHRASES: Record<Cue, [number, number][]> = {
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
 };
-const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -342,6 +344,36 @@ export class Soundscape {
     o.stop(when + length + 0.05);
   }
 
+  /**
+   * A coal taking the wind in the dark wood: a soft whoomph of air and then the hiss of it burning, which is the
+   * one sound in the game the player makes happen with their hands alone.
+   */
+  private flare(): void {
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime + 0.02;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    src.loopStart = Math.random() * 3;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 0.9;
+    filter.frequency.setValueAtTime(240, t0);
+    filter.frequency.exponentialRampToValueAtTime(1500, t0 + 0.22);
+    filter.frequency.exponentialRampToValueAtTime(700, t0 + 1.6);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.09, t0 + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.9);
+    src.connect(filter).connect(gain);
+    gain.connect(this.master);
+    const send = ctx.createGain();
+    send.gain.value = 0.3;
+    gain.connect(send).connect(this.reverb);
+    src.start(t0, Math.random() * 4);
+    src.stop(t0 + 2);
+  }
+
   /** A field cricket: three quick pulses of a high tone. */
   private cricket(when: number, pan: number, level: number): void {
     const f = 4300 + Math.random() * 600;
@@ -528,7 +560,10 @@ export class Soundscape {
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     for (const name of s.cues) {
-      if (name === 'distress') this.peep(1);
+      if (name === 'kindled') {
+        this.flare();
+        this.phrase(name);
+      } else if (name === 'distress') this.peep(1);
       else if (name === 'calling') this.peep(0.95, true);
       else if (name === 'bugle') this.bugle();
       else this.phrase(name);

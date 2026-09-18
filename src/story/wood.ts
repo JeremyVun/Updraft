@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
+import type { Coal } from '../fx/embers';
+import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH } from '../world/wood';
 import type { Cast, Chapter } from './cast';
@@ -25,6 +27,50 @@ const LOST_GLIMMER = 40;
 const LOST_RELENT = 170;
 /** How near a waypoint counts as reached. */
 const REACHED = 7;
+
+/** The walk as one line, so a coal can be laid a given number of paces up it rather than at a corner of it. */
+const WAY = [WOOD_LANDING, ...WOOD_PATH];
+const LEG_END: number[] = [];
+{
+  let run = 0;
+  for (let i = 1; i < WAY.length; i++) {
+    run += WAY[i].distanceTo(WAY[i - 1]);
+    LEG_END.push(run);
+  }
+}
+const PATH_LENGTH = LEG_END[LEG_END.length - 1];
+
+/** A point `along` the walk from the landing, `side` units to the right of the middle of it. */
+function pathPoint(along: number, side: number, out: THREE.Vector2): THREE.Vector2 {
+  const d = Math.max(0, Math.min(PATH_LENGTH - 0.01, along));
+  let i = 0;
+  while (i < LEG_END.length - 1 && LEG_END[i] < d) i++;
+  const a = WAY[i];
+  const b = WAY[i + 1];
+  const start = i === 0 ? 0 : LEG_END[i - 1];
+  const t = (d - start) / Math.max(0.001, LEG_END[i] - start);
+  const dir = new THREE.Vector2(b.x - a.x, b.y - a.y).normalize();
+  return out.set(a.x + (b.x - a.x) * t + dir.y * side, a.y + (b.y - a.y) * t - dir.x * side);
+}
+
+/** How far up the walk a point is, measured along the line rather than as the crow flies. */
+function pathAlong(x: number, z: number): number {
+  let best = 1e9;
+  let at = 0;
+  for (let i = 1; i < WAY.length; i++) {
+    const a = WAY[i - 1];
+    const b = WAY[i];
+    const dx = b.x - a.x;
+    const dz = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
+    const d = Math.hypot(x - a.x - dx * t, z - a.y - dz * t);
+    if (d < best) {
+      best = d;
+      at = (i === 1 ? 0 : LEG_END[i - 2]) + Math.hypot(dx, dz) * t;
+    }
+  }
+  return at;
+}
 
 type Beat = 'ashore' | 'first' | 'walk' | 'bolt' | 'lost' | 'found' | 'plane' | 'dry' | 'out' | 'toBoat' | 'push' | 'aboard';
 
@@ -59,9 +105,19 @@ export class WoodChapter implements Chapter {
   private nextCall = 0;
   private lit = 0;
   private readonly light = new THREE.Vector3();
+  /** What the child and the camera are drawn to: the fire if there is one, and the next coal if there is not. */
+  private readonly glow = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
+  private readonly spot = new THREE.Vector2();
+  private readonly ran = new THREE.Vector3();
+  /** The one unlit coal ahead of them: there is never a second, so there is never a choice to get wrong. */
+  private ahead: Coal | null = null;
+  private chainAt = 0;
+  private chainSide = -1;
+  /** The coal laid within throw of where the cygnet is hiding, so the way to find it is the way they came. */
+  private hearth: Coal | null = null;
 
   constructor(private readonly cast: Cast) {
     const { child, plane, cygnet } = cast;
@@ -73,6 +129,37 @@ export class WoodChapter implements Chapter {
     if (cygnet.seat === 'cradle') cast.carry.stow();
     else cygnet.rideIn('satchel');
     child.walkTo(WOOD_LANDING.x, WOOD_LANDING.y - 14, false, () => this.to('first'), 1.4);
+    /**
+     * The first coal is already breathing in the litter before they are off the beach, close enough to the path
+     * to be the first thing in frame and off it enough to be a thing rather than the ground. Everything the room
+     * asks of the player is in it: one warm point in a blue-black world, and a gust across it takes it.
+     */
+    cast.embers.clearCoals();
+    this.chainAt = 21;
+    this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
+  }
+
+  /** A coal's place on the walk, as the pair `lay` wants. */
+  private at(along: number, side: number): [number, number] {
+    pathPoint(along, side, this.spot);
+    return [this.spot.x, this.spot.y];
+  }
+
+  /**
+   * The next coal, laid at the edge of what the one that just caught is lighting: far enough to be worth walking
+   * to, near enough that its glimmer is inside the new light, and always on the way up. One at a time.
+   */
+  private layNext(): void {
+    const t = tuning.wood;
+    const c = this.cast.child.position;
+    const along = Math.max(this.chainAt, pathAlong(c.x, c.z)) + t.chainStep;
+    if (along > PATH_LENGTH - 8) {
+      this.ahead = null;
+      return;
+    }
+    this.chainSide = -this.chainSide;
+    this.chainAt = along;
+    this.ahead = this.cast.embers.lay(...this.at(along, this.chainSide * t.chainOffset));
   }
 
   /** The player's wind is the light here, so it is theirs for all of it except the moment of gathering it up. */
@@ -99,7 +186,7 @@ export class WoodChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now = time;
-    const { child: c, plane: p, cygnet, embers } = this.cast;
+    const { child: c, plane: p, embers } = this.cast;
     /** The boat is waiting on the far shore, the way it always is — but it goes there once they are out of sight. */
     if (!this.moored && this.leg >= 2) {
       this.moored = true;
@@ -109,15 +196,19 @@ export class WoodChapter implements Chapter {
     this.light.copy(c.position);
     this.lit = embers.brightest(this.light);
     this.darkFor = this.lit < ENOUGH ? this.darkFor + dt : 0;
-    this.embers = this.beat === 'ashore' ? 0.4 : 1;
+    this.embers = 1;
+    this.glow.copy(this.lit > 0.4 ? this.light : (this.ahead ?? this.hearth)?.p ?? c.position);
+    this.caught();
 
     switch (this.beat) {
       case 'ashore':
+        /** They come up the beach with one small glow already burning off the path, and they have seen it. */
+        c.lookAt = this.ahead ? this.ahead.p : null;
         break;
       case 'first':
         /** The first light the player makes is the first thing the child has seen. They turn to it and go. */
-        c.lookAt = this.light;
-        if (this.lit > ENOUGH && this.t > 1.5) this.to('walk');
+        c.lookAt = this.glow;
+        if (this.lit > ENOUGH && this.t > 1.2) this.to('walk');
         else if (this.t > 75) this.to('walk');
         break;
       case 'walk':
@@ -125,8 +216,15 @@ export class WoodChapter implements Chapter {
         if (this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < 34) this.bolt();
         break;
       case 'bolt':
-        c.lookAt = cygnet.position;
-        if (this.t > 2.6) this.to('lost');
+        this.bolting();
+        if (this.t > 2.8) {
+          this.to('lost');
+          /**
+           * A coal in the litter between them and it, within the throw of its light: the way to find a bird in
+           * the dark is the only thing they have done all night, done once more toward where the calling is.
+           */
+          this.hearth = embers.lay(HIDING.x + (c.position.x - HIDING.x) * 0.42, HIDING.z + (c.position.z - HIDING.z) * 0.3);
+        }
         break;
       case 'lost':
         this.search(time);
@@ -184,16 +282,17 @@ export class WoodChapter implements Chapter {
     if (this.cast.input.gust > 9) this.unaided = false;
     else if (this.darkFor > UNAIDED) this.unaided = true;
     if (this.unaided && this.now > this.nextKindle) {
-      this.cast.embers.kindle(t.x, t.y, 5, 8, 0.72);
+      if (this.ahead) this.cast.embers.blow(this.ahead, 0.85);
+      else this.cast.embers.kindle(t.x, t.y, 5, 8, 0.72);
       this.nextKindle = this.now + 2.6;
     }
 
     if (this.lit < ENOUGH) {
       if (c.moving) c.stop();
-      c.lookAt = this.lit > 0 ? this.light : null;
+      c.lookAt = this.ahead ? this.ahead.p : this.lit > 0 ? this.light : null;
       return;
     }
-    c.lookAt = this.light;
+    c.lookAt = this.glow;
     if (c.busy) return;
     /** Toward the light when it is out ahead of them, and on up the path when it is not. */
     const gain = Math.hypot(c.position.x - t.x, c.position.z - t.y) - Math.hypot(this.light.x - t.x, this.light.z - t.y);
@@ -206,23 +305,64 @@ export class WoodChapter implements Chapter {
     }
   }
 
+  /**
+   * A coal taking is the only event in the room, so everything answers it at once: the music lifts, the light
+   * jumps, and the next faint one is laid at the edge of what it has just lit. The chain is the path.
+   */
+  private caught(): void {
+    for (const coal of this.cast.embers.takeCaught()) {
+      cue('kindled');
+      this.flared = this.now;
+      if (coal === this.ahead && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
+      else if (coal === this.ahead) this.ahead = null;
+    }
+  }
+
+  private flared = -99;
   private aimed = 0;
   private moored = false;
   private darkFor = 0;
   private unaided = false;
   private nextKindle = 0;
 
-  /** The storm's worst gust, and the cygnet is out of the hood and gone before the child can close a hand on it. */
+  /**
+   * The storm's worst gust: the fire they were walking by gutters right down, the cygnet is out of the hood before
+   * the child can close a hand on it, and it goes across the frame and into the dark on its own two feet, so what
+   * the player sees is where it went rather than a bird that stopped existing.
+   */
   private bolt(): void {
     const { child: c, cygnet } = this.cast;
     this.to('bolt');
     c.stop();
-    cygnet.position.set(HIDING.x, Math.max(heightAt(HIDING.x, HIDING.z), 0), HIDING.z);
-    cygnet.yaw = Math.atan2(c.position.x - HIDING.x, c.position.z - HIDING.z);
+    for (const coal of this.cast.embers.coals) if (coal.lit) coal.heat *= 0.3;
+    this.ran.copy(c.position);
+    this.ran.y = Math.max(heightAt(this.ran.x, this.ran.z), 0) + 0.5;
+    cygnet.position.copy(this.ran);
     cygnet.cower();
-    this.nextCall = this.now + 2;
+    this.nextCall = this.now + 2.4;
     cue('distress');
   }
+
+  /** The run itself: low, fast and bobbing, out of the light and off the path, and then down in the leaves. */
+  private bolting(): void {
+    const { child: c, cygnet } = this.cast;
+    const k = Math.min(1, this.t / 1.3);
+    const ease = k * k * (3 - 2 * k);
+    cygnet.position.set(
+      this.ran.x + (HIDING.x - this.ran.x) * ease,
+      0,
+      this.ran.z + (HIDING.z - this.ran.z) * ease,
+    );
+    cygnet.position.y = Math.max(heightAt(cygnet.position.x, cygnet.position.z), 0) + (k < 1 ? Math.abs(Math.sin(this.t * 13)) * 0.12 : 0);
+    cygnet.yaw = k < 1 ? Math.atan2(HIDING.x - this.ran.x, HIDING.z - this.ran.z) : Math.atan2(c.position.x - HIDING.x, c.position.z - HIDING.z);
+    if (k >= 1 && !this.cowering) {
+      this.cowering = true;
+      cygnet.cower();
+    }
+    c.lookAt = cygnet.position;
+  }
+
+  private cowering = false;
 
   /**
    * It is somewhere out there in the dark and it is calling, and the only way to find it is to put light on it.
@@ -239,7 +379,8 @@ export class WoodChapter implements Chapter {
     /** A glimmer where it is hiding, and then, much later, enough of one to have found it. */
     if (this.t > LOST_GLIMMER && time > this.nextKindle) {
       const hard = this.t > LOST_RELENT;
-      this.cast.embers.kindle(HIDING.x, HIDING.z, hard ? 2.5 : 4, hard ? 5 : 2, hard ? 0.6 : 0.36);
+      if (hard && this.hearth) this.cast.embers.blow(this.hearth, 0.9);
+      else this.cast.embers.kindle(HIDING.x, HIDING.z, 3.5, 2, 0.36);
       this.nextKindle = time + (hard ? 2.5 : 8);
     }
     if (c.busy || c.moving) return;
@@ -249,7 +390,10 @@ export class WoodChapter implements Chapter {
         /** Carried in the arms from here, not on their back. After the dark it is not put down again for a while. */
         this.cast.carry.gatherUp(() => {
           cygnet.bind(0.35);
+          this.hearth = null;
           this.to('walk');
+          /** The walk starts again from where they are now, off the path, so the next coal is back on it. */
+          if (!this.ahead) this.layNext();
         });
       }, 1.1);
     }
@@ -351,8 +495,10 @@ export class WoodChapter implements Chapter {
       return;
     }
     /** Close in behind them, leaning a little toward the light but never far enough to leave them behind. */
-    const lean = Math.min(1, 9 / Math.max(1, Math.hypot(this.light.x - c.x, this.light.z - c.z))) * 0.3;
-    s.target.set(c.x + (this.light.x - c.x) * lean, ground + 1.9, c.z + (this.light.z - c.z) * lean);
+    /** And when one takes, the camera turns further into the light for a moment, because they both looked. */
+    const rush = Math.max(0, 1 - (this.now - this.flared) / 1.4);
+    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (0.42 + rush * 0.3);
+    s.target.set(c.x + (this.glow.x - c.x) * lean, ground + 1.9, c.z + (this.glow.z - c.z) * lean);
     /**
      * The eye is placed on the ground behind them rather than hung a fixed height above the target, because the
      * wood is a steep dome and a fixed height put the camera in the hillside going up and in the air coming down.

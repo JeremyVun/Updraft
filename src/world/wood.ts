@@ -322,8 +322,15 @@ void main() {
   vec3 col = alb * (hemiLight(N) * vAo + uSunColor * (wrap * wrap * 0.55 + 0.05) * sun * (0.25 + 0.75 * vAo));
   col += alb * uSunColor * sun * step(0.5, vLeaf) * step(vLeaf, 1.5) * pow(max(dot(-V, uSunDir), 0.0), 3.0) * 1.2;
   col += uSunColor * sun * vAo * vSolid * (rim * (0.04 + 0.26 * uNight) + wet * (0.06 + 0.3 * uNight));
-  col += alb * emberLight(vWorld, N);
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
+      near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
+  col += (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N);
+  /**
+   * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
+   * the room can never do is hide the child, so anything between the two of them gets out of the way.
+   */
+  float clear = vLeaf > 0.5 ? 1.0 : smoothstep(1.0, 4.5, distance(cameraPosition, vWorld));
+  gl_FragColor = vec4(applyFog(col, vWorld), clear);
 }`;
 
 interface Seg {

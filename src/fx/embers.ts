@@ -12,7 +12,7 @@ const RANGE = 34;
 /** Below this a spark is out, and anything brighter counts toward a light the child can follow. */
 const LIT = 0.24;
 /** The most heat a spark woken out of bare litter can hold: cinders, never a fire on their own. */
-const CINDER = 0.34;
+const CINDER = 0.3;
 
 const VERT = /* glsl */ `
 in vec4 aSpark;
@@ -45,7 +45,7 @@ void main() {
   if (a < 0.004) discard;
   /** Hot at the heart, going red as it cools, so a dying ember reads as dying rather than as a dimmer lamp. */
   vec3 col = mix(vec3(1.0, 0.22, 0.04), vec3(1.0, 0.66, 0.26), smoothstep(0.15, 0.9, vHeat));
-  col = mix(col, vec3(1.0, 0.86, 0.6), vCoal * smoothstep(0.7, 1.6, vHeat) * 0.6);
+  col = mix(col, vec3(1.0, 0.86, 0.6), vCoal * smoothstep(0.7, 1.6, vHeat) * 0.3);
   vec4 f = fogOf(vWorld);
   gl_FragColor = vec4(col * (1.0 + 2.2 * vHeat) * (1.0 - f.a * 0.75), a);
 }`;
@@ -267,10 +267,11 @@ export class Embers {
       c.flare *= Math.exp(-dt * 0.85);
       c.heat -= dt / t.burnFor;
       if (Math.random() < dt * (0.9 + c.flare)) this.throwSparks(c, 1);
+      /** Burnt right out: it stops being anything at all, so the only glimmer left is the next one to blow on. */
       if (c.heat <= 0) {
         c.heat = 0;
         c.lit = false;
-        c.wake = 0.55;
+        c.live = false;
       }
       /** The flame leans downwind and rises and falls, so a lit coal is never a static lamp. */
       c.heat = Math.min(1, c.heat + 0.0004 * Math.sin(time * 3.1 + c.seed));
@@ -334,13 +335,13 @@ export class Embers {
     for (let i = 0; i < COALS; i++) {
       const c = this.coals[i];
       const j = (SPARKS + i) * 4;
-      const breathe = c.live && !c.lit ? (0.14 + 0.09 * Math.sin(time * 1.6 + c.seed)) * (0.35 + 0.65 * c.wake) : 0;
-      const shown = c.live ? (c.lit ? c.heat + c.flare * 0.8 : breathe) * this.presence : 0;
+      const breathe = c.live && !c.lit ? (0.3 + 0.16 * Math.sin(time * 1.6 + c.seed)) * (0.55 + 0.45 * c.wake) : 0;
+      const shown = c.live ? (c.lit ? Math.min(1.2, c.heat + c.flare * 0.35) : breathe) * this.presence : 0;
       data[j] = c.p.x;
-      data[j + 1] = c.p.y + (c.lit ? 0.18 + c.flare * 0.12 : 0.02);
+      data[j + 1] = c.p.y + (c.lit ? 0.2 + c.flare * 0.05 : 0.05);
       data[j + 2] = c.p.z;
       data[j + 3] = shown;
-      sizes[SPARKS + i] = c.live ? (c.lit ? 0.42 + c.heat * 0.2 + c.flare * 0.45 : 0.24) : 0;
+      sizes[SPARKS + i] = c.live ? (c.lit ? 0.42 + c.heat * 0.16 + c.flare * 0.22 : 0.3) : 0;
       if (!c.live || !c.lit) continue;
       const power = (c.heat + c.flare * t.flareLight) * t.coalLight;
       const reach = power / (1 + c.p.distanceToSquared(near) * 0.0025);

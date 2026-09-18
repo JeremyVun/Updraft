@@ -149,7 +149,7 @@ export const tuning = {
   },
   wood: {
     /** How fast a coal in the litter catches under the player's breath: 1 is a coal taken by about one good gust. */
-    catchRate: 1.35,
+    catchRate: 2.2,
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
     /** How high fanning can run a burning coal up, and how much of that rush is thrown as light. */
@@ -158,7 +158,7 @@ export const tuning = {
     /** How much light a coal makes, against the light the child will walk by (`ENOUGH` in the chapter, 1.2). */
     coalLight: 3.1,
     /** Heat a gust turns up out of bare wet litter where there is no coal: cinders, and an answer to every gust. */
-    stir: 3.4,
+    stir: 2.2,
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 15,
     chainOffset: 2.6,
