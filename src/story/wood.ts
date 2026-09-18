@@ -486,12 +486,14 @@ export class WoodChapter implements Chapter {
     s.eye = undefined;
     const ground = Math.max(heightAt(c.x, c.z), 0);
     if (this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found') {
-      /** Near enough to the child to share the dark with them, and turned toward where the calling is coming from. */
-      const bearing = Math.atan2(c.x - HIDING.x, c.z - HIDING.z) + 1.5;
-      s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      s.target.set(c.x * 0.62 + HIDING.x * 0.38, ground + 1.6, c.z * 0.62 + HIDING.z * 0.38);
-      s.distance = 18;
-      s.height = 7;
+      /**
+       * The same shoulder the whole walk was watched over, stepped back and swung the other way from the calling,
+       * so the child and the dark they are looking into are both in frame and neither is against the edge of it.
+       */
+      s.target.set(c.x + (HIDING.x - c.x) * 0.42, ground + 1.7, c.z + (HIDING.z - c.z) * 0.42);
+      const bx = c.x + (c.x - HIDING.x) * 0.35;
+      const bz = c.z + 12;
+      s.eye = this.side.set(bx, Math.max(Math.max(heightAt(bx, bz), 0), ground) + 5, bz);
       this.pace = 0.35;
       this.focus.copy(c);
       return;
