@@ -35,6 +35,28 @@ const LODS = [
   { segs: 30, reach: 178, cap: 2000 },
 ];
 
+const onPath = new THREE.Vector2();
+/** The whole walk, boat to boat: the corridor has to start where the child steps off, not where the path does. */
+const WAY = [WOOD_LANDING, ...WOOD_PATH, new THREE.Vector2(WOOD_BERTH.x, WOOD_BERTH.z)];
+
+/** Distance to the way through, leaving the nearest point on it in `onPath`. */
+function pathDistance(x: number, z: number): number {
+  let best = 1e9;
+  for (let i = 1; i < WAY.length; i++) {
+    const a = WAY[i - 1];
+    const b = WAY[i];
+    const dx = b.x - a.x;
+    const dz = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
+    const d = Math.hypot(x - a.x - dx * t, z - a.y - dz * t);
+    if (d < best) {
+      best = d;
+      onPath.set(a.x + dx * t, a.y + dz * t);
+    }
+  }
+  return best;
+}
+
 const LITTER_CELL = 0.6;
 const LITTER_GRID = 90;
 const LITTER_REACH = 24;
@@ -185,9 +207,27 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
 
+/**
+ * The way through, in the shader: the litter is swept off it and thins at its edges, so between the lights the
+ * floor itself says where the path goes. A child walking in the dark follows a worn line, not a heading.
+ */
+const WAY_GLSL = /* glsl */ `
+uniform vec2 uWay[${WAY.length}];
+float wayDistance(vec2 p) {
+  float best = 1e9;
+  for (int i = 1; i < ${WAY.length}; i++) {
+    vec2 a = uWay[i - 1];
+    vec2 ab = uWay[i] - a;
+    float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+    best = min(best, distance(p, a + ab * t));
+  }
+  return best;
+}`;
+
 /** Wet leaves lying on the floor, scattered over a grid of cells that follows the camera and is fixed in the world. */
 const LITTER_VERT = /* glsl */ `
 ${ATMO_GLSL}
+${WAY_GLSL}
 uniform vec2 uLitterCell;
 uniform float uStorm;
 in vec2 aCell;
@@ -207,7 +247,8 @@ void main() {
   vec2 p = (cell + vec2(r1, r2)) * ${LITTER_CELL.toFixed(2)};
   vec2 uv = domainUv(p);
   float away = distance(p, cameraPosition.xz);
-  if (r3 > 0.3 + 0.75 * vnoise(p * 0.6) || away > ${LITTER_REACH.toFixed(1)} || !insideUv(uv)) {
+  float worn = smoothstep(1.1, 4.2, wayDistance(p));
+  if (r3 > (0.3 + 0.75 * vnoise(p * 0.6)) * worn || away > ${LITTER_REACH.toFixed(1)} || !insideUv(uv)) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
@@ -322,8 +363,15 @@ void main() {
   vec3 col = alb * (hemiLight(N) * vAo + uSunColor * (wrap * wrap * 0.55 + 0.05) * sun * (0.25 + 0.75 * vAo));
   col += alb * uSunColor * sun * step(0.5, vLeaf) * step(vLeaf, 1.5) * pow(max(dot(-V, uSunDir), 0.0), 3.0) * 1.2;
   col += uSunColor * sun * vAo * vSolid * (rim * (0.04 + 0.26 * uNight) + wet * (0.06 + 0.3 * uNight));
-  col += alb * emberLight(vWorld, N);
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
+      near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
+  col += (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N);
+  /**
+   * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
+   * the room can never do is hide the child, so anything between the two of them gets out of the way.
+   */
+  float clear = vLeaf > 0.5 ? 1.0 : smoothstep(1.2, 6.5, distance(cameraPosition, vWorld));
+  gl_FragColor = vec4(applyFog(col, vWorld), clear);
 }`;
 
 interface Seg {
@@ -481,28 +529,6 @@ interface Placed {
   tiltDir: number;
 }
 
-const onPath = new THREE.Vector2();
-/** The whole walk, boat to boat: the corridor has to start where the child steps off, not where the path does. */
-const WAY = [WOOD_LANDING, ...WOOD_PATH, new THREE.Vector2(WOOD_BERTH.x, WOOD_BERTH.z)];
-
-/** Distance to the way through, leaving the nearest point on it in `onPath`. */
-function pathDistance(x: number, z: number): number {
-  let best = 1e9;
-  for (let i = 1; i < WAY.length; i++) {
-    const a = WAY[i - 1];
-    const b = WAY[i];
-    const dx = b.x - a.x;
-    const dz = b.y - a.y;
-    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
-    const d = Math.hypot(x - a.x - dx * t, z - a.y - dz * t);
-    if (d < best) {
-      best = d;
-      onPath.set(a.x + dx * t, a.y + dz * t);
-    }
-  }
-  return best;
-}
-
 /** Somewhere small enough to be missed: under the fallen trunk, in the roots, and in the middle of the thicket. */
 const TRUNK_HOLE = { x: -9, z: -1801 };
 const HOLLOW = { x: -46, z: -1832 };
@@ -551,6 +577,7 @@ export class DarkWood {
       uStormDir: { value: new THREE.Vector2(0.4, 0.92) },
       uPixel: { value: 0.0008 },
       uLitterCell: { value: new THREE.Vector2() },
+      uWay: { value: WAY.map((w) => new THREE.Vector2(w.x, w.y)) },
       uBox: { value: DEBRIS_BOX },
       uDebrisCentre: { value: new THREE.Vector3() },
       uDrift: { value: this.drift },
