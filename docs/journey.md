@@ -318,9 +318,11 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    under the lines that sag. **A red door stands on the crest** with nothing behind it and nothing on the other
    side — painted the same white and the same red as the cottage at the end of the journey, which nobody is told
    either. Still wanted: baskets and a peg bag.
-3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year. The green wave rolls out, and the long
-   walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the cygnet's first
-   glide on the player's updraft.
+3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year, and the island is asleep. The boat
+   lands in a bay under a bank; the child climbs it, and the first sight over the top is a grey meadow with one
+   patch of colour in it and a piano standing there, on the way and about a minute off. The lullaby wakes the rest
+   in waves. The long walk follows the plane through a sun shower, over the crest and down to the pond. **Built**,
+   and still needs the cygnet's first glide on the player's updraft.
 4. **The drowned village** (`story/drowned.ts`, `world/drowned.ts`) — the long dusk drift between rooftops, a
    spire, treetops, a turning weathervane, herons on chimneys, autumn leaves on black water. Homes the water took.
    A third of the way through **the air dies**: the boat loses way between two gable ends, the sail hangs dead off
@@ -377,7 +379,7 @@ waits for the water-shading session, because it is built on the sea.
 | *all three below* | on `main` (2026-09-18, merged from `rooms-trial`). Left over for the next brief: from the birches' crest the drowned village's roofs ghost through the haze, which breaks "never see the next island" — raise that chapter's `haze`. |
 | the autumn birches | **built** and accepted on a look at its screenshots (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`). Known weak spot: a gust lands where the cursor meets the ground, which from the walking camera is often far up the ride, so the cloud it tears off can be small in frame. |
 | kite and pinwheels on the island of lines | **built** and accepted (`world/kite.ts`, `world/pinwheels.ts`): a red-footed paper diamond with a bow tail tied off beside the boat, and rows of two-tone paper wheels a gust runs down. The kite flies leaning rather than upright, because its spine lies along its string. |
-| the piano on the meadow | **built** and accepted to look at (`world/piano.ts`, `story/piano.ts`, `PianoStrings` in `audio.ts`): bleached wood, the child on the stool at the keys, framed wide. **Nobody has heard it yet** — the tone was synthesised blind and needs Jeremy's ear. Still to do once the cygnet lands: the bird walking the keys (`Piano.walkKeys` is built and waiting). |
+| the piano on the meadow | **built** and now the key to the room (`world/piano.ts`, `story/piano.ts`, `?chapter=piano`): it stands on the walk in the one patch of colour on a sleeping island, the child sits at the stool, the duet wakes the meadow phrase by phrase, and on the whole lullaby the cygnet climbs out onto the keys and walks them while the island wakes to the hills. **Nobody has heard it yet** — the tone was synthesised blind and needs Jeremy's ear. |
 | the sleeping island | waiting on the cygnet |
 | the sky mirror | waiting on the water session |
 
