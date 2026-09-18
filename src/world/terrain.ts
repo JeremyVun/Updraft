@@ -148,7 +148,9 @@ void main() {
   float lit = mix(lambert, wrap, grassy * far);
   vec3 V = normalize(cameraPosition - vWorld);
   float back = pow(max(dot(-V, uSunDir), 0.0), 4.0) * grassy * far;
-  vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun) + uSunColor * tint * back * 0.45 * sun;
+  /** The frost creeping over the sleeping island, and the lamp standing in the middle of it. */
+  alb = mix(alb, vec3(0.76, 0.81, 0.86), frostAt(xz) * 0.6);
+  vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);

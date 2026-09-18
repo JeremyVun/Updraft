@@ -82,6 +82,24 @@ export const atmo = {
     uWaiting: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** The light the player has made out of the embers: where it is (xyz) and how strong (w). */
     uEmberLight: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /**
+     * The sleeping island's ground fog: where it pools (x, z), how far out it reaches, and how thick it is.
+     * At thickness 0 the whole of it, and so every other room, costs one comparison.
+     */
+    uHollow: { value: new THREE.Vector4(0, 0, 1, 0) },
+    /** The height its top surface lies at, and how softly it gives out there. */
+    uHollowTop: { value: new THREE.Vector2(0, 2.5) },
+    uHollowTint: { value: hdr('#b9c6d8', 1.0) },
+    /** What the player's gestures have carved out of it: 1 fog, 0 clear air, over the square in `uCarveDomain`. */
+    uCarveTex: { value: null as THREE.Texture | null },
+    uCarveDomain: { value: new THREE.Vector4(0, 0, 1, 1) },
+    /** Frost creeping in toward the bed: the bed (x, z), how near it the frost has come, and how hard, 0 to 1. */
+    uFrost: { value: new THREE.Vector4(0, 0, 1e4, 0) },
+    /** The lane the morning comes down: from (x, z) to (x, z), with half width and how far open in `uLaneOpen`. */
+    uLane: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uLaneOpen: { value: new THREE.Vector2(3, 0) },
+    /** The bedside lamp, the one warm light in the blue: where it is (xyz) and how strong (w). */
+    uLamp: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** A patch of grass someone has pressed flat: centre (x, z), radius, and how flat, 0 to 1. */
     uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
@@ -146,6 +164,15 @@ uniform sampler2D uLifeTex;
 uniform vec4 uIslandLife;
 uniform float uLivingBeyond;
 uniform vec4 uWaiting;
+uniform vec4 uHollow;
+uniform vec2 uHollowTop;
+uniform vec3 uHollowTint;
+uniform sampler2D uCarveTex;
+uniform vec4 uCarveDomain;
+uniform vec4 uFrost;
+uniform vec4 uLane;
+uniform vec2 uLaneOpen;
+uniform vec4 uLamp;
 uniform vec4 uTrodden;
 uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
@@ -213,6 +240,44 @@ vec3 emberLight(vec3 world, vec3 N) {
   return vec3(1.0, 0.54, 0.2) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.55 + 0.45, 0.0, 1.0);
 }
 
+/**
+ * The lane the morning comes down the hill: 1 in the middle of it, 0 off it, and it opens from its first point
+ * toward its last, so whatever comes down it arrives with the light rather than after it.
+ */
+float laneAt(vec2 xz) {
+  if (uLaneOpen.y <= 0.0) return 0.0;
+  vec2 ab = uLane.zw - uLane.xy;
+  float t = clamp(dot(xz - uLane.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+  float d = distance(xz, uLane.xy + ab * t);
+  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * smoothstep(uLaneOpen.y + 0.08, uLaneOpen.y - 0.08, t);
+}
+
+/** Frost on the grass: hard out at the rim of the hollow, closing in on the bed as the night goes on. */
+float frostAt(vec2 xz) {
+  if (uFrost.w <= 0.0) return 0.0;
+  float d = distance(xz, uFrost.xy) * (0.86 + 0.28 * fbm(xz * 0.12));
+  return uFrost.w * smoothstep(uFrost.z - 4.0, uFrost.z + 4.0, d) * (1.0 - laneAt(xz));
+}
+
+/** The bedside lamp: the one warm light in the blue, and the reason the bed is the warmest thing in frame. */
+vec3 lampLight(vec3 world, vec3 N) {
+  if (uLamp.w <= 0.0) return vec3(0.0);
+  vec3 d = uLamp.xyz - world;
+  float dist = length(d);
+  float fall = uLamp.w / (1.0 + dist * dist * 0.09);
+  return vec3(1.0, 0.72, 0.38) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.5 + 0.5, 0.0, 1.0);
+}
+
+/** How thick the sleeping island's ground fog is at a point: pooled in the hollow, under its top, less where carved. */
+float hollowDensity(vec3 p) {
+  float pool = 1.0 - smoothstep(0.5, 1.0, length(p.xz - uHollow.xy) / uHollow.z);
+  if (pool <= 0.0) return 0.0;
+  float under = 1.0 - smoothstep(uHollowTop.x - uHollowTop.y, uHollowTop.x + uHollowTop.y, p.y);
+  vec2 uv = (p.xz - uCarveDomain.xy) * uCarveDomain.zw;
+  float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
+  return uHollow.w * pool * under * carve;
+}
+
 /** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */
 vec3 stillGrey(vec3 c) {
   return vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))) * vec3(1.0, 0.97, 0.9) * 0.92;
@@ -259,6 +324,14 @@ vec4 fogOf(vec3 wpos) {
   float veil = max(0.0, dist - uVeil.x) * uVeil.y;
   float amt = 1.0 - exp(-dist * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
+  /** The ground fog of the sleeping island, taken along the eye ray at both ends and the middle of it. */
+  if (uHollow.w > 0.0) {
+    vec3 mid = (cameraPosition + wpos) * 0.5;
+    float dens = (hollowDensity(cameraPosition) + 2.0 * hollowDensity(mid) + hollowDensity(wpos)) * 0.25;
+    float pooled = 1.0 - exp(-dist * dens * 0.2);
+    fogCol = mix(fogCol, uHollowTint * (uSkyAmbient * 1.3 + uSunColor * 0.09), pooled / max(pooled + amt, 1e-4));
+    amt = 1.0 - (1.0 - amt) * (1.0 - pooled);
+  }
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
 }
 
