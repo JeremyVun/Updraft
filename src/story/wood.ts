@@ -112,6 +112,8 @@ export class WoodChapter implements Chapter {
   private readonly side = new THREE.Vector3();
   private readonly spot = new THREE.Vector2();
   private readonly ran = new THREE.Vector3();
+  /** The way they are going, eased, so the shot swings round with the path instead of snapping to every turn. */
+  private readonly aim = new THREE.Vector3(0, 0, -1);
   /** The one unlit coal ahead of them: there is never a second, so there is never a choice to get wrong. */
   private ahead: Coal | null = null;
   private chainAt = 0;
@@ -261,6 +263,7 @@ export class WoodChapter implements Chapter {
         break;
     }
 
+    this.heading(dt);
     this.weather(dt);
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
@@ -479,6 +482,17 @@ export class WoodChapter implements Chapter {
     }, 0.6);
   }
 
+  /** Where the walk is pointing: toward the light when there is one out ahead, and up the path when there is not. */
+  private heading(dt: number): void {
+    const c = this.cast.child.position;
+    const t = this.target();
+    const toward = this.glow.distanceToSquared(c) > 25 ? this.glow : this.tmp.set(t.x, 0, t.y);
+    this.side.set(toward.x - c.x, 0, toward.z - c.z);
+    if (this.side.lengthSq() < 1) return;
+    this.aim.lerp(this.side.normalize(), 1 - Math.exp(-dt * 0.5));
+    if (this.aim.lengthSq() > 0.01) this.aim.normalize();
+  }
+
   /** The storm blows itself out over the second half of the wood, and the night starts to go grey at the edges. */
   private weather(dt: number): void {
     const easing = this.beat === 'dry' || this.beat === 'out' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
@@ -520,8 +534,10 @@ export class WoodChapter implements Chapter {
      * It stays put behind them however far the frame leans toward the light: sliding it as well turned the child
      * out of the picture altogether, which is the one thing this room is not allowed to do.
      */
-    const ex = c.x + 1.1;
-    const ez = c.z + 13;
+    /** And it stands behind the way they are going, not behind north: the wood's path doubles back on itself, and
+     * a camera that always looked up the island left the next coal out at the side of the frame on half the legs. */
+    const ex = c.x - this.aim.x * 13 - this.aim.z * 1.1;
+    const ez = c.z - this.aim.z * 13 + this.aim.x * 1.1;
     s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 4.2, ez);
     /** The camera is quick to the fright and slow through the searching, which is how the two feel. */
     this.pace = this.beat === 'bolt' ? 1.1 : near ? 0.45 : 0.9;
