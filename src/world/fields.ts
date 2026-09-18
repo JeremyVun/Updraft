@@ -3,7 +3,7 @@
  * variation in the sward. Written in TypeScript (for placing things) and GLSL (for grass and terrain). Needs
  * HEIGHTFIELD_GLSL for the hash and the coastline.
  */
-import { gnoise, hash2, pcg, meadowInset, meadowPoint } from './heightfield';
+import { BANK, gnoise, hash2, pcg, meadowInset, meadowPoint } from './heightfield';
 
 /** Field size in world units. */
 export const FIELD = 56;
@@ -31,6 +31,18 @@ export const WAY = [
  * and in the line the terrain paints, because they all ask `fieldAt`.
  */
 const GATE = 8;
+/**
+ * And nothing at all lies across the first view. Coming over the bank the player has to read the way on in one
+ * look, so for the first stretch the gap is wide enough to be a gateway rather than a gap in a wall.
+ */
+const BROW = { x: BANK.x, z: BANK.crest };
+const WIDE_GATE = 24;
+
+function gateWidth(x: number, z: number): number {
+  const d = Math.hypot(x - BROW.x, z - BROW.z);
+  const near = Math.max(0, Math.min(1, (100 - d) / 40));
+  return GATE + (WIDE_GATE - GATE) * near * near * (3 - 2 * near);
+}
 
 /** How far (x, z) lies from the way, in world units. */
 export function offWay(x: number, z: number): number {
@@ -122,9 +134,11 @@ export function fieldAt(x: number, z: number, out: FieldSample = { edge: 99, kin
   out.kind = u01(pcg(hash2(ax, az) ^ 0x9e3779b9));
   const lo = ax < ox || (ax === ox && az < oz);
   const pair = lo ? pcg(hash2(ax, az) + hash2(ox, oz) * 3) : pcg(hash2(ox, oz) + hash2(ax, az) * 3);
-  out.wall = u01(pair) < 0.84 && out.presence > 0 && offWay(x, z) > GATE;
+  out.wall = u01(pair) < 0.84 && out.presence > 0 && offWay(x, z) > gateWidth(x, z);
   return out;
 }
+
+const glslNum = (x: number): string => x.toFixed(2);
 
 const WAY_GLSL = WAY.map((p) => `vec2(${p.x.toFixed(2)}, ${p.z.toFixed(2)})`).join(', ');
 
@@ -140,6 +154,11 @@ float offWay(vec2 p) {
     best = min(best, length(p - a - d * t));
   }
   return best;
+}
+float fl_gate(vec2 p) {
+  float d = length(p - vec2(${glslNum(BROW.x)}, ${glslNum(BROW.z)}));
+  float near = clamp((100.0 - d) / 40.0, 0.0, 1.0);
+  return ${GATE}.0 + ${WIDE_GATE - GATE}.0 * near * near * (3.0 - 2.0 * near);
 }
 vec2 fl_warp(vec2 p) {
   return p + vec2(gnoise(p * 0.011), gnoise(p * 0.011 + vec2(5.2, -3.7))) * 9.0;
@@ -185,7 +204,7 @@ vec4 fieldAt(vec2 p) {
   float kind = float(hf_pcg(hf_hash2(a) ^ 0x9e3779b9u) & 0xffffu) / 65535.0;
   bool lo = a.x < other.x || (a.x == other.x && a.y < other.y);
   uint pair = lo ? hf_pcg(hf_hash2(a) + hf_hash2(other) * 3u) : hf_pcg(hf_hash2(other) + hf_hash2(a) * 3u);
-  float wall = float(pair & 0xffffu) / 65535.0 < 0.84 && offWay(p) > ${GATE}.0 ? 1.0 : 0.0;
+  float wall = float(pair & 0xffffu) / 65535.0 < 0.84 && offWay(p) > fl_gate(p) ? 1.0 : 0.0;
   return vec4(md * ${FIELD}.0, kind, wall, presence);
 }
 `;

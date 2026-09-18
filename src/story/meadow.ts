@@ -191,9 +191,9 @@ export class MeadowChapter implements Chapter {
     return this.beat === 'aboard';
   }
 
-  /** QA: how far the stop at the piano has got. */
+  /** QA: how far the stop at the piano has got, and how far the island has been told to wake. */
   get atPiano(): string {
-    return this.piano.at;
+    return `${this.piano.at} wave=${Math.round(this.cast.life.regions.wave.z)}/${Math.round(this.waveTo)} at ${this.waveSpeed}/s`;
   }
 
   /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
@@ -218,7 +218,7 @@ export class MeadowChapter implements Chapter {
   /** For testing: a few paces short of the piano, on a sleeping island, with the walk still to do. */
   skipToPiano(): void {
     const { child, cygnet, plane } = this.cast;
-    this.leg = 0;
+    this.leg = 1;
     child.stop();
     child.place(PIANO_AT.x + 7, PIANO_AT.z + 32, Math.PI);
     child.standUp();
@@ -698,7 +698,9 @@ export class MeadowChapter implements Chapter {
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat } = this.cast;
     const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 && this.leg < ROUTE.length - 1) this.leg++;
+    /** A waypoint is behind them once they are near it or past it: the stop at the piano takes them well past one. */
+    const reached = Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 || c.position.z < t.y - 12;
+    if (reached && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
     if (this.cast.cygnet.flying) {

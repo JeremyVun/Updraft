@@ -187,6 +187,17 @@ export class PianoStop {
     shot.from = this.side;
     shot.distance = near ? 15 - keys * 5.4 : 20;
     shot.height = near ? 2.1 - keys * 0.7 : 5;
+    /**
+     * And when the bird is back in the arms and the last of the tune is ringing, the camera stands off and lets
+     * the room have it: the two of them small at the piano, and the island waking away from them to the hills.
+     */
+    if (this.walkStep >= 1) {
+      const wide = THREE.MathUtils.smoothstep(this.now - this.walkFrom - tuning.piano.walkKeys, 0, 2.5);
+      shot.target.z -= wide * 26;
+      shot.target.y += wide * 3;
+      shot.distance = THREE.MathUtils.lerp(shot.distance, 44, wide);
+      shot.height = THREE.MathUtils.lerp(shot.height, 15, wide);
+    }
   }
 
   /**
@@ -290,7 +301,6 @@ export class PianoStop {
       child.lookAt = cygnet.eye(this.onto);
     } else if (this.walkStep === 1 && time - this.walkFrom > walkKeys + 1.4 && !cast.carry.busy) {
       this.walkStep = 2;
-      this.walkFrom = 0;
       child.lookAt = piano.keys;
       cast.carry.stow();
     }
