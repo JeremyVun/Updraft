@@ -248,10 +248,22 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   bolt runs across frame and the bird's coal is the one thing to blow on; the camera behind the way they are going;
   the exits kept. Short: foreground branches during the search; the finding can come within ~10 s.
 
-In flight: the meadow's opening (`/private/tmp/updraft-fb-meadow`: grey island, cove and climb, the piano's patch of
-colour, colour by phrase, the cygnet on the keys, the wall rule), the water under the cursor
-(`/private/tmp/updraft-fb-water`). Queued: the sleeping island; re-measure the crest's frame rate when nothing else
-is capturing. A peer session is polishing the ending (dolphins, summit, fledging, credits).
+- The meadow's opening (`1158c8a`): the piano is the key. Haze 0.9 on the crossing; a bank over a shallow bay with
+  beats beach → climb → brow; the whole island asleep (the `waiting` region covers it and the wind raises no life
+  in it); the piano moved onto the route at `meadowPoint(-18, -740)` in a 27-unit patch of colour, scaled 1.42 with
+  the child seated at the stool; `PianoStop.onWake` rolls colour out by phrase (hollow, crest and pond, the island
+  on the finale) and the piano finishes the tune itself when nobody answers; the cygnet walks the keys in the
+  finale; `WAY` in `fields.ts` is the one route line and no wall stands within 8 units of it (24 near the brow);
+  `?chapter=piano`. Short: the wind front only reads in motion; the pond's rim grass is green while the island
+  sleeps.
+- The water (`4588766`): the player's gust used to feed the sea's roughness (blurred mirror, wide glitter, lost
+  Fresnel) and drag the ripple texture at cursor speed: a slick. Lighting now comes from the weather only; the
+  stroke adds fine ripple, a uniform darkening and a short chop; the sail luffs on an arriving gust
+  (`tuning.water`). Deliberate: whitecaps now need the squall.
+
+Everything in the 2026-09-18 playtest is built. Open: the sleeping island (needs its design pass); the crest's
+frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
+ending (dolphins, summit, fledging, credits).
 
 The rest of this section is the record from the branch.
 
