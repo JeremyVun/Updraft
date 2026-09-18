@@ -201,9 +201,24 @@ Landed on `main` 2026-09-18 from Opus 5 parcels, each accepted on a look at its 
   sleeves, thumbs. Gates unchanged. Still short: the bag is boxy; wet shows faint diagonal lines on the crown; from
   behind it sits deep and shows mostly its grey back (handed to the pose pass).
 
-In flight: **pose and timing** in `/private/tmp/updraft-cyg-pose` (branch `cygnet-pose-b`, port 5265). After it: a
-full playthrough, the haze fix (the drowned village's steeple shows from the meadow crest as well as from the
-birches), the cygnet on the piano keys, the sleeping island.
+- **Pose and timing** (`12ebf3a`): a lean is now mostly a translation with a squash, so the kneel no longer planks
+  the coat; anticipation, arcs and a rest beat in gather-up and set-down; the plane no longer crosses the child's
+  face on its way to the satchel; the satchel seat is higher and upright with its own S-neck, leans into turns and
+  looks about; acts have an in, a hold and an out; a weightier waddle; the try is crouch, patter, bound, face-plant,
+  lie there, up, shake, look at the child. Gates: all 27 green for the agent and on the lead's first run; on a
+  second run one intermittent miss (gather turn 0.1025 against 0.07 while carried), not yet traced. Still short:
+  in the regard the cygnet's head still sits over the child's face from dead front (the cross-body reach runs out;
+  needs the shoulder pivots forward, which is geometry); stow and unstow are one smooth beat each with nothing
+  authored inside; swim, plunge and glide were not worked; from 15 units behind it still reads deep in the bag
+  (the bag's front rim is the limit).
+- **Lead's finding across all three:** at 5-20 units the cygnet still reads dark slate, not pale silver-fawn. Close
+  up it is pale; past the distance where the down shells fade it is not. This is the first thing for the next look
+  parcel, with the boxy bag, its front rim and the shoulder pivots.
+
+Next: the full playthrough (running 2026-09-18), then one more Opus look parcel (above, plus the haze fix: the
+drowned village's steeple shows from the meadow crest as well as from the birches), the swans' steady heads, the
+cygnet on the piano keys, the sleeping island. Waiting on Jeremy: the crest staging (wheel, or a raft on a pond near
+the crest), and his ears on the foley, the cries and the piano.
 
 The rest of this section is the record from the branch.
 
