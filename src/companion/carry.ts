@@ -4,14 +4,17 @@ import type { Traveller } from '../traveller/traveller';
 import { Duet, type Beat } from './duet';
 
 const UP = new THREE.Vector3(0, 1, 0);
-/** Where the hands hold it out to look at it, and where they bring it in to, in the frame of the child's body. */
-const PRESENT = new THREE.Vector3(0, 0.68, 0.6);
+/**
+ * Where the hands hold it out to look at it, and where they bring it in to, in the frame of the child's body. Held
+ * out, it goes off their centre line and below their chin: dead ahead its head covers their face from the front.
+ */
+const PRESENT = new THREE.Vector3(0.13, 0.6, 0.47);
 /** A mitten rests against the outside of what it holds, not at the middle of it. */
-const PALM = 0.07;
+const PALM = 0.06;
 /** How far from it the child kneels. */
 const STANDOFF = 1.0;
 /** Where a kneeling child's hands stop when they are held out low: as far down as the arms go without falling over. */
-const OFFER = new THREE.Vector3(0, 0.57, 0.45);
+const OFFER = new THREE.Vector3(0, 0.53, 0.41);
 
 const lerp = THREE.MathUtils.lerp;
 
@@ -91,18 +94,23 @@ export class Carry {
           c.kneeling = 1;
           k.watch(c.face(new THREE.Vector3()));
         },
-        update: () => this.regard(),
+        update: (_kk, t) => {
+          /** Anticipation: they rock back from it for a moment before the knees go, which is what makes the kneel read. */
+          c.lean = -0.09 * Math.sin(Math.min(1, t / 0.42) * Math.PI);
+          this.regard();
+        },
       },
       {
         name: 'offer',
         dur: 1.1,
-        enter: () => this.lead(Math.PI, OFFER),
+        enter: () => this.lead(Math.PI, OFFER, 0.09),
         update: (kk) => {
           /** Low and open and a little short of it: an offer, not a grab. The hands stop where a kneeling child's hands stop. */
           c.lean = 0.42 * kk;
           this.regard();
         },
       },
+      /** They hold still. Nothing but breathing, and the two of them looking at each other. */
       { name: 'wait', dur: 2.6, until: (t) => t > 0.7 + wary() * 1.6, update: () => this.regard() },
       {
         /** It gets into the hands by itself. Nothing about this is done to it. */
@@ -118,13 +126,14 @@ export class Carry {
           this.regard();
         },
         exit: () => {
-          this.dip = 0;
+          /** The dip is carried on the hands' own height, so it is let go of, never zeroed: zeroing it is a one-frame step. */
+          this.dipWas = this.dip = 0;
           this.lead(this.relYaw);
         },
       },
       {
         name: 'lift',
-        dur: 1.25,
+        dur: 1.5,
         enter: () => {
           leanFrom.value = c.lean;
           this.goal = null;
@@ -207,6 +216,8 @@ export class Carry {
           if (facing !== undefined) this.relYaw = lerpAngle(this.relYawFrom, facing - c.yaw, kk);
         },
       },
+      /** The hands rest on the grass a moment before anything else happens, which is what makes it a choice it makes. */
+      { name: 'rest', dur: 0.45, update: () => this.regard() },
       {
         name: 'step-off',
         dur: 0.7,
@@ -310,6 +321,9 @@ export class Carry {
         this.goalK = Math.min(1, this.goalK + dt / 1.0);
         const e = this.goalK * this.goalK * (3 - 2 * this.goalK);
         this.centre.lerpVectors(this.centreFrom, this.goal, e);
+        /** The hands take an arc out and down to the offer rather than the shortest line, and open as they go. */
+        this.centre.y += Math.sin(e * Math.PI) * this.goalArc;
+        this.centre.z += Math.sin(e * Math.PI) * this.goalArc * 0.7;
         this.spacing = lerp(this.spacingFrom, 0.36, e);
       }
       this.centre.y -= this.dip - this.dipWas;
@@ -378,6 +392,7 @@ export class Carry {
   }
   private goal: THREE.Vector3 | null = null;
   private goalK = 0;
+  private goalArc = 0;
   private dip = 0;
   private dipWas = 0;
   /** While set, the way it faces in the hands is this and nothing else. */
@@ -423,7 +438,7 @@ export class Carry {
   private readonly q1 = new THREE.Vector3();
 
   /** The hands take over from wherever they are now, and if given somewhere to go, set off for it. */
-  private lead(relYaw: number, to?: THREE.Vector3): void {
+  private lead(relYaw: number, to?: THREE.Vector3, arc = 0): void {
     const { child: c } = this;
     if (this.leading) {
       /** Already leading: carry on from where the hands were being sent, which is not quite where they have got to. */
@@ -440,6 +455,7 @@ export class Carry {
     this.leading = true;
     this.goal = to ?? null;
     this.goalK = 0;
+    this.goalArc = arc;
   }
 
   /** They look at each other: the child at its eye, it at the child's face. */

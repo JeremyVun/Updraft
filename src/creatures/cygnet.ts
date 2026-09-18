@@ -16,9 +16,9 @@ const LIFT_TO_FLY = 0.5;
 const CEILING = 7.5;
 /** Nothing it can do keeps it up longer than this. */
 const GLIDE_FOR = 9;
-const HOP_FOR = 3.4;
+const HOP_FOR = 4.2;
 /** How long a try at flying is a run, before it turns into a fall. */
-const RUN_UNTIL = 2.3;
+const RUN_UNTIL = 2.6;
 
 /** Other places a hand can go on it, in its body's own frame: under the breast and under the rump, for holding it across the chest. */
 const GRIPS = { breast: [0, -0.1, 0.12], rump: [0, -0.09, -0.13] } as const;
@@ -391,7 +391,7 @@ export class Cygnet {
   release(spot: THREE.Vector3): void {
     this.position.set(spot.x, Math.max(heightAt(spot.x, spot.z), 0), spot.z);
     this.yaw = this.seating.yaw;
-    this.seating.go({ seat: null, held: false }, 'hop', 0.55, 0.1);
+    this.seating.go({ seat: null, held: false }, 'hop', 0.72, 0.1);
     this.state = 'following';
     this.settle = 0.1;
     this.landedAt = this.time;
@@ -776,7 +776,7 @@ export class Cygnet {
     const hurry = seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
     this.hurry = ease(this.hurry, hurry, 4, dt);
     const speed = this.hurry * (1.5 + 2.9 * this.hurry);
-    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 5 + 4 * hurry, 2.2 + 2.4 * hurry, dt);
+    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
       this.position.x += Math.sin(this.yaw) * speed * dt;
       this.position.z += Math.cos(this.yaw) * speed * dt;
@@ -864,16 +864,16 @@ export class Cygnet {
     let hop = 0;
     let run = 0;
     this.turnTo(this.runBearing, 6, 4.5, dt);
-    if (t < 0.5) {
-      /** It gathers itself: a crouch, a look up, wings coming off its back. */
+    if (t < 0.8) {
+      /** It gathers itself: a crouch, a long look up at where it means to go, wings coming off its back. */
       this.effort = 0.3;
       this.flap = ease(this.flap, 0.5, 6, dt);
       this.settle = ease(this.settle, 0.45, 8, dt);
     } else if (t < RUN_UNTIL) {
       /** The run: feet slapping, wings going as hard as they will, and each bound a little higher than the last. */
-      const w = (t - 0.5) / (RUN_UNTIL - 0.5);
+      const w = (t - 0.8) / (RUN_UNTIL - 0.8);
       run = 0.8 + 2.6 * w;
-      const bound = (t - 0.5) / 0.42;
+      const bound = (t - 0.8) / 0.42;
       hop = Math.max(0, Math.sin((bound - Math.floor(bound)) * Math.PI)) ** 1.3 * (0.05 + w * 0.2);
       this.effort = 1;
       this.flap = 1;
@@ -885,11 +885,12 @@ export class Cygnet {
       const w = (t - RUN_UNTIL) / (HOP_FOR - RUN_UNTIL);
       if (this.faceplant === 0) this.heard.push({ kind: 'tumble', amount: 0.55 });
       run = 2.2 * Math.max(0, 1 - w * 3.2);
-      this.faceplant = Math.max(0.001, Math.sin(Math.min(1, w * 1.35) * Math.PI) ** 0.6);
+      /** Down hard, and then it lies there. Getting up again is slower than going down, which is what makes it tender. */
+      this.faceplant = Math.max(0.001, Math.min(1, w * 3.4) ** 0.6 * (1 - THREE.MathUtils.smoothstep(w, 0.55, 1)));
       this.effort = ease(this.effort, 0, 8, dt);
       this.flap = ease(this.flap, 0.25 * (1 - w), 6, dt);
       this.roll = ease(this.roll, 0, 5, dt);
-      if (this.hopT <= 0.35 && this.hopT > 0.3) this.mind.perform('shake');
+      if (this.hopT <= 0.3 && this.hopT > 0.25) this.mind.perform('shake');
     }
     this.hurry = ease(this.hurry, run > 0.1 ? 1 : 0, 8, dt);
     this.position.x += Math.sin(this.yaw) * run * dt;
@@ -918,6 +919,13 @@ export class Cygnet {
       this.nextWriggle = this.time + 7 + Math.random() * 8;
     }
     this.wriggle = Math.max(0, this.wriggle - dt);
+    /**
+     * A passenger's own balance: it leans against every turn the child makes and rocks a little with their walking,
+     * and when they stop it comes upright and stays there. All of it off the seat's own lag, so none of it is jitter.
+     */
+    const against = clamp(-this.seating.jostle.x * 3.5, -0.13, 0.13);
+    const rock = Math.sin(this.time * 2.1) * 0.022 * clamp(this.seating.speed * 0.6, 0, 1);
+    this.roll = ease(this.roll, (against + rock) * (1 - this.doze * 0.8), 3, dt);
     if (this.mind.told && this.state === 'hooded' && this.time > this.nextCall) {
       /** In the hood with the family in sight: it stretches up and calls to them, and nothing answers. */
       this.call(true);
@@ -997,7 +1005,7 @@ export class Cygnet {
     d.glide = this.glide;
     d.hope = this.hope;
     d.hopLift = this.hopLift;
-    d.crouch = this.hopT > HOP_FOR - 0.5 ? 1 : 0;
+    d.crouch = this.hopT > HOP_FOR - 0.8 ? 1 : 0;
     d.landing = clamp(this.landing / 0.75, 0, 1);
     d.faceplant = this.faceplant;
     d.flop = this.flop;

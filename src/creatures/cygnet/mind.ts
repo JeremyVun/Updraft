@@ -70,9 +70,10 @@ const IDLE: Partial<Record<Act, ActSpec>> = {
   yawn: { dur: 1.7, rest: 30, where: anywhere, urge: (m) => m.feel.tired * 1.4 },
   shake: { dur: 0.9, rest: 18, where: anywhere, urge: (m, s) => 0.25 + s.rain * 2 + m.wet * 3 },
   wag: { dur: 0.7, rest: 6, where: anywhere, urge: (m) => m.feel.content * 0.9 },
-  'look-about': { dur: 2.4, rest: 5, where: anywhere, urge: (m) => 0.5 + m.feel.curious * 0.8 + m.feel.fear * 0.6 },
+  /** Riding is most of the game, so a passenger looks about oftener than a bird with the grass to get on with. */
+  'look-about': { dur: 2.4, rest: 4.5, where: anywhere, urge: (m, s) => (0.5 + m.feel.curious * 0.8 + m.feel.fear * 0.6) * (s.where === 'riding' ? 1.5 : 1) },
   nuzzle: { dur: 2.2, rest: 26, where: riding, urge: (m) => m.bond * m.feel.content * 1.2 },
-  peer: { dur: 2.6, rest: 12, where: riding, urge: (m, s) => (s.childSpeed > 0.5 ? 0.9 : 0.3) * m.feel.curious },
+  peer: { dur: 2.6, rest: 9, where: riding, urge: (m, s) => (s.childSpeed > 0.5 ? 1.1 : 0.35) * m.feel.curious },
 };
 
 const REACTIONS: Record<'flinch' | 'brace' | 'bowled' | 'into-wind' | 'ask' | 'snap', number> = {
@@ -87,6 +88,7 @@ const REACTIONS: Record<'flinch' | 'brace' | 'bowled' | 'into-wind' | 'ask' | 's
 export type Interest = 'child' | 'hands' | 'plane' | 'creature' | 'flock' | 'light' | 'wind' | 'told' | 'nothing';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const smooth = (x: number) => x * x * (3 - 2 * x);
 const toward = (a: number, b: number, rate: number, dt: number) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
 /**
@@ -289,7 +291,11 @@ export class Mind {
     if (this.act) {
       this.actT += dt;
       this.actK = Math.min(1, this.actT / this.actDur);
-      this.actEnv = Math.sin(this.actK * Math.PI) ** 0.7;
+      /**
+       * Every act has a beginning, a middle and an end rather than being one swell: it goes into the pose quickly,
+       * holds it long enough to be read at game distance, and comes out of it more slowly than it went in.
+       */
+      this.actEnv = smooth(Math.min(1, this.actK / 0.17)) * (1 - smooth(clamp01((this.actK - 0.66) / 0.34)));
       if (this.actK >= 1) {
         const was = this.act;
         this.rested.set(was, this.time);

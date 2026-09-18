@@ -15,7 +15,8 @@ export interface Mount {
  */
 const SEATS: Record<Seat, { yaw: number; pitch: number }> = {
   cradle: { yaw: Math.PI / 2, pitch: -0.18 },
-  satchel: { yaw: 0, pitch: -0.3 },
+  /** Sitting up in the bag rather than lying back in it: any further and its back is all the camera behind ever sees. */
+  satchel: { yaw: 0, pitch: -0.11 },
   lap: { yaw: 0, pitch: -0.1 },
 };
 

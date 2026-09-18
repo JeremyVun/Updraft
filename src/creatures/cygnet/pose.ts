@@ -87,7 +87,8 @@ export interface Posed {
 const FLOOR = 0.006 * SIZE;
 /** Where the hips are on the body, from the skeleton, and how high the body stands when both legs are comfortably bent. */
 const HIP = SKELETON.find(([bone]) => bone === THIGH_L)![2];
-const STANDING = -HIP[1] + (THIGH + SHIN) * 0.75 + SOLE;
+/** How high it stands: enough of its short legs showing under the body for a waddle to be a waddle. */
+const STANDING = -HIP[1] + (THIGH + SHIN) * 0.84 + SOLE;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -134,7 +135,7 @@ export class Poser {
     const act = (name: Act) => this.acts.get(name) ?? 0;
 
     const hunch = clamp(d.fear * (d.carried ? 0.35 : 1) * (1 - d.effort) + act('flinch') * 0.8 + act('brace') * 0.45, 0, 1);
-    p.sit = ease(p.sit, riding ? (d.seat === 'satchel' ? 0.75 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, riding ? 3 : 4, dt);
+    p.sit = ease(p.sit, riding ? (d.seat === 'satchel' ? 0.6 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, riding ? 3 : 4, dt);
     p.held = ease(p.held, riding || climbing ? 1 : 0, 5, dt);
     p.stowed = ease(p.stowed, d.seat === 'satchel' && riding ? 1 : 0, 4, dt);
     p.hunch = ease(p.hunch, hunch, act('flinch') > p.hunch ? 14 : 2, dt);
@@ -278,8 +279,8 @@ export class Poser {
     body.scale.set(1 + breathe * 0.6, 1 + breathe * 1.2, 1 + breathe * 0.8);
 
     /** The neck is the whole character: the S of a bird at ease, tucked back into the shoulders, or stretched. */
-    let a = -0.35;
-    let b = 0.45;
+    let a = -0.5;
+    let b = 0.6;
     let head = 0;
     a = lerp(a, -1.2, p.curl);
     b = lerp(b, 1.6, p.curl);
@@ -292,9 +293,10 @@ export class Poser {
     b = lerp(b, 2.1, p.hunch);
     head = lerp(head, 0.25, p.hunch);
     const heldNeck = p.held * (1 - p.curl) * (1 - p.sleep);
-    a = lerp(a, -0.15 + p.stowed * 0.05, heldNeck);
-    b = lerp(b, 0.05, heldNeck);
-    head = lerp(head, -0.1, heldNeck);
+    /** In the arms the neck lies out along the child; up in the bag it sits back on itself in an S, head level. */
+    a = lerp(a, lerp(-0.15, -0.62, p.stowed), heldNeck);
+    b = lerp(b, lerp(0.05, 0.72, p.stowed), heldNeck);
+    head = lerp(head, lerp(-0.1, -0.24, p.stowed), heldNeck);
     a = lerp(a, -1.5, p.sleep);
     b = lerp(b, 1.9, p.sleep);
     head = lerp(head, 0.5, p.sleep);
@@ -302,8 +304,11 @@ export class Poser {
     b = lerp(b, 0.38, p.reach);
     head = lerp(head, 0, p.reach);
     /** Down to the grass, and down into its own breast. */
-    a += nibble * 0.9 + act('preen-breast') * 0.35 + stretch * 0.55 + act('brace') * 0.5;
-    b += nibble * 0.5 + act('preen-breast') * 1.5 + stretch * 0.1 + act('brace') * 0.3;
+    a += nibble * 0.9 + act('preen-breast') * 0.35 + act('brace') * 0.5;
+    b += nibble * 0.5 + act('preen-breast') * 1.5 + act('brace') * 0.3;
+    /** A stretch runs one straight line from the bill through the body to the foot out behind: the neck must not curl. */
+    a = lerp(a, 0.55, stretch);
+    b = lerp(b, -0.1, stretch);
     head += nibble * (0.5 + Math.sin(t * 40) * 0.08) + act('preen-breast') * (0.7 + Math.sin(t * 31) * 0.1) - act('yawn') * 0.4 - stretch * 0.3;
     a -= act('preen-back') * 0.75;
     /** On its breast the neck is flung out along the ground in front of it. */
@@ -333,7 +338,9 @@ export class Poser {
     /** In the arms its left side is against the child, so that is where a nuzzle goes: up under their chin. */
     wantYaw = lerp(wantYaw, 1.35, act('nuzzle'));
     wantPitch = lerp(wantPitch, -0.55 + Math.sin(t * 7) * 0.12, act('nuzzle'));
-    wantYaw = lerp(wantYaw, -0.5 * d.actSide, act('peer'));
+    /** Craning round the child to see what they are looking at: the head goes right round, and it holds it there. */
+    wantYaw = lerp(wantYaw, -1.2 * d.actSide, act('peer'));
+    wantPitch = lerp(wantPitch, -0.12, act('peer'));
     wantYaw = lerp(wantYaw, 1.5, p.sleep);
     wantPitch = lerp(wantPitch, 0.4, p.sleep);
     wantYaw *= 1 - d.call.env * 0.6;

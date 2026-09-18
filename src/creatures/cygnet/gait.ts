@@ -63,7 +63,7 @@ export class Gait {
     this.yawWas = yaw;
     this.vel.set(0, 0, 0);
     this.phase = 0;
-    this.sway = this.roll = this.twist = this.dip = 0;
+    /** How the body rides over the feet is left where it was: it is damped toward the new feet, and zeroing it is a pop. */
     this.fresh = false;
   }
 
@@ -152,10 +152,11 @@ export class Gait {
     const [l, r] = this.feet;
     const lean = (l.planted ? 1 : 0) - (r.planted ? 1 : 0);
     const amount = stepping ? 1 : 0.4;
-    const follow = 1 - Math.exp(-dt * (10 + 10 * this.pace));
+    /** How fast the body answers the feet. Slower than instant is what gives the waddle its weight, and it cannot snap. */
+    const follow = 1 - Math.exp(-dt * (6.5 + 3 * this.pace));
     this.sway += (lean * 0.022 * amount - this.sway) * follow;
-    this.roll += (-lean * (0.13 - 0.05 * this.pace) * amount - this.roll) * follow;
-    this.twist += (lean * 0.12 * amount - this.twist) * follow;
+    this.roll += (-lean * (0.115 - 0.045 * this.pace) * amount - this.roll) * follow;
+    this.twist += (lean * 0.105 * amount - this.twist) * follow;
     const down = l.planted && r.planted ? 1 : 0;
     this.dip += ((stepping ? down * 0.008 : 0) - this.dip) * follow;
   }
