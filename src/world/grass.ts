@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { params } from '../params';
+import { glsl } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
 import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL } from './heightfield';
@@ -22,6 +23,16 @@ function croppedAt(x: number, z: number): number {
 function woodFloorAt(x: number, z: number): number {
   const d = Math.hypot((x - ISLES.wood.x) / ISLES.wood.rx, (z - ISLES.wood.z) / ISLES.wood.rz);
   return 1 - smoothstep(0.7, 1.05, d);
+}
+
+/**
+ * Home is the one island the pasture grass is let grow on: the last hill is lush rather than grazed, deep enough
+ * to feel like the meadow again without swallowing the child. Mirrors `homeAt` in the blade shaders.
+ */
+const HOME_LUSH = 0.8;
+function homeAt(x: number, z: number): number {
+  const d = Math.hypot((x - ISLES.home.x) / ISLES.home.rx, (z - ISLES.home.z) / ISLES.home.rz);
+  return 1 - smoothstep(0.75, 1.05, d);
 }
 import { heightAt } from './island';
 import { shaderFbm, smoothstep } from './noise';
@@ -82,6 +93,10 @@ float croppedAt(vec2 xz) {
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
   return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz));
 }
+/** 1 over the home island, where the pasture is let grow lush for the last hill. */
+float homeAt(vec2 xz) {
+  return 1.0 - smoothstep(0.75, 1.05, length((xz - vec2(${ISLES.home.x}.0, ${ISLES.home.z}.0)) / vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0)));
+}
 /** 1 over the dark wood, where the floor is leaf litter and nothing grows tall enough to hide it. */
 float woodFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.7, 1.05, length((xz - vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0)) / vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0)));
@@ -124,13 +139,12 @@ export function grassHeightAt(x: number, z: number): number {
   if (pasture <= 0) return h * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
   h += (0.41 + 0.26 * lush - h) * pasture;
   const f = fieldAt(x, z, fieldSample);
-  const grazed = Math.max(
-    1 - smoothstep(45, 95, Math.hypot(x - LAST_HILL.x, z - LAST_HILL.z)),
-    1 - smoothstep(14, 30, Math.hypot(x - COTTAGE.x, z - COTTAGE.z)),
-  );
+  const hilltop = 1 - smoothstep(45, 95, Math.hypot(x - LAST_HILL.x, z - LAST_HILL.z));
+  const garden = 1 - smoothstep(14, 30, Math.hypot(x - COTTAGE.x, z - COTTAGE.z));
+  const grazed = Math.max(hilltop, garden);
   const hay = (f.kind <= 0.22 ? 1 : 0) * f.presence * (1 - grazed);
   const rush = (f.kind >= 0.86 ? 1 : 0) * f.presence * (1 - grazed);
-  return h * (1 + hay * 1.5 + rush * 1.2) * (1 - 0.5 * grazed) * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
+  return h * (1 + hay * 1.5 + rush * 1.2) * (1 + HOME_LUSH * homeAt(x, z)) * (1 - 0.22 * hilltop) * (1 - 0.5 * garden) * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * troddenAt(x, z);
 }
 
 export const grassUniforms = {
@@ -276,11 +290,12 @@ void main() {
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
   float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush) * step(95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
   h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
-  float grazed = max(1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0))),
-                     1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0))));
+  float hilltop = 1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
+  float garden = 1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0)));
+  float grazed = max(hilltop, garden);
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
   float width = 0.15 + 0.1 * gr_rand(s);
   float angle = gr_rand(s) * 6.2831853;
   float curve = 0.12 + 0.28 * gr_rand(s);
@@ -480,11 +495,12 @@ void main() {
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
   float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush) * step(95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
   h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
-  float grazed = max(1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0))),
-                     1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0))));
+  float hilltop = 1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
+  float garden = 1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0)));
+  float grazed = max(hilltop, garden);
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * mix(1.0, 0.5, grazed) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * troddenAt(root2);
   float stand = standing(rank, share, dist);
   h *= mix(0.72, 1.0, life) * stand;
   float width = (0.15 + 0.1 * gr_rand(s)) * widthAt(dist) * stand;

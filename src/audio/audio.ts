@@ -37,6 +37,8 @@ export interface SoundState {
   music: Mood;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
   scripted: boolean;
+  /** True once the music has been cut for good: the pad and the chimes go, and the world is all that is left. */
+  silence: boolean;
   cues: Cue[];
 }
 
@@ -104,8 +106,10 @@ const PHRASES: Record<Cue, [number, number][]> = {
   unfold: [[74, 2], [78, 1], [81, 1], [83, 2], [81, 1], [78, 1], [76, 2], [78, 1], [74, 3], [0, 2], [71, 1], [74, 1], [76, 2], [78, 1], [76, 1], [74, 4]],
   release: [[69, 1], [74, 1], [78, 1], [81, 1], [86, 2], [90, 2], [93, 5]],
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
+  /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
+  finale: [],
 };
-const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5 };
+const PHRASE_BEAT: Record<Cue, number> = { distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -146,6 +150,9 @@ export class Soundscape {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
   private reverb!: GainNode;
+  /** Everything that is music, so it can be cut in one place and the wind and the crickets left playing. */
+  private musicBus!: GainNode;
+  private finaleUntil = 0;
   private noise!: AudioBuffer;
   private breezeGain!: GainNode;
   private breezeFilter!: BiquadFilterNode;
@@ -210,6 +217,11 @@ export class Soundscape {
     this.reverb = ctx.createGain();
     this.reverb.gain.value = 0.55;
     this.reverb.connect(convolver).connect(this.master);
+    this.musicBus = ctx.createGain();
+    this.musicBus.connect(this.master);
+    const musicSend = ctx.createGain();
+    musicSend.gain.value = 0.9;
+    this.musicBus.connect(musicSend).connect(this.reverb);
 
     [this.breezeGain, this.breezeFilter] = this.noiseLayer('lowpass', 520, 0.4, 0);
     const breezeLfo = ctx.createOscillator();
@@ -239,8 +251,7 @@ export class Soundscape {
     padFilter.Q.value = 0.3;
     this.padFilter = padFilter;
     this.padGain.connect(padFilter);
-    padFilter.connect(this.master);
-    padFilter.connect(this.reverb);
+    padFilter.connect(this.musicBus);
     for (let v = 0; v < 4; v++) {
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -298,10 +309,7 @@ export class Soundscape {
     const panner = ctx.createStereoPanner();
     panner.pan.value = Math.max(-0.8, Math.min(0.8, pan));
     out.connect(panner);
-    panner.connect(this.master);
-    const send = ctx.createGain();
-    send.gain.value = 0.9;
-    panner.connect(send).connect(this.reverb);
+    panner.connect(this.musicBus);
     const f = hz(midi);
     const partials: [number, number][] = [[1, 1], [2.0, 0.28], [3.01, 0.1], [4.2, 0.04]];
     for (const [ratio, amp] of partials) {
@@ -471,7 +479,39 @@ export class Soundscape {
     }
   }
 
+  /**
+   * The end. Over the rise to the stars the pad climbs out of a cluster that does not agree with itself, chord by
+   * chord, into D, and the chimes go up with it, quickening, until a high D is rung at the top and left to ring.
+   * Then the story cuts the music, and what is left is the wind.
+   */
+  private finale(): void {
+    const t0 = this.nextPulse() + 0.05;
+    const steps: [number, number[]][] = [
+      [0, [50, 57, 63, 68]],
+      [3.5, [50, 57, 62, 67]],
+      [7, [50, 57, 64, 69]],
+      [10.5, [55, 62, 66, 71]],
+      [13.5, [57, 64, 69, 73]],
+      [16.5, [62, 66, 69, 74]],
+    ];
+    for (const [at, chord] of steps) {
+      this.padVoices.forEach((voice, i) => voice.osc.forEach((o) => o.frequency.setTargetAtTime(hz(chord[i]), t0 + at, 1.1)));
+    }
+    steps.slice(1).forEach(([at, chord], k) => {
+      const gap = 0.42 - k * 0.06;
+      chord.forEach((midi, i) => this.chime(midi + 12, 0.38 + i * 0.05 + k * 0.03, (i - 1.5) * 0.3, t0 + at + i * gap, 3.5));
+    });
+    this.chime(86, 0.62, 0, t0 + 18.2, 9);
+    this.chime(81, 0.45, -0.35, t0 + 18.2 + PULSE, 9);
+    this.chime(90, 0.55, 0.3, t0 + 18.2 + PULSE * 2, 10);
+    this.finaleUntil = t0 + 22;
+  }
+
   private phrase(name: Cue): void {
+    if (name === 'finale') {
+      this.finale();
+      return;
+    }
     const beat = PHRASE_BEAT[name];
     let at = this.nextPulse() + 0.05;
     for (const [midi, beats] of PHRASES[name]) {
@@ -508,7 +548,9 @@ export class Soundscape {
 
     const mood = MOODS[s.music] ?? MOODS.meadow;
     const chord = Math.floor(now / mood.seconds) % mood.chords.length;
-    if (chord !== this.chord || s.music !== this.mood) {
+    const finale = now < this.finaleUntil;
+    if (s.silence) this.musicBus.gain.setTargetAtTime(0, now, 0.12);
+    if (!finale && (chord !== this.chord || s.music !== this.mood)) {
       /** A room change glides the voices to their new notes rather than cutting: the chord bends into the next. */
       const glide = s.music !== this.mood ? 3.5 : 1.2;
       this.chord = chord;
@@ -520,8 +562,10 @@ export class Soundscape {
       });
     }
     const hush = 1 - 0.92 * s.hush;
+    /** The finale swells, night or no night: it is the one time the music is meant to be the loudest thing there is. */
+    const swell = finale ? 1.6 + 0.8 * (1 - (this.finaleUntil - now) / 22) : 1;
     this.padGain.gain.setTargetAtTime(
-      ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night) + this.activity * 0.09) * hush * mood.level,
+      ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * 0.09) * hush * mood.level * swell,
       now,
       s.hush > 0.5 ? 0.7 : 1.5,
     );
@@ -548,7 +592,7 @@ export class Soundscape {
     }
 
     /** The chimes are the player's own voice in the music, so they only answer gestures that are doing something. */
-    const gusting = s.gust > 7 && !s.scripted;
+    const gusting = s.gust > 7 && !s.scripted && !s.silence;
     if (gusting) {
       const interval = s.gust > 17 ? PULSE : PULSE * 2;
       const at = this.nextPulse();

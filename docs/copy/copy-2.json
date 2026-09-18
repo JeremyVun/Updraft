@@ -1,0 +1,79 @@
+{
+  "credits": [
+    {
+      "role": "Directed by",
+      "names": [
+        "Jeremy"
+      ]
+    },
+    {
+      "role": "Story and journey",
+      "names": [
+        "Jeremy",
+        "Fable 5.1"
+      ]
+    },
+    {
+      "role": "Music and sound",
+      "names": [
+        "Fable 5.1"
+      ]
+    },
+    {
+      "role": "Graphics engineering",
+      "names": [
+        "Opus 5",
+        "Opus 5",
+        "Opus 5"
+      ]
+    },
+    {
+      "role": "Visual effects",
+      "names": [
+        "Opus 5"
+      ]
+    },
+    {
+      "role": "World and creatures",
+      "names": [
+        "Opus 5"
+      ]
+    },
+    {
+      "role": "Companion animation and behaviour",
+      "names": [
+        "Fable 5.1"
+      ]
+    },
+    {
+      "role": "Build orchestration",
+      "names": [
+        "Fable 5.1"
+      ]
+    },
+    {
+      "role": "Playtesting",
+      "names": [
+        "Jeremy"
+      ]
+    },
+    {
+      "role": "The few words",
+      "names": [
+        "Astra"
+      ]
+    },
+    {
+      "role": "Final say",
+      "names": [
+        "Jeremy"
+      ]
+    }
+  ],
+  "closing": "Thank you for bringing them home.",
+  "playAgain": "Play again",
+  "notes": "The repeated Opus credit and Jeremy’s final say keep the jokes quiet and the credits honest.",
+  "title": "End credits and the play-again button",
+  "status": "draft, awaiting Jeremy",
+  "draftedBy": "gpt-6-astra via codex exec, 2026-09-18"
+}

@@ -124,6 +124,15 @@ export class SwanFlock {
     return this.mode !== 'idle';
   }
 
+  get wheeling(): boolean {
+    return this.mode === 'wheel';
+  }
+
+  /** The heading of the V, for anyone flying at the back of it. */
+  get direction(): THREE.Vector3 {
+    return this.dir;
+  }
+
   /** The bearing the skein is flying, so a bird that falls out of it keeps its line for a moment. */
   get heading(): number {
     return Math.atan2(this.dir.x, this.dir.z);

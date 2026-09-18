@@ -5,7 +5,7 @@ import { params } from '../params';
 import { mainlandCoastZ } from '../world/heightfield';
 import type { Cast, Chapter } from './cast';
 import { CrossingChapter, FIRST_ISLAND, LANDING } from './crossing';
-import { HomeChapter } from './home';
+import { HOME_BEACH, HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
 import { FAR_SHORE, MeadowChapter } from './meadow';
@@ -53,14 +53,12 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
    */
   toHome: [
     new THREE.Vector2(-70, -1926),
-    new THREE.Vector2(-160, -1948),
-    new THREE.Vector2(-252, -1944),
-    new THREE.Vector2(-318, -1904),
-    new THREE.Vector2(-334, -1986),
-    new THREE.Vector2(-268, -2038),
-    new THREE.Vector2(-160, -2024),
-    new THREE.Vector2(-86, -1986),
-    new THREE.Vector2(-45, -1958),
+    new THREE.Vector2(-160, -1946),
+    new THREE.Vector2(-250, -1950),
+    new THREE.Vector2(-290, -2010),
+    new THREE.Vector2(-205, -1975),
+    new THREE.Vector2(-130, -1940),
+    new THREE.Vector2(HOME_BEACH.x, HOME_BEACH.y),
   ],
 };
 
@@ -103,7 +101,7 @@ export class Journey {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
       this.begin('stage');
     } else if (start === 'summit' || start === 'home') {
-      this.land(-45, -1958, -45, -1968);
+      this.land(HOME_BEACH.x, HOME_BEACH.y - 2, HOME_BEACH.x, HOME_BEACH.y - 8);
       this.begin('home');
       (this.chapter as HomeChapter).skipToSummit();
     }

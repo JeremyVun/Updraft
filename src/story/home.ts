@@ -16,14 +16,17 @@ type Beat =
   | 'tries'
   | 'flying'
   | 'answered'
+  | 'fledge'
   | 'gone'
+  | 'settle'
   | 'unfold'
   | 'gaze'
   | 'fold'
   | 'release'
   | 'nightfall'
   | 'home'
-  | 'inside';
+  | 'inside'
+  | 'credits';
 
 /** North, where the flock went and where the cygnet has been trying to get to since the first island. */
 const NORTH = Math.PI;
@@ -31,13 +34,36 @@ const NORTH = Math.PI;
 const PROMPT_AT = 55;
 /** And if the player still never lifts it, the night wind does, because nothing in this game is ever failed. */
 const RELENT_AT = 130;
-/** How long the flock wheels overhead once it has come down, before they all go north together. */
-const REUNION = 9;
+/** Seconds the family has been wheeling before the cygnet lets go of the player's wind and flies by itself. */
+const FLEDGES_AFTER = 3;
+/** How near the wheel it has to get before the family takes it in and they all go north together. */
+const JOIN_AT = 9;
+/** How fast the family flies off with it, and how it climbs as it goes: slow enough that the small one can hold on. */
+const LEAVE_SPEED = 9;
+const LEAVE_CLIMB = 1.1;
+/** Seconds the child watches them go before sitting down with the plane. */
+const WATCHES_FOR = 14;
+/** The camera comes round to the drawing before the sheet starts to open, and the sheet opens slowly. */
+const SETTLE_FOR = 4;
+const UNFOLD_RATE = 0.32;
+const GAZE_FOR = 7;
+const FOLD_RATE = 0.8;
+const RELEASE_FOR = 9.5;
+const NIGHTFALL_FOR = 11;
+/** The rise to the stars: when it starts after the door, when it is done, when the music is cut, when the credits roll. */
+const RISE_FROM = 2;
+const RISE_TO = 24;
+const SILENCE_AT = 23.5;
+const CREDITS_AT = 26;
 
+/** The south beach the boat comes in to. */
+export const HOME_BEACH = new THREE.Vector2(-45, -1946);
 /** The crest of the last hill, where the ground falls away and the cottage comes into view. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
 /** From the summit the sun sets over the cottage, to the north-west. */
 const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)), -Math.cos(THREE.MathUtils.degToRad(32)));
+/** The camera's side of the summit while the cygnet flies its circuit: south, with the family wheeling to the north beyond it. */
+const FROM_SOUTH = new THREE.Vector3(0.14, 0, 1).normalize();
 
 /**
  * Home. The last island: up over the crest of the final hill with the fledgling, and the valley below holds a white
@@ -70,9 +96,14 @@ export class HomeChapter implements Chapter {
   private readonly onCygnet = new THREE.Vector3();
   trodden: THREE.Vector3 | null = null;
   hush = 0;
+  silence = false;
+  finished = false;
   private nextCall = 0;
   private flockCalled = false;
   private tried = 0;
+  private called = false;
+  private answeredBack = false;
+  private leftAt = 0;
   private readonly gathering = new THREE.Vector3();
   /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
   private coaxFrom = 0;
@@ -182,8 +213,8 @@ export class HomeChapter implements Chapter {
    */
   private updateFlight(dt: number): void {
     const { child: c, cygnet, flock } = this.cast;
-    c.lookAt = cygnet.gone || cygnet.flying ? cygnet.position : cygnet.eye(this.onCygnet);
-    const quiet = cygnet.gone || this.beat === 'answered' ? 0 : 0.7;
+    c.lookAt = cygnet.flying ? cygnet.position : cygnet.eye(this.onCygnet);
+    const quiet = this.beat === 'answered' ? 0 : 0.7;
     this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.8));
 
     /**
@@ -217,19 +248,20 @@ export class HomeChapter implements Chapter {
       return;
     }
 
-    /** They have come down for it. It is still the player holding it up there, and they hold it all the way. */
+    /**
+     * They have come down for it. The player is still holding it up there for a few seconds more, and then it
+     * finds it does not need them: it lets go of the wind and flies.
+     */
     if (this.beat === 'answered') {
-      if (this.now > this.nextCall) {
-        cue('calling');
-        this.cast.cygnet.call(true);
-        this.nextCall = this.now + 4.5 + Math.random();
+      if (this.t > FLEDGES_AFTER) {
+        cygnet.fledge();
+        this.to('fledge');
       }
-      if (this.t > REUNION) this.away();
       return;
     }
     if (this.beat !== 'flying') return;
 
-    if (!cygnet.gone && this.now > this.nextCall) {
+    if (this.now > this.nextCall) {
       cue('calling');
       this.nextCall = this.now + 5.5 + Math.random() * 2;
     }
@@ -239,7 +271,7 @@ export class HomeChapter implements Chapter {
       flock.pass(c.position.x, c.position.z, c.position.y + 38, NORTH, 13, 190);
       cue('skein');
     }
-    if (this.t > RELENT_AT && !cygnet.gone) this.answered();
+    if (this.t > RELENT_AT) this.answered();
   }
 
   /**
@@ -277,19 +309,51 @@ export class HomeChapter implements Chapter {
     cue('lifted');
   }
 
-  /** It goes. The skein comes down for it out of the night and takes it in, and they go north together. */
-  private away(): void {
+  /**
+   * Flying by itself now, round and round the child, steadier every turn. Then it comes round to face them and
+   * calls — the third call in the story, and the first one anything answers — and goes to its family.
+   */
+  private updateFledge(): void {
     const { child: c, cygnet, flock } = this.cast;
-    if (cygnet.gone) return;
-    cygnet.leave(NORTH);
-    if (!this.flockCalled) {
-      this.flockCalled = true;
-      cue('skein');
+    c.lookAt = cygnet.position;
+    const phase = cygnet.fledgePhase;
+    if (phase === 'turn' && !this.called) {
+      this.called = true;
+      cue('calling');
+      cygnet.call(true);
+      this.nextCall = this.now + 1.4;
     }
-    flock.pass(c.position.x, c.position.z, Math.max(cygnet.position.y + 20, c.position.y + 34), NORTH, 13, 150);
-    cue('calling');
-    this.to('gone');
-    c.cheer();
+    if (this.called && !this.answeredBack && this.now > this.nextCall) {
+      this.answeredBack = true;
+      cue('bugle');
+    }
+    if (phase === 'ready') {
+      cygnet.join((out) => {
+        if (!flock.active) return null;
+        if (flock.wheeling) return out.copy(flock.head);
+        /** The last place in the V: the one it fell out of over the first island. */
+        return flock.tail(out).addScaledVector(flock.direction, -4.4).add(this.tmp.set(flock.direction.z, 0.3, -flock.direction.x).multiplyScalar(2.2));
+      });
+      this.to('gone');
+    }
+  }
+
+  /** It reaches the wheel, and the whole family goes north with it in the line, and the child watches them out of sight. */
+  private updateGone(): void {
+    const { child: c, cygnet, flock } = this.cast;
+    if (flock.wheeling && cygnet.position.distanceTo(flock.head) < JOIN_AT) {
+      flock.goOn(NORTH, LEAVE_CLIMB, LEAVE_SPEED);
+      this.leftAt = this.now;
+      cue('skein');
+      c.cheer();
+    }
+    c.lookAt = cygnet.visible ? cygnet.position : flock.head;
+    const away = this.leftAt > 0 && (this.now - this.leftAt > WATCHES_FOR || !cygnet.visible);
+    if (away && !c.busy) {
+      c.sitDown();
+      c.faceToward(c.position.x + TOWARD_SUNSET.x * 10, c.position.z + TOWARD_SUNSET.y * 10, 1);
+      this.to('settle');
+    }
   }
 
   private forward(): THREE.Vector3 {
@@ -309,24 +373,28 @@ export class HomeChapter implements Chapter {
       if (c.sitting && this.t > 4.5 && !c.busy) this.setDown();
     } else if (this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered') {
       this.updateFlight(dt);
+    } else if (this.beat === 'fledge') {
+      this.updateFledge();
     } else if (this.beat === 'gone') {
-      c.lookAt = this.cast.flock.head;
-      if (this.t > 13 && !c.busy) {
-        c.sitDown();
-        c.faceToward(faceX, faceZ, 1);
+      this.updateGone();
+    } else if (this.beat === 'settle') {
+      /** The plane comes up in both hands first, and the camera comes round to it, and only then does it open. */
+      c.presenting = Math.min(1, c.presenting + dt * 0.8);
+      c.lookAt = c.presentPoint(this.held);
+      if (this.t > SETTLE_FOR) {
         this.to('unfold');
         cue('unfold');
       }
     } else if (this.beat === 'unfold') {
-      drawing.open = Math.min(1, drawing.open + dt * 0.9);
-      c.presenting = Math.min(1, c.presenting + dt * 1.5);
+      drawing.open = Math.min(1, drawing.open + dt * UNFOLD_RATE);
+      c.lookAt = c.presentPoint(this.held);
       p.visible = drawing.open < 0.35;
       if (drawing.open >= 1) this.to('gaze');
     } else if (this.beat === 'gaze') {
       c.lookAt = c.presentPoint(this.held);
-      if (this.t > 9) this.to('fold');
+      if (this.t > GAZE_FOR) this.to('fold');
     } else if (this.beat === 'fold') {
-      drawing.open = Math.max(0, drawing.open - dt * 1.1);
+      drawing.open = Math.max(0, drawing.open - dt * FOLD_RATE);
       c.presenting = Math.max(0, c.presenting - dt * 1.4);
       p.visible = drawing.open < 0.35;
       if (drawing.open <= 0) {
@@ -344,7 +412,7 @@ export class HomeChapter implements Chapter {
       }
       c.lookAt = p.position;
       if (!p.held && this.t > 3 && this.t < 3.05) c.cheer();
-      if (this.t > 12) {
+      if (this.t > RELEASE_FOR) {
         this.to('nightfall');
         c.sitDown();
         this.duskTarget = 2;
@@ -352,10 +420,11 @@ export class HomeChapter implements Chapter {
     } else if (this.beat === 'nightfall') {
       c.lookAt = this.sky;
       if (p.position.distanceTo(c.position) > 160) p.visible = false;
-      if (this.t > 26) {
+      if (this.t > NIGHTFALL_FOR) {
         this.to('home');
         c.standUp();
-        c.walkTo(cottage.doorstep.x, cottage.doorstep.z, false, () => {
+        /** Down the hill at a run: it is home, and the light is on. */
+        c.walkTo(cottage.doorstep.x, cottage.doorstep.z, true, () => {
           cottage.openDoor(true);
           cue('home');
           this.to('inside');
@@ -367,6 +436,12 @@ export class HomeChapter implements Chapter {
       if (this.t > 1.2 && this.t < 1.25) c.walkTo(cottage.position.x, cottage.position.z, false, undefined, 0.3);
       if (this.t > 2.6) c.visible = false;
       if (this.t > 4.2) cottage.openDoor(false);
+      if (this.t > RISE_FROM && this.t < RISE_FROM + 0.05 && !this.silence) cue('finale');
+      if (this.t > SILENCE_AT) this.silence = true;
+      if (this.t > CREDITS_AT) {
+        this.finished = true;
+        this.to('credits');
+      }
     }
 
     const at = c.presentPoint(this.held);
@@ -379,11 +454,15 @@ export class HomeChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
-    if (this.beat === 'unfold' || this.beat === 'gaze' || this.beat === 'fold') {
-      const cot = this.cast.cottage.position;
+    if (this.beat === 'settle' || this.beat === 'unfold' || this.beat === 'gaze' || this.beat === 'fold') {
+      /**
+       * Over the child's shoulder and off to one side, framed on their hands: the plane opening into the drawing
+       * is the whole subject, with the cottage it is a drawing of down the hill beyond it.
+       */
       const fwd = this.forward();
-      s.eye = this.eyeAt.set(c.x - fwd.x * 4 - fwd.z * 0.45, c.y + 4.2, c.z - fwd.z * 4 + fwd.x * 0.45);
-      s.target.set(cot.x, cot.y + 6, cot.z);
+      const held = this.cast.child.presentPoint(this.held);
+      s.eye = this.eyeAt.set(c.x - fwd.x * 3.2 + fwd.z * 2.1, c.y + 2.5, c.z - fwd.z * 3.2 - fwd.x * 2.1);
+      s.target.set(held.x, held.y + 0.15, held.z);
       this.pace = 0.6;
       this.focus.copy(c);
       return;
@@ -400,6 +479,21 @@ export class HomeChapter implements Chapter {
       s.target.set(g.x, g.y + 2, g.z);
       this.pace = 0.32;
       this.focus.copy(k);
+      return;
+    }
+    if (this.beat === 'fledge') {
+      /**
+       * From the south of the summit, low, looking north over the child at the cygnet flying its circuit, with
+       * the family wheeling in the sky beyond: the child, the small one and the family in one frame.
+       */
+      const k = this.cast.cygnet.position;
+      const gap = Math.hypot(k.x - c.x, k.z - c.z);
+      s.from = FROM_SOUTH;
+      s.target.set(c.x + (k.x - c.x) * 0.6, c.y + 1.2 + (k.y - c.y - 1.2) * 0.6, c.z + (k.z - c.z) * 0.6);
+      s.distance = 11 + gap * 0.3;
+      s.height = THREE.MathUtils.clamp(c.y + 2.4 - s.target.y, -8, 3);
+      this.pace = 0.5;
+      this.focus.copy(c);
       return;
     }
     if (this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying') {
@@ -427,7 +521,7 @@ export class HomeChapter implements Chapter {
        * Anchored on the child for good now. What matters here is not where the cygnet has got to but the face of the
        * person who let it go, so the camera stays behind them and only tilts up after it.
        */
-      const k = this.cast.cygnet.position;
+      const k = this.cast.cygnet.visible ? this.cast.cygnet.position : this.cast.flock.head;
       const toCygnet = Math.atan2(k.x - c.x, k.z - c.z);
       s.from = this.side.set(-Math.sin(toCygnet), 0, -Math.cos(toCygnet));
       s.target.set(c.x, c.y + 2.2 + Math.min(15, Math.max(0, k.y - c.y) * 0.55), c.z);
@@ -448,22 +542,21 @@ export class HomeChapter implements Chapter {
       this.focus.copy(c);
       return;
     }
-    if (this.beat === 'home' || this.beat === 'inside') {
+    if (this.beat === 'home' || this.beat === 'inside' || this.beat === 'credits') {
+      /** One framing from the run down to the door until the rise, so the door is never waited on by a camera re-settling. */
       const cot = this.cast.cottage.position;
-      s.target.set(c.x * 0.35 + cot.x * 0.65, cot.y + 2.5, c.z * 0.35 + cot.z * 0.65);
+      s.target.set(c.x * 0.3 + cot.x * 0.7, cot.y + 2.5, c.z * 0.3 + cot.z * 0.7);
       s.from = this.behind.set(SUMMIT.x - cot.x, 0, SUMMIT.y - cot.z).normalize();
-      s.distance = this.beat === 'inside' ? 72 : 50;
-      s.height = this.beat === 'inside' ? 40 : 24;
+      s.distance = 58;
+      s.height = 28;
       this.pace = 0.2;
-      if (this.beat === 'inside') {
-        const lift = THREE.MathUtils.smootherstep(this.t, 7, 50);
-        if (lift > 0) {
-          s.eye = this.eyeAt.copy(s.target).addScaledVector(s.from, s.distance).setY(s.target.y + s.height + lift * 18);
-          const toMoon = this.sky.copy(this.moon).setY(0).normalize();
-          s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
-        }
-        this.pace = 0.2 - lift * 0.12;
+      const lift = this.beat === 'credits' ? 1 : this.beat === 'inside' ? THREE.MathUtils.smootherstep(this.t, RISE_FROM, RISE_TO) : 0;
+      if (lift > 0) {
+        s.eye = this.eyeAt.copy(s.target).addScaledVector(s.from, s.distance).setY(s.target.y + s.height + lift * 18);
+        const toMoon = this.sky.copy(this.moon).setY(0).normalize();
+        s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
       }
+      this.pace = 0.2 - lift * 0.12;
       this.focus.copy(c);
       return;
     }

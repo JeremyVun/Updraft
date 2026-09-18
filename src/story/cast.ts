@@ -83,5 +83,9 @@ export interface Chapter {
   readonly coax?: Coax | null;
   /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
   readonly invitesFlight?: boolean;
+  /** True once the music has been cut for good and only the world is left to hear. */
+  readonly silence?: boolean;
+  /** True once the story is over and the credits may roll. */
+  readonly finished?: boolean;
   update(dt: number, time: number): void;
 }

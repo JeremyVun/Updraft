@@ -241,10 +241,12 @@ export const LAST_HILL = { x: -30, z: -2060 } as const;
 function homeHeight(x: number, z: number): number {
   const d = isleCoast(x, z, ISLES.home, 0.1, 51);
   const land = smoothstep(10, -22, d);
+  /** The shore shelves up onto the island over a long way: a beach the boat runs up and a slope off it, not a cliff. */
+  const inland = smoothstep(4, -110, d);
   let h = land * 4 - 1.6;
-  h += land * land * (14 + gfbm(x * 0.006, z * 0.006, 3, 52) * 12);
+  h += land * inland * (14 + gfbm(x * 0.006, z * 0.006, 3, 52) * 12);
   const r2 = (x - LAST_HILL.x) ** 2 + (z - LAST_HILL.z) ** 2;
-  h += land * (34 * Math.exp(-r2 / (2 * 58 ** 2)) + 18 * Math.exp(-r2 / (2 * 170 ** 2)));
+  h += land * (34 * Math.exp(-r2 / (2 * 58 ** 2)) + inland * 18 * Math.exp(-r2 / (2 * 170 ** 2)));
   return h - smoothstep(0, 70, d) * 8;
 }
 
@@ -433,10 +435,11 @@ float hf_home(vec2 p) {
   vec2 r = vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.1, 51.0);
   float land = smoothstep(10.0, -22.0, d);
+  float inland = smoothstep(4.0, -110.0, d);
   float h = land * 4.0 - 1.6;
-  h += land * land * (14.0 + gfbm(p * 0.006, 3, 52.0) * 12.0);
+  h += land * inland * (14.0 + gfbm(p * 0.006, 3, 52.0) * 12.0);
   float r2 = sq(p.x - ${LAST_HILL.x}.0) + sq(p.y - (${LAST_HILL.z}.0));
-  h += land * (34.0 * exp(-r2 / (2.0 * 3364.0)) + 18.0 * exp(-r2 / (2.0 * 28900.0)));
+  h += land * (34.0 * exp(-r2 / (2.0 * 3364.0)) + inland * 18.0 * exp(-r2 / (2.0 * 28900.0)));
   return h - smoothstep(0.0, 70.0, d) * 8.0;
 }
 float worldHeight(vec2 p) {

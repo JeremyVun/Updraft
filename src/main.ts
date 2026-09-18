@@ -310,8 +310,11 @@ const soundState: SoundState = {
   shower: 0,
   hush: 0,
   scripted: false,
+  silence: false,
   cues: [],
 };
+const credits = document.getElementById('credits') as HTMLElement;
+document.getElementById('again')?.addEventListener('click', () => location.reload());
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
 function resize(): void {
@@ -542,6 +545,8 @@ function frame(now: number): void {
   soundState.cues = takeCues();
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
   soundState.scripted = story.current.scripted ?? false;
+  soundState.silence = story.current.silence ?? false;
+  if (story.current.finished && !credits.classList.contains('rolling')) credits.classList.add('rolling');
   soundState.shower = shower;
   sound.update(dt, soundState);
 

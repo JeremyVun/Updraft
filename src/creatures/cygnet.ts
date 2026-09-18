@@ -16,6 +16,9 @@ const LIFT_TO_FLY = 0.5;
 const CEILING = 7.5;
 /** Nothing it can do keeps it up longer than this. */
 const GLIDE_FOR = 9;
+/** Seconds of the fledging's circuit round the child, and of coming round to face them before it goes. */
+const FLEDGE_LOOP = 10;
+const FLEDGE_TURN = 3;
 const HOP_FOR = 4.2;
 /** How long a try at flying is a run, before it turns into a fall. */
 const RUN_UNTIL = 2.6;
@@ -29,7 +32,7 @@ export interface Heard {
   amount: number;
 }
 
-export type CygnetState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'perched' | 'swimming' | 'gliding' | 'leaving';
+export type CygnetState = 'flying' | 'falling' | 'downed' | 'fallen' | 'carried' | 'hooded' | 'following' | 'perched' | 'swimming' | 'gliding' | 'fledging' | 'leaving';
 
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
@@ -146,6 +149,13 @@ export class Cygnet {
   private landedAt = 0;
   private landing = 0;
   private leaveYaw = 0;
+  /** The fledging: seconds into it, where it is round the child, and how it holds station once it has joined the flock. */
+  private fledgeT = 0;
+  private fledgeArc = 0;
+  private joining: ((out: THREE.Vector3) => THREE.Vector3 | null) | null = null;
+  private readonly joinAt = new THREE.Vector3();
+  private readonly flyTo = new THREE.Vector3();
+  joined = false;
   private climb = 0;
   private notice = 0;
   private readonly childPrev = new THREE.Vector3();
@@ -289,7 +299,36 @@ export class Cygnet {
     this.state = 'leaving';
     this.leaveYaw = bearing;
     this.climb = 0;
+    this.joined = false;
     this.flights++;
+  }
+
+  /**
+   * Its own flight at last. Off the player's wind and flying by itself: a wobbly circuit round the child that
+   * steadies as it goes, then round to hang in front of them, facing them, for the one call that is answered.
+   */
+  fledge(): void {
+    if (this.state === 'fledging' || this.state === 'leaving') return;
+    this.state = 'fledging';
+    this.fledgeT = 0;
+    this.fledgeArc = this.awayFromChild;
+    this.hopT = 0;
+    this.landing = 0;
+    this.settle = 0;
+    this.fear = 0;
+    this.flights++;
+  }
+
+  /** Where the fledging has got to: the circuit, the turn to face the child, or hanging there ready to go. */
+  get fledgePhase(): 'loop' | 'turn' | 'ready' | null {
+    if (this.state !== 'fledging') return null;
+    return this.fledgeT < FLEDGE_LOOP ? 'loop' : this.fledgeT < FLEDGE_LOOP + FLEDGE_TURN ? 'turn' : 'ready';
+  }
+
+  /** Goes to its family: flies to wherever `where` says they are and, once there, holds its place among them. */
+  join(where: (out: THREE.Vector3) => THREE.Vector3 | null): void {
+    this.joining = where;
+    this.leave(this.yaw);
   }
 
   /** On its way and not coming back. */
@@ -523,7 +562,8 @@ export class Cygnet {
     const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
     this.hope = ease(this.hope, afoot && this.hopT <= 0 ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY) : 0, 2.5, dt);
 
-    if (this.state === 'leaving') this.climbOut(dt);
+    if (this.state === 'leaving') this.climbOut(dt, child);
+    else if (this.state === 'fledging') this.fledging(dt, child);
     else if (this.state === 'gliding') this.soar(dt, wind, child);
     else if (this.state === 'following') this.walk(dt, child);
     else if (this.state === 'swimming') this.paddling(dt);
@@ -542,7 +582,7 @@ export class Cygnet {
     this.look.air =
       this.state === 'falling'
         ? clamp((this.seating.shown.p.y - this.fallTo.y) / 6, 0, 1)
-        : this.state === 'gliding' || this.state === 'leaving'
+        : this.state === 'gliding' || this.state === 'fledging' || this.state === 'leaving'
           ? clamp((this.seating.shown.p.y - Math.max(heightAt(this.seating.shown.p.x, this.seating.shown.p.z), 0)) / 4, 0, 1)
           : 0;
     this.windNow.x = wind.x;
@@ -554,14 +594,72 @@ export class Cygnet {
     if (this.carried && this.seating.riding && !this.seating.move) this.position.copy(this.seating.shown.p);
   }
 
-  /** Climbing away north, finding its own strength as it goes, until the night has it. */
-  private climbOut(dt: number): void {
+  /**
+   * The circuit round the child on its own wings: wide and high by the end, with the lurches in height and heading
+   * of a bird that has only just found out it can, dying away as it goes. Then round to hang in front of the child.
+   */
+  private fledging(dt: number, child: THREE.Vector3): void {
+    this.fledgeT += dt;
+    const t = this.fledgeT;
+    const ground = Math.max(heightAt(child.x, child.z), 0);
+    const p = this.position;
+    if (t < FLEDGE_LOOP) {
+      const steady = THREE.MathUtils.smoothstep(t, 0, FLEDGE_LOOP);
+      const wobble = 1 - steady;
+      const r = 4.5 + 4 * steady;
+      const speed = 3.2 + 2.6 * steady;
+      this.fledgeArc += (speed / r) * dt;
+      const lurch = Math.sin(t * 1.7) * 0.6 * wobble + Math.sin(t * 3.1 + 1) * 0.25 * wobble;
+      this.flyTo.set(child.x + Math.sin(this.fledgeArc) * r, ground + 3.2 + 5.5 * steady + lurch, child.z + Math.cos(this.fledgeArc) * r);
+      p.lerp(this.flyTo, 1 - Math.exp(-dt * (1.4 + 2 * steady)));
+      this.yaw = easeAngle(this.yaw, this.fledgeArc + Math.PI / 2 + Math.sin(t * 2.3) * 0.35 * wobble, 2.5, dt);
+      this.roll = ease(this.roll, -0.3 - Math.sin(t * 2.6) * 0.4 * wobble, 2, dt);
+      this.pitch = ease(this.pitch, -0.12 + Math.sin(t * 1.9) * 0.22 * wobble, 3, dt);
+      this.flap = ease(this.flap, 0.95 - 0.4 * steady, 3, dt);
+      this.flapPhase += dt * (9.5 - 3.5 * steady);
+      this.effort = 0.55 - 0.2 * steady;
+    } else {
+      /** It comes round to hang a few paces in front of the child at head height, wings going, facing them. */
+      const bearing = this.awayFromChild;
+      this.flyTo.set(child.x + Math.sin(bearing) * 4.2, ground + 3.3 + Math.sin(t * 2.2) * 0.15, child.z + Math.cos(bearing) * 4.2);
+      p.lerp(this.flyTo, 1 - Math.exp(-dt * 1.8));
+      this.yaw = easeAngle(this.yaw, Math.atan2(child.x - p.x, child.z - p.z), 2.5, dt);
+      this.roll = ease(this.roll, Math.sin(t * 1.4) * 0.08, 2, dt);
+      this.pitch = ease(this.pitch, 0.35, 2.5, dt);
+      this.flap = ease(this.flap, 1, 3, dt);
+      this.flapPhase += dt * 10.5;
+      this.effort = 0.85;
+    }
+  }
+
+  /**
+   * Climbing away north, finding its own strength as it goes, until the night has it; or, joining its family, to
+   * wherever they are, and then holding its place among them however they fly.
+   */
+  private climbOut(dt: number, child: THREE.Vector3): void {
     this.climb = Math.min(1, this.climb + dt * 0.3);
-    this.yaw = easeAngle(this.yaw, this.leaveYaw, 0.7, dt);
-    const speed = 3.4 + this.climb * 7.5;
-    this.position.x += Math.sin(this.yaw) * speed * dt;
-    this.position.z += Math.cos(this.yaw) * speed * dt;
-    this.position.y += (3.1 - this.climb * 1.1) * dt;
+    const p = this.position;
+    const target = this.joining?.(this.joinAt);
+    if (target) {
+      const dx = target.x - p.x;
+      const dz = target.z - p.z;
+      const gap = Math.hypot(dx, dz);
+      this.yaw = easeAngle(this.yaw, Math.atan2(dx, dz), this.joined ? 3 : 1.4, dt);
+      const speed = Math.min(3.4 + this.climb * 8, 3 + gap * 1.2);
+      p.x += Math.sin(this.yaw) * speed * dt;
+      p.z += Math.cos(this.yaw) * speed * dt;
+      p.y += clamp((target.y - p.y) * 0.9, -2.5, 3.2) * dt;
+      if (gap < 3) this.joined = true;
+      /** Once it is in the line it is held to its place, give or take a wobble of its own. */
+      if (this.joined) p.lerp(target, 1 - Math.exp(-dt * 2.5));
+      if (p.distanceTo(child) > 420 || p.y > 150) this.visible = false;
+    } else {
+      this.yaw = easeAngle(this.yaw, this.leaveYaw, 0.7, dt);
+      const speed = 3.4 + this.climb * 7.5;
+      p.x += Math.sin(this.yaw) * speed * dt;
+      p.z += Math.cos(this.yaw) * speed * dt;
+      p.y += (3.1 - this.climb * 1.1) * dt;
+    }
     this.flap = 1;
     /** Frantic at first, then long steady strokes: the beat of a bird that has found out it can. */
     this.flapPhase += dt * (11 - this.climb * 4);
@@ -1004,7 +1102,7 @@ export class Cygnet {
     d.move = this.seating.move?.kind ?? null;
     d.jostle = this.carried ? this.seating.jostle.z : 0;
     d.falling = st === 'falling';
-    d.gliding = st === 'gliding';
+    d.gliding = st === 'gliding' || st === 'fledging';
     d.leaving = st === 'leaving';
     d.afoot = st === 'following';
     d.downed = st === 'downed';

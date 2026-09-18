@@ -100,6 +100,109 @@ body.shot #veil {
   }
 }
 
+#credits {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 3s ease;
+  color: #fff7ea;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  text-align: center;
+}
+
+#credits.rolling {
+  opacity: 1;
+}
+
+#credits .roll {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  padding-bottom: 20vh;
+}
+
+#credits.rolling .roll {
+  animation: roll 72s linear forwards;
+}
+
+@keyframes roll {
+  to {
+    transform: translateY(calc(-100% - 100vh));
+  }
+}
+
+#credits .entry {
+  margin: 0 0 46px;
+}
+
+#credits .role {
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-bottom: 10px;
+}
+
+#credits .name {
+  font-size: 24px;
+  line-height: 1.5;
+  text-shadow: 0 0 18px rgba(255, 236, 200, 0.35);
+}
+
+#credits .closing {
+  margin-top: 30vh;
+  font-size: 20px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+#again {
+  position: fixed;
+  right: max(72px, calc(env(safe-area-inset-right) + 54px));
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 6px));
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 247, 234, 0.5);
+  border-radius: 999px;
+  background: rgba(255, 244, 226, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff7ea;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 4s ease 6s;
+}
+
+#credits.rolling ~ #again {
+  pointer-events: auto;
+  animation: glow 4.5s ease-in-out 6s infinite;
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.32;
+    text-shadow: 0 0 6px rgba(255, 236, 200, 0.3);
+    box-shadow: 0 0 10px rgba(255, 236, 200, 0.12);
+  }
+  50% {
+    opacity: 0.9;
+    text-shadow: 0 0 16px rgba(255, 236, 200, 0.75);
+    box-shadow: 0 0 22px rgba(255, 236, 200, 0.3);
+  }
+}
+
+#again:hover {
+  animation-play-state: paused;
+  opacity: 1;
+}
+
 body.shot #sound,
 body.shot #cursor {
   display: none;
