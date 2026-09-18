@@ -1013,6 +1013,7 @@ export class Dolphins {
 
   /** Sends one of the grown ones out of its lane, already on the side it is wanted, so nothing jumps across. */
   private begin(kind: Show): void {
+    if (this.stunt) return;
     const side = kind === 'push' ? this.camera : -this.camera;
     let d: Dolphin | null = null;
     let nearest = -1e9;
@@ -1102,10 +1103,11 @@ export class Dolphins {
       }
     } else if (s.phase === 'run') {
       this.glide(s, -4.5, s.side * 2.8, 0.45, dt);
+      /** It stops porpoising first: the last arc has to come down before it can lie alongside. */
+      if (s.t > 4.5) d.hurry = false;
       if (s.t > 4.5 && d.arc === 0) {
         s.phase = 'act';
         s.t = 0;
-        d.hurry = false;
         d.held = -0.16;
       }
     } else if (s.phase === 'act') {
