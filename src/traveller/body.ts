@@ -67,13 +67,24 @@ export interface Rig {
   head: THREE.Group;
   armL: THREE.Group;
   armR: THREE.Group;
+  /** The elbows: each forearm hangs off its upper arm and carries the mitten. */
+  foreL: THREE.Group;
+  foreR: THREE.Group;
+  handL: THREE.Object3D;
   legL: THREE.Group;
   legR: THREE.Group;
   eyes: THREE.Mesh;
   handR: THREE.Object3D;
   neck: THREE.Object3D;
+  /** Places on the child where a companion rides. They belong to the bones they sit on, so a passenger gets every lean, breath and step for free. */
+  sockets: Record<SocketName, THREE.Object3D>;
   material: THREE.ShaderMaterial;
 }
+
+export type SocketName = 'cradle' | 'satchel' | 'shoulder' | 'lap';
+
+export const UPPER_ARM = 0.29;
+export const FOREARM = 0.32;
 
 /**
  * A small child about 2.3 units tall: bell-shaped mustard raincoat, pointed hood, red mittens and scarf knot,
@@ -129,15 +140,19 @@ export function buildChild(): Rig {
 
   const arm = (side: number) => {
     const g = new THREE.Group();
-    g.position.set(side * 0.3, 0.86, 0.02);
-    const sleeve = paint(at(new THREE.CapsuleGeometry(0.09, 0.36, 4, 10), 0, -0.24, 0), PALETTE.coat);
-    const mitten = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, -0.5, 0.02), PALETTE.scarf);
-    g.add(mesh([sleeve, mitten]));
+    g.position.set(side * 0.34, 0.88, 0.02);
+    g.add(mesh([paint(at(new THREE.CapsuleGeometry(0.095, UPPER_ARM - 0.09, 4, 10), 0, -UPPER_ARM / 2, 0), PALETTE.coat)]));
+    const fore = new THREE.Group();
+    fore.position.set(0, -UPPER_ARM, 0);
+    const sleeve = paint(at(new THREE.CapsuleGeometry(0.088, FOREARM - 0.16, 4, 10), 0, -(FOREARM - 0.1) / 2, 0), PALETTE.coat);
+    const cuff = paint(at(new THREE.TorusGeometry(0.085, 0.025, 6, 12).rotateX(Math.PI / 2), 0, -FOREARM + 0.1, 0), PALETTE.coatShade);
+    const mitten = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, -FOREARM + 0.02, 0.01, 1, 1.1, 1), PALETTE.scarf);
+    fore.add(mesh([sleeve, cuff, mitten]));
+    g.add(fore);
     const hand = new THREE.Object3D();
-    hand.position.set(0, -0.52, 0.05);
-    g.add(hand);
-    g.rotation.z = side * 0.12;
-    return { g, hand };
+    hand.position.set(0, -FOREARM, 0.02);
+    fore.add(hand);
+    return { g, fore, hand };
   };
   const left = arm(-1);
   const right = arm(1);
@@ -153,12 +168,29 @@ export function buildChild(): Rig {
     return g;
   };
 
+  const socket = (parent: THREE.Object3D, x: number, y: number, z: number) => {
+    const o = new THREE.Object3D();
+    o.position.set(x, y, z);
+    parent.add(o);
+    return o;
+  };
+  const sockets = {
+    cradle: socket(body, 0, 0.8, 0.56),
+    satchel: socket(body, 0, 0.8, -0.56),
+    shoulder: socket(body, -0.3, 1.04, -0.02),
+    lap: socket(body, 0, 0.16, 0.52),
+  };
+
   return {
     root,
     body,
     head,
     armL: left.g,
     armR: right.g,
+    foreL: left.fore,
+    foreR: right.fore,
+    handL: left.hand,
+    sockets,
     legL: leg(-1),
     legR: leg(1),
     eyes,

@@ -137,11 +137,9 @@ export class LinesChapter implements Chapter {
 
   /** The first thing they do on solid ground is put it down, so it can walk the hill on its own legs. */
   private setDown(): void {
-    const { child: c, crane } = this.cast;
-    c.lookAt = crane.eye(this.tmp);
-    c.pickUp(() => {
-      crane.follow();
-      crane.bind(0.08);
+    const { child: c, cygnet, carry } = this.cast;
+    carry.setDown(() => {
+      cygnet.bind(0.08);
       c.lookAt = null;
       this.to('walk');
       this.play = 'carry';
@@ -154,16 +152,16 @@ export class LinesChapter implements Chapter {
   }
 
   private updateWalk(time: number): void {
-    const { child: c, plane: p, boat, wind, crane } = this.cast;
-    if (crane.flying) {
+    const { child: c, plane: p, boat, wind, cygnet } = this.cast;
+    if (cygnet.flying) {
       /** If the player finds out here that they can fly it, everything else on the hill can wait. */
       c.stop();
-      c.lookAt = crane.position;
+      c.lookAt = cygnet.position;
       if (!this.flown) {
         this.flown = true;
         c.cheer();
         cue('delight');
-        crane.bind(0.2);
+        cygnet.bind(0.2);
       }
       return;
     }
@@ -237,14 +235,11 @@ export class LinesChapter implements Chapter {
   }
 
   private board(): void {
-    const { child: c, boat, crane } = this.cast;
+    const { child: c, boat } = this.cast;
     this.to('toBoat');
     c.lookAt = null;
     c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
-      c.faceToward(crane.position.x, crane.position.z, 1);
-      c.lookAt = crane.eye(this.tmp);
-      c.pickUp(() => {
-        crane.carry(c.armsPoint(this.tmp), c.yaw);
+      this.cast.carry.gatherUp(() => {
         c.lookAt = null;
         this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);
@@ -266,8 +261,8 @@ export class LinesChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    if (this.cast.crane.flying) {
-      const k = this.cast.crane.position;
+    if (this.cast.cygnet.flying) {
+      const k = this.cast.cygnet.position;
       const ground = Math.max(heightAt(k.x, k.z), 0);
       s.target.set(c.x * 0.35 + k.x * 0.65, Math.max(ground + 1.8, k.y * 0.8 + ground * 0.2), c.z * 0.35 + k.z * 0.65);
       s.distance = 20 + Math.hypot(k.x - c.x, k.z - c.z) * 0.6;

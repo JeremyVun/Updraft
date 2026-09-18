@@ -104,6 +104,28 @@ On leading the player, variety, the colt and the music (2026-09-17, verbatim):
 > the same music throughout the entire game (the music is great, but it gets too repetitive when its played whe
 > whole way through)."
 
+On the companion becoming a swan cygnet (2026-09-17, verbatim). This supersedes "fledgling crane" everywhere below;
+the plan for it is `docs/cygnet.md`:
+
+> "Unfortunately, the child's companion / baby crane looks too much like a chicken. is there a cuter baby bird
+> species we can make it?"
+
+> "yea i think a swan cygnet will work a lot better. Ugly duckling is exactly the feel i think this should go. As
+> the child's companion, the swan cygnet is a co star in this game so all it's animations, sounds, behaviour, poses,
+> how it flaps, falls/tumbles from the sky at the start, how it climbs ontop of the child, is carried by the child
+> need to be super high quality, seamless and beyond reproach. It should feel like another real character with
+> it's own emotions, thoughts, and liveliness. Especially with teh way it interacts with the child, it should look
+> completely seamless and cohesive. This is a big piece of work that requires extreme attention to deail"
+
+> "I'm also thinking that there could be a nice moment in the game where the little swan cygnet has their brave
+> moment to swim by themselves next to the child, maybe a bit later in the game where it makes sense. Have a think
+> as well about whether the swan cygnet should react to the players 'wind'"
+
+On who does the visual work, when asked whether his model-routing rules (visual work only by Astra or Opus 5)
+should bind the Fable session he gave the cygnet to: "I'm relying on you to make the right decision about what
+works best. All i care about is that we get a great quality experience for the kids who will play this game. [...]
+I care most about visual and animation quality, and attention to detail when it comes to this kind of stuff."
+
 On the season: "i agree with the use of seasons. That's the heroes journey. But i dont think the still island should start in dead winter. It should be looming. thats why the cranes are migrating. It's why they have to find their way home before it gets too cold and dark."
 
 On new rooms (2026-09-17, verbatim), answering a list of five proposals — see "Rooms still to come":
@@ -146,7 +168,7 @@ What the journey is *about*: **something small trusted the child, and the child 
 
 Principles:
 - **Beauty first, and beauty from simulation.** Light, colour and motion come from shaders and the live wind, not from a pile of assets. Every new thing must match the grass and the golden light; if it doesn't, it isn't finished.
-- **Wordless, and almost voiceless.** No text on screen, ever. The child never makes a sound at all. The colt is
+- **Wordless, and almost voiceless.** No text on screen, ever. The child never makes a sound at all. The cygnet is
   silent too, **except at a handful of critical moments** — when it is in distress, or when it is warning the child
   and the player of something. Because everything else is silent, those few small cries land like nothing else in
   the game. They are the only voice in the story, so they are never spent on anything ordinary. Other animals and
@@ -173,7 +195,7 @@ Principles:
 
 **The child isn't travelling home. The child is taking a lost fledgling to its family — and only at the very end does the player find out they were walking home the whole time.**
 
-When the island comes back to life, a flock of cranes crosses overhead going north. One small one can't keep up and comes down in the grass. The flock goes on. The child picks it up, looks at the boat, and pushes off.
+When the island comes back to life, a skein of white swans crosses overhead going north. One small one can't keep up and comes down in the grass. The flock goes on. The child picks it up, looks at the boat, and pushes off.
 
 This carries the whole game:
 - It gives the player a legible, wordless goal without a word of text.
@@ -185,7 +207,7 @@ Two lost children: one who can't find home, one who can't fly. Both fears are fa
 
 ## The year
 
-Winter is **coming**, not gone. That is why the cranes are flying, why the fledgling has to catch up, and why the journey has a clock without ever having a timer. The light and the warmth are draining out of the world ahead of them, and home has to be reached before the cold closes in.
+Winter is **coming**, not gone. That is why the swans are flying, why the fledgling has to catch up, and why the journey has a clock without ever having a timer. The light and the warmth are draining out of the world ahead of them, and home has to be reached before the cold closes in.
 
 The season deepens island by island and never goes back: late autumn, a bright windy day, the last warm afternoon of the year, deep autumn, the first winter storm, a clear frozen night. The child leaves in autumn and arrives in winter, a year older, in one night.
 
@@ -208,7 +230,7 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
 1. **The still island** (`story/island.ts`) — grey, dawn, late autumn, no wind. The child and the paper plane, the
    boat in the cove. The first gesture is the first breeze in a long time; colour comes back wherever the wind
    goes; everywhere the child arrives something small happens; and when the island is whole the whole frame lifts
-   at once. Then the skein comes over and the colt falls — see below. **Built.**
+   at once. Then the skein comes over and the cygnet falls — see below. **Built.**
 2. **The island of lines** (`story/lines.ts`, `world/lines.ts`) — a green whaleback strung pole to pole with
    washing hung out with nobody there. One gust lifts a whole band of sheets at once and the child runs through
    them after the plane. The first piece of home the dream hands over. **Built, and now the right size.**
@@ -224,7 +246,7 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    side — painted the same white and the same red as the cottage at the end of the journey, which nobody is told
    either. Still wanted: baskets and a peg bag.
 3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year. The green wave rolls out, and the long
-   walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the colt's first
+   walk follows the plane through a sun shower. Unfenced and unnamed. **Built**, and still needs the cygnet's first
    glide on the player's updraft.
 4. **The drowned village** (`story/drowned.ts`, `world/drowned.ts`) — the long dusk drift between rooftops, a
    spire, treetops, a turning weathervane, herons on chimneys, autumn leaves on black water. Homes the water took.
@@ -236,12 +258,12 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
 5. **The dark wood** (`story/wood.ts`, `world/wood.ts`, `fx/embers.ts`) — the first winter storm, at night. There
    is no grass to bend and nothing to throw, so the wind does the only other thing it can do: it breathes on fire.
    The player fans embers awake out of the leaf litter and the child walks on for exactly as long as there is
-   light, and stops the moment it goes out. Halfway up, the storm frightens the colt out of the hood; it goes to
+   light, and stops the moment it goes out. Halfway up, the storm frightens the cygnet out of the satchel; it goes to
    ground off the path and calls, and the only way to find it is to put light on it. The plane is found sodden in
    the leaves further on and dried in the wind. **Built.**
    **And nobody is ever stranded here**, which was the one place in the game a player could be. After half a
    minute with nothing burning the litter starts waking on its own ahead of them and keeps waking until the
-   player's own first gust takes it back over; while the colt is lost, a glimmer comes up where it is hiding after
+   player's own first gust takes it back over; while the cygnet is lost, a glimmer comes up where it is hiding after
    forty seconds, and after three minutes enough of one that it is found. The player still brings the light. The
    room only refuses to let the game end here.
 6. **The long crossing** (`story/crossing.ts` with `dolphins` and `duskTo`) — the intermission, and the only
@@ -249,7 +271,7 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
    birds. Nothing is asked of the player except to sail. **Built** — `fx/sealife/dolphin.ts`.
 7. **Home** (`story/home.ts`) — clear, frozen, stars. **The reunion**, staged in four beats: the child stands the
-   colt in the grass and steps back; it **tries twice by itself and drops both times**, so the player is shown
+   cygnet in the grass and steps back; it **tries twice by itself and drops both times**, so the player is shown
    rather than told that nobody else can do this; it calls north and nothing answers; and then the player raises
    the wind under it and holds it there. The moment it has the air, **the family comes down out of the night and
    wheels low over the hill** — a short, close thermal column a little to the north, framed from the child's
@@ -386,11 +408,13 @@ see "Rooms still to come".) None of it makes sense and none of it is explained. 
 
 Halfway across the meadow the ground rises, and this is the one moment the dream orientates you. The child tops
 the rise and stops. **The haze thins** — the chapter eases its `haze` from 0.55 down to 0.1 — and the world opens
-out as far as the far shore. Away to the north, the colt's family is **wheeling up a thermal**, a slow column of
-cranes turning in the light, the way cranes do before they go on.
+out as far as the far shore. Away to the north, on the dark water of a bay, the cygnet's family is **resting**: a
+raft of white swans, heads up, one or two stretching their wings, before they go on. (Cranes wheel up thermals;
+swans do not. This was Jeremy's pick of three.)
 
-The colt calls to them. Not the distress call: lower, longer, twice, with hope in it rather than panic. Nothing
-answers. The column keeps turning. After a while the child walks on and the haze closes again behind them.
+The cygnet calls to them. Not the distress call: lower, longer, twice, with hope in it rather than panic. Nothing
+answers. They are too far, and after a while they lift off the water in a long pattering run and go north. The
+child walks on and the haze closes again behind them.
 
 No words, no marker, no objective text: you simply now know where you are going and what you are carrying. And
 because the gathering lies the same way as home, it quietly sets up the ending, where it turns out you were
@@ -407,10 +431,10 @@ The moment the whole game turns on. It is staged deliberately and nothing about 
 3. The camera plants itself at the child's shoulder and looks up past them. The player watches the sky **with**
    the child, never instead of them.
 4. **The bird at the back of the V is the one that cannot hold on**, and it goes when it is directly overhead, so
-   none of it happens off screen. The colt takes over from exactly where that bird was.
+   none of it happens off screen. The cygnet takes over from exactly where that bird was.
 5. **The camera stands square on to the line of the fall** — on whichever side is clear of the tree — and snaps
    onto it rather than gliding, because by the time a slow camera arrived the fall was half over. It rides down
-   with the colt so it is always centred, with the V receding above it, and lifts to look down once it is in the
+   with the cygnet so it is always centred, with the V receding above it, and lifts to look down once it is in the
    grass, where the grass would otherwise hide it.
 6. **It falls for eight and a half seconds.** Not like a stone: at first it is still almost with them, sinking and
    falling behind, and only once it has lost the formation does the ground come up. Wings going the whole way,
@@ -425,9 +449,9 @@ The moment the whole game turns on. It is staged deliberately and nothing about 
 
 ## The companion
 
-Built as a general **companion** system, not a one-off crane, because more animals join later and the experience is meant to grow more involved.
+Built as a general **companion** system, not a one-off swan, because more animals join later and the experience is meant to grow more involved.
 
-A companion has: a body and gait, a place it rides on the child (arms, hood, shoulder, at heel), a bond value that only rises, and a set of shared moments that raise it. The bond shows in behaviour, never in a meter: distance kept, how often it looks at the child, whether it rides or walks, whether it sleeps against them at night, whether it comes when the child stops.
+A companion has: a body and gait, a place it rides on the child (arms, satchel, at heel), a bond value that only rises, and a set of shared moments that raise it. The bond shows in behaviour, never in a meter: distance kept, how often it looks at the child, whether it rides or walks, whether it sleeps against them at night, whether it comes when the child stops.
 
 Things that raise the bond, all of them things the player causes or witnesses:
 - The child picks it up, carries it, sets it down somewhere safe.
@@ -437,10 +461,14 @@ Things that raise the bond, all of them things the player causes or witnesses:
 - It is frightened and the child stays.
 - It is lost and found.
 
-The crane's arc is flight: flaps and drops, then glides, then cannot help in the dark, then flies. Where it rides
-matters as much as the arc: in the arms across the sea and after the dark, walking at heel on the short bare island
-of lines, and in the hood on the long walks, where meadow grass three feet deep would swallow it. It comes down
-only where the camera comes down with it. Later companions get their own single arc of the same shape — one fear, faced once, caused by the player.
+The cygnet's arc is flight: flaps and drops, then glides, then cannot help in the dark, then flies. It has a second
+bond, with the wind, which is the player: afraid of it, then curious, then asking for it, and at the end trusting
+it to hold it up. And it has one brave thing of its own, the swim on the long crossing. Where it rides matters as
+much: **in the satchel on the child's back** on the walks, where the camera behind them always sees it and it can
+look back at the wind (cygnets ride on their parents' backs); **across the chest in both arms** for the tender
+moments and in the boat; at heel on the short bare island of lines. It gets into the child's hands by itself:
+they kneel and hold them out low and still, and it hops up. Later companions get their own single arc of the
+same shape: one fear, faced once, caused by the player. The build is described in `docs/cygnet.md`.
 
 ## World layout (one coordinate space; the camera looks roughly north, −z)
 
@@ -470,9 +498,9 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 - **Time of day.** Sun height and sky colours follow the story: pale dawn, bright fogged morning, golden afternoon, bruised dusk, storm dark, clear night.
 - **The traveller.** A procedural child with a wind-simulated scarf, walking, running, throwing, sitting, sailing, carrying, driven by a story director. Silent.
 - **Cloth on the wind.** Lines, sheets and hanging things that read the wind field and fill, snap and flutter: the sail's shader generalised. The island of lines is built on it, and it pays for sheets, flags and laundry anywhere else.
-- **Companions.** The system above; the crane first.
+- **Companions.** The system above; the cygnet first.
 - **The boat.** A small boat whose patchwork sail catches the wind field. Used twice: the crossing, and the drift through the wood.
-- **Creatures.** Songbirds, gulls, rabbits, butterflies, sheep, goats, fish, a whale, herons, a murmuration, fireflies, and the crane flock.
+- **Creatures.** Songbirds, gulls, rabbits, butterflies, sheep, goats, fish, a whale, herons, a murmuration, fireflies, and the swans.
 - **Distance that reads.** Open ground with nothing on the horizon looked flat and streamed in badly. Every island wants a far silhouette with atmospheric perspective — the next island in the chain, standing out of the haze — and verticals in the middle distance. Being able to see where you are going next is the point of an archipelago.
 - **Light on the wind.** In the dark room, gusts and updrafts fan embers and fireflies into brightness and carry them.
 - **Music.** Layers join as the world comes back, fuller in the hills, thin and low in the wood, almost gone in
@@ -485,17 +513,17 @@ about 650 units). The veil hides everything either side of it, so it reads as op
   it in the wood, a climbing bass at sea, and the only chords that come home at the end. The voices glide between
   moods over three and a half seconds, so a room change is a modulation and never a new track starting. One piece
   of music for eighteen minutes was the complaint; this is the answer.
-- **The colt's voice.** `peep()` in `audio/audio.ts`, fired by the `distress` and `calling` cues. Distress is high
+- **The cygnet's voice.** `peep()` in `audio/audio.ts`, fired by the `distress` and `calling` cues. Distress is high
   and panicky; calling out to the flock is lower, longer and hopeful. Kept for those moments and nothing else.
   Where they are spent: `calling` at the meadow crest when the family is wheeling and nothing answers, and again at
   the very end when something does; `distress` only in the dark wood, where the calling out of the dark *is* how
   the player finds it. Nowhere else.
 - **Light on the wind.** `fx/embers.ts`. Gust energy is breath on a coal: it wakes sparks in the leaf litter, they
   ride the wind and go out again. `uEmberLight` in `atmosphere.ts` carries the hot centroid, so creatures and the
-  wood are genuinely lit by it — which is what makes finding the colt in the dark a thing the player does rather
+  wood are genuinely lit by it — which is what makes finding the cygnet in the dark a thing the player does rather
   than a thing they watch.
 - **Trodden grass.** `uTrodden`: a soft, noise-warped patch pressed flat where somebody sat down in it, so a
-  fledgling in a meadow three feet deep is not swallowed whole. Used for the colt's first flight and the last one.
+  fledgling in a meadow three feet deep is not swallowed whole. Used for the cygnet's first flight and the last one.
 - **Being the wind in the sails.** `Boat.becalmed` takes away the steady drive the boat otherwise sails on, so
   only what the player puts into the sail moves it. The drowned village spends it (`STILL_AT`, `FILL_NEEDED`): the
   chapter eases its own `breeze` to nothing so the sea, the grass and the sound go with it, hushes the music to
@@ -535,8 +563,8 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 9. **The island chain: built.** `ISLES` in the heightfield, the chapters sequenced in `story/journey.ts`
    (island → toLines → lines → toMeadow → meadow → toHome → home), the crossing generalised to take a route and a
    haze, the old hills chapter split into `story/meadow.ts` and `story/home.ts`, the dry-stone walls deleted.
-10. **The crane colt: rebuilt (2026-09-17).** `creatures/crane.ts` with `creatures/colt/body.ts` (geometry, 18 bones)
-    and `creatures/colt/shader.ts`. It is drawn the way a child would draw a crane chick: a round downy body, a big
+10. **Superseded the same day by the swan cygnet (`docs/cygnet.md`); kept for what it learned about the crane chick.** **The cygnet: rebuilt (2026-09-17).** `creatures/cygnet.ts` with `creatures/cygnet/body.ts` (geometry, 18 bones)
+    and `creatures/cygnet/shader.ts`. It is drawn the way a child would draw a cygnet: a round downy body, a big
     round head on a soft two-segment neck, large dark eyes with lids that blink, a short pink bill with a jaw that
     opens on each call, a cowlick on the crown that trails on a spring, stubby wings whose hand carries the first
     scalloped quills, and pink legs too long for it. Albedos are linear and it is never greyed with the land (it
@@ -553,12 +581,12 @@ about 650 units). The veil hides everything either side of it, so it reads as op
     wings held and flares into a run on landing; `leave` climbs out with a beat that slows as it finds its
     strength.
 
-10b. **Superseded note from when it was half built:** `creatures/crane.ts` is a rigged colt (body, neck, head and bill, folded wings,
+10b. **Superseded note from when it was half built:** `creatures/cygnet.ts` is a rigged cygnet (body, neck, head and bill, folded wings,
     two-jointed legs) driven by bone matrices, with fallen / carried / hooded / following states and a bond that
     only rises. `creatures/flock.ts` is the skein that goes over. The island chapter now runs the beat: the flock
     crosses once the island is whole, one bird cannot hold formation and comes down, and the child gathers it up
     and carries it from there. Still to do: the first glide on an updraft, the flight at the end, riding in the
-    hood on the walks, and tuning — the colt still reads cream rather than cinnamon when backlit.
+    satchel on the walks, and tuning — the cygnet still reads cream rather than cinnamon when backlit.
 
     **The fall is the moment the whole game turns on, so it is staged deliberately.** The skein comes over the
     child's head low enough to read as birds. The camera plants itself at their shoulder and looks up past them,
@@ -581,10 +609,10 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 12b. **The long crossing: built.** `fx/sealife/dolphin.ts` — a pod that surges fore and aft of the boat in
     desynchronised lanes, porpoises in real ballistic arcs, and puts two riders on the bow wave. The route stands
     a long way out west into open water and comes back, because after the wood the point of it is not to arrive.
-12c. **The crane's arc: built.** The glide is `Crane.soar`, on wind sampled **at the colt's own position**, so the
-    player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the colt is set
+12c. **The cygnet's arc: built.** The glide is `Cygnet.soar`, on wind sampled **at the cygnet's own position**, so the
+    player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the cygnet is set
     down in the grass, tries by itself and fails, the child sits down to watch, and there is nothing else on
-    screen. The flight at the end is `Crane.leave` — the one thing in the game that is allowed to go away.
+    screen. The flight at the end is `Cygnet.leave` — the one thing in the game that is allowed to go away.
 13. **More nonsense:** baskets and pegs on the island of lines; a red door standing in the grass; chimneys with no
     house; a bed made up in the meadow; a line strung between two rocks at sea; a piano at the tide line the wind
     plays. The point is that none of it makes sense and none of it is explained.
@@ -598,7 +626,7 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 
 `?chapter=` starts later in the story: `crossing` (or `lines`), `washing`, `meadow` (or `hills`), `birches` (or
 `autumn`), `drowned` (or `village`), `wood` (or `dark`), `sea` (or `dolphins`), `summit` (or `home`). Every start past the first island puts
-the colt in the child's arms and cuts the camera straight to the chapter's own shot. `?dusk=0..2` overrides the
+the cygnet in the child's arms and cuts the camera straight to the chapter's own shot. `?dusk=0..2` overrides the
 time of day; `?shower=0..1` forces the rain; `?grass=0` clears the grass; `?debug=wind` draws the wind field.
 
 `tools/play.mjs` takes its query in the `QUERY` environment variable **without a leading `?`** — it is appended

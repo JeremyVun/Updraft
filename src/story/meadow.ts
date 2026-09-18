@@ -31,12 +31,12 @@ export const FAR_SHORE = new THREE.Vector3(shore.x, 0, shore.z);
 
 /** The high ground on the walk, where the haze thins and you are told, without a word, where you are going. */
 const CREST_LEG = 2;
-/** How near the crest waypoint counts as being up on the rise, and how many cranes are in the family. */
+/** How near the crest waypoint counts as being up on the rise, and how many swans are in the family. */
 const CREST_NEAR = 16;
 const FAMILY = 22;
 /**
  * The reveal shot: the frame is centred `ahead` of the child with the camera `back` behind them, standing at
- * `eye` above the ground and looking `look` above it, tipping up to `tilt` as the cranes climb, and swung
+ * `eye` above the ground and looking `look` above it, tipping up to `tilt` as the swans climb, and swung
  * `swing` off the line between the two so the family is not stacked dead above their heads.
  */
 const REVEAL = { ahead: 15, back: 16, eye: 5, look: 5.4, tilt: 1.2, swing: 0.06 };
@@ -47,7 +47,7 @@ const WAVE_REACH = 3600;
 const SHOWER = { gather: 10, fall: 30, clear: 16 };
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 16;
-/** How long the colt is left trying, and how often it has a go, before the child gives up and carries it on. */
+/** How long the cygnet is left trying, and how often it has a go, before the child gives up and carries it on. */
 const TRY_FOR = tuning.colt.tryFor;
 const TRY_EVERY = 5.5;
 
@@ -85,19 +85,19 @@ export class MeadowChapter implements Chapter {
   private nextLook = 0;
   private crestDone = false;
   private cheeredFlight = false;
-  /** Where the grass is pressed flat while they sit in it, so the colt is not lost in a field taller than it is. */
+  /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
   trodden: THREE.Vector3 | null = null;
   /** The piano standing in the grass off the walk, and the optional stop the child makes at it. */
   private readonly piano = new PianoStop();
   private nextTry = 0;
   private nextCall = 0;
-  /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
+  /** When the wind starts showing the player the gesture the cygnet is waiting for, and the shape it draws there. */
   private coaxFrom = 0;
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
   private nextBugle = 0;
   private wentOn = false;
   private kneltAt = -1e3;
-  private readonly onColt = new THREE.Vector3();
+  private readonly onCygnet = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   /** Where the family is, where it was first found, and the horizontal line from the child to it. */
   private readonly far = new THREE.Vector3();
@@ -146,9 +146,9 @@ export class MeadowChapter implements Chapter {
     this.to('walk');
   }
 
-  /** For testing: a few paces short of the rise, colt in the hood and plane in hand, with the crest still to come. */
+  /** For testing: a few paces short of the rise, cygnet in the satchel and plane in hand, with the crest still to come. */
   skipToCrest(): void {
-    const { child, crane, plane, life } = this.cast;
+    const { child, cygnet, plane, life } = this.cast;
     life.regions.wave.set(LANDING.x, LANDING.y, WAVE_REACH, 90);
     this.waveStart = -1e3;
     this.leg = CREST_LEG;
@@ -158,8 +158,8 @@ export class MeadowChapter implements Chapter {
     child.stop();
     child.place(at.x + back.x, at.y + back.y, Math.atan2(-back.x, -back.y));
     child.standUp();
-    crane.carry(child.hoodPoint(this.tmp), child.yaw, true);
-    crane.bind(0.06);
+    cygnet.rideIn('satchel');
+    cygnet.bind(0.06);
     plane.hold(child.handPosition(this.hand), child.yaw);
     this.play = 'hold';
     this.to('walk');
@@ -267,24 +267,26 @@ export class MeadowChapter implements Chapter {
   }
 
   /**
-   * The walk is long and the grass is over the colt's head, so it rides in the hood, where it is in every frame
+   * The walk is long and the grass is over the cygnet's head, so it rides in the satchel on their back, where it is in every frame
    * and can watch the plane go over. It only comes down where the camera comes down with it.
    */
   private walkOn(): void {
-    const { child: c, crane } = this.cast;
-    crane.carry(c.hoodPoint(this.tmp), c.yaw, true);
-    crane.bind(0.06);
+    const { cygnet, carry } = this.cast;
+    /** By the meadow it has stopped being afraid of the wind and started being curious about it. */
+    cygnet.mind.trust(0.35);
+    carry.stow();
+    cygnet.bind(0.06);
     this.to('walk');
     this.play = 'carry';
     this.throwAhead();
   }
 
   /**
-   * Straight out of the reveal and in the same place: the colt is stood down in the grass facing the way they
+   * Straight out of the reveal and in the same place: the cygnet is stood down in the grass facing the way they
    * went, and the child kneels to it and then sits. It has just watched its family leave without it.
    */
   private setDown(): void {
-    const { child: c, crane } = this.cast;
+    const { child: c, carry } = this.cast;
     const { setDownAt, firstTry } = tuning.crest;
     c.stop();
     this.to('try');
@@ -292,14 +294,9 @@ export class MeadowChapter implements Chapter {
     this.kneltAt = this.now;
     /** Wide enough to take the camera as well as the two of them, or the near grass fills the whole frame. */
     this.trodden = new THREE.Vector3(c.position.x + this.axis.x * setDownAt * 0.6, 12, c.position.z + this.axis.z * setDownAt * 0.6);
-    c.pickUp(() => {
-      /** Down out of the hood and a flutter on, after them, so it is facing the sky it wants and not the child. */
-      crane.position.set(c.position.x + this.axis.x * setDownAt, 0, c.position.z + this.axis.z * setDownAt);
-      crane.yaw = Math.atan2(this.axis.x, this.axis.z);
-      crane.follow();
-      c.faceToward(crane.position.x, crane.position.z, 1);
-      this.nextTry = this.now + firstTry;
-    });
+    /** Out of the satchel and down in front of them, facing the sky it wants and not the child. */
+    c.faceToward(c.position.x + this.axis.x, c.position.z + this.axis.z, 1);
+    carry.unstow(() => carry.setDown(() => (this.nextTry = this.now + firstTry), Math.atan2(this.axis.x, this.axis.z)));
   }
 
   /**
@@ -309,8 +306,8 @@ export class MeadowChapter implements Chapter {
    * failed: if the player never does it, the child eventually gathers it up and walks on, and it will try again.
    */
   private updateTry(time: number): void {
-    const { child: c, crane, flock } = this.cast;
-    if (crane.flying) {
+    const { child: c, cygnet, flock } = this.cast;
+    if (cygnet.flying) {
       this.to('glide');
       return;
     }
@@ -319,29 +316,29 @@ export class MeadowChapter implements Chapter {
       this.far.copy(flock.head);
       if (this.t > tuning.crest.watches) {
         flock.clear();
-        crane.watch(null);
+        cygnet.watch(null);
       } else if (time > this.nextCall) {
         cue('calling');
-        crane.call(true);
+        cygnet.call(true);
         this.nextCall = time + 5 + Math.random();
       }
     }
-    c.lookAt = crane.eye(this.onColt);
-    if (time > this.nextTry && !crane.carried) {
-      crane.tryToFly();
+    c.lookAt = cygnet.eye(this.onCygnet);
+    if (time > this.nextTry && !cygnet.carried) {
+      cygnet.tryToFly();
       if (this.coaxFrom === 0) this.coaxFrom = time + tuning.swirl.coaxAfter;
       this.nextTry = time + TRY_EVERY;
       /** They settle in to watch it, but only before it has ever managed it: after that they stay on their feet. */
-      if (this.t > TRY_EVERY * 1.5 && crane.flights === 0 && !c.sitting && !c.busy) c.sitDown();
+      if (this.t > TRY_EVERY * 1.5 && cygnet.flights === 0 && !c.sitting && !c.busy) c.sitDown();
     }
     if (this.t > TRY_FOR && !c.busy) {
       if (c.sitting) {
         c.standUp();
         return;
       }
-      this.walkTo(crane.position, () => {
+      this.walkTo(cygnet.position, () => {
         this.gatherUp(() => {
-          crane.carry(c.hoodPoint(this.tmp), c.yaw, true);
+          this.cast.carry.stow();
           this.trodden = null;
           this.to('walk');
           /** The plane is nearly always still in their hand; if the reveal caught it out in the grass, they fetch it. */
@@ -353,14 +350,14 @@ export class MeadowChapter implements Chapter {
   }
 
   /**
-   * A few seconds after the first failed try the air around the colt starts to turn by itself, and goes on asking
+   * A few seconds after the first failed try the air around the cygnet starts to turn by itself, and goes on asking
    * a little harder for as long as nothing happens. It is only ever offered while the player has never lifted it:
    * once they have, they know, and the wind says nothing.
    */
   get coax(): Coax | null {
-    const { crane } = this.cast;
-    if (this.beat !== 'try' || this.coaxFrom === 0 || crane.flying || crane.carried || crane.flights > 0) return null;
-    this.coaxing.at.copy(crane.position);
+    const { cygnet } = this.cast;
+    if (this.beat !== 'try' || this.coaxFrom === 0 || cygnet.flying || cygnet.carried || cygnet.flights > 0) return null;
+    this.coaxing.at.copy(cygnet.position);
     this.coaxing.urgency = THREE.MathUtils.smoothstep(this.now, this.coaxFrom, this.coaxFrom + tuning.swirl.coaxRamp);
     return this.coaxing.urgency > 0 ? this.coaxing : null;
   }
@@ -370,25 +367,27 @@ export class MeadowChapter implements Chapter {
    * and the beat starts again, because a player who has just found out they can fly it will want to do it again.
    */
   private updateGlide(): void {
-    const { child: c, crane } = this.cast;
-    c.lookAt = crane.position;
-    if (crane.flying) {
+    const { child: c, cygnet } = this.cast;
+    c.lookAt = cygnet.position;
+    if (cygnet.flying) {
       if (c.sitting && !c.busy) c.standUp();
       return;
     }
     if (c.busy || c.sitting) return;
-    if (crane.flights === 1 && !this.cheeredFlight) {
+    if (cygnet.flights === 1 && !this.cheeredFlight) {
+      /** It went up on the wind and came down safe. After that the wind is something to ask for. */
+      cygnet.mind.trust(0.66);
       this.cheeredFlight = true;
       c.cheer();
       cue('delight');
-      crane.bind(0.2);
+      cygnet.bind(0.2);
       return;
     }
-    if (Math.hypot(crane.position.x - c.position.x, crane.position.z - c.position.z) > 4) {
-      this.walkTo(crane.position, undefined);
+    if (Math.hypot(cygnet.position.x - c.position.x, cygnet.position.z - c.position.z) > 4) {
+      this.walkTo(cygnet.position, undefined);
       return;
     }
-    c.faceToward(crane.position.x, crane.position.z, 1);
+    c.faceToward(cygnet.position.x, cygnet.position.z, 1);
     this.to('try');
     this.nextTry = this.now + 3.5;
   }
@@ -397,15 +396,12 @@ export class MeadowChapter implements Chapter {
     this.cast.child.walkTo(at.x, at.z, true, then, 2.2);
   }
 
-  /** Crouches, gathers the colt into the arms, and stands up again. */
+  /** Crouches, gathers the cygnet into the arms, and stands up again. */
   private gatherUp(then: () => void): void {
-    const { child: c, crane, flock } = this.cast;
+    const { child: c, cygnet, carry, flock } = this.cast;
     flock.clear();
-    crane.watch(null);
-    c.faceToward(crane.position.x, crane.position.z, 1);
-    c.lookAt = crane.eye(this.onColt);
-    c.pickUp(() => {
-      crane.carry(c.armsPoint(this.tmp), c.yaw);
+    cygnet.watch(null);
+    carry.gatherUp(() => {
       c.lookAt = null;
       then();
     });
@@ -417,17 +413,17 @@ export class MeadowChapter implements Chapter {
 
   /**
    * The one moment the dream tells you what you are doing, and the scene the rest of the game leans on. It is
-   * heard before it is seen: the grown cranes bugle from somewhere ahead, the colt hears them first and stretches
-   * up out of the hood, and the child stops and turns to look where it is looking. The haze thins, and the family
+   * heard before it is seen: the grown swans bugle from somewhere ahead, the cygnet hears them first and stretches
+   * up out of the satchel, and the child stops and turns to look where it is looking. The haze thins, and the family
    * is climbing a thermal off the meadow in front of them. The colt calls. Nothing answers. They string out and
-   * go north — the way the boat is going, the way home — and the child kneels and sets the colt down after them.
+   * go north — the way the boat is going, the way home — and the child kneels and sets the cygnet down after them.
    */
   private updateCrest(dt: number, time: number): void {
-    const { child: c, crane, flock } = this.cast;
+    const { child: c, cygnet, flock } = this.cast;
     const { answers, goes, setsDown, spread, climb, leaves } = tuning.crest;
     const k = flock.active ? flock.head : this.gathering;
     this.far.set(k.x, k.y + spread * 0.5, k.z);
-    crane.watch(this.far);
+    cygnet.watch(this.far);
     this.haze += (0.1 - this.haze) * (1 - Math.exp(-dt * 1.1));
 
     /** The grown birds call among themselves while they climb, and not once after they have turned away. */
@@ -435,14 +431,14 @@ export class MeadowChapter implements Chapter {
       cue('bugle');
       this.nextBugle = time + 5.4;
     }
-    /** The child walks on for a pace, unaware, and then stops and comes round to what the colt can hear. */
+    /** The child walks on for a pace, unaware, and then stops and comes round to what the cygnet can hear. */
     if (this.t > answers) {
       if (c.moving) c.stop();
       c.lookAt = this.far;
       c.faceToward(this.far.x, this.far.z, 1 - Math.exp(-dt * 1.7));
       if (time > this.nextCall) {
         cue('calling');
-        crane.call(true);
+        cygnet.call(true);
         this.nextCall = time + 5 + Math.random();
       }
     }
@@ -453,14 +449,14 @@ export class MeadowChapter implements Chapter {
        * Off on the line the journey takes, a little west of the one they were found on: north, for home. They
        * go at a glide rather than their travelling speed, so the player has time to see that they are going.
        */
-      flock.goOn(THREE.MathUtils.lerp(Math.atan2(this.axis.x, this.axis.z), Math.PI, 0.5), climb * 0.7, leaves, time);
+      flock.goOn(THREE.MathUtils.lerp(Math.atan2(this.axis.x, this.axis.z), Math.PI, 0.5), climb * 0.7, leaves);
     }
     if (this.t > setsDown && !c.busy) this.setDown();
   }
 
   /** The family comes up out of the meadow ahead, and the walk stops where it stands for it. */
   private reveal(): void {
-    const { child: c, crane, flock } = this.cast;
+    const { child: c, cygnet, flock } = this.cast;
     const { ahead, aside, base, radius, spread, climb, answers } = tuning.crest;
     this.crestDone = true;
     this.to('crest');
@@ -471,7 +467,7 @@ export class MeadowChapter implements Chapter {
     this.gathering.set(c.position.x + aside, 0, c.position.z - ahead);
     this.gathering.y = Math.max(heightAt(this.gathering.x, this.gathering.z), 0) + base;
     flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, radius, FAMILY, spread, climb);
-    crane.watch(this.far.copy(this.gathering));
+    cygnet.watch(this.far.copy(this.gathering));
   }
 
   /**
@@ -492,7 +488,7 @@ export class MeadowChapter implements Chapter {
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
-    if (this.cast.crane.flying) {
+    if (this.cast.cygnet.flying) {
       this.to('glide');
       return;
     }
@@ -585,12 +581,12 @@ export class MeadowChapter implements Chapter {
     s.eye = undefined;
     if (this.beat === 'try' || this.beat === 'glide') {
       /**
-       * Side on and low. Over the child's shoulder the colt is behind their back and under the grass; from here
-       * they are both in profile, with the colt clear against the sky the moment it leaves the ground.
+       * Side on and low. Over the child's shoulder the cygnet is behind their back and under the grass; from here
+       * they are both in profile, with the cygnet clear against the sky the moment it leaves the ground.
        */
-      const k = this.cast.crane.position;
+      const k = this.cast.cygnet.position;
       /**
-       * Down in the grass, on the colt. While it is on the ground the camera stands off to one side so the child
+       * Down in the grass, on the cygnet. While it is on the ground the camera stands off to one side so the child
        * cannot hide it; as it climbs the camera swings in behind their shoulder, so the player ends up watching
        * the sky with the child — the frame of the fall, turned the other way up.
        */
@@ -602,9 +598,9 @@ export class MeadowChapter implements Chapter {
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       s.target.set(k.x, k.y + 0.4, k.z);
       /**
-       * The camera stays down at head height on the ground whatever the colt does, so that once it is up the
-       * frame is looking up at it with sky behind it. Hung a fixed distance above the colt instead, it follows
-       * the colt into the air and the background is always grass — which is the opposite of the point.
+       * The camera stays down at head height on the ground whatever the cygnet does, so that once it is up the
+       * frame is looking up at it with sky behind it. Hung a fixed distance above the cygnet instead, it follows
+       * the cygnet into the air and the background is always grass — which is the opposite of the point.
        */
       s.distance = 9.5 + gap * 0.35;
       s.height = THREE.MathUtils.clamp(ground + 2.6 - k.y, -9, 2.6);
@@ -622,7 +618,7 @@ export class MeadowChapter implements Chapter {
       const ground = Math.max(heightAt(c.x, c.z), 0);
       const tilt = Math.min(REVEAL.tilt, Math.max(0, this.far.y - ground - 12) * 0.12);
       const bearing = Math.atan2(this.axis.x, this.axis.z) + Math.PI + REVEAL.swing;
-      /** The frame opens out as the cranes climb: it starts on the two of them and ends with the sky in it. */
+      /** The frame opens out as the swans climb: it starts on the two of them and ends with the sky in it. */
       const open = THREE.MathUtils.smoothstep(this.t, 0.6, 6);
       const ahead = REVEAL.ahead * (0.5 + 0.5 * open);
       s.target.set(c.x + this.axis.x * ahead, ground + REVEAL.look + tilt, c.z + this.axis.z * ahead);

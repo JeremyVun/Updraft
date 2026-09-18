@@ -19,6 +19,8 @@ export interface Shot {
   eye?: THREE.Vector3;
   /** The camera travels with a steadily moving target (a boat) and only eases the framing, so it never trails. */
   carry?: boolean;
+  /** QA: the camera goes exactly where it is put, with no ground clearance, no sight-line correction and no breathing. */
+  free?: boolean;
 }
 
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
@@ -83,6 +85,11 @@ export class CameraRig {
     }
     this.eye.lerp(this.desired(shot, this.wantEye), k);
     this.look.lerp(shot.target, k);
+    if (shot.free) {
+      this.camera.position.copy(this.eye);
+      this.camera.lookAt(this.look);
+      return;
+    }
     this.place(time, dt);
   }
 

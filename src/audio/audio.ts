@@ -83,7 +83,7 @@ const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
 const PHRASES: Record<Cue, [number, number][]> = {
-  /** Never played: the cranes' voices are their own, not musical phrases. */
+  /** Never played: the cygnet's voice is its own, not a musical phrase. */
   distress: [],
   calling: [],
   bugle: [],
@@ -367,7 +367,7 @@ export class Soundscape {
   }
 
   /**
-   * The colt's voice. It is the only sound either traveller ever makes, so it is kept for the few moments that
+   * The cygnet's voice. It is the only sound either traveller ever makes, so it is kept for the few moments that
    * matter: a small bird calling for a family that is not coming back. Thin, high, and pitched to be heard over
    * nothing at all.
    */
@@ -388,9 +388,10 @@ export class Soundscape {
     let at = t0;
     for (let i = 0; i < calls; i++) {
       const len = (longing ? 0.4 : 0.16) + Math.random() * 0.08;
-      const f = (longing ? 880 : 1250) + Math.random() * 420 - i * 60;
+      /** A cygnet's note is a thin whistle, well above where a crane chick's sat. */
+      const f = (longing ? 1480 : 2050) + Math.random() * 380 - i * 70;
       const osc = ctx.createOscillator();
-      osc.type = 'triangle';
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(f * 0.72, at);
       osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
       osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);

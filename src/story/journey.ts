@@ -11,6 +11,7 @@ import { LINES_LANDING, LinesChapter } from './lines';
 import { FAR_SHORE, MeadowChapter } from './meadow';
 import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
+import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
@@ -27,7 +28,8 @@ export type ChapterName =
   | 'toWood'
   | 'wood'
   | 'toHome'
-  | 'home';
+  | 'home'
+  | 'stage';
 
 /** Where the boat goes on each crossing. Each one is shorter and hazier than the last. */
 const ROUTES: Record<string, THREE.Vector2[]> = {
@@ -97,6 +99,9 @@ export class Journey {
     } else if (start === 'sea' || start === 'dolphins') {
       this.sail(WOOD_BERTH.x, WOOD_BERTH.z + 6, Math.PI);
       this.begin('toHome');
+    } else if (start === 'stage') {
+      this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
+      this.begin('stage');
     } else if (start === 'summit' || start === 'home') {
       this.land(-45, -1958, -45, -1968);
       this.begin('home');
@@ -111,7 +116,7 @@ export class Journey {
     cast.boat.beach(x, z, yaw);
     cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
     cast.boat.launch();
-    this.withColt();
+    this.withCygnet();
   }
 
   /** Puts the boat ashore with the child beside it, as if a crossing had just ended. */
@@ -121,15 +126,15 @@ export class Journey {
     cast.boat.beach(bx, bz, Math.PI);
     cast.boat.grounded = true;
     cast.child.place(cx, cz, Math.PI);
-    this.withColt();
+    this.withCygnet();
   }
 
-  /** Everywhere past the first island the child is carrying the colt, so every test start has to start that way. */
-  private withColt(): void {
+  /** Everywhere past the first island the child is carrying the cygnet, so every test start has to start that way. */
+  private withCygnet(): void {
     const { cast } = this;
-    cast.crane.visible = true;
-    cast.crane.bond = 0.5;
-    cast.crane.carry(cast.child.armsPoint(new THREE.Vector3()), cast.child.yaw);
+    cast.cygnet.visible = true;
+    cast.cygnet.bond = 0.5;
+    cast.cygnet.rideIn('cradle');
   }
 
   get shot(): Shot {
@@ -223,10 +228,13 @@ export class Journey {
           whaleAt: 55,
           whaleEvery: 150,
           dolphins: true,
+          swimAt: 0.42,
           season: 0.92,
         });
       case 'home':
         return new HomeChapter(cast);
+      case 'stage':
+        return new StageChapter(cast);
       default:
         return new IslandChapter(cast);
     }

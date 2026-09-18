@@ -5,7 +5,7 @@ import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
-/** Where the colt goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
+/** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
 const HIDING = new THREE.Vector3(-8.5, 0, -1791);
 /** Where the paper plane the storm took is lying, further on and face down in the leaves. */
 const SODDEN = new THREE.Vector2(-37, -1848);
@@ -17,7 +17,7 @@ const FOUND = 12;
 const FOUND_HEAT = 0.5;
 /**
  * Nobody is ever stranded in the dark. After this long with nothing burning, the wood wakes a few coals of its
- * own — a glimmer to walk toward, never a path — and after a long time lost, enough of them that the colt is
+ * own — a glimmer to walk toward, never a path — and after a long time lost, enough of them that the cygnet is
  * found. The player still brings the light; the room only refuses to let the game end here.
  */
 const UNAIDED = 35;
@@ -33,7 +33,7 @@ type Beat = 'ashore' | 'first' | 'walk' | 'bolt' | 'lost' | 'found' | 'plane' | 
  * and nothing to throw, so the wind does the only other thing it can do — it breathes on fire. The player fans
  * embers awake out of the leaf litter and the child walks toward wherever the light is. The light is the path.
  *
- * And halfway up, the storm frightens the colt out of the hood and it goes to ground somewhere off the path in the
+ * And halfway up, the storm frightens the cygnet out of the hood and it goes to ground somewhere off the path in the
  * dark, and calls. The player finds it by putting light on it. This is the room the whole story is for: something
  * small trusted the child, and the child went into the dark first so that it would not have to.
  */
@@ -64,12 +64,13 @@ export class WoodChapter implements Chapter {
   private readonly side = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
-    const { child, plane, crane } = cast;
+    const { child, plane, cygnet } = cast;
     plane.homeRadius = 1e9;
     plane.visible = false;
     plane.soggy.value = 1;
     child.dismount();
-    crane.carry(child.hoodPoint(this.tmp), child.yaw, true);
+    if (cygnet.seat === 'cradle') cast.carry.stow();
+    else cygnet.rideIn('satchel');
     child.walkTo(WOOD_LANDING.x, WOOD_LANDING.y - 14, false, () => this.to('first'), 1.4);
   }
 
@@ -97,7 +98,7 @@ export class WoodChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now = time;
-    const { child: c, plane: p, crane, embers } = this.cast;
+    const { child: c, plane: p, cygnet, embers } = this.cast;
     /** The boat is waiting on the far shore, the way it always is — but it goes there once they are out of sight. */
     if (!this.moored && this.leg >= 2) {
       this.moored = true;
@@ -123,7 +124,7 @@ export class WoodChapter implements Chapter {
         if (this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < 34) this.bolt();
         break;
       case 'bolt':
-        c.lookAt = crane.position;
+        c.lookAt = cygnet.position;
         if (this.t > 2.6) this.to('lost');
         break;
       case 'lost':
@@ -210,14 +211,14 @@ export class WoodChapter implements Chapter {
   private unaided = false;
   private nextKindle = 0;
 
-  /** The storm's worst gust, and the colt is out of the hood and gone before the child can close a hand on it. */
+  /** The storm's worst gust, and the cygnet is out of the hood and gone before the child can close a hand on it. */
   private bolt(): void {
-    const { child: c, crane } = this.cast;
+    const { child: c, cygnet } = this.cast;
     this.to('bolt');
     c.stop();
-    crane.position.set(HIDING.x, Math.max(heightAt(HIDING.x, HIDING.z), 0), HIDING.z);
-    crane.yaw = Math.atan2(c.position.x - HIDING.x, c.position.z - HIDING.z);
-    crane.cower();
+    cygnet.position.set(HIDING.x, Math.max(heightAt(HIDING.x, HIDING.z), 0), HIDING.z);
+    cygnet.yaw = Math.atan2(c.position.x - HIDING.x, c.position.z - HIDING.z);
+    cygnet.cower();
     this.nextCall = this.now + 2;
     cue('distress');
   }
@@ -227,11 +228,11 @@ export class WoodChapter implements Chapter {
    * Nothing hurries the player and nothing goes wrong if they take all night: it keeps calling until they come.
    */
   private search(time: number): void {
-    const { child: c, crane } = this.cast;
-    c.lookAt = crane.position;
+    const { child: c, cygnet } = this.cast;
+    c.lookAt = cygnet.position;
     if (time > this.nextCall) {
       cue('distress');
-      crane.call(false);
+      cygnet.call(false);
       this.nextCall = time + 3.4 + Math.random() * 1.6;
     }
     /** A glimmer where it is hiding, and then, much later, enough of one to have found it. */
@@ -244,11 +245,9 @@ export class WoodChapter implements Chapter {
     if (this.cast.embers.heatNear(HIDING.x, HIDING.z, FOUND) > FOUND_HEAT) {
       this.to('found');
       c.walkTo(HIDING.x, HIDING.z + 1.2, false, () => {
-        c.faceToward(HIDING.x, HIDING.z, 1);
-        c.pickUp(() => {
-          crane.carry(c.armsPoint(this.tmp), c.yaw);
-          /** Carried in the arms from here, not the hood. After the dark it is not put down again for a while. */
-          crane.bind(0.35);
+        /** Carried in the arms from here, not on their back. After the dark it is not put down again for a while. */
+        this.cast.carry.gatherUp(() => {
+          cygnet.bind(0.35);
           this.to('walk');
         });
       }, 1.1);

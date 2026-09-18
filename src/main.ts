@@ -39,8 +39,12 @@ import { heightAt } from './world/island';
 import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
-import { Crane } from './creatures/crane';
-import { CraneFlock } from './creatures/flock';
+import { Foley, type Surface } from './audio/foley';
+import { Carry } from './companion/carry';
+import { Probe } from './companion/probe';
+import { Cygnet } from './creatures/cygnet';
+import { screenPan } from './creatures/motion';
+import { SwanFlock } from './creatures/flock';
 import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
 import { piano } from './world/piano';
 import { Kite } from './world/kite';
@@ -205,14 +209,21 @@ function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3
 }
 const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
-const crane = new Crane();
-crane.objects.forEach((o) => scene.add(o));
-const flock = new CraneFlock();
-scene.add(flock.mesh);
-const craneAt = new THREE.Vector3();
-const craneAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+const cygnet = new Cygnet();
+cygnet.objects.forEach((o) => scene.add(o));
+cygnet.mount = child;
+const carry = new Carry(child, cygnet);
+const foley = new Foley();
+let nextBugle = 0;
+let swanBeat = 0;
+const probe = params.shot ? new Probe(child, cygnet, carry) : null;
+const flock = new SwanFlock();
+flock.objects.forEach((o) => scene.add(o));
+const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+const handsAt = new THREE.Vector3();
+const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, crane, flock, embers, birches, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 rig.cut(story.shot);
@@ -374,18 +385,58 @@ function frame(now: number): void {
   child.update(dt);
   glider.update(dt, time);
   flock.update(dt, time);
-  /** The arm comes down over it while it is being carried, and lifts again when it is not. */
-  child.cradle += ((crane.state === 'carried' && crane.visible ? 1 : 0) - child.cradle) * (1 - Math.exp(-dt * 2.5));
-  if (crane.state === 'carried') crane.carry(child.armsPoint(craneAt), child.yaw);
-  else if (crane.state === 'hooded') crane.carry(child.hoodPoint(craneAt), child.yaw, true);
+  carry.update(dt);
+  const notice = cygnet.world;
+  child.face(notice.face);
+  notice.hands = carry.offering(handsAt);
+  notice.plane = glider.position.distanceToSquared(cygnet.position) < 400 ? glider.position : null;
+  notice.creature = nearbyCreature(cygnet.position.x, cygnet.position.z, 7, creatureAt) ? creatureAt : null;
+  notice.flock = flock.active ? flock.head : null;
+  notice.light = atmo.uniforms.uEmberLight.value.w > 0.15 ? emberAt : null;
+  notice.dark = atmo.uniforms.uNight.value;
+  notice.rain = shown.shower || 0;
+  /** The white comes through its grey as the year turns: none on the first island, plain to see by the last. */
+  cygnet.look.grown = THREE.MathUtils.smoothstep(atmo.uniforms.uSeason.value, 0.4, 1);
+  notice.cold = THREE.MathUtils.clamp((atmo.uniforms.uSeason.value - 0.5) * 1.6 + atmo.uniforms.uNight.value * 0.3, 0, 1);
   /**
-   * The colt reads the air where it is standing. Wind brushed under it with the cursor lifts it as a held updraft
+   * The cygnet reads the air where it is standing. Wind brushed under it with the cursor lifts it as a held updraft
    * does, because moving the cursor is the only verb the game has taught. Not where it has just fallen, though:
    * there it is the child's to gather up.
    */
-  wind.sample(crane.position.x, crane.position.z, craneAir);
-  if (crane.state !== 'fallen') craneAir.lift += craneAir.energy * tuning.colt.gustLift;
-  crane.update(dt, time, child.position, craneAir);
+  wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir);
+  if (cygnet.state !== 'fallen') cygnetAir.lift += cygnetAir.energy * tuning.colt.gustLift;
+  cygnet.update(dt, time, child.position, cygnetAir);
+  carry.after();
+  foley.setOutput(sound.output);
+  const heardPan = screenPan(rig.camera, cygnet.position);
+  for (const h of cygnet.heard) {
+    if (h.kind === 'step') {
+      const under: Surface = child.riding && cygnet.position.distanceToSquared(boat.position) < 9 ? 'wood' : heightAt(cygnet.position.x, cygnet.position.z) < 0.9 ? 'sand' : 'grass';
+      foley.step(under, h.amount, heardPan);
+    } else if (h.kind === 'flap') foley.flap(h.amount, heardPan);
+    else if (h.kind === 'flutter') foley.flutter(6, h.amount, heardPan);
+    else if (h.kind === 'shake') foley.shake(heardPan, cygnet.mind.wet);
+    else if (h.kind === 'tumble') foley.tumble(h.amount, heardPan);
+    else if (h.kind === 'plunge') foley.plunge(heardPan);
+    else if (h.kind === 'paddle') foley.paddle(h.amount, heardPan);
+    else foley.rustle(h.amount, heardPan);
+  }
+  cygnet.heard.length = 0;
+  /** The grown swans are heard before they are seen: the throb of their wings, and now and then one of them calling. */
+  if (flock.active) {
+    const far = THREE.MathUtils.clamp(flock.head.distanceTo(rig.camera.position) / 320, 0, 1);
+    const swanPan = screenPan(rig.camera, flock.head);
+    swanBeat += dt * 3.4;
+    if (swanBeat > Math.PI * 2 && far < 0.75) {
+      swanBeat -= Math.PI * 2;
+      foley.wingbeat(swanPan, far);
+    }
+    if (time > nextBugle) {
+      foley.bugle(swanPan + (Math.random() - 0.5) * 0.4, far, 0.8 + Math.random() * 0.4);
+      nextBugle = time + 1.6 + Math.random() * 4.5;
+    }
+  }
+  probe?.update(time);
   pollReadbacks();
   wind.step(dt, time);
   life.update(dt);
@@ -565,7 +616,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, kite, pinwheels, village, wood, embers, boat, life, piano, birches };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, kite, pinwheels, village, wood, embers, boat, life, piano, birches };
 }
 
 /**

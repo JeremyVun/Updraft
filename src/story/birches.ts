@@ -140,12 +140,13 @@ export class BirchesChapter implements Chapter {
   }
 
   /**
-   * The one place this chapter touches the companion: it rides in the hood over the island, the way it does on
+   * The one place this chapter touches the companion: it rides in the satchel over the island, the way it does on
    * every other long walk, and it is never taken out again here.
    */
   private setOff(): void {
-    const { child: c, crane } = this.cast;
-    crane.carry(c.hoodPoint(this.tmp), c.yaw, true);
+    const { cygnet, carry } = this.cast;
+    if (cygnet.seat === 'cradle') carry.stow();
+    else cygnet.rideIn('satchel');
     this.to('walk');
     this.play = 'carry';
     this.throwAhead();
