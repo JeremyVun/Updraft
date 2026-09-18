@@ -5,11 +5,13 @@ import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
 import { tuning } from '../tuning';
 
-export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
+export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
   game: { bearing: Math.PI, distance: 15, height: 5.2, on: 'both' },
+  /** Standing where the child stands and watching the swans, wherever in the sky or on the water they are. */
+  flock: { bearing: Math.PI, distance: 9, height: 3, on: 'both' },
   behind: { bearing: Math.PI, distance: 5.5, height: 1.4, on: 'both' },
   front: { bearing: 0, distance: 5.5, height: 1.0, on: 'both' },
   side: { bearing: Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
@@ -236,6 +238,10 @@ export class StageChapter implements Chapter {
     else s.target.set((c.position.x + at.x) / 2, (c.position.y + 1.2 + at.y) / 2, (c.position.z + at.z) / 2);
     const bearing = this.facing + v.bearing;
     s.eye = (s.eye ?? new THREE.Vector3()).set(s.target.x + Math.sin(bearing) * v.distance, s.target.y + v.height, s.target.z + Math.cos(bearing) * v.distance);
+    if (this.view === 'flock' && this.cast.flock.active) {
+      s.target.copy(this.cast.flock.head);
+      s.eye.set(c.position.x - Math.sin(this.facing) * v.distance, c.position.y + v.height, c.position.z - Math.cos(this.facing) * v.distance);
+    }
     this.focus.copy(c.position);
     this.trodden.set(c.position.x, 7, c.position.z);
   }
