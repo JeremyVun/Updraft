@@ -248,7 +248,11 @@ export class Embers {
     for (const c of this.coals) {
       if (!c.live) continue;
       const w = this.wind.sample(c.p.x, c.p.z, this.sample);
-      const breath = w.energy + Math.hypot(w.x, w.z) * 0.06;
+      /**
+       * Only the player's own breath counts. Gust energy is written by their strokes alone, so the storm blowing
+       * through the wood all night can never light a coal for them: the light in this room is theirs or nobody's.
+       */
+      const breath = w.energy;
       if (!c.lit) {
         if (time - c.laid < 1.4) continue;
         c.wake = Math.min(1, c.wake + breath * dt * t.catchRate);
