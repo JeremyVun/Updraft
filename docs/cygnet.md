@@ -1,8 +1,8 @@
 # The cygnet
 
 The companion becomes a swan cygnet and is rebuilt as the game's co-star. Jeremy's brief is verbatim in
-`journey.md` ("On the companion becoming a swan cygnet"). Work happens on branch `cygnet` in
-`/private/tmp/updraft-cygnet`. When it ships, the lasting parts of this file fold into `journey.md` and this file
+`journey.md` ("On the companion becoming a swan cygnet"). It is **on `main`** (merged 2026-09-18, `eb1d7c6`); the
+parcels still open are under Status. When it ships, the lasting parts of this file fold into `journey.md` and this file
 is deleted.
 
 ## Who does the work
@@ -171,6 +171,28 @@ as a cygnet's thin whistle. Adults: distant bugling and wing whistle as the skei
 - **Visual verdicts** at real camera distance and close up, per the model-routing rules, then Jeremy's.
 
 ## Status (update as it moves)
+
+**On `main` since 2026-09-18** (`eb1d7c6`), merged on top of the rooms (birches, kite and pinwheels, piano). The
+session that built it died; a new session took over from this file. What the merge decided:
+- **The crest is the close scene, with swans.** `main` had since rebuilt the crest as one unmissable scene for the
+  cranes (heard first, the family wheeling up right in front of the rise, stringing out north, the set-down
+  straight after in the same place: `tuning.crest`). This branch had the family resting on the far bay (Jeremy's
+  pick, because swans do not ride thermals), which from the real crest was a few white pixels. Merged: the close
+  scene, played by the swans (`SwanFlock.circle(..., climb)` and a new `SwanFlock.goOn`, which hands each bird a V
+  slot and lets it ease across). **Open for Jeremy:** whether a resting-then-lifting family can or should be staged
+  close instead; the swans agent was asked for an opinion.
+- Gusts count as lift under the cygnet (`tuning.colt.gustLift`), as they did for the colt: cursor movement is the
+  only verb. The home summit's `coax` swirl follows the cygnet.
+- The birches carry it in the satchel (`carry.stow()` on setting off).
+- Gates on `main` after the merge: the same marginal misses as before (gather jerk 0.0211, gap 0.0649; down jerk
+  0.0241, gap 0.0678; walk turn 0.1018). The crest scene runs end to end at 60 fps with no console errors.
+
+In flight (2026-09-18), Opus 5, one parcel each, forked from `main`: **look pass two** in
+`/private/tmp/updraft-cyg-look2` (branch `cygnet-look2-b`, port 5263) and **swans polish and the crest** in
+`/private/tmp/updraft-cyg-swans2` (branch `cygnet-swans2-b`, port 5264). **Pose and timing** follows once look pass
+two has landed, because both touch `traveller/body.ts`.
+
+The rest of this section is the record from the branch.
 
 Done on `cygnet`:
 - Names; the QA stage (`?chapter=stage`, `story/stage.ts`: `play(name)` including `act:<name>`, `shore`, `swim`;
