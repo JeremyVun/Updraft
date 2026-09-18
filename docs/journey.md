@@ -189,6 +189,41 @@ After playing the cygnet, the swans and the rooms on `main` (2026-09-18, verbati
 > little maybe, as well as make the boats sails flap more noticeably, but it shouldn't cause the water to look too
 > much different otherwise."
 
+On the meadow's opening (2026-09-18, verbatim, with a screenshot of the landing: green shore, grey interior):
+
+> "we need to rethink two things on the meadows stage. 1) the shore being colourful and then the interior being grey,
+> and then suddenly turning completely colourful when the level starts is a bit odd. Any ideas how to make this
+> better? Should we keep the colouring mechanic here? or keep it auto coloured? Or any other ideas that fit within
+> the theme of the game? 2) we have to be careful of the paddock / stone fences crossing perpendicular to the
+> player's path. It reads to the player as "you can't cross here, go around", but they actually can go through. The
+> level needs to be mindful about how it unconsciously communicates the direction the player needs to go."
+
+Offered (a) the meadow already alive, with the first gust sending one great visible wave of WIND across it. His answer:
+
+> "yea i think option (a) makes the most sense. I think we should also be a bit more careful about how we do the
+> camera leading up to the meadows island, and also maybe have it so the child has to climb up a bit to see more of
+> the meadow, otherwise there's no surprise left by the time they reach the island since they saw the whole thing
+> from the boat already.
+>
+> Alternatively, im wondering if we can use the piano as the key. So the whole island is gray, but the piano is in a
+> patch of colour, which draws the player there. As you complete each part of the piano challenge, colour starts
+> returning to the whole island, or maybe all at the end of the challenge?"
+
+**Plan (lead's recommendation, 2026-09-18; Jeremy may still prefer plain (a)): the piano is the key.** The whole
+island is asleep and grey, shore included, seen from the boat only as a hazy shape (thicker haze on `toMeadow`, the
+camera low and close to the boat). The landing is a cove under a bank: from the beach, sand, bank and sky. The
+child climbs, and the first sight over the top is the grey meadow with ONE patch of colour and a piano standing in
+it, about a minute's walk from the landing and on the route, not beside it. Each phrase of the lullaby answered
+wakes more: the hollow round the piano, then out to the crest, then on the finale the whole island, carried on
+(a)'s wave of wind through the grass to the far hills. Never gated: unanswered, the piano finishes the tune itself
+and the island still wakes, more quietly, so nobody walks the crest and the pond in grey.
+
+**Standing rule for every room: nothing long and straight lies across the route without a visible way through ON
+the route.** A wall, fence, hedge or line across the path says "stop, go round"; one running along it says "this
+way". Walls near a walk run with it or funnel toward it (a drove road), and any that must cross has a gap, stile or
+open gate exactly where the path goes, readable from where the player first sees it. The worn path, the plane's
+lean, flowers and gaps all agree.
+
 On the piano as a puzzle (2026-09-18): "yea good idea for the piano as a puzzle, approved". The idea approved: **call
 and response.** The piano says a short phrase of a lullaby by itself, keys dipping; a sweep of wind along the keys
 the way the phrase went plays it back, and the piano goes on to the next (rising, falling, over the top and home);
