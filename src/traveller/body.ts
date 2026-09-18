@@ -111,28 +111,35 @@ export function buildChild(): Rig {
   const coat = paint(new THREE.LatheGeometry(coatProfile, 20), PALETTE.coat);
   const hem = paint(at(new THREE.TorusGeometry(0.585, 0.045, 6, 24).rotateX(Math.PI / 2), 0, 0.02, 0), PALETTE.coatShade);
   /**
-   * The satchel is the cygnet's seat, and the game is played from behind the child, so it is an open-topped basket of
-   * a bag with its lid folded back: four low walls and a floor round the `satchel` socket, deep enough to hold a bird
-   * by the flanks and shallow enough that all of it above the wing is in shot.
+   * The satchel is the cygnet's seat, and the game is played from behind the child, so it is a soft pouch of a bag
+   * that the bird sits down INTO rather than on: one rounded body of worn leather sagging under the weight, pressed
+   * against the coat, with a slack mouth round the top. The mouth is tipped so its far edge — the one the camera
+   * behind is looking over — is a good way lower than the edge against the child's back. That is what lets the
+   * cygnet be nestled in deep and still show its breast, neck and head over the rim from directly behind.
    */
-  const LEATHER = new THREE.Color('#7d5738');
-  const RIM = new THREE.Color('#9c7248');
+  const LEATHER = new THREE.Color('#8d6440');
+  const WORN = new THREE.Color('#78543a');
+  const RIM = new THREE.Color('#b0855a');
   const bag: THREE.BufferGeometry[] = [];
-  const panel = (w: number, h: number, d: number, x: number, y: number, z: number, color: THREE.Color) =>
-    bag.push(paint(at(new THREE.BoxGeometry(w, h, d), x, y, z), color));
-  panel(0.49, 0.05, 0.3, 0, 0.605, -0.55, LEATHER);
-  panel(0.49, 0.24, 0.045, 0, 0.72, -0.695, LEATHER);
-  panel(0.49, 0.2, 0.045, 0, 0.7, -0.405, LEATHER);
-  for (const s of [-1, 1]) panel(0.045, 0.24, 0.3, s * 0.223, 0.72, -0.55, LEATHER);
-  /** A rolled rim all the way round the mouth, so the opening reads as an opening from any angle. */
-  panel(0.53, 0.05, 0.055, 0, 0.845, -0.7, RIM);
-  panel(0.53, 0.05, 0.055, 0, 0.81, -0.4, RIM);
-  for (const s of [-1, 1]) panel(0.055, 0.05, 0.31, s * 0.235, 0.845, -0.55, RIM);
-  /** The lid, unbuckled and hanging down the back: what makes an open bag read as a satchel and not as a crate. */
-  bag.push(paint(at(new THREE.BoxGeometry(0.47, 0.26, 0.04).rotateX(-0.16), 0, 0.72, -0.75), RIM));
-  bag.push(paint(at(new THREE.SphereGeometry(0.04, 8, 6), 0, 0.61, -0.775, 1, 1, 0.6), PALETTE.coatShade));
-  /** Two straps over the shoulders, only as far forward as the coat's own curve, so they lie on it and never in it. */
-  for (const s of [-1, 1]) bag.push(paint(at(new THREE.BoxGeometry(0.08, 0.03, 0.5).rotateX(-0.5), s * 0.175, 0.95, -0.44), LEATHER));
+  const ball = (rx: number, ry: number, rz: number, x: number, y: number, z: number, color: THREE.Color, seg = 16) =>
+    bag.push(paint(at(new THREE.SphereGeometry(1, seg, Math.round(seg * 0.7)), x, y, z, rx, ry, rz), color));
+  ball(0.29, 0.25, 0.29, 0, 0.79, -0.56, LEATHER, 18);
+  /** The belly of the bag, slumped below the rest of it: a bag with something heavy in it does not keep its shape. */
+  ball(0.265, 0.15, 0.265, 0, 0.675, -0.555, WORN, 14);
+  /**
+   * The mouth: a slack ring lying on the pouch where the pouch is that wide, so it reads as the bag's own opening
+   * and not as a hoop over it. Tipped so its far edge sits a hand's breadth below the edge against the coat.
+   */
+  const mouth = new THREE.TorusGeometry(0.27, 0.04, 7, 24).rotateX(Math.PI / 2).rotateX(-0.34);
+  bag.push(paint(at(mouth, 0, 0.95, -0.56, 0.98, 1, 0.95), RIM));
+  /** The lid, unbuckled and flopped down the back, and the buckle it is not fastened to. */
+  bag.push(paint(at(new THREE.SphereGeometry(1, 14, 10).rotateX(-0.22), 0, 0.78, -0.825, 0.235, 0.17, 0.035), RIM));
+  bag.push(paint(at(new THREE.SphereGeometry(0.038, 8, 6), 0, 0.63, -0.815, 1, 1, 0.6), PALETTE.coatShade));
+  /** Straps over the shoulders and down the chest, following the coat's own curve so they lie on it and never in it. */
+  for (const s of [-1, 1]) {
+    bag.push(paint(at(new THREE.BoxGeometry(0.08, 0.03, 0.5).rotateX(-0.5), s * 0.185, 1.02, -0.43), LEATHER));
+    bag.push(paint(at(new THREE.BoxGeometry(0.075, 0.03, 0.44).rotateX(0.62), s * 0.195, 0.86, 0.29), LEATHER));
+  }
   const satchel = mergeGeometries(bag)!;
   const buttons = [0.35, 0.58, 0.8].map((y) =>
     paint(at(new THREE.SphereGeometry(0.035, 6, 4), 0, y, 0.43 - y * 0.12), PALETTE.coatShade),
@@ -208,8 +215,11 @@ export function buildChild(): Rig {
   const sockets = {
     /** In against the chest, and near enough that both mittens can rest on it without the arms running out of reach. */
     cradle: socket(body, 0, 0.79, 0.5),
-    /** High in the bag and a little back of its middle, so the breast and the whole neck clear the rim from behind. */
-    satchel: socket(body, 0, 0.91, -0.585),
+    /**
+     * Down inside the bag, not on it: its flanks and folded wings are in the pouch and the rim closes round them,
+     * with the breast against the coat and the shoulders clear of the low back edge of the mouth.
+     */
+    satchel: socket(body, 0, 0.89, -0.545),
     shoulder: socket(body, -0.3, 1.04, -0.02),
     lap: socket(body, 0, 0.16, 0.52),
   };
