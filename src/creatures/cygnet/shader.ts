@@ -131,18 +131,20 @@ in float vShell;
 #endif
 
 /**
- * Linear, and far lower than they look: the golden sun here is worth about 2.7, so anything pale burns out to white.
- * A cygnet is grey — but a warm grey, cool in shadow, so it belongs to the light it stands in.
+ * Linear albedo, on the same scale as every other creature: the adult swans' plume is 0.72 here. A mute cygnet is
+ * pale — silver-grey on the back, warm fawn-white on the face, breast and belly — so its darkest down still sits
+ * well above a quarter, and only the bill, the lores, the legs and the eye are allowed to be dark. Anything lower
+ * reads as charcoal the moment it is past the distance where the coat's own shells still catch the light.
  */
-const vec3 NAPE = vec3(0.033, 0.031, 0.029);
-const vec3 DOVE = vec3(0.063, 0.060, 0.056);
-const vec3 MILK = vec3(0.112, 0.108, 0.100);
-const vec3 SNOW = vec3(0.40, 0.395, 0.378);
-const vec3 SLATE = vec3(0.028, 0.025, 0.028);
-const vec3 NAIL = vec3(0.078, 0.057, 0.052);
-const vec3 LEG = vec3(0.034, 0.032, 0.038);
-const vec3 VANE = vec3(0.068, 0.066, 0.069);
-const vec3 VANE_TIP = vec3(0.124, 0.122, 0.119);
+const vec3 NAPE = vec3(0.285, 0.272, 0.250);
+const vec3 DOVE = vec3(0.450, 0.436, 0.404);
+const vec3 MILK = vec3(0.640, 0.624, 0.576);
+const vec3 SNOW = vec3(0.860, 0.850, 0.812);
+const vec3 SLATE = vec3(0.120, 0.100, 0.102);
+const vec3 NAIL = vec3(0.250, 0.176, 0.166);
+const vec3 LEG = vec3(0.052, 0.049, 0.058);
+const vec3 VANE = vec3(0.398, 0.390, 0.398);
+const vec3 VANE_TIP = vec3(0.570, 0.562, 0.548);
 const vec3 IRIS = vec3(0.004, 0.004, 0.005);
 
 float hash13(vec3 p) {
@@ -162,9 +164,14 @@ bool strand(vec3 rest, float t) {
   vec3 q = rest * uStrand;
   vec3 c = floor(q);
   vec3 f = fract(q) - 0.5;
-  float h = hash13(c + 9.1);
-  /** Soaked, most of the coat sticks together and the rest hangs in points. */
-  if (h < uClump) return false;
+  vec3 r = hash33(c + 9.1);
+  float h = r.x;
+  /**
+   * Soaked, most of the coat sticks together and the rest hangs in points. Which cells stick has to come out of a
+   * hash that mixes all three axes: a weaker one leaves whole planes of the lattice clumping together, which on the
+   * crown reads as ruled diagonal lines rather than as wet down.
+   */
+  if (fract(r.y + r.z * 7.13) < uClump) return false;
   float g = t / mix(0.55, 1.0, h);
   return g <= 1.0 && length(f - (hash33(c) - 0.5) * 0.44) < uFat * (1.0 - g * g * 0.97);
 }
@@ -216,12 +223,13 @@ void main() {
     fuzz *= 1.0 - 0.9 * lore;
   }
   /** Soaked down is darker and warmer, the colour of wet wool, not of grey gone flat. */
-  alb *= mix(vec3(1.0), vec3(0.4, 0.375, 0.35), uWet);
+  alb *= mix(vec3(1.0), vec3(0.52, 0.485, 0.45), uWet);
   fuzz *= 1.0 - 0.7 * uWet;
 #ifdef SHELL
-  /** Down is dark at the root and catches everything at the tip, which is the whole of why a coat looks soft. */
-  alb *= mix(mix(0.66, 0.44, uWet), 0.96, vShell);
-  ao = mix(0.72, 1.0, vShell);
+  /** Down is shaded at the root and catches everything at the tip, which is the whole of why a coat looks soft.
+      The root only has to be a shade, not a darkness: this is a pale bird, and depth here comes from the gradient. */
+  alb *= mix(mix(0.80, 0.62, uWet), 1.0, vShell);
+  ao = mix(0.84, 1.0, vShell);
   fuzz = 0.38 * (1.0 - 0.7 * uWet);
   thin = 0.34;
 #endif
@@ -230,15 +238,15 @@ void main() {
    * Once the down has lain down with distance this skin is the whole bird, not the dark roots under a coat, so it
    * takes over the coat's own value. Without it the cygnet is pale close up and a charcoal lump from the camera.
    */
-  alb *= mix(1.34, 1.0, vFade);
-  ao = mix(0.98, ao, vFade);
+  alb *= mix(1.12, 1.0, vFade);
+  ao = mix(0.96, ao, vFade);
 #endif
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
   /**
    * A pale bird stays pale out of the sun. Without this it takes the whole of its shaded value from a warm ground
    * bounce meant for brown animals and goes charcoal the moment a cloud or the child's shoulder is over it.
    */
-  col += alb * uSkyAmbient * (0.2 + 0.22 * (N.y * 0.5 + 0.5));
+  col += alb * uSkyAmbient * (0.10 + 0.13 * (N.y * 0.5 + 0.5));
   if (uWet > 0.0 && m != ${EYE}) {
     /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
     vec3 V = normalize(cameraPosition - vWorld);
