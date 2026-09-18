@@ -234,9 +234,7 @@ function coil(x: number, z: number, turns: number, outer: number): Part[] {
 
 /** A creel: a withy frame bent over a flat base, with the slats that keep the lobsters in. */
 function creel(x: number, z: number, yaw: number): Part[] {
-  const out: Part[] = [];
-  const parts: Part[] = [];
-  parts.push(part(new THREE.BoxGeometry(0.74, 0.07, 0.52).translate(0, 0.035, 0), WOOD.withy));
+  const parts: Part[] = [part(new THREE.BoxGeometry(0.74, 0.07, 0.52).translate(0, 0.035, 0), WOOD.withy)];
   for (let i = 0; i < 4; i++) {
     const hoop = new THREE.TorusGeometry(0.26, 0.022, 4, 10, Math.PI);
     hoop.translate(0, 0.07, -0.19 + i * 0.127);
@@ -247,12 +245,7 @@ function creel(x: number, z: number, yaw: number): Part[] {
     rod.translate(Math.cos(a) * 0.26, 0.07 + Math.sin(a) * 0.26, 0);
     parts.push(part(rod, WOOD.iron));
   }
-  for (const [geo, color] of parts) {
-    geo.rotateY(yaw);
-    geo.translate(x, DECK, z);
-    out.push(part(geo, color));
-  }
-  return out;
+  return parts.map(([geo, color]) => part(geo.rotateY(yaw).translate(x, DECK, z), color));
 }
 
 /** A galvanised bucket with a wire handle, standing where it was set down. */
@@ -303,6 +296,7 @@ function lampPost(x: number, z: number): Part[] {
   return out;
 }
 
+/** The plane the shadow is drawn on: the water the jetty stands in, out to as far as a low sun can throw it. */
 function shadow(): THREE.Mesh {
   const reach = 7;
   const geo = new THREE.PlaneGeometry(HEAD.half * 2 + reach * 2, HALF_LENGTH * 2 + reach * 2);
@@ -325,7 +319,7 @@ function shadow(): THREE.Mesh {
   return mesh;
 }
 
-/** The whole jetty: one merged mesh under one shader, standing where `HOME_JETTY` says it does. */
+/** The whole jetty: all its timber merged into one mesh, with its shadow on the water under it. */
 export function createJetty(): THREE.Object3D {
   const rand = mulberry32(4711);
   const geo = build([
