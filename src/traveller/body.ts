@@ -120,19 +120,19 @@ export function buildChild(): Rig {
   const bag: THREE.BufferGeometry[] = [];
   const panel = (w: number, h: number, d: number, x: number, y: number, z: number, color: THREE.Color) =>
     bag.push(paint(at(new THREE.BoxGeometry(w, h, d), x, y, z), color));
-  panel(0.44, 0.05, 0.3, 0, 0.605, -0.55, LEATHER);
-  panel(0.44, 0.24, 0.045, 0, 0.72, -0.695, LEATHER);
-  panel(0.44, 0.2, 0.045, 0, 0.7, -0.405, LEATHER);
-  for (const s of [-1, 1]) panel(0.045, 0.24, 0.3, s * 0.2, 0.72, -0.55, LEATHER);
+  panel(0.49, 0.05, 0.3, 0, 0.605, -0.55, LEATHER);
+  panel(0.49, 0.24, 0.045, 0, 0.72, -0.695, LEATHER);
+  panel(0.49, 0.2, 0.045, 0, 0.7, -0.405, LEATHER);
+  for (const s of [-1, 1]) panel(0.045, 0.24, 0.3, s * 0.223, 0.72, -0.55, LEATHER);
   /** A rolled rim all the way round the mouth, so the opening reads as an opening from any angle. */
-  panel(0.48, 0.05, 0.055, 0, 0.845, -0.7, RIM);
-  panel(0.48, 0.05, 0.055, 0, 0.81, -0.4, RIM);
-  for (const s of [-1, 1]) panel(0.055, 0.05, 0.31, s * 0.21, 0.845, -0.55, RIM);
+  panel(0.53, 0.05, 0.055, 0, 0.845, -0.7, RIM);
+  panel(0.53, 0.05, 0.055, 0, 0.81, -0.4, RIM);
+  for (const s of [-1, 1]) panel(0.055, 0.05, 0.31, s * 0.235, 0.845, -0.55, RIM);
   /** The lid, unbuckled and hanging down the back: what makes an open bag read as a satchel and not as a crate. */
-  bag.push(paint(at(new THREE.BoxGeometry(0.42, 0.26, 0.04).rotateX(-0.16), 0, 0.72, -0.75), RIM));
+  bag.push(paint(at(new THREE.BoxGeometry(0.47, 0.26, 0.04).rotateX(-0.16), 0, 0.72, -0.75), RIM));
   bag.push(paint(at(new THREE.SphereGeometry(0.04, 8, 6), 0, 0.61, -0.775, 1, 1, 0.6), PALETTE.coatShade));
-  /** Two straps over the shoulders, which is what holds it where it is and ties it into the coat. */
-  for (const s of [-1, 1]) bag.push(paint(at(new THREE.BoxGeometry(0.075, 0.03, 0.95).rotateX(-0.42), s * 0.17, 0.98, -0.16), LEATHER));
+  /** Two straps over the shoulders, only as far forward as the coat's own curve, so they lie on it and never in it. */
+  for (const s of [-1, 1]) bag.push(paint(at(new THREE.BoxGeometry(0.08, 0.03, 0.5).rotateX(-0.5), s * 0.175, 0.95, -0.44), LEATHER));
   const satchel = mergeGeometries(bag)!;
   const buttons = [0.35, 0.58, 0.8].map((y) =>
     paint(at(new THREE.SphereGeometry(0.035, 6, 4), 0, y, 0.43 - y * 0.12), PALETTE.coatShade),
