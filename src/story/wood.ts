@@ -510,18 +510,18 @@ export class WoodChapter implements Chapter {
     /** And when one takes, the camera turns further into the light for a moment, because they both looked. */
     const rush = Math.max(0, 1 - (this.now - this.flared) / 1.4);
     const near = this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
-    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (near ? 0.34 : 0.42 + rush * 0.3);
+    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (near ? 0.3 : 0.42 + rush * 0.3);
     const dx = (this.glow.x - c.x) * lean;
     const dz = (this.glow.z - c.z) * lean;
     s.target.set(c.x + dx, ground + 1.9, c.z + dz);
     /**
      * The eye is placed on the ground behind them rather than hung a fixed height above the target, because the
      * wood is a steep dome and a fixed height put the camera in the hillside going up and in the air coming down.
-     * It also slides the opposite way to the lean, so turning toward the light swings the camera round the child
-     * instead of panning off them: whatever the frame is looking at, they are still standing in it.
+     * It stays put behind them however far the frame leans toward the light: sliding it as well turned the child
+     * out of the picture altogether, which is the one thing this room is not allowed to do.
      */
-    const ex = c.x + 1.1 - dx * 0.8;
-    const ez = c.z + 13 - dz * 0.8;
+    const ex = c.x + 1.1;
+    const ez = c.z + 13;
     s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 4.2, ez);
     /** The camera is quick to the fright and slow through the searching, which is how the two feel. */
     this.pace = this.beat === 'bolt' ? 1.1 : near ? 0.45 : 0.9;
