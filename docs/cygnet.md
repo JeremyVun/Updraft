@@ -215,10 +215,29 @@ Landed on `main` 2026-09-18 from Opus 5 parcels, each accepted on a look at its 
   up it is pale; past the distance where the down shells fade it is not. This is the first thing for the next look
   parcel, with the boxy bag, its front rim and the shoulder pivots.
 
-Next: the full playthrough (running 2026-09-18), then one more Opus look parcel (above, plus the haze fix: the
-drowned village's steeple shows from the meadow crest as well as from the birches), the swans' steady heads, the
-cygnet on the piano keys, the sleeping island. Waiting on Jeremy: the crest staging (wheel, or a raft on a pond near
-the crest), and his ears on the foley, the cries and the piano.
+Playthrough (2026-09-18): clean from the first island to the end of the meadow walk, 60 fps; the script ends there
+and does not drive the later rooms.
+
+From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `main`:
+- Flying (`217e240`): a try's run becomes the take-off when there is wind under it; it feels for wind in a ring
+  (`tuning.colt.reach`); runs come back to `trodden`; plain gusts count as lift only where the chapter's
+  `invitesFlight` is true; `mayFly` false in the wood; the twirl winds up sooner.
+- Pale cygnet and the pouch (`14e474d`): the palette was 8-10x darker than every other creature (DOVE 0.06 linear
+  against the swans' 0.72); rescaled, hacks unwound, the crate replaced by a soft pouch it nestles into, the
+  shoulder pivots forward so the regard clears the face. Then, Jeremy: "too pale now"; duskier (`a39e0df`): warm
+  taupe, DOVE 0.23 / MILK 0.33 / SNOW 0.55, the shell rim `fuzz` 0.20→0.09 (the rim term, not the palette, is what
+  makes it read white), a warm sky fill at dusk.
+- Birches (`6ddc6b3`): a litter field the wind transports (swept bare behind a gust, drift where it dies), leaves
+  that skitter, lift and settle elsewhere, four heaps with an angle of repose, the cygnet's dive into the hollow's
+  heap (`delve` act, `cygnet.errand`), the island 60×80 with a rise and a hollow, haze 0.97. Short: the leaf devil
+  does not isolate in a wood already full of gold; heaps read flatter from the walking camera.
+- The piano (`48b7422`, `184992f`): a struck-string tone (unheard by anyone yet), and the approved call-and-response
+  duet; still to do by eye: the cygnet on the keys, the island answering each phrase (the piano is the key that
+  wakes the grey meadow: see `journey.md`), the child sitting AT it.
+
+In flight: the pond crest (`/private/tmp/updraft-fb-pond`), the wood teaching its embers (`/private/tmp/updraft-fb-wood`).
+Queued: the meadow's opening (grey island, cove and climb, the piano's patch of colour, colour by phrase, the wall
+rule), the water under the cursor, the swans' steady heads, the sleeping island.
 
 The rest of this section is the record from the branch.
 
