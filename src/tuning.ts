@@ -229,18 +229,19 @@ export const tuning = {
     sag: 1.8,
     yawThrow: 0.45,
     wingDrop: 0.6,
-    /** The bank it holds by the last lap, in radians. */
+    /** The bank it holds by the last lap, in radians, and the seconds it spends leaning over to look down at the child. */
     bank: 0.55,
-    /** Where it comes round to hang in front of the child's face, and how high above their feet. */
+    looksFor: 2.8,
+    /** Where it comes round to hang in front of the child's face, and how high above their feet: clear of the hill. */
     hangAt: 4.2,
-    hangHigh: 3.4,
+    hangHigh: 4.5,
     /** Nose-up of the flare it stops on, and of the hang it holds while it calls. */
     flare: 0.72,
     /** Wingbeats a second of the flutter that holds it there. */
     hangBeat: 3.6,
     /** Seconds into the flight to its family at which the last over-correction comes, and how long it lasts. */
-    wonkAt: 1.5,
-    wonkFor: 1.4,
+    wonkAt: 1.3,
+    wonkFor: 1.2,
     /** How far it bobs in the last place of the V once it has it: a station held, but not the way its family holds one. */
     joinBob: 0.32,
   },

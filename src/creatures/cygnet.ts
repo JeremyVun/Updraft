@@ -348,8 +348,8 @@ export class Cygnet {
     this.watch(null);
     this.leftFor = 0;
     this.leave(this.yaw);
-    /** It is already flying when it turns for them, so it goes after them with the speed the circuit left it. */
-    this.climb = 0.45;
+    /** It stopped itself dead to say goodbye, so it has to find its speed again — but it knows how to now. */
+    this.climb = 0.1;
   }
 
   /** On its way and not coming back. */
@@ -675,21 +675,21 @@ export class Cygnet {
     /** The pitch is whatever the climb is really doing, so a sag drops the nose and the recovery lifts it. */
     const rise = dt > 0 ? (p.y - was) / dt : 0;
     this.pitch = ease(this.pitch, clamp(-rise * 0.16, -0.4, 0.45), 4, dt);
+    /**
+     * Halfway round it remembers who is down there, and puts a wing down to see them: the head turning alone is
+     * nothing at this distance, so the whole bird leans over into the look and that is what the player reads.
+     */
+    const looking = Math.max(0, Math.sin(((t - f.loopFor * 0.42) / f.looksFor) * Math.PI));
+    this.craning = ease(this.craning, looking * 0.6, 2.5, dt);
+    this.watch(looking > 0.05 ? this.watching.set(child.x, child.y + 1.55, child.z) : null);
     const heading = Math.atan2(Math.cos(a), -Math.sin(a) * f.squash);
     this.yaw = easeAngle(this.yaw, heading + (drift - lurch) * f.yawThrow, 2.2 + 2.5 * steady, dt);
-    this.roll = ease(this.roll, -f.bank * (0.3 + 0.7 * steady) + (drift - lurch * 1.4) * f.wingDrop, 2.5 + 2 * steady, dt);
+    this.roll = ease(this.roll, -f.bank * (0.3 + 0.7 * steady + looking * 0.6) + (drift - lurch * 1.4) * f.wingDrop, 2.5 + 2 * steady, dt);
     /** `pose` adds the body's own idle beat to the phase, so what is asked for here is the stroke over and above it. */
     this.flapPhase += dt * (Math.PI * 2 * lerp(f.beatFrom, f.beatTo, steady) - (5 + this.glide * 3));
     this.effort = 0.8 - 0.35 * steady;
     this.trim = ease(this.trim, 0.1 + 0.28 * steady, 2, dt);
     this.tucked = ease(this.tucked, 0.3 + 0.6 * steady, 1.5, dt);
-    /**
-     * Halfway round it remembers who is down there. A fledgling in the air looks about it the whole time; this is
-     * the one look the scene is for, and it is the last thing it does before it comes round to say goodbye.
-     */
-    const looking = t > f.loopFor * 0.45 && t < f.loopFor * 0.45 + 2.6;
-    this.craning = ease(this.craning, looking ? 0.55 : 0, 2.5, dt);
-    this.watch(looking ? this.watching.set(child.x, child.y + 1.55, child.z) : null);
   }
 
   /**
@@ -751,7 +751,7 @@ export class Cygnet {
       const dz = target.z - p.z;
       const gap = Math.hypot(dx, dz);
       this.yaw = easeAngle(this.yaw, Math.atan2(dx, dz) + wonk * 0.3, this.joined ? 3 : 1.8, dt);
-      const speed = Math.min(4 + this.climb * 9.5, 3 + gap * 1.2);
+      const speed = Math.min(3.5 + this.climb * 9.5, 3 + gap * 1.2);
       p.x += Math.sin(this.yaw) * speed * dt;
       p.z += Math.cos(this.yaw) * speed * dt;
       p.y += clamp((target.y - p.y) * 0.9, -2.5, 3.2) * dt;

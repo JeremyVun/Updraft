@@ -530,11 +530,14 @@ export class HomeChapter implements Chapter {
       const k = this.cast.cygnet.position;
       const f = tuning.fledge;
       const open = THREE.MathUtils.smoothstep(this.t / (f.loopFor + f.swingFor), 0, 1);
+      /** And in again as it breaks off the circuit, so the goodbye is nearer than anything else in the sequence. */
+      const near = THREE.MathUtils.smoothstep(this.t, f.loopFor, f.loopFor + f.swingFor);
       s.from = FROM_SOUTH;
       s.target.set(c.x, c.y + 1.7 + THREE.MathUtils.clamp((k.y - c.y) * 0.5, 0, 5), c.z + f.offset);
-      s.distance = 14 + 4.5 * open;
+      s.distance = 14 + 4.5 * open - 4 * near;
       s.height = THREE.MathUtils.clamp(c.y + 2.6 - s.target.y, -9, 2);
-      this.pace = 0.5;
+      /** It arrives on this framing rather than gliding onto it for a third of the circuit, and then it settles. */
+      this.pace = 0.45 + 0.8 * (1 - open);
       this.focus.copy(k);
       return;
     }
