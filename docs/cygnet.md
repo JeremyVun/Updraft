@@ -236,9 +236,22 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   duet; still to do by eye: the cygnet on the keys, the island answering each phrase (the piano is the key that
   wakes the grey meadow: see `journey.md`), the child sitting AT it.
 
-In flight: the pond crest (`/private/tmp/updraft-fb-pond`), the wood teaching its embers (`/private/tmp/updraft-fb-wood`).
-Queued: the meadow's opening (grey island, cove and climb, the piano's patch of colour, colour by phrase, the wall
-rule), the water under the cursor, the swans' steady heads, the sleeping island.
+- The pond crest (`a25656f`): a pond in a hollow 51 units past the crest (`world/pond.ts`, carved in the heightfield),
+  the family resting on it from the chapter's first frame, bugling heard before the crest, the beat crest → down →
+  try, the family's pattering run and V north, the set-down at the edge, runs along the shore, the try camera
+  looking out over the water, the coax sooner; 8 of 8 test circles flew it; splash-down and paddle back. Swan heads
+  steady, ripple rings, the wash no longer lingers. Short: the far bank reads as a dark smear from the crest (grass
+  lit only by sky); water reflects sky only; the crest measured 47 fps once while two agents' Chromes were busy,
+  unconfirmed.
+- The wood (`32b2462`): coals the player's gusts catch, flare and burn down; one first coal in the first view; a
+  chain laid one at a time at the edge of the last light; cinders stirred by any gust; firelight on the floor; the
+  bolt runs across frame and the bird's coal is the one thing to blow on; the camera behind the way they are going;
+  the exits kept. Short: foreground branches during the search; the finding can come within ~10 s.
+
+In flight: the meadow's opening (`/private/tmp/updraft-fb-meadow`: grey island, cove and climb, the piano's patch of
+colour, colour by phrase, the cygnet on the keys, the wall rule), the water under the cursor
+(`/private/tmp/updraft-fb-water`). Queued: the sleeping island; re-measure the crest's frame rate when nothing else
+is capturing. A peer session is polishing the ending (dolphins, summit, fledging, credits).
 
 The rest of this section is the record from the branch.
 
