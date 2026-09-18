@@ -191,6 +191,11 @@ export class MeadowChapter implements Chapter {
     return this.beat === 'aboard';
   }
 
+  /** QA: how far the stop at the piano has got. */
+  get atPiano(): string {
+    return this.piano.at;
+  }
+
   /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
   get hush(): number {
     return Math.max(this.beatHush, this.piano.hush);
@@ -207,6 +212,20 @@ export class MeadowChapter implements Chapter {
     plane.hold(child.handPosition(this.hand), child.yaw);
     this.play = 'hold';
     this.duskTarget = this.dusk = 0.45;
+    this.to('walk');
+  }
+
+  /** For testing: a few paces short of the piano, on a sleeping island, with the walk still to do. */
+  skipToPiano(): void {
+    const { child, cygnet, plane } = this.cast;
+    this.leg = 0;
+    child.stop();
+    child.place(PIANO_AT.x + 7, PIANO_AT.z + 32, Math.PI);
+    child.standUp();
+    cygnet.rideIn('satchel');
+    cygnet.bind(0.06);
+    plane.hold(child.handPosition(this.hand), child.yaw);
+    this.play = 'hold';
     this.to('walk');
   }
 

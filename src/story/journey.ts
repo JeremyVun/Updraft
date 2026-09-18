@@ -84,6 +84,10 @@ export class Journey {
     } else if (start === 'meadow' || start === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
+    } else if (start === 'piano') {
+      this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
+      this.begin('meadow');
+      (this.chapter as MeadowChapter).skipToPiano();
     } else if (start === 'birches' || start === 'autumn') {
       this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
       this.begin('birches');

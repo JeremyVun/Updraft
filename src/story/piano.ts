@@ -13,8 +13,10 @@ type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' |
 export type Waking = 1 | 2 | 3;
 
 /** How near the child has to come before they notice it, and how far past it they can get before it is missed. */
-const NOTICE = 15;
-const GIVE_UP = 95;
+const NOTICE = 26;
+const GIVE_UP = 190;
+/** They are level with it and still walking: near enough, they go over to it rather than leave it behind. */
+const PASSING = 60;
 /** Nothing in this stop may hold the walk up for longer than this, whatever goes wrong with a leg of it. */
 const PATIENCE = 22;
 /** How long they take to lower themselves onto the stool. */
@@ -70,6 +72,11 @@ export class PianoStop {
   /** Round to the sunward side of the piano's front, so the case is rimmed and the child is in profile. */
   private readonly side = new THREE.Vector3(Math.sin(piano.yaw + 0.55), 0, Math.cos(piano.yaw + 0.55));
 
+  /** QA: how far the stop has got, from noticing it to walking on. */
+  get at(): string {
+    return this.beat;
+  }
+
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
     return this.hushed;
@@ -79,7 +86,7 @@ export class PianoStop {
   waypoint(next: THREE.Vector2, child: THREE.Vector3): THREE.Vector2 {
     if (this.beat === 'done') return next;
     /** Once they are past it, or well west of it and on their way up the walk, the stop is behind them. */
-    const past = child.z < piano.keys.z - 12 || child.x < piano.keys.x - 20;
+    const past = child.z < piano.keys.z - 26 || child.x < piano.keys.x - 34;
     if (past || Math.hypot(child.x - piano.keys.x, child.z - piano.keys.z) > GIVE_UP) {
       this.beat = 'done';
       return next;
@@ -94,13 +101,16 @@ export class PianoStop {
     this.hushed += ((this.beat === 'seated' ? tuning.piano.hush : 0) - this.hushed) * (1 - Math.exp(-dt * 0.8));
 
     switch (this.beat) {
-      case 'ahead':
-        if (Math.hypot(c.position.x - piano.stand.x, c.position.z - piano.stand.z) < NOTICE) {
+      case 'ahead': {
+        /** The walk follows the plane, not the waypoints, so it can wander by: level with the piano they go to it. */
+        const gap = Math.hypot(c.position.x - piano.stand.x, c.position.z - piano.stand.z);
+        if (gap < NOTICE || (gap < PASSING && c.position.z < piano.keys.z + 8)) {
           c.stop();
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 0.7);
           this.to('walking');
         }
         break;
+      }
       case 'walking':
         c.lookAt = piano.keys;
         /** If anything at all keeps them from reaching it, the stop is simply missed. Nobody is stranded here. */
