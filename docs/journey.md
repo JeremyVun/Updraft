@@ -380,7 +380,7 @@ waits for the water-shading session, because it is built on the sea.
 | the autumn birches | **built** and accepted on a look at its screenshots (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`). Known weak spot: a gust lands where the cursor meets the ground, which from the walking camera is often far up the ride, so the cloud it tears off can be small in frame. |
 | kite and pinwheels on the island of lines | **built** and accepted (`world/kite.ts`, `world/pinwheels.ts`): a red-footed paper diamond with a bow tail tied off beside the boat, and rows of two-tone paper wheels a gust runs down. The kite flies leaning rather than upright, because its spine lies along its string. |
 | the piano on the meadow | **built** and now the key to the room (`world/piano.ts`, `story/piano.ts`, `?chapter=piano`): it stands on the walk in the one patch of colour on a sleeping island, the child sits at the stool, the duet wakes the meadow phrase by phrase, and on the whole lullaby the cygnet climbs out onto the keys and walks them while the island wakes to the hills. **Nobody has heard it yet** — the tone was synthesised blind and needs Jeremy's ear. |
-| the sleeping island | waiting on the cygnet |
+| the sleeping island | **building** (2026-09-19): the world first (`sleeping-world`: island, bed and bedroom fragments, fog with carved lanes, frost, dawn, the contract in `docs/contracts/world.md`), then the story (feather, the bird's walk, the glide, the waking) as a second parcel on top. |
 | the sky mirror | waiting on the water session |
 
 The companion is now **a swan cygnet** (Jeremy, 2026-09-17), not a crane colt; wherever this document says colt or
