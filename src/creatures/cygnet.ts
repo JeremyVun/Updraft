@@ -42,6 +42,8 @@ export class Cygnet {
   readonly position = new THREE.Vector3();
   yaw = 0;
   state: CygnetState = 'flying';
+  /** False where the story will not have it flown at all: in the dark wood it stays on the ground whatever the wind does. */
+  mayFly = true;
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: Heard[] = [];
 
@@ -527,7 +529,9 @@ export class Cygnet {
     else this.passenger(dt);
 
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
-    if (afoot && lift > LIFT_TO_FLY && this.hopT <= 0 && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
+    /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
+    const running = this.hopT > 0 && this.hopT < HOP_FOR - 0.8 && this.faceplant === 0;
+    if (this.mayFly && afoot && lift > LIFT_TO_FLY && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
 
     this.glide = ease(this.glide, this.state === 'gliding' ? 1 : this.hope * 0.5, 3, dt);
     this.look.air =
@@ -564,6 +568,8 @@ export class Cygnet {
 
   private takeOff(): void {
     this.state = 'gliding';
+    this.hopT = 0;
+    this.hopLift = 0;
     this.glideT = 0;
     this.air = 2.4;
     this.settle = 0;

@@ -15,10 +15,10 @@ export const tuning = {
      * Tracing circles with the cursor winds up an updraft in the middle of them. The turning rates, in radians per
      * second on screen (6.3 is one loop a second), at which it starts to build and at which it builds fastest.
      */
-    twirlFrom: 4,
-    twirlFull: 8,
+    twirlFrom: 3,
+    twirlFull: 6.5,
     /** Updraft charge gained per second of full twirling, and lost per second once the twirling stops. */
-    chargeRate: 0.55,
+    chargeRate: 0.8,
     dischargeRate: 1.2,
   },
   swirl: {
@@ -108,7 +108,9 @@ export const tuning = {
      * How much of the gust energy brushed under the colt counts as rising air. It takes off above 0.5 of lift and
      * needs about 0.4 to stay up; energy tops out at 1.6 and fades in about a second, so it has to be kept up.
      */
-    gustLift: 0.6,
+    gustLift: 0.9,
+    /** How far round itself it also feels for wind, so the player's circles do not have to be dead centre on a moving bird. */
+    reach: 2,
     /** Seconds the colt is left trying in the meadow before the child gathers it up and walks on. */
     tryFor: 60,
   },

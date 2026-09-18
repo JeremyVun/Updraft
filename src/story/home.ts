@@ -79,6 +79,7 @@ export class HomeChapter implements Chapter {
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
 
   constructor(private readonly cast: Cast) {
+    cast.cygnet.mayFly = true;
     const { child, plane } = cast;
     plane.homeRadius = 70;
     child.dismount();
@@ -245,6 +246,10 @@ export class HomeChapter implements Chapter {
    * A few seconds after its first attempt the air around it starts to turn by itself, and asks a little harder for
    * as long as it stays on the ground: the last thing the player is asked to do is the thing they were shown.
    */
+  get invitesFlight(): boolean {
+    return this.beat === 'tries' || this.beat === 'flying';
+  }
+
   get coax(): Coax | null {
     const { cygnet } = this.cast;
     const trying = this.beat === 'tries' || this.beat === 'flying';

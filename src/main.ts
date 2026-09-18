@@ -220,6 +220,7 @@ const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 flock.objects.forEach((o) => scene.add(o));
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
@@ -404,7 +405,17 @@ function frame(now: number): void {
    * there it is the child's to gather up.
    */
   wind.sample(cygnet.position.x, cygnet.position.z, cygnetAir);
-  if (cygnet.state !== 'fallen') cygnetAir.lift += cygnetAir.energy * tuning.colt.gustLift;
+  /**
+   * It feels for the air a little way round itself as well as under it: circles drawn about a small bird put their
+   * wind beside it, not beneath it, and a column wound a stride ahead of a running one is under it when it counts.
+   */
+  for (let i = 0; i < 4; i++) {
+    const a = cygnet.yaw + i * Math.PI * 0.5;
+    wind.sample(cygnet.position.x + Math.sin(a) * tuning.colt.reach, cygnet.position.z + Math.cos(a) * tuning.colt.reach, cygnetAhead);
+    cygnetAir.lift = Math.max(cygnetAir.lift, cygnetAhead.lift);
+    cygnetAir.energy = Math.max(cygnetAir.energy, cygnetAhead.energy);
+  }
+  if (cygnet.state !== 'fallen' && story.current.invitesFlight) cygnetAir.lift += cygnetAir.energy * tuning.colt.gustLift;
   cygnet.update(dt, time, child.position, cygnetAir);
   carry.after();
   foley.setOutput(sound.output);

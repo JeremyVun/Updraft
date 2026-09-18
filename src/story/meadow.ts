@@ -305,6 +305,10 @@ export class MeadowChapter implements Chapter {
    * puts the wind under it, and finds out that they are the reason it can fly. Nothing is asked and nothing is
    * failed: if the player never does it, the child eventually gathers it up and walks on, and it will try again.
    */
+  get invitesFlight(): boolean {
+    return this.beat === 'try' || this.beat === 'glide';
+  }
+
   private updateTry(time: number): void {
     const { child: c, cygnet, flock } = this.cast;
     if (cygnet.flying) {
@@ -325,7 +329,10 @@ export class MeadowChapter implements Chapter {
     }
     c.lookAt = cygnet.eye(this.onCygnet);
     if (time > this.nextTry && !cygnet.carried) {
-      cygnet.tryToFly();
+      /** Out from the child and back again, so however long it keeps at it, it is still where the player is looking. */
+      const home = this.trodden;
+      const strayed = home ? Math.hypot(cygnet.position.x - home.x, cygnet.position.z - home.z) > 4 : false;
+      cygnet.tryToFly(strayed && home ? Math.atan2(home.x - cygnet.position.x, home.z - cygnet.position.z) : undefined);
       if (this.coaxFrom === 0) this.coaxFrom = time + tuning.swirl.coaxAfter;
       this.nextTry = time + TRY_EVERY;
       /** They settle in to watch it, but only before it has ever managed it: after that they stay on their feet. */

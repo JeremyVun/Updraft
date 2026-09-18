@@ -65,6 +65,7 @@ export class WoodChapter implements Chapter {
 
   constructor(private readonly cast: Cast) {
     const { child, plane, cygnet } = cast;
+    cygnet.mayFly = false;
     plane.homeRadius = 1e9;
     plane.visible = false;
     plane.soggy.value = 1;

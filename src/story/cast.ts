@@ -81,5 +81,7 @@ export interface Chapter {
   readonly escort?: THREE.Vector3 | null;
   /** Where the chapter is waiting for the player to twirl up an updraft, so the wind shows the gesture there. */
   readonly coax?: Coax | null;
+  /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
+  readonly invitesFlight?: boolean;
   update(dt: number, time: number): void;
 }
