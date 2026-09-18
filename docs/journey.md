@@ -445,14 +445,20 @@ see "Rooms still to come".) None of it makes sense and none of it is explained. 
 ## The crest: where the player is told what they are doing
 
 Halfway across the meadow the ground rises, and this is the one moment the dream orientates you. The child tops
-the rise and stops. **The haze thins** — the chapter eases its `haze` from 0.55 down to 0.1 — and the world opens
-out as far as the far shore. Away to the north, on the dark water of a bay, the cygnet's family is **resting**: a
-raft of white swans, heads up, one or two stretching their wings, before they go on. (Cranes wheel up thermals;
-swans do not. This was Jeremy's pick of three.)
+the rise and stops. **The haze thins** — the chapter eases its `haze` from 0.55 to `tuning.crest.haze`, far
+enough to open the hollow beyond the rise and never far enough to show the next island — and below them, fifty
+paces on, there is a **pond** in a bowl of the meadow (`POND` in `heightfield.ts`, drawn by `world/pond.ts`)
+with the cygnet's family **resting** on it: a raft of white swans on still dark water, heads up, one or two
+asleep, before they go on. (Cranes wheel up thermals; swans do not. This was Jeremy's pick of three.)
 
-The cygnet calls to them. Not the distress call: lower, longer, twice, with hope in it rather than panic. Nothing
-answers. They are too far, and after a while they lift off the water in a long pattering run and go north. The
-child walks on and the haze closes again behind them.
+Nothing about it appears: the swans are on the water from the chapter's first frame, the grown birds are heard
+bugling a long way down the walk, and the paper plane leans at the pond from the crest leg onward. The child
+goes down to the water's edge and stops there. The cygnet calls to them, lower and longer than the distress
+call, with hope in it rather than panic. Nothing answers: heads go up, one after another they turn north, make
+the long pattering run across the pond and go, climbing away in a V. Then the child kneels and sets the cygnet
+down at the edge, facing the way they went, and it tries — and the pond is what makes the try work, because the
+camera can stand on the bank and look out over open water instead of climbing the side of the bowl, and a bird
+that comes down over the water splashes down and paddles back rather than landing badly.
 
 No words, no marker, no objective text: you simply now know where you are going and what you are carrying. And
 because the gathering lies the same way as home, it quietly sets up the ending, where it turns out you were
