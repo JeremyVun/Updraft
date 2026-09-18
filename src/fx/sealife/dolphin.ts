@@ -2,16 +2,22 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { flipWinding } from '../../creatures/shapes';
+import { tuning } from '../../tuning';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { REFLECTION_LAYER } from '../../world/water/reflection';
 import { curve } from './curve';
 import { FOAM, Marks, RING, SLICK } from './marks';
 
 /** Beak tip to the notch of the flukes, in world units. */
-const LEN = 2.2;
+const LEN = tuning.dolphins.length;
+/** The rest pose is drawn at this length and scaled to `LEN`, so the whole animal keeps its proportions. */
+const DRAWN = 2.2;
+const SCALE = LEN / DRAWN;
+/** How high the back rides above the beak, once scaled: what has to clear the water for the dolphin to be out. */
+const BACK = 0.172 * SCALE;
 const G = 9.8;
 /** Where the beak rides when the body lies level at the surface. */
-const BASE_Y = -0.1;
+const BASE_Y = -0.14;
 /** Runners in loose ones and twos, then the two that ride the bow wave. */
 const SHOALS = [1, 2, 1, 2];
 const RIDERS = 2;
@@ -79,7 +85,7 @@ function body(): THREE.BufferGeometry {
       const ca = Math.cos(a);
       const e = ca < 0 ? 1.2 : 1;
       const v = Math.sign(ca) * Math.abs(ca) ** e;
-      pos.push(w * Math.sign(sa) * Math.abs(sa) ** e, cy + h * v, -s * LEN);
+      pos.push(w * Math.sign(sa) * Math.abs(sa) ** e, cy + h * v, -s * DRAWN);
       rig.push(s, BODY, v, j / around);
     }
   }
@@ -89,7 +95,7 @@ function body(): THREE.BufferGeometry {
   rig.push(0, BODY, 0, 0);
   for (let j = 0; j < around; j++) idx.push(nose, (j + 1) % around, j);
   const tail = pos.length / 3;
-  pos.push(0, 0, -LEN - 0.01);
+  pos.push(0, 0, -DRAWN - 0.01);
   rig.push(1, BODY, 0, 0);
   const last = rings * around;
   for (let j = 0; j < around; j++) idx.push(tail, last + j, last + ((j + 1) % around));
@@ -103,7 +109,7 @@ function dorsal(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
-  const root = -0.4 * LEN;
+  const root = -0.4 * DRAWN;
   const base = TOP(0.45) - 0.045;
   for (let k = 0; k <= levels; k++) {
     const h = k / levels;
@@ -115,13 +121,13 @@ function dorsal(): THREE.BufferGeometry {
       const along = 0.5 - 0.5 * Math.cos(a);
       const z = lead - along * chord;
       pos.push(Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85), base + h * 0.26, z);
-      rig.push(-z / LEN, DORSAL, 1, along);
+      rig.push(-z / DRAWN, DORSAL, 1, along);
     }
   }
   stitch(idx, levels + 1, around);
   const tip = pos.length / 3;
   pos.push(0, base + 0.268, root - 0.45);
-  rig.push(-(root - 0.45) / LEN, DORSAL, 1, 0.5);
+  rig.push(-(root - 0.45) / DRAWN, DORSAL, 1, 0.5);
   const last = levels * around;
   for (let j = 0; j < around; j++) idx.push(tip, last + j, last + ((j + 1) % around));
   return build(pos, rig, idx);
@@ -134,13 +140,13 @@ function flipper(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
-  const root = new THREE.Vector3(0.072, -0.072, -0.2 * LEN);
+  const root = new THREE.Vector3(0.072, -0.072, -0.2 * DRAWN);
   const e1 = new THREE.Vector3(0.62, -0.42, -0.66).normalize();
   const back = new THREE.Vector3(0, 0, -1);
   const e2 = back.clone().addScaledVector(e1, -back.dot(e1)).normalize();
   const e3 = new THREE.Vector3().crossVectors(e2, e1);
   const span = 0.34;
-  const s = -root.z / LEN;
+  const s = -root.z / DRAWN;
   const p = new THREE.Vector3();
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
@@ -175,7 +181,7 @@ function flukes(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
-  const hinge = -0.985 * LEN;
+  const hinge = -0.985 * DRAWN;
   for (let i = 0; i <= stations; i++) {
     const t = -1 + (2 * i) / stations;
     const at = Math.abs(t);
@@ -188,7 +194,7 @@ function flukes(): THREE.BufferGeometry {
       const along = 0.5 - 0.5 * Math.cos(a);
       const z = lead + (trail - lead) * along;
       pos.push(t * 0.3, Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85), z);
-      rig.push(-z / LEN, FLUKES, 1, along);
+      rig.push(-z / DRAWN, FLUKES, 1, along);
     }
   }
   const raw: number[] = [];
@@ -203,6 +209,7 @@ function dolphinGeometry(): THREE.BufferGeometry {
   right.computeVertexNormals();
   const geo = mergeGeometries([body(), dorsal(), flipper(), right, flukes()]);
   if (!geo) throw new Error('dolphin parts do not share attributes');
+  geo.scale(SCALE, SCALE, SCALE);
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
   return geo;
 }
@@ -291,7 +298,7 @@ Skin skin() {
     float stripe = smoothstep(0.11, 0.0, abs(v - mix(-0.5, -0.88, smoothstep(0.1, 0.21, s)))) * smoothstep(0.085, 0.105, s) * smoothstep(0.25, 0.2, s);
     float beak = smoothstep(0.118, 0.08, s) * smoothstep(-0.6, -0.15, v);
     k.albedo = mix(k.albedo, INK, max(stripe * 0.75, beak * 0.85));
-    float eye = length(vec2((s - 0.128) * ${f(LEN)}, (v - 0.3) * 0.17));
+    float eye = length(vec2((s - 0.128) * ${f(DRAWN)}, (v - 0.3) * 0.17));
     k.albedo = mix(k.albedo, INK, smoothstep(0.03, 0.017, eye));
   } else {
     k.albedo = mix(CAPE, SLATE, smoothstep(0.25, -0.35, rn.y) * 0.45);
@@ -605,8 +612,41 @@ interface Pack {
   delay: number;
 }
 
+/** The set-pieces one dolphin leaves the pod to play, both of them staged between the camera and the boat. */
+type Show = 'leap' | 'push';
+
+/**
+ * A dolphin out of its lane, playing one. It holds the beak's station in the boat's frame; the vertical life is
+ * still the ordinary ballistic swimming, asked for a bigger throw or held at a depth.
+ */
+interface Stunt {
+  kind: Show;
+  d: Dolphin;
+  /** out: down and away to its mark. run: the approach. act: the leap or the shove. back: rejoining the pod. */
+  phase: 'out' | 'run' | 'act' | 'back';
+  t: number;
+  /** Which side it plays on: the camera's for a shove; a leap starts on the far one and comes down on the near. */
+  side: number;
+  along: number;
+  across: number;
+  vel: number;
+  /** Fixed at lift-off: nothing steers in the air, so the throw is flown out exactly as it left. */
+  flyAlong: number;
+  flyAcross: number;
+  asked: boolean;
+  hit: boolean;
+}
+
+/** Where a leap is at the top of its arc: clear of the sail at z 0.55 and short of the stem at 2.64. */
+const OVER_BOW = 2;
+/** Where the shoulder presses on the quarter, and how far off the planking the beak stays while it pushes. */
+const SHOVE_ALONG = -1;
+const SHOVE_ACROSS = 1.2;
+
 interface Dolphin {
   pack: Pack;
+  /** Full-grown, so it is one of the ones that can be asked to play a set-piece. */
+  adult: boolean;
   dAlong: number;
   dAcross: number;
   size: number;
@@ -629,6 +669,11 @@ interface Dolphin {
   arc: number;
   once: boolean;
   hold: number;
+  /** What a set-piece is asking of it: a depth to hold, a lift-off speed for its next arc, a roll, a hard run. */
+  held: number | null;
+  lift: number;
+  tilt: number | null;
+  hurry: boolean;
   breath: number;
   t: number;
   air: number;
@@ -646,6 +691,8 @@ interface Dolphin {
  */
 export class Dolphins {
   readonly objects: THREE.Object3D[] = [];
+  /** What to do when one of them shoulders the boat: the story hands the shove to the hull. */
+  onShove: ((side: number, strength: number) => void) | null = null;
   private readonly mesh: THREE.Mesh;
   private readonly ghost: THREE.Mesh;
   private readonly marks = new Marks();
@@ -661,9 +708,17 @@ export class Dolphins {
   private head = 0;
   private speed = 4;
   private readonly sample = { y: 0, vy: 0 };
+  private readonly seen = new THREE.Vector3();
   private here = false;
   private wanted = false;
   private going = 0;
+  private stunt: Stunt | null = null;
+  /** Seconds the pod has been with this boat, when the next set-piece is due, and how many have been played. */
+  private clock = 0;
+  private next = 0;
+  private turn = 0;
+  private camera = 1;
+  private busy = false;
 
   constructor() {
     const base = dolphinGeometry();
@@ -726,9 +781,15 @@ export class Dolphins {
     this.objects.push(this.ghost, this.marks.mesh, this.mesh, this.drops.mesh);
   }
 
-  /** Keeps the pod running with a boat at `near` on bearing `heading`; a null `near` sends them away. */
-  run(near: THREE.Vector3 | null, heading: number): void {
+  /**
+   * Keeps the pod running with a boat at `near` on bearing `heading`; a null `near` sends them away. `camera` is
+   * which side of the stern the camera rides on, so the set-pieces play where they can be seen, and `busy` holds
+   * them off while something else has the boat.
+   */
+  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false): void {
     this.wanted = near !== null;
+    this.camera = camera < 0 ? -1 : 1;
+    this.busy = busy;
     if (!near) return;
     if (!this.here || this.boat.distanceToSquared(near) > 1e4) {
       this.boat.copy(near);
@@ -743,6 +804,13 @@ export class Dolphins {
     let turn = heading - this.head;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     this.head += turn * 0.06;
+  }
+
+  /** The one that is playing to the boat, for the child to look at; null when the pod is only running alongside. */
+  get spotlight(): THREE.Vector3 | null {
+    const s = this.stunt;
+    if (!s || !this.wanted || s.phase === 'out' || s.phase === 'back') return null;
+    return this.seen.set(s.d.x, Math.max(s.d.y, 0.2), s.d.z);
   }
 
   update(dt: number, time: number): void {
@@ -765,21 +833,25 @@ export class Dolphins {
     const fx = Math.sin(this.head);
     const fz = Math.cos(this.head);
     for (const p of this.packs) this.steer(p, dt);
+    if (this.wanted || this.stunt) this.show(dt);
     const A = this.iA.array as Float32Array;
     const B = this.iB.array as Float32Array;
     const C = this.iC.array as Float32Array;
     for (let i = 0; i < POD; i++) {
       const d = this.pod[i];
       const p = d.pack;
-      const along = p.along + d.dAlong;
-      const u = Math.min(1, Math.abs(along - p.station) / 22);
-      const across = p.sideAt * (p.near + (p.far - p.near) * u * u) + d.dAcross;
-      const slide = (across - d.across) / dt;
+      const s = this.stunt && this.stunt.d === d ? this.stunt : null;
+      const along = s ? s.along : p.along + d.dAlong;
+      const across = s ? s.across : this.wide(d, along);
+      /** A set-piece crosses the boat's track far faster than any lane change, and its body has to say so. */
+      const slide = THREE.MathUtils.clamp((across - d.across) / dt, s ? -11 : -4, s ? 11 : 4);
       d.across = across;
       d.x = this.boat.x + fx * along + fz * across;
       d.z = this.boat.z + fz * along - fx * across;
-      const pace = Math.max(this.speed + p.vel, 2.2);
-      const drift = Math.atan2(THREE.MathUtils.clamp(slide, -4, 4), pace);
+      const forward = Math.max(this.speed + (s ? s.vel : p.vel), 2.2);
+      const drift = Math.atan2(slide, forward);
+      /** How fast it is going over the ground along its own path, which is what the body is laid out along. */
+      const pace = Math.hypot(forward, slide);
       d.yaw = this.head + drift;
       this.swim(d, dt, time, pace);
       this.bank(d, dt, time, drift);
@@ -810,9 +882,10 @@ export class Dolphins {
   private makeDolphin(pack: Pack, member: number): Dolphin {
     return {
       pack,
-      dAlong: member ? rand(-2.6, -1.1) : 0,
-      dAcross: member ? rand(0.7, 1.7) * (Math.random() < 0.5 ? -1 : 1) : 0,
-      size: member ? rand(0.66, 0.86) : rand(0.92, 1.12),
+      adult: !member,
+      dAlong: member ? rand(-3.4, -1.6) : 0,
+      dAcross: member ? rand(0.95, 2.1) * (Math.random() < 0.5 ? -1 : 1) : 0,
+      size: member ? rand(0.68, 0.86) : rand(0.95, 1.15),
       seed: Math.random(),
       x: 0,
       y: -2,
@@ -831,6 +904,10 @@ export class Dolphins {
       arc: 0,
       once: false,
       hold: -2,
+      held: null,
+      lift: 0,
+      tilt: null,
+      hurry: false,
       breath: rand(2, 14),
       t: 0,
       air: 0.6,
@@ -859,7 +936,22 @@ export class Dolphins {
       d.once = false;
       d.wet = 0;
       d.breath = d.pack.delay + rand(0.5, 4);
+      d.held = null;
+      d.lift = 0;
+      d.tilt = null;
+      d.hurry = false;
     }
+    this.stunt = null;
+    this.clock = 0;
+    this.turn = 0;
+    this.next = rand(tuning.dolphins.leapAt - 6, tuning.dolphins.leapAt + 9);
+  }
+
+  /** How far out from the boat's track a lane sits: it opens out as the pack surges away from its station. */
+  private wide(d: Dolphin, along: number): number {
+    const p = d.pack;
+    const u = Math.min(1, Math.abs(along - p.station) / 22);
+    return p.sideAt * (p.near + (p.far - p.near) * u * u) + d.dAcross;
   }
 
   /** Picks the shape of one lane: where it sits, how far and how slowly it surges, and how close it comes. */
@@ -870,8 +962,9 @@ export class Dolphins {
     p.phase = Math.random() * 6.2832;
     p.entry = entry;
     p.close = p.rider ? 3.2 : rand(2.6, 4.2);
-    p.near = p.rider ? rand(1.4, 3) : rand(3.2, 7);
-    p.far = p.rider ? p.near : rand(9, 15);
+    /** Near enough to ride the bow wave, never near enough for a flipper to reach the planking. */
+    p.near = p.rider ? rand(2.2, 3.6) : rand(4, 7.5);
+    p.far = p.rider ? p.near : rand(10, 16);
     p.side = Math.random() < 0.5 ? -1 : 1;
     p.cycle = Math.floor((p.phase - Math.PI / 2) / (Math.PI * 2));
     p.along = p.station + p.swing * Math.sin(p.phase) + entry;
@@ -895,12 +988,184 @@ export class Dolphins {
     p.sideAt += (p.side - p.sideAt) * ease(dt, 0.3);
   }
 
+  /** One set-piece at a time, and none at all while the boat has something else to attend to. */
+  private show(dt: number): void {
+    this.clock += dt;
+    const s = this.stunt;
+    if (!s) {
+      const kind: Show = this.turn === 0 ? 'leap' : this.turn === 1 ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
+      if (!this.busy && this.wanted && this.clock > this.next) this.begin(kind);
+      return;
+    }
+    /** Anything that comes up mid-approach sends it back to the pod; nothing is ever cut away from. */
+    if ((this.busy || !this.wanted) && (s.phase === 'out' || s.phase === 'run')) {
+      s.phase = 'back';
+      s.t = 0;
+      s.d.hurry = false;
+    }
+    const was = s.along;
+    s.t += dt;
+    if (s.phase === 'back') this.rejoin(s, dt);
+    else if (s.kind === 'leap') this.leap(s, dt);
+    else this.shove(s, dt);
+    s.vel = (s.along - was) / dt;
+  }
+
+  /** Sends one of the grown ones out of its lane, already on the side it is wanted, so nothing jumps across. */
+  private begin(kind: Show): void {
+    if (this.stunt) return;
+    const side = kind === 'push' ? this.camera : -this.camera;
+    let d: Dolphin | null = null;
+    let nearest = -1e9;
+    for (const other of this.pod) {
+      if (!other.adult || other.pack.rider) continue;
+      const score = side * other.across;
+      if (score > nearest) {
+        nearest = score;
+        d = other;
+      }
+    }
+    if (!d) return;
+    this.stunt = { kind, d, phase: 'out', t: 0, side, along: d.pack.along + d.dAlong, across: d.across, vel: d.pack.vel, flyAlong: 0, flyAcross: 0, asked: false, hit: false };
+    d.held = kind === 'push' ? -2.2 : -2.8;
+    d.hurry = false;
+    d.tilt = null;
+  }
+
+  /**
+   * Eases the beak toward a station in the boat's frame, within what one can really do: it overhauls the boat at
+   * its own best speed at most, and to drop back it can only stop swimming and let the boat run away from it.
+   */
+  private glide(s: Stunt, along: number, across: number, rate: number, dt: number): void {
+    const k = ease(dt, rate);
+    s.along += THREE.MathUtils.clamp((along - s.along) * k, -this.speed * dt, 7 * dt);
+    s.across += THREE.MathUtils.clamp((across - s.across) * k, -6 * dt, 6 * dt);
+  }
+
+  /**
+   * The leap. It falls back and out to the beam, runs in on two or three porpoises, and asks for one throw big
+   * enough to carry it over the gunwale; from lift-off nothing steers it, so where it lands is where it aimed.
+   */
+  private leap(s: Stunt, dt: number): void {
+    const d = s.d;
+    if (s.phase === 'out') {
+      this.glide(s, 7, s.side * 11, 0.85, dt);
+      if (s.t > 3.6 && (Math.abs(s.across) > 8 || s.t > 7)) {
+        s.phase = 'run';
+        s.t = 0;
+        d.held = null;
+        d.hurry = true;
+      }
+    } else if (s.phase === 'run') {
+      this.glide(s, 1.2, s.side * 5.6, 0.55, dt);
+      if (s.t > 4.2 && !s.asked) {
+        s.asked = true;
+        d.lift = tuning.dolphins.leapLift * rand(0.96, 1.06);
+      }
+      if (s.asked && d.lift === 0 && d.arc === 1) {
+        s.phase = 'act';
+        s.t = 0;
+        s.flyAcross = (-s.side * 5.4 - s.across) / d.air;
+        s.flyAlong = (OVER_BOW - s.along) / (d.air * 0.5);
+        d.tilt = s.side * 0.4;
+      }
+    } else if (s.phase === 'act') {
+      s.along += s.flyAlong * dt;
+      s.across += s.flyAcross * dt;
+      if (d.t >= d.air || d.arc === 0) {
+        /** In, and the sea takes the run out of it. */
+        d.hurry = false;
+        d.tilt = null;
+        s.flyAlong += (0.3 - s.flyAlong) * ease(dt, 2.2);
+        s.flyAcross -= s.flyAcross * ease(dt, 2.2);
+      }
+      if (d.arc === 0) {
+        s.phase = 'back';
+        s.t = 0;
+        d.held = -2.4;
+      }
+    }
+  }
+
+  /**
+   * The shove. It comes up astern on the camera's side, swims in under the quarter rolled onto its side so the eye
+   * that is uppermost is the one on the child, leans on the planking, and lets the boat go.
+   */
+  private shove(s: Stunt, dt: number): void {
+    const d = s.d;
+    if (s.phase === 'out') {
+      this.glide(s, -16, s.side * 7, 0.8, dt);
+      if (s.t > 3.2 && (s.along < -9 || s.t > 7)) {
+        s.phase = 'run';
+        s.t = 0;
+        d.held = null;
+        d.hurry = true;
+      }
+    } else if (s.phase === 'run') {
+      this.glide(s, -4.5, s.side * 2.8, 0.45, dt);
+      /** It stops porpoising first: the last arc has to come down before it can lie alongside. */
+      if (s.t > 4.5) d.hurry = false;
+      if (s.t > 4.5 && d.arc === 0) {
+        s.phase = 'act';
+        s.t = 0;
+        /** High enough that the flank it rolls onto stays out of the water, where the child can see the eye. */
+        d.held = -0.02;
+      }
+    } else if (s.phase === 'act') {
+      d.tilt = -s.side * 1.5;
+      if (!s.hit) {
+        this.glide(s, SHOVE_ALONG, s.side * SHOVE_ACROSS, 1.1, dt);
+        if (Math.abs(s.across) < SHOVE_ACROSS + 0.06 && s.along > SHOVE_ALONG - 0.4) {
+          s.hit = true;
+          s.t = 0;
+          this.onShove?.(s.side, 1);
+        } else if (s.t > 6) {
+          /** It could not get alongside; the boat is never shoved by a dolphin that is not there. */
+          s.phase = 'back';
+          s.t = 0;
+          d.held = -1.8;
+          d.tilt = null;
+        }
+      } else {
+        /** The boat leaps away from it and it slides back down the planking, still looking up. */
+        this.glide(s, SHOVE_ALONG - 2.4 * s.t, s.side * (SHOVE_ACROSS + 1.6 * s.t), 1.5, dt);
+        if (s.t > 1.8) {
+          s.phase = 'back';
+          s.t = 0;
+          d.held = -1.8;
+          d.tilt = null;
+        }
+      }
+    }
+  }
+
+  /** Back to its lane, which has been running on without it, and the wait before anything is played again. */
+  private rejoin(s: Stunt, dt: number): void {
+    const d = s.d;
+    d.lift = 0;
+    d.tilt = null;
+    if (s.t > 1.5) d.held = null;
+    const along = d.pack.along + d.dAlong;
+    const across = this.wide(d, along);
+    this.glide(s, along, across, 0.5, dt);
+    if (Math.hypot(along - s.along, across - s.across) < 1.2 || s.t > 16) {
+      d.held = null;
+      d.hurry = false;
+      d.breath = rand(0.5, 3);
+      this.stunt = null;
+      this.turn++;
+      const t = tuning.dolphins;
+      this.next = this.turn === 1 ? rand(t.pushAt - 8, t.pushAt + 12) : this.clock + rand(t.restLeast, t.restLeast + t.restSpread);
+    }
+  }
+
   /** The vertical life of one dolphin: a held depth, or a ballistic arc and the matched dip that follows it. */
   private swim(d: Dolphin, dt: number, time: number, pace: number): void {
     const p = d.pack;
-    const surging = p.up && !p.rider && p.delay <= 0 && this.wanted;
+    const surging = d.hurry || (p.up && !p.rider && p.delay <= 0 && this.wanted);
     if (d.arc === 0) {
-      if (!this.wanted) d.hold -= dt * 0.55;
+      if (d.held !== null) d.hold = d.held;
+      else if (!this.wanted) d.hold -= dt * 0.55;
       else if (surging) d.hold = BASE_Y;
       else {
         d.breath -= dt;
@@ -909,9 +1174,10 @@ export class Dolphins {
       }
       const to = d.hold + Math.sin(time * 0.5 + d.seed * 9) * 0.06;
       const was = d.y;
-      d.y += (to - d.y) * ease(dt, surging ? 1.6 : 0.5);
+      d.y += (to - d.y) * ease(dt, surging || d.held !== null ? 1.6 : 0.5);
       d.vy += ((d.y - was) / dt - d.vy) * ease(dt, 6);
-      if ((surging || d.breath <= 0) && this.wanted && Math.abs(d.y - BASE_Y) < 0.1) {
+      const up = d.lift > 0 || (d.held === null && (surging || d.breath <= 0));
+      if (up && this.wanted && Math.abs(d.y - BASE_Y) < 0.1) {
         d.arc = 1;
         d.t = 0;
         d.once = !surging;
@@ -952,6 +1218,14 @@ export class Dolphins {
 
   /** Chooses the next arc: a true leap while they are running up, a lazy roll for a breath otherwise. */
   private pick(d: Dolphin, surging: boolean): void {
+    if (d.lift > 0) {
+      /** A throw this big goes in steeply on the far side, so the dip after it is short and deep. */
+      d.vy0 = d.lift;
+      d.lift = 0;
+      d.air = (2 * d.vy0) / G;
+      d.dip = 0.55;
+      return;
+    }
     d.vy0 = surging && Math.random() > 0.22 ? rand(2.5, 3.7) : rand(1.05, 1.75);
     d.air = (2 * d.vy0) / G;
     d.dip = surging ? rand(0.42, 0.78) : rand(0.8, 1.5);
@@ -976,54 +1250,59 @@ export class Dolphins {
   /** Banking into the turn, a slow sway, and the roll onto one side they take to look up at the boat. */
   private bank(d: Dolphin, dt: number, time: number, drift: number): void {
     d.rollIn -= dt;
-    if (d.rollIn <= 0 && d.rollFor <= 0 && d.y < -0.1) {
+    if (d.rollIn <= 0 && d.rollFor <= 0 && d.y < -0.1 && d.tilt === null) {
       d.rollFor = rand(1.3, 2.8);
       d.rollTo = rand(0.9, 1.7) * (Math.random() < 0.5 ? -1 : 1);
       d.rollIn = rand(9, 26);
     }
     d.rollFor -= dt;
-    const want = -drift * 1.5 + Math.sin(time * 0.7 + d.seed * 12) * 0.06 + (d.rollFor > 0 ? d.rollTo : 0);
-    d.roll += (want - d.roll) * ease(dt, 2.2);
+    const want = d.tilt ?? -drift * 1.5 + Math.sin(time * 0.7 + d.seed * 12) * 0.06 + (d.rollFor > 0 ? d.rollTo : 0);
+    d.roll += (want - d.roll) * ease(dt, d.tilt === null ? 2.2 : 1.7);
   }
 
   /** White water: a dab and a flick of spray as the back comes out, and a small clean hole where the beak goes in. */
   private wash(d: Dolphin, dt: number, time: number): void {
     const fx = Math.sin(d.yaw);
     const fz = Math.cos(d.yaw);
-    const back = d.y + Math.cos(d.pitch) * 0.17 * d.size;
+    /** Marks and drops are sized against the body, which is `SCALE` times the length it was drawn at. */
+    const s = d.size * SCALE;
+    const back = d.y + Math.cos(d.pitch) * BACK * d.size;
     const out = back > 0.015;
     if (out && !d.wasUp) {
-      this.marks.add(FOAM, d.x + fx * 0.3 * d.size, d.z + fz * 0.3 * d.size, 0.17 * d.size, 1.6, time, 0.42, 0.26, d.yaw, 2.1);
+      this.marks.add(FOAM, d.x + fx * 0.3 * s, d.z + fz * 0.3 * s, 0.17 * s, 1.6, time, 0.42, 0.26, d.yaw, 2.1);
       const pace = Math.max(this.speed + d.pack.vel, 2);
-      for (let i = 0; i < 11; i++) {
+      /** The harder it comes out, the more it takes with it: a breath throws a dab, a leap throws a sheet. */
+      const hard = THREE.MathUtils.clamp(d.vy / 4, 0.3, 1.8);
+      for (let i = 0, n = Math.round(11 * hard); i < n; i++) {
         const side = rand(-0.7, 0.7);
         this.drops.emit(
-          d.x - fx * rand(0, 0.5) + fz * side * d.size,
+          d.x - fx * rand(0, 0.5) + fz * side * s,
           0.06 + Math.random() * 0.1,
-          d.z - fz * rand(0, 0.5) - fx * side * d.size,
-          -fx * pace * rand(0.1, 0.34) + fz * side * 1.6,
-          rand(1.1, 3.2),
-          -fz * pace * rand(0.1, 0.34) - fx * side * 1.6,
-          rand(0.01, 0.02),
+          d.z - fz * rand(0, 0.5) - fx * side * s,
+          -fx * pace * rand(0.1, 0.34) + fz * side * 1.6 * hard,
+          rand(1.1, 3.2) * hard,
+          -fz * pace * rand(0.1, 0.34) - fx * side * 1.6 * hard,
+          rand(0.014, 0.028),
           rand(0.7, 1.2),
           0,
         );
       }
-      for (let i = 0; i < 2; i++) {
-        this.drops.emit(d.x - fx * rand(0, 0.7), 0.12, d.z - fz * rand(0, 0.7), rand(-0.4, 0.4), rand(0.5, 1.3), rand(-0.4, 0.4), rand(0.045, 0.08), rand(0.9, 1.5), 1);
+      for (let i = 0, n = Math.round(2 * hard); i < n; i++) {
+        this.drops.emit(d.x - fx * rand(0, 0.7), 0.12, d.z - fz * rand(0, 0.7), rand(-0.4, 0.4), rand(0.5, 1.3), rand(-0.4, 0.4), rand(0.06, 0.12), rand(0.9, 1.5), 1);
       }
     }
     if (!out && d.wasUp) {
-      this.marks.add(SLICK, d.x - fx * 0.5, d.z - fz * 0.5, 0.45 * d.size, 8, time, 0.22, 0.09, d.yaw, 1.7);
+      this.marks.add(SLICK, d.x - fx * 0.5 * s, d.z - fz * 0.5 * s, 0.45 * s, 8, time, 0.22, 0.09, d.yaw, 1.7);
     }
     d.wasUp = out;
     const inside = d.y < -0.02 && d.vy < 0;
     if (inside && !d.wasIn && d.vy < -1.4) {
-      this.marks.add(RING, d.x, d.z, 0.14 * d.size, 1.6, time, 0.4, 0.9);
-      this.marks.add(FOAM, d.x, d.z, 0.1 * d.size, 1.1, time, 0.28, 0.2);
-      for (let i = 0; i < 6; i++) {
+      const deep = THREE.MathUtils.clamp(-d.vy / 4, 0.4, 1.8);
+      this.marks.add(RING, d.x, d.z, 0.14 * s * deep, 1.6, time, 0.4, 0.9);
+      this.marks.add(FOAM, d.x, d.z, 0.1 * s * deep, 1.1, time, 0.28, 0.2);
+      for (let i = 0, n = Math.round(6 * deep); i < n; i++) {
         const a = Math.random() * Math.PI * 2;
-        this.drops.emit(d.x, 0.04, d.z, Math.cos(a) * rand(0.3, 0.9), rand(0.6, 1.5), Math.sin(a) * rand(0.3, 0.9), rand(0.01, 0.018), 0.7, 0);
+        this.drops.emit(d.x, 0.04, d.z, Math.cos(a) * rand(0.3, 0.9) * deep, rand(0.6, 1.5) * deep, Math.sin(a) * rand(0.3, 0.9) * deep, rand(0.014, 0.024), 0.7, 0);
       }
     }
     d.wasIn = inside;
@@ -1032,6 +1311,6 @@ export class Dolphins {
     d.trail -= dt;
     if (d.trail > 0) return;
     d.trail = 0.1;
-    this.marks.add(FOAM, d.x - fx * 0.4 * d.size, d.z - fz * 0.4 * d.size, 0.09 * d.size, 1.2, time, 0.26, 0.2, d.yaw, 1.9);
+    this.marks.add(FOAM, d.x - fx * 0.4 * s, d.z - fz * 0.4 * s, 0.09 * s, 1.2, time, 0.26, 0.2, d.yaw, 1.9);
   }
 }

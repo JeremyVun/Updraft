@@ -130,6 +130,7 @@ export class CrossingChapter implements Chapter {
     this.shower = this.storm > 0 ? Math.max(0, this.storm - 0.2) * 1.25 : 0;
     this.nextWhale = this.whaleAt ?? 0;
     this.swimAt = opts.swimAt ?? null;
+    if (this.wantsDolphins) cast.sealife.onDolphinShove = (side, strength) => cast.boat.nudge(side, strength);
     cast.boat.becalmed = 0;
     cast.boat.steerFor = this.route[0];
     cast.boat.mooring = opts.moor ?? null;
@@ -198,7 +199,9 @@ export class CrossingChapter implements Chapter {
       sealife.surfaceWhale(this.spot, boat.yaw - 0.3 * side);
     }
     sealife.fishNear(boat.position, farewell ? 0.25 : 1);
-    sealife.dolphinsWith(this.wantsDolphins ? boat.position : null, boat.yaw);
+    /** The camera rides the quarter away from the sail, and the cygnet's swim is the one thing they must not crowd. */
+    const swimming = this.swim === 'side' || this.swim === 'in' || this.swim === 'drying';
+    sealife.dolphinsWith(this.wantsDolphins ? boat.position : null, boat.yaw, -this.quarter, swimming);
     /** The night ends somewhere out here, by degrees, with nobody watching for it. */
     if (this.duskTo !== this.duskFrom) {
       this.dusk = THREE.MathUtils.lerp(this.duskFrom, this.duskTo, this.progress());
@@ -206,6 +209,8 @@ export class CrossingChapter implements Chapter {
     const whale = sealife.whale;
     if (whale && !farewell) child.lookAt = whale;
     this.watching = whale && !farewell ? Math.min(1, this.watching + dt * 0.5) : Math.max(0, this.watching - dt * 0.5);
+    const show = sealife.dolphinShow;
+    if (show && !whale && !farewell) child.lookAt = show;
 
     if (this.swimAt !== null) this.braveSwim(dt);
 
