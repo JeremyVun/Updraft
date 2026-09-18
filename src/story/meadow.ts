@@ -225,6 +225,7 @@ export class MeadowChapter implements Chapter {
         p.homeRadius = 26;
       } else if (this.leg >= CREST_LEG && !this.crestDone) {
         /** The signpost leans at what there is to find: over the rise, that is the white birds on the water. */
+        this.piano.waypoint(this.target(), c.position);
         p.home.set(POND_AT.x, 0, POND_AT.z);
         p.homeRadius = 34;
       } else {
@@ -700,16 +701,16 @@ export class MeadowChapter implements Chapter {
       const ground = Math.max(heightAt(k.x, k.z), 0);
       const up = THREE.MathUtils.clamp((k.y - ground) / 3.5, 0, 1);
       /**
-       * The camera stands out over the water and looks back in at the shore, which is the one line of sight here
-       * that does not run up the side of the bowl: the rig would answer a bank by climbing over the scene, and
-       * the player would be trying to draw circles on the ground from directly above it. It also puts the pale
-       * bird against dark water, and the child, the bank and the sky they left by all behind it.
+       * The camera stands on the bank with its back to the meadow and looks out over the water, which is the one
+       * line of sight here that does not run up the side of the bowl: the rig answers a bank by climbing over the
+       * scene, and the player would be left drawing circles on the ground from directly above it. It also puts
+       * the pale bird and the child against dark water and the sky their family left by.
        */
-      const bearing = Math.atan2(POND_AT.x - k.x, POND_AT.z - k.z);
+      const bearing = Math.atan2(k.x - POND_AT.x, k.z - POND_AT.z);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       /** Off the cygnet toward the child, so the one who set it down is in the frame it is trying to leave. */
-      s.target.set(k.x + (c.x - k.x) * 0.3, k.y + 0.5, k.z + (c.z - k.z) * 0.3);
-      s.distance = 12 + gap * 0.6;
+      s.target.set(k.x + (c.x - k.x) * 0.42, k.y * 0.72 + Math.max(heightAt(c.x, c.z), 0) * 0.28 + 0.6, k.z + (c.z - k.z) * 0.42);
+      s.distance = 13 + gap * 0.7;
       /**
        * The camera stays down on the ground whatever the cygnet does, so that once it is up the frame is looking
        * up at it with sky behind it. But while it is still down it stands well above the grass and looks in at a

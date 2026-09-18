@@ -62,7 +62,8 @@ void main() {
   /** Peat water: almost all of what you see is the sky, and the little that is not is the bottom of a field. */
   vec3 body = mix(uShallow, uDeep, smoothstep(0.1, 1.4, depth)) * light;
   vec3 sky = skyColor(R);
-  vec3 col = mix(body, sky, clamp(F * 1.35 + 0.06, 0.0, 0.92));
+  /** Peat water takes more out of the sky than the sea does: what comes back off it is dimmer and greener. */
+  vec3 col = mix(body, sky * vec3(0.78, 0.82, 0.8), clamp(F * 1.2, 0.0, 0.88));
 
   vec3 H = normalize(uSunDir + V);
   col += uSunColor * pow(max(dot(N, H), 0.0), 220.0) * 1.6 * sh;
@@ -150,8 +151,8 @@ export class Pond {
         uniforms: {
           ...atmo.uniforms,
           uLevel: { value: POND_LEVEL },
-          uDeep: { value: new THREE.Color('#10231f') },
-          uShallow: { value: new THREE.Color('#3d4a2e') },
+          uDeep: { value: new THREE.Color('#0b1a18') },
+          uShallow: { value: new THREE.Color('#2e3a22') },
         },
         vertexShader: WATER_VERT,
         fragmentShader: WATER_FRAG,
