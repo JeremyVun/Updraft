@@ -63,7 +63,7 @@ const CREDITS_AT = 26;
  */
 export const HOME_JETTY = { x: -45, shoreZ: -1954, endZ: -1927, halfWidth: 1.2, deck: 0.7 } as const;
 /** Where the boat comes alongside the end of it and lies, bow to the east. */
-export const HOME_MOORING = { x: -45.5, z: -1925.4, yaw: Math.PI / 2 } as const;
+export const HOME_MOORING = { x: -45.3, z: -1926.25, yaw: Math.PI / 2 } as const;
 const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
 /** The crest of the last hill, where the ground falls away and the cottage comes into view. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
@@ -609,6 +609,18 @@ export class HomeChapter implements Chapter {
         s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
       }
       this.pace = 0.2 - lift * 0.12;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'ashore' && c.z > HOME_JETTY.shoreZ - 1.5) {
+      /**
+       * The one arrival in the journey that is watched from the water: low off the jetty's seaward quarter, with
+       * the boat lying against the end, the length of the planks and the child walking in all in the one frame,
+       * and the hill they are about to go up behind them. It hands over to the climb as they reach the sand.
+       */
+      s.eye = this.eyeAt.set(HOME_JETTY.x + 16, 3.4, HOME_JETTY.endZ + 10);
+      s.target.set(c.x, HOME_JETTY.deck + 1.1, c.z);
+      this.pace = 0.5;
       this.focus.copy(c);
       return;
     }

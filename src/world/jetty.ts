@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HOME_JETTY } from '../story/home';
+import { glsl } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { mulberry32, smoothstep } from './noise';
@@ -18,17 +19,17 @@ const DECK = HOME_JETTY.deck;
 
 const PLANK = { pitch: 0.305, width: 0.256, thick: 0.075 };
 /** The walking strip's half-width, and the head at the seaward end the boat lies against. */
-const SHAFT_HALF = HOME_JETTY.halfWidth + 0.05;
-const HEAD = { from: 9, half: 1.95 };
+const SHAFT_HALF = HOME_JETTY.halfWidth + 0.22;
+const HEAD = { from: 8.4, half: 2.05 };
 const BENTS = 10;
 /** Where the working things stand: clear of the strip the child walks, out on the widened head. */
-const POST_X = 1.52;
-const POST_Z = 12.9;
+const POST_X = 1.6;
+const POST_Z = 12.85;
 
 /** Local z of the seaward end, so the whole jetty can be laid out about its middle. */
 const END = HALF_LENGTH;
 /** Where the head's own stringers start: the first point out where the deck is already wide enough to hide them. */
-const HEAD_STRINGER = 9.3;
+const HEAD_STRINGER = 9;
 
 function halfAt(lz: number): number {
   return SHAFT_HALF + (HEAD.half - SHAFT_HALF) * smoothstep(HEAD.from - 1, HEAD.from + 0.7, lz);
@@ -78,11 +79,11 @@ void main() {
     /** How high above the water the fragment is, with the sea breathing up and down the pile as it laps. */
     float lap = sin(uTime * 1.15 + vWorld.z * 0.8 + vWorld.x) * 0.035 + (vnoise(vec2(vWorld.x * 2.2 + uTime * 0.5, vWorld.z * 2.2)) - 0.5) * 0.07;
     float above = vWorld.y - lap;
-    alb = mix(alb, vec3(0.115, 0.135, 0.075), (1.0 - smoothstep(0.0, 0.3, above)) * 0.85);
+    alb = mix(alb, vec3(0.115, 0.135, 0.075), (1.0 - smoothstep(0.02, 0.34, above)) * 0.85);
     alb *= mix(0.5, 1.0, smoothstep(-0.1, 0.22, above));
-    /** The barnacled ring the tide leaves, and the white water working at it. */
-    float ring = exp(-pow((above - 0.05) / 0.07, 2.0));
-    alb = mix(alb, vec3(0.93, 0.91, 0.86), ring * 0.7);
+    /** The barnacled ring the tide leaves, patchy round the pile the way weed and shell grow. */
+    float ring = exp(-pow((above - 0.04) / 0.05, 2.0)) * (0.5 + 0.5 * vnoise(vWorld.xz * 9.0 + vWorld.y * 3.0));
+    alb = mix(alb, vec3(0.9, 0.88, 0.82), ring * 0.4);
   }
 
   float ndl = max(dot(n, uSunDir), 0.0);
@@ -92,6 +93,37 @@ void main() {
   vec3 lamp = vec3(1.0, 0.62, 0.28) * (0.3 + 4.2 * uNight);
   col = mix(col, lamp, vGlow);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
+const SHADE_VERT = /* glsl */ `
+out vec3 vWorld;
+void main() {
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vWorld = w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+
+/**
+ * The jetty's own shadow on the sea. Traced the other way round: from each patch of water back up the sunbeam
+ * to the height of the deck, and darkened if the deck is over it. A low sun throws it a long way off the piles,
+ * which is what makes the thing look like it is standing in the water rather than laid on top of it.
+ */
+const SHADE_FRAG = /* glsl */ `
+${ATMO_GLSL}
+in vec3 vWorld;
+void main() {
+  float up = max(uSunDir.y, 0.12);
+  vec2 q = vWorld.xz + uSunDir.xz * (${glsl(DECK)} / up);
+  float lz = q.y - ${glsl(MID_Z)};
+  float half = ${glsl(SHAFT_HALF)} + ${glsl(HEAD.half - SHAFT_HALF)} * smoothstep(${glsl(HEAD.from - 1)}, ${glsl(HEAD.from + 0.7)}, lz);
+  /** The further the sun has to carry it, the softer its edge. */
+  float pen = 0.16 + 0.1 * (${glsl(DECK)} / up);
+  float cover = (1.0 - smoothstep(half - pen, half + pen, abs(q.x - ${glsl(HOME_JETTY.x)})))
+    * smoothstep(${glsl(-HALF_LENGTH)} - pen, ${glsl(-HALF_LENGTH)} + pen, lz)
+    * (1.0 - smoothstep(${glsl(HALF_LENGTH)} - pen, ${glsl(HALF_LENGTH)} + pen, lz));
+  float shade = cover * 0.55 * smoothstep(0.0, 0.14, uSunDir.y) * cloudShadow(vWorld.xz) * (1.0 - fogOf(vWorld).a);
+  if (shade < 0.004) discard;
+  gl_FragColor = vec4(mix(vec3(1.0), vec3(0.42, 0.55, 0.68), shade), 1.0);
 }`;
 
 type Part = [THREE.BufferGeometry, THREE.Color, number, number];
@@ -118,8 +150,8 @@ function build(parts: Part[]): THREE.BufferGeometry {
 }
 
 const WOOD = {
-  plank: new THREE.Color('#8b8074'),
-  worn: new THREE.Color('#6d6154'),
+  plank: new THREE.Color('#8a8378'),
+  worn: new THREE.Color('#6b6459'),
   frame: new THREE.Color('#5e5245'),
   tar: new THREE.Color('#4b4038'),
   white: new THREE.Color('#e3dac9'),
@@ -180,6 +212,8 @@ function frame(rand: () => number): Part[] {
     head.translate(side * (HEAD.half - 0.24), top - 0.125, (HEAD_STRINGER + END) / 2);
     out.push(part(head, WOOD.frame, 0, 1));
   }
+  /** The rubbing board a hull comes to rest against, worn down to bare wood where boats have leaned on it. */
+  out.push(part(new THREE.BoxGeometry(HEAD.half * 2 + 0.1, 0.24, 0.13).translate(0, 0.33, END + 0.06), WOOD.worn, 0, 1));
   return out;
 }
 
@@ -267,8 +301,30 @@ function lampPost(x: number, z: number): Part[] {
   return out;
 }
 
+function shadow(): THREE.Mesh {
+  const reach = 7;
+  const geo = new THREE.PlaneGeometry(HEAD.half * 2 + reach * 2, HALF_LENGTH * 2 + reach * 2);
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(HOME_JETTY.x, 0.03, MID_Z);
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.ShaderMaterial({
+      vertexShader: SHADE_VERT,
+      fragmentShader: SHADE_FRAG,
+      uniforms: { ...atmo.uniforms },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendSrc: THREE.DstColorFactor,
+      blendDst: THREE.ZeroFactor,
+    }),
+  );
+  mesh.renderOrder = 3;
+  return mesh;
+}
+
 /** The whole jetty: one merged mesh under one shader, standing where `HOME_JETTY` says it does. */
-export function createJetty(): THREE.Mesh {
+export function createJetty(): THREE.Object3D {
   const rand = mulberry32(4711);
   const geo = build([
     ...frame(rand),
@@ -282,5 +338,7 @@ export function createJetty(): THREE.Mesh {
   geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide }));
   mesh.position.set(HOME_JETTY.x, 0, MID_Z);
-  return mesh;
+  const group = new THREE.Group();
+  group.add(mesh, shadow());
+  return group;
 }
