@@ -223,6 +223,50 @@ export const tuning = {
     /** Seconds of turning a spinning wheel smears over: what makes a gust visible running down a row. */
     smearSeconds: 0.075,
   },
+  /**
+   * The fledging over the summit: the first flight it makes of its own, flown round the child. The circuit starts
+   * small, low, fast-beating and thrown about, and opens out into long strokes and a held bank by the last lap.
+   */
+  fledge: {
+    /** Seconds of the circuit, of coming out of it toward the child, and of hanging in front of them before it goes. */
+    loopFor: 12,
+    swingFor: 2.4,
+    hangFor: 3.4,
+    /** How wide the circuit is on the first lap and on the last, and how far it is squashed toward the camera. */
+    radiusFrom: 4.2,
+    radiusTo: 7.8,
+    squash: 0.62,
+    /** How far toward the camera the circuit's centre stands, so it passes nearer the lens than anything else flying. */
+    offset: 2.5,
+    /** How high above the child's ground it flies on the first lap and on the last. */
+    heightFrom: 3.2,
+    heightTo: 8,
+    /** How fast it goes round, in units a second, on the first lap and on the last. */
+    speedFrom: 4.2,
+    speedTo: 8.2,
+    /** Wingbeats a second: too many at first, and a swan's own long stroke by the end. */
+    beatFrom: 3.3,
+    beatTo: 2.1,
+    /** A lurch: units of height it loses, radians of heading it is thrown off, radians of wing it drops. */
+    sag: 1.8,
+    yawThrow: 0.45,
+    wingDrop: 0.6,
+    /** The bank it holds by the last lap, in radians, and the seconds it spends leaning over to look down at the child. */
+    bank: 0.55,
+    looksFor: 2.8,
+    /** Where it comes round to hang in front of the child's face, and how high above their feet: clear of the hill. */
+    hangAt: 4.2,
+    hangHigh: 4.5,
+    /** Nose-up of the flare it stops on, and of the hang it holds while it calls. */
+    flare: 0.72,
+    /** Wingbeats a second of the flutter that holds it there. */
+    hangBeat: 3.6,
+    /** Seconds into the flight to its family at which the last over-correction comes, and how long it lasts. */
+    wonkAt: 1.3,
+    wonkFor: 1.2,
+    /** How far it bobs in the last place of the V once it has it: a station held, but not the way its family holds one. */
+    joinBob: 0.32,
+  },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
     /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
