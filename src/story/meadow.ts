@@ -19,7 +19,7 @@ export const ROUTE = WAY.slice(1).map((p) => new THREE.Vector2(p.x, p.z));
 
 /** The top of the bank over the landing, where the island is first seen, and where the beach waits below it. */
 const BROW = new THREE.Vector2(BANK.x + 1, BANK.crest - 2);
-const BEACH = new THREE.Vector2(LANDING.x - 2, mainlandCoastZ(LANDING.x) - 11);
+const BEACH = new THREE.Vector2(LANDING.x - 2, mainlandCoastZ(LANDING.x) - 4);
 /** The piano, and the patch of colour it stands in: the one thing awake on a sleeping island. */
 const PIANO_AT = new THREE.Vector3(PLACE.x, heightAt(PLACE.x, PLACE.z) + 1.2, PLACE.z);
 const BROW_AT = new THREE.Vector3(BROW.x, heightAt(BROW.x, BROW.y) + 1.6, BROW.y);
@@ -783,13 +783,18 @@ export class MeadowChapter implements Chapter {
        */
       const top = this.beat === 'brow';
       const look = top ? PIANO_AT : BROW_AT;
-      const bearing = Math.atan2(c.x - look.x, c.z - look.z);
+      /**
+       * On the way up the camera stands off to the side of the bank rather than below it, because from below a
+       * rig that answers a hill by rising ends up looking down the slope at the top of the child's head. In
+       * profile they are plainly climbing, against the sky the bank is hiding everything else behind.
+       */
+      const bearing = Math.atan2(c.x - look.x, c.z - look.z) + (top ? 0 : 1.15);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       const ground = Math.max(heightAt(c.x, c.z), 0);
-      const toward = top ? 0.1 : 0.25;
-      s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 4.2 : 2.6), c.z + (look.z - c.z) * toward);
-      s.distance = top ? 21 : 24;
-      s.height = top ? 7.5 : 5.5;
+      const toward = top ? 0.1 : 0.16;
+      s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 4.2 : 2.4), c.z + (look.z - c.z) * toward);
+      s.distance = top ? 21 : 19;
+      s.height = top ? 7.5 : 2.6;
       this.pace = top ? 0.9 : 0.4;
       this.focus.set(c.x, ground, c.z);
       return;

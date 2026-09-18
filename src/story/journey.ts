@@ -204,7 +204,8 @@ export class Journey {
       case 'lines':
         return new LinesChapter(cast);
       case 'toMeadow':
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.75, season: 0.26 });
+        /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.9, season: 0.26 });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
