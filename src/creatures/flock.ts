@@ -169,24 +169,25 @@ export class SwanFlock {
   }
 
   /**
-   * The empty place at the very back of the V, for one more: a length behind the last of them and out on the other
-   * side of the line, which is the place a bird takes when it slots in rather than tucks in under somebody.
+   * The empty place at the very back of the V, for one more: the far end of the arm the last of them is not on.
+   * It is a station in the formation rather than a spot beside a bird, so it holds still while the V is forming.
    */
-  behindTail(out: THREE.Vector3): THREE.Vector3 {
-    const last = this.birds[this.birds.length - 1];
-    if (!last) return out.copy(this.lead);
-    const side = last.offset.x >= 0 ? -1 : 1;
+  nextSlot(out: THREE.Vector3): THREE.Vector3 {
+    const i = this.birds.length;
+    if (!i) return out.copy(this.lead);
+    const side = i % 2 === 0 ? 1 : -1;
+    const rank = Math.ceil(i / 2);
     const yaw = Math.atan2(this.dir.x, this.dir.z);
-    const ox = side * 3.0;
-    const oz = -4.4;
-    return out.set(last.at.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), last.at.y + last.bob + 0.4, last.at.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
+    const ox = side * rank * 3.1;
+    const oz = -rank * 4.4 - 1.4;
+    return out.set(this.lead.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), this.lead.y + 0.3, this.lead.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
   }
 
   /** Where the i-th bird flies in the V: the leader in front, the rest falling back from it in pairs. */
   private slot(i: number): THREE.Vector3 {
     const side = i === 0 ? 0 : i % 2 === 0 ? 1 : -1;
     const rank = Math.ceil(i / 2);
-    return new THREE.Vector3(side * (rank * 3.0 + range(Math.random, -0.4, 0.4)), range(Math.random, -0.5, 0.5), -rank * 7.5 - Math.random() * 1.4);
+    return new THREE.Vector3(side * (rank * 3.1 + range(Math.random, -0.4, 0.4)), range(Math.random, -0.5, 0.5), -rank * 4.4 - Math.random() * 1.4);
   }
 
   /** Sends a skein over, passing above (x, z) at the given height on the given bearing, from `from` units back. */

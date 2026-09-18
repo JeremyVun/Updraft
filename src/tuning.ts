@@ -214,8 +214,8 @@ export const tuning = {
     radiusFrom: 4.2,
     radiusTo: 7.8,
     squash: 0.62,
-    /** How far north of the child the circuit's centre stands, so its near side passes in front of them. */
-    offset: 3,
+    /** How far toward the camera the circuit's centre stands, so it passes nearer the lens than anything else flying. */
+    offset: 2.5,
     /** How high above the child's ground it flies on the first lap and on the last. */
     heightFrom: 3.2,
     heightTo: 8,
@@ -226,7 +226,7 @@ export const tuning = {
     beatFrom: 3.3,
     beatTo: 2.1,
     /** A lurch: units of height it loses, radians of heading it is thrown off, radians of wing it drops. */
-    sag: 1.5,
+    sag: 1.8,
     yawThrow: 0.45,
     wingDrop: 0.6,
     /** The bank it holds by the last lap, in radians. */

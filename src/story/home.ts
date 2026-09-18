@@ -74,6 +74,13 @@ const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)),
  * because that is the line the family leaves along, and a shot that holds it needs no swing when they go.
  */
 const FROM_SOUTH = new THREE.Vector3(0.05, 0, 1).normalize();
+/**
+ * The bearing from the child it comes round to hang on: out to one side and a little toward the camera, away from
+ * the low sun, so it hangs clear of their head against open sky and the child turns to it and is seen in profile.
+ */
+const HANGS_ON = 1.15;
+/** Seconds the small one takes to come into the last place of the V, carried north with the family while it does. */
+const SLIPS_IN = 5;
 
 /**
  * Home. The last island: up over the crest of the final hill with the fledgling, and the valley below holds a white
@@ -112,8 +119,12 @@ export class HomeChapter implements Chapter {
   private flockCalled = false;
   private tried = 0;
   private called = false;
+  private turned = false;
   private answeredBack = false;
   private leftAt = 0;
+  /** When the small one started taking its place in the line, and how far it was from it when it did. */
+  private slipAt = 0;
+  private readonly slipBy = new THREE.Vector3();
   private readonly gathering = new THREE.Vector3();
   /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
   private coaxFrom = 0;
@@ -269,8 +280,7 @@ export class HomeChapter implements Chapter {
      */
     if (this.beat === 'answered') {
       if (this.t > FLEDGES_AFTER) {
-        /** It comes round to the child's own face at the end of its circuit, so the goodbye is said to them. */
-        cygnet.fledge(c.position, c.yaw);
+        cygnet.fledge(c.position, HANGS_ON);
         this.to('fledge');
       }
       return;
@@ -332,6 +342,11 @@ export class HomeChapter implements Chapter {
   private updateFledge(): void {
     const { child: c, cygnet, flock } = this.cast;
     c.lookAt = cygnet.position;
+    /** They turn to it as it breaks out of the circuit, so it comes round to a face and not to the back of a head. */
+    if (!this.turned && this.t > tuning.fledge.loopFor) {
+      this.turned = true;
+      c.faceToward(c.position.x + Math.sin(HANGS_ON) * 8, c.position.z + Math.cos(HANGS_ON) * 8, 1);
+    }
     const phase = cygnet.fledgePhase;
     if (phase === 'turn' && !this.called) {
       this.called = true;
@@ -347,8 +362,16 @@ export class HomeChapter implements Chapter {
       cygnet.join((out) => {
         if (!flock.active) return null;
         if (flock.wheeling) return out.copy(flock.head);
-        /** The last place in the V: the one it fell out of over the first island. */
-        return flock.behindTail(out);
+        /**
+         * The last place in the V: the one it fell out of over the first island. It is never chased across the sky
+         * — the place is taken from wherever it was when they broke, and closed on while they carry it north.
+         */
+        flock.nextSlot(out);
+        if (this.slipAt === 0) {
+          this.slipAt = this.now;
+          this.slipBy.subVectors(cygnet.position, out);
+        }
+        return out.addScaledVector(this.slipBy, 1 - THREE.MathUtils.smoothstep(this.now - this.slipAt, 0, SLIPS_IN));
       });
       this.to('gone');
     }
@@ -508,8 +531,8 @@ export class HomeChapter implements Chapter {
       const f = tuning.fledge;
       const open = THREE.MathUtils.smoothstep(this.t / (f.loopFor + f.swingFor), 0, 1);
       s.from = FROM_SOUTH;
-      s.target.set(c.x, c.y + 1.7 + THREE.MathUtils.clamp((k.y - c.y) * 0.5, 0, 5), c.z - f.offset);
-      s.distance = 15 + 5 * open;
+      s.target.set(c.x, c.y + 1.7 + THREE.MathUtils.clamp((k.y - c.y) * 0.5, 0, 5), c.z + f.offset);
+      s.distance = 14 + 4.5 * open;
       s.height = THREE.MathUtils.clamp(c.y + 2.6 - s.target.y, -9, 2);
       this.pace = 0.5;
       this.focus.copy(k);

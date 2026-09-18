@@ -325,7 +325,7 @@ export class Cygnet {
     this.fledgeT = 0;
     /** It picks the circuit up from wherever the player's wind left it, so nothing about the hand-over is a cut. */
     const f = tuning.fledge;
-    this.fledgeArc = Math.atan2(this.position.x - child.x, (this.position.z - child.z + f.offset) / f.squash);
+    this.fledgeArc = Math.atan2(this.position.x - child.x, (this.position.z - child.z - f.offset) / f.squash);
     this.fledgeFrom = this.position.y - Math.max(heightAt(child.x, child.z), 0);
     this.fledgeFace = facing;
     this.hopT = 0;
@@ -661,7 +661,7 @@ export class Cygnet {
     const steady = THREE.MathUtils.smoothstep(t / f.loopFor, 0, 1);
     const wobble = (1 - steady) ** 1.4;
     /** It loses the air every couple of seconds early on and grabs it back; by the last lap they have gone. */
-    const lurch = Math.max(0, Math.sin(t * 2.3)) ** 3 * wobble;
+    const lurch = Math.max(0, Math.sin(t * 2.3)) ** 2 * wobble;
     const drift = Math.sin(t * 1.27 + 1) * wobble;
     const r = lerp(f.radiusFrom, f.radiusTo, steady);
     const along = Math.hypot(Math.cos(this.fledgeArc) * r, Math.sin(this.fledgeArc) * r * f.squash);
@@ -669,7 +669,7 @@ export class Cygnet {
     const a = this.fledgeArc;
     /** It takes over at whatever height the player's wind had it at, and sinks onto its own line rather than to it. */
     const high = lerp(this.fledgeFrom, lerp(f.heightFrom, f.heightTo, steady), THREE.MathUtils.smoothstep(t, 0, 2));
-    this.flyTo.set(child.x + Math.sin(a) * r, ground + high - lurch * f.sag + drift * 0.7, child.z - f.offset + Math.cos(a) * r * f.squash);
+    this.flyTo.set(child.x + Math.sin(a) * r, ground + high - lurch * f.sag + drift * 0.7, child.z + f.offset + Math.cos(a) * r * f.squash);
     const was = p.y;
     p.lerp(this.flyTo, 1 - Math.exp(-dt * (3 + 3 * steady)));
     /** The pitch is whatever the climb is really doing, so a sag drops the nose and the recovery lifts it. */
@@ -711,7 +711,7 @@ export class Cygnet {
     const r = f.radiusTo;
     const along = Math.hypot(Math.cos(this.fledgeArc) * r, Math.sin(this.fledgeArc) * r * f.squash);
     this.fledgeArc += (f.speedTo / Math.max(along, 1)) * dt * (1 - swing);
-    this.flyTo.set(child.x + Math.sin(this.fledgeArc) * r, ground + f.heightTo, child.z - f.offset + Math.cos(this.fledgeArc) * r * f.squash);
+    this.flyTo.set(child.x + Math.sin(this.fledgeArc) * r, ground + f.heightTo, child.z + f.offset + Math.cos(this.fledgeArc) * r * f.squash);
     this.tmp.set(child.x + Math.sin(this.fledgeFace) * f.hangAt, ground + f.hangHigh + Math.sin(hang * 1.9) * 0.16, child.z + Math.cos(this.fledgeFace) * f.hangAt);
     this.flyTo.lerp(this.tmp, swing);
     const fromX = p.x;
