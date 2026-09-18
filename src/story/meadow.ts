@@ -112,6 +112,7 @@ export class MeadowChapter implements Chapter {
   private waveTo = 0;
   private waveSpeed = 0;
   private gustUntil = 0;
+  private gustPower = 1;
   private showerStart = -1;
   private holdUntil = 0;
   private duskTarget = 0;
@@ -261,7 +262,9 @@ export class MeadowChapter implements Chapter {
     /** Once it is all awake the wind wakes ground the ordinary way again, wherever the journey goes next. */
     this.cast.life.regions.waiting.set(0, 0, 0, 0);
     cue('wave');
-    if (answered) this.gustUntil = this.now + GUST_FOR;
+    /** The wind runs ahead of the last wave whoever finished the tune; for a player who never joined in, softly. */
+    this.gustPower = answered ? 1 : UNANSWERED;
+    this.gustUntil = this.now + GUST_FOR * (answered ? 1 : 0.7);
   }
 
   /** For testing, and for the walk that somehow got past the piano: the island is simply awake. */
@@ -296,12 +299,12 @@ export class MeadowChapter implements Chapter {
         az: cz - tz * 15,
         bx: cx + tx * 15,
         bz: cz + tz * 15,
-        vx: ux * 27,
-        vz: uz * 27,
+        vx: ux * 27 * this.gustPower,
+        vz: uz * 27 * this.gustPower,
         radius: 13,
-        energy: 0.9,
+        energy: 0.9 * this.gustPower,
         swirl: 0,
-        lift: 0.3,
+        lift: 0.3 * this.gustPower,
       });
     }
   }
