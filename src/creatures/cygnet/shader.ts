@@ -132,19 +132,20 @@ in float vShell;
 
 /**
  * Linear albedo, on the same scale as every other creature: the adult swans' plume is 0.72 here. A mute cygnet is
- * pale — silver-grey on the back, warm fawn-white on the face, breast and belly — so its darkest down still sits
- * well above a quarter, and only the bill, the lores, the legs and the eye are allowed to be dark. Anything lower
- * reads as charcoal the moment it is past the distance where the coat's own shells still catch the light.
+ * dusky — warm mouse-grey and taupe, darkest over the crown, nape and back, fawn-pale on the face, foreneck, breast
+ * and belly — and it has to stay clearly darker than its white family in the same light, which is the whole of why
+ * it is the ugly duckling. Every step keeps red above green above blue, so the coat never goes to cold ash.
  */
-const vec3 NAPE = vec3(0.212, 0.200, 0.180);
-const vec3 DOVE = vec3(0.336, 0.322, 0.292);
-const vec3 MILK = vec3(0.498, 0.482, 0.440);
-const vec3 SNOW = vec3(0.760, 0.750, 0.712);
+const vec3 NAPE = vec3(0.163, 0.141, 0.113);
+const vec3 DOVE = vec3(0.228, 0.204, 0.168);
+const vec3 MILK = vec3(0.330, 0.303, 0.254);
+/** Where the year's white has come through. Well short of the adults' 0.72: it is still not one of them. */
+const vec3 SNOW = vec3(0.545, 0.528, 0.486);
 const vec3 SLATE = vec3(0.120, 0.100, 0.102);
 const vec3 NAIL = vec3(0.250, 0.176, 0.166);
 const vec3 LEG = vec3(0.052, 0.049, 0.058);
-const vec3 VANE = vec3(0.300, 0.294, 0.302);
-const vec3 VANE_TIP = vec3(0.442, 0.436, 0.424);
+const vec3 VANE = vec3(0.190, 0.176, 0.160);
+const vec3 VANE_TIP = vec3(0.272, 0.256, 0.230);
 const vec3 IRIS = vec3(0.004, 0.004, 0.005);
 
 float hash13(vec3 p) {
@@ -195,7 +196,7 @@ void main() {
   float k = vMat.y;
   float fleck = 0.5 * vnoise(vRest.xz * 130.0 + vRest.y * 83.0) + 0.5 * vnoise(vRest.zy * 44.0 + vRest.x * 31.0);
   vec3 alb = coat(k, fleck);
-  float fuzz = 0.3;
+  float fuzz = 0.22;
   float thin = 0.14;
   float ao = 0.84;
   if (m == ${QUILL}) {
@@ -227,11 +228,11 @@ void main() {
   fuzz *= 1.0 - 0.7 * uWet;
 #ifdef SHELL
   /** Down is shaded at the root and catches everything at the tip, which is the whole of why a coat looks soft.
-      The root only has to be a shade, not a darkness: this is a pale bird, and depth here comes from the gradient. */
-  alb *= mix(mix(0.80, 0.62, uWet), 1.0, vShell);
-  ao = mix(0.84, 1.0, vShell);
-  /** Enough to fur the edge, no more: on a coat this pale the rim is white light, and it burns the bird out. */
-  fuzz = 0.20 * (1.0 - 0.7 * uWet);
+      The root only has to be a shade: the coat is dusky already, and going dark at the root turns it to soot. */
+  alb *= mix(mix(0.86, 0.68, uWet), 1.0, vShell);
+  ao = mix(0.88, 1.0, vShell);
+  /** The rim is absolute light, so it is what pales the bird: enough to fur the edge and no more. */
+  fuzz = 0.09 * (1.0 - 0.7 * uWet);
   thin = 0.20;
 #endif
 #ifndef SHELL
@@ -244,10 +245,10 @@ void main() {
 #endif
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
   /**
-   * A pale bird stays pale out of the sun. Without this it takes the whole of its shaded value from a warm ground
-   * bounce meant for brown animals and goes charcoal the moment a cloud or the child's shoulder is over it.
+   * Out of the sun the bird still has to read as soft down rather than a dark lump, so the sky fills it. The fill is
+   * warmed on the way in: taken straight, a blue sky or a moon turns a fawn coat to cold ash in every shaded frame.
    */
-  col += alb * uSkyAmbient * (0.10 + 0.13 * (N.y * 0.5 + 0.5));
+  col += alb * uSkyAmbient * vec3(1.40, 1.02, 0.62) * (0.16 + 0.18 * (N.y * 0.5 + 0.5));
   if (uWet > 0.0 && m != ${EYE}) {
     /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
     vec3 V = normalize(cameraPosition - vWorld);
