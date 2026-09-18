@@ -776,7 +776,7 @@ export class Cygnet {
     const hurry = seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
     this.hurry = ease(this.hurry, hurry, 4, dt);
     const speed = this.hurry * (1.5 + 2.9 * this.hurry);
-    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.9 + 1.5 * hurry, dt);
+    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
       this.position.x += Math.sin(this.yaw) * speed * dt;
       this.position.z += Math.cos(this.yaw) * speed * dt;
@@ -922,9 +922,9 @@ export class Cygnet {
      * A passenger's own balance: it leans against every turn the child makes and rocks a little with their walking,
      * and when they stop it comes upright and stays there. All of it off the seat's own lag, so none of it is jitter.
      */
-    const against = clamp(-this.seating.jostle.x * 7, -0.2, 0.2);
+    const against = clamp(-this.seating.jostle.x * 3.5, -0.13, 0.13);
     const rock = Math.sin(this.time * 2.1) * 0.022 * clamp(this.seating.speed * 0.6, 0, 1);
-    this.roll = ease(this.roll, (against + rock) * (1 - this.doze * 0.8), 5, dt);
+    this.roll = ease(this.roll, (against + rock) * (1 - this.doze * 0.8), 3, dt);
     if (this.mind.told && this.state === 'hooded' && this.time > this.nextCall) {
       /** In the hood with the family in sight: it stretches up and calls to them, and nothing answers. */
       this.call(true);
