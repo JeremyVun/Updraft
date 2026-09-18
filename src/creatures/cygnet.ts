@@ -391,7 +391,7 @@ export class Cygnet {
   release(spot: THREE.Vector3): void {
     this.position.set(spot.x, Math.max(heightAt(spot.x, spot.z), 0), spot.z);
     this.yaw = this.seating.yaw;
-    this.seating.go({ seat: null, held: false }, 'hop', 0.55, 0.1);
+    this.seating.go({ seat: null, held: false }, 'hop', 0.72, 0.1);
     this.state = 'following';
     this.settle = 0.1;
     this.landedAt = this.time;
@@ -776,7 +776,7 @@ export class Cygnet {
     const hurry = seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
     this.hurry = ease(this.hurry, hurry, 4, dt);
     const speed = this.hurry * (1.5 + 2.9 * this.hurry);
-    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 5 + 4 * hurry, 2.2 + 2.4 * hurry, dt);
+    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.9 + 1.5 * hurry, dt);
     if (speed > 0.02) {
       this.position.x += Math.sin(this.yaw) * speed * dt;
       this.position.z += Math.cos(this.yaw) * speed * dt;

@@ -10,7 +10,7 @@ const UP = new THREE.Vector3(0, 1, 0);
  */
 const PRESENT = new THREE.Vector3(0.13, 0.6, 0.47);
 /** A mitten rests against the outside of what it holds, not at the middle of it. */
-const PALM = 0.07;
+const PALM = 0.06;
 /** How far from it the child kneels. */
 const STANDOFF = 1.0;
 /** Where a kneeling child's hands stop when they are held out low: as far down as the arms go without falling over. */
@@ -126,13 +126,14 @@ export class Carry {
           this.regard();
         },
         exit: () => {
-          this.dip = 0;
+          /** The dip is carried on the hands' own height, so it is let go of, never zeroed: zeroing it is a one-frame step. */
+          this.dipWas = this.dip = 0;
           this.lead(this.relYaw);
         },
       },
       {
         name: 'lift',
-        dur: 1.25,
+        dur: 1.5,
         enter: () => {
           leanFrom.value = c.lean;
           this.goal = null;
@@ -215,6 +216,8 @@ export class Carry {
           if (facing !== undefined) this.relYaw = lerpAngle(this.relYawFrom, facing - c.yaw, kk);
         },
       },
+      /** The hands rest on the grass a moment before anything else happens, which is what makes it a choice it makes. */
+      { name: 'rest', dur: 0.45, update: () => this.regard() },
       {
         name: 'step-off',
         dur: 0.7,

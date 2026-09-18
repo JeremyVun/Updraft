@@ -152,7 +152,8 @@ export class Gait {
     const [l, r] = this.feet;
     const lean = (l.planted ? 1 : 0) - (r.planted ? 1 : 0);
     const amount = stepping ? 1 : 0.4;
-    const follow = 1 - Math.exp(-dt * (10 + 10 * this.pace));
+    /** How fast the body answers the feet. Slower than instant is what gives the waddle its weight, and it cannot snap. */
+    const follow = 1 - Math.exp(-dt * (6.5 + 6 * this.pace));
     this.sway += (lean * 0.022 * amount - this.sway) * follow;
     this.roll += (-lean * (0.13 - 0.05 * this.pace) * amount - this.roll) * follow;
     this.twist += (lean * 0.12 * amount - this.twist) * follow;

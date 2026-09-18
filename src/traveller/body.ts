@@ -206,7 +206,8 @@ export function buildChild(): Rig {
     return o;
   };
   const sockets = {
-    cradle: socket(body, 0, 0.8, 0.56),
+    /** In against the chest, and near enough that both mittens can rest on it without the arms running out of reach. */
+    cradle: socket(body, 0, 0.79, 0.5),
     /** High in the bag and a little back of its middle, so the breast and the whole neck clear the rim from behind. */
     satchel: socket(body, 0, 0.91, -0.585),
     shoulder: socket(body, -0.3, 1.04, -0.02),
