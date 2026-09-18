@@ -189,6 +189,15 @@ After playing the cygnet, the swans and the rooms on `main` (2026-09-18, verbati
 > little maybe, as well as make the boats sails flap more noticeably, but it shouldn't cause the water to look too
 > much different otherwise."
 
+On the piano as a puzzle (2026-09-18): "yea good idea for the piano as a puzzle, approved". The idea approved: **call
+and response.** The piano says a short phrase of a lullaby by itself, keys dipping; a sweep of wind along the keys
+the way the phrase went plays it back, and the piano goes on to the next (rising, falling, over the top and home);
+after the third it plays the whole tune, the cygnet walks the keys, and the child gets up and goes. Anything else
+is just wind on a piano. It always ends: the child walks on after 20 s of the player playing nothing, or 90 s
+whatever happens. Mechanics built (`story/piano.ts` `duet`, `Piano.phrase` / `expect` / `matched`,
+`tuning.piano`); still to do by eye: the cygnet on the keys, the world answering each phrase, and the child
+sitting AT it rather than on it.
+
 ## The dream
 
 A dreamy, meditative game about being the wind. A Ghibli afternoon: soft light, slow time, small kindnesses. The player never fails, never waits on a timer, never reads a word. Every gesture is answered by the world.

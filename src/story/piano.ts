@@ -15,6 +15,18 @@ const PATIENCE = 22;
 const SIT_FOR = 0.7;
 
 /**
+ * The lullaby, in steps of the meadow's scale up from a low note. The piano says a phrase; the player answers by
+ * sweeping the wind along the keys the way the phrase went, once for each part of it; the piano goes on to the
+ * next. Rising, falling, then over the top and home.
+ */
+const LULLABY: number[][][] = [
+  [[0, 1, 2, 4]],
+  [[5, 4, 2, 1]],
+  [[0, 2, 4, 5], [4, 2, 1, 0]],
+];
+const CADENCE = [0, 2, 4, 7, 4, 2, 0];
+
+/**
  * The stop at the piano on the meadow. The plane leans toward it like any other waypoint, and if the child comes
  * near they stop, look at it, sit down on the stool and press one key — and then sit with their hands in their lap
  * and listen for as long as the player keeps playing. Nothing is gated on any of it: they walk on after a little
@@ -26,6 +38,12 @@ export class PianoStop {
   private now = 0;
   private pressAt = 0;
   private noteAt = 0;
+  /** Which phrase of the lullaby they are on, which part of it the player has got to, and when the piano speaks next. */
+  private phrase = 0;
+  private part = 0;
+  private sayAt = 0;
+  private heardTo = 0;
+  private finishedAt = 0;
   private hushed = 0;
   private fromYaw = 0;
   private readonly aim = new THREE.Vector2(piano.stand.x, piano.stand.z);
@@ -104,8 +122,11 @@ export class PianoStop {
           this.noteAt = 0;
           piano.press();
         }
+        this.duet(time, c);
         const heard = Math.max(this.since + 2, piano.lastGestureNote);
-        if (time - heard > tuning.piano.listenFor || this.t > tuning.piano.stayFor) {
+        const over = this.finishedAt > 0 && time > this.finishedAt;
+        if (over || time - heard > tuning.piano.listenFor || this.t > tuning.piano.stayFor) {
+          piano.expect = null;
           c.dismount();
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(c), 1);
           this.to('leaving');
@@ -136,7 +157,52 @@ export class PianoStop {
     shot.height = near ? 2.1 : 5;
   }
 
+  /**
+   * The piano says a phrase and waits. A sweep of wind along the keys the way the phrase went plays it back, and
+   * the piano goes on; anything else is just the wind on a piano, and after a while it says the phrase again.
+   * Nothing is failed: a player who only listens is walked on from here like anywhere else.
+   */
+  private duet(time: number, child: Cast['child']): void {
+    if (this.finishedAt > 0 || this.noteAt > 0 || this.pressAt > 0) return;
+    const base = Math.floor(piano.steps * 0.3);
+    const parts = LULLABY[this.phrase];
+    if (this.sayAt === 0) this.sayAt = time + 1.4;
+
+    if (piano.matched > this.heardTo) {
+      this.heardTo = piano.matched;
+      this.part++;
+      if (this.part >= parts.length) {
+        this.phrase++;
+        this.part = 0;
+        if (this.phrase >= LULLABY.length) {
+          /** All of it, by itself, from the top: the tune they have been finding was there the whole time. */
+          piano.expect = null;
+          const whole = [...LULLABY.flat(2), ...CADENCE].map((s) => base + s);
+          this.finishedAt = piano.phrase(whole, tuning.piano.phraseSpacing * 0.8, 0.42) + 1.2;
+          child.cheer();
+          return;
+        }
+        this.sayAt = time + 1.6;
+      } else {
+        piano.expect = parts[this.part].map((s) => base + s);
+        /** Half an answer earns the time to finish it before the piano says the phrase over again. */
+        this.sayAt = time + tuning.piano.sayAgain;
+      }
+      return;
+    }
+
+    if (time > this.sayAt) {
+      this.part = 0;
+      const said = parts.flat().map((s) => base + s);
+      const ends = piano.phrase(said, tuning.piano.phraseSpacing);
+      piano.expect = parts[0].map((s) => base + s);
+      this.heardTo = piano.matched;
+      this.sayAt = ends + tuning.piano.sayAgain;
+    }
+  }
+
   private give(child: Cast['child']): void {
+    piano.expect = null;
     child.stop();
     child.lookAt = null;
     this.to('done');

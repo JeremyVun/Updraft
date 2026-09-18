@@ -556,7 +556,7 @@ function frame(now: number): void {
   grass.bake(renderer);
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm);
-  piano.update(dt, time, rig.camera, wind, sound.output);
+  piano.update(dt, time, rig.camera, wind, sound.output, input.present && input.gust > tuning.pointer.minGust ? input.gustDir : null);
   wood.update(dt, time, rig.camera, storm);
   kite.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);

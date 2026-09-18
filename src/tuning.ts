@@ -136,9 +136,14 @@ export const tuning = {
     /** How near the camera has to be for the piano to sound at all, and where it is loudest. */
     heardWithin: 62,
     heardFully: 16,
-    /** Seconds the child sits with nothing played before they walk on, and the longest they ever stay. */
-    listenFor: 8,
-    stayFor: 45,
+    /** Seconds the child sits with the player playing nothing before they walk on, and the longest they ever stay. */
+    listenFor: 20,
+    stayFor: 90,
+    /** The lullaby: seconds between its notes, how long it waits for an answer before saying a phrase again. */
+    phraseSpacing: 0.42,
+    sayAgain: 8,
+    /** How much less wind than a run normally takes counts as an answer while the piano is waiting for one. */
+    answerEase: 0.2,
     /** How far the room's music pulls back while they are sitting at it. */
     hush: 0.5,
   },

@@ -234,7 +234,7 @@ function keysGeometry(): THREE.BufferGeometry {
   return mergeGeometries(parts);
 }
 
-type Source = 'gust' | 'lift' | 'breeze' | 'child' | 'bird';
+type Source = 'gust' | 'lift' | 'breeze' | 'child' | 'bird' | 'dream';
 
 interface Scheduled {
   at: number;
@@ -290,6 +290,13 @@ export class Piano {
   private lastPlayed = -1e3;
   private lastGesture = -1e3;
   private now = 0;
+  /**
+   * The notes the player's next sweep finds if it goes the way they go, as steps of the scale: while this is set,
+   * a gust along the keys that way plays them rather than a run of its own, and `matched` counts it.
+   */
+  expect: number[] | null = null;
+  private stroke: THREE.Vector2 | null = null;
+  matched = 0;
 
   constructor() {
     const foot = Math.max(heightAt(PLACE.x, PLACE.z), 0);
@@ -357,6 +364,22 @@ export class Piano {
     }
   }
 
+  /** How many notes of the scale the keyboard has, for whoever writes a tune for it. */
+  get steps(): number {
+    return this.pool.length;
+  }
+
+  /** The piano playing by itself: a phrase, as steps of the scale. Nothing the wind does is heard over it. Returns when it ends. */
+  phrase(steps: number[], spacing: number, velocity = 0.36): number {
+    let at = this.now + 0.05;
+    for (const step of steps) {
+      this.schedule(at, this.pool[THREE.MathUtils.clamp(step, 0, this.pool.length - 1)], velocity * (0.9 + this.rand() * 0.2), 'dream');
+      at += spacing * (0.94 + this.rand() * 0.12);
+    }
+    this.runUntil = Math.max(this.runUntil, at + 0.2);
+    return at;
+  }
+
   private nearestStep(midi: number): number {
     let best = 0;
     for (let i = 1; i < this.pool.length; i++) {
@@ -365,8 +388,10 @@ export class Piano {
     return best;
   }
 
-  update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null): void {
+  /** `stroke` is the way the player's own wind is going right now, if they are making any: truer than the air over the keys, which the breeze is in too. */
+  update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null, stroke: THREE.Vector2 | null = null): void {
     this.now = time;
+    this.stroke = stroke;
     this.strings.setOutput(out);
     const reach = camera.position.distanceTo(this.keys);
     this.group.visible = reach < 240;
@@ -394,8 +419,12 @@ export class Piano {
     const speed = Math.hypot(w.x, w.z);
     const energy = w.energy;
 
-    if (energy > t.gustFrom && energy > this.prevEnergy + 0.008 && speed > 3 && this.now > this.runUntil) {
-      this.run(THREE.MathUtils.clamp((energy - t.gustFrom) / (t.gustFull - t.gustFrom), 0, 1), (w.x * this.axis.x + w.z * this.axis.y) / Math.max(speed, 1e-4), speed);
+    /** While it is waiting for an answer it listens harder: an unhurried sweep along the keys is an answer too. */
+    const from = this.expect ? t.gustFrom * t.answerEase : t.gustFrom;
+    const stroke = this.stroke;
+    const along = stroke ? stroke.x * this.axis.x + stroke.y * this.axis.y : (w.x * this.axis.x + w.z * this.axis.y) / Math.max(speed, 1e-4);
+    if (energy > from && energy > this.prevEnergy + 0.004 && (speed > 3 || (this.expect !== null && stroke !== null)) && this.now > this.runUntil) {
+      this.run(THREE.MathUtils.clamp((energy - from) / (t.gustFull - from), 0, 1), along, speed);
     }
     this.prevEnergy = energy;
 
@@ -424,6 +453,19 @@ export class Piano {
     const crossing = Math.min(1, Math.abs(along) * 2.2);
     const count = Math.round(THREE.MathUtils.lerp(t.runLeast, t.runMost, strength * (0.45 + 0.55 * crossing)));
     const dir = along >= 0 ? 1 : -1;
+    const tune = this.expect;
+    if (tune && crossing > 0.3 && Math.sign(tune[tune.length - 1] - tune[0]) === dir) {
+      /** The right way along the keys: the wind finds the tune, not just any notes, and the player has played it. */
+      let at = this.now;
+      const spacing = THREE.MathUtils.lerp(t.spaceSlow, t.spaceFast, Math.min(1, strength * 0.5)) * 1.5;
+      for (const step of tune) {
+        this.schedule(at, this.pool[THREE.MathUtils.clamp(step, 0, this.pool.length - 1)], 0.38 + 0.3 * strength, 'gust');
+        at += spacing;
+      }
+      this.runUntil = at + 0.25;
+      this.matched++;
+      return;
+    }
     const room = this.pool.length - count;
     /** It starts where the gust comes in: low notes if it is going up the keys, high ones if it is coming down. */
     const bias = Math.pow(this.rand(), 1.5) * room * 0.8;
