@@ -122,7 +122,7 @@ export class SwanFlock {
   readonly dropped = new THREE.Vector3();
 
   constructor() {
-    this.swans = new Instances(swanGeometry(), MAX, ['iPos', 'iAir', 'iNeck', 'iBody']);
+    this.swans = new Instances(swanGeometry(), MAX, ['iPos', 'iAir', 'iNeck', 'iBody', 'iSteady']);
     this.swans.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
     this.mesh = new THREE.Mesh(this.swans.geometry, swanMaterial());
     this.mesh.frustumCulled = false;
@@ -662,6 +662,7 @@ export class SwanFlock {
       this.swans.set(1, drawn, b.pitch, b.roll, b.beat, b.flap);
       this.swans.set(2, drawn, b.neck.x, b.neck.y, b.neck.z, b.neck.w);
       this.swans.set(3, drawn, b.fold, b.headYaw, b.headPitch, b.feet);
+      this.swans.set(4, drawn, b.bob, 0, 0, 0);
       drawn++;
     }
     this.swans.commit(drawn);

@@ -699,12 +699,17 @@ export class MeadowChapter implements Chapter {
       const gap = Math.hypot(k.x - c.x, k.z - c.z);
       const ground = Math.max(heightAt(k.x, k.z), 0);
       const up = THREE.MathUtils.clamp((k.y - ground) / 3.5, 0, 1);
-      const toChild = gap > 0.5 ? Math.atan2(c.x - k.x, c.z - k.z) : this.cast.child.yaw + Math.PI;
-      const bearing = toChild + 1.0 * (1 - up);
+      /**
+       * The camera stands out over the water and looks back in at the shore, which is the one line of sight here
+       * that does not run up the side of the bowl: the rig would answer a bank by climbing over the scene, and
+       * the player would be trying to draw circles on the ground from directly above it. It also puts the pale
+       * bird against dark water, and the child, the bank and the sky they left by all behind it.
+       */
+      const bearing = Math.atan2(POND_AT.x - k.x, POND_AT.z - k.z);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       /** Off the cygnet toward the child, so the one who set it down is in the frame it is trying to leave. */
       s.target.set(k.x + (c.x - k.x) * 0.3, k.y + 0.5, k.z + (c.z - k.z) * 0.3);
-      s.distance = 13 + gap * 0.5;
+      s.distance = 12 + gap * 0.6;
       /**
        * The camera stays down on the ground whatever the cygnet does, so that once it is up the frame is looking
        * up at it with sky behind it. But while it is still down it stands well above the grass and looks in at a

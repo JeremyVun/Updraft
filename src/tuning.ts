@@ -45,8 +45,8 @@ export const tuning = {
     coaxAfter: 2.2,
     coaxRamp: 10,
     /** The invitation's loops: turns a second, their radius, how high they climb, and how brightly they show. */
-    coaxLoops: 0.62,
-    coaxRadius: 1.3,
+    coaxLoops: 0.85,
+    coaxRadius: 1.0,
     coaxHeight: 2.6,
     coaxAlpha: 0.72,
     /** Seconds of winding in one invitation, and of quiet after it before it comes round again. */
@@ -83,7 +83,7 @@ export const tuning = {
     family: 15,
     raft: 6.5,
     /** How far the haze is allowed to lift at the crest. Thinner than this and the next island shows through it. */
-    haze: 0.3,
+    haze: 0.42,
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
     looks: 7.5,

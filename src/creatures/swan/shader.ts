@@ -47,6 +47,8 @@ in vec4 iAir;
 in vec4 iNeck;
 /** Wings folded, head turn, head pitch, feet stowed. */
 in vec4 iBody;
+/** How far the body is riding above its own line on this wingbeat, which the head is not allowed to follow. */
+in vec4 iSteady;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec2 vMat;
@@ -128,7 +130,12 @@ void main() {
   }
   p = rotZ(rotX(p, iAir.x), iAir.y);
   nrm = rotZ(rotX(nrm, iAir.x), iAir.y);
+  /**
+   * A swan's head is held still in the world while its body rises and falls under it on the beat. The bob is in
+   * the instance's position, so the neck gives it back, more of it the further out toward the head you are.
+   */
   vWorld = rotY(p, iPos.w) + iPos.xyz;
+  vWorld.y -= iSteady.x * (part == ${HEAD} ? 1.0 : part == ${NECK} ? aSpan * aSpan : 0.0);
   vNormal = rotY(nrm, iPos.w);
   vMat = aMat;
   vUnder = smoothstep(0.05, -0.6, vNormal.y);

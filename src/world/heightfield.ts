@@ -268,12 +268,15 @@ export function pondOut(x: number, z: number): number {
   return d * (1 + 0.16 * gfbm(x * 0.05, z * 0.05, 2, 71));
 }
 
-/** The bowl: the ground is only ever taken down, so the bank is whatever the meadow was already doing. */
+/**
+ * The bowl. The bank is raised as well as the middle dug out, so the water is held by ground on every side of it
+ * and never runs out into the hollow the pond was put in.
+ */
 function pondHeight(h: number, x: number, z: number): number {
   const d = pondOut(x, z);
-  if (d > 1.55) return h;
+  if (d > 1.4) return h;
   const bed = POND_LEVEL + POND_BANK * d * d - POND_BED * (1 - d * d);
-  return h + (smin(h, bed, 1.4) - h) * smoothstep(1.55, 1, d);
+  return h + (bed - h) * smoothstep(1.4, 0.9, d);
 }
 
 /** The cottage below the last hill sits on a levelled pad. */
@@ -454,9 +457,9 @@ float pondDry(vec2 p, float groundH) {
 }
 float hf_pond(float h, vec2 p) {
   float d = pondOut(p);
-  if (d > 1.55) return h;
+  if (d > 1.4) return h;
   float bed = ${glsl(POND_LEVEL)} + ${glsl(POND_BANK)} * d * d - ${glsl(POND_BED)} * (1.0 - d * d);
-  return mix(h, hf_smin(h, bed, 1.4), smoothstep(1.55, 1.0, d));
+  return mix(h, bed, smoothstep(1.4, 0.9, d));
 }
 float worldHeight(vec2 p) {
   float h = hf_smax(hf_island(p), hf_lines(p), 6.0);

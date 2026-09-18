@@ -57,11 +57,12 @@ void main() {
   float F = 0.02 + 0.98 * pow(1.0 - nv, 5.0);
 
   float sh = cloudShadow(xz);
-  vec3 light = uSkyAmbient + uSunColor * max(uSunDir.y, 0.0) * sh;
+  /** Held off the floor by the sky, or a cloud crossing the hollow puts a hole of a different colour in the pond. */
+  vec3 light = uSkyAmbient * 1.15 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
   /** Peat water: almost all of what you see is the sky, and the little that is not is the bottom of a field. */
   vec3 body = mix(uShallow, uDeep, smoothstep(0.1, 1.4, depth)) * light;
   vec3 sky = skyColor(R);
-  vec3 col = mix(body, sky, clamp(F, 0.0, 0.92));
+  vec3 col = mix(body, sky, clamp(F * 1.35 + 0.06, 0.0, 0.92));
 
   vec3 H = normalize(uSunDir + V);
   col += uSunColor * pow(max(dot(N, H), 0.0), 220.0) * 1.6 * sh;
@@ -182,7 +183,7 @@ export class Pond {
       /** Thickest right on the waterline and thinning both ways, the way a reed bed actually stands in a pond. */
       if (Math.random() > 1 - Math.abs(above) / 1.3) continue;
       at.set([x, z, Math.random() * Math.PI, Math.random() * 100], n * 4);
-      look.set([Math.max(ground, POND_LEVEL - 0.25), 1.1 + Math.random() * 1.5, 0.028 + Math.random() * 0.02, (Math.random() - 0.5) * 0.5], n * 4);
+      look.set([Math.max(ground, POND_LEVEL - 0.25), 1.0 + Math.random() * 1.4, 0.05 + Math.random() * 0.055, (Math.random() - 0.5) * 0.5], n * 4);
       n++;
     }
     reeds.setAttribute('iReed', new THREE.InstancedBufferAttribute(at, 4));
@@ -192,7 +193,7 @@ export class Pond {
     const bed = new THREE.Mesh(
       reeds,
       new THREE.ShaderMaterial({
-        uniforms: { ...atmo.uniforms, uReedRoot: { value: new THREE.Color('#2f3a1b') }, uReedTip: { value: new THREE.Color('#9a9448') } },
+        uniforms: { ...atmo.uniforms, uReedRoot: { value: new THREE.Color('#2f3a1b') }, uReedTip: { value: new THREE.Color('#7e8a42') } },
         vertexShader: REED_VERT,
         fragmentShader: REED_FRAG,
         side: THREE.DoubleSide,
