@@ -2,16 +2,22 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { flipWinding } from '../../creatures/shapes';
+import { tuning } from '../../tuning';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { REFLECTION_LAYER } from '../../world/water/reflection';
 import { curve } from './curve';
 import { FOAM, Marks, RING, SLICK } from './marks';
 
 /** Beak tip to the notch of the flukes, in world units. */
-const LEN = 2.2;
+const LEN = tuning.dolphins.length;
+/** The rest pose is drawn at this length and scaled to `LEN`, so the whole animal keeps its proportions. */
+const DRAWN = 2.2;
+const SCALE = LEN / DRAWN;
+/** How high the back rides above the beak, once scaled: what has to clear the water for the dolphin to be out. */
+const BACK = 0.172 * SCALE;
 const G = 9.8;
 /** Where the beak rides when the body lies level at the surface. */
-const BASE_Y = -0.1;
+const BASE_Y = -0.14;
 /** Runners in loose ones and twos, then the two that ride the bow wave. */
 const SHOALS = [1, 2, 1, 2];
 const RIDERS = 2;
@@ -79,7 +85,7 @@ function body(): THREE.BufferGeometry {
       const ca = Math.cos(a);
       const e = ca < 0 ? 1.2 : 1;
       const v = Math.sign(ca) * Math.abs(ca) ** e;
-      pos.push(w * Math.sign(sa) * Math.abs(sa) ** e, cy + h * v, -s * LEN);
+      pos.push(w * Math.sign(sa) * Math.abs(sa) ** e, cy + h * v, -s * DRAWN);
       rig.push(s, BODY, v, j / around);
     }
   }
@@ -89,7 +95,7 @@ function body(): THREE.BufferGeometry {
   rig.push(0, BODY, 0, 0);
   for (let j = 0; j < around; j++) idx.push(nose, (j + 1) % around, j);
   const tail = pos.length / 3;
-  pos.push(0, 0, -LEN - 0.01);
+  pos.push(0, 0, -DRAWN - 0.01);
   rig.push(1, BODY, 0, 0);
   const last = rings * around;
   for (let j = 0; j < around; j++) idx.push(tail, last + j, last + ((j + 1) % around));
@@ -103,7 +109,7 @@ function dorsal(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
-  const root = -0.4 * LEN;
+  const root = -0.4 * DRAWN;
   const base = TOP(0.45) - 0.045;
   for (let k = 0; k <= levels; k++) {
     const h = k / levels;
@@ -115,13 +121,13 @@ function dorsal(): THREE.BufferGeometry {
       const along = 0.5 - 0.5 * Math.cos(a);
       const z = lead - along * chord;
       pos.push(Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85), base + h * 0.26, z);
-      rig.push(-z / LEN, DORSAL, 1, along);
+      rig.push(-z / DRAWN, DORSAL, 1, along);
     }
   }
   stitch(idx, levels + 1, around);
   const tip = pos.length / 3;
   pos.push(0, base + 0.268, root - 0.45);
-  rig.push(-(root - 0.45) / LEN, DORSAL, 1, 0.5);
+  rig.push(-(root - 0.45) / DRAWN, DORSAL, 1, 0.5);
   const last = levels * around;
   for (let j = 0; j < around; j++) idx.push(tip, last + j, last + ((j + 1) % around));
   return build(pos, rig, idx);
@@ -134,13 +140,13 @@ function flipper(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
-  const root = new THREE.Vector3(0.072, -0.072, -0.2 * LEN);
+  const root = new THREE.Vector3(0.072, -0.072, -0.2 * DRAWN);
   const e1 = new THREE.Vector3(0.62, -0.42, -0.66).normalize();
   const back = new THREE.Vector3(0, 0, -1);
   const e2 = back.clone().addScaledVector(e1, -back.dot(e1)).normalize();
   const e3 = new THREE.Vector3().crossVectors(e2, e1);
   const span = 0.34;
-  const s = -root.z / LEN;
+  const s = -root.z / DRAWN;
   const p = new THREE.Vector3();
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
@@ -175,7 +181,7 @@ function flukes(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
-  const hinge = -0.985 * LEN;
+  const hinge = -0.985 * DRAWN;
   for (let i = 0; i <= stations; i++) {
     const t = -1 + (2 * i) / stations;
     const at = Math.abs(t);
@@ -188,7 +194,7 @@ function flukes(): THREE.BufferGeometry {
       const along = 0.5 - 0.5 * Math.cos(a);
       const z = lead + (trail - lead) * along;
       pos.push(t * 0.3, Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85), z);
-      rig.push(-z / LEN, FLUKES, 1, along);
+      rig.push(-z / DRAWN, FLUKES, 1, along);
     }
   }
   const raw: number[] = [];
@@ -203,6 +209,7 @@ function dolphinGeometry(): THREE.BufferGeometry {
   right.computeVertexNormals();
   const geo = mergeGeometries([body(), dorsal(), flipper(), right, flukes()]);
   if (!geo) throw new Error('dolphin parts do not share attributes');
+  geo.scale(SCALE, SCALE, SCALE);
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
   return geo;
 }
@@ -291,7 +298,7 @@ Skin skin() {
     float stripe = smoothstep(0.11, 0.0, abs(v - mix(-0.5, -0.88, smoothstep(0.1, 0.21, s)))) * smoothstep(0.085, 0.105, s) * smoothstep(0.25, 0.2, s);
     float beak = smoothstep(0.118, 0.08, s) * smoothstep(-0.6, -0.15, v);
     k.albedo = mix(k.albedo, INK, max(stripe * 0.75, beak * 0.85));
-    float eye = length(vec2((s - 0.128) * ${f(LEN)}, (v - 0.3) * 0.17));
+    float eye = length(vec2((s - 0.128) * ${f(DRAWN)}, (v - 0.3) * 0.17));
     k.albedo = mix(k.albedo, INK, smoothstep(0.03, 0.017, eye));
   } else {
     k.albedo = mix(CAPE, SLATE, smoothstep(0.25, -0.35, rn.y) * 0.45);
@@ -607,6 +614,8 @@ interface Pack {
 
 interface Dolphin {
   pack: Pack;
+  /** Full-grown, so it is one of the ones that can be asked to play a set-piece. */
+  adult: boolean;
   dAlong: number;
   dAcross: number;
   size: number;
@@ -810,9 +819,10 @@ export class Dolphins {
   private makeDolphin(pack: Pack, member: number): Dolphin {
     return {
       pack,
-      dAlong: member ? rand(-2.6, -1.1) : 0,
-      dAcross: member ? rand(0.7, 1.7) * (Math.random() < 0.5 ? -1 : 1) : 0,
-      size: member ? rand(0.66, 0.86) : rand(0.92, 1.12),
+      adult: !member,
+      dAlong: member ? rand(-3.4, -1.6) : 0,
+      dAcross: member ? rand(0.95, 2.1) * (Math.random() < 0.5 ? -1 : 1) : 0,
+      size: member ? rand(0.68, 0.86) : rand(0.95, 1.15),
       seed: Math.random(),
       x: 0,
       y: -2,
@@ -870,8 +880,9 @@ export class Dolphins {
     p.phase = Math.random() * 6.2832;
     p.entry = entry;
     p.close = p.rider ? 3.2 : rand(2.6, 4.2);
-    p.near = p.rider ? rand(1.4, 3) : rand(3.2, 7);
-    p.far = p.rider ? p.near : rand(9, 15);
+    /** Near enough to ride the bow wave, never near enough for a flipper to reach the planking. */
+    p.near = p.rider ? rand(2.2, 3.6) : rand(4, 7.5);
+    p.far = p.rider ? p.near : rand(10, 16);
     p.side = Math.random() < 0.5 ? -1 : 1;
     p.cycle = Math.floor((p.phase - Math.PI / 2) / (Math.PI * 2));
     p.along = p.station + p.swing * Math.sin(p.phase) + entry;
@@ -990,40 +1001,45 @@ export class Dolphins {
   private wash(d: Dolphin, dt: number, time: number): void {
     const fx = Math.sin(d.yaw);
     const fz = Math.cos(d.yaw);
-    const back = d.y + Math.cos(d.pitch) * 0.17 * d.size;
+    /** Marks and drops are sized against the body, which is `SCALE` times the length it was drawn at. */
+    const s = d.size * SCALE;
+    const back = d.y + Math.cos(d.pitch) * BACK * d.size;
     const out = back > 0.015;
     if (out && !d.wasUp) {
-      this.marks.add(FOAM, d.x + fx * 0.3 * d.size, d.z + fz * 0.3 * d.size, 0.17 * d.size, 1.6, time, 0.42, 0.26, d.yaw, 2.1);
+      this.marks.add(FOAM, d.x + fx * 0.3 * s, d.z + fz * 0.3 * s, 0.17 * s, 1.6, time, 0.42, 0.26, d.yaw, 2.1);
       const pace = Math.max(this.speed + d.pack.vel, 2);
-      for (let i = 0; i < 11; i++) {
+      /** The harder it comes out, the more it takes with it: a breath throws a dab, a leap throws a sheet. */
+      const hard = THREE.MathUtils.clamp(d.vy / 4, 0.3, 1.8);
+      for (let i = 0, n = Math.round(11 * hard); i < n; i++) {
         const side = rand(-0.7, 0.7);
         this.drops.emit(
-          d.x - fx * rand(0, 0.5) + fz * side * d.size,
+          d.x - fx * rand(0, 0.5) + fz * side * s,
           0.06 + Math.random() * 0.1,
-          d.z - fz * rand(0, 0.5) - fx * side * d.size,
-          -fx * pace * rand(0.1, 0.34) + fz * side * 1.6,
-          rand(1.1, 3.2),
-          -fz * pace * rand(0.1, 0.34) - fx * side * 1.6,
-          rand(0.01, 0.02),
+          d.z - fz * rand(0, 0.5) - fx * side * s,
+          -fx * pace * rand(0.1, 0.34) + fz * side * 1.6 * hard,
+          rand(1.1, 3.2) * hard,
+          -fz * pace * rand(0.1, 0.34) - fx * side * 1.6 * hard,
+          rand(0.014, 0.028),
           rand(0.7, 1.2),
           0,
         );
       }
-      for (let i = 0; i < 2; i++) {
-        this.drops.emit(d.x - fx * rand(0, 0.7), 0.12, d.z - fz * rand(0, 0.7), rand(-0.4, 0.4), rand(0.5, 1.3), rand(-0.4, 0.4), rand(0.045, 0.08), rand(0.9, 1.5), 1);
+      for (let i = 0, n = Math.round(2 * hard); i < n; i++) {
+        this.drops.emit(d.x - fx * rand(0, 0.7), 0.12, d.z - fz * rand(0, 0.7), rand(-0.4, 0.4), rand(0.5, 1.3), rand(-0.4, 0.4), rand(0.06, 0.12), rand(0.9, 1.5), 1);
       }
     }
     if (!out && d.wasUp) {
-      this.marks.add(SLICK, d.x - fx * 0.5, d.z - fz * 0.5, 0.45 * d.size, 8, time, 0.22, 0.09, d.yaw, 1.7);
+      this.marks.add(SLICK, d.x - fx * 0.5 * s, d.z - fz * 0.5 * s, 0.45 * s, 8, time, 0.22, 0.09, d.yaw, 1.7);
     }
     d.wasUp = out;
     const inside = d.y < -0.02 && d.vy < 0;
     if (inside && !d.wasIn && d.vy < -1.4) {
-      this.marks.add(RING, d.x, d.z, 0.14 * d.size, 1.6, time, 0.4, 0.9);
-      this.marks.add(FOAM, d.x, d.z, 0.1 * d.size, 1.1, time, 0.28, 0.2);
-      for (let i = 0; i < 6; i++) {
+      const deep = THREE.MathUtils.clamp(-d.vy / 4, 0.4, 1.8);
+      this.marks.add(RING, d.x, d.z, 0.14 * s * deep, 1.6, time, 0.4, 0.9);
+      this.marks.add(FOAM, d.x, d.z, 0.1 * s * deep, 1.1, time, 0.28, 0.2);
+      for (let i = 0, n = Math.round(6 * deep); i < n; i++) {
         const a = Math.random() * Math.PI * 2;
-        this.drops.emit(d.x, 0.04, d.z, Math.cos(a) * rand(0.3, 0.9), rand(0.6, 1.5), Math.sin(a) * rand(0.3, 0.9), rand(0.01, 0.018), 0.7, 0);
+        this.drops.emit(d.x, 0.04, d.z, Math.cos(a) * rand(0.3, 0.9) * deep, rand(0.6, 1.5) * deep, Math.sin(a) * rand(0.3, 0.9) * deep, rand(0.014, 0.024), 0.7, 0);
       }
     }
     d.wasIn = inside;
@@ -1032,6 +1048,6 @@ export class Dolphins {
     d.trail -= dt;
     if (d.trail > 0) return;
     d.trail = 0.1;
-    this.marks.add(FOAM, d.x - fx * 0.4 * d.size, d.z - fz * 0.4 * d.size, 0.09 * d.size, 1.2, time, 0.26, 0.2, d.yaw, 1.9);
+    this.marks.add(FOAM, d.x - fx * 0.4 * s, d.z - fz * 0.4 * s, 0.09 * s, 1.2, time, 0.26, 0.2, d.yaw, 1.9);
   }
 }

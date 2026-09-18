@@ -203,6 +203,25 @@ export const tuning = {
     /** Seconds of turning a spinning wheel smears over: what makes a gust visible running down a row. */
     smearSeconds: 0.075,
   },
+  /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
+  dolphins: {
+    /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
+    length: 3.3,
+    /** Seconds into the crossing for the first leap over the bow, and for the first shove on the quarter. */
+    leapAt: 26,
+    pushAt: 68,
+    /** The wait before either comes round again, and how much of that is chance. */
+    restLeast: 40,
+    restSpread: 25,
+    /** How fast the leap leaves the water, in units a second: it clears the bow and falls back on the far side. */
+    leapLift: 7.4,
+    /** What a shove does to the hull: radians of heel away from it, radians a second of yaw, and units of surge. */
+    shoveHeel: 0.17,
+    shoveYaw: 0.16,
+    shoveSurge: 1.9,
+    /** Seconds after a shove at which it is felt hardest; it is gone about six times that later. */
+    shovePeak: 0.32,
+  },
   petals: {
     /** Share of the 8192 petals alive on the still island, and in the short pasture past z = -600. */
     stillIslandShare: 0.7,
