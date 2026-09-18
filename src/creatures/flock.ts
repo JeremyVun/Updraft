@@ -640,8 +640,8 @@ export class SwanFlock {
     for (const b of this.birds) {
       if (n + 3 > WAKES) break;
       const moving = b.run > 0 && b.run < RUN + 0.6;
-      const wash = moving ? 0.9 : 0.34;
-      this.wakes.set(0, n, b.at.x - Math.sin(b.yaw) * 0.25, b.at.z - Math.cos(b.yaw) * 0.25, 0.86 + (moving ? 1.9 : 0), 0.36);
+      const wash = moving ? 0.5 : 0.34;
+      this.wakes.set(0, n, b.at.x - Math.sin(b.yaw) * (moving ? 0.9 : 0.25), b.at.z - Math.cos(b.yaw) * (moving ? 0.9 : 0.25), 0.86 + (moving ? 1.3 : 0), 0.36);
       this.wakes.set(1, n, b.yaw, wash * Math.max(0, 1 - Math.max(0, b.at.y - 0.1) * 4), 0, 0);
       n++;
       if (!moving) continue;
@@ -649,9 +649,9 @@ export class SwanFlock {
         const k = b.step - i * 0.5;
         const age = k - Math.floor(k);
         const back = (age + i * 0.5) * (b.speed / 5.4) * 1.5 + 0.3;
-        const spread = 0.42 + age * 0.9;
+        const spread = 0.3 + age * 0.52;
         this.wakes.set(0, n, b.at.x - Math.sin(b.yaw) * back, b.at.z - Math.cos(b.yaw) * back, spread, spread);
-        this.wakes.set(1, n, b.yaw, (1 - age) * (1 - age) * 0.95, 1, 0);
+        this.wakes.set(1, n, b.yaw, (1 - age) * (1 - age) * 0.8, 1, 0);
         n++;
       }
     }
