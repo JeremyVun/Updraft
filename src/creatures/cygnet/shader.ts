@@ -136,15 +136,15 @@ in float vShell;
  * well above a quarter, and only the bill, the lores, the legs and the eye are allowed to be dark. Anything lower
  * reads as charcoal the moment it is past the distance where the coat's own shells still catch the light.
  */
-const vec3 NAPE = vec3(0.285, 0.272, 0.250);
-const vec3 DOVE = vec3(0.450, 0.436, 0.404);
-const vec3 MILK = vec3(0.640, 0.624, 0.576);
-const vec3 SNOW = vec3(0.860, 0.850, 0.812);
+const vec3 NAPE = vec3(0.212, 0.200, 0.180);
+const vec3 DOVE = vec3(0.336, 0.322, 0.292);
+const vec3 MILK = vec3(0.498, 0.482, 0.440);
+const vec3 SNOW = vec3(0.760, 0.750, 0.712);
 const vec3 SLATE = vec3(0.120, 0.100, 0.102);
 const vec3 NAIL = vec3(0.250, 0.176, 0.166);
 const vec3 LEG = vec3(0.052, 0.049, 0.058);
-const vec3 VANE = vec3(0.398, 0.390, 0.398);
-const vec3 VANE_TIP = vec3(0.570, 0.562, 0.548);
+const vec3 VANE = vec3(0.300, 0.294, 0.302);
+const vec3 VANE_TIP = vec3(0.442, 0.436, 0.424);
 const vec3 IRIS = vec3(0.004, 0.004, 0.005);
 
 float hash13(vec3 p) {
@@ -230,8 +230,9 @@ void main() {
       The root only has to be a shade, not a darkness: this is a pale bird, and depth here comes from the gradient. */
   alb *= mix(mix(0.80, 0.62, uWet), 1.0, vShell);
   ao = mix(0.84, 1.0, vShell);
-  fuzz = 0.38 * (1.0 - 0.7 * uWet);
-  thin = 0.34;
+  /** Enough to fur the edge, no more: on a coat this pale the rim is white light, and it burns the bird out. */
+  fuzz = 0.20 * (1.0 - 0.7 * uWet);
+  thin = 0.20;
 #endif
 #ifndef SHELL
   /**
