@@ -713,10 +713,10 @@ export class AutumnBirches {
       for (let i = 0; i < LITTER_SIDE; i++) {
         const x = LITTER_BOX.x + (i + 0.5) * cell.x;
         const z = LITTER_BOX.z + (j + 0.5) * cell.z;
-        const y = heightAt(x, z);
-        if (y < TREE_LINE - 0.9) continue;
+        /** The cheap test first: over half of this grid is sea, and the ground under it is not worth looking up. */
         const isle = Math.hypot((x - ISLE.x) / ISLE.rx, (z - ISLE.z) / ISLE.rz);
         if (isle > 1.02) continue;
+        if (heightAt(x, z) < TREE_LINE - 0.9) continue;
         let d = (1.2 + 0.45 * patchy(x * 0.09, z * 0.09)) * (1 - THREE.MathUtils.smoothstep(isle, 0.74, 1.02));
         /** The ride is walked and blown over: less lies on it than either side of it. */
         d *= 0.72 + 0.4 * THREE.MathUtils.smoothstep(walkDistance(x, z), 1.5, 9);
