@@ -58,6 +58,7 @@ out vec3 vWorld;
 out vec3 vNormal;
 out vec2 vMat;
 out vec3 vRest;
+out float vFade;
 
 /** No down where the bill leaves the face or around the eye, and finer on the head than on the body. */
 float downLength(vec3 rest) {
@@ -90,9 +91,10 @@ void main() {
   float w = aSkin.z;
   vec3 world = mix((a * vec4(p, 1.0)).xyz, (b * vec4(p, 1.0)).xyz, w);
   vec3 N = normalize(mix(mat3(a) * n, mat3(b) * n, w));
+  /** How much of the coat is still standing: strands are too fine to survive the pixel grid from far off. */
+  vFade = 1.0 - smoothstep(${DOWN_NEAR.toFixed(1)}, ${DOWN_FAR.toFixed(1)}, distance(cameraPosition, world));
 #ifdef SHELL
-  /** Strands are too fine to survive the pixel grid from far off, so the coat lies down again as the camera leaves. */
-  float len = uDown * downLength(position) * (1.0 - smoothstep(${DOWN_NEAR.toFixed(1)}, ${DOWN_FAR.toFixed(1)}, distance(cameraPosition, world)));
+  float len = uDown * downLength(position) * vFade;
   float ruffle = 1.0 + uRuffle * sin(uTime * 6.5 + dot(position, vec3(41.0, 23.0, 31.0)));
   /** Sleeked down lies one way — back along the bird — rather than merely shortening, which is what reads as slick. */
   vec3 lay = uLay * (len * aShell);
@@ -123,6 +125,7 @@ in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vMat;
 in vec3 vRest;
+in float vFade;
 #ifdef SHELL
 in float vShell;
 #endif
@@ -222,12 +225,20 @@ void main() {
   fuzz = 0.38 * (1.0 - 0.7 * uWet);
   thin = 0.34;
 #endif
+#ifndef SHELL
+  /**
+   * Once the down has lain down with distance this skin is the whole bird, not the dark roots under a coat, so it
+   * takes over the coat's own value. Without it the cygnet is pale close up and a charcoal lump from the camera.
+   */
+  alb *= mix(1.34, 1.0, vFade);
+  ao = mix(0.98, ao, vFade);
+#endif
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
   /**
    * A pale bird stays pale out of the sun. Without this it takes the whole of its shaded value from a warm ground
    * bounce meant for brown animals and goes charcoal the moment a cloud or the child's shoulder is over it.
    */
-  col += alb * uSkyAmbient * (0.26 + 0.2 * (N.y * 0.5 + 0.5));
+  col += alb * uSkyAmbient * (0.2 + 0.22 * (N.y * 0.5 + 0.5));
   if (uWet > 0.0 && m != ${EYE}) {
     /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
     vec3 V = normalize(cameraPosition - vWorld);
