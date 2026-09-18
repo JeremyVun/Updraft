@@ -334,7 +334,9 @@ export class Poser {
     /** In the arms its left side is against the child, so that is where a nuzzle goes: up under their chin. */
     wantYaw = lerp(wantYaw, 1.35, act('nuzzle'));
     wantPitch = lerp(wantPitch, -0.55 + Math.sin(t * 7) * 0.12, act('nuzzle'));
-    wantYaw = lerp(wantYaw, -0.5 * d.actSide, act('peer'));
+    /** Craning round the child to see what they are looking at: the head goes right round, and it holds it there. */
+    wantYaw = lerp(wantYaw, -1.2 * d.actSide, act('peer'));
+    wantPitch = lerp(wantPitch, -0.12, act('peer'));
     wantYaw = lerp(wantYaw, 1.5, p.sleep);
     wantPitch = lerp(wantPitch, 0.4, p.sleep);
     wantYaw *= 1 - d.call.env * 0.6;

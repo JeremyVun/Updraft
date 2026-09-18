@@ -918,6 +918,13 @@ export class Cygnet {
       this.nextWriggle = this.time + 7 + Math.random() * 8;
     }
     this.wriggle = Math.max(0, this.wriggle - dt);
+    /**
+     * A passenger's own balance: it leans against every turn the child makes and rocks a little with their walking,
+     * and when they stop it comes upright and stays there. All of it off the seat's own lag, so none of it is jitter.
+     */
+    const against = clamp(-this.seating.jostle.x * 7, -0.2, 0.2);
+    const rock = Math.sin(this.time * 2.1) * 0.022 * clamp(this.seating.speed * 0.6, 0, 1);
+    this.roll = ease(this.roll, (against + rock) * (1 - this.doze * 0.8), 5, dt);
     if (this.mind.told && this.state === 'hooded' && this.time > this.nextCall) {
       /** In the hood with the family in sight: it stretches up and calls to them, and nothing answers. */
       this.call(true);
