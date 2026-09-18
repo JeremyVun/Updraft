@@ -156,6 +156,7 @@ export class Cygnet {
   private fledgeT = 0;
   private fledgeArc = 0;
   private fledgeFace = 0;
+  private fledgeFrom = 0;
   /** How far its head is off the line of flight, how far its legs are up in it, and how far its wings are trimmed. */
   private craning = 0;
   private tucked = 0;
@@ -325,6 +326,7 @@ export class Cygnet {
     /** It picks the circuit up from wherever the player's wind left it, so nothing about the hand-over is a cut. */
     const f = tuning.fledge;
     this.fledgeArc = Math.atan2(this.position.x - child.x, (this.position.z - child.z + f.offset) / f.squash);
+    this.fledgeFrom = this.position.y - Math.max(heightAt(child.x, child.z), 0);
     this.fledgeFace = facing;
     this.hopT = 0;
     this.landing = 0;
@@ -641,7 +643,7 @@ export class Cygnet {
    */
   private fledging(dt: number, child: THREE.Vector3): void {
     this.fledgeT += dt;
-    this.flap = 1;
+    this.flap = ease(this.flap, 1, 6, dt);
     const ground = Math.max(heightAt(child.x, child.z), 0);
     if (this.fledgeT < tuning.fledge.loopFor) this.circuit(dt, child, ground);
     else this.turnBack(dt, this.fledgeT - tuning.fledge.loopFor, child, ground);
@@ -665,11 +667,9 @@ export class Cygnet {
     const along = Math.hypot(Math.cos(this.fledgeArc) * r, Math.sin(this.fledgeArc) * r * f.squash);
     this.fledgeArc += (lerp(f.speedFrom, f.speedTo, steady) / Math.max(along, 1)) * dt;
     const a = this.fledgeArc;
-    this.flyTo.set(
-      child.x + Math.sin(a) * r,
-      ground + lerp(f.heightFrom, f.heightTo, steady) - lurch * f.sag + drift * 0.7,
-      child.z - f.offset + Math.cos(a) * r * f.squash,
-    );
+    /** It takes over at whatever height the player's wind had it at, and sinks onto its own line rather than to it. */
+    const high = lerp(this.fledgeFrom, lerp(f.heightFrom, f.heightTo, steady), THREE.MathUtils.smoothstep(t, 0, 2));
+    this.flyTo.set(child.x + Math.sin(a) * r, ground + high - lurch * f.sag + drift * 0.7, child.z - f.offset + Math.cos(a) * r * f.squash);
     const was = p.y;
     p.lerp(this.flyTo, 1 - Math.exp(-dt * (3 + 3 * steady)));
     /** The pitch is whatever the climb is really doing, so a sag drops the nose and the recovery lifts it. */
@@ -703,7 +703,7 @@ export class Cygnet {
     const swing = THREE.MathUtils.smoothstep(t / f.swingFor, 0, 1);
     const hang = Math.max(0, t - f.swingFor);
     this.watch(this.watching.set(child.x, child.y + 1.55, child.z));
-    this.craning = ease(this.craning, 1, 2.2, dt);
+    this.craning = ease(this.craning, 1, 3.5, dt);
     this.trim = ease(this.trim, 0.06, 3, dt);
     this.tucked = ease(this.tucked, 0.15, 2, dt);
 
