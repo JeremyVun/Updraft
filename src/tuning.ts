@@ -80,19 +80,23 @@ export const tuning = {
   },
   crest: {
     /** How far ahead of the child the colt's family is wheeling, and how far to the east of the way ahead. */
-    ahead: 34,
-    aside: 8,
-    /** How high off the meadow the column starts, how fast the thermal carries it up, and how it is shaped. */
-    base: 2,
-    climb: 1.1,
-    radius: 12,
-    spread: 9,
-    /** How fast they glide away once they have turned north: slower than travelling, so the going is seen. */
-    leaves: 11,
+    ahead: 46,
+    aside: 10,
+    /**
+     * Swans do not ride thermals. The family flies a low heavy circuit over the meadow: `base` is how high it is
+     * held, `spread` the whole depth of it, `climb` the little it gains while it waits for the last of them.
+     */
+    base: 15,
+    climb: 0.4,
+    radius: 16,
+    spread: 6,
+    /** How fast they go once they have turned north, and how hard they climb out: the going has to be seen. */
+    leaves: 15,
+    leaveClimb: 3.4,
     /** Seconds in: the colt answers them, they string out and go north, and the child sets it down after them. */
     answers: 1.3,
-    goes: 10.5,
-    setsDown: 16,
+    goes: 9.5,
+    setsDown: 17.5,
     /** How far in front of the child the colt is put down, and how long it waits before its first try. */
     setDownAt: 2.8,
     firstTry: 2.2,

@@ -420,7 +420,7 @@ export class MeadowChapter implements Chapter {
    */
   private updateCrest(dt: number, time: number): void {
     const { child: c, cygnet, flock } = this.cast;
-    const { answers, goes, setsDown, spread, climb, leaves } = tuning.crest;
+    const { answers, goes, setsDown, spread, leaves, leaveClimb } = tuning.crest;
     const k = flock.active ? flock.head : this.gathering;
     this.far.set(k.x, k.y + spread * 0.5, k.z);
     cygnet.watch(this.far);
@@ -449,7 +449,7 @@ export class MeadowChapter implements Chapter {
        * Off on the line the journey takes, a little west of the one they were found on: north, for home. They
        * go at a glide rather than their travelling speed, so the player has time to see that they are going.
        */
-      flock.goOn(THREE.MathUtils.lerp(Math.atan2(this.axis.x, this.axis.z), Math.PI, 0.5), climb * 0.7, leaves);
+      flock.goOn(Math.PI, leaveClimb, leaves);
     }
     if (this.t > setsDown && !c.busy) this.setDown();
   }

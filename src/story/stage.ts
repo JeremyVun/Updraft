@@ -3,12 +3,15 @@ import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
 import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
+import { tuning } from '../tuning';
 
-export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
+export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
   game: { bearing: Math.PI, distance: 15, height: 5.2, on: 'both' },
+  /** Standing where the child stands and watching the swans, wherever in the sky or on the water they are. */
+  flock: { bearing: Math.PI, distance: 26, height: 7, on: 'both' },
   behind: { bearing: Math.PI, distance: 5.5, height: 1.4, on: 'both' },
   front: { bearing: 0, distance: 5.5, height: 1.0, on: 'both' },
   side: { bearing: Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
@@ -179,8 +182,9 @@ export class StageChapter implements Chapter {
         return true;
       }
       case 'circle': {
-        const p = ahead(34);
-        flock.circle(p.x, p.z, Math.max(heightAt(p.x, p.z), 0) + 22, 20, 20, 16);
+        const { ahead: out, base, radius, spread } = tuning.crest;
+        const p = ahead(out);
+        flock.circle(p.x, p.z, Math.max(heightAt(p.x, p.z), 0) + base, radius, 20, spread);
         return true;
       }
       case 'afloat': {
@@ -234,6 +238,12 @@ export class StageChapter implements Chapter {
     else s.target.set((c.position.x + at.x) / 2, (c.position.y + 1.2 + at.y) / 2, (c.position.z + at.z) / 2);
     const bearing = this.facing + v.bearing;
     s.eye = (s.eye ?? new THREE.Vector3()).set(s.target.x + Math.sin(bearing) * v.distance, s.target.y + v.height, s.target.z + Math.cos(bearing) * v.distance);
+    if (this.view === 'flock' && this.cast.flock.active) {
+      /** Stood off the flock itself, on the line the child sees it along, so whatever it is doing fills the frame. */
+      s.target.copy(this.cast.flock.head);
+      const away = this.tmp.set(s.target.x - c.position.x, 0, s.target.z - c.position.z).normalize();
+      s.eye.set(s.target.x - away.x * v.distance, s.target.y + v.height, s.target.z - away.z * v.distance);
+    }
     this.focus.copy(c.position);
     this.trodden.set(c.position.x, 7, c.position.z);
   }
