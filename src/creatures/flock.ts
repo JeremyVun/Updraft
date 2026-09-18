@@ -10,6 +10,8 @@ const WAKES = MAX * 4;
 /** Wingbeats a second. Slow for a bird, which is most of what makes a swan look as heavy as it is. */
 const BEAT = 2.15;
 const CRUISE = 19;
+/** How fast they fly the circuit before they go: slower than travelling, but still a swan's flying speed. */
+const WHEEL = 12;
 /** How high the widest part of a swan floats: the rest of the body is under the sea and the sea hides it. */
 const FLOAT = 0.03;
 /** The run before a swan is airborne, and how fast it is going by the end of it. */
@@ -30,8 +32,10 @@ type Pose = 'alert' | 'curve' | 'preen' | 'dip' | 'tuck' | 'stretch';
 type Mode = 'idle' | 'skein' | 'wheel' | 'raft';
 
 interface Bird {
-  /** The station it holds in the skein or the wheel; unused on the water, where `at` is the whole truth. */
+  /** The station it holds in the skein; unused on the water, where `at` is the whole truth. */
   offset: THREE.Vector3;
+  /** Its place on the wheel: where it stands on the circle, how wide its own orbit is, and how high it rides. */
+  arc: THREE.Vector3;
   at: THREE.Vector3;
   seed: number;
   yaw: number;
@@ -61,6 +65,8 @@ interface Bird {
   step: number;
   /** Which way it prefers to turn its head and tuck its bill. */
   side: number;
+  /** Its own wingbeat, a little off everyone else's: a flock of swans is never a metronome. */
+  rate: number;
   /** How closely it is holding its station: 0 straight after a take-off, 1 once the skein has formed. */
   hold: number;
 }
@@ -85,6 +91,9 @@ export class SwanFlock {
   /** Centre and radius of the wheel they are turning, or of the water they are sitting on. */
   private pool = { x: 0, z: 0, r: 0, base: 0 };
   private turn = 0;
+  /** How fast the wheel is coming round, and the bank that speed and radius ask for. */
+  private spin = 0;
+  private bank = 0;
   private bearing = 0;
   /** Counts up from the moment a raft is told to go, and is negative while it is still a raft. */
   private launched = -1;
@@ -136,7 +145,7 @@ export class SwanFlock {
   private slot(i: number): THREE.Vector3 {
     const side = i === 0 ? 0 : i % 2 === 0 ? 1 : -1;
     const rank = Math.ceil(i / 2);
-    return new THREE.Vector3(side * rank * 3.1, (Math.random() - 0.5) * 1.6, -rank * 4.4 - Math.random() * 1.2);
+    return new THREE.Vector3(side * (rank * 3.6 + range(Math.random, -0.5, 0.5)), range(Math.random, -0.5, 0.5), -rank * 5 - Math.random() * 1.2);
   }
 
   /** Sends a skein over, passing above (x, z) at the given height on the given bearing, from `from` units back. */
@@ -180,16 +189,20 @@ export class SwanFlock {
     this.birds.length = 0;
     for (let i = 0; i < c; i++) {
       const b = flying[i] ?? this.blank(0);
-      const a = (i / c) * Math.PI * 2 + Math.random() * 0.4;
-      b.offset.set(a, (i / c) * rise + Math.random() * rise * 0.17, 0.85 + Math.random() * 0.3);
+      /** Strung round the circle in ones and twos rather than evenly, so it is a family and not a fairground. */
+      const a = (i / c) * Math.PI * 2 + range(Math.random, -0.24, 0.24);
+      b.arc.set(a, range(Math.random, -0.3, 0.3) + ((i % 3) - 1) * rise * 0.42 + (i / c) * rise * 0.5, 0.88 + Math.random() * 0.24);
       b.hold = flying[i] ? 0 : 1;
       if (!flying[i]) {
-        b.at.set(x + Math.cos(a) * radius * b.offset.z, base + b.offset.y, z + Math.sin(a) * radius * b.offset.z);
+        b.at.set(x + Math.cos(a) * radius * b.arc.z, base + b.arc.y, z + Math.sin(a) * radius * b.arc.z);
         b.yaw = -a;
       }
       this.birds.push(b);
     }
     this.pool = { x, z, r: radius, base };
+    /** A swan's circuit is flown, not floated: the wheel turns at the speed it would take to fly round it. */
+    this.spin = WHEEL / Math.max(radius, 4);
+    this.bank = Math.atan2(WHEEL * WHEEL / Math.max(radius, 4), 19);
     this.lead.set(x, base, z);
     this.turn = 0;
     this.climb = climb;
@@ -210,9 +223,13 @@ export class SwanFlock {
     flying.sort((a, b) => b.at.dot(this.dir) - a.at.dot(this.dir));
     this.lead.copy(flying[0].at);
     this.dropped.copy(this.lead);
+    /**
+     * They do not all break together. The one already pointing the way straightens out of the turn first and the
+     * rest come off the wheel behind it, each after the one in front, which is what leaving looks like.
+     */
     flying.forEach((b, i) => {
       b.offset.copy(this.slot(i));
-      b.hold = 0;
+      b.delay = i * 0.2 + range(Math.random, 0.04, 0.16);
     });
     this.birds.length = 0;
     this.birds.push(...flying);
@@ -319,6 +336,7 @@ export class SwanFlock {
   private blank(yaw: number): Bird {
     return {
       offset: new THREE.Vector3(),
+      arc: new THREE.Vector3(),
       at: new THREE.Vector3(),
       seed: Math.random() * 100,
       yaw,
@@ -343,6 +361,7 @@ export class SwanFlock {
       run: 0,
       step: 0,
       side: Math.random() < 0.5 ? -1 : 1,
+      rate: range(Math.random, 0.93, 1.07),
       hold: 0,
     };
   }
@@ -370,9 +389,19 @@ export class SwanFlock {
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
     let anyVisible = false;
+    let circling = false;
     for (const b of this.birds) {
       if (b.fade <= 0) continue;
       anyVisible = true;
+      /** Still on the wheel, waiting its turn to break out of it: nothing about it changes until it does. */
+      if (b.delay > 0) {
+        b.delay -= dt;
+        circling = true;
+        this.circling(b, dt, time);
+        /** The moment it lets go of the circle it is holding nothing, and has to find its station from there. */
+        if (b.delay <= 0) b.hold = 0;
+        continue;
+      }
       if (b.labour > 0) b.labour = Math.min(1, b.labour + dt * 0.15);
       /** Nobody holds a perfect station: they drift a little fore and aft and settle back, and the V breathes. */
       const wx = Math.sin(time * 0.31 + b.seed) * 0.5 + Math.sin(time * 0.17 + b.seed * 3) * 0.35;
@@ -380,7 +409,7 @@ export class SwanFlock {
       const sag = b.labour * (0.55 + 0.45 * Math.sin(time * 1.55 + b.seed));
       const ox = (b.offset.x + wx) * cy + (b.offset.z + wz - b.labour * 5.5) * sy;
       const oz = -(b.offset.x + wx) * sy + (b.offset.z + wz - b.labour * 5.5) * cy;
-      b.beat += dt * BEAT * (1 + b.labour * 0.22);
+      b.beat += dt * BEAT * b.rate * (1 + b.labour * 0.22);
       b.flap = 1 - sag * 0.5;
       b.bob = stroke(b.beat) * -0.055 * b.flap;
       const to = tmp.set(
@@ -388,9 +417,9 @@ export class SwanFlock {
         this.lead.y + b.offset.y + Math.sin(time * 0.5 + b.seed) * 0.35 - b.labour * 2.6 - sag * 0.7,
         this.lead.z + oz,
       );
-      b.hold = ease(b.hold, 1, 0.3, dt);
-      b.at.lerp(to, 1 - Math.exp(-dt * (0.6 + 14 * b.hold * b.hold)));
-      b.yaw = yaw + wrapAngle(b.yaw - yaw) * Math.exp(-dt * (0.5 + 3 * b.hold));
+      b.hold = ease(b.hold, 1, 0.45, dt);
+      b.at.lerp(to, 1 - Math.exp(-dt * (0.9 + 14 * b.hold * b.hold)));
+      b.yaw = yaw + wrapAngle(b.yaw - yaw) * Math.exp(-dt * (0.9 + 3 * b.hold));
       b.roll = ease(b.roll, wrapAngle(b.yaw - yaw) * -1.6 + Math.sin(time * 0.43 + b.seed * 5) * 0.05, 2, dt);
       b.pitch = ease(b.pitch, -0.03 + sag * 0.16, 2, dt);
       b.neck.lerp(tmp4.set(FLY[0], FLY[1] + sag * 0.12, FLY[2] - sag * 0.2, 0), 1 - Math.exp(-dt * 2));
@@ -399,35 +428,43 @@ export class SwanFlock {
       b.fold = ease(b.fold, 0, 4, dt);
       b.feet = ease(b.feet, 0, 3, dt);
     }
+    if (circling) this.turn += dt * this.spin;
     if (!anyVisible || this.lead.distanceToSquared(this.dropped) > 1400 * 1400) this.clear();
   }
 
-  /** Birds strung round a slow wheel: angle in offset.x, height in offset.y, radius scale in offset.z. */
+  /** Birds strung round a wheel: angle in arc.x, height in arc.y, radius scale in arc.z. */
   private wheel(dt: number, time: number): void {
     const t = this.pool;
-    this.turn += dt * 0.22;
+    this.turn += dt * this.spin;
     t.base += this.climb * dt;
     this.lead.set(t.x, t.base, t.z);
     for (const b of this.birds) {
       if (b.fade <= 0) continue;
-      const a = b.offset.x + this.turn;
-      const r = t.r * b.offset.z;
-      b.beat += dt * BEAT * 0.94;
-      b.flap = ease(b.flap, 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(time * 0.29 + b.seed * 4)), 1.2, dt);
-      b.bob = stroke(b.beat) * -0.055 * b.flap;
-      const to = tmp.set(t.x + Math.cos(a) * r, t.base + b.offset.y + Math.sin(time * 0.3 + b.seed) * 2.5, t.z + Math.sin(a) * r);
+      this.circling(b, dt, time);
       b.hold = ease(b.hold, 1, 0.35, dt);
-      b.at.lerp(to, 1 - Math.exp(-dt * (0.6 + 7 * b.hold)));
-      /** The wheel runs clockwise against its own angle, so they face along it and hold a bank into the turn. */
-      b.yaw = -a + wrapAngle(b.yaw + a) * (1 - b.hold);
-      b.roll = ease(b.roll, (0.42 + 0.06 * Math.sin(time * 0.7 + b.seed)) * b.hold, 1.5, dt);
-      b.pitch = ease(b.pitch, -0.04, 2, dt);
-      b.neck.lerp(tmp4.set(FLY[0], FLY[1], FLY[2], 0), 1 - Math.exp(-dt * 2));
-      b.headYaw = ease(b.headYaw, 0, 1.5, dt);
-      b.headPitch = ease(b.headPitch, FLY[4], 2, dt);
-      b.fold = ease(b.fold, 0, 4, dt);
-      b.feet = ease(b.feet, 0, 3, dt);
     }
+  }
+
+  /** One bird flying the circuit: heavy wings, a held bank, and the head looking in toward the rest of them. */
+  private circling(b: Bird, dt: number, time: number): void {
+    const t = this.pool;
+    const a = b.arc.x + this.turn;
+    const r = t.r * b.arc.z;
+    b.beat += dt * BEAT * b.rate * 0.96;
+    b.flap = ease(b.flap, 0.72 + 0.28 * (0.5 + 0.5 * Math.sin(time * 0.29 + b.seed * 4)), 1.2, dt);
+    b.bob = stroke(b.beat) * -0.055 * b.flap;
+    const to = tmp.set(t.x + Math.cos(a) * r, t.base + b.arc.y + Math.sin(time * 0.3 + b.seed) * 0.8, t.z + Math.sin(a) * r);
+    b.at.lerp(to, 1 - Math.exp(-dt * (0.6 + 7 * b.hold)));
+    /** The wheel runs against its own angle, so they face along it and hold a bank into the turn. */
+    b.yaw = -a + wrapAngle(b.yaw + a) * (1 - b.hold);
+    b.roll = ease(b.roll, (this.bank + 0.04 * Math.sin(time * 0.7 + b.seed)) * b.hold, 1.5, dt);
+    b.pitch = ease(b.pitch, -0.04, 2, dt);
+    b.neck.lerp(tmp4.set(FLY[0], FLY[1], FLY[2], 0), 1 - Math.exp(-dt * 2));
+    /** Round the turn each of them is looking in at the others, which is what makes a wheel a family gathering. */
+    b.headYaw = ease(b.headYaw, -0.34 * b.hold, 1.5, dt);
+    b.headPitch = ease(b.headPitch, FLY[4], 2, dt);
+    b.fold = ease(b.fold, 0, 4, dt);
+    b.feet = ease(b.feet, 0, 3, dt);
   }
 
   /** The raft: each swan drifting and turning on its own, and changing its mind about what to do every so often. */
@@ -559,6 +596,8 @@ export class SwanFlock {
     }
     if (airborne === this.birds.length && this.lead.distanceToSquared(this.dropped) > 300 * 300) {
       this.mode = 'skein';
+      /** The run's stagger is spent; in the air `delay` means something else, so nobody carries one over. */
+      for (const b of this.birds) b.delay = 0;
       this.dir.set(Math.sin(yaw), 0, Math.cos(yaw));
       this.wake.visible = false;
       this.wakes.commit(0);

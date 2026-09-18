@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { CREATURE_GLSL } from '../shading';
-import { BILL, EYE, FEET, FOOT, HEAD, NECK, NECK_AT, NECK_LEN, SHOULDER, SPAN, TAIL, TAIL_AT, VANE, WING_L, WING_R } from './body';
+import { BILL, EYE, FEET, FOOT, HEAD, NECK, NECK_AT, NECK_LEN, PLUME, SHOULDER, SPAN, TAIL, TAIL_AT, VANE, WING_L, WING_R } from './body';
 
 const n = (v: number) => v.toFixed(4);
 /** How far behind the shoulder the wingtip runs in the beat: the lag is the whole of the wing's flex. */
@@ -144,6 +144,8 @@ in float vUnder;
 
 /** Linear and warm: white on a bird is never the white of the page, or it tears a hole in a painted sky. */
 const vec3 PLUME = vec3(0.6, 0.585, 0.55);
+/** What white turns when it is only lit by the sky: a swan seen from below must not be the sky's own colour. */
+const vec3 SHADED = vec3(0.47, 0.5, 0.6);
 const vec3 SLATE = vec3(0.045, 0.043, 0.05);
 const vec3 HORN = vec3(0.3, 0.22, 0.075);
 const vec3 WEB = vec3(0.032, 0.03, 0.033);
@@ -157,13 +159,15 @@ void main() {
   vec3 alb = PLUME;
   float fuzz = 0.5;
   float thin = 0.3;
-  float ao = 1.0 - vUnder * 0.34 - k * 0.12;
+  float ao = 1.0 - vUnder * 0.62 - k * 0.12;
   if (mat == ${VANE}) {
     /** The flight feathers are a single layer of quills: the low sun comes through them and lights the far wing. */
     alb = PLUME * (1.0 - k * 0.06);
-    thin = 0.55 + 0.7 * k;
+    /** The hand of the wing is thinner and stands away from the light, so the outer half falls off into shadow. */
+    alb *= 1.0 - smoothstep(0.55, 1.0, k) * 0.2;
+    thin = 0.34 + 0.5 * k;
     fuzz = 0.42;
-    ao = 1.0 - vUnder * 0.3;
+    ao = 1.0 - vUnder * 0.58;
   } else if (mat == ${BILL}) {
     alb = mix(SLATE, HORN, k * 0.55);
     fuzz = 0.05;
@@ -180,6 +184,8 @@ void main() {
     thin = 0.0;
     ao = 1.0;
   }
+  /** White stays white in the sun and goes cool and heavy underneath, which is the only way it reads on a pale sky. */
+  if (mat == ${VANE} || mat == ${PLUME}) alb = mix(alb, alb * SHADED, vUnder);
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, 1.0);
   if (mat == ${EYE}) col += uSunColor * 0.8 * catchlight(N, vWorld);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
