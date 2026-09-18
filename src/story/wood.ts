@@ -335,7 +335,7 @@ export class WoodChapter implements Chapter {
     this.to('bolt');
     this.bolted = true;
     c.stop();
-    for (const coal of this.cast.embers.coals) if (coal.lit) coal.heat *= 0.3;
+    for (const coal of this.cast.embers.coals) if (coal.lit) coal.heat *= 0.55;
     this.ran.copy(c.position);
     this.ran.y = Math.max(heightAt(this.ran.x, this.ran.z), 0) + 0.5;
     cygnet.position.copy(this.ran);
@@ -481,7 +481,7 @@ export class WoodChapter implements Chapter {
       /** Near enough to the child to share the dark with them, and turned toward where the calling is coming from. */
       const bearing = Math.atan2(c.x - HIDING.x, c.z - HIDING.z) + 1.5;
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      s.target.set(c.x * 0.5 + HIDING.x * 0.5, ground + 1.6, c.z * 0.5 + HIDING.z * 0.5);
+      s.target.set(c.x * 0.62 + HIDING.x * 0.38, ground + 1.6, c.z * 0.62 + HIDING.z * 0.38);
       s.distance = 18;
       s.height = 7;
       this.pace = 0.35;
