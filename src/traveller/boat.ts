@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
@@ -215,6 +216,9 @@ export class Boat {
   private boom = 0;
   private time = 0;
   private fade = 0;
+  /** A shove against the hull, signed by the side it came from, and how long ago it landed. */
+  private shove = 0;
+  private shoveAge = 1e3;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -273,6 +277,16 @@ export class Boat {
     return out.set(0, 2.2, 0.55).applyMatrix4(this.group.matrixWorld);
   }
 
+  /**
+   * Something in the water leans on the hull from `side` (+1 the side the sail swings from, with `strength` at
+   * about a dolphin's shoulder): it heels away from the shove, the head is knocked round and the boat is given a
+   * surge, and all three ease out over a couple of seconds.
+   */
+  nudge(side: number, strength = 1): void {
+    this.shove = side * strength;
+    this.shoveAge = 0;
+  }
+
   /** World position of the seat, where the child rides. */
   seat(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
@@ -289,9 +303,15 @@ export class Boat {
     const across = w.x * fz - w.z * fx;
     const windSpeed = Math.hypot(w.x, w.z);
 
+    this.shoveAge += dt;
+    const u = this.shoveAge / tuning.dolphins.shovePeak;
+    const kick = this.shove * u * Math.exp(1 - u);
+
     if (this.afloat && !this.grounded) {
       const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + (4.2 + 2.2 * this.swell) * (1 - this.becalmed) + w.energy * 6;
       this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * (0.45 + this.becalmed * 0.3)));
+      this.speed += Math.abs(kick) * tuning.dolphins.shoveSurge * dt;
+      this.yaw += kick * tuning.dolphins.shoveYaw * dt;
       if (this.steerFor) {
         const want = Math.atan2(this.steerFor.x - p.x, this.steerFor.y - p.z);
         let dy = want - this.yaw;
@@ -317,7 +337,7 @@ export class Boat {
     const bow = this.sea.slopeX * fx + this.sea.slopeZ * fz;
     const beam = this.sea.slopeX * fz - this.sea.slopeZ * fx;
     const settle = 1 - Math.exp(-dt * 3.5);
-    this.roll += (heel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam - this.roll) * settle;
+    this.roll += (heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam - this.roll) * settle;
     this.pitch += ((this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05) - this.pitch) * settle;
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
     p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;

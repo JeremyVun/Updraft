@@ -612,6 +612,37 @@ interface Pack {
   delay: number;
 }
 
+/** The set-pieces one dolphin leaves the pod to play, both of them staged between the camera and the boat. */
+type Show = 'leap' | 'push';
+
+/**
+ * A dolphin out of its lane, playing one. It holds the beak's station in the boat's frame; the vertical life is
+ * still the ordinary ballistic swimming, asked for a bigger throw or held at a depth.
+ */
+interface Stunt {
+  kind: Show;
+  d: Dolphin;
+  /** out: down and away to its mark. run: the approach. act: the leap or the shove. back: rejoining the pod. */
+  phase: 'out' | 'run' | 'act' | 'back';
+  t: number;
+  /** Which side of the boat it plays on: the camera's for a shove, the far one for a leap that ends near her. */
+  side: number;
+  along: number;
+  across: number;
+  vel: number;
+  /** Fixed at lift-off: nothing steers in the air, so the throw is flown out exactly as it left. */
+  flyAlong: number;
+  flyAcross: number;
+  asked: boolean;
+  hit: boolean;
+}
+
+/** Where a leap is at the top of its arc: clear of the sail at z 0.55 and short of the stem at 2.64. */
+const OVER_BOW = 2;
+/** Where the shoulder presses on the quarter, and how far off the planking the beak stays while it pushes. */
+const SHOVE_ALONG = -1;
+const SHOVE_ACROSS = 1.35;
+
 interface Dolphin {
   pack: Pack;
   /** Full-grown, so it is one of the ones that can be asked to play a set-piece. */
@@ -638,6 +669,11 @@ interface Dolphin {
   arc: number;
   once: boolean;
   hold: number;
+  /** What a set-piece is asking of it: a depth to hold, a lift-off speed for its next arc, a roll, a hard run. */
+  held: number | null;
+  lift: number;
+  tilt: number | null;
+  hurry: boolean;
   breath: number;
   t: number;
   air: number;
@@ -655,6 +691,8 @@ interface Dolphin {
  */
 export class Dolphins {
   readonly objects: THREE.Object3D[] = [];
+  /** What to do when one of them shoulders the boat: the story hands the shove to the hull. */
+  onShove: ((side: number, strength: number) => void) | null = null;
   private readonly mesh: THREE.Mesh;
   private readonly ghost: THREE.Mesh;
   private readonly marks = new Marks();
@@ -670,9 +708,17 @@ export class Dolphins {
   private head = 0;
   private speed = 4;
   private readonly sample = { y: 0, vy: 0 };
+  private readonly seen = new THREE.Vector3();
   private here = false;
   private wanted = false;
   private going = 0;
+  private stunt: Stunt | null = null;
+  /** Seconds the pod has been with this boat, when the next set-piece is due, and how many have been played. */
+  private clock = 0;
+  private next = 0;
+  private turn = 0;
+  private camera = 1;
+  private busy = false;
 
   constructor() {
     const base = dolphinGeometry();
@@ -735,9 +781,15 @@ export class Dolphins {
     this.objects.push(this.ghost, this.marks.mesh, this.mesh, this.drops.mesh);
   }
 
-  /** Keeps the pod running with a boat at `near` on bearing `heading`; a null `near` sends them away. */
-  run(near: THREE.Vector3 | null, heading: number): void {
+  /**
+   * Keeps the pod running with a boat at `near` on bearing `heading`; a null `near` sends them away. `camera` is
+   * which side of the stern the camera rides on, so the set-pieces play where they can be seen, and `busy` holds
+   * them off while something else has the boat.
+   */
+  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false): void {
     this.wanted = near !== null;
+    this.camera = camera < 0 ? -1 : 1;
+    this.busy = busy;
     if (!near) return;
     if (!this.here || this.boat.distanceToSquared(near) > 1e4) {
       this.boat.copy(near);
@@ -752,6 +804,13 @@ export class Dolphins {
     let turn = heading - this.head;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     this.head += turn * 0.06;
+  }
+
+  /** The one that is playing to the boat, for the child to look at; null when the pod is only running alongside. */
+  get spotlight(): THREE.Vector3 | null {
+    const s = this.stunt;
+    if (!s || !this.wanted || s.phase === 'out' || s.phase === 'back') return null;
+    return this.seen.set(s.d.x, Math.max(s.d.y, 0.2), s.d.z);
   }
 
   update(dt: number, time: number): void {
@@ -774,21 +833,25 @@ export class Dolphins {
     const fx = Math.sin(this.head);
     const fz = Math.cos(this.head);
     for (const p of this.packs) this.steer(p, dt);
+    if (this.wanted || this.stunt) this.show(dt);
     const A = this.iA.array as Float32Array;
     const B = this.iB.array as Float32Array;
     const C = this.iC.array as Float32Array;
     for (let i = 0; i < POD; i++) {
       const d = this.pod[i];
       const p = d.pack;
-      const along = p.along + d.dAlong;
-      const u = Math.min(1, Math.abs(along - p.station) / 22);
-      const across = p.sideAt * (p.near + (p.far - p.near) * u * u) + d.dAcross;
-      const slide = (across - d.across) / dt;
+      const s = this.stunt && this.stunt.d === d ? this.stunt : null;
+      const along = s ? s.along : p.along + d.dAlong;
+      const across = s ? s.across : this.wide(d, along);
+      /** A set-piece crosses the boat's track far faster than any lane change, and its body has to say so. */
+      const slide = THREE.MathUtils.clamp((across - d.across) / dt, s ? -11 : -4, s ? 11 : 4);
       d.across = across;
       d.x = this.boat.x + fx * along + fz * across;
       d.z = this.boat.z + fz * along - fx * across;
-      const pace = Math.max(this.speed + p.vel, 2.2);
-      const drift = Math.atan2(THREE.MathUtils.clamp(slide, -4, 4), pace);
+      const forward = Math.max(this.speed + (s ? s.vel : p.vel), 2.2);
+      const drift = Math.atan2(slide, forward);
+      /** How fast it is going over the ground along its own path, which is what the body is laid out along. */
+      const pace = Math.hypot(forward, slide);
       d.yaw = this.head + drift;
       this.swim(d, dt, time, pace);
       this.bank(d, dt, time, drift);
@@ -841,6 +904,10 @@ export class Dolphins {
       arc: 0,
       once: false,
       hold: -2,
+      held: null,
+      lift: 0,
+      tilt: null,
+      hurry: false,
       breath: rand(2, 14),
       t: 0,
       air: 0.6,
@@ -869,7 +936,22 @@ export class Dolphins {
       d.once = false;
       d.wet = 0;
       d.breath = d.pack.delay + rand(0.5, 4);
+      d.held = null;
+      d.lift = 0;
+      d.tilt = null;
+      d.hurry = false;
     }
+    this.stunt = null;
+    this.clock = 0;
+    this.turn = 0;
+    this.next = rand(tuning.dolphins.leapAt - 6, tuning.dolphins.leapAt + 9);
+  }
+
+  /** How far out from the boat's track a lane sits: it opens out as the pack surges away from its station. */
+  private wide(d: Dolphin, along: number): number {
+    const p = d.pack;
+    const u = Math.min(1, Math.abs(along - p.station) / 22);
+    return p.sideAt * (p.near + (p.far - p.near) * u * u) + d.dAcross;
   }
 
   /** Picks the shape of one lane: where it sits, how far and how slowly it surges, and how close it comes. */
@@ -906,12 +988,175 @@ export class Dolphins {
     p.sideAt += (p.side - p.sideAt) * ease(dt, 0.3);
   }
 
+  /** One set-piece at a time, and none at all while the boat has something else to attend to. */
+  private show(dt: number): void {
+    this.clock += dt;
+    const s = this.stunt;
+    if (!s) {
+      const kind: Show = this.turn === 0 ? 'leap' : this.turn === 1 ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
+      if (!this.busy && this.wanted && this.clock > this.next) this.begin(kind);
+      return;
+    }
+    /** Anything that comes up mid-approach sends it back to the pod; nothing is ever cut away from. */
+    if ((this.busy || !this.wanted) && (s.phase === 'out' || s.phase === 'run')) {
+      s.phase = 'back';
+      s.t = 0;
+      s.d.hurry = false;
+    }
+    const was = s.along;
+    s.t += dt;
+    if (s.phase === 'back') this.rejoin(s, dt);
+    else if (s.kind === 'leap') this.leap(s, dt);
+    else this.shove(s, dt);
+    s.vel = (s.along - was) / dt;
+  }
+
+  /** Sends one of the grown ones out of its lane, already on the side it is wanted, so nothing jumps across. */
+  private begin(kind: Show): void {
+    const side = kind === 'push' ? this.camera : -this.camera;
+    let d: Dolphin | null = null;
+    let nearest = -1e9;
+    for (const other of this.pod) {
+      if (!other.adult || other.pack.rider) continue;
+      const score = side * other.across;
+      if (score > nearest) {
+        nearest = score;
+        d = other;
+      }
+    }
+    if (!d) return;
+    this.stunt = { kind, d, phase: 'out', t: 0, side, along: d.pack.along + d.dAlong, across: d.across, vel: d.pack.vel, flyAlong: 0, flyAcross: 0, asked: false, hit: false };
+    d.held = kind === 'push' ? -2.2 : -2.8;
+    d.hurry = false;
+    d.tilt = null;
+  }
+
+  /**
+   * Eases the beak toward a station in the boat's frame, within what one can really do: it overhauls the boat at
+   * its own best speed at most, and to drop back it can only stop swimming and let the boat run away from it.
+   */
+  private glide(s: Stunt, along: number, across: number, rate: number, dt: number): void {
+    const k = ease(dt, rate);
+    s.along += THREE.MathUtils.clamp((along - s.along) * k, -this.speed * dt, 7 * dt);
+    s.across += THREE.MathUtils.clamp((across - s.across) * k, -6 * dt, 6 * dt);
+  }
+
+  /**
+   * The leap. It falls back and out to the beam, runs in on two or three porpoises, and asks for one throw big
+   * enough to carry it over the gunwale; from lift-off nothing steers it, so where it lands is where it aimed.
+   */
+  private leap(s: Stunt, dt: number): void {
+    const d = s.d;
+    if (s.phase === 'out') {
+      this.glide(s, 7, s.side * 11, 0.85, dt);
+      if (s.t > 3.6) {
+        s.phase = 'run';
+        s.t = 0;
+        d.held = null;
+        d.hurry = true;
+      }
+    } else if (s.phase === 'run') {
+      this.glide(s, 1.2, s.side * 5.6, 0.55, dt);
+      if (s.t > 4.2 && !s.asked) {
+        s.asked = true;
+        d.lift = tuning.dolphins.leapLift * rand(0.96, 1.06);
+      }
+      if (s.asked && d.lift === 0 && d.arc === 1) {
+        s.phase = 'act';
+        s.t = 0;
+        s.flyAcross = (-s.side * 5.4 - s.across) / d.air;
+        s.flyAlong = (OVER_BOW - s.along) / (d.air * 0.5);
+        d.tilt = s.side * 0.4;
+      }
+    } else if (s.phase === 'act') {
+      s.along += s.flyAlong * dt;
+      s.across += s.flyAcross * dt;
+      if (d.t >= d.air || d.arc === 0) {
+        /** In, and the sea takes the run out of it. */
+        d.hurry = false;
+        d.tilt = null;
+        s.flyAlong += (0.3 - s.flyAlong) * ease(dt, 2.2);
+        s.flyAcross -= s.flyAcross * ease(dt, 2.2);
+      }
+      if (d.arc === 0) {
+        s.phase = 'back';
+        s.t = 0;
+        d.held = -2.4;
+      }
+    }
+  }
+
+  /**
+   * The shove. It comes up astern on the camera's side, swims in under the quarter rolled onto its side so the eye
+   * that is uppermost is the one on the child, leans on the planking, and lets the boat go.
+   */
+  private shove(s: Stunt, dt: number): void {
+    const d = s.d;
+    if (s.phase === 'out') {
+      this.glide(s, -16, s.side * 7, 0.8, dt);
+      if (s.t > 3.2) {
+        s.phase = 'run';
+        s.t = 0;
+        d.held = null;
+        d.hurry = true;
+      }
+    } else if (s.phase === 'run') {
+      this.glide(s, -4.5, s.side * 2.8, 0.45, dt);
+      if (s.t > 4.5 && d.arc === 0) {
+        s.phase = 'act';
+        s.t = 0;
+        d.hurry = false;
+        d.held = -0.16;
+      }
+    } else if (s.phase === 'act') {
+      d.tilt = -s.side * 1.5;
+      if (!s.hit) {
+        this.glide(s, SHOVE_ALONG, s.side * SHOVE_ACROSS, 1.1, dt);
+        if (s.t > 3.5 || (Math.abs(s.across) < SHOVE_ACROSS + 0.12 && s.along > SHOVE_ALONG - 0.5)) {
+          s.hit = true;
+          s.t = 0;
+          this.onShove?.(s.side, 1);
+        }
+      } else {
+        /** The boat leaps away from it and it slides back down the planking, still looking up. */
+        this.glide(s, SHOVE_ALONG - 2.4 * s.t, s.side * (SHOVE_ACROSS + 1.6 * s.t), 1.5, dt);
+        if (s.t > 1.8) {
+          s.phase = 'back';
+          s.t = 0;
+          d.held = -1.8;
+          d.tilt = null;
+        }
+      }
+    }
+  }
+
+  /** Back to its lane, which has been running on without it, and the wait before anything is played again. */
+  private rejoin(s: Stunt, dt: number): void {
+    const d = s.d;
+    d.lift = 0;
+    d.tilt = null;
+    if (s.t > 1.5) d.held = null;
+    const along = d.pack.along + d.dAlong;
+    const across = this.wide(d, along);
+    this.glide(s, along, across, 0.5, dt);
+    if (Math.hypot(along - s.along, across - s.across) < 1.2 || s.t > 16) {
+      d.held = null;
+      d.hurry = false;
+      d.breath = rand(0.5, 3);
+      this.stunt = null;
+      this.turn++;
+      const t = tuning.dolphins;
+      this.next = this.turn === 1 ? rand(t.pushAt - 8, t.pushAt + 12) : this.clock + rand(t.restLeast, t.restLeast + t.restSpread);
+    }
+  }
+
   /** The vertical life of one dolphin: a held depth, or a ballistic arc and the matched dip that follows it. */
   private swim(d: Dolphin, dt: number, time: number, pace: number): void {
     const p = d.pack;
-    const surging = p.up && !p.rider && p.delay <= 0 && this.wanted;
+    const surging = d.hurry || (p.up && !p.rider && p.delay <= 0 && this.wanted);
     if (d.arc === 0) {
-      if (!this.wanted) d.hold -= dt * 0.55;
+      if (d.held !== null) d.hold = d.held;
+      else if (!this.wanted) d.hold -= dt * 0.55;
       else if (surging) d.hold = BASE_Y;
       else {
         d.breath -= dt;
@@ -920,9 +1165,10 @@ export class Dolphins {
       }
       const to = d.hold + Math.sin(time * 0.5 + d.seed * 9) * 0.06;
       const was = d.y;
-      d.y += (to - d.y) * ease(dt, surging ? 1.6 : 0.5);
+      d.y += (to - d.y) * ease(dt, surging || d.held !== null ? 1.6 : 0.5);
       d.vy += ((d.y - was) / dt - d.vy) * ease(dt, 6);
-      if ((surging || d.breath <= 0) && this.wanted && Math.abs(d.y - BASE_Y) < 0.1) {
+      const up = d.lift > 0 || (d.held === null && (surging || d.breath <= 0));
+      if (up && this.wanted && Math.abs(d.y - BASE_Y) < 0.1) {
         d.arc = 1;
         d.t = 0;
         d.once = !surging;
@@ -963,6 +1209,14 @@ export class Dolphins {
 
   /** Chooses the next arc: a true leap while they are running up, a lazy roll for a breath otherwise. */
   private pick(d: Dolphin, surging: boolean): void {
+    if (d.lift > 0) {
+      /** A throw this big goes in steeply on the far side, so the dip after it is short and deep. */
+      d.vy0 = d.lift;
+      d.lift = 0;
+      d.air = (2 * d.vy0) / G;
+      d.dip = 0.55;
+      return;
+    }
     d.vy0 = surging && Math.random() > 0.22 ? rand(2.5, 3.7) : rand(1.05, 1.75);
     d.air = (2 * d.vy0) / G;
     d.dip = surging ? rand(0.42, 0.78) : rand(0.8, 1.5);
@@ -987,14 +1241,14 @@ export class Dolphins {
   /** Banking into the turn, a slow sway, and the roll onto one side they take to look up at the boat. */
   private bank(d: Dolphin, dt: number, time: number, drift: number): void {
     d.rollIn -= dt;
-    if (d.rollIn <= 0 && d.rollFor <= 0 && d.y < -0.1) {
+    if (d.rollIn <= 0 && d.rollFor <= 0 && d.y < -0.1 && d.tilt === null) {
       d.rollFor = rand(1.3, 2.8);
       d.rollTo = rand(0.9, 1.7) * (Math.random() < 0.5 ? -1 : 1);
       d.rollIn = rand(9, 26);
     }
     d.rollFor -= dt;
-    const want = -drift * 1.5 + Math.sin(time * 0.7 + d.seed * 12) * 0.06 + (d.rollFor > 0 ? d.rollTo : 0);
-    d.roll += (want - d.roll) * ease(dt, 2.2);
+    const want = d.tilt ?? -drift * 1.5 + Math.sin(time * 0.7 + d.seed * 12) * 0.06 + (d.rollFor > 0 ? d.rollTo : 0);
+    d.roll += (want - d.roll) * ease(dt, d.tilt === null ? 2.2 : 1.7);
   }
 
   /** White water: a dab and a flick of spray as the back comes out, and a small clean hole where the beak goes in. */
