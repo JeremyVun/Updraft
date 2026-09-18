@@ -8,7 +8,7 @@ import { CrossingChapter, FIRST_ISLAND, LANDING } from './crossing';
 import { HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
-import { MeadowChapter } from './meadow';
+import { FAR_SHORE, MeadowChapter } from './meadow';
 import { DrownedChapter } from './drowned';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
@@ -79,7 +79,7 @@ export class Journey {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
     } else if (start === 'drowned' || start === 'village') {
-      this.sail(-6, -1176, Math.PI);
+      this.sail(FAR_SHORE.x, FAR_SHORE.z - 4, Math.PI);
       this.begin('drowned');
     } else if (start === 'wood' || start === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);

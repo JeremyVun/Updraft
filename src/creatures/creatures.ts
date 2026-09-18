@@ -151,10 +151,10 @@ export class Creatures {
     s.night = env.night;
     s.gustAt = input.present && input.gust > 4 ? this.gustPoint.copy(input.world) : null;
     const up = s.updraft;
-    if (input.present && input.down && input.charge > 0) {
+    if (input.present && input.charge > 0) {
       const snap = up.strength < 0.05 ? 1 : 1 - Math.exp(-dt * 6);
-      up.x += (input.world.x - up.x) * snap;
-      up.z += (input.world.z - up.z) * snap;
+      up.x += (input.updraftAt.x - up.x) * snap;
+      up.z += (input.updraftAt.z - up.z) * snap;
       up.strength = Math.max(up.strength, input.charge);
     } else {
       up.strength = Math.max(0, up.strength - dt * 0.7);

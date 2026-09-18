@@ -106,7 +106,7 @@ export class DrownedChapter implements Chapter {
     this.now = time;
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
-    c.ride(boat.seat(this.seat), boat.yaw);
+    c.ride(boat.seat(this.seat), boat.yaw, boat.roll, boat.pitch);
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
 
     const through = this.through;

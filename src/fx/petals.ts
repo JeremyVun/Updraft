@@ -4,6 +4,7 @@ import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
 import { FLOWER_PATCHES, type FlowerPatch } from '../world/landmarks';
 import { mulberry32 } from '../world/noise';
+import { glsl, tuning } from '../tuning';
 
 const W = 128;
 const H = 64;
@@ -33,7 +34,7 @@ void main() {
   float above = p.y - max(ground, 0.0);
   float sp = length(w.xy);
 
-  float lift = w.z * (3.5 + 4.0 * seed) + smoothstep(9.0, 20.0, sp) * 2.5 + w.w * (3.0 + 2.0 * seed);
+  float lift = w.z * (3.5 + 4.0 * seed) + smoothstep(${glsl(tuning.petals.liftFrom)}, ${glsl(tuning.petals.liftTo)}, sp) * 2.5 + w.w * (3.0 + 2.0 * seed);
   float resting = step(above, 0.35);
   bool grabbed = resting < 0.5 || lift > 0.8 + seed * 0.8 || (sea && above < 0.2);
 
@@ -164,7 +165,8 @@ function seedHomes(patches: readonly FlowerPatch[], pos: Float32Array, share = 1
   const living = Math.round(COUNT * share);
   for (let i = 0; i < COUNT; i++) {
     if (i >= living) {
-      pos.set([0, -80, 0, 1e4], i * 4);
+      // Far outside the window: the sim floors y at the ground, so parking under the island would surface them.
+      pos.set([1e6, -80, 1e6, 1e4], i * 4);
       continue;
     }
     let x = 0;
@@ -182,11 +184,11 @@ function seedHomes(patches: readonly FlowerPatch[], pos: Float32Array, share = 1
   }
 }
 
-function initialState(): { pos: Float32Array; vel: Float32Array } {
+function initialState(share: number): { pos: Float32Array; vel: Float32Array } {
   const rand = mulberry32(11);
   const pos = new Float32Array(COUNT * 4);
   const vel = new Float32Array(COUNT * 4);
-  seedHomes(FLOWER_PATCHES, pos);
+  seedHomes(FLOWER_PATCHES, pos, share);
   for (let i = 0; i < COUNT; i++) vel.set([0, 0, 0, rand()], i * 4);
   return { pos, vel };
 }
@@ -209,9 +211,9 @@ export class Petals {
   private readonly updraft = new THREE.Vector4(0, 0, 0, 8);
   private readonly home: THREE.DataTexture;
 
-  constructor(renderer: THREE.WebGLRenderer) {
+  constructor(renderer: THREE.WebGLRenderer, share = 1) {
     this.gpu = new GpuRunner(renderer);
-    const { pos, vel } = initialState();
+    const { pos, vel } = initialState(share);
     const home = dataTexture(pos.slice());
     this.home = home;
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {

@@ -5,6 +5,7 @@ import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Crane } from '../creatures/crane';
 import type { Embers } from '../fx/embers';
+import type { Coax } from '../fx/swirl';
 import type { CraneFlock } from '../creatures/flock';
 import type { Boat } from '../traveller/boat';
 import type { SeaLife } from '../fx/sealife';
@@ -72,5 +73,7 @@ export interface Chapter {
   readonly embers?: number;
   /** Where the gulls should circle, or null to leave them to their own coast. */
   readonly escort?: THREE.Vector3 | null;
+  /** Where the chapter is waiting for the player to twirl up an updraft, so the wind shows the gesture there. */
+  readonly coax?: Coax | null;
   update(dt: number, time: number): void;
 }

@@ -8,6 +8,8 @@ export const surfUniforms = {
   uShoreTex: { value: null as THREE.Texture | null },
   /** 0 glassy and still (the grey world before the first gust), 1 the breeze's usual surf. */
   uSeaState: { value: 1 },
+  /** The weather working the sea over, 0 none to 1 the full squall (`Chapter.storm`, eased across rooms). */
+  uSquall: { value: 0 },
 };
 
 /**
@@ -18,6 +20,7 @@ export const SURF_GLSL = /* glsl */ `
 uniform sampler2D uLace;
 uniform sampler2D uShoreTex;
 uniform float uSeaState;
+uniform float uSquall;
 
 const float SURF_PERIOD = 7.5;
 const float SURF_UP = 0.3;

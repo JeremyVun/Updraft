@@ -10,6 +10,7 @@ export interface Ribbon {
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uFlat;
 in vec3 aSide;
 in vec2 aInfo;
 out float vAlpha;
@@ -17,7 +18,8 @@ out float vEdge;
 out vec3 vWorld;
 void main() {
   vec3 toCam = normalize(cameraPosition - position);
-  vec3 c = cross(aSide, toCam);
+  /** Foam lies on the water; only a ribbon in the air turns to face the camera, or it stands up as a wall. */
+  vec3 c = cross(aSide, mix(toCam, vec3(0.0, 1.0, 0.0), uFlat));
   vec3 side = c / max(length(c), 1e-4);
   vec3 world = position + side * aInfo.x;
   vAlpha = aInfo.y;
@@ -49,7 +51,8 @@ export class RibbonBatch {
   private readonly maxVerts: number;
   private readonly tmp = new THREE.Vector3();
 
-  constructor(maxPoints: number, color: THREE.ColorRepresentation, opacity = 1) {
+  /** `flat` keeps the ribbon lying in the ground plane instead of turning to face the camera. */
+  constructor(maxPoints: number, color: THREE.ColorRepresentation, opacity = 1, flat = false) {
     this.maxVerts = maxPoints * 2;
     this.positions = new Float32Array(this.maxVerts * 3);
     this.sides = new Float32Array(this.maxVerts * 3);
@@ -62,7 +65,7 @@ export class RibbonBatch {
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
-      uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) } },
+      uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) }, uFlat: { value: flat ? 1 : 0 } },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,

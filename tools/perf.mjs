@@ -3,10 +3,11 @@
 //   modes: frames   every rAF interval: percentiles, hitches (>25 ms) with their time, long tasks, __stats
 //          gl       which native WebGL calls block the main thread (count, total, max), from page load
 //          cpu      CPU profile: top self-time functions and top functions by total time
-//          flicker  frame-to-frame image change (screen blitted to 160x90 each frame); reports frames whose
+//          flicker  frame-to-frame image change (screen box-averaged down 8x each frame); reports frames whose
 //                   change spikes against their neighbours: pops, flashes, reshuffles
-//   query is appended to ?shot=1; steps use tools/play.mjs syntax (wait, swipe, move, down, up).
+//   query is appended to ?shot=1; steps use tools/play.mjs syntax (wait, swipe, move, down, up, eval).
 //   env: BASE (default http://127.0.0.1:5230/), DSF (device scale factor, default 1), W/H viewport (1600x900)
+//        WHOLE / BLOCK flicker spike thresholds (default 1.5 / 8; lower them for a frozen world, `hold=`)
 // Takes the same machine-wide browser lock as tools/play.mjs. Note that other processes using the GPU
 // (another capture, a browser playing video) inflate every number here: check before trusting a run.
 import { chromium } from 'playwright-core';
@@ -92,59 +93,77 @@ const INIT = {
     }
   },
   flicker: () => {
-    const W = 160;
-    const H = 90;
+    /** Mip level read back: each texel is the box average of 8x8 screen pixels. A straight 10:1 linear blit samples 4 pixels of every 100, and thin blades then shimmer at 8/255 a frame even in a frozen world. */
+    const LEVEL = 3;
     const BX = 16;
+    const BY = 9;
+    let W = 0;
+    let H = 0;
     let gl = null;
-    let fbo = null;
+    let full = null;
+    let small = null;
+    let tex = null;
     let prev = null;
-    const cur = new Uint8Array(W * H * 4);
+    let cur = null;
     window.__flick = [];
     const raf = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = (cb) =>
       raf((t) => {
         cb(t);
         if (!window.__game || !window.__ready) return;
-        if (!gl) {
-          gl = window.__game.renderer.getContext();
-          const tex = gl.createTexture();
+        gl ??= window.__game.renderer.getContext();
+        const fw = gl.drawingBufferWidth;
+        const fh = gl.drawingBufferHeight;
+        if (W !== fw >> LEVEL || H !== fh >> LEVEL) {
+          W = fw >> LEVEL;
+          H = fh >> LEVEL;
+          cur = new Uint8Array(W * H * 4);
+          prev = null;
+          tex = gl.createTexture();
           gl.bindTexture(gl.TEXTURE_2D, tex);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-          fbo = gl.createFramebuffer();
-          gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+          gl.texStorage2D(gl.TEXTURE_2D, LEVEL + 1, gl.RGBA8, fw, fh);
+          full = gl.createFramebuffer();
+          gl.bindFramebuffer(gl.FRAMEBUFFER, full);
           gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+          small = gl.createFramebuffer();
+          gl.bindFramebuffer(gl.FRAMEBUFFER, small);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, LEVEL);
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-          gl.bindTexture(gl.TEXTURE_2D, null);
         }
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, fbo);
-        gl.blitFramebuffer(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, 0, 0, W, H, gl.COLOR_BUFFER_BIT, gl.LINEAR);
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, fbo);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, full);
+        gl.blitFramebuffer(0, 0, fw, fh, 0, 0, fw, fh, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, small);
         gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, cur);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         window.__game.renderer.resetState();
         if (prev) {
           let sum = 0;
-          const blocks = new Float32Array(BX * 9);
+          const blocks = new Float32Array(BX * BY);
+          const per = (W / BX) * (H / BY) * 3;
           for (let y = 0; y < H; y++) {
             for (let x = 0; x < W; x++) {
               const i = (y * W + x) * 4;
               const d = Math.abs(cur[i] - prev[i]) + Math.abs(cur[i + 1] - prev[i + 1]) + Math.abs(cur[i + 2] - prev[i + 2]);
               sum += d;
-              blocks[Math.floor(y / 10) * BX + Math.floor(x / 10)] += d;
+              blocks[Math.floor((y * BY) / H) * BX + Math.floor((x * BX) / W)] += d;
             }
           }
           let maxB = 0;
           let maxI = 0;
           for (let b = 0; b < blocks.length; b++) {
-            const v = blocks[b] / 300;
+            const v = blocks[b] / per;
             if (v > maxB) {
               maxB = v;
               maxI = b;
             }
           }
           window.__flick.push([t, sum / (W * H * 3), maxB, maxI]);
-        } else prev = new Uint8Array(W * H * 4);
+        }
+        prev ??= new Uint8Array(W * H * 4);
         prev.set(cur);
       });
   },
@@ -180,6 +199,7 @@ try {
     if (s.move) await page.mouse.move(...px(s.move));
     if (s.down) await page.mouse.down();
     if (s.up) await page.mouse.up();
+    if (s.eval) console.log(JSON.stringify(await page.evaluate(s.eval)));
     if (s.swipe) {
       const pts = s.swipe.map(px);
       const ms = s.ms ?? 600;
@@ -259,11 +279,11 @@ try {
       const around = (c) => [f[i - 3][c], f[i - 2][c], f[i - 1][c], f[i + 1][c], f[i + 2][c], f[i + 3][c]];
       const whole = f[i][1] - med(around(1));
       const block = f[i][2] - med(around(2));
-      if (whole > 1.5 || block > 8) spikes.push(`${((f[i][0] - f[0][0]) / 1000).toFixed(2)}:${whole.toFixed(1)}/${block.toFixed(0)}@${f[i][3]}`);
+      if (whole > Number(process.env.WHOLE ?? 1.5) || block > Number(process.env.BLOCK ?? 8)) spikes.push(`${((f[i][0] - f[0][0]) / 1000).toFixed(2)}:${whole.toFixed(1)}/${block.toFixed(0)}@${f[i][3]}`);
     }
     const means = f.map((x) => x[1]);
     console.log(`${f.length} frames; frame-to-frame change (0-255) p50 ${med(means).toFixed(2)} max ${Math.max(...means).toFixed(2)}; spikes: ${spikes.length}`);
-    console.log('spikes (s: whole-frame / worst 10x10-of-160x90 block @ block index):', spikes.slice(0, 60).join(' ') || 'none');
+    console.log('spikes (s: whole-frame / worst block of a 16x9 grid @ block index):', spikes.slice(0, 60).join(' ') || 'none');
   }
   console.log('stats:', JSON.stringify(stats));
   const unique = [...new Set(errors)].filter((e) => !e.includes('Failed to load resource'));

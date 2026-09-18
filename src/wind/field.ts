@@ -3,6 +3,7 @@ import { GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
 import { Readback } from '../gl/readback';
 import { atmo } from '../world/atmosphere';
 import { WINDOW, onWindowMove } from '../world/window';
+import { tuning } from '../tuning';
 import {
   ADVECT_FRAG,
   BEND_FRAG,
@@ -139,7 +140,7 @@ export class WindField {
       uTime: { value: 0 },
       uDomain: domain,
       uBreeze: { value: this.breeze },
-      uRelax: { value: 0.32 },
+      uRelax: { value: tuning.wind.relax },
       uSplatCount: { value: 0 },
       uSplatSeg: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
       uSplatVel: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
@@ -149,7 +150,7 @@ export class WindField {
     this.vorticityMat = simMaterial(VORTICITY_FRAG, {
       uVel: { value: null },
       uCurl: { value: this.curl.texture },
-      uStrength: { value: 9 },
+      uStrength: { value: tuning.wind.swirliness },
       uDt: dt,
       uTexel: texel,
     });
@@ -169,16 +170,16 @@ export class WindField {
       uVel: { value: null },
       uDt: dt,
       uDomain: domain,
-      uVelDissipation: { value: 0.12 },
-      uEnergyDecay: { value: 1.1 },
-      uLiftDecay: { value: 0.8 },
+      uVelDissipation: { value: tuning.wind.dissipation },
+      uEnergyDecay: { value: tuning.wind.energyDecay },
+      uLiftDecay: { value: tuning.wind.liftDecay },
     });
     this.bendMat = simMaterial(BEND_FRAG, {
       uBend: { value: null },
       uVel: { value: null },
       uDt: dt,
-      uStiffness: { value: 38 },
-      uDamping: { value: 3.2 },
+      uStiffness: { value: tuning.wind.grassStiffness },
+      uDamping: { value: tuning.wind.grassDamping },
     });
     this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } });
     this.shiftMat = simMaterial(SHIFT_FRAG, {

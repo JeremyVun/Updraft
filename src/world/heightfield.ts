@@ -1,3 +1,5 @@
+import { glsl, tuning } from '../tuning';
+
 /**
  * The terrain height of the whole world, written twice: in TypeScript for gameplay and in GLSL for baking and
  * drawing. Both use the same integer-hashed gradient noise, so they agree to within float rounding.
@@ -107,9 +109,30 @@ function islandHeight(x: number, z: number): number {
  * The chain of islands. Each lies further north than the last with a stretch of sea between, and the stretches
  * shrink as home gets nearer, so the world closes in. The still island keeps its own shape; the rest are ellipses.
  */
+const MEADOW_SCULPTED = { x: 10, z: -880, rx: 340, rz: 300 } as const;
+const MEADOW_SOUTH = MEADOW_SCULPTED.z + MEADOW_SCULPTED.rz;
+const MEADOW_SCALE = tuning.world.meadowLength / (2 * MEADOW_SCULPTED.rz);
+
+/**
+ * The meadow is a scale model of the ground it was sculpted as, shrunk toward the coast the boat lands on, so its
+ * hills, cliffs and coastline keep their places along the walk. This takes a sculpted point to where it now lies.
+ */
+export function meadowPoint(x: number, z: number): { x: number; z: number } {
+  return { x: MEADOW_SCULPTED.x + (x - MEADOW_SCULPTED.x) * MEADOW_SCALE, z: MEADOW_SOUTH + (z - MEADOW_SOUTH) * MEADOW_SCALE };
+}
+
+function meadowSculpted(x: number, z: number): { x: number; z: number } {
+  return { x: MEADOW_SCULPTED.x + (x - MEADOW_SCULPTED.x) / MEADOW_SCALE, z: MEADOW_SOUTH + (z - MEADOW_SOUTH) / MEADOW_SCALE };
+}
+
 export const ISLES = {
   lines: { x: 14, z: -360, rx: 70, rz: 56 },
-  meadow: { x: 10, z: -880, rx: 340, rz: 300 },
+  meadow: {
+    x: MEADOW_SCULPTED.x,
+    z: MEADOW_SOUTH - MEADOW_SCULPTED.rz * MEADOW_SCALE,
+    rx: MEADOW_SCULPTED.rx * MEADOW_SCALE,
+    rz: MEADOW_SCULPTED.rz * MEADOW_SCALE,
+  },
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
   home: { x: -45, z: -2120, rx: 190, rz: 165 },
@@ -132,13 +155,14 @@ function linesHeight(x: number, z: number): number {
   const land = smoothstep(10, -30, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = land * 3.2 - 1.4;
-  h += land * land * (Math.max(0, 1 - r * r) * 12 + (gfbm(x * 0.022, z * 0.022, 3, 22) * 0.5 + 0.5) * 5);
+  h += land * land * (Math.max(0, 1 - r * r) * tuning.world.linesDome + (gfbm(x * 0.022, z * 0.022, 3, 22) * 0.5 + 0.5) * 5);
   return h - smoothstep(0, 40, d) * 8;
 }
 
 /** The meadow: the broad rolling pasture, now bounded by its own coast on every side. */
-function meadowHeight(x: number, z: number): number {
-  const inland = -isleCoast(x, z, ISLES.meadow, 0.08, 11);
+function meadowHeight(wx: number, wz: number): number {
+  const { x, z } = meadowSculpted(wx, wz);
+  const inland = -isleCoast(x, z, MEADOW_SCULPTED, 0.08, 11);
   const land = smoothstep(-12, 16, inland);
   let h = land * 4.8 - 1.6;
   const cliffs = smoothstep(0, 0.3, gfbm(x * 0.006, 7.7, 2, 12));
@@ -191,16 +215,18 @@ function homeHeight(x: number, z: number): number {
 }
 
 /** The meadow's south coast, where the boat comes ashore: kept as a function of x for the story and the camera. */
-export function mainlandCoastZ(x: number): number {
-  const c = ISLES.meadow;
+export function mainlandCoastZ(wx: number): number {
+  const c = MEADOW_SCULPTED;
+  const x = meadowSculpted(wx, 0).x;
   const ex = Math.min(1, Math.abs(x - c.x) / c.rx);
   const n = gfbm(x / (c.rx * 0.9), (c.z + c.rz) / (c.rz * 0.9), 3, 11);
-  return c.z + c.rz * (1 + n * 0.08) * Math.sqrt(Math.max(0, 1 - ex * ex));
+  return meadowPoint(x, c.z + c.rz * (1 + n * 0.08) * Math.sqrt(Math.max(0, 1 - ex * ex))).z;
 }
 
 /** How far inside the meadow's coast a point lies; negative outside it. */
-export function meadowInset(x: number, z: number): number {
-  return -isleCoast(x, z, ISLES.meadow, 0.08, 11);
+export function meadowInset(wx: number, wz: number): number {
+  const { x, z } = meadowSculpted(wx, wz);
+  return -isleCoast(x, z, MEADOW_SCULPTED, 0.08, 11) * MEADOW_SCALE;
 }
 
 function rawHeight(x: number, z: number): number {
@@ -311,15 +337,20 @@ float hf_lines(vec2 p) {
   float land = smoothstep(10.0, -30.0, d);
   float rr = length((p - c) / r);
   float h = land * 3.2 - 1.4;
-  h += land * land * (max(0.0, 1.0 - rr * rr) * 12.0 + (gfbm(p * 0.022, 3, 22.0) * 0.5 + 0.5) * 5.0);
+  h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.linesDome)} + (gfbm(p * 0.022, 3, 22.0) * 0.5 + 0.5) * 5.0);
   return h - smoothstep(0.0, 40.0, d) * 8.0;
 }
-float meadowInset(vec2 p) {
-  return -hf_isleCoast(p, vec2(${ISLES.meadow.x}.0, ${ISLES.meadow.z}.0), vec2(${ISLES.meadow.rx}.0, ${ISLES.meadow.rz}.0), 0.08, 11.0);
+vec2 hf_meadowSculpted(vec2 p) {
+  vec2 pivot = vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SOUTH}.0);
+  return pivot + (p - pivot) * ${glsl(1 / MEADOW_SCALE)};
 }
-float hf_meadow(vec2 p) {
-  vec2 c = vec2(${ISLES.meadow.x}.0, ${ISLES.meadow.z}.0);
-  vec2 r = vec2(${ISLES.meadow.rx}.0, ${ISLES.meadow.rz}.0);
+float meadowInset(vec2 p) {
+  return -hf_isleCoast(hf_meadowSculpted(p), vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SCULPTED.z}.0), vec2(${MEADOW_SCULPTED.rx}.0, ${MEADOW_SCULPTED.rz}.0), 0.08, 11.0) * ${glsl(MEADOW_SCALE)};
+}
+float hf_meadow(vec2 world) {
+  vec2 p = hf_meadowSculpted(world);
+  vec2 c = vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SCULPTED.z}.0);
+  vec2 r = vec2(${MEADOW_SCULPTED.rx}.0, ${MEADOW_SCULPTED.rz}.0);
   float inland = -hf_isleCoast(p, c, r, 0.08, 11.0);
   float land = smoothstep(-12.0, 16.0, inland);
   float h = land * 4.8 - 1.6;

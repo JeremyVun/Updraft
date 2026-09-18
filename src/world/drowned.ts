@@ -6,6 +6,7 @@ import { Instances, blob, flipWinding, merge, mirrored, tag, type BlobSpec } fro
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32 } from './noise';
+import { swellLift } from './water/swell';
 import { REFLECTION_LAYER } from './water/reflection';
 
 /**
@@ -1151,7 +1152,7 @@ export class DrownedVillage {
     this.storm.value = storm;
     this.turnVane(dt, storm);
     this.flyHerons(dt, time, boat, storm);
-    this.driftLeaves(dt, boat, storm);
+    this.driftLeaves(dt, time, boat, storm);
   }
 
   /**
@@ -1301,7 +1302,7 @@ export class DrownedVillage {
     return best;
   }
 
-  private driftLeaves(dt: number, boat: THREE.Vector3, storm: number): void {
+  private driftLeaves(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
     if (Math.abs(boat.z + 1440) > 320) return;
     const pull = 0.2 + storm * 0.45;
     const array = this.leafPos.array as Float32Array;
@@ -1315,6 +1316,7 @@ export class DrownedVillage {
       l.z += l.vz * dt;
       l.yaw += (l.spin + w.energy * 0.8) * dt;
       array[i * 4] = l.x;
+      array[i * 4 + 1] = 0.045 + swellLift(l.x, l.z, time);
       array[i * 4 + 2] = l.z;
       array[i * 4 + 3] = l.yaw;
     }

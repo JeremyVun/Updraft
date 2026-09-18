@@ -3,6 +3,8 @@ import type { Shot } from '../camera';
 import { LAST_HILL } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import { MOON, sunDirection } from '../world/palette';
+import type { Coax } from '../fx/swirl';
+import { tuning } from '../tuning';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
@@ -72,6 +74,9 @@ export class HomeChapter implements Chapter {
   private flockCalled = false;
   private tried = 0;
   private readonly gathering = new THREE.Vector3();
+  /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
+  private coaxFrom = 0;
+  private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
 
   constructor(private readonly cast: Cast) {
     const { child, plane } = cast;
@@ -193,6 +198,7 @@ export class HomeChapter implements Chapter {
       if (this.t > 2 && this.tried < 1) {
         this.tried = 1;
         crane.tryToFly();
+        this.coaxFrom = this.now + tuning.swirl.coaxAfter;
       }
       if (this.t > 6 && this.tried < 2) {
         this.tried = 2;
@@ -230,6 +236,19 @@ export class HomeChapter implements Chapter {
       cue('skein');
     }
     if (this.t > RELENT_AT && !crane.gone) this.answered();
+  }
+
+  /**
+   * A few seconds after its first attempt the air around it starts to turn by itself, and asks a little harder for
+   * as long as it stays on the ground: the last thing the player is asked to do is the thing they were shown.
+   */
+  get coax(): Coax | null {
+    const { crane } = this.cast;
+    const trying = this.beat === 'tries' || this.beat === 'flying';
+    if (!trying || this.coaxFrom === 0 || crane.flying || crane.gone) return null;
+    this.coaxing.at.copy(crane.position);
+    this.coaxing.urgency = THREE.MathUtils.smoothstep(this.now, this.coaxFrom, this.coaxFrom + tuning.swirl.coaxRamp);
+    return this.coaxing.urgency > 0 ? this.coaxing : null;
   }
 
   /**

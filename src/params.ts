@@ -33,6 +33,8 @@ export const params = {
   dusk: num('dusk'),
   /** Shower override, 0 dry to 1. */
   shower: num('shower'),
+  /** Storm override, 0 calm to 1 the full squall: the sea gets up, the weathervane spins, the herons go. */
+  storm: num('storm'),
   /** Start later in the story: `crossing`, `washing`, `meadow`, `drowned`, `wood`, `sea` or `summit`. */
   chapter: q.get('chapter'),
   /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). On by default for touch devices; `lite=0` forces it off. */
@@ -43,6 +45,8 @@ export const params = {
   mirrorlod: q.get('mirrorlod') ?? 'coarse',
   /** QA: `blades=direct` uses the old per-vertex grass shader instead of the blade table, for before/after comparison. */
   blades: q.get('blades') ?? 'table',
+  /** QA: `grasslod=<0|1>` is the coarsest grass level any tile may use. The picture should not change (beyond the second ring with `0`, where the finest blade has no second segment to close): a coarser level only ever stands in for blades that have already thinned and closed up to it. */
+  grasslod: num('grasslod'),
   /** QA: `hold=<frame>` freezes the world after that frame (it keeps drawing the same state), so two runs can capture the very same frame. */
   hold: num('hold'),
   /** QA: an on-screen readout of frame times, quality level and readbacks, for phones. */

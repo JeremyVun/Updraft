@@ -4,6 +4,7 @@ import { CameraRig } from './camera';
 import { Creatures } from './creatures/creatures';
 import { islandHabitat, mainlandHabitat } from './creatures/habitat';
 import { Petals } from './fx/petals';
+import { Swirl } from './fx/swirl';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
 import { ROUTE } from './story/meadow';
@@ -48,11 +49,13 @@ import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
-import { COTTAGE, ISLES, mainlandCoastZ } from './world/heightfield';
+import { COTTAGE, ISLES, mainlandCoastZ, meadowPoint } from './world/heightfield';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
 import { surfUniforms } from './world/water/surf';
+import { swellUniforms } from './world/water/swell';
 import { WINDOW, followWindow, onWindowMove, windowCentre } from './world/window';
+import { tuning } from './tuning';
 
 declare global {
   interface Window {
@@ -133,7 +136,7 @@ const wood = new DarkWood(wind);
 wood.objects.forEach((o) => scene.add(o));
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
-const petals = new Petals(renderer);
+const petals = new Petals(renderer, tuning.petals.stillIslandShare);
 scene.add(petals.mesh);
 const allFlowers = [...FLOWER_PATCHES, ...hillFlowers];
 const petalsHomedAt = new THREE.Vector2(1e9, 1e9);
@@ -143,11 +146,14 @@ function homePetals(): void {
   if (Math.hypot(cx - petalsHomedAt.x, cz - petalsHomedAt.y) < 60) return;
   petalsHomedAt.set(cx, cz);
   const near = allFlowers.filter((f) => Math.hypot(f.x - cx, f.z - cz) < 190);
-  petals.rehome(near, cz < -600 ? 0.12 : 1);
+  petals.rehome(near, cz < -600 ? tuning.petals.pastureShare : cz > -200 ? tuning.petals.stillIslandShare : 1);
 }
 homePetals();
 const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
+/** The wind the player draws by circling the cursor, and the same loops offered where the story wants them. */
+const swirl = new Swirl();
+scene.add(swirl.batch.mesh);
 const glider = new Glider(wind, tree.canopy);
 glider.objects.forEach((o) => scene.add(o));
 const child = new Traveller(wind);
@@ -207,19 +213,19 @@ const homesInHills = [
   { x: COTTAGE.x + 6, z: COTTAGE.z + 26 },
 ];
 const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera);
-hillCreatures.spawn({ x: 10, z: -680, radius: 70, gulls: 4, seed: 21 });
+hillCreatures.spawn({ ...meadowPoint(10, -680), radius: 70, gulls: 4, seed: 21 });
 homesInHills.forEach((h, i) => {
   const last = i === homesInHills.length - 1;
   hillCreatures.spawn({ x: h.x, z: h.z, radius: 26, rabbits: 2, songbirds: i % 2 === 0 || last ? 4 : 0, butterflies: last ? 0 : 6, seed: 30 + i });
 });
 const sheepFolds = [
-  { x: -10, z: -755, sheep: 6 },
-  { x: 28, z: -766, sheep: 4 },
-  { x: -22, z: -916, sheep: 5 },
-  { x: 18, z: -980, sheep: 5 },
-  { x: 30, z: -1098, sheep: 4 },
-  { x: 24, z: -1150, sheep: 4 },
-  { x: 6, z: -1130, sheep: 5 },
+  { ...meadowPoint(-10, -755), sheep: 6 },
+  { ...meadowPoint(28, -766), sheep: 4 },
+  { ...meadowPoint(-22, -916), sheep: 5 },
+  { ...meadowPoint(18, -980), sheep: 5 },
+  { ...meadowPoint(30, -1098), sheep: 4 },
+  { ...meadowPoint(24, -1150), sheep: 4 },
+  { ...meadowPoint(6, -1130), sheep: 5 },
   { x: COTTAGE.x - 15, z: COTTAGE.z + 20, sheep: 6 },
 ];
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
@@ -296,7 +302,7 @@ let heightParity = 0;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
-const shown = { dusk: NaN, haze: NaN, shower: NaN, season: NaN };
+const shown = { dusk: NaN, haze: NaN, shower: NaN, season: NaN, storm: NaN };
 function ease(from: number, to: number, rate: number, dt: number): number {
   return Number.isNaN(from) ? to : from + (to - from) * (1 - Math.exp(-dt * rate));
 }
@@ -341,15 +347,15 @@ function frame(now: number): void {
   renderer.info.reset();
   frameIndex++;
   const veer = Math.sin(time * 0.021) * 0.35;
-  wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(2.6 * story.breeze);
+  wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * story.breeze);
 
   input.muted = story.current.scripted ?? false;
   input.update(dt, rig.camera, wind);
-  if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.down ? input.charge : 0, dt);
+  if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   story.update(dt, time);
   creatures.gulls.follow(story.escort);
   atmo.uniforms.uRainbow.value = story.rainbow;
-  boat.update(dt);
+  boat.update(dt, time);
   child.update(dt);
   glider.update(dt, time);
   flock.update(dt, time);
@@ -357,8 +363,14 @@ function frame(now: number): void {
   child.cradle += ((crane.state === 'carried' && crane.visible ? 1 : 0) - child.cradle) * (1 - Math.exp(-dt * 2.5));
   if (crane.state === 'carried') crane.carry(child.armsPoint(craneAt), child.yaw);
   else if (crane.state === 'hooded') crane.carry(child.hoodPoint(craneAt), child.yaw, true);
-  /** The colt reads the air where it is standing, so an updraft only lifts it when the player holds it over it. */
-  crane.update(dt, time, child.position, wind.sample(crane.position.x, crane.position.z, craneAir));
+  /**
+   * The colt reads the air where it is standing. Wind brushed under it with the cursor lifts it as a held updraft
+   * does, because moving the cursor is the only verb the game has taught. Not where it has just fallen, though:
+   * there it is the child's to gather up.
+   */
+  wind.sample(crane.position.x, crane.position.z, craneAir);
+  if (crane.state !== 'fallen') craneAir.lift += craneAir.energy * tuning.colt.gustLift;
+  crane.update(dt, time, child.position, craneAir);
   pollReadbacks();
   wind.step(dt, time);
   life.update(dt);
@@ -373,17 +385,20 @@ function frame(now: number): void {
   /** The year turns island by island and never goes back; like the sky, it is eased so no room change cuts. */
   atmo.uniforms.uSeason.value = ease(shown.season, story.season, 0.35, dt);
   shown.season = atmo.uniforms.uSeason.value;
-  const storm = story.current.storm ?? 0;
+  const storm = params.storm ?? story.current.storm ?? 0;
+  /** The sea answers the weather, and it is still in frame across a room change, so it eases like the sky does. */
+  const squall = ease(shown.storm, storm, 0.5, dt);
   /** Whether the story is standing on anything: several things only belong over land, and the journey is mostly sea. */
   const overLand = THREE.MathUtils.smoothstep(heightAt(story.focus.x, story.focus.z), -1.5, 2.5);
   shown.dusk = dusk;
   shown.haze = haze;
   shown.shower = shower;
+  shown.storm = squall;
   const flat = story.current.trodden ?? null;
   const tread = atmo.uniforms.uTrodden.value;
   if (flat) tread.set(flat.x, flat.z, flat.y, ease(tread.w, 1, 1.4, dt));
   else tread.w = ease(tread.w, 0, 1.4, dt);
-  applyPalette(story.worldLife, dusk, shower);
+  applyPalette(story.worldLife, dusk, shower, squall);
   /** How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler. */
   atmo.uniforms.uVeil.value.set(900 - 780 * haze, 0.002 + 0.03 * haze);
   sinceLightBake++;
@@ -393,8 +408,12 @@ function frame(now: number): void {
     bakes.bakeLight(bakeInputs);
   }
   bakes.tick();
-  post.saturation = 0.62 + 0.38 * story.worldLife;
+  post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
   surfUniforms.uSeaState.value = story.breeze;
+  surfUniforms.uSquall.value = squall;
+  /** Trough to crest in world units: a breathing swell on a calm day, a sea running in a squall. */
+  swellUniforms.uSwell.value = (0.25 + 1.45 * squall) * story.breeze;
+  boat.swell = squall;
 
   const u = atmo.uniforms;
   u.uTime.value = time;
@@ -406,9 +425,10 @@ function frame(now: number): void {
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
 
   homePetals();
-  petals.update(dt, input.down && input.present ? input.world : null, input.charge);
+  petals.update(dt, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   const pointerWorld = input.present ? input.world : null;
-  lines.update(dt, pointerWorld, input.gust, input.down ? pointerWorld : null, input.charge);
+  lines.update(dt, pointerWorld, input.gust, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
+  swirl.update(dt, rig.camera, input, story.current.coax ?? null);
   cursor.update(input.gust, input.charge, input.down);
   const creatureEnv = {
     camera: rig.camera,
@@ -427,7 +447,7 @@ function frame(now: number): void {
   soundState.rise += (Math.sign(riseNow) - soundState.rise) * (Math.abs(riseNow) > 1e-4 ? 0.3 : 0);
   soundState.gust = input.present ? input.gust : 0;
   soundState.pan = input.ndc.x;
-  soundState.charge = input.down ? input.charge : 0;
+  soundState.charge = input.charge;
   soundState.overLand = heightAt(input.world.x, input.world.z) > 0.5;
   /** The wind where the story is, not where it started: the rooms past the first island are most of the game. */
   const b = wind.sample(story.focus.x, story.focus.z, breezeSample);
@@ -524,7 +544,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, crane, flock, washing, village, wood, embers, boat, life };
 }
 
 /**

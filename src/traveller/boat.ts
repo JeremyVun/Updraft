@@ -4,6 +4,7 @@ import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import { heightAt } from '../world/island';
+import { type Swell, swellAt, swellLift } from '../world/water/swell';
 
 const LENGTH = 4.8;
 const BEAM = 0.95;
@@ -197,16 +198,20 @@ export class Boat {
    * of its own at all and only the wind the player makes moves it.
    */
   becalmed = 0;
+  /** How hard the sea is running under the hull, 0 calm to 1 the full squall; the boat rocks and drives on it. */
+  swell = 0;
   private readonly sailPivot = new THREE.Group();
   private readonly sailMat: THREE.ShaderMaterial;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   /** Foam left on the water behind the hull. */
-  private readonly wake = new RibbonBatch(90, '#eef0ef', 0.5);
+  private readonly wake = new RibbonBatch(90, '#eef0ef', 0.5, true);
   private readonly wakeTrail: Ribbon = { points: [], alpha: 0, width: 2.8 };
   private readonly stern = new THREE.Vector3();
-  private roll = 0;
-  private pitch = 0;
+  private readonly sea: Swell = { height: 0, slopeX: 0, slopeZ: 0 };
+  /** How the hull is lying, for whoever is riding it. */
+  roll = 0;
+  pitch = 0;
   private boom = 0;
   private time = 0;
   private fade = 0;
@@ -274,7 +279,7 @@ export class Boat {
     return out.copy(this.seatLocal).applyMatrix4(this.group.matrixWorld);
   }
 
-  update(dt: number): void {
+  update(dt: number, time: number): void {
     this.time += dt;
     const p = this.position;
     const w = this.wind.sample(p.x, p.z, this.sample);
@@ -285,7 +290,7 @@ export class Boat {
     const windSpeed = Math.hypot(w.x, w.z);
 
     if (this.afloat && !this.grounded) {
-      const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + 4.2 * (1 - this.becalmed) + w.energy * 6;
+      const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + (4.2 + 2.2 * this.swell) * (1 - this.becalmed) + w.energy * 6;
       this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * (0.45 + this.becalmed * 0.3)));
       if (this.steerFor) {
         const want = Math.atan2(this.steerFor.x - p.x, this.steerFor.y - p.z);
@@ -303,10 +308,19 @@ export class Boat {
     }
 
     const heel = this.afloat ? THREE.MathUtils.clamp(across * 0.018, -0.22, 0.22) : 0;
-    this.roll += (heel + Math.sin(this.time * 1.3) * (this.afloat ? 0.05 : 0.0) - this.roll) * (1 - Math.exp(-dt * 2));
-    this.pitch += ((this.afloat ? Math.sin(this.time * 0.9 + 1) * 0.04 - this.speed * 0.004 : -0.05) - this.pitch) * (1 - Math.exp(-dt * 2));
-    const bob = this.afloat ? Math.sin(this.time * 1.1) * 0.045 + Math.sin(this.time * 2.3) * 0.02 : 0;
-    p.y = this.afloat ? bob + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
+    /**
+     * The hull lies along the swell it is floating on, the same waves the water mesh is displaced by, so the
+     * boat rises over a crest and heels to the face of it instead of rocking to a rhythm of its own.
+     */
+    const t = this.time;
+    const lift = this.swellUnder(p.x, p.z, time);
+    const bow = this.sea.slopeX * fx + this.sea.slopeZ * fz;
+    const beam = this.sea.slopeX * fz - this.sea.slopeZ * fx;
+    const settle = 1 - Math.exp(-dt * 3.5);
+    this.roll += (heel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam - this.roll) * settle;
+    this.pitch += ((this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05) - this.pitch) * settle;
+    const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
+    p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const relX = w.x * fz - w.z * fx;
     const targetBoom = THREE.MathUtils.clamp(-Math.atan2(relX, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
@@ -317,14 +331,29 @@ export class Boat {
     this.sailMat.uniforms.uFill.value += ((relX >= 0 ? 1 : -1) * (slack + fill * 0.75) - this.sailMat.uniforms.uFill.value) * (1 - Math.exp(-dt * 3));
     this.sailMat.uniforms.uFlutter.value = (0.25 + (1 - fill) * 0.8) * (1 - this.becalmed * 0.7);
     this.pose(dt);
-    this.updateWake(dt);
+    this.updateWake(dt, time);
+  }
+
+  /**
+   * The swell under a point, damped in the shallows exactly as the water mesh damps it, so a boat coming in
+   * over the sand settles onto a flat sea rather than bobbing on a swell that is no longer drawn.
+   */
+  private swellUnder(x: number, z: number, time: number): number {
+    swellAt(x, z, time, this.sea);
+    const damp = this.afloat ? THREE.MathUtils.smoothstep(Math.max(-heightAt(x, z), 0), 0.6, 4.5) : 0;
+    this.sea.height *= damp;
+    this.sea.slopeX *= damp;
+    this.sea.slopeZ *= damp;
+    return this.sea.height;
   }
 
   /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
-  private updateWake(dt: number): void {
+  private updateWake(dt: number, time: number): void {
     const pts = this.wakeTrail.points;
     const moving = this.afloat && !this.grounded && this.speed > 0.6;
-    this.stern.set(this.position.x - Math.sin(this.yaw) * 1.5, 0.05, this.position.z - Math.cos(this.yaw) * 1.5);
+    const sx = this.position.x - Math.sin(this.yaw) * 1.5;
+    const sz = this.position.z - Math.cos(this.yaw) * 1.5;
+    this.stern.set(sx, 0.05 + this.sea.height, sz);
     const n = pts.length;
     if (moving && (n < 2 || pts[n - 2].distanceTo(this.stern) > 1.6)) {
       pts.push(this.stern.clone());
@@ -337,6 +366,8 @@ export class Boat {
       this.fade = 0;
     }
     this.fade += dt;
+    /** The foam lies on the water, and the water moves: every point rides whatever swell is under it now. */
+    for (const q of pts) q.y = 0.05 + swellLift(q.x, q.z, time);
     this.wakeTrail.alpha = moving ? Math.min(0.3, this.speed * 0.035) : 0.1;
     this.wake.update([this.wakeTrail]);
   }
