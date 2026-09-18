@@ -197,7 +197,14 @@ export class WoodChapter implements Chapter {
     this.lit = embers.brightest(this.light);
     this.darkFor = this.lit < ENOUGH ? this.darkFor + dt : 0;
     this.embers = 1;
-    this.glow.copy(this.lit > 0.4 ? this.light : (this.ahead ?? this.hearth)?.p ?? c.position);
+    /**
+     * What the frame is turned toward: the fire while there is one, the coal waiting to be blown on when there is
+     * not, and while the bird is out there in the dark, the dark it is calling from. The camera never leaves the
+     * child's shoulder for it, so nobody is ever looking at a wood with neither of them in it.
+     */
+    const alone = this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
+    if (alone) this.glow.copy(this.beat === 'bolt' ? this.cast.cygnet.position : HIDING);
+    else this.glow.copy(this.lit > 0.4 ? this.light : (this.ahead ?? this.hearth)?.p ?? c.position);
     this.caught();
 
     switch (this.beat) {
@@ -337,7 +344,12 @@ export class WoodChapter implements Chapter {
     this.to('bolt');
     this.bolted = true;
     c.stop();
-    for (const coal of this.cast.embers.coals) if (coal.lit) coal.heat *= 0.55;
+    /** The gust fans the fire up and then knocks it down, so the fright is seen and the wood is not blacked out. */
+    for (const coal of this.cast.embers.coals) {
+      if (!coal.lit) continue;
+      coal.flare = Math.max(coal.flare, 1.2);
+      coal.heat *= 0.85;
+    }
     /** The next coal up the path goes out with it: while the bird is lost there is nothing else to blow on. */
     if (this.ahead) this.cast.embers.douse(this.ahead);
     this.ahead = null;
@@ -485,19 +497,6 @@ export class WoodChapter implements Chapter {
     s.from = undefined;
     s.eye = undefined;
     const ground = Math.max(heightAt(c.x, c.z), 0);
-    if (this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found') {
-      /**
-       * The same shoulder the whole walk was watched over, stepped back and swung the other way from the calling,
-       * so the child and the dark they are looking into are both in frame and neither is against the edge of it.
-       */
-      s.target.set(c.x + (HIDING.x - c.x) * 0.42, ground + 1.7, c.z + (HIDING.z - c.z) * 0.42);
-      const bx = c.x + (c.x - HIDING.x) * 0.35;
-      const bz = c.z + 12;
-      s.eye = this.side.set(bx, Math.max(Math.max(heightAt(bx, bz), 0), ground) + 5, bz);
-      this.pace = 0.35;
-      this.focus.copy(c);
-      return;
-    }
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
       s.target.set((c.x + b.x) / 2, b.y + 2, (c.z + b.z) / 2 - 2);
@@ -510,7 +509,8 @@ export class WoodChapter implements Chapter {
     /** Close in behind them, leaning a little toward the light but never far enough to leave them behind. */
     /** And when one takes, the camera turns further into the light for a moment, because they both looked. */
     const rush = Math.max(0, 1 - (this.now - this.flared) / 1.4);
-    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (0.42 + rush * 0.3);
+    const near = this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
+    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (near ? 0.6 : 0.42 + rush * 0.3);
     s.target.set(c.x + (this.glow.x - c.x) * lean, ground + 1.9, c.z + (this.glow.z - c.z) * lean);
     /**
      * The eye is placed on the ground behind them rather than hung a fixed height above the target, because the
@@ -519,7 +519,7 @@ export class WoodChapter implements Chapter {
     const ex = c.x + 1.1;
     const ez = c.z + 13;
     s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 4.2, ez);
-    this.pace = 0.9;
+    this.pace = near ? 0.35 : 0.9;
     this.focus.copy(c);
   }
 }
