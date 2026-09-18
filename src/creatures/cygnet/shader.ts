@@ -17,9 +17,28 @@ const DOWN_FAR = 21;
 
 const vec3 = (v: V3) => `vec3(${v[0].toFixed(5)}, ${v[1].toFixed(5)}, ${v[2].toFixed(5)})`;
 
+/**
+ * The lores: the bare dark skin running from the corner of the bill back to the eye, which is the one mark that says
+ * swan rather than duckling at any distance. Both stages measure the same wedge — the frag to darken it, the vert to
+ * keep the down off it — so the bare skin and the dark skin are the same shape.
+ */
+const LORE_GLSL = /* glsl */ `
+float loreMask(vec3 rest) {
+  vec3 q = vec3(abs(rest.x), rest.y, rest.z);
+  vec3 ab = ${vec3(EYE_AT)} - ${vec3(LORE_AT)};
+  vec3 r = q - ${vec3(LORE_AT)};
+  /** Stops short of the eye: run it the whole way and the mark becomes a halo, and the eye a cartoon. */
+  ab *= 0.7;
+  float t = clamp(dot(r, ab) / dot(ab, ab), 0.0, 1.0);
+  float wide = mix(0.011, 0.019, t);
+  return (1.0 - smoothstep(wide, wide + 0.012, length(r - ab * t))) * smoothstep(0.008, 0.03, q.x);
+}
+`;
+
 export const CYGNET_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
+${LORE_GLSL}
 uniform mat4 uBones[${BONES}];
 uniform float uNudge;
 uniform float uBlink;
@@ -44,7 +63,7 @@ out vec3 vRest;
 float downLength(vec3 rest) {
   vec3 q = vec3(abs(rest.x), rest.y, rest.z);
   float k = smoothstep(0.018, 0.046, distance(q, ${vec3(EYE_AT)}));
-  k *= smoothstep(0.02, 0.072, distance(q, ${vec3(LORE_AT)}));
+  k *= 1.0 - 0.92 * loreMask(rest);
   return k * (1.0 - 0.4 * smoothstep(0.30, 0.46, rest.y));
 }
 
@@ -92,6 +111,7 @@ void main() {
 export const CYGNET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
+${LORE_GLSL}
 uniform float uAir;
 uniform float uBlink;
 uniform float uWet;
@@ -111,15 +131,15 @@ in float vShell;
  * Linear, and far lower than they look: the golden sun here is worth about 2.7, so anything pale burns out to white.
  * A cygnet is grey — but a warm grey, cool in shadow, so it belongs to the light it stands in.
  */
-const vec3 NAPE = vec3(0.086, 0.081, 0.075);
-const vec3 DOVE = vec3(0.163, 0.157, 0.150);
-const vec3 MILK = vec3(0.268, 0.261, 0.247);
-const vec3 SNOW = vec3(0.60, 0.594, 0.575);
-const vec3 SLATE = vec3(0.030, 0.028, 0.033);
+const vec3 NAPE = vec3(0.033, 0.031, 0.029);
+const vec3 DOVE = vec3(0.063, 0.060, 0.056);
+const vec3 MILK = vec3(0.112, 0.108, 0.100);
+const vec3 SNOW = vec3(0.40, 0.395, 0.378);
+const vec3 SLATE = vec3(0.028, 0.025, 0.028);
 const vec3 NAIL = vec3(0.078, 0.057, 0.052);
 const vec3 LEG = vec3(0.034, 0.032, 0.038);
-const vec3 VANE = vec3(0.132, 0.129, 0.132);
-const vec3 VANE_TIP = vec3(0.235, 0.232, 0.226);
+const vec3 VANE = vec3(0.068, 0.066, 0.069);
+const vec3 VANE_TIP = vec3(0.124, 0.122, 0.119);
 const vec3 IRIS = vec3(0.004, 0.004, 0.005);
 
 float hash13(vec3 p) {
@@ -188,18 +208,16 @@ void main() {
     fuzz = 0.0;
     thin = 0.0;
   } else {
-    /** The bare dark skin between bill and eye that gives a swan its face; barely there on a bird this young. */
-    vec3 q = vec3(abs(vRest.x), vRest.y, vRest.z);
-    vec3 ab = ${vec3(EYE_AT)} - ${vec3(LORE_AT)};
-    vec3 d = q - ${vec3(LORE_AT)} - ab * clamp(dot(q - ${vec3(LORE_AT)}, ab) / dot(ab, ab), 0.0, 1.0);
-    alb *= mix(1.0, 0.16, (1.0 - smoothstep(0.014, 0.042, length(d))) * smoothstep(0.014, 0.046, abs(vRest.x)));
+    float lore = loreMask(vRest);
+    alb = mix(alb, mix(SLATE, alb, 0.18), lore);
+    fuzz *= 1.0 - 0.9 * lore;
   }
   /** Soaked down is darker and warmer, the colour of wet wool, not of grey gone flat. */
   alb *= mix(vec3(1.0), vec3(0.4, 0.375, 0.35), uWet);
   fuzz *= 1.0 - 0.7 * uWet;
 #ifdef SHELL
   /** Down is dark at the root and catches everything at the tip, which is the whole of why a coat looks soft. */
-  alb *= mix(mix(0.78, 0.5, uWet), 1.06, vShell);
+  alb *= mix(mix(0.66, 0.44, uWet), 0.96, vShell);
   ao = mix(0.72, 1.0, vShell);
   fuzz = 0.38 * (1.0 - 0.7 * uWet);
   thin = 0.34;
@@ -209,7 +227,7 @@ void main() {
    * A pale bird stays pale out of the sun. Without this it takes the whole of its shaded value from a warm ground
    * bounce meant for brown animals and goes charcoal the moment a cloud or the child's shoulder is over it.
    */
-  col += alb * uSkyAmbient * (0.5 + 0.34 * (N.y * 0.5 + 0.5));
+  col += alb * uSkyAmbient * (0.26 + 0.2 * (N.y * 0.5 + 0.5));
   if (uWet > 0.0 && m != ${EYE}) {
     /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
     vec3 V = normalize(cameraPosition - vWorld);

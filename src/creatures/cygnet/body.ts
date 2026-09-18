@@ -211,9 +211,9 @@ function parts(down: boolean): THREE.BufferGeometry[] {
   );
   if (down) return out;
 
-  out.push(still(loft({ stations: bill(HEAD, 0.049, 0.019, 0.009, 0.048, 0.166), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) })));
+  out.push(still(loft({ stations: bill(HEAD, 0.049, 0.019, 0.009, 0.044, 0.168), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) })));
   out.push(
-    still(loft({ stations: bill(JAW, 0.036, 0.008, 0.011, 0.043, 0.154), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) * 0.4 })),
+    still(loft({ stations: bill(JAW, 0.036, 0.008, 0.011, 0.039, 0.156), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) * 0.4 })),
   );
   pair({ part: HEAD, mat: EYE, at: EYE_AT, size: [EYE_R * 0.78, EYE_R, EYE_R * 0.96], detail: 2 }, HEAD);
 
