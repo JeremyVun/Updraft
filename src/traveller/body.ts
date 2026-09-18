@@ -168,7 +168,11 @@ export function buildChild(): Rig {
 
   const arm = (side: number) => {
     const g = new THREE.Group();
-    g.position.set(side * 0.34, 0.88, 0.02);
+    /**
+     * The shoulders sit forward of the coat's widest line, the way a child's do. Set back on the barrel, a
+     * cross-body reach runs out of arm and brings whatever is being held across the child's own face from the front.
+     */
+    g.position.set(side * 0.33, 0.88, 0.12);
     /** A gathered, puffed sleeve: fullest at the shoulder, drawn in toward the elbow, the way a child's coat is cut. */
     const puff = paint(at(new THREE.SphereGeometry(0.138, 12, 10), 0, -0.035, 0, 1, 0.95, 1), PALETTE.coat);
     const upper = paint(at(new THREE.CapsuleGeometry(0.093, UPPER_ARM - 0.1, 4, 10), 0, -UPPER_ARM / 2 - 0.02, 0), PALETTE.coat);
