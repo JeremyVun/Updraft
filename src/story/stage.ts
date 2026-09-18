@@ -3,6 +3,7 @@ import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
 import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
+import { tuning } from '../tuning';
 
 export type StageView = 'game' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
 
@@ -179,8 +180,9 @@ export class StageChapter implements Chapter {
         return true;
       }
       case 'circle': {
-        const p = ahead(34);
-        flock.circle(p.x, p.z, Math.max(heightAt(p.x, p.z), 0) + 22, 20, 20, 16);
+        const { ahead: out, base, radius, spread } = tuning.crest;
+        const p = ahead(out);
+        flock.circle(p.x, p.z, Math.max(heightAt(p.x, p.z), 0) + base, radius, 20, spread);
         return true;
       }
       case 'afloat': {
