@@ -44,6 +44,8 @@ export interface CrossingOpts {
   storm?: number;
   /** How far along the route the cygnet takes to the water by itself, for the one crossing where it does. */
   swimAt?: number;
+  /** A jetty to come alongside at the end instead of a beach to run up. */
+  moor?: { x: number; z: number; yaw: number };
 }
 
 /** How long it stands on the side of the boat making up its mind, how long it swims, and how long it dries off on the side afterwards. */
@@ -128,7 +130,8 @@ export class CrossingChapter implements Chapter {
     this.swimAt = opts.swimAt ?? null;
     cast.boat.becalmed = 0;
     cast.boat.steerFor = this.route[0];
-    cast.boat.canGround = this.route.length === 1;
+    cast.boat.mooring = opts.moor ?? null;
+    cast.boat.canGround = this.route.length === 1 && !opts.moor;
     cast.boat.grounded = false;
     cast.plane.homeRadius = 1e9;
   }
@@ -144,7 +147,7 @@ export class CrossingChapter implements Chapter {
     if (this.leg < this.route.length - 1 && Math.hypot(boat.position.x - wp.x, boat.position.z - wp.y) < ROUNDED) {
       this.leg++;
       boat.steerFor = this.route[this.leg];
-      boat.canGround = this.leg === this.route.length - 1;
+      boat.canGround = this.leg === this.route.length - 1 && !boat.mooring;
     }
   }
 

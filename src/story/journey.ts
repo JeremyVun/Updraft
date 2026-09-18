@@ -5,7 +5,7 @@ import { params } from '../params';
 import { mainlandCoastZ } from '../world/heightfield';
 import type { Cast, Chapter } from './cast';
 import { CrossingChapter, FIRST_ISLAND, LANDING } from './crossing';
-import { HOME_BEACH, HomeChapter } from './home';
+import { HOME_MOORING, HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
 import { FAR_SHORE, MeadowChapter } from './meadow';
@@ -58,7 +58,7 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(-290, -2010),
     new THREE.Vector2(-205, -1975),
     new THREE.Vector2(-130, -1940),
-    new THREE.Vector2(HOME_BEACH.x, HOME_BEACH.y),
+    new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
   ],
 };
 
@@ -101,7 +101,7 @@ export class Journey {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
       this.begin('stage');
     } else if (start === 'summit' || start === 'home') {
-      this.land(HOME_BEACH.x, HOME_BEACH.y - 2, HOME_BEACH.x, HOME_BEACH.y - 8);
+      this.moor();
       this.begin('home');
       (this.chapter as HomeChapter).skipToSummit();
     }
@@ -114,6 +114,18 @@ export class Journey {
     cast.boat.beach(x, z, yaw);
     cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
     cast.boat.launch();
+    this.withCygnet();
+  }
+
+  /** Puts the boat alongside the jetty at home with the child aboard, as if the last crossing had just ended. */
+  private moor(): void {
+    const { cast } = this;
+    cast.life.regions.island.w = 1;
+    cast.boat.beach(HOME_MOORING.x, HOME_MOORING.z, HOME_MOORING.yaw);
+    cast.boat.afloat = true;
+    cast.boat.grounded = true;
+    cast.boat.mooring = HOME_MOORING;
+    cast.child.ride(cast.boat.seat(new THREE.Vector3()), cast.boat.yaw);
     this.withCygnet();
   }
 
@@ -228,6 +240,7 @@ export class Journey {
           dolphins: true,
           swimAt: 0.42,
           season: 0.92,
+          moor: HOME_MOORING,
         });
       case 'home':
         return new HomeChapter(cast);

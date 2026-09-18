@@ -5,6 +5,7 @@ import { heightAt } from '../world/island';
 import { MOON, sunDirection } from '../world/palette';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
+import type { Deck } from '../traveller/traveller';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
@@ -56,8 +57,14 @@ const RISE_TO = 24;
 const SILENCE_AT = 23.5;
 const CREDITS_AT = 26;
 
-/** The south beach the boat comes in to. */
-export const HOME_BEACH = new THREE.Vector2(-45, -1946);
+/**
+ * The jetty on the south beach: out from the shore over the water, with a deck the child walks in along. The one
+ * arrival in the journey that has somewhere built for it, which is how you know it is home.
+ */
+export const HOME_JETTY = { x: -45, shoreZ: -1950, endZ: -1927, halfWidth: 1.2, deck: 0.7 } as const;
+/** Where the boat comes alongside the end of it and lies, bow to the east. */
+export const HOME_MOORING = { x: -45.5, z: -1925.4, yaw: Math.PI / 2 } as const;
+const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ + 1, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
 /** The crest of the last hill, where the ground falls away and the cottage comes into view. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
 /** From the summit the sun sets over the cottage, to the north-west. */
@@ -113,9 +120,14 @@ export class HomeChapter implements Chapter {
     cast.cygnet.mayFly = true;
     const { child, plane } = cast;
     plane.homeRadius = 70;
+    child.decks = [JETTY_DECK];
     child.dismount();
-    const from = child.position;
-    child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
+    /** Out of the boat onto the end of the jetty, in along it to the sand, and then up. */
+    child.place(HOME_JETTY.x, HOME_JETTY.endZ + 0.3, NORTH);
+    child.walkTo(HOME_JETTY.x, HOME_JETTY.shoreZ - 4, false, () => {
+      const from = child.position;
+      child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
+    }, 1);
   }
 
   /**
@@ -461,8 +473,9 @@ export class HomeChapter implements Chapter {
        */
       const fwd = this.forward();
       const held = this.cast.child.presentPoint(this.held);
-      s.eye = this.eyeAt.set(c.x - fwd.x * 3.2 + fwd.z * 2.1, c.y + 2.5, c.z - fwd.z * 3.2 - fwd.x * 2.1);
-      s.target.set(held.x, held.y + 0.15, held.z);
+      /** On the left, which is the side the child holds it out to, so the head is never between the camera and the sheet. */
+      s.eye = this.eyeAt.set(c.x - fwd.x * 4.4 - fwd.z * 3, c.y + 2.35, c.z - fwd.z * 4.4 + fwd.x * 3);
+      s.target.set(held.x, held.y + 0.1, held.z);
       this.pace = 0.6;
       this.focus.copy(c);
       return;
@@ -524,7 +537,9 @@ export class HomeChapter implements Chapter {
       const k = this.cast.cygnet.visible ? this.cast.cygnet.position : this.cast.flock.head;
       const toCygnet = Math.atan2(k.x - c.x, k.z - c.z);
       s.from = this.side.set(-Math.sin(toCygnet), 0, -Math.cos(toCygnet));
-      s.target.set(c.x, c.y + 2.2 + Math.min(15, Math.max(0, k.y - c.y) * 0.55), c.z);
+      /** Once they are out of sight the frame comes back down to the child, who is what the shot was about. */
+      const lift = this.cast.cygnet.visible ? Math.min(15, Math.max(0, k.y - c.y) * 0.55) : 0;
+      s.target.set(c.x, c.y + 2.2 + lift, c.z);
       s.distance = 17;
       s.height = 3.5;
       this.pace = 0.4;
@@ -534,10 +549,11 @@ export class HomeChapter implements Chapter {
     if (this.beat === 'summit' || this.beat === 'release' || this.beat === 'nightfall') {
       const fwd = this.forward();
       s.from = this.behind.copy(fwd).negate();
-      const lift = this.beat === 'release' ? Math.min(12, Math.max(0, p.y - c.y - 4) * 0.4) : 0;
-      s.target.set(c.x + fwd.x * 14, c.y + 1.5 + lift, c.z + fwd.z * 14);
-      s.distance = this.beat === 'nightfall' ? 30 : 24;
-      s.height = this.beat === 'nightfall' ? 8 : 5.5;
+      const lift = this.beat === 'release' ? Math.min(10, Math.max(0, p.y - c.y - 4) * 0.4) : 0;
+      /** Framed so the child stays in the bottom third while the plane goes: the throw is watched from beside them. */
+      s.target.set(c.x + fwd.x * 9, c.y + 1.2 + lift, c.z + fwd.z * 9);
+      s.distance = this.beat === 'nightfall' ? 30 : 20;
+      s.height = this.beat === 'nightfall' ? 8 : 5;
       this.pace = 0.3;
       this.focus.copy(c);
       return;

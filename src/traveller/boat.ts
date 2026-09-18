@@ -193,6 +193,8 @@ export class Boat {
   grounded = false;
   /** False while the route still passes close to land, so rounding a headland is not mistaken for arriving. */
   canGround = true;
+  /** A berth to come alongside instead of a beach to run up: where the hull stops, and the way it lies there. */
+  mooring: { x: number; z: number; yaw: number } | null = null;
   /**
    * How far the world's own wind has gone out of the sails, 0 normal to 1 dead calm. At 1 the boat has no way
    * of its own at all and only the wind the player makes moves it.
@@ -305,6 +307,17 @@ export class Boat {
         this.grounded = true;
         this.speed = 0;
       }
+      if (this.mooring && Math.hypot(this.mooring.x - p.x, this.mooring.z - p.z) < 2.6) {
+        this.grounded = true;
+        this.speed = 0;
+      }
+    } else if (this.afloat && this.mooring) {
+      /** Made fast: it settles against the jetty and lies along it. */
+      const m = this.mooring;
+      const k = 1 - Math.exp(-dt * 0.8);
+      p.x += (m.x - p.x) * k;
+      p.z += (m.z - p.z) * k;
+      this.yaw += Math.atan2(Math.sin(m.yaw - this.yaw), Math.cos(m.yaw - this.yaw)) * k;
     }
 
     const heel = this.afloat ? THREE.MathUtils.clamp(across * 0.018, -0.22, 0.22) : 0;

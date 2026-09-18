@@ -27,6 +27,16 @@ interface Goal {
 }
 
 const OBSTACLES = [...ROCKS, { x: TREE.x, z: TREE.z, radius: 1.3 }];
+
+/** A built surface over the water the child can walk on: a jetty's deck, a strip from one end to the other. */
+export interface Deck {
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  halfWidth: number;
+  height: number;
+}
 const WALK = 2.6;
 const RUN = 5.4;
 const SHADOW_FRAG = /* glsl */ `
@@ -250,8 +260,26 @@ export class Traveller {
     return out;
   }
 
+  /** Decks the child may walk on; anywhere else the ground is the terrain. */
+  decks: Deck[] = [];
+
+  /** The terrain under a point, or a deck built over it. */
+  private ground(x: number, z: number): number {
+    for (const d of this.decks) {
+      const dx = d.x1 - d.x0;
+      const dz = d.z1 - d.z0;
+      const len2 = dx * dx + dz * dz;
+      const t = ((x - d.x0) * dx + (z - d.z0) * dz) / len2;
+      if (t < 0 || t > 1) continue;
+      const px = d.x0 + dx * t;
+      const pz = d.z0 + dz * t;
+      if (Math.hypot(x - px, z - pz) <= d.halfWidth) return Math.max(d.height, heightAt(x, z));
+    }
+    return heightAt(x, z);
+  }
+
   place(x: number, z: number, yaw: number): void {
-    this.position.set(x, Math.max(heightAt(x, z), 0), z);
+    this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.pose(0);
     this.scarf.reset(this.rig.neck.getWorldPosition(this.tmp));
@@ -271,7 +299,7 @@ export class Traveller {
   dismount(): void {
     this.riding = false;
     this.sitting = false;
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
   }
 
   walkTo(x: number, z: number, run = false, onArrive?: () => void, near = 0.6): void {
@@ -369,7 +397,7 @@ export class Traveller {
 
     const neck = this.rig.neck.getWorldPosition(this.tmp);
     const centre = this.tmp2.set(p.x, p.y + (this.sitting ? 0.7 : 1.1), p.z);
-    this.scarf.update(dt, neck, centre, 0.52, w, this.riding ? p.y - 0.2 : Math.max(heightAt(p.x, p.z), 0), p);
+    this.scarf.update(dt, neck, centre, 0.52, w, this.riding ? p.y - 0.2 : Math.max(this.ground(p.x, p.z), 0), p);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
@@ -414,8 +442,8 @@ export class Traveller {
         nz = r.z + (oz / od) * keep;
       }
     }
-    const nextH = heightAt(nx, nz);
-    if (nextH < 0.2 && nextH < heightAt(p.x, p.z)) {
+    const nextH = this.ground(nx, nz);
+    if (nextH < 0.2 && nextH < this.ground(p.x, p.z)) {
       this.speed = 0;
       if (this.goal) {
         const arrive = this.goal.onArrive;
@@ -450,7 +478,7 @@ export class Traveller {
         const x = p.x + (-az * side * reach + ax * 3);
         const z = p.z + (ax * side * reach + az * 3);
         const blocked = OBSTACLES.some((r) => Math.hypot(x - r.x, z - r.z) < r.radius + 1.2);
-        if (!blocked && heightAt(x, z) > 0.6) {
+        if (!blocked && this.ground(x, z) > 0.6) {
           g.detour = { x, z };
           return;
         }
