@@ -193,7 +193,7 @@ function parts(down: boolean): THREE.BufferGeometry[] {
       const top = Math.sin(a) * 0.5 + 0.5;
       const rump = 1 - ramp(t, 0.02, 0.44);
       const head = ramp(t, 0.6, 1);
-      return 0.99 - top * 0.84 - rump * top * 0.4 - head * top * 0.34 + head * (1 - top) * 0.2;
+      return 0.99 - top * 0.6 - rump * top * 0.3 - head * top * 0.26 + head * (1 - top) * 0.2;
     },
   });
   addWing(out, down);

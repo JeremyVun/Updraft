@@ -176,7 +176,7 @@ vec3 coat(float k, float fleck) {
    * The white comes through where the down is already palest — breast, cheeks, flanks — and the back stays grey.
    * It has to claim whole areas rather than fleck them, or it is invisible from the camera the game is played at.
    */
-  return mix(c, SNOW, uGrown * smoothstep(0.16, 0.74, t * 0.92 + fleck * 0.2));
+  return mix(c, SNOW, uGrown * (0.28 + 0.72 * smoothstep(0.16, 0.74, t * 0.92 + fleck * 0.2)));
 }
 
 void main() {
