@@ -46,6 +46,26 @@ vec3 swellShift(vec2 p, float height) {
 }
 
 /**
+ * The gust's own small waves: short, steep chop running with the wind, laid over the swell where a stroke
+ * crosses it. Kept long enough that the mesh near the camera still resolves it.
+ */
+vec3 windChop(vec2 p, vec2 along, float amp) {
+  vec2 side = vec2(-along.y, along.x);
+  float a = dot(p, along) * 0.62 - uTime * 3.9;
+  float b = dot(p, along * 0.86 + side * 0.51) * 0.95 - uTime * 4.6;
+  return vec3(0.0, amp * (sin(a) * 0.6 + sin(b) * 0.4), 0.0);
+}
+
+/** How much of that chop the water at p can carry: none in the shallows, none where the mesh is too coarse. */
+float chopHere(vec2 p, float fromCamera) {
+  vec2 uv = domainUv(p);
+  vec2 edge = min(uv, 1.0 - uv);
+  float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
+  float depth = -mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
+  return smoothstep(0.8, 3.5, depth) * smoothstep(95.0, 55.0, fromCamera);
+}
+
+/**
  * How much swell there is at p: none where the water is too shallow to hold it, and none far from the camera,
  * where the mesh is too coarse to carry a wave and the ripple normals do the work instead.
  */

@@ -250,6 +250,17 @@ export const tuning = {
     liftFrom: 9,
     liftTo: 20,
   },
+  water: {
+    /** Extra normal slope a gust ruffles into the sea it crosses. */
+    ruffle: 0.085,
+    /** How far a gust darkens that water, as a share of its colour. */
+    darken: 0.13,
+    /** Height of the small chop a gust lays over the swell, in world units. */
+    chop: 0.12,
+    /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
+    luffFrom: 0.12,
+    luffFade: 0.55,
+  },
 };
 
 /** A number as a GLSL float literal. */
