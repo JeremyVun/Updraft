@@ -87,7 +87,8 @@ export interface Posed {
 const FLOOR = 0.006 * SIZE;
 /** Where the hips are on the body, from the skeleton, and how high the body stands when both legs are comfortably bent. */
 const HIP = SKELETON.find(([bone]) => bone === THIGH_L)![2];
-const STANDING = -HIP[1] + (THIGH + SHIN) * 0.75 + SOLE;
+/** How high it stands: enough of its short legs showing under the body for a waddle to be a waddle. */
+const STANDING = -HIP[1] + (THIGH + SHIN) * 0.84 + SOLE;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -278,8 +279,8 @@ export class Poser {
     body.scale.set(1 + breathe * 0.6, 1 + breathe * 1.2, 1 + breathe * 0.8);
 
     /** The neck is the whole character: the S of a bird at ease, tucked back into the shoulders, or stretched. */
-    let a = -0.35;
-    let b = 0.45;
+    let a = -0.5;
+    let b = 0.6;
     let head = 0;
     a = lerp(a, -1.2, p.curl);
     b = lerp(b, 1.6, p.curl);
@@ -303,8 +304,11 @@ export class Poser {
     b = lerp(b, 0.38, p.reach);
     head = lerp(head, 0, p.reach);
     /** Down to the grass, and down into its own breast. */
-    a += nibble * 0.9 + act('preen-breast') * 0.35 + stretch * 0.55 + act('brace') * 0.5;
-    b += nibble * 0.5 + act('preen-breast') * 1.5 + stretch * 0.1 + act('brace') * 0.3;
+    a += nibble * 0.9 + act('preen-breast') * 0.35 + act('brace') * 0.5;
+    b += nibble * 0.5 + act('preen-breast') * 1.5 + act('brace') * 0.3;
+    /** A stretch runs one straight line from the bill through the body to the foot out behind: the neck must not curl. */
+    a = lerp(a, 0.55, stretch);
+    b = lerp(b, -0.1, stretch);
     head += nibble * (0.5 + Math.sin(t * 40) * 0.08) + act('preen-breast') * (0.7 + Math.sin(t * 31) * 0.1) - act('yawn') * 0.4 - stretch * 0.3;
     a -= act('preen-back') * 0.75;
     /** On its breast the neck is flung out along the ground in front of it. */

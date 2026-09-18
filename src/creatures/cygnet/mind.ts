@@ -88,6 +88,7 @@ const REACTIONS: Record<'flinch' | 'brace' | 'bowled' | 'into-wind' | 'ask' | 's
 export type Interest = 'child' | 'hands' | 'plane' | 'creature' | 'flock' | 'light' | 'wind' | 'told' | 'nothing';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const smooth = (x: number) => x * x * (3 - 2 * x);
 const toward = (a: number, b: number, rate: number, dt: number) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
 /**
@@ -290,7 +291,11 @@ export class Mind {
     if (this.act) {
       this.actT += dt;
       this.actK = Math.min(1, this.actT / this.actDur);
-      this.actEnv = Math.sin(this.actK * Math.PI) ** 0.7;
+      /**
+       * Every act has a beginning, a middle and an end rather than being one swell: it goes into the pose quickly,
+       * holds it long enough to be read at game distance, and comes out of it more slowly than it went in.
+       */
+      this.actEnv = smooth(Math.min(1, this.actK / 0.17)) * (1 - smooth(clamp01((this.actK - 0.66) / 0.34)));
       if (this.actK >= 1) {
         const was = this.act;
         this.rested.set(was, this.time);

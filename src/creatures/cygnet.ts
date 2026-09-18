@@ -16,9 +16,9 @@ const LIFT_TO_FLY = 0.5;
 const CEILING = 7.5;
 /** Nothing it can do keeps it up longer than this. */
 const GLIDE_FOR = 9;
-const HOP_FOR = 3.4;
+const HOP_FOR = 4.2;
 /** How long a try at flying is a run, before it turns into a fall. */
-const RUN_UNTIL = 2.3;
+const RUN_UNTIL = 2.6;
 
 /** Other places a hand can go on it, in its body's own frame: under the breast and under the rump, for holding it across the chest. */
 const GRIPS = { breast: [0, -0.1, 0.12], rump: [0, -0.09, -0.13] } as const;
@@ -864,16 +864,16 @@ export class Cygnet {
     let hop = 0;
     let run = 0;
     this.turnTo(this.runBearing, 6, 4.5, dt);
-    if (t < 0.5) {
-      /** It gathers itself: a crouch, a look up, wings coming off its back. */
+    if (t < 0.8) {
+      /** It gathers itself: a crouch, a long look up at where it means to go, wings coming off its back. */
       this.effort = 0.3;
       this.flap = ease(this.flap, 0.5, 6, dt);
       this.settle = ease(this.settle, 0.45, 8, dt);
     } else if (t < RUN_UNTIL) {
       /** The run: feet slapping, wings going as hard as they will, and each bound a little higher than the last. */
-      const w = (t - 0.5) / (RUN_UNTIL - 0.5);
+      const w = (t - 0.8) / (RUN_UNTIL - 0.8);
       run = 0.8 + 2.6 * w;
-      const bound = (t - 0.5) / 0.42;
+      const bound = (t - 0.8) / 0.42;
       hop = Math.max(0, Math.sin((bound - Math.floor(bound)) * Math.PI)) ** 1.3 * (0.05 + w * 0.2);
       this.effort = 1;
       this.flap = 1;
@@ -885,11 +885,12 @@ export class Cygnet {
       const w = (t - RUN_UNTIL) / (HOP_FOR - RUN_UNTIL);
       if (this.faceplant === 0) this.heard.push({ kind: 'tumble', amount: 0.55 });
       run = 2.2 * Math.max(0, 1 - w * 3.2);
-      this.faceplant = Math.max(0.001, Math.sin(Math.min(1, w * 1.35) * Math.PI) ** 0.6);
+      /** Down hard, and then it lies there. Getting up again is slower than going down, which is what makes it tender. */
+      this.faceplant = Math.max(0.001, Math.min(1, w * 3.4) ** 0.6 * (1 - THREE.MathUtils.smoothstep(w, 0.55, 1)));
       this.effort = ease(this.effort, 0, 8, dt);
       this.flap = ease(this.flap, 0.25 * (1 - w), 6, dt);
       this.roll = ease(this.roll, 0, 5, dt);
-      if (this.hopT <= 0.35 && this.hopT > 0.3) this.mind.perform('shake');
+      if (this.hopT <= 0.3 && this.hopT > 0.25) this.mind.perform('shake');
     }
     this.hurry = ease(this.hurry, run > 0.1 ? 1 : 0, 8, dt);
     this.position.x += Math.sin(this.yaw) * run * dt;
@@ -1004,7 +1005,7 @@ export class Cygnet {
     d.glide = this.glide;
     d.hope = this.hope;
     d.hopLift = this.hopLift;
-    d.crouch = this.hopT > HOP_FOR - 0.5 ? 1 : 0;
+    d.crouch = this.hopT > HOP_FOR - 0.8 ? 1 : 0;
     d.landing = clamp(this.landing / 0.75, 0, 1);
     d.faceplant = this.faceplant;
     d.flop = this.flop;
