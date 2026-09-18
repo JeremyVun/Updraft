@@ -641,7 +641,7 @@ interface Stunt {
 const OVER_BOW = 2;
 /** Where the shoulder presses on the quarter, and how far off the planking the beak stays while it pushes. */
 const SHOVE_ALONG = -1;
-const SHOVE_ACROSS = 1.35;
+const SHOVE_ACROSS = 1.2;
 
 interface Dolphin {
   pack: Pack;
@@ -1115,7 +1115,7 @@ export class Dolphins {
       d.tilt = -s.side * 1.5;
       if (!s.hit) {
         this.glide(s, SHOVE_ALONG, s.side * SHOVE_ACROSS, 1.1, dt);
-        if (Math.abs(s.across) < SHOVE_ACROSS + 0.12 && s.along > SHOVE_ALONG - 0.5) {
+        if (Math.abs(s.across) < SHOVE_ACROSS + 0.06 && s.along > SHOVE_ALONG - 0.4) {
           s.hit = true;
           s.t = 0;
           this.onShove?.(s.side, 1);
