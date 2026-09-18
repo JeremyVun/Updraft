@@ -31,7 +31,8 @@ export const SOLE = 0.014;
 /** The hip is buried high in the flank, so the leg only shows below the down. */
 const HIP = 0.022;
 const STAND = HIP + THIGH + SHIN + SOLE;
-const NECK_LINK = 0.05;
+/** Long enough that the S has somewhere to happen: a cygnet's neck is already most of a swan's, only thicker. */
+const NECK_LINK = 0.076;
 
 /** Each joint's rest position on its parent. */
 export const SKELETON: [bone: number, parent: number, at: V3][] = [
@@ -65,10 +66,10 @@ export const REST: V3[] = (() => {
 })();
 
 /** Eye centre in rest space (left eye); the shader closes the lids around it. */
-export const EYE_AT: V3 = [0.09, REST[HEAD][1] + 0.061, REST[HEAD][2] + 0.062];
-export const EYE_R = 0.031;
+export const EYE_AT: V3 = [0.079, REST[HEAD][1] + 0.063, REST[HEAD][2] + 0.056];
+export const EYE_R = 0.03;
 /** Where the bill leaves the face; between here and the eye the down gives way to bare dark skin. */
-export const LORE_AT: V3 = [0.02, REST[HEAD][1] + 0.05, REST[HEAD][2] + 0.062];
+export const LORE_AT: V3 = [0.031, REST[HEAD][1] + 0.049, REST[HEAD][2] + 0.076];
 
 /** Where the child's mittens go, in the body's own frame: under the belly either side, and the middle of the back. */
 export const HOLDS = { bellyL: [0.112, -0.092, 0.01] as V3, bellyR: [-0.112, -0.092, 0.01] as V3, back: [0, 0.114, -0.02] as V3 };
@@ -107,7 +108,8 @@ function skin(): Station[] {
     /** Never further forward than the neck itself: a spine that goes forward and back folds the skin over here. */
     body(0.142, 0.072, 0.086, 0.076, 0.096, [BODY, NECK_1, 0.3]),
   ];
-  const radius = [0.068, 0.062, 0.058, 0.055, 0.053, 0.052, 0.052, 0.054, 0.058];
+  /** Thick where it leaves the breast and slender by the head: the taper is what stops a neck reading as a stalk. */
+  const radius = [0.072, 0.064, 0.058, 0.053, 0.049, 0.046, 0.044, 0.043, 0.044];
   for (let i = 0; i < 4; i++) {
     const joint = REST[NECK[i]];
     const below = i === 0 ? BODY : NECK[i - 1];
@@ -125,15 +127,15 @@ function skin(): Station[] {
     skin: s,
   });
   st.push(
-    head(-0.006, -0.004, 0.06, 0.058, 0.062, [NECK_4, HEAD, 0.5]),
-    head(0.02, 0.005, 0.084, 0.078, 0.086),
-    head(0.048, 0.015, 0.1, 0.092, 0.102),
-    head(0.078, 0.02, 0.106, 0.098, 0.104),
-    head(0.109, 0.019, 0.101, 0.094, 0.095),
-    head(0.134, 0.014, 0.084, 0.08, 0.078),
-    head(0.152, 0.008, 0.062, 0.06, 0.058),
-    head(0.164, 0.003, 0.034, 0.033, 0.032),
-    head(0.172, 0.0, 0.005, 0.005, 0.005),
+    head(-0.008, -0.006, 0.05, 0.05, 0.054, [NECK_4, HEAD, 0.5]),
+    head(0.018, 0.004, 0.074, 0.072, 0.086),
+    head(0.046, 0.014, 0.09, 0.086, 0.106),
+    head(0.076, 0.019, 0.095, 0.092, 0.11),
+    head(0.107, 0.018, 0.091, 0.088, 0.102),
+    head(0.132, 0.013, 0.077, 0.075, 0.084),
+    head(0.15, 0.007, 0.058, 0.056, 0.06),
+    head(0.162, 0.003, 0.032, 0.031, 0.032),
+    head(0.17, 0.0, 0.005, 0.005, 0.005),
   );
   return st;
 }
@@ -150,13 +152,13 @@ function bill(bone: number, y: number, up: number, down: number, half: number, r
   });
   return [
     ring(0, 0, 0.12, 0.25),
-    ring(0.012, 0, 0.95, 1),
-    ring(reach * 0.3, 0.004, 1, 0.9),
-    ring(reach * 0.55, 0.01, 1.02, 0.76),
-    ring(reach * 0.74, 0.017, 0.99, 0.6),
-    ring(reach * 0.88, 0.024, 0.86, 0.45),
-    ring(reach * 0.96, 0.03, 0.56, 0.28),
-    ring(reach, 0.034, 0.08, 0.1),
+    ring(0.012, 0, 0.92, 1),
+    ring(reach * 0.26, 0.004, 1.0, 0.82),
+    ring(reach * 0.48, 0.011, 1.04, 0.62),
+    ring(reach * 0.68, 0.019, 1.06, 0.48),
+    ring(reach * 0.84, 0.027, 1.02, 0.38),
+    ring(reach * 0.94, 0.034, 0.78, 0.26),
+    ring(reach, 0.04, 0.1, 0.1),
   ];
 }
 
@@ -209,9 +211,9 @@ function parts(down: boolean): THREE.BufferGeometry[] {
   );
   if (down) return out;
 
-  out.push(still(loft({ stations: bill(HEAD, 0.05, 0.026, 0.01, 0.041, 0.116), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) })));
+  out.push(still(loft({ stations: bill(HEAD, 0.049, 0.019, 0.009, 0.048, 0.166), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) })));
   out.push(
-    still(loft({ stations: bill(JAW, 0.036, 0.009, 0.012, 0.036, 0.107), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) * 0.4 })),
+    still(loft({ stations: bill(JAW, 0.036, 0.008, 0.011, 0.043, 0.154), mat: BILL, around: 14, smooth: 1, blend: (t) => ramp(t, 0.72, 1) * 0.4 })),
   );
   pair({ part: HEAD, mat: EYE, at: EYE_AT, size: [EYE_R * 0.78, EYE_R, EYE_R * 0.96], detail: 2 }, HEAD);
 
@@ -235,9 +237,10 @@ function parts(down: boolean): THREE.BufferGeometry[] {
 }
 
 /**
- * The wing: a soft downy paddle of an arm with two rows of rounded coverts over it, a short fan of grey flight
- * feathers with paler tips, and no more reach than a bird this size has. Each vane carries the pivot and the angle
- * it swings through as the wing shuts, so the fan closes the way a real one does instead of folding as a slab.
+ * The wing: one downy teardrop of an arm, broad in the chord and thin through, that lies on the flank as a single
+ * soft shape when it is shut, with a short fan of flight feathers running out of its point. Nothing is plated over
+ * it: rows of coverts on a bird this young read as armour. Each vane carries the pivot and the angle it swings
+ * through as the wing shuts, so the fan closes the way a real one does instead of folding as a slab.
  */
 function addWing(out: THREE.BufferGeometry[], down: boolean): void {
   const s = REST[WING_L];
@@ -245,15 +248,15 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
   const wing: THREE.BufferGeometry[] = [];
   const arm: Station[] = [
     /** Buried in the flank and bound to the body alone, so no swing of the wing can push its blunt end through. */
-    { at: at(0.018, 0.004, 0.022), rx: 0.03, up: 0.024, down: 0.024, skin: [BODY, BODY, 0] },
-    { at: at(0.062, 0.004, 0.02), rx: 0.05, up: 0.038, down: 0.04, skin: [BODY, WING_L, 0.6] },
-    { at: at(0.104, 0.004, 0.014), rx: 0.06, up: 0.038, down: 0.038, skin: [WING_L, WING_L, 0] },
-    { at: at(0.135, 0.002, 0.008), rx: 0.058, up: 0.033, down: 0.032, skin: [WING_L, WING_L, 0] },
-    { at: at(0.18, -0.002, -0.002), rx: 0.052, up: 0.028, down: 0.027, skin: [WING_L, FORE_L, 0.55] },
-    { at: at(0.22, -0.006, -0.012), rx: 0.044, up: 0.023, down: 0.022, skin: [FORE_L, FORE_L, 0] },
-    { at: at(0.258, -0.01, -0.022), rx: 0.033, up: 0.017, down: 0.016, skin: [FORE_L, HAND_L, 0.6] },
-    { at: at(0.288, -0.014, -0.03), rx: 0.019, up: 0.01, down: 0.01, skin: [HAND_L, HAND_L, 0] },
-    { at: at(0.302, -0.016, -0.035), rx: 0.004, up: 0.004, down: 0.004, skin: [HAND_L, HAND_L, 0] },
+    { at: at(0.018, 0.004, 0.022), rx: 0.034, up: 0.026, down: 0.026, skin: [BODY, BODY, 0] },
+    { at: at(0.062, 0.004, 0.018), rx: 0.064, up: 0.036, down: 0.038, skin: [BODY, WING_L, 0.6] },
+    { at: at(0.104, 0.003, 0.01), rx: 0.084, up: 0.034, down: 0.034, skin: [WING_L, WING_L, 0] },
+    { at: at(0.142, 0.001, 0.002), rx: 0.09, up: 0.03, down: 0.03, skin: [WING_L, WING_L, 0] },
+    { at: at(0.185, -0.003, -0.008), rx: 0.086, up: 0.026, down: 0.025, skin: [WING_L, FORE_L, 0.55] },
+    { at: at(0.226, -0.007, -0.02), rx: 0.073, up: 0.021, down: 0.02, skin: [FORE_L, FORE_L, 0] },
+    { at: at(0.264, -0.011, -0.032), rx: 0.055, up: 0.016, down: 0.015, skin: [FORE_L, HAND_L, 0.6] },
+    { at: at(0.298, -0.015, -0.042), rx: 0.032, up: 0.011, down: 0.011, skin: [HAND_L, HAND_L, 0] },
+    { at: at(0.322, -0.018, -0.048), rx: 0.005, up: 0.005, down: 0.005, skin: [HAND_L, HAND_L, 0] },
   ];
   const coat = (spec: LoftSpec) => (down ? loft({ ...spec, around: 9 }) : loft(spec));
   wing.push(coat({ stations: arm, mat: COAT, around: 12, smooth: 1, side: [0, 0, -1], blend: (_t, a) => 0.6 - Math.sin(a) * 0.22 }));
@@ -268,60 +271,28 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
       vane({
         part: HAND_L,
         mat: QUILL,
-        root: at(0.254 + k * 0.046, -0.012 - k * 0.003, -0.016 - k * 0.006),
-        length: 0.118 + k * 0.04,
-        width: 0.03 - k * 0.004,
+        root: at(0.262 + k * 0.05, -0.014 - k * 0.003, -0.03 - k * 0.006),
+        length: 0.112 + k * 0.042,
+        width: 0.026 - k * 0.004,
         spin: 1.06 - k * 0.6,
         lift: -0.03 - k * 0.04,
+        thick: 0.007,
         pale: 0.85 + k * 0.15,
       });
     }
-    for (let i = 0; i < 4; i++) {
-      const k = i / 3;
-      vane({
-        part: FORE_L,
-        mat: QUILL,
-        root: at(0.19 + k * 0.058, -0.008 - k * 0.003, -0.01 - k * 0.004),
-        length: 0.088 + k * 0.026,
-        width: 0.032 - k * 0.002,
-        spin: 1.4 - k * 0.2,
-        lift: -0.02,
-        pale: 0.5 + k * 0.3,
-      });
-    }
-  }
-  /**
-   * Coverts: short, round and down-coloured, rooted clear of the arm's own surface rather than half sunk in it.
-   * They are left out of the coat itself: a shell pushed off a blade thinner than the coat is long comes through
-   * the other side of it, and a wing covered in that reads as dirt.
-   */
-  if (!down) {
-    for (let i = 0; i < 4; i++) {
-      const k = i / 3;
-      vane({
-        part: k < 0.4 ? WING_L : FORE_L,
-        mat: COAT,
-        root: at(0.158 + k * 0.086, 0.03 - k * 0.02, -0.006 - k * 0.008),
-        length: 0.068 + k * 0.024,
-        width: 0.032 - k * 0.004,
-        spin: 1.46 - k * 0.16,
-        lift: -0.1,
-        thick: 0.012,
-        pale: 0.42,
-      });
-    }
+    /** Short, soft and down-coloured: the second row is there to fill the point of the teardrop, not to be read. */
     for (let i = 0; i < 3; i++) {
       const k = i / 2;
       vane({
-        part: k < 0.6 ? WING_L : FORE_L,
+        part: FORE_L,
         mat: COAT,
-        root: at(0.15 + k * 0.072, 0.048 - k * 0.02, 0.01 - k * 0.008),
-        length: 0.054 + k * 0.016,
-        width: 0.034 - k * 0.004,
-        spin: 1.4 - k * 0.12,
-        lift: -0.06,
-        thick: 0.014,
-        pale: 0.3,
+        root: at(0.206 + k * 0.05, -0.01 - k * 0.003, -0.026 - k * 0.006),
+        length: 0.076 + k * 0.022,
+        width: 0.03,
+        spin: 1.42 - k * 0.2,
+        lift: -0.02,
+        thick: 0.009,
+        pale: 0.36 + k * 0.12,
       });
     }
   }
