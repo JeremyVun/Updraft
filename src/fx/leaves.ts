@@ -57,6 +57,75 @@ vec3 leafCurl(vec3 n, vec3 side, vec2 c, float amount) {
   return normalize(n + side * c.x * amount);
 }`;
 
+/** The grid the litter field is kept on, and the piece of the world it covers: the island and a margin of sea. */
+const LITTER_RES = 256;
+const MARGIN = 14;
+export const LITTER_SIDE = LITTER_RES;
+export const LITTER_BOX = {
+  x: ISLE.x - ISLE.rx - MARGIN,
+  z: ISLE.z - ISLE.rz - MARGIN,
+  sx: (ISLE.rx + MARGIN) * 2,
+  sz: (ISLE.rz + MARGIN) * 2,
+};
+
+/** Reading the litter field: shared by the sim, the floor of leaves and anything that wants to know how deep it lies. */
+export const LITTER_GLSL = /* glsl */ `
+uniform sampler2D uLitterTex;
+vec2 litterUv(vec2 xz) {
+  return (xz - vec2(${glsl(LITTER_BOX.x)}, ${glsl(LITTER_BOX.z)})) / vec2(${glsl(LITTER_BOX.sx)}, ${glsl(LITTER_BOX.sz)});
+}
+vec2 litterWorld(vec2 uv) {
+  return vec2(${glsl(LITTER_BOX.x)}, ${glsl(LITTER_BOX.z)}) + uv * vec2(${glsl(LITTER_BOX.sx)}, ${glsl(LITTER_BOX.sz)});
+}
+/** How deep the leaves lie here: 0 swept bare, about 1 an ordinary autumn floor, 2 and over a heap to jump into. */
+float litterDepth(vec2 xz) {
+  vec2 uv = litterUv(xz);
+  if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return 0.0;
+  return texture(uLitterTex, uv).r;
+}`;
+
+const LITTER_SIM_FRAG = /* glsl */ `
+uniform sampler2D uField;
+uniform sampler2D uWindTex;
+uniform vec4 uDomain;
+uniform vec4 uWade;
+uniform float uDt;
+in vec2 vUv;
+${LITTER_GLSL}
+vec2 domainUv(vec2 xz) { return (xz - uDomain.xy) * uDomain.zw; }
+bool insideUv(vec2 uv) { return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0))); }
+
+vec4 airAt(vec2 xz) {
+  vec2 uv = domainUv(xz);
+  return insideUv(uv) ? texture(uWindTex, uv) : vec4(0.0);
+}
+
+/** How hard the air is working on the floor here: enough of this and the leaves stop being on the ground at all. */
+float lifting(vec4 w) {
+  return smoothstep(${glsl(tuning.birches.litterTakes * 0.75)}, ${glsl(tuning.birches.litterTakes * 2.4)}, length(w.xy))
+       + min(w.z * 1.7, 1.5) + min(w.w * 0.9, 1.1);
+}
+
+void main() {
+  vec2 p = litterWorld(vUv);
+  float d = texture(uField, vUv).r;
+  vec4 w = airAt(p);
+  /** What the air takes off this patch of floor this frame, and what the patch upwind of it has just sent over. */
+  float goes = d * min(0.9, lifting(w) * ${glsl(tuning.birches.litterSweep)} * uDt);
+  vec2 back = p - w.xy * uDt * ${glsl(tuning.birches.litterCarry)};
+  float db = texture(uField, litterUv(back)).r;
+  d += db * min(0.9, lifting(airAt(back)) * ${glsl(tuning.birches.litterSweep)} * uDt) - goes;
+  /** A heap only ever settles: it never stands up again, so what a burst leaves is lower and wider every time. */
+  float px = 1.0 / ${glsl(LITTER_RES)};
+  float around = 0.25 * (texture(uField, vUv + vec2(px, 0.0)).r + texture(uField, vUv - vec2(px, 0.0)).r
+                       + texture(uField, vUv + vec2(0.0, px)).r + texture(uField, vUv - vec2(0.0, px)).r);
+  d = mix(d, around, min(0.7, ${glsl(tuning.birches.litterSlump)} * smoothstep(0.7, 2.0, max(d, around)) * uDt));
+  /** And feet scuff a way through it: a walk over this island leaves a track in the leaves behind it. */
+  float tread = uWade.w * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy)));
+  d -= d * min(0.9, tread * 2.4 * uDt);
+  gl_FragColor = vec4(max(d, 0.0), 0.0, 0.0, 1.0);
+}`;
+
 /**
  * Whether a leaf still on the tree lets go this frame. The player's gusts take them off in clouds; the prevailing
  * breeze alone only trickles; and the branch a swing hangs from shakes its own down. Nothing ever puts one back.
@@ -110,25 +179,49 @@ void main() {
     return;
   }
 
-  float above = p.y - max(ground, 0.0);
-  float resting = step(above, 0.14);
-  float lift = w.z * (2.8 + 2.2 * seed) + smoothstep(6.0, 17.0, sp) * 2.2 + w.w * (2.2 + 1.6 * seed);
+  float above = max(p.y - max(ground, 0.0), 0.0);
   /** A child walking into a drift of them sends the lot up round their knees. */
   float wade = uWade.w * (1.0 - smoothstep(uWade.z * 0.45, uWade.z, length(p.xz - uWade.xy)));
-  bool grabbed = resting < 0.5 || lift > 0.5 + seed * 0.5 || wade > 0.25;
+  /**
+   * What it takes to move a leaf that is lying on the floor. A leaf is not a blade of grass rooted in the ground:
+   * anything much over the everyday breeze picks it up altogether and it goes, and where it comes down is not
+   * where it started. This one number is the difference between litter that behaves and litter that sticks.
+   */
+  float takes = ${glsl(tuning.birches.litterTakes)} * (0.6 + 0.85 * seed);
+  float taken = smoothstep(takes * 0.55, takes, sp) + min(w.z * 2.4, 1.5) + smoothstep(0.15, 0.9, w.w) + wade * 3.0;
+  float down = 1.0 - smoothstep(0.1, 0.55, above);
+  if (down > 0.5 && taken < 0.32) {
+    /** At rest, and staying at rest: nothing half-hearted, or the whole floor crawls under the breeze all day. */
+    gl_FragColor = vec4(v.xyz * exp(-uDt * 11.0), seed);
+    return;
+  }
 
-  vec2 turb = vec2(vnoise(p.xz * 0.4 + uTime * 0.9 + seed * 17.0), vnoise(p.zx * 0.4 - uTime * 0.8 + seed * 29.0)) - 0.5;
+  /**
+   * Off the ground it is a leaf and nothing else: it lags the air, it turns what it loses into tumbling, it rides
+   * the rising part of a gust up, and on the way down it rocks from edge to edge instead of dropping like a stone.
+   */
   bool afloat = ground < 0.0 && above < 0.25;
-  /** A leaf never makes the speed of the air that took it: it lags, and what it loses it turns into tumbling. */
-  vec2 hTarget = w.xy * (afloat ? 0.12 : 0.55 + 0.3 * seed) + turb * (1.3 + sp * 0.3);
+  float rise = w.z * (3.4 + 2.6 * seed) + smoothstep(7.0, 19.0, sp) * 2.6 + w.w * (3.6 + 2.8 * seed);
+  /** Along the floor it barely leaves the ground: it skips, catches, and skips again, which is what skittering is. */
+  float skip = down * clamp(sp / 7.0, 0.0, 1.5) * max(0.0, sin(uTime * (5.0 + 7.0 * seed) + seed * 61.0));
+  float lift = rise + skip * 3.4;
+  vec2 turb = vec2(vnoise(p.xz * 0.4 + uTime * 0.9 + seed * 17.0), vnoise(p.zx * 0.4 - uTime * 0.8 + seed * 29.0)) - 0.5;
+  /** Close to the ground it very nearly makes the speed of the air; up in the open it falls behind it and tumbles. */
+  float keeps = mix(0.9, 0.5 + 0.35 * seed, clamp(above, 0.0, 1.0));
+  vec2 hTarget = w.xy * (afloat ? 0.12 : keeps) + turb * (1.3 + sp * 0.3);
   float fall = afloat ? 0.0 : 0.62 + 0.45 * seed;
+  /** The rock of a falling leaf: side to side across the way it is going, widest when the air is slowest. */
+  float rock = sin(uTime * (1.7 + 2.3 * seed) + seed * 43.0);
+  vec2 across = sp > 0.5 ? vec2(-w.y, w.x) / sp : vec2(1.0, 0.0);
+  hTarget += across * rock * (0.5 + 2.0 * (1.0 - clamp(sp / 9.0, 0.0, 1.0))) * min(above, 1.2);
+  fall *= 0.7 + 0.4 * abs(rock);
   vec3 target = vec3(hTarget.x, lift * (0.8 + 0.5 * fract(seed * 13.7)) - fall + turb.y * 1.2, hTarget.y);
   if (wade > 0.25) {
     vec2 away = normalize(p.xz - uWade.xy + vec2(1e-3));
-    target = vec3(away.x * (2.0 + 3.0 * seed), 2.2 + 2.4 * seed, away.y * (2.0 + 3.0 * seed));
+    target = vec3(away.x * (2.4 + 3.6 * seed), 2.6 + 3.0 * seed, away.y * (2.4 + 3.6 * seed));
   }
-  float k = 1.0 - exp(-uDt * (1.3 + seed * 1.2 + wade * 6.0));
-  v.xyz = grabbed ? mix(v.xyz, target, k) : v.xyz * exp(-uDt * 9.0);
+  float k = 1.0 - exp(-uDt * (1.6 + seed * 1.4 + sp * 0.12 + wade * 6.0));
+  v.xyz = mix(v.xyz, target, k);
   gl_FragColor = v;
 }`;
 
@@ -138,6 +231,7 @@ uniform sampler2D uVel;
 uniform sampler2D uWindTex;
 uniform sampler2D uHeightTex;
 uniform vec4 uDomain;
+uniform vec4 uFocus;
 in vec2 vUv;
 ${NOISE_GLSL}
 ${ISLE_GLSL}
@@ -165,6 +259,27 @@ void main() {
   /** On the sea they lie flat on the water and go with it, the way they do over the village further north. */
   p.y = max(p.y, max(ground, 0.0) + (ground < 0.0 ? 0.03 : 0.06));
   p.y = min(p.y, 70.0);
+
+  /**
+   * The walk over this island is a long one and there are only so many leaves. One that has settled far behind the
+   * player, or that has gone out over the water where it is already fading to nothing, is of no use to anybody
+   * there, so it is quietly moved back round them: mostly onto the floor ahead, and now and then up into the
+   * crowns to come down out of them. It only ever happens outside what can be seen.
+   */
+  float away = distance(p.xz, uFocus.xy);
+  if ((away > uFocus.z && length(v.xyz) < 1.2) || birchIsleR(p.xz) > 1.2) {
+    float roll = hash12(vec2(v.w * 331.0, floor(uTime * 4.0)));
+    float a = hash12(vec2(v.w * 77.0, floor(uTime * 4.0) + 3.0)) * 6.2831;
+    vec2 to = uFocus.xy + vec2(cos(a), sin(a)) * (14.0 + 30.0 * roll);
+    vec2 toUv = domainUv(to);
+    float h = insideUv(toUv) ? texture(uHeightTex, toUv).r : -1.0;
+    /** Never onto the beaches, never into the sea, and never anywhere the floor of this wood does not reach. */
+    if (h > 1.4 && birchIsleR(to) < 0.86) {
+      p.xz = to;
+      p.y = h + (roll < 0.72 ? 0.06 : 7.0 + 6.0 * hash12(vec2(v.w * 53.0, 11.0)));
+      p.w = 1.0;
+    }
+  }
   if (birchIsleR(p.xz) > 1.3) p.w = 2.0;
   gl_FragColor = p;
 }`;
@@ -190,7 +305,7 @@ void main() {
   }
   float seed = v.w;
   float ground = max(texture(uHeightTex, domainUv(p.xz)).r, 0.0);
-  float above = clamp((p.y - ground - 0.1) / 1.2, 0.0, 1.0);
+  float above = clamp((p.y - ground - 0.06) / 0.8, 0.0, 1.0);
   float speed = length(v.xyz);
   /** Lying flat when it is down; end over end while it is up, faster the harder it is going. */
   float spin = uTime * (1.8 + seed * 3.4) * (0.35 + min(speed, 14.0) * 0.14) + seed * 40.0;
@@ -198,13 +313,13 @@ void main() {
   vec3 n = normalize(mix(vec3(0.0, 1.0, 0.0), tumble, above));
   vec3 t1 = normalize(cross(n, abs(n.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
   vec3 t2 = cross(n, t1);
-  /** Half, because this card is two units across where the litter's is one; bigger while it is in the air. */
-  float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (0.85 + 0.7 * fract(seed * 5.7)) * (1.0 + 0.55 * above);
+  /** Half, because this card is two units across where the litter's is one: a settled one is a leaf of the litter. */
+  float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (1.2 + 0.85 * fract(seed * 5.7)) * (1.0 + 0.4 * above);
   /** One leaf on the lens is a gold blind across the whole room, so the last metre of them thins away. */
-  float away = distance(cameraPosition, p.xyz);
-  size *= smoothstep(0.5, 2.6, away);
-  /** The player's gusts land a long way up the ride, and a cloud that far off has to be drawn bigger to read. */
-  size *= 1.0 + 1.1 * smoothstep(18.0, 75.0, away);
+  float fromEye = distance(cameraPosition, p.xyz);
+  size *= smoothstep(0.5, 2.6, fromEye);
+  /** A cloud of them in the air a long way up the ride has to be drawn bigger to read; a settled one is litter. */
+  size *= 1.0 + 1.1 * smoothstep(18.0, 75.0, fromEye) * above;
   /** And one blown out over the water goes to nothing before it is far enough out to be somebody else's leaf. */
   size *= 1.0 - smoothstep(1.06, 1.28, birchIsleR(p.xz));
   vWorld = p.xyz + (t1 * position.x * 1.45 + t2 * position.y) * size;
@@ -241,8 +356,8 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-function dataTexture(data: Float32Array): THREE.DataTexture {
-  const tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat, THREE.FloatType);
+function dataTexture(data: Float32Array, w: number, h: number): THREE.DataTexture {
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat, THREE.FloatType);
   tex.needsUpdate = true;
   return tex;
 }
@@ -256,9 +371,52 @@ export interface Shake {
 }
 
 /**
- * The leaves of the birch island, from the branch to the floor and along it. Every one of them starts on a tree;
- * the wind takes it off, it rides and tumbles and settles, and later gusts run it along the ground. Nothing ever
- * goes back up, which is the whole point of the room: what the player takes off the year does not come back.
+ * The litter field: how deep the leaves lie, everywhere on the island, kept from one frame to the next. It is the
+ * floor's memory. A gust lifts depth off the ground where it blows and puts it down again downwind, so the play
+ * leaves swept bare ground behind it and heaps where the air ran out; a heap the wind has just burst slumps into a
+ * lower, wider one rather than standing up like a snowdrift; and feet scuff a track through it. Whoever owns the
+ * island seeds it once (`LITTER_SIDE` squared, r is the depth in leaves), and after that it is the room's own.
+ */
+export class LitterField {
+  readonly uniforms: Record<string, THREE.IUniform>;
+  private readonly gpu: GpuRunner;
+  private readonly field = new PingPong(LITTER_RES, LITTER_RES, THREE.HalfFloatType, THREE.LinearFilter);
+  private readonly mat: THREE.ShaderMaterial;
+
+  constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4) {
+    this.gpu = new GpuRunner(renderer);
+    const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, { uSrc: { value: null } });
+    const tex = dataTexture(seed, LITTER_RES, LITTER_RES);
+    copy.uniforms.uSrc.value = tex;
+    this.gpu.run(copy, this.field.read);
+    this.gpu.run(copy, this.field.write);
+    tex.dispose();
+    copy.dispose();
+    this.uniforms = { uLitterTex: { value: this.field.texture } };
+    this.mat = simMaterial(LITTER_SIM_FRAG, {
+      uField: { value: null },
+      uLitterTex: { value: null },
+      uWindTex: atmo.uniforms.uWindTex,
+      uDomain: atmo.uniforms.uDomain,
+      uDt: { value: 1 / 60 },
+      uWade: { value: wade },
+    });
+  }
+
+  update(dt: number): void {
+    this.mat.uniforms.uDt.value = dt;
+    this.mat.uniforms.uField.value = this.field.texture;
+    this.gpu.run(this.mat, this.field.write);
+    this.field.swap();
+    this.uniforms.uLitterTex.value = this.field.texture;
+  }
+}
+
+/**
+ * The leaves of the birch island, from the branch to the floor and along it. Every one of them starts on a tree or
+ * already down; the wind takes it off, it rides and tumbles and settles, and later gusts run it along the floor to
+ * somewhere else. Nothing ever goes back up, which is the whole point of the room: what the player takes off the
+ * year does not come back.
  */
 export class FallenLeaves {
   readonly mesh: THREE.Mesh;
@@ -268,12 +426,12 @@ export class FallenLeaves {
   private readonly velMat: THREE.ShaderMaterial;
   private readonly posMat: THREE.ShaderMaterial;
   private readonly renderMat: THREE.ShaderMaterial;
-  /** Where somebody is wading through them: x, z, how far it reaches, how fast they are going. */
-  private readonly wade = new THREE.Vector4(1e6, 1e6, 1.6, 0);
   private readonly shake = new THREE.Vector4(1e6, 1e6, 6, 0);
+  /** Where the leaves are wanted: the child, and how far out a settled one has to be before it is moved back. */
+  private readonly focus = new THREE.Vector4(0, 0, 58, 0);
 
-  /** `state` is four floats per leaf: where it hangs, and 0 if it is still on the tree or 1 if it is not. */
-  constructor(renderer: THREE.WebGLRenderer, state: Float32Array) {
+  /** `state` is four floats per leaf: where it starts, and 0 if it is still on the tree or 1 if it is not. */
+  constructor(renderer: THREE.WebGLRenderer, state: Float32Array, wade: THREE.Vector4) {
     this.gpu = new GpuRunner(renderer);
     const vel = new Float32Array(LEAF_COUNT * 4);
     const rand = mulberry32(6101);
@@ -282,7 +440,7 @@ export class FallenLeaves {
       uSrc: { value: null },
     });
     for (const [target, data] of [[this.pos, state], [this.vel, vel]] as const) {
-      const tex = dataTexture(data);
+      const tex = dataTexture(data, W, H);
       copy.uniforms.uSrc.value = tex;
       this.gpu.run(copy, target.read);
       tex.dispose();
@@ -297,8 +455,8 @@ export class FallenLeaves {
       uDt: { value: 1 / 60 },
       uShake: { value: this.shake },
     };
-    this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uWade: { value: this.wade } });
-    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null } });
+    this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uWade: { value: wade } });
+    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uFocus: { value: this.focus } });
 
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.InstancedBufferGeometry();
@@ -325,11 +483,11 @@ export class FallenLeaves {
   }
 
   /** Nothing is simulated or drawn anywhere but on the island: everywhere else these leaves are not in the world. */
-  update(dt: number, here: boolean, wader: THREE.Vector3 | null, waderSpeed: number, shake: Shake | null): void {
+  update(dt: number, here: boolean, focus: THREE.Vector3, shake: Shake | null): void {
     this.mesh.visible = here;
     if (!here) return;
-    if (wader) this.wade.set(wader.x, wader.z, 1.7, Math.min(1, waderSpeed * 0.55));
-    else this.wade.w = 0;
+    this.focus.x = focus.x;
+    this.focus.y = focus.z;
     if (shake) this.shake.set(shake.x, shake.z, shake.radius, shake.strength);
     else this.shake.w = 0;
 

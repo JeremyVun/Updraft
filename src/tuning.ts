@@ -155,6 +155,15 @@ export const tuning = {
     stripSpeed: 15,
     /** How wide a fallen leaf is, in world units. */
     leafSize: 0.22,
+    /** Wind speed, in units a second, that takes a leaf of average weight off the floor and sends it skittering. */
+    litterTakes: 4.4,
+    /** How fast a gust sweeps the floor bare where it blows, and the share of the wind speed the swept litter travels at. */
+    litterSweep: 1.35,
+    litterCarry: 0.6,
+    /** How fast a heap the wind has burst slumps into a lower, wider one. */
+    litterSlump: 2.2,
+    /** How high a heap of leaves stands, per unit of depth. */
+    pileHeight: 0.26,
     /** How hard the swing is pushed by the air along its travel, and by a gust however it is blowing. */
     swingPush: 0.8,
     swingGust: 3.8,
