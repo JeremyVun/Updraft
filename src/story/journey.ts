@@ -84,6 +84,10 @@ export class Journey {
     } else if (start === 'meadow' || start === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
+    } else if (start === 'piano') {
+      this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
+      this.begin('meadow');
+      (this.chapter as MeadowChapter).skipToPiano();
     } else if (start === 'birches' || start === 'autumn') {
       this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
       this.begin('birches');
@@ -219,7 +223,8 @@ export class Journey {
       case 'lines':
         return new LinesChapter(cast);
       case 'toMeadow':
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.75, season: 0.26 });
+        /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.9, season: 0.26 });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':

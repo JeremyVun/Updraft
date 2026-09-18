@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { POND, POND_LEVEL, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
+import { BANK, POND, POND_LEVEL, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
+import { WAY } from '../world/fields';
+import { PATCH, PLACE } from '../world/piano';
 import { heightAt } from '../world/island';
 import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
@@ -9,22 +11,18 @@ import { cue } from './cues';
 import { PianoStop } from './piano';
 import { tuning } from '../tuning';
 
-type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'down' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'beach' | 'climb' | 'brow' | 'walk' | 'crest' | 'down' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
-/** The way inland, across the meadow to its far shore, in the coordinates the meadow was sculpted in. */
-export const ROUTE = [
-  [6, -660],
-  [-18, -740],
-  [-40, -830],
-  [-4, -930],
-  [30, -1020],
-  [12, -1100],
-  [-6, -1148],
-].map(([x, z]) => {
-  const p = meadowPoint(x, z);
-  return new THREE.Vector2(p.x, p.z);
-});
+/** The way inland, across the meadow to its far shore. The walls are built around the same line: `WAY` in `fields.ts`. */
+export const ROUTE = WAY.slice(1).map((p) => new THREE.Vector2(p.x, p.z));
+
+/** The top of the bank over the landing, where the island is first seen, and where the beach waits below it. */
+const BROW = new THREE.Vector2(BANK.x + 1, BANK.crest - 2);
+const BEACH = new THREE.Vector2(LANDING.x - 2, mainlandCoastZ(LANDING.x) - 4);
+/** The piano, and the patch of colour it stands in: the one thing awake on a sleeping island. */
+const PIANO_AT = new THREE.Vector3(PLACE.x, heightAt(PLACE.x, PLACE.z) + 1.2, PLACE.z);
+const BROW_AT = new THREE.Vector3(BROW.x, heightAt(BROW.x, BROW.y) + 1.6, BROW.y);
 const shore = meadowPoint(-6, -1172);
 /** Where the boat is waiting on the far shore. Nobody put it there, and nobody remarks on it. */
 export const FAR_SHORE = new THREE.Vector3(shore.x, 0, shore.z);
@@ -65,8 +63,21 @@ function overPond(x: number, z: number): boolean {
   return pondOut(x, z) < 1 && heightAt(x, z) < POND_LEVEL - 0.15;
 }
 
-const WAVE_SPEED = 85;
 const WAVE_REACH = 3600;
+/**
+ * How far the colour has reached, and how fast it rolls there, each time the lullaby gets further: the hollow round
+ * the piano, then out over the crest and the pond, then the whole island on the last one. The great wave is the
+ * spectacle of the room, so it is the only one the wind itself runs ahead of.
+ */
+const WAKING = [
+  { reach: PATCH.radius, speed: 0 },
+  { reach: 80, speed: 15 },
+  { reach: 168, speed: 40 },
+  { reach: WAVE_REACH, speed: 150 },
+];
+/** How long the wind keeps driving the last wave across the island, and how quiet a wake nobody answered is. */
+const GUST_FOR = 15;
+const UNANSWERED = 0.45;
 /** The sun shower on the walk: it gathers, falls steadily, then drifts away (seconds). */
 const SHOWER = { gather: 10, fall: 30, clear: 16 };
 /** How near the boat the plane has to land before the child takes the hint. */
@@ -76,9 +87,10 @@ const TRY_FOR = tuning.colt.tryFor;
 const TRY_EVERY = 5.5;
 
 /**
- * The meadow: the last warm afternoon of the year. The child steps ashore onto grey pasture and the player's first
- * gust inland sends a wave of green rolling to the far side. The long walk follows the plane, waypoint by waypoint,
- * through a sun shower, and ends where the boat is drawn up on the far shore.
+ * The meadow: the last warm afternoon of the year, and the island is asleep. The boat lands in a bay under a bank,
+ * and the whole room is over the top of it — a grey island with one patch of colour in it and a piano standing
+ * there. The lullaby wakes the rest, wave by wave. The long walk follows the plane through a sun shower, over the
+ * crest and down to the pond, and ends where the boat is drawn up on the far shore.
  */
 export class MeadowChapter implements Chapter {
   beat: Beat = 'ashore';
@@ -96,14 +108,17 @@ export class MeadowChapter implements Chapter {
   private play: Play = 'carry';
   private leg = 0;
   private beatStart = 0;
-  private waveStart = 0;
+  /** How far the colour is rolling out, how fast, and how long the wind runs ahead of it. */
+  private waveTo = 0;
+  private waveSpeed = 0;
+  private gustUntil = 0;
+  private gustPower = 1;
   private showerStart = -1;
   private holdUntil = 0;
   private duskTarget = 0;
   private now = 0;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
-  private readonly horizon = new THREE.Vector3(20, 40, -1300);
   private readonly watched = new THREE.Vector3();
   private watchUntil = 0;
   private nextLook = 0;
@@ -136,7 +151,14 @@ export class MeadowChapter implements Chapter {
   private readonly axis = new THREE.Vector3(0, 0, -1);
 
   constructor(private readonly cast: Cast) {
-    const { child, plane, boat, cygnet, flock } = cast;
+    const { child, plane, boat, cygnet, flock, life } = cast;
+    /**
+     * The island is asleep, shore and all, and the only colour on it is the patch the piano stands in. Everything
+     * that happens to the meadow's colour after this happens because the lullaby got further.
+     */
+    life.regions.wave.set(PLACE.x, PLACE.z, PATCH.radius, PATCH.soft);
+    this.waveTo = PATCH.radius;
+    this.piano.onWake = (stage, answered) => this.wake(stage, answered);
     /**
      * The family is on the water from the moment the chapter starts, long before anything in the story points at
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
@@ -146,8 +168,7 @@ export class MeadowChapter implements Chapter {
     plane.homeRadius = 70;
     child.dismount();
     boat.beach(FAR_SHORE.x, FAR_SHORE.z, 0.2);
-    const up = mainlandCoastZ(LANDING.x) - 14;
-    child.walkTo(LANDING.x - 2, up, false, () => this.to('waiting'), 0.8);
+    child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
   }
 
   /**
@@ -156,11 +177,24 @@ export class MeadowChapter implements Chapter {
    * through the one scene they are most likely to sit still for.
    */
   get scripted(): boolean {
-    return this.beat === 'ashore' || this.beat === 'wave' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
+    return (
+      this.beat === 'ashore' ||
+      this.beat === 'beach' ||
+      this.beat === 'climb' ||
+      this.beat === 'brow' ||
+      this.beat === 'toBoat' ||
+      this.beat === 'push' ||
+      this.beat === 'aboard'
+    );
   }
 
   get done(): boolean {
     return this.beat === 'aboard';
+  }
+
+  /** QA: how far the stop at the piano has got, and how far the island has been told to wake. */
+  get atPiano(): string {
+    return `${this.piano.at} wave=${Math.round(this.cast.life.regions.wave.z)}/${Math.round(this.waveTo)} at ${this.waveSpeed}/s`;
   }
 
   /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
@@ -170,9 +204,8 @@ export class MeadowChapter implements Chapter {
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
   skipAhead(): void {
-    const { child, plane, life } = this.cast;
-    life.regions.wave.set(LANDING.x, LANDING.y, WAVE_REACH, 90);
-    this.waveStart = -1e3;
+    const { child, plane } = this.cast;
+    this.wokenAlready();
     this.leg = ROUTE.length - 1;
     child.stop();
     child.place(ROUTE[ROUTE.length - 1].x + 4, ROUTE[ROUTE.length - 1].y + 40, Math.PI);
@@ -183,12 +216,25 @@ export class MeadowChapter implements Chapter {
     this.to('walk');
   }
 
+  /** For testing: a few paces short of the piano, on a sleeping island, with the walk still to do. */
+  skipToPiano(): void {
+    const { child, cygnet, plane } = this.cast;
+    this.leg = 1;
+    child.stop();
+    child.place(PIANO_AT.x + 7, PIANO_AT.z + 32, Math.PI);
+    child.standUp();
+    cygnet.rideIn('satchel');
+    cygnet.bind(0.06);
+    plane.hold(child.handPosition(this.hand), child.yaw);
+    this.play = 'hold';
+    this.to('walk');
+  }
+
   /** For testing: a few paces short of the rise, cygnet in the satchel and plane in hand, with the crest still to come. */
   skipToCrest(): void {
-    const { child, cygnet, plane, life, flock } = this.cast;
+    const { child, cygnet, plane, flock } = this.cast;
     if (!flock.active) flock.rest(POND.x, POND.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
-    life.regions.wave.set(LANDING.x, LANDING.y, WAVE_REACH, 90);
-    this.waveStart = -1e3;
+    this.wokenAlready();
     this.leg = CREST_LEG;
     const at = ROUTE[CREST_LEG];
     const from = ROUTE[CREST_LEG - 1];
@@ -203,6 +249,66 @@ export class MeadowChapter implements Chapter {
     this.to('walk');
   }
 
+  /**
+   * The island waking, phrase by phrase: a ring of colour rolling out from the piano, the wind running ahead of
+   * the last one. Nothing here is gated on the player — the piano finishes the lullaby by itself if it has to —
+   * so the crest, the pond and the walk on are never taken in grey.
+   */
+  private wake(stage: number, answered: boolean): void {
+    const step = WAKING[Math.min(stage, WAKING.length - 1)];
+    this.waveTo = step.reach;
+    this.waveSpeed = step.speed * (answered ? 1 : UNANSWERED);
+    if (stage < 3) return;
+    /** Once it is all awake the wind wakes ground the ordinary way again, wherever the journey goes next. */
+    this.cast.life.regions.waiting.set(0, 0, 0, 0);
+    cue('wave');
+    /** The wind runs ahead of the last wave whoever finished the tune; for a player who never joined in, softly. */
+    this.gustPower = answered ? 1 : UNANSWERED;
+    this.gustUntil = this.now + GUST_FOR * (answered ? 1 : 0.7);
+  }
+
+  /** For testing, and for the walk that somehow got past the piano: the island is simply awake. */
+  private wokenAlready(): void {
+    const { life } = this.cast;
+    life.regions.wave.set(PLACE.x, PLACE.z, WAVE_REACH, 90);
+    life.regions.waiting.set(0, 0, 0, 0);
+    this.waveTo = WAVE_REACH;
+    this.waveSpeed = 0;
+  }
+
+  /**
+   * The great wave of wind that carries the last of it: a front of moving air on the ring of colour, pushed outward
+   * where the player is looking, so the grass bends and pales and the petals go up along it all the way to the hills.
+   */
+  private blowFront(): void {
+    const wave = this.cast.life.regions.wave;
+    if (this.now > this.gustUntil || wave.z >= WAVE_REACH) return;
+    const at = this.shot.target;
+    const dx = at.x - wave.x;
+    const dz = at.z - wave.y;
+    const d = Math.hypot(dx, dz) || 1;
+    const ux = dx / d;
+    const uz = dz / d;
+    const tx = -uz;
+    const tz = ux;
+    for (let i = -1; i <= 1; i++) {
+      const cx = wave.x + ux * wave.z + tx * i * 30;
+      const cz = wave.y + uz * wave.z + tz * i * 30;
+      this.cast.wind.addSplat({
+        ax: cx - tx * 15,
+        az: cz - tz * 15,
+        bx: cx + tx * 15,
+        bz: cz + tz * 15,
+        vx: ux * 27 * this.gustPower,
+        vz: uz * 27 * this.gustPower,
+        radius: 13,
+        energy: 0.9 * this.gustPower,
+        swirl: 0,
+        lift: 0.3 * this.gustPower,
+      });
+    }
+  }
+
   private to(beat: Beat): void {
     this.beat = beat;
     this.beatStart = this.now;
@@ -214,7 +320,7 @@ export class MeadowChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now = time;
-    const { child: c, plane: p, life, input, boat } = this.cast;
+    const { child: c, plane: p, life, boat } = this.cast;
     /**
      * The plane leans toward the next waypoint, and on the last leg toward the boat itself. Aimed simply north of
      * the child it made for open water at the far shore, sat on the sea and held the child at the water's edge.
@@ -241,15 +347,26 @@ export class MeadowChapter implements Chapter {
 
     switch (this.beat) {
       case 'ashore':
+        c.lookAt = BROW_AT;
         break;
-      case 'waiting': {
-        c.lookAt = this.horizon;
-        const overLand = heightAt(input.world.x, input.world.z) > 1;
-        if ((input.gust > 5 && overLand && input.present) || this.t > 9) this.startWave();
+      case 'beach':
+        /** Sand, the bank and the sky: they stand and look up at it, and then they climb it. */
+        c.lookAt = BROW_AT;
+        if (this.t > 2.6) {
+          this.to('climb');
+          c.walkTo(BROW.x, BROW.y, false, () => this.to('brow'), 1.2);
+        }
         break;
-      }
-      case 'wave':
-        if (this.t > 5 && !c.busy) this.walkOn();
+      case 'climb':
+        c.lookAt = BROW_AT;
+        /** However the climb goes, nobody is left on the beach: at the latest they are up it by now. */
+        if (this.t > 34) this.to('brow');
+        break;
+      case 'brow':
+        /** And over the top, all of it at once: a grey island, and one patch of colour with a piano in it. */
+        c.stop();
+        c.lookAt = PIANO_AT;
+        if (this.t > 5.5 && !c.busy) this.walkOn();
         break;
       case 'walk':
         if (!this.piano.hold(dt, time, this.cast)) this.updateWalk(time);
@@ -297,7 +414,8 @@ export class MeadowChapter implements Chapter {
     const quiet = this.beat === 'crest' || this.beat === 'down' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
     this.beatHush += (quiet - this.beatHush) * (1 - Math.exp(-dt * 0.5));
     const wave = life.regions.wave;
-    if (wave.z >= 0) wave.z = Math.min(WAVE_REACH, wave.z + dt * WAVE_SPEED * Math.min(1, 0.3 + (this.now - this.waveStart) * 0.25));
+    if (wave.z >= 0 && wave.z < this.waveTo) wave.z = Math.min(this.waveTo, wave.z + dt * this.waveSpeed);
+    this.blowFront();
 
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
     if (!this.wentOn && boat && time > this.nextBugle) {
@@ -310,15 +428,6 @@ export class MeadowChapter implements Chapter {
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
     this.piano.frame(this.shot);
-  }
-
-  private startWave(): void {
-    const { child: c, life } = this.cast;
-    this.to('wave');
-    this.waveStart = this.now;
-    life.regions.wave.set(c.position.x, c.position.z, 0, 90);
-    c.cheer();
-    cue('wave');
   }
 
   /**
@@ -592,13 +701,17 @@ export class MeadowChapter implements Chapter {
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat } = this.cast;
     const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 && this.leg < ROUTE.length - 1) this.leg++;
+    /** A waypoint is behind them once they are near it or past it: the stop at the piano takes them well past one. */
+    const reached = Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 || c.position.z < t.y - 12;
+    if (reached && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
     if (this.cast.cygnet.flying) {
       this.to('glide');
       return;
     }
+    /** However the stop at the piano went, nobody walks the crest in grey: past it, the island wakes regardless. */
+    if (this.waveTo < WAVE_REACH && c.position.z < PLACE.z - 34) this.wake(3, false);
     /** Walking is exactly the state the reveal wants to interrupt; a throw or a pick-up is left to finish. */
     if (!this.crestDone && this.onCrest() && (c.moving || !c.busy)) {
       this.reveal();
@@ -686,6 +799,30 @@ export class MeadowChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
+    if (this.beat === 'ashore' || this.beat === 'beach' || this.beat === 'climb' || this.beat === 'brow') {
+      /**
+       * The climb, from below and behind: on the beach the bank fills the frame and there is nothing over it but
+       * sky, which is the whole point of landing here. On the top the camera comes round onto the line to the
+       * piano, so what the player sees over the brow is the grey island with the one patch of colour in it.
+       */
+      const top = this.beat === 'brow';
+      const look = top ? PIANO_AT : BROW_AT;
+      /**
+       * On the way up the camera stands off to the side of the bank rather than below it, because from below a
+       * rig that answers a hill by rising ends up looking down the slope at the top of the child's head. In
+       * profile they are plainly climbing, against the sky the bank is hiding everything else behind.
+       */
+      const bearing = Math.atan2(c.x - look.x, c.z - look.z) + (top ? 0 : 1.15);
+      s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+      const ground = Math.max(heightAt(c.x, c.z), 0);
+      const toward = top ? 0.1 : 0.16;
+      s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 4.2 : 2.4), c.z + (look.z - c.z) * toward);
+      s.distance = top ? 21 : 19;
+      s.height = top ? 7.5 : 2.6;
+      this.pace = top ? 0.9 : 0.4;
+      this.focus.set(c.x, ground, c.z);
+      return;
+    }
     if (this.beat === 'try' || this.beat === 'glide') {
       /**
        * Side on and low. Over the child's shoulder the cygnet is behind their back and under the grass; from here
@@ -761,8 +898,8 @@ export class MeadowChapter implements Chapter {
     const fz = c.z * (1 - pw) + p.z * pw - 5;
     const ground = Math.max(heightAt(fx, fz), 0);
     s.target.set(fx, ground + 3 + Math.max(0, p.y - ground - 12) * 0.35, fz);
-    s.distance = this.beat === 'wave' ? 70 : 44;
-    s.height = this.beat === 'wave' ? 26 : 13;
+    s.distance = 44;
+    s.height = 13;
     this.pace = 0.35;
     this.focus.set(fx, ground, fz);
   }

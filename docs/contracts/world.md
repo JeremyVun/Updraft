@@ -16,13 +16,15 @@ A 320 × 320 square that follows the camera; see `wind.md` for how it moves. Eve
 ## Life
 
 - `src/world/life.ts` keeps a 256² field over the window: 0 grey and still, 1 fully alive. Wind over land raises it, it spreads slowly, and it never falls.
-- Two regions extend it beyond the window: the island (a disc that fills in once the island is restored) and the mainland's green wave (a growing radius from where the player's first gust inland landed).
+- Two regions extend it beyond the window: the island (a disc that fills in once the island is restored) and the wave (a growing radius, with a soft edge, from wherever the room's colour comes back from). On the meadow that is the piano: the wave starts as the one patch of colour the piano stands in and grows with the lullaby — a few dozen units for the first phrase, out over the crest for the second, and the whole island on the last, with the wind running ahead of it (`story/meadow.ts`, `WAKING`).
+- The meadow is held asleep until then by `uWaiting`: inside that ellipse wind does not raise life at all, so the island wakes all of a piece and never in blotches under the cursor. The story clears it when the wave is let go, and from then on the wind wakes ground the ordinary way.
 - `lifeAt(xz)` in GLSL and `life.at(x, z)` on the CPU (one or two readbacks behind) must agree in spirit: grass, terrain, walls, the tree, petals and creatures all fade between grey and living with it.
 - Creatures are absent where life has not come back and appear as it arrives (see below), so the grey world is empty and the restored world is busy.
 
 ## Fields and walls
 
 - The mainland is a warped Voronoi patchwork (`src/world/fields.ts`, `FIELD` = 56 units), written in TypeScript and GLSL. `fieldAt` gives the distance to the nearest boundary, a stable random `kind` for the field, whether that boundary carries a wall, and how strongly the patchwork is present (it fades out near the coast).
+- **Nothing long and straight lies across the walk without a way through on it.** `WAY` in `fields.ts` is the line the story walks, and no boundary within `GATE` of it carries a wall, so every wall that crosses the route has a gap exactly where the path goes — in the built walls, in the grass tufts and in the line the terrain paints, because all three ask `fieldAt`. The gap widens to a gateway in the first view over the bank above the landing.
 - Dry-stone walls (`src/world/walls.ts`) are built from the same function a few tiles per frame near the camera; beyond that the terrain paints them as thin lines. Anything that moves on the ground should respect them: the child hops over them, sheep stay in their field, and the grass grows tufts along them.
 
 ## Creatures

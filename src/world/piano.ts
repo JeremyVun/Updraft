@@ -17,8 +17,13 @@ import { WINDOW } from './window';
  * then by itself. Every note comes out of the meadow's own scale, so nothing anyone does can sound wrong.
  */
 
-/** Where it stands: a little east of the walk, on the leg before the crest, in a patch of shorter grass. */
-const PLACE = meadowPoint(16, -676);
+/**
+ * Where it stands: on the walk itself, a minute up from the top of the bank, in the one patch of the island that
+ * is not asleep. Nobody can miss it, because the way on goes through it.
+ */
+export const PLACE = meadowPoint(-18, -740);
+/** How far the colour round it reaches while the island is still grey, and how soft that edge is. */
+export const PATCH = { radius: 27, soft: 11 };
 /** Turned toward the camera, which looks north from a little east of south, so the keys face the walk. */
 const YAW = 0.34;
 
@@ -31,10 +36,19 @@ const KEY_Y = 0.8;
 /** Where a key is hinged, back under the case, and how far it reaches out from there. */
 const KEY_BACK = 0.3;
 const KEY_LEN = 0.46;
-/** The stool, close enough in that whoever is on it is plainly at the keyboard rather than beside it. */
-const STOOL_Z = 1.06;
-/** A sitting pose drops the body half a unit, so the point they are put on has to be that far above the stool. */
-const SEAT_LIFT = 0.5;
+/** The stool, far enough back that a child sits at the keyboard with their knees under it, not on top of it. */
+const STOOL_Z = 1.5;
+const STOOL_TOP = 0.5;
+/**
+ * Where the child's own origin goes for them to be sitting on the stool rather than hovering over it: their pose
+ * drops half a unit when they sit, and the rest of the difference is the height of a child's hip. By eye.
+ */
+const SEAT_LIFT = -0.1;
+/**
+ * How big it is. It was built to an upright's own measurements and came out a toy beside the child, who then sat
+ * over the keyboard instead of at it. Everything else in here is in the piano's own units and scales with this.
+ */
+const SCALE = 1.42;
 
 /** The keyboard runs from C3 to C7. A key's index is its midi note less this. */
 const LOW_MIDI = 48;
@@ -301,8 +315,9 @@ export class Piano {
   constructor() {
     const foot = Math.max(heightAt(PLACE.x, PLACE.z), 0);
     /** Settled into the ground, and leaning the way a thing left standing in a field for a long time leans. */
-    this.group.position.set(PLACE.x, foot - 0.12, PLACE.z);
+    this.group.position.set(PLACE.x, foot - 0.14, PLACE.z);
     this.group.rotation.set(0.016, YAW, -0.022);
+    this.group.scale.setScalar(SCALE);
     this.group.updateMatrix();
     this.group.matrixAutoUpdate = false;
     this.group.updateMatrixWorld(true);
@@ -323,8 +338,9 @@ export class Piano {
     this.group.add(shell, keys);
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
-    this.local(0.06, 0.5 + SEAT_LIFT, STOOL_Z, this.seat);
-    this.local(0.16, 0, 2.25, this.stand);
+    /** The lift is a fact about how the child's own pose sits, so it is added in world units, after the scale. */
+    this.local(0.06, STOOL_TOP, STOOL_Z, this.seat).y += SEAT_LIFT;
+    this.local(0.16, 0, 1.9, this.stand);
     for (let i = 0; i < QUEUE; i++) this.queue.push({ at: 0, midi: 60, velocity: 0, source: 'breeze', active: false });
   }
 
@@ -334,7 +350,7 @@ export class Piano {
 
   /** How much of the grass around its feet is pressed away, so nothing grows through the case or over the keys. */
   get clearing(): { x: number; z: number; radius: number } {
-    return { x: this.group.position.x, z: this.group.position.z + 0.35, radius: 1.5 };
+    return { x: this.group.position.x, z: this.group.position.z + 0.45, radius: 1.5 * SCALE };
   }
 
   /** The last time the player's own wind rang a note out of it. */
@@ -362,6 +378,21 @@ export class Piano {
       const hop = (i / steps) * seconds;
       this.schedule(this.now + hop, this.pool[a + dir * i], 0.2 + this.rand() * 0.1, 'bird');
     }
+  }
+
+  /** A point standing on the keys, `t` from the bottom note to the top, for something small enough to walk them. */
+  alongKeys(t: number, out: THREE.Vector3): THREE.Vector3 {
+    return this.local(THREE.MathUtils.clamp(t - 0.5, -0.5, 0.5) * (WIDTH - 0.12), KEY_Y + 0.05, KEY_BACK + KEY_LEN * 0.6, out);
+  }
+
+  /** What a key that far along the keyboard sounds, so a walker's feet and the notes under them agree. */
+  noteAlong(t: number): number {
+    return LOW_MIDI + Math.round(THREE.MathUtils.clamp(t, 0, 1) * (KEY_COUNT - 1));
+  }
+
+  /** Which way something walking the keys faces: along them, toward the top of the keyboard. */
+  get alongYaw(): number {
+    return YAW + Math.PI / 2;
   }
 
   /** How many notes of the scale the keyboard has, for whoever writes a tune for it. */
