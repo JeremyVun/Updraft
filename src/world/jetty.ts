@@ -113,6 +113,8 @@ const SHADE_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
 void main() {
+  /** The sea's mirror is drawn from under the surface, where a shadow laid on top of it has no business. */
+  if (uMirrorPass > 0.5) discard;
   float up = max(uSunDir.y, 0.12);
   vec2 q = vWorld.xz + uSunDir.xz * (${glsl(DECK)} / up);
   float lz = q.y - ${glsl(MID_Z)};
