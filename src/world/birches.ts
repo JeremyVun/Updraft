@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { FallenLeaves, LEAF_COUNT, LEAF_SHAPE_GLSL, LEAF_TINT_GLSL } from '../fx/leaves';
+import { FallenLeaves, LEAF_COUNT, LEAF_SHAPE_GLSL, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_SIDE, LitterField } from '../fx/leaves';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -12,7 +12,7 @@ const ISLE = ISLES.birches;
 /** Below this the shore is bare sand, so both beaches read as beaches and the boat is never behind a tree. */
 const TREE_LINE = 2.3;
 /** No trunk stands this near the walk: the ride stays open all the way over the island. */
-const RIDE = 7;
+const RIDE = 8.5;
 /** Leaves on one tree. They are hidden one by one as it is stripped, so this is how much gold a tree has to lose. */
 const LEAVES_PER_TREE = 420;
 /** The floor is scattered over a grid of cells that follows the camera and stands still in the world. */
@@ -25,26 +25,45 @@ const FLOOR_RANGE = ISLE.rx + 90;
 const SHED_FLIGHT = 2.4;
 
 /** The south beach, where the boat runs ashore. */
-export const BIRCHES_LANDING = new THREE.Vector2(3, -1074);
+export const BIRCHES_LANDING = new THREE.Vector2(3, -1052);
 /** The boat is drawn up on the north beach before they get there. Nobody put it there. */
-export const BIRCHES_BERTH = new THREE.Vector3(-4, 0, -1159);
-/** The clearing on the crest, where the swing hangs. */
-export const BIRCHES_CLEARING = new THREE.Vector2(2.6, -1116);
+export const BIRCHES_BERTH = new THREE.Vector3(-4, 0, -1197);
+/** The clearing on the rise, where the swing hangs. */
+export const BIRCHES_CLEARING = new THREE.Vector2(2.6, -1118);
 
 /**
- * Up off the south beach, along an open ride between the trunks, over the crest through the clearing and down to
- * the north beach with the boat on it. About a hundred paces. The trees are planted around this, never on it.
+ * Up off the south beach, along an open ride between the trunks, over the rise through the clearing, down into the
+ * hollow where the leaves are deepest, through the last thick stand and out onto the north beach with the boat on
+ * it. Half again as far as it was: the room was over before the player had found out what the floor does.
  */
 export const BIRCHES_WALK = [
-  new THREE.Vector2(7, -1085),
-  new THREE.Vector2(5, -1100),
+  new THREE.Vector2(7, -1068),
+  new THREE.Vector2(5, -1092),
   BIRCHES_CLEARING,
-  new THREE.Vector2(-7, -1136),
-  new THREE.Vector2(-4, -1155),
+  /** Down into the hollow, which is where the leaf play happens. */
+  new THREE.Vector2(-6, -1146),
+  new THREE.Vector2(-9, -1170),
+  new THREE.Vector2(-4, -1190),
 ];
 
+/**
+ * The heaps. Leaves do not pile themselves in the open: they pile where something stopped them, so every one of
+ * these is against something — a birch that came down years ago, the foot of the tree the swing hangs from, the
+ * bottom of the hollow, the lee of the last thick stand. They are what the room is for playing with.
+ */
+export const BIRCH_PILES = [
+  { x: 9.8, z: -1076, r: 3.6, deep: 4.6 },
+  { x: -3.6, z: -1113, r: 3.2, deep: 4.2 },
+  /** The deep one, at the bottom of the hollow: this is the one the cygnet goes into. */
+  { x: -6, z: -1149, r: 4.6, deep: 5.4 },
+  { x: -11.5, z: -1172, r: 3.2, deep: 4.4 },
+];
+
+/** The birch that came down years ago and has been catching the year's leaves ever since. */
+const FALLEN_LOG = { a: new THREE.Vector2(5.2, -1080.6), b: new THREE.Vector2(14.6, -1073.4) };
+
 /** The big birch the swing hangs from: it stands west of the clearing and reaches a limb out over it. */
-const SWING_TREE = new THREE.Vector2(-2.4, -1114.6);
+const SWING_TREE = new THREE.Vector2(-2.4, -1116.6);
 const SWING_SCALE = 16.5;
 /** Where the rope is over the limb, in the unit tree the swing variant is grown as. */
 const SWING_LIMB = new THREE.Vector3(0.26, 0.25, 0.04);
@@ -137,22 +156,28 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
 
+/** White bark in torn papery bands, with the short dark dashes across it that say birch and nothing else. */
+const BARK_GLSL = /* glsl */ `
+vec3 birchBark(vec3 N, float along) {
+  float around = atan(N.z, N.x);
+  float band = vnoise(vec2(around * 1.4, along * 1.6));
+  float dash = smoothstep(0.66, 0.86, vnoise(vec2(around * 3.2, along * 9.0)));
+  float scar = smoothstep(0.76, 0.94, vnoise(vec2(around * 0.8 + 11.0, along * 0.35)));
+  vec3 white = mix(vec3(0.78, 0.75, 0.70), vec3(1.0, 0.97, 0.92), band);
+  return mix(white, vec3(0.30, 0.26, 0.23), max(dash * 0.7, scar * 0.5));
+}`;
+
 const TRUNK_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${DISSOLVE_GLSL}
+${BARK_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
 in float vUp;
 void main() {
   if (inTheWay(vWorld, 1.1)) discard;
   vec3 N = normalize(vNormal);
-  float around = atan(N.z, N.x);
-  /** White bark in torn papery bands, with the short dark dashes across it that say birch and nothing else. */
-  float band = vnoise(vec2(around * 1.4, vWorld.y * 1.6));
-  float dash = smoothstep(0.66, 0.86, vnoise(vec2(around * 3.2, vWorld.y * 9.0)));
-  float scar = smoothstep(0.76, 0.94, vnoise(vec2(around * 0.8 + 11.0, vWorld.y * 0.35)));
-  vec3 white = mix(vec3(0.78, 0.75, 0.70), vec3(1.0, 0.97, 0.92), band);
-  vec3 alb = mix(white, vec3(0.30, 0.26, 0.23), max(dash * 0.7, scar * 0.5));
+  vec3 alb = birchBark(N, vWorld.y);
   /** Old bark at the foot of it, rough and dark, going up further on the big ones. */
   alb = mix(vec3(0.20, 0.17, 0.15), alb, smoothstep(0.0, 0.14, vUp));
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
@@ -201,7 +226,7 @@ void main() {
   float keep = 1.0 - 0.4 * smoothstep(uDetail.x, uDetail.y, away);
   float fade = clamp((keep - aTuft.w) * 6.0, 0.0, 1.0);
   /** And a crown the camera has walked into is a gold wall across the whole view, so it thins out of the way. */
-  fade *= smoothstep(3.5, 13.0, away);
+  fade *= smoothstep(5.0, 17.0, away);
   if (fade <= 0.001) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
@@ -251,11 +276,16 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-/** The floor: leaves lying where they have been falling for weeks, drifted deep in the hollows. */
+/**
+ * The floor: the leaves that are lying still. How many there are anywhere, and how deep they are heaped, is the
+ * litter field and nothing else, so the floor is swept bare where the player has been blowing and stands in
+ * heaps where the air ran out. Nothing here hops in place: a card the air is taking leaves with the air, shrinking
+ * as it goes, and what is actually flying is the simulated leaves in `fx/leaves.ts`.
+ */
 const LITTER_VERT = /* glsl */ `
 ${ATMO_GLSL}
+${LITTER_GLSL}
 uniform vec2 uLitterCell;
-uniform vec4 uWade;
 in vec2 aCell;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -270,15 +300,16 @@ void main() {
   vec2 p = (cell + vec2(r1, r2)) * ${glsl(LITTER_CELL)};
   vec2 uv = domainUv(p);
   float away = distance(p, cameraPosition.xz);
-  /** Thick everywhere, and drifted deep where the ground dips and along the foot of the trees. */
-  float drift = 0.62 + 0.8 * fbm(p * 0.09 + 3.3);
-  /** Only this island has a floor of leaves on it; the meadow it follows keeps its own grass. */
-  float isle = length((p - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)}));
-  drift *= 1.0 - smoothstep(0.74, 1.02, isle);
+  float deep = litterDepth(p);
+  /** How much of the floor the leaves cover, and how much of them is heaped on top of that: two different things. */
+  float cover = smoothstep(0.0, 1.0, deep);
+  float heap = max(0.0, deep - 1.6);
   /** Far off, fewer and larger: the carpet has to reach the trees at the edge of the frame without the count. */
   float far = smoothstep(12.0, ${glsl(LITTER_REACH)}, away);
-  drift *= 1.0 - 0.55 * far;
-  if (r3 > drift || away > ${glsl(LITTER_REACH)} || !insideUv(uv)) {
+  float drift = cover * (1.0 - 0.55 * far);
+  /** It thins away rather than winking out, so the floor being stripped is a fade and never a row of holes. */
+  float fade = clamp((drift - r3) * 3.5, 0.0, 1.0);
+  if (fade <= 0.002 || away > ${glsl(LITTER_REACH)} || !insideUv(uv)) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
@@ -290,22 +321,25 @@ void main() {
   vec4 w = texture(uWindTex, uv);
   vec3 n = normalize(hn.gba);
   vec3 base = vec3(p.x, hn.r + 0.02 + r3 * 0.05, p.y);
-  /** A gust runs them along the ground in little hops, and they come to rest again when it has gone through. */
-  float run = clamp(w.z * 0.9 + smoothstep(9.0, 20.0, length(w.xy)), 0.0, 1.4);
-  float hop = abs(sin(uTime * (3.0 + r1 * 4.0) + r2 * 6.28));
-  base.xz += w.xy * run * (0.06 + 0.09 * r1);
-  base.y += run * hop * (0.12 + 0.22 * r2);
-  /** And somebody walking into a drift of them sends the lot up round their knees. */
-  float wade = uWade.w * (1.0 - smoothstep(uWade.z * 0.3, uWade.z, distance(p, uWade.xy)));
-  if (wade > 0.01) {
-    vec2 away2 = normalize(p - uWade.xy + vec2(1e-3));
-    base.xz += away2 * wade * (0.12 + 0.3 * r1);
-    base.y += wade * (0.3 + 0.7 * r2) * (0.45 + 0.55 * sin(uTime * 6.0 + r1 * 6.28));
-  }
-  float a = r1 * 6.2831 + run * 3.0 + wade * 5.0;
+  /**
+   * Heaped, they are not a carpet at all: they stand off the ground through the whole depth of the heap, they lie
+   * every way but flat, and they are drawn broader so that a heap reads as one solid mass and not as a thin skin
+   * of leaves lifted off the floor.
+   */
+  base.y += heap * ${glsl(tuning.birches.pileHeight)} * (0.12 + 0.88 * hash12(cell + 41.1));
+  /**
+   * And where the air is taking them, they go with it: up off the floor and downwind, thinning out as they go,
+   * while the field they are drawn from empties behind them. None of this ever puts one back where it was.
+   */
+  float takes = ${glsl(tuning.birches.litterTakes)} * (0.75 + 0.5 * r1);
+  float go = clamp(smoothstep(takes * 0.6, takes * 1.5, length(w.xy)) + min(w.z * 1.8, 1.0) + min(w.w * 0.9, 1.0), 0.0, 1.0);
+  base.xz += w.xy * go * (0.2 + 0.45 * r1);
+  base.y += go * (0.25 + 1.1 * r2);
+  float a = r1 * 6.2831 + go * 4.0;
   vec3 t1 = normalize(cross(n, vec3(cos(a), 0.0, sin(a))));
-  vec3 t2 = normalize(mix(cross(n, t1), vec3(cos(a), 0.4, sin(a)), min(1.0, run * 0.5 + wade)));
-  float size = ${glsl(tuning.birches.leafSize)} * (1.25 + 0.9 * r2) * (1.0 + 0.9 * far);
+  vec3 loose = normalize(vec3(cos(a) * 0.9, 0.35 + r1 * 0.9, sin(a) * 0.9));
+  vec3 t2 = normalize(mix(cross(n, t1), loose, clamp(heap * 0.5 + go, 0.0, 0.85)));
+  float size = ${glsl(tuning.birches.leafSize)} * (1.25 + 0.9 * r2) * (1.0 + 0.9 * far) * (1.0 + 0.4 * heap) * fade * (1.0 - 0.7 * go);
   vWorld = base + (t1 * position.x * 1.45 + t2 * position.y) * size;
   vNormal = normalize(n + t1 * 0.25);
   vSide = t1;
@@ -351,6 +385,29 @@ void main() {
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   vec3 alb = uPaint * (0.88 + 0.24 * vnoise(vWorld.xz * 9.0 + vWorld.y * 14.0));
   vec3 col = alb * (hemiLight(N) + uSunColor * max(dot(N, uSunDir), 0.0) * 0.8 * sun);
+  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
+/**
+ * The birch that came down. Same bark as the standing ones, greyer and greener for the years it has lain there,
+ * and dark underneath where it meets the ground and the leaves have been banked against it.
+ */
+const FALLEN_FRAG = /* glsl */ `
+${ATMO_GLSL}
+${DISSOLVE_GLSL}
+${BARK_GLSL}
+in vec3 vWorld;
+in vec3 vNormal;
+void main() {
+  if (inTheWay(vWorld, 0.9)) discard;
+  vec3 N = normalize(vNormal);
+  vec3 alb = birchBark(N, vWorld.x * 0.7 + vWorld.z * 0.7);
+  float moss = smoothstep(0.35, 0.8, vnoise(vWorld.xz * 1.7 + 4.0)) * (1.0 - max(N.y, 0.0) * 0.4);
+  alb = mix(alb * vec3(0.78, 0.76, 0.70), vec3(0.32, 0.34, 0.20), moss * 0.55);
+  alb *= 0.45 + 0.55 * smoothstep(-0.7, 0.2, N.y);
+  float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
+  vec3 col = alb * (hemiLight(N) * vec3(1.1, 1.02, 0.86) + uGroundBounce * 0.7 + uSunColor * max(dot(N, uSunDir), 0.0) * 0.8 * sun);
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -554,9 +611,15 @@ export class AutumnBirches {
   private readonly table: Float32Array;
   private readonly treeTex: THREE.DataTexture;
   private readonly leaves: FallenLeaves;
+  private readonly litter: LitterField;
   private readonly litterMesh: THREE.Mesh;
   private readonly litterMat: THREE.ShaderMaterial;
-  private readonly wade = new THREE.Vector4(1e6, 1e6, 2.2, 0);
+  /** Who is wading through the leaves: x, z, how far it reaches, and how fast they are going. */
+  private readonly wade = new THREE.Vector4(1e6, 1e6, 2.1, 0);
+  private readonly focus = new THREE.Vector3(ISLE.x, 0, ISLE.z);
+  /** Something that has just gone into the heap, and the seconds left of it: it outranks anybody merely walking. */
+  private readonly kicking = new THREE.Vector4(1e6, 1e6, 3, 0);
+  private kickFor = 0;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly walker = new THREE.Vector3();
   private readonly lastWalker = new THREE.Vector3(1e6, 0, 1e6);
@@ -572,8 +635,10 @@ export class AutumnBirches {
     this.table = new Float32Array(width * 3 * 4);
     this.treeTex = new THREE.DataTexture(this.table, width, 3, THREE.RGBAFormat, THREE.FloatType);
     this.treeTex.needsUpdate = true;
+    this.litter = new LitterField(renderer, this.litterSeed(rand), this.wade);
     const shared = {
       ...atmo.uniforms,
+      ...this.litter.uniforms,
       uTrees: { value: this.treeTex },
       uSubject: { value: this.subject },
       uWade: { value: this.wade },
@@ -598,7 +663,7 @@ export class AutumnBirches {
     });
 
     this.objects.push(this.canopy(rand, variants, shared));
-    this.litterMesh = this.litter(shared);
+    this.litterMesh = this.litterCarpet(shared);
     this.litterMat = this.litterMesh.material as THREE.ShaderMaterial;
     this.objects.push(this.litterMesh);
 
@@ -608,9 +673,89 @@ export class AutumnBirches {
     this.swing = new Swing(pivot, Math.max(heightAt(pivot.x, pivot.z), 0), this.subject);
     this.objects.push(this.swing.group);
 
-    this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants));
+    this.objects.push(this.fallen(shared));
+
+    this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants), this.wade);
     this.objects.push(this.leaves.mesh);
     for (const o of this.objects) o.visible = false;
+  }
+
+  /** The birch that came down, lying along the slope with the first heap of the walk banked against its lee side. */
+  private fallen(shared: Record<string, THREE.IUniform>): THREE.Mesh {
+    const { a, b } = FALLEN_LOG;
+    /** It lies on the ground it fell on, not on a line over it: it is jointed along the slope and sunk into it. */
+    const parts = 4;
+    const along = (t: number): THREE.Vector3 => {
+      const x = a.x + (b.x - a.x) * t;
+      const z = a.y + (b.y - a.y) * t;
+      return new THREE.Vector3(x, Math.max(heightAt(x, z), 0) + 0.16, z);
+    };
+    const wide = (t: number): number => 0.34 * (1 - t * 0.42);
+    const geo = mergeGeometries(
+      Array.from({ length: parts }, (_, i) => log(along(i / parts), along((i + 1) / parts), wide(i / parts), wide((i + 1) / parts), 9)),
+    );
+    const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared }));
+    mesh.frustumCulled = false;
+    return mesh;
+  }
+
+  /**
+   * The floor as it stands when they arrive: a season of leaves over the whole wood, thicker in the hollow and
+   * along the foot of every trunk, thin on the ride where the wind gets at it, nothing at all on the two beaches,
+   * and the heaps. From here on the wind and their feet own it.
+   */
+  private litterSeed(rand: () => number): Float32Array {
+    const data = new Float32Array(LITTER_SIDE * LITTER_SIDE * 4);
+    const patchy = createNoise2D(907);
+    const cell = { x: LITTER_BOX.sx / LITTER_SIDE, z: LITTER_BOX.sz / LITTER_SIDE };
+    const depths = new Float32Array(LITTER_SIDE * LITTER_SIDE);
+    for (let j = 0; j < LITTER_SIDE; j++) {
+      for (let i = 0; i < LITTER_SIDE; i++) {
+        const x = LITTER_BOX.x + (i + 0.5) * cell.x;
+        const z = LITTER_BOX.z + (j + 0.5) * cell.z;
+        /** The cheap test first: over half of this grid is sea, and the ground under it is not worth looking up. */
+        const isle = Math.hypot((x - ISLE.x) / ISLE.rx, (z - ISLE.z) / ISLE.rz);
+        if (isle > 1.02) continue;
+        if (heightAt(x, z) < TREE_LINE - 0.9) continue;
+        let d = (1.2 + 0.45 * patchy(x * 0.09, z * 0.09)) * (1 - THREE.MathUtils.smoothstep(isle, 0.74, 1.02));
+        /** The ride is walked and blown over: less lies on it than either side of it. */
+        d *= 0.72 + 0.4 * THREE.MathUtils.smoothstep(walkDistance(x, z), 1.5, 9);
+        depths[j * LITTER_SIDE + i] = Math.max(0, d);
+      }
+    }
+    /** Banked against every trunk, because that is where a leaf blowing along the ground stops. */
+    const at = (x: number, z: number, add: number): void => {
+      const i = Math.round((x - LITTER_BOX.x) / cell.x - 0.5);
+      const j = Math.round((z - LITTER_BOX.z) / cell.z - 0.5);
+      if (i < 0 || j < 0 || i >= LITTER_SIDE || j >= LITTER_SIDE) return;
+      const k = j * LITTER_SIDE + i;
+      if (depths[k] > 0) depths[k] = Math.min(4, depths[k] + add);
+    };
+    for (const tree of this.trees) {
+      const reach = 0.5 + tree.scale * 0.055;
+      for (let s = 0; s < 22; s++) {
+        const a = rand() * Math.PI * 2;
+        const r = reach * (0.35 + rand() * 0.8);
+        at(tree.x + Math.cos(a) * r, tree.z + Math.sin(a) * r, 0.5 * (1 - r / (reach * 1.15)));
+      }
+    }
+    /** And the heaps, which are the only deep leaves anybody put there on purpose. */
+    for (const pile of BIRCH_PILES) {
+      const span = Math.ceil(pile.r / Math.min(cell.x, cell.z)) + 1;
+      const ci = Math.round((pile.x - LITTER_BOX.x) / cell.x - 0.5);
+      const cj = Math.round((pile.z - LITTER_BOX.z) / cell.z - 0.5);
+      for (let j = cj - span; j <= cj + span; j++) {
+        for (let i = ci - span; i <= ci + span; i++) {
+          if (i < 0 || j < 0 || i >= LITTER_SIDE || j >= LITTER_SIDE) continue;
+          const x = LITTER_BOX.x + (i + 0.5) * cell.x;
+          const z = LITTER_BOX.z + (j + 0.5) * cell.z;
+          const k = 1 - Math.hypot((x - pile.x) / pile.r, (z - pile.z) / pile.r) ** 2;
+          if (k > 0) depths[j * LITTER_SIDE + i] = Math.max(depths[j * LITTER_SIDE + i], pile.deep * k);
+        }
+      }
+    }
+    for (let k = 0; k < depths.length; k++) data[k * 4] = depths[k];
+    return data;
   }
 
   /** Scattered over the island in stands, off the beaches, off the ride and out of the clearing on the crest. */
@@ -690,7 +835,7 @@ export class AutumnBirches {
     return mesh;
   }
 
-  private litter(shared: Record<string, THREE.IUniform>): THREE.Mesh {
+  private litterCarpet(shared: Record<string, THREE.IUniform>): THREE.Mesh {
     const side = LITTER_GRID;
     const card = new THREE.PlaneGeometry(1, 1);
     const geo = new THREE.InstancedBufferGeometry();
@@ -725,11 +870,23 @@ export class AutumnBirches {
   private leafState(rand: () => number, variants: { tips: THREE.Vector3[] }[]): Float32Array {
     const state = new Float32Array(LEAF_COUNT * 4);
     const near = this.trees.filter((t) => walkDistance(t.x, t.z) < 17);
-    const drifts = Math.floor(LEAF_COUNT * 0.04);
+    /** A fifth of them are already in the heaps, so that a gust into one bursts it and does not merely thin it. */
+    const heaped = Math.floor(LEAF_COUNT * 0.2);
+    const drifts = heaped + Math.floor(LEAF_COUNT * 0.22);
     for (let i = 0; i < LEAF_COUNT; i++) {
+      if (i < heaped) {
+        const pile = BIRCH_PILES[i % BIRCH_PILES.length];
+        const a = rand() * Math.PI * 2;
+        const r = Math.sqrt(rand()) * pile.r * 0.9;
+        const x = pile.x + Math.cos(a) * r;
+        const z = pile.z + Math.sin(a) * r;
+        const heap = pile.deep * Math.max(0, 1 - (r / pile.r) ** 2) * tuning.birches.pileHeight;
+        state.set([x, Math.max(heightAt(x, z), 0) + 0.04 + rand() * heap, z, 1], i * 4);
+        continue;
+      }
       if (i < drifts) {
         const a = rand() * Math.PI * 2;
-        const r = Math.sqrt(rand()) * 9;
+        const r = Math.sqrt(rand()) * 11;
         const leg = BIRCHES_WALK[Math.floor(rand() * BIRCHES_WALK.length)];
         const x = leg.x + Math.cos(a) * r;
         const z = leg.y + Math.sin(a) * r;
@@ -752,6 +909,15 @@ export class AutumnBirches {
   /** Shakes the leaves out of the tree the swing hangs from, while somebody is swinging on it. */
   shake(amount: number): void {
     this.shaking = amount;
+  }
+
+  /**
+   * Something has just gone into the leaves. They go up round it and come down again over the next second, and the
+   * floor is left with a hole where the heap was, exactly as if the wind had burst it: the heap does not come back.
+   */
+  kick(x: number, z: number, radius: number, strength: number): void {
+    this.kicking.set(x, z, radius, strength);
+    this.kickFor = 0.7;
   }
 
   update(dt: number, camera: THREE.Camera, walker: THREE.Vector3 | null): void {
@@ -779,18 +945,25 @@ export class AutumnBirches {
     }
     this.writeTable();
 
-    let speed = 0;
     if (walker) {
       this.walker.copy(walker);
-      if (this.lastWalker.x < 1e5) speed = this.walker.distanceTo(this.lastWalker) / Math.max(dt, 1e-4);
+      const speed = this.lastWalker.x < 1e5 ? this.walker.distanceTo(this.lastWalker) / Math.max(dt, 1e-4) : 0;
       this.lastWalker.copy(walker);
-      this.wade.set(walker.x, walker.z, 1.6, Math.min(1, speed * 0.45));
+      /** Deep leaves come up round the knees of anybody moving through them, and settle again the moment they stop. */
+      this.wade.set(walker.x, walker.z, 2.1, Math.min(1, speed * 0.75));
+      this.focus.copy(walker);
     } else {
       this.wade.w = 0;
+      this.focus.copy(camera.position);
+    }
+    this.kickFor = Math.max(0, this.kickFor - dt);
+    if (this.kickFor > 0) {
+      this.wade.set(this.kicking.x, this.kicking.y, this.kicking.z, this.kicking.w * Math.min(1, this.kickFor / 0.35));
     }
     this.litterMat.uniforms.uLitterCell.value.set(Math.round(camera.position.x / LITTER_CELL), Math.round(camera.position.z / LITTER_CELL));
 
+    this.litter.update(dt);
     const shaking = this.shaking > 0.01 ? { x: SWING_TREE.x, z: SWING_TREE.y, radius: 9, strength: this.shaking * 0.5 } : null;
-    this.leaves.update(dt, near, walker, speed, shaking);
+    this.leaves.update(dt, near, this.focus, shaking);
   }
 }

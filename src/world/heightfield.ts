@@ -133,13 +133,32 @@ export const ISLES = {
     rx: MEADOW_SCULPTED.rx * MEADOW_SCALE,
     rz: MEADOW_SCULPTED.rz * MEADOW_SCALE,
   },
-  birches: { x: 0, z: -1120, rx: 60, rz: 50 },
+  birches: { x: 0, z: -1128, rx: 60, rz: 80 },
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
   home: { x: -45, z: -2120, rx: 190, rz: 165 },
 } as const;
 
 type Isle = (typeof ISLES)[keyof typeof ISLES];
+
+/**
+ * The two things that give the long walk over the birches a shape: the rise the swing tree stands on, and the
+ * hollow beyond it where the year's leaves have been collecting all autumn. Shared so ground and shader agree.
+ */
+export const BIRCH_RISE = { x: 2.6, z: -1118, rx: 38, rz: 30, h: 3.6 };
+export const BIRCH_HOLLOW = { x: -6, z: -1150, rx: 19, rz: 14, h: 2.9 };
+
+/** 1 in the middle of one of those and 0 at its edge, squared so the ground leaves it smoothly. */
+function lump(x: number, z: number, c: { x: number; z: number; rx: number; rz: number }): number {
+  const k = Math.max(0, 1 - ((x - c.x) / c.rx) ** 2 - ((z - c.z) / c.rz) ** 2);
+  return k * k;
+}
+
+const LUMP_GLSL = /* glsl */ `
+float hf_lump(vec2 p, vec2 c, vec2 r) {
+  float k = max(0.0, 1.0 - dot((p - c) / r, (p - c) / r));
+  return k * k;
+}`;
 
 /** Roughly how far outside an island's coast a point lies, in world units; negative on land. */
 function isleCoast(x: number, z: number, c: Isle, wobble: number, seed: number): number {
@@ -184,6 +203,8 @@ function birchesHeight(x: number, z: number): number {
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = land * 3.4 - 1.6;
   h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (gfbm(x * 0.028, z * 0.028, 3, 62) * 0.5 + 0.5) * 3.2);
+  h += land * land * lump(x, z, BIRCH_RISE) * BIRCH_RISE.h;
+  h -= land * lump(x, z, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
   return h - smoothstep(0, 36, d) * 8;
 }
 
@@ -344,6 +365,7 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
   vec2 e = (p - c) / r;
   return (length(e) - 1.0 - n * wobble) * min(r.x, r.y) * 0.8;
 }
+${LUMP_GLSL}
 float hf_lines(vec2 p) {
   vec2 c = vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0);
   vec2 r = vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0);
@@ -384,6 +406,8 @@ float hf_birches(vec2 p) {
   float rr = length((p - c) / r);
   float h = land * 3.4 - 1.6;
   h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.birchesCrest)} + (gfbm(p * 0.028, 3, 62.0) * 0.5 + 0.5) * 3.2);
+  h += land * land * hf_lump(p, vec2(${glsl(BIRCH_RISE.x)}, ${glsl(BIRCH_RISE.z)}), vec2(${glsl(BIRCH_RISE.rx)}, ${glsl(BIRCH_RISE.rz)})) * ${glsl(BIRCH_RISE.h)};
+  h -= land * hf_lump(p, vec2(${glsl(BIRCH_HOLLOW.x)}, ${glsl(BIRCH_HOLLOW.z)}), vec2(${glsl(BIRCH_HOLLOW.rx)}, ${glsl(BIRCH_HOLLOW.rz)})) * ${glsl(BIRCH_HOLLOW.h)};
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
 float hf_drowned(vec2 p) {

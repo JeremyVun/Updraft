@@ -403,6 +403,22 @@ trickles. The crossing `toBirches` is a short blind hop off the meadow's far sho
 drift now begins from the birches' north beach. Music mood `birches`: slower than the meadow, falling a step each
 chord and never coming back up.
 
+**Rebuilt** (2026-09-18, `fb-birches2`, after Jeremy's playtest: the floor behaved like grass, the room was over
+too soon, and it wanted to be fun). `ISLES.birches` is now at (0, −1128), 60 × 80: half again as long, with a rise
+under the swing tree and a hollow beyond it (`BIRCH_RISE`, `BIRCH_HOLLOW` in `heightfield.ts`), so the walk has a
+rhythm — arrival under the gold, the first heap against a fallen birch, the swing, the leaf play in the hollow, the
+last thick stand, the bare north beach. The floor is no longer a fixed carpet: `LitterField` in `fx/leaves.ts` keeps
+how deep the leaves lie everywhere on the island, and the wind lifts depth off it where it blows and lays it down
+downwind, so the play leaves swept bare ground and new drifts behind it, heaps stand at an angle of repose and
+settle lower and wider when they are burst, and feet scuff a track. The simulated leaves are taken by anything much
+over the breeze (`tuning.birches.litterTakes`), skitter along the ground, stand up in the player's circles, rock as
+they come down, never rest on bare sand, and are quietly moved back round the player when they settle far behind.
+Four heaps (`BIRCH_PILES`). In the hollow the child sets the cygnet down at the deep one and it finds out what a
+heap of leaves is: a look, a run, a dive in on its breast with the leaves up round it, a rummage (the new `delve`
+act), a shake, and again — and it drops the lot to chase anything the player blows past it. It never flies here
+(`mayFly`), the play has its own held shot, and it can never stop the walk. `haze` raised to 0.97 so the drowned
+village no longer ghosts through from the rise, which was the note left over above.
+
 **The sleeping island** — approved by Jeremy, including the one call that nothing answers. After the dark wood,
 before dawn. **The one room where the player leads the bird.**
 - *Why they sleep.* The child has been up all night in a storm. A short hop from the wood there is a small frosted
