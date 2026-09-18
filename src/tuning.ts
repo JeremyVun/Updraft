@@ -217,7 +217,7 @@ export const tuning = {
     leapLift: 7.4,
     /** What a shove does to the hull: radians of heel away from it, radians a second of yaw, and units of surge. */
     shoveHeel: 0.17,
-    shoveYaw: 0.16,
+    shoveYaw: 0.38,
     shoveSurge: 1.9,
     /** Seconds after a shove at which it is felt hardest; it is gone about six times that later. */
     shovePeak: 0.32,
