@@ -146,8 +146,8 @@ export const tuning = {
     saysTwice: 3,
     /** The cygnet on the keys: how long it takes to walk them, and how far along them it starts and finishes. */
     walkKeys: 6.5,
-    walkFrom: 0.3,
-    walkTo: 0.78,
+    walkFrom: 0.46,
+    walkTo: 0.95,
     /** How far the room's music pulls back while they are sitting at it. */
     hush: 0.5,
   },

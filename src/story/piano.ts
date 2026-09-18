@@ -155,7 +155,12 @@ export class PianoStop {
         const over = this.finishedAt > 0 && time > this.finishedAt;
         /** Nothing may cut the finale short: the island is waking, and the bird is on the keys. */
         if (this.finishedAt > 0 && !over) break;
-        if (over || time - heard > tuning.piano.listenFor || this.t > tuning.piano.stayFor) {
+        /**
+         * A player who never played anything is walked on from here like anywhere else. A player who answered
+         * even once is not: they are owed the end of the tune, and the piano is on its way to playing it.
+         */
+        const quiet = time - heard > tuning.piano.listenFor && !this.answered;
+        if (over || quiet || this.t > tuning.piano.stayFor) {
           piano.expect = null;
           c.dismount();
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(c), 1);
@@ -238,7 +243,8 @@ export class PianoStop {
      * Nothing here is gated. A player who only listens is played the whole tune anyway, once the piano has asked
      * often enough, and the island wakes on it more quietly than it would have done for them.
      */
-    if (this.said >= tuning.piano.saysTwice || (!this.answered && this.t > tuning.piano.listenFor * 0.7)) {
+    const waited = this.said >= tuning.piano.saysTwice || this.t > tuning.piano.stayFor - 18;
+    if (waited || (!this.answered && this.t > tuning.piano.listenFor * 0.7)) {
       this.finish(cast, false);
       return;
     }
