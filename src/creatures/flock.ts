@@ -145,7 +145,7 @@ export class SwanFlock {
   private slot(i: number): THREE.Vector3 {
     const side = i === 0 ? 0 : i % 2 === 0 ? 1 : -1;
     const rank = Math.ceil(i / 2);
-    return new THREE.Vector3(side * (rank * 3.6 + range(Math.random, -0.5, 0.5)), range(Math.random, -0.5, 0.5), -rank * 5 - Math.random() * 1.2);
+    return new THREE.Vector3(side * (rank * 3.0 + range(Math.random, -0.4, 0.4)), range(Math.random, -0.5, 0.5), -rank * 7.5 - Math.random() * 1.4);
   }
 
   /** Sends a skein over, passing above (x, z) at the given height on the given bearing, from `from` units back. */

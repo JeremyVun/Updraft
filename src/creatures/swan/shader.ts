@@ -143,9 +143,9 @@ in vec2 vMat;
 in float vUnder;
 
 /** Linear and warm: white on a bird is never the white of the page, or it tears a hole in a painted sky. */
-const vec3 PLUME = vec3(0.6, 0.585, 0.55);
+const vec3 PLUME = vec3(0.72, 0.702, 0.66);
 /** What white turns when it is only lit by the sky: a swan seen from below must not be the sky's own colour. */
-const vec3 SHADED = vec3(0.47, 0.5, 0.6);
+const vec3 SHADED = vec3(0.63, 0.66, 0.76);
 const vec3 SLATE = vec3(0.045, 0.043, 0.05);
 const vec3 HORN = vec3(0.3, 0.22, 0.075);
 const vec3 WEB = vec3(0.032, 0.03, 0.033);
@@ -159,15 +159,15 @@ void main() {
   vec3 alb = PLUME;
   float fuzz = 0.5;
   float thin = 0.3;
-  float ao = 1.0 - vUnder * 0.62 - k * 0.12;
+  float ao = 1.0 - vUnder * 0.44 - k * 0.12;
   if (mat == ${VANE}) {
     /** The flight feathers are a single layer of quills: the low sun comes through them and lights the far wing. */
     alb = PLUME * (1.0 - k * 0.06);
     /** The hand of the wing is thinner and stands away from the light, so the outer half falls off into shadow. */
-    alb *= 1.0 - smoothstep(0.55, 1.0, k) * 0.2;
+    alb *= 1.0 - smoothstep(0.55, 1.0, k) * 0.12;
     thin = 0.34 + 0.5 * k;
     fuzz = 0.42;
-    ao = 1.0 - vUnder * 0.58;
+    ao = 1.0 - vUnder * 0.42;
   } else if (mat == ${BILL}) {
     alb = mix(SLATE, HORN, k * 0.55);
     fuzz = 0.05;

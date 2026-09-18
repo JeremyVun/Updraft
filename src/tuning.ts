@@ -91,8 +91,8 @@ export const tuning = {
     radius: 16,
     spread: 6,
     /** How fast they go once they have turned north, and how hard they climb out: the going has to be seen. */
-    leaves: 13,
-    leaveClimb: 2.6,
+    leaves: 15,
+    leaveClimb: 3.4,
     /** Seconds in: the colt answers them, they string out and go north, and the child sets it down after them. */
     answers: 1.3,
     goes: 9.5,
