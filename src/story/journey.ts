@@ -43,7 +43,7 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
   toMeadow: [new THREE.Vector2(14, -505), new THREE.Vector2(10, -545), LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
-  toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), BIRCHES_LANDING],
+  toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
   /** Out of the village and straight into the wood, in the dark and the worst of the weather. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /**

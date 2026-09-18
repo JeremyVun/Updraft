@@ -25,26 +25,29 @@ const FLOOR_RANGE = ISLE.rx + 90;
 const SHED_FLIGHT = 2.4;
 
 /** The south beach, where the boat runs ashore. */
-export const BIRCHES_LANDING = new THREE.Vector2(3, -1074);
+export const BIRCHES_LANDING = new THREE.Vector2(3, -1052);
 /** The boat is drawn up on the north beach before they get there. Nobody put it there. */
-export const BIRCHES_BERTH = new THREE.Vector3(-4, 0, -1159);
-/** The clearing on the crest, where the swing hangs. */
-export const BIRCHES_CLEARING = new THREE.Vector2(2.6, -1116);
+export const BIRCHES_BERTH = new THREE.Vector3(-4, 0, -1197);
+/** The clearing on the rise, where the swing hangs. */
+export const BIRCHES_CLEARING = new THREE.Vector2(2.6, -1118);
 
 /**
- * Up off the south beach, along an open ride between the trunks, over the crest through the clearing and down to
- * the north beach with the boat on it. About a hundred paces. The trees are planted around this, never on it.
+ * Up off the south beach, along an open ride between the trunks, over the rise through the clearing, down into the
+ * hollow where the leaves are deepest, through the last thick stand and out onto the north beach with the boat on
+ * it. Half again as far as it was: the room was over before the player had found out what the floor does.
  */
 export const BIRCHES_WALK = [
-  new THREE.Vector2(7, -1085),
-  new THREE.Vector2(5, -1100),
+  new THREE.Vector2(7, -1068),
+  new THREE.Vector2(5, -1092),
   BIRCHES_CLEARING,
-  new THREE.Vector2(-7, -1136),
-  new THREE.Vector2(-4, -1155),
+  /** Down into the hollow, which is where the leaf play happens. */
+  new THREE.Vector2(-6, -1146),
+  new THREE.Vector2(-9, -1170),
+  new THREE.Vector2(-4, -1190),
 ];
 
 /** The big birch the swing hangs from: it stands west of the clearing and reaches a limb out over it. */
-const SWING_TREE = new THREE.Vector2(-2.4, -1114.6);
+const SWING_TREE = new THREE.Vector2(-2.4, -1116.6);
 const SWING_SCALE = 16.5;
 /** Where the rope is over the limb, in the unit tree the swing variant is grown as. */
 const SWING_LIMB = new THREE.Vector3(0.26, 0.25, 0.04);
