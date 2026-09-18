@@ -241,7 +241,13 @@ export class Traveller {
     this.rig.handR.getWorldPosition(out);
     if (this.stowed < 0.001) return out;
     const tucked = this.rig.sockets.satchel.localToWorld(this.tmp2.set(0.16, 0.2, 0.02));
-    return out.lerp(tucked, this.stowed);
+    out.lerp(tucked, this.stowed);
+    /** Round the outside of the arm on its way to the bag: straight there would sail it across their own face. */
+    const bow = Math.sin(this.stowed * Math.PI) * 0.34;
+    out.x += Math.cos(this.yaw) * bow;
+    out.z -= Math.sin(this.yaw) * bow;
+    out.y -= bow * 0.35;
+    return out;
   }
 
   place(x: number, z: number, yaw: number): void {
@@ -590,14 +596,20 @@ export class Traveller {
     const leanNow = this.leanNow.step(this.lean, 0.4, dt);
     const tiltNow = this.tiltNow.step(this.tilt, 0.4, dt);
     r.root.position.copy(this.position);
-    r.root.position.y += lift - crouch - sit * 0.5 - kneel * 0.5 + this.hop;
+    r.root.position.y += lift - crouch - sit * 0.5 - kneel * 0.56 + this.hop;
     r.root.rotation.set(this.riding ? this.ridePitch : 0, this.yaw, this.riding ? this.rideRoll : 0);
-    r.body.position.y = 0.62 + this.bob + Math.sin(t * 2.2) * 0.008;
-    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1 + kneel * 0.16 + leanNow, bodyY, 0);
-    r.body.scale.set(1, 1 + Math.sin(t * 2.2) * 0.012, 1);
+    /**
+     * The coat is a rigid bell, so bending over something is not a rotation. Most of a lean is the whole body carried
+     * forward and settled down over the knees, with the bell squashing as the weight comes onto it, and only a little
+     * of it is the bell tipping. Any more than this and the hem planks over and the child reads as falling.
+     */
+    const bend = leanNow;
+    r.body.position.set(0, 0.62 + this.bob + Math.sin(t * 2.2) * 0.008 - bend * 0.16 - kneel * 0.04, bend * 0.34);
+    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1 + kneel * 0.1 + bend * 0.45, bodyY, 0);
+    r.body.scale.set(1 + bend * 0.07, 1 + Math.sin(t * 2.2) * 0.012 - bend * 0.09, 1 + bend * 0.05);
     /** Kneeling, the shins go back under the coat and the hem settles on the ground round them. */
-    r.legL.rotation.set(swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.5, 0, -0.05 - sit * 0.15);
-    r.legR.rotation.set(-swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.5, 0, 0.05 + sit * 0.15);
+    r.legL.rotation.set(swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.22, 0, -0.05 - sit * 0.15);
+    r.legR.rotation.set(-swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.22, 0, 0.05 + sit * 0.15);
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
     r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
     r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
@@ -623,7 +635,9 @@ export class Traveller {
       const dz = this.lookAt.z - head.z;
       const yawTo = Math.atan2(dx, dz) - this.yaw;
       wantYaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(yawTo), Math.cos(yawTo)), -1.1, 1.1);
-      wantPitch = THREE.MathUtils.clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -0.9, 0.4);
+      /** Looking down at something at their own feet takes a real chin-down, not a glance. */
+      /** Looking down at something at their own feet takes a real chin-down; past this the hood swallows the face. */
+      wantPitch = THREE.MathUtils.clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -0.9, 0.52);
     }
     this.headYaw = damp(this.headYaw, wantYaw, 5, dt || 1);
     this.headPitch = damp(this.headPitch, wantPitch, 5, dt || 1);
