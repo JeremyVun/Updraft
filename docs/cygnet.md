@@ -187,10 +187,23 @@ session that built it died; a new session took over from this file. What the mer
 - Gates on `main` after the merge: the same marginal misses as before (gather jerk 0.0211, gap 0.0649; down jerk
   0.0241, gap 0.0678; walk turn 0.1018). The crest scene runs end to end at 60 fps with no console errors.
 
-In flight (2026-09-18), Opus 5, one parcel each, forked from `main`: **look pass two** in
-`/private/tmp/updraft-cyg-look2` (branch `cygnet-look2-b`, port 5263) and **swans polish and the crest** in
-`/private/tmp/updraft-cyg-swans2` (branch `cygnet-swans2-b`, port 5264). **Pose and timing** follows once look pass
-two has landed, because both touch `traveller/body.ts`.
+Landed on `main` 2026-09-18 from Opus 5 parcels, each accepted on a look at its screenshots:
+- **Swans polish and the crest** (`7c90cb2`): white above and pearl-grey below so they read on a pale sky; the wheel
+  is a flown, banked low circuit (`tuning.crest`); `goOn` lets each bird break out of the circle in turn into a
+  narrow deep V going due north and climbing (`leaveClimb`); wakes ride the swell; the take-off run has legs down
+  and hard shallow beats; a `flock` view on the stage. Still short: heads should hold steady in the world while the
+  body bobs (cheap, biggest gain); the raft has no ripple ring or reflection; the wash lingers 0.6 s under a bird
+  that has lifted; 22 birds is loose at the crest, 14-16 would read as one family. The agent's view on Jeremy's
+  pick: a resting-then-lifting family would read if staged on a pond or wet hollow 50-70 units ahead of the crest.
+- **Look pass two** (`59a6cf6`): neck half again as long and tapered, longer flatter bill, bare lores, the folded
+  wing as one downy teardrop, paler and warmer in every light with a sky fill and a far-distance skin fix, a real
+  lay for `sleek`, a soaked `wet`, `grown` readable from the game camera, an open-topped satchel it sits in, puffed
+  sleeves, thumbs. Gates unchanged. Still short: the bag is boxy; wet shows faint diagonal lines on the crown; from
+  behind it sits deep and shows mostly its grey back (handed to the pose pass).
+
+In flight: **pose and timing** in `/private/tmp/updraft-cyg-pose` (branch `cygnet-pose-b`, port 5265). After it: a
+full playthrough, the haze fix (the drowned village's steeple shows from the meadow crest as well as from the
+birches), the cygnet on the piano keys, the sleeping island.
 
 The rest of this section is the record from the branch.
 
