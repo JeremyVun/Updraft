@@ -6,6 +6,7 @@ import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { cue } from './cues';
+import { PianoStop } from './piano';
 import { tuning } from '../tuning';
 
 type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
@@ -61,7 +62,7 @@ export class MeadowChapter implements Chapter {
   readonly worldLife = 1;
   pace = 0.35;
   haze = 0.55;
-  hush = 0;
+  private beatHush = 0;
   dusk = 0;
   shower = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
@@ -86,6 +87,8 @@ export class MeadowChapter implements Chapter {
   private cheeredFlight = false;
   /** Where the grass is pressed flat while they sit in it, so the colt is not lost in a field taller than it is. */
   trodden: THREE.Vector3 | null = null;
+  /** The piano standing in the grass off the walk, and the optional stop the child makes at it. */
+  private readonly piano = new PianoStop();
   private nextTry = 0;
   private nextCall = 0;
   /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
@@ -121,6 +124,11 @@ export class MeadowChapter implements Chapter {
 
   get done(): boolean {
     return this.beat === 'aboard';
+  }
+
+  /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
+  get hush(): number {
+    return Math.max(this.beatHush, this.piano.hush);
   }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
@@ -178,7 +186,7 @@ export class MeadowChapter implements Chapter {
         p.home.set(boat.position.x, 0, boat.position.z);
         p.homeRadius = 26;
       } else {
-        const t = this.target();
+        const t = this.piano.waypoint(this.target(), c.position);
         const dx = t.x - c.position.x;
         const dz = t.y - c.position.z;
         const d = Math.hypot(dx, dz) || 1;
@@ -201,7 +209,7 @@ export class MeadowChapter implements Chapter {
         if (this.t > 5 && !c.busy) this.walkOn();
         break;
       case 'walk':
-        this.updateWalk(time);
+        if (!this.piano.hold(dt, time, this.cast)) this.updateWalk(time);
         break;
       case 'crest':
         this.updateCrest(dt, time);
@@ -240,12 +248,13 @@ export class MeadowChapter implements Chapter {
     if (this.beat !== 'crest') this.haze += (0.55 - this.haze) * (1 - Math.exp(-dt * 0.25));
     /** The fullest music in the game pulls back for the crest, so two bird voices are all there is to hear. */
     const quiet = this.beat === 'crest' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
-    this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.5));
+    this.beatHush += (quiet - this.beatHush) * (1 - Math.exp(-dt * 0.5));
     const wave = life.regions.wave;
     if (wave.z >= 0) wave.z = Math.min(WAVE_REACH, wave.z + dt * WAVE_SPEED * Math.min(1, 0.3 + (this.now - this.waveStart) * 0.25));
 
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
+    this.piano.frame(this.shot);
   }
 
   private startWave(): void {

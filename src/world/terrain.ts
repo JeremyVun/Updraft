@@ -3,7 +3,7 @@ import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
-import { GRASS_LINE, HEIGHTFIELD_GLSL } from './heightfield';
+import { GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 import { REFLECTION_LAYER } from './water/reflection';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 
@@ -132,6 +132,9 @@ void main() {
   tint = mix(stillGrey(tint), tint, life);
   alb = mix(stillGrey(alb) * 1.04, alb, 0.45 + 0.55 * life);
   alb = mix(alb, mix(under, field, far), grassy);
+  /** Under the birches the floor is leaf mould, not soil: what shows between the fallen leaves stays warm. */
+  float duff = 1.0 - smoothstep(0.6, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
+  alb = mix(alb, vec3(0.42, 0.26, 0.12) * (0.82 + 0.5 * grain), grassy * duff * 0.88);
   alb = mix(alb, uRock * (0.8 + 0.4 * grain), smoothstep(0.42, 0.6, slope));
   float lineWidth = max(0.5, dist * 0.0024);
   float wallLine = (1.0 - smoothstep(lineWidth * 0.45, lineWidth, fld.x)) * fld.z * fld.w;

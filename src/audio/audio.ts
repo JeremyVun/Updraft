@@ -1,4 +1,5 @@
 import type { Cue } from '../story/cues';
+import type { AudioOut } from '../creatures/voices';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -45,7 +46,7 @@ export interface SoundState {
  * own gestures ring out of it. The voices glide between them over a couple of seconds, so a room change is a
  * modulation rather than a new track starting.
  */
-export type Mood = 'still' | 'lines' | 'meadow' | 'drowned' | 'wood' | 'sea' | 'home';
+export type Mood = 'still' | 'lines' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sea' | 'home';
 
 interface MoodMusic {
   chords: number[][];
@@ -66,6 +67,8 @@ const MOODS: Record<Mood, MoodMusic> = {
   lines: { chords: [[50, 57, 64, 71], [43, 50, 59, 66], [45, 52, 61, 66], [47, 54, 57, 62]], seconds: 9, cutoff: 1500, level: 1, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
   /** The last warm afternoon of the year: the fullest the music gets before the dark. */
   meadow: { chords: [[50, 57, 64, 66], [47, 54, 57, 62], [43, 50, 59, 66], [45, 52, 59, 64]], seconds: 8.5, cutoff: 1600, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88] },
+  /** Slower than the meadow and a step lower each time round: warm, falling, and it never comes back up. */
+  birches: { chords: [[50, 57, 62, 66], [48, 55, 62, 67], [47, 54, 59, 66], [45, 52, 59, 64]], seconds: 11, cutoff: 1250, level: 0.95, scale: [62, 64, 66, 69, 71, 72, 74, 76, 78, 81, 83] },
   /** Suspended, hollow, never landing on a third: homes the water took. */
   drowned: { chords: [[47, 54, 59, 66], [45, 52, 57, 64], [43, 50, 57, 62], [42, 49, 57, 64]], seconds: 13, cutoff: 820, level: 0.85, scale: [59, 62, 64, 66, 69, 71, 74, 76, 78, 81] },
   /** A drone and the semitone above it, turning over and never resolving. Barely music at all. */
@@ -579,5 +582,111 @@ export class Soundscape {
       this.lastGlider = now;
     }
     this.prevGliderLift = s.gliderLift;
+  }
+}
+
+/** The notes a room's gestures ring out of its music. Anything else played in that room takes them too. */
+export function moodScale(mood: Mood): readonly number[] {
+  return (MOODS[mood] ?? MOODS.meadow).scale;
+}
+
+/** At most this many notes may be sounding at once, so a storm of gestures cannot pile up oscillators. */
+const PIANO_VOICES = 10;
+
+/** How flat or sharp each key has drifted, in cents: the same key is always out by the same amount. */
+function outOfTune(midi: number): number {
+  const h = Math.sin(midi * 12.9898) * 43758.5453;
+  return (h - Math.floor(h) - 0.5) * 13;
+}
+
+/**
+ * The upright piano standing in the meadow, which the wind plays. Felted hammers gone soft, a case that has been
+ * out in the weather, and strings that have drifted apart from each other: a dull, warm tone with a little beating
+ * in it and the knock of the action underneath. Synthesised like everything else here; nothing is sampled.
+ */
+export class PianoStrings {
+  private out: AudioOut | null = null;
+  private knock: AudioBuffer | null = null;
+  /** When each voice frees up, so a run can never start more notes than the piano has strings for. */
+  private readonly ends = new Float64Array(PIANO_VOICES);
+
+  setOutput(out: AudioOut | null): void {
+    if (out?.ctx === this.out?.ctx) return;
+    this.out = out;
+    this.knock = null;
+    this.ends.fill(0);
+  }
+
+  /** One note: `velocity` 0..1 for how hard the wind struck it, `level` for how near the listener is. */
+  note(midi: number, velocity: number, pan: number, level: number): void {
+    const out = this.out;
+    if (!out || level <= 0.01) return;
+    const { ctx } = out;
+    const now = ctx.currentTime;
+    let slot = -1;
+    for (let i = 0; i < PIANO_VOICES; i++) if (this.ends[i] <= now) slot = i;
+    if (slot < 0) return;
+
+    const t0 = now + 0.012;
+    const f = hz(midi) * Math.pow(2, outOfTune(midi) / 1200);
+    /** Long in the bass, short and dead in the treble, and a soft blow rings for less time than a hard one. */
+    const decay = (midi < 60 ? 5 : midi < 72 ? 3.6 : 2.5) * (0.7 + 0.5 * velocity);
+    this.ends[slot] = t0 + decay + 0.2;
+
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = Math.max(-0.7, Math.min(0.7, pan));
+    const dry = ctx.createGain();
+    dry.gain.value = 0.85;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.5;
+    panner.connect(dry).connect(out.bus);
+    panner.connect(wet).connect(out.reverb);
+
+    /** Felt: the harder it is hit the brighter it starts, and all of it goes dull within the first half second. */
+    const felt = ctx.createBiquadFilter();
+    felt.type = 'lowpass';
+    felt.Q.value = 0.7;
+    felt.frequency.setValueAtTime(Math.min(9000, 620 + f * 1.4 + velocity * 2900), t0);
+    felt.frequency.exponentialRampToValueAtTime(Math.min(6000, 460 + f), t0 + 0.7);
+    felt.connect(panner);
+
+    const peak = 0.1 * velocity * level;
+    /** Two strings a few cents apart on the fundamental, so every note beats slowly against itself. */
+    const partials: [number, number][] = [[1, 0.52], [1, 0.52], [2.004, 0.4], [3.02, 0.15], [4.05, 0.06]];
+    partials.forEach(([ratio, amp], i) => {
+      const o = ctx.createOscillator();
+      o.type = i < 2 ? 'triangle' : 'sine';
+      o.frequency.value = f * ratio;
+      if (i < 2) o.detune.value = i === 0 ? -3.5 : 3.5;
+      const g = ctx.createGain();
+      const life = decay / (1 + i * 0.55);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(peak * amp, t0 + 0.008 + 0.012 * (1 - velocity));
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + life);
+      o.connect(g).connect(felt);
+      o.start(t0);
+      o.stop(t0 + life + 0.05);
+    });
+
+    if (!this.knock) {
+      const len = Math.floor(ctx.sampleRate * 0.12);
+      const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buffer.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 6);
+      this.knock = buffer;
+    }
+    /** The key hitting the keybed: an old action is as much wood as it is string. */
+    const src = ctx.createBufferSource();
+    src.buffer = this.knock;
+    const wood = ctx.createBiquadFilter();
+    wood.type = 'bandpass';
+    wood.frequency.value = 180 + Math.random() * 90;
+    wood.Q.value = 1.4;
+    const thump = ctx.createGain();
+    thump.gain.setValueAtTime(0.05 * velocity * level, t0);
+    thump.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+    src.connect(wood).connect(thump).connect(panner);
+    src.start(t0);
+    src.stop(t0 + 0.12);
   }
 }
