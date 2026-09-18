@@ -11,7 +11,7 @@ export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-si
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
   game: { bearing: Math.PI, distance: 15, height: 5.2, on: 'both' },
   /** Standing where the child stands and watching the swans, wherever in the sky or on the water they are. */
-  flock: { bearing: Math.PI, distance: 9, height: 3, on: 'both' },
+  flock: { bearing: Math.PI, distance: 26, height: 7, on: 'both' },
   behind: { bearing: Math.PI, distance: 5.5, height: 1.4, on: 'both' },
   front: { bearing: 0, distance: 5.5, height: 1.0, on: 'both' },
   side: { bearing: Math.PI / 2, distance: 5.5, height: 0.9, on: 'both' },
@@ -239,8 +239,10 @@ export class StageChapter implements Chapter {
     const bearing = this.facing + v.bearing;
     s.eye = (s.eye ?? new THREE.Vector3()).set(s.target.x + Math.sin(bearing) * v.distance, s.target.y + v.height, s.target.z + Math.cos(bearing) * v.distance);
     if (this.view === 'flock' && this.cast.flock.active) {
+      /** Stood off the flock itself, on the line the child sees it along, so whatever it is doing fills the frame. */
       s.target.copy(this.cast.flock.head);
-      s.eye.set(c.position.x - Math.sin(this.facing) * v.distance, c.position.y + v.height, c.position.z - Math.cos(this.facing) * v.distance);
+      const away = this.tmp.set(s.target.x - c.position.x, 0, s.target.z - c.position.z).normalize();
+      s.eye.set(s.target.x - away.x * v.distance, s.target.y + v.height, s.target.z - away.z * v.distance);
     }
     this.focus.copy(c.position);
     this.trodden.set(c.position.x, 7, c.position.z);
