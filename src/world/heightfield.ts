@@ -136,6 +136,8 @@ export const ISLES = {
   birches: { x: 0, z: -1128, rx: 60, rz: 80 },
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
+  /** The frosted island the bed stands on, out west on the long crossing's own detour. */
+  sleeping: { x: -175, z: -1922, rx: 42, rz: 46 },
   home: { x: -45, z: -2120, rx: 190, rz: 165 },
 } as const;
 
@@ -250,6 +252,25 @@ function woodHeight(x: number, z: number): number {
   return h - smoothstep(0, 60, d) * 7;
 }
 
+/**
+ * The sleeping island: the hollow the bed is made up in, and the hill north of it whose top stands out of the
+ * fog into the first sun. The hollow is deep enough to hold fog and the hill high enough to be out of it.
+ */
+export const SLEEP_HOLLOW = { x: -175, z: -1912, rx: 16, rz: 14, h: 4.6 };
+export const SLEEP_HILL = { x: -176, z: -1944, rx: 20, rz: 18, h: 15 };
+
+function sleepingHeight(x: number, z: number): number {
+  const c = ISLES.sleeping;
+  const d = isleCoast(x, z, c, 0.14, 81);
+  const land = smoothstep(10, -16, d);
+  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  let h = land * 3.0 - 1.5;
+  h += land * land * (Math.max(0, 1 - r * r) * 4.5 + (gfbm(x * 0.03, z * 0.03, 3, 82) * 0.5 + 0.5) * 2.6);
+  h += land * land * lump(x, z, SLEEP_HILL) * SLEEP_HILL.h;
+  h -= land * land * lump(x, z, SLEEP_HOLLOW) * SLEEP_HOLLOW.h;
+  return h - smoothstep(0, 36, d) * 8;
+}
+
 /** The top of the last hill, where the journey ends. */
 export const LAST_HILL = { x: -30, z: -2060 } as const;
 
@@ -287,6 +308,7 @@ function rawHeight(x: number, z: number): number {
   h = smax(h, birchesHeight(x, z), 6);
   h = smax(h, drownedHeight(x, z), 6);
   h = smax(h, woodHeight(x, z), 6);
+  h = smax(h, sleepingHeight(x, z), 6);
   return smax(h, homeHeight(x, z), 6);
 }
 
@@ -482,6 +504,18 @@ float hf_wood(vec2 p) {
   h += land * land * (max(0.0, 1.0 - rr * rr) * 22.0 + (gfbm(p * 0.03, 3, 42.0) * 0.5 + 0.5) * 5.0);
   return h - smoothstep(0.0, 60.0, d) * 7.0;
 }
+float hf_sleeping(vec2 p) {
+  vec2 c = vec2(${ISLES.sleeping.x}.0, ${ISLES.sleeping.z}.0);
+  vec2 r = vec2(${ISLES.sleeping.rx}.0, ${ISLES.sleeping.rz}.0);
+  float d = hf_isleCoast(p, c, r, 0.14, 81.0);
+  float land = smoothstep(10.0, -16.0, d);
+  float rr = length((p - c) / r);
+  float h = land * 3.0 - 1.5;
+  h += land * land * (max(0.0, 1.0 - rr * rr) * 4.5 + (gfbm(p * 0.03, 3, 82.0) * 0.5 + 0.5) * 2.6);
+  h += land * land * hf_lump(p, vec2(${glsl(SLEEP_HILL.x)}, ${glsl(SLEEP_HILL.z)}), vec2(${glsl(SLEEP_HILL.rx)}, ${glsl(SLEEP_HILL.rz)})) * ${glsl(SLEEP_HILL.h)};
+  h -= land * land * hf_lump(p, vec2(${glsl(SLEEP_HOLLOW.x)}, ${glsl(SLEEP_HOLLOW.z)}), vec2(${glsl(SLEEP_HOLLOW.rx)}, ${glsl(SLEEP_HOLLOW.rz)})) * ${glsl(SLEEP_HOLLOW.h)};
+  return h - smoothstep(0.0, 36.0, d) * 8.0;
+}
 float hf_home(vec2 p) {
   vec2 c = vec2(${ISLES.home.x}.0, ${ISLES.home.z}.0);
   vec2 r = vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0);
@@ -518,6 +552,7 @@ float worldHeight(vec2 p) {
   h = hf_smax(h, hf_birches(p), 6.0);
   h = hf_smax(h, hf_drowned(p), 6.0);
   h = hf_smax(h, hf_wood(p), 6.0);
+  h = hf_smax(h, hf_sleeping(p), 6.0);
   h = hf_smax(h, hf_home(p), 6.0);
   h = hf_pond(h, p);
   float d = length(p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)}));
