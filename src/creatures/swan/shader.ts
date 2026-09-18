@@ -195,6 +195,8 @@ void main() {
 const WAKE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
+uniform float uStill;
+uniform float uLevel;
 in vec4 iWake;
 in vec4 iWash;
 out vec2 vUv;
@@ -205,9 +207,10 @@ void main() {
   float c = cos(iWash.x), s = sin(iWash.x);
   vec3 local = vec3(position.x * iWake.w, 0.0, position.z * iWake.z);
   vec2 still = vec2(iWake.x + c * local.x + s * local.z, iWake.y - s * local.x + c * local.z);
-  /** A wake is on the water, not on the plane the water would lie in: it rides the swell like everything else. */
-  vec3 ride = swellShift(still, swellHeight(still, distance(cameraPosition.xz, still)));
-  vWorld = vec3(still.x + ride.x, 0.04 + ride.y, still.y + ride.z);
+  /** A wake is on the water, not on the plane the water would lie in: at sea it rides the swell like everything
+      else, and on the pond, where there is no swell, it lies flat on the surface it was given. */
+  vec3 ride = uStill > 0.5 ? vec3(0.0) : swellShift(still, swellHeight(still, distance(cameraPosition.xz, still)));
+  vWorld = vec3(still.x + ride.x, uLevel + 0.04 + ride.y, still.y + ride.z);
   vUv = position.xz;
   vFade = iWash.y;
   vKind = iWash.z;
@@ -222,8 +225,14 @@ in float vFade;
 in float vKind;
 void main() {
   float r = length(vUv);
-  /** A swan sitting still lays a soft bright patch on the water; a foot slapping it throws up a puff of white. */
-  float a = mix(smoothstep(1.0, 0.1, r), smoothstep(1.0, 0.2, r) * (0.55 + 0.45 * smoothstep(0.2, 0.62, r)), vKind);
+  /**
+   * A swan sitting still lays a soft bright patch on the water; a foot slapping it throws up a puff of white;
+   * and where one settles or shifts its weight, a ring goes out from it and opens until it is gone.
+   */
+  float smudge = smoothstep(1.0, 0.1, r);
+  float splash = smoothstep(1.0, 0.2, r) * (0.55 + 0.45 * smoothstep(0.2, 0.62, r));
+  float ring = smoothstep(0.3, 0.02, abs(r - 0.78)) * smoothstep(1.02, 0.9, r);
+  float a = vKind < 0.5 ? smudge : vKind < 1.5 ? splash : ring;
   a *= vFade;
   if (a < 0.004) discard;
   vec3 foam = uSkyAmbient * 1.1 + uSunColor * 0.42;
@@ -236,7 +245,7 @@ export function swanMaterial(): THREE.ShaderMaterial {
 
 export function wakeMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, ...swellUniforms },
+    uniforms: { ...atmo.uniforms, ...swellUniforms, uStill: { value: 0 }, uLevel: { value: 0 } },
     vertexShader: WAKE_VERT,
     fragmentShader: WAKE_FRAG,
     transparent: true,
