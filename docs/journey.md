@@ -160,6 +160,35 @@ Approving all of it, and handing over the build (2026-09-17, verbatim):
 
 And: "Anything you want to prototype and explore, go ahead. we can always iterate or trim what doesn't work."
 
+After playing the cygnet, the swans and the rooms on `main` (2026-09-18, verbatim). Work from this is tracked in
+`docs/cygnet.md` Status and in "Rooms still to come":
+
+> "- What colour is the cygnet supposed to be? It is showing up as darkish grey / slate from what i can tell. I think
+> it would also be really cute if the cygnet kind of fit into the child's backback more so it looked a bit more
+> "comfy" and "snuggled" in.
+> - I do agree that the raft of swans on a pond is better. And they shouldn't just "appear" like the wheeling family
+> does. The player should see them as a point of interest. Whether you make the special interaction here with the
+> cygnett something else related to swimming, or keep it to helping it fly i leave up to you, but if you keep it to
+> trying to help it fly, make sure that it actually works (i was twirling my mouse and it wasn't flying - instead it
+> kept wandering away).
+> - The cygnet sounds great, the piano doesn't sound like a piano.
+>
+> Coming to the piano, as a player it wasn't intuitive. The child just sort of stands on it and then as a player you
+> can move your mouse around and the piano makes some sounds, but nothing else happens and the player has no way of
+> exiting either. If it's interactable, any ideas of making it more of a puzzle?
+>
+> On the autumn island of leaves, the leaves on the ground are behaving like the grass (when you blow them, they
+> kind of just stick to the ground and move in place). I think this island could be a bit longer as well. It should
+> be a bit "fun" as well with the cygnet jumping into a bundle of leaves and so on.
+>
+> The sequence on the forest island is a bit confusing, im not sure whats supposed to happen. As a player, when i
+> move my mouse around, it causes the cygnet to fly up in an updraft.
+>
+> When i move my mouse over the water, the wind from my mouse makes the water look really oily and weird. My
+> thinking is that the players wind should still draw the wind lines, and it should affect the wave geometry a
+> little maybe, as well as make the boats sails flap more noticeably, but it shouldn't cause the water to look too
+> much different otherwise."
+
 ## The dream
 
 A dreamy, meditative game about being the wind. A Ghibli afternoon: soft light, slow time, small kindnesses. The player never fails, never waits on a timer, never reads a word. Every gesture is answered by the world.
