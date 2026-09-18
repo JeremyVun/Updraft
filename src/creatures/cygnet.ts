@@ -44,6 +44,11 @@ export class Cygnet {
   state: CygnetState = 'flying';
   /** False where the story will not have it flown at all: in the dark wood it stays on the ground whatever the wind does. */
   mayFly = true;
+  /**
+   * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
+   * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
+   */
+  water: { level: number; over(x: number, z: number): boolean } | null = null;
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: Heard[] = [];
 
@@ -461,7 +466,7 @@ export class Cygnet {
   swimTo(target: THREE.Vector3): void {
     if (this.state !== 'swimming') {
       this.seating.go({ seat: null, held: false }, 'hop', 0.75, 0.22);
-      this.position.set(target.x, 0, target.z);
+      this.position.set(target.x, this.swimLevel, target.z);
       this.state = 'swimming';
       this.swum = 0;
       this.dunk = 1;
@@ -469,6 +474,26 @@ export class Cygnet {
       this.mind.wet = 1;
     }
     this.swimAim.copy(target);
+  }
+
+  /** The height of whatever it is swimming on: the sea, or a pond up the hill. */
+  swimLevel = 0;
+
+  /**
+   * Out of the water and up the bank: a scramble, a shake, and it is a land animal again, which is the state
+   * everything else it does on the ground starts from.
+   */
+  ashore(x: number, z: number, yaw: number): void {
+    if (this.state !== 'swimming') return;
+    this.seating.go({ seat: null, held: false }, 'hop', 0.7, 0.3);
+    this.state = 'following';
+    this.position.set(x, Math.max(heightAt(x, z), 0), z);
+    this.yaw = yaw;
+    this.landedAt = this.time;
+    this.landing = 0;
+    this.settle = 0;
+    this.heard.push({ kind: 'flutter', amount: 0.9 });
+    this.mind.perform('shake', 1.1);
   }
 
   /** How many times it has taken to the water, and how far behind the place it is making for it has fallen. */
@@ -583,7 +608,8 @@ export class Cygnet {
    */
   private soar(dt: number, wind: WindSample, child: THREE.Vector3): void {
     this.glideT += dt;
-    const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
+    const afloat = this.water && this.water.over(this.position.x, this.position.z) ? this.water.level : null;
+    const ground = afloat ?? Math.max(heightAt(this.position.x, this.position.z), 0);
     const room = 1 - THREE.MathUtils.smoothstep(this.position.y - ground, CEILING - 2, CEILING);
     const fading = 1 - THREE.MathUtils.smoothstep(this.glideT, GLIDE_FOR - 2.5, GLIDE_FOR);
     this.air += (wind.lift * 9 * room * fading - 3.4) * dt;
@@ -615,6 +641,14 @@ export class Cygnet {
     /** It looks down at the one who is watching it fly. */
 
 
+    if (this.position.y <= ground && afloat !== null) {
+      /** It came down over the water, which is the one landing it cannot make badly: it simply floats. */
+      this.swimLevel = afloat;
+      this.swimTo(this.tmp.set(this.position.x, afloat, this.position.z));
+      this.dunk = 1;
+      this.bind(0.12);
+      return;
+    }
     if (this.position.y <= ground) {
       this.position.y = ground;
       this.state = 'following';
@@ -840,7 +874,7 @@ export class Cygnet {
     this.position.z += Math.cos(this.yaw) * this.swimSpeed * dt;
     /** Down with the plunge and up again past where it floats, then the sea's own slow lift. */
     const bobbing = Math.sin(this.time * 1.3 + 0.7) * 0.03 + Math.sin(this.time * 2.7) * 0.012;
-    this.position.y = bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;
+    this.position.y = this.swimLevel + bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;
     this.effort = ease(this.effort, clamp((gap - 2.5) / 4, 0, 0.6), 2, dt);
     this.flap = ease(this.flap, this.effort > 0.3 ? 0.5 : 0, 3, dt);
     this.hurry = clamp(this.swimSpeed / 2.3, 0, 1);

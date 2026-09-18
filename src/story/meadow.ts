@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { mainlandCoastZ, meadowPoint } from '../world/heightfield';
+import { POND, POND_LEVEL, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
@@ -9,7 +9,7 @@ import { cue } from './cues';
 import { PianoStop } from './piano';
 import { tuning } from '../tuning';
 
-type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'waiting' | 'wave' | 'walk' | 'crest' | 'down' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /** The way inland, across the meadow to its far shore, in the coordinates the meadow was sculpted in. */
@@ -31,15 +31,39 @@ export const FAR_SHORE = new THREE.Vector3(shore.x, 0, shore.z);
 
 /** The high ground on the walk, where the haze thins and you are told, without a word, where you are going. */
 const CREST_LEG = 2;
-/** How near the crest waypoint counts as being up on the rise, and how many swans are in the family. */
+/** How near the crest waypoint counts as being up on the rise. */
 const CREST_NEAR = 16;
-const FAMILY = 22;
+/** The pond in the hollow beyond the rise, where the family is. Everything at the crest is arranged around it. */
+const POND_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z);
+/** How far out the bugling carries, so it is heard on the walk well before the rise. */
+const HEARD_FROM = 150;
 /**
- * The reveal shot: the frame is centred `ahead` of the child with the camera `back` behind them, standing at
- * `eye` above the ground and looking `look` above it, tipping up to `tilt` as the swans climb, and swung
- * `swing` off the line between the two so the family is not stacked dead above their heads.
+ * The reveal shot, from the top of the rise looking down into the hollow: the frame is centred `toward` of the
+ * way from the child to the water, with the camera `back` behind them and `up` above the frame's centre, so the
+ * two of them stand low in it and the pond with the white birds on it fills the rest.
  */
-const REVEAL = { ahead: 15, back: 16, eye: 5, look: 5.4, tilt: 1.2, swing: 0.06 };
+const REVEAL = { toward: 0.62, back: 26, up: 11.5, swing: 0.1 };
+
+/**
+ * The bank, coming at the pond from (x, z): the last dry ground before the water, and then `standOff` back from
+ * it, which is where somebody stands to look at what is on the water.
+ */
+function pondEdge(x: number, z: number, standOff: number, out: THREE.Vector3): THREE.Vector3 {
+  const dx = x - POND.x;
+  const dz = z - POND.z;
+  const d = Math.hypot(dx, dz) || 1;
+  for (let r = 3; r < 44; r += 0.4) {
+    if (heightAt(POND.x + (dx / d) * r, POND.z + (dz / d) * r) > POND_LEVEL + 0.25) {
+      return out.set(POND.x + (dx / d) * (r + standOff), 0, POND.z + (dz / d) * (r + standOff));
+    }
+  }
+  return out.set(x, 0, z);
+}
+
+/** Whether a point is over the pond's water, for anything that might come down on it. */
+function overPond(x: number, z: number): boolean {
+  return pondOut(x, z) < 1 && heightAt(x, z) < POND_LEVEL - 0.15;
+}
 
 const WAVE_SPEED = 85;
 const WAVE_REACH = 3600;
@@ -96,16 +120,29 @@ export class MeadowChapter implements Chapter {
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
   private nextBugle = 0;
   private wentOn = false;
+  /** When the child reached the water's edge, and when the family left it; both negative until they happen. */
+  private atEdge = -1;
+  private leftAt = -1;
+  /** Where the child stands to watch them, and which way along the shore the cygnet runs on its next try. */
+  private readonly edge = new THREE.Vector3();
+  private readonly along = new THREE.Vector3();
+  private readonly bank = new THREE.Vector3();
+  private runSide = 1;
   private kneltAt = -1e3;
   private readonly onCygnet = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   /** Where the family is, where it was first found, and the horizontal line from the child to it. */
   private readonly far = new THREE.Vector3();
-  private readonly gathering = new THREE.Vector3();
   private readonly axis = new THREE.Vector3(0, 0, -1);
 
   constructor(private readonly cast: Cast) {
-    const { child, plane, boat } = cast;
+    const { child, plane, boat, cygnet, flock } = cast;
+    /**
+     * The family is on the water from the moment the chapter starts, long before anything in the story points at
+     * it. Nothing in this room appears: the player comes over the rise and finds it already there.
+     */
+    flock.rest(POND.x, POND.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
+    cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.homeRadius = 70;
     child.dismount();
     boat.beach(FAR_SHORE.x, FAR_SHORE.z, 0.2);
@@ -148,7 +185,8 @@ export class MeadowChapter implements Chapter {
 
   /** For testing: a few paces short of the rise, cygnet in the satchel and plane in hand, with the crest still to come. */
   skipToCrest(): void {
-    const { child, cygnet, plane, life } = this.cast;
+    const { child, cygnet, plane, life, flock } = this.cast;
+    if (!flock.active) flock.rest(POND.x, POND.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     life.regions.wave.set(LANDING.x, LANDING.y, WAVE_REACH, 90);
     this.waveStart = -1e3;
     this.leg = CREST_LEG;
@@ -185,6 +223,10 @@ export class MeadowChapter implements Chapter {
       if (this.leg === ROUTE.length - 1) {
         p.home.set(boat.position.x, 0, boat.position.z);
         p.homeRadius = 26;
+      } else if (this.leg >= CREST_LEG && !this.crestDone) {
+        /** The signpost leans at what there is to find: over the rise, that is the white birds on the water. */
+        p.home.set(POND_AT.x, 0, POND_AT.z);
+        p.homeRadius = 34;
       } else {
         const t = this.piano.waypoint(this.target(), c.position);
         const dx = t.x - c.position.x;
@@ -213,6 +255,9 @@ export class MeadowChapter implements Chapter {
         break;
       case 'crest':
         this.updateCrest(dt, time);
+        break;
+      case 'down':
+        this.updateDown(dt, time);
         break;
       case 'try':
         this.updateTry(time);
@@ -245,13 +290,22 @@ export class MeadowChapter implements Chapter {
           ? THREE.MathUtils.smoothstep(t, 0, gather)
           : 1 - THREE.MathUtils.smoothstep(t, gather + fall, gather + fall + clear);
     }
-    if (this.beat !== 'crest') this.haze += (0.55 - this.haze) * (1 - Math.exp(-dt * 0.25));
+    const open = this.beat === 'crest' || this.beat === 'down' || this.beat === 'try' || this.beat === 'glide';
+    this.haze += ((open ? tuning.crest.haze : 0.55) - this.haze) * (1 - Math.exp(-dt * (open ? 1.1 : 0.25)));
     /** The fullest music in the game pulls back for the crest, so two bird voices are all there is to hear. */
-    const quiet = this.beat === 'crest' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
+    const quiet = this.beat === 'crest' || this.beat === 'down' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
     this.beatHush += (quiet - this.beatHush) * (1 - Math.exp(-dt * 0.5));
     const wave = life.regions.wave;
     if (wave.z >= 0) wave.z = Math.min(WAVE_REACH, wave.z + dt * WAVE_SPEED * Math.min(1, 0.3 + (this.now - this.waveStart) * 0.25));
 
+    /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
+    if (!this.wentOn && boat && time > this.nextBugle) {
+      const far = Math.hypot(c.position.x - POND_AT.x, c.position.z - POND_AT.z);
+      if (far < HEARD_FROM) {
+        cue('bugle');
+        this.nextBugle = time + (this.beat === 'crest' || this.beat === 'down' ? 5.4 : 9 + Math.random() * 5);
+      }
+    }
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
     this.piano.frame(this.shot);
@@ -292,11 +346,14 @@ export class MeadowChapter implements Chapter {
     this.to('try');
     this.nextTry = 1e9;
     this.kneltAt = this.now;
+    /** Along the bank rather than at the water, so a run at flying goes down the shore and never off into the pond. */
+    this.axis.set(c.position.x - POND_AT.x, 0, c.position.z - POND_AT.z).normalize();
+    this.along.set(-this.axis.z, 0, this.axis.x);
     /** Wide enough to take the camera as well as the two of them, or the near grass fills the whole frame. */
-    this.trodden = new THREE.Vector3(c.position.x + this.axis.x * setDownAt * 0.6, 12, c.position.z + this.axis.z * setDownAt * 0.6);
-    /** Out of the satchel and down in front of them, facing the sky it wants and not the child. */
-    c.faceToward(c.position.x + this.axis.x, c.position.z + this.axis.z, 1);
-    carry.unstow(() => carry.setDown(() => (this.nextTry = this.now + firstTry), Math.atan2(this.axis.x, this.axis.z)));
+    this.trodden = new THREE.Vector3(c.position.x + this.along.x * setDownAt * 0.6, 12, c.position.z + this.along.z * setDownAt * 0.6);
+    /** Out of the satchel and down beside them at the edge, facing north after the family and not at the child. */
+    c.faceToward(c.position.x + this.along.x, c.position.z + this.along.z, 1);
+    carry.unstow(() => carry.setDown(() => (this.nextTry = this.now + firstTry), Math.PI));
   }
 
   /**
@@ -328,11 +385,9 @@ export class MeadowChapter implements Chapter {
       }
     }
     c.lookAt = cygnet.eye(this.onCygnet);
+    if (this.swimHome(time)) return;
     if (time > this.nextTry && !cygnet.carried) {
-      /** Out from the child and back again, so however long it keeps at it, it is still where the player is looking. */
-      const home = this.trodden;
-      const strayed = home ? Math.hypot(cygnet.position.x - home.x, cygnet.position.z - home.z) > 4 : false;
-      cygnet.tryToFly(strayed && home ? Math.atan2(home.x - cygnet.position.x, home.z - cygnet.position.z) : undefined);
+      cygnet.tryToFly(this.runBearing());
       if (this.coaxFrom === 0) this.coaxFrom = time + tuning.swirl.coaxAfter;
       this.nextTry = time + TRY_EVERY;
       /** They settle in to watch it, but only before it has ever managed it: after that they stay on their feet. */
@@ -354,6 +409,35 @@ export class MeadowChapter implements Chapter {
         });
       });
     }
+  }
+
+  /**
+   * Where the next run goes: up and down the shore, turning round at each end, so it is always broadside to the
+   * camera and always within a cursor's reach of where it started. Nothing it does takes it out of the frame.
+   */
+  private runBearing(): number {
+    const { cygnet } = this.cast;
+    const home = this.trodden;
+    if (!home) return Math.atan2(this.along.x * this.runSide, this.along.z * this.runSide);
+    const out = (cygnet.position.x - home.x) * this.along.x + (cygnet.position.z - home.z) * this.along.z;
+    if (out * this.runSide > 2.6) this.runSide = -this.runSide;
+    return Math.atan2(this.along.x * this.runSide, this.along.z * this.runSide);
+  }
+
+  /**
+   * It came down on the water. Nothing has gone wrong — it is a swan — so it paddles back to the bank in front of
+   * the child, climbs out, shakes, and is standing there ready to go again.
+   */
+  private swimHome(time: number): boolean {
+    const { child: c, cygnet } = this.cast;
+    if (cygnet.state !== 'swimming') return false;
+    pondEdge(c.position.x, c.position.z, -0.4, this.bank);
+    cygnet.swimTo(this.bank);
+    if (Math.hypot(cygnet.position.x - this.bank.x, cygnet.position.z - this.bank.z) < 1.1) {
+      cygnet.ashore(this.trodden?.x ?? this.side.x, this.trodden?.z ?? this.side.z, Math.PI);
+      this.nextTry = time + 3.2;
+    }
+    return true;
   }
 
   /**
@@ -420,24 +504,15 @@ export class MeadowChapter implements Chapter {
 
   /**
    * The one moment the dream tells you what you are doing, and the scene the rest of the game leans on. It is
-   * heard before it is seen: the grown swans bugle from somewhere ahead, the cygnet hears them first and stretches
-   * up out of the satchel, and the child stops and turns to look where it is looking. The haze thins, and the family
-   * is climbing a thermal off the meadow in front of them. The colt calls. Nothing answers. They string out and
-   * go north — the way the boat is going, the way home — and the child kneels and sets the cygnet down after them.
+   * heard before it is seen: the grown swans bugle from the hollow ahead, the cygnet hears them first and
+   * stretches up out of the satchel, and the child stops and turns to look where it is looking. The haze thins,
+   * and over the rise, below them, there is a pond with the cygnet's family resting on it.
    */
   private updateCrest(dt: number, time: number): void {
     const { child: c, cygnet, flock } = this.cast;
-    const { answers, goes, setsDown, spread, leaves, leaveClimb } = tuning.crest;
-    const k = flock.active ? flock.head : this.gathering;
-    this.far.set(k.x, k.y + spread * 0.5, k.z);
+    const { answers, looks } = tuning.crest;
+    this.far.set(flock.head.x, flock.head.y + 1.2, flock.head.z);
     cygnet.watch(this.far);
-    this.haze += (0.1 - this.haze) * (1 - Math.exp(-dt * 1.1));
-
-    /** The grown birds call among themselves while they climb, and not once after they have turned away. */
-    if (!this.wentOn && time > this.nextBugle) {
-      cue('bugle');
-      this.nextBugle = time + 5.4;
-    }
     /** The child walks on for a pace, unaware, and then stops and comes round to what the cygnet can hear. */
     if (this.t > answers) {
       if (c.moving) c.stop();
@@ -449,32 +524,56 @@ export class MeadowChapter implements Chapter {
         this.nextCall = time + 5 + Math.random();
       }
     }
-    if (!this.wentOn && this.t > goes) {
-      this.wentOn = true;
-      cue('bugle');
-      /**
-       * Off on the line the journey takes, a little west of the one they were found on: north, for home. They
-       * go at a glide rather than their travelling speed, so the player has time to see that they are going.
-       */
-      flock.goOn(Math.PI, leaveClimb, leaves);
+    /** Then they go down to it, because the cygnet in the satchel is straining at the sight of them. */
+    if (this.t > looks && !c.busy) this.goDown();
+  }
+
+  /** Down off the rise to the water, where they stop, because there is nothing else to do about it. */
+  private goDown(): void {
+    const { child: c } = this.cast;
+    pondEdge(c.position.x, c.position.z, tuning.crest.standOff, this.edge);
+    this.to('down');
+    this.atEdge = -1;
+    c.walkTo(this.edge.x, this.edge.z, false, () => (this.atEdge = this.now), 1.2);
+  }
+
+  /**
+   * At the water. The family notices nothing: heads go up, one after another they turn north, make the long
+   * pattering run across the pond, and go, climbing away in a V the way the boat is going, the way home. The
+   * cygnet calls the whole time and nothing answers, and then the child kneels and sets it down after them.
+   */
+  private updateDown(dt: number, time: number): void {
+    const { child: c, cygnet, flock } = this.cast;
+    const { goes, setsDown, leaves, leaveClimb } = tuning.crest;
+    if (flock.active) this.far.set(flock.head.x, flock.head.y + 1.2, flock.head.z);
+    cygnet.watch(this.far);
+    c.lookAt = this.far;
+    if (time > this.nextCall) {
+      cue('calling');
+      cygnet.call(true);
+      this.nextCall = time + 5 + Math.random();
     }
-    if (this.t > setsDown && !c.busy) this.setDown();
+    if (this.atEdge >= 0 && !c.moving && !c.busy) c.faceToward(POND_AT.x, POND_AT.z, 1 - Math.exp(-dt * 1.6));
+    if (!this.wentOn && this.atEdge >= 0 && this.now - this.atEdge > goes) {
+      this.wentOn = true;
+      this.leftAt = this.now;
+      cue('bugle');
+      /** North, for home, on the line the journey takes; slower than their travelling speed so the going is seen. */
+      flock.lift(Math.PI, leaves, leaveClimb);
+    }
+    if (this.wentOn && this.now - this.leftAt > setsDown && !c.busy) this.setDown();
   }
 
   /** The family comes up out of the meadow ahead, and the walk stops where it stands for it. */
   private reveal(): void {
     const { child: c, cygnet, flock } = this.cast;
-    const { ahead, aside, base, radius, spread, climb, answers } = tuning.crest;
     this.crestDone = true;
     this.to('crest');
-    this.nextBugle = this.now;
-    this.nextCall = this.now + answers;
-    /** Ahead and a little to the east: out from under the low sun, and the way the walk bends after the rise. */
-    this.axis.set(aside, 0, -ahead).normalize();
-    this.gathering.set(c.position.x + aside, 0, c.position.z - ahead);
-    this.gathering.y = Math.max(heightAt(this.gathering.x, this.gathering.z), 0) + base;
-    flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, radius, FAMILY, spread, climb);
-    cygnet.watch(this.far.copy(this.gathering));
+    this.nextCall = this.now + tuning.crest.answers;
+    /** Everything from here is aimed at the water: the camera, the child, the set-down and the runs after it. */
+    this.axis.set(POND_AT.x - c.position.x, 0, POND_AT.z - c.position.z).normalize();
+    this.far.copy(flock.active ? flock.head : POND_AT);
+    cygnet.watch(this.far);
   }
 
   /**
@@ -601,37 +700,42 @@ export class MeadowChapter implements Chapter {
       const ground = Math.max(heightAt(k.x, k.z), 0);
       const up = THREE.MathUtils.clamp((k.y - ground) / 3.5, 0, 1);
       const toChild = gap > 0.5 ? Math.atan2(c.x - k.x, c.z - k.z) : this.cast.child.yaw + Math.PI;
-      const bearing = toChild + 1.15 * (1 - up);
+      const bearing = toChild + 1.0 * (1 - up);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      s.target.set(k.x, k.y + 0.4, k.z);
+      /** Off the cygnet toward the child, so the one who set it down is in the frame it is trying to leave. */
+      s.target.set(k.x + (c.x - k.x) * 0.3, k.y + 0.5, k.z + (c.z - k.z) * 0.3);
+      s.distance = 13 + gap * 0.5;
       /**
-       * The camera stays down at head height on the ground whatever the cygnet does, so that once it is up the
-       * frame is looking up at it with sky behind it. Hung a fixed distance above the cygnet instead, it follows
-       * the cygnet into the air and the background is always grass — which is the opposite of the point.
+       * The camera stays down on the ground whatever the cygnet does, so that once it is up the frame is looking
+       * up at it with sky behind it. But while it is still down it stands well above the grass and looks in at a
+       * slant, because the player has to be able to draw a circle on the ground around it, and from a camera lying
+       * in the grass a small circle on screen is a hundred metres of meadow.
        */
-      s.distance = 9.5 + gap * 0.35;
-      s.height = THREE.MathUtils.clamp(ground + 2.6 - k.y, -9, 2.6);
-      /** It has a whole sky to come down out of after the reveal, so it comes down fast and then settles. */
+      const eye = ground + THREE.MathUtils.lerp(7.2, 3.4, up);
+      s.height = THREE.MathUtils.clamp(eye - s.target.y, -9, 8);
+      /** It has a whole hollow to come down into after the set-down, so the camera comes down fast and settles. */
       this.pace = this.now - this.kneltAt < 3.5 ? 1.2 : 0.5;
       this.focus.copy(k);
       return;
     }
-    if (this.beat === 'crest') {
+    if (this.beat === 'crest' || this.beat === 'down') {
       /**
-       * One frame holds the whole scene: the two of them low in it, and above them the sky their family is
-       * climbing out of. The camera stands behind them on the line between the child and the column, swung a
-       * little off it, and tips up as the birds do — so nothing has to be looked for and nothing is off screen.
+       * Coming over the rise you look down into the hollow, and the two of them stand low in a frame that is
+       * mostly pond. Once the family is up the same frame holds them and it: the camera stands behind the child
+       * on the line to whatever is being watched, and opens out and tips up as far as it has to.
        */
+      const k = this.cast.flock.active ? this.far : POND_AT;
       const ground = Math.max(heightAt(c.x, c.z), 0);
-      const tilt = Math.min(REVEAL.tilt, Math.max(0, this.far.y - ground - 12) * 0.12);
-      const bearing = Math.atan2(this.axis.x, this.axis.z) + Math.PI + REVEAL.swing;
-      /** The frame opens out as the swans climb: it starts on the two of them and ends with the sky in it. */
-      const open = THREE.MathUtils.smoothstep(this.t, 0.6, 6);
-      const ahead = REVEAL.ahead * (0.5 + 0.5 * open);
-      s.target.set(c.x + this.axis.x * ahead, ground + REVEAL.look + tilt, c.z + this.axis.z * ahead);
+      const reach = Math.hypot(k.x - c.x, k.z - c.z);
+      const bearing = Math.atan2(c.x - k.x, c.z - k.z) + REVEAL.swing;
+      const open = THREE.MathUtils.smoothstep(this.t, 0.6, 5);
+      const toward = REVEAL.toward * (0.62 + 0.38 * open);
+      const look = (ground + Math.max(k.y, POND_AT.y)) * 0.5 + (k.y - ground) * 0.28;
+      s.target.set(c.x + (k.x - c.x) * toward, look, c.z + (k.z - c.z) * toward);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      s.distance = ahead + REVEAL.back * (0.7 + 0.3 * open);
-      s.height = REVEAL.eye - REVEAL.look - tilt;
+      /** Whatever they are looking at has to fit in the frame with them, so the camera stands off by how far apart they are. */
+      s.distance = REVEAL.back + reach * toward * 0.75;
+      s.height = ground + REVEAL.up - s.target.y;
       this.pace = 0.8;
       this.focus.copy(c);
       return;
