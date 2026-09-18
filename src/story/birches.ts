@@ -49,7 +49,8 @@ export class BirchesChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   pace = 0.4;
-  readonly haze = 0.85;
+  /** Thick: from the last of the rise the drowned village is in the way north, and it is not for seeing yet. */
+  readonly haze = 0.97;
   dusk = 0.58;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 32, height: 9 };
   readonly music = 'birches' as const;
@@ -173,8 +174,8 @@ export class BirchesChapter implements Chapter {
   }
 
   /**
-   * The one place this chapter touches the companion: it rides in the satchel over the island, the way it does on
-   * every other long walk, and it is never taken out again here.
+   * It rides in the satchel over the island, the way it does on every other long walk, until the heap of leaves
+   * in the hollow, which is worth getting down for.
    */
   private setOff(): void {
     const { cygnet, carry } = this.cast;
@@ -201,7 +202,7 @@ export class BirchesChapter implements Chapter {
       return;
     }
     /** And down in the hollow beyond it, the heap the cygnet has never seen the like of. */
-    if (this.leg >= HOLLOW_LEG && !this.played && Math.hypot(c.position.x - PLAY_PILE.x, c.position.z - PLAY_PILE.z) < 11) {
+    if (!this.played && this.swings > 0 && Math.hypot(c.position.x - PLAY_PILE.x, c.position.z - PLAY_PILE.z) < 17) {
       this.toLeaves();
       return;
     }
@@ -477,12 +478,13 @@ export class BirchesChapter implements Chapter {
        * disappearing into a pile of leaves, and from the walking camera it would be a speck among the trunks.
        */
       const k = this.cast.cygnet.position;
-      s.from = undefined;
-      const mx = (this.pile.x * 2 + c.x + k.x) / 4;
-      const mz = (this.pile.z * 2 + c.z + k.z) / 4;
-      s.target.set(mx, Math.max(heightAt(mx, mz), 0) + 1.3, mz);
-      s.distance = 11;
-      s.height = 3.4;
+      /** Held on one side, the way the swing is: a shot that swings round behind the child loses the heap. */
+      s.from = this.from;
+      const mx = this.pile.x * 0.62 + k.x * 0.38;
+      const mz = this.pile.z * 0.62 + k.z * 0.38;
+      s.target.set(mx, Math.max(heightAt(mx, mz), 0) + 1.1, mz);
+      s.distance = 13;
+      s.height = 4.2;
       this.pace = 0.4;
       this.focus.set(this.pile.x, Math.max(heightAt(this.pile.x, this.pile.z), 0), this.pile.z);
       return;

@@ -100,9 +100,13 @@ vec4 airAt(vec2 xz) {
   return insideUv(uv) ? texture(uWindTex, uv) : vec4(0.0);
 }
 
-/** How hard the air is working on the floor here: enough of this and the leaves stop being on the ground at all. */
+/**
+ * How hard the air is working on the floor here: enough of this and the leaves stop being on the ground at all.
+ * The prevailing breeze has to count for nothing, or the whole island quietly empties itself into the sea while
+ * the player is looking the other way.
+ */
 float lifting(vec4 w) {
-  return smoothstep(${glsl(tuning.birches.litterTakes * 0.75)}, ${glsl(tuning.birches.litterTakes * 2.4)}, length(w.xy))
+  return smoothstep(${glsl(tuning.birches.litterTakes * 1.15)}, ${glsl(tuning.birches.litterTakes * 2.6)}, length(w.xy))
        + min(w.z * 1.7, 1.5) + min(w.w * 0.9, 1.1);
 }
 
@@ -115,14 +119,27 @@ void main() {
   vec2 back = p - w.xy * uDt * ${glsl(tuning.birches.litterCarry)};
   float db = texture(uField, litterUv(back)).r;
   d += db * min(0.9, lifting(airAt(back)) * ${glsl(tuning.birches.litterSweep)} * uDt) - goes;
-  /** A heap only ever settles: it never stands up again, so what a burst leaves is lower and wider every time. */
+  /**
+   * Leaves will stand at a slope and no steeper. Anything heaped past that runs off into whatever is beside it,
+   * which is what makes a burst heap settle into a lower, wider one — and what stops an untouched heap from
+   * quietly melting away while nobody is playing with it.
+   */
   float px = 1.0 / ${glsl(LITTER_RES)};
-  float around = 0.25 * (texture(uField, vUv + vec2(px, 0.0)).r + texture(uField, vUv - vec2(px, 0.0)).r
-                       + texture(uField, vUv + vec2(0.0, px)).r + texture(uField, vUv - vec2(0.0, px)).r);
-  d = mix(d, around, min(0.7, ${glsl(tuning.birches.litterSlump)} * smoothstep(0.7, 2.0, max(d, around)) * uDt));
-  /** And feet scuff a way through it: a walk over this island leaves a track in the leaves behind it. */
+  float gain = 0.0;
+  float lose = 0.0;
+  for (int i = 0; i < 4; i++) {
+    vec2 step = i < 2 ? vec2(i == 0 ? px : -px, 0.0) : vec2(0.0, i == 2 ? px : -px);
+    float n = texture(uField, vUv + step).r;
+    gain += max(0.0, n - d - ${glsl(tuning.birches.litterRepose)});
+    lose += max(0.0, d - n - ${glsl(tuning.birches.litterRepose)});
+  }
+  d += (gain - lose) * 0.25 * min(1.0, ${glsl(tuning.birches.litterSlump)} * uDt);
+  /**
+   * And feet scuff a way through it: a walk over this island leaves a track in the leaves behind it. Lightly —
+   * what goes up round a pair of knees is the loose leaves, and a heap somebody has just gone into is still a heap.
+   */
   float tread = uWade.w * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy)));
-  d -= d * min(0.9, tread * 2.4 * uDt);
+  d -= d * min(0.7, tread * 0.7 * uDt);
   gl_FragColor = vec4(max(d, 0.0), 0.0, 0.0, 1.0);
 }`;
 
@@ -188,6 +205,8 @@ void main() {
    * where it started. This one number is the difference between litter that behaves and litter that sticks.
    */
   float takes = ${glsl(tuning.birches.litterTakes)} * (0.6 + 0.85 * seed);
+  /** Bare sand holds nothing: a leaf blown down onto a beach keeps going until the sea has it. */
+  takes *= mix(0.3, 1.0, smoothstep(0.4, 2.6, ground));
   float taken = smoothstep(takes * 0.55, takes, sp) + min(w.z * 2.4, 1.5) + smoothstep(0.15, 0.9, w.w) + wade * 3.0;
   float down = 1.0 - smoothstep(0.1, 0.55, above);
   if (down > 0.5 && taken < 0.32) {

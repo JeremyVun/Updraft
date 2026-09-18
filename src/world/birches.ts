@@ -717,7 +717,7 @@ export class AutumnBirches {
         if (y < TREE_LINE - 0.9) continue;
         const isle = Math.hypot((x - ISLE.x) / ISLE.rx, (z - ISLE.z) / ISLE.rz);
         if (isle > 1.02) continue;
-        let d = (0.95 + 0.6 * patchy(x * 0.09, z * 0.09)) * (1 - THREE.MathUtils.smoothstep(isle, 0.74, 1.02));
+        let d = (1.2 + 0.45 * patchy(x * 0.09, z * 0.09)) * (1 - THREE.MathUtils.smoothstep(isle, 0.74, 1.02));
         /** The ride is walked and blown over: less lies on it than either side of it. */
         d *= 0.72 + 0.4 * THREE.MathUtils.smoothstep(walkDistance(x, z), 1.5, 9);
         depths[j * LITTER_SIDE + i] = Math.max(0, d);
