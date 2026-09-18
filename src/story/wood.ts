@@ -386,7 +386,8 @@ export class WoodChapter implements Chapter {
       this.nextKindle = time + (hard ? 2.5 : 8);
     }
     if (c.busy || c.moving) return;
-    if (this.cast.embers.heatNear(HIDING.x, HIDING.z, FOUND) > FOUND_HEAT) {
+    /** Found when the player puts new light on it: the coal beside it takes, or they get fire nearer still. */
+    if (this.hearth?.lit || this.cast.embers.heatNear(HIDING.x, HIDING.z, FOUND) > FOUND_HEAT) {
       this.to('found');
       c.walkTo(HIDING.x, HIDING.z + 1.2, false, () => {
         /** Carried in the arms from here, not on their back. After the dark it is not put down again for a while. */

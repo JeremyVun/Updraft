@@ -72,6 +72,8 @@ export interface Coal {
   /** How much breath an unlit coal has had, 0 to 1. */
   wake: number;
   live: boolean;
+  /** When it was laid: the gust that lit the last one must not run straight on into this one. */
+  laid: number;
   seed: number;
 }
 
@@ -114,7 +116,7 @@ export class Embers {
       this.sparks.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), heat: 0, max: CINDER, seed: Math.random() * 6.28 });
     }
     for (let i = 0; i < COALS; i++) {
-      this.coals.push({ p: new THREE.Vector3(), heat: 0, flare: 0, lit: false, wake: 0, live: false, seed: Math.random() * 6.28 });
+      this.coals.push({ p: new THREE.Vector3(), heat: 0, flare: 0, lit: false, wake: 0, live: false, laid: 0, seed: Math.random() * 6.28 });
     }
     this.mesh = new THREE.Mesh(
       geo,
@@ -144,6 +146,7 @@ export class Embers {
     coal.wake = 0;
     coal.lit = false;
     coal.live = true;
+    coal.laid = this.clock;
     return coal;
   }
 
@@ -247,6 +250,7 @@ export class Embers {
       const w = this.wind.sample(c.p.x, c.p.z, this.sample);
       const breath = w.energy + Math.hypot(w.x, w.z) * 0.06;
       if (!c.lit) {
+        if (time - c.laid < 1.4) continue;
         c.wake = Math.min(1, c.wake + breath * dt * t.catchRate);
         c.heat = c.wake * 0.12;
         if (c.wake >= 1) {

@@ -370,7 +370,7 @@ void main() {
    * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
    * the room can never do is hide the child, so anything between the two of them gets out of the way.
    */
-  float clear = vLeaf > 0.5 ? 1.0 : smoothstep(1.0, 4.5, distance(cameraPosition, vWorld));
+  float clear = vLeaf > 0.5 ? 1.0 : smoothstep(1.2, 6.5, distance(cameraPosition, vWorld));
   gl_FragColor = vec4(applyFog(col, vWorld), clear);
 }`;
 
