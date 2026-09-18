@@ -204,10 +204,10 @@ out float vKind;
 void main() {
   float c = cos(iWash.x), s = sin(iWash.x);
   vec3 local = vec3(position.x * iWake.w, 0.0, position.z * iWake.z);
-  vec2 flat = vec2(iWake.x + c * local.x + s * local.z, iWake.y - s * local.x + c * local.z);
+  vec2 still = vec2(iWake.x + c * local.x + s * local.z, iWake.y - s * local.x + c * local.z);
   /** A wake is on the water, not on the plane the water would lie in: it rides the swell like everything else. */
-  vec3 ride = swellShift(flat, swellHeight(flat, distance(cameraPosition.xz, flat)));
-  vWorld = vec3(flat.x + ride.x, 0.04 + ride.y, flat.y + ride.z);
+  vec3 ride = swellShift(still, swellHeight(still, distance(cameraPosition.xz, still)));
+  vWorld = vec3(still.x + ride.x, 0.04 + ride.y, still.y + ride.z);
   vUv = position.xz;
   vFade = iWash.y;
   vKind = iWash.z;
