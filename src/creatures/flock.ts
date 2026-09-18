@@ -550,7 +550,8 @@ export class SwanFlock {
         b.speed = ease(b.speed, RUN_SPEED * (0.15 + 0.85 * k), 2.5, dt);
         b.fold = ease(b.fold, 0, 8, dt);
         b.flap = ease(b.flap, 1, 6, dt);
-        b.beat += dt * BEAT * 1.5;
+        /** The run is not cruising: the wings go hard and shallow until it has the speed to fly. */
+        b.beat += dt * BEAT * 2.3;
         b.yaw = yaw + wrapAngle(b.yaw - yaw) * Math.exp(-dt * 2.2);
         b.at.x += Math.sin(b.yaw) * b.speed * dt;
         b.at.z += Math.cos(b.yaw) * b.speed * dt;
@@ -648,9 +649,9 @@ export class SwanFlock {
         const k = b.step - i * 0.5;
         const age = k - Math.floor(k);
         const back = (age + i * 0.5) * (b.speed / 5.4) * 1.5 + 0.3;
-        const spread = 0.2 + age * 0.45;
+        const spread = 0.42 + age * 0.9;
         this.wakes.set(0, n, b.at.x - Math.sin(b.yaw) * back, b.at.z - Math.cos(b.yaw) * back, spread, spread);
-        this.wakes.set(1, n, b.yaw, (1 - age) * (1 - age) * 0.7, 1, 0);
+        this.wakes.set(1, n, b.yaw, (1 - age) * (1 - age) * 0.95, 1, 0);
         n++;
       }
     }
