@@ -134,7 +134,9 @@ export function fieldAt(x: number, z: number, out: FieldSample = { edge: 99, kin
   out.kind = u01(pcg(hash2(ax, az) ^ 0x9e3779b9));
   const lo = ax < ox || (ax === ox && az < oz);
   const pair = lo ? pcg(hash2(ax, az) + hash2(ox, oz) * 3) : pcg(hash2(ox, oz) + hash2(ax, az) * 3);
-  out.wall = u01(pair) < 0.84 && out.presence > 0 && offWay(x, z) > gateWidth(x, z);
+  /** The gate is only asked about where there is a wall to take down, and only near where it would stand. */
+  out.wall = u01(pair) < 0.84 && out.presence > 0;
+  if (out.wall && out.edge < WIDE_GATE + FIELD * 0.5) out.wall = offWay(x, z) > gateWidth(x, z);
   return out;
 }
 
@@ -204,7 +206,10 @@ vec4 fieldAt(vec2 p) {
   float kind = float(hf_pcg(hf_hash2(a) ^ 0x9e3779b9u) & 0xffffu) / 65535.0;
   bool lo = a.x < other.x || (a.x == other.x && a.y < other.y);
   uint pair = lo ? hf_pcg(hf_hash2(a) + hf_hash2(other) * 3u) : hf_pcg(hf_hash2(other) + hf_hash2(a) * 3u);
-  float wall = float(pair & 0xffffu) / 65535.0 < 0.84 && offWay(p) > fl_gate(p) ? 1.0 : 0.0;
-  return vec4(md * ${FIELD}.0, kind, wall, presence);
+  float edge = md * ${FIELD}.0;
+  float wall = float(pair & 0xffffu) / 65535.0 < 0.84 ? 1.0 : 0.0;
+  /** The gate is only asked about where there is a wall to take down, and only near where it would stand. */
+  if (wall > 0.0 && edge < ${(WIDE_GATE + FIELD * 0.5).toFixed(1)}) wall = offWay(p) > fl_gate(p) ? 1.0 : 0.0;
+  return vec4(edge, kind, wall, presence);
 }
 `;
