@@ -40,7 +40,9 @@ void main() {
   float groundH = texture(uHeightTex, clamp(uv, 0.0, 1.0)).r;
   float depth = uLevel - groundH;
   /** The waterline is where the bed comes up to meet it, so the shore is drawn by the ground and never by an edge. */
-  float alpha = smoothstep(0.02, 0.5, depth) * smoothstep(1.12, 0.98, pondOut(xz));
+  /** Held strictly inside the bowl's rim as well as to where the bed is under it, so no film of it can spill out
+      over the hollow the pond was dug in. */
+  float alpha = smoothstep(0.03, 0.45, depth) * smoothstep(1.0, 0.88, pondOut(xz));
   if (alpha < 0.01) discard;
 
   vec2 flow = texture(uWindTex, clamp(uv, 0.0, 1.0)).xy;

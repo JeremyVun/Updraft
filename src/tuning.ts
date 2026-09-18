@@ -86,7 +86,7 @@ export const tuning = {
     haze: 0.42,
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
-    looks: 7.5,
+    looks: 11,
     /** How far back from the waterline the child stops, and how long they stand there before the family goes. */
     standOff: 3.6,
     goes: 3.2,

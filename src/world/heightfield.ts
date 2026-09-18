@@ -452,8 +452,8 @@ float pondOut(vec2 p) {
 /** 0 where the pond's water stands over the ground, so no meadow grows up through the surface of it. */
 float pondDry(vec2 p, float groundH) {
   float o = pondOut(p);
-  if (o > 1.25) return 1.0;
-  return mix(1.0, smoothstep(${glsl(POND_LEVEL - 0.05)}, ${glsl(POND_LEVEL + 0.3)}, groundH), smoothstep(1.25, 1.0, o));
+  if (o > 1.0) return 1.0;
+  return mix(1.0, smoothstep(${glsl(POND_LEVEL - 0.05)}, ${glsl(POND_LEVEL + 0.2)}, groundH), smoothstep(1.0, 0.9, o));
 }
 float hf_pond(float h, vec2 p) {
   float d = pondOut(p);

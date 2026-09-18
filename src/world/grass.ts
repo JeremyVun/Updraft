@@ -115,8 +115,8 @@ function troddenAt(x: number, z: number): number {
 /** Mirrors `pondDry` in `HEIGHTFIELD_GLSL`; keep the two in step. */
 function pondDry(x: number, z: number, groundH: number): number {
   const o = pondOut(x, z);
-  if (o > 1.25) return 1;
-  return 1 + (smoothstep(POND_LEVEL - 0.05, POND_LEVEL + 0.3, groundH) - 1) * smoothstep(1.25, 1, o);
+  if (o > 1) return 1;
+  return 1 + (smoothstep(POND_LEVEL - 0.05, POND_LEVEL + 0.2, groundH) - 1) * smoothstep(1, 0.9, o);
 }
 
 /** Typical blade height at (x, z): the vertex shader's formula without the per-blade randomness. */

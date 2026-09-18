@@ -742,7 +742,8 @@ export class MeadowChapter implements Chapter {
       /** Whatever they are looking at has to fit in the frame with them, so the camera stands off by how far apart they are. */
       s.distance = REVEAL.back + reach * toward * 0.75;
       s.height = ground + REVEAL.up - s.target.y;
-      this.pace = 0.8;
+      /** Brisker than the walk: the frame has to have arrived while there is still something happening in it. */
+      this.pace = 1.1;
       this.focus.copy(c);
       return;
     }
