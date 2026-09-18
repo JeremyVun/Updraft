@@ -207,7 +207,8 @@ export function buildChild(): Rig {
   };
   const sockets = {
     cradle: socket(body, 0, 0.8, 0.56),
-    satchel: socket(body, 0, 0.8, -0.56),
+    /** High in the bag and a little back of its middle, so the breast and the whole neck clear the rim from behind. */
+    satchel: socket(body, 0, 0.91, -0.585),
     shoulder: socket(body, -0.3, 1.04, -0.02),
     lap: socket(body, 0, 0.16, 0.52),
   };

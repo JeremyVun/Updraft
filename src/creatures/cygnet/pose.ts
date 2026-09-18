@@ -134,7 +134,7 @@ export class Poser {
     const act = (name: Act) => this.acts.get(name) ?? 0;
 
     const hunch = clamp(d.fear * (d.carried ? 0.35 : 1) * (1 - d.effort) + act('flinch') * 0.8 + act('brace') * 0.45, 0, 1);
-    p.sit = ease(p.sit, riding ? (d.seat === 'satchel' ? 0.75 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, riding ? 3 : 4, dt);
+    p.sit = ease(p.sit, riding ? (d.seat === 'satchel' ? 0.6 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, riding ? 3 : 4, dt);
     p.held = ease(p.held, riding || climbing ? 1 : 0, 5, dt);
     p.stowed = ease(p.stowed, d.seat === 'satchel' && riding ? 1 : 0, 4, dt);
     p.hunch = ease(p.hunch, hunch, act('flinch') > p.hunch ? 14 : 2, dt);
@@ -292,9 +292,10 @@ export class Poser {
     b = lerp(b, 2.1, p.hunch);
     head = lerp(head, 0.25, p.hunch);
     const heldNeck = p.held * (1 - p.curl) * (1 - p.sleep);
-    a = lerp(a, -0.15 + p.stowed * 0.05, heldNeck);
-    b = lerp(b, 0.05, heldNeck);
-    head = lerp(head, -0.1, heldNeck);
+    /** In the arms the neck lies out along the child; up in the bag it sits back on itself in an S, head level. */
+    a = lerp(a, lerp(-0.15, -0.62, p.stowed), heldNeck);
+    b = lerp(b, lerp(0.05, 0.72, p.stowed), heldNeck);
+    head = lerp(head, lerp(-0.1, -0.24, p.stowed), heldNeck);
     a = lerp(a, -1.5, p.sleep);
     b = lerp(b, 1.9, p.sleep);
     head = lerp(head, 0.5, p.sleep);
