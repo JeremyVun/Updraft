@@ -625,7 +625,7 @@ interface Stunt {
   /** out: down and away to its mark. run: the approach. act: the leap or the shove. back: rejoining the pod. */
   phase: 'out' | 'run' | 'act' | 'back';
   t: number;
-  /** Which side of the boat it plays on: the camera's for a shove, the far one for a leap that ends near her. */
+  /** Which side it plays on: the camera's for a shove; a leap starts on the far one and comes down on the near. */
   side: number;
   along: number;
   across: number;
@@ -1108,7 +1108,8 @@ export class Dolphins {
       if (s.t > 4.5 && d.arc === 0) {
         s.phase = 'act';
         s.t = 0;
-        d.held = -0.16;
+        /** High enough that the flank it rolls onto stays out of the water, where the child can see the eye. */
+        d.held = -0.02;
       }
     } else if (s.phase === 'act') {
       d.tilt = -s.side * 1.5;

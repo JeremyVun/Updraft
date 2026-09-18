@@ -278,9 +278,9 @@ export class Boat {
   }
 
   /**
-   * Something in the water leans on the hull from `side` (+1 the side the sail swings from, with `strength` at
-   * about a dolphin's shoulder): it heels away from the shove, the head is knocked round and the boat is given a
-   * surge, and all three ease out over a couple of seconds.
+   * Something in the water leans on the hull from `side` (+1 for the hull's own +x, the side a crossing calls
+   * left), `strength` 1 being about a dolphin's shoulder: the boat heels away from the shove, its head is knocked
+   * round and it is given a surge, all three easing out over a couple of seconds.
    */
   nudge(side: number, strength = 1): void {
     this.shove = side * strength;
