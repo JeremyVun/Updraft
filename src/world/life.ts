@@ -18,11 +18,16 @@ uniform sampler2D uWindTex;
 uniform sampler2D uHeightTex;
 uniform float uDt;
 uniform vec2 uTexel;
+uniform vec4 uDomain;
+uniform vec4 uWaiting;
 in vec2 vUv;
 void main() {
   float l = texture(uLife, vUv).r;
   vec4 w = texture(uWindTex, vUv);
   float land = smoothstep(-0.4, 0.4, texture(uHeightTex, vUv).r);
+  /** The island that waits does not answer the wind at all: only the piano wakes it, and it wakes all of a piece. */
+  vec2 world = uDomain.xy + vUv / uDomain.zw;
+  if (uWaiting.z > 0.0 && length((world - uWaiting.xy) / uWaiting.zw) < 1.0) land = 0.0;
   float n = 0.25 * (texture(uLife, vUv + vec2(uTexel.x, 0.0)).r + texture(uLife, vUv - vec2(uTexel.x, 0.0)).r
                   + texture(uLife, vUv + vec2(0.0, uTexel.y)).r + texture(uLife, vUv - vec2(0.0, uTexel.y)).r);
   float wake = (w.z * 1.1 + w.w * 0.7) * land;
@@ -85,6 +90,8 @@ export class LifeField {
       uHeightTex: atmo.uniforms.uHeightTex,
       uDt: { value: 1 / 60 },
       uTexel: { value: new THREE.Vector2(1 / RES, 1 / RES) },
+      uDomain: atmo.uniforms.uDomain,
+      uWaiting: atmo.uniforms.uWaiting,
     });
     this.shiftMat = simMaterial(SHIFT_FRAG, { uSrc: { value: null }, uOffset: { value: new THREE.Vector2() } });
     this.copyMat = simMaterial(COPY_FRAG, { uSrc: { value: null } });
@@ -93,8 +100,12 @@ export class LifeField {
     atmo.uniforms.uLifeTex.value = this.life.texture;
     atmo.uniforms.uIslandLife.value = this.regions.island;
     atmo.uniforms.uLifeWave.value = this.regions.wave;
-    /** The meadow is the one island that waits: its inland stays grey until the player's wave rolls over it. */
-    this.regions.waiting.set(ISLES.meadow.x, ISLES.meadow.z, ISLES.meadow.rx - 34, ISLES.meadow.rz - 34);
+    /**
+     * The meadow is the one island that waits, and it waits all over: a green shore around a grey interior read as
+     * a bug, and gave away from the boat what the climb up the bank is meant to keep. Its own colour comes back
+     * from the piano, in one patch and then in waves.
+     */
+    this.regions.waiting.set(ISLES.meadow.x, ISLES.meadow.z, ISLES.meadow.rx + 6, ISLES.meadow.rz + 6);
     onWindowMove((dx, dz) => {
       this.shiftMat.uniforms.uSrc.value = this.life.texture;
       this.shiftMat.uniforms.uOffset.value.set(dx / WINDOW.size, dz / WINDOW.size);

@@ -142,6 +142,12 @@ export const tuning = {
     sayAgain: 8,
     /** How much less wind than a run normally takes counts as an answer while the piano is waiting for one. */
     answerEase: 0.2,
+    /** How often a phrase is said to nobody before the piano stops waiting and plays the whole tune by itself. */
+    saysTwice: 3,
+    /** The cygnet on the keys: how long it takes to walk them, and how far along them it starts and finishes. */
+    walkKeys: 6.5,
+    walkFrom: 0.3,
+    walkTo: 0.78,
     /** How far the room's music pulls back while they are sitting at it. */
     hush: 0.5,
   },

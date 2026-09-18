@@ -179,6 +179,21 @@ function linesHeight(x: number, z: number): number {
   return h - smoothstep(0, 40, d) * 8;
 }
 
+/**
+ * The bank over the landing. The boat comes ashore in a shallow bay, and everything the meadow is lies behind a
+ * bank of grass the child has to climb: from the beach there is sand, the bank and the sky, and what is over it is
+ * only seen from the top of it. The arms of the bay come further south than the middle, so the beach is enclosed.
+ */
+export const BANK = { x: 9, crest: -624, reach: 82, arms: 30, arm: 13, rise: 21, fall: 17, height: 10.5 } as const;
+
+function landingBank(wx: number, wz: number): number {
+  const lateral = Math.exp(-(((wx - BANK.x) / BANK.reach) ** 2));
+  const crest = BANK.crest + BANK.arm * (1 - Math.exp(-(((wx - BANK.x) / BANK.arms) ** 2)));
+  const u = wz - crest;
+  const shape = u > 0 ? smoothstep(BANK.rise, 0, u) : Math.exp(-((u / BANK.fall) ** 2));
+  return BANK.height * lateral * shape;
+}
+
 /** The meadow: the broad rolling pasture, now bounded by its own coast on every side. */
 function meadowHeight(wx: number, wz: number): number {
   const { x, z } = meadowSculpted(wx, wz);
@@ -191,6 +206,7 @@ function meadowHeight(wx: number, wz: number): number {
   const broad = gfbm(x * 0.0042, z * 0.0042, 3, 13);
   const mid = gfbm(x * 0.012, z * 0.012, 3, 14);
   h += land * rise * Math.max(0, 16 + 26 * broad + 7 * mid);
+  h += land * landingBank(wx, wz);
   return h - smoothstep(0, 70, -inland) * 8;
 }
 
@@ -413,6 +429,13 @@ vec2 hf_meadowSculpted(vec2 p) {
 float meadowInset(vec2 p) {
   return -hf_isleCoast(hf_meadowSculpted(p), vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SCULPTED.z}.0), vec2(${MEADOW_SCULPTED.rx}.0, ${MEADOW_SCULPTED.rz}.0), 0.08, 11.0) * ${glsl(MEADOW_SCALE)};
 }
+float hf_bank(vec2 world) {
+  float lateral = exp(-sq((world.x - ${glsl(BANK.x)}) / ${glsl(BANK.reach)}));
+  float crest = ${glsl(BANK.crest)} + ${glsl(BANK.arm)} * (1.0 - exp(-sq((world.x - ${glsl(BANK.x)}) / ${glsl(BANK.arms)})));
+  float u = world.y - crest;
+  float shape = u > 0.0 ? smoothstep(${glsl(BANK.rise)}, 0.0, u) : exp(-sq(u / ${glsl(BANK.fall)}));
+  return ${glsl(BANK.height)} * lateral * shape;
+}
 float hf_meadow(vec2 world) {
   vec2 p = hf_meadowSculpted(world);
   vec2 c = vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SCULPTED.z}.0);
@@ -426,6 +449,7 @@ float hf_meadow(vec2 world) {
   float broad = gfbm(p * 0.0042, 3, 13.0);
   float mid = gfbm(p * 0.012, 3, 14.0);
   h += land * rise * max(0.0, 16.0 + 26.0 * broad + 7.0 * mid);
+  h += land * hf_bank(world);
   return h - smoothstep(0.0, 70.0, -inland) * 8.0;
 }
 float hf_birches(vec2 p) {

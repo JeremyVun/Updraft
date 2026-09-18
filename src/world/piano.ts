@@ -17,8 +17,13 @@ import { WINDOW } from './window';
  * then by itself. Every note comes out of the meadow's own scale, so nothing anyone does can sound wrong.
  */
 
-/** Where it stands: a little east of the walk, on the leg before the crest, in a patch of shorter grass. */
-const PLACE = meadowPoint(16, -676);
+/**
+ * Where it stands: on the walk itself, a minute up from the top of the bank, in the one patch of the island that
+ * is not asleep. Nobody can miss it, because the way on goes through it.
+ */
+export const PLACE = meadowPoint(-18, -740);
+/** How far the colour round it reaches while the island is still grey, and how soft that edge is. */
+export const PATCH = { radius: 27, soft: 11 };
 /** Turned toward the camera, which looks north from a little east of south, so the keys face the walk. */
 const YAW = 0.34;
 
@@ -362,6 +367,21 @@ export class Piano {
       const hop = (i / steps) * seconds;
       this.schedule(this.now + hop, this.pool[a + dir * i], 0.2 + this.rand() * 0.1, 'bird');
     }
+  }
+
+  /** A point standing on the keys, `t` from the bottom note to the top, for something small enough to walk them. */
+  alongKeys(t: number, out: THREE.Vector3): THREE.Vector3 {
+    return this.local(THREE.MathUtils.clamp(t - 0.5, -0.5, 0.5) * (WIDTH - 0.12), KEY_Y + 0.05, KEY_BACK + KEY_LEN * 0.6, out);
+  }
+
+  /** What a key that far along the keyboard sounds, so a walker's feet and the notes under them agree. */
+  noteAlong(t: number): number {
+    return LOW_MIDI + Math.round(THREE.MathUtils.clamp(t, 0, 1) * (KEY_COUNT - 1));
+  }
+
+  /** Which way something walking the keys faces: along them, toward the top of the keyboard. */
+  get alongYaw(): number {
+    return YAW + Math.PI / 2;
   }
 
   /** How many notes of the scale the keyboard has, for whoever writes a tune for it. */
