@@ -110,15 +110,36 @@ export function buildChild(): Rig {
   ].map(([r, y]) => new THREE.Vector2(r, y));
   const coat = paint(new THREE.LatheGeometry(coatProfile, 20), PALETTE.coat);
   const hem = paint(at(new THREE.TorusGeometry(0.585, 0.045, 6, 24).rotateX(Math.PI / 2), 0, 0.02, 0), PALETTE.coatShade);
-  const satchel = paint(at(new THREE.BoxGeometry(0.42, 0.42, 0.16, 1, 1, 1), 0.0, 0.52, -0.44, 1, 1, 1), PALETTE.boot);
-  const flap = paint(at(new THREE.BoxGeometry(0.44, 0.2, 0.05), 0.0, 0.66, -0.53), new THREE.Color('#6b4a33'));
-  const strap = paint(at(new THREE.TorusGeometry(0.44, 0.03, 4, 24).rotateY(Math.PI / 2).rotateX(0.5), 0.0, 0.62, -0.05, 1, 1.15, 1), new THREE.Color('#6b4a33'));
+  /**
+   * The satchel is the cygnet's seat, and the game is played from behind the child, so it is an open-topped basket of
+   * a bag with its lid folded back: four low walls and a floor round the `satchel` socket, deep enough to hold a bird
+   * by the flanks and shallow enough that all of it above the wing is in shot.
+   */
+  const LEATHER = new THREE.Color('#7d5738');
+  const RIM = new THREE.Color('#9c7248');
+  const bag: THREE.BufferGeometry[] = [];
+  const panel = (w: number, h: number, d: number, x: number, y: number, z: number, color: THREE.Color) =>
+    bag.push(paint(at(new THREE.BoxGeometry(w, h, d), x, y, z), color));
+  panel(0.49, 0.05, 0.3, 0, 0.605, -0.55, LEATHER);
+  panel(0.49, 0.24, 0.045, 0, 0.72, -0.695, LEATHER);
+  panel(0.49, 0.2, 0.045, 0, 0.7, -0.405, LEATHER);
+  for (const s of [-1, 1]) panel(0.045, 0.24, 0.3, s * 0.223, 0.72, -0.55, LEATHER);
+  /** A rolled rim all the way round the mouth, so the opening reads as an opening from any angle. */
+  panel(0.53, 0.05, 0.055, 0, 0.845, -0.7, RIM);
+  panel(0.53, 0.05, 0.055, 0, 0.81, -0.4, RIM);
+  for (const s of [-1, 1]) panel(0.055, 0.05, 0.31, s * 0.235, 0.845, -0.55, RIM);
+  /** The lid, unbuckled and hanging down the back: what makes an open bag read as a satchel and not as a crate. */
+  bag.push(paint(at(new THREE.BoxGeometry(0.47, 0.26, 0.04).rotateX(-0.16), 0, 0.72, -0.75), RIM));
+  bag.push(paint(at(new THREE.SphereGeometry(0.04, 8, 6), 0, 0.61, -0.775, 1, 1, 0.6), PALETTE.coatShade));
+  /** Two straps over the shoulders, only as far forward as the coat's own curve, so they lie on it and never in it. */
+  for (const s of [-1, 1]) bag.push(paint(at(new THREE.BoxGeometry(0.08, 0.03, 0.5).rotateX(-0.5), s * 0.175, 0.95, -0.44), LEATHER));
+  const satchel = mergeGeometries(bag)!;
   const buttons = [0.35, 0.58, 0.8].map((y) =>
     paint(at(new THREE.SphereGeometry(0.035, 6, 4), 0, y, 0.43 - y * 0.12), PALETTE.coatShade),
   );
   const collar = paint(at(new THREE.TorusGeometry(0.22, 0.11, 8, 16).rotateX(Math.PI / 2), 0, 1.02, 0), PALETTE.scarf);
   const knot = paint(at(new THREE.SphereGeometry(0.12, 10, 8), 0.12, 0.98, 0.18, 1, 0.85, 0.9), PALETTE.scarf);
-  body.add(mesh([coat, hem, satchel, flap, strap, ...buttons, collar, knot]));
+  body.add(mesh([coat, hem, satchel, ...buttons, collar, knot]));
 
   const neck = new THREE.Object3D();
   neck.position.set(0.12, 1.0, 0.16);
@@ -141,13 +162,23 @@ export function buildChild(): Rig {
   const arm = (side: number) => {
     const g = new THREE.Group();
     g.position.set(side * 0.34, 0.88, 0.02);
-    g.add(mesh([paint(at(new THREE.CapsuleGeometry(0.095, UPPER_ARM - 0.09, 4, 10), 0, -UPPER_ARM / 2, 0), PALETTE.coat)]));
+    /** A gathered, puffed sleeve: fullest at the shoulder, drawn in toward the elbow, the way a child's coat is cut. */
+    const puff = paint(at(new THREE.SphereGeometry(0.138, 12, 10), 0, -0.035, 0, 1, 0.95, 1), PALETTE.coat);
+    const upper = paint(at(new THREE.CapsuleGeometry(0.093, UPPER_ARM - 0.1, 4, 10), 0, -UPPER_ARM / 2 - 0.02, 0), PALETTE.coat);
+    g.add(mesh([puff, upper]));
     const fore = new THREE.Group();
     fore.position.set(0, -UPPER_ARM, 0);
-    const sleeve = paint(at(new THREE.CapsuleGeometry(0.088, FOREARM - 0.16, 4, 10), 0, -(FOREARM - 0.1) / 2, 0), PALETTE.coat);
-    const cuff = paint(at(new THREE.TorusGeometry(0.085, 0.025, 6, 12).rotateX(Math.PI / 2), 0, -FOREARM + 0.1, 0), PALETTE.coatShade);
-    const mitten = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, -FOREARM + 0.02, 0.01, 1, 1.1, 1), PALETTE.scarf);
-    fore.add(mesh([sleeve, cuff, mitten]));
+    /** The elbow is its own soft ball on the forearm, so a bent arm creases instead of breaking into two sticks. */
+    const elbow = paint(at(new THREE.SphereGeometry(0.096, 10, 8), 0, 0.005, 0), PALETTE.coat);
+    const sleeve = paint(at(new THREE.CapsuleGeometry(0.09, FOREARM - 0.16, 4, 10), 0, -(FOREARM - 0.1) / 2, 0), PALETTE.coat);
+    const cuff = paint(at(new THREE.TorusGeometry(0.087, 0.028, 6, 12).rotateX(Math.PI / 2), 0, -FOREARM + 0.1, 0), PALETTE.coatShade);
+    const mitten = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, -FOREARM + 0.02, 0.01, 1, 1.15, 1), PALETTE.scarf);
+    /** A thumb on the inner edge of each mitten, which is what lets a hand read as holding rather than as touching. */
+    const thumb = paint(
+      at(new THREE.CapsuleGeometry(0.042, 0.06, 4, 8).rotateZ(side * 0.7).rotateX(-0.35), -side * 0.072, -FOREARM + 0.02, 0.045),
+      PALETTE.scarf,
+    );
+    fore.add(mesh([elbow, sleeve, cuff, mitten, thumb]));
     g.add(fore);
     const hand = new THREE.Object3D();
     hand.position.set(0, -FOREARM, 0.02);
