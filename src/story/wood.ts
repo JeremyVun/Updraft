@@ -411,6 +411,9 @@ export class WoodChapter implements Chapter {
     p.launch(this.tmp.set(SODDEN.x, Math.max(heightAt(SODDEN.x, SODDEN.y), 0) + 0.1, SODDEN.y), this.side.set(0, 0, 0));
     p.home.set(SODDEN.x, 0, SODDEN.y);
     this.leg = WOOD_PATH.length - 2;
+    /** A coal in the leaves beside it, so the thing they have been walking toward all night shows them the plane. */
+    this.ahead = this.cast.embers.lay(SODDEN.x + 1.6, SODDEN.y + 2.2);
+    this.chainAt = pathAlong(SODDEN.x, SODDEN.y);
   }
 
   /** Close enough to see what it is: they crouch in the leaves and lift it out of them. */
