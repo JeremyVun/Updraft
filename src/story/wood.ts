@@ -208,6 +208,8 @@ export class WoodChapter implements Chapter {
       case 'first':
         /** The first light the player makes is the first thing the child has seen. They turn to it and go. */
         c.lookAt = this.glow;
+        /** Nobody is stranded on the first coal either: left long enough, the wood takes it and shows them. */
+        if (this.ahead && this.t > UNAIDED && this.cast.input.gust < 9) this.cast.embers.blow(this.ahead, 0.8);
         if (this.lit > ENOUGH && this.t > 1.2) this.to('walk');
         else if (this.t > 75) this.to('walk');
         break;

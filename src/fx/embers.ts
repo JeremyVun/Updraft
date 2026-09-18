@@ -157,6 +157,7 @@ export class Embers {
     coal.heat = Math.max(coal.heat, amount);
     coal.flare = Math.max(coal.flare, amount * 1.4);
     this.throwSparks(coal, Math.round(10 * amount));
+    this.caught.push(coal);
   }
 
   /** The coals that caught since the last call: the room answers them with light, sound and the next one. */
