@@ -55,7 +55,7 @@ const BROW_AT = 17;
 /** Seconds they stand on the brow with the house below them. The walk over it is the climax; this is the top of it. */
 const BROW_FOR = 7.5;
 /** They turn to the way home, sit down where they are, and the paper comes up out of the one hand into both. */
-const SETTLE_FOR = 3.4;
+const SETTLE_FOR = 3.6;
 /**
  * The opening, in seconds and how far open. The two wings come up, and then it is held still for a beat with the
  * plane's own shape wide open in their hands, so that whatever flattens after it is unmistakably the same paper.
@@ -67,7 +67,7 @@ const OPENING: number[][] = [
   [4.2, 1],
 ];
 /** The crayon starts arriving once the sheet is swinging out of its own fold, and takes this long to be all there. */
-const DRAWS_FROM = 0.62;
+const DRAWS_FROM = 0.58;
 const DRAWS_IN = 2.8;
 const GAZE_FOR = 6.5;
 const FOLD_RATE = 0.38;
@@ -291,7 +291,7 @@ export class HomeChapter implements Chapter {
     cygnet.visible = false;
     this.dusk = 1.15;
     this.duskTarget = 1.15;
-    child.place(SUMMIT.x, SUMMIT.y, Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
+    child.place(SEAT.x, SEAT.y, Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
     child.standUp();
     plane.hold(child.handPosition(this.hand), child.yaw);
     this.openIt();
@@ -850,20 +850,21 @@ export class HomeChapter implements Chapter {
     let onPaper = 1;
     if (beat === 'settle') {
       /** Off their back and round onto the shoulder while they turn and sit: the shot arrives before the paper moves. */
+      /** In quickly enough that it has arrived before the first fold moves: the paper is never opened at a distance. */
       const k = THREE.MathUtils.smootherstep(this.t, 0, SETTLE_FOR);
       arc = DRAW_ARC * k;
-      dist = 11 - 6.6 * k;
+      dist = 9 - 4.6 * k;
       rise = 3.2 - 1 * k;
       ahead = 5 - 2.6 * k;
       aimUp = 1.7 - 0.9 * k;
-      onPaper = THREE.MathUtils.smoothstep(this.t, 1.3, SETTLE_FOR);
-      this.pace = 0.45;
+      onPaper = THREE.MathUtils.smoothstep(this.t, 1.2, SETTLE_FOR);
+      this.pace = 0.8;
     } else if (beat === 'unfold' || beat === 'gaze') {
       /** In on the mittens while it comes open, and out again as the sheet fills: their hands do all the work. */
       const out = beat === 'gaze' ? THREE.MathUtils.smootherstep(this.t, 0, 3.4) : 0;
       dist = 4.4 - 1.2 * THREE.MathUtils.smoothstep(drawing.open, 0, 0.5) + 1.5 * out;
       rise = 2.2 + 0.3 * THREE.MathUtils.smoothstep(drawing.open, 0.4, 1);
-      this.pace = 0.5;
+      this.pace = 0.75;
     } else if (beat === 'fold') {
       /** It starts to leave them before they are up: back, higher, and round behind them, all in the one move. */
       const k = THREE.MathUtils.smootherstep(this.t, 0, 3.2);
