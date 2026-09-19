@@ -400,7 +400,7 @@ export const tuning = {
     edgeFor: 8,
     looksBack: 2.2,
     /** How far up the hill it sits down, 0 the bed to 1 the top, and the seconds before it gets up regardless. */
-    shiverAt: 0.42,
+    shiverAt: 0.5,
     shiverFor: 9,
     /** What the wind under it has to do at the hilltop before it goes, and how long it has to be kept there. */
     liftToFly: 1.8,

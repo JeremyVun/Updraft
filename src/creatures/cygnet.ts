@@ -1434,6 +1434,9 @@ export class Cygnet {
       if (m.act === 'shake') this.heard.push({ kind: 'shake', amount: 1 });
       else if (m.act === 'bowled') this.heard.push({ kind: 'flutter', amount: 0.9 });
       else if (m.act === 'ask') this.heard.push({ kind: 'flutter', amount: 0.5 });
+      /** Cold all through it, and the breath that gets it up again: both of them are its own down moving. */
+      else if (m.act === 'shiver') this.heard.push({ kind: 'rustle', amount: 0.5 });
+      else if (m.act === 'into-wind') this.heard.push({ kind: 'rustle', amount: 0.7 });
       this.actWas = m.act;
     }
     if (this.seating.move?.kind === 'climb' && this.time > this.nextRustle) {
