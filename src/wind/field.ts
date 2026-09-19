@@ -15,6 +15,7 @@ import {
   PRESSURE_FRAG,
   SCALE_FRAG,
   SHIFT_FRAG,
+  SWAY_FRAG,
   VORTICITY_FRAG,
 } from './shaders';
 
@@ -73,6 +74,50 @@ export interface WindSample {
   lift: number;
 }
 
+const smooth = (from: number, to: number, x: number) => THREE.MathUtils.smoothstep(x, from, to);
+
+/**
+ * The wind as a hanging thing feels it; mirrors `feltWind` in GLSL. `calm` is `WindField.calm`. Writes x and z of
+ * `out` and leaves the rest of the sample as it was.
+ */
+export function feltWind(sample: WindSample, calm: number, out: WindSample = sample): WindSample {
+  const s = Math.hypot(sample.x, sample.z);
+  if (s < 1e-4) {
+    out.x = 0;
+    out.z = 0;
+    return out;
+  }
+  const arrived = smooth(tuning.wind.arriveFrom, tuning.wind.arriveFull, sample.energy);
+  const quiet = calm * (1 - Math.exp(-s / Math.max(calm, 1e-3)));
+  const k = (quiet + (s - quiet) * arrived) / s;
+  out.x = sample.x * k;
+  out.z = sample.z * k;
+  return out;
+}
+
+/** The same spring the sway texture runs, for one thing on the CPU: a sail, a kite, a pinwheel. */
+export class Sway {
+  x = 0;
+  z = 0;
+  private vx = 0;
+  private vz = 0;
+
+  constructor(
+    private readonly stiffness = tuning.wind.swayStiffness,
+    private readonly damping = tuning.wind.swayDamping,
+  ) {}
+
+  update(feltX: number, feltZ: number, dt: number): void {
+    for (let left = Math.min(dt, 0.1); left > 1e-5; left -= STEP) {
+      const h = Math.min(STEP, left);
+      this.vx += (this.stiffness * (feltX - this.x) - this.damping * this.vx) * h;
+      this.vz += (this.stiffness * (feltZ - this.z) - this.damping * this.vz) * h;
+      this.x += this.vx * h;
+      this.z += this.vz * h;
+    }
+  }
+}
+
 const READ_RES = 128;
 const STEP = 1 / 60;
 
@@ -91,6 +136,7 @@ export class WindField {
   private readonly gpu: GpuRunner;
   private readonly vel: PingPong;
   private readonly bend: PingPong;
+  private readonly sway: PingPong;
   private readonly pressure: PingPong;
   private readonly curl: THREE.WebGLRenderTarget;
   private readonly divergence: THREE.WebGLRenderTarget;
@@ -108,6 +154,7 @@ export class WindField {
   private readonly gradientMat: THREE.ShaderMaterial;
   private readonly advectMat: THREE.ShaderMaterial;
   private readonly bendMat: THREE.ShaderMaterial;
+  private readonly swayMat: THREE.ShaderMaterial;
   private readonly scaleMat: THREE.ShaderMaterial;
   private readonly shiftMat: THREE.ShaderMaterial;
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
@@ -121,6 +168,7 @@ export class WindField {
     this.gpu = new GpuRunner(renderer);
     this.vel = new PingPong(res, res);
     this.bend = new PingPong(res, res);
+    this.sway = new PingPong(res, res);
     this.pressure = new PingPong(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.curl = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.divergence = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
@@ -181,6 +229,14 @@ export class WindField {
       uStiffness: { value: tuning.wind.grassStiffness },
       uDamping: { value: tuning.wind.grassDamping },
     });
+    this.swayMat = simMaterial(SWAY_FRAG, {
+      uSway: { value: null },
+      uVel: { value: null },
+      uDt: dt,
+      uStiffness: { value: tuning.wind.swayStiffness },
+      uDamping: { value: tuning.wind.swayDamping },
+      uCalm: { value: 0 },
+    });
     this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } });
     this.shiftMat = simMaterial(SHIFT_FRAG, {
       uSrc: { value: null },
@@ -189,7 +245,7 @@ export class WindField {
     });
     onWindowMove((dx, dz) => this.shift(dx, dz));
 
-    for (const rt of [this.vel.read, this.vel.write, this.bend.read, this.bend.write, this.pressure.read, this.pressure.write]) {
+    for (const rt of [this.vel.read, this.vel.write, this.bend.read, this.bend.write, this.sway.read, this.sway.write, this.pressure.read, this.pressure.write]) {
       this.gpu.clear(rt);
     }
   }
@@ -200,6 +256,15 @@ export class WindField {
 
   get bendTexture(): THREE.Texture {
     return this.bend.texture;
+  }
+
+  get swayTexture(): THREE.Texture {
+    return this.sway.texture;
+  }
+
+  /** How hard air with no gust in it can be felt: it goes with the prevailing breeze, and dead air is dead. */
+  get calm(): number {
+    return tuning.wind.calm * this.breeze.length();
   }
 
   addSplat(splat: Splat): void {
@@ -263,6 +328,12 @@ export class WindField {
     this.bendMat.uniforms.uVel.value = this.vel.texture;
     this.gpu.run(this.bendMat, this.bend.write);
     this.bend.swap();
+
+    this.swayMat.uniforms.uSway.value = this.sway.texture;
+    this.swayMat.uniforms.uVel.value = this.vel.texture;
+    this.swayMat.uniforms.uCalm.value = this.calm;
+    this.gpu.run(this.swayMat, this.sway.write);
+    this.sway.swap();
   }
 
   /** Keeps the air where it is in the world when the window moves by (dx, dz) world units. */
@@ -272,6 +343,7 @@ export class WindField {
     for (const [pp, outside] of [
       [this.vel, new THREE.Vector4(this.breeze.x, this.breeze.y, 0, 0)],
       [this.bend, new THREE.Vector4(0, 0, 0, 0)],
+      [this.sway, new THREE.Vector4(0, 0, 0, 0)],
     ] as const) {
       su.uSrc.value = pp.texture;
       su.uOutside.value.copy(outside);

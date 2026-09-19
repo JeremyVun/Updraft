@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { params } from '../params';
+import { glsl, tuning } from '../tuning';
 import { WINDOW, onWindowMove } from './window';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
@@ -70,6 +71,10 @@ export const atmo = {
     uGroundDomain: { value: windowDomain() },
     uWindTex: { value: null as THREE.Texture | null },
     uBendTex: { value: null as THREE.Texture | null },
+    /** The wind hanging things feel, on its spring: xy the sprung wind in world units per second, zw its rate. */
+    uSwayTex: { value: null as THREE.Texture | null },
+    /** How hard air with no gust in it can be felt; see `feltWind`. */
+    uCalm: { value: 0 },
     uHeightTex: { value: null as THREE.Texture | null },
     uGroundTex: { value: null as THREE.Texture | null },
     uSurfaceTex: { value: null as THREE.Texture | null },
@@ -110,6 +115,18 @@ export const atmo = {
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
   },
 };
+
+/**
+ * The wind as a hanging thing feels it, from a sample of the wind texture. Mirrors `feltWind` in `wind/field.ts`.
+ */
+export const FELT_GLSL = /* glsl */ `
+vec2 feltWind(vec4 w, float calm) {
+  float s = length(w.xy);
+  if (s < 1e-4) return vec2(0.0);
+  float arrived = smoothstep(${glsl(tuning.wind.arriveFrom)}, ${glsl(tuning.wind.arriveFull)}, w.z);
+  float quiet = calm * (1.0 - exp(-s / max(calm, 1e-3)));
+  return w.xy * (mix(quiet, s, arrived) / s);
+}`;
 
 export const NOISE_GLSL = /* glsl */ `
 float hash12(vec2 p) {
@@ -159,6 +176,8 @@ uniform vec4 uDomain;
 uniform vec4 uGroundDomain;
 uniform sampler2D uWindTex;
 uniform sampler2D uBendTex;
+uniform sampler2D uSwayTex;
+uniform float uCalm;
 uniform sampler2D uHeightTex;
 uniform sampler2D uGroundTex;
 uniform sampler2D uSurfaceTex;
@@ -190,6 +209,14 @@ vec2 domainUv(vec2 xz) {
 
 bool insideUv(vec2 uv) {
   return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+}
+
+${FELT_GLSL}
+
+/** The sprung wind a hanging thing at xz swings on: xy in world units per second, zw its rate of change. */
+vec4 swayAt(vec2 xz) {
+  vec2 uv = domainUv(xz);
+  return insideUv(uv) ? texture(uSwayTex, uv) : vec4(0.0);
 }
 
 /** xyz: terrain normal, w: sun visibility from the baked hill shadows (open sky outside the window). */

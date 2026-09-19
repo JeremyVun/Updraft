@@ -237,7 +237,7 @@ const story = new Journey({ child, plane: glider, boat, wind, input, life, tree,
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 rig.cut(story.shot);
-const windDebug = params.debug === 'wind' ? createWindDebug() : null;
+const windDebug = params.debug === 'wind' || params.debug === 'sway' ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
 const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
 creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
@@ -509,6 +509,8 @@ function frame(now: number): void {
   u.uTime.value = time;
   u.uWindTex.value = wind.texture;
   u.uBendTex.value = wind.bendTexture;
+  u.uSwayTex.value = wind.swayTexture;
+  u.uCalm.value = wind.calm;
   u.uCloudShift.value.addScaledVector(wind.breeze, dt * 2.2);
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */

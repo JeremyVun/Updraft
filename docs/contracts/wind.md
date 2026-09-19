@@ -24,11 +24,19 @@ Gust energy and updraft exist because the 2D field is incompressible: it cannot 
 
 RGBA half float on the same grid. `xy` is the lean vector of the grass (direction on the ground, magnitude in radians, up to about 1.3). `zw` is its rate of change. It is a damped spring (stiffness 38, damping 3.2) driven toward a lean set by wind speed, so gusts overshoot and settle.
 
+## Sway texture (`wind.swayTexture`, shared as `uSwayTex`; GLSL `swayAt(xz)`)
+
+RGBA half float on the same grid. `xy` is the wind a hanging thing feels, on a soft spring (`tuning.wind.swayStiffness` / `swayDamping`), in world units per second; `zw` is its rate of change. Cloth, sails, kites, pinwheels and leaves on their twigs swing on this and not on the raw velocity. The grass does not read it.
+
+Why it exists: the field is incompressible, so a stroke moves air a long way off in the same frame (measured: 10 units per second 15 units UPWIND of a stroke within 10 frames), and everything hung in it jumped at once, like paint under a brush. The gust itself travels: gust energy (`b`) is laid down only under the stroke and carried downwind at the air's own speed, reaching 20 units downwind about a second later. So the felt wind (`feltWind` in GLSL and in `wind/field.ts`) takes air with no gust energy in it only up to a soft ceiling of `tuning.wind.calm` times the prevailing breeze (dead air is dead), and the full velocity once energy has risen from `arriveFrom` to `arriveFull`. Story gusts that should be felt must carry energy in their splats.
+
+On the CPU, sample the wind, pass it through `feltWind(sample, wind.calm)`, and keep a `Sway` (same spring) for the thing that swings. `?debug=sway` draws the texture.
+
 ## Frame order
 
 1. During the frame, callers queue splats with `wind.addSplat(splat)`. At most 8 per frame; extra ones are dropped.
 2. `main.ts` sets `wind.breeze` (the prevailing breeze vector, about 2.6 units/s, slowly veering).
-3. `wind.step(dt, time)` runs 1 or 2 substeps of 1/60 s (never more: a slow frame must not multiply the sim's cost, so under heavy load the wind runs slower than real time): force (breeze and splats; splats only in the first substep), curl, vorticity confinement, divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass spring.
+3. `wind.step(dt, time)` runs 1 or 2 substeps of 1/60 s (never more: a slow frame must not multiply the sim's cost, so under heavy load the wind runs slower than real time): force (breeze and splats; splats only in the first substep), curl, vorticity confinement, divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass spring and the sway spring.
 4. `main.ts` copies the current textures into `atmo.uniforms` after the step. Textures ping-pong, so never keep a texture reference from an earlier frame.
 5. The step ends by requesting a readback of a 128 × 128 copy (`src/gl/readback.ts`), which lands at the next frame's `pollReadbacks()` once the GPU has finished it, without the CPU ever waiting. `wind.sample(x, z, out)` reads that copy bilinearly. It is normally one or two frames behind the GPU; when the GPU is saturated it can fall a few more frames behind (see `docs/engine.md`). It covers the domain that was current when it was requested.
 

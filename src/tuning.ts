@@ -71,6 +71,18 @@ export const tuning = {
     /** The spring that leans the grass: stiffer snaps back faster, less damping overshoots more. */
     grassStiffness: 38,
     grassDamping: 3.2,
+    /**
+     * What a hanging thing feels (cloth, a sail, a kite, a leaf on its twig). A stroke moves the air a long way
+     * off at once, because air cannot pile up; only the gust itself, carried downwind, counts as wind arriving.
+     * Air moving without gust energy in it is felt no harder than `calm` times the prevailing breeze, and a gust
+     * is felt in full once its energy has risen from `arriveFrom` to `arriveFull`.
+     */
+    calm: 1.35,
+    arriveFrom: 0.02,
+    arriveFull: 0.35,
+    /** The spring hanging things swing on: soft enough to arrive late, overshoot and swing back. */
+    swayStiffness: 26,
+    swayDamping: 4.2,
   },
   world: {
     /** North to south length of the meadow. It was sculpted 600 long and is shown as a scale model of that. */
