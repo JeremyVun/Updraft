@@ -53,21 +53,26 @@ void main() {
   }
   vec2 w = texture(uWindTex, domainUv(pegged.xz)).xy;
   float speed = length(w);
-  vec3 gust = speed > 0.001 ? vec3(w.x, 0.0, w.y) / speed : side;
-  float lean = dot(gust, side) >= 0.0 ? 1.0 : -1.0;
+  /**
+   * Which side it swings to follows the wind across the line smoothly. Taken as a bare sign, neighbouring
+   * columns of one sheet chose opposite sides whenever the wind ran along the line, and the fold between them
+   * showed as a thin seam of sky down the cloth.
+   */
+  float across = dot(vec3(w.x, 0.0, w.y), side);
+  float lean = across / sqrt(across * across + 0.12 * speed * speed + 0.04);
 
   /** The sheet hinges on the line: still wind hangs it straight down, a full gust lifts it toward horizontal. */
   float swing = clamp(speed / ${glsl(tuning.washing.fullSwingSpeed)}, 0.0, 1.0);
   swing *= 0.35 + 0.65 * hang;
   float ripple = sin(uTime * (4.0 + aShape.z) + position.x * 6.5 - hang * 5.0 + aShape.w);
   swing = clamp(swing + ripple * 0.035 * (0.3 + swing), 0.0, 1.05);
-  float angle = swing * 1.5708;
+  float angle = swing * 1.5708 * lean;
 
-  vec3 down = -up * cos(angle) + side * lean * sin(angle);
+  vec3 down = -up * cos(angle) + side * sin(angle);
   vWorld = pegged + down * (hang * aShape.y);
   vWorld += side * lean * ripple * 0.05 * aShape.y * hang;
 
-  vNormal = normalize(cross(along, down)) * lean;
+  vNormal = normalize(cross(down, along));
   vColor = aColor;
   vSwing = swing;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -377,7 +382,7 @@ export class WashingLines {
         /** On the lines over the walk the pieces are wide: a row of little ones up there reads as bunting. */
         const width = high ? 1.7 + rand() * 1.6 : small ? 0.5 + rand() * 0.6 : 1.8 + rand() * 1.8;
         const drop = high ? spec.drop! * (0.85 + rand() * 0.3) : small ? 0.5 + rand() * 0.55 : 1.4 + rand() * 1.3;
-        const step = (width + 0.5 + rand() * 1.3) / span;
+        const step = (width + 0.35 + rand() * 0.9) / span;
         if (t + step > 0.96) break;
         onLine(spec, t, point);
         onLine(spec, t + step, next);
@@ -456,6 +461,44 @@ function against(x: number, z: number, path: readonly THREE.Vector2[], out: Alon
 }
 
 /**
+ * Two lines hung side by side in nearly the same plane put one sheet through the other, and the one behind shows
+ * as a moving seam down the one in front. Lines may cross as steeply as they like; they may not run together.
+ */
+const CROWDED_WITHIN = 1.4;
+const CROWDED_ANGLE = THREE.MathUtils.degToRad(25);
+
+function cross2(ax: number, az: number, bx: number, bz: number): number {
+  return ax * bz - az * bx;
+}
+
+function pointToRun(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
+  const ex = bx - ax;
+  const ez = bz - az;
+  const t = THREE.MathUtils.clamp(((px - ax) * ex + (pz - az) * ez) / (ex * ex + ez * ez || 1), 0, 1);
+  return Math.hypot(px - ax - ex * t, pz - az - ez * t);
+}
+
+/** Whether a line from a to b would run alongside one already hung, seen from above. */
+function crowds(ax: number, az: number, bx: number, bz: number, hung: readonly LineSpec[]): boolean {
+  for (const { a: c, b: d } of hung) {
+    const between = Math.abs(Math.atan2(cross2(bx - ax, bz - az, d.x - c.x, d.z - c.z), (bx - ax) * (d.x - c.x) + (bz - az) * (d.z - c.z)));
+    if (Math.min(between, Math.PI - between) > CROWDED_ANGLE) continue;
+    const straddles =
+      cross2(bx - ax, bz - az, c.x - ax, c.z - az) * cross2(bx - ax, bz - az, d.x - ax, d.z - az) < 0 &&
+      cross2(d.x - c.x, d.z - c.z, ax - c.x, az - c.z) * cross2(d.x - c.x, d.z - c.z, bx - c.x, bz - c.z) < 0;
+    if (straddles) return true;
+    const gap = Math.min(
+      pointToRun(ax, az, c.x, c.z, d.x, d.z),
+      pointToRun(bx, bz, c.x, c.z, d.x, d.z),
+      pointToRun(c.x, c.z, ax, az, bx, bz),
+      pointToRun(d.x, d.z, ax, az, bx, bz),
+    );
+    if (gap < CROWDED_WITHIN) return true;
+  }
+  return false;
+}
+
+/**
  * A hillside of washing with a way through it. Lines are hung everywhere except along the walk, so the open
  * ground is always the way on and the view to either side is cloth — a funnel nobody has to be told about. The
  * lines nearest the walk run with it, the way washing is hung along a path, and further out they lie across the
@@ -473,7 +516,36 @@ export function lineField(
   const specs: LineSpec[] = [];
   const at: Along = { side: Infinity, t: 0, dir: new THREE.Vector2() };
   const ends = path.length ? [path[0], path[path.length - 1]] : [];
-  for (let i = 0; i < count * 12 && specs.length < count; i++) {
+  /**
+   * The walk itself is hung across first, pole to pole over the top of it, high enough to pass under. The
+   * alley keeps the ground open so the way on is obvious; these keep the sky closed so it is still somebody's
+   * washing the child is lost in, and a gust coming through lifts the whole passage at once.
+   */
+  if (path.length > 1) {
+    const on = new THREE.Vector2();
+    for (let t = 0.05; t < 0.95; t += 0.05 + rand() * 0.035) {
+      pointAt(path, t, on, at.dir);
+      const across = Math.atan2(at.dir.y, -at.dir.x) + (rand() - 0.5) * 0.5;
+      const half = 8 + rand() * 3;
+      const shift = (rand() - 0.5) * 5;
+      const ax = on.x + Math.sin(across) * (-half + shift);
+      const az = on.y + Math.cos(across) * (-half + shift);
+      const bx = on.x + Math.sin(across) * (half + shift);
+      const bz = on.y + Math.cos(across) * (half + shift);
+      if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
+      if (crowds(ax, az, bx, bz, specs)) continue;
+      const top = 6 + rand() * 0.9;
+      specs.push({
+        a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
+        b: new THREE.Vector3(bx, Math.max(heightAt(bx, bz), 0) + top * (0.92 + rand() * 0.16), bz),
+        sag: 0.3 + rand() * 0.4,
+        /** Short drops: the hems have to clear a child's head, and the camera's, by a good margin. */
+        drop: 1.1 + rand() * 0.7,
+      });
+    }
+  }
+  const field = specs.length + count;
+  for (let i = 0; i < count * 40 && specs.length < field; i++) {
     const angle = rand() * Math.PI * 2;
     const reach = spread * Math.sqrt(rand());
     const x = centre.x + Math.cos(angle) * reach;
@@ -503,6 +575,7 @@ export function lineField(
     const top = 4.2 + rand() * 1.7;
     if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
     if (path.length && Math.min(against(ax, az, path, at).side, against(bx, bz, path, at).side) < 4) continue;
+    if (crowds(ax, az, bx, bz, specs)) continue;
     specs.push({
       a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
       b: new THREE.Vector3(bx, Math.max(heightAt(bx, bz), 0) + top * (0.85 + rand() * 0.3), bz),
@@ -510,33 +583,6 @@ export function lineField(
     });
   }
 
-  /**
-   * And then the walk itself is hung across, pole to pole over the top of it, high enough to pass under. The
-   * alley keeps the ground open so the way on is obvious; these keep the sky closed so it is still somebody's
-   * washing the child is lost in, and a gust coming through lifts the whole passage at once.
-   */
-  if (path.length > 1) {
-    const on = new THREE.Vector2();
-    for (let t = 0.05; t < 0.95; t += 0.05 + rand() * 0.035) {
-      pointAt(path, t, on, at.dir);
-      const across = Math.atan2(at.dir.y, -at.dir.x) + (rand() - 0.5) * 0.5;
-      const half = 8 + rand() * 3;
-      const shift = (rand() - 0.5) * 5;
-      const ax = on.x + Math.sin(across) * (-half + shift);
-      const az = on.y + Math.cos(across) * (-half + shift);
-      const bx = on.x + Math.sin(across) * (half + shift);
-      const bz = on.y + Math.cos(across) * (half + shift);
-      if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
-      const top = 6 + rand() * 0.9;
-      specs.push({
-        a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
-        b: new THREE.Vector3(bx, Math.max(heightAt(bx, bz), 0) + top * (0.92 + rand() * 0.16), bz),
-        sag: 0.3 + rand() * 0.4,
-        /** Short drops: the hems have to clear a child's head, and the camera's, by a good margin. */
-        drop: 1.1 + rand() * 0.7,
-      });
-    }
-  }
   return specs;
 }
 

@@ -326,16 +326,18 @@ export class MeadowChapter implements Chapter {
      * the child it made for open water at the far shore, sat on the sea and held the child at the water's edge.
      */
     if (!p.departing) {
+      const next = this.target();
+      const t = this.piano.waypoint(next, c.position);
+      /** The stop at the piano is the next thing to do for as long as it says so, whichever leg the walk is on. */
+      const pianoAhead = t !== next;
       if (this.leg === ROUTE.length - 1) {
         p.home.set(boat.position.x, 0, boat.position.z);
         p.homeRadius = 26;
-      } else if (this.leg >= CREST_LEG && !this.crestDone) {
+      } else if (this.leg >= CREST_LEG && !this.crestDone && !pianoAhead) {
         /** The signpost leans at what there is to find: over the rise, that is the white birds on the water. */
-        this.piano.waypoint(this.target(), c.position);
         p.home.set(POND_AT.x, 0, POND_AT.z);
         p.homeRadius = 34;
       } else {
-        const t = this.piano.waypoint(this.target(), c.position);
         const dx = t.x - c.position.x;
         const dz = t.y - c.position.z;
         const d = Math.hypot(dx, dz) || 1;
