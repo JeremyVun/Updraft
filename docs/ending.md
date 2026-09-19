@@ -196,26 +196,72 @@ because reflecting the sky's own star field through the ripples would only boil.
 frame was one flat fogged slab.
 
 
-**The unfolding** (`end-unfold`, 2026-09-19). The drawing is not a second sheet that replaces the plane any
-more: it is the same piece of paper. `traveller/drawing.ts` holds the sheet the glider is folded from — its span
-plus its keel across, its length along, nose at the top edge — cut into the eight facets its creases make, and
-folds every vertex of it on the CPU each frame: the nose flap first, about the diagonal crease out of the nose,
-then the wing about its own crease, then the fold down the middle that everything rides on. Folded, it is the
-plane in the child's hand (the glider mesh is hidden from the brow until the throw, and comes back at the instant
-it leaves their hand). `open` runs it to the flat sheet in stages you can watch — the near wing up, the far one
-falling open after it, the sheet swinging out of its own fold, the two corners of the nose flipping back — and the
-drawn side is the side those folds hide, so the drawing arrives as the paper flattens, with the creases still in
-it. The mittens are put on points *of the sheet* (`Drawing.point`, `GRIPS` in `home.ts`), so the hands go where
-the paper goes: the far one keeps hold of the fold, the near one lifts the wing, swings the sheet open, flicks the
-corners back and takes a bottom corner. It is folded back the same way before the throw.
-And the camera is one swing and nothing else: close behind on the walk, up over their head on the brow so the
-valley opens for the player as it opens for the child, round onto their left shoulder as they sit, in on their
-hands while the paper comes open and out again as the sheet fills, so the finished drawing and the house it is a
-drawing of are held in the one frame. `gone` to `release` is about 61 s, six more than it was.
+**The unfolding** (`end-unfold2`, 2026-09-19, answering the third brief). Three things were wrong with the first
+version: the paper stopped being the plane at the brow, the drawing was on it before it was ever opened, and the
+house was shown before the picture of it.
+
+*The paper is the plane until it opens.* `traveller/drawing.ts` still holds the sheet the glider is folded from,
+cut into the eight facets its creases make and folded vertex by vertex on the CPU each frame — the nose flap about
+the diagonal crease out of the nose, then the wing about its own crease, then the fold down the middle everything
+rides on. What is new is that folded it *is* the glider rather than a likeness of it. The sheet is 3.3 by 2.45
+(`HALF_W` 1.65, `KEEL` 0.5) and hangs from `HOLD`, and those numbers put its span at ±1.15, its nose at +1.5, its
+tail at −0.95, its wings at +0.16 and the bottom of its keel at −0.34: the glider's own five points
+(`glider/glider.ts`, `paperPlane()`), at the glider's own `SCALE`. Its shader is the glider's `PAPER_FRAG` and not
+a second opinion about paper — the same white (0.96, 0.93, 0.87), the same nine ruled lines read off a paper
+coordinate in the glider's units so they lie across the folded plane where the glider's do, the same margin, the
+same hemisphere-plus-sun-plus-rim light with the same glow through the back of the page. One difference is left
+and cannot be folded away: a real dart's wing ends in a short chord with a 45-degree leading edge, and the glider
+is a stylised arrow with a point and a 25-degree one. The exchange is made at nine units with the camera moving,
+where that is a few pixels.
+
+*Nothing is drawn on it before it opens.* `uDrawn` holds the entire crayon back, so both faces are bare ruled
+paper while it is folded and the drawing can no longer ride out on top of the wings — which is exactly what
+Jeremy saw. The paper comes flat and stays blank for about half a second, and then from `open` 0.58 the crayon
+arrives from the foot of the page upward behind a waxy, noisy edge over 2.8 s: the hills and the wall, then the
+house, then the sun, and last the little paper plane in the sky. `uOpen` brings the creases up as it opens, so the
+folded plane has none. Folding it back runs the crayon out again (capped by `smoothstep(open, 0.06, 0.42)`), so
+the faces that come back to the outside of the plane are bare paper, the way they were on the way up.
+
+*The drawing comes first, the house second.* After the family goes, the child turns for home, walks six units down
+off the very top — far enough that the ground has begun to fall and the sheet is held against the sea and not
+against the grass — and sits down with the cottage still hidden behind the brow. `settle` 3.6 s (they turn, sit,
+and the paper comes up out of the one hand into both; the glider is hidden and the sheet shown at the start of it,
+still a plane), `unfold` 4.2 s on `OPENING` keys — the two wings up in 1.1 s, then held still for 0.8 s with the
+plane's shape wide open in their hands, then flat over 2.3 s — `gaze` 6.5 s, `fold` 2.6 s. Then they stand, the
+sheet is the glider again in their hand, and they walk the last eleven units over the brow (`crest`, `Traveller.
+stroll` 0.7, about 7 s) and stand there 7.5 s with the real house below them, lit, as drawn. The walk over the brow
+is the climax, and the picture is what the player has in their eye when it happens.
+
+*The camera is one swing.* Behind them while the family goes; round onto their shoulder and in from nine units to
+four as they sit (`DRAW_ARC` 0.7, and briskly — `pace` 0.8 — so it has arrived before the first fold moves); in to
+3.2 on the mittens as the paper opens and out to 4.7 as the sheet fills, so the finished drawing is held whole;
+then one long move through `fold` and `crest` that takes it back in behind them (`WALK_ARC` 0.1), up from 2.5 to
+4.8 and out to 7.1, so it is over their head when the ground drops away and the valley opens for the player at the
+moment it opens for the child; and a last quarter-turn off their shoulder (`BROW_ARC` 0.28 to `GOES_ARC` 0.46)
+while the paper goes.
+
+*The music goes for it.* `HomeChapter.hush` runs to 0.75 as they sit, 1 through the opening and the gaze, 0.9
+through the fold, and then back down to 0 across the last nine units of the walk, so the theme swells as the
+ground falls away. `cue('unfold')` still fires as the hands start: a small paper sound reads better than nothing
+at all with the music that far out. The wind and the paper are the whole soundtrack of the opening.
+
+*The wind takes the drawing.* There is no throw any more. On the brow the child raises the paper over their head
+into the wind and `release` waits for the player, who is not muted there: their wind is read both at the paper
+(`wind.sample`) and at the ground their cursor is over (`input.gust`, `input.world`, out to 95 units, because a
+stroke drawn across the paper on screen lays its gust well beyond a child seen from behind), and about a second of
+real stroking carries it off — `Glider.launch` into the sunset, `depart`, `cue('release')`, and the child cheers
+after it. If the player only watches, the island's own wind comes up the hill at 10.8 s (a splat that lays the
+grass over first) and takes it at 12, so the ending cannot be made to wait. `gone` to the start of nightfall is
+about 63 s with a player and 72 s without one.
+
+*The door opens from inside.* On the run down, `Cottage.openDoor(true)` fires nine units out instead of on
+arrival, so the lamplight is out on the grass before the child reaches it. There is no figure in it: Jeremy was
+not convinced by one, and a crude one would cost more than it gives.
 
 Everything above, round 2 and the unfolding included, is on `main` as of the evening of 2026-09-19, verified by capture
 only: Jeremy has not played round 2. To reach the drawing quickly in QA, `__game.story.current.skipToDrawing(open?)`
-from an `eval` step in `?chapter=summit` puts the child at the summit with the family gone and jumps to `crest`.
+from an `eval` step in `?chapter=summit` puts the child on the summit with the family gone and the paper still a
+plane in their hand, at `settle`; with an argument it sits them down with the sheet already that far open.
 
 Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
 the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`
