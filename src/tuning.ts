@@ -15,13 +15,13 @@ export const tuning = {
      * Tracing circles with the cursor winds up an updraft in the middle of them. The turning rates, in radians per
      * second on screen (6.3 is one loop a second), at which it starts to build and at which it builds fastest.
      */
-    twirlFrom: 3,
-    twirlFull: 6.5,
+    twirlFrom: 2.2,
+    twirlFull: 5.2,
     /** Updraft charge gained per second of full twirling, and lost per second once the twirling stops. */
     chargeRate: 0.8,
     dischargeRate: 1.2,
     /** How near on screen (in screen heights) circles have to be drawn to something the story asks to have lifted for the column to stand there. */
-    anchorNear: 0.32,
+    anchorNear: 0.6,
   },
   swirl: {
     /**
@@ -117,14 +117,18 @@ export const tuning = {
   },
   summit: {
     /**
-     * The last lift is the whole gesture, not a flick: the updraft under it has to stand this tall (a bare gust
-     * brushes about 1.4 at most, a wound column about 4) and be kept there this long before it goes. Nothing
-     * times it out; the family only comes over calling now and then to show what is being asked.
+     * The last lift is the whole gesture, not a flick. A column of `liftToFly` gets it off the ground (a bare gust
+     * brushes about 0.4 at most, a wound column 1.5 to 2.5), and then it climbs only as fast as the player keeps
+     * winding (`gain` height a second per unit of updraft, at most `rise`) and sinks at `sink` the moment they stop.
+     * The family comes down for it once it has been held up `liftTo` above the grass. Nothing times it out; they
+     * wheel in sight to the north and call every `callEvery` seconds to say what is being asked.
      */
-    liftToFly: 2.2,
-    liftFor: 3,
-    promptAt: 55,
-    promptEvery: 70,
+    liftToFly: 0.6,
+    gain: 1.6,
+    sink: 1.4,
+    rise: 0.9,
+    liftTo: 5.5,
+    callEvery: 9,
   },
   piano: {
     /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */

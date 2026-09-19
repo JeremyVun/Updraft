@@ -13,6 +13,12 @@ import { Ride, type Mount, type Seat } from './cygnet/ride';
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
 const LIFT_TO_HOPE = 0.18;
 const LIFT_TO_FLY = 0.5;
+/** A climb made by the player's hand: units of height a second per unit of updraft, how fast it sinks without one, and the most it can rise a second. */
+export interface Labour {
+  gain: number;
+  sink: number;
+  rise: number;
+}
 /** It never climbs further above the ground than this, so a glide can never take it out of the frame. */
 const CEILING = 7.5;
 /** Nothing it can do keeps it up longer than this. */
@@ -144,10 +150,9 @@ export class Cygnet {
   private glideT = 0;
   private hope = 0;
   private hopT = 0;
-  /** The updraft it takes to lift it and how long that has to be kept under it first: a flick anywhere else, the whole gesture at the summit. */
+  /** The updraft it takes to lift it, and how it climbs on one: a bound anywhere else, at the summit a slow labour that sinks the moment the wind stops. */
   private liftToFly = LIFT_TO_FLY;
-  private liftFor = 0;
-  private wound = 0;
+  private labour: Labour | null = null;
   private hopLift = 0;
   private runBearing = 0;
   private awayFromChild = 0;
@@ -365,11 +370,10 @@ export class Cygnet {
    * A run at it: feet slapping, wings going, a bound or two, and down on its breast. It is trying to get up by
    * itself, and it cannot. It runs the way it is told, or else away from the child, who is watching.
    */
-  /** What the wind has to do under it before it goes, from here on. */
-  needs(lift: number, seconds: number): void {
+  /** What the wind has to do under it before it goes, and how it climbs on it, from here on. */
+  needs(lift: number, labour: Labour | null): void {
     this.liftToFly = lift;
-    this.liftFor = seconds;
-    this.wound = 0;
+    this.labour = labour;
   }
 
   tryToFly(bearing?: number): void {
@@ -612,11 +616,7 @@ export class Cygnet {
     const afoot = this.state === 'following' || this.state === 'fallen';
     /** It only ever goes up on wind that is actually under it, so the player learns where to hold the pointer. */
     const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
-    const enough = lift > this.liftToFly;
-    this.wound = enough ? Math.min(this.liftFor, this.wound + dt) : Math.max(0, this.wound - dt * 0.5);
-    /** Its wings come half up as the column stands, and the rest of the way as the player keeps it standing. */
-    const hoping = this.liftFor > 0 ? Math.max(THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, this.liftToFly) * 0.5, this.wound / this.liftFor) : THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY);
-    this.hope = ease(this.hope, afoot && this.hopT <= 0 ? hoping : 0, 2.5, dt);
+    this.hope = ease(this.hope, afoot && this.hopT <= 0 ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, this.liftToFly) : 0, 2.5, dt);
 
     if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
@@ -632,8 +632,7 @@ export class Cygnet {
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
     const running = this.hopT > 0 && this.hopT < HOP_FOR - 0.8 && this.faceplant === 0;
-    const ready = enough && this.wound >= this.liftFor;
-    if (this.mayFly && afoot && ready && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
+    if (this.mayFly && afoot && lift > this.liftToFly && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
 
     /** The updraft holds its wings all the way out; flying itself, only as much of them is trimmed as it is resting. */
     const wings = this.state === 'gliding' ? 1 : this.state === 'fledging' || this.state === 'leaving' ? this.trim : this.hope * 0.5;
@@ -811,15 +810,21 @@ export class Cygnet {
     const afloat = this.water && this.water.over(this.position.x, this.position.z) ? this.water.level : null;
     const ground = afloat ?? Math.max(heightAt(this.position.x, this.position.z), 0);
     const room = 1 - THREE.MathUtils.smoothstep(this.position.y - ground, CEILING - 2, CEILING);
-    const fading = 1 - THREE.MathUtils.smoothstep(this.glideT, GLIDE_FOR - 2.5, GLIDE_FOR);
-    this.air += (wind.lift * 9 * room * fading - 3.4) * dt;
-    this.air = clamp(this.air, -3.2, 3.6);
+    const l = this.labour;
+    /**
+     * Laboured, it goes up only as fast as the wind is wound and comes down the moment it stops, for as long as the
+     * player keeps at it: the climb is theirs to make and theirs to lose.
+     */
+    const fading = l ? 1 : 1 - THREE.MathUtils.smoothstep(this.glideT, GLIDE_FOR - 2.5, GLIDE_FOR);
+    this.air += (wind.lift * (l?.gain ?? 9) * room * fading - (l?.sink ?? 3.4)) * dt;
+    this.air = clamp(this.air, -3.2, l?.rise ?? 3.6);
     this.position.y += this.air * dt;
 
-    /** It cannot steer: it goes where the air goes, sliding downwind and turning to face its own drift. */
-    const drift = 0.22 + this.glide * 0.3;
-    let vx = wind.x * drift + Math.sin(this.yaw) * 1.1;
-    let vz = wind.z * drift + Math.cos(this.yaw) * 1.1;
+    /** It cannot steer: it goes where the air goes, sliding downwind and turning to face its own drift. Held in a column, hardly at all. */
+    const drift = l ? 0.04 : 0.22 + this.glide * 0.3;
+    const headway = l ? 0.25 : 1.1;
+    let vx = wind.x * drift + Math.sin(this.yaw) * headway;
+    let vz = wind.z * drift + Math.cos(this.yaw) * headway;
     /** Capped, so a hard gust cannot carry it out of the frame and lose the player the only thing they care about. */
     const speed = Math.hypot(vx, vz);
     if (speed > 2.6) {
