@@ -252,7 +252,7 @@ vec3 clothAt(vec2 uvw) {
   vec2 xz = uBed.xy + uBedAxis * ((back - 0.5) * uBed.z) + side * (across * uBed.w);
   float lift = uFold.y * smoothstep(0.1, 0.9, back) * (0.35 + 0.5 * sin(back * 3.14159));
   float ripple = sin(uTime * 2.1 + back * 7.0 + across * 3.0) * uFold.z * (0.3 + 0.7 * back);
-  float y = ${glsl(BED_GROUND)} + 0.62 + over - drape * 0.34 + lift + ripple;
+  float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 + lift + ripple;
   return vec3(xz.x, y, xz.y);
 }
 
@@ -303,7 +303,8 @@ void main() {
   vec3 a = curtainAt(uv + vec2(0.05, 0.0), aSide);
   vec3 b = curtainAt(uv + vec2(0.0, 0.05), aSide);
   vWorld = p;
-  vNormal = normalize(cross(b - p, a - p)) * aSide;
+  /** Both panels take the same normal: the mirrored one's winding is already answered by `gl_FrontFacing`. */
+  vNormal = normalize(cross(b - p, a - p));
   vColor = uCloth;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
@@ -384,7 +385,7 @@ in vec2 vUv;
 void main() {
   float a = uThrough * (1.0 - smoothstep(0.1, 1.0, vUv.y)) * (1.0 - smoothstep(0.25, 1.0, abs(vUv.x - 0.5) * 2.0));
   if (a < 0.004) discard;
-  gl_FragColor = vec4(vec3(1.0, 0.82, 0.58) * 1.6, a * 0.5);
+  gl_FragColor = vec4(vec3(1.0, 0.82, 0.58) * 1.15, a * 0.38);
 }`;
 
 type Part = [THREE.BufferGeometry, THREE.Color, number];
