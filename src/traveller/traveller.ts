@@ -164,12 +164,15 @@ export class Traveller {
     for (const o of this.objects) o.visible = on;
   }
 
-  /** Where the drawing is held when presenting: up in front of the face at arm's length. */
+  /**
+   * The middle of the sheet when they hold it up: in front of the face and a little to one side, and near enough in
+   * that their own hands can be on the bottom corners of it instead of pointing at where it is.
+   */
   presentPoint(out: THREE.Vector3): THREE.Vector3 {
-    const up = this.sitting ? 1.95 : 2.45;
+    const up = this.sitting ? 1.88 : 2.4;
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
-    return out.set(this.position.x + fx * 0.95 - fz * 0.45, this.position.y + up, this.position.z + fz * 0.95 + fx * 0.45);
+    return out.set(this.position.x + fx * 0.52 - fz * 0.38, this.position.y + up, this.position.z + fz * 0.52 + fx * 0.38);
   }
 
   /** A place on the child's own body where a companion rides; it moves with every bone above it. */
