@@ -344,6 +344,19 @@ export class LinesChapter implements Chapter {
       this.focus.copy(k);
       return;
     }
+    /**
+     * Under the three on the line, looking up: the camera comes down low behind the child and looks up with them,
+     * so the clothes stand against the sky with the door beyond, and the child is small under their family.
+     */
+    const gazing = this.gazeUntil > 0 && this.now < this.gazeUntil + 1.2;
+    if (gazing) {
+      s.target.set(c.x * 0.4 + FAMILY_MID.x * 0.6, c.y * 0.3 + (FAMILY_MID.y - 1.4) * 0.7, c.z * 0.4 + FAMILY_MID.z * 0.6);
+      s.distance = 14;
+      s.height = 0.6;
+      this.pace = 0.55;
+      this.focus.copy(FAMILY_MID);
+      return;
+    }
     if (this.beat === 'ashore' || this.beat === 'wonder') {
       s.target.set(c.x, Math.max(heightAt(c.x, c.z), 0) + 5, c.z - 12);
       s.distance = 30;
