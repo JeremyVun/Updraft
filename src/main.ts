@@ -386,6 +386,7 @@ function frame(now: number): void {
   wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * story.breeze);
 
   input.muted = story.current.scripted ?? false;
+  input.anchor = story.current.invitesFlight && !cygnet.gone ? cygnet.position : null;
   input.update(dt, rig.camera, wind);
   if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   story.update(dt, time);

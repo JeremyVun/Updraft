@@ -181,6 +181,8 @@ export class Cottage {
   private readonly smoke: THREE.InstancedBufferAttribute;
   private readonly puffs: { p: THREE.Vector3; age: number; life: number }[] = [];
   private readonly chimney = new THREE.Vector3();
+  /** The chimney is cold until the child is home; once they are, the first puffs come up one after another. */
+  smoking = false;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private doorOpen = 0;
   private doorTarget = 0;
@@ -253,11 +255,7 @@ export class Cottage {
     );
     smokeMesh.frustumCulled = false;
     this.smokeMesh = smokeMesh;
-    for (let i = 0; i < PUFFS; i++) {
-      const age = i / PUFFS;
-      const life = 7 + (i % 5);
-      this.puffs.push({ p: this.chimney.clone().add(new THREE.Vector3(age * 2, age * life * 0.6, age * -1)), age, life });
-    }
+    for (let i = 0; i < PUFFS; i++) this.puffs.push({ p: this.chimney.clone(), age: -i / PUFFS, life: 7 + (i % 5) });
   }
 
   get objects(): THREE.Object3D[] {
@@ -278,22 +276,24 @@ export class Cottage {
     this.spill.uniforms.uOpen.value = Math.min(1, this.doorOpen * 1.6);
 
     const w = this.wind.sample(this.chimney.x, this.chimney.z, this.sample);
-    this.spawn += dt;
+    if (this.smoking) this.spawn += dt;
     const a = this.smoke.array as Float32Array;
     this.puffs.forEach((puff, i) => {
-      puff.age += dt / puff.life;
+      if (this.smoking) puff.age += dt / puff.life;
       if (puff.age >= 1) {
         puff.age -= 1;
         puff.p.copy(this.chimney);
       }
-      const rise = 0.9 - puff.age * 0.4;
-      puff.p.x += (w.x * (0.4 + puff.age * 0.7) + Math.sin(this.spawn * 0.7 + i) * 0.12) * dt;
-      puff.p.z += (w.z * (0.4 + puff.age * 0.7) + Math.cos(this.spawn * 0.6 + i * 1.3) * 0.12) * dt;
-      puff.p.y += (rise + w.lift * 2) * dt;
+      if (puff.age > 0) {
+        const rise = 0.9 - puff.age * 0.4;
+        puff.p.x += (w.x * (0.4 + puff.age * 0.7) + Math.sin(this.spawn * 0.7 + i) * 0.12) * dt;
+        puff.p.z += (w.z * (0.4 + puff.age * 0.7) + Math.cos(this.spawn * 0.6 + i * 1.3) * 0.12) * dt;
+        puff.p.y += (rise + w.lift * 2) * dt;
+      }
       a[i * 4] = puff.p.x;
       a[i * 4 + 1] = puff.p.y;
       a[i * 4 + 2] = puff.p.z;
-      a[i * 4 + 3] = puff.age;
+      a[i * 4 + 3] = Math.max(0, puff.age);
     });
     this.smoke.needsUpdate = true;
   }

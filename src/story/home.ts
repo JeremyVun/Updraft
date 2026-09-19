@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { LAST_HILL } from '../world/heightfield';
+import { COTTAGE, LAST_HILL } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import { MOON, sunDirection } from '../world/palette';
 import type { Coax } from '../fx/swirl';
@@ -19,6 +19,7 @@ type Beat =
   | 'answered'
   | 'fledge'
   | 'gone'
+  | 'crest'
   | 'settle'
   | 'unfold'
   | 'gaze'
@@ -31,10 +32,6 @@ type Beat =
 
 /** North, where the flock went and where the cygnet has been trying to get to since the first island. */
 const NORTH = Math.PI;
-/** The flock comes over of its own accord after this long, calling, to tell the player what is being asked of them. */
-const PROMPT_AT = 55;
-/** And if the player still never lifts it, the night wind does, because nothing in this game is ever failed. */
-const RELENT_AT = 130;
 /** Seconds the family has been wheeling before the cygnet lets go of the player's wind and flies by itself. */
 const FLEDGES_AFTER = 3;
 /** How near the wheel it has to get before the family takes it in and they all go north together. */
@@ -42,8 +39,10 @@ const JOIN_AT = 8;
 /** How fast the family flies off with it, and how it climbs as it goes: slow enough that the small one can hold on. */
 const LEAVE_SPEED = 11;
 const LEAVE_CLIMB = 1;
-/** Seconds the child watches them go before sitting down with the plane: long enough for the V to grow small. */
+/** Seconds the child watches them go before walking on: long enough for the V to grow small. */
 const WATCHES_FOR = 16;
+/** How slowly they walk on afterwards, as a share of their usual pace. */
+const STROLL = 0.55;
 /** The camera comes round to the drawing before the sheet starts to open, and the sheet opens slowly. */
 const SETTLE_FOR = 4;
 const UNFOLD_RATE = 0.32;
@@ -65,8 +64,11 @@ export const HOME_JETTY = { x: -45, shoreZ: -1954, endZ: -1927, halfWidth: 1.2, 
 /** Where the boat comes alongside the end of it and lies, bow to the east. */
 export const HOME_MOORING = { x: -45.3, z: -1926.25, yaw: Math.PI / 2 } as const;
 const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
-/** The crest of the last hill, where the ground falls away and the cottage comes into view. */
+/** The top of the last hill, where the small one is put down. The cottage is still hidden behind the brow from here. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
+/** On over the brow toward the cottage: the ground falls away and the valley opens, and this is where they stop and see it. */
+const TO_COTTAGE = new THREE.Vector2(COTTAGE.x - SUMMIT.x, COTTAGE.z - SUMMIT.y).normalize();
+const REVEAL = SUMMIT.clone().addScaledVector(TO_COTTAGE, 28);
 /** From the summit the sun sets over the cottage, to the north-west. */
 const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)), -Math.cos(THREE.MathUtils.degToRad(32)));
 /**
@@ -116,7 +118,7 @@ export class HomeChapter implements Chapter {
   silence = false;
   finished = false;
   private nextCall = 0;
-  private flockCalled = false;
+  private nextPrompt = tuning.summit.promptAt;
   private tried = 0;
   private called = false;
   private turned = false;
@@ -217,6 +219,7 @@ export class HomeChapter implements Chapter {
     this.to('setDown');
     /** The last of the light: it goes while the sun is still going, and the night comes on after it. */
     this.duskTarget = 1.15;
+    cygnet.needs(tuning.summit.liftToFly, tuning.summit.liftFor);
     c.standUp();
     const x = c.position.x + Math.sin(c.yaw) * 2.2;
     const z = c.position.z + Math.cos(c.yaw) * 2.2;
@@ -291,13 +294,15 @@ export class HomeChapter implements Chapter {
       cue('calling');
       this.nextCall = this.now + 5.5 + Math.random() * 2;
     }
-    /** They come over calling, whether or not the player has worked it out: an answer, and a nudge. */
-    if (!this.flockCalled && this.t > PROMPT_AT) {
-      this.flockCalled = true;
+    /**
+     * They come over calling now and then, whether or not the player has worked it out: an answer, and a nudge.
+     * This is the one thing in the game that waits for the player for as long as it takes; nothing does it for them.
+     */
+    if (this.t > this.nextPrompt) {
+      this.nextPrompt = this.t + tuning.summit.promptEvery;
       flock.pass(c.position.x, c.position.z, c.position.y + 38, NORTH, 13, 190);
       cue('skein');
     }
-    if (this.t > RELENT_AT) this.answered();
   }
 
   /**
@@ -390,10 +395,24 @@ export class HomeChapter implements Chapter {
     c.lookAt = cygnet.visible ? cygnet.position : flock.head;
     const away = this.leftAt > 0 && (this.now - this.leftAt > WATCHES_FOR || !cygnet.visible);
     if (away && !c.busy) {
-      c.sitDown();
-      c.faceToward(c.position.x + TOWARD_SUNSET.x * 10, c.position.z + TOWARD_SUNSET.y * 10, 1);
-      this.to('settle');
+      /** Then on, slowly, over the brow: nothing is said, and the valley says it for them. */
+      this.to('crest');
+      c.stroll = STROLL;
+      c.walkTo(REVEAL.x, REVEAL.y, false, () => {
+        c.stroll = 1;
+        c.faceToward(this.cast.cottage.position.x, this.cast.cottage.position.z, 1);
+        c.sitDown();
+        this.to('settle');
+      }, 0.8);
     }
+  }
+
+  /** Eyes on the path until the ground falls away, and then on the roof below before their feet have stopped. */
+  private updateCrest(): void {
+    const { child: c, cottage } = this.cast;
+    const along = (c.position.x - SUMMIT.x) * TO_COTTAGE.x + (c.position.z - SUMMIT.y) * TO_COTTAGE.y;
+    const fwd = this.forward();
+    c.lookAt = along > 12 ? cottage.position : this.sky.set(c.position.x + fwd.x * 3, c.position.y - 0.4, c.position.z + fwd.z * 3);
   }
 
   private forward(): THREE.Vector3 {
@@ -417,6 +436,8 @@ export class HomeChapter implements Chapter {
       this.updateFledge();
     } else if (this.beat === 'gone') {
       this.updateGone();
+    } else if (this.beat === 'crest') {
+      this.updateCrest();
     } else if (this.beat === 'settle') {
       /** The plane comes up in both hands first, and the camera comes round to it, and only then does it open. */
       c.presenting = Math.min(1, c.presenting + dt * 0.8);
@@ -474,7 +495,10 @@ export class HomeChapter implements Chapter {
       c.lookAt = cottage.position;
     } else if (this.beat === 'inside') {
       if (this.t > 1.2 && this.t < 1.25) c.walkTo(cottage.position.x, cottage.position.z, false, undefined, 0.3);
-      if (this.t > 2.6) c.visible = false;
+      if (this.t > 2.6) {
+        c.visible = false;
+        cottage.smoking = true;
+      }
       if (this.t > 4.2) cottage.openDoor(false);
       if (this.t > RISE_FROM && this.t < RISE_FROM + 0.05 && !this.silence) cue('finale');
       if (this.t > SILENCE_AT) this.silence = true;
@@ -610,6 +634,16 @@ export class HomeChapter implements Chapter {
         s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
       }
       this.pace = 0.2 - lift * 0.12;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'crest') {
+      /** Close behind on the way over the brow, so what opens up ahead of them opens up for the player at the same moment. */
+      s.from = this.behind.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y);
+      s.target.set(c.x + TO_COTTAGE.x * 6, c.y + 1.6, c.z + TO_COTTAGE.y * 6);
+      s.distance = 11;
+      s.height = 2.2;
+      this.pace = 0.5;
       this.focus.copy(c);
       return;
     }

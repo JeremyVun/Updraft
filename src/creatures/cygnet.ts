@@ -144,6 +144,10 @@ export class Cygnet {
   private glideT = 0;
   private hope = 0;
   private hopT = 0;
+  /** The updraft it takes to lift it and how long that has to be kept under it first: a flick anywhere else, the whole gesture at the summit. */
+  private liftToFly = LIFT_TO_FLY;
+  private liftFor = 0;
+  private wound = 0;
   private hopLift = 0;
   private runBearing = 0;
   private awayFromChild = 0;
@@ -361,6 +365,13 @@ export class Cygnet {
    * A run at it: feet slapping, wings going, a bound or two, and down on its breast. It is trying to get up by
    * itself, and it cannot. It runs the way it is told, or else away from the child, who is watching.
    */
+  /** What the wind has to do under it before it goes, from here on. */
+  needs(lift: number, seconds: number): void {
+    this.liftToFly = lift;
+    this.liftFor = seconds;
+    this.wound = 0;
+  }
+
   tryToFly(bearing?: number): void {
     if ((this.state === 'following' || this.state === 'fallen') && this.hopT <= 0) {
       this.state = 'following';
@@ -601,7 +612,11 @@ export class Cygnet {
     const afoot = this.state === 'following' || this.state === 'fallen';
     /** It only ever goes up on wind that is actually under it, so the player learns where to hold the pointer. */
     const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
-    this.hope = ease(this.hope, afoot && this.hopT <= 0 ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY) : 0, 2.5, dt);
+    const enough = lift > this.liftToFly;
+    this.wound = enough ? Math.min(this.liftFor, this.wound + dt) : Math.max(0, this.wound - dt * 0.5);
+    /** Its wings come half up as the column stands, and the rest of the way as the player keeps it standing. */
+    const hoping = this.liftFor > 0 ? Math.max(THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, this.liftToFly) * 0.5, this.wound / this.liftFor) : THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, LIFT_TO_FLY);
+    this.hope = ease(this.hope, afoot && this.hopT <= 0 ? hoping : 0, 2.5, dt);
 
     if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
@@ -617,7 +632,8 @@ export class Cygnet {
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
     const running = this.hopT > 0 && this.hopT < HOP_FOR - 0.8 && this.faceplant === 0;
-    if (this.mayFly && afoot && lift > LIFT_TO_FLY && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
+    const ready = enough && this.wound >= this.liftFor;
+    if (this.mayFly && afoot && ready && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
 
     /** The updraft holds its wings all the way out; flying itself, only as much of them is trimmed as it is resting. */
     const wings = this.state === 'gliding' ? 1 : this.state === 'fledging' || this.state === 'leaving' ? this.trim : this.hope * 0.5;

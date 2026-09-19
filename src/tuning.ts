@@ -20,6 +20,8 @@ export const tuning = {
     /** Updraft charge gained per second of full twirling, and lost per second once the twirling stops. */
     chargeRate: 0.8,
     dischargeRate: 1.2,
+    /** How near on screen (in screen heights) circles have to be drawn to something the story asks to have lifted for the column to stand there. */
+    anchorNear: 0.32,
   },
   swirl: {
     /**
@@ -103,14 +105,26 @@ export const tuning = {
   },
   colt: {
     /**
-     * How much of the gust energy brushed under the colt counts as rising air. It takes off above 0.5 of lift and
-     * needs about 0.4 to stay up; energy tops out at 1.6 and fades in about a second, so it has to be kept up.
+     * How much of the gust energy brushed under the colt counts as rising air. It takes off above 0.5 of lift, and
+     * energy tops out at 1.6, so a bare gust makes it hope and open its wings but never lifts it: the lift is the
+     * spiral the wind shows them, and the player draws it. Nothing is failed if they never do.
      */
-    gustLift: 0.9,
+    gustLift: 0.25,
     /** How far round itself it also feels for wind, so the player's circles do not have to be dead centre on a moving bird. */
     reach: 2,
     /** Seconds the colt is left trying in the meadow before the child gathers it up and walks on. */
     tryFor: 60,
+  },
+  summit: {
+    /**
+     * The last lift is the whole gesture, not a flick: the updraft under it has to stand this tall (a bare gust
+     * brushes about 1.4 at most, a wound column about 4) and be kept there this long before it goes. Nothing
+     * times it out; the family only comes over calling now and then to show what is being asked.
+     */
+    liftToFly: 2.2,
+    liftFor: 3,
+    promptAt: 55,
+    promptEvery: 70,
   },
   piano: {
     /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */

@@ -82,6 +82,8 @@ export class Traveller {
   private ridePitch = 0;
   /** 0..1: both hands holding the drawing up in front. */
   presenting = 0;
+  /** Walking speed as a share of the usual: slowed for a walk nothing hurries. */
+  stroll = 1;
   /** Where the child is looking, if anywhere in particular. */
   lookAt: THREE.Vector3 | null = null;
   /** Down on their knees with the hem of the coat on the ground, 0 to 1: the height a child talks to something small at. */
@@ -420,7 +422,7 @@ export class Traveller {
         this.goal = null;
         g.onArrive?.();
       } else {
-        target = (g.run ? RUN : WALK) * Math.min(1, da / 1.5 + 0.3);
+        target = (g.run ? RUN : WALK * this.stroll) * Math.min(1, da / 1.5 + 0.3);
         const want = this.steer(Math.atan2(dx, dz), da);
         let dy = want - this.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));

@@ -164,11 +164,8 @@ body.shot #veil {
   right: max(72px, calc(env(safe-area-inset-right) + 54px));
   bottom: max(24px, calc(env(safe-area-inset-bottom) + 6px));
   padding: 8px 18px;
-  border: 1px solid rgba(255, 247, 234, 0.5);
-  border-radius: 999px;
-  background: rgba(255, 244, 226, 0.08);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  border: 0;
+  background: none;
   color: #fff7ea;
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   font-size: 14px;
@@ -189,12 +186,10 @@ body.shot #veil {
   100% {
     opacity: 0.32;
     text-shadow: 0 0 6px rgba(255, 236, 200, 0.3);
-    box-shadow: 0 0 10px rgba(255, 236, 200, 0.12);
   }
   50% {
     opacity: 0.9;
     text-shadow: 0 0 16px rgba(255, 236, 200, 0.75);
-    box-shadow: 0 0 22px rgba(255, 236, 200, 0.3);
   }
 }
 
