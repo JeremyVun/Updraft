@@ -3,6 +3,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PianoStrings, moodScale } from '../audio/audio';
 import type { AudioOut } from '../creatures/voices';
 import { KeyLine } from '../fx/keyline';
+import { NoteTraces } from '../fx/notetraces';
+import type { LifeField } from './life';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -24,7 +26,7 @@ import { WINDOW } from './window';
  */
 export const PLACE = meadowPoint(-18, -740);
 /** How far the colour round it reaches while the island is still grey, and how soft that edge is. */
-export const PATCH = { radius: 27, soft: 11 };
+export const PATCH = { radius: 19, soft: 9 };
 /** Turned toward the camera, which looks north from a little east of south, so the keys face the walk. */
 const YAW = 0.34;
 
@@ -300,6 +302,10 @@ export class Piano {
   /** The wind line that shows which way along the keys a phrase went, and where it runs. */
   private readonly line = new KeyLine();
   private readonly path = (t: number, out: THREE.Vector3): THREE.Vector3 => this.alongKeys(t, out);
+  /** What every note does to the meadow: a trace off its key and colour where it runs. */
+  private readonly traces = new NoteTraces();
+  private readonly back = new THREE.Vector2();
+  private readonly keyAt = new THREE.Vector3();
   private level = 0;
   private prevEnergy = 0;
   private runUntil = 0;
@@ -340,9 +346,12 @@ export class Piano {
       }),
     );
     /** The streak is built in world coordinates and drawn there, so the group's own transform never reaches it. */
-    this.group.add(shell, keys, this.line.batch.mesh);
+    this.group.add(shell, keys, this.line.batch.mesh, this.traces.batch.mesh);
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
+    /** The way up the hill behind the case, which is where every note goes. */
+    this.local(0, 0, -1, this.keyAt);
+    this.back.set(this.keyAt.x - this.group.position.x, this.keyAt.z - this.group.position.z).normalize();
     /** The lift is a fact about how the child's own pose sits, so it is added in world units, after the scale. */
     this.local(0.06, STOOL_TOP, STOOL_Z, this.seat).y += SEAT_LIFT;
     this.local(0.16, 0, 1.9, this.stand);
@@ -425,13 +434,14 @@ export class Piano {
   }
 
   /** `stroke` is the way the player's own wind is going right now, if they are making any: truer than the air over the keys, which the breeze is in too. */
-  update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null, stroke: THREE.Vector2 | null = null): void {
+  update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null, stroke: THREE.Vector2 | null = null, life: LifeField | null = null): void {
     this.now = time;
     this.stroke = stroke;
     this.strings.setOutput(out);
     const reach = camera.position.distanceTo(this.keys);
     this.group.visible = reach < 240;
     if (!this.group.visible) return;
+    this.traces.update(dt, wind, life);
 
     const { heardWithin, heardFully, dipRelease } = tuning.piano;
     this.level = 1 - THREE.MathUtils.smoothstep(reach, heardFully, heardWithin);
@@ -555,8 +565,15 @@ export class Piano {
   private play(midi: number, velocity: number, source: Source): void {
     const key = midi - LOW_MIDI;
     if (key >= 0 && key < KEY_COUNT) this.dip[key] = 1;
-    /** The wind is shown on the phrase the piano asks and on the sweep that answers it, and on nothing else. */
-    if (source === 'dream' || source === 'gust') this.line.aim(key / (KEY_COUNT - 1));
+    /**
+     * The wind is shown on the phrase the piano asks and on the sweep that answers it, and on nothing else: the
+     * whole tune played at the end runs up and down the keys too fast for a line to be anything but a scribble.
+     */
+    if (this.expect !== null && (source === 'dream' || source === 'gust')) this.line.aim(key / (KEY_COUNT - 1));
+    /** And every note, whoever sounded it, goes up the hill as a trace and leaves colour where it runs. */
+    if (key >= 0 && key < KEY_COUNT) {
+      this.traces.spawn(this.alongKeys(key / (KEY_COUNT - 1), this.keyAt), this.back, key / (KEY_COUNT - 1), THREE.MathUtils.clamp(velocity * 2, 0.25, 1));
+    }
     this.lastPlayed = this.now;
     if (source === 'gust' || source === 'lift') this.lastGesture = this.now;
     this.strings.note(midi, velocity, (KEYBOARD[key]?.x ?? 0) * 0.5, this.level * tuning.piano.loudness);

@@ -7,6 +7,8 @@ import { WINDOW, onWindowMove } from './window';
 
 const RES = 256;
 const READ_RES = 64;
+/** How many places colour can be planted in one frame. */
+const BLOOMS = 12;
 
 /**
  * Life comes back where the wind flows: gust energy and updrafts raise it, living ground fills itself in and
@@ -20,20 +22,31 @@ uniform float uDt;
 uniform vec2 uTexel;
 uniform vec4 uDomain;
 uniform vec4 uWaiting;
+uniform vec4 uBlooms[${BLOOMS}];
+uniform int uBloomCount;
 in vec2 vUv;
 void main() {
   float l = texture(uLife, vUv).r;
   vec4 w = texture(uWindTex, vUv);
-  float land = smoothstep(-0.4, 0.4, texture(uHeightTex, vUv).r);
-  /** The island that waits does not answer the wind at all: only the piano wakes it, and it wakes all of a piece. */
+  float ground = smoothstep(-0.4, 0.4, texture(uHeightTex, vUv).r);
+  float land = ground;
+  /** The island that waits does not answer the wind at all: only the piano wakes it, note by note and then all of a piece. */
   vec2 world = uDomain.xy + vUv / uDomain.zw;
   if (uWaiting.z > 0.0 && length((world - uWaiting.xy) / uWaiting.zw) < 1.0) land = 0.0;
+  /** Colour planted on purpose, where a note's trace runs: it takes wherever there is ground, waiting or not. */
+  float planted = 0.0;
+  for (int i = 0; i < ${BLOOMS}; i++) {
+    if (i >= uBloomCount) break;
+    vec4 b = uBlooms[i];
+    planted += b.w * (1.0 - smoothstep(0.4, 1.0, length(world - b.xy) / b.z));
+  }
+  planted *= ground;
   float n = 0.25 * (texture(uLife, vUv + vec2(uTexel.x, 0.0)).r + texture(uLife, vUv - vec2(uTexel.x, 0.0)).r
                   + texture(uLife, vUv + vec2(0.0, uTexel.y)).r + texture(uLife, vUv - vec2(0.0, uTexel.y)).r);
   float wake = (w.z * 1.1 + w.w * 0.7) * land;
   float grow = l > 0.22 ? 0.06 * l : 0.0;
   float spread = max(n - l, 0.0) * 0.4;
-  gl_FragColor = vec4(clamp(l + uDt * (wake + grow + spread), 0.0, 1.0), 0.0, 0.0, 1.0);
+  gl_FragColor = vec4(clamp(l + uDt * (wake + grow + spread + planted), 0.0, 1.0), 0.0, 0.0, 1.0);
 }`;
 
 const SHIFT_FRAG = /* glsl */ `
@@ -77,6 +90,8 @@ export class LifeField {
   private readonly cpu = new Float32Array(READ_RES * READ_RES * 4);
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
   private sinceRead = 0;
+  private readonly blooms = Array.from({ length: BLOOMS }, () => new THREE.Vector4());
+  private bloomCount = 0;
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);
@@ -92,6 +107,8 @@ export class LifeField {
       uTexel: { value: new THREE.Vector2(1 / RES, 1 / RES) },
       uDomain: atmo.uniforms.uDomain,
       uWaiting: atmo.uniforms.uWaiting,
+      uBlooms: { value: this.blooms },
+      uBloomCount: { value: 0 },
     });
     this.shiftMat = simMaterial(SHIFT_FRAG, { uSrc: { value: null }, uOffset: { value: new THREE.Vector2() } });
     this.copyMat = simMaterial(COPY_FRAG, { uSrc: { value: null } });
@@ -115,11 +132,23 @@ export class LifeField {
     });
   }
 
+  /**
+   * Plant colour this frame: `strength` is life per second within `radius` of (x, z). It takes even on the island
+   * that is waiting, and once it has taken it grows and spreads on its own like life anywhere. Each note the
+   * piano sounds plants a little where its trace runs; the piano's stages and the great wave do the rest.
+   */
+  bloom(x: number, z: number, radius: number, strength: number): void {
+    if (this.bloomCount >= BLOOMS) return;
+    this.blooms[this.bloomCount++].set(x, z, radius, strength);
+  }
+
   update(dt: number): void {
     this.lifeMat.uniforms.uDt.value = dt;
     this.lifeMat.uniforms.uLife.value = this.life.texture;
+    this.lifeMat.uniforms.uBloomCount.value = this.bloomCount;
     this.gpu.run(this.lifeMat, this.life.write);
     this.life.swap();
+    this.bloomCount = 0;
     atmo.uniforms.uLifeTex.value = this.life.texture;
 
     this.sinceRead += dt;

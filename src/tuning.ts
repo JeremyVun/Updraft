@@ -187,29 +187,52 @@ export const tuning = {
     linePen: 0.085,
     lineAlpha: 0.8,
     /**
+     * What every note does to the meadow: the trace it lifts off its key and runs up the hill behind the piano.
+     * How long it takes to lift clear of the case and how fast it climbs while it does; how fast it runs and how
+     * long it lives (longer for low notes); how high it rides over the grass at the bottom and the top of the
+     * keyboard; how readily it bends with the wind that is blowing; its width; and the colour it plants as it
+     * goes, as a radius and a rate of life per second.
+     */
+    traceLift: 0.45,
+    traceClimb: 4.5,
+    traceSpeed: 9,
+    traceFor: 3.6,
+    traceLonger: 1.8,
+    traceLow: 2.0,
+    traceHigh: 3.4,
+    traceBends: 1.2,
+    /** How far the traces fan across the hill from the bottom of the keyboard to the top, in radians. */
+    traceFan: 1.1,
+    traceWidth: 0.15,
+    bloomRadius: 3.6,
+    bloomRate: 4,
+    /**
      * The one frame the whole duet is played in: how far round from square on the keyboard the camera stands (so
      * left and right on screen is along the keys and the child's head is off them), how far back and how high
      * above the keys, how much further out it waits while they are still walking to it, and how much nearer it
      * comes while the cygnet is walking the keys.
      */
-    frameTurn: 0.34,
-    frameBack: 11,
-    frameUp: 3.4,
-    frameLook: 0.5,
+    frameTurn: 0.55,
+    frameBack: 10,
+    frameUp: 2.6,
+    frameLook: 1.1,
     frameWide: 9,
     frameHigh: 1.8,
     frameCreep: 2.4,
     framePace: 0.32,
     /**
-     * And the one move out of it, when the tune is whole and the island goes green: how long the rise takes, how
-     * far back and how high it comes to rest, how far along the way north its eye travels, how fast the camera
-     * follows the move, and how much less of all of it a wake nobody answered gets.
+     * And the one move out of it, when the tune is whole and the island goes green: how long the rise takes, the
+     * bearing it spirals round to, how far back and how high it comes to rest, how far along the way north its
+     * eye travels, how fast the camera follows the move, how long it rests before the child gets up, and how much
+     * less of all of it a wake nobody answered gets.
      */
-    riseFor: 9,
-    riseBack: 30,
-    riseUp: 13,
-    riseOn: 18,
+    riseFor: 10,
+    riseTo: -0.12,
+    riseBack: 50,
+    riseUp: 20,
+    riseOn: 20,
     risePace: 0.6,
+    restFor: 6,
     riseQuiet: 0.72,
   },
   wood: {

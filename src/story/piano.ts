@@ -34,8 +34,6 @@ const LULLABY: number[][][] = [
 ];
 const CADENCE = [0, 2, 4, 7, 4, 2, 0];
 
-/** The bearing the walk's own camera stands at, so the finale comes to rest in the frame it hands back to. */
-const ONWARD = 0.075;
 
 /**
  * The stop at the piano on the meadow. The plane leans toward it like any other waypoint, and if the child comes
@@ -188,9 +186,12 @@ export class PianoStop {
    * their shoulder, near enough square on the keyboard that left and right on screen is along the keys and their
    * head is off them, high enough to see the keys past them and the meadow they are waking beyond the piano. It
    * arrives there in a single glide as they sit and does not move again until the tune is whole. Then it lifts
-   * out of that frame in one slow, eased rise, swinging round behind them onto the way north, and comes to rest
-   * looking along it, so the green rolling out to the hills is watched over the ground they are about to walk.
-   * Returns how fast the camera should follow it, or null while the stop does not own the frame.
+   * out of that frame in one slow, eased rise, spiralling round behind them and up onto the way north, and comes
+   * to rest well back and mid-high, the child and the piano at the foot of the frame and the green rolling away
+   * from them to the crest, toward the notch the pond lies beyond. The pond itself cannot be seen from here: it
+   * is two rises and two hundred paces off, and a camera high enough to look over them would be looking down on
+   * the game. Its reveal is the brow's, on the walk. Returns how fast the camera should follow, or null while the
+   * stop does not own the frame.
    */
   frame(shot: Shot): number | null {
     if (this.beat === 'ahead' || this.beat === 'done') return null;
@@ -207,7 +208,7 @@ export class PianoStop {
       /** Eased at both ends, so the rise begins and settles without a hand on it anywhere in between. */
       const k = THREE.MathUtils.smoothstep(this.now - this.roseFrom, 0, t.riseFor);
       const far = this.answered ? 1 : t.riseQuiet;
-      bearing += (ONWARD - bearing) * k;
+      bearing += (t.riseTo - bearing) * k;
       distance += (t.riseBack * far - distance) * k;
       height += (t.riseUp * far - height) * k;
       this.mid.z -= t.riseOn * far * k;
@@ -286,7 +287,7 @@ export class PianoStop {
     const ends = piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.42 : 0.3);
     /** However the bird's turn on the keys goes, the island is woken and the child is up again by these times. */
     this.wakeAt = ends + tuning.piano.walkKeys;
-    this.finishedAt = this.wakeAt + tuning.piano.riseFor + 6;
+    this.finishedAt = this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor;
     if (answered) cast.child.cheer();
     /** Out of the satchel first, because from there it can reach the keys without anybody lifting it. */
     this.walkFrom = -1;
@@ -336,7 +337,7 @@ export class PianoStop {
     this.wakeAt = 0;
     this.roseFrom = time;
     this.onWake?.(3, this.answered);
-    this.finishedAt = time + tuning.piano.riseFor + 2.5;
+    this.finishedAt = time + tuning.piano.riseFor + tuning.piano.restFor;
   }
 
   private give(child: Cast['child']): void {
