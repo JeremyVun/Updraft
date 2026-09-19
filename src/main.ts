@@ -58,6 +58,7 @@ import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
+import { createJetty } from './world/jetty';
 import { COTTAGE, ISLES, mainlandCoastZ, meadowPoint } from './world/heightfield';
 import { Pond } from './world/pond';
 import { Water } from './world/water';
@@ -161,6 +162,8 @@ const birches = new AutumnBirches(renderer, wind);
 birches.objects.forEach((o) => scene.add(o));
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
+/** And out from the beach below it, the one landing in the journey that was built rather than run up onto. */
+scene.add(createJetty());
 const petals = new Petals(renderer, tuning.petals.stillIslandShare);
 scene.add(petals.mesh);
 const allFlowers = [...FLOWER_PATCHES, ...hillFlowers];
@@ -386,6 +389,7 @@ function frame(now: number): void {
   wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * story.breeze);
 
   input.muted = story.current.scripted ?? false;
+  input.anchor = story.current.invitesFlight && !cygnet.gone ? cygnet.position : null;
   input.update(dt, rig.camera, wind);
   if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   story.update(dt, time);

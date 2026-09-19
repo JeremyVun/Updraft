@@ -83,16 +83,58 @@ And, a little later:
    faint breathing "play again" in the corner.
 7. **Grass on the home island**: lusher than the pasture, and the summit no longer half-grazed.
 
-## Status (2026-09-18)
+## Jeremy's second brief (2026-09-19, verbatim)
 
-On `main`: the shelving shore and the shorter route; the jetty's deck and mooring (`HOME_JETTY`, `HOME_MOORING` in
-`story/home.ts`, `Boat.mooring`, `Traveller.decks`; `?chapter=jetty` starts moored with the walk in to do) — the
-jetty itself is not built yet, the child walks in on an invisible deck; the dolphins (merged from `end-dolphins`:
-`tuning.dolphins`, `Boat.nudge`, `Dolphins.spotlight`); the cygnet's `fledging` state and `join`; the restructured
-beats, cameras and timings in `home.ts`; the lush home grass; the finale (`Soundscape.finale`, cue `finale`,
-`SoundState.silence`, everything musical on one `musicBus`) and the credits (`#credits`, `#again` in `index.html`,
-copy in `docs/copy/copy-2.json`, awaiting Jeremy's verdict).
+> "1. play again shouldnt have a button border.
+> 2. it should take more wind from the player to help the cygnett fly. right now i only need to move my mouse and
+> draw one short line (it should feel more involved from the player, more cursor turns to create the updraft to help
+> it fly). This should also be the one sequence in the game that doesn't time out (it requires the player to do
+> something).
+> 3. I want a better animation for the child unfolding the paper aeroplane, and when they do so, the house should
+> be in sight (and the chimney shouldn't start smoking until the child enters the house). I'm thinking that after
+> they help the cygnett fly away, there's an emotional pause of some kind as they keep walking slowly up the hill,
+> and then they see the house and then unfold the paper aeroplane.
+> 4. For the ending scene with the sky full of stars, is there a way to compose the shot so that the stars are
+> still sparkling in the water in the bottom half, while keeping the moon in the shot? The moon probably shouldn't
+> be right in the middle of the screen horizontally either (it causes the credit text to become hard to read). I
+> dont know, please take a look and help me figure out how to better compose this final camera pan (maybe water
+> distance rendering needs a look at as well? I'm not sure)."
 
-The fledging's visual pass is merged (`tuning.fledge`, `Cygnet.circuit`/`turnBack`, `SwanFlock.nextSlot`). In flight: the jetty model
-(Opus 5 parcel: piles, planks, a post, something left on it that says somebody lives here; the boat comes
-alongside its end bow to the east), then one full run from `?chapter=sea` through the credits to check the whole.
+And, while that was being built:
+
+> "there should be some mechanic in the game called an 'updraft' that the player learns either by accident or as
+> part of earlier puzzles and sequences where we show them an upward spiralling trace (like at the summit scene
+> currently), and the player has to mirror it with their cursor (mouse / touch screen drag)"
+
+## What answers it (2026-09-19)
+
+- **The lift is the whole gesture.** A bare gust used to count as lift under the bird (`tuning.colt.gustLift` 0.9
+  against a take-off at 0.5), so one stroke lifted it. Now gusts only make it hope (0.25: wings half open, nothing
+  more), and at the summit it needs a column of `tuning.summit.liftToFly` held for `liftFor` seconds
+  (`Cygnet.needs`): about four or five turns of the cursor round it. Nothing times it out: the family passes over
+  calling every `promptEvery` seconds instead of the night wind doing it for the player.
+- **The updraft is taught by mirroring.** The invitation spiral (`Coax`, `fx/swirl.ts`) was already shown in the
+  meadow's `try` beat and at the summit; what stopped it being a lesson was that gusts lifted the bird anyway, and
+  that the player's column stood at the cursor's ground point, which under a low camera is a long ellipse off the
+  bird. Now `input.anchor` (set by `main.ts` while a chapter `invitesFlight`) stands the column at the bird when
+  the circles are drawn near it on screen (`tuning.pointer.anchorNear`), so the player's spiral takes the
+  invitation's place exactly. The meadow teaches it, the summit asks for it.
+- **On over the brow.** The cottage was hidden from the summit point behind the true crest (10 units further on),
+  which is why the drawing used to open against grass. After the family goes, the child walks on slowly
+  (`Traveller.stroll`, beat `crest`) with their eyes on the path, and over the brow the valley opens and their eyes
+  go to the roof; they sit at `REVEAL` (28 units on) and open the drawing with the cottage in frame beyond it.
+  The chimney is cold (`Cottage.smoking`) until the child is through the door.
+- **Play again** is bare glowing text: no border, box or blur.
+- The final rise and the stars in the water: Opus 5 parcel `end-stars`. The unfolding animation: Opus 5 parcel
+  `end-unfold`.
+
+## Status (2026-09-19)
+
+On `main`: everything in the first brief (the shelving shore and the shorter route; the jetty, `world/jetty.ts`,
+with its deck and mooring, the arrival watched from the water and the climb watched from low behind the child;
+the dolphins; the fledging and join; the restructured beats, cameras and timings in `home.ts`; the lush home
+grass; the finale and the credits) and the second brief's mechanics above.
+
+Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
+the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`
+reports the set-down step-off jerk a hair over its limit (0.021 against 0.02), in `companion/carry.ts`.

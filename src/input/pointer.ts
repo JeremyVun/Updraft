@@ -18,6 +18,12 @@ export class PointerInput {
   charge = 0;
   /** The middle of the circles being traced, where the air rises. */
   readonly updraftAt = new THREE.Vector3();
+  /**
+   * Something the story is asking the player to lift. Circles drawn round it on screen stand their column there,
+   * because a circle on the screen is a long ellipse on the ground under a low camera and the air would rise
+   * anywhere along it but under the bird.
+   */
+  anchor: THREE.Vector3 | null = null;
   present = false;
   /**
    * Set while the story is playing a beat out on its own. The pointer still tracks, but it puts nothing into the
@@ -33,6 +39,7 @@ export class PointerInput {
   private readonly instVel = new THREE.Vector2();
   private readonly ray = new THREE.Raycaster();
   private heading: number | null = null;
+  private readonly anchorNdc = new THREE.Vector3();
   private spin = 0;
   private sinceHeading = 0;
   private listeners: ((kind: 'down' | 'up') => void)[] = [];
@@ -122,7 +129,15 @@ export class PointerInput {
     if (want > this.charge) this.charge = Math.min(want, this.charge + dt * T.chargeRate * want);
     else this.charge = Math.max(want, this.charge - dt * T.dischargeRate);
     const settle = this.charge < 0.05 ? 1 : 1 - Math.exp(-dt * 2);
-    this.updraftAt.lerp(this.world, settle);
+    this.updraftAt.lerp(this.anchored(camera) ?? this.world, settle);
+  }
+
+  private anchored(camera: THREE.Camera): THREE.Vector3 | null {
+    if (!this.anchor) return null;
+    const a = this.anchorNdc.copy(this.anchor).project(camera);
+    if (a.z > 1) return null;
+    const aspect = camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1;
+    return Math.hypot((this.ndc.x - a.x) * aspect, this.ndc.y - a.y) < T.anchorNear ? this.anchor : null;
   }
 
   update(dt: number, camera: THREE.Camera, wind: WindField): void {
