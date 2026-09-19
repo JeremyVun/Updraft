@@ -644,7 +644,7 @@ export class HomeChapter implements Chapter {
     c.faceToward(faceX, faceZ, 1 - Math.exp(-dt * 1.2));
     const fwd = this.forward();
     /** The hand the plane has ridden in the whole way (`handPosition` is that one), out and up, offering it. */
-    c.reachFor(0, this.held.set(c.position.x + fwd.x * 0.62, c.position.y + 2.35, c.position.z + fwd.z * 0.62));
+    c.reachFor(0, this.held.set(c.position.x + fwd.x * 0.74, c.position.y + 2.46, c.position.z + fwd.z * 0.74));
     const w = wind.sample(p.position.x, p.position.z, this.air);
     const reach = Math.hypot(input.world.x - c.position.x, input.world.z - c.position.z);
     const over = input.present && input.gust > 4 ? 1 - THREE.MathUtils.smoothstep(reach, 30, 95) : 0;
@@ -900,8 +900,8 @@ export class HomeChapter implements Chapter {
       const k = THREE.MathUtils.smootherstep(this.t, 0, 7);
       const gone = this.wentAt > 0 ? THREE.MathUtils.smoothstep(this.now - this.wentAt, 0, 2.5) : 0;
       arc = BROW_ARC + (GOES_ARC - BROW_ARC) * k;
-      dist = 7.6 + 1.8 * k;
-      rise = 5.2 - 0.6 * k;
+      dist = 6.6 + 2.4 * k;
+      rise = 4.9 - 0.4 * k;
       ahead = 12;
       aimUp = -0.2 + gone * THREE.MathUtils.clamp((this.cast.plane.position.y - c.y) * 0.5, 0, 7);
       onPaper = 0;
