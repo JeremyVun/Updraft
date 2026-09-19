@@ -320,7 +320,7 @@ export const tuning = {
     fogSwell: 0.7,
     fogDrift: 0.02,
     /** How hard a gust cuts a lane in the fog, how wide the cut is, and the seconds a lane takes to close again. */
-    carveStrength: 2.6,
+    carveStrength: 4.2,
     carveWidth: 4.2,
     carveCloses: 8,
     /** Wind speed at which a stroke carves at full strength. */

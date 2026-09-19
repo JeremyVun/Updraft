@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
-import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
+import { BED, BED_FACING, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 
 type Beat = 'ashore' | 'toBed' | 'beside' | 'toBoat' | 'push' | 'aboard';
@@ -143,11 +143,24 @@ export class SleepingChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    s.target.set(c.x + this.aim.x * 2.6, ground + 1.7, c.z + this.aim.z * 2.6);
-    /** The hollow is a bowl, so the eye is kept low against the child rather than a fixed height above the slope. */
-    const ex = c.x - this.aim.x * 6.5 - this.aim.z * 1.1;
-    const ez = c.z - this.aim.z * 6.5 + this.aim.x * 1.1;
-    s.eye = this.side.set(ex, Math.max(ground + 1.8, Math.max(heightAt(ex, ez), 0) + 0.35), ez);
+    if (this.beat === 'beside') {
+      /** Standing at the bed, the room is the subject: the shot comes round the foot of it so nothing is behind them. */
+      const dir = this.side.set(-BED_FACING.y * 0.7 + BED_FACING.x * 1.1, 0, BED_FACING.x * 0.7 + BED_FACING.y * 1.1).normalize();
+      s.target.set(BED.x, BED.y + 1.1, BED.z);
+      const bx = BED.x + dir.x * 11;
+      const bz = BED.z + dir.z * 11;
+      s.eye = this.look.set(bx, Math.max(BED.y + 2.6, Math.max(heightAt(bx, bz), 0) + 0.4), bz);
+      this.focus.copy(c);
+      return;
+    }
+    s.target.set(c.x + this.aim.x * 2.8, ground + 1.7, c.z + this.aim.z * 2.8);
+    /**
+     * Well back and well to one side: the hollow is a bowl, and the rig will not bring a camera nearer the
+     * ground than its own clearance, so standing off is the only way the room is seen along rather than down.
+     */
+    const ex = c.x - this.aim.x * 11 - this.aim.z * 2.2;
+    const ez = c.z - this.aim.z * 11 + this.aim.x * 2.2;
+    s.eye = this.side.set(ex, Math.max(ground + 2.2, Math.max(heightAt(ex, ez), 0) + 0.4), ez);
     this.focus.copy(c);
   }
 }
