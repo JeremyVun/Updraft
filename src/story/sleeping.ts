@@ -92,15 +92,24 @@ export class SleepingChapter implements Chapter {
   private tighten = 0;
   private sunAt = 0;
   private sat = false;
+  private landYaw = 0;
   private warmed = 0;
   private laid = false;
   private readonly hand = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();
-  private readonly look = new THREE.Vector3();
   private readonly aim = new THREE.Vector3(-1, 0, 0);
   private readonly side = new THREE.Vector3();
-  private readonly perch = new THREE.Vector3();
   private readonly spot = new THREE.Vector3();
+  /**
+   * Anything handed to somebody else is handed to them by reference and read by them every frame after: where the
+   * child is looking, where the bird is looking, what it is walking to, the flattened grass and the camera's eye.
+   * Each of them owns a vector of its own, because sharing one makes the camera tell the bird where to walk.
+   */
+  private readonly look = new THREE.Vector3();
+  private readonly told = new THREE.Vector3();
+  private readonly carrot = new THREE.Vector3();
+  private readonly flat = new THREE.Vector3();
+  private readonly perch = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3(0, 0, -1);
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
@@ -220,10 +229,15 @@ export class SleepingChapter implements Chapter {
     }
 
     /** The colour goes out of the world while the night has them, and comes back with the sun off the hill. */
-    const warm = this.warmed > 0 ? 1 : 0.06;
+    /** Colour comes back with the morning, but this is a frosted island at the end of the year and stays one. */
+    const warm = this.warmed > 0 ? 0.75 : 0.06;
     this.worldLife += (warm - this.worldLife) * (1 - Math.exp(-dt * 0.4));
-    /** The sky goes from the wood's night to the sunrise the bird brings, and the crossing home leaves in it. */
-    this.dusk += ((this.warmed > 0 ? 1.02 : 1.9) - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    /**
+     * The sky goes from the wood's night, through the grey the hour before dawn actually is once the bird is out
+     * on the hill, to the sunrise it brings back down. Nothing here gives the morning away before it arrives.
+     */
+    const night = this.warmed > 0 ? 1.02 : this.beat === 'ashore' || this.beat === 'toBed' || this.beat === 'tuckIn' || this.beat === 'asleep' ? 1.9 : 1.58;
+    this.dusk += (night - this.dusk) * (1 - Math.exp(-dt * 0.22));
     this.haze += ((this.warmed > 0 ? 0.6 : 0.82) - this.haze) * (1 - Math.exp(-dt * 0.2));
     this.tighten = Math.max(0, this.tighten - dt * 0.55);
     c.tighter = this.tighten;
@@ -233,7 +247,7 @@ export class SleepingChapter implements Chapter {
      * long as the child is tall, so holding it out where it could be seen over a sleeping child is the one thing
      * that cannot be staged: it is not lost, nobody fetches it, and it is exactly where they left it.
      */
-    p.visible = c.abed < 0.55;
+    p.visible = c.abed < 0.55 && this.beat !== 'waking';
     sleeping.sleeper = this.laid ? 1 : 0;
     this.heading(dt);
     this.frame();
@@ -276,7 +290,7 @@ export class SleepingChapter implements Chapter {
   private asleep(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
     k.perch(ON_BLANKET, this.onBlanketYaw);
-    k.watch(c.face(this.look));
+    k.watch(c.face(this.told));
     /** The frost comes in across the hollow toward the bed the whole time they lie there. */
     sleeping.frost = lerp(0.3, T.frostAsleep, smooth(this.t, 0, 40));
     this.hush = lerp(this.hush, this.called && this.t - this.callAt < 7 ? 0.95 : 0.55, 1 - Math.exp(-dt * 0.8));
@@ -332,7 +346,7 @@ export class SleepingChapter implements Chapter {
     if (this.t < 5.5) {
       k.perch(ON_BLANKET, this.onBlanketYaw);
       /** At the feather, then at the child, and then it goes. That order is the whole decision. */
-      k.watch(this.t < 2.6 || this.t > 4.4 ? f.position : c.face(this.look));
+      k.watch(this.t < 2.6 || this.t > 4.4 ? f.position : c.face(this.told));
       return;
     }
     /** Off the blanket and onto the grass beside the bed: from here it is walking, and it is on its own. */
@@ -347,7 +361,7 @@ export class SleepingChapter implements Chapter {
   private theEdge(): void {
     const { cygnet: k, sleeping } = this.cast;
     const f = sleeping.feather;
-    this.trodden = this.spot.set(BED.x, TRODDEN + 2, BED.z);
+    this.trodden = this.flat.set(BED.x, TRODDEN + 2, BED.z);
     const gap = Math.hypot(k.position.x - EDGE.x, k.position.z - EDGE.z);
     if (gap > 1.8 && this.looks === 0 && this.t < T.edgeFor) {
       this.lead(f.position);
@@ -358,8 +372,8 @@ export class SleepingChapter implements Chapter {
     if (this.looks === 0 && this.nextLook === 0) this.nextLook = this.now + 0.4;
     if (this.looks < 2 && this.now > this.nextLook) {
       this.looks++;
-      k.does('look-back', this.spot.copy(BED).setY(BED.y + 1.1), T.looksBack);
-      k.watch(this.spot);
+      k.does('look-back', this.told.copy(BED).setY(BED.y + 1.1), T.looksBack);
+      k.watch(this.told);
       this.nextLook = this.now + T.looksBack + 1.2;
     }
     if (this.looks >= 2 && this.now > this.nextLook) {
@@ -434,7 +448,7 @@ export class SleepingChapter implements Chapter {
     sleeping.feather.goal.set(k.position.x, Math.max(heightAt(k.position.x, k.position.z), 0) + 2.2, k.position.z);
     this.hush = lerp(this.hush, 0.85, 1 - Math.exp(-dt * 0.6));
     /** The first sun stands on the top of the hill from the moment it gets there. */
-    sleeping.dawn = Math.min(0.3, sleeping.dawn + dt * 0.1);
+    sleeping.dawn = Math.min(0.42, sleeping.dawn + dt * 0.1);
     sleeping.frost = Math.min(T.frostWorst, sleeping.frost + dt * 0.02);
     if (k.flying || this.now > this.sunAt) this.away();
   }
@@ -461,13 +475,15 @@ export class SleepingChapter implements Chapter {
     const { cygnet: k, sleeping } = this.cast;
     const down = k.sailing;
     sleeping.laneOpen = Math.max(sleeping.laneOpen, down);
-    sleeping.dawn = Math.max(sleeping.dawn, 0.3 + 0.7 * down);
+    sleeping.dawn = Math.max(sleeping.dawn, 0.42 + 0.58 * down);
     sleeping.fog = Math.min(sleeping.fog, 1 - 0.8 * down);
     sleeping.frost = Math.min(sleeping.frost, T.frostWorst * (1 - down));
     sleeping.curtains = Math.max(sleeping.curtains, smooth(down, 0.6, 0.9));
     this.warmed = 1;
     this.hush = lerp(this.hush, 0.35, 1 - Math.exp(-dt * 0.5));
     if (k.state === 'perched' || down >= 1) {
+      /** It comes in on the heading it was flying and turns to the child over the next breath, never in a frame. */
+      this.landYaw = k.yaw;
       this.to('waking');
       cue('home');
     }
@@ -476,7 +492,9 @@ export class SleepingChapter implements Chapter {
   /** The light through the window, the bird on the blanket, and a child who wakes up warm. */
   private waking(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
-    k.perch(ON_BLANKET, this.onBlanketYaw);
+    const turn = this.onBlanketYaw - this.landYaw;
+    this.landYaw += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 1.6));
+    k.perch(ON_BLANKET, this.landYaw);
     sleeping.laneOpen = 1;
     sleeping.dawn = 1;
     sleeping.fog = Math.max(0, sleeping.fog - dt * 0.6);
@@ -485,7 +503,7 @@ export class SleepingChapter implements Chapter {
     this.hush = lerp(this.hush, 0.2, 1 - Math.exp(-dt * 0.6));
     if (this.t > 2.2) {
       c.eyesShut = 0;
-      k.watch(c.face(this.look));
+      k.watch(c.face(this.told));
     }
     /** They sit up in it, and the bird is what they see. */
     if (this.t > 3.6) {
@@ -508,7 +526,7 @@ export class SleepingChapter implements Chapter {
   private inTheLap(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
     c.lookAt = k.eye(this.look);
-    k.watch(c.face(this.spot));
+    k.watch(c.face(this.told));
     sleeping.blanket = Math.min(0.5, sleeping.blanket + dt * 0.25);
     sleeping.fog = 0;
     sleeping.frost = 0;
@@ -528,13 +546,19 @@ export class SleepingChapter implements Chapter {
   private lead(at: THREE.Vector3): void {
     const { cygnet: k } = this.cast;
     k.stay = false;
-    k.errand = this.perch.set(at.x, Math.max(heightAt(at.x, at.z), 0), at.z);
+    k.errand = this.carrot.set(at.x, Math.max(heightAt(at.x, at.z), 0), at.z);
     k.watch(at);
   }
 
   private board(): void {
-    const { child: c, boat } = this.cast;
+    const { child: c, boat, cygnet: k } = this.cast;
     this.to('toBoat');
+    /** Nothing of this room goes on board with them: it is the bird's own again from here. */
+    k.watch(null);
+    k.errand = null;
+    k.stay = false;
+    k.pace = 1;
+    this.trodden = null;
     c.lookAt = null;
     c.walkTo(
       boat.position.x + 1.8,
@@ -614,12 +638,16 @@ export class SleepingChapter implements Chapter {
       case 'edge':
       case 'climb':
       case 'shiver': {
-        /** Down at the bird's eye, where the grass is over its head and the fog top is the sky. */
+        /**
+         * Down at the bird's eye, where the grass is over its head and the fog top is the sky. It stands behind
+         * the way up rather than behind the bird: a bird that stops to look at something must not swing the
+         * whole world round with its head.
+         */
         const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        s.target.set(k.position.x + this.ahead.x * 1.5, ground + 0.6, k.position.z + this.ahead.z * 1.5);
-        const ex = k.position.x - this.ahead.x * 3.6 - this.ahead.z * 1.2;
-        const ez = k.position.z - this.ahead.z * 3.6 + this.ahead.x * 1.2;
-        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 0.8, ez);
+        s.target.set(k.position.x + UPHILL.x * 2.2, ground + 0.85, k.position.z + UPHILL.y * 2.2);
+        const ex = k.position.x - UPHILL.x * 3.4 - UPHILL.y * 1.5;
+        const ez = k.position.z - UPHILL.y * 3.4 + UPHILL.x * 1.5;
+        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 0.85, ez);
         s.clearance = 0.55;
         this.pace = 0.7;
         this.focus.copy(k.position);
@@ -650,18 +678,18 @@ export class SleepingChapter implements Chapter {
       case 'waking': {
         /** The window, and the face on the pillow the light comes through onto. */
         s.target.set((PILLOW.x + k.position.x) / 2, PILLOW.y + 0.5, (PILLOW.z + k.position.z) / 2);
-        const dir = this.side.set(BESIDE.x * 0.8 + BED_FACING.x * 0.8, 0, BESIDE.y * 0.8 + BED_FACING.y * 0.8).normalize();
-        s.eye = this.perch.set(PILLOW.x + dir.x * 3.4, PILLOW.y + 1.0, PILLOW.z + dir.z * 3.4);
-        s.clearance = 0.85;
+        const dir = this.side.set(BESIDE.x * 0.85 + BED_FACING.x * 0.7, 0, BESIDE.y * 0.85 + BED_FACING.y * 0.7).normalize();
+        s.eye = this.perch.set(PILLOW.x + dir.x * 6.4, PILLOW.y + 2.1, PILLOW.z + dir.z * 6.4);
+        s.clearance = 1.2;
         this.pace = 0.5;
         this.focus.copy(PILLOW);
         return;
       }
       case 'lap': {
         const dir = this.side.set(BESIDE.x * 1.05 + BED_FACING.x * 0.4, 0, BESIDE.y * 1.05 + BED_FACING.y * 0.4).normalize();
-        s.target.set(c.x, c.y + 1.4, c.z);
-        s.eye = this.perch.set(c.x + dir.x * 4.4, c.y + 2.0, c.z + dir.z * 4.4);
-        s.clearance = 1.4;
+        s.target.set(c.x, c.y + 1.3, c.z);
+        s.eye = this.perch.set(c.x + dir.x * 6.2, c.y + 2.4, c.z + dir.z * 6.2);
+        s.clearance = 1.6;
         this.pace = 0.45;
         this.focus.copy(c);
         return;

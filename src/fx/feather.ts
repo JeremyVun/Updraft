@@ -5,7 +5,7 @@ import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
 
 /** How long the feather is, in world units: a swan's primary beside a bird a unit and a half tall. */
-const LENGTH = 0.62;
+const LENGTH = 0.82;
 const STEPS = 14;
 
 const VERT = /* glsl */ `
@@ -156,7 +156,9 @@ export class Feather {
     v.z += (w.z - v.z) * take;
     const rising = w.lift * t.featherLift + w.energy * t.featherGust;
     this.lift += (Math.min(1, rising / t.featherSink) - this.lift) * (1 - Math.exp(-dt * 3));
-    v.y += (rising - t.featherSink - v.y) * (1 - Math.exp(-dt * 2.2));
+    /** It hangs: below the height it likes the air holds it up, and above it it sinks the way a feather does. */
+    const hold = THREE.MathUtils.clamp((floor + t.featherHangs - p.y) * 0.5, -0.25, 0.6);
+    v.y += (rising + hold - t.featherSink - v.y) * (1 - Math.exp(-dt * 2.2));
 
     /**
      * And it leans where the story wants it, harder the further off it has got, exactly as the paper plane does:

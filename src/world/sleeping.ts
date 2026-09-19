@@ -371,7 +371,7 @@ out vec3 vWorld;
 void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  vWorld = aDown.xyz + (right * position.x + up * position.y) * 0.11;
+  vWorld = aDown.xyz + (right * position.x + up * position.y) * 0.055;
   vUv = position.xy;
   vFade = aDown.w;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);

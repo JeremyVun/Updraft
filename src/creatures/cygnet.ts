@@ -869,8 +869,11 @@ export class Cygnet {
       lerp(from.y, to.y, e) + Math.sin(e * Math.PI) * this.sailArc,
       from.z + (to.z - from.z) * e + (az / across) * side,
     );
-    /** Never nearer the hillside than a bird would fly it, except at the very end where it is meant to arrive. */
-    const clear = Math.max(heightAt(p.x, p.z), 0) + 1.5 * (1 - k * k);
+    /**
+     * Never nearer the hillside than a bird would fly it, except at the two ends: it leaves the ground it was
+     * standing on rather than being lifted off it, and it comes down onto what it is aimed at.
+     */
+    const clear = Math.max(heightAt(p.x, p.z), 0) + 1.5 * (1 - k * k) * THREE.MathUtils.smoothstep(k, 0, 0.14);
     if (p.y < clear) p.y = clear;
 
     const rise = dt > 0 ? (p.y - was) / dt : 0;

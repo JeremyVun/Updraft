@@ -375,7 +375,9 @@ export const tuning = {
     featherLift: 0.5,
     featherGust: 0.5,
     /** How hard it leans toward the goal, in units a second squared: about 0.9 units a second of drift in still air. */
-    featherLean: 1.45,
+    featherLean: 2.6,
+    /** How high off the grass it likes to hang: below this the air holds it up, above it it sinks like a feather. */
+    featherHangs: 1.5,
     /** Seconds it will lie on the grass before a breath of its own picks it up again, and how high it may hang. */
     featherRests: 2.5,
     featherCeiling: 3.4,
