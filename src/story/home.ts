@@ -625,10 +625,15 @@ export class HomeChapter implements Chapter {
       this.focus.copy(c);
       return;
     }
+    /**
+     * The hill is steeper than the lens is tall: from behind and above, the whole frame is grass. So the climb is
+     * watched from low behind them, looking up the slope, and they go up against the crest and the sky.
+     */
     const ground = Math.max(heightAt(c.x, c.z), 0);
-    s.target.set(c.x, ground + 3, c.z - 6);
-    s.distance = 34;
-    s.height = 11;
+    const ahead = Math.max(heightAt(c.x, c.z - 8), 0);
+    s.target.set(c.x, ahead + 3, c.z - 8);
+    s.distance = 24;
+    s.height = ground - 0.6 - s.target.y;
     this.pace = 0.35;
     this.focus.set(c.x, ground, c.z);
   }
