@@ -952,6 +952,12 @@ export class Grass {
       if (!l.count) continue;
       l.tableMat.uniforms.uTileCount.value = l.count;
       this.quad.material = l.tableMat;
+      // The table reserves room for the maximum tile population, but only these
+      // rows are sampled by this frame's instances. Scissor the clear as well as
+      // the draw: writing four attachments for empty rows wastes bandwidth.
+      const rows = Math.ceil(l.count * l.spec.cols * l.spec.rows / TABLE_WIDTH);
+      l.table.scissor.set(0, 0, TABLE_WIDTH, rows);
+      l.table.scissorTest = true;
       renderer.setRenderTarget(l.table);
       this.quad.render(renderer);
     }

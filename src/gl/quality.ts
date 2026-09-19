@@ -35,18 +35,32 @@ export class Quality {
 
   /** Opens at the highest level within the pixel budget for a `width` × `height` view (and `startRatio`); the rest is climbed into. */
   constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
+    // QA overrides are exact, including subpixel scales; neither the startup cap nor
+    // the adaptive ladder may silently substitute a different resolution.
+    if (locked) {
+      this.levels.push({ ratio: maxRatio, samples });
+      return;
+    }
     if (!location.search.includes('nocap')) startRatio = Math.min(startRatio, Math.sqrt(OPENING_PIXELS / Math.max(1, width * height)));
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples });
-    this.levels.push({ ratio: 1, samples });
-    if (samples > 2) this.levels.push({ ratio: 1, samples: 2 });
+    const baseRatio = Math.min(1, maxRatio);
+    this.levels.push({ ratio: baseRatio, samples });
+    if (samples > 2) this.levels.push({ ratio: baseRatio, samples: 2 });
     /**
      * Below one device pixel per pixel, and softer for it. Only a machine that is already missing every other
      * refresh ever gets here, and in a game this slow a soft frame that arrives is worth more than a sharp one
      * that does not: a saturated GPU also starves the readbacks the wind and the life are read back through.
      */
-    this.levels.push({ ratio: 0.85, samples: Math.min(samples, 2) });
-    this.levels.push({ ratio: 0.72, samples: Math.min(samples, 2) });
-    this.index = Math.max(0, this.levels.findIndex((l) => l.ratio <= startRatio));
+    this.levels.push({ ratio: baseRatio * 0.85, samples: Math.min(samples, 2) });
+    this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2) });
+    const opening = this.levels.findIndex((l) => l.ratio <= startRatio);
+    this.index = opening < 0 ? this.levels.length - 1 : opening;
+  }
+
+  /** Time behind the start screen or in a hidden tab is not evidence of smooth play. */
+  reset(now: number): void {
+    this.recent.length = 0;
+    this.changedAt = this.lastReview = this.smoothSince = now;
   }
 
   get level(): QualityLevel {

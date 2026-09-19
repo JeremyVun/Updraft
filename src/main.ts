@@ -448,7 +448,10 @@ function ease(from: number, to: number, rate: number, dt: number): number {
 }
 let time = 0;
 let last = performance.now();
-document.addEventListener('visibilitychange', () => { last = performance.now(); });
+document.addEventListener('visibilitychange', () => {
+  last = performance.now();
+  quality.reset(last);
+});
 let frames = 0;
 let fpsWindowStart = last;
 let fps = 0;
@@ -844,6 +847,7 @@ async function boot(): Promise<void> {
       setSound(true);
     }
     last = performance.now();
+    quality.reset(last);
     fpsWindowStart = last;
     requestAnimationFrame(frame);
   });
