@@ -155,7 +155,7 @@ void main() {
    * shows between them and has to be the grass itself rather than the soil under it. The frost then creeps over
    * both together, in the grain of the ground rather than as a wash laid over the top of it.
    */
-  alb = mix(alb, mix(under, field, 0.55) * (0.88 + 0.24 * grain), grassy * sward * 0.92);
+  alb = mix(alb, mix(under, field, 0.35) * (0.88 + 0.24 * grain), grassy * sward * 0.92);
   alb = mix(alb, rimeColour() * (0.86 + 0.28 * grain), frostAt(xz) * 0.78);
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
