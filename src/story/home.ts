@@ -117,7 +117,7 @@ const GRIPS: [0 | 1, number[][]][] = [
 /** The paper held up into the wind: this long before the island's own takes it, so the ending cannot be made to wait. */
 const HOLDS_UP = 12;
 /** Seconds of the player's own wind on it that carry it off, and how long they watch it go afterwards. */
-const TAKES = 0.55;
+const TAKES = 0.4;
 const WATCHES_IT = 8;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
@@ -628,11 +628,11 @@ export class HomeChapter implements Chapter {
   }
 
   /**
-   * The last thing the player does. The child holds the paper up over their head into the wind, and the player's
-   * own stroke across the hilltop carries it off into the sunset the way it carried the small one up. Their wind
-   * is read both at the paper and at the ground their cursor is over, because a stroke drawn across the paper on
-   * screen lays its gust well beyond a child seen from behind. If they only watch, the island's own wind comes up
-   * the hill and takes it, because the end of the story may not be made to wait on anybody.
+   * The last thing the player does. The child holds the paper up into the wind, and the player's own stroke
+   * carries it off into the sunset the way it carried the small one up. The stroke is read as a stroke and not as
+   * a place: from the brow the ground under the cursor is half a mile of sea, so asking them to draw it over the
+   * paper would be asking them to aim at something the camera has put nowhere. If they only watch, the island's
+   * own wind comes up the hill and takes it, because the end of the story may not be made to wait on anybody.
    */
   private updateRelease(dt: number, faceX: number, faceZ: number): void {
     const { child: c, plane: p, input, wind } = this.cast;
@@ -646,9 +646,8 @@ export class HomeChapter implements Chapter {
     /** The hand the plane has ridden in the whole way (`handPosition` is that one), out and up, offering it. */
     c.reachFor(0, this.held.set(c.position.x + fwd.x * 0.74, c.position.y + 2.46, c.position.z + fwd.z * 0.74));
     const w = wind.sample(p.position.x, p.position.z, this.air);
-    const reach = Math.hypot(input.world.x - c.position.x, input.world.z - c.position.z);
-    const over = input.present && input.gust > 2.5 ? 1 - THREE.MathUtils.smoothstep(reach, 50, 150) : 0;
-    this.taken += dt * Math.max(over * Math.min(1, (input.gust - 2.5) / 5), Math.min(1, w.energy * 2.6));
+    const stroke = input.present && !input.muted ? Math.max(0, (input.gust - 2) / 3) : 0;
+    this.taken += dt * Math.min(1.4, Math.max(stroke, w.energy * 2.6));
     if (this.t > HOLDS_UP - 1.2 && !this.gusted) {
       this.gusted = true;
       wind.addSplat({
