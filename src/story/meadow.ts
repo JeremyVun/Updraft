@@ -72,13 +72,14 @@ const WAVE_REACH = 3600;
 /**
  * How far the colour has reached, and how fast it rolls there, each time the lullaby gets further: the hollow round
  * the piano, then out over the crest and the pond, then the whole island on the last one. The great wave is the
- * spectacle of the room, so it is the only one the wind itself runs ahead of.
+ * spectacle of the room, so it is the only one the wind itself runs ahead of, and it rolls slowly enough that its
+ * front is still crossing the meadow while the camera is rising off the piano to watch it.
  */
 const WAKING = [
   { reach: PATCH.radius, speed: 0 },
   { reach: 80, speed: 15 },
   { reach: 168, speed: 40 },
-  { reach: WAVE_REACH, speed: 150 },
+  { reach: WAVE_REACH, speed: 20 },
 ];
 /** How long the wind keeps driving the last wave across the island, and how quiet a wake nobody answered is. */
 const GUST_FOR = 15;
@@ -434,7 +435,8 @@ export class MeadowChapter implements Chapter {
     }
     if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
     this.frame();
-    this.piano.frame(this.shot);
+    /** The stop at the piano owns the camera while it has the child, and says how fast it should follow. */
+    this.pace = this.piano.frame(this.shot) ?? this.pace;
   }
 
   /**

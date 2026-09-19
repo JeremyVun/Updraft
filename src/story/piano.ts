@@ -34,6 +34,9 @@ const LULLABY: number[][][] = [
 ];
 const CADENCE = [0, 2, 4, 7, 4, 2, 0];
 
+/** The bearing the walk's own camera stands at, so the finale comes to rest in the frame it hands back to. */
+const ONWARD = 0.075;
+
 /**
  * The stop at the piano on the meadow. The plane leans toward it like any other waypoint, and if the child comes
  * near they stop, look at it, sit down on the stool and press one key — and then sit with their hands in their lap
@@ -63,14 +66,16 @@ export class PianoStop {
   /** The cygnet's own turn at the keys: when it starts walking them, and when it is back in the arms. */
   private walkFrom = 0;
   private walkStep = 0;
+  /** When the island is told to wake all the way, at the latest, and when the camera began its one long rise. */
+  private wakeAt = 0;
+  private roseFrom = 0;
   private readonly foot = new THREE.Vector3();
   private fromYaw = 0;
   private readonly aim = new THREE.Vector2(piano.stand.x, piano.stand.z);
   private readonly from = new THREE.Vector3();
   private readonly onto = new THREE.Vector3();
   private readonly mid = new THREE.Vector3();
-  /** Round to the sunward side of the piano's front, so the case is rimmed and the child is in profile. */
-  private readonly side = new THREE.Vector3(Math.sin(piano.yaw + 0.55), 0, Math.cos(piano.yaw + 0.55));
+  private readonly side = new THREE.Vector3();
 
   /** QA: how far the stop has got, from noticing it to walking on. */
   get at(): string {
@@ -151,6 +156,7 @@ export class PianoStop {
         }
         this.duet(time, cast);
         this.onTheKeys(time, cast);
+        this.wakeIsland(time);
         const heard = Math.max(this.since + 2, piano.lastGestureNote);
         const over = this.finishedAt > 0 && time > this.finishedAt;
         /** Nothing may cut the finale short: the island is waking, and the bird is on the keys. */
@@ -178,31 +184,39 @@ export class PianoStop {
   }
 
   /**
-   * The camera goes round to one side of the piano — square on, the child sits with their back to you and their
-   * head is in front of the keyboard — and stays where the rest of the game stands: back far enough and low
-   * enough that the two of them are small in the grass with the hills and the low sun behind them.
+   * One frame for the whole duet, and one move out of it. The camera stands behind the child and a little over
+   * their shoulder, near enough square on the keyboard that left and right on screen is along the keys and their
+   * head is off them, high enough to see the keys past them and the meadow they are waking beyond the piano. It
+   * arrives there in a single glide as they sit and does not move again until the tune is whole. Then it lifts
+   * out of that frame in one slow, eased rise, swinging round behind them onto the way north, and comes to rest
+   * looking along it, so the green rolling out to the hills is watched over the ground they are about to walk.
+   * Returns how fast the camera should follow it, or null while the stop does not own the frame.
    */
-  frame(shot: Shot): void {
-    if (this.beat === 'ahead' || this.beat === 'done') return;
-    const near = this.beat !== 'walking';
-    /** While the bird is on the keys the camera comes in to them: at the walking distance it is a speck of white. */
-    const keys = this.walkFrom !== 0 ? 1 : 0;
-    this.mid.lerpVectors(piano.keys, piano.seat, 0.3 - keys * 0.25);
-    shot.target.set(this.mid.x, piano.keys.y + 0.3, this.mid.z);
-    shot.from = this.side;
-    shot.distance = near ? 15 - keys * 5.4 : 20;
-    shot.height = near ? 2.1 - keys * 0.7 : 5;
-    /**
-     * And when the bird is back in the arms and the last of the tune is ringing, the camera stands off and lets
-     * the room have it: the two of them small at the piano, and the island waking away from them to the hills.
-     */
-    if (this.walkStep >= 1) {
-      const wide = THREE.MathUtils.smoothstep(this.now - this.walkFrom - tuning.piano.walkKeys, 0, 2.5);
-      shot.target.z -= wide * 26;
-      shot.target.y += wide * 3;
-      shot.distance = THREE.MathUtils.lerp(shot.distance, 44, wide);
-      shot.height = THREE.MathUtils.lerp(shot.height, 15, wide);
+  frame(shot: Shot): number | null {
+    if (this.beat === 'ahead' || this.beat === 'done') return null;
+    const t = tuning.piano;
+    /** It waits further out while they are still on their way to it and comes in as they sit: one move, not two. */
+    const settled = this.beat === 'walking' || this.beat === 'looking' ? 0 : 1;
+    /** And it creeps in while the bird is on the keys, because at the settled distance a cygnet is a speck. */
+    const creep = this.walkFrom > 0 ? THREE.MathUtils.smoothstep(this.now - this.walkFrom, 0, 2.5) : 0;
+    let bearing = piano.yaw + t.frameTurn;
+    let distance = t.frameBack + t.frameWide * (1 - settled) - t.frameCreep * creep;
+    let height = t.frameUp + t.frameHigh * (1 - settled);
+    this.mid.set(piano.keys.x, piano.keys.y + t.frameLook, piano.keys.z);
+    if (this.roseFrom > 0) {
+      /** Eased at both ends, so the rise begins and settles without a hand on it anywhere in between. */
+      const k = THREE.MathUtils.smoothstep(this.now - this.roseFrom, 0, t.riseFor);
+      const far = this.answered ? 1 : t.riseQuiet;
+      bearing += (ONWARD - bearing) * k;
+      distance += (t.riseBack * far - distance) * k;
+      height += (t.riseUp * far - height) * k;
+      this.mid.z -= t.riseOn * far * k;
     }
+    shot.target.copy(this.mid);
+    shot.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+    shot.distance = distance;
+    shot.height = height;
+    return this.roseFrom > 0 ? t.risePace : t.framePace;
   }
 
   /**
@@ -270,9 +284,10 @@ export class PianoStop {
     this.answered = answered;
     const whole = [...LULLABY.flat(2), ...CADENCE].map((s) => base + s);
     const ends = piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.42 : 0.3);
-    this.finishedAt = ends + tuning.piano.walkKeys * 0.4 + 3.4;
+    /** However the bird's turn on the keys goes, the island is woken and the child is up again by these times. */
+    this.wakeAt = ends + tuning.piano.walkKeys;
+    this.finishedAt = this.wakeAt + tuning.piano.riseFor + 6;
     if (answered) cast.child.cheer();
-    this.onWake?.(3, answered);
     /** Out of the satchel first, because from there it can reach the keys without anybody lifting it. */
     this.walkFrom = -1;
     cast.carry.unstow(() => {
@@ -310,6 +325,18 @@ export class PianoStop {
       child.lookAt = piano.keys;
       cast.carry.stow();
     }
+  }
+
+  /**
+   * The last thing that happens is the green. The island is told to wake all the way once the bird is back off
+   * the keys, and the camera begins the one rise that the wave is watched from.
+   */
+  private wakeIsland(time: number): void {
+    if (this.wakeAt === 0 || (this.walkStep < 1 && time < this.wakeAt)) return;
+    this.wakeAt = 0;
+    this.roseFrom = time;
+    this.onWake?.(3, this.answered);
+    this.finishedAt = time + tuning.piano.riseFor + 2.5;
   }
 
   private give(child: Cast['child']): void {

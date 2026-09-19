@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PianoStrings, moodScale } from '../audio/audio';
 import type { AudioOut } from '../creatures/voices';
+import { KeyLine } from '../fx/keyline';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -296,6 +297,9 @@ export class Piano {
   private readonly axis = new THREE.Vector2(Math.cos(YAW), -Math.sin(YAW));
   private readonly rand = mulberry32(5150);
   private readonly strings = new PianoStrings();
+  /** The wind line that shows which way along the keys a phrase went, and where it runs. */
+  private readonly line = new KeyLine();
+  private readonly path = (t: number, out: THREE.Vector3): THREE.Vector3 => this.alongKeys(t, out);
   private level = 0;
   private prevEnergy = 0;
   private runUntil = 0;
@@ -335,7 +339,8 @@ export class Piano {
         fragmentShader: PIANO_FRAG,
       }),
     );
-    this.group.add(shell, keys);
+    /** The streak is built in world coordinates and drawn there, so the group's own transform never reaches it. */
+    this.group.add(shell, keys, this.line.batch.mesh);
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
     /** The lift is a fact about how the child's own pose sits, so it is added in world units, after the scale. */
@@ -432,6 +437,7 @@ export class Piano {
     this.level = 1 - THREE.MathUtils.smoothstep(reach, heardFully, heardWithin);
     if (this.level > 0 && this.inWindow()) this.listen(wind);
     this.fire();
+    this.line.update(dt, time, this.path);
 
     const fade = dt / dipRelease;
     for (let i = 0; i < KEY_COUNT; i++) this.dip[i] = Math.max(0, this.dip[i] - fade);
@@ -495,6 +501,8 @@ export class Piano {
       }
       this.runUntil = at + 0.25;
       this.matched++;
+      /** Their own wind played it back: the line lets go of the keys and goes up, and the island answers. */
+      this.line.flourish();
       return;
     }
     const room = this.pool.length - count;
@@ -547,6 +555,8 @@ export class Piano {
   private play(midi: number, velocity: number, source: Source): void {
     const key = midi - LOW_MIDI;
     if (key >= 0 && key < KEY_COUNT) this.dip[key] = 1;
+    /** The wind is shown on the phrase the piano asks and on the sweep that answers it, and on nothing else. */
+    if (source === 'dream' || source === 'gust') this.line.aim(key / (KEY_COUNT - 1));
     this.lastPlayed = this.now;
     if (source === 'gust' || source === 'lift') this.lastGesture = this.now;
     this.strings.note(midi, velocity, (KEYBOARD[key]?.x ?? 0) * 0.5, this.level * tuning.piano.loudness);

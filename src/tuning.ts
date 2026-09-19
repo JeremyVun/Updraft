@@ -169,6 +169,44 @@ export const tuning = {
     hush: 1,
     /** How loud it is against everything else, once the listener is near enough to hear it fully. */
     loudness: 3,
+    /**
+     * The wind line the phrase is shown with: how far over the keys it runs, how fast it chases the key that is
+     * sounding, how long after the last note it holds on, and how it floats off — slowly while it waits, and away
+     * altogether once the player has played the phrase back.
+     */
+    lineOver: 0.1,
+    lineChases: 11,
+    lineHolds: 0.85,
+    lineRise: 0.3,
+    lineBlown: 2.6,
+    /** How thick the streak is drawn, in world units, and how strongly it shows. */
+    linePen: 0.085,
+    lineAlpha: 0.8,
+    /**
+     * The one frame the whole duet is played in: how far round from square on the keyboard the camera stands (so
+     * left and right on screen is along the keys and the child's head is off them), how far back and how high
+     * above the keys, how much further out it waits while they are still walking to it, and how much nearer it
+     * comes while the cygnet is walking the keys.
+     */
+    frameTurn: 0.34,
+    frameBack: 11,
+    frameUp: 3.4,
+    frameLook: 0.5,
+    frameWide: 9,
+    frameHigh: 1.8,
+    frameCreep: 2.4,
+    framePace: 0.32,
+    /**
+     * And the one move out of it, when the tune is whole and the island goes green: how long the rise takes, how
+     * far back and how high it comes to rest, how far along the way north its eye travels, how fast the camera
+     * follows the move, and how much less of all of it a wake nobody answered gets.
+     */
+    riseFor: 9,
+    riseBack: 30,
+    riseUp: 13,
+    riseOn: 18,
+    risePace: 0.6,
+    riseQuiet: 0.72,
   },
   wood: {
     /** How fast a coal in the litter catches under the player's breath: 1 is a coal taken by about one good gust. */
