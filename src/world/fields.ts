@@ -12,15 +12,17 @@ const SHORE = 34;
 
 /**
  * The way across the meadow, from the top of the bank over the landing to the far shore, in the coordinates the
- * meadow was sculpted in. The story walks it and the walls are built around it; both read it from here.
+ * meadow was sculpted in. The story walks it and the walls are built around it; both read it from here. It goes
+ * by the piano, over the west rise, through the pass and over the brow beyond it — where the north slope and the
+ * pond on it open all at once — and then down the water's edge to the boat.
  */
 export const WAY = [
   [10, -640],
   [6, -660],
   [-18, -740],
   [-40, -830],
-  [-4, -930],
-  [30, -1020],
+  [8, -988],
+  [4, -1032],
   [12, -1100],
   [-6, -1148],
 ].map(([x, z]) => meadowPoint(x, z));
