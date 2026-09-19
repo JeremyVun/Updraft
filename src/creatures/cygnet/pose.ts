@@ -119,6 +119,8 @@ export class Poser {
   /** One eased weight per thing it can be doing, so one act can fade out while the next fades in. */
   private readonly acts = new Map<Act, number>();
   private headYaw = 0;
+  private blownX = 0;
+  private blownZ = 0;
   private headPitch = 0;
   private neckYaw = 0;
   private readonly unturn = new THREE.Quaternion();
@@ -138,7 +140,18 @@ export class Poser {
     for (const name of ACTS) this.acts.set(name, ease(this.acts.get(name) ?? 0, d.act === name ? d.actEnv : 0, 10, dt));
     const act = (name: Act) => this.acts.get(name) ?? 0;
 
-    const hunch = clamp(d.fear * (d.carried ? 0.35 : 1) * (1 - d.effort) + act('flinch') * 0.8 + act('brace') * 0.45, 0, 1);
+    /**
+     * The sleeping island's five. A tug and a push are one continuous worrying at somebody rather than a count of
+     * pulls, so both ride a plain oscillation under their own eased weight: nothing here can switch or restart.
+     */
+    const tug = act('tug');
+    const nudge = act('nudge');
+    const back = act('look-back');
+    const shiver = act('shiver');
+    const haul = (0.5 + 0.5 * Math.sin(t * 5.0)) * tug;
+    const push = (0.5 + 0.5 * Math.sin(t * 2.4)) * nudge;
+
+    const hunch = clamp(d.fear * (d.carried ? 0.35 : 1) * (1 - d.effort) + act('flinch') * 0.8 + act('brace') * 0.45 + shiver * 0.55, 0, 1);
     p.sit = ease(p.sit, riding ? (d.seat === 'satchel' ? 0.6 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, riding ? 3 : 4, dt);
     p.held = ease(p.held, riding || climbing ? 1 : 0, 5, dt);
     p.stowed = ease(p.stowed, d.seat === 'satchel' && riding ? 1 : 0, 4, dt);
@@ -166,16 +179,25 @@ export class Poser {
       (1 - p.hunch * 0.6 * (1 - d.effort));
     p.spread = ease(p.spread, spread, 7, dt);
     const shaking = Math.sin(t * 36) * shake * 0.5;
-    const tremble = p.hunch * 0.6 + d.fear * (d.carried ? 0.15 : 0.3) + d.cold * 0.35;
+    /** Cold all through it: small, fast and everywhere, which is what tells a shiver from a shake. */
+    const tremble = p.hunch * 0.6 + d.fear * (d.carried ? 0.15 : 0.3) + d.cold * 0.35 + shiver * 1.4;
 
     /** A seat tips it back by itself; only the climb and a hop add anything of their own. */
-    let rootPitch = (flying ? d.pitch : 0) - 0.55 * p.climb - 0.15 * p.lifted + 0.85 * p.plant;
+    /** Hauling at something it cannot move, it sits back on its heels; pushing under a hand, it leans in. */
+    let rootPitch = (flying ? d.pitch : 0) - 0.55 * p.climb - 0.15 * p.lifted + 0.85 * p.plant - haul * 0.3 + push * 0.22;
     let rootRoll = flying ? d.roll : d.roll * (1 - p.sit * 0.5);
     rootRoll += d.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
     /** Braced, it leans into the wind; knocked over, it goes with it. */
-    const blown = Math.hypot(d.wind.x, d.wind.z) > 0.2 ? 1 : 0;
-    const wx = blown ? d.wind.x / Math.hypot(d.wind.x, d.wind.z) : 0;
-    const wz = blown ? d.wind.z / Math.hypot(d.wind.x, d.wind.z) : 0;
+    /**
+     * The way it leans is eased, not taken: air circled round a bird reverses on it twice a turn, and a lean read
+     * straight off the wind's heading throws the whole body over from one side to the other in a frame.
+     */
+    const speed = Math.hypot(d.wind.x, d.wind.z);
+    this.blownX = ease(this.blownX, speed > 0.2 ? d.wind.x / speed : 0, 3, dt);
+    this.blownZ = ease(this.blownZ, speed > 0.2 ? d.wind.z / speed : 0, 3, dt);
+    const wx = this.blownX;
+    const wz = this.blownZ;
+    rootRoll += Math.sin(t * 17) * 0.055 * shiver + back * 0.18 * Math.sign(d.actYaw || 1);
     rootRoll += (act('bowled') * 1.0 - act('brace') * 0.16 - act('into-wind') * 0.06) * wx * -1;
     rootPitch += (act('bowled') * 0.5 - act('brace') * 0.16 - act('into-wind') * 0.08) * wz;
 
@@ -186,7 +208,7 @@ export class Poser {
     const bodyY = lerp(0.072, STANDING - d.gait.dip, 1 - tuck);
     const nibble = act('nibble');
     const body = n[BODY];
-    body.rotation.x = -0.04 + p.sit * 0.04 - p.hunch * 0.12 + nibble * 0.25 + d.hurry * 0.12 - p.beg * 0.1 + stretch * 0.12;
+    body.rotation.x = -0.04 + p.sit * 0.04 - p.hunch * 0.12 + nibble * 0.25 + d.hurry * 0.12 - p.beg * 0.1 + stretch * 0.12 + push * 0.26 - haul * 0.18;
     body.rotation.z =
       Math.sin(d.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, d.effort) +
       Math.sin(d.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, d.wriggle * 3) +
@@ -320,6 +342,14 @@ export class Poser {
     b = lerp(b, -0.1, stretch);
     head += nibble * (0.5 + Math.sin(t * 40) * 0.08) + act('preen-breast') * (0.7 + Math.sin(t * 31) * 0.1) - act('yawn') * 0.4 - stretch * 0.3;
     a -= act('preen-back') * 0.75;
+    /**
+     * Worrying at the scarf: the neck goes out and up for it, and then hauls back into the shoulders with the
+     * whole bird behind it. Pushing under a hand: the neck goes low and forward and lifts at the end of the push.
+     */
+    a = lerp(a, lerp(0.45, -0.95, haul / Math.max(tug, 1e-3)), tug);
+    b = lerp(b, lerp(-0.25, 1.15, haul / Math.max(tug, 1e-3)), tug);
+    a = lerp(a, lerp(0.7, 0.2, push / Math.max(nudge, 1e-3)), nudge);
+    b = lerp(b, lerp(0.35, -0.35, push / Math.max(nudge, 1e-3)), nudge);
     /** On its breast the neck is flung out along the ground in front of it. */
     a = lerp(a, 0.75, p.plant);
     b = lerp(b, -0.55, p.plant);
@@ -361,6 +391,12 @@ export class Poser {
     /** Craning round the child to see what they are looking at: the head goes right round, and it holds it there. */
     wantYaw = lerp(wantYaw, -1.2 * d.actSide, act('peer'));
     wantPitch = lerp(wantPitch, -0.12, act('peer'));
+    /** The head goes where the worrying is, and right round over its own shoulder for a look back. */
+    wantYaw = lerp(wantYaw, clamp(d.actYaw, -1.2, 1.2), Math.max(tug, nudge));
+    wantPitch = lerp(wantPitch, -0.55 + haul / Math.max(tug, 1e-3) * 0.7, tug);
+    wantPitch = lerp(wantPitch, 0.5 - push / Math.max(nudge, 1e-3) * 1.1, nudge);
+    wantYaw = lerp(wantYaw, clamp(d.actYaw, -2.3, 2.3), back);
+    wantPitch = lerp(wantPitch, -0.05, back);
     wantYaw = lerp(wantYaw, 1.5, p.sleep);
     wantPitch = lerp(wantPitch, 0.4, p.sleep);
     wantYaw *= 1 - d.call.env * 0.6;
@@ -409,11 +445,11 @@ export class Poser {
     out.rootRoll = rootRoll;
     const squeeze = Math.max(act('yawn') * 0.85, act('into-wind') * 0.6, act('brace') * 0.5, act('flinch'), act('nuzzle') * 0.7);
     out.blink = Math.max(d.blink, p.sleep, squeeze) - d.fear * 0.2 * (1 - p.sleep) * (1 - squeeze);
-    out.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - d.fear) + d.cold * 0.5 + shake * 0.7, 0, 1);
+    out.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - d.fear) + d.cold * 0.5 + shake * 0.7 + shiver * 0.9, 0, 1);
     out.sleek = clamp(d.fear * 0.8 + p.reach * 0.5 + act('flinch') * 0.5, 0, 1);
     out.wingOpen = p.spread;
     return out;
   }
 }
 
-const ACTS: Act[] = ['preen-breast', 'preen-wing', 'preen-back', 'nibble', 'stretch', 'yawn', 'shake', 'wag', 'look-about', 'snap', 'flinch', 'brace', 'bowled', 'into-wind', 'ask', 'nuzzle', 'peer', 'delve'];
+const ACTS: Act[] = ['preen-breast', 'preen-wing', 'preen-back', 'nibble', 'stretch', 'yawn', 'shake', 'wag', 'look-about', 'snap', 'flinch', 'brace', 'bowled', 'into-wind', 'ask', 'nuzzle', 'peer', 'delve', 'tug', 'nudge', 'look-back', 'shiver'];

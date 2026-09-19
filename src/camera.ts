@@ -5,6 +5,8 @@ import { heightAt } from './world/island';
 const MIN_HFOV = 64;
 /** The camera always looks roughly north, from a little east of south, unless a shot says otherwise. */
 const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
+/** How far above the ground a shot stands unless it says otherwise. */
+const GROUND_CLEARANCE = 2.8;
 
 export interface Shot {
   /** The point the camera looks at. */
@@ -19,6 +21,11 @@ export interface Shot {
   eye?: THREE.Vector3;
   /** The camera travels with a steadily moving target (a boat) and only eases the framing, so it never trails. */
   carry?: boolean;
+  /**
+   * How far above the ground the camera is held. The default stands it at a walking child's eye; a room that
+   * wants to be seen by something small lowers it, and nothing else in the game changes.
+   */
+  clearance?: number;
   /** QA: the camera goes exactly where it is put, with no ground clearance, no sight-line correction and no breathing. */
   free?: boolean;
 }
@@ -36,6 +43,7 @@ export class CameraRig {
   private readonly probe = new THREE.Vector3();
   private lift = 0;
   private pull = 0;
+  private clear = GROUND_CLEARANCE;
 
   constructor() {
     this.fixed = params.cam !== null;
@@ -71,6 +79,7 @@ export class CameraRig {
     this.lastTarget.copy(shot.target);
     this.lift = 0;
     this.pull = 0;
+    this.clear = shot.clearance ?? GROUND_CLEARANCE;
     this.place(0, Infinity);
   }
 
@@ -90,6 +99,8 @@ export class CameraRig {
       this.camera.lookAt(this.look);
       return;
     }
+    /** Eased like everything else the shot asks for: coming down to a bird's eye is a move, not a cut. */
+    this.clear += ((shot.clearance ?? GROUND_CLEARANCE) - this.clear) * k;
     this.place(time, dt);
   }
 
@@ -98,7 +109,7 @@ export class CameraRig {
     const want = this.want.copy(this.eye);
     want.x += Math.sin(time * 0.07 + 1.3) * 0.02 * reach;
     want.y += Math.sin(time * 0.11) * 0.012 * reach;
-    const clear = Math.max(heightAt(want.x, want.z), heightAt(want.x, want.z - 6), 0) + 2.8;
+    const clear = Math.max(heightAt(want.x, want.z), heightAt(want.x, want.z - 6), 0) + this.clear;
     if (want.y < clear) want.y = clear;
     /**
      * Whatever else a shot asks for, the subject stays in sight. Ground in the way is answered by coming in
@@ -117,7 +128,7 @@ export class CameraRig {
     this.lift += (lift - this.lift) * (1 - Math.exp(-dt * (lift > this.lift ? 4 : 0.5)));
     const pos = this.camera.position.lerpVectors(want, this.look, this.pull);
     pos.y += this.lift;
-    const floor = Math.max(heightAt(pos.x, pos.z), heightAt(pos.x, pos.z - 6), 0) + 2.8;
+    const floor = Math.max(heightAt(pos.x, pos.z), heightAt(pos.x, pos.z - 6), 0) + this.clear;
     if (pos.y < floor) pos.y = floor;
     this.camera.lookAt(this.look);
   }

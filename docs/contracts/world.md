@@ -55,6 +55,12 @@ pops. Defaults in brackets.
 | `dawn` [0] | night | the first sun down the whole hill, the fog burnt back, the lamp overtaken |
 | `curtains` [0] | drawn | thrown open, gathered at the sides, with the light coming through |
 | `blanket` [0] | tucked in | folded back off the bed |
+| `sleeper` [0] | an empty bed | a child asleep under the blanket: it stands over them and rises and falls with their breathing |
+
+`fogTop` is not 0..1 but a height in world units (default `tuning.sleeping.fogTop`): how high the fog's top surface
+lies. The story raises it to `fogClimbs` as the night thickens, so a bird climbing the hill walks up into the fog
+and out of it again near the top, and the lanes the player carves are the only clear air in it. The pool thins
+with distance from the hollow long before the summit, so the hilltop stands out of the fog however high it is.
 
 The sky's own warming is not here: that is the chapter's `dusk`, eased in `main.ts` like every other room's.
 The module also lifts the blanket a little by itself under any real gust over the bed and settles it back.
@@ -74,15 +80,20 @@ wherever it is open.
   (`uCarveTex`/`uCarveDomain`) decayed back toward 1, read by the pooled fog and by the fog's top sheets.
 - `lane(from, to, halfWidth)` and `laneOpen` (0..1) set `uLane`/`uLaneOpen`: one widening lane down the hill,
   clear of fog and of frost as far as it has opened, for the morning to come down.
-- `pillowPuff()` releases a few dozen pieces of down from the pillow, which hang and then go where the wind
-  goes. The story's one long white feather belongs beside it (see the note in the constructor).
+- `pillowPuff()` releases a few dozen pieces of down from the pillow, which hang and then go where the wind goes.
+- `feather` is the room's one long white feather (`src/fx/feather.ts`), which comes out of the pillow with that
+  down and is the whole of this room's control. `release(from, drift)` puts it in the air; it then takes the air's
+  own speed rather than being pushed along by it, hangs about `featherHangs` off the grass, and leans toward
+  `goal` so it can never be lost and never has to be fetched — the paper plane's idea, slower and floatier. A
+  stroke that crosses it on screen carries it directly (`brush`), as one that crosses the plane does.
 - `fogTopAt(x, z)` is the height of the fog's top surface, so a bird climbing the hill can be told when it is
   out of it. It ignores what has been carved: it answers for the fog as a whole, not for the hole you just made.
 
-**What the story parcel is expected to drive:** `frost` up through the night and back down with `dawn`; `fog`
-through the climb; `blanket` for the gust that is answered and refused; `pillowPuff()` and its feather;
-`lane(HILLTOP, BED, ...)` with `laneOpen` run from 0 to 1 as the bird glides down it; `curtains` thrown open at
-the end; `dawn` to 1. Nothing in the room decides any of that for itself.
+**What the story drives** (`src/story/sleeping.ts`): `frost` up through the night and back down with `dawn`;
+`fog` and `fogTop` through the climb; `sleeper` while the child is in the bed; `blanket` for the gust that is
+answered and refused; `pillowPuff()` and `feather.release`/`feather.goal`; `lane(HILLTOP, BED, ...)` with
+`laneOpen` run from 0 to 1 as the bird glides down it; `curtains` thrown open at the end; `dawn` to 1. Nothing in
+the room decides any of that for itself.
 
 ## Adding something that lives in the world
 

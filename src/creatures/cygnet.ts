@@ -5,7 +5,7 @@ import { tuning } from '../tuning';
 import type { WindSample } from '../wind/field';
 import { BODY, BONES, FOOT_L, FOOT_R, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
 import { Gait } from './cygnet/gait';
-import { Mind, type Senses } from './cygnet/mind';
+import { Mind, type Act, type Senses } from './cygnet/mind';
 import { Poser, type Drives } from './cygnet/pose';
 import { applyLook, cygnetMaterial, downShells, newLook } from './cygnet/shader';
 import { Ride, type Mount, type Seat } from './cygnet/ride';
@@ -56,6 +56,10 @@ export class Cygnet {
   state: CygnetState = 'flying';
   /** False where the story will not have it flown at all: in the dark wood it stays on the ground whatever the wind does. */
   mayFly = true;
+  /** It stands where it is, whatever it feels about the child: for the moments the story asks it to stop and look. */
+  stay = false;
+  /** How fast it walks, as a share of its usual. A bird following something floating in the air ambles after it. */
+  pace = 1;
   /**
    * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
    * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
@@ -162,6 +166,12 @@ export class Cygnet {
   private landing = 0;
   private leaveYaw = 0;
   /** The fledging: seconds into it, where it is round the child, and the bearing it comes round to hang on. */
+  /** The one long glide: where it set off from, where it is going, how long it takes and how it has got on. */
+  private readonly sailFrom = new THREE.Vector3();
+  private readonly sailTo = new THREE.Vector3();
+  private sailFor = 0;
+  private sailT = 0;
+  private sailArc = 0;
   private fledgeT = 0;
   private fledgeArc = 0;
   private fledgeFace = 0;
@@ -383,6 +393,46 @@ export class Cygnet {
       this.hopLift = 0;
       this.runBearing = bearing ?? this.awayFromChild;
     }
+  }
+
+  /**
+   * The longest glide it has made, and the first it makes for somebody rather than because somebody lifted it: it
+   * lets go of the hill and goes down the whole slope to a point far below, alone. Whoever asked for it says where
+   * it lands, and takes it over the moment it is down, because it comes in on its breast.
+   */
+  glideTo(to: THREE.Vector3, seconds: number, arc: number): void {
+    this.sailFrom.copy(this.position);
+    this.sailTo.copy(to);
+    this.sailFor = seconds;
+    this.sailT = 0;
+    this.sailArc = arc;
+    this.state = 'gliding';
+    this.glideT = 0;
+    this.air = 0;
+    this.hopT = 0;
+    this.settle = 0;
+    this.landing = 0;
+    this.fear = 0;
+    this.flights++;
+    this.mind.trust(1);
+  }
+
+  /** How far down that glide it has got, 0 to 1: what the morning coming down the hill with it is run from. */
+  get sailing(): number {
+    return this.sailFor > 0 ? clamp(this.sailT / this.sailFor, 0, 1) : 0;
+  }
+
+  /** Reaches up and flutters at somebody, which is what a chick does when it wants to be noticed. */
+  plead(): void {
+    this.beg = 1.6;
+    this.nextBeg = this.time + 3;
+    this.heard.push({ kind: 'flutter', amount: 0.7 });
+  }
+
+  /** Told to do a particular thing, at something: worrying at the scarf, pushing under a hand, looking back. */
+  does(act: Act, at?: THREE.Vector3, dur?: number): void {
+    if (at) this.mind.actAt.copy(at);
+    this.mind.perform(act, dur ?? Number.NaN);
   }
 
   /** Dozed off on a long quiet carry. */
@@ -620,10 +670,19 @@ export class Cygnet {
 
     if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
-    else if (this.state === 'gliding') this.soar(dt, wind, child);
+    else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
     else if (this.state === 'following') this.walk(dt, child);
     else if (this.state === 'swimming') this.paddling(dt);
-    else if (this.state === 'perched') this.effort = 0;
+    else if (this.state === 'perched') {
+      this.effort = 0;
+      /**
+       * Tumbled onto something rather than set down on it: it goes over onto its breast as it arrives and picks
+       * itself up off it in its own time. Eased on the way in as well as out, because a pose that switches is a pop.
+       */
+      this.faceplant = ease(this.faceplant, this.time - this.landedAt < 0.55 ? 0.8 : 0, 3, dt);
+      this.roll = ease(this.roll, 0, 4, dt);
+      this.pitch = ease(this.pitch, 0, 4, dt);
+    }
     else if (this.state === 'fallen') this.rest(dt, child);
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
@@ -788,6 +847,65 @@ export class Cygnet {
     this.roll = ease(this.roll, Math.sin(this.time * 0.6) * 0.1 - wonk * 0.5, 2.5, dt);
     this.pitch = ease(this.pitch, -0.28 + Math.sin(this.flapPhase) * 0.05 + wonk * 0.12, 4, dt);
     if (this.position.y > 150) this.visible = false;
+  }
+
+  /**
+   * The glide itself. It goes off the top slowly, finds the line, and holds it the whole way down with its wings
+   * out and nothing else to do but steer a little; the ground is never allowed near it until the last of it, and
+   * it arrives with speed still on and goes over onto its breast, because it has never landed well yet.
+   */
+  private sail(dt: number): void {
+    this.sailT += dt;
+    const k = clamp(this.sailT / this.sailFor, 0, 1);
+    /** Away gently and down at a steady pace: a glide that eased to a stop at the bottom would be a lift, not a fall. */
+    const e = (k * k * (3 - 2 * k)) * 0.35 + k * 0.65;
+    const p = this.position;
+    const from = this.sailFrom;
+    const to = this.sailTo;
+    /** A long lazy wander across the line, dying out as it comes in, which is what keeps a glide from being a rail. */
+    const side = Math.sin(this.sailT * 0.55) * 1.1 * (1 - k);
+    const ax = to.z - from.z;
+    const az = -(to.x - from.x);
+    const across = Math.hypot(ax, az) || 1;
+    const was = p.y;
+    p.set(
+      from.x + (to.x - from.x) * e + (ax / across) * side,
+      lerp(from.y, to.y, e) + Math.sin(e * Math.PI) * this.sailArc,
+      from.z + (to.z - from.z) * e + (az / across) * side,
+    );
+    /**
+     * Never nearer the hillside than a bird would fly it, except at the two ends: it leaves the ground it was
+     * standing on rather than being lifted off it, and it comes down onto what it is aimed at.
+     */
+    const clear = Math.max(heightAt(p.x, p.z), 0) + 1.5 * (1 - k * k) * THREE.MathUtils.smoothstep(k, 0, 0.14);
+    if (p.y < clear) p.y = clear;
+
+    const rise = dt > 0 ? (p.y - was) / dt : 0;
+    const travel = Math.atan2(to.x - p.x, to.z - p.z);
+    /** It levels out over the last of it, so that arriving is a flare and not the frame its bank went to nothing. */
+    const level = 1 - THREE.MathUtils.smoothstep(k, 0.86, 1);
+    this.yaw = easeAngle(this.yaw, travel + Math.cos(this.sailT * 0.55) * 0.22 * (1 - k), 2.2, dt);
+    this.roll = ease(this.roll, (-Math.cos(this.sailT * 0.55) * 0.3 * (1 - k) + Math.sin(this.time * 0.8) * 0.06) * level, 2.5, dt);
+    this.pitch = ease(this.pitch, clamp(-rise * 0.14, -0.4, 0.3) * level, 3.5, dt);
+    this.craning = ease(this.craning, 0.15, 2, dt);
+    this.trim = ease(this.trim, 0.2, 2, dt);
+    this.tucked = ease(this.tucked, 0.85, 1.5, dt);
+    /** A few strokes to hold the line at the start, and none at all once it is riding the wind down. */
+    const working = Math.max(0, 1 - k * 3);
+    this.effort = ease(this.effort, working * 0.5, 3, dt);
+    this.flap = ease(this.flap, working * 0.7, 3, dt);
+    this.flapPhase += dt * (3 + working * 6);
+    if (k >= 1) {
+      this.sailFor = 0;
+      this.state = 'perched';
+      this.heard.push({ kind: 'tumble', amount: 0.7 });
+      this.effort = 0;
+      this.flap = 0;
+      this.settle = 0;
+      this.landedAt = this.time;
+      this.bind(0.15);
+      this.mind.startle(0);
+    }
   }
 
   private takeOff(): void {
@@ -1021,9 +1139,10 @@ export class Cygnet {
     /** It is a beat behind: it notices the child has gone before it goes after them. */
     if (gap > keep + 0.6 && this.childSpeed > 1) this.notice = Math.min(0.45, this.notice + dt);
     else this.notice = Math.max(0, this.notice - dt * 2);
-    const hurry = this.errand ? clamp((gap - keep) / 1.0, 0, 1) : seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
+    const wants = this.errand ? clamp((gap - keep) / 1.0, 0, 1) : seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
+    const hurry = this.stay ? 0 : wants;
     this.hurry = ease(this.hurry, hurry, 4, dt);
-    const speed = this.hurry * (1.5 + 2.9 * this.hurry);
+    const speed = this.hurry * (1.5 + 2.9 * this.hurry) * this.pace;
     if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
       this.position.x += Math.sin(this.yaw) * speed * dt;
@@ -1322,6 +1441,9 @@ export class Cygnet {
       if (m.act === 'shake') this.heard.push({ kind: 'shake', amount: 1 });
       else if (m.act === 'bowled') this.heard.push({ kind: 'flutter', amount: 0.9 });
       else if (m.act === 'ask') this.heard.push({ kind: 'flutter', amount: 0.5 });
+      /** Cold all through it, and the breath that gets it up again: both of them are its own down moving. */
+      else if (m.act === 'shiver') this.heard.push({ kind: 'rustle', amount: 0.5 });
+      else if (m.act === 'into-wind') this.heard.push({ kind: 'rustle', amount: 0.7 });
       this.actWas = m.act;
     }
     if (this.seating.move?.kind === 'climb' && this.time > this.nextRustle) {
