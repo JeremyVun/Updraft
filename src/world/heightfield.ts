@@ -313,15 +313,19 @@ function rawHeight(x: number, z: number): number {
 }
 
 /**
- * The pond in the hollow beyond the meadow's crest, where the cygnet's family is resting. It is dug out of ground
- * that was already a hollow, so the walk comes over the rise and looks down onto it with the white birds on it.
+ * The tarn on the open north slope, where the cygnet's family is resting. It lies on a shelf beyond the brow, so
+ * the walk comes over the top and the ground falls away to it, and everything that leaves it leaves over falling
+ * ground and open water. It is longer north to south than a swan's take-off run, so nothing runs out of water.
  */
-export const POND = { x: 8, z: -789, rx: 15.5, rz: 13 } as const;
+export const POND = { x: 24, z: -892, rx: 15.5, rz: 17 } as const;
 /** How far the middle is dug below the water, and how far the bank stands above it at the rim of the ellipse. */
 const POND_BED = 2.6;
 const POND_BANK = 1.1;
-/** The still water's surface, taken from the hollow it was dug in so the pond belongs to the ground around it. */
-export const POND_LEVEL = rawHeight(POND.x, POND.z) - 0.5;
+/**
+ * The still water's surface, taken from the shelf it lies on so the pond belongs to the ground around it, and set
+ * low enough into it that the lip holding it downhill is no taller than the bite it takes out of the slope above.
+ */
+export const POND_LEVEL = rawHeight(POND.x, POND.z) - 0.85;
 
 /** How far out of the middle of the pond a point lies, 1 at the rim of its ellipse, wandering so it is not drawn. */
 export function pondOut(x: number, z: number): number {
