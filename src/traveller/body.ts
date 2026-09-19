@@ -43,6 +43,8 @@ void main() {
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
   vec3 col = vColor * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95);
   col += uSunColor * vColor * rim * 0.55 * sun;
+  /** The light a room makes for itself: the coals the child walks toward, the bedside lamp, the first morning. */
+  col += vColor * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
