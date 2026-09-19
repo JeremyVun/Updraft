@@ -162,8 +162,10 @@ export const tuning = {
     walkKeys: 6.5,
     walkFrom: 0.46,
     walkTo: 0.95,
-    /** How far the room's music pulls back while they are sitting at it. */
-    hush: 0.5,
+    /** How far the room's music pulls back while they are sitting at it: all the way, so the tune is heard alone. */
+    hush: 1,
+    /** How loud it is against everything else, once the listener is near enough to hear it fully. */
+    loudness: 3,
   },
   wood: {
     /** How fast a coal in the litter catches under the player's breath: 1 is a coal taken by about one good gust. */

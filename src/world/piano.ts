@@ -549,7 +549,7 @@ export class Piano {
     if (key >= 0 && key < KEY_COUNT) this.dip[key] = 1;
     this.lastPlayed = this.now;
     if (source === 'gust' || source === 'lift') this.lastGesture = this.now;
-    this.strings.note(midi, velocity, (KEYBOARD[key]?.x ?? 0) * 0.5, this.level);
+    this.strings.note(midi, velocity, (KEYBOARD[key]?.x ?? 0) * 0.5, this.level * tuning.piano.loudness);
     this.log.push({ t: Math.round(this.now * 100) / 100, midi, step: this.pool.indexOf(midi), v: Math.round(velocity * 100) / 100, src: source });
     if (this.log.length > 90) this.log.shift();
   }
