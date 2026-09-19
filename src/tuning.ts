@@ -245,6 +245,26 @@ export const tuning = {
     rippleQuiet: 0.03,
     rippleFull: 0.075,
   },
+  /** The three on the line by the door: the wind that makes them people, and how the child answers them. */
+  family: {
+    /** The felt wind along their line at which they begin to fill, and at which they are people. */
+    fillFrom: 3.5,
+    fillFull: 8.5,
+    /** How long they have to be held as people before the hands reach, and the door opens. */
+    holdFor: 3.2,
+    /** How far the chest fills out of the cloth and the shoulders square, as fractions of the piece's width. */
+    chest: 0.3,
+    shoulders: 0.1,
+    /** How far a sleeve lifts and reaches when the hands go out, as fractions of the piece's width. */
+    reachUp: 0.55,
+    reachOut: 0.3,
+    /** How near the child has to be to stop under them and look up, and how long a look lasts. */
+    stopWithin: 10,
+    looksFor: 3.2,
+    /** The island's own breeze, for a child who walks under without playing: how long it fills them for. */
+    breezeFor: 1.5,
+    breezeSpeed: 9,
+  },
   /** The kite over the far beach and the pinwheels along the walk: the child nobody has seen. */
   linesToys: {
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */

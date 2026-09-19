@@ -13,6 +13,8 @@ in vec3 aAlong;
 in vec4 aShape;
 in vec3 aColor;
 in float aKind;
+in float aRole;
+uniform vec2 uFamily;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vColor;
@@ -28,6 +30,27 @@ vec2 clothProfile(float kind, float up01, float x) {
   if (kind > 1.5) return vec2(mix(1.16, 0.7, up01), 1.0);
   if (kind > 0.5) return vec2(1.0 + 0.3 * smoothstep(0.5, 0.82, up01) * (1.0 - smoothstep(0.86, 1.0, up01)), 1.0);
   return vec2(1.0, 1.0);
+}
+
+/**
+ * The three on the crest. For as long as a steady wind along their line holds them, they are people: the cloth
+ * fills into a chest and shoulders, and once it has held a while the big ones' sleeves lift toward the small
+ * one's and the small one's lift to theirs. When the wind drops they are washing again. uFamily.x is how far
+ * they are filled and uFamily.y how far the hands have reached; aRole is 0 for the father, 1 for the mother, 2
+ * for the child, and below zero for every ordinary piece on the hill.
+ */
+void family(vec3 along, vec3 side, vec3 up, float hang) {
+  float fill = uFamily.x;
+  float chest = sin(uv.x * 3.14159) * (1.0 - smoothstep(0.1, 0.75, hang)) * smoothstep(0.0, 0.12, hang);
+  vWorld += side * chest * fill * ${glsl(tuning.family.chest)} * aShape.x;
+  float shoulder = smoothstep(0.84, 1.0, uv.y) * smoothstep(0.25, 0.5, abs(position.x));
+  vWorld += along * sign(position.x) * shoulder * fill * ${glsl(tuning.family.shoulders)} * aShape.x;
+  float band = smoothstep(0.42, 0.58, uv.y) * (1.0 - smoothstep(0.84, 0.96, uv.y));
+  float arm = smoothstep(0.26, 0.5, abs(position.x)) * band;
+  float toward = aRole < 0.5 ? 1.0 : (aRole < 1.5 ? -1.0 : 0.0);
+  float lifts = aRole > 1.5 ? 1.0 : step(0.0, position.x * toward);
+  float hands = uFamily.y * arm * lifts;
+  vWorld += (up * ${glsl(tuning.family.reachUp)} + along * sign(position.x) * ${glsl(tuning.family.reachOut)}) * hands * aShape.x;
 }
 
 void main() {
@@ -101,6 +124,7 @@ void main() {
   vWorld += side * lean * ripple * shake * 1.2 * aShape.y * hang;
 
   vNormal = normalize(cross(down, along));
+  if (aRole > -0.5) family(along, side, up, hang);
   vColor = aColor;
   vSwing = swing;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -328,25 +352,66 @@ export function baskets(x: number, z: number): THREE.Mesh {
 /**
  * A door standing in the grass with nothing behind it and nothing on the other side of it. Nobody remarks on it
  * and nothing happens if you walk round it; it is only the dream handing over another piece of home, and it
- * gives the top of the hill something to be the top of.
+ * gives the top of the hill something to be the top of. It is shut until the three on the line beside it have
+ * been held up as people long enough, and then it swings open on the far beach and the boat.
  */
-export function redDoor(x: number, z: number, yaw: number): THREE.Group {
-  const group = new THREE.Group();
-  const foot = Math.max(heightAt(x, z), 0);
-  const frame = (w: number, h: number, dy: number, dx: number) =>
-    new THREE.BoxGeometry(w, h, 0.22).translate(dx, dy + h / 2, 0);
-  const jambs = mergeGeometries([frame(0.17, 3.05, 0, -0.66), frame(0.17, 3.05, 0, 0.66), frame(1.49, 0.2, 3.05, 0)]);
-  const panel = new THREE.BoxGeometry(1.15, 2.9, 0.1).translate(0, 1.47, 0.02);
-  const paint = painted;
-  /** The same white and the same red as the cottage at the end of the journey. Nobody is told that either. */
-  group.add(new THREE.Mesh(jambs, paint('#ebe4d4')));
-  group.add(new THREE.Mesh(panel, paint('#b5362c')));
-  const knob = new THREE.SphereGeometry(0.06, 8, 6).translate(0.4, 1.5, 0.08);
-  group.add(new THREE.Mesh(knob, paint('#b99a52')));
-  group.position.set(x, foot - 0.1, z);
-  group.rotation.y = yaw;
-  return group;
+export class RedDoor {
+  readonly group = new THREE.Group();
+  /** How far it is asked to stand open, 0 to 1; it swings there on its own hinge speed. */
+  open = 0;
+  private swung = 0;
+  private readonly panel = new THREE.Group();
+
+  constructor(x: number, z: number, yaw: number) {
+    const foot = Math.max(heightAt(x, z), 0);
+    const frame = (w: number, h: number, dy: number, dx: number) =>
+      new THREE.BoxGeometry(w, h, 0.22).translate(dx, dy + h / 2, 0);
+    const jambs = mergeGeometries([frame(0.17, 3.05, 0, -0.66), frame(0.17, 3.05, 0, 0.66), frame(1.49, 0.2, 3.05, 0)]);
+    /** Hinged on one jamb: the panel and its knob swing together about the edge that stays put. */
+    const panel = new THREE.BoxGeometry(1.15, 2.9, 0.1).translate(0.575, 1.47, 0.02);
+    const paint = painted;
+    /** The same white and the same red as the cottage at the end of the journey. Nobody is told that either. */
+    this.group.add(new THREE.Mesh(jambs, paint('#ebe4d4')));
+    this.panel.add(new THREE.Mesh(panel, paint('#b5362c')));
+    const knob = new THREE.SphereGeometry(0.06, 8, 6).translate(0.975, 1.5, 0.08);
+    this.panel.add(new THREE.Mesh(knob, paint('#b99a52')));
+    this.panel.position.x = -0.575;
+    this.group.add(this.panel);
+    this.group.position.set(x, foot - 0.1, z);
+    this.group.rotation.y = yaw;
+  }
+
+  get opened(): boolean {
+    return this.open > 0.5;
+  }
+
+  update(dt: number): void {
+    this.swung += (this.open - this.swung) * (1 - Math.exp(-dt * 1.4));
+    this.panel.rotation.y = this.swung * 1.8;
+  }
 }
+
+/** The door on the crest of the island of lines, and the line beside it with the three of them on it. */
+export const door = new RedDoor(23, -357, 0.32);
+
+/**
+ * Strung high across the way just short of the door, so the child walks in under it: a man's shirt, a small
+ * jumper in the child's own yellow, and a woman's blouse. Hanging, they are washing; see `family` in the shader.
+ */
+export const FAMILY_LINE: LineSpec = (() => {
+  const a = new THREE.Vector3(23.2, 0, -350.6);
+  const b = new THREE.Vector3(32.6, 0, -356.4);
+  a.y = Math.max(heightAt(a.x, a.z), 0) + 6.3;
+  b.y = Math.max(heightAt(b.x, b.z), 0) + 6.1;
+  return { a, b, sag: 0.32, drop: 1.7 };
+})();
+/** How far the wind has made them people (x) and how far their hands have reached (y): the story writes it. */
+export const family = new THREE.Vector2(0, 0);
+const FAMILY_PIECES = [
+  { at: 0.22, width: 1.55, drop: 1.6, colour: '#9fb0bd', role: 0 },
+  { at: 0.5, width: 0.78, drop: 0.88, colour: '#e6c25a', role: 2 },
+  { at: 0.78, width: 1.35, drop: 1.75, colour: '#e0bdb6', role: 1 },
+];
 
 /**
  * Lines of washing hung out with nobody there: the first piece of home the dream hands over. Poles and rope are
@@ -359,7 +424,7 @@ export class WashingLines {
   readonly subject = new THREE.Vector4();
   private readonly clothMat: THREE.ShaderMaterial;
 
-  constructor(specs: readonly LineSpec[], seed = 91) {
+  constructor(specs: readonly LineSpec[], seed = 91, familyLine: LineSpec | null = null) {
     const rand = mulberry32(seed);
     const woodMat = new THREE.ShaderMaterial({
       uniforms: atmo.uniforms,
@@ -367,7 +432,7 @@ export class WashingLines {
       fragmentShader: WOOD_FRAG,
     });
     this.clothMat = new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject } },
+      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject }, uFamily: { value: family } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
@@ -380,6 +445,7 @@ export class WashingLines {
     const shapes: number[] = [];
     const colors: number[] = [];
     const kinds: number[] = [];
+    const roles: number[] = [];
 
     const point = new THREE.Vector3();
     const next = new THREE.Vector3();
@@ -426,7 +492,29 @@ export class WashingLines {
         /** Mostly sheets, and then a shirt, a nightgown or a pair of trousers among them, the way a line is. */
         const roll = rand();
         kinds.push(small ? (roll < 0.5 ? 1 : 0) : roll < 0.16 ? 1 : roll < 0.3 ? 2 : roll < 0.4 ? 3 : 0);
+        roles.push(-1);
         t += step;
+      }
+    }
+
+    if (familyLine) {
+      for (const end of [familyLine.a, familyLine.b]) {
+        posts.push(poleGeometry(new THREE.Vector3(end.x, Math.max(heightAt(end.x, end.z), 0), end.z), end.y));
+      }
+      ropes.push(ropeGeometry(familyLine));
+      for (const piece of FAMILY_PIECES) {
+        onLine(familyLine, piece.at - 0.02, point);
+        onLine(familyLine, piece.at + 0.02, next);
+        dir.subVectors(next, point).normalize();
+        onLine(familyLine, piece.at, point);
+        anchors.push(point.x, point.y, point.z);
+        alongs.push(dir.x, dir.y, dir.z);
+        shapes.push(piece.width, piece.drop, rand() * 3, rand() * 6.28);
+        posts.push(pegGeometry(point, dir, piece.width * 0.46), pegGeometry(point, dir, -piece.width * 0.46));
+        const c = new THREE.Color(piece.colour);
+        colors.push(c.r, c.g, c.b);
+        kinds.push(1);
+        roles.push(piece.role);
       }
     }
 
@@ -441,6 +529,7 @@ export class WashingLines {
     cloth.setAttribute('aShape', new THREE.InstancedBufferAttribute(new Float32Array(shapes), 4));
     cloth.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colors), 3));
     cloth.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(kinds), 1));
+    cloth.setAttribute('aRole', new THREE.InstancedBufferAttribute(new Float32Array(roles), 1));
     cloth.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
 
     this.group.add(new THREE.Mesh(mergeGeometries(posts), woodMat));
@@ -539,9 +628,11 @@ export function lineField(
   spread = 24,
   seed = 17,
   path: readonly THREE.Vector2[] = [],
+  hung: readonly LineSpec[] = [],
 ): LineSpec[] {
   const rand = mulberry32(seed);
-  const specs: LineSpec[] = [];
+  /** Lines strung by hand first, so the field keeps clear of them; they are not returned, only respected. */
+  const specs: LineSpec[] = [...hung];
   const at: Along = { side: Infinity, t: 0, dir: new THREE.Vector2() };
   const ends = path.length ? [path[0], path[path.length - 1]] : [];
   /**
@@ -611,7 +702,7 @@ export function lineField(
     });
   }
 
-  return specs;
+  return specs.slice(hung.length);
 }
 
 /** The point a fraction `t` of the way along the path, and the direction it runs there. */
