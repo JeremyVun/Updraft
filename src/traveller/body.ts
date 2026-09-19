@@ -64,6 +64,8 @@ function at(geo: THREE.BufferGeometry, x: number, y: number, z: number, sx = 1, 
 export interface Rig {
   root: THREE.Group;
   body: THREE.Group;
+  /** The coat itself, so it can be flattened on its own: everything else on the body must keep its size. */
+  coat: THREE.Mesh;
   head: THREE.Group;
   armL: THREE.Group;
   armR: THREE.Group;
@@ -146,7 +148,8 @@ export function buildChild(): Rig {
   );
   const collar = paint(at(new THREE.TorusGeometry(0.22, 0.11, 8, 16).rotateX(Math.PI / 2), 0, 1.02, 0), PALETTE.scarf);
   const knot = paint(at(new THREE.SphereGeometry(0.12, 10, 8), 0.12, 0.98, 0.18, 1, 0.85, 0.9), PALETTE.scarf);
-  body.add(mesh([coat, hem, satchel, ...buttons, collar, knot]));
+  const bell = mesh([coat, hem, satchel, ...buttons, collar, knot]);
+  body.add(bell);
 
   const neck = new THREE.Object3D();
   neck.position.set(0.12, 1.0, 0.16);
@@ -231,6 +234,7 @@ export function buildChild(): Rig {
   return {
     root,
     body,
+    coat: bell,
     head,
     armL: left.g,
     armR: right.g,

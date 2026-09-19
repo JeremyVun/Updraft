@@ -110,9 +110,14 @@ And, while that was being built:
 
 - **The lift is the whole gesture.** A bare gust used to count as lift under the bird (`tuning.colt.gustLift` 0.9
   against a take-off at 0.5), so one stroke lifted it. Now gusts only make it hope (0.25: wings half open, nothing
-  more), and at the summit it needs a column of `tuning.summit.liftToFly` held for `liftFor` seconds
-  (`Cygnet.needs`): about four or five turns of the cursor round it. Nothing times it out: the family passes over
-  calling every `promptEvery` seconds instead of the night wind doing it for the player.
+  more). At the summit a column of `tuning.summit.liftToFly` gets it off the grass and then it climbs only as fast
+  as the player keeps winding and sinks the moment they stop (`Cygnet.needs` with a `Labour`: `gain`, `sink`,
+  `rise`), and the family comes down for it once it has been held `liftTo` up: six to eight turns of the cursor,
+  and a player who stops halfway watches it come back down to try again. Nothing times it out.
+- **Why it happens.** Sitting in the last of the sun, the family passes low across the sun ahead of the child
+  (`updateSummit`: `flock.pass` where the summit camera can see it), the small one watches them and cries after
+  them, and only then is it set down. The family swings out of the skein into a wide wheel over the hilltop and
+  calls from it every `callEvery` seconds while the player is asked; they come down for it only when it is up.
 - **The updraft is taught by mirroring.** The invitation spiral (`Coax`, `fx/swirl.ts`) was already shown in the
   meadow's `try` beat and at the summit; what stopped it being a lesson was that gusts lifted the bird anyway, and
   that the player's column stood at the cursor's ground point, which under a low camera is a long ellipse off the
@@ -123,10 +128,14 @@ And, while that was being built:
   which is why the drawing used to open against grass. After the family goes, the child walks on slowly
   (`Traveller.stroll`, beat `crest`) with their eyes on the path, and over the brow the valley opens and their eyes
   go to the roof; they sit at `REVEAL` (28 units on) and open the drawing with the cottage in frame beyond it.
-  The chimney is cold (`Cottage.smoking`) until the child is through the door.
+  The chimney is cold (`Cottage.smoking`) until nightfall, when somebody in the house lights the fire: the smoke
+  is what asks the child in (Jeremy: children do not light fireplaces, adults do).
 - **Play again** is bare glowing text: no border, box or blur.
-- The final rise and the stars in the water: Opus 5 parcel `end-stars`. The unfolding animation: Opus 5 parcel
-  `end-unfold`.
+- **Fireflies at home** had gone out: the sleeping island's `presence` (which puts a summer night's fireflies out)
+  was true for the whole 300-unit range the room is drawn at, and the cottage is 237 from the hollow. It now gives
+  out at `PRESENCE_TO` (110) from the hollow.
+- The final rise and the stars in the water: Opus 5 parcel `end-stars`, merged. The unfolding animation: Opus 5
+  parcel `end-unfold`.
 
 ## Status (2026-09-19)
 
@@ -134,6 +143,21 @@ On `main`: everything in the first brief (the shelving shore and the shorter rou
 with its deck and mooring, the arrival watched from the water and the climb watched from low behind the child;
 the dolphins; the fledging and join; the restructured beats, cameras and timings in `home.ts`; the lush home
 grass; the finale and the credits) and the second brief's mechanics above.
+
+**The last shot** (`end-stars`, 2026-09-19). The rise now ends looking out over the open sea north-east of the
+island, swung 19 degrees east of the moon (`MOON_OFF` in `home.ts`) and a degree above level: the moon hangs in
+the left of the frame with its path lying down the water under it, the horizon crosses the middle, and the dark
+strip up the centre that the credits roll through is left alone. The moon had to come down to do it (`MOON.el`
+12, was 24): from a camera 90 units up, a moon at 24 throws its path onto water inside the island's own shoulder,
+where nothing can see it, and it will not share a 38-degree lens with the sea it lights. The pan also tightens as
+it goes (`pace` 0.2 to 0.36 instead of 0.2 down to 0.08) so it has arrived by the time the credits are over it;
+before, it was still swinging the moon into the middle of the screen a minute into the roll.
+And the sea keeps the stars: `uStarlight` (1 once the last of the day is out of the sky and no weather is in the
+way) thins the night haze, draws the distance veil back from 510 units to 780, and lets the water catch the
+sky's field of stars as glints — the world-space cells a few pixels across that the sun's glitter is drawn with,
+because reflecting the sky's own star field through the ripples would only boil. Before this the whole lower
+frame was one flat fogged slab.
+
 
 Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
 the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`

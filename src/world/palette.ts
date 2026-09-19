@@ -134,8 +134,12 @@ export function sunDirection(azDeg: number, elDeg: number, out = new THREE.Vecto
   return out.set(-Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 }
 
-/** Where the moon hangs at night (azimuth, elevation in degrees). */
-export const MOON = { az: -38, el: 24 } as const;
+/**
+ * Where the moon hangs at night (azimuth, elevation in degrees). Low, because the end of the story is watched
+ * from a hill over the sea: a moon any higher throws its path onto water too near the shore to be seen, and
+ * cannot be held in the same frame as the sea it lights.
+ */
+export const MOON = { az: -38, el: 12 } as const;
 
 /** Where the light comes from for a time of day: the sun sinks into the north-west, then the moon takes over. */
 function lightAngles(dusk: number): [number, number] {
@@ -173,9 +177,16 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
   u.uSkyHorizonSun.value.copy(p.horizonSun);
   u.uSkyAmbient.value.copy(p.ambient);
   u.uGroundBounce.value.copy(p.bounce);
-  u.uFogDensity.value = p.fog;
   u.uNight.value = night;
-  u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * u.uNight.value) + 0.22 * shower;
+  /**
+   * Once the very last of the day is out of the sky and no weather is in the way, the air is at its clearest:
+   * the haze thins, the veil the world ends in draws back (main.ts), and the sea starts catching the stars.
+   * Only the top of the dial, so a room that plays at nightfall keeps whatever murk it was built with.
+   */
+  const starlight = THREE.MathUtils.smoothstep(dusk, 1.92, 1.99) * (1 - storm);
+  u.uStarlight.value = starlight;
+  u.uFogDensity.value = p.fog * (1 - 0.35 * starlight);
+  u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * night * (1 - 0.6 * starlight)) + 0.22 * shower;
   const [az, el] = lightAngles(dusk);
   sunDirection(az, el, u.uSunDir.value);
 }

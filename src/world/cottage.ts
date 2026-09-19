@@ -181,7 +181,7 @@ export class Cottage {
   private readonly smoke: THREE.InstancedBufferAttribute;
   private readonly puffs: { p: THREE.Vector3; age: number; life: number }[] = [];
   private readonly chimney = new THREE.Vector3();
-  /** The chimney is cold until the child is home; once they are, the first puffs come up one after another. */
+  /** The chimney is cold until somebody lights the fire as night comes; then the first puffs come up one after another. */
   smoking = false;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private doorOpen = 0;
