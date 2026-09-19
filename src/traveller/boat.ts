@@ -476,20 +476,23 @@ export class Boat {
   }
 
   /**
-   * What the sail has this frame, smoothed into `sailWind`. The player's wind is told from the world's by the
-   * gust it carries and by how far it stands above the prevailing breeze, because `becalmed` takes the world's
-   * wind out of the sail and leaves the player's in it. The squall is not in the wind field at all, so its weight
-   * on the cloth comes from the sea it is raising.
+   * What the sail has this frame, smoothed into `sailWind`. The world's share is the prevailing breeze the
+   * chapter is running, which is steady and dies when the chapter means it to; the field itself is read for what
+   * the player has added to it and for which way the wind is lying. `becalmed` takes the world's wind out of the
+   * sail and leaves the player's. The squall is no stronger in the field, so its weight comes from the sea.
    */
   private readWind(dt: number): WindSample {
     const w = this.airOnSail(this.sample);
     const speed = Math.hypot(w.x, w.z);
-    const world = Math.min(speed, this.wind.breeze.length());
-    const made = speed - world + w.energy * tuning.sail.gustPress;
+    const world = this.wind.breeze.length();
+    /** Told by the gust it carries and by standing well clear of the breeze and of the field's own stirring. */
+    const made = Math.max(0, speed - Math.max(world, tuning.sail.stirs)) + w.energy * tuning.sail.gustPress;
     const weather = this.swell * tuning.sail.squallPress;
     const blowing = made + world + weather;
     const taken = made + (world + weather * tuning.sail.squallHolds) * (1 - this.becalmed);
-    const along = (w.x * Math.sin(this.yaw) + w.z * Math.cos(this.yaw)) * (taken / Math.max(blowing, 1e-3));
+    /** Which way it is lying is the field's to say, however little of it there is. */
+    const heading = speed > 1e-3 ? (w.x * Math.sin(this.yaw) + w.z * Math.cos(this.yaw)) / speed : 0;
+    const along = heading * taken;
     const air = this.sailWind;
     air.blowing = this.takesUp(air.blowing, blowing, dt);
     air.taken = this.takesUp(air.taken, taken, dt);
