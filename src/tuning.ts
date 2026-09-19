@@ -355,8 +355,8 @@ export const tuning = {
     luffFrom: 0.12,
     luffFade: 0.55,
     /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
-    drive: 1.6,
-    following: 0.4,
+    drive: 1.7,
+    following: 0.42,
     topSpeed: 16,
     /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
     gathers: 0.5,
