@@ -261,7 +261,21 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   stroke adds fine ripple, a uniform darkening and a short chop; the sail luffs on an arriving gust
   (`tuning.water`). Deliberate: whitecaps now need the squall.
 
-Everything in the 2026-09-18 playtest is built. Open: the sleeping island (needs its design pass); the crest's
+- The sleeping island's world (`1aed3b1`, 2026-09-19): `world/sleeping.ts` (the bed with a cloth blanket, pillow and
+  down, the bedside lamp, the window frame with cloth curtains and a light shaft onto the pillow, the upside-down
+  chair and desk hanging over the hollow, the ceiling lamp on its flex, rug and floorboards dithering into frost),
+  pooled fog in `fogOf` with four top sheets and a 128² carve field the player's stroke opens lanes in, frost and
+  dawn as shared uniforms, a `sleeping` block in `tuning.ts`, a stub chapter (ashore, the bed, the berth), the
+  `toSleeping` hop and `toHome` re-based west off `SLEEP_BERTH` through the strait north of the island; the wood
+  no longer sows trees or litter over it. 60 fps at the bed as the game opens; parity 0.0006. Short: the rig's
+  2.8-unit ground clearance keeps every shot in the hollow 4–5 units above the child (a low camera needs
+  `camera.ts` or a shallower hollow); **a carved lane does not read from the high camera** (the fog top is a flat
+  pale disc from above; it reads at fog level); the `toHome` strait is 30–80 cm deep for 30 units and will read as
+  bright shallows; frosted blades read as ice chips within 10 units; `fogTopAt` ignores carving; large glowing
+  orbs in the hill shot at dawn 1 (`/tmp/updraft-sleepw-k-hill-dawn1.png`) are unattributed (fireflies gate or
+  the down); the last two thirds of the crossing home were checked numerically, not watched.
+
+Everything in the 2026-09-18 playtest is built. Open: the sleeping island's story (building); the crest's
 frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
 ending (dolphins, summit, fledging, credits).
 
