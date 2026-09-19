@@ -117,7 +117,7 @@ const GRIPS: [0 | 1, number[][]][] = [
 /** The paper held up into the wind: this long before the island's own takes it, so the ending cannot be made to wait. */
 const HOLDS_UP = 12;
 /** Seconds of the player's own wind on it that carry it off, and how long they watch it go afterwards. */
-const TAKES = 1;
+const TAKES = 0.55;
 const WATCHES_IT = 8;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
@@ -647,8 +647,8 @@ export class HomeChapter implements Chapter {
     c.reachFor(0, this.held.set(c.position.x + fwd.x * 0.74, c.position.y + 2.46, c.position.z + fwd.z * 0.74));
     const w = wind.sample(p.position.x, p.position.z, this.air);
     const reach = Math.hypot(input.world.x - c.position.x, input.world.z - c.position.z);
-    const over = input.present && input.gust > 4 ? 1 - THREE.MathUtils.smoothstep(reach, 30, 95) : 0;
-    this.taken += dt * Math.max(over * Math.min(1, (input.gust - 4) / 7), Math.min(1, w.energy * 2.6));
+    const over = input.present && input.gust > 2.5 ? 1 - THREE.MathUtils.smoothstep(reach, 50, 150) : 0;
+    this.taken += dt * Math.max(over * Math.min(1, (input.gust - 2.5) / 5), Math.min(1, w.energy * 2.6));
     if (this.t > HOLDS_UP - 1.2 && !this.gusted) {
       this.gusted = true;
       wind.addSplat({
