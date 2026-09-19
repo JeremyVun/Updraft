@@ -309,10 +309,18 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   with the bird legible in it. Short: near blades in full sun still read as gold cones at the hilltop (the backlit
   term on a short sward; density is capped at one blade per 0.25 m cell, so continuity has to come from the ground).
 - **Found on the merge:** the child and the cygnet were black on the bed once the ending lowered the moon from 24°
-  to 12° (the hollow's rim shadows the bed), because the character shaders never took the lamp. A parcel is adding
-  the lamp, dawn and ember light to the child's and the cygnet's shaders.
+  to 12° (the hollow's rim shadows the bed), because the character shaders never took the lamp.
+- The lamp on the characters (`4540335`): `emberLight`, `dawnLight` and the lamp added to the child's shader
+  (`traveller/body.ts`), `dawnLight` and the lamp to the cygnet's skin and down shells (`cygnet/shader.ts`, the
+  shells taking it as a rim on the lamp side), all three to the paper plane; every block behind its uniform's `w`
+  so other rooms pay one comparison (ungated, the down shells' extra cost shifted the gates' wall-clock window and
+  two runs failed marginally). The characters multiply the lamp by a cubed wrap toward it, the cygnet at 0.75, so
+  the hood and the down are warm on the lamp side and blue away from it and the bed stays the warmest thing in
+  frame; at the props' flat weight the child was a butter blob. A side gain: in the wood the coat, the mittens and
+  the cygnet in the satchel now take the coal's light as the floor does. 60 fps, gates clean three runs, summit
+  unchanged. The cygnet's 0.75 and the wrap are the agent's judgement, not a value Jeremy has seen.
 
-Everything in the 2026-09-18 playtest is built. Open: the lamp on the characters (building) and Jeremy's verdict on the room; the crest's
+Everything in the 2026-09-18 playtest is built. Open: Jeremy's verdict on the sleeping island as a whole; the crest's
 frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
 ending (dolphins, summit, fledging, credits).
 
