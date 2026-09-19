@@ -110,9 +110,14 @@ And, while that was being built:
 
 - **The lift is the whole gesture.** A bare gust used to count as lift under the bird (`tuning.colt.gustLift` 0.9
   against a take-off at 0.5), so one stroke lifted it. Now gusts only make it hope (0.25: wings half open, nothing
-  more), and at the summit it needs a column of `tuning.summit.liftToFly` held for `liftFor` seconds
-  (`Cygnet.needs`): about four or five turns of the cursor round it. Nothing times it out: the family passes over
-  calling every `promptEvery` seconds instead of the night wind doing it for the player.
+  more). At the summit a column of `tuning.summit.liftToFly` gets it off the grass and then it climbs only as fast
+  as the player keeps winding and sinks the moment they stop (`Cygnet.needs` with a `Labour`: `gain`, `sink`,
+  `rise`), and the family comes down for it once it has been held `liftTo` up: six to eight turns of the cursor,
+  and a player who stops halfway watches it come back down to try again. Nothing times it out.
+- **Why it happens.** Sitting in the last of the sun, the family passes low across the sun ahead of the child
+  (`updateSummit`: `flock.pass` where the summit camera can see it), the small one watches them and cries after
+  them, and only then is it set down. The family swings out of the skein into a wide wheel over the hilltop and
+  calls from it every `callEvery` seconds while the player is asked; they come down for it only when it is up.
 - **The updraft is taught by mirroring.** The invitation spiral (`Coax`, `fx/swirl.ts`) was already shown in the
   meadow's `try` beat and at the summit; what stopped it being a lesson was that gusts lifted the bird anyway, and
   that the player's column stood at the cursor's ground point, which under a low camera is a long ellipse off the
@@ -123,10 +128,14 @@ And, while that was being built:
   which is why the drawing used to open against grass. After the family goes, the child walks on slowly
   (`Traveller.stroll`, beat `crest`) with their eyes on the path, and over the brow the valley opens and their eyes
   go to the roof; they sit at `REVEAL` (28 units on) and open the drawing with the cottage in frame beyond it.
-  The chimney is cold (`Cottage.smoking`) until the child is through the door.
+  The chimney is cold (`Cottage.smoking`) until nightfall, when somebody in the house lights the fire: the smoke
+  is what asks the child in (Jeremy: children do not light fireplaces, adults do).
 - **Play again** is bare glowing text: no border, box or blur.
-- The final rise and the stars in the water: Opus 5 parcel `end-stars`. The unfolding animation: Opus 5 parcel
-  `end-unfold`.
+- **Fireflies at home** had gone out: the sleeping island's `presence` (which puts a summer night's fireflies out)
+  was true for the whole 300-unit range the room is drawn at, and the cottage is 237 from the hollow. It now gives
+  out at `PRESENCE_TO` (110) from the hollow.
+- The final rise and the stars in the water: Opus 5 parcel `end-stars`, merged. The unfolding animation: Opus 5
+  parcel `end-unfold`.
 
 ## Status (2026-09-19)
 
