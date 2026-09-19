@@ -324,17 +324,22 @@ export const tuning = {
    * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
    */
   sail: {
-    /** Wind speed a unit of the player's gust is worth, and what the squall presses with at a full sea. */
+    /** Wind speed a unit of the player's gust is worth. */
     gustPress: 4,
-    squallPress: 5,
+    /**
+     * What the squall presses the cloth with at a full sea, and how much of that the sail can hold: a small boat
+     * in a storm is a hard-pressed, shaking sail spilling most of it, not four times the way through the water.
+     */
+    squallPress: 4.5,
+    squallHolds: 0.28,
     /** How fast the cloth takes wind up, and how slowly it lets it go, per second. */
     fills: 3.2,
     empties: 1.2,
     /** Wind speed the belly is two thirds out at, and how deep a full belly is, in world units. */
-    bellyAt: 2.2,
+    bellyAt: 1.4,
     belly: 0.72,
     /** Below this wind speed the cloth begins to hang, and with none in it at all it hangs dead. */
-    hangsBelow: 1.3,
+    hangsBelow: 0.6,
     /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
     livelyAt: 10,
     /** With no wind: how far the leech falls in toward the mast, how far the cloth sags, and the folds it hangs in. */
@@ -349,8 +354,8 @@ export const tuning = {
     luffFrom: 0.12,
     luffFade: 0.55,
     /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
-    drive: 2.3,
-    following: 0.4,
+    drive: 3.4,
+    following: 0.6,
     topSpeed: 16,
     /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
     gathers: 0.5,

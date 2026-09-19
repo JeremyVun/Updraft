@@ -488,7 +488,7 @@ export class Boat {
     const made = speed - world + w.energy * tuning.sail.gustPress;
     const weather = this.swell * tuning.sail.squallPress;
     const blowing = made + world + weather;
-    const taken = made + (world + weather) * (1 - this.becalmed);
+    const taken = made + (world + weather * tuning.sail.squallHolds) * (1 - this.becalmed);
     const along = (w.x * Math.sin(this.yaw) + w.z * Math.cos(this.yaw)) * (taken / Math.max(blowing, 1e-3));
     const air = this.sailWind;
     air.blowing = this.takesUp(air.blowing, blowing, dt);
