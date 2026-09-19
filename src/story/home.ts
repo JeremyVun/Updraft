@@ -643,7 +643,8 @@ export class HomeChapter implements Chapter {
     }
     c.faceToward(faceX, faceZ, 1 - Math.exp(-dt * 1.2));
     const fwd = this.forward();
-    c.reachFor(1, this.held.set(c.position.x + fwd.x * 0.3, c.position.y + 2.62, c.position.z + fwd.z * 0.3));
+    /** The hand the plane has ridden in the whole way (`handPosition` is that one), out and up, offering it. */
+    c.reachFor(0, this.held.set(c.position.x + fwd.x * 0.62, c.position.y + 2.35, c.position.z + fwd.z * 0.62));
     const w = wind.sample(p.position.x, p.position.z, this.air);
     const reach = Math.hypot(input.world.x - c.position.x, input.world.z - c.position.z);
     const over = input.present && input.gust > 4 ? 1 - THREE.MathUtils.smoothstep(reach, 30, 95) : 0;
@@ -664,7 +665,7 @@ export class HomeChapter implements Chapter {
       });
     }
     if (this.taken > TAKES || this.t > HOLDS_UP) {
-      c.reachFor(1, null);
+      c.reachFor(0, null);
       p.launch(c.handPosition(this.hand), this.tmp.set(TOWARD_SUNSET.x * 5.5, 5.4, TOWARD_SUNSET.y * 5.5));
       p.depart(this.tmp.set(TOWARD_SUNSET.x, 0, TOWARD_SUNSET.y));
       cue('release');
