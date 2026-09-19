@@ -350,9 +350,9 @@ export class LinesChapter implements Chapter {
      */
     const gazing = this.gazeUntil > 0 && this.now < this.gazeUntil + 1.2;
     if (gazing) {
-      s.target.set(c.x * 0.4 + FAMILY_MID.x * 0.6, c.y * 0.3 + (FAMILY_MID.y - 1.4) * 0.7, c.z * 0.4 + FAMILY_MID.z * 0.6);
-      s.distance = 14;
-      s.height = 0.6;
+      s.target.set(c.x * 0.35 + FAMILY_MID.x * 0.65, FAMILY_MID.y - 0.6, c.z * 0.35 + FAMILY_MID.z * 0.65);
+      s.distance = 12;
+      s.height = -2.2;
       this.pace = 0.55;
       this.focus.copy(FAMILY_MID);
       return;
