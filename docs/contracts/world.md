@@ -33,6 +33,56 @@ A 320 × 320 square that follows the camera; see `wind.md` for how it moves. Eve
 - Every species reads the same `Stimuli` each frame: the wind field, the player's gust and updraft, the camera, the glider, the walking child, the life at a point, the breeze and the time of night. They are dormant beyond `DORMANT_RANGE` from the camera.
 - Waking follows the story: rabbits pop up out of the grass, butterflies rise from the flowers and finches fly in where life passes 0.6–0.75; gulls come in off the sea once the breeze returns. Finches only perch in the tree once it has leaves.
 
+## The sleeping island
+
+`src/world/sleeping.ts` (`SleepingIsland`), the room after the dark wood. Its ground is in `heightfield.ts`
+(`ISLES.sleeping` at (−175, −1922), `SLEEP_HOLLOW` and `SLEEP_HILL`), its short frosted grass in `grass.ts`
+(`sleepFloorAt`), and everything it colours the world with is in `atmosphere.ts`. The story that plays in it
+drives it entirely through the numbers below; the room itself owns how they look.
+
+**Places.** `SLEEP_LANDING` (east shore, facing the wood: where the boat runs ashore), `SLEEP_BERTH` (west shore:
+where it is drawn up for the crossing home), `BED` with `BED_FACING` (the way its head end points), `PILLOW`,
+`HILLTOP` (the top of `SLEEP_HILL`, well clear of the fog), `LAMP` (the bedside bulb), `WINDOW` with
+`WINDOW_INTO` (the way the light comes through it toward the pillow), and `bedside` (where the child stands).
+
+**Driven values**, all 0..1, all eased inside the module (`tuning.sleeping.ease`) so a chapter setting one never
+pops. Defaults in brackets.
+
+| value | 0 | 1 |
+| --- | --- | --- |
+| `fog` [1] | no fog at all | the night's full pooling in the hollow |
+| `frost` [0] | bare grass | frost hard in from the rim right up to the bed |
+| `dawn` [0] | night | the first sun down the whole hill, the fog burnt back, the lamp overtaken |
+| `curtains` [0] | drawn | thrown open, gathered at the sides, with the light coming through |
+| `blanket` [0] | tucked in | folded back off the bed |
+
+The sky's own warming is not here: that is the chapter's `dusk`, eased in `main.ts` like every other room's.
+The module also lifts the blanket a little by itself under any real gust over the bed and settles it back.
+
+**What they drive.** `uHollow` (where the fog pools, how far it reaches, how thick) and `uHollowTop` feed
+`hollowDensity`, which `fogOf` takes along the eye ray, so the pooled fog is in every shader at no extra cost to
+any other room: at `fog` 0 with the camera 300 units away the whole of it is one comparison. `uFrost` is read by
+`frostAt` (the terrain, the grass blades, the bed and the rug). `uLamp` is read by `lampLight` and `uDawn` by
+`dawnLight`, which lights the hilltop first and comes down the hill as `dawn` rises, and lights the lane
+wherever it is open.
+
+**Calls.**
+- `carve(x, z, dirX, dirZ, strength)` stamps a lane of clear air into the fog. The room already calls it every
+  frame from the player's own stroke (`input.world`, `input.gust`), so blowing across the hollow opens a lane
+  that closes again over `tuning.sleeping.carveCloses` seconds. It is a 128² field over the island
+  (`uCarveTex`/`uCarveDomain`) decayed back toward 1, read by the pooled fog and by the fog's top sheets.
+- `lane(from, to, halfWidth)` and `laneOpen` (0..1) set `uLane`/`uLaneOpen`: one widening lane down the hill,
+  clear of fog and of frost as far as it has opened, for the morning to come down.
+- `pillowPuff()` releases a few dozen pieces of down from the pillow, which hang and then go where the wind
+  goes. The story's one long white feather belongs beside it (see the note in the constructor).
+- `fogTopAt(x, z)` is the height of the fog's top surface, so a bird climbing the hill can be told when it is
+  out of it. It ignores what has been carved: it answers for the fog as a whole, not for the hole you just made.
+
+**What the story parcel is expected to drive:** `frost` up through the night and back down with `dawn`; `fog`
+through the climb; `blanket` for the gust that is answered and refused; `pillowPuff()` and its feather;
+`lane(HILLTOP, BED, ...)` with `laneOpen` run from 0 to 1 as the bird glides down it; `curtains` thrown open at
+the end; `dawn` to 1. Nothing in the room decides any of that for itself.
+
 ## Adding something that lives in the world
 
 1. Stand it on `heightAt`, and if it is small, keep it out of walls (`fieldAt`) and off water.

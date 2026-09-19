@@ -342,7 +342,7 @@ vec4 fogOf(vec3 wpos) {
     vec3 mid = (cameraPosition + wpos) * 0.5;
     float dens = (hollowDensity(cameraPosition) + 2.0 * hollowDensity(mid) + hollowDensity(wpos)) * 0.25;
     float pooled = 1.0 - exp(-dist * dens * 0.2);
-    fogCol = mix(fogCol, uHollowTint * (uSkyAmbient * 1.3 + uSunColor * 0.09), pooled / max(pooled + amt, 1e-4));
+    fogCol = mix(fogCol, uHollowTint * (uSkyAmbient * 1.25 + uSunColor * 0.5), pooled / max(pooled + amt, 1e-4));
     amt = 1.0 - (1.0 - amt) * (1.0 - pooled);
   }
   return vec4(fogCol, clamp(amt, 0.0, 1.0));

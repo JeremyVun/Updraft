@@ -16,8 +16,8 @@ export const SLEEP_BERTH = new THREE.Vector3(-214.5, 0, -1926);
 
 /** The way the bed's head end points: toward the hill, and toward the window the morning comes through. */
 export const BED_FACING = new THREE.Vector2(-0.35, -0.94).normalize();
-const BED_LENGTH = 2.35;
-const BED_WIDTH = 1.3;
+const BED_LENGTH = 2.8;
+const BED_WIDTH = 1.5;
 
 function groundAround(x: number, z: number, radius: number): number {
   let top = heightAt(x, z);
@@ -64,12 +64,9 @@ const CURTAIN_DROP = RAIL_Y - 0.28;
 WINDOW.y = WINDOW_GROUND + 1.35;
 
 /** Where the ceiling lamp stands on its flex, and where the two upside-down pieces hang over the hollow. */
-const FLEX_AT = new THREE.Vector2(
-  PILLOW.x + BESIDE_BED.x * 3.4 + BED_FACING.x * 1.8,
-  PILLOW.z + BESIDE_BED.y * 3.4 + BED_FACING.y * 1.8,
-);
-const CHAIR_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 1.6 - BED_FACING.x * 2.2, BED.z + BESIDE_BED.y * 1.6 - BED_FACING.y * 2.2);
-const DESK_AT = new THREE.Vector2(BED.x - BESIDE_BED.x * 3.4 - BED_FACING.x * 0.6, BED.z - BESIDE_BED.y * 3.4 - BED_FACING.y * 0.6);
+const FLEX_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 3.6 + BED_FACING.x * 1.6, BED.z + BESIDE_BED.y * 3.6 + BED_FACING.y * 1.6);
+const CHAIR_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 2.0 - BED_FACING.x * 2.8, BED.z + BESIDE_BED.y * 2.0 - BED_FACING.y * 2.8);
+const DESK_AT = new THREE.Vector2(BED.x - BESIDE_BED.x * 3.8 - BED_FACING.x * 1.2, BED.z - BESIDE_BED.y * 3.8 - BED_FACING.y * 1.2);
 
 /** The carve field covers the island: gusts cut lanes in the fog anywhere on it, not only over the hollow. */
 const CARVE_RES = 128;
@@ -161,7 +158,7 @@ void main() {
   float a = uHollow.w * pool * carve * smoothstep(0.32, 0.78, n) * (1.35 - vLevel * 0.24);
   if (a < 0.004) discard;
   vec3 up = vec3(0.0, 1.0, 0.0);
-  vec3 col = uHollowTint * (uSkyAmbient * 1.5 + uSunColor * 0.08);
+  vec3 col = uHollowTint * (uSkyAmbient * 1.4 + uSunColor * 0.55);
   col += lampLight(vWorld, up) * 0.5 + dawnLight(vWorld, up) * 0.8;
   gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
 }`;
@@ -414,8 +411,8 @@ const PAINT = new THREE.Color('#dfd8c8');
 const TIMBER = new THREE.Color('#7c6247');
 const LINEN = new THREE.Color('#ece5d4');
 const BLANKET_RED = new THREE.Color('#a85a48');
-const RUG_RED = new THREE.Color('#8e5a4c');
-const BOARD = new THREE.Color('#8a6c4c');
+const RUG_RED = new THREE.Color('#7b5a55');
+const BOARD = new THREE.Color('#7d6b55');
 const BRASS = new THREE.Color('#b5915a');
 const SHADE = new THREE.Color('#e9dcc0');
 
@@ -655,16 +652,16 @@ export class SleepingIsland {
       return mesh;
     };
     const top = tuning.sleeping.fogTop;
-    this.chair = piece(chairParts(), CHAIR_AT.x, CHAIR_AT.y, top + 1.0, 0.7, true);
-    this.desk = piece(deskParts(), DESK_AT.x, DESK_AT.y, top + 1.5, -0.5, true);
+    this.chair = piece(chairParts(), CHAIR_AT.x, CHAIR_AT.y, top + 1.4, 0.7, true);
+    this.desk = piece(deskParts(), DESK_AT.x, DESK_AT.y, top + 2.0, -0.5, true);
     this.flex = piece(flexParts(), FLEX_AT.x, FLEX_AT.y, heightAt(FLEX_AT.x, FLEX_AT.y), 1.1, false);
 
     const rug = new THREE.Mesh(
       mergeGeometries([
-        ...[-2.1, -1.4, -0.7, 0, 0.7, 1.4, 2.1].map((offset) =>
-          floorPiece(BED.x + BESIDE_BED.x * offset, BED.z + BESIDE_BED.y * offset, BED_FACING, 5.4, 0.62, 0.02, BOARD, 14),
+        ...[-1.9, -1.2, -0.5, 0.2, 0.9, 1.6].map((offset) =>
+          floorPiece(BED.x + BESIDE_BED.x * offset, BED.z + BESIDE_BED.y * offset, BED_FACING, 5.0, 0.64, 0.02, BOARD, 14),
         ),
-        floorPiece(BED.x, BED.z, BED_FACING, 3.9, 2.9, 0.05, RUG_RED, 12),
+        floorPiece(BED.x, BED.z, BED_FACING, 3.6, 2.6, 0.05, RUG_RED, 12),
       ]),
       new THREE.ShaderMaterial({
         vertexShader: FLOOR_VERT,

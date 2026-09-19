@@ -143,10 +143,11 @@ export class SleepingChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    s.target.set(c.x + this.aim.x * 2.4, ground + 1.8, c.z + this.aim.z * 2.4);
-    const ex = c.x - this.aim.x * 12 - this.aim.z * 1.6;
-    const ez = c.z - this.aim.z * 12 + this.aim.x * 1.6;
-    s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 4.4, ez);
+    s.target.set(c.x + this.aim.x * 2.2, ground + 1.5, c.z + this.aim.z * 2.2);
+    /** The hollow is a bowl, so the eye is kept low against the child rather than a fixed height above the slope. */
+    const ex = c.x - this.aim.x * 9 - this.aim.z * 1.4;
+    const ez = c.z - this.aim.z * 9 + this.aim.x * 1.4;
+    s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0) + 1.1, ground + 2.6), ez);
     this.focus.copy(c);
   }
 }

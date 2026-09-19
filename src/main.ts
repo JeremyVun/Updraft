@@ -573,8 +573,9 @@ function frame(now: number): void {
   kite.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
   birches.update(dt, rig.camera, child.visible ? child.position : null);
-  /** Fireflies rise out of grass, not out of the sea, and they do not fly in a gale. */
-  fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6), story.focus);
+  /** Fireflies rise out of grass, not out of the sea; they do not fly in a gale, and nothing is out in a frost. */
+  const rimed = Math.min(1, atmo.uniforms.uFrost.value.w * 3);
+  fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6) * (1 - rimed), story.focus);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.brightest(emberAt);
   atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, Math.min(2.6, emberLit * 0.5));

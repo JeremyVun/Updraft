@@ -311,11 +311,11 @@ export const tuning = {
    */
   sleeping: {
     /** How thick the pooled fog is at full `fog`, and how far out from the hollow it reaches. */
-    fogThickness: 0.38,
+    fogThickness: 0.6,
     fogReach: 34,
     /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
-    fogTop: 7.6,
-    fogSoft: 1.7,
+    fogTop: 5.6,
+    fogSoft: 2.0,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
     fogDrift: 0.02,

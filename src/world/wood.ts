@@ -22,6 +22,14 @@ export const WOOD_PATH: THREE.Vector2[] = [
 ];
 
 const ISLE = ISLES.wood;
+/**
+ * The sleeping island stands inside the square the wood sows itself over, and nothing of the wood is on it: no
+ * trunks and no leaf litter. Without this the frosted island comes up wooded.
+ */
+const NEXT_ISLE = ISLES.sleeping;
+function onNextIsle(x: number, z: number): boolean {
+  return Math.hypot((x - NEXT_ISLE.x) / NEXT_ISLE.rx, (z - NEXT_ISLE.z) / NEXT_ISLE.rz) < 1.1;
+}
 /** Trees stop above the beach; below this the shore is bare shingle. */
 const TREE_LINE = 2.0;
 /** No trunk stands within this of the path, though the branches close over it. */
@@ -248,7 +256,8 @@ void main() {
   vec2 uv = domainUv(p);
   float away = distance(p, cameraPosition.xz);
   float worn = smoothstep(1.1, 4.2, wayDistance(p));
-  if (r3 > (0.3 + 0.75 * vnoise(p * 0.6)) * worn || away > ${LITTER_REACH.toFixed(1)} || !insideUv(uv)) {
+  float next = length((p - vec2(${NEXT_ISLE.x}.0, ${NEXT_ISLE.z}.0)) / vec2(${NEXT_ISLE.rx}.0, ${NEXT_ISLE.rz}.0));
+  if (r3 > (0.3 + 0.75 * vnoise(p * 0.6)) * worn || away > ${LITTER_REACH.toFixed(1)} || !insideUv(uv) || next < 1.1) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
@@ -662,7 +671,7 @@ export class DarkWood {
         const x = gx + (rand() - 0.5) * step * 1.5;
         const z = gz + (rand() - 0.5) * step * 1.5;
         const y = heightAt(x, z);
-        if (y < TREE_LINE) continue;
+        if (y < TREE_LINE || onNextIsle(x, z)) continue;
         const way = pathDistance(x, z);
         if (way < CORRIDOR * 0.66) continue;
         if (reserved.some(([rx, rz, r]) => Math.hypot(x - rx, z - rz) < r)) continue;
