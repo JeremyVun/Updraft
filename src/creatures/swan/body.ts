@@ -38,6 +38,10 @@ function spline(v: number[], s: number): number {
   return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
 }
 
+function reverse(idx: number[]): void {
+  for (let i = 0; i < idx.length; i += 3) [idx[i + 1], idx[i + 2]] = [idx[i + 2], idx[i + 1]];
+}
+
 function attribute(geo: THREE.BufferGeometry, name: string, value: number): THREE.BufferGeometry {
   geo.setAttribute(name, new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count).fill(value), 1));
   return geo;
@@ -96,6 +100,8 @@ function sweptSkin(part: number, mat: number, rings: Ring[], around: number, ble
       else idx.push(pole, a, b);
     }
   }
+  /** The rings are wound for a sweep running up +z; a sweep the other way is inside out until it is turned. */
+  if (rings[rings.length - 1].z < rings[0].z) reverse(idx);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('aMat', new THREE.Float32BufferAttribute(mats, 2));
@@ -141,8 +147,8 @@ function wingSkin(part: number, side: number): THREE.BufferGeometry {
   for (let i = 0; i < stations; i++) {
     for (let j = 0; j < around; j++) {
       const [a, b, d, e] = [ring(i, j), ring(i, j + 1), ring(i + 1, j), ring(i + 1, j + 1)];
-      if (side > 0) idx.push(a, b, d, b, e, d);
-      else idx.push(a, d, b, b, d, e);
+      if (side > 0) idx.push(a, d, b, b, d, e);
+      else idx.push(a, b, d, b, e, d);
     }
   }
   for (const [i, first] of [
@@ -155,8 +161,8 @@ function wingSkin(part: number, side: number): THREE.BufferGeometry {
     spans.push(first ? 0 : 1);
     for (let j = 0; j < around; j++) {
       const [a, b] = [ring(i, j), ring(i, j + 1)];
-      if (first === side > 0) idx.push(pole, b, a);
-      else idx.push(pole, a, b);
+      if (first === side > 0) idx.push(pole, a, b);
+      else idx.push(pole, b, a);
     }
   }
   const geo = new THREE.BufferGeometry();

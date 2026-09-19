@@ -14,6 +14,18 @@ const DEPTH = 0.62;
 const FLOOR_Y = -0.24;
 /** How deep the hull floats: local y 0 rides this far above the sea, putting the waterline below the floorboards. */
 const DRAFT = 0.42;
+/**
+ * Pushed off a beach, a boat goes out the way the sand slopes, whichever way its bow is pointing, and is brought
+ * round by hand before the sail can take it: how fast it drifts out, how fast it comes round, how nearly it has
+ * to be pointing the right way before it is sailed, and the longest it is ever held like that.
+ */
+const PUSH_OFF_SPEED = 1.4;
+const PUSH_OFF_TURN = 0.55;
+const PUSH_OFF_UNTIL = 0.7;
+const PUSH_OFF_LONGEST = 8;
+/** How fast it can be steered round under sail: nimble with no way on, and a wide slow curve at speed. */
+const TURN_SLOW = 0.5;
+const TURN_FAST = 0.25;
 
 const HULL_VERT = /* glsl */ `
 in vec3 color;
@@ -229,6 +241,9 @@ export class Boat {
   /** A shove against the hull, signed by the side it came from, and how long ago it landed. */
   private shove = 0;
   private shoveAge = 1e3;
+  /** Which way the beach lets it go while it is being pushed off, and how long that has been going on. */
+  private readonly pushDir = new THREE.Vector2();
+  private pushingFor = -1;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -273,7 +288,18 @@ export class Boat {
   launch(): void {
     this.afloat = true;
     this.grounded = false;
-    this.speed = 0.8;
+    this.speed = 0;
+    this.pushingFor = 0;
+    /** Out is downhill off the sand; on open water, where there is no slope, it is astern. */
+    const p = this.position;
+    const gx = heightAt(p.x + 3, p.z) - heightAt(p.x - 3, p.z);
+    const gz = heightAt(p.x, p.z + 3) - heightAt(p.x, p.z - 3);
+    if (Math.hypot(gx, gz) > 0.05) this.pushDir.set(-gx, -gz).normalize();
+    else this.pushDir.set(-Math.sin(this.yaw), -Math.cos(this.yaw));
+  }
+
+  private get pushingOff(): boolean {
+    return this.pushingFor >= 0;
   }
 
   /** Which side the sail is swung out to: +1 to starboard, -1 to port. */
@@ -318,18 +344,28 @@ export class Boat {
     const kick = this.shove * u * Math.exp(1 - u);
 
     if (this.afloat && !this.grounded) {
-      const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + (4.2 + 2.2 * this.swell) * (1 - this.becalmed) + w.energy * 6;
-      this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * (0.45 + this.becalmed * 0.3)));
-      this.speed += Math.abs(kick) * tuning.dolphins.shoveSurge * dt;
-      this.yaw += kick * tuning.dolphins.shoveYaw * dt;
+      let dy = 0;
       if (this.steerFor) {
         const want = Math.atan2(this.steerFor.x - p.x, this.steerFor.y - p.z);
-        let dy = want - this.yaw;
-        dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-        this.yaw += THREE.MathUtils.clamp(dy, -dt * 0.25, dt * 0.25);
+        dy = Math.atan2(Math.sin(want - this.yaw), Math.cos(want - this.yaw));
       }
-      p.x += (fx * this.speed + w.x * 0.06) * dt;
-      p.z += (fz * this.speed + w.z * 0.06) * dt;
+      if (this.pushingOff) {
+        this.pushingFor += dt;
+        const out = PUSH_OFF_SPEED * Math.max(0.35, 1 - this.pushingFor / PUSH_OFF_LONGEST);
+        p.x += this.pushDir.x * out * dt;
+        p.z += this.pushDir.y * out * dt;
+        this.yaw += THREE.MathUtils.clamp(dy, -dt * PUSH_OFF_TURN, dt * PUSH_OFF_TURN);
+        if ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST) this.pushingFor = -1;
+      } else {
+        const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + (4.2 + 2.2 * this.swell) * (1 - this.becalmed) + w.energy * 6;
+        this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * (0.45 + this.becalmed * 0.3)));
+        this.speed += Math.abs(kick) * tuning.dolphins.shoveSurge * dt;
+        this.yaw += kick * tuning.dolphins.shoveYaw * dt;
+        const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
+        this.yaw += THREE.MathUtils.clamp(dy, -dt * turn, dt * turn);
+        p.x += (fx * this.speed + w.x * 0.06) * dt;
+        p.z += (fz * this.speed + w.z * 0.06) * dt;
+      }
       const ahead = heightAt(p.x + fx * 2.2, p.z + fz * 2.2);
       if (this.canGround && ahead > -0.25) {
         this.grounded = true;
