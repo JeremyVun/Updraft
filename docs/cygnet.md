@@ -275,7 +275,7 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   orbs in the hill shot at dawn 1 (`/tmp/updraft-sleepw-k-hill-dawn1.png`) are unattributed (fireflies gate or
   the down); the last two thirds of the crossing home were checked numerically, not watched.
 
-- The sleeping island's story (2026-09-19, on `sleeping-story`): `story/sleeping.ts` rewritten from the stub into
+- The sleeping island's story (2026-09-19, merged `4153f73`, fixed up in `d6b1f63` for the peer's new `needs(lift, labour)`): `story/sleeping.ts` rewritten from the stub into
   the whole room — ashore through the fog, the cygnet set on the blanket and the child into the bed with the plane
   held against them, the three tries and the one call nothing answers, the pillow's feather, the look back at the
   edge of the trodden grass, the climb, the shiver and the breath that lifts it, the hilltop, the glide down the
@@ -292,8 +292,15 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   shot; the tumble onto the blanket and the lift into the arms measure turn 0.12–0.16 rad and jerk 0.06 (both are
   deliberate impacts, inside the gates' `try` limits, above the 0.07/0.02 the quiet moments hold); the paper plane
   is as long as the child is tall, so while they are asleep it is under the blanket with them rather than shown.
+  **Lead's look at five frames:** the child asleep with the cygnet on the blanket, the glide in the sunrise, the
+  light through the window and the waking with the bird in the lap all read. The bird's-eye climb frame is the weak
+  one: the frosted blades fill the frame as a swarm of dark chips against the sky (`/tmp/updraft-sleeps-beat-11-lane.png`),
+  and the same chips are visible in the grass of every sunrise shot. That is the first thing for the next parcel
+  (`grass.ts`: the frost treatment and the blade width over the island). Also unjudged by anyone but the agent: the
+  lying pose up close, the climb's brightness (`dusk` 1.22 for the climb), and the eased gust lean, which reaches
+  the meadow and the summit too.
 
-Everything in the 2026-09-18 playtest is built. Open: the sleeping island's story (built, on `sleeping-story`); the crest's
+Everything in the 2026-09-18 playtest is built. Open: the sleeping island's frosted blades and Jeremy's verdict on the room; the crest's
 frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
 ending (dolphins, summit, fledging, credits).
 
