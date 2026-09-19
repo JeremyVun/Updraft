@@ -14,6 +14,7 @@ import type { Drawing } from '../traveller/drawing';
 import type { Traveller } from '../traveller/traveller';
 import type { WindField } from '../wind/field';
 import type { AutumnBirches } from '../world/birches';
+import type { SleepingIsland } from '../world/sleeping';
 import type { Cottage } from '../world/cottage';
 import type { LifeField } from '../world/life';
 import type { Tree } from '../world/tree';
@@ -39,6 +40,8 @@ export interface Cast {
   embers: Embers;
   /** The island of gold birches, its leaves and the swing hanging on the crest. */
   birches: AutumnBirches;
+  /** The bed in the hollow, the bedroom round it, and the fog the player's gusts carve lanes in. */
+  sleeping: SleepingIsland;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }

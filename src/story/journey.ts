@@ -11,9 +11,11 @@ import { LINES_LANDING, LinesChapter } from './lines';
 import { FAR_SHORE, MeadowChapter } from './meadow';
 import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
+import { SleepingChapter } from './sleeping';
 import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
+import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
 
 export type ChapterName =
@@ -27,6 +29,8 @@ export type ChapterName =
   | 'drowned'
   | 'toWood'
   | 'wood'
+  | 'toSleeping'
+  | 'sleeping'
   | 'toHome'
   | 'home'
   | 'stage';
@@ -46,23 +50,36 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
   /** Out of the village and straight into the wood, in the dark and the worst of the weather. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
+  /** A short hop west, round the wood's north shore: the frosted island is on them in a few minutes. */
+  toSleeping: [
+    new THREE.Vector2(-38, -1922),
+    new THREE.Vector2(-80, -1928),
+    new THREE.Vector2(-115, -1924),
+    SLEEP_LANDING,
+  ],
   /**
-   * The long way round. They come out of the wood before dawn and stand well out into open water, and the night
-   * ends somewhere along it. It is the only crossing that goes anywhere but straight, because after the wood the
-   * point of it is not to arrive.
+   * The long way round. They leave the sleeping island's west shore in the sunrise and stand well out into open
+   * water before coming back through the strait between the island and the wood. It is the only crossing that
+   * goes anywhere but straight, because by now the point of it is not to arrive.
    */
   toHome: [
-    new THREE.Vector2(-70, -1926),
-    new THREE.Vector2(-160, -1946),
-    new THREE.Vector2(-250, -1950),
-    new THREE.Vector2(-290, -2010),
-    new THREE.Vector2(-205, -1975),
-    new THREE.Vector2(-130, -1940),
+    new THREE.Vector2(-268, -1936),
+    new THREE.Vector2(-318, -1972),
+    new THREE.Vector2(-348, -2036),
+    new THREE.Vector2(-330, -2100),
+    new THREE.Vector2(-268, -2110),
+    new THREE.Vector2(-245, -2050),
+    new THREE.Vector2(-222, -1966),
+    new THREE.Vector2(-222, -1878),
+    new THREE.Vector2(-186, -1852),
+    new THREE.Vector2(-140, -1852),
+    new THREE.Vector2(-112, -1886),
+    new THREE.Vector2(-68, -1912),
     new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
   ],
 };
 
-const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'toWood', 'wood', 'toHome', 'home'];
+const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'toWood', 'wood', 'toSleeping', 'sleeping', 'toHome', 'home'];
 
 /**
  * Runs the chapters in order and speaks for whichever is current. `?chapter=` starts later in the story for
@@ -98,8 +115,11 @@ export class Journey {
     } else if (start === 'wood' || start === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
       this.begin('wood');
+    } else if (start === 'sleeping') {
+      this.land(SLEEP_LANDING.x, SLEEP_LANDING.y, SLEEP_LANDING.x - 5, SLEEP_LANDING.y);
+      this.begin('sleeping');
     } else if (start === 'sea' || start === 'dolphins') {
-      this.sail(WOOD_BERTH.x, WOOD_BERTH.z + 6, Math.PI);
+      this.sail(SLEEP_BERTH.x - 5, SLEEP_BERTH.z - 2, -1.76);
       this.begin('toHome');
     } else if (start === 'stage') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
@@ -237,6 +257,11 @@ export class Journey {
         return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1, music: 'wood', season: 0.7 });
       case 'wood':
         return new WoodChapter(cast);
+      case 'toSleeping':
+        /** Still the wood's night and the last of its weather, and over before the storm is properly gone. */
+        return new CrossingChapter(cast, { route: ROUTES.toSleeping, haze: 0.92, dusk: 1.85, season: 0.85, music: 'wood' });
+      case 'sleeping':
+        return new SleepingChapter(cast);
       case 'toHome':
         return new CrossingChapter(cast, {
           route: ROUTES.toHome,
