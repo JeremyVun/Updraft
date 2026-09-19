@@ -125,7 +125,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float ndl = dot(N, uSunDir);
   float through = max(-ndl, 0.0) * 0.55;
-  vec3 face = mix(gl_FrontFacing ? col : paper, paper * 0.78, crease * 0.5);
+  vec3 face = mix(gl_FrontFacing ? col : paper, paper * 0.72, crease * 0.75);
   vec3 lit = face * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through) * 0.8);
   if (!gl_FrontFacing) lit = face * (hemiLight(N) + uSunColor * (max(-dot(N, uSunDir), 0.0) * 0.7 + max(dot(N, uSunDir), 0.0) * 0.5) * 0.8);
   gl_FragColor = vec4(applyFog(lit, vWorld), 1.0);
