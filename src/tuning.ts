@@ -15,13 +15,13 @@ export const tuning = {
      * Tracing circles with the cursor winds up an updraft in the middle of them. The turning rates, in radians per
      * second on screen (6.3 is one loop a second), at which it starts to build and at which it builds fastest.
      */
-    twirlFrom: 3,
-    twirlFull: 6.5,
+    twirlFrom: 2.2,
+    twirlFull: 5.2,
     /** Updraft charge gained per second of full twirling, and lost per second once the twirling stops. */
     chargeRate: 0.8,
     dischargeRate: 1.2,
     /** How near on screen (in screen heights) circles have to be drawn to something the story asks to have lifted for the column to stand there. */
-    anchorNear: 0.32,
+    anchorNear: 0.6,
   },
   swirl: {
     /**
@@ -96,8 +96,11 @@ export const tuning = {
     /** The family resting on the pond beyond the crest: how many of them, and how wide the raft is spread. */
     family: 15,
     raft: 6.5,
-    /** How far the haze is allowed to lift at the crest. Thinner than this and the next island shows through it. */
-    haze: 0.42,
+    /**
+     * How far the air is allowed to see at the crest. The reveal looks out over falling ground and open water
+     * now, so the veil has to stand between the swans and the next island in the chain, which is behind them.
+     */
+    haze: 0.96,
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
     looks: 11,
@@ -105,7 +108,7 @@ export const tuning = {
     standOff: 3.6,
     goes: 3.2,
     /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
-    leaves: 15,
+    leaves: 12,
     leaveClimb: 3.4,
     /** Seconds after the family has gone before the child kneels and sets the cygnet down after them. */
     setsDown: 8.5,
@@ -129,14 +132,18 @@ export const tuning = {
   },
   summit: {
     /**
-     * The last lift is the whole gesture, not a flick: the updraft under it has to stand this tall (a bare gust
-     * brushes about 1.4 at most, a wound column about 4) and be kept there this long before it goes. Nothing
-     * times it out; the family only comes over calling now and then to show what is being asked.
+     * The last lift is the whole gesture, not a flick. A column of `liftToFly` gets it off the ground (a bare gust
+     * brushes about 0.4 at most, a wound column 1.5 to 2.5), and then it climbs only as fast as the player keeps
+     * winding (`gain` height a second per unit of updraft, at most `rise`) and sinks at `sink` the moment they stop.
+     * The family comes down for it once it has been held up `liftTo` above the grass. Nothing times it out; they
+     * wheel in sight to the north and call every `callEvery` seconds to say what is being asked.
      */
-    liftToFly: 2.2,
-    liftFor: 3,
-    promptAt: 55,
-    promptEvery: 70,
+    liftToFly: 0.6,
+    gain: 1.6,
+    sink: 1.4,
+    rise: 0.9,
+    liftTo: 5.5,
+    callEvery: 9,
   },
   piano: {
     /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */
@@ -329,9 +336,53 @@ export const tuning = {
     darken: 0.13,
     /** Height of the small chop a gust lays over the swell, in world units. */
     chop: 0.12,
+    /** How many of the night sky's stars the sea catches, and how brightly they flash when it does. */
+    stars: 0.11,
+    starLight: 5,
+  },
+  /**
+   * The boat's sail. The cloth fills with whatever wind it has, whoever made it, and hangs dead when it has none;
+   * the hull's speed follows the same reading, a few seconds behind it. Wind speeds are world units per second,
+   * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
+   */
+  sail: {
+    /** Wind speed a unit of the player's gust is worth, and the stirring the field never quite loses. */
+    gustPress: 4,
+    stirs: 0.9,
+    /**
+     * What the squall presses the cloth with at a full sea, and how much of that the sail can hold: a small boat
+     * in a storm is a hard-pressed, shaking sail spilling most of it, not four times the way through the water.
+     */
+    squallPress: 4.5,
+    squallHolds: 0.28,
+    /** How fast the cloth takes wind up, and how slowly it lets it go, per second. */
+    fills: 3.2,
+    empties: 1.2,
+    /** Wind speed the belly is two thirds out at, and how deep a full belly is, in world units. */
+    bellyAt: 2.4,
+    belly: 0.72,
+    /** Below this wind speed the cloth begins to hang, and with none in it at all it hangs dead. */
+    hangsBelow: 1.3,
+    /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
+    livelyAt: 10,
+    /** With no wind: how far the leech falls in toward the mast, how far the cloth sags, and the folds it hangs in. */
+    gather: 0.22,
+    sag: 0.8,
+    folds: 3.5,
+    fold: 0.3,
+    /** How far the ripple and the leech's shake move the cloth, in world units. */
+    ripple: 0.18,
+    shake: 0.24,
     /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
     luffFrom: 0.12,
     luffFade: 0.55,
+    /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
+    drive: 1.7,
+    following: 0.42,
+    topSpeed: 16,
+    /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
+    gathers: 0.5,
+    carries: 0.45,
   },
   /**
    * The sleeping island: the fog pooled in the hollow, the frost coming in across it, and the bedroom the bed
@@ -343,14 +394,16 @@ export const tuning = {
     fogReach: 34,
     /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
     fogTop: 4.6,
+    /** And how high it lies once the night has thickened it: over a bird's head on the lower slopes of the hill. */
+    fogClimbs: 8.5,
     fogSoft: 1.5,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
     fogDrift: 0.02,
     /** How hard a gust cuts a lane in the fog, how wide the cut is, and the seconds a lane takes to close again. */
-    carveStrength: 4.2,
-    carveWidth: 4.2,
-    carveCloses: 8,
+    carveStrength: 5.5,
+    carveWidth: 4.6,
+    carveCloses: 11,
     /** Wind speed at which a stroke carves at full strength. */
     carveSpeed: 9,
     /** How far out the frost starts and how near the bed it comes, from `frost` 0 to 1. */
@@ -374,6 +427,69 @@ export const tuning = {
     downCount: 34,
     downThrow: 1.6,
     downLife: 9,
+    /** How far the blanket stands over the child under it, and how wide that shape is, in bed widths. */
+    sleeperHigh: 0.66,
+    sleeperWide: 0.62,
+
+    /**
+     * The one long white feather. It is the paper plane made slower and floatier: it takes the air's own speed
+     * rather than being pushed along by it, sinks at a walking pace, and leans toward wherever the story wants
+     * the bird to go, so a player who blows on it once still finds it leading and never has to fetch it.
+     */
+    featherTakes: 1.6,
+    featherSink: 0.3,
+    /** Rising air and gust energy turned into climb, in units a second at full. */
+    featherLift: 0.5,
+    featherGust: 0.5,
+    /** How hard it leans toward the goal, in units a second squared: about 0.9 units a second of drift in still air. */
+    featherLean: 2.6,
+    /** How high off the grass it likes to hang: below this the air holds it up, above it it sinks like a feather. */
+    featherHangs: 1.2,
+    /** Seconds it will lie on the grass before a breath of its own picks it up again, and how high it may hang. */
+    featherRests: 2.5,
+    featherCeiling: 3.4,
+    /** Share of a stroke's speed a swipe across it on screen gives it. */
+    featherBrush: 0.5,
+
+    /**
+     * The story's waits, and what happens at each of them if the player does nothing at all. Nobody is ever
+     * stranded on this island: every one of these ends by itself.
+     */
+    climbsIn: 3.2,
+    /** Seconds asleep before the bird starts trying, and between its three tries. */
+    triesFrom: 4,
+    triesEvery: 7,
+    /** Seconds after its one call before the pillow gives up the feather by itself. */
+    featherBy: 24,
+    /** Seconds it stands at the edge of the trodden grass, and how long each look back at the bed lasts. */
+    edgeFor: 8,
+    looksBack: 2.2,
+    /** How far up the hill it sits down, 0 the bed to 1 the top, and the seconds before it gets up regardless. */
+    shiverAt: 0.5,
+    shiverFor: 9,
+    /** What the wind under it has to do at the hilltop before it goes. */
+    liftToFly: 1.8,
+    /** Seconds on the hilltop before the sun comes up by itself and the bird goes anyway. */
+    sunBy: 70,
+    /** The glide down: seconds it takes, and how far it holds above the straight line from the hill to the bed. */
+    glideFor: 15,
+    glideArc: 2.6,
+    /** How far the frost has come in by the time the bird gives up on the child, and by the hilltop. */
+    frostAsleep: 0.62,
+    frostWorst: 0.95,
+    /** Seconds the waking takes: the light on the face, the sitting up, and the bird gathered into the lap. */
+    wakeFor: 9,
+
+    /**
+     * The child asleep in it. The coat is a rigid bell, so lying down is not a pose it can hold: they are tipped
+     * onto their back, rolled onto one side, flattened into the mattress and propped so the head is on the pillow
+     * and the hood shows. What is left over the blanket line is a low mound and a face, which is what reads.
+     */
+    lieHigh: 0.62,
+    lieTip: 0.17,
+    lieSquash: 0.32,
+    lieDeep: 0.5,
+    lieSide: 1.1,
   },
 };
 

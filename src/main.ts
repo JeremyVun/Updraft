@@ -489,8 +489,13 @@ function frame(now: number): void {
   if (flat) tread.set(flat.x, flat.z, flat.y, ease(tread.w, 1, 1.4, dt));
   else tread.w = ease(tread.w, 0, 1.4, dt);
   applyPalette(story.worldLife, dusk, shower, squall);
-  /** How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler. */
-  atmo.uniforms.uVeil.value.set(900 - 780 * haze, 0.002 + 0.03 * haze);
+  /**
+   * How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler.
+   * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
+   * sea keeps the stars on it all the way out.
+   */
+  const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
+  atmo.uniforms.uVeil.value.set(900 - 780 * seen, 0.002 + 0.03 * seen);
   sinceLightBake++;
   if (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004) {
     sinceLightBake = 0;

@@ -275,7 +275,32 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   orbs in the hill shot at dawn 1 (`/tmp/updraft-sleepw-k-hill-dawn1.png`) are unattributed (fireflies gate or
   the down); the last two thirds of the crossing home were checked numerically, not watched.
 
-Everything in the 2026-09-18 playtest is built. Open: the sleeping island's story (building); the crest's
+- The sleeping island's story (2026-09-19, merged `4153f73`, fixed up in `d6b1f63` for the peer's new `needs(lift, labour)`): `story/sleeping.ts` rewritten from the stub into
+  the whole room — ashore through the fog, the cygnet set on the blanket and the child into the bed with the plane
+  held against them, the three tries and the one call nothing answers, the pillow's feather, the look back at the
+  edge of the trodden grass, the climb, the shiver and the breath that lifts it, the hilltop, the glide down the
+  lane of sun, the window on the face and the waking. New: `fx/feather.ts` (the plane's idea, slower and floatier:
+  it takes the air's own speed, hangs about `featherHangs` off the grass, leans toward a goal so it is never lost,
+  and a stroke across it on screen carries it); `Cygnet.glideTo/sailing` (the long glide, with `laneOpen` run from
+  it), `stay`, `pace`, `plead`, `does`, and the acts `tug`, `nudge`, `look-back`, `shiver`; `Traveller.lieOn/abed/
+  abedSide/tighter/eyesShut` (the coat is flattened on its own, not the child inside it, so the head and hood read
+  on the pillow while the blanket stands over the rest); `Shot.clearance` so one room can come down to a bird's eye
+  without touching the rig anywhere else; `sleeping.fogTop` and `sleeping.sleeper` driven by the story.
+  **Every wait ends by itself** (see the beat list in `story/sleeping.ts`): with no input at all it reaches the boat
+  in about 4 minutes. Gates unchanged from `main` (25 of 27; the two `idle` misses are `main`'s). Short: the frosted
+  blades read as flying ice chips at the bird's-eye camera, which is the world parcel's note made worse by the low
+  shot; the tumble onto the blanket and the lift into the arms measure turn 0.12–0.16 rad and jerk 0.06 (both are
+  deliberate impacts, inside the gates' `try` limits, above the 0.07/0.02 the quiet moments hold); the paper plane
+  is as long as the child is tall, so while they are asleep it is under the blanket with them rather than shown.
+  **Lead's look at five frames:** the child asleep with the cygnet on the blanket, the glide in the sunrise, the
+  light through the window and the waking with the bird in the lap all read. The bird's-eye climb frame is the weak
+  one: the frosted blades fill the frame as a swarm of dark chips against the sky (`/tmp/updraft-sleeps-beat-11-lane.png`),
+  and the same chips are visible in the grass of every sunrise shot. That is the first thing for the next parcel
+  (`grass.ts`: the frost treatment and the blade width over the island). Also unjudged by anyone but the agent: the
+  lying pose up close, the climb's brightness (`dusk` 1.22 for the climb), and the eased gust lean, which reaches
+  the meadow and the summit too.
+
+Everything in the 2026-09-18 playtest is built. Open: the sleeping island's frosted blades and Jeremy's verdict on the room; the crest's
 frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
 ending (dolphins, summit, fledging, credits).
 

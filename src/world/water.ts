@@ -82,6 +82,7 @@ ${SURF_GLSL}
 uniform sampler2D uRipple;
 uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
+uniform float uMirrorOn;
 uniform vec2 uBreeze;
 uniform vec3 uDeep;
 uniform vec3 uAbsorb;
@@ -98,7 +99,7 @@ vec3 mirrored(vec3 R, float lod, out float seen) {
   vec4 p = uMirrorMatrix * vec4(vWorld + R * 48.0, 1.0);
   vec2 uv = p.xy / p.w;
   vec2 edge = min(uv, 1.0 - uv);
-  seen = p.w > 0.0 ? smoothstep(0.0, 0.06, min(edge.x, edge.y)) : 0.0;
+  seen = p.w > 0.0 ? uMirrorOn * smoothstep(0.0, 0.06, min(edge.x, edge.y)) : 0.0;
   return textureLod(uMirror, clamp(uv, 0.0, 1.0), lod).rgb;
 }
 
@@ -321,7 +322,18 @@ void main() {
   float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 
-  vec3 col = mix(body, refl, F) + sun;
+  /**
+   * The stars on the water. The sky's own field is far finer than a pixel of sea, so reflecting it would boil
+   * into noise; the sea catches it instead as the facets that happen to point at one, flashing in world-space
+   * cells a few pixels across, which is how the sun's glitter is drawn too.
+   */
+  vec3 starlight = vec3(0.0);
+  if (uStarlight > 0.0) {
+    float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uStarlight;
+    starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}) * F * caught * ${glsl(tuning.water.starLight)};
+  }
+
+  vec3 col = mix(body, refl, F) + sun + starlight;
   // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
   col *= 1.0 - ${glsl(tuning.water.darken)} * stroke;
 
@@ -362,6 +374,7 @@ export class Water {
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
         uMirrorMatrix: { value: this.reflection.matrix },
+        uMirrorOn: { value: 0 },
         uBreeze: { value: breeze },
         uDeep: { value: new THREE.Color('#0d4a66') },
         uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },
@@ -386,7 +399,10 @@ export class Water {
   update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
     /** Snapped to the even part of the grid, so the vertices carrying the swell never slide through it. */
     this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
-    if (!params.mirror || camera.position.z < mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT) return;
+    /** Where there is no mirror the sea must not read one: the last one drawn is a different room by now. */
+    const mirrored = !!params.mirror && camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT;
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uMirrorOn.value = mirrored ? 1 : 0;
+    if (!mirrored) return;
     if (this.frame++ % params.mirror) return;
     atmo.uniforms.uMirrorPass.value = 1;
     this.reflection.render(camera, before, after);

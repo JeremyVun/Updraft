@@ -46,7 +46,11 @@ export type Act =
   | 'ask'
   | 'nuzzle'
   | 'peer'
-  | 'delve';
+  | 'delve'
+  | 'tug'
+  | 'nudge'
+  | 'look-back'
+  | 'shiver';
 
 interface ActSpec {
   dur: number;
@@ -80,6 +84,14 @@ const IDLE: Partial<Record<Act, ActSpec>> = {
    * for itself: it is what a heap of leaves is for, and the birches ask for it by name.
    */
   delve: { dur: 2.4, rest: 0.8, where: afoot, urge: () => 0 },
+  /**
+   * The three things it does at the bed, and the two it does on the hill. None of them is ever chosen: they are
+   * what one room asks for by name, because none of them means anything anywhere else.
+   */
+  tug: { dur: 2.6, rest: 0.5, where: afoot, urge: () => 0 },
+  nudge: { dur: 2.4, rest: 0.5, where: afoot, urge: () => 0 },
+  'look-back': { dur: 2.2, rest: 0.4, where: afoot, urge: () => 0 },
+  shiver: { dur: 6, rest: 0.4, where: afoot, urge: () => 0 },
 };
 
 const REACTIONS: Record<'flinch' | 'brace' | 'bowled' | 'into-wind' | 'ask' | 'snap', number> = {

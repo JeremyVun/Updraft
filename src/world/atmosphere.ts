@@ -44,6 +44,8 @@ export const atmo = {
     uFogDensity: { value: 0.0011 },
     /** 0 by day, 1 at full night: stars, fireflies, lit windows. */
     uNight: { value: 0 },
+    /** 1 once the last of the day has gone out of the sky and the weather is clear: the sea catches the stars. */
+    uStarlight: { value: 0 },
     /** How much of the world has come back to life, 0 grey and still to 1: sets the colour of the open sea. */
     uWorldLife: { value: 0 },
     /**
@@ -165,6 +167,7 @@ uniform vec3 uSkyAmbient;
 uniform vec3 uGroundBounce;
 uniform float uFogDensity;
 uniform float uNight;
+uniform float uStarlight;
 uniform float uWorldLife;
 uniform float uSeason;
 uniform float uMirrorPass;
@@ -315,7 +318,8 @@ float hollowDensity(vec3 p) {
   float under = 1.0 - smoothstep(uHollowTop.x - uHollowTop.y, uHollowTop.x + uHollowTop.y, p.y);
   vec2 uv = (p.xz - uCarveDomain.xy) * uCarveDomain.zw;
   float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
-  return uHollow.w * pool * under * carve;
+  /** Squared, so a lane only half blown open is already a quarter as thick: a gesture has to show. */
+  return uHollow.w * pool * under * carve * carve;
 }
 
 /** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */
