@@ -45,17 +45,6 @@ vec3 swellShift(vec2 p, float height) {
   return vec3(drag.x, lift, drag.y);
 }
 
-/**
- * The gust's own small waves: short, steep chop running with the wind, laid over the swell where a stroke
- * crosses it. Kept long enough that the mesh near the camera still resolves it.
- */
-vec3 windChop(vec2 p, vec2 along, float amp) {
-  vec2 side = vec2(-along.y, along.x);
-  float a = dot(p, along) * 0.62 - uTime * 3.9;
-  float b = dot(p, along * 0.86 + side * 0.51) * 0.95 - uTime * 4.6;
-  return vec3(0.0, amp * (sin(a) * 0.6 + sin(b) * 0.4), 0.0);
-}
-
 /** How much of that chop the water at p can carry: none in the shallows, none where the mesh is too coarse. */
 float chopHere(vec2 p, float fromCamera) {
   vec2 uv = domainUv(p);
@@ -75,6 +64,14 @@ float swellHeight(vec2 p, float fromCamera) {
   float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
   float depth = -mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   return uSwell * smoothstep(0.6, 4.5, depth) * smoothstep(105.0, 62.0, fromCamera);
+}
+
+/** Surface at a world xz, undoing the waves' horizontal drag just as swellLift does on the CPU. */
+float seaSurfaceY(vec2 world) {
+  float height = swellHeight(world, distance(world, cameraPosition.xz));
+  vec2 base = world;
+  for (int i = 0; i < 3; i++) base = world - swellShift(base, height).xz;
+  return swellShift(base, height).y;
 }
 `;
 

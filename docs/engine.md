@@ -9,8 +9,17 @@ Nothing heavy is allowed to happen in the first frames. Before the loop starts, 
 1. Every scene material compiles in parallel (`precompile`, `KHR_parallel_shader_compile`), against the scene's half-float target: a program's cache key depends on the target's colour space, so compiling against the screen would compile everything twice.
 2. Every simulation and bake material compiles the same way (`precompileSim`; `simMaterial` registers them).
 3. The window is placed for the camera the story chose and baked once (`followWindow(..., true)`).
-4. One warm frame draws the whole scene with every object shown into the offscreen target, then runs the post chain: textures upload, buffers land on the GPU, every render target is allocated.
-5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished all of it. Only then does `requestAnimationFrame(frame)` start.
+4. Warm batches draw the scene into the offscreen target, yielding for input and paint between each 64 objects, then run the post chain. Original visibility and layer masks are restored even on failure. Textures upload, buffers land on the GPU, and render targets are allocated.
+5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished all of it. The start screen then enables Begin / Continue. Only the activation gesture starts audio and `requestAnimationFrame(frame)`; the story and quality governor do not run while waiting.
+
+World construction also yields between major systems so setup does not monopolise the browser in one long task.
+The start screen's hollow ring is a browser-owned SVG cursor: its movement does not depend on JavaScript
+servicing pointer events during WebGL initialization. The animated gameplay cursor stays unchanged.
+A local production-preview profile reduced the worst opening frame gap from 950 ms to 167 ms; individual
+constructors and driver calls can still cause shorter pauses. These changes only affect startup.
+The start-screen check records the worst boot frame gap (default ceiling 500 ms, override with `BOOT_MAX_MS`).
+
+`src/entry.ts` paints the DOM/SVG start screen before dynamically importing the game. Module and boot failures keep a retry button available. The first real frames trigger the veil fade; its listeners, SVGs and animation loop are removed after the transition. `?shot` bypasses the screen and sound activation for existing QA; add `start=1` to test the real gate with QA access. `node tools/start-check.mjs` verifies entry, pause, audio, touch, keyboard, resume and retry in isolated Chrome (set `BASE` for a production preview).
 
 Anything that appears later in the story (the whale, rain, fireflies, the drawing) is already compiled and uploaded; showing it costs nothing.
 
@@ -20,7 +29,7 @@ Anything that appears later in the story (the whale, rain, fireflies, the drawin
 2. `pollReadbacks()`: finished GPU→CPU copies land (see below). This is the one place a frame may touch a read buffer.
 3. GPU simulation: wind substeps, life, the light re-bake if the sun has moved, petals, wind lines.
 4. Camera update, then everything that depends on where it is: the window follow (with its bakes and shifts), the cloud-shadow bake for the camera's domain, terrain leaves, grass tiles, walls.
-5. The sea's mirror render, then the post chain (scene → resolve → bloom → grade → screen).
+5. The doorway view when open, the current room's sea reflection, then the post chain (scene → resolve → bloom → grade → screen).
 6. `endFrame()` fences the frame so the next one can tell whether the GPU has caught up.
 
 ## Readbacks (`src/gl/readback.ts`)
@@ -38,6 +47,14 @@ A level just climbed into is reviewed after a second rather than the usual two a
 ## Post chain (`src/post/post.ts`)
 
 One multisampled half-float scene target; one resolve pass that also clamps NaN/inf and huge highlights (bloom would smear one bad pixel across the screen); bloom added in place on that plain target; the grade (ACES, split toning, vignette, grain) straight to the screen. Only the scene target is multisampled: the previous composer resolved three multisampled targets per frame.
+
+## Storm transitions
+
+The shared key light moves continuously from the sunset direction to the moon between dusk 1.5 and 1.85;
+it previously jumped 71° at dusk 1.5. Lightning is a separate cloud flash, gated by rain, darkness and elapsed
+storm time. Dense storm cover fades directional terrain shadows to diffuse light and skips their ray marches;
+clearing the cloud forces a fresh shadow bake even if the moon has stopped moving. `node tools/storm-profile.mjs` measures the underway passage without screenshot/video overhead,
+reporting frame stalls, blocking GPU calls, lighting-direction jumps and chapter boundaries.
 
 ## Bakes that follow the world
 
@@ -77,3 +94,24 @@ Each optimisation that could conceivably change the picture keeps its old path b
 `node tools/perf.mjs <frames|gl|cpu|flicker> [seconds] [query] ['<steps>']` runs the game in local Chrome and reports from inside the page: frame-interval percentiles and hitches, which native WebGL calls block the main thread, a CPU profile, or frame-to-frame image change spikes (pops and flashes). To hunt level-of-detail pops, freeze the world (`hold=150` with a fixed `cam=`), creep the camera a few millimetres a frame from an `eval` step that also calls `grass.update` and `grass.bake`, and lower the thresholds (`BLOCK=2 WHOLE=0.3`): with nothing else moving, any spike is a pop. At game speed the wind's own motion (about 6 of 255 a frame) hides them from this tool, though not from the eye. `?ratio=2` makes the GPU the bottleneck on purpose, which is how GPU cost is compared here: `EXT_disjoint_timer_query` numbers are meaningless on ANGLE's Metal backend.
 
 Every number from these tools is inflated by anything else using the GPU: another session's capture, a browser playing video. Check `ps` for busy Chrome processes before trusting a run, and compare builds back to back rather than against remembered numbers.
+
+## The washing island's doorway
+
+`world/doorway.ts` draws one translated camera into a half-float target, then samples it projectively inside the
+red door. An oblique near plane clips the destination at its threshold. The image enters the normal scene pass,
+so bloom and grading happen once. There is no recursive portal rendering or second simulation.
+
+Before arrival, a negative `uRoom` radius excludes the secret shore from terrain and water shading; its grass,
+family and kite are hidden during both the scene and reflection pass. The occupied boat remains visible.
+Each doorway view has an explicit scene-object set and a positive terrain radius (`uRoom`); the departure boat and kite cannot
+appear beside the source doorway, and the ordinary washing cannot appear on the far shore. The terrain's existing
+secondary leaf set serves the portal view. The sea grid is temporarily centred on that camera with its reflection
+disabled; all render state is restored before the main pass. `world/door-shore.ts` supplies fixed-root, wind-reactive
+short grass that both views can draw without moving the simulation window twice.
+
+Traveller shaders receive a render-only translation for the doorway view and a threshold clip for the source
+view. Each traveller follows the destination ground height beyond the sill, so the old hillside cannot lower
+their feet into the new shore. World-space scarf vertices use the same translation. The camera waits for both travellers, crosses with an
+explicit continuous shot, and the chapter transfers their logical positions once. The ordinary camera and window
+follow then resume. The portal stops rendering after crossing. `tools/lines-check.mjs` checks the full route,
+per-view object visibility, both travellers' transfer and checkpoint restore.

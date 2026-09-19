@@ -20,5 +20,28 @@
 - **Time and weather**: the walk inland sinks from golden afternoon to a deep orange sunset, then dusk and a cool moonlit night with stars, fireflies and glowing windows. A sun shower may pass: thin streaks catching the low sun, a bright grey veil, wet sheen on the grass. A rainbow comes down on the island as the child sails away. At sunset a murmuration of starlings turns over the far hills beside the sun.
 - **The child and the drawing**: a small child in a mustard hooded coat with a long red scarf that streams in the wind. The paper plane unfolds into a child's crayon drawing on ruled notebook paper: sun, green hills, a dashed wall, the white cottage with a red door and lit windows, a yellow figure with a red scarf, the plane itself.
 - **Sea life**: on the crossing a humpback rolls up out of the open sea in one long slow arc — dark blue-grey back, white water where it breaks the surface, a spout that glows gold against the low sun and drifts away on the wind, and pale flukes streaming water as it dives — while small silver fish leap near the boat and flash in the sun.
-- **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette, faint lens fringe at the corners, fine grain. The page opens by fading in from a warm white.
+- **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette, faint lens fringe at the corners, fine grain. The page opens through a dim pastel veil, with ivory wind ribbons and a single serif invitation; see the start screen below.
 - **Interface**: no text on screen. The cursor is a soft ring that tightens and glows while an updraft charges. A small speaker button in the corner breathes until sound is chosen.
+
+
+## Start screen (2026-09-19)
+
+Jeremy approved simplifying the opening after experimenting with cursor gusts and local mist: set the mood
+and invite one click; discovering the wind belongs in the game.
+
+- Dim pastel peach, mauve and blue-grey with a stationary vignette and slowly drifting haze. Night
+  checkpoints use a darker palette. Pointer movement gently nudges the whole colour field, which settles
+  when the hand stops. No cursor trails, local spotlight or mist following the pointer.
+- A browser-owned SVG version of the game's hollow 26px cursor stays responsive during graphics setup.
+  Two or three sparse ambient wind ribbons borrow the game's taper.
+- One centred word: “Begin”, or “Continue” with a valid checkpoint. Warm ivory italic Iowan / Palatino /
+  Georgia serif, softly edged. Opacity breathes from .95 to .42 over 5.6 seconds, without disappearing,
+  scaling or bouncing. Reduced motion disables the pulse and drift, leaving a still wind motif.
+- Reveal the word after graphics preparation. Click, tap, Enter or Space starts sound and the story, then
+  dissolves the veil over the first real scene. Touch dragging shifts the backdrop without entering.
+  Keep the entering gesture out of the game's wind field, and retain the visible keyboard focus outline.
+- No downloaded font, image, audio or graphics context is needed for the start screen itself. A failed
+  module or graphics boot offers “Try again”. Remove the veil and its animation loop after the fade.
+
+`tools/start-check.mjs` checks desktop and phone entry, audio gating, centring, ambient motion, backdrop
+response without cursor trails, reduced motion, checkpoint restoration and boot retry.

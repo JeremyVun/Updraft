@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import type { Traveller } from '../traveller/traveller';
+import { tuning } from '../tuning';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
@@ -74,6 +76,8 @@ function paperPlane(): THREE.BufferGeometry {
 }
 
 const SCALE = 0.85;
+/** The pinch point on the centre fold, below the wings and forward of the tail. */
+export const PAPER_GRIP = new THREE.Vector3(0, -0.2, -0.45);
 /** How long a wingtip trail lingers in the air. */
 const TRAIL_SECONDS = 1.6;
 
@@ -105,6 +109,10 @@ export class Glider {
   private readonly body: THREE.Mesh;
   private readonly shadow: THREE.Mesh;
   private readonly shadowMat: THREE.ShaderMaterial;
+  private carrier: Traveller | null = null;
+  private readonly heldRotation = new THREE.Quaternion();
+  private readonly releasedRotation = new THREE.Quaternion();
+  private releaseBlend = 0;
   private yaw = 0.6;
   private bank = 0;
   private pitch = 0;
@@ -167,26 +175,35 @@ export class Glider {
     return !this.held && this.restTime > 1.2 && this.aground;
   }
 
-  /** Keeps the plane in a hand, nose along `yaw`, tilted a little up. */
-  hold(at: THREE.Vector3, yaw: number): void {
+  /** Held by the keel, or secured to the satchel when the child's arms are occupied. */
+  hold(child: Traveller): void {
+    this.carrier = child;
+    child.carryingPlane = true;
+    this.releaseBlend = 0;
     this.held = true;
     this.restTime = 0;
     this.departing = null;
-    this.position.copy(at);
     this.velocity.set(0, 0, 0);
-    this.yaw = yaw;
-    this.pitch = 0.25;
-    this.bank = 0;
+    this.yaw = child.yaw;
     this.lift = 0;
+    this.placeHeld();
   }
 
   launch(from: THREE.Vector3, velocity: THREE.Vector3): void {
+    /** Release from the paper's actual centre, so the keel offset does not become a jump. */
+    const carried = this.held;
+    if (carried) {
+      this.releasedRotation.copy(this.group.quaternion);
+      this.releaseBlend = 1;
+    }
+    if (this.carrier) this.carrier.carryingPlane = false;
+    this.carrier = null;
     this.held = false;
     this.restTime = 0;
     /** A new flight is never still the old one: the ending asks for `depart` again after it launches. */
     this.departing = null;
-    this.position.copy(from);
-    this.prev.copy(from);
+    if (!carried) this.position.copy(from);
+    this.prev.copy(this.position);
     this.velocity.copy(velocity);
     this.thrust = velocity.length();
     this.yaw = Math.atan2(velocity.x, velocity.z);
@@ -206,6 +223,8 @@ export class Glider {
 
   update(dt: number, time: number): void {
     this.clock = time;
+    const size = this.held ? tuning.paperCarry.scale : SCALE;
+    this.body.scale.setScalar(THREE.MathUtils.lerp(this.body.scale.x, size, 1 - Math.exp(-dt * tuning.paperCarry.sizeRate)));
     if (this.held) {
       this.placeHeld();
       return;
@@ -318,6 +337,10 @@ export class Glider {
     this.group.rotateY(this.yaw);
     this.group.rotateX(-this.pitch);
     this.group.rotateZ(this.bank);
+    if (this.releaseBlend > 0) {
+      this.releaseBlend = Math.max(0, this.releaseBlend - dt / tuning.paperCarry.releaseSeconds);
+      this.group.quaternion.slerp(this.releasedRotation, THREE.MathUtils.smoothstep(this.releaseBlend, 0, 1));
+    }
 
     if (altitude < 5 && hSpeed > 1.5) {
       this.wind.addSplat({
@@ -376,10 +399,13 @@ export class Glider {
   }
 
   private placeHeld(): void {
+    if (!this.carrier) return;
+    /** Sample after the child's pose, including the boat's roll and this frame's step. */
+    this.carrier.planeQuaternion(this.heldRotation);
+    this.carrier.handPosition(this.position);
+    this.position.sub(this.scratch.copy(PAPER_GRIP).multiplyScalar(this.body.scale.x).applyQuaternion(this.heldRotation));
     this.group.position.copy(this.position);
-    this.group.rotation.set(0, 0, 0);
-    this.group.rotateY(this.yaw);
-    this.group.rotateX(-this.pitch);
+    this.group.quaternion.copy(this.heldRotation);
     this.group.updateMatrixWorld();
     this.shadowMat.uniforms.uOpacity.value = 0;
     this.tipL.alpha = this.tipR.alpha = 0;
@@ -387,7 +413,7 @@ export class Glider {
   }
 
   private updateTrail(trail: Ribbon, side: number, speed: number): void {
-    const tip = this.scratch.set(side * 1.15 * SCALE, 0.16 * SCALE, -0.95 * SCALE).applyMatrix4(this.group.matrixWorld);
+    const tip = this.scratch.set(side * 1.15 * this.body.scale.x, 0.16 * this.body.scale.x, -0.95 * this.body.scale.x).applyMatrix4(this.group.matrixWorld);
     const pts = trail.points;
     const laid = this.laid.get(trail)!;
     const n = pts.length;

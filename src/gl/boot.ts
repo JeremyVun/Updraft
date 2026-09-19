@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { simMaterials } from './gpu';
 
+/** Give input and the opening veil a paint opportunity between startup chunks. */
+export function yieldBoot(): Promise<void> {
+  return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+}
+
 /**
  * Compiles every material in the scene up front, in parallel where the driver allows, against the target the
  * scene is really drawn into (a program's key depends on the target's colour space). Without this the first
@@ -25,21 +30,37 @@ export async function precompileSim(renderer: THREE.WebGLRenderer, target: THREE
 }
 
 /**
- * Draws the whole scene once, with every object shown, into `target` (never presented): textures upload,
+ * Draws the scene in batches, with every object shown, into `target` (never presented): textures upload,
  * buffers land on the GPU and render targets are allocated, so the first real frame is an ordinary one.
  */
-export function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget): void {
+export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget): Promise<void> {
   const hidden: THREE.Object3D[] = [];
-  scene.traverse((o) => {
-    if (!o.visible) {
-      hidden.push(o);
-      o.visible = true;
+  const drawables: { object: THREE.Object3D; mask: number }[] = [];
+  const previousTarget = renderer.getRenderTarget();
+  scene.traverse(o => {
+    if (!o.visible) { hidden.push(o); o.visible = true; }
+    if ('material' in o) {
+      drawables.push({ object: o, mask: o.layers.mask });
+      // Layers suppress this draw without hiding any children.
+      o.layers.mask = 0;
     }
   });
-  renderer.setRenderTarget(target);
-  renderer.render(scene, camera);
-  renderer.setRenderTarget(null);
-  for (const o of hidden) o.visible = false;
+  try {
+    // The warm images are discarded. Upload a bounded batch per paint opportunity.
+    for (let i = 0; i < drawables.length; i += 64) {
+      const batch = drawables.slice(i, i + 64);
+      for (const { object, mask } of batch) object.layers.mask = mask;
+      renderer.setRenderTarget(target);
+      renderer.render(scene, camera);
+      for (const { object } of batch) object.layers.mask = 0;
+      renderer.setRenderTarget(previousTarget);
+      await yieldBoot();
+    }
+  } finally {
+    renderer.setRenderTarget(previousTarget);
+    for (const { object, mask } of drawables) object.layers.mask = mask;
+    for (const o of hidden) o.visible = false;
+  }
 }
 
 /** Resolves once the GPU has finished everything issued so far, polling without blocking the main thread. */

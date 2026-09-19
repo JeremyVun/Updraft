@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { heightAt } from '../world/island';
 import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
+import { CallMarks } from '../fx/call-marks';
 import type { WindSample } from '../wind/field';
 import { BODY, BONES, FOOT_L, FOOT_R, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
 import { Gait } from './cygnet/gait';
@@ -94,6 +95,9 @@ export class Cygnet {
     this.mind.bond = value;
   }
   visible = false;
+  /** A visual echo of its voice, shared by every chapter and carried pose. */
+  private readonly callMarks = new CallMarks();
+  private formationEffort = 0;
   private wasVisible = false;
   /** How many times the player has put it in the air. It has never flown before the first. */
   flights = 0;
@@ -266,7 +270,21 @@ export class Cygnet {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.mesh];
+    return [this.mesh, this.callMarks.sprite];
+  }
+
+  /** The same bird flies, struggles, and falls: no adult-to-baby swap at separation. */
+  flyWith(from: THREE.Vector3, heading: number, effort: number): void {
+    if (!this.visible) {
+      this.seating.seat = null;
+      this.seating.held = false;
+      this.seating.snap();
+    }
+    this.visible = true;
+    this.state = 'flying';
+    this.position.copy(from);
+    this.yaw = heading;
+    this.formationEffort = effort;
   }
 
   /**
@@ -278,13 +296,15 @@ export class Cygnet {
     this.fallTo.copy(to);
     this.fallTo.y = Math.max(heightAt(to.x, to.z), 0);
     const line = heading ?? Math.atan2(to.x - from.x, to.z - from.z);
+    const ahead = (to.x - from.x) * Math.sin(line) + (to.z - from.z) * Math.cos(line);
     /**
      * It carries on the flock's line for a moment, sinking, before it peels away. That first stretch is the only
      * thing that tells the player it fell out of the V rather than choosing to come down.
+     * When the landing is ahead, keep the tangent short enough that the curve never passes it and doubles back.
      */
     this.fallDrift
       .set(Math.sin(line), 0, Math.cos(line))
-      .multiplyScalar(38)
+      .multiplyScalar(ahead > 0 ? Math.min(38, ahead * 0.7) : 38)
       .add(from)
       .setY(from.y - (from.y - this.fallTo.y) * 0.1);
     this.fallFor = seconds;
@@ -657,7 +677,11 @@ export class Cygnet {
     this.time = time;
     this.mesh.visible = this.visible;
     this.wasVisible = this.visible;
-    if (!this.visible) return;
+    if (!this.visible) {
+      this.callT = 0;
+      this.callMarks.hide();
+      return;
+    }
     dt = Math.min(dt, 0.05);
     this.childSpeed = ease(this.childSpeed, dt > 0 ? Math.min(8, this.tmp.copy(child).sub(this.childPrev).length() / dt) : 0, 8, dt);
     this.childPrev.copy(child);
@@ -668,7 +692,13 @@ export class Cygnet {
     const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
     this.hope = ease(this.hope, afoot && this.hopT <= 0 ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, this.liftToFly) : 0, 2.5, dt);
 
-    if (this.state === 'leaving') this.climbOut(dt, child);
+    if (this.state === 'flying') {
+      this.effort = this.formationEffort;
+      this.flap = 0.6 + this.effort * 0.4;
+      this.flapPhase += dt * (7 + this.effort * 7);
+      this.pitch = ease(this.pitch, 0.12 - this.effort * 0.3, 3, dt);
+      this.roll = ease(this.roll, Math.sin(time * 2.1) * 0.12 * (1 - this.effort), 3, dt);
+    } else if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
     else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
     else if (this.state === 'following') this.walk(dt, child);
@@ -699,7 +729,7 @@ export class Cygnet {
     this.look.air =
       this.state === 'falling'
         ? clamp((this.seating.shown.p.y - this.fallTo.y) / 6, 0, 1)
-        : this.state === 'gliding' || this.state === 'fledging' || this.state === 'leaving'
+        : this.state === 'flying' || this.state === 'gliding' || this.state === 'fledging' || this.state === 'leaving'
           ? clamp((this.seating.shown.p.y - Math.max(heightAt(this.seating.shown.p.x, this.seating.shown.p.z), 0)) / 4, 0, 1)
           : 0;
     this.windNow.x = wind.x;
@@ -709,6 +739,7 @@ export class Cygnet {
     this.live(dt, child);
     this.pose(dt);
     if (this.carried && this.seating.riding && !this.seating.move) this.position.copy(this.seating.shown.p);
+    this.callMarks.update(dt, this.seating.shown.p, this.callT);
   }
 
   /**
@@ -1358,7 +1389,7 @@ export class Cygnet {
     d.move = this.seating.move?.kind ?? null;
     d.jostle = this.carried ? this.seating.jostle.z : 0;
     d.falling = st === 'falling';
-    d.gliding = st === 'gliding' || st === 'fledging';
+    d.gliding = st === 'flying' || st === 'gliding' || st === 'fledging';
     d.leaving = st === 'leaving';
     d.afoot = st === 'following';
     d.downed = st === 'downed';

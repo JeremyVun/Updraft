@@ -5,7 +5,7 @@ import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { BED, BED_FACING, HILLTOP, PILLOW, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
 
 type Beat =
   | 'ashore'
@@ -95,7 +95,6 @@ export class SleepingChapter implements Chapter {
   private landYaw = 0;
   private warmed = 0;
   private laid = false;
-  private readonly hand = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();
   private readonly aim = new THREE.Vector3(-1, 0, 0);
   private readonly side = new THREE.Vector3();
@@ -139,6 +138,32 @@ export class SleepingChapter implements Chapter {
 
   get done(): boolean {
     return this.beat === 'aboard';
+  }
+
+  get checkpoint(): string | null {
+    if (this.beat === 'toBoat') return 'morning';
+    const k = this.cast.cygnet.position;
+    return this.beat === 'climb' && Math.hypot(k.x - BED.x, k.z - BED.z) > TRODDEN - 1 ? 'feather' : null;
+  }
+  restoreCheckpoint(point: string): void {
+    const { child: c, sleeping, cygnet: k } = this.cast;
+    this.moored = true;
+    if (point === 'morning') {
+      this.warmed = 1; this.worldLife = 0.75; this.dusk = 1.02; this.haze = 0.6;
+      sleeping.dawn = sleeping.curtains = sleeping.laneOpen = 1;
+      sleeping.fog = sleeping.frost = 0;
+      this.board();
+    } else {
+      this.laid = true; this.called = true;
+      c.lieOn(LIE_AT, BED_FACING); c.position.copy(LIE_AT); c.abed = c.eyesShut = 1;
+      sleeping.sleeper = 1; sleeping.frost = T.frostAsleep;
+      // Resume once the bird has left the bed, so its low camera starts clear of the sleeping child.
+      sleeping.feather.release(this.spot.copy(k.position).setY(k.position.y + 1.4), this.side.set(UPHILL.x * 0.4, 0.2, UPHILL.y * 0.4));
+      sleeping.feather.goal.copy(TOP).setY(TOP.y + 1.6);
+      sleeping.feather.keepNear = TO_HILL;
+      k.pace = 0.6;
+      this.looks = 2; this.dusk = 1.22; this.beat = 'climb';
+    }
   }
 
   /** The one thing the player is asked for by name, and only at the top of the hill. */
@@ -218,11 +243,6 @@ export class SleepingChapter implements Chapter {
         this.inTheLap(dt);
         break;
       case 'push':
-        if (this.t > 0.9 && !this.cast.boat.afloat) this.cast.boat.launch();
-        if (this.t > 2.3) {
-          this.to('aboard');
-          c.ride(this.cast.boat.seat(this.seat), this.cast.boat.yaw);
-        }
         break;
       default:
         break;
@@ -247,7 +267,7 @@ export class SleepingChapter implements Chapter {
     this.haze += ((this.warmed > 0 ? 0.6 : 0.82) - this.haze) * (1 - Math.exp(-dt * 0.2));
     this.tighten = Math.max(0, this.tighten - dt * 0.55);
     c.tighter = this.tighten;
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
     /**
      * The plane goes under the blanket with them and comes back out into their hand when they sit up. It is as
      * long as the child is tall, so holding it out where it could be seen over a sleeping child is the one thing
@@ -499,7 +519,7 @@ export class SleepingChapter implements Chapter {
       /** It comes in on the heading it was flying and turns to the child over the next breath, never in a frame. */
       this.landYaw = k.yaw;
       this.to('waking');
-      cue('home');
+      completeObjective();
     }
   }
 
@@ -573,17 +593,12 @@ export class SleepingChapter implements Chapter {
     k.pace = 1;
     this.trodden = null;
     c.lookAt = null;
-    c.walkTo(
-      boat.position.x + 1.8,
-      boat.position.z + 0.9,
-      false,
-      () => {
-        this.to('push');
-        c.faceToward(boat.position.x, boat.position.z, 1);
-        c.push();
-      },
-      0.8,
-    );
+    const beside = boat.boardingPoint(this.seat);
+    c.walkTo(beside.x, beside.z, false, () => {
+      this.to('push');
+      c.faceToward(boat.position.x, boat.position.z, 1);
+      c.board(boat, () => this.to('aboard'));
+    }, 0.8);
   }
 
   /** Where the walk is pointing, and where the bird is going, both eased, so no shot ever snaps round. */

@@ -1,3 +1,4 @@
+import { SKY_RADIANCE_GLSL } from './sky-radiance';
 import * as THREE from 'three';
 import { params } from '../params';
 import { glsl, tuning } from '../tuning';
@@ -55,10 +56,17 @@ export const atmo = {
     uSeason: { value: 0 },
     /** 1 while the sea's mirror image is drawn: the ground paints its meadow instead of waiting for blades. */
     uMirrorPass: { value: 0 },
+    /** Centre x/z and radius: positive keeps this room, negative conceals it, zero shows all. */
+    uRoom: { value: new THREE.Vector3(0, 0, 0) },
     /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
     uRainbow: { value: 0 },
     /** A passing shower, 0 dry to 1: wet sheen on the grass. */
     uShower: { value: 0 },
+    uStormCover: { value: 0 },
+    uHarbourLight: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uHarbourDirection: { value: new THREE.Vector3(0, 0, 1) },
+    /** Direction of sheet lightning in the clouds, and its current strength. */
+    uLightning: { value: new THREE.Vector4(0, 0.32, -1, 0) },
     /** Mist lying in the low ground, 0 clear to 1: thick in the still world and after dark. */
     uMist: { value: 0 },
     /**
@@ -66,6 +74,8 @@ export const atmo = {
      * Unlike mist it does not care about height, so the island ahead is a rumour until you are nearly on it.
      */
     uVeil: { value: new THREE.Vector2(1e5, 0) },
+    /** Offshore fog converges to the sky itself, then releases on the approach to home. */
+    uOpenSea: { value: 0 },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },
@@ -164,6 +174,10 @@ uniform vec3 uSkyZenith;
 uniform vec3 uSkyHorizon;
 uniform vec3 uSkyHorizonSun;
 uniform vec3 uSkyAmbient;
+uniform float uStormCover;
+uniform vec4 uHarbourLight;
+uniform vec3 uHarbourDirection;
+uniform vec4 uLightning;
 uniform vec3 uGroundBounce;
 uniform float uFogDensity;
 uniform float uNight;
@@ -174,6 +188,13 @@ uniform float uMirrorPass;
 uniform float uShower;
 uniform float uMist;
 uniform vec2 uVeil;
+uniform float uOpenSea;
+uniform vec3 uRoom;
+/** Hidden land must also leave no shallows or surf in the water. */
+bool roomHides(vec2 p) {
+  float d = distance(p, uRoom.xy);
+  return (uRoom.z > 0.0 && d > uRoom.z) || (uRoom.z < 0.0 && d < -uRoom.z);
+}
 uniform vec2 uCloudShift;
 uniform vec4 uDomain;
 uniform vec4 uGroundDomain;
@@ -227,7 +248,8 @@ vec4 groundAt(vec2 xz) {
   vec2 uv = (xz - uGroundDomain.xy) * uGroundDomain.zw;
   if (!insideUv(uv)) return vec4(0.0, 1.0, 0.0, 1.0);
   vec4 g = texture(uGroundTex, uv);
-  return vec4(normalize(g.xyz * 2.0 - 1.0), g.w);
+  float clouded = smoothstep(${glsl(tuning.storm.shadowSoftenFrom)}, ${glsl(tuning.storm.shadowCovered)}, uStormCover);
+  return vec4(normalize(g.xyz * 2.0 - 1.0), mix(g.w, 1.0, clouded));
 }
 
 /**
@@ -346,6 +368,16 @@ vec3 skyColor(vec3 d) {
   return col;
 }
 
+/** The lighthouse's sweep catches nearby rain, water and the travellers; it cannot kindle embers. */
+vec3 harbourLight(vec3 world) {
+  if (uHarbourLight.w <= 0.001) return vec3(0.0);
+  vec3 d = world - uHarbourLight.xyz;
+  float dist = length(d);
+  float cone = smoothstep(0.968, 0.994, dot(d / max(dist, 0.001), uHarbourDirection));
+  float fall = 1.0 - smoothstep(35.0, 95.0, dist);
+  return vec3(0.9, 0.78, 0.52) * cone * fall * uHarbourLight.w;
+}
+
 vec3 hemiLight(vec3 n) {
   return mix(uGroundBounce, uSkyAmbient, n.y * 0.5 + 0.5);
 }
@@ -358,6 +390,8 @@ float cloudShadow(vec2 xz) {
   return mix(1.0, texture(uCloudTex, clamp(uv, 0.0, 1.0)).r, smoothstep(0.0, 0.04, min(edge.x, edge.y)));
 }
 
+${SKY_RADIANCE_GLSL}
+
 /** rgb: haze colour toward this point, a: how much haze covers it. Cheap enough to evaluate per vertex. */
 vec4 fogOf(vec3 wpos) {
   vec3 rd = wpos - cameraPosition;
@@ -368,6 +402,12 @@ vec4 fogOf(vec3 wpos) {
   float veil = max(0.0, dist - uVeil.x) * uVeil.y;
   float amt = 1.0 - exp(-dist * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
+  // Ordinary haze has its own tint. Far offshore that tint must not reveal the outline of an island.
+  if (uOpenSea > 0.001 && veil > 0.0) {
+    float open = uOpenSea * smoothstep(1.0, 4.0, veil);
+    fogCol = mix(fogCol, skyRadiance(rd), open);
+    amt = max(amt, open);
+  }
   /** The ground fog of the sleeping island, taken along the eye ray at both ends and the middle of it. */
   if (uHollow.w > 0.0) {
     vec3 mid = (cameraPosition + wpos) * 0.5;

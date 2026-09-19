@@ -3,9 +3,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glsl, tuning } from '../tuning';
 import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
-import { RibbonBatch, type Ribbon } from '../fx/ribbons';
+import { FOAM, Marks } from '../fx/sealife/marks';
 import { heightAt } from '../world/island';
-import { type Swell, swellAt, swellLift } from '../world/water/swell';
+import { type Swell, swellAt } from '../world/water/swell';
 
 const LENGTH = 4.8;
 const BEAM = 0.95;
@@ -68,7 +68,7 @@ void main() {
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
   float sun = cloudShadow(vWorld.xz);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 4.0) * max(dot(-V, uSunDir), 0.0);
-  vec3 col = alb * (hemiLight(N) + uSunColor * wrap * wrap * sun * 0.9) + uSunColor * rim * 0.12 * sun;
+  vec3 col = alb * (harbourLight(vWorld) + hemiLight(N) + uSunColor * wrap * wrap * sun * 0.9) + uSunColor * rim * 0.12 * sun;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
@@ -76,8 +76,10 @@ void main() {
 const SAIL_VERT = /* glsl */ `
 uniform float uFill;
 uniform float uFlutter;
+uniform float uRipplePhase;
 uniform float uLuff;
 uniform float uDroop;
+uniform float uShelter;
 uniform float uTime;
 out vec2 vUv;
 out vec3 vWorld;
@@ -91,19 +93,19 @@ out vec3 vNormal;
 vec3 cloth(vec2 st) {
   float s = st.x;
   float t = st.y;
-  float cut = s * (1.0 - uDroop * s * ${glsl(tuning.sail.gather)});
+  float cut = s * (1.0 - uDroop * s * mix(${glsl(tuning.sail.gather)}, ${glsl(tuning.opening.sailGather)}, uShelter));
   vec3 p = vec3(
     -cut * ${glsl(SAIL_SPAN)} * (1.0 - t * ${glsl(SAIL_TAPER)}),
     ${glsl(SAIL_TACK)} + t * ${glsl(SAIL_HOIST)} + cut * ${glsl(SAIL_RISE)},
     0.0);
-  p.y -= uDroop * s * (0.4 + 0.6 * sin(t * 3.14159)) * ${glsl(tuning.sail.sag)};
+  p.y -= uDroop * s * (0.4 + 0.6 * sin(t * 3.14159)) * mix(${glsl(tuning.sail.sag)}, ${glsl(tuning.opening.sailSag)}, uShelter);
   float folds = sin(s * ${glsl(tuning.sail.folds)} * 6.28318 + 1.1 + t * 0.7) * smoothstep(0.0, 0.2, s) * (0.3 + 0.7 * sin(t * 3.14159));
   float breathe = 0.7 + 0.3 * sin(uTime * 0.55 + t * 1.5);
   p.z += uDroop * (folds * breathe * ${glsl(tuning.sail.fold)} + s * sin(uTime * 0.4) * 0.08);
   /** A gust crossing the sail breaks along the free edge first: the leech shakes, then the belly fills again. */
   float leech = smoothstep(0.15, 1.0, s) * (0.4 + 0.6 * t);
   float belly = sin(s * 3.14159) * sin(t * 3.14159 * 0.9) * (1.0 - 0.3 * uLuff * leech);
-  float ripple = sin(uTime * (4.5 + 5.5 * uFlutter) - s * 6.5 + t * 3.0) * uFlutter * (0.25 + 0.75 * s * s);
+  float ripple = sin(uRipplePhase - s * 6.5 + t * 3.0) * uFlutter * (0.25 + 0.75 * s * s);
   float shake = (uLuff + uFlutter * 0.35) * leech;
   p.z += belly * uFill + ripple * ${glsl(tuning.sail.ripple)} + sin(uTime * 19.0 - s * 12.0 + t * 4.0) * shake * ${glsl(tuning.sail.shake)};
   return p;
@@ -123,6 +125,7 @@ void main() {
 
 const SAIL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uScarf;
 in vec2 vUv;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -134,12 +137,16 @@ void main() {
   float seam = 1.0 - smoothstep(0.0, 0.05, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
   float stitch = seam * step(0.5, fract((vUv.x + vUv.y) * 60.0));
   cloth *= 1.0 - seam * 0.18 - stitch * 0.1;
+  // The impossible scarf gathers into the sail, its red wool carried into the colder chapters.
+  float woven = smoothstep(vUv.y * 0.75, vUv.y * 0.75 + 0.25, uScarf);
+  vec3 wool = vec3(0.57, 0.023, 0.036) * (0.94 + 0.06 * sin(vUv.y * 100.0));
+  cloth = mix(cloth, wool, woven);
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   float ndl = dot(N, uSunDir);
   float through = max(-ndl, 0.0) * 0.45 + pow(max(dot(-V, uSunDir), 0.0), 3.0) * 0.25;
   float sun = cloudShadow(vWorld.xz);
-  vec3 col = cloth * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
+  vec3 col = cloth * (harbourLight(vWorld) + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
   col += cloth * cloth * uSunColor * through * 0.35 * sun;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -199,11 +206,13 @@ function floorboards(): THREE.BufferGeometry {
   const sheer = (u: number) => 0.28 * u * u;
   for (let i = 0; i <= U; i++) {
     const u = i / U;
-    const drop = (sheer(u) - FLOOR_Y) / (depth(u) * (1 - 0.5 * u * u));
+    // At the narrow bow the shell rises above the main floor level. Follow it inside the hull.
+    const floor = Math.max(FLOOR_Y, sheer(u) - depth(u) * (1 - 0.5 * u * u) + 0.02);
+    const drop = (sheer(u) - floor) / (depth(u) * (1 - 0.5 * u * u));
     const sin = Math.min(1, Math.max(0, drop)) ** (1 / 0.7);
     const half = width(u) * Math.sqrt(Math.max(0, 1 - sin * sin));
     const z = (u - 0.45) * LENGTH;
-    pos.push(-half, FLOOR_Y, z, half, FLOOR_Y, z);
+    pos.push(-half, floor, z, half, floor, z);
   }
   for (let i = 0; i < U; i++) {
     const a = i * 2;
@@ -233,10 +242,13 @@ function sailGeometry(): THREE.BufferGeometry {
  * driven by whatever wind fills its patchwork sail.
  */
 export class Boat {
+  scarfSail = 0;
   readonly group = new THREE.Group();
   readonly position = new THREE.Vector3();
   yaw = 0;
   speed = 0;
+  /** A narrow passage can spill surplus wind without making its sail look becalmed. */
+  speedLimit = Infinity;
   afloat = false;
   /** Where the child steers for; null lets it drift with the wind. */
   steerFor: THREE.Vector2 | null = null;
@@ -251,6 +263,8 @@ export class Boat {
    * of its own at all and only the wind the player makes moves it.
    */
   becalmed = 0;
+  /** The opening cove shelters the sail from weather, while the player's gusts still reach it. */
+  shelter = 0;
   /** How hard the sea is running under the hull, 0 calm to 1 the full squall; the boat rocks and drives on it. */
   swell = 0;
   /**
@@ -261,14 +275,19 @@ export class Boat {
   readonly sailWind = { blowing: 0, taken: 0, along: 0, made: 0 };
   private readonly sailPivot = new THREE.Group();
   private readonly sailMat: THREE.ShaderMaterial;
+  /** The actual shell vertices, before merging, so every part of the hull clears the sand. */
+  private readonly hullContacts: THREE.BufferAttribute;
+  private readonly contact = new THREE.Vector3();
+  private nearShore = true;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   /** The wind the sail feels, on the hanging things' spring: it fills when a gust arrives, not when the air moves. */
   private readonly sway = new Sway();
   /** Foam left on the water behind the hull. */
-  private readonly wake = new RibbonBatch(90, '#eef0ef', 0.5, true);
-  private readonly wakeTrail: Ribbon = { points: [], alpha: 0, width: 2.8 };
-  private readonly stern = new THREE.Vector3();
+  private readonly wake = new Marks();
+  private wakeIn = 0;
+  private readonly boardA = new THREE.Vector3();
+  private readonly boardB = new THREE.Vector3();
   private readonly sea: Swell = { height: 0, slopeX: 0, slopeZ: 0 };
   /** How the hull is lying, for whoever is riding it. */
   roll = 0;
@@ -278,13 +297,14 @@ export class Boat {
   private settled = 0;
   private luff = 0;
   private time = 0;
-  private fade = 0;
   /** A shove against the hull, signed by the side it came from, and how long ago it landed. */
   private shove = 0;
   private shoveAge = 1e3;
   /** Which way the beach lets it go while it is being pushed off, and how long that has been going on. */
   private readonly pushDir = new THREE.Vector2();
   private pushingFor = -1;
+  /** While a foot is still crossing the gunwale, the hull may drift from the shove but the sail may not take it. */
+  private boardingPush = false;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -295,7 +315,9 @@ export class Boat {
     });
     const wood = new THREE.Color('#9a6a42');
     const trim = new THREE.Color('#5d3d27');
-    const shell = paint(hull(), wood);
+    const shellGeometry = hull();
+    this.hullContacts = shellGeometry.getAttribute('position') as THREE.BufferAttribute;
+    const shell = paint(shellGeometry, wood);
     const deck = paint(floorboards(), trim);
     const thwart = paint(new THREE.BoxGeometry(1.7, 0.08, 0.34).translate(0, 0.02, -0.25), trim);
     const mast = paint(new THREE.CylinderGeometry(0.06, 0.08, 4.6, 8).translate(0, 2.2, 0.55), trim);
@@ -305,7 +327,7 @@ export class Boat {
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
       fragmentShader: SAIL_FRAG,
-      uniforms: { ...atmo.uniforms, uFill: { value: 0 }, uFlutter: { value: 0 }, uLuff: { value: 0 }, uDroop: { value: 1 } },
+      uniforms: { ...atmo.uniforms, uScarf: { value: 0 }, uFill: { value: 0 }, uFlutter: { value: 0 }, uRipplePhase: { value: 0 }, uLuff: { value: 0 }, uDroop: { value: 1 }, uShelter: { value: 0 } },
       side: THREE.DoubleSide,
     });
     this.sailPivot.position.set(0, 0, 0.55);
@@ -319,24 +341,33 @@ export class Boat {
   }
 
   beach(x: number, z: number, yaw: number): void {
+    this.speedLimit = Infinity;
+    this.shelter = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
     this.yaw = yaw;
     this.afloat = false;
     this.speed = 0;
+    this.lieOnShore(1, 0);
     this.pose(0);
   }
 
-  launch(): void {
+  launch(holdForBoarding = false): void {
     this.afloat = true;
     this.grounded = false;
     this.speed = 0;
     this.pushingFor = 0;
+    this.boardingPush = holdForBoarding;
     /** Out is downhill off the sand; on open water, where there is no slope, it is astern. */
     const p = this.position;
     const gx = heightAt(p.x + 3, p.z) - heightAt(p.x - 3, p.z);
     const gz = heightAt(p.x, p.z + 3) - heightAt(p.x, p.z - 3);
     if (Math.hypot(gx, gz) > 0.05) this.pushDir.set(-gx, -gz).normalize();
     else this.pushDir.set(-Math.sin(this.yaw), -Math.cos(this.yaw));
+  }
+
+  /** The child has settled: the shove may now give way to the wind already waiting in the sail. */
+  finishBoarding(): void {
+    this.boardingPush = false;
   }
 
   private get pushingOff(): boolean {
@@ -347,6 +378,9 @@ export class Boat {
   get sailSide(): number {
     return this.boom >= 0 ? 1 : -1;
   }
+
+  /** The droop actually drawn by the cloth, 0 full to 1 hanging dead. */
+  get sailDroop(): number { return this.sailMat.uniforms.uDroop.value; }
 
   /** World position of the middle of the sail, for anyone who needs to look at it. */
   sailPoint(out: THREE.Vector3): THREE.Vector3 {
@@ -370,9 +404,23 @@ export class Boat {
     return out.copy(this.seatLocal).applyMatrix4(this.group.matrixWorld);
   }
 
+  /**
+   * The shoreward place beside the thwart. Choosing the higher of the two sides keeps the child on sand when the
+   * boat is lying at an angle to a beach, and gives every departure the same measured last step to the gunwale.
+   */
+  boardingPoint(out: THREE.Vector3): THREE.Vector3 {
+    this.group.updateMatrixWorld(true);
+    this.boardA.set(-1.45, 0, 0.3).applyMatrix4(this.group.matrixWorld);
+    this.boardB.set(1.45, 0, 0.3).applyMatrix4(this.group.matrixWorld);
+    const a = heightAt(this.boardA.x, this.boardA.z);
+    const b = heightAt(this.boardB.x, this.boardB.z);
+    return out.copy(a >= b ? this.boardA : this.boardB);
+  }
+
   update(dt: number, time: number): void {
     this.time += dt;
     const p = this.position;
+    if (this.afloat) this.shelter *= Math.exp(-dt * tuning.opening.departureRate);
     const w = this.readWind(dt);
     const air = this.sailWind;
     const fx = Math.sin(this.yaw);
@@ -396,15 +444,28 @@ export class Boat {
         p.x += this.pushDir.x * out * dt;
         p.z += this.pushDir.y * out * dt;
         this.yaw += THREE.MathUtils.clamp(dy, -dt * PUSH_OFF_TURN, dt * PUSH_OFF_TURN);
-        if ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST) this.pushingFor = -1;
+        if (!this.boardingPush && ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST)) {
+          this.pushingFor = -1;
+        }
       } else {
         /**
          * A small boat sails on any point of wind, so what drives it is how much wind the sail is holding, with
          * a little more for a following one. Nobody is ever left stuck head to wind waiting for a shift.
          */
+        const distance = this.steerFor ? Math.hypot(this.steerFor.x - p.x, this.steerFor.y - p.z) : Infinity;
+        // Ease the sheet before a tight turn. A fixed turning circle can orbit a point forever.
+        const aligned = THREE.MathUtils.smoothstep(Math.cos(dy), 0, tuning.sail.turnAligned);
+        const turnLimit = this.steerFor
+          ? THREE.MathUtils.lerp(Math.max(tuning.sail.minimumWay, distance * TURN_FAST * tuning.sail.turnBrake), tuning.sail.topSpeed, aligned)
+          : Infinity;
+        const berthDistance = this.mooring ? Math.hypot(this.mooring.x - p.x, this.mooring.z - p.z) : Infinity;
+        const approach = Math.max(tuning.sail.minimumWay, berthDistance * tuning.sail.mooringDrive);
         const drive = Math.min(
           air.taken * tuning.sail.drive + Math.max(0, air.along) * tuning.sail.following,
           tuning.sail.topSpeed,
+          this.speedLimit,
+          turnLimit,
+          approach,
         );
         const gathering = drive > this.speed ? tuning.sail.gathers : tuning.sail.carries;
         this.speed += (drive - this.speed) * (1 - Math.exp(-dt * gathering));
@@ -412,8 +473,11 @@ export class Boat {
         this.yaw += kick * tuning.dolphins.shoveYaw * dt;
         const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
         this.yaw += THREE.MathUtils.clamp(dy, -dt * turn, dt * turn);
-        p.x += (fx * this.speed + w.x * 0.06) * dt;
-        p.z += (fz * this.speed + w.z * 0.06) * dt;
+        // The child takes a line as the berth approaches; sideways drift must not defeat the last turn.
+        const leeway = Math.min(0.06, this.speedLimit * tuning.sail.passageDrift / Math.max(1, Math.hypot(w.x, w.z)));
+        const drift = leeway * (this.mooring ? THREE.MathUtils.smoothstep(berthDistance, 2.6, tuning.sail.mooringShelter) : 1);
+        p.x += (fx * this.speed + w.x * drift) * dt;
+        p.z += (fz * this.speed + w.z * drift) * dt;
       }
       const ahead = heightAt(p.x + fx * 2.2, p.z + fz * 2.2);
       if (this.canGround && ahead > -0.25) {
@@ -443,12 +507,15 @@ export class Boat {
     const bow = this.sea.slopeX * fx + this.sea.slopeZ * fz;
     const beam = this.sea.slopeX * fz - this.sea.slopeZ * fx;
     const settle = 1 - Math.exp(-dt * 3.5);
-    this.roll += (heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam - this.roll) * settle;
-    this.pitch += ((this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05) - this.pitch) * settle;
+    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam;
+    const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
+    this.lieOnShore(settle, lift, waterRoll, waterPitch);
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
     p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const sail = this.sailMat.uniforms;
+    sail.uScarf.value = this.scarfSail;
+    sail.uShelter.value = this.shelter;
     /** With nothing moving in it the cloth is dead weight: the leech falls in and it hangs off the mast in folds. */
     const hang = 1 - THREE.MathUtils.smoothstep(air.blowing, 0, tuning.sail.hangsBelow);
     sail.uDroop.value = hang;
@@ -460,6 +527,9 @@ export class Boat {
     sail.uFill.value += ((across >= 0 ? 1 : -1) * fill * tuning.sail.belly - sail.uFill.value) * (1 - Math.exp(-dt * 3));
     /** The harder it blows, the more there is for the cloth to do: a lazy ripple in a light air, a lively one in a gust. */
     sail.uFlutter.value = Math.min(1, air.blowing / tuning.sail.livelyAt);
+    /** Integrate the changing frequency: multiplying it by elapsed time makes every gust jump the cloth. */
+    sail.uRipplePhase.value = (sail.uRipplePhase.value
+      + dt * (tuning.sail.rippleRate + tuning.sail.rippleGustRate * sail.uFlutter.value)) % (Math.PI * 2);
     /**
      * A gust does not simply fill the sail: it breaks over it. The cloth shakes along the leech the moment the
      * wind changes, hard for a gust the sail was not already carrying, and goes quiet again as it fills.
@@ -470,7 +540,8 @@ export class Boat {
     this.luff = Math.max(this.luff * Math.exp(-dt / tuning.sail.luffFade), Math.min(1, Math.max(0, arriving - tuning.sail.luffFrom) * 2.4));
     /** An eased sheet spills its wind instead of holding it: the sail flaps on while the boat loses way. */
     const spilling = this.becalmed * Math.min(1, (air.blowing - air.made) / tuning.sail.hangsBelow);
-    sail.uLuff.value = Math.max(this.luff, spilling) * (this.afloat ? 1 : 0.5);
+    const squallLuff = this.swell * tuning.sail.squallLuff * (0.58 + 0.42 * Math.sin(this.time * 2.7) ** 2);
+    sail.uLuff.value = Math.max(this.luff, spilling, squallLuff) * (this.afloat ? 1 : 0.5);
     this.pose(dt);
     this.updateWake(dt, time);
   }
@@ -497,8 +568,9 @@ export class Boat {
     /** Told by the gust it carries and by standing well clear of the breeze and of the field's own stirring. */
     const made = Math.max(0, speed - Math.max(world, tuning.sail.stirs)) + w.energy * tuning.sail.gustPress;
     const weather = this.swell * tuning.sail.squallPress;
-    const blowing = made + world + weather;
-    const taken = made + (world + weather * tuning.sail.squallHolds) * (1 - this.becalmed);
+    const exposed = 1 - this.shelter;
+    const blowing = made + (world + weather) * exposed;
+    const taken = made + (world + weather * tuning.sail.squallHolds) * exposed * (1 - this.becalmed);
     /** Which way it is lying is the field's to say, however little of it there is. */
     const heading = speed > 1e-3 ? (w.x * Math.sin(this.yaw) + w.z * Math.cos(this.yaw)) / speed : 0;
     const along = heading * taken;
@@ -531,36 +603,56 @@ export class Boat {
 
   /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
   private updateWake(dt: number, time: number): void {
-    const pts = this.wakeTrail.points;
-    const moving = this.afloat && !this.grounded && this.speed > 0.6;
-    const sx = this.position.x - Math.sin(this.yaw) * 1.5;
-    const sz = this.position.z - Math.cos(this.yaw) * 1.5;
-    this.stern.set(sx, 0.05 + this.sea.height, sz);
-    const n = pts.length;
-    if (moving && (n < 2 || pts[n - 2].distanceTo(this.stern) > 1.6)) {
-      pts.push(this.stern.clone());
-      if (pts.length > 26) pts.shift();
-    } else if (n > 0) {
-      pts[n - 1].copy(this.stern);
+    this.wake.update(time);
+    this.wakeIn -= dt;
+    if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0) return;
+    this.wakeIn = 0.15;
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const strength = Math.min(0.7, this.speed * 0.13);
+    // Two broken trails peel off the quarters; a small curl at each shoulder anchors the waterline.
+    for (const side of [-1, 1]) {
+      this.wake.add(FOAM, this.position.x - fx * 1.6 + fz * side * 0.5,
+        this.position.z - fz * 1.6 - fx * side * 0.5, 0.22, 5.5, time,
+        strength, 0.22, Math.PI / 2 - this.yaw + side * 0.18, 1.65);
+      this.wake.add(FOAM, this.position.x + fx * 0.6 + fz * side * 0.78,
+        this.position.z + fz * 0.6 - fx * side * 0.78, 0.13, 1.4, time,
+        strength * 0.8, 0.09, Math.PI / 2 - this.yaw, 2.4);
     }
-    if (!moving && pts.length > 1 && this.fade > 0.5) {
-      pts.shift();
-      this.fade = 0;
-    }
-    this.fade += dt;
-    /** The foam lies on the water, and the water moves: every point rides whatever swell is under it now. */
-    for (const q of pts) q.y = 0.05 + swellLift(q.x, q.z, time);
-    this.wakeTrail.alpha = moving ? Math.min(0.3, this.speed * 0.035) : 0.1;
-    this.wake.update([this.wakeTrail]);
   }
 
   private pose(_dt: number): void {
-    this.group.position.copy(this.position);
     this.group.rotation.set(0, 0, 0);
     this.group.rotateY(this.yaw);
     this.group.rotateX(this.pitch);
     this.group.rotateZ(this.roll);
+    // Floating height alone lets an arriving bow, or a departing stern, pass through the beach.
+    // Resolve the shell against the ground after applying its complete pitch and roll.
+    let supported = -Infinity;
+    for (let i = 0; this.nearShore && i < this.hullContacts.count; i++) {
+      const p = this.contact.fromBufferAttribute(this.hullContacts, i).applyQuaternion(this.group.quaternion);
+      supported = Math.max(supported, heightAt(this.position.x + p.x, this.position.z + p.z) - p.y);
+    }
+    this.position.y = Math.max(this.position.y, supported + tuning.sail.hullClearance);
+    this.group.position.copy(this.position);
     this.sailPivot.rotation.y = this.boom;
     this.group.updateMatrixWorld(true);
+  }
+
+  /** Rest along a sloping beach instead of holding a level hull on its highest corner. */
+  private lieOnShore(settle: number, sea: number, waterRoll = 0, waterPitch = -0.05): void {
+    const p = this.position, fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const fore = heightAt(p.x + fx * 2, p.z + fz * 2);
+    const aft = heightAt(p.x - fx * 2, p.z - fz * 2);
+    const right = heightAt(p.x + fz * BEAM, p.z - fx * BEAM);
+    const left = heightAt(p.x - fz * BEAM, p.z + fx * BEAM);
+    const ground = Math.max(fore, aft, right, left, heightAt(p.x, p.z));
+    this.nearShore = ground > -LENGTH;
+    const resting = THREE.MathUtils.smoothstep(ground, sea - 0.4, sea + 0.4);
+    const base = sea - 0.15;
+    const pitch = -Math.atan2(Math.max(fore, base) - Math.max(aft, base), 4);
+    const roll = Math.atan2(Math.max(right, base) - Math.max(left, base), BEAM * 2);
+    const limit = tuning.sail.shoreTilt;
+    this.pitch += (THREE.MathUtils.lerp(waterPitch, THREE.MathUtils.clamp(pitch, -limit, limit), resting) - this.pitch) * settle;
+    this.roll += (THREE.MathUtils.lerp(waterRoll, THREE.MathUtils.clamp(roll, -limit, limit), resting) - this.roll) * settle;
   }
 }

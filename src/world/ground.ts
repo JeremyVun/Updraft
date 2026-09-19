@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glsl, tuning } from '../tuning';
 import { GpuRunner, simMaterial, simTarget } from '../gl/gpu';
 import { Readback } from '../gl/readback';
 import { atmo } from './atmosphere';
@@ -31,6 +32,7 @@ const GROUND_FRAG = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
 uniform sampler2D uHeightTex;
 uniform vec3 uSunDir;
+uniform float uStormCover;
 uniform vec4 uDomain;
 uniform int uOccluderCount;
 uniform vec4 uOccluders[${MAX_OCCLUDERS}];
@@ -45,6 +47,11 @@ float heightAt(vec2 p) {
 void main() {
   vec2 world = vUv / uDomain.zw + uDomain.xy;
   vec4 hn = texture(uHeightTex, vUv);
+  // Full storm cloud scatters the remaining light: no directional terrain shadow to march.
+  if (uStormCover >= ${glsl(tuning.storm.shadowCovered)}) {
+    gl_FragColor = vec4(hn.gba * 0.5 + 0.5, 1.0);
+    return;
+  }
   float h0 = max(hn.r, 0.0) + 0.6;
   vec2 dir = normalize(uSunDir.xz);
   float rise = uSunDir.y / length(uSunDir.xz);
@@ -155,6 +162,7 @@ export class GroundBakes {
     this.groundMat = simMaterial(GROUND_FRAG, {
       uHeightTex: { value: this.height.texture },
       uSunDir: atmo.uniforms.uSunDir,
+      uStormCover: atmo.uniforms.uStormCover,
       uDomain: atmo.uniforms.uDomain,
       uOccluderCount: { value: 0 },
       uOccluders: { value: Array.from({ length: MAX_OCCLUDERS }, () => new THREE.Vector4()) },

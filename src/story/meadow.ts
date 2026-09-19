@@ -7,7 +7,7 @@ import { heightAt } from '../world/island';
 import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
 import { tuning } from '../tuning';
 
@@ -129,6 +129,7 @@ export class MeadowChapter implements Chapter {
   private watchUntil = 0;
   private nextLook = 0;
   private crestDone = false;
+  private boatMoved = false;
   private cheeredFlight = false;
   /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
   trodden: THREE.Vector3 | null = null;
@@ -157,7 +158,7 @@ export class MeadowChapter implements Chapter {
   private readonly axis = new THREE.Vector3(0, 0, -1);
 
   constructor(private readonly cast: Cast) {
-    const { child, plane, boat, cygnet, flock, life } = cast;
+    const { child, plane, cygnet, flock, life } = cast;
     /**
      * The island is asleep, shore and all, and the only colour on it is the patch the piano stands in. Everything
      * that happens to the meadow's colour after this happens because the lullaby got further.
@@ -173,7 +174,6 @@ export class MeadowChapter implements Chapter {
     cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.homeRadius = 70;
     child.dismount();
-    boat.beach(FAR_SHORE.x, FAR_SHORE.z, 0.2);
     child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
   }
 
@@ -203,6 +203,20 @@ export class MeadowChapter implements Chapter {
     return `${this.piano.at} wave=${Math.round(this.cast.life.regions.wave.z)}/${Math.round(this.waveTo)} at ${this.waveSpeed}/s`;
   }
 
+  get checkpoint(): string | null {
+    if (this.beat !== 'walk') return null;
+    return this.crestDone ? 'pond' : this.piano.at === 'done' ? 'piano' : null;
+  }
+  saveCheckpoint(): number[] { return [this.leg, this.waveTo, this.waveSpeed, this.dusk, this.duskTarget]; }
+  restoreCheckpoint(point: string, data: number[]): void {
+    this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
+    this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];
+    this.piano.restoreDone();
+    this.crestDone = point === 'pond';
+    this.beat = 'walk'; this.play = 'hold'; this.holdUntil = 1;
+    if (this.crestDone) this.cast.flock.clear();
+  }
+
   /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
   get hush(): number {
     return Math.max(this.beatHush, this.piano.hush);
@@ -216,7 +230,7 @@ export class MeadowChapter implements Chapter {
     child.stop();
     child.place(ROUTE[ROUTE.length - 1].x + 4, ROUTE[ROUTE.length - 1].y + 40, Math.PI);
     child.standUp();
-    plane.hold(child.handPosition(this.hand), child.yaw);
+    plane.hold(child);
     this.play = 'hold';
     this.duskTarget = this.dusk = 0.45;
     this.to('walk');
@@ -231,7 +245,7 @@ export class MeadowChapter implements Chapter {
     child.standUp();
     cygnet.rideIn('satchel');
     cygnet.bind(0.06);
-    plane.hold(child.handPosition(this.hand), child.yaw);
+    plane.hold(child);
     this.play = 'hold';
     this.to('walk');
   }
@@ -250,7 +264,7 @@ export class MeadowChapter implements Chapter {
     child.standUp();
     cygnet.rideIn('satchel');
     cygnet.bind(0.06);
-    plane.hold(child.handPosition(this.hand), child.yaw);
+    plane.hold(child);
     this.play = 'hold';
     this.to('walk');
   }
@@ -267,7 +281,7 @@ export class MeadowChapter implements Chapter {
     if (stage < 3) return;
     /** Once it is all awake the wind wakes ground the ordinary way again, wherever the journey goes next. */
     this.cast.life.regions.waiting.set(0, 0, 0, 0);
-    cue('wave');
+    completeObjective();
     /** The wind runs ahead of the last wave whoever finished the tune; for a player who never joined in, softly. */
     this.gustPower = answered ? 1 : UNANSWERED;
     this.gustUntil = this.now + GUST_FOR * (answered ? 1 : 0.7);
@@ -327,6 +341,11 @@ export class MeadowChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now = time;
     const { child: c, plane: p, life, boat } = this.cast;
+    // Keep the boat at the landing until the walk has left the arrival bay behind.
+    if (!this.boatMoved && this.leg >= CREST_LEG) {
+      boat.beach(FAR_SHORE.x, FAR_SHORE.z, 0.2);
+      this.boatMoved = true;
+    }
     /**
      * The plane leans toward the next waypoint, and on the last leg toward the boat itself. Aimed simply north of
      * the child it made for open water at the far shore, sat on the sea and held the child at the water's edge.
@@ -392,11 +411,6 @@ export class MeadowChapter implements Chapter {
         this.updateGlide();
         break;
       case 'push':
-        if (this.t > 0.9 && !boat.afloat) boat.launch();
-        if (this.t > 2.3) {
-          this.to('aboard');
-          c.ride(boat.seat(this.tmp), boat.yaw);
-        }
         break;
       default:
         break;
@@ -437,7 +451,7 @@ export class MeadowChapter implements Chapter {
         this.nextBugle = time + (this.beat === 'crest' || this.beat === 'down' ? 5.4 : 9 + Math.random() * 5);
       }
     }
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
     this.frame();
     /** The stop at the piano owns the camera while it has the child, and says how fast it should follow. */
     this.pace = this.piano.frame(this.shot) ?? this.pace;
@@ -554,6 +568,7 @@ export class MeadowChapter implements Chapter {
   private swimHome(time: number): boolean {
     const { child: c, cygnet } = this.cast;
     if (cygnet.state !== 'swimming') return false;
+    c.stop();
     pondEdge(c.position.x, c.position.z, -0.4, this.bank);
     cygnet.swimTo(this.bank);
     if (Math.hypot(cygnet.position.x - this.bank.x, cygnet.position.z - this.bank.z) < 1.1) {
@@ -583,17 +598,16 @@ export class MeadowChapter implements Chapter {
   private updateGlide(): void {
     const { child: c, cygnet } = this.cast;
     c.lookAt = cygnet.position;
-    if (cygnet.flying) {
-      if (c.sitting && !c.busy) c.standUp();
-      return;
-    }
+    if (c.sitting && !c.busy) c.standUp();
+    if (cygnet.flying) return;
+    if (this.swimHome(this.now)) return;
     if (c.busy || c.sitting) return;
     if (cygnet.flights === 1 && !this.cheeredFlight) {
       /** It went up on the wind and came down safe. After that the wind is something to ask for. */
       cygnet.mind.trust(0.66);
       this.cheeredFlight = true;
       c.cheer();
-      cue('delight');
+      completeObjective();
       cygnet.bind(0.2);
       return;
     }
@@ -785,7 +799,7 @@ export class MeadowChapter implements Chapter {
         return;
       }
       c.pickUp(() => {
-        p.hold(c.handPosition(this.hand), c.yaw);
+        p.hold(c);
         this.play = 'hold';
         this.holdUntil = this.now + 0.4 + Math.random() * 0.55;
       });
@@ -797,11 +811,12 @@ export class MeadowChapter implements Chapter {
     const { child: c, boat } = this.cast;
     this.to('toBoat');
     c.lookAt = null;
-    c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
+    const beside = boat.boardingPoint(this.tmp);
+    c.walkTo(beside.x, beside.z, false, () => {
       this.gatherUp(() => {
         this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);
-        c.push();
+        c.board(boat, () => this.to('aboard'));
       });
     }, 0.5);
   }

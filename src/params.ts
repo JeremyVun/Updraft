@@ -37,6 +37,8 @@ export const params = {
   storm: num('storm'),
   /** Start later in the story: `crossing`, `washing`, `meadow`, `birches`, `drowned`, `wood`, `sleeping`, `sea` or `summit`. */
   chapter: q.get('chapter'),
+  /** Chapter/shot QA never reads or overwrites a player's save unless explicitly testing progress. */
+  progress: q.has('progress') ? q.get('progress') === '1' : !q.has('shot') && !q.has('chapter'),
   /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). On by default for touch devices; `lite=0` forces it off. */
   lite,
   /** How often the sea's reflection is drawn: every frame (1), alternate frames (2, the lite default; a one-frame lag is faintly visible in still comparisons), or never (0, QA). */

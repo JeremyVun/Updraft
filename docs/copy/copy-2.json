@@ -7,7 +7,7 @@
       ]
     },
     {
-      "role": "Story and journey",
+      "role": "Story",
       "names": [
         "Jeremy",
         "Fable 5.1"
@@ -30,7 +30,8 @@
     {
       "role": "Visual effects",
       "names": [
-        "Opus 5"
+        "Opus 5",
+        "Astra"
       ]
     },
     {
@@ -40,13 +41,30 @@
       ]
     },
     {
-      "role": "Companion animation and behaviour",
+      "role": "Animation",
       "names": [
-        "Fable 5.1"
+        "Fable 5.1",
+        "Opus 5",
+        "Astra"
       ]
     },
     {
-      "role": "Build orchestration",
+      "role": "Cinematography",
+      "names": [
+        "Fable 5.1",
+        "Opus 5",
+        "Astra"
+      ]
+    },
+    {
+      "role": "Puzzles",
+      "names": [
+        "Fable 5.1",
+        "Astra"
+      ]
+    },
+    {
+      "role": "Production",
       "names": [
         "Fable 5.1"
       ]
@@ -58,21 +76,15 @@
       ]
     },
     {
-      "role": "The few words",
+      "role": "Copy",
       "names": [
         "Astra"
-      ]
-    },
-    {
-      "role": "Final say",
-      "names": [
-        "Jeremy"
       ]
     }
   ],
   "closing": "Thank you for bringing them home.",
   "playAgain": "Play again",
-  "notes": "The repeated Opus credit and Jeremy’s final say keep the jokes quiet and the credits honest.",
+  "notes": "Use short, familiar roles. The repeated Opus graphics credit supplies the quiet joke; Jeremy rejected Final say and The wind / You as corny. Music and sound combines composition and sound design. Cinematography covers camera framing, movement and scene staging by Fable, Opus and Astra. Jeremy confirmed Astra’s recent visual, animation and puzzle work, much of it still uncommitted, and requested Fable share the puzzles credit. Git history also credits Opus for the fledging and paper unfolding. Astra is the Codex contributor. Reviewed 2026-09-19.",
   "title": "End credits and the play-again button",
   "status": "draft, awaiting Jeremy",
   "draftedBy": "gpt-6-astra via codex exec, 2026-09-18"

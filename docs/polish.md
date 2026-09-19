@@ -46,7 +46,20 @@ And on the piano, an open question:
 | the pond | on `main`: `POND` at (24, −892) on the north slope, the walk over the brow at `WAY[4]`, the veil held from the brow to the boat. The crater rim is fixed: the bowl is dug out but the rim is the slope itself where the slope stands above the water and a low lip (`POND_LIP` 0.4) only where it falls below; checked by capture from the brow, the tarn lies in its slope. |
 | the piano puzzle and the finale | built, and the mechanic reworked on Jeremy's question (his words above): every note lifts a wind trace off its key that runs up the hill and greens the grass it runs over (`fx/notetraces.ts`, `LifeField.bloom`); the phrase's traces are the invitation; the key-line shows only while a phrase waits; the duet frame sees the whole keyboard from the child's shoulder with the slope and sky behind; the finale spirals up in one eased rise and rests looking along the way north with the child and the piano at the foot of the frame, then the child gets up. The pond cannot be seen from the piano (205 paces, two rises), so its reveal is the brow's. Details in `docs/journey.md`. |
 | the wind feel | built: the washing swings on the felt wind through the sway spring, its hem lagging its pegs so a gust runs down the cloth, filled with a belly (an arc, not a fan of rays) and a ripple that rises with the wind (`tuning.washing`); the kite, the pinwheels, the birches' whip and their leaves' letting go, and the sail's one sampling function all read the felt wind on the same spring. Nothing the grass reads was touched. Compared by capture against `main` from the walk: the sheets take the gust a beat after the grass, belly rather than tilt as one, and settle again. |
-| a puzzle for the island of lines | **built**: the family on the line, joined with the door (ideas 1 and 4 below), on Jeremy's go. See `docs/journey.md`, the island of lines. |
+| a puzzle for the island of lines | **reworked September 19**: three wind-lifted curtains wait for player input, with sideways invitation traces at the first; the cygnet goes first and waits for the child. The plane stays held. The family opens a real doorway onto a separate shore, with only the family clothes, kite and boat beyond it. Island length increased 15%, width retained. See `docs/journey.md`, the island of lines. |
+
+## The sea passage
+
+Jeremy, September 19: “Get an understanding of the game's vision and what it aims to make the player feel and
+experience, then proceed with fixing these issues.” The approved review found undersized dolphins, cropped or
+sail-obscured encounters, repetitive steep hops, weak contact with the waves, hidden child reactions, a cygnet
+swim that fell behind the frame, and land appearing too soon.
+
+Implemented around the crossing's role as relief after the wood: a generous living sea, a little play, then room
+for the cygnet's confidence. Larger dolphins and quieter surfacing, a side-on encounter camera, water-following
+foam and wake, a slower boat during the swim, and a longer offshore route replace the crowded sequence. The paper
+stays stowed in the boat so it cannot intersect the returning cygnet. Passage details and verification tools are
+in `journey.md`, “The long crossing”.
 
 ## The pond
 
@@ -130,3 +143,43 @@ the child waits behind. **Jeremy picks; nothing is built until he does.**
 ## Where it stands (2026-09-19, late evening)
 
 Everything in this round is on `main`. Jeremy gave the Fable lead ownership of the visual work after the Opus 5 limit was hit, and it was all done by capture from the lead's own worktrees. Still wanting his eye and ear: the piano's loudness and hush, the traces and the greening as played, the finale's rise, the three on the line, and the washing in a gust.
+
+Review follow-up: Jeremy wants to discuss how the piano puzzle works before changing it, after the other review fixes. The reported finale issue (restoring the whole meadow immediately while the green wave is still travelling) remains unresolved; no piano behavior is changed in this pass. The full phone/portrait gameplay pass is captured in `backlog/portrait-gameplay/design.md` and is outside this session.
+
+
+## Shared objective sound (September 19)
+
+Jeremy asked for the starting island's completion sound at major puzzle conclusions, not every smaller step.
+`completeObjective()` in `story/cues.ts` reuses the unchanged `restored` phrase. It marks the opening restoration,
+red door opening, piano's full meadow awakening, first successful meadow glide, refilled sail, finding the cygnet
+in the wood, waking the sleeping child and the final family's answer. Each is a one-time success transition;
+checkpoint restoration does not play it. Sheets, piano phrases, coals and free play keep their smaller responses.
+
+## Dark wood (September 19)
+
+Jeremy: embers look like basic light orbs and activate on tiny cursor movement; replace mechanic-skipping
+waiting timers with invitation traces after about five seconds; increase ember spacing 30–40%; explain the
+sequence and assess firefly numbers.
+
+The first fragmented-coal visual pass is rejected (see below). Direct sweeps build ignition; idle and residual wind
+cannot finish it. Traces demonstrate the sweep after five seconds without supplying wind, light or progress.
+Spacing increased 35% (15 → 20.25 along the path). Rescue requires the hiding-place coal; plane drying requires
+player fanning. The storm previously suppressed every firefly; the wood now has its own sheltered population
+(240 within 25 units, smaller than the open meadow's flies). The plane stop now interrupts the path walk, preventing the child from walking past it and becoming stuck
+at the far shore. Checkpoint restore lights only the already-earned area, leaving the next ember for the player.
+The story remains making light, losing and finding
+the cygnet, repairing the plane, then boarding on the far shore. Its narrative is the child facing the dark
+for somebody smaller who trusts them.
+
+Checks: `node tools/wood-logic-check.mjs` for input/idle invariants and `node tools/wood-check.mjs [portrait]`
+for real gestures through the scene (`rescue` stages the bolt for a focused second-half check).
+The mechanics suite covers 30/60/120 fps, tiny motions, residual wind, both checkpoint resumes, the full
+route and waiting-target framing in landscape and portrait. Screenshots and reports go to `/tmp/updraft-wood-*`.
+
+Jeremy's visual correction, verbatim:
+
+> “hrm.. the embers still need to look like something the player can and should interact with, instead of a bunch of orange squares. Rethink the visual language a bit for the embers”
+
+Jeremy authorized one Astra subagent to create three in-scene ember concepts with no gameplay changes.
+Workshop: `/tmp/updraft-ember-comps-r1`. The visual decision remains open. The object itself must invite fanning;
+the five-second traces reinforce that invitation. Both a plain light orb and scattered orange squares are rejected.

@@ -3,7 +3,7 @@ import type { WindField } from '../wind/field';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { Dolphins } from './sealife/dolphin';
 import { Fish } from './sealife/fish';
-import { Marks } from './sealife/marks';
+import { FOAM, RING, Marks } from './sealife/marks';
 import { Spray } from './sealife/spray';
 import { WhaleWake } from './sealife/wake';
 import { Whale } from './sealife/whale';
@@ -18,6 +18,7 @@ export class SeaLife {
   private readonly wake: WhaleWake;
   private readonly fish: Fish;
   private readonly pod = new Dolphins();
+  private swimMark = 0;
   private readonly seen = new THREE.Vector3();
 
   constructor(wind: WindField, camera: THREE.Camera) {
@@ -62,6 +63,14 @@ export class SeaLife {
   /** Where a dolphin is playing to the boat, for the child to look at; null when they are only running alongside. */
   get dolphinShow(): THREE.Vector3 | null {
     return this.pod.spotlight;
+  }
+
+  /** The small, persistent V behind the cygnet, carried by the same surface as every other wake. */
+  swimmerNear(at: THREE.Vector3, time: number): void {
+    if (time < this.swimMark) return;
+    this.swimMark = time + 0.28;
+    this.foam.add(RING, at.x, at.z, 0.18, 2.2, time, 0.65, 0.4);
+    this.foam.add(FOAM, at.x, at.z, 0.2, 1.5, time, 0.45, 0.12);
   }
 
   /** How often fish leap around `near` (0 none .. 1 lively); the story sets this each frame. */

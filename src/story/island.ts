@@ -4,7 +4,8 @@ import type { WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
 import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
+import { tuning } from '../tuning';
 
 type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'skein' | 'toCygnet' | 'near' | 'kneel' | 'gather' | 'leaving' | 'toBoat' | 'push' | 'aboard';
 type Play = 'watch' | 'fetch' | 'hold';
@@ -33,10 +34,13 @@ export class IslandChapter implements Chapter {
   worldLife = 0;
   restored = false;
   pace = 0.8;
-  readonly haze = 0.85;
+  /** The aerial shot must not reveal the washing on the next island. */
+  get haze(): number {
+    return this.beat === 'toTree' || this.beat === 'atTree' || this.beat === 'skein' ? 0.99 : 0.85;
+  }
   hush = 0;
   readonly dusk = 0;
-  readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 9 };
+  readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 9, fitWidth: true };
   readonly music = 'still' as const;
   readonly season = 0.08;
   readonly focus = new THREE.Vector3();
@@ -64,8 +68,14 @@ export class IslandChapter implements Chapter {
   private hushWanted = 0;
   private readonly fallen = new THREE.Vector3();
   private readonly left = new THREE.Vector3();
-  /** Fixed side-on direction for the fall shot, chosen once so the camera never swings mid-drop. */
-  private readonly watchFrom = new THREE.Vector3();
+  /** Shared camera anchors for the outlook, the family and the uninterrupted descent. */
+  private readonly skyEye = new THREE.Vector3();
+  private readonly skyLook = new THREE.Vector3();
+  private readonly outlookEye = new THREE.Vector3();
+  private readonly outlookLook = new THREE.Vector3();
+  private readonly rescueView = new THREE.Vector3(1, 0, 0.45).normalize();
+  private readonly climbView = new THREE.Vector3();
+  private fallAt = 0;
   private readonly eye = new THREE.Vector3();
   private watchUntil = 0;
   private nextLook = 0;
@@ -77,8 +87,9 @@ export class IslandChapter implements Chapter {
     SEAT.y = Math.max(heightAt(SEAT.x, SEAT.z), 0);
     child.place(SEAT.x, SEAT.z, 0.35);
     child.sitDown();
-    plane.hold(child.handPosition(this.hand), child.yaw);
+    plane.hold(child);
     boat.beach(BOAT_BERTH.x, BOAT_BERTH.z, BERTH_YAW);
+    boat.shelter = 1;
     const top = cast.tree.canopy.reduce((a, c) => (c.centre.y > a.y ? c.centre : a), cast.tree.canopy[0].centre);
     this.canopyTop.copy(top);
     this.frame();
@@ -89,7 +100,16 @@ export class IslandChapter implements Chapter {
    * swallowed by it at the one moment the game asks the player to look at them.
    */
   get trodden(): THREE.Vector3 | null {
-    return this.beat === 'toTree' || this.beat === 'atTree' ? this.flat : null;
+    if (this.beat === 'toTree' || this.beat === 'atTree' || (this.beat === 'skein' && !this.dropped)) {
+      return this.flat.set(TREE.x + 4, 10, TREE.z + 1);
+    }
+    const rescuing = this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather'
+      || (this.beat === 'leaving' && this.downAt >= 0 && this.now - this.beatStart < 3);
+    if (this.dropped && (this.cast.cygnet.grounded || rescuing)) {
+      // Their shared patch stays pressed while the child lifts it, even after it is no longer grounded.
+      return this.flat.set(this.fallen.x, rescuing ? 5 : 2.5, this.fallen.z);
+    }
+    return null;
   }
 
   /** Only catch and the first breeze answer the player; the rest of the island is the story playing itself out. */
@@ -99,6 +119,17 @@ export class IslandChapter implements Chapter {
 
   get done(): boolean {
     return this.beat === 'aboard';
+  }
+
+  get checkpoint(): string | null { return this.beat === 'leaving' ? 'companion' : null; }
+  restoreCheckpoint(): void {
+    this.cast.boat.shelter = 1;
+    this.restored = this.dropped = true;
+    this.breeze = this.breezeTarget = this.worldLife = 1;
+    this.beat = 'leaving';
+    this.play = 'hold';
+    this.holdUntil = 1.4;
+    this.cast.flock.clear();
   }
 
   update(dt: number, time: number): void {
@@ -146,7 +177,7 @@ export class IslandChapter implements Chapter {
     this.hushWanted = quiet ? (this.dropped ? 1 : 0.55) : after ? 0.45 : 0;
     this.hush += (this.hushWanted - this.hush) * (1 - Math.exp(-dt * 0.9));
 
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
     this.frame();
   }
 
@@ -158,10 +189,10 @@ export class IslandChapter implements Chapter {
       this.sinceLifeCheck = 0;
       const island = life.regions.island;
       this.islandLife = life.mean((x, z) => Math.hypot(x - island.x, z - island.y) < island.z && heightAt(x, z) > 0.4);
-      if (!this.restored && this.islandLife > 0.78) {
+      if (!this.restored && this.islandLife > 0.65) {
         this.restored = true;
         this.restoredAt = this.now;
-        cue('restored');
+        completeObjective();
       }
     }
     const region = life.regions.island;
@@ -253,7 +284,7 @@ export class IslandChapter implements Chapter {
           return;
         }
         c.pickUp(() => {
-          p.hold(c.handPosition(this.hand), c.yaw);
+          p.hold(c);
           this.play = 'hold';
           this.holdUntil = this.now + 1.6 + Math.random() * 1.4;
           if (Math.random() < 0.35) c.wave();
@@ -341,51 +372,57 @@ export class IslandChapter implements Chapter {
 
   private climb(): void {
     const c = this.cast.child;
-    c.walkTo(TREE.x + 1.1, TREE.z + 2.4, true, () => {
+    c.walkTo(TREE.x + 5.5, TREE.z + 1, true, () => {
       this.beat = 'atTree';
       this.beatStart = this.now;
-      c.faceToward(TREE.x, TREE.z, 1);
-      c.cheer();
+      c.faceToward(c.position.x + 30, c.position.z + 10, 0.6);
+      this.horizon.set(c.position.x + 700, 10, c.position.z + 180);
+      c.lookAt = this.horizon;
+      this.outlookEye.copy(c.position).add(this.tmp.set(8, 6, -18));
+      this.outlookLook.copy(c.position).add(this.tmp.set(3, 4, 12));
     }, 0.8);
   }
 
   private updateFarewell(time: number): void {
-    const { child: c, boat } = this.cast;
+    const { child: c } = this.cast;
     const t = this.now - this.beatStart;
     if (this.beat === 'toTree') {
       const p = this.cast.plane;
       c.lookAt = p.airborne && !p.landed ? p.position : this.canopyTop;
     } else if (this.beat === 'atTree') {
-      c.lookAt = t < 4 ? this.canopyTop : this.horizon;
-      if (t > 4 && t < 4.2) c.faceToward(this.horizon.x, this.horizon.z, 0.2);
-      if (t > 8.5) {
+      c.lookAt = this.horizon;
+      if (t > tuning.opening.outlook) {
         this.beat = 'skein';
         this.beatStart = this.now;
-        /** Low enough to read as birds and not specks, coming over their head and going on north without them. */
-        this.cast.flock.pass(c.position.x + 2, c.position.z + 2, 40, Math.PI - 0.2, 15, 105);
-        c.lookAt = this.cast.flock.head;
-        cue('skein');
+        const { flock, cygnet } = this.cast;
+        // Cross the eastern slope toward the north, the same direction the boat will take.
+        // The trailing bird is still upstream of its landing when it loses the formation.
+        this.findFallen(c.position.x, c.position.z);
+        flock.pass(c.position.x, c.position.z, c.position.y + tuning.opening.flockHeight, -2.5, 9, 0);
+        this.tmp.copy(this.fallen)
+          .addScaledVector(flock.direction, -(tuning.opening.flockSpeed * tuning.opening.flight + tuning.opening.fallTravel))
+          .setY(c.position.y + tuning.opening.flockHeight);
+        flock.carryCygnet(tuning.opening.flockSpeed, this.tmp);
+        cygnet.flyWith(flock.tail(this.left), flock.heading, 0.6);
+        cue('overhead');
       }
     } else if (this.beat === 'skein') {
       const { cygnet, flock } = this.cast;
-      c.lookAt = this.dropped ? cygnet.position : flock.head;
-      /**
-       * The bird at the back of the V is the one that cannot hold on, and it goes when it is right overhead, so
-       * the whole fall happens in front of the player. The flock does not come back for it.
-       */
-      if (!this.dropped && flock.tail(this.left).z < c.position.z + 2) {
-        this.findFallen(c.position.x, c.position.z);
-        if (flock.dropOne(this.left)) {
+      c.lookAt = t < tuning.opening.flight * 0.4 ? flock.head : cygnet.position;
+      if (!this.dropped) {
+        const effort = 0.15 + 0.85 * Math.sin(Math.PI * THREE.MathUtils.smootherstep(t, 0, tuning.opening.flight));
+        flock.tail(this.left);
+        // One recovery gains a little height, then fades as the adults pull ahead.
+        this.left.addScaledVector(flock.direction, -t * 0.22 - (1 - effort) * 1.3);
+        this.left.y += effort * 0.75 - t * 0.1;
+        cygnet.flyWith(this.left, flock.heading, effort);
+        if (t > tuning.opening.flight) {
+          // Retire the reserved station, retaining the companion's exact last position for the descent.
+          flock.dropOne(this.tmp);
           this.dropped = true;
-          cygnet.plummet(this.left, this.fallen, 8.5, flock.heading);
+          this.fallAt = time;
+          cygnet.plummet(this.left, this.fallen, tuning.opening.fall, flock.heading);
           cue('fallen');
-          /** Square on to the line of the fall, on whichever side is clear of the tree they are standing under. */
-          const fx = this.fallen.x - this.left.x;
-          const fz = this.fallen.z - this.left.z;
-          const len = Math.hypot(fx, fz) || 1;
-          this.watchFrom.set(-fz / len, 0, fx / len);
-          const toChild = this.watchFrom.x * (c.position.x - this.fallen.x) + this.watchFrom.z * (c.position.z - this.fallen.z);
-          if (toChild > 0) this.watchFrom.negate();
         }
       }
       /** It lands. The child does not move for a moment, and then runs. */
@@ -395,7 +432,10 @@ export class IslandChapter implements Chapter {
         cygnet.call(false);
         this.nextCall = time + (cygnet.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
       }
-      if (this.dropped && cygnet.grounded && this.downAt < 0) this.downAt = this.now;
+      if (this.dropped && cygnet.grounded && this.downAt < 0) {
+        this.downAt = this.now;
+        cue('landed');
+      }
       /** The player is left alone with it for a moment before the child moves. */
       if (this.downAt > 0 && this.now - this.downAt > 3.4 && !c.busy) {
         this.beat = 'toCygnet';
@@ -415,10 +455,18 @@ export class IslandChapter implements Chapter {
     } else if (this.beat === 'gather') {
       c.lookAt = this.cast.cygnet.eye(this.tmp);
     } else if (this.beat === 'push') {
-      if (t > 0.9 && !boat.afloat) boat.launch();
-      if (t > 2.3) {
-        this.beat = 'aboard';
-        c.ride(boat.seat(this.tmp), boat.yaw);
+      // A soft travelling brush reaches the cove before the weather fills the departing sail.
+      const gust = t / tuning.opening.departureGustFor;
+      if (gust < 1) {
+        const strength = Math.sin(Math.PI * gust);
+        const x = BOAT_BERTH.x - 12 + gust * 16;
+        const z = BOAT_BERTH.z + 3 - gust * 4;
+        this.cast.wind.addSplat({
+          ax: x - 0.8, az: z - 3, bx: x + 0.8, bz: z + 3,
+          vx: tuning.opening.departureGustSpeed * strength,
+          vz: -tuning.opening.departureGustSpeed * 0.25 * strength,
+          radius: 4.2, energy: tuning.opening.departureGustEnergy * strength, swirl: 0, lift: 0,
+        });
       }
     }
   }
@@ -475,11 +523,15 @@ export class IslandChapter implements Chapter {
     this.beat = 'toBoat';
     this.beatStart = this.now;
     c.lookAt = null;
-    c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
+    const beside = boat.boardingPoint(this.tmp);
+    c.walkTo(beside.x, beside.z, false, () => {
       this.beat = 'push';
       this.beatStart = this.now;
       c.faceToward(boat.position.x, boat.position.z, 1);
-      c.push();
+      c.board(boat, () => {
+        this.beat = 'aboard';
+        this.beatStart = this.now;
+      });
     }, 0.5);
   }
 
@@ -497,58 +549,45 @@ export class IslandChapter implements Chapter {
     }
     s.from = undefined;
     s.eye = undefined;
-    if (this.beat === 'skein') {
-      /** Planted beside the child, looking up: whatever is up there is what you are made to watch. */
-      const { cygnet, flock } = this.cast;
-      if (this.dropped) {
-        /**
-         * Once it is falling the camera stands square on to the drop and rides down with it, so the cygnet is
-         * always centred. Anchoring on the child left the whole fall above the top of the frame.
-         */
-        const k = cygnet.position;
-        /** Square on while it is in the air; lifted and looking down once it is in the grass, or the grass hides it. */
-        const ground = Math.max(heightAt(k.x, k.z), 0);
-        const settled = cygnet.grounded ? 1 : 0;
-        const out = 12 - settled * 2;
-        s.eye = this.eye.set(
-          k.x + this.watchFrom.x * out,
-          Math.max(k.y + 1.8, ground + 2.6 + settled * 3.4),
-          k.z + this.watchFrom.z * out,
-        );
-        s.target.copy(k).setY(k.y + settled * 0.3);
-        /** Snaps onto the fall rather than gliding to it: by the time a slow camera arrived it was half over. */
-        this.pace = 7;
-      } else {
-        s.eye = this.eye.set(c.x - 4.6, c.y + 2.4, c.z + 13);
-        s.target.copy(this.tmp.set(c.x, c.y + 1.7, c.z)).lerp(flock.head, 0.62);
-        this.pace = 0.9;
-      }
+    s.carry = false;
+    s.clearance = undefined;
+    if (this.beat === 'atTree') {
+      s.eye = this.eye.copy(this.outlookEye);
+      s.target.copy(this.outlookLook);
+      this.pace = 0.7;
       this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'skein') {
+      const k = this.cast.cygnet.position;
+      const t = this.now - this.beatStart;
+      const follow = THREE.MathUtils.smootherstep(t, 0.25, tuning.opening.flight * 0.45);
+      const closer = THREE.MathUtils.smootherstep(t, tuning.opening.flight * 0.5, tuning.opening.flight);
+      const descent = this.dropped ? THREE.MathUtils.smootherstep(this.now - this.fallAt, 0, tuning.opening.fall) : 0;
+      const landing = this.dropped ? THREE.MathUtils.smootherstep(this.now - this.fallAt, tuning.opening.fall * 0.7, tuning.opening.fall) : 0;
+      this.skyLook.copy(k).lerp(this.cast.flock.head, 0.5 * (1 - closer));
+      // Stay on the island as the family approaches; ease back down the slope to make room for the landing.
+      this.skyEye.copy(this.fallen).add(this.tmp.set(12, 9, -22));
+      this.skyEye.lerpVectors(this.outlookEye, this.skyEye, descent);
+      // Keep the bird above centre, leaving the sea and slope below it as a distance reference.
+      this.skyLook.add(this.tmp.set(0, -5 + landing * 6, 0));
+      s.eye = this.eye.copy(this.outlookEye).lerp(this.skyEye, follow);
+      s.target.copy(this.outlookLook).lerp(this.skyLook, follow);
+      this.pace = 0.9;
+      this.focus.copy(k);
       return;
     }
     if (this.beat === 'toCygnet' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather') {
       const k = this.cast.cygnet.position;
       const close = this.beat === 'kneel' || this.beat === 'gather';
       s.eye = undefined;
+      s.from = this.rescueView;
       s.target.set((c.x + k.x) / 2, Math.max(c.y, k.y) + (close ? 0.75 : 1.1), (c.z + k.z) / 2);
       s.distance = close ? 6.5 : 14;
-      s.height = close ? 1.9 : 4;
+      s.height = close ? 4.5 : 7;
+      s.clearance = 5.2;
       this.pace = 0.6;
       this.focus.copy(k);
-      return;
-    }
-    if (this.beat === 'atTree') {
-      /**
-       * Low and close, standing off to the side of the line from the trunk to the child: from straight back the
-       * tree filled the frame and the child was somewhere behind it.
-       */
-      const dx = c.x - TREE.x;
-      const dz = c.z - TREE.z;
-      const d = Math.hypot(dx, dz) || 1;
-      s.eye = this.eye.set(c.x - (dz / d) * 6.5, c.y + 4.2, c.z + (dx / d) * 6.5);
-      s.target.set(c.x, c.y + 1.55, c.z - 1.2);
-      this.pace = 0.35;
-      this.focus.copy(c);
       return;
     }
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
@@ -569,6 +608,14 @@ export class IslandChapter implements Chapter {
     const spread = Math.hypot(p.x - c.x, p.z - c.z) + Math.max(0, p.y - c.y - 6) * 0.8;
     s.distance = THREE.MathUtils.clamp(30 + spread * 0.9, 36, 84);
     s.height = s.distance * 0.25;
+    if (this.beat === 'toTree') {
+      // Round the eastern side during the climb, arriving behind the child for the outlook.
+      // An orbit keeps the camera out of the hill instead of crossing through it at the summit.
+      const remaining = Math.hypot(c.x - (TREE.x + 5.5), c.z - (TREE.z + 1));
+      const turn = THREE.MathUtils.smootherstep(30 - remaining, 0, 30) * (Math.PI - 0.4);
+      s.from = this.climbView.set(Math.sin(turn), 0, Math.cos(turn));
+      this.pace = 0.75;
+    }
     if (this.beat === 'leaving') {
       const b = this.cast.boat.position;
       s.target.lerp(this.tmp.set(b.x, b.y + 2, b.z), 0.3);

@@ -5,15 +5,20 @@ import { Creatures } from './creatures/creatures';
 import { islandHabitat, mainlandHabitat } from './creatures/habitat';
 import { Petals } from './fx/petals';
 import { Swirl } from './fx/swirl';
+import { WashingInvitation } from './fx/washing-invitation';
+import { SailInvitation } from './fx/sail-invitation';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
 import { ROUTE } from './story/meadow';
 import { takeCues } from './story/cues';
 import { Journey } from './story/journey';
+import { clearProgress } from './story/progress';
+import { EmberInvitation } from './fx/ember-invitation';
 import { Embers } from './fx/embers';
 import { Fireflies } from './fx/fireflies';
 import { Murmuration } from './fx/murmuration';
 import { Rain } from './fx/rain';
+import { StormWeather } from './fx/storm';
 import { SeaLife } from './fx/sealife';
 import { Boat } from './traveller/boat';
 import { Drawing } from './traveller/drawing';
@@ -21,7 +26,7 @@ import { Traveller } from './traveller/traveller';
 import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
-import { gpuIdle, precompile, precompileSim, warmRender } from './gl/boot';
+import { gpuIdle, precompile, precompileSim, warmRender, yieldBoot } from './gl/boot';
 import { Quality } from './gl/quality';
 import { endFrame, pollReadbacks, readbackStats } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
@@ -45,6 +50,9 @@ import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
+import { CURTAINS, washingPassage } from './world/lines-passage';
+import { createDoorShoreGrass } from './world/door-shore';
+import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
 import { FAMILY_LINE, WashingLines, baskets, door, lineField, seaLines } from './world/lines';
 import { piano } from './world/piano';
 import { Kite } from './world/kite';
@@ -67,6 +75,7 @@ import { surfUniforms } from './world/water/surf';
 import { swellUniforms } from './world/water/swell';
 import { WINDOW, followWindow, onWindowMove, windowCentre } from './world/window';
 import { tuning } from './tuning';
+import { startScreen } from './start-screen';
 
 declare global {
   interface Window {
@@ -94,10 +103,12 @@ function windowAim(): [number, number] {
   aimDir.normalize();
   return [rig.camera.position.x + aimDir.x * 100, rig.camera.position.z + aimDir.z * 100];
 }
+await yieldBoot();
 const wind = new WindField(renderer, params.lite ? { res: 128, iterations: 12, maxSubsteps: 1 } : {});
 const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
+await yieldBoot();
 const tree = createTree();
 const hillFlowers = wildflowersAlong(ROUTE);
 const bakes = new GroundBakes(renderer);
@@ -111,6 +122,7 @@ const bakeInputs: BakeInputs = {
   ],
   flowers: [...FLOWER_PATCHES, ...hillFlowers],
 };
+await yieldBoot();
 const water = new Water(renderer, scene, wind.breeze, bakes.height.texture);
 const bakedSun = atmo.uniforms.uSunDir.value.clone();
 onWindowMove(() => {
@@ -118,9 +130,11 @@ onWindowMove(() => {
   bakes.bake(bakeInputs);
   water.bakeShore(WINDOW.size);
 });
+await yieldBoot();
 const life = new LifeField(renderer);
 const clouds = new CloudShadows(renderer);
-scene.add(createSky());
+const sky = createSky();
+scene.add(sky);
 const terrain = new Terrain(wind.breeze, bakes.filterable);
 scene.add(terrain.mesh);
 scene.add(water.mesh);
@@ -129,41 +143,58 @@ pond.objects.forEach((o) => scene.add(o));
 scene.add(createRocks());
 scene.add(createDistantIslands());
 scene.add(tree.group);
+await yieldBoot();
 const grass = new Grass();
 scene.add(grass.group);
 /** Left on the sand where the boat comes in, so the first thing the island says is that somebody was here. */
-scene.add(baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3));
+const washingBaskets = baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3);
+scene.add(washingBaskets);
 
-/** A door standing on the crest with nothing behind it: the dream leaving another piece of home lying about. */
+/** An ordinary red door; the separate shore is visible only inside its opening. */
 scene.add(door.group);
 
 /** And an upright piano standing in the meadow grass, off the walk, which the wind plays. */
 scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
+await yieldBoot();
 const washing = new WashingLines(
-  [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46, 17, LINES_WALK, [FAMILY_LINE]), ...seaLines()],
+  [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()],
   91,
   FAMILY_LINE,
 );
 scene.add(washing.group);
 /** The child who is not there: one kite standing over the far beach, and pinwheels along the walk. */
+await yieldBoot();
 const kite = new Kite(wind, LINES_BERTH);
 scene.add(kite.group);
+const shoreFamily = new WashingLines([], 91, {
+  a: new THREE.Vector3(234.8, heightAt(240, -462) + 5.2, -462),
+  b: new THREE.Vector3(245.2, heightAt(240, -462) + 5.2, -462), sag: 0.18,
+});
+scene.add(shoreFamily.group);
+const shoreGrass = createDoorShoreGrass();
+scene.add(shoreGrass);
 const pinwheels = new Pinwheels(wind, LINES_WALK);
 scene.add(pinwheels.group);
+await yieldBoot();
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const wood = new DarkWood(wind);
 wood.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const sleeping = new SleepingIsland(renderer, wind, input);
 sleeping.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const birches = new AutumnBirches(renderer, wind);
 birches.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 /** And out from the beach below it, the one landing in the journey that was built rather than run up onto. */
 scene.add(createJetty());
+await yieldBoot();
 const petals = new Petals(renderer, tuning.petals.stillIslandShare);
 scene.add(petals.mesh);
 const allFlowers = [...FLOWER_PATCHES, ...hillFlowers];
@@ -177,15 +208,22 @@ function homePetals(): void {
   petals.rehome(near, cz < -600 ? tuning.petals.pastureShare : cz > -200 ? tuning.petals.stillIslandShare : 1);
 }
 homePetals();
+await yieldBoot();
 const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
 /** The wind the player draws by circling the cursor, and the same loops offered where the story wants them. */
 const swirl = new Swirl();
 scene.add(swirl.batch.mesh);
+const washingInvitation = new WashingInvitation();
+scene.add(washingInvitation.batch.mesh);
+const sailInvitation = new SailInvitation();
+scene.add(sailInvitation.batch.mesh);
 const glider = new Glider(wind, tree.canopy);
 glider.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const child = new Traveller(wind);
 child.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const boat = new Boat(wind);
 boat.objects.forEach((o) => scene.add(o));
 for (const o of [...glider.objects, ...boat.objects, ...child.objects]) if (o !== child.shadow) o.traverse((c) => c.layers.enable(REFLECTION_LAYER));
@@ -195,8 +233,18 @@ const fireflies = new Fireflies(wind);
 scene.add(fireflies.mesh);
 const embers = new Embers(wind);
 scene.add(embers.mesh);
+const emberInvitation = new EmberInvitation();
+scene.add(emberInvitation.batch.mesh);
 
+await yieldBoot();
 const rain = new Rain();
+const stormWeather = new StormWeather((strength, pan) => {
+  sound.thunder(strength, pan);
+  if (story.name === 'drowned' && cygnet.carried) {
+    cygnet.mind.startle(0.12);
+    cygnet.mind.react('flinch');
+  }
+});
 scene.add(rain.mesh);
 const starlings = new Murmuration();
 scene.add(starlings.mesh);
@@ -216,8 +264,10 @@ function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3
   }
   return found;
 }
+await yieldBoot();
 const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
+await yieldBoot();
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => scene.add(o));
 cygnet.mount = child;
@@ -239,6 +289,7 @@ story.update(0, 0);
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' || params.debug === 'sway' ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
+await yieldBoot();
 const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
 creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
 creatures.spawn({ x: 0, z: 0, radius: 30, songbirds: 11, seed: 3 });
@@ -248,6 +299,7 @@ const homesInHills = [
   ...ROUTE.map((p: THREE.Vector2, i: number) => ({ x: p.x + (i % 2 ? 14 : -14), z: p.y })),
   { x: COTTAGE.x + 6, z: COTTAGE.z + 26 },
 ];
+await yieldBoot();
 const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera);
 hillCreatures.spawn({ ...meadowPoint(10, -680), radius: 70, gulls: 4, seed: 21 });
 homesInHills.forEach((h, i) => {
@@ -267,10 +319,19 @@ const sheepFolds = [
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
 scene.add(hillCreatures.group);
 
+await yieldBoot();
 const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
 /** Phones open at a modest scale and climb if they prove smooth; opening at full scale costs seconds of crawl. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 const post = new Post(renderer, scene, rig.camera, params.msaa ?? (maxPixelRatio >= 1.75 ? 2 : 4));
+const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
+const doorwayShared = [sky, terrain.mesh, water.mesh, ...doorwayActors];
+const doorwaySource = new Set([...doorwayShared, grass.group, washing.group, washingBaskets, pinwheels.group, door.group, lines.batch.mesh, swirl.batch.mesh, washingInvitation.batch.mesh]);
+const doorwayDestination = new Set([...doorwayShared, shoreGrass, shoreFamily.group, kite.group, lines.batch.mesh]);
+const doorwayView = new DoorwayView(renderer, scene, terrain, water,
+  doorwaySource, doorwayDestination,
+  [shoreGrass, shoreFamily.group, kite.group],
+  [{ objects: [...child.objects, ...glider.objects], at: child.position }, { objects: cygnet.objects, at: cygnet.position }]);
 const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, coarsePointer ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
   pixelRatio = level.ratio;
   post.samples = level.samples;
@@ -280,9 +341,10 @@ let pixelRatio = quality.level.ratio;
 
 const sound = new Soundscape();
 const soundButton = document.getElementById('sound') as HTMLButtonElement;
+const fullscreenButton = document.getElementById('fullscreen') as HTMLButtonElement;
 function setSound(on: boolean): void {
-  if (on) sound.start();
   sound.setMuted(!on);
+  if (on) sound.start();
   soundButton.dataset.on = String(on);
   soundButton.setAttribute('aria-pressed', String(on));
 }
@@ -292,17 +354,39 @@ soundButton.addEventListener('click', () => {
   setSound(soundButton.dataset.on !== 'true');
 });
 input.onButton((kind) => {
+  if (kind === 'down' && soundChosen && soundButton.dataset.on === 'true' && !sound.running) sound.start();
   if (kind === 'down' && !soundChosen && !params.shot) {
     soundChosen = true;
     setSound(true);
   }
 });
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'm' || e.key === 'M') {
+  if (import.meta.env.DEV && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'R') {
+    e.preventDefault();
+    clearProgress();
+    location.replace(location.pathname);
+    return;
+  }
+  if (startScreen.started && (e.key === 'm' || e.key === 'M')) {
     soundChosen = true;
     setSound(soundButton.dataset.on !== 'true');
   }
 });
+
+fullscreenButton.hidden = !document.fullscreenEnabled;
+function syncFullscreen(): void {
+  const active = document.fullscreenElement !== null;
+  fullscreenButton.setAttribute('aria-pressed', String(active));
+  fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
+}
+fullscreenButton.addEventListener('click', () => {
+  const change = document.fullscreenElement
+    ? document.exitFullscreen()
+    : document.documentElement.requestFullscreen();
+  void change.catch(() => syncFullscreen());
+});
+document.addEventListener('fullscreenchange', syncFullscreen);
+
 const soundState: SoundState = {
   gust: 0,
   pan: 0,
@@ -323,7 +407,10 @@ const soundState: SoundState = {
   cues: [],
 };
 const credits = document.getElementById('credits') as HTMLElement;
-document.getElementById('again')?.addEventListener('click', () => location.reload());
+document.getElementById('again')?.addEventListener('click', () => {
+  if (params.progress) clearProgress();
+  location.reload();
+});
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
 function resize(): void {
@@ -346,12 +433,13 @@ function ease(from: number, to: number, rate: number, dt: number): number {
   return Number.isNaN(from) ? to : from + (to - from) * (1 - Math.exp(-dt * rate));
 }
 let time = 0;
-let veilLifted = false;
 let last = performance.now();
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
 let frames = 0;
 let fpsWindowStart = last;
 let fps = 0;
 let sinceLightBake = 0;
+let stormShadowCovered = false;
 let frameIndex = 0;
 let qaWhaleAt = 8;
 const readout = params.stats ? createReadout() : null;
@@ -370,6 +458,11 @@ function whaleForQa(): void {
 }
 
 function frame(now: number): void {
+  if (document.hidden) {
+    last = now;
+    requestAnimationFrame(frame);
+    return;
+  }
   if (params.hold !== null && frameIndex >= params.hold) {
     post.render(time);
     endFrame(renderer);
@@ -391,7 +484,11 @@ function frame(now: number): void {
   input.muted = story.current.scripted ?? false;
   input.anchor = story.current.invitesFlight && !cygnet.gone ? cygnet.position : null;
   input.update(dt, rig.camera, wind);
+  washingPassage.active?.brush(rig.camera, input, wind);
+  if (story.name === 'birches') birches.scarf.brush(rig.camera, input, wind, dt);
   if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
+  const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
+  story.current.brushDry?.(emberBreath);
   story.update(dt, time);
   creatures.gulls.follow(story.escort);
   atmo.uniforms.uRainbow.value = story.rainbow;
@@ -489,19 +586,28 @@ function frame(now: number): void {
   if (flat) tread.set(flat.x, flat.z, flat.y, ease(tread.w, 1, 1.4, dt));
   else tread.w = ease(tread.w, 0, 1.4, dt);
   applyPalette(story.worldLife, dusk, shower, squall);
+  stormWeather.update(dt, storm, boat.afloat ? boat.yaw : child.yaw);
   /**
    * How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler.
    * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
    * sea keeps the stars on it all the way out.
    */
+  atmo.uniforms.uOpenSea.value = ease(atmo.uniforms.uOpenSea.value, story.current.openSea ?? 0, 0.7, dt);
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
-  atmo.uniforms.uVeil.value.set(900 - 780 * seen, 0.002 + 0.03 * seen);
+  atmo.uniforms.uVeil.value.set(
+    THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),
+    THREE.MathUtils.lerp(0.002 + 0.03 * seen, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
+  );
   sinceLightBake++;
-  if (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004) {
+  const shadowCovered = atmo.uniforms.uStormCover.value >= tuning.storm.shadowCovered;
+  // The shared shader fades terrain shadows out under opaque storm cloud. Re-bake on clearing, even if
+  // a window move updated bakedSun while the light was hidden and the sun itself has since stood still.
+  if (!shadowCovered && (stormShadowCovered || (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004))) {
     sinceLightBake = 0;
     bakedSun.copy(atmo.uniforms.uSunDir.value);
     bakes.bakeLight(bakeInputs);
   }
+  stormShadowCovered = shadowCovered;
   bakes.tick();
   post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
   surfUniforms.uSeaState.value = story.breeze;
@@ -567,6 +673,8 @@ function frame(now: number): void {
   soundState.shower = shower;
   sound.update(dt, soundState);
 
+  rig.camera.near = story.name === 'lines' && doorway.travelling ? 0.035 : 0.5;
+  rig.camera.updateProjectionMatrix();
   rig.update(dt, time, story.shot, story.pace);
   rig.camera.updateMatrixWorld();
   followWindow(...windowAim());
@@ -584,20 +692,35 @@ function frame(now: number): void {
   kite.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
   door.update(dt);
+  washingInvitation.update(dt, story.name === 'lines' ? washingPassage.active : null);
+  sailInvitation.update(dt, rig.camera, boat, story.current.invitesSail ?? false);
   birches.update(dt, rig.camera, child.visible ? child.position : null);
-  /** Fireflies rise out of grass, not out of the sea; they do not fly in a gale, nor over a frosted island. */
-  fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6) * (1 - sleeping.presence), story.focus);
+  /** Under the wood's canopy a sheltered population stays low despite the storm outside. */
+  const inWood = story.name === 'wood';
+  const flyWeather = inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6);
+  fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
+  emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.brightest(emberAt);
   atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, Math.min(2.6, emberLit * 0.5));
-  rain.update(dt, shower, rig.camera, wind.breeze);
+  rain.update(dt, shower, rig.camera, wind.breeze, squall);
   const joining = glider.departing && glider.position.distanceTo(child.position) < 200 ? glider.position : null;
   /** Starlings turn over the hills at sunset, not in a squall. */
   starlings.update(dt, storm > 0.3 ? 0 : (params.dusk ?? story.dusk), joining);
   if (params.whale) whaleForQa();
   sealife.update(dt, time);
-  water.update(rig.camera, (mirrorCamera) => terrain.beginMirror(mirrorCamera), () => terrain.endMirror());
-  post.render(time);
+  water.step(dt);
+  // The boat belongs to the arrival room until it moves to the shore beyond the door.
+  const boatInWashing = boat.position.distanceToSquared(door.group.position) < boat.position.distanceToSquared(DOOR_EXIT);
+  for (const o of boat.objects) {
+    (boatInWashing ? doorwaySource : doorwayDestination).add(o);
+    (boatInWashing ? doorwayDestination : doorwaySource).delete(o);
+  }
+  doorwayView.render(rig.camera, story.name === 'lines', story.name === 'island' || story.name === 'toLines', () => {
+    // The sea's reflection belongs to the same room as the main view.
+    water.update(rig.camera, (mirrorCamera) => terrain.beginMirror(mirrorCamera), () => terrain.endMirror());
+    post.render(time);
+  });
   endFrame(renderer);
 
   frames++;
@@ -625,10 +748,7 @@ function frame(now: number): void {
       ]);
     }
   }
-  if (time > 0.4 && !veilLifted) {
-    veilLifted = true;
-    document.getElementById('veil')?.classList.add('lifted');
-  }
+  if (time > 0.4) startScreen.reveal();
   if (params.shot) {
     window.__stats = {
       frame: frameIndex,
@@ -651,24 +771,36 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, kite, pinwheels, village, wood, sleeping, embers, boat, life, piano, birches, pond };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, kite, pinwheels, village, wood, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond };
 }
 
 /**
  * Everything the first frame would otherwise pay for happens here, behind the veil: every shader compiles in
- * parallel, the window bakes, one warm frame uploads the world, and the loop starts only once the GPU is idle.
+ * parallel, the window bakes, warm batches upload the world, and the loop starts only once the GPU is idle.
  */
 async function boot(): Promise<void> {
   const started = performance.now();
+  await yieldBoot();
   await precompile(renderer, scene, rig.camera, post.sceneTarget);
   await precompileSim(renderer, bakes.ground);
+  await yieldBoot();
   followWindow(...windowAim(), true);
   if (params.shot) heightParity = measureHeightParity(renderer);
-  warmRender(renderer, scene, rig.camera, post.sceneTarget);
+  await gpuIdle(renderer);
+  await yieldBoot();
+  await warmRender(renderer, scene, rig.camera, post.sceneTarget);
+  await yieldBoot();
   post.render(0);
   await gpuIdle(renderer);
   bootMs = performance.now() - started;
-  last = performance.now();
-  requestAnimationFrame(frame);
+  startScreen.ready(withSound => {
+    if (withSound) {
+      soundChosen = true;
+      setSound(true);
+    }
+    last = performance.now();
+    fpsWindowStart = last;
+    requestAnimationFrame(frame);
+  });
 }
-boot();
+export const bootReady = boot();

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { BirchCanopyMotion } from '../fx/birch-canopy';
 import { FallenLeaves, LEAF_COUNT, LEAF_SHAPE_GLSL, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_SIDE, LitterField } from '../fx/leaves';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
@@ -7,6 +8,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
+import { BirchScarf, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
 
 const ISLE = ISLES.birches;
 /** Below this the shore is bare sand, so both beaches read as beaches and the boat is never behind a tree. */
@@ -22,7 +24,7 @@ const LITTER_REACH = 44;
 /** How near the island the camera has to be before its floor and its loose leaves exist at all. */
 const FLOOR_RANGE = ISLE.rx + 90;
 /** Seconds a tuft the wind has just taken stays in the air on its way out of the crown. */
-const SHED_FLIGHT = 2.4;
+const SHED_FLIGHT = tuning.birches.shedFlight;
 
 /** The south beach, where the boat runs ashore. */
 export const BIRCHES_LANDING = new THREE.Vector2(3, -1052);
@@ -194,6 +196,8 @@ const CANOPY_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${BIRCH_TREE_GLSL}
 uniform vec2 uDetail;
+uniform sampler2D uCanopyMotion;
+in vec2 aMotion;
 in vec4 aLeaf;
 in vec4 aTuft;
 out vec3 vWorld;
@@ -203,24 +207,14 @@ out float vSeed;
 out float vDepth;
 void main() {
   rootBirch(int(aTuft.x));
-  /**
-   * Every leaf has its own place in the queue; the tree strips through them and never puts one back. The ones
-   * the last second or two took are not simply gone: they are still in the air, going downwind off the branch
-   * they were on, which is the whole of what a gust looks like in this room.
-   */
-  float gone = birchS.z - aLeaf.w;
-  float flight = gone > 0.0 ? gone / max(birchF.x, 1e-5) : 0.0;
-  if (gone > 0.0 && flight >= 1.0) {
+  // Once detached, a card belongs to its flight simulation, not to the tree or cursor.
+  vec4 motion = texture(uCanopyMotion, aMotion);
+  float flight = motion.w / ${glsl(SHED_FLIGHT)};
+  if (flight >= 1.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
-  vec3 centre = birchPlace(aLeaf.xyz);
-  if (flight > 0.0) {
-    vec2 uv = domainUv(centre.xz);
-    vec2 air = insideUv(uv) ? texture(uWindTex, uv).xy : vec2(0.0);
-    float s = flight * ${glsl(SHED_FLIGHT)};
-    centre += vec3(air.x * s * 0.55, 0.9 * s - 1.05 * s * s, air.y * s * 0.55);
-  }
+  vec3 centre = flight > 0.0 ? motion.xyz : birchPlace(aLeaf.xyz);
   float away = distance(centre, cameraPosition);
   /** Far trees keep their gold: the tufts thin out, and the ones left grow to cover for them. */
   float keep = 1.0 - 0.4 * smoothstep(uDetail.x, uDetail.y, away);
@@ -279,8 +273,8 @@ void main() {
 /**
  * The floor: the leaves that are lying still. How many there are anywhere, and how deep they are heaped, is the
  * litter field and nothing else, so the floor is swept bare where the player has been blowing and stands in
- * heaps where the air ran out. Nothing here hops in place: a card the air is taking leaves with the air, shrinking
- * as it goes, and what is actually flying is the simulated leaves in `fx/leaves.ts`.
+ * heaps where the air ran out. These resting cards stay on the ground and thin as that field empties;
+ * airborne movement belongs to the simulated leaves in `fx/leaves.ts`.
  */
 const LITTER_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -302,23 +296,21 @@ void main() {
   float away = distance(p, cameraPosition.xz);
   float deep = litterDepth(p);
   /** How much of the floor the leaves cover, and how much of them is heaped on top of that: two different things. */
-  float cover = smoothstep(0.0, 1.0, deep);
+  float cover = 1.0 - exp(-deep * 1.35);
   float heap = max(0.0, deep - 1.6);
   /** Far off, fewer and larger: the carpet has to reach the trees at the edge of the frame without the count. */
   float far = smoothstep(12.0, ${glsl(LITTER_REACH)}, away);
-  float drift = cover * (1.0 - 0.55 * far);
+  float reach = 1.0 - smoothstep(${glsl(LITTER_REACH - 14)}, ${glsl(LITTER_REACH)}, away);
+  float drift = cover * (1.0 - 0.55 * far) * reach;
   /** It thins away rather than winking out, so the floor being stripped is a fade and never a row of holes. */
-  float fade = clamp((drift - r3) * 3.5, 0.0, 1.0);
+  float fade = smoothstep(r3, r3 + 0.08, drift);
   if (fade <= 0.002 || away > ${glsl(LITTER_REACH)} || !insideUv(uv)) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
   vec4 hn = texture(uHeightTex, uv);
-  if (hn.r < ${glsl(TREE_LINE - 0.9)}) {
-    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    return;
-  }
-  vec4 w = texture(uWindTex, uv);
+  /** Leaves carried out of the wood thin over the wet sand rather than ending at a height contour. */
+  fade *= smoothstep(0.02, 0.3, hn.r);
   vec3 n = normalize(hn.gba);
   vec3 base = vec3(p.x, hn.r + 0.02 + r3 * 0.05, p.y);
   /**
@@ -327,19 +319,12 @@ void main() {
    * of leaves lifted off the floor.
    */
   base.y += heap * ${glsl(tuning.birches.pileHeight)} * (0.12 + 0.88 * hash12(cell + 41.1));
-  /**
-   * And where the air is taking them, they go with it: up off the floor and downwind, thinning out as they go,
-   * while the field they are drawn from empties behind them. None of this ever puts one back where it was.
-   */
-  float takes = ${glsl(tuning.birches.litterTakes)} * (0.75 + 0.5 * r1);
-  float go = clamp(smoothstep(takes * 0.6, takes * 1.5, length(swayAt(p).xy)) + min(w.z * 1.8, 1.0) + min(w.w * 0.9, 1.0), 0.0, 1.0);
-  base.xz += w.xy * go * (0.2 + 0.45 * r1);
-  base.y += go * (0.25 + 1.1 * r2);
-  float a = r1 * 6.2831 + go * 4.0;
+  // Ground cover is resting litter, not a sheet displaced by the instantaneous wind.
+  float a = r1 * 6.2831;
   vec3 t1 = normalize(cross(n, vec3(cos(a), 0.0, sin(a))));
   vec3 loose = normalize(vec3(cos(a) * 0.9, 0.35 + r1 * 0.9, sin(a) * 0.9));
-  vec3 t2 = normalize(mix(cross(n, t1), loose, clamp(heap * 0.5 + go, 0.0, 0.85)));
-  float size = ${glsl(tuning.birches.leafSize)} * (1.25 + 0.9 * r2) * (1.0 + 0.9 * far) * (1.0 + 0.4 * heap) * fade * (1.0 - 0.7 * go);
+  vec3 t2 = normalize(mix(cross(n, t1), loose, clamp(heap * 0.5, 0.0, 0.85)));
+  float size = ${glsl(tuning.birches.leafSize)} * (1.25 + 0.9 * r2) * (1.0 + 0.9 * far) * (1.0 + 0.4 * heap) * fade;
   vWorld = base + (t1 * position.x * 1.45 + t2 * position.y) * size;
   vNormal = normalize(n + t1 * 0.25);
   vSide = t1;
@@ -545,6 +530,7 @@ export class Swing {
   speed = 0;
   /** 0 empty, 1 with the child on it: a loaded swing is slower and takes more pushing. */
   rider = 0;
+  braking = false;
   length = 3.6;
   private readonly seatLocal = new THREE.Vector3();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -586,8 +572,8 @@ export class Swing {
     const way = Math.abs(this.speed) > 0.03 ? Math.sign(this.speed) : Math.sign(along) || 1;
     const gust = w.energy * tuning.birches.swingGust * way;
     const gravity = -9.81 * 0.78 * Math.sin(this.angle);
-    this.speed += ((gravity + (push + gust) / load) / this.length) * dt;
-    this.speed *= Math.exp(-dt * tuning.birches.swingDamping);
+    this.speed += ((gravity + (this.braking ? 0 : (push + gust) / load)) / this.length) * dt;
+    this.speed *= Math.exp(-dt * (this.braking ? tuning.birches.scarf.swingBrake : tuning.birches.swingDamping));
     this.angle += this.speed * dt;
     if (Math.abs(this.angle) > 1.15) {
       this.angle = Math.sign(this.angle) * 1.15;
@@ -607,10 +593,12 @@ export class AutumnBirches {
   /** Who must stay in sight: x, y, z and 1 while it applies. Anything in front of them gives way. */
   readonly subject = new THREE.Vector4();
   readonly swing: Swing;
+  readonly scarf = new BirchScarf();
   private readonly trees: Birch[] = [];
   private readonly table: Float32Array;
   private readonly treeTex: THREE.DataTexture;
   private readonly leaves: FallenLeaves;
+  private canopyMotion!: BirchCanopyMotion;
   private readonly litter: LitterField;
   private readonly litterMesh: THREE.Mesh;
   private readonly litterMat: THREE.ShaderMaterial;
@@ -662,7 +650,7 @@ export class AutumnBirches {
       this.objects.push(mesh);
     });
 
-    this.objects.push(this.canopy(rand, variants, shared));
+    this.objects.push(this.canopy(renderer, rand, variants, shared));
     this.litterMesh = this.litterCarpet(shared);
     this.litterMat = this.litterMesh.material as THREE.ShaderMaterial;
     this.objects.push(this.litterMesh);
@@ -674,6 +662,14 @@ export class AutumnBirches {
     this.objects.push(this.swing.group);
 
     this.objects.push(this.fallen(shared));
+    this.objects.push(this.scarf.mesh);
+    const fork = SCARF_SNAGS[0];
+    const hook = this.scarf.snags[0].center;
+    const branch = mergeGeometries([
+      log(new THREE.Vector3(fork.treeX, hook.y - 0.4, fork.treeZ), new THREE.Vector3(hook.x + 0.2, hook.y + 1.15, hook.z - 0.1), 0.17, 0.065, 7),
+      log(new THREE.Vector3(hook.x + 1.5, hook.y + 0.65, hook.z - 0.35), new THREE.Vector3(hook.x + 1.1, hook.y + 1.95, hook.z - 0.6), 0.075, 0.025, 6),
+    ]);
+    this.objects.push(new THREE.Mesh(branch, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared })));
 
     this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants), this.wade);
     this.objects.push(this.leaves.mesh);
@@ -701,7 +697,7 @@ export class AutumnBirches {
 
   /**
    * The floor as it stands when they arrive: a season of leaves over the whole wood, thicker in the hollow and
-   * along the foot of every trunk, thin on the ride where the wind gets at it, nothing at all on the two beaches,
+   * along the foot of every trunk, thin on the ride where the wind gets at it, scattered onto the dry beaches,
    * and the heaps. From here on the wind and their feet own it.
    */
   private litterSeed(rand: () => number): Float32Array {
@@ -715,9 +711,17 @@ export class AutumnBirches {
         const z = LITTER_BOX.z + (j + 0.5) * cell.z;
         /** The cheap test first: over half of this grid is sea, and the ground under it is not worth looking up. */
         const isle = Math.hypot((x - ISLE.x) / ISLE.rx, (z - ISLE.z) / ISLE.rz);
-        if (isle > 1.02) continue;
-        if (heightAt(x, z) < TREE_LINE - 0.9) continue;
-        let d = (1.2 + 0.45 * patchy(x * 0.09, z * 0.09)) * (1 - THREE.MathUtils.smoothstep(isle, 0.74, 1.02));
+        if (isle > 1.15) continue;
+        const h = heightAt(x, z);
+        if (h <= 0.05) continue;
+        const patches = patchy(x * 0.12, z * 0.12);
+        const fingers = patchy(x * 0.24 + 18, z * 0.065);
+        // Broad gaps and narrow windrows, independent of the island's elliptical outline.
+        const edge = h + patches * 1.6 + fingers * 0.9;
+        let d = (1.15 + 0.65 * patches) * THREE.MathUtils.smoothstep(edge, 0.15, 4.8);
+        // A few full-sized strays continue across the sand between the windrows.
+        d += 0.12 * THREE.MathUtils.smoothstep(fingers, -0.2, 0.7);
+        d *= THREE.MathUtils.smoothstep(h, 0.05, 0.65);
         /** The ride is walked and blown over: less lies on it than either side of it. */
         d *= 0.72 + 0.4 * THREE.MathUtils.smoothstep(walkDistance(x, z), 1.5, 9);
         depths[j * LITTER_SIDE + i] = Math.max(0, d);
@@ -771,6 +775,10 @@ export class AutumnBirches {
         const way = walkDistance(x, z);
         /** The ride opens out at both beaches and at the clearing, and closes in between. */
         if (way < RIDE) continue;
+        // A small glade opens toward the wound trunk, keeping its cloth readable below the canopy.
+        if (((x + 5) / 10) ** 2 + ((z + 1121) / 18) ** 2 < 1) continue;
+        if (this.scarf.crosses(x, z) || SCARF_SNAGS.some(s => Math.hypot(x - s.treeX, z - s.treeZ) < 3.2)
+          || SCARF_PERCHES.some(s => Math.hypot(x - s.x, z - s.z) < 3.2)) continue;
         if (Math.hypot(x - BIRCHES_CLEARING.x, z - BIRCHES_CLEARING.y) < 8.5) continue;
         const thick = 0.62 + 0.42 * stands(x * 0.035, z * 0.035);
         if (rand() > thick) continue;
@@ -780,7 +788,14 @@ export class AutumnBirches {
         this.trees.push({ x, y: y - 0.25, z, scale, yaw: rand() * 6.2831, variant: Math.floor(rand() * 4), strip: 0, shed: 0 });
       }
     }
-    /** And the big one on the crest, which is the only reason anybody stops here. */
+    for (const s of SCARF_SNAGS) {
+      this.trees.push({ x: s.treeX, y: heightAt(s.treeX, s.treeZ) - 0.25, z: s.treeZ, scale: 16, yaw: 0.4, variant: 1, strip: 0, shed: 0 });
+    }
+    for (const s of SCARF_PERCHES) {
+      this.trees.push({ x: s.x, y: heightAt(s.x, s.z) - 0.25, z: s.z, scale: 15 + s.h * .2,
+        yaw: s.x * .4, variant: 1, strip: 0, shed: 0 });
+    }
+    /** Keep the swing tree last: the rope's pivot is read from this exact tree. */
     const y = heightAt(SWING_TREE.x, SWING_TREE.y);
     this.trees.push({ x: SWING_TREE.x, y: y - 0.3, z: SWING_TREE.y, scale: SWING_SCALE, yaw: 0, variant: 4, strip: 0, shed: 0 });
   }
@@ -796,7 +811,7 @@ export class AutumnBirches {
   }
 
   /** Gold hung on the twig ends: one card is a handful of leaves, and a tree loses them one at a time. */
-  private canopy(rand: () => number, variants: { tips: THREE.Vector3[] }[], shared: Record<string, THREE.IUniform>): THREE.Mesh {
+  private canopy(renderer: THREE.WebGLRenderer, rand: () => number, variants: { tips: THREE.Vector3[] }[], shared: Record<string, THREE.IUniform>): THREE.Mesh {
     const leaves = new Float32Array(this.trees.length * LEAVES_PER_TREE * 4);
     const tufts = new Float32Array(this.trees.length * LEAVES_PER_TREE * 4);
     let n = 0;
@@ -813,10 +828,17 @@ export class AutumnBirches {
         n++;
       }
     });
+    this.canopyMotion = new BirchCanopyMotion(renderer, LEAVES_PER_TREE, this.trees.length, leaves, BIRCH_TREE_GLSL, shared);
+    const refs = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) {
+      refs[i * 2] = ((i % LEAVES_PER_TREE) + 0.5) / LEAVES_PER_TREE;
+      refs[i * 2 + 1] = (Math.floor(i / LEAVES_PER_TREE) + 0.5) / this.trees.length;
+    }
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = quad.index;
     geo.setAttribute('position', quad.attributes.position);
+    geo.setAttribute('aMotion', new THREE.InstancedBufferAttribute(refs, 2));
     geo.setAttribute('aLeaf', new THREE.InstancedBufferAttribute(leaves, 4));
     geo.setAttribute('aTuft', new THREE.InstancedBufferAttribute(tufts, 4));
     geo.instanceCount = n;
@@ -826,7 +848,7 @@ export class AutumnBirches {
       new THREE.ShaderMaterial({
         vertexShader: CANOPY_VERT,
         fragmentShader: CANOPY_FRAG,
-        uniforms: { ...shared, uDetail: { value: new THREE.Vector2(34, 150) } },
+        uniforms: { ...shared, uCanopyMotion: this.canopyMotion.uniform, uDetail: { value: new THREE.Vector2(34, 150) } },
         side: THREE.DoubleSide,
         alphaToCoverage: true,
       }),
@@ -926,6 +948,7 @@ export class AutumnBirches {
     const here = away < ISLE.rx + 240;
     const near = away < FLOOR_RANGE;
     for (const o of this.objects) o.visible = here;
+    this.scarf.mesh.visible = here && !this.scarf.finished;
     this.litterMesh.visible = near;
     this.leaves.mesh.visible = near;
     if (!near) return;
@@ -944,6 +967,7 @@ export class AutumnBirches {
       tree.shed += tree.strip - was;
     }
     this.writeTable();
+    this.canopyMotion.update(dt);
 
     if (walker) {
       this.walker.copy(walker);

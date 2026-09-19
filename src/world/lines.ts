@@ -4,6 +4,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32, smoothstep } from './noise';
 import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
+import { CURTAINS, curtainLift } from './lines-passage';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -14,12 +15,16 @@ in vec4 aShape;
 in vec3 aColor;
 in float aKind;
 in float aRole;
+in float aCurtain;
+uniform vec3 uCurtains;
 uniform vec2 uFamily;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vColor;
 out vec2 vUv;
 out float vSwing;
+out float vRole;
+out float vCurtain;
 
 /**
  * Not everything on a line is a bedsheet. The pegged edge is uv.y 1 and the hem is 0, so a silhouette is a
@@ -33,29 +38,41 @@ vec2 clothProfile(float kind, float up01, float x) {
 }
 
 /**
- * The three on the crest. For as long as a steady wind along their line holds them, they are people: the cloth
- * fills into a chest and shoulders, and once it has held a while the big ones' sleeves lift toward the small
- * one's and the small one's lift to theirs. When the wind drops they are washing again. uFamily.x is how far
- * they are filled and uFamily.y how far the hands have reached; aRole is 0 for the father, 1 for the mother, 2
- * for the child, and below zero for every ordinary piece on the hill.
+ * A breeze brings three sleeves together. Keep them soft, hanging clothes: a little fullness and a broad
+ * movement through each cuff, with the yellow jumper answering last. The top edge stays pegged to the line.
+ * uFamily.x fills the cloth; uFamily.y carries the gesture. Roles are blue (0), red (1), yellow (2).
  */
 void family(vec3 along, vec3 side, vec3 up, float hang) {
   float fill = uFamily.x;
-  float chest = sin(uv.x * 3.14159) * (1.0 - smoothstep(0.1, 0.75, hang)) * smoothstep(0.0, 0.12, hang);
-  vWorld += side * chest * fill * ${glsl(tuning.family.chest)} * aShape.x;
-  float shoulder = smoothstep(0.84, 1.0, uv.y) * smoothstep(0.25, 0.5, abs(position.x));
+  float belly = sin(uv.x * 3.14159) * sin(hang * 3.14159);
+  vWorld += side * belly * fill * ${glsl(tuning.family.chest)} * aShape.x;
+  float shoulder = smoothstep(0.84, 0.94, uv.y) * (1.0 - smoothstep(0.94, 1.0, uv.y))
+    * smoothstep(0.25, 0.5, abs(position.x));
   vWorld += along * sign(position.x) * shoulder * fill * ${glsl(tuning.family.shoulders)} * aShape.x;
-  float band = smoothstep(0.42, 0.58, uv.y) * (1.0 - smoothstep(0.84, 0.96, uv.y));
-  float arm = smoothstep(0.26, 0.5, abs(position.x)) * band;
+
+  // Move the whole cuff, not a narrow strip that folds over itself into a pointed finger.
+  float sleeve = smoothstep(0.48, 0.68, uv.y) * (1.0 - smoothstep(0.84, 1.0, uv.y));
+  float cuff = smoothstep(0.16, 0.46, abs(position.x)) * sleeve;
   float toward = aRole < 0.5 ? 1.0 : (aRole < 1.5 ? -1.0 : 0.0);
-  float lifts = aRole > 1.5 ? 1.0 : step(0.0, position.x * toward);
-  float hands = uFamily.y * arm * lifts;
-  vWorld += (up * ${glsl(tuning.family.reachUp)} + along * sign(position.x) * ${glsl(tuning.family.reachOut)}) * hands * aShape.x;
+  float inward = aRole > 1.5 ? 1.0 : step(0.0, position.x * toward);
+  float delay = aRole * ${glsl(tuning.family.answerDelay)};
+  float reach = smoothstep(delay, 1.0, uFamily.y) * cuff * inward;
+  float rise = ${glsl(tuning.family.reachUp)} * aShape.x;
+  // The small cuffs are already higher; they answer mostly sideways, rather than reaching above the rope.
+  if (aRole > 1.5) rise *= ${glsl(tuning.family.childLift)};
+  vWorld += (up * rise + along * sign(position.x) * ${glsl(tuning.family.reachOut)} * aShape.x) * reach;
 }
 
 void main() {
   vUv = uv;
+  vRole = aRole;
+  vCurtain = aCurtain;
   vec2 cut = clothProfile(aKind, uv.y, position.x);
+  if (aRole > -0.5) {
+    // Separate sleeves, a narrow body and shoulders: legible even before the wind makes them people.
+    cut.x = mix(aRole > 0.5 && aRole < 1.5 ? 0.82 : 0.64, 1.18, smoothstep(0.55, 0.68, uv.y));
+    cut.x *= 1.0 - 0.28 * smoothstep(0.91, 1.0, uv.y);
+  }
   float hang = (1.0 - uv.y) * cut.y;
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 along = normalize(aAlong);
@@ -106,6 +123,14 @@ void main() {
    * grows down the cloth and the position is the integral of that, which for a linear angle is a circular arc.
    */
   float full = swing * 1.5708 * lean;
+  if (aCurtain > -0.5) {
+    float lifted = uCurtains[int(aCurtain)];
+    // Wind curls a sheet overhead, away from the waiting pair. The belly stays between pegs and hem.
+    full = mix(full * 0.28, 2.28, lifted);
+    lean = mix(lean, 1.0, lifted);
+  }
+  // The family keeps its upright silhouette while the sleeves reach.
+  if (aRole > -0.5) full *= 0.22;
   float base = ${glsl(tuning.washing.belly)};
   float theta0 = full * base;
   float k = full * (1.0 - base);
@@ -123,6 +148,11 @@ void main() {
   vWorld = pegged - up * (dropDown * aShape.y) + side * (dropSide * aShape.y);
   vWorld += side * lean * ripple * shake * 1.2 * aShape.y * hang;
 
+  if (aCurtain > -0.5) {
+    float belly = sin(uv.x * 3.14159) * sin(hang * 3.14159);
+    vWorld += side * belly * (0.14 + 0.06 * sin(uTime * 0.7 + aShape.w));
+    vWorld.y += sin(uv.x * 15.0 + uTime * 0.8) * 0.045 * hang;
+  }
   vNormal = normalize(cross(down, along));
   if (aRole > -0.5) family(along, side, up, hang);
   vColor = aColor;
@@ -138,6 +168,8 @@ in vec3 vNormal;
 in vec3 vColor;
 in vec2 vUv;
 in float vSwing;
+in float vRole;
+in float vCurtain;
 
 /** Interleaved gradient noise: a dither pattern that holds still on screen instead of crawling. */
 float clothDither(vec2 p) {
@@ -168,7 +200,18 @@ void main() {
   float ndl = dot(N, uSunDir);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
 
+  // A neckline makes these unmistakably clothes rather than three more rectangular sheets.
+  if (vRole > -0.5 && length(vec2((vUv.x - 0.5) / 0.1, (1.0 - vUv.y) / 0.065)) < 1.0) discard;
   vec3 cloth = vColor;
+  if (vCurtain > -0.5) {
+    // The same red sewn hem on each passage: a domestic detail the player can recognise at a distance.
+    float hemBand = smoothstep(0.015, 0.025, vUv.y) * (1.0 - smoothstep(0.075, 0.085, vUv.y));
+    float sideBand = 1.0 - smoothstep(0.012, 0.021, min(vUv.x, 1.0 - vUv.x));
+    vec3 thread = vec3(${new THREE.Color('#b9503d').toArray().map(glsl).join(', ')});
+    cloth = mix(cloth, thread, max(hemBand, sideBand) * 0.9);
+    float stitch = (1.0 - smoothstep(0.0015, 0.003, abs(vUv.y - 0.052))) * step(0.55, fract(vUv.x * 65.0));
+    cloth = mix(cloth, vColor, stitch * 0.8);
+  }
   float weave = sin(vUv.x * 240.0) * sin(vUv.y * 190.0) * 0.03;
   cloth *= 1.0 + weave;
   float hem = smoothstep(0.0, 0.02, min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)));
@@ -234,6 +277,8 @@ export interface LineSpec {
   sag: number;
   /** How long the pieces on it hang, when the line is strung somewhere they have to hang clear of. */
   drop?: number;
+  /** One of the three broad sheets that the player opens across the walk. */
+  curtain?: number;
 }
 
 /** A point on the catenary between the two ends, t from 0 to 1. */
@@ -349,12 +394,7 @@ export function baskets(x: number, z: number): THREE.Mesh {
   return mesh;
 }
 
-/**
- * A door standing in the grass with nothing behind it and nothing on the other side of it. Nobody remarks on it
- * and nothing happens if you walk round it; it is only the dream handing over another piece of home, and it
- * gives the top of the hill something to be the top of. It is shut until the three on the line beside it have
- * been held up as people long enough, and then it swings open on the far beach and the boat.
- */
+/** The ordinary red door whose opening frames the separate shore; the family releases its latch. */
 export class RedDoor {
   readonly group = new THREE.Group();
   /** How far it is asked to stand open, 0 to 1; it swings there on its own hinge speed. */
@@ -391,28 +431,22 @@ export class RedDoor {
   }
 }
 
-/** The door on the crest of the island of lines, and the line beside it with the three of them on it. */
-export const door = new RedDoor(23, -357, 0.32);
-
-/**
- * Strung high across the way just short of the door, so the child walks in under it: a man's shirt, a small
- * jumper in the child's own yellow, and a woman's blouse. Hanging, they are washing; see `family` in the shader.
- */
+/** Beyond the last curtain: a quiet patch of sky behind three recognisable garments. */
+export const door = new RedDoor(11, -398, 0);
+door.group.scale.set(1.5, 1.08, 1);
 export const FAMILY_LINE: LineSpec = (() => {
-  const a = new THREE.Vector3(23.2, 0, -350.6);
-  const b = new THREE.Vector3(32.6, 0, -356.4);
-  a.y = Math.max(heightAt(a.x, a.z), 0) + 5.9;
-  b.y = Math.max(heightAt(b.x, b.z), 0) + 5.7;
-  return { a, b, sag: 0.3, drop: 2.4 };
+  const a = new THREE.Vector3(5.8, 0, -390);
+  const b = new THREE.Vector3(16.2, 0, -390);
+  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(11, -390)) + 5.2;
+  a.y = top; b.y = top;
+  return { a, b, sag: 0.18 };
 })();
-/** Which side of the line the walk's camera should stand to see the three of them square on. */
-export const FAMILY_FACE = new THREE.Vector3(0.53, 0, 0.85).normalize();
-/** How far the wind has made them people (x) and how far their hands have reached (y): the story writes it. */
+export const FAMILY_FACE = new THREE.Vector3(0.12, 0, 1).normalize();
 export const family = new THREE.Vector2(0, 0);
 const FAMILY_PIECES = [
-  { at: 0.2, width: 2.1, drop: 2.4, colour: '#9fb0bd', role: 0 },
-  { at: 0.5, width: 1.05, drop: 1.25, colour: '#e6c25a', role: 2 },
-  { at: 0.8, width: 1.85, drop: 2.5, colour: '#e0bdb6', role: 1 },
+  { at: 0.2, width: 2.7, drop: 3.0, colour: '#477c9b', role: 0 },
+  { at: 0.5, width: 1.55, drop: 1.8, colour: '#f0bb35', role: 2 },
+  { at: 0.8, width: 2.65, drop: 3.1, colour: '#bd5340', role: 1 },
 ];
 
 /**
@@ -434,7 +468,7 @@ export class WashingLines {
       fragmentShader: WOOD_FRAG,
     });
     this.clothMat = new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject }, uFamily: { value: family } },
+      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject }, uFamily: { value: family }, uCurtains: { value: curtainLift } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
@@ -448,6 +482,7 @@ export class WashingLines {
     const colors: number[] = [];
     const kinds: number[] = [];
     const roles: number[] = [];
+    const curtains: number[] = [];
 
     const point = new THREE.Vector3();
     const next = new THREE.Vector3();
@@ -462,6 +497,22 @@ export class WashingLines {
         posts.push(poleGeometry(new THREE.Vector3(end.x, Math.max(heightAt(end.x, end.z), 0), end.z), end.y));
       }
       ropes.push(ropeGeometry(spec));
+      if (spec.curtain !== undefined) {
+        const curtain = CURTAINS[spec.curtain];
+        for (let j = 0; j < curtain.panels; j++) {
+          const width = curtain.width / curtain.panels + (curtain.panels > 1 ? 0.35 : 0);
+          onLine(spec, (j + 0.5) / curtain.panels, point);
+          dir.subVectors(spec.b, spec.a).normalize();
+          anchors.push(point.x, point.y, point.z);
+          alongs.push(dir.x, dir.y, dir.z);
+          shapes.push(width, curtain.drop - j * 0.15, 0.6 + j * 0.3, j * 2.8 + spec.curtain);
+          const c = CLOTH_COLOURS[spec.curtain === 1 ? j + 1 : 0];
+          colors.push(c.r, c.g, c.b);
+          kinds.push(0); roles.push(-1); curtains.push(spec.curtain);
+          posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
+        }
+        continue;
+      }
       /** Every eighth line sags enough that somebody has put a prop under it, the way they always do. */
       if (rand() < 0.13) {
         onLine(spec, 0.35 + rand() * 0.3, point);
@@ -489,12 +540,15 @@ export class WashingLines {
         shapes.push(width, drop, rand() * 3, rand() * 6.28);
         /** Two pegs at the corners of every piece: the detail that says washing rather than flags, up close. */
         posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
-        const c = CLOTH_COLOURS[Math.floor(rand() * CLOTH_COLOURS.length)];
+        // Reserve the blue/red/yellow family for the clearing. Nearby laundry is ordinary pale linen.
+        const nearFamily = familyLine !== null && Math.hypot(point.x - 11, point.z + 390) < 40;
+        const c = CLOTH_COLOURS[Math.floor(rand() * (nearFamily ? 9 : CLOTH_COLOURS.length))];
         colors.push(c.r, c.g, c.b);
         /** Mostly sheets, and then a shirt, a nightgown or a pair of trousers among them, the way a line is. */
         const roll = rand();
         kinds.push(small ? (roll < 0.5 ? 1 : 0) : roll < 0.16 ? 1 : roll < 0.3 ? 2 : roll < 0.4 ? 3 : 0);
         roles.push(-1);
+        curtains.push(-1);
         t += step;
       }
     }
@@ -517,10 +571,11 @@ export class WashingLines {
         colors.push(c.r, c.g, c.b);
         kinds.push(1);
         roles.push(piece.role);
+        curtains.push(-1);
       }
     }
 
-    const sheet = new THREE.PlaneGeometry(1, 1, 5, 7).translate(0, 0.5, 0);
+    const sheet = new THREE.PlaneGeometry(1, 1, 7, 11).translate(0, 0.5, 0);
     const cloth = new THREE.InstancedBufferGeometry();
     cloth.index = sheet.index;
     cloth.attributes.position = sheet.attributes.position;
@@ -531,6 +586,7 @@ export class WashingLines {
     cloth.setAttribute('aShape', new THREE.InstancedBufferAttribute(new Float32Array(shapes), 4));
     cloth.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colors), 3));
     cloth.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(kinds), 1));
+    cloth.setAttribute('aCurtain', new THREE.InstancedBufferAttribute(new Float32Array(curtains), 1));
     cloth.setAttribute('aRole', new THREE.InstancedBufferAttribute(new Float32Array(roles), 1));
     cloth.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
 
@@ -633,6 +689,11 @@ export function lineField(
   hung: readonly LineSpec[] = [],
 ): LineSpec[] {
   const rand = mulberry32(seed);
+  const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
+    pointToRun(11, -393, ax, az, bx, bz) < 12 ||
+    pointToRun(11, -407, ax, az, bx, bz) < 8 ||
+    CURTAINS.some(c => pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7)
+  );
   /** Lines strung by hand first, so the field keeps clear of them; they are not returned, only respected. */
   const specs: LineSpec[] = [...hung];
   const at: Along = { side: Infinity, t: 0, dir: new THREE.Vector2() };
@@ -646,6 +707,7 @@ export function lineField(
     const on = new THREE.Vector2();
     for (let t = 0.05; t < 0.95; t += 0.05 + rand() * 0.035) {
       pointAt(path, t, on, at.dir);
+      if (ends.some(e => e.distanceTo(on) < 15)) continue;
       const across = Math.atan2(at.dir.y, -at.dir.x) + (rand() - 0.5) * 0.5;
       const half = 8 + rand() * 3;
       const shift = (rand() - 0.5) * 5;
@@ -654,7 +716,7 @@ export function lineField(
       const bx = on.x + Math.sin(across) * (half + shift);
       const bz = on.y + Math.cos(across) * (half + shift);
       if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
-      if (crowds(ax, az, bx, bz, specs)) continue;
+      if (reserved(ax, az, bx, bz) || crowds(ax, az, bx, bz, specs)) continue;
       const top = 6 + rand() * 0.9;
       specs.push({
         a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
@@ -670,7 +732,7 @@ export function lineField(
     const angle = rand() * Math.PI * 2;
     const reach = spread * Math.sqrt(rand());
     const x = centre.x + Math.cos(angle) * reach;
-    const z = centre.y + Math.sin(angle) * reach * 0.8;
+    const z = centre.y + Math.sin(angle) * reach * 0.92;
     if (heightAt(x, z) < 2.5) continue;
 
     /** Lines run roughly across the prevailing wind, the way you would hang washing to dry. */
@@ -696,7 +758,7 @@ export function lineField(
     const top = 4.2 + rand() * 1.7;
     if (heightAt(ax, az) < 1.6 || heightAt(bx, bz) < 1.6) continue;
     if (path.length && Math.min(against(ax, az, path, at).side, against(bx, bz, path, at).side) < 4) continue;
-    if (crowds(ax, az, bx, bz, specs)) continue;
+    if (reserved(ax, az, bx, bz) || crowds(ax, az, bx, bz, specs)) continue;
     specs.push({
       a: new THREE.Vector3(ax, Math.max(heightAt(ax, az), 0) + top, az),
       b: new THREE.Vector3(bx, Math.max(heightAt(bx, bz), 0) + top * (0.85 + rand() * 0.3), bz),

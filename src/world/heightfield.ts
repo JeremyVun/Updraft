@@ -126,7 +126,7 @@ function meadowSculpted(x: number, z: number): { x: number; z: number } {
 }
 
 export const ISLES = {
-  lines: { x: 14, z: -360, rx: 70, rz: 56 },
+  lines: { x: 14, z: -368.4, rx: 70, rz: 64.4 },
   meadow: {
     x: MEADOW_SCULPTED.x,
     z: MEADOW_SOUTH - MEADOW_SCULPTED.rz * MEADOW_SCALE,
@@ -140,6 +140,13 @@ export const ISLES = {
   sleeping: { x: -175, z: -1922, rx: 42, rz: 46 },
   home: { x: -45, z: -2120, rx: 190, rz: 165 },
 } as const;
+
+/** The small shore reached only through the red door; separated from the washing island by open sea. */
+export const DOOR_SHORE = { x: 240, z: -460, rx: 23, rz: 30 } as const;
+function doorShoreHeight(x: number, z: number): number {
+  const r = Math.hypot((x - DOOR_SHORE.x) / DOOR_SHORE.rx, (z - DOOR_SHORE.z) / DOOR_SHORE.rz);
+  return 3.4 - smoothstep(0.35, 1.08, r) * 5.2 - smoothstep(1, 1.6, r) * 8;
+}
 
 type Isle = (typeof ISLES)[keyof typeof ISLES];
 
@@ -304,6 +311,7 @@ export function meadowInset(wx: number, wz: number): number {
 
 function rawHeight(x: number, z: number): number {
   let h = smax(islandHeight(x, z), linesHeight(x, z), 6);
+  h = smax(h, doorShoreHeight(x, z), 2);
   h = smax(h, meadowHeight(x, z), 6);
   h = smax(h, birchesHeight(x, z), 6);
   h = smax(h, drownedHeight(x, z), 6);
@@ -442,8 +450,8 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
 }
 ${LUMP_GLSL}
 float hf_lines(vec2 p) {
-  vec2 c = vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0);
-  vec2 r = vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0);
+  vec2 c = vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)});
+  vec2 r = vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)});
   float d = hf_isleCoast(p, c, r, 0.16, 21.0);
   float land = smoothstep(10.0, -30.0, d);
   float rr = length((p - c) / r);
@@ -555,8 +563,13 @@ float hf_pond(float h, vec2 p) {
   float held = mix(bed, rim, smoothstep(0.9, 1.15, d));
   return mix(held, h, smoothstep(1.15, 1.5, d));
 }
+float hf_doorShore(vec2 p) {
+  float r = length((p - vec2(${glsl(DOOR_SHORE.x)}, ${glsl(DOOR_SHORE.z)})) / vec2(${glsl(DOOR_SHORE.rx)}, ${glsl(DOOR_SHORE.rz)}));
+  return 3.4 - smoothstep(0.35, 1.08, r) * 5.2 - smoothstep(1.0, 1.6, r) * 8.0;
+}
 float worldHeight(vec2 p) {
   float h = hf_smax(hf_island(p), hf_lines(p), 6.0);
+  h = hf_smax(h, hf_doorShore(p), 2.0);
   h = hf_smax(h, hf_meadow(p), 6.0);
   h = hf_smax(h, hf_birches(p), 6.0);
   h = hf_smax(h, hf_drowned(p), 6.0);

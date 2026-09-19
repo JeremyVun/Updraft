@@ -3,9 +3,11 @@ import type { WindField, WindSample } from '../wind/field';
 import { tuning } from '../tuning';
 import { fieldAt, type FieldSample } from '../world/fields';
 import { heightAt } from '../world/island';
+import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
 import { buildChild, FOREARM, UPPER_ARM, type Rig, type SocketName } from './body';
 import { Scarf } from './scarf';
+import type { Boat } from './boat';
 
 type Action =
   | { kind: 'throw'; t: number; released: boolean; onRelease: () => void }
@@ -13,7 +15,11 @@ type Action =
   | { kind: 'cheer'; t: number }
   | { kind: 'wave'; t: number }
   | { kind: 'reach'; t: number }
-  | { kind: 'push'; t: number };
+  | { kind: 'push'; t: number }
+  | {
+      kind: 'board'; t: number; boat: Boat; from: THREE.Vector3; local: THREE.Vector3;
+      fromYaw: number; side: number; launched: boolean; onDone: () => void;
+    };
 
 interface Goal {
   x: number;
@@ -256,33 +262,45 @@ export class Traveller {
   engaged = false;
 
   get busy(): boolean {
-    return this.goal !== null || this.action !== null || this.engaged;
+    return this.goal !== null || this.acting;
   }
+
+  /** An action or shared animation is in progress; ordinary walking may safely be checkpointed. */
+  get acting(): boolean { return this.action !== null || this.engaged; }
 
   get moving(): boolean {
     return this.goal !== null;
   }
 
-  /**
-   * Set by whoever fills the child's arms. With both arms round something, the paper plane rides in the satchel
-   * instead, nose up over their shoulder; when the arms are free again it goes back to the hand.
-   */
+  /** Both hands belong to the cygnet; the plane's keel goes under the satchel's outer flap. */
   armsFull = false;
+  /** Keeps the free mitten outside the bell of the coat while it grips the paper. */
+  carryingPlane = false;
   private stowed = 0;
+  private readonly paperLocal = new THREE.Quaternion();
+  private readonly paperStowed = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -0.18, 'ZYX'));
+  private readonly paperHand = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0, -Math.PI / 2, 'YXZ'));
 
-  /** Where the plane is held: in the mitten, or tucked in the satchel while the arms are full. */
+  /** The paper's grip, either in the mitten or against the outside of the bag. */
   handPosition(out: THREE.Vector3): THREE.Vector3 {
     this.rig.root.updateMatrixWorld(true);
     this.rig.handR.getWorldPosition(out);
     if (this.stowed < 0.001) return out;
-    const tucked = this.rig.sockets.satchel.localToWorld(this.tmp2.set(0.16, 0.2, 0.02));
+    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.78, -0.88));
     out.lerp(tucked, this.stowed);
-    /** Round the outside of the arm on its way to the bag: straight there would sail it across their own face. */
-    const bow = Math.sin(this.stowed * Math.PI) * 0.34;
-    out.x += Math.cos(this.yaw) * bow;
-    out.z -= Math.sin(this.yaw) * bow;
-    out.y -= bow * 0.35;
+    /** Carry it round the outside of the shoulder, clear of the hood and the bird. */
+    this.tmp2.set(Math.sin(this.stowed * Math.PI) * tuning.paperCarry.transferArc, 0, 0);
+    this.tmp2.applyQuaternion(this.rig.body.getWorldQuaternion(this.paperLocal));
+    out.add(this.tmp2);
     return out;
+  }
+
+  /** Edge-on beside the coat in one hand; nose up, wings behind the bag when both arms are full. */
+  planeQuaternion(out: THREE.Quaternion): THREE.Quaternion {
+    this.rig.root.updateMatrixWorld(true);
+    /** Keep the wing outside the hood through the wind-up; the glider levels only after release. */
+    this.paperLocal.copy(this.paperHand).slerp(this.paperStowed, this.stowed);
+    return this.rig.body.getWorldQuaternion(out).multiply(this.paperLocal);
   }
 
   /** Decks the child may walk on; anywhere else the ground is the terrain. */
@@ -384,6 +402,22 @@ export class Traveller {
     this.action = { kind: 'push', t: 0 };
   }
 
+  /**
+   * One continuous departure: push until the hull gives, travel with it while stepping over the gunwale, and only
+   * hand control back to the story once the child has put their weight down on the thwart.
+   */
+  board(boat: Boat, onDone: () => void): void {
+    this.goal = null;
+    this.sitting = false;
+    this.riding = false;
+    boat.group.updateMatrixWorld(true);
+    const from = boat.group.worldToLocal(this.position.clone());
+    this.action = {
+      kind: 'board', t: 0, boat, from, local: new THREE.Vector3(), fromYaw: this.yaw,
+      side: from.x < 0 ? -1 : 1, launched: false, onDone,
+    };
+  }
+
   faceToward(x: number, z: number, amount: number): void {
     const target = Math.atan2(x - this.position.x, z - this.position.z);
     let d = target - this.yaw;
@@ -410,7 +444,9 @@ export class Traveller {
       this.nextBlink = 2 + Math.random() * 4;
     }
 
-    this.stowed = damp(this.stowed, this.armsFull ? 1 : 0, 3, dt);
+    /** Let the mitten come away from the bird before bringing the paper back out of the bag. */
+    const keepStowed = this.armsFull || this.riding || (this.stowed > 0.5 && this.reachNow[0] > 0.1 && this.presenting < 0.01);
+    this.stowed = damp(this.stowed, keepStowed ? 1 : 0, tuning.paperCarry.transferRate, dt);
     this.pose(dt);
 
     const moved = Math.hypot(p.x - this.prev.x, p.z - this.prev.z);
@@ -477,7 +513,11 @@ export class Traveller {
       }
     }
     const nextH = this.ground(nx, nz);
-    if (nextH < 0.2 && nextH < this.ground(p.x, p.z)) {
+    /** The inland pond sits above sea level; its bed is ground, but is not somewhere to walk. */
+    const atPond = nextH < POND_LEVEL + 0.2 &&
+      Math.abs(nx - POND.x) < POND.rx * 1.5 && Math.abs(nz - POND.z) < POND.rz * 1.5 && pondOut(nx, nz) < 1.15;
+    const shore = atPond ? POND_LEVEL + 0.2 : 0.2;
+    if (nextH < shore && nextH < this.ground(p.x, p.z)) {
       this.speed = 0;
       if (this.goal) {
         const arrive = this.goal.onArrive;
@@ -569,6 +609,53 @@ export class Traveller {
     else if (a.kind === 'wave' && a.t > 1.8) this.action = null;
     else if (a.kind === 'reach' && a.t > 4.2) this.action = null;
     else if (a.kind === 'push' && a.t > 2.4) this.action = null;
+    else if (a.kind === 'board') {
+      const k = tuning.boarding;
+      const boat = a.boat;
+      if (!a.launched && a.t >= k.launch) {
+        a.launched = true;
+        boat.launch(true);
+      }
+
+      /** Stay in the boat's frame once it starts to move: there is no interval in which the hull sails underneath. */
+      if (a.t < k.push) {
+        a.local.copy(a.from);
+      } else if (a.t < k.rail) {
+        const u = THREE.MathUtils.smootherstep(a.t, k.push, k.rail);
+        a.local.lerpVectors(a.from, this.tmp.set(a.side * k.railIn, k.railHeight, -0.08), u);
+        a.local.y += Math.sin(u * Math.PI) * k.stepArc;
+      } else if (a.t < k.inside) {
+        const u = THREE.MathUtils.smootherstep(a.t, k.rail, k.inside);
+        a.local.lerpVectors(
+          this.tmp.set(a.side * k.railIn, k.railHeight, -0.08),
+          this.tmp2.set(a.side * k.insideIn, k.insideHeight, -0.25),
+          u,
+        );
+        a.local.y += Math.sin(u * Math.PI) * k.stepArc * 0.55;
+      } else {
+        const u = THREE.MathUtils.smootherstep(a.t, k.inside, k.seated);
+        a.local.lerpVectors(
+          this.tmp.set(a.side * k.insideIn, k.insideHeight, -0.25),
+          this.tmp2.set(0, 0.02, -0.25),
+          u,
+        );
+      }
+      a.local.applyMatrix4(boat.group.matrixWorld);
+      this.position.copy(a.local);
+      const turn = Math.atan2(Math.sin(boat.yaw - a.fromYaw), Math.cos(boat.yaw - a.fromYaw));
+      this.yaw = a.fromYaw + turn * THREE.MathUtils.smootherstep(a.t, k.push * 0.55, k.inside);
+      this.riding = a.t >= k.launch;
+      this.sitting = a.t >= k.inside;
+      this.rideRoll = boat.roll * 0.55;
+      this.ridePitch = boat.pitch * 0.55;
+
+      if (a.t >= k.settle) {
+        this.action = null;
+        boat.finishBoarding();
+        this.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
+        a.onDone();
+      }
+    }
   }
 
   private pose(dt: number): void {
@@ -593,9 +680,13 @@ export class Traveller {
     let bodyY = 0;
     let lift = 0;
     let crouch = 0;
+    let boardingStep = 0;
+    let boardingSide = 1;
 
     const a = this.action;
     if (a?.kind === 'throw') {
+      /** Keep the held wing outside the coat as the arm comes up beside the hood. */
+      armRZ = 0.65;
       const wind = THREE.MathUtils.smoothstep(a.t, 0, 0.55);
       const fling = THREE.MathUtils.smoothstep(a.t, 0.55, 0.72);
       const settle = THREE.MathUtils.smoothstep(a.t, 0.8, 1.1);
@@ -634,6 +725,18 @@ export class Traveller {
       bodyX = 0.75 * lean;
       armLX = armRX = -1.4 * lean;
       crouch = 0.1 * lean;
+    } else if (a?.kind === 'board') {
+      const k = tuning.boarding;
+      const press = THREE.MathUtils.smoothstep(a.t, 0, k.push) * (1 - THREE.MathUtils.smoothstep(a.t, k.push, k.rail));
+      const climb = THREE.MathUtils.smootherstep(a.t, k.push * 0.78, k.inside);
+      const settle = THREE.MathUtils.smootherstep(a.t, k.inside, k.settle);
+      bodyX = 0.7 * press + 0.22 * climb * (1 - settle);
+      bodyY = a.side * Math.sin(climb * Math.PI) * 0.24;
+      crouch = 0.12 * press + Math.sin(climb * Math.PI) * 0.08;
+      armLX = THREE.MathUtils.lerp(-1.35, -0.45, climb);
+      armRX = THREE.MathUtils.lerp(-1.35, -0.55, climb);
+      boardingStep = Math.sin(THREE.MathUtils.smoothstep(a.t, k.push * 0.82, k.inside) * Math.PI);
+      boardingSide = a.side;
     }
 
     if (this.presenting > 0.01) {
@@ -672,6 +775,13 @@ export class Traveller {
     /** Kneeling, the shins go back under the coat and the hem settles on the ground round them. */
     r.legL.rotation.set(swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.22, 0, -0.05 - sit * 0.15);
     r.legR.rotation.set(-swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.22, 0, 0.05 + sit * 0.15);
+    if (boardingStep > 0) {
+      /** The near knee clears first; the other leg stays long for the last push off the sand. */
+      const near = boardingSide < 0 ? r.legL : r.legR;
+      const far = boardingSide < 0 ? r.legR : r.legL;
+      near.rotation.x -= boardingStep * 1.05;
+      far.rotation.x += boardingStep * 0.28;
+    }
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
     r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
     r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
@@ -686,6 +796,11 @@ export class Traveller {
     }
     r.foreL.rotation.set(-elbowL, 0, 0);
     r.foreR.rotation.set(-elbowR, 0, 0);
+    if (this.carryingPlane && !a && this.presenting < 0.01 && this.swing < 0.01) {
+      /** A quiet carry at the hip: running must not swing the wing back through the coat. Companion IK still wins. */
+      r.armR.rotation.set(-0.2 + swing * moving * 0.12, 0, 0.65);
+      r.foreR.rotation.set(-0.4, 0, 0);
+    }
 
     let wantYaw = Math.sin(t * 0.37) * 0.35;
     let wantPitch = Math.sin(t * 0.23) * 0.08;

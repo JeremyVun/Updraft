@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { PAPER_GRIP } from '../glider/glider';
+import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 
 /**
@@ -13,11 +15,11 @@ const KEEL = 0.5;
 const SCALE = 0.85;
 const HELD = 0.68;
 /**
- * Where the hand has hold of the folded paper, in the sheet's own frame. Folded, these numbers put the sheet on
- * the glider's own five points: span, length, the height of the wings and the depth of the keel all match, so the
- * one can be exchanged for the other in the child's hand without anything moving.
+ * Where the hand has hold of the folded paper: the glider's own grip, because folded, the sheet lies on the
+ * glider's five points in the glider's own frame, so with the same grip, pose and scale the one can be exchanged
+ * for the other in the child's hand without anything moving.
  */
-const HOLD = [0, KEEL - 0.16, -0.275] as const;
+const HOLD = [PAPER_GRIP.x, PAPER_GRIP.y, PAPER_GRIP.z] as const;
 /** The paper's grain in the glider's own units, so the ruling on the folded sheet lies where the glider's does. */
 const PAPER_U = 0.4;
 /** Folded layers are held a hair apart, or two faces of paper fight for the same pixels. */
@@ -224,7 +226,6 @@ export class Drawing {
   private readonly face = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private readonly basis = new THREE.Matrix4();
-  private readonly spin = new THREE.Euler(0, 0, 0, 'YXZ');
   private readonly presented = new THREE.Quaternion();
   private readonly inHand = new THREE.Quaternion();
   private readonly offset = new THREE.Vector3();
@@ -263,7 +264,7 @@ export class Drawing {
         uv[i * 2] = 0.5 + x / (2 * HALF_W);
         uv[i * 2 + 1] = (y + HALF_L) / (2 * HALF_L);
         grain[i * 2] = 0.5 + x * PAPER_U;
-        grain[i * 2 + 1] = 0.5 + (y - HOLD[2]) * PAPER_U;
+        grain[i * 2 + 1] = 0.5 + y * PAPER_U;
         i++;
       }
     }
@@ -368,25 +369,23 @@ export class Drawing {
   }
 
   /**
-   * Holds the paper: in the hand at `hand` with its nose along `yaw` while it is still a plane, and up in front of
+   * Holds the paper: at the same grip and orientation as the carried plane, and up in front of
    * them at `up`, turned to face `toward`, once it is open. `lift` carries it from the one to the other.
    */
-  place(hand: THREE.Vector3, yaw: number, up: THREE.Vector3, toward: THREE.Vector3, time: number): void {
+  place(hand: THREE.Vector3, up: THREE.Vector3, toward: THREE.Vector3, time: number, carried: THREE.Quaternion): void {
     this.time = time;
     this.material.uniforms.uDrawn.value = this.drawn;
     this.material.uniforms.uOpen.value = this.open;
     const raise = THREE.MathUtils.smootherstep(this.lift, 0, 1);
     const round = THREE.MathUtils.smootherstep(this.turn, 0, 1);
     /**
-     * A whole sheet of the paper this plane was folded from is bigger than the child; it comes in to the size a
-     * pair of small hands can hold up while the wings and the middle fold are swinging about, where nothing can
-     * see it happen.
+     * Start at the carried plane's scale and open to the familiar drawing size as the folds spread.
      */
-    const size = SCALE * THREE.MathUtils.lerp(1, HELD, THREE.MathUtils.smoothstep(this.open, 0.05, 0.45));
+    const size = THREE.MathUtils.lerp(tuning.paperCarry.scale, SCALE * HELD, THREE.MathUtils.smoothstep(this.open, 0.05, 0.45));
     this.mesh.scale.setScalar(size);
 
-    /** In the hand: nose along their heading and tipped up, the way the plane has been carried all along. */
-    this.inHand.setFromEuler(this.spin.set(-0.25, yaw, 0, 'YXZ'));
+    /** Begin in the same carry pose as the glider, including its bank and the child's lean. */
+    this.inHand.copy(carried);
     /** Open: the drawn side of it turned to them, the sun end of it up. */
     this.face.subVectors(toward, up).normalize();
     this.up.set(0, 1, 0).addScaledVector(this.face, -this.face.y).normalize();

@@ -157,7 +157,9 @@ the boat, which is the first time the player sees it go somewhere on its own and
 
 Foley everywhere, voice almost nowhere. Feet on sand, grass and boat planks; wing flutter; the whole-body shake;
 the thump and skid of a bad landing; down against the coat when it climbs. The two existing cries are re-voiced
-as a cygnet's thin whistle. Adults: distant bugling and wing whistle as the skein passes and at the reunion.
+as a cygnet's thin whistle. Three tiny cream strokes accompany its calls in every chapter, following its
+shown position even while carried or airborne and fading back to nothing between calls. These belong to the
+voice, not footsteps or wing sounds (`fx/call-marks.ts`, `tuning.cygnetCalls`). Adults: distant bugling and wing whistle as the skein passes and at the reunion.
 
 ### 5. Proving it
 

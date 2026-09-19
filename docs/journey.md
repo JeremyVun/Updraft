@@ -257,6 +257,36 @@ pond; measured, the pond is 205 paces from the piano behind two rises, and no ca
 down can see it from there, so the pond's reveal stays the brow's, on the walk, and the finale rests on the way
 toward it.
 
+## The storm passage (2026-09-19)
+
+Jeremy first requested 25–30 seconds from storm to forest. After playing that version, he revised the direction:
+
+> "the storm doesn't last for long enough and the lighthouse is off to the side instead of being a central part
+> of the journey. I'd be looking to increase the journey through the storm by 10-15 seconds. It should get really
+> dark and scary by the time they get to the forrest island."
+
+Then: "yea, you are the creative director here, do your best".
+
+The passage now takes about 40–42 seconds. Weather starts 210 paces from shore, among the last roofs. The channel
+bows east toward the lighthouse, passes its flooded base, then turns toward the forest; the added time is real
+travel. The camera follows the lighthouse during the approach. Its warm beam sweeps rain, water, sail and
+travellers, falters slowly, and goes out at nineteen seconds. The plane is taken at twenty-two seconds, with
+roughly eighteen seconds of exposed water left. By the beach, the last sunset colour is gone: black trees, cold
+rain and clouded moonlight. Nearby figures retain soft scattered light; lightning briefly opens the distant veil.
+
+The boat spills excess drive above 5.8 units/s. Ambient wind still moves it; the earlier becalmed passage remains.
+Lightning waits for established rain and darkness, with no flash in the first seventeen seconds of the preview.
+Three delayed thunder reports build through the final stretch, with a stronger low rumble and audible midrange. The cygnet shakes as the rain sets
+in, flinches at thunder, and nuzzles under the child's chin when the lighthouse goes out. The sail spills and flaps harder while rain slants across it.
+The lighthouse cannot light embers or bypass the forest's light mechanic.
+
+Crossings recognise a waypoint passed within its channel, and the boat eases its speed in tight turns and on the
+approach to a mooring. The last village waypoint no longer remains a target while a timer runs. `toWood` is kept
+only to resume old saves; new journeys go directly from `drowned` to `wood`. Navigation and pacing checks:
+`node tools/boat-check.mjs` (real boat/chapter code, controlled wind, 30/60fps). Visual capture:
+`node tools/storm-check.mjs /tmp/updraft-storm`, with `W=390 H=844` for portrait. Live captures reach the beach
+in about 41.6 seconds; the plane disappears into the weather before the final approach.
+
 ## The dream
 
 A dreamy, meditative game about being the wind. A Ghibli afternoon: soft light, slow time, small kindnesses. The player never fails, never waits on a timer, never reads a word. Every gesture is answered by the world.
@@ -292,7 +322,7 @@ Principles:
 
 **The child isn't travelling home. The child is taking a lost fledgling to its family — and only at the very end does the player find out they were walking home the whole time.**
 
-When the island comes back to life, a skein of white swans crosses overhead going north. One small one can't keep up and comes down in the grass. The flock goes on. The child picks it up, looks at the boat, and pushes off.
+When the island comes back to life, a skein of white swans crosses the eastern slope toward the north. One small one can't keep up and comes down in the grass. The flock goes on. The child picks it up, looks at the boat, and pushes off.
 
 This carries the whole game:
 - It gives the player a legible, wordless goal without a word of text.
@@ -328,29 +358,44 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    boat in the cove. The first gesture is the first breeze in a long time; colour comes back wherever the wind
    goes; everywhere the child arrives something small happens; and when the island is whole the whole frame lifts
    at once. Then the skein comes over and the cygnet falls — see below. **Built.**
-2. **The island of lines** (`story/lines.ts`, `world/lines.ts`) — a green whaleback strung pole to pole with
-   washing hung out with nobody there. One gust lifts a whole band of sheets at once and the child runs through
-   them after the plane. The first piece of home the dream hands over. **Built, and now the right size.**
-   The washing does the leading: it is hung *around* the walk (`lineField` takes `LINES_WALK`), so there is always
-   an open alley through it and the way on is the open ground, while the view to either side is cloth. The alley
-   breathes between four and eight paces wide, opens out at the crest where the far shore comes into view, and is
-   strung across overhead — high lines with wide pieces on them, hung clear of a child's head — so the corridor is
-   enclosed without being blocked. Both beaches are left bare, so arriving and the boat waiting on the far side
-   are the two clearest sights on the island. Nobody is ever told any of this.
-   Not everything on a line is a bedsheet: shirts with sleeves, nightgowns that flare at the hem, trousers whose
-   hem rides up into two legs, and small things pegged between them, plus pegs at every corner and a forked prop
-   under the lines that sag. **A red door stands on the crest** with nothing behind it and nothing on the other
-   side — painted the same white and the same red as the cottage at the end of the journey, which nobody is told
-   either. Strung high across the way just short of it, **the three of them**: a man's shirt, a small jumper in
-   the child's own yellow, and a woman's blouse (`FAMILY_LINE`, `family` in the cloth shader, `story/lines.ts`
-   `family`). Hanging, they are washing. A steady wind along their line fills them into chests and shoulders, and
-   for as long as it holds they are people; held a few seconds more, the big ones' sleeves reach for the small
-   one's and the small one's lift to theirs, and the door swings open on the far beach and the boat (`RedDoor`).
-   When the wind drops they are washing again. The child stops under them and looks up, and the camera comes down
-   low behind them, square to the line, so the three stand against the sky over the child. Nothing is gated on it:
-   a child who walks under without playing is shown them once by a breeze of the island's own, and the door shut
-   bars nothing. It is the island's one small puzzle, chosen by Jeremy from four (`docs/polish.md`), and it asks
-   for the gesture the piano asks for next. Still wanted: baskets and a peg bag.
+2. **The island of lines** (`story/lines.ts`, `world/lines.ts`, `world/lines-passage.ts`) — a green
+   whaleback swallowed in washing, the first impossible fragment of home. **Reworked on Jeremy's September 19
+   playtest:** he could not see the family among all the other lines, the camera pan gave way to chasing the plane,
+   and the island felt too small. He asked for about 15% more physical length and approved opening a way through
+   hanging sheets: “capture that perspective of that child like feeling of being sort of lost in another world
+   within all of the hanging clothes”.
+   The island is **15% longer north–south**, with the south landing and width retained. Dense washing follows the
+   longer, winding alley; the camera travels beneath it, near the child's height. The paper stays in the child's
+   hand through three curtains across the path. Broad sweeps lift a hem; several small sweeps add up, with no
+   direction test or lost progress. The cygnet approaches, goes through first, and looks back for the child. At
+   the second curtain two sheets overlap. A completed sheet remains overhead until both are safely through.
+   **No automatic opening:** Jeremy asked for an invitation instead of a timeout. The first sheet repeats warm
+   sideways brushstrokes across its face, distinct from the updraft coils. They fade during a real cursor/touch
+   sweep and return if needed; they generate no wind or progress. All three sheets wait for the player's wind.
+   The final sheet reveals a clearing, one low line with two adult garments and the small yellow jumper, and
+   **the red door**. The released breeze brings their sleeves together, and the door opens.
+   After Jeremy found the reach creepy, the gesture uses soft fullness and small, broad cuff movements:
+   blue begins, red follows and yellow answers. The cloth stays pegged, without pointed arms or an inflated
+   torso, and the door waits until the sleeves have nearly met. It plays the opening island's completion phrase
+   once at that moment; the individual sheets retain their smaller response.
+   This is the reward, with its own held view; finding three garments in the crowd is no longer the puzzle.
+   On seeing the first build Jeremy still found the line too easy to miss. **Colour identifies it:** rich blue,
+   warm red and the child's yellow belong to these three; nearby laundry stays pale linen, and pinwheels stay
+   outside the clearing. The passage sheets share a red sewn hem so their distinction is learned on the way.
+   Daylight stays across the island; the piano's dimmed-world technique is not repeated.
+   **The door is the only way onward.** Jeremy's next brief: the round island makes walking around the sheets
+   seem possible; opening the door onto another place would feel “like alice in wonderland almost”. Beyond it
+   he wants only the special family clothes, the kite and the boat. `world/doorway.ts` renders that separate shore
+   inside the opening. Outside the frame there is sea, with no departure boat or onward land. The cygnet and child
+   pass through first; the camera follows continuously, then the forest of washing is gone. One family line stands
+   on the small grassy landing, with the kite and the waiting boat. The child throws the plane and the voyage resumes.
+   Safe checkpoints follow the first and second curtains and the completed threshold crossing; the existing `family`
+   checkpoint migrates older north-beach saves to this shore. Feel and crossing timings: `tuning.linesPassage`.
+   Verified with `tools/lines-check.mjs`: full mouse passage through all three curtains, doorway and boat departure;
+   portrait doorway/resume; migration of the old family checkpoint. Render checks cover the boat's exclusion from
+   the washing island, ordinary laundry's exclusion from the shore, and matching reflections. Doorway frame times
+   in local Chrome: median 16.7 ms, p95 18.2 ms. Curtain tests cover touch and holding the first sheet closed beyond 50 seconds without input.
+   Landscape and portrait captures inspected; typecheck and production build pass.
 3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year, and the island is asleep. The boat
    lands in a bay under a bank; the child climbs it, and the first sight over the top is a grey meadow with one
    patch of colour in it and a piano standing there, on the way and about a minute off. Every note the wind finds
@@ -371,11 +416,15 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    light, and stops the moment it goes out. Halfway up, the storm frightens the cygnet out of the satchel; it goes to
    ground off the path and calls, and the only way to find it is to put light on it. The plane is found sodden in
    the leaves further on and dried in the wind. **Built.**
-   **And nobody is ever stranded here**, which was the one place in the game a player could be. After half a
-   minute with nothing burning the litter starts waking on its own ahead of them and keeps waking until the
-   player's own first gust takes it back over; while the cygnet is lost, a glimmer comes up where it is hiding after
-   forty seconds, and after three minutes enough of one that it is found. The player still brings the light. The
-   room only refuses to let the game end here.
+   **September 19 polish:** no waiting timer lights an ember, finds the cygnet or dries the plane. After five
+   seconds, warm sweep traces demonstrate the gesture at the waiting ember (and later the held plane). These
+   traces never write wind or progress. Ignition requires deliberate motion across the visible ember; residual
+   gusts and decorative sparks cannot complete it. Ember steps are 20.25 units along the path, 35% farther apart.
+   The ember visual is under review: Jeremy rejected both the original orb and the first fragmented-coal pass
+   (it reads as orange squares). Three in-scene concepts are being explored; see `docs/polish.md`.
+   Under the trees, 240 small green-gold fireflies occupy a 25-unit radius; the storm no longer hides them all.
+   The points of interest remain the first ember, the lost cygnet, the wet plane and the waiting boat. The rescue
+   is the central gate, followed by repairing the plane; there is no separate combination or order puzzle.
 6. **The long crossing** (`story/crossing.ts` with `dolphins` and `duskTo`) — the intermission, and the only
    crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
@@ -391,7 +440,8 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
 
 Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, a
 whale, a pod of dolphins, a storm, and where the time of day ends up. `story/journey.ts` runs the order:
-island → toLines → lines → toMeadow → meadow → drowned → toWood → wood → toHome → home.
+island → toLines → lines → toMeadow → meadow → toBirches → birches → drowned → wood → toSleeping → sleeping →
+toHome → home. The drowned chapter includes the storm passage and forest landing; it has no separate crossing.
 
 **Only the first island was ever grey.** Everything north of `LIVING_BEYOND` (`world/atmosphere.ts`) is already
 living before the child reaches it, so nothing snaps into colour underfoot when a chapter starts — that pop was a
@@ -401,6 +451,10 @@ the time of day, the haze and the rain toward whatever the current chapter asks 
 it, so a chapter change is never a cut in the sky.
 
 ## Rooms still to come
+
+**September 19 additions:** Jeremy selected the island of little boats, the sky mirror and the stairs in the
+clouds. Their ranked concepts and the authorised little-boats build are recorded in [rooms.md](rooms.md).
+The little boats belong after the washing, before the meadow; the other two remain planned.
 
 Jeremy approved all of this on 2026-09-17 and gave the orchestrating session ownership of building it. How it is
 being built: each piece is one bounded parcel given to an Opus 5 agent in its own worktree under `/private/tmp`
@@ -455,6 +509,33 @@ heap of leaves is: a look, a run, a dive in on its breast with the leaves up rou
 act), a shake, and again — and it drops the lot to chase anything the player blows past it. It never flies here
 (`mayFly`), the play has its own held shot, and it can never stop the walk. `haze` raised to 0.97 so the drowned
 village no longer ghosts through from the rise, which was the note left over above.
+
+**Birches polish (2026-09-19).** Jeremy finds the leaf-play sequence too scripted and wants the
+cygnet to jump out of the backpack and play while the player carries on. `story/birches-play.ts` now makes local
+decisions during the walk: hop down near a heap, run after gusts, scuff leaves, pause to rummage or shake, and
+follow when the child moves away. There is no leaf-play chapter beat or camera cut; they gather before boarding.
+Shore litter uses irregular patches and scattered strays, with a gradual distance fade.
+
+Jeremy chose **an impossibly long red scarf**: “Think about it carefully, make it really beautiful.” One
+continuous wool strip leads from the arrival beach through the gold canopy to the departure boat
+(`world/birch-scarf.ts`). The existing island accommodates it, with a small glade around the middle tangle.
+Lift a loop off a fork, sweep the scarf loose from a trunk, then draw the final bow outward. The child waits
+at each tangle while the cygnet remains free to play. Partial progress holds; the ambient breeze cannot solve
+them. Once freed, the scarf draws along its own length into the boat and becomes a red sail, carried onward.
+Its stitched edges, tassels, folds and warm backlighting belong to the same continuous strip. The chapter's
+veil is thickened to keep the drowned village out of the departure view.
+
+Jeremy's first visual review: it looked like a curved ribbon, and should be much more tangled back and forth
+among the trees. The revised scarf has thick closed hems, folded front and back surfaces, stockinette yarn
+relief, and delayed, damped movement. Ten additional support birches carry irregular wraps at different
+heights; the connecting lengths sag under gravity, double back across the grove and settle near the ground.
+The middle interaction moves the camera closer, beneath the crossing lengths.
+
+The swing stays optional, invited by local wind while the child is nearby, and can be ridden only once.
+Keep making gusts to continue; leave the air quiet for 2.6 seconds to finish. The swing brakes, and the child
+steps off near the bottom of its arc. There is no fixed ride duration. Completed tangles and the used swing
+are checkpointed. `tools/scarf-check.mjs` exercises actual pointer gestures, idle gates, checkpoint restore,
+the red sail and the swing's controlled exit; `NATURAL=1` also checks the walking route between tangles.
 
 **The sleeping island** — approved by Jeremy, including the one call that nothing answers. After the dark wood,
 before dawn. **The one room where the player leads the bird.**
@@ -557,30 +638,44 @@ walking the child home the whole time.
 
 ## The fall, beat by beat
 
-The moment the whole game turns on. It is staged deliberately and nothing about it is incidental.
+Opening polish approved by Jeremy, 2026-09-19: a beautiful hilltop view before the swans, a gradual camera move,
+the actual cygnet visibly struggling in the V, minimal marks accompanying its ground calls, and a drooped sail
+that answers cursor wind until a soft breeze carries the boat away.
 
-1. The island is whole. The child climbs to the tree and looks out at the horizon.
-2. **The skein comes over**, 40 units up — low enough to read as birds, not specks — on a bearing that takes it
-   right over the child's head and on north without them. Music: a thin high phrase going away from you. The
-   music begins pulling back from this moment (`hush` 0.55).
-3. The camera plants itself at the child's shoulder and looks up past them. The player watches the sky **with**
-   the child, never instead of them.
-4. **The bird at the back of the V is the one that cannot hold on**, and it goes when it is directly overhead, so
-   none of it happens off screen. The cygnet takes over from exactly where that bird was.
-5. **The camera stands square on to the line of the fall** — on whichever side is clear of the tree — and snaps
-   onto it rather than gliding, because by the time a slow camera arrived the fall was half over. It rides down
-   with the cygnet so it is always centred, with the V receding above it, and lifts to look down once it is in the
-   grass, where the grass would otherwise hide it.
-6. **It falls for eight and a half seconds.** Not like a stone: at first it is still almost with them, sinking and
-   falling behind, and only once it has lost the formation does the ground come up. Wings going the whole way,
-   sagging each time it tries to climb and cannot. It calls, over and over, all the way down. Music is out of the
-   way by now (`hush` 1) — the cries are almost the only thing you can hear.
-7. It lands on the near side of the ridge, always in view. It tries three times to get up, each weaker, and stops.
-   It keeps calling.
-8. **The child does not move for three and a half seconds.** The player is left alone with it.
-9. Then they run — and pull up short, four metres away. The last steps are walked. They stop, face it, kneel, and
-   wait a beat while it looks at them. Only then do they gather it up. You do not charge at something that small.
-10. From here they carry it, and the music comes back at sea, on the crossing, as an intermission.
+1. The restored island draws the child up beside the tree. The camera rounds the eastern side during the climb, then
+   looks across the slope with the child and tree on the right and open sky and water to the left. Hold this outlook for 3.5 seconds.
+2. Eight adults and the cygnet cross the open sky toward the north, establishing the direction the boat will
+   follow. Their flight lane is positioned from the eventual landing, so the baby has not passed that patch
+   of grass when it loses height. The camera stays near the child, gradually tilting to hold the family before
+   favouring the baby. The music pulls back; a quiet rising fourth accompanies the entrance, keeping the
+   descending phrase for the fall itself.
+   The distant haze conceals the next island throughout the aerial shot.
+3. The companion's own body occupies the last station from the beginning. Over five seconds its faster wingbeats
+   win one small recovery, then fade as it falls further behind and lower. The adult renderer reserves that station;
+   separation never swaps one model for another.
+4. The cygnet loses the formation and descends for five seconds, travelling forward onto the near slope while
+   the family continues north. Its landing remains ahead along the flock's bearing, and its descent curve
+   cannot overshoot and double back. The camera eases along the slope to follow the descent, keeping the island
+   as a reference. No camera snap at separation. The descending music starts on separation without waiting
+   for a musical beat and falls into the low register over five seconds. A final low D sounds on actual
+   touchdown, then fades for 1.8 seconds. Distress calls
+   begin with the fall; the impact sound is emitted on touchdown.
+5. In the grass it tries to get up and calls. Three small cream strokes briefly echo each call above its position,
+   fading between calls. The grass can still hide much of the bird; its call remains locatable. The same marks accompany the
+   cygnet's calls throughout the journey, including while carried, swimming or flying; they fade with the call.
+6. The child waits 3.4 seconds, runs toward it, slows for the last steps, kneels and offers their hands. Then they
+   carry it toward the boat. The rescue is viewed from the side, and their shared patch of grass stays pressed
+   through the lift so the hands and cygnet remain visible. The music returns at sea.
+7. The cove shelters the sail from prevailing wind throughout the opening. Cursor gusts still fill and flutter
+   it; without them it hangs in deeper folds. A small travelling gust brushes the cove as the child pushes off,
+   and the shelter gradually releases once the boat is afloat. Cloth fills before the hull gathers speed.
+
+The opening shots preserve their horizontal composition in portrait viewports by drawing the camera back.
+Pacing, flight height and sheltered-sail controls live in `tuning.opening`; shared voice marks use `tuning.cygnetCalls`.
+`tools/opening-check.mjs` supplies timed checkpoints to `tools/play.mjs`; it skips colouring only, then runs the
+climb, flight, descent and rescue normally, recording framing, camera movement, northbound flight and forward travel through the
+fall. `tools/opening-sail-check.mjs` checks real cursor strokes, relaxation and
+the departure gust with a held opening-camera fixture. Screenshots belong in `/tmp`.
 
 ## The companion
 
@@ -613,7 +708,7 @@ Each island lies further north than the last with sea between, and the stretches
 | room | centre | size | sea before it |
 | --- | --- | --- | --- |
 | the still island | (−6, −14) | 60 × 44, its own hand-made shape | — |
-| the island of lines | (14, −360) | 70 × 56, a low whaleback under its washing | 246 |
+| the island of lines | (14, −368.4) | 70 × 64.4, a low whaleback under its washing | 246 |
 | the meadow | (10, −780) | 227 × 200, the old rolling pasture, now bounded: a two-thirds scale model of the 340 × 300 it was sculpted as (`tuning.world.meadowLength`, `meadowPoint` in `world/heightfield.ts`) | 196 |
 | the drowned village | (−10, −1440) | 210 × 175, all of it well under water | 285 |
 | the dark wood | (−30, −1800) | 130 × 115, the smallest of them, on a long shelving shore | 70 |
@@ -745,6 +840,14 @@ about 650 units). The veil hides everything either side of it, so it reads as op
 12b. **The long crossing: built.** `fx/sealife/dolphin.ts` — a pod that surges fore and aft of the boat in
     desynchronised lanes, porpoises in real ballistic arcs, and puts two riders on the bow wave. The route stands
     a long way out west into open water and comes back, because after the wood the point of it is not to arrive.
+    The September 19 polish gives that relief room: a roughly 900-unit offshore route, about three and a half
+    minutes in the current breeze. Larger dolphins spend longer swimming beneath the surface, with one near-side
+    leap and a gentler nudge. The camera sees the child's face and holds the whole featured animal even in portrait.
+    The pod moves ahead while the cygnet chooses a 32-second swim; the boat slows to stay beside it, and both remain
+    in view. Dolphins, foam, wake and swimmer follow the same swell. The paper stays stowed while sailing. Distant
+    land dissolves into the sky until the pod leaves and the approach to home begins. Feel knobs: `tuning.seaPassage`
+    and `tuning.dolphins`. Verification: `tools/sea-check.mjs` (full GPU passage, desktop or `W=390 H=844`) and
+    `tools/sea-logic-check.mjs` (wind, frame rate, framing, completion and old swim checkpoints).
 12c. **The cygnet's arc: built.** The glide is `Cygnet.soar`, on wind sampled **at the cygnet's own position**, so the
     player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the cygnet is set
     down in the grass, tries by itself and fails, the child sits down to watch, and there is nothing else on

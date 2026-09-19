@@ -110,15 +110,33 @@ float lifting(vec4 w) {
        + min(w.z * 1.7, 1.5) + min(w.w * 0.9, 1.1);
 }
 
+// Signed upwind flux across one face. Both cells use the same face velocity,
+// so transport moves litter between cells without creating it under the cursor.
+float litterFlux(vec4 a, vec4 b, bool x) {
+  float velocity = x ? (a.g + b.g) * 0.5 : (a.b + b.b) * 0.5;
+  float ma = a.r * clamp(a.a * ${glsl(tuning.birches.litterSweep)}, 0.0, 1.0);
+  float mb = b.r * clamp(b.a * ${glsl(tuning.birches.litterSweep)}, 0.0, 1.0);
+  return velocity * (velocity > 0.0 ? ma : mb);
+}
+
 void main() {
   vec2 p = litterWorld(vUv);
-  float d = texture(uField, vUv).r;
+  vec4 state = texture(uField, vUv);
+  float d = state.r;
   vec4 w = airAt(p);
-  /** What the air takes off this patch of floor this frame, and what the patch upwind of it has just sent over. */
-  float goes = d * min(0.9, lifting(w) * ${glsl(tuning.birches.litterSweep)} * uDt);
-  vec2 back = p - w.xy * uDt * ${glsl(tuning.birches.litterCarry)};
-  float db = texture(uField, litterUv(back)).r;
-  d += db * min(0.9, lifting(airAt(back)) * ${glsl(tuning.birches.litterSweep)} * uDt) - goes;
+  float arrived = smoothstep(0.02, 0.25, w.z + w.w);
+  vec2 target = w.xy * ${glsl(tuning.birches.litterCarry)} * arrived;
+  target *= min(1.0, ${glsl(tuning.birches.litterMaxSpeed)} / max(length(target), 0.001));
+  float response = 1.0 - exp(-uDt / ${glsl(tuning.birches.litterResponse)});
+  vec2 velocity = mix(state.gb, target, response);
+  float mobile = mix(state.a, lifting(w) * arrived, response);
+  const float cell = 1.0 / ${glsl(LITTER_RES)};
+  vec4 left = texture(uField, vUv - vec2(cell, 0.0));
+  vec4 right = texture(uField, vUv + vec2(cell, 0.0));
+  vec4 down = texture(uField, vUv - vec2(0.0, cell));
+  vec4 up = texture(uField, vUv + vec2(0.0, cell));
+  d += uDt * ((litterFlux(left, state, true) - litterFlux(state, right, true)) / ${glsl(LITTER_BOX.sx / LITTER_RES)}
+            + (litterFlux(down, state, false) - litterFlux(state, up, false)) / ${glsl(LITTER_BOX.sz / LITTER_RES)});
   /**
    * Leaves will stand at a slope and no steeper. Anything heaped past that runs off into whatever is beside it,
    * which is what makes a burst heap settle into a lower, wider one — and what stops an untouched heap from
@@ -130,8 +148,8 @@ void main() {
   for (int i = 0; i < 4; i++) {
     vec2 step = i < 2 ? vec2(i == 0 ? px : -px, 0.0) : vec2(0.0, i == 2 ? px : -px);
     float n = texture(uField, vUv + step).r;
-    gain += max(0.0, n - d - ${glsl(tuning.birches.litterRepose)});
-    lose += max(0.0, d - n - ${glsl(tuning.birches.litterRepose)});
+    gain += max(0.0, n - state.r - ${glsl(tuning.birches.litterRepose)});
+    lose += max(0.0, state.r - n - ${glsl(tuning.birches.litterRepose)});
   }
   d += (gain - lose) * 0.25 * min(1.0, ${glsl(tuning.birches.litterSlump)} * uDt);
   /**
@@ -140,7 +158,7 @@ void main() {
    */
   float tread = uWade.w * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy)));
   d -= d * min(0.7, tread * 0.7 * uDt);
-  gl_FragColor = vec4(max(d, 0.0), 0.0, 0.0, 1.0);
+  gl_FragColor = vec4(max(d, 0.0), velocity, mobile);
 }`;
 
 /**
@@ -402,7 +420,8 @@ export interface Shake {
 export class LitterField {
   readonly uniforms: Record<string, THREE.IUniform>;
   private readonly gpu: GpuRunner;
-  private readonly field = new PingPong(LITTER_RES, LITTER_RES, THREE.HalfFloatType, THREE.LinearFilter);
+  // Repeated transport needs full precision or small rounding losses slowly erase the floor.
+  private readonly field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, THREE.LinearFilter);
   private readonly mat: THREE.ShaderMaterial;
 
   constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4) {
@@ -427,7 +446,7 @@ export class LitterField {
   }
 
   update(dt: number): void {
-    this.mat.uniforms.uDt.value = dt;
+    this.mat.uniforms.uDt.value = Math.min(dt, 1 / 30);
     this.mat.uniforms.uField.value = this.field.texture;
     this.gpu.run(this.mat, this.field.write);
     this.field.swap();

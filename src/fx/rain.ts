@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { tuning } from '../tuning';
 
 const COUNT = 2600;
 const BOX = new THREE.Vector3(56, 30, 56);
@@ -56,6 +57,7 @@ export class Rain {
   readonly mesh: THREE.Mesh;
   private readonly uniforms: Record<string, THREE.IUniform>;
   private readonly forward = new THREE.Vector3();
+  private readonly drift = new THREE.Vector2();
 
   constructor() {
     const quad = new THREE.PlaneGeometry(1, 1);
@@ -91,7 +93,7 @@ export class Rain {
   }
 
   /** `amount` 0 dry .. 1 a steady shower; `breeze` is the air's drift, which the drops lean and travel with. */
-  update(dt: number, amount: number, camera: THREE.Camera, breeze: THREE.Vector2): void {
+  update(dt: number, amount: number, camera: THREE.Camera, breeze: THREE.Vector2, storm = 0): void {
     this.mesh.visible = amount > 0.002;
     if (!this.mesh.visible) return;
     const u = this.uniforms;
@@ -101,8 +103,9 @@ export class Rain {
     this.forward.normalize();
     u.uCentre.value.copy(camera.position).addScaledVector(this.forward, BOX.x * 0.3);
     u.uCentre.value.y = camera.position.y - 4;
-    u.uDrift.value.x += breeze.x * dt;
-    u.uDrift.value.z += breeze.y * dt;
-    u.uBreezeDir.value.copy(breeze);
+    this.drift.copy(breeze).multiplyScalar(1 + storm * tuning.storm.rainLean / Math.max(0.5, breeze.length()));
+    u.uDrift.value.x += this.drift.x * dt;
+    u.uDrift.value.z += this.drift.y * dt;
+    u.uBreezeDir.value.copy(this.drift);
   }
 }
