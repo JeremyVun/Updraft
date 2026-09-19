@@ -299,8 +299,20 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   (`grass.ts`: the frost treatment and the blade width over the island). Also unjudged by anyone but the agent: the
   lying pose up close, the climb's brightness (`dusk` 1.22 for the climb), and the eased gust lean, which reaches
   the meadow and the summit too.
+- The frosted grass (`a4bc000`): the chips were two things — a blade cropped to 28% was wider than tall, and the
+  wildflower heads were glowing cards on a 0.15 m sward. Now the width goes down with the crop (`swardWidth`,
+  `swardCrop` in `tuning.sleeping`), no flowers on the island, tufts and curve cut, a shared `rimeColour()` that
+  takes its pale from the sky ambient and lightens the tip more than the root, the dawn and the lamp multiplying a
+  blade's colour rather than adding to it, rimed blades shading flat, and the ground under them grass rather than
+  soil so it carries the surface between blades. Every term gated by `sleepFloorAt`/`frostAt`; meadow and summit
+  frames unchanged to MSAA noise; 60 fps at the bed and at the bird's eye. The climb now reads as a rimed slope
+  with the bird legible in it. Short: near blades in full sun still read as gold cones at the hilltop (the backlit
+  term on a short sward; density is capped at one blade per 0.25 m cell, so continuity has to come from the ground).
+- **Found on the merge:** the child and the cygnet were black on the bed once the ending lowered the moon from 24°
+  to 12° (the hollow's rim shadows the bed), because the character shaders never took the lamp. A parcel is adding
+  the lamp, dawn and ember light to the child's and the cygnet's shaders.
 
-Everything in the 2026-09-18 playtest is built. Open: the sleeping island's frosted blades and Jeremy's verdict on the room; the crest's
+Everything in the 2026-09-18 playtest is built. Open: the lamp on the characters (building) and Jeremy's verdict on the room; the crest's
 frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
 ending (dolphins, summit, fledging, credits).
 
