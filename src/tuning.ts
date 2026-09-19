@@ -354,9 +354,9 @@ export const tuning = {
     frostFrom: 30,
     frostTo: 2,
     /**
-     * The frosted sward. A blade here keeps this much of its height, and takes this much of its width down with
-     * the cut, so cropping leaves fine stubble instead of blades wider than they are tall. The odd tall tuft is
-     * cut right back, and less curve leaves the stubble standing rather than arched over showing its face.
+     * The frosted sward. A blade here keeps this much of its height, and rather less of its width, so cropping
+     * leaves fine stubble instead of blades wider than they are tall and a bird stays legible in it. The odd
+     * tall tuft is cut right back, and a little less curve keeps the stubble from arching over onto its face.
      */
     swardCrop: 0.52,
     swardWidth: 0.28,
