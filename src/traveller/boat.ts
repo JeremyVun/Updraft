@@ -54,6 +54,7 @@ void main() {
 const SAIL_VERT = /* glsl */ `
 uniform float uFill;
 uniform float uFlutter;
+uniform float uLuff;
 uniform float uTime;
 out vec2 vUv;
 out vec3 vWorld;
@@ -61,11 +62,15 @@ out vec3 vNormal;
 void main() {
   float belly = sin(uv.x * 3.14159) * sin(uv.y * 3.14159 * 0.9);
   float ripple = sin(uTime * 9.0 - uv.x * 7.0 + uv.y * 3.0) * uFlutter * (0.3 + uv.x);
-  vec3 p = position + vec3(0.0, 0.0, 1.0) * (belly * uFill + ripple * 0.06);
+  /** A gust crossing the sail breaks along the free edge first: the leech shakes, then the belly fills again. */
+  float leech = smoothstep(0.2, 1.0, uv.x) * (0.45 + 0.55 * uv.y);
+  float phase = uTime * 27.0 - uv.x * 15.0 + uv.y * 4.0;
+  float shake = uLuff * leech;
+  vec3 p = position + vec3(0.0, 0.0, 1.0) * (belly * uFill * (1.0 - 0.3 * uLuff * leech) + ripple * 0.06 + sin(phase) * shake * 0.19);
   vec4 w = modelMatrix * vec4(p, 1.0);
   vUv = uv;
   vWorld = w.xyz;
-  vec3 n = normalize(vec3(-belly * uFill * 0.4 * cos(uv.x * 3.14159), 0.0, 1.0));
+  vec3 n = normalize(vec3(-belly * uFill * 0.4 * cos(uv.x * 3.14159) - cos(phase) * shake * 0.8, 0.0, 1.0));
   vNormal = normalize(mat3(modelMatrix) * n);
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
@@ -216,6 +221,9 @@ export class Boat {
   roll = 0;
   pitch = 0;
   private boom = 0;
+  /** The wind the sail has settled to, against which a new gust reads as an arrival. */
+  private settled = 0;
+  private luff = 0;
   private time = 0;
   private fade = 0;
   /** A shove against the hull, signed by the side it came from, and how long ago it landed. */
@@ -241,7 +249,7 @@ export class Boat {
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
       fragmentShader: SAIL_FRAG,
-      uniforms: { ...atmo.uniforms, uFill: { value: 0 }, uFlutter: { value: 0.5 } },
+      uniforms: { ...atmo.uniforms, uFill: { value: 0 }, uFlutter: { value: 0.5 }, uLuff: { value: 0 } },
       side: THREE.DoubleSide,
     });
     this.sailPivot.position.set(0, 0, 0.55);
@@ -363,6 +371,16 @@ export class Boat {
     const slack = 0.15 * (1 - this.becalmed * 0.88);
     this.sailMat.uniforms.uFill.value += ((relX >= 0 ? 1 : -1) * (slack + fill * 0.75) - this.sailMat.uniforms.uFill.value) * (1 - Math.exp(-dt * 3));
     this.sailMat.uniforms.uFlutter.value = (0.25 + (1 - fill) * 0.8) * (1 - this.becalmed * 0.7);
+    /**
+     * A gust does not simply fill the sail: it breaks over it. The cloth shakes along the leech the moment the
+     * wind changes, hard for a gust the sail was not already carrying, and goes quiet again as it fills.
+     */
+    const pressing = Math.min(1, w.energy * 1.5 + Math.max(0, windSpeed - tuning.wind.breeze * 1.6) / 12);
+    this.settled += (pressing - this.settled) * (1 - Math.exp(-dt * 1.1));
+    const arriving = Math.max(0, pressing - this.settled) / Math.max(1 - this.settled, 0.2);
+    const luff = this.sailMat.uniforms.uLuff;
+    this.luff = Math.max(this.luff * Math.exp(-dt / tuning.water.luffFade), Math.min(1, Math.max(0, arriving - tuning.water.luffFrom) * 2.4));
+    luff.value = this.luff * (this.afloat ? 1 : 0.5);
     this.pose(dt);
     this.updateWake(dt, time);
   }

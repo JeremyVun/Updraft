@@ -93,6 +93,6 @@ beats, cameras and timings in `home.ts`; the lush home grass; the finale (`Sound
 `SoundState.silence`, everything musical on one `musicBus`) and the credits (`#credits`, `#again` in `index.html`,
 copy in `docs/copy/copy-2.json`, awaiting Jeremy's verdict).
 
-In flight: the fledging's visual pass (Opus 5, `/private/tmp/updraft-end-fledge`). Still to do: the jetty model
+The fledging's visual pass is merged (`tuning.fledge`, `Cygnet.circuit`/`turnBack`, `SwanFlock.nextSlot`). In flight: the jetty model
 (Opus 5 parcel: piles, planks, a post, something left on it that says somebody lives here; the boat comes
 alongside its end bow to the east), then one full run from `?chapter=sea` through the credits to check the whole.

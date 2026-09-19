@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { params } from '../params';
+import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mainlandCoastZ } from './heightfield';
 import { PlanarReflection } from './water/reflection';
@@ -59,11 +60,16 @@ out vec3 vSwell;
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
-  float height = swellHeight(xz, length(cameraPosition.xz - xz));
+  float fromCamera = length(cameraPosition.xz - xz);
+  float height = swellHeight(xz, fromCamera);
+  /** All the player's wind does to the shape of the sea: a little chop in the small waves where a gust runs. */
+  vec4 wind = texture(uWindTex, clamp(domainUv(xz), 0.0, 1.0));
+  vec2 gustAlong = normalize(wind.xy + vec2(1e-4, 0.0));
+  float chop = ${glsl(tuning.water.chop)} * smoothstep(0.1, 0.8, wind.z) * chopHere(xz, fromCamera);
   const float E = 1.5;
-  vec3 at = swellShift(xz, height);
-  vec3 along = vec3(E, 0.0, 0.0) + swellShift(xz + vec2(E, 0.0), height) - at;
-  vec3 across = vec3(0.0, 0.0, E) + swellShift(xz + vec2(0.0, E), height) - at;
+  vec3 at = swellShift(xz, height) + windChop(xz, gustAlong, chop);
+  vec3 along = vec3(E, 0.0, 0.0) + swellShift(xz + vec2(E, 0.0), height) + windChop(xz + vec2(E, 0.0), gustAlong, chop) - at;
+  vec3 across = vec3(0.0, 0.0, E) + swellShift(xz + vec2(0.0, E), height) + windChop(xz + vec2(0.0, E), gustAlong, chop) - at;
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
@@ -206,10 +212,17 @@ void main() {
   float speed = length(flow);
   vec2 along = normalize(flow + vec2(1e-4, 0.0));
   float paw = catsPaw(xz, along);
-  // The player only ruffles the water; the weather is what runs the sea.
-  float rough = clamp(max(max(smoothstep(1.2, 7.5, speed), smoothstep(0.12, 1.1, gust)) * paw, uSquall), 0.0, 1.0);
-  // Breaking water needs a sea running, not a moment's stroke, so only the hardest gusts fleck it.
-  float storm = clamp(max(smoothstep(18.0, 34.0, speed) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
+  /**
+   * The weather runs the sea, and it alone decides how the sea is lit: a stroke of the player's wind is held out
+   * of the roughness below, because roughness here is what spreads the specular lobe, blurs the mirror and drops the Fresnel
+   * edge, and a patch of that under the cursor reads as a slick of oil rather than as wind.
+   */
+  float settled = min(speed, length(uBreeze) * 1.4);
+  float rough = clamp(max(smoothstep(1.2, 7.5, settled) * paw, uSquall), 0.0, 1.0);
+  // Breaking water needs a sea running, not a moment's stroke, so only the weather flecks it.
+  float storm = clamp(max(smoothstep(18.0, 34.0, settled) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
+  /** All the player's wind does to the look of the sea: darken the water it crosses and ruffle it. A cat's paw. */
+  float stroke = clamp(max(smoothstep(0.1, 0.75, gust), smoothstep(1.5, 7.0, speed - length(uBreeze) * 1.4)) * paw, 0.0, 1.0);
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(-ground, 0.0);
@@ -217,7 +230,8 @@ void main() {
   float offshore = mix(60.0, -shoreDistance(xz), inside);
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
 
-  vec2 drift = flow * 0.22;
+  /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
+  vec2 drift = along * settled * 0.22;
   vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1);
   vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
   vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
@@ -231,6 +245,9 @@ void main() {
   float A_SWELL = 0.07 * calm * (1.0 - vSwell.z);
   vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2 + swell.xy * A_SWELL + vSwell.xy;
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
+  /** The ruffle tilts the surface but stays out of the hidden-roughness sum, so it cannot change the shine. */
+  float ruffle = ${glsl(tuning.water.ruffle)} * stroke;
+  slope += r2.xy * ruffle + r1.xy * ruffle * 0.45;
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
@@ -305,6 +322,8 @@ void main() {
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 
   vec3 col = mix(body, refl, F) + sun;
+  // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
+  col *= 1.0 - ${glsl(tuning.water.darken)} * stroke;
 
   float foam = surf.x;
   if (storm > 0.0) {

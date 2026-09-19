@@ -330,7 +330,8 @@ export class HomeChapter implements Chapter {
      * sky is only legible side on, and directly above the child it is a tower nobody can see the top of.
      */
     this.gathering.set(c.position.x + 5, c.position.y + 8, c.position.z - 34);
-    flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, 22, 22, 20);
+    /** Fewer of them than at the crest, so the small one can be picked out among them when it goes to join. */
+    flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, 20, 16, 18);
     this.nextCall = this.now + 1.2;
     cue('lifted');
   }
