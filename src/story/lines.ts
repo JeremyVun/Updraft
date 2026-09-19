@@ -4,7 +4,7 @@ import { tuning } from '../tuning';
 import { Sway, feltWind, type WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
 import { KITE_AT } from '../world/kite';
-import { FAMILY_LINE, door, family } from '../world/lines';
+import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
@@ -325,6 +325,7 @@ export class LinesChapter implements Chapter {
     const c = this.cast.child.position;
     const p = this.cast.plane.position;
     const s = this.shot;
+    s.from = undefined;
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
       s.target.set((c.x + b.x) / 2, b.y + 2.2, (c.z + b.z) / 2 - 2);
@@ -350,9 +351,10 @@ export class LinesChapter implements Chapter {
      */
     const gazing = this.gazeUntil > 0 && this.now < this.gazeUntil + 1.2;
     if (gazing) {
-      s.target.set(c.x * 0.35 + FAMILY_MID.x * 0.65, FAMILY_MID.y - 0.6, c.z * 0.35 + FAMILY_MID.z * 0.65);
-      s.distance = 12;
-      s.height = -2.2;
+      s.target.set(c.x * 0.3 + FAMILY_MID.x * 0.7, FAMILY_MID.y - 1.1, c.z * 0.3 + FAMILY_MID.z * 0.7);
+      s.from = FAMILY_FACE;
+      s.distance = 10;
+      s.height = -1.6;
       this.pace = 0.55;
       this.focus.copy(FAMILY_MID);
       return;

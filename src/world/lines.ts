@@ -401,16 +401,18 @@ export const door = new RedDoor(23, -357, 0.32);
 export const FAMILY_LINE: LineSpec = (() => {
   const a = new THREE.Vector3(23.2, 0, -350.6);
   const b = new THREE.Vector3(32.6, 0, -356.4);
-  a.y = Math.max(heightAt(a.x, a.z), 0) + 6.3;
-  b.y = Math.max(heightAt(b.x, b.z), 0) + 6.1;
-  return { a, b, sag: 0.32, drop: 1.7 };
+  a.y = Math.max(heightAt(a.x, a.z), 0) + 5.9;
+  b.y = Math.max(heightAt(b.x, b.z), 0) + 5.7;
+  return { a, b, sag: 0.3, drop: 2.4 };
 })();
+/** Which side of the line the walk's camera should stand to see the three of them square on. */
+export const FAMILY_FACE = new THREE.Vector3(0.53, 0, 0.85).normalize();
 /** How far the wind has made them people (x) and how far their hands have reached (y): the story writes it. */
 export const family = new THREE.Vector2(0, 0);
 const FAMILY_PIECES = [
-  { at: 0.22, width: 1.55, drop: 1.6, colour: '#9fb0bd', role: 0 },
-  { at: 0.5, width: 0.78, drop: 0.88, colour: '#e6c25a', role: 2 },
-  { at: 0.78, width: 1.35, drop: 1.75, colour: '#e0bdb6', role: 1 },
+  { at: 0.2, width: 2.1, drop: 2.4, colour: '#9fb0bd', role: 0 },
+  { at: 0.5, width: 1.05, drop: 1.25, colour: '#e6c25a', role: 2 },
+  { at: 0.8, width: 1.85, drop: 2.5, colour: '#e0bdb6', role: 1 },
 ];
 
 /**
