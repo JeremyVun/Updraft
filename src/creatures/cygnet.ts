@@ -883,9 +883,11 @@ export class Cygnet {
 
     const rise = dt > 0 ? (p.y - was) / dt : 0;
     const travel = Math.atan2(to.x - p.x, to.z - p.z);
+    /** It levels out over the last of it, so that arriving is a flare and not the frame its bank went to nothing. */
+    const level = 1 - THREE.MathUtils.smoothstep(k, 0.86, 1);
     this.yaw = easeAngle(this.yaw, travel + Math.cos(this.sailT * 0.55) * 0.22 * (1 - k), 2.2, dt);
-    this.roll = ease(this.roll, -Math.cos(this.sailT * 0.55) * 0.3 * (1 - k) + Math.sin(this.time * 0.8) * 0.06, 2, dt);
-    this.pitch = ease(this.pitch, clamp(-rise * 0.14, -0.4, 0.3), 3, dt);
+    this.roll = ease(this.roll, (-Math.cos(this.sailT * 0.55) * 0.3 * (1 - k) + Math.sin(this.time * 0.8) * 0.06) * level, 2.5, dt);
+    this.pitch = ease(this.pitch, clamp(-rise * 0.14, -0.4, 0.3) * level, 3.5, dt);
     this.craning = ease(this.craning, 0.15, 2, dt);
     this.trim = ease(this.trim, 0.2, 2, dt);
     this.tucked = ease(this.tucked, 0.85, 1.5, dt);
