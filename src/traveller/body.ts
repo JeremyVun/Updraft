@@ -48,9 +48,12 @@ void main() {
    * The lamp stands a stride from the pillow, so it is taken square on the side turned to it and nearly let go
    * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
    */
-  vec3 toLamp = uLamp.xyz - vWorld;
-  float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
-  col += vColor * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lampLight(vWorld, N) * pow(lampSide, 3.0));
+  col += vColor * (emberLight(vWorld, N) + dawnLight(vWorld, N));
+  if (uLamp.w > 0.0) {
+    vec3 toLamp = uLamp.xyz - vWorld;
+    float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
+    col += vColor * lampLight(vWorld, N) * pow(lampSide, 3.0);
+  }
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 

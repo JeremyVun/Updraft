@@ -39,9 +39,12 @@ void main() {
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through)) + uSunColor * rim * 0.22;
   /** Paper held against a child in bed: it takes the room's own light, and the lamp on the side turned to it. */
-  vec3 toLamp = uLamp.xyz - vWorld;
-  float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
-  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lampLight(vWorld, N) * pow(lampSide, 3.0));
+  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N));
+  if (uLamp.w > 0.0) {
+    vec3 toLamp = uLamp.xyz - vWorld;
+    float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
+    col += alb * lampLight(vWorld, N) * pow(lampSide, 3.0);
+  }
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
 }`;
