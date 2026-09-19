@@ -118,7 +118,7 @@ const GRIPS: [0 | 1, number[][]][] = [
 const HOLDS_UP = 12;
 /** Seconds of the player's own wind on it that carry it off, and how long they watch it go afterwards. */
 const TAKES = 0.4;
-const WATCHES_IT = 8;
+const WATCHES_IT = 7;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
 const NIGHTFALL_FOR = 11;

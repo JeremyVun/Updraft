@@ -227,9 +227,9 @@ off the very top — far enough that the ground has begun to fall and the sheet 
 against the grass — and sits down with the cottage still hidden behind the brow. `settle` 3.6 s (they turn, sit,
 and the paper comes up out of the one hand into both; the glider is hidden and the sheet shown at the start of it,
 still a plane), `unfold` 4.2 s on `OPENING` keys — the two wings up in 1.1 s, then held still for 0.8 s with the
-plane's shape wide open in their hands, then flat over 2.3 s — `gaze` 6.5 s, `fold` 2.6 s. Then they stand, the
+plane's shape wide open in their hands, then flat over 2.3 s — `gaze` 6 s, `fold` 2.6 s. Then they stand, the
 sheet is the glider again in their hand, and they walk the last eleven units over the brow (`crest`, `Traveller.
-stroll` 0.7, about 7 s) and stand there 7.5 s with the real house below them, lit, as drawn. The walk over the brow
+stroll` 0.7, about 7 s) and stand there 7 s with the real house below them, lit, as drawn. The walk over the brow
 is the climax, and the picture is what the player has in their eye when it happens.
 
 *The camera is one swing.* Behind them while the family goes; round onto their shoulder and in from nine units to
@@ -245,14 +245,14 @@ through the fold, and then back down to 0 across the last nine units of the walk
 ground falls away. `cue('unfold')` still fires as the hands start: a small paper sound reads better than nothing
 at all with the music that far out. The wind and the paper are the whole soundtrack of the opening.
 
-*The wind takes the drawing.* There is no throw any more. On the brow the child raises the paper over their head
-into the wind and `release` waits for the player, who is not muted there: their wind is read both at the paper
-(`wind.sample`) and at the ground their cursor is over (`input.gust`, `input.world`, out to 95 units, because a
-stroke drawn across the paper on screen lays its gust well beyond a child seen from behind), and about a second of
-real stroking carries it off — `Glider.launch` into the sunset, `depart`, `cue('release')`, and the child cheers
-after it. If the player only watches, the island's own wind comes up the hill at 10.8 s (a splat that lays the
-grass over first) and takes it at 12, so the ending cannot be made to wait. `gone` to the start of nightfall is
-about 63 s with a player and 72 s without one.
+*The wind takes the drawing.* There is no throw any more. On the brow the child raises the paper into the wind on
+the same hand that has carried it all game, and `release` waits for the player, who is not muted there. The stroke
+is read as a stroke and not as a place (`input.gust` above 2, about four tenths of a second of real stroking):
+from the brow the ground under the cursor is half a mile of open sea, so asking the player to draw it across the
+paper would be asking them to aim at something the camera has put nowhere. Then `Glider.launch` into the sunset,
+`depart`, `cue('release')`, and the child cheers after it. If the player only watches, the island's own wind comes
+up the hill at 10.8 s — a splat that lays the grass over first — and takes it at 12, so the ending cannot be made
+to wait. `gone` to the start of nightfall is about 59 s if the player takes it at once and 70 s if they never do.
 
 *The door opens from inside.* On the run down, `Cottage.openDoor(true)` fires nine units out instead of on
 arrival, so the lamplight is out on the grass before the child reaches it. There is no figure in it: Jeremy was
