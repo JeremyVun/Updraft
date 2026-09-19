@@ -270,7 +270,7 @@ export class SleepingChapter implements Chapter {
       return;
     }
     /** It gets onto the bed by itself, the way it gets into their hands by itself. */
-    k.perch(ON_BLANKET, this.onBlanketYaw);
+    k.perch(ON_BLANKET, this.onBlanket(dt));
     if (this.t < 2.2) {
       k.bind(0.03);
       return;
@@ -284,8 +284,16 @@ export class SleepingChapter implements Chapter {
     if (c.abed >= 1) this.to('asleep');
   }
 
-  private get onBlanketYaw(): number {
-    return Math.atan2(BESIDE.x, BESIDE.y);
+  /**
+   * Which way it faces on the blanket, eased from whichever way it was facing when it got there. Whoever perches
+   * it says where it is every frame, so a fixed bearing would turn it through whatever angle it arrived at in one.
+   */
+  private onBlanket(dt: number): number {
+    const want = Math.atan2(BESIDE.x, BESIDE.y);
+    if (this.landYaw === 0) this.landYaw = this.cast.cygnet.yaw;
+    const turn = want - this.landYaw;
+    this.landYaw += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 1.8));
+    return this.landYaw;
   }
 
   /**
@@ -295,7 +303,7 @@ export class SleepingChapter implements Chapter {
    */
   private asleep(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
-    k.perch(ON_BLANKET, this.onBlanketYaw);
+    k.perch(ON_BLANKET, this.onBlanket(dt));
     k.watch(c.face(this.told));
     /** The frost comes in across the hollow toward the bed the whole time they lie there. */
     sleeping.frost = lerp(0.3, T.frostAsleep, smooth(this.t, 0, 40));
@@ -350,7 +358,7 @@ export class SleepingChapter implements Chapter {
     const f = sleeping.feather;
     this.hush = lerp(this.hush, 0.8, 1 - Math.exp(-dt * 0.8));
     if (this.t < 5.5) {
-      k.perch(ON_BLANKET, this.onBlanketYaw);
+      k.perch(ON_BLANKET, this.onBlanket(dt));
       /** At the feather, then at the child, and then it goes. That order is the whole decision. */
       k.watch(this.t < 2.6 || this.t > 4.4 ? f.position : c.face(this.told));
       return;
@@ -498,9 +506,7 @@ export class SleepingChapter implements Chapter {
   /** The light through the window, the bird on the blanket, and a child who wakes up warm. */
   private waking(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
-    const turn = this.onBlanketYaw - this.landYaw;
-    this.landYaw += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 1.6));
-    k.perch(ON_BLANKET, this.landYaw);
+    k.perch(ON_BLANKET, this.onBlanket(dt));
     sleeping.laneOpen = 1;
     sleeping.dawn = 1;
     sleeping.fog = Math.max(0, sleeping.fog - dt * 0.6);
@@ -515,7 +521,7 @@ export class SleepingChapter implements Chapter {
     if (this.t > 3.6) {
       c.position.copy(SIT_AT);
       c.sitting = true;
-      c.yaw = this.onBlanketYaw;
+      c.yaw = Math.atan2(BESIDE.x, BESIDE.y);
       c.abed = Math.max(0, 1 - (this.t - 3.6) / 2.2);
       c.lookAt = k.eye(this.look);
     }
