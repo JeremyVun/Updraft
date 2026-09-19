@@ -99,7 +99,7 @@ vec3 cloth(vec2 st) {
   p.y -= uDroop * s * (0.4 + 0.6 * sin(t * 3.14159)) * ${glsl(tuning.sail.sag)};
   float folds = sin(s * ${glsl(tuning.sail.folds)} * 6.28318 + 1.1) * smoothstep(0.0, 0.22, s) * (0.45 + 0.55 * sin(t * 2.3 - 0.8));
   float breathe = 0.7 + 0.3 * sin(uTime * 0.55 + t * 1.5);
-  p.z += uDroop * (folds * breathe * ${glsl(tuning.sail.fold)} + s * sin(uTime * 0.4) * 0.04);
+  p.z += uDroop * (folds * breathe * ${glsl(tuning.sail.fold)} + s * sin(uTime * 0.4) * 0.08);
   /** A gust crossing the sail breaks along the free edge first: the leech shakes, then the belly fills again. */
   float leech = smoothstep(0.15, 1.0, s) * (0.4 + 0.6 * t);
   float belly = sin(s * 3.14159) * sin(t * 3.14159 * 0.9) * (1.0 - 0.3 * uLuff * leech);
@@ -446,13 +446,16 @@ export class Boat {
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
     p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
-    const targetBoom = THREE.MathUtils.clamp(-Math.atan2(across, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
-    this.boom += (targetBoom - this.boom) * (1 - Math.exp(-dt * 1.5));
     const sail = this.sailMat.uniforms;
+    /** With nothing moving in it the cloth is dead weight: the leech falls in and it hangs off the mast in folds. */
+    const hang = 1 - THREE.MathUtils.smoothstep(air.blowing, 0, tuning.sail.hangsBelow);
+    sail.uDroop.value = hang;
+    /** Nothing holds a dead sail out: the boom comes back amidships and swings with whatever the hull is doing. */
+    const set = THREE.MathUtils.clamp(-Math.atan2(across, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
+    const targetBoom = set * (1 - hang * 0.85) + hang * Math.sin(this.time * 0.35) * 0.05;
+    this.boom += (targetBoom - this.boom) * (1 - Math.exp(-dt * 1.5));
     const fill = (1 - Math.exp(-air.taken / tuning.sail.bellyAt)) * (this.afloat ? 1 : 0.4);
     sail.uFill.value += ((across >= 0 ? 1 : -1) * fill * tuning.sail.belly - sail.uFill.value) * (1 - Math.exp(-dt * 3));
-    /** With nothing moving in it the cloth is dead weight: the leech falls in and it hangs off the mast in folds. */
-    sail.uDroop.value = 1 - THREE.MathUtils.smoothstep(air.blowing, 0, tuning.sail.hangsBelow);
     /** The harder it blows, the more there is for the cloth to do: a lazy ripple in a light air, a lively one in a gust. */
     sail.uFlutter.value = Math.min(1, air.blowing / tuning.sail.livelyAt);
     /**

@@ -344,13 +344,13 @@ export const tuning = {
     /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
     livelyAt: 10,
     /** With no wind: how far the leech falls in toward the mast, how far the cloth sags, and the folds it hangs in. */
-    gather: 0.13,
-    sag: 0.4,
-    folds: 3,
-    fold: 0.16,
+    gather: 0.22,
+    sag: 0.8,
+    folds: 3.5,
+    fold: 0.22,
     /** How far the ripple and the leech's shake move the cloth, in world units. */
-    ripple: 0.13,
-    shake: 0.17,
+    ripple: 0.18,
+    shake: 0.24,
     /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
     luffFrom: 0.12,
     luffFade: 0.55,
