@@ -84,8 +84,11 @@ export const tuning = {
     /** The family resting on the pond beyond the crest: how many of them, and how wide the raft is spread. */
     family: 15,
     raft: 6.5,
-    /** How far the haze is allowed to lift at the crest. Thinner than this and the next island shows through it. */
-    haze: 0.42,
+    /**
+     * How far the air is allowed to see at the crest. The reveal looks out over falling ground and open water
+     * now, so the veil has to stand between the swans and the next island in the chain, which is behind them.
+     */
+    haze: 0.86,
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
     looks: 11,
