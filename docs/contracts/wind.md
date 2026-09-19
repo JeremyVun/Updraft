@@ -51,6 +51,8 @@ A splat pushes air along the segment from `(ax, az)` to `(bx, bz)`, with a Gauss
 
 Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and lift in the middle of circles traced with the cursor: `charge` winds up with how fast the stroke's heading turns, `tuning.pointer.twirlFrom`/`twirlFull`, and runs down when the circling stops. Nothing needs a button press. While a chapter `invitesFlight`, `main.ts` sets `input.anchor` to the cygnet, and circles drawn within `tuning.pointer.anchorNear` screen heights of it stand their column at the bird rather than at the cursor's ground point, which under a low camera is a long ellipse that would put the air anywhere but under it) and the glider's wake when it skims low.
 
+Pointer strokes project both screen endpoints through the current camera, so camera motion cannot generate wind. An idle pointer performs no ground picks; the last gesture's gust settles at its existing world point. A new touch or re-entry starts a fresh stroke without connecting it to the previous contact.
+
 The cygnet reads `lift` at its own position (plus `tuning.colt.reach` around it) and takes off above `Cygnet.liftToFly` once it has been held there for `liftFor` seconds (`Cygnet.needs`; a flick anywhere else, `tuning.summit` at the end). Gust `energy` under it counts as lift at `tuning.colt.gustLift`, enough to make it hope and open its wings but never to lift it: the updraft is the spiral the wind shows the player (`Coax`, drawn by `fx/swirl.ts`) and the player draws it.
 
 ## Deliberate exceptions
@@ -60,3 +62,47 @@ These effects bypass the field on purpose. Keep them explicit when changing any 
 - **Pushing the glider.** The field is pushed where the cursor meets the ground, but the glider flies well above that point. A stroke that passes over the glider on screen pushes it directly (`Glider.brush`), so the player pushes what they see.
 - **The updraft funnel for petals.** Petals spiral up an explicit funnel around the middle of the traced circles (`input.updraftAt`) (`Petals.update`, `uUpdraft`: centre, strength, radius). They are drawn in along the ground and spill out at the top. The funnel fades over about 1.5 s after release.
 - **Brushing gulls.** Gulls also fly far above the ground point the stroke pushes, so a stroke that passes over a gull on screen shoves it directly (`Gulls.update`, `screenBrush`), and it flaps to recover.
+- **Unthreading the birches scarf.** `BirchScarf.brush` tests moving strokes at the active tangle in screen
+  space: upward for the fork, horizontal for the trunk and outward for the bow. These directed strokes
+  accumulate permanent knot progress and deposit wind at the cloth; ambient wind only moves the drape.
+  Only the tangle the child has reached can open. The final gathering into the sail is a scripted reward.
+
+## Storm passage
+
+The drowned village caps hull drive with `Boat.speedLimit` while leaving the sail exposed. Storm pressure
+(`squallPress`) mostly spills (`squallHolds`); `squallLuff` shakes the cloth without multiplying the boat's speed.
+Tight turns also ease the drive. Leeway is bounded in a capped passage and attenuated close to the final mooring. These do not change the wind
+field. The passage cap is reapplied after checkpoint placement and reset on other crossings or a new berth.
+
+Rain's storm slant is an explicit weather effect: it adds `tuning.storm.rainLean` along the prevailing breeze,
+without writing a gust into the field. Lightning and delayed thunder are driven by `StormWeather` after the
+palette is set; shared ambient light and the sky's `uLightning` illuminate the world together. They do not light
+the embers or let the child bypass the forest's light mechanic. Storm cover also veils the moon and closes the
+view to 62 paces; flashes briefly thin that veil. `LighthouseLight` drives `uHarbourLight` and
+`uHarbourDirection`, shared by the beam, boat, creature and water shaders. Its clock begins with the storm,
+fades out at nineteen seconds, and resets in calm weather. It is independent of `uEmberLight`.
+
+## Opening cove shelter
+
+`Boat.shelter` (0 exposed, 1 sheltered) attenuates prevailing wind and weather in both `sailWind.blowing` and
+`sailWind.taken`. Local gusts remain effective. The first island sets shelter to 1; once afloat it decays at
+`tuning.opening.departureRate`. A new berth resets shelter; restoring the opening companion checkpoint reinstates it. Its deeper hanging folds ease out with the same value. This is separate from
+`becalmed`, which spills the weather's drive while allowing the cloth to keep moving.
+
+During the opening push-off, `IslandChapter` writes a short, low-energy travelling splat across the cove. It
+uses the regular wind field, so grass and sail feel its arrival through their existing springs.
+
+## Washing passages
+
+`world/lines-passage.ts` samples local felt wind across each curtain. Gust energy and speed together accumulate
+its opening; ambient wind alone cannot solve it. Broad sweeps in either direction work. `WashingCurtain.brush`
+projects points on the active sheet into the camera, then deposits a splat **at the sheet** when a moving pointer
+passes over it. This corrects the low camera's ground projection behind the hanging cloth. It writes the same
+field used by nearby grass and washing; it never increments puzzle progress directly. Only the waiting curtain
+receives this screen targeting. There is no timed assistance: the first sheet instead shows sideways invitation
+traces (`fx/washing-invitation.ts`) that draw without writing wind or progress. Real sweeps accumulate without
+losing progress, and the invitation fades while those sweeps are arriving.
+
+Completed curtains hold their opening as story state so they cannot fall onto either traveller. The family
+reveal after the last passage is a scripted reward, with a matching breeze in the field; its garment and door
+animation asks for no further hidden gesture. The plane remains held throughout the passages.

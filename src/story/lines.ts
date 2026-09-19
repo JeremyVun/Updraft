@@ -1,393 +1,383 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
-import { Sway, feltWind, type WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
-import { KITE_AT } from '../world/kite';
+import { DOOR_EXIT, DOOR_SHIFT, doorway } from '../world/doorway';
 import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
+import { CURTAINS, LINES_BERTH, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
 
-/** The island's south beach, where the boat runs ashore. */
-export const LINES_LANDING = new THREE.Vector2(14, -308);
-/** The boat is drawn up on the far shore before they get there. Nobody put it there. */
-export const LINES_BERTH = new THREE.Vector3(14, 0, -408);
-
-/**
- * Up over the top of the island and down the other side. It is a hundred paces of ground, not a crossing: the
- * room is meant to swallow them in washing, so the way weaves between the lines rather than covering distance.
- * The washing is hung around it (`lineField` takes this same path), leaving an alley that wanders the way a
- * person would: wherever the child is standing, the open ground is the way on, and nobody is ever told so.
- */
-export const LINES_WALK = [
-  new THREE.Vector2(-4, -322),
-  new THREE.Vector2(32, -350),
-  new THREE.Vector2(-4, -380),
-  new THREE.Vector2(14, -400),
-];
-const ROUTE = LINES_WALK;
-
-/** The middle of the family's line, and the way it runs: the wind has to blow along it to fill them. */
+export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
 const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
-const FAMILY_DIR = new THREE.Vector3().subVectors(FAMILY_LINE.b, FAMILY_LINE.a).setY(0).normalize();
-
-/** How near the boat either of them has to be before the child takes the hint and pushes off. */
-const BOARDING = 22;
-/** And if the washing is more interesting than the boat, they go anyway after this long on the last stretch. */
-const LAST_LEG_PATIENCE = 50;
-
-type Beat = 'ashore' | 'wonder' | 'walk' | 'toBoat' | 'push' | 'aboard';
+const ROUTE = LINES_WALK;
+type Beat = 'ashore' | 'wonder' | 'approach' | 'curtain' | 'birdThrough' | 'childThrough' | 'familyApproach' | 'family' | 'throughDoor' | 'shore' | 'walk' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
-/**
- * The island of lines: a bare hill strung pole to pole with washing, hung out with nobody there. The first thing
- * the dream hands over that is unmistakably home, and the first place the wind is pure delight — one gust lifts a
- * whole band of sheets at once, and the child runs through them after the plane.
- */
+/** Small beneath somebody's washing. The wind makes a way, and the little bird learns to go first. */
 export class LinesChapter implements Chapter {
   beat: Beat = 'ashore';
   readonly breeze = 1;
   readonly worldLife = 1;
-  pace = 0.4;
-  readonly haze = 0.85;
+  pace = 0.65;
+  readonly haze = 0.9;
   readonly dusk = 0;
-  readonly shot: Shot = { target: new THREE.Vector3(), distance: 34, height: 10 };
   readonly music = 'lines' as const;
   readonly season = 0.2;
+  readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 5 };
   readonly focus = new THREE.Vector3();
-  private play: Play = 'carry';
-  private leg = 0;
-  private beatStart = 0;
-  private holdUntil = 0;
-  private now = 0;
-  private cheered = false;
-  private flown = false;
-  private lastLegAt = 0;
-  private lookedUp = 0;
-  /** The three on the line by the door: how long they have been people, when the child last stopped for them. */
-  private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
-  private readonly familySway = new Sway();
-  private held = 0;
-  private gazeUntil = 0;
-  private gazed = 0;
-  private breezeUntil = -1;
+  private readonly flat = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
-  private readonly crest = new THREE.Vector3(14, 17, -360);
+  private readonly watching = new THREE.Vector3();
+  private readonly from = new THREE.Vector3(0.12, 0, 1).normalize();
+  private gate = 0;
+  private leg = ROUTE.length - 1;
+  private play: Play = 'carry';
+  private now = 0;
+  private beatStart = 0;
+  private holdUntil = 0;
+  private birdArrived = -1;
+  private lastLegAt = 0;
+  private noticed = false;
+  private doorElapsed = 0;
+  private readonly thresholdEye = new THREE.Vector3();
+  private readonly thresholdLook = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
-    const { child, plane, boat } = cast;
-    plane.homeRadius = 30;
-    child.dismount();
-    boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
+    const { child, plane, boat, cygnet } = cast;
+    doorway.reset();
+    CURTAINS.forEach(c => c.reset());
+    washingPassage.active = null;
+    family.set(0, 0); door.open = 0;
+    plane.homeRadius = 20;
+    child.dismount(); child.stroll = 1;
+    cygnet.mayFly = false;
+    cygnet.stay = false;
+    cygnet.errand = null;
+    // Keep the arrival boat on its beach until the washing hides it from view.
+    boat.canGround = false; boat.steerFor = null;
     child.walkTo(LINES_LANDING.x - 2, LINES_LANDING.y - 12, false, () => this.to('wonder'), 0.9);
   }
 
   get scripted(): boolean {
-    return this.beat !== 'walk';
+    return this.beat === 'ashore' || this.beat === 'wonder' || this.beat === 'family' ||
+      this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
   }
-
-  get done(): boolean {
-    return this.beat === 'aboard';
+  get done(): boolean { return this.beat === 'aboard'; }
+  get trodden(): THREE.Vector3 | null {
+    if (this.beat === 'throughDoor') return this.flat.set(11, -398, 12);
+    if (this.gate < CURTAINS.length) {
+      const c = CURTAINS[this.gate];
+      return this.flat.set(c.center.x, c.center.z, 8);
+    }
+    return this.beat === 'family' || this.beat === 'familyApproach' ? this.flat.set(11, -388, 9) : null;
+  }
+  get checkpoint(): string | null {
+    if (this.beat === 'approach' && this.gate > 0) return `curtain-${this.gate}`;
+    return this.beat === 'walk' ? 'family' : null;
+  }
+  saveCheckpoint(): number[] { return this.beat === 'walk' ? [this.leg, +door.opened] : [this.gate, 0]; }
+  restoreCheckpoint(point: string, data: number[]): void {
+    const { child: c, cygnet, plane } = this.cast;
+    c.stop(); c.lean = 0; c.lookAt = null;
+    cygnet.follow(); cygnet.stay = false; cygnet.errand = null; cygnet.watch(null); cygnet.pace = 1;
+    plane.hold(c);
+    if (point === 'family') {
+      doorway.reset(true);
+      // Migrate the former north-beach checkpoint into the new shore.
+      if (c.position.x < 150) { c.place(DOOR_EXIT.x, DOOR_EXIT.z - 5, Math.PI); cygnet.release(c.position.clone().add(new THREE.Vector3(1, 0, -1))); cygnet.seating.snap(); }
+      this.cast.boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
+      this.cast.boat.canGround = false;
+      // Existing two-number family saves remain valid after the route and encounter change.
+      this.gate = CURTAINS.length;
+      CURTAINS.forEach(g => g.reset(true));
+      this.leg = ROUTE.length - 1;
+      this.to('walk'); this.play = 'hold'; this.holdUntil = 1;
+      door.open = data[1] ? 1 : 0;
+    } else {
+      this.gate = THREE.MathUtils.clamp(Math.floor(data[0]), 1, CURTAINS.length - 1);
+      CURTAINS.forEach((g, i) => g.reset(i < this.gate));
+      this.approach();
+    }
   }
 
   private to(beat: Beat): void {
-    this.beat = beat;
-    this.beatStart = this.now;
+    // The boat must already wait beyond the door when it opens, but never vanish at landing.
+    if (beat === 'family') this.cast.boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
+    this.beat = beat; this.beatStart = this.now;
   }
-
-  private get t(): number {
-    return this.now - this.beatStart;
-  }
+  private get t(): number { return this.now - this.beatStart; }
 
   update(dt: number, time: number): void {
     this.now = time;
-    const { child: c, plane: p, boat } = this.cast;
-    /**
-     * Over the top of the hill the plane's home moves to the boat on the far beach, so however the player blows
-     * it about it drifts down there — and chasing it is how they find the way off the island.
-     */
-    if (!p.departing) {
-      const last = this.leg === ROUTE.length - 1;
-      if (last) {
-        p.home.set(boat.position.x, 0, boat.position.z);
-        p.homeRadius = 22;
-      } else {
-        const t = this.target();
-        const dx = t.x - c.position.x;
-        const dz = t.y - c.position.z;
-        const d = Math.hypot(dx, dz) || 1;
-        const reach = Math.min(d, 18);
-        p.home.set(c.position.x + (dx / d) * reach, 0, c.position.z + (dz / d) * reach);
-        p.homeRadius = 20;
-      }
+    const { child: c, plane: p, cygnet, boat, wind } = this.cast;
+    const active = this.gate < CURTAINS.length ? CURTAINS[this.gate] : null;
+    washingPassage.active = this.beat === 'curtain' ? active : null;
+    CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active));
+    if (this.beat === 'walk') {
+      p.home.set(boat.position.x, boat.position.y, boat.position.z + tuning.linesPassage.shorePlaneInset);
+      p.homeRadius = tuning.linesPassage.shorePlaneRadius;
+    } else if (active) {
+      p.home.copy(active.before); p.homeRadius = 12;
     }
-
     switch (this.beat) {
-      case 'ashore':
-        break;
       case 'wonder':
-        /** A moment looking up the hill at all of it before the game starts again. */
-        c.lookAt = this.crest;
-        if (this.t > 4.5 && !c.busy) this.setDown();
+        c.lookAt = CURTAINS[0].center;
+        if (this.t > 3.5 && !c.busy) this.setDown();
         break;
-      case 'walk':
-        this.family(dt, time);
-        if (time < this.gazeUntil) c.lookAt = FAMILY_MID;
-        else this.updateWalk(time);
-        break;
-      case 'push':
-        if (this.t > 0.9 && !boat.afloat) boat.launch();
-        if (this.t > 2.3) {
-          this.to('aboard');
-          c.ride(boat.seat(this.tmp), boat.yaw);
+      case 'curtain': {
+        const g = active!;
+        c.lookAt = this.t < 2 ? cygnet.position : g.center;
+        if (cygnet.position.distanceTo(g.birdBefore) < 1) {
+          cygnet.stay = true;
+          if (!this.noticed) {
+            this.noticed = true;
+            cygnet.does(this.gate === 0 ? 'peer' : 'look-back', c.position, 2.5);
+          }
+        }
+        if (g.charge >= 1 && this.t > tuning.linesPassage.birdLead && this.noticed) {
+          g.cleared = true;
+          cygnet.bind(0.035);
+          cygnet.stay = false; cygnet.errand = g.after;
+          cygnet.watch(g.after); cygnet.pace = 0.8;
+          cygnet.does('nibble', g.after, 1.6);
+          this.birdArrived = -1;
+          this.to('birdThrough');
+          cue('delight');
         }
         break;
-      default:
+      }
+      case 'birdThrough': {
+        c.lookAt = cygnet.position;
+        const g = active!;
+        if (cygnet.position.distanceTo(g.after) < 1.2) {
+          cygnet.stay = true;
+          cygnet.watch(this.watching.copy(c.position).setY(c.position.y + 1.5));
+          if (this.birdArrived < 0) {
+            this.birdArrived = time;
+            cygnet.does('look-back', c.position, 2.5);
+          }
+          if (time - this.birdArrived > tuning.linesPassage.lookBack) {
+            this.to('childThrough');
+            c.walkTo(g.center.x - 1.1, g.after.z - 0.8, false, () => this.passed(), 0.6);
+          }
+        }
+        break;
+      }
+      case 'childThrough':
+        c.lookAt = cygnet.position;
+        c.lean = 0.3 * Math.exp(-Math.pow((c.position.z - active!.center.z) / 2.3, 2));
+        break;
+      case 'family':
+        this.reveal(dt);
+        break;
+      case 'throughDoor': {
+        const duration = tuning.linesPassage.doorApproach + tuning.linesPassage.doorCross;
+        const through = c.position.z < -399 && cygnet.position.z < -399;
+        if (this.doorElapsed < duration * 0.75 || through) this.doorElapsed += dt;
+        if (this.doorElapsed >= duration && through) this.crossDoor();
+        break;
+      }
+      case 'shore':
+        if (cygnet.errand && cygnet.position.distanceTo(cygnet.errand) < 0.7) cygnet.stay = true;
+        if (this.t > tuning.linesPassage.shorePause) {
+          doorway.travelling = false;
+          cygnet.errand = null; cygnet.stay = false; cygnet.watch(null);
+          this.to('walk'); this.play = 'hold'; this.holdUntil = this.now + 0.8; this.lastLegAt = this.now;
+        }
+        break;
+      case 'walk':
+        family.multiplyScalar(Math.exp(-dt * 0.35));
+        this.updateWalk();
+        break;
+      case 'push':
         break;
     }
-
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
     this.frame();
   }
 
-  /** The first thing they do on solid ground is put it down, so it can walk the hill on its own legs. */
   private setDown(): void {
-    const { child: c, cygnet, carry } = this.cast;
+    const { child: c, cygnet, carry, plane } = this.cast;
     carry.setDown(() => {
       cygnet.bind(0.08);
       c.lookAt = null;
-      this.to('walk');
-      this.play = 'carry';
-      this.throwAhead();
+      plane.hold(c);
+      this.approach();
     });
   }
 
-  private target(): THREE.Vector2 {
-    return ROUTE[Math.min(this.leg, ROUTE.length - 1)];
+  private approach(): void {
+    const { child: c, cygnet } = this.cast;
+    const g = CURTAINS[this.gate];
+    this.to('approach'); this.noticed = false;
+    cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1; cygnet.watch(g.center);
+    c.lean = 0; c.lookAt = g.center;
+    // A short walk beneath the washing, with the paper safe in hand throughout the encounter.
+    c.walkTo(g.before.x, g.before.z, c.position.distanceTo(g.before) > 16, () => {
+      c.faceToward(g.center.x, g.center.z, 1);
+      cygnet.errand = g.birdBefore;
+      cygnet.watch(g.center);
+      this.to('curtain');
+    }, 0.6);
   }
 
-  private updateWalk(time: number): void {
-    const { child: c, plane: p, boat, wind, cygnet } = this.cast;
-    if (cygnet.flying) {
-      /** If the player finds out here that they can fly it, everything else on the hill can wait. */
-      c.stop();
-      c.lookAt = cygnet.position;
-      if (!this.flown) {
-        this.flown = true;
-        c.cheer();
-        cue('delight');
-        cygnet.bind(0.2);
-      }
-      return;
+  private passed(): void {
+    const { child: c, cygnet } = this.cast;
+    c.lean = 0;
+    cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1;
+    this.gate++;
+    if (this.gate < CURTAINS.length) this.approach();
+    else {
+      this.to('familyApproach');
+      c.lookAt = FAMILY_MID;
+      cygnet.watch(FAMILY_MID);
+      c.walkTo(9.3, -385.7, false, () => {
+        c.faceToward(FAMILY_MID.x, FAMILY_MID.z, 1);
+        cygnet.errand = this.tmp.set(12.5, heightAt(12.5, -385.7), -385.7).clone();
+        this.to('family');
+      }, 0.4);
     }
-    this.flown = false;
-    const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 16 && this.leg < ROUTE.length - 1) this.leg++;
-    const last = this.leg === ROUTE.length - 1;
-    if (last && this.lastLegAt === 0) this.lastLegAt = time;
+  }
 
+  private reveal(dt: number): void {
+    const { child: c, cygnet, wind } = this.cast;
+    const k = tuning.linesPassage;
+    c.lookAt = FAMILY_MID;
+    // The breeze the player let through the last curtain reaches the three in the clearing.
+    const fill = THREE.MathUtils.smoothstep(this.t, 0.5, k.revealFill);
+    family.x += (fill - family.x) * (1 - Math.exp(-dt * 2.5));
+    family.y += (THREE.MathUtils.smoothstep(this.t, 1.5, k.revealFill + 1) - family.y) * (1 - Math.exp(-dt * 3));
+    if (this.t < k.revealFill + 1) wind.addSplat({ ax: 6, az: -390, bx: 16, bz: -390, vx: 1, vz: -5,
+      radius: 4, energy: 0.25, swirl: 0, lift: 0 });
+    if (family.y > tuning.family.doorAt && !door.opened) {
+      door.open = 1;
+      cygnet.bind(0.05);
+      completeObjective();
+    }
+    if (this.t > k.revealFill + k.revealHold && !c.busy) {
+      this.to('throughDoor'); this.doorElapsed = 0; doorway.begin();
+      cygnet.stay = false; cygnet.watch(null);
+      cygnet.errand = new THREE.Vector3(11.2, heightAt(11.2, -403), -403); cygnet.pace = 0.75;
+      c.lookAt = door.group.position;
+      c.walkTo(11, -396.8, false, () => c.walkTo(11, -402, false, undefined, 0.15), 0.15);
+    }
+  }
+
+
+  private crossDoor(): void {
+    const { child: c, cygnet, plane } = this.cast;
+    doorway.crossed = true;
+    c.stop(); c.place(c.position.x + DOOR_SHIFT.x, c.position.z + DOOR_SHIFT.z, c.yaw);
+    cygnet.position.add(DOOR_SHIFT);
+    cygnet.position.y = Math.max(heightAt(cygnet.position.x, cygnet.position.z), 0);
+    cygnet.seating.snap();
+    cygnet.errand = new THREE.Vector3(DOOR_EXIT.x + 1.7, heightAt(DOOR_EXIT.x + 1.7, DOOR_EXIT.z - 7), DOOR_EXIT.z - 7);
+    cygnet.stay = false; cygnet.watch(c.position); cygnet.pace = 1;
+    plane.hold(c); c.lookAt = this.cast.boat.position;
+    this.to('shore');
+  }
+
+  private updateWalk(): void {
+    const { child: c, plane: p, boat } = this.cast;
     if (this.play === 'watch') {
       c.lookAt = p.position;
-      /** A strong gust lifts a whole hillside of washing at once, and that is worth cheering at. */
-      const w = wind.sample(c.position.x, c.position.z, this.tmp2);
-      if (!this.cheered && (Math.hypot(w.x, w.z) > 11 || p.position.y - heightAt(p.position.x, p.position.z) > 8)) {
-        this.cheered = true;
-        c.cheer();
-        cue('delight');
-      }
       if (p.landed) this.fetch();
-      else if (!c.moving && Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 9) {
-        c.walkTo(p.position.x, p.position.z, true, undefined, 6);
-      }
+      else if (!c.moving && Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 9)
+        c.walkTo(p.position.x, p.position.z, true, undefined, 5);
     } else if (this.play === 'fetch') {
       c.lookAt = p.position;
       if (!p.landed && p.airborne) this.play = 'watch';
     } else if (this.play === 'hold' && !c.busy) {
-      if (last) c.lookAt = boat.position;
-      const nearBoat = Math.hypot(p.position.x - boat.position.x, p.position.z - boat.position.z) < BOARDING;
-      const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
-      const waited = this.lastLegAt > 0 && time - this.lastLegAt > LAST_LEG_PATIENCE;
-      if (last && (nearBoat || childNear || waited)) this.board();
-      else if (time > this.holdUntil) this.throwAhead();
-    }
-
-    /** Coming over the top, the kite standing over the far beach catches their eye, and the player's with it. */
-    if (this.lookedUp === 0 && c.position.z < this.crest.z) this.lookedUp = time + 3;
-    if (time < this.lookedUp) c.lookAt = KITE_AT;
-  }
-
-  private readonly tmp2 = { x: 0, z: 0, energy: 0, lift: 0 };
-
-  /**
-   * The puzzle of the island, if it is one: a man's shirt, a small jumper and a woman's blouse hang on the line
-   * by the door. A steady wind along the line fills all three, and for as long as it holds they are people; held
-   * a little longer, their hands reach for each other and the door swings open on the far beach and the boat.
-   * When the wind drops they are washing again. Nothing here holds anybody: the door shut bars nothing, and a
-   * child who walks under without playing is shown them once by a breeze of the island's own.
-   */
-  private family(dt: number, time: number): void {
-    const { wind, child: c } = this.cast;
-    const k = tuning.family;
-    const w = feltWind(wind.sample(FAMILY_MID.x, FAMILY_MID.z, this.air), wind.calm);
-    this.familySway.update(w.x, w.z, dt);
-    const along = Math.abs(this.familySway.x * FAMILY_DIR.x + this.familySway.z * FAMILY_DIR.z);
-    const want = THREE.MathUtils.smoothstep(along, k.fillFrom, k.fillFull);
-    family.x += (want - family.x) * (1 - Math.exp(-dt * (want > family.x ? 2.5 : 0.8)));
-    this.held = family.x > 0.5 ? this.held + dt : Math.max(0, this.held - dt * 2);
-    const hands = THREE.MathUtils.smoothstep(this.held, 0.5, k.holdFor);
-    family.y += (hands - family.y) * (1 - Math.exp(-dt * 3));
-    if (this.held > k.holdFor && !door.opened) {
-      door.open = 1;
-      cue('delight');
-      if (!c.busy) c.cheer();
-    }
-
-    const near = Math.hypot(c.position.x - FAMILY_MID.x, c.position.z - FAMILY_MID.z);
-    /** A child who comes under them without having filled them is shown them once, briefly, by the island. */
-    if (this.breezeUntil < 0 && near < k.stopWithin + 6 && family.x < 0.2 && this.held === 0) this.breezeUntil = time + k.breezeFor;
-    if (time < this.breezeUntil) {
-      wind.addSplat({
-        ax: FAMILY_LINE.a.x,
-        az: FAMILY_LINE.a.z,
-        bx: FAMILY_LINE.b.x,
-        bz: FAMILY_LINE.b.z,
-        vx: FAMILY_DIR.x * k.breezeSpeed,
-        vz: FAMILY_DIR.z * k.breezeSpeed,
-        radius: 5,
-        energy: 0.8,
-        swirl: 0,
-        lift: 0,
-      });
-    }
-
-    /** Under them while they are people, the child stops and looks up. Not for long, and not more than a few times. */
-    if (family.x > 0.5 && near < k.stopWithin && time > this.gazeUntil + 5 && this.gazed < 3 && !this.cast.cygnet.flying) {
-      this.gazed++;
-      this.gazeUntil = time + k.looksFor;
-      c.stop();
-      this.gazing = this.play;
-    } else if (this.gazeUntil > 0 && time >= this.gazeUntil && this.gazing !== null) {
-      /** Stopped in the middle of going for the plane, they go for it again. */
-      if (this.gazing === 'fetch') this.fetch();
-      this.gazing = null;
+      const nearBoat = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < 16;
+      if (nearBoat || (this.lastLegAt > 0 && this.now - this.lastLegAt > 45)) this.board();
+      else if (this.now > this.holdUntil) this.throwAhead();
     }
   }
-
-  private gazing: Play | null = null;
 
   private throwAhead(): void {
-    const c = this.cast.child;
-    const t = this.leg === ROUTE.length - 1 ? this.cast.boat.position : this.target();
-    const tx = t instanceof THREE.Vector2 ? t.x : t.x;
-    const tz = t instanceof THREE.Vector2 ? t.y : t.z;
-    const angle = Math.atan2(tx - c.position.x, tz - c.position.z) + (Math.random() - 0.5) * 0.7;
-    c.throwToward(c.position.x + Math.sin(angle) * 16, c.position.z + Math.cos(angle) * 16, () => {
-      this.cast.plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 7.4, 5.4, Math.cos(angle) * 7.4));
-      this.play = 'watch';
-      this.cheered = false;
-      c.lookAt = this.cast.plane.position;
+    const { child: c, plane, boat } = this.cast;
+    const angle = Math.atan2(boat.position.x - c.position.x, boat.position.z + tuning.linesPassage.shorePlaneInset - c.position.z);
+    c.throwToward(boat.position.x, boat.position.z + tuning.linesPassage.shorePlaneInset, () => {
+      plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 7.4, 5.4, Math.cos(angle) * 7.4));
+      this.play = 'watch'; c.lookAt = plane.position;
     });
   }
-
   private fetch(): void {
     const { child: c, plane: p } = this.cast;
     this.play = 'fetch';
     c.walkTo(p.position.x, p.position.z, true, () => {
       if (this.play !== 'fetch') return;
       if (Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 2.6 || !p.landed) {
-        this.play = 'watch';
-        return;
+        this.play = 'watch'; return;
       }
-      c.pickUp(() => {
-        p.hold(c.handPosition(this.hand), c.yaw);
-        this.play = 'hold';
-        this.holdUntil = this.now + 0.6 + Math.random() * 0.8;
-      });
+      c.pickUp(() => { p.hold(c); this.play = 'hold'; this.holdUntil = this.now + 0.8; });
     }, 1.2);
   }
-
   private board(): void {
-    const { child: c, boat } = this.cast;
-    this.to('toBoat');
-    c.lookAt = null;
-    c.walkTo(boat.position.x - 1.4, boat.position.z + 2.6, false, () => {
+    const { child: c, boat, cygnet } = this.cast;
+    washingPassage.active = null;
+    cygnet.stay = false; cygnet.errand = null; cygnet.watch(null);
+    this.to('toBoat'); c.lookAt = null;
+    const beside = boat.boardingPoint(this.tmp);
+    c.walkTo(beside.x, beside.z, false, () => {
       this.cast.carry.gatherUp(() => {
-        c.lookAt = null;
-        this.to('push');
+        c.lookAt = null; this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);
-        c.push();
+        c.board(boat, () => {
+          this.cast.cygnet.mayFly = true;
+          this.to('aboard');
+        });
       });
     }, 0.5);
   }
 
   private frame(): void {
     const c = this.cast.child.position;
-    const p = this.cast.plane.position;
     const s = this.shot;
-    s.from = undefined;
-    if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
+    const k = tuning.linesPassage;
+    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined;
+    if (this.beat === 'throughDoor' || this.beat === 'shore') {
+      const base = door.group.position;
+      const total = k.doorApproach + k.doorCross;
+      const progress = THREE.MathUtils.smoothstep(this.doorElapsed, 0, total);
+      if (this.beat === 'throughDoor') {
+        this.thresholdEye.set(base.x, base.y + 1.85, base.z + 0.04).lerp(doorway.fromEye, 1 - progress);
+        this.thresholdLook.set(base.x, base.y + 1.85, base.z - 14).lerp(doorway.fromLook, 1 - THREE.MathUtils.smoothstep(this.doorElapsed, 0, k.doorApproach));
+      } else {
+        const settle = THREE.MathUtils.smoothstep(this.t, 0, k.shorePause);
+        this.thresholdEye.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z + 0.04);
+        this.thresholdEye.lerp(this.tmp.set(DOOR_EXIT.x + 1, DOOR_EXIT.y + 5, DOOR_EXIT.z + 7), settle);
+        this.thresholdLook.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z - 14);
+      }
+      s.eye = this.thresholdEye; s.target.copy(this.thresholdLook); s.exact = true;
+      this.focus.copy(s.target); return;
+    }
+    if (this.gate < CURTAINS.length && this.beat !== 'ashore' && this.beat !== 'wonder') {
+      const g = CURTAINS[this.gate];
+      const waiting = this.beat !== 'approach';
+      const x = waiting ? g.center.x : c.x * 0.7 + g.center.x * 0.3;
+      const z = waiting ? g.center.z + 0.7 : c.z - 3;
+      s.target.set(x, heightAt(x, z) + 2.8, z);
+      s.distance = waiting ? k.curtainDistance : k.walkDistance;
+      s.height = waiting ? k.curtainHeight : k.walkHeight;
+      this.pace = waiting ? 1.1 : 0.75;
+    } else if (this.beat === 'familyApproach' || this.beat === 'family') {
+      s.target.copy(FAMILY_MID).setY(heightAt(11, -390) + 2.8);
+      s.from = FAMILY_FACE; s.distance = 17; s.height = 0.3;
+      this.pace = 0.7;
+    } else if (this.beat === 'ashore' || this.beat === 'wonder') {
+      s.target.set(c.x, heightAt(c.x, c.z) + 4, c.z - 9);
+      s.distance = 25; s.height = 4;
+      this.pace = 0.45;
+    } else {
       const b = this.cast.boat.position;
-      s.target.set((c.x + b.x) / 2, b.y + 2.2, (c.z + b.z) / 2 - 2);
-      s.distance = 26;
-      s.height = 6.5;
-      this.pace = 0.35;
-      this.focus.copy(b);
-      return;
-    }
-    if (this.cast.cygnet.flying) {
-      const k = this.cast.cygnet.position;
-      const ground = Math.max(heightAt(k.x, k.z), 0);
-      s.target.set(c.x * 0.35 + k.x * 0.65, Math.max(ground + 1.8, k.y * 0.8 + ground * 0.2), c.z * 0.35 + k.z * 0.65);
-      s.distance = 20 + Math.hypot(k.x - c.x, k.z - c.z) * 0.6;
-      s.height = 5 + (k.y - ground) * 0.5;
+      s.target.set(c.x * 0.65 + b.x * 0.35, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * 0.65 + b.z * 0.35);
+      s.distance = 24; s.height = 7;
       this.pace = 0.5;
-      this.focus.copy(k);
-      return;
     }
-    /**
-     * Under the three on the line, looking up: the camera comes down low behind the child and looks up with them,
-     * so the clothes stand against the sky with the door beyond, and the child is small under their family.
-     */
-    const gazing = this.gazeUntil > 0 && this.now < this.gazeUntil + 1.2;
-    if (gazing) {
-      s.target.set(c.x * 0.3 + FAMILY_MID.x * 0.7, FAMILY_MID.y - 1.1, c.z * 0.3 + FAMILY_MID.z * 0.7);
-      s.from = FAMILY_FACE;
-      s.distance = 10;
-      s.height = -1.6;
-      this.pace = 0.55;
-      this.focus.copy(FAMILY_MID);
-      return;
-    }
-    if (this.beat === 'ashore' || this.beat === 'wonder') {
-      s.target.set(c.x, Math.max(heightAt(c.x, c.z), 0) + 5, c.z - 12);
-      s.distance = 30;
-      s.height = 8;
-      this.pace = 0.3;
-      this.focus.copy(c);
-      return;
-    }
-    const pw = this.cast.plane.held ? 0 : 0.3;
-    const fx = c.x * (1 - pw) + p.x * pw;
-    const fz = c.z * (1 - pw) + p.z * pw - 4;
-    const ground = Math.max(heightAt(fx, fz), 0);
-    s.target.set(fx, ground + 3.5, fz);
-    /** Capped: on a hill this crowded, a wide shot is a shot with the child somewhere behind a sheet in it. */
-    s.distance = Math.min(30, 18 + Math.hypot(p.x - c.x, p.z - c.z) * 0.4);
-    s.height = s.distance * 0.32;
-    /**
-     * Coming over the crest, the shot opens out and takes in the far beach with the boat on it. Otherwise the
-     * child walks down the back of the hill into a frame that shows the player nothing they can act on.
-     */
-    const b = this.cast.boat.position;
-    const over = THREE.MathUtils.smoothstep(this.crest.z + 6 - c.z, 0, 32);
-    if (over > 0) {
-      /** Rising rather than pulling back: from further away there is only more washing between them and us. */
-      s.target.lerp(this.tmp.set(b.x, Math.max(b.y, 0) + 2, b.z), 0.15 * over);
-      s.distance += Math.hypot(b.x - fx, b.z - fz) * 0.1 * over;
-      s.height += 3 * over;
-    }
-    this.pace = 0.4;
-    this.focus.set(fx, ground, fz);
+    s.distance *= Math.max(1, 0.53 / (window.innerWidth / window.innerHeight));
+    this.focus.copy(s.target);
   }
 }

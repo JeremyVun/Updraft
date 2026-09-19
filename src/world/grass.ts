@@ -104,7 +104,7 @@ float birchFloorAt(vec2 xz) {
 }
 /** How much of its height a blade keeps on the cropped islands: grazed on the lines, shorter under the birches. */
 float croppedAt(vec2 xz) {
-  float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${ISLES.lines.z}.0)) / vec2(${ISLES.lines.rx}.0, ${ISLES.lines.rz}.0)));
+  float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz));
 }
 /** 1 over the home island, where the pasture is let grow lush for the last hill. */
@@ -619,6 +619,7 @@ void main() {
 }`;
 
 const FRAG = /* glsl */ `
+uniform vec3 uRoom;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform vec3 uSkyAmbient;
@@ -638,6 +639,8 @@ in float vSun;
 in vec4 vFlower;
 
 void main() {
+  if (distance(vWorld.xz, vec2(240.0, -460.0)) < 48.0) discard;
+  if (uRoom.z > 0.0 && distance(vWorld.xz, uRoom.xy) > uRoom.z) discard;
   // Multisampling evaluates a sliver of a blade outside its own edges, where t extrapolates far past 1 and lights a pixel like a spark.
   float T = clamp(vT, 0.0, 1.0);
   float sun = clamp(vSun, 0.0, 1.0);

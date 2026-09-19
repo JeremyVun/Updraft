@@ -8,6 +8,7 @@ import { ShoreBake } from './water/shore';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { rippleTexture } from './water/textures';
+import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
 
 /** Vertex spacing of the sea near the camera, and how far that even spacing reaches before the mesh opens out. */
 const STEP = 1.9;
@@ -54,6 +55,10 @@ function seaGrid(segments: number): THREE.BufferGeometry {
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
+${WIND_WAVES_GLSL}
+vec3 surfaceShift(vec2 p, float distanceToCamera) {
+  return swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera), 0.0);
+}
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
 out vec3 vSwell;
@@ -62,14 +67,11 @@ void main() {
   vec2 xz = w.xz;
   float fromCamera = length(cameraPosition.xz - xz);
   float height = swellHeight(xz, fromCamera);
-  /** All the player's wind does to the shape of the sea: a little chop in the small waves where a gust runs. */
-  vec4 wind = texture(uWindTex, clamp(domainUv(xz), 0.0, 1.0));
-  vec2 gustAlong = normalize(wind.xy + vec2(1e-4, 0.0));
-  float chop = ${glsl(tuning.water.chop)} * smoothstep(0.1, 0.8, wind.z) * chopHere(xz, fromCamera);
+  // Neighbour samples include the envelope gradient as well as the travelling crests.
   const float E = 1.5;
-  vec3 at = swellShift(xz, height) + windChop(xz, gustAlong, chop);
-  vec3 along = vec3(E, 0.0, 0.0) + swellShift(xz + vec2(E, 0.0), height) + windChop(xz + vec2(E, 0.0), gustAlong, chop) - at;
-  vec3 across = vec3(0.0, 0.0, E) + swellShift(xz + vec2(0.0, E), height) + windChop(xz + vec2(0.0, E), gustAlong, chop) - at;
+  vec3 at = surfaceShift(xz, fromCamera);
+  vec3 along = vec3(E, 0.0, 0.0) + surfaceShift(xz + vec2(E, 0.0), fromCamera) - at;
+  vec3 across = vec3(0.0, 0.0, E) + surfaceShift(xz + vec2(0.0, E), fromCamera) - at;
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
@@ -79,6 +81,7 @@ void main() {
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SURF_GLSL}
+${WIND_WAVES_GLSL}
 uniform sampler2D uRipple;
 uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
@@ -198,32 +201,18 @@ void main() {
   vec2 edge = min(uv, 1.0 - uv);
   /** Wide, because the wind beyond the window is only an approximation of it and the join must not show. */
   float inside = smoothstep(0.0, 0.11, min(edge.x, edge.y));
+  if (roomHides(xz)) inside = 0.0;
   Footprint fp = footprintOf(xz);
   float footprint = max(length(fp.dx), length(fp.dy));
 
-  vec4 wind = texture(uWindTex, clamp(uv, 0.0, 1.0));
-  vec2 flow = wind.xy;
-  if (inside < 1.0) {
-    /** Beyond the window there is only the prevailing breeze. Held near its own strength, or the join shows as
-        a band of rougher water across the sea; the cat's paw below is what keeps the open water from going even. */
-    float g = fbm(xz * 0.02 - uBreeze * uTime * 0.02);
-    flow = mix(uBreeze * (0.75 + 0.5 * g), wind.xy, inside);
-  }
-  float gust = wind.z * inside;
-  float speed = length(flow);
-  vec2 along = normalize(flow + vec2(1e-4, 0.0));
+  // Weather owns the underlying ripple drift and lighting. Cursor reversals cannot move their phase.
+  float settled = length(uBreeze);
+  vec2 along = normalize(uBreeze + vec2(1e-4, 0.0));
+  vec2 flow = uBreeze;
   float paw = catsPaw(xz, along);
-  /**
-   * The weather runs the sea, and it alone decides how the sea is lit: a stroke of the player's wind is held out
-   * of the roughness below, because roughness here is what spreads the specular lobe, blurs the mirror and drops the Fresnel
-   * edge, and a patch of that under the cursor reads as a slick of oil rather than as wind.
-   */
-  float settled = min(speed, length(uBreeze) * 1.4);
   float rough = clamp(max(smoothstep(1.2, 7.5, settled) * paw, uSquall), 0.0, 1.0);
-  // Breaking water needs a sea running, not a moment's stroke, so only the weather flecks it.
   float storm = clamp(max(smoothstep(18.0, 34.0, settled) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
-  /** All the player's wind does to the look of the sea: darken the water it crosses and ruffle it. A cat's paw. */
-  float stroke = clamp(max(smoothstep(0.1, 0.75, gust), smoothstep(1.5, 7.0, speed - length(uBreeze) * 1.4)) * paw, 0.0, 1.0);
+  float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(-ground, 0.0);
@@ -247,8 +236,7 @@ void main() {
   vec2 slope = r0.xy * a0 + r1.xy * a1 + r2.xy * a2 + swell.xy * A_SWELL + vSwell.xy;
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
   /** The ruffle tilts the surface but stays out of the hidden-roughness sum, so it cannot change the shine. */
-  float ruffle = ${glsl(tuning.water.ruffle)} * stroke;
-  slope += r2.xy * ruffle + r1.xy * ruffle * 0.45;
+  slope += windWaveSlope(xz, footprint);
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
@@ -346,6 +334,7 @@ void main() {
   col = mix(col, foamColor(V, sh), clamp(foam, 0.0, 1.0));
 
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
+  col += harbourLight(vWorld) * (0.08 + 0.14 * F);
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -359,8 +348,10 @@ export class Water {
   private readonly reflection: PlanarReflection;
   private readonly shore: ShoreBake;
   private frame = 0;
+  private readonly windWaves: WindWaves;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
+    this.windWaves = new WindWaves(renderer);
     this.reflection = new PlanarReflection(renderer, scene, 0.25);
     this.shore = new ShoreBake(renderer, height);
     surfUniforms.uShoreTex.value = this.shore.target.texture;
@@ -371,6 +362,7 @@ export class Water {
         ...atmo.uniforms,
         ...surfUniforms,
         ...swellUniforms,
+        uWaterWind: this.windWaves.uniform,
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
         uMirrorMatrix: { value: this.reflection.matrix },
@@ -385,6 +377,11 @@ export class Water {
     });
     this.mesh = new THREE.Mesh(seaGrid(params.lite ? 128 : 192), mat);
     this.mesh.frustumCulled = false;
+  }
+
+  /** Advance the water independently of the air, once per simulation frame. */
+  step(dt: number): void {
+    this.windWaves.update(dt);
   }
 
   /** Re-measures the shoreline; call after the window's height bake. */

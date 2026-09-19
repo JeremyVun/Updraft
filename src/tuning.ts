@@ -3,6 +3,64 @@
  * for scale, the prevailing breeze blows at `wind.breeze` and the hardest stroke makes `pointer.maxGust`.
  */
 export const tuning = {
+  veil: {
+    /** Sparse ambient ribbons; pointer strokes only nudge the broad colour field. */
+    maxRibbons: 3,
+    maxPoints: 76,
+    pointSpacing: 3,
+    drift: 78,
+    ambientLife: 5.8,
+    ambientEvery: 3.2,
+    colourTravel: 16,
+    tapTravel: 12,
+  },
+  opening: {
+    /** A held view of the sea, then one clear recovery before the small bird loses the V. */
+    outlook: 3.5,
+    flight: 5,
+    fall: 5,
+    flockSpeed: 6.5,
+    flockHeight: 19,
+    /** The landing stays this far ahead after the approach, plus any distance lost while struggling. */
+    fallTravel: 18,
+    /** Sheltered cloth hangs deeper; the cove releases its shelter once the boat is afloat. */
+    sailGather: 0.48,
+    sailSag: 1.65,
+    departureRate: 0.42,
+    departureGustFor: 2.2,
+    departureGustSpeed: 3.2,
+    departureGustEnergy: 0.018,
+  },
+  boarding: {
+    /** Plant against the hull, then keep one continuous step over the gunwale and down onto the thwart. */
+    push: 0.72,
+    launch: 0.66,
+    rail: 1.42,
+    inside: 1.92,
+    seated: 2.36,
+    settle: 2.82,
+    /** Places in the boat's own frame: just above the gunwale, then safely inside it. */
+    railIn: 0.78,
+    railHeight: 0.66,
+    insideIn: 0.28,
+    insideHeight: 0.3,
+    stepArc: 0.24,
+  },
+  cygnetCalls: {
+    /** Three cream strokes accompany the cygnet's voice throughout the journey. */
+    height: 2.1,
+    size: 1.05,
+  },
+  paperCarry: {
+    /** Small enough to carry against the bag; the larger airborne silhouette remains easy to follow. */
+    scale: 0.5,
+    sizeRate: 9,
+    /** The arc around the shoulder when the paper moves between the mitten and the satchel. */
+    transferArc: 0.95,
+    transferRate: 3,
+    /** A released plane levels into flight rather than snapping out of the carry angle. */
+    releaseSeconds: 0.22,
+  },
   pointer: {
     /** The wind speed a stroke can never exceed; faster strokes ease toward it. */
     maxGust: 26,
@@ -248,8 +306,24 @@ export const tuning = {
     riseQuiet: 0.72,
   },
   wood: {
-    /** How fast a coal in the litter catches under the player's breath: 1 is a coal taken by about one good gust. */
-    catchRate: 2.2,
+    /** Ignition gained per screen-height unit brushed directly across the ember. */
+    catchRate: 1.8,
+    /** A deliberate sweep must cross the ember itself; residual wind cannot finish the gesture. */
+    brushRadius: 0.2,
+    brushTravelMin: 0.001,
+    brushStepMax: 0.06,
+    wakeCool: 0.045,
+    inviteAfter: 5,
+    inviteSweep: 1.8,
+    invitePause: 1.5,
+    inviteSpan: 3.8,
+    inviteAlpha: 0.65,
+    inviteWidth: 0.065,
+    dryRate: 0.85,
+    /** Sheltered fireflies gather closer under the trees than in open grass. */
+    fireflyCount: 240,
+    fireflyRange: 25,
+    fireflyPresence: 0.85,
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
     /** How high fanning can run a burning coal up, and how much of that rush is thrown as light. */
@@ -260,10 +334,45 @@ export const tuning = {
     /** Heat a gust turns up out of bare wet litter where there is no coal: cinders, and an answer to every gust. */
     stir: 2.2,
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
-    chainStep: 15,
+    chainStep: 20.25,
     chainOffset: 2.6,
   },
   birches: {
+    scarf: {
+      width: 0.9,
+      brushRadius: 0.2,
+      brushSpeed: 1.4,
+      loosenSeconds: 0.65,
+      releaseSeconds: 2.6,
+      gatherSeconds: 8,
+      windResponse: 2.8,
+      flutter: 0.1,
+      arriveWithin: 9.5,
+      quietToLeaveSwing: 2.6,
+      swingBrake: 3.2,
+      swingMountSeconds: 0.8,
+    },
+    /** The companion explores within sight of the child and responds to local gusts. */
+    playRadius: 9,
+    playWind: 0.12,
+    playPause: 2.5,
+    playScuffEvery: 0.3,
+    playHopNear: 7,
+    playHopReach: 1.6,
+    playHopPause: 0.9,
+    playChaseReach: 4,
+    playDryHeight: 0.8,
+    playRummageFor: 1.2,
+    playRummageNear: 6,
+    playScuffRadius: 0.85,
+    playScuffStrength: 0.65,
+    swingInvitation: 0.22,
+    /** Shed clusters keep their own velocity for this many seconds, then fade. */
+    shedFlight: 4.5,
+    shedDrag: 1.5,
+    /** Seconds for a gust to start carrying the ground litter, and its top transport speed. */
+    litterResponse: 0.65,
+    litterMaxSpeed: 7,
     /** Gust energy and wind speed at which a leaf with an average grip on it lets go of the branch. */
     gripEnergy: 0.28,
     gripSpeed: 5.5,
@@ -306,25 +415,38 @@ export const tuning = {
     rippleQuiet: 0.03,
     rippleFull: 0.075,
   },
-  /** The three on the line by the door: the wind that makes them people, and how the child answers them. */
+  /** Making a way through the washing: forgiving wind gestures, an invitation, and the view from below. */
+  linesPassage: {
+    /** Local gusts count in any direction, and several small sweeps add up. */
+    energyFrom: 0.025, energyFull: 0.22,
+    speedFrom: 0.4, speedFull: 3,
+    fillSeconds: 1.8,
+    billowSpeed: 6, rise: 3.5, settle: 1.2,
+    brushFrom: 0.8, brushRadius: 0.27,
+    /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
+    inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,
+    inviteWidth: 0.11, inviteAlpha: 0.85, inviteSpan: 0.66,
+    /** Let the little bird try first, then the child follows beneath the raised hem. */
+    birdLead: 1.4, lookBack: 1.5,
+    revealFill: 2.8, revealHold: 4.5,
+    doorApproach: 5.5, doorCross: 7, shorePause: 4,
+    portalScale: 0.75,
+    shorePlaneInset: 14, shorePlaneRadius: 5,
+    walkDistance: 16, walkHeight: 1.4,
+    curtainDistance: 17, curtainHeight: 0.9,
+  },
   family: {
-    /** The felt wind along their line at which they begin to fill, and at which they are people. */
-    fillFrom: 3.5,
-    fillFull: 8.5,
-    /** How long they have to be held as people before the hands reach, and the door opens. */
-    holdFor: 3.2,
-    /** How far the chest fills out of the cloth and the shoulders square, as fractions of the piece's width. */
-    chest: 0.3,
-    shoulders: 0.1,
-    /** How far a sleeve lifts and reaches when the hands go out, as fractions of the piece's width. */
-    reachUp: 0.55,
-    reachOut: 0.3,
-    /** How near the child has to be to stop under them and look up, and how long a look lasts. */
-    stopWithin: 10,
-    looksFor: 3.2,
-    /** The island's own breeze, for a child who walks under without playing: how long it fills them for. */
-    breezeFor: 1.5,
-    breezeSpeed: 9,
+    /** Soft fullness and shoulder movement, as fractions of the piece's width. */
+    chest: 0.07,
+    shoulders: 0.02,
+    /** Small cuff movements: keep the fabric below its pegs and avoid long, pointed arms. */
+    reachUp: 0.13,
+    reachOut: 0.16,
+    /** Delay per garment within the gesture; the small jumper answers both parents. */
+    answerDelay: 0.14,
+    childLift: 0.15,
+    /** Open the door once the sleeves have nearly met. */
+    doorAt: 0.96,
   },
   /** The kite over the far beach and the pinwheels along the walk: the child nobody has seen. */
   linesToys: {
@@ -393,22 +515,45 @@ export const tuning = {
     /** How far it bobs in the last place of the V once it has it: a station held, but not the way its family holds one. */
     joinBob: 0.32,
   },
+  seaPassage: {
+    speed: 5.2,
+    swimSpeed: 1.5,
+    swimFor: 32,
+    swimAt: 0.38,
+    swimBeside: 2.4,
+    cameraDistance: 21,
+    cameraHeight: 5.1,
+    swimCameraDistance: 16,
+    swimCameraHeight: 4.6,
+    cameraBearing: 1.25,
+    childTurn: 0.7,
+    haze: 0.94,
+    /** Begin easing away before the coastal approach. */
+    farewellAt: 0.76,
+  },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
     /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
-    length: 3.3,
-    /** Seconds into the crossing for the first leap over the bow, and for the first shove on the quarter. */
-    leapAt: 26,
-    pushAt: 68,
+    length: 4.35,
+    girth: 1.22,
+    quietLead: 18,
+    quietEase: 0.22,
+    /** Quiet swimming between breaths, with only occasional low porpoises. */
+    breathLeast: 3.5,
+    breathSpread: 5.5,
+    leapChance: 0.18,
+    /** Seconds into the crossing for the first leap alongside, and for the first shove on the quarter. */
+    leapAt: 24,
+    pushAt: 57,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
-    /** How fast the leap leaves the water, in units a second: it clears the bow and falls back on the far side. */
-    leapLift: 7.4,
+    /** How fast the leap leaves the water, in units a second: it rises alongside, then slips back into the water. */
+    leapLift: 6.3,
     /** What a shove does to the hull: radians of heel away from it, radians a second of yaw, and units of surge. */
-    shoveHeel: 0.17,
-    shoveYaw: 0.38,
-    shoveSurge: 1.9,
+    shoveHeel: 0.12,
+    shoveYaw: 0.18,
+    shoveSurge: 0.8,
     /** Seconds after a shove at which it is felt hardest; it is gone about six times that later. */
     shovePeak: 0.32,
   },
@@ -421,10 +566,18 @@ export const tuning = {
     liftTo: 20,
   },
   water: {
+    /** Seconds for wind ripples to build and to settle after a gust. */
+    windAttack: 0.6,
+    windRelease: 2.8,
+    /** Local air is much slower than the cursor after pressure projection; ordinary sweeps must still ruffle it. */
+    windSpeedFrom: 0.25,
+    windSpeedFull: 2.5,
+    windEnergyFrom: 0.025,
+    windEnergyFull: 0.55,
     /** Extra normal slope a gust ruffles into the sea it crosses. */
-    ruffle: 0.085,
+    ruffle: 0.16,
     /** How far a gust darkens that water, as a share of its colour. */
-    darken: 0.13,
+    darken: 0.07,
     /** Height of the small chop a gust lays over the swell, in world units. */
     chop: 0.12,
     /** How many of the night sky's stars the sea catches, and how brightly they flash when it does. */
@@ -437,6 +590,10 @@ export const tuning = {
    * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
    */
   sail: {
+    /** Hull clearance above the terrain; enough for the rendered ground between height samples. */
+    hullClearance: 0.06,
+    /** Most a beached hull leans with the sand beneath it, in radians. */
+    shoreTilt: 0.28,
     /** Wind speed a unit of the player's gust is worth, and the stirring the field never quite loses. */
     gustPress: 4,
     stirs: 0.9,
@@ -444,8 +601,8 @@ export const tuning = {
      * What the squall presses the cloth with at a full sea, and how much of that the sail can hold: a small boat
      * in a storm is a hard-pressed, shaking sail spilling most of it, not four times the way through the water.
      */
-    squallPress: 4.5,
-    squallHolds: 0.28,
+    squallPress: 8,
+    squallHolds: 0.16,
     /** How fast the cloth takes wind up, and how slowly it lets it go, per second. */
     fills: 3.2,
     empties: 1.2,
@@ -454,6 +611,19 @@ export const tuning = {
     belly: 0.72,
     /** Below this wind speed the cloth begins to hang, and with none in it at all it hangs dead. */
     hangsBelow: 1.3,
+    /** Fully slack within half a percent: eased wind approaches zero without ever reaching it exactly. */
+    inviteDroop: 0.995,
+    /** Seconds of settled cloth before the first sweep, its duration, and the quiet between repeats. */
+    inviteAfter: 0.7,
+    inviteSweep: 1.8,
+    invitePause: 2.4,
+    /** A pale brushstroke across the sail, just in front of the cloth. Distances are world units. */
+    inviteAlpha: 0.8,
+    inviteWidth: 0.12,
+    inviteSpan: 5.4,
+    inviteArc: 0.3,
+    inviteSpacing: 0.18,
+    inviteStandOff: 1.1,
     /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
     livelyAt: 10,
     /** With no wind: how far the leech falls in toward the mast, how far the cloth sags, and the folds it hangs in. */
@@ -463,6 +633,9 @@ export const tuning = {
     fold: 0.3,
     /** How far the ripple and the leech's shake move the cloth, in world units. */
     ripple: 0.18,
+    /** Ripple phase speed in radians/s, plus the extra at full flutter. Integrated continuously by the boat. */
+    rippleRate: 4.5,
+    rippleGustRate: 5.5,
     shake: 0.24,
     /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
     luffFrom: 0.12,
@@ -470,10 +643,74 @@ export const tuning = {
     /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
     drive: 1.7,
     following: 0.42,
-    topSpeed: 16,
+    topSpeed: 12,
+    /** Spill wind in a tight turn; the turning radius must shrink as a missed waypoint gets closer. */
+    turnBrake: 0.65,
+    turnAligned: 0.85,
+    minimumWay: 0.45,
+    /** Ease alongside the jetty, sheltered from sideways drift over the final boat lengths. */
+    mooringDrive: 0.22,
+    mooringShelter: 18,
+    /** Maximum sideways wind drift as a share of a passage's speed cap. */
+    passageDrift: 0.04,
+    /** How much a storm spills and shakes the sail even under a steady prevailing breeze. */
+    squallLuff: 0.6,
     /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
     gathers: 0.5,
     carries: 0.45,
+  },
+  /** Move the shared key light continuously from the sunset to the moon. */
+  sky: {
+    moonHandoffFrom: 1.5,
+    moonHandoffTo: 1.85,
+  },
+  /** One continuous passage from the last drowned houses to the forest beach. */
+  storm: {
+    passageSpeed: 5.8,
+    startsFromShore: 210,
+    gatherFor: 22,
+    weatherGatherFor: 14,
+    lighthouseLookUntil: 21.5,
+    lighthouseLookFrom: 3,
+    lighthouseLookRelease: 19.5,
+    lighthouseFrameDistance: 23,
+    lighthouseFrameHeight: 2.4,
+    lighthouseFrameUp: 1.9,
+    lighthouseComfortFor: 2.6,
+    lighthouseStartle: 0.18,
+    lighthouseLookOffset: 0.12,
+    lighthouseCameraPace: 1.1,
+    darkBy: 33,
+    lighthouseOutAt: 19,
+    lighthouseFadeFor: 2.5,
+    lighthouseSweep: 0.38,
+    lighthouseSweepStart: 1.7,
+    stormVeil: 62,
+    stormVeilDensity: 0.045,
+    moonThroughCloud: 0.2,
+    shadowSoftenFrom: 0.8,
+    shadowCovered: 0.98,
+    snatchFor: 4,
+    shakeAt: 7.5,
+    cameraQuarter: 1.08,
+    lookAhead: 1.3,
+    planeAhead: 2,
+    planeLookUp: 1.8,
+    planeLookFor: 2,
+    planeLostAfter: 6.5,
+    firstLightning: 16,
+    lightningStormFrom: 0.85,
+    lightningNightFrom: 0.06,
+    lightningRainFrom: 0.8,
+    lightningAttack: 0.18,
+    lightningAmbient: 0.6,
+    lightningHorizon: 0.18,
+    lightningGap: 8.4,
+    lightningFade: 0.9,
+    thunderDelay: 1.4,
+    thunderGain: 0.52,
+    thunderPresence: 0.45,
+    rainLean: 10,
   },
   /**
    * The sleeping island: the fog pooled in the hollow, the frost coming in across it, and the bedroom the bed

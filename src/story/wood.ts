@@ -5,7 +5,7 @@ import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH } from '../world/wood';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
 const HIDING = new THREE.Vector3(-8.5, 0, -1791);
@@ -14,17 +14,6 @@ const SODDEN = new THREE.Vector2(-37, -1848);
 
 /** How much light there has to be before the child will trust it enough to move. */
 const ENOUGH = 1.2;
-/** How near the light has to come to the hiding place, and how much of it there has to be, to show what is there. */
-const FOUND = 5;
-const FOUND_HEAT = 2.4;
-/**
- * Nobody is ever stranded in the dark. After this long with nothing burning, the wood wakes a few coals of its
- * own — a glimmer to walk toward, never a path — and after a long time lost, enough of them that the cygnet is
- * found. The player still brings the light; the room only refuses to let the game end here.
- */
-const UNAIDED = 35;
-const LOST_GLIMMER = 40;
-const LOST_RELENT = 170;
 /** How near a waypoint counts as reached. */
 const REACHED = 7;
 
@@ -107,7 +96,6 @@ export class WoodChapter implements Chapter {
   private readonly light = new THREE.Vector3();
   /** What the child and the camera are drawn to: the fire if there is one, and the next coal if there is not. */
   private readonly glow = new THREE.Vector3();
-  private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   private readonly spot = new THREE.Vector2();
@@ -173,6 +161,24 @@ export class WoodChapter implements Chapter {
     return this.beat === 'aboard';
   }
 
+  get checkpoint(): string | null {
+    return this.beat === 'out' ? 'dry' : this.bolted && this.beat === 'walk' ? 'found' : null;
+  }
+  saveCheckpoint(): number[] { return [this.leg, this.chainAt]; }
+  restoreCheckpoint(point: string, data: number[]): void {
+    this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, WOOD_PATH.length - 1);
+    this.chainAt = data[1]; this.bolted = true;
+    this.beat = point === 'dry' ? 'out' : 'walk';
+    this.cast.embers.clearCoals();
+    this.chainSide = 1;
+    // Restore the light already earned at this checkpoint, without lighting or skipping the next ember.
+    const c = this.cast.child.position;
+    const earned = this.cast.embers.lay(c.x + 2, c.z);
+    this.cast.embers.blow(earned, 0.8);
+    this.cast.embers.takeCaught();
+    this.ahead = this.cast.embers.lay(...this.at(this.chainAt, this.chainSide * tuning.wood.chainOffset));
+  }
+
   private to(beat: Beat): void {
     this.beat = beat;
     this.beatStart = this.now;
@@ -197,7 +203,6 @@ export class WoodChapter implements Chapter {
     }
     this.light.copy(c.position);
     this.lit = embers.brightest(this.light);
-    this.darkFor = this.lit < ENOUGH ? this.darkFor + dt : 0;
     this.embers = 1;
     /**
      * What the frame is turned toward: the fire while there is one, the coal waiting to be blown on when there is
@@ -206,7 +211,8 @@ export class WoodChapter implements Chapter {
      */
     const alone = this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
     if (alone) this.glow.copy(this.beat === 'bolt' ? this.cast.cygnet.position : HIDING);
-    else this.glow.copy(this.lit > 0.4 ? this.light : (this.ahead ?? this.hearth)?.p ?? c.position);
+    else if (this.beat === 'dry') this.glow.copy(p.position);
+    else this.glow.copy(this.ahead?.live && !this.ahead.lit ? this.ahead.p : this.lit > 0.4 ? this.light : c.position);
     this.caught();
 
     switch (this.beat) {
@@ -217,10 +223,7 @@ export class WoodChapter implements Chapter {
       case 'first':
         /** The first light the player makes is the first thing the child has seen. They turn to it and go. */
         c.lookAt = this.glow;
-        /** Nobody is stranded on the first coal either: left long enough, the wood takes it and shows them. */
-        if (this.ahead && this.t > UNAIDED && this.cast.input.gust < 9) this.cast.embers.blow(this.ahead, 0.8);
         if (this.lit > ENOUGH && this.t > 1.2) this.to('walk');
-        else if (this.t > 75) this.to('walk');
         break;
       case 'walk':
         this.follow();
@@ -243,7 +246,6 @@ export class WoodChapter implements Chapter {
       case 'found':
         break;
       case 'plane':
-        this.follow();
         this.reachPlane();
         break;
       case 'dry':
@@ -253,11 +255,6 @@ export class WoodChapter implements Chapter {
         this.follow();
         break;
       case 'push':
-        if (this.t > 0.9 && !this.cast.boat.afloat) this.cast.boat.launch();
-        if (this.t > 2.3) {
-          this.to('aboard');
-          c.ride(this.cast.boat.seat(this.tmp), this.cast.boat.yaw);
-        }
         break;
       default:
         break;
@@ -265,7 +262,7 @@ export class WoodChapter implements Chapter {
 
     this.heading(dt);
     this.weather(dt);
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
     this.frame();
   }
 
@@ -280,23 +277,15 @@ export class WoodChapter implements Chapter {
     const last = this.leg >= WOOD_PATH.length - 1;
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < REACHED && !last) this.leg++;
 
-    if (this.beat === 'walk' && this.leg >= 4) this.toPlane();
+    if (this.beat === 'walk' && this.leg >= 4) { this.toPlane(); return; }
     if (this.beat === 'out' && last && Math.hypot(c.position.x - t.x, c.position.z - t.y) < REACHED + 4) {
       this.board();
       return;
     }
 
-    /**
-     * Left long enough in the dark with nothing happening, the leaf litter starts waking on its own ahead of
-     * them and keeps waking until the player takes it back over. A first gust from them ends it at once: this is
-     * for somebody who has run out of ideas, and it gets out of their way the moment they have one.
-     */
-    if (this.cast.input.gust > 9) this.unaided = false;
-    else if (this.darkFor > UNAIDED) this.unaided = true;
-    if (this.unaided && this.now > this.nextKindle) {
-      if (this.ahead) this.cast.embers.blow(this.ahead, 0.85);
-      else this.cast.embers.kindle(t.x, t.y, 5, 8, 0.72);
-      this.nextKindle = this.now + 2.6;
+    // At the last shore, a spent final fire must still be recoverable after a long pause.
+    if (!this.ahead && this.lit < ENOUGH) {
+      this.ahead = this.cast.embers.lay(t.x, t.y);
     }
 
     if (this.lit < ENOUGH) {
@@ -325,6 +314,7 @@ export class WoodChapter implements Chapter {
     for (const coal of this.cast.embers.takeCaught()) {
       cue('kindled');
       this.flared = this.now;
+      if (coal === this.ahead && this.beat === 'plane') continue;
       if (coal === this.ahead && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
       else if (coal === this.ahead) this.ahead = null;
     }
@@ -333,9 +323,6 @@ export class WoodChapter implements Chapter {
   private flared = -99;
   private aimed = 0;
   private moored = false;
-  private darkFor = 0;
-  private unaided = false;
-  private nextKindle = 0;
 
   /**
    * The storm's worst gust: the fire they were walking by gutters right down, the cygnet is out of the hood before
@@ -398,17 +385,11 @@ export class WoodChapter implements Chapter {
       cygnet.call(false);
       this.nextCall = time + 3.4 + Math.random() * 1.6;
     }
-    /** A glimmer where it is hiding, and then, much later, enough of one to have found it. */
-    if (this.t > LOST_GLIMMER && time > this.nextKindle) {
-      const hard = this.t > LOST_RELENT;
-      if (hard && this.hearth) this.cast.embers.blow(this.hearth, 0.9);
-      else this.cast.embers.kindle(HIDING.x, HIDING.z, 3.5, 2, 0.36);
-      this.nextKindle = time + (hard ? 2.5 : 8);
-    }
     if (c.busy || c.moving) return;
-    /** Found when the player puts new light on it: the coal beside it takes, or they get fire nearer still. */
-    if (this.hearth?.lit || this.cast.embers.heatNear(HIDING.x, HIDING.z, FOUND) > FOUND_HEAT) {
+    /** Found only when the player lights the waiting coal beside the hiding place. */
+    if (this.hearth?.lit) {
       this.to('found');
+      completeObjective();
       c.walkTo(HIDING.x, HIDING.z + 1.2, false, () => {
         /** Carried in the arms from here, not on their back. After the dark it is not put down again for a while. */
         this.cast.carry.gatherUp(() => {
@@ -426,6 +407,8 @@ export class WoodChapter implements Chapter {
   private toPlane(): void {
     const { plane: p } = this.cast;
     this.to('plane');
+    this.cast.child.stop();
+    if (this.ahead && !this.ahead.lit) this.cast.embers.douse(this.ahead);
     p.visible = true;
     p.soggy.value = 1;
     p.launch(this.tmp.set(SODDEN.x, Math.max(heightAt(SODDEN.x, SODDEN.y), 0) + 0.1, SODDEN.y), this.side.set(0, 0, 0));
@@ -440,8 +423,13 @@ export class WoodChapter implements Chapter {
   private reachPlane(): void {
     const { child: c, plane: p } = this.cast;
     if (c.busy || !p.landed) return;
+    if (!this.ahead?.live) this.ahead = this.cast.embers.lay(SODDEN.x + 1.6, SODDEN.y + 2.2);
+    if (!this.ahead.lit) {
+      if (c.moving) c.stop();
+      c.lookAt = this.ahead.p;
+      return;
+    }
     const gap = Math.hypot(c.position.x - SODDEN.x, c.position.z - SODDEN.y);
-    if (gap > 12) return;
     if (gap > 2.4) {
       if (!c.moving) c.walkTo(SODDEN.x, SODDEN.y, false, undefined, 1.6);
       c.lookAt = p.position;
@@ -450,35 +438,47 @@ export class WoodChapter implements Chapter {
     c.stop();
     c.faceToward(SODDEN.x, SODDEN.y, 1);
     c.pickUp(() => {
-      p.hold(c.handPosition(this.hand), c.yaw);
+      p.hold(c);
       this.to('dry');
     });
   }
 
   /** Held out in both hands into the wind until it is paper again. Nothing else in the wood can be mended. */
   private drying(dt: number): void {
-    const { child: c, plane: p, wind } = this.cast;
-    const w = wind.sample(c.position.x, c.position.z, this.air);
-    p.soggy.value = Math.max(0, p.soggy.value - dt * (0.035 + Math.hypot(w.x, w.z) * 0.035 + w.energy * 0.5));
+    const { child: c, plane: p } = this.cast;
+    p.soggy.value = Math.max(0, p.soggy.value - dt * this.dryBreath * tuning.wood.dryRate);
+    this.dryBreath = 0;
     c.lookAt = p.position;
     c.presenting = Math.min(1, c.presenting + dt * 1.2);
     if (p.soggy.value <= 0.02) {
       c.presenting = 0;
       this.to('out');
       this.leg = WOOD_PATH.length - 1;
+      this.layNext();
     }
   }
 
-  private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
+  private dryBreath = 0;
+
+  /** Screen-local breath, supplied by the same deliberate gesture that fans the embers. */
+  brushDry(amount: number): void { this.dryBreath = amount; }
+
+  get windInvitation(): THREE.Vector3 | null {
+    if (this.scripted || this.beat === 'bolt' || this.beat === 'toBoat') return null;
+    if (this.beat === 'dry') return this.cast.plane.position;
+    const coal = this.beat === 'lost' ? this.hearth : this.ahead;
+    return coal?.live && !coal.lit ? coal.p : null;
+  }
 
   private board(): void {
     const { child: c, boat } = this.cast;
     this.to('toBoat');
     c.lookAt = null;
-    c.walkTo(boat.position.x - 1.2, boat.position.z + 2.4, false, () => {
+    const beside = boat.boardingPoint(this.tmp);
+    c.walkTo(beside.x, beside.z, false, () => {
       this.to('push');
       c.faceToward(boat.position.x, boat.position.z, 1);
-      c.push();
+      c.board(boat, () => this.to('aboard'));
     }, 0.6);
   }
 

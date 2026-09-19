@@ -7,6 +7,7 @@ import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32 } from './noise';
 import { swellLift } from './water/swell';
+import { LighthouseLight } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
 
 /**
@@ -19,12 +20,15 @@ export const DROWNED_CHANNEL: THREE.Vector2[] = [
   new THREE.Vector2(4, -1372),
   new THREE.Vector2(-28, -1436),
   new THREE.Vector2(8, -1496),
-  new THREE.Vector2(-22, -1554),
-  new THREE.Vector2(-14, -1614),
+  new THREE.Vector2(38, -1554),
+  new THREE.Vector2(44, -1608),
+  new THREE.Vector2(-4, -1650),
 ];
 
 /** The church spire: the one vertical in the village, standing east of the channel at its midpoint. */
 export const SPIRE = new THREE.Vector3(14, 21, -1436);
+/** The boat follows the harbour light, then passes its drowned doorstep. */
+export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 
 /** Albedos are written linear: the renderer never tone-maps on the way in, so an sRGB hex would clip to white. */
 const lin = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
@@ -672,6 +676,30 @@ function buildChurch(into: Merged, rand: Rng): void {
   into.add(new THREE.SphereGeometry(0.11, 6, 5).translate(0, -0.42, 0), IRON, VANE, vane);
 }
 
+/** A small harbour light standing in the flood, its door below water and its lantern still turning. */
+function buildLighthouse(into: Merged): void {
+  const frame = new THREE.Matrix4().makeScale(1, 0.82, 1).setPosition(LIGHTHOUSE);
+  const lime = lin(0.52, 0.50, 0.43);
+  const dark = lin(0.055, 0.065, 0.075);
+  into.add(new THREE.CylinderGeometry(2.0, 2.9, 14, 14).translate(0, 5.4, 0), lime, PLAIN, frame);
+  into.add(new THREE.CylinderGeometry(3.2, 3.6, 1.3, 14).translate(0, -0.3, 0), STONE, MASONRY, frame);
+  into.add(new THREE.CylinderGeometry(2.23, 2.34, 1.7, 14).translate(0, 8.1, 0), dark, PLAIN, frame);
+  into.add(new THREE.CylinderGeometry(2.85, 2.55, 0.4, 14).translate(0, 12.5, 0), dark, MASONRY, frame);
+  into.add(new THREE.CylinderGeometry(1.65, 1.65, 0.18, 8).translate(0, 12.7, 0), dark, MASONRY, frame);
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    const x = Math.sin(a), z = Math.cos(a);
+    into.add(new THREE.CylinderGeometry(0.065, 0.065, 2.5, 5).translate(x * 1.7, 13.85, z * 1.7), IRON, MASONRY, frame);
+    into.add(new THREE.CylinderGeometry(0.045, 0.045, 0.95, 5).translate(x * 2.65, 13.15, z * 2.65), IRON, MASONRY, frame);
+  }
+  into.add(new THREE.TorusGeometry(2.65, 0.055, 5, 24).rotateX(Math.PI / 2).translate(0, 13.6, 0), IRON, MASONRY, frame);
+  into.add(new THREE.ConeGeometry(2.15, 1.35, 8).translate(0, 15.65, 0), dark, MASONRY, frame);
+  into.add(new THREE.SphereGeometry(0.15, 6, 5).translate(0, 16.45, 0), IRON, MASONRY, frame);
+  // A tall slit and the submerged door face the passing boat.
+  into.add(new THREE.BoxGeometry(0.08, 1.65, 0.48).translate(2.42, 5.7, 0), HOLLOW, OPENING, frame);
+  into.add(new THREE.BoxGeometry(0.1, 2.0, 1.0).translate(2.75, 0, 0), HOLLOW, OPENING, frame);
+}
+
 /** The apexes of a house's two gables, where a line could be tied. */
 function gables(h: HouseSpec): THREE.Vector3[] {
   const y = h.wall + h.rise - h.sink - 0.25;
@@ -851,6 +879,7 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[]): THREE.Buffer
       const z = at.y + tangent.x * off * side;
       if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 9.5)) continue;
       if (Math.hypot(x - SPIRE.x, z - SPIRE.z) < 18) continue;
+      if (Math.hypot(x - LIGHTHOUSE.x, z - LIGHTHOUSE.z) < 22) continue;
       const bare = twigs.length;
       for (const part of drownedTree(x, z, range(rand, 7, 10), rand, twigs)) {
         const count = part.attributes.position.count;
@@ -1017,6 +1046,7 @@ interface Drifter {
 export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
   private readonly storm = { value: 0 };
+  private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
   private vaneSpin = 0;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -1037,6 +1067,8 @@ export class DrownedVillage {
       }
     }
     buildChurch(body, rand);
+    buildLighthouse(body);
+    this.objects.push(this.lighthouse.object);
     buildLine(body, houses);
     buildGate(body, rand, houses);
     const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle };
@@ -1150,6 +1182,7 @@ export class DrownedVillage {
   /** `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end. */
   update(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
     this.storm.value = storm;
+    this.lighthouse.update(dt, storm);
     this.turnVane(dt, storm);
     this.flyHerons(dt, time, boat, storm);
     this.driftLeaves(dt, time, boat, storm);

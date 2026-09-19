@@ -115,6 +115,7 @@ export class SwanFlock {
   /** Counts up from the moment a raft is told to go, and is negative while it is still a raft. */
   private launched = -1;
   private lost = false;
+  private companionSlot = false;
   private speed = CRUISE;
   /** How fast the air is carrying the whole flock upward: a thermal lifts it, a line climbs out on it. */
   private climb = 0;
@@ -168,6 +169,19 @@ export class SwanFlock {
     return out.set(last.at.x, last.at.y + last.bob, last.at.z);
   }
 
+  /** Reserve the last station for the companion's own body, while retaining its moving flight path. */
+  carryCygnet(speed: number, from?: THREE.Vector3): void {
+    this.companionSlot = true;
+    this.speed = speed;
+    // Place the actual tail station on a story's flight lane before the first visible frame.
+    if (from) {
+      this.tail(tmp).sub(from).negate();
+      this.lead.add(tmp);
+      for (const bird of this.birds) bird.at.add(tmp);
+      this.dropped.add(tmp);
+    }
+  }
+
   /**
    * The empty place at the very back of the V, for one more: the far end of the arm the last of them is not on.
    * It is a station in the formation rather than a spot beside a bird, so it holds still while the V is forming.
@@ -196,6 +210,7 @@ export class SwanFlock {
   /** Sends a skein over, passing above (x, z) at the given height on the given bearing, from `from` units back. */
   pass(x: number, z: number, height: number, bearing: number, count = 15, from = 115, ailing = !this.lost): void {
     this.birds.length = 0;
+    this.companionSlot = false;
     const c = Math.min(count, MAX);
     this.dir.set(Math.sin(bearing), 0, Math.cos(bearing));
     this.lead.set(x, height, z).addScaledVector(this.dir, -from);
@@ -229,6 +244,7 @@ export class SwanFlock {
    * close for one that has come down over your head — and `climb` is how fast a thermal carries the whole column up.
    */
   circle(x: number, z: number, base: number, radius: number, count = 26, rise = 46, climb = 0): void {
+    this.companionSlot = false;
     const c = Math.min(count, MAX);
     /** Any of them already in the air keep their place in the sky and swing into the wheel rather than cutting to it. */
     const flying = this.mode === 'skein' || this.mode === 'wheel' ? this.birds.filter((b) => b.fade > 0) : [];
@@ -290,6 +306,7 @@ export class SwanFlock {
    * their heads on their backs. Sea level is y = 0; they sit in it and the sea hides everything below the waterline.
    */
   rest(x: number, z: number, radius: number, count = 14, level = 0): void {
+    this.companionSlot = false;
     this.level = level;
     this.runFor = level > 0 ? POND_RUN : RUN;
     this.runSpeed = level > 0 ? POND_RUN_SPEED : RUN_SPEED;
@@ -353,6 +370,7 @@ export class SwanFlock {
   /** Stops whatever the flock is doing and puts it away. */
   clear(): void {
     this.mode = 'idle';
+    this.companionSlot = false;
     this.level = 0;
     this.launched = -1;
     this.mesh.visible = false;
@@ -684,7 +702,7 @@ export class SwanFlock {
   private draw(): void {
     let drawn = 0;
     for (const b of this.birds) {
-      if (b.fade <= 0) continue;
+      if (b.fade <= 0 || (this.companionSlot && b === this.birds[this.birds.length - 1])) continue;
       this.swans.set(0, drawn, b.at.x, b.at.y + b.bob, b.at.z, b.yaw);
       this.swans.set(1, drawn, b.pitch, b.roll, b.beat, b.flap);
       this.swans.set(2, drawn, b.neck.x, b.neck.y, b.neck.z, b.neck.w);

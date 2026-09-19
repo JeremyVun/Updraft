@@ -261,6 +261,8 @@ export class Pinwheels {
         const z = on.y + dir.y * along + nz * out;
         const ground = heightAt(x, z);
         if (ground < 2) continue;
+        // The family clearing has one subject. Keep the dancing wheels in the passages before it.
+        if (Math.hypot(x - 11, z + 390) < 13) continue;
         /** Long enough to stand the wheel clear of grass this deep, and all of them a little out of true. */
         const top = 1.8 + rand() * 0.4;
         this.wheels.push({ x, z, sway: new Sway(), ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });

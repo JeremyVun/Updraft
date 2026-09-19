@@ -21,6 +21,8 @@ export interface Shot {
   eye?: THREE.Vector3;
   /** The camera travels with a steadily moving target (a boat) and only eases the framing, so it never trails. */
   carry?: boolean;
+  /** Preserve the landscape composition's horizontal field in narrow viewports by drawing back. */
+  fitWidth?: boolean;
   /**
    * How far above the ground the camera is held. The default stands it at a walking child's eye; a room that
    * wants to be seen by something small lowers it, and nothing else in the game changes.
@@ -28,6 +30,8 @@ export interface Shot {
   clearance?: number;
   /** QA: the camera goes exactly where it is put, with no ground clearance, no sight-line correction and no breathing. */
   free?: boolean;
+  /** An authored continuous threshold move supplies its own easing and ground clearance. */
+  exact?: boolean;
 }
 
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
@@ -64,11 +68,16 @@ export class CameraRig {
   }
 
   private desired(shot: Shot, out: THREE.Vector3): THREE.Vector3 {
-    if (shot.eye) return out.copy(shot.eye);
-    return out
-      .copy(shot.target)
+    if (shot.eye) out.copy(shot.eye);
+    else out.copy(shot.target)
       .addScaledVector(shot.from ?? FROM, shot.distance)
       .setY(shot.target.y + shot.height);
+    if (shot.fitWidth) {
+      const horizontal = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect;
+      const back = Math.max(1, Math.tan(THREE.MathUtils.degToRad(MIN_HFOV) / 2) / horizontal);
+      out.sub(shot.target).multiplyScalar(back).add(shot.target);
+    }
+    return out;
   }
 
   /** Jumps straight to a shot (used once at the start). */
@@ -85,6 +94,11 @@ export class CameraRig {
 
   update(dt: number, time: number, shot: Shot, pace = 0.6): void {
     if (this.fixed) return;
+    if (shot.exact && shot.eye) {
+      this.eye.copy(shot.eye); this.look.copy(shot.target); this.lastTarget.copy(shot.target);
+      this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
+      return;
+    }
     const k = 1 - Math.exp(-dt * pace);
     this.moved.subVectors(shot.target, this.lastTarget);
     this.lastTarget.copy(shot.target);

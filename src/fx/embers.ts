@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { screenBrush } from '../creatures/motion';
+import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
@@ -6,7 +8,8 @@ import { heightAt } from '../world/island';
 
 const SPARKS = 300;
 const COALS = 10;
-const COUNT = SPARKS + COALS;
+const CHIPS = 9;
+const COUNT = SPARKS + COALS * CHIPS;
 /** How far from the child sparks are kept; any that get further away are quietly moved back in. */
 const RANGE = 34;
 /** Below this a spark is out, and anything brighter counts toward a light the child can follow. */
@@ -17,17 +20,20 @@ const CINDER = 0.3;
 const VERT = /* glsl */ `
 in vec4 aSpark;
 in float aSize;
+in vec2 aShape;
 out vec2 vUv;
 out float vHeat;
 out vec3 vWorld;
-out float vCoal;
+out vec2 vShape;
 void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  vWorld = aSpark.xyz + (right * position.x + up * position.y) * aSize;
+  // A coal is a low splinter in a bed of ash; airborne sparks are long, fine flecks.
+  vec2 scale = mix(vec2(0.48, 1.25), vec2(1.0, 0.48), aShape.y);
+  vWorld = aSpark.xyz + (right * position.x * scale.x + up * position.y * scale.y) * aSize;
   vUv = position.xy;
   vHeat = aSpark.w;
-  vCoal = aSize > 0.2 ? 1.0 : 0.0;
+  vShape = aShape;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -36,18 +42,25 @@ ${ATMO_GLSL}
 in vec2 vUv;
 in float vHeat;
 in vec3 vWorld;
-in float vCoal;
+in vec2 vShape;
 void main() {
-  float r = length(vUv);
-  float core = 1.0 - smoothstep(0.0, 0.3 + vCoal * 0.12, r);
-  float halo = (1.0 - smoothstep(0.05, 1.0, r)) * (0.4 + vCoal * 0.45);
-  float a = (core + halo) * vHeat;
+  float seed = vShape.x;
+  float coal = vShape.y;
+  float angle = seed + sin(uTime * 2.0 + seed) * (1.0 - coal) * 0.5;
+  vec2 q = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * vUv;
+  float edge = abs(q.x) * 0.85 + abs(q.y) * 1.2;
+  edge += coal * sin(q.x * 15.0 + seed) * sin(q.y * 11.0 - seed) * 0.1;
+  float body = 1.0 - smoothstep(0.48, 0.85, edge);
+  float crack = exp(-abs(q.y + sin(q.x * 8.0 + seed) * 0.13) * 32.0);
+  float heart = (1.0 - smoothstep(0.05, 0.58, length(q))) * 0.4 + crack * coal * 0.45;
+  float halo = exp(-dot(vUv, vUv) * 5.0) * 0.065;
+  float pulse = 0.88 + 0.12 * sin(uTime * (3.0 + seed * 0.2) + seed);
+  float a = (body * (0.6 + heart * 0.4) + halo) * min(vHeat, 1.0) * pulse;
   if (a < 0.004) discard;
-  /** Hot at the heart, going red as it cools, so a dying ember reads as dying rather than as a dimmer lamp. */
-  vec3 col = mix(vec3(1.0, 0.22, 0.04), vec3(1.0, 0.66, 0.26), smoothstep(0.15, 0.9, vHeat));
-  col = mix(col, vec3(1.0, 0.86, 0.6), vCoal * smoothstep(0.7, 1.6, vHeat) * 0.3);
+  vec3 col = mix(vec3(0.9, 0.1, 0.015), vec3(1.0, 0.48, 0.09), smoothstep(0.15, 0.95, vHeat));
+  col = mix(col, vec3(1.0, 0.78, 0.32), heart * smoothstep(0.4, 1.2, vHeat));
   vec4 f = fogOf(vWorld);
-  gl_FragColor = vec4(col * (1.0 + (2.2 - vCoal * 1.35) * vHeat) * (1.0 - f.a * 0.75), a);
+  gl_FragColor = vec4(col * (1.2 + vHeat * 0.8) * (1.0 - f.a * 0.75), a);
 }`;
 
 interface Spark {
@@ -75,6 +88,7 @@ export interface Coal {
   /** When it was laid: the gust that lit the last one must not run straight on into this one. */
   laid: number;
   seed: number;
+  breath: number;
 }
 
 /**
@@ -96,8 +110,8 @@ export class Embers {
   private readonly sizes: THREE.InstancedBufferAttribute;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly centre = new THREE.Vector3();
-  private readonly near = new THREE.Vector3();
   private readonly caught: Coal[] = [];
+  private readonly chipPositions = new Float32Array(COALS * CHIPS * 3);
   private lit = 0;
   private clock = 0;
 
@@ -110,13 +124,19 @@ export class Embers {
     this.sizes = new THREE.InstancedBufferAttribute(new Float32Array(COUNT), 1).setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aSpark', this.attr);
     geo.setAttribute('aSize', this.sizes);
+    const shapes = new Float32Array(COUNT * 2);
+    for (let i = 0; i < COUNT; i++) {
+      shapes[i * 2] = Math.random() * Math.PI * 2;
+      shapes[i * 2 + 1] = i >= SPARKS ? 1 : 0;
+    }
+    geo.setAttribute('aShape', new THREE.InstancedBufferAttribute(shapes, 2));
     geo.instanceCount = COUNT;
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
     for (let i = 0; i < SPARKS; i++) {
       this.sparks.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), heat: 0, max: CINDER, seed: Math.random() * 6.28 });
     }
     for (let i = 0; i < COALS; i++) {
-      this.coals.push({ p: new THREE.Vector3(), heat: 0, flare: 0, lit: false, wake: 0, live: false, laid: 0, seed: Math.random() * 6.28 });
+      this.coals.push({ p: new THREE.Vector3(), heat: 0, flare: 0, lit: false, wake: 0, live: false, laid: 0, breath: 0, seed: Math.random() * 6.28 });
     }
     this.mesh = new THREE.Mesh(
       geo,
@@ -144,9 +164,21 @@ export class Embers {
     coal.heat = 0;
     coal.flare = 0;
     coal.wake = 0;
+    coal.breath = 0;
     coal.lit = false;
     coal.live = true;
     coal.laid = this.clock;
+    const slot = this.coals.indexOf(coal);
+    for (let chip = 0; chip < CHIPS; chip++) {
+      const angle = chip * 2.39996 + coal.seed;
+      const radius = chip === 0 ? 0 : 0.24 + Math.sqrt(chip / CHIPS) * 0.48;
+      const x = coal.p.x + Math.cos(angle) * radius;
+      const z = coal.p.z + Math.sin(angle) * radius;
+      const j = (slot * CHIPS + chip) * 3;
+      this.chipPositions[j] = x;
+      this.chipPositions[j + 1] = Math.max(heightAt(x, z), 0) + 0.13;
+      this.chipPositions[j + 2] = z;
+    }
     return coal;
   }
 
@@ -175,33 +207,33 @@ export class Embers {
   }
 
   clearCoals(): void {
+    this.caught.length = 0;
+    this.lit = 0;
     for (const c of this.coals) {
       c.live = false;
       c.lit = false;
       c.heat = 0;
       c.flare = 0;
       c.wake = 0;
+      c.breath = 0;
     }
   }
 
-  /**
-   * Wakes a few cinders somewhere on its own, without the player. The wood does this only when they have been
-   * left with nothing to go on for a long time — it is the room breathing, not a hint.
-   */
-  kindle(x: number, z: number, radius: number, count: number, heat: number): void {
-    let woken = 0;
-    for (const s of this.sparks) {
-      if (woken >= count) break;
-      if (s.heat > LIT) continue;
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * radius;
-      s.p.set(x + Math.cos(a) * r, 0, z + Math.sin(a) * r);
-      s.p.y = Math.max(heightAt(s.p.x, s.p.z), 0) + 0.1 + Math.random() * 0.22;
-      s.v.set(0, 0, 0);
-      s.max = 1;
-      s.heat = heat * (0.85 + Math.random() * 0.3);
-      woken++;
-    }
+  /** Only motion across the visible coal feeds ignition; a distant gust or its fading wake cannot. */
+  brush(camera: THREE.Camera, input: PointerInput, target: THREE.Vector3 | null, dt: number): number {
+    for (const coal of this.coals) coal.breath = 0;
+    if (!target || input.muted || !input.present) return 0;
+    const t = tuning.wood;
+    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1;
+    const travel = Math.hypot((input.ndc.x - input.prevNdc.x) * aspect, input.ndc.y - input.prevNdc.y);
+    if (travel < t.brushTravelMin || dt <= 0) return 0;
+    const touch = screenBrush(camera, target, input.prevNdc, input.ndc, t.brushRadius);
+    // Accumulate distance brushed across the ember, independent of terrain projection or event rate.
+    // Cap a single event so entering the canvas or a cursor jump cannot finish a coal.
+    const breath = Math.sqrt(touch) * Math.min(travel, t.brushStepMax) / dt;
+    const coal = this.coals.find(c => c.live && c.p === target);
+    if (coal) coal.breath = breath;
+    return breath;
   }
 
   private throwSparks(coal: Coal, count: number): void {
@@ -230,42 +262,16 @@ export class Embers {
     return this.lit;
   }
 
-  /**
-   * How much fire there is within `radius` of a point. The centroid is the wrong question for "is that corner of
-   * the wood lit" — a wide gust averages out to the middle of nowhere — so this asks about the corner itself.
-   */
-  heatNear(x: number, z: number, radius: number): number {
-    if (this.presence <= 0.01) return 0;
-    let sum = 0;
-    const r2 = radius * radius;
-    for (const s of this.sparks) {
-      if (s.heat <= LIT) continue;
-      const dx = s.p.x - x;
-      const dz = s.p.z - z;
-      if (dx * dx + dz * dz < r2) sum += s.heat - LIT;
-    }
-    for (const c of this.coals) {
-      if (!c.live || !c.lit) continue;
-      const dx = c.p.x - x;
-      const dz = c.p.z - z;
-      if (dx * dx + dz * dz < r2) sum += (c.heat + c.flare) * 2.5;
-    }
-    return sum * this.presence;
-  }
-
   private stepCoals(dt: number, time: number): void {
     const t = tuning.wood;
     for (const c of this.coals) {
       if (!c.live) continue;
       const w = this.wind.sample(c.p.x, c.p.z, this.sample);
-      /**
-       * Only the player's own breath counts. Gust energy is written by their strokes alone, so the storm blowing
-       * through the wood all night can never light a coal for them: the light in this room is theirs or nobody's.
-       */
+      // The field fans existing fires. Ignition additionally needs a fresh stroke across this coal.
       const breath = w.energy;
       if (!c.lit) {
         if (time - c.laid < 1.4) continue;
-        c.wake = Math.min(1, c.wake + breath * dt * t.catchRate);
+        c.wake = THREE.MathUtils.clamp(c.wake + (c.breath > 0 ? c.breath * t.catchRate : -t.wakeCool) * dt, 0, 1);
         c.heat = c.wake * 0.12;
         if (c.wake >= 1) {
           c.lit = true;
@@ -315,7 +321,6 @@ export class Embers {
       this.lit = 0;
       return;
     }
-    this.near.copy(near);
     this.stepCoals(dt, time);
     const t = tuning.wood;
     const data = this.attr.array as Float32Array;
@@ -352,16 +357,18 @@ export class Embers {
     let best = 0;
     for (let i = 0; i < COALS; i++) {
       const c = this.coals[i];
-      const j = (SPARKS + i) * 4;
       const breathe = c.live && !c.lit ? (0.42 + 0.2 * Math.sin(time * 1.6 + c.seed)) * (0.6 + 0.4 * c.wake) : 0;
       const shown = c.live ? (c.lit ? Math.min(1.2, c.heat + c.flare * 0.35) : breathe) * this.presence : 0;
-      const size = c.live ? (c.lit ? 0.42 + c.heat * 0.16 + c.flare * 0.22 : 0.36) : 0;
-      sizes[SPARKS + i] = size;
-      data[j] = c.p.x;
-      /** Stood clear of the floor, because a glow centred on the ground is cut in half by it. */
-      data[j + 1] = c.p.y + size * 0.8;
-      data[j + 2] = c.p.z;
-      data[j + 3] = shown;
+      for (let chip = 0; chip < CHIPS; chip++) {
+        const index = SPARKS + i * CHIPS + chip;
+        const j = index * 4;
+        const ground = (i * CHIPS + chip) * 3;
+        sizes[index] = c.live ? 0.16 + (0.5 + 0.5 * Math.sin(chip * 4.7 + c.seed)) * 0.14 : 0;
+        data[j] = this.chipPositions[ground];
+        data[j + 1] = this.chipPositions[ground + 1];
+        data[j + 2] = this.chipPositions[ground + 2];
+        data[j + 3] = shown * (0.65 + 0.35 * Math.sin(chip * 2.7 + time * 0.8 + c.seed) ** 2);
+      }
       if (!c.live || !c.lit) continue;
       const power = (c.heat + c.flare * t.flareLight) * t.coalLight;
       /** Falls off with distance, so a fire left far behind stops counting as light to walk by. */
@@ -372,20 +379,9 @@ export class Embers {
         this.lit = reach;
       }
     }
-    if (best <= 0) {
-      /** No coal burning: the light is whatever cinders there are, which is never enough to walk toward. */
-      this.centre.set(0, 0, 0);
-      let weight = 0;
-      for (const s of this.sparks) {
-        if (s.heat <= LIT) continue;
-        const k = s.heat - LIT;
-        this.centre.addScaledVector(s.p, k);
-        weight += k;
-      }
-      if (weight > 0) this.centre.divideScalar(weight);
-      else this.centre.copy(near);
-      this.lit = weight * this.presence;
-    }
+    // Decorative cinders can never supply enough light to bypass an unlit coal.
+    this.lit = best * this.presence;
+    if (best <= 0) this.centre.copy(near);
     this.attr.needsUpdate = true;
     this.sizes.needsUpdate = true;
   }

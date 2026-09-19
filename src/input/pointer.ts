@@ -77,8 +77,8 @@ export class PointerInput {
     this.present = true;
   }
 
-  private pick(camera: THREE.Camera, out: THREE.Vector3): void {
-    this.ray.setFromCamera(this.ndc, camera);
+  private pick(camera: THREE.Camera, ndc: THREE.Vector2, out: THREE.Vector3): void {
+    this.ray.setFromCamera(ndc, camera);
     const o = this.ray.ray.origin;
     const d = this.ray.ray.direction;
     const ground = (t: number) => o.y + d.y * t - Math.max(heightAt(o.x + d.x * t, o.z + d.z * t), 0);
@@ -143,6 +143,7 @@ export class PointerInput {
   update(dt: number, camera: THREE.Camera, wind: WindField): void {
     if (!this.present || this.muted) {
       this.hasPrev = false;
+      this.vel.set(0, 0);
       this.heading = null;
       this.spin = 0;
       this.gust *= Math.exp(-dt * 6);
@@ -151,17 +152,25 @@ export class PointerInput {
     }
     this.prevNdc.copy(this.ndc);
     this.ndc.copy(this.eventNdc);
-    this.pick(camera, this.world);
     if (!this.hasPrev) {
+      this.pick(camera, this.ndc, this.world);
       this.prev.copy(this.world);
       this.prevNdc.copy(this.ndc);
+      this.vel.set(0, 0);
+      this.gust = 0;
       this.hasPrev = true;
       return;
     }
 
-    const dx = this.world.x - this.prev.x;
-    const dz = this.world.z - this.prev.z;
-    this.vel.lerp(this.instVel.set(dx / dt, dz / dt), 1 - Math.exp(-dt * 30));
+    this.instVel.set(0, 0);
+    if (!this.ndc.equals(this.prevNdc)) {
+      /** Both ends of a stroke use this frame's camera: moving the camera cannot supply any of the wind. */
+      this.pick(camera, this.prevNdc, this.prev);
+      this.pick(camera, this.ndc, this.world);
+      this.instVel.set((this.world.x - this.prev.x) / dt, (this.world.z - this.prev.z) / dt);
+    }
+    /** With no new gesture, its last gust settles where it was made; no ground picking is needed. */
+    this.vel.lerp(this.instVel, 1 - Math.exp(-dt * 30));
     const raw = this.vel.length() * (this.down ? T.pressedGain : T.hoverGain);
     const speed = T.maxGust * Math.tanh(raw / T.maxGust);
     this.gust = speed;

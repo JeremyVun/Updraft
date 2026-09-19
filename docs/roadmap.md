@@ -52,6 +52,10 @@ Every room below is built and playable; what is left is polish, pacing and the t
 
 ## Next
 
+- [New rooms](rooms.md): build the island of little boats between washing and meadow; then the sky mirror;
+  develop the stairs in the clouds before committing its build.
+
+- [Phone and portrait gameplay](backlog/portrait-gameplay/design.md): full physical-phone playthrough and framing/input/performance pass; deferred from the 2026-09-19 review.
 - The meadow's frame time: it saturates the GPU at render scale 1 and the governor answers by going soft.
 - A playthrough for pacing: about eighteen minutes, no room over five.
 - The turn of the year beyond the grass — the trees, the flowers, the sky and the light.

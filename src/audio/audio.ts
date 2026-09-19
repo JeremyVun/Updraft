@@ -1,5 +1,6 @@
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
+import { tuning } from '../tuning';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -94,10 +95,13 @@ const PHRASES: Record<Cue, [number, number][]> = {
   kindled: [[62, 1], [69, 1], [74, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
+  /** The opening V is still flying: an open fourth lifts and hangs, without anticipating the fall. */
+  overhead: [[81, 1], [86, 3]],
   /** High and thin and going away from you, the way a skein sounds when you look up too late. */
   skein: [[86, 2], [83, 2], [81, 3], [78, 2], [76, 4]],
-  /** The fall: the same shape turned downward, and it does not resolve. */
-  fallen: [[81, 2], [76, 2], [71, 3], [69, 2], [66, 6], [64, 8]],
+  /** Keep descending into the lower register; the final low D belongs to contact with the ground. */
+  fallen: [[81, 2], [76, 2], [71, 3], [66, 3], [57, 3]],
+  landed: [[50, 1]],
   /** The air dies: low, slow and unanswered, under a room that has gone quiet. */
   becalmed: [[57, 4], [54, 5], [52, 8]],
   /** And the sail fills: the same notes, the other way up, and the music comes back with them. */
@@ -111,7 +115,7 @@ const PHRASES: Record<Cue, [number, number][]> = {
   /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
   finale: [],
 };
-const PHRASE_BEAT: Record<Cue, number> = { kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, fallen: 0.5, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'overhead' | 'fallen' | 'landed'>, number> = { kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -179,6 +183,7 @@ export class Soundscape {
   private lastGlider = 0;
   private activity = 0;
   private muted = false;
+  private hidden = document.hidden;
   private padFilter!: BiquadFilterNode;
   private rainGain!: GainNode;
   private patterGain!: GainNode;
@@ -187,7 +192,24 @@ export class Soundscape {
   private nextLark = 8;
 
   get running(): boolean {
-    return this.ctx?.state === 'running' && !this.muted;
+    return this.ctx?.state === 'running' && !this.muted && !this.hidden;
+  }
+
+  constructor() {
+    document.addEventListener('visibilitychange', () => this.setHidden(document.hidden));
+    window.addEventListener('pagehide', () => this.setHidden(true));
+    window.addEventListener('pageshow', () => this.setHidden(document.hidden));
+  }
+
+  private setHidden(hidden: boolean): void {
+    this.hidden = hidden;
+    this.syncPlayback();
+  }
+
+  private syncPlayback(): void {
+    if (!this.ctx || this.ctx.state === 'closed') return;
+    // Resume may require another gesture on some browsers; start() retries on the next touch.
+    void (this.hidden || this.muted ? this.ctx.suspend() : this.ctx.resume()).catch(() => undefined);
   }
 
   /** The live audio graph for other modules' sounds: connect to `bus` (dry) and optionally `reverb` (wet). Null until sound starts or while muted. */
@@ -197,12 +219,16 @@ export class Soundscape {
 
   /** Must be called from a user gesture. */
   start(): void {
+    if (this.hidden) return;
     if (this.ctx) {
-      void this.ctx.resume();
+      this.syncPlayback();
       return;
     }
     const ctx = new AudioContext();
     this.ctx = ctx;
+    ctx.addEventListener('statechange', () => {
+      if (ctx.state === 'running' && (this.hidden || this.muted)) this.syncPlayback();
+    });
     this.noise = pinkNoise(ctx, 6);
 
     const comp = ctx.createDynamicsCompressor();
@@ -274,6 +300,44 @@ export class Soundscape {
     this.muted = muted;
     if (!this.ctx) return;
     this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.25);
+    this.syncPlayback();
+  }
+
+  /** A distant, rolling report: low thunder under a short, softened crack, with no musical cue. */
+  thunder(strength: number, pan: number): void {
+    if (!this.running || !this.ctx) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = pan;
+    panner.connect(this.master);
+    panner.connect(this.reverb);
+    let remaining = 2;
+    for (let layer = 0; layer < 2; layer++) {
+      const source = ctx.createBufferSource();
+      source.buffer = this.noise;
+      source.loop = true;
+      source.playbackRate.value = layer === 0 ? 0.65 : 1;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(layer === 0 ? 220 : 950, now);
+      filter.frequency.exponentialRampToValueAtTime(layer === 0 ? 65 : 160, now + 3.8);
+      filter.Q.value = 0.6;
+      const gain = ctx.createGain();
+      const peak = strength * tuning.storm.thunderGain * (layer === 0 ? 1 : tuning.storm.thunderPresence);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(peak, now + (layer === 0 ? 0.28 : 0.06));
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.001, peak * 0.4), now + 1.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + (layer === 0 ? 4.8 : 1.9));
+      gain.gain.linearRampToValueAtTime(0, now + 5.2);
+      source.connect(filter).connect(gain).connect(panner);
+      source.start(now, layer * 2.3);
+      source.stop(now + 5.3);
+      source.onended = () => {
+        source.disconnect(); filter.disconnect(); gain.disconnect();
+        if (--remaining === 0) panner.disconnect();
+      };
+    }
   }
 
   private noiseLayer(
@@ -544,6 +608,26 @@ export class Soundscape {
       this.finale();
       return;
     }
+    if (name === 'landed') {
+      // The low ending is triggered by touchdown, not pre-scheduled during the flight.
+      this.chime(PHRASES.landed[0][0], 0.5, 0, this.ctx!.currentTime + 0.02, 1.8);
+      return;
+    }
+    if (name === 'overhead' || name === 'fallen') {
+      // These cues follow the animation's clock, without waiting for the musical pulse.
+      // Fit the whole phrase to its beat and leave only a short tail after touchdown.
+      const duration = name === 'overhead' ? tuning.opening.flight : tuning.opening.fall;
+      const notes = PHRASES[name];
+      const units = notes.reduce((sum, [, beats]) => sum + beats, 0);
+      const start = this.ctx!.currentTime + 0.02;
+      let elapsed = 0;
+      for (const [midi, beats] of notes) {
+        this.chime(midi, name === 'overhead' ? 0.3 : 0.5, 0, start + elapsed,
+          Math.min(2.2, duration - elapsed + 0.35));
+        elapsed += beats / units * duration;
+      }
+      return;
+    }
     const beat = PHRASE_BEAT[name];
     let at = this.nextPulse() + 0.05;
     for (const [midi, beats] of PHRASES[name]) {
@@ -559,7 +643,7 @@ export class Soundscape {
 
   update(dt: number, s: SoundState): void {
     const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running') return;
+    if (!ctx || !this.running) return;
     const now = ctx.currentTime;
     const tc = 0.08;
     const g = Math.min(s.gust / 26, 1);

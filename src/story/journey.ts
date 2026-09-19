@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tuning } from '../tuning';
 import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
 import { params } from '../params';
@@ -17,6 +18,7 @@ import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
+import { readProgress, placeProgress, restoreLife, saveProgress } from './progress';
 
 export type ChapterName =
   | 'island'
@@ -35,8 +37,8 @@ export type ChapterName =
   | 'home'
   | 'stage';
 
-/** Where the boat goes on each crossing. Each one is shorter and hazier than the last. */
-const ROUTES: Record<string, THREE.Vector2[]> = {
+/** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
+export const ROUTES: Record<string, THREE.Vector2[]> = {
   toLines: [
     new THREE.Vector2(34, 44),
     new THREE.Vector2(70, 56),
@@ -45,10 +47,10 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(60, -195),
     LINES_LANDING,
   ],
-  toMeadow: [new THREE.Vector2(14, -505), new THREE.Vector2(10, -545), LANDING],
+  toMeadow: [new THREE.Vector2(224, -521), new THREE.Vector2(100, -549), LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
-  /** Out of the village and straight into the wood, in the dark and the worst of the weather. */
+  /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /** A short hop west, round the wood's north shore: the frosted island is on them in a few minutes. */
   toSleeping: [
@@ -58,19 +60,18 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     SLEEP_LANDING,
   ],
   /**
-   * The long way round, about 620 units of it. They leave the sleeping island's west shore in the sunrise and
+   * The long way round, about 900 units of it. They leave the sleeping island's west shore in the sunrise and
    * stand well out into open water before coming back east through the shallow strait between the island they
    * left and the one they are going to. It is the only crossing that goes anywhere but straight, because by now
    * the point of it is not to arrive.
    */
   toHome: [
-    new THREE.Vector2(-262, -1948),
-    new THREE.Vector2(-312, -1990),
-    new THREE.Vector2(-344, -2052),
-    new THREE.Vector2(-318, -2108),
-    new THREE.Vector2(-258, -2106),
-    new THREE.Vector2(-232, -2040),
-    new THREE.Vector2(-212, -1992),
+    new THREE.Vector2(-340, -1970),
+    new THREE.Vector2(-445, -2050),
+    new THREE.Vector2(-450, -2150),
+    new THREE.Vector2(-350, -2190),
+    new THREE.Vector2(-265, -2090),
+    new THREE.Vector2(-242, -2012),
     new THREE.Vector2(-180, -1994),
     new THREE.Vector2(-158, -1980),
     new THREE.Vector2(-140, -1966),
@@ -80,7 +81,7 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
 };
 
-const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'toWood', 'wood', 'toSleeping', 'sleeping', 'toHome', 'home'];
+const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toHome', 'home'];
 
 /**
  * Runs the chapters in order and speaks for whichever is current. `?chapter=` starts later in the story for
@@ -89,9 +90,27 @@ const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow'
 export class Journey {
   name: ChapterName = 'island';
   private chapter: Chapter;
+  private savedPoint = '';
 
   constructor(private readonly cast: Cast) {
     this.chapter = new IslandChapter(cast);
+    const saved = params.progress ? readProgress() : null;
+    if (saved) {
+      if (saved.chapter !== 'island' || saved.point !== 'entry') {
+        placeProgress(saved, cast);
+        if (saved.chapter === 'home') cast.boat.mooring = HOME_MOORING;
+        // Mid-island starts must not initiate the arrival's carry animation.
+        if (saved.point !== 'entry' && saved.seat) cast.cygnet.rideIn('satchel');
+        this.begin(saved.chapter);
+        if (saved.point !== 'entry') {
+          placeProgress(saved, cast);
+          this.chapter.restoreCheckpoint?.(saved.point, saved.data);
+        }
+      }
+      restoreLife(saved, cast);
+      this.savedPoint = saved.point;
+      return;
+    }
     const start = params.chapter;
     if (start === 'crossing' || start === 'lines') {
       this.sail(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
@@ -218,18 +237,33 @@ export class Journey {
 
   update(dt: number, time: number): void {
     this.chapter.update(dt, time);
-    if (!this.chapter.done) return;
-    const next = ORDER[ORDER.indexOf(this.name) + 1];
-    if (next) this.begin(next);
+    if (this.chapter.done) {
+      // Old saves in the separate forest crossing still arrive in the wood.
+      const next = this.name === 'toWood' ? 'wood' : ORDER[ORDER.indexOf(this.name) + 1];
+      if (next) this.begin(next);
+    }
+    // The zero-time camera setup behind Begin is not a played checkpoint.
+    if (dt <= 0 || !params.progress || this.name === 'stage') return;
+    const point = this.chapter.checkpoint;
+    if (point && point !== this.savedPoint && !this.cast.carry.busy && !this.cast.child.acting) {
+      saveProgress(this.name, point, this.chapter.saveCheckpoint?.() ?? [], this.cast);
+      this.savedPoint = point;
+    } else if (!this.savedPoint) {
+      // Entering a crossing is the preceding island's exit checkpoint.
+      saveProgress(this.name, 'entry', [], this.cast);
+      this.savedPoint = 'entry';
+    }
   }
 
   private begin(name: ChapterName): void {
     this.name = name;
     this.chapter = this.make(name);
+    this.savedPoint = '';
   }
 
   private make(name: ChapterName): Chapter {
     const { cast } = this;
+    if (ORDER.indexOf(name) > ORDER.indexOf('birches') || name === 'toWood') cast.boat.scarfSail = 1;
     switch (name) {
       case 'toLines':
         return new CrossingChapter(cast, {
@@ -267,13 +301,13 @@ export class Journey {
         /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */
         return new CrossingChapter(cast, {
           route: ROUTES.toHome,
-          haze: 0.5,
+          haze: tuning.seaPassage.haze,
           dusk: 1.02,
           duskTo: 0.25,
-          whaleAt: 55,
-          whaleEvery: 150,
+          whaleAt: 42,
+          whaleEvery: 0,
           dolphins: true,
-          swimAt: 0.42,
+          swimAt: tuning.seaPassage.swimAt,
           season: 0.92,
           moor: HOME_MOORING,
         });

@@ -9,6 +9,37 @@ How the ground, its life and the things living on it fit together. The wind's ow
 - `heightAt(x, z)` (`src/world/island.ts`) reads the window's height bake when the point is inside it and falls back to `worldHeight`, so it is valid everywhere and consistent with what is drawn. Use it for anything that stands on the ground.
 - The terrain, grass and sea all read the same 512² height bake inside the window (`src/world/ground.ts`), so nothing floats or sinks.
 
+## The shore beyond the red door
+
+`DOOR_SHORE` in `heightfield.ts` is a separate small island at (240, −460), with the same CPU/GLSL height function.
+During the washing chapter each camera sees only its room's land; the rest is sea. The boat stays visible on the
+arrival beach until the family reveal, then moves to the destination before the red door at (11, −398) opens.
+Its render-room membership follows its position, including in the water reflection. The kite belongs only to
+the destination. It has one family clothesline and short grass from
+`door-shore.ts`; ordinary grass excludes this patch to avoid drawing two populations. The voyage to the meadow
+starts from this shore. Portal rendering and the threshold transfer are described in `docs/engine.md`.
+
+The meadow and birches also retain the arrival boat until the walk approaches their inland crest. Check landing
+continuity, boat visibility and departure placement with `node tools/landing-check.mjs`.
+
+## Boats on the shore
+
+`Boat` resolves its rotated hull vertices against terrain on placement and every frame, including while afloat
+or pushing off. Checking only the hull centre misses sand under the bow and sides. Near shore it eases its pitch
+and roll toward the beach slope; the floorboards rise inside the bow rather than extending below its shell.
+Clearance and maximum shore tilt are in `tuning.sail`. `tools/boat-ground-check.mjs` audits berths, launches and
+crossings on the CPU; `tools/boat-shores-check.mjs` checks the baked and rendered ground and captures each shore.
+
+## The sea surface and offshore view
+
+`world/water/swell.ts` owns the swell. CPU swimmers and dolphins use `swellLift`; foam, rings, slicks and submerged
+dolphin silhouettes use GLSL `seaSurfaceY`, which undoes horizontal wave displacement before finding surface
+height. Surface marks have enough vertices to bend over the swell. The boat emits these marks for its wake.
+
+The long crossing exposes `Chapter.openSea` (0–1). `main.ts` eases it into `uOpenSea`; distant fog converges fully
+to the same `skyRadiance` used by the backdrop, including clouds, so hidden islands cannot leave tinted outlines.
+It releases during the approach to home. Other chapters retain ordinary haze.
+
 ## The window
 
 A 320 × 320 square that follows the camera; see `wind.md` for how it moves. Everything baked in window space is re-made when it moves: height, ground (normal and sun visibility), surface (open ground and flower patches), the shoreline distance for the surf, and the life field shifts with it.

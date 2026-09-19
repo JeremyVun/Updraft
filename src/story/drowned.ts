@@ -1,16 +1,19 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { WindSample } from '../wind/field';
-import { DROWNED_CHANNEL, SPIRE } from '../world/drowned';
+import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
+import { WOOD_LANDING } from '../world/wood';
+import { tuning } from '../tuning';
+import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
 
 /** How near a waypoint counts as rounded. */
 const ROUNDED = 20;
 /** How near the spire has to be before the child looks up at it. */
 const SPIRE_NEAR = 80;
-/** The squall takes the plane once it has been building this long, and the drift ends a while after. */
-const GATHER_AT = 0.55;
+/** The channel continues to shore; the boat never waits by circling its last roof. */
+const PASSAGE = [...DROWNED_CHANNEL, WOOD_LANDING];
 /** Where in the village the air dies and they stop. */
 const STILL_AT = 0.32;
 /** How much wind the player has to put into the sail before the boat has way on it again. */
@@ -55,10 +58,17 @@ export class DrownedChapter implements Chapter {
   private quarter = 1;
   private filled = 0;
   private stirred = false;
+  private stormTime = 0;
+  private shook = false;
+  private sheltered = false;
+  private readonly departure = new THREE.Vector2();
 
   constructor(private readonly cast: Cast) {
     const { boat, plane } = cast;
     boat.becalmed = 0;
+    boat.speedLimit = tuning.storm.passageSpeed;
+    boat.mooring = null;
+    this.departure.set(boat.position.x, boat.position.z);
     boat.steerFor = DROWNED_CHANNEL[0];
     boat.canGround = false;
     boat.grounded = false;
@@ -70,8 +80,19 @@ export class DrownedChapter implements Chapter {
     return this.beat === 'snatch';
   }
 
+  get invitesSail(): boolean { return this.beat === 'still'; }
+
   get done(): boolean {
-    return this.beat === 'after' && this.t > 16;
+    return this.beat === 'after' && this.cast.boat.grounded;
+  }
+
+  get checkpoint(): string | null { return this.stirred && this.beat === 'drift' ? 'sail' : null; }
+  saveCheckpoint(): number[] { return [this.leg]; }
+  restoreCheckpoint(_point: string, data: number[]): void {
+    this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, DROWNED_CHANNEL.length - 1);
+    this.stirred = true; this.beat = 'drift';
+    this.cast.boat.speedLimit = tuning.storm.passageSpeed;
+    this.cast.boat.steerFor = DROWNED_CHANNEL[this.leg];
   }
 
   private to(beat: Beat): void {
@@ -90,24 +111,26 @@ export class DrownedChapter implements Chapter {
     const prev = DROWNED_CHANNEL[Math.max(0, this.leg - 1)];
     const span = Math.hypot(wp.x - prev.x, wp.y - prev.y) || 1;
     const gone = 1 - Math.min(1, Math.hypot(this.cast.boat.position.x - wp.x, this.cast.boat.position.z - wp.y) / span);
-    return THREE.MathUtils.clamp((this.leg + gone) / legs, 0, 1);
+    return THREE.MathUtils.clamp((this.leg - 1 + gone) / legs, 0, 1);
   }
 
   private steer(): void {
     const { boat } = this.cast;
-    const wp = DROWNED_CHANNEL[this.leg];
-    if (this.leg < DROWNED_CHANNEL.length - 1 && Math.hypot(boat.position.x - wp.x, boat.position.z - wp.y) < ROUNDED) {
+    const wp = PASSAGE[this.leg];
+    const from = this.leg === 0 ? this.departure : PASSAGE[this.leg - 1];
+    if (this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
       this.leg++;
-      boat.steerFor = DROWNED_CHANNEL[this.leg];
+      boat.steerFor = PASSAGE[this.leg];
     }
+    boat.canGround = this.leg === PASSAGE.length - 1 && this.beat === 'after';
   }
 
-  update(dt: number, time: number): void {
-    this.now = time;
+  update(dt: number, _time: number): void {
+    this.now += dt;
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
     c.ride(boat.seat(this.seat), boat.yaw, boat.roll, boat.pitch);
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
 
     const through = this.through;
     switch (this.beat) {
@@ -116,21 +139,20 @@ export class DrownedChapter implements Chapter {
         break;
       case 'drift':
         if (!this.stirred && through > STILL_AT) this.becalm();
-        else if (through > GATHER_AT) this.to('gather');
+        else if (Math.hypot(boat.position.x - WOOD_LANDING.x, boat.position.z - WOOD_LANDING.y) < tuning.storm.startsFromShore) this.to('gather');
         break;
       case 'still':
         this.hold(dt);
         break;
       case 'gather':
-        /** The storm is what takes it, so it has to be a storm first: the player watches it come for half a minute. */
-        if (this.storm > 0.82) this.snatch();
+        if (this.t > tuning.storm.gatherFor) this.snatch();
         break;
       case 'snatch':
-        if (this.t > 5.5) this.to('after');
+        if (this.t > tuning.storm.snatchFor) this.to('after');
         break;
       case 'after':
         /** Once the rain has it, it is gone. Nothing in the story goes to look for it; it turns up in the wood. */
-        if (p.position.distanceTo(boat.position) > 130) p.visible = false;
+        if (p.position.distanceTo(boat.position) > 130 || this.t > tuning.storm.planeLostAfter) p.visible = false;
         break;
       default:
         break;
@@ -144,8 +166,17 @@ export class DrownedChapter implements Chapter {
   /** Dusk deepening into a squall, and the music getting out of the way of it. */
   private weather(dt: number, through: number): void {
     const gathering = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
-    const want = gathering ? 1 : 0;
-    this.storm += (want - this.storm) * (1 - Math.exp(-dt * 0.06));
+    if (gathering) this.stormTime += dt;
+    this.storm = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.weatherGatherFor);
+    if (!this.shook && this.stormTime > tuning.storm.shakeAt) {
+      this.shook = true;
+      this.cast.cygnet.mind.perform('shake', 1.1);
+    }
+    if (!this.sheltered && this.stormTime > tuning.storm.lighthouseOutAt) {
+      this.sheltered = true;
+      this.cast.cygnet.mind.startle(tuning.storm.lighthouseStartle);
+      this.cast.cygnet.mind.perform('nuzzle', tuning.storm.lighthouseComfortFor);
+    }
     /**
      * The air goes out of the village before the storm comes into it. The world's own wind dies with it, so the
      * water goes to glass and the only thing left moving anywhere is whatever the player does.
@@ -154,9 +185,9 @@ export class DrownedChapter implements Chapter {
     const boat = this.cast.boat;
     boat.becalmed += ((still ? 1 : 0) - boat.becalmed) * (1 - Math.exp(-dt * (still ? 0.7 : 1.1)));
     this.breeze += ((still ? 0 : 1) - this.breeze) * (1 - Math.exp(-dt * (still ? 0.6 : 0.5)));
-    this.dusk = 0.75 + through * 0.25 + this.storm * 0.35;
-    this.haze = 0.6 + this.storm * 0.28 + (1 - this.breeze) * 0.12;
-    this.shower = Math.max(0, this.storm - 0.25) * 1.2;
+    this.dusk = 0.75 + through * 0.25 + THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.darkBy);
+    this.haze = 0.6 + this.storm * 0.36 + (1 - this.breeze) * 0.12;
+    this.shower = THREE.MathUtils.smoothstep(this.storm, 0.12, 0.85);
     const quiet = this.beat === 'snatch' ? 1 : this.beat === 'after' ? 0.85 : still ? 0.92 : 0.3 + this.storm * 0.45;
     this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.8));
   }
@@ -182,7 +213,7 @@ export class DrownedChapter implements Chapter {
     if (this.t > 6 && (this.filled > FILL_NEEDED || this.t > STILL_LIMIT)) {
       this.stirred = true;
       this.to('drift');
-      cue('filled');
+      completeObjective();
     }
   }
 
@@ -201,6 +232,14 @@ export class DrownedChapter implements Chapter {
     if (this.beat === 'after') {
       /** The empty hand, and then the water it went over. */
       c.lookAt = this.t < 6 ? c.handPosition(this.hand) : this.look.set(this.lost, 1.5, boat.position.z - 40);
+      return;
+    }
+    if ((this.sheltered && this.stormTime < tuning.storm.lighthouseOutAt + tuning.storm.lighthouseComfortFor) || (this.shook && this.stormTime < tuning.storm.shakeAt + 2)) {
+      c.lookAt = this.cast.cygnet.eye(this.look);
+      return;
+    }
+    if (this.beat === 'gather' && this.t < tuning.storm.lighthouseOutAt) {
+      c.lookAt = this.look.copy(LIGHTHOUSE).setY(14);
       return;
     }
     if (Math.hypot(boat.position.x - SPIRE.x, boat.position.z - SPIRE.z) < SPIRE_NEAR) {
@@ -240,17 +279,17 @@ export class DrownedChapter implements Chapter {
     const s = this.shot;
     const fx = Math.sin(boat.yaw);
     const fz = Math.cos(boat.yaw);
-    if (this.beat === 'snatch' || (this.beat === 'after' && this.t < 7)) {
+    if (this.beat === 'snatch' || (this.beat === 'after' && this.t < tuning.storm.planeLookFor)) {
       /**
        * Astern and a little wider than the drift, so the frame holds the child with both arms out and the plane
        * going away up the channel in front of them. Chasing the plane itself would only show the player a dot.
        */
       this.quarter += (-boat.sailSide - this.quarter) * 0.05;
-      const bearing = boat.yaw + Math.PI + this.quarter * 0.5;
+      const bearing = boat.yaw + Math.PI + this.quarter * tuning.storm.cameraQuarter;
       s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
       const seat = this.cast.child.position;
-      s.target.set(seat.x + fx * 7, seat.y + 1.7 + Math.max(0, p.position.y - seat.y) * 0.2, seat.z + fz * 7);
-      s.distance = 17;
+      s.target.set(seat.x + fx * tuning.storm.planeAhead, seat.y + 1.7 + Math.min(tuning.storm.planeLookUp, Math.max(0, p.position.y - seat.y) * 0.1), seat.z + fz * tuning.storm.planeAhead);
+      s.distance = 18;
       s.height = 3.6;
       this.pace = 1;
       this.focus.copy(boat.position);
@@ -269,14 +308,27 @@ export class DrownedChapter implements Chapter {
       return;
     }
     this.quarter += (-boat.sailSide - this.quarter) * 0.02;
-    const bearing = boat.yaw + Math.PI + this.quarter * 0.66;
+    const bearing = boat.yaw + Math.PI + this.quarter * tuning.storm.cameraQuarter;
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
+    if (this.beat === 'gather') {
+      const guide = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.lighthouseLookFrom)
+        * (1 - THREE.MathUtils.smoothstep(this.stormTime, tuning.storm.lighthouseLookRelease, tuning.storm.lighthouseLookUntil));
+      const towardLight = Math.atan2(LIGHTHOUSE.x - boat.position.x, LIGHTHOUSE.z - boat.position.z)
+        + Math.PI + tuning.storm.lighthouseLookOffset;
+      this.from.lerp(this.tmp.set(Math.sin(towardLight), 0, Math.cos(towardLight)), guide).normalize();
+    }
     /** Low and close to the water, because the village only reads as drowned from a hand's breadth above it. */
     const seat = this.cast.child.position;
-    s.target.set(seat.x + fx * 3, seat.y + 0.9, seat.z + fz * 3);
+    s.target.set(seat.x + fx * tuning.storm.lookAhead, seat.y + 0.9, seat.z + fz * tuning.storm.lookAhead);
     s.distance = this.beat === 'enter' ? 26 : 16;
     s.height = this.beat === 'enter' ? 6 : 2.8;
-    this.pace = 0.4;
+    if (this.beat === 'gather') {
+      const opening = THREE.MathUtils.smoothstep(this.stormTime, 0, 6);
+      s.distance = THREE.MathUtils.lerp(16, tuning.storm.lighthouseFrameDistance, opening);
+      s.height = THREE.MathUtils.lerp(2.8, tuning.storm.lighthouseFrameHeight, opening);
+      s.target.y = seat.y + THREE.MathUtils.lerp(0.9, tuning.storm.lighthouseFrameUp, opening);
+    }
+    this.pace = this.beat === 'gather' ? tuning.storm.lighthouseCameraPace : 0.4;
     this.focus.copy(boat.position);
   }
 }

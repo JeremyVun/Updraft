@@ -7,7 +7,7 @@ import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Deck } from '../traveller/traveller';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
+import { completeObjective, cue } from './cues';
 
 type Beat =
   | 'ashore'
@@ -160,6 +160,7 @@ export class HomeChapter implements Chapter {
   private duskTarget = 0.85;
   private now = 0;
   private readonly hand = new THREE.Vector3();
+  private readonly paperFacing = new THREE.Quaternion();
   private readonly tmp = new THREE.Vector3();
   private readonly held = new THREE.Vector3();
   private readonly behind = new THREE.Vector3();
@@ -230,13 +231,31 @@ export class HomeChapter implements Chapter {
     return false;
   }
 
+  get checkpoint(): string | null {
+    return this.finished ? 'complete' : this.beat === 'release' ? 'drawing' : this.beat === 'crest' ? 'reunion' : null;
+  }
+  restoreCheckpoint(point: string): void {
+    const { child, cygnet, flock, plane, cottage, drawing } = this.cast;
+    cygnet.visible = false; flock.clear();
+    this.dusk = this.duskTarget = point === 'complete' ? 2 : 1.15;
+    if (point === 'reunion') this.onOver();
+    else if (point === 'drawing') {
+      this.paper = true; drawing.mesh.visible = true; plane.visible = false;
+      this.beat = 'release';
+    } else {
+      this.beat = 'credits'; this.finished = this.silence = true;
+      child.visible = plane.visible = false;
+      cottage.smoking = true; cottage.openDoor(false);
+    }
+  }
+
   /** For testing the ending: straight to the top of the hill, plane in hand. */
   skipToSummit(): void {
     const { child, plane } = this.cast;
     child.stop();
     child.place(SUMMIT.x + 5, SUMMIT.y + 26, Math.PI);
     child.standUp();
-    plane.hold(child.handPosition(this.hand), child.yaw);
+    plane.hold(child);
     this.climb();
   }
 
@@ -253,7 +272,7 @@ export class HomeChapter implements Chapter {
     if (open === undefined) {
       child.place(SUMMIT.x, SUMMIT.y, Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
       child.standUp();
-      plane.hold(child.handPosition(this.hand), child.yaw);
+      plane.hold(child);
       this.onOver();
       return;
     }
@@ -264,7 +283,7 @@ export class HomeChapter implements Chapter {
     child.faceToward(cottage.position.x, cottage.position.z, 1);
     child.sitDown();
     child.presenting = 1;
-    plane.hold(child.handPosition(this.hand), child.yaw);
+    plane.hold(child);
     drawing.open = open;
     this.to('unfold');
   }
@@ -304,7 +323,7 @@ export class HomeChapter implements Chapter {
     this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * 0.22));
     const staged = this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered';
     if (!staged) this.hush += (0 - this.hush) * (1 - Math.exp(-dt * 0.5));
-    if (p.held) p.hold(c.handPosition(this.hand), c.yaw);
+    if (p.held) p.hold(c);
     this.frame();
   }
 
@@ -459,7 +478,7 @@ export class HomeChapter implements Chapter {
     /** Fewer of them than at the crest, so the small one can be picked out among them when it goes to join. */
     flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, 20, 16, 18);
     this.nextCall = this.now + 1.2;
-    cue('lifted');
+    completeObjective();
   }
 
   /**
@@ -670,7 +689,7 @@ export class HomeChapter implements Chapter {
       drawing.lift = this.lifted;
       drawing.turn = this.tilted;
       /** Turned toward where the camera is standing, over their shoulder, so it is seen the way they see it. */
-      drawing.place(c.handPosition(this.hand), c.yaw, c.presentPoint(this.held), this.eyeAt, this.now);
+      drawing.place(c.handPosition(this.hand), c.presentPoint(this.held), this.eyeAt, this.now, c.planeQuaternion(this.paperFacing));
       const holding = this.beat === 'unfold' || this.beat === 'gaze' || (this.beat === 'fold' && drawing.open >= GRIPS_TO);
       if (holding) this.hands();
     }

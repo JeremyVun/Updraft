@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
+import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
 import { SURF_GLSL, surfUniforms } from '../../world/water/surf';
 
 const MAX = 600;
@@ -9,6 +10,7 @@ export const RING = 2;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
+${SWELL_GLSL}
 in vec4 iA;
 in vec4 iB;
 in vec4 iC;
@@ -26,7 +28,7 @@ void main() {
   vec2 q = position.xy;
   vec2 local = vec2(q.x * r * iC.y, q.y * r);
   vec2 xz = iA.xy + dir * local.x + vec2(-dir.y, dir.x) * local.y;
-  vWorld = vec3(xz.x, 0.02, xz.y);
+  vWorld = vec3(xz.x, seaSurfaceY(xz) + 0.035, xz.y);
   vQ = q;
   vFade = t;
   vKind = iB.z;
@@ -92,7 +94,7 @@ export class Marks {
   private readonly c: THREE.InstancedBufferAttribute;
 
   constructor() {
-    const quad = new THREE.PlaneGeometry(2, 2);
+    const quad = new THREE.PlaneGeometry(2, 2, 3, 3);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = quad.index;
     geo.setAttribute('position', quad.attributes.position);
@@ -111,7 +113,7 @@ export class Marks {
       new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...atmo.uniforms, ...surfUniforms, uDeep: { value: new THREE.Color('#0d4a66') } },
+        uniforms: { ...atmo.uniforms, ...surfUniforms, ...swellUniforms, uDeep: { value: new THREE.Color('#0d4a66') } },
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,

@@ -6,15 +6,31 @@
     <title>Updraft</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
-  <body>
-    <canvas id="view"></canvas>
-    <div id="veil"></div>
+  <body class="starting">
+    <canvas id="view" inert></canvas>
+    <div id="veil" aria-busy="true">
+      <div class="veil-colour" aria-hidden="true"></div>
+      <div class="veil-haze" aria-hidden="true"></div>
+      <svg class="veil-wind" aria-hidden="true"></svg>
+      <svg class="veil-rest" viewBox="0 0 440 160" aria-hidden="true">
+        <path d="M32 96 C110 126 211 26 330 65 C229 30 121 130 32 96Z"/>
+        <path d="M95 116 C184 113 256 50 397 77 C266 54 187 117 95 116Z"/>
+      </svg>
+      <button id="begin" type="button" disabled><span>Begin</span></button>
+      <span id="start-status" class="visually-hidden" role="status"></span>
+    </div>
     <button id="sound" aria-label="Sound" aria-pressed="false" data-on="false">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path class="speaker" d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
         <path class="wave wave-1" d="M15 9.2c1.1.8 1.1 4.8 0 5.6" />
         <path class="wave wave-2" d="M17.6 7c2.4 1.9 2.4 8.1 0 10" />
         <path class="mute" d="M15.5 9.5l5 5m0-5l-5 5" />
+      </svg>
+    </button>
+    <button id="fullscreen" type="button" aria-label="Enter full screen" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="enter" d="M9 5H5v4m10-4h4v4M9 19H5v-4m10 4h4v-4" />
+        <path class="exit" d="M5 9h4V5m10 4h-4V5M5 15h4v4m10-4h-4v4" />
       </svg>
     </button>
     <div id="credits" aria-hidden="true">
@@ -24,7 +40,7 @@
           <div class="name">Jeremy</div>
         </div>
         <div class="entry">
-          <div class="role">Story and journey</div>
+          <div class="role">Story</div>
           <div class="name">Jeremy</div>
           <div class="name">Fable 5.1</div>
         </div>
@@ -41,17 +57,31 @@
         <div class="entry">
           <div class="role">Visual effects</div>
           <div class="name">Opus 5</div>
+          <div class="name">Astra</div>
         </div>
         <div class="entry">
           <div class="role">World and creatures</div>
           <div class="name">Opus 5</div>
         </div>
         <div class="entry">
-          <div class="role">Companion animation and behaviour</div>
+          <div class="role">Animation</div>
           <div class="name">Fable 5.1</div>
+          <div class="name">Opus 5</div>
+          <div class="name">Astra</div>
         </div>
         <div class="entry">
-          <div class="role">Build orchestration</div>
+          <div class="role">Cinematography</div>
+          <div class="name">Fable 5.1</div>
+          <div class="name">Opus 5</div>
+          <div class="name">Astra</div>
+        </div>
+        <div class="entry">
+          <div class="role">Puzzles</div>
+          <div class="name">Fable 5.1</div>
+          <div class="name">Astra</div>
+        </div>
+        <div class="entry">
+          <div class="role">Production</div>
           <div class="name">Fable 5.1</div>
         </div>
         <div class="entry">
@@ -59,17 +89,13 @@
           <div class="name">Jeremy</div>
         </div>
         <div class="entry">
-          <div class="role">The few words</div>
+          <div class="role">Copy</div>
           <div class="name">Astra</div>
-        </div>
-        <div class="entry">
-          <div class="role">Final say</div>
-          <div class="name">Jeremy</div>
         </div>
         <div class="closing">Thank you for bringing them home.</div>
       </div>
     </div>
     <button id="again" type="button">Play again</button>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/entry.ts"></script>
   </body>
 </html>

@@ -89,6 +89,7 @@ vec3 mirrorShade(vec3 n, vec2 xz, float h) {
 }
 
 void main() {
+  if (roomHides(vWorld.xz)) discard;
   vec3 n = normalize(vNormal);
   vec2 xz = vWorld.xz;
   float h = vWorld.y;
@@ -113,7 +114,7 @@ void main() {
   vec4 surf = surfaceAt(xz);
   alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
-  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), uMirrorPass);
+  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), max(uMirrorPass, (1.0 - smoothstep(40.0, 48.0, distance(xz, vec2(240.0, -460.0)))) * 0.38));
   vec3 tint = grassTint(xz);
   vec4 fld = fieldAt(xz);
   float hay = step(fld.y, 0.22) * fld.w;

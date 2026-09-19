@@ -64,6 +64,8 @@ export interface Chapter {
   readonly shower?: number;
   /** Haze thick enough to hide what is ahead, 0 to 1. */
   readonly haze?: number;
+  /** At open sea, distant land dissolves into the sky without leaving a tinted silhouette. */
+  readonly openSea?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
   /** Which room's music this chapter is played to. */
@@ -86,9 +88,18 @@ export interface Chapter {
   readonly coax?: Coax | null;
   /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
   readonly invitesFlight?: boolean;
+  /** Offer a sweep only while this chapter is waiting for wind in a fully slack sail. */
+  readonly invitesSail?: boolean;
+  /** A waiting ember or wet plane that needs a deliberate sweep across it. */
+  readonly windInvitation?: THREE.Vector3 | null;
+  brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */
   readonly silence?: boolean;
   /** True once the story is over and the credits may roll. */
   readonly finished?: boolean;
+  /** A completed point of interest; only safe, reconstructible exits are persisted. */
+  readonly checkpoint?: string | null;
+  saveCheckpoint?(): number[];
+  restoreCheckpoint?(point: string, data: number[]): void;
   update(dt: number, time: number): void;
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tuning } from '../tuning';
 import { params } from '../params';
 import { atmo } from './atmosphere';
 
@@ -146,7 +147,8 @@ function lightAngles(dusk: number): [number, number] {
   if (params.sun) return [params.sun[0], params.sun[1]];
   if (dusk <= 1) return [THREE.MathUtils.lerp(52, 32, dusk), THREE.MathUtils.lerp(13, 3.2, dusk)];
   if (dusk <= 1.5) return [32, THREE.MathUtils.lerp(3.2, -2.5, (dusk - 1) / 0.5)];
-  return [MOON.az, MOON.el];
+  const night = THREE.MathUtils.smoothstep(dusk, tuning.sky.moonHandoffFrom, tuning.sky.moonHandoffTo);
+  return [THREE.MathUtils.lerp(32, MOON.az, night), THREE.MathUtils.lerp(-2.5, MOON.el, night)];
 }
 
 /**

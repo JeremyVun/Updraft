@@ -80,6 +80,9 @@ export class PianoStop {
     return this.beat;
   }
 
+  /** A checkpoint beyond the stop never replays or re-scores the puzzle. */
+  restoreDone(): void { this.beat = 'done'; piano.expect = null; }
+
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
     return this.hushed;
