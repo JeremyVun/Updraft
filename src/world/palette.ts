@@ -56,7 +56,7 @@ const DUSK: Palette = {
   fog: 0.0014,
 };
 
-/** Moonlight: the single light becomes the moon, low and cool. */
+/** Moonlight: the single light becomes the moon, low and cool, in air a clear night has scrubbed of haze. */
 const NIGHT: Palette = {
   sun: hdr('#a9bdf0', 0.42),
   zenith: hdr('#0a1230', 0.42),
@@ -64,7 +64,7 @@ const NIGHT: Palette = {
   horizonSun: hdr('#3e4a7a', 0.5),
   ambient: hdr('#4f62a0', 0.3),
   bounce: hdr('#1b1f30', 0.1),
-  fog: 0.0014,
+  fog: 0.0009,
 };
 
 /** A passing shower: the sun still out but veiled, the sky grey and bright, the haze thick. */
@@ -134,8 +134,12 @@ export function sunDirection(azDeg: number, elDeg: number, out = new THREE.Vecto
   return out.set(-Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 }
 
-/** Where the moon hangs at night (azimuth, elevation in degrees). */
-export const MOON = { az: -38, el: 24 } as const;
+/**
+ * Where the moon hangs at night (azimuth, elevation in degrees). Low, because the end of the story is watched
+ * from a hill over the sea: a moon any higher throws its path onto water too near the shore to be seen, and
+ * cannot be held in the same frame as the sea it lights.
+ */
+export const MOON = { az: -38, el: 12 } as const;
 
 /** Where the light comes from for a time of day: the sun sinks into the north-west, then the moon takes over. */
 function lightAngles(dusk: number): [number, number] {
@@ -175,7 +179,8 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
   u.uGroundBounce.value.copy(p.bounce);
   u.uFogDensity.value = p.fog;
   u.uNight.value = night;
-  u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * u.uNight.value) + 0.22 * shower;
+  /** Night is only thick when the weather makes it so: a clear one lets the sea keep its stars to the horizon. */
+  u.uMist.value = Math.max(0.42 * (1 - k), (0.12 + 0.18 * storm) * u.uNight.value) + 0.22 * shower;
   const [az, el] = lightAngles(dusk);
   sunDirection(az, el, u.uSunDir.value);
 }

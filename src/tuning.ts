@@ -304,6 +304,9 @@ export const tuning = {
     /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
     luffFrom: 0.12,
     luffFade: 0.55,
+    /** How many of the night sky's stars the sea catches, and how brightly they flash when it does. */
+    stars: 0.11,
+    starLight: 5,
   },
 };
 

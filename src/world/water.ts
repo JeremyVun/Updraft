@@ -321,7 +321,18 @@ void main() {
   float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 
-  vec3 col = mix(body, refl, F) + sun;
+  /**
+   * The stars on the water. The sky's own field is far finer than a pixel of sea, so reflecting it would boil
+   * into noise; the sea catches it instead as the facets that happen to point at one, flashing in world-space
+   * cells a few pixels across, which is how the sun's glitter is drawn too.
+   */
+  vec3 starlight = vec3(0.0);
+  if (uNight > 0.0) {
+    float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uNight;
+    starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}) * F * caught * ${glsl(tuning.water.starLight)};
+  }
+
+  vec3 col = mix(body, refl, F) + sun + starlight;
   // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
   col *= 1.0 - ${glsl(tuning.water.darken)} * stroke;
 
