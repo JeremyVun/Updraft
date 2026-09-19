@@ -303,7 +303,7 @@ void main() {
   vec3 a = curtainAt(uv + vec2(0.05, 0.0), aSide);
   vec3 b = curtainAt(uv + vec2(0.0, 0.05), aSide);
   vWorld = p;
-  /** Both panels take the same normal: the mirrored one's winding is already answered by `gl_FrontFacing`. */
+  /** Both panels take the same normal: the mirrored one's winding is answered by gl_FrontFacing below. */
   vNormal = normalize(cross(b - p, a - p));
   vColor = uCloth;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
