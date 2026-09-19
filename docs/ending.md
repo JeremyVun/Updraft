@@ -178,6 +178,10 @@ valley opens for the player as it opens for the child, round onto their left sho
 hands while the paper comes open and out again as the sheet fills, so the finished drawing and the house it is a
 drawing of are held in the one frame. `gone` to `release` is about 61 s, six more than it was.
 
+Everything above, round 2 and the unfolding included, is on `main` as of the evening of 2026-09-19, verified by capture
+only: Jeremy has not played round 2. To reach the drawing quickly in QA, `__game.story.current.skipToDrawing(open?)`
+from an `eval` step in `?chapter=summit` puts the child at the summit with the family gone and jumps to `crest`.
+
 Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
 the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`
 reports the set-down step-off jerk a hair over its limit (0.021 against 0.02), in `companion/carry.ts`.
