@@ -96,6 +96,20 @@ is a wall of grass); the dolphins (merged from `end-dolphins`: `tuning.dolphins`
 lush home grass; the finale (`Soundscape.finale`, cue `finale`, `SoundState.silence`, everything musical on one
 `musicBus`) and the credits (`#credits`, `#again` in `index.html`, copy in `docs/copy/copy-2.json`).
 
+**The last shot** (`end-stars`, 2026-09-19). The rise now ends looking out over the open sea north-east of the
+island, swung 19 degrees east of the moon (`MOON_OFF` in `home.ts`) and a degree above level: the moon hangs in
+the left of the frame with its path lying down the water under it, the horizon crosses the middle, and the dark
+strip up the centre that the credits roll through is left alone. The moon had to come down to do it (`MOON.el`
+12, was 24): from a camera 90 units up, a moon at 24 throws its path onto water inside the island's own shoulder,
+where nothing can see it, and it will not share a 38-degree lens with the sea it lights. The pan also tightens as
+it goes (`pace` 0.2 to 0.36 instead of 0.2 down to 0.08) so it has arrived by the time the credits are over it;
+before, it was still swinging the moon into the middle of the screen a minute into the roll.
+And the sea keeps the stars: `uStarlight` (1 once the last of the day is out of the sky and no weather is in the
+way) thins the night haze, draws the distance veil back from 510 units to 780, and lets the water catch the
+sky's field of stars as glints — the world-space cells a few pixels across that the sun's glitter is drawn with,
+because reflecting the sky's own star field through the ripples would only boil. Before this the whole lower
+frame was one flat fogged slab.
+
 A full run from `?chapter=sea` through the credits was captured on the merged code before the jetty model landed
 and looked right. Waiting on Jeremy: the credits copy, the finale as heard (composed blind: the chord ladder, the
 chime timing, the swell and cut 23.5 s into `inside`), and whether the 72 s credits roll, the "Play again" glow
