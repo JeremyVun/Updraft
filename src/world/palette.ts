@@ -179,10 +179,11 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
   u.uGroundBounce.value.copy(p.bounce);
   u.uNight.value = night;
   /**
-   * Once the last of the day is out of the sky and no weather is in the way, the air is at its clearest: the
-   * haze thins, the veil the world ends in draws back (main.ts), and the sea starts catching the stars.
+   * Once the very last of the day is out of the sky and no weather is in the way, the air is at its clearest:
+   * the haze thins, the veil the world ends in draws back (main.ts), and the sea starts catching the stars.
+   * Only the top of the dial, so a room that plays at nightfall keeps whatever murk it was built with.
    */
-  const starlight = THREE.MathUtils.smoothstep(dusk, 1.8, 1.98) * (1 - storm);
+  const starlight = THREE.MathUtils.smoothstep(dusk, 1.92, 1.99) * (1 - storm);
   u.uStarlight.value = starlight;
   u.uFogDensity.value = p.fog * (1 - 0.35 * starlight);
   u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * night * (1 - 0.6 * starlight)) + 0.22 * shower;
