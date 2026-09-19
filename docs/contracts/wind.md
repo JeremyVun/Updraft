@@ -41,7 +41,9 @@ A splat pushes air along the segment from `(ax, az)` to `(bx, bz)`, with a Gauss
 - `swirl`: tangential acceleration around the end point `b`, peaking at about 0.7 × radius. It spins the grass and the wind lines.
 - `lift`: updraft added per second around `b`.
 
-Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and lift in the middle of circles traced with the cursor: `charge` winds up with how fast the stroke's heading turns, `tuning.pointer.twirlFrom`/`twirlFull`, and runs down when the circling stops. Nothing needs a button press) and the glider's wake when it skims low.
+Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and lift in the middle of circles traced with the cursor: `charge` winds up with how fast the stroke's heading turns, `tuning.pointer.twirlFrom`/`twirlFull`, and runs down when the circling stops. Nothing needs a button press. While a chapter `invitesFlight`, `main.ts` sets `input.anchor` to the cygnet, and circles drawn within `tuning.pointer.anchorNear` screen heights of it stand their column at the bird rather than at the cursor's ground point, which under a low camera is a long ellipse that would put the air anywhere but under it) and the glider's wake when it skims low.
+
+The cygnet reads `lift` at its own position (plus `tuning.colt.reach` around it) and takes off above `Cygnet.liftToFly` once it has been held there for `liftFor` seconds (`Cygnet.needs`; a flick anywhere else, `tuning.summit` at the end). Gust `energy` under it counts as lift at `tuning.colt.gustLift`, enough to make it hope and open its wings but never to lift it: the updraft is the spiral the wind shows the player (`Coax`, drawn by `fx/swirl.ts`) and the player draws it.
 
 ## Deliberate exceptions
 
