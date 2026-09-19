@@ -234,6 +234,16 @@ export const tuning = {
   washing: {
     /** Wind speed that lifts a sheet all the way to horizontal; the breeze alone lifts it `wind.breeze` / this. */
     fullSwingSpeed: 18,
+    /** How much later than its pegs the hem takes the wind, in seconds, so a gust runs down the cloth. */
+    hemLag: 0.12,
+    /** How much of the swing the cloth has already at the pegs; the rest is the belly it fills down its drop. */
+    belly: 0.35,
+    /** The felt wind at which the cloth begins to shake rather than breathe, and at which it shakes hardest. */
+    flutterFrom: 4,
+    flutterFull: 15,
+    /** How much of the swing the ripple is, breathing in a breeze and shivering in a gust. */
+    rippleQuiet: 0.03,
+    rippleFull: 0.075,
   },
   /** The kite over the far beach and the pinwheels along the walk: the child nobody has seen. */
   linesToys: {

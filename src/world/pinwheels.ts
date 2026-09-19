@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { AudioOut } from '../creatures/voices';
 import { glsl, tuning } from '../tuning';
-import type { WindField, WindSample } from '../wind/field';
+import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
@@ -207,6 +207,8 @@ function pointAt(path: readonly THREE.Vector2[], t: number, out: THREE.Vector2, 
 }
 
 interface Wheel {
+  /** The wind it feels, on the hanging things' spring: a gust reaches a row one wheel at a time. */
+  sway: Sway;
   x: number;
   z: number;
   /** How quickly it turns: a big wheel on a long pin is lazier than a small one. */
@@ -261,7 +263,7 @@ export class Pinwheels {
         if (ground < 2) continue;
         /** Long enough to stand the wheel clear of grass this deep, and all of them a little out of true. */
         const top = 1.8 + rand() * 0.4;
-        this.wheels.push({ x, z, ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });
+        this.wheels.push({ x, z, sway: new Sway(), ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });
         positions.push(x, ground + top, z);
         states.push(0, 0, 0, 0.38 + rand() * 0.09);
         tint.set(SAIL_TINTS[Math.floor(rand() * SAIL_TINTS.length)]);
@@ -314,7 +316,10 @@ export class Pinwheels {
     let loudest = 0;
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
-      const air = this.wind.sample(w.x, w.z, this.sample);
+      const air = feltWind(this.wind.sample(w.x, w.z, this.sample), this.wind.calm);
+      w.sway.update(air.x, air.z, dt);
+      air.x = w.sway.x;
+      air.z = w.sway.z;
       const speed = Math.hypot(air.x, air.z);
       /** It weathercocks: the sails are a sail, and the stick is behind them. */
       if (speed > 0.3) w.yaw += wrap(Math.atan2(air.x, air.z) - w.yaw) * (1 - Math.exp(-dt * k.veerRate * w.ease * Math.min(2, 0.5 + speed * 0.2)));

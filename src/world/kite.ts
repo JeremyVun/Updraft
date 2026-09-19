@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import { tuning } from '../tuning';
-import type { WindField, WindSample } from '../wind/field';
+import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 
@@ -208,6 +208,8 @@ export class Kite {
   private readonly tail: THREE.Vector3[] = [];
   private readonly was: THREE.Vector3[] = [];
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  /** It flies on the wind it feels, on the same spring as the washing, so a gust reaches it when the gust does. */
+  private readonly sway = new Sway();
   private readonly basis = new THREE.Matrix4();
   private readonly xAxis = new THREE.Vector3();
   private readonly yAxis = new THREE.Vector3();
@@ -289,7 +291,10 @@ export class Kite {
     }
     if (dt < 1e-4) return;
     const k = tuning.linesToys;
-    const air = this.wind.sample(KITE_AT.x, KITE_AT.z, this.sample);
+    const air = feltWind(this.wind.sample(KITE_AT.x, KITE_AT.z, this.sample), this.wind.calm);
+    this.sway.update(air.x, air.z, dt);
+    air.x = this.sway.x;
+    air.z = this.sway.z;
     const speed = Math.hypot(air.x, air.z);
     const strength = THREE.MathUtils.smoothstep(speed, 0.5, 5);
 

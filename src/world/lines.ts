@@ -51,7 +51,13 @@ void main() {
     vSwing = 0.0;
     return;
   }
-  vec2 w = texture(uWindTex, domainUv(pegged.xz)).xy;
+  /**
+   * It swings on the wind a hanging thing feels, not on the raw air: a gust reaches it when the gust arrives, it
+   * takes it late, overshoots and swings back. The hem takes it later than the pegs, so a gust runs down the cloth.
+   */
+  vec4 sway = swayAt(pegged.xz);
+  float room = length(sway.xy) * 0.6 + 0.5;
+  vec2 w = sway.xy - clamp(sway.zw * (${glsl(tuning.washing.hemLag)} * hang), -room, room);
   float speed = length(w);
   /**
    * Which side it swings to follows the wind across the line smoothly. Taken as a bare sign, neighbouring
@@ -61,16 +67,38 @@ void main() {
   float across = dot(vec3(w.x, 0.0, w.y), side);
   float lean = across / sqrt(across * across + 0.12 * speed * speed + 0.04);
 
-  /** The sheet hinges on the line: still wind hangs it straight down, a full gust lifts it toward horizontal. */
+  /** Still wind hangs it straight down; a full gust lifts it toward horizontal. */
   float swing = clamp(speed / ${glsl(tuning.washing.fullSwingSpeed)}, 0.0, 1.0);
-  swing *= 0.35 + 0.65 * hang;
-  float ripple = sin(uTime * (4.0 + aShape.z) + position.x * 6.5 - hang * 5.0 + aShape.w);
-  swing = clamp(swing + ripple * 0.035 * (0.3 + swing), 0.0, 1.05);
-  float angle = swing * 1.5708 * lean;
+  /** The harder it blows the more it shakes: a slow breathing in a breeze, a shiver running down it in a gust. */
+  float flutter = smoothstep(${glsl(tuning.washing.flutterFrom)}, ${glsl(tuning.washing.flutterFull)}, speed);
+  float run = clamp(dot(vec3(w.x, 0.0, w.y), along) * 0.3, -1.0, 1.0);
+  float phase = uTime * (3.2 + aShape.z + 7.0 * flutter) + position.x * 6.5 * run - hang * (4.0 + 5.0 * flutter) + aShape.w;
+  float ripple = sin(phase) + 0.45 * flutter * sin(phase * 2.3 + hang * 9.0);
+  float shake = mix(${glsl(tuning.washing.rippleQuiet)}, ${glsl(tuning.washing.rippleFull)}, flutter);
+  swing = clamp(swing + ripple * shake * (0.3 + swing), 0.0, 1.05);
 
-  vec3 down = -up * cos(angle) + side * sin(angle);
-  vWorld = pegged + down * (hang * aShape.y);
-  vWorld += side * lean * ripple * 0.05 * aShape.y * hang;
+  /**
+   * The cloth fills rather than hinging: pegged along its top it hangs nearly straight under the pegs and bellies
+   * out down its drop, so the drop is an arc from the line and not a fan of straight rays out of it. The angle
+   * grows down the cloth and the position is the integral of that, which for a linear angle is a circular arc.
+   */
+  float full = swing * 1.5708 * lean;
+  float base = ${glsl(tuning.washing.belly)};
+  float theta0 = full * base;
+  float k = full * (1.0 - base);
+  float theta1 = theta0 + k * hang;
+  float dropDown;
+  float dropSide;
+  if (abs(k) > 1e-3) {
+    dropDown = (sin(theta1) - sin(theta0)) / k;
+    dropSide = (cos(theta0) - cos(theta1)) / k;
+  } else {
+    dropDown = cos(theta0) * hang;
+    dropSide = sin(theta0) * hang;
+  }
+  vec3 down = -up * cos(theta1) + side * sin(theta1);
+  vWorld = pegged - up * (dropDown * aShape.y) + side * (dropSide * aShape.y);
+  vWorld += side * lean * ripple * shake * 1.2 * aShape.y * hang;
 
   vNormal = normalize(cross(down, along));
   vColor = aColor;

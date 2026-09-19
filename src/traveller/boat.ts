@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glsl, tuning } from '../tuning';
-import type { WindField, WindSample } from '../wind/field';
+import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import { heightAt } from '../world/island';
@@ -263,6 +263,8 @@ export class Boat {
   private readonly sailMat: THREE.ShaderMaterial;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  /** The wind the sail feels, on the hanging things' spring: it fills when a gust arrives, not when the air moves. */
+  private readonly sway = new Sway();
   /** Foam left on the water behind the hull. */
   private readonly wake = new RibbonBatch(90, '#eef0ef', 0.5, true);
   private readonly wakeTrail: Ribbon = { points: [], alpha: 0, width: 2.8 };
@@ -474,8 +476,12 @@ export class Boat {
   }
 
   /** The air the sail is standing in: the one place the boat reads the wind field. */
-  private airOnSail(out: WindSample): WindSample {
-    return this.wind.sample(this.position.x, this.position.z, out);
+  private airOnSail(out: WindSample, dt: number): WindSample {
+    feltWind(this.wind.sample(this.position.x, this.position.z, out), this.wind.calm);
+    this.sway.update(out.x, out.z, dt);
+    out.x = this.sway.x;
+    out.z = this.sway.z;
+    return out;
   }
 
   /**
@@ -485,7 +491,7 @@ export class Boat {
    * sail and leaves the player's. The squall is no stronger in the field, so its weight comes from the sea.
    */
   private readWind(dt: number): WindSample {
-    const w = this.airOnSail(this.sample);
+    const w = this.airOnSail(this.sample, dt);
     const speed = Math.hypot(w.x, w.z);
     const world = this.wind.breeze.length();
     /** Told by the gust it carries and by standing well clear of the breeze and of the field's own stirring. */
