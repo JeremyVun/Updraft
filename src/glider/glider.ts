@@ -38,8 +38,10 @@ void main() {
   float through = max(-ndl, 0.0) * 0.45 * (1.0 - uSodden);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through)) + uSunColor * rim * 0.22;
-  /** Paper held against a child in bed: it takes the room's own light the way the child does. */
-  col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
+  /** Paper held against a child in bed: it takes the room's own light, and the lamp on the side turned to it. */
+  vec3 toLamp = uLamp.xyz - vWorld;
+  float lampSide = 0.2 + 0.8 * clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)), 0.0, 1.0);
+  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lampLight(vWorld, N) * lampSide);
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
 }`;

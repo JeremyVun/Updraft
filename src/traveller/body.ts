@@ -43,8 +43,14 @@ void main() {
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
   vec3 col = vColor * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95);
   col += uSunColor * vColor * rim * 0.55 * sun;
-  /** The light a room makes for itself: the coals the child walks toward, the bedside lamp, the first morning. */
-  col += vColor * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
+  /**
+   * The light a room makes for itself: the coals the child walks toward, the bedside lamp, the first morning.
+   * The lamp stands a stride from the pillow, so it is taken square on the side turned to it and nearly let go
+   * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
+   */
+  vec3 toLamp = uLamp.xyz - vWorld;
+  float lampSide = 0.2 + 0.8 * clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)), 0.0, 1.0);
+  col += vColor * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lampLight(vWorld, N) * lampSide);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 

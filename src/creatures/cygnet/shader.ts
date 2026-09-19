@@ -249,12 +249,14 @@ void main() {
    * bird, and a coat lit from one side only has to keep a warm edge on that side or it reads as a cut-out, so the
    * down catches the lamp along its rim as well as taking it flat.
    */
-  col += alb * (lampLight(vWorld, N) + dawnLight(vWorld, N));
-  if (uLamp.w > 0.0) {
-    vec3 toLamp = normalize(uLamp.xyz - vWorld);
-    float edge = pow(1.0 - clamp(dot(N, normalize(cameraPosition - vWorld)), 0.0, 1.0), 2.0);
-    col += lampLight(vWorld, toLamp) * fuzz * edge * clamp(dot(N, toLamp) * 0.8 + 0.35, 0.0, 1.0) * 1.8;
-  }
+  vec3 toLamp = uLamp.xyz - vWorld;
+  float lampSide = 0.2 + 0.8 * clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)), 0.0, 1.0);
+  vec3 lamp = lampLight(vWorld, N) * lampSide;
+  col += alb * (lamp + dawnLight(vWorld, N));
+#ifdef SHELL
+  /** Absolute light, so it is what pales the coat: enough to warm the edge of it on the lamp side and no more. */
+  col += lamp * pow(1.0 - clamp(dot(N, normalize(cameraPosition - vWorld)), 0.0, 1.0), 2.0) * 0.5;
+#endif
   /**
    * Out of the sun the bird still has to read as soft down rather than a dark lump, so the sky fills it. The fill is
    * warmed on the way in: taken straight, a blue sky or a moon turns a fawn coat to cold ash in every shaded frame.
