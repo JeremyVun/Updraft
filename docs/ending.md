@@ -123,6 +123,12 @@ wind, taking the drawing away at the end. Jeremy:
 > "yea, the camera work will need to be key. Enter the dream and go with what feels most natural. I'm not
 > convinced about the figure standing in the light though, but if you think it works, you're free to try."
 
+After the third round was on `main`, asked whether the drawing before the house fits the narrative better:
+
+> "ok, then my only steer is to keep the map unfolded for a bit until the house comes into view"
+
+So the sheet stays open in their hands as they walk on over the brow, and only folds once the house is in view.
+
 ## The plan for the third round
 
 1. **The paper is the plane until it opens.** From the summit to the moment the hands begin, the paper is
