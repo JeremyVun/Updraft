@@ -47,7 +47,7 @@ const STROLL = 0.55;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
 const BROW_AT = 17;
 /** Seconds they stand on the brow looking down at it before they go on: the pause is the whole point of the walk. */
-const BROW_FOR = 5.5;
+const BROW_FOR = 6;
 /** And where they sit down to open the paper, far enough on that the cottage sits below the sheet in the frame. */
 const REVEAL_AT = 25;
 /** They sit, the paper comes up into both hands, and only then does it start to come open. */
@@ -750,7 +750,7 @@ export class HomeChapter implements Chapter {
        * It rises behind them while they stand there and looks over their head down the valley, because what they
        * have stopped for is not a thing to be seen on their face: it is the roof, down there, where it always was.
        */
-      const out = THREE.MathUtils.smoothstep(this.t, 0.5, BROW_FOR - 0.4);
+      const out = THREE.MathUtils.smoothstep(this.t, 0.2, 2.6);
       const on = THREE.MathUtils.smoothstep(this.t, BROW_FOR, BROW_FOR + 5.5);
       arc = 0.12 + (BROW_ARC - 0.12) * out + (DRAW_ARC - BROW_ARC) * on;
       dist = 9.5 - 2 * out - 1.3 * on;
