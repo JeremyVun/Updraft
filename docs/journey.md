@@ -497,12 +497,15 @@ see "Rooms still to come".) None of it makes sense and none of it is explained. 
 
 ## The crest: where the player is told what they are doing
 
-Halfway across the meadow the ground rises, and this is the one moment the dream orientates you. The child tops
-the rise and stops. **The haze thins** — the chapter eases its `haze` from 0.55 to `tuning.crest.haze`, far
-enough to open the hollow beyond the rise and never far enough to show the next island — and below them, fifty
-paces on, there is a **pond** in a bowl of the meadow (`POND` in `heightfield.ts`, drawn by `world/pond.ts`)
-with the cygnet's family **resting** on it: a raft of white swans on still dark water, heads up, one or two
-asleep, before they go on. (Cranes wheel up thermals; swans do not. This was Jeremy's pick of three.)
+Two thirds of the way across the meadow, past the piano and the rise beyond it, the walk comes over a brow and
+this is the one moment the dream orientates you. The child tops the brow and stops. Below them, sixty paces on,
+the ground falls away to a **pond** on a shelf of the open north slope (`POND` in `heightfield.ts`, drawn by
+`world/pond.ts`) with the cygnet's family **resting** on it: a raft of white swans on still dark water, heads up,
+one or two asleep, before they go on, and beyond them only sea and sky. (Cranes wheel up thermals; swans do not.
+This was Jeremy's pick of three.) The pond was in a closed bowl nearer the piano until 2026-09-19; the family
+lifting north flew through its rim, and Jeremy wanted it further from the piano, so it was moved out onto the
+slope (`docs/polish.md`). **The veil stands thick here** (`tuning.crest.haze`, held from the brow all the way to
+the boat) because everything north of the pond is open water with the next island behind it.
 
 Nothing about it appears: the swans are on the water from the chapter's first frame, the grown birds are heard
 bugling a long way down the walk, and the paper plane leans at the pond from the crest leg onward. The child
