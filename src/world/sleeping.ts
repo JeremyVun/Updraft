@@ -77,6 +77,8 @@ const STAMPS = 6;
 
 /** Beyond this the room is not in the world at all, and nothing it drives costs any other room anything. */
 const RANGE = 300;
+/** How far from the hollow the island still counts as the world one is in, for what a summer night is not allowed there. */
+const PRESENCE_TO = 110;
 
 const DOWN = 64;
 
@@ -596,6 +598,7 @@ export class SleepingIsland {
   private readonly last = new THREE.Vector2(1e9, 0);
   private readonly rand = mulberry32(5501);
   private here = false;
+  private nearness = 0;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -845,9 +848,12 @@ export class SleepingIsland {
     return deep <= 0.001 ? ground : THREE.MathUtils.lerp(ground, tuning.sleeping.fogTop, deep);
   }
 
-  /** 1 while the room is in the world at all: nothing that belongs to a summer night belongs in it. */
+  /**
+   * 1 over the island itself: nothing that belongs to a summer night belongs in it. It gives out well inside the
+   * range the room is drawn at, because home is only a strait away and its fireflies are not the room's to put out.
+   */
   get presence(): number {
-    return this.here ? 1 : 0;
+    return this.here ? this.nearness : 0;
   }
 
   /** Where the child stands when they come to the bed: on the side away from the window. */
@@ -857,7 +863,9 @@ export class SleepingIsland {
 
   update(dt: number, time: number, camera: THREE.Camera): void {
     const t = tuning.sleeping;
-    const here = Math.hypot(camera.position.x - SLEEP_HOLLOW.x, camera.position.z - SLEEP_HOLLOW.z) < RANGE;
+    const away = Math.hypot(camera.position.x - SLEEP_HOLLOW.x, camera.position.z - SLEEP_HOLLOW.z);
+    const here = away < RANGE;
+    this.nearness = 1 - THREE.MathUtils.smoothstep(away, PRESENCE_TO, PRESENCE_TO + 40);
     if (here !== this.here) {
       this.here = here;
       for (const o of this.objects) o.visible = here;

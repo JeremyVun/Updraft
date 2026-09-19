@@ -135,6 +135,21 @@ with its deck and mooring, the arrival watched from the water and the climb watc
 the dolphins; the fledging and join; the restructured beats, cameras and timings in `home.ts`; the lush home
 grass; the finale and the credits) and the second brief's mechanics above.
 
+**The last shot** (`end-stars`, 2026-09-19). The rise now ends looking out over the open sea north-east of the
+island, swung 19 degrees east of the moon (`MOON_OFF` in `home.ts`) and a degree above level: the moon hangs in
+the left of the frame with its path lying down the water under it, the horizon crosses the middle, and the dark
+strip up the centre that the credits roll through is left alone. The moon had to come down to do it (`MOON.el`
+12, was 24): from a camera 90 units up, a moon at 24 throws its path onto water inside the island's own shoulder,
+where nothing can see it, and it will not share a 38-degree lens with the sea it lights. The pan also tightens as
+it goes (`pace` 0.2 to 0.36 instead of 0.2 down to 0.08) so it has arrived by the time the credits are over it;
+before, it was still swinging the moon into the middle of the screen a minute into the roll.
+And the sea keeps the stars: `uStarlight` (1 once the last of the day is out of the sky and no weather is in the
+way) thins the night haze, draws the distance veil back from 510 units to 780, and lets the water catch the
+sky's field of stars as glints — the world-space cells a few pixels across that the sun's glitter is drawn with,
+because reflecting the sky's own star field through the ripples would only boil. Before this the whole lower
+frame was one flat fogged slab.
+
+
 Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
 the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`
 reports the set-down step-off jerk a hair over its limit (0.021 against 0.02), in `companion/carry.ts`.

@@ -55,6 +55,15 @@ const RISE_FROM = 2;
 const RISE_TO = 24;
 const SILENCE_AT = 23.5;
 const CREDITS_AT = 26;
+const UP = new THREE.Vector3(0, 1, 0);
+/**
+ * Where the rise ends up pointing: this far east of the moon, and barely above level. The moon then hangs in
+ * the left of the frame with its path down the water under it, the horizon lies across the middle, and the
+ * dark half of the screen the credits roll up is left alone. A moon in the middle is a lamp behind the text.
+ */
+const MOON_OFF = THREE.MathUtils.degToRad(19);
+const SEA_PITCH = THREE.MathUtils.degToRad(1);
+const SEA_LOOK = 100;
 
 /**
  * The jetty on the south beach: out from the shore over the water, with a deck the child walks in along. The one
@@ -656,10 +665,12 @@ export class HomeChapter implements Chapter {
       const lift = this.beat === 'credits' ? 1 : this.beat === 'inside' ? THREE.MathUtils.smootherstep(this.t, RISE_FROM, RISE_TO) : 0;
       if (lift > 0) {
         s.eye = this.eyeAt.copy(s.target).addScaledVector(s.from, s.distance).setY(s.target.y + s.height + lift * 18);
-        const toMoon = this.sky.copy(this.moon).setY(0).normalize();
-        s.target.lerp(this.tmp.copy(s.eye).addScaledVector(toMoon, 100).setY(s.eye.y + 24), lift);
+        /** Out over the open sea north-east of the island, which is the one way from here that holds both. */
+        const out = this.sky.copy(this.moon).setY(0).normalize().applyAxisAngle(UP, -MOON_OFF);
+        s.target.lerp(this.tmp.copy(s.eye).addScaledVector(out, SEA_LOOK).setY(s.eye.y + SEA_LOOK * Math.tan(SEA_PITCH)), lift);
       }
-      this.pace = 0.2 - lift * 0.12;
+      /** Tighter as it goes, not looser: the pan has to have arrived by the time the credits are over it. */
+      this.pace = 0.2 + lift * 0.16;
       this.focus.copy(c);
       return;
     }
