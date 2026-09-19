@@ -56,7 +56,7 @@ const DUSK: Palette = {
   fog: 0.0014,
 };
 
-/** Moonlight: the single light becomes the moon, low and cool, in air a clear night has scrubbed of haze. */
+/** Moonlight: the single light becomes the moon, low and cool. */
 const NIGHT: Palette = {
   sun: hdr('#a9bdf0', 0.42),
   zenith: hdr('#0a1230', 0.42),
@@ -64,7 +64,7 @@ const NIGHT: Palette = {
   horizonSun: hdr('#3e4a7a', 0.5),
   ambient: hdr('#4f62a0', 0.3),
   bounce: hdr('#1b1f30', 0.1),
-  fog: 0.0009,
+  fog: 0.0014,
 };
 
 /** A passing shower: the sun still out but veiled, the sky grey and bright, the haze thick. */
@@ -177,10 +177,15 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
   u.uSkyHorizonSun.value.copy(p.horizonSun);
   u.uSkyAmbient.value.copy(p.ambient);
   u.uGroundBounce.value.copy(p.bounce);
-  u.uFogDensity.value = p.fog;
   u.uNight.value = night;
-  /** Night is only thick when the weather makes it so: a clear one lets the sea keep its stars to the horizon. */
-  u.uMist.value = Math.max(0.42 * (1 - k), (0.12 + 0.18 * storm) * u.uNight.value) + 0.22 * shower;
+  /**
+   * Once the last of the day is out of the sky and no weather is in the way, the air is at its clearest: the
+   * haze thins, the veil the world ends in draws back (main.ts), and the sea starts catching the stars.
+   */
+  const starlight = THREE.MathUtils.smoothstep(dusk, 1.8, 1.98) * (1 - storm);
+  u.uStarlight.value = starlight;
+  u.uFogDensity.value = p.fog * (1 - 0.35 * starlight);
+  u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * night * (1 - 0.6 * starlight)) + 0.22 * shower;
   const [az, el] = lightAngles(dusk);
   sunDirection(az, el, u.uSunDir.value);
 }

@@ -490,7 +490,7 @@ function frame(now: number): void {
    * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
    * sea keeps the stars on it all the way out.
    */
-  const seen = haze * (1 - 0.7 * atmo.uniforms.uNight.value * (1 - squall));
+  const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(900 - 780 * seen, 0.002 + 0.03 * seen);
   sinceLightBake++;
   if (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004) {

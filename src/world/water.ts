@@ -327,8 +327,8 @@ void main() {
    * cells a few pixels across, which is how the sun's glitter is drawn too.
    */
   vec3 starlight = vec3(0.0);
-  if (uNight > 0.0) {
-    float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uNight;
+  if (uStarlight > 0.0) {
+    float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uStarlight;
     starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}) * F * caught * ${glsl(tuning.water.starLight)};
   }
 
