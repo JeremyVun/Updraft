@@ -28,11 +28,16 @@ const shore = meadowPoint(-6, -1172);
 export const FAR_SHORE = new THREE.Vector3(shore.x, 0, shore.z);
 
 /** The high ground on the walk, where the haze thins and you are told, without a word, where you are going. */
-const CREST_LEG = 2;
+const CREST_LEG = 3;
 /** How near the crest waypoint counts as being up on the rise. */
 const CREST_NEAR = 16;
-/** The pond in the hollow beyond the rise, where the family is. Everything at the crest is arranged around it. */
+/** The tarn on the slope below the brow, where the family is. Everything at the crest is arranged around it. */
 const POND_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z);
+/**
+ * Where the raft lies on it: toward the near shore, so the whole length of the water is ahead of a take-off run
+ * and the birds are nearest the frame the player first sees them in.
+ */
+const RAFT_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z + 5);
 /** How far out the bugling carries, so it is heard on the walk well before the rise. */
 const HEARD_FROM = 150;
 /**
@@ -163,7 +168,7 @@ export class MeadowChapter implements Chapter {
      * The family is on the water from the moment the chapter starts, long before anything in the story points at
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
      */
-    flock.rest(POND.x, POND.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
+    flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.homeRadius = 70;
     child.dismount();
@@ -233,7 +238,7 @@ export class MeadowChapter implements Chapter {
   /** For testing: a few paces short of the rise, cygnet in the satchel and plane in hand, with the crest still to come. */
   skipToCrest(): void {
     const { child, cygnet, plane, flock } = this.cast;
-    if (!flock.active) flock.rest(POND.x, POND.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
+    if (!flock.active) flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     this.wokenAlready();
     this.leg = CREST_LEG;
     const at = ROUTE[CREST_LEG];

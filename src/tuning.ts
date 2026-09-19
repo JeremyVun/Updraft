@@ -93,7 +93,7 @@ export const tuning = {
     standOff: 3.6,
     goes: 3.2,
     /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
-    leaves: 15,
+    leaves: 12,
     leaveClimb: 3.4,
     /** Seconds after the family has gone before the child kneels and sets the cygnet down after them. */
     setsDown: 8.5,
