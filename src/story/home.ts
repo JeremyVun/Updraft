@@ -755,8 +755,8 @@ export class HomeChapter implements Chapter {
       arc = 0.12 + (BROW_ARC - 0.12) * out + (DRAW_ARC - BROW_ARC) * on;
       dist = 9.5 - 2 * out - 1.3 * on;
       rise = 2.6 + 0.8 * out;
-      ahead = 6 + 3 * out - 2.4 * on;
-      aimUp = 1.6 - 0.7 * out + 0.7 * on;
+      ahead = 6 + 4.5 * out - 3.9 * on;
+      aimUp = 1.6 - 1.05 * out + 1.05 * on;
       this.pace = 0.34;
     } else if (beat === 'settle') {
       arc = DRAW_ARC;
