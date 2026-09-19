@@ -245,6 +245,23 @@ void main() {
 #endif
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
   /**
+   * The bedside lamp and the first morning down the hill. Out of the sun they are the whole of the light on the
+   * bird, and a coat lit from one side only has to keep a warm edge on that side or it reads as a cut-out, so the
+   * down catches the lamp along its rim as well as taking it flat.
+   */
+  col += alb * dawnLight(vWorld, N);
+  if (uLamp.w > 0.0) {
+    vec3 toLamp = uLamp.xyz - vWorld;
+    float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
+    vec3 lamp = lampLight(vWorld, N);
+    /** Under weight: a bird that takes the lamp as fully as the linen does outshines the bed it is lying on. */
+    col += alb * lamp * pow(lampSide, 3.0) * 0.75;
+#ifdef SHELL
+    /** Absolute light, so it is what pales the coat: enough to fur the edge of it on the lamp side and no more. */
+    col += lamp * lampSide * pow(1.0 - clamp(dot(N, normalize(cameraPosition - vWorld)), 0.0, 1.0), 2.0) * 0.15;
+#endif
+  }
+  /**
    * Out of the sun the bird still has to read as soft down rather than a dark lump, so the sky fills it. The fill is
    * warmed on the way in: taken straight, a blue sky or a moon turns a fawn coat to cold ash in every shaded frame.
    */

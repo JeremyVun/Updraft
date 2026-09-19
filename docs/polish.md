@@ -42,9 +42,10 @@ And on the piano, an open question:
 | --- | --- |
 | swans see-through from below; the boat looping back over the island it left; the plane leaning at the pond before the piano; the piano too quiet under the music | fixed on `main` (`2274654`). The piano's loudness and the hush still need Jeremy's ear. |
 | the "vertical lines" on the washing | fixed on `main` (`ab0be2b`). Two causes. The one Jeremy saw: each vertex of a sheet chose its swing side by the bare sign of the wind across the line, so with the wind along a line neighbouring columns of ONE sheet swung opposite ways and the fold between them showed as a thin seam of sky. The swing side is now smooth in the wind across the line, and the sheet's normal is its true front normal. Also: `lineField` no longer hangs two lines within 1.4 units of each other at 25° or less (`crowds`); crossings stay. The overhead lines are hung first so the field cannot crowd them out; 194 lines and about 700 pieces, as before. |
-| the sail | building: Opus 5 parcel, `/private/tmp/updraft-polish2-sail`, branch `polish2-sail`. |
-| the piano puzzle, the finale, the pond | building: Opus 5 parcel, `/private/tmp/updraft-polish2-piano`, branch `polish2-piano`. See "The pond". |
-| the wind feel | design below; plumbing by the lead, the look by an Opus 5 parcel after the sail lands. |
+| the sail | on `main` (`e375b13`, from `polish2-sail`): the cloth fills with whatever wind it has, hangs dead in folds with none, ripples and shakes more the harder it blows, and the hull's speed follows the same reading with inertia (`tuning.sail`). The first crossing still takes 90 s. The Opus 5 parcel was cut off by the weekly limit mid-polish; a final look by eye is still owed. |
+| the pond | on `main` (`5c06767`): `POND` is at (24, −892) on the north slope, the walk comes over the brow at `WAY[4]`, the raft sits near the shore it is seen from, and the veil (`tuning.crest.haze` 0.96) is held from the brow to the boat so the birches never show. Checked by capture. Still owed: the pond's raised rim reads as a crater on the slope (a look for Opus 5). |
+| the piano puzzle and the finale | **half built** on branch `polish2-piano` (`/private/tmp/updraft-polish2-piano`): the key-line (`src/fx/keyline.ts`), the one duet frame and the single finale rise are committed as WIP at the cut-off, untested at the end. Not on `main`. Resume as a fresh Opus 5 parcel once the limit resets (Tue 2026-09-23 08:00 Sydney): finish, verify by capture, and rest the finale on the far sight of the pond (issue 5 above). |
+| the wind feel | plumbing on branch `polish2-wind` (`/private/tmp/updraft-polish2-wind`, measured, not on `main`); the look on cloth, kite, pinwheels, leaves and the sail's one sampling function is an Opus 5 parcel waiting on the same reset. |
 | a puzzle for the island of lines | ideas below, for Jeremy to pick from. |
 
 ## The pond
@@ -125,3 +126,7 @@ who plays with it and lets everyone else through after a little while.
 Ideas 1 and 4 join naturally (the family filled is what opens the door), and 1 and 3 can share a sheet. Already
 offered and not repeated here: the grounded kite the player lifts to mark the way, and the sheet across the alley
 the child waits behind. **Jeremy picks; nothing is built until he does.**
+
+## Blocked on the Opus 5 weekly limit (hit 2026-09-19 17:00 Sydney, resets Tue 2026-09-23 08:00)
+
+All visual work is Opus 5 or Astra only, and Astra needs Jeremy's explicit go per assignment. Waiting: the piano parcel's second half, the wind-look parcel, a look at the sail and the pond by eye, and the lines puzzle once picked.

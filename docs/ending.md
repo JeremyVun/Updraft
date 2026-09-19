@@ -124,10 +124,12 @@ And, while that was being built:
   bird. Now `input.anchor` (set by `main.ts` while a chapter `invitesFlight`) stands the column at the bird when
   the circles are drawn near it on screen (`tuning.pointer.anchorNear`), so the player's spiral takes the
   invitation's place exactly. The meadow teaches it, the summit asks for it.
-- **On over the brow.** The cottage was hidden from the summit point behind the true crest (10 units further on),
-  which is why the drawing used to open against grass. After the family goes, the child walks on slowly
-  (`Traveller.stroll`, beat `crest`) with their eyes on the path, and over the brow the valley opens and their eyes
-  go to the roof; they sit at `REVEAL` (28 units on) and open the drawing with the cottage in frame beyond it.
+- **On over the brow.** The cottage was hidden from the summit point behind the true crest, which is why the
+  drawing used to open against grass. After the family goes, the child walks on slowly (`Traveller.stroll`, beat
+  `crest`) with their eyes on the path; they stop on the brow (`BROW_AT`, 17 on from the summit) and stand there
+  for six seconds with the valley and the roof below them, and only then go down a few steps more to `REVEAL`
+  (25 on), sit, and open the paper with the cottage in frame beyond it. The house first, then the drawing: the
+  rhyme needs the thing before the picture of it.
   The chimney is cold (`Cottage.smoking`) until nightfall, when somebody in the house lights the fire: the smoke
   is what asks the child in (Jeremy: children do not light fireplaces, adults do).
 - **Play again** is bare glowing text: no border, box or blur.
@@ -158,6 +160,27 @@ sky's field of stars as glints — the world-space cells a few pixels across tha
 because reflecting the sky's own star field through the ripples would only boil. Before this the whole lower
 frame was one flat fogged slab.
 
+
+**The unfolding** (`end-unfold`, 2026-09-19). The drawing is not a second sheet that replaces the plane any
+more: it is the same piece of paper. `traveller/drawing.ts` holds the sheet the glider is folded from — its span
+plus its keel across, its length along, nose at the top edge — cut into the eight facets its creases make, and
+folds every vertex of it on the CPU each frame: the nose flap first, about the diagonal crease out of the nose,
+then the wing about its own crease, then the fold down the middle that everything rides on. Folded, it is the
+plane in the child's hand (the glider mesh is hidden from the brow until the throw, and comes back at the instant
+it leaves their hand). `open` runs it to the flat sheet in stages you can watch — the near wing up, the far one
+falling open after it, the sheet swinging out of its own fold, the two corners of the nose flipping back — and the
+drawn side is the side those folds hide, so the drawing arrives as the paper flattens, with the creases still in
+it. The mittens are put on points *of the sheet* (`Drawing.point`, `GRIPS` in `home.ts`), so the hands go where
+the paper goes: the far one keeps hold of the fold, the near one lifts the wing, swings the sheet open, flicks the
+corners back and takes a bottom corner. It is folded back the same way before the throw.
+And the camera is one swing and nothing else: close behind on the walk, up over their head on the brow so the
+valley opens for the player as it opens for the child, round onto their left shoulder as they sit, in on their
+hands while the paper comes open and out again as the sheet fills, so the finished drawing and the house it is a
+drawing of are held in the one frame. `gone` to `release` is about 61 s, six more than it was.
+
+Everything above, round 2 and the unfolding included, is on `main` as of the evening of 2026-09-19, verified by capture
+only: Jeremy has not played round 2. To reach the drawing quickly in QA, `__game.story.current.skipToDrawing(open?)`
+from an `eval` step in `?chapter=summit` puts the child at the summit with the family gone and jumps to `crest`.
 
 Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
 the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`
