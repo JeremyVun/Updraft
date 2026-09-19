@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { tuning } from '../tuning';
+import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
@@ -26,6 +26,16 @@ const PUSH_OFF_LONGEST = 8;
 /** How fast it can be steered round under sail: nimble with no way on, and a wide slow curve at speed. */
 const TURN_SLOW = 0.5;
 const TURN_FAST = 0.25;
+/**
+ * How the sail is cut: the foot from mast to clew, the luff from tack to head, how far it narrows toward the
+ * head, how far the foot rises to the clew and how high the tack sits. The shader cuts the same cloth from these
+ * numbers, so the mesh only has to carry the uv and a shape to be measured for.
+ */
+const SAIL_SPAN = 2.7;
+const SAIL_HOIST = 3.7;
+const SAIL_TAPER = 0.55;
+const SAIL_RISE = 0.35;
+const SAIL_TACK = 0.75;
 
 const HULL_VERT = /* glsl */ `
 in vec3 color;
@@ -67,23 +77,47 @@ const SAIL_VERT = /* glsl */ `
 uniform float uFill;
 uniform float uFlutter;
 uniform float uLuff;
+uniform float uDroop;
 uniform float uTime;
 out vec2 vUv;
 out vec3 vWorld;
 out vec3 vNormal;
-void main() {
-  float belly = sin(uv.x * 3.14159) * sin(uv.y * 3.14159 * 0.9);
-  float ripple = sin(uTime * 9.0 - uv.x * 7.0 + uv.y * 3.0) * uFlutter * (0.3 + uv.x);
+
+/**
+ * Where a point of the cloth is, across the sail from the mast (s) and up it from the boom (t). With wind in it
+ * the sail bellies and a ripple travels out to the leech; with none the leech falls in toward the mast and the
+ * cloth it gives up hangs in slow vertical folds.
+ */
+vec3 cloth(vec2 st) {
+  float s = st.x;
+  float t = st.y;
+  float cut = s * (1.0 - uDroop * s * ${glsl(tuning.sail.gather)});
+  vec3 p = vec3(
+    -cut * ${glsl(SAIL_SPAN)} * (1.0 - t * ${glsl(SAIL_TAPER)}),
+    ${glsl(SAIL_TACK)} + t * ${glsl(SAIL_HOIST)} + cut * ${glsl(SAIL_RISE)},
+    0.0);
+  p.y -= uDroop * s * (0.4 + 0.6 * sin(t * 3.14159)) * ${glsl(tuning.sail.sag)};
+  float folds = sin(s * ${glsl(tuning.sail.folds)} * 6.28318 + 1.1) * smoothstep(0.0, 0.22, s) * (0.45 + 0.55 * sin(t * 2.3 - 0.8));
+  float breathe = 0.7 + 0.3 * sin(uTime * 0.55 + t * 1.5);
+  p.z += uDroop * (folds * breathe * ${glsl(tuning.sail.fold)} + s * sin(uTime * 0.4) * 0.04);
   /** A gust crossing the sail breaks along the free edge first: the leech shakes, then the belly fills again. */
-  float leech = smoothstep(0.2, 1.0, uv.x) * (0.45 + 0.55 * uv.y);
-  float phase = uTime * 27.0 - uv.x * 15.0 + uv.y * 4.0;
-  float shake = uLuff * leech;
-  vec3 p = position + vec3(0.0, 0.0, 1.0) * (belly * uFill * (1.0 - 0.3 * uLuff * leech) + ripple * 0.06 + sin(phase) * shake * 0.19);
+  float leech = smoothstep(0.15, 1.0, s) * (0.4 + 0.6 * t);
+  float belly = sin(s * 3.14159) * sin(t * 3.14159 * 0.9) * (1.0 - 0.3 * uLuff * leech);
+  float ripple = sin(uTime * (4.5 + 5.5 * uFlutter) - s * 6.5 + t * 3.0) * uFlutter * (0.25 + 0.75 * s * s);
+  float shake = (uLuff + uFlutter * 0.35) * leech;
+  p.z += belly * uFill + ripple * ${glsl(tuning.sail.ripple)} + sin(uTime * 19.0 - s * 12.0 + t * 4.0) * shake * ${glsl(tuning.sail.shake)};
+  return p;
+}
+
+void main() {
+  vec3 p = cloth(uv);
+  /** The cloth is what it is doing, so the light on it is taken from the shape itself rather than guessed at. */
+  vec3 pu = cloth(uv + vec2(0.012, 0.0));
+  vec3 pv = cloth(uv + vec2(0.0, 0.012));
   vec4 w = modelMatrix * vec4(p, 1.0);
   vUv = uv;
   vWorld = w.xyz;
-  vec3 n = normalize(vec3(-belly * uFill * 0.4 * cos(uv.x * 3.14159) - cos(phase) * shake * 0.8, 0.0, 1.0));
-  vNormal = normalize(mat3(modelMatrix) * n);
+  vNormal = normalize(mat3(modelMatrix) * normalize(cross(pv - p, pu - p)));
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
@@ -182,15 +216,14 @@ function floorboards(): THREE.BufferGeometry {
   return geo;
 }
 
+/** Enough of a grid for the cloth to hang in folds; the shader moves every point of it from its uv. */
 function sailGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.PlaneGeometry(1, 1, 10, 12);
+  const geo = new THREE.PlaneGeometry(1, 1, 18, 16);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
     const s = pos.getX(i) + 0.5;
     const t = pos.getY(i) + 0.5;
-    const x = -s * 2.7 * (1 - t * 0.55);
-    const y = 0.75 + t * 3.7 + s * 0.35;
-    pos.setXYZ(i, x, y, 0);
+    pos.setXYZ(i, -s * SAIL_SPAN * (1 - t * SAIL_TAPER), SAIL_TACK + t * SAIL_HOIST + s * SAIL_RISE, 0);
   }
   return geo;
 }
@@ -220,6 +253,12 @@ export class Boat {
   becalmed = 0;
   /** How hard the sea is running under the hull, 0 calm to 1 the full squall; the boat rocks and drives on it. */
   swell = 0;
+  /**
+   * The wind the sail has, smoothed, and the only reading the cloth and the hull are allowed: `blowing` is the
+   * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
+   * how much of what it holds pushes the way the boat is pointing, and `made` how much of it the player put there.
+   */
+  readonly sailWind = { blowing: 0, taken: 0, along: 0, made: 0 };
   private readonly sailPivot = new THREE.Group();
   private readonly sailMat: THREE.ShaderMaterial;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
@@ -264,7 +303,7 @@ export class Boat {
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
       fragmentShader: SAIL_FRAG,
-      uniforms: { ...atmo.uniforms, uFill: { value: 0 }, uFlutter: { value: 0.5 }, uLuff: { value: 0 } },
+      uniforms: { ...atmo.uniforms, uFill: { value: 0 }, uFlutter: { value: 0 }, uLuff: { value: 0 }, uDroop: { value: 1 } },
       side: THREE.DoubleSide,
     });
     this.sailPivot.position.set(0, 0, 0.55);
@@ -332,12 +371,12 @@ export class Boat {
   update(dt: number, time: number): void {
     this.time += dt;
     const p = this.position;
-    const w = this.wind.sample(p.x, p.z, this.sample);
+    const w = this.readWind(dt);
+    const air = this.sailWind;
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
     const along = w.x * fx + w.z * fz;
     const across = w.x * fz - w.z * fx;
-    const windSpeed = Math.hypot(w.x, w.z);
 
     this.shoveAge += dt;
     const u = this.shoveAge / tuning.dolphins.shovePeak;
@@ -357,8 +396,16 @@ export class Boat {
         this.yaw += THREE.MathUtils.clamp(dy, -dt * PUSH_OFF_TURN, dt * PUSH_OFF_TURN);
         if ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST) this.pushingFor = -1;
       } else {
-        const drive = Math.max(0, along) * 0.62 + Math.abs(across) * 0.3 + (4.2 + 2.2 * this.swell) * (1 - this.becalmed) + w.energy * 6;
-        this.speed += (Math.min(drive, 16) - this.speed) * (1 - Math.exp(-dt * (0.45 + this.becalmed * 0.3)));
+        /**
+         * A small boat sails on any point of wind, so what drives it is how much wind the sail is holding, with
+         * a little more for a following one. Nobody is ever left stuck head to wind waiting for a shift.
+         */
+        const drive = Math.min(
+          air.taken * tuning.sail.drive + Math.max(0, air.along) * tuning.sail.following,
+          tuning.sail.topSpeed,
+        );
+        const gathering = drive > this.speed ? tuning.sail.gathers : tuning.sail.carries;
+        this.speed += (drive - this.speed) * (1 - Math.exp(-dt * gathering));
         this.speed += Math.abs(kick) * tuning.dolphins.shoveSurge * dt;
         this.yaw += kick * tuning.dolphins.shoveYaw * dt;
         const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
@@ -399,26 +446,62 @@ export class Boat {
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
     p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
-    const relX = w.x * fz - w.z * fx;
-    const targetBoom = THREE.MathUtils.clamp(-Math.atan2(relX, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
+    const targetBoom = THREE.MathUtils.clamp(-Math.atan2(across, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
     this.boom += (targetBoom - this.boom) * (1 - Math.exp(-dt * 1.5));
-    const fill = Math.min(1, windSpeed / 9 + w.energy * 0.4) * (this.afloat ? 1 : 0.35);
-    /** Becalmed, the sail hangs dead off the boom: no belly left in it and nothing for it to flutter on. */
-    const slack = 0.15 * (1 - this.becalmed * 0.88);
-    this.sailMat.uniforms.uFill.value += ((relX >= 0 ? 1 : -1) * (slack + fill * 0.75) - this.sailMat.uniforms.uFill.value) * (1 - Math.exp(-dt * 3));
-    this.sailMat.uniforms.uFlutter.value = (0.25 + (1 - fill) * 0.8) * (1 - this.becalmed * 0.7);
+    const sail = this.sailMat.uniforms;
+    const fill = (1 - Math.exp(-air.taken / tuning.sail.bellyAt)) * (this.afloat ? 1 : 0.4);
+    sail.uFill.value += ((across >= 0 ? 1 : -1) * fill * tuning.sail.belly - sail.uFill.value) * (1 - Math.exp(-dt * 3));
+    /** With nothing moving in it the cloth is dead weight: the leech falls in and it hangs off the mast in folds. */
+    sail.uDroop.value = 1 - THREE.MathUtils.smoothstep(air.blowing, 0, tuning.sail.hangsBelow);
+    /** The harder it blows, the more there is for the cloth to do: a lazy ripple in a light air, a lively one in a gust. */
+    sail.uFlutter.value = Math.min(1, air.blowing / tuning.sail.livelyAt);
     /**
      * A gust does not simply fill the sail: it breaks over it. The cloth shakes along the leech the moment the
      * wind changes, hard for a gust the sail was not already carrying, and goes quiet again as it fills.
      */
-    const pressing = Math.min(1, w.energy * 1.5 + Math.max(0, windSpeed - tuning.wind.breeze * 1.6) / 12);
+    const pressing = Math.min(1, w.energy * 1.5 + air.made / 12);
     this.settled += (pressing - this.settled) * (1 - Math.exp(-dt * 1.1));
     const arriving = Math.max(0, pressing - this.settled) / Math.max(1 - this.settled, 0.2);
-    const luff = this.sailMat.uniforms.uLuff;
-    this.luff = Math.max(this.luff * Math.exp(-dt / tuning.water.luffFade), Math.min(1, Math.max(0, arriving - tuning.water.luffFrom) * 2.4));
-    luff.value = this.luff * (this.afloat ? 1 : 0.5);
+    this.luff = Math.max(this.luff * Math.exp(-dt / tuning.sail.luffFade), Math.min(1, Math.max(0, arriving - tuning.sail.luffFrom) * 2.4));
+    /** An eased sheet spills its wind instead of holding it: the sail flaps on while the boat loses way. */
+    const spilling = this.becalmed * Math.min(1, (air.blowing - air.made) / tuning.sail.hangsBelow);
+    sail.uLuff.value = Math.max(this.luff, spilling) * (this.afloat ? 1 : 0.5);
     this.pose(dt);
     this.updateWake(dt, time);
+  }
+
+  /** The air the sail is standing in: the one place the boat reads the wind field. */
+  private airOnSail(out: WindSample): WindSample {
+    return this.wind.sample(this.position.x, this.position.z, out);
+  }
+
+  /**
+   * What the sail has this frame, smoothed into `sailWind`. The player's wind is told from the world's by the
+   * gust it carries and by how far it stands above the prevailing breeze, because `becalmed` takes the world's
+   * wind out of the sail and leaves the player's in it. The squall is not in the wind field at all, so its weight
+   * on the cloth comes from the sea it is raising.
+   */
+  private readWind(dt: number): WindSample {
+    const w = this.airOnSail(this.sample);
+    const speed = Math.hypot(w.x, w.z);
+    const world = Math.min(speed, this.wind.breeze.length());
+    const made = speed - world + w.energy * tuning.sail.gustPress;
+    const weather = this.swell * tuning.sail.squallPress;
+    const blowing = made + world + weather;
+    const taken = made + (world + weather) * (1 - this.becalmed);
+    const along = (w.x * Math.sin(this.yaw) + w.z * Math.cos(this.yaw)) * (taken / Math.max(blowing, 1e-3));
+    const air = this.sailWind;
+    air.blowing = this.takesUp(air.blowing, blowing, dt);
+    air.taken = this.takesUp(air.taken, taken, dt);
+    air.made = this.takesUp(air.made, made, dt);
+    air.along += (along - air.along) * (1 - Math.exp(-dt * tuning.sail.fills));
+    return w;
+  }
+
+  /** Cloth takes wind up faster than it lets it go. */
+  private takesUp(was: number, now: number, dt: number): number {
+    const rate = now > was ? tuning.sail.fills : tuning.sail.empties;
+    return was + (now - was) * (1 - Math.exp(-dt * rate));
   }
 
   /**
