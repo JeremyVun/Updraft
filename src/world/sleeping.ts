@@ -138,7 +138,7 @@ out float vLevel;
 void main() {
   vec3 w = position;
   vec2 drift = uCloudShift * ${glsl(tuning.sleeping.fogDrift)};
-  w.y = uHollowTop.x + aLevel * 0.95 + (fbm(w.xz * 0.07 + drift) - 0.5) * ${glsl(tuning.sleeping.fogSwell * 2)};
+  w.y = uHollowTop.x + (aLevel - 2.0) * 0.55 + (fbm(w.xz * 0.07 + drift) - 0.5) * ${glsl(tuning.sleeping.fogSwell * 2)};
   vWorld = w;
   vLevel = aLevel;
   gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
@@ -149,13 +149,15 @@ ${ATMO_GLSL}
 in vec3 vWorld;
 in float vLevel;
 void main() {
-  float pool = 1.0 - smoothstep(0.35, 1.0, length(vWorld.xz - uHollow.xy) / uHollow.z);
+  /** Every sheet lies out to its own warped edge, or four circles nested in the grass is what you see. */
+  float reach = uHollow.z * (0.72 + 0.14 * vLevel) * (0.82 + 0.36 * fbm(vWorld.xz * 0.045 + vLevel * 3.1));
+  float pool = 1.0 - smoothstep(0.3, 1.0, length(vWorld.xz - uHollow.xy) / reach);
   if (pool <= 0.001 || uHollow.w <= 0.0) discard;
   vec2 drift = uCloudShift * ${glsl(tuning.sleeping.fogDrift)};
   float n = fbm(vWorld.xz * 0.11 - drift * 1.6 + vLevel * 7.3);
   vec2 uv = (vWorld.xz - uCarveDomain.xy) * uCarveDomain.zw;
   float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
-  float a = uHollow.w * pool * carve * smoothstep(0.32, 0.78, n) * (1.35 - vLevel * 0.24);
+  float a = uHollow.w * pool * carve * smoothstep(0.3, 0.86, n) * (0.62 - vLevel * 0.1);
   if (a < 0.004) discard;
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 col = uHollowTint * (uSkyAmbient * 1.4 + uSunColor * 0.55);
@@ -348,7 +350,7 @@ out vec3 vWorld;
 void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  vWorld = aDown.xyz + (right * position.x + up * position.y) * 0.075;
+  vWorld = aDown.xyz + (right * position.x + up * position.y) * 0.11;
   vUv = position.xy;
   vFade = aDown.w;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -569,7 +571,7 @@ export class SleepingIsland {
   /** The blanket: 0 tucked in, 1 thrown back. */
   blanket = 0;
 
-  private readonly shown = { fog: 1, frost: 0, dawn: 0, curtains: 0, blanket: 0 };
+  private shown = { fog: 1, frost: 0, dawn: 0, curtains: 0, blanket: 0 };
   private curtainRate = 0;
   /** What a gust over the bed has lifted the blanket by, on top of whatever the story has asked for. */
   private puff = 0;
@@ -652,8 +654,8 @@ export class SleepingIsland {
       return mesh;
     };
     const top = tuning.sleeping.fogTop;
-    this.chair = piece(chairParts(), CHAIR_AT.x, CHAIR_AT.y, top + 1.4, 0.7, true);
-    this.desk = piece(deskParts(), DESK_AT.x, DESK_AT.y, top + 2.0, -0.5, true);
+    this.chair = piece(chairParts(), CHAIR_AT.x, CHAIR_AT.y, top + 1.6, 0.7, true);
+    this.desk = piece(deskParts(), DESK_AT.x, DESK_AT.y, top + 2.3, -0.5, true);
     this.flex = piece(flexParts(), FLEX_AT.x, FLEX_AT.y, heightAt(FLEX_AT.x, FLEX_AT.y), 1.1, false);
 
     const rug = new THREE.Mesh(
@@ -844,7 +846,7 @@ export class SleepingIsland {
 
   /** Where the child stands when they come to the bed: on the side away from the window. */
   get bedside(): THREE.Vector3 {
-    return this.at.set(BED.x + BESIDE_BED.x * 1.5, BED_GROUND, BED.z + BESIDE_BED.y * 1.5);
+    return this.at.set(BED.x + BESIDE_BED.x * 2.4, BED_GROUND, BED.z + BESIDE_BED.y * 2.4);
   }
 
   update(dt: number, time: number, camera: THREE.Camera): void {
@@ -853,6 +855,8 @@ export class SleepingIsland {
     if (here !== this.here) {
       this.here = here;
       for (const o of this.objects) o.visible = here;
+      /** Arriving shows the room as the story has set it, not an ease out of whatever it was left at. */
+      if (here) this.shown = { fog: this.fog, frost: this.frost, dawn: this.dawn, curtains: this.curtains, blanket: this.blanket };
     }
     if (!here) {
       atmo.uniforms.uHollow.value.w = 0;

@@ -9,7 +9,7 @@ type Beat = 'ashore' | 'toBed' | 'beside' | 'toBoat' | 'push' | 'aboard';
 /** How long they stand by the bed before going back to the boat. */
 const BESIDE_FOR = 25;
 /** How far the frost has come in by the time they leave. */
-const FROST_BY = 0.75;
+const FROST_BY = 0.8;
 
 /**
  * The sleeping island, before there is a story in it: they come ashore out of the dark wood, walk to the bed
@@ -42,7 +42,7 @@ export class SleepingChapter implements Chapter {
     const { child, sleeping } = cast;
     child.dismount();
     sleeping.fog = 1;
-    sleeping.frost = 0.15;
+    sleeping.frost = 0.25;
     sleeping.dawn = 0;
     sleeping.curtains = 0;
     sleeping.blanket = 0;
@@ -87,7 +87,7 @@ export class SleepingChapter implements Chapter {
         break;
       case 'beside':
         c.lookAt = this.look.copy(sleeping.bedside).setY(sleeping.bedside.y + 0.6);
-        sleeping.frost = 0.15 + (FROST_BY - 0.15) * Math.min(1, this.t / BESIDE_FOR);
+        sleeping.frost = 0.25 + (FROST_BY - 0.25) * Math.min(1, this.t / BESIDE_FOR);
         if (this.t > BESIDE_FOR) this.board();
         break;
       case 'push':
@@ -143,11 +143,11 @@ export class SleepingChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    s.target.set(c.x + this.aim.x * 2.2, ground + 1.5, c.z + this.aim.z * 2.2);
+    s.target.set(c.x + this.aim.x * 2.6, ground + 1.7, c.z + this.aim.z * 2.6);
     /** The hollow is a bowl, so the eye is kept low against the child rather than a fixed height above the slope. */
-    const ex = c.x - this.aim.x * 9 - this.aim.z * 1.4;
-    const ez = c.z - this.aim.z * 9 + this.aim.x * 1.4;
-    s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0) + 1.1, ground + 2.6), ez);
+    const ex = c.x - this.aim.x * 6.5 - this.aim.z * 1.1;
+    const ez = c.z - this.aim.z * 6.5 + this.aim.x * 1.1;
+    s.eye = this.side.set(ex, Math.max(ground + 1.8, Math.max(heightAt(ex, ez), 0) + 0.35), ez);
     this.focus.copy(c);
   }
 }

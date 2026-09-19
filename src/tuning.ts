@@ -311,11 +311,11 @@ export const tuning = {
    */
   sleeping: {
     /** How thick the pooled fog is at full `fog`, and how far out from the hollow it reaches. */
-    fogThickness: 0.6,
+    fogThickness: 0.32,
     fogReach: 34,
     /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
-    fogTop: 5.6,
-    fogSoft: 2.0,
+    fogTop: 4.6,
+    fogSoft: 1.5,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
     fogDrift: 0.02,
@@ -329,7 +329,7 @@ export const tuning = {
     frostFrom: 30,
     frostTo: 2,
     /** The bedside lamp, the one warm thing in the blue, and how far the dawn puts it out of business. */
-    lamp: 1.5,
+    lamp: 2.4,
     lampDawn: 0.55,
     /** Seconds the driven values take to ease to what the story asks for, so a switch never pops. */
     ease: 1.6,
