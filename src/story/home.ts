@@ -45,11 +45,11 @@ const WATCHES_FOR = 16;
 /** How slowly they walk on afterwards, as a share of their usual pace. */
 const STROLL = 0.55;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
-const BROW_AT = 13;
+const BROW_AT = 17;
 /** Seconds they stand on the brow looking down at it before they go on: the pause is the whole point of the walk. */
 const BROW_FOR = 5.5;
 /** And where they sit down to open the paper, far enough on that the cottage sits below the sheet in the frame. */
-const REVEAL_AT = 23;
+const REVEAL_AT = 25;
 /** They sit, the paper comes up into both hands, and only then does it start to come open. */
 const SETTLE_FOR = 3.2;
 /** The unfolding itself: the wings, the sheet, the two corners of the nose, and the raise, over about six seconds. */
@@ -57,7 +57,7 @@ const UNFOLD_RATE = 0.17;
 const GAZE_FOR = 6;
 const FOLD_RATE = 0.34;
 /** How far round from behind the child the camera stands on the brow, and where it settles for the drawing. */
-const BROW_ARC = 0.95;
+const BROW_ARC = 0.3;
 const DRAW_ARC = 0.62;
 /** Which side of the sheet, in the paper's own coordinates, is the one nearest the camera over their shoulder. */
 const NEAR = 1;
@@ -743,16 +743,20 @@ export class HomeChapter implements Chapter {
       const near = THREE.MathUtils.smoothstep(this.along, 3, BROW_AT);
       arc = 0.12 * near;
       dist = 11 - 1.5 * near;
+      rise = 2.2 + 0.4 * near;
       this.pace = 0.5;
     } else if (beat === 'brow') {
-      /** Off their shoulder while they stand, until the roof below and the face looking at it are both in frame. */
+      /**
+       * It rises behind them while they stand there and looks over their head down the valley, because what they
+       * have stopped for is not a thing to be seen on their face: it is the roof, down there, where it always was.
+       */
       const out = THREE.MathUtils.smoothstep(this.t, 0.5, BROW_FOR - 0.4);
       const on = THREE.MathUtils.smoothstep(this.t, BROW_FOR, BROW_FOR + 5.5);
-      arc = 0.12 + (BROW_ARC - 0.12) * out - (BROW_ARC - DRAW_ARC) * on;
-      dist = 9.5 - 1.9 * out - 1.4 * on;
-      rise = 2.2 - 0.4 * out + 0.6 * on;
-      ahead = 6 - 1.6 * out + 0.6 * on;
-      aimUp = 1.6 - 0.15 * out;
+      arc = 0.12 + (BROW_ARC - 0.12) * out + (DRAW_ARC - BROW_ARC) * on;
+      dist = 9.5 - 2 * out - 1.3 * on;
+      rise = 2.6 + 0.8 * out;
+      ahead = 6 + 3 * out - 2.4 * on;
+      aimUp = 1.6 - 0.7 * out + 0.7 * on;
       this.pace = 0.34;
     } else if (beat === 'settle') {
       arc = DRAW_ARC;
@@ -766,7 +770,7 @@ export class HomeChapter implements Chapter {
       const open = beat === 'fold' ? 1 : drawing.open;
       const drift = beat === 'fold' ? 0.4 * THREE.MathUtils.smoothstep(this.t, 0, 3) : 0;
       arc = DRAW_ARC;
-      dist = 5.2 - 0.5 * THREE.MathUtils.smoothstep(open, 0, 0.45) + 1.1 * THREE.MathUtils.smoothstep(open, 0.5, 1) + drift;
+      dist = 5.2 - 0.5 * THREE.MathUtils.smoothstep(open, 0, 0.45) + 0.6 * THREE.MathUtils.smoothstep(open, 0.5, 1) + drift;
       rise = 3.4 + 0.5 * THREE.MathUtils.smoothstep(open, 0.5, 1);
       onPaper = 1;
       this.pace = 0.55;
