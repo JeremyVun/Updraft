@@ -67,7 +67,8 @@ any other room: at `fog` 0 with the camera 300 units away the whole of it is one
 wherever it is open.
 
 **Calls.**
-- `carve(x, z, dirX, dirZ, strength)` stamps a lane of clear air into the fog. The room already calls it every
+- `carve(x, z, dirX, dirZ, strength)` stamps a lane of clear air into the fog; `strength` is how much fog one
+  call takes out (1 clears it), so a caller working per frame scales it by `dt`. The room already calls it every
   frame from the player's own stroke (`input.world`, `input.gust`), so blowing across the hollow opens a lane
   that closes again over `tuning.sleeping.carveCloses` seconds. It is a 128² field over the island
   (`uCarveTex`/`uCarveDomain`) decayed back toward 1, read by the pooled fog and by the fog's top sheets.

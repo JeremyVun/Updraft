@@ -37,6 +37,7 @@ export class SleepingChapter implements Chapter {
   private readonly look = new THREE.Vector3();
   private readonly aim = new THREE.Vector3(-1, 0, 0);
   private readonly side = new THREE.Vector3();
+  private readonly perch = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
     const { child, sleeping } = cast;
@@ -149,7 +150,7 @@ export class SleepingChapter implements Chapter {
       s.target.set(BED.x, BED.y + 1.1, BED.z);
       const bx = BED.x + dir.x * 11;
       const bz = BED.z + dir.z * 11;
-      s.eye = this.look.set(bx, Math.max(BED.y + 2.6, Math.max(heightAt(bx, bz), 0) + 0.4), bz);
+      s.eye = this.perch.set(bx, Math.max(BED.y + 2.6, Math.max(heightAt(bx, bz), 0) + 0.4), bz);
       this.focus.copy(c);
       return;
     }
