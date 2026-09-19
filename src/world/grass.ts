@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { params } from '../params';
-import { glsl } from '../tuning';
+import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
 import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, POND_LEVEL, pondOut } from './heightfield';
@@ -25,9 +25,14 @@ function woodFloorAt(x: number, z: number): number {
   return 1 - smoothstep(0.7, 1.05, d);
 }
 
+/** The sleeping island's frosted sward: what a blade cropped this short keeps of itself. */
+const SWARD = tuning.sleeping;
+
 /**
  * The sleeping island is cropped shortest of all: frosted stubble, so a small white bird walking away from the
- * bed is legible the whole way up the hill. Mirrors `sleepFloorAt` in the blade shaders; keep them in step.
+ * bed is legible the whole way up the hill. A blade takes its width down with its height here, unlike the other
+ * cropped islands, so what is left is fine grass and not a chip wider than it is tall.
+ * Mirrors `sleepFloorAt` in the blade shaders; keep them in step.
  */
 function sleepFloorAt(x: number, z: number): number {
   const d = Math.hypot((x - ISLES.sleeping.x) / ISLES.sleeping.rx, (z - ISLES.sleeping.z) / ISLES.sleeping.rz);
@@ -128,6 +133,17 @@ vec3 grassTint(vec2 xz) {
 }
 `;
 
+/**
+ * The pale the frost puts on whatever it settles on. White, taking its cast from the sky over it, so the rime is
+ * blue in the night's own light and goes neutral as the morning comes up rather than staying a painted grey.
+ */
+export const RIME_GLSL = /* glsl */ `
+vec3 rimeColour() {
+  vec3 sky = uSkyAmbient / max(max(uSkyAmbient.r, max(uSkyAmbient.g, uSkyAmbient.b)), 1e-4);
+  return mix(vec3(0.84, 0.86, 0.89), sky, 0.5);
+}
+`;
+
 const fieldSample: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 };
 
 /** Mirrors `troddenAt` in `ATMO_GLSL`; keep the two in step. */
@@ -159,7 +175,7 @@ export function grassHeightAt(x: number, z: number): number {
   const pasture = smoothstep(-600, -660, z);
   let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
   h *= dry;
-  if (pasture <= 0) return h * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * (1 - 0.72 * sleepFloorAt(x, z)) * troddenAt(x, z);
+  if (pasture <= 0) return h * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * (1 - (1 - SWARD.swardCrop) * sleepFloorAt(x, z)) * troddenAt(x, z);
   h += (0.41 + 0.26 * lush - h) * pasture;
   const f = fieldAt(x, z, fieldSample);
   const hilltop = 1 - smoothstep(45, 95, Math.hypot(x - LAST_HILL.x, z - LAST_HILL.z));
@@ -167,7 +183,7 @@ export function grassHeightAt(x: number, z: number): number {
   const grazed = Math.max(hilltop, garden);
   const hay = (f.kind <= 0.22 ? 1 : 0) * f.presence * (1 - grazed);
   const rush = (f.kind >= 0.86 ? 1 : 0) * f.presence * (1 - grazed);
-  return h * (1 + hay * 1.5 + rush * 1.2) * (1 + HOME_LUSH * homeAt(x, z)) * (1 - 0.22 * hilltop) * (1 - 0.5 * garden) * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * (1 - 0.72 * sleepFloorAt(x, z)) * troddenAt(x, z);
+  return h * (1 + hay * 1.5 + rush * 1.2) * (1 + HOME_LUSH * homeAt(x, z)) * (1 - 0.22 * hilltop) * (1 - 0.5 * garden) * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * (1 - (1 - SWARD.swardCrop) * sleepFloorAt(x, z)) * troddenAt(x, z);
 }
 
 export const grassUniforms = {
@@ -310,19 +326,21 @@ void main() {
   float shortPatch = smoothstep(0.52, 0.68, fbm(root2 * 0.05 - 23.0));
   float fringe = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 2.2).toFixed(2)}, groundH);
   float pasture = pastureAt(root2);
+  /** The frosted sward: it takes a blade's width, its tufts and its curve down with its height. */
+  float sward = sleepFloorAt(root2);
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
   float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush) * step(95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
-  h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
+  h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * mix(2.2, ${glsl(SWARD.swardTuft)}, sward)), pasture);
   float hilltop = 1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
   float garden = 1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0)));
   float grazed = max(hilltop, garden);
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * (1.0 - 0.72 * sleepFloorAt(root2)) * troddenAt(root2);
-  float width = 0.15 + 0.1 * gr_rand(s);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * mix(1.0, ${glsl(SWARD.swardCrop)}, sward) * troddenAt(root2);
+  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SWARD.swardWidth)}, sward);
   float angle = gr_rand(s) * 6.2831853;
-  float curve = 0.12 + 0.28 * gr_rand(s);
-  float flowerRand = step(gr_rand(s), surf.z * 0.1);
+  float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SWARD.swardCurve)}, sward);
+  float flowerRand = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward));
   float petal = gr_rand(s);
   // The petal colour class is stored as a small integer, exact in half float, instead of the draw it comes from.
   float petalClass = petal < 0.45 ? 0.0 : petal < 0.65 ? 1.0 : petal < 0.9 ? 2.0 : 3.0;
@@ -353,17 +371,23 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   float aoLow = mix(0.7, 0.22, fringe);
   float aoFar = far * 0.75;
   vAo = vec2(mix(aoLow, 1.0, aoFar), (1.0 - aoFar) * (1.0 - aoLow));
-  vFlat = smoothstep(0.3, 1.0, wa);
-  /** Frost takes the colour out of a blade; the lamp, and later the morning, put their own back into it. */
+  /**
+   * Frost takes the colour out of a blade, thickest where it caught the sky and thinnest down in the roots, so a
+   * rimed sward pales toward its tips instead of every blade going one flat white. The lamp, and later the
+   * morning, put their own colour back into it, and grass held stiff by rime does not flash as the wind lays it.
+   */
   float rime = frostAt(root2);
+  vec3 pale = rimeColour();
+  vFlat = smoothstep(0.3, 1.0, wa) * (1.0 - 0.55 * rime);
   vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
-  vRoot = mix(vRoot, vec3(0.74, 0.79, 0.84), rime * 0.55) + warm * 0.3;
-  vTint = mix(vTint, vec3(0.82, 0.87, 0.9), rime * 0.7) + warm * 0.45;
+  vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SWARD.rimeRoot)}) + warm * 0.3;
+  vTint = mix(vTint, pale, rime * ${glsl(SWARD.rimeTip)}) + warm * 0.45;
 `;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
+${RIME_GLSL}
 in vec2 aTile;
 uniform vec3 uGrassRoot;
 uniform sampler2D uRootTex;
@@ -469,6 +493,7 @@ ${ATMO_GLSL}
 ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
 ${GRASS_GLSL}
+${RIME_GLSL}
 ${BLADE_RAND_GLSL}
 ${BLADE_LOD_GLSL}
 ${BLADE_THIN_GLSL}
@@ -521,21 +546,23 @@ void main() {
   float fringe = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 2.2).toFixed(2)}, groundH);
   float life = lifeAt(root2);
   float pasture = pastureAt(root2);
+  /** The frosted sward: it takes a blade's width, its tufts and its curve down with its height. */
+  float sward = sleepFloorAt(root2);
   float h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.55 * gr_rand(s)) * (0.2 + 0.8 * fringe * fringe) * (1.0 - shortPatch * 0.5);
   float tuft = step(0.93, gr_rand(s)) * smoothstep(0.45, 0.8, lush) * step(95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
-  h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * 2.2), pasture);
+  h = mix(h, (0.34 + 0.26 * lush + 0.14 * gr_rand(s)) * (1.0 + tuft * mix(2.2, ${glsl(SWARD.swardTuft)}, sward)), pasture);
   float hilltop = 1.0 - smoothstep(45.0, 95.0, length(root2 - vec2(${LAST_HILL.x}.0, ${LAST_HILL.z}.0)));
   float garden = 1.0 - smoothstep(14.0, 30.0, length(root2 - vec2(${COTTAGE.x}.0, ${COTTAGE.z}.0)));
   float grazed = max(hilltop, garden);
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * (1.0 - 0.72 * sleepFloorAt(root2)) * troddenAt(root2);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * mix(1.0, ${glsl(SWARD.swardCrop)}, sward) * troddenAt(root2);
   float stand = standing(rank, share, dist);
   h *= mix(0.72, 1.0, life) * stand;
-  float width = (0.15 + 0.1 * gr_rand(s)) * widthAt(dist) * stand;
+  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SWARD.swardWidth)}, sward) * widthAt(dist) * stand;
   float angle = gr_rand(s) * 6.2831853;
-  float curve = 0.12 + 0.28 * gr_rand(s);
-  float flower = step(gr_rand(s), surf.z * 0.1) * step(0.5, life);
+  float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SWARD.swardCurve)}, sward);
+  float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward)) * step(0.5, life);
   float petal = gr_rand(s);
   h *= 1.0 + flower * (0.2 + 0.5 * pasture);
   vec3 rootPos = vec3(root2.x, groundH - 0.12, root2.y);

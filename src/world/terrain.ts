@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { GRASS_GLSL, grassUniforms } from './grass';
+import { GRASS_GLSL, RIME_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
 import { GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 import { REFLECTION_LAYER } from './water/reflection';
@@ -66,6 +66,7 @@ ${ATMO_GLSL}
 ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
 ${GRASS_GLSL}
+${RIME_GLSL}
 ${SURF_GLSL}
 uniform vec3 uSand;
 uniform vec3 uWetSand;
@@ -112,7 +113,9 @@ void main() {
   vec4 surf = surfaceAt(xz);
   alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
-  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), uMirrorPass);
+  /** The sleeping island's sward is cropped too short to cover its ground, so that ground is grass, not soil. */
+  float sward = sleepFloorAt(xz);
+  float far = max(max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), uMirrorPass), sward * 0.9);
   vec3 tint = grassTint(xz);
   vec4 fld = fieldAt(xz);
   float hay = step(fld.y, 0.22) * fld.w;
@@ -148,8 +151,8 @@ void main() {
   float lit = mix(lambert, wrap, grassy * far);
   vec3 V = normalize(cameraPosition - vWorld);
   float back = pow(max(dot(-V, uSunDir), 0.0), 4.0) * grassy * far;
-  /** The frost creeping over the sleeping island, and the lamp standing in the middle of it. */
-  alb = mix(alb, vec3(0.76, 0.81, 0.86), frostAt(xz) * 0.5);
+  /** The frost creeping over the sleeping island, in the grain of the ground rather than over the top of it. */
+  alb = mix(alb, rimeColour() * (0.86 + 0.28 * grain), frostAt(xz) * 0.55);
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = applyFog(col, vWorld);
