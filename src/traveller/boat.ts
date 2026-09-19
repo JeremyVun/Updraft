@@ -97,7 +97,7 @@ vec3 cloth(vec2 st) {
     ${glsl(SAIL_TACK)} + t * ${glsl(SAIL_HOIST)} + cut * ${glsl(SAIL_RISE)},
     0.0);
   p.y -= uDroop * s * (0.4 + 0.6 * sin(t * 3.14159)) * ${glsl(tuning.sail.sag)};
-  float folds = sin(s * ${glsl(tuning.sail.folds)} * 6.28318 + 1.1) * smoothstep(0.0, 0.22, s) * (0.45 + 0.55 * sin(t * 2.3 - 0.8));
+  float folds = sin(s * ${glsl(tuning.sail.folds)} * 6.28318 + 1.1 + t * 0.7) * smoothstep(0.0, 0.2, s) * (0.3 + 0.7 * sin(t * 3.14159));
   float breathe = 0.7 + 0.3 * sin(uTime * 0.55 + t * 1.5);
   p.z += uDroop * (folds * breathe * ${glsl(tuning.sail.fold)} + s * sin(uTime * 0.4) * 0.08);
   /** A gust crossing the sail breaks along the free edge first: the leech shakes, then the belly fills again. */

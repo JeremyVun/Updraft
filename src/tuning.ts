@@ -347,7 +347,7 @@ export const tuning = {
     gather: 0.22,
     sag: 0.8,
     folds: 3.5,
-    fold: 0.22,
+    fold: 0.3,
     /** How far the ripple and the leech's shake move the cloth, in world units. */
     ripple: 0.18,
     shake: 0.24,
