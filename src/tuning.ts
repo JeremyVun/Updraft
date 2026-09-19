@@ -411,9 +411,8 @@ export const tuning = {
     /** How far up the hill it sits down, 0 the bed to 1 the top, and the seconds before it gets up regardless. */
     shiverAt: 0.5,
     shiverFor: 9,
-    /** What the wind under it has to do at the hilltop before it goes, and how long it has to be kept there. */
+    /** What the wind under it has to do at the hilltop before it goes. */
     liftToFly: 1.8,
-    liftFor: 2,
     /** Seconds on the hilltop before the sun comes up by itself and the bird goes anyway. */
     sunBy: 70,
     /** The glide down: seconds it takes, and how far it holds above the straight line from the hill to the bed. */

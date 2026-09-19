@@ -419,7 +419,7 @@ export class SleepingChapter implements Chapter {
       k.stay = true;
       k.errand = null;
       k.watch(null);
-      k.needs(T.liftToFly, T.liftFor);
+      k.needs(T.liftToFly, null);
       k.mayFly = true;
       sleeping.feather.goal.copy(TOP).setY(TOP.y + 2.2);
       this.sunAt = this.now + T.sunBy;
