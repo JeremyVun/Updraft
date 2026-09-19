@@ -53,7 +53,7 @@ const SEAT_AT = 6;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
 const BROW_AT = 17;
 /** Seconds they stand on the brow with the house below them. The walk over it is the climax; this is the top of it. */
-const BROW_FOR = 7.5;
+const BROW_FOR = 7;
 /** They turn to the way home, sit down where they are, and the paper comes up out of the one hand into both. */
 const SETTLE_FOR = 3.6;
 /**
@@ -69,7 +69,7 @@ const OPENING: number[][] = [
 /** The crayon starts arriving once the sheet is swinging out of its own fold, and takes this long to be all there. */
 const DRAWS_FROM = 0.58;
 const DRAWS_IN = 2.8;
-const GAZE_FOR = 6.5;
+const GAZE_FOR = 6;
 const FOLD_RATE = 0.38;
 /**
  * Where the camera stands, as an angle round from directly behind the child: on their shoulder for the hands,
@@ -118,7 +118,7 @@ const GRIPS: [0 | 1, number[][]][] = [
 const HOLDS_UP = 12;
 /** Seconds of the player's own wind on it that carry it off, and how long they watch it go afterwards. */
 const TAKES = 1;
-const WATCHES_IT = 9;
+const WATCHES_IT = 8;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
 const NIGHTFALL_FOR = 11;
