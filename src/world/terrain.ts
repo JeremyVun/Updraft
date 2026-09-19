@@ -113,9 +113,8 @@ void main() {
   vec4 surf = surfaceAt(xz);
   alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
-  /** The sleeping island's sward is cropped too short to cover its ground, so that ground is grass, not soil. */
   float sward = sleepFloorAt(xz);
-  float far = max(max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), uMirrorPass), sward * 0.9);
+  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), uMirrorPass);
   vec3 tint = grassTint(xz);
   vec4 fld = fieldAt(xz);
   float hay = step(fld.y, 0.22) * fld.w;
@@ -151,8 +150,13 @@ void main() {
   float lit = mix(lambert, wrap, grassy * far);
   vec3 V = normalize(cameraPosition - vWorld);
   float back = pow(max(dot(-V, uSunDir), 0.0), 4.0) * grassy * far;
-  /** The frost creeping over the sleeping island, in the grain of the ground rather than over the top of it. */
-  alb = mix(alb, rimeColour() * (0.86 + 0.28 * grain), frostAt(xz) * 0.55);
+  /**
+   * The sleeping island's sward is cropped shorter than the gap between one blade and the next, so its ground
+   * shows between them and has to be the grass itself rather than the soil under it. The frost then creeps over
+   * both together, in the grain of the ground rather than as a wash laid over the top of it.
+   */
+  alb = mix(alb, mix(under, field, 0.55) * (0.88 + 0.24 * grain), grassy * sward * 0.92);
+  alb = mix(alb, rimeColour() * (0.86 + 0.28 * grain), frostAt(xz) * 0.62);
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = applyFog(col, vWorld);

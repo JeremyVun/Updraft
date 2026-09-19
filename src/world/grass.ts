@@ -374,15 +374,16 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   /**
    * Frost takes the colour out of a blade, thickest where it caught the sky and thinnest down in the roots, so a
    * rimed sward pales toward its tips instead of every blade going one flat white. The lamp, and later the
-   * morning, put their own colour back into it, and grass held stiff by rime does not flash as the wind lays it.
+   * morning, light what is there rather than being added on top of it, so grass under the dawn goes green in the
+   * sun instead of turning into pale confetti, and grass held stiff by rime does not flash as the wind lays it.
    */
   float rime = frostAt(root2);
   vec3 pale = rimeColour();
   vFlat = smoothstep(0.3, 1.0, wa) * (1.0 - 0.55 * rime);
   vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
-  vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)}) + warm * 0.3;
-  vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)}) + warm * 0.45;
+  vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)}) * (1.0 + warm * 0.55);
+  vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)}) * (1.0 + warm * 0.8);
 `;
 
 const VERT = /* glsl */ `

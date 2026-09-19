@@ -358,10 +358,10 @@ export const tuning = {
      * the cut, so cropping leaves fine stubble instead of blades wider than they are tall. The odd tall tuft is
      * cut right back, and less curve leaves the stubble standing rather than arched over showing its face.
      */
-    swardCrop: 0.4,
-    swardWidth: 0.42,
-    swardTuft: 0.55,
-    swardCurve: 0.55,
+    swardCrop: 0.48,
+    swardWidth: 0.62,
+    swardTuft: 1.0,
+    swardCurve: 0.95,
     /** How much of a blade's colour the rime takes at the root, and at the tip, where it settles thickest. */
     rimeRoot: 0.45,
     rimeTip: 0.92,
