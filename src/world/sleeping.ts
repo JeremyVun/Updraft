@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { Feather } from '../fx/feather';
 import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
@@ -157,12 +158,21 @@ void main() {
   float n = fbm(vWorld.xz * 0.11 - drift * 1.6 + vLevel * 7.3);
   vec2 uv = (vWorld.xz - uCarveDomain.xy) * uCarveDomain.zw;
   float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
-  float a = uHollow.w * pool * carve * smoothstep(0.3, 0.86, n) * (0.62 - vLevel * 0.1);
-  if (a < 0.004) discard;
+  /**
+   * A lane has to be seen, and a sheet that only loses a little alpha where it is torn does not read as a hole
+   * in anything. So the tear bites harder than it is carved, and its rim — where the fog is half gone — is lit,
+   * which is what a hole torn in mist actually looks like and what makes the lane legible from above as well as
+   * from inside it.
+   */
+  float torn = carve * carve;
+  float rim = smoothstep(0.1, 0.55, carve) * (1.0 - smoothstep(0.55, 0.95, carve));
+  float a = uHollow.w * pool * torn * smoothstep(0.3, 0.86, n) * (0.62 - vLevel * 0.1);
+  if (a < 0.004 && rim < 0.02) discard;
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 col = uHollowTint * (uSkyAmbient * 1.4 + uSunColor * 0.55);
   col += lampLight(vWorld, up) * 0.5 + dawnLight(vWorld, up) * 0.8;
-  gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
+  col *= 1.0 + rim * 1.5;
+  gl_FragColor = vec4(col, clamp(a + rim * 0.22 * uHollow.w * pool, 0.0, 1.0));
 }`;
 
 /** Everything in the room that is made of something: painted wood, brass, linen over a mattress. */
@@ -232,6 +242,8 @@ uniform vec3 uCloth;
 uniform vec4 uBed;
 uniform vec2 uBedAxis;
 uniform vec3 uFold;
+/** Who is under it: how much of them there is, how far up the bed they lie, and how they breathe. */
+uniform vec3 uSleeper;
 out vec3 vColor;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -252,7 +264,15 @@ vec3 clothAt(vec2 uvw) {
   vec2 xz = uBed.xy + uBedAxis * ((back - 0.5) * uBed.z) + side * (across * uBed.w);
   float lift = uFold.y * smoothstep(0.1, 0.9, back) * (0.35 + 0.5 * sin(back * 3.14159));
   float ripple = sin(uTime * 2.1 + back * 7.0 + across * 3.0) * uFold.z * (0.3 + 0.7 * back);
-  float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 + lift + ripple;
+  /**
+   * A child asleep under it: the cloth stands over a long shape lying up the bed, highest at the shoulders and
+   * falling away down the legs, and it rises and falls with their breathing. Where the blanket has been thrown
+   * back off them there is nothing left to stand over, so the shape goes with the fold.
+   */
+  float along = 1.0 - smoothstep(uSleeper.y - 0.3, uSleeper.y + 0.25, back);
+  float wide = clamp(abs(across) / ${glsl(tuning.sleeping.sleeperWide)}, 0.0, 1.0);
+  float body = uSleeper.x * sqrt(1.0 - wide * wide) * along * (1.0 - smoothstep(m - 0.08, m + 0.12, uvw.y));
+  float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 * (1.0 - min(1.0, body * 1.2)) + lift + ripple + body * (1.0 + uSleeper.z);
   return vec3(xz.x, y, xz.y);
 }
 
@@ -571,8 +591,10 @@ export class SleepingIsland {
   curtains = 0;
   /** The blanket: 0 tucked in, 1 thrown back. */
   blanket = 0;
+  /** Somebody asleep under the blanket, 0 an empty bed to 1: the cloth stands over them and breathes with them. */
+  sleeper = 0;
 
-  private shown = { fog: 1, frost: 0, dawn: 0, curtains: 0, blanket: 0 };
+  private shown = { fog: 1, frost: 0, dawn: 0, curtains: 0, blanket: 0, sleeper: 0 };
   private curtainRate = 0;
   /** What a gust over the bed has lifted the blanket by, on top of whatever the story has asked for. */
   private puff = 0;
@@ -588,6 +610,8 @@ export class SleepingIsland {
   private readonly shaft: THREE.Mesh;
   private readonly fold = new THREE.Vector3();
   private readonly open = new THREE.Vector3();
+  /** What the blanket stands over: how much of a child there is under it, where they lie, and their breathing. */
+  private readonly under = new THREE.Vector3(0, 1.15, 0);
   private readonly shaftUniform = { value: 0 };
   private readonly down: Down[] = [];
   private readonly downAttr: THREE.InstancedBufferAttribute;
@@ -596,6 +620,11 @@ export class SleepingIsland {
   private readonly last = new THREE.Vector2(1e9, 0);
   private readonly rand = mulberry32(5501);
   private here = false;
+  /**
+   * The one long white feather the pillow gives up, which is the whole of this room's control: the story releases
+   * it, gives it somewhere to lean, and the bird follows it. It lives here because it comes out of the pillow.
+   */
+  readonly feather: Feather;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -603,6 +632,7 @@ export class SleepingIsland {
     private readonly input: PointerInput,
   ) {
     this.gpu = new GpuRunner(renderer);
+    this.feather = new Feather(wind);
     for (let i = 0; i < STAMPS; i++) {
       this.stamps.push(new THREE.Vector4());
       this.stampArgs.push(new THREE.Vector2());
@@ -685,9 +715,10 @@ export class SleepingIsland {
         uniforms: {
           ...atmo.uniforms,
           uCloth: { value: BLANKET_RED },
-          uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 1.8, BED_WIDTH * 0.56) },
+          uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 2.3, BED_WIDTH * 0.56) },
           uBedAxis: { value: new THREE.Vector2(-BED_FACING.x, -BED_FACING.y) },
           uFold: { value: this.fold },
+          uSleeper: { value: this.under },
         },
         side: THREE.DoubleSide,
       }),
@@ -788,7 +819,8 @@ export class SleepingIsland {
     feathers.frustumCulled = false;
     this.objects.push(feathers);
 
-    /** The story's one long white feather belongs here, beside the down it comes out of the pillow with. */
+    /** The story's one long white feather, beside the down it comes out of the pillow with. */
+    this.objects.push(...this.feather.objects);
 
     for (const o of this.objects) o.visible = false;
   }
@@ -861,8 +893,9 @@ export class SleepingIsland {
     if (here !== this.here) {
       this.here = here;
       for (const o of this.objects) o.visible = here;
+      this.feather.visible = here;
       /** Arriving shows the room as the story has set it, not an ease out of whatever it was left at. */
-      if (here) this.shown = { fog: this.fog, frost: this.frost, dawn: this.dawn, curtains: this.curtains, blanket: this.blanket };
+      if (here) this.shown = { fog: this.fog, frost: this.frost, dawn: this.dawn, curtains: this.curtains, blanket: this.blanket, sleeper: this.sleeper };
     }
     if (!here) {
       atmo.uniforms.uHollow.value.w = 0;
@@ -877,6 +910,7 @@ export class SleepingIsland {
     this.shown.frost += (this.frost - this.shown.frost) * k;
     this.shown.dawn += (this.dawn - this.shown.dawn) * k;
     this.shown.blanket += (this.blanket - this.shown.blanket) * k;
+    this.shown.sleeper += (this.sleeper - this.shown.sleeper) * k;
     const was = this.shown.curtains;
     this.shown.curtains += (this.curtains - this.shown.curtains) * k;
     this.curtainRate += ((this.shown.curtains - was) / Math.max(dt, 1e-3) - this.curtainRate) * (1 - Math.exp(-dt * 4));
@@ -897,6 +931,8 @@ export class SleepingIsland {
     this.player(dt);
     this.stepCarve(dt);
     this.cloth(dt, time);
+    this.feather.update(dt, time);
+    if (!this.input.muted) this.feather.brush(camera, this.input.prevNdc, this.input.ndc, this.input.gust, this.input.gustDir, this.input.charge, dt);
     this.hanging(time);
     this.drift(dt);
   }
@@ -943,6 +979,8 @@ export class SleepingIsland {
     const want = Math.min(1, (speed / t.blanketSpeed) * 0.7 + w.energy * 0.8) * t.blanketGust;
     this.puff += (want - this.puff) * (1 - Math.exp(-dt / (want > this.puff ? 0.25 : t.blanketSettles)));
     this.fold.set(this.shown.blanket * t.blanketLift, this.puff, 0.01 + Math.min(0.06, speed * 0.004 + w.energy * 0.03));
+    /** They are plainly only asleep, and this is how you can tell: the blanket over them rises and falls. */
+    this.under.set(this.shown.sleeper * t.sleeperHigh, 1.15, Math.sin(time * 0.75) * 0.06 * this.shown.sleeper);
 
     const c = this.wind.sample(WINDOW.x, WINDOW.z, this.air);
     this.open.set(

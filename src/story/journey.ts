@@ -264,10 +264,11 @@ export class Journey {
       case 'sleeping':
         return new SleepingChapter(cast);
       case 'toHome':
+        /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */
         return new CrossingChapter(cast, {
           route: ROUTES.toHome,
           haze: 0.5,
-          dusk: 1.85,
+          dusk: 1.02,
           duskTo: 0.25,
           whaleAt: 55,
           whaleEvery: 150,

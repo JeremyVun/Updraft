@@ -334,9 +334,9 @@ export const tuning = {
     fogSwell: 0.7,
     fogDrift: 0.02,
     /** How hard a gust cuts a lane in the fog, how wide the cut is, and the seconds a lane takes to close again. */
-    carveStrength: 4.2,
-    carveWidth: 4.2,
-    carveCloses: 8,
+    carveStrength: 5.5,
+    carveWidth: 4.6,
+    carveCloses: 11,
     /** Wind speed at which a stroke carves at full strength. */
     carveSpeed: 9,
     /** How far out the frost starts and how near the bed it comes, from `frost` 0 to 1. */
@@ -360,6 +360,68 @@ export const tuning = {
     downCount: 34,
     downThrow: 1.6,
     downLife: 9,
+    /** How far the blanket stands over the child under it, and how wide that shape is, in bed widths. */
+    sleeperHigh: 0.66,
+    sleeperWide: 0.62,
+
+    /**
+     * The one long white feather. It is the paper plane made slower and floatier: it takes the air's own speed
+     * rather than being pushed along by it, sinks at a walking pace, and leans toward wherever the story wants
+     * the bird to go, so a player who blows on it once still finds it leading and never has to fetch it.
+     */
+    featherTakes: 1.6,
+    featherSink: 0.3,
+    /** Rising air and gust energy turned into climb, in units a second at full. */
+    featherLift: 0.5,
+    featherGust: 0.5,
+    /** How hard it leans toward the goal, in units a second squared: about 0.9 units a second of drift in still air. */
+    featherLean: 1.45,
+    /** Seconds it will lie on the grass before a breath of its own picks it up again, and how high it may hang. */
+    featherRests: 2.5,
+    featherCeiling: 3.4,
+    /** Share of a stroke's speed a swipe across it on screen gives it. */
+    featherBrush: 0.5,
+
+    /**
+     * The story's waits, and what happens at each of them if the player does nothing at all. Nobody is ever
+     * stranded on this island: every one of these ends by itself.
+     */
+    climbsIn: 3.2,
+    /** Seconds asleep before the bird starts trying, and between its three tries. */
+    triesFrom: 4,
+    triesEvery: 7,
+    /** Seconds after its one call before the pillow gives up the feather by itself. */
+    featherBy: 24,
+    /** Seconds it stands at the edge of the trodden grass, and how long each look back at the bed lasts. */
+    edgeFor: 8,
+    looksBack: 2.2,
+    /** How far up the hill it sits down, 0 the bed to 1 the top, and the seconds before it gets up regardless. */
+    shiverAt: 0.42,
+    shiverFor: 9,
+    /** What the wind under it has to do at the hilltop before it goes, and how long it has to be kept there. */
+    liftToFly: 1.8,
+    liftFor: 2,
+    /** Seconds on the hilltop before the sun comes up by itself and the bird goes anyway. */
+    sunBy: 70,
+    /** The glide down: seconds it takes, and how far it holds above the straight line from the hill to the bed. */
+    glideFor: 15,
+    glideArc: 2.6,
+    /** How far the frost has come in by the time the bird gives up on the child, and by the hilltop. */
+    frostAsleep: 0.62,
+    frostWorst: 0.95,
+    /** Seconds the waking takes: the light on the face, the sitting up, and the bird gathered into the lap. */
+    wakeFor: 9,
+
+    /**
+     * The child asleep in it. The coat is a rigid bell, so lying down is not a pose it can hold: they are tipped
+     * onto their back, rolled onto one side, flattened into the mattress and propped so the head is on the pillow
+     * and the hood shows. What is left over the blanket line is a low mound and a face, which is what reads.
+     */
+    lieHigh: 0.62,
+    lieTip: 0.17,
+    lieSquash: 0.32,
+    lieDeep: 0.5,
+    lieSide: 1.1,
   },
 };
 
