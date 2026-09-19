@@ -83,16 +83,21 @@ And, a little later:
    faint breathing "play again" in the corner.
 7. **Grass on the home island**: lusher than the pasture, and the summit no longer half-grazed.
 
-## Status (2026-09-18)
+## Status (2026-09-19)
 
-On `main`: the shelving shore and the shorter route; the jetty's deck and mooring (`HOME_JETTY`, `HOME_MOORING` in
-`story/home.ts`, `Boat.mooring`, `Traveller.decks`; `?chapter=jetty` starts moored with the walk in to do) — the
-jetty itself is not built yet, the child walks in on an invisible deck; the dolphins (merged from `end-dolphins`:
-`tuning.dolphins`, `Boat.nudge`, `Dolphins.spotlight`); the cygnet's `fledging` state and `join`; the restructured
-beats, cameras and timings in `home.ts`; the lush home grass; the finale (`Soundscape.finale`, cue `finale`,
-`SoundState.silence`, everything musical on one `musicBus`) and the credits (`#credits`, `#again` in `index.html`,
-copy in `docs/copy/copy-2.json`, awaiting Jeremy's verdict).
+On `main`: the shelving shore and the shorter route; the jetty (`world/jetty.ts`: piles, planks, a lantern post,
+a bucket, a jar and a creel that say somebody lives here, a shadow plane on the water) with its deck and mooring
+(`HOME_JETTY`, `HOME_MOORING` in `story/home.ts`, `Boat.mooring`, `Traveller.decks`; `?chapter=jetty` starts moored
+with the walk in to do); the arrival watched from the water and the climb watched from low behind the child, up
+the slope against the crest and the sky (the hill is steeper than the lens is tall, so any framing from above
+is a wall of grass); the dolphins (merged from `end-dolphins`: `tuning.dolphins`, `Boat.nudge`,
+`Dolphins.spotlight`); the cygnet's `fledging` state and `join` with its visual pass (`tuning.fledge`,
+`Cygnet.circuit`/`turnBack`, `SwanFlock.nextSlot`); the restructured beats, cameras and timings in `home.ts`; the
+lush home grass; the finale (`Soundscape.finale`, cue `finale`, `SoundState.silence`, everything musical on one
+`musicBus`) and the credits (`#credits`, `#again` in `index.html`, copy in `docs/copy/copy-2.json`).
 
-The fledging's visual pass is merged (`tuning.fledge`, `Cygnet.circuit`/`turnBack`, `SwanFlock.nextSlot`). In flight: the jetty model
-(Opus 5 parcel: piles, planks, a post, something left on it that says somebody lives here; the boat comes
-alongside its end bow to the east), then one full run from `?chapter=sea` through the credits to check the whole.
+A full run from `?chapter=sea` through the credits was captured on the merged code before the jetty model landed
+and looked right. Waiting on Jeremy: the credits copy, the finale as heard (composed blind: the chord ladder, the
+chime timing, the swell and cut 23.5 s into `inside`), and whether the 72 s credits roll, the "Play again" glow
+and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs` reports the
+set-down step-off jerk a hair over its limit (0.021 against 0.02), in `companion/carry.ts`.
