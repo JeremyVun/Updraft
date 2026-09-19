@@ -416,7 +416,11 @@ export class MeadowChapter implements Chapter {
           ? THREE.MathUtils.smoothstep(t, 0, gather)
           : 1 - THREE.MathUtils.smoothstep(t, gather + fall, gather + fall + clear);
     }
-    const open = this.beat === 'crest' || this.beat === 'down' || this.beat === 'try' || this.beat === 'glide';
+    /**
+     * From the brow on, the walk faces north over open water toward the next island, so the veil that stands
+     * between the swans and it has to stand there until the boat is reached.
+     */
+    const open = this.crestDone || this.beat === 'crest' || this.beat === 'down' || this.beat === 'try' || this.beat === 'glide';
     this.haze += ((open ? tuning.crest.haze : 0.55) - this.haze) * (1 - Math.exp(-dt * (open ? 1.1 : 0.25)));
     /** The fullest music in the game pulls back for the crest, so two bird voices are all there is to hear. */
     const quiet = this.beat === 'crest' || this.beat === 'down' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
