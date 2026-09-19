@@ -119,6 +119,8 @@ export class Poser {
   /** One eased weight per thing it can be doing, so one act can fade out while the next fades in. */
   private readonly acts = new Map<Act, number>();
   private headYaw = 0;
+  private blownX = 0;
+  private blownZ = 0;
   private headPitch = 0;
   private neckYaw = 0;
   private readonly unturn = new THREE.Quaternion();
@@ -186,9 +188,15 @@ export class Poser {
     let rootRoll = flying ? d.roll : d.roll * (1 - p.sit * 0.5);
     rootRoll += d.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
     /** Braced, it leans into the wind; knocked over, it goes with it. */
-    const blown = Math.hypot(d.wind.x, d.wind.z) > 0.2 ? 1 : 0;
-    const wx = blown ? d.wind.x / Math.hypot(d.wind.x, d.wind.z) : 0;
-    const wz = blown ? d.wind.z / Math.hypot(d.wind.x, d.wind.z) : 0;
+    /**
+     * The way it leans is eased, not taken: air circled round a bird reverses on it twice a turn, and a lean read
+     * straight off the wind's heading throws the whole body over from one side to the other in a frame.
+     */
+    const speed = Math.hypot(d.wind.x, d.wind.z);
+    this.blownX = ease(this.blownX, speed > 0.2 ? d.wind.x / speed : 0, 3, dt);
+    this.blownZ = ease(this.blownZ, speed > 0.2 ? d.wind.z / speed : 0, 3, dt);
+    const wx = this.blownX;
+    const wz = this.blownZ;
     rootRoll += Math.sin(t * 17) * 0.055 * shiver + back * 0.18 * Math.sign(d.actYaw || 1);
     rootRoll += (act('bowled') * 1.0 - act('brace') * 0.16 - act('into-wind') * 0.06) * wx * -1;
     rootPitch += (act('bowled') * 0.5 - act('brace') * 0.16 - act('into-wind') * 0.08) * wz;

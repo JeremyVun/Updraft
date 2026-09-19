@@ -355,10 +355,8 @@ export class SleepingChapter implements Chapter {
       k.watch(this.t < 2.6 || this.t > 4.4 ? f.position : c.face(this.told));
       return;
     }
-    /** Off the blanket and onto the grass beside the bed: from here it is walking, and it is on its own. */
-    k.follow();
-    k.position.set(BED.x + BESIDE.x * 1.5, 0, BED.z + BESIDE.y * 1.5);
-    k.position.y = Math.max(heightAt(k.position.x, k.position.z), 0);
+    /** Off the blanket and onto the grass beside the bed, by hopping down off it rather than by appearing there. */
+    k.release(this.spot.set(BED.x + BESIDE.x * 1.5, 0, BED.z + BESIDE.y * 1.5));
     k.pace = 0.6;
     this.to('edge');
   }
@@ -663,11 +661,16 @@ export class SleepingChapter implements Chapter {
         return;
       }
       case 'hilltop': {
+        /**
+         * Aimed at the bird itself and nothing else. This is the one shot the player has to draw on: whatever the
+         * rig does about the hillside in the way, the thing they are asked to circle stays in the middle of it.
+         */
         const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        s.target.set(k.position.x, ground + 1.0, k.position.z);
-        const ex = k.position.x - UPHILL.x * 5.2 + UPHILL.y * 2.8;
-        const ez = k.position.z - UPHILL.y * 5.2 - UPHILL.x * 2.8;
-        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 1.7, ez);
+        s.target.set(k.position.x, ground + 0.3, k.position.z);
+        /** From above it, looking back down the hill it climbed: the fog sea below, and the bed nowhere in it. */
+        const ex = k.position.x + UPHILL.x * 4.6 + UPHILL.y * 2.6;
+        const ez = k.position.z + UPHILL.y * 4.6 - UPHILL.x * 2.6;
+        s.eye = this.perch.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 2.2, ez);
         s.clearance = 0.9;
         this.pace = 0.55;
         this.focus.copy(k.position);
