@@ -58,23 +58,24 @@ const ROUTES: Record<string, THREE.Vector2[]> = {
     SLEEP_LANDING,
   ],
   /**
-   * The long way round. They leave the sleeping island's west shore in the sunrise and stand well out into open
-   * water before coming back through the strait between the island and the wood. It is the only crossing that
-   * goes anywhere but straight, because by now the point of it is not to arrive.
+   * The long way round, about 620 units of it. They leave the sleeping island's west shore in the sunrise and
+   * stand well out into open water before coming back east through the shallow strait between the island they
+   * left and the one they are going to. It is the only crossing that goes anywhere but straight, because by now
+   * the point of it is not to arrive.
    */
   toHome: [
-    new THREE.Vector2(-268, -1936),
-    new THREE.Vector2(-318, -1972),
-    new THREE.Vector2(-348, -2036),
-    new THREE.Vector2(-330, -2100),
-    new THREE.Vector2(-268, -2110),
-    new THREE.Vector2(-245, -2050),
-    new THREE.Vector2(-222, -1966),
-    new THREE.Vector2(-222, -1878),
-    new THREE.Vector2(-186, -1852),
-    new THREE.Vector2(-140, -1852),
-    new THREE.Vector2(-112, -1886),
-    new THREE.Vector2(-68, -1912),
+    new THREE.Vector2(-262, -1948),
+    new THREE.Vector2(-312, -1990),
+    new THREE.Vector2(-344, -2052),
+    new THREE.Vector2(-318, -2108),
+    new THREE.Vector2(-258, -2106),
+    new THREE.Vector2(-232, -2040),
+    new THREE.Vector2(-212, -1992),
+    new THREE.Vector2(-180, -1994),
+    new THREE.Vector2(-158, -1980),
+    new THREE.Vector2(-140, -1966),
+    new THREE.Vector2(-120, -1948),
+    new THREE.Vector2(-80, -1932),
     new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
   ],
 };
