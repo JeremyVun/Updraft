@@ -415,7 +415,7 @@ waits for the water-shading session, because it is built on the sea.
 | the autumn birches | **built** and accepted on a look at its screenshots (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`). Known weak spot: a gust lands where the cursor meets the ground, which from the walking camera is often far up the ride, so the cloud it tears off can be small in frame. |
 | kite and pinwheels on the island of lines | **built** and accepted (`world/kite.ts`, `world/pinwheels.ts`): a red-footed paper diamond with a bow tail tied off beside the boat, and rows of two-tone paper wheels a gust runs down. The kite flies leaning rather than upright, because its spine lies along its string. |
 | the piano on the meadow | **built** and now the key to the room (`world/piano.ts`, `story/piano.ts`, `?chapter=piano`): it stands on the walk in the one patch of colour on a sleeping island, the child sits at the stool, the duet wakes the meadow phrase by phrase, and on the whole lullaby the cygnet climbs out onto the keys and walks them while the island wakes to the hills. **Nobody has heard it yet** — the tone was synthesised blind and needs Jeremy's ear. |
-| the sleeping island | **built** (2026-09-19, `?chapter=sleeping`): the world in `world/sleeping.ts` (the island, the bed and the bedroom fragments, the fog with carved lanes, frost, dawn, the lamp, the window and its curtains; contract in `docs/contracts/world.md`), and the story on top of it in `story/sleeping.ts` — the child into the bed with the plane held against them, the bird's three tries and the one call nothing answers, the pillow's feather (`fx/feather.ts`), the look back at the edge of the trodden grass, the climb through the fog, the shiver, the updraft at the hilltop and the long glide down the lane of sun onto the blanket. Every wait ends by itself: with no input at all it reaches the boat in about four minutes. |
+| the sleeping island | **built** (2026-09-19, `?chapter=sleeping`): the world in `world/sleeping.ts` (the island, the bed and the bedroom fragments, the fog with carved lanes, frost, dawn, the lamp, the window and its curtains; contract in `docs/contracts/world.md`), and the story on top of it in `story/sleeping.ts` — the child into the bed with the plane held against them, the bird's three tries and the one call nothing answers, the pillow's feather (`fx/feather.ts`), the look back at the edge of the trodden grass, the climb through the fog, the shiver, the updraft at the hilltop and the long glide down the lane of sun onto the blanket. Every wait ends by itself: with no input at all it reaches the boat in about four minutes. The story on top (`story/sleeping.ts`, `fx/feather.ts`): the child asleep, the tries and the one call, the feather, the climb at the bird's eye through carved lanes, the glide down the lane of sun, the waking; every wait ends by itself. Then the frosted sward and the lamp on the characters. **Nobody but the agents and a lead's glance at a dozen frames has judged it.** |
 | the sky mirror | waiting on the water session |
 
 The companion is now **a swan cygnet** (Jeremy, 2026-09-17), not a crane colt; wherever this document says colt or
@@ -532,12 +532,15 @@ see "Rooms still to come".) None of it makes sense and none of it is explained. 
 
 ## The crest: where the player is told what they are doing
 
-Halfway across the meadow the ground rises, and this is the one moment the dream orientates you. The child tops
-the rise and stops. **The haze thins** — the chapter eases its `haze` from 0.55 to `tuning.crest.haze`, far
-enough to open the hollow beyond the rise and never far enough to show the next island — and below them, fifty
-paces on, there is a **pond** in a bowl of the meadow (`POND` in `heightfield.ts`, drawn by `world/pond.ts`)
-with the cygnet's family **resting** on it: a raft of white swans on still dark water, heads up, one or two
-asleep, before they go on. (Cranes wheel up thermals; swans do not. This was Jeremy's pick of three.)
+Two thirds of the way across the meadow, past the piano and the rise beyond it, the walk comes over a brow and
+this is the one moment the dream orientates you. The child tops the brow and stops. Below them, sixty paces on,
+the ground falls away to a **pond** on a shelf of the open north slope (`POND` in `heightfield.ts`, drawn by
+`world/pond.ts`) with the cygnet's family **resting** on it: a raft of white swans on still dark water, heads up,
+one or two asleep, before they go on, and beyond them only sea and sky. (Cranes wheel up thermals; swans do not.
+This was Jeremy's pick of three.) The pond was in a closed bowl nearer the piano until 2026-09-19; the family
+lifting north flew through its rim, and Jeremy wanted it further from the piano, so it was moved out onto the
+slope (`docs/polish.md`). **The veil stands thick here** (`tuning.crest.haze`, held from the brow all the way to
+the boat) because everything north of the pond is open water with the next island behind it.
 
 Nothing about it appears: the swans are on the water from the chapter's first frame, the grown birds are heard
 bugling a long way down the walk, and the paper plane leans at the pond from the crest leg onward. The child

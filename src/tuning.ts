@@ -458,6 +458,18 @@ export const tuning = {
     /** How far out the frost starts and how near the bed it comes, from `frost` 0 to 1. */
     frostFrom: 30,
     frostTo: 2,
+    /**
+     * The frosted sward. A blade here keeps this much of its height, and rather less of its width, so cropping
+     * leaves fine stubble instead of blades wider than they are tall and a bird stays legible in it. The odd
+     * tall tuft is cut right back, and a little less curve keeps the stubble from arching over onto its face.
+     */
+    swardCrop: 0.52,
+    swardWidth: 0.28,
+    swardTuft: 1.0,
+    swardCurve: 0.85,
+    /** How much of a blade's colour the rime takes at the root, and at the tip, where it settles thickest. */
+    rimeRoot: 0.55,
+    rimeTip: 0.82,
     /** The bedside lamp, the one warm thing in the blue, and how far the dawn puts it out of business. */
     lamp: 2.4,
     lampDawn: 0.55,
