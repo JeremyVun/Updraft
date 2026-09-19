@@ -651,10 +651,10 @@ export class SleepingChapter implements Chapter {
          * whole world round with its head.
          */
         const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        s.target.set(k.position.x + UPHILL.x * 2.2, ground + 0.7, k.position.z + UPHILL.y * 2.2);
-        const ex = k.position.x - UPHILL.x * 3.2 - UPHILL.y * 1.1;
-        const ez = k.position.z - UPHILL.y * 3.2 + UPHILL.x * 1.1;
-        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 0.85, ez);
+        s.target.set(k.position.x + UPHILL.x * 2.0, ground + 0.72, k.position.z + UPHILL.y * 2.0);
+        const ex = k.position.x - UPHILL.x * 3.4 - UPHILL.y * 1.0;
+        const ez = k.position.z - UPHILL.y * 3.4 + UPHILL.x * 1.0;
+        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 1.02, ez);
         s.clearance = 0.55;
         this.pace = 0.7;
         this.focus.copy(k.position);

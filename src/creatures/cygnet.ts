@@ -679,7 +679,7 @@ export class Cygnet {
        * Tumbled onto something rather than set down on it: it goes over onto its breast as it arrives and picks
        * itself up off it in its own time. Eased on the way in as well as out, because a pose that switches is a pop.
        */
-      this.faceplant = ease(this.faceplant, this.time - this.landedAt < 0.5 ? 1 : 0, 5, dt);
+      this.faceplant = ease(this.faceplant, this.time - this.landedAt < 0.55 ? 0.8 : 0, 3, dt);
       this.roll = ease(this.roll, 0, 4, dt);
       this.pitch = ease(this.pitch, 0, 4, dt);
     }
