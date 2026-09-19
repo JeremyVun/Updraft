@@ -233,6 +233,30 @@ whatever happens. Mechanics built (`story/piano.ts` `duet`, `Piano.phrase` / `ex
 `tuning.piano`); still to do by eye: the cygnet on the keys, the world answering each phrase, and the child
 sitting AT it rather than on it.
 
+**The meadow answers every note (2026-09-19).** Jeremy asked whether call and response was the wrong direction:
+"the connection is the piano and the music tones with the rest of the island... can the invitation wind lines /
+traces in the air connect and resonate with the environment? if you were entering the dream as a child, what would
+work best here?" What was built, and holds up by capture: every note the piano sounds, whoever sounded it, lifts a
+wind trace off its key (`fx/notetraces.ts`), the same white streak as every other wind the player sees. It rises
+over the case and runs away up the hill behind the piano, fanned across the slope by pitch so a rising phrase lays
+its shape on the hill the way it lay on the keys, bending with whatever wind is blowing, low notes long and low,
+high notes short and high; and where it runs it plants colour in the grey grass (`LifeField.bloom`, which takes
+even on the island that waits, and then grows and spreads like life anywhere). So banging the keys is never
+nothing: the piano and the meadow are one instrument. The piano's own phrase sends its traces the same way, and
+that is the invitation; a short streak along the keys (`fx/keyline.ts`) shows the way the sweep should go, and
+only while a phrase is waiting to be answered. The answered phrase still rolls the ring out (`WAKING`), and the
+whole lullaby still brings the wave. The patch the piano stands in was shrunk (`PATCH` 19) so the grey begins in
+the seated frame and the notes are seen to green it. Seen from the duet frame, which stands at the child's
+shoulder square to the keys and low enough that the slope and the sky are the backdrop: the traces fly up into the
+grey and the green follows them up the hill.
+
+**The finale's camera (2026-09-19).** One eased rise out of the duet frame, spiralling round behind the child and
+up onto the way north, resting well back and mid-high with the child and the piano at the foot of the frame and
+the green rolling away to the crest (`tuning.piano.rise*`, `restFor`). Jeremy asked for it to settle on the swan
+pond; measured, the pond is 205 paces from the piano behind two rises, and no camera that is not looking straight
+down can see it from there, so the pond's reveal stays the brow's, on the walk, and the finale rests on the way
+toward it.
+
 ## The dream
 
 A dreamy, meditative game about being the wind. A Ghibli afternoon: soft light, slow time, small kindnesses. The player never fails, never waits on a timer, never reads a word. Every gesture is answered by the world.
@@ -317,12 +341,23 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    hem rides up into two legs, and small things pegged between them, plus pegs at every corner and a forked prop
    under the lines that sag. **A red door stands on the crest** with nothing behind it and nothing on the other
    side — painted the same white and the same red as the cottage at the end of the journey, which nobody is told
-   either. Still wanted: baskets and a peg bag.
+   either. Strung high across the way just short of it, **the three of them**: a man's shirt, a small jumper in
+   the child's own yellow, and a woman's blouse (`FAMILY_LINE`, `family` in the cloth shader, `story/lines.ts`
+   `family`). Hanging, they are washing. A steady wind along their line fills them into chests and shoulders, and
+   for as long as it holds they are people; held a few seconds more, the big ones' sleeves reach for the small
+   one's and the small one's lift to theirs, and the door swings open on the far beach and the boat (`RedDoor`).
+   When the wind drops they are washing again. The child stops under them and looks up, and the camera comes down
+   low behind them, square to the line, so the three stand against the sky over the child. Nothing is gated on it:
+   a child who walks under without playing is shown them once by a breeze of the island's own, and the door shut
+   bars nothing. It is the island's one small puzzle, chosen by Jeremy from four (`docs/polish.md`), and it asks
+   for the gesture the piano asks for next. Still wanted: baskets and a peg bag.
 3. **The meadow** (`story/meadow.ts`) — the last warm afternoon of the year, and the island is asleep. The boat
    lands in a bay under a bank; the child climbs it, and the first sight over the top is a grey meadow with one
-   patch of colour in it and a piano standing there, on the way and about a minute off. The lullaby wakes the rest
-   in waves. The long walk follows the plane through a sun shower, over the crest and down to the pond. **Built**,
-   and still needs the cygnet's first glide on the player's updraft.
+   patch of colour in it and a piano standing there, on the way and about a minute off. Every note the wind finds
+   on it sends a trace up the hill that greens the grass it runs over; the lullaby wakes the rest in waves, and the
+   camera rises off the piano to watch the last of it roll toward the crest. The long walk follows the plane
+   through a sun shower, over the brow, where the pond is revealed lying on the open slope below, and down to it.
+   **Built**, and still needs the cygnet's first glide on the player's updraft.
 4. **The drowned village** (`story/drowned.ts`, `world/drowned.ts`) — the long dusk drift between rooftops, a
    spire, treetops, a turning weathervane, herons on chimneys, autumn leaves on black water. Homes the water took.
    A third of the way through **the air dies**: the boat loses way between two gable ends, the sail hangs dead off
