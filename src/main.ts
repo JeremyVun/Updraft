@@ -51,6 +51,7 @@ import { Kite } from './world/kite';
 import { Pinwheels } from './world/pinwheels';
 import { LINES_WALK, LINES_LANDING, LINES_BERTH } from './story/lines';
 import { DrownedVillage } from './world/drowned';
+import { SleepingIsland } from './world/sleeping';
 import { DarkWood } from './world/wood';
 import { AutumnBirches } from './world/birches';
 import { createTree } from './world/tree';
@@ -154,6 +155,8 @@ const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
 const wood = new DarkWood(wind);
 wood.objects.forEach((o) => scene.add(o));
+const sleeping = new SleepingIsland(renderer, wind, input);
+sleeping.objects.forEach((o) => scene.add(o));
 const birches = new AutumnBirches(renderer, wind);
 birches.objects.forEach((o) => scene.add(o));
 const cottage = new Cottage(wind);
@@ -566,6 +569,7 @@ function frame(now: number): void {
   village.update(dt, time, boat.position, storm);
   piano.update(dt, time, rig.camera, wind, sound.output, input.present && input.gust > tuning.pointer.minGust ? input.gustDir : null);
   wood.update(dt, time, rig.camera, storm);
+  sleeping.update(dt, time, rig.camera);
   kite.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
   birches.update(dt, rig.camera, child.visible ? child.position : null);
@@ -635,7 +639,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, kite, pinwheels, village, wood, embers, boat, life, piano, birches, pond };
+  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, terrain, cottage, petals, grass, sealife, cygnet, flock, carry, probe, washing, kite, pinwheels, village, wood, sleeping, embers, boat, life, piano, birches, pond };
 }
 
 /**

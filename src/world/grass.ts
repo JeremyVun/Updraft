@@ -354,11 +354,12 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   float aoFar = far * 0.75;
   vAo = vec2(mix(aoLow, 1.0, aoFar), (1.0 - aoFar) * (1.0 - aoLow));
   vFlat = smoothstep(0.3, 1.0, wa);
-  /** Frost takes the colour out of the blade, and the lamp puts its own back into whatever stands near the bed. */
+  /** Frost takes the colour out of a blade; the lamp, and later the morning, put their own back into it. */
   float rime = frostAt(root2);
-  vec3 lamp = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0));
-  vRoot = mix(vRoot, vec3(0.74, 0.79, 0.84), rime * 0.55) + lamp * 0.3;
-  vTint = mix(vTint, vec3(0.82, 0.87, 0.9), rime * 0.7) + lamp * 0.45;
+  vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
+            + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
+  vRoot = mix(vRoot, vec3(0.74, 0.79, 0.84), rime * 0.55) + warm * 0.3;
+  vTint = mix(vTint, vec3(0.82, 0.87, 0.9), rime * 0.7) + warm * 0.45;
 `;
 
 const VERT = /* glsl */ `

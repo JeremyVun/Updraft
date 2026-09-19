@@ -100,6 +100,8 @@ export const atmo = {
     uLaneOpen: { value: new THREE.Vector2(3, 0) },
     /** The bedside lamp, the one warm light in the blue: where it is (xyz) and how strong (w). */
     uLamp: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** The morning coming down the sleeping island's hill: how far it has come (x), and the height it has reached down to (y). */
+    uDawn: { value: new THREE.Vector2(0, 0) },
     /** A patch of grass someone has pressed flat: centre (x, z), radius, and how flat, 0 to 1. */
     uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
@@ -173,6 +175,7 @@ uniform vec4 uFrost;
 uniform vec4 uLane;
 uniform vec2 uLaneOpen;
 uniform vec4 uLamp;
+uniform vec2 uDawn;
 uniform vec4 uTrodden;
 uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
@@ -266,6 +269,16 @@ vec3 lampLight(vec3 world, vec3 N) {
   float dist = length(d);
   float fall = uLamp.w / (1.0 + dist * dist * 0.09);
   return vec3(1.0, 0.72, 0.38) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.5 + 0.5, 0.0, 1.0);
+}
+
+/**
+ * The first sun: it stands on the top of the hill and comes down it as the morning does, and it comes down the
+ * lane the wind has torn in the fog as well, so what rides that wind arrives with the light rather than after it.
+ */
+vec3 dawnLight(vec3 world, vec3 N) {
+  if (uDawn.x <= 0.0) return vec3(0.0);
+  float reached = max(smoothstep(uDawn.y - 3.5, uDawn.y + 3.0, world.y), laneAt(world.xz));
+  return vec3(1.0, 0.74, 0.46) * uDawn.x * reached * clamp(dot(N, uSunDir) * 0.55 + 0.5, 0.0, 1.0);
 }
 
 /** How thick the sleeping island's ground fog is at a point: pooled in the hollow, under its top, less where carved. */

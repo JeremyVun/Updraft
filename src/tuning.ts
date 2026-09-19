@@ -305,6 +305,48 @@ export const tuning = {
     luffFrom: 0.12,
     luffFade: 0.55,
   },
+  /**
+   * The sleeping island: the fog pooled in the hollow, the frost coming in across it, and the bedroom the bed
+   * stands in. The story drives `fog`, `frost`, `dawn`, `curtains` and `blanket`; these are what those mean.
+   */
+  sleeping: {
+    /** How thick the pooled fog is at full `fog`, and how far out from the hollow it reaches. */
+    fogThickness: 0.38,
+    fogReach: 34,
+    /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
+    fogTop: 7.6,
+    fogSoft: 1.7,
+    /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
+    fogSwell: 0.7,
+    fogDrift: 0.02,
+    /** How hard a gust cuts a lane in the fog, how wide the cut is, and the seconds a lane takes to close again. */
+    carveStrength: 2.6,
+    carveWidth: 4.2,
+    carveCloses: 8,
+    /** Wind speed at which a stroke carves at full strength. */
+    carveSpeed: 9,
+    /** How far out the frost starts and how near the bed it comes, from `frost` 0 to 1. */
+    frostFrom: 30,
+    frostTo: 2,
+    /** The bedside lamp, the one warm thing in the blue, and how far the dawn puts it out of business. */
+    lamp: 1.5,
+    lampDawn: 0.55,
+    /** Seconds the driven values take to ease to what the story asks for, so a switch never pops. */
+    ease: 1.6,
+    /** How high a gust lifts the blanket by itself, the wind speed that does it, and the seconds it settles over. */
+    blanketGust: 0.35,
+    blanketSpeed: 7,
+    blanketSettles: 2.2,
+    /** How far the blanket is thrown back at `blanket` 1, in bed lengths. */
+    blanketLift: 0.62,
+    /** How wide the curtains are drawn back at `curtains` 1, as a share of the window, and how much they gather. */
+    curtainOpen: 0.78,
+    curtainGather: 0.45,
+    /** The puff of down off the pillow: how many, how fast they leave it, and how long they hang about. */
+    downCount: 34,
+    downThrow: 1.6,
+    downLife: 9,
+  },
 };
 
 /** A number as a GLSL float literal. */
