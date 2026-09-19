@@ -74,6 +74,7 @@ export class IslandChapter implements Chapter {
   private readonly outlookEye = new THREE.Vector3();
   private readonly outlookLook = new THREE.Vector3();
   private readonly rescueView = new THREE.Vector3(1, 0, 0.45).normalize();
+  private readonly careView = new THREE.Vector3(-1, 0, 0.6).normalize();
   private readonly climbView = new THREE.Vector3();
   private fallAt = 0;
   private readonly eye = new THREE.Vector3();
@@ -514,7 +515,7 @@ export class IslandChapter implements Chapter {
       this.play = 'hold';
       this.holdUntil = this.now + 1.4;
       c.lookAt = this.cast.boat.position;
-    });
+    }, true);
   }
 
   /** The plane has come down by the boat: the child fetches it, then leans on the bow and pushes off. */
@@ -581,11 +582,11 @@ export class IslandChapter implements Chapter {
       const k = this.cast.cygnet.position;
       const close = this.beat === 'kneel' || this.beat === 'gather';
       s.eye = undefined;
-      s.from = this.rescueView;
+      s.from = close ? this.careView : this.rescueView;
       s.target.set((c.x + k.x) / 2, Math.max(c.y, k.y) + (close ? 0.75 : 1.1), (c.z + k.z) / 2);
-      s.distance = close ? 6.5 : 14;
-      s.height = close ? 4.5 : 7;
-      s.clearance = 5.2;
+      s.distance = close ? 5.8 : 14;
+      s.height = close ? 3.3 : 7;
+      s.clearance = close ? 2.6 : 5.2;
       this.pace = 0.6;
       this.focus.copy(k);
       return;

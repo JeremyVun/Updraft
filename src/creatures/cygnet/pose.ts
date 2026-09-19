@@ -67,6 +67,8 @@ export interface Drives {
   actYaw: number;
   breath: number;
   blink: number;
+  wingGuard: number;
+  wingOpening: number;
   /** The wind on it in its own frame (x to its left, z ahead), units per second. */
   wind: { x: number; z: number };
   /**
@@ -177,7 +179,7 @@ export class Poser {
         1,
       ) *
       (1 - p.hunch * 0.6 * (1 - d.effort));
-    p.spread = ease(p.spread, spread, 7, dt);
+    p.spread = ease(p.spread, Math.max(spread, d.wingOpening), 7, dt);
     const shaking = Math.sin(t * 36) * shake * 0.5;
     /** Cold all through it: small, fast and everywhere, which is what tells a shiver from a shake. */
     const tremble = p.hunch * 0.6 + d.fear * (d.carried ? 0.15 : 0.3) + d.cold * 0.35 + shiver * 1.4;
@@ -214,7 +216,7 @@ export class Poser {
       Math.sin(d.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, d.wriggle * 3) +
       act('peer') * 0.22 * d.actSide +
       Math.sin(t * 15) * 0.3 * act('delve') +
-      d.gait.roll * walk;
+      d.gait.roll * walk + Math.sin(d.stride) * (0.035 + d.effort * 0.07) * p.swim;
     body.rotation.y = d.gait.twist * walk + Math.sin(d.stride) * 0.06 * p.swim;
     this.unturn.setFromEuler(body.rotation).invert();
     let reach = 0;
@@ -431,6 +433,7 @@ export class Poser {
     const preenLift = preenWing * 0.25 + stretch * 0.95;
     poseWings(n, {
       open: p.spread,
+      guard: d.wingGuard,
       beat: Math.sin(beatPhase) * power,
       lag: Math.sin(beatPhase - 0.75) * power,
       twist: -d.glide * 0.12 + d.effort * 0.1 * Math.max(0, Math.sin(d.flapPhase)),

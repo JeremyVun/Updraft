@@ -1,5 +1,35 @@
 # The cygnet
 
+## The recovering wing (Jeremy's approved direction, September 20)
+
+> "what if we give the cygnette a bandaged wing from it's fall in the starting island. And then later on during the sleeping scene, it's only then that the cygnette confronts its fears and somehow manages to have the bandage come off so that it can do it's flight later on? Instead of the flight practice happening in the meadows, it can be swim practice or something?"
+
+Approved: “beautiful! yes lets do this”. This supersedes the meadow's flight practice below.
+
+The child gathers the fallen cygnet, supports it against their coat and winds a small linen wrap around its left
+wing. It favours that wing early; the increasing range of its ordinary stretches shows recovery across the islands.
+Jeremy’s follow-up asks for recognisable bandage layers: three overlapping, slightly uneven gauze turns, visible seams and a tucked end. The bandage has no icon, instructions or removal puzzle. The wing heals before the bird finds the courage to fly.
+The wrap follows the actual wing surface and its joint weights: broad at the shoulder, narrowing toward the wrist,
+with a thin cloth allowance. Its edges and tucked end stay against that shape when the wing moves.
+
+At the pond, the nearest swans react while the child is still approaching; alert heads and paddling precede their
+staggered takeoff. The child offers the water. The cygnet paddles a little way after the family, watches where they
+went, then looks back and returns to the child's waiting hands. The child gathers and stows it, then follows the
+paper onward. This is a moment of attachment, not another swimming tutorial after the little boats.
+
+At the sleeping hilltop it looks back toward the child, slowly opens both healed wings, and the loose cloth unwinds
+into the wind. Only then does the updraft invitation begin. Its first glide brings morning back to its friend;
+its later flight at home is the farewell. The sleeping island now waits for player wind at feather release and takeoff; the walk remains assisted.
+
+Implementation: `creatures/cygnet/bandage.ts` is one continuous linen strip, fitted to the shared arm geometry, wound by
+`Carry.gatherUp(..., true)` and released by `SleepingChapter`. `WingBandage.flightReady` independently prevents
+early wind flight and practice hops. `story/wing-care.ts` reconstructs care and recovery from chapter/checkpoint,
+including old saves and direct chapter starts; no save schema change. Knobs: `tuning.wingCare` and `tuning.crest`.
+Verification: `node tools/wing-care-check.mjs` checks the real actors and chapters at 30/60/120 fps, with no input
+and strong wind, treatment completion, the pond's exit, release-before-flight and checkpoint history. GPU captures
+of care, pond and hilltop supplement those logic checks.
+
+
 The companion becomes a swan cygnet and is rebuilt as the game's co-star. Jeremy's brief is verbatim in
 `journey.md` ("On the companion becoming a swan cygnet"). It is **on `main`** (merged 2026-09-18, `eb1d7c6`); the
 parcels still open are under Status. When it ships, the lasting parts of this file fold into `journey.md` and this file
@@ -263,66 +293,23 @@ From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `mai
   stroke adds fine ripple, a uniform darkening and a short chop; the sail luffs on an arriving gust
   (`tuning.water`). Deliberate: whitecaps now need the squall.
 
-- The sleeping island's world (`1aed3b1`, 2026-09-19): `world/sleeping.ts` (the bed with a cloth blanket, pillow and
-  down, the bedside lamp, the window frame with cloth curtains and a light shaft onto the pillow, the upside-down
-  chair and desk hanging over the hollow, the ceiling lamp on its flex, rug and floorboards dithering into frost),
-  pooled fog in `fogOf` with four top sheets and a 128² carve field the player's stroke opens lanes in, frost and
-  dawn as shared uniforms, a `sleeping` block in `tuning.ts`, a stub chapter (ashore, the bed, the berth), the
-  `toSleeping` hop and `toHome` re-based west off `SLEEP_BERTH` through the strait north of the island; the wood
-  no longer sows trees or litter over it. 60 fps at the bed as the game opens; parity 0.0006. Short: the rig's
-  2.8-unit ground clearance keeps every shot in the hollow 4–5 units above the child (a low camera needs
-  `camera.ts` or a shallower hollow); **a carved lane does not read from the high camera** (the fog top is a flat
-  pale disc from above; it reads at fog level); the `toHome` strait is 30–80 cm deep for 30 units and will read as
-  bright shallows; frosted blades read as ice chips within 10 units; `fogTopAt` ignores carving; large glowing
-  orbs in the hill shot at dawn 1 (`/tmp/updraft-sleepw-k-hill-dawn1.png`) are unattributed (fireflies gate or
-  the down); the last two thirds of the crossing home were checked numerically, not watched.
+- The sleeping island (September 20 polish approved by Jeremy): the bird's three attempts and unanswered
+  call lead to a player brush across the pillow. The feather stays within sight during the assisted climb;
+  the shiver still resumes by itself. The healed wing unwraps at the summit, where gentle circles raise
+  the first flight and open the summit window. Waiting alone completes neither gesture. Its light
+  follows the glide back to the bed. Jeremy moved the window uphill so the climb has a visible purpose.
+- The bed now supports the reclining child with rounded mattress and pillow geometry, a fitted blanket,
+  smaller side rolls and hands against the chest. The sleeping coat scale resets when the child stands.
+  The summit shot includes the window beside the bird on portrait screens; it holds the curtain reveal
+  before following the glide. The bedside shot keeps both travellers together.
+- Fog uses the shared continuous eye-ray density; the four visible horizontal sheets are removed. Winter
+  stems have shallow roots, finer bent silhouettes and less root occlusion; textured ground carries the
+  surface between them. The bedside lamp has a soft reflected contribution on both characters.
+- Verification: `tools/sleeping-logic-check.mjs` covers both idle gates, modest input, the complete rescue
+  and coat restoration; `tools/sleeping-check.mjs` drives actual mouse/touch gestures through the chapter.
+  `tools/wing-care-check.mjs` retains the wing-history and checkpoint checks. No new save version is needed.
 
-- The sleeping island's story (2026-09-19, merged `4153f73`, fixed up in `d6b1f63` for the peer's new `needs(lift, labour)`): `story/sleeping.ts` rewritten from the stub into
-  the whole room — ashore through the fog, the cygnet set on the blanket and the child into the bed with the plane
-  held against them, the three tries and the one call nothing answers, the pillow's feather, the look back at the
-  edge of the trodden grass, the climb, the shiver and the breath that lifts it, the hilltop, the glide down the
-  lane of sun, the window on the face and the waking. New: `fx/feather.ts` (the plane's idea, slower and floatier:
-  it takes the air's own speed, hangs about `featherHangs` off the grass, leans toward a goal so it is never lost,
-  and a stroke across it on screen carries it); `Cygnet.glideTo/sailing` (the long glide, with `laneOpen` run from
-  it), `stay`, `pace`, `plead`, `does`, and the acts `tug`, `nudge`, `look-back`, `shiver`; `Traveller.lieOn/abed/
-  abedSide/tighter/eyesShut` (the coat is flattened on its own, not the child inside it, so the head and hood read
-  on the pillow while the blanket stands over the rest); `Shot.clearance` so one room can come down to a bird's eye
-  without touching the rig anywhere else; `sleeping.fogTop` and `sleeping.sleeper` driven by the story.
-  **Every wait ends by itself** (see the beat list in `story/sleeping.ts`): with no input at all it reaches the boat
-  in about 4 minutes. Gates unchanged from `main` (25 of 27; the two `idle` misses are `main`'s). Short: the frosted
-  blades read as flying ice chips at the bird's-eye camera, which is the world parcel's note made worse by the low
-  shot; the tumble onto the blanket and the lift into the arms measure turn 0.12–0.16 rad and jerk 0.06 (both are
-  deliberate impacts, inside the gates' `try` limits, above the 0.07/0.02 the quiet moments hold); the paper plane
-  is as long as the child is tall, so while they are asleep it is under the blanket with them rather than shown.
-  **Lead's look at five frames:** the child asleep with the cygnet on the blanket, the glide in the sunrise, the
-  light through the window and the waking with the bird in the lap all read. The bird's-eye climb frame is the weak
-  one: the frosted blades fill the frame as a swarm of dark chips against the sky (`/tmp/updraft-sleeps-beat-11-lane.png`),
-  and the same chips are visible in the grass of every sunrise shot. That is the first thing for the next parcel
-  (`grass.ts`: the frost treatment and the blade width over the island). Also unjudged by anyone but the agent: the
-  lying pose up close, the climb's brightness (`dusk` 1.22 for the climb), and the eased gust lean, which reaches
-  the meadow and the summit too.
-- The frosted grass (`a4bc000`): the chips were two things — a blade cropped to 28% was wider than tall, and the
-  wildflower heads were glowing cards on a 0.15 m sward. Now the width goes down with the crop (`swardWidth`,
-  `swardCrop` in `tuning.sleeping`), no flowers on the island, tufts and curve cut, a shared `rimeColour()` that
-  takes its pale from the sky ambient and lightens the tip more than the root, the dawn and the lamp multiplying a
-  blade's colour rather than adding to it, rimed blades shading flat, and the ground under them grass rather than
-  soil so it carries the surface between blades. Every term gated by `sleepFloorAt`/`frostAt`; meadow and summit
-  frames unchanged to MSAA noise; 60 fps at the bed and at the bird's eye. The climb now reads as a rimed slope
-  with the bird legible in it. Short: near blades in full sun still read as gold cones at the hilltop (the backlit
-  term on a short sward; density is capped at one blade per 0.25 m cell, so continuity has to come from the ground).
-- **Found on the merge:** the child and the cygnet were black on the bed once the ending lowered the moon from 24°
-  to 12° (the hollow's rim shadows the bed), because the character shaders never took the lamp.
-- The lamp on the characters (`4540335`): `emberLight`, `dawnLight` and the lamp added to the child's shader
-  (`traveller/body.ts`), `dawnLight` and the lamp to the cygnet's skin and down shells (`cygnet/shader.ts`, the
-  shells taking it as a rim on the lamp side), all three to the paper plane; every block behind its uniform's `w`
-  so other rooms pay one comparison (ungated, the down shells' extra cost shifted the gates' wall-clock window and
-  two runs failed marginally). The characters multiply the lamp by a cubed wrap toward it, the cygnet at 0.75, so
-  the hood and the down are warm on the lamp side and blue away from it and the bed stays the warmest thing in
-  frame; at the props' flat weight the child was a butter blob. A side gain: in the wood the coat, the mittens and
-  the cygnet in the satchel now take the coal's light as the floor does. 60 fps, gates clean three runs, summit
-  unchanged. The cygnet's 0.75 and the wrap are the agent's judgement, not a value Jeremy has seen.
-
-Everything in the 2026-09-18 playtest is built. Open: Jeremy's verdict on the sleeping island as a whole; the crest's
+Everything in the 2026-09-18 playtest is built. Open: Jeremy's visual verdict on the latest sleeping polish; the crest's
 frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
 ending (dolphins, summit, fledging, credits).
 
@@ -405,3 +392,15 @@ on the water, take-off), each in `/private/tmp/updraft-cygnet-{look,swans}`.
 8. Story changes: the family resting on the far bay at the crest (Jeremy's pick), white skein, reunion, the brave
    swim on the long crossing and the swim ashore at home; per-room behaviour.
 9. Full playthrough, visual verdicts, fold this into `journey.md`, merge.
+
+## Sheltered paddling (2026-09-19)
+
+Jeremy requested swimming alongside the little boats. Between washing and meadow, the cygnet now chooses
+three short swims in shallow pools, steps down from the bank, paddles beside the toys, and scrambles out
+with a shake before each narrow channel. The fleet waits for it. These use the existing `swimTo` / `ashore`
+transitions and `swimLevel`; the room owns its elevated water surface and wake. The later open-sea swim
+remains the larger, more exposed act of confidence. No new voice cues.
+
+The little-boats polish adds `swimPlay`: alternating fast kicks and glides, closer weaving, wing flicks,
+and small spray timed to `paddlePhase`. It resets ashore. While swimming, the grass depth bias (`uNudge`)
+eases to zero so submerged parts are covered by the water; it returns when the cygnet climbs out.

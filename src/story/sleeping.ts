@@ -3,7 +3,7 @@ import type { Shot } from '../camera';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { BED, BED_FACING, HILLTOP, PILLOW, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
+import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { completeObjective, cue } from './cues';
 
@@ -16,6 +16,7 @@ type Beat =
   | 'edge'
   | 'climb'
   | 'shiver'
+  | 'unbinding'
   | 'hilltop'
   | 'glide'
   | 'waking'
@@ -27,16 +28,16 @@ type Beat =
 const T = tuning.sleeping;
 /** Across the bed, at right angles to the way its head end points. */
 const BESIDE = new THREE.Vector2(-BED_FACING.y, BED_FACING.x);
-/** Where the cygnet sits on the blanket: beside the child's knees, on the side away from the window. */
+/** Where the cygnet sits on the blanket: beside the child's knees, clear of their face in the bedside shot. */
 const ON_BLANKET = new THREE.Vector3(
-  BED.x + BESIDE.x * 0.58 + BED_FACING.x * 0.1,
-  BED.y + 0.67,
-  BED.z + BESIDE.y * 0.58 + BED_FACING.y * 0.1,
+  BED.x - BESIDE.x * 0.6 - BED_FACING.x * 0.65,
+  BED.y + 0.94,
+  BED.z - BESIDE.y * 0.6 - BED_FACING.y * 0.65,
 );
 /** Where the child lies: the foot end of the mattress, at the height their body rides in it. */
-const LIE_AT = new THREE.Vector3(BED.x - BED_FACING.x * 1.25, BED.y + T.lieHigh, BED.z - BED_FACING.y * 1.25);
+const LIE_AT = new THREE.Vector3(BED.x - BED_FACING.x * 1.0, BED.y + T.lieHigh, BED.z - BED_FACING.y * 1.0);
 /** Where they sit on the edge of it when they wake, before they put their boots on the frost. */
-const SIT_AT = new THREE.Vector3(BED.x + BESIDE.x * 0.4, BED.y + 1.12, BED.z + BESIDE.y * 0.4);
+const SIT_AT = new THREE.Vector3(BED.x + BESIDE.x * 0.65, BED.y + T.sitHigh, BED.z + BESIDE.y * 0.65);
 /** The way up: everything in this room happens along the line from the bed to the top of the hill. */
 const UPHILL = new THREE.Vector2(HILLTOP.x - BED.x, HILLTOP.z - BED.z).normalize();
 const TO_HILL = Math.hypot(HILLTOP.x - BED.x, HILLTOP.z - BED.z);
@@ -60,7 +61,7 @@ const smooth = THREE.MathUtils.smoothstep;
  * light goes blue. The bird tries everything it has and none of it works, and then it calls once — the low hopeful
  * call, not the distress cry — and nothing answers.
  *
- * Then the pillow gives up one long white feather, and the controls do not change at all: the player blows a light
+ * Then a brush of wind frees one long white feather from the pillow, and the controls do not change at all: the player blows a light
  * thing along and somebody follows it. The bird goes up the hill alone, and brings the morning back down it.
  */
 export class SleepingChapter implements Chapter {
@@ -84,13 +85,17 @@ export class SleepingChapter implements Chapter {
   private tried = 0;
   private called = false;
   private callAt = 0;
-  /** When the feather will come out of the pillow by itself if the player never blows on the bed. */
-  private featherAt = 0;
+  private pillowStroke = 0;
+  private bedBreath = 0;
+  private readonly bedEntry = new THREE.Vector3();
+  private readonly bedFocus = new THREE.Vector3();
+  private readonly roomFocus = new THREE.Vector3();
+  private readonly subjects = { primary: this.bedFocus, secondary: this.roomFocus, margin: 0.76, extra: 9 };
   private looks = 0;
   private nextLook = 0;
   private turnAt = 0;
   private tighten = 0;
-  private sunAt = 0;
+
   private sat = false;
   private landYaw = 0;
   private warmed = 0;
@@ -112,7 +117,7 @@ export class SleepingChapter implements Chapter {
   private readonly ahead = new THREE.Vector3(0, 0, -1);
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
-  private readonly laneFrom = new THREE.Vector2(TOP.x, TOP.z);
+  private readonly laneFrom = new THREE.Vector2(WINDOW.x, WINDOW.z);
   private readonly laneTo = new THREE.Vector2(BED.x, BED.z);
 
   constructor(private readonly cast: Cast) {
@@ -136,6 +141,8 @@ export class SleepingChapter implements Chapter {
     return this.beat === 'ashore' || this.beat === 'toBed' || this.beat === 'tuckIn' || this.beat === 'push' || this.beat === 'aboard';
   }
 
+  get departureKite(): boolean { return ['waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat); }
+
   get done(): boolean {
     return this.beat === 'aboard';
   }
@@ -149,7 +156,8 @@ export class SleepingChapter implements Chapter {
     const { child: c, sleeping, cygnet: k } = this.cast;
     this.moored = true;
     if (point === 'morning') {
-      this.warmed = 1; this.worldLife = 0.75; this.dusk = 1.02; this.haze = 0.6;
+      this.warmed = 1; this.worldLife = 1; this.dusk = 1.02; this.haze = 0.6;
+      sleeping.lane(this.laneFrom, this.laneTo, T.dawnLaneWidth);
       sleeping.dawn = sleeping.curtains = sleeping.laneOpen = 1;
       sleeping.fog = sleeping.frost = 0;
       this.board();
@@ -162,7 +170,7 @@ export class SleepingChapter implements Chapter {
       sleeping.feather.goal.copy(TOP).setY(TOP.y + 1.6);
       sleeping.feather.keepNear = TO_HILL;
       k.pace = 0.6;
-      this.looks = 2; this.dusk = 1.22; this.beat = 'climb';
+      this.looks = 2; this.dusk = 1.9; this.beat = 'climb';
     }
   }
 
@@ -170,6 +178,15 @@ export class SleepingChapter implements Chapter {
   get invitesFlight(): boolean {
     return this.beat === 'hilltop';
   }
+
+  get twirlGain(): number { return this.invitesFlight ? T.twirlGain : 1; }
+
+  get windInvitation(): THREE.Vector3 | null {
+    return this.beat === 'asleep' && this.called && this.t > this.callAt + 1.8 ? PILLOW : null;
+  }
+
+  /** The existing screen-space sweep reaches the pillow even when the ground lies behind it. */
+  brushDry(amount: number): void { this.bedBreath = amount; }
 
   get coax(): Coax | null {
     const { cygnet } = this.cast;
@@ -182,6 +199,7 @@ export class SleepingChapter implements Chapter {
   private to(beat: Beat): void {
     this.beat = beat;
     this.beatStart = this.now;
+    if (beat === 'tuckIn') this.bedEntry.copy(this.cast.child.position);
   }
 
   private get t(): number {
@@ -233,6 +251,9 @@ export class SleepingChapter implements Chapter {
       case 'hilltop':
         this.hilltop(dt);
         break;
+      case 'unbinding':
+        this.unbinding(dt);
+        break;
       case 'glide':
         this.gliding(dt);
         break;
@@ -249,15 +270,15 @@ export class SleepingChapter implements Chapter {
     }
 
     /** The colour goes out of the world while the night has them, and comes back with the sun off the hill. */
-    /** Colour comes back with the morning, but this is a frosted island at the end of the year and stays one. */
-    const warm = this.warmed > 0 ? 0.75 : 0.06;
+    /** The bird brings life back: colour follows the light until the whole island is green again. */
+    const warm = this.warmed > 0 ? lerp(0.06, 1, sleeping.dawn) : 0.06;
     this.worldLife += (warm - this.worldLife) * (1 - Math.exp(-dt * 0.4));
     /**
      * The sky goes from the wood's night, through the grey the hour before dawn actually is once the bird is out
      * on the hill, to the sunrise it brings back down. Nothing here gives the morning away before it arrives.
      */
     const atBed = this.beat === 'ashore' || this.beat === 'toBed' || this.beat === 'tuckIn' || this.beat === 'asleep' || this.beat === 'feather';
-    const night = this.warmed > 0 ? 1.02 : atBed ? 1.9 : 1.22;
+    const night = this.warmed > 0 ? lerp(1.9, 1.02, this.cast.sleeping.dawn) : 1.9;
     this.dusk += (night - this.dusk) * (1 - Math.exp(-dt * 0.22));
     /**
      * And the fog thickens over the bird's head as it goes: at the bed it lies low enough to see the room across,
@@ -269,12 +290,15 @@ export class SleepingChapter implements Chapter {
     c.tighter = this.tighten;
     if (p.held) p.hold(c);
     /**
-     * The plane goes under the blanket with them and comes back out into their hand when they sit up. It is as
+     * The plane stays tucked away through the embrace and returns to the satchel as they leave the bed. It is as
      * long as the child is tall, so holding it out where it could be seen over a sleeping child is the one thing
      * that cannot be staged: it is not lost, nobody fetches it, and it is exactly where they left it.
      */
-    p.visible = c.abed < 0.55 && this.beat !== 'waking';
-    sleeping.sleeper = this.laid ? 1 : 0;
+    p.visible = c.abed < 0.55 && this.beat !== 'waking' && this.beat !== 'lap';
+    sleeping.sleeper = this.laid ? c.abed : 0;
+    if (['edge', 'climb', 'shiver'].includes(this.beat)) {
+      sleeping.feather.follow = this.cast.cygnet.position;
+    } else sleeping.feather.follow = null;
     this.heading(dt);
     this.frame();
   }
@@ -298,7 +322,7 @@ export class SleepingChapter implements Chapter {
     c.lean = 0;
     /** In, under the blanket, on their side with the plane held against them. Everything else follows from this. */
     this.laid = true;
-    c.position.copy(LIE_AT);
+    c.position.lerpVectors(this.bedEntry, LIE_AT, smooth(this.t, 2.2, 2.2 + T.climbsIn));
     c.abed = Math.min(1, (this.t - 2.2) / T.climbsIn);
     c.eyesShut = this.t > 2.2 + T.climbsIn * 0.6 ? 1 : 0;
     if (c.abed >= 1) this.to('asleep');
@@ -319,7 +343,7 @@ export class SleepingChapter implements Chapter {
   /**
    * Asleep, and the night closing in on them. The bird tries everything it has — the scarf, a flutter, its head
    * under their hand — and the child only turns over. A gust on the bed lifts the blanket and they pull it tighter:
-   * answered, and no use. Then the one call, which nothing answers, and then the pillow gives up the feather.
+   * answered, and no use. Then the one call, which nothing answers, and a brush of the pillow frees the feather.
    */
   private asleep(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
@@ -330,7 +354,8 @@ export class SleepingChapter implements Chapter {
     this.hush = lerp(this.hush, this.called && this.t - this.callAt < 7 ? 0.95 : 0.55, 1 - Math.exp(-dt * 0.8));
 
     /** Blowing on the bed lifts the blanket — the room does that itself — and the child draws it back round them. */
-    if (this.blowing(BED.x, BED.z) > 0.3 && this.tighten <= 0.05) {
+    sleeping.bedWind = this.bedBreath;
+    if ((this.bedBreath > 0.02 || this.blowing(BED.x, BED.z) > 0.3) && this.tighten <= 0.05) {
       this.tighten = 1;
       this.turnAt = this.now + 1.6;
     }
@@ -353,15 +378,17 @@ export class SleepingChapter implements Chapter {
       this.callAt = this.t;
       k.call(true);
       cue('calling');
-      this.featherAt = this.now + T.featherBy;
     }
-    /** After the call, the next gust over the pillow takes the feather with it; left alone, it comes anyway. */
-    if (this.called && (this.now > this.featherAt || (this.t > this.callAt + 4 && this.blowing(PILLOW.x, PILLOW.z) > 0.28))) this.toFeather();
+    // A few quiet strokes suffice; time and ambient breeze never release the feather.
+    if (this.windInvitation) this.pillowStroke += Math.max(0, this.bedBreath) * dt;
+    if (this.pillowStroke >= T.featherStroke) this.toFeather();
+    this.bedBreath = 0;
   }
 
   /** A puff of down, and one long white feather that hangs there. The bird looks at it, and at the child. */
   private toFeather(): void {
     const { sleeping } = this.cast;
+    sleeping.bedWind = 0;
     this.to('feather');
     sleeping.pillowPuff();
     sleeping.feather.release(
@@ -425,7 +452,7 @@ export class SleepingChapter implements Chapter {
     this.hush = lerp(this.hush, 0.75, 1 - Math.exp(-dt * 0.5));
     sleeping.frost = Math.min(T.frostWorst, sleeping.frost + dt * 0.012);
     /** A first touch of light on the crest ahead of it, which is the only reason to keep walking into the dark. */
-    sleeping.dawn = Math.min(0.18, sleeping.dawn + dt * 0.02);
+    sleeping.dawn = Math.min(0.04, sleeping.dawn + dt * 0.006);
     const up = Math.hypot(k.position.x - BED.x, k.position.z - BED.z) / TO_HILL;
     if (!this.sat && up > T.shiverAt) {
       this.sat = true;
@@ -440,10 +467,11 @@ export class SleepingChapter implements Chapter {
       k.errand = null;
       k.watch(null);
       k.needs(T.liftToFly, null);
-      k.mayFly = true;
+      k.mayFly = false;
+      k.wing.recovery = 1;
       sleeping.feather.goal.copy(TOP).setY(TOP.y + 2.2);
-      this.sunAt = this.now + T.sunBy;
-      this.to('hilltop');
+      k.watch(this.told.copy(BED));
+      this.to('unbinding');
     }
   }
 
@@ -473,27 +501,46 @@ export class SleepingChapter implements Chapter {
   }
 
   /**
-   * The top stands out of the fog into the first sun, and the bed is nowhere. This is the one thing the player is
+   * The summit window holds a seam of morning above the fog, and the bed is nowhere. This is the one thing the player is
    * asked for: circles drawn round the bird stand a column at it and it goes, and a plain gust only makes it hope.
-   * If they never work it out, the sun comes up by itself and it goes anyway.
+   * The invitation repeats until their circles lift it; the morning follows the flight.
    */
   private hilltop(dt: number): void {
     const { cygnet: k, sleeping } = this.cast;
     sleeping.feather.goal.set(k.position.x, Math.max(heightAt(k.position.x, k.position.z), 0) + 2.2, k.position.z);
     this.hush = lerp(this.hush, 0.85, 1 - Math.exp(-dt * 0.6));
-    /** The first sun stands on the top of the hill from the moment it gets there. */
-    sleeping.dawn = Math.min(0.42, sleeping.dawn + dt * 0.1);
+    /** A faint spill at the curtain seam; full morning still waits for the updraft. */
+    sleeping.dawn = Math.min(0.12, sleeping.dawn + dt * 0.03);
     sleeping.frost = Math.min(T.frostWorst, sleeping.frost + dt * 0.02);
-    if (k.flying || this.now > this.sunAt) this.away();
+    if (k.flying) this.away();
+  }
+
+  /** The wing has healed. Looking back for the child gives it a reason to trust that wing again. */
+  private unbinding(dt: number): void {
+    const { cygnet: k, sleeping } = this.cast;
+    const care = tuning.wingCare;
+    k.stay = true; k.errand = null; k.mayFly = false;
+    k.watch(this.told.copy(BED));
+    const facing = Math.atan2(BED.x - k.position.x, BED.z - k.position.z);
+    k.yaw += Math.atan2(Math.sin(facing - k.yaw), Math.cos(facing - k.yaw)) * (1 - Math.exp(-dt * 1.4));
+    k.wing.opening = smooth(this.t, care.lookBackFor, care.lookBackFor + care.openFor);
+    sleeping.dawn = Math.min(0.12, sleeping.dawn + dt * 0.02);
+    if (this.t > care.lookBackFor + care.openFor) k.wing.release();
+    if (k.wing.flightReady && this.t > care.lookBackFor + care.openFor + care.unwindFor + 0.8) {
+      k.watch(null);
+      k.mayFly = true;
+      this.to('hilltop');
+    }
   }
 
   /** Off the top, alone, by its own choice, and the longest glide it has ever made. */
   private away(): void {
     const { cygnet: k, sleeping } = this.cast;
     this.to('glide');
+    k.wing.opening = 0;
     k.stay = false;
     k.glideTo(this.spot.copy(ON_BLANKET), T.glideFor, T.glideArc);
-    sleeping.lane(this.laneFrom, this.laneTo, 6);
+    sleeping.lane(this.laneFrom, this.laneTo, T.dawnLaneWidth);
     sleeping.laneOpen = 0;
     sleeping.feather.goal.copy(BED).setY(BED.y + 2.6);
     this.music = 'sea';
@@ -502,17 +549,18 @@ export class SleepingChapter implements Chapter {
 
   /**
    * The wind that carries it is the wind that tears the fog open, so a lane of sunlight comes down the hill with
-   * it and the frost goes out of the grass under it, and the same wind throws the curtains open so the morning
-   * lands on the child's face as the bird comes down onto the blanket. It all arrives together, on one wind.
+   * it and the frost goes out of the grass under it. The summit curtains open on takeoff; their light
+   * reaches the child as the bird lands on the blanket.
    */
   private gliding(dt: number): void {
     const { cygnet: k, sleeping } = this.cast;
     const down = k.sailing;
     sleeping.laneOpen = Math.max(sleeping.laneOpen, down);
-    sleeping.dawn = Math.max(sleeping.dawn, 0.42 + 0.58 * down);
+    sleeping.dawn = Math.max(sleeping.dawn, 0.12 + 0.88 * down);
     sleeping.fog = Math.min(sleeping.fog, 1 - 0.8 * down);
     sleeping.frost = Math.min(sleeping.frost, T.frostWorst * (1 - down));
-    sleeping.curtains = Math.max(sleeping.curtains, smooth(down, 0.6, 0.9));
+    // The same updraft that lifts the bird opens the summit window before the light reaches the bed.
+    sleeping.curtains = Math.max(sleeping.curtains, smooth(this.t, 0, T.curtainsFor));
     this.warmed = 1;
     this.hush = lerp(this.hush, 0.35, 1 - Math.exp(-dt * 0.5));
     if (k.state === 'perched' || down >= 1) {
@@ -523,7 +571,7 @@ export class SleepingChapter implements Chapter {
     }
   }
 
-  /** The light through the window, the bird on the blanket, and a child who wakes up warm. */
+  /** The light has reached the hollow, the bird is on the blanket, and the child wakes up warm. */
   private waking(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
     k.perch(ON_BLANKET, this.onBlanket(dt));
@@ -569,9 +617,12 @@ export class SleepingChapter implements Chapter {
       c.abed = 0;
       c.standUp();
       const b = sleeping.bedside;
-      c.position.set(b.x, Math.max(heightAt(b.x, b.z), 0), b.z);
+      this.spot.set(b.x, Math.max(heightAt(b.x, b.z), 0), b.z);
+      const off = smooth(this.t, 6.5, 8.2);
+      c.position.lerpVectors(SIT_AT, this.spot, off);
+      c.position.y += Math.sin(off * Math.PI) * 0.14;
       k.rideIn('cradle');
-      this.board();
+      if (off >= 1) this.board();
     }
   }
 
@@ -615,16 +666,35 @@ export class SleepingChapter implements Chapter {
     if (this.ahead.lengthSq() > 0.01) this.ahead.normalize();
   }
 
+  /** The destination and the bird share the shot, including the first spill of morning. */
+  private summitFrame(): void {
+    const k = this.cast.cygnet;
+    const s = this.shot;
+    const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
+    this.bedFocus.copy(k.position).setY(k.position.y + 0.65);
+    this.roomFocus.copy(WINDOW).setY(WINDOW.y + 0.5);
+    s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.38);
+    const ex = k.position.x - UPHILL.x * 6.8 + UPHILL.y * 3;
+    const ez = k.position.z - UPHILL.y * 6.8 - UPHILL.x * 3;
+    s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), ground) + 2.5, ez);
+    s.subjects = this.subjects;
+    s.clearance = 0.9;
+    this.pace = 0.9;
+    this.focus.copy(k.position);
+  }
+
   /**
    * The camera as a sequence, never a cut: in low behind the child through the fog, down close at the bed, and
    * then right down to the bird's own eye for the climb, where the same world is enormous. A shot's `clearance`
    * is what lets it come down there without changing the rig for any other room.
    */
   private frame(): void {
-    const { child, cygnet: k, sleeping } = this.cast;
+    const { child, cygnet: k } = this.cast;
     const c = child.position;
     const s = this.shot;
     s.from = undefined;
+    s.subjects = undefined;
+    s.fitWidth = false;
     switch (this.beat) {
       case 'ashore':
       case 'toBed': {
@@ -639,28 +709,19 @@ export class SleepingChapter implements Chapter {
         return;
       }
       case 'tuckIn':
-      case 'asleep': {
-        /**
-         * Along the bed from the head end and down at the height of what is happening on it: the face on the
-         * pillow, the bird on the blanket beside it, the lamp warm behind them and the frost coming in past.
-         */
-        const dir = this.side.set(BESIDE.x * 0.92 + BED_FACING.x * 0.6, 0, BESIDE.y * 0.92 + BED_FACING.y * 0.6).normalize();
-        s.target.set(BED.x + BED_FACING.x * 0.2, BED.y + 0.85, BED.z + BED_FACING.y * 0.2);
-        s.eye = this.perch.set(BED.x + dir.x * 7.6, BED.y + 2.6, BED.z + dir.z * 7.6);
-        s.clearance = 1.4;
-        this.pace = 0.35;
+      case 'asleep':
+      case 'feather':
+      case 'waking':
+      case 'lap': {
+        // The bed and both travellers stay together in portrait as well as landscape.
+        this.bedFocus.copy(BED).setY(BED.y + 1.05);
+        this.roomFocus.copy(k.position).setY(k.position.y + 0.65);
+        s.target.copy(this.bedFocus);
+        s.eye = this.perch.set(BED.x + 7.1, BED.y + 4.0, BED.z + 6.4);
+        s.subjects = this.subjects;
+        s.clearance = 1.0;
+        this.pace = 0.8;
         this.focus.copy(BED);
-        return;
-      }
-      case 'feather': {
-        /** The two of them and the thing between them, at the height of the smaller one. */
-        const f = sleeping.feather.position;
-        s.target.set((f.x + k.position.x) / 2, (f.y + k.position.y + 1.0) / 2, (f.z + k.position.z) / 2);
-        const dir = this.side.set(BESIDE.x * 0.9 + BED_FACING.x * 0.45, 0, BESIDE.y * 0.9 + BED_FACING.y * 0.45).normalize();
-        s.eye = this.perch.set(BED.x + dir.x * 3.8, BED.y + 1.6, BED.z + dir.z * 3.8);
-        s.clearance = 0.9;
-        this.pace = 0.4;
-        this.focus.copy(k.position);
         return;
       }
       case 'edge':
@@ -672,58 +733,45 @@ export class SleepingChapter implements Chapter {
          * whole world round with its head.
          */
         const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        s.target.set(k.position.x + UPHILL.x * 2.0, ground + 0.72, k.position.z + UPHILL.y * 2.0);
-        const ex = k.position.x - UPHILL.x * 3.4 - UPHILL.y * 1.0;
-        const ez = k.position.z - UPHILL.y * 3.4 + UPHILL.x * 1.0;
-        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 1.02, ez);
-        s.clearance = 0.55;
+        this.bedFocus.copy(k.position).setY(ground + 0.7);
+        this.roomFocus.copy(WINDOW).setY(WINDOW.y + 0.5);
+        s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.16);
+        const ex = k.position.x - UPHILL.x * 5.4 - UPHILL.y;
+        const ez = k.position.z - UPHILL.y * 5.4 + UPHILL.x;
+        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 1.5, ez);
+        s.subjects = this.subjects;
+        s.clearance = 0.7;
         this.pace = 0.7;
         this.focus.copy(k.position);
         return;
       }
+      case 'unbinding':
       case 'hilltop': {
-        /**
-         * Aimed at the bird itself and nothing else. This is the one shot the player has to draw on: whatever the
-         * rig does about the hillside in the way, the thing they are asked to circle stays in the middle of it.
-         */
-        const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        s.target.set(k.position.x, ground + 0.3, k.position.z);
-        /** From above it, looking back down the hill it climbed: the fog sea below, and the bed nowhere in it. */
-        const ex = k.position.x + UPHILL.x * 4.6 + UPHILL.y * 2.6;
-        const ez = k.position.z + UPHILL.y * 4.6 - UPHILL.x * 2.6;
-        s.eye = this.perch.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 2.2, ez);
-        s.clearance = 0.9;
-        this.pace = 0.55;
-        this.focus.copy(k.position);
+        this.summitFrame();
         return;
       }
       case 'glide': {
+        // Hold the reveal while the curtains open, then follow the bird down the light.
+        if (this.t < T.windowRevealFor) { this.summitFrame(); return; }
         /** Behind it and a little above, so the lane of sun opening down the hill is what lies ahead of it. */
-        s.target.set(k.position.x - UPHILL.x * 4, k.position.y - 0.7, k.position.z - UPHILL.y * 4);
+        s.target.set(k.position.x - UPHILL.x * 1.2, k.position.y + 0.5, k.position.z - UPHILL.y * 1.2);
         const ex = k.position.x + UPHILL.x * 6.5;
         const ez = k.position.z + UPHILL.y * 6.5;
-        s.eye = this.perch.set(ex, k.position.y + 2.4, ez);
+        s.eye = this.perch.set(ex, k.position.y + 3.4, ez);
         s.clearance = 1.2;
         this.pace = 1.1;
         this.focus.copy(k.position);
         return;
       }
-      case 'waking': {
-        /** The window, and the face on the pillow the light comes through onto. */
-        s.target.set((PILLOW.x + k.position.x) / 2, PILLOW.y + 0.5, (PILLOW.z + k.position.z) / 2);
-        const dir = this.side.set(BESIDE.x * 0.85 + BED_FACING.x * 0.7, 0, BESIDE.y * 0.85 + BED_FACING.y * 0.7).normalize();
-        s.eye = this.perch.set(PILLOW.x + dir.x * 6.4, PILLOW.y + 2.1, PILLOW.z + dir.z * 6.4);
-        s.clearance = 1.2;
-        this.pace = 0.5;
-        this.focus.copy(PILLOW);
-        return;
-      }
-      case 'lap': {
-        const dir = this.side.set(BESIDE.x * 1.05 + BED_FACING.x * 0.4, 0, BESIDE.y * 1.05 + BED_FACING.y * 0.4).normalize();
-        s.target.set(c.x, c.y + 1.3, c.z);
-        s.eye = this.perch.set(c.x + dir.x * 6.2, c.y + 2.4, c.z + dir.z * 6.2);
-        s.clearance = 1.6;
-        this.pace = 0.45;
+      case 'toBoat': {
+        // Stay with the child while leaving the bed; the distant boat midpoint loses them in portrait.
+        this.bedFocus.copy(c).setY(c.y + 1.25);
+        this.roomFocus.copy(this.bedFocus).addScaledVector(this.aim, 5);
+        s.target.copy(this.bedFocus).addScaledVector(this.aim, 1.2);
+        s.eye = this.perch.set(c.x + 7.1, c.y + 4.2, c.z + 6.4);
+        s.subjects = this.subjects;
+        s.clearance = 1.4;
+        this.pace = 1.2;
         this.focus.copy(c);
         return;
       }

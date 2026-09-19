@@ -1,3 +1,7 @@
+import { SkyMirrorChapter } from './sky-mirror';
+import { MIRROR_LANDING } from '../world/sky-mirror-layout';
+import { LittleBoatsChapter } from './little-boats';
+import { BOATS_LANDING, BOATS_BERTH } from '../world/little-boats-layout';
 import * as THREE from 'three';
 import { tuning } from '../tuning';
 import type { Mood } from '../audio/audio';
@@ -5,7 +9,7 @@ import type { Shot } from '../camera';
 import { params } from '../params';
 import { mainlandCoastZ } from '../world/heightfield';
 import type { Cast, Chapter } from './cast';
-import { CrossingChapter, FIRST_ISLAND, LANDING } from './crossing';
+import { CrossingChapter, FIRST_ISLAND, LANDING, MEADOW_APPROACH } from './crossing';
 import { HOME_MOORING, HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
 import { LINES_LANDING, LinesChapter } from './lines';
@@ -19,11 +23,14 @@ import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
 import { readProgress, placeProgress, restoreLife, saveProgress } from './progress';
+import { restoreWingCare } from './wing-care';
 
 export type ChapterName =
   | 'island'
   | 'toLines'
   | 'lines'
+  | 'toBoats'
+  | 'boats'
   | 'toMeadow'
   | 'meadow'
   | 'toBirches'
@@ -33,6 +40,9 @@ export type ChapterName =
   | 'wood'
   | 'toSleeping'
   | 'sleeping'
+  | 'toMirror'
+  | 'mirror'
+  | 'toHarbour'
   | 'toHome'
   | 'home'
   | 'stage';
@@ -47,7 +57,8 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(60, -195),
     LINES_LANDING,
   ],
-  toMeadow: [new THREE.Vector2(224, -521), new THREE.Vector2(100, -549), LANDING],
+  toBoats: [new THREE.Vector2(265, -512), new THREE.Vector2(330, -502), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
+  toMeadow: [new THREE.Vector2(355, -683), new THREE.Vector2(305, -682), new THREE.Vector2(270, -585), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
@@ -59,12 +70,20 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(-115, -1924),
     SLEEP_LANDING,
   ],
-  /**
-   * The long way round, about 900 units of it. They leave the sleeping island's west shore in the sunrise and
-   * stand well out into open water before coming back east through the shallow strait between the island they
-   * left and the one they are going to. It is the only crossing that goes anywhere but straight, because by now
-   * the point of it is not to arrive.
-   */
+  /** The offshore passage keeps the dolphins and brave swim, then moors beside the entry jetty. */
+  toMirror: [
+    new THREE.Vector2(-340, -1970), new THREE.Vector2(-480, -2040),
+    new THREE.Vector2(-590, -2180), new THREE.Vector2(-540, -2200),
+    new THREE.Vector2(-455, -2188), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
+  ],
+  toHarbour: [
+    new THREE.Vector2(-347, -2335), new THREE.Vector2(-338, -2205), new THREE.Vector2(-350, -2135),
+    new THREE.Vector2(-270, -2030), new THREE.Vector2(-242, -2012),
+    new THREE.Vector2(-180, -1994), new THREE.Vector2(-158, -1980),
+    new THREE.Vector2(-140, -1966), new THREE.Vector2(-120, -1948),
+    new THREE.Vector2(-80, -1932), new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
+  ],
+  /** Previous uninterrupted passage: retained for existing toHome entry/swim saves. */
   toHome: [
     new THREE.Vector2(-340, -1970),
     new THREE.Vector2(-445, -2050),
@@ -81,7 +100,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
 };
 
-const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toHome', 'home'];
+const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toBoats', 'boats', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toMirror', 'mirror', 'toHarbour', 'home'];
 
 /**
  * Runs the chapters in order and speaks for whichever is current. `?chapter=` starts later in the story for
@@ -118,6 +137,9 @@ export class Journey {
     } else if (start === 'washing') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');
+    } else if (start === 'boats') {
+      this.land(BOATS_LANDING.x, BOATS_LANDING.z, BOATS_LANDING.x - 1, BOATS_LANDING.z - 4);
+      this.begin('boats');
     } else if (start === 'meadow' || start === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
@@ -140,7 +162,10 @@ export class Journey {
       this.begin('sleeping');
     } else if (start === 'sea' || start === 'dolphins') {
       this.sail(SLEEP_BERTH.x - 5, SLEEP_BERTH.z - 2, -1.76);
-      this.begin('toHome');
+      this.begin('toMirror');
+    } else if (start === 'mirror') {
+      this.land(MIRROR_LANDING.x, MIRROR_LANDING.z, MIRROR_LANDING.x + 2, MIRROR_LANDING.z - 3);
+      this.begin('mirror');
     } else if (start === 'stage') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
       this.begin('stage');
@@ -239,7 +264,7 @@ export class Journey {
     this.chapter.update(dt, time);
     if (this.chapter.done) {
       // Old saves in the separate forest crossing still arrive in the wood.
-      const next = this.name === 'toWood' ? 'wood' : ORDER[ORDER.indexOf(this.name) + 1];
+      const next = this.name === 'toWood' ? 'wood' : this.name === 'toHome' ? 'home' : ORDER[ORDER.indexOf(this.name) + 1];
       if (next) this.begin(next);
     }
     // The zero-time camera setup behind Begin is not a played checkpoint.
@@ -263,7 +288,8 @@ export class Journey {
 
   private make(name: ChapterName): Chapter {
     const { cast } = this;
-    if (ORDER.indexOf(name) > ORDER.indexOf('birches') || name === 'toWood') cast.boat.scarfSail = 1;
+    restoreWingCare(cast.cygnet, name);
+    if (ORDER.indexOf(name) > ORDER.indexOf('birches') || name === 'toWood' || name === 'toHome') cast.boat.scarfSail = 1;
     switch (name) {
       case 'toLines':
         return new CrossingChapter(cast, {
@@ -277,9 +303,13 @@ export class Journey {
         });
       case 'lines':
         return new LinesChapter(cast);
+      case 'toBoats':
+        return new CrossingChapter(cast, {route: ROUTES.toBoats, haze: 1.05, season: 0.22, music: 'lines'});
+      case 'boats':
+        return new LittleBoatsChapter(cast);
       case 'toMeadow':
         /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.9, season: 0.26 });
+        return new CrossingChapter(cast, { route: cast.boat.position.x < BOATS_BERTH.x - 70 ? [new THREE.Vector2(224, -521), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING] : ROUTES.toMeadow, haze: 0.9, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
@@ -297,6 +327,24 @@ export class Journey {
         return new CrossingChapter(cast, { route: ROUTES.toSleeping, haze: 0.92, dusk: 1.85, season: 0.85, music: 'wood' });
       case 'sleeping':
         return new SleepingChapter(cast);
+      case 'toMirror':
+        return new CrossingChapter(cast, {
+          route: ROUTES.toMirror, haze: tuning.seaPassage.haze,
+          dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
+          whaleAt: 42, whaleEvery: 0, dolphins: true,
+          swimAt: tuning.seaPassage.swimAt, season: 0.92,
+          moor: MIRROR_LANDING, arrivalSpeed: 3,
+        });
+      case 'mirror': return new SkyMirrorChapter(cast);
+      case 'toHarbour':
+        if (cast.skyMirror.progress < 3) cast.skyMirror.restore(3);
+        return new CrossingChapter(cast, {
+          // Saves from the first mirror version departed from its northern arrival shelf.
+          route: cast.boat.position.x < -420 && cast.boat.position.z > -2280
+            ? [new THREE.Vector2(-455, -2205), ...ROUTES.toHarbour.slice(2)] : ROUTES.toHarbour,
+          haze: 0.92, dusk: tuning.skyMirror.duskTo,
+          season: 0.98, moor: HOME_MOORING, music: 'home',
+        });
       case 'toHome':
         /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */
         return new CrossingChapter(cast, {
@@ -312,7 +360,7 @@ export class Journey {
           moor: HOME_MOORING,
         });
       case 'home':
-        return new HomeChapter(cast);
+        return new HomeChapter(cast, tuning.skyMirror.duskTo);
       case 'stage':
         return new StageChapter(cast);
       default:

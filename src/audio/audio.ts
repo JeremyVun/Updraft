@@ -34,6 +34,7 @@ export interface SoundState {
   shower: number;
   /** How far the music pulls back, 0 normal to 1 almost gone, so a moment can be heard on its own. */
   hush: number;
+  piano?: number;
   /** Which room's music is playing. */
   music: Mood;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
@@ -49,7 +50,7 @@ export interface SoundState {
  * own gestures ring out of it. The voices glide between them over a couple of seconds, so a room change is a
  * modulation rather than a new track starting.
  */
-export type Mood = 'still' | 'lines' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sea' | 'home';
+export type Mood = 'still' | 'lines' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sea' | 'mirror' | 'home';
 
 interface MoodMusic {
   chords: number[][];
@@ -78,6 +79,8 @@ const MOODS: Record<Mood, MoodMusic> = {
   wood: { chords: [[38, 45, 50, 57], [38, 45, 51, 58]], seconds: 15, cutoff: 440, level: 0.65, scale: [50, 53, 57, 60, 62, 65, 69, 72] },
   /** Out of the dark and into open water, with the bass climbing under it. */
   sea: { chords: [[45, 52, 57, 64], [43, 50, 59, 66], [50, 57, 64, 71], [47, 54, 61, 69]], seconds: 11, cutoff: 1300, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86] },
+  /** Suspended above the water; the same two open voicings trade places slowly. */
+  mirror: { chords: [[50, 57, 64, 69], [45, 52, 62, 69]], seconds: 19, cutoff: 920, level: 0.55, scale: [69, 74, 76, 81, 83, 88] },
   /** Clear, frozen and resolved: the only room whose chords come home. */
   home: { chords: [[50, 57, 62, 69], [43, 50, 59, 66], [45, 52, 61, 64], [50, 57, 64, 71]], seconds: 10, cutoff: 1450, level: 1.15, scale: [62, 66, 69, 71, 74, 78, 81, 83, 86, 90] },
 };
@@ -647,19 +650,21 @@ export class Soundscape {
     const now = ctx.currentTime;
     const tc = 0.08;
     const g = Math.min(s.gust / 26, 1);
+    const piano = s.piano ?? 0;
+    const air = 1 - piano * 0.82;
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
-    this.breezeGain.gain.setTargetAtTime(0.02 + s.breeze * 0.2, now, 0.5);
+    this.breezeGain.gain.setTargetAtTime((0.02 + s.breeze * 0.2) * air, now, 0.5);
     this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
     this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
     this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
-    this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55, now, tc);
+    this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + g * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime(s.pan * 0.7, now, tc);
-    this.whistleGain.gain.setTargetAtTime(Math.max(0, g - 0.55) * 0.12, now, tc);
+    this.whistleGain.gain.setTargetAtTime(Math.max(0, g - 0.55) * 0.12 * air, now, tc);
     this.whistleFilter.frequency.setTargetAtTime(900 + g * 900, now, tc);
-    this.rustleGain.gain.setTargetAtTime(s.overLand ? Math.pow(g, 1.2) * 0.2 : 0, now, tc);
-    this.liftGain.gain.setTargetAtTime(s.charge * 0.35, now, 0.15);
+    this.rustleGain.gain.setTargetAtTime(s.overLand ? Math.pow(g, 1.2) * 0.2 * air : 0, now, tc);
+    this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500, now, 0.2);
 
     const mood = MOODS[s.music] ?? MOODS.meadow;
@@ -677,7 +682,7 @@ export class Soundscape {
         voice.gain.gain.setTargetAtTime(0.25, now, 2.5);
       });
     }
-    const hush = 1 - 0.92 * s.hush;
+    const hush = (1 - 0.92 * s.hush) * (1 - piano);
     /** The finale swells, night or no night: it is the one time the music is meant to be the loudest thing there is. */
     const swell = finale ? 1.6 + 0.8 * (1 - (this.finaleUntil - now) / 22) : 1;
     this.padGain.gain.setTargetAtTime(
@@ -711,7 +716,7 @@ export class Soundscape {
     }
 
     /** The chimes are the player's own voice in the music, so they only answer gestures that are doing something. */
-    const gusting = s.gust > 7 && !s.scripted && !s.silence;
+    const gusting = s.gust > 7 && !s.scripted && !s.silence && piano < 0.05;
     if (gusting) {
       const interval = s.gust > 17 ? PULSE : PULSE * 2;
       const at = this.nextPulse();

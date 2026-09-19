@@ -63,6 +63,24 @@ in `journey.md`, “The long crossing”.
 
 ## The pond
 
+September 20 follow-up: the flock now reacts during the approach, nearest birds first. The meadow flight practice
+is replaced by a short swim back to waiting hands. The recovering wing is wrapped on the starting island and
+unwrapped at the sleeping hilltop before its first glide; see `docs/cygnet.md`, “The recovering wing”.
+
+Pond visibility follow-up: Jeremy's screenshot showed only the child's hat above the foreground bank. The approach
+camera now lets the departing flock leave the frame and comes round over the water, keeping the child and shore
+as its subjects. The set-down, swim and gathering frame both companions in landscape and portrait. The child
+stops closer to the water; a short, fine grass margin and an opening in the southern reeds expose their hands
+and the cygnet's route. `tools/pond-view-check.mjs` checks framing and terrain/grass sight lines through the real
+sequence from two approaches, alongside browser captures of set-down, swimming and return.
+
+Meadow navigation follow-up: throws and airborne guidance now share the next destination, with an unfinished
+piano or pond stop taking priority over the final boat marker. After swimming, guidance and pursuit bend around
+the dry bank instead of repeatedly stopping at the water. `tools/meadow-route-check.mjs` checks every route
+cursor, the real piano approach and complete pond-to-boat walk at 30/60/120 fps, and restored walks on both banks.
+
+Earlier pond-placement investigation:
+
 Measured (world units, north is −z): the pond at (8, −789), level 3.5, lies in a closed bowl. The family leaves due
 north on a slope of about 0.23 in a V some 20 wide; the rim north of the water is 9 to 10 high at 20 to 40 units and
 16 at x = 23, so they fly through it. The saddle at `WAY[4]` (0.7, −813) is the natural second crest: north of it the
@@ -181,5 +199,202 @@ Jeremy's visual correction, verbatim:
 > “hrm.. the embers still need to look like something the player can and should interact with, instead of a bunch of orange squares. Rethink the visual language a bit for the embers”
 
 Jeremy authorized one Astra subagent to create three in-scene ember concepts with no gameplay changes.
-Workshop: `/tmp/updraft-ember-comps-r1`. The visual decision remains open. The object itself must invite fanning;
+Workshop: `/tmp/updraft-ember-comps-r1` (superseded by the approved image below). The object itself must invite fanning;
 the five-second traces reinforce that invitation. Both a plain light orb and scattered orange squares are rejected.
+
+During the authorized study Jeremy redirected it, verbatim:
+
+> “im looking at what the sub agent is doing and it's just weird and doesn't fit with the style of a child's dream.”
+
+The study must return to simple, soft, inviting warmth that belongs beside the child and cygnet. Familiar
+forms and a legible response to breath take priority over novelty or an elaborate object to decipher.
+
+The completed study is `/tmp/updraft-ember-comps-r1/index.html`, with implementation notes in `OPTIONS.md`.
+The final three directions are Tiny flame, Breathing cinders and Smoking ember. The lead recommends Tiny flame
+for the clearest invitation at gameplay and phone size; the waiting flame means nurturing existing warmth.
+All were visual fixtures. The realistic direction was subsequently rejected.
+
+Jeremy redirected the visual study again, verbatim:
+
+> “ok listen, i think we went too realistic. We just needed the idea of an artistic / abstract idea of a "light orb ember". make sense? maybe use gpt image 2.5 to create an idea”
+
+The realistic flame/coal/smoke study is superseded. Return to an abstract orb of light with a richer, expressive
+response to wind. Explore it through image generation before another implementation; no literal fire or debris.
+
+Approved direction: Jeremy answered **“yes! this is it”** to the generated abstract orb study.
+The durable exemplar is [wood-ember.png](../assets/art-direction/wood-ember.png).
+
+Implementation: one warm heart wrapped in overlapping translucent veils, a loose trailing wisp and small
+rounded motes. The orb breathes while waiting, its outer light yields to wind, and fanning opens the shape
+before it catches. Rendering in `src/fx/ember-orb.ts` reads existing wake/heat/flare state; ignition,
+spacing, invitation timing and story gates are retained. The visible heart and input target share the same
+position above the litter. No physical housing, firewood, smoke plume, glass sphere or sharp fragments.
+`node tools/ember-check.mjs [portrait]` captures waiting, invitation, fanning, lit and close-detail states with
+real mouse/touch sweeps; temporary pictures, movie and report live in `/tmp/updraft-orb-*`.
+
+Verification: build/typecheck and `wood-logic-check.mjs` pass, including the full route and checkpoint
+restores. The real browser check passes at 1600×900 and 390×844: idle and one sweep leave the orb unlit,
+four deliberate mouse/touch sweeps ignite it, and no browser errors are reported. Waiting, invitation and
+lit states were visually inspected in both sizes. The scene remains local; no deployment was made.
+
+Follow-up polish: Jeremy asked for richer animation, progressive light while fanning, and a much smaller,
+dimmer resting ember. Resting scale is 0.38 of the base size and opacity 0.24. Smoothed wake opens and
+brightens the veils; their uneven folds circulate, breathe and sway, with the tail lengthening as they warm.
+Forest illumination now eases up before ignition through `Embers.illumination`; `brightest` remains the
+fully-lit story gate. Mouse/touch checks measure growth and light across individual sweeps, and the logic
+check verifies that pre-ignition illumination cannot advance the story at 30/60/120 Hz.
+Desktop and portrait browser checks pass with four sweeps to ignite, increasing size/brightness/forest
+light at each partial sweep and no browser errors. Full route and checkpoint logic pass. Vite bundling
+passes. The unrelated scarf typecheck errors were subsequently resolved; full typecheck now passes.
+
+Jeremy then asked for the circular, wispy silhouette of the approved concept to be matched more closely.
+The first attempt used a painted texture with subtle distortion. Jeremy rejected it as a static image;
+its motion was not sufficient. The replacement has seven independent curved surfaces per orb in
+`src/fx/ember-veils.ts`, with separate tilted orbits, billowing widths, free ends and light flowing along
+their surfaces. `ember-orb.ts` draws only the heart and halo. The generated artwork supplies colour
+variation inside the ribbons, not the orb's silhouette. Resting size, fanning growth and lighting stay.
+
+`ember-check.mjs` now records an isolated view on a plain background with a fixed camera and no airborne
+sparks, alongside the real mouse/touch interaction. This makes the actual wisp motion reviewable.
+The artwork and built-in imagegen prompt are in `assets/fx/ember-orb.png` and `ember-orb-prompt.md`.
+
+The moving-surface pass builds and typechecks. Mouse/touch fanning, progressive illumination and the
+full route/checkpoint checks pass. Fixed-camera captures show the silhouette and folds changing over
+2.4 seconds without sparks or scene motion. Local only; no deployment.
+
+Forest floor and lightning polish (2026-09-20): Jeremy found lightning exposing a smooth green floor and
+asked for more subdued flashes ashore and a little more grass. Wood lightning eases to 28% strength over
+land; strike timing and thunder are retained. The native grass renderer now includes short, fine forest
+tufts in uneven patches, with flowers suppressed and muted olive/brown colour. Terrain between the tufts
+is mottled leaf mould and moss instead of the generic green soil. CPU and both GPU grass paths use the
+same crop formula. `tools/wood-floor-check.mjs` captures quiet, subdued-flash and full-flash views.
+
+Forest tuft density is one quarter of the meadow population; interior tiles use the matching coarser
+blade table. Build/typecheck, boat/weather timing tests and the browser floor captures pass without
+shader errors. The held wood flash measures 0.168 versus approximately 0.602 unsheltered. Local only.
+
+## Piano redesign investigation (2026-09-20)
+
+Jeremy's brief:
+
+> i think it needs a redesign. The piano location and the camera position needs to be done so that you can actually see the greening of the field. The piano, the music, and the meadows should feel connected. The music being the way that the child brings colour to the chapter.
+>
+> In terms of copying the direction, it's not clear at all what and where to do this. The piano is a bit too soft, and there's no trace outline showing you what to trace.
+
+Jeremy requested removal of the old piano/wind worktrees and an inspection of the current code and visuals.
+`/private/tmp/updraft-polish2-piano` and `/private/tmp/updraft-polish2-wind` were clean and fully merged into
+`main`; both worktrees were removed. Their branch refs remain. No unmerged redesign was recovered.
+
+Findings from the current implementation:
+
+- **Composition:** the seated view faces a rising bank. Most nearby grass is already inside the piano's
+  initial green patch; the hill hides the broader meadow. Note trails travel above the case and out toward the
+  edge of the view. Making the trail brighter cannot expose the ground receiving its colour.
+- **Invitation:** `KeyLine` follows sounding notes, holds for 0.85 seconds, then loses its points and fades.
+  The response remains available for several more seconds without a guide. Concurrent trace-clarity work
+  increases its contrast and screen width, but retains this lifecycle.
+- **Input:** `PointerInput.pick` intersects terrain, while `Piano.listen` checks rising wind energy at the
+  keyboard's ground coordinates. It does not test a stroke against the keyboard as seen on screen. The low
+  viewing angle displaces a pointer over the keys onto ground behind them. This needs direct gesture verification.
+- **Sound:** `hush` reduces the pad to 8%; it does not hush the normal gesture chimes, gust, whistle or grass
+  rustle. Piano answers compete with sounds generated by the same sweep. The existing loudness multiplier is
+  already 3. This is a mix-routing finding, not a listening verdict.
+- **Colour:** stage three immediately clears `life.regions.waiting`, making `regionLife` return fully alive
+  for the meadow before the expanding wave reaches it. Earlier stages have radii 80 and 168, much larger than
+  the close view. Automatic notes plant colour too; no answer starts the automatic finale after 14 seated seconds.
+- **Child:** the child presses one introductory note, then listens with hands in their lap while wind and
+  scripted phrases supply the tune. The animation does not yet communicate the child playing the meadow awake.
+
+Recommended direction, not yet implemented: one stable composition holding the child, playable keys and an
+open descending field; a persistent, generously sized sweep guide whose visible path is also its input target;
+notes and the child's hands responding progressively to the stroke; a broad, clearly visible advance of colour
+after each phrase; a final travelling wave that finishes before the grey hold is released. Duck competing
+gesture sounds during the duet. Repeated demonstrations should help an idle player find the gesture rather
+than silently completing it for them. Preserve earned progress and avoid rhythm or exact-pitch requirements.
+
+Terrain candidate for visual exploration: the existing west-rise waypoint, sculpted (-40, -830), world
+approximately (-23.3, -746.7). Ground there is 20.9 high and falls to 11.6 forty units north; at the current piano
+it is 16.5 and rises to 19.8 twenty units north. This supports a view over the field without an overhead camera.
+It is a candidate, not an approved relocation: verify the approach, skyline, pond concealment, keyboard
+visibility and colour front in landscape and portrait before deciding. Piano placement, walk waypoints,
+clearing, initial colour origin and finale framing must move together.
+
+Scratch evidence and inspection scripts are in `/tmp/updraft-piano-*`; no gameplay changes were made by this
+investigation. The existing note synthesis, key depression and life-field systems can support the redesign.
+Visual inspection covered the approach, seated framing and cygnet on the keyboard. A separate attempt to measure
+real sweeps and the complete finale did not finish: concurrent GPU captures occupied the shared browser lock,
+and a live reload interrupted the first acquired run. Gesture reliability is a code finding awaiting a completed
+browser check; the finale's immediate restoration is confirmed by the life-field and story code.
+
+## Meadow plane and camera (2026-09-20)
+
+The plane could outrun the child and pull the camera onto empty ground between them. Its meadow steering target
+now stays at most 24 units toward the next waypoint, piano, pond or boat. Jeremy found the first 26-unit flight
+area too restrictive: slowing now starts at 28, waiting turns at 34, and inward return takes over by 42 units.
+Forward flight resumes when the gap closes to 24. Lift eases from 18 to 28 units above the child, including on
+high ground. A plane already far away flies back continuously.
+The child refreshes the pursuit destination without resetting obstacle detours. The walking camera caps the
+plane's influence and fits the pair using their camera-space positions, with bounded extra distance and priority
+for the child during recovery. At the widest separation the plane may leave the frame briefly, especially on
+phones. Authored piano, pond and boarding shots retain their own framing.
+Knobs: `tuning.meadowPlane`. Regression check: `node tools/meadow-plane-check.mjs` (strong gusts and updrafts,
+30/60/120fps, desktop/portrait, runaway recovery, route progress, scripted release and the final departure).
+
+
+## Piano redesign implemented (2026-09-20)
+
+Jeremy approved the redesign, then asked for the green patch to read from the beach crest and a slightly wider
+playing camera. The piano moved to the west rise, facing the open falling field. The initial green radius is
+13 with a soft edge of 4; a shallow saddle lowers the intervening ridge without changing the piano's height.
+The playing camera stands 19 units back and the finale widens to 32, with both piano and child retained.
+
+The persistent trace above the keys is also the screen-space input target, with a starting ring, directional
+motion and progressive notes. Four sweeps answer the three phrases; idle time no longer completes the puzzle.
+The child's hands follow the notes. Player notes carry colour out into the field; repeated demonstrations
+remain quiet and do not colour it. Phrase waves reach 32 and 62, then the finale travels across the island
+before releasing its grey hold. Competing wind/chime sounds are hushed and piano loudness is raised.
+The child resumes following the plane after standing up, and the completed checkpoint skips the duet.
+
+The earlier investigation above is historical; its unimplemented recommendations and incomplete checks are
+superseded by this build. Gesture logic and meadow plane regression checks pass. Real GPU mouse and touch
+runs complete all four sweeps, preserve the invitation while idle, retain the grey hold at the wave's start,
+keep the piano and child in the finale frame, and resume the walk afterward. Build/typecheck pass.
+
+
+## A field-wide answer to every piano gesture (2026-09-20)
+
+Jeremy's next playtest: "I can see the greening to the top right of the screen, but i can't see the greening
+happen anywhere else... i was hoping for a more 'epic' feeling of the music connecting with the environment
+each time the player mirrors an action."
+
+The previous early radii stayed beneath the close camera; the third sweep had no wave at all. All four
+sweeps now have a distinct reward: radii 45, 85, 125, then the whole island. Music starts at the piano and
+travels across already-green ground before advancing the next colour front. Three soft arcs follow the
+terrain at that same radius, and a broad front of wind bends the grass across the left, middle and right.
+Note trails fan across the field with much less sideways drift; the introductory note no longer spends
+colour ahead of the player's first answer.
+
+Each early answer opens a brief view over the field, holds while the front arrives, then returns to the
+keys before demonstrating the next gesture. Each successive reveal is wider and higher. The final camera
+remains above the field for the full wave. This supersedes the earlier fixed close camera and 32/62 radii.
+`tools/piano-frame-check.mjs` checks continuous subject visibility in landscape, ultrawide and portrait;
+`tools/piano-check.mjs` checks four real gestures and colour across three bearings after every early answer.
+
+Verified: typecheck and production bundling pass, as do gesture and meadow pursuit regressions. The full
+desktop playthrough completes all four real pointer sweeps and confirms colour at left, centre and right
+bearings for each early wave. Captures show the first broad response, the third sweep restoring the middle
+hills, and the final island-wide reveal. Continuous camera bounds pass at 1600×900, 2048×1023 and 390×844.
+
+
+## Curling music and organic colour (2026-09-20)
+
+Jeremy found that the note trails painted straight lanes and asked for "a whirlwind of music and greening".
+Notes now orbit as they drift into the meadow; wider, gentler blooms overlap along those curved paths.
+Five loose eddies replace the three concentric musical arcs, carrying soft patches just ahead of the main
+front. Grass receives both outward and turning wind.
+
+The broad restoration uses a fixed spatial disturbance and an increasingly soft edge. CPU life queries,
+shader colour and the visible eddies share `world/music-growth.ts`. Its shape stays fixed as the radius
+advances, so earned colour never goes grey again. The initial arrival patch is unchanged, and the final
+coverage margin includes the uneven edge. `tools/piano-growth-check.mjs` checks permanence, initial-patch
+compatibility and agreement between the colour front and the visible curls.

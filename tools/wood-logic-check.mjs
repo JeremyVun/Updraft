@@ -15,7 +15,7 @@ registerHooks({
   },
 });
 globalThis.location = { search: '?shot' };
-globalThis.window = { matchMedia: () => ({ matches: false }) };
+globalThis.window = { innerHeight: 900, matchMedia: () => ({ matches: false }) };
 const { Embers } = await import('../src/fx/embers.ts');
 const { EmberInvitation } = await import('../src/fx/ember-invitation.ts');
 const { tuning } = await import('../src/tuning.ts');
@@ -37,15 +37,33 @@ for (const fps of [30, 60, 120]) {
   e.clearCoals(); assert.equal(e.takeCaught().length, 0);
   console.log(`${fps}fps: no idle/residual ignition or spark bypass; deliberate fanning lights once`);
 }
+// Render light may build while the gate remains closed; ignition must not flash the scene in one frame.
+for (const fps of [30, 60, 120]) {
+  const e = new Embers(wind), coal = e.lay(-18, -1712), near = coal.p.clone();
+  for (let i = 0; i < fps * 3; i++) e.update(1 / fps, near, 1);
+  let last = 0, maxStep = 0, warmed = false;
+  while (!coal.lit) {
+    coal.breath = 0.5; e.update(1 / fps, near, 1);
+    const light = e.illumination(near.clone());
+    maxStep = Math.max(maxStep, light - last); last = light;
+    if (coal.wake > 0.4 && !coal.lit) {
+      warmed = true; assert(light > 0); assert.equal(e.brightest(near.clone()), 0);
+    }
+  }
+  assert(warmed); assert(maxStep < 0.8, `${fps}fps ignition illumination jumped ${maxStep}`);
+  e.clearCoals(); assert.equal(e.illumination(near.clone()), 0);
+}
+console.log('Progressive forest illumination stays separate from the ignition gate at 30/60/120fps.');
 const invitation = new EmberInvitation();
 const camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 200);
 camera.position.set(0, 4, 10); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
 const target = new THREE.Vector3();
-for (let i = 0; i < 299; i++) invitation.update(1 / 60, camera, target);
+const idleInput = { present: false, muted: false, ndc: new THREE.Vector2(), prevNdc: new THREE.Vector2() };
+for (let i = 0; i < 299; i++) invitation.update(1 / 60, camera, target, idleInput);
 assert.equal(invitation.batch.mesh.visible, false);
-for (let i = 0; i < 35; i++) invitation.update(1 / 60, camera, target);
+for (let i = 0; i < 35; i++) invitation.update(1 / 60, camera, target, idleInput);
 assert.equal(invitation.batch.mesh.visible, true);
-invitation.update(1 / 60, camera, null); assert.equal(invitation.batch.mesh.visible, false);
+invitation.update(1 / 60, camera, null, idleInput); assert.equal(invitation.batch.mesh.visible, false);
 assert.equal(tuning.wood.chainStep / 15, 1.35);
 console.log('Five-second invitation and 35% path spacing passed.');
 

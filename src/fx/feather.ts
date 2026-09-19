@@ -88,6 +88,8 @@ export class Feather {
   readonly goal = new THREE.Vector3();
   /** How far from the goal it may wander before the air turns it round. */
   keepNear = 26;
+  /** Keep the guide in sight of the bird while preserving small gust-driven detours. */
+  follow: THREE.Vector3 | null = null;
   /** 0 while it is still in the pillow, 1 once it is in the air. */
   flying = false;
   /** How much the wind is lifting it, 0..1, for whoever wants to hear or see that. */
@@ -148,7 +150,7 @@ export class Feather {
     const p = this.position;
     const v = this.velocity;
     const w = this.wind.sample(p.x, p.z, this.sample);
-    const floor = Math.max(heightAt(p.x, p.z), 0) + 0.06;
+    let floor = Math.max(heightAt(p.x, p.z), 0) + 0.06;
 
     /** It weighs almost nothing, so it takes the air's own speed rather than being pushed along by it. */
     const take = 1 - Math.exp(-dt * t.featherTakes);
@@ -180,6 +182,15 @@ export class Feather {
       this.rest = 0;
     }
     p.addScaledVector(v, dt);
+    if (this.follow) {
+      const dx = p.x - this.follow.x, dz = p.z - this.follow.z;
+      const gap = Math.hypot(dx, dz);
+      if (gap > t.featherLead) {
+        const pull = (gap - t.featherLead) * (1 - Math.exp(-dt * t.featherCatch));
+        p.x -= dx / gap * pull; p.z -= dz / gap * pull;
+      }
+    }
+    floor = Math.max(heightAt(p.x, p.z), 0) + 0.06;
     if (p.y < floor) {
       p.y = floor;
       v.y = Math.max(v.y, 0);

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { screenBrush } from '../creatures/motion';
+import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BirchCanopyMotion } from '../fx/birch-canopy';
 import { FallenLeaves, LEAF_COUNT, LEAF_SHAPE_GLSL, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_SIDE, LitterField } from '../fx/leaves';
@@ -220,7 +222,10 @@ void main() {
   float keep = 1.0 - 0.4 * smoothstep(uDetail.x, uDetail.y, away);
   float fade = clamp((keep - aTuft.w) * 6.0, 0.0, 1.0);
   /** And a crown the camera has walked into is a gold wall across the whole view, so it thins out of the way. */
-  fade *= smoothstep(5.0, 17.0, away);
+  fade *= smoothstep(7.0, 19.0, away);
+  // Detached canopy cards used to produce another dense curtain on top of the individual leaves.
+  float shedKeep = 1.0 - smoothstep(${glsl(tuning.birches.shedClusterKeep - .08)}, ${glsl(tuning.birches.shedClusterKeep + .08)}, aTuft.w);
+  fade *= mix(1.0, shedKeep, smoothstep(0.0, .08, flight));
   if (fade <= 0.001) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
@@ -531,6 +536,8 @@ export class Swing {
   /** 0 empty, 1 with the child on it: a loaded swing is slower and takes more pushing. */
   rider = 0;
   braking = false;
+  invited = false;
+  brushAge = Infinity;
   length = 3.6;
   private readonly seatLocal = new THREE.Vector3();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -538,17 +545,17 @@ export class Swing {
   constructor(pivot: THREE.Vector3, ground: number, subject: THREE.Vector4) {
     this.pivot.copy(pivot);
     this.length = Math.max(2.2, pivot.y - ground - 0.55);
-    const seat = new THREE.BoxGeometry(1.0, 0.1, 0.36).translate(0, -this.length, 0);
+    const seat = new THREE.BoxGeometry(1.25, 0.12, 0.42).translate(0, -this.length, 0);
     const rope = (side: number): THREE.BufferGeometry =>
-      log(new THREE.Vector3(side * 0.44, 0.1, 0), new THREE.Vector3(side * 0.46, -this.length, 0), 0.03, 0.026, 5);
+      log(new THREE.Vector3(side * 0.44, 0.1, 0), new THREE.Vector3(side * 0.46, -this.length, 0), 0.045, 0.038, 7);
     const paint = (colour: string): THREE.ShaderMaterial =>
       new THREE.ShaderMaterial({
         vertexShader: PLAIN_VERT,
         fragmentShader: ROPE_FRAG,
         uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color(colour) }, uSubject: { value: subject } },
       });
-    const wood = paint('#8a6a42');
-    const cord = paint('#c9b48a');
+    const wood = paint('#705030');
+    const cord = paint('#725b3c');
     this.group.add(new THREE.Mesh(seat, wood));
     this.group.add(new THREE.Mesh(mergeGeometries([rope(1), rope(-1)]), cord));
     this.group.position.copy(pivot);
@@ -560,7 +567,19 @@ export class Swing {
     return out.set(this.pivot.x, this.pivot.y - this.length * Math.cos(this.angle), this.pivot.z + this.length * Math.sin(this.angle));
   }
 
+  brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
+    if ((!this.invited && !this.rider) || input.muted || !input.present || input.gust < 1.4) return;
+    const seat = this.seat(this.seatLocal);
+    const touch = screenBrush(camera, seat, input.prevNdc, input.ndc, .25);
+    if (touch < .01) return;
+    this.brushAge = 0;
+    wind.addSplat({ ax: seat.x, az: seat.z, bx: seat.x, bz: seat.z,
+      vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
+      radius: 3, energy: Math.min(.8, input.gust / 20) * Math.sqrt(touch), lift: 0, swirl: 0 });
+  }
+
   update(dt: number, wind: WindField): void {
+    this.brushAge += dt;
     const seat = this.seat(this.seatLocal);
     const w = wind.sample(seat.x, seat.z, this.air);
     const load = 1 + this.rider * 0.8;
@@ -618,6 +637,7 @@ export class AutumnBirches {
     const rand = mulberry32(8821);
     const variants = [grow(rand, false), grow(rand, false), grow(rand, false), grow(rand, false), grow(rand, true)];
     this.place(rand);
+    this.scarf.setTrees(this.trees);
 
     const width = Math.max(this.trees.length, 1);
     this.table = new Float32Array(width * 3 * 4);
@@ -670,6 +690,25 @@ export class AutumnBirches {
       log(new THREE.Vector3(hook.x + 1.5, hook.y + 0.65, hook.z - 0.35), new THREE.Vector3(hook.x + 1.1, hook.y + 1.95, hook.z - 0.6), 0.075, 0.025, 6),
     ]);
     this.objects.push(new THREE.Mesh(branch, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared })));
+
+    const stump = this.scarf.stump, base = new THREE.Vector3(stump.x, Math.max(0, heightAt(stump.x, stump.z)), stump.z);
+    const top = base.clone().add(new THREE.Vector3(0, stump.height, 0));
+    const stumpGeo = log(base, top, stump.radius, stump.radius * .82, 12);
+    const broken = (x: number, z: number) => .07 * Math.sin(Math.atan2(z - top.z, x - top.x) * 5 + .4);
+    const barkPosition = stumpGeo.attributes.position;
+    for (let i = 0; i < barkPosition.count; i++) if (barkPosition.getY(i) > top.y - .01)
+      barkPosition.setY(i, top.y + broken(barkPosition.getX(i), barkPosition.getZ(i)));
+    stumpGeo.computeVertexNormals();
+    const stumpVert = PLAIN_VERT.replace('out vec3 vWorld;', 'uniform float uBase;\nout float vUp;\nout vec3 vWorld;')
+      .replace('vWorld = w.xyz;', 'vWorld = w.xyz; vUp = (w.y - uBase) / 16.0;');
+    this.objects.push(new THREE.Mesh(stumpGeo, new THREE.ShaderMaterial({ vertexShader: stumpVert,
+      fragmentShader: TRUNK_FRAG, uniforms: { ...shared, uBase: { value: base.y } } })));
+    const cut = new THREE.CircleGeometry(stump.radius * .82, 12).rotateX(-Math.PI / 2).translate(top.x, top.y + .003, top.z);
+    const cutPosition = cut.attributes.position;
+    for (let i = 1; i < cutPosition.count; i++) cutPosition.setY(i, top.y + .003 + broken(cutPosition.getX(i), cutPosition.getZ(i)));
+    cut.computeVertexNormals();
+    this.objects.push(new THREE.Mesh(cut, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: ROPE_FRAG,
+      uniforms: { ...shared, uPaint: { value: new THREE.Color('#c9a471') } } })));
 
     this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants), this.wade);
     this.objects.push(this.leaves.mesh);
@@ -789,6 +828,7 @@ export class AutumnBirches {
       }
     }
     for (const s of SCARF_SNAGS) {
+      if (s.kind === 'unwind' || s.kind === 'pull') continue;
       this.trees.push({ x: s.treeX, y: heightAt(s.treeX, s.treeZ) - 0.25, z: s.treeZ, scale: 16, yaw: 0.4, variant: 1, strip: 0, shed: 0 });
     }
     for (const s of SCARF_PERCHES) {

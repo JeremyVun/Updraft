@@ -4,6 +4,7 @@ import { PianoStrings, moodScale } from '../audio/audio';
 import type { AudioOut } from '../creatures/voices';
 import { KeyLine } from '../fx/keyline';
 import { NoteTraces } from '../fx/notetraces';
+import { PianoWave } from '../fx/piano-wave';
 import type { LifeField } from './life';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
@@ -12,6 +13,8 @@ import { meadowPoint } from './heightfield';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
 import { WINDOW } from './window';
+import type { PointerInput } from '../input/pointer';
+import { PianoStroke } from './piano-stroke';
 
 /**
  * An upright piano standing in the meadow grass with nobody at it, which the wind plays. It is another piece of
@@ -24,11 +27,11 @@ import { WINDOW } from './window';
  * Where it stands: on the walk itself, a minute up from the top of the bank, in the one patch of the island that
  * is not asleep. Nobody can miss it, because the way on goes through it.
  */
-export const PLACE = meadowPoint(-18, -740);
+export const PLACE = meadowPoint(-40, -830);
 /** How far the colour round it reaches while the island is still grey, and how soft that edge is. */
-export const PATCH = { radius: 19, soft: 9 };
+export const PATCH = { radius: tuning.piano.initialRadius, soft: tuning.piano.initialSoft };
 /** Turned toward the camera, which looks north from a little east of south, so the keys face the walk. */
-const YAW = 0.34;
+const YAW = -0.12;
 
 const WIDTH = 1.85;
 const DEPTH = 0.72;
@@ -301,9 +304,10 @@ export class Piano {
   private readonly strings = new PianoStrings();
   /** The wind line that shows which way along the keys a phrase went, and where it runs. */
   private readonly line = new KeyLine();
-  private readonly path = (t: number, out: THREE.Vector3): THREE.Vector3 => this.alongKeys(t, out);
+  private readonly path = (t: number, out: THREE.Vector3): THREE.Vector3 => this.guideAlong(t, out);
   /** What every note does to the meadow: a trace off its key and colour where it runs. */
   private readonly traces = new NoteTraces();
+  readonly wave = new PianoWave();
   private readonly back = new THREE.Vector2();
   private readonly keyAt = new THREE.Vector3();
   private level = 0;
@@ -318,7 +322,21 @@ export class Piano {
    * The notes the player's next sweep finds if it goes the way they go, as steps of the scale: while this is set,
    * a gust along the keys that way plays them rather than a run of its own, and `matched` counts it.
    */
-  expect: number[] | null = null;
+  private expected: number[] | null = null;
+  readonly gesture = new PianoStroke();
+  private playedSteps = 0;
+  private readonly guideA = new THREE.Vector3();
+  private readonly guideB = new THREE.Vector3();
+  engaged = false;
+  finale = false;
+  performedAt = -1000;
+  performedKey = 0.5;
+  get expect(): number[] | null { return this.expected; }
+  set expect(notes: number[] | null) {
+    this.expected = notes;
+    this.gesture.reset();
+    this.playedSteps = 0;
+  }
   private stroke: THREE.Vector2 | null = null;
   matched = 0;
 
@@ -346,7 +364,7 @@ export class Piano {
       }),
     );
     /** The streak is built in world coordinates and drawn there, so the group's own transform never reaches it. */
-    this.group.add(shell, keys, this.line.batch.mesh, this.traces.batch.mesh);
+    this.group.add(shell, keys, this.line.batch.mesh, this.traces.batch.mesh, this.wave.batch.mesh);
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
     /** The way up the hill behind the case, which is where every note goes. */
@@ -399,6 +417,14 @@ export class Piano {
     return this.local(THREE.MathUtils.clamp(t - 0.5, -0.5, 0.5) * (WIDTH - 0.12), KEY_Y + 0.05, KEY_BACK + KEY_LEN * 0.6, out);
   }
 
+  /** Drawing and input share this generous path over the whole keyboard. */
+  guideAlong(t: number, out: THREE.Vector3): THREE.Vector3 {
+    this.local((t - 0.5) * (WIDTH - 0.12) * tuning.piano.guideSpan, KEY_Y + 0.05,
+      KEY_BACK + KEY_LEN * 0.6, out);
+    out.y += tuning.piano.guideOver;
+    return out;
+  }
+
   /** What a key that far along the keyboard sounds, so a walker's feet and the notes under them agree. */
   noteAlong(t: number): number {
     return LOW_MIDI + Math.round(THREE.MathUtils.clamp(t, 0, 1) * (KEY_COUNT - 1));
@@ -434,9 +460,9 @@ export class Piano {
   }
 
   /** `stroke` is the way the player's own wind is going right now, if they are making any: truer than the air over the keys, which the breeze is in too. */
-  update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null, stroke: THREE.Vector2 | null = null, life: LifeField | null = null): void {
+  update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null, input: PointerInput | null = null, life: LifeField | null = null): void {
     this.now = time;
-    this.stroke = stroke;
+    this.stroke = input && input.present && input.gust > tuning.pointer.minGust ? input.gustDir : null;
     this.strings.setOutput(out);
     const reach = camera.position.distanceTo(this.keys);
     this.group.visible = reach < 240;
@@ -444,13 +470,45 @@ export class Piano {
     this.traces.update(dt, wind, life);
 
     const { heardWithin, heardFully, dipRelease } = tuning.piano;
-    this.level = 1 - THREE.MathUtils.smoothstep(reach, heardFully, heardWithin);
-    if (this.level > 0 && this.inWindow()) this.listen(wind);
+    this.level = this.engaged ? 1 : 1 - THREE.MathUtils.smoothstep(reach, heardFully, heardWithin);
+    if (this.engaged) { if (input) this.answer(input, camera); }
+    else if (this.level > 0 && this.inWindow()) this.listen(wind);
     this.fire();
-    this.line.update(dt, time, this.path);
+    const direction = this.expect ? Math.sign(this.expect[this.expect.length - 1] - this.expect[0]) : 0;
+    this.line.update(dt, time, this.path, camera, direction, this.gesture.progress);
 
     const fade = dt / dipRelease;
     for (let i = 0; i < KEY_COUNT; i++) this.dip[i] = Math.max(0, this.dip[i] - fade);
+  }
+
+  private answer(input: PointerInput, camera: THREE.Camera): void {
+    const notes = this.expect;
+    if (!notes || !input.present || input.muted || input.ndc.equals(input.prevNdc)) return;
+    const forward = notes[notes.length - 1] > notes[0];
+    this.guideAlong(forward ? 0 : 1, this.guideA).project(camera);
+    this.guideAlong(forward ? 1 : 0, this.guideB).project(camera);
+    if (this.guideA.z > 1 || this.guideB.z > 1) return;
+    const aspect = camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1;
+    const ax = this.guideA.x * aspect * 0.5, ay = this.guideA.y * 0.5;
+    const dx = (this.guideB.x - this.guideA.x) * aspect * 0.5, dy = (this.guideB.y - this.guideA.y) * 0.5;
+    const length2 = dx * dx + dy * dy;
+    if (length2 < 0.0001) return;
+    const px = input.prevNdc.x * aspect * 0.5 - ax, py = input.prevNdc.y * 0.5 - ay;
+    const qx = input.ndc.x * aspect * 0.5 - ax, qy = input.ndc.y * 0.5 - ay;
+    const previous = (px * dx + py * dy) / length2, current = (qx * dx + qy * dy) / length2;
+    const distance = Math.max(Math.abs(px * dy - py * dx), Math.abs(qx * dy - qy * dx)) / Math.sqrt(length2);
+    const before = this.gesture.progress;
+    const progress = this.gesture.step(previous, current, distance, tuning.piano.guideTolerance);
+    if (progress <= before) return;
+    for (const slot of this.queue) if (slot.source === 'dream') slot.active = false;
+    while (this.playedSteps < notes.length && progress >= (this.playedSteps + 0.45) / notes.length) {
+      this.play(this.pool[notes[this.playedSteps++]], tuning.piano.answerVelocity, 'gust');
+    }
+    if (progress >= 1) {
+      this.matched++;
+      this.expect = null;
+      this.runUntil = this.now + 0.5;
+    }
   }
 
   /** The wind readback only covers a window around the camera; outside it a sample is the window's edge. */
@@ -467,10 +525,10 @@ export class Piano {
     const energy = w.energy;
 
     /** While it is waiting for an answer it listens harder: an unhurried sweep along the keys is an answer too. */
-    const from = this.expect ? t.gustFrom * t.answerEase : t.gustFrom;
+    const from = t.gustFrom;
     const stroke = this.stroke;
     const along = stroke ? stroke.x * this.axis.x + stroke.y * this.axis.y : (w.x * this.axis.x + w.z * this.axis.y) / Math.max(speed, 1e-4);
-    if (energy > from && energy > this.prevEnergy + 0.004 && (speed > 3 || (this.expect !== null && stroke !== null)) && this.now > this.runUntil) {
+    if (energy > from && energy > this.prevEnergy + 0.004 && speed > 3 && this.now > this.runUntil) {
       this.run(THREE.MathUtils.clamp((energy - from) / (t.gustFull - from), 0, 1), along, speed);
     }
     this.prevEnergy = energy;
@@ -500,21 +558,6 @@ export class Piano {
     const crossing = Math.min(1, Math.abs(along) * 2.2);
     const count = Math.round(THREE.MathUtils.lerp(t.runLeast, t.runMost, strength * (0.45 + 0.55 * crossing)));
     const dir = along >= 0 ? 1 : -1;
-    const tune = this.expect;
-    if (tune && crossing > 0.3 && Math.sign(tune[tune.length - 1] - tune[0]) === dir) {
-      /** The right way along the keys: the wind finds the tune, not just any notes, and the player has played it. */
-      let at = this.now;
-      const spacing = THREE.MathUtils.lerp(t.spaceSlow, t.spaceFast, Math.min(1, strength * 0.5)) * 1.5;
-      for (const step of tune) {
-        this.schedule(at, this.pool[THREE.MathUtils.clamp(step, 0, this.pool.length - 1)], 0.38 + 0.3 * strength, 'gust');
-        at += spacing;
-      }
-      this.runUntil = at + 0.25;
-      this.matched++;
-      /** Their own wind played it back: the line lets go of the keys and goes up, and the island answers. */
-      this.line.flourish();
-      return;
-    }
     const room = this.pool.length - count;
     /** It starts where the gust comes in: low notes if it is going up the keys, high ones if it is coming down. */
     const bias = Math.pow(this.rand(), 1.5) * room * 0.8;
@@ -565,14 +608,19 @@ export class Piano {
   private play(midi: number, velocity: number, source: Source): void {
     const key = midi - LOW_MIDI;
     if (key >= 0 && key < KEY_COUNT) this.dip[key] = 1;
-    /**
-     * The wind is shown on the phrase the piano asks and on the sweep that answers it, and on nothing else: the
-     * whole tune played at the end runs up and down the keys too fast for a line to be anything but a scribble.
-     */
-    if (this.expect !== null && (source === 'dream' || source === 'gust')) this.line.aim(key / (KEY_COUNT - 1));
-    /** And every note, whoever sounded it, goes up the hill as a trace and leaves colour where it runs. */
-    if (key >= 0 && key < KEY_COUNT) {
-      this.traces.spawn(this.alongKeys(key / (KEY_COUNT - 1), this.keyAt), this.back, key / (KEY_COUNT - 1), THREE.MathUtils.clamp(velocity * 2, 0.25, 1));
+    /** Only earned notes carry colour; the quiet demonstration stays at the keys. */
+    if (key >= 0 && key < KEY_COUNT && (source !== 'dream' || this.finale)) {
+      const step = this.pool.indexOf(midi);
+      const notes = this.expect;
+      const pitch = source === 'gust' && notes
+        ? (step - Math.min(...notes)) / Math.max(1, Math.max(...notes) - Math.min(...notes))
+        : key / (KEY_COUNT - 1);
+      this.traces.spawn(this.alongKeys(key / (KEY_COUNT - 1), this.keyAt), this.back, pitch,
+        THREE.MathUtils.clamp(velocity * 2, 0.25, 1), source === 'gust' || this.finale);
+    }
+    if (source !== 'breeze' && source !== 'bird') {
+      this.performedAt = this.now;
+      this.performedKey = key / (KEY_COUNT - 1);
     }
     this.lastPlayed = this.now;
     if (source === 'gust' || source === 'lift') this.lastGesture = this.now;

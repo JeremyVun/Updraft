@@ -240,7 +240,8 @@ export class HomeChapter implements Chapter {
   private coaxFrom = 0;
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
 
-  constructor(private readonly cast: Cast) {
+  constructor(private readonly cast: Cast, private readonly duskFloor = 0.85) {
+    this.dusk = this.duskTarget = duskFloor;
     cast.cygnet.mayFly = true;
     const { child, plane } = cast;
     plane.homeRadius = 70;
@@ -364,7 +365,8 @@ export class HomeChapter implements Chapter {
     } else {
       this.updateEnding(dt);
     }
-    this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    this.dusk = Math.max(this.dusk, this.duskFloor);
+    this.dusk += (Math.max(this.duskFloor, this.duskTarget) - this.dusk) * (1 - Math.exp(-dt * 0.22));
     const staged = this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered';
     if (!staged) this.hush += (this.hushFor - this.hush) * (1 - Math.exp(-dt * 0.5));
     if (p.held) p.hold(c);

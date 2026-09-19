@@ -104,6 +104,13 @@ export class Glider {
    */
   readonly home = new THREE.Vector3(-6, 0, -14);
   homeRadius = 50;
+  /** Optional walking companion. The chapter clears this for authored scenes and sailing. */
+  companion: THREE.Vector3 | null = null;
+  private waiting = false;
+  private waitBlend = 0;
+  private turnSide = 1;
+  /** A chapter may offer a landing surface over water; null keeps the shared terrain and sea behaviour. */
+  landingGround: ((x: number, z: number) => number | null) | null = null;
   /** False while it is down on the water, where the child cannot go and fetch it. */
   private aground = true;
   private readonly body: THREE.Mesh;
@@ -226,6 +233,8 @@ export class Glider {
     const size = this.held ? tuning.paperCarry.scale : SCALE;
     this.body.scale.setScalar(THREE.MathUtils.lerp(this.body.scale.x, size, 1 - Math.exp(-dt * tuning.paperCarry.sizeRate)));
     if (this.held) {
+      this.waiting = false;
+      this.waitBlend = 0;
       this.placeHeld();
       return;
     }
@@ -233,7 +242,7 @@ export class Glider {
     const p = this.position;
     const v = this.velocity;
     const w = this.wind.sample(p.x, p.z, this.sample);
-    const ground = heightAt(p.x, p.z);
+    const ground = this.landingGround?.(p.x, p.z) ?? heightAt(p.x, p.z);
     const surface = Math.max(ground, 0);
     const clearance = ground > GRASS_LINE ? 1.8 : 0.45;
     const floor = surface + clearance;
@@ -270,6 +279,27 @@ export class Glider {
       gx /= n;
       gz /= n;
     }
+    const escort = this.companion && !this.departing ? this.companion : null;
+    const guide = tuning.meadowPlane;
+    if (escort) {
+      const gap = Math.hypot(p.x - escort.x, p.z - escort.z);
+      if (!this.waiting && gap > guide.waitAt) {
+        this.waiting = true;
+        // Keep the same side through a waiting turn; no alternating left/right corrections.
+        this.turnSide = fx * dz - fz * dx >= 0 ? 1 : -1;
+      } else if (gap < guide.resumeAt) this.waiting = false;
+      this.waitBlend += ((this.waiting ? 1 : 0) - this.waitBlend) * (1 - Math.exp(-dt * guide.turnRate));
+      const hx = this.home.x - escort.x, hz = this.home.z - escort.z;
+      const length = Math.hypot(hx, hz) || 1;
+      const tx = dx - hz / length * guide.turnWidth * this.turnSide;
+      const tz = dz + hx / length * guide.turnWidth * this.turnSide;
+      const turn = Math.hypot(tx, tz) || 1;
+      gx += (tx / turn - gx) * this.waitBlend;
+      gz += (tz / turn - gz) * this.waitBlend;
+    } else {
+      this.waiting = false;
+      this.waitBlend = 0;
+    }
     v.x += (w.x + gx * glide - v.x) * (1 - Math.exp(-dt * grip));
     v.z += (w.z + gz * glide - v.z) * (1 - Math.exp(-dt * grip));
     const vyTarget = resting ? 0 : liftForce - 2.4;
@@ -298,7 +328,8 @@ export class Glider {
         v.z -= ((p.z - this.home.z) / r) * 3.2 * dt;
       }
     }
-    if (p.y > 32 && !this.departing) v.y -= (p.y - 32) * dt * 1.5;
+    // Walking flight uses the companion-relative ceiling below, even on the high meadow slopes.
+    if (p.y > 32 && !this.departing && !escort) v.y -= (p.y - 32) * dt * 1.5;
     for (const o of this.obstacles) {
       const d = this.scratch.subVectors(p, o.centre);
       const len = d.length();
@@ -306,8 +337,31 @@ export class Glider {
       if (len < reach && len > 1e-3) v.addScaledVector(d, ((reach - len) / len) * dt * 6);
     }
 
+    if (escort) {
+      // Spill only the outward part of a gust. Sideways play and lift remain responsive.
+      // This bounds velocity, not position: even an old far-away save flies home continuously.
+      const ex = p.x - escort.x, ez = p.z - escort.z;
+      const gap = Math.hypot(ex, ez);
+      if (gap > guide.brakeFrom) {
+        const radial = (v.x * ex + v.z * ez) / gap;
+        const brake = THREE.MathUtils.smoothstep(gap, guide.brakeFrom, guide.reach);
+        const limit = guide.outwardSpeed * (1 - brake)
+          - guide.returnSpeed * THREE.MathUtils.smoothstep(gap, guide.waitAt, guide.reach);
+        if (radial > limit) {
+          v.x += ex / gap * (limit - radial);
+          v.z += ez / gap * (limit - radial);
+        }
+      }
+      const high = p.y - escort.y;
+      if (high > guide.heightBrake) {
+        const brake = THREE.MathUtils.smoothstep(high, guide.heightBrake, guide.height);
+        v.y = Math.min(v.y, guide.riseSpeed * (1 - brake)
+          - guide.returnSpeed * THREE.MathUtils.smoothstep(high, guide.height, guide.height + guide.heightBrake));
+      }
+    }
+
     p.addScaledVector(v, dt);
-    const newFloor = Math.max(heightAt(p.x, p.z), 0) + clearance;
+    const newFloor = Math.max(this.landingGround?.(p.x, p.z) ?? heightAt(p.x, p.z), 0) + clearance;
     if (p.y < newFloor) {
       p.y += (newFloor - p.y) * (1 - Math.exp(-dt * 12));
       if (v.y < 0) v.y *= 0.3;

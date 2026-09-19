@@ -157,6 +157,8 @@ export class WoodChapter implements Chapter {
     return this.beat === 'ashore' || this.beat === 'found' || this.beat === 'push' || this.beat === 'aboard';
   }
 
+  get departureKite(): boolean { return ['dry', 'out', 'toBoat', 'push', 'aboard'].includes(this.beat); }
+
   get done(): boolean {
     return this.beat === 'aboard';
   }

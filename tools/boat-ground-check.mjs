@@ -20,6 +20,7 @@ globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { Boat } = await import('../src/traveller/boat.ts');
 const { CrossingChapter } = await import('../src/story/crossing.ts');
 const { DrownedChapter } = await import('../src/story/drowned.ts');
+const { BOATS_BERTH } = await import('../src/world/little-boats-layout.ts');
 const { ROUTES } = await import('../src/story/journey.ts');
 const { BOAT_BERTH } = await import('../src/story/island.ts');
 const { LINES_BERTH } = await import('../src/story/lines.ts');
@@ -74,18 +75,27 @@ for (const [name, at, yaw] of berths) {
   let worst=clearance(b);
   for(let i=0;i<120;i++){b.update(1/60,i/60);worst=Math.min(worst,clearance(b));}
   record(`${name} berth`,worst,{position:b.position.toArray()});
+  if(name==='lines') {
+    const beside=b.boardingPoint(new THREE.Vector3());
+    assert(heightAt(beside.x,beside.z)>0,'secret shore boarding point must be on dry sand');
+    for(let step=0;step<=20;step++) {
+      const x=THREE.MathUtils.lerp(240,beside.x,step/20);
+      const z=THREE.MathUtils.lerp(-470,beside.z,step/20);
+      assert(heightAt(x,z)>0,'secret shore approach must not walk through water');
+    }
+  }
   if(name==='home')continue;
   b.canGround=false;b.launch();
   b.steerFor=new THREE.Vector2(b.position.x+b.pushDir.x*40,b.position.z+b.pushDir.y*40);worst=Infinity;
   for(let i=0;i<900;i++){b.update(1/60,i/60);if(i%10===0)worst=Math.min(worst,clearance(b));}
   record(`${name} launch`,worst);
 }
-const starts = { toLines:[16.5,29.5,0.95],toMeadow:[LINES_BERTH.x,LINES_BERTH.z,0.1],
+const starts = { toLines:[16.5,29.5,0.95],toBoats:[LINES_BERTH.x,LINES_BERTH.z,0.1],toMeadow:[BOATS_BERTH.x,BOATS_BERTH.z,Math.PI],
   toBirches:[FAR_SHORE.x,FAR_SHORE.z,0.2],toWood:[-14,-1614,Math.PI],
   toSleeping:[WOOD_BERTH.x,WOOD_BERTH.z,0.2],toHome:[SLEEP_BERTH.x-5,SLEEP_BERTH.z-2,-1.76] };
 for(const [name,start] of Object.entries(starts)) for(const gust of [0,8]) {
   const cast=fixture(gust),b=cast.boat;b.beach(...start);b.launch();
-  const c=new CrossingChapter(cast,{route:ROUTES[name],...(name==='toHome'?{moor:HOME_MOORING}:{})});
+  const c=new CrossingChapter(cast,{route:ROUTES[name],arrivalSpeed:name==='toMeadow'?tuning.sail.meadowArrivalSpeed:undefined,...(name==='toHome'?{moor:HOME_MOORING}:{})});
   let worst=Infinity,reached=false;
   for(let i=0;i<600*60;i++) {
     c.update(1/60);b.update(1/60,i/60);

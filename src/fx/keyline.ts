@@ -1,70 +1,55 @@
 import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { RibbonBatch, type Ribbon } from './ribbons';
+import { windPen } from './wind-gesture';
 
-/** How many lengths the streak is drawn from: a keyboard's worth of travel and no more. */
-const POINTS = 40;
-
-/**
- * The wind showing the way along a keyboard. A pale streak runs with the notes as they sound — up the keys for a
- * rising phrase, back down for a falling one — and when the phrase is answered it lets go and blows away. It is
- * drawn in the same grammar as every other wind the player sees, so nothing here is a mark or an arrow.
- */
+const POINTS = 49;
+/** A path that stays while listening, with air repeatedly demonstrating its direction. */
 export class KeyLine {
-  readonly batch = new RibbonBatch(POINTS, '#fffaf0');
-  private readonly ribbon: Ribbon = { points: [], alpha: 0, width: 0 };
-  private readonly spare: THREE.Vector3[] = [];
-  private readonly at = new THREE.Vector3();
-  /** Where the streak has got to along the keys, and the key that is sounding now. */
-  private head = 0;
-  private want = 0;
-  private aimed = -1e3;
+  readonly batch = new RibbonBatch(POINTS * 4, '#fff4dd', 1, false, tuning.invitation.lightFloor);
+  private readonly ribbon: Ribbon = { points: Array.from({ length: POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0 };
+  private readonly sweep: Ribbon = { points: Array.from({ length: POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0 };
+  private readonly answer: Ribbon = { points: Array.from({ length: POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0 };
+  private readonly centre = new THREE.Vector3();
+  private readonly start = new THREE.Vector3();
+  private readonly right = new THREE.Vector3();
+  private readonly up = new THREE.Vector3();
+  private readonly marker: Ribbon = { points: Array.from({ length: POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0 };
   private shown = 0;
-  private blown = 0;
-  private now = 0;
+  private since = 0;
+  private direction = 0;
 
-  /** The key that is sounding, from the bottom note to the top. The line runs to it while the notes keep coming. */
-  aim(t: number): void {
-    if (this.now - this.aimed > tuning.piano.lineHolds) {
-      this.head = t;
-      this.blown = 0;
-    }
-    this.want = t;
-    this.aimed = this.now;
-  }
-
-  /** The phrase came back. The line lets go of the keys and the wind has it. */
-  flourish(): void {
-    this.blown = 1;
-  }
-
-  update(dt: number, time: number, along: (t: number, out: THREE.Vector3) => THREE.Vector3): void {
-    this.now = time;
+  update(dt: number, time: number, along: (t: number, out: THREE.Vector3) => THREE.Vector3,
+    camera: THREE.Camera, direction: number, progress: number): void {
+    if (direction !== this.direction) { this.since = time; this.direction = direction; }
+    this.shown += ((direction ? 1 : 0) - this.shown) * (1 - Math.exp(-dt * 5));
+    this.batch.mesh.visible = this.shown > 0.005;
+    if (!this.batch.mesh.visible) return;
     const t = tuning.piano;
-    const live = time - this.aimed < t.lineHolds;
-    const points = this.ribbon.points;
-    this.head += (this.want - this.head) * (1 - Math.exp(-dt * t.lineChases));
-    this.shown += ((live ? 1 : 0) - this.shown) * (1 - Math.exp(-dt * (live ? 7 : 1.4)));
-    /** Everything already laid down floats off the keys, and faster once the phrase has been played back. */
-    const rise = (t.lineRise + t.lineBlown * this.blown) * dt;
-    for (const p of points) p.y += rise;
-
-    if (live) {
-      along(this.head, this.at);
-      /** Laid a little over the keys, and never quite steady, because it is air and not a line drawn on them. */
-      this.at.y += t.lineOver + Math.sin(time * 4.3 + this.head * 11) * 0.012;
-      const last = points[points.length - 1];
-      if (!last || last.distanceTo(this.at) > 0.03) points.push((this.spare.pop() ?? new THREE.Vector3()).copy(this.at));
-      else last.copy(this.at);
-      while (points.length > POINTS) this.spare.push(points.shift()!);
-    } else if (points.length > 0) {
-      /** It dissolves from the tail, the way a wind line does, so the last of it is where the phrase ended. */
-      this.spare.push(points.shift()!);
+    const phase = ((time - this.since) % t.guideCycle) / t.guideSweep;
+    const head = Math.min(1, phase);
+    const pen = windPen(camera, along(0.5, this.centre), t.linePen);
+    this.ribbon.alpha = this.shown * 0.65;
+    this.ribbon.width = pen * 0.45;
+    this.sweep.alpha = this.shown * (1 - THREE.MathUtils.smoothstep(phase, 1, 1.3));
+    this.sweep.width = pen;
+    this.answer.alpha = this.shown * (progress > 0 ? 0.95 : 0);
+    this.answer.width = pen * 0.8;
+    along(direction < 0 ? 1 : 0, this.start);
+    this.right.setFromMatrixColumn(camera.matrixWorld, 0);
+    this.up.setFromMatrixColumn(camera.matrixWorld, 1);
+    this.marker.alpha = this.shown * (progress < 0.05 ? 0.75 + Math.sin(time * 3) * 0.15 : 0);
+    this.marker.width = pen * 0.45;
+    for (let i = 0; i < POINTS; i++) {
+      const f = i / (POINTS - 1);
+      along(f, this.ribbon.points[i]);
+      const demonstration = Math.max(0, head - (1 - f) * 0.28);
+      along(direction < 0 ? 1 - demonstration : demonstration, this.sweep.points[i]);
+      along(direction < 0 ? 1 - f * progress : f * progress, this.answer.points[i]);
+      this.marker.points[i].copy(this.start)
+        .addScaledVector(this.right, Math.cos(f * Math.PI * 2) * pen * 1.8)
+        .addScaledVector(this.up, Math.sin(f * Math.PI * 2) * pen * 1.8);
     }
-
-    this.ribbon.alpha = this.shown * t.lineAlpha * (1 - 0.35 * this.blown);
-    this.ribbon.width = t.linePen;
-    this.batch.mesh.visible = points.length > 1 && this.ribbon.alpha > 0.004;
-    if (this.batch.mesh.visible) this.batch.update([this.ribbon]);
+    this.batch.update([this.ribbon, this.sweep, this.answer, this.marker]);
   }
 }

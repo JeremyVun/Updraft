@@ -44,6 +44,7 @@ uniform float uNudge;
 uniform float uBlink;
 uniform float uFold;
 uniform float uDown;
+uniform float uBandage;
 uniform float uRuffle;
 uniform vec3 uFlow;
 uniform vec3 uLay;
@@ -94,7 +95,8 @@ void main() {
   /** How much of the coat is still standing: strands are too fine to survive the pixel grid from far off. */
   vFade = 1.0 - smoothstep(${DOWN_NEAR.toFixed(1)}, ${DOWN_FAR.toFixed(1)}, distance(cameraPosition, world));
 #ifdef SHELL
-  float len = uDown * downLength(position) * vFade;
+  float covered = smoothstep(0.13, 0.145, position.x) * (1.0 - smoothstep(0.28, 0.295, position.x));
+  float len = uDown * downLength(position) * vFade * (1.0 - uBandage * covered * 0.96);
   float ruffle = 1.0 + uRuffle * sin(uTime * 6.5 + dot(position, vec3(41.0, 23.0, 31.0)));
   /** Sleeked down lies one way — back along the bird — rather than merely shortening, which is what reads as slick. */
   vec3 lay = uLay * (len * aShell);
@@ -255,7 +257,7 @@ void main() {
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
     vec3 lamp = lampLight(vWorld, N);
     /** Under weight: a bird that takes the lamp as fully as the linen does outshines the bed it is lying on. */
-    col += alb * lamp * pow(lampSide, 3.0) * 0.75;
+    col += alb * lamp * (0.28 + 0.72 * lampSide) * 0.75;
 #ifdef SHELL
     /** Absolute light, so it is what pales the coat: enough to fur the edge of it on the lamp side and no more. */
     col += lamp * lampSide * pow(1.0 - clamp(dot(N, normalize(cameraPosition - vWorld)), 0.0, 1.0), 2.0) * 0.15;
@@ -315,6 +317,7 @@ export function cygnetMaterial(bones: THREE.Matrix4[]): THREE.ShaderMaterial {
     uBlink: { value: 0 },
     uFold: { value: 1 },
     uDown: { value: DOWN },
+    uBandage: { value: 0 },
     uFlow: { value: new THREE.Vector3(0, -0.3, 0) },
     uLay: { value: new THREE.Vector3() },
     uRuffle: { value: 0 },

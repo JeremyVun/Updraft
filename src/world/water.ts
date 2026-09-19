@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
+import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
+import { LITTLE_BOATS_GLSL } from './little-boats-layout';
 import { params } from '../params';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -55,9 +58,11 @@ function seaGrid(segments: number): THREE.BufferGeometry {
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
+${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
+${MIRROR_LAYOUT_GLSL}
 vec3 surfaceShift(vec2 p, float distanceToCamera) {
-  return swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera), 0.0);
+  return (swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera) + boatsWaterBase(p) + boatsRipple(p, uTime), 0.0)) * (1.0 - mirrorWater(p));
 }
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
@@ -81,7 +86,10 @@ void main() {
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SURF_GLSL}
+${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
+${MIRROR_LAYOUT_GLSL}
+${MIRROR_RIPPLES_GLSL}
 uniform sampler2D uRipple;
 uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
@@ -215,9 +223,15 @@ void main() {
   float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
-  float depth = max(-ground, 0.0);
+  float poolLevel = boatsWaterBase(xz);
+  float pool = smoothstep(0.0, 0.3, poolLevel);
+  float depth = max(poolLevel - ground, 0.0);
   vec4 bedN = groundAt(xz);
   float offshore = mix(60.0, -shoreDistance(xz), inside);
+  if (pool > 0.0) {
+    float bankDistance = max(0.0, (1.08 - boatsOut(xz)) * boatsWidth(-548.0 - xz.y));
+    offshore = mix(offshore, bankDistance, pool);
+  }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
 
   /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
@@ -240,8 +254,8 @@ void main() {
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
-  if (offshore < 40.0) {
-    surf = surfWaves(xz, offshore, depth, surfBlur, fp);
+  if (offshore < 40.0 && pool < 0.99) {
+    surf = surfWaves(xz, offshore, depth, surfBlur, fp) * (1.0 - pool);
     swellAmp = 0.13 * uSeaState * smoothstep(4.5, 1.6, depth) * smoothstep(0.0, 1.5, offshore) * smoothstep(17.0, 5.0, offshore);
     vec2 toSea = -vec2(shoreDistance(xz + vec2(0.5, 0.0)) + offshore, shoreDistance(xz + vec2(0.0, 0.5)) + offshore) * 2.0;
     slope += toSea * surf.z * swellAmp;
@@ -259,7 +273,8 @@ void main() {
   float seen;
   vec3 mirror = mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0), seen);
   // Capped just above the open sky: the mirrored sun disc would bloom, and the glitter draws the sun instead.
-  vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen);
+  // The planar mirror lies at sea level; elevated pools reflect the sky rather than a displaced scene.
+  vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool));
   refl = mix(sky, refl, smoothstep(0.0, 2.5, offshore)) * (1.0 - 0.17 * rough - 0.18 * storm);
   // Facet masking dims a rough sea seen edge-on; capped, or a gust punches a hole of a different colour in it.
   float roughness = min(sqrt(sqrt(alpha2)), 0.42);
@@ -273,7 +288,7 @@ void main() {
     vec3 T = refract(-V, N, 0.75);
     float tDown = max(-T.y, 0.25);
     vec2 bedXZ = xz + T.xz / tDown * depth * 0.8;
-    float bedDepth = max(-mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
+    float bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
     float path = bedDepth / tDown;
 
     float grain = vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5;
@@ -336,6 +351,22 @@ void main() {
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
   col += harbourLight(vWorld) * (0.08 + 0.14 * F);
   col = applyFog(col, vWorld);
+  float glass = mirrorWater(xz);
+  if (glass > 0.001) {
+    vec2 ringSlope = mirrorSlope(xz);
+    vec3 mirrorNormal = normalize(vec3(-ringSlope.x, 1.0, -ringSlope.y));
+    vec3 ray = reflect(-V, mirrorNormal);
+    vec3 reflectedSky = skyRadiance(normalize(vec3(ray.x, abs(ray.y), ray.z)));
+    vec4 projected = uMirrorMatrix * vec4(vWorld, 1.0);
+    vec2 mirrorUv = projected.xy / projected.w + ringSlope * 0.12;
+    vec2 border = min(mirrorUv, 1.0 - mirrorUv);
+    float on = projected.w > 0.0 ? uMirrorOn * smoothstep(0.0, 0.025, min(border.x, border.y)) : 0.0;
+    vec3 reflectedScene = textureLod(uMirror, clamp(mirrorUv, 0.0, 1.0), min(3.0, length(ringSlope) * 24.0)).rgb;
+    vec3 glassColour = mix(reflectedSky, reflectedScene, on);
+    // A trace of cool water keeps the horizon legible without hiding the doubled clouds.
+    glassColour = glassColour * 0.96 + vec3(0.003, 0.006, 0.012);
+    col = mix(col, glassColour, glass);
+  }
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -362,6 +393,7 @@ export class Water {
         ...atmo.uniforms,
         ...surfUniforms,
         ...swellUniforms,
+        ...mirrorUniforms,
         uWaterWind: this.windWaves.uniform,
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
@@ -397,7 +429,9 @@ export class Water {
     /** Snapped to the even part of the grid, so the vertices carrying the swell never slide through it. */
     this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
     /** Where there is no mirror the sea must not read one: the last one drawn is a different room by now. */
-    const mirrored = !!params.mirror && camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT;
+    const onFlat = Math.hypot(camera.position.x - SKY_MIRROR.x, camera.position.z - SKY_MIRROR.z) < 240;
+    this.reflection.scale = onFlat ? (params.lite ? 0.5 : 0.75) : 0.25;
+    const mirrored = !!params.mirror && (onFlat || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
     (this.mesh.material as THREE.ShaderMaterial).uniforms.uMirrorOn.value = mirrored ? 1 : 0;
     if (!mirrored) return;
     if (this.frame++ % params.mirror) return;

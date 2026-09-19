@@ -23,6 +23,7 @@ const { CrossingChapter } = await import('../src/story/crossing.ts');
 const { LIGHTHOUSE } = await import('../src/world/drowned.ts');
 const { BIRCHES_BERTH } = await import('../src/world/birches.ts');
 const { roundedWaypoint } = await import('../src/traveller/navigation.ts');
+const { BOATS_BERTH } = await import('../src/world/little-boats-layout.ts');
 const { ROUTES } = await import('../src/story/journey.ts');
 const { LINES_BERTH } = await import('../src/story/lines.ts');
 const { FAR_SHORE } = await import('../src/story/meadow.ts');
@@ -93,14 +94,14 @@ for (const distance of [6, 20, 40]) {
 }
 assert(roundedWaypoint(8, -22, 0, 0, 0, -20, 5), 'passed within corridor');
 assert(!roundedWaypoint(30, -22, 0, 0, 0, -20, 5), 'must not skip from another channel');
-const starts = { toLines: [16.5,29.5,0.95], toMeadow: [LINES_BERTH.x,LINES_BERTH.z,0.1],
+const starts = { toLines: [16.5,29.5,0.95], toBoats: [LINES_BERTH.x,LINES_BERTH.z,0.1], toMeadow: [BOATS_BERTH.x,BOATS_BERTH.z,Math.PI],
   toBirches: [FAR_SHORE.x,FAR_SHORE.z,0.2], toWood: [-14,-1614,Math.PI],
   toSleeping: [-34,-1908,0.2], toHome: [-219.5,-1928,-1.76] };
 const crossings = [];
 for (const [name, start] of Object.entries(starts)) for (const gust of [0,8]) {
   const cast=fixture(gust), b=cast.boat;
   b.beach(...start); b.launch();
-  const c=new CrossingChapter(cast,{route:ROUTES[name],...(name==='toHome'?{moor:HOME_MOORING}:{})});
+  const c=new CrossingChapter(cast,{route:ROUTES[name],arrivalSpeed:name==='toMeadow'?tuning.sail.meadowArrivalSpeed:undefined,...(name==='toHome'?{moor:HOME_MOORING}:{})});
   let reached=false, lastLeg=0, turn=0, yaw=b.yaw, worst=0;
   for(let i=0;i<600*60;i++) {
     c.update(1/60); b.update(1/60,i/60);
@@ -110,6 +111,7 @@ for (const [name, start] of Object.entries(starts)) for (const gust of [0,8]) {
   }
   assert(reached, `crossing stranded: ${name}, gust ${gust}, leg ${c.leg}, position ${b.position.toArray()}`);
   assert(Math.max(worst,turn)<Math.PI*2, `circle on ${name}`);
+  if (name === 'toMeadow') assert(Math.abs(b.position.x - 10) < 12, `meadow landing missed hill path: gust=${gust}, position=${b.position.toArray()}`);
 }
 // Every cloud flash has one delayed report; leaving the storm does not schedule new flashes.
 const { StormWeather } = await import('../src/fx/storm.ts');
@@ -131,6 +133,20 @@ assert.equal(flashes.length,3);assert.equal(thunder.length,3);
 assert(flashes[0] >= 16, `early lightning: ${flashes[0]}`);
 for(let i=0;i<3;i++)assert(thunder[i]-flashes[i]>1.3&&thunder[i]-flashes[i]<1.9);
 assert.equal(atmo.uniforms.uLightning.value.w,0);
+// Shelter dims the light while preserving strike and thunder timing.
+const peaks = [];
+for (const scale of [1, tuning.wood.lightningScale]) {
+  let peak = 0, reports = 0;
+  const sheltered = new StormWeather(() => reports++);
+  for (let i = 0; i < 32 * 60; i++) {
+    applyPalette(1, 2, 1, 1);
+    sheltered.update(1 / 60, 1, Math.PI, scale);
+    peak = Math.max(peak, atmo.uniforms.uLightning.value.w);
+  }
+  peaks.push({ peak, reports });
+}
+assert(Math.abs(peaks[1].peak / peaks[0].peak - tuning.wood.lightningScale) < 0.005);
+assert.equal(peaks[1].reports, peaks[0].reports);
 // No lightning in dry weather or daylight, even if the storm timer is already overdue.
 for (const [dusk, rain] of [[1, 1], [2, 0]]) {
   let reports = 0;

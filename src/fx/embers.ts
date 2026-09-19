@@ -5,14 +5,15 @@ import { tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
+import { EMBER_ORB_GLSL } from './ember-orb';
+import { EmberVeils } from './ember-veils';
 
 const SPARKS = 300;
 const COALS = 10;
-const CHIPS = 9;
-const COUNT = SPARKS + COALS * CHIPS;
+const COUNT = SPARKS + COALS;
 /** How far from the child sparks are kept; any that get further away are quietly moved back in. */
 const RANGE = 34;
-/** Below this a spark is out, and anything brighter counts toward a light the child can follow. */
+/** Below this a spark slot may be reused. Sparks never supply puzzle light. */
 const LIT = 0.24;
 /** The most heat a spark woken out of bare litter can hold: cinders, never a fire on their own. */
 const CINDER = 0.3;
@@ -21,46 +22,48 @@ const VERT = /* glsl */ `
 in vec4 aSpark;
 in float aSize;
 in vec2 aShape;
+in vec4 aMotion;
 out vec2 vUv;
 out float vHeat;
 out vec3 vWorld;
 out vec2 vShape;
+out vec4 vMotion;
 void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  // A coal is a low splinter in a bed of ash; airborne sparks are long, fine flecks.
-  vec2 scale = mix(vec2(0.48, 1.25), vec2(1.0, 0.48), aShape.y);
+  vec2 scale = mix(vec2(0.45, 1.0), vec2(1.0), aShape.y);
   vWorld = aSpark.xyz + (right * position.x * scale.x + up * position.y * scale.y) * aSize;
   vUv = position.xy;
   vHeat = aSpark.w;
   vShape = aShape;
+  vec3 air = vec3(aMotion.x, 0.0, aMotion.y);
+  vMotion = vec4(dot(air, right), dot(air, up), aMotion.zw);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${EMBER_ORB_GLSL}
 in vec2 vUv;
 in float vHeat;
 in vec3 vWorld;
 in vec2 vShape;
+in vec4 vMotion;
 void main() {
-  float seed = vShape.x;
-  float coal = vShape.y;
-  float angle = seed + sin(uTime * 2.0 + seed) * (1.0 - coal) * 0.5;
-  vec2 q = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * vUv;
-  float edge = abs(q.x) * 0.85 + abs(q.y) * 1.2;
-  edge += coal * sin(q.x * 15.0 + seed) * sin(q.y * 11.0 - seed) * 0.1;
-  float body = 1.0 - smoothstep(0.48, 0.85, edge);
-  float crack = exp(-abs(q.y + sin(q.x * 8.0 + seed) * 0.13) * 32.0);
-  float heart = (1.0 - smoothstep(0.05, 0.58, length(q))) * 0.4 + crack * coal * 0.45;
-  float halo = exp(-dot(vUv, vUv) * 5.0) * 0.065;
-  float pulse = 0.88 + 0.12 * sin(uTime * (3.0 + seed * 0.2) + seed);
-  float a = (body * (0.6 + heart * 0.4) + halo) * min(vHeat, 1.0) * pulse;
+  if (vHeat < 0.004) discard;
+  vec4 glow;
+  if (vShape.y > 0.5) {
+    glow = emberOrb(vUv, vShape.x, vMotion.xy, vMotion.z, vMotion.w);
+  } else {
+    // Tiny tapered motes, with no square or diamond silhouette.
+    float r = length(vUv * vec2(1.0 + vUv.y * 0.25, 1.0));
+    float mote = exp(-r * r * 7.0) * (1.0 - smoothstep(0.65, 1.0, r));
+    glow = vec4(mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.75, 0.29), vHeat) * 1.9, mote);
+  }
+  float a = glow.a * vHeat;
   if (a < 0.004) discard;
-  vec3 col = mix(vec3(0.9, 0.1, 0.015), vec3(1.0, 0.48, 0.09), smoothstep(0.15, 0.95, vHeat));
-  col = mix(col, vec3(1.0, 0.78, 0.32), heart * smoothstep(0.4, 1.2, vHeat));
   vec4 f = fogOf(vWorld);
-  gl_FragColor = vec4(col * (1.2 + vHeat * 0.8) * (1.0 - f.a * 0.75), a);
+  gl_FragColor = vec4(glow.rgb * (1.0 - f.a * 0.75), a);
 }`;
 
 interface Spark {
@@ -72,8 +75,8 @@ interface Spark {
 }
 
 /**
- * One coal in the leaf litter: the thing the player blows on. Unlit it breathes a faint red, just enough to be
- * seen and gone for in the dark; a gust across it takes it, and then it burns down again unless it is fanned.
+ * One light-orb ember: a warm heart wrapped in breathing veils. Its visible centre is also its brush target.
+ * Fanning wakes it; the resulting light burns down again unless it is fanned.
  */
 export interface Coal {
   readonly p: THREE.Vector3;
@@ -108,14 +111,18 @@ export class Embers {
   private readonly sparks: Spark[] = [];
   private readonly attr: THREE.InstancedBufferAttribute;
   private readonly sizes: THREE.InstancedBufferAttribute;
+  private readonly motion: THREE.InstancedBufferAttribute;
+  private readonly veils: EmberVeils;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly centre = new THREE.Vector3();
+  private readonly glowCentre = new THREE.Vector3();
+  private readonly glowPower = new Float32Array(COALS);
+  private glow = 0;
   private readonly caught: Coal[] = [];
-  private readonly chipPositions = new Float32Array(COALS * CHIPS * 3);
   private lit = 0;
   private clock = 0;
 
-  constructor(private readonly wind: WindField) {
+  constructor(private readonly wind: WindField, artwork: THREE.Texture | null = null) {
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = quad.index;
@@ -124,6 +131,8 @@ export class Embers {
     this.sizes = new THREE.InstancedBufferAttribute(new Float32Array(COUNT), 1).setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aSpark', this.attr);
     geo.setAttribute('aSize', this.sizes);
+    this.motion = new THREE.InstancedBufferAttribute(new Float32Array(COUNT * 4), 4).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('aMotion', this.motion);
     const shapes = new Float32Array(COUNT * 2);
     for (let i = 0; i < COUNT; i++) {
       shapes[i * 2] = Math.random() * Math.PI * 2;
@@ -141,7 +150,7 @@ export class Embers {
     this.mesh = new THREE.Mesh(
       geo,
       new THREE.ShaderMaterial({
-        uniforms: atmo.uniforms,
+        uniforms: { ...atmo.uniforms, uEmberArt: { value: artwork } },
         vertexShader: VERT,
         fragmentShader: FRAG,
         transparent: true,
@@ -149,6 +158,12 @@ export class Embers {
         blending: THREE.AdditiveBlending,
       }),
     );
+    this.veils = new EmberVeils(
+      (this.attr.array as Float32Array).subarray(SPARKS * 4),
+      (this.sizes.array as Float32Array).subarray(SPARKS),
+      (this.motion.array as Float32Array).subarray(SPARKS * 4), artwork,
+    );
+    this.mesh.add(this.veils.mesh);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
   }
@@ -160,7 +175,7 @@ export class Embers {
       coal = this.coals[0];
       for (const c of this.coals) if (c.heat + c.wake < coal.heat + coal.wake) coal = c;
     }
-    coal.p.set(x, Math.max(heightAt(x, z), 0) + 0.07, z);
+    coal.p.set(x, Math.max(heightAt(x, z), 0) + tuning.wood.orbHover, z);
     coal.heat = 0;
     coal.flare = 0;
     coal.wake = 0;
@@ -168,17 +183,9 @@ export class Embers {
     coal.lit = false;
     coal.live = true;
     coal.laid = this.clock;
-    const slot = this.coals.indexOf(coal);
-    for (let chip = 0; chip < CHIPS; chip++) {
-      const angle = chip * 2.39996 + coal.seed;
-      const radius = chip === 0 ? 0 : 0.24 + Math.sqrt(chip / CHIPS) * 0.48;
-      const x = coal.p.x + Math.cos(angle) * radius;
-      const z = coal.p.z + Math.sin(angle) * radius;
-      const j = (slot * CHIPS + chip) * 3;
-      this.chipPositions[j] = x;
-      this.chipPositions[j + 1] = Math.max(heightAt(x, z), 0) + 0.13;
-      this.chipPositions[j + 2] = z;
-    }
+    const j = (SPARKS + this.coals.indexOf(coal)) * 4;
+    (this.motion.array as Float32Array).fill(0, j, j + 4);
+    this.glowPower[this.coals.indexOf(coal)] = 0;
     return coal;
   }
 
@@ -209,6 +216,8 @@ export class Embers {
   clearCoals(): void {
     this.caught.length = 0;
     this.lit = 0;
+    this.glow = 0;
+    this.glowPower.fill(0);
     for (const c of this.coals) {
       c.live = false;
       c.lit = false;
@@ -260,6 +269,12 @@ export class Embers {
   brightest(out: THREE.Vector3): number {
     if (this.lit > 0) out.copy(this.centre);
     return this.lit;
+  }
+
+  /** Cosmetic illumination grows before ignition; it never supplies the story's light gate. */
+  illumination(out: THREE.Vector3): number {
+    out.copy(this.glowCentre);
+    return this.glow;
   }
 
   private stepCoals(dt: number, time: number): void {
@@ -319,12 +334,14 @@ export class Embers {
     this.mesh.visible = this.presence > 0.01;
     if (!this.mesh.visible) {
       this.lit = 0;
+      this.glow = 0;
       return;
     }
     this.stepCoals(dt, time);
     const t = tuning.wood;
     const data = this.attr.array as Float32Array;
     const sizes = this.sizes.array as Float32Array;
+    const motion = this.motion.array as Float32Array;
     for (let i = 0; i < SPARKS; i++) {
       const s = this.sparks[i];
       if (s.p.distanceToSquared(near) > RANGE * RANGE * 1.8 || (s.heat < 0.02 && Math.random() < dt * 0.5)) {
@@ -355,20 +372,31 @@ export class Embers {
 
     /** The light the child follows: the best single fire near them, not the average of the ones behind. */
     let best = 0;
+    let glowBest = 0;
     for (let i = 0; i < COALS; i++) {
       const c = this.coals[i];
-      const breathe = c.live && !c.lit ? (0.42 + 0.2 * Math.sin(time * 1.6 + c.seed)) * (0.6 + 0.4 * c.wake) : 0;
-      const shown = c.live ? (c.lit ? Math.min(1.2, c.heat + c.flare * 0.35) : breathe) * this.presence : 0;
-      for (let chip = 0; chip < CHIPS; chip++) {
-        const index = SPARKS + i * CHIPS + chip;
-        const j = index * 4;
-        const ground = (i * CHIPS + chip) * 3;
-        sizes[index] = c.live ? 0.16 + (0.5 + 0.5 * Math.sin(chip * 4.7 + c.seed)) * 0.14 : 0;
-        data[j] = this.chipPositions[ground];
-        data[j + 1] = this.chipPositions[ground + 1];
-        data[j + 2] = this.chipPositions[ground + 2];
-        data[j + 3] = shown * (0.65 + 0.35 * Math.sin(chip * 2.7 + time * 0.8 + c.seed) ** 2);
-      }
+      const index = SPARKS + i;
+      const j = index * 4;
+      const w = this.wind.sample(c.p.x, c.p.z, this.sample);
+      const response = 1 - Math.exp(-dt * t.orbResponse);
+      const breath = Math.min(1, c.breath + w.energy * 0.5);
+      motion[j] += (THREE.MathUtils.clamp(w.x * t.orbWindLean, -0.8, 0.8) * breath - motion[j]) * response;
+      motion[j + 1] += (THREE.MathUtils.clamp(w.z * t.orbWindLean, -0.8, 0.8) * breath - motion[j + 1]) * response;
+      motion[j + 2] += ((c.lit ? c.heat : c.wake) - motion[j + 2]) * response;
+      motion[j + 3] += ((c.lit ? Math.min(1.4, c.heat + c.flare * 0.2) : 0) - motion[j + 3]) * response;
+      const growth = THREE.MathUtils.smoothstep(motion[j + 2], 0, 1);
+      sizes[index] = t.orbSize * (t.orbRestScale + (1.1 - t.orbRestScale) * growth + motion[j + 3] * 0.18);
+      data[j] = c.p.x;
+      data[j + 1] = c.p.y + (Math.sin(time * 1.25 + c.seed) + 0.3 * Math.sin(time * 2.1 + c.seed))
+        * t.orbBob * (0.45 + growth * 0.55);
+      data[j + 2] = c.p.z;
+      data[j + 3] = c.live ? this.presence * Math.min(1, t.orbRestAlpha
+        + (0.82 - t.orbRestAlpha) * growth + motion[j + 3] * 0.13) : 0;
+      const lightTarget = !c.live ? 0 : c.lit ? (c.heat + c.flare * t.flareLight) * t.coalLight
+        : Math.pow(c.wake, 1.4) * t.coalLight * 1.3;
+      this.glowPower[i] += (lightTarget - this.glowPower[i]) * (1 - Math.exp(-dt * t.orbLightResponse));
+      const glowReach = this.glowPower[i] / (1 + c.p.distanceToSquared(near) * 0.0025);
+      if (glowReach > glowBest) { glowBest = glowReach; this.glowCentre.copy(c.p); }
       if (!c.live || !c.lit) continue;
       const power = (c.heat + c.flare * t.flareLight) * t.coalLight;
       /** Falls off with distance, so a fire left far behind stops counting as light to walk by. */
@@ -380,9 +408,13 @@ export class Embers {
       }
     }
     // Decorative cinders can never supply enough light to bypass an unlit coal.
+    this.glow = glowBest * this.presence;
+    if (glowBest <= 0) this.glowCentre.copy(near);
     this.lit = best * this.presence;
     if (best <= 0) this.centre.copy(near);
     this.attr.needsUpdate = true;
     this.sizes.needsUpdate = true;
+    this.motion.needsUpdate = true;
+    this.veils.update();
   }
 }

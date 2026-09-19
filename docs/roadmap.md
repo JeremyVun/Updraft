@@ -52,7 +52,7 @@ Every room below is built and playable; what is left is polish, pacing and the t
 
 ## Next
 
-- [New rooms](rooms.md): build the island of little boats between washing and meadow; then the sky mirror;
+- [New rooms](rooms.md): little boats implemented between washing and meadow, with cygnet swimming; sky mirror implemented locally before home;
   develop the stairs in the clouds before committing its build.
 
 - [Phone and portrait gameplay](backlog/portrait-gameplay/design.md): full physical-phone playthrough and framing/input/performance pass; deferred from the 2026-09-19 review.
@@ -60,7 +60,7 @@ Every room below is built and playable; what is left is polish, pacing and the t
 - A playthrough for pacing: about eighteen minutes, no room over five.
 - The turn of the year beyond the grass — the trees, the flowers, the sky and the light.
 - More of the loose nonsense `journey.md` asks for: chimneys with no house, a bed in the meadow, a piano at the
-  tide line. And two islands never built: the sky mirror and the autumn birches.
+  tide line. The sky mirror and autumn birches are now implemented.
 
 ## Later
 

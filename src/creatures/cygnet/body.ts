@@ -242,10 +242,10 @@ function parts(down: boolean): THREE.BufferGeometry[] {
  * it: rows of coverts on a bird this young read as armour. Each vane carries the pivot and the angle it swings
  * through as the wing shuts, so the fan closes the way a real one does instead of folding as a slab.
  */
-function addWing(out: THREE.BufferGeometry[], down: boolean): void {
+/** The same surface and skin weights dress the wing and fit its bandage. */
+export function wingArmGeometry(down = false): THREE.BufferGeometry {
   const s = REST[WING_L];
   const at = (x: number, y: number, z: number): V3 => [x, s[1] + y, s[2] + z];
-  const wing: THREE.BufferGeometry[] = [];
   const arm: Station[] = [
     /** Buried in the flank and bound to the body alone, so no swing of the wing can push its blunt end through. */
     { at: at(0.018, 0.004, 0.022), rx: 0.034, up: 0.026, down: 0.026, skin: [BODY, BODY, 0] },
@@ -258,8 +258,13 @@ function addWing(out: THREE.BufferGeometry[], down: boolean): void {
     { at: at(0.298, -0.015, -0.042), rx: 0.032, up: 0.011, down: 0.011, skin: [HAND_L, HAND_L, 0] },
     { at: at(0.322, -0.018, -0.048), rx: 0.005, up: 0.005, down: 0.005, skin: [HAND_L, HAND_L, 0] },
   ];
-  const coat = (spec: LoftSpec) => (down ? loft({ ...spec, around: 9 }) : loft(spec));
-  wing.push(coat({ stations: arm, mat: COAT, around: 12, smooth: 1, side: [0, 0, -1], blend: (_t, a) => 0.6 - Math.sin(a) * 0.22 }));
+  return loft({ stations: arm, mat: COAT, around: down ? 9 : 12, smooth: 1, side: [0, 0, -1], blend: (_t, a) => 0.6 - Math.sin(a) * 0.22 });
+}
+
+function addWing(out: THREE.BufferGeometry[], down: boolean): void {
+  const s = REST[WING_L];
+  const at = (x: number, y: number, z: number): V3 => [x, s[1] + y, s[2] + z];
+  const wing: THREE.BufferGeometry[] = [wingArmGeometry(down)];
 
   /** Shut, every vane lines up along its own bone, so the fan closes and the tips run on past the wrist to the tail. */
   const SHUT = 0.14;

@@ -3,6 +3,7 @@ import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import { surfaceHeight } from '../world/island';
 import { RibbonBatch, type Ribbon } from './ribbons';
+import { windPen } from './wind-gesture';
 
 const T = tuning.swirl;
 
@@ -10,18 +11,24 @@ const T = tuning.swirl;
 export interface Coax {
   at: THREE.Vector3;
   urgency: number;
+  radius?: number;
 }
 
 /** Lengths of ribbon in one column, and the radians of turn drawn before the next length is laid down. */
-const MAX_WISPS = 80;
-const LAY_TURN = 0.3;
+const MAX_WISPS = 180;
+const LAY_TURN = 0.12;
+/** A clear leading turn followed by two detached, fading pieces of older air. */
+const SEGMENTS = [
+  { start: 0, count: 34, alpha: 1, width: 1 },
+  { start: 48, count: 24, alpha: 0.42, width: 0.7 },
+  { start: 87, count: 18, alpha: 0.16, width: 0.45 },
+];
 /**
- * Two ribbons wind up every column: the second runs narrower and fainter just above the first, which along a
- * climbing coil is the same as running half a turn behind it, so a column reads as air wound rather than a drawn ring.
+ * A narrower wake runs just above the leading strand; both break into older pieces as the air rises.
  */
 const STRANDS = [
   { radius: 1, lift: 0, width: 1, alpha: 1 },
-  { radius: 0.7, lift: 0.4, width: 0.6, alpha: 0.4 },
+  { radius: 0.92, lift: 0.24, width: 0.55, alpha: 0.36 },
 ];
 
 interface Wisp {
@@ -41,18 +48,18 @@ interface Wisp {
 
 /** A column of air being wound up: lengths of ribbon laid turn by turn, each climbing and drawing in as it ages. */
 class Coil {
-  readonly strands: Ribbon[] = STRANDS.map(() => ({ points: [], alpha: 0, width: 0 }));
+  readonly strands: Ribbon[] = STRANDS.flatMap(() => SEGMENTS.map(() => ({ points: [], alpha: 0, width: 0 })));
   private readonly wisps: Wisp[] = [];
   private readonly spare: Wisp[] = [];
-  private readonly store: THREE.Vector3[][] = STRANDS.map(() => []);
+  private readonly store: THREE.Vector3[][] = this.strands.map(() => []);
   private wobble = 0;
 
   /** Lays a length of ribbon at `off` times `rad` around the axis at (cx, cz), `base` above the ground there. */
-  lay(cx: number, cz: number, off: THREE.Vector3, rad: number, base: number): void {
+  lay(cx: number, cz: number, off: THREE.Vector3, rad: number, base: number, floor?: number): void {
     const w = this.spare.pop() ?? { cx: 0, cy: 0, cz: 0, ox: 0, oy: 0, oz: 0, rad: 0, rad0: 0, y: 0, age: 0 };
     /** The loops wander a little as they are drawn, so that nothing in this ever comes out as a clean circle. */
-    this.wobble = THREE.MathUtils.clamp(this.wobble + (Math.random() - 0.5) * 0.09, -0.12, 0.12);
-    rad *= 1 + this.wobble;
+    this.wobble += 0.075;
+    rad *= 1 + Math.sin(this.wobble) * 0.045 + Math.sin(this.wobble * 0.43) * 0.018;
     w.cx = cx;
     w.cz = cz;
     w.ox = off.x;
@@ -60,7 +67,7 @@ class Coil {
     w.oz = off.z;
     w.rad = rad;
     w.rad0 = rad;
-    w.cy = surfaceHeight(cx + off.x * rad, cz + off.z * rad) + base;
+    w.cy = (floor ?? surfaceHeight(cx + off.x * rad, cz + off.z * rad)) + base;
     w.y = 0;
     w.age = 0;
     this.wisps.push(w);
@@ -80,20 +87,23 @@ class Coil {
   }
 
   build(alpha: number, width: number): void {
-    for (let i = 0; i < STRANDS.length; i++) {
-      const conf = STRANDS[i];
+    for (let i = 0; i < this.strands.length; i++) {
+      const conf = STRANDS[Math.floor(i / SEGMENTS.length)];
+      const segment = SEGMENTS[i % SEGMENTS.length];
       const strand = this.strands[i];
       const store = this.store[i];
-      strand.alpha = alpha * conf.alpha;
-      strand.width = width * conf.width;
+      strand.alpha = alpha * conf.alpha * segment.alpha;
+      strand.width = width * conf.width * segment.width;
       strand.points.length = 0;
       if (strand.alpha < 0.002) continue;
       /** Newest end first: a ribbon fades along its length, and the end to lose is the one dissolving up top. */
-      for (let k = this.wisps.length - 1; k >= 0; k--) {
+      const start = this.wisps.length - 1 - segment.start;
+      for (let k = start; k >= Math.max(0, start - segment.count + 1); k--) {
         const w = this.wisps[k];
         const p = store[strand.points.length] ?? (store[strand.points.length] = new THREE.Vector3());
-        const r = w.rad * conf.radius;
-        p.set(w.cx + w.ox * r, w.cy + w.oy * r + w.y + conf.lift, w.cz + w.oz * r);
+        const r = w.rad * conf.radius * (1 + w.age * w.age * 0.035);
+        p.set(w.cx + w.ox * r + Math.sin(w.age * 2.1) * w.age * 0.09,
+          w.cy + w.oy * r + w.y + conf.lift, w.cz + w.oz * r);
         strand.points.push(p);
       }
     }
@@ -108,7 +118,7 @@ class Coil {
  * mark on the field and a ring stood up reads as a circle drawn in the air.
  */
 export class Swirl {
-  readonly batch = new RibbonBatch(STRANDS.length * MAX_WISPS * 2, '#fffaf0');
+  readonly batch = new RibbonBatch(STRANDS.length * MAX_WISPS * 2, '#fff4dd', 1, false, tuning.invitation.lightFloor);
   private readonly trace = new Coil();
   private readonly ghost = new Coil();
   private readonly ribbons = [...this.trace.strands, ...this.ghost.strands];
@@ -149,7 +159,8 @@ export class Swirl {
     const rise = (T.pitch * this.rate) / (Math.PI * 2) - T.sink * (1 - THREE.MathUtils.smoothstep(this.rate, 1.5, 5));
     this.trace.drift(dt, rise, THREE.MathUtils.lerp(T.flare, T.tighten, charge), T.life);
     /** The player's own wind is drawn with a bolder stroke than the invitation: theirs is the air that is real. */
-    this.trace.build(this.shown, Math.min(away * T.pen * 1.6, 1.2) * (0.85 + 0.35 * charge));
+    this.trace.build(this.shown, windPen(camera, input.updraftAt,
+      Math.min(away * T.pen * 1.6, 1.2)) * (0.85 + 0.35 * charge));
 
     const urgency = coax ? THREE.MathUtils.clamp(coax.urgency, 0, 1) : 0;
     /** As the player's own trace comes up near the invitation, the invitation gives way to it by the same amount. */
@@ -205,11 +216,16 @@ export class Swirl {
     this.bearing = bearing;
     this.tracking = true;
     if (Math.abs(this.turned - this.laid) < LAY_TURN) return;
-    this.laid = this.turned;
     /** The column stands as wide as the circles were drawn on screen, within reason: small hand, small column. */
     const rad = THREE.MathUtils.clamp(screen * reach, T.radiusMin, T.radiusMax) * (0.78 + 0.22 * charge);
     /** Laid where they drew it and no higher, so the low side of the first loop is still down in the grass. */
-    this.trace.lay(input.updraftAt.x, input.updraftAt.z, this.at(this.turned), rad, rad * this.over.y * 0.2);
+    const direction = Math.sign(this.turned - this.laid);
+    // Sample by angle, not frame count, so a slower device cannot turn each piece back into a complete hoop.
+    while ((this.turned - this.laid) * direction >= LAY_TURN) {
+      this.laid += direction * LAY_TURN;
+      this.trace.lay(input.updraftAt.x, input.updraftAt.z, this.at(this.laid), rad, rad * this.over.y * 0.2,
+        input.anchor ? input.updraftAt.y : undefined);
+    }
   }
 
   /** The loops the story turns over by itself where it wants an updraft: they wind up, rise, fade, and come again. */
@@ -222,16 +238,18 @@ export class Swirl {
       if (this.cycle > period) this.cycle = 0;
       winding = this.cycle < T.coaxWind;
       this.slow += dt * T.coaxLoops * (1 + 0.6 * urgency) * Math.PI * 2;
-      if (winding && this.handover < 0.4 && this.slow - this.slowLaid > LAY_TURN) {
-        this.slowLaid = this.slow;
-        const rad = T.coaxRadius * (0.9 + 0.2 * urgency);
+      if (winding && this.handover < 0.4) {
+        const rad = (coax.radius ?? T.coaxRadius) * (0.9 + 0.2 * urgency);
         /** Stood almost clear of the ground, so the whole loop can be seen going round whatever stands there. */
-        this.ghost.lay(coax.at.x, coax.at.z, this.at(this.slow), rad, rad * this.over.y * 0.8);
-      }
+        while (this.slow - this.slowLaid >= LAY_TURN) {
+          this.slowLaid += LAY_TURN;
+          this.ghost.lay(coax.at.x, coax.at.z, this.at(this.slowLaid), rad, rad * this.over.y * 0.8, coax.at.y);
+        }
+      } else this.slowLaid = this.slow;
       /** It comes in over a breath, holds while it winds, and blows out with its last loops still climbing. */
       const env = Math.min(1, this.cycle / 0.7) * (1 - THREE.MathUtils.smoothstep(this.cycle, T.coaxWind, T.coaxWind + 1.1));
       want = T.coaxAlpha * (0.5 + 0.5 * urgency) * env;
-      this.ghostPen = Math.min(camera.position.distanceTo(coax.at) * T.pen, 0.8);
+      this.ghostPen = windPen(camera, coax.at, Math.min(camera.position.distanceTo(coax.at) * T.pen, 0.8));
     } else {
       this.cycle = 0;
     }

@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { BANK, POND, POND_LEVEL, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
+import { BANK, POND, POND_LEVEL, ISLES, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
 import { WAY } from '../world/fields';
-import { PATCH, PLACE } from '../world/piano';
+import { piano, PATCH, PLACE } from '../world/piano';
 import { heightAt } from '../world/island';
-import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
 import { tuning } from '../tuning';
+import { musicFront } from '../world/music-growth';
 
-type Beat = 'ashore' | 'beach' | 'climb' | 'brow' | 'walk' | 'crest' | 'down' | 'try' | 'glide' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'beach' | 'climb' | 'brow' | 'walk' | 'crest' | 'down' | 'pond' | 'gather' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /** The way inland, across the meadow to its far shore. The walls are built around the same line: `WAY` in `fields.ts`. */
@@ -69,17 +69,11 @@ function overPond(x: number, z: number): boolean {
 }
 
 const WAVE_REACH = 3600;
-/**
- * How far the colour has reached, and how fast it rolls there, each time the lullaby gets further: the hollow round
- * the piano, then out over the crest and the pond, then the whole island on the last one. The great wave is the
- * spectacle of the room, so it is the only one the wind itself runs ahead of, and it rolls slowly enough that its
- * front is still crossing the meadow while the camera is rising off the piano to watch it.
- */
+/** Every mirrored sweep has its own colour front; the final one reaches the whole island. */
 const WAKING = [
   { reach: PATCH.radius, speed: 0 },
-  { reach: 80, speed: 15 },
-  { reach: 168, speed: 40 },
-  { reach: WAVE_REACH, speed: 20 },
+  ...tuning.piano.responseReach.map((reach, i) => ({ reach, speed: tuning.piano.responseSpeed[i] })),
+  { reach: WAVE_REACH, speed: 32 },
 ];
 /** How long the wind keeps driving the last wave across the island, and how quiet a wake nobody answered is. */
 const GUST_FOR = 15;
@@ -88,9 +82,6 @@ const UNANSWERED = 0.45;
 const SHOWER = { gather: 10, fall: 30, clear: 16 };
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 16;
-/** How long the cygnet is left trying, and how often it has a go, before the child gives up and carries it on. */
-const TRY_FOR = tuning.colt.tryFor;
-const TRY_EVERY = 5.5;
 
 /**
  * The meadow: the last warm afternoon of the year, and the island is asleep. The boat lands in a bay under a bank,
@@ -117,6 +108,7 @@ export class MeadowChapter implements Chapter {
   /** How far the colour is rolling out, how fast, and how long the wind runs ahead of it. */
   private waveTo = 0;
   private waveSpeed = 0;
+  private waveFrom = -1;
   private gustUntil = 0;
   private gustPower = 1;
   private showerStart = -1;
@@ -125,33 +117,38 @@ export class MeadowChapter implements Chapter {
   private now = 0;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly planeGoal = new THREE.Vector2();
+  private readonly walkGoal = new THREE.Vector2();
   private readonly watched = new THREE.Vector3();
   private watchUntil = 0;
   private nextLook = 0;
+  private nextChase = 0;
+  private readonly cameraChild = new THREE.Vector3();
+  private readonly framing = { primary: this.cameraChild, secondary: new THREE.Vector3(),
+    margin: tuning.meadowPlane.cameraMargin, extra: tuning.meadowPlane.cameraExtra };
+  private readonly pondFraming = { primary: this.cameraChild, secondary: new THREE.Vector3(), margin: 0.7, extra: 14 };
   private crestDone = false;
   private boatMoved = false;
-  private cheeredFlight = false;
   /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
   trodden: THREE.Vector3 | null = null;
-  /** The piano standing in the grass off the walk, and the optional stop the child makes at it. */
+  /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
-  private nextTry = 0;
   private nextCall = 0;
-  /** When the wind starts showing the player the gesture the cygnet is waiting for, and the shape it draws there. */
-  private coaxFrom = 0;
-  private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
   private nextBugle = 0;
   private wentOn = false;
   /** When the child reached the water's edge, and when the family left it; both negative until they happen. */
   private atEdge = -1;
   private leftAt = -1;
-  /** Where the child stands to watch them, and which way along the shore the cygnet runs on its next try. */
+  /** Where the child waits and where the cygnet enters and leaves the water. */
   private readonly edge = new THREE.Vector3();
-  private readonly along = new THREE.Vector3();
   private readonly bank = new THREE.Vector3();
-  private runSide = 1;
+  private swim: 'settle' | 'enter' | 'out' | 'watch' | 'back' = 'settle';
+  private swimAt = 0;
+  private readonly swimOut = new THREE.Vector3();
+  private readonly dryBank = new THREE.Vector3();
   private kneltAt = -1e3;
   private readonly onCygnet = new THREE.Vector3();
+  private readonly returnLook = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   /** Where the family is, where it was first found, and the horizontal line from the child to it. */
   private readonly far = new THREE.Vector3();
@@ -172,7 +169,7 @@ export class MeadowChapter implements Chapter {
      */
     flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     cygnet.water = { level: POND_LEVEL, over: overPond };
-    plane.homeRadius = 70;
+    plane.homeRadius = tuning.meadowPlane.reach;
     child.dismount();
     child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
   }
@@ -188,6 +185,7 @@ export class MeadowChapter implements Chapter {
       this.beat === 'beach' ||
       this.beat === 'climb' ||
       this.beat === 'brow' ||
+      this.beat === 'gather' ||
       this.beat === 'toBoat' ||
       this.beat === 'push' ||
       this.beat === 'aboard'
@@ -221,6 +219,8 @@ export class MeadowChapter implements Chapter {
   get hush(): number {
     return Math.max(this.beatHush, this.piano.hush);
   }
+
+  get pianoMix(): number { return this.piano.hush; }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
   skipAhead(): void {
@@ -278,17 +278,16 @@ export class MeadowChapter implements Chapter {
     const step = WAKING[Math.min(stage, WAKING.length - 1)];
     this.waveTo = step.reach;
     this.waveSpeed = step.speed * (answered ? 1 : UNANSWERED);
-    if (stage < 3) return;
-    /** Once it is all awake the wind wakes ground the ordinary way again, wherever the journey goes next. */
-    this.cast.life.regions.waiting.set(0, 0, 0, 0);
-    completeObjective();
-    /** The wind runs ahead of the last wave whoever finished the tune; for a player who never joined in, softly. */
+    this.waveFrom = this.now;
+    if (stage === 4) completeObjective();
+    /** Every answer sends a front of moving grass across the field, starting at the instrument. */
     this.gustPower = answered ? 1 : UNANSWERED;
-    this.gustUntil = this.now + GUST_FOR * (answered ? 1 : 0.7);
+    this.gustUntil = this.now + (stage === 4 ? GUST_FOR : step.reach / step.speed);
   }
 
   /** For testing, and for the walk that somehow got past the piano: the island is simply awake. */
   private wokenAlready(): void {
+    this.piano.restoreDone();
     const { life } = this.cast;
     life.regions.wave.set(PLACE.x, PLACE.z, WAVE_REACH, 90);
     life.regions.waiting.set(0, 0, 0, 0);
@@ -303,27 +302,23 @@ export class MeadowChapter implements Chapter {
   private blowFront(): void {
     const wave = this.cast.life.regions.wave;
     if (this.now > this.gustUntil || wave.z >= WAVE_REACH) return;
-    const at = this.shot.target;
-    const dx = at.x - wave.x;
-    const dz = at.z - wave.y;
-    const d = Math.hypot(dx, dz) || 1;
-    const ux = dx / d;
-    const uz = dz / d;
-    const tx = -uz;
-    const tz = ux;
-    for (let i = -1; i <= 1; i++) {
-      const cx = wave.x + ux * wave.z + tx * i * 30;
-      const cz = wave.y + uz * wave.z + tz * i * 30;
+    const radius = Math.min(this.waveTo, Math.max(0, this.now - this.waveFrom) * this.waveSpeed);
+    for (let i = 0; i < 9; i++) {
+      const angle = (i / 8 - 0.5) * Math.PI;
+      const ux = Math.sin(angle), uz = -Math.cos(angle), tx = -uz, tz = ux;
+      const reach = musicFront(radius, angle);
+      const cx = wave.x + ux * reach;
+      const cz = wave.y + uz * reach;
       this.cast.wind.addSplat({
         ax: cx - tx * 15,
         az: cz - tz * 15,
         bx: cx + tx * 15,
         bz: cz + tz * 15,
-        vx: ux * 27 * this.gustPower,
-        vz: uz * 27 * this.gustPower,
+        vx: (ux * 0.65 + tx * tuning.piano.waveSwirl) * 27 * this.gustPower,
+        vz: (uz * 0.65 + tz * tuning.piano.waveSwirl) * 27 * this.gustPower,
         radius: 13,
         energy: 0.9 * this.gustPower,
-        swirl: 0,
+        swirl: tuning.piano.waveSwirl,
         lift: 0.3 * this.gustPower,
       });
     }
@@ -351,25 +346,13 @@ export class MeadowChapter implements Chapter {
      * the child it made for open water at the far shore, sat on the sea and held the child at the water's edge.
      */
     if (!p.departing) {
-      const next = this.target();
-      const t = this.piano.waypoint(next, c.position);
-      /** The stop at the piano is the next thing to do for as long as it says so, whichever leg the walk is on. */
-      const pianoAhead = t !== next;
-      if (this.leg === ROUTE.length - 1) {
-        p.home.set(boat.position.x, 0, boat.position.z);
-        p.homeRadius = 26;
-      } else if (this.leg >= CREST_LEG && !this.crestDone && !pianoAhead) {
-        /** The signpost leans at what there is to find: over the rise, that is the white birds on the water. */
-        p.home.set(POND_AT.x, 0, POND_AT.z);
-        p.homeRadius = 34;
-      } else {
-        const dx = t.x - c.position.x;
-        const dz = t.y - c.position.z;
-        const d = Math.hypot(dx, dz) || 1;
-        const reach = Math.min(d, 25);
-        p.home.set(c.position.x + (dx / d) * reach, 0, c.position.z + (dz / d) * reach);
-        p.homeRadius = 70;
-      }
+      const t = this.planeWaypoint();
+      const dx = t.x - c.position.x;
+      const dz = t.y - c.position.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const reach = Math.min(d, tuning.meadowPlane.lead);
+      p.home.set(c.position.x + dx / d * reach, 0, c.position.z + dz / d * reach);
+      p.homeRadius = tuning.meadowPlane.reach;
     }
 
     switch (this.beat) {
@@ -404,11 +387,11 @@ export class MeadowChapter implements Chapter {
       case 'down':
         this.updateDown(dt, time);
         break;
-      case 'try':
-        this.updateTry(time);
+      case 'pond':
+        this.updatePond(dt);
         break;
-      case 'glide':
-        this.updateGlide();
+      case 'gather':
+        this.updateGather();
         break;
       case 'push':
         break;
@@ -434,13 +417,27 @@ export class MeadowChapter implements Chapter {
      * From the brow on, the walk faces north over open water toward the next island, so the veil that stands
      * between the swans and it has to stand there until the boat is reached.
      */
-    const open = this.crestDone || this.beat === 'crest' || this.beat === 'down' || this.beat === 'try' || this.beat === 'glide';
+    const open = this.crestDone || this.beat === 'crest' || this.beat === 'down' || this.beat === 'pond';
     this.haze += ((open ? tuning.crest.haze : 0.55) - this.haze) * (1 - Math.exp(-dt * (open ? 1.1 : 0.25)));
     /** The fullest music in the game pulls back for the crest, so two bird voices are all there is to hear. */
-    const quiet = this.beat === 'crest' || this.beat === 'down' ? 0.45 : this.beat === 'try' && this.cast.flock.active ? 0.3 : 0;
+    const quiet = this.beat === 'crest' || this.beat === 'down' ? 0.45 : this.beat === 'pond' && this.cast.flock.active ? 0.3 : 0;
     this.beatHush += (quiet - this.beatHush) * (1 - Math.exp(-dt * 0.5));
     const wave = life.regions.wave;
-    if (wave.z >= 0 && wave.z < this.waveTo) wave.z = Math.min(this.waveTo, wave.z + dt * this.waveSpeed);
+    const musicRadius = this.waveFrom < 0 ? 0 : Math.max(0, time - this.waveFrom) * this.waveSpeed;
+    if (wave.z >= 0 && wave.z < this.waveTo) {
+      // The music crosses already-green ground first, then carries the next colour front with it.
+      wave.z = this.waveFrom < 0 ? Math.min(this.waveTo, wave.z + dt * this.waveSpeed)
+        : Math.max(wave.z, Math.min(this.waveTo, musicRadius));
+    }
+    const fade = this.waveFrom < 0 ? 0 : Math.min(1, musicRadius / 5)
+      * (1 - THREE.MathUtils.smoothstep(musicRadius, this.waveTo, this.waveTo + this.waveSpeed));
+    // Keep untouched ground grey until the colour front has crossed the entire island.
+    const covered = Math.hypot(PLACE.x - ISLES.meadow.x, PLACE.z - ISLES.meadow.z)
+      + Math.max(ISLES.meadow.rx, ISLES.meadow.rz) + wave.w + 12
+      + tuning.piano.growthRoughness + tuning.piano.growthSoftness;
+    piano.wave.update(PLACE.x, PLACE.z, Math.min(this.waveTo, musicRadius),
+      fade * (1 - THREE.MathUtils.smoothstep(musicRadius, covered, covered + 40)), life);
+    if (wave.z > covered && this.waveTo === WAVE_REACH) life.regions.waiting.set(0, 0, 0, 0);
     this.blowFront();
 
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
@@ -452,9 +449,14 @@ export class MeadowChapter implements Chapter {
       }
     }
     if (p.held) p.hold(c);
+    p.companion = this.beat === 'walk' ? c.position : null;
     this.frame();
     /** The stop at the piano owns the camera while it has the child, and says how fast it should follow. */
-    this.pace = this.piano.frame(this.shot) ?? this.pace;
+    const pianoPace = this.piano.frame(this.shot);
+    if (pianoPace !== null) {
+      this.pace = pianoPace;
+      this.shot.subjects = undefined;
+    }
   }
 
   /**
@@ -472,156 +474,112 @@ export class MeadowChapter implements Chapter {
     this.throwAhead();
   }
 
-  /**
-   * Straight out of the reveal and in the same place: the cygnet is stood down in the grass facing the way they
-   * went, and the child kneels to it and then sits. It has just watched its family leave without it.
-   */
+  /** The child offers water instead of another attempt at flying on the recovering wing. */
   private setDown(): void {
-    const { child: c, carry } = this.cast;
-    const { setDownAt, firstTry } = tuning.crest;
+    const { child: c, carry, cygnet: k } = this.cast;
     c.stop();
-    this.to('try');
-    this.nextTry = 1e9;
+    k.mayFly = false;
+    this.cast.plane.visible = false;
+    this.to('pond');
+    this.swim = 'settle';
     this.kneltAt = this.now;
-    /** Along the bank rather than at the water, so a run at flying goes down the shore and never off into the pond. */
-    this.axis.set(c.position.x - POND_AT.x, 0, c.position.z - POND_AT.z).normalize();
-    this.along.set(-this.axis.z, 0, this.axis.x);
-    /** Wide enough to take the camera as well as the two of them, or the near grass fills the whole frame. */
-    this.trodden = new THREE.Vector3(c.position.x + this.along.x * setDownAt * 0.6, 12, c.position.z + this.along.z * setDownAt * 0.6);
-    /** Out of the satchel and down beside them at the edge, facing north after the family and not at the child. */
-    c.faceToward(c.position.x + this.along.x, c.position.z + this.along.z, 1);
-    carry.unstow(() => carry.setDown(() => (this.nextTry = this.now + firstTry), Math.PI));
+    this.axis.set(POND_AT.x - c.position.x, 0, POND_AT.z - c.position.z).normalize();
+    pondEdge(c.position.x, c.position.z, 0.15, this.dryBank);
+    this.bank.copy(this.dryBank);
+    // Find actual water on this approach, including the irregular, shallow lip of the pond.
+    for (let d = 0; d < 12; d += 0.15) {
+      this.bank.copy(this.dryBank).addScaledVector(this.axis, d);
+      if (overPond(this.bank.x, this.bank.z)) break;
+    }
+    this.bank.y = POND_LEVEL;
+    this.swimOut.copy(this.bank).addScaledVector(this.axis, tuning.wingCare.pondOut);
+    this.trodden = new THREE.Vector3(c.position.x, 12, c.position.z);
+    c.faceToward(POND_AT.x, POND_AT.z, 1);
+    carry.unstow(() => carry.setDown(() => {
+      this.swim = 'enter';
+      this.swimAt = this.now;
+      k.stay = false;
+      k.pace = 0.55;
+      k.errand = this.bank;
+    }, Math.atan2(this.axis.x, this.axis.z)));
   }
 
-  /**
-   * The beat the whole game turns on after the fall. It faces the wind and tries, and cannot. The child sits down
-   * to watch, the plane stays in their hand, and there is nothing else on screen — so sooner or later the player
-   * puts the wind under it, and finds out that they are the reason it can fly. Nothing is asked and nothing is
-   * failed: if the player never does it, the child eventually gathers it up and walks on, and it will try again.
-   */
-  get invitesFlight(): boolean {
-    return this.beat === 'try' || this.beat === 'glide';
-  }
-
-  private updateTry(time: number): void {
-    const { child: c, cygnet, flock } = this.cast;
-    if (cygnet.flying) {
-      this.to('glide');
+  /** A short paddle after the departing family, a look back, and the choice to return to waiting hands. */
+  private updatePond(dt: number): void {
+    const { child: c, cygnet: k, flock, carry } = this.cast;
+    c.lookAt = k.eye(this.onCygnet);
+    if (flock.active && this.t > tuning.crest.watches) { flock.clear(); k.watch(null); }
+    if (this.swim === 'settle' || carry.busy) return;
+    c.kneeling += (1 - c.kneeling) * (1 - Math.exp(-dt * 2));
+    c.reachLocal(0, this.tmp.set(0.17, 0.53, 0.43));
+    c.reachLocal(1, this.tmp.set(-0.17, 0.53, 0.43));
+    if (this.swim === 'enter') {
+      if (Math.hypot(k.position.x - this.bank.x, k.position.z - this.bank.z) < 0.8) {
+        k.errand = null;
+        k.swimLevel = POND_LEVEL;
+        k.swimTo(this.bank);
+        k.swimTo(this.swimOut);
+        this.swim = 'out'; this.swimAt = this.now;
+      } else if (this.now - this.swimAt > tuning.wingCare.pondEntryLimit) {
+        // A blocked bank still ends in the same act of care; never wait forever on terrain navigation.
+        k.errand = null; k.stay = true;
+        this.finishPond();
+      }
       return;
     }
-    /** It keeps calling after them while they are still up there, and they are gone before it gives up on them. */
-    if (flock.active) {
-      this.far.copy(flock.head);
-      if (this.t > tuning.crest.watches) {
-        flock.clear();
-        cygnet.watch(null);
-      } else if (time > this.nextCall) {
-        cue('calling');
-        cygnet.call(true);
-        this.nextCall = time + 5 + Math.random();
+    if (this.swim === 'out') {
+      k.swimTo(this.swimOut);
+      if (Math.hypot(k.position.x - this.swimOut.x, k.position.z - this.swimOut.z) < 0.7
+        || this.now - this.swimAt > tuning.wingCare.pondReturnAfter) {
+        this.swimOut.copy(k.position);
+        k.watch(this.far);
+        this.swim = 'watch'; this.swimAt = this.now;
+      }
+    } else if (this.swim === 'watch') {
+      k.swimTo(this.swimOut);
+      if (this.now - this.swimAt > tuning.wingCare.pondWatchFor) {
+        k.watch(c.face(this.returnLook));
+        this.swim = 'back'; this.swimAt = this.now;
+      }
+    } else {
+      c.face(this.returnLook);
+      k.swimTo(this.bank);
+      if (Math.hypot(k.position.x - this.bank.x, k.position.z - this.bank.z) < 0.7) {
+        k.ashore(this.dryBank.x, this.dryBank.z, Math.atan2(-this.axis.x, -this.axis.z));
+        k.stay = true; k.pace = 1;
+        k.bind(0.2);
+        completeObjective();
+        this.finishPond();
       }
     }
-    c.lookAt = cygnet.eye(this.onCygnet);
-    if (this.swimHome(time)) return;
-    if (time > this.nextTry && !cygnet.carried) {
-      cygnet.tryToFly(this.runBearing());
-      if (this.coaxFrom === 0) this.coaxFrom = time + tuning.swirl.coaxAfter;
-      this.nextTry = time + TRY_EVERY;
-      /** They settle in to watch it, but only before it has ever managed it: after that they stay on their feet. */
-      if (this.t > TRY_EVERY * 1.5 && cygnet.flights === 0 && !c.sitting && !c.busy) c.sitDown();
+  }
+
+  private finishPond(): void {
+    this.cast.cygnet.mayFly = false;
+    this.cast.child.reachFor(0, null);
+    this.cast.child.reachFor(1, null);
+    this.to('gather');
+  }
+
+  /** Receive it in the same patient hands used throughout the journey. */
+  private updateGather(): void {
+    const { child: c, cygnet, carry } = this.cast;
+    if (c.busy || carry.busy) return;
+    if (c.sitting) {
+      c.standUp();
+      return;
     }
-    if (this.t > TRY_FOR && !c.busy) {
-      if (c.sitting) {
-        c.standUp();
-        return;
-      }
-      this.walkTo(cygnet.position, () => {
-        this.gatherUp(() => {
-          this.cast.carry.stow();
-          this.trodden = null;
-          this.to('walk');
-          /** The plane is nearly always still in their hand; if the reveal caught it out in the grass, they fetch it. */
-          this.play = this.cast.plane.held ? 'hold' : 'watch';
-          this.holdUntil = this.now + 1;
-        });
+    this.gatherUp(() => {
+      carry.stow(() => {
+        cygnet.mayFly = true;
+        cygnet.stay = false; cygnet.pace = 1;
+        this.trodden = null;
+        this.to('walk');
+        this.cast.plane.visible = true;
+        this.play = this.cast.plane.held ? 'hold' : 'watch';
+        this.holdUntil = this.now + 1;
       });
-    }
-  }
-
-  /**
-   * Where the next run goes: up and down the shore, turning round at each end, so it is always broadside to the
-   * camera and always within a cursor's reach of where it started. Nothing it does takes it out of the frame.
-   */
-  private runBearing(): number {
-    const { cygnet } = this.cast;
-    const home = this.trodden;
-    if (!home) return Math.atan2(this.along.x * this.runSide, this.along.z * this.runSide);
-    const out = (cygnet.position.x - home.x) * this.along.x + (cygnet.position.z - home.z) * this.along.z;
-    if (out * this.runSide > 2.6) this.runSide = -this.runSide;
-    return Math.atan2(this.along.x * this.runSide, this.along.z * this.runSide);
-  }
-
-  /**
-   * It came down on the water. Nothing has gone wrong — it is a swan — so it paddles back to the bank in front of
-   * the child, climbs out, shakes, and is standing there ready to go again.
-   */
-  private swimHome(time: number): boolean {
-    const { child: c, cygnet } = this.cast;
-    if (cygnet.state !== 'swimming') return false;
-    c.stop();
-    pondEdge(c.position.x, c.position.z, -0.4, this.bank);
-    cygnet.swimTo(this.bank);
-    if (Math.hypot(cygnet.position.x - this.bank.x, cygnet.position.z - this.bank.z) < 1.1) {
-      cygnet.ashore(this.trodden?.x ?? this.side.x, this.trodden?.z ?? this.side.z, Math.PI);
-      this.nextTry = time + 3.2;
-    }
-    return true;
-  }
-
-  /**
-   * A few seconds after the first failed try the air around the cygnet starts to turn by itself, and goes on asking
-   * a little harder for as long as nothing happens. It is only ever offered while the player has never lifted it:
-   * once they have, they know, and the wind says nothing.
-   */
-  get coax(): Coax | null {
-    const { cygnet } = this.cast;
-    if (this.beat !== 'try' || this.coaxFrom === 0 || cygnet.flying || cygnet.carried || cygnet.flights > 0) return null;
-    this.coaxing.at.copy(cygnet.position);
-    this.coaxing.urgency = THREE.MathUtils.smoothstep(this.now, this.coaxFrom, this.coaxFrom + tuning.swirl.coaxRamp);
-    return this.coaxing.urgency > 0 ? this.coaxing : null;
-  }
-
-  /**
-   * It is up. Everything else in the world can wait until it comes down — and when it does, the child goes to it,
-   * and the beat starts again, because a player who has just found out they can fly it will want to do it again.
-   */
-  private updateGlide(): void {
-    const { child: c, cygnet } = this.cast;
-    c.lookAt = cygnet.position;
-    if (c.sitting && !c.busy) c.standUp();
-    if (cygnet.flying) return;
-    if (this.swimHome(this.now)) return;
-    if (c.busy || c.sitting) return;
-    if (cygnet.flights === 1 && !this.cheeredFlight) {
-      /** It went up on the wind and came down safe. After that the wind is something to ask for. */
-      cygnet.mind.trust(0.66);
-      this.cheeredFlight = true;
-      c.cheer();
-      completeObjective();
-      cygnet.bind(0.2);
-      return;
-    }
-    if (Math.hypot(cygnet.position.x - c.position.x, cygnet.position.z - c.position.z) > 4) {
-      this.walkTo(cygnet.position, undefined);
-      return;
-    }
-    c.faceToward(cygnet.position.x, cygnet.position.z, 1);
-    this.to('try');
-    this.nextTry = this.now + 3.5;
-  }
-
-  private walkTo(at: THREE.Vector3, then: (() => void) | undefined): void {
-    this.cast.child.walkTo(at.x, at.z, true, then, 2.2);
+    });
   }
 
   /** Crouches, gathers the cygnet into the arms, and stands up again. */
@@ -637,6 +595,39 @@ export class MeadowChapter implements Chapter {
 
   private target(): THREE.Vector2 {
     return ROUTE[Math.min(this.leg, ROUTE.length - 1)];
+  }
+
+  /** Throws and airborne steering share the same next stop, including after a detour past a route marker. */
+  private planeWaypoint(): THREE.Vector2 {
+    const next = this.target();
+    const piano = this.piano.waypoint(next);
+    if (piano !== next) return piano;
+    if (this.leg >= CREST_LEG && !this.crestDone) return this.planeGoal.set(POND_AT.x, POND_AT.z);
+    if (this.leg === ROUTE.length - 1) {
+      const boat = this.cast.boat.position;
+      return this.aroundPond(boat.x, boat.z, this.planeGoal);
+    }
+    return this.aroundPond(next.x, next.y, this.planeGoal);
+  }
+
+  /** Once the swim is over, lead around the bank; a straight pursuit across the pond stops at the water. */
+  private aroundPond(x: number, z: number, out: THREE.Vector2): THREE.Vector2 {
+    out.set(x, z);
+    const c = this.cast.child.position;
+    if (!this.crestDone || Math.hypot(c.x - POND.x, c.z - POND.z) > 60) return out;
+    const distance = Math.hypot(x - c.x, z - c.z);
+    for (let d = 1; d < distance; d += 1) {
+      const sx = c.x + (x - c.x) * d / distance;
+      const sz = c.z + (z - c.z) * d / distance;
+      if (pondOut(sx, sz) >= 1.15 || heightAt(sx, sz) >= POND_LEVEL + 0.2) continue;
+      // A short outward arc follows whichever side of the pond they already stand on.
+      const angle = Math.atan2((c.x - POND.x) / POND.rx, (c.z - POND.z) / POND.rz);
+      const goalAngle = Math.atan2((x - POND.x) / POND.rx, (z - POND.z) / POND.rz);
+      const turn = Math.atan2(Math.sin(goalAngle - angle), Math.cos(goalAngle - angle));
+      const ahead = angle + THREE.MathUtils.clamp(turn, -0.4, 0.4);
+      return out.set(POND.x + Math.sin(ahead) * POND.rx * 1.6, POND.z + Math.cos(ahead) * POND.rz * 1.6);
+    }
+    return out;
   }
 
   /**
@@ -675,13 +666,13 @@ export class MeadowChapter implements Chapter {
   }
 
   /**
-   * At the water. The family notices nothing: heads go up, one after another they turn north, make the long
+   * The approaching child startles the nearest birds: heads go up, one after another they turn north, make the long
    * pattering run across the pond, and go, climbing away in a V the way the boat is going, the way home. The
    * cygnet calls the whole time and nothing answers, and then the child kneels and sets it down after them.
    */
   private updateDown(dt: number, time: number): void {
     const { child: c, cygnet, flock } = this.cast;
-    const { goes, setsDown, leaves, leaveClimb } = tuning.crest;
+    const { startleFrom, setsDown, leaves, leaveClimb } = tuning.crest;
     if (flock.active) this.far.set(flock.head.x, flock.head.y + 1.2, flock.head.z);
     cygnet.watch(this.far);
     c.lookAt = this.far;
@@ -691,14 +682,15 @@ export class MeadowChapter implements Chapter {
       this.nextCall = time + 5 + Math.random();
     }
     if (this.atEdge >= 0 && !c.moving && !c.busy) c.faceToward(POND_AT.x, POND_AT.z, 1 - Math.exp(-dt * 1.6));
-    if (!this.wentOn && this.atEdge >= 0 && this.now - this.atEdge > goes) {
+    const nearBank = Math.hypot(c.position.x - this.edge.x, c.position.z - this.edge.z) < startleFrom;
+    if (!this.wentOn && nearBank) {
       this.wentOn = true;
       this.leftAt = this.now;
       cue('bugle');
       /** North, for home, on the line the journey takes; slower than their travelling speed so the going is seen. */
-      flock.lift(Math.PI, leaves, leaveClimb);
+      flock.lift(Math.PI, leaves, leaveClimb, c.position);
     }
-    if (this.wentOn && this.now - this.leftAt > setsDown && !c.busy) this.setDown();
+    if (this.wentOn && this.atEdge >= 0 && !c.moving && this.now - this.leftAt > setsDown && !c.busy) this.setDown();
   }
 
   /** The family comes up out of the meadow ahead, and the walk stops where it stands for it. */
@@ -727,18 +719,17 @@ export class MeadowChapter implements Chapter {
 
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat } = this.cast;
+    // The paper was stowed for the duet; hand it back to the walking/throwing loop afterward.
+    if (p.held && this.play !== 'hold') {
+      this.play = 'hold';
+      this.holdUntil = time + 0.8;
+    }
     const t = this.target();
     /** A waypoint is behind them once they are near it or past it: the stop at the piano takes them well past one. */
     const reached = Math.hypot(c.position.x - t.x, c.position.z - t.y) < 38 || c.position.z < t.y - 12;
     if (reached && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1;
 
-    if (this.cast.cygnet.flying) {
-      this.to('glide');
-      return;
-    }
-    /** However the stop at the piano went, nobody walks the crest in grey: past it, the island wakes regardless. */
-    if (this.waveTo < WAVE_REACH && c.position.z < PLACE.z - 34) this.wake(3, false);
     /** Walking is exactly the state the reveal wants to interrupt; a throw or a pick-up is left to finish. */
     if (!this.crestDone && this.onCrest() && (c.moving || !c.busy)) {
       this.reveal();
@@ -758,8 +749,12 @@ export class MeadowChapter implements Chapter {
     if (this.play === 'watch') {
       c.lookAt = p.position;
       if (p.landed) this.fetch();
-      else if (!c.moving && Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 14) {
-        c.walkTo(p.position.x, p.position.z, false, undefined, 8);
+      else if (!c.acting && time >= this.nextChase &&
+        Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > tuning.meadowPlane.chaseFrom) {
+        const aim = this.aroundPond(p.position.x, p.position.z, this.walkGoal);
+        if (c.moving) c.retargetWalk(aim.x, aim.y);
+        else c.walkTo(aim.x, aim.y, false, undefined, tuning.meadowPlane.chaseNear);
+        this.nextChase = time + tuning.meadowPlane.retargetEvery;
       }
     } else if (this.play === 'fetch') {
       c.lookAt = p.position;
@@ -774,10 +769,8 @@ export class MeadowChapter implements Chapter {
 
   private throwAhead(): void {
     const c = this.cast.child;
-    const t = this.leg === ROUTE.length - 1 ? this.cast.boat.position : this.target();
-    const tx = 'x' in t ? t.x : 0;
-    const tz = t instanceof THREE.Vector2 ? t.y : t.z;
-    const angle = Math.atan2(tx - c.position.x, tz - c.position.z) + (Math.random() - 0.5) * 0.5;
+    const t = this.planeWaypoint();
+    const angle = Math.atan2(t.x - c.position.x, t.y - c.position.z) + (Math.random() - 0.5) * 0.5;
     /**
      * The longest walk in the game, over open ground: it is thrown a good way out ahead and they go after it
      * without dawdling. A measured playthrough spent five minutes on the last stretch alone at the old stride.
@@ -792,7 +785,8 @@ export class MeadowChapter implements Chapter {
   private fetch(): void {
     const { child: c, plane: p } = this.cast;
     this.play = 'fetch';
-    c.walkTo(p.position.x, p.position.z, true, () => {
+    const aim = this.aroundPond(p.position.x, p.position.z, this.walkGoal);
+    c.walkTo(aim.x, aim.y, true, () => {
       if (this.play !== 'fetch') return;
       if (Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 2.6 || !p.landed) {
         this.play = 'watch';
@@ -827,6 +821,12 @@ export class MeadowChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
+    s.subjects = undefined;
+    s.fitWidth = false;
+    s.clearance = 2.8;
+    // A narrower angle stacks the companions diagonally on a phone, so fitting them need not shrink them.
+    const pondView = typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+      ? tuning.crest.pondPortraitView : tuning.crest.pondView;
     if (this.beat === 'ashore' || this.beat === 'beach' || this.beat === 'climb' || this.beat === 'brow') {
       /**
        * The climb, from below and behind: on the beach the bank fills the frame and there is nothing over it but
@@ -843,53 +843,51 @@ export class MeadowChapter implements Chapter {
       const bearing = Math.atan2(c.x - look.x, c.z - look.z) + (top ? 0 : 1.15);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       const ground = Math.max(heightAt(c.x, c.z), 0);
-      const toward = top ? 0.1 : 0.16;
-      s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 4.2 : 2.4), c.z + (look.z - c.z) * toward);
+      const toward = top ? 0.04 : 0.16;
+      s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 3.4 : 2.4), c.z + (look.z - c.z) * toward);
       s.distance = top ? 21 : 19;
       s.height = top ? 7.5 : 2.6;
       this.pace = top ? 0.9 : 0.4;
       this.focus.set(c.x, ground, c.z);
       return;
     }
-    if (this.beat === 'try' || this.beat === 'glide') {
-      /**
-       * Side on and low. Over the child's shoulder the cygnet is behind their back and under the grass; from here
-       * they are both in profile, with the cygnet clear against the sky the moment it leaves the ground.
-       */
+    if (this.beat === 'pond' || this.beat === 'gather') {
       const k = this.cast.cygnet.position;
-      /**
-       * Down in the grass, on the cygnet. While it is on the ground the camera stands off to one side so the child
-       * cannot hide it; as it climbs the camera swings in behind their shoulder, so the player ends up watching
-       * the sky with the child — the frame of the fall, turned the other way up.
-       */
+      const ground = Math.max(heightAt(c.x, c.z), 0);
       const gap = Math.hypot(k.x - c.x, k.z - c.z);
-      const ground = Math.max(heightAt(k.x, k.z), 0);
-      const up = THREE.MathUtils.clamp((k.y - ground) / 3.5, 0, 1);
-      /**
-       * The camera stands on the bank with its back to the meadow and looks out over the water, which is the one
-       * line of sight here that does not run up the side of the bowl: the rig answers a bank by climbing over the
-       * scene, and the player would be left drawing circles on the ground from directly above it. It also puts
-       * the pale bird and the child against dark water and the sky their family left by.
-       */
-      const bearing = Math.atan2(k.x - POND_AT.x, k.z - POND_AT.z);
+      // Look back from over the water: no uphill bank or tall foreground grass between us and their hands.
+      const bearing = Math.atan2(c.x - POND_AT.x, c.z - POND_AT.z) + pondView;
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      /** Off the cygnet toward the child, so the one who set it down is in the frame it is trying to leave. */
-      s.target.set(k.x + (c.x - k.x) * 0.42, k.y * 0.72 + Math.max(heightAt(c.x, c.z), 0) * 0.28 + 0.6, k.z + (c.z - k.z) * 0.42);
-      s.distance = 13 + gap * 0.7;
-      /**
-       * The camera stays down on the ground whatever the cygnet does, so that once it is up the frame is looking
-       * up at it with sky behind it. But while it is still down it stands well above the grass and looks in at a
-       * slant, because the player has to be able to draw a circle on the ground around it, and from a camera lying
-       * in the grass a small circle on screen is a hundred metres of meadow.
-       */
-      const eye = ground + THREE.MathUtils.lerp(7.2, 3.4, up);
-      s.height = THREE.MathUtils.clamp(eye - s.target.y, -9, 8);
-      /** It has a whole hollow to come down into after the set-down, so the camera comes down fast and settles. */
-      this.pace = this.now - this.kneltAt < 3.5 ? 1.2 : 0.5;
-      this.focus.copy(k);
+      s.target.set((k.x + c.x) * 0.5, (k.y + ground) * 0.5 + 0.55, (k.z + c.z) * 0.5);
+      s.distance = tuning.crest.pondCameraBack + gap * 0.55;
+      s.height = tuning.crest.pondCameraUp;
+      s.clearance = 2;
+      this.cameraChild.copy(c).y += 0.9;
+      this.pondFraming.secondary.copy(k).y += 0.35;
+      s.subjects = this.pondFraming;
+      this.pace = this.now - this.kneltAt < 3.5 ? 1.1 : 0.7;
+      this.focus.copy(s.target);
       return;
     }
-    if (this.beat === 'crest' || this.beat === 'down') {
+    if (this.beat === 'down') {
+      // The flock leaves the shot. Keep the child and the shore in view while closing on the act of care.
+      const gap = Math.hypot(c.x - this.edge.x, c.z - this.edge.z);
+      const close = 1 - THREE.MathUtils.smoothstep(gap, 3, 18);
+      const bearing = Math.atan2(c.x - POND_AT.x, c.z - POND_AT.z)
+        + THREE.MathUtils.lerp(REVEAL.swing, pondView, close);
+      const toward = THREE.MathUtils.lerp(0.4, 0.12, close);
+      s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+      s.target.copy(c).lerp(POND_AT, toward).y += 0.9;
+      s.distance = THREE.MathUtils.lerp(28, tuning.crest.pondCameraBack + 1, close);
+      s.height = THREE.MathUtils.lerp(11.5, tuning.crest.pondCameraUp, close);
+      this.cameraChild.copy(c).y += 1.2;
+      this.pondFraming.secondary.copy(this.edge).setY(Math.max(heightAt(this.edge.x, this.edge.z), POND_LEVEL) + 0.5);
+      s.subjects = this.pondFraming;
+      this.pace = 1.1;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'crest') {
       /**
        * Coming over the rise you look down into the hollow, and the two of them stand low in a frame that is
        * mostly pond. Once the family is up the same frame holds them and it: the camera stands behind the child
@@ -921,14 +919,19 @@ export class MeadowChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    const pw = this.cast.plane.held ? 0 : 0.25;
-    const fx = c.x * (1 - pw) + p.x * pw;
-    const fz = c.z * (1 - pw) + p.z * pw - 5;
-    const ground = Math.max(heightAt(fx, fz), 0);
-    s.target.set(fx, ground + 3 + Math.max(0, p.y - ground - 12) * 0.35, fz);
-    s.distance = 44;
+    const guide = tuning.meadowPlane;
+    const gap = Math.hypot(p.x - c.x, p.z - c.z);
+    const pw = this.cast.plane.held ? 0 : Math.min(0.25, guide.cameraLead / Math.max(gap, 1));
+    const fx = c.x + (p.x - c.x) * pw;
+    const fz = c.z + (p.z - c.z) * pw - 3;
+    const ground = Math.max(c.y, 0);
+    s.target.set(fx, ground + 3 + (this.cast.plane.held ? 0 : Math.min(guide.cameraRise, Math.max(0, p.y - ground - 6) * 0.35)), fz);
+    s.distance = guide.cameraBack;
     s.height = 13;
-    this.pace = 0.35;
+    this.cameraChild.copy(c).y += 1.2;
+    this.framing.secondary.copy(this.cast.plane.held ? this.cameraChild : p);
+    s.subjects = this.framing;
+    this.pace = guide.cameraPace;
     this.focus.set(fx, ground, fz);
   }
 }

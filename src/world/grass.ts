@@ -1,3 +1,4 @@
+import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
 import { params } from '../params';
 import { glsl, tuning } from '../tuning';
@@ -6,14 +7,15 @@ import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
 import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, POND_LEVEL, pondOut } from './heightfield';
 
 /**
- * How much of its height a blade keeps on the two islands that are cropped: the island of lines is grazed a
- * little shorter so the washing stands clear of it, and the birches are shorter still so their fallen leaves are
- * the floor. Mirrors `croppedAt` in the blade shaders; keep them in step.
+ * How much height grass keeps on grazed islands and the pond's margin. The bank stays short enough to see the
+ * child offer the water and receive the cygnet. Mirrors `croppedAt` in the blade shaders; keep them in step.
  */
 function croppedAt(x: number, z: number): number {
+  if (Math.abs(x - LITTLE_BOATS.x) < 55 && Math.abs(z - LITTLE_BOATS.z) < 78) return 0.22;
   const lines = 1 - smoothstep(0.78, 1.12, Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz));
   const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
-  return (1 - 0.34 * lines) * (1 - 0.62 * birches);
+  const bank = 1 - smoothstep(tuning.crest.bankCropFrom, tuning.crest.bankCropTo, pondOut(x, z));
+  return (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank);
 }
 
 /**
@@ -23,6 +25,15 @@ function croppedAt(x: number, z: number): number {
 function woodFloorAt(x: number, z: number): number {
   const d = Math.hypot((x - ISLES.wood.x) / ISLES.wood.rx, (z - ISLES.wood.z) / ISLES.wood.rz);
   return 1 - smoothstep(0.7, 1.05, d);
+}
+
+/** Short scattered tufts, mirrored by woodGrassCrop in GLSL. */
+function woodGrassCrop(x: number, z: number): number {
+  const wood = woodFloorAt(x, z);
+  if (wood <= 0) return 1;
+  const k = tuning.wood;
+  const patch = smoothstep(0.42, 0.63, shaderFbm(x * k.grassPatchScale + 53, z * k.grassPatchScale - 17));
+  return 1 + (k.grassBaseCrop + (k.grassTuftCrop - k.grassBaseCrop) * patch - 1) * wood;
 }
 
 /** The sleeping island's look numbers: what a blade cropped this short keeps of itself, and how its rime lies. */
@@ -102,10 +113,16 @@ float pastureAt(vec2 xz) {
 float birchFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
 }
-/** How much of its height a blade keeps on the cropped islands: grazed on the lines, shorter under the birches. */
+/** Short, irregular grass around the tarn where the swans have been resting. */
+float pondBankAt(vec2 xz) {
+  return 1.0 - smoothstep(${glsl(tuning.crest.bankCropFrom)}, ${glsl(tuning.crest.bankCropTo)}, pondOut(xz));
+}
+/** How much of its height a blade keeps on the cropped islands and the pond's bank. */
 float croppedAt(vec2 xz) {
+  if (abs(xz.x - 350.0) < 55.0 && abs(xz.y + 590.0) < 78.0) return 0.22;
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
-  return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz));
+  float bank = pondBankAt(xz);
+  return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
 }
 /** 1 over the home island, where the pasture is let grow lush for the last hill. */
 float homeAt(vec2 xz) {
@@ -119,6 +136,12 @@ float sleepFloorAt(vec2 xz) {
 float woodFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.7, 1.05, length((xz - vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0)) / vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0)));
 }
+float woodGrassCrop(vec2 xz) {
+  float wood = woodFloorAt(xz);
+  if (wood <= 0.0) return 1.0;
+  float tuftPatch = smoothstep(0.42, 0.63, fbm(xz * ${glsl(tuning.wood.grassPatchScale)} + vec2(53.0, -17.0)));
+  return mix(1.0, mix(${glsl(tuning.wood.grassBaseCrop)}, ${glsl(tuning.wood.grassTuftCrop)}, tuftPatch), wood);
+}
 vec3 grassTint(vec2 xz) {
   float dry = smoothstep(0.58, 0.76, fbm(xz * 0.022 + vec2(3.1, 7.7)));
   float cool = smoothstep(0.5, 0.68, fbm(xz * 0.041 - vec2(5.3, 1.9))) * (1.0 - dry);
@@ -129,6 +152,7 @@ vec3 grassTint(vec2 xz) {
   emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);
   vec3 tint = mix(meadow, emerald, pastureAt(xz));
   tint = mix(tint, vec3(0.44, 0.31, 0.11), birchFloorAt(xz) * 0.72);
+  tint = mix(tint, mix(vec3(0.14, 0.19, 0.085), vec3(0.29, 0.27, 0.12), fbm(xz * 0.32)), woodFloorAt(xz) * 0.9);
   return mix(tint, mix(tint, vec3(0.4, 0.41, 0.31), 0.28) * 0.93, uSeason);
 }
 `;
@@ -167,7 +191,9 @@ function pondDry(x: number, z: number, groundH: number): number {
 export function grassHeightAt(x: number, z: number): number {
   const groundH = heightAt(x, z);
   if (groundH < GRASS_LINE - 0.6) return 0;
-  const dry = pondDry(x, z, groundH);
+  const inBoats = Math.abs(x - LITTLE_BOATS.x) < 65 && Math.abs(z - LITTLE_BOATS.z) < 85;
+  const boatDry = inBoats && boatsOut(x, z) < 1.2 ? smoothstep(boatsLevel(LITTLE_BOATS.startZ - z) + 0.05, boatsLevel(LITTLE_BOATS.startZ - z) + 0.3, groundH) : 1;
+  const dry = pondDry(x, z, groundH) * boatDry * boatsToyClearing(x, z);
   if (dry <= 0) return 0;
   const lush = shaderFbm(x * 0.035 + 17, z * 0.035 + 17);
   const shortPatch = smoothstep(0.52, 0.68, shaderFbm(x * 0.05 - 23, z * 0.05 - 23));
@@ -175,7 +201,7 @@ export function grassHeightAt(x: number, z: number): number {
   const pasture = smoothstep(-600, -660, z);
   let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
   h *= dry;
-  if (pasture <= 0) return h * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * (1 - (1 - SLEEP.swardCrop) * sleepFloorAt(x, z)) * troddenAt(x, z);
+  if (pasture <= 0) return h * croppedAt(x, z) * woodGrassCrop(x, z) * (1 - (1 - SLEEP.swardCrop) * sleepFloorAt(x, z)) * troddenAt(x, z);
   h += (0.41 + 0.26 * lush - h) * pasture;
   const f = fieldAt(x, z, fieldSample);
   const hilltop = 1 - smoothstep(45, 95, Math.hypot(x - LAST_HILL.x, z - LAST_HILL.z));
@@ -183,7 +209,7 @@ export function grassHeightAt(x: number, z: number): number {
   const grazed = Math.max(hilltop, garden);
   const hay = (f.kind <= 0.22 ? 1 : 0) * f.presence * (1 - grazed);
   const rush = (f.kind >= 0.86 ? 1 : 0) * f.presence * (1 - grazed);
-  return h * (1 + hay * 1.5 + rush * 1.2) * (1 + HOME_LUSH * homeAt(x, z)) * (1 - 0.22 * hilltop) * (1 - 0.5 * garden) * croppedAt(x, z) * (1 - 0.95 * woodFloorAt(x, z)) * (1 - (1 - SLEEP.swardCrop) * sleepFloorAt(x, z)) * troddenAt(x, z);
+  return h * (1 + hay * 1.5 + rush * 1.2) * (1 + HOME_LUSH * homeAt(x, z)) * (1 - 0.22 * hilltop) * (1 - 0.5 * garden) * croppedAt(x, z) * woodGrassCrop(x, z) * (1 - (1 - SLEEP.swardCrop) * sleepFloorAt(x, z)) * troddenAt(x, z);
 }
 
 export const grassUniforms = {
@@ -259,6 +285,11 @@ uniform float uDensity;
 float densityAt(float dist) {
   return mix(mix(1.0, uLevelDensity.x, smoothstep(uRings.x, uRings.y, dist)), uLevelDensity.y, smoothstep(uRings.z, uRings.w, dist));
 }
+float bladeDensity(vec2 root, float dist) {
+  float near = 1.0 - smoothstep(${glsl(SLEEP.swardDetailFrom)}, ${glsl(SLEEP.swardDetailTo)}, dist);
+  float winter = 1.0 - smoothstep(0.72, 1.06, length((root - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})));
+  return min(1.0, uDensity * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near));
+}
 float widthAt(float dist) {
   return mix(mix(1.0, uLevelWidth.x, smoothstep(uRings.x, uRings.y, dist)), uLevelWidth.y, smoothstep(uRings.z, uRings.w, dist));
 }
@@ -314,8 +345,8 @@ void main() {
   float groundH = hn.r;
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
-  float keep = edge > 0.85 ? 1.0 : edge * edge * tufts;
-  keep *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH);
+  float keep = (edge > 0.85 ? 1.0 : edge * edge * tufts) * mix(1.0, ${glsl(tuning.wood.grassDensity)}, woodFloorAt(root2));
+  keep *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH) * boatsDry(root2, groundH);
   vec4 surf = surfaceAt(root2);
   keep *= surf.x;
   vec4 fld = fieldAt(root2);
@@ -336,11 +367,11 @@ void main() {
   float grazed = max(hilltop, garden);
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
-  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
+  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2));
   float angle = gr_rand(s) * 6.2831853;
   float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardCurve)}, sward);
-  float flowerRand = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward));
+  float flowerRand = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2)));
   float petal = gr_rand(s);
   // The petal colour class is stored as a small integer, exact in half float, instead of the draw it comes from.
   float petalClass = petal < 0.45 ? 0.0 : petal < 0.65 ? 1.0 : petal < 0.9 ? 2.0 : 3.0;
@@ -365,10 +396,10 @@ void main() {
  * in scope) so the fragment shader, which runs several times per pixel under multisampling, does not.
  */
 const BLADE_SHADE_GLSL = /* glsl */ `
-  float fringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
+  float shadeFringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
   float far = smoothstep(60.0, 170.0, dist);
-  vRoot = mix(mix(tint * 0.55, uGrassRoot, fringe), mix(uGrassRoot, tint, 0.62), far);
-  float aoLow = mix(0.7, 0.22, fringe);
+  vRoot = mix(mix(tint * 0.55, uGrassRoot, shadeFringe), mix(uGrassRoot, tint, 0.62), far);
+  float aoLow = mix(0.7, 0.22, shadeFringe);
   float aoFar = far * 0.75;
   vAo = vec2(mix(aoLow, 1.0, aoFar), (1.0 - aoFar) * (1.0 - aoLow));
   /**
@@ -377,6 +408,14 @@ const BLADE_SHADE_GLSL = /* glsl */ `
    * morning, light what is there rather than being added on top of it, so grass under the dawn goes green in the
    * sun instead of turning into pale confetti, and grass held stiff by rime does not flash as the wind lays it.
    */
+  float winter = 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})));
+  // Short winter stems do not have the deep occlusion of the metre-high meadow.
+  vAo = mix(vAo, vec2(0.86, 0.14), winter);
+  float green = morningAt(root2);
+  vec3 winterRoot = mix(vec3(0.23, 0.29, 0.23), vec3(0.16, 0.27, 0.09), green);
+  vec3 winterTip = mix(vec3(0.38, 0.44, 0.31), vec3(0.26, 0.43, 0.13), green);
+  vRoot = mix(vRoot, winterRoot, winter * 0.9);
+  vTint = mix(vTint, winterTip, winter * 0.85);
   float rime = frostAt(root2);
   vec3 pale = rimeColour();
   vFlat = smoothstep(0.3, 1.0, wa) * (1.0 - 0.55 * rime);
@@ -384,8 +423,9 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   vSideDir *= 1.0 - 0.5 * rime;
   vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
-  vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)}) * (1.0 + warm * 0.55);
-  vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)}) * (1.0 + warm * 0.8);
+  vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)});
+  vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)});
+  vLocalLight = warm;
 `;
 
 const VERT = /* glsl */ `
@@ -409,6 +449,7 @@ out float vFlat;
 out vec3 vRoot;
 out vec2 vAo;
 out float vSun;
+out vec3 vLocalLight;
 out vec4 vFlower;
 
 void collapse() {
@@ -423,9 +464,9 @@ void main() {
   float rank = root.w;
   float dist = length(root2 - uGrassEye);
   float thinned = densityAt(dist);
-  if (rank >= thinned * uDensity) { collapse(); return; }
+  if (rank >= thinned * bladeDensity(root2, dist)) { collapse(); return; }
   vec4 shape = texelFetch(uShapeTex, at, 0);
-  float share = uDensity * shape.x;
+  float share = bladeDensity(root2, dist) * shape.x;
   if (rank >= thinned * share) { collapse(); return; }
   vec4 tintIn = texelFetch(uTintTex, at, 0);
   vec4 fl = texelFetch(uFlowerTex, at, 0);
@@ -442,7 +483,7 @@ void main() {
   float flower = fl.y * step(0.5, life);
   float petalClass = fl.z;
   h *= 1.0 + flower * fl.w;
-  vec3 rootPos = vec3(root2.x, groundH - 0.12, root2.y);
+  vec3 rootPos = vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
 
   vec2 uv = domainUv(root2);
   vec4 ground = groundAt(root2);
@@ -513,6 +554,7 @@ out float vFlat;
 out vec3 vRoot;
 out vec2 vAo;
 out float vSun;
+out vec3 vLocalLight;
 out vec4 vFlower;
 
 void collapse() {
@@ -529,13 +571,13 @@ void main() {
   if (!insideUv(uv)) { collapse(); return; }
   float dist = length(root2 - uGrassEye);
   float thinned = densityAt(dist);
-  if (rank >= thinned * uDensity) { collapse(); return; }
+  if (rank >= thinned * bladeDensity(root2, dist)) { collapse(); return; }
   vec4 hn = texture(uHeightTex, uv);
   float groundH = hn.r;
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
-  float share = uDensity * (edge > 0.85 ? 1.0 : edge * edge * tufts);
-  share *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH);
+  float share = bladeDensity(root2, dist) * (edge > 0.85 ? 1.0 : edge * edge * tufts) * mix(1.0, ${glsl(tuning.wood.grassDensity)}, woodFloorAt(root2));
+  share *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH) * boatsDry(root2, groundH);
   vec4 surf = surfaceAt(root2);
   share *= surf.x;
   vec4 fld = fieldAt(root2);
@@ -559,16 +601,16 @@ void main() {
   float grazed = max(hilltop, garden);
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
-  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * (1.0 - 0.95 * woodFloorAt(root2)) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
+  h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
   float stand = standing(rank, share, dist);
   h *= mix(0.72, 1.0, life) * stand;
-  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * widthAt(dist) * stand;
+  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * widthAt(dist) * stand;
   float angle = gr_rand(s) * 6.2831853;
   float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardCurve)}, sward);
-  float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward)) * step(0.5, life);
+  float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2))) * step(0.5, life);
   float petal = gr_rand(s);
   h *= 1.0 + flower * (0.2 + 0.5 * pasture);
-  vec3 rootPos = vec3(root2.x, groundH - 0.12, root2.y);
+  vec3 rootPos = vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
 
   vec4 ground = groundAt(root2);
   vec4 bend = texture(uBendTex, uv);
@@ -636,6 +678,7 @@ in float vFlat;
 in vec3 vRoot;
 in vec2 vAo;
 in float vSun;
+in vec3 vLocalLight;
 in vec4 vFlower;
 
 void main() {
@@ -665,7 +708,7 @@ void main() {
   float spec = pow(max(dot(N, H), 0.0), 24.0 + 40.0 * uShower) * (0.16 + 0.5 * flattened + 0.9 * uShower) * T;
   vec3 ambient = mix(uGroundBounce, uSkyAmbient, N.y * 0.5 + 0.5);
 
-  vec3 col = alb * ambient * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * sun;
+  vec3 col = alb * (ambient + vLocalLight) * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * sun;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), 1.0);
 }`;
 
@@ -750,7 +793,8 @@ export class Grass {
     let prevReach = 0;
     for (const [level, spec] of specs.entries()) {
       const blades = spec.cols * spec.rows;
-      if (level < this.finest) spec.maxTiles = 1;
+      // Retain a bounded fine patch for the short winter turf even on the quarter-density tier.
+      if (level < this.finest) spec.maxTiles = level === 0 ? 96 : 1;
       spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach, level === this.finest ? 0 : prevReach));
       prevReach = spec.reach;
       const template = bladeTemplate(spec.segments, level < specs.length - 1);
@@ -838,8 +882,8 @@ export class Grass {
         const h = heightAt(sx, sz);
         low = Math.min(low, h);
         high = Math.max(high, h);
-        /** The dark wood has its own floor of leaves and roots, and no blade there is ever drawn tall enough to see. */
-        if (h > GRASS_LINE - 0.8 && woodFloorAt(sx, sz) < 0.9) land = true;
+        /** Short forest tufts share the same ground and wind as the meadow blades. */
+        if (h > GRASS_LINE - 0.8) land = true;
       }
       const rise = (high - low) / 2 + MAX_BLADE / 2;
       v = land ? new THREE.Sphere(new THREE.Vector3(x + TILE / 2, (low + high + MAX_BLADE) / 2, z + TILE / 2), Math.hypot(TILE * 0.7072 + MAX_BLADE * 0.6, rise) + 1) : null;
@@ -871,7 +915,17 @@ export class Grass {
         const bounds = this.boundsOf(tx, tz);
         if (!bounds || !this.frustum.intersectsSphere(bounds)) continue;
         /** A level can stand in for a tile only once every blade in it has thinned to that level; a finer one always can. */
-        let li = this.finest;
+        const winterDetail = sleepFloorAt(mx, mz) > 0.001 && nearest < SLEEP.swardDetailTo;
+        let li = winterDetail ? 0 : this.finest;
+        // At quarter density the 16x16 table contains every surviving forest blade.
+        // Only use it when the entire tile lies in the fully cropped interior.
+        if (tuning.wood.grassDensity <= 0.25 &&
+          woodFloorAt(tx * TILE, tz * TILE) >= 0.9999 &&
+          woodFloorAt((tx + 1) * TILE, tz * TILE) >= 0.9999 &&
+          woodFloorAt(tx * TILE, (tz + 1) * TILE) >= 0.9999 &&
+          woodFloorAt((tx + 1) * TILE, (tz + 1) * TILE) >= 0.9999) {
+          li = Math.max(li, 1);
+        }
         while (li < this.coarsest && nearest > this.lods[li].spec.reach) li++;
         while (li > this.finest && this.lods[li].count >= this.lods[li].spec.maxTiles) li--;
         const lod = this.lods[li];

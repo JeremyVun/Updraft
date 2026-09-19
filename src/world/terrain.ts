@@ -137,6 +137,15 @@ void main() {
   /** Under the birches the floor is leaf mould, not soil: what shows between the fallen leaves stays warm. */
   float duff = 1.0 - smoothstep(0.6, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
   alb = mix(alb, vec3(0.42, 0.26, 0.12) * (0.82 + 0.5 * grain), grassy * duff * 0.88);
+  // Damp leaf mould and moss remain textured when lightning exposes the gaps between tufts.
+  float forest = woodFloorAt(xz) * grassy;
+  if (forest > 0.0) {
+    float moss = smoothstep(0.38, 0.68, fbm(xz * 0.24 + 19.0));
+    float flecks = vnoise(xz * 9.0) * detail;
+    vec3 floorColour = mix(vec3(0.105, 0.071, 0.038), vec3(0.095, 0.13, 0.057), moss);
+    floorColour *= 0.67 + grain * 0.5 + flecks * 0.26;
+    alb = mix(alb, floorColour, forest * 0.95);
+  }
   alb = mix(alb, uRock * (0.8 + 0.4 * grain), smoothstep(0.42, 0.6, slope));
   float lineWidth = max(0.5, dist * 0.0024);
   float wallLine = (1.0 - smoothstep(lineWidth * 0.45, lineWidth, fld.x)) * fld.z * fld.w;
@@ -155,8 +164,18 @@ void main() {
    * shows between them and has to be the grass itself rather than the soil under it. The frost then creeps over
    * both together, in the grain of the ground rather than as a wash laid over the top of it.
    */
-  alb = mix(alb, mix(under, field, 0.35) * (0.88 + 0.24 * grain), grassy * sleepFloorAt(xz) * 0.92);
-  alb = mix(alb, rimeColour() * (0.86 + 0.28 * grain), frostAt(xz) * 0.78);
+  float sleepingFloor = grassy * sleepFloorAt(xz);
+  float winterFibre = 0.0;
+  if (sleepingFloor > 0.001) {
+    float winterTuft = fbm(xz * 0.17 + 13.0);
+    winterFibre = vnoise(xz * vec2(12.0, 5.0)) * detail;
+    vec3 winterGrass = mix(vec3(0.14, 0.22, 0.17), vec3(0.27, 0.31, 0.22), smoothstep(0.2, 0.85, winterTuft));
+    vec3 awakeGrass = mix(vec3(0.09, 0.22, 0.06), vec3(0.19, 0.32, 0.11), winterTuft);
+    winterGrass = mix(winterGrass, awakeGrass, morningAt(xz));
+    winterGrass *= 0.88 + winterFibre * 0.09 + grain * 0.12;
+    alb = mix(alb, winterGrass, sleepingFloor * 0.92);
+  }
+  alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frostAt(xz) * 0.5);
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = applyFog(col, vWorld);

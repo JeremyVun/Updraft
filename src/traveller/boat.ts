@@ -520,11 +520,15 @@ export class Boat {
     const hang = 1 - THREE.MathUtils.smoothstep(air.blowing, 0, tuning.sail.hangsBelow);
     sail.uDroop.value = hang;
     /** Nothing holds a dead sail out: the boom comes back amidships and swings with whatever the hull is doing. */
-    const set = THREE.MathUtils.clamp(-Math.atan2(across, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
+    const set = THREE.MathUtils.clamp(Math.atan2(across, Math.max(along, 0.5)) * 0.6, -1.1, 1.1);
     const targetBoom = set * (1 - hang * 0.85) + hang * Math.sin(this.time * 0.35) * 0.05;
     this.boom += (targetBoom - this.boom) * (1 - Math.exp(-dt * 1.5));
     const fill = (1 - Math.exp(-air.taken / tuning.sail.bellyAt)) * (this.afloat ? 1 : 0.4);
-    sail.uFill.value += ((across >= 0 ? 1 : -1) * fill * tuning.sail.belly - sail.uFill.value) * (1 - Math.exp(-dt * 3));
+    // Cloth bellies along the sail's local +z, rotated by the boom and hull. Crosswind alone can
+    // change sign in a following breeze and turn the belly astern while the wind still drives us forward.
+    const normalYaw = this.yaw + this.boom;
+    const pressure = w.x * Math.sin(normalYaw) + w.z * Math.cos(normalYaw);
+    sail.uFill.value += ((pressure >= 0 ? 1 : -1) * fill * tuning.sail.belly - sail.uFill.value) * (1 - Math.exp(-dt * 3));
     /** The harder it blows, the more there is for the cloth to do: a lazy ripple in a light air, a lively one in a gust. */
     sail.uFlutter.value = Math.min(1, air.blowing / tuning.sail.livelyAt);
     /** Integrate the changing frequency: multiplying it by elapsed time makes every gust jump the cloth. */

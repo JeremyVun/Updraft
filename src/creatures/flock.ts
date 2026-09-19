@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tuning } from '../tuning';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { ease, range, wrapAngle } from './motion';
 import { Instances } from './shapes';
@@ -343,15 +344,20 @@ export class SwanFlock {
    * The raft goes: the long pattering run across the water, one after another, and then they are up and gathering
    * into a skein on `bearing`. Nothing else stops them, so this is also how a raft puts itself away.
    */
-  lift(bearing = this.bearing, speed = CRUISE, climb = 0): void {
+  lift(bearing = this.bearing, speed = CRUISE, climb = 0, startledBy?: THREE.Vector3): void {
     if (this.mode !== 'raft' || this.launched >= 0) return;
     this.launched = 0;
     this.bearing = bearing;
     this.dir.set(Math.sin(bearing), 0, Math.cos(bearing));
-    /** Whoever is furthest downwind has clear water ahead of it, so it is the one that goes first. */
-    const order = [...this.birds].sort((a, b) => b.at.dot(this.dir) - a.at.dot(this.dir));
+    /** A startled raft reacts nearest the child first; an undisturbed departure starts downwind. */
+    const order = [...this.birds].sort((a, b) => startledBy
+      ? a.at.distanceToSquared(startledBy) - b.at.distanceToSquared(startledBy)
+      : b.at.dot(this.dir) - a.at.dot(this.dir));
     order.forEach((b, i) => {
-      b.delay = i * 0.42 + Math.random() * 0.25;
+      b.delay = startledBy
+        ? tuning.crest.startlePause + i * tuning.crest.startleStagger + Math.random() * 0.15
+        : i * 0.42 + Math.random() * 0.25;
+      if (startledBy) b.speed = tuning.crest.startlePaddle;
       b.offset.set(0, 0, 0);
     });
     this.birds.length = 0;

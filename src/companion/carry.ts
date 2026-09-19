@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Traveller } from '../traveller/traveller';
 import { Duet, type Beat } from './duet';
+import { tuning } from '../tuning';
 
 const UP = new THREE.Vector3(0, 1, 0);
 /**
@@ -41,6 +42,9 @@ export class Carry {
   private onBodyWant = 0;
   private readonly gripLocal = [new THREE.Vector3(), new THREE.Vector3()];
   private hasGrips = false;
+  private tending = 0;
+  private tendingHand: 0 | 1 = 0;
+  private readonly wingTip = new THREE.Vector3();
   private readonly a = new THREE.Vector3();
   private readonly b = new THREE.Vector3();
   private readonly c = new THREE.Vector3();
@@ -65,7 +69,7 @@ export class Carry {
    * The first time, and any time it is frightened: down on the knees, both hands offered low and then held still
    * while it makes up its mind, and only then the scoop, the lift, a look at each other, and in to the chest.
    */
-  gatherUp(onDone?: () => void): void {
+  gatherUp(onDone?: () => void, tendWing = false): void {
     const { child: c, cygnet: k } = this;
     const wary = () => THREE.MathUtils.clamp(k.frightened * 1.2 + (1 - k.bond) * 0.5, 0, 1);
     const leanFrom = { value: 0 };
@@ -180,8 +184,36 @@ export class Carry {
           c.tilt = 0;
         },
       },
+      ...(tendWing ? this.tendWing() : []),
       { name: 'settle', dur: 0.6, update: () => this.regard(), exit: () => this.atEase() },
     ], onDone);
+  }
+
+  /** Keep the bird supported against the coat while one mitten winds and smooths its small linen wrap. */
+  private tendWing(): Beat[] {
+    const { child: c, cygnet: k } = this;
+    return [
+      { name: 'linen', dur: 1.4, enter: () => {
+        this.onBodyWant = 1;
+        k.wing.dress(0);
+        k.wing.tip(this.wingTip);
+        this.tendingHand = c.mitten(0, this.a).distanceToSquared(this.wingTip) < c.mitten(1, this.b).distanceToSquared(this.wingTip) ? 0 : 1;
+      }, update: (p) => {
+        c.kneeling = p;
+        this.tending = p;
+        c.lookAt = k.wing.tip(this.wingTip);
+      } },
+      { name: 'bandage', dur: tuning.wingCare.dressFor, update: (p) => {
+        k.wing.dress(p);
+        c.lookAt = k.wing.tip(this.wingTip);
+        k.watch(c.face(this.regardAt));
+      }, exit: () => k.wing.dress(1) },
+      { name: 'smooth-wrap', dur: 1.2, update: (p) => {
+        this.tending = 1 - p;
+        c.kneeling = 1 - p;
+        this.regard();
+      }, exit: () => { this.tending = 0; c.kneeling = 0; k.bind(0.12); } },
+    ];
   }
 
   /**
@@ -300,7 +332,7 @@ export class Carry {
       }
       return worst;
     }
-    if (this.onBody < 0.95 || this.cygnet.seating.move) return null;
+    if (this.onBody < 0.95 || this.cygnet.seating.move || this.tending > 0) return null;
     for (const hand of [0, 1] as const) worst = Math.max(worst, c.mitten(hand, this.gapAt).distanceTo(this.palmOn(hand, 'cradle', this.a)));
     return worst;
   }
@@ -415,6 +447,11 @@ export class Carry {
     }
     c.toBody(this.palmOn(0, 'cradle', this.a), this.gripLocal[0]);
     c.toBody(this.palmOn(1, 'cradle', this.a), this.gripLocal[1]);
+    if (this.tending > 0) {
+      k.wing.tip(this.wingTip);
+      this.wingTip.y += PALM * 0.35;
+      this.gripLocal[this.tendingHand].lerp(c.toBody(this.wingTip, this.a), this.tending);
+    }
     this.hasGrips = true;
   }
 

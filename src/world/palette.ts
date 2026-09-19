@@ -192,3 +192,44 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
   const [az, el] = lightAngles(dusk);
   sunDirection(az, el, u.uSunDir.value);
 }
+
+
+/** Winter night and first light: cool distance remains after the small window has brought warmth home. */
+const SLEEP_NIGHT: Palette = {
+  sun: hdr('#bdccdf', 0.42), zenith: hdr('#111d34', 0.48),
+  horizon: hdr('#526079', 0.4), horizonSun: hdr('#78778d', 0.42),
+  ambient: hdr('#91a5bd', 0.24), bounce: hdr('#45545d', 0.11), fog: 0.0015,
+};
+const SLEEP_DAWN: Palette = {
+  sun: hdr('#e6d6ca', 0.85), zenith: hdr('#465c83', 0.6),
+  horizon: hdr('#b1a8b8', 0.65), horizonSun: hdr('#d9bbad', 0.8),
+  ambient: hdr('#a7b7cd', 0.4), bounce: hdr('#657868', 0.17), fog: 0.0015,
+};
+const SLEEP_MORNING: Palette = {
+  sun: hdr('#ffdf9e', 2.3), zenith: hdr('#659cc7', 0.9),
+  horizon: hdr('#c7dcce', 0.88), horizonSun: hdr('#ffe1a7', 1.15),
+  ambient: hdr('#b4cbdc', 0.5), bounce: hdr('#8caa67', 0.24), fog: 0.0014,
+};
+const sleepMix = blank();
+const morningDirection = sunDirection(2, 24);
+
+/** Applied after the ordinary palette. Presence fades on the crossing, leaving other chapters untouched. */
+export function applySleepingPalette(presence: number): void {
+  if (presence <= 0 || params.dusk !== null) return;
+  const u = atmo.uniforms;
+  // The illuminated lane arrives first; the wider sky follows as the bird reaches the hollow.
+  const dawn = THREE.MathUtils.smoothstep(u.uDawn.value.x, 0.16, 1);
+  const p = dawn < 0.55
+    ? mixInto(sleepMix, SLEEP_NIGHT, SLEEP_DAWN, dawn / 0.55)
+    : mixInto(sleepMix, SLEEP_DAWN, SLEEP_MORNING, (dawn - 0.55) / 0.45);
+  u.uSunColor.value.lerp(p.sun, presence);
+  u.uSkyZenith.value.lerp(p.zenith, presence);
+  u.uSkyHorizon.value.lerp(p.horizon, presence);
+  u.uSkyHorizonSun.value.lerp(p.horizonSun, presence);
+  u.uSkyAmbient.value.lerp(p.ambient, presence);
+  u.uGroundBounce.value.lerp(p.bounce, presence);
+  u.uFogDensity.value = THREE.MathUtils.lerp(u.uFogDensity.value, p.fog, presence);
+  u.uNight.value = THREE.MathUtils.lerp(u.uNight.value, 1 - THREE.MathUtils.smoothstep(dawn, 0.08, 0.8), presence);
+  u.uStarlight.value *= 1 - dawn * presence;
+  if (!params.sun) u.uSunDir.value.lerp(morningDirection, dawn * presence).normalize();
+}

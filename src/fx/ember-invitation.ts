@@ -1,52 +1,48 @@
 import * as THREE from 'three';
 import { tuning } from '../tuning';
-import { RibbonBatch, type Ribbon } from './ribbons';
+import type { PointerInput } from '../input/pointer';
+import { screenBrush } from '../creatures/motion';
+import { WindGesture } from './wind-gesture';
 
-/** Quiet strokes around the waiting ember (or wet plane). Drawing only: never writes wind or heat. */
+/** Shared sweeps for embers, wet paper, toy sails and soap bubbles. Drawing only. */
 export class EmberInvitation {
-  readonly batch = new RibbonBatch(72, '#ffe0a0', 3);
-  private readonly strokes: Ribbon[] = Array.from({ length: 3 }, () => ({
-    points: Array.from({ length: 24 }, () => new THREE.Vector3()), alpha: 0, width: 0,
-  }));
-  private readonly right = new THREE.Vector3();
-  private readonly up = new THREE.Vector3();
+  private readonly gesture = new WindGesture('ember-invitation');
+  readonly batch = this.gesture.batch;
+  readonly strokes = this.gesture.strokes;
   private target: THREE.Vector3 | null = null;
   private elapsed = 0;
+  private quiet = 0;
+  private alpha = 0;
+  private readonly center = new THREE.Vector3();
+  private readonly toward = new THREE.Vector3();
+  private readonly rim = new THREE.Vector3();
+  private readonly screen = new THREE.Vector3();
 
-  constructor() {
-    this.batch.mesh.name = 'ember-invitation';
-    this.batch.mesh.visible = false;
-  }
-
-  update(dt: number, camera: THREE.Camera, target: THREE.Vector3 | null): void {
-    this.batch.mesh.visible = false;
-    if (target !== this.target) { this.target = target; this.elapsed = 0; }
+  update(dt: number, camera: THREE.Camera, target: THREE.Vector3 | null, input: PointerInput,
+    alternate?: THREE.Vector3, surfaceRadius = 0): void {
+    this.gesture.hide();
+    if (target !== this.target) { this.target = target; this.elapsed = 0; this.quiet = 0; this.alpha = 0; }
     if (!target) return;
-    this.elapsed += dt;
-    const k = tuning.wood;
-    if (this.elapsed < k.inviteAfter) return;
-    const at = this.elapsed - k.inviteAfter;
-    const cycle = k.inviteSweep + k.invitePause;
-    const phase = (at % cycle) / k.inviteSweep;
-    const fade = THREE.MathUtils.smoothstep(phase, 0, 0.16) * (1 - THREE.MathUtils.smoothstep(phase, 0.8, 1));
-    if (fade < 0.002) return;
-    const direction = Math.floor(at / cycle) % 2 === 0 ? 1 : -1;
-    this.right.setFromMatrixColumn(camera.matrixWorld, 0);
-    this.up.setFromMatrixColumn(camera.matrixWorld, 1);
-    const pen = THREE.MathUtils.smoothstep(phase, 0, 1);
-    for (let strand = 0; strand < this.strokes.length; strand++) {
-      const r = this.strokes[strand];
-      r.alpha = k.inviteAlpha * fade * (strand === 0 ? 1 : 0.4);
-      r.width = k.inviteWidth * (strand === 0 ? 1 : 0.6);
-      for (let i = 0; i < r.points.length; i++) {
-        const tail = i / (r.points.length - 1);
-        const t = Math.max(0, pen - tail * 0.4 - strand * 0.04);
-        r.points[i].copy(target)
-          .addScaledVector(this.right, (t - 0.5) * k.inviteSpan * direction)
-          .addScaledVector(this.up, 0.4 + Math.sin(t * Math.PI) * 0.38 + strand * 0.15);
-      }
+    this.elapsed += dt; this.quiet += dt;
+    let brushRadius = tuning.wood.brushRadius;
+    if (surfaceRadius > 0) {
+      this.screen.copy(target).project(camera);
+      this.toward.setFromMatrixColumn(camera.matrixWorld, 0);
+      this.rim.copy(target).addScaledVector(this.toward, surfaceRadius).project(camera);
+      brushRadius = Math.max(brushRadius, Math.abs(this.rim.x - this.screen.x)
+        * (camera as THREE.PerspectiveCamera).aspect + tuning.skyMirror.bubbleHitPadding);
     }
-    this.batch.mesh.visible = true;
-    this.batch.update(this.strokes);
+    if (input.present && !input.muted && input.ndc.distanceToSquared(input.prevNdc) > 1e-8
+      && (screenBrush(camera, target, input.prevNdc, input.ndc, brushRadius) > 0.02
+        || (alternate && screenBrush(camera, alternate, input.prevNdc, input.ndc, brushRadius) > 0.02))) this.quiet = 0;
+    const k = tuning.wood;
+    const offered = this.elapsed > k.inviteAfter && this.quiet > tuning.invitation.resumeAfter;
+    this.alpha += ((offered ? k.inviteAlpha : 0) - this.alpha)
+      * (1 - Math.exp(-dt * (offered ? 6 : tuning.invitation.handover)));
+    const at = Math.max(0, this.elapsed - k.inviteAfter), cycle = k.inviteSweep + k.invitePause;
+    // A large target such as a soap bubble must not bury the demonstration inside its opaque surface.
+    this.center.copy(target).addScaledVector(this.toward.subVectors(camera.position, target).normalize(), surfaceRadius);
+    this.gesture.draw(camera, this.center, (at % cycle) / k.inviteSweep, Math.max(k.inviteSpan, surfaceRadius * 2.3), this.alpha,
+      k.inviteWidth, 'across', Math.floor(at / cycle) % 2 === 0 ? 1 : -1);
   }
 }

@@ -5,9 +5,7 @@ import { tuning } from '../tuning';
 import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
-
-/** Where the kite is now, so the story can have the child look up at it without having to own one. */
-export const KITE_AT = new THREE.Vector3();
+import { REFLECTION_LAYER } from './water/reflection';
 
 const PAPER_VERT = /* glsl */ `
 in vec3 aPaper;
@@ -194,7 +192,10 @@ class Cord {
  * is marked without anybody being told.
  */
 export class Kite {
+  /** Each departure has its own wind sample, position and tail. */
+  readonly position = new THREE.Vector3();
   readonly group = new THREE.Group();
+  private readonly stringLength: number;
   private readonly anchor = new THREE.Vector3();
   private readonly sail = new THREE.Group();
   private readonly cord = new Cord(CORD_POINTS);
@@ -229,12 +230,16 @@ export class Kite {
 
   constructor(
     private readonly wind: WindField,
-    berth: THREE.Vector3,
+    berth: { x: number; z: number },
+    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number } = {},
   ) {
-    /** West of the boat and a little south of it, where the sand goes over into grass. */
-    const x = berth.x - 11;
-    const z = berth.z + 3;
-    const ground = Math.max(heightAt(x, z), 0);
+    /** The original Lines tie-off is the default; each shore can put its post on dry ground. */
+    this.stringLength = options.stringLength ?? tuning.linesToys.stringLength;
+    this.azimuth = options.azimuth ?? this.azimuth;
+    const [dx, dz] = options.offset ?? [-11, 3];
+    const x = berth.x + dx;
+    const z = berth.z + dz;
+    const ground = options.ground ?? Math.max(heightAt(x, z), 0);
     this.anchor.set(x, ground + 1.05, z);
 
     const drift = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG });
@@ -274,24 +279,24 @@ export class Kite {
     this.bows = new THREE.Mesh(bowGeo, paper);
     this.bows.frustumCulled = false;
     this.group.add(this.bows);
-    KITE_AT.copy(this.anchor).add(this.a.set(0, 14, -6));
+    this.group.traverse(part => part.layers.enable(REFLECTION_LAYER));
+    this.position.copy(this.anchor).add(this.a.set(0, 14, -6));
+    this.group.visible = false;
   }
 
-  /** Where it is in the sky, for the story and for QA. */
-  get position(): THREE.Vector3 {
-    return KITE_AT;
-  }
+  /** The fixed tie-off beside the departure, also used by the framing checks. */
+  get tieOff(): THREE.Vector3 { return this.anchor; }
 
-  update(dt: number, time: number, camera: THREE.Camera): void {
+  update(dt: number, time: number, camera: THREE.Camera, enabled = true): void {
     const away = Math.hypot(camera.position.x - this.anchor.x, camera.position.z - this.anchor.z);
-    this.group.visible = away < 300;
+    this.group.visible = enabled && away < 300;
     if (!this.group.visible) {
       this.asleep = true;
       return;
     }
     if (dt < 1e-4) return;
     const k = tuning.linesToys;
-    const air = feltWind(this.wind.sample(KITE_AT.x, KITE_AT.z, this.sample), this.wind.calm);
+    const air = feltWind(this.wind.sample(this.position.x, this.position.z, this.sample), this.wind.calm);
     this.sway.update(air.x, air.z, dt);
     air.x = this.sway.x;
     air.z = this.sway.z;
@@ -322,11 +327,11 @@ export class Kite {
     this.roll += (bank - this.roll) * (1 - Math.exp(-dt * 2.5));
 
     const flown = this.azimuth + Math.sin(this.phase) * swing;
-    const span = k.stringLength * this.reach;
+    const span = this.stringLength * this.reach;
     const flat = Math.cos(this.elev) * span;
-    KITE_AT.set(this.anchor.x + Math.sin(flown) * flat, this.anchor.y + Math.sin(this.elev) * span, this.anchor.z + Math.cos(flown) * flat);
+    this.position.set(this.anchor.x + Math.sin(flown) * flat, this.anchor.y + Math.sin(this.elev) * span, this.anchor.z + Math.cos(flown) * flat);
     /** Whatever the player does to it, it stays in the air: the string is the only thing holding it down. */
-    KITE_AT.y = Math.max(KITE_AT.y, Math.max(heightAt(KITE_AT.x, KITE_AT.z), 0) + FOOT + 1.2);
+    this.position.y = Math.max(this.position.y, Math.max(heightAt(this.position.x, this.position.z), 0) + FOOT + 1.2);
 
     this.face(dt, camera);
     if (this.asleep) {
@@ -339,7 +344,7 @@ export class Kite {
 
   /** Nose up the string, belly into the wind, banked into whichever way it is swinging. */
   private face(dt: number, camera: THREE.Camera): void {
-    this.yAxis.subVectors(KITE_AT, this.anchor).normalize();
+    this.yAxis.subVectors(this.position, this.anchor).normalize();
     this.xAxis.copy(this.yAxis).cross(UP).normalize();
     this.zAxis.crossVectors(this.xAxis, this.yAxis).normalize();
     this.basis.makeBasis(this.xAxis, this.yAxis, this.zAxis);
@@ -347,10 +352,10 @@ export class Kite {
      * And it swings round on its string until it is showing its face to whoever is watching. A kite edge-on is a
      * white sliver, which is the one thing this one must never be: it is here to be recognised from the crest.
      */
-    this.a.subVectors(camera.position, KITE_AT);
+    this.a.subVectors(camera.position, this.position);
     const want = Math.atan2(this.a.dot(this.xAxis), Math.max(this.a.dot(this.zAxis), 0.001));
     this.shown += (THREE.MathUtils.clamp(want, -0.95, 0.95) - this.shown) * (1 - Math.exp(-dt * 0.9));
-    this.sail.position.copy(KITE_AT);
+    this.sail.position.copy(this.position);
     this.sail.quaternion.setFromRotationMatrix(this.basis);
     this.sail.rotateY(this.shown + this.roll * 0.6);
     this.sail.rotateZ(-this.roll);
@@ -438,7 +443,7 @@ export class Kite {
   /** The string hangs in its own weight and comes straight as the kite pulls: the slack is the whole story. */
   private runCord(time: number, span: number, speed: number): void {
     this.b.copy(this.sail.localToWorld(this.c.set(0, 0.05, -0.12)));
-    const sag = Math.max(0, tuning.linesToys.stringLength - span) * 0.42;
+    const sag = Math.max(0, this.stringLength - span) * 0.42;
     const shiver = Math.min(0.09, speed * 0.008);
     for (let i = 0; i < CORD_POINTS; i++) {
       const t = i / (CORD_POINTS - 1);

@@ -3,6 +3,44 @@
  * for scale, the prevailing breeze blows at `wind.breeze` and the hardest stroke makes `pointer.maxGust`.
  */
 export const tuning = {
+  meadowPlane: {
+    /** Lead the child toward each discovery, then wheel nearby until they catch up. */
+    lead: 24, waitAt: 34, resumeAt: 24, brakeFrom: 28, reach: 42,
+    returnSpeed: 5, turnRate: 2.5, turnWidth: 8, outwardSpeed: 30,
+    height: 28, heightBrake: 18, riseSpeed: 24,
+    chaseFrom: 10, chaseNear: 5, retargetEvery: 0.6,
+    cameraLead: 6, cameraRise: 6, cameraBack: 44, cameraExtra: 22,
+    cameraMargin: 0.78, cameraPace: 0.8,
+  },
+  planeIndicator: {
+    /** Screen pixels beyond the edge to reach full visibility; fade time stays independent of frame rate. */
+    edgeFade: 24, fadeRate: 8, opacity: 0.86,
+  },
+  skyMirror: {
+    rippleSpeed: 3.6, rippleStrength: 0.06, settleRate: 0.55,
+    bubbleRadius: 1.55, bubbleGrow: 1.25, bubbleSpeed: 6.5, bubbleResponse: 28, bubbleStrokeSpeed: 0.4,
+    bubbleDrag: 1.4, bubbleFilledDrag: 2.6, bubbleVerticalDrag: 2.6,
+    bubbleLift: 4.5, bubbleRelease: 8.5, bubbleReach: 19,
+    bubbleHitPadding: 0.055, captureRadius: 2.1, wandRadius: 0.62,
+    liftFrom: 0.2, liftFull: 0.65, starRise: 3.2, starHeight: 18,
+    boatDriftSpeed: 4.5, duskFrom: 1.27, duskTo: 1.72, stroll: 0.85,
+    cameraDistance: 27, cameraPortraitDistance: 29, cameraHeight: 8,
+    cameraPortraitHeight: 10, cameraLiftFollow: 0.28, constellationReveal: 6,
+    cameraRiseDistance: 32, cameraPortraitRiseDistance: 40,
+  },
+  littleBoats: {
+    /** Small toy sails respond to local gust energy, not the prevailing breeze. */
+    windFrom: 0.012, windFull: 0.18, speed: 2.4, drag: 1.7,
+    fleetReach: 14, childLead: 4, bankOffset: 2.2,
+    /** Nearby wind carries the fleet; each directly blown sail can move independently. */
+    fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
+    brushSpeed: 1.5, brushRadius: 0.085, brushWindRadius: 3.5, brushEnergyScale: 22,
+    inviteAfter: 4, revealFor: 4.5,
+    rippleHeight: 0.065, toyDraft: 0.025, sailFillRate: 2.8, sailEmptyRate: 1.4,
+    sailSag: 0.48, sailFold: 0.1, sailFlutter: 0.045, sailShake: 0.13,
+    heel: 0.13, rollSpring: 13, rollDamping: 3.8, drift: 0.5,
+    swimSpeed: 3.15, swimWeave: 0.15, swimPlay: 0.8,
+  },
   veil: {
     /** Sparse ambient ribbons; pointer strokes only nudge the broad colour field. */
     maxRibbons: 3,
@@ -81,6 +119,13 @@ export const tuning = {
     /** How near on screen (in screen heights) circles have to be drawn to something the story asks to have lifted for the column to stand there. */
     anchorNear: 0.6,
   },
+  invitation: {
+    /** Readable air at game distance, including the unlit wood. Widths are CSS pixels. */
+    minPixels: 6, maxPixels: 10, lightFloor: 0.8,
+    tail: 0.48, curl: 0.12, spread: 0.045,
+    handover: 12, resumeAfter: 1.4,
+    screenMargin: 0.08,
+  },
   swirl: {
     /**
      * The ribbon the player's circling draws into the air. Every loop they draw lifts the air another `pitch`, so
@@ -145,6 +190,11 @@ export const tuning = {
   world: {
     /** North to south length of the meadow. It was sculpted 600 long and is shown as a scale model of that. */
     meadowLength: 400,
+    /** Offshore veil in multiples of the meadow's coastline radii; opaque before the neighbouring islands. */
+    meadowVeilFrom: 1.08,
+    meadowVeilTo: 1.3,
+    /** Lower the ridge between the beach crest and the piano's patch of colour. */
+    meadowPianoSaddle: 6,
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
     /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
@@ -162,19 +212,40 @@ export const tuning = {
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
     looks: 11,
-    /** How far back from the waterline the child stops, and how long they stand there before the family goes. */
-    standOff: 3.6,
-    goes: 3.2,
+    /** How far back from the waterline the child stops; the flock reacts this far before they reach that spot. */
+    standOff: 1.6,
+    startleFrom: 10,
+    /** Short grass at the water's edge gives the child's hands and the little swimmer a readable shore. */
+    bankGrass: 0.18,
+    bankCropFrom: 1.18,
+    bankCropTo: 1.55,
+    /** Come round onto the water as they arrive, then keep both companions inside the frame. */
+    pondView: 2.15,
+    pondPortraitView: 2.7,
+    pondCameraBack: 9,
+    pondCameraUp: 5.5,
+    /** The nearest birds raise their heads and paddle away before running; the reaction spreads through the raft. */
+    startlePause: 0.7,
+    startleStagger: 0.24,
+    startlePaddle: 0.65,
     /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
     leaves: 12,
     leaveClimb: 3.4,
     /** Seconds after the family has gone before the child kneels and sets the cygnet down after them. */
     setsDown: 8.5,
-    /** How far in front of the child the cygnet is put down, and how long it waits before its first try. */
-    setDownAt: 2.6,
-    firstTry: 2,
     /** Seconds it keeps its eyes on the sky they left by, after which they are out of sight for good. */
     watches: 7,
+  },
+  wingCare: {
+    dressFor: 4.8,
+    lookBackFor: 2.2,
+    openFor: 2.8,
+    unwindFor: 3.2,
+    /** Pond: a small separation, then a deliberate return to the child's hands. */
+    pondOut: 5,
+    pondWatchFor: 3.5,
+    pondReturnAfter: 12,
+    pondEntryLimit: 18,
   },
   colt: {
     /**
@@ -185,8 +256,6 @@ export const tuning = {
     gustLift: 0.25,
     /** How far round itself it also feels for wind, so the player's circles do not have to be dead centre on a moving bird. */
     reach: 2,
-    /** Seconds the colt is left trying in the meadow before the child gathers it up and walks on. */
-    tryFor: 60,
   },
   summit: {
     /**
@@ -204,6 +273,19 @@ export const tuning = {
     callEvery: 9,
   },
   piano: {
+    initialRadius: 13, initialSoft: 4,
+    /** The visible sweep is the hit target, measured in screen heights rather than terrain distance. */
+    guideSpan: 1.65, guideOver: 1.35, guideTolerance: 0.045,
+    guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
+    phraseRest: 9, finaleWaveAfter: 0.35,
+    /** Each completed sweep sends music across a larger stretch of the visible meadow. */
+    responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
+    responseLift: 2.2, responseHold: 5.4, responseReturn: 8,
+    responseBack: [34, 46, 58], responseUp: [19, 30, 41], responseOn: [13, 16, 21],
+    waveWidth: 0.65, waveAlpha: 0.55, waveOver: 1.3,
+    growthRoughness: 14, growthSoftness: 6,
+    traceCurl: 0.9, traceOrbit: 0.9, traceDrift: 0.55,
+    waveCurl: 0.075, waveCurlRadius: 11, waveSwirl: 0.55,
     /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */
     gustFrom: 0.2,
     gustFull: 0.75,
@@ -225,16 +307,9 @@ export const tuning = {
     /** How near the camera has to be for the piano to sound at all, and where it is loudest. */
     heardWithin: 62,
     heardFully: 16,
-    /** Seconds the child sits with the player playing nothing before they walk on, and the longest they ever stay. */
-    listenFor: 20,
-    stayFor: 90,
     /** The lullaby: seconds between its notes, how long it waits for an answer before saying a phrase again. */
     phraseSpacing: 0.42,
     sayAgain: 8,
-    /** How much less wind than a run normally takes counts as an answer while the piano is waiting for one. */
-    answerEase: 0.2,
-    /** How often a phrase is said to nobody before the piano stops waiting and plays the whole tune by itself. */
-    saysTwice: 3,
     /** The cygnet on the keys: how long it takes to walk them, and how far along them it starts and finishes. */
     walkKeys: 6.5,
     walkFrom: 0.46,
@@ -242,20 +317,9 @@ export const tuning = {
     /** How far the room's music pulls back while they are sitting at it: all the way, so the tune is heard alone. */
     hush: 1,
     /** How loud it is against everything else, once the listener is near enough to hear it fully. */
-    loudness: 3,
-    /**
-     * The wind line the phrase is shown with: how far over the keys it runs, how fast it chases the key that is
-     * sounding, how long after the last note it holds on, and how it floats off — slowly while it waits, and away
-     * altogether once the player has played the phrase back.
-     */
-    lineOver: 0.1,
-    lineChases: 11,
-    lineHolds: 0.85,
-    lineRise: 0.3,
-    lineBlown: 2.6,
+    loudness: 3.8,
     /** How thick the streak is drawn, in world units, and how strongly it shows. */
     linePen: 0.085,
-    lineAlpha: 0.8,
     /**
      * What every note does to the meadow: the trace it lifts off its key and runs up the hill behind the piano.
      * How long it takes to lift clear of the case and how fast it climbs while it does; how fast it runs and how
@@ -265,30 +329,30 @@ export const tuning = {
      */
     traceLift: 0.45,
     traceClimb: 4.5,
-    traceSpeed: 9,
-    traceFor: 3.6,
-    traceLonger: 1.8,
-    traceLow: 2.0,
-    traceHigh: 3.4,
-    traceBends: 1.2,
+    traceSpeed: 11,
+    traceFor: 6,
+    traceLonger: 1.4,
+    traceLow: 1.2,
+    traceHigh: 0.8,
+    traceBends: 0.025,
     /** How far the traces fan across the hill from the bottom of the keyboard to the top, in radians. */
-    traceFan: 1.1,
+    traceFan: 2.5,
     traceWidth: 0.15,
-    bloomRadius: 3.6,
-    bloomRate: 4,
+    bloomRadius: 10,
+    bloomRate: 3,
     /**
      * The one frame the whole duet is played in: how far round from square on the keyboard the camera stands (so
      * left and right on screen is along the keys and the child's head is off them), how far back and how high
      * above the keys, how much further out it waits while they are still walking to it, and how much nearer it
      * comes while the cygnet is walking the keys.
      */
-    frameTurn: 0.55,
-    frameBack: 10,
-    frameUp: 2.6,
-    frameLook: 1.1,
-    frameWide: 9,
+    frameTurn: 0.28,
+    frameBack: 19,
+    frameUp: 4,
+    frameLook: 1.2,
+    frameOn: 6,
+    frameWide: 3,
     frameHigh: 1.8,
-    frameCreep: 2.4,
     framePace: 0.32,
     /**
      * And the one move out of it, when the tune is whole and the island goes green: how long the rise takes, the
@@ -298,14 +362,22 @@ export const tuning = {
      */
     riseFor: 10,
     riseTo: -0.12,
-    riseBack: 50,
-    riseUp: 20,
-    riseOn: 20,
+    riseBack: 65,
+    riseUp: 46,
+    riseOn: 24,
     risePace: 0.6,
-    restFor: 6,
+    restFor: 9,
     riseQuiet: 0.72,
   },
   wood: {
+    lightningScale: 0.28,
+    /** Under the canopy, only lightning and the player's embers reveal the floor. */
+    ambientScale: 0.06,
+    skyScale: 0.16,
+    grassDensity: 0.25,
+    grassBaseCrop: 0.15,
+    grassTuftCrop: 0.70,
+    grassPatchScale: 0.22,
     /** Ignition gained per screen-height unit brushed directly across the ember. */
     catchRate: 1.8,
     /** A deliberate sweep must cross the ember itself; residual wind cannot finish the gesture. */
@@ -320,6 +392,15 @@ export const tuning = {
     inviteAlpha: 0.65,
     inviteWidth: 0.065,
     dryRate: 0.85,
+    /** The approved orb breathes above the litter, with veils that yield to the live wind. */
+    orbSize: 1.35,
+    orbRestScale: 0.38,
+    orbRestAlpha: 0.24,
+    orbLightResponse: 2.8,
+    orbHover: 0.95,
+    orbBob: 0.055,
+    orbResponse: 5,
+    orbWindLean: 0.08,
     /** Sheltered fireflies gather closer under the trees than in open grass. */
     fireflyCount: 240,
     fireflyRange: 25,
@@ -342,11 +423,38 @@ export const tuning = {
       width: 0.9,
       brushRadius: 0.2,
       brushSpeed: 1.4,
-      loosenSeconds: 0.65,
+      strokeDistance: 0.5,
+      circleDistance: 6.5,
+      circleChargeFrom: 0.12, circleChargeFull: 0.55,
+      bowDistance: 0.2,
+      slipDistance: 0.28,
+      gestureResponse: 10,
+      inviteAfter: 0.8,
+      inviteResume: 0.8,
+      inviteAlpha: 0.9,
+      inviteWidth: 0.085,
+      inviteSweep: 1.6,
+      invitePause: 0.45,
+      inviteSpan: 4,
+      inviteBowSpan: 5,
+      inviteCircleRadius: 1.65,
+      swingOfferSeconds: 12,
       releaseSeconds: 2.6,
       gatherSeconds: 8,
       windResponse: 2.8,
       flutter: 0.1,
+      clothGravity: 8.5,
+      clothDrag: 1.1,
+      clothBend: 0.018,
+      clothWind: 0.22,
+      clothLift: 12,
+      clothClearance: 0.1,
+      clothIterations: 14,
+      clothSlideResponse: 10,
+      clothSlipSpeed: 1.1,
+      clothSlipSeconds: 1.2,
+      clothSlipReach: 2,
+      clothSlipDrop: 1.1,
       arriveWithin: 9.5,
       quietToLeaveSwing: 2.6,
       swingBrake: 3.2,
@@ -368,7 +476,7 @@ export const tuning = {
     playScuffStrength: 0.65,
     swingInvitation: 0.22,
     /** Shed clusters keep their own velocity for this many seconds, then fade. */
-    shedFlight: 4.5,
+    shedFlight: 3.2,
     shedDrag: 1.5,
     /** Seconds for a gust to start carrying the ground litter, and its top transport speed. */
     litterResponse: 0.65,
@@ -385,6 +493,12 @@ export const tuning = {
     stripSpeed: 15,
     /** How wide a fallen leaf is, in world units. */
     leafSize: 0.22,
+    /** Airborne leaves stay sparse and small enough to see the child and the puzzle through them. */
+    airborneKeep: 0.42,
+    airborneSize: 0.8,
+    leafEyeClear: 3,
+    leafEyeFull: 9,
+    shedClusterKeep: 0.4,
     /** Wind speed, in units a second, that takes a leaf of average weight off the floor and sends it skittering. */
     litterTakes: 4.4,
     /** How fast a gust sweeps the floor bare where it blows, and the share of the wind speed the swept litter travels at. */
@@ -450,6 +564,10 @@ export const tuning = {
   },
   /** The kite over the far beach and the pinwheels along the walk: the child nobody has seen. */
   linesToys: {
+    /** The last bend reveals the little-boats departure marker, after the first two pools. */
+    boatKiteRevealAt: 85,
+    /** A shorter tether keeps the kite beside the boat in the narrower departure views. */
+    shoreKiteStringLength: 22,
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */
     stringLength: 34,
     /** How high the kite rides in the island's own breeze, in radians above the horizon from its tie-off. */
@@ -590,6 +708,8 @@ export const tuning = {
    * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
    */
   sail: {
+    /** A controlled turn into the meadow bay keeps gusts from landing far along the beach. */
+    meadowArrivalSpeed: 5,
     /** Hull clearance above the terrain; enough for the rendered ground between height samples. */
     hullClearance: 0.06,
     /** Most a beached hull leans with the sand beneath it, in radians. */
@@ -621,8 +741,6 @@ export const tuning = {
     inviteAlpha: 0.8,
     inviteWidth: 0.12,
     inviteSpan: 5.4,
-    inviteArc: 0.3,
-    inviteSpacing: 0.18,
     inviteStandOff: 1.1,
     /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
     livelyAt: 10,
@@ -718,13 +836,13 @@ export const tuning = {
    */
   sleeping: {
     /** How thick the pooled fog is at full `fog`, and how far out from the hollow it reaches. */
-    fogThickness: 0.32,
+    fogThickness: 0.56,
     fogReach: 34,
     /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
-    fogTop: 4.6,
+    fogTop: 5.4,
     /** And how high it lies once the night has thickened it: over a bird's head on the lower slopes of the hill. */
     fogClimbs: 8.5,
-    fogSoft: 1.5,
+    fogSoft: 2.8,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
     fogDrift: 0.02,
@@ -740,18 +858,32 @@ export const tuning = {
     /**
      * The frosted sward. A blade here keeps this much of its height, and rather less of its width, so cropping
      * leaves fine stubble instead of blades wider than they are tall and a bird stays legible in it. The odd
-     * tall tuft is cut right back, and a little less curve keeps the stubble from arching over onto its face.
+     * tall tuft is cut back; the remaining stems bend into low tufts rather than standing like stakes.
      */
-    swardCrop: 0.52,
-    swardWidth: 0.28,
+    swardCrop: 0.68,
+    swardWidth: 0.18,
+    /** Close winter turf needs more stems on the sparse phone tier; fades into the ordinary LOD. */
+    swardDensity: 2.6,
+    swardDetailFrom: 12,
+    swardDetailTo: 22,
     swardTuft: 1.0,
-    swardCurve: 0.85,
+    /** Short blades need their roots at the surface instead of buried like meadow grass. */
+    rootDepth: 0.018,
+    swardCurve: 2.4,
     /** How much of a blade's colour the rime takes at the root, and at the tip, where it settles thickest. */
-    rimeRoot: 0.55,
-    rimeTip: 0.82,
+    rimeRoot: 0.38,
+    rimeTip: 0.72,
     /** The bedside lamp, the one warm thing in the blue, and how far the dawn puts it out of business. */
-    lamp: 2.4,
-    lampDawn: 0.55,
+    lamp: 1.25,
+    lampDawn: 0.94,
+    /** Camera-near mist clears softly; distant air still conceals the bed during the climb. */
+    fogNear: 2.5,
+    fogFar: 11,
+    fogExtinction: 0.12,
+    /** Light travels from the summit across the winter turf before the sky brightens. */
+    dawnStrength: 1.2,
+    dawnLaneWidth: 5.0,
+    sitHigh: 0.68,
     /** Seconds the driven values take to ease to what the story asks for, so a switch never pops. */
     ease: 1.6,
     /** How high a gust lifts the blanket by itself, the wind speed that does it, and the seconds it settles over. */
@@ -763,13 +895,17 @@ export const tuning = {
     /** How wide the curtains are drawn back at `curtains` 1, as a share of the window, and how much they gather. */
     curtainOpen: 0.78,
     curtainGather: 0.45,
+    /** Seconds for the summit curtains to open as the updraft lifts the bird. */
+    curtainsFor: 2.2,
+    /** Hold both bird and window while the linen gathers and morning starts down the hill. */
+    windowRevealFor: 4.5,
     /** The puff of down off the pillow: how many, how fast they leave it, and how long they hang about. */
     downCount: 34,
     downThrow: 1.6,
     downLife: 9,
     /** How far the blanket stands over the child under it, and how wide that shape is, in bed widths. */
-    sleeperHigh: 0.66,
-    sleeperWide: 0.62,
+    sleeperHigh: 0.44,
+    sleeperWide: 0.65,
 
     /**
      * The one long white feather. It is the paper plane made slower and floatier: it takes the air's own speed
@@ -790,17 +926,22 @@ export const tuning = {
     featherCeiling: 3.4,
     /** Share of a stroke's speed a swipe across it on screen gives it. */
     featherBrush: 0.5,
+    /** Maximum lead on the walking bird, and how quickly a gust carries it back into sight. */
+    featherLead: 3.6,
+    featherCatch: 4,
 
     /**
-     * The story's waits, and what happens at each of them if the player does nothing at all. Nobody is ever
-     * stranded on this island: every one of these ends by itself.
+     * The bird acts between two player gestures: a brush of the pillow, then circles at the summit.
+     * The walk is assisted, and the shiver resumes by itself if the player leaves it alone.
      */
     climbsIn: 3.2,
     /** Seconds asleep before the bird starts trying, and between its three tries. */
-    triesFrom: 4,
-    triesEvery: 7,
-    /** Seconds after its one call before the pillow gives up the feather by itself. */
-    featherBy: 24,
+    triesFrom: 2.4,
+    triesEvery: 4.4,
+    /** Screen travel across the pillow needed to free the feather after the call. */
+    featherStroke: 0.16,
+    /** Local circling sensitivity: a gentle loop takes about 2–3 seconds. */
+    twirlGain: 2.0,
     /** Seconds it stands at the edge of the trodden grass, and how long each look back at the bed lasts. */
     edgeFor: 8,
     looksBack: 2.2,
@@ -808,9 +949,7 @@ export const tuning = {
     shiverAt: 0.5,
     shiverFor: 9,
     /** What the wind under it has to do at the hilltop before it goes. */
-    liftToFly: 1.8,
-    /** Seconds on the hilltop before the sun comes up by itself and the bird goes anyway. */
-    sunBy: 70,
+    liftToFly: 0.9,
     /** The glide down: seconds it takes, and how far it holds above the straight line from the hill to the bed. */
     glideFor: 15,
     glideArc: 2.6,
@@ -822,14 +961,14 @@ export const tuning = {
 
     /**
      * The child asleep in it. The coat is a rigid bell, so lying down is not a pose it can hold: they are tipped
-     * onto their back, rolled onto one side, flattened into the mattress and propped so the head is on the pillow
-     * and the hood shows. What is left over the blanket line is a low mound and a face, which is what reads.
+     * onto their back with a small side roll, supported by the mattress and propped on the pillow.
+     * The coat narrows beneath the blanket; the head and hands retain their normal proportions.
      */
-    lieHigh: 0.62,
-    lieTip: 0.17,
-    lieSquash: 0.32,
-    lieDeep: 0.5,
-    lieSide: 1.1,
+    lieHigh: 0.84,
+    lieTip: 0.10,
+    lieSquash: 0.72,
+    lieDeep: 0.68,
+    lieSide: 0.48,
   },
 };
 

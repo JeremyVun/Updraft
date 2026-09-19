@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { params } from '../params';
 import { glsl, tuning } from '../tuning';
 import { WINDOW, onWindowMove } from './window';
+import { MUSIC_GROWTH_GLSL } from './music-growth';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
 export const LIVING_BEYOND = -150;
@@ -76,6 +77,9 @@ export const atmo = {
     uVeil: { value: new THREE.Vector2(1e5, 0) },
     /** Offshore fog converges to the sky itself, then releases on the approach to home. */
     uOpenSea: { value: 0 },
+    /** An island's offshore veil is anchored to its coast, so looking from a hill cannot expose the next room. */
+    uIslandVeil: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uIslandVeilAmount: { value: 0 },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },
@@ -119,6 +123,8 @@ export const atmo = {
     uLamp: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** The morning coming down the sleeping island's hill: how far it has come (x), and the height it has reached down to (y). */
     uDawn: { value: new THREE.Vector2(0, 0) },
+    /** Summit window xyz and curtain opening; the lane is lit from its actual source. */
+    uDawnSource: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** A patch of grass someone has pressed flat: centre (x, z), radius, and how flat, 0 to 1. */
     uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
@@ -189,6 +195,8 @@ uniform float uShower;
 uniform float uMist;
 uniform vec2 uVeil;
 uniform float uOpenSea;
+uniform vec4 uIslandVeil;
+uniform float uIslandVeilAmount;
 uniform vec3 uRoom;
 /** Hidden land must also leave no shallows or surf in the water. */
 bool roomHides(vec2 p) {
@@ -219,6 +227,7 @@ uniform vec4 uLane;
 uniform vec2 uLaneOpen;
 uniform vec4 uLamp;
 uniform vec2 uDawn;
+uniform vec4 uDawnSource;
 uniform vec4 uTrodden;
 uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
@@ -257,12 +266,12 @@ vec4 groundAt(vec2 xz) {
  * Only the first island was ever grey, so everything further north is living before the child ever reaches it and
  * nothing snaps into colour underfoot. One island can be held back from that, waiting for its own green wave.
  */
+${MUSIC_GROWTH_GLSL}
 float regionLife(vec2 xz) {
   float island = length(xz - uIslandLife.xy) < uIslandLife.z ? uIslandLife.w : 0.0;
   float ahead = xz.y < uLivingBeyond ? 1.0 : 0.0;
   if (uWaiting.z > 0.0 && length((xz - uWaiting.xy) / uWaiting.zw) < 1.0) ahead = 0.0;
-  float d = length(xz - uLifeWave.xy);
-  float wave = uLifeWave.z < 0.0 ? 0.0 : clamp((uLifeWave.z - d) / uLifeWave.w, 0.0, 1.0);
+  float wave = musicLife(xz - uLifeWave.xy, uLifeWave.z, uLifeWave.w);
   return max(max(island, ahead), wave);
 }
 /**
@@ -304,7 +313,16 @@ float laneAt(vec2 xz) {
   vec2 ab = uLane.zw - uLane.xy;
   float t = clamp(dot(xz - uLane.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
   float d = distance(xz, uLane.xy + ab * t);
-  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * smoothstep(uLaneOpen.y + 0.08, uLaneOpen.y - 0.08, t);
+  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * (1.0 - smoothstep(uLaneOpen.y - 0.08, uLaneOpen.y + 0.08, t));
+}
+
+/** The window wakes the turf along its spill, then the green opens across the whole island. */
+float morningAt(vec2 xz) {
+  if (uDawn.x <= 0.12) return 0.0;
+  float spread = smoothstep(0.55, 1.0, uDawn.x);
+  float radius = spread * 110.0;
+  float island = spread * (1.0 - smoothstep(radius - 10.0, radius + 10.0, distance(xz, uLane.xy)));
+  return max(laneAt(xz) * uDawnSource.w, island);
 }
 
 /** Frost on the grass: hard out at the rim of the hollow, closing in on the bed as the night goes on. */
@@ -329,19 +347,25 @@ vec3 lampLight(vec3 world, vec3 N) {
  */
 vec3 dawnLight(vec3 world, vec3 N) {
   if (uDawn.x <= 0.0) return vec3(0.0);
-  float reached = max(smoothstep(uDawn.y - 3.5, uDawn.y + 3.0, world.y), laneAt(world.xz));
-  return vec3(1.0, 0.72, 0.42) * (1.7 * uDawn.x) * reached * clamp(dot(N, uSunDir) * 0.55 + 0.5, 0.0, 1.0);
+  vec3 toWindow = normalize(uDawnSource.xyz - world + vec3(0.0, 0.001, 0.0));
+  float lane = laneAt(world.xz) * uDawnSource.w;
+  float morning = morningAt(world.xz) * 0.22;
+  float reached = max(lane * (1.0 - 0.5 * smoothstep(0.65, 1.0, uDawn.x)), morning);
+  return vec3(1.0, 0.82, 0.57) * ${glsl(tuning.sleeping.dawnStrength)} * reached
+    * clamp(dot(N, toWindow) * 0.45 + 0.55, 0.0, 1.0);
 }
 
 /** How thick the sleeping island's ground fog is at a point: pooled in the hollow, under its top, less where carved. */
 float hollowDensity(vec3 p) {
   float pool = 1.0 - smoothstep(0.5, 1.0, length(p.xz - uHollow.xy) / uHollow.z);
   if (pool <= 0.0) return 0.0;
-  float under = 1.0 - smoothstep(uHollowTop.x - uHollowTop.y, uHollowTop.x + uHollowTop.y, p.y);
+  float wisps = vnoise(p.xz * 0.16 + uCloudShift * 0.025 + p.y * 0.09);
+  float top = uHollowTop.x + (wisps - 0.5) * 2.0;
+  float under = 1.0 - smoothstep(top - uHollowTop.y, top + uHollowTop.y, p.y);
   vec2 uv = (p.xz - uCarveDomain.xy) * uCarveDomain.zw;
   float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
   /** Squared, so a lane only half blown open is already a quarter as thick: a gesture has to show. */
-  return uHollow.w * pool * under * carve * carve;
+  return uHollow.w * pool * under * (0.35 + wisps * 1.1) * carve * carve;
 }
 
 /** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */
@@ -412,9 +436,22 @@ vec4 fogOf(vec3 wpos) {
   if (uHollow.w > 0.0) {
     vec3 mid = (cameraPosition + wpos) * 0.5;
     float dens = (hollowDensity(cameraPosition) + 2.0 * hollowDensity(mid) + hollowDensity(wpos)) * 0.25;
-    float pooled = 1.0 - exp(-dist * dens * 0.2);
-    fogCol = mix(fogCol, uHollowTint * (uSkyAmbient * 1.25 + uSunColor * 0.5), pooled / max(pooled + amt, 1e-4));
+    float nearClear = smoothstep(${glsl(tuning.sleeping.fogNear)}, ${glsl(tuning.sleeping.fogFar)}, dist);
+    float pooled = 1.0 - exp(-dist * dens * ${glsl(tuning.sleeping.fogExtinction)} * nearClear);
+    vec3 mistLight = uHollowTint * (uSkyAmbient * 0.9 + uSunColor * 0.24);
+    mistLight += vec3(1.0, 0.8, 0.55) * laneAt(mid.xz) * uDawnSource.w * 0.15;
+    fogCol = mix(fogCol, mistLight, pooled / max(pooled + amt, 1e-4));
     amt = 1.0 - (1.0 - amt) * (1.0 - pooled);
+  }
+  // Land, its props, reflections and the sea all reach the same sky colour beyond this coast.
+  // Camera-distance fog alone can leave a tinted island silhouette even when fully opaque.
+  if (uIslandVeilAmount > 0.0) {
+    float coast = length((wpos.xz - uIslandVeil.xy) / uIslandVeil.zw);
+    float hidden = smoothstep(${glsl(tuning.world.meadowVeilFrom)}, ${glsl(tuning.world.meadowVeilTo)}, coast) * uIslandVeilAmount;
+    if (hidden > 0.0) {
+      fogCol = mix(fogCol, skyRadiance(rd), hidden);
+      amt = max(amt, hidden);
+    }
   }
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
 }

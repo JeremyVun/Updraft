@@ -43,6 +43,8 @@ export interface Deck {
   z1: number;
   halfWidth: number;
   height: number;
+  /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
+  stepOffDepth?: number;
 }
 const WALK = 2.6;
 const RUN = 5.4;
@@ -277,6 +279,13 @@ export class Traveller {
   /** Keeps the free mitten outside the bell of the coat while it grips the paper. */
   carryingPlane = false;
   private stowed = 0;
+  private planeStowRequested = false;
+
+  /** Keep the paper on the backpack while a chapter uses the child's free hands. */
+  stowPlane(on: boolean, immediate = false): void {
+    this.planeStowRequested = on;
+    if (immediate) this.stowed = on ? 1 : 0;
+  }
   private readonly paperLocal = new THREE.Quaternion();
   private readonly paperStowed = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -0.18, 'ZYX'));
   private readonly paperHand = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0, -Math.PI / 2, 'YXZ'));
@@ -357,6 +366,16 @@ export class Traveller {
   walkTo(x: number, z: number, run = false, onArrive?: () => void, near = 0.6): void {
     this.sitting = false;
     this.goal = { x, z, run, onArrive, near, best: Infinity, since: 0 };
+  }
+
+  /** Follow a moving subject without discarding an obstacle detour or the stuck-walk watchdog. */
+  retargetWalk(x: number, z: number): void {
+    const g = this.goal;
+    if (!g) return;
+    g.best += Math.hypot(x - this.position.x, z - this.position.z)
+      - Math.hypot(g.x - this.position.x, g.z - this.position.z);
+    g.x = x;
+    g.z = z;
   }
 
   stop(): void {
@@ -445,7 +464,7 @@ export class Traveller {
     }
 
     /** Let the mitten come away from the bird before bringing the paper back out of the bag. */
-    const keepStowed = this.armsFull || this.riding || (this.stowed > 0.5 && this.reachNow[0] > 0.1 && this.presenting < 0.01);
+    const keepStowed = this.planeStowRequested || this.armsFull || this.riding || (this.stowed > 0.5 && this.reachNow[0] > 0.1 && this.presenting < 0.01);
     this.stowed = damp(this.stowed, keepStowed ? 1 : 0, tuning.paperCarry.transferRate, dt);
     this.pose(dt);
 
@@ -517,7 +536,9 @@ export class Traveller {
     const atPond = nextH < POND_LEVEL + 0.2 &&
       Math.abs(nx - POND.x) < POND.rx * 1.5 && Math.abs(nz - POND.z) < POND.rz * 1.5 && pondOut(nx, nz) < 1.15;
     const shore = atPond ? POND_LEVEL + 0.2 : 0.2;
-    if (nextH < shore && nextH < this.ground(p.x, p.z)) {
+    const deckLanding=this.decks.some(d=>d.stepOffDepth!==undefined && nextH>=d.stepOffDepth &&
+      Math.hypot(nx-d.x1,nz-d.z1)<d.halfWidth);
+    if (nextH < shore && nextH < this.ground(p.x, p.z) && !deckLanding) {
       this.speed = 0;
       if (this.goal) {
         const arrive = this.goal.onArrive;
@@ -820,6 +841,7 @@ export class Traveller {
     this.headPitch = damp(this.headPitch, wantPitch, 5, dt || 1);
     r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05 + tiltNow);
     r.eyes.scale.set(1, this.blink > 0 ? 0.15 : 1, 1);
+    r.coat.scale.set(1, 1, 1);
     const abed = this.abedGlide.step(this.abed, 0.8, dt || 1);
     if (abed > 0.001) this.layDown(abed, t, dt || 1);
     r.root.updateMatrixWorld(true);
@@ -842,7 +864,7 @@ export class Traveller {
     this.lie
       .setFromAxisAngle(this.axisY, this.bedYaw)
       .multiply(this.spin.setFromAxisAngle(this.axisX, -Math.PI / 2 + s.lieTip))
-      .multiply(this.spin.setFromAxisAngle(this.axisY, side * s.lieSide));
+      .multiply(this.spin.setFromAxisAngle(this.axisY, (0.8 + side * 0.2) * s.lieSide));
     r.root.quaternion.slerp(this.lie, w);
     r.root.position.lerp(this.bedAt, w);
     /** Breathing, which is the whole point of the beat: the scarf hangs off the neck and rises and falls with it. */
@@ -857,11 +879,11 @@ export class Traveller {
     r.legL.rotation.set(THREE.MathUtils.lerp(r.legL.rotation.x, 1.15, curl), 0, -0.12);
     r.legR.rotation.set(THREE.MathUtils.lerp(r.legR.rotation.x, 1.0, curl), 0, 0.12);
     /** Both arms round what they are holding, drawn in under the chin, and tighter every time they are woken. */
-    const hug = w * (1 + this.tighter * 0.3);
-    r.armL.rotation.set(THREE.MathUtils.lerp(r.armL.rotation.x, -2.0, w), 0, THREE.MathUtils.lerp(r.armL.rotation.z, 0.35 + this.tighter * 0.2, w));
-    r.armR.rotation.set(THREE.MathUtils.lerp(r.armR.rotation.x, -2.0, w), 0, THREE.MathUtils.lerp(r.armR.rotation.z, -0.35 - this.tighter * 0.2, w));
-    r.foreL.rotation.x = THREE.MathUtils.lerp(r.foreL.rotation.x, -(1.75 + this.tighter * 0.35), hug);
-    r.foreR.rotation.x = THREE.MathUtils.lerp(r.foreR.rotation.x, -(1.75 + this.tighter * 0.35), hug);
+    const hug = w;
+    r.armL.rotation.set(THREE.MathUtils.lerp(r.armL.rotation.x, 0.15, w), 0, THREE.MathUtils.lerp(r.armL.rotation.z, 0.12, w));
+    r.armR.rotation.set(THREE.MathUtils.lerp(r.armR.rotation.x, 0.15, w), 0, THREE.MathUtils.lerp(r.armR.rotation.z, -0.12, w));
+    r.foreL.rotation.x = THREE.MathUtils.lerp(r.foreL.rotation.x, -(2.35 + this.tighter * 0.15), hug);
+    r.foreR.rotation.x = THREE.MathUtils.lerp(r.foreR.rotation.x, -(2.35 + this.tighter * 0.15), hug);
     /** Chin down toward the plane against their chest, the way a child actually sleeps holding something. */
     r.head.rotation.x = THREE.MathUtils.lerp(r.head.rotation.x, 0.3, w);
     r.head.rotation.y = THREE.MathUtils.lerp(r.head.rotation.y, -0.2 * side, w);

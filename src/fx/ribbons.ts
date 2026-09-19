@@ -31,12 +31,19 @@ void main() {
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uColor;
+uniform float uLightFloor;
 in float vAlpha;
 in float vEdge;
 in vec3 vWorld;
 void main() {
   float soft = smoothstep(1.0, 0.35, abs(vEdge));
-  vec3 col = uColor * (hemiLight(vec3(0.0, 1.0, 0.0)) * 0.9 + uSunColor * 0.55);
+  vec3 col = uColor * max(vec3(uLightFloor), hemiLight(vec3(0.0, 1.0, 0.0)) * 0.9 + uSunColor * 0.55);
+  // A soft, cool edge keeps ivory air legible over pale cloth without lighting the surrounding world.
+  if (uLightFloor > 0.0) {
+    float core = 1.0 - smoothstep(0.12, 0.6, abs(vEdge));
+    col = mix(vec3(0.035, 0.075, 0.09), col, core);
+    soft *= mix(0.85, 1.0, core);
+  }
   float fog = 1.0 - exp(-length(vWorld - cameraPosition) * uFogDensity);
   gl_FragColor = vec4(col, vAlpha * soft * (1.0 - fog));
 }`;
@@ -52,7 +59,7 @@ export class RibbonBatch {
   private readonly tmp = new THREE.Vector3();
 
   /** `flat` keeps the ribbon lying in the ground plane instead of turning to face the camera. */
-  constructor(maxPoints: number, color: THREE.ColorRepresentation, opacity = 1, flat = false) {
+  constructor(maxPoints: number, color: THREE.ColorRepresentation, opacity = 1, flat = false, lightFloor = 0) {
     this.maxVerts = maxPoints * 2;
     this.positions = new Float32Array(this.maxVerts * 3);
     this.sides = new Float32Array(this.maxVerts * 3);
@@ -65,7 +72,7 @@ export class RibbonBatch {
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
-      uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) }, uFlat: { value: flat ? 1 : 0 } },
+      uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) }, uFlat: { value: flat ? 1 : 0 }, uLightFloor: { value: lightFloor } },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,

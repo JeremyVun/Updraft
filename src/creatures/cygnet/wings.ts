@@ -5,6 +5,8 @@ import { FORE_L, FORE_R, HAND_L, HAND_R, WING_L, WING_R } from './body';
 export interface WingPose {
   /** 0 folded against the body to 1 fully spread. */
   open: number;
+  /** Protection of the recovering left wing; fades as it heals and opens at the sleeping hilltop. */
+  guard: number;
   /** The stroke, -1 bottom of the downbeat to 1 top of the upbeat, already scaled by how hard it is beating. */
   beat: number;
   /** The same stroke a moment later, for the hand to follow the arm. */
@@ -49,11 +51,12 @@ const local = new THREE.Quaternion();
 
 /** Sets the six wing bones for both sides. Every output is continuous in every input, so a wing can never pop. */
 export function poseWings(n: THREE.Object3D[], w: WingPose): void {
-  const open = w.open;
-  const shut = 1 - open;
   for (const side of [1, -1]) {
+    const guard = side > 0 ? w.guard : 0;
+    const open = w.open * (1 - guard * 0.96);
+    const shut = 1 - open;
     const bones = side > 0 ? [WING_L, FORE_L, HAND_L] : [WING_R, FORE_R, HAND_R];
-    const raise = side > 0 ? w.raise[0] : w.raise[1];
+    const raise = (side > 0 ? w.raise[0] : w.raise[1]) * (1 - guard);
     for (let i = 0; i < 3; i++) {
       let twist = lerp(FOLD[i][0], SPREAD[i][0], open);
       let lift = lerp(FOLD[i][1], SPREAD[i][1], open);
@@ -65,9 +68,11 @@ export function poseWings(n: THREE.Object3D[], w: WingPose): void {
       twist += w.twist * (0.6 + i * 0.5) + (i === 2 ? w.lag * 0.3 : 0) * open;
       /** Clamped in, it is tighter than merely folded: swept further back and pulled down onto the flank. */
       sweep += w.clamp * 0.13 * shut;
+      sweep += guard * 0.1;
+      lift -= guard * 0.055;
       lift -= w.clamp * 0.07;
       twist += w.clamp * 0.1 * shut;
-      lift += raise * (i === 0 ? 1 : 0.35) + w.shake * (0.3 + i * 0.12);
+      lift += raise * (i === 0 ? 1 : 0.35) + w.shake * (0.3 + i * 0.12) * (1 - guard * 0.85);
       twist += w.shake * 0.35;
       /** The right wing is the left one seen in a mirror: the roll survives it, the sweep and the elevation turn over. */
       euler.set(twist, sweep * side, lift * side);

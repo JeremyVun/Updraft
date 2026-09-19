@@ -17,8 +17,8 @@ export const SLEEP_BERTH = new THREE.Vector3(-214.5, 0, -1926);
 
 /** The way the bed's head end points: toward the hill, and toward the window the morning comes through. */
 export const BED_FACING = new THREE.Vector2(-0.35, -0.94).normalize();
-const BED_LENGTH = 2.8;
-const BED_WIDTH = 1.5;
+const BED_LENGTH = 3.45;
+const BED_WIDTH = 1.95;
 
 function groundAround(x: number, z: number, radius: number): number {
   let top = heightAt(x, z);
@@ -48,25 +48,21 @@ const BESIDE_BED = new THREE.Vector2(-BED_FACING.y, BED_FACING.x);
 /** The bedside lamp's bulb: the one warm light in the blue. */
 export const LAMP = new THREE.Vector3(PILLOW.x + BESIDE_BED.x * 1.15, 0, PILLOW.z + BESIDE_BED.y * 1.15);
 const LAMP_GROUND = groundAround(LAMP.x, LAMP.z, 0.4);
-LAMP.y = LAMP_GROUND + 0.95;
+LAMP.y = LAMP_GROUND + 1.3;
 
-/**
- * The window frame standing by itself beside the bed. `WINDOW_INTO` is the way the light comes through it: it
- * stands where the low morning sun (north-west; `lightAngles` in `world/palette.ts`) throws that light onto the
- * pillow, so throwing the curtains open puts the morning on the child's face.
- */
-export const WINDOW_INTO = new THREE.Vector3(0.53, -0.18, 0.85).normalize();
-export const WINDOW = new THREE.Vector3(PILLOW.x - WINDOW_INTO.x * 3.4, 0, PILLOW.z - WINDOW_INTO.z * 3.4);
+/** The summit window holds the morning behind its curtains, facing down into the sleeping hollow. */
+export const WINDOW = new THREE.Vector3(HILLTOP.x, 0, HILLTOP.z);
 const WINDOW_GROUND = groundAround(WINDOW.x, WINDOW.z, 0.9);
-const PANE_W = 1.62;
-const PANE_H = 2.0;
+export const WINDOW_INTO = new THREE.Vector3(BED.x - WINDOW.x, BED.y + 1.1 - (WINDOW_GROUND + 1.35), BED.z - WINDOW.z).normalize();
+const PANE_W = 2.0;
+const PANE_H = 2.4;
 const RAIL_Y = PANE_H + 0.2;
 const CURTAIN_DROP = RAIL_Y - 0.28;
 WINDOW.y = WINDOW_GROUND + 1.35;
 
 /** Where the ceiling lamp stands on its flex, and where the two upside-down pieces hang over the hollow. */
 const FLEX_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 3.6 + BED_FACING.x * 1.6, BED.z + BESIDE_BED.y * 3.6 + BED_FACING.y * 1.6);
-const CHAIR_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 2.0 - BED_FACING.x * 2.8, BED.z + BESIDE_BED.y * 2.0 - BED_FACING.y * 2.8);
+const CHAIR_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 3.8 + BED_FACING.x * 2.3, BED.z + BESIDE_BED.y * 3.8 + BED_FACING.y * 2.3);
 const DESK_AT = new THREE.Vector2(BED.x - BESIDE_BED.x * 3.8 - BED_FACING.x * 1.2, BED.z - BESIDE_BED.y * 3.8 - BED_FACING.y * 1.2);
 
 /** The carve field covers the island: gusts cut lanes in the fog anywhere on it, not only over the hollow. */
@@ -92,7 +88,7 @@ float laneCut(vec2 xz) {
   vec2 ab = uLane.zw - uLane.xy;
   float t = clamp(dot(xz - uLane.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
   float d = distance(xz, uLane.xy + ab * t);
-  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * smoothstep(uLaneOpen.y + 0.08, uLaneOpen.y - 0.08, t);
+  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * (1.0 - smoothstep(uLaneOpen.y - 0.08, uLaneOpen.y + 0.08, t));
 }`;
 
 /**
@@ -128,55 +124,6 @@ void main() {
 const FILL_FRAG = /* glsl */ `
 void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }`;
 
-/**
- * The fog's top surface: a few sheets lying across the hollow at `uHollowTop`, drifting, thinned where the
- * player has carved and where the morning has come. The volume itself is in `fogOf`; these are the lid on it,
- * so the hill, and anything walking up it, can be seen to come out of the fog.
- */
-const SHEET_VERT = /* glsl */ `
-${ATMO_GLSL}
-in float aLevel;
-out vec3 vWorld;
-out float vLevel;
-void main() {
-  vec3 w = position;
-  vec2 drift = uCloudShift * ${glsl(tuning.sleeping.fogDrift)};
-  w.y = uHollowTop.x + (aLevel - 2.0) * 0.55 + (fbm(w.xz * 0.07 + drift) - 0.5) * ${glsl(tuning.sleeping.fogSwell * 2)};
-  vWorld = w;
-  vLevel = aLevel;
-  gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
-}`;
-
-const SHEET_FRAG = /* glsl */ `
-${ATMO_GLSL}
-in vec3 vWorld;
-in float vLevel;
-void main() {
-  /** Every sheet lies out to its own warped edge, or four circles nested in the grass is what you see. */
-  float reach = uHollow.z * (0.72 + 0.14 * vLevel) * (0.82 + 0.36 * fbm(vWorld.xz * 0.045 + vLevel * 3.1));
-  float pool = 1.0 - smoothstep(0.3, 1.0, length(vWorld.xz - uHollow.xy) / reach);
-  if (pool <= 0.001 || uHollow.w <= 0.0) discard;
-  vec2 drift = uCloudShift * ${glsl(tuning.sleeping.fogDrift)};
-  float n = fbm(vWorld.xz * 0.11 - drift * 1.6 + vLevel * 7.3);
-  vec2 uv = (vWorld.xz - uCarveDomain.xy) * uCarveDomain.zw;
-  float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
-  /**
-   * A lane has to be seen, and a sheet that only loses a little alpha where it is torn does not read as a hole
-   * in anything. So the tear bites harder than it is carved, and its rim — where the fog is half gone — is lit,
-   * which is what a hole torn in mist actually looks like and what makes the lane legible from above as well as
-   * from inside it.
-   */
-  float torn = carve * carve;
-  float rim = smoothstep(0.1, 0.55, carve) * (1.0 - smoothstep(0.55, 0.95, carve));
-  float a = uHollow.w * pool * torn * smoothstep(0.3, 0.86, n) * (0.62 - vLevel * 0.1);
-  if (a < 0.004 && rim < 0.02) discard;
-  vec3 up = vec3(0.0, 1.0, 0.0);
-  vec3 col = uHollowTint * (uSkyAmbient * 1.4 + uSunColor * 0.55);
-  col += lampLight(vWorld, up) * 0.5 + dawnLight(vWorld, up) * 0.8;
-  col *= 1.0 + rim * 1.5;
-  gl_FragColor = vec4(col, clamp(a + rim * 0.22 * uHollow.w * pool, 0.0, 1.0));
-}`;
-
 /** Everything in the room that is made of something: painted wood, brass, linen over a mattress. */
 const PROP_VERT = /* glsl */ `
 in vec3 color;
@@ -211,7 +158,7 @@ void main() {
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   vec3 col = alb * (hemiLight(n) + uSunColor * max(dot(n, uSunDir) * 0.6 + 0.4, 0.0) * 0.5 * sun
                     + lampLight(vWorld, n) + dawnLight(vWorld, n));
-  col = mix(col, vec3(1.0, 0.76, 0.42) * 2.4, vGlow);
+  col = mix(col, vec3(1.0, 0.76, 0.42) * 2.0, vGlow * (1.0 - 0.94 * uDawn.x));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
@@ -265,7 +212,8 @@ vec3 clothAt(vec2 uvw) {
   vec2 side = vec2(-uBedAxis.y, uBedAxis.x);
   vec2 xz = uBed.xy + uBedAxis * ((back - 0.5) * uBed.z) + side * (across * uBed.w);
   float lift = uFold.y * smoothstep(0.1, 0.9, back) * (0.35 + 0.5 * sin(back * 3.14159));
-  float ripple = sin(uTime * 2.1 + back * 7.0 + across * 3.0) * uFold.z * (0.3 + 0.7 * back);
+  float ripple = sin(uTime * 2.1 + back * 7.0 + across * 3.0) * uFold.z * (0.3 + 0.7 * back)
+    + sin(across * 16.0 + back * 3.0) * 0.035 * smoothstep(0.3, 1.0, abs(across));
   /**
    * A child asleep under it: the cloth stands over a long shape lying up the bed, highest at the shoulders and
    * falling away down the legs, and it rises and falls with their breathing. Where the blanket has been thrown
@@ -273,7 +221,7 @@ vec3 clothAt(vec2 uvw) {
    */
   float along = 1.0 - smoothstep(uSleeper.y - 0.3, uSleeper.y + 0.25, back);
   float wide = clamp(abs(across) / ${glsl(tuning.sleeping.sleeperWide)}, 0.0, 1.0);
-  float body = uSleeper.x * sqrt(1.0 - wide * wide) * along * (1.0 - smoothstep(m - 0.08, m + 0.12, uvw.y));
+  float body = uSleeper.x * sqrt(1.0 - wide * wide) * (0.65 + 0.35 * sin(back * 3.14159)) * along * (1.0 - smoothstep(m - 0.08, m + 0.12, uvw.y));
   float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 * (1.0 - min(1.0, body * 1.2)) + lift + ripple + body * (1.0 + uSleeper.z);
   return vec3(xz.x, y, xz.y);
 }
@@ -307,7 +255,7 @@ out vec2 vUv;
  */
 vec3 curtainAt(vec2 uvw, float side) {
   float open = uOpen.x;
-  float inner = mix(0.0, uPane.x * ${glsl(tuning.sleeping.curtainOpen)}, open);
+  float inner = mix(0.09, uPane.x * ${glsl(tuning.sleeping.curtainOpen)}, open);
   float across = side * mix(inner, uPane.x, uvw.x);
   float folds = sin(uvw.x * 9.42) * (0.03 + ${glsl(tuning.sleeping.curtainGather)} * open) * (0.35 + 0.65 * uvw.y);
   float sway = (uOpen.y + uOpen.z * 0.4) * uvw.y * uvw.y;
@@ -393,7 +341,17 @@ void main() {
   gl_FragColor = vec4(mix(col, f.rgb, f.a * 0.7), a);
 }`;
 
-/** The morning coming through the open window and landing on the pillow. */
+/** Morning held behind the summit curtains; a narrow seam is visible before they open. */
+const MORNING_FRAG = /* glsl */ `
+uniform vec3 uOpen;
+in vec2 vUv;
+void main() {
+  vec3 col = mix(vec3(1.0, 0.73, 0.44), vec3(1.0, 0.91, 0.73), smoothstep(0.0, 0.85, vUv.y));
+  float cloud = sin(vUv.y * 28.0 + sin(vUv.x * 5.0) * 0.9) * 0.025;
+  gl_FragColor = vec4(col * (0.9 + uOpen.x * 0.65 + cloud), 1.0);
+}`;
+
+/** The first spill of light out of the window; the shared dawn lane carries it down the hill. */
 const SHAFT_VERT = /* glsl */ `
 out vec2 vUv;
 void main() {
@@ -407,7 +365,7 @@ in vec2 vUv;
 void main() {
   float a = uThrough * (1.0 - smoothstep(0.1, 1.0, vUv.y)) * (1.0 - smoothstep(0.25, 1.0, abs(vUv.x - 0.5) * 2.0));
   if (a < 0.004) discard;
-  gl_FragColor = vec4(vec3(1.0, 0.82, 0.58) * 1.15, a * 0.38);
+  gl_FragColor = vec4(vec3(1.0, 0.82, 0.58) * 1.15, a * 0.075);
 }`;
 
 type Part = [THREE.BufferGeometry, THREE.Color, number];
@@ -446,6 +404,17 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number): 
 }
 
 /** The bed: four posts, boards at each end, a mattress and a pillow. The blanket on it is cloth and is its own. */
+function cushion(w: number, h: number, d: number, x: number, y: number, z: number): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(1, 28, 16);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const round = (v: number) => Math.sign(v) * Math.pow(Math.abs(v), 0.48);
+    p.setXYZ(i, round(p.getX(i)) * w / 2 + x, round(p.getY(i)) * h / 2 + y, round(p.getZ(i)) * d / 2 + z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 function bedParts(): Part[] {
   const L = BED_LENGTH;
   const W = BED_WIDTH;
@@ -460,8 +429,8 @@ function bedParts(): Part[] {
   parts.push(prop(box(W - 0.1, 0.34, 0.06, 0, 0.62, -(L / 2 - 0.04)), PAINT));
   parts.push(prop(box(W - 0.1, 0.2, 0.06, 0, 0.42, L / 2 - 0.04), PAINT));
   for (const sx of [-1, 1]) parts.push(prop(box(0.06, 0.13, L - 0.18, sx * (W / 2 - 0.04), 0.36, 0), PAINT));
-  parts.push(prop(box(W - 0.12, 0.2, L - 0.2, 0, 0.52, 0), LINEN));
-  const pillow = box(0.86, 0.17, 0.52, 0, 0.71, -(L / 2 - 0.45));
+  parts.push(prop(cushion(W - 0.1, 0.25, L - 0.16, 0, 0.54, 0), LINEN));
+  const pillow = cushion(1.12, 0.22, 0.72, 0, 0.75, -(L / 2 - 0.52));
   pillow.rotateX(-0.07);
   parts.push(prop(pillow, LINEN));
   return parts;
@@ -471,9 +440,9 @@ function bedParts(): Part[] {
 function lampParts(): Part[] {
   return [
     prop(new THREE.CylinderGeometry(0.15, 0.19, 0.05, 10).translate(0, 0.025, 0), BRASS),
-    prop(new THREE.CylinderGeometry(0.03, 0.035, 0.68, 8).translate(0, 0.36, 0), BRASS),
-    prop(new THREE.CylinderGeometry(0.17, 0.25, 0.28, 12, 1, true).translate(0, 0.85, 0), SHADE, 0.5),
-    prop(new THREE.SphereGeometry(0.075, 8, 6).translate(0, 0.79, 0), SHADE, 1),
+    prop(new THREE.CylinderGeometry(0.03, 0.035, 1.03, 8).translate(0, 0.535, 0), BRASS),
+    prop(new THREE.CylinderGeometry(0.17, 0.25, 0.28, 12, 1, true).translate(0, 1.2, 0), SHADE, 0.5),
+    prop(new THREE.SphereGeometry(0.075, 8, 6).translate(0, 1.14, 0), SHADE, 1),
   ];
 }
 
@@ -593,6 +562,8 @@ export class SleepingIsland {
   curtains = 0;
   /** The blanket: 0 tucked in, 1 thrown back. */
   blanket = 0;
+  /** Wind brushed over the visible bed, independent of ground picking. */
+  bedWind = 0;
   /** Somebody asleep under the blanket, 0 an empty bed to 1: the cloth stands over them and breathes with them. */
   sleeper = 0;
   /**
@@ -718,14 +689,14 @@ export class SleepingIsland {
     this.objects.push(rug);
 
     const blanket = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1, 14, 20),
+      new THREE.PlaneGeometry(1, 1, 28, 36),
       new THREE.ShaderMaterial({
         vertexShader: BLANKET_VERT,
         fragmentShader: CLOTH_FRAG,
         uniforms: {
           ...atmo.uniforms,
           uCloth: { value: BLANKET_RED },
-          uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 2.3, BED_WIDTH * 0.56) },
+          uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 2.85, BED_WIDTH * 0.56) },
           uBedAxis: { value: new THREE.Vector2(-BED_FACING.x, -BED_FACING.y) },
           uFold: { value: this.fold },
           uSleeper: { value: this.under },
@@ -735,6 +706,21 @@ export class SleepingIsland {
     );
     blanket.frustumCulled = false;
     this.objects.push(blanket);
+
+    const morning = new THREE.Mesh(
+      new THREE.PlaneGeometry(PANE_W - 0.06, PANE_H - 0.6),
+      new THREE.ShaderMaterial({
+        vertexShader: SHAFT_VERT,
+        fragmentShader: MORNING_FRAG,
+        uniforms: { uOpen: { value: this.open } },
+        side: THREE.DoubleSide,
+      }),
+    );
+    const into = new THREE.Vector3(WINDOW_INTO.x, 0, WINDOW_INTO.z).normalize();
+    morning.position.set(WINDOW.x, WINDOW_GROUND + (PANE_H + 0.55) / 2, WINDOW.z).addScaledVector(into, -0.12);
+    morning.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), into);
+    morning.frustumCulled = false;
+    this.objects.push(morning);
 
     const pane = new THREE.PlaneGeometry(1, 1, 9, 9);
     const panes = mergeGeometries([pane.clone(), pane.clone()]);
@@ -762,8 +748,8 @@ export class SleepingIsland {
 
     this.shaft = new THREE.Mesh(
       mergeGeometries([
-        new THREE.PlaneGeometry(1.5, 4.6).rotateX(Math.PI / 2).translate(0, 0, 2.3),
-        new THREE.PlaneGeometry(1.5, 4.6).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 0, 2.3),
+        new THREE.PlaneGeometry(2.0, 8.0).rotateX(Math.PI / 2).translate(0, 0, 4.0),
+        new THREE.PlaneGeometry(2.0, 8.0).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 0, 4.0),
       ]),
       new THREE.ShaderMaterial({
         vertexShader: SHAFT_VERT,
@@ -780,31 +766,6 @@ export class SleepingIsland {
     this.shaft.renderOrder = 3;
     this.shaft.frustumCulled = false;
     this.objects.push(this.shaft);
-
-    const sheets = new THREE.Mesh(
-      mergeGeometries(
-        Array.from({ length: 4 }, (_, i) => {
-          const g = new THREE.PlaneGeometry(tuning.sleeping.fogReach * 2.2, tuning.sleeping.fogReach * 2.2, 26, 26);
-          g.rotateX(-Math.PI / 2);
-          g.translate(SLEEP_HOLLOW.x, 0, SLEEP_HOLLOW.z);
-          g.deleteAttribute('normal');
-          g.deleteAttribute('uv');
-          g.setAttribute('aLevel', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(i), 1));
-          return g;
-        }),
-      ),
-      new THREE.ShaderMaterial({
-        vertexShader: SHEET_VERT,
-        fragmentShader: SHEET_FRAG,
-        uniforms: { ...atmo.uniforms },
-        transparent: true,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
-    );
-    sheets.renderOrder = 2;
-    sheets.frustumCulled = false;
-    this.objects.push(sheets);
 
     const quad = new THREE.PlaneGeometry(2, 2);
     const downGeo = new THREE.InstancedBufferGeometry();
@@ -917,6 +878,7 @@ export class SleepingIsland {
       atmo.uniforms.uFrost.value.w = 0;
       atmo.uniforms.uLamp.value.w = 0;
       atmo.uniforms.uDawn.value.x = 0;
+      atmo.uniforms.uDawnSource.value.w = 0;
       return;
     }
 
@@ -943,6 +905,7 @@ export class SleepingIsland {
     u.uLamp.value.set(LAMP.x, LAMP.y, LAMP.z, t.lamp * (1 - t.lampDawn * this.shown.dawn));
     /** The first sun stands on the hilltop and comes down the hill as the morning does. */
     u.uDawn.value.set(this.shown.dawn, THREE.MathUtils.lerp(HILLTOP.y + 1, BED_GROUND - 1, this.shown.dawn));
+    u.uDawnSource.value.set(WINDOW.x, WINDOW.y, WINDOW.z, this.shown.curtains);
 
     this.player(dt);
     this.stepCarve(dt);
@@ -992,7 +955,7 @@ export class SleepingIsland {
     const t = tuning.sleeping;
     const w = this.wind.sample(BED.x, BED.z, this.air);
     const speed = Math.hypot(w.x, w.z);
-    const want = Math.min(1, (speed / t.blanketSpeed) * 0.7 + w.energy * 0.8) * t.blanketGust;
+    const want = Math.min(1, (speed / t.blanketSpeed) * 0.7 + w.energy * 0.8 + this.bedWind) * t.blanketGust;
     this.puff += (want - this.puff) * (1 - Math.exp(-dt / (want > this.puff ? 0.25 : t.blanketSettles)));
     this.fold.set(this.shown.blanket * t.blanketLift, this.puff, 0.01 + Math.min(0.06, speed * 0.004 + w.energy * 0.03));
     /** They are plainly only asleep, and this is how you can tell: the blanket over them rises and falls. */
@@ -1004,7 +967,7 @@ export class SleepingIsland {
       Math.min(0.5, Math.hypot(c.x, c.z) * 0.02 + c.energy * 0.25) * (0.4 + 0.6 * this.shown.curtains) + Math.sin(time * 1.3) * 0.02,
       THREE.MathUtils.clamp(this.curtainRate, -1, 1),
     );
-    this.shaftUniform.value = this.shown.curtains * this.shown.dawn;
+    this.shaftUniform.value = this.shown.curtains * (0.5 + 0.5 * this.shown.dawn);
     this.shaft.visible = this.shaftUniform.value > 0.01;
   }
 

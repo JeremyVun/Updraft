@@ -7,7 +7,8 @@ import { heightAt } from './island';
 
 /** The southern beach stays put; the extra fifteen percent of island is north of it. */
 export const LINES_LANDING = new THREE.Vector2(14, -308);
-export const LINES_BERTH = new THREE.Vector3(240, 0, -491);
+// Rest the bow on the north beach, with dry sand beside the thwart for boarding.
+export const LINES_BERTH = new THREE.Vector3(240, 0, -483.5);
 export const LINES_WALK = [
   new THREE.Vector2(12, -320), new THREE.Vector2(0, -330), new THREE.Vector2(0, -340),
   new THREE.Vector2(25, -351), new THREE.Vector2(25, -362),

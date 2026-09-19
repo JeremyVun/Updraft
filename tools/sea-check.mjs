@@ -45,7 +45,7 @@ const steps = [
   wait("__game.story.current.swim==='done'"), { shot: 'together' },
   { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>3.5)throw Error(JSON.stringify(s));return s;})()` },
   { wait: 35000 }, { shot: 'farewell' },
-  wait("__game.story.name==='home'", 110), { shot: 'home' },
+  wait("__game.story.name==='mirror'", 110), { shot: 'mirror-arrival' },
   { eval: 'window.seaLog' },
 ];
 const child = spawn(process.execPath, ['tools/play.mjs', process.argv[2] ?? '/tmp/updraft-sea', JSON.stringify(steps)], {

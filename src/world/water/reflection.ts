@@ -25,7 +25,7 @@ export class PlanarReflection {
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
     private readonly scene: THREE.Scene,
-    private readonly scale: number,
+    public scale: number,
   ) {
     this.target = new THREE.WebGLRenderTarget(1, 1, {
       type: THREE.HalfFloatType,

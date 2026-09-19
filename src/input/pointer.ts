@@ -24,6 +24,8 @@ export class PointerInput {
    * anywhere along it but under the bird.
    */
   anchor: THREE.Vector3 | null = null;
+  /** Chapter-local sensitivity for slow, deliberate circles. */
+  twirlGain = 1;
   present = false;
   /**
    * Set while the story is playing a beat out on its own. The pointer still tracks, but it puts nothing into the
@@ -125,7 +127,7 @@ export class PointerInput {
     } else if (this.sinceHeading > 0.15) {
       this.spin *= Math.exp(-dt * 5);
     }
-    const want = THREE.MathUtils.smoothstep(Math.abs(this.spin), T.twirlFrom, T.twirlFull);
+    const want = THREE.MathUtils.smoothstep(Math.abs(this.spin) * this.twirlGain, T.twirlFrom, T.twirlFull);
     if (want > this.charge) this.charge = Math.min(want, this.charge + dt * T.chargeRate * want);
     else this.charge = Math.max(want, this.charge - dt * T.dischargeRate);
     const settle = this.charge < 0.05 ? 1 : 1 - Math.exp(-dt * 2);

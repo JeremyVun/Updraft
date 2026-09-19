@@ -10,13 +10,15 @@ export class StormWeather {
   private thunderIn = Infinity;
   private strikes = 0;
   private strength = 0;
+  private flashScale = 1;
   private pan = 0;
   private readonly light = new THREE.Color();
 
   constructor(private readonly thunder: (strength: number, pan: number) => void) {}
 
   /** Called after the palette, so the flash lights the rain, sail, travellers and reflected sky together. */
-  update(dt: number, storm: number, heading: number): void {
+  update(dt: number, storm: number, heading: number, lightningScale = 1, woodShade = 0): void {
+    this.flashScale += (lightningScale - this.flashScale) * (1 - Math.exp(-dt * 2.5));
     const u = atmo.uniforms;
     u.uStormCover.value = storm;
     if (storm > 0.01) this.elapsed += dt;
@@ -44,7 +46,7 @@ export class StormWeather {
     }
     const t = this.age / tuning.storm.lightningFade;
     // One soft-edged illumination, never a sequence of full-screen white flashes.
-    const flash = t < 1 ? Math.sin(Math.min(1, this.age / tuning.storm.lightningAttack) * Math.PI * 0.5) * Math.pow(1 - t, 2) * this.strength : 0;
+    const flash = t < 1 ? Math.sin(Math.min(1, this.age / tuning.storm.lightningAttack) * Math.PI * 0.5) * Math.pow(1 - t, 2) * this.strength * this.flashScale : 0;
     u.uLightning.value.w = flash;
     // A storm hides the moon as well as the sun. Keep the close figures readable in scattered light.
     u.uSunColor.value.multiplyScalar(1 - storm * (1 - tuning.storm.moonThroughCloud));
@@ -53,6 +55,17 @@ export class StormWeather {
     // Cloud-scattered light keeps the two travellers readable between the lightning strikes.
     this.light.setRGB(0.025, 0.032, 0.046).multiplyScalar(storm);
     u.uSkyAmbient.value.add(this.light);
+    // The forest cannot inherit the crossing's fill light: the player makes its light.
+    // Dim the sky too, because its reflection and fog otherwise expose the wet floor.
+    // Apply before the flash; ember illumination is a separate, unaffected light.
+    const fill = THREE.MathUtils.lerp(1, tuning.wood.ambientScale, woodShade);
+    const sky = THREE.MathUtils.lerp(1, tuning.wood.skyScale, woodShade);
+    u.uSunColor.value.multiplyScalar(fill);
+    u.uSkyAmbient.value.multiplyScalar(fill);
+    u.uGroundBounce.value.multiplyScalar(fill);
+    u.uSkyZenith.value.multiplyScalar(sky);
+    u.uSkyHorizon.value.multiplyScalar(sky);
+    u.uSkyHorizonSun.value.multiplyScalar(sky);
     this.light.setRGB(0.42, 0.51, 0.7).multiplyScalar(flash * tuning.storm.lightningAmbient);
     u.uSkyAmbient.value.add(this.light);
     u.uSkyHorizon.value.add(this.light.multiplyScalar(tuning.storm.lightningHorizon));

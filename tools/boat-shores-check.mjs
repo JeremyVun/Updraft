@@ -25,7 +25,7 @@ try {
   const page=await browser.newPage({viewport:{width:1200,height:800}});
   page.on('pageerror', e=>errors.push(e.message));
   const cases = [
-    ['opening',8.5,21.5,0.95,false], ['lines-departure',240,-491,0.1,false],
+    ['opening',8.5,21.5,0.95,false], ['lines-departure',240,-483.5,0.1,false],
     ['meadow-departure',-2/3,-974-2/3,0.2,false], ['birches-departure',-4,-1197,0.15,false],
     ['wood-departure',-34,-1908,0.2,false], ['sleeping-departure',-214.5,-1926,-1.76,false],
     ['home',-45.3,-1926.25,Math.PI/2,true],

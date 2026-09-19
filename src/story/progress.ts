@@ -1,6 +1,7 @@
 import type { Cast } from './cast';
 import type { ChapterName } from './journey';
 import type { Seat } from '../creatures/cygnet/ride';
+import { restoreWingCare } from './wing-care';
 
 export const PROGRESS_KEY = 'updraft.progress.v1';
 /** Versioned story checkpoints, not a dump of animations, callbacks or GPU textures. */
@@ -20,16 +21,21 @@ export interface Progress {
 export const CHECKPOINTS: Partial<Record<ChapterName, Record<string, number>>> = {
   island: { entry: 0, companion: 0 },
   toLines: { entry: 0 }, lines: { entry: 0, 'curtain-1': 2, 'curtain-2': 2, family: 2 },
+  toBoats: { entry: 0 }, boats: { entry: 0, 'pool-1': 1, 'pool-2': 1 },
   toMeadow: { entry: 0 }, meadow: { entry: 0, piano: 5, pond: 5 },
   toBirches: { entry: 0 }, birches: {
     entry: 0, swing: 3, leaves: 3,
     'scarf-0-swing': 4, 'scarf-1': 4, 'scarf-1-swing': 4,
     'scarf-2': 4, 'scarf-2-swing': 4, 'scarf-3': 4, 'scarf-3-swing': 4,
+    'scarf4-0-swing': 4, 'scarf4-1': 4, 'scarf4-1-swing': 4,
+    'scarf4-2': 4, 'scarf4-2-swing': 4, 'scarf4-3': 4, 'scarf4-3-swing': 4,
+    'scarf4-4': 4, 'scarf4-4-swing': 4,
   },
   drowned: { entry: 0, sail: 1 }, toWood: { entry: 0 },
   wood: { entry: 0, found: 2, dry: 2 }, toSleeping: { entry: 0 },
   sleeping: { entry: 0, feather: 0, morning: 0 },
-  toHome: { entry: 0, swim: 2 },
+  toMirror: { entry: 0, swim: 2 }, mirror: { entry: 0, stars: 2, 'stars-0': 2, 'stars-1': 2, 'stars-2': 2, 'stars-3': 2, 'stars-4': 2, 'stars-5': 2, 'stars-6': 2, 'stars-7': 2, reflection: 1, window: 1, moon: 1, tide: 1, lantern: 1 },
+  toHarbour: { entry: 0 }, toHome: { entry: 0, swim: 2 },
   home: { entry: 0, reunion: 0, drawing: 0, complete: 0 },
 };
 
@@ -82,6 +88,7 @@ export function placeProgress(p: Progress, cast: Cast): void {
   if (p.seat) k.rideIn(p.seat);
   else k.release(k.position.clone().fromArray(p.bird));
   k.yaw = p.bird[3]; k.visible = !!p.bird[6];
+  restoreWingCare(k, p.chapter, p.point);
   plane.hold(c); plane.visible = !!p.plane[0]; plane.soggy.value = p.plane[1];
 }
 

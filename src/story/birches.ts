@@ -15,7 +15,7 @@ const CLEARING_LEG = 2;
 const BOARDING = 20;
 /** And if the leaves are more interesting than the boat, they go anyway after this long on the last stretch. */
 const LAST_LEG_PATIENCE = 45;
-type Beat = 'ashore' | 'wonder' | 'walk' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /**
@@ -48,6 +48,7 @@ export class BirchesChapter implements Chapter {
   private cheered = false;
   private lastLegAt = 0;
   private swings = 0;
+  private swingOffered = false;
   private lastSwingInput = 0;
   private leavingSwing = false;
   private readonly mountFrom = new THREE.Vector3();
@@ -74,7 +75,7 @@ export class BirchesChapter implements Chapter {
 
   get scripted(): boolean {
     /** Exploring and playing with the cygnet never take control away from the wind. */
-    return !['walk', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat);
+    return !['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat);
   }
 
   get done(): boolean {
@@ -84,16 +85,18 @@ export class BirchesChapter implements Chapter {
   get checkpoint(): string | null {
     if (this.beat !== 'walk') return null;
     const count = this.cast.birches.scarf.completed;
-    return count > 0 || this.swings > 0 ? `scarf-${count}${this.swings > 0 ? '-swing' : ''}` : null;
+    return count > 0 || this.swings > 0 ? `scarf4-${count}${this.swings > 0 ? '-swing' : ''}` : null;
   }
   saveCheckpoint(): number[] { return [this.leg, this.swings, this.dusk, this.cast.birches.scarf.completed]; }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
     this.swings = Math.max(0, data[1]); this.dusk = data[2];
     // Saves made before the scarf resume beyond the tangles they have already walked past.
-    const count = data.length > 3 ? THREE.MathUtils.clamp(Math.floor(data[3]), 0, 3) : point === 'leaves' ? 2 : 1;
+    const saved = data.length > 3 ? Math.floor(data[3]) : point === 'leaves' ? 2 : 1;
+    // Old three-knot saves already earned their sail. Earlier saves encounter the new loop on the way.
+    const count = THREE.MathUtils.clamp(!point.startsWith('scarf4-') && saved >= 3 ? SCARF_SNAGS.length : saved, 0, SCARF_SNAGS.length);
     this.cast.birches.scarf.restore(count);
-    this.cast.boat.scarfSail = count === 3 ? 1 : 0;
+    this.cast.boat.scarfSail = count === SCARF_SNAGS.length ? 1 : 0;
     this.cast.child.stop();
     this.beat = 'walk'; this.play = 'hold';
   }
@@ -149,6 +152,10 @@ export class BirchesChapter implements Chapter {
       case 'walk':
         this.updateWalk(time);
         break;
+      case 'swingOffer':
+        if (birches.swing.brushAge < .5) this.toSwing();
+        else if (this.t > tuning.birches.scarf.swingOfferSeconds) this.resumeWalk();
+        break;
       case 'toSwing':
         if (!c.busy) this.mount();
         break;
@@ -162,7 +169,7 @@ export class BirchesChapter implements Chapter {
         c.lookAt = scarf.focus;
         if (scarf.active >= 0 && scarf.snags[scarf.active].freed) {
           cue('delight');
-          if (scarf.completed === 3) this.to('unravelling');
+          if (scarf.completed === SCARF_SNAGS.length) this.to('unravelling');
           else this.resumeWalk();
         }
         break;
@@ -180,7 +187,8 @@ export class BirchesChapter implements Chapter {
         break;
     }
 
-    if (['walk', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat)) this.leafPlay.update(dt, time);
+    if (['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat)) this.leafPlay.update(dt, time);
+    birches.swing.invited = this.swings === 0 && (this.beat === 'swingOffer' || (this.beat === 'walk' && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 16));
     birches.swing.update(dt, this.cast.wind);
     if (this.beat !== 'swinging') birches.shake(0);
     if (p.held) p.hold(c);
@@ -211,6 +219,15 @@ export class BirchesChapter implements Chapter {
     const { child: c, plane: p, boat, wind } = this.cast;
     const scarf = this.cast.birches.scarf;
     const snag = scarf.snags[scarf.completed];
+    if (this.swings === 0 && scarf.completed > 0 && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 13) {
+      if (this.cast.birches.swing.brushAge < .5) { this.toSwing(); return; }
+      if (!this.swingOffered && !c.acting) {
+        this.swingOffered = true; this.play = 'carry'; c.stop();
+        c.lookAt = this.cast.birches.swing.seat(this.seat);
+        c.walkTo(this.seat.x + 2.8, this.seat.z + 3.4, false, undefined, .5);
+        this.to('swingOffer'); return;
+      }
+    }
     if (snag && !c.acting && (c.position.distanceTo(snag.before) < tuning.birches.scarf.arriveWithin || c.position.z < snag.before.z)) {
       this.toScarf();
       return;
@@ -219,11 +236,6 @@ export class BirchesChapter implements Chapter {
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 14 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1 && scarf.finished;
     if (last && this.lastLegAt === 0) this.lastLegAt = time;
-    /** Coming into the clearing, the swing is already moving on the wind, and that is the whole invitation. */
-    if (this.swings === 0 && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 9 && wind.sample(BIRCHES_CLEARING.x, BIRCHES_CLEARING.y, this.air).energy > tuning.birches.swingInvitation) {
-      this.toSwing();
-      return;
-    }
     if (this.play === 'watch') {
       c.lookAt = p.position;
       /** A gust that takes a cloud of gold off a whole stand at once is worth stopping for. */
@@ -253,6 +265,7 @@ export class BirchesChapter implements Chapter {
   /** Over to the swing, which has been moving on its own since before they came over the rise. */
   private toSwing(): void {
     const { child: c, birches } = this.cast;
+    this.play = 'carry'; c.stop();
     this.to('toSwing');
     const seat = birches.swing.seat(this.seat);
     c.lookAt = this.tmp.copy(seat).setY(seat.y + 0.4);
@@ -267,7 +280,7 @@ export class BirchesChapter implements Chapter {
     c.lookAt = null;
     birches.swing.rider = 1;
     birches.swing.braking = false;
-    this.lastSwingInput = this.now;
+    this.lastSwingInput = this.now + tuning.birches.scarf.swingMountSeconds;
     this.leavingSwing = false;
     this.mountFrom.copy(c.position);
   }
@@ -346,6 +359,7 @@ export class BirchesChapter implements Chapter {
         return;
       }
       c.pickUp(() => {
+        if (this.beat !== 'walk' || this.play !== 'fetch') return;
         p.hold(c);
         this.play = 'hold';
         this.holdUntil = this.now + 0.6 + Math.random() * 0.8;
@@ -379,25 +393,33 @@ export class BirchesChapter implements Chapter {
     const c = this.cast.child.position;
     const p = this.cast.plane.position;
     const s = this.shot;
-    s.fitWidth = true;
+    // Keep the camera inside the grove in portrait, rather than retreating through several more trees.
+    s.fitWidth = false;
     if (this.beat === 'toScarf' || this.beat === 'scarf' || this.beat === 'unravelling') {
       const scarf = this.cast.birches.scarf;
       const at = scarf.focus ?? this.cast.boat.sailPoint(this.scarfMast);
       s.from = this.scarfFrom;
-      s.target.set(at.x * 0.65 + c.x * 0.35, at.y * 0.65 + (c.y + 1.2) * 0.35, at.z * 0.7 + c.z * 0.3);
+      s.target.set((at.x + c.x) * 0.5,
+        at.y * 0.65 + (c.y + 1.2) * 0.35, at.z * 0.7 + c.z * 0.3);
       s.distance = this.beat === 'unravelling' ? 28 : scarf.active === 1 ? 17 : 24;
+      s.distance *= Math.max(1, 0.56 / (window.innerWidth / window.innerHeight));
       s.height = this.beat === 'unravelling' ? 7 : scarf.active === 1 ? 3.8 : 5.5;
       this.focus.copy(at);
       this.pace = 0.5;
       return;
     }
-    if (this.beat === 'toSwing' || this.beat === 'swinging') {
+    if (this.beat === 'swingOffer' || this.beat === 'toSwing' || this.beat === 'swinging') {
       /** Three-quarters on to the swing, low: the one shot in the room that is about a face and not a hillside. */
       const seat = this.cast.birches.swing.seat(this.seat);
       s.from = this.from;
       s.target.set(seat.x, seat.y + 0.9, seat.z);
       s.distance = 14;
       s.height = 2.6;
+      if (this.beat === 'swingOffer') {
+        s.target.lerp(this.tmp.set(c.x, c.y + 1, c.z), .5);
+        s.distance = Math.max(17, 15 + Math.hypot(c.x - seat.x, c.z - seat.z) * .6) * Math.max(1, .56 / (window.innerWidth / window.innerHeight));
+        s.height = 4.2;
+      }
       this.pace = 0.4;
       this.focus.copy(seat);
       return;

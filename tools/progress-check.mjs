@@ -32,7 +32,9 @@ try {
   const cases = [
     ['island', '', 'companion', `c.beat='leaving';c.restored=true;c.worldLife=1;g.life.regions.island.w=1;g.cygnet.rideIn('cradle');`],
     ['lines', 'washing', 'family', `const {FAMILY_LINE,door}=await import('/src/world/lines.ts');c.beat='walk';c.leg=2;c.play='hold';c.holdUntil=1e6;g.child.place(-4,Math.min(FAMILY_LINE.a.z,FAMILY_LINE.b.z)-15,Math.PI);door.open=1;`],
-    ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(g.child);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(3,true);`],
+    ['boats', 'boats', 'pool-1', `c.restoreCheckpoint('pool-1',[33]);`],
+    ['boats', 'boats', 'pool-2', `c.restoreCheckpoint('pool-2',[69]);`],
+    ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(g.child);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(4,true);`],
     ['meadow', 'meadow', 'pond', `c.skipToCrest();c.crestDone=true;c.beat='walk';c.play='hold';c.holdUntil=1e6;g.cygnet.rideIn('satchel');`],
     ['birches', 'birches', 'swing', `const {BIRCHES_CLEARING:p}=await import('/src/world/birches.ts');g.child.place(p.x,p.y,Math.PI);c.beat='walk';c.swings=6;c.leg=3;c.play='hold';c.holdUntil=1e6;`],
     ['birches', 'birches', 'leaves', `const {BIRCH_PILES:p}=await import('/src/world/birches.ts');g.child.place(p[2].x,p[2].z,Math.PI);c.beat='walk';c.swings=6;c.played=true;c.leg=4;c.play='hold';c.holdUntil=1e6;`],
@@ -41,7 +43,10 @@ try {
     ['wood', 'wood', 'dry', `c.beat='out';c.bolted=true;c.leg=4;c.chainAt=100;g.glider.visible=true;g.glider.soggy.value=0;`],
     ['sleeping', 'sleeping', 'feather', `c.beatStart=c.now-20;c.tuckIn(0);c.toFeather();c.beatStart=c.now-6;c.theFeather(0);g.cygnet.release(g.sleeping.feather.goal);c.looks=2;c.nextLook=c.now-1;c.theEdge();`],
     ['sleeping', 'sleeping', 'morning', `const {SLEEP_BERTH:p}=await import('/src/world/sleeping.ts');g.boat.beach(p.x,p.z,-1.76);g.child.place(g.sleeping.bedside.x,g.sleeping.bedside.z,0);g.cygnet.rideIn('cradle');c.moored=true;c.warmed=1;c.board();`],
-    ['toHome', 'sea', 'swim', `c.swim='done';c.leg=4;c.time=100;g.cygnet.rideIn('cradle');`],
+    ['mirror', 'mirror', 'moon', `c.restoreCheckpoint('moon',[0]);`],
+    ['mirror', 'mirror', 'tide', `c.restoreCheckpoint('tide',[1]);`],
+    ['mirror', 'mirror', 'lantern', `c.restoreCheckpoint('lantern',[2]);`],
+    ['toMirror', 'sea', 'swim', `c.swim='done';c.leg=4;c.time=100;g.cygnet.rideIn('cradle');`],
     ['home', 'summit', 'reunion', `c.onOver();g.cygnet.visible=false;`],
     ['home', 'summit', 'drawing', `c.skipToDrawing(0);c.beat='release';g.child.standUp();`],
     ['home', 'summit', 'complete', `c.beat='credits';c.finished=true;c.silence=true;g.child.visible=false;g.cygnet.visible=false;`],
@@ -80,8 +85,8 @@ try {
   if(process.env.ONLY) break checks;
 
   // Island exits are crossing entries, and all chapter entries round-trip without carrying old callback closures.
-  for (const chapter of ['island','toLines','lines','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toHome','home']) {
-    const aliases={island:'',toLines:'crossing',lines:'washing',toMeadow:'washing',meadow:'meadow',toBirches:'meadow',birches:'birches',drowned:'drowned',toWood:'drowned',wood:'wood',toSleeping:'wood',sleeping:'sleeping',toHome:'sea',home:'jetty'};
+  for (const chapter of ['island','toLines','lines','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','toHome','home']) {
+    const aliases={island:'',toLines:'crossing',lines:'washing',toMeadow:'washing',meadow:'meadow',toBirches:'meadow',birches:'birches',drowned:'drowned',toWood:'drowned',wood:'wood',toSleeping:'wood',sleeping:'sleeping',toMirror:'sea',mirror:'mirror',toHarbour:'mirror',toHome:'sea',home:'jetty'};
     await clear();await open('shot&progress=1&chapter='+aliases[chapter]);
     await page.evaluate(async chapter => {
       const g=__game;
@@ -89,6 +94,8 @@ try {
       if(chapter==='toMeadow') at=(await import('/src/story/lines.ts')).LINES_BERTH;
       if(chapter==='toBirches') at=(await import('/src/story/meadow.ts')).FAR_SHORE;
       if(chapter==='toWood') at={x:-18,z:-1640};
+      if(chapter==='toHome') at=(await import('/src/world/sleeping.ts')).SLEEP_BERTH;
+      if(chapter==='toHarbour') at=(await import('/src/world/sky-mirror-layout.ts')).MIRROR_BERTH;
       if(chapter==='toSleeping') at=(await import('/src/world/wood.ts')).WOOD_BERTH;
       if(at){g.story.sail(at.x,at.z-5,Math.PI);g.story.begin(chapter);}
     },chapter);

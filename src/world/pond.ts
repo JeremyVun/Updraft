@@ -179,6 +179,10 @@ export class Pond {
       const d = 0.78 + Math.random() * 0.4;
       const x = POND.x + Math.cos(a) * POND.rx * d;
       const z = POND.z + Math.sin(a) * POND.rz * d;
+      /** The southern shore is open where the family rests and the child offers the water. */
+      const south = (z - POND.z) / Math.hypot(x - POND.x, z - POND.z);
+      const opening = THREE.MathUtils.smoothstep(south, 0.45, 0.8);
+      if (Math.random() < opening) continue;
       const ground = worldHeight(x, z);
       const above = ground - POND_LEVEL;
       if (above < REED_BAND.inner || above > REED_BAND.outer) continue;

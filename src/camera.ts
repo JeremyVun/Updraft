@@ -32,6 +32,8 @@ export interface Shot {
   free?: boolean;
   /** An authored continuous threshold move supplies its own easing and ground clearance. */
   exact?: boolean;
+  /** Optional playable pair. Fit both within a bounded retreat; the primary always keeps the frame. */
+  subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; margin: number; extra: number };
 }
 
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
@@ -48,6 +50,14 @@ export class CameraRig {
   private lift = 0;
   private pull = 0;
   private clear = GROUND_CLEARANCE;
+  private fitBack = 0;
+  private readonly local = new THREE.Vector3();
+  private readonly second = new THREE.Vector3();
+  private readonly right = new THREE.Vector3();
+  private readonly up = new THREE.Vector3();
+  private readonly back = new THREE.Vector3();
+  private readonly fitOffset = new THREE.Vector3();
+  private readonly fitOrigin = new THREE.Vector3();
 
   constructor() {
     this.fixed = params.cam !== null;
@@ -90,6 +100,9 @@ export class CameraRig {
     this.pull = 0;
     this.clear = shot.clearance ?? GROUND_CLEARANCE;
     this.place(0, Infinity);
+    this.fitBack = 0;
+    this.fitOffset.set(0, 0, 0);
+    this.fitSubjects(shot, Infinity);
   }
 
   update(dt: number, time: number, shot: Shot, pace = 0.6): void {
@@ -116,6 +129,56 @@ export class CameraRig {
     /** Eased like everything else the shot asks for: coming down to a bird's eye is a move, not a cut. */
     this.clear += ((shot.clearance ?? GROUND_CLEARANCE) - this.clear) * k;
     this.place(time, dt);
+    this.fitSubjects(shot, dt);
+  }
+
+  /** Use the final camera, after terrain correction, so a hill cannot silently undo the fit. */
+  private fitSubjects(shot: Shot, dt: number): void {
+    const pair = shot.subjects;
+    const camera = this.camera;
+    if (!pair) {
+      this.fitBack = 0;
+      this.fitOffset.multiplyScalar(Math.exp(-dt * 2));
+      camera.position.add(this.fitOffset);
+      camera.updateMatrixWorld();
+      return;
+    }
+    this.fitOrigin.copy(camera.position);
+    camera.updateMatrixWorld();
+    this.right.setFromMatrixColumn(camera.matrixWorld, 0);
+    this.up.setFromMatrixColumn(camera.matrixWorld, 1);
+    this.back.setFromMatrixColumn(camera.matrixWorld, 2);
+    const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
+    const horizontal = vertical * camera.aspect;
+    let needed = 0;
+    for (const point of [pair.primary, pair.secondary]) {
+      this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
+      needed = Math.max(needed, Math.abs(this.local.x) / horizontal + this.local.z,
+        Math.abs(this.local.y) / vertical + this.local.z);
+    }
+    needed = Math.min(pair.extra, needed);
+    // Respond as an edge approaches; release the extra space slowly when they come together.
+    this.fitBack = Math.max(needed, this.fitBack * Math.exp(-dt * 0.8));
+    camera.position.addScaledVector(this.back, this.fitBack);
+    camera.updateMatrixWorld();
+    this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
+    const depth = Math.max(1, -this.local.z);
+    this.second.copy(pair.secondary).applyMatrix4(camera.matrixWorldInverse);
+    const otherDepth = Math.max(1, -this.second.z);
+    // Recompose within the available room before asking for any more distance. If an old runaway
+    // cannot fit, the child's interval wins until the plane has flown back into reach.
+    const shift = (a: number, b: number, slope: number): number => {
+      const lo = a - depth * slope, hi = a + depth * slope;
+      const bothLo = Math.max(lo, b - otherDepth * slope);
+      const bothHi = Math.min(hi, b + otherDepth * slope);
+      return bothLo <= bothHi ? THREE.MathUtils.clamp(0, bothLo, bothHi) : THREE.MathUtils.clamp(0, lo, hi);
+    };
+    const x = shift(this.local.x, this.second.x, horizontal);
+    const y = shift(this.local.y, this.second.y, vertical);
+    camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
+    camera.position.y = Math.max(camera.position.y, Math.max(heightAt(camera.position.x, camera.position.z), 0) + this.clear);
+    this.fitOffset.subVectors(camera.position, this.fitOrigin);
+    camera.updateMatrixWorld();
   }
 
   private place(time: number, dt: number): void {

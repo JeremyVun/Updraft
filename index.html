@@ -8,6 +8,13 @@
   </head>
   <body class="starting">
     <canvas id="view" inert></canvas>
+    <div id="plane-guide" aria-hidden="true">
+      <svg id="plane-indicator" viewBox="0 0 32 32">
+        <path class="paper" d="M3 4 L29 16 L3 28 L8 16 Z" />
+        <path class="fold" d="M8 16 L29 16 L11 21 Z" />
+        <path class="crease" d="M8 16 L29 16" />
+      </svg>
+    </div>
     <div id="veil" aria-busy="true">
       <div class="veil-colour" aria-hidden="true"></div>
       <div class="veil-haze" aria-hidden="true"></div>

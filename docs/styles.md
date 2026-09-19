@@ -10,9 +10,11 @@
 - **Rocks**: rounded, mossy on top, a few clusters near the shore and on the hills.
 - **Petals**: small pastel pink, cream, yellow and a little lilac, with a few glowing pollen specks. They lie hidden in flower patches in the grass and glint as they tumble.
 - **Wind lines**: thin white tapered ribbons that follow the actual flow, fade in and out, and curl as they die, in the spirit of *The Wind Waker*. They appear along the player's gestures, spiral around an updraft, and occasionally trace a strong natural gust.
-- **The swirl**: circling the cursor lays the loops being drawn into the air in the same pale ribbon, stood up toward the camera and climbing out of the grass with every turn of the hand, so an updraft is a column the player can watch themselves winding; it comes apart and sinks the moment they stop. Where the story is waiting for that gesture — the fledgling trying to fly — the same loops turn over by themselves, fainter and slower, until the player takes them over.
+- **The swirl**: circling the cursor lays a leading turn into the air, with detached, fading pieces rising above it. It stretches and disperses rather than stacking complete hoops. The cygnet and the wrapped scarf trunk use the same invitation, giving way to the player's real updraft.
+- **Wind invitations**: one ivory gust crosses the object that needs wind, with unequal trailing strands curling apart. The same effect sweeps sideways, lifts a scarf loop or pulls a bow outward. A soft cool edge preserves contrast on pale cloth, and a minimum light level keeps air visible in the dark wood. Local gestures suppress the demonstration; it returns after inactivity. Invitations never advance a puzzle.
 - **Sea**: turquoise over a sandy seabed glimpsed through the shallows, deep blue further out. Broken waves roll in as lines of lacy foam, run up the beach as a thin sheet and slide back, leaving wet sand that dries. Sun glitter twinkles toward the sun; the land, the boat and the child are mirrored, blurred by ripples. In the still world it lies glassy and grey.
 - **Haze and the archipelago**: distance fades toward a sky colour that is warm toward the sun and cooler away from it. The other islands of the archipelago are grey, lifeless silhouettes in that haze.
+- **Departure kite**: the same ruled-paper diamond, faded red foot and bow tail marks every boat departure. One kite belongs to the current room; arrival beaches and home have none. It answers the wind without requiring interaction. Preserve the door reveal on Lines, the final bend among the little boats, the opening beyond the wood and the waking child on the sleeping island. The mirror keeps its landing-stage kite visible during star play; the completed constellation still controls the boat’s final approach.
 - **Glider**: warm off-white notebook paper with faint ruled lines and a red margin, glowing when backlit, leaving a faint ribbon from each wingtip.
 - **Creatures**: small, round and slightly oversized so they read from the default camera. Warm brown rabbits (one white) whose long ears glow pink against the sun, plump finches with buff, rosy or yellow breasts, white gulls with grey wings and dark tips, and white, pale yellow and blue butterflies. Soft wrapped light, cool shadows and a warm rim of fur or feathers when backlit. They move in springy, eased arcs (hops squash and stretch, ears lag and flop) and all of them answer the wind: rabbits flatten their ears or bolt, finches burst up as a flock, gulls circle up an updraft, butterflies tumble away and drift back to the flowers. Sheep graze the walled pastures in loose flocks: plump clouds of creamy fleece with black faces and legs, some carrying a farmer's blue or red raddle mark, lambs springing into the air beside their mothers; they bunch with their rumps to a strong wind, trot away from a gust, and lie down together at night.
 - **The still world**: before the first gust everything is grey, dim and quiet: colourless grass, a bare tree, a glassy sea, no animals. Colour returns only where the wind has been.
@@ -45,3 +47,47 @@ and invite one click; discovering the wind belongs in the game.
 
 `tools/start-check.mjs` checks desktop and phone entry, audio gating, centring, ambient motion, backdrop
 response without cursor trails, reduced motion, checkpoint restoration and boot retry.
+
+The dark wood's embers are abstract light, following Jeremy's approved
+[orb study](../assets/art-direction/wood-ember.png): honey and apricot veils curling around a warm heart,
+softly breathing and yielding to wind. Their small warm motes remain distinct from the cooler fireflies.
+No literal campfire, solid sphere or scattered glowing chips. The heart is in `src/fx/ember-orb.ts`; seven independently moving surfaces in `src/fx/ember-veils.ts` form the wisps.
+
+The unlit forest floor should be almost invisible. Lightning briefly reveals its texture; fanning an ember
+progressively reveals a warm patch of the way ahead. Do not lift the room's ambient light to show off the
+grass. The canopy dims the crossing's blue fill, sky reflection and fog, while preserving ember light.
+
+
+## Sky mirror (2026-09-20)
+
+An uninterrupted skin of water doubles the sunset and clouds beneath the travellers. Keep the room open:
+no ground fog, moon prop or revealed sand road. A little wooden stool, enamel soap bowl and brass hoop
+bring one fragment of childhood into the emptiness. Bubbles have nearly clear centres, shifting rose,
+pearl and blue rims, soft highlights and a slight wobble. They reflect in the same glass as the child.
+
+Fallen lights are small gold starbursts on the surface; captured lights glow inside transparent bubbles;
+returned lights recede into the sky and gain their ordinary reflection below. Their ascent must be visible
+from the child's position. The paper stays visible in hand, on the satchel or flying between discoveries.
+A lamp and distant landing stage give the walk an ending without interrupting the reflected horizon.
+The playable view looks across the bubble's travel, keeping its reflection and the fallen light apart.
+Returned stars gather above the far jetty; thin connecting light and broken ripples across the offshore
+channel make their connection to the boat visible. The completed constellation joins the ripples into
+its approach, shown in a brief wider view before the travellers leave.
+
+## Sleeping island (2026-09-20)
+
+Slate-blue night surrounds a small warm bed. Keep lavender-grey distance and pale moonlit edges;
+nearby mist must leave the cygnet readable. Rounded bedding supports the child, including the seated
+embrace. The paper stays tucked away until the child leaves the bed.
+
+The window on the nearer, lower crest holds a cream seam between its curtains. Frame it beside the
+cygnet on phone and desktop; hold the opening before following the glide. Its light travels down the
+grass and mist before the wider sky brightens. Morning is golden light and fresh green turf beneath a pearl-blue sky, with cool shadows
+keeping the warmth distinct. The cold island visibly wakes with the child: green follows the light
+down the hill, then spreads beyond the lane across the whole island. Use the local winter palette, not the game's orange sunset played backwards.
+The bedside lamp's light and emissive shade fade together into morning.
+
+Short, curved winter blades retain the meadow's wind response. A bounded patch of extra stems near
+the phone camera avoids isolated spikes; lighter roots and quiet, broad ground variation tie the turf
+together. Frost gathers toward tips. Mist has an uneven, continuous boundary, never stacked planes.
+Keep the bedside pair together and follow the child throughout the departure to the boat.

@@ -15,6 +15,32 @@ body {
   cursor: none;
 }
 
+#plane-guide {
+  position: fixed;
+  top: max(34px, calc(env(safe-area-inset-top) + 24px));
+  right: max(34px, calc(env(safe-area-inset-right) + 24px));
+  bottom: max(82px, calc(env(safe-area-inset-bottom) + 64px));
+  left: max(34px, calc(env(safe-area-inset-left) + 24px));
+  pointer-events: none;
+}
+
+#plane-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  overflow: visible;
+  opacity: 0;
+  filter: drop-shadow(0 1px 2px #353a4659);
+  will-change: transform, opacity;
+}
+
+#plane-indicator .paper { fill: #fff7e6; stroke: #666779; stroke-width: .8; stroke-linejoin: round; }
+#plane-indicator .fold { fill: #d6d2c7; }
+#plane-indicator .crease { fill: none; stroke: #92928f; stroke-width: .65; }
+body.starting #plane-guide { visibility: hidden; }
+
 #veil {
   position: fixed;
   inset: 0;

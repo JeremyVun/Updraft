@@ -63,9 +63,34 @@ These effects bypass the field on purpose. Keep them explicit when changing any 
 - **The updraft funnel for petals.** Petals spiral up an explicit funnel around the middle of the traced circles (`input.updraftAt`) (`Petals.update`, `uUpdraft`: centre, strength, radius). They are drawn in along the ground and spill out at the top. The funnel fades over about 1.5 s after release.
 - **Brushing gulls.** Gulls also fly far above the ground point the stroke pushes, so a stroke that passes over a gull on screen shoves it directly (`Gulls.update`, `screenBrush`), and it flaps to recover.
 - **Unthreading the birches scarf.** `BirchScarf.brush` tests moving strokes at the active tangle in screen
-  space: upward for the fork, horizontal for the trunk and outward for the bow. These directed strokes
+  space: upward for the fork, sustained circles for the wrapped trunk, rightward for the slipped loop,
+  and outward for either bow tail. Circling must build the same `PointerInput.charge` as the cygnet's
+  updraft; a straight stroke crossing the centre cannot count as a half-turn. `input.anchor` stands the
+  real column at the visible wrap, and the shared `Swirl` invitation demonstrates it. These directed strokes
   accumulate permanent knot progress and deposit wind at the cloth; ambient wind only moves the drape.
   Only the tangle the child has reached can open. The final gathering into the sail is a scripted reward.
+  The first length uses `ScarfCloth`: the field accelerates its persistent particles while gravity, cloth
+  constraints and collision contact determine where they move. The active upward brush also lifts the
+  nearby folds and slides the fork attachments; completing the gesture releases those attachments.
+  Authored curves no longer reposition that length after release. The other released lengths use the same
+  solver after guided clearance of their supports.
+
+## Invitations
+
+`fx/wind-gesture.ts` draws the shared travelling sweep for washing, sails, embers, toy boats, soap bubbles,
+scarf lifts/pulls, the sleeping pillow and the swing. Each gust has a leading strand and two shorter, unequal wakes that curl
+apart. Direction changes with the useful gesture; the bow sends matching sweeps outward on both sides.
+The wrapped trunk uses `fx/swirl.ts`, like the cygnet: a leading turn followed by detached pieces of rising air.
+
+Hints never write wind, heat or puzzle progress. Local useful input suppresses them; inactivity lets them
+return. Large targets place their demonstration on the near surface, where it stays visible.
+Sweeps shorten near screen edges so departing air can dissolve inside a portrait frame. Sweep and updraft width is bounded in CSS pixels
+at the target depth. Wind ribbons have a minimum light level and a soft cool edge so pale cloth and the
+unlit wood both retain contrast; glider and kite ribbons keep their existing material. Piano guidance
+keeps its note timing and key path while sharing this readable material. Settings: `tuning.invitation`.
+
+`tools/wind-invitation-check.mjs` captures the game cameras and checks idle gates and fanning handover;
+`tools/scarf-check.mjs` checks rejection of straight strokes, circular release, saves and departure.
 
 ## Storm passage
 
@@ -106,3 +131,46 @@ losing progress, and the invitation fades while those sweeps are arriving.
 Completed curtains hold their opening as story state so they cannot fall onto either traveller. The family
 reveal after the last passage is a scripted reward, with a matching breeze in the field; its garment and door
 animation asks for no further hidden gesture. The plane remains held throughout the passages.
+
+The little-boats room samples local gust energy at the toy hulls. Strokes over a visible sail also write a
+local splat through `LittleBoats.brush`, correcting the low camera's projection onto ground behind it.
+The stream supplies heading; each toy responds to its own local gust, and nearby gusts also carry the joined fleet. Ambient breeze and distant strokes do
+not complete the room. The invitation is drawing only. Feel parameters live in `tuning.littleBoats`.
+
+Toy sails use that same local reading for their hanging folds, gust flutter, belly and boom angle.
+Changes in pressure trigger a short luff; quiet air lets the cloth sag again. A damped hull roll and
+bounded sideways drift follow the crosswind. Bobbing and surface tilt come from the shared pool ripples.
+
+## Sky mirror: soap bubbles and fallen stars
+
+`SkyMirror.brush` tests pointer segments against the visible soap hoop, bubbles and bubble reflections.
+Sweeps grow a film at the hoop. A released bubble takes direction from the current screen stroke projected
+locally at its height. Stroke speed sets a bounded target velocity; a fast response handles reversals and
+horizontal drag supplies a short coast. This avoids lag from the shared wind's smoothed direction.
+Empty bubbles ignore lift, so curled steering strokes
+still skim the mirror. A filled bubble uses the existing updraft charge and anchors it at the visible bubble;
+if capture happened during a charged stroke, a fresh arc or a settled charge arms lifting. A continuous
+circle works without requiring a release. Filled bubbles stop taking horizontal pushes so the circle
+does not shove its own target away.
+Only a low bubble can collect a fallen light. Sufficient
+height releases it into the sky. Invitations only demonstrate gestures and never advance the puzzle.
+A sweep over a different fallen light selects it for the paper-led walk only when no live bubble or rising
+star is in play. Selection does not carry over into later frames. Neither idle time nor ambient
+breeze can make a bubble or restore a star. Water strokes and footsteps still make local rings.
+
+The little-boats farewell adds an outgoing current only after the leading toy reaches the stream mouth
+(or for an individual toy already at the mouth). This carries the toys into the sea after play and cannot
+advance the earlier interaction. Sails still read actual wind; the current never fabricates sail pressure.
+
+## Sleeping island
+
+After the cygnet's unanswered call, `SleepingChapter.windInvitation` points at the pillow. The existing
+screen-space brush feeds `brushDry`/`bedWind`, lifting the blanket and accumulating feather release.
+Ambient wind and invitation ribbons cannot release it. The feather's own `brush` remains a direct
+screen-space exception like the glider's.
+
+At the summit `invitesFlight` anchors real updrafts at the cygnet. `Chapter.twirlGain` is copied into
+`PointerInput` each frame (default 1); this chapter uses `tuning.sleeping.twirlGain` only while inviting
+flight, so slower loops can charge the column. The bird still samples real lift and holds it for its
+normal takeoff interval. Takeoff opens the summit curtains; the opening releases the dawn lane toward
+the bed. There is no timed launch.

@@ -4,7 +4,8 @@ import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
 import { CallMarks } from '../fx/call-marks';
 import type { WindSample } from '../wind/field';
-import { BODY, BONES, FOOT_L, FOOT_R, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
+import { BODY, BONES, FOOT_L, FOOT_R, FORE_L, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
+import { WingBandage } from './cygnet/bandage';
 import { Gait } from './cygnet/gait';
 import { Mind, type Act, type Senses } from './cygnet/mind';
 import { Poser, type Drives } from './cygnet/pose';
@@ -57,6 +58,7 @@ export class Cygnet {
   state: CygnetState = 'flying';
   /** False where the story will not have it flown at all: in the dark wood it stays on the ground whatever the wind does. */
   mayFly = true;
+  readonly wing = new WingBandage();
   /** It stands where it is, whatever it feels about the child: for the moments the story asks it to stop and look. */
   stay = false;
   /** How fast it walks, as a share of its usual. A bird following something floating in the air ambles after it. */
@@ -258,7 +260,7 @@ export class Cygnet {
       time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
       settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
       puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
-      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wind: { x: 0, z: 0 },
+      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, wind: { x: 0, z: 0 },
       gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
     };
     this.mat = cygnetMaterial(this.bones);
@@ -270,7 +272,7 @@ export class Cygnet {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.mesh, this.callMarks.sprite];
+    return [this.mesh, this.callMarks.sprite, this.wing.mesh];
   }
 
   /** The same bird flies, struggles, and falls: no adult-to-baby swap at separation. */
@@ -407,6 +409,7 @@ export class Cygnet {
   }
 
   tryToFly(bearing?: number): void {
+    if (!this.wing.flightReady) return;
     if ((this.state === 'following' || this.state === 'fallen') && this.hopT <= 0) {
       this.state = 'following';
       this.hopT = HOP_FOR;
@@ -421,6 +424,7 @@ export class Cygnet {
    * it lands, and takes it over the moment it is down, because it comes in on its breast.
    */
   glideTo(to: THREE.Vector3, seconds: number, arc: number): void {
+    const alreadyFlying = this.flying;
     this.sailFrom.copy(this.position);
     this.sailTo.copy(to);
     this.sailFor = seconds;
@@ -433,7 +437,7 @@ export class Cygnet {
     this.settle = 0;
     this.landing = 0;
     this.fear = 0;
-    this.flights++;
+    if (!alreadyFlying) this.flights++;
     this.mind.trust(1);
   }
 
@@ -623,6 +627,11 @@ export class Cygnet {
 
   /** The height of whatever it is swimming on: the sea, or a pond up the hill. */
   swimLevel = 0;
+  /** Playful paddling in the toy pools; zero keeps the later open-sea swim's existing character. */
+  swimPlay = 0;
+  private swimJoy = 0;
+  /** Alternating foot phase for water kicked up by the room beneath it. */
+  get paddlePhase(): number { return this.stride; }
 
   /**
    * Out of the water and up the bank: a scramble, a shake, and it is a land animal again, which is the state
@@ -632,6 +641,8 @@ export class Cygnet {
     if (this.state !== 'swimming') return;
     this.seating.go({ seat: null, held: false }, 'hop', 0.7, 0.3);
     this.state = 'following';
+    this.swimPlay = 0;
+    this.swimJoy = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0), z);
     this.yaw = yaw;
     this.landedAt = this.time;
@@ -678,6 +689,7 @@ export class Cygnet {
     this.mesh.visible = this.visible;
     this.wasVisible = this.visible;
     if (!this.visible) {
+      this.wing.mesh.visible = false;
       this.callT = 0;
       this.callMarks.hide();
       return;
@@ -721,7 +733,7 @@ export class Cygnet {
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
     const running = this.hopT > 0 && this.hopT < HOP_FOR - 0.8 && this.faceplant === 0;
-    if (this.mayFly && afoot && lift > this.liftToFly && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
+    if (this.mayFly && this.wing.flightReady && afoot && lift > this.liftToFly && (this.hopT <= 0 || running) && this.landing <= 0 && time - this.landedAt > 1.6) this.takeOff();
 
     /** The updraft holds its wings all the way out; flying itself, only as much of them is trimmed as it is resting. */
     const wings = this.state === 'gliding' ? 1 : this.state === 'fledging' || this.state === 'leaving' ? this.trim : this.hope * 0.5;
@@ -1055,6 +1067,7 @@ export class Cygnet {
     }
 
     if (this.fallT >= 1) {
+      this.wing.restore('hurt');
       this.state = 'downed';
       this.heard.push({ kind: 'tumble', amount: 1 });
       this.struggle = 0;
@@ -1225,7 +1238,10 @@ export class Cygnet {
     const dx = this.swimAim.x - this.position.x;
     const dz = this.swimAim.z - this.position.z;
     const gap = Math.hypot(dx, dz);
-    const want = entering ? 0 : clamp(gap * 1.1, 0, 2.3);
+    this.swimJoy = ease(this.swimJoy, entering ? 0 : this.swimPlay, 3, dt);
+    const burst = this.swimJoy * (0.5 + 0.5 * Math.sin(this.swum * 2.4)) ** 2;
+    const top = 2.3 + (tuning.littleBoats.swimSpeed - 2.3) * burst;
+    const want = entering ? 0 : clamp(gap * (1.1 + burst * 0.65), 0, top);
     this.swimSpeed = ease(this.swimSpeed, want, 1.6, dt);
     if (gap > 0.15) this.turnTo(Math.atan2(dx, dz), 3, 2.2, dt);
     this.position.x += Math.sin(this.yaw) * this.swimSpeed * dt;
@@ -1233,10 +1249,12 @@ export class Cygnet {
     /** Down with the plunge and up again past where it floats, then the sea's own slow lift. */
     const bobbing = Math.sin(this.time * 1.3 + 0.7) * 0.03 + Math.sin(this.time * 2.7) * 0.012;
     this.position.y = this.swimLevel + bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;
-    this.effort = ease(this.effort, clamp((gap - 2.5) / 4, 0, 0.6), 2, dt);
-    this.flap = ease(this.flap, this.effort > 0.3 ? 0.5 : 0, 3, dt);
+    this.effort = ease(this.effort, Math.max(clamp((gap - 2.5) / 4, 0, 0.6), burst * 0.6), 3, dt);
+    // Little wing flicks and quick alternating kicks between calmer glides.
+    this.flap = ease(this.flap, Math.max(this.effort > 0.3 ? 0.5 : 0, burst * 0.8), 5, dt);
     this.hurry = clamp(this.swimSpeed / 2.3, 0, 1);
-    this.stride += dt * (2.5 + this.swimSpeed * 3.2);
+    this.stride += dt * (2.5 + this.swimSpeed * 3.2 + burst * 6);
+    this.position.y += burst * 0.025 * Math.sin(this.stride * 2);
     if (this.time > this.nextPaddle && this.swimSpeed > 0.3) {
       this.heard.push({ kind: 'paddle', amount: this.hurry });
       this.nextPaddle = this.time + 0.62 / (0.5 + this.hurry);
@@ -1380,6 +1398,8 @@ export class Cygnet {
     const n = this.nodes;
     const st = this.state;
     const d = this.drives;
+    // The grass visibility bias must ease away afloat, or submerged feet draw over the water.
+    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, st === 'swimming' ? 0 : 2.4, 8, dt);
     const m = this.mind;
     if (this.debug.stand) this.settle = 0;
     d.time = this.time;
@@ -1428,6 +1448,8 @@ export class Cygnet {
     d.actSide = m.actSide;
     d.breath = this.breath;
     d.blink = this.blink;
+    d.wingGuard = this.wing.guard;
+    d.wingOpening = this.wing.opening;
 
     const yaw = this.seating.yaw;
     const cy = Math.cos(yaw);
@@ -1494,6 +1516,7 @@ export class Cygnet {
     look.wingOpen = posed.wingOpen;
     look.wind.set(this.windNow.x, this.windNow.z);
     applyLook(this.mat, look);
+    this.mat.uniforms.uBandage.value = this.wing.covered;
 
     /** Placed last, once the pose knows how high the body rides on its origin, so a seat or a hand holds the body itself. */
     this.seating.tick(dt);
@@ -1504,6 +1527,7 @@ export class Cygnet {
     for (const [bone, r] of Object.entries(this.debug.bones)) n[Number(bone)].rotation.set(r[0], r[1], r[2]);
     this.root.updateMatrixWorld(true);
     for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);
+    this.wing.update(dt, this.time, n[FORE_L].matrixWorld, this.bones, this.windNow, this.visible, this.mat.uniforms.uNudge.value);
   }
 
   /** Turns what the mind is looking at into a direction for the head, relative to the way the body faces. */

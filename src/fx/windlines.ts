@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { WindField, WindSample } from '../wind/field';
 import { heightAt, surfaceHeight } from '../world/island';
 import { RibbonBatch, type Ribbon } from './ribbons';
+import { tuning } from '../tuning';
 
 interface Line extends Ribbon {
   head: THREE.Vector3;
@@ -21,7 +22,7 @@ const ORIGIN = new THREE.Vector2();
 
 /** White streaks that trace the real flow and curl as they fade, in the spirit of The Wind Waker. */
 export class WindLines {
-  readonly batch = new RibbonBatch(MAX_LINES * MAX_POINTS, '#fffaf0');
+  readonly batch = new RibbonBatch(MAX_LINES * MAX_POINTS, '#fff4dd', 1, false, tuning.invitation.lightFloor);
   private readonly lines: Line[] = [];
   private readonly vectors: THREE.Vector3[] = [];
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };

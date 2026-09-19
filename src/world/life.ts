@@ -4,6 +4,7 @@ import { Readback } from '../gl/readback';
 import { LIVING_BEYOND, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { WINDOW, onWindowMove } from './window';
+import { musicLife } from './music-growth';
 
 const RES = 256;
 const READ_RES = 64;
@@ -193,8 +194,7 @@ export class LifeField {
     const held = wt.z > 0 && Math.hypot((x - wt.x) / wt.z, (z - wt.y) / wt.w) < 1;
     const ahead = z < LIVING_BEYOND && !held ? 1 : 0;
     const wv = this.regions.wave;
-    const d = Math.hypot(x - wv.x, z - wv.y);
-    const wave = wv.z < 0 ? 0 : Math.min(1, Math.max(0, (wv.z - d) / wv.w));
+    const wave = musicLife(x - wv.x, z - wv.y, wv.z, wv.w);
     return Math.max(Math.max(island, ahead), wave);
   }
 }

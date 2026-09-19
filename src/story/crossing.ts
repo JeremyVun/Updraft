@@ -8,6 +8,8 @@ import { roundedWaypoint } from '../traveller/navigation';
 
 /** The beach on the meadow's south shore, where the boat first comes ashore on the mainland-sized island. */
 export const LANDING = new THREE.Vector2(10, -600);
+/** Line up offshore with the hill path before turning into the bay, rather than beaching diagonally east of it. */
+export const MEADOW_APPROACH = new THREE.Vector2(LANDING.x, -548);
 
 /** The restored still island, as the child looks back at it from the first crossing. */
 export const FIRST_ISLAND = new THREE.Vector3(-8, 9, -18);
@@ -24,6 +26,8 @@ const SAIL_BEARING = Math.atan2(0.075, 1);
 export interface CrossingOpts {
   /** Waypoints out to open water and on to the far shore; the bow may only ground on the last one. */
   route: THREE.Vector2[];
+  /** Limit the final alignment and beach approach where the landing sits beside a narrow walking route. */
+  arrivalSpeed?: number;
   /** Which room's music the crossing is played to; the open sea by default. */
   music?: Mood;
   /** How far through the year the crossing is: between the room behind them and the one ahead. */
@@ -80,6 +84,7 @@ export class CrossingChapter implements Chapter {
   readonly music: Mood;
   readonly season: number;
   private readonly route: THREE.Vector2[];
+  private readonly arrivalSpeed: number;
   private readonly lookBack: THREE.Vector3 | null;
   private readonly farewellFor: number;
   private readonly wantsRainbow: boolean;
@@ -124,6 +129,7 @@ export class CrossingChapter implements Chapter {
     opts: CrossingOpts,
   ) {
     this.route = opts.route;
+    this.arrivalSpeed = opts.arrivalSpeed ?? Infinity;
     this.departure.set(cast.boat.position.x, cast.boat.position.z);
     cast.boat.speedLimit = Infinity;
     this.music = opts.music ?? 'sea';
@@ -199,6 +205,7 @@ export class CrossingChapter implements Chapter {
       boat.steerFor = this.route[this.leg];
       boat.canGround = this.leg === this.route.length - 1 && !boat.mooring;
     }
+    if (this.leg >= this.route.length - 2) boat.speedLimit = Math.min(boat.speedLimit, this.arrivalSpeed);
   }
 
   update(dt: number, time = this.time + dt): void {

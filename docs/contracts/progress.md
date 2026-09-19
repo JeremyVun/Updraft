@@ -10,20 +10,37 @@ Every chapter has an entry checkpoint. Additional exits:
 
 - Still island: the tree/fall/gather sequence, companion now in the arms.
 - Washing: past curtains one and two (`curtain-1`, `curtain-2`, two-number payloads), then through the family’s door (`family`, its existing two-number payload). Completed curtains stay open after restore. `family` resumes on the separate shore with the doorway crossed; older family saves on the washing island migrate to that shore, including the departure boat. A reload during the camera crossing returns to the previous curtain checkpoint.
+- Little boats: `pool-1` and `pool-2`, each with one number for fleet progress. Restore the travellers on
+  the dry bank between swims and rebuild the gathered toys at rest. Existing `toMeadow` entry saves from
+  the washing shore keep their former direct crossing.
 - Meadow: leaving the piano, then leaving the pond encounter.
-- Birches: each freed scarf tangle and leaving the one-time optional swing. `scarf-1` through `scarf-3`,
-  plus their `-swing` variants and `scarf-0-swing`, store route leg, swing-used count, dusk and freed-tangle
-  count. The final checkpoint restores the red sail. Older three-number swing/leaf saves resume their saved
+- Birches: each freed scarf tangle and leaving the one-time optional swing. `scarf4-1` through `scarf4-4`,
+  plus their `-swing` variants and `scarf4-0-swing`, store route leg, swing-used count, dusk and freed-tangle
+  count. The final checkpoint restores the red sail. Legacy `scarf-3` saves map to all four knots freed;
+  `scarf4-3` leaves the final bow intact. Older three-number swing/leaf saves resume their saved
   walk position with one/two tangles already freed. Independent cygnet play creates no separate checkpoint.
 - Drowned village: wind has filled the sail and the boat is moving again.
 - Dark wood: companion found and gathered; recovered plane dried. The two-number payload remains leg/path
   distance. Restore rebuilds earned light beside the child and leaves the next ember unlit at its saved distance.
-- Sleeping island: feather leaves the bed; morning together is over and they walk to the boat.
+- Sleeping island: feather leaves the bed; morning together is over and they walk to the boat. The
+  feather checkpoint resumes the assisted climb with the summit curtains closed; the morning checkpoint
+  restores them open. Neither changes the payload or replays the bedside gesture.
 - Long crossing: companion's swim is over. The two-number payload remains leg/time; restore finds the nearest
   waypoint to the saved boat position so checkpoints from the shorter coastal route continue toward home.
+- Sky mirror: `stars-<mask>` stores the completed-star bitmask and current destination. Restore rebuilds the
+  pair with the wand and held paper, preserves lights already overhead, and discards transient bubbles.
+  A partial constellation restores the boat offshore; only all three stars open its final approach.
+  Legacy `moon`/`tide`/`lantern` map to 0/1/2 restored stars; `reflection`/`window` restart with none.
+  Voyages use `toMirror` (entry/swim) and `toHarbour` (entry); old `toHome` saves keep the direct route.
 - Home: reunion is over; drawing is folded and ready for release; completed ending.
 
 `Chapter.checkpoint` names a safe exit; `saveCheckpoint()` supplies its numeric story state and `restoreCheckpoint()` rebuilds its continuation. `CHECKPOINTS` declares permitted chapter/point pairs and payload lengths. Changing this schema incompatibly requires a version change or migration. Restore clamps route indices. Malformed/unknown saves and unavailable storage must not prevent playing.
+
+Wing care is reconstructed from chapter and checkpoint by `story/wing-care.ts`: bare before the fall, wrapped from
+the companion checkpoint through sleeping/feather, and free from sleeping/morning onward. The same rule migrates
+older saves and applies to chapter shortcuts. No checkpoint falls inside treatment or unwrapping, so there is no
+new serialized animation state. A reload before the sleeping glide repeats the hilltop release; later saves never
+put the bandage back on.
 
 The record keeps the travellers' checkpoint positions, boat state, companion bond/flight count/seat, plane condition, life regions and chapter-specific progression. A completed piano is not replayed or re-scored; its wave and waiting region are retained. Transient wind, individual leaves, particle fields and animations are rebuilt, not serialized. Checkpoints wait until the current child/carry action is complete; restore starts from a stable pose with new callbacks and relative timers.
 

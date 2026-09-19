@@ -7,17 +7,15 @@ import type { Cast } from './cast';
 type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' | 'done';
 
 /**
- * How far the island has woken: one for the hollow round the piano, two out to the crest, three for all of it. The
- * third comes with the whole lullaby, whether the player found it or the piano played it to itself.
+ * Each mirrored sweep wakes a wider stretch of the meadow. The fourth sends the whole lullaby across the island.
  */
-export type Waking = 1 | 2 | 3;
+export type Waking = 1 | 2 | 3 | 4;
 
 /** How near the child has to come before they notice it, and how far past it they can get before it is missed. */
 const NOTICE = 26;
-const GIVE_UP = 190;
 /** They are level with it and still walking: near enough, they go over to it rather than leave it behind. */
 const PASSING = 60;
-/** Nothing in this stop may hold the walk up for longer than this, whatever goes wrong with a leg of it. */
+/** Recovery limit for stepping away from the stool after the completed tune. */
 const PATIENCE = 22;
 /** How long they take to lower themselves onto the stool. */
 const SIT_FOR = 0.7;
@@ -35,12 +33,7 @@ const LULLABY: number[][][] = [
 const CADENCE = [0, 2, 4, 7, 4, 2, 0];
 
 
-/**
- * The stop at the piano on the meadow. The plane leans toward it like any other waypoint, and if the child comes
- * near they stop, look at it, sit down on the stool and press one key — and then sit with their hands in their lap
- * and listen for as long as the player keeps playing. Nothing is gated on any of it: they walk on after a little
- * quiet, or after a while whatever happens, and a player who leads them straight past never finds out it was there.
- */
+/** The child and wind play the meadow awake. The invitation waits; only a traced answer advances it. */
 export class PianoStop {
   /**
    * What the piano does to the island: the meadow hears each phrase of the lullaby and wakes a little further.
@@ -57,7 +50,6 @@ export class PianoStop {
   private part = 0;
   private sayAt = 0;
   private heardTo = 0;
-  private said = 0;
   private finishedAt = 0;
   private answered = false;
   private hushed = 0;
@@ -67,6 +59,7 @@ export class PianoStop {
   /** When the island is told to wake all the way, at the latest, and when the camera began its one long rise. */
   private wakeAt = 0;
   private roseFrom = 0;
+  private responseAt = -1;
   private readonly foot = new THREE.Vector3();
   private fromYaw = 0;
   private readonly aim = new THREE.Vector2(piano.stand.x, piano.stand.z);
@@ -74,6 +67,7 @@ export class PianoStop {
   private readonly onto = new THREE.Vector3();
   private readonly mid = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
+  private readonly hands = [new THREE.Vector3(), new THREE.Vector3()];
 
   /** QA: how far the stop has got, from noticing it to walking on. */
   get at(): string {
@@ -81,7 +75,7 @@ export class PianoStop {
   }
 
   /** A checkpoint beyond the stop never replays or re-scores the puzzle. */
-  restoreDone(): void { this.beat = 'done'; piano.expect = null; }
+  restoreDone(): void { this.beat = 'done'; piano.expect = null; piano.engaged = false; piano.finale = false; }
 
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
@@ -89,22 +83,17 @@ export class PianoStop {
   }
 
   /** The plane is the signpost: while the piano is still ahead of them, it leans that way instead. */
-  waypoint(next: THREE.Vector2, child: THREE.Vector3): THREE.Vector2 {
+  waypoint(next: THREE.Vector2): THREE.Vector2 {
     if (this.beat === 'done') return next;
-    /** Once they are past it, or well west of it and on their way up the walk, the stop is behind them. */
-    const past = child.z < piano.keys.z - 26 || child.x < piano.keys.x - 34;
-    if (past || Math.hypot(child.x - piano.keys.x, child.z - piano.keys.z) > GIVE_UP) {
-      this.beat = 'done';
-      return next;
-    }
-    return this.beat === 'ahead' ? this.aim : next;
+    return this.aim;
   }
 
   /** Runs the stop. True while it has the child, and the walk waits for it. */
   hold(dt: number, time: number, cast: Cast): boolean {
     this.now = time;
     const c = cast.child;
-    this.hushed += ((this.beat === 'seated' ? tuning.piano.hush : 0) - this.hushed) * (1 - Math.exp(-dt * 0.8));
+    piano.engaged = this.beat !== 'ahead' && this.beat !== 'done';
+    this.hushed += ((piano.engaged ? tuning.piano.hush : 0) - this.hushed) * (1 - Math.exp(-dt * 0.8));
 
     switch (this.beat) {
       case 'ahead': {
@@ -112,6 +101,8 @@ export class PianoStop {
         const gap = Math.hypot(c.position.x - piano.stand.x, c.position.z - piano.stand.z);
         if (gap < NOTICE || (gap < PASSING && c.position.z < piano.keys.z + 8)) {
           c.stop();
+          c.stowPlane(true);
+          cast.plane.hold(c);
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 0.7);
           this.to('walking');
         }
@@ -119,8 +110,8 @@ export class PianoStop {
       }
       case 'walking':
         c.lookAt = piano.keys;
-        /** If anything at all keeps them from reaching it, the stop is simply missed. Nobody is stranded here. */
-        if (this.t > PATIENCE) this.give(c);
+        /** Retry an interrupted approach; walking around the piano cannot complete the duet. */
+        if (!c.moving && !c.acting) c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 0.7);
         break;
       case 'looking':
         c.lookAt = piano.keys;
@@ -149,25 +140,19 @@ export class PianoStop {
         if (this.pressAt > 0 && time > this.pressAt) {
           this.pressAt = 0;
           this.noteAt = time + 0.4;
-          c.pickUp(() => undefined);
+          this.playHands(time, cast);
         }
         if (this.noteAt > 0 && time > this.noteAt) {
           this.noteAt = 0;
           piano.press();
         }
+        this.playHands(time, cast);
         this.duet(time, cast);
         this.onTheKeys(time, cast);
         this.wakeIsland(time);
-        const heard = Math.max(this.since + 2, piano.lastGestureNote);
         const over = this.finishedAt > 0 && time > this.finishedAt;
-        /** Nothing may cut the finale short: the island is waking, and the bird is on the keys. */
-        if (this.finishedAt > 0 && !over) break;
-        /**
-         * A player who never played anything is walked on from here like anywhere else. A player who answered
-         * even once is not: they are owed the end of the tune, and the piano is on its way to playing it.
-         */
-        const quiet = time - heard > tuning.piano.listenFor && !this.answered;
-        if (over || quiet || this.t > tuning.piano.stayFor) {
+        if (over) {
+          this.releaseHands(cast);
           piano.expect = null;
           c.dismount();
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(c), 1);
@@ -184,29 +169,26 @@ export class PianoStop {
     return this.beat !== 'ahead' && this.beat !== 'done';
   }
 
-  /**
-   * One frame for the whole duet, and one move out of it. The camera stands behind the child and a little over
-   * their shoulder, near enough square on the keyboard that left and right on screen is along the keys and their
-   * head is off them, high enough to see the keys past them and the meadow they are waking beyond the piano. It
-   * arrives there in a single glide as they sit and does not move again until the tune is whole. Then it lifts
-   * out of that frame in one slow, eased rise, spiralling round behind them and up onto the way north, and comes
-   * to rest well back and mid-high, the child and the piano at the foot of the frame and the green rolling away
-   * from them to the crest, toward the notch the pond lies beyond. The pond itself cannot be seen from here: it
-   * is two rises and two hundred paces off, and a camera high enough to look over them would be looking down on
-   * the game. Its reveal is the brow's, on the walk. Returns how fast the camera should follow, or null while the
-   * stop does not own the frame.
-   */
+  /** A steady view over the keys into falling ground; one gentle widening follows the final phrase. */
   frame(shot: Shot): number | null {
     if (this.beat === 'ahead' || this.beat === 'done') return null;
     const t = tuning.piano;
     /** It waits further out while they are still on their way to it and comes in as they sit: one move, not two. */
     const settled = this.beat === 'walking' || this.beat === 'looking' ? 0 : 1;
-    /** And it creeps in while the bird is on the keys, because at the settled distance a cygnet is a speck. */
-    const creep = this.walkFrom > 0 ? THREE.MathUtils.smoothstep(this.now - this.walkFrom, 0, 2.5) : 0;
     let bearing = piano.yaw + t.frameTurn;
-    let distance = t.frameBack + t.frameWide * (1 - settled) - t.frameCreep * creep;
+    let distance = t.frameBack + t.frameWide * (1 - settled);
     let height = t.frameUp + t.frameHigh * (1 - settled);
-    this.mid.set(piano.keys.x, piano.keys.y + t.frameLook, piano.keys.z);
+    this.mid.set(piano.keys.x, piano.keys.y + t.frameLook, piano.keys.z - t.frameOn);
+    shot.fitWidth = true;
+    if (this.responseAt >= 0 && this.roseFrom === 0) {
+      const age = this.now - this.responseAt;
+      const open = THREE.MathUtils.smoothstep(age, 0, t.responseLift)
+        * (1 - THREE.MathUtils.smoothstep(age, t.responseHold, t.responseReturn));
+      const step = Math.min(2, this.heardTo - 1);
+      distance += (t.responseBack[step] - distance) * open;
+      height += (t.responseUp[step] - height) * open;
+      this.mid.z -= (t.responseOn[step] - t.frameOn) * open;
+    }
     if (this.roseFrom > 0) {
       /** Eased at both ends, so the rise begins and settles without a hand on it anywhere in between. */
       const k = THREE.MathUtils.smoothstep(this.now - this.roseFrom, 0, t.riseFor);
@@ -214,68 +196,64 @@ export class PianoStop {
       bearing += (t.riseTo - bearing) * k;
       distance += (t.riseBack * far - distance) * k;
       height += (t.riseUp * far - height) * k;
-      this.mid.z -= t.riseOn * far * k;
+      this.mid.z -= (t.riseOn * far - t.frameOn) * k;
     }
     shot.target.copy(this.mid);
     shot.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
     shot.distance = distance;
     shot.height = height;
-    return this.roseFrom > 0 ? t.risePace : t.framePace;
+    return this.roseFrom > 0 ? t.risePace : this.responseAt >= 0 && this.now - this.responseAt < t.phraseRest ? 1.3 : t.framePace;
   }
 
-  /**
-   * The piano says a phrase and waits. A sweep of wind along the keys the way the phrase went plays it back, and
-   * the piano goes on; anything else is just the wind on a piano, and after a while it says the phrase again.
-   * Nothing is failed: a player who only listens is walked on from here like anywhere else.
-   */
+  /** Demonstrate the next sweep without spending its colour or resetting a partial answer. */
   private duet(time: number, cast: Cast): void {
     if (this.finishedAt > 0 || this.noteAt > 0 || this.pressAt > 0) return;
     const base = Math.floor(piano.steps * 0.3);
-    const parts = LULLABY[this.phrase];
     if (this.sayAt === 0) this.sayAt = time + 1.4;
-
     if (piano.matched > this.heardTo) {
       this.heardTo = piano.matched;
       this.answered = true;
+      this.responseAt = time;
       this.part++;
-      if (this.part >= parts.length) {
+      if (this.part >= LULLABY[this.phrase].length) {
         this.phrase++;
         this.part = 0;
-        this.said = 0;
         if (this.phrase >= LULLABY.length) {
           this.finish(cast, true);
           return;
         }
-        /** The island answers the phrase before the piano asks the next one: the colour is the reply. */
-        this.onWake?.(this.phrase as Waking, true);
-        this.sayAt = time + 1.6;
-      } else {
-        piano.expect = parts[this.part].map((s) => base + s);
-        /** Half an answer earns the time to finish it before the piano says the phrase over again. */
-        this.sayAt = time + tuning.piano.sayAgain;
       }
+      this.onWake?.(this.heardTo as Waking, true);
+      // Leave room to hear the answer and watch its colour travel before the next invitation.
+      this.sayAt = time + tuning.piano.phraseRest;
       return;
     }
-
-    /**
-     * Nothing here is gated. A player who only listens is played the whole tune anyway, once the piano has asked
-     * often enough, and the island wakes on it more quietly than it would have done for them.
-     */
-    const waited = this.said >= tuning.piano.saysTwice || this.t > tuning.piano.stayFor - 18;
-    if (waited || (!this.answered && this.t > tuning.piano.listenFor * 0.7)) {
-      this.finish(cast, false);
-      return;
-    }
-
-    if (time > this.sayAt) {
-      this.part = 0;
-      this.said++;
-      const said = parts.flat().map((s) => base + s);
-      const ends = piano.phrase(said, tuning.piano.phraseSpacing);
-      piano.expect = parts[0].map((s) => base + s);
-      this.heardTo = piano.matched;
+    if (time > this.sayAt && piano.gesture.progress === 0) {
+      const notes = LULLABY[this.phrase][this.part].map(s => base + s);
+      const ends = piano.phrase(notes, tuning.piano.phraseSpacing, 0.42);
+      if (!piano.expect) piano.expect = notes;
       this.sayAt = ends + tuning.piano.sayAgain;
     }
+  }
+
+  private playHands(time: number, cast: Cast): void {
+    if (this.walkFrom !== 0 || cast.carry.busy) return;
+    const recent = Math.exp(-Math.max(0, time - piano.performedAt) * 7);
+    const note = THREE.MathUtils.clamp(piano.performedKey, 0.2, 0.8);
+    for (const hand of [0, 1] as const) {
+      const home = hand === 0 ? 0.65 : 0.35;
+      const active = (note >= 0.5 ? 0 : 1) === hand;
+      piano.alongKeys(active ? home + (note - home) * recent : home, this.hands[hand]);
+      this.hands[hand].y += 0.07 + (active ? 0.07 * (1 - recent) : 0.05);
+      cast.child.reachFor(hand, this.hands[hand]);
+    }
+    cast.child.lean = 0.06;
+  }
+
+  private releaseHands(cast: Cast): void {
+    cast.child.reachFor(0, null);
+    cast.child.reachFor(1, null);
+    cast.child.lean = 0;
   }
 
   /**
@@ -286,12 +264,13 @@ export class PianoStop {
     const base = Math.floor(piano.steps * 0.3);
     piano.expect = null;
     this.answered = answered;
+    piano.finale = true;
+    this.releaseHands(cast);
     const whole = [...LULLABY.flat(2), ...CADENCE].map((s) => base + s);
-    const ends = piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.42 : 0.3);
-    /** However the bird's turn on the keys goes, the island is woken and the child is up again by these times. */
-    this.wakeAt = ends + tuning.piano.walkKeys;
+    piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.52 : 0.4);
+    /** The front begins while the lullaby is sounding, with the bird joining it. */
+    this.wakeAt = this.now + tuning.piano.finaleWaveAfter;
     this.finishedAt = this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor;
-    if (answered) cast.child.cheer();
     /** Out of the satchel first, because from there it can reach the keys without anybody lifting it. */
     this.walkFrom = -1;
     cast.carry.unstow(() => {
@@ -331,20 +310,20 @@ export class PianoStop {
     }
   }
 
-  /**
-   * The last thing that happens is the green. The island is told to wake all the way once the bird is back off
-   * the keys, and the camera begins the one rise that the wave is watched from.
-   */
+  /** Music, the colour front and the widening camera begin together. */
   private wakeIsland(time: number): void {
-    if (this.wakeAt === 0 || (this.walkStep < 1 && time < this.wakeAt)) return;
+    if (this.wakeAt === 0 || time < this.wakeAt) return;
     this.wakeAt = 0;
     this.roseFrom = time;
-    this.onWake?.(3, this.answered);
+    this.onWake?.(4, this.answered);
     this.finishedAt = time + tuning.piano.riseFor + tuning.piano.restFor;
   }
 
   private give(child: Cast['child']): void {
     piano.expect = null;
+    piano.engaged = false;
+    piano.finale = false;
+    child.stowPlane(false);
     child.stop();
     child.lookAt = null;
     this.to('done');

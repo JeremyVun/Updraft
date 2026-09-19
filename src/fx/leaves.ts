@@ -355,11 +355,14 @@ void main() {
   vec3 t2 = cross(n, t1);
   /** Half, because this card is two units across where the litter's is one: a settled one is a leaf of the litter. */
   float size = ${glsl(tuning.birches.leafSize)} * 0.5 * (1.2 + 0.85 * fract(seed * 5.7)) * (1.0 + 0.4 * above);
-  /** One leaf on the lens is a gold blind across the whole room, so the last metre of them thins away. */
+  // Keep the resting carpet; thin only airborne particles, smoothly as each leaf leaves the floor.
+  float airKeep = 1.0 - smoothstep(${glsl(tuning.birches.airborneKeep - .08)}, ${glsl(tuning.birches.airborneKeep + .08)}, fract(seed * 19.3));
+  size *= mix(1.0, airKeep * ${glsl(tuning.birches.airborneSize)}, above);
+  /** A generous near-camera clearing keeps individual leaves from masking the whole interaction. */
   float fromEye = distance(cameraPosition, p.xyz);
-  size *= smoothstep(0.5, 2.6, fromEye);
+  size *= smoothstep(${glsl(tuning.birches.leafEyeClear)}, ${glsl(tuning.birches.leafEyeFull)}, fromEye);
   /** A cloud of them in the air a long way up the ride has to be drawn bigger to read; a settled one is litter. */
-  size *= 1.0 + 1.1 * smoothstep(18.0, 75.0, fromEye) * above;
+  size *= 1.0 + 0.25 * smoothstep(18.0, 75.0, fromEye) * above;
   /** And one blown out over the water goes to nothing before it is far enough out to be somebody else's leaf. */
   size *= 1.0 - smoothstep(1.06, 1.28, birchIsleR(p.xz));
   vWorld = p.xyz + (t1 * position.x * 1.45 + t2 * position.y) * size;

@@ -1,3 +1,5 @@
+import type { SkyMirror } from '../world/sky-mirror';
+import type { LittleBoats } from '../world/little-boats';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
@@ -42,6 +44,8 @@ export interface Cast {
   birches: AutumnBirches;
   /** The bed in the hollow, the bedroom round it, and the fog the player's gusts carve lanes in. */
   sleeping: SleepingIsland;
+  littleBoats: LittleBoats;
+  skyMirror: SkyMirror;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
 }
@@ -60,6 +64,8 @@ export interface Chapter {
   /** Where the camera's attention is, for things like sound. */
   readonly focus: THREE.Vector3;
   readonly done: boolean;
+  /** Reveal the departure kite only once it can guide the player onward. Defaults to true. */
+  readonly departureKite?: boolean;
   /** A passing shower, 0 dry to 1. */
   readonly shower?: number;
   /** Haze thick enough to hide what is ahead, 0 to 1. */
@@ -68,6 +74,8 @@ export interface Chapter {
   readonly openSea?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
+  /** The piano owns both the melody and the player's gesture sound during its duet. */
+  readonly pianoMix?: number;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** How far through the turn of the year this room is, 0 late autumn to 1 the frozen night. It only rises. */
@@ -88,6 +96,8 @@ export interface Chapter {
   readonly coax?: Coax | null;
   /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
   readonly invitesFlight?: boolean;
+  /** Sensitivity for deliberate circling; other chapters retain the normal wind response. */
+  readonly twirlGain?: number;
   /** Offer a sweep only while this chapter is waiting for wind in a fully slack sail. */
   readonly invitesSail?: boolean;
   /** A waiting ember or wet plane that needs a deliberate sweep across it. */

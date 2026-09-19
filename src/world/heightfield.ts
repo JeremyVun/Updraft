@@ -1,4 +1,6 @@
+import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
+import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsOut, boatsLevel } from './little-boats-layout';
 
 /**
  * The terrain height of the whole world, written twice: in TypeScript for gameplay and in GLSL for baking and
@@ -133,6 +135,7 @@ export const ISLES = {
     rx: MEADOW_SCULPTED.rx * MEADOW_SCALE,
     rz: MEADOW_SCULPTED.rz * MEADOW_SCALE,
   },
+  boats: LITTLE_BOATS,
   birches: { x: 0, z: -1128, rx: 60, rz: 80 },
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
@@ -177,6 +180,23 @@ function isleCoast(x: number, z: number, c: Isle, wobble: number, seed: number):
   return (Math.hypot(ex, ez) - 1 - n * wobble) * Math.min(c.rx, c.rz) * 0.8;
 }
 
+/** Low sandy banks enclose three connected pools; the last stream shelves into the sea. */
+function littleBoatsHeight(x: number, z: number): number {
+  const c = LITTLE_BOATS;
+  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  let h = 3.5 - smoothstep(0.58, 1.08, r) * 5.1 - smoothstep(1, 1.5, r) * 8;
+  h += Math.max(0, 1 - r) * gnoise(x * 0.07, z * 0.07) * 0.55;
+  const d = boatsOut(x, z);
+  if (d > 1.65) return h;
+  const level = boatsLevel(c.startZ - z);
+  const bed = level - 0.65 + Math.min(1, d * d) * 0.24;
+  const bank = Math.max(h, level + 0.42);
+  const bowl = bed + (bank - bed) * smoothstep(0.65, 1.35, d);
+  const shaped = bowl + (h - bowl) * smoothstep(1.35, 1.65, d);
+  // Open the last pool into the sea instead of closing it with a submerged end wall.
+  return shaped + (h - shaped) * smoothstep(101, 112, c.startZ - z);
+}
+
 /** The island of lines: a low green whaleback, small enough that the washing on it is the whole room. */
 function linesHeight(x: number, z: number): number {
   const c = ISLES.lines;
@@ -194,6 +214,9 @@ function linesHeight(x: number, z: number): number {
  * only seen from the top of it. The arms of the bay come further south than the middle, so the beach is enclosed.
  */
 export const BANK = { x: 9, crest: -624, reach: 82, arms: 30, arm: 13, rise: 21, fall: 17, height: 10.5 } as const;
+
+/** An open saddle lets the beach reveal the green ground beneath the piano. */
+const PIANO_SADDLE = { x: -15, z: -706, rx: 32, rz: 32, start: -744, full: -718 };
 
 function landingBank(wx: number, wz: number): number {
   const lateral = Math.exp(-(((wx - BANK.x) / BANK.reach) ** 2));
@@ -216,6 +239,8 @@ function meadowHeight(wx: number, wz: number): number {
   const mid = gfbm(x * 0.012, z * 0.012, 3, 14);
   h += land * rise * Math.max(0, 16 + 26 * broad + 7 * mid);
   h += land * landingBank(wx, wz);
+  const saddle = Math.exp(-(((wx - PIANO_SADDLE.x) / PIANO_SADDLE.rx) ** 2 + ((wz - PIANO_SADDLE.z) / PIANO_SADDLE.rz) ** 2));
+  h -= land * saddle * smoothstep(PIANO_SADDLE.start, PIANO_SADDLE.full, wz) * tuning.world.meadowPianoSaddle;
   return h - smoothstep(0, 70, -inland) * 8;
 }
 
@@ -264,7 +289,7 @@ function woodHeight(x: number, z: number): number {
  * fog into the first sun. The hollow is deep enough to hold fog and the hill high enough to be out of it.
  */
 export const SLEEP_HOLLOW = { x: -175, z: -1912, rx: 16, rz: 14, h: 4.6 };
-export const SLEEP_HILL = { x: -176, z: -1944, rx: 20, rz: 18, h: 15 };
+export const SLEEP_HILL = { x: -176, z: -1932, rx: 15, rz: 11, h: 9 };
 
 function sleepingHeight(x: number, z: number): number {
   const c = ISLES.sleeping;
@@ -312,12 +337,13 @@ export function meadowInset(wx: number, wz: number): number {
 function rawHeight(x: number, z: number): number {
   let h = smax(islandHeight(x, z), linesHeight(x, z), 6);
   h = smax(h, doorShoreHeight(x, z), 2);
+  h = Math.max(h, littleBoatsHeight(x, z));
   h = smax(h, meadowHeight(x, z), 6);
   h = smax(h, birchesHeight(x, z), 6);
   h = smax(h, drownedHeight(x, z), 6);
   h = smax(h, woodHeight(x, z), 6);
   h = smax(h, sleepingHeight(x, z), 6);
-  return smax(h, homeHeight(x, z), 6);
+  return Math.max(smax(h, homeHeight(x, z), 6), mirrorBed(x, z));
 }
 
 /**
@@ -487,6 +513,8 @@ float hf_meadow(vec2 world) {
   float mid = gfbm(p * 0.012, 3, 14.0);
   h += land * rise * max(0.0, 16.0 + 26.0 * broad + 7.0 * mid);
   h += land * hf_bank(world);
+  vec2 saddle = (world - vec2(${glsl(PIANO_SADDLE.x)}, ${glsl(PIANO_SADDLE.z)})) / vec2(${glsl(PIANO_SADDLE.rx)}, ${glsl(PIANO_SADDLE.rz)});
+  h -= land * exp(-dot(saddle, saddle)) * smoothstep(${glsl(PIANO_SADDLE.start)}, ${glsl(PIANO_SADDLE.full)}, world.y) * ${glsl(tuning.world.meadowPianoSaddle)};
   return h - smoothstep(0.0, 70.0, -inland) * 8.0;
 }
 float hf_birches(vec2 p) {
@@ -567,15 +595,32 @@ float hf_doorShore(vec2 p) {
   float r = length((p - vec2(${glsl(DOOR_SHORE.x)}, ${glsl(DOOR_SHORE.z)})) / vec2(${glsl(DOOR_SHORE.rx)}, ${glsl(DOOR_SHORE.rz)}));
   return 3.4 - smoothstep(0.35, 1.08, r) * 5.2 - smoothstep(1.0, 1.6, r) * 8.0;
 }
+${LITTLE_BOATS_GLSL}
+float hf_littleBoats(vec2 p) {
+  float r = length((p - vec2(${glsl(LITTLE_BOATS.x)}, ${glsl(LITTLE_BOATS.z)})) / vec2(${glsl(LITTLE_BOATS.rx)}, ${glsl(LITTLE_BOATS.rz)}));
+  float h = 3.5 - smoothstep(0.58, 1.08, r) * 5.1 - smoothstep(1.0, 1.5, r) * 8.0;
+  h += max(0.0, 1.0 - r) * gnoise(p * 0.07) * 0.55;
+  float d = boatsOut(p);
+  if (d > 1.65) return h;
+  float level = boatsLevel(${glsl(LITTLE_BOATS.startZ)} - p.y);
+  float bed = level - 0.65 + min(1.0, d * d) * 0.24;
+  float bank = max(h, level + 0.42);
+  float bowl = mix(bed, bank, smoothstep(0.65, 1.35, d));
+  float shaped = mix(bowl, h, smoothstep(1.35, 1.65, d));
+  return mix(shaped, h, smoothstep(101.0, 112.0, ${glsl(LITTLE_BOATS.startZ)} - p.y));
+}
+${MIRROR_LAYOUT_GLSL}
 float worldHeight(vec2 p) {
   float h = hf_smax(hf_island(p), hf_lines(p), 6.0);
   h = hf_smax(h, hf_doorShore(p), 2.0);
+  h = max(h, hf_littleBoats(p));
   h = hf_smax(h, hf_meadow(p), 6.0);
   h = hf_smax(h, hf_birches(p), 6.0);
   h = hf_smax(h, hf_drowned(p), 6.0);
   h = hf_smax(h, hf_wood(p), 6.0);
   h = hf_smax(h, hf_sleeping(p), 6.0);
   h = hf_smax(h, hf_home(p), 6.0);
+  h = max(h, mirrorBed(p));
   h = hf_pond(h, p);
   float d = length(p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)}));
   return mix(h, ${COTTAGE_Y.toFixed(4)}, 1.0 - smoothstep(${COTTAGE.radius.toFixed(1)}, ${(COTTAGE.radius * 2).toFixed(1)}, d));
