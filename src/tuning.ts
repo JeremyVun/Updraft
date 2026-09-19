@@ -321,12 +321,53 @@ export const tuning = {
     darken: 0.13,
     /** Height of the small chop a gust lays over the swell, in world units. */
     chop: 0.12,
-    /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
-    luffFrom: 0.12,
-    luffFade: 0.55,
     /** How many of the night sky's stars the sea catches, and how brightly they flash when it does. */
     stars: 0.11,
     starLight: 5,
+  },
+  /**
+   * The boat's sail. The cloth fills with whatever wind it has, whoever made it, and hangs dead when it has none;
+   * the hull's speed follows the same reading, a few seconds behind it. Wind speeds are world units per second,
+   * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
+   */
+  sail: {
+    /** Wind speed a unit of the player's gust is worth, and the stirring the field never quite loses. */
+    gustPress: 4,
+    stirs: 0.9,
+    /**
+     * What the squall presses the cloth with at a full sea, and how much of that the sail can hold: a small boat
+     * in a storm is a hard-pressed, shaking sail spilling most of it, not four times the way through the water.
+     */
+    squallPress: 4.5,
+    squallHolds: 0.28,
+    /** How fast the cloth takes wind up, and how slowly it lets it go, per second. */
+    fills: 3.2,
+    empties: 1.2,
+    /** Wind speed the belly is two thirds out at, and how deep a full belly is, in world units. */
+    bellyAt: 2.4,
+    belly: 0.72,
+    /** Below this wind speed the cloth begins to hang, and with none in it at all it hangs dead. */
+    hangsBelow: 1.3,
+    /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
+    livelyAt: 10,
+    /** With no wind: how far the leech falls in toward the mast, how far the cloth sags, and the folds it hangs in. */
+    gather: 0.22,
+    sag: 0.8,
+    folds: 3.5,
+    fold: 0.3,
+    /** How far the ripple and the leech's shake move the cloth, in world units. */
+    ripple: 0.18,
+    shake: 0.24,
+    /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
+    luffFrom: 0.12,
+    luffFade: 0.55,
+    /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
+    drive: 1.7,
+    following: 0.42,
+    topSpeed: 16,
+    /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
+    gathers: 0.5,
+    carries: 0.45,
   },
   /**
    * The sleeping island: the fog pooled in the hollow, the frost coming in across it, and the bedroom the bed
