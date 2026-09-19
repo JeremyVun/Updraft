@@ -106,6 +106,41 @@ And, while that was being built:
 > part of earlier puzzles and sequences where we show them an upward spiralling trace (like at the summit scene
 > currently), and the player has to mirror it with their cursor (mouse / touch screen drag)"
 
+## Jeremy's third brief (2026-09-19, evening, verbatim)
+
+After playing the unfolding that landed that afternoon:
+
+> "the paper aeroplane unfolding doesn't look right. throughout the whole game, it's a white piece of paper, but
+> then suddenly it changes to this [a wide, ruled sheet in the child's hand on the brow]. It's wider and is showing
+> a drawing. The unfolding is supposed to be a surprise, a dreamlike reveal, but it's revealed before it's ever
+> unfolded."
+
+Asked what would make the ending most likely to make people cry, the lead proposed: keep the unfolding but make
+it small and hands-led; put the drawing *before* the house, so the picture becomes the place when they walk over
+the brow; let the music go quiet for it and return with the house; someone in the doorway; and the player, the
+wind, taking the drawing away at the end. Jeremy:
+
+> "yea, the camera work will need to be key. Enter the dream and go with what feels most natural. I'm not
+> convinced about the figure standing in the light though, but if you think it works, you're free to try."
+
+## The plan for the third round
+
+1. **The paper is the plane until it opens.** From the summit to the moment the hands begin, the paper is
+   indistinguishable from the glider (same silhouette, scale and white paper; the swap made at that instant and
+   checked frame by frame). No face shows any drawing before the sheet is opening; the drawing comes into being
+   as the paper flattens.
+2. **Drawing first, then the house.** After the family goes the child sits alone on the summit, the house still
+   hidden behind the brow, and opens the plane: a child's crayon drawing of a house with a red door. Quiet. Then
+   they get up, walk the last steps over the brow, and the real house is below them, as drawn, window lit. The
+   walk over the brow is the climax. The camera carries it: over the shoulder for the hands, then rising with them
+   over the brow so the valley opens for the player as it opens for the child.
+3. **Music quiet for the opening**, wind and paper only, and the theme back as the house appears.
+4. **The wind takes the drawing.** The child holds it up into the wind and the player's stroke carries it into the
+   sunset the way the cygnet went; the island's own wind takes it after a while if the player does nothing, so the
+   ending cannot stall.
+5. **The door opens from inside** as the child comes down to it, light spilling onto the grass. No figure: Jeremy
+   is not convinced by one, and a crude figure would cost more than it gives.
+
 ## What answers it (2026-09-19)
 
 - **The lift is the whole gesture.** A bare gust used to count as lift under the bird (`tuning.colt.gustLift` 0.9
