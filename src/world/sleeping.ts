@@ -593,8 +593,15 @@ export class SleepingIsland {
   blanket = 0;
   /** Somebody asleep under the blanket, 0 an empty bed to 1: the cloth stands over them and breathes with them. */
   sleeper = 0;
+  /**
+   * How high the fog's top surface lies, in world units. It starts where the hollow can still be seen into and
+   * the story raises it as the night thickens, so a bird climbing the hill walks up into it and the lanes the
+   * player carves are what it walks through. The hilltop stands out of it however high it is: the pool thins
+   * with distance from the hollow long before the summit.
+   */
+  fogTop = tuning.sleeping.fogTop;
 
-  private shown = { fog: 1, frost: 0, dawn: 0, curtains: 0, blanket: 0, sleeper: 0 };
+  private shown = { fog: 1, frost: 0, dawn: 0, curtains: 0, blanket: 0, sleeper: 0, top: tuning.sleeping.fogTop };
   private curtainRate = 0;
   /** What a gust over the bed has lifted the blanket by, on top of whatever the story has asked for. */
   private puff = 0;
@@ -874,7 +881,7 @@ export class SleepingIsland {
     const ground = heightAt(x, z);
     const pool = 1 - THREE.MathUtils.smoothstep(Math.hypot(x - SLEEP_HOLLOW.x, z - SLEEP_HOLLOW.z) / tuning.sleeping.fogReach, 0.5, 1);
     const deep = pool * Math.min(1, this.shown.fog * (1 - 0.8 * this.shown.dawn) * 2);
-    return deep <= 0.001 ? ground : THREE.MathUtils.lerp(ground, tuning.sleeping.fogTop, deep);
+    return deep <= 0.001 ? ground : THREE.MathUtils.lerp(ground, this.shown.top, deep);
   }
 
   /** 1 while the room is in the world at all: nothing that belongs to a summer night belongs in it. */
@@ -895,7 +902,7 @@ export class SleepingIsland {
       for (const o of this.objects) o.visible = here;
       this.feather.visible = here;
       /** Arriving shows the room as the story has set it, not an ease out of whatever it was left at. */
-      if (here) this.shown = { fog: this.fog, frost: this.frost, dawn: this.dawn, curtains: this.curtains, blanket: this.blanket, sleeper: this.sleeper };
+      if (here) this.shown = { fog: this.fog, frost: this.frost, dawn: this.dawn, curtains: this.curtains, blanket: this.blanket, sleeper: this.sleeper, top: this.fogTop };
     }
     if (!here) {
       atmo.uniforms.uHollow.value.w = 0;
@@ -911,13 +918,14 @@ export class SleepingIsland {
     this.shown.dawn += (this.dawn - this.shown.dawn) * k;
     this.shown.blanket += (this.blanket - this.shown.blanket) * k;
     this.shown.sleeper += (this.sleeper - this.shown.sleeper) * k;
+    this.shown.top += (this.fogTop - this.shown.top) * k;
     const was = this.shown.curtains;
     this.shown.curtains += (this.curtains - this.shown.curtains) * k;
     this.curtainRate += ((this.shown.curtains - was) / Math.max(dt, 1e-3) - this.curtainRate) * (1 - Math.exp(-dt * 4));
 
     const u = atmo.uniforms;
     u.uHollow.value.set(SLEEP_HOLLOW.x, SLEEP_HOLLOW.z, t.fogReach, this.shown.fog * (1 - 0.8 * this.shown.dawn) * t.fogThickness);
-    u.uHollowTop.value.set(t.fogTop, t.fogSoft);
+    u.uHollowTop.value.set(this.shown.top, t.fogSoft);
     u.uFrost.value.set(
       BED.x,
       BED.z,

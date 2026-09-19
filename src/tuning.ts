@@ -329,6 +329,8 @@ export const tuning = {
     fogReach: 34,
     /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
     fogTop: 4.6,
+    /** And how high it lies once the night has thickened it: over a bird's head on the lower slopes of the hill. */
+    fogClimbs: 8.5,
     fogSoft: 1.5,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,

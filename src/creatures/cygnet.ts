@@ -675,8 +675,13 @@ export class Cygnet {
     else if (this.state === 'swimming') this.paddling(dt);
     else if (this.state === 'perched') {
       this.effort = 0;
-      /** Set down or tumbled onto something, it picks itself up off its breast in its own time. */
-      this.faceplant = Math.max(0, this.faceplant - dt * 1.4);
+      /**
+       * Tumbled onto something rather than set down on it: it goes over onto its breast as it arrives and picks
+       * itself up off it in its own time. Eased on the way in as well as out, because a pose that switches is a pop.
+       */
+      this.faceplant = ease(this.faceplant, this.time - this.landedAt < 0.5 ? 1 : 0, 5, dt);
+      this.roll = ease(this.roll, 0, 4, dt);
+      this.pitch = ease(this.pitch, 0, 4, dt);
     }
     else if (this.state === 'fallen') this.rest(dt, child);
     else if (this.state === 'falling') this.descend(dt);
@@ -893,9 +898,6 @@ export class Cygnet {
       this.sailFor = 0;
       this.state = 'perched';
       this.heard.push({ kind: 'tumble', amount: 0.7 });
-      this.faceplant = 1;
-      this.roll = 0;
-      this.pitch = 0;
       this.effort = 0;
       this.flap = 0;
       this.settle = 0;

@@ -236,8 +236,14 @@ export class SleepingChapter implements Chapter {
      * The sky goes from the wood's night, through the grey the hour before dawn actually is once the bird is out
      * on the hill, to the sunrise it brings back down. Nothing here gives the morning away before it arrives.
      */
-    const night = this.warmed > 0 ? 1.02 : this.beat === 'ashore' || this.beat === 'toBed' || this.beat === 'tuckIn' || this.beat === 'asleep' ? 1.9 : 1.58;
+    const atBed = this.beat === 'ashore' || this.beat === 'toBed' || this.beat === 'tuckIn' || this.beat === 'asleep' || this.beat === 'feather';
+    const night = this.warmed > 0 ? 1.02 : atBed ? 1.9 : 1.22;
     this.dusk += (night - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    /**
+     * And the fog thickens over the bird's head as it goes: at the bed it lies low enough to see the room across,
+     * and by the climb it is deep enough that the lanes the player carves are the only clear air in it.
+     */
+    sleeping.fogTop = this.warmed > 0 ? T.fogTop : atBed ? T.fogTop : T.fogClimbs;
     this.haze += ((this.warmed > 0 ? 0.6 : 0.82) - this.haze) * (1 - Math.exp(-dt * 0.2));
     this.tighten = Math.max(0, this.tighten - dt * 0.55);
     c.tighter = this.tighten;
@@ -392,6 +398,8 @@ export class SleepingChapter implements Chapter {
     this.trodden = null;
     this.hush = lerp(this.hush, 0.75, 1 - Math.exp(-dt * 0.5));
     sleeping.frost = Math.min(T.frostWorst, sleeping.frost + dt * 0.012);
+    /** A first touch of light on the crest ahead of it, which is the only reason to keep walking into the dark. */
+    sleeping.dawn = Math.min(0.18, sleeping.dawn + dt * 0.02);
     const up = Math.hypot(k.position.x - BED.x, k.position.z - BED.z) / TO_HILL;
     if (!this.sat && up > T.shiverAt) {
       this.sat = true;
@@ -514,8 +522,9 @@ export class SleepingChapter implements Chapter {
       c.lookAt = k.eye(this.look);
     }
     if (this.t > T.wakeFor) {
+      /** Into their arms, which puts the plane back in the satchel and their hands back on the bird. */
       this.laid = false;
-      k.rideIn('lap');
+      k.rideIn('cradle');
       k.bind(0.12);
       k.mayFly = false;
       this.to('lap');
@@ -644,9 +653,9 @@ export class SleepingChapter implements Chapter {
          * whole world round with its head.
          */
         const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        s.target.set(k.position.x + UPHILL.x * 2.2, ground + 0.85, k.position.z + UPHILL.y * 2.2);
-        const ex = k.position.x - UPHILL.x * 3.4 - UPHILL.y * 1.5;
-        const ez = k.position.z - UPHILL.y * 3.4 + UPHILL.x * 1.5;
+        s.target.set(k.position.x + UPHILL.x * 2.2, ground + 0.7, k.position.z + UPHILL.y * 2.2);
+        const ex = k.position.x - UPHILL.x * 3.2 - UPHILL.y * 1.1;
+        const ez = k.position.z - UPHILL.y * 3.2 + UPHILL.x * 1.1;
         s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 0.85, ez);
         s.clearance = 0.55;
         this.pace = 0.7;
