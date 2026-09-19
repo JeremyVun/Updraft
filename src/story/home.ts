@@ -45,6 +45,11 @@ const LEAVE_CLIMB = 1;
 const WATCHES_FOR = 16;
 /** How slowly they walk on afterwards, as a share of their usual pace. */
 const STROLL = 0.7;
+/**
+ * How far on from the summit they take the paper: a few paces toward home, far enough that the ground has begun
+ * to fall away in front of them and the sheet is held against the sea and the sun rather than against the grass.
+ */
+const SEAT_AT = 6;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
 const BROW_AT = 17;
 /** Seconds they stand on the brow with the house below them. The walk over it is the climax; this is the top of it. */
@@ -62,15 +67,15 @@ const OPENING: number[][] = [
   [4.2, 1],
 ];
 /** The crayon starts arriving once the sheet is swinging out of its own fold, and takes this long to be all there. */
-const DRAWS_FROM = 0.55;
-const DRAWS_IN = 2.3;
+const DRAWS_FROM = 0.62;
+const DRAWS_IN = 2.8;
 const GAZE_FOR = 6.5;
 const FOLD_RATE = 0.38;
 /**
  * Where the camera stands, as an angle round from directly behind the child: on their shoulder for the hands,
  * back in behind them for the walk, and a little off it again on the brow and while the paper goes.
  */
-const DRAW_ARC = 0.62;
+const DRAW_ARC = 0.7;
 const WALK_ARC = 0.1;
 const BROW_ARC = 0.28;
 const GOES_ARC = 0.46;
@@ -152,6 +157,7 @@ const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JET
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
 /** On over the brow toward the cottage: the ground falls away and the valley opens, and this is where they stop and see it. */
 const TO_COTTAGE = new THREE.Vector2(COTTAGE.x - SUMMIT.x, COTTAGE.z - SUMMIT.y).normalize();
+const SEAT = SUMMIT.clone().addScaledVector(TO_COTTAGE, SEAT_AT);
 const BROW = SUMMIT.clone().addScaledVector(TO_COTTAGE, BROW_AT);
 /** From the summit the sun sets over the cottage, to the north-west. */
 const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)), -Math.cos(THREE.MathUtils.degToRad(32)));
@@ -209,6 +215,7 @@ export class HomeChapter implements Chapter {
   private wentAt = 0;
   private taken = 0;
   private gusted = false;
+  private wentOn = false;
   private doorOpened = false;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   trodden: THREE.Vector3 | null = null;
@@ -542,7 +549,12 @@ export class HomeChapter implements Chapter {
     }
     c.lookAt = cygnet.visible ? cygnet.position : flock.head;
     const away = this.leftAt > 0 && (this.now - this.leftAt > WATCHES_FOR || !cygnet.visible);
-    if (away && !c.busy) this.openIt();
+    /** They turn for home and walk a few paces down off the very top before they stop and sit. */
+    if (away && !this.wentOn && !c.busy) {
+      this.wentOn = true;
+      c.stroll = STROLL;
+      c.walkTo(SEAT.x, SEAT.y, false, () => this.openIt(), 0.5);
+    }
   }
 
   /**
@@ -553,7 +565,6 @@ export class HomeChapter implements Chapter {
     const { child: c, plane, drawing } = this.cast;
     this.to('settle');
     c.stop();
-    c.stroll = STROLL;
     /** From here what is in their hand is the sheet, folded on the glider's own lines; the glider waits its turn. */
     this.paper = true;
     plane.visible = false;
@@ -684,7 +695,7 @@ export class HomeChapter implements Chapter {
     } else if (this.beat === 'settle') {
       /** They turn to the way home, sit down in the grass, and the paper comes up out of one hand into both. */
       c.faceToward(c.position.x + TO_COTTAGE.x * 10, c.position.z + TO_COTTAGE.y * 10, 1 - Math.exp(-dt * 1.8));
-      if (!c.sitting && this.t > 0.9) c.sitDown();
+      if (!c.sitting && this.t > 0.6) c.sitDown();
       if (this.t > 1.2) c.presenting = Math.min(1, c.presenting + dt * 0.9);
       c.lookAt = this.t > 1.5 ? drawing.point(0, 0.3, this.watching) : this.watching.copy(p.position);
       if (this.t > SETTLE_FOR) {
@@ -841,24 +852,24 @@ export class HomeChapter implements Chapter {
       /** Off their back and round onto the shoulder while they turn and sit: the shot arrives before the paper moves. */
       const k = THREE.MathUtils.smootherstep(this.t, 0, SETTLE_FOR);
       arc = DRAW_ARC * k;
-      dist = 12 - 7.6 * k;
-      rise = 3.4 - 0.9 * k;
+      dist = 11 - 6.6 * k;
+      rise = 3.2 - 1 * k;
       ahead = 5 - 2.6 * k;
-      aimUp = 1.7 - 0.7 * k;
+      aimUp = 1.7 - 0.9 * k;
       onPaper = THREE.MathUtils.smoothstep(this.t, 1.3, SETTLE_FOR);
       this.pace = 0.45;
     } else if (beat === 'unfold' || beat === 'gaze') {
       /** In on the mittens while it comes open, and out again as the sheet fills: their hands do all the work. */
       const out = beat === 'gaze' ? THREE.MathUtils.smootherstep(this.t, 0, 3.4) : 0;
-      dist = 4.4 - 1.1 * THREE.MathUtils.smoothstep(drawing.open, 0, 0.5) + 1.5 * out;
-      rise = 2.5 + 0.35 * THREE.MathUtils.smoothstep(drawing.open, 0.4, 1);
+      dist = 4.4 - 1.2 * THREE.MathUtils.smoothstep(drawing.open, 0, 0.5) + 1.5 * out;
+      rise = 2.2 + 0.3 * THREE.MathUtils.smoothstep(drawing.open, 0.4, 1);
       this.pace = 0.5;
     } else if (beat === 'fold') {
       /** It starts to leave them before they are up: back, higher, and round behind them, all in the one move. */
       const k = THREE.MathUtils.smootherstep(this.t, 0, 3.2);
       arc = DRAW_ARC + (WALK_ARC - DRAW_ARC) * k * 0.45;
-      dist = 5.8 + 0.9 * k;
-      rise = 2.85 + 1 * k;
+      dist = 4.7 + 1.5 * k;
+      rise = 2.5 + 1.1 * k;
       ahead = 2.4 + 1.6 * k;
       aimUp = 1 + 0.3 * k;
       onPaper = 1 - k;
@@ -867,19 +878,19 @@ export class HomeChapter implements Chapter {
       /** Climbing with them, and looking further ahead the nearer the ground comes to falling away under them. */
       const on = THREE.MathUtils.smootherstep(this.along, 0, BROW_AT);
       arc = DRAW_ARC + (WALK_ARC - DRAW_ARC) * (0.45 + 0.55 * on);
-      dist = 6.7 + 1.1 * on;
-      rise = 3.85 + 2 * on;
-      ahead = 4 + 9 * on;
-      aimUp = 1.3 - 2 * on;
+      dist = 6.2 + 0.9 * on;
+      rise = 3.6 + 1.2 * on;
+      ahead = 4 + 8 * on;
+      aimUp = 1.3 - 1.2 * on;
       onPaper = 0;
       this.pace = 0.35;
     } else if (beat === 'brow') {
       const k = THREE.MathUtils.smootherstep(this.t, 0, 6);
       arc = WALK_ARC + (BROW_ARC - WALK_ARC) * k;
-      dist = 7.8 + 0.5 * k;
-      rise = 5.85 + 0.5 * k;
-      ahead = 13;
-      aimUp = -0.7;
+      dist = 7.1 + 0.5 * k;
+      rise = 4.8 + 0.4 * k;
+      ahead = 12;
+      aimUp = -0.3;
       onPaper = 0;
       this.pace = 0.3;
     } else {
@@ -887,10 +898,10 @@ export class HomeChapter implements Chapter {
       const k = THREE.MathUtils.smootherstep(this.t, 0, 7);
       const gone = this.wentAt > 0 ? THREE.MathUtils.smoothstep(this.now - this.wentAt, 0, 2.5) : 0;
       arc = BROW_ARC + (GOES_ARC - BROW_ARC) * k;
-      dist = 8.3 + 2.4 * k;
-      rise = 6.35 - 1.2 * k;
+      dist = 7.6 + 1.8 * k;
+      rise = 5.2 - 0.6 * k;
       ahead = 12;
-      aimUp = -0.4 + gone * THREE.MathUtils.clamp((this.cast.plane.position.y - c.y) * 0.5, 0, 7);
+      aimUp = -0.2 + gone * THREE.MathUtils.clamp((this.cast.plane.position.y - c.y) * 0.5, 0, 7);
       onPaper = 0;
       this.pace = 0.3;
     }
