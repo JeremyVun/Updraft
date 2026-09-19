@@ -250,12 +250,12 @@ void main() {
    * down catches the lamp along its rim as well as taking it flat.
    */
   vec3 toLamp = uLamp.xyz - vWorld;
-  float lampSide = 0.2 + 0.8 * clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)), 0.0, 1.0);
-  vec3 lamp = lampLight(vWorld, N) * lampSide;
-  col += alb * (lamp + dawnLight(vWorld, N));
+  float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
+  vec3 lamp = lampLight(vWorld, N);
+  col += alb * (lamp * pow(lampSide, 3.0) + dawnLight(vWorld, N));
 #ifdef SHELL
-  /** Absolute light, so it is what pales the coat: enough to warm the edge of it on the lamp side and no more. */
-  col += lamp * pow(1.0 - clamp(dot(N, normalize(cameraPosition - vWorld)), 0.0, 1.0), 2.0) * 0.5;
+  /** Absolute light, so it is what pales the coat: enough to fur the edge of it on the lamp side and no more. */
+  col += lamp * lampSide * pow(1.0 - clamp(dot(N, normalize(cameraPosition - vWorld)), 0.0, 1.0), 2.0) * 0.3;
 #endif
   /**
    * Out of the sun the bird still has to read as soft down rather than a dark lump, so the sky fills it. The fill is

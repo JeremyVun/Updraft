@@ -49,8 +49,8 @@ void main() {
    * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
    */
   vec3 toLamp = uLamp.xyz - vWorld;
-  float lampSide = 0.2 + 0.8 * clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)), 0.0, 1.0);
-  col += vColor * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lampLight(vWorld, N) * lampSide);
+  float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
+  col += vColor * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lampLight(vWorld, N) * pow(lampSide, 3.0));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
