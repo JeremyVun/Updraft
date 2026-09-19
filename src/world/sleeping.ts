@@ -844,6 +844,11 @@ export class SleepingIsland {
     return deep <= 0.001 ? ground : THREE.MathUtils.lerp(ground, tuning.sleeping.fogTop, deep);
   }
 
+  /** 1 while the room is in the world at all: nothing that belongs to a summer night belongs in it. */
+  get presence(): number {
+    return this.here ? 1 : 0;
+  }
+
   /** Where the child stands when they come to the bed: on the side away from the window. */
   get bedside(): THREE.Vector3 {
     return this.at.set(BED.x + BESIDE_BED.x * 2.4, BED_GROUND, BED.z + BESIDE_BED.y * 2.4);

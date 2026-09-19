@@ -278,7 +278,7 @@ vec3 lampLight(vec3 world, vec3 N) {
 vec3 dawnLight(vec3 world, vec3 N) {
   if (uDawn.x <= 0.0) return vec3(0.0);
   float reached = max(smoothstep(uDawn.y - 3.5, uDawn.y + 3.0, world.y), laneAt(world.xz));
-  return vec3(1.0, 0.74, 0.46) * uDawn.x * reached * clamp(dot(N, uSunDir) * 0.55 + 0.5, 0.0, 1.0);
+  return vec3(1.0, 0.72, 0.42) * (1.7 * uDawn.x) * reached * clamp(dot(N, uSunDir) * 0.55 + 0.5, 0.0, 1.0);
 }
 
 /** How thick the sleeping island's ground fog is at a point: pooled in the hollow, under its top, less where carved. */
