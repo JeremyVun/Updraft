@@ -45,7 +45,7 @@ import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
-import { WashingLines, baskets, lineField, redDoor, seaLines } from './world/lines';
+import { FAMILY_LINE, WashingLines, baskets, door, lineField, seaLines } from './world/lines';
 import { piano } from './world/piano';
 import { Kite } from './world/kite';
 import { Pinwheels } from './world/pinwheels';
@@ -135,17 +135,17 @@ scene.add(grass.group);
 scene.add(baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3));
 
 /** A door standing on the crest with nothing behind it: the dream leaving another piece of home lying about. */
-const door = redDoor(23, -357, 0.32);
-scene.add(door);
+scene.add(door.group);
 
 /** And an upright piano standing in the meadow grass, off the walk, which the wind plays. */
 scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
-const washing = new WashingLines([
-  ...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46, 17, LINES_WALK),
-  ...seaLines(),
-]);
+const washing = new WashingLines(
+  [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 190, 46, 17, LINES_WALK, [FAMILY_LINE]), ...seaLines()],
+  91,
+  FAMILY_LINE,
+);
 scene.add(washing.group);
 /** The child who is not there: one kite standing over the far beach, and pinwheels along the walk. */
 const kite = new Kite(wind, LINES_BERTH);
@@ -237,7 +237,7 @@ const story = new Journey({ child, plane: glider, boat, wind, input, life, tree,
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 rig.cut(story.shot);
-const windDebug = params.debug === 'wind' ? createWindDebug() : null;
+const windDebug = params.debug === 'wind' || params.debug === 'sway' ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
 const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
 creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
@@ -514,6 +514,8 @@ function frame(now: number): void {
   u.uTime.value = time;
   u.uWindTex.value = wind.texture;
   u.uBendTex.value = wind.bendTexture;
+  u.uSwayTex.value = wind.swayTexture;
+  u.uCalm.value = wind.calm;
   u.uCloudShift.value.addScaledVector(wind.breeze, dt * 2.2);
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
@@ -581,6 +583,7 @@ function frame(now: number): void {
   sleeping.update(dt, time, rig.camera);
   kite.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
+  door.update(dt);
   birches.update(dt, rig.camera, child.visible ? child.position : null);
   /** Fireflies rise out of grass, not out of the sea; they do not fly in a gale, nor over a frosted island. */
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * Math.max(0, 1 - storm * 1.6) * (1 - sleeping.presence), story.focus);

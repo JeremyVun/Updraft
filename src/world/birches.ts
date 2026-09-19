@@ -107,8 +107,8 @@ vec3 birchPlace(vec3 local) {
   vec3 p = local * birchT.w;
   p = vec3(birchS.x * p.x + birchS.y * p.z, p.y, -birchS.y * p.x + birchS.x * p.z);
   vec3 world = birchT.xyz + p;
-  vec2 uv = domainUv(birchT.xz);
-  vec2 w = insideUv(uv) ? texture(uWindTex, uv).xy : vec2(0.0);
+  /** It leans on the wind it feels, on the hanging things' spring: a gust reaches it late and it swings back. */
+  vec2 w = swayAt(birchT.xz).xy;
   float k = pow(clamp(local.y, 0.0, 1.4), 1.6);
   vec2 idle = vec2(sin(uTime * 0.85 + birchS.w * 31.0), cos(uTime * 0.71 + birchS.w * 17.0)) * (0.05 + length(w) * 0.01);
   vec2 lean = (w * 0.006 + idle * 0.02) * birchT.w;
@@ -332,7 +332,7 @@ void main() {
    * while the field they are drawn from empties behind them. None of this ever puts one back where it was.
    */
   float takes = ${glsl(tuning.birches.litterTakes)} * (0.75 + 0.5 * r1);
-  float go = clamp(smoothstep(takes * 0.6, takes * 1.5, length(w.xy)) + min(w.z * 1.8, 1.0) + min(w.w * 0.9, 1.0), 0.0, 1.0);
+  float go = clamp(smoothstep(takes * 0.6, takes * 1.5, length(swayAt(p).xy)) + min(w.z * 1.8, 1.0) + min(w.w * 0.9, 1.0), 0.0, 1.0);
   base.xz += w.xy * go * (0.2 + 0.45 * r1);
   base.y += go * (0.25 + 1.1 * r2);
   float a = r1 * 6.2831 + go * 4.0;

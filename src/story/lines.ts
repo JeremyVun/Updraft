@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
+import { tuning } from '../tuning';
+import { Sway, feltWind, type WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
 import { KITE_AT } from '../world/kite';
+import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 
@@ -23,6 +26,10 @@ export const LINES_WALK = [
   new THREE.Vector2(14, -400),
 ];
 const ROUTE = LINES_WALK;
+
+/** The middle of the family's line, and the way it runs: the wind has to blow along it to fill them. */
+const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
+const FAMILY_DIR = new THREE.Vector3().subVectors(FAMILY_LINE.b, FAMILY_LINE.a).setY(0).normalize();
 
 /** How near the boat either of them has to be before the child takes the hint and pushes off. */
 const BOARDING = 22;
@@ -57,6 +64,13 @@ export class LinesChapter implements Chapter {
   private flown = false;
   private lastLegAt = 0;
   private lookedUp = 0;
+  /** The three on the line by the door: how long they have been people, when the child last stopped for them. */
+  private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  private readonly familySway = new Sway();
+  private held = 0;
+  private gazeUntil = 0;
+  private gazed = 0;
+  private breezeUntil = -1;
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly crest = new THREE.Vector3(14, 17, -360);
@@ -118,7 +132,9 @@ export class LinesChapter implements Chapter {
         if (this.t > 4.5 && !c.busy) this.setDown();
         break;
       case 'walk':
-        this.updateWalk(time);
+        this.family(dt, time);
+        if (time < this.gazeUntil) c.lookAt = FAMILY_MID;
+        else this.updateWalk(time);
         break;
       case 'push':
         if (this.t > 0.9 && !boat.afloat) boat.launch();
@@ -203,6 +219,63 @@ export class LinesChapter implements Chapter {
 
   private readonly tmp2 = { x: 0, z: 0, energy: 0, lift: 0 };
 
+  /**
+   * The puzzle of the island, if it is one: a man's shirt, a small jumper and a woman's blouse hang on the line
+   * by the door. A steady wind along the line fills all three, and for as long as it holds they are people; held
+   * a little longer, their hands reach for each other and the door swings open on the far beach and the boat.
+   * When the wind drops they are washing again. Nothing here holds anybody: the door shut bars nothing, and a
+   * child who walks under without playing is shown them once by a breeze of the island's own.
+   */
+  private family(dt: number, time: number): void {
+    const { wind, child: c } = this.cast;
+    const k = tuning.family;
+    const w = feltWind(wind.sample(FAMILY_MID.x, FAMILY_MID.z, this.air), wind.calm);
+    this.familySway.update(w.x, w.z, dt);
+    const along = Math.abs(this.familySway.x * FAMILY_DIR.x + this.familySway.z * FAMILY_DIR.z);
+    const want = THREE.MathUtils.smoothstep(along, k.fillFrom, k.fillFull);
+    family.x += (want - family.x) * (1 - Math.exp(-dt * (want > family.x ? 2.5 : 0.8)));
+    this.held = family.x > 0.5 ? this.held + dt : Math.max(0, this.held - dt * 2);
+    const hands = THREE.MathUtils.smoothstep(this.held, 0.5, k.holdFor);
+    family.y += (hands - family.y) * (1 - Math.exp(-dt * 3));
+    if (this.held > k.holdFor && !door.opened) {
+      door.open = 1;
+      cue('delight');
+      if (!c.busy) c.cheer();
+    }
+
+    const near = Math.hypot(c.position.x - FAMILY_MID.x, c.position.z - FAMILY_MID.z);
+    /** A child who comes under them without having filled them is shown them once, briefly, by the island. */
+    if (this.breezeUntil < 0 && near < k.stopWithin + 6 && family.x < 0.2 && this.held === 0) this.breezeUntil = time + k.breezeFor;
+    if (time < this.breezeUntil) {
+      wind.addSplat({
+        ax: FAMILY_LINE.a.x,
+        az: FAMILY_LINE.a.z,
+        bx: FAMILY_LINE.b.x,
+        bz: FAMILY_LINE.b.z,
+        vx: FAMILY_DIR.x * k.breezeSpeed,
+        vz: FAMILY_DIR.z * k.breezeSpeed,
+        radius: 5,
+        energy: 0.8,
+        swirl: 0,
+        lift: 0,
+      });
+    }
+
+    /** Under them while they are people, the child stops and looks up. Not for long, and not more than a few times. */
+    if (family.x > 0.5 && near < k.stopWithin && time > this.gazeUntil + 5 && this.gazed < 3 && !this.cast.cygnet.flying) {
+      this.gazed++;
+      this.gazeUntil = time + k.looksFor;
+      c.stop();
+      this.gazing = this.play;
+    } else if (this.gazeUntil > 0 && time >= this.gazeUntil && this.gazing !== null) {
+      /** Stopped in the middle of going for the plane, they go for it again. */
+      if (this.gazing === 'fetch') this.fetch();
+      this.gazing = null;
+    }
+  }
+
+  private gazing: Play | null = null;
+
   private throwAhead(): void {
     const c = this.cast.child;
     const t = this.leg === ROUTE.length - 1 ? this.cast.boat.position : this.target();
@@ -252,6 +325,7 @@ export class LinesChapter implements Chapter {
     const c = this.cast.child.position;
     const p = this.cast.plane.position;
     const s = this.shot;
+    s.from = undefined;
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
       s.target.set((c.x + b.x) / 2, b.y + 2.2, (c.z + b.z) / 2 - 2);
@@ -269,6 +343,20 @@ export class LinesChapter implements Chapter {
       s.height = 5 + (k.y - ground) * 0.5;
       this.pace = 0.5;
       this.focus.copy(k);
+      return;
+    }
+    /**
+     * Under the three on the line, looking up: the camera comes down low behind the child and looks up with them,
+     * so the clothes stand against the sky with the door beyond, and the child is small under their family.
+     */
+    const gazing = this.gazeUntil > 0 && this.now < this.gazeUntil + 1.2;
+    if (gazing) {
+      s.target.set(c.x * 0.3 + FAMILY_MID.x * 0.7, FAMILY_MID.y - 1.1, c.z * 0.3 + FAMILY_MID.z * 0.7);
+      s.from = FAMILY_FACE;
+      s.distance = 10;
+      s.height = -1.6;
+      this.pace = 0.55;
+      this.focus.copy(FAMILY_MID);
       return;
     }
     if (this.beat === 'ashore' || this.beat === 'wonder') {

@@ -1,4 +1,4 @@
-import { NOISE_GLSL } from '../world/atmosphere';
+import { FELT_GLSL, NOISE_GLSL } from '../world/atmosphere';
 
 export const MAX_SPLATS = 8;
 
@@ -204,4 +204,26 @@ void main() {
   b.zw += acc * uDt;
   b.xy += b.zw * uDt;
   gl_FragColor = b;
+}`;
+
+/**
+ * The wind hanging things feel, on a soft spring, so cloth and leaves take the gust late, overshoot and swing back.
+ * Channels: xy the sprung wind (world units per second), zw its rate of change.
+ */
+export const SWAY_FRAG = /* glsl */ `
+uniform sampler2D uSway;
+uniform sampler2D uVel;
+uniform float uDt;
+uniform float uStiffness;
+uniform float uDamping;
+uniform float uCalm;
+in vec2 vUv;
+${FELT_GLSL}
+void main() {
+  vec4 s = texture(uSway, vUv);
+  vec2 target = feltWind(texture(uVel, vUv), uCalm);
+  vec2 acc = uStiffness * (target - s.xy) - uDamping * s.zw;
+  s.zw += acc * uDt;
+  s.xy += s.zw * uDt;
+  gl_FragColor = s;
 }`;

@@ -318,9 +318,9 @@ function rawHeight(x: number, z: number): number {
  * ground and open water. It is longer north to south than a swan's take-off run, so nothing runs out of water.
  */
 export const POND = { x: 24, z: -892, rx: 15.5, rz: 17 } as const;
-/** How far the middle is dug below the water, and how far the bank stands above it at the rim of the ellipse. */
+/** How far the middle is dug below the water, and how low a lip holds it on the side where the slope falls away. */
 const POND_BED = 2.6;
-const POND_BANK = 1.1;
+const POND_LIP = 0.4;
 /**
  * The still water's surface, taken from the shelf it lies on so the pond belongs to the ground around it, and set
  * low enough into it that the lip holding it downhill is no taller than the bite it takes out of the slope above.
@@ -334,14 +334,17 @@ export function pondOut(x: number, z: number): number {
 }
 
 /**
- * The bowl. The bank is raised as well as the middle dug out, so the water is held by ground on every side of it
- * and never runs out into the hollow the pond was put in.
+ * The bowl. The middle is dug out; the rim is the slope itself where the slope stands above the water, and a
+ * low lip where it falls below, just enough to hold the water in. A bank raised all the way round read as a
+ * crater sitting on the hillside rather than a tarn lying in it.
  */
 function pondHeight(h: number, x: number, z: number): number {
   const d = pondOut(x, z);
-  if (d > 1.4) return h;
-  const bed = POND_LEVEL + POND_BANK * d * d - POND_BED * (1 - d * d);
-  return h + (bed - h) * smoothstep(1.4, 0.9, d);
+  if (d > 1.5) return h;
+  const bed = POND_LEVEL - POND_BED * (1 - d * d);
+  const rim = Math.max(h, POND_LEVEL + POND_LIP);
+  const held = bed + (rim - bed) * smoothstep(0.9, 1.15, d);
+  return held + (h - held) * smoothstep(1.15, 1.5, d);
 }
 
 /** The cottage below the last hill sits on a levelled pad. */
@@ -546,9 +549,11 @@ float pondDry(vec2 p, float groundH) {
 }
 float hf_pond(float h, vec2 p) {
   float d = pondOut(p);
-  if (d > 1.4) return h;
-  float bed = ${glsl(POND_LEVEL)} + ${glsl(POND_BANK)} * d * d - ${glsl(POND_BED)} * (1.0 - d * d);
-  return mix(h, bed, smoothstep(1.4, 0.9, d));
+  if (d > 1.5) return h;
+  float bed = ${glsl(POND_LEVEL)} - ${glsl(POND_BED)} * (1.0 - d * d);
+  float rim = max(h, ${glsl(POND_LEVEL + POND_LIP)});
+  float held = mix(bed, rim, smoothstep(0.9, 1.15, d));
+  return mix(held, h, smoothstep(1.15, 1.5, d));
 }
 float worldHeight(vec2 p) {
   float h = hf_smax(hf_island(p), hf_lines(p), 6.0);

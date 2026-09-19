@@ -25,6 +25,17 @@ His verdicts on what the first session proposed:
 
 On the finale camera: "don't take my word on the camera reveal as gospel. The session should just take it as a suggestion but go with it's own judgement and think carefully about what works best."
 
+Later the same evening, after the Opus 5 limit was hit, on the lines puzzle and on who does the visual work:
+
+> 1. What lines puzzles? did you think of any? what was suggested before?
+> 2. I am giving you ownership of the work that astra was supposed to do
+
+> for the lines puzzle, why 1 and 4? If you think it fits with the child's dreamlike, meditative, adventure, will be visually intuitive and simple for a child to solve, and tugs the right heartstrings, then proceed accordingly.
+
+And on the piano, an open question:
+
+> are we going the wrong direction with the piano? the connection is the piano and the music tones with the rest of the island. how does it currently work? can the invitation wind lines / traces in the air connect and resonate with the environment? if you were entering the dream as a child, what would work best here?
+
 ## Status
 
 | item | state |

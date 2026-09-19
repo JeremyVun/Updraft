@@ -151,9 +151,10 @@ const RELEASE_GLSL = /* glsl */ `
 uniform vec4 uShake;
 uniform float uDt;
 uniform float uTime;
-bool letsGo(vec4 w, vec2 xz, float seed) {
+/** felt is the wind the leaf feels on its twig, from the sway texture: the air itself moves before the gust arrives. */
+bool letsGo(vec4 w, vec2 felt, vec2 xz, float seed) {
   float grip = 0.3 + 0.85 * seed;
-  if (w.z > grip * ${glsl(tuning.birches.gripEnergy)} || length(w.xy) > ${glsl(tuning.birches.gripSpeed)} + grip * 9.0) return true;
+  if (w.z > grip * ${glsl(tuning.birches.gripEnergy)} || length(felt) > ${glsl(tuning.birches.gripSpeed)} + grip * 9.0) return true;
   float shake = uShake.w * (1.0 - smoothstep(0.0, uShake.z, length(xz - uShake.xy)));
   float chance = (${glsl(tuning.birches.trickle)} + shake) / 20.0;
   return hash12(vec2(seed * 977.0, floor(uTime * 20.0))) < chance;
@@ -163,6 +164,7 @@ const VEL_FRAG = /* glsl */ `
 uniform sampler2D uPos;
 uniform sampler2D uVel;
 uniform sampler2D uWindTex;
+uniform sampler2D uSwayTex;
 uniform sampler2D uHeightTex;
 uniform vec4 uDomain;
 uniform vec4 uWade;
@@ -187,7 +189,7 @@ void main() {
 
   if (p.w < 0.5) {
     /** Still on the branch: it holds on until the air takes it, and then it goes out on the gust that took it. */
-    if (letsGo(w, p.xz, seed)) {
+    if (letsGo(w, texture(uSwayTex, uv).xy, p.xz, seed)) {
       vec2 gone = w.xy * (0.9 + 0.7 * seed);
       gl_FragColor = vec4(gone.x, 2.4 + w.z * 4.5, gone.y, seed);
       return;
@@ -248,6 +250,7 @@ const POS_FRAG = /* glsl */ `
 uniform sampler2D uPos;
 uniform sampler2D uVel;
 uniform sampler2D uWindTex;
+uniform sampler2D uSwayTex;
 uniform sampler2D uHeightTex;
 uniform vec4 uDomain;
 uniform vec4 uFocus;
@@ -269,7 +272,7 @@ void main() {
   if (p.w < 0.5) {
     vec4 w = texture(uWindTex, uv);
     /** The same test the velocity pass just made, on the same textures, so the two never disagree. */
-    if (letsGo(w, p.xz, v.w)) p.w = 1.0;
+    if (letsGo(w, texture(uSwayTex, uv).xy, p.xz, v.w)) p.w = 1.0;
     gl_FragColor = p;
     return;
   }
@@ -416,6 +419,7 @@ export class LitterField {
       uField: { value: null },
       uLitterTex: { value: null },
       uWindTex: atmo.uniforms.uWindTex,
+      uSwayTex: atmo.uniforms.uSwayTex,
       uDomain: atmo.uniforms.uDomain,
       uDt: { value: 1 / 60 },
       uWade: { value: wade },
@@ -468,6 +472,7 @@ export class FallenLeaves {
 
     const shared = {
       uWindTex: atmo.uniforms.uWindTex,
+      uSwayTex: atmo.uniforms.uSwayTex,
       uHeightTex: atmo.uniforms.uHeightTex,
       uDomain: atmo.uniforms.uDomain,
       uTime: atmo.uniforms.uTime,
