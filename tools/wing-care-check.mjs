@@ -19,7 +19,8 @@ const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {MeadowChapter,ROUTE}=await import('../src/story/meadow.ts');
 const {SleepingChapter}=await import('../src/story/sleeping.ts');
-const {BED,HILLTOP}=await import('../src/world/sleeping.ts');
+const {CurtainRibbon}=await import('../src/world/sleeping-ribbon.ts');
+const {BED,SLEEP_LEDGE,CURTAIN_KNOT,CURTAIN_END}=await import('../src/world/sleeping.ts');
 const {Feather}=await import('../src/fx/feather.ts');
 const {restoreWingCare}=await import('../src/story/wing-care.ts');
 const {saveProgress,readProgress,placeProgress}=await import('../src/story/progress.ts');
@@ -34,7 +35,7 @@ function fixture(fps=60) {
   const carry=new Carry(child,cygnet);
   const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
-    sleeping:{feather:new Feather(wind),bedside:BED.clone(),lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
+    sleeping:{ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),feather:new Feather(wind),bedside:BED.clone(),lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
   };
   let time=0;
   return {cast,air,get time(){return time;},step(chapter) {
@@ -93,12 +94,11 @@ for (const fps of [30,60,120]) {
   for (const strong of [false,true]) {
     const q=fixture(fps),s=new SleepingChapter(q.cast),k=q.cast.cygnet;
     q.cast.child.stop();q.cast.child.place(BED.x,BED.z,0);
-    const up=HILLTOP.clone().sub(BED).setY(0).normalize();
-    const top=HILLTOP.clone().addScaledVector(up,-2.2);top.y=heightAt(top.x,top.z);
+    const top=SLEEP_LEDGE.clone();
     k.release(top);k.stay=true;restoreWingCare(k,'sleeping');
     // Settle the test's initial placement before measuring the authored release, just as the real climb does.
     for(let i=0;i<fps*2;i++)q.step();
-    s.sat=true;s.now=q.time;s.to('unbinding');
+    s.sat=true;s.now=q.time;s.leapFrom.copy(top);s.to('unbinding');
     if(strong)Object.assign(q.air,{lift:3,energy:1.6});
     let freeAt=-1,flightAt=-1,previousCloth=null,worstClothStep=0;
     for(let i=0;i<fps*140;i++) {

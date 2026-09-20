@@ -74,7 +74,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   toMirror: [
     new THREE.Vector2(-340, -1970), new THREE.Vector2(-480, -2040),
     new THREE.Vector2(-590, -2180), new THREE.Vector2(-540, -2200),
-    new THREE.Vector2(-455, -2188), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
+    new THREE.Vector2(-542, -2253), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
     new THREE.Vector2(-347, -2335), new THREE.Vector2(-338, -2205), new THREE.Vector2(-350, -2135),

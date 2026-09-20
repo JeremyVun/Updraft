@@ -285,11 +285,11 @@ function woodHeight(x: number, z: number): number {
 }
 
 /**
- * The sleeping island: the hollow the bed is made up in, and the hill north of it whose top stands out of the
- * fog into the first sun. The hollow is deep enough to hold fog and the hill high enough to be out of it.
+ * The sleeping island: an open bed terrace and a high shoulder with an exposed outward lip.
+ * SLEEP_HOLLOW retains the fog domain centre; the old terrain depression has been removed.
  */
-export const SLEEP_HOLLOW = { x: -175, z: -1912, rx: 16, rz: 14, h: 4.6 };
-export const SLEEP_HILL = { x: -176, z: -1932, rx: 15, rz: 11, h: 9 };
+export const SLEEP_HOLLOW = { x: -175, z: -1912, rx: 16, rz: 14, h: 0 };
+export const SLEEP_HILL = { x: -180, z: -1944, rx: 19, rz: 18, h: 13 };
 
 function sleepingHeight(x: number, z: number): number {
   const c = ISLES.sleeping;
@@ -299,7 +299,11 @@ function sleepingHeight(x: number, z: number): number {
   let h = land * 3.0 - 1.5;
   h += land * land * (Math.max(0, 1 - r * r) * 4.5 + (gfbm(x * 0.03, z * 0.03, 3, 82) * 0.5 + 0.5) * 2.6);
   h += land * land * lump(x, z, SLEEP_HILL) * SLEEP_HILL.h;
-  h -= land * land * lump(x, z, SLEEP_HOLLOW) * SLEEP_HOLLOW.h;
+  // An open terrace supports the bed; the narrow shoulder above it has an exposed outward face.
+  const terrace = 1 - smoothstep(6, 13, Math.hypot(x + 176.5, z + 1911));
+  h += (6.3 + (x + 176.5) * 0.018 - (z + 1911) * 0.025 - h) * terrace;
+  h -= 5.2 * (1 - smoothstep(3.4, 6.5, Math.abs(x + 180)))
+    * smoothstep(-1938.9, -1937.7, z) * (1 - smoothstep(-1937, -1927, z));
   return h - smoothstep(0, 36, d) * 8;
 }
 
@@ -556,7 +560,10 @@ float hf_sleeping(vec2 p) {
   float h = land * 3.0 - 1.5;
   h += land * land * (max(0.0, 1.0 - rr * rr) * 4.5 + (gfbm(p * 0.03, 3, 82.0) * 0.5 + 0.5) * 2.6);
   h += land * land * hf_lump(p, vec2(${glsl(SLEEP_HILL.x)}, ${glsl(SLEEP_HILL.z)}), vec2(${glsl(SLEEP_HILL.rx)}, ${glsl(SLEEP_HILL.rz)})) * ${glsl(SLEEP_HILL.h)};
-  h -= land * land * hf_lump(p, vec2(${glsl(SLEEP_HOLLOW.x)}, ${glsl(SLEEP_HOLLOW.z)}), vec2(${glsl(SLEEP_HOLLOW.rx)}, ${glsl(SLEEP_HOLLOW.rz)})) * ${glsl(SLEEP_HOLLOW.h)};
+  float terrace = 1.0 - smoothstep(6.0, 13.0, length(p - vec2(-176.5, -1911.0)));
+  h = mix(h, 6.3 + (p.x + 176.5) * 0.018 - (p.y + 1911.0) * 0.025, terrace);
+  h -= 5.2 * (1.0 - smoothstep(3.4, 6.5, abs(p.x + 180.0)))
+    * smoothstep(-1938.9, -1937.7, p.y) * (1.0 - smoothstep(-1937.0, -1927.0, p.y));
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
 float hf_home(vec2 p) {

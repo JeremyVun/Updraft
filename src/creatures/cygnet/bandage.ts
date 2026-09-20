@@ -27,7 +27,12 @@ export class WingBandage {
   private readonly end = new THREE.Vector3();
   private readonly skinPoint = new THREE.Vector3();
   private readonly skinOther = new THREE.Vector3();
+  private readonly skinNormal = new THREE.Vector3();
+  private readonly normalMatrix = new THREE.Matrix3();
   private readonly surface = wingArmGeometry();
+  private readonly skinnedPosition = new Float64Array(this.surface.attributes.position.count * 3);
+  private readonly skinnedNormal = new Float64Array(this.skinnedPosition.length);
+  private readonly skinFresh = new Uint8Array(this.surface.attributes.position.count);
   private readonly ringX: number[] = [];
   private bones: readonly THREE.Matrix4[] = [];
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
@@ -112,7 +117,24 @@ export class WingBandage {
 
   /** Where the child's fingertips meet the end being wound, in world space. */
   tip(out: THREE.Vector3): THREE.Vector3 {
+    this.skinFresh.fill(0);
     return this.point(this.dressing, 0, 0, 0, out);
+  }
+
+  /** Skin a sampled arm vertex once; the linen reuses those same triangles. */
+  private skinVertex(i: number): void {
+    const { position, normal, aSkin } = this.surface.attributes;
+    const a = this.bones[aSkin.getX(i)], b = this.bones[aSkin.getY(i)];
+    const blend = aSkin.getZ(i);
+    this.skinPoint.fromBufferAttribute(position, i).applyMatrix4(a);
+    this.skinOther.fromBufferAttribute(position, i).applyMatrix4(b);
+    this.skinPoint.lerp(this.skinOther, blend).toArray(this.skinnedPosition, i * 3);
+    // Padding follows the skinned displacement, including scale. Normalizing
+    // it (or using an inverse-transpose normal matrix) would change the fit.
+    this.skinNormal.fromBufferAttribute(normal, i).applyMatrix3(this.normalMatrix.setFromMatrix4(a));
+    this.skinOther.fromBufferAttribute(normal, i).applyMatrix3(this.normalMatrix.setFromMatrix4(b));
+    this.skinNormal.lerp(this.skinOther, blend).toArray(this.skinnedNormal, i * 3);
+    this.skinFresh[i] = 1;
   }
 
   /** Sample the actual arm's triangles, with the same joint weights as its skin. */
@@ -137,11 +159,9 @@ export class WingBandage {
   }
 
   private surfacePoint(index: number, padding: number, weight: number, out: THREE.Vector3): void {
-    const { position, normal, aSkin } = this.surface.attributes;
-    const p = this.skinPoint.fromBufferAttribute(position, index);
-    p.addScaledVector(this.skinOther.fromBufferAttribute(normal, index), padding);
-    this.skinOther.copy(p).applyMatrix4(this.bones[aSkin.getY(index)]);
-    p.applyMatrix4(this.bones[aSkin.getX(index)]).lerp(this.skinOther, aSkin.getZ(index));
+    if (!this.skinFresh[index]) this.skinVertex(index);
+    const p = this.skinPoint.fromArray(this.skinnedPosition, index * 3);
+    p.addScaledVector(this.skinOther.fromArray(this.skinnedNormal, index * 3), padding);
     out.addScaledVector(p, weight);
   }
 
@@ -182,6 +202,7 @@ export class WingBandage {
     this.mesh.visible = visible && this.dressing > 0 && (this.state === 'wrapped' || this.releaseTime >= 0 && this.driftTime < 7);
     if (!this.mesh.visible) return;
     const unroll = this.releaseTime < 0 ? 0 : Math.min(1, this.releaseTime / tuning.wingCare.unwindFor);
+    if (unroll < 1) this.skinFresh.fill(0);
     const position = this.mesh.geometry.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i <= ROWS; i++) for (let j = 0; j < COLS; j++) {
       const s = i / ROWS;

@@ -167,10 +167,15 @@ advance the earlier interaction. Sails still read actual wind; the current never
 After the cygnet's unanswered call, `SleepingChapter.windInvitation` points at the pillow. The existing
 screen-space brush feeds `brushDry`/`bedWind`, lifting the blanket and accumulating feather release.
 Ambient wind and invitation ribbons cannot release it. The feather's own `brush` remains a direct
-screen-space exception like the glider's.
+screen-space exception like the glider's. During the assisted walk, strokes build forward encouragement
+inside the current route corridor. They retain lift and sway without projecting the feather backwards
+down a steep hill. Strong correct strokes move it faster than idle guidance.
 
 At the summit `invitesFlight` anchors real updrafts at the cygnet. `Chapter.twirlGain` is copied into
 `PointerInput` each frame (default 1); this chapter uses `tuning.sleeping.twirlGain` only while inviting
 flight, so slower loops can charge the column. The bird still samples real lift and holds it for its
-normal takeoff interval. Takeoff opens the summit curtains; the opening releases the dawn lane toward
-the bed. There is no timed launch.
+normal takeoff interval. Takeoff starts a reach for the loose ribbon beyond the ledge. The bird's beak
+must catch it and complete a physical tug before the knot releases and the curtains can open. The resulting
+glide releases the dawn lane toward the bed. There is no timed launch, and blowing on tied curtains alone
+cannot solve the chapter. After commitment, further wind steadies the glide while a safe baseline carries
+it home if input stops.

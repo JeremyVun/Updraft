@@ -159,18 +159,20 @@ export class SkyMirror {
     for (let i = 0; i < 5; i++) for (const side of [-1, 1]) add(new THREE.CylinderGeometry(0.09, 0.12, 3, 7), -406 + i * 3.6, -1, -2323 + side);
     // The entry has its own landing stage: a hull in deep water, planks above it, then the bare mirror.
     const entry=MIRROR_ENTRY_DECK;
+    const entryX=entry.x1-entry.x0,entryZ=entry.z1-entry.z0,entryYaw=Math.atan2(entryX,entryZ);
     const entryParts: THREE.BufferGeometry[]=[];
-    const part=(g:THREE.BufferGeometry,x:number,y:number,z:number)=>entryParts.push(g.translate(x,y,z));
-    const length=entry.z0-entry.z1, planks=Math.ceil(length/0.51);
+    const part=(g:THREE.BufferGeometry,x:number,y:number,z:number)=>entryParts.push(g.rotateY(entryYaw).translate(x,y,z));
+    const length=Math.hypot(entryX,entryZ), planks=Math.ceil(length/0.51);
     for(let i=0;i<planks;i++)part(new THREE.BoxGeometry(entry.halfWidth*2,0.14,length/planks-0.015),
-      entry.x0,entry.height-0.07,entry.z0-(i+0.5)*length/planks);
+      entry.x0+(i+0.5)*entryX/planks,entry.height-0.07,entry.z0+(i+0.5)*entryZ/planks);
     const posts=Math.ceil(length/3.7);
     for(let i=0;i<=posts;i++)for(const side of [-1,1]) {
-      const z=entry.z0-i*length/posts, x=entry.x0+side;
+      const z=entry.z0+i*entryZ/posts-Math.sin(entryYaw)*side, x=entry.x0+i*entryX/posts+Math.cos(entryYaw)*side;
       const bottom=mirrorBed(x,z)-0.4, top=entry.height+0.5;
       part(new THREE.CylinderGeometry(0.1,0.15,top-bottom,8),x,(top+bottom)/2,z);
     }
-    for(const side of [-1,1])part(new THREE.BoxGeometry(0.14,0.22,length),entry.x0+side*0.85,entry.height-0.23,(entry.z0+entry.z1)/2);
+    for(const side of [-1,1])part(new THREE.BoxGeometry(0.14,0.22,length),(entry.x0+entry.x1)/2+Math.cos(entryYaw)*side*0.85,
+      entry.height-0.23,(entry.z0+entry.z1)/2-Math.sin(entryYaw)*side*0.85);
     add(mergeGeometries(entryParts),0,0,0);entryParts.forEach(g=>g.dispose());
     // A lone lamppost comes into view along the curve, with no house or second red door.
     add(new THREE.CylinderGeometry(0.075, 0.11, 5, 9), -394, 2.2, -2324.05);

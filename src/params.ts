@@ -12,7 +12,8 @@ function num(key: string): number | null {
   return raw !== null && Number.isFinite(Number(raw)) ? Number(raw) : null;
 }
 
-const lite = q.has('lite') ? q.get('lite') !== '0' : window.matchMedia('(pointer: coarse)').matches;
+const lite = q.has('lite') && q.get('lite') !== '0';
+const ratio = num('ratio');
 
 export const params = {
   /** Set by the QA tools: exposes `window.__game`, `__stats`, `__ready` and steps time at a fixed rate. */
@@ -20,12 +21,12 @@ export const params = {
   /** `wind` overlays the wind field. */
   debug: q.get('debug') ?? '',
   /** Fixed render scale; disables the automatic step-down. */
-  ratio: num('ratio'),
+  ratio: ratio !== null && ratio > 0 ? ratio : null,
   /** Camera override: x,y,z,targetX,targetY,targetZ. */
   cam: nums('cam'),
   /** Sun override: azimuthDeg,elevationDeg (azimuth 0 = straight ahead of the default camera). */
   sun: nums('sun'),
-  /** Grass density multiplier. */
+  /** Fixed grass density multiplier; overrides the adaptive world tier. */
   grass: num('grass'),
   /** MSAA sample count for the scene render (default 4). */
   msaa: num('msaa'),
@@ -39,10 +40,10 @@ export const params = {
   chapter: q.get('chapter'),
   /** Chapter/shot QA never reads or overwrites a player's save unless explicitly testing progress. */
   progress: q.has('progress') ? q.get('progress') === '1' : !q.has('shot') && !q.has('chapter'),
-  /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). On by default for touch devices; `lite=0` forces it off. */
+  /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). Explicit QA preset only; normal play adapts visual quality on every device. */
   lite,
-  /** How often the sea's reflection is drawn: every frame (1), alternate frames (2, the lite default; a one-frame lag is faintly visible in still comparisons), or never (0, QA). */
-  mirror: q.get('mirror') !== null ? Number(q.get('mirror')) || 0 : lite ? 2 : 1,
+  /** Fixed reflection cadence: every frame (1), alternate frames (2), or never (0). Otherwise follows world quality. */
+  mirror: q.get('mirror') !== null ? Number(q.get('mirror')) || 0 : null,
   /** QA: `mirrorlod=full` gives the sea's mirror the main view's terrain detail instead of a coarser set, for comparison. */
   mirrorlod: q.get('mirrorlod') ?? 'coarse',
   /** QA: `blades=direct` uses the old per-vertex grass shader instead of the blade table, for before/after comparison. */

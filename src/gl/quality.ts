@@ -3,7 +3,15 @@ export interface QualityLevel {
   ratio: number;
   /** Multisampling of the scene target. */
   samples: number;
+  /** Geometry and reflection budget, independent of input hardware. */
+  detail: 0 | 1 | 2;
 }
+
+export const WORLD_QUALITY = [
+  { grassDensity: 0.25, grassReach: 0.7, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
+  { grassDensity: 0.55, grassReach: 0.85, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625 },
+  { grassDensity: 1, grassReach: 1, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75 },
+] as const;
 
 const RECENT = 90;
 /** Pixels the opening level may render; the level climbs from there if frames prove smooth. */
@@ -18,7 +26,7 @@ const SETTLE_UP_MS = 1000;
 const CLIMB_MS = 12000;
 
 /**
- * Keeps the frame under the display's refresh by stepping the render scale down (then the multisampling)
+ * Targets smooth 60 fps by stepping down render scale, world detail and multisampling
  * when frames run long, and creeping back up after a long smooth stretch. It judges by the trimmed mean and
  * the 90th percentile of recent frame intervals, so a single hitch (a window move, a tab switch) never costs
  * quality, while a GPU that misses every other refresh is caught at once.
@@ -34,26 +42,29 @@ export class Quality {
   private lastStepUp = false;
 
   /** Opens at the highest level within the pixel budget for a `width` × `height` view (and `startRatio`); the rest is climbed into. */
-  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void) {
+  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2) {
     // QA overrides are exact, including subpixel scales; neither the startup cap nor
     // the adaptive ladder may silently substitute a different resolution.
     if (locked) {
-      this.levels.push({ ratio: maxRatio, samples });
+      this.levels.push({ ratio: maxRatio, samples, detail: 2 });
       return;
     }
     if (!location.search.includes('nocap')) startRatio = Math.min(startRatio, Math.sqrt(OPENING_PIXELS / Math.max(1, width * height)));
-    for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples });
+    for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples, detail: 2 });
     const baseRatio = Math.min(1, maxRatio);
-    this.levels.push({ ratio: baseRatio, samples });
-    if (samples > 2) this.levels.push({ ratio: baseRatio, samples: 2 });
+    this.levels.push({ ratio: baseRatio, samples, detail: 2 });
+    // Preserve the meadow before spending the remaining budget on extra antialiasing.
+    if (samples > 2) this.levels.push({ ratio: baseRatio, samples: 2, detail: 2 });
+    this.levels.push({ ratio: baseRatio, samples: Math.min(samples, 2), detail: 1 });
+    this.levels.push({ ratio: baseRatio, samples: Math.min(samples, 2), detail: 0 });
     /**
      * Below one device pixel per pixel, and softer for it. Only a machine that is already missing every other
      * refresh ever gets here, and in a game this slow a soft frame that arrives is worth more than a sharp one
      * that does not: a saturated GPU also starves the readbacks the wind and the life are read back through.
      */
-    this.levels.push({ ratio: baseRatio * 0.85, samples: Math.min(samples, 2) });
-    this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2) });
-    const opening = this.levels.findIndex((l) => l.ratio <= startRatio);
+    this.levels.push({ ratio: baseRatio * 0.85, samples: Math.min(samples, 2), detail: 0 });
+    this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0 });
+    const opening = this.levels.findIndex((l) => l.ratio <= startRatio && l.detail <= startDetail);
     this.index = opening < 0 ? this.levels.length - 1 : opening;
   }
 

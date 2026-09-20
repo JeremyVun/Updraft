@@ -49,7 +49,7 @@ away during the next crossing. Other chapters retain ordinary haze.
 
 `world/sky-mirror-layout.ts` defines the submerged flat at (−455, −2310), three fallen lights, the outer
 boat channel and far pier. `mirrorBed` remains shared CPU/GPU terrain, 0.025 below sea level at its centre.
-The entry mooring is offshore at (−455, −2221); a separate timber jetty reaches the flat at z=−2263.
+The entry mooring is offshore at (−515.66, −2271.09); a 16-unit timber jetty reaches the western flat at (−501, −2278).
 Its deck permits the shallow step off only at the shore end, preserving the deep-water walking boundary.
 The bubble redesign changes no terrain or shared water height. The old causeway overlay is removed.
 
@@ -96,7 +96,8 @@ drives it entirely through the numbers below; the room itself owns how they look
 
 **Places.** `SLEEP_LANDING` (east shore, facing the wood: where the boat runs ashore), `SLEEP_BERTH` (west shore:
 where it is drawn up for the crossing home), `BED` with `BED_FACING` (the way its head end points), `PILLOW`,
-`HILLTOP` (the top of `SLEEP_HILL`, well clear of the fog), `LAMP` (the bedside bulb), `WINDOW` at the summit with
+`HILLTOP` (the top of `SLEEP_HILL`, clear of fog), `SLEEP_APPROACH` (the side path), `SLEEP_LEDGE`
+(the safe launch footing), `CURTAIN_KNOT` and `CURTAIN_END` (beyond the exposed lip), `LAMP`, `WINDOW` with
 `WINDOW_INTO` (the way the light comes through it down toward the bed), and `bedside` (where the child stands).
 
 **Driven values**, all 0..1, all eased inside the module (`tuning.sleeping.ease`) so a chapter setting one never
@@ -104,7 +105,7 @@ pops. Defaults in brackets.
 
 | value | 0 | 1 |
 | --- | --- | --- |
-| `fog` [1] | no fog at all | the night's full pooling in the hollow |
+| `fog` [1] | no fog at all | the night's full pooling around the terrace |
 | `frost` [0] | bare grass | frost hard in from the rim right up to the bed |
 | `dawn` [0] | night | the first sun down the whole hill, the fog burnt back, the lamp overtaken |
 | `curtains` [0] | drawn | thrown open, gathered at the sides, with the light coming through |
@@ -146,30 +147,37 @@ The lamp shade's emission fades with the lamp as dawn arrives.
   `goal` so it can never be lost and never has to be fetched — the paper plane's idea, slower and floatier. A
   stroke that crosses it on screen carries it directly (`brush`), as one that crosses the plane does.
   While walking, `follow` references the cygnet position; `featherLead`/`featherCatch` softly limit the
-  guide's lead. Final ground contact is sampled after movement and this constraint.
+  guide's lead. `routeStart` and `goal` define the current walking corridor. During that guided walk,
+  screen strokes build `encouragement`; forward speed responds while lateral drift remains bounded.
+  World-projected swipes cannot reverse it down the hill. Final ground contact is sampled after movement.
 - `fogTopAt(x, z)` is the height of the fog's top surface, so a bird climbing the hill can be told when it is
   out of it. It ignores what has been carved: it answers for the fog as a whole, not for the hole you just made.
 
-**What the story drives** (`src/story/sleeping.ts`): `frost` up through the night and back down with `dawn`;
-`fog` and `fogTop` through the climb; `sleeper` while the child is in bed; screen brush feedback through
-`bedWind`; `pillowPuff()` and `feather.release`/`feather.goal`; `lane(HILLTOP, BED, ...)` with `laneOpen`
-advancing as the bird glides; `curtains` opening at takeoff; and `dawn` reaching 1 at the bed.
+**Story and contact.** The child takes roughly 26 seconds to pause, place the bird, sit, drowse, recline,
+pull up the quilt and settle. `Traveller.sleepiness` and `yawn` default to zero; yawns are silent. Reclining
+interpolates supported hips, and `blanketEdge()` exposes the cloth crease for the mitten targets.
+`blanketPull` lifts that crease while the hands draw it up. The folded end is the head end of the bed. The quilt covers the flattened coat; legs settle along the
+mattress, and the scarf uses the posed body and mattress for collision. Scarf shading receives the lamp
+and dawn alongside the coat.
 
-The pillow releases only after the unanswered call and real screen-space brushing. At the summit,
-`twirlGain` raises local circling sensitivity and the healed bird waits for actual lift. The updraft
-starts the glide and opens the summit curtains over `curtainsFor` seconds. The camera holds both for
-`windowRevealFor` before following the bird. No timeout completes either interaction. The walk and
-shiver remain assisted. Bedside subjects include both travellers; climb and summit subjects include
-the cygnet and window. The same `feather` and `morning` checkpoints restore these states without
-replaying the bedside gesture.
+The pillow releases after the unanswered call, a view of the warm seam and real brushing. The side path
+ends at `SLEEP_LEDGE`, where the bird studies the unreachable ribbon and releases its healed wing.
+`twirlGain` only assists circles during `hilltop`; real lift starts `reachRibbon`, not the return glide.
+`Cygnet.billGrip`/`billGripWeight` solve contact at the posed bill tip. `flightPose` keeps the wings and feet
+in an airborne pose through the reach. The creature's grass depth offset fades to zero so the ribbon can correctly occlude the bill. `pullRibbon` advances only while contact is maintained. Pulling the loose
+end the full `ribbonPull` distance sets `ribbon.released`; only then may `curtains` open. `SleepingIsland`
+enforces closed curtains while the ribbon is tied. `sleeping-ribbon.ts` draws the shrinking knot and tail.
 
-The lower crest is 21 metres from the bed; its window has a warm surface behind its linen curtains, visible through a narrow seam before
-takeoff. Its short shaft meets the shared dawn lane down the hill. The mattress and pillow are rounded
-cushions. The blanket follows a sleeping body mound and eases back as the child sits up. `Traveller`
-resets the coat scale before applying any current sleeping pose. `tools/sleeping-logic-check.mjs`
-checks the complete state arc; `tools/sleeping-check.mjs` checks real mouse and touch gestures,
-visibility at both targets and during the window opening, the tucked plane during the embrace,
-continuous departure framing, dawn and boarding.
+The released knot starts one continued glide, counted as the same flight as takeoff. Light advances from
+`WINDOW` to `BED` through `laneOpen`. Wind adds support to the safe return; no crash/retry follows commitment.
+The camera retains the window for `windowRevealFor` before following the bird. Both `feather` and `morning`
+checkpoint names retain their schema; morning restoration also releases the ribbon. The exposed lip and
+bed terrace are mirrored in CPU/GLSL terrain and explicitly sampled by the height parity check.
+
+`tools/sleeping-logic-check.mjs` checks progression, idle gates, physical contact, terrace/drop and assisted
+versus idle feather travel. `tools/sleeping-check.mjs` checks real mouse/touch gestures, portrait/landscape
+framing, bedtime, beak grip, opening, dawn and boarding. `SUMMIT=1` isolates the ledge for visual iteration;
+that staged mode is not a full playthrough. `tools/wing-care-check.mjs` retains the healing and one-flight gates.
 
 Winter grass uses a finer tile only within `swardDetailTo` of the camera on this island; the extra
 density fades between `swardDetailFrom` and `swardDetailTo`. The sparse phone tier reserves at most

@@ -87,6 +87,7 @@ export interface Rig {
   legL: THREE.Group;
   legR: THREE.Group;
   eyes: THREE.Mesh;
+  mouth: THREE.Mesh;
   handR: THREE.Object3D;
   neck: THREE.Object3D;
   /** Places on the child where a companion rides. They belong to the bones they sit on, so a passenger gets every lean, breath and step for free. */
@@ -179,6 +180,11 @@ export function buildChild(): Rig {
   head.add(mesh([face, hood, tip, tipEnd, pompom, rim, ...cheeks]));
   const eyes = mesh([-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.04, 8, 6), s * 0.12, 0.0, 0.405, 1, 1.25, 0.6), PALETTE.eye)));
   head.add(eyes);
+  const yawnMouth = mesh([paint(new THREE.SphereGeometry(0.055, 12, 10), PALETTE.eye)]);
+  yawnMouth.position.set(0, -0.135, 0.397);
+  yawnMouth.scale.set(0.7, 1, 0.25);
+  yawnMouth.visible = false;
+  head.add(yawnMouth);
 
   const arm = (side: number) => {
     const g = new THREE.Group();
@@ -256,6 +262,7 @@ export function buildChild(): Rig {
     legL: leg(-1),
     legR: leg(1),
     eyes,
+    mouth: yawnMouth,
     handR: right.hand,
     neck,
     material,

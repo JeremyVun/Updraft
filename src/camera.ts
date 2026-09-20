@@ -33,7 +33,7 @@ export interface Shot {
   /** An authored continuous threshold move supplies its own easing and ground clearance. */
   exact?: boolean;
   /** Optional playable pair. Fit both within a bounded retreat; the primary always keeps the frame. */
-  subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; margin: number; extra: number };
+  subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3; margin: number; extra: number };
 }
 
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
@@ -53,6 +53,7 @@ export class CameraRig {
   private fitBack = 0;
   private readonly local = new THREE.Vector3();
   private readonly second = new THREE.Vector3();
+  private readonly third = new THREE.Vector3();
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private readonly back = new THREE.Vector3();
@@ -151,7 +152,7 @@ export class CameraRig {
     const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
     const horizontal = vertical * camera.aspect;
     let needed = 0;
-    for (const point of [pair.primary, pair.secondary]) {
+    for (const point of [pair.primary, pair.secondary, ...(pair.tertiary ? [pair.tertiary] : [])]) {
       this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
       needed = Math.max(needed, Math.abs(this.local.x) / horizontal + this.local.z,
         Math.abs(this.local.y) / vertical + this.local.z);
@@ -165,16 +166,18 @@ export class CameraRig {
     const depth = Math.max(1, -this.local.z);
     this.second.copy(pair.secondary).applyMatrix4(camera.matrixWorldInverse);
     const otherDepth = Math.max(1, -this.second.z);
+    this.third.copy(pair.tertiary ?? pair.secondary).applyMatrix4(camera.matrixWorldInverse);
+    const thirdDepth = Math.max(1, -this.third.z);
     // Recompose within the available room before asking for any more distance. If an old runaway
     // cannot fit, the child's interval wins until the plane has flown back into reach.
-    const shift = (a: number, b: number, slope: number): number => {
+    const shift = (a: number, b: number, c: number, slope: number): number => {
       const lo = a - depth * slope, hi = a + depth * slope;
-      const bothLo = Math.max(lo, b - otherDepth * slope);
-      const bothHi = Math.min(hi, b + otherDepth * slope);
+      const bothLo = Math.max(lo, b - otherDepth * slope, c - thirdDepth * slope);
+      const bothHi = Math.min(hi, b + otherDepth * slope, c + thirdDepth * slope);
       return bothLo <= bothHi ? THREE.MathUtils.clamp(0, bothLo, bothHi) : THREE.MathUtils.clamp(0, lo, hi);
     };
-    const x = shift(this.local.x, this.second.x, horizontal);
-    const y = shift(this.local.y, this.second.y, vertical);
+    const x = shift(this.local.x, this.second.x, this.third.x, horizontal);
+    const y = shift(this.local.y, this.second.y, this.third.y, vertical);
     camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
     camera.position.y = Math.max(camera.position.y, Math.max(heightAt(camera.position.x, camera.position.z), 0) + this.clear);
     this.fitOffset.subVectors(camera.position, this.fitOrigin);

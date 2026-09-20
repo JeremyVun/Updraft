@@ -7,6 +7,7 @@
 //                   change spikes against their neighbours: pops, flashes, reshuffles
 //   query is appended to ?shot=1; steps use tools/play.mjs syntax (wait, swipe, move, down, up, eval).
 //   env: BASE (default http://127.0.0.1:5230/), DSF (device scale factor, default 1), W/H viewport (1600x900)
+//        WARMUP (milliseconds after ready before measurement, default 1500)
 //        WHOLE / BLOCK flicker spike thresholds (default 1.5 / 8; lower them for a frozen world, `hold=`)
 // Takes the same machine-wide browser lock as tools/play.mjs. Note that other processes using the GPU
 // (another capture, a browser playing video) inflate every number here: check before trusting a run.
@@ -187,12 +188,24 @@ try {
     cdp = await context.newCDPSession(page);
     await cdp.send('Profiler.enable');
     await cdp.send('Profiler.setSamplingInterval', { interval: 500 });
-    await cdp.send('Profiler.start');
   }
   const t0 = Date.now();
   await page.goto(`${base}?shot=1${query ? '&' + query : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
   const readyMs = Date.now() - t0;
+  await page.waitForTimeout(Number(process.env.WARMUP ?? 1500));
+  // Boot compilation/uploads and veil callbacks are not steady-state frame cost.
+  // Reset every instrument together so modes cover the same measurement window.
+  await page.evaluate(() => {
+    window.__t0 = performance.now();
+    window.__perfMeasuring = true;
+    window.__frames = [];
+    window.__long = [];
+    window.__gl = {};
+    window.__flick = [];
+  });
+  if (cdp) await cdp.send('Profiler.start');
+  const measuredAt = Date.now();
   const px = ([x, y]) => [x * width, y * height];
   for (const s of steps) {
     if (s.wait) await page.waitForTimeout(s.wait);
@@ -217,8 +230,11 @@ try {
       }
     }
   }
-  const remaining = secs * 1000 - (Date.now() - t0 - readyMs);
+  const remaining = secs * 1000 - (Date.now() - measuredAt);
   if (remaining > 0) await page.waitForTimeout(remaining);
+  if (!await page.evaluate(() => window.__perfMeasuring && window.__ready)) {
+    throw new Error('Measurement invalidated by a reload or failed game. Repeat against a stable build.');
+  }
   const stats = await page.evaluate(() => window.__stats ?? null);
   const med = (a) => {
     const s = [...a].sort((x, y) => x - y);
@@ -232,14 +248,14 @@ try {
     for (let i = 1; i < f.length; i++) dts.push(f[i] - f[i - 1]);
     const sorted = [...dts].sort((a, b) => a - b);
     const p = (q) => sorted[Math.floor(q * (sorted.length - 1))].toFixed(1);
-    console.log(`ready in ${readyMs} ms, first frame ${(f[0] - d.t0).toFixed(0)} ms after script start, ${dts.length} frames`);
+    console.log(`ready in ${readyMs} ms; ${dts.length} measured frame intervals after warmup`);
     console.log(`interval p50 ${p(0.5)}  p90 ${p(0.9)}  p99 ${p(0.99)}  max ${p(1)} ms;  >25 ms: ${dts.filter((x) => x > 25).length}  >50 ms: ${dts.filter((x) => x > 50).length}  >100 ms: ${dts.filter((x) => x > 100).length}`);
     const hitches = dts.map((x, i) => [((f[i + 1] - f[0]) / 1000).toFixed(2), x.toFixed(0)]).filter(([, x]) => Number(x) > 25);
     console.log('hitches (s after first frame: ms):', hitches.slice(0, 50).map(([t, x]) => `${t}:${x}`).join(' ') || 'none');
-    console.log('long tasks:', d.long.slice(0, 20).map(([s, x]) => `${((s - d.t0) / 1000).toFixed(2)}s:${x.toFixed(0)}ms`).join(' ') || 'none');
+    console.log('long tasks:', d.long.filter(([s]) => s >= d.t0).slice(0, 20).map(([s, x]) => `${((s - d.t0) / 1000).toFixed(2)}s:${x.toFixed(0)}ms`).join(' ') || 'none');
   } else if (mode === 'gl') {
     const gl = await page.evaluate(() => window.__gl);
-    console.log(`native WebGL calls over ${secs} s from load (count, main-thread total, worst)`);
+    console.log(`native WebGL calls over ${secs} s after warmup (count, main-thread total, worst)`);
     for (const [k, v] of Object.entries(gl).sort((a, b) => b[1].ms - a[1].ms).slice(0, 12)) {
       console.log(`  ${k.padEnd(28)} n=${String(v.n).padStart(7)}  total ${v.ms.toFixed(0).padStart(6)} ms  max ${v.max.toFixed(1)} ms`);
     }
@@ -267,7 +283,7 @@ try {
         total.set(k, (total.get(k) ?? 0) + ms);
       }
     }
-    console.log(`${(sum / 1000).toFixed(1)} s profiled from load (native WebGL time is charged to the calling function)`);
+    console.log(`${(sum / 1000).toFixed(1)} s profiled after warmup (native WebGL time is charged to the calling function)`);
     console.log('top self time (ms):');
     for (const [k, v] of [...self].sort((a, b) => b[1] - a[1]).slice(0, 20)) console.log(`  ${v.toFixed(0).padStart(6)}  ${k}`);
     console.log('top total time (ms):');

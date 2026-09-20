@@ -559,67 +559,27 @@ the red sail and the swing's controlled exit; `NATURAL=1` also checks the walkin
 **The sleeping island** — approved by Jeremy, including the one call that nothing answers. After the dark wood,
 before dawn. **The one room where the player leads the bird.**
 
-**September 20 playtest correction:** the implementation below is not yet narratively successful. Jeremy
-found the feather difficult to lead, the curtain opening uncaused, the flight unnecessary and the sequence
-rushed. He also rejected the bed's depression and corrected his earlier assessment of the window's distance.
-See [the narrative repair proposal](sleeping.md) for his brief, a physical curtain-release mechanism and the
-comprehension checks. That proposal is not implemented or playtested; retain this distinction when continuing.
+September 20: Jeremy approved the [narrative repair](sleeping.md): “yep sounds good. approved. proceed
+with implementing this”. It replaces the automatic curtain opening and walkable flight destination.
 
-- *Why they sleep.* The child has been up all night in a storm. A short hop from the wood there is a small frosted
-  island with **a bed made up in the grass** in a hollow, and a ground fog pooling round it. Every other fragment
-  of home is harmless. This is the one that asks them to stop. The child climbs in, the fledgling on the blanket.
-  They are plainly only asleep — breathing, the scarf rising and falling — so what worries the player is not the
-  child but what is coming for them: the fog thickens, frost creeps in across the grass toward the bed, and the
-  light goes blue. Winter has caught up.
-- *The bird tries by itself.* It tugs the scarf, begs with a flutter, pushes under the child's hand. The child
-  turns over. If the player blows on the bed, the blanket lifts and the child pulls it tighter: answered, and no
-  use. Then it **calls once — the low hopeful call from the meadow crest, not the distress cry — and nothing
-  answers**, exactly as nothing answered there. (Calls and is refused twice, by its family and by the child; the
-  third time, at the end, something answers. This spends the voice one more time than the rule above allows, so
-  it is Jeremy's call.)
-- *A bedroom that is not there.* The bed stands among fragments of the child's room, none of them joined to
-  anything: a rug and a few floorboards under it that give out into frosted grass; a bedside lamp, lit, the one
-  warm light in the blue; and overhead, things the wrong way up — a chair and a desk hanging from the fog as if the ceiling were a floor, a
-  ceiling lamp growing up out of the grass on its flex. Nothing is explained.
-- *The plane is out of play* (Jeremy). The child falls asleep holding it against their chest, the way you hold
-  something you are not going to let go of. It is not lost and nobody has to fetch it.
-- *A feather leads the bird.* When the player blows on the bed to wake the child, the pillow gives up a puff of
-  down and **one long white feather**, which hangs in the air. The cygnet's parents are white. It looks at the
-  feather, and at the child, and follows it. The child follows a paper plane with home drawn on it; the bird
-  follows a white feather: each of them is led by a scrap of where they belong. **The controls do not change at
-  all** — the player blows a light thing along and somebody follows it, and like the plane it leans toward where
-  the story wants them and never has to be fetched — so nothing new is taught. It is slower and floatier than the
-  plane. A sliver of warmth between the curtains of a **window standing at the summit** gives the climb
-  a destination. The camera comes down to the bird's eye level and the same world is enormous.
-- *Its fear is leaving the child.* It has never once been out of their sight. It stops at the edge of the trodden
-  grass and looks back, twice, before it goes. Uphill the fog shuts behind it and the bed is gone; it sits down
-  and shivers, which until now only the child being near could stop. Here a soft breeze from the player ruffles
-  its down and it gets up. The player is its company on this walk. (After a few seconds it gets up regardless.)
-- *The fog is this room's.* The player's gestures carve clear lanes through it that close again slowly, so the
-  climb is made a few paces of clear air at a time. The grass is short and frosted so a small bird stays legible.
-- *What wakes the child is morning, and the bird brings it.* At the summit, a window holds the morning
-  behind its curtains. The healed bird opens its wings and the loose bandage unwinds into the wind.
-  The player's updraft lifts the bird and throws the curtains open. **Light spills down the hill from
-  the window**, clearing fog and frost as the cygnet glides back to the bed along it. The light reaches
-  the child's face as the bird lands on the blanket. They wake up warm with a bird in their lap.
-- *What it is for.* In the wood the child went into the dark to find the bird with light. Here the bird goes out
-  alone and brings the light back. And it is the first time it flies *to* the child, which is what makes it
-  flying *away* from them at the end cost something. The flight arc becomes: falls and is cared for, swims back to the child,
-  cannot help in the dark, glides for the first time because someone needs it to, flies.
-- *Gentle, with two moments of agency.* A brush of the pillow after the call releases the feather; circles at the summit lift the bird. Both wait for real input and show the shared wind invitations. The feather assists the walk and stays near the cygnet, and the shiver still ends by itself. The sky stays cold until the glide brings morning.
-- The long crossing then begins in the sunrise the bird brought, so it is still the exhale.
+- The exhausted child yawns, sits, resists sleep, reclines and draws up the quilt on an open grassy terrace.
+  The bird tries to wake them and calls once; nothing answers. This is the previously approved exception to
+  the two protagonists' silence. The plane stays tucked away through bedtime and the reunion.
+- A pillow stroke frees the white feather. Broad strokes encourage it along an assisted route, up the side
+  of the hill; it stays near the bird. One look back and a shiver establish leaving the child's company.
+- The window holds a seam of morning above an exposed shoulder. Its curtains are tied with a ribbon whose
+  loose end hangs beyond the lip. A side view shows the safe ledge, ribbon and drop. The bird reaches,
+  hesitates, looks back and tests its healed wing; the bandage unwinds before flight is possible.
+- Real circles lift the bird into a short reach for the ribbon. Beak contact and the physical tug release
+  the knot. Wind alone cannot open the curtains. Having left the ledge to free the ribbon, it has no footing
+  beneath it and glides home on the player's wind. Continued input supports the glide; letting go is safe.
+- Morning spills from the opened window, clears frost and turns the island green along the return route,
+  then spreads across the island. The bird lands; light reaches the pillow; the child wakes and gathers it
+  into their lap. The long crossing begins in the sunrise the bird brought.
 
-September 20 review: Jeremy approved the polish with “yep proceed”. The pass keeps the role reversal and
-assisted climb, makes feather release and takeoff player-led, and improves the sleeping pose, bedding,
-lamp, mist and portrait composition. Jeremy then moved the window to the summit: “opening it releases
-morning down the hill.” This supersedes the bedside-window concept. His portrait review then asked
-for a nearer destination: the crest is 12 metres closer, lower, and the window slightly larger. The `feather` and `morning` checkpoints retain their existing schema. Jeremy then asked for
-“lighting, grass, colour grading” to better fit the game's visual design and the chapter setting.
-Jeremy clarified the emotion: “There should be a strong contrast between the sleeping and the morning
-light coming through the curtains, lighting up the island and turning it all vibrant and green again”.
-The refinement keeps a cold, lonely night around the warm bed, then brings golden light and fresh green
-down the hill and across the island. Softer turf, a supported embrace and a camera that follows the
-departure support that release.
+The role reversal remains: in the wood the child carries light to the bird; here the bird brings light to
+the child. Its first flight *to* the child gives weight to flying *away* at the ending. See `sleeping.md` for
+staging and comprehension criteria, and `contracts/world.md` for the curtain/contact and feather contracts.
 
 **The sky mirror** — implemented locally; see `rooms.md`. After the dolphins and the brave swim, the boat
 reaches a flat under a thin film of water. A child-sized soap hoop makes bubbles in the player's wind.

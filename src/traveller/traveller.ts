@@ -111,6 +111,9 @@ export class Traveller {
   tighter = 0;
   /** Eyes shut. While it is up they are asleep however much of the lying pose they are in. */
   eyesShut = 0;
+  /** Story-authored drowsiness and silent yawns; both zero outside the bedtime passage. */
+  sleepiness = 0;
+  yawn = 0;
   private readonly rig: Rig;
   private goal: Goal | null = null;
   private action: Action | null = null;
@@ -127,6 +130,10 @@ export class Traveller {
   private readonly abedGlide = new Glide();
   private readonly sideGlide = new Glide();
   private readonly shutGlide = new Glide();
+  private readonly yawnGlide = new Glide();
+  private readonly hipFrom = new THREE.Vector3();
+  private readonly hipTo = new THREE.Vector3();
+  private readonly hipPivot = new THREE.Vector3(0, 0.62 * 1.12, 0);
   private readonly bedAt = new THREE.Vector3();
   private bedYaw = 0;
   private readonly lie = new THREE.Quaternion();
@@ -486,7 +493,12 @@ export class Traveller {
 
     const neck = this.rig.neck.getWorldPosition(this.tmp);
     const centre = this.tmp2.set(p.x, p.y + (this.sitting ? 0.7 : 1.1), p.z);
-    this.scarf.update(dt, neck, centre, 0.52, w, this.riding ? p.y - 0.2 : Math.max(this.ground(p.x, p.z), 0), p);
+    const onBed = THREE.MathUtils.smoothstep(this.abed, 0.2, 0.8);
+    if (onBed > 0) this.rig.body.localToWorld(centre.set(0, 0.45, 0.1));
+    const floor = this.riding ? p.y - 0.2 : Math.max(this.ground(p.x, p.z), 0);
+    const mattress = this.bedAt.y - tuning.sleeping.lieHigh + 0.68;
+    this.scarf.update(dt, neck, centre, THREE.MathUtils.lerp(0.52, 0.36, onBed), w,
+      THREE.MathUtils.lerp(floor, mattress, onBed), p);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
@@ -844,6 +856,20 @@ export class Traveller {
     r.coat.scale.set(1, 1, 1);
     const abed = this.abedGlide.step(this.abed, 0.8, dt || 1);
     if (abed > 0.001) this.layDown(abed, t, dt || 1);
+    const yawn = this.yawnGlide.step(this.yawn, 0.35, dt || 1);
+    const shut = this.shutGlide.step(Math.max(this.eyesShut, yawn * 0.9), 0.4, dt || 1);
+    r.eyes.scale.y = Math.min(r.eyes.scale.y, THREE.MathUtils.lerp(1, 0.15, shut));
+    r.head.rotation.x += this.sleepiness * 0.24 * (1 - abed) - yawn * 0.2;
+    r.body.rotation.x += this.sleepiness * 0.07 * (1 - abed);
+    r.body.scale.y *= 1 + yawn * 0.025;
+    r.mouth.visible = yawn > 0.025;
+    r.mouth.scale.y = 0.2 + yawn * 1.2;
+    // A hand covers the yawn once the bird is safely on the blanket. Contact IK still has the final say.
+    if (!this.armsFull && abed < 0.2) {
+      r.armR.rotation.x = THREE.MathUtils.lerp(r.armR.rotation.x, -2.0, yawn);
+      r.armR.rotation.z = THREE.MathUtils.lerp(r.armR.rotation.z, -0.2, yawn);
+      r.foreR.rotation.x = THREE.MathUtils.lerp(r.foreR.rotation.x, -1.0, yawn);
+    }
     r.root.updateMatrixWorld(true);
     for (const hand of [0, 1] as const) {
       this.reachNow[hand] = THREE.MathUtils.clamp(this.reachGlide[hand].step(this.reachWant[hand], 0.45, dt), 0, 1);
@@ -865,8 +891,12 @@ export class Traveller {
       .setFromAxisAngle(this.axisY, this.bedYaw)
       .multiply(this.spin.setFromAxisAngle(this.axisX, -Math.PI / 2 + s.lieTip))
       .multiply(this.spin.setFromAxisAngle(this.axisY, (0.8 + side * 0.2) * s.lieSide));
+    // Recline around the hips, so the seat remains supported as the shoulders find the pillow.
+    this.hipFrom.copy(this.hipPivot).applyQuaternion(r.root.quaternion).add(r.root.position);
+    this.hipTo.copy(this.hipPivot).applyQuaternion(this.lie).add(this.bedAt);
     r.root.quaternion.slerp(this.lie, w);
-    r.root.position.lerp(this.bedAt, w);
+    r.root.position.lerpVectors(this.hipFrom, this.hipTo, w)
+      .sub(this.tmp.copy(this.hipPivot).applyQuaternion(r.root.quaternion));
     /** Breathing, which is the whole point of the beat: the scarf hangs off the neck and rises and falls with it. */
     const breath = Math.sin(t * 0.75) * 0.045 * w;
     r.body.position.set(0, THREE.MathUtils.lerp(r.body.position.y, 0.62 + breath, w), THREE.MathUtils.lerp(r.body.position.z, 0, w));
@@ -874,10 +904,10 @@ export class Traveller {
     r.body.rotation.z = THREE.MathUtils.lerp(r.body.rotation.z, 0, w);
     /** Only the bell is flattened: the head, the hood and the mittens on top of the blanket keep their size. */
     r.coat.scale.set(THREE.MathUtils.lerp(1, s.lieSquash * (1 + breath * 0.8), w), 1, THREE.MathUtils.lerp(1, s.lieDeep, w));
-    /** Knees drawn up under the blanket, and the arms round the plane, drawn in tighter every time they are woken. */
+    /** Boots settle along the mattress; folding the one-piece legs sharply drives them through it. */
     const curl = w * 0.9;
-    r.legL.rotation.set(THREE.MathUtils.lerp(r.legL.rotation.x, 1.15, curl), 0, -0.12);
-    r.legR.rotation.set(THREE.MathUtils.lerp(r.legR.rotation.x, 1.0, curl), 0, 0.12);
+    r.legL.rotation.set(THREE.MathUtils.lerp(r.legL.rotation.x, 0.10, curl), 0, -0.12);
+    r.legR.rotation.set(THREE.MathUtils.lerp(r.legR.rotation.x, 0.06, curl), 0, 0.12);
     /** Both arms round what they are holding, drawn in under the chin, and tighter every time they are woken. */
     const hug = w;
     r.armL.rotation.set(THREE.MathUtils.lerp(r.armL.rotation.x, 0.15, w), 0, THREE.MathUtils.lerp(r.armL.rotation.z, 0.12, w));
@@ -887,8 +917,7 @@ export class Traveller {
     /** Chin down toward the plane against their chest, the way a child actually sleeps holding something. */
     r.head.rotation.x = THREE.MathUtils.lerp(r.head.rotation.x, 0.3, w);
     r.head.rotation.y = THREE.MathUtils.lerp(r.head.rotation.y, -0.2 * side, w);
-    const shut = this.shutGlide.step(this.eyesShut, 0.5, dt);
-    if (shut > 0.5) r.eyes.scale.set(1, 0.15, 1);
+
   }
 
   /**

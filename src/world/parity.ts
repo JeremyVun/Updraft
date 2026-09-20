@@ -4,7 +4,7 @@ import { HEIGHTFIELD_GLSL, SLEEP_HILL, worldHeight } from './heightfield';
 
 import { LITTLE_BOATS, boatsX, boatsWidth } from './little-boats-layout';
 
-const SAMPLES = 132;
+const SAMPLES = 138;
 
 /** Largest gap between the GPU and CPU height functions over scattered points (QA only; stalls the GPU once). */
 export function measureHeightParity(renderer: THREE.WebGLRenderer): number {
@@ -25,6 +25,7 @@ export function measureHeightParity(renderer: THREE.WebGLRenderer): number {
   for (let i = 0; i < 8; i++) points.push(new THREE.Vector2(-23 + (i % 2) * 12, -744 + i * 6));
   // The shorter sleeping ascent must put the cygnet and summit window on the same ground on CPU and GPU.
   for (let i = 0; i < 12; i++) points.push(new THREE.Vector2(SLEEP_HILL.x + (i % 3 - 1) * 4, SLEEP_HILL.z + Math.floor(i / 3) * 5));
+  for (const [x,z] of [[-180,-1938.8],[-180,-1938.2],[-180,-1937.6],[-177.3,-1939.6],[-176.5,-1911],[-172,-1940]]) points.push(new THREE.Vector2(x,z));
   const target = simTarget(SAMPLES, 1, THREE.FloatType, THREE.NearestFilter);
   const mat = simMaterial(
     /* glsl */ `

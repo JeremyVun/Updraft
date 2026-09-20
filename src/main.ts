@@ -30,7 +30,7 @@ import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { gpuIdle, precompile, precompileSim, warmRender, yieldBoot } from './gl/boot';
-import { Quality } from './gl/quality';
+import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { endFrame, pollReadbacks, readbackStats } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
 import { Post } from './post/post';
@@ -347,11 +347,22 @@ const doorwayView = new DoorwayView(renderer, scene, terrain, water,
   [shoreGrass, shoreFamily.group, kite.group],
   [{ objects: [...child.objects, ...glider.objects], at: child.position }, { objects: cygnet.objects, at: cygnet.position }]);
 const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, coarsePointer ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
+  const resizeTargets = pixelRatio !== level.ratio || post.samples !== level.samples;
   pixelRatio = level.ratio;
   post.samples = level.samples;
-  resize();
-});
+  applyWorldQuality(level);
+  if (resizeTargets) resize();
+}, coarsePointer ? 1 : 2);
+function applyWorldQuality(level: QualityLevel, immediate = false): void {
+  const detail = WORLD_QUALITY[params.lite ? 0 : level.detail];
+  grass.setQuality(detail.grassDensity, detail.grassReach, immediate);
+  terrain.detail = detail.terrainSplit;
+  water.mirrorEvery = detail.mirrorEvery;
+  water.mirrorScale = detail.mirrorScale;
+}
+applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;
+post.samples = quality.level.samples;
 
 const sound = new Soundscape();
 const soundButton = document.getElementById('sound') as HTMLButtonElement;
@@ -515,7 +526,7 @@ function frame(now: number): void {
     birches.scarf.brush(rig.camera, input, wind, dt);
     birches.swing.brush(rig.camera, input, wind);
   }
-  if (input.present) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
+  if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
   story.current.brushDry?.(emberBreath);
   skyMirror.brush(dt, time, input, rig.camera);
@@ -726,7 +737,7 @@ function frame(now: number): void {
   u.uCloudDomain.value.set(cam.x - CLOUD_SPAN / 2, cam.z - CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN);
   clouds.update();
   terrain.update(rig.camera);
-  grass.update(rig.camera);
+  grass.update(rig.camera, dt);
   grass.bake(renderer);
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm);
@@ -790,6 +801,7 @@ function frame(now: number): void {
         `fps ${fps.toFixed(0)}  frame p50 ${percentile(intervals, 0.5).toFixed(0)} p90 ${percentile(intervals, 0.9).toFixed(0)} max ${Math.max(...intervals).toFixed(0)} ms`,
         `cpu (js in frame) p50 ${percentile(cpuTimes, 0.5).toFixed(1)} p90 ${percentile(cpuTimes, 0.9).toFixed(1)} ms${params.lite ? '  LITE' : ''}`,
         `scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
+        `grass ${(grass.quality.density * 100).toFixed(0)}%  reach ${(grass.quality.reach * 100).toFixed(0)}%  detail ${quality.level.detail}`,
         `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms`,
         `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
         `boot ${bootMs.toFixed(0)} ms  ${story.name}`,
@@ -807,6 +819,9 @@ function frame(now: number): void {
       leaves: terrain.leaves,
       ratio: pixelRatio,
       samples: post.samples,
+      worldDetail: quality.level.detail,
+      grassDensity: grass.quality.density,
+      grassReach: grass.quality.reach,
       readbacksSkipped: readbackStats.skipped,
       readbacksForced: readbackStats.forced,
       readbacksDelivered: readbackStats.delivered,
@@ -819,7 +834,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond };
+  window.__game = { quality, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond };
 }
 
 /**
@@ -831,8 +846,11 @@ async function boot(): Promise<void> {
   await yieldBoot();
   await precompile(renderer, scene, rig.camera, post.sceneTarget);
   await precompileSim(renderer, bakes.ground);
+  await grass.precompile(renderer);
   await yieldBoot();
   followWindow(...windowAim(), true);
+  grass.update(rig.camera);
+  grass.bake(renderer);
   if (params.shot) heightParity = measureHeightParity(renderer);
   await gpuIdle(renderer);
   await yieldBoot();

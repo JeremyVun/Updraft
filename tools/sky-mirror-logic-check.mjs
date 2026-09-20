@@ -77,16 +77,19 @@ const results=[];
 // Actual sailing physics stop alongside the entry jetty, well before the walkable shallows.
 {
   const f=fixture(60),{boat}=f.cast;
-  boat.beach(-455,MIRROR_LANDING.z+33,Math.PI);boat.afloat=true;
+  boat.beach(-542,-2253,MIRROR_LANDING.yaw);boat.afloat=true;
   f.chapter=new CrossingChapter(f.cast,{route:[ROUTES.toMirror.at(-1)],moor:MIRROR_LANDING,arrivalSpeed:3});
   for(let i=0;i<60*90 && !f.chapter.done;i++) {
     f.step();assert(mirrorBed(boat.position.x,boat.position.z)<-2,'arrival hull stays in deep water');
   }
   assert(f.chapter.done,'boat reaches its mooring');
   f.chapter=new SkyMirrorChapter(f.cast);
-  for(let i=0;i<60*23;i++) {
+  const d=MIRROR_ENTRY_DECK,dx=d.x1-d.x0,dz=d.z1-d.z0,length=Math.hypot(dx,dz);
+  assert(length<17,'arrival jetty stays the same length as the departure jetty');
+  for(let i=0;i<60*12;i++) {
     f.step();const p=f.cast.child.position;
-    if(p.z>MIRROR_ENTRY_DECK.z1)assert(Math.abs(p.x-MIRROR_ENTRY_DECK.x0)<0.2 && p.y>=0.27,'walk stays on entry planks');
+    const along=((p.x-d.x0)*dx+(p.z-d.z0)*dz)/length;
+    if(along<length)assert(Math.abs((p.x-d.x0)*dz-(p.z-d.z0)*dx)/length<0.2 && p.y>=0.27,'walk stays on entry planks');
   }
   assert(f.cast.child.position.z<MIRROR_ENTRY_DECK.z1,'child steps from the jetty onto the flat');
 }
@@ -142,7 +145,7 @@ for(const [fps,portrait] of (process.env.RESTORE_ONLY?[]:[[60,false],[30,true]])
     if(!room.holdingWand && !f.cast.cygnet.carried && f.cast.child.moving)sharedWalk+=1/fps;
   }
   assert.equal(c.beat,'play',`arrival must reach the wand: child ${f.cast.child.position.toArray()}, stand ${c.stand.toArray()}, moving ${f.cast.child.moving}, acting ${f.cast.child.acting}, paper ${f.cast.plane.position.toArray()}, held ${f.cast.plane.held}, landed ${f.cast.plane.landed}`);
-  assert(sharedWalk>10,'the cygnet walks with the child across the arrival flat');
+  assert(sharedWalk>24,'the extra walking is on the open mirror with the cygnet, not on a longer jetty');
   const wand=room.wand.clone().project(f.rig.camera),star=room.stars[0].origin.clone().project(f.rig.camera);
   assert(Math.abs(wand.x-star.x)>0.2,'hoop and target must read side by side');
   for(const at of [room.wand,room.stars[0].origin,f.cast.child.position]) {

@@ -61,7 +61,7 @@ function homeAt(x: number, z: number): number {
 }
 import { heightAt } from './island';
 import { shaderFbm, smoothstep } from './noise';
-import { WINDOW } from './window';
+import { WINDOW, onWindowMove } from './window';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 const TILE = 8;
@@ -280,15 +280,30 @@ uniform vec2 uSink;
 uniform vec2 uLevelDensity;
 uniform vec2 uLevelWidth;
 uniform vec2 uClose;
+uniform vec2 uQualityClose;
 uniform float uShrinkBand;
 uniform float uDensity;
+uniform float uDensityPrevious;
+uniform float uQualityBlend;
 float densityAt(float dist) {
   return mix(mix(1.0, uLevelDensity.x, smoothstep(uRings.x, uRings.y, dist)), uLevelDensity.y, smoothstep(uRings.z, uRings.w, dist));
 }
-float bladeDensity(vec2 root, float dist) {
+float bladeDensityFor(vec2 root, float dist, float density) {
   float near = 1.0 - smoothstep(${glsl(SLEEP.swardDetailFrom)}, ${glsl(SLEEP.swardDetailTo)}, dist);
   float winter = 1.0 - smoothstep(0.72, 1.06, length((root - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})));
-  return min(1.0, uDensity * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near));
+  return min(1.0, density * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near));
+}
+float bladeDensity(vec2 root, float dist) {
+  return bladeDensityFor(root, dist, max(uDensity, uDensityPrevious));
+}
+float qualityCloseFor(vec2 root, float dist, float density) {
+  if (uQualityClose.x <= 0.0) return 0.0;
+  return 1.0 - smoothstep(uQualityClose.x, uQualityClose.y, bladeDensityFor(root, dist, density));
+}
+float bladeClose(vec2 root, float dist) {
+  // Close the extra segment before changing populations; the coarser blade is then identical.
+  float detail = mix(qualityCloseFor(root, dist, uDensityPrevious), qualityCloseFor(root, dist, uDensity), uQualityBlend);
+  return max(smoothstep(uClose.x, uClose.y, dist), detail);
 }
 float widthAt(float dist) {
   return mix(mix(1.0, uLevelWidth.x, smoothstep(uRings.x, uRings.y, dist)), uLevelWidth.y, smoothstep(uRings.z, uRings.w, dist));
@@ -299,6 +314,14 @@ float standing(float rank, float share, float dist) {
   float ahead = densityAt(dist + uShrinkBand) * share;
   float grown = smoothstep(0.0, 1.0, (here - rank) / max(here - ahead, 1e-5));
   return grown * (1.0 - smoothstep(uSink.x, uSink.y, dist));
+}
+/** Keep both populations during a quality change and grow/shrink each blade in place. */
+float qualityStanding(float rank, float share, float dist, vec2 root) {
+  if (uQualityBlend >= 1.0) return standing(rank, share, dist);
+  float base = max(bladeDensity(root, dist), 1e-5);
+  float before = share * bladeDensityFor(root, dist, uDensityPrevious) / base;
+  float after = share * bladeDensityFor(root, dist, uDensity) / base;
+  return mix(standing(rank, before, dist), standing(rank, after, dist), uQualityBlend);
 }
 `;
 
@@ -472,10 +495,10 @@ void main() {
   vec4 fl = texelFetch(uFlowerTex, at, 0);
 
   float side01 = position.x;
-  float t = mix(position.y, position.z, smoothstep(uClose.x, uClose.y, dist));
+  float t = mix(position.y, position.z, bladeClose(root2, dist));
   float seed = fl.x;
   float life = lifeAt(root2);
-  float stand = standing(rank, share, dist);
+  float stand = qualityStanding(rank, share, dist, root2);
   float h = shape.y * mix(0.72, 1.0, life) * stand;
   float width = shape.z * widthAt(dist) * stand;
   float angle = shape.w;
@@ -584,7 +607,7 @@ void main() {
   if (rank >= thinned * share) { collapse(); return; }
 
   float side01 = position.x;
-  float t = mix(position.y, position.z, smoothstep(uClose.x, uClose.y, dist));
+  float t = mix(position.y, position.z, bladeClose(root2, dist));
   float seed = gr_rand(s);
   float lush = fbm(root2 * 0.035 + 17.0);
   float shortPatch = smoothstep(0.52, 0.68, fbm(root2 * 0.05 - 23.0));
@@ -602,7 +625,7 @@ void main() {
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
-  float stand = standing(rank, share, dist);
+  float stand = qualityStanding(rank, share, dist, root2);
   h *= mix(0.72, 1.0, life) * stand;
   float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * widthAt(dist) * stand;
   float angle = gr_rand(s) * 6.2831853;
@@ -745,6 +768,9 @@ interface Lod {
   table: THREE.WebGLRenderTarget;
   tableMat: THREE.ShaderMaterial;
   count: number;
+  previousCount: number;
+  tilesChanged: boolean;
+  dirty: boolean;
 }
 
 /** Tiles a level can hold: every tile touching the ring between its reach and the previous level's. */
@@ -766,6 +792,8 @@ export class Grass {
   private readonly matrix = new THREE.Matrix4();
   private readonly bounds = new Map<number, THREE.Sphere | null>();
   private readonly quad = new FullScreenQuad();
+  private tablesDirty = true;
+  private readonly tableState = new Float64Array(17).fill(NaN);
   /** Where thinning is measured from: the camera `update` picked tiles for, on the ground plane. */
   private readonly eye = { value: new THREE.Vector2() };
   /** On a meadow sown sparsely (`uDensity`, the lite tier) the finer levels hold nothing but blades that never show, so tiles start at the first level that holds them all. */
@@ -774,29 +802,32 @@ export class Grass {
   private readonly direct = params.blades === 'direct';
   private readonly coarsest = Math.min(params.grasslod ?? LODS.length - 1, LODS.length - 1);
 
+  private readonly thinning;
+  private reachScale = 1;
+  private reachFrom = 1;
+  private reachTarget = 1;
+
   constructor() {
-    const touch = window.matchMedia('(pointer: coarse)').matches;
-    const density = Math.min(1, params.grass ?? (params.lite ? 0.25 : touch ? 0.55 : 1));
-    const reachScale = params.lite ? 0.7 : 1;
-    const specs = LODS.map((base) => ({ ...base, reach: base.reach * reachScale }));
+    const density = Math.max(0, Math.min(1, params.grass ?? (params.lite ? 0.25 : 1)));
+    const specs = LODS.map((base) => ({ ...base }));
     const last = specs[specs.length - 1];
-    const thinning = {
+    const thinning = this.thinning = {
       uGrassEye: this.eye,
       uRings: { value: new THREE.Vector4(specs[0].reach * specs[0].thinFrom, specs[0].reach, specs[1].reach * specs[1].thinFrom, specs[1].reach) },
       uSink: { value: new THREE.Vector2(last.reach * last.thinFrom, last.reach) },
       uLevelDensity: { value: new THREE.Vector2(...specs.slice(1).map((l) => (l.cols * l.rows) / (FINE * FINE))) },
       uLevelWidth: { value: new THREE.Vector2(...specs.slice(1).map((l) => l.widthScale)) },
-      uShrinkBand: { value: SHRINK_BAND * reachScale },
+      uShrinkBand: { value: SHRINK_BAND },
       uDensity: { value: density },
+      uDensityPrevious: { value: density },
+      uQualityBlend: { value: 1 },
     };
     while (this.finest < this.coarsest && density <= thinning.uLevelDensity.value.getComponent(this.finest)) this.finest++;
-    let prevReach = 0;
     for (const [level, spec] of specs.entries()) {
       const blades = spec.cols * spec.rows;
-      // Retain a bounded fine patch for the short winter turf even on the quarter-density tier.
-      if (level < this.finest) spec.maxTiles = level === 0 ? 96 : 1;
-      spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach, level === this.finest ? 0 : prevReach));
-      prevReach = spec.reach;
+      // Reserve all quality levels once. Sparse tiers may cover the inner rings too;
+      // promotion must never allocate a new MRT or drop tiles because the lite pool was smaller.
+      spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach, 0));
       const template = bladeTemplate(spec.segments, level < specs.length - 1);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
@@ -849,6 +880,7 @@ export class Grass {
           uFlowerTex: { value: table.textures[3] },
           ...thinning,
           uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
+          uQualityClose: { value: new THREE.Vector2(...(level === 0 ? [0.25, 0.55] as const : level === 1 ? [0.125, 0.25] as const : [0, 0] as const)) },
           uTileSize: { value: TILE },
           uGrid: { value: new THREE.Vector2(spec.cols, spec.rows) },
           uLevel: { value: level },
@@ -858,12 +890,78 @@ export class Grass {
       const mesh = new THREE.Mesh(geo, mat);
       mesh.frustumCulled = false;
       this.group.add(mesh);
-      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, count: 0 });
+      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
+    this.setQuality(density, params.lite ? 0.7 : 1, true);
+    // Height and surface bakes can change even on a forced move to the same domain.
+    onWindowMove(() => { this.tablesDirty = true; });
+  }
+
+  /** Explicit grass/lite overrides stay reproducible while normal play follows the governor. */
+  setQuality(density: number, reach: number, immediate = false): void {
+    const u = this.thinning;
+    density = Math.max(0, Math.min(1, params.grass ?? (params.lite ? 0.25 : density)));
+    reach = params.lite ? 0.7 : THREE.MathUtils.clamp(reach, 0.7, 1);
+    if (!immediate && density === u.uDensity.value && reach === this.reachTarget) return;
+    u.uDensityPrevious.value = immediate ? density : THREE.MathUtils.lerp(u.uDensityPrevious.value, u.uDensity.value, u.uQualityBlend.value);
+    u.uDensity.value = density;
+    this.reachFrom = immediate ? reach : this.reachScale;
+    this.reachTarget = reach;
+    u.uQualityBlend.value = immediate ? 1 : 0;
+    this.updateQuality(0, true);
+  }
+
+  /** One-second transitions preserve world-anchored roots and require no shader recompilation. */
+  private updateQuality(dt: number, force = false): void {
+    const u = this.thinning;
+    if (!force && u.uQualityBlend.value === 1) return;
+    u.uQualityBlend.value = Math.min(1, u.uQualityBlend.value + Math.max(0, dt));
+    if (u.uQualityBlend.value === 1) u.uDensityPrevious.value = u.uDensity.value;
+    this.reachScale = THREE.MathUtils.lerp(this.reachFrom, this.reachTarget, u.uQualityBlend.value);
+    for (let i = 0; i < this.lods.length; i++) {
+      const l = this.lods[i];
+      l.spec.reach = LODS[i].reach * this.reachScale;
+      const mat = (this.group.children[i] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material;
+      mat.uniforms.uClose.value.set(l.spec.reach * l.spec.thinFrom, l.spec.reach);
+    }
+    const first = this.lods[0].spec, second = this.lods[1].spec;
+    u.uRings.value.set(first.reach * first.thinFrom, first.reach, second.reach * second.thinFrom, second.reach);
+    const last = this.lods[this.lods.length - 1].spec;
+    u.uSink.value.set(last.reach * last.thinFrom, last.reach);
+    u.uShrinkBand.value = SHRINK_BAND * this.reachScale;
+    this.finest = 0;
+    const density = Math.max(u.uDensity.value, u.uDensityPrevious.value);
+    while (this.finest < this.coarsest && density <= u.uLevelDensity.value.getComponent(this.finest)) this.finest++;
+  }
+
+  get quality(): { density: number; reach: number } {
+    const u = this.thinning;
+    return { density: THREE.MathUtils.lerp(u.uDensityPrevious.value, u.uDensity.value, u.uQualityBlend.value), reach: this.reachScale };
   }
 
   get bladesDrawn(): number {
     return this.lods.reduce((n, l) => n + l.count * l.spec.cols * l.spec.rows, 0);
+  }
+
+  /** These MRT shaders are not scene materials or ordinary single-target simulations. */
+  async precompile(renderer: THREE.WebGLRenderer): Promise<void> {
+    if (this.direct) return;
+    const previous = renderer.getRenderTarget();
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const mesh = new THREE.Mesh(geometry, this.lods[0].tableMat);
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    scene.add(mesh);
+    try {
+      for (const lod of this.lods) {
+        mesh.material = lod.tableMat;
+        renderer.setRenderTarget(lod.table);
+        await renderer.compileAsync(scene, camera);
+      }
+    } finally {
+      renderer.setRenderTarget(previous);
+      geometry.dispose();
+    }
   }
 
   /** The sphere holding every blade a tile could grow, or null where it has no land. Sized from the ground under the whole tile: on a cliff the corners stand metres above and below the middle. */
@@ -894,14 +992,15 @@ export class Grass {
   }
 
   /** Picks the tiles to draw for this camera; call `bake` afterwards, before the scene is drawn. */
-  update(camera: THREE.Camera): void {
+  update(camera: THREE.Camera, dt = 0): void {
+    this.updateQuality(dt);
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
     const cx = camera.position.x;
     const cz = camera.position.z;
     this.eye.value.set(cx, cz);
     const reach = this.lods[this.lods.length - 1].spec.reach;
-    for (const l of this.lods) l.count = 0;
+    for (const l of this.lods) { l.count = 0; l.tilesChanged = false; }
     const x0 = Math.floor((Math.max(cx - reach, WINDOW.minX)) / TILE);
     const x1 = Math.floor((Math.min(cx + reach, WINDOW.minX + WINDOW.size)) / TILE);
     const z0 = Math.floor((Math.max(cz - reach, WINDOW.minZ)) / TILE);
@@ -930,16 +1029,23 @@ export class Grass {
         while (li > this.finest && this.lods[li].count >= this.lods[li].spec.maxTiles) li--;
         const lod = this.lods[li];
         if (lod.count >= lod.spec.maxTiles) continue;
+        if (lod.tiles.array[lod.count * 2] !== tx * TILE || lod.tiles.array[lod.count * 2 + 1] !== tz * TILE) lod.tilesChanged = true;
         lod.tiles.array[lod.count * 2] = tx * TILE;
         lod.tiles.array[lod.count * 2 + 1] = tz * TILE;
         lod.count++;
       }
     }
     for (const l of this.lods) {
-      l.tiles.clearUpdateRanges();
-      l.tiles.addUpdateRange(0, l.count * 2);
-      l.tiles.needsUpdate = true;
-      l.tileTex.needsUpdate = true;
+      if (l.tilesChanged || l.count !== l.previousCount) {
+        if (l.count) {
+          l.tiles.clearUpdateRanges();
+          l.tiles.addUpdateRange(0, l.count * 2);
+          l.tiles.needsUpdate = true;
+          l.tileTex.needsUpdate = true;
+        }
+        l.dirty = true;
+      }
+      l.previousCount = l.count;
       l.geo.instanceCount = l.count * l.spec.cols * l.spec.rows;
     }
   }
@@ -947,9 +1053,23 @@ export class Grass {
   /** Fills each level's blade table for the tiles `update` picked. */
   bake(renderer: THREE.WebGLRenderer): void {
     if (this.direct) return;
+    // TABLE_FRAG depends on static ground/surface bakes plus season, palette and
+    // flattened grass. Wind, life, lighting and eye distance stay in the blade
+    // shader, so they must not force the fixed traits to be recomputed.
+    let stateIndex = 0;
+    const track = (value: number): void => {
+      if (this.tableState[stateIndex] !== value) this.tablesDirty = true;
+      this.tableState[stateIndex++] = value;
+    };
+    track(atmo.uniforms.uSeason.value);
+    const t = atmo.uniforms.uTrodden.value;
+    track(t.x); track(t.y); track(t.z); track(t.w);
+    for (const { value: color } of Object.values(grassUniforms)) {
+      track(color.r); track(color.g); track(color.b);
+    }
     const prev = renderer.getRenderTarget();
     for (const l of this.lods) {
-      if (!l.count) continue;
+      if (!l.count || (!l.dirty && !this.tablesDirty)) continue;
       l.tableMat.uniforms.uTileCount.value = l.count;
       this.quad.material = l.tableMat;
       // The table reserves room for the maximum tile population, but only these
@@ -960,7 +1080,9 @@ export class Grass {
       l.table.scissorTest = true;
       renderer.setRenderTarget(l.table);
       this.quad.render(renderer);
+      l.dirty = false;
     }
     renderer.setRenderTarget(prev);
+    this.tablesDirty = false;
   }
 }

@@ -35,6 +35,7 @@ void main() {
   float stripe = step(0.5, fract(vAlong * 5.0)) * 0.08;
   vec3 alb = uColor * (1.0 - stripe);
   vec3 col = alb * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.8 + through) * sun);
+  col += alb * (lampLight(vWorld, N) + dawnLight(vWorld, N));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 

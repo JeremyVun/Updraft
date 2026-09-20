@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Feather } from '../fx/feather';
+import { CurtainRibbon } from './sleeping-ribbon';
 import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
@@ -30,7 +31,7 @@ function groundAround(x: number, z: number, radius: number): number {
 }
 
 const BED_GROUND = groundAround(-176.5, -1911, 1.4);
-/** The bed, made up in the grass in the middle of the hollow. Its head end points along `BED_FACING`. */
+/** The bed, made up in the grass on the open terrace. Its head end points along `BED_FACING`. */
 export const BED = new THREE.Vector3(-176.5, BED_GROUND, -1911);
 /** Where the pillow lies, which is what the morning has to reach. */
 export const PILLOW = new THREE.Vector3(
@@ -51,7 +52,9 @@ const LAMP_GROUND = groundAround(LAMP.x, LAMP.z, 0.4);
 LAMP.y = LAMP_GROUND + 1.3;
 
 /** The summit window holds the morning behind its curtains, facing down into the sleeping hollow. */
-export const WINDOW = new THREE.Vector3(HILLTOP.x, 0, HILLTOP.z);
+export const WINDOW = new THREE.Vector3(-180, 0, -1939.6);
+export const SLEEP_LEDGE = new THREE.Vector3(-177.3, heightAt(-177.3, -1939.6), -1939.6);
+export const SLEEP_APPROACH = new THREE.Vector3(-172, heightAt(-172, -1940), -1940);
 const WINDOW_GROUND = groundAround(WINDOW.x, WINDOW.z, 0.9);
 export const WINDOW_INTO = new THREE.Vector3(BED.x - WINDOW.x, BED.y + 1.1 - (WINDOW_GROUND + 1.35), BED.z - WINDOW.z).normalize();
 const PANE_W = 2.0;
@@ -59,6 +62,9 @@ const PANE_H = 2.4;
 const RAIL_Y = PANE_H + 0.2;
 const CURTAIN_DROP = RAIL_Y - 0.28;
 WINDOW.y = WINDOW_GROUND + 1.35;
+export const CURTAIN_KNOT = new THREE.Vector3(WINDOW.x, WINDOW_GROUND + 1.52, WINDOW.z + 0.3);
+/** The loose end is out beyond the lip; its underside is several metres above the slope. */
+export const CURTAIN_END = new THREE.Vector3(WINDOW.x + 0.15, WINDOW_GROUND + 0.85, -1936.7);
 
 /** Where the ceiling lamp stands on its flex, and where the two upside-down pieces hang over the hollow. */
 const FLEX_AT = new THREE.Vector2(BED.x + BESIDE_BED.x * 3.6 + BED_FACING.x * 1.6, BED.z + BESIDE_BED.y * 3.6 + BED_FACING.y * 1.6);
@@ -191,6 +197,7 @@ uniform vec3 uCloth;
 uniform vec4 uBed;
 uniform vec2 uBedAxis;
 uniform vec3 uFold;
+uniform float uPull;
 /** Who is under it: how much of them there is, how far up the bed they lie, and how they breathe. */
 uniform vec3 uSleeper;
 out vec3 vColor;
@@ -204,14 +211,13 @@ out vec2 vUv;
  */
 vec3 clothAt(vec2 uvw) {
   float fold = uFold.x;
-  float m = 1.0 - fold;
-  float back = uvw.y <= m ? uvw.y : max(2.0 * m - uvw.y, 0.0);
-  float over = uvw.y <= m ? 0.0 : sin(clamp((uvw.y - m) / max(fold, 1e-3), 0.0, 1.0) * 3.14159) * (0.1 + 0.26 * fold) + 0.05;
+  float back = uvw.y >= fold ? uvw.y : 2.0 * fold - uvw.y;
+  float over = uvw.y >= fold ? 0.0 : sin(clamp((fold - uvw.y) / max(fold, 1e-3), 0.0, 1.0) * 3.14159) * (0.1 + 0.26 * fold) + 0.05;
   float across = (uvw.x - 0.5) * 2.0;
   float drape = smoothstep(0.8, 1.0, abs(across));
   vec2 side = vec2(-uBedAxis.y, uBedAxis.x);
   vec2 xz = uBed.xy + uBedAxis * ((back - 0.5) * uBed.z) + side * (across * uBed.w);
-  float lift = uFold.y * smoothstep(0.1, 0.9, back) * (0.35 + 0.5 * sin(back * 3.14159));
+  float lift = uFold.y * (1.0 - smoothstep(0.1, 0.9, back)) * (0.35 + 0.5 * sin(back * 3.14159));
   float ripple = sin(uTime * 2.1 + back * 7.0 + across * 3.0) * uFold.z * (0.3 + 0.7 * back)
     + sin(across * 16.0 + back * 3.0) * 0.035 * smoothstep(0.3, 1.0, abs(across));
   /**
@@ -221,8 +227,9 @@ vec3 clothAt(vec2 uvw) {
    */
   float along = 1.0 - smoothstep(uSleeper.y - 0.3, uSleeper.y + 0.25, back);
   float wide = clamp(abs(across) / ${glsl(tuning.sleeping.sleeperWide)}, 0.0, 1.0);
-  float body = uSleeper.x * sqrt(1.0 - wide * wide) * (0.65 + 0.35 * sin(back * 3.14159)) * along * (1.0 - smoothstep(m - 0.08, m + 0.12, uvw.y));
-  float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 * (1.0 - min(1.0, body * 1.2)) + lift + ripple + body * (1.0 + uSleeper.z);
+  float body = uSleeper.x * sqrt(1.0 - wide * wide) * (0.65 + 0.35 * sin(back * 3.14159)) * along * smoothstep(fold - 0.08, fold + 0.12, uvw.y);
+  float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 * (1.0 - min(1.0, body * 1.2)) + lift + ripple + body * (1.0 + uSleeper.z)
+    + uPull * exp(-pow((uvw.y - fold) * 12.0, 2.0));
   return vec3(xz.x, y, xz.y);
 }
 
@@ -262,7 +269,8 @@ vec3 curtainAt(vec2 uvw, float side) {
   vec3 right = vec3(-uHang.z, 0.0, uHang.x);
   vec3 ahead = vec3(uHang.x, 0.0, uHang.z);
   vec3 p = uPane.yzw;
-  p += right * (across + folds * side * 0.5) + ahead * (folds + sway);
+  float tied = (1.0 - smoothstep(0.0, 0.25, open)) * exp(-pow((uvw.y - 0.47) * 5.0, 2.0));
+  p += right * (across - side * inner * tied * 0.78 * (1.0 - uvw.x) + folds * side * 0.5) + ahead * (folds + sway * (1.0 - tied));
   p.y -= uvw.y * ${glsl(CURTAIN_DROP)};
   return p;
 }
@@ -562,6 +570,9 @@ export class SleepingIsland {
   curtains = 0;
   /** The blanket: 0 tucked in, 1 thrown back. */
   blanket = 0;
+  /** How far the child lifts the fold while drawing it up, in world units. */
+  blanketPull = 0;
+  private readonly pull = { value: 0 };
   /** Wind brushed over the visible bed, independent of ground picking. */
   bedWind = 0;
   /** Somebody asleep under the blanket, 0 an empty bed to 1: the cloth stands over them and breathes with them. */
@@ -606,6 +617,7 @@ export class SleepingIsland {
    * it, gives it somewhere to lean, and the bird follows it. It lives here because it comes out of the pillow.
    */
   readonly feather: Feather;
+  readonly ribbon = new CurtainRibbon(CURTAIN_KNOT, CURTAIN_END);
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -614,6 +626,7 @@ export class SleepingIsland {
   ) {
     this.gpu = new GpuRunner(renderer);
     this.feather = new Feather(wind);
+    this.objects.push(this.ribbon.mesh);
     for (let i = 0; i < STAMPS; i++) {
       this.stamps.push(new THREE.Vector4());
       this.stampArgs.push(new THREE.Vector2());
@@ -699,6 +712,7 @@ export class SleepingIsland {
           uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 2.85, BED_WIDTH * 0.56) },
           uBedAxis: { value: new THREE.Vector2(-BED_FACING.x, -BED_FACING.y) },
           uFold: { value: this.fold },
+          uPull: this.pull,
           uSleeper: { value: this.under },
         },
         side: THREE.DoubleSide,
@@ -889,6 +903,8 @@ export class SleepingIsland {
     this.shown.blanket += (this.blanket - this.shown.blanket) * k;
     this.shown.sleeper += (this.sleeper - this.shown.sleeper) * k;
     this.shown.top += (this.fogTop - this.shown.top) * k;
+    // A gust can billow tied cloth, but only the beak pulling the ribbon free releases it.
+    if (!this.ribbon.released) this.curtains = 0;
     const was = this.shown.curtains;
     this.shown.curtains += (this.curtains - this.shown.curtains) * k;
     this.curtainRate += ((this.shown.curtains - was) / Math.max(dt, 1e-3) - this.curtainRate) * (1 - Math.exp(-dt * 4));
@@ -912,6 +928,7 @@ export class SleepingIsland {
     this.cloth(dt, time);
     this.feather.update(dt, time);
     if (!this.input.muted) this.feather.brush(camera, this.input.prevNdc, this.input.ndc, this.input.gust, this.input.gustDir, this.input.charge, dt);
+    this.ribbon.update(dt, time, this.shown.curtains);
     this.hanging(time);
     this.drift(dt);
   }
@@ -950,9 +967,25 @@ export class SleepingIsland {
     this.pending = 0;
   }
 
-  /** The blanket and the curtains, which are cloth and answer the air they are in. */
+  /** The fold crease in the same coordinates as clothAt: the mittens follow the cloth, not a guessed pose. */
+  blanketEdge(across: number, out: THREE.Vector3): THREE.Vector3 {
+    const back = this.fold.x;
+    const along = (back - 0.5) * 2.85;
+    const width = BED_WIDTH * 0.56;
+    out.set(BED.x - BED_FACING.x * (along + 0.25), BED.y, BED.z - BED_FACING.y * (along + 0.25));
+    out.x += BED_FACING.y * across * width;
+    out.z -= BED_FACING.x * across * width;
+    const wide = Math.min(1, Math.abs(across) / tuning.sleeping.sleeperWide);
+    const body = this.under.x * Math.sqrt(1 - wide * wide) * (0.65 + 0.35 * Math.sin(back * Math.PI))
+      * (1 - THREE.MathUtils.smoothstep(back, this.under.y - 0.3, this.under.y + 0.25))
+      * THREE.MathUtils.smoothstep(back, back - 0.08, back + 0.12);
+    out.y = BED_GROUND + 0.655 + body * (1 + this.under.z) + this.pull.value;
+    return out;
+  }
+
   private cloth(dt: number, time: number): void {
     const t = tuning.sleeping;
+    this.pull.value += (this.blanketPull - this.pull.value) * (1 - Math.exp(-dt * 8));
     const w = this.wind.sample(BED.x, BED.z, this.air);
     const speed = Math.hypot(w.x, w.z);
     const want = Math.min(1, (speed / t.blanketSpeed) * 0.7 + w.energy * 0.8 + this.bedWind) * t.blanketGust;

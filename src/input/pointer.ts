@@ -144,12 +144,17 @@ export class PointerInput {
 
   update(dt: number, camera: THREE.Camera, wind: WindField): void {
     if (!this.present || this.muted) {
+      // Consumers also brush visible objects directly from these values. A muted
+      // frame must not replay the last stroke or retain an updraft over the plane.
+      this.ndc.copy(this.eventNdc);
+      this.prevNdc.copy(this.ndc);
       this.hasPrev = false;
       this.vel.set(0, 0);
       this.heading = null;
       this.spin = 0;
-      this.gust *= Math.exp(-dt * 6);
-      this.charge = Math.max(0, this.charge - dt * 1.5);
+      this.sinceHeading = 0;
+      this.gust = this.muted ? 0 : this.gust * Math.exp(-dt * 6);
+      this.charge = this.muted ? 0 : Math.max(0, this.charge - dt * 1.5);
       return;
     }
     this.prevNdc.copy(this.ndc);

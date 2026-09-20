@@ -28,6 +28,7 @@ void main() {
  */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uFade;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vVane;
@@ -44,7 +45,7 @@ void main() {
   vec3 col = alb * (uSkyAmbient * 1.5 + uSunColor * (max(ndl, 0.0) * 0.5 + max(-ndl, 0.0) * 0.55));
   col += lampLight(vWorld, N) * 1.1 + dawnLight(vWorld, N) * 1.2;
   vec4 f = fogOf(vWorld);
-  gl_FragColor = vec4(mix(col, f.rgb, f.a * 0.8), a);
+  gl_FragColor = vec4(mix(col, f.rgb, f.a * 0.8), a * uFade);
 }`;
 
 /** A long primary: a curved spine, a vane that swells and tapers off it, and a bare quill at the root. */
@@ -90,10 +91,14 @@ export class Feather {
   keepNear = 26;
   /** Keep the guide in sight of the bird while preserving small gust-driven detours. */
   follow: THREE.Vector3 | null = null;
+  routeStart: THREE.Vector3 | null = null;
+  encouragement = 0;
   /** 0 while it is still in the pillow, 1 once it is in the air. */
   flying = false;
   /** How much the wind is lifting it, 0..1, for whoever wants to hear or see that. */
   lift = 0;
+  /** Fade into the window seam when the guide has delivered the bird. */
+  fade = 1;
 
   private readonly mesh: THREE.Mesh;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -110,7 +115,7 @@ export class Feather {
       new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...atmo.uniforms },
+        uniforms: { ...atmo.uniforms, uFade: { value: 1 } },
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
@@ -135,6 +140,7 @@ export class Feather {
     this.velocity.copy(drift);
     this.goal.copy(from);
     this.flying = true;
+    this.fade = 1;
     this.rest = 0;
     this.mesh.visible = true;
   }
@@ -146,6 +152,7 @@ export class Feather {
 
   update(dt: number, time: number): void {
     if (!this.flying) return;
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uFade.value = this.fade;
     const t = tuning.sleeping;
     const p = this.position;
     const v = this.velocity;
@@ -175,6 +182,21 @@ export class Feather {
       v.z += (dz / away) * pull * dt;
     }
     /** Never lost: down on the grass too long and a breath of its own picks it up again. */
+    this.encouragement *= Math.exp(-dt * 0.75);
+    if (this.follow && this.routeStart) {
+      const rx = this.goal.x - this.routeStart.x, rz = this.goal.z - this.routeStart.z;
+      const length = Math.hypot(rx, rz) || 1, ax = rx / length, az = rz / length;
+      const side = THREE.MathUtils.clamp(-az * v.x + ax * v.z, -0.7, 0.7);
+      const remaining = (this.goal.x - p.x) * ax + (this.goal.z - p.z) * az;
+      const forward = THREE.MathUtils.clamp(remaining * 1.2, 0, 0.6 + this.encouragement * t.featherEncouragement);
+      const blend = 1 - Math.exp(-dt * 5);
+      v.x = ax * forward - az * side;
+      v.z = az * forward + ax * side;
+      const lateral = -az * (p.x - this.routeStart.x) + ax * (p.z - this.routeStart.z);
+      const correction = (lateral - THREE.MathUtils.clamp(lateral, -t.featherCorridor, t.featherCorridor)) * blend;
+      p.x += az * correction; p.z -= ax * correction;
+      p.y += (floor + t.featherHangs - p.y) * (1 - Math.exp(-dt * 3));
+    }
     const down = p.y <= floor + 0.05;
     this.rest = down ? this.rest + dt : 0;
     if (this.rest > t.featherRests) {
@@ -231,12 +253,19 @@ export class Feather {
     const aby = b.y - a.y;
     const k = THREE.MathUtils.clamp(((px - ax) * abx + (s.y - a.y) * aby) / Math.max(abx * abx + aby * aby, 1e-6), 0, 1);
     const d = Math.hypot(px - (ax + abx * k), s.y - (a.y + aby * k));
-    const radius = 0.22;
+    const radius = tuning.sleeping.featherBrushRadius;
     if (d > radius) return;
     const f = (1 - d / radius) ** 2;
     const t = tuning.sleeping;
+    this.encouragement = Math.min(1, this.encouragement + Math.min(gust, 14) * f * dt * 1.6);
     const push = Math.min(gust, 14) * t.featherBrush * f;
     const grip = 1 - Math.exp(-dt * 6 * f);
+    if (this.follow && this.routeStart) {
+      // Screen-to-ground projection changes sharply on the hill. A visible stroke encourages the route,
+      // while ordinary free flight still uses the world-space direction below.
+      this.velocity.y += (push * 0.2 + charge * 3) * f * dt;
+      return;
+    }
     this.velocity.x += (dir.x * push - this.velocity.x) * grip;
     this.velocity.z += (dir.y * push - this.velocity.z) * grip;
     this.velocity.y += (push * 0.35 + charge * 6) * f * dt * 5;

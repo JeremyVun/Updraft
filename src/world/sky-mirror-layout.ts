@@ -3,8 +3,8 @@ import { glsl } from '../tuning';
 /** A sandbank just beneath the sea, well west of home. Nothing rises above the reflected horizon. */
 export const SKY_MIRROR = { x: -455, z: -2310, rx: 82, rz: 70 } as const;
 /** Moor offshore, alongside a wooden walk that reaches the submerged flat. */
-export const MIRROR_LANDING = { x: -455, z: -2221, yaw: Math.PI } as const;
-export const MIRROR_ENTRY_DECK = { x0: -452.3, z0: -2219, x1: -452.3, z1: -2263, halfWidth: 1.15, height: 0.28, stepOffDepth: -0.04 };
+export const MIRROR_ENTRY_DECK = { x0: -514.12, z0: -2268.87, x1: -501, z1: -2278, halfWidth: 1.15, height: 0.28, stepOffDepth: -0.04 };
+export const MIRROR_LANDING = { x: -515.66, z: -2271.09, yaw: Math.atan2(13.12,-9.13) } as const;
 export const MIRROR_WATCH = { x: -454, z: -2281 } as const;
 /** Legacy causeway stops, retained for existing checkpoint and route tooling. */
 export const MIRROR_PATH = [
@@ -15,7 +15,7 @@ export const MIRROR_BERTH = { x: -390, z: -2323, yaw: Math.PI } as const;
 export const MIRROR_DECK = { x0: -407, z0: -2323, x1: -391, z1: -2323, halfWidth: 1.15, height: 0.22 };
 /** The empty hull drifts through the deep channel, never over the walkable mirror. */
 export const MIRROR_DRIFT = [
-  { x: -455, z: -2212 }, { x: -403, z: -2206 },
+  { x: -532, z: -2259 }, { x: -533, z: -2215 }, { x: -403, z: -2206 },
   { x: -354, z: -2260 }, { x: -350, z: -2319 }, MIRROR_BERTH,
 ] as const;
 

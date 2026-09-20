@@ -50,6 +50,12 @@ const lerp = THREE.MathUtils.lerp;
 export class Cygnet {
   readonly position = new THREE.Vector3();
   yaw = 0;
+  /** A story-authored airborne reach; zero for ordinary locomotion. */
+  flightPose = 0;
+  /** Contact at the tip of the bill, solved after the skeleton has posed. */
+  billGrip: THREE.Vector3 | null = null;
+  billGripWeight = 0;
+  private readonly billCorrection = new THREE.Vector3();
   /**
    * Somewhere it has gone off to by itself: a leaf that skittered past, a heap worth looking into. While this is
    * set it makes for it at its own speed and forgets about keeping with the child, and it clears when it arrives.
@@ -423,7 +429,7 @@ export class Cygnet {
    * lets go of the hill and goes down the whole slope to a point far below, alone. Whoever asked for it says where
    * it lands, and takes it over the moment it is down, because it comes in on its breast.
    */
-  glideTo(to: THREE.Vector3, seconds: number, arc: number): void {
+  glideTo(to: THREE.Vector3, seconds: number, arc: number, continuing = false): void {
     const alreadyFlying = this.flying;
     this.sailFrom.copy(this.position);
     this.sailTo.copy(to);
@@ -437,7 +443,7 @@ export class Cygnet {
     this.settle = 0;
     this.landing = 0;
     this.fear = 0;
-    if (!alreadyFlying) this.flights++;
+    if (!alreadyFlying && !continuing) this.flights++;
     this.mind.trust(1);
   }
 
@@ -678,6 +684,12 @@ export class Cygnet {
     return this.nodes[BODY].getWorldQuaternion(out);
   }
 
+  /** The actual outer tip, matching the bill stations in body.ts. */
+  billTip(out: THREE.Vector3): THREE.Vector3 {
+    this.nodes[HEAD].updateWorldMatrix(true, false);
+    return out.set(0, 0.009, 0.23).applyMatrix4(this.nodes[HEAD].matrixWorld);
+  }
+
   /** Where the child should look to meet its eye. */
   eye(out: THREE.Vector3): THREE.Vector3 {
     this.nodes[HEAD].updateMatrixWorld(true);
@@ -913,7 +925,9 @@ export class Cygnet {
     const was = p.y;
     p.set(
       from.x + (to.x - from.x) * e + (ax / across) * side,
-      lerp(from.y, to.y, e) + Math.sin(e * Math.PI) * this.sailArc,
+      lerp(from.y, to.y, e) + Math.sin(e * Math.PI) * this.sailArc
+        + (this.sailFor > 12 ? Math.sin(k * Math.PI) * Math.min(0.65, this.windNow.lift * 0.4)
+          - Math.sin(Math.min(1, k / 0.12) * Math.PI) * 0.28 : 0),
       from.z + (to.z - from.z) * e + (az / across) * side,
     );
     /**
@@ -1399,7 +1413,7 @@ export class Cygnet {
     const st = this.state;
     const d = this.drives;
     // The grass visibility bias must ease away afloat, or submerged feet draw over the water.
-    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, st === 'swimming' ? 0 : 2.4, 8, dt);
+    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, st === 'swimming' || st === 'gliding' || this.flightPose > 0 || this.billGrip ? 0 : 2.4, 8, dt);
     const m = this.mind;
     if (this.debug.stand) this.settle = 0;
     d.time = this.time;
@@ -1409,21 +1423,21 @@ export class Cygnet {
     d.move = this.seating.move?.kind ?? null;
     d.jostle = this.carried ? this.seating.jostle.z : 0;
     d.falling = st === 'falling';
-    d.gliding = st === 'flying' || st === 'gliding' || st === 'fledging';
+    d.gliding = st === 'flying' || st === 'gliding' || st === 'fledging' || this.flightPose > 0.1;
     d.leaving = st === 'leaving';
     d.afoot = st === 'following';
     d.downed = st === 'downed';
     d.afloat = st === 'swimming' && this.seating.move === null;
-    d.perched = st === 'perched';
+    d.perched = st === 'perched' && this.flightPose < 0.1;
     d.settle = this.grounded || st === 'following' ? this.settle : 0;
     d.fear = this.fear;
     d.bond = this.bond;
     d.cold = m.feel.cold;
     d.effort = this.effort;
     d.flap = this.flap;
-    d.glide = this.glide;
+    d.glide = Math.max(this.glide, this.flightPose);
     d.look = this.craning;
-    d.tucked = this.tucked;
+    d.tucked = Math.max(this.tucked, this.flightPose * 0.85);
     d.hope = this.hope;
     d.hopLift = this.hopLift;
     d.crouch = this.hopT > HOP_FOR - 0.8 ? 1 : 0;
@@ -1526,6 +1540,13 @@ export class Cygnet {
     this.root.quaternion.copy(this.seating.shown.q).multiply(this.tilt.setFromEuler(this.tiltBy.set(posed.rootPitch, 0, posed.rootRoll)));
     for (const [bone, r] of Object.entries(this.debug.bones)) n[Number(bone)].rotation.set(r[0], r[1], r[2]);
     this.root.updateMatrixWorld(true);
+    if (this.billGrip && this.billGripWeight > 0) {
+      this.billTip(this.billCorrection);
+      this.billCorrection.subVectors(this.billGrip, this.billCorrection).multiplyScalar(this.billGripWeight);
+      this.root.position.add(this.billCorrection);
+      this.position.add(this.billCorrection);
+      this.root.updateMatrixWorld(true);
+    }
     for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);
     this.wing.update(dt, this.time, n[FORE_L].matrixWorld, this.bones, this.windNow, this.visible, this.mat.uniforms.uNudge.value);
   }

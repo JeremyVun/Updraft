@@ -379,6 +379,8 @@ export class Water {
   private readonly reflection: PlanarReflection;
   private readonly shore: ShoreBake;
   private frame = 0;
+  mirrorEvery = params.lite ? 2 : 1;
+  mirrorScale = params.lite ? 0.5 : 0.75;
   private readonly windWaves: WindWaves;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
@@ -422,19 +424,20 @@ export class Water {
   }
 
   /**
-   * Renders the mirror image on alternate frames (the world is drawn again for it, and a one-frame lag in a
-   * reflection under a gliding camera cannot be seen); call after the camera has moved, before the scene is drawn.
+   * Renders the mirror at the current quality cadence (every frame, or alternate frames on the low tier).
+   * Call after the camera has moved, before the scene is drawn.
    */
   update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
     /** Snapped to the even part of the grid, so the vertices carrying the swell never slide through it. */
     this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
     /** Where there is no mirror the sea must not read one: the last one drawn is a different room by now. */
     const onFlat = Math.hypot(camera.position.x - SKY_MIRROR.x, camera.position.z - SKY_MIRROR.z) < 240;
-    this.reflection.scale = onFlat ? (params.lite ? 0.5 : 0.75) : 0.25;
-    const mirrored = !!params.mirror && (onFlat || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
+    this.reflection.scale = onFlat ? this.mirrorScale : 0.25;
+    const mirrorEvery = params.mirror ?? this.mirrorEvery;
+    const mirrored = !!mirrorEvery && (onFlat || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
     (this.mesh.material as THREE.ShaderMaterial).uniforms.uMirrorOn.value = mirrored ? 1 : 0;
     if (!mirrored) return;
-    if (this.frame++ % params.mirror) return;
+    if (this.frame++ % mirrorEvery) return;
     atmo.uniforms.uMirrorPass.value = 1;
     this.reflection.render(camera, before, after);
     atmo.uniforms.uMirrorPass.value = 0;

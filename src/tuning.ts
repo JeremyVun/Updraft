@@ -839,9 +839,9 @@ export const tuning = {
     fogThickness: 0.56,
     fogReach: 34,
     /** The height its top surface lies at, and how softly it gives out there: the hill has to stand out of it. */
-    fogTop: 5.4,
+    fogTop: 8.2,
     /** And how high it lies once the night has thickened it: over a bird's head on the lower slopes of the hill. */
-    fogClimbs: 8.5,
+    fogClimbs: 11.4,
     fogSoft: 2.8,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
@@ -891,11 +891,11 @@ export const tuning = {
     blanketSpeed: 7,
     blanketSettles: 2.2,
     /** How far the blanket is thrown back at `blanket` 1, in bed lengths. */
-    blanketLift: 0.62,
+    blanketLift: 0.46,
     /** How wide the curtains are drawn back at `curtains` 1, as a share of the window, and how much they gather. */
     curtainOpen: 0.78,
     curtainGather: 0.45,
-    /** Seconds for the summit curtains to open as the updraft lifts the bird. */
+    /** Seconds for the curtains to open after the bird has pulled their ribbon free. */
     curtainsFor: 2.2,
     /** Hold both bird and window while the linen gathers and morning starts down the hill. */
     windowRevealFor: 4.5,
@@ -904,7 +904,7 @@ export const tuning = {
     downThrow: 1.6,
     downLife: 9,
     /** How far the blanket stands over the child under it, and how wide that shape is, in bed widths. */
-    sleeperHigh: 0.44,
+    sleeperHigh: 0.78,
     sleeperWide: 0.65,
 
     /**
@@ -929,12 +929,24 @@ export const tuning = {
     /** Maximum lead on the walking bird, and how quickly a gust carries it back into sight. */
     featherLead: 3.6,
     featherCatch: 4,
+    featherCorridor: 1.1,
+    featherEncouragement: 1.6,
+    featherBrushRadius: 0.36,
 
     /**
      * The bird acts between two player gestures: a brush of the pillow, then circles at the summit.
      * The walk is assisted, and the shiver resumes by itself if the player leaves it alone.
      */
-    climbsIn: 3.2,
+    /** Bedside choreography: a pause, the bird stepping off, sitting, resisting sleep, reclining and tucking. */
+    tiredStroll: 0.68,
+    bedPauseFor: 3.8,
+    bedBirdFor: 2.4,
+    bedSitFor: 3.2,
+    bedDrowseFor: 4.5,
+    climbsIn: 4.8,
+    bedTuckFor: 3.2,
+    bedSettleFor: 3.8,
+    blanketHandLift: 0.45,
     /** Seconds asleep before the bird starts trying, and between its three tries. */
     triesFrom: 2.4,
     triesEvery: 4.4,
@@ -951,13 +963,17 @@ export const tuning = {
     /** What the wind under it has to do at the hilltop before it goes. */
     liftToFly: 0.9,
     /** The glide down: seconds it takes, and how far it holds above the straight line from the hill to the bed. */
-    glideFor: 15,
+    leapFor: 2.0,
+    ribbonTugFor: 1.6,
+    ribbonPull: 0.85,
+    ledgeStudyFor: 6.5,
+    glideFor: 18,
     glideArc: 2.6,
     /** How far the frost has come in by the time the bird gives up on the child, and by the hilltop. */
     frostAsleep: 0.62,
     frostWorst: 0.95,
     /** Seconds the waking takes: the light on the face, the sitting up, and the bird gathered into the lap. */
-    wakeFor: 9,
+    wakeFor: 12,
 
     /**
      * The child asleep in it. The coat is a rigid bell, so lying down is not a pose it can hold: they are tipped

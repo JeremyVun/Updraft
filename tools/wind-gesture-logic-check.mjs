@@ -20,6 +20,28 @@ const camera = new THREE.PerspectiveCamera(50, 16/9, .1, 1000);
 camera.position.copy(center).add(new THREE.Vector3(0, 3.8, 17)); camera.lookAt(center); camera.updateMatrixWorld();
 const el = { addEventListener() {} };
 const wind = { addSplat() {} };
+{
+  const input = new PointerInput(el);
+  let splats = 0;
+  const field = { addSplat() { splats++; } };
+  input.present = true;
+  input.update(1/60, camera, field);
+  input.eventNdc.set(.12, .08);
+  input.update(1/60, camera, field);
+  assert(input.gust > 1, 'fixture produces a real stroke');
+  input.charge = .8;
+  input.muted = true;
+  input.eventNdc.set(-.2, -.1);
+  const before = splats;
+  input.update(1/60, camera, field);
+  assert.equal(splats, before, 'scripted input cannot feed the wind');
+  assert.equal(input.gust, 0, 'direct object brushing cannot replay a muted gust');
+  assert.equal(input.charge, 0, 'scripted input cannot keep lifting the plane');
+  assert(input.ndc.equals(input.prevNdc) && input.ndc.equals(input.eventNdc), 'muted pointer tracks without retaining a stroke');
+  input.muted = false;
+  input.update(1/60, camera, field);
+  assert.equal(splats, before, 'resuming cannot turn pointer travel during the scene into wind');
+}
 for (const fps of [30,60,120]) for (const clockwise of [false,true]) {
   const input = new PointerInput(el); input.present = true; input.anchor = center;
   scarf.snags[1].target = 0;

@@ -51,8 +51,10 @@ The camera looks across the approach with a fixed bearing,
 keeping hoop, bubble and target apart, and eases upward when a star leaves its bubble.
 
 The arrival boat now moors in deep water alongside a separate entry jetty. The child walks its planks to
-the flat before setting down the cygnet. Its arrival end was moved another 18 units offshore at Jeremy's
-request, adding about eight seconds of walking. Bubble steering follows the cursor stroke at the bubble's height,
+the flat before setting down the cygnet. The jetty stays about 16 units long, matching the departure pier;
+placing it on the western edge adds about nine seconds on the open mirror with the cygnet (27 seconds
+walking together before the bowl, previously 18). Bubble
+steering follows the cursor stroke at the bubble's height,
 responds promptly to reversals, and coasts after release. Destination selection is disabled while a bubble
 is in play; a caught or rising star holds the child and camera until its ascent is complete.
 
@@ -84,6 +86,9 @@ Camera/control pass (2026-09-20): desktop and portrait touch playthroughs return
 reloaded the first saved star and boarded both travellers with the paper visible, without browser errors.
 Logic checks cover accidental updrafts, the offshore gate and partial saves, the shared arrival walk,
 rising-star framing and the final constellation from each possible last stop. Typecheck and build pass.
+The entry/capture follow-up also covers the sailing approach, the deck-to-flat step, a pending destination
+on the capture frame, another star returning during a capture, stroke reversal and coasting, and continuous
+lifting circles. Mouse and touch gesture checks pass; the browser touch run completes all stars and boarding.
 
 ## 3. The stairs in the clouds — planned
 

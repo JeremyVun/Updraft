@@ -5,6 +5,7 @@
 //   Coordinates are fractions of the viewport (0..1). "swipe" moves through the points over "ms" with fine steps.
 //   "burst" takes n screenshots every <every> ms named <name>-1..n.
 //   env: BASE (default http://127.0.0.1:5230/), QUERY (appended), W/H viewport (default 1600x900),
+//        TOUCH=1 emulates a coarse primary pointer; it does not emulate GPU performance.
 //        VIDEO=1 records <prefix>.webm of the whole session (headless screencast, lower quality than shots)
 // Prints stats (`window.__stats`) at the end and writes <prefix>-console.log on errors.
 // Runs take a machine-wide lock (/tmp/updraft-chromium.lock) so parallel agents capture one at a time.
@@ -71,6 +72,7 @@ const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-video-') : nul
 const context = await browser.newContext({
   viewport: { width, height },
   deviceScaleFactor: 1,
+  hasTouch: process.env.TOUCH === '1',
   ...(videoDir ? { recordVideo: { dir: videoDir, size: { width, height } } } : {}),
 });
 try {

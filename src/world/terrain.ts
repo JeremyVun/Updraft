@@ -85,16 +85,23 @@ vec3 mirrorShade(vec3 n, vec2 xz, float h) {
   alb = mix(stillGrey(alb), alb, 0.45 + 0.55 * life);
   alb = mix(alb, uRock * 0.9, smoothstep(0.42, 0.6, 1.0 - n.y));
   float sun = groundAt(xz).w * cloudShadow(xz);
-  return applyFog(alb * (hemiLight(n) + uSunColor * max(dot(n, uSunDir), 0.0) * sun), vWorld);
+  return alb * (hemiLight(n) + uSunColor * max(dot(n, uSunDir), 0.0) * sun);
 }
 
 void main() {
   if (roomHides(vWorld.xz)) discard;
+  vec4 fog = fogOf(vWorld);
+  // Fully veiled land contributes only the fog colour. Avoid its noise, field,
+  // shore and lighting lookups, including in the reflection, without changing it.
+  if (fog.a == 1.0) {
+    gl_FragColor = vec4(fog.rgb, 1.0);
+    return;
+  }
   vec3 n = normalize(vNormal);
   vec2 xz = vWorld.xz;
   float h = vWorld.y;
   if (uMirrorPass > 0.5) {
-    gl_FragColor = vec4(mirrorShade(n, xz, h), 1.0);
+    gl_FragColor = vec4(mix(mirrorShade(n, xz, h), fog.rgb, fog.a), 1.0);
     return;
   }
   float dist = length(vWorld - cameraPosition);
@@ -178,7 +185,7 @@ void main() {
   alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frostAt(xz) * 0.5);
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
-  col = applyFog(col, vWorld);
+  col = mix(col, fog.rgb, fog.a);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -230,6 +237,7 @@ export class Terrain {
   private readonly camPos = new THREE.Vector3();
   private filling: LeafSet;
   private split = SPLIT;
+  detail = SPLIT;
 
   constructor(breeze: THREE.Vector2, heightFilterable: boolean) {
     const template = leafTemplate(SEGMENTS);
@@ -273,12 +281,12 @@ export class Terrain {
 
   /** Picks the leaves for the main view. */
   update(camera: THREE.Camera): void {
-    this.fill(this.main, camera, SPLIT);
+    this.fill(this.main, camera, this.detail);
   }
 
   /** Picks a coarser set of leaves for the sea's mirror camera and draws it until `endMirror`. */
   beginMirror(camera: THREE.Camera): void {
-    this.fill(this.mirror, camera, MIRROR_SPLIT);
+    this.fill(this.mirror, camera, params.mirrorlod === 'full' ? this.detail : MIRROR_SPLIT);
     this.mesh.geometry = this.mirror.geo;
   }
 

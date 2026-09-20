@@ -1,8 +1,8 @@
 # Sleeping island: narrative repair
 
-September 20, 2026. **Design proposal, not implemented or playtested.** This records the response to Jeremy's
-playtest; it does not describe the current build. The earlier lighting pass is integrated. The subsequent
-bedtime animation experiment remains isolated in `/tmp/updraft-bedtime` and has not been integrated.
+September 20, 2026. Jeremy approved this design: “yep sounds good. approved. proceed with implementing
+this”. Implemented locally. The earlier lighting pass remains in place; bed choreography, terrain, feather
+guidance and physical ribbon release are rebuilt together. No production deployment was requested.
 
 ## Jeremy's playtest
 
@@ -24,7 +24,7 @@ bedtime animation experiment remains isolated in `/tmp/updraft-bedtime` and has 
 > I need you to think through it much more carefully. Sweat the details, and make the sleeping bed scenario
 > make more sense.
 
-## What fails now
+## What the playtest exposed
 
 The curtains open on elapsed glide time. The bird never touches them. The climb ends on continuous ground,
 so flying is unnecessary. A shiver and a look back cannot establish a physical risk that the scene does not
@@ -33,7 +33,7 @@ player does more work yet has less control. The bed is lowered by an explicit te
 bed entry translates and rotates the child into place in about five seconds, without distinct supported
 poses or time to resist sleep. Passing the chapter's current automation proves progression, not comprehension.
 
-## Proposed causal sequence
+## Approved causal sequence
 
 The child exhaustedly accepts a bed. Cold makes the bird leave that shelter. It finds morning tied behind a
 window. Opening the curtains requires it to leave solid ground and trust its healed wing. The bird frees the
@@ -132,3 +132,19 @@ The open view from the terrace should make the restored island part of that reli
 Build in that order: prove the geography and physical action in a simple playable scene, then integrate
 bedtime choreography, assisted feather controls, cameras, light timing and reunion. Do not call a prettier
 automatic curtain opening the completed repair.
+
+
+## Verification
+
+Phone (390×844) and desktop (1600×900) playthroughs completed with real pillow strokes, imperfect feather
+sweeps and circles. Both reached reunion and boarding without browser/shader errors. A further phone
+run checked the three-subject ledge framing. Side-view bedtime captures exposed and corrected quilt
+coverage, leg placement and scarf/mattress contact. The feather fades into the window seam after arrival.
+The kite appears after the reunion, when the child leaves the bed.
+
+The actor/feather checks pass at 30 and 60 fps; wing-care checks pass at 30, 60 and 120 fps. The constrained
+beak stays attached during the tug; cloth release precedes the one continued glide. Broad feather strokes
+completed the controlled route in 6.9 seconds versus 17.9 seconds idle. Both sleeping checkpoints saved
+and restored; CPU/GPU terrain height disagreement stayed below 0.002 world units. Production build passes.
+An unfamiliar viewer's understanding remains a playtest question; these checks establish the actions,
+controls and framing rather than claiming that qualitative test has happened.
