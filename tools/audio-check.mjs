@@ -173,6 +173,9 @@ try {
     const { Foley } = await import('/src/audio/foley.ts');
     const results = [];
     for (const name of ['normal', 'care', 'materials', 'busy']) {
+      // Compare the two chime envelopes through the same noise and reverb realization.
+      let seed = 926417;
+      Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
       const { ctx, sound } = offlineSound(8);
       sound.master.gain.cancelScheduledValues(0); sound.master.gain.value = 0.9;
       const foley = new Foley(); foley.setOutput(sound.output);
@@ -228,7 +231,8 @@ try {
     assert.equal(clip.clipped, 0, `${clip.name}: no digital clipping`);
     assert(clip.peakDbFS > -60, `${clip.name}: output is audible`);
   }
-  assert(render[1].rmsDbFS < render[0].rmsDbFS - 8, 'caring chime remains meaningfully quieter in rendered audio');
+  assert(render[1].rmsDbFS < render[0].rmsDbFS - 8,
+    `caring chime remains meaningfully quieter in rendered audio: normal ${render[0].rmsDbFS.toFixed(2)} dBFS, care ${render[1].rmsDbFS.toFixed(2)} dBFS`);
   assert(render[0].leftPower > render[0].rightPower * 2, 'source panning survives the output graph');
   const dir = '/tmp/updraft-audio-check'; fs.mkdirSync(dir, { recursive: true });
   const metrics = render.map(({ pcm, ...clip }) => {

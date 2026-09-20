@@ -1,6 +1,11 @@
 // Preview new island arrangements without changing the game.
 // Usage: node tools/audio-island-proposals.mjs [/tmp/updraft-island-proposals]
 // Add --sea-refinement to compare the first sea proposal with the quieter revised background.
+// Add --sleeping-refinement for the current winter chapter, including deliberate music-free passages.
+// Add --meadow for the proposed background after the piano, through the swans and the walk onward.
+// Add --birches for autumn play, the optional swing and space around the scarf puzzles.
+// Add --birches-refinement to compare the first Birches proposal with its revised melody/harmony.
+// Add --lines for tentative curiosity beneath the washing, then the warmer family clothes.
 // Requires Chrome and ffmpeg. Uses an isolated temporary Vite snapshot; runtime files are read-only.
 // Renders current score, proposal and a shared ambience/gesture stem; loudness-matches the music only.
 // Outputs separate WAV/MP3s and a current → 2 s gap → proposal comparison for each scene.
@@ -13,26 +18,40 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createServer } from 'vite';
 import { audioPage, wav } from './lib/audio-render.mjs';
 import { proposalScenes } from './lib/island-score-proposals.mjs';
+import { sleepingStudy } from './lib/sleeping-score-proposal.mjs';
+import { meadowStudy } from './lib/meadow-score-proposal.mjs';
+import { birchesStudy } from './lib/birches-score-proposal.mjs';
+import { linesStudy } from './lib/lines-score-proposal.mjs';
 
 const dir = path.resolve(process.argv[2] ?? '/tmp/updraft-island-proposals');
 const stems = path.join(dir, 'stems');
 fs.mkdirSync(stems, { recursive: true });
 const rate = 24000;
 const refineSea = process.argv.includes('--sea-refinement');
-const runtime = ['src/audio/audio.ts', 'src/audio/little-boats-score.ts', 'src/audio/sea-score.ts', 'src/audio/foley.ts', 'src/story/home.ts', 'src/story/sleeping.ts',
-  'src/story/little-boats.ts', 'src/story/crossing.ts', 'src/tuning.ts'];
+const refineSleeping = process.argv.includes('--sleeping-refinement');
+const meadowOnly = process.argv.includes('--meadow');
+const birchesOnly = process.argv.includes('--birches');
+const refineBirches = process.argv.includes('--birches-refinement');
+const linesOnly = process.argv.includes('--lines');
+assert([refineSea, refineSleeping, meadowOnly, birchesOnly, refineBirches, linesOnly].filter(Boolean).length <= 1, 'Choose one study per run');
+const runtime = ['src/audio/audio.ts', 'src/audio/little-boats-score.ts', 'src/audio/sea-score.ts', 'src/audio/sleeping-score.ts', 'src/audio/meadow-score.ts', 'src/audio/birches-score.ts', 'src/audio/lines-score.ts', 'src/audio/foley.ts', 'src/story/home.ts', 'src/story/sleeping.ts',
+  'src/story/little-boats.ts', 'src/story/crossing.ts', 'src/story/meadow.ts', 'src/story/piano.ts',
+  'src/story/birches.ts', 'src/story/birches-play.ts', 'src/tuning.ts'];
 const hashes = files => Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
 const snapshot = fs.mkdtempSync(path.join(os.tmpdir(), 'updraft-score-source-'));
-const snapshotFiles = [...runtime, 'tools/lib/island-score-proposals.mjs'];
+const previewFiles = ['tools/audio-island-proposals.mjs', 'tools/lib/island-score-proposals.mjs',
+  'tools/lib/sleeping-score-proposal.mjs', 'tools/lib/meadow-score-proposal.mjs', 'tools/lib/birches-score-proposal.mjs', 'tools/lib/lines-score-proposal.mjs'];
+const snapshotFiles = [...runtime, ...previewFiles];
 for (const file of snapshotFiles) {
   const target = path.join(snapshot, file);
   fs.mkdirSync(path.dirname(target), { recursive: true }); fs.copyFileSync(file, target);
 }
 const before = Object.fromEntries(runtime.map(file => [file,
   crypto.createHash('sha256').update(fs.readFileSync(path.join(snapshot, file))).digest('hex')]));
-const report = { source: before, previewSource: hashes(['tools/audio-island-proposals.mjs', 'tools/lib/island-score-proposals.mjs']),
-  comparison: refineSea ? 'first sea proposal, then revised background' : 'current game music, then original proposal',
-  method: 'Condensed listening scenes, not gameplay recordings. Current production score versus preview-only arrangements. Identical ambience, physical sounds, calls, cues and player gestures in each pair. Music stems matched by integrated LUFS; one common playback gain and end fade per pair. No home-melody changes. Numerical verification only; awaiting Jeremy’s listening judgement.', clips: [] };
+const report = { source: before, previewSource: hashes(previewFiles),
+  comparison: linesOnly ? 'current Lines background, then a tentative reed melody and warmer family phrase' : refineBirches ? 'first Birches proposal, then revised melody and supporting harmony' : birchesOnly ? 'current Birches background, then proposed autumn arrangement' : meadowOnly ? 'previous Meadow background, then approved post-piano arrangement' : refineSea ? 'first sea proposal, then revised background' : refineSleeping
+    ? 'current winter chapter music, then revised Sleeping proposal' : 'current game music, then original proposal',
+  method: 'Condensed listening scenes, not gameplay recordings. Current production score (or the first proposal when refining) versus preview-only arrangements. Identical ambience, physical sounds, calls, cues and player gestures in each pair. Music stems matched by integrated LUFS; one common playback gain and end fade per pair. No home-melody changes. Numerical verification only; awaiting Jeremy’s listening judgement.', clips: [] };
 
 function floatWav(samples) {
   const h = Buffer.alloc(44), b = Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength);
@@ -79,11 +98,11 @@ const server = await createServer({ root: snapshot, configFile: false, envDir: f
 await server.listen();
 const { browser, page } = await audioPage(`http://127.0.0.1:${server.httpServer.address().port}/`);
 try {
-  for (const [name, scene] of Object.entries(proposalScenes)) {
+  for (const [name, scene] of Object.entries(linesOnly ? { lines: linesStudy } : birchesOnly || refineBirches ? { birches: birchesStudy } : meadowOnly ? { meadow: meadowStudy } : refineSleeping ? { sleeping: sleepingStudy } : proposalScenes)) {
     if (refineSea && name !== 'sea') continue;
     const audio = {}, metrics = {};
     for (const stem of ['current', 'proposal', 'context']) {
-      const result = await page.evaluate(async ({ name, stem, seconds, refineSea }) => {
+      const result = await page.evaluate(async ({ name, stem, seconds, refineSea, refineSleeping, refineBirches }) => {
         const { scheduleProposal, sceneState, contextEvents } = await import('/tools/lib/island-score-proposals.mjs');
         const { Foley } = await import('/src/audio/foley.ts');
         const originalRandom = Math.random;
@@ -95,9 +114,9 @@ try {
           const { ctx, sound } = offlineSound(duration);
           const foley = new Foley(); foley.setOutput(sound.output);
           const piano = new audioModule.PianoStrings(); piano.setOutput(sound.output);
-          const arrangement = stem === 'proposal' || refineSea && stem === 'current';
+          const arrangement = stem === 'proposal' || (refineSea || refineBirches) && stem === 'current';
           const proposal = arrangement ? scheduleProposal(name, ctx, sound.musicBus, lead,
-            refineSea && stem === 'proposal' ? 'refined' : 'original') : { piano: [], notes: [] };
+            (refineSea || refineSleeping || refineBirches) && stem === 'proposal' ? 'refined' : 'original') : { piano: [], notes: [] };
           if (stem === 'context') sound.padGain.disconnect();
           // Current and proposal music are separate from the shared calls and gesture notes.
           if (stem === 'current') sound.chime = () => {};
@@ -112,13 +131,13 @@ try {
           for (const note of proposal.piano) atTime(note.at, () =>
             piano.note(note.midi, note.velocity, 0, name === 'sleeping' ? 0.32 : 0.7));
           if (stem === 'context') for (let tick = 0; tick < seconds * 8; tick++) {
-            atTime(lead + tick / 8, () => contextEvents(name, tick, sound, foley, { cues: [] }));
+            atTime(lead + tick / 8, () => contextEvents(name, tick, sound, foley, { cues: [] }, refineSleeping ? 'refined' : 'original'));
           }
           const update = tick => {
             const time = tick / 8 - lead;
             if (!arrangement) {
-              const state = sceneState(name, Math.max(0, time), baseState);
-              if (stem === 'context' && time >= 0) contextEvents(name, tick - lead * 8, sound, null, state);
+              const state = sceneState(name, Math.max(0, time), baseState, refineSleeping ? 'refined' : 'original');
+              if (stem === 'context' && time >= 0) contextEvents(name, tick - lead * 8, sound, null, state, refineSleeping ? 'refined' : 'original');
               sound.update(0.125, state);
               if (stem === 'current') for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
                 sound[name].gain.cancelScheduledValues(ctx.currentTime); sound[name].gain.value = 0;
@@ -145,15 +164,26 @@ try {
           for (let i = 0; i < bytes.length; i += 16384) binary += String.fromCharCode(...bytes.subarray(i, i + 16384));
           return { float: btoa(binary), notes: proposal.notes.map(n => ({ ...n, at: n.at - lead })) };
         } finally { Math.random = originalRandom; }
-      }, { name, stem, seconds: scene.seconds, refineSea });
+      }, { name, stem, seconds: scene.seconds, refineSea, refineSleeping, refineBirches });
       const bytes = Buffer.from(result.float, 'base64');
       audio[stem] = new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
       // Preserve the first sea audition's score-to-environment balance, before comparing the revision.
       if (refineSea && stem !== 'context') for (let i = 0; i < audio[stem].length; i++) audio[stem][i] *= 10 ** (9.7 / 20);
+      // Retain the first Birches audition's balance against the same environmental stem.
+      if (refineBirches && stem !== 'context') for (let i = 0; i < audio[stem].length; i++) audio[stem][i] *= 10 ** (20.4 / 20);
       assert.equal(audio[stem].length, scene.seconds * rate * 2);
       assert(peak(audio[stem]) > 0.0001, `${name}/${stem} is silent`);
       const file = path.join(stems, `${name}-${stem}.wav`);
       fs.writeFileSync(file, floatWav(audio[stem])); metrics[stem] = measure(file);
+      if (refineSleeping && stem === 'proposal') for (const [from, to] of scene.musicRests) {
+        let power = 0, highest = 0, count = 0;
+        for (let i = from * rate * 2; i < to * rate * 2; i++) {
+          power += audio[stem][i] ** 2; highest = Math.max(highest, Math.abs(audio[stem][i])); count++;
+        }
+        const rmsDbFS = 10 * Math.log10(Math.max(1e-20, power / count));
+        assert(rmsDbFS < -90 && highest < 0.0001, `Music tail spills into the ${from}–${to}s rest`);
+        (report.musicRests ??= []).push({ from, to, rmsDbFS });
+      }
       if (stem === 'proposal') fs.writeFileSync(path.join(stems, `${name}-notes.json`), JSON.stringify(result.notes, null, 2));
       console.log(`Rendered ${name}/${stem}`);
     }
@@ -168,13 +198,31 @@ try {
       10 ** (-2 / 20) / Math.max(peak(current), peak(proposed)));
     const a = exportClip(path.join(dir, `${name}-current`), current, playbackGain);
     const b = exportClip(path.join(dir, `${name}-proposal`), proposed, playbackGain);
+    if (linesOnly) {
+      // Exactly the same proposed music and gain as the contextual player, without chimes or foley.
+      const { pcm: _music, ...musicMetrics } = exportClip(path.join(dir, `${name}-music-only`),
+        audio.proposal, playbackGain * 10 ** (musicGainDb / 20));
+      report.musicOnly = { seconds: scene.seconds, sameGainAsContext: true, ...musicMetrics };
+    }
     const reel = Buffer.concat([a.pcm, Buffer.alloc(rate * 4 * 2), b.pcm]);
     const file = path.join(dir, `${name}-comparison`);
     fs.writeFileSync(`${file}.wav`, wav(reel));
     execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', `${file}.wav`, '-c:a', 'libmp3lame', '-b:a', '192k', `${file}.mp3`]);
+    if (refineBirches) {
+      // Compare just the opening and swing; retain the full-study gain and common end fade.
+      const count = 36 * rate * 2;
+      const earlier = exportClip(path.join(stems, 'birches-first-melody'), current.slice(0, count), playbackGain);
+      const revised = exportClip(path.join(stems, 'birches-revised-melody'), proposed.slice(0, count), playbackGain);
+      const excerpt = path.join(dir, 'birches-melody-comparison');
+      fs.writeFileSync(`${excerpt}.wav`, wav(Buffer.concat([earlier.pcm, Buffer.alloc(rate * 4 * 2), revised.pcm])));
+      execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', `${excerpt}.wav`, '-c:a', 'libmp3lame', '-b:a', '192k', `${excerpt}.mp3`]);
+      report.melodyComparison = { seconds: 74, revisionStarts: 38, sourceInterval: [0, 36], commonPlaybackGain: true };
+    }
     const { pcm: _a, ...currentMetrics } = a, { pcm: _b, ...proposalMetrics } = b;
     report.clips.push({ name, ...scene,
       ...(refineSea ? { intent: 'Quieter melodic fragments, continuous close harmony, no high-register swell or melody during the swim.' } : {}),
+      ...(refineBirches ? { intent: 'Clearer chord-tone melody over D / C / G-over-B / A-minor, retaining the falling bass, swing contour and scarf breathing room.',
+        baselineProposalMusicGainDb: 20.4 } : {}),
       proposalStarts: scene.seconds + 2, stemMetrics: metrics,
       proposalMusicGainDb: musicGainDb, commonPlaybackGainDb: 20 * Math.log10(playbackGain), currentMetrics, proposalMetrics });
   }

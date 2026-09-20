@@ -4,7 +4,18 @@ A browser game where you play the wind. You sweep your hand and the air moves: e
 
 Atmosphere and visuals make or break this game. Beauty should come from simulation and light, not from a mountain of hand-made assets.
 
-## The full game (direction, not yet built)
+## Current game
+
+The child and an injured swan cygnet travel through 17 chapters, including crossings: the still island,
+washing, little boats, meadow and piano, birches, drowned village, dark wood, sleeping island, sky mirror
+and home. Wind gestures reveal and restore each place, help the companion, and carry the boat onward.
+Checkpoints persist locally. See `journey.md` for the brief and story, `contracts/` for behavior, and
+`testing.md` for release checks. The production review is recorded in `production-review.md`.
+
+## Original direction (2026-09-15)
+
+These early exploration ideas predate the authored journey. The chain-reaction gardening systems below
+are historical proposals; they do not describe the current implementation.
 
 - A small traveller (a kid on a kite-boat, or a paper glider in the prototype) crosses a grey, lifeless archipelago. You cannot steer them directly, only the air around them.
 - You restore islands with a few interacting elements: push rain clouds over dry soil, carry seeds there, fan a fire to clear deadwood or snuff it before it reaches a forest, build dunes to shelter saplings.
@@ -18,12 +29,12 @@ The closest existing game is thatgamecompany's *Flower* (2009), which also has y
 
 - Platform: browser, Three.js + TypeScript + Vite. Mouse, trackpad and touch.
 - The wind is a real 2D fluid simulation over the ground plane (GPU stable fluids with vorticity confinement). Everything that moves reads it; nothing fakes its own wind. See `contracts/wind.md`.
-- Two verbs. Moving or dragging the pointer makes a gust along the path. Pressing and holding still raises an updraft: a rising, swirling column that lifts petals and the glider.
+- Two verbs (updated): moving or dragging makes a gust; tracing circles raises an updraft. Holding still does not charge it. See `contracts/wind.md`.
 - The player pushes what they see. A stroke over the glider carries it, even though the air under the cursor is pushed on the ground behind it.
 - The glider can't be lost. Past about 50 units from the island it banks around and comes home, and it never crashes; it skims the grass or settles in it until a gust lifts it.
 - First milestone is a single island at golden hour: a grass meadow, flower patches, one tree on the ridge, rocks, petals, a paper glider, wind lines and sound, with the grey archipelago in the distance. See `roadmap.md`.
-- Sound is off until the player clicks or taps (browsers require a gesture). The first press anywhere turns it on; the speaker button and the M key toggle it.
-- Player-facing text is drafted by Astra and approved by Jeremy (`copy/`). The game shows no text on screen. Astra's first draft (`copy/copy-1.json`) keeps the title "Updraft" and labels the sound button "Sound"; it awaits Jeremy's verdict.
+- Sound starts from Begin/Continue after a click, tap or keyboard activation. The speaker button and M toggle it. The loading veil remains silent, and a chosen mute persists into play.
+- Player-facing text is drafted by Astra and approved by Jeremy (`copy/`). Gameplay has no instructional narration; the start screen, controls, recovery dialog and credits have text.
 
 ## Shape
 

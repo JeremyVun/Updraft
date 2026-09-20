@@ -55,6 +55,12 @@ Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and 
 
 Pointer strokes project both screen endpoints through the current camera, so camera motion cannot generate wind. An idle pointer performs no ground picks; the last gesture's gust settles at its existing world point. A new touch or re-entry starts a fresh stroke without connecting it to the previous contact.
 
+One primary pointer owns a contact until release. Additional fingers or another input device cannot move or
+release that stroke. Browser cancellation, lost capture, blur, page suspension and viewport resize discard
+pending motion and charge; a cancelled touch needs a fresh pointer-down. Ordinary release retains the soft
+decay, and mouse hover still makes wind. `tools/pointer-contact-check.mjs` checks these rules without a GPU;
+`tools/touch-viewport-check.mjs` checks real browser touch contacts and viewport/fullscreen resizing.
+
 `tuning.pointer.minGust` and `minLift` are shared with gesture audio. Any input strong enough to write wind
 must qualify for its chime response; piano and rescue behavior are defined in `audio.md`.
 

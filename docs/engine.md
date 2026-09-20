@@ -43,6 +43,17 @@ discarded rather than queued; the next frame starts without a catch-up backlog. 
 simulation, and visibility changes reset the timestamp. QA `shot` still advances exactly 1/60 s per frame.
 `__stats` reports game time, world-step count/size, simulated milliseconds and discarded milliseconds.
 
+On resize, `main.ts` sizes both the displayed canvas and its drawing buffer from `innerWidth`/`innerHeight`,
+then sizes the post targets and camera from those same values. CSS `100vh` alone may include space behind
+Safari's browser controls. Viewport changes also cancel any in-progress pointer stroke before its old
+coordinates can be interpreted in the new frame.
+
+When a chapter changes, `Journey` retains the previous chapter's prepared shot, pace and habitat focus
+until the new chapter has had its first normal update. Several constructors initialize those vectors at
+the origin and populate them during update. Reading them sooner caused a one-frame camera pull toward
+the origin. Retaining the view avoids an extra zero-time gameplay update at every transition; startup and
+checkpoint restoration still perform their existing zero-time setup before the first camera cut.
+
 ## Readbacks (`src/gl/readback.ts`)
 
 The wind field, the life field and the height bake are read back to the CPU for gameplay. In Chrome, mapping a read buffer blocks until the GPU process has executed every command issued before the map, so a readback issued and mapped mid-frame stalls for the whole frame's rendering, and a GPU-bound frame turns into a CPU stall too (that was the original stutter: 60-140 ms every few frames).

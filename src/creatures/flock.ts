@@ -161,6 +161,11 @@ export class SwanFlock {
     return this.mode === 'wheel';
   }
 
+  /** Includes the take-off run, when wings are already beating over the water. */
+  get flying(): boolean {
+    return this.mode === 'skein' || this.mode === 'wheel' || (this.mode === 'raft' && this.launched >= 0);
+  }
+
   /** The heading of the V, for anyone flying at the back of it. */
   get direction(): THREE.Vector3 {
     return this.dir;

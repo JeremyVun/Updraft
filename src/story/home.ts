@@ -85,7 +85,7 @@ const GRIPS: [0 | 1, number[][]][] = [
       [0, 0, -0.8],
       [0.5, 0, -1],
       [0.78, -NEAR * 0.57, -1],
-      [1, -NEAR * 0.71, -1.05],
+      [1, -NEAR * 0.71, -1.2],
     ],
   ],
   [
@@ -96,12 +96,12 @@ const GRIPS: [0 | 1, number[][]][] = [
       [0.55, NEAR * 1.48, 0.2],
       [0.72, NEAR * 0.97, 0.95],
       [0.88, NEAR * 1.16, 0.78],
-      [1, NEAR * 0.71, -1.05],
+      [1, NEAR * 0.71, -1.2],
     ],
   ],
 ];
 /** The paper held up into the wind: this long before the island's own takes it, so the ending cannot be made to wait. */
-const HOLDS_UP = 12;
+const HOLDS_UP = tuning.homeReveal.releaseFor;
 /** Seconds of the player's own wind on it that carry it off, and how long they watch it go afterwards. */
 const TAKES = 0.4;
 const WATCHES_IT = 7;
@@ -186,6 +186,8 @@ export class HomeChapter implements Chapter {
   private readonly sky = new THREE.Vector3();
   private readonly fwd = new THREE.Vector3();
   private readonly eyeAt = new THREE.Vector3();
+  private readonly readingEye = new THREE.Vector3();
+  private readonly paperEye = new THREE.Vector3();
   private readonly moon = sunDirection(MOON.az, MOON.el);
   private readonly side = new THREE.Vector3();
   private readonly onCygnet = new THREE.Vector3();
@@ -787,8 +789,12 @@ export class HomeChapter implements Chapter {
       drawing.lift = this.lifted;
       drawing.turn = this.tilted;
       drawing.drawn = this.inked();
-      /** Turned toward where the camera is standing, over their shoulder, so it is seen the way they see it. */
-      drawing.place(c.handPosition(this.hand), c.presentPoint(this.held), this.eyeAt, this.now, c.planeQuaternion(this.paperFacing));
+      // A chest-height reading pose belongs to the child, independent of the viewing camera or head turn.
+      c.presentPoint(this.held);
+      const tilt = THREE.MathUtils.degToRad(tuning.homeReveal.paperTilt);
+      this.paperEye.copy(this.held).addScaledVector(this.forward(), -Math.sin(tilt));
+      this.paperEye.y += Math.cos(tilt);
+      drawing.place(c.handPosition(this.hand), this.held, this.paperEye, this.now, c.planeQuaternion(this.paperFacing));
       const holding = this.beat === 'unfold' || this.beat === 'gaze' || (this.beat === 'fold' && drawing.open >= GRIPS_TO);
       if (holding) this.hands();
     }
@@ -796,7 +802,7 @@ export class HomeChapter implements Chapter {
 
   /**
    * How far the paper has come up out of the one hand: into both of them to be worked on, low, where the hands can
-   * get at it, and then up in front of their face once the last corner is open and there is a drawing to look at.
+   * get at it, and then settled into the reading hold once the last corner is open.
    */
   private get lifted(): number {
     const open = this.cast.drawing.open;
@@ -855,28 +861,40 @@ export class HomeChapter implements Chapter {
     const reveal = tuning.homeReveal;
     const walking = beat === 'crest';
     const close = ['settle', 'unfold', 'gaze'].includes(beat);
-    // Come onto the shoulder while approaching the house. Hold one composition through every fold;
-    // a push-in during unfolding would make the paper grow as well as open.
-    const retreat = beat === 'fold' ? THREE.MathUtils.smootherstep(this.t, 0, 1 / FOLD_RATE) : close ? 0 : 1;
+    // Ease toward the drawing over the first folds, rather than climbing as soon as the hands move.
+    const approaching = beat === 'settle' || beat === 'unfold';
+    const approach = approaching ? THREE.MathUtils.smootherstep(
+      this.t + (beat === 'unfold' ? SETTLE_FOR : 0), 0, reveal.approachFor) : 1;
+    const retreat = beat === 'fold' ? THREE.MathUtils.smootherstep(this.t, 0, 1 / FOLD_RATE) : close ? 1 - approach : 1;
+    const reading = this.recognisedAt < 0 ? 0 : THREE.MathUtils.smootherstep(
+      this.now - this.recognisedAt, reveal.readingFrom, reveal.readingUntil) * (1 - retreat);
     const shoulderArc = THREE.MathUtils.lerp(reveal.portraitShoulderArc, reveal.shoulderArc,
       THREE.MathUtils.smoothstep(aspect, 0.46, 1));
-    const arc = THREE.MathUtils.lerp(shoulderArc * Math.min(1, aspect / 0.46), reveal.walkArc, retreat);
+    const arc = THREE.MathUtils.lerp(shoulderArc * Math.min(1, aspect / 0.46), reveal.walkArc, retreat)
+      + (portrait ? reveal.portraitReadingArc : reveal.readingArc) * reading;
     const portraitBack = THREE.MathUtils.lerp(reveal.narrowPortraitBack, reveal.portraitBack,
       THREE.MathUtils.smoothstep(aspect, 0.36, 0.46));
     const near = portrait ? portraitBack * Math.max(1, (0.46 / aspect) ** 2) : reveal.shoulderBack;
     const dist = THREE.MathUtils.lerp(near, reveal.walkBack, retreat);
-    const closeRise = reveal.shoulderRise + Math.max(0, near - portraitBack) * 0.45;
+    const closeRise = (portrait ? reveal.portraitShoulderRise : reveal.shoulderRise) + Math.max(0, near - portraitBack) * 0.45;
     const rise = THREE.MathUtils.lerp(closeRise, reveal.walkRise, retreat);
     this.side.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y).applyAxisAngle(UP, arc);
-    s.eye = this.eyeAt.copy(c).addScaledVector(this.side, dist).setY(c.y + rise);
+    this.eyeAt.copy(c).addScaledVector(this.side, dist).setY(c.y + rise);
+    this.readingEye.copy(this.eyeAt).addScaledVector(this.side, -reveal.readingForward * reading);
+    this.readingEye.y += reveal.readingRise * reading;
+    s.eye = this.readingEye;
     child.presentPoint(this.sheet);
-    // Blend sight directions so the paper sits to the left of the real house, with room for both hands.
+    // Share the child's view: the drawing in the foreground, the real house beyond it.
     this.aim.copy(cottage.position).y += 2.6;
-    this.aim.sub(this.eyeAt).normalize();
-    this.tmp.copy(this.sheet).sub(this.eyeAt).normalize();
-    const weight = THREE.MathUtils.lerp(portrait ? reveal.portraitPaperWeight : reveal.paperWeight, walking ? 0.15 : 0.25, retreat);
+    this.aim.sub(this.readingEye).normalize();
+    this.tmp.copy(this.sheet).sub(this.readingEye).normalize();
+    const readingWeight = THREE.MathUtils.lerp(portrait ? reveal.portraitPaperWeight : reveal.paperWeight,
+      portrait ? reveal.portraitPaperWeight : reveal.readingPaperWeight, reading);
+    const weight = THREE.MathUtils.lerp(readingWeight, walking ? 0.15 : 0.25, retreat);
     this.aim.lerp(this.tmp, weight).normalize();
-    s.target.copy(this.eyeAt).addScaledVector(this.aim, 20);
+    // Keep the aim near the sheet. Extending a downward sight line into the hillside makes the
+    // camera's terrain correction pull past the child during the reading move.
+    s.target.copy(this.readingEye).addScaledVector(this.aim, this.readingEye.distanceTo(this.sheet));
     if (beat === 'release' && this.wentAt > 0) {
       // Follow the plane only after it leaves the hand; ease back towards the wider nightfall shot.
       const gone = THREE.MathUtils.smoothstep(this.now - this.wentAt, 0, 2.5);

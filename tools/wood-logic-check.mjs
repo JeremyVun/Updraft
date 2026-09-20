@@ -106,6 +106,7 @@ const { Boat } = await import('../src/traveller/boat.ts');
 const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { WoodChapter } = await import('../src/story/wood.ts');
+const { WOOD_APPROACH_LIGHT } = await import('../src/world/wood.ts');
 const { takeCues } = await import('../src/story/cues.ts');
 const { CameraRig } = await import('../src/camera.ts');
 const { Glider } = await import('../src/glider/glider.ts');
@@ -138,15 +139,25 @@ for (const portrait of [false, true]) {
   let birdBefore = null, worstBirdStep = 0, wetPaper = null, worstEscapeFrame = 0;
   const seen = new Set();
   let scrambleCount = 0, sawCoax = false; takeCues();
+  let rescueLight = null, rescueAt = 0;
+  let approachClearance = Infinity;
+  let previousEye = null, firstLightCameraStep = 0;
   for (let frame = 1; frame <= 30 * 400; frame++) {
     const dt = 1 / 30, time = frame * dt;
     const target = c.windInvitation;
     waited = target === previousTarget ? waited + dt : 0; previousTarget = target;
     for (const coal of embers.coals) coal.breath = coal.p === target && c.t > 6 ? 1 : 0;
-    c.brushDry(c.t > 6 && ['snag', 'dry'].includes(c.beat) ? 1 : 0);
+    c.brushDry(c.t > 6 && c.beat === 'snag' ? 1 : 0);
+    const litBefore = c.beat === 'walk' ? embers.coals.filter(k=>k.live&&k.lit).sort((a,b)=>b.laid-a.laid)[0] : null;
+    const lightPlace = litBefore?.p.clone();
     c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
+    if (!c.bolted) approachClearance = Math.min(approachClearance,
+      Math.hypot(child.position.x-WOOD_APPROACH_LIGHT.x,child.position.z-WOOD_APPROACH_LIGHT.y));
+    if (litBefore && c.beat === 'compose') { rescueLight = {coal:litBefore,place:lightPlace}; rescueAt = time; }
     cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
     embers.update(dt, child.position, c.embers); rig.update(dt, time, c.shot, c.pace); c.afterCamera(rig.camera);
+    if(previousEye&&c.beat==='walk'&&c.leg===0) firstLightCameraStep=Math.max(firstLightCameraStep,rig.camera.position.distanceTo(previousEye));
+    previousEye=rig.camera.position.clone();
     assert(!takeCues().includes('restored'), 'the reunion must not play the level-complete cue');
     scrambleCount += cygnet.heard.filter(h => h.kind === 'scramble').length; cygnet.heard.length = 0;
     if (c.hearth && ['walk', 'compose', 'fright'].includes(c.beat) && !c.goingToBird) assert.equal(c.hearth.reveal, 0, 'shelter ember leaked before the angle change: '+JSON.stringify({time,beat:c.beat,child:child.position.toArray(),hearth:c.hearth.p.toArray(),coals:embers.coals.filter(k=>k.live).map(k=>[...k.p.toArray(),k.reveal])}));
@@ -159,6 +170,10 @@ for (const portrait of [false, true]) {
     }
     seen.add(c.beat);
     if (['fright', 'bolt', 'lost'].includes(c.beat)) assert(c.hearth?.live, 'refuge ember must exist before the escape');
+    if (rescueLight && time-rescueAt<18) {
+      assert(rescueLight.coal.live&&rescueLight.coal.lit&&rescueLight.coal.reveal===1,'thunder must preserve the earned light');
+      assert(rescueLight.coal.p.equals(rescueLight.place),'earned light must never be moved during the sequence');
+    }
     if (c.beat === 'bolt' && cygnet.seating.move) {
       assert(cygnet.stay && !cygnet.errand, 'landing target must stay fixed until the jump finishes');
     }
@@ -174,11 +189,18 @@ for (const portrait of [false, true]) {
     }
     birdBefore = cygnet.seating.shown.p.clone();
     if (c.beat === 'plane') {
+      assert.equal(c.ahead,c.planeCoal,'tree arrival must reuse the final path ember');
+      assert.equal(embers.coals.filter(k=>k.live&&Math.hypot(k.p.x+37,k.p.z+1848)<15).length,1,'one ember in the plane clearing');
       wetPaper ??= plane.position.clone();
       assert(plane.position.distanceTo(wetPaper) < 0.3, 'the caught paper may sway with its branch but cannot drift away');
       assert(!plane.landed, 'a caught plane cannot be picked up from the ground');
     }
     if (c.beat === 'snag' && c.t < 5) assert.equal(c.planeWork, 0, 'idle wind cannot free the plane');
+    assert.notEqual(c.beat, 'dry', 'retrieval must not add a drying puzzle');
+    if (c.beat === 'out') {
+      assert(plane.held, 'retrieved plane stays safely held');
+      assert.notEqual(c.windInvitation, plane.position, 'held paper must never ask for wind');
+    }
     if (c.beat !== last) { console.log(`${portrait ? 'portrait' : 'desktop'} route: ${c.beat} at ${time.toFixed(1)}s`); last = c.beat; }
     if (target && target === c.windInvitation && !child.moving && waited > 5) {
       const p = target.clone().project(rig.camera);
@@ -198,6 +220,11 @@ for (const portrait of [false, true]) {
   assert(worstWaitFrame < 0.95, `waiting target must remain in frame: ${JSON.stringify(worst)}`);
   assert.equal(scrambleCount, 1, 'one audible feather scramble per escape');
   assert(sawCoax, 'the child must coax the cygnet out before lifting it');
+  assert(rescueLight, 'the route must enter the rescue from an earned approach light');
+  assert(approachClearance>2.4, `child walked through the approach ember: ${approachClearance}`);
+  console.log(`Approach ember clearance: ${approachClearance.toFixed(2)} units`);
+  assert(firstLightCameraStep<0.6,`first ignition jumped the camera: ${firstLightCameraStep}`);
+  console.log(`First-ember camera step: ${firstLightCameraStep.toFixed(3)} units at 30fps`);
   assert(seen.has('snag') && seen.has('fall') && seen.has('pickup'), 'free the plane from the tree before collecting it');
   assert(plane.soggy.value <= 0.02);
   assert(seen.has('fright') && seen.has('bolt') && seen.has('lost'), 'thunder fright, continuous jump and rescue must all play');

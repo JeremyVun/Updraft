@@ -27,7 +27,8 @@ The camera retains both characters, then swings around to look into the shelter.
 There is no deliberate lowering or handover. Ambient lightning is suppressed throughout this chapter so the
 fright has one unmistakable cause; the authored event cannot repeat during an idle or checkpoint restore.
 
-The shelter is a hollow rock shell with an open west-facing mouth. Its ember is inside, concealed during
+The shelter is an uneven cluster of partly buried boulders beneath a tilted slab, with a low west-facing
+crevice. Broken chips, broad weathered facets and patches of moss tie it to the forest floor. Its ember is inside, concealed during
 the approach and fright. It becomes visible only when the camera has turned toward the entrance after the
 jump. The player fans it awake, revealing the frightened bird. The child hesitates, then crosses to a spot
 outside the rock, kneels and offers a still hand. After 2.2 seconds the cygnet walks out to them. The pickup
@@ -35,8 +36,28 @@ begins only once the bird is outside too. The reunion has no level-complete musi
 The child first needed light for their own next step; now they use it to help their companion. Care gives them
 a reason to enter the dark. They continue with the cygnet against their chest.
 
+Jeremy's next screenshot found that “the rocks look a bit unnatural” and “there are two embers close by”.
+The symmetrical tunnel mesh is replaced by separate stones. The last approach ember sits back along the
+path, behind the rescue camera, and no further path ember is offered beside the shelter before the rescue.
+Lighting it earns the short walk into the clearing. Existing lights stay in place and burn normally while
+the camera turns toward the concealed refuge ember. Jeremy rejected fading the earned light at the thunder:
+“the ember that I had just lit disappeared”. Scene focus must come from placement and framing, not erasing
+the player's work.
+
+The approach ember sits on the west verge, and lighting it keeps the child on the walking line rather than
+steering into the orb. The first ember after pickup is 12 path units ahead instead of 20.25. The walking
+camera shifts farther to the shoulder after rescue, separating the next light from the child's silhouette;
+unlit path embers also receive the same foreground-branch clearance as the rescue subjects.
+
+Camera continuity: walking orientation follows the next route point or a waiting ember ahead, never an
+earned fire behind the child. The rescue holds that walking heading while its authored camera plays.
+Subject fitting eases at `cameraFitResponse`, and the camera carries the child's physical displacement
+through `Shot.carryAnchor`; selecting a new ember changes focus without translating the camera instantly.
+The September 20 full-game baseline exposed a 12.67-unit one-frame retreat at the first ignition, which
+the earlier isolated-scene checks had missed.
+
 Controls live in `tuning.wood`; the sequence is in `src/story/wood.ts`. The rescue waits indefinitely for player
-ignition. Neither the scripted weather nor a waiting timer lights an ember or dries the plane.
+ignition. Neither scripted weather nor a waiting timer lights an ember.
 
 ## Paper caught in the tree (September 20 follow-up)
 
@@ -53,11 +74,25 @@ the branch moves; deliberate player strokes produce the faster, stronger flutter
 The five-second wind trace remains at the moving plane. Ambient motion never adds release progress.
 
 Once loose, the wet paper pitches and flutters down over 1.8 seconds to clear ground beside the child. The
-child approaches only after it has landed, then picks it up for the existing drying interaction. The fall and
+child settles the cygnet into the satchel, approaches the landed paper, picks it up and walks onward. The fall and
 ground placement remain authored, so the gust that releases it cannot carry it away and stall retrieval.
 The camera includes the child, fork and paper, with the same foreground-tree clearance used for the rescue.
+The path ends at this same ember. The last two path intervals are balanced to avoid a second fire beside
+the tree, and reaching the paper reuses the earned fire instead of spawning another. Existing fires stay
+where they were lit and burn normally.
 `tuning.wood` holds the snag height, required stroke distance, response and fall duration. Checkpoint names
-and save data are unchanged; completed drying still resumes after this scene.
+and save data are unchanged; the legacy `dry` checkpoint still resumes after retrieval.
+
+## Retrieval without a second puzzle (September 21)
+
+Jeremy found the child apparently stuck after pickup, with a wind indicator still showing. The old drying
+interaction was targeting paper stowed on the backpack because the child was holding the cygnet. He rejected
+the mechanic itself: “that's too abstract for a child to understand” and “we should remove the drying mechanic.”
+
+Freeing the plane from the branch is the complete paper interaction. The cygnet climbs into the satchel before
+pickup, freeing the child's hands; collecting the plane immediately resumes the route to the boat. The held
+paper never requests wind. Its wet shading fades during the walk, with no input or progression gate. Existing
+ember guidance continues along the remaining path. The legacy `dry` save key is retained for compatibility.
 
 ## Earlier progression defect
 
@@ -97,6 +132,8 @@ Lighting does not contribute to ignition or the child's movement gate. Jeremy ap
   lighting when Vite has versioned dependencies during another task's edits.
 - `VIDEO=1 node tools/wood-check.mjs [portrait]`: real pointer/touch strokes from landing through boarding;
   long-idle gates, captures of the fright, run, rescue and plane. Evidence stays under `/tmp/updraft-wood-*`.
+  `NATURAL=1` skips synthetic clock jumps for a continuous playthrough; `BASE` pins a production preview,
+  and `PREFIX` keeps before/after captures separate. Reports include render-loop camera positions and spikes.
 - `npm run typecheck` and `npm run build`.
 
 Latest mechanics checks pass: both full routes and checkpoint restores, both characters in frame throughout
@@ -108,8 +145,8 @@ jump/feathers, the ember inside the opening, and the cygnet emerging beside the 
 moves to the other side so the child's back does not hide its exit. Audio rendering measures the scramble
 at roughly eleven times the ordinary handling flutter's RMS, with one event after the thunder's initial crack.
 Evidence: `/tmp/updraft-wood-scene-{desktop,portrait}-*.png` and their `-report.json` files.
-Full GPU/browser pointer playthrough remains outstanding; the shared capture slot was occupied by another
-task during this pass. The fixture checks scene staging and audio output, not the full rain/wind/audio mix.
+The early fixture pass checked staging and audio output without the full rain/wind/audio mix. The later
+camera-regression pass below runs the complete chapter through the real GPU game and gesture handling.
 
 Tree follow-up: both full mechanics routes and checkpoint restores pass, including portrait framing of the
 last ember during approach. Desktop and portrait tree renders pass: no input or missed strokes leave it
@@ -120,3 +157,27 @@ the coal pool reusing a concealed rescue ember when all ten slots were occupied.
 Idle-motion follow-up: desktop and portrait scene checks verify visible rocking, matching branch/plane
 anchor movement, zero release progress over nine idle seconds, and the invitation trace. Direct strokes
 still release the plane and retrieval completes. The production build passes.
+
+Shelter follow-up: desktop and portrait renders verify the broken-stone opening and outside pickup.
+The reveal shot has more framing room for the child in portrait. Regression checks require the earned
+approach light to remain lit in its original position through the thunder and reveal, outside the rescue
+composition, while the hidden refuge ember remains the next interaction.
+Both scene checks and full mechanics routes pass after that correction, along with the build/typecheck.
+
+Camera and plane-ember regression pass: complete desktop pointer and portrait touch playthroughs reach
+`toSleeping` from the forest landing on the same fixed production build, without clock jumps or staged
+chapter transitions. Both have zero browser errors. The largest recorded forest camera step is 0.355 units
+on desktop and 0.399 in portrait; at the first ignition it is 0.232 and 0.170 respectively, versus the
+12.67-unit desktop baseline jump. The approach faces the refuge, and the plane captures show one ember.
+Mechanics checks cover the reused plane ember, 6.50-unit approach clearance, saves and boarding; build passes.
+Evidence: `/tmp/updraft-camera-final-{desktop,portrait}.webm`, their screenshots and `-report.json` files.
+
+Retrieval simplification: mechanics checks pass for desktop, portrait and legacy checkpoint restores; the
+production build passes. The full desktop gesture run reaches `toSleeping` without a drying beat or wind
+cue on held paper. With no input for three seconds after pickup, the child walks 8.40 units onward. The
+largest forest camera step is 0.364 units, with zero browser errors.
+Evidence: `/tmp/updraft-paper-retrieval-desktop.webm`, screenshots and `-report.json`.
+The full portrait touch run also reaches `toSleeping`, walks onward without a post-pickup gesture, and
+passes the camera continuity assertions with zero browser errors. Both walking captures show the cygnet
+in the satchel and the plane held beside the child. Portrait evidence uses
+`/tmp/updraft-paper-retrieval-portrait` with the same suffixes.

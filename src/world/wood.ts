@@ -15,8 +15,12 @@ export const WOOD_REFUGE = new THREE.Vector3(-8.5, 0, -1791);
 export const WOOD_HEARTH = new THREE.Vector3(-9.1, 0, -1792.05);
 export const WOOD_OUTSIDE = new THREE.Vector3(-11.6, 0, -1791);
 export const WOOD_COAX = new THREE.Vector3(-13, 0, -1791);
+/** On the west verge, clear of the walking line and behind the rescue camera. */
+export const WOOD_APPROACH_LIGHT = new THREE.Vector2(-34, -1781.5);
 /** The storm left the paper on a low, forked branch, above the child's reach. */
 export const WOOD_PLANE = new THREE.Vector2(-37, -1848);
+/** The path's final ember is also the light used to retrieve the paper. */
+export const WOOD_PLANE_LIGHT = new THREE.Vector2(WOOD_PLANE.x + 1.6, WOOD_PLANE.y + 2.2);
 
 /** Shared by the exposed fork and its caught paper, following the wood's slow passing gusts. */
 export function woodPlaneSway(time: number, breeze: THREE.Vector2, air: { x: number; z: number; energy: number }, out: THREE.Vector3): THREE.Vector3 {
@@ -582,31 +586,38 @@ const THICKET = { x: -22, z: -1812 };
 /** A broken slab leaning on an outcrop: a low, west-facing gap, open toward the child's approach. */
 function refugeRocks(): THREE.Mesh {
   const ground = heightAt(WOOD_REFUGE.x, WOOD_REFUGE.z);
-  // A continuous rock shell around an empty tunnel. There is no boulder occupying the entrance.
-  const positions: number[] = [];
-  const rings = [-1.9, -0.8, 1.5, 2.4];
-  const steps = 12;
-  const ring = (slice: number, inner: boolean, i: number): THREE.Vector3 => {
-    const angle = i / steps * Math.PI;
-    const width = inner ? [1.4, 1.5, 1.2, 0.6][slice] : [2.5, 2.7, 2.5, 2.15][slice];
-    const height = inner ? [1.65, 1.75, 1.5, 0.9][slice] : [2.5, 2.9, 2.7, 2.1][slice];
-    const rough = inner ? 1 : 1 + Math.sin(i * 4.1 + slice) * 0.055;
-    return new THREE.Vector3(WOOD_REFUGE.x + rings[slice], ground - 0.18 + Math.sin(angle) * height * rough,
-      WOOD_REFUGE.z - 0.45 + Math.cos(angle) * width * rough);
-  };
-  const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => positions.push(...a.toArray(), ...b.toArray(), ...c.toArray());
-  const quad = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3) => { tri(a,b,c); tri(a,c,d); };
-  for (let i = 0; i < steps; i++) {
-    for (let j = 0; j < rings.length - 1; j++) {
-      quad(ring(j,false,i), ring(j+1,false,i), ring(j+1,false,i+1), ring(j,false,i+1));
-      quad(ring(j,true,i+1), ring(j+1,true,i+1), ring(j+1,true,i), ring(j,true,i));
+  // Separate weathered masses leave a crooked seam beneath a fallen slab. The clear westward
+  // passage contains both the bird and the hearth; no stone occupies their entry/exit path.
+  const parts: THREE.BufferGeometry[] = [];
+  const stone = (x: number, y: number, z: number, sx: number, sy: number, sz: number,
+    rx: number, ry: number, rz: number, seed: number) => {
+    const geo = new THREE.IcosahedronGeometry(1, 1);
+    const vertices = geo.getAttribute('position');
+    for (let i = 0; i < vertices.count; i++) {
+      const vx = vertices.getX(i), vy = vertices.getY(i), vz = vertices.getZ(i);
+      // Coordinate-based weathering keeps shared vertices together and gives each stone broad facets.
+      const wear = 1 + 0.1 * Math.sin(vx * 5.7 + vy * 3.1 + vz * 4.3 + seed)
+        + 0.045 * Math.sin(vz * 9.2 - vx * 4.1 + seed * 2);
+      vertices.setXYZ(i, vx * wear, vy * wear, vz * wear);
     }
-    // The front lip joins outside to inside, leaving the arch completely open.
-    quad(ring(0,false,i+1), ring(0,false,i), ring(0,true,i), ring(0,true,i+1));
-    tri(ring(3,false,i), ring(3,false,i+1), new THREE.Vector3(WOOD_REFUGE.x + 2.4, ground - 0.18, WOOD_REFUGE.z - 0.45));
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geo.computeVertexNormals();
+    geo.scale(sx, sy, sz);
+    geo.rotateX(rx); geo.rotateY(ry); geo.rotateZ(rz);
+    geo.translate(WOOD_REFUGE.x + x, ground + y, WOOD_REFUGE.z + z);
+    geo.deleteAttribute('uv'); geo.computeVertexNormals();
+    parts.push(geo);
+  };
+  // Unequal shoulders: one long stone lies down, the other is partly buried on its edge.
+  stone(0.3, 0.65, -2.45, 2.85, 1.35, 1.25, 0.12, -0.18, 0.09, 1);
+  stone(0.85, 0.85, 1.75, 2.15, 1.55, 1.05, -0.18, 0.28, -0.16, 3);
+  stone(2.1, 0.9, -0.25, 1.25, 1.65, 2.1, 0.15, -0.2, 0.12, 5);
+  // A tilted, broad slab makes a low irregular overhang, not a cut-out semicircle.
+  stone(-0.05, 2.35, -0.45, 2.85, 0.72, 2.35, -0.14, 0.07, 0.13, 7);
+  // Fallen chips bed the shoulders into the leaf litter, away from the cygnet's route.
+  stone(-1.95, 0.1, -2.55, 0.8, 0.4, 0.7, 0.2, 0.5, -0.1, 9);
+  stone(-1.25, 0.08, 2.25, 0.65, 0.32, 0.85, -0.1, -0.4, 0.1, 11);
+  stone(1.9, 0.05, 2.6, 0.9, 0.38, 0.6, 0.1, 0.8, 0.15, 13);
+  const geo = mergeGeometries(parts);
+  for (const part of parts) part.dispose();
   const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
     side: THREE.DoubleSide, uniforms: atmo.uniforms,
     vertexShader: `${ATMO_GLSL}
@@ -617,7 +628,11 @@ function refugeRocks(): THREE.Mesh {
       void main() {
         vec3 n = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
         float grain = vnoise(vWorld.xz * 5.0 + vWorld.y);
-        vec3 alb = mix(vec3(0.09, 0.105, 0.12), vec3(0.18, 0.19, 0.2), grain);
+        float weather = vnoise(vWorld.xz * 0.85 + vWorld.y * 0.6);
+        vec3 alb = mix(vec3(0.08, 0.095, 0.105), vec3(0.17, 0.18, 0.19), weather);
+        alb *= 0.88 + grain * 0.2;
+        float moss = smoothstep(0.48, 0.75, weather) * smoothstep(0.1, 0.8, n.y);
+        alb = mix(alb, vec3(0.075, 0.095, 0.058), moss * 0.6);
         float occlusion = mix(0.18, 1.0, smoothstep(-0.3, 0.6, n.y));
         vec3 col = alb * (hemiLight(n) * occlusion + uSunColor * max(0.0, dot(n, uSunDir)) * cloudShadow(vWorld.xz));
         col += (alb + vec3(0.05, 0.03, 0.01)) * emberLight(vWorld, n);

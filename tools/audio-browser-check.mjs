@@ -38,13 +38,16 @@ try {
     await page.waitForFunction(() => audioStates.length >= 6);
     const state = await page.evaluate(() => ({ name: __game.story.name, audio: audioStates.at(-1), sounds: materials,
       boatsScore: !!__game.sound.boatsScore, boatsVoices: __game.sound.boatsScore?.voices.size ?? 0,
-      seaScore: __game.sound.seaScore?.current?.phase }));
+      seaScore: __game.sound.seaScore?.current?.phase,
+      sleepingScore: __game.sound.sleepingScore?.current?.phase }));
     if (name === 'boats') {
       assert.equal(state.audio.music, 'boats', 'Little Boats selects its approved composition');
       assert(state.boatsScore && state.boatsVoices > 0, 'Little Boats starts sounding in the real game loop');
     } else assert.equal(state.boatsScore, false, `${name}: Little Boats score cannot leak into another chapter`);
     if (name === 'toMirror') assert.equal(state.seaScore, state.audio.seaScore, 'Long crossing receives its live arrangement');
     else assert.equal(state.seaScore, undefined, `${name}: long sea arrangement cannot leak into other chapters`);
+    if (name === 'sleeping') assert.equal(state.sleepingScore, 'shelter', 'Sleeping enters its approved bedside arrangement');
+    else assert.equal(state.sleepingScore, undefined, `${name}: Sleeping arrangement cannot leak into another chapter`);
     for (const field of ['land', 'sea', 'meadow', 'cold']) assert(Number.isFinite(state.audio[field]), `${name}: finite ${field}`);
     for (const source of [state.audio.cygnet, state.audio.flock]) {
       assert(Number.isFinite(source.pan) && Number.isFinite(source.distance), `${name}: valid positioned source`);
@@ -93,7 +96,8 @@ try {
   });
   await page.waitForFunction(() => audioStates.length >= 4);
   assert.equal(await page.evaluate(() => audioStates.at(-1).music), 'sea');
-  assert.equal(await page.evaluate(() => __game.sound.seaScore), null, 'Sleeping morning keeps its original sea pad');
+  assert.equal(await page.evaluate(() => __game.sound.seaScore), null, 'Sleeping morning does not borrow the long-crossing score');
+  assert.equal(await page.evaluate(() => __game.sound.sleepingScore.current.phase), 'morning', 'Restoring morning selects the approved warm answer');
   // A real pointer sweep through a playable wood fixture must be reflected by the audio state.
   await page.evaluate(() => {
     __game.story.begin('wood');

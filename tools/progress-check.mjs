@@ -40,7 +40,8 @@ try {
     ['drowned', 'drowned', 'sail', `c.beat='drift';c.stirred=true;c.leg=2;`],
     ['wood', 'wood', 'found', `c.beat='walk';c.bolted=true;c.leg=2;c.chainAt=55;`],
     ['wood', 'wood', 'dry', `c.beat='out';c.bolted=true;c.leg=4;c.chainAt=100;g.glider.visible=true;g.glider.soggy.value=0;`],
-    ['sleeping', 'sleeping', 'feather', `c.beatStart=c.now-20;c.tuckIn(0);c.toFeather();c.beatStart=c.now-6;c.theFeather(0);g.cygnet.release(g.sleeping.feather.goal);c.looks=2;c.nextLook=c.now-1;c.theEdge();`],
+    // Arrange the completed walk around the bed and the whole tuck-in before freeing the feather.
+    ['sleeping', 'sleeping', 'feather', `c.birdWalkIndex=3;c.beatStart=c.now-60;c.tuckIn(0);if(g.child.abed!==1||c.beat!=='asleep')throw new Error('Incomplete bedside fixture');c.toFeather();c.beatStart=c.now-6;c.theFeather(0);g.cygnet.release(g.sleeping.feather.goal);c.looks=2;c.nextLook=c.now-1;c.theEdge();`],
     ['sleeping', 'sleeping', 'morning', `const {SLEEP_BERTH:p}=await import('/src/world/sleeping.ts');g.boat.beach(p.x,p.z,-1.76);g.child.place(g.sleeping.bedside.x,g.sleeping.bedside.z,0);g.cygnet.rideIn('cradle');c.moored=true;c.warmed=1;c.board();`],
     ...[0,1,3,7].map(mask => ['mirror','mirror',`stars-${mask}`,
       `c.restoreCheckpoint('stars-${mask}',[${mask},0]);`]),
@@ -70,7 +71,8 @@ try {
     assert.equal(restored.chapter, chapter);
     assert.equal((await read()).point, point, 'must not overwrite a restored checkpoint with entry');
     assert(restored.child.every(Number.isFinite));
-    assert(Math.hypot(restored.child[0]-saved.child[0],restored.child[2]-saved.child[2])<4, 'resume at the saved place, allowing the first second of walking/sailing');
+    assert(Math.hypot(restored.child[0]-saved.child[0],restored.child[2]-saved.child[2])<4,
+      `resume at the saved place, allowing the first second of walking/sailing: ${JSON.stringify({chapter,point,saved:saved.child,restored:restored.child})}`);
     assert(!restored.busy, 'arrival carry callback must not run after a POI restore');
     if (point === 'piano') {
       assert.match(restored.piano, /^done /);

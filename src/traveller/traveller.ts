@@ -200,14 +200,15 @@ export class Traveller {
   }
 
   /**
-   * The middle of the sheet when they hold it up: in front of the face and a little to one side, and near enough in
-   * that their own hands can be on the bottom corners of it instead of pointing at where it is.
+   * The middle of the sheet at reading height, with the near edge within a relaxed reach of both hands.
    */
   presentPoint(out: THREE.Vector3): THREE.Vector3 {
-    const up = this.sitting ? 1.88 : 2.4;
+    const hold = tuning.homeReveal;
+    const up = hold.paperHeight - (this.sitting ? 0.52 : 0);
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
-    return out.set(this.position.x + fx * 0.52 - fz * 0.38, this.position.y + up, this.position.z + fz * 0.52 + fx * 0.38);
+    return out.set(this.position.x + fx * hold.paperForward - fz * hold.paperSide, this.position.y + up,
+      this.position.z + fz * hold.paperForward + fx * hold.paperSide);
   }
 
   /** A place on the child's own body where a companion rides; it moves with every bone above it. */
@@ -285,6 +286,9 @@ export class Traveller {
   get moving(): boolean {
     return this.goal !== null;
   }
+
+  /** Alternating contacts from the distance-driven walking pose; riding does not advance it. */
+  get footContact(): number { return Math.floor((this.gait + Math.PI / 2) / Math.PI); }
 
   /** Both hands belong to the cygnet; the plane's keel goes under the satchel's outer flap. */
   armsFull = false;

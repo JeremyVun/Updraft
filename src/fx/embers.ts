@@ -398,13 +398,13 @@ export class Embers {
       data[j + 2] = c.p.z;
       data[j + 3] = c.live ? this.presence * c.reveal * Math.min(1, t.orbRestAlpha
         + (0.82 - t.orbRestAlpha) * growth + motion[j + 3] * 0.13) : 0;
-      const lightTarget = !c.live || c.reveal <= 0 ? 0 : c.lit ? (c.heat + c.flare * t.flareLight) * t.coalLight
-        : Math.pow(c.wake, 1.4) * t.coalLight * 1.3;
+      const lightTarget = !c.live ? 0 : c.reveal * (c.lit ? (c.heat + c.flare * t.flareLight) * t.coalLight
+        : Math.pow(c.wake, 1.4) * t.coalLight * 1.3);
       this.glowPower[i] += (lightTarget - this.glowPower[i]) * (1 - Math.exp(-dt * t.orbLightResponse));
       const glowReach = this.glowPower[i] / (1 + c.p.distanceToSquared(near) * 0.0025);
       if (glowReach > glowBest) { glowBest = glowReach; this.glowCentre.copy(c.p); }
       if (!c.live || !c.lit) continue;
-      const power = (c.heat + c.flare * t.flareLight) * t.coalLight;
+      const power = c.reveal * (c.heat + c.flare * t.flareLight) * t.coalLight;
       /** Falls off with distance, so a fire left far behind stops counting as light to walk by. */
       const reach = power / (1 + c.p.distanceToSquared(near) * 0.0025);
       if (reach > best) {

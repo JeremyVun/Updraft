@@ -21,6 +21,8 @@ export interface Shot {
   eye?: THREE.Vector3;
   /** The camera travels with a steadily moving target (a boat) and only eases the framing, so it never trails. */
   carry?: boolean;
+  /** Optional physical anchor: carry its movement, while changes of focus still ease normally. */
+  carryAnchor?: THREE.Vector3;
   /** Preserve the landscape composition's horizontal field in narrow viewports by drawing back. */
   fitWidth?: boolean;
   /**
@@ -46,6 +48,7 @@ export class CameraRig {
   private readonly look = new THREE.Vector3();
   private readonly wantEye = new THREE.Vector3();
   private readonly lastTarget = new THREE.Vector3();
+  private readonly lastCarryAnchor = new THREE.Vector3();
   private readonly moved = new THREE.Vector3();
   private readonly want = new THREE.Vector3();
   private readonly probe = new THREE.Vector3();
@@ -99,6 +102,7 @@ export class CameraRig {
     this.desired(shot, this.eye);
     this.look.copy(shot.target);
     this.lastTarget.copy(shot.target);
+    this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
     this.lift = 0;
     this.pull = 0;
     this.clear = shot.clearance ?? GROUND_CLEARANCE;
@@ -116,8 +120,9 @@ export class CameraRig {
       return;
     }
     const k = 1 - Math.exp(-dt * pace);
-    this.moved.subVectors(shot.target, this.lastTarget);
+    this.moved.subVectors(shot.carryAnchor ?? shot.target, shot.carryAnchor ? this.lastCarryAnchor : this.lastTarget);
     this.lastTarget.copy(shot.target);
+    this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
     if (shot.carry && this.moved.lengthSq() < 1) {
       this.eye.add(this.moved);
       this.look.add(this.moved);

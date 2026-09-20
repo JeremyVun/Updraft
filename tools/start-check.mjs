@@ -1,9 +1,9 @@
 // Start screen checks in isolated Chrome. Run without another GPU capture.
 // BASE may point to Vite dev or a production preview. Screenshots/report go to /tmp.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const browser = await chromium.launch({ executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist'] });
+const { browser, close } = await openBrowser({ allowAutoplay: false });
 const report={checks:[],errors:[]};
 const base=process.env.BASE ?? 'http://127.0.0.1:5230/';
 const key='updraft.progress.v1';
@@ -12,7 +12,13 @@ try {
  const context=await browser.newContext({viewport:{width:1440,height:900}});
  await context.addInitScript(()=>{const Native=window.AudioContext;window.__audio=[];window.AudioContext=class extends Native{constructor(...a){super(...a);window.__audio.push(this)}};});
  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
- const ready=async()=>{await page.waitForSelector('#veil.ready',{timeout:60000});await page.waitForTimeout(950)};
+ const ready=async()=>{
+   await page.waitForSelector('#veil.ready',{timeout:60000});await page.waitForTimeout(950);
+   // Shot mode deliberately defaults to silent. Set the preference behind the veil;
+   // the actual keyboard/click Begin gesture must still create and unlock native audio.
+   await page.locator('#sound').evaluate(button=>{if(button.dataset.on==='false')button.click()});
+   assert.equal(await page.evaluate(()=>__audio.length),0,'sound preference must not start audio before Begin');
+ };
  await page.addInitScript(() => {
    window.__bootFrames = [];
    let last = 0;
@@ -50,7 +56,13 @@ try {
  report.checks.push('ready screen stays paused and silent; strokes only shift the backdrop');
  await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'begin');
  await page.keyboard.press('Enter');
- await page.waitForFunction(()=>__audio.length===1&&__audio[0].state==='running');
+ try { await page.waitForFunction(()=>__audio.length===1&&__audio[0].state==='running'); }
+ catch (error) {
+   report.beginFailure = await page.evaluate(() => ({ audio: __audio.map(ctx => ctx.state),
+     hidden: document.hidden, veil: document.querySelector('#veil')?.className,
+     sound: document.querySelector('#sound')?.dataset.on, frame: window.__stats?.frame }));
+   throw error;
+ }
  await page.waitForSelector('#veil',{state:'detached'});
  assert(await page.evaluate(()=>__stats.frame>0&&!document.getElementById('view').inert));
  assert.equal(await page.locator('#sound').getAttribute('data-on'),'true');
@@ -101,4 +113,4 @@ try {
  const qa=await browser.newPage();await qa.goto(base+'?shot');await qa.waitForFunction(()=>window.__ready,null,{timeout:60000});
  assert.equal(await qa.locator('#veil').count(),0);report.checks.push('existing shot QA bypasses start screen');
  assert.deepEqual(report.errors,[]);
-} finally {fs.writeFileSync('/tmp/updraft-start-check.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));await browser.close()}
+} finally {fs.writeFileSync('/tmp/updraft-start-check.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));await close()}

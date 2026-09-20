@@ -296,17 +296,33 @@ They remain standing: one second looking at the visible house, 2.2 seconds bring
 then the existing 4.2-second physical unfold. The picture becomes readable with the final fold. The motif starts
 at that recognition, with both the sheet and the real house in frame. The drawing stays open for eight seconds,
 as Jeremy chose after the initial twelve-second refinement; the melody continues through refolding.
-The child looks from the drawing back to the house; only then do they refold it for its existing wind release.
+The child looks from the drawing back to the house; only then do they refold it for its wind release.
+Jeremy found the post-fold pause too long: the automatic release now takes two seconds instead of twelve.
+The breeze starts after 0.8 seconds; a player's stroke can still carry the plane away sooner.
 Paper handling plays at 35% of its previous gain, leaving the wind and melody more space. There is no separate
 walk or seven-second wait between reading the picture and finding the house.
 
-The camera establishes the house on the walk, eases onto the shoulder while the hands rise, and holds that
-composition through the unfolding and recognition. Paper and cottage share the view. Portrait screens get
-more distance and a different balance between those subjects. After Jeremy found the sheet covering the
-house, the shoulder angle moved farther sideways, with separate portrait framing. The whole sheet and
-cottage now stay apart throughout the eight-second hold, including the child's glance back to the house.
+Jeremy set the priority: a natural hold first, then the camera. He approved the lower, farther-out pose with
+the sheet tilted 40 degrees above horizontal, allowing a tiny extra reach if needed. Its centre is now at
+1.95 units above the feet and 1.4 forward. At Jeremy's request, the unfolded picture is 10% larger; the
+carried plane keeps its existing size. Both hands follow the near edge. The sheet's
+orientation belongs to the child; neither the camera nor a glance toward the cottage swivels it.
+
+Jeremy asked to keep the house in view and preserve the emotion: the sideways shot felt “like you're no longer
+the character.” The paper moves farther out, and the camera comes closer and almost directly behind the child,
+looking over their head toward the drawing and the house above it. Following Jeremy's feedback that it climbed
+too eagerly, the camera approaches over 4.4 seconds through the hands coming up and the first folds opening.
+Its landscape resting height is 5.5 units above the child's feet, lowered again after Jeremy found the
+previous endpoint too high. During the eight-second hold it advances slightly after a 1.5-second pause,
+without further rise or sideways orbit. Some head overlap remains. Portrait screens use their own framing. The aim stays at the sheet's distance: an extended
+downward aim would enter the hillside and trigger unwanted terrain correction.
 The camera eases out through refolding and follows the plane after release. `tuning.homeReveal` holds the
-timing and composition controls.
+pose, timing and composition controls. The ending view check verifies that the sheet and house stay in frame
+throughout the move and that the paper does not cover the cottage.
+The larger picture and slower approach passed all fifteen ending-view cases and typecheck, with full desktop
+and portrait captures at `/tmp/updraft-larger-drawing-*`. The lower landscape endpoint also passes all fifteen
+view cases and typecheck; its visual check is `/tmp/updraft-lower-reading-hold.png`.
+The earlier approved side pose is `/tmp/updraft-natural-hold-side.png`.
 
 `Chapter.afterCamera` checks the actual eased camera, including terrain sight lines and all four paper corners.
 A missed view holds recognition rather than playing its music offscreen. The motif starts from audio time

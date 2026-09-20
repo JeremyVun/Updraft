@@ -381,7 +381,8 @@ export class Drawing {
     /**
      * Start at the carried plane's scale and open to the familiar drawing size as the folds spread.
      */
-    const size = THREE.MathUtils.lerp(tuning.paperCarry.scale, SCALE * HELD, THREE.MathUtils.smoothstep(this.open, 0.05, 0.45));
+    const size = THREE.MathUtils.lerp(tuning.paperCarry.scale, SCALE * HELD * tuning.homeReveal.paperScale,
+      THREE.MathUtils.smoothstep(this.open, 0.05, 0.45));
     this.mesh.scale.setScalar(size);
 
     /** Begin in the same carry pose as the glider, including its bank and the child's lean. */

@@ -3,6 +3,10 @@ import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
 import { BOATS_CHORDS, LittleBoatsScore } from './little-boats-score';
 import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
+import { SleepingScore, type SleepingScorePhase } from './sleeping-score';
+import { MeadowScore, type MeadowScorePhase } from './meadow-score';
+import { BirchesScore, type BirchesScorePhase } from './birches-score';
+import { LinesScore, type LinesScorePhase } from './lines-score';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -59,6 +63,12 @@ export interface SoundState {
   music: Mood;
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   seaScore?: SeaScorePhase;
+  sleepingScore?: SleepingScorePhase;
+  /** The approved arrangement starts after the piano and ends before departure. */
+  meadowScore?: MeadowScorePhase;
+  birchesScore?: BirchesScorePhase;
+  linesScore?: LinesScorePhase;
+  linesMelodyQuiet?: boolean;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
   scripted: boolean;
   /** True once the music has been cut for good: the pad and the chimes go, and the world is all that is left. */
@@ -227,6 +237,11 @@ export class Soundscape {
   private boatsScore: LittleBoatsScore | null = null;
   private boatsCueUntil = 0;
   private seaScore: SeaScore | null = null;
+  private sleepingScore: SleepingScore | null = null;
+  private meadowScore: MeadowScore | null = null;
+  private birchesScore: BirchesScore | null = null;
+  private linesScore: LinesScore | null = null;
+  private linesCueUntil = 0;
 
   get running(): boolean {
     return this.ctx?.state === 'running' && !this.muted && !this.hidden;
@@ -423,6 +438,7 @@ export class Soundscape {
       o.frequency.value = f * ratio;
       const g = ctx.createGain();
       const peak = velocity * amp * 0.16;
+      g.gain.value = 0;
       g.gain.setValueAtTime(0, when);
       g.gain.linearRampToValueAtTime(peak, when + (soft ? tuning.audio.careChimeAttack : 0.006));
       g.gain.exponentialRampToValueAtTime(0.0001, when + decay / ratio);
@@ -740,6 +756,36 @@ export class Soundscape {
     } else if (this.seaScore) {
       this.seaScore.stop(); this.seaScore = null; this.chord = -1;
     }
+    if (s.sleepingScore && !s.silence) {
+      this.sleepingScore ??= new SleepingScore(this.output!, out => {
+        const piano = new PianoStrings(); piano.setOutput(out); return piano;
+      });
+      // The approved arrangement already contains its quiet dynamics and true rests.
+      this.sleepingScore.update(s.sleepingScore, tuning.audio.sleepingScoreLevel * (1 - piano));
+    } else if (this.sleepingScore) {
+      this.sleepingScore.stop(s.silence ? 0.12 : 1.8); this.sleepingScore = null;
+    }
+    if (s.music === 'meadow' && s.meadowScore && !s.silence) {
+      this.meadowScore ??= new MeadowScore(ctx, this.musicBus);
+      // The audition already includes the quieter flock/pond dynamics; don't apply that hush twice.
+      this.meadowScore.update(s.meadowScore, tuning.audio.meadowScoreLevel * (1 - piano));
+    } else if (this.meadowScore) {
+      this.meadowScore.stop(s.silence ? 0.12 : 1.8); this.meadowScore = null;
+    }
+    if (s.music === 'birches' && s.birchesScore && !s.silence) {
+      this.birchesScore ??= new BirchesScore(ctx, this.musicBus);
+      this.birchesScore.update(s.birchesScore, tuning.audio.birchesScoreLevel * (1 - piano));
+    } else if (this.birchesScore) {
+      this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
+    }
+    if (s.music === 'lines' && s.linesScore && !s.silence) {
+      this.linesScore ??= new LinesScore(ctx, this.musicBus);
+      if (s.cues.includes('delight') || s.cues.includes('restored')) this.linesCueUntil = now + tuning.audio.linesCueSpace;
+      this.linesScore.update(s.linesScore, tuning.audio.linesScoreLevel * (1 - piano),
+        10 ** (tuning.audio.linesMelodyDb / 20), s.linesMelodyQuiet || now < this.linesCueUntil);
+    } else if (this.linesScore) {
+      this.linesScore.stop(s.silence ? .12 : 1.8); this.linesScore = null; this.linesCueUntil = 0;
+    }
     const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[s.music] ?? MOODS.meadow;
     const chord = this.seaScore ? this.seaScore.chordAt(now) : this.boatsScore ? this.boatsScore.chordAt(now)
       : Math.floor(now / mood.seconds) % mood.chords.length;
@@ -760,9 +806,9 @@ export class Soundscape {
     /** The finale swells, night or no night: it is the one time the music is meant to be the loudest thing there is. */
     const swell = finale ? 1.6 + 0.8 * (1 - (this.finaleUntil - now) / 22) : 1;
     this.padGain.gain.setTargetAtTime(
-      ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * 0.09) * hush * mood.level * swell,
+      this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * 0.09) * hush * mood.level * swell,
       now,
-      s.hush > 0.5 ? 0.7 : 1.5,
+      piano > 0 ? tuning.piano.mixResponse : s.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
@@ -828,7 +874,8 @@ export class Soundscape {
       const interval = PULSE * (s.charge > 0.7 ? 1 : 2);
       const at = this.nextPulse();
       if (at - this.lastArp >= interval - 1e-3) {
-        const chordTones = care ? [62, 69, 74, 81] : mood.chords[this.chord % mood.chords.length].map((m) => m + 12);
+        const chordTones = care ? [62, 69, 74, 81]
+          : (this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at) ?? mood.chords[this.chord % mood.chords.length]).map((m) => m + 12);
         const tone = chordTones[Math.floor((now / interval) % chordTones.length)] + (!care && s.charge > 0.6 ? 12 : 0);
         this.chime(tone, (0.25 + s.charge * 0.35) * velocity, s.pan, at, 1.6, care);
         this.lastArp = at;
@@ -836,7 +883,7 @@ export class Soundscape {
     }
 
     if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5 && gestures) {
-      const base = mood.chords[this.chord % mood.chords.length][0] + 24;
+      const base = (this.linesScore?.chordAt(this.nextPulse()) ?? this.birchesScore?.chordAt(this.nextPulse()) ?? mood.chords[this.chord % mood.chords.length])[0] + 24;
       this.chime(base, 0.4 * velocity, 0, this.nextPulse(), 1.8, care);
       this.chime(base + 7, 0.35 * velocity, 0, this.nextPulse() + PULSE, 2.2, care);
       this.lastGlider = now;
@@ -877,15 +924,26 @@ export class PianoStrings {
     this.ends.fill(0);
   }
 
-  /** One note: `velocity` 0..1 for how hard the wind struck it, `level` for how near the listener is. */
-  note(midi: number, velocity: number, pan: number, level: number): void {
+  /** One note: velocity is strike strength, level is proximity. Optional audio time and returned sources
+   * let a composed score schedule ahead and release the note on a story transition. */
+  note(midi: number, velocity: number, pan: number, level: number, when?: number): AudioScheduledSourceNode[] {
     const out = this.out;
-    if (!out || level <= 0.01) return;
+    if (!out || level <= 0.01) return [];
     const { ctx } = out;
-    const now = ctx.currentTime;
+    const now = when ?? ctx.currentTime;
     let slot = -1;
     for (let i = 0; i < PIANO_VOICES; i++) if (this.ends[i] <= now) slot = i;
-    if (slot < 0) return;
+    if (slot < 0) return [];
+    const sources: AudioScheduledSourceNode[] = [];
+    const nodes: AudioNode[] = [];
+    let remaining = 0;
+    const track = (source: AudioScheduledSourceNode): void => {
+      sources.push(source); remaining++;
+      source.onended = () => {
+        source.disconnect();
+        if (--remaining === 0) for (const node of nodes) node.disconnect();
+      };
+    };
 
     const t0 = now + 0.012;
     const f = hz(midi) * Math.pow(2, outOfTune(midi) / 1200);
@@ -909,6 +967,7 @@ export class PianoStrings {
     felt.frequency.setValueAtTime(Math.min(12000, 900 + f * 3 + velocity * 6500), t0);
     felt.frequency.exponentialRampToValueAtTime(Math.min(7000, 700 + f * 2.2), t0 + 0.9);
     felt.connect(panner);
+    nodes.push(panner, dry, wet, felt);
 
     const peak = 0.085 * velocity * level;
     /**
@@ -937,6 +996,7 @@ export class PianoStrings {
         g.gain.exponentialRampToValueAtTime(top * 0.3, t0 + 0.06 + life * 0.09);
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + life);
         o.connect(g).connect(felt);
+        nodes.push(g); track(o);
         o.start(t0);
         o.stop(t0 + life + 0.05);
       }
@@ -971,9 +1031,11 @@ export class PianoStrings {
     click.gain.setValueAtTime(0.09 * velocity * velocity * level, t0);
     click.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
     hammer.connect(bite).connect(click).connect(panner);
+    nodes.push(wood, thump, bite, click); track(hammer); track(src);
     hammer.start(t0);
     hammer.stop(t0 + 0.05);
     src.start(t0);
     src.stop(t0 + 0.12);
+    return sources;
   }
 }

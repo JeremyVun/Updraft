@@ -8,7 +8,8 @@ import { heightAt } from '../world/island';
 import { SLEEP_SNOW_STOP, SLEEP_MIST_STOP } from '../world/sleeping-layout';
 import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
+import type { SleepingScorePhase } from '../audio/sleeping-score';
 
 type Beat =
   | 'ashore'
@@ -82,6 +83,14 @@ export class SleepingChapter implements Chapter {
   dusk = 1.9;
   readonly season = 1;
   music: 'wood' | 'sea' = 'wood';
+  /** Follow the bird's decisions, including pauses that can last as long as the player needs. */
+  get sleepingScore(): SleepingScorePhase {
+    if (['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'morning';
+    if (['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat)) return 'summit';
+    if (['climb', 'snow', 'mist', 'catchFeather'].includes(this.beat)) return 'climb';
+    if (['feather', 'edge'].includes(this.beat) || this.beat === 'asleep' && this.t >= T.winterBeginsAt) return 'cold';
+    return 'shelter';
+  }
   hush = 0.5;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 16, height: 5, carry: false, clearance: 2.4, smoothFit: 3 };
   readonly focus = new THREE.Vector3();
@@ -851,7 +860,7 @@ export class SleepingChapter implements Chapter {
       /** It comes in on the heading it was flying and turns to the child over the next breath, never in a frame. */
       this.landYaw = k.yaw;
       this.to('waking');
-      completeObjective();
+      // The flight already earned its musical answer; the reunion keeps the warmer background alone.
     }
   }
 

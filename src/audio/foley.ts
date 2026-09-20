@@ -4,7 +4,7 @@ import type { WhaleSound } from '../fx/sealife/wake';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'water' | 'paper' | 'door' | 'splash'
-  | 'dolphin-surface' | WhaleSound;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | WhaleSound;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -19,6 +19,7 @@ export class Foley {
   private lastFlap = -1;
   private frostHeard = false;
   private nextCrackle = 0;
+  private swanBeat = 0;
 
   setOutput(out: AudioOut | null): void {
     if (out && out.ctx !== this.out?.ctx) {
@@ -43,6 +44,22 @@ export class Foley {
         q: 0.55, attack: 0.025, wet: 0.08 });
       if (!wool) this.puff({ at: at + 0.045, len: 0.07, level: level * 0.035, pan,
         type: 'lowpass', from: sail ? 380 : 650, attack: 0.012 });
+    } else if (kind === 'leaf-scuff') {
+      // A few dry folds under a foot, never a continuous bed of crackle.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.puff({ at, len: 0.17, level: level * 0.055, pan, type: 'bandpass',
+        from: 1700 * colour, to: 900 * colour, q: 0.65, attack: 0.018 });
+      this.puff({ at: at + 0.04, len: 0.045, level: level * 0.028, pan,
+        type: 'bandpass', from: 2900 * colour, q: 0.7, attack: 0.008 });
+      this.puff({ at: at + 0.095, len: 0.055, level: level * 0.018, pan,
+        type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
+    } else if (kind === 'swing-creak') {
+      // Low rope friction and wood flex; no piercing, pitched playground squeak.
+      const colour = 0.92 + Math.random() * 0.16;
+      this.puff({ at, len: 0.34, level: level * 0.055, pan, type: 'bandpass',
+        from: 290 * colour, to: 190 * colour, q: 3.5, attack: 0.065, wet: 0.03 });
+      this.puff({ at: at + 0.04, len: 0.19, level: level * 0.022, pan,
+        type: 'bandpass', from: 720 * colour, to: 460 * colour, q: 2, attack: 0.045 });
     } else if (kind === 'water') {
       this.puff({ at, len: 0.58, level: level * 0.055, pan, type: 'bandpass', from: 620,
         to: 320, q: 0.65, attack: 0.1, wet: 0.08 });
@@ -277,7 +294,12 @@ export class Foley {
   }
 
   /** The throb of big wings going over: one soft pulse of air per beat, the sound a skein makes before you see it. */
-  wingbeat(pan: number, far: number): void {
+  wingbeat(dt: number, pan: number, far: number): void {
+    this.swanBeat += dt * 3.4;
+    if (this.swanBeat <= Math.PI * 2) return;
+    // Inaudible beats still pass: approaching swans must not replay a distant backlog.
+    this.swanBeat %= Math.PI * 2;
+    if (far >= 0.75) return;
     const now = this.out?.ctx.currentTime;
     if (now === undefined) return;
     this.puff({ at: now + 0.005, len: 0.22, level: 0.03 * (1 - 0.7 * far), pan, type: 'bandpass', from: 760, to: 520, q: 1.6, attack: 0.06, wet: 0.3 + 0.4 * far });

@@ -48,11 +48,14 @@ export class PointerInput {
   private readonly anchorNdc = new THREE.Vector3();
   private spin = 0;
   private sinceHeading = 0;
+  private activePointer: number | null = null;
   private listeners: ((kind: 'down' | 'up') => void)[] = [];
 
   constructor(private readonly el: HTMLElement) {
     el.addEventListener('pointermove', (e) => this.move(e));
     el.addEventListener('pointerdown', (e) => {
+      if (!e.isPrimary || (this.activePointer !== null && e.pointerId !== this.activePointer)) return;
+      this.activePointer = e.pointerId;
       this.down = true;
       this.present = true;
       if (e.pointerType !== 'mouse') this.hasPrev = false;
@@ -61,15 +64,26 @@ export class PointerInput {
       this.listeners.forEach((l) => l('down'));
     });
     const up = (e: PointerEvent) => {
+      if (e.pointerId !== this.activePointer) return;
+      this.activePointer = null;
       this.down = false;
       if (e.pointerType !== 'mouse') this.present = false;
       this.listeners.forEach((l) => l('up'));
     };
     el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
+    const cancel = (e: PointerEvent) => {
+      if (e.pointerId === this.activePointer) this.cancel();
+    };
+    el.addEventListener('pointercancel', cancel);
+    el.addEventListener('lostpointercapture', cancel);
     el.addEventListener('pointerleave', (e) => {
       if (e.pointerType === 'mouse' && !this.down) this.present = false;
     });
+    const doc = el.ownerDocument;
+    doc?.addEventListener('visibilitychange', () => { if (doc.hidden) this.cancel(); });
+    doc?.defaultView?.addEventListener('blur', () => this.cancel());
+    doc?.defaultView?.addEventListener('pagehide', () => this.cancel());
+    doc?.defaultView?.addEventListener('resize', () => this.cancel());
   }
 
   onButton(listener: (kind: 'down' | 'up') => void): void {
@@ -77,10 +91,25 @@ export class PointerInput {
   }
 
   private move(e: PointerEvent): void {
+    if (!e.isPrimary || (this.activePointer !== null && e.pointerId !== this.activePointer)) return;
+    if (e.pointerType === 'touch' && this.activePointer === null) return;
     const rect = this.el.getBoundingClientRect();
     this.eventNdc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     if (!this.present) this.hasPrev = false;
     this.present = true;
+  }
+
+  /** A browser-owned gesture or suspended page ends contact without replaying its last stroke. */
+  private cancel(): void {
+    const wasDown = this.down;
+    this.activePointer = null;
+    this.down = this.present = this.hasPrev = false;
+    this.ndc.copy(this.eventNdc);
+    this.prevNdc.copy(this.ndc);
+    this.vel.set(0, 0);
+    this.gust = this.charge = this.spin = this.sinceHeading = 0;
+    this.heading = null;
+    if (wasDown) this.listeners.forEach(l => l('up'));
   }
 
   private pick(camera: THREE.Camera, ndc: THREE.Vector2, out: THREE.Vector3): void {

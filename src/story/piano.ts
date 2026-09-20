@@ -56,6 +56,7 @@ export class PianoStop {
   private finishedAt = 0;
   private answered = false;
   private hushed = 0;
+  private hushProgress = 0;
   /** The cygnet's own turn at the keys: when it starts walking them, and when it is back in the arms. */
   private walkFrom = 0;
   private walkStep = 0;
@@ -78,7 +79,7 @@ export class PianoStop {
   }
 
   /** A checkpoint beyond the stop never replays or re-scores the puzzle. */
-  restoreDone(): void { this.beat = 'done'; this.completeAt = 0; piano.expect = null; piano.engaged = false; piano.finale = false; }
+  restoreDone(): void { this.beat = 'done'; this.completeAt = 0; this.hushed = this.hushProgress = 0; piano.expect = null; piano.engaged = false; piano.finale = false; }
 
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
@@ -96,7 +97,11 @@ export class PianoStop {
     this.now = time;
     const c = cast.child;
     piano.engaged = this.beat !== 'ahead' && this.beat !== 'done';
-    this.hushed += ((piano.engaged ? tuning.piano.hush : 0) - this.hushed) * (1 - Math.exp(-dt * 0.8));
+    // Ownership starts on approach, but music stays with the walk and the first look at the keys.
+    const playing = this.beat === 'sitting' || this.beat === 'seated' || this.beat === 'leaving';
+    this.hushProgress = THREE.MathUtils.clamp(this.hushProgress + dt
+      * (playing ? 1 / tuning.piano.fadeOut : -1 / tuning.piano.fadeIn), 0, 1);
+    this.hushed = tuning.piano.hush * THREE.MathUtils.smoothstep(this.hushProgress, 0, 1);
 
     switch (this.beat) {
       case 'ahead': {

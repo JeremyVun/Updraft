@@ -8,6 +8,14 @@ export const tuning = {
     boatsScoreLevel: 3.67, boatsCueDuck: 0.28, boatsCueSpace: 3.8,
     /** Approved sea revision: +9.7 dB reference gain and +6.3 dB loudness match, without preview playback gain. */
     seaScoreLevel: 6.31,
+    /** Approved Sleeping study's +16.9 dB music match, excluding its playback normalization. */
+    sleepingScoreLevel: 7,
+    /** Approved Meadow study's +17.9 dB music match, excluding common playback normalization. */
+    meadowScoreLevel: 7.85,
+    /** Approved Birches revision: +20.3 dB music match, excluding the audition playback boost. */
+    birchesScoreLevel: 10.35,
+    /** Approved Lines balance (+17.6 dB), excluding preview playback gain; a separate, small melody trim. */
+    linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
     careChimeLevel: 0.28, careChimeAttack: 0.035,
     cygnetFullDistance: 30, flockDistance: 320,
     /** Give an authored call and its answer a gap in the incidental flock chatter. */
@@ -16,6 +24,10 @@ export const tuning = {
     materialLevel: 0.7, materialNear: 20, materialFar: 120,
     /** Close paper handling stays beneath the wind and the recognition melody. */
     paperLevel: 0.35,
+    /** Sparse close physical detail: child and bird share one leaf budget, with no wind/particle triggers. */
+    leafScuffLevel: 0.4, leafScuffEvery: 1.4, leafCoverMin: 0.55,
+    swingCreakLevel: 0.5, swingCreakEvery: 2.4, swingCreakAngle: 0.16,
+    birchesFoleyNear: 20, birchesFoleyFar: 65,
     materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.16,
     dolphinSurfaceEvery: 0.3,
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
@@ -33,9 +45,20 @@ export const tuning = {
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
     recogniseFor: 8,
+    /** After refolding, offer the plane briefly before the wind takes it. */
+    releaseFor: 2,
+    /** A relaxed reading hold: chest height, away from the face, tilted up from horizontal. */
+    paperHeight: 1.95, paperForward: 1.4, paperSide: 0, paperTilt: 40,
+    /** A little larger when open so the drawing reads without a camera climb. */
+    paperScale: 1.1,
     /** One shoulder composition holds both the paper and the distant house. */
-    shoulderArc: 0.52, portraitShoulderArc: 0.38, shoulderBack: 4.6, shoulderRise: 3.4,
-    portraitBack: 6.5, narrowPortraitBack: 6.1, paperWeight: 0.56, portraitPaperWeight: 0.62,
+    shoulderArc: 0.26, portraitShoulderArc: 0.16, shoulderBack: 3.8, shoulderRise: 5.5, portraitShoulderRise: 7.5,
+    /** Let the move develop through the hands coming up and the first folds opening. */
+    approachFor: 4.4,
+    /** A restrained drift keeps the child, drawing and real house together throughout recognition. */
+    readingRise: 0, readingForward: 0.2, readingArc: 0, portraitReadingArc: 0,
+    readingFrom: 1.5, readingUntil: 7, readingPaperWeight: 0.6,
+    portraitBack: 7.3, narrowPortraitBack: 7, paperWeight: 0.6, portraitPaperWeight: 0.65,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
   },
   swanDeparture: {
@@ -385,6 +408,8 @@ export const tuning = {
     walkTo: 0.95,
     /** How far the room's music pulls back while they are sitting at it: all the way, so the tune is heard alone. */
     hush: 1,
+    /** Fade from sitting through the first key, reaching silence before the demonstration phrase. */
+    fadeOut: 2.2, fadeIn: 3.2, mixResponse: 0.12,
     /** How loud it is against everything else, once the listener is near enough to hear it fully. */
     loudness: 3.8,
     /** How thick the streak is drawn, in world units, and how strongly it shows. */
@@ -461,7 +486,8 @@ export const tuning = {
     inviteSpan: 3.8,
     inviteAlpha: 0.65,
     inviteWidth: 0.065,
-    dryRate: 0.85,
+    /** Cosmetic only: recovered paper lightens during the walk, without holding up departure. */
+    paperRecoverSeconds: 2,
     /** The approved orb breathes above the litter, with veils that yield to the live wind. */
     orbSize: 1.35,
     orbRestScale: 0.38,
@@ -487,6 +513,10 @@ export const tuning = {
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 20.25,
     chainOffset: 2.6,
+    /** Bring the next light closer after pickup and keep it beside the child's silhouette. */
+    rescueChainStep: 12,
+    afterRescueCameraSide: 4.8,
+    cameraFitResponse: 2.5,
     /** A nearby separation: the child and bird share the frame throughout. */
     shelterDistance: 12,
     frightThunderDelay: 0.16,

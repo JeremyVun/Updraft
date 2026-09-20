@@ -21,8 +21,20 @@ Its fading mix cannot mute newly playable gestures after the duet.
   notes; lighting its hearth plays a restrained two-note `comfort` cue. Ordinary embers retain `kindled`.
 - **Sleeping:** morning restores the sea mood and its lighter mix. The pillow feather gets the approved short,
   unresolved hint; the complete `lifted` phrase remains reserved for the bird's brave flight.
+  Jeremy subsequently approved the revised Sleeping arrangement and removed the second completion phrase
+  at landing. Its own score now follows shelter, cold, climb, summit and morning, with genuine background rests.
 - **Meadow:** the world still wakes during the final piano lullaby. The shared completion phrase follows the
   last note plus a 1.2-second breathing space, once only. Checkpoint restoration does not replay it.
+  Jeremy subsequently reported the approach becoming quiet too early. The background now stays through
+  walking/looking, then fades once over 2.2 seconds from sitting, overlapping the first key and clearing the
+  demonstration. The former piano contribution to both `hush` and `pianoMix` is removed.
+  Jeremy approved the September 21 post-piano background. It now follows the walk, flock departure, safe
+  paddle and return to the child, and hands back to the original pad during boarding. The piano, wind
+  feedback and existing island transitions retain their earlier behavior.
+- **Birches:** Jeremy approved the revised plucked-string composition after hearing the music separately
+  from the wind chimes. It follows the first loop, optional swing, quiet scarf work and walk to the boat.
+  Updraft harmony follows its current chord; the original pad returns at boarding and keeps its existing
+  island-transition clock and pitch glides.
 - **Finale:** an explicit guard replaces the 50 ms trigger window. One cue at every tested frame rate.
 - **Location:** shoreline distance is local to the current island. Land wildlife is gated by land, cold and rain;
   only the meadow gets skylarks. Cygnet and flock calls use their actual screen position and distance.
@@ -57,7 +69,7 @@ up an octave and adds phrase-ending breaths. It never replaced the production me
 Comparison: `/tmp/updraft-audio-themes/melody-comparison.wav` — 0:00 piano, 0:16 current home, 0:38 proposed
 reprise. Individual clips and their source hashes/metrics are in the same directory. No normalization.
 
-Jeremy subsequently approved the Little Boats composition; it is integrated locally. Sleeping is undecided.
+Jeremy subsequently approved the Little Boats composition and revised Sleeping score; both are integrated locally.
 The long-sea proposal was revised with quieter melodic fragments and accompaniment shaped around the actual
 passage. Jeremy heard that revision and approved integration; it now follows the real swim and approach states.
 
@@ -78,7 +90,8 @@ match Jeremy's instruction. Historical line numbers refer to that snapshot. Curr
 - The piano has its own synthesis and an attempt at exclusive musical space. The cygnet has feet, wings,
   feather friction, handling and swimming sounds without routine vocal chatter. The child's voice stays absent.
 - Major objectives share the original restoration phrase, as Jeremy requested in `polish.md`, “Shared
-  objective sound.” Keep that recognition. The wood's later brief deliberately removes it from the rescue.
+  objective sound.” Keep that recognition. Later approvals remove it from the wood rescue and Sleeping's
+  landing; Sleeping retains its full flight reward immediately beforehand.
 
 ## Confirmed problems and their consequences
 
@@ -204,10 +217,9 @@ arpeggio shapes provide a family resemblance, but there is no explicit reprise o
 home. The proposal to replace home with that reprise was rejected after Jeremy's audition. Preserve the
 current recognition melody and keep the objective signature distinct from it.
 
-Also audition chapter transitions: chords are selected from global AudioContext time, so arrivals can begin
-at any point in the new progression. Each oscillator glides in frequency instead of crossfading stable notes
-(`audio.ts:675–686`). Choose intentional entry chords and voice-leading; test whether those pitch bends serve
-the dream or sound like retuning. This is an audition concern, not a confirmed unpleasant sound.
+The transition audition is resolved: on September 21 Jeremy rejected the proposed crossfades and directed
+that existing transitions remain unchanged. Preserve the shared pad's global chord clock and pitch glides.
+The earlier concern was not a confirmed defect; the preview was never integrated.
 
 ## Evidence and work order
 

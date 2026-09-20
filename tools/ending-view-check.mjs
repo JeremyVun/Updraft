@@ -68,13 +68,14 @@ function assertFacade(g) {
  }
 }
 // The centre can be visible while the sheet still hides the left wall or roof.
-function assertPaperBesideHouse(g) {
+function assertPaperClearOfHouse(g) {
  const {drawing,cottage,rig}=g;
  const paper=[-1.65,1.65].flatMap(x=>[-1.225,1.225].map(y=>drawing.point(x,y,new THREE.Vector3()).project(rig.camera)));
  const house=[-4.75,4.75].flatMap(x=>[0,5.9].flatMap(y=>[-2.95,2.95].map(z=>
   new THREE.Vector3(x,y,z).applyMatrix4(cottage.group.matrixWorld).project(rig.camera))));
- const gap=Math.min(...house.map(p=>p.x))-Math.max(...paper.map(p=>p.x));
- assert(gap>.025,`the whole house must sit beside the open paper, gap=${gap}`);
+ const gapX=Math.min(...house.map(p=>p.x))-Math.max(...paper.map(p=>p.x));
+ const gapY=Math.min(...house.map(p=>p.y))-Math.max(...paper.map(p=>p.y));
+ assert(Math.max(gapX,gapY)>.025,`the whole house must clear the open paper, gap=${gapX},${gapY}`);
 }
 const cases=[];
 for(const [w,h] of [[1600,900],[390,844],[320,900]])for(const fps of [30,60,120])cases.push({w,h,fps});
@@ -121,7 +122,11 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
    assert(time-fullAt<(resize ? .5 : .2),`recognition must follow the completed unfold promptly: ${w}x${h} ${fps}fps delay=${time-fullAt}`);
   }
   if(chapter.beat==='fold'&&foldAt===null){foldAt=time;assert(restore==='drawing'||time-recognised>=tuning.homeReveal.recogniseFor);}
-  if(chapter.beat==='gaze'&&chapter.recognisedAt>=0&&time-fullAt>.2)assertPaperBesideHouse(g);
+  if(chapter.beat==='gaze'&&chapter.recognisedAt>=0&&time-fullAt>.2) {
+   assertPaperClearOfHouse(g);
+   assert(chapter.houseInFrame,'the house remains in view throughout the reading hold');
+   assert(chapter.paperInFrame,'the whole sheet remains in frame throughout the reading hold');
+  }
   if(chapter.finished)break;
  }
  assert(chapter.finished,'ending must reach credits without input');

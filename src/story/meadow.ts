@@ -10,6 +10,7 @@ import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
 import { tuning } from '../tuning';
 import { musicFront } from '../world/music-growth';
+import type { MeadowScorePhase } from '../audio/meadow-score';
 
 type Beat = 'ashore' | 'beach' | 'climb' | 'brow' | 'walk' | 'crest' | 'down' | 'pond' | 'gather' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
@@ -224,12 +225,22 @@ export class MeadowChapter implements Chapter {
     if (this.crestDone) this.cast.flock.clear();
   }
 
-  /** The music makes room while the child is sitting at the piano, so the player hears what they are playing. */
+  /** Story quiet and the piano handover have separate controls; do not apply the piano fade twice. */
   get hush(): number {
-    return Math.max(this.beatHush, this.piano.hush);
+    return this.beatHush;
   }
 
   get pianoMix(): number { return this.piano.hush; }
+  get meadowScore(): MeadowScorePhase | undefined {
+    // The grey approach and duet retain their existing sound and timing.
+    if (this.piano.at !== 'done') return undefined;
+    if (this.beat === 'crest' || this.beat === 'down') return 'flock';
+    if (this.beat === 'pond') return 'pond';
+    if (this.beat === 'gather' || this.beat === 'walk' && this.crestDone) return 'return';
+    if (this.beat === 'walk') return 'walk';
+    // Restore the original pad while boarding, ahead of the unchanged transition into Birches.
+    return undefined;
+  }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged; }
 

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
 import { AudioEnvironment } from './audio/environment';
 import { WorldFoley } from './audio/world-foley';
+import { BirchesFoley } from './audio/birches-foley';
 import { CameraRig } from './camera';
 import { Creatures } from './creatures/creatures';
 import { islandHabitat, mainlandHabitat } from './creatures/habitat';
@@ -299,8 +300,13 @@ cygnet.mount = child;
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
+const birchesFoley = new BirchesFoley(foley, rig.camera);
 const materialAt = new THREE.Vector3();
 const splashAt = new THREE.Vector3();
+birches.onLeafScuff = (x, z, strength) => {
+  birchesFoley.scuff(materialAt.set(x, heightAt(x, z), z), strength,
+    sound.running && story.name === 'birches');
+};
 sealife.onDolphinSplash = (x, y, z, strength) => {
   if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength);
 };
@@ -310,7 +316,6 @@ sealife.onDolphinSurface = (x, y, z, strength) => {
 sealife.onWhaleSound = (kind, x, y, z) => {
   if (sound.running) worldFoley.whale(kind, splashAt.set(x, y, z));
 };
-let swanBeat = 0;
 const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 flock.objects.forEach((o) => scene.add(o));
@@ -468,7 +473,8 @@ function resize(): void {
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setPixelRatio(pixelRatio);
-  renderer.setSize(w, h, false);
+  // Keep the displayed canvas and camera on the same viewport, including Safari's browser controls.
+  renderer.setSize(w, h);
   post.setSize(w, h, pixelRatio);
   rig.resize(w, h);
 }
@@ -595,14 +601,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   cygnet.heard.length = 0;
   /** The grown swans are heard before they are seen: the throb of their wings, and now and then one of them calling. */
-  if (flock.active) {
+  if (flock.flying) {
     const far = THREE.MathUtils.clamp(flock.head.distanceTo(rig.camera.position) / 320, 0, 1);
     const swanPan = screenPan(rig.camera, flock.head);
-    swanBeat += dt * 3.4;
-    if (swanBeat > Math.PI * 2 && far < 0.75) {
-      swanBeat -= Math.PI * 2;
-      foley.wingbeat(swanPan, far);
-    }
+    foley.wingbeat(dt, swanPan, far);
   }
   probe?.update(time);
   wind.step(dt, time, finalStep);
@@ -710,6 +712,11 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.night = atmo.uniforms.uNight.value;
   soundState.music = story.music;
   soundState.seaScore = story.current.seaScore;
+  soundState.sleepingScore = story.current.sleepingScore;
+  soundState.meadowScore = story.current.meadowScore;
+  soundState.birchesScore = story.current.birchesScore;
+  soundState.linesScore = story.current.linesScore;
+  soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
   soundState.piano = story.current.pianoMix ?? 0;
   soundState.pianoActive = story.current.pianoActive ?? false;
@@ -761,6 +768,11 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 function prepareWorldAudio(dt: number): void {
   const heard = sound.running;
   worldFoley.update(dt);
+  birchesFoley.update(dt);
+  const hearBirches = heard && story.name === 'birches';
+  birchesFoley.step(child.position, child.footContact, birches.leafCoverAt(child.position.x, child.position.z),
+    hearBirches && child.visible && child.moving && !child.riding && !child.sitting && !child.acting);
+  birchesFoley.swing(birches.swing.pivot, birches.swing.angle, birches.swing.speed, birches.swing.rider, hearBirches);
   worldFoley.cloth(washing.soundPoints, wind, dt, heard && story.name === 'lines');
   materialAt.copy(FAMILY_LINE.a).lerp(FAMILY_LINE.b, 0.5);
   worldFoley.motion(family, 'cloth', materialAt, family.x + family.y, dt, heard && story.name === 'lines');

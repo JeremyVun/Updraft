@@ -7,6 +7,7 @@ import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import { CURTAINS, LINES_BERTH, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
 import type { Cast, Chapter } from './cast';
 import { completeObjective, cue } from './cues';
+import type { LinesScorePhase } from '../audio/lines-score';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
 const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
@@ -65,6 +66,15 @@ export class LinesChapter implements Chapter {
       this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
   }
   get done(): boolean { return this.beat === 'aboard'; }
+  get linesScore(): LinesScorePhase | undefined {
+    if (this.beat === 'ashore' || this.beat === 'push' || this.beat === 'aboard') return undefined;
+    if (this.beat === 'shore' || this.beat === 'walk' || this.beat === 'toBoat') return 'shore';
+    if (this.beat === 'throughDoor' || (this.beat === 'family' && door.opened)) return 'door';
+    if (this.beat === 'familyApproach' || this.beat === 'family') return 'family';
+    return this.gate === 0 ? 'first' : this.gate === 1 ? 'second' : 'third';
+  }
+  /** The bird's lead and look back keep the foreground, without muting playable wind. */
+  get linesMelodyQuiet(): boolean { return this.beat === 'birdThrough' || this.beat === 'childThrough'; }
   get trodden(): THREE.Vector3 | null {
     if (this.beat === 'throughDoor') return this.flat.set(11, -398, 12);
     if (this.gate < CURTAINS.length) {

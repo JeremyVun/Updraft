@@ -14,7 +14,7 @@ try {
  await page.goto(`${process.env.BASE??'http://127.0.0.1:5230/'}?shot=1&chapter=summit`);
  await page.waitForFunction(()=>window.__ready===true,null,{timeout:60000});
  await page.evaluate(()=>{const g=__game;g.story.current.skipToDrawing();g.story.current.beat='gone';g.story.current.frame();g.rig.cut(g.story.current.shot);g.story.current.beat='crest';g.story.current.frame();});
- const marks=[['house',()=>__game.story.current.beat==='brow'],['plane',()=>__game.story.current.beat==='unfold'],['wings',()=>__game.story.current.beat==='unfold'&&__game.story.current.cast.drawing.open>.28],['opening',()=>__game.story.current.beat==='unfold'&&__game.story.current.cast.drawing.open>.7],['recognition',()=>__game.story.current.recognisedAt>=0],['held',()=>__game.story.current.recognisedAt>=0&&__game.story.current.now-__game.story.current.recognisedAt>1.5],['release',()=>__game.story.current.beat==='release']];
+ const marks=[['house',()=>__game.story.current.beat==='brow'],['plane',()=>__game.story.current.beat==='unfold'],['wings',()=>__game.story.current.beat==='unfold'&&__game.story.current.cast.drawing.open>.28],['opening',()=>__game.story.current.beat==='unfold'&&__game.story.current.cast.drawing.open>.7],['recognition',()=>__game.story.current.recognisedAt>=0],['held',()=>__game.story.current.recognisedAt>=0&&__game.story.current.now-__game.story.current.recognisedAt>1.5],['reading',()=>__game.story.current.beat==='gaze'&&__game.story.current.now-__game.story.current.recognisedAt>7.3],['release',()=>__game.story.current.beat==='release']];
  const results=[];
  for(const [name,condition] of marks){
   await page.waitForFunction(condition,null,{timeout:60000});

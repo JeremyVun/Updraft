@@ -4,6 +4,10 @@ import type { LittleBoats } from '../world/little-boats';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
 import type { SeaScorePhase } from '../audio/sea-score';
+import type { SleepingScorePhase } from '../audio/sleeping-score';
+import type { MeadowScorePhase } from '../audio/meadow-score';
+import type { BirchesScorePhase } from '../audio/birches-score';
+import type { LinesScorePhase } from '../audio/lines-score';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
@@ -88,6 +92,15 @@ export interface Chapter {
   readonly music?: Mood;
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly seaScore?: SeaScorePhase;
+  /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
+  readonly sleepingScore?: SleepingScorePhase;
+  /** The background after Meadow's piano follows the flock, paddle and return to the child. */
+  readonly meadowScore?: MeadowScorePhase;
+  /** Birches follows the optional swing, scarf work and the walk to the far beach. */
+  readonly birchesScore?: BirchesScorePhase;
+  /** Lines follows each curtain, the family clothes and the walk beyond the doorway. */
+  readonly linesScore?: LinesScorePhase;
+  readonly linesMelodyQuiet?: boolean;
   /** How far through the turn of the year this room is, 0 late autumn to 1 the frozen night. It only rises. */
   readonly season?: number;
   /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
@@ -112,9 +125,9 @@ export interface Chapter {
   readonly twirlGain?: number;
   /** Offer a sweep only while this chapter is waiting for wind in a fully slack sail. */
   readonly invitesSail?: boolean;
-  /** A waiting ember, caught plane or wet paper that needs a deliberate sweep across it. */
+  /** A chapter target, such as a waiting ember or caught plane, that needs a deliberate sweep. */
   readonly windInvitation?: THREE.Vector3 | null;
-  /** Screen-local wind work on paper: first loosen its snag, then dry it when held. */
+  /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */
   readonly silence?: boolean;

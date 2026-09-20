@@ -1,5 +1,9 @@
 // Standalone composition studies. Imported only by audio-island-proposals.mjs, never by the game.
 // Times are condensed listening scenes, not proposed chapter durations.
+import { sleepingState, sleepingEvents, sleepingMusic } from './sleeping-score-proposal.mjs';
+import { meadowState, meadowEvents, meadowMusic } from './meadow-score-proposal.mjs';
+import { birchesState, birchesEvents, birchesMusic } from './birches-score-proposal.mjs';
+import { linesState, linesEvents, linesMusic } from './lines-score-proposal.mjs';
 export const proposalScenes = {
   boats: { seconds: 36, label: 'Little Boats',
     intent: 'Rounded wooden plucks in a lilting six-beat phrase; small melodic answers and breathing room.',
@@ -17,7 +21,11 @@ const smooth = x => { const k = clamp(x); return k * k * (3 - 2 * k); };
 const hz = midi => 440 * 2 ** ((midi - 69) / 12);
 
 /** Identical environmental/input choreography for the current and proposed music. */
-export function sceneState(name, time, base) {
+export function sceneState(name, time, base, version = 'original') {
+  if (name === 'lines') return linesState(time, base);
+  if (name === 'birches') return birchesState(time, base);
+  if (name === 'meadow') return meadowState(time, base);
+  if (name === 'sleeping' && version === 'refined') return sleepingState(time, base);
   const s = { ...base, flockChatter: false, meadow: 0, pianoActive: false, cues: [],
     cygnet: { active: true, pan: -0.3, distance: 20 } };
   const stroke = (at, strength = 12) => time >= at && time < at + 0.75 ? strength : 0;
@@ -39,7 +47,11 @@ export function sceneState(name, time, base) {
 }
 
 /** Production sounds on the same schedule in both alternatives. Called at 8 Hz. */
-export function contextEvents(name, tick, sound, foley, state) {
+export function contextEvents(name, tick, sound, foley, state, version = 'original') {
+  if (name === 'lines') return linesEvents(tick, sound, foley, state);
+  if (name === 'birches') return birchesEvents(tick, sound, foley, state);
+  if (name === 'meadow') return meadowEvents(tick, sound, foley, state);
+  if (name === 'sleeping' && version === 'refined') return sleepingEvents(tick, sound, foley, state);
   const time = tick / 8;
   if (name === 'sleeping') {
     if (tick === 10 * 8) state.cues.push('calling');
@@ -111,7 +123,13 @@ export function scheduleProposal(name, ctx, bus, epoch = 0, version = 'original'
   }
   function key(at, midi, velocity = 0.4) { piano.push({ at: at + epoch, midi, velocity }); notes.push({ voice: 'piano', at: at + epoch, midi, velocity }); }
 
-  if (name === 'boats') {
+  if (name === 'lines') {
+    linesMusic({ ctx, bus, notes, epoch, pad });
+  } else if (name === 'birches') {
+    birchesMusic({ ctx, bus, notes, epoch, pad, version });
+  } else if (name === 'meadow') {
+    meadowMusic({ pad, voice, pluck });
+  } else if (name === 'boats') {
     const chords = [[50, 57, 64, 66], [43, 54, 59, 62], [47, 54, 62, 66], [45, 52, 62, 64],
       [50, 57, 64, 71], [43, 54, 59, 64], [45, 52, 61, 67], [50, 57, 62, 66]];
     const phrases = [
@@ -133,6 +151,10 @@ export function scheduleProposal(name, ctx, bus, epoch = 0, version = 'original'
         Math.sin(bar * 0.8 + i * 0.6) * 0.22, i === phrases[bar].length - 1 ? 2.8 : 1.7));
     });
   } else if (name === 'sleeping') {
+    if (version === 'refined') {
+      sleepingMusic({ pad, key });
+      return { piano, notes };
+    }
     // An independent theme. Neither the meadow's learned tune nor the approved home melody is quoted.
     pad(0, 10, [50, 57, 64, 65], 0.0055);
     pad(10, 8, [46, 53, 57, 64], 0.004);

@@ -16,7 +16,7 @@ import {Cygnet} from '/src/creatures/cygnet.ts';
 import {Traveller} from '/src/traveller/traveller.ts';
 import {Carry} from '/src/companion/carry.ts';
 import {WoodChapter} from '/src/story/wood.ts';
-import {DarkWood} from '/src/world/wood.ts';
+import {DarkWood,WOOD_APPROACH_LIGHT} from '/src/world/wood.ts';
 import {Terrain} from '/src/world/terrain.ts';
 import {CameraRig} from '/src/camera.ts';
 import {Post} from '/src/post/post.ts';
@@ -47,7 +47,7 @@ const ht=new THREE.DataTexture(data,128,128,THREE.RGBAFormat,THREE.FloatType);ht
 atmo.uniforms.uHeightTex.value=ht;atmo.uniforms.uDomain.value.set(-70,originZ,1/128,1/128);
 atmo.uniforms.uVeil.value.set(55,0.9);atmo.uniforms.uSeason.value=.84;
 const post=new Post(renderer,scene,camera,0),light=new THREE.Vector3();
-const earned=embers.lay(-21,-1783);embers.blow(earned,.8);embers.takeCaught();
+const earned=embers.lay(WOOD_APPROACH_LIGHT.x,WOOD_APPROACH_LIGHT.y);embers.blow(earned,.8);embers.takeCaught();
 let time=0,ready=false;const audioEvents=[];const weather=new StormWeather((strength,pan,close)=>audioEvents.push({kind:'thunder',time,strength,close}));
 function state(){return {beat:chapter.beat,t:chapter.t,child:child.position.toArray(),bird:bird.seating.shown.p.toArray(),reveal:chapter.hearth?.reveal,carry:carry.playing,coaxing:chapter.coaxing,comingOut:chapter.comingOut,gathering:chapter.gathering,frame:camera.position.toArray(),plane:plane.position.toArray(),work:chapter.planeWork,landed:plane.landed,light:atmo.uniforms.uEmberLight.value.toArray()}}
 function step(n,story=true){for(let i=0;i<n;i++){
@@ -64,7 +64,7 @@ function render(){post.render(time)}
 if(${planeMode}){embers.clearCoals();chapter.hearth=null;chapter.bolted=true;child.stop();child.place(-37,-1842,Math.PI);chapter.toPlane();}
 chapter.frame();rig.cut(chapter.shot);step(120,false);chapter.now=time;
 console.log('scene: compiling forest materials');await renderer.compileAsync(scene,camera);console.log('scene: rendering');render();
-window.stage={step,state,render,chapter,child,bird,plane,embers,renderer,scene,camera,audioEvents,
+window.stage={step,state,render,chapter,child,bird,plane,embers,earned,renderer,scene,camera,audioEvents,
  idleSway(){let lo=Infinity,hi=-Infinity,gap=0;for(let i=0;i<540;i++){step(1);lo=Math.min(lo,plane.group.rotation.z);hi=Math.max(hi,plane.group.rotation.z);
    const sway=scene.getObjectByName('wood-plane-tree').material.uniforms.uSnagSway.value;
    gap=Math.max(gap,plane.position.clone().sub(chapter.snagAt).distanceTo(sway));}
@@ -97,7 +97,7 @@ try{
    await page.evaluate(()=>{for(let i=0;i<10&&stage.state().beat==='snag';i++)stage.sweep();});
    await shot('falling',`s.beat==='fall'&&s.t>.6`);
    await shot('ground',`s.beat==='pickup'&&s.t>.2`);
-   await shot('retrieved',`s.beat==='dry'`);
+   await shot('retrieved',`s.beat==='out'`);
    assert.equal(errors.length,0,errors.join('\n'));fs.writeFileSync(prefix+'-report.json',JSON.stringify({shots,errors},null,2));
    console.log('Tree snag: idle/missed strokes hold, direct sweeps loosen, paper falls and is retrieved.');
  }else{
@@ -109,11 +109,15 @@ try{
  await shot('landing',`s.beat==='bolt'&&s.t>1.4`);
  await shot('run',`s.beat==='bolt'&&s.t>3.5`);
  await shot('entrance',`s.beat==='lost'&&s.reveal>0.95`);
+ const oldLight=await page.evaluate(()=>{const e=stage.earned,p=e.p.clone().project(stage.camera);return {live:e.live,lit:e.lit,reveal:e.reveal,p:p.toArray()}});
+ assert(oldLight.live&&oldLight.lit&&oldLight.reveal===1,'the earned approach light must keep burning');
+ assert(oldLight.p[2]>1||Math.abs(oldLight.p[0])>1||Math.abs(oldLight.p[1])>1,'the approach light sits outside the rescue composition');
  await page.evaluate(()=>{stage.embers.blow(stage.chapter.hearth,1)});
  await shot('coax',`s.coaxing&&!s.comingOut`);
  await shot('emerging',`s.comingOut&&!s.gathering&&s.bird[0]<-10`);
  await shot('pickup',`s.carry==='gather:step-up'`);
  await shot('held',`s.beat==='walk'`);
+ await shot('onward',`s.beat==='walk'&&s.t>8`);
  const sounds=await page.evaluate(()=>stage.soundCheck()),audioEvents=await page.evaluate(()=>stage.audioEvents);
  assert.equal(errors.length,0,errors.join('\n'));assert.equal(shots[0].reveal,0);
  assert(shots.find(s=>s.name==='entrance').reveal>.95);

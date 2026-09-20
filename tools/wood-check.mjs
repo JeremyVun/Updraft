@@ -1,12 +1,13 @@
 // Real pointer sweeps through the dark wood, plus long-idle and accidental-motion regressions.
-// node tools/wood-check.mjs [portrait] [rescue]. Rescue stages the bolt after the first-coal idle/input checks. Captures and report: /tmp/updraft-wood-<mode>-*.
+// node tools/wood-check.mjs [portrait] [rescue]. NATURAL=1 skips clock probes; BASE pins a build; PREFIX separates captures.
+// Rescue stages the bolt after the first-coal idle/input checks. Captures and report: /tmp/updraft-wood-<mode>-*.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const portrait = process.argv.includes('portrait');
 const resumeRescue = process.argv.includes('rescue');
 const mode = (portrait ? 'portrait' : 'desktop') + (resumeRescue ? '-rescue' : '');
-const prefix = `/tmp/updraft-wood-${mode}`;
+const prefix = process.env.PREFIX ?? `/tmp/updraft-wood-${mode}`;
 const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-wood-video-') : null;
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1440, height: 900 };
 const lock = '/tmp/updraft-chromium.lock';
@@ -63,10 +64,26 @@ try {
     const after = await state();
     assert.equal(after.beat, beat, 'waiting must not skip a mechanic');
     assert.deepEqual(after.coals.map(c => c.lit), before.coals.map(c => c.lit), 'waiting must not light coals');
-    if (beat === 'dry') assert.equal(after.soggy, before.soggy, 'the storm must not dry the plane');
     console.log(`300-second idle gate passed: ${beat}`);
   }
-  await idleCheck('first');
+  if (!process.env.NATURAL) await idleCheck('first');
+  // Observe the real render-loop camera without advancing story time or changing the shot.
+  await page.evaluate(() => {
+    const g=__game, original=g.rig.update.bind(g.rig), samples=[], spikes=[];
+    let previous=null, frame=0;
+    window.__woodCamera={samples,spikes};
+    g.rig.update=(dt,time,shot,pace)=>{
+      original(dt,time,shot,pace);
+      const c=g.story.current,p=g.rig.camera.position.toArray(),q=g.rig.camera.quaternion.toArray();
+      const sample={time,dt,beat:c.beat,leg:c.leg,chainAt:c.chainAt,eye:p,rotation:q,child:g.child.position.toArray(),
+        aim:c.aim?.toArray(),glow:c.glow?.toArray(),fit:g.rig.fitBack};
+      if(previous){sample.step=Math.hypot(...p.map((v,i)=>v-previous.eye[i]));
+        sample.turn=2*Math.acos(Math.min(1,Math.abs(q.reduce((s,v,i)=>s+v*previous.rotation[i],0))));
+        if(sample.step>.3||sample.turn>.04)spikes.push({...sample,previous});}
+      if(frame++%12===0)samples.push(sample);
+      previous=sample;
+    };
+  });
   await page.waitForFunction(() => __game.emberInvitation.batch.mesh.visible, null, { timeout: 12000 });
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${prefix}-invitation.png` });
@@ -108,7 +125,20 @@ try {
     if (s.beat !== lastBeat) {
       lastBeat = s.beat; report.beats.push(s); console.log(`beat ${s.beat}, leg ${s.leg}`);
       await page.screenshot({ path: `${prefix}-${s.beat}.png` });
-      if (s.beat === 'lost' || s.beat === 'dry') await idleCheck(s.beat);
+      if (!process.env.NATURAL && s.beat === 'lost') await idleCheck(s.beat);
+      if (s.beat === 'out') {
+        await page.waitForTimeout(3000);
+        const after = await state();
+        assert(Math.hypot(after.child[0] - s.child[0], after.child[2] - s.child[2]) > 1,
+          'child must walk on after pickup without another gesture');
+        await page.screenshot({ path: `${prefix}-walking-with-paper.png` });
+        report.afterPickup = after;
+        continue;
+      }
+    }
+    assert.notEqual(s.beat, 'dry', 'retrieval must not add a drying puzzle');
+    if (s.beat === 'out') {
+      assert(await page.evaluate(() => __game.story.current.windInvitation !== __game.glider.position), 'held paper must never ask for wind');
     }
     const detail = s.beat === 'fright' ? `startle-${Math.floor(s.t * 5)}` : s.beat === 'bolt' ? `run-${Math.floor(s.t)}`
       : s.beat === 'found' ? s.carry.replace(':', '-') || (s.t < 1.4 ? 'resolve' : 'approach') : null;
@@ -128,15 +158,23 @@ try {
   }
   report.final = await state();
   report.stats = await page.evaluate(() => window.__stats);
+  report.camera = await page.evaluate(() => window.__woodCamera);
+  if(process.env.NATURAL&&!resumeRescue){
+    const forest=new Set(['first','walk','compose','fright','bolt','lost','found','plane','snag','fall','pickup','out','toBoat','push']);
+    const spikes=report.camera.spikes.filter(s=>forest.has(s.beat));
+    assert(spikes.every(s=>s.step<1), 'forest camera must not jump a world unit in one render frame');
+    assert(spikes.every(s=>s.turn<.08), 'forest camera must not snap its orientation');
+  }
   assert(report.completed, `must reach the departure boat: ${JSON.stringify(report.final)}`);
   assert(report.beats.some(b => b.beat === 'lost'), 'the rescue must be encountered');
-  assert(report.beats.some(b => b.beat === 'dry'), 'the plane must be repaired');
+  assert(report.beats.some(b => b.beat === 'out'), 'retrieval must continue toward the boat');
   assert.equal(report.errors.length, 0, report.errors.join('\n'));
   console.log(`Wood complete with ${strokes} sweeps; no browser errors.`);
 } catch (error) {
   report.failure = error.stack;
   throw error;
 } finally {
+  try { report.camera ??= await context?.pages()[0]?.evaluate(()=>window.__woodCamera); } catch {}
   try {
     await context?.close();
     if (video) await video.saveAs(`${prefix}.webm`);

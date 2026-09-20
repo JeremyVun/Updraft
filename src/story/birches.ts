@@ -7,6 +7,7 @@ import { cue } from './cues';
 import { tuning } from '../tuning';
 import { BirchLeafPlay } from './birches-play';
 import { SCARF_SNAGS } from '../world/birch-scarf';
+import type { BirchesScorePhase } from '../audio/birches-score';
 
 const ROUTE = BIRCHES_WALK;
 /** The leg that ends in the clearing on the crest, where the swing is. */
@@ -76,6 +77,16 @@ export class BirchesChapter implements Chapter {
   get scripted(): boolean {
     /** Exploring and playing with the cygnet never take control away from the wind. */
     return !['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat);
+  }
+
+  get birchesScore(): BirchesScorePhase | undefined {
+    // Arrival and boarding retain the original pad and its existing island transitions.
+    if (['ashore', 'push', 'aboard'].includes(this.beat)) return undefined;
+    if (this.beat === 'toSwing' || this.beat === 'swinging') return 'swing';
+    const scarf = this.cast.birches.scarf;
+    if (this.beat === 'unravelling') return 'scarf';
+    if (scarf.finished) return 'return';
+    return scarf.completed === 0 ? 'walk' : 'scarf';
   }
 
   get done(): boolean {

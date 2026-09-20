@@ -619,6 +619,8 @@ export class AutumnBirches {
   private readonly leaves: FallenLeaves;
   private canopyMotion!: BirchCanopyMotion;
   private readonly litter: LitterField;
+  private readonly litterCover: Float32Array;
+  onLeafScuff: ((x: number, z: number, strength: number) => void) | null = null;
   private readonly litterMesh: THREE.Mesh;
   private readonly litterMat: THREE.ShaderMaterial;
   /** Who is wading through the leaves: x, z, how far it reaches, and how fast they are going. */
@@ -643,7 +645,8 @@ export class AutumnBirches {
     this.table = new Float32Array(width * 3 * 4);
     this.treeTex = new THREE.DataTexture(this.table, width, 3, THREE.RGBAFormat, THREE.FloatType);
     this.treeTex.needsUpdate = true;
-    this.litter = new LitterField(renderer, this.litterSeed(rand), this.wade);
+    this.litterCover = this.litterSeed(rand);
+    this.litter = new LitterField(renderer, this.litterCover, this.wade);
     const shared = {
       ...atmo.uniforms,
       ...this.litter.uniforms,
@@ -980,6 +983,15 @@ export class AutumnBirches {
   kick(x: number, z: number, radius: number, strength: number): void {
     this.kicking.set(x, z, radius, strength);
     this.kickFor = 0.7;
+    this.onLeafScuff?.(x, z, strength);
+  }
+
+  /** Authored floor coverage for quiet foot scuffs, without reading the moving GPU field back. */
+  leafCoverAt(x: number, z: number): number {
+    const i = Math.floor((x - LITTER_BOX.x) / LITTER_BOX.sx * LITTER_SIDE);
+    const j = Math.floor((z - LITTER_BOX.z) / LITTER_BOX.sz * LITTER_SIDE);
+    if (i < 0 || j < 0 || i >= LITTER_SIDE || j >= LITTER_SIDE) return 0;
+    return this.litterCover[(j * LITTER_SIDE + i) * 4];
   }
 
   update(dt: number, camera: THREE.Camera, walker: THREE.Vector3 | null): void {

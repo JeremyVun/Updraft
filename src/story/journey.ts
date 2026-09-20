@@ -110,6 +110,8 @@ export class Journey {
   name: ChapterName = 'island';
   private chapter: Chapter;
   private savedPoint = '';
+  /** Constructors may leave presentation empty until update; keep the last prepared view meanwhile. */
+  private transitionView: Chapter | null = null;
 
   constructor(private readonly cast: Cast) {
     this.chapter = new IslandChapter(cast);
@@ -220,7 +222,7 @@ export class Journey {
   }
 
   get shot(): Shot {
-    return this.chapter.shot;
+    return (this.transitionView ?? this.chapter).shot;
   }
   get breeze(): number {
     return this.chapter.breeze;
@@ -232,10 +234,10 @@ export class Journey {
     return this.chapter.dusk;
   }
   get pace(): number {
-    return this.chapter.pace;
+    return (this.transitionView ?? this.chapter).pace;
   }
   get focus(): THREE.Vector3 {
-    return this.chapter.focus;
+    return (this.transitionView ?? this.chapter).focus;
   }
   get shower(): number {
     return this.chapter.shower ?? 0;
@@ -262,6 +264,7 @@ export class Journey {
 
   update(dt: number, time: number): void {
     this.chapter.update(dt, time);
+    this.transitionView = null;
     if (this.chapter.done) {
       // Old saves in the separate forest crossing still arrive in the wood.
       const next = this.name === 'toWood' ? 'wood' : this.name === 'toHome' ? 'home' : ORDER[ORDER.indexOf(this.name) + 1];
@@ -281,6 +284,7 @@ export class Journey {
   }
 
   private begin(name: ChapterName): void {
+    this.transitionView = this.transitionView ?? this.chapter;
     this.name = name;
     this.chapter = this.make(name);
     this.savedPoint = '';
