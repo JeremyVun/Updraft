@@ -10,11 +10,11 @@ vec3 spectrum(float t) {
 vec3 rainbow(vec3 d, vec3 sky) {
   float a = degrees(acos(clamp(dot(d, -uSunDir), -1.0, 1.0)));
   float p = (a - 40.2) / 2.6;
-  float primary = smoothstep(0.0, 0.25, p) * smoothstep(1.0, 0.7, p);
+  float primary = smoothstep(0.0, 0.25, p) * (1.0 - smoothstep(0.7, 1.0, p));
   float q = (53.8 - a) / 3.2;
-  float secondary = smoothstep(0.0, 0.4, q) * smoothstep(1.0, 0.6, q) * 0.16;
-  float inside = smoothstep(40.5, 30.0, a) * smoothstep(0.0, 20.0, a) * 0.05;
-  float gap = smoothstep(42.4, 43.4, a) * smoothstep(51.0, 50.0, a) * 0.07;
+  float secondary = smoothstep(0.0, 0.4, q) * (1.0 - smoothstep(0.6, 1.0, q)) * 0.16;
+  float inside = (1.0 - smoothstep(30.0, 40.5, a)) * smoothstep(0.0, 20.0, a) * 0.05;
+  float gap = smoothstep(42.4, 43.4, a) * (1.0 - smoothstep(50.0, 51.0, a)) * 0.07;
   float along = atan(d.x + uSunDir.x, d.z + uSunDir.z);
   float patchy = 0.55 + 0.45 * smoothstep(0.3, 0.7, fbm(vec2(along * 2.2, uTime * 0.004)));
   float fade = smoothstep(-0.01, 0.05, d.y) * patchy * uRainbow;
@@ -54,9 +54,9 @@ vec3 skyRadiance(vec3 d) {
     vec3 sd3 = d * 260.0;
     vec3 cell = floor(sd3);
     float h = hash12(cell.xy * 1.37 + cell.z * 7.13);
-    float star = step(0.9965, h) * smoothstep(0.55, 0.1, length(fract(sd3) - 0.5));
+    float star = step(0.9965, h) * (1.0 - smoothstep(0.1, 0.55, length(fract(sd3) - 0.5)));
     float twinkle = 0.65 + 0.35 * sin(uTime * (1.5 + h * 4.0) + h * 40.0);
-    float band = smoothstep(0.35, 0.0, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78))))) * fbm(d.xz * 9.0 + d.y * 4.0);
+    float band = (1.0 - smoothstep(0.0, 0.35, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78)))))) * fbm(d.xz * 9.0 + d.y * 4.0);
     col += (vec3(0.9, 0.93, 1.0) * star * twinkle * 3.5 + vec3(0.45, 0.5, 0.75) * band * 0.18) * uNight * (1.0 - uStormCover) * smoothstep(0.0, 0.12, d.y);
   }
   return col;

@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { swellLift } from '../world/water/swell';
@@ -193,7 +194,7 @@ export class CrossingChapter implements Chapter {
   }
 
   get checkpoint(): string | null { return this.swim === 'done' ? 'swim' : null; }
-  saveCheckpoint(): number[] { return [this.leg, this.time]; }
+  saveCheckpoint(): CheckpointPayload<'crossing'> { return [this.leg, this.time]; }
   restoreCheckpoint(_point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, this.route.length - 1);
     if (this.wantsDolphins) {

@@ -14,31 +14,37 @@ use the working checkout. Evidence and source hashes are under `/tmp/updraft-pro
 
 | Priority | Finding | Status |
 | --- | --- | --- |
-| P1 | Reversed GLSL `smoothstep` bounds rely on undefined behavior across GPUs. | Open; details below. |
+| P1 | Reversed GLSL `smoothstep` bounds rely on undefined behavior across GPUs. | Fixed in the isolated hardening pass; comparison evidence below. |
 | P1 | A new chapter can expose its zero-initialized camera target for one frame, pulling the view toward the world origin. | Fixed; retain the preceding prepared view until the normal update. |
 | P2 | Additional fingers can reposition or release another finger's wind stroke. | Fixed; primary pointer owns its contact. |
 | P2 | Browser cancellation, lost capture or page suspension can leave stale contact/charge. | Fixed; discard interrupted input, including viewport resize. |
 | P2 | Canvas CSS height and renderer/camera height can disagree when Safari controls reappear. | Fixed; resize the displayed canvas with the rendering viewport. |
 | P2 | Distant flock wingbeats accumulate and burst on return; resting rafts also emit sustained wingbeats. | Fixed; expire inaudible beats and gate on flight/take-off. |
 | P2 | iPad Safari can dismiss native fullscreen during a wind gesture. | User-reported; likely browser-owned dismissal, still needs target-device confirmation. |
+| P2 | Rolling credits pass behind the visible Play again label. | Existing UI overlap exposed by the final journey capture; follow-up below. |
 
 ### Shader portability
 
-The audit found **73 literal reversed-bound calls inside GLSL templates in 22 files**, including
-`src/world/heightfield.ts`, `water.ts`, `water/swell.ts`, `sky-radiance.ts`, swan shading and marine animals.
-For example, the heightfield uses `smoothstep(10.0, -14.0, …)`, and grass uses
-`smoothstep(-600.0, -660.0, …)`. This count excludes JavaScript's deliberately reversible helper and does
-not exhaust variable/interpolated bounds.
+The initial audit found 73 literal reversed-bound calls in annotated GLSL templates. The follow-up scans
+all shader templates, including inline unannotated shaders: **74 literal calls plus two expression-bound
+calls** now use `1.0 - smoothstep(low, high, x)`. JavaScript's intentionally reversible helpers are unchanged.
+The collapsed hearth flame tip also handles equal edges explicitly and bounds extrapolated UV height
+before its fractional power; nonpositive shadow radii are skipped.
 
 The [GLSL ES specification](https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf)
-leaves results undefined when the first edge is greater than or equal to the second. A driver may therefore
-render different terrain, masks, shading or water even though local Chrome looks correct. This is a verified
-specification violation, not a reproduced failure on Jeremy's iPad.
+leaves results undefined when the first edge is greater than or equal to the second. A driver can render
+incorrect terrain, masks, shading or water. This was a verified specification violation, not a reproduced
+failure on Jeremy's iPad. The corrected expression preserves the intended descending curve with defined bounds.
 
-Replace descending ramps with `1.0 - smoothstep(low, high, x)` or one explicit descending-ramp helper.
-Handle equal edges deliberately. Preserve CPU/GPU terrain parity and test frozen views across Metal, WebKit
-and an additional GPU family. This broad shader pass is deferred to avoid changing dozens of visual paths
-without those comparisons. Inventory: `/tmp/updraft-production-review/shader-literal-reversed.json`.
+Validation against `188c9fa`: all 12 seeded, frozen scene comparisons pass on Chrome/Metal, including
+landscape and portrait Sleeping. Worst mean channel difference is 0.005/255; at most 0.013% of pixels differ
+by more than 8 levels. Sampled CPU/GPU height error remains 0.01038 m (gate: 0.02 m). Metal and software
+Vulkan also pass small float-shader ramp comparisons, with maximum error below 1.8e-7. This adds a second
+compiler/backend; it is not a substitute for a physical WebKit/iPad or independent GPU-family check.
+
+`tools/shader-check.mjs` rejects literal descending/equal bounds. The render comparison scans actual
+compiled shaders too, catching expanded tuning literals. Expression-bound calls still need explicit range
+reasoning; all 86 such source calls were inspected during this pass. Evidence: `/tmp/updraft-hardening/`.
 
 ### Touch and fullscreen
 
@@ -99,13 +105,15 @@ The matching 15.1-second steady-state CPU profile spent 13.36 s idle. `getBuffer
 active costs. Preserve the asynchronous readback ordering and prioritize target-device measurements
 before changing it (`perf-cpu.log`).
 
-1. **Reduce startup construction cost.** The latest combined production build's main chunk is 1,711.83 kB minified
+1. **Reduce startup construction cost.** The baseline combined production build's main chunk is 1,711.83 kB minified
    / 520.98 kB gzip. The engine constructs and prepares the entire archipelago before Begin. Splitting this
-   file alone will not remove that work. Candidate first steps: generate deterministic water textures at
-   build time with exact byte parity, then evaluate preparing distant chapters during playable slack time.
-   `water/textures.ts` currently computes 4,194,304 cosine terms for ripples and four 256² Worley fields
-   for lace. Three desktop Node runs measured 215–253 ms for ripples and 50–71 ms for lace; these are
-   component timings, not browser boot or iPad measurements (`texture-cpu.json` in the evidence directory).
+   file alone will not remove that work. **Implemented:** water texture construction reuses row/column
+   trigonometry and ranks squared Worley distances before taking the two nearest square roots. At 256²,
+   ripple generation falls from 4,194,304 cosine calls to 65,536 sine/cosine calls. Five-run desktop Node
+   medians were 133.63 → 24.31 ms for ripples and 34.03 → 11.34 ms for lace, with identical packed bytes
+   at five resolutions in Node and both Chrome backends. No new assets or downloads are required. These
+   are component timings, not a whole-game FPS or iPad claim. Staged distant-room preparation remains
+   a larger follow-up if target-device startup is still slow.
    Any staged preparation must retain checkpoint starts and avoid chapter-entry stalls.
    The cold browser profile also attributes about 0.66 s of sampled self time to the heightfield's
    `pcg`/`hash2`/`gradDot` functions. `heightAt()` already uses the GPU-baked CPU grid once installed;
@@ -115,10 +123,12 @@ before changing it (`perf-cpu.log`).
    world textures, reflection, scene/MSAA/depth targets and bloom. Low reduces drawing cost but retains
    these grass allocations. Review the memory budget on older iPads; consider a bounded pool or compact
    immutable data only if it preserves promotion behavior, tile coverage and existing blade precision.
-3. **Remove verified hot-loop allocation.** `nearbyCreature()` builds spread arrays of rabbits/songbirds
-   on every query; `worldStep()` creates the environment object and callback; `CameraRig.fitSubjects()`
-   creates small arrays/closures each substep. Reuse scratch state or iterate existing populations directly
-   if profiles show GC pressure. Keep tie ordering and subject-fit behavior identical.
+3. **Remove verified hot-loop allocation — implemented.** Nearby-creature queries iterate live populations
+   directly, preserving distance ties and the exclusive radius. The simulation reuses its creature environment
+   and callback; camera fitting avoids per-step arrays and a capturing closure. Two thousand nearest-creature
+   cases and 7,200 camera frames match the original exactly. Real rabbit/songbird getters also match
+   fresh snapshots over 600 frames of movement; inspection snapshots remain detached. No camera tuning
+   or frame order changes.
 4. **Profile before extending room culling.** Most distant systems already have explicit distance gates.
    `DrownedVillage.update()` still advances vanes/herons each world step. A room-level gate may save work,
    but stateful departures, audio and resumptions need an explicit catch-up policy. Do not apply a blanket
@@ -133,20 +143,24 @@ before changing it (`perf-cpu.log`).
   audio state, per-frame visibility, quality, simulation and QA exports. Extract cohesive startup and audio
   wiring functions with explicit dependencies while preserving frame order. A wholesale engine rewrite
   would put timing, snapshots and shared uniforms at risk.
-- **Give checkpoints typed payloads.** `CHECKPOINTS`, chapter serialization and restoration duplicate names,
-  lengths and positional-number meanings. A typed per-chapter schema/decoder can catch drift at compile
-  time while retaining the existing v1 migration rules. Existing malformed-storage guards and fixtures are
-  valuable; retain compatibility tests for old saves.
+- **Checkpoint schemas consolidated.** `story/checkpoint-data.ts` names positional fields once, derives
+  the public arity map and types the eight current payload writers as numeric tuples. `decodeProgress()`
+  separates validation from storage. All 69 current/legacy layouts and 2,698 decoder cases match `188c9fa`.
+  The v1 wire format, chapter restoration and migration rules are unchanged. Per-point semantic decoding
+  remains in the chapters; this is not a serialization rewrite.
 - **Consolidate test plumbing.** Many tools duplicate TypeScript loaders and browser setup/locking.
   `tools/lib/browser.mjs` already provides the shared GPU lock, but some older tools launch directly.
   This review moved the Begin-screen check onto that lock, preserving its requirement for a real user
   gesture to start audio rather than inheriting the helper's autoplay override.
-  Standardize ownership, cleanup and a discoverable quick/mechanics/browser/release runner so accidental
-  concurrent GPU checks do not invalidate measurements.
+  **Follow-up implemented:** 28 tools share one TypeScript loader. `npm run check`, `check:mechanics`,
+  `check:browser` and `check:release` provide sequential groups and per-check evidence logs. Older bespoke
+  tools remain available individually; the release group is not every audio/artistic fixture in the repo.
   Two existing fixtures had drifted: Begin expected audio even though `shot` defaults to mute, and Sleeping
   attempted the feather checkpoint before completing the newer walk-around-bed/tuck-in sequence. The
   tests now explicitly set the sound preference before the real Begin gesture and arrange a completed
   tuck-in, retaining the original audio-unlock and saved-position assertions.
+- **Morning-lane GLSL consolidated.** Surface lighting and Sleeping fog use one `LANE_GLSL` definition,
+  preserving uniforms, curve arithmetic and the early-out. Frozen render comparisons cover both.
 - **Keep shader/CPU duplication explicit.** Heightfields and several grass masks intentionally have both
   implementations. Centralize constants and generate matching scalar functions where practical; use
   `measureHeightParity` as a required gate. Sharing only names without parity checks would hide drift.
@@ -196,5 +210,50 @@ Completed:
 - The latest combined checkout passes TypeScript and production build, the three new mechanics regressions,
   and the concurrently added Birches foley's 35 checks and two unclipped renders.
 
-Physical iPad Safari validation remains a release requirement. A stable combined checkout should receive
-the final release playthrough once the separate audio work has finished.
+Physical iPad Safari validation remains a release requirement. The isolated hardening pass below runs
+against a frozen build containing the combined work committed at `188c9fa` plus this pass's production changes.
+
+
+## Isolated hardening verification — 2026-09-21
+
+The combined checkout was committed and pushed as `188c9fa` before work began in the separate
+`codex/production-hardening` worktree. Evidence is under `/tmp/updraft-hardening/`; `source-hashes.json`
+identifies the production sources used for the frozen comparison and journey build.
+
+- Production build/typecheck and all 35 mechanics checks pass (`mechanics-final/results.json`).
+- The shader scan covers 523 calls; 84 expression-bound calls remain subject to range contracts. Metal and
+  software Vulkan ramp checks pass, as do exact original texture hashes at five resolutions on both backends.
+- All 12 final frozen render/state comparisons pass (`render-final.json`). Camera refactor parity is exact
+  over 7,200 frames; save decoding matches all 69 layouts and 2,698 cases against the original source.
+- The old Mirror pointer fixture omitted primary-pointer metadata and failed before the loader refactor.
+  It now dispatches complete events; desktop and portrait touch collection, lift and star selection pass.
+- Live creature-position coverage uses the actual classes over 600 frames, protecting against accidentally
+  caching their detached QA snapshots. Spatial-query order and miss behavior remain covered separately.
+
+The main bundle remains 1,717.67 kB minified / 522.23 kB gzip. This pass improves texture construction and
+recurring allocation; it does not solve whole-world eager loading or establish an iPad memory budget.
+
+Back-to-back cold browser profiles covered 3.54 s before and 3.51 s after to the ready screen. Worst frame
+intervals were 266.7/283.3 ms, and the longest construction tasks 263/285 ms; neither recorded an instrumented
+GL call above 10 ms. These single samples show no meaningful whole-boot reduction despite the measured texture
+saving. Procedural terrain/construction work still dominates (`boot-before.json`, `boot-after.json`).
+A 20-second final Meadow sample at 1600×900, ratio 1 and 4× MSAA measured p50/p90 16.7 ms, p99 16.8 ms,
+two 33.4 ms intervals and no long tasks. This is desktop evidence, not an iPad throughput or thermal result.
+
+The final frozen-build journey passed all 17 chapters with 269 real pointer gestures and 42 checkpoint
+observations, reached credits at 2,230 seconds (about 37 minutes), reloaded the completed save and returned
+to a fresh island through Play again. No page or console errors were reported. Unlike the original baseline
+journey, this run includes the combined audio/scene work, review fixes and this hardening pass. Evidence:
+`journey.json`, `journey.log` and chapter/credits captures. This is functional traversal, not a listening pass.
+
+The final credits capture also exposes an existing UI issue: the rolling names pass through the same screen
+area as Play again. `styles.css` and the credits markup are unchanged from `188c9fa`; replay itself works.
+Reserve a clear band or fade for the replay control in a separate credits-layout pass, covering portrait,
+short landscape and safe-area insets. Evidence: `journey-credits.png`. This remains an open presentation issue.
+
+All eight focused browser checks pass across the grouped run and corrected Begin-screen rerun: shader
+backends, touch/viewport, transition views, context loss, Begin/audio unlock/retry, progress, frame scheduling
+and pond/crossing views. The initial retry fixture missed Vite's timestamped `main.ts?t=…` URL, so no failure
+had actually been injected. It now matches the URL pathname and asserts that the module was blocked; retry
+and all other Begin cases pass. Evidence: `browser-final/results.json`, `start-final-rerun.log` and
+`validation-summary.json`, which retains the distinction between the original failure and passing rerun.

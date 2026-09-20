@@ -74,7 +74,7 @@ void main() {
     p += NECK;
   }
   if (part == ${TAIL}) {
-    p.x *= 1.0 + 0.7 * iPerch.w * smoothstep(-0.14, -0.3, p.z);
+    p.x *= 1.0 + 0.7 * iPerch.w * (1.0 - smoothstep(-0.3, -0.14, p.z));
     p -= TAIL_BASE;
     p = rotX(p, iWing.z);
     n = rotX(n, iWing.z);
@@ -734,6 +734,9 @@ export class Songbirds {
     inst.set(4, i, b.back.r, b.back.g, b.back.b, b.cap);
     inst.set(5, i, b.breast.r, b.breast.g, b.breast.b, b.puff);
   }
+
+  /** Live positions for spatial queries; the inspection snapshot below remains detached. */
+  get positions(): readonly Readonly<{ x: number; y: number; z: number }>[] { return this.birds; }
 
   get state(): { x: number; y: number; z: number; mode: Mode }[] {
     return this.birds.map((b) => ({ x: b.x, y: b.y, z: b.z, mode: b.mode }));

@@ -1,14 +1,9 @@
 // Ending order, rendered-camera gates, continuous framing, resume and completion without a GPU.
 // Usage: node tools/ending-view-check.mjs
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s,c,n) { return n(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s+'.ts' : s,c); },
-  load(u,c,n) { return u.endsWith('.ts') ? {format:'module',shortCircuit:true,source:transformSync(new URL(u).pathname,fs.readFileSync(new URL(u),'utf8')).code} : n(u,c); },
-});
+
 globalThis.location={search:'?shot'};
 globalThis.window={innerWidth:1600,innerHeight:800,matchMedia:()=>({matches:false})};
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
@@ -21,7 +16,6 @@ const {Boat}=await import('../src/traveller/boat.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {tuning}=await import('../src/tuning.ts');
 const {Soundscape}=await import('../src/audio/audio.ts');
-
 
 const { HomeChapter } = await import('../src/story/home.ts');
 const { heightAt } = await import('../src/world/island.ts');

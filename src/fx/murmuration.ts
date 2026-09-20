@@ -49,7 +49,7 @@ void main() {
   vec3 wobble = vec3(sin(uTime * (2.0 + jitter * 3.0) + jitter * 40.0), cos(uTime * (2.5 + jitter * 2.0) + jitter * 17.0), sin(uTime * 1.7 + jitter * 9.0)) * 0.035;
   q += wobble;
   q.y = mix(q.y, -abs(q.y) * 0.4 - uRoost * 3.0 * (0.3 + aSeed.w), uRoost);
-  q.xz *= 1.0 - 0.6 * uRoost * smoothstep(-0.2, -1.5, q.y);
+  q.xz *= 1.0 - 0.6 * uRoost * (1.0 - smoothstep(-1.5, -0.2, q.y));
   vec3 centre = uCentre + q * uSize;
 
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);

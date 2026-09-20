@@ -7,6 +7,15 @@ const MIN_HFOV = 64;
 const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 /** How far above the ground a shot stands unless it says otherwise. */
 const GROUND_CLEARANCE = 2.8;
+const OCCLUSION_STEPS = [0.3, 0.55];
+
+function subjectShift(a: number, b: number, c: number, depth: number, otherDepth: number,
+  thirdDepth: number, slope: number): number {
+  const lo = a - depth * slope, hi = a + depth * slope;
+  const bothLo = Math.max(lo, b - otherDepth * slope, c - thirdDepth * slope);
+  const bothHi = Math.min(hi, b + otherDepth * slope, c + thirdDepth * slope);
+  return bothLo <= bothHi ? THREE.MathUtils.clamp(0, bothLo, bothHi) : THREE.MathUtils.clamp(0, lo, hi);
+}
 
 export interface Shot {
   /** The point the camera looks at. */
@@ -159,7 +168,8 @@ export class CameraRig {
     const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
     const horizontal = vertical * camera.aspect;
     let needed = 0;
-    for (const point of [pair.primary, pair.secondary, ...(pair.tertiary ? [pair.tertiary] : [])]) {
+    for (let i = 0; i < (pair.tertiary ? 3 : 2); i++) {
+      const point = i === 0 ? pair.primary : i === 1 ? pair.secondary : pair.tertiary!;
       this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
       needed = Math.max(needed, Math.abs(this.local.x) / horizontal + this.local.z,
         Math.abs(this.local.y) / vertical + this.local.z);
@@ -177,14 +187,8 @@ export class CameraRig {
     const thirdDepth = Math.max(1, -this.third.z);
     // Recompose within the available room before asking for any more distance. If an old runaway
     // cannot fit, the child's interval wins until the plane has flown back into reach.
-    const shift = (a: number, b: number, c: number, slope: number): number => {
-      const lo = a - depth * slope, hi = a + depth * slope;
-      const bothLo = Math.max(lo, b - otherDepth * slope, c - thirdDepth * slope);
-      const bothHi = Math.min(hi, b + otherDepth * slope, c + thirdDepth * slope);
-      return bothLo <= bothHi ? THREE.MathUtils.clamp(0, bothLo, bothHi) : THREE.MathUtils.clamp(0, lo, hi);
-    };
-    const x = shift(this.local.x, this.second.x, this.third.x, horizontal);
-    const y = shift(this.local.y, this.second.y, this.third.y, vertical);
+    const x = subjectShift(this.local.x, this.second.x, this.third.x, depth, otherDepth, thirdDepth, horizontal);
+    const y = subjectShift(this.local.y, this.second.y, this.third.y, depth, otherDepth, thirdDepth, vertical);
     camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
     camera.position.y = Math.max(camera.position.y, Math.max(heightAt(camera.position.x, camera.position.z), 0) + this.clear);
     if (shot.smoothFit && Number.isFinite(dt)) {
@@ -209,7 +213,7 @@ export class CameraRig {
      */
     let pull = 0;
     let lift = this.blocked(want);
-    for (const step of [0.3, 0.55]) {
+    for (const step of OCCLUSION_STEPS) {
       if (lift <= 0.05) break;
       this.probe.lerpVectors(want, this.look, step);
       pull = step;

@@ -1,20 +1,9 @@
 // CPU audit of hull/terrain clearance at every berth, launch and crossing landing.
 // AUDIT=1 prints failures without stopping, to measure a baseline.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) specifier += '.ts';
-    return next(specifier, context);
-  },
-  load(url, context, next) {
-    if (!url.endsWith('.ts')) return next(url, context);
-    return { format: 'module', shortCircuit: true, source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code };
-  },
-});
+
 globalThis.location = { search: '?shot' };
 globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { Boat } = await import('../src/traveller/boat.ts');

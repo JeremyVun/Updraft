@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
@@ -80,7 +81,7 @@ export class SkyMirrorChapter implements Chapter {
     return this.cast.skyMirror.holdingWand && ['play','throw','walk','fetch','reveal','gather','jetty'].includes(this.beat)
       ? `stars-${this.cast.skyMirror.completedMask}` : null;
   }
-  saveCheckpoint(): number[] { return [this.cast.skyMirror.completedMask,this.target]; }
+  saveCheckpoint(): CheckpointPayload<'mirror'> { return [this.cast.skyMirror.completedMask,this.target]; }
   restoreCheckpoint(point: string,data: number[]): void {
     this.companion.reset();
     const {child,cygnet,skyMirror:room,plane,boat}=this.cast;

@@ -107,7 +107,7 @@ uniform vec3 uTipDry;
 uniform vec3 uTipCool;
 /** 1 on the mainland's grazed pasture, 0 on the island's wild meadow. */
 float pastureAt(vec2 xz) {
-  return smoothstep(-600.0, -660.0, xz.y);
+  return (1.0 - smoothstep(-660.0, -600.0, xz.y));
 }
 /** 1 under the birches, where the floor is fallen gold and the little grass left in it has gone over with the year. */
 float birchFloorAt(vec2 xz) {

@@ -114,7 +114,7 @@ void main() {
   float shore = h < 2.5 ? shoreDistance(xz) : 1e3;
   bool beach = shore < 6.0 && grassy < 1.0;
   vec4 swash = beach ? beachSwash(xz, shore, -normalize(n.xz + 1e-5), fp) * (1.0 - grassy) : vec4(0.0);
-  float wet = max(swash.z, smoothstep(5.0, 0.0, shore) * 0.5) * (1.0 - grassy);
+  float wet = max(swash.z, (1.0 - smoothstep(0.0, 5.0, shore)) * 0.5) * (1.0 - grassy);
   vec3 alb = mix(sand, uWetSand, wet * 0.85);
   float slope = 1.0 - n.y;
 

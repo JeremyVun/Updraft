@@ -1,16 +1,7 @@
 // Wingbeat timing and resting/take-off gates; no browser or GPU required.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
-registerHooks({
-  resolve(s, c, next) { return next(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c); },
-  load(u, c, next) {
-    return u.endsWith('.ts')
-      ? { format: 'module', shortCircuit: true, source: transformSync(new URL(u).pathname, fs.readFileSync(new URL(u), 'utf8')).code }
-      : next(u, c);
-  },
-});
+
 globalThis.location = { search: '?shot' };
 const { Foley } = await import('../src/audio/foley.ts');
 const { SwanFlock } = await import('../src/creatures/flock.ts');

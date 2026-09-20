@@ -1,19 +1,9 @@
 // Pointer ownership, cancellation and page lifecycle; no browser/GPU required.
 // Usage: node tools/pointer-contact-check.mjs
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
 
-registerHooks({
-  resolve(s, c, next) { return next(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c); },
-  load(u, c, next) {
-    return u.endsWith('.ts')
-      ? { format: 'module', shortCircuit: true, source: transformSync(new URL(u).pathname, fs.readFileSync(new URL(u), 'utf8')).code }
-      : next(u, c);
-  },
-});
 globalThis.location = { search: '?shot' };
 const { PointerInput } = await import('../src/input/pointer.ts');
 

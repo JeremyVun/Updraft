@@ -482,7 +482,7 @@ float hf_islandCoast(vec2 p) {
 }
 float hf_island(vec2 p) {
   float d = hf_islandCoast(p);
-  float land = smoothstep(10.0, -14.0, d);
+  float land = (1.0 - smoothstep(-14.0, 10.0, d));
   float h = land * 2.7 - 1.5;
   float hills = gfbm(p * 0.02, 3, 2.0) * 0.5 + 0.5;
   float ridge = exp(-(sq(p.x + 16.0) + sq(p.y + 34.0)) / (2.0 * 400.0));
@@ -502,7 +502,7 @@ float hf_lines(vec2 p) {
   vec2 c = vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)});
   vec2 r = vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)});
   float d = hf_isleCoast(p, c, r, 0.16, 21.0);
-  float land = smoothstep(10.0, -30.0, d);
+  float land = (1.0 - smoothstep(-30.0, 10.0, d));
   float rr = length((p - c) / r);
   float h = land * 3.2 - 1.4;
   h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.linesDome)} + (gfbm(p * 0.022, 3, 22.0) * 0.5 + 0.5) * 5.0);
@@ -519,7 +519,7 @@ float hf_bank(vec2 world) {
   float lateral = exp(-sq((world.x - ${glsl(BANK.x)}) / ${glsl(BANK.reach)}));
   float crest = ${glsl(BANK.crest)} + ${glsl(BANK.arm)} * (1.0 - exp(-sq((world.x - ${glsl(BANK.x)}) / ${glsl(BANK.arms)})));
   float u = world.y - crest;
-  float shape = u > 0.0 ? smoothstep(${glsl(BANK.rise)}, 0.0, u) : exp(-sq(u / ${glsl(BANK.fall)}));
+  float shape = u > 0.0 ? (1.0 - smoothstep(0.0, ${glsl(BANK.rise)}, u)) : exp(-sq(u / ${glsl(BANK.fall)}));
   return ${glsl(BANK.height)} * lateral * shape;
 }
 float hf_meadow(vec2 world) {
@@ -544,7 +544,7 @@ float hf_birches(vec2 p) {
   vec2 c = vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0);
   vec2 r = vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.13, 61.0);
-  float land = smoothstep(18.0, -38.0, d);
+  float land = (1.0 - smoothstep(-38.0, 18.0, d));
   float rr = length((p - c) / r);
   float h = land * 3.4 - 1.6;
   h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.birchesCrest)} + (gfbm(p * 0.028, 3, 62.0) * 0.5 + 0.5) * 3.2);
@@ -559,7 +559,7 @@ float hf_drowned(vec2 p) {
   vec2 c = vec2(${ISLES.drowned.x}.0, ${ISLES.drowned.z}.0);
   vec2 r = vec2(${ISLES.drowned.rx}.0, ${ISLES.drowned.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.14, 31.0);
-  float land = smoothstep(20.0, -30.0, d);
+  float land = (1.0 - smoothstep(-30.0, 20.0, d));
   float lumps = gfbm(p * 0.013, 3, 32.0);
   return land * (0.5 + lumps * 2.3) - 6.5 - smoothstep(0.0, 80.0, d) * 2.0;
 }
@@ -567,7 +567,7 @@ float hf_wood(vec2 p) {
   vec2 c = vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0);
   vec2 r = vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.2, 41.0);
-  float land = smoothstep(16.0, -38.0, d);
+  float land = (1.0 - smoothstep(-38.0, 16.0, d));
   float rr = length((p - c) / r);
   float h = land * 2.6 - 1.5;
   h += land * land * (max(0.0, 1.0 - rr * rr) * 22.0 + (gfbm(p * 0.03, 3, 42.0) * 0.5 + 0.5) * 5.0);
@@ -577,7 +577,7 @@ float hf_sleeping(vec2 p) {
   vec2 c = vec2(${ISLES.sleeping.x}.0, ${ISLES.sleeping.z}.0);
   vec2 r = vec2(${ISLES.sleeping.rx}.0, ${ISLES.sleeping.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.14, 81.0);
-  float land = smoothstep(10.0, -16.0, d);
+  float land = (1.0 - smoothstep(-16.0, 10.0, d));
   float rr = length((p - c) / r);
   float h = land * 3.0 - 1.5;
   h += land * land * (max(0.0, 1.0 - rr * rr) * 4.5 + (gfbm(p * 0.03, 3, 82.0) * 0.5 + 0.5) * 2.6);
@@ -593,8 +593,8 @@ float hf_home(vec2 p) {
   vec2 c = vec2(${ISLES.home.x}.0, ${ISLES.home.z}.0);
   vec2 r = vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0);
   float d = hf_isleCoast(p, c, r, 0.1, 51.0);
-  float land = smoothstep(10.0, -22.0, d);
-  float inland = smoothstep(4.0, -110.0, d);
+  float land = (1.0 - smoothstep(-22.0, 10.0, d));
+  float inland = (1.0 - smoothstep(-110.0, 4.0, d));
   float h = land * 4.0 - 1.6;
   h += land * inland * (14.0 + gfbm(p * 0.006, 3, 52.0) * 12.0);
   float r2 = sq(p.x - ${LAST_HILL.x}.0) + sq(p.y - (${LAST_HILL.z}.0));
@@ -611,7 +611,7 @@ float pondOut(vec2 p) {
 float pondDry(vec2 p, float groundH) {
   float o = pondOut(p);
   if (o > 1.0) return 1.0;
-  return mix(1.0, smoothstep(${glsl(POND_LEVEL - 0.05)}, ${glsl(POND_LEVEL + 0.2)}, groundH), smoothstep(1.0, 0.9, o));
+  return mix(1.0, smoothstep(${glsl(POND_LEVEL - 0.05)}, ${glsl(POND_LEVEL + 0.2)}, groundH), (1.0 - smoothstep(0.9, 1.0, o)));
 }
 float hf_pond(float h, vec2 p) {
   float d = pondOut(p);

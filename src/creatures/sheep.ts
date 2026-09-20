@@ -80,7 +80,7 @@ void main() {
   if (part == ${EAR_R}) side = -1.0;
 
   if (part == ${EYE}) p.y = 0.885 + (p.y - 0.885) * (1.0 - 0.92 * iFace.w);
-  if (part == ${MUZZLE} && p.y < 0.745) p += vec3(0.0, -0.035, -0.01) * iHead.w * smoothstep(0.745, 0.69, p.y);
+  if (part == ${MUZZLE} && p.y < 0.745) p += vec3(0.0, -0.035, -0.01) * iHead.w * (1.0 - smoothstep(0.69, 0.745, p.y));
 
   if (leg) {
     vec3 hip = vec3(0.19 * side, 0.42, front ? 0.32 : -0.36);

@@ -15,6 +15,10 @@ Nothing heavy is allowed to happen in the first frames. Before the loop starts, 
 5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished all of it. The start screen then enables Begin / Continue. Only the activation gesture starts audio and `requestAnimationFrame(frame)`; the story and quality governor do not run while waiting.
 
 World construction also yields between major systems so setup does not monopolise the browser in one long task.
+Water's deterministic ripple texture reuses row/column sine and cosine tables; its foam texture ranks squared
+cell distances and takes only the two winning square roots. Packed bytes and texture settings match the
+original generator at five checked resolutions (`tools/water-texture-check.mjs`). The temporary tables are
+discarded after construction; no startup assets or downloads were added.
 The start screen's hollow ring is a browser-owned SVG cursor: its movement does not depend on JavaScript
 servicing pointer events during WebGL initialization. The animated gameplay cursor stays unchanged.
 A local production-preview profile reduced the worst opening frame gap from 950 ms to 167 ms; individual
@@ -53,6 +57,15 @@ until the new chapter has had its first normal update. Several constructors init
 the origin and populate them during update. Reading them sooner caused a one-frame camera pull toward
 the origin. Retaining the view avoids an extra zero-time gameplay update at every transition; startup and
 checkpoint restoration still perform their existing zero-time setup before the first camera cut.
+
+The creature environment and its life callback are reused between simulation steps. Nearby-creature queries
+iterate persistent population arrays, preserving their tie order and strict radius. Camera subject fitting
+uses the same arithmetic without per-step arrays or a capturing closure; 7,200 frames match the original
+camera exactly (`tools/camera-parity-check.mjs`). These changes do not reorder simulation work.
+
+GLSL descending ramps use `1.0 - smoothstep(low, high, x)` with distinct, ascending edges. Reversed or equal
+GLSL edges are undefined, even if a local driver draws the expected curve. CPU reversible helpers remain
+separate. Surface lighting and Sleeping fog share the morning-lane function in `world/lane.ts`.
 
 ## Readbacks (`src/gl/readback.ts`)
 

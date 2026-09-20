@@ -82,13 +82,13 @@ void main() {
     col = sky + uSunColor * (0.22 + glow) * sun;
     additive = 0.12;
   } else if (vKind < 1.5) {
-    a = smoothstep(1.0, 0.0, r) * vAlpha;
+    a = (1.0 - smoothstep(0.0, 1.0, r)) * vAlpha;
     float glint = pow(toSun, 8.0) * 2.5 + 0.45;
     col = sky * 1.1 + uSunColor * glint * sun;
     additive = 0.7;
   } else {
     float lumps = vnoise(vQ * 3.0 + vSeed * 17.0);
-    a = smoothstep(1.0, 0.35, r + (lumps - 0.5) * 0.5) * vAlpha;
+    a = (1.0 - smoothstep(0.35, 1.0, r + (lumps - 0.5) * 0.5)) * vAlpha;
     col = vec3(0.92, 0.9, 0.84) * (sky + uSunColor * (0.45 + pow(toSun, 4.0) * 2.5) * sun);
     additive = 0.25;
   }

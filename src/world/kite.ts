@@ -36,7 +36,7 @@ void main() {
   vec3 alb = vec3(0.93, 0.89, 0.81);
   float rule = 1.0 - smoothstep(0.006, 0.03, abs(fract(vPaper.y * 2.4) - 0.5));
   alb = mix(alb, vec3(0.62, 0.72, 0.9), rule * 0.4);
-  float red = max(smoothstep(0.06, -0.12, vPaper.y), vPaper.z);
+  float red = max((1.0 - smoothstep(-0.12, 0.06, vPaper.y)), vPaper.z);
   alb = mix(alb, vec3(0.56, 0.17, 0.13), red);
   float spine = 1.0 - smoothstep(0.045, 0.085, abs(vPaper.x));
   float cross = 1.0 - smoothstep(0.045, 0.085, abs(vPaper.y));

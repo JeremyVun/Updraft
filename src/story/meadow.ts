@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { BANK, POND, POND_LEVEL, ISLES, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
@@ -215,7 +216,7 @@ export class MeadowChapter implements Chapter {
     if (this.beat !== 'walk') return null;
     return this.crestDone ? 'pond' : this.piano.at === 'done' ? 'piano' : null;
   }
-  saveCheckpoint(): number[] { return [this.leg, this.waveTo, this.waveSpeed, this.dusk, this.duskTarget]; }
+  saveCheckpoint(): CheckpointPayload<'meadow'> { return [this.leg, this.waveTo, this.waveSpeed, this.dusk, this.duskTarget]; }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
     this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];

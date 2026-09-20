@@ -36,7 +36,7 @@ in float vAlpha;
 in float vEdge;
 in vec3 vWorld;
 void main() {
-  float soft = smoothstep(1.0, 0.35, abs(vEdge));
+  float soft = (1.0 - smoothstep(0.35, 1.0, abs(vEdge)));
   vec3 col = uColor * max(vec3(uLightFloor), hemiLight(vec3(0.0, 1.0, 0.0)) * 0.9 + uSunColor * 0.55);
   // A soft, cool edge keeps ivory air legible over pale cloth without lighting the surrounding world.
   if (uLightFloor > 0.0) {

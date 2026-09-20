@@ -138,7 +138,7 @@ void main() {
   vWorld.y -= iSteady.x * (part == ${HEAD} ? 1.0 : part == ${NECK} ? aSpan * aSpan : 0.0);
   vNormal = rotY(nrm, iPos.w);
   vMat = aMat;
-  vUnder = smoothstep(0.05, -0.6, vNormal.y);
+  vUnder = (1.0 - smoothstep(-0.6, 0.05, vNormal.y));
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -238,9 +238,9 @@ void main() {
    * A swan sitting still lays a soft bright patch on the water; a foot slapping it throws up a puff of white;
    * and where one settles or shifts its weight, a ring goes out from it and opens until it is gone.
    */
-  float smudge = smoothstep(1.0, 0.1, r);
-  float splash = smoothstep(1.0, 0.2, r) * (0.55 + 0.45 * smoothstep(0.2, 0.62, r));
-  float ring = smoothstep(0.3, 0.02, abs(r - 0.78)) * smoothstep(1.02, 0.9, r);
+  float smudge = (1.0 - smoothstep(0.1, 1.0, r));
+  float splash = (1.0 - smoothstep(0.2, 1.0, r)) * (0.55 + 0.45 * smoothstep(0.2, 0.62, r));
+  float ring = (1.0 - smoothstep(0.02, 0.3, abs(r - 0.78))) * (1.0 - smoothstep(0.9, 1.02, r));
   float a = vKind < 0.5 ? smudge : vKind < 1.5 ? splash : ring;
   a *= vFade;
   if (a < 0.004) discard;

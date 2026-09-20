@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
@@ -87,7 +88,7 @@ export class LinesChapter implements Chapter {
     if (this.beat === 'approach' && this.gate > 0) return `curtain-${this.gate}`;
     return this.beat === 'walk' ? 'family' : null;
   }
-  saveCheckpoint(): number[] { return this.beat === 'walk' ? [this.leg, +door.opened] : [this.gate, 0]; }
+  saveCheckpoint(): CheckpointPayload<'lines'> { return this.beat === 'walk' ? [this.leg, +door.opened] : [this.gate, 0]; }
   restoreCheckpoint(point: string, data: number[]): void {
     const { child: c, cygnet, plane } = this.cast;
     c.stop(); c.lean = 0; c.lookAt = null;

@@ -3,7 +3,34 @@
 The project already has focused mechanics, checkpoint, GPU and gesture tests in `tools/`.
 They run locally; GitHub Actions is not required. The checks serve different purposes:
 
+Common groups run sequentially and preserve each check's log plus `results.json` in `/tmp`:
+
+- `npm run check`: fast shader, parity, input, timing and engine mechanics checks.
+- `npm run check:mechanics`: the quick group plus chapter, camera and gesture mechanics (including mouse
+  and portrait touch Mirror collection). About five minutes locally.
+- `npm run check:browser`: shader backends, touch/viewport, transitions, context loss, Begin, saves, frame
+  scheduling and chapter views. Requires a running dev server; `BASE` selects it.
+- `npm run check:release`: mechanics, browser checks and the continuous journey. Allow at least an hour.
+  Audio/artistic checks below remain separate; this group does not replace listening or device QA.
+
+Set `CHECK_OUTPUT=/tmp/<name>` to choose the evidence directory. `tools/lib/typescript.mjs` is the shared
+loader for Node mechanics fixtures. Camera/progress refactor checks read baseline source from Git, default
+`188c9fa`; keep that history available or set `BASELINE_REF` to an appropriate pre-refactor revision.
+
+Focused checks:
+
 - `npm run typecheck` and `npm run build`: TypeScript and the production bundle.
+- `node tools/shader-check.mjs`: ascending/distinct literal GLSL edges and descending-ramp equivalence.
+- `node tools/shader-browser-check.mjs`: float-shader ramps on Chrome/Metal and software Vulkan, plus
+  original water-texture hashes through browser JavaScript. Requires the dev server. Software Vulkan
+  exercises another compiler/backend, not another physical GPU family or Safari.
+- `node tools/water-texture-check.mjs`: exact original texture bytes and settings at five resolutions.
+- `node tools/nearby-check.mjs`: 2,000 nearest-creature comparisons, ties, boundaries and live populations.
+- `node tools/camera-parity-check.mjs`: 7,200 exact original/refactored camera frames, including rotation.
+- `node tools/progress-schema-check.mjs`: current/legacy checkpoint layouts and malformed-record parity.
+- `COMPARE_BASE=http://127.0.0.1:5233/ BASE=http://127.0.0.1:5235/ node tools/render-parity-check.mjs /tmp/updraft-render`:
+  12 seeded frozen scene comparisons against an unchanged build, actor/camera bounds, terrain parity and
+  expanded shader-literal checks. Both servers should serve frozen production builds.
 - `node tools/pointer-contact-check.mjs`: primary-contact ownership, cancellation, page lifecycle and viewport resize.
 - `node tools/touch-viewport-check.mjs`: real browser multi-touch, cancellation, canvas/camera dimensions,
   portrait resize and fullscreen entry/exit. The browser-controls case models a reduced `innerHeight`;
@@ -161,3 +188,18 @@ The production mix peaks at −15.35 dBFS without clipping. Build, 87 shared aud
 70 Birches score regressions pass. Evidence: `/tmp/updraft-lines-score-check.json` and its WAV.
 Live game-loop/contextual verification remains outstanding because another progress check holds the browser;
 offline production audio and chapter tests do not constitute a live listening pass.
+
+
+## Production hardening validation — 2026-09-21
+
+The isolated `codex/production-hardening` pass builds on the combined `188c9fa` snapshot. Build/typecheck,
+35 mechanics checks, 12 frozen render/state comparisons and exact camera/texture/save compatibility
+checks pass. The final continuous journey passed all 17 chapters, 269 real pointer gestures, credits,
+completed-save reload and Play again with no reported page/console errors. Credits were reached in about
+37 minutes. Evidence and source hashes: `/tmp/updraft-hardening/`. See `production-review.md` for measurements,
+implementation scope and physical-iPad limitations. The run verifies traversal; audio listening remains separate.
+
+All eight focused browser gates also pass across the grouped run and the corrected Begin retry rerun.
+The fault-injection route now ignores Vite's query timestamp and verifies that it actually blocked the main
+module before asserting the retry state. The final credits capture exposed an existing replay-label overlap,
+recorded as an open presentation issue in the review; neither the credits markup nor its CSS changed here.

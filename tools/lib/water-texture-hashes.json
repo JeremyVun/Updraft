@@ -1,0 +1,52 @@
+[
+  {
+    "name": "rippleTexture",
+    "res": 7,
+    "hash": "decab621748f64d4508f03f48a409a8d03da6505154698ad17276322abde1f10"
+  },
+  {
+    "name": "laceTexture",
+    "res": 7,
+    "hash": "49b55b77d4a943107a45be120600bcdd1cae0f164dfeefdfcb5026c8cd94bd3d"
+  },
+  {
+    "name": "rippleTexture",
+    "res": 32,
+    "hash": "8a3c5df0f2d1161184ca18a4ef6a4bc2a2511db912ed9b680fc89ac50b661756"
+  },
+  {
+    "name": "laceTexture",
+    "res": 32,
+    "hash": "ed5f0fc459a6349a2c261f0ea3d90e8effc672d8be0d958f7accc26aef68a70d"
+  },
+  {
+    "name": "rippleTexture",
+    "res": 127,
+    "hash": "1b870c2a435c897bd96326de5ed8141625091c5dbca173af78850d75cfae1b54"
+  },
+  {
+    "name": "laceTexture",
+    "res": 127,
+    "hash": "91f223b48a14e9414620856ef4612e6c95d37d34485cb6467f54786b28b0d579"
+  },
+  {
+    "name": "rippleTexture",
+    "res": 128,
+    "hash": "7c366b8bf5270385e3645d4238ef2ac11ddd8fa8003d08d08e0045814b46aca4"
+  },
+  {
+    "name": "laceTexture",
+    "res": 128,
+    "hash": "fb26202d26aca71ef8aa63ce0a15fc99f4b5754830a522bf675b2845ba753fc9"
+  },
+  {
+    "name": "rippleTexture",
+    "res": 256,
+    "hash": "12e0d7e47eade8567c0366056953552b4d7432596f8775871f867a0282561459"
+  },
+  {
+    "name": "laceTexture",
+    "res": 256,
+    "hash": "e6e296a71436f3bccc49ee947ee84293b8184e7f2ef331d22962a59f0940a0fd"
+  }
+]

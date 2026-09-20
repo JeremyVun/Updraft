@@ -96,23 +96,23 @@ Skin skin() {
   float mottle = vnoise(vRest.zx * vec2(1.3, 2.1)) * 0.6 + vnoise(vRest.zy * 4.0 + 3.0) * 0.4;
   Skin k = Skin(uBack * (0.9 + 0.2 * mottle), 0.0, 0.0);
   if (part == ${BODY} || part == ${DORSAL}) {
-    float pale = smoothstep(-0.2, -0.62, rn.y + (mottle - 0.5) * 0.5) * smoothstep(0.82, 0.55, s);
-    float pleats = smoothstep(0.06, 0.12, s) * smoothstep(0.5, 0.38, s) * smoothstep(-0.35, -0.6, rn.y);
+    float pale = (1.0 - smoothstep(-0.62, -0.2, rn.y + (mottle - 0.5) * 0.5)) * (1.0 - smoothstep(0.55, 0.82, s));
+    float pleats = smoothstep(0.06, 0.12, s) * (1.0 - smoothstep(0.38, 0.5, s)) * (1.0 - smoothstep(-0.6, -0.35, rn.y));
     float groove = smoothstep(0.55, 1.0, sin(vRig.z * 6.2832 * 26.0)) * pleats;
     k.albedo = mix(k.albedo, uBelly * (0.88 + 0.16 * mottle), pale) * (1.0 - groove * 0.35);
-    float head = smoothstep(0.23, 0.15, s) * smoothstep(0.1, 0.45, rn.y);
-    float jaw = smoothstep(0.26, 0.18, s) * smoothstep(0.25, 0.0, abs(rn.y + 0.05));
+    float head = (1.0 - smoothstep(0.15, 0.23, s)) * smoothstep(0.1, 0.45, rn.y);
+    float jaw = (1.0 - smoothstep(0.18, 0.26, s)) * (1.0 - smoothstep(0.0, 0.25, abs(rn.y + 0.05)));
     k.bump = knobs(vec2(vRest.z * 1.9, vRest.x * 2.2)) * (head + jaw * 0.8) * 0.035 - groove * 0.015;
     float eye = length(vec2(vRest.z + 0.235 * ${f(LENGTH)}, vRest.y + 0.46));
-    k.albedo *= 1.0 - smoothstep(0.1, 0.06, eye) * step(0.8, abs(rn.x)) * 0.8;
+    k.albedo *= 1.0 - (1.0 - smoothstep(0.06, 0.1, eye)) * step(0.8, abs(rn.x)) * 0.8;
   } else if (part == ${FIN}) {
     float top = smoothstep(-0.2, 0.4, rn.y);
-    k.albedo = mix(uBelly * (0.92 + 0.12 * mottle), uBack * 1.1, top * smoothstep(0.75, 0.2, vRig.z) * 0.8);
+    k.albedo = mix(uBelly * (0.92 + 0.12 * mottle), uBack * 1.1, top * (1.0 - smoothstep(0.2, 0.75, vRig.z)) * 0.8);
     k.thin = 0.6;
   } else {
-    float under = smoothstep(0.15, -0.15, rn.y);
+    float under = (1.0 - smoothstep(-0.15, 0.15, rn.y));
     float marks = smoothstep(0.3, 0.72, vnoise(vRest.xz * vec2(1.1, 2.0) + 4.0));
-    float white = under * smoothstep(0.93, 0.76, vRig.w) * smoothstep(0.97, 0.78, abs(vRig.z)) * (0.62 + 0.38 * marks);
+    float white = under * (1.0 - smoothstep(0.76, 0.93, vRig.w)) * (1.0 - smoothstep(0.78, 0.97, abs(vRig.z))) * (0.62 + 0.38 * marks);
     k.albedo = mix(k.albedo, uBelly * 1.08, white);
     k.thin = 0.8;
   }
@@ -155,7 +155,7 @@ void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   Skin k = skin();
-  N = bumped(N, vWorld, k.bump * smoothstep(60.0, 20.0, length(cameraPosition - vWorld)));
+  N = bumped(N, vWorld, k.bump * (1.0 - smoothstep(20.0, 60.0, length(cameraPosition - vWorld))));
 
   float sun = cloudShadow(vWorld.xz);
   float ndl = dot(N, uSunDir);
@@ -175,7 +175,7 @@ void main() {
 
   vec3 R = reflect(-V, N);
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
-  env = mix(env, uSeaTint * uSkyAmbient * 1.4, smoothstep(0.0, -0.3, R.y));
+  env = mix(env, uSeaTint * uSkyAmbient * 1.4, (1.0 - smoothstep(-0.3, 0.0, R.y)));
   float F = 0.03 + 0.97 * pow(1.0 - nv, 5.0);
   col = mix(col, env, F * (0.3 + 0.5 * sheet));
   vec3 H = normalize(uSunDir + V);

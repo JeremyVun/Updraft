@@ -1,19 +1,8 @@
 // Ending flight mechanics without a renderer: momentum, bounded catch-up, and the opening's V.
 // Usage: node tools/flock-flight-check.mjs. Visual review still needs the real summit camera.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) specifier += '.ts';
-    return next(specifier, context);
-  },
-  load(url, context, next) {
-    if (!url.endsWith('.ts')) return next(url, context);
-    return { format: 'module', shortCircuit: true, source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code };
-  },
-});
+
 globalThis.location = { search: '?shot' };
 globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { SwanFlock } = await import('../src/creatures/flock.ts');
