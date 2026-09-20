@@ -7,6 +7,7 @@ const portrait = process.argv.includes('portrait');
 const resumeRescue = process.argv.includes('rescue');
 const mode = (portrait ? 'portrait' : 'desktop') + (resumeRescue ? '-rescue' : '');
 const prefix = `/tmp/updraft-wood-${mode}`;
+const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-wood-video-') : null;
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1440, height: 900 };
 const lock = '/tmp/updraft-chromium.lock';
 for (;;) {
@@ -23,11 +24,16 @@ for (;;) {
   }
 }
 let browser;
+let video;
+let context;
 const report = { mode, beats: [], catches: [], errors: [] };
 try {
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
     args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
-  const page = await browser.newPage({ viewport, hasTouch: portrait });
+  context = await browser.newContext({ viewport, hasTouch: portrait,
+    ...(videoDir ? { recordVideo: { dir: videoDir, size: viewport } } : {}) });
+  const page = await context.newPage();
+  video = page.video();
   await page.route('**/favicon.ico', route => route.fulfill({ status: 204 }));
   page.on('pageerror', e => report.errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
@@ -39,6 +45,8 @@ try {
     const target = c.windInvitation?.clone().project(g.rig.camera);
     return { chapter: g.story.name, beat: c.beat, leg: c.leg, chainAt: c.chainAt, t: c.t,
       child: g.child.position.toArray(), moving: g.child.moving, soggy: g.glider.soggy.value,
+      bird: g.cygnet.seating.shown.p.toArray(), birdState: g.cygnet.state, carry: g.carry.playing,
+      plane: g.glider.position.toArray(), landed: g.glider.landed,
       target: target && [target.x, target.y, target.z],
       coals: g.embers.coals.filter(c => c.live).map(c => ({ lit: c.lit, wake: c.wake, p: c.p.toArray() })) };
   });
@@ -87,10 +95,11 @@ try {
   }
   if (resumeRescue) await page.evaluate(() => {
     const g = __game, c = g.story.current;
-    g.child.stop(); g.child.place(-32, -1773, Math.PI); c.leg = 2; c.chainAt = 95;
+    g.child.stop(); g.child.place(-18, -1786, Math.PI); c.leg = 2; c.chainAt = 108;
     c.bolt(); c.frame(); g.rig.cut(c.shot);
   });
   let lastBeat, strokes = 0, lastCoal = -1;
+  const captured = new Set();
   process.once('SIGTERM', () => { browser?.close().finally(() => { if (fs.existsSync(`${lock}/pid`) && Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true }); process.exit(143); }); });
   const end = Date.now() + 360000;
   while (Date.now() < end) {
@@ -100,6 +109,12 @@ try {
       lastBeat = s.beat; report.beats.push(s); console.log(`beat ${s.beat}, leg ${s.leg}`);
       await page.screenshot({ path: `${prefix}-${s.beat}.png` });
       if (s.beat === 'lost' || s.beat === 'dry') await idleCheck(s.beat);
+    }
+    const detail = s.beat === 'fright' ? `startle-${Math.floor(s.t * 5)}` : s.beat === 'bolt' ? `run-${Math.floor(s.t)}`
+      : s.beat === 'found' ? s.carry.replace(':', '-') || (s.t < 1.4 ? 'resolve' : 'approach') : null;
+    if (detail && !captured.has(detail)) {
+      captured.add(detail);
+      await page.screenshot({ path: `${prefix}-${detail}.png` });
     }
     const litCount = s.coals.filter(c => c.lit).length;
     if (s.chainAt !== lastCoal) { lastCoal = s.chainAt; report.catches.push(s); }
@@ -118,8 +133,15 @@ try {
   assert(report.beats.some(b => b.beat === 'dry'), 'the plane must be repaired');
   assert.equal(report.errors.length, 0, report.errors.join('\n'));
   console.log(`Wood complete with ${strokes} sweeps; no browser errors.`);
+} catch (error) {
+  report.failure = error.stack;
+  throw error;
 } finally {
-  fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
+  try {
+    await context?.close();
+    if (video) await video.saveAs(`${prefix}.webm`);
+  } catch (error) { report.videoError = error.message; }
   await browser?.close();
+  fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
   if (fs.existsSync(`${lock}/pid`) && Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true });
 }

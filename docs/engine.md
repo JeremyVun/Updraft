@@ -27,12 +27,21 @@ Anything that appears later in the story (the whale, rain, fireflies, the drawin
 
 ## Frame order (`frame()` in `main.ts`)
 
-1. CPU-only work first: input, story, the traveller, the boat, the glider. No GPU commands yet.
-2. `pollReadbacks()`: finished GPU→CPU copies land (see below). This is the one place a frame may touch a read buffer.
-3. GPU simulation: wind substeps, life, the light re-bake if the sun has moved, petals, wind lines.
-4. Camera update, then everything that depends on where it is: the window follow (with its bakes and shifts), the cloud-shadow bake for the camera's domain, terrain leaves, grass tiles, walls.
-5. The doorway view when open, the current room's sea reflection, then the post chain (scene → resolve → bloom → grade → screen).
-6. `endFrame()` fences the frame so the next one can tell whether the GPU has caught up.
+1. Measure the real frame interval once for telemetry and the quality governor. `gl/frame-time.ts` accepts up
+   to 100 ms and divides it into at most three world updates, each no larger than 1/30 s. Ordinary 30–144 fps
+   updates remain single steps, avoiding duplicated CPU work around 60 fps. The GPU wind keeps its separate
+   fixed 60 Hz clock: at most six wind ticks per rendered frame.
+2. Poll completed readbacks once, before submitting this frame's GPU work. Snapshot the pointer's screen
+   segment and interpolate it across the world updates; each brush sees only its own segment and duration.
+3. Each world update advances input, story, actors, wind/life/particles, camera and world mechanics in order.
+   The final update follows the world window and requests the wind readback after its last simulation tick.
+4. Prepare the final view once: lighting bakes, cloud shadows, terrain selection, grass tables and audio cues.
+5. Render the doorway view when open, the room's sea reflection and post chain, then fence with `endFrame()`.
+
+The 100 ms cap permits normal game-time progression down to 10 fps. Excess time from a longer stall is
+discarded rather than queued; the next frame starts without a catch-up backlog. Hidden tabs do not advance
+simulation, and visibility changes reset the timestamp. QA `shot` still advances exactly 1/60 s per frame.
+`__stats` reports game time, world-step count/size, simulated milliseconds and discarded milliseconds.
 
 ## Readbacks (`src/gl/readback.ts`)
 
@@ -43,6 +52,22 @@ The wind field, the life field and the height bake are read back to the CPU for 
 If the GPU stays behind (a saturated device, or another process on the GPU), the gate would starve the CPU copies. So one blocking delivery is accepted anyway now and then: a quarter second after a cheap one, two seconds after one that blocked for more than 6 ms, whatever the frame rate. The CPU wind copy is then up to a few frames older than usual, which the consumers tolerate, and the quality governor is stepping the load down meanwhile. `__stats.readbacksSkipped / readbacksForced / readbacksDelivered / readbackWorstMs` show what happened.
 
 ## Quality governor (`src/gl/quality.ts`)
+
+The bottom-right Graphics quality selector offers Auto, High, Medium and Low. Auto is the default and
+adapts in both directions. High holds full world detail at device pixel ratio (capped at 2); Medium holds
+80% grass with 95% reach at at most 1× scale with up to two MSAA samples; Low holds 55% grass with
+85% reach at 0.85× scale (relative to the lesser of DPR and 1), also with up to two samples. Low prioritises
+a fuller meadow with 30 fps acceptable; this is a visual budget, not a frame cap or a guaranteed device fps.
+Manual settings never respond to frame intervals.
+Switching back to Auto keeps the current level and resets its timing and failed-climb penalty.
+The choice persists separately from story progress in `updraft.quality.v1`; unavailable storage falls back
+to Auto without preventing session changes. Shot mode and explicit graphics overrides ignore the saved
+choice and hide the selector. `node tools/quality-setting-check.mjs` checks the real control, full-grass
+restoration, reload persistence, keyboard selection, phone layout and QA isolation.
+`controls.ts` loads before the game bundle so the same controls also work on the veil. Loading-time quality
+choices are applied after graphics warm-up; audio preferences never create an AudioContext until play
+begins with sound enabled. `node tools/veil-controls-check.mjs` verifies that control clicks cannot start
+play, fullscreen works before module loading, and Begin preserves the selected mute state.
 
 Explicit render-scale overrides are exact, including values below 1. Startup selects the lowest rung if even
 that exceeds the pixel budget, and applies its multisampling before allocating the scene target. The governor
@@ -56,13 +81,16 @@ hidden-tab time cannot earn a change. A new level settles for 2.5 seconds after 
 an increase.
 
 The ladder lowers render scale from DPR (capped at 2) to 1, then multisampling to 2, then world detail,
-before resorting to subpixel scales of 0.85 and 0.72. Full grass recovers before extra antialiasing. World detail controls:
+before resorting to subpixel scales of 0.85 and 0.72. A final Auto-only fallback retains the old 25% density
+and 70% reach at 0.72× for devices still overloaded; selecting Low never chooses that fallback. Auto still
+targets 60 fps. Full grass recovers before extra antialiasing. World detail controls:
 
 | Level | Grass density | Grass reach | Terrain split factor | Reflection cadence | Sky-mirror scale |
 | --- | --- | --- | --- | --- | --- |
 | Full | 100% | 100% | 1.6 | Every frame | 0.75 |
-| Medium | 55% | 85% | 1.35 | Every frame | 0.625 |
-| Low | 25% | 70% | 1.1 | Alternate frames | 0.5 |
+| Medium | 80% | 95% | 1.35 | Every frame | 0.625 |
+| Low | 55% | 85% | 1.1 | Alternate frames | 0.5 |
+| Auto fallback | 25% | 70% | 1.1 | Alternate frames | 0.5 |
 
 The opening pixel budget is 2.2 million. Touch starts at medium world detail and at most 1.25× render scale;
 this is only a starting point. It has the same full-quality ceiling as a mouse device. The governor restores
@@ -85,6 +113,25 @@ browser wiring: full grass, low-detail overload, restoration, terrain budgets an
 The frozen meadow test submitted 83,456 blades at full detail and 29,440 at low detail (65% fewer).
 Meadow and sleeping-island down/up cycles both restored the full-quality pixels exactly. These checks
 establish adaptation and rendering correctness; they do not establish frame rates on an actual iPad.
+
+### Grass budget comparison (2026-09-20)
+
+Jeremy prefers fuller Medium/Low grass and accepts 30 fps on Low. Candidate values are 80% density/95%
+reach for Medium at 1× scale, and 55%/85% for Low at 0.85×. The 25%/70% at 0.72× fallback remains
+available only to Auto. Presets keep the same simulation fidelity and do not cap frame rate.
+
+`node tools/quality-budget-profile.mjs` compares frozen cameras in the island, meadow and sky mirror on
+local Chrome/Metal, M4 Pro, 1280×800 CSS pixels, 2× MSAA. Each comparison changes one setting, plus two
+comparisons of the complete old/new presets. Five A/B/B/A or B/A/A/B rounds bracket background load.
+Each sample waits for GPU completion after eight draws. Results report median paired deltas and their
+range, not differences between independent run averages. Raw results/captures are written to `/tmp`.
+
+The work includes wind ticks, reflections and post-processing, but excludes story/CPU simulation,
+other field updates and readbacks. These are completed-work throughput deltas, **not gameplay fps**.
+Other sessions are using the GPU: small or sign-changing deltas are inconclusive, and absolute costs
+cannot establish device headroom. Earlier standalone live frame-rate samples were discarded as a basis
+for preset decisions because their background load was not comparable. Physical-device checks remain
+necessary before claiming sustained 30/60 fps.
 
 ## Post chain (`src/post/post.ts`)
 
@@ -120,6 +167,7 @@ reporting frame stalls, blocking GPU calls, lighting-direction jumps and chapter
 - Grass levels of detail draw one population of blades, not three. Level 1 (16x16 a tile) holds one chosen blade from every 2x2 block of level 0's cells (32x32) and level 2 (8x16) one from every pair of level 1's; the chosen blades carry the lowest thinning ranks. Thinning, blade width and the far sink depend on distance from the eye alone, never on the level, so by the time every blade of a tile is past a ring the blades still standing are exactly the next level's, and the tile changes level with no change on screen (no hysteresis needed). Each level's blade also closes its lowest segment across its thinning band, so the tessellation matches too. A blade about to be thinned shrinks whole into the ground over a few metres of camera travel instead of vanishing. Before this, each level hashed its own unrelated blades (32², 17², 10²), and a tile crossing the 52 m ring was redrawn at once as a different patch of grass. `grasslod=<0|1>` caps the coarsest level for a same-frame diff (0.0002 of 255 against `grasslod=1`; `grasslod=0` differs only beyond the second ring, where level 0 has no second segment to close).
 - A sparsely sown meadow (the lite tier's quarter density) starts its tiles at the first level that holds every blade it can show, so a phone does not run the vertex shader over blades that never appear.
 - Blade fragments clamp `vT` and `vSun`: under multisampling a sliver of a blade is evaluated outside its own edges, where they extrapolate far past 1 and light one pixel like a spark, which bloom then spreads.
+- Swan fragments likewise clamp interpolated underside shading to 0–1: distant wing triangles otherwise flash as their lighting extrapolates under MSAA. `node tools/swan-shading-check.mjs` compares the old and fixed shaders through wingbeats at four distances and checks that ordinary shading remains unchanged.
 - Grass tiles are culled against a sphere sized from the ground under the whole tile, so tiles on a cliff do not drop out at the edge of the screen.
 
 ## On a phone
@@ -137,7 +185,7 @@ per vertex** (`BLADE_SHADE_GLSL`, shared by the table and direct paths). Median 
 `ratio=1&msaa=2`: p90 33.3 ms → 16.8, frames over 25 ms in twelve seconds about 89 → 70, the same frame
 pixel-for-pixel. The island of lines and the drowned village were already locked at 16.7 and stayed there.
 
-`?stats` draws a small readout (frame percentiles, CPU time inside the frame, quality level, readback counts, draw calls, boot time) for devices without a debugger. The explicit `?lite=1` comparison preset uses: 128² wind with 12 pressure iterations and one substep, a quarter of the grass at 0.7× reach, and far terrain that splits less. The costs that do not shrink with resolution matter most there: the wind simulation (about 35 passes of 256² per substep), the life, cloud and petal passes, and bloom. The sim never runs more than two substeps a frame, so a slow frame cannot multiply its own cost.
+`?stats` draws a small readout (frame percentiles, CPU time inside the frame, quality level, readback counts, draw calls, boot time) for devices without a debugger. The explicit `?lite=1` comparison preset uses: 128² wind with 12 pressure iterations and the same 60 Hz simulation clock, a quarter of the grass at 0.7× reach, and far terrain that splits less. The costs that do not shrink with resolution matter most there: the wind simulation (22 passes of 256² per tick, plus another force pass for each additional eight sources), the life, cloud and petal passes, and bloom. The solver accumulates elapsed game time, runs zero to six ticks per frame, and shares the game’s 100 ms stall cap. High-refresh displays no longer multiply simulation cost or speed; input is retained and resampled between ticks.
 
 ## Before/after flags
 
@@ -182,13 +230,18 @@ cache-invalidation and terrain comparisons in meadow, sleeping and lite wood, wi
 Reusable focused checks: `tools/quality-check.mjs`, `tools/bandage-cost-check.mjs`,
 `tools/render-cost-check.mjs`. The production build retains its existing main-chunk size warning.
 
+Wind timing fix (2026-09-20): `wind/clock.ts` resamples sustained sources and movement trails onto a fixed
+60 Hz clock, including the lite preset. One-shot gusts are applied once; high-refresh frames retain their input.
+At 120 fps this halves full solver ticks versus the old frame-based loop. The shared loop now accepts 100 ms with bounded world substeps; prolonged frames below 10 fps still slow
+game time as a whole, and hidden time is not caught up.
+Chrome/Metal checks passed 72 combinations of 20/30/60/90/120/144 fps, normal/lite, and six input patterns.
+Steady breeze, held forces, straight strokes, impulses and 13 simultaneous sources gave identical fields.
+Circles sample different polygons; aggregate velocity magnitude differed by at most 2.4%, and transported
+gust/lift fields by at most 3.6%. Local pointer interpretation also passes at 30/60/120 Hz. This establishes
+simulation timing and force consistency, not physical-device performance or a combined release playthrough.
+
 Remaining findings that need a separate decision or larger change:
 
-- **Wind simulation time depends on display rate** (`src/wind/field.ts`, `step`). A one-second stepping audit
-  executes two seconds of fixed simulation at 120 fps and 1.5 seconds at 90 fps. Lite mode executes half a
-  second at 30 fps. The per-frame gust impulses and per-second lift forces need consistent accumulation before
-  changing the solver cadence; simply dropping alternate frames loses input or changes the wind's feel.
-  A fixed 60 Hz solver with accumulated gesture forces is the recommended follow-up, tested at 30/60/90/120 Hz.
 - **Saturated GPU readbacks still hitch.** Locked 3200×1800 meadow runs force roughly six readback deliveries
   in twelve seconds and spend around 60–90 ms on some of them. This is the existing stale-input escape hatch,
   not normal-resolution behavior. The quality governor ordinarily lowers resolution. A device that remains
@@ -221,3 +274,21 @@ their feet into the new shore. World-space scarf vertices use the same translati
 explicit continuous shot, and the chapter transfers their logical positions once. The ordinary camera and window
 follow then resume. The portal stops rendering after crossing. `tools/lines-check.mjs` checks the full route,
 per-view object visibility, both travellers' transfer and checkpoint restore.
+
+## Startup and recovery follow-up (2026-09-20)
+
+A cold production-build CPU profile traced a 1.17-second startup task mostly to scarf settling: 180 cloth
+updates repeatedly sampled procedural terrain before a height bake existed. `prepareInBatches` now runs the
+same steps in short batches and yields for the opening veil to paint. A numerical regression checks both
+current and previous cloth positions against synchronous settling; the contact/migration checks still pass.
+This changes scheduling, not cloth physics. It does not defer room allocation or reduce total startup work.
+A local cold-load profile measured the worst RAF gap at 1,167 ms before and 267 ms after; the navigation-to-ready
+profile windows were about 2.9 and 3.0 seconds. These are local Chrome measurements, not phone measurements.
+
+The initial HTML includes a small inline SVG cygnet while loading, replaced by Begin/Continue when ready.
+Its CSS animation is disabled for reduced motion. It cannot guarantee animation through a browser/GPU stall.
+`tools/boot-profile.mjs` records cold-load long tasks, WebGL stalls and a CPU profile for further investigation.
+
+WebGL loss pauses play and offers checkpoint reload; see `docs/contracts/progress.md`. Coarse production
+performance and lifecycle telemetry uses the shared analytics service; see `docs/contracts/analytics.md`.
+Local release checks and the continuous journey runner are listed in `docs/testing.md`.

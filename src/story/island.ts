@@ -462,7 +462,7 @@ export class IslandChapter implements Chapter {
         const strength = Math.sin(Math.PI * gust);
         const x = BOAT_BERTH.x - 12 + gust * 16;
         const z = BOAT_BERTH.z + 3 - gust * 4;
-        this.cast.wind.addSplat({
+        this.cast.wind.addSplat({ source: this,
           ax: x - 0.8, az: z - 3, bx: x + 0.8, bz: z + 3,
           vx: tuning.opening.departureGustSpeed * strength,
           vz: -tuning.opening.departureGustSpeed * 0.25 * strength,

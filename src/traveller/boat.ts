@@ -381,6 +381,7 @@ export class Boat {
 
   /** The droop actually drawn by the cloth, 0 full to 1 hanging dead. */
   get sailDroop(): number { return this.sailMat.uniforms.uDroop.value; }
+  get sailFlutter(): number { return this.sailMat.uniforms.uLuff.value; }
 
   /** World position of the middle of the sail, for anyone who needs to look at it. */
   sailPoint(out: THREE.Vector3): THREE.Vector3 {
@@ -469,7 +470,7 @@ export class Boat {
         );
         const gathering = drive > this.speed ? tuning.sail.gathers : tuning.sail.carries;
         this.speed += (drive - this.speed) * (1 - Math.exp(-dt * gathering));
-        this.speed += Math.abs(kick) * tuning.dolphins.shoveSurge * dt;
+        this.speed = Math.min(tuning.sail.topSpeed, this.speed + Math.abs(kick) * tuning.dolphins.shoveSurge * dt);
         this.yaw += kick * tuning.dolphins.shoveYaw * dt;
         const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
         this.yaw += THREE.MathUtils.clamp(dy, -dt * turn, dt * turn);

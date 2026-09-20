@@ -1,4 +1,4 @@
-// Real pointer interpretation and scarf targeting at 30/60/120 Hz, with a fixed camera and no renderer.
+// Real pointer interpretation and scarf targeting at 10–120 Hz with bounded catch-up, with a fixed camera and no renderer.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -12,6 +12,7 @@ globalThis.location = { search: '?shot' };
 globalThis.window = { innerHeight: 900, matchMedia: () => ({ matches: false }) };
 const { BirchScarf } = await import('../src/world/birch-scarf.ts');
 const { PointerInput } = await import('../src/input/pointer.ts');
+const { frameTiming } = await import('../src/gl/frame-time.ts');
 const { EmberInvitation } = await import('../src/fx/ember-invitation.ts');
 const { Swirl } = await import('../src/fx/swirl.ts');
 const scarf = new BirchScarf(); scarf.active = 1;
@@ -42,15 +43,18 @@ const wind = { addSplat() {} };
   input.update(1/60, camera, field);
   assert.equal(splats, before, 'resuming cannot turn pointer travel during the scene into wind');
 }
-for (const fps of [30,60,120]) for (const clockwise of [false,true]) {
+for (const fps of [10,15,30,60,120]) for (const clockwise of [false,true]) {
   const input = new PointerInput(el); input.present = true; input.anchor = center;
   scarf.snags[1].target = 0;
   let elapsed = 0;
   for (let frame = 0; frame < fps * 12 && scarf.snags[1].target < 1; frame++) {
     elapsed = frame/fps; const a = elapsed*Math.PI*2*(clockwise?-1:1);
     input.eventNdc.set(Math.cos(a)*.15/camera.aspect, Math.sin(a)*.15);
-    input.update(1/fps, camera, wind);
-    scarf.brush(camera, input, wind, 1/fps);
+    const timing = frameTiming(1/fps); input.beginFrame();
+    for(let i=0;i<timing.steps;i++) {
+      input.update(timing.stepDt, camera, wind, (i+1)/timing.steps);
+      scarf.brush(camera, input, wind, timing.stepDt);
+    }
   }
   console.log(JSON.stringify({fps,clockwise,seconds:elapsed,progress:scarf.snags[1].target,charge:input.charge}));
   assert.equal(scarf.snags[1].target,1,'Circling must release the wrap');
@@ -59,7 +63,10 @@ for (const fps of [30,60,120]) for (const clockwise of [false,true]) {
   const straight = new PointerInput(el); straight.present = true; straight.anchor = center;
   for (let frame = 0; frame < fps*8; frame++) {
     straight.eventNdc.set(Math.sin(frame/fps*Math.PI*2)*.18/camera.aspect,0);
-    straight.update(1/fps,camera,wind); scarf.brush(camera,straight,wind,1/fps);
+    const timing=frameTiming(1/fps);straight.beginFrame();
+    for(let i=0;i<timing.steps;i++) {
+      straight.update(timing.stepDt,camera,wind,(i+1)/timing.steps); scarf.brush(camera,straight,wind,timing.stepDt);
+    }
   }
   assert.equal(scarf.snags[1].target,0,'Straight sweeps across the centre must never unwrap it');
 }

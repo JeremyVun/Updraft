@@ -701,6 +701,8 @@ export class Dolphins {
   readonly objects: THREE.Object3D[] = [];
   /** What to do when one of them shoulders the boat: the story hands the shove to the hull. */
   onShove: ((side: number, strength: number) => void) | null = null;
+  onSplash: ((x: number, y: number, z: number, strength: number) => void) | null = null;
+  onSurface: ((x: number, y: number, z: number, strength: number) => void) | null = null;
   private readonly mesh: THREE.Mesh;
   private readonly ghost: THREE.Mesh;
   private readonly marks = new Marks();
@@ -1285,6 +1287,7 @@ export class Dolphins {
       const pace = Math.max(this.speed + d.pack.vel, 2);
       /** The harder it comes out, the more it takes with it: a breath throws a dab, a leap throws a sheet. */
       const hard = THREE.MathUtils.clamp(d.vy / 4, 0.3, 1.8);
+      this.onSurface?.(d.x, d.surface, d.z, hard);
       for (let i = 0, n = Math.round(11 * hard); i < n; i++) {
         const side = rand(-0.7, 0.7);
         this.drops.emit(
@@ -1310,6 +1313,7 @@ export class Dolphins {
     const inside = d.y < -0.02 && d.vy < 0;
     if (inside && !d.wasIn && d.vy < -1.4) {
       const deep = THREE.MathUtils.clamp(-d.vy / 4, 0.4, 1.8);
+      this.onSplash?.(d.x, d.surface, d.z, deep);
       this.marks.add(RING, d.x, d.z, 0.14 * s * deep, 1.6, time, 0.4, 0.9);
       this.marks.add(FOAM, d.x, d.z, 0.1 * s * deep, 1.1, time, 0.28, 0.2);
       for (let i = 0, n = Math.round(6 * deep); i < n; i++) {

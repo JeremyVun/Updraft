@@ -18,6 +18,8 @@ export class WingBandage {
   dressing = 0;
   /** Authored opening of both wings at the sleeping hilltop, before the first flight. */
   opening = 0;
+  manualUnroll: number | null = null;
+  heldTip: THREE.Vector3 | null = null;
   private releaseTime = -1;
   private driftTime = 0;
   private readonly drift = new THREE.Vector3();
@@ -98,7 +100,7 @@ export class WingBandage {
     this.state = state;
     this.recovery = recovery;
     this.dressing = state === 'wrapped' ? 1 : 0;
-    this.opening = 0;
+    this.opening = 0; this.manualUnroll=null; this.heldTip=null;
     this.releaseTime = -1;
     this.driftTime = 0;
     this.drift.set(0, 0, 0);
@@ -179,16 +181,22 @@ export class WingBandage {
     }
     this.end.set(-0.016 + width + s * 0.22, 0.028 + s * 0.12 + Math.sin(s * 9 - time * 4) * s * 0.025,
       -0.017 + s * 0.48 + Math.sin(time * 3 - s * 12) * s * 0.028).applyMatrix4(this.anchor);
-    return free === 1 ? out.copy(this.end) : out.lerp(this.end, free);
+    if(free===1)out.copy(this.end);else out.lerp(this.end,free);
+    if(this.heldTip && s>.84) {
+      this.end.copy(this.heldTip);this.end.x+=width;
+      out.lerp(this.end,smooth(s,.84,1)*(1-smooth(this.driftTime,0,1.2)));
+    }
+    return out;
   }
 
   update(dt: number, time: number, wing: THREE.Matrix4, bones: readonly THREE.Matrix4[], wind: WindSample, visible: boolean, nudge: number): void {
     this.bones = bones;
     if (this.state !== 'free' || this.releaseTime < 0) this.anchor.copy(wing);
     if (this.releaseTime >= 0 && this.state === 'wrapped') {
-      this.releaseTime += dt;
+      this.releaseTime = this.manualUnroll===null ? this.releaseTime+dt : this.manualUnroll*tuning.wingCare.unwindFor;
       if (this.releaseTime >= tuning.wingCare.unwindFor) {
         this.state = 'free';
+        if(this.heldTip)this.heldTip=this.heldTip.clone();
         this.velocity.set(wind.x * 0.08, 0.24, wind.z * 0.08);
       }
     }

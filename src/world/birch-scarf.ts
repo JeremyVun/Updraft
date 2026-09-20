@@ -212,7 +212,7 @@ export class BirchScarf {
     if (count > 0 && count < this.snags.length) for (let i = 0; i < 360; i++) this.firstCloth.update(1 / 60);
   }
 
-  setTrees(trees: { x: number; y: number; z: number; scale: number }[]): void {
+  setTrees(trees: { x: number; y: number; z: number; scale: number }[], settle = true): void {
     this.collisions.splice(0, this.collisions.length, ...trees.map(t => ({
       a: new THREE.Vector3(t.x, t.y, t.z), b: new THREE.Vector3(t.x, t.y + t.scale * .85, t.z), radius: .42,
     })), { a: ground(this.stump.x, this.stump.z, 0), b: ground(this.stump.x, this.stump.z, this.stump.height), radius: this.stump.radius });
@@ -224,7 +224,12 @@ export class BirchScarf {
       b: new THREE.Vector3(hook.x + .2, hook.y + 1.15, hook.z - .1), radius: .17 });
     capsules.push({ a: ground(5.2, -1080.6, .16), b: ground(14.6, -1073.4, .16), radius: .3 });
     this.firstCloth.capsules = capsules;
-    for (let i = 0; i < 180; i++) this.firstCloth.update(1 / 60);
+    if (settle) for (const _ of this.settle()) { /* Synchronous callers keep their original preparation. */ }
+  }
+
+  /** Same fixed cloth steps, exposed so startup can give the veil a paint between batches. */
+  *settle(): Generator<void> {
+    for (let i = 0; i < 180; i++) { this.firstCloth.update(1 / 60); yield; }
   }
 
   /** Stroke the cloth the player sees, rather than the ground beyond it under a low camera. */
@@ -260,7 +265,7 @@ export class BirchScarf {
     snag.target = Math.min(1, snag.target + Math.min(.18, travel) * Math.sqrt(touch));
     if (travel > 0) snag.brushAge = 0;
     snag.impulse = Math.min(1, snag.impulse + (kind === 'lift' ? pull : Math.sqrt(touch)) * dt * 5);
-    wind.addSplat({ ax: snag.center.x, az: snag.center.z, bx: snag.center.x, bz: snag.center.z,
+    wind.addSplat({ source: this, ax: snag.center.x, az: snag.center.z, bx: snag.center.x, bz: snag.center.z,
       vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
       radius: 3.5, energy: Math.min(0.6, input.gust / 25), lift: kind === 'lift' ? pull * 0.5 : 0, swirl: 0 });
   }

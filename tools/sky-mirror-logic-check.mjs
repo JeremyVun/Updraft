@@ -93,6 +93,27 @@ const results=[];
   }
   assert(f.cast.child.position.z<MIRROR_ENTRY_DECK.z1,'child steps from the jetty onto the flat');
 }
+// The confident companion investigates and reacts, but never supplies puzzle progress or blocks departure.
+{
+  const f=fixture(60),{cygnet:k,skyMirror:room,child}=f.cast,c=f.chapter;
+  c.restoreCheckpoint('stars-0',[0,0]);k.wing.restore('free',1);
+  const from=k.position.clone();
+  for(let i=0;i<60*10;i++) {
+    f.step();
+    if(k.errand)assert(k.errand.distanceTo(child.position)<tuning.mirrorCompanion.exploreRadius+.2);
+    assert(mirrorBed(k.position.x,k.position.z)>-.04,'exploration stays on the shallow flat');
+  }
+  assert(k.position.distanceTo(from)>1,'the bird goes to investigate instead of staying a passenger');
+  assert.equal(room.progress,0,'curiosity cannot complete a star');
+  room.spawn();const b=room.bubbles.at(-1);b.position.copy(room.stars[0].origin).setY(b.radius+.08);
+  for(let i=0;i<5;i++)f.step();
+  assert(room.carried,'fixture bubble catches the light through the real simulation');
+  assert.equal(k.mind.act,'stretch','both healed wings answer the captured light');
+  assert.equal(k.errand,null,'the bird stops chasing once the bubble has a light');
+  for(let i=0;i<60*5;i++)f.step();
+  assert.equal(room.progress,0,'the player still supplies the updraft');
+  c.gather();assert.equal(k.errand,null);assert.equal(k.pace,1);
+}
 // A reversal takes effect even while the shared wind still points the old way; release retains inertia.
 {
   const f=fixture(60),room=f.cast.skyMirror,input=f.cast.input;
@@ -145,7 +166,7 @@ for(const [fps,portrait] of (process.env.RESTORE_ONLY?[]:[[60,false],[30,true]])
     if(!room.holdingWand && !f.cast.cygnet.carried && f.cast.child.moving)sharedWalk+=1/fps;
   }
   assert.equal(c.beat,'play',`arrival must reach the wand: child ${f.cast.child.position.toArray()}, stand ${c.stand.toArray()}, moving ${f.cast.child.moving}, acting ${f.cast.child.acting}, paper ${f.cast.plane.position.toArray()}, held ${f.cast.plane.held}, landed ${f.cast.plane.landed}`);
-  assert(sharedWalk>24,'the extra walking is on the open mirror with the cygnet, not on a longer jetty');
+  assert(sharedWalk>15 && sharedWalk<30,'a short shared walk on the mirror, not a prolonged arrival');
   const wand=room.wand.clone().project(f.rig.camera),star=room.stars[0].origin.clone().project(f.rig.camera);
   assert(Math.abs(wand.x-star.x)>0.2,'hoop and target must read side by side');
   for(const at of [room.wand,room.stars[0].origin,f.cast.child.position]) {

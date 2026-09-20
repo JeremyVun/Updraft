@@ -6,6 +6,14 @@ export function yieldBoot(): Promise<void> {
   return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 }
 
+/** Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps. */
+export async function prepareInBatches(steps: Iterable<unknown>, budgetMs = 8): Promise<void> {
+  let started = performance.now();
+  for (const _ of steps) {
+    if (performance.now() - started >= budgetMs) { await yieldBoot(); started = performance.now(); }
+  }
+}
+
 /**
  * Compiles every material in the scene up front, in parallel where the driver allows, against the target the
  * scene is really drawn into (a program's key depends on the target's colour space). Without this the first
@@ -71,6 +79,8 @@ export function gpuIdle(renderer: THREE.WebGLRenderer, timeoutMs = 4000): Promis
   const started = performance.now();
   return new Promise((resolve) => {
     const check = (): void => {
+      // A lost context invalidates its fence; only a fresh page may restart the simulation.
+      if (gl.isContextLost()) { resolve(); return; }
       const status = sync ? gl.clientWaitSync(sync, 0, 0) : gl.ALREADY_SIGNALED;
       if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED || performance.now() - started > timeoutMs) {
         if (sync) gl.deleteSync(sync);

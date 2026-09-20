@@ -45,17 +45,12 @@ const LEAVE_CLIMB = 1;
 const WATCHES_FOR = 16;
 /** How slowly they walk on afterwards, as a share of their usual pace. */
 const STROLL = 0.7;
-/**
- * How far on from the summit they take the paper: a few paces toward home, far enough that the ground has begun
- * to fall away in front of them and the sheet is held against the sea and the sun rather than against the grass.
- */
-const SEAT_AT = 6;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
-const BROW_AT = 17;
+const BROW_AT = tuning.homeReveal.stopAfter;
 /** Seconds they stand on the brow with the house below them. The walk over it is the climax; this is the top of it. */
-const BROW_FOR = 7;
-/** They turn to the way home, sit down where they are, and the paper comes up out of the one hand into both. */
-const SETTLE_FOR = 3.6;
+const BROW_FOR = tuning.homeReveal.noticeFor;
+/** They remain facing the house and bring the paper up into both hands. */
+const SETTLE_FOR = tuning.homeReveal.raiseFor;
 /**
  * The opening, in seconds and how far open. The two wings come up, and then it is held still for a beat with the
  * plane's own shape wide open in their hands, so that whatever flattens after it is unmistakably the same paper.
@@ -66,19 +61,10 @@ const OPENING: number[][] = [
   [1.9, 0.3],
   [4.2, 1],
 ];
-/** The crayon starts arriving once the sheet is swinging out of its own fold, and takes this long to be all there. */
+/** The drawing emerges with the last fold, fully readable as the sheet becomes flat. */
 const DRAWS_FROM = 0.58;
-const DRAWS_IN = 2.8;
-const GAZE_FOR = 6;
+const GAZE_FOR = tuning.homeReveal.recogniseFor;
 const FOLD_RATE = 0.38;
-/**
- * Where the camera stands, as an angle round from directly behind the child: on their shoulder for the hands,
- * back in behind them for the walk, and a little off it again on the brow and while the paper goes.
- */
-const DRAW_ARC = 0.7;
-const WALK_ARC = 0.1;
-const BROW_ARC = 0.28;
-const GOES_ARC = 0.46;
 /** Which side of the sheet, in the paper's own coordinates, is the one nearest the camera over their shoulder. */
 const NEAR = 1;
 /** How far up out of the hand the paper comes to be worked on, before it is raised to be looked at. */
@@ -157,7 +143,6 @@ const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JET
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
 /** On over the brow toward the cottage: the ground falls away and the valley opens, and this is where they stop and see it. */
 const TO_COTTAGE = new THREE.Vector2(COTTAGE.x - SUMMIT.x, COTTAGE.z - SUMMIT.y).normalize();
-const SEAT = SUMMIT.clone().addScaledVector(TO_COTTAGE, SEAT_AT);
 const BROW = SUMMIT.clone().addScaledVector(TO_COTTAGE, BROW_AT);
 /** From the summit the sun sets over the cottage, to the north-west. */
 const TOWARD_SUNSET = new THREE.Vector2(-Math.sin(THREE.MathUtils.degToRad(32)), -Math.cos(THREE.MathUtils.degToRad(32)));
@@ -172,7 +157,7 @@ const FROM_SOUTH = new THREE.Vector3(0.05, 0, 1).normalize();
  */
 const HANGS_ON = 1.15;
 /** Seconds the small one takes to come into the last place of the V, carried north with the family while it does. */
-const SLIPS_IN = 5;
+const SLIPS_IN = tuning.swanDeparture.cygnetJoin;
 
 /**
  * Home. The last island: up over the crest of the final hill with the fledgling, and the valley below holds a white
@@ -209,18 +194,25 @@ export class HomeChapter implements Chapter {
   private readonly sheet = new THREE.Vector3();
   private readonly grip = new THREE.Vector3();
   private readonly watching = new THREE.Vector3();
-  /** True from the moment they sit down until the paper is a plane again: what is in their hand is the sheet. */
+  /** The folding mesh owns the paper while the child opens, reads and refolds it. */
   private paper = false;
-  /** When the crayon started arriving, when the paper went, and how much of the player's wind has been on it. */
-  private drawnFrom = 0;
+  private houseInFrame = false;
+  private houseSeenAt = -1;
+  private paperInFrame = false;
+  private recognisedAt = -1;
+  private readonly screen = new THREE.Vector3();
+  private readonly sight = new THREE.Vector3();
+  /** When the paper went, and how much of the player's wind has been on it. */
   private wentAt = 0;
   private taken = 0;
   private gusted = false;
   private wentOn = false;
   private doorOpened = false;
+  private finaleStarted = false;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   trodden: THREE.Vector3 | null = null;
   hush = 0;
+  readonly flockChatter = false;
   silence = false;
   finished = false;
   private nextCall = 0;
@@ -275,8 +267,8 @@ export class HomeChapter implements Chapter {
 
   get checkpoint(): string | null {
     if (this.finished) return 'complete';
-    if (this.beat === 'crest' || this.beat === 'brow' || this.beat === 'release') return 'drawing';
-    if (this.beat === 'settle' || this.beat === 'unfold' || this.beat === 'gaze' || this.beat === 'fold') return 'reunion';
+    if (this.recognisedAt >= 0) return 'drawing';
+    if (['crest', 'brow', 'settle', 'unfold', 'gaze'].includes(this.beat)) return 'reunion';
     return null;
   }
   restoreCheckpoint(point: string): void {
@@ -288,10 +280,9 @@ export class HomeChapter implements Chapter {
       this.skipToDrawing();
     } else if (point === 'drawing') {
       child.stop();
-      child.place(SEAT.x, SEAT.y, Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
-      child.standUp();
-      plane.hold(child);
-      this.onOver();
+      this.skipToDrawing(1);
+      this.recognisedAt = this.now;
+      this.to('gaze');
     } else {
       this.beat = 'credits';
       this.finished = this.silence = true;
@@ -313,7 +304,7 @@ export class HomeChapter implements Chapter {
 
   /**
    * And for testing the drawing: alone on the summit with the family gone and the paper still a plane in their
-   * hand — or, given how far open the sheet should be, already sitting with it coming open.
+   * hand — or, given an opening fraction, standing at the brow with it coming open.
    */
   skipToDrawing(open?: number): void {
     const { child, plane, cygnet, drawing } = this.cast;
@@ -321,12 +312,12 @@ export class HomeChapter implements Chapter {
     cygnet.visible = false;
     this.dusk = 1.15;
     this.duskTarget = 1.15;
-    child.place(SEAT.x, SEAT.y, Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
+    child.place(open === undefined ? SUMMIT.x : BROW.x, open === undefined ? SUMMIT.y : BROW.y,
+      Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
     child.standUp();
     plane.hold(child);
+    if (open === undefined) { this.onOver(); return; }
     this.openIt();
-    if (open === undefined) return;
-    child.sitDown();
     child.presenting = 1;
     drawing.open = open;
     this.to('unfold');
@@ -379,31 +370,30 @@ export class HomeChapter implements Chapter {
    */
   private updateSummit(): void {
     const { child: c, cygnet, flock } = this.cast;
-    if (!this.passed && this.t > 1.5) {
+    const f = tuning.summit;
+    if (!this.passed && this.t > f.arriveAt) {
       this.passed = true;
-      /** Low across the sun ahead of them, not over their heads: the camera looks down at the child and would miss it. */
-      flock.pass(c.position.x - 18, c.position.z - 26, c.position.y + 7, NORTH, 13, 70);
+      /** Meet the west edge on its northbound tangent, while the whole approach is still in front of the camera. */
+      flock.pass(c.position.x + 2 - f.wheelRadius, c.position.z - f.wheelAhead, c.position.y + f.wheelHeight, NORTH, 13, 60, false);
       cue('skein');
       cygnet.watch(flock.head);
     }
     c.lookAt = this.passed && flock.active ? flock.head : this.sky;
-    if (this.passed && !this.criedAfter && this.t > 5.5) {
+    if (this.passed && !flock.wheeling && this.t > f.turnAt) {
+      flock.circle(c.position.x + 2, c.position.z - f.wheelAhead, c.position.y + f.wheelHeight, f.wheelRadius, 13, 8);
+    }
+    if (this.passed && !this.criedAfter && this.t > f.callAt) {
       this.criedAfter = true;
       cue('calling');
       cygnet.call(true);
     }
-    if (c.sitting && this.t > 9.5 && !c.busy) this.setDown();
+    if (c.sitting && this.t > f.setDownAt && !c.busy) this.setDown();
   }
 
   /** They stand it in the grass facing north, and step back off it, and that is all they can do for it. */
   private setDown(): void {
-    const { child: c, cygnet, flock } = this.cast;
+    const { child: c, cygnet } = this.cast;
     this.to('setDown');
-    /**
-     * The family does not go on without it: they swing round out of the skein into a wide wheel over the hilltop,
-     * in the frame whichever way the camera turns, and come down for it only when it is up.
-     */
-    flock.circle(c.position.x + 2, c.position.z - 24, c.position.y + 8, 26, 14, 8);
     cygnet.watch(null);
     this.nextBugle = this.now + 4;
     /** The last of the light: it goes while the sun is still going, and the night comes on after it. */
@@ -573,7 +563,7 @@ export class HomeChapter implements Chapter {
   private updateGone(): void {
     const { child: c, cygnet, flock } = this.cast;
     if (flock.wheeling && cygnet.position.distanceTo(flock.head) < JOIN_AT) {
-      flock.goOn(NORTH, LEAVE_CLIMB, LEAVE_SPEED);
+      flock.goOn(NORTH, LEAVE_CLIMB, LEAVE_SPEED, cygnet.position);
       this.leftAt = this.now;
       cue('skein');
       c.cheer();
@@ -584,14 +574,11 @@ export class HomeChapter implements Chapter {
     if (away && !this.wentOn && !c.busy) {
       this.wentOn = true;
       c.stroll = STROLL;
-      c.walkTo(SEAT.x, SEAT.y, false, () => this.openIt(), 0.5);
+      this.onOver();
     }
   }
 
-  /**
-   * Alone on the hilltop in the last of the sun, with the cottage still hidden behind the brow, they sit down
-   * where they are and open the paper. The picture comes before the place: that is the order the ending needs.
-   */
+  /** The house has caught their eye. Still facing it, they bring the plane up to check the drawing. */
   private openIt(): void {
     const { child: c, plane, drawing } = this.cast;
     this.to('settle');
@@ -602,10 +589,9 @@ export class HomeChapter implements Chapter {
     drawing.mesh.visible = true;
     drawing.open = 0;
     drawing.drawn = 0;
-    this.drawnFrom = 0;
   }
 
-  /** A plane again in their hand, and now somewhere to take it: on, slowly, up over the brow. */
+  /** After the flock has gone, walk on with the folded plane until the house opens into view. */
   private onOver(): void {
     const { child: c, plane, drawing, cottage } = this.cast;
     this.paper = false;
@@ -620,15 +606,10 @@ export class HomeChapter implements Chapter {
     }, 0.6);
   }
 
-  /**
-   * The music goes as they sit down to open it, so that the wind and the paper are all there is, and comes back
-   * over the last of the walk, swelling as the ground falls away: the theme belongs to the house, not the picture.
-   */
+  /** Leave room for recognition: the motif begins only when house and drawing share the frame. */
   private get hushFor(): number {
-    if (this.beat === 'settle') return 0.75;
-    if (this.beat === 'unfold' || this.beat === 'gaze') return 1;
-    if (this.beat === 'fold') return 0.9;
-    if (this.beat === 'crest') return 0.9 * (1 - THREE.MathUtils.smoothstep(this.along, BROW_AT - 9, BROW_AT));
+    if (['crest', 'brow', 'settle', 'unfold'].includes(this.beat)) return 1;
+    if (this.beat === 'gaze') return this.recognisedAt < 0 ? 1 : 0.75;
     return 0;
   }
 
@@ -652,10 +633,7 @@ export class HomeChapter implements Chapter {
   private updateBrow(): void {
     const { child: c, cottage } = this.cast;
     c.lookAt = cottage.position;
-    if (this.t > BROW_FOR && !c.busy) {
-      this.to('release');
-      this.taken = 0;
-    }
+    if (this.houseSeenAt >= 0 && this.now - this.houseSeenAt > BROW_FOR && this.houseInFrame && !c.busy) this.openIt();
   }
 
   /**
@@ -681,7 +659,8 @@ export class HomeChapter implements Chapter {
     this.taken += dt * Math.min(1.4, Math.max(stroke, w.energy * 2.6));
     if (this.t > HOLDS_UP - 1.2 && !this.gusted) {
       this.gusted = true;
-      wind.addSplat({
+      wind.addSplat({ source: this,
+        impulse: true,
         ax: c.position.x - TOWARD_SUNSET.x * 26,
         az: c.position.z - TOWARD_SUNSET.y * 26,
         bx: c.position.x + TOWARD_SUNSET.x * 8,
@@ -724,15 +703,11 @@ export class HomeChapter implements Chapter {
     } else if (this.beat === 'gone') {
       this.updateGone();
     } else if (this.beat === 'settle') {
-      /** They turn to the way home, sit down in the grass, and the paper comes up out of one hand into both. */
+      // A glance from the house to the paper motivates the hands; keep their feet planted.
       c.faceToward(c.position.x + TO_COTTAGE.x * 10, c.position.z + TO_COTTAGE.y * 10, 1 - Math.exp(-dt * 1.8));
-      if (!c.sitting && this.t > 0.6) c.sitDown();
-      if (this.t > 1.2) c.presenting = Math.min(1, c.presenting + dt * 0.9);
-      c.lookAt = this.t > 1.5 ? drawing.point(0, 0.3, this.watching) : this.watching.copy(p.position);
-      if (this.t > SETTLE_FOR) {
-        this.to('unfold');
-        cue('unfold');
-      }
+      if (this.t > tuning.homeReveal.handsFrom) c.presenting = Math.min(1, c.presenting + dt * 0.9);
+      c.lookAt = this.t < tuning.homeReveal.handsFrom ? cottage.position : drawing.point(0, 0.3, this.watching);
+      if (this.t > SETTLE_FOR && this.houseInFrame && this.paperInFrame) this.to('unfold');
     } else if (this.beat === 'unfold') {
       /** Along the keys, so the wings come up and the paper is then held still for a beat before it flattens. */
       drawing.open = Math.max(drawing.open, keyed(OPENING, this.t));
@@ -740,7 +715,15 @@ export class HomeChapter implements Chapter {
       if (drawing.open >= 1) this.to('gaze');
     } else if (this.beat === 'gaze') {
       c.lookAt = drawing.point(0, 0.3, this.watching);
-      if (this.t > GAZE_FOR) this.to('fold');
+      if (this.recognisedAt < 0 && drawing.drawn > 0.97 && this.houseInFrame && this.paperInFrame) {
+        this.recognisedAt = this.now;
+        cue('unfold');
+      }
+      if (this.recognisedAt >= 0) {
+        const recognised = this.now - this.recognisedAt;
+        c.lookAt = recognised > 1.2 ? cottage.position : drawing.point(0, 0.3, this.watching);
+        if (recognised > GAZE_FOR) this.to('fold');
+      }
     } else if (this.beat === 'fold') {
       /** Folded back the way it came open, because it has one more thing to be before they let it go. */
       drawing.open = Math.max(0, drawing.open - dt * FOLD_RATE);
@@ -750,7 +733,10 @@ export class HomeChapter implements Chapter {
         c.reachFor(0, null);
         c.reachFor(1, null);
       }
-      if (drawing.open <= 0) this.onOver();
+      if (drawing.open <= 0) {
+        this.paper = false; drawing.mesh.visible = false; p.visible = true;
+        this.to('release'); this.taken = 0;
+      }
     } else if (this.beat === 'crest') {
       c.presenting = Math.max(0, c.presenting - dt * 1.2);
       this.updateCrest();
@@ -786,7 +772,10 @@ export class HomeChapter implements Chapter {
       if (this.t > 1.2 && this.t < 1.25) c.walkTo(cottage.position.x, cottage.position.z, false, undefined, 0.3);
       if (this.t > 2.6) c.visible = false;
       if (this.t > 4.2) cottage.openDoor(false);
-      if (this.t > RISE_FROM && this.t < RISE_FROM + 0.05 && !this.silence) cue('finale');
+      if (this.t >= RISE_FROM && !this.finaleStarted && !this.silence) {
+        this.finaleStarted = true;
+        cue('finale');
+      }
       if (this.t > SILENCE_AT) this.silence = true;
       if (this.t > CREDITS_AT) {
         this.finished = true;
@@ -812,7 +801,7 @@ export class HomeChapter implements Chapter {
   private get lifted(): number {
     const open = this.cast.drawing.open;
     const up = WORK + (1 - WORK) * THREE.MathUtils.smoothstep(open, 0.82, 1);
-    if (this.beat === 'settle') return WORK * THREE.MathUtils.smoothstep(this.t, 1.3, SETTLE_FOR);
+    if (this.beat === 'settle') return WORK * THREE.MathUtils.smoothstep(this.t, tuning.homeReveal.handsFrom, SETTLE_FOR);
     if (this.beat === 'unfold' || this.beat === 'gaze') return up;
     if (this.beat === 'fold') return up * THREE.MathUtils.smoothstep(open, 0.02, GRIPS_TO);
     return 0;
@@ -824,21 +813,17 @@ export class HomeChapter implements Chapter {
    */
   private get tilted(): number {
     const open = this.cast.drawing.open;
-    if (this.beat === 'settle') return TIPPED * THREE.MathUtils.smoothstep(this.t, 1.3, SETTLE_FOR);
+    if (this.beat === 'settle') return TIPPED * THREE.MathUtils.smoothstep(this.t, tuning.homeReveal.handsFrom, SETTLE_FOR);
     const round = TIPPED + (1 - TIPPED) * THREE.MathUtils.smoothstep(open, 0.12, 0.86);
     return this.beat === 'fold' ? round * THREE.MathUtils.smoothstep(open, 0.02, GRIPS_TO) : round;
   }
 
-  /**
-   * The crayon arrives while the paper is flattening and keeps arriving for a moment after it is flat: it draws
-   * itself in. And it goes back inside the folds as they close, so that the faces which come to the outside of
-   * the plane again are bare paper, the way they were on the way up.
-   */
+  /** Tie the picture to the last fold so a flat sheet never waits for its reveal. */
   private inked(): number {
     const open = this.cast.drawing.open;
-    if (this.drawnFrom === 0 && open >= DRAWS_FROM) this.drawnFrom = this.now;
-    const arriving = this.drawnFrom === 0 ? 0 : THREE.MathUtils.smoothstep(this.now, this.drawnFrom, this.drawnFrom + DRAWS_IN);
-    return Math.min(arriving, THREE.MathUtils.smoothstep(open, 0.06, 0.42));
+    return this.beat === 'fold'
+      ? THREE.MathUtils.smoothstep(open, 0.06, 0.42)
+      : THREE.MathUtils.smoothstep(open, DRAWS_FROM, 0.98);
   }
 
   /**
@@ -859,91 +844,71 @@ export class HomeChapter implements Chapter {
     }
   }
 
-  /**
-   * From the moment they sit down to the moment the paper goes: one swing of the camera and nothing else. It comes
-   * round off their back onto their shoulder as they sit, pushes in on the mittens while the paper opens and eases
-   * out again as the sheet fills, so the finished drawing is held whole. Then it falls in behind them and climbs
-   * with them as they walk, and is over their head when the ground drops away, so the valley and the house open
-   * for the player at the moment they open for the child. Returns false for any beat it has nothing to say about.
-   */
+  /** Approach the house, settle onto the shoulder, then hold paper and destination together. */
   private frameDrawing(): boolean {
     const beat = this.beat;
-    const held = beat === 'settle' || beat === 'unfold' || beat === 'gaze' || beat === 'fold';
-    if (!held && beat !== 'crest' && beat !== 'brow' && beat !== 'release') return false;
-    const { child, drawing } = this.cast;
-    const c = child.position;
-    const s = this.shot;
-    let arc = DRAW_ARC;
-    let dist = 4.4;
-    let rise = 2.5;
-    let ahead = 2.4;
-    let aimUp = 1;
-    let onPaper = 1;
-    if (beat === 'settle') {
-      /** Off their back and round onto the shoulder while they turn and sit: the shot arrives before the paper moves. */
-      /** In quickly enough that it has arrived before the first fold moves: the paper is never opened at a distance. */
-      const k = THREE.MathUtils.smootherstep(this.t, 0, SETTLE_FOR);
-      arc = DRAW_ARC * k;
-      dist = 9 - 4.6 * k;
-      rise = 3.2 - 1 * k;
-      ahead = 5 - 2.6 * k;
-      aimUp = 1.7 - 0.9 * k;
-      onPaper = THREE.MathUtils.smoothstep(this.t, 1.2, SETTLE_FOR);
-      this.pace = 0.8;
-    } else if (beat === 'unfold' || beat === 'gaze') {
-      /** In on the mittens while it comes open, and out again as the sheet fills: their hands do all the work. */
-      const out = beat === 'gaze' ? THREE.MathUtils.smootherstep(this.t, 0, 3.4) : 0;
-      dist = 4.4 - 1.2 * THREE.MathUtils.smoothstep(drawing.open, 0, 0.5) + 1.5 * out;
-      rise = 2.2 + 0.3 * THREE.MathUtils.smoothstep(drawing.open, 0.4, 1);
-      this.pace = 0.75;
-    } else if (beat === 'fold') {
-      /** It starts to leave them before they are up: back, higher, and round behind them, all in the one move. */
-      const k = THREE.MathUtils.smootherstep(this.t, 0, 3.2);
-      arc = DRAW_ARC + (WALK_ARC - DRAW_ARC) * k * 0.45;
-      dist = 4.7 + 1.5 * k;
-      rise = 2.5 + 1.1 * k;
-      ahead = 2.4 + 1.6 * k;
-      aimUp = 1 + 0.3 * k;
-      onPaper = 1 - k;
-      this.pace = 0.4;
-    } else if (beat === 'crest') {
-      /** Climbing with them, and looking further ahead the nearer the ground comes to falling away under them. */
-      const on = THREE.MathUtils.smootherstep(this.along, 0, BROW_AT);
-      arc = DRAW_ARC + (WALK_ARC - DRAW_ARC) * (0.45 + 0.55 * on);
-      dist = 6.2 + 0.9 * on;
-      rise = 3.6 + 1.2 * on;
-      ahead = 4 + 8 * on;
-      aimUp = 1.3 - 1.2 * on;
-      onPaper = 0;
-      this.pace = 0.35;
-    } else if (beat === 'brow') {
-      const k = THREE.MathUtils.smootherstep(this.t, 0, 6);
-      arc = WALK_ARC + (BROW_ARC - WALK_ARC) * k;
-      dist = 7.1 + 0.5 * k;
-      rise = 4.8 + 0.4 * k;
-      ahead = 12;
-      aimUp = -0.3;
-      onPaper = 0;
-      this.pace = 0.3;
-    } else {
-      /** The paper held up, and then gone: the frame opens out after it and tilts up as it climbs into the sun. */
-      const k = THREE.MathUtils.smootherstep(this.t, 0, 7);
-      const gone = this.wentAt > 0 ? THREE.MathUtils.smoothstep(this.now - this.wentAt, 0, 2.5) : 0;
-      arc = BROW_ARC + (GOES_ARC - BROW_ARC) * k;
-      dist = 6.6 + 2.4 * k;
-      rise = 4.9 - 0.4 * k;
-      ahead = 12;
-      aimUp = -0.2 + gone * THREE.MathUtils.clamp((this.cast.plane.position.y - c.y) * 0.5, 0, 7);
-      onPaper = 0;
-      this.pace = 0.3;
+    if (!['crest', 'brow', 'settle', 'unfold', 'gaze', 'fold', 'release'].includes(beat)) return false;
+    const { child, cottage } = this.cast;
+    const c = child.position, s = this.shot;
+    const aspect = typeof window === 'undefined' ? 16 / 9 : window.innerWidth / window.innerHeight;
+    const portrait = aspect < 1;
+    const reveal = tuning.homeReveal;
+    const walking = beat === 'crest';
+    const close = ['settle', 'unfold', 'gaze'].includes(beat);
+    // Come onto the shoulder while approaching the house. Hold one composition through every fold;
+    // a push-in during unfolding would make the paper grow as well as open.
+    const retreat = beat === 'fold' ? THREE.MathUtils.smootherstep(this.t, 0, 1 / FOLD_RATE) : close ? 0 : 1;
+    const shoulderArc = THREE.MathUtils.lerp(reveal.portraitShoulderArc, reveal.shoulderArc,
+      THREE.MathUtils.smoothstep(aspect, 1, 1.5));
+    const arc = THREE.MathUtils.lerp(shoulderArc * Math.min(1, aspect / 0.46), reveal.walkArc, retreat);
+    const near = portrait ? reveal.portraitBack * Math.max(1, (0.46 / aspect) ** 2) : reveal.shoulderBack;
+    const dist = THREE.MathUtils.lerp(near, reveal.walkBack, retreat);
+    const closeRise = reveal.shoulderRise + Math.max(0, near - reveal.portraitBack) * 0.45;
+    const rise = THREE.MathUtils.lerp(closeRise, reveal.walkRise, retreat);
+    this.side.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y).applyAxisAngle(UP, arc);
+    s.eye = this.eyeAt.copy(c).addScaledVector(this.side, dist).setY(c.y + rise);
+    child.presentPoint(this.sheet);
+    // Blend sight directions so the paper sits to the left of the real house, with room for both hands.
+    this.aim.copy(cottage.position).y += 2.6;
+    this.aim.sub(this.eyeAt).normalize();
+    this.tmp.copy(this.sheet).sub(this.eyeAt).normalize();
+    const weight = THREE.MathUtils.lerp(portrait ? reveal.portraitPaperWeight : reveal.paperWeight, walking ? 0.15 : 0.25, retreat);
+    this.aim.lerp(this.tmp, weight).normalize();
+    s.target.copy(this.eyeAt).addScaledVector(this.aim, 20);
+    if (beat === 'release' && this.wentAt > 0) {
+      // Follow the plane only after it leaves the hand; ease back towards the wider nightfall shot.
+      const gone = THREE.MathUtils.smoothstep(this.now - this.wentAt, 0, 2.5);
+      s.target.lerp(this.cast.plane.position, gone * 0.65);
     }
-    const dir = this.side.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y).applyAxisAngle(UP, arc);
-    s.eye = this.eyeAt.set(c.x + dir.x * dist, c.y + rise, c.z + dir.z * dist);
-    this.aim.set(c.x + TO_COTTAGE.x * ahead, c.y + aimUp, c.z + TO_COTTAGE.y * ahead);
-    s.target.copy(this.aim);
-    if (onPaper > 0) s.target.lerp(drawing.point(0, 0.15, this.sheet), onPaper);
+    this.pace = close ? 1.6 : 0.8;
     this.focus.copy(c);
     return true;
+  }
+
+  /** Use the actual eased camera: timers alone cannot guarantee that the player saw either reveal. */
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    if (!['brow', 'settle', 'unfold', 'gaze'].includes(this.beat)) return;
+    camera.updateMatrixWorld();
+    const visible = (point: THREE.Vector3, margin: number, grass = false): boolean => {
+      this.screen.copy(point).project(camera);
+      if (this.screen.z < -1 || this.screen.z > 1 || Math.abs(this.screen.x) > margin || Math.abs(this.screen.y) > margin) return false;
+      for (let i = 1; i < 40; i++) {
+        this.sight.copy(camera.position).lerp(point, i / 40);
+        const clearance = 0.12 + (grass ? 0.9 * THREE.MathUtils.smoothstep(this.sight.distanceTo(point), 0, 4) : 0);
+        if (heightAt(this.sight.x, this.sight.z) > this.sight.y - clearance) return false;
+      }
+      return true;
+    };
+    this.aim.copy(this.cast.cottage.position).y += 2.6;
+    this.houseInFrame = visible(this.aim, 0.8, true)
+      && [-4, 0, 4].every(x => visible(this.aim.set(x, 0.6, 2.4).applyMatrix4(this.cast.cottage.group.matrixWorld), 0.9, true))
+      && visible(this.aim.set(0, 5.9, 0).applyMatrix4(this.cast.cottage.group.matrixWorld), 0.9, true);
+    if (this.beat === 'brow') {
+      if (!this.houseInFrame) this.houseSeenAt = -1;
+      else if (this.houseSeenAt < 0) this.houseSeenAt = this.now;
+    }
+    this.paperInFrame = this.paper && [-1.65, 1.65].every(x => [-1.225, 1.225].every(y =>
+      visible(this.cast.drawing.point(x, y, this.sheet), 0.88)));
   }
 
   private frame(): void {
@@ -951,6 +916,7 @@ export class HomeChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
+    s.fitWidth = false;
     if (this.frameDrawing()) return;
     if (this.beat === 'answered') {
       /**
@@ -987,21 +953,12 @@ export class HomeChapter implements Chapter {
       return;
     }
     if (this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying') {
-      /** The same frame as the meadow and the same frame as the fall: over their shoulder, looking up past them. */
+      // Move closer on the same side of the hill. The family remains in the sky beyond the small one.
       const k = this.cast.cygnet.position;
       const ground = Math.max(heightAt(k.x, k.z), 0);
-      const gap = Math.hypot(k.x - c.x, k.z - c.z);
-      const rise = THREE.MathUtils.clamp((k.y - ground) / 4, 0, 1);
-      const toChild = gap > 0.5 ? Math.atan2(c.x - k.x, c.z - k.z) : this.cast.child.yaw + Math.PI;
-      s.from = this.side.set(Math.sin(toChild + 1.1 * (1 - rise)), 0, Math.cos(toChild + 1.1 * (1 - rise)));
-      s.target.set(k.x, k.y + 0.4, k.z);
-      /**
-       * The camera stays down at head height on the ground whatever the cygnet does, so that once it is up the
-       * frame is looking up at it with sky behind it. Hung a fixed distance above the cygnet instead, it follows
-       * the cygnet into the air and the background is always grass — which is the opposite of the point.
-       */
-      s.distance = 14 + gap * 0.4;
-      s.height = THREE.MathUtils.clamp(ground + 2.8 - k.y, -9, 2.8);
+      const f = tuning.summit;
+      s.eye = this.eyeAt.set(c.x + f.flightSide, ground + f.flightEye, c.z + f.flightBack);
+      s.target.set(k.x, k.y + f.flightLookUp, k.z - f.flightLookAhead);
       this.pace = 0.45;
       this.focus.copy(c);
       return;
@@ -1027,12 +984,23 @@ export class HomeChapter implements Chapter {
       this.focus.copy(c);
       return;
     }
-    if (this.beat === 'summit' || this.beat === 'nightfall') {
+    if (this.beat === 'summit') {
+      // Stay on the south side: the approaching V banks across the sky beyond both companions.
+      const f = tuning.summit;
+      const aspect = typeof window === 'undefined' ? 16 / 9 : window.innerWidth / window.innerHeight;
+      const back = aspect < 1 ? Math.max(f.arrivalBack, f.portraitBack * 0.46 / aspect) : f.arrivalBack;
+      s.eye = this.eyeAt.set(c.x, c.y + f.arrivalRise, c.z + back);
+      s.target.set(c.x + 2, c.y + 8, c.z - f.arrivalLookAhead);
+      this.pace = 0.65;
+      this.focus.copy(c);
+      return;
+    }
+    if (this.beat === 'nightfall') {
       const fwd = this.forward();
       s.from = this.behind.copy(fwd).negate();
       s.target.set(c.x + fwd.x * 9, c.y + 1.2, c.z + fwd.z * 9);
-      s.distance = this.beat === 'nightfall' ? 30 : 20;
-      s.height = this.beat === 'nightfall' ? 8 : 5;
+      s.distance = 30;
+      s.height = 8;
       this.pace = 0.3;
       this.focus.copy(c);
       return;

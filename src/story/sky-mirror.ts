@@ -4,6 +4,7 @@ import { tuning } from '../tuning';
 import { MIRROR_STARS, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, mirrorBed } from '../world/sky-mirror-layout';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
+import { MirrorCompanion } from './mirror-companion';
 
 type Beat = 'ashore' | 'setDown' | 'pickup' | 'play' | 'throw' | 'walk' | 'fetch' | 'reveal' | 'gather' | 'jetty' | 'boarding' | 'aboard';
 const T=tuning.skyMirror;
@@ -29,7 +30,7 @@ export class SkyMirrorChapter implements Chapter {
   private drift=-1;
   private boatReady=false;
   private returned=0;
-  private nextLook=0;
+  private readonly companion: MirrorCompanion;
   private nextChase=0;
   private readonly stand=new THREE.Vector3();
   private readonly aim=new THREE.Vector3();
@@ -44,6 +45,7 @@ export class SkyMirrorChapter implements Chapter {
   private readonly oldRadius: number;
 
   constructor(private readonly cast: Cast) {
+    this.companion = new MirrorCompanion(cast);
     const {child,plane,cygnet,skyMirror,sealife,boat}=cast;
     skyMirror.reset(); skyMirror.active=true;
     sealife.dolphinsWith(null,0); sealife.onDolphinShove=()=>{};
@@ -80,6 +82,7 @@ export class SkyMirrorChapter implements Chapter {
   }
   saveCheckpoint(): number[] { return [this.cast.skyMirror.completedMask,this.target]; }
   restoreCheckpoint(point: string,data: number[]): void {
+    this.companion.reset();
     const {child,cygnet,skyMirror:room,plane,boat}=this.cast;
     const starSave=point==='stars' || point.startsWith('stars-');
     const mask=starSave?(data[0]|0)&7:point==='tide'?1:point==='lantern'?3:0;
@@ -144,11 +147,6 @@ export class SkyMirrorChapter implements Chapter {
       const carried=room.carried;
       const rising=room.stars.find(s=>s.state==='rising');
       c.lookAt=carried?.position ?? rising?.light.position ?? room.aim;
-      if(carried) { k.watch(carried.position); }
-      else if(time>this.nextLook) {
-        this.watched.copy(room.aim); k.watch(this.watched);
-        k.does('nibble',this.watched,1.8); this.nextLook=time+9;
-      }
       // Capture happens later in the frame than story navigation. Even an empty bubble locks
       // manual destination changes; a filled or rising light also holds automatic progression.
       if(carried || rising) { room.requestedStar=-1; }
@@ -182,6 +180,7 @@ export class SkyMirrorChapter implements Chapter {
         room.active=false; room.ready=false; this.to('aboard');
       });
     }
+    if (this.beat === 'play' || this.beat === 'walk') this.companion.update(time, this.target, this.beat === 'play');
     this.frame();
   }
   private play(): void {
@@ -194,7 +193,12 @@ export class SkyMirrorChapter implements Chapter {
     const {skyMirror:room}=this.cast;
     for(const bubble of room.bubbles)if(bubble.star<0)room.pop(bubble);
     this.target=index; this.destination(index); room.focusStar=index; room.ready=false; room.requestedStar=-1;
-    this.walkWithPlane();
+    // The small discoveries are close together. Keep the paper stowed and walk straight on with the bird,
+    // without repeating a throw, chase and retrieval between every light.
+    this.companion.reset();
+    const { child } = this.cast;
+    child.walkTo(this.stand.x,this.stand.z,false,()=>this.play(),0.45);
+    this.to('walk');
   }
   private walkWithPlane(): void {
     const {child:c,plane:p,cygnet:k,skyMirror:room}=this.cast;
@@ -220,6 +224,7 @@ export class SkyMirrorChapter implements Chapter {
     },1.1);
   }
   private gather(): void {
+    this.companion.reset();
     const {child,cygnet,carry,skyMirror:room,plane}=this.cast;
     room.ready=false;
     // The little hoop stays behind on the mirror; the paper stays with the child all the way home.

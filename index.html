@@ -23,8 +23,77 @@
         <path d="M32 96 C110 126 211 26 330 65 C229 30 121 130 32 96Z"/>
         <path d="M95 116 C184 113 256 50 397 77 C266 54 187 117 95 116Z"/>
       </svg>
-      <button id="begin" type="button" disabled><span>Begin</span></button>
-      <span id="start-status" class="visually-hidden" role="status"></span>
+      <div class="veil-loading" aria-hidden="true">
+        <svg viewBox="0 0 128 112">
+          <defs>
+            <linearGradient id="loading-down" x1="0" y1="0" x2=".65" y2="1">
+              <stop stop-color="#978978"/>
+              <stop offset=".52" stop-color="#b4a791"/>
+              <stop offset="1" stop-color="#c4b79f"/>
+            </linearGradient>
+            <linearGradient id="loading-breast" x1="0" y1="0" x2="1" y2=".25">
+              <stop stop-color="#c4b69e" stop-opacity="0"/>
+              <stop offset="1" stop-color="#d8ccb5" stop-opacity=".6"/>
+            </linearGradient>
+          </defs>
+          <g class="cygnet-wake" fill="none" stroke="#d7cec1" stroke-width="1.15" stroke-linecap="round">
+            <path class="cygnet-ripple" d="M29 91c-9 2-15 2-21 0m10 7c-5 1-9 1-13 0"/>
+            <path class="cygnet-ripple cygnet-ripple-late" d="M34 92c-9 2-15 2-21 0m10 7c-5 1-9 1-13 0"/>
+          </g>
+          <g class="cygnet-paddler">
+            <!-- The body covers both hips: only short ankles and the webbed paddles show below it. -->
+            <g class="cygnet-foot cygnet-foot-far" fill="#514b50">
+              <path d="M58 80c0 5-1 8-4 10" fill="none" stroke="#514b50" stroke-width="2.8" stroke-linecap="round"/>
+              <path d="M55 89c-3 0-6 1-9 4l3 .3-1 2.2 4-1 1.8 1.1c2-2 3-4 1.2-6.6Z"/>
+            </g>
+            <g class="cygnet-foot cygnet-foot-near" fill="#595055">
+              <path d="M48 82c0 4-1 7-4 9" fill="none" stroke="#595055" stroke-width="3" stroke-linecap="round"/>
+              <path d="M45 90c-3 0-7 1-10 4l3.5 .3-1 2.2 4-1 2 1.1c2.5-2 3.5-4 1.5-6.6Z"/>
+            </g>
+            <path fill="url(#loading-down)" d="M18 64c5 3 8 3 12 0 9-12 22-13 31-5 5 3 8 4 10 1 4-6 1-12-2-17-4-6-5-11-1-17-3-6-1-12 4-15 6-4 14-2 18 2 5 5 5 11 1 16-3 3-6 4-10 3-3 6 1 12 2 18 3 14-1 27-13 34-13 9-35 8-46-1-5-5-7-13-6-19Z"/>
+            <path fill="url(#loading-breast)" d="M84 31c-5 7-1 14 0 21 2 12-3 24-15 31-8 5-19 6-29 4 19-1 30-12 32-25 2-8-2-14-2-20 0-5 3-9 7-11Z"/>
+            <g class="cygnet-wing">
+              <path fill="#978a79" d="M30 66c9-7 25-5 35 7-9 9-24 11-37 4l8-1-7-3 8 .2Z"/>
+              <path fill="#c1b49e" opacity=".6" d="M33 66c9-4 19-2 27 5-10-5-17-5-27-5Z"/>
+            </g>
+            <path fill="#62585a" d="M85 21c4-2 6-1 9 1l11 2c2 .3 3 2 1 3-5 2-10 1-15 0l-7-2Z"/>
+            <path fill="#92766e" d="m102 24 4 .5c2 .3 2 1.6 0 2.3l-4 .5Z"/>
+            <circle fill="#302b2d" cx="81" cy="20.5" r="2.15"/>
+            <circle fill="#e6decd" cx="81.6" cy="19.9" r=".55"/>
+          </g>
+          <path fill="none" stroke="#ded5c8" stroke-width="1.15" stroke-linecap="round" opacity=".4" d="M25 88c13 4 32 5 48 0m7-1 5-1"/>
+        </svg>
+      </div>
+      <button id="begin" type="button" disabled>
+        <span>Begin</span>
+        <svg class="begin-mouse" viewBox="0 0 20 28" aria-hidden="true" focusable="false">
+          <path class="begin-mouse-button" d="M10 2a7 7 0 0 0-7 7v3h7Z"/>
+          <rect x="3" y="2" width="14" height="24" rx="7"/>
+          <path d="M3 12h14M10 2v10"/>
+        </svg>
+      </button>
+      <span id="start-status" class="visually-hidden" role="status">Loading</span>
+    </div>
+    <div id="graphics-recovery" role="alertdialog" aria-modal="true" aria-labelledby="recovery-message" hidden>
+      <p id="recovery-message">The graphics stopped.</p>
+      <button type="button">Restart game</button>
+    </div>
+    <div id="quality-control">
+      <div id="quality-dismiss" hidden aria-hidden="true"></div>
+      <button id="quality" type="button" aria-label="Graphics quality" title="Graphics quality" aria-haspopup="menu" aria-controls="quality-menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect class="quality-bar quality-bar-1" x="4" y="15" width="3" height="5" rx=".6"/>
+          <rect class="quality-bar quality-bar-2" x="10.5" y="10" width="3" height="10" rx=".6"/>
+          <rect class="quality-bar quality-bar-3" x="17" y="5" width="3" height="15" rx=".6"/>
+        </svg>
+      </button>
+      <div id="quality-menu" role="menu" aria-label="Graphics quality" hidden>
+        <div class="quality-heading" aria-hidden="true">Graphics quality</div>
+        <button type="button" role="menuitemradio" data-mode="auto" aria-checked="true" tabindex="-1">Auto</button>
+        <button type="button" role="menuitemradio" data-mode="high" aria-checked="false" tabindex="-1">High</button>
+        <button type="button" role="menuitemradio" data-mode="medium" aria-checked="false" tabindex="-1">Medium</button>
+        <button type="button" role="menuitemradio" data-mode="low" aria-checked="false" tabindex="-1">Low</button>
+      </div>
     </div>
     <button id="sound" aria-label="Sound" aria-pressed="false" data-on="false">
       <svg viewBox="0 0 24 24" aria-hidden="true">

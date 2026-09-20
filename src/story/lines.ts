@@ -249,7 +249,7 @@ export class LinesChapter implements Chapter {
     const fill = THREE.MathUtils.smoothstep(this.t, 0.5, k.revealFill);
     family.x += (fill - family.x) * (1 - Math.exp(-dt * 2.5));
     family.y += (THREE.MathUtils.smoothstep(this.t, 1.5, k.revealFill + 1) - family.y) * (1 - Math.exp(-dt * 3));
-    if (this.t < k.revealFill + 1) wind.addSplat({ ax: 6, az: -390, bx: 16, bz: -390, vx: 1, vz: -5,
+    if (this.t < k.revealFill + 1) wind.addSplat({ source: this, ax: 6, az: -390, bx: 16, bz: -390, vx: 1, vz: -5,
       radius: 4, energy: 0.25, swirl: 0, lift: 0 });
     if (family.y > tuning.family.doorAt && !door.opened) {
       door.open = 1;

@@ -100,7 +100,7 @@ export class WashingCurtain {
     this.touched = true;
     this.brushAge = 0;
     const speed = input.gust * Math.sqrt(touch);
-    wind.addSplat({ ax: this.a.x, az: this.a.z, bx: this.b.x, bz: this.b.z,
+    wind.addSplat({ source: this, ax: this.a.x, az: this.a.z, bx: this.b.x, bz: this.b.z,
       vx: input.gustDir.x * speed, vz: input.gustDir.y * speed, radius: 3,
       energy: Math.min(0.5, speed / 25), swirl: 0, lift: 0 });
   }

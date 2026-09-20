@@ -32,7 +32,9 @@ Every chapter has an entry checkpoint. Additional exits:
   A partial constellation restores the boat offshore; only all three stars open its final approach.
   Legacy `moon`/`tide`/`lantern` map to 0/1/2 restored stars; `reflection`/`window` restart with none.
   Voyages use `toMirror` (entry/swim) and `toHarbour` (entry); old `toHome` saves keep the direct route.
-- Home: reunion is over; drawing is folded and ready for release; completed ending.
+- Home: reunion is over (resume the walk toward the house); house/drawing recognition is complete (resume
+  with the sheet open at the brow, without replaying the motif); completed ending. Existing checkpoint names
+  `reunion`, `drawing` and `complete` remain valid.
 
 `Chapter.checkpoint` names a safe exit; `saveCheckpoint()` supplies its numeric story state and `restoreCheckpoint()` rebuilds its continuation. `CHECKPOINTS` declares permitted chapter/point pairs and payload lengths. Changing this schema incompatibly requires a version change or migration. Restore clamps route indices. Malformed/unknown saves and unavailable storage must not prevent playing.
 
@@ -46,6 +48,10 @@ The record keeps the travellers' checkpoint positions, boat state, companion bon
 
 Startup restores before the initial camera cut, terrain bake and warm render. `Play again` clears the record before reloading. The completed-ending checkpoint returns to credits until replay is chosen. `?shot` and `?chapter=` neither read nor write normal progress; use `?progress=1` explicitly for persistence QA, or `?progress=0` to disable it.
 
+Restore the musical phase with the story state. Sleeping's `morning` selects the sea mood and `hush=0.1`;
+earlier Sleeping progression retains wood. Completed piano restoration clears pending completion audio.
+Neither restore emits reward cues. See `audio.md` for gesture, source and cue contracts.
+
 ## Hidden pages and sound
 
 `Soundscape` responds to `visibilitychange`, `pagehide` and `pageshow`. It suspends the existing AudioContext while hidden or muted, and resumes it on return only if sound was already started and enabled. It never creates audio on a visibility event. If the browser requires a fresh gesture to resume, the next pointer-down retries. A rejected resume does not break gameplay.
@@ -53,3 +59,15 @@ Startup restores before the initial camera cut, terrain bake and warm render. `P
 The frame loop skips simulation and rendering while hidden, and resets its time baseline on visibility changes. Story time therefore waits with audio; a long absence does not advance a scripted beat or appear to the quality governor as a slow frame.
 
 Verification: `node tools/progress-check.mjs` against a dev server; `BASE` selects another server. It uses an isolated browser profile and does not touch a player's saves. Logs and screenshots go to `/tmp`.
+
+## Lost graphics context
+
+`src/gl/context-recovery.ts` listens before WebGL boot. A real context loss pauses the frame loop, mutes audio
+and makes the game controls inert. The recovery dialog reloads the page from its last valid checkpoint (or
+restarts when no save exists). Browser context restoration alone does not resume play: wind simulation textures
+and raw readback fences cannot be reconstructed by Three.js's ordinary resource restoration. No save is written
+by recovery, so an interrupted action returns to the preceding stable checkpoint.
+
+`node tools/context-loss-check.mjs` uses `WEBGL_lose_context` in local Chrome, restores the context, verifies
+that the broken simulation remains paused, then reloads through the UI and checks that wind readbacks advance.
+It covers both saved and unsaved play. A phone is not needed for this fault-injection check.

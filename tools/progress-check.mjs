@@ -1,14 +1,13 @@
 // Check checkpoint writes/restores, replay, storage failures and hidden-page audio in isolated Chrome.
 // Usage: node tools/progress-check.mjs (BASE defaults to http://127.0.0.1:5230/; ONLY filters chapter/point).
 // Evidence goes to /tmp. Run without another GPU capture or a live-reloading source tree.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const key = 'updraft.progress.v1';
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist'] });
+const { browser, close } = await openBrowser();
 const report = { checkpoints: [], errors: [] };
 try {
   checks: {
@@ -31,27 +30,28 @@ try {
   // Native story exits are arranged directly; the production Journey must notice and save them.
   const cases = [
     ['island', '', 'companion', `c.beat='leaving';c.restored=true;c.worldLife=1;g.life.regions.island.w=1;g.cygnet.rideIn('cradle');`],
-    ['lines', 'washing', 'family', `const {FAMILY_LINE,door}=await import('/src/world/lines.ts');c.beat='walk';c.leg=2;c.play='hold';c.holdUntil=1e6;g.child.place(-4,Math.min(FAMILY_LINE.a.z,FAMILY_LINE.b.z)-15,Math.PI);door.open=1;`],
+    ['lines', 'washing', 'family', `c.restoreCheckpoint('family',[2,1]);c.holdUntil=1e6;`],
     ['boats', 'boats', 'pool-1', `c.restoreCheckpoint('pool-1',[33]);`],
     ['boats', 'boats', 'pool-2', `c.restoreCheckpoint('pool-2',[69]);`],
     ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(g.child);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(4,true);`],
     ['meadow', 'meadow', 'pond', `c.skipToCrest();c.crestDone=true;c.beat='walk';c.play='hold';c.holdUntil=1e6;g.cygnet.rideIn('satchel');`],
-    ['birches', 'birches', 'swing', `const {BIRCHES_CLEARING:p}=await import('/src/world/birches.ts');g.child.place(p.x,p.y,Math.PI);c.beat='walk';c.swings=6;c.leg=3;c.play='hold';c.holdUntil=1e6;`],
-    ['birches', 'birches', 'leaves', `const {BIRCH_PILES:p}=await import('/src/world/birches.ts');g.child.place(p[2].x,p[2].z,Math.PI);c.beat='walk';c.swings=6;c.played=true;c.leg=4;c.play='hold';c.holdUntil=1e6;`],
+    ...[1,2,3,4].map(count => ['birches','birches',`scarf4-${count}`,
+      `c.restoreCheckpoint('scarf4-${count}',[${count},0,.65,${count}]);c.holdUntil=1e6;`]),
     ['drowned', 'drowned', 'sail', `c.beat='drift';c.stirred=true;c.leg=2;`],
     ['wood', 'wood', 'found', `c.beat='walk';c.bolted=true;c.leg=2;c.chainAt=55;`],
     ['wood', 'wood', 'dry', `c.beat='out';c.bolted=true;c.leg=4;c.chainAt=100;g.glider.visible=true;g.glider.soggy.value=0;`],
     ['sleeping', 'sleeping', 'feather', `c.beatStart=c.now-20;c.tuckIn(0);c.toFeather();c.beatStart=c.now-6;c.theFeather(0);g.cygnet.release(g.sleeping.feather.goal);c.looks=2;c.nextLook=c.now-1;c.theEdge();`],
     ['sleeping', 'sleeping', 'morning', `const {SLEEP_BERTH:p}=await import('/src/world/sleeping.ts');g.boat.beach(p.x,p.z,-1.76);g.child.place(g.sleeping.bedside.x,g.sleeping.bedside.z,0);g.cygnet.rideIn('cradle');c.moored=true;c.warmed=1;c.board();`],
-    ['mirror', 'mirror', 'moon', `c.restoreCheckpoint('moon',[0]);`],
-    ['mirror', 'mirror', 'tide', `c.restoreCheckpoint('tide',[1]);`],
-    ['mirror', 'mirror', 'lantern', `c.restoreCheckpoint('lantern',[2]);`],
+    ...[0,1,3,7].map(mask => ['mirror','mirror',`stars-${mask}`,
+      `c.restoreCheckpoint('stars-${mask}',[${mask},0]);`]),
     ['toMirror', 'sea', 'swim', `c.swim='done';c.leg=4;c.time=100;g.cygnet.rideIn('cradle');`],
-    ['home', 'summit', 'reunion', `c.onOver();g.cygnet.visible=false;`],
-    ['home', 'summit', 'drawing', `c.skipToDrawing(0);c.beat='release';g.child.standUp();`],
+    ['home', 'summit', 'reunion', `c.skipToDrawing();g.cygnet.visible=false;`],
+    ['home', 'summit', 'drawing', `c.restoreCheckpoint('drawing');`],
     ['home', 'summit', 'complete', `c.beat='credits';c.finished=true;c.silence=true;g.child.visible=false;g.cygnet.visible=false;`],
   ];
-  for (const [chapter, query, point, setup] of cases.filter(c=>!process.env.ONLY || (c[0]+'/'+c[2]).includes(process.env.ONLY))) {
+  const firstCase=process.env.FROM?cases.findIndex(c=>c[0]===process.env.FROM):0;
+  assert(firstCase>=0,'Unknown FROM chapter');
+  for (const [chapter, query, point, setup] of cases.slice(firstCase).filter(c=>!process.env.ONLY || (c[0]+'/'+c[2]).includes(process.env.ONLY))) {
     await clear();
     await open(`shot&progress=1${query ? '&chapter=' + query : ''}`);
     await page.evaluate(async setup => {
@@ -85,13 +85,14 @@ try {
   if(process.env.ONLY) break checks;
 
   // Island exits are crossing entries, and all chapter entries round-trip without carrying old callback closures.
-  for (const chapter of ['island','toLines','lines','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','toHome','home']) {
-    const aliases={island:'',toLines:'crossing',lines:'washing',toMeadow:'washing',meadow:'meadow',toBirches:'meadow',birches:'birches',drowned:'drowned',toWood:'drowned',wood:'wood',toSleeping:'wood',sleeping:'sleeping',toMirror:'sea',mirror:'mirror',toHarbour:'mirror',toHome:'sea',home:'jetty'};
+  for (const chapter of ['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','toHome','home']) {
+    const aliases={island:'',toLines:'crossing',lines:'washing',toBoats:'washing',boats:'boats',toMeadow:'boats',meadow:'meadow',toBirches:'meadow',birches:'birches',drowned:'drowned',toWood:'drowned',wood:'wood',toSleeping:'wood',sleeping:'sleeping',toMirror:'sea',mirror:'mirror',toHarbour:'mirror',toHome:'sea',home:'jetty'};
     await clear();await open('shot&progress=1&chapter='+aliases[chapter]);
     await page.evaluate(async chapter => {
       const g=__game;
       let at=null;
-      if(chapter==='toMeadow') at=(await import('/src/story/lines.ts')).LINES_BERTH;
+      if(chapter==='toBoats') at=(await import('/src/story/lines.ts')).LINES_BERTH;
+      if(chapter==='toMeadow') at=(await import('/src/world/little-boats-layout.ts')).BOATS_BERTH;
       if(chapter==='toBirches') at=(await import('/src/story/meadow.ts')).FAR_SHORE;
       if(chapter==='toWood') at={x:-18,z:-1640};
       if(chapter==='toHome') at=(await import('/src/world/sleeping.ts')).SLEEP_BERTH;
@@ -148,5 +149,5 @@ try {
   assert.deepEqual(report.errors,[]);
 } finally {
   fs.writeFileSync('/tmp/updraft-progress-check.json',JSON.stringify(report,null,2));
-  await browser.close();
+  await close();
 }

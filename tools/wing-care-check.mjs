@@ -19,12 +19,14 @@ const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {MeadowChapter,ROUTE}=await import('../src/story/meadow.ts');
 const {SleepingChapter}=await import('../src/story/sleeping.ts');
+const {SleepingTrail}=await import('../src/world/sleeping-trail.ts');
 const {CurtainRibbon}=await import('../src/world/sleeping-ribbon.ts');
 const {BED,SLEEP_LEDGE,CURTAIN_KNOT,CURTAIN_END}=await import('../src/world/sleeping.ts');
 const {Feather}=await import('../src/fx/feather.ts');
 const {restoreWingCare}=await import('../src/story/wing-care.ts');
 const {saveProgress,readProgress,placeProgress}=await import('../src/story/progress.ts');
 const {heightAt}=await import('../src/world/island.ts');
+const {tuning}=await import('../src/tuning.ts');
 const {POND_LEVEL}=await import('../src/world/heightfield.ts');
 
 function fixture(fps=60) {
@@ -35,12 +37,14 @@ function fixture(fps=60) {
   const carry=new Carry(child,cygnet);
   const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
-    sleeping:{ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),feather:new Feather(wind),bedside:BED.clone(),lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
+    sleeping:{trail:new SleepingTrail(),ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),feather:new Feather(wind),bedside:BED.clone(),lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0,curtainOpening:0},
   };
   let time=0;
   return {cast,air,get time(){return time;},step(chapter) {
     const dt=1/fps;time+=dt;
-    chapter?.update(dt,time);child.update(dt);carry.update(dt);flock.update(dt,time);
+    chapter?.update(dt,time);
+    cast.sleeping.curtainOpening+=(cast.sleeping.curtains-cast.sleeping.curtainOpening)*(1-Math.exp(-dt/1.6));
+    child.update(dt);carry.update(dt);flock.update(dt,time);
     cygnet.update(dt,time,child.position,air);carry.after();
     cygnet.heard.length=0;
   }};
@@ -67,28 +71,30 @@ for (const fps of [30,60,120]) {
   for(let i=0;i<fps*12;i++){k.tryToFly();f.step();assert(!k.flying,'wrapped wing took flight');}
   assert.equal(k.flights,0);
 
-  // Real approach from the brow: flock must start before the child arrives, then paddle home and resume.
+  // The migrating flock leaves first; the child watches from the brow, then walks down and offers a paddle.
   const p=fixture(fps),c=new MeadowChapter(p.cast),b=p.cast.cygnet;
   restoreWingCare(b,'meadow');
   p.cast.child.stop();p.cast.child.place(ROUTE[3].x,ROUTE[3].y,Math.PI);
   b.rideIn('satchel');p.cast.plane.hold(p.cast.child);c.crestDone=true;c.leg=3;c.piano.restoreDone();
   for(let i=0;i<fps;i++)p.step();
   c.goDown();
-  let tookOff=false,swam=false,returned=false,departMoving=false,departGap=0;
+  let tookOff=false,swam=false,returned=false,departMoving=false,departGap=0,startedDownAt=-1;
   Object.assign(p.air,{lift:3,energy:1.6});
   for(let i=0;i<fps*110;i++) {
     p.step(c);
     if(c.wentOn&&!tookOff){tookOff=true;departMoving=p.cast.child.moving;departGap=p.cast.child.position.distanceTo(c.edge);}
+    if(c.beat==='down' && p.cast.child.moving && startedDownAt<0)startedDownAt=c.t;
     if(b.state==='swimming'){swam=true;assert(Math.abs(b.position.y-POND_LEVEL)<1,'swimmer left pond surface');}
     if(c.beat==='gather')returned=true;
     assert(!b.flying,'pond allowed flight');
     if(c.beat==='walk'&&returned)break;
   }
-  assert(tookOff&&departMoving&&departGap>4,'flock waited for child to stop');
+  assert(tookOff&&!departMoving&&departGap>4,'the flock must leave while the child watches from the brow');
+  assert(startedDownAt>=tuning.crest.migrationLeadFor && startedDownAt<tuning.crest.migrationLeadFor+1,'the child must follow after the departure lead');
   assert(swam&&returned,'pond did not complete a swim');
   assert.equal(c.beat,'walk','pond did not resume journey');
   assert.equal(b.seat,'satchel');assert.equal(b.flights,0);assert.equal(b.wing.state,'wrapped');
-  console.log(`${fps}fps: wrapped, flock startled during approach, pond returned to hands and resumed.`);
+  console.log(`${fps}fps: wrapped, flock departed before the descent, pond returned to hands and resumed.`);
 
   // Sleeping hilltop: strongest wind cannot skip the look back, opening or actual cloth release.
   for (const strong of [false,true]) {

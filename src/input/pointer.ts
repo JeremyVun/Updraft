@@ -35,8 +35,12 @@ export class PointerInput {
   down = false;
 
   private readonly eventNdc = new THREE.Vector2();
+  private readonly frameFrom = new THREE.Vector2();
+  private readonly frameTo = new THREE.Vector2();
+  private readonly framePoint = new THREE.Vector2();
   private readonly prev = new THREE.Vector3();
   private hasPrev = false;
+  private strokeSource = {};
   private readonly vel = new THREE.Vector2();
   private readonly instVel = new THREE.Vector2();
   private readonly ray = new THREE.Raycaster();
@@ -142,11 +146,19 @@ export class PointerInput {
     return Math.hypot((this.ndc.x - a.x) * aspect, this.ndc.y - a.y) < T.anchorNear ? this.anchor : null;
   }
 
-  update(dt: number, camera: THREE.Camera, wind: WindField): void {
+  /** Snapshot one rendered frame's gesture before the game divides it into simulation steps. */
+  beginFrame(): void {
+    this.frameFrom.copy(this.hasPrev && this.present && !this.muted ? this.ndc : this.eventNdc);
+    this.frameTo.copy(this.eventNdc);
+  }
+
+  update(dt: number, camera: THREE.Camera, wind: WindField, frameFraction?: number): void {
+    const target = frameFraction === undefined ? this.eventNdc
+      : this.framePoint.copy(this.frameFrom).lerp(this.frameTo, frameFraction);
     if (!this.present || this.muted) {
       // Consumers also brush visible objects directly from these values. A muted
       // frame must not replay the last stroke or retain an updraft over the plane.
-      this.ndc.copy(this.eventNdc);
+      this.ndc.copy(target);
       this.prevNdc.copy(this.ndc);
       this.hasPrev = false;
       this.vel.set(0, 0);
@@ -158,8 +170,9 @@ export class PointerInput {
       return;
     }
     this.prevNdc.copy(this.ndc);
-    this.ndc.copy(this.eventNdc);
+    this.ndc.copy(target);
     if (!this.hasPrev) {
+      this.strokeSource = {};
       this.pick(camera, this.ndc, this.world);
       this.prev.copy(this.world);
       this.prevNdc.copy(this.ndc);
@@ -185,7 +198,7 @@ export class PointerInput {
       const nx = this.vel.x / this.vel.length();
       const nz = this.vel.y / this.vel.length();
       this.gustDir.set(nx, nz);
-      wind.addSplat({
+      wind.addSplat({ source: this.strokeSource, trail: true,
         ax: this.prev.x,
         az: this.prev.z,
         bx: this.world.x,
@@ -200,9 +213,9 @@ export class PointerInput {
     }
 
     this.twirl(dt, camera);
-    if (this.charge > 0.01) {
+    if (this.charge > T.minLift) {
       /** No swirl of its own: the strokes going round it are already turning the air, the way the player drew it. */
-      wind.addSplat({
+      wind.addSplat({ source: 'pointer-lift',
         ax: this.updraftAt.x,
         az: this.updraftAt.z,
         bx: this.updraftAt.x,

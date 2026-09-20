@@ -5,7 +5,7 @@ import { Dolphins } from './sealife/dolphin';
 import { Fish } from './sealife/fish';
 import { FOAM, RING, Marks } from './sealife/marks';
 import { Spray } from './sealife/spray';
-import { WhaleWake } from './sealife/wake';
+import { WhaleWake, type WhaleSound } from './sealife/wake';
 import { Whale } from './sealife/whale';
 
 /** Life in the open sea on the crossing: a humpback that surfaces now and then, and small fish leaping near the boat. */
@@ -58,6 +58,18 @@ export class SeaLife {
   /** What to do when a dolphin shoulders the boat: the story hands the shove to the hull. */
   set onDolphinShove(fn: (side: number, strength: number) => void) {
     this.pod.onShove = fn;
+  }
+
+  set onDolphinSplash(fn: (x: number, y: number, z: number, strength: number) => void) {
+    this.pod.onSplash = fn;
+  }
+
+  set onDolphinSurface(fn: (x: number, y: number, z: number, strength: number) => void) {
+    this.pod.onSurface = fn;
+  }
+
+  set onWhaleSound(fn: (kind: WhaleSound, x: number, y: number, z: number) => void) {
+    this.wake.onSound = fn;
   }
 
   /** Where a dolphin is playing to the boat, for the child to look at; null when they are only running alongside. */

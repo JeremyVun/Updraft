@@ -19,6 +19,7 @@ uniform float uTime;
 uniform vec4 uDomain;
 uniform vec2 uBreeze;
 uniform float uRelax;
+uniform float uAmbient;
 uniform int uSplatCount;
 uniform vec4 uSplatSeg[${MAX_SPLATS}];
 uniform vec4 uSplatVel[${MAX_SPLATS}];
@@ -31,14 +32,16 @@ void main() {
   vec4 s = texture(uVel, vUv);
   vec2 v = s.xy;
 
-  float base = length(uBreeze);
-  vec2 dir = uBreeze / max(base, 1e-4);
-  vec2 perp = vec2(-dir.y, dir.x);
-  vec2 q = world * 0.02 - uBreeze * uTime * 0.02;
-  float gust = fbm(q);
-  float veer = (vnoise(q * 0.6 + 11.3) - 0.5) * 0.7;
-  vec2 target = base > 1e-3 ? normalize(dir + perp * veer) * base * (0.3 + 2.3 * gust * gust) : vec2(0.0);
-  v += (target - v) * (1.0 - exp(-uDt * uRelax));
+  if (uAmbient > 0.5) {
+    float base = length(uBreeze);
+    vec2 dir = uBreeze / max(base, 1e-4);
+    vec2 perp = vec2(-dir.y, dir.x);
+    vec2 q = world * 0.02 - uBreeze * uTime * 0.02;
+    float gust = fbm(q);
+    float veer = (vnoise(q * 0.6 + 11.3) - 0.5) * 0.7;
+    vec2 target = base > 1e-3 ? normalize(dir + perp * veer) * base * (0.3 + 2.3 * gust * gust) : vec2(0.0);
+    v += (target - v) * (1.0 - exp(-uDt * uRelax));
+  }
 
   for (int i = 0; i < ${MAX_SPLATS}; i++) {
     if (i >= uSplatCount) break;
@@ -50,13 +53,23 @@ void main() {
     float r = uSplatVel[i].z;
     float w = exp(-d * d / (r * r));
 
+    float exposure = uSplatMix[i].z;
     vec2 pushV = uSplatVel[i].xy;
     float speed = length(pushV);
     if (speed > 1e-3) {
       vec2 n = pushV / speed;
       float along = dot(v, n);
-      v += n * max(0.0, speed - along) * w * 0.8;
-      v += (pushV - v) * w * 0.12;
+      if (exposure == 1.0) {
+        // Keep the established 60 Hz push, without powers in the common case.
+        v += n * max(0.0, speed - along) * w * 0.8;
+        v += (pushV - v) * w * 0.12;
+      } else {
+        // A force starting or ending partway through a tick receives fractional exposure.
+        float blend = 1.0 - pow(1.0 - w * 0.12, exposure);
+        float catchUp = 1.0 - pow((1.0 - w * 0.8) * (1.0 - w * 0.12), exposure);
+        v += n * (speed - along) * (along < speed ? catchUp : blend);
+        v -= (v - n * dot(v, n)) * blend;
+      }
     }
 
     float swirl = uSplatMix[i].y;
@@ -65,11 +78,11 @@ void main() {
       float rl = length(rel);
       vec2 tang = vec2(-rel.y, rel.x) / max(rl, 1e-3);
       float ring = (rl / r) * exp(-rl * rl / (r * r)) * 2.33;
-      v += tang * swirl * ring * uDt;
+      v += tang * swirl * ring * uDt * exposure;
     }
 
-    s.z += uSplatMix[i].x * w;
-    s.w += uSplatVel[i].w * exp(-d * d / (r * r * 1.3)) * uDt;
+    s.z += uSplatMix[i].x * w * exposure;
+    s.w += uSplatVel[i].w * exp(-d * d / (r * r * 1.3)) * uDt * exposure;
   }
 
   gl_FragColor = vec4(v, min(s.z, 1.6), min(s.w, 2.5));

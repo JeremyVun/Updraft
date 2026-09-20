@@ -247,6 +247,11 @@ export class Traveller {
     return this.rig.head.getWorldPosition(out);
   }
 
+  /** The mouth, rather than the centre of the head, for visible breath in cold air. */
+  breathFrom(out: THREE.Vector3): THREE.Vector3 {
+    return this.rig.head.localToWorld(out.set(0, -0.10, 0.43));
+  }
+
   /** A world point in the frame of the child's body, as posed this frame. */
   toBody(world: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
     return this.rig.body.worldToLocal(out.copy(world));
@@ -476,8 +481,8 @@ export class Traveller {
     this.pose(dt);
 
     const moved = Math.hypot(p.x - this.prev.x, p.z - this.prev.z);
-    if (moved > 0.01 && !this.sitting && !this.riding) {
-      this.wind.addSplat({
+    if (moved > 0.6 * dt && !this.sitting && !this.riding) {
+      this.wind.addSplat({ source: this, trail: true,
         ax: this.prev.x,
         az: this.prev.z,
         bx: p.x,

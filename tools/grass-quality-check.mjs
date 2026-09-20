@@ -30,7 +30,7 @@ async function check() {
     const full = read(), fullBlades = grass.bladesDrawn;
     const tables = grass.lods.map(l => l.table);
     const results = [];
-    for (const [density, reach] of [[0.55, 0.85], [0.25, 0.7], [0.55, 0.85], [1, 1]]) {
+    for (const [density, reach] of [[0.8, 0.95], [0.55, 0.85], [0.25, 0.7], [0.55, 0.85], [0.8, 0.95], [1, 1]]) {
       const before = read();
       grass.setQuality(density, reach);
       const start = diff(before, read());

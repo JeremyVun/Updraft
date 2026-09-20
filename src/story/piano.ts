@@ -40,6 +40,9 @@ export class PianoStop {
    * Whoever owns the room sets this; the stop itself only says how far the tune has got.
    */
   onWake: ((stage: Waking, answered: boolean) => void) | null = null;
+  /** Completion is heard after the final melody, while its colour front keeps travelling. */
+  onComplete: (() => void) | null = null;
+  private completeAt = 0;
   private beat: Beat = 'ahead';
   private since = 0;
   private now = 0;
@@ -75,7 +78,7 @@ export class PianoStop {
   }
 
   /** A checkpoint beyond the stop never replays or re-scores the puzzle. */
-  restoreDone(): void { this.beat = 'done'; piano.expect = null; piano.engaged = false; piano.finale = false; }
+  restoreDone(): void { this.beat = 'done'; this.completeAt = 0; piano.expect = null; piano.engaged = false; piano.finale = false; }
 
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
@@ -267,7 +270,8 @@ export class PianoStop {
     piano.finale = true;
     this.releaseHands(cast);
     const whole = [...LULLABY.flat(2), ...CADENCE].map((s) => base + s);
-    piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.52 : 0.4);
+    const ends = piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.52 : 0.4);
+    this.completeAt = ends + tuning.piano.completionRest;
     /** The front begins while the lullaby is sounding, with the bird joining it. */
     this.wakeAt = this.now + tuning.piano.finaleWaveAfter;
     this.finishedAt = this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor;
@@ -312,6 +316,10 @@ export class PianoStop {
 
   /** Music, the colour front and the widening camera begin together. */
   private wakeIsland(time: number): void {
+    if (this.completeAt > 0 && time >= this.completeAt) {
+      this.completeAt = 0;
+      this.onComplete?.();
+    }
     if (this.wakeAt === 0 || time < this.wakeAt) return;
     this.wakeAt = 0;
     this.roseFrom = time;

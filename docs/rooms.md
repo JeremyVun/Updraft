@@ -42,8 +42,9 @@ with the player's wind. The paper remains visible on the backpack while the mitt
 Three lights lie on the surface. Sweeps make and steer bubbles; a low bubble touching a light catches it,
 and that patch of mirror goes dark. Circles lift a filled bubble. Once high enough it bursts gently and the
 light rises into its place in the sky, now reflected naturally below. Lights may be collected in any order;
-a sweep at a different fallen light asks the paper to lead the child there. The plane flies between stops,
-the child follows and retrieves it, and the cygnet walks beside them. Empty bubbles are harmless play.
+a sweep at a different fallen light asks the child to walk there with the bird. The paper leads the initial
+walk to the bowl. Between lights it stays on the backpack; the child walks
+directly to the next stop with the cygnet, without repeating a throw and retrieval. Empty bubbles are harmless play.
 A burst carrying a light returns it to its original patch without undoing completed stars. Empty bubbles
 always skim the surface, even during a curled stroke. Capture cannot inherit an already charged updraft;
 a fresh lifting arc can follow immediately. Filled bubbles settle horizontally while being lifted.
@@ -89,6 +90,20 @@ rising-star framing and the final constellation from each possible last stop. Ty
 The entry/capture follow-up also covers the sailing approach, the deck-to-flat step, a pending destination
 on the capture frame, another star returning during a capture, stroke reversal and coasting, and continuous
 lifting circles. Mouse and touch gesture checks pass; the browser touch run completes all stars and boarding.
+
+## Journey pacing and the mirror companion (September 20)
+
+Jeremy asked for shorter crossings from little boats to meadow, sleeping to mirror, and especially mirror
+to home; the mirror should feel like a short way station. The earlier per-crossing speed boosts were
+rejected. Ordinary sailing now shares a 4.5–5.5 units/s baseline and a top speed of 10; swimming and mooring retain their slower pace. Physical route changes
+remain recommendations in [geography.md](geography.md), including which scenic approaches to preserve.
+The secret doorway shore is concealed on later crossings; the home jetty appears only on the final homeward approach.
+
+At the mirror the healed cygnet investigates beside the fallen light, follows low bubbles from the side,
+and opens both wings when a bubble catches a light. It watches the ascent. These decisions follow actual
+puzzle events, remain within a small radius of the child and never capture, burst or return a light for the
+player. The bird stays on its feet; the farewell flight still belongs to home. Movement and attention are
+cleared before gathering and on checkpoint restoration. The original three lights and gestures remain.
 
 ## 3. The stairs in the clouds — planned
 

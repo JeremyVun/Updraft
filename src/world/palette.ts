@@ -228,6 +228,9 @@ export function applySleepingPalette(presence: number): void {
   u.uSkyHorizonSun.value.lerp(p.horizonSun, presence);
   u.uSkyAmbient.value.lerp(p.ambient, presence);
   u.uGroundBounce.value.lerp(p.bounce, presence);
+  const nightShade=1-presence*(1-dawn)*.22;
+  u.uSkyAmbient.value.multiplyScalar(nightShade);
+  u.uGroundBounce.value.multiplyScalar(nightShade);
   u.uFogDensity.value = THREE.MathUtils.lerp(u.uFogDensity.value, p.fog, presence);
   u.uNight.value = THREE.MathUtils.lerp(u.uNight.value, 1 - THREE.MathUtils.smoothstep(dawn, 0.08, 0.8), presence);
   u.uStarlight.value *= 1 - dawn * presence;

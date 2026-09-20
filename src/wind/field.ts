@@ -4,6 +4,7 @@ import { Readback } from '../gl/readback';
 import { atmo } from '../world/atmosphere';
 import { WINDOW, onWindowMove } from '../world/window';
 import { tuning } from '../tuning';
+import { WindClock, WIND_STEP, type TimedSplat } from './clock';
 import {
   ADVECT_FRAG,
   BEND_FRAG,
@@ -52,6 +53,12 @@ void main() {
 
 /** A push of air along a segment, in world units. See docs/contracts/wind.md. */
 export interface Splat {
+  /** Stable producer identity: samples of one force are resampled into one splat per solver tick. */
+  source: object | string;
+  /** Endpoints describe movement during the frame, rather than a stationary brush segment. */
+  trail?: boolean;
+  /** One-shot event; otherwise this force is sustained over the current render interval. */
+  impulse?: boolean;
   ax: number;
   az: number;
   bx: number;
@@ -119,15 +126,13 @@ export class Sway {
 }
 
 const READ_RES = 128;
-const STEP = 1 / 60;
+const STEP = WIND_STEP;
 
 export interface WindOptions {
   /** Grid resolution; 256 by default. */
   res?: number;
   /** Jacobi pressure iterations per substep; 24 by default. */
   iterations?: number;
-  /** Substeps a frame may run; 2 by default. */
-  maxSubsteps?: number;
 }
 
 export class WindField {
@@ -159,12 +164,12 @@ export class WindField {
   private readonly shiftMat: THREE.ShaderMaterial;
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
   private readonly iterations: number;
-  private readonly maxSubsteps: number;
+  private readonly clock = new WindClock();
+  private steppedSinceReadback = false;
 
-  constructor(renderer: THREE.WebGLRenderer, { res = 256, iterations = 24, maxSubsteps = 2 }: WindOptions = {}) {
+  constructor(renderer: THREE.WebGLRenderer, { res = 256, iterations = 24 }: WindOptions = {}) {
     this.res = res;
     this.iterations = iterations;
-    this.maxSubsteps = maxSubsteps;
     this.gpu = new GpuRunner(renderer);
     this.vel = new PingPong(res, res);
     this.bend = new PingPong(res, res);
@@ -189,6 +194,7 @@ export class WindField {
       uDomain: domain,
       uBreeze: { value: this.breeze },
       uRelax: { value: tuning.wind.relax },
+      uAmbient: { value: 1 },
       uSplatCount: { value: 0 },
       uSplatSeg: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
       uSplatVel: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
@@ -268,30 +274,40 @@ export class WindField {
   }
 
   addSplat(splat: Splat): void {
-    if (this.splats.length < MAX_SPLATS) this.splats.push(splat);
+    this.splats.push(splat);
   }
 
-  /** Runs the substeps that fit `dt`, capped: a slow frame must not multiply the sim and get slower still. */
-  step(dt: number, time: number): void {
-    const steps = Math.min(this.maxSubsteps, Math.max(1, Math.round(dt / STEP)));
-    for (let i = 0; i < steps; i++) this.substep(time - (steps - 1 - i) * STEP, i === 0);
-    this.splats.length = 0;
-    this.readBack();
+  /** A fixed simulation clock, independent of display refresh and the graphics preset. */
+  step(dt: number, time: number, requestReadback = true): void {
+    const splats = this.splats;
+    this.splats = [];
+    const steps = this.clock.advance(dt, time, splats, (t, inputs) => this.substep(t, inputs));
+    this.steppedSinceReadback ||= steps > 0;
+    if (requestReadback && this.steppedSinceReadback) {
+      this.readBack();
+      this.steppedSinceReadback = false;
+    }
   }
 
-  private substep(time: number, withSplats: boolean): void {
+  private substep(time: number, inputs: TimedSplat[]): void {
     const fu = this.forceMat.uniforms;
     fu.uTime.value = time;
-    fu.uVel.value = this.vel.texture;
-    const splats = withSplats ? this.splats : [];
-    fu.uSplatCount.value = splats.length;
-    splats.forEach((s, i) => {
-      fu.uSplatSeg.value[i].set(s.ax, s.az, s.bx, s.bz);
-      fu.uSplatVel.value[i].set(s.vx, s.vz, s.radius, s.lift);
-      fu.uSplatMix.value[i].set(s.energy, s.swirl, 0, 0);
-    });
-    this.gpu.run(this.forceMat, this.vel.write);
-    this.vel.swap();
+    // Eight uniforms per pass, not eight accepted strokes. Busy scenes with more sources
+    // may need another force pass; pressure, advection and springs still run only once per tick.
+    for (let offset = 0; offset < Math.max(1, inputs.length); offset += MAX_SPLATS) {
+      fu.uVel.value = this.vel.texture;
+      fu.uAmbient.value = offset === 0 ? 1 : 0;
+      const count = Math.min(MAX_SPLATS, inputs.length - offset);
+      fu.uSplatCount.value = count;
+      for (let i = 0; i < count; i++) {
+        const { splat: s, weight } = inputs[offset + i];
+        fu.uSplatSeg.value[i].set(s.ax, s.az, s.bx, s.bz);
+        fu.uSplatVel.value[i].set(s.vx, s.vz, s.radius, s.lift);
+        fu.uSplatMix.value[i].set(s.energy, s.swirl, weight, 0);
+      }
+      this.gpu.run(this.forceMat, this.vel.write);
+      this.vel.swap();
+    }
 
     this.curlMat.uniforms.uVel.value = this.vel.texture;
     this.gpu.run(this.curlMat, this.curl);

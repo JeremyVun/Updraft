@@ -44,8 +44,10 @@ void main() {
   vec3 alb = mix(vec3(0.97, 0.97, 0.99), vec3(0.88, 0.87, 0.84), quill * 0.5);
   vec3 col = alb * (uSkyAmbient * 1.5 + uSunColor * (max(ndl, 0.0) * 0.5 + max(-ndl, 0.0) * 0.55));
   col += lampLight(vWorld, N) * 1.1 + dawnLight(vWorld, N) * 1.2;
+  // The steering object stays recognisable against the very fog the player is being asked to clear.
+  col = max(col, vec3(0.50, 0.54, 0.56));
   vec4 f = fogOf(vWorld);
-  gl_FragColor = vec4(mix(col, f.rgb, f.a * 0.8), a * uFade);
+  gl_FragColor = vec4(mix(col, f.rgb, f.a * 0.45), a * uFade);
 }`;
 
 /** A long primary: a curved spine, a vane that swells and tapers off it, and a bare quill at the root. */
@@ -93,8 +95,14 @@ export class Feather {
   follow: THREE.Vector3 | null = null;
   routeStart: THREE.Vector3 | null = null;
   encouragement = 0;
+  /** Additional hanging height over a visible obstruction on the assisted route. */
+  clearance = 0;
   /** 0 while it is still in the pillow, 1 once it is in the air. */
   flying = false;
+  preview: THREE.Vector3 | null = null;
+  previewLift = 0;
+  heldBy: { billTip(out: THREE.Vector3): THREE.Vector3; yaw: number } | null = null;
+  catchingBy: Feather['heldBy'] = null;
   /** How much the wind is lifting it, 0..1, for whoever wants to hear or see that. */
   lift = 0;
   /** Fade into the window seam when the guide has delivered the bird. */
@@ -131,17 +139,19 @@ export class Feather {
   }
 
   set visible(on: boolean) {
-    this.mesh.visible = on && this.flying;
+    this.mesh.visible = on && (this.flying || this.preview !== null);
   }
 
   /** Out of the pillow: it comes away slowly and hangs there, which is the whole of the invitation. */
   release(from: THREE.Vector3, drift: THREE.Vector3): void {
+    this.preview = null; this.heldBy = null; this.catchingBy = null;
     this.position.copy(from);
     this.velocity.copy(drift);
     this.goal.copy(from);
     this.flying = true;
     this.fade = 1;
     this.rest = 0;
+    this.clearance = 0;
     this.mesh.visible = true;
   }
 
@@ -151,7 +161,27 @@ export class Feather {
   }
 
   update(dt: number, time: number): void {
-    if (!this.flying) return;
+    if (!this.flying) {
+      if (this.preview) {
+        this.mesh.visible=true;
+        this.mesh.position.copy(this.preview);
+        this.mesh.position.y+=.08+this.previewLift*.3;
+        this.mesh.rotation.set(-1.05+Math.sin(time*2.4)*.08,-.35,Math.sin(time*1.7)*.12);
+      }
+      return;
+    }
+    const carrier=this.heldBy??this.catchingBy;
+    if (carrier) {
+      carrier.billTip(this.scratch);
+      if(this.heldBy)this.position.copy(this.scratch);
+      else this.position.lerp(this.scratch,1-Math.exp(-dt*tuning.sleeping.featherTakeRate));
+      this.mesh.position.copy(this.position);
+      // The quill starts at the bill, with its vane held crosswise clear of the face.
+      this.mesh.rotation.set(.12,carrier.yaw+Math.PI/2,0);
+      this.mesh.translateZ(.82*.42);
+      this.velocity.set(0,0,0);
+      return;
+    }
     (this.mesh.material as THREE.ShaderMaterial).uniforms.uFade.value = this.fade;
     const t = tuning.sleeping;
     const p = this.position;
@@ -166,7 +196,7 @@ export class Feather {
     const rising = w.lift * t.featherLift + w.energy * t.featherGust;
     this.lift += (Math.min(1, rising / t.featherSink) - this.lift) * (1 - Math.exp(-dt * 3));
     /** It hangs: below the height it likes the air holds it up, and above it it sinks the way a feather does. */
-    const hold = THREE.MathUtils.clamp((floor + t.featherHangs - p.y) * 0.5, -0.25, 0.6);
+    const hold = THREE.MathUtils.clamp((floor + t.featherHangs + this.clearance - p.y) * 0.5, -0.25, 0.6);
     v.y += (rising + hold - t.featherSink - v.y) * (1 - Math.exp(-dt * 2.2));
 
     /**
@@ -195,7 +225,7 @@ export class Feather {
       const lateral = -az * (p.x - this.routeStart.x) + ax * (p.z - this.routeStart.z);
       const correction = (lateral - THREE.MathUtils.clamp(lateral, -t.featherCorridor, t.featherCorridor)) * blend;
       p.x += az * correction; p.z -= ax * correction;
-      p.y += (floor + t.featherHangs - p.y) * (1 - Math.exp(-dt * 3));
+      p.y += (floor + t.featherHangs + this.clearance - p.y) * (1 - Math.exp(-dt * 3));
     }
     const down = p.y <= floor + 0.05;
     this.rest = down ? this.rest + dt : 0;

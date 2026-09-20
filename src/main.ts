@@ -1,6 +1,8 @@
 import { LittleBoats } from './world/little-boats';
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
+import { AudioEnvironment } from './audio/environment';
+import { WorldFoley } from './audio/world-foley';
 import { CameraRig } from './camera';
 import { Creatures } from './creatures/creatures';
 import { islandHabitat, mainlandHabitat } from './creatures/habitat';
@@ -15,7 +17,7 @@ import { PlaneIndicator } from './glider/indicator';
 import { ROUTE } from './story/meadow';
 import { takeCues } from './story/cues';
 import { Journey } from './story/journey';
-import { clearProgress } from './story/progress';
+import { clearProgress, readProgress } from './story/progress';
 import { EmberInvitation } from './fx/ember-invitation';
 import { Embers } from './fx/embers';
 import { Fireflies } from './fx/fireflies';
@@ -29,8 +31,9 @@ import { Traveller } from './traveller/traveller';
 import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
-import { gpuIdle, precompile, precompileSim, warmRender, yieldBoot } from './gl/boot';
+import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
+import { controls } from './controls';
 import { endFrame, pollReadbacks, readbackStats } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
 import { Post } from './post/post';
@@ -40,6 +43,8 @@ import { CLOUD_SPAN, atmo } from './world/atmosphere';
 import { CloudShadows } from './world/clouds';
 import { createDistantIslands } from './world/distant';
 import { Grass } from './world/grass';
+import { sleepingGust } from './world/sleeping-wind';
+import { HEARTH } from './world/sleeping-hearth';
 import { GroundBakes, type BakeInputs } from './world/ground';
 import { LifeField } from './world/life';
 import { applyPalette, applySleepingPalette } from './world/palette';
@@ -56,7 +61,7 @@ import { SwanFlock } from './creatures/flock';
 import { CURTAINS, washingPassage } from './world/lines-passage';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
-import { FAMILY_LINE, WashingLines, baskets, door, lineField, seaLines } from './world/lines';
+import { FAMILY_LINE, WashingLines, baskets, door, family, lineField, seaLines } from './world/lines';
 import { piano } from './world/piano';
 import { DepartureKites } from './story/departure-kites';
 import { Pinwheels } from './world/pinwheels';
@@ -70,7 +75,7 @@ import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Cottage } from './world/cottage';
 import { createJetty } from './world/jetty';
-import { COTTAGE, ISLES, mainlandCoastZ, meadowPoint } from './world/heightfield';
+import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
 import { Pond } from './world/pond';
 import { SkyMirror } from './world/sky-mirror';
 import { Water } from './world/water';
@@ -80,6 +85,9 @@ import { swellUniforms } from './world/water/swell';
 import { WINDOW, followWindow, onWindowMove, windowCentre } from './world/window';
 import { tuning } from './tuning';
 import { startScreen } from './start-screen';
+import { contextRecovery } from './gl/context-recovery';
+import { telemetry } from './analytics/telemetry';
+import { frameTiming } from './gl/frame-time';
 
 declare global {
   interface Window {
@@ -89,6 +97,7 @@ declare global {
   }
 }
 
+const resumedAtLoad = params.progress && readProgress() !== null;
 const canvas = document.getElementById('view') as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.toneMapping = THREE.NoToneMapping;
@@ -108,7 +117,7 @@ function windowAim(): [number, number] {
   return [rig.camera.position.x + aimDir.x * 100, rig.camera.position.z + aimDir.z * 100];
 }
 await yieldBoot();
-const wind = new WindField(renderer, params.lite ? { res: 128, iterations: 12, maxSubsteps: 1 } : {});
+const wind = new WindField(renderer, params.lite ? { res: 128, iterations: 12 } : {});
 const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
@@ -196,13 +205,15 @@ const skyMirror = new SkyMirror();
 scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
 scene.add(littleBoats.group);
-const birches = new AutumnBirches(renderer, wind);
+const birches = new AutumnBirches(renderer, wind, false);
+await prepareInBatches(birches.scarf.settle());
 birches.objects.forEach((o) => scene.add(o));
 await yieldBoot();
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 /** And out from the beach below it, the one landing in the journey that was built rather than run up onto. */
-scene.add(createJetty());
+const homeJetty = createJetty();
+scene.add(homeJetty);
 await yieldBoot();
 const petals = new Petals(renderer, tuning.petals.stillIslandShare);
 scene.add(petals.mesh);
@@ -252,8 +263,8 @@ scene.add(emberInvitation.batch.mesh);
 
 await yieldBoot();
 const rain = new Rain();
-const stormWeather = new StormWeather((strength, pan) => {
-  sound.thunder(strength, pan);
+const stormWeather = new StormWeather((strength, pan, close) => {
+  sound.thunder(strength, pan, close);
   if (story.name === 'drowned' && cygnet.carried) {
     cygnet.mind.startle(0.12);
     cygnet.mind.react('flinch');
@@ -287,7 +298,18 @@ cygnet.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.e
 cygnet.mount = child;
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
-let nextBugle = 0;
+const worldFoley = new WorldFoley(foley, rig.camera);
+const materialAt = new THREE.Vector3();
+const splashAt = new THREE.Vector3();
+sealife.onDolphinSplash = (x, y, z, strength) => {
+  if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength);
+};
+sealife.onDolphinSurface = (x, y, z, strength) => {
+  if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength, true);
+};
+sealife.onWhaleSound = (kind, x, y, z) => {
+  if (sound.running) worldFoley.whale(kind, splashAt.set(x, y, z));
+};
 let swanBeat = 0;
 const probe = params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
@@ -300,6 +322,7 @@ const emberAt = new THREE.Vector3();
 const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, sleeping, littleBoats, skyMirror, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
+water.skyMirrorAppearance = story.name === 'home' ? 0 : 1;
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' || params.debug === 'sway' ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
@@ -351,34 +374,44 @@ const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, wind
   pixelRatio = level.ratio;
   post.samples = level.samples;
   applyWorldQuality(level);
+  telemetry.quality(level.ratio, level.samples, level.detail);
   if (resizeTargets) resize();
-}, coarsePointer ? 1 : 2);
+}, coarsePointer ? 1 : 2, controls.qualityMode);
 function applyWorldQuality(level: QualityLevel, immediate = false): void {
   const detail = WORLD_QUALITY[params.lite ? 0 : level.detail];
-  grass.setQuality(detail.grassDensity, detail.grassReach, immediate);
+  grass.setQuality(level.grassDensity ?? detail.grassDensity, level.grassReach ?? detail.grassReach, immediate);
   terrain.detail = detail.terrainSplit;
   water.mirrorEvery = detail.mirrorEvery;
   water.mirrorScale = detail.mirrorScale;
+  controls.setQualityDetail(params.lite ? 0 : level.detail);
 }
 applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;
 post.samples = quality.level.samples;
 
+let graphicsReady = false;
+controls.onQualityChange = mode => {
+  // A loading-time choice is applied after warm-up, without resizing targets mid-batch.
+  if (graphicsReady && !contextRecovery.lost) quality.setMode(mode, performance.now());
+};
+
 const sound = new Soundscape();
+const audioEnvironment = new AudioEnvironment(heightAt);
+contextRecovery.onPause = () => { input.muted = true; sound.setMuted(true); };
 const soundButton = document.getElementById('sound') as HTMLButtonElement;
-const fullscreenButton = document.getElementById('fullscreen') as HTMLButtonElement;
 function setSound(on: boolean): void {
+  if (contextRecovery.lost) return;
   sound.setMuted(!on);
   if (on) sound.start();
-  soundButton.dataset.on = String(on);
-  soundButton.setAttribute('aria-pressed', String(on));
+  controls.setSound(on);
 }
 let soundChosen = false;
-soundButton.addEventListener('click', () => {
+controls.onSoundChange = on => {
   soundChosen = true;
-  setSound(soundButton.dataset.on !== 'true');
-});
+  if (startScreen.started) setSound(on);
+};
 input.onButton((kind) => {
+  if (contextRecovery.lost) return;
   if (kind === 'down' && soundChosen && soundButton.dataset.on === 'true' && !sound.running) sound.start();
   if (kind === 'down' && !soundChosen && !params.shot) {
     soundChosen = true;
@@ -386,6 +419,8 @@ input.onButton((kind) => {
   }
 });
 window.addEventListener('keydown', (e) => {
+  // Text entry and form controls must not trigger game shortcuts.
+  if (e.target instanceof Element && e.target.closest('select, input, textarea, [contenteditable="true"]')) return;
   if (import.meta.env.DEV && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'R') {
     e.preventDefault();
     clearProgress();
@@ -397,20 +432,6 @@ window.addEventListener('keydown', (e) => {
     setSound(soundButton.dataset.on !== 'true');
   }
 });
-
-fullscreenButton.hidden = !document.fullscreenEnabled;
-function syncFullscreen(): void {
-  const active = document.fullscreenElement !== null;
-  fullscreenButton.setAttribute('aria-pressed', String(active));
-  fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
-}
-fullscreenButton.addEventListener('click', () => {
-  const change = document.fullscreenElement
-    ? document.exitFullscreen()
-    : document.documentElement.requestFullscreen();
-  void change.catch(() => syncFullscreen());
-});
-document.addEventListener('fullscreenchange', syncFullscreen);
 
 const soundState: SoundState = {
   gust: 0,
@@ -425,6 +446,10 @@ const soundState: SoundState = {
   night: 0,
   sea: 1,
   meadow: 0,
+  land: 0,
+  cold: 0,
+  cygnet: { pan: 0, distance: 0, active: false },
+  flock: { pan: 0, distance: 0, active: false },
   shower: 0,
   hush: 0,
   scripted: false,
@@ -439,6 +464,7 @@ document.getElementById('again')?.addEventListener('click', () => {
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
 function resize(): void {
+  if (contextRecovery.lost) return;
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setPixelRatio(pixelRatio);
@@ -485,33 +511,9 @@ function whaleForQa(): void {
   sealife.surfaceWhale(new THREE.Vector3(boat.position.x + fx * 125 + fz * 26, 0, boat.position.z + fz * 125 - fx * 26), boat.yaw - 0.3);
 }
 
-function frame(now: number): void {
-  if (document.hidden) {
-    last = now;
-    requestAnimationFrame(frame);
-    return;
-  }
-  if (params.hold !== null && frameIndex >= params.hold) {
-    post.render(time);
-    endFrame(renderer);
-    requestAnimationFrame(frame);
-    return;
-  }
-  // RAF timestamps mark the frame's start, which can precede the Begin click or visibility reset.
-  // Wait for a later frame: negative time reverses the tide, and zero breaks velocity calculations.
-  if (now <= last) {
-    requestAnimationFrame(frame);
-    return;
-  }
-  const cpuStart = performance.now();
-  const realDt = (now - last) / 1000;
-  quality.frame(now, now - last);
-  last = now;
-  const dt = params.shot ? 1 / 60 : Math.min(realDt, 1 / 20);
+/** World mechanics receive at most 1/30 s; wind subdivides to 1/60 s; input follows the same slice of the screen stroke. */
+function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   time += dt;
-
-  renderer.info.reset();
-  frameIndex++;
   const veer = Math.sin(time * 0.021) * 0.35;
   wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * story.breeze);
 
@@ -519,7 +521,7 @@ function frame(now: number): void {
   input.twirlGain = story.current.twirlGain ?? 1;
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
     : story.name === 'birches' ? birches.scarf.updraftTarget : null;
-  input.update(dt, rig.camera, wind);
+  input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind);
   if (story.name === 'birches') {
@@ -528,9 +530,11 @@ function frame(now: number): void {
   }
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
-  story.current.brushDry?.(emberBreath);
+  story.current.brushDry?.(story.name==='sleeping' ? sleeping.trail.brush(rig.camera,input,dt) ?? emberBreath : emberBreath);
   skyMirror.brush(dt, time, input, rig.camera);
   story.update(dt, time);
+  telemetry.chapter(story.name);
+  if (story.current.finished) telemetry.complete();
   if (story.name !== 'boats' && littleBoats.departing) littleBoats.update(dt, time, wind, Infinity);
   creatures.gulls.follow(story.escort);
   atmo.uniforms.uRainbow.value = story.rainbow;
@@ -552,7 +556,7 @@ function frame(now: number): void {
   notice.rain = shown.shower || 0;
   /** The white comes through its grey as the year turns: none on the first island, plain to see by the last. */
   cygnet.look.grown = THREE.MathUtils.smoothstep(atmo.uniforms.uSeason.value, 0.4, 1);
-  notice.cold = THREE.MathUtils.clamp((atmo.uniforms.uSeason.value - 0.5) * 1.6 + atmo.uniforms.uNight.value * 0.3, 0, 1);
+  notice.cold = story.name === 'sleeping' ? sleeping.cold * (1-sleeping.dawn) : THREE.MathUtils.clamp((atmo.uniforms.uSeason.value - 0.5) * 1.6 + atmo.uniforms.uNight.value * 0.3, 0, 1);
   /**
    * The cygnet reads the air where it is standing. Wind brushed under it with the cursor lifts it as a held updraft
    * does, because moving the cursor is the only verb the game has taught. Not where it has just fallen, though:
@@ -573,12 +577,15 @@ function frame(now: number): void {
   cygnet.update(dt, time, child.position, cygnetAir);
   carry.after();
   foley.setOutput(sound.output);
+  foley.frost(story.name==='sleeping' ? sleeping.cold*(1-sleeping.dawn) : 0);
+  if(story.name==='sleeping')foley.hearth(sleeping.hearth.flame.value,1-THREE.MathUtils.smoothstep(rig.camera.position.distanceTo(HEARTH),10,35),screenPan(rig.camera,HEARTH));
   const heardPan = screenPan(rig.camera, cygnet.position);
   for (const h of cygnet.heard) {
     if (h.kind === 'step') {
       const under: Surface = child.riding && cygnet.position.distanceToSquared(boat.position) < 9 ? 'wood' : heightAt(cygnet.position.x, cygnet.position.z) < 0.9 ? 'sand' : 'grass';
       foley.step(under, h.amount, heardPan);
     } else if (h.kind === 'flap') foley.flap(h.amount, heardPan);
+    else if (h.kind === 'scramble') foley.scramble(heardPan);
     else if (h.kind === 'flutter') foley.flutter(6, h.amount, heardPan);
     else if (h.kind === 'shake') foley.shake(heardPan, cygnet.mind.wet);
     else if (h.kind === 'tumble') foley.tumble(h.amount, heardPan);
@@ -596,14 +603,9 @@ function frame(now: number): void {
       swanBeat -= Math.PI * 2;
       foley.wingbeat(swanPan, far);
     }
-    if (time > nextBugle) {
-      foley.bugle(swanPan + (Math.random() - 0.5) * 0.4, far, 0.8 + Math.random() * 0.4);
-      nextBugle = time + 1.6 + Math.random() * 4.5;
-    }
   }
   probe?.update(time);
-  pollReadbacks();
-  wind.step(dt, time);
+  wind.step(dt, time, finalStep);
   life.update(dt);
   tree.life.value += (Math.min(1, life.at(TREE.x, TREE.z) * 1.15) - tree.life.value) * (1 - Math.exp(-dt * 0.8));
   /**
@@ -633,12 +635,16 @@ function frame(now: number): void {
   applySleepingPalette(sleeping.presence);
   shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0, 1.2, dt);
   stormWeather.update(dt, storm, boat.afloat ? boat.yaw : child.yaw,
-    story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade);
+    story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade, story.current.stormStrike);
   /**
    * How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler.
    * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
    * sea keeps the stars on it all the way out.
    */
+  // The final hill sees ordinary sea beyond the cottage. Fade only the distant mirror's special shading;
+  // its walkable flat, local reflections and every earlier chapter retain their original behaviour.
+  water.skyMirrorAppearance = ease(water.skyMirrorAppearance, story.name === 'home' ? 0 : 1, 1.2, dt);
+  if (story.name === 'home' && water.skyMirrorAppearance < 0.001) water.skyMirrorAppearance = 0;
   atmo.uniforms.uOpenSea.value = ease(atmo.uniforms.uOpenSea.value, story.current.openSea ?? 0, 0.7, dt);
   // Keep the meadow's own hills clear while concealing every shore beyond it, including in the sea's mirror.
   // On departure the next room emerges gradually; direct chapter starts get the complete veil on frame one.
@@ -652,17 +658,6 @@ function frame(now: number): void {
     THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),
     THREE.MathUtils.lerp(0.002 + 0.03 * seen, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
   );
-  sinceLightBake++;
-  const shadowCovered = atmo.uniforms.uStormCover.value >= tuning.storm.shadowCovered;
-  // The shared shader fades terrain shadows out under opaque storm cloud. Re-bake on clearing, even if
-  // a window move updated bakedSun while the light was hidden and the sun itself has since stood still.
-  if (!shadowCovered && (stormShadowCovered || (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004))) {
-    sinceLightBake = 0;
-    bakedSun.copy(atmo.uniforms.uSunDir.value);
-    bakes.bakeLight(bakeInputs);
-  }
-  stormShadowCovered = shadowCovered;
-  bakes.tick();
   post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
   surfUniforms.uSeaState.value = story.breeze;
   surfUniforms.uSquall.value = squall;
@@ -688,7 +683,6 @@ function frame(now: number): void {
   const pointerWorld = input.present ? input.world : null;
   lines.update(dt, pointerWorld, input.gust, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   swirl.update(dt, rig.camera, input, story.current.coax ?? (story.name === 'birches' ? scarfInvitation.coax : null));
-  cursor.update(input.gust, input.charge, input.down);
   const creatureEnv = {
     camera: rig.camera,
     input,
@@ -714,35 +708,28 @@ function frame(now: number): void {
   soundState.gliderLift = glider.lift;
   soundState.life = story.worldLife;
   soundState.night = atmo.uniforms.uNight.value;
-  /** How far into the meadow the story is — but only counted at all while there is ground under it. */
-  const inland = mainlandCoastZ(story.focus.x) - story.focus.z;
-  soundState.sea = 1 - overLand * THREE.MathUtils.smoothstep(inland, 20, 260);
-  soundState.meadow = overLand * THREE.MathUtils.smoothstep(inland, 60, 200);
   soundState.music = story.music;
-  soundState.cues = takeCues();
+  soundState.seaScore = story.current.seaScore;
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
   soundState.piano = story.current.pianoMix ?? 0;
+  soundState.pianoActive = story.current.pianoActive ?? false;
+  soundState.caringWind = story.current.caringWind ?? false;
+  soundState.flockChatter = story.current.flockChatter ?? true;
   soundState.scripted = story.current.scripted ?? false;
   soundState.silence = story.current.silence ?? false;
   if (story.current.finished && !credits.classList.contains('rolling')) credits.classList.add('rolling');
   soundState.shower = shower;
-  sound.update(dt, soundState);
 
   rig.camera.near = story.name === 'lines' && doorway.travelling ? 0.035 : 0.5;
   rig.camera.updateProjectionMatrix();
   rig.update(dt, time, story.shot, story.pace);
+  story.current.afterCamera?.(rig.camera);
   rig.camera.updateMatrixWorld();
-  followWindow(...windowAim());
-  const cam = rig.camera.position;
-  u.uCloudDomain.value.set(cam.x - CLOUD_SPAN / 2, cam.z - CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN);
-  clouds.update();
-  terrain.update(rig.camera);
-  grass.update(rig.camera, dt);
-  grass.bake(renderer);
+  if (finalStep) followWindow(...windowAim());
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm);
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
-  wood.update(dt, time, rig.camera, storm);
+  wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
   departureKites.update(dt, time, rig.camera, story);
   pinwheels.update(dt, rig.camera, sound.output);
@@ -768,13 +755,121 @@ function frame(now: number): void {
   sealife.update(dt, time);
   skyMirror.update(dt, time, child.position, cygnet.position, !cygnet.carried);
   water.step(dt);
+}
+
+/** Material sound follows the same physical state the frame is about to draw. */
+function prepareWorldAudio(dt: number): void {
+  const heard = sound.running;
+  worldFoley.update(dt);
+  worldFoley.cloth(washing.soundPoints, wind, dt, heard && story.name === 'lines');
+  materialAt.copy(FAMILY_LINE.a).lerp(FAMILY_LINE.b, 0.5);
+  worldFoley.motion(family, 'cloth', materialAt, family.x + family.y, dt, heard && story.name === 'lines');
+  for (const curtain of CURTAINS) {
+    worldFoley.motion(curtain, 'cloth', curtain.center, curtain.opening, dt, heard && story.name === 'lines');
+  }
+  for (const snag of birches.scarf.snags) {
+    worldFoley.motion(snag, 'wool', snag.center, snag.work + snag.release, dt, heard && story.name === 'birches');
+  }
+  worldFoley.motion(birches.scarf, 'wool', boat.position, birches.scarf.woven, dt, heard && story.name === 'birches');
+  boat.sailPoint(materialAt);
+  worldFoley.flow(boat, 'sail', materialAt, boat.sailFlutter * 0.65, heard && boat.group.visible);
+  worldFoley.flow(boat, 'water', boat.position, Math.min(0.7, boat.speed / 7 + Math.abs(boat.pitch) * 2),
+    heard && boat.group.visible && boat.afloat && !boat.grounded);
+  for (const toy of littleBoats.toys) {
+    const active = heard && littleBoats.active && littleBoats.launched && toy.group.visible;
+    worldFoley.flow(toy, 'water', toy.group.position, Math.min(0.14, toy.speed * 0.035), active);
+    worldFoley.flow(toy, 'sail', toy.group.position, toy.luff * 0.12, active);
+  }
+  worldFoley.motion(drawing, 'paper', drawing.mesh.position, drawing.open, dt, heard && drawing.mesh.visible);
+  worldFoley.motion(cottage, 'door', cottage.doorstep, cottage.doorOpening, dt, heard && story.name === 'home');
+  worldFoley.motion(door, 'door', door.group.position, door.doorOpening, dt, heard && story.name === 'lines');
+}
+
+/** Expensive view preparation and audio scheduling run once per rendered frame. */
+function prepareFrame(dt: number): void {
+  const u = atmo.uniforms;
+  sinceLightBake++;
+  const shadowCovered = atmo.uniforms.uStormCover.value >= tuning.storm.shadowCovered;
+  // The shared shader fades terrain shadows out under opaque storm cloud. Re-bake on clearing, even if
+  // a window move updated bakedSun while the light was hidden and the sun itself has since stood still.
+  if (!shadowCovered && (stormShadowCovered || (sinceLightBake >= 3 && bakedSun.angleTo(atmo.uniforms.uSunDir.value) > 0.0004))) {
+    sinceLightBake = 0;
+    bakedSun.copy(atmo.uniforms.uSunDir.value);
+    bakes.bakeLight(bakeInputs);
+  }
+  stormShadowCovered = shadowCovered;
+  bakes.tick();
+  const cam = rig.camera.position;
+  u.uCloudDomain.value.set(cam.x - CLOUD_SPAN / 2, cam.z - CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN);
+  clouds.update();
+  terrain.update(rig.camera);
+  grass.update(rig.camera, dt);
+  grass.bake(renderer);
+  cursor.update(input.gust, input.charge, input.down);
+  audioEnvironment.update(dt, story.focus.x, story.focus.z, story.name);
+  soundState.sea = audioEnvironment.sea;
+  soundState.meadow = audioEnvironment.meadow;
+  soundState.land = audioEnvironment.land;
+  soundState.cold = story.name === 'sleeping' ? sleeping.cold * (1 - sleeping.dawn) : 0;
+  for (const [emitter, at, active] of [
+    [soundState.cygnet!, cygnet.position, cygnet.visible],
+    [soundState.flock!, flock.head, flock.active],
+  ] as const) {
+    emitter.pan = screenPan(rig.camera, at);
+    emitter.distance = rig.camera.position.distanceTo(at);
+    emitter.active = active;
+  }
+  soundState.cues = takeCues();
+  soundState.winterGust = story.name === 'sleeping' ? sleepingGust(time, sleeping.cold, sleeping.dawn) : 0;
+  sound.update(dt, soundState);
+  prepareWorldAudio(dt);
+}
+
+function frame(now: number): void {
+  if (contextRecovery.lost) return;
+  if (document.hidden) {
+    last = now;
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (params.hold !== null && frameIndex >= params.hold) {
+    post.render(time);
+    endFrame(renderer);
+    requestAnimationFrame(frame);
+    return;
+  }
+  // RAF timestamps mark the frame's start, which can precede the Begin click or visibility reset.
+  // Wait for a later frame: negative time reverses the tide, and zero breaks velocity calculations.
+  if (now <= last) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  const cpuStart = performance.now();
+  const realDt = (now - last) / 1000;
+  telemetry.frame(now - last);
+  quality.frame(now, now - last);
+  last = now;
+  const timing = frameTiming(params.shot ? 1 / 60 : realDt);
+  const dt = timing.dt;
+
+  renderer.info.reset();
+  frameIndex++;
+  pollReadbacks();
+  input.beginFrame();
+  for (let step = 0; step < timing.steps; step++) {
+    simulate(timing.stepDt, (step + 1) / timing.steps, step === timing.steps - 1);
+  }
+  prepareFrame(dt);
   // The boat belongs to the arrival room until it moves to the shore beyond the door.
   const boatInWashing = boat.position.distanceToSquared(door.group.position) < boat.position.distanceToSquared(DOOR_EXIT);
   for (const o of boat.objects) {
     (boatInWashing ? doorwaySource : doorwayDestination).add(o);
     (boatInWashing ? doorwayDestination : doorwaySource).delete(o);
   }
-  doorwayView.render(rig.camera, story.name === 'lines', story.name === 'island' || story.name === 'toLines', () => {
+  // The home landing belongs to the final approach, including in the water's reflection.
+  homeJetty.visible = story.name === 'home' || story.name === 'toHarbour' || story.name === 'toHome';
+  // The shore behind the impossible door can recede during its departure, but never reappear later.
+  doorwayView.render(rig.camera, story.name === 'lines', story.name !== 'toBoats', () => {
     // The sea's reflection belongs to the same room as the main view.
     water.update(rig.camera, (mirrorCamera) => terrain.beginMirror(mirrorCamera), () => terrain.endMirror());
     post.render(time);
@@ -800,7 +895,7 @@ function frame(now: number): void {
       readout([
         `fps ${fps.toFixed(0)}  frame p50 ${percentile(intervals, 0.5).toFixed(0)} p90 ${percentile(intervals, 0.9).toFixed(0)} max ${Math.max(...intervals).toFixed(0)} ms`,
         `cpu (js in frame) p50 ${percentile(cpuTimes, 0.5).toFixed(1)} p90 ${percentile(cpuTimes, 0.9).toFixed(1)} ms${params.lite ? '  LITE' : ''}`,
-        `scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
+        `${quality.mode}  scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
         `grass ${(grass.quality.density * 100).toFixed(0)}%  reach ${(grass.quality.reach * 100).toFixed(0)}%  detail ${quality.level.detail}`,
         `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms`,
         `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
@@ -812,6 +907,11 @@ function frame(now: number): void {
   if (params.shot) {
     window.__stats = {
       frame: frameIndex,
+      time,
+      simulationSteps: timing.steps,
+      simulationStepMs: timing.stepDt * 1000,
+      simulatedMs: dt * 1000,
+      droppedMs: Math.max(0, realDt - dt) * 1000,
       fps: Math.round(fps),
       calls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
@@ -859,10 +959,15 @@ async function boot(): Promise<void> {
   post.render(0);
   await gpuIdle(renderer);
   bootMs = performance.now() - started;
+  if (contextRecovery.lost) return;
+  graphicsReady = true;
+  quality.setMode(controls.qualityMode, performance.now());
   startScreen.ready(withSound => {
+    telemetry.start(story.name, resumedAtLoad, !!story.current.finished);
+    telemetry.quality(quality.level.ratio, quality.level.samples, quality.level.detail);
     if (withSound) {
       soundChosen = true;
-      setSound(true);
+      setSound(controls.soundOn);
     }
     last = performance.now();
     quality.reset(last);

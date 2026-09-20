@@ -255,6 +255,10 @@ function birchesHeight(x: number, z: number): number {
   h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (gfbm(x * 0.028, z * 0.028, 3, 62) * 0.5 + 0.5) * 3.2);
   h += land * land * lump(x, z, BIRCH_RISE) * BIRCH_RISE.h;
   h -= land * lump(x, z, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
+  // A wind-scoured notch: rock face on the inside, a steep fall beyond the outer footing.
+  const across=((x+164.56)*2+(z+1925.88))/Math.sqrt(5);
+  const along=((x+164.56)-2*(z+1925.88))/Math.sqrt(5);
+  h -= 4.5*smoothstep(1.65,3.8,across)*(1-smoothstep(2.2,5.5,Math.abs(along)));
   return h - smoothstep(0, 36, d) * 8;
 }
 
@@ -289,7 +293,7 @@ function woodHeight(x: number, z: number): number {
  * SLEEP_HOLLOW retains the fog domain centre; the old terrain depression has been removed.
  */
 export const SLEEP_HOLLOW = { x: -175, z: -1912, rx: 16, rz: 14, h: 0 };
-export const SLEEP_HILL = { x: -180, z: -1944, rx: 19, rz: 18, h: 13 };
+export const SLEEP_HILL = { x: -180, z: -1940, rx: 22, rz: 18, h: 13 };
 
 function sleepingHeight(x: number, z: number): number {
   const c = ISLES.sleeping;
@@ -298,12 +302,13 @@ function sleepingHeight(x: number, z: number): number {
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = land * 3.0 - 1.5;
   h += land * land * (Math.max(0, 1 - r * r) * 4.5 + (gfbm(x * 0.03, z * 0.03, 3, 82) * 0.5 + 0.5) * 2.6);
-  h += land * land * lump(x, z, SLEEP_HILL) * SLEEP_HILL.h;
-  // An open terrace supports the bed; the narrow shoulder above it has an exposed outward face.
+  // A rounded ridge with a steep south face and a long grassy back. Walking never changes its height.
+  const dx=x-SLEEP_HILL.x;
+  const dz=z-(SLEEP_HILL.z+dx*dx*.012);
+  const depth=dz>0?4.8:SLEEP_HILL.rz;
+  h+=land*land*SLEEP_HILL.h*Math.exp(-.7*((dx/SLEEP_HILL.rx)**2+(dz/depth)**2));
   const terrace = 1 - smoothstep(6, 13, Math.hypot(x + 176.5, z + 1911));
   h += (6.3 + (x + 176.5) * 0.018 - (z + 1911) * 0.025 - h) * terrace;
-  h -= 5.2 * (1 - smoothstep(3.4, 6.5, Math.abs(x + 180)))
-    * smoothstep(-1938.9, -1937.7, z) * (1 - smoothstep(-1937, -1927, z));
   return h - smoothstep(0, 36, d) * 8;
 }
 
@@ -347,7 +352,10 @@ function rawHeight(x: number, z: number): number {
   h = smax(h, drownedHeight(x, z), 6);
   h = smax(h, woodHeight(x, z), 6);
   h = smax(h, sleepingHeight(x, z), 6);
-  return Math.max(smax(h, homeHeight(x, z), 6), mirrorBed(x, z));
+  h = Math.max(smax(h, homeHeight(x, z), 6), mirrorBed(x, z));
+  // A submerged channel between sleeping and home: the coastal approach must clear the boat's keel.
+  const channel = Math.hypot((x + 150) / 24, (z + 1974) / 17);
+  return h - (1 - smoothstep(0.25, 1, channel)) * 1.5;
 }
 
 /**
@@ -386,12 +394,23 @@ function pondHeight(h: number, x: number, z: number): number {
 }
 
 /** The cottage below the last hill sits on a levelled pad. */
-export const COTTAGE = { x: -70, z: -2124, radius: 13 } as const;
+export const COTTAGE = { x: -70, z: -2124, radius: 13, approachRadius: 26 } as const;
+const cottageApproachLength = Math.hypot(LAST_HILL.x - COTTAGE.x, LAST_HILL.z - COTTAGE.z);
+const COTTAGE_APPROACH = {
+  x: (LAST_HILL.x - COTTAGE.x) / cottageApproachLength,
+  z: (LAST_HILL.z - COTTAGE.z) / cottageApproachLength,
+};
 export const COTTAGE_Y = rawHeight(COTTAGE.x, COTTAGE.z);
 
 export function worldHeight(x: number, z: number): number {
   const h = pondHeight(rawHeight(x, z), x, z);
-  const d = Math.hypot(x - COTTAGE.x, z - COTTAGE.z);
+  // Extend the terrace uphill so the foreground turf falls below the view of the lower walls.
+  // The seaward edge and the house's foundation stay at their existing height.
+  const dx = x - COTTAGE.x, dz = z - COTTAGE.z;
+  const along = dx * COTTAGE_APPROACH.x + dz * COTTAGE_APPROACH.z;
+  const across = dx * COTTAGE_APPROACH.z - dz * COTTAGE_APPROACH.x;
+  const reach = COTTAGE.radius + (COTTAGE.approachRadius - COTTAGE.radius) * smoothstep(0, COTTAGE.radius, along);
+  const d = Math.hypot(across, along * COTTAGE.radius / reach);
   if (d > COTTAGE.radius * 2) return h;
   return h + (COTTAGE_Y - h) * smoothstep(COTTAGE.radius * 2, COTTAGE.radius, d);
 }
@@ -531,6 +550,9 @@ float hf_birches(vec2 p) {
   h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.birchesCrest)} + (gfbm(p * 0.028, 3, 62.0) * 0.5 + 0.5) * 3.2);
   h += land * land * hf_lump(p, vec2(${glsl(BIRCH_RISE.x)}, ${glsl(BIRCH_RISE.z)}), vec2(${glsl(BIRCH_RISE.rx)}, ${glsl(BIRCH_RISE.rz)})) * ${glsl(BIRCH_RISE.h)};
   h -= land * hf_lump(p, vec2(${glsl(BIRCH_HOLLOW.x)}, ${glsl(BIRCH_HOLLOW.z)}), vec2(${glsl(BIRCH_HOLLOW.rx)}, ${glsl(BIRCH_HOLLOW.rz)})) * ${glsl(BIRCH_HOLLOW.h)};
+  vec2 notch=p-vec2(-164.56,-1925.88);
+  float across=dot(notch,vec2(2.0,1.0))/sqrt(5.0), along=dot(notch,vec2(1.0,-2.0))/sqrt(5.0);
+  h-=4.5*smoothstep(1.65,3.8,across)*(1.0-smoothstep(2.2,5.5,abs(along)));
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
 float hf_drowned(vec2 p) {
@@ -559,11 +581,12 @@ float hf_sleeping(vec2 p) {
   float rr = length((p - c) / r);
   float h = land * 3.0 - 1.5;
   h += land * land * (max(0.0, 1.0 - rr * rr) * 4.5 + (gfbm(p * 0.03, 3, 82.0) * 0.5 + 0.5) * 2.6);
-  h += land * land * hf_lump(p, vec2(${glsl(SLEEP_HILL.x)}, ${glsl(SLEEP_HILL.z)}), vec2(${glsl(SLEEP_HILL.rx)}, ${glsl(SLEEP_HILL.rz)})) * ${glsl(SLEEP_HILL.h)};
+  float dx=p.x - (${glsl(SLEEP_HILL.x)});
+  float dz=p.y-(${glsl(SLEEP_HILL.z)}+dx*dx*.012);
+  float depth=dz>0.0?4.8:${glsl(SLEEP_HILL.rz)};
+  h+=land*land*${glsl(SLEEP_HILL.h)}*exp(-.7*(sq(dx/${glsl(SLEEP_HILL.rx)})+sq(dz/depth)));
   float terrace = 1.0 - smoothstep(6.0, 13.0, length(p - vec2(-176.5, -1911.0)));
   h = mix(h, 6.3 + (p.x + 176.5) * 0.018 - (p.y + 1911.0) * 0.025, terrace);
-  h -= 5.2 * (1.0 - smoothstep(3.4, 6.5, abs(p.x + 180.0)))
-    * smoothstep(-1938.9, -1937.7, p.y) * (1.0 - smoothstep(-1937.0, -1927.0, p.y));
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
 float hf_home(vec2 p) {
@@ -628,8 +651,15 @@ float worldHeight(vec2 p) {
   h = hf_smax(h, hf_sleeping(p), 6.0);
   h = hf_smax(h, hf_home(p), 6.0);
   h = max(h, mirrorBed(p));
+  float channel = length((p - vec2(-150.0, -1974.0)) / vec2(24.0, 17.0));
+  h -= (1.0 - smoothstep(0.25, 1.0, channel)) * 1.5;
   h = hf_pond(h, p);
-  float d = length(p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)}));
+  vec2 cottageDelta = p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)});
+  vec2 cottageApproach = vec2(${glsl(COTTAGE_APPROACH.x)}, ${glsl(COTTAGE_APPROACH.z)});
+  float along = dot(cottageDelta, cottageApproach);
+  float across = dot(cottageDelta, vec2(cottageApproach.y, -cottageApproach.x));
+  float reach = ${glsl(COTTAGE.radius)} + ${glsl(COTTAGE.approachRadius - COTTAGE.radius)} * smoothstep(0.0, ${glsl(COTTAGE.radius)}, along);
+  float d = length(vec2(across, along * ${glsl(COTTAGE.radius)} / reach));
   return mix(h, ${COTTAGE_Y.toFixed(4)}, 1.0 - smoothstep(${COTTAGE.radius.toFixed(1)}, ${(COTTAGE.radius * 2).toFixed(1)}, d));
 }
 `;

@@ -1,16 +1,16 @@
 import * as THREE from 'three';
+import type { StormStrike } from '../fx/storm';
 import type { Shot } from '../camera';
 import type { Coal } from '../fx/embers';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH } from '../world/wood';
+import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_PLANE, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
-const HIDING = new THREE.Vector3(-8.5, 0, -1791);
-/** Where the paper plane the storm took is lying, further on and face down in the leaves. */
-const SODDEN = new THREE.Vector2(-37, -1848);
+const HIDING = WOOD_REFUGE;
+const SODDEN = WOOD_PLANE;
 
 /** How much light there has to be before the child will trust it enough to move. */
 const ENOUGH = 1.2;
@@ -61,7 +61,7 @@ function pathAlong(x: number, z: number): number {
   return at;
 }
 
-type Beat = 'ashore' | 'first' | 'walk' | 'bolt' | 'lost' | 'found' | 'plane' | 'dry' | 'out' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'first' | 'walk' | 'compose' | 'fright' | 'bolt' | 'lost' | 'found' | 'plane' | 'snag' | 'fall' | 'pickup' | 'dry' | 'out' | 'toBoat' | 'push' | 'aboard';
 
 /**
  * The dark wood: the first winter storm, at night, on the smallest island of the chain. There is no grass to bend
@@ -81,6 +81,7 @@ export class WoodChapter implements Chapter {
   dusk = 2;
   shower = 1;
   storm = 1;
+  stormStrike: StormStrike | null = null;
   hush = 0.6;
   embers = 0;
   /** Carried, because the walk up the wood is slow and continuous and an eased camera trails below the child. */
@@ -99,7 +100,9 @@ export class WoodChapter implements Chapter {
   private readonly tmp = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   private readonly spot = new THREE.Vector2();
-  private readonly ran = new THREE.Vector3();
+  private readonly childSubject = new THREE.Vector3();
+  private readonly birdSubject = new THREE.Vector3();
+  private readonly refugeSubject = new THREE.Vector3();
   /** The way they are going, eased, so the shot swings round with the path instead of snapping to every turn. */
   private readonly aim = new THREE.Vector3(0, 0, -1);
   /** The one unlit coal ahead of them: there is never a second, so there is never a choice to get wrong. */
@@ -154,8 +157,10 @@ export class WoodChapter implements Chapter {
 
   /** The player's wind is the light here, so it is theirs for all of it except the moment of gathering it up. */
   get scripted(): boolean {
-    return this.beat === 'ashore' || this.beat === 'found' || this.beat === 'push' || this.beat === 'aboard';
+    return this.beat === 'ashore' || this.beat === 'compose' || this.beat === 'fright' || this.beat === 'bolt' || this.beat === 'found' || this.beat === 'fall' || this.beat === 'pickup' || this.beat === 'push' || this.beat === 'aboard';
   }
+
+  get caringWind(): boolean { return this.beat === 'lost'; }
 
   get departureKite(): boolean { return ['dry', 'out', 'toBoat', 'push', 'aboard'].includes(this.beat); }
 
@@ -170,6 +175,7 @@ export class WoodChapter implements Chapter {
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, WOOD_PATH.length - 1);
     this.chainAt = data[1]; this.bolted = true;
+    this.stormStrike = null;
     this.beat = point === 'dry' ? 'out' : 'walk';
     this.cast.embers.clearCoals();
     this.chainSide = 1;
@@ -211,10 +217,14 @@ export class WoodChapter implements Chapter {
      * not, and while the bird is out there in the dark, the dark it is calling from. The camera never leaves the
      * child's shoulder for it, so nobody is ever looking at a wood with neither of them in it.
      */
-    const alone = this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
-    if (alone) this.glow.copy(this.beat === 'bolt' ? this.cast.cygnet.position : HIDING);
+    const alone = this.beat === 'compose' || this.beat === 'fright' || this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
+    if (alone) this.glow.copy(this.cast.cygnet.seating.shown.p);
     else if (this.beat === 'dry') this.glow.copy(p.position);
     else this.glow.copy(this.ahead?.live && !this.ahead.lit ? this.ahead.p : this.lit > 0.4 ? this.light : c.position);
+    // Present inside the hollow, but concealed until the camera reveals its entrance.
+    if (!this.bolted && !this.hearth && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < 23) {
+      this.layHearth();
+    }
     this.caught();
 
     switch (this.beat) {
@@ -229,25 +239,40 @@ export class WoodChapter implements Chapter {
         break;
       case 'walk':
         this.follow();
-        if (!this.bolted && this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < 30) this.bolt();
+        if (!this.bolted && this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < tuning.wood.shelterDistance) this.bolt();
+        break;
+      case 'compose':
+        if (this.t >= tuning.wood.frightCompose && this.viewReady) {
+          this.to('fright');
+          this.stormStrike = { heading: Math.atan2(HIDING.x - c.position.x, HIDING.z - c.position.z) };
+        }
+        break;
+      case 'fright':
+        this.fright();
         break;
       case 'bolt':
-        this.bolting();
-        if (this.t > 2.8) {
+        this.bolting(dt);
+        if (this.cowering && this.now - this.refugeAt > tuning.wood.refugePause) {
           this.to('lost');
-          /**
-           * A coal in the litter between them and it, within the throw of its light: the way to find a bird in
-           * the dark is the only thing they have done all night, done once more toward where the calling is.
-           */
-          this.hearth = embers.lay(HIDING.x + (c.position.x - HIDING.x) * 0.26, HIDING.z + (c.position.z - HIDING.z) * 0.18);
         }
         break;
       case 'lost':
         this.search(time);
         break;
       case 'found':
+        this.reunite();
         break;
       case 'plane':
+        this.poseCaughtPlane();
+        this.reachTree();
+        break;
+      case 'snag':
+        this.freePlane(dt);
+        break;
+      case 'fall':
+        this.fallPlane();
+        break;
+      case 'pickup':
         this.reachPlane();
         break;
       case 'dry':
@@ -262,6 +287,7 @@ export class WoodChapter implements Chapter {
         break;
     }
 
+    this.dryBreath = 0;
     this.heading(dt);
     this.weather(dt);
     if (p.held) p.hold(c);
@@ -314,10 +340,10 @@ export class WoodChapter implements Chapter {
    */
   private caught(): void {
     for (const coal of this.cast.embers.takeCaught()) {
-      cue('kindled');
+      cue(coal === this.hearth ? 'comfort' : 'kindled');
       this.flared = this.now;
       if (coal === this.ahead && this.beat === 'plane') continue;
-      if (coal === this.ahead && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
+      if (coal === this.ahead && this.beat !== 'compose' && this.beat !== 'fright' && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
       else if (coal === this.ahead) this.ahead = null;
     }
   }
@@ -326,48 +352,113 @@ export class WoodChapter implements Chapter {
   private aimed = 0;
   private moored = false;
 
-  /**
-   * The storm's worst gust: the fire they were walking by gutters right down, the cygnet is out of the hood before
-   * the child can close a hand on it, and it goes across the frame and into the dark on its own two feet, so what
-   * the player sees is where it went rather than a bird that stopped existing.
-   */
+  /** One close strike causes the escape. The child never chooses to put the bird down. */
   private bolt(): void {
-    const { child: c, cygnet } = this.cast;
-    this.to('bolt');
+    const { child: c } = this.cast;
+    if (this.bolted) return;
+    this.to('compose');
     this.bolted = true;
+    this.hush = 1;
     c.stop();
-    /** The gust fans the fire up and then knocks it down, so the fright is seen and the wood is not blacked out. */
-    for (const coal of this.cast.embers.coals) {
-      if (!coal.lit) continue;
-      coal.flare = Math.max(coal.flare, 1.2);
-      coal.heat *= 0.85;
-    }
-    /** The next coal up the path goes out with it: while the bird is lost there is nothing else to blow on. */
+    if (!this.hearth) this.layHearth();
     if (this.ahead) this.cast.embers.douse(this.ahead);
     this.ahead = null;
-    this.ran.copy(c.position);
-    this.ran.y = Math.max(heightAt(this.ran.x, this.ran.z), 0) + 0.5;
-    cygnet.position.copy(this.ran);
-    cygnet.cower();
-    this.nextCall = this.now + 2.4;
-    cue('distress');
   }
 
-  /** The run itself: low, fast and bobbing, out of the light and off the path, and then down in the leaves. */
-  private bolting(): void {
+  private layHearth(): void {
+    this.hearth = this.cast.embers.lay(WOOD_HEARTH.x, WOOD_HEARTH.z);
+    this.hearth.p.y = heightAt(WOOD_HEARTH.x, WOOD_HEARTH.z) + 0.48;
+    this.hearth.reveal = 0;
+  }
+
+  private viewReady = false;
+  private entranceVisible = false;
+  private reachedAfterBird = false;
+  private landedAt = 0;
+  private enteredShelter = false;
+  private readonly composeEye = new THREE.Vector3();
+  private readonly revealEye = new THREE.Vector3();
+  private readonly cameraPoint = new THREE.Vector3();
+  private readonly offeredHand = new THREE.Vector3();
+
+  /** Wait for the actual rendered angle, including portrait fitting and terrain corrections. */
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    if (this.beat === 'compose' && this.shot.eye) {
+      const child = this.cast.child.position;
+      this.tmp.copy(camera.position).sub(child).setY(0).normalize();
+      this.cameraPoint.copy(this.shot.eye).sub(child).setY(0).normalize();
+      const aligned = this.tmp.dot(this.cameraPoint) > 0.985;
+      this.cameraPoint.copy(child).y += 1.5;
+      this.cameraPoint.project(camera);
+      this.viewReady = aligned && Math.abs(this.cameraPoint.x) < 0.7 && Math.abs(this.cameraPoint.y) < 0.7;
+    }
+    if (this.hearth && ['bolt', 'lost', 'found'].includes(this.beat)) {
+      this.cameraPoint.copy(this.hearth.p).project(camera);
+      const dx = WOOD_HEARTH.x - camera.position.x;
+      this.entranceVisible = dx > 3 && Math.abs(camera.position.z - WOOD_HEARTH.z) / dx < 0.6
+        && Math.abs(this.cameraPoint.x) < 0.82 && Math.abs(this.cameraPoint.y) < 0.82;
+    }
+  }
+
+  private startled = false;
+  private refugeAt = 0;
+  private goingToBird = false;
+  private coaxAt = 0;
+  private coaxing = false;
+  private comingOut = false;
+  private gathering = false;
+
+  private fright(): void {
+    const { child: c, cygnet, carry } = this.cast;
+    if (!this.startled && this.t >= tuning.wood.frightThunderDelay) {
+      this.startled = true;
+      cygnet.mind.startle(1);
+      cygnet.does('flinch');
+      c.lean = -0.12;
+    }
+    if (this.t < tuning.wood.frightJumpAfter || carry.busy) return;
+    // Freeze a nearby landing before detaching. Moving this target toward the refuge midair was the teleport.
+    const from = cygnet.seating.shown.p;
+    this.tmp.set(Math.cos(c.yaw), 0, -Math.sin(c.yaw));
+    if (this.tmp.dot(this.side.copy(HIDING).sub(from)) < 0) this.tmp.negate();
+    this.tmp.multiplyScalar(tuning.wood.frightJumpDistance).add(from);
+    cygnet.startleJump(this.tmp);
+    cygnet.pace = tuning.wood.frightenedPace;
+    c.lean = 0;
+    cygnet.call(false);
+    cue('distress');
+    this.to('bolt');
+  }
+
+  /** Its ordinary gait carries it into nearby cover, and its feet decide when the run is over. */
+  private bolting(dt: number): void {
     const { child: c, cygnet } = this.cast;
-    const k = Math.min(1, this.t / 1.3);
-    const ease = k * k * (3 - 2 * k);
-    cygnet.position.set(
-      this.ran.x + (HIDING.x - this.ran.x) * ease,
-      0,
-      this.ran.z + (HIDING.z - this.ran.z) * ease,
-    );
-    cygnet.position.y = Math.max(heightAt(cygnet.position.x, cygnet.position.z), 0) + (k < 1 ? Math.abs(Math.sin(this.t * 13)) * 0.12 : 0);
-    cygnet.yaw = k < 1 ? Math.atan2(HIDING.x - this.ran.x, HIDING.z - this.ran.z) : Math.atan2(c.position.x - HIDING.x, c.position.z - HIDING.z);
-    if (k >= 1 && !this.cowering) {
+    c.faceToward(cygnet.seating.shown.p.x, cygnet.seating.shown.p.z, 1 - Math.exp(-dt * 3));
+    if (!this.reachedAfterBird && this.t > 0.3) { this.reachedAfterBird = true; c.reach(); }
+    if (cygnet.stay && !cygnet.seating.move) {
+      if (!this.landedAt) this.landedAt = this.now;
+      if (this.now - this.landedAt > tuning.wood.frightLandingPause) {
+        cygnet.stay = false;
+        cygnet.errand = WOOD_OUTSIDE;
+      }
+    }
+    if (this.hearth && this.entranceVisible && this.t > tuning.wood.frightJumpDuration + 1.5) {
+      this.hearth.reveal = Math.min(1, this.hearth.reveal + dt * 1.4);
+    }
+    if (!this.enteredShelter && !cygnet.stay && Math.hypot(cygnet.position.x - WOOD_OUTSIDE.x, cygnet.position.z - WOOD_OUTSIDE.z) < 0.65) {
+      this.enteredShelter = true;
+      cygnet.errand = HIDING;
+    }
+    if (this.enteredShelter && Math.hypot(cygnet.position.x - HIDING.x, cygnet.position.z - HIDING.z) < 0.5 && !this.cowering) {
       this.cowering = true;
+      this.refugeAt = this.now;
+      cygnet.errand = null;
+      cygnet.pace = 1;
       cygnet.cower();
+      cygnet.watch(c.position);
+      cygnet.call(false);
+      cue('distress');
+      this.nextCall = this.now + 4;
     }
     c.lookAt = cygnet.position;
   }
@@ -382,6 +473,7 @@ export class WoodChapter implements Chapter {
   private search(time: number): void {
     const { child: c, cygnet } = this.cast;
     c.lookAt = cygnet.position;
+    if (this.hearth && this.entranceVisible) this.hearth.reveal = 1;
     if (time > this.nextCall) {
       cue('distress');
       cygnet.call(false);
@@ -389,23 +481,59 @@ export class WoodChapter implements Chapter {
     }
     if (c.busy || c.moving) return;
     /** Found only when the player lights the waiting coal beside the hiding place. */
-    if (this.hearth?.lit) {
+    if (this.hearth?.lit && this.hearth.reveal > 0.95) {
       this.to('found');
-      completeObjective();
-      c.walkTo(HIDING.x, HIDING.z + 1.2, false, () => {
-        /** Carried in the arms from here, not on their back. After the dark it is not put down again for a while. */
-        this.cast.carry.gatherUp(() => {
-          cygnet.bind(0.35);
-          this.hearth = null;
-          this.to('walk');
-          /** The walk starts again from where they are now, off the path, so the next coal is back on it. */
-          if (!this.ahead) this.layNext();
-        });
-      }, 1.1);
+      c.lean = -0.08;
     }
   }
 
-  /** Face down in the leaves where the storm dropped it, a long way from where it was taken. */
+  /** The light shows who needs them. A breath of hesitation, then the child leaves its safe patch to help. */
+  private reunite(): void {
+    const { child: c, cygnet } = this.cast;
+    c.lookAt = cygnet.position;
+    if (this.gathering) return;
+    if (!this.goingToBird) {
+      c.lean = -0.08 * Math.max(0, 1 - this.t / tuning.wood.rescueResolve);
+      if (this.t < tuning.wood.rescueResolve) return;
+      this.goingToBird = true;
+      // Stop outside the rock. The child never has to put its head or hands through the lip.
+      c.walkTo(WOOD_COAX.x, WOOD_COAX.z, false, () => {
+        c.stop(); c.faceToward(HIDING.x, HIDING.z, 1); c.kneeling = 1;
+        this.coaxAt = this.now; this.coaxing = true;
+      }, 0.15);
+    }
+    if (!this.coaxing) return;
+    // One low, still mitten offers a place to come to, rather than reaching into the hollow.
+    c.reachFor(0, this.offeredHand.set(WOOD_COAX.x + 0.75, c.position.y + 0.55, WOOD_COAX.z));
+    cygnet.watch(this.offeredHand);
+    if (!this.comingOut && this.now - this.coaxAt > tuning.wood.coaxWait) {
+      this.comingOut = true;
+      cygnet.follow(); cygnet.stay = false; cygnet.pace = 0.32; cygnet.errand = WOOD_OUTSIDE;
+    }
+    if (!this.comingOut || cygnet.position.distanceToSquared(this.tmp.set(WOOD_OUTSIDE.x, cygnet.position.y, WOOD_OUTSIDE.z)) > 0.28) return;
+    this.gathering = true;
+    cygnet.errand = null; cygnet.stay = true; cygnet.pace = 1;
+    c.reachFor(0, null);
+    this.cast.carry.gatherUp(() => {
+      cygnet.bind(0.35); cygnet.stay = false;
+      this.hearth = null;
+      this.to('walk'); this.chainAt = pathAlong(c.position.x, c.position.z);
+      if (!this.ahead) this.layNext();
+    });
+  }
+
+  private planeWork = 0;
+  private planeGoal = 0;
+  private planeTug = 0;
+  private readonly snagAt = new THREE.Vector3();
+  private readonly planeLanding = new THREE.Vector3();
+  private readonly fallFrom = new THREE.Vector3();
+  private readonly planeRotation = new THREE.Euler();
+  private readonly fallRotation = new THREE.Euler();
+  private readonly snagSway = new THREE.Vector3();
+  private readonly snagWind = { x: 0, z: 0, energy: 0, lift: 0 };
+
+  /** The last fire reveals the paper caught above their reach in a bare fork. */
   private toPlane(): void {
     const { plane: p } = this.cast;
     this.to('plane');
@@ -413,7 +541,10 @@ export class WoodChapter implements Chapter {
     if (this.ahead && !this.ahead.lit) this.cast.embers.douse(this.ahead);
     p.visible = true;
     p.soggy.value = 1;
-    p.launch(this.tmp.set(SODDEN.x, Math.max(heightAt(SODDEN.x, SODDEN.y), 0) + 0.1, SODDEN.y), this.side.set(0, 0, 0));
+    this.snagAt.set(SODDEN.x, heightAt(SODDEN.x, SODDEN.y) + tuning.wood.planeSnagHeight, SODDEN.y);
+    this.planeLanding.set(SODDEN.x + 1.5, heightAt(SODDEN.x + 1.5, SODDEN.y + 2) + 0.1, SODDEN.y + 2);
+    this.planeRotation.set(-1.0, 0.7, 0.42);
+    this.poseCaughtPlane();
     p.home.set(SODDEN.x, 0, SODDEN.y);
     this.leg = WOOD_PATH.length - 2;
     /** A coal in the leaves beside it, so the thing they have been walking toward all night shows them the plane. */
@@ -421,24 +552,83 @@ export class WoodChapter implements Chapter {
     this.chainAt = pathAlong(SODDEN.x, SODDEN.y);
   }
 
-  /** Close enough to see what it is: they crouch in the leaves and lift it out of them. */
-  private reachPlane(): void {
+  private reachTree(): void {
     const { child: c, plane: p } = this.cast;
-    if (c.busy || !p.landed) return;
+    if (c.busy) return;
     if (!this.ahead?.live) this.ahead = this.cast.embers.lay(SODDEN.x + 1.6, SODDEN.y + 2.2);
     if (!this.ahead.lit) {
       if (c.moving) c.stop();
       c.lookAt = this.ahead.p;
       return;
     }
-    const gap = Math.hypot(c.position.x - SODDEN.x, c.position.z - SODDEN.y);
-    if (gap > 2.4) {
-      if (!c.moving) c.walkTo(SODDEN.x, SODDEN.y, false, undefined, 1.6);
+    const gap = Math.hypot(c.position.x - SODDEN.x, c.position.z - SODDEN.y - 4.5);
+    if (gap > 0.8) {
+      if (!c.moving) c.walkTo(SODDEN.x, SODDEN.y + 4.5, false, undefined, 0.5);
       c.lookAt = p.position;
       return;
     }
     c.stop();
     c.faceToward(SODDEN.x, SODDEN.y, 1);
+    c.lookAt = p.position;
+    this.to('snag');
+  }
+
+  /** Like the scarf, strokes across the visible snag accumulate; idle storm wind never completes it. */
+  private freePlane(dt: number): void {
+    const { plane: p, child: c } = this.cast;
+    const k = tuning.wood;
+    // Keep the light the player already earned while they work; taking time never hides the snag.
+    if (this.ahead?.lit) this.ahead.heat = Math.max(k.planeEmberHold, this.ahead.heat);
+    this.planeGoal = Math.min(1, this.planeGoal + Math.min(0.16, dt * this.dryBreath / k.planeStrokeDistance));
+    this.planeWork += (this.planeGoal - this.planeWork) * (1 - Math.exp(-dt * k.planeTugResponse));
+    this.planeTug += (Math.min(1, this.dryBreath * 2) - this.planeTug) * (1 - Math.exp(-dt * k.planeTugResponse));
+    this.poseCaughtPlane();
+    c.lookAt = p.position;
+    if (this.planeGoal === 1 && this.planeWork > 0.995) {
+      this.fallFrom.copy(p.position); this.fallRotation.copy(this.planeRotation);
+      this.to('fall');
+    }
+  }
+
+  /** The fork carries the paper with it; a small, slower rocking invites the stronger player flutter. */
+  private poseCaughtPlane(): void {
+    const { wind, plane } = this.cast;
+    wind.sample(SODDEN.x, SODDEN.y, this.snagWind);
+    woodPlaneSway(this.now, wind.breeze, this.snagWind, this.snagSway);
+    const k = tuning.wood;
+    const along = (this.snagSway.x * wind.breeze.x + this.snagSway.z * wind.breeze.y)
+      / Math.max(0.001, wind.breeze.length() * k.planeTreeSway);
+    const rock = along * k.planeIdleRock * (1 - this.planeTug * 0.7);
+    const flutter = Math.sin(this.now * 19) * this.planeTug;
+    this.tmp.copy(this.snagAt).add(this.snagSway).add(this.side.set(0.75, 0.18, 0.28).multiplyScalar(this.planeWork));
+    this.tmp.y += flutter * 0.065;
+    this.planeRotation.set(-1.0 + this.planeWork * 0.45 + rock * 0.65 + flutter * 0.08,
+      0.7 + this.planeWork * 0.45 + rock * 0.4, 0.42 - this.planeWork * 0.3 + rock + flutter * 0.16);
+    plane.pin(this.tmp, this.planeRotation);
+  }
+
+  /** Heavy, wet paper flutters down to a safe pickup spot instead of being swept away again. */
+  private fallPlane(): void {
+    const k = Math.min(1, this.t / tuning.wood.planeFallSeconds);
+    this.tmp.lerpVectors(this.fallFrom, this.planeLanding, k);
+    this.tmp.y = THREE.MathUtils.lerp(this.fallFrom.y, this.planeLanding.y, k * k);
+    this.tmp.x += Math.sin(k * Math.PI * 2) * Math.sin(k * Math.PI) * 0.25;
+    this.planeRotation.set(THREE.MathUtils.lerp(this.fallRotation.x, -0.05, k) + Math.sin(k * Math.PI * 2) * 0.25,
+      THREE.MathUtils.lerp(this.fallRotation.y, 0, k), THREE.MathUtils.lerp(this.fallRotation.z, 0.12, k) + Math.sin(k * Math.PI * 3) * (1 - k) * 0.22);
+    this.cast.plane.pin(this.tmp, this.planeRotation);
+    this.cast.child.lookAt = this.cast.plane.position;
+    if (k >= 1) { this.cast.plane.layDown(this.planeLanding); this.to('pickup'); }
+  }
+
+  private reachPlane(): void {
+    const { child: c, plane: p } = this.cast;
+    c.lookAt = p.position;
+    if (c.busy || !p.landed) return;
+    if (Math.hypot(c.position.x - p.position.x, c.position.z - p.position.z) > 2.4) {
+      if (!c.moving) c.walkTo(p.position.x, p.position.z, false, undefined, 1.6);
+      return;
+    }
+    c.stop(); c.faceToward(p.position.x, p.position.z, 1);
     c.pickUp(() => {
       p.hold(c);
       this.to('dry');
@@ -467,8 +657,8 @@ export class WoodChapter implements Chapter {
 
   get windInvitation(): THREE.Vector3 | null {
     if (this.scripted || this.beat === 'bolt' || this.beat === 'toBoat') return null;
-    if (this.beat === 'dry') return this.cast.plane.position;
-    const coal = this.beat === 'lost' ? this.hearth : this.ahead;
+    if (this.beat === 'dry' || this.beat === 'snag') return this.cast.plane.position;
+    const coal = this.beat === 'lost' ? (this.hearth && this.hearth.reveal > 0.95 ? this.hearth : null) : this.ahead;
     return coal?.live && !coal.lit ? coal.p : null;
   }
 
@@ -502,7 +692,7 @@ export class WoodChapter implements Chapter {
     this.shower = Math.max(0, this.storm - 0.2) * 1.25;
     /** Never thin: from the crest of the wood you can see the home island's hill, and home is the last surprise. */
     this.haze = 0.9 + this.storm * 0.06;
-    const alone = this.beat === 'bolt' || this.beat === 'lost';
+    const alone = this.beat === 'compose' || this.beat === 'fright' || this.beat === 'bolt' || this.beat === 'lost';
     const quiet = alone ? 1 : this.beat === 'found' ? 0.75 : 0.55;
     this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.7));
   }
@@ -512,7 +702,18 @@ export class WoodChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
+    s.subjects = undefined;
     const ground = Math.max(heightAt(c.x, c.z), 0);
+    if (['plane', 'snag', 'fall', 'pickup', 'dry'].includes(this.beat)) {
+      this.childSubject.copy(c).y += 1.5;
+      this.birdSubject.copy(this.cast.plane.position);
+      s.target.copy(this.childSubject).lerp(this.birdSubject, 0.55);
+      s.eye = this.side.set(SODDEN.x + 9, ground + 5.7, Math.max(c.z + 10, SODDEN.y + 14));
+      s.subjects = { primary: this.childSubject, secondary: this.birdSubject,
+        tertiary: this.beat === 'plane' ? this.ahead?.p : undefined, margin: 0.8, extra: 16 };
+      this.pace = 1.1; this.focus.copy(s.target);
+      return;
+    }
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
       s.target.set((c.x + b.x) / 2, b.y + 2, (c.z + b.z) / 2 - 2);
@@ -525,7 +726,28 @@ export class WoodChapter implements Chapter {
     /** Close in behind them, leaning a little toward the light but never far enough to leave them behind. */
     /** And when one takes, the camera turns further into the light for a moment, because they both looked. */
     const rush = Math.max(0, 1 - (this.now - this.flared) / 1.4);
-    const near = this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
+    const near = this.beat === 'compose' || this.beat === 'fright' || this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
+    if (near) {
+      this.childSubject.copy(c).y += 1.5;
+      this.birdSubject.copy(this.cast.cygnet.seating.shown.p).y += 0.4;
+      const reveal = this.beat === 'compose' || this.beat === 'fright' ? 0
+        : this.beat === 'bolt' ? THREE.MathUtils.smootherstep(this.t, tuning.wood.frightJumpDuration + 0.3, tuning.wood.frightJumpDuration + 3.2) : 1;
+      this.refugeSubject.set(HIDING.x, heightAt(HIDING.x, HIDING.z) + 0.9, HIDING.z);
+      s.target.copy(this.childSubject).lerp(this.refugeSubject, reveal * 0.62);
+      this.composeEye.set(c.x - 5.5, ground + 3.8, c.z + 8.5);
+      this.revealEye.set(HIDING.x - 17, ground + 3.4, HIDING.z + 5.5);
+      // See the offered hand and the bird's way out beside the child, instead of through their back.
+      if (this.beat === 'found') {
+        const reunion = THREE.MathUtils.smootherstep(this.t, 0, tuning.wood.rescueResolve + 1);
+        this.revealEye.lerp(this.cameraPoint.set(HIDING.x - 12, ground + 3.4, HIDING.z - 7), reunion);
+      }
+      s.eye = this.side.copy(this.composeEye).lerp(this.revealEye, reveal);
+      s.subjects = { primary: this.childSubject, secondary: this.birdSubject,
+        tertiary: reveal > 0.65 ? this.hearth?.p : undefined, margin: 0.8, extra: 14 };
+      this.pace = this.beat === 'compose' ? 2.2 : 2.8;
+      this.focus.copy(s.target);
+      return;
+    }
     const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (near ? 0.3 : 0.42 + rush * 0.3);
     const dx = (this.glow.x - c.x) * lean;
     const dz = (this.glow.z - c.z) * lean;

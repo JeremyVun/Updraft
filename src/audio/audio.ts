@@ -1,6 +1,8 @@
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
+import { BOATS_CHORDS, LittleBoatsScore } from './little-boats-score';
+import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -8,9 +10,16 @@ import { tuning } from '../tuning';
  * answer the story's moments.
  */
 
+export interface AudioEmitter {
+  pan: number;
+  distance: number;
+  active: boolean;
+}
+
 export interface SoundState {
   /** Player gust speed, 0..~26. */
   gust: number;
+  winterGust?: number;
   /** Pointer position across the screen, -1..1. */
   pan: number;
   /** Gesture direction on screen: +1 moving up/right, -1 down/left. */
@@ -30,13 +39,26 @@ export interface SoundState {
   sea: number;
   /** 1 out over the green hills, where skylarks sing. */
   meadow: number;
+  /** Ground beneath the story, independent of the pointer's overLand test. */
+  land: number;
+  /** Local frost; the final home's requested night ambience remains available. */
+  cold: number;
   /** A passing shower, 0 dry to 1. */
   shower: number;
   /** How far the music pulls back, 0 normal to 1 almost gone, so a moment can be heard on its own. */
   hush: number;
   piano?: number;
+  pianoActive?: boolean;
+  /** Only the wood's rescue ember changes the ordinary wind chime. */
+  caringWind?: boolean;
+  cygnet?: AudioEmitter;
+  flock?: AudioEmitter;
+  /** Authored conversations own their pauses; incidental calls must stay out. */
+  flockChatter?: boolean;
   /** Which room's music is playing. */
   music: Mood;
+  /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
+  seaScore?: SeaScorePhase;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
   scripted: boolean;
   /** True once the music has been cut for good: the pad and the chimes go, and the world is all that is left. */
@@ -45,12 +67,12 @@ export interface SoundState {
 }
 
 /**
- * Each room has its own music. Same instrument, same key family, different weather: the chords it turns over,
+ * Each room has its own music in the same key family: the chords it turns over,
  * how long it holds each one, how bright the pad is allowed to be, how loud it sits, and the notes the player's
- * own gestures ring out of it. The voices glide between them over a couple of seconds, so a room change is a
- * modulation rather than a new track starting.
+ * own gestures ring out of it. The shared pad glides between rooms. Little Boats and the long sea crossing
+ * instead play their approved compositions, with stable notes and fading transitions.
  */
-export type Mood = 'still' | 'lines' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sea' | 'mirror' | 'home';
+export type Mood = 'still' | 'lines' | 'boats' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sea' | 'mirror' | 'home';
 
 interface MoodMusic {
   chords: number[][];
@@ -69,6 +91,8 @@ const MOODS: Record<Mood, MoodMusic> = {
   still: { chords: [[50, 57, 62, 69], [45, 52, 57, 64]], seconds: 16, cutoff: 680, level: 0.8, scale: [62, 64, 69, 71, 74, 76, 81, 83, 86] },
   /** The first delight in the journey, and the brightest thing in it. */
   lines: { chords: [[50, 57, 64, 71], [43, 50, 59, 66], [45, 52, 61, 66], [47, 54, 57, 62]], seconds: 9, cutoff: 1500, level: 1, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
+  /** Its approved plucked score replaces the shared pad; gestures retain the same bright voice. */
+  boats: { chords: BOATS_CHORDS, seconds: 4.5, cutoff: 1500, level: 0, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
   /** The last warm afternoon of the year: the fullest the music gets before the dark. */
   meadow: { chords: [[50, 57, 64, 66], [47, 54, 57, 62], [43, 50, 59, 66], [45, 52, 59, 64]], seconds: 8.5, cutoff: 1600, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88] },
   /** Slower than the meadow and a step lower each time round: warm, falling, and it never comes back up. */
@@ -85,6 +109,7 @@ const MOODS: Record<Mood, MoodMusic> = {
   home: { chords: [[50, 57, 62, 69], [43, 50, 59, 66], [45, 52, 61, 64], [50, 57, 64, 71]], seconds: 10, cutoff: 1450, level: 1.15, scale: [62, 66, 69, 71, 74, 78, 81, 83, 86, 90] },
 };
 
+const SEA_SCORE_MOOD: MoodMusic = { ...MOODS.sea, chords: SEA_CHORDS, level: 0 };
 const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
@@ -96,6 +121,7 @@ const PHRASES: Record<Cue, [number, number][]> = {
   breeze: [[74, 1], [78, 1], [81, 2]],
   /** A coal takes in the dark wood: three notes up out of the drone, the only lift the room's music is allowed. */
   kindled: [[62, 1], [69, 1], [74, 2]],
+  comfort: [[62, 1], [69, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
   /** The opening V is still flying: an open fourth lifts and hangs, without anticipating the fall. */
@@ -109,6 +135,8 @@ const PHRASES: Record<Cue, [number, number][]> = {
   becalmed: [[57, 4], [54, 5], [52, 8]],
   /** And the sail fills: the same notes, the other way up, and the music comes back with them. */
   filled: [[54, 1], [57, 1], [62, 1], [66, 2], [69, 4]],
+  /** The feather offers a direction, not the answer the later flight earns. */
+  feather: [[62, 1], [69, 3]],
   /** It has the air under it at last. The one phrase in the game that is allowed to sound like an answer. */
   lifted: [[62, 1], [66, 1], [69, 1], [74, 2], [78, 1], [81, 1], [86, 4], [83, 2], [86, 6]],
   wave: [[57, 1], [62, 1], [66, 1], [69, 1], [74, 2], [78, 2], [81, 4]],
@@ -118,7 +146,7 @@ const PHRASES: Record<Cue, [number, number][]> = {
   /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
   finale: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'overhead' | 'fallen' | 'landed'>, number> = { kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'overhead' | 'fallen' | 'landed'>, number> = { feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -179,12 +207,13 @@ export class Soundscape {
   private chord = -1;
   private mood: Mood | null = null;
   private noteIndex = 4;
-  private lastNote = 0;
-  private lastArp = 0;
+  private lastNote = -Infinity;
+  private lastArp = -Infinity;
   private wasGusting = false;
   private prevGliderLift = 0;
   private lastGlider = 0;
   private activity = 0;
+  private recognitionUntil = 0;
   private muted = false;
   private hidden = document.hidden;
   private padFilter!: BiquadFilterNode;
@@ -193,6 +222,11 @@ export class Soundscape {
   private nextCricket = 0;
   private nextOwl = 20;
   private nextLark = 8;
+  private nextFlock = 0;
+  private flockQuietUntil = 0;
+  private boatsScore: LittleBoatsScore | null = null;
+  private boatsCueUntil = 0;
+  private seaScore: SeaScore | null = null;
 
   get running(): boolean {
     return this.ctx?.state === 'running' && !this.muted && !this.hidden;
@@ -306,8 +340,8 @@ export class Soundscape {
     this.syncPlayback();
   }
 
-  /** A distant, rolling report: low thunder under a short, softened crack, with no musical cue. */
-  thunder(strength: number, pan: number): void {
+  /** Rolling thunder, with a sharper, immediate crack for the one close strike in the wood. */
+  thunder(strength: number, pan: number, close = false): void {
     if (!this.running || !this.ctx) return;
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -323,13 +357,13 @@ export class Soundscape {
       source.playbackRate.value = layer === 0 ? 0.65 : 1;
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(layer === 0 ? 220 : 950, now);
-      filter.frequency.exponentialRampToValueAtTime(layer === 0 ? 65 : 160, now + 3.8);
+      filter.frequency.setValueAtTime(layer === 0 ? 220 : close ? 4200 : 950, now);
+      filter.frequency.exponentialRampToValueAtTime(layer === 0 ? 65 : 160, now + (close && layer === 1 ? 0.8 : 3.8));
       filter.Q.value = 0.6;
       const gain = ctx.createGain();
-      const peak = strength * tuning.storm.thunderGain * (layer === 0 ? 1 : tuning.storm.thunderPresence);
+      const peak = strength * tuning.storm.thunderGain * (layer === 0 ? 1 : close ? 0.85 : tuning.storm.thunderPresence);
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(peak, now + (layer === 0 ? 0.28 : 0.06));
+      gain.gain.linearRampToValueAtTime(peak, now + (layer === 0 ? 0.28 : close ? 0.012 : 0.06));
       gain.gain.exponentialRampToValueAtTime(Math.max(0.001, peak * 0.4), now + 1.1);
       gain.gain.exponentialRampToValueAtTime(0.001, now + (layer === 0 ? 4.8 : 1.9));
       gain.gain.linearRampToValueAtTime(0, now + 5.2);
@@ -372,7 +406,7 @@ export class Soundscape {
     return [gain, filter];
   }
 
-  private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2): void {
+  private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2, soft = false): void {
     const ctx = this.ctx!;
     const out = ctx.createGain();
     const panner = ctx.createStereoPanner();
@@ -380,7 +414,9 @@ export class Soundscape {
     out.connect(panner);
     panner.connect(this.musicBus);
     const f = hz(midi);
-    const partials: [number, number][] = [[1, 1], [2.0, 0.28], [3.01, 0.1], [4.2, 0.04]];
+    const partials: [number, number][] = soft
+      ? [[1, 1], [2, 0.12], [3, 0.025]]
+      : [[1, 1], [2.0, 0.28], [3.01, 0.1], [4.2, 0.04]];
     for (const [ratio, amp] of partials) {
       const o = ctx.createOscillator();
       o.type = 'sine';
@@ -388,7 +424,7 @@ export class Soundscape {
       const g = ctx.createGain();
       const peak = velocity * amp * 0.16;
       g.gain.setValueAtTime(0, when);
-      g.gain.linearRampToValueAtTime(peak, when + 0.006);
+      g.gain.linearRampToValueAtTime(peak, when + (soft ? tuning.audio.careChimeAttack : 0.006));
       g.gain.exponentialRampToValueAtTime(0.0001, when + decay / ratio);
       o.connect(g).connect(out);
       o.start(when);
@@ -478,12 +514,13 @@ export class Soundscape {
    * matter: a small bird calling for a family that is not coming back. Thin, high, and pitched to be heard over
    * nothing at all.
    */
-  private peep(loudness = 1, longing = false): void {
+  private peep(loudness = 1, longing = false, source?: AudioEmitter): void {
     const ctx = this.ctx!;
     const t0 = ctx.currentTime + 0.02;
     const out = ctx.createGain();
     const panner = ctx.createStereoPanner();
-    panner.pan.value = (Math.random() - 0.5) * 0.3;
+    panner.pan.value = Math.max(-0.85, Math.min(0.85, source?.pan ?? 0));
+    out.gain.value = Math.min(1, tuning.audio.cygnetFullDistance / Math.max(tuning.audio.cygnetFullDistance, source?.distance ?? 0));
     out.connect(panner);
     panner.connect(this.master);
     const send = ctx.createGain();
@@ -527,54 +564,67 @@ export class Soundscape {
   }
 
   /**
-   * The grown cranes, a long way off: a rolling bugle with a rattle in it, two or three of them overlapping and
-   * nearly all of it reverb. It is the only voice in the game lower than the colt's, so when the colt answers it
-   * the answer sounds exactly as small as it is.
+   * A grown swan calling on the wing: two bugled notes, the second higher, nasal and carrying. `far` is 0 overhead
+   * to 1 a long way off, which takes the top off it and leaves most of it in the air.
    */
-  private bugle(): void {
-    const ctx = this.ctx!;
-    const birds = 2 + Math.floor(Math.random() * 2);
-    for (let b = 0; b < birds; b++) {
-      const panner = ctx.createStereoPanner();
-      panner.pan.value = (Math.random() - 0.5) * 0.7;
-      panner.connect(this.master);
-      const send = ctx.createGain();
-      send.gain.value = 1.5;
-      panner.connect(send).connect(this.reverb);
-      let at = ctx.currentTime + 0.05 + b * (0.2 + Math.random() * 0.45);
-      for (let i = 0; i < 2; i++) {
-        const len = 0.5 + Math.random() * 0.22;
-        const f = 460 + Math.random() * 110 - i * 30;
-        const osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(f * 0.8, at);
-        osc.frequency.exponentialRampToValueAtTime(f * 1.06, at + len * 0.22);
-        osc.frequency.exponentialRampToValueAtTime(f * 0.84, at + len);
-        /** The rattle: a crane's call is a trill rolled in the throat, never a clean tone. */
-        const roll = ctx.createOscillator();
-        roll.frequency.value = 31 + Math.random() * 11;
-        const depth = ctx.createGain();
-        depth.gain.value = 0.5;
-        const trill = ctx.createGain();
-        trill.gain.value = 0.5;
-        roll.connect(depth).connect(trill.gain);
-        const throat = ctx.createBiquadFilter();
-        throat.type = 'bandpass';
-        throat.frequency.value = f * 2.4;
-        throat.Q.value = 1.3;
-        const env = ctx.createGain();
-        const peak = 0.055;
-        env.gain.setValueAtTime(0, at);
-        env.gain.linearRampToValueAtTime(peak, at + 0.07);
-        env.gain.setValueAtTime(peak, at + len * 0.62);
-        env.gain.exponentialRampToValueAtTime(0.0001, at + len);
-        osc.connect(throat).connect(trill).connect(env).connect(panner);
-        osc.start(at);
-        osc.stop(at + len + 0.05);
-        roll.start(at);
-        roll.stop(at + len + 0.05);
-        at += len + 0.12 + Math.random() * 0.1;
-      }
+  private bugle(source?: AudioEmitter, loudness = 1): void {
+    const out = this.output;
+    if (!out || !source?.active) return;
+    if (source.distance >= tuning.audio.flockDistance) return;
+    const pan = source.pan;
+    const far = Math.min(1, source.distance / tuning.audio.flockDistance);
+    const reach = Math.min(1, (1 - far) * 2);
+    const level = reach * reach * (3 - 2 * reach);
+    const { ctx } = out;
+    const now = ctx.currentTime + 0.02;
+    const base = 470 + Math.random() * 90;
+    const voice = ctx.createGain();
+    const tone = ctx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 4200 - 3000 * far;
+    const p = ctx.createStereoPanner();
+    p.pan.value = Math.max(-0.85, Math.min(0.85, pan));
+    const dry = ctx.createGain();
+    dry.gain.value = 1 - 0.6 * far;
+    const send = ctx.createGain();
+    send.gain.value = 0.5 + 0.5 * far;
+    voice.connect(tone).connect(p);
+    p.connect(dry).connect(out.bus);
+    p.connect(send).connect(out.reverb);
+    let at = now;
+    for (const [ratio, len] of [
+      [1, 0.2],
+      [1.26, 0.34],
+    ]) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      const f = base * ratio;
+      osc.frequency.setValueAtTime(f * 0.9, at);
+      osc.frequency.exponentialRampToValueAtTime(f, at + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.95, at + len);
+      /** Two fixed resonances over a moving note are what make it a throat and not a horn. */
+      const mouth = ctx.createBiquadFilter();
+      mouth.type = 'bandpass';
+      mouth.frequency.value = 950;
+      mouth.Q.value = 3;
+      const nose = ctx.createBiquadFilter();
+      nose.type = 'bandpass';
+      nose.frequency.value = 1750;
+      nose.Q.value = 4;
+      const env = ctx.createGain();
+      const peak = 0.05 * loudness * (1 - 0.55 * far) * level;
+      env.gain.setValueAtTime(0, at);
+      env.gain.linearRampToValueAtTime(peak, at + 0.035);
+      env.gain.setValueAtTime(peak * 0.8, at + len * 0.6);
+      env.gain.exponentialRampToValueAtTime(0.0001, at + len);
+      osc.connect(mouth).connect(env);
+      const thin = ctx.createGain();
+      thin.gain.value = 0.5;
+      osc.connect(nose).connect(thin).connect(env);
+      env.connect(voice);
+      osc.start(at);
+      osc.stop(at + len + 0.05);
+      at += len + 0.05;
     }
   }
 
@@ -607,6 +657,8 @@ export class Soundscape {
   }
 
   private phrase(name: Cue): void {
+    // A quick release keeps the recognition melody; do not stack a second tune over it.
+    if (name === 'release' && this.ctx!.currentTime < this.recognitionUntil) return;
     if (name === 'finale') {
       this.finale();
       return;
@@ -632,11 +684,14 @@ export class Soundscape {
       return;
     }
     const beat = PHRASE_BEAT[name];
-    let at = this.nextPulse() + 0.05;
+    // Recognition follows the visible house and drawing, without a beat-grid delay.
+    let at = name === 'unfold' ? this.ctx!.currentTime + 0.02 : this.nextPulse() + 0.05;
     for (const [midi, beats] of PHRASES[name]) {
-      if (midi > 0) this.chime(midi, name === 'unfold' ? 0.55 : 0.5, 0, at, Math.max(2.2, beats * beat * 3));
+      if (midi > 0) this.chime(midi, name === 'unfold' ? 0.55 : name === 'comfort' ? 0.5 * tuning.audio.careChimeLevel : name === 'feather' ? 0.32 : 0.5,
+        0, at, Math.max(2.2, beats * beat * 3), name === 'comfort');
       at += beats * beat;
     }
+    if (name === 'unfold') this.recognitionUntil = at;
   }
 
   private nextPulse(): number {
@@ -650,6 +705,8 @@ export class Soundscape {
     const now = ctx.currentTime;
     const tc = 0.08;
     const g = Math.min(s.gust / 26, 1);
+    const winter = s.winterGust ?? 0;
+    const airGust = Math.max(g, winter * .76);
     const piano = s.piano ?? 0;
     const air = 1 - piano * 0.82;
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
@@ -658,17 +715,34 @@ export class Soundscape {
     this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
     this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
     this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
-    this.gustGain.gain.setTargetAtTime(Math.pow(g, 1.4) * 0.55 * air, now, tc);
-    this.gustFilter.frequency.setTargetAtTime(260 + g * 1100, now, tc);
-    this.gustPan.pan.setTargetAtTime(s.pan * 0.7, now, tc);
-    this.whistleGain.gain.setTargetAtTime(Math.max(0, g - 0.55) * 0.12 * air, now, tc);
-    this.whistleFilter.frequency.setTargetAtTime(900 + g * 900, now, tc);
-    this.rustleGain.gain.setTargetAtTime(s.overLand ? Math.pow(g, 1.2) * 0.2 * air : 0, now, tc);
+    this.gustGain.gain.setTargetAtTime(Math.pow(airGust, 1.4) * 0.55 * air, now, tc);
+    this.gustFilter.frequency.setTargetAtTime(260 + airGust * 1100, now, tc);
+    this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);
+    this.whistleGain.gain.setTargetAtTime(Math.max(0, airGust - 0.55) * 0.12 * air, now, tc);
+    this.whistleFilter.frequency.setTargetAtTime(900 + airGust * 900, now, tc);
+    this.rustleGain.gain.setTargetAtTime((s.overLand || winter > 0) ? Math.pow(airGust, 1.2) * 0.2 * air : 0, now, tc);
     this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500, now, 0.2);
 
-    const mood = MOODS[s.music] ?? MOODS.meadow;
-    const chord = Math.floor(now / mood.seconds) % mood.chords.length;
+    if (s.music === 'boats' && !s.silence) {
+      this.boatsScore ??= new LittleBoatsScore(ctx, this.musicBus);
+      if (s.cues.includes('restored') || s.cues.includes('delight')) {
+        this.boatsCueUntil = now + tuning.audio.boatsCueSpace;
+      }
+      this.boatsScore.update(tuning.audio.boatsScoreLevel * (1 - 0.92 * s.hush) / (1 - 0.92 * 0.28)
+        * (1 - piano) * (now < this.boatsCueUntil ? tuning.audio.boatsCueDuck : 1));
+    } else if (this.boatsScore) {
+      this.boatsScore.stop(); this.boatsScore = null; this.boatsCueUntil = 0;
+    }
+    if (s.music === 'sea' && s.seaScore && !s.silence) {
+      if (!this.seaScore) { this.seaScore = new SeaScore(ctx, this.musicBus); this.chord = -1; }
+      this.seaScore.update(s.seaScore, tuning.audio.seaScoreLevel * (1 - 0.92 * s.hush) * (1 - piano));
+    } else if (this.seaScore) {
+      this.seaScore.stop(); this.seaScore = null; this.chord = -1;
+    }
+    const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[s.music] ?? MOODS.meadow;
+    const chord = this.seaScore ? this.seaScore.chordAt(now) : this.boatsScore ? this.boatsScore.chordAt(now)
+      : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
     if (s.silence) this.musicBus.gain.setTargetAtTime(0, now, 0.12);
     if (!finale && (chord !== this.chord || s.music !== this.mood)) {
@@ -693,20 +767,31 @@ export class Soundscape {
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     for (const name of s.cues) {
-      if (name === 'kindled') {
+      if (name === 'kindled' || name === 'comfort') {
         this.flare();
         this.phrase(name);
-      } else if (name === 'distress') this.peep(1);
-      else if (name === 'calling') this.peep(0.95, true);
-      else if (name === 'bugle') this.bugle();
+      } else if (name === 'distress' || name === 'calling') {
+        this.peep(name === 'distress' ? 1 : 0.95, name === 'calling', s.cygnet);
+        this.flockQuietUntil = now + tuning.audio.callSpace;
+      } else if (name === 'bugle') {
+        this.bugle(s.flock);
+        this.flockQuietUntil = now + tuning.audio.callSpace;
+      }
       else this.phrase(name);
     }
 
-    if (s.night > 0.3 && now > this.nextCricket) {
-      this.cricket(now + 0.05, Math.random() * 1.6 - 0.8, 0.012 * s.night);
+    if (s.flockChatter !== false && s.flock?.active && now > this.nextFlock && now > this.flockQuietUntil) {
+      this.bugle(s.flock, 0.8 + Math.random() * 0.4);
+      this.nextFlock = now + 1.6 + Math.random() * 4.5;
+    }
+
+    const wildlife = Math.max(0, Math.min(1, s.land)) * (1 - Math.min(1, s.cold))
+      * Math.max(0, 1 - s.shower / 0.6);
+    if (wildlife > 0.1 && s.night > 0.3 && now > this.nextCricket) {
+      this.cricket(now + 0.05, Math.random() * 1.6 - 0.8, 0.012 * s.night * wildlife);
       this.nextCricket = now + 0.25 + Math.random() * (1.6 - s.night);
     }
-    if (s.night > 0.7 && now > this.nextOwl) {
+    if (wildlife > 0.5 && s.night > 0.7 && now > this.nextOwl) {
       this.owl(now + 0.1, Math.random() * 1.2 - 0.6);
       this.nextOwl = now + 25 + Math.random() * 30;
     }
@@ -716,7 +801,13 @@ export class Soundscape {
     }
 
     /** The chimes are the player's own voice in the music, so they only answer gestures that are doing something. */
-    const gusting = s.gust > 7 && !s.scripted && !s.silence && piano < 0.05;
+    // Hush belongs to the score. Every playable wind stroke keeps its musical answer;
+    // the piano supplies that answer itself while the duet is engaged.
+    const gestures = !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
+    const care = s.caringWind ?? false;
+    const scale = care ? [62, 64, 69, 71, 74, 76] : mood.scale;
+    const velocity = care ? tuning.audio.careChimeLevel : 1;
+    const gusting = s.gust > tuning.pointer.minGust && gestures;
     if (gusting) {
       const interval = s.gust > 17 ? PULSE : PULSE * 2;
       const at = this.nextPulse();
@@ -724,30 +815,30 @@ export class Soundscape {
         if (at > this.lastNote + 1e-3) {
           const step = (s.rise >= 0 ? 1 : -1) * (s.gust > 18 ? 2 : 1);
           this.noteIndex += step;
-          if (this.noteIndex > mood.scale.length - 1) this.noteIndex -= 5;
+          if (this.noteIndex > scale.length - 1) this.noteIndex -= 5;
           if (this.noteIndex < 0) this.noteIndex += 5;
-          this.chime(mood.scale[Math.min(this.noteIndex, mood.scale.length - 1)], 0.45 + g * 0.55, s.pan, at);
+          this.chime(scale[Math.min(this.noteIndex, scale.length - 1)], (0.45 + g * 0.55) * velocity, s.pan, at, 2.2, care);
           this.lastNote = at;
         }
       }
     }
     this.wasGusting = gusting;
 
-    if (s.charge > 0.2 && !s.scripted) {
+    if (s.charge > tuning.pointer.minLift && gestures) {
       const interval = PULSE * (s.charge > 0.7 ? 1 : 2);
       const at = this.nextPulse();
       if (at - this.lastArp >= interval - 1e-3) {
-        const chordTones = mood.chords[this.chord % mood.chords.length].map((m) => m + 12);
-        const tone = chordTones[Math.floor((now / interval) % chordTones.length)] + (s.charge > 0.6 ? 12 : 0);
-        this.chime(tone, 0.25 + s.charge * 0.35, s.pan, at, 1.6);
+        const chordTones = care ? [62, 69, 74, 81] : mood.chords[this.chord % mood.chords.length].map((m) => m + 12);
+        const tone = chordTones[Math.floor((now / interval) % chordTones.length)] + (!care && s.charge > 0.6 ? 12 : 0);
+        this.chime(tone, (0.25 + s.charge * 0.35) * velocity, s.pan, at, 1.6, care);
         this.lastArp = at;
       }
     }
 
-    if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5 && !s.scripted) {
+    if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5 && gestures) {
       const base = mood.chords[this.chord % mood.chords.length][0] + 24;
-      this.chime(base, 0.4, 0, this.nextPulse(), 1.8);
-      this.chime(base + 7, 0.35, 0, this.nextPulse() + PULSE, 2.2);
+      this.chime(base, 0.4 * velocity, 0, this.nextPulse(), 1.8, care);
+      this.chime(base + 7, 0.35 * velocity, 0, this.nextPulse() + PULSE, 2.2, care);
       this.lastGlider = now;
     }
     this.prevGliderLift = s.gliderLift;

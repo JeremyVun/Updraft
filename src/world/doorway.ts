@@ -105,8 +105,8 @@ export class DoorwayView {
     view.getWorldDirection(doorway.look).multiplyScalar(12).add(view.position);
     if (!active) {
       this.clipUniforms.uDoorClip.value.set(0, 0, 0, 0);
-      // Before arrival, the rest of the world and the occupied boat remain visible. Only the secret
-      // shore is absent, including from the reflection rendered inside draw(). Restore scene state after it.
+      // Outside the doorway and its outgoing crossing, only the secret shore is absent. The occupied
+      // boat and other rooms remain visible. The reflection uses the same exclusion; restore state afterward.
       const hidden = concealShore ? this.shoreObjects.filter(o => o.visible) : [];
       for (const o of hidden) o.visible = false;
       atmo.uniforms.uRoom.value.set(DOOR_SHORE.x, DOOR_SHORE.z, concealShore ? -48 : 0);

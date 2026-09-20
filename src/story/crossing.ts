@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { swellLift } from '../world/water/swell';
 import type { Mood } from '../audio/audio';
+import type { SeaScorePhase } from '../audio/sea-score';
 import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
 import { roundedWaypoint } from '../traveller/navigation';
@@ -24,6 +25,9 @@ const SWING = 9;
 const SAIL_BEARING = Math.atan2(0.075, 1);
 
 export interface CrossingOpts {
+  /** Ambient breeze multiplier; ordinary transfers use 1 and encounters retain their own slower pace. */
+  breeze?: number;
+  speed?: number;
   /** Waypoints out to open water and on to the far shore; the bow may only ground on the last one. */
   route: THREE.Vector2[];
   /** Limit the final alignment and beach approach where the landing sits beside a narrow walking route. */
@@ -66,11 +70,11 @@ const WAIT_FOR_IT = 6.5;
 
 /**
  * A crossing. The boat follows its waypoints and the player fills the sail; the child looks back at whatever is
- * falling astern, then ahead into the haze. Ends when the bow runs up the far beach. Each crossing after the first
- * is shorter and hazier than the last, so the world closes in and every island arrives without warning.
+ * falling astern, then ahead into the haze. Ends at the far beach or mooring. Routes and haze shape each
+ * island reveal; ordinary transfers share the same sail response.
  */
 export class CrossingChapter implements Chapter {
-  readonly breeze = 1;
+  readonly breeze: number;
   readonly worldLife = 1;
   pace = 0.4;
   dusk: number;
@@ -85,6 +89,7 @@ export class CrossingChapter implements Chapter {
   readonly season: number;
   private readonly route: THREE.Vector2[];
   private readonly arrivalSpeed: number;
+  private readonly cruiseSpeed: number;
   private readonly lookBack: THREE.Vector3 | null;
   private readonly farewellFor: number;
   private readonly wantsRainbow: boolean;
@@ -104,6 +109,7 @@ export class CrossingChapter implements Chapter {
   private seaTurn = 0;
   private swimFrame = 0;
   private readonly framing = new THREE.Vector3();
+  private readonly swimSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.72, extra: 18 };
   private readonly spans: number[] = [];
   private readonly distances: number[] = [];
   private routeLength = 0;
@@ -129,9 +135,11 @@ export class CrossingChapter implements Chapter {
     opts: CrossingOpts,
   ) {
     this.route = opts.route;
+    this.breeze = opts.breeze ?? 1;
     this.arrivalSpeed = opts.arrivalSpeed ?? Infinity;
+    this.cruiseSpeed = opts.speed ?? (opts.dolphins ? tuning.seaPassage.speed : Infinity);
     this.departure.set(cast.boat.position.x, cast.boat.position.z);
-    cast.boat.speedLimit = Infinity;
+    cast.boat.speedLimit = this.cruiseSpeed;
     this.music = opts.music ?? 'sea';
     this.season = opts.season ?? 0.3;
     this.lookBack = opts.lookBack ?? null;
@@ -141,7 +149,7 @@ export class CrossingChapter implements Chapter {
     this.whaleEvery = opts.whaleEvery ?? 0;
     this.wantsDolphins = opts.dolphins ?? false;
     if (this.wantsDolphins) {
-      cast.boat.speedLimit = tuning.seaPassage.speed;
+      cast.boat.speedLimit = this.cruiseSpeed;
       this.quarter = -cast.boat.sailSide || 1;
       // The near encounter fits a portrait frame; preserving the whole pod would miniaturise the travellers.
       this.shot.fitWidth = false;
@@ -177,6 +185,13 @@ export class CrossingChapter implements Chapter {
     return this.cast.boat.grounded;
   }
 
+  get seaScore(): SeaScorePhase | undefined {
+    if (!this.wantsDolphins) return undefined;
+    if (this.swim !== 'before' && this.swim !== 'done') return 'swim';
+    if (this.progress() >= tuning.seaPassage.farewellAt) return 'arrival';
+    return this.swim === 'done' ? 'return' : 'open';
+  }
+
   get checkpoint(): string | null { return this.swim === 'done' ? 'swim' : null; }
   saveCheckpoint(): number[] { return [this.leg, this.time]; }
   restoreCheckpoint(_point: string, data: number[]): void {
@@ -188,7 +203,7 @@ export class CrossingChapter implements Chapter {
         const gap = Math.hypot(point.x - this.cast.boat.position.x, point.y - this.cast.boat.position.z);
         if (gap < nearest) { nearest = gap; this.leg = index; }
       });
-      this.cast.boat.speedLimit = tuning.seaPassage.speed;
+      this.cast.boat.speedLimit = this.cruiseSpeed;
     }
     this.time = data[1]; this.swim = 'done';
     this.cast.boat.steerFor = this.route[this.leg];
@@ -303,7 +318,7 @@ export class CrossingChapter implements Chapter {
       this.swimT = 0;
     };
     if (this.swim === 'before') {
-      if (this.progress() > this.swimAt! && cygnet.seat === 'cradle' && !carry.busy) {
+      if (this.time >= tuning.seaPassage.swimNotBefore && this.progress() > this.swimAt! && cygnet.seat === 'cradle' && !carry.busy) {
         this.swimSide = this.quarter > 0 ? -1 : 1;
         to('restless');
       }
@@ -352,7 +367,8 @@ export class CrossingChapter implements Chapter {
       }
     } else {
       boat.becalmed += (0 - boat.becalmed) * (1 - Math.exp(-dt * 0.6));
-      if (this.wantsDolphins) boat.speedLimit = tuning.seaPassage.speed;
+      if (this.wantsDolphins) boat.speedLimit = this.leg >= this.route.length - 2
+        ? Math.min(this.cruiseSpeed, this.arrivalSpeed) : this.cruiseSpeed;
     }
   }
 
@@ -368,6 +384,7 @@ export class CrossingChapter implements Chapter {
   /** Behind the sail, looking the way they are going; swung round to face what they are leaving, during a farewell. */
   private frame(back: THREE.Vector3 | null): void {
     const { boat } = this.cast;
+    this.shot.subjects = undefined;
     const fx = Math.sin(boat.yaw);
     const fz = Math.cos(boat.yaw);
     const swing = back ? THREE.MathUtils.smootherstep(this.time, this.farewellFor, this.farewellFor + SWING) : 1;
@@ -405,6 +422,11 @@ export class CrossingChapter implements Chapter {
         this.shot.target.lerp(this.framing, this.swimFrame * 0.8);
         this.shot.distance = THREE.MathUtils.lerp(tuning.seaPassage.cameraDistance, tuning.seaPassage.swimCameraDistance, this.swimFrame);
         this.shot.height = THREE.MathUtils.lerp(tuning.seaPassage.cameraHeight, tuning.seaPassage.swimCameraHeight, this.swimFrame);
+        if (this.swimFrame > 0.1) {
+          this.swimSubjects.primary.copy(this.cast.child.position).y += 1.2;
+          this.swimSubjects.secondary.copy(this.cast.cygnet.position).y += 0.4;
+          this.shot.subjects = this.swimSubjects;
+        }
         this.pace = 0.7;
       }
     }

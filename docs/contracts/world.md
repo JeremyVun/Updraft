@@ -59,6 +59,11 @@ carried/restored lights and the pier appear in the same reflection pass. Fallen 
 surface itself. `mirror-soap.ts` supplies the transparent film and luminous points; there is no extra
 scene render or GPU readback per bubble.
 
+Home fades `Water.skyMirrorAppearance` to zero so the distant flat uses ordinary sea shading behind the
+cottage. Only the fragment colour override is gated: the water geometry, submerged terrain, ripple state,
+reflection pass and all earlier chapters retain their original behaviour. Direct home starts initialize it
+at zero; arrival from the harbour fades it out.
+
 The child registers a temporary walkable pier deck and paper landing-height callback, both removed on
 departure. The empty boat travels around the flat through deep water to meet them at the far pier.
 Returned lights and the pier stay visible behind the boat until hidden by distance.
@@ -96,7 +101,7 @@ drives it entirely through the numbers below; the room itself owns how they look
 
 **Places.** `SLEEP_LANDING` (east shore, facing the wood: where the boat runs ashore), `SLEEP_BERTH` (west shore:
 where it is drawn up for the crossing home), `BED` with `BED_FACING` (the way its head end points), `PILLOW`,
-`HILLTOP` (the top of `SLEEP_HILL`, clear of fog), `SLEEP_APPROACH` (the side path), `SLEEP_LEDGE`
+`HILLTOP` (the top of `SLEEP_HILL`, clear of fog), `SLEEP_ROUTE` (the shared grassy ascent), `SLEEP_APPROACH` (its penultimate bend), `SLEEP_LEDGE`
 (the safe launch footing), `CURTAIN_KNOT` and `CURTAIN_END` (beyond the exposed lip), `LAMP`, `WINDOW` with
 `WINDOW_INTO` (the way the light comes through it down toward the bed), and `bedside` (where the child stands).
 
@@ -109,6 +114,8 @@ pops. Defaults in brackets.
 | `frost` [0] | bare grass | frost hard in from the rim right up to the bed |
 | `dawn` [0] | night | the first sun down the whole hill, the fog burnt back, the lamp overtaken |
 | `curtains` [0] | drawn | thrown open, gathered at the sides, with the light coming through |
+| `cold` [0] | warm bedside refuge, ticking clock | contracted lamp light, clock stopped |
+| `hint` [0] | no hint | a brief slit of window light touching the pillow |
 | `blanket` [0] | tucked in | folded back off the bed |
 | `sleeper` [0] | an empty bed | a child asleep under the blanket: it stands over them and rises and falls with their breathing |
 
@@ -130,7 +137,9 @@ any other room: at `fog` 0 with the camera 300 units away the whole of it is one
 `dawnLight` uses `uDawnSource` (window xyz, eased curtain opening) and the advancing lane; broad fill
 arrives late in `uDawn.x`. Grass receives this as light, independently of the dim night ambient.
 Near-camera fog extinction eases in over `fogNear`–`fogFar`, preserving distant concealment.
-The lamp shade's emission fades with the lamp as dawn arrives.
+The lamp shade's emission follows the lamp as the cold deepens and dawn arrives. `uSleepHint` supplies the
+brief pillow illumination independently of the rescue's dawn lane. `uSleepMist` adds the local shoulder bank
+inside `hollowDensity`, so terrain, characters and scenery share continuous fog rather than intersecting cards.
 
 **Calls.**
 - `carve(x, z, dirX, dirZ, strength)` stamps a lane of clear air into the fog; `strength` is how much fog one
@@ -160,6 +169,15 @@ interpolates supported hips, and `blanketEdge()` exposes the cloth crease for th
 mattress, and the scarf uses the posed body and mattress for collision. Scarf shading receives the lamp
 and dawn alongside the coat.
 
+`sleeping-layout.ts` owns walking targets only. The heightfield does not import it: a continuous rounded
+ridge has a steeper south face and a gentler back. The bird follows existing slopes on the eastern flank;
+no flattened corridor, summit subtraction or ring-shaped terrace is carved for the script. CPU checks
+cover actual footsteps and 0.6 m of footing either side of the guide. The window stands on the crest,
+with the loose ribbon hanging over the naturally steep face.
+`SleepingChapter` advances one waypoint at a time; snow and mist stops are named layout indices.
+`sleeping-trail.ts` owns sparse buried rocks, snow deposits, seed heads and guiding wind wisps.
+`trail.snow` and `trail.mist` retain earned progress. Snow clears into rounded banks, without cut walls.
+
 The pillow releases after the unanswered call, a view of the warm seam and real brushing. The side path
 ends at `SLEEP_LEDGE`, where the bird studies the unreachable ribbon and releases its healed wing.
 `twirlGain` only assists circles during `hilltop`; real lift starts `reachRibbon`, not the return glide.
@@ -177,7 +195,7 @@ bed terrace are mirrored in CPU/GLSL terrain and explicitly sampled by the heigh
 `tools/sleeping-logic-check.mjs` checks progression, idle gates, physical contact, terrace/drop and assisted
 versus idle feather travel. `tools/sleeping-check.mjs` checks real mouse/touch gestures, portrait/landscape
 framing, bedtime, beak grip, opening, dawn and boarding. `SUMMIT=1` isolates the ledge for visual iteration;
-that staged mode is not a full playthrough. `tools/wing-care-check.mjs` retains the healing and one-flight gates.
+`CLIMB=1` stages the feather checkpoint. Neither staged mode is a full playthrough. `tools/wing-care-check.mjs` retains the healing and one-flight gates.
 
 Winter grass uses a finer tile only within `swardDetailTo` of the camera on this island; the extra
 density fades between `swardDetailFrom` and `swardDetailTo`. The sparse phone tier reserves at most

@@ -266,6 +266,8 @@ export class Cottage {
     this.doorTarget = open ? 1 : 0;
   }
 
+  get doorOpening(): number { return this.doorOpen; }
+
   update(dt: number, camera: THREE.Camera): void {
     const far = camera.position.distanceTo(this.position) > 1400;
     this.group.visible = !far;

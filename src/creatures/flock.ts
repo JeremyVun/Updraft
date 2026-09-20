@@ -13,6 +13,9 @@ const BEAT = 2.15;
 const CRUISE = 19;
 /** How fast they fly the circuit before they go: slower than travelling, but still a swan's flying speed. */
 const WHEEL = 12;
+/** The same broad, staggered V at the first island and at the farewell. */
+const RANK_WIDTH = 3.1;
+const RANK_BACK = 4.4;
 /** How high the widest part of a swan floats: the rest of the body is under the water and the water hides it. */
 const FLOAT = 0.03;
 /** How long a ring goes out from a swan that has settled or shifted its weight, and how far it opens. */
@@ -63,6 +66,10 @@ interface Bird {
   /** How far gone the one at the back of the V is, 0 to 1. */
   labour: number;
   speed: number;
+  /** Slightly different cruising speeds let the arriving V open into a loose circuit. */
+  wheelSpeed: number;
+  /** Vertical flight velocity, retained when a wheel opens into the departing V. */
+  rise: number;
   turn: number;
   pose: Pose;
   until: number;
@@ -120,6 +127,12 @@ export class SwanFlock {
   private speed = CRUISE;
   /** How fast the air is carrying the whole flock upward: a thermal lifts it, a line climbs out on it. */
   private climb = 0;
+  private departing = false;
+  /** Existing birds fly onto the orbit; only a newly revealed distant wheel starts on its stations. */
+  private enteringWheel = false;
+  private companion: THREE.Vector3 | null = null;
+  private readonly companionWas = new THREE.Vector3();
+  private readonly companionVelocity = new THREE.Vector3();
   /** Set when a bird has dropped out, so the story knows where it came down. */
   readonly dropped = new THREE.Vector3();
 
@@ -163,6 +176,14 @@ export class SwanFlock {
     return this.lead;
   }
 
+  /** The whole family, including stragglers still running while the leader is already climbing. */
+  bounds(out: THREE.Box3): THREE.Box3 {
+    out.makeEmpty();
+    for (const bird of this.birds) if (bird.fade > 0) out.expandByPoint(bird.at);
+    if (out.isEmpty()) out.expandByPoint(this.lead);
+    return out.expandByScalar(2); // Unfolded wings and raised necks, beyond the body positions.
+  }
+
   /** Where the bird at the back of the V is: the one that will fall out. */
   tail(out: THREE.Vector3): THREE.Vector3 {
     const last = this.birds[this.birds.length - 1];
@@ -193,8 +214,8 @@ export class SwanFlock {
     const side = i % 2 === 0 ? 1 : -1;
     const rank = Math.ceil(i / 2);
     const yaw = Math.atan2(this.dir.x, this.dir.z);
-    const ox = side * rank * 2.4;
-    const oz = -rank * 5.0 - 1.4;
+    const ox = side * rank * RANK_WIDTH;
+    const oz = -rank * RANK_BACK - 1.4;
     return out.set(this.lead.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), this.lead.y + 0.3, this.lead.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
   }
 
@@ -205,11 +226,12 @@ export class SwanFlock {
   private slot(i: number): THREE.Vector3 {
     const side = i === 0 ? 0 : i % 2 === 0 ? 1 : -1;
     const rank = Math.ceil(i / 2);
-    return new THREE.Vector3(side * (rank * 2.4 + range(Math.random, -0.4, 0.4)), range(Math.random, -0.5, 0.5), -rank * 5.0 - Math.random() * 1.4);
+    return new THREE.Vector3(side * (rank * RANK_WIDTH + range(Math.random, -0.4, 0.4)), range(Math.random, -0.5, 0.5), -rank * RANK_BACK - Math.random() * 1.4);
   }
 
   /** Sends a skein over, passing above (x, z) at the given height on the given bearing, from `from` units back. */
   pass(x: number, z: number, height: number, bearing: number, count = 15, from = 115, ailing = !this.lost): void {
+    this.departing = false;
     this.birds.length = 0;
     this.companionSlot = false;
     const c = Math.min(count, MAX);
@@ -221,7 +243,7 @@ export class SwanFlock {
       const rank = Math.ceil(i / 2);
       const b = this.blank(bearing);
       /** A skein is never a drawn line: each of them sits wide of its rank and a little forward or back of it. */
-      b.offset.set(side * (rank * 3.1 + range(Math.random, -0.7, 0.9)), range(Math.random, -0.9, 0.9), -rank * 4.4 - range(Math.random, -1.4, 1.6));
+      b.offset.set(side * (rank * RANK_WIDTH + range(Math.random, -0.7, 0.9)), range(Math.random, -0.9, 0.9), -rank * RANK_BACK - range(Math.random, -1.4, 1.6));
       b.hold = 1;
       b.at.set(
         this.lead.x + b.offset.x * Math.cos(bearing) + b.offset.z * Math.sin(bearing),
@@ -245,20 +267,31 @@ export class SwanFlock {
    * close for one that has come down over your head — and `climb` is how fast a thermal carries the whole column up.
    */
   circle(x: number, z: number, base: number, radius: number, count = 26, rise = 46, climb = 0): void {
+    this.departing = false;
     this.companionSlot = false;
-    const c = Math.min(count, MAX);
     /** Any of them already in the air keep their place in the sky and swing into the wheel rather than cutting to it. */
     const flying = this.mode === 'skein' || this.mode === 'wheel' ? this.birds.filter((b) => b.fade > 0) : [];
+    const wasWheel = this.mode === 'wheel';
+    const c = flying.length || Math.min(count, MAX);
+    this.enteringWheel = flying.length > 0;
     this.birds.length = 0;
     for (let i = 0; i < c; i++) {
       const b = flying[i] ?? this.blank(0);
+      const height = wasWheel ? b.arc.y : b.at.y - base;
       /** Strung round the circle in ones and twos rather than evenly, so it is a family and not a fairground. */
       const a = (i / c) * Math.PI * 2 + range(Math.random, -0.24, 0.24);
       b.arc.set(a, range(Math.random, -0.3, 0.3) + ((i % 3) - 1) * rise * 0.42 + (i / c) * rise * 0.5, 0.88 + Math.random() * 0.24);
       b.hold = flying[i] ? 0 : 1;
+      if (flying[i]) {
+        // Keep neighbours in their own lanes instead of sending alternate V ranks across the circle.
+        b.wheelSpeed = WHEEL + tuning.swanArrival.speedSpread * (1 - 2 * i / Math.max(1, c - 1));
+        b.arc.y = height;
+        b.arc.z = 1 + b.offset.x / Math.max(radius, 4) * 0.16;
+      }
       if (!flying[i]) {
         b.at.set(x + Math.cos(a) * radius * b.arc.z, base + b.arc.y, z + Math.sin(a) * radius * b.arc.z);
         b.yaw = -a;
+        b.speed = WHEEL * b.arc.z;
       }
       this.birds.push(b);
     }
@@ -274,31 +307,68 @@ export class SwanFlock {
   }
 
   /**
-   * The gathering goes on without the one it left behind. Each bird glides out of the wheel into its place in
-   * the V, and turns onto the new heading as it gets there, so the family never cuts from one shape to the other.
+   * The family goes on together. Each bird flies out of the wheel into the opening's V, keeping its momentum
+   * through the turn and gaining its station at a bounded speed.
    */
-  goOn(bearing: number, climb: number, speed: number): void {
+  goOn(bearing: number, climb: number, speed: number, companion?: THREE.Vector3): void {
     if (this.mode !== 'wheel') return;
     const flying = this.birds.filter((b) => b.fade > 0);
     if (!flying.length) return;
     this.bearing = bearing;
     this.dir.set(Math.sin(bearing), 0, Math.cos(bearing));
-    /** Whoever is furthest along the new heading already leads, so nobody flies back through the flock. */
-    flying.sort((a, b) => b.at.dot(this.dir) - a.at.dot(this.dir));
-    this.lead.copy(flying[0].at);
-    this.dropped.copy(this.lead);
-    /**
-     * They do not all break together. The one already pointing the way straightens out of the turn first and the
-     * rest come off the wheel behind it, each after the one in front, which is what leaving looks like.
-     */
+    const f = tuning.swanDeparture;
+    const cy = Math.cos(bearing), sy = Math.sin(bearing);
+    /** Keep their momentum. A bird pointing away needs a place behind the ones already turning north. */
+    const predicted = flying.map((b) => {
+      const at = b.at.clone();
+      let yaw = b.yaw;
+      const steps = Math.ceil(f.turnAhead * 30);
+      const dt = f.turnAhead / steps;
+      for (let i = 0; i < steps; i++) {
+        yaw += THREE.MathUtils.clamp(wrapAngle(bearing - yaw) * f.response, -f.turnRate, f.turnRate) * dt;
+        at.x += Math.sin(yaw) * b.speed * dt;
+        at.z += Math.cos(yaw) * b.speed * dt;
+      }
+      return at;
+    });
+    this.lead.set(0, 0, 0);
     flying.forEach((b, i) => {
       b.offset.copy(this.slot(i));
-      b.delay = i * 0.2 + range(Math.random, 0.04, 0.16);
+      b.delay = 0;
+      b.hold = 0;
+      this.lead.add(predicted[i]);
+      this.lead.x -= b.offset.x * cy + b.offset.z * sy;
+      this.lead.y -= b.offset.y;
+      this.lead.z -= -b.offset.x * sy + b.offset.z * cy;
     });
+    this.lead.multiplyScalar(1 / flying.length).addScaledVector(this.dir, -speed * f.turnAhead - f.setback);
+    this.dropped.copy(this.lead);
+    /** Exchange stations if it shortens both turns together, rather than alternating birds across the wheel. */
+    const cost = (i: number, offset: THREE.Vector3): number => {
+      const dx = this.lead.x + this.dir.x * speed * f.turnAhead + offset.x * cy + offset.z * sy - predicted[i].x;
+      const dz = this.lead.z + this.dir.z * speed * f.turnAhead - offset.x * sy + offset.z * cy - predicted[i].z;
+      return dx * dx + dz * dz;
+    };
+    for (let pass = 0; pass < flying.length; pass++) {
+      let changed = false;
+      for (let i = 0; i < flying.length; i++) for (let j = i + 1; j < flying.length; j++) {
+        const a = flying[i], b = flying[j];
+        if (cost(i, a.offset) + cost(j, b.offset) <= cost(i, b.offset) + cost(j, a.offset)) continue;
+        const offset = a.offset;
+        a.offset = b.offset;
+        b.offset = offset;
+        changed = true;
+      }
+      if (!changed) break;
+    }
     this.birds.length = 0;
     this.birds.push(...flying);
     this.speed = speed;
     this.climb = climb;
+    this.departing = true;
+    this.companion = companion ?? null;
+    if (companion) this.companionWas.copy(companion);
+    this.companionVelocity.set(0, 0, 0);
     this.start('skein');
   }
 
@@ -307,6 +377,8 @@ export class SwanFlock {
    * their heads on their backs. Sea level is y = 0; they sit in it and the sea hides everything below the waterline.
    */
   rest(x: number, z: number, radius: number, count = 14, level = 0): void {
+    this.departing = false;
+    this.companion = null;
     this.companionSlot = false;
     this.level = level;
     this.runFor = level > 0 ? POND_RUN : RUN;
@@ -376,6 +448,8 @@ export class SwanFlock {
   /** Stops whatever the flock is doing and puts it away. */
   clear(): void {
     this.mode = 'idle';
+    this.departing = false;
+    this.companion = null;
     this.companionSlot = false;
     this.level = 0;
     this.launched = -1;
@@ -429,6 +503,8 @@ export class SwanFlock {
       fade: 1,
       labour: 0,
       speed: 0,
+      wheelSpeed: WHEEL,
+      rise: 0,
       turn: 0,
       pose: 'alert',
       until: 0,
@@ -444,6 +520,7 @@ export class SwanFlock {
 
   private start(mode: Mode): void {
     this.mode = mode;
+    if (!this.departing) this.companion = null;
     this.wakeUniforms.uLevel.value = this.level;
     this.wakeUniforms.uStill.value = this.level > 0 ? 1 : 0;
     this.mesh.visible = true;
@@ -461,25 +538,19 @@ export class SwanFlock {
 
   /** The skein under way: stations breathing, the beat travelling down the line, and the back of the V struggling. */
   private skein(dt: number, time: number): void {
+    if (this.companion && dt > 0) {
+      this.companionVelocity.subVectors(this.companion, this.companionWas).multiplyScalar(1 / dt);
+      this.companionWas.copy(this.companion);
+    }
     this.lead.addScaledVector(this.dir, this.speed * dt);
     this.lead.y += this.climb * dt;
     const yaw = Math.atan2(this.dir.x, this.dir.z);
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
     let anyVisible = false;
-    let circling = false;
     for (const b of this.birds) {
       if (b.fade <= 0) continue;
       anyVisible = true;
-      /** Still on the wheel, waiting its turn to break out of it: nothing about it changes until it does. */
-      if (b.delay > 0) {
-        b.delay -= dt;
-        circling = true;
-        this.circling(b, dt, time);
-        /** The moment it lets go of the circle it is holding nothing, and has to find its station from there. */
-        if (b.delay <= 0) b.hold = 0;
-        continue;
-      }
       if (b.labour > 0) b.labour = Math.min(1, b.labour + dt * 0.15);
       /** Nobody holds a perfect station: they drift a little fore and aft and settle back, and the V breathes. */
       const wx = Math.sin(time * 0.31 + b.seed) * 0.5 + Math.sin(time * 0.17 + b.seed * 3) * 0.35;
@@ -496,18 +567,64 @@ export class SwanFlock {
         this.lead.z + oz,
       );
       b.hold = ease(b.hold, 1, 0.45, dt);
-      b.at.lerp(to, 1 - Math.exp(-dt * (0.9 + 14 * b.hold * b.hold)));
-      b.yaw = yaw + wrapAngle(b.yaw - yaw) * Math.exp(-dt * (0.9 + 3 * b.hold));
-      b.roll = ease(b.roll, wrapAngle(b.yaw - yaw) * -1.6 + Math.sin(time * 0.43 + b.seed * 5) * 0.05, 2, dt);
-      b.pitch = ease(b.pitch, -0.03 + sag * 0.16, 2, dt);
+      if (this.departing) this.gather(b, to, dt);
+      else {
+        const x = b.at.x, y = b.at.y, z = b.at.z;
+        b.at.lerp(to, 1 - Math.exp(-dt * (0.9 + 14 * b.hold * b.hold)));
+        if (dt > 0) {
+          b.speed = Math.hypot(b.at.x - x, b.at.z - z) / dt;
+          b.rise = (b.at.y - y) / dt;
+        }
+        b.yaw = yaw + wrapAngle(b.yaw - yaw) * Math.exp(-dt * (0.9 + 3 * b.hold));
+        b.roll = ease(b.roll, wrapAngle(b.yaw - yaw) * -1.6 + Math.sin(time * 0.43 + b.seed * 5) * 0.05, 2, dt);
+        b.pitch = ease(b.pitch, -0.03 + sag * 0.16, 2, dt);
+      }
       b.neck.lerp(tmp4.set(FLY[0], FLY[1] + sag * 0.12, FLY[2] - sag * 0.2, 0), 1 - Math.exp(-dt * 2));
       b.headYaw = ease(b.headYaw, 0, 1.5, dt);
       b.headPitch = ease(b.headPitch, FLY[4], 2, dt);
       b.fold = ease(b.fold, 0, 4, dt);
       b.feet = ease(b.feet, 0, 3, dt);
     }
-    if (circling) this.turn += dt * this.spin;
     if (!anyVisible || this.lead.distanceToSquared(this.dropped) > 1400 * 1400) this.clear();
+  }
+
+  /** Fly to the moving station; never pull a body across the sky to make the V finish sooner. */
+  private gather(b: Bird, to: THREE.Vector3, dt: number): void {
+    const f = tuning.swanDeparture;
+    const dx = to.x - b.at.x, dz = to.z - b.at.z;
+    const along = dx * this.dir.x + dz * this.dir.z;
+    const across = dx * this.dir.z - dz * this.dir.x;
+    const forward = THREE.MathUtils.clamp(this.speed + along * f.forwardGain, this.speed * f.slow, this.speed * f.catchUp);
+    const side = THREE.MathUtils.clamp(across * f.sideGain, -f.sideSpeed, f.sideSpeed);
+    const yaw = Math.atan2(this.dir.x * forward + this.dir.z * side, this.dir.z * forward - this.dir.x * side);
+    const turn = THREE.MathUtils.clamp(wrapAngle(yaw - b.yaw) * f.response, -f.turnRate, f.turnRate);
+    const speed = Math.min(this.speed * f.catchUp, Math.hypot(forward, side));
+    b.speed += THREE.MathUtils.clamp((speed - b.speed) * f.response, -f.acceleration, f.acceleration) * dt;
+    let room = 0;
+    for (const other of this.birds) {
+      if (other === b || other.fade <= 0) continue;
+      room += this.roomTo(b, other.at, Math.sin(other.yaw) * other.speed, Math.cos(other.yaw) * other.speed, b.seed > other.seed);
+    }
+    if (this.companion) room += this.roomTo(b, this.companion, this.companionVelocity.x, this.companionVelocity.z, true);
+    const rise = THREE.MathUtils.clamp(this.climb + (to.y - b.at.y) * f.riseGain + room, -f.sinkSpeed, f.riseSpeed);
+    b.rise += THREE.MathUtils.clamp((rise - b.rise) * f.response, -f.acceleration, f.acceleration) * dt;
+    b.yaw += turn * dt;
+    b.at.x += Math.sin(b.yaw) * b.speed * dt;
+    b.at.z += Math.cos(b.yaw) * b.speed * dt;
+    b.at.y += b.rise * dt;
+    b.roll = ease(b.roll, Math.atan2(-turn * b.speed, 19), 2, dt);
+    b.pitch = ease(b.pitch, -Math.atan2(b.rise, b.speed), 2, dt);
+  }
+
+  private roomTo(b: Bird, at: THREE.Vector3, vx: number, vz: number, above: boolean): number {
+    const f = tuning.swanDeparture;
+    const dx = b.at.x - at.x, dz = b.at.z - at.z;
+    vx = Math.sin(b.yaw) * b.speed - vx;
+    vz = Math.cos(b.yaw) * b.speed - vz;
+    const near = THREE.MathUtils.clamp(-(dx * vx + dz * vz) / Math.max(vx * vx + vz * vz, 1e-6), 0, f.avoidAhead);
+    const dy = b.at.y - at.y;
+    const gap = Math.hypot(dx + vx * near, dy, dz + vz * near);
+    return gap < f.avoidRadius ? (dy > 0 || (dy === 0 && above) ? 1 : -1) * (1 - gap / f.avoidRadius) * f.avoidRise : 0;
   }
 
   /** Birds strung round a wheel: angle in arc.x, height in arc.y, radius scale in arc.z. */
@@ -532,17 +649,51 @@ export class SwanFlock {
     b.flap = ease(b.flap, 0.72 + 0.28 * (0.5 + 0.5 * Math.sin(time * 0.29 + b.seed * 4)), 1.2, dt);
     b.bob = stroke(b.beat) * -0.055 * b.flap;
     const to = tmp.set(t.x + Math.cos(a) * r, t.base + b.arc.y + Math.sin(time * 0.3 + b.seed) * 0.8, t.z + Math.sin(a) * r);
-    b.at.lerp(to, 1 - Math.exp(-dt * (0.6 + 7 * b.hold)));
+    const x = b.at.x, y = b.at.y, z = b.at.z;
+    if (this.enteringWheel) this.flyOntoWheel(b, dt, time);
+    else b.at.lerp(to, 1 - Math.exp(-dt * (0.6 + 7 * b.hold)));
+    if (dt > 0 && !this.enteringWheel) {
+      b.speed = Math.hypot(b.at.x - x, b.at.z - z) / dt;
+      b.rise = (b.at.y - y) / dt;
+    }
     /** The wheel runs against its own angle, so they face along it and hold a bank into the turn. */
-    b.yaw = -a + wrapAngle(b.yaw + a) * (1 - b.hold);
-    b.roll = ease(b.roll, (this.bank + 0.04 * Math.sin(time * 0.7 + b.seed)) * b.hold, 1.5, dt);
-    b.pitch = ease(b.pitch, -0.04, 2, dt);
+    if (!this.enteringWheel) {
+      b.yaw = -a + wrapAngle(b.yaw + a) * (1 - b.hold);
+      b.roll = ease(b.roll, (this.bank + 0.04 * Math.sin(time * 0.7 + b.seed)) * b.hold, 1.5, dt);
+      b.pitch = ease(b.pitch, -0.04, 2, dt);
+    }
     b.neck.lerp(tmp4.set(FLY[0], FLY[1], FLY[2], 0), 1 - Math.exp(-dt * 2));
     /** Round the turn each of them is looking in at the others, which is what makes a wheel a family gathering. */
     b.headYaw = ease(b.headYaw, -0.34 * b.hold, 1.5, dt);
     b.headPitch = ease(b.headPitch, FLY[4], 2, dt);
     b.fold = ease(b.fold, 0, 4, dt);
     b.feet = ease(b.feet, 0, 3, dt);
+  }
+
+  /** Steer along the local tangent with a gentle radial correction: there is no assigned point to race to. */
+  private flyOntoWheel(b: Bird, dt: number, time: number): void {
+    const f = tuning.swanArrival, t = this.pool;
+    const dx = b.at.x - t.x, dz = b.at.z - t.z;
+    const distance = Math.max(0.1, Math.hypot(dx, dz));
+    const radial = THREE.MathUtils.clamp((distance - t.r * b.arc.z) * f.radialGain, -f.radialSpeed, f.radialSpeed);
+    const vx = -dz / distance * WHEEL - dx / distance * radial;
+    const vz = dx / distance * WHEEL - dz / distance * radial;
+    const yaw = Math.atan2(vx, vz) - b.speed / (Math.max(t.r * b.arc.z, 4) * f.response);
+    const turn = THREE.MathUtils.clamp(wrapAngle(yaw - b.yaw) * f.response, -f.turnRate, f.turnRate);
+    b.speed += THREE.MathUtils.clamp((b.wheelSpeed - b.speed) * f.response, -f.acceleration, f.acceleration) * dt;
+    let room = 0;
+    for (const other of this.birds) {
+      if (other === b || other.fade <= 0) continue;
+      room += this.roomTo(b, other.at, Math.sin(other.yaw) * other.speed, Math.cos(other.yaw) * other.speed, b.seed > other.seed);
+    }
+    const rise = THREE.MathUtils.clamp(this.climb + (t.base + b.arc.y + Math.sin(time * 0.3 + b.seed) * 0.8 - b.at.y) * 0.6 + room, -2, 2);
+    b.rise += THREE.MathUtils.clamp((rise - b.rise) * f.response, -f.acceleration, f.acceleration) * dt;
+    b.yaw += turn * dt;
+    b.at.x += Math.sin(b.yaw) * b.speed * dt;
+    b.at.z += Math.cos(b.yaw) * b.speed * dt;
+    b.at.y += b.rise * dt;
+    b.roll = ease(b.roll, Math.atan2(-turn * b.speed, 19), 2, dt);
+    b.pitch = ease(b.pitch, -Math.atan2(b.rise, b.speed), 2, dt);
   }
 
   /** The raft: each swan drifting and turning on its own, and changing its mind about what to do every so often. */

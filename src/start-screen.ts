@@ -72,6 +72,7 @@ class StartScreen {
     if (!this.enabled) { start(false); return; }
     this.start = () => start(true);
     this.veil.setAttribute('aria-busy', 'false');
+    if (document.getElementById('start-status')!.textContent === 'Loading') document.getElementById('start-status')!.textContent = '';
     this.button.disabled = false;
     this.veil.classList.add('ready');
   }

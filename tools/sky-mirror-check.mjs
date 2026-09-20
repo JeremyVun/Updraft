@@ -1,4 +1,4 @@
-// Fallen stars: real mouse/touch sweeps and circles, paper-led walks, checkpoint reload and far-side boarding.
+// Fallen stars: real mouse/touch sweeps and circles, companion walks, checkpoint reload and far-side boarding.
 // Usage: node tools/sky-mirror-check.mjs [prefix]; TOUCH=1 for 390x844. Shared GPU lock; captures in /tmp.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -121,18 +121,30 @@ try {
         return Math.hypot(g.child.position.x-at[0],g.child.position.z-at[2])<0.1 && Math.abs(p.x)<0.85 && Math.abs(p.y)<0.85;
       },before),'captured bubble and child wait visibly for the updraft');
     }
+    let peakCharge=0;
     for(let circle=0;circle<12;circle++) {
       if(await page.evaluate(()=>!__game.skyMirror.carried))break;
       let p=await point('bubble');const radius=touch?18:28;
       await move(p.x+radius,p.y,true);
-      for(let i=1;i<=20;i++) {
-        if(i%4===0)p=await point('bubble')??p;
-        await move(p.x+Math.cos(i/20*Math.PI*2)*radius,p.y+Math.sin(i/20*Math.PI*2)*radius);
-        await page.waitForTimeout(8);
+      // Keep one circle at 0.9 simulated seconds even when screenshot rendering or
+      // browser RPCs change the wall-clock cadence. Only real pointer events supply wind.
+      const firstFrame=await page.evaluate(()=>__stats.frame);
+      let angle=0;
+      while(angle<Math.PI*2) {
+        const s=await page.evaluate(()=>{
+          const b=__game.skyMirror.carried,p=b?.position.clone().project(__game.rig.camera);
+          return {frame:__stats.frame,charge:__game.input.charge,p:p?{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2}:null};
+        });
+        if(!s.p)break;
+        p=s.p;peakCharge=Math.max(peakCharge,s.charge);
+        angle=Math.min(Math.PI*2,(s.frame-firstFrame)/54*Math.PI*2);
+        await move(p.x+Math.cos(angle)*radius,p.y+Math.sin(angle)*radius);
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
       }
 
       await up();
     }
+    console.log(JSON.stringify({star,peakCharge}));
     await page.waitForFunction(n=>__game.skyMirror.progress>n,star,{timeout:15000});
     outcomes.push(await page.evaluate(()=>({mask:__game.skyMirror.completedMask,stars:__game.skyMirror.stars.map(s=>s.state)})));
     console.log(JSON.stringify(outcomes.at(-1)));

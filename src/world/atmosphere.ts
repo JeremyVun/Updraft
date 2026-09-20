@@ -121,10 +121,17 @@ export const atmo = {
     uLaneOpen: { value: new THREE.Vector2(3, 0) },
     /** The bedside lamp, the one warm light in the blue: where it is (xyz) and how strong (w). */
     uLamp: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uHearth: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** The morning coming down the sleeping island's hill: how far it has come (x), and the height it has reached down to (y). */
     uDawn: { value: new THREE.Vector2(0, 0) },
     /** Summit window xyz and curtain opening; the lane is lit from its actual source. */
     uDawnSource: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** Brief window light touching the pillow before the bird commits to the climb. */
+    uSleepHint: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** A local bank on the winter shoulder: same continuous fog integration, cleared by the player's sweep. */
+    uSleepMist: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uSleepMistPart: { value: 0 },
+    uSleepMistAxis: { value: new THREE.Vector2(.4472136,-.8944272) },
     /** A patch of grass someone has pressed flat: centre (x, z), radius, and how flat, 0 to 1. */
     uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
@@ -226,8 +233,13 @@ uniform vec4 uFrost;
 uniform vec4 uLane;
 uniform vec2 uLaneOpen;
 uniform vec4 uLamp;
+uniform vec4 uHearth;
 uniform vec2 uDawn;
 uniform vec4 uDawnSource;
+uniform vec4 uSleepHint;
+uniform vec4 uSleepMist;
+uniform float uSleepMistPart;
+uniform vec2 uSleepMistAxis;
 uniform vec4 uTrodden;
 uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
@@ -334,11 +346,15 @@ float frostAt(vec2 xz) {
 
 /** The bedside lamp: the one warm light in the blue, and the reason the bed is the warmest thing in frame. */
 vec3 lampLight(vec3 world, vec3 N) {
-  if (uLamp.w <= 0.0) return vec3(0.0);
+  if (uLamp.w <= 0.0 && uHearth.w <= 0.0) return vec3(0.0);
+  vec3 fire = uHearth.xyz - world;
+  float reach=length(fire);
+  vec3 hearth=vec3(1.0,.42,.12)*uHearth.w/(1.0+reach*reach*.32)
+    * clamp(dot(N,fire/max(reach,.001))*.5+.5,0.0,1.0);
   vec3 d = uLamp.xyz - world;
   float dist = length(d);
   float fall = uLamp.w / (1.0 + dist * dist * 0.09);
-  return vec3(1.0, 0.72, 0.38) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.5 + 0.5, 0.0, 1.0);
+  return hearth + vec3(1.0, 0.72, 0.38) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.5 + 0.5, 0.0, 1.0);
 }
 
 /**
@@ -346,11 +362,12 @@ vec3 lampLight(vec3 world, vec3 N) {
  * lane the wind has torn in the fog as well, so what rides that wind arrives with the light rather than after it.
  */
 vec3 dawnLight(vec3 world, vec3 N) {
-  if (uDawn.x <= 0.0) return vec3(0.0);
+  if (uDawn.x <= 0.0 && uSleepHint.w <= 0.0) return vec3(0.0);
   vec3 toWindow = normalize(uDawnSource.xyz - world + vec3(0.0, 0.001, 0.0));
   float lane = laneAt(world.xz) * uDawnSource.w;
   float morning = morningAt(world.xz) * 0.22;
-  float reached = max(lane * (1.0 - 0.5 * smoothstep(0.65, 1.0, uDawn.x)), morning);
+  float hint = uSleepHint.w * (1.0 - smoothstep(0.35, 1.4, distance(world, uSleepHint.xyz)));
+  float reached = max(max(lane * (1.0 - 0.5 * smoothstep(0.65, 1.0, uDawn.x)), morning), hint);
   return vec3(1.0, 0.82, 0.57) * ${glsl(tuning.sleeping.dawnStrength)} * reached
     * clamp(dot(N, toWindow) * 0.45 + 0.55, 0.0, 1.0);
 }
@@ -365,7 +382,11 @@ float hollowDensity(vec3 p) {
   vec2 uv = (p.xz - uCarveDomain.xy) * uCarveDomain.zw;
   float carve = insideUv(uv) ? texture(uCarveTex, uv).r : 1.0;
   /** Squared, so a lane only half blown open is already a quarter as thick: a gesture has to show. */
-  return uHollow.w * pool * under * (0.35 + wisps * 1.1) * carve * carve;
+  vec3 delta=p-uSleepMist.xyz;
+  vec3 bankPos=vec3(dot(delta.xz,uSleepMistAxis),delta.y,dot(delta.xz,vec2(-uSleepMistAxis.y,uSleepMistAxis.x)))/vec3(5.5,3.2,4.5);
+  bankPos.x=abs(bankPos.x)-uSleepMistPart*2.1;
+  float bank=(1.0-smoothstep(0.25,1.15,length(bankPos)+(wisps-.5)*.3))*uSleepMist.w;
+  return uHollow.w * pool * under * (0.35 + wisps * 1.1) * carve * carve + bank * .8;
 }
 
 /** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */
@@ -437,8 +458,18 @@ vec4 fogOf(vec3 wpos) {
     vec3 mid = (cameraPosition + wpos) * 0.5;
     float dens = (hollowDensity(cameraPosition) + 2.0 * hollowDensity(mid) + hollowDensity(wpos)) * 0.25;
     float nearClear = smoothstep(${glsl(tuning.sleeping.fogNear)}, ${glsl(tuning.sleeping.fogFar)}, dist);
-    float pooled = 1.0 - exp(-dist * dens * ${glsl(tuning.sleeping.fogExtinction)} * nearClear);
-    vec3 mistLight = uHollowTint * (uSkyAmbient * 0.9 + uSunColor * 0.24);
+    // A short local bank can lie between all three global fog samples. Integrate its ray chord explicitly.
+    vec3 delta=cameraPosition-uSleepMist.xyz;
+    vec2 forward=vec2(-uSleepMistAxis.y,uSleepMistAxis.x);
+    vec3 bankOrigin=vec3(dot(delta.xz,uSleepMistAxis),delta.y,dot(delta.xz,forward))/vec3(5.5,3.2,4.5);
+    vec3 bankRay=vec3(dot(rd.xz,uSleepMistAxis),rd.y,dot(rd.xz,forward))/vec3(5.5,3.2,4.5);
+    float closest=clamp(-dot(bankOrigin,bankRay)/max(dot(bankRay,bankRay),1e-5),0.0,dist);
+    vec3 bankSample=bankOrigin+bankRay*closest;
+    bankSample.x=abs(bankSample.x)-uSleepMistPart*2.1;
+    float radial=length(bankSample);
+    float bank=(1.0-smoothstep(.25,1.15,radial))*uSleepMist.w*smoothstep(2.5,10.0,dist);
+    float pooled = 1.0 - exp(-dist * dens * ${glsl(tuning.sleeping.fogExtinction)} * nearClear - bank*2.5);
+    vec3 mistLight = uHollowTint * (uSkyAmbient * 0.9 + uSunColor * 0.24) + vec3(.10,.12,.16)*bank;
     mistLight += vec3(1.0, 0.8, 0.55) * laneAt(mid.xz) * uDawnSource.w * 0.15;
     fogCol = mix(fogCol, mistLight, pooled / max(pooled + amt, 1e-4));
     amt = 1.0 - (1.0 - amt) * (1.0 - pooled);

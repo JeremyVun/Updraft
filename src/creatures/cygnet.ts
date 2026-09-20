@@ -2,15 +2,19 @@ import * as THREE from 'three';
 import { heightAt } from '../world/island';
 import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
+import { LooseDown } from '../fx/loose-down';
 import { CallMarks } from '../fx/call-marks';
 import type { WindSample } from '../wind/field';
-import { BODY, BONES, FOOT_L, FOOT_R, FORE_L, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
+import { BODY, NECK, BONES, FOOT_L, FOOT_R, FORE_L, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
 import { WingBandage } from './cygnet/bandage';
 import { Gait } from './cygnet/gait';
 import { Mind, type Act, type Senses } from './cygnet/mind';
 import { Poser, type Drives } from './cygnet/pose';
 import { applyLook, cygnetMaterial, downShells, newLook } from './cygnet/shader';
 import { Ride, type Mount, type Seat } from './cygnet/ride';
+
+const PREEN_NECK = [...NECK].reverse();
+const PREEN_JOINTS = [HEAD, ...PREEN_NECK];
 
 /** How strong an updraft under it has to be before it looks up and opens its wings, and before it goes. */
 const LIFT_TO_HOPE = 0.18;
@@ -34,7 +38,7 @@ const GRIPS = { breast: [0, -0.1, 0.12], rump: [0, -0.09, -0.13] } as const;
 
 /** Something it just did that can be heard. The cygnet only says what happened; the sound of it is made elsewhere. */
 export interface Heard {
-  kind: 'step' | 'flap' | 'flutter' | 'shake' | 'tumble' | 'rustle' | 'plunge' | 'paddle';
+  kind: 'step' | 'flap' | 'flutter' | 'scramble' | 'shake' | 'tumble' | 'rustle' | 'plunge' | 'paddle';
   amount: number;
 }
 
@@ -52,9 +56,22 @@ export class Cygnet {
   yaw = 0;
   /** A story-authored airborne reach; zero for ordinary locomotion. */
   flightPose = 0;
+  /** An intentional, guided lift keeps its balance through the player’s gust. */
+  steadyLift = false;
   /** Contact at the tip of the bill, solved after the skeleton has posed. */
   billGrip: THREE.Vector3 | null = null;
   billGripWeight = 0;
+  preenAt: THREE.Vector3 | null = null;
+  preenWeight = 0;
+  private readonly neckPivot = new THREE.Vector3();
+  private readonly preenHead = new THREE.Vector3();
+  private readonly neckFrom = new THREE.Vector3();
+  private readonly neckTo = new THREE.Vector3();
+  private readonly neckParent = new THREE.Quaternion();
+  private readonly neckInverse = new THREE.Quaternion();
+  private readonly neckDelta = new THREE.Quaternion();
+  private readonly neckIdentity = new THREE.Quaternion();
+  private readonly preenBase = PREEN_JOINTS.map(() => new THREE.Quaternion());
   private readonly billCorrection = new THREE.Vector3();
   /**
    * Somewhere it has gone off to by itself: a leaf that skittered past, a heap worth looking into. While this is
@@ -76,6 +93,7 @@ export class Cygnet {
   water: { level: number; over(x: number, z: number): boolean } | null = null;
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: Heard[] = [];
+  private readonly looseDown = new LooseDown();
 
   /** What it notices, how it feels, and what it does of its own accord. */
   readonly mind = new Mind();
@@ -182,6 +200,7 @@ export class Cygnet {
   private readonly sailFrom = new THREE.Vector3();
   private readonly sailTo = new THREE.Vector3();
   private sailFor = 0;
+  private sailFlaps = false;
   private sailT = 0;
   private sailArc = 0;
   private fledgeT = 0;
@@ -278,7 +297,7 @@ export class Cygnet {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.mesh, this.callMarks.sprite, this.wing.mesh];
+    return [this.mesh, this.callMarks.sprite, this.wing.mesh, this.looseDown.mesh];
   }
 
   /** The same bird flies, struggles, and falls: no adult-to-baby swap at separation. */
@@ -429,11 +448,12 @@ export class Cygnet {
    * lets go of the hill and goes down the whole slope to a point far below, alone. Whoever asked for it says where
    * it lands, and takes it over the moment it is down, because it comes in on its breast.
    */
-  glideTo(to: THREE.Vector3, seconds: number, arc: number, continuing = false): void {
+  glideTo(to: THREE.Vector3, seconds: number, arc: number, continuing = false, flaps = false): void {
     const alreadyFlying = this.flying;
     this.sailFrom.copy(this.position);
     this.sailTo.copy(to);
     this.sailFor = seconds;
+    this.sailFlaps = flaps;
     this.sailT = 0;
     this.sailArc = arc;
     this.state = 'gliding';
@@ -557,6 +577,24 @@ export class Cygnet {
     this.state = 'following';
     this.settle = 0.1;
     this.landedAt = this.time;
+  }
+
+  /** Scramble from the current seat to a fixed nearby landing, then hand locomotion back to the feet. */
+  startleJump(spot: THREE.Vector3): void {
+    this.yaw = Math.atan2(spot.x - this.seating.shown.p.x, spot.z - this.seating.shown.p.z);
+    this.nodes[BODY].getWorldPosition(this.tmp);
+    this.looseDown.burst(this.tmp, this.yaw);
+    this.position.set(spot.x, Math.max(heightAt(spot.x, spot.z), 0), spot.z);
+    this.seating.go({ seat: null, held: false }, 'dash', tuning.wood.frightJumpDuration, tuning.wood.frightJumpArc);
+    this.state = 'following';
+    this.hurry = 0;
+    this.hopT = 0;
+    this.landing = 0;
+    this.errand = null;
+    this.stay = true;
+    this.fear = 1;
+    this.settle = 0;
+    this.heard.push({ kind: 'scramble', amount: 1 });
   }
 
   /** Where a holding hand goes, in the world: under the belly either side, on the back, under the breast or the rump. */
@@ -725,15 +763,20 @@ export class Cygnet {
     } else if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
     else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
-    else if (this.state === 'following') this.walk(dt, child);
+    else if (this.state === 'following' && this.seating.move?.kind === 'dash' && this.stay) {
+      // A brief scrambling flutter; ground locomotion cannot move the landing beneath it.
+      this.flap = ease(this.flap, 0.85, 12, dt);
+      this.effort = 0.65;
+    } else if (this.state === 'following') this.walk(dt, child);
     else if (this.state === 'swimming') this.paddling(dt);
     else if (this.state === 'perched') {
-      this.effort = 0;
+      this.effort = this.flightPose * 0.6;
+      if (this.flightPose > 0) this.flap = ease(this.flap, this.flightPose * 0.9, 6, dt);
       /**
        * Tumbled onto something rather than set down on it: it goes over onto its breast as it arrives and picks
        * itself up off it in its own time. Eased on the way in as well as out, because a pose that switches is a pop.
        */
-      this.faceplant = ease(this.faceplant, this.time - this.landedAt < 0.55 ? 0.8 : 0, 3, dt);
+      this.faceplant = ease(this.faceplant, this.flightPose === 0 && this.time - this.landedAt < 0.55 ? 0.8 : 0, 3, dt);
       this.roll = ease(this.roll, 0, 4, dt);
       this.pitch = ease(this.pitch, 0, 4, dt);
     }
@@ -764,6 +807,7 @@ export class Cygnet {
     this.pose(dt);
     if (this.carried && this.seating.riding && !this.seating.move) this.position.copy(this.seating.shown.p);
     this.callMarks.update(dt, this.seating.shown.p, this.callT);
+    this.looseDown.update(dt, wind);
   }
 
   /**
@@ -947,8 +991,8 @@ export class Cygnet {
     this.craning = ease(this.craning, 0.15, 2, dt);
     this.trim = ease(this.trim, 0.2, 2, dt);
     this.tucked = ease(this.tucked, 0.85, 1.5, dt);
-    /** A few strokes to hold the line at the start, and none at all once it is riding the wind down. */
-    const working = Math.max(0, 1 - k * 3);
+    /** Brief working strokes on the rescue descent, with gliding intervals between them. */
+    const working = this.sailFlaps ? Math.max(0,1-k*3,.65*Math.max(0,Math.sin(k*Math.PI*5))) : Math.max(0, 1 - k * 3);
     this.effort = ease(this.effort, working * 0.5, 3, dt);
     this.flap = ease(this.flap, working * 0.7, 3, dt);
     this.flapPhase += dt * (3 + working * 6);
@@ -1397,7 +1441,7 @@ export class Cygnet {
     s.dark = w.dark;
     /** On the side of the boat it is riding too: a gust may ruffle it there, but never bowl it off the gunwale into the sea. */
     s.where = this.carried || st === 'perched' || st === 'swimming' ? 'riding' : st === 'following' ? 'afoot' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
-    s.locked = this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
+    s.locked = this.steadyLift || this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
     s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3;
     this.mind.update(dt, s);
   }
@@ -1540,6 +1584,37 @@ export class Cygnet {
     this.root.quaternion.copy(this.seating.shown.q).multiply(this.tilt.setFromEuler(this.tiltBy.set(posed.rootPitch, 0, posed.rootRoll)));
     for (const [bone, r] of Object.entries(this.debug.bones)) n[Number(bone)].rotation.set(r[0], r[1], r[2]);
     this.root.updateMatrixWorld(true);
+    if(this.preenAt && this.preenWeight>0) {
+      PREEN_JOINTS.forEach((joint,i)=>this.preenBase[i].copy(n[joint].quaternion));
+      // Keep the head above the wing, with the bill pointing down to the linen. Solving the bill alone
+      // admits an inverted solution with the entire face inside the chest.
+      this.preenHead.copy(this.preenAt);n[BODY].worldToLocal(this.preenHead);
+      this.preenHead.add(this.neckTo.set(-.055,.223,.027));n[BODY].localToWorld(this.preenHead);
+      // Blend the head's path in space, then solve the neck. Blending all five joint rotations
+      // independently can bow the intervening pose through the breast even when both ends are clear.
+      n[HEAD].getWorldPosition(this.neckPivot);
+      this.preenHead.lerpVectors(this.neckPivot,this.preenHead,this.preenWeight);
+      for(let pass=0;pass<12;pass++) for(const joint of PREEN_NECK) {
+        const bone=n[joint];bone.getWorldPosition(this.neckPivot);
+        n[HEAD].getWorldPosition(this.neckFrom).sub(this.neckPivot).normalize();
+        this.neckTo.copy(this.preenHead).sub(this.neckPivot).normalize();
+        this.neckDelta.setFromUnitVectors(this.neckFrom,this.neckTo).slerp(this.neckIdentity,.4);
+        bone.parent!.getWorldQuaternion(this.neckParent);
+        this.neckDelta.premultiply(this.neckInverse.copy(this.neckParent).invert()).multiply(this.neckParent);
+        bone.quaternion.premultiply(this.neckDelta);
+        const base=this.preenBase[PREEN_JOINTS.indexOf(joint)];
+        const angle=base.angleTo(bone.quaternion);
+        if(angle>.85)bone.quaternion.slerp(base,1-.85/angle);
+        this.root.updateMatrixWorld(true);
+      }
+      n[HEAD].getWorldPosition(this.neckPivot);
+      this.neckTo.copy(this.preenAt).sub(this.neckPivot).normalize();
+      n[HEAD].parent!.getWorldQuaternion(this.neckParent);
+      this.neckTo.applyQuaternion(this.neckParent.invert());
+      n[HEAD].quaternion.setFromUnitVectors(this.neckFrom.set(0,.009,.23).normalize(),this.neckTo);
+      n[HEAD].quaternion.slerp(this.preenBase[0],1-this.preenWeight);
+      this.root.updateMatrixWorld(true);
+    }
     if (this.billGrip && this.billGripWeight > 0) {
       this.billTip(this.billCorrection);
       this.billCorrection.subVectors(this.billGrip, this.billCorrection).multiplyScalar(this.billGripWeight);
@@ -1548,6 +1623,7 @@ export class Cygnet {
       this.root.updateMatrixWorld(true);
     }
     for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);
+    if(this.wing.heldTip && this.wing.state==='wrapped') this.billTip(this.wing.heldTip);
     this.wing.update(dt, this.time, n[FORE_L].matrixWorld, this.bones, this.windNow, this.visible, this.mat.uniforms.uNudge.value);
   }
 

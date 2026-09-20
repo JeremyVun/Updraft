@@ -1,7 +1,9 @@
+import type { StormStrike } from '../fx/storm';
 import type { SkyMirror } from '../world/sky-mirror';
 import type { LittleBoats } from '../world/little-boats';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
+import type { SeaScorePhase } from '../audio/sea-score';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
@@ -76,8 +78,16 @@ export interface Chapter {
   readonly hush?: number;
   /** The piano owns both the melody and the player's gesture sound during its duet. */
   readonly pianoMix?: number;
+  /** The piano supplies gesture notes while engaged, independently of its fading mix. */
+  readonly pianoActive?: boolean;
+  /** A softer musical answer while the player lights the hidden cygnet's refuge. */
+  readonly caringWind?: boolean;
+  /** False when the chapter schedules its own adult/cygnet conversation. */
+  readonly flockChatter?: boolean;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
+  /** The long sea arrangement follows actual swimming and coastal approach. */
+  readonly seaScore?: SeaScorePhase;
   /** How far through the turn of the year this room is, 0 late autumn to 1 the frozen night. It only rises. */
   readonly season?: number;
   /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
@@ -86,6 +96,8 @@ export interface Chapter {
   readonly rainbow?: number;
   /** The winter storm, 0 calm to 1: how hard the trees and the village are being worked over. */
   readonly storm?: number;
+  /** Null reserves lightning for this chapter; a new object fires one authored strike. */
+  readonly stormStrike?: StormStrike | null;
   /** A patch of grass to press flat so something small in it can be seen: centre (x, z) and radius. */
   readonly trodden?: THREE.Vector3 | null;
   /** How awake the embers in the leaf litter are, 0 none to 1: the only light in the dark wood. */
@@ -100,8 +112,9 @@ export interface Chapter {
   readonly twirlGain?: number;
   /** Offer a sweep only while this chapter is waiting for wind in a fully slack sail. */
   readonly invitesSail?: boolean;
-  /** A waiting ember or wet plane that needs a deliberate sweep across it. */
+  /** A waiting ember, caught plane or wet paper that needs a deliberate sweep across it. */
   readonly windInvitation?: THREE.Vector3 | null;
+  /** Screen-local wind work on paper: first loosen its snag, then dry it when held. */
   brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */
   readonly silence?: boolean;
@@ -111,5 +124,7 @@ export interface Chapter {
   readonly checkpoint?: string | null;
   saveCheckpoint?(): number[];
   restoreCheckpoint?(point: string, data: number[]): void;
+  /** Read the rendered camera after its easing, for reveals that require subjects to be in view. */
+  afterCamera?(camera: THREE.PerspectiveCamera): void;
   update(dt: number, time: number): void;
 }

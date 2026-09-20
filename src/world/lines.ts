@@ -327,7 +327,6 @@ export function seaLines(): LineSpec[] {
   const rand = mulberry32(404);
   const at: [number, number, number][] = [
     [128, -118, 0.9],
-    [-298, -1962, 2.3],
   ];
   return at.map(([x, z, yaw]) => {
     const run = 7.5 + rand() * 3;
@@ -425,6 +424,8 @@ export class RedDoor {
     return this.open > 0.5;
   }
 
+  get doorOpening(): number { return this.swung; }
+
   update(dt: number): void {
     this.swung += (this.open - this.swung) * (1 - Math.exp(-dt * 1.4));
     this.panel.rotation.y = this.swung * 1.8;
@@ -456,6 +457,8 @@ const FAMILY_PIECES = [
  */
 export class WashingLines {
   readonly group = new THREE.Group();
+  /** One local sound source per line; curtains have their own opening response. */
+  readonly soundPoints: THREE.Vector3[] = [];
   /** Who must stay in sight: x, y, z and 1 while it applies. The washing in front of them gives way. */
   readonly subject = new THREE.Vector4();
   private readonly clothMat: THREE.ShaderMaterial;
@@ -490,6 +493,7 @@ export class WashingLines {
     const seen = new Set<string>();
 
     for (const spec of specs) {
+      if (spec.curtain === undefined) this.soundPoints.push(onLine(spec, 0.5, new THREE.Vector3()));
       for (const end of [spec.a, spec.b]) {
         const key = `${end.x.toFixed(1)},${end.z.toFixed(1)}`;
         if (seen.has(key)) continue;

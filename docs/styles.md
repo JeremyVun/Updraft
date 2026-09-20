@@ -23,7 +23,7 @@
 - **The child and the drawing**: a small child in a mustard hooded coat with a long red scarf that streams in the wind. The paper plane unfolds into a child's crayon drawing on ruled notebook paper: sun, green hills, a dashed wall, the white cottage with a red door and lit windows, a yellow figure with a red scarf, the plane itself.
 - **Sea life**: on the crossing a humpback rolls up out of the open sea in one long slow arc — dark blue-grey back, white water where it breaks the surface, a spout that glows gold against the low sun and drifts away on the wind, and pale flukes streaming water as it dives — while small silver fish leap near the boat and flash in the sun.
 - **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette, faint lens fringe at the corners, fine grain. The page opens through a dim pastel veil, with ivory wind ribbons and a single serif invitation; see the start screen below.
-- **Interface**: no text on screen. The cursor is a soft ring that tightens and glows while an updraft charges. A small speaker button in the corner breathes until sound is chosen.
+- **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an updraft charges. A small speaker button in the corner breathes when muted. Graphics quality uses three ascending bars in a matching round button beside sound and fullscreen: one filled bar for Low, two for Medium, three for High. The bars track the rendered world-detail tier as Auto adapts; Auto remains selected in the menu and the tooltip includes its current tier. During loading, bars stay unfilled until the initial automatic level is known. Its custom blue-green menu has compact ivory sans-serif labels and a quiet gold check for Auto, High, Medium or Low; touch devices retain 44px menu rows. The current choice stays in the tooltip and accessible label, without a persistent text label. These shared controls are available on the loading veil and throughout play. The menu supports arrows, first-letter navigation, Enter/Space, Escape and Tab; outside dismissal never starts play or blows wind.
 
 
 ## Start screen (2026-09-19)
@@ -31,19 +31,25 @@
 Jeremy approved simplifying the opening after experimenting with cursor gusts and local mist: set the mood
 and invite one click; discovering the wind belongs in the game.
 
-- Dim pastel peach, mauve and blue-grey with a stationary vignette and slowly drifting haze. Night
-  checkpoints use a darker palette. Pointer movement gently nudges the whole colour field, which settles
+- Muted sage through the centre, sea blue-teal toward the edges and diffuse straw-gold light above
+  and to the left, with a stationary vignette and slowly drifting haze. Night checkpoints deepen these
+  colours toward slate and dark green. Pointer movement gently nudges the whole colour field, which settles
   when the hand stops. No cursor trails, local spotlight or mist following the pointer.
 - A browser-owned SVG version of the game's hollow 26px cursor stays responsive during graphics setup.
   Two or three sparse ambient wind ribbons borrow the game's taper.
-- One centred word: “Begin”, or “Continue” with a valid checkpoint. Warm ivory italic Iowan / Palatino /
-  Georgia serif, softly edged. Opacity breathes from .95 to .42 over 5.6 seconds, without disappearing,
-  scaling or bouncing. Reduced motion disables the pulse and drift, leaving a still wind motif.
+- One centred invitation: “Begin”, or “Continue” with a valid checkpoint. Warm ivory italic Iowan /
+  Palatino / Georgia serif, with a small mouse outline and filled left button for a fine pointer with
+  hover. Touch uses a delicate rounded button outline instead. Label opacity breathes from .95 to .82
+  over 5.6 seconds, without disappearing, scaling or bouncing. Reduced motion disables the pulse and
+  drift, leaving a still wind motif.
 - Reveal the word after graphics preparation. Click, tap, Enter or Space starts sound and the story, then
   dissolves the veil over the first real scene. Touch dragging shifts the backdrop without entering.
   Keep the entering gesture out of the game's wind field, and retain the visible keyboard focus outline.
 - No downloaded font, image, audio or graphics context is needed for the start screen itself. A failed
   module or graphics boot offers “Try again”. Remove the veil and its animation loop after the fade.
+- Mute, fullscreen and quality work while loading through the lightweight `controls.ts` module. The
+  veil stays silent even when sound is enabled; Begin honours the selected mute state. Control clicks
+  cannot enter the game. Quality changes during graphics preparation queue until warm-up completes.
 
 `tools/start-check.mjs` checks desktop and phone entry, audio gating, centring, ambient motion, backdrop
 response without cursor trails, reduced motion, checkpoint restoration and boot retry.
@@ -53,9 +59,11 @@ The dark wood's embers are abstract light, following Jeremy's approved
 softly breathing and yielding to wind. Their small warm motes remain distinct from the cooler fireflies.
 No literal campfire, solid sphere or scattered glowing chips. The heart is in `src/fx/ember-orb.ts`; seven independently moving surfaces in `src/fx/ember-veils.ts` form the wisps.
 
-The unlit forest floor should be almost invisible. Lightning briefly reveals its texture; fanning an ember
-progressively reveals a warm patch of the way ahead. Do not lift the room's ambient light to show off the
-grass. The canopy dims the crossing's blue fill, sky reflection and fog, while preserving ember light.
+The forest remains dark, with faint cold moonlight on wet trunks, uneven ground and the travellers' outlines.
+Jeremy's September 20 correction: the earlier near-black floor erased the forest and left no sliver of moonlight.
+Retain enough scattered fill and blue-grey distance to place the characters in the wood between embers.
+Fanning progressively reveals a warmer, fuller patch of the way ahead. Moonlight never supplies the story's
+ember gate. Keep the storm's subdued lightning and the contrast between cold surroundings and warm care.
 
 
 ## Sky mirror (2026-09-20)
@@ -81,13 +89,18 @@ nearby mist must leave the cygnet readable. Rounded bedding supports the child, 
 embrace. The paper stays tucked away until the child leaves the bed.
 
 The bed stands on an open grassy terrace. The window holds a cream seam above a steep shoulder, with an
-ochre ribbon tied at its centre and a loose end beyond the lip. Frame the bird, unreachable end and drop
+broad coral ribbon tied at its centre and a loose end beyond the lip. Frame the bird, unreachable end and drop
 together on phone and desktop; retain the opening window before following the glide. The beak contact
 must be visible, including removal of the bird's grass visibility offset while airborne. Its light travels down the
 grass and mist before the wider sky brightens. Morning is golden light and fresh green turf beneath a pearl-blue sky, with cool shadows
 keeping the warmth distinct. The cold island visibly wakes with the child: green follows the light
 down the hill, then spreads beyond the lane across the whole island. Use the local winter palette, not the game's orange sunset played backwards.
-The bedside lamp's light and emissive shade fade together into morning.
+The bedside lamp's light and emissive shade contract as frost reaches the rug; the bedside clock stops.
+A narrow slit of window light briefly reaches the pillow before the bird leaves. The cliff is natural,
+with continuous convex slopes, sparse buried exposures and snow pockets. Never flatten a strip under
+the walking route or cut an inset shelf below the window. The summit curtain remains clear against the sky.
+The route is suggested by short moving wind wisps and the feather's lean. A snowdrift fills a natural notch between rock and the drop; wind exposes the grassy footing.
+Bedroom details cluster around the bed and summit window, leaving the hillside natural. The chapter reaches full winter before its morning transformation.
 
 Short, curved winter blades retain the meadow's wind response. A bounded patch of extra stems near
 the phone camera avoids isolated spikes; lighter roots and quiet, broad ground variation tie the turf

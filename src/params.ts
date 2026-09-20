@@ -40,7 +40,7 @@ export const params = {
   chapter: q.get('chapter'),
   /** Chapter/shot QA never reads or overwrites a player's save unless explicitly testing progress. */
   progress: q.has('progress') ? q.get('progress') === '1' : !q.has('shot') && !q.has('chapter'),
-  /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, one substep, sparser grass, coarser far terrain, the reflection on alternate frames). Explicit QA preset only; normal play adapts visual quality on every device. */
+  /** Lighter simulation and world for weak GPUs (128² wind, fewer pressure iterations, sparser grass, coarser far terrain, the reflection on alternate frames). Explicit QA preset only; normal play adapts visual quality on every device. */
   lite,
   /** Fixed reflection cadence: every frame (1), alternate frames (2), or never (0). Otherwise follows world quality. */
   mirror: q.get('mirror') !== null ? Number(q.get('mirror')) || 0 : null,

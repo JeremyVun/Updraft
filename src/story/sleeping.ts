@@ -1,9 +1,12 @@
 import * as THREE from 'three';
+import { sleepingGust } from '../world/sleeping-wind';
+import { HEARTH } from '../world/sleeping-hearth';
 import type { Shot } from '../camera';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_APPROACH, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
+import { SLEEP_SNOW_STOP, SLEEP_MIST_STOP } from '../world/sleeping-layout';
+import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { completeObjective, cue } from './cues';
 
@@ -15,7 +18,9 @@ type Beat =
   | 'feather'
   | 'edge'
   | 'climb'
-  | 'shiver'
+  | 'snow'
+  | 'mist'
+  | 'catchFeather'
   | 'unbinding'
   | 'hilltop'
   | 'reachRibbon'
@@ -31,6 +36,7 @@ const T = tuning.sleeping;
 /** Across the bed, at right angles to the way its head end points. */
 const BESIDE = new THREE.Vector2(-BED_FACING.y, BED_FACING.x);
 /** Where the cygnet sits on the blanket: beside the child's knees, clear of their face in the bedside shot. */
+const PILLOW_FEATHER = new THREE.Vector3(PILLOW.x-BESIDE.x*.88,PILLOW.y+.32,PILLOW.z-BESIDE.y*.88);
 const ON_BLANKET = new THREE.Vector3(
   BED.x - BESIDE.x * 0.6 - BED_FACING.x * 0.65,
   BED.y + 0.94,
@@ -45,8 +51,7 @@ const UPHILL = new THREE.Vector2(HILLTOP.x - BED.x, HILLTOP.z - BED.z).normalize
 const TO_HILL = Math.hypot(HILLTOP.x - BED.x, HILLTOP.z - BED.z);
 /** How far the grass round the bed is trodden flat, and where that gives out on the way up the hill. */
 const TRODDEN = 7.5;
-const EDGE = new THREE.Vector3(BED.x + UPHILL.x * TRODDEN, 0, BED.z + UPHILL.y * TRODDEN);
-EDGE.y = Math.max(heightAt(EDGE.x, EDGE.z), 0);
+const EDGE = SLEEP_ROUTE[1];
 /** Where the bird stands on the top: a little short of the summit, so the hill is still above it. */
 const TOP = SLEEP_LEDGE;
 const ROUTE_START = new THREE.Vector3(BED.x, BED.y, BED.z);
@@ -69,16 +74,16 @@ const smooth = THREE.MathUtils.smoothstep;
  */
 export class SleepingChapter implements Chapter {
   beat: Beat = 'ashore';
-  readonly breeze = 0.3;
+  get breeze(): number { return .3 + (this.cast.sleeping.cold || 0) * T.winterBreeze * (1-this.cast.sleeping.dawn) + sleepingGust(this.now,this.cast.sleeping.cold || 0,this.cast.sleeping.dawn)*.65; }
   /** The last of the living world goes out of it as they come up the beach, and comes back with the morning. */
   worldLife = 1;
   pace = 0.4;
   haze = 0.82;
   dusk = 1.9;
-  readonly season = 0.85;
+  readonly season = 1;
   music: 'wood' | 'sea' = 'wood';
   hush = 0.5;
-  readonly shot: Shot = { target: new THREE.Vector3(), distance: 16, height: 5, carry: true, clearance: 2.4 };
+  readonly shot: Shot = { target: new THREE.Vector3(), distance: 16, height: 5, carry: false, clearance: 2.4, smoothFit: 3 };
   readonly focus = new THREE.Vector3();
   trodden: THREE.Vector3 | null = null;
 
@@ -93,25 +98,36 @@ export class SleepingChapter implements Chapter {
   private readonly bedEntry = new THREE.Vector3();
   private readonly birdEntry = new THREE.Vector3();
   private birdPlaced = false;
+  private birdWalkIndex = 0;
+  private departureIndex = 0;
   private entryYaw = 0;
   private readonly blanketHand = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly bedFocus = new THREE.Vector3();
   private readonly roomFocus = new THREE.Vector3();
+  private readonly hearthFocus = HEARTH.clone().add(new THREE.Vector3(0,.65,0));
   private readonly subjects = { primary: this.bedFocus, secondary: this.roomFocus, tertiary: undefined as THREE.Vector3 | undefined, margin: 0.76, extra: 9 };
   private looks = 0;
   private nextLook = 0;
   private turnAt = 0;
   private tighten = 0;
 
-  private sat = false;
-  private roundedShoulder = false;
+  private routeIndex = 1;
+  private snowDone = false;
+  private mistDone = false;
+  private encounterStroke = 0;
   private readonly leapFrom = new THREE.Vector3();
   private readonly grip = new THREE.Vector3();
   private readonly beak = new THREE.Vector3();
   private leapYaw = 0;
   private leapBearing = 0;
   private ribbonCaught = false;
+  private bandageCaught = false;
+  private unroll = 0;
+  private unboundAt = -1;
+  private featherLetGo = false;
+  private readonly bandageStart = new THREE.Vector3();
   private ribbonDraw = 0;
+  private openingAge = 0;
   private landYaw = 0;
   private warmed = 0;
   private laid = false;
@@ -129,6 +145,7 @@ export class SleepingChapter implements Chapter {
   private readonly carrot = new THREE.Vector3();
   private readonly flat = new THREE.Vector3();
   private readonly perch = new THREE.Vector3();
+  private readonly cameraDetail = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3(0, 0, -1);
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
@@ -145,6 +162,9 @@ export class SleepingChapter implements Chapter {
     sleeping.frost = 0.3;
     sleeping.dawn = 0;
     sleeping.curtains = 0;
+    sleeping.ribbon.reset();
+    sleeping.trail.snow = sleeping.trail.mist = 0;
+    sleeping.cold = sleeping.hint = 0;
     sleeping.blanket = 0;
     sleeping.sleeper = 0;
     child.lieOn(LIE_AT, BED_FACING);
@@ -169,8 +189,13 @@ export class SleepingChapter implements Chapter {
   }
   restoreCheckpoint(point: string): void {
     const { child: c, sleeping, cygnet: k } = this.cast;
+    sleeping.hearth.extinguish();
     this.moored = true;
+    c.stop();
     if (point === 'morning') {
+      this.music = 'sea';
+      this.hush = 0.1;
+      sleeping.trail.snow = sleeping.trail.mist = 1;
       this.warmed = 1; this.worldLife = 1; this.dusk = 1.02; this.haze = 0.6;
       sleeping.lane(this.laneFrom, this.laneTo, T.dawnLaneWidth);
       sleeping.ribbon.released = true;
@@ -178,13 +203,18 @@ export class SleepingChapter implements Chapter {
       sleeping.fog = sleeping.frost = 0;
       this.board();
     } else {
+      this.music = 'wood';
+      this.hush = 0.8;
       this.laid = true; this.called = true;
       c.lieOn(LIE_AT, BED_FACING); c.position.copy(LIE_AT); c.abed = c.eyesShut = 1;
       sleeping.sleeper = 1; sleeping.frost = T.frostAsleep;
       // Resume once the bird has left the bed, so its low camera starts clear of the sleeping child.
       sleeping.feather.release(this.spot.copy(k.position).setY(k.position.y + 1.4), this.side.set(UPHILL.x * 0.4, 0.2, UPHILL.y * 0.4));
-      sleeping.feather.goal.copy(SLEEP_APPROACH).setY(SLEEP_APPROACH.y + 1.6);
-      sleeping.feather.routeStart = ROUTE_START;
+      k.release(EDGE); k.stay = false;
+      this.routeIndex = 2; this.departureIndex = 2;
+      sleeping.feather.position.copy(EDGE).setY(EDGE.y + 1.4);
+      sleeping.feather.goal.copy(SLEEP_ROUTE[2]).setY(SLEEP_ROUTE[2].y + 1.4);
+      sleeping.feather.routeStart = EDGE;
       sleeping.feather.keepNear = TO_HILL;
       k.pace = 0.6;
       this.looks = 2; this.dusk = 1.9; this.beat = 'climb';
@@ -199,7 +229,9 @@ export class SleepingChapter implements Chapter {
   get twirlGain(): number { return this.invitesFlight ? T.twirlGain : 1; }
 
   get windInvitation(): THREE.Vector3 | null {
-    return this.beat === 'asleep' && this.called && this.t > this.callAt + 8.5 ? PILLOW : null;
+    if (this.beat === 'snow') return this.cast.sleeping.trail.snowTarget;
+    if (this.beat === 'mist') return this.cast.sleeping.trail.mistTarget;
+    return this.beat === 'asleep' && this.called && this.t > this.callAt + 11 ? PILLOW_FEATHER : null;
   }
 
   /** The existing screen-space sweep reaches the pillow even when the ground lies behind it. */
@@ -271,8 +303,12 @@ export class SleepingChapter implements Chapter {
       case 'climb':
         this.climbing(dt);
         break;
-      case 'shiver':
-        this.shivering(dt);
+      case 'mist':
+      case 'snow':
+        this.encounter(dt);
+        break;
+      case 'catchFeather':
+        this.catchFeather();
         break;
       case 'hilltop':
         this.hilltop(dt);
@@ -303,7 +339,7 @@ export class SleepingChapter implements Chapter {
 
     /** The colour goes out of the world while the night has them, and comes back with the sun off the hill. */
     /** The bird brings life back: colour follows the light until the whole island is green again. */
-    const warm = this.warmed > 0 ? lerp(0.06, 1, sleeping.dawn) : 0.06;
+    const warm = this.warmed > 0 ? lerp(0.06, 1, sleeping.dawn) : lerp(T.winterGreen, .06, smooth(sleeping.cold || 0, 0, T.winterBedCold));
     this.worldLife += (warm - this.worldLife) * (1 - Math.exp(-dt * 0.4));
     /**
      * The sky goes from the wood's night, through the grey the hour before dawn actually is once the bird is out
@@ -328,9 +364,23 @@ export class SleepingChapter implements Chapter {
      */
     p.visible = c.abed < 0.55 && this.beat !== 'tuckIn' && this.beat !== 'waking' && this.beat !== 'lap';
     sleeping.sleeper = this.laid ? c.abed : 0;
-    if (['edge', 'climb', 'shiver'].includes(this.beat)) {
+    if (sleeping.sleepFace) c.breathFrom(sleeping.sleepFace);
+    sleeping.sleepMarks = this.laid ? c.eyesShut : 0;
+    if (this.beat === 'tuckIn') sleeping.cold = 0;
+    if (this.warmed === 0 && ['climb','snow','mist','hilltop','unbinding','reachRibbon','pullRibbon'].includes(this.beat)) {
+      sleeping.cold = Math.max(sleeping.cold, T.winterBedCold + (1-T.winterBedCold)*smooth(this.routeIndex,2,SLEEP_ROUTE.length-1));
+    }
+    if (['edge', 'climb', 'snow', 'mist'].includes(this.beat)) {
       sleeping.feather.follow = this.cast.cygnet.position;
     } else sleeping.feather.follow = null;
+    sleeping.feather.clearance=this.beat==='snow'?T.snowDepth*(1-sleeping.trail.snow):0;
+    sleeping.trail.interaction = this.beat === 'snow' || this.beat === 'mist' ? this.beat : null;
+    sleeping.trail.guideActive = ['edge','climb','snow','mist'].includes(this.beat);
+    sleeping.trail.guideAt.copy(this.cast.cygnet.position);
+    sleeping.trail.guideGoal.copy(this.windInvitation ?? SLEEP_ROUTE[this.routeIndex]);
+    if (this.beat !== 'asleep') sleeping.hint = 0;
+    if (this.warmed > 0) sleeping.cold = Math.min(sleeping.cold, 1-smooth(sleeping.dawn,0,.8));
+    this.bedBreath = 0;
     this.heading(dt);
     this.frame();
   }
@@ -349,16 +399,37 @@ export class SleepingChapter implements Chapter {
     c.lookAt = k.eye(this.look);
     c.sleepiness = 0.3;
     c.eyesShut = 0.12;
-    sleeping.blanket = 0.95 * (1 - smooth(this.t, tuckAt + 0.3, settleAt - 0.3));
+    sleeping.blanket = T.blanketOpen * (1 - smooth(this.t, tuckAt + 0.3, settleAt - 0.3));
     if (this.t < birdAt) {
       c.faceToward(BED.x, BED.z, 1 - Math.exp(-dt * 1.6));
       c.yawn = smooth(this.t, 0.4, 1.4) * (1 - smooth(this.t, 2.3, 3.6));
       return;
     }
-    if (!this.birdPlaced) { this.birdEntry.copy(k.position); this.entryYaw = c.yaw; this.birdPlaced = true; }
-    const step = smooth(this.t, birdAt, sitAt);
+    if (!this.birdPlaced) {
+      this.entryYaw = c.yaw; this.birdPlaced = true;
+      k.release(this.spot.copy(BED).addScaledVector(new THREE.Vector3(BESIDE.x,0,BESIDE.y),1.6));
+      k.stay = false; k.pace = T.bedBirdPace;
+    }
+    // Feet take the long way around the footboard; no perched interpolation through the mattress.
+    const walk = [[1.6,-2.3],[-1.5,-2.3],[-1.5,-.65]];
+    if (this.birdWalkIndex < walk.length) {
+      const [across,along] = walk[this.birdWalkIndex];
+      this.spot.set(BED.x+BESIDE.x*across+BED_FACING.x*along,0,BED.z+BESIDE.y*across+BED_FACING.y*along);
+      this.spot.y = heightAt(this.spot.x,this.spot.z);
+      k.errand = this.spot; k.watch(null);
+      c.faceToward(HEARTH.x,HEARTH.z,1-Math.exp(-dt*1.5));c.lookAt=HEARTH;c.yawn=0;
+      c.reachLocal(0,this.side.set(.18,.53,.43));c.reachLocal(1,this.side.set(-.18,.53,.43));
+      this.entryYaw=c.yaw;
+      if (Math.hypot(k.position.x-this.spot.x,k.position.z-this.spot.z)<.48) this.birdWalkIndex++;
+      this.beatStart += dt;
+      this.birdEntry.copy(k.position);
+      return;
+    }
+    c.reachFor(0,null);c.reachFor(1,null);
+    k.errand = null; k.stay = true;
+    const step = smooth(this.t, birdAt, birdAt+T.bedHopFor);
     this.spot.lerpVectors(this.birdEntry, ON_BLANKET, step);
-    this.spot.y += Math.sin(step * Math.PI) * 0.18;
+    this.spot.y += Math.sin(step * Math.PI) * T.bedHopHeight;
     k.perch(this.spot, this.onBlanket(dt));
     k.watch(c.face(this.told));
     c.lean = 0.24 * Math.sin(step * Math.PI);
@@ -426,9 +497,14 @@ export class SleepingChapter implements Chapter {
     const { child: c, cygnet: k, sleeping } = this.cast;
     k.perch(ON_BLANKET, this.onBlanket(dt));
     const noticing = this.called && this.t - this.callAt > 2 && this.t - this.callAt < 7.5;
-    k.watch(noticing ? this.told.copy(WINDOW) : c.face(this.told));
+    k.watch(this.t > T.winterBeginsAt && this.t < T.winterBeginsAt+1.2 ? this.told.copy(ON_BLANKET).add(new THREE.Vector3(-.7,1.8,.2)) : noticing ? this.told.copy(WINDOW) : c.face(this.told));
     /** The frost comes in across the hollow toward the bed the whole time they lie there. */
-    sleeping.frost = lerp(0.3, T.frostAsleep, smooth(this.t, 0, 40));
+    sleeping.frost = lerp(0.3, T.frostAsleep, smooth(this.t, T.winterBeginsAt, T.winterArrivesFor));
+    sleeping.cold = lerp(0,T.winterBedCold,smooth(this.t, T.winterBeginsAt, T.winterArrivesFor));
+    const hintTime = this.called ? this.t - this.callAt : -1;
+    sleeping.hint = smooth(hintTime, 5.5, 7) * (1 - smooth(hintTime, 8.5, 10));
+    c.eyesShut = 1 - sleeping.hint * 0.22;
+    if (sleeping.hint > 0.2) this.tighten = sleeping.hint * 0.32;
     this.hush = lerp(this.hush, this.called && this.t - this.callAt < 7 ? 0.95 : 0.55, 1 - Math.exp(-dt * 0.8));
 
     /** Blowing on the bed lifts the blanket — the room does that itself — and the child draws it back round them. */
@@ -440,10 +516,10 @@ export class SleepingChapter implements Chapter {
 
     if (this.tried < 3 && this.t > T.triesFrom + this.tried * T.triesEvery) {
       if (this.tried === 0) k.does('tug', c.face(this.spot), 2.8), (this.spot.y -= 0.3);
-      else if (this.tried === 1) k.plead();
+      else if (this.tried === 1) { k.does('shake', c.face(this.spot), 1.2); k.plead(); }
       else k.does('nudge', c.mitten(0, this.spot));
       this.tried++;
-      this.turnAt = this.now + 2.6;
+      if (this.tried < 3) this.turnAt = this.now + 2.6;
     }
     /** All they do is turn over. */
     if (this.turnAt > 0 && this.now > this.turnAt) {
@@ -458,7 +534,12 @@ export class SleepingChapter implements Chapter {
       cue('calling');
     }
     // A few quiet strokes suffice; time and ambient breeze never release the feather.
-    if (this.windInvitation) this.pillowStroke += Math.max(0, this.bedBreath) * dt;
+    if (this.windInvitation) {
+      sleeping.feather.preview = PILLOW_FEATHER;
+      sleeping.feather.previewLift = Math.min(1,this.pillowStroke/T.featherStroke);
+      k.watch(PILLOW_FEATHER);
+      this.pillowStroke += Math.max(0, this.bedBreath) * dt;
+    }
     if (this.pillowStroke >= T.featherStroke) this.toFeather();
     this.bedBreath = 0;
   }
@@ -470,13 +551,13 @@ export class SleepingChapter implements Chapter {
     this.to('feather');
     sleeping.pillowPuff();
     sleeping.feather.release(
-      this.spot.set(PILLOW.x, PILLOW.y + 0.6, PILLOW.z),
+      this.spot.copy(PILLOW_FEATHER).add(this.side.set(0,.38,0)),
       this.side.set(UPHILL.x * 0.4, 0.2, UPHILL.y * 0.4),
     );
     sleeping.feather.goal.copy(EDGE).setY(EDGE.y + 1.4);
     sleeping.feather.keepNear = 16;
     sleeping.feather.routeStart = ROUTE_START;
-    cue('lifted');
+    cue('feather');
   }
 
   private theFeather(dt: number): void {
@@ -490,7 +571,7 @@ export class SleepingChapter implements Chapter {
       return;
     }
     /** Off the blanket and onto the grass beside the bed, by hopping down off it rather than by appearing there. */
-    k.release(this.spot.set(BED.x + BESIDE.x * 1.5, 0, BED.z + BESIDE.y * 1.5));
+    k.release(this.spot.set(ON_BLANKET.x-BESIDE.x*1.1,0,ON_BLANKET.z-BESIDE.y*1.1));
     k.pace = 0.6;
     this.to('edge');
   }
@@ -499,9 +580,18 @@ export class SleepingChapter implements Chapter {
   private theEdge(): void {
     const { cygnet: k, sleeping } = this.cast;
     const f = sleeping.feather;
+    // Stay on the far side until the headboard is behind us, then join the uphill route.
+    if (this.departureIndex < 2) {
+      if (this.departureIndex === 0) this.carrot.set(BED.x-BESIDE.x*1.8+BED_FACING.x*2.8,0,BED.z-BESIDE.y*1.8+BED_FACING.y*2.8);
+      else this.carrot.copy(EDGE);
+      this.carrot.y=heightAt(this.carrot.x,this.carrot.z);
+      k.errand=this.carrot; k.stay=false; k.watch(f.position);
+      if (Math.hypot(k.position.x-this.carrot.x,k.position.z-this.carrot.z)<.48) this.departureIndex++;
+      return;
+    }
     this.trodden = this.flat.set(BED.x, TRODDEN + 2, BED.z);
     const gap = Math.hypot(k.position.x - EDGE.x, k.position.z - EDGE.z);
-    if (gap > 1.8 && this.looks === 0 && this.t < T.edgeFor) {
+    if (gap > T.routeReach && this.looks === 0) {
       this.lead(f.position);
       return;
     }
@@ -517,76 +607,94 @@ export class SleepingChapter implements Chapter {
     if (this.looks >= 1 && this.now > this.nextLook) {
       k.stay = false;
       k.watch(null);
-      f.goal.copy(SLEEP_APPROACH).setY(SLEEP_APPROACH.y + 1.6);
+      this.routeIndex = 2;
+      f.goal.copy(SLEEP_ROUTE[this.routeIndex]).setY(SLEEP_ROUTE[this.routeIndex].y + 1.4);
       f.routeStart = EDGE;
       f.keepNear = TO_HILL;
       this.to('climb');
     }
   }
 
-  /** Up the hill behind the feather, with the fog shutting behind it and the bed gone. */
+  /** The same grass shelf supports the guide, bird and both encounters; no shortcuts across the cliff. */
   private climbing(dt: number): void {
     const { cygnet: k, sleeping } = this.cast;
-    if (!this.roundedShoulder && k.position.distanceTo(SLEEP_APPROACH) < 2) {
-      this.roundedShoulder = true;
-      sleeping.feather.routeStart = SLEEP_APPROACH;
-      sleeping.feather.goal.copy(TOP).setY(TOP.y + 1.4);
-    }
-    this.lead(sleeping.feather.position);
-    k.pace = 0.58 + sleeping.feather.encouragement * 0.28;
+    const destination = SLEEP_ROUTE[this.routeIndex];
+    this.lead(sleeping.feather.heldBy ? destination : sleeping.feather.position);
+    k.pace = T.climbPace + sleeping.feather.encouragement * T.climbEncouragement;
     this.trodden = null;
-    this.hush = lerp(this.hush, 0.75, 1 - Math.exp(-dt * 0.5));
-    sleeping.frost = Math.min(T.frostWorst, sleeping.frost + dt * 0.012);
-    /** A first touch of light on the crest ahead of it, which is the only reason to keep walking into the dark. */
-    sleeping.dawn = Math.min(0.04, sleeping.dawn + dt * 0.006);
-    const up = Math.hypot(k.position.x - BED.x, k.position.z - BED.z) / TO_HILL;
-    if (!this.sat && up > T.shiverAt) {
-      this.sat = true;
-      k.stay = true;
-      k.errand = null;
-      k.does('shiver', undefined, 40);
-      this.to('shiver');
-      return;
-    }
-    if (this.roundedShoulder && Math.hypot(k.position.x - TOP.x, k.position.z - TOP.z) < 0.85) {
-      k.stay = true;
-      k.errand = null;
-      k.watch(null);
-      k.needs(T.liftToFly, null);
-      k.mayFly = false;
-      k.wing.recovery = 1;
-      sleeping.feather.goal.copy(TOP).setY(TOP.y + 2.2);
-      k.watch(this.told.copy(BED));
-      this.to('unbinding');
-      this.leapFrom.copy(k.position);
-    }
+    this.hush = lerp(this.hush, 0.8, 1 - Math.exp(-dt * 0.5));
+    sleeping.frost = lerp(T.frostAsleep, T.frostWorst, (this.routeIndex - 1) / (SLEEP_ROUTE.length - 2));
+    sleeping.cold = lerp(0.65, 1, (this.routeIndex - 1) / (SLEEP_ROUTE.length - 2));
+    if (Math.hypot(k.position.x-destination.x,k.position.z-destination.z)>T.routeReach) return;
+    if (this.routeIndex === SLEEP_SNOW_STOP && !this.snowDone) { this.startEncounter('snow'); return; }
+    if (this.routeIndex === SLEEP_MIST_STOP && !this.mistDone) { this.startEncounter('mist'); return; }
+    if (this.routeIndex < SLEEP_ROUTE.length-1) { this.nextWaypoint(); return; }
+    k.stay = true; k.errand = null; k.watch(null);
+    k.needs(T.liftToFly, null); k.mayFly = false; k.wing.recovery = 1;
+    sleeping.feather.goal.copy(TOP).setY(TOP.y + 2.2);
+    k.watch(this.told.copy(BED));
+    this.leapFrom.copy(k.position);
+    this.to('unbinding');
   }
 
-  /**
-   * The fog has shut behind it and it cannot see the child any more, so it sits down where it is. Until now only
-   * the child being near it could stop that. Here a breath from the player ruffles its down and it gets up, which
-   * is the player being its company; left alone it gets up by itself, because nobody is stranded on this island.
-   */
-  private shivering(dt: number): void {
-    const { cygnet: k, sleeping } = this.cast;
-    const f = sleeping.feather;
-    f.goal.set(
-      k.position.x + UPHILL.x * 2.4,
-      Math.max(heightAt(k.position.x, k.position.z), 0) + 1.3,
-      k.position.z + UPHILL.y * 2.4,
-    );
-    k.watch(f.position);
-    this.hush = lerp(this.hush, 0.9, 1 - Math.exp(-dt * 0.8));
-    const breath = this.blowing(k.position.x, k.position.z);
-    if (this.t > 1.6 && (breath > 0.12 || this.t > T.shiverFor)) {
-      k.mind.trust(0.4);
-      k.does('into-wind', undefined, 1.8);
-      k.stay = false;
-      f.goal.copy(this.roundedShoulder ? TOP : SLEEP_APPROACH);
-      f.goal.y += 1.6;
-      f.routeStart = this.roundedShoulder ? SLEEP_APPROACH : EDGE;
-      this.to('climb');
+  private nextWaypoint(): void {
+    const f=this.cast.sleeping.feather;
+    f.routeStart = SLEEP_ROUTE[this.routeIndex];
+    this.routeIndex++;
+    f.goal.copy(SLEEP_ROUTE[this.routeIndex]).setY(SLEEP_ROUTE[this.routeIndex].y+1.4);
+  }
+
+  private startEncounter(beat: 'snow' | 'mist'): void {
+    const {cygnet:k,sleeping}=this.cast;
+    k.stay=true;k.errand=null;
+    this.encounterStroke=0;
+    this.to(beat);
+    const target=beat==='snow'?sleeping.trail.snowTarget:sleeping.trail.mistTarget;
+    sleeping.feather.goal.copy(target);
+    k.watch(target);
+    k.does(beat==='snow'?'peer':'shiver',undefined,T.encounterNoticeFor);
+  }
+
+  /** Broad sweeps carry loose powder away or open the fog. Neither gate solves itself on elapsed time. */
+  private encounter(dt: number): void {
+    const {cygnet:k,sleeping}=this.cast;
+    const snow=this.beat==='snow', target=snow?sleeping.trail.snowTarget:sleeping.trail.mistTarget;
+    const required=snow?T.snowStroke:T.mistStroke;
+    k.stay=true;k.errand=null;
+    k.watch(!snow && this.t<1.8 ? this.told.copy(BED).setY(BED.y+1) : target);
+    sleeping.feather.goal.copy(target);
+    // Screen-space motion is the same forgiving gesture already used at the pillow.
+    this.encounterStroke+=Math.max(0,this.bedBreath)*dt;
+    const progress=Math.min(1,this.encounterStroke/required);
+    if(snow) sleeping.trail.snow=progress;
+    else {
+      sleeping.trail.mist=progress;
+      if(progress>0) sleeping.carve(target.x,target.z,-1,-1,progress*0.4);
     }
+    if(k.stay && this.t>3.4){
+      const facing=Math.atan2(target.x-k.position.x,target.z-k.position.z);
+      k.yaw+=Math.atan2(Math.sin(facing-k.yaw),Math.cos(facing-k.yaw))*(1-Math.exp(-dt*1.4));
+    }
+    if(progress<1 || this.t<T.encounterNoticeFor || (snow && !sleeping.trail.snowReady)) return;
+    if(snow) this.snowDone=true;else this.mistDone=true;
+    k.mind.trust(0.4); k.does('into-wind',undefined,2.6); k.stay=false;
+    if (!snow) { this.to('catchFeather'); return; }
+    this.nextWaypoint();
+    this.to('climb');
+  }
+
+  private catchFeather(): void {
+    const {cygnet:k,sleeping}=this.cast;
+    k.stay=true;k.errand=null;
+    const f=sleeping.feather;
+    if(!f.heldBy) {
+      k.billTip(this.beak);
+      f.goal.copy(this.beak);f.follow=null;f.routeStart=null;
+      f.catchingBy=k;
+      k.watch(f.position);
+      if(this.t>.9 && f.position.distanceTo(this.beak)<.035) {f.heldBy=k;f.catchingBy=null;}
+    }
+    if(this.t>1.5 && f.heldBy){this.nextWaypoint();this.to('climb');}
   }
 
   /**
@@ -599,7 +707,7 @@ export class SleepingChapter implements Chapter {
     sleeping.feather.goal.set(k.position.x, Math.max(heightAt(k.position.x, k.position.z), 0) + 2.2, k.position.z);
     this.hush = lerp(this.hush, 0.85, 1 - Math.exp(-dt * 0.6));
     /** A faint spill at the curtain seam; full morning still waits for the updraft. */
-    sleeping.dawn = Math.min(0.12, sleeping.dawn + dt * 0.03);
+    sleeping.dawn = 0;
     sleeping.frost = Math.min(T.frostWorst, sleeping.frost + dt * 0.02);
     k.watch(this.told.copy(CURTAIN_END));
     const facing = Math.atan2(CURTAIN_END.x - k.position.x, CURTAIN_END.z - k.position.z);
@@ -613,39 +721,53 @@ export class SleepingChapter implements Chapter {
     }
   }
 
-  /** The wing has healed. Looking back for the child gives it a reason to trust that wing again. */
+  /** The bird notices the ribbon, lets its guide go, and picks the healed wing's loose dressing free. */
   private unbinding(dt: number): void {
-    const { cygnet: k, sleeping } = this.cast;
-    const care = tuning.wingCare;
-    const feather = sleeping.feather;
-    if (feather.flying) {
-      feather.goal.copy(WINDOW).setY(WINDOW.y + 0.4);
-      feather.position.lerp(feather.goal, 1 - Math.exp(-dt * 1.6));
-      feather.velocity.multiplyScalar(Math.exp(-dt * 4));
-      feather.fade = 1 - smooth(this.t, 2.5, 5.5);
-      if (this.t >= 5.5) { feather.flying = false; feather.visible = false; }
+    const {cygnet:k,sleeping}=this.cast;
+    const f=sleeping.feather;
+    k.stay=true;k.errand=null;k.mayFly=false;
+    const facing=Math.atan2(BED.x-k.position.x,BED.z-k.position.z);
+    k.yaw+=Math.atan2(Math.sin(facing-k.yaw),Math.cos(facing-k.yaw))*(1-Math.exp(-dt*1.4));
+    if(this.t<3.7) { k.watch(CURTAIN_END); return; }
+    if(!this.featherLetGo) {
+      this.featherLetGo=true;
+      k.billTip(this.beak);
+      f.release(this.beak,this.side.set(-.7,1.2,.25));
+      f.goal.copy(this.beak).add(this.side.set(-7,5,-4));f.follow=null;f.routeStart=null;
     }
-    k.stay = true; k.errand = null; k.mayFly = false;
-    if (this.t < T.ledgeStudyFor) {
-      k.watch(this.told.copy(CURTAIN_END));
-      const reach = smooth(this.t, 0.8, 2.2) * (1 - smooth(this.t, 3.2, 4.5));
-      this.spot.copy(this.leapFrom).lerp(TOP, reach * 0.6);
-      k.perch(this.spot, Math.atan2(CURTAIN_END.x - k.position.x, CURTAIN_END.z - k.position.z));
-      if (this.t > 1 && this.t < 1 + dt) k.plead();
+    f.fade=1-smooth(this.t,6,9);
+    if(this.t>9){f.flying=false;f.visible=false;}
+    if(this.t<T.ledgeStudyFor){k.watch(f.position);return;}
+    k.wing.opening=.46;
+    if(!this.bandageCaught) {
+      k.wing.tip(this.bandageStart);
+      this.grip.copy(this.bandageStart);
+      k.preenAt=this.grip;k.preenWeight=smooth(this.t,T.ledgeStudyFor,T.ledgeStudyFor+1.4);
+      // The solver supplies the downward preen. Keep its underlying gaze upright so blending in
+      // cannot inherit a second, independent head tuck toward the same low point.
+      k.watch(this.told.copy(k.position).add(this.side.set(Math.sin(k.yaw)*.6,.8,Math.cos(k.yaw)*.6)));
+      if(k.preenWeight>.98 && k.billTip(this.beak).distanceTo(this.grip)<.035) {
+        this.bandageCaught=true;k.wing.manualUnroll=0;k.wing.release();k.wing.heldTip=this.beak;
+      }
       return;
     }
-    k.watch(this.told.copy(BED));
-    const facing = Math.atan2(BED.x - k.position.x, BED.z - k.position.z);
-    k.yaw += Math.atan2(Math.sin(facing - k.yaw), Math.cos(facing - k.yaw)) * (1 - Math.exp(-dt * 1.4));
-    k.wing.opening = smooth(this.t - T.ledgeStudyFor, care.lookBackFor, care.lookBackFor + care.openFor);
-    sleeping.dawn = Math.min(0.12, sleeping.dawn + dt * 0.02);
-    if (this.t - T.ledgeStudyFor > care.lookBackFor + care.openFor) k.wing.release();
-    if (k.wing.flightReady && this.t - T.ledgeStudyFor > care.lookBackFor + care.openFor + care.unwindFor + 0.8) {
-      k.watch(null);
-      k.release(this.spot.copy(k.position));
-      k.stay = true;
-      k.mayFly = true;
-      this.to('hilltop');
+    this.unroll=Math.min(1,this.unroll+dt/T.selfUnwrapFor);
+    const draw=smooth(this.unroll,0,1);
+    const tug=Math.sin(this.unroll*Math.PI*6)*.045*Math.sin(this.unroll*Math.PI);
+    this.grip.copy(this.bandageStart).add(this.side.set(Math.sin(k.yaw)*(.16*draw+tug),.08*draw,Math.cos(k.yaw)*(.16*draw+tug)));
+    k.preenAt=this.grip;k.preenWeight=1;
+    k.wing.manualUnroll=draw;
+    if(k.wing.flightReady) {
+      if(this.unboundAt<0)this.unboundAt=this.now;
+      const settle=smooth(this.now-this.unboundAt,0,1.3);
+      k.preenWeight=1-settle;
+      k.wing.opening=.46+.54*Math.sin(settle*Math.PI);
+      k.watch(CURTAIN_END);
+      if(settle>=1) {
+        k.preenAt=null;k.preenWeight=0;k.wing.heldTip=null;
+        k.wing.opening=0;k.watch(CURTAIN_END);k.release(this.spot.copy(k.position));
+        k.stay=true;k.mayFly=true;k.steadyLift=true;this.to('hilltop');
+      }
     }
   }
 
@@ -656,10 +778,10 @@ export class SleepingChapter implements Chapter {
     sleeping.ribbon.gripAt(0, this.grip);
     this.spot.copy(this.grip).add(this.side.set(-Math.sin(this.leapYaw) * 0.5, -1.25, -Math.cos(this.leapYaw) * 0.5));
     this.spot.lerpVectors(this.leapFrom, this.spot, u);
-    this.spot.y += Math.sin(u * Math.PI) * 0.8;
-    const yaw = this.leapBearing + Math.atan2(Math.sin(this.leapYaw - this.leapBearing), Math.cos(this.leapYaw - this.leapBearing)) * smooth(this.t, 0.5, T.leapFor);
+    this.spot.y += Math.sin(u * Math.PI) * T.ribbonReachArc;
+    const yaw = this.leapBearing + Math.atan2(Math.sin(this.leapYaw - this.leapBearing), Math.cos(this.leapYaw - this.leapBearing)) * smooth(this.t, 0.15, T.leapFor - 0.25);
     k.perch(this.spot, yaw);
-    k.flightPose = smooth(this.t, 0, 0.5);
+    k.flightPose = 0.75 * smooth(this.t, 0, 0.45);
     k.billGrip = this.grip;
     k.billGripWeight = smooth(this.t, T.leapFor - 0.55, T.leapFor);
     k.watch(this.told.copy(CURTAIN_KNOT));
@@ -667,7 +789,7 @@ export class SleepingChapter implements Chapter {
     sleeping.feather.visible = false;
     if (this.t >= T.leapFor) {
       this.ribbonCaught = k.billTip(this.beak).distanceTo(this.grip) < 0.08;
-      if (this.ribbonCaught) this.to('pullRibbon');
+      if (this.ribbonCaught) { sleeping.ribbon.held = true; this.to('pullRibbon'); }
     }
   }
 
@@ -683,8 +805,14 @@ export class SleepingChapter implements Chapter {
     k.watch(this.told.copy(CURTAIN_KNOT));
     if (pull >= 1 && touching) {
       sleeping.ribbon.released = true;
-      k.billGrip = null; k.billGripWeight = 0; k.flightPose = 0.75;
-      this.away();
+      // Let the cloth visibly part while the beak still holds the drawn tail.
+      this.openingAge += dt;
+      sleeping.curtains = smooth(this.openingAge, 0, T.curtainsFor);
+      if (sleeping.curtainOpening >= T.ribbonReleaseOpening) {
+        sleeping.ribbon.held = false;
+        k.billGrip = null; k.billGripWeight = 0; k.steadyLift = false;
+        this.away();
+      }
     }
   }
 
@@ -694,7 +822,7 @@ export class SleepingChapter implements Chapter {
     this.to('glide');
     k.wing.opening = 0;
     k.stay = false;
-    k.glideTo(this.spot.copy(ON_BLANKET), T.glideFor, T.glideArc, true);
+    k.glideTo(this.spot.copy(ON_BLANKET), T.glideFor, T.glideArc, true, true);
     sleeping.lane(this.laneFrom, this.laneTo, T.dawnLaneWidth);
     sleeping.laneOpen = 0;
     sleeping.feather.goal.copy(BED).setY(BED.y + 2.6);
@@ -716,7 +844,7 @@ export class SleepingChapter implements Chapter {
     sleeping.fog = Math.min(sleeping.fog, 1 - 0.8 * down);
     sleeping.frost = Math.min(sleeping.frost, T.frostWorst * (1 - down));
     // The completed tug releases the cloth; opening alone does not yet warm the bed.
-    if (sleeping.ribbon.released) sleeping.curtains = Math.max(sleeping.curtains, smooth(this.t, 0, T.curtainsFor));
+    if (sleeping.ribbon.released) sleeping.curtains = Math.max(sleeping.curtains, smooth(this.openingAge + this.t, 0, T.curtainsFor));
     this.warmed = 1;
     this.hush = lerp(this.hush, 0.35, 1 - Math.exp(-dt * 0.5));
     if (k.state === 'perched' || down >= 1) {
@@ -786,7 +914,14 @@ export class SleepingChapter implements Chapter {
   private lead(at: THREE.Vector3): void {
     const { cygnet: k } = this.cast;
     k.stay = false;
-    k.errand = this.carrot.set(at.x, Math.max(heightAt(at.x, at.z), 0), at.z);
+    const a = SLEEP_ROUTE[Math.max(0,this.routeIndex-1)], b = SLEEP_ROUTE[this.routeIndex];
+    const dx=b.x-a.x,dz=b.z-a.z,len2=dx*dx+dz*dz;
+    const t=THREE.MathUtils.clamp(((at.x-a.x)*dx+(at.z-a.z)*dz)/len2,0,1);
+    this.carrot.set(a.x+dx*t,0,a.z+dz*t);
+    // Complete the last stride even when the feather is fluttering just short of its waypoint.
+    if(t>0.82) this.carrot.copy(b);
+    this.carrot.y=heightAt(this.carrot.x,this.carrot.z);
+    k.errand = this.carrot;
     k.watch(at);
   }
 
@@ -871,21 +1006,19 @@ export class SleepingChapter implements Chapter {
       case 'feather':
       case 'waking':
       case 'lap': {
-        // One deliberate view connects the cold bed to the seam of morning before the bird leaves.
-        if (this.beat === 'asleep' && this.called && this.t - this.callAt > 2 && this.t - this.callAt < 7.5) {
-          this.bedFocus.copy(BED).setY(BED.y + 1.2);
-          this.roomFocus.copy(WINDOW);
-          s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.28);
-          s.eye = this.perch.set(BED.x + 14, BED.y + 7, BED.z + 15);
-          s.subjects = this.subjects; s.clearance = 1.2;
-          this.pace = 0.75; this.focus.copy(BED);
-          return;
-        }
         // The bed and both travellers stay together in portrait as well as landscape.
         this.bedFocus.copy(BED).setY(BED.y + 1.05);
         this.roomFocus.copy(this.beat === 'tuckIn' ? c : k.position).setY(this.beat === 'tuckIn' ? c.y + 1.4 : k.position.y + 0.65);
         s.target.copy(this.bedFocus);
         s.eye = this.perch.set(BED.x + 7.1, BED.y + 4.0, BED.z + 6.4);
+        if(this.beat!=='asleep' || !this.called)this.subjects.tertiary=this.hearthFocus;
+        if (this.beat === 'asleep' && this.called) {
+          const h=this.t-this.callAt;
+          const reveal=smooth(h,1,5)*(1-smooth(h,8,12));
+          this.roomFocus.lerp(WINDOW,reveal);
+          s.target.lerp(WINDOW,reveal*.28);
+          this.perch.lerp(this.side.set(BED.x+14,BED.y+7,BED.z+15),reveal);
+        }
         s.subjects = this.subjects;
         s.clearance = 1.0;
         this.pace = 0.8;
@@ -894,7 +1027,9 @@ export class SleepingChapter implements Chapter {
       }
       case 'edge':
       case 'climb':
-      case 'shiver': {
+      case 'snow':
+      case 'mist':
+      case 'catchFeather': {
         /**
          * Down at the bird's eye, where the grass is over its head and the fog top is the sky. It stands behind
          * the way up rather than behind the bird: a bird that stops to look at something must not swing the
@@ -902,11 +1037,21 @@ export class SleepingChapter implements Chapter {
          */
         const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
         this.bedFocus.copy(k.position).setY(ground + 0.7);
-        this.roomFocus.copy(WINDOW).setY(WINDOW.y + 0.5);
-        s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.16);
-        const ex = k.position.x - UPHILL.x * 5.4 - UPHILL.y;
-        const ez = k.position.z - UPHILL.y * 5.4 + UPHILL.x;
-        s.eye = this.perch.set(ex, Math.max(heightAt(ex, ez), 0) + 1.5, ez);
+        const trail=this.cast.sleeping.trail;
+        const interest=this.beat==='snow'?trail.snowTarget:this.beat==='mist'?trail.mistTarget:SLEEP_ROUTE[this.routeIndex];
+        this.roomFocus.copy(interest).setY(interest.y+0.7);
+        s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.35);
+        const a=SLEEP_ROUTE[Math.max(0,this.routeIndex-1)],b=SLEEP_ROUTE[this.routeIndex];
+        const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz);
+        const ex=k.position.x-dx/len*6.4-dz/len*3.2;
+        const ez=k.position.z-dz/len*6.4+dx/len*3.2;
+        s.eye = this.perch.set(ex, Math.max(ground + 2.4, heightAt(ex, ez) + 1.2), ez);
+        if (this.routeIndex >= 6) {
+          this.subjects.tertiary = WINDOW;
+          this.subjects.margin = .66;
+          this.subjects.extra = 14;
+          s.target.lerp(WINDOW,.18);
+        }
         s.subjects = this.subjects;
         s.clearance = 0.7;
         this.pace = 0.7;
@@ -918,18 +1063,37 @@ export class SleepingChapter implements Chapter {
       case 'reachRibbon':
       case 'pullRibbon': {
         this.summitFrame();
+        if(this.beat==='unbinding') {
+          const detail=smooth(this.t,.3,1.5)*(1-smooth(this.t,2.6,4.1));
+          s.target.lerp(CURTAIN_END,detail);
+          s.eye!.lerp(this.side.copy(CURTAIN_END).add(new THREE.Vector3(4,1.7,4)),detail);
+          this.subjects.primary.copy(k.position).lerp(CURTAIN_END,detail);
+          this.subjects.secondary.copy(WINDOW).lerp(CURTAIN_KNOT,detail);
+          // Come back to the bird close enough to read the bill taking the loose dressing.
+          const close=smooth(this.t,4.0,6.3);
+          s.target.lerp(this.cameraDetail.copy(k.position).add(this.side.set(0,.65,0)),close);
+          s.eye!.lerp(this.cameraDetail.copy(k.position).add(this.side.set(4.2,1.7,2.3)),close);
+          this.subjects.primary.lerp(this.cameraDetail.copy(k.position).add(this.side.set(0,.65,0)),close);
+          this.subjects.secondary.lerp(this.subjects.primary,close);
+          this.subjects.tertiary=undefined;
+          this.subjects.margin=.76;
+        }
         return;
       }
       case 'glide': {
-        // Hold the reveal while the curtains open, then follow the bird down the light.
-        if (this.t < T.windowRevealFor) { this.summitFrame(); return; }
-        /** Behind it and a little above, so the lane of sun opening down the hill is what lies ahead of it. */
-        s.target.set(k.position.x - UPHILL.x * 1.2, k.position.y + 0.5, k.position.z - UPHILL.y * 1.2);
-        const ex = k.position.x + UPHILL.x * 6.5;
-        const ez = k.position.z + UPHILL.y * 6.5;
-        s.eye = this.perch.set(ex, k.position.y + 3.4, ez);
-        s.clearance = 1.2;
-        this.pace = 1.1;
+        // Let the opening window lead into the descent without switching camera destinations in one frame.
+        this.summitFrame();
+        const follow=smooth(this.t,T.windowRevealFor,T.windowRevealFor+1.8);
+        // During the reveal the window is the subject. A descending primary pulls it out of a portrait frame.
+        this.bedFocus.copy(CURTAIN_END).lerp(k.position,follow);
+        this.cameraDetail.set(k.position.x-UPHILL.x*1.2,k.position.y+.5,k.position.z-UPHILL.y*1.2);
+        s.target.copy(WINDOW).lerp(CURTAIN_END,.25).lerp(this.cameraDetail,follow);
+        this.cameraDetail.set(k.position.x+UPHILL.x*6.5,k.position.y+3.4,k.position.z+UPHILL.y*6.5);
+        s.eye!.lerp(this.cameraDetail,follow);
+        this.subjects.secondary.lerp(this.subjects.primary,follow);
+        if(follow>0)this.subjects.tertiary=undefined;
+        s.clearance=lerp(.9,1.2,follow);
+        this.pace=lerp(.9,1.1,follow);
         this.focus.copy(k.position);
         return;
       }

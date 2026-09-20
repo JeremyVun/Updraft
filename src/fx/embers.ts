@@ -88,6 +88,8 @@ export interface Coal {
   /** How much breath an unlit coal has had, 0 to 1. */
   wake: number;
   live: boolean;
+  /** Visibility of an authored reveal; zero keeps an unlit ember concealed in its shelter. */
+  reveal: number;
   /** When it was laid: the gust that lit the last one must not run straight on into this one. */
   laid: number;
   seed: number;
@@ -145,7 +147,7 @@ export class Embers {
       this.sparks.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), heat: 0, max: CINDER, seed: Math.random() * 6.28 });
     }
     for (let i = 0; i < COALS; i++) {
-      this.coals.push({ p: new THREE.Vector3(), heat: 0, flare: 0, lit: false, wake: 0, live: false, laid: 0, breath: 0, seed: Math.random() * 6.28 });
+      this.coals.push({ p: new THREE.Vector3(), heat: 0, flare: 0, lit: false, wake: 0, live: false, reveal: 1, laid: 0, breath: 0, seed: Math.random() * 6.28 });
     }
     this.mesh = new THREE.Mesh(
       geo,
@@ -173,7 +175,10 @@ export class Embers {
     let coal = this.coals.find((c) => !c.live);
     if (!coal) {
       coal = this.coals[0];
-      for (const c of this.coals) if (c.heat + c.wake < coal.heat + coal.wake) coal = c;
+      // An unlit, concealed story ember is reserved for its reveal, even when every slot is occupied.
+      const reusable = this.coals.filter(c => c.reveal >= 1);
+      coal = reusable[0] ?? coal;
+      for (const c of reusable) if (c.heat + c.wake < coal.heat + coal.wake) coal = c;
     }
     coal.p.set(x, Math.max(heightAt(x, z), 0) + tuning.wood.orbHover, z);
     coal.heat = 0;
@@ -182,6 +187,7 @@ export class Embers {
     coal.breath = 0;
     coal.lit = false;
     coal.live = true;
+    coal.reveal = 1;
     coal.laid = this.clock;
     const j = (SPARKS + this.coals.indexOf(coal)) * 4;
     (this.motion.array as Float32Array).fill(0, j, j + 4);
@@ -390,9 +396,9 @@ export class Embers {
       data[j + 1] = c.p.y + (Math.sin(time * 1.25 + c.seed) + 0.3 * Math.sin(time * 2.1 + c.seed))
         * t.orbBob * (0.45 + growth * 0.55);
       data[j + 2] = c.p.z;
-      data[j + 3] = c.live ? this.presence * Math.min(1, t.orbRestAlpha
+      data[j + 3] = c.live ? this.presence * c.reveal * Math.min(1, t.orbRestAlpha
         + (0.82 - t.orbRestAlpha) * growth + motion[j + 3] * 0.13) : 0;
-      const lightTarget = !c.live ? 0 : c.lit ? (c.heat + c.flare * t.flareLight) * t.coalLight
+      const lightTarget = !c.live || c.reveal <= 0 ? 0 : c.lit ? (c.heat + c.flare * t.flareLight) * t.coalLight
         : Math.pow(c.wake, 1.4) * t.coalLight * 1.3;
       this.glowPower[i] += (lightTarget - this.glowPower[i]) * (1 - Math.exp(-dt * t.orbLightResponse));
       const glowReach = this.glowPower[i] / (1 + c.p.distanceToSquared(near) * 0.0025);

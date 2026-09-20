@@ -426,7 +426,7 @@ function log(a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number, radial 
  * One birch, grown at unit height so every tree on the island is the same geometry at a different size: a trunk
  * with a lean in it, limbs that go up steeply and then droop at the ends, and the twig tips the gold hangs on.
  */
-function grow(rand: () => number, swingLimb: boolean): { segs: Seg[]; tips: THREE.Vector3[] } {
+export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]; tips: THREE.Vector3[] } {
   const segs: Seg[] = [];
   const tips: THREE.Vector3[] = [];
   const link = (a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number): void => {
@@ -573,7 +573,7 @@ export class Swing {
     const touch = screenBrush(camera, seat, input.prevNdc, input.ndc, .25);
     if (touch < .01) return;
     this.brushAge = 0;
-    wind.addSplat({ ax: seat.x, az: seat.z, bx: seat.x, bz: seat.z,
+    wind.addSplat({ source: this, ax: seat.x, az: seat.z, bx: seat.x, bz: seat.z,
       vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
       radius: 3, energy: Math.min(.8, input.gust / 20) * Math.sqrt(touch), lift: 0, swirl: 0 });
   }
@@ -633,11 +633,11 @@ export class AutumnBirches {
   /** How hard the swing tree is being shaken by what is on it. */
   private shaking = 0;
 
-  constructor(renderer: THREE.WebGLRenderer, private readonly wind: WindField) {
+  constructor(renderer: THREE.WebGLRenderer, private readonly wind: WindField, settleScarf = true) {
     const rand = mulberry32(8821);
-    const variants = [grow(rand, false), grow(rand, false), grow(rand, false), grow(rand, false), grow(rand, true)];
+    const variants = [growBirch(rand, false), growBirch(rand, false), growBirch(rand, false), growBirch(rand, false), growBirch(rand, true)];
     this.place(rand);
-    this.scarf.setTrees(this.trees);
+    this.scarf.setTrees(this.trees, settleScarf);
 
     const width = Math.max(this.trees.length, 1);
     this.table = new Float32Array(width * 3 * 4);

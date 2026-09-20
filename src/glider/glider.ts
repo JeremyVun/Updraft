@@ -117,6 +117,10 @@ export class Glider {
   private readonly shadow: THREE.Mesh;
   private readonly shadowMat: THREE.ShaderMaterial;
   private carrier: Traveller | null = null;
+  /** A story object resting in the world until picked up (the wet paper in the wood). */
+  private restingAt: THREE.Vector3 | null = null;
+  private pinned = false;
+  private readonly restingRotation = new THREE.Euler();
   private readonly heldRotation = new THREE.Quaternion();
   private readonly releasedRotation = new THREE.Quaternion();
   private releaseBlend = 0;
@@ -179,11 +183,13 @@ export class Glider {
   }
 
   get landed(): boolean {
-    return !this.held && this.restTime > 1.2 && this.aground;
+    return !this.pinned && !this.held && this.restTime > 1.2 && this.aground;
   }
 
   /** Held by the keel, or secured to the satchel when the child's arms are occupied. */
   hold(child: Traveller): void {
+    this.pinned = false;
+    this.restingAt = null;
     this.carrier = child;
     child.carryingPlane = true;
     this.releaseBlend = 0;
@@ -197,6 +203,8 @@ export class Glider {
   }
 
   launch(from: THREE.Vector3, velocity: THREE.Vector3): void {
+    this.pinned = false;
+    this.restingAt = null;
     /** Release from the paper's actual centre, so the keel offset does not become a jump. */
     const carried = this.held;
     if (carried) {
@@ -219,6 +227,30 @@ export class Glider {
     for (const laid of this.laid.values()) laid.length = 0;
   }
 
+  /** Lay paper in the leaves. Wind can reveal it without turning the pickup into a moving target. */
+  layDown(at: THREE.Vector3): void {
+    this.launch(at, new THREE.Vector3());
+    this.restingAt = at.clone();
+    this.position.copy(at);
+    this.restTime = 0;
+    this.aground = true;
+    this.airborne = false;
+    this.lift = 0;
+    this.restingRotation.set(-0.05, this.yaw, 0.12);
+    this.trails.update([]);
+  }
+
+  /** An authored snag or heavy fall owns the pose; residual wind cannot turn it into free flight. */
+  pin(at: THREE.Vector3, rotation: THREE.Euler): void {
+    if (!this.restingAt) this.layDown(at);
+    this.pinned = true;
+    this.restingAt!.copy(at);
+    this.position.copy(at);
+    this.restingRotation.copy(rotation);
+    this.restTime = 0;
+    this.airborne = true;
+  }
+
   depart(heading: THREE.Vector3): void {
     this.departing = heading.clone().normalize();
   }
@@ -232,6 +264,18 @@ export class Glider {
     this.clock = time;
     const size = this.held ? tuning.paperCarry.scale : SCALE;
     this.body.scale.setScalar(THREE.MathUtils.lerp(this.body.scale.x, size, 1 - Math.exp(-dt * tuning.paperCarry.sizeRate)));
+    if (this.restingAt) {
+      this.position.copy(this.restingAt);
+      this.velocity.set(0, 0, 0);
+      if (!this.pinned) this.restTime += dt;
+      this.group.position.copy(this.position);
+      this.group.rotation.copy(this.restingRotation);
+      this.group.updateMatrixWorld();
+      this.shadow.position.copy(this.position).setY(this.position.y - 0.04);
+      this.shadow.scale.setScalar(1);
+      this.shadowMat.uniforms.uOpacity.value = this.pinned ? 0 : 0.32;
+      return;
+    }
     if (this.held) {
       this.waiting = false;
       this.waitBlend = 0;
@@ -397,7 +441,7 @@ export class Glider {
     }
 
     if (altitude < 5 && hSpeed > 1.5) {
-      this.wind.addSplat({
+      this.wind.addSplat({ source: this, trail: true,
         ax: this.prev.x,
         az: this.prev.z,
         bx: p.x,
@@ -428,6 +472,7 @@ export class Glider {
    * the ground under the cursor (where the wind field is pushed) lies well behind it.
    */
   brush(camera: THREE.Camera, a: THREE.Vector2, b: THREE.Vector2, gust: number, dir: THREE.Vector2, charge: number, dt: number): void {
+    if (this.restingAt) return;
     if (this.held) return;
     const s = this.scratch.copy(this.position).project(camera);
     const aspect = window.innerWidth / window.innerHeight;

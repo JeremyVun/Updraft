@@ -58,7 +58,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     LINES_LANDING,
   ],
   toBoats: [new THREE.Vector2(265, -512), new THREE.Vector2(330, -502), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
-  toMeadow: [new THREE.Vector2(355, -683), new THREE.Vector2(305, -682), new THREE.Vector2(270, -585), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING],
+  toMeadow: [new THREE.Vector2(355, -683), new THREE.Vector2(305, -682), new THREE.Vector2(230, -574), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
@@ -72,13 +72,13 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
   /** The offshore passage keeps the dolphins and brave swim, then moors beside the entry jetty. */
   toMirror: [
-    new THREE.Vector2(-340, -1970), new THREE.Vector2(-480, -2040),
-    new THREE.Vector2(-590, -2180), new THREE.Vector2(-540, -2200),
+    new THREE.Vector2(-330, -1990), new THREE.Vector2(-445, -2095),
+    new THREE.Vector2(-533, -2215),
     new THREE.Vector2(-542, -2253), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
-    new THREE.Vector2(-347, -2335), new THREE.Vector2(-338, -2205), new THREE.Vector2(-350, -2135),
-    new THREE.Vector2(-270, -2030), new THREE.Vector2(-242, -2012),
+    new THREE.Vector2(-347, -2315), new THREE.Vector2(-310, -2135),
+    new THREE.Vector2(-242, -2012),
     new THREE.Vector2(-180, -1994), new THREE.Vector2(-158, -1980),
     new THREE.Vector2(-140, -1966), new THREE.Vector2(-120, -1948),
     new THREE.Vector2(-80, -1932), new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
@@ -341,7 +341,7 @@ export class Journey {
         return new CrossingChapter(cast, {
           // Saves from the first mirror version departed from its northern arrival shelf.
           route: cast.boat.position.x < -420 && cast.boat.position.z > -2280
-            ? [new THREE.Vector2(-455, -2205), ...ROUTES.toHarbour.slice(2)] : ROUTES.toHarbour,
+            ? [new THREE.Vector2(-455, -2205), ...ROUTES.toHarbour.slice(1)] : ROUTES.toHarbour,
           haze: 0.92, dusk: tuning.skyMirror.duskTo,
           season: 0.98, moor: HOME_MOORING, music: 'home',
         });

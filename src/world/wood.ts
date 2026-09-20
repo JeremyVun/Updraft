@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import type { Shot } from '../camera';
+import { tuning } from '../tuning';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WindField } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -8,6 +10,24 @@ import { createNoise2D, mulberry32 } from './noise';
 
 /** The south shore of the wood, where the boat runs ashore out of the storm. */
 export const WOOD_LANDING = new THREE.Vector2(-26, -1692);
+/** The west-facing mouth of the low rock shelter beside the path. */
+export const WOOD_REFUGE = new THREE.Vector3(-8.5, 0, -1791);
+export const WOOD_HEARTH = new THREE.Vector3(-9.1, 0, -1792.05);
+export const WOOD_OUTSIDE = new THREE.Vector3(-11.6, 0, -1791);
+export const WOOD_COAX = new THREE.Vector3(-13, 0, -1791);
+/** The storm left the paper on a low, forked branch, above the child's reach. */
+export const WOOD_PLANE = new THREE.Vector2(-37, -1848);
+
+/** Shared by the exposed fork and its caught paper, following the wood's slow passing gusts. */
+export function woodPlaneSway(time: number, breeze: THREE.Vector2, air: { x: number; z: number; energy: number }, out: THREE.Vector3): THREE.Vector3 {
+  const length = breeze.length() || 1;
+  const dx = breeze.x / length, dz = breeze.y / length;
+  const phase = time * tuning.wood.planeSwayRate - (WOOD_PLANE.x * dx + WOOD_PLANE.y * dz) * 0.045;
+  const strength = 0.45 + 0.55 * Math.min(1, Math.hypot(air.x, air.z) / 5 + air.energy * 0.3);
+  const along = Math.sin(phase) * tuning.wood.planeTreeSway * strength;
+  const across = Math.sin(phase * 1.63 + 0.8) * tuning.wood.planeTreeSway * 0.25 * strength;
+  return out.set(dx * along - dz * across, 0, dz * along + dx * across);
+}
 /** The boat is drawn up on the north shore before they get there. Nobody put it there. */
 export const WOOD_BERTH = new THREE.Vector3(-34, 0, -1908);
 
@@ -337,6 +357,9 @@ void main() {
 const WOOD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uStorm;
+uniform vec3 uViewA;
+uniform vec3 uViewB;
+uniform float uViewClear;
 in vec3 vWorld;
 in vec3 vSide;
 in vec3 vFace;
@@ -345,6 +368,12 @@ in float vLeaf;
 in float vAo;
 in float vSeed;
 in float vSolid;
+float clearSight(vec3 subject) {
+  vec3 ray = subject - cameraPosition;
+  float along = dot(vWorld - cameraPosition, ray) / max(0.1, dot(ray, ray));
+  float distanceToRay = distance(vWorld, cameraPosition + ray * clamp(along, 0.0, 1.0));
+  return mix(1.0, smoothstep(1.1, 2.2, distanceToRay), step(0.01, along) * step(along, 0.98));
+}
 void main() {
   vec3 N;
   vec3 alb;
@@ -380,6 +409,9 @@ void main() {
    * the room can never do is hide the child, so anything between the two of them gets out of the way.
    */
   float clear = vLeaf > 0.5 ? 1.0 : smoothstep(1.2, 6.5, distance(cameraPosition, vWorld));
+  clear *= mix(1.0, min(clearSight(uViewA), clearSight(uViewB)), uViewClear);
+  // Also clear the sightline on devices without MSAA, where alpha-to-coverage has no effect.
+  if (clear < 0.99 && hash12(floor(gl_FragCoord.xy)) > clear) discard;
   gl_FragColor = vec4(applyFog(col, vWorld), clear);
 }`;
 
@@ -547,6 +579,75 @@ const THICKET = { x: -22, z: -1812 };
  * The dark wood: the first winter storm, at night, on the smallest island of the chain. Bare trees heaving in the
  * wind, a floor of wet leaves and roots, and no light in it but the light the player makes.
  */
+/** A broken slab leaning on an outcrop: a low, west-facing gap, open toward the child's approach. */
+function refugeRocks(): THREE.Mesh {
+  const ground = heightAt(WOOD_REFUGE.x, WOOD_REFUGE.z);
+  // A continuous rock shell around an empty tunnel. There is no boulder occupying the entrance.
+  const positions: number[] = [];
+  const rings = [-1.9, -0.8, 1.5, 2.4];
+  const steps = 12;
+  const ring = (slice: number, inner: boolean, i: number): THREE.Vector3 => {
+    const angle = i / steps * Math.PI;
+    const width = inner ? [1.4, 1.5, 1.2, 0.6][slice] : [2.5, 2.7, 2.5, 2.15][slice];
+    const height = inner ? [1.65, 1.75, 1.5, 0.9][slice] : [2.5, 2.9, 2.7, 2.1][slice];
+    const rough = inner ? 1 : 1 + Math.sin(i * 4.1 + slice) * 0.055;
+    return new THREE.Vector3(WOOD_REFUGE.x + rings[slice], ground - 0.18 + Math.sin(angle) * height * rough,
+      WOOD_REFUGE.z - 0.45 + Math.cos(angle) * width * rough);
+  };
+  const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => positions.push(...a.toArray(), ...b.toArray(), ...c.toArray());
+  const quad = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3) => { tri(a,b,c); tri(a,c,d); };
+  for (let i = 0; i < steps; i++) {
+    for (let j = 0; j < rings.length - 1; j++) {
+      quad(ring(j,false,i), ring(j+1,false,i), ring(j+1,false,i+1), ring(j,false,i+1));
+      quad(ring(j,true,i+1), ring(j+1,true,i+1), ring(j+1,true,i), ring(j,true,i));
+    }
+    // The front lip joins outside to inside, leaving the arch completely open.
+    quad(ring(0,false,i+1), ring(0,false,i), ring(0,true,i), ring(0,true,i+1));
+    tri(ring(3,false,i), ring(3,false,i+1), new THREE.Vector3(WOOD_REFUGE.x + 2.4, ground - 0.18, WOOD_REFUGE.z - 0.45));
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+    side: THREE.DoubleSide, uniforms: atmo.uniforms,
+    vertexShader: `${ATMO_GLSL}
+      out vec3 vWorld; out vec3 vNormal;
+      void main() { vWorld = position; vNormal = normal; gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `${ATMO_GLSL}
+      in vec3 vWorld; in vec3 vNormal;
+      void main() {
+        vec3 n = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
+        float grain = vnoise(vWorld.xz * 5.0 + vWorld.y);
+        vec3 alb = mix(vec3(0.09, 0.105, 0.12), vec3(0.18, 0.19, 0.2), grain);
+        float occlusion = mix(0.18, 1.0, smoothstep(-0.3, 0.6, n.y));
+        vec3 col = alb * (hemiLight(n) * occlusion + uSunColor * max(0.0, dot(n, uSunDir)) * cloudShadow(vWorld.xz));
+        col += (alb + vec3(0.05, 0.03, 0.01)) * emberLight(vWorld, n);
+        vec3 view = normalize(cameraPosition - vWorld);
+        col += uSunColor * pow(max(0.0, dot(reflect(-view, n), uSunDir)), 24.0) * 0.16;
+        gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+      }`,
+  }));
+  mesh.name = 'wood-refuge';
+  return mesh;
+}
+
+function planeTree(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const ground = (x: number, z: number) => heightAt(x, z) - 0.2;
+  // A bare tree with an exposed fork at the paper's height. Its trunk stands behind the pickup spot.
+  const base = new THREE.Vector3(WOOD_PLANE.x - 2.8, ground(WOOD_PLANE.x, WOOD_PLANE.y), WOOD_PLANE.y - 1);
+  const h = tuning.wood.planeSnagHeight;
+  const branch = base.clone().add(new THREE.Vector3(0.45, h - 0.7, 0.3));
+  const crown = base.clone().add(new THREE.Vector3(-0.35, h + 3.2, -0.5));
+  const fork = base.clone().add(new THREE.Vector3(2.6, h + 0.1, 0.95));
+  parts.push(log(base, branch, 0.32, 0.21), log(branch, crown, 0.21, 0.065), log(branch, fork, 0.14, 0.045));
+  parts.push(log(fork, fork.clone().add(new THREE.Vector3(0.8, 0.55, -0.35)), 0.045, 0.012));
+  parts.push(log(fork, fork.clone().add(new THREE.Vector3(0.9, 0.2, 0.6)), 0.04, 0.01));
+  parts.push(log(branch.clone().lerp(crown, 0.4), crown.clone().add(new THREE.Vector3(-2.1, -0.7, 0.3)), 0.1, 0.025));
+  parts.push(log(branch.clone().lerp(crown, 0.6), crown.clone().add(new THREE.Vector3(1.8, -0.2, -0.6)), 0.08, 0.015));
+
+  return mergeGeometries(parts);
+}
+
 export class DarkWood {
   readonly objects: THREE.Object3D[] = [];
 
@@ -583,6 +684,9 @@ export class DarkWood {
       ...atmo.uniforms,
       uSegs: { value: segTex },
       uStorm: { value: 0 },
+      uViewA: { value: new THREE.Vector3() },
+      uViewB: { value: new THREE.Vector3() },
+      uViewClear: { value: 0 },
       uStormDir: { value: new THREE.Vector2(0.4, 0.92) },
       uPixel: { value: 0.0008 },
       uLitterCell: { value: new THREE.Vector2() },
@@ -618,7 +722,20 @@ export class DarkWood {
       mergeGeometries(this.deadfall()),
       new THREE.ShaderMaterial({ vertexShader: DEAD_VERT, ...frag, side: THREE.FrontSide }),
     );
-    this.objects.push(deadfall);
+    const snagTree = new THREE.Mesh(planeTree(), new THREE.ShaderMaterial({
+      vertexShader: DEAD_VERT.replace('void main() {', 'uniform vec3 uSnagSway; uniform vec2 uSnagHeight;\nvoid main() {')
+        .replace('vWorld = position;', `vWorld = position;
+          float up = max(0.0, (position.y - uSnagHeight.x) / uSnagHeight.y);
+          vWorld += uSnagSway * up * up;`)
+        .replace('vFace = normalize(normal);', `vFace = normalize(vec3(normal.x,
+          normal.y - dot(normal.xz, uSnagSway.xz) * 2.0 * up / uSnagHeight.y, normal.z));`)
+        .replace('vec4(position, 1.0)', 'vec4(vWorld, 1.0)'),
+      ...frag, uniforms: { ...this.uniforms, uViewClear: { value: 0 },
+        uSnagSway: { value: this.snagSway },
+        uSnagHeight: { value: new THREE.Vector2(heightAt(WOOD_PLANE.x, WOOD_PLANE.y) - 0.2, tuning.wood.planeSnagHeight + 0.2) } },
+    }));
+    snagTree.name = 'wood-plane-tree';
+    this.objects.push(deadfall, refugeRocks(), snagTree);
 
     const card = new THREE.PlaneGeometry(1, 1);
     const litterGeo = new THREE.InstancedBufferGeometry();
@@ -656,6 +773,8 @@ export class DarkWood {
     const rand = mulberry32(7717);
     const patchy = createNoise2D(53);
     const reserved: [number, number, number][] = [
+      [WOOD_REFUGE.x - 9, WOOD_REFUGE.z + 5, 11],
+      [WOOD_PLANE.x, WOOD_PLANE.y + 3, 8],
       [HOLLOW.x, HOLLOW.z, 3.4],
       [TRUNK_HOLE.x, TRUNK_HOLE.z, 3.6],
       [THICKET.x, THICKET.z, 1.9],
@@ -736,6 +855,7 @@ export class DarkWood {
     const parts: THREE.BufferGeometry[] = [];
     const ground = (x: number, z: number) => heightAt(x, z) - 0.2;
 
+
     /** The disc of earth and torn roots a tree brings up with it when it goes over. */
     const plate = (butt: THREE.Vector3, axis: THREE.Vector3, radius: number) => {
       const disc = new THREE.CylinderGeometry(radius, radius * 0.9, 0.26, 9, 1, false);
@@ -785,7 +905,9 @@ export class DarkWood {
       const reach = Math.sqrt(rand()) * 0.86;
       const x = ISLE.x + Math.cos(ang) * reach * ISLE.rx;
       const z = ISLE.z + Math.sin(ang) * reach * ISLE.rz;
-      if (ground(x, z) < TREE_LINE + 1 || pathDistance(x, z) < 5.5) continue;
+      if (ground(x, z) < TREE_LINE + 1 || pathDistance(x, z) < 5.5
+        || Math.hypot(x - (WOOD_REFUGE.x - 9), z - (WOOD_REFUGE.z + 5)) < 17
+        || Math.hypot(x - WOOD_PLANE.x, z - WOOD_PLANE.y) < 12) continue;
       const yaw = rand() * Math.PI * 2;
       const len = 4.5 + rand() * 5;
       const r = 0.17 + rand() * 0.18;
@@ -806,14 +928,22 @@ export class DarkWood {
   }
 
   /** `storm` is 0 calm to 1 the full squall: how hard the trees are working. */
-  update(dt: number, _time: number, camera: THREE.Camera, storm: number): void {
+  private readonly snagSway = new THREE.Vector3();
+  private readonly snagWind = { x: 0, z: 0, energy: 0, lift: 0 };
+
+  update(dt: number, time: number, camera: THREE.Camera, storm: number, sight?: Shot['subjects']): void {
     /** The wood is only ever drawn from its own island: everywhere else in the journey it is not in the world. */
     const here = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z) < ISLE.rx + 260;
     for (const o of this.objects) o.visible = here;
     if (!here) return;
 
+    this.field.sample(WOOD_PLANE.x, WOOD_PLANE.y, this.snagWind);
+    woodPlaneSway(time, this.field.breeze, this.snagWind, this.snagSway);
+
     this.storm += (storm - this.storm) * (1 - Math.exp(-dt * 1.4));
     const u = this.uniforms;
+    u.uViewClear.value += ((sight ? 1 : 0) - u.uViewClear.value) * (1 - Math.exp(-dt * 4));
+    if (sight) { u.uViewA.value.copy(sight.primary); u.uViewB.value.copy(sight.secondary); }
     u.uStorm.value = this.storm;
     const breeze = this.field.breeze;
     if (breeze.lengthSq() > 1e-4) u.uStormDir.value.copy(breeze).normalize();

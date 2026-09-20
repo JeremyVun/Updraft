@@ -2,6 +2,8 @@
 
 Read this first after any context loss. It is the artistic vision and the plan, and it outranks convenient shortcuts.
 
+Current island positions, direct distances and sailing-route lengths: [geography.md](geography.md).
+
 ## Jeremy's words (2026-09-16, verbatim)
 
 > "I love your artistic thinking. Please explore your ideas and continue expanding ontop of this beautiful experience you've made. small cute animals and birds. I'd love to see the story you tell with the traveller. I would probably suggest getting an opus 5 sub agent to take a look at increasing the quality of the water to match the rest of the visual quality of the game. The grass visuals and effects are truly amazing, and i'd love to see the adventure go to a place where it's like those endless beautiful green rolling irish hills."
@@ -241,6 +243,32 @@ pulls away. A completed piano checkpoint resumes beyond the puzzle.
 Validation: `tools/piano-logic-check.mjs` checks gesture credit; `tools/piano-check.mjs` plays four real
 mouse/touch sweeps and checks idle behaviour, guide visibility, the travelling wave and departure.
 
+## Crossing and companion polish (2026-09-20)
+
+Jeremy's ordering review keeps the chapter sequence. He wants little boats to meadow under 60 seconds,
+shorter open sea before the mirror and a short final ride home. He rejected per-crossing speed boosts.
+Ordinary sailing is now 4.5–5.5 units/s with a top speed of 10; the meadow, sea and home breeze multipliers
+are removed. No islands or routes changed in this speed-normalisation pass. [Geography and pacing](geography.md)
+records measured timings and proposed physical changes, still awaiting a layout pass. The earlier route
+edits remain; the underwater home channel still matches in both terrain implementations.
+
+The family now begins its departure while the child is still standing on the meadow rise. The camera
+holds the whole flock before the child approaches. The cygnet calls after the migration has begun; the
+child neither frightens them off nor watches them knowingly reject their young. At the mirror, the cygnet
+explores beside lights and bubbles and stretches its healed wings; see `rooms.md`.
+
+The secret shore beyond the washing door is visible only in that chapter and its outgoing crossing.
+The home jetty is withheld until `toHarbour`, legacy `toHome`, or `home`, including during the wood's exit.
+
+At the approved speed, controlled checks measure little boats to meadow at 99 seconds, sleeping to
+mirror at 152, and mirror to home at 122. Recommended targets are 50–60, 135–145 and 40–50 respectively;
+these are not implemented route timings. The sea target now explicitly includes the post-swim dolphin
+nudge, omitted from the earlier 115–125-second recommendation. Strong-wind simulation currently skips
+that nudge; correcting the encounter departure gate is part of the proposed route work.
+The dolphin leap and full 32-second swim remain; preparation
+cannot start before 32 seconds, so strong wind does not skip the leap. Checks cover all eight current
+passages, 30/60 fps, varied wind bearings, storm pacing and dolphin/swimmer camera projection.
+
 ## The storm passage (2026-09-19)
 
 Jeremy first requested 25–30 seconds from storm to forest. After playing that version, he revised the direction:
@@ -399,7 +427,7 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    The player fans embers awake out of the leaf litter and the child walks on for exactly as long as there is
    light, and stops the moment it goes out. Halfway up, the storm frightens the cygnet out of the satchel; it goes to
    ground off the path and calls, and the only way to find it is to put light on it. The plane is found sodden in
-   the leaves further on and dried in the wind. **Built.**
+   a branch further on, loosened by wind strokes, collected after it falls and dried in the wind. **Built.**
    **September 19 polish:** no waiting timer lights an ember, finds the cygnet or dries the plane. After five
    seconds, warm sweep traces demonstrate the gesture at the waiting ember (and later the held plane). These
    traces never write wind or progress. Ignition requires deliberate motion across the visible ember; residual
@@ -410,6 +438,13 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    Under the trees, 240 small green-gold fireflies occupy a 25-unit radius; the storm no longer hides them all.
    The points of interest remain the first ember, the lost cygnet, the wet plane and the waiting boat. The rescue
    is the central gate, followed by repairing the plane; there is no separate combination or order puzzle.
+   **September 20 local review:** the wet plane is caught in an exposed tree fork. Deliberate strokes slip it
+   loose, echoing the scarf knots. It flutters down and stays on the ground until pickup; ordinary flight physics
+   previously let ember-fanning blow it away and strand the child. Jeremy approved the moonlight level and requested one
+   scripted flash and clap to frighten the cygnet into a visible jump and run to a nearby rock shelter. The ember
+   waits concealed inside the rock gap until the camera turns toward it. The child coaxes the bird outside
+   before picking it up; the reunion has no completion jingle. See [wood.md](wood.md) for the staging,
+   “Care becomes courage” and validation.
 6. **The long crossing** (`story/crossing.ts` with `dolphins` and `duskTo`) — the intermission, and the only
    crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
@@ -421,7 +456,8 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    wheels low over the hill** — a short, close thermal column a little to the north, framed from the child's
    shoulder so the sky is most of the frame — and the music, held back since the wood, comes back with it. The
    player is still holding the updraft through the whole reunion: they do not watch it happen, they are the reason
-   it happens. Then they go north together. After that the drawing, the release, and the red door. **Built.**
+   it happens. Then they go north together. The child walks on, sees the house, and unfolds the plane. The drawing and
+   real house share the frame when the motif begins; then the release and the red door. **Built.**
 
 Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, a
 whale, a pod of dolphins, a storm, and where the time of day ends up. `story/journey.ts` runs the order:
@@ -455,7 +491,7 @@ waits for the water-shading session, because it is built on the sea.
 | the autumn birches | **built** and accepted on a look at its screenshots (`world/birches.ts`, `fx/leaves.ts`, `story/birches.ts`, `?chapter=birches`). Known weak spot: a gust lands where the cursor meets the ground, which from the walking camera is often far up the ride, so the cloud it tears off can be small in frame. |
 | kite and pinwheels on the island of lines | **built** and accepted (`world/kite.ts`, `world/pinwheels.ts`): a red-footed paper diamond with a bow tail tied off beside the boat, and rows of two-tone paper wheels a gust runs down. The kite flies leaning rather than upright, because its spine lies along its string. |
 | the piano on the meadow | **built** and now the key to the room (`world/piano.ts`, `story/piano.ts`, `?chapter=piano`): it stands on the walk in the one patch of colour on a sleeping island, the child sits at the stool, the duet wakes the meadow phrase by phrase, and on the whole lullaby the cygnet climbs out onto the keys and walks them while the island wakes to the hills. **Nobody has heard it yet** — the tone was synthesised blind and needs Jeremy's ear. |
-| the sleeping island | **built; polish approved September 20** (`?chapter=sleeping`). The child sleeps, the cygnet tries to wake them, and the player brushes a feather free after its unanswered call. The feather leads the assisted climb; gentle circles at the summit lift the healed bird into its first glide. Morning follows it to the bed. Neither feather release nor takeoff happens on a timer. A curtained window at the summit releases morning when the updraft lifts the bird. The bed, framing, winter ground and mist have a local polish pass; see `docs/contracts/world.md`. |
+| the sleeping island | **built; polish approved September 20** (`?chapter=sleeping`). The child sleeps, the cygnet tries to wake them, and the player brushes a feather free after its unanswered call. The feather leads the assisted climb; gentle circles at the summit lift the healed bird into its first glide. Morning follows it to the bed. Neither feather release nor takeoff happens on a timer. A physical ribbon tug releases morning from the summit window; the winter ascent includes a snow-choked notch and fog passage. The bed, framing, winter ground and mist have a local polish pass; see `docs/contracts/world.md`. |
 | the sky mirror | **implemented locally (2026-09-20)**: wind blows bubbles across fallen star reflections, then lifts the lights back into the sky; the plane leads the walk to the far pier; see `rooms.md`. |
 
 The companion is now **a swan cygnet** (Jeremy, 2026-09-17), not a crane colt; wherever this document says colt or
@@ -566,7 +602,10 @@ with implementing this”. It replaces the automatic curtain opening and walkabl
   The bird tries to wake them and calls once; nothing answers. This is the previously approved exception to
   the two protagonists' silence. The plane stays tucked away through bedtime and the reunion.
 - A pillow stroke frees the white feather. Broad strokes encourage it along an assisted route, up the side
-  of the hill; it stays near the bird. One look back and a shiver establish leaving the child's company.
+  of the hill; it stays near the bird. The winter follow-up adds a snow-choked notch between rock and drop, followed by a bank of
+  mist across the grass shoulder, both cleared by broad wind sweeps. Faint wind wisps guide the ascent;
+  natural rock exposures never form a marked road. Frost closes around the bed and its alarm clock stops.
+  A brief shaft through the curtain slit makes the child stir, establishing why the bird seeks morning.
 - The window holds a seam of morning above an exposed shoulder. Its curtains are tied with a ribbon whose
   loose end hangs beyond the lip. A side view shows the safe ledge, ribbon and drop. The bird reaches,
   hesitates, looks back and tests its healed wing; the bandage unwinds before flight is possible.
@@ -716,7 +755,7 @@ Each island lies further north than the last with sea between, and the stretches
 | the meadow | (10, −780) | 227 × 200, the old rolling pasture, now bounded: a two-thirds scale model of the 340 × 300 it was sculpted as (`tuning.world.meadowLength`, `meadowPoint` in `world/heightfield.ts`) | 196 |
 | the drowned village | (−10, −1440) | 210 × 175, all of it well under water | 285 |
 | the dark wood | (−30, −1800) | 130 × 115, the smallest of them, on a long shelving shore | 70 |
-| the sleeping island | (−175, −1922) | 42 × 46, a hollow with the bed in it and a hill north of it that stands out of the fog, out west on the crossing home | 113 by boat round the wood's north shore |
+| the sleeping island | (−175, −1922) | 42 × 46, an open bedside terrace and a winter hill with a grassy shoulder above the fog, out west on the crossing home | 113 by boat round the wood's north shore |
 | home | (−45, −2120) | 190 × 165, one long hill and the cottage beyond | 40 |
 
 The still island keeps the south-east cove at (8.5, 21.5). The last hill is at (−30, −2060) and the cottage at

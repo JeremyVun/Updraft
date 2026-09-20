@@ -15,7 +15,7 @@ function croppedAt(x: number, z: number): number {
   const lines = 1 - smoothstep(0.78, 1.12, Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz));
   const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
   const bank = 1 - smoothstep(tuning.crest.bankCropFrom, tuning.crest.bankCropTo, pondOut(x, z));
-  return (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank);
+  return smoothstep(.8,1.1,Math.hypot(x-tuning.sleeping.hearthX,z-tuning.sleeping.hearthZ)) * (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank);
 }
 
 /**
@@ -122,7 +122,7 @@ float croppedAt(vec2 xz) {
   if (abs(xz.x - 350.0) < 55.0 && abs(xz.y + 590.0) < 78.0) return 0.22;
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   float bank = pondBankAt(xz);
-  return (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
+  return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
 }
 /** 1 over the home island, where the pasture is let grow lush for the last hill. */
 float homeAt(vec2 xz) {

@@ -35,7 +35,7 @@ export class LittleBoatsChapter implements Chapter {
   get haze(): number {
     return 1.105 - 0.055 * THREE.MathUtils.smoothstep(this.cast.littleBoats.progress, 68, 85);
   }
-  readonly music = 'lines' as const;
+  readonly music = 'boats' as const;
   readonly hush = 0.28;
   readonly pace = 0.65;
   readonly focus = new THREE.Vector3();

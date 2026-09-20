@@ -127,6 +127,14 @@ export class MeadowChapter implements Chapter {
   private readonly framing = { primary: this.cameraChild, secondary: new THREE.Vector3(),
     margin: tuning.meadowPlane.cameraMargin, extra: tuning.meadowPlane.cameraExtra };
   private readonly pondFraming = { primary: this.cameraChild, secondary: new THREE.Vector3(), margin: 0.7, extra: 14 };
+  private readonly flockBounds = new THREE.Box3();
+  private readonly flockCentre = new THREE.Vector3();
+  private readonly flockCorner = new THREE.Vector3();
+  private readonly flockRight = new THREE.Vector3();
+  private readonly flockUp = new THREE.Vector3();
+  private readonly flockBack = new THREE.Vector3();
+  private readonly departureFraming = { primary: this.cameraChild, secondary: new THREE.Vector3(),
+    tertiary: new THREE.Vector3(), margin: 0.7, extra: tuning.crest.departureCameraExtra };
   private crestDone = false;
   private boatMoved = false;
   /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
@@ -163,6 +171,7 @@ export class MeadowChapter implements Chapter {
     life.regions.wave.set(PLACE.x, PLACE.z, PATCH.radius, PATCH.soft);
     this.waveTo = PATCH.radius;
     this.piano.onWake = (stage, answered) => this.wake(stage, answered);
+    this.piano.onComplete = completeObjective;
     /**
      * The family is on the water from the moment the chapter starts, long before anything in the story points at
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
@@ -221,6 +230,8 @@ export class MeadowChapter implements Chapter {
   }
 
   get pianoMix(): number { return this.piano.hush; }
+  readonly flockChatter = false;
+  get pianoActive(): boolean { return piano.engaged; }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
   skipAhead(): void {
@@ -279,7 +290,6 @@ export class MeadowChapter implements Chapter {
     this.waveTo = step.reach;
     this.waveSpeed = step.speed * (answered ? 1 : UNANSWERED);
     this.waveFrom = this.now;
-    if (stage === 4) completeObjective();
     /** Every answer sends a front of moving grass across the field, starting at the instrument. */
     this.gustPower = answered ? 1 : UNANSWERED;
     this.gustUntil = this.now + (stage === 4 ? GUST_FOR : step.reach / step.speed);
@@ -309,7 +319,7 @@ export class MeadowChapter implements Chapter {
       const reach = musicFront(radius, angle);
       const cx = wave.x + ux * reach;
       const cz = wave.y + uz * reach;
-      this.cast.wind.addSplat({
+      this.cast.wind.addSplat({ source: `meadow-wave-${i}`,
         ax: cx - tx * 15,
         az: cz - tz * 15,
         bx: cx + tx * 15,
@@ -646,11 +656,8 @@ export class MeadowChapter implements Chapter {
       if (c.moving) c.stop();
       c.lookAt = this.far;
       c.faceToward(this.far.x, this.far.z, 1 - Math.exp(-dt * 1.7));
-      if (time > this.nextCall) {
-        cue('calling');
-        cygnet.call(true);
-        this.nextCall = time + 5 + Math.random();
-      }
+      // The adults are calling to one another for departure. The small one watches before trying
+      // to reach them; no parent hears its call here and then deliberately turns away.
     }
     /** Then they go down to it, because the cygnet in the satchel is straining at the sight of them. */
     if (this.t > looks && !c.busy) this.goDown();
@@ -658,21 +665,30 @@ export class MeadowChapter implements Chapter {
 
   /** Down off the rise to the water, where they stop, because there is nothing else to do about it. */
   private goDown(): void {
-    const { child: c } = this.cast;
+    const { child: c, flock } = this.cast;
     pondEdge(c.position.x, c.position.z, tuning.crest.standOff, this.edge);
     this.to('down');
     this.atEdge = -1;
-    c.walkTo(this.edge.x, this.edge.z, false, () => (this.atEdge = this.now), 1.2);
+    this.wentOn = true;
+    this.leftAt = this.now;
+    this.nextCall = this.now + tuning.crest.migrationLeadFor;
+    cue('bugle');
+    // Departure begins at the north of the raft, independently of the child's distance.
+    // Hold on the rise long enough to see that they were already leaving.
+    flock.lift(Math.PI, tuning.crest.leaves, tuning.crest.leaveClimb);
   }
 
   /**
-   * The approaching child startles the nearest birds: heads go up, one after another they turn north, make the long
-   * pattering run across the pond, and go, climbing away in a V the way the boat is going, the way home. The
-   * cygnet calls the whole time and nothing answers, and then the child kneels and sets it down after them.
+   * The family is already migrating when the child starts down. The little one calls after the departing
+   * birds; the child offers a safe paddle and waiting hands when it cannot follow them into the sky yet.
    */
   private updateDown(dt: number, time: number): void {
     const { child: c, cygnet, flock } = this.cast;
-    const { startleFrom, setsDown, leaves, leaveClimb } = tuning.crest;
+    const { setsDown, migrationLeadFor } = tuning.crest;
+    if (this.atEdge === -1 && this.t > migrationLeadFor) {
+      this.atEdge = -2;
+      c.walkTo(this.edge.x, this.edge.z, false, () => (this.atEdge = this.now), 1.2);
+    }
     if (flock.active) this.far.set(flock.head.x, flock.head.y + 1.2, flock.head.z);
     cygnet.watch(this.far);
     c.lookAt = this.far;
@@ -682,15 +698,8 @@ export class MeadowChapter implements Chapter {
       this.nextCall = time + 5 + Math.random();
     }
     if (this.atEdge >= 0 && !c.moving && !c.busy) c.faceToward(POND_AT.x, POND_AT.z, 1 - Math.exp(-dt * 1.6));
-    const nearBank = Math.hypot(c.position.x - this.edge.x, c.position.z - this.edge.z) < startleFrom;
-    if (!this.wentOn && nearBank) {
-      this.wentOn = true;
-      this.leftAt = this.now;
-      cue('bugle');
-      /** North, for home, on the line the journey takes; slower than their travelling speed so the going is seen. */
-      flock.lift(Math.PI, leaves, leaveClimb, c.position);
-    }
-    if (this.wentOn && this.atEdge >= 0 && !c.moving && this.now - this.leftAt > setsDown && !c.busy) this.setDown();
+    if (this.wentOn && this.atEdge >= 0 && !c.moving
+      && this.now - this.leftAt > setsDown + tuning.crest.pondReturn && !c.busy) this.setDown();
   }
 
   /** The family comes up out of the meadow ahead, and the walk stops where it stands for it. */
@@ -869,43 +878,51 @@ export class MeadowChapter implements Chapter {
       this.focus.copy(s.target);
       return;
     }
-    if (this.beat === 'down') {
-      // The flock leaves the shot. Keep the child and the shore in view while closing on the act of care.
-      const gap = Math.hypot(c.x - this.edge.x, c.z - this.edge.z);
-      const close = 1 - THREE.MathUtils.smoothstep(gap, 3, 18);
-      const bearing = Math.atan2(c.x - POND_AT.x, c.z - POND_AT.z)
-        + THREE.MathUtils.lerp(REVEAL.swing, pondView, close);
-      const toward = THREE.MathUtils.lerp(0.4, 0.12, close);
+    if (this.beat === 'down' || this.beat === 'crest') {
+      // Establish the whole family while the child is still on the rise, then keep that view for departure.
+      // Stay on the family's side of the scene through the last take-off, then turn toward the hands.
+      // Freeze their last framing bounds during the return so the departing leader cannot drag the shot away.
+      const sinceLift = this.leftAt < 0 ? 0 : this.now - this.leftAt;
+      const close = THREE.MathUtils.smoothstep(sinceLift, tuning.crest.setsDown,
+        tuning.crest.setsDown + tuning.crest.pondReturn);
+      if (close === 0) this.cast.flock.bounds(this.flockBounds);
+      this.flockBounds.getCenter(this.flockCentre);
+      const bearing = THREE.MathUtils.lerp(REVEAL.swing,
+        Math.atan2(c.x - POND_AT.x, c.z - POND_AT.z) + pondView, close);
+      const reach = c.distanceTo(this.flockCentre);
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      s.target.copy(c).lerp(POND_AT, toward).y += 0.9;
-      s.distance = THREE.MathUtils.lerp(28, tuning.crest.pondCameraBack + 1, close);
-      s.height = THREE.MathUtils.lerp(11.5, tuning.crest.pondCameraUp, close);
+      this.tmp.copy(c).lerp(POND_AT, 0.12).y += 0.9;
+      s.target.copy(c).lerp(this.flockCentre, tuning.crest.departureToward).lerp(this.tmp, close);
+      s.distance = THREE.MathUtils.lerp(tuning.crest.departureCameraBack + reach * tuning.crest.departureCameraReach,
+        tuning.crest.pondCameraBack + 1, close);
+      s.height = THREE.MathUtils.lerp(Math.max(REVEAL.up, c.y + tuning.crest.departureCameraUp - s.target.y),
+        tuning.crest.pondCameraUp, close);
       this.cameraChild.copy(c).y += 1.2;
-      this.pondFraming.secondary.copy(this.edge).setY(Math.max(heightAt(this.edge.x, this.edge.z), POND_LEVEL) + 0.5);
-      s.subjects = this.pondFraming;
-      this.pace = 1.1;
-      this.focus.copy(c);
-      return;
-    }
-    if (this.beat === 'crest') {
-      /**
-       * Coming over the rise you look down into the hollow, and the two of them stand low in a frame that is
-       * mostly pond. Once the family is up the same frame holds them and it: the camera stands behind the child
-       * on the line to whatever is being watched, and opens out and tips up as far as it has to.
-       */
-      const k = this.cast.flock.active ? this.far : POND_AT;
-      const ground = Math.max(heightAt(c.x, c.z), 0);
-      const reach = Math.hypot(k.x - c.x, k.z - c.z);
-      const bearing = Math.atan2(c.x - k.x, c.z - k.z) + REVEAL.swing;
-      const open = THREE.MathUtils.smoothstep(this.t, 0.6, 5);
-      const toward = REVEAL.toward * (0.62 + 0.38 * open);
-      const look = (ground + Math.max(k.y, POND_AT.y)) * 0.5 + (k.y - ground) * 0.28;
-      s.target.set(c.x + (k.x - c.x) * toward, look, c.z + (k.z - c.z) * toward);
-      s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-      /** Whatever they are looking at has to fit in the frame with them, so the camera stands off by how far apart they are. */
-      s.distance = REVEAL.back + reach * toward * 0.75;
-      s.height = ground + REVEAL.up - s.target.y;
-      /** Brisker than the walk: the frame has to have arrived while there is still something happening in it. */
+      if (close === 0) {
+        // Enclose all eight corners in the shot's own plane. A world-space diagonal misses the
+        // opposite wing of the V in portrait, especially while some birds are still on the water.
+        this.flockBack.copy(this.side).multiplyScalar(s.distance).setY(s.height).normalize();
+        this.flockRight.set(this.side.z, 0, -this.side.x);
+        this.flockUp.crossVectors(this.flockBack, this.flockRight);
+        let left = Infinity, right = -Infinity, bottom = Infinity, top = -Infinity, near = -Infinity;
+        const { min, max } = this.flockBounds;
+        for (const x of [min.x, max.x]) for (const y of [min.y, max.y]) for (const z of [min.z, max.z]) {
+          this.flockCorner.set(x, y, z).sub(this.flockCentre);
+          const across = this.flockCorner.dot(this.flockRight), up = this.flockCorner.dot(this.flockUp);
+          left = Math.min(left, across); right = Math.max(right, across);
+          bottom = Math.min(bottom, up); top = Math.max(top, up);
+          near = Math.max(near, this.flockCorner.dot(this.flockBack));
+        }
+        this.departureFraming.secondary.copy(this.flockCentre).addScaledVector(this.flockRight, left)
+          .addScaledVector(this.flockUp, bottom).addScaledVector(this.flockBack, near);
+        this.departureFraming.tertiary.copy(this.flockCentre).addScaledVector(this.flockRight, right)
+          .addScaledVector(this.flockUp, top).addScaledVector(this.flockBack, near);
+      } else {
+        // Only the child needs the frame once the departure has been seen.
+        this.departureFraming.secondary.copy(this.cameraChild);
+        this.departureFraming.tertiary.copy(this.cameraChild);
+      }
+      s.subjects = this.departureFraming;
       this.pace = 1.1;
       this.focus.copy(c);
       return;

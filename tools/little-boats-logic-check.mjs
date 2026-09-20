@@ -379,3 +379,52 @@ assert(
 );
 assert(!outgoing.room.departing, 'offscreen fleet stops updating');
 console.log('Every sail responds independently; whole fleet clears the shore and continues after chapter departure.');
+
+// Reproduce repeated strokes over the rearmost sail. Check rendered hull centres,
+// not just course coordinates: the outlet bend compresses distance along the course.
+function hullClearance(room, label) {
+  const visible = room.toys.filter((t) => t.group.visible);
+  let closest = Infinity;
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i + 1; j < visible.length; j++) {
+      const a = visible[i].group.position, b = visible[j].group.position;
+      const distance = Math.hypot(a.x - b.x, a.z - b.z);
+      closest = Math.min(closest, distance);
+      assert(distance > 1.9, `${label}: hulls overlap (${distance}), s=${visible[i].s},${visible[j].s}`);
+    }
+  }
+  return closest;
+}
+for (const fps of [30, 60, 120]) {
+  for (const restored of [3, 33, 69, 95]) {
+    const room = new LittleBoats();
+    room.active = true;
+    room.restore(restored);
+    hullClearance(room, `restored ${restored}`);
+    let target = room.toys[0], closest = Infinity;
+    const rearWind = {
+      sample(x, z, out) {
+        return Object.assign(out, {
+          x: 2, z: -1, lift: 0,
+          energy: Math.hypot(x - target.group.position.x, z - target.group.position.z) < 0.1 ? 0.5 : 0,
+        });
+      },
+    };
+    for (let frame = 0; frame < fps * 160; frame++) {
+      target = room.toys.reduce((rear, t) => t.s < rear.s ? t : rear);
+      // Hold the hero for ten seconds as the chapter does when the cygnet lags.
+      const limit = frame < fps * 10 ? restored : L.length;
+      const previous = room.toys.map((t) => t.s);
+      room.update(1 / fps, frame / fps, rearWind, limit);
+      room.toys.forEach((t, i) => {
+        assert(t.s >= previous[i] - 1e-8, 'separation never jerks a hull backwards');
+        assert(t.s - previous[i] <= tuning.littleBoats.speed / fps + 1e-8, 'contact does not teleport a hull forward');
+      });
+      if (frame < fps * 10) assert.equal(room.progress, restored, 'rear push respects the traveller limit');
+      closest = Math.min(closest, hullClearance(room, `rear gust ${fps}fps from ${restored}`));
+    }
+    assert.equal(room.progress, L.length, 'rear strokes still complete the room');
+    assert(room.toys.every((t) => !t.group.visible), 'rear strokes send the entire fleet offshore');
+    console.log(JSON.stringify({ test: 'rear-sail separation', fps, restored, closest }));
+  }
+}

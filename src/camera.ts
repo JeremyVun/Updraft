@@ -28,6 +28,8 @@ export interface Shot {
    * wants to be seen by something small lowers it, and nothing else in the game changes.
    */
   clearance?: number;
+  /** Smooth authored changes of subject coverage instead of jumping to the fit. */
+  smoothFit?: number;
   /** QA: the camera goes exactly where it is put, with no ground clearance, no sight-line correction and no breathing. */
   free?: boolean;
   /** An authored continuous threshold move supplies its own easing and ground clearance. */
@@ -159,7 +161,7 @@ export class CameraRig {
     }
     needed = Math.min(pair.extra, needed);
     // Respond as an edge approaches; release the extra space slowly when they come together.
-    this.fitBack = Math.max(needed, this.fitBack * Math.exp(-dt * 0.8));
+    this.fitBack = shot.smoothFit ? THREE.MathUtils.lerp(this.fitBack, Math.max(0,needed),1-Math.exp(-dt*shot.smoothFit)) : Math.max(needed, this.fitBack * Math.exp(-dt * 0.8));
     camera.position.addScaledVector(this.back, this.fitBack);
     camera.updateMatrixWorld();
     this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
@@ -180,7 +182,11 @@ export class CameraRig {
     const y = shift(this.local.y, this.second.y, this.third.y, vertical);
     camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
     camera.position.y = Math.max(camera.position.y, Math.max(heightAt(camera.position.x, camera.position.z), 0) + this.clear);
-    this.fitOffset.subVectors(camera.position, this.fitOrigin);
+    if (shot.smoothFit && Number.isFinite(dt)) {
+      this.want.subVectors(camera.position,this.fitOrigin);
+      this.fitOffset.lerp(this.want,1-Math.exp(-dt*shot.smoothFit));
+      camera.position.copy(this.fitOrigin).add(this.fitOffset);
+    } else this.fitOffset.subVectors(camera.position, this.fitOrigin);
     camera.updateMatrixWorld();
   }
 

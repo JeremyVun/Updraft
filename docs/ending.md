@@ -228,7 +228,7 @@ house, then the sun, and last the little paper plane in the sky. `uOpen` brings 
 folded plane has none. Folding it back runs the crayon out again (capped by `smoothstep(open, 0.06, 0.42)`), so
 the faces that come back to the outside of the plane are bare paper, the way they were on the way up.
 
-*The drawing comes first, the house second.* After the family goes, the child turns for home, walks six units down
+*Historical staging, superseded by the house-first sequence below.* The drawing originally came first, the house second. After the family goes, the child turns for home, walks six units down
 off the very top — far enough that the ground has begun to fall and the sheet is held against the sea and not
 against the grass — and sits down with the cottage still hidden behind the brow. `settle` 3.6 s (they turn, sit,
 and the paper comes up out of the one hand into both; the glider is hidden and the sheet shown at the start of it,
@@ -272,3 +272,93 @@ plane in their hand, at `settle`; with an argument it sits them down with the sh
 Waiting on Jeremy: the credits copy (`docs/copy/copy-2.json`), the finale as heard (composed blind), and whether
 the 72 s credits roll and the summit-to-credits pacing feel right. Known and pre-existing: `tools/cygnet-gates.mjs`
 reports the set-down step-off jerk a hair over its limit (0.021 against 0.02), in `companion/carry.ts`.
+
+## Flock departure (2026-09-20)
+
+Jeremy noticed adults racing back into formation and asked for natural catch-up while keeping the opening's V.
+The old position interpolation could move an adult at nearly four times the intended travelling speed.
+`SwanFlock.goOn` now assigns the V around the birds' expected turning paths. They retain their speed, bank onto
+their courses and fly toward their stations, with bounded acceleration and at most 15% extra catch-up speed.
+Birds ahead ease back; birds on crossing paths leave vertical room. The departure and the opening share the
+same V proportions, and the cygnet takes eight seconds to settle into the empty tail station.
+
+The controls are in `tuning.swanDeparture`. `node tools/flock-flight-check.mjs` checks speed, acceleration,
+turns, separation, the V forming before the child turns away, and the opening reset at 30/60/120 fps.
+
+## House first, then recognition (2026-09-20)
+
+Jeremy: “the audio motif that plays should [be] played at the moment when three things are true — the house is
+found, the paper plane is unfolded and reveals the house.” He chose the alternative where the child keeps
+walking, sees the house, then unfolds the plane: “sweat the details when it comes to the camera script.”
+
+After watching the flock leave, the child walks seventeen units over the brow with the plane still folded.
+They remain standing: one second looking at the visible house, 2.2 seconds bringing the plane into both hands,
+then the existing 4.2-second physical unfold. The picture becomes readable with the final fold. The motif starts
+at that recognition, with both the sheet and the real house in frame. The drawing stays open for eight seconds,
+as Jeremy chose after the initial twelve-second refinement; the melody continues through refolding.
+The child looks from the drawing back to the house; only then do they refold it for its existing wind release.
+Paper handling plays at 35% of its previous gain, leaving the wind and melody more space. There is no separate
+walk or seven-second wait between reading the picture and finding the house.
+
+The camera establishes the house on the walk, eases onto the shoulder while the hands rise, and holds that
+composition through the unfolding and recognition. Paper and cottage share the view. Portrait screens get
+more distance and a different balance between those subjects. The camera eases out through refolding and
+follows the plane after release. `tuning.homeReveal` holds the timing and composition controls.
+
+`Chapter.afterCamera` checks the actual eased camera, including terrain sight lines and all four paper corners.
+A missed view holds recognition rather than playing its music offscreen. The motif starts from audio time
+instead of waiting for the next musical pulse; an early plane release lets that melody finish without adding
+a competing release phrase. Ambient music stays low through the reveal.
+
+The existing `reunion` checkpoint resumes the approach. `drawing` now resumes the recognised, open picture
+at the brow, without replaying its motif. `skipToDrawing()` starts the walk; an opening fraction starts at the
+brow. `tools/ending-view-check.mjs` checks sequence, framing gates, frame rates, narrow screens, resizing,
+resume, completion and audio scheduling. `tools/ending-check.mjs` captures the sequence in real Chrome.
+
+Validation: production build and the ending sequence checks pass at 30/60/120 fps, including narrow screens,
+resize and resume. GPU capture/review remains pending: the shared browser was occupied by the full playthrough.
+
+## Arrival into the summit circuit (2026-09-20)
+
+Jeremy found the V snapping into its circle, with too little camera context for the cygnet's wish to join.
+The family now reaches the circle on a tangent and banks in at bounded speed, retaining the same thirteen
+adults and their momentum. Slightly different cruising speeds open the V into a loose circuit; no bird is
+pulled toward a randomly assigned station. The existing wheel also flies smoothly into the closer gathering
+when the player lifts the cygnet.
+
+A steady view from south of the hill shows the turn before the cygnet calls at fourteen seconds; the child
+begins the set-down at seventeen. The camera moves closer from that same side, keeping the family beyond
+the cygnet's first attempts. Portrait has its own retreat distance to hold the circuit without making the
+child disappear into a distant hill. Controls: `tuning.swanArrival` and the arrival/flight values in `tuning.summit`.
+
+Checks: `tools/flock-flight-check.mjs` covers arrival continuity, speed, turn, separation, a minute of waiting,
+and the reunion at 30/60/120 fps. `tools/summit-arrival-check.mjs` captures the natural climb, arrival, call
+and first attempt in desktop and portrait; `VIDEO=1` also saves the sequence.
+
+
+## Full house at the unfolding (2026-09-20)
+
+Jeremy found that the foreground hid the lower half of the house when the child began opening the plane.
+The old gate checked the roof and middle of the doorway against bare terrain; foreground grass still covered
+the walls. The child now stops 24 paces beyond the summit, seven farther than before. The cottage terrace
+extends toward the hill, with its flat uphill reach increased from 13 to 26; the house height and seaward edge
+stay unchanged. The extension is mirrored in the CPU and GPU heightfields.
+
+The reveal gate checks the lower facade as well as the roof and leaves clearance for grass. The ending view
+check independently traces through the grass canopy at the start of unfolding and at recognition; terrain
+parity includes the extended terrace and its blended edges. The camera composition and fold timing are unchanged.
+
+Validation: build and all twelve ending-view cases pass, including 30/60/120 fps, narrow screens, resize and
+resume. Desktop and portrait GPU captures show the complete lower facade before unfolding and at recognition;
+CPU/GPU height parity is within 0.011 units. Evidence: `/tmp/updraft-house-verified-*`.
+
+
+## Sky mirror beyond the cottage (2026-09-20)
+
+Jeremy noticed the sky mirror's doubled clouds showing as a bright patch to the left of the house.
+Its special fragment shading ignored the viewer's chapter. Home now fades only that colour override away,
+revealing the ordinary sea already shaded beneath it. Earlier chapters keep the exact original shader weight;
+the mirror's terrain, wave flattening, props, puzzle and reflection pass are untouched.
+
+`tools/sky-mirror-visibility-check.mjs` compares rendered water against the legacy fragment expression at the
+same simulation instant in the mirror, crossing and washing, and captures the corrected ending in both orientations.

@@ -5,11 +5,16 @@ export interface QualityLevel {
   samples: number;
   /** Geometry and reflection budget, independent of input hardware. */
   detail: 0 | 1 | 2;
+  /** Auto's final fallback can thin grass beyond the player-facing Low preset. */
+  grassDensity?: number;
+  grassReach?: number;
 }
 
+export type QualityMode = 'auto' | 'high' | 'medium' | 'low';
+
 export const WORLD_QUALITY = [
-  { grassDensity: 0.25, grassReach: 0.7, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
-  { grassDensity: 0.55, grassReach: 0.85, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625 },
+  { grassDensity: 0.55, grassReach: 0.85, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
+  { grassDensity: 0.8, grassReach: 0.95, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625 },
   { grassDensity: 1, grassReach: 1, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75 },
 ] as const;
 
@@ -40,9 +45,11 @@ export class Quality {
   private lastReview = 0;
   private climbMs = CLIMB_MS;
   private lastStepUp = false;
+  private selectedMode: QualityMode;
 
   /** Opens at the highest level within the pixel budget for a `width` × `height` view (and `startRatio`); the rest is climbed into. */
-  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2) {
+  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2, mode: QualityMode = 'auto') {
+    this.selectedMode = locked ? 'auto' : mode;
     // QA overrides are exact, including subpixel scales; neither the startup cap nor
     // the adaptive ladder may silently substitute a different resolution.
     if (locked) {
@@ -64,8 +71,33 @@ export class Quality {
      */
     this.levels.push({ ratio: baseRatio * 0.85, samples: Math.min(samples, 2), detail: 0 });
     this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0 });
+    this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0, grassDensity: 0.25, grassReach: 0.7 });
     const opening = this.levels.findIndex((l) => l.ratio <= startRatio && l.detail <= startDetail);
     this.index = opening < 0 ? this.levels.length - 1 : opening;
+    if (this.selectedMode !== 'auto') this.index = this.presetIndex(this.selectedMode);
+  }
+
+  get mode(): QualityMode { return this.selectedMode; }
+
+  /** Manual settings hold their level. Auto resumes here, with fresh timing and no old climb penalty. */
+  setMode(mode: QualityMode, now: number): void {
+    if (this.locked || mode === this.selectedMode) return;
+    this.selectedMode = mode;
+    this.lastStepUp = false;
+    this.climbMs = CLIMB_MS;
+    this.reset(now);
+    if (mode !== 'auto') {
+      this.index = this.presetIndex(mode);
+      this.apply(this.level);
+    }
+  }
+
+  private presetIndex(mode: Exclude<QualityMode, 'auto'>): number {
+    if (mode === 'high') return 0;
+    // Low preserves the meadow at a 30-fps-tolerant visual budget. The two lower
+    // rungs remain available to Auto when it needs more headroom for its 60 fps target.
+    if (mode === 'low') return this.levels.length - 3;
+    return this.levels.findIndex(level => level.detail === 1);
   }
 
   /** Time behind the start screen or in a hidden tab is not evidence of smooth play. */
@@ -80,7 +112,7 @@ export class Quality {
 
   /** Records one real frame interval; may change the level (calling `apply`) about every 1.5 s. */
   frame(now: number, intervalMs: number): void {
-    if (this.locked) return;
+    if (this.locked || this.selectedMode !== 'auto') return;
     this.recent.push(intervalMs);
     if (this.recent.length > RECENT) this.recent.shift();
     const settle = this.lastStepUp ? SETTLE_UP_MS : SETTLE_MS;

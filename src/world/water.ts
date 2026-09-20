@@ -90,6 +90,7 @@ ${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
 ${MIRROR_RIPPLES_GLSL}
+uniform float uSkyMirrorAppearance;
 uniform sampler2D uRipple;
 uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
@@ -351,7 +352,7 @@ void main() {
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
   col += harbourLight(vWorld) * (0.08 + 0.14 * F);
   col = applyFog(col, vWorld);
-  float glass = mirrorWater(xz);
+  float glass = mirrorWater(xz) * uSkyMirrorAppearance;
   if (glass > 0.001) {
     vec2 ringSlope = mirrorSlope(xz);
     vec3 mirrorNormal = normalize(vec3(-ringSlope.x, 1.0, -ringSlope.y));
@@ -379,6 +380,8 @@ export class Water {
   private readonly reflection: PlanarReflection;
   private readonly shore: ShoreBake;
   private frame = 0;
+  /** Only the sky mirror's special surface colour; wave geometry and ordinary sea reflections are independent. */
+  skyMirrorAppearance = 1;
   mirrorEvery = params.lite ? 2 : 1;
   mirrorScale = params.lite ? 0.5 : 0.75;
   private readonly windWaves: WindWaves;
@@ -397,6 +400,7 @@ export class Water {
         ...swellUniforms,
         ...mirrorUniforms,
         uWaterWind: this.windWaves.uniform,
+        uSkyMirrorAppearance: { value: 1 },
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
         uMirrorMatrix: { value: this.reflection.matrix },
@@ -428,6 +432,7 @@ export class Water {
    * Call after the camera has moved, before the scene is drawn.
    */
   update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uSkyMirrorAppearance.value = this.skyMirrorAppearance;
     /** Snapped to the even part of the grid, so the vertices carrying the swell never slide through it. */
     this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
     /** Where there is no mirror the sea must not read one: the last one drawn is a different room by now. */

@@ -12,10 +12,12 @@ Jeremy’s follow-up asks for recognisable bandage layers: three overlapping, sl
 The wrap follows the actual wing surface and its joint weights: broad at the shoulder, narrowing toward the wrist,
 with a thin cloth allowance. Its edges and tucked end stay against that shape when the wing moves.
 
-At the pond, the nearest swans react while the child is still approaching; alert heads and paddling precede their
-staggered takeoff. The child offers the water. The cygnet paddles a little way after the family, watches where they
-went, then looks back and returns to the child's waiting hands. The child gathers and stows it, then follows the
-paper onward. This is a moment of attachment, not another swimming tutorial after the little boats.
+At the pond, the adults begin their migration while the child is still standing on the rise. The view
+holds the whole family; northmost birds lead the staggered takeoff. Only then does the child approach and
+the cygnet call after them. This is a missed connection, not the child startling the family away or parents
+hearing their injured young and rejecting it. The child offers the water. The cygnet paddles a little way
+after the family, watches where they went, then returns to the child's waiting hands. This is attachment,
+not another swimming tutorial after the little boats.
 
 At the sleeping hilltop it looks back toward the child, slowly opens both healed wings, and the loose cloth unwinds
 into the wind. Only then does the updraft invitation begin. Its first glide brings morning back to its friend;

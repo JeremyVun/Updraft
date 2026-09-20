@@ -168,6 +168,7 @@ interface Toy {
   rest: number;
   lane: number;
   speed: number;
+  previousS: number;
   fill: number;
   effort: number;
   joined: boolean;
@@ -208,6 +209,7 @@ export class LittleBoats {
   private time = 0;
   private readonly brushAt = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
+  private readonly fleet: Toy[] = [];
 
   constructor() {
     this.group.name = 'island-of-little-boats';
@@ -295,6 +297,7 @@ export class LittleBoats {
         s: i === 0 ? 3 : [0, 12, 36, 49, 66, 79, 87][i],
         lane: i === 0 ? 0 : (i % 2 ? 1 : -1) * (1.3 + i * 0.13),
         speed: 0,
+        previousS: 0,
         fill: 0,
         effort: 0,
         joined: i === 0,
@@ -379,7 +382,7 @@ export class LittleBoats {
       this.brushAt.copy(toy.group.position);
       this.brushAt.y += 0.8;
       if (screenBrush(camera, this.brushAt, input.prevNdc, input.ndc, tuning.littleBoats.brushRadius) < 0.01) continue;
-      wind.addSplat({
+      wind.addSplat({ source: toy,
         ax: toy.group.position.x,
         az: toy.group.position.z,
         bx: toy.group.position.x,
@@ -405,7 +408,8 @@ export class LittleBoats {
     this.idle = 0;
     this.toys.forEach((t, i) => {
       t.joined = t.rest <= s + 8;
-      t.s = t.joined ? Math.max(3, s - i * 1.7) : t.rest;
+      const behind = s - i * tuning.littleBoats.hullSpacing;
+      t.s = t.joined ? (behind >= 3 ? behind : s + i * tuning.littleBoats.hullSpacing) : t.rest;
       t.speed = 0;
     });
     this.pose(0);
@@ -445,10 +449,17 @@ export class LittleBoats {
     this.idle = push > 0.1 ? 0 : this.idle + dt;
     if (this.launched) {
       const hero = this.toys[0];
+      this.fleet.length = 0;
+      for (const t of this.toys) {
+        t.previousS = t.s;
+        if (t.s < k.offshoreEnd) this.fleet.push(t);
+      }
+      // Use the boats' actual order on the water, including independently sailed toys.
+      this.fleet.sort((a, b) => a.s - b.s);
       for (const [i, t] of this.toys.entries()) {
         if (this.progress > t.s - 5) t.joined = true;
         const carried = i === 0 ? push : t.joined ? push * k.fleetCarry : 0;
-        // Each sail owns its response. No toy waits for an index-based place behind the leader.
+        // Each sail owns its response; a following hull can carry that movement forward.
         const current =
           this.departing || t.s >= L.length
             ? THREE.MathUtils.lerp(k.outletCurrent, k.offshoreSpeed, THREE.MathUtils.smoothstep(t.s, 107, 135))
@@ -458,6 +469,21 @@ export class LittleBoats {
         const end = i === 0 && this.progress < L.length ? Math.min(L.length, limit) : k.offshoreEnd;
         t.s = Math.max(t.s, Math.min(end, t.s + t.speed * dt));
       }
+      const heroEnd = this.progress < L.length ? Math.max(hero.previousS, Math.min(L.length, limit)) : k.offshoreEnd;
+      // A rear push travels through the flotilla instead of through the hulls. Keep the
+      // lane offsets and stream course, so a collision cannot shove a toy onto a bank.
+      for (let i = 1; i < this.fleet.length; i++) {
+        const ahead = this.fleet[i], behind = this.fleet[i - 1];
+        if (ahead.s < behind.s + k.hullSpacing - 1e-8)
+          ahead.s = Math.min(ahead === hero ? heroEnd : k.offshoreEnd, behind.s + k.hullSpacing);
+      }
+      // The child's boat may be waiting for the walkers/swimmer. Let that stop travel
+      // back through any boats behind it, without pushing it past the chapter limit.
+      for (let i = this.fleet.length - 2; i >= 0; i--) {
+        const behind = this.fleet[i], ahead = this.fleet[i + 1];
+        if (behind.s > ahead.s - k.hullSpacing + 1e-8) behind.s = ahead.s - k.hullSpacing;
+      }
+      for (const t of this.fleet) t.speed = dt > 0 ? Math.max(0, (t.s - t.previousS) / dt) : 0;
       this.progress = Math.min(L.length, hero.s);
       if (this.progress >= L.length) this.departing = this.toys.some((t) => t.s < k.offshoreEnd);
     }

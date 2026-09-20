@@ -9,11 +9,15 @@ const DRIP_CHORD = 4;
 const DRIP_POINTS = DRIP_SPAN * DRIP_CHORD;
 const rand = (lo: number, hi: number) => lo + (hi - lo) * Math.random();
 
+export type WhaleSound = 'whale-surface' | 'whale-blow' | 'whale-drain' | 'whale-dive';
+
 /**
  * Where the whale meets the sea: white water where the body breaks the surface or slides under, a calm slick
  * behind it, its breath, water pouring off the lifted flukes, and the splash as they slip under.
  */
 export class WhaleWake {
+  /** Fired with the visible water/breath event, wherever this whale surfaces in the journey. */
+  onSound: ((kind: WhaleSound, x: number, y: number, z: number) => void) | null = null;
   private readonly prevTop = new Float32Array(SPINE_N);
   private readonly emergedAt = new Float32Array(SPINE_N);
   private readonly dripRest: { x: number; s: number }[] = [];
@@ -111,6 +115,7 @@ export class WhaleWake {
     if (blow.y > 0.05 && this.blowWas <= 0.05 && time - this.lastBlow > 5) {
       this.lastBlow = time;
       this.spray.blow(blow, w.heading);
+      this.onSound?.('whale-blow', blow.x, blow.y, blow.z);
       this.ring(blow.x, blow.z, 1.2, time, 0.8);
     }
     this.blowWas = blow.y;
@@ -118,6 +123,7 @@ export class WhaleWake {
     if (!this.headBroke && first >= 0 && (first * SPINE_STEP) / LENGTH < 0.3) {
       this.headBroke = true;
       const P = w.spine[first];
+      this.onSound?.('whale-surface', P.x, 0, P.z);
       this.spray.splash(P.x + hx * 0.5, P.z + hz * 0.5, 1.2, 0.45);
       this.burst(P.x, P.z, 2.2, 10, time);
     }
@@ -140,12 +146,14 @@ export class WhaleWake {
     const up = notch.y > 0.05;
     if (up && this.notchWas <= 0.05 && this.notchWas > -5) {
       this.flukesUpAt = time;
+      this.onSound?.('whale-drain', notch.x, notch.y, notch.z);
       for (let k = 0; k < 50; k++) {
         const e = this.dripNow[Math.floor(Math.random() * DRIP_POINTS)];
         this.spray.emit(MIST, e.x, Math.max(e.y, 0.1), e.z, rand(-0.5, 0.5), rand(0.3, 2), rand(-0.5, 0.5), 0.22, rand(1.5, 2.5), 0.4, 0.2);
       }
     }
     if (!up && this.notchWas > 0.05 && this.flukesUpAt > 0) {
+      this.onSound?.('whale-dive', notch.x, 0, notch.z);
       this.spray.splash(notch.x, notch.z, 1.4, 0.75);
       this.burst(notch.x, notch.z, 2, 10, time);
       this.slicks.add(SLICK, notch.x, notch.z, 3, 30, time, 0.8, 0.09);

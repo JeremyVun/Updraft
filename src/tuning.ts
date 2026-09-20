@@ -3,6 +3,54 @@
  * for scale, the prevailing breeze blows at `wind.breeze` and the hardest stroke makes `pointer.maxGust`.
  */
 export const tuning = {
+  audio: {
+    /** Matches the approved Little Boats preview's music gain, before common playback normalization. */
+    boatsScoreLevel: 3.67, boatsCueDuck: 0.28, boatsCueSpace: 3.8,
+    /** Approved sea revision: +9.7 dB reference gain and +6.3 dB loudness match, without preview playback gain. */
+    seaScoreLevel: 6.31,
+    careChimeLevel: 0.28, careChimeAttack: 0.035,
+    cygnetFullDistance: 30, flockDistance: 320,
+    /** Give an authored call and its answer a gap in the incidental flock chatter. */
+    callSpace: 4,
+    shoreNear: 20, shoreFar: 260, shoreRefresh: 0.75,
+    materialLevel: 0.7, materialNear: 20, materialFar: 120,
+    /** Close paper handling stays beneath the wind and the recognition melody. */
+    paperLevel: 0.35,
+    materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.16,
+    dolphinSurfaceEvery: 0.3,
+    /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
+    whaleLevel: 1, whaleNear: 35, whaleFar: 190,
+    clothSources: 3, clothReach: 60, clothLevel: 0.35,
+  },
+  mirrorCompanion: {
+    exploreRadius: 7, bubbleStandOff: 2.2, starStandOff: 1.7,
+    pace: 1.12, chooseEvery: 0.55, inspectEvery: 6, stretchFor: 2.4,
+  },
+  homeReveal: {
+    /** Stop beyond the convex shoulder, where the whole cottage clears the foreground grass. */
+    stopAfter: 24,
+    /** House first; a short look, hands up, then the unchanged 4.2-second physical unfold. */
+    noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
+    /** Let recognition settle, then refold while the melody continues. */
+    recogniseFor: 8,
+    /** One shoulder composition holds both the paper and the distant house. */
+    shoulderArc: 0.52, portraitShoulderArc: 0.36, shoulderBack: 4.6, shoulderRise: 3.4,
+    portraitBack: 6.1, paperWeight: 0.56, portraitPaperWeight: 0.68,
+    walkArc: 0.2, walkBack: 8, walkRise: 4.6,
+  },
+  swanDeparture: {
+    /** Fractions of the travelling speed; ahead birds make room while stragglers gain only a little. */
+    slow: 0.65, catchUp: 1.15,
+    acceleration: 3, turnRate: 0.9, response: 1.5,
+    forwardGain: 0.75, sideGain: 0.65, sideSpeed: 6,
+    riseGain: 0.6, riseSpeed: 3, sinkSpeed: 2,
+    /** Leave vertical room when two turning paths are about to cross. */
+    avoidAhead: 1.25, avoidRadius: 5, avoidRise: 5,
+    /** Lay out the V around where their turns will finish, with room for the front birds to ease back. */
+    turnAhead: 3, setback: 7,
+    /** The small one takes its tail station while the adults are still gathering. */
+    cygnetJoin: 8,
+  },
   meadowPlane: {
     /** Lead the child toward each discovery, then wheel nearby until they catch up. */
     lead: 24, waitAt: 34, resumeAt: 24, brakeFrom: 28, reach: 42,
@@ -23,7 +71,7 @@ export const tuning = {
     bubbleLift: 4.5, bubbleRelease: 8.5, bubbleReach: 19,
     bubbleHitPadding: 0.055, captureRadius: 2.1, wandRadius: 0.62,
     liftFrom: 0.2, liftFull: 0.65, starRise: 3.2, starHeight: 18,
-    boatDriftSpeed: 4.5, duskFrom: 1.27, duskTo: 1.72, stroll: 0.85,
+    boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29, cameraHeight: 8,
     cameraPortraitHeight: 10, cameraLiftFollow: 0.28, constellationReveal: 6,
     cameraRiseDistance: 32, cameraPortraitRiseDistance: 40,
@@ -34,6 +82,8 @@ export const tuning = {
     fleetReach: 14, childLead: 4, bankOffset: 2.2,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
+    /** Course spacing leaves hull room even where the offshore turn compresses travel. */
+    hullSpacing: 3.4,
     brushSpeed: 1.5, brushRadius: 0.085, brushWindRadius: 3.5, brushEnergyScale: 22,
     inviteAfter: 4, revealFor: 4.5,
     rippleHeight: 0.065, toyDraft: 0.025, sailFillRate: 2.8, sailEmptyRate: 1.4,
@@ -107,6 +157,7 @@ export const tuning = {
     pressedGain: 0.19,
     /** Strokes slower than this make no wind at all. */
     minGust: 0.6,
+    minLift: 0.01,
     /**
      * Tracing circles with the cursor winds up an updraft in the middle of them. The turning rates, in radians per
      * second on screen (6.3 is one loop a second), at which it starts to build and at which it builds fastest.
@@ -211,7 +262,9 @@ export const tuning = {
     haze: 0.96,
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
-    looks: 11,
+    looks: 5,
+    /** The family starts its journey while the child is still standing on the rise. */
+    migrationLeadFor: 2.8,
     /** How far back from the waterline the child stops; the flock reacts this far before they reach that spot. */
     standOff: 1.6,
     startleFrom: 10,
@@ -219,11 +272,17 @@ export const tuning = {
     bankGrass: 0.18,
     bankCropFrom: 1.18,
     bankCropTo: 1.55,
-    /** Come round onto the water as they arrive, then keep both companions inside the frame. */
+    /** Come round onto the water after the flock leaves, then keep both companions inside the frame. */
     pondView: 2.15,
     pondPortraitView: 2.7,
     pondCameraBack: 9,
     pondCameraUp: 5.5,
+    /** Hold the child and the whole departing family, allowing more room for the V on a phone. */
+    departureToward: 0.55,
+    departureCameraBack: 20,
+    departureCameraReach: 0.35,
+    departureCameraUp: 14,
+    departureCameraExtra: 80,
     /** The nearest birds raise their heads and paddle away before running; the reaction spreads through the raft. */
     startlePause: 0.7,
     startleStagger: 0.24,
@@ -231,8 +290,9 @@ export const tuning = {
     /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
     leaves: 12,
     leaveClimb: 3.4,
-    /** Seconds after the family has gone before the child kneels and sets the cygnet down after them. */
+    /** Watch the startle, staggered runs and climb before turning back to the child's hands. */
     setsDown: 8.5,
+    pondReturn: 3.5,
     /** Seconds it keeps its eyes on the sky they left by, after which they are out of sight for good. */
     watches: 7,
   },
@@ -257,7 +317,16 @@ export const tuning = {
     /** How far round itself it also feels for wind, so the player's circles do not have to be dead centre on a moving bird. */
     reach: 2,
   },
+  swanArrival: {
+    turnRate: 0.72, acceleration: 2.4, response: 1.6,
+    radialGain: 0.7, radialSpeed: 7, speedSpread: 2,
+  },
   summit: {
+    /** A tangent approach, then a readable circuit before the small one asks to join. */
+    arriveAt: 1.5, turnAt: 5, callAt: 14, setDownAt: 17,
+    wheelRadius: 22, wheelAhead: 38, wheelHeight: 13,
+    arrivalBack: 32, portraitBack: 64, arrivalRise: 7, arrivalLookAhead: 22,
+    flightSide: -7, flightBack: 20, flightEye: 4, flightLookUp: 2.6, flightLookAhead: 5,
     /**
      * The last lift is the whole gesture, not a flick. A column of `liftToFly` gets it off the ground (a bare gust
      * brushes about 0.4 at most, a wound column 1.5 to 2.5), and then it climbs only as fast as the player keeps
@@ -277,7 +346,7 @@ export const tuning = {
     /** The visible sweep is the hit target, measured in screen heights rather than terrain distance. */
     guideSpan: 1.65, guideOver: 1.35, guideTolerance: 0.045,
     guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
-    phraseRest: 9, finaleWaveAfter: 0.35,
+    phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
     responseLift: 2.2, responseHold: 5.4, responseReturn: 8,
@@ -371,9 +440,10 @@ export const tuning = {
   },
   wood: {
     lightningScale: 0.28,
-    /** Under the canopy, only lightning and the player's embers reveal the floor. */
-    ambientScale: 0.06,
-    skyScale: 0.16,
+    /** Cool silhouettes remain between embers; the player supplies the warm, revealing light. */
+    ambientScale: 0.28,
+    moonScale: 0.85,
+    skyScale: 0.4,
     grassDensity: 0.25,
     grassBaseCrop: 0.15,
     grassTuftCrop: 0.70,
@@ -417,6 +487,29 @@ export const tuning = {
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 20.25,
     chainOffset: 2.6,
+    /** A nearby separation: the child and bird share the frame throughout. */
+    shelterDistance: 12,
+    frightThunderDelay: 0.16,
+    frightStrength: 1.45,
+    frightCompose: 2.2,
+    frightJumpAfter: 1.65,
+    frightJumpDuration: 1.3,
+    frightLandingPause: 0.3,
+    scrambleGain: 0.12,
+    frightJumpDistance: 2.3,
+    frightJumpArc: 0.45,
+    rescueResolve: 1.4,
+    coaxWait: 2.2,
+    refugePause: 1.2,
+    frightenedPace: 0.65,
+    planeSnagHeight: 4.6,
+    planeStrokeDistance: 0.95,
+    planeTugResponse: 9,
+    planeFallSeconds: 1.8,
+    planeEmberHold: 0.55,
+    planeTreeSway: 0.11,
+    planeSwayRate: 0.7,
+    planeIdleRock: 0.055,
   },
   birches: {
     scarf: {
@@ -634,12 +727,14 @@ export const tuning = {
     joinBob: 0.32,
   },
   seaPassage: {
-    speed: 5.2,
+    speed: 10,
     swimSpeed: 1.5,
     swimFor: 32,
     swimAt: 0.38,
+    /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
+    swimNotBefore: 32,
     swimBeside: 2.4,
-    cameraDistance: 21,
+    cameraDistance: 23,
     cameraHeight: 5.1,
     swimCameraDistance: 16,
     swimCameraHeight: 4.6,
@@ -661,7 +756,7 @@ export const tuning = {
     breathSpread: 5.5,
     leapChance: 0.18,
     /** Seconds into the crossing for the first leap alongside, and for the first shove on the quarter. */
-    leapAt: 24,
+    leapAt: 12,
     pushAt: 57,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
@@ -759,9 +854,10 @@ export const tuning = {
     luffFrom: 0.12,
     luffFade: 0.55,
     /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
-    drive: 1.7,
-    following: 0.42,
-    topSpeed: 12,
+    // At the ordinary 2.6-unit breeze: 4.5 through the water, up to 5.5 with a following wind.
+    drive: 4.5 / 2.6,
+    following: 1 / 2.6,
+    topSpeed: 10,
     /** Spill wind in a tight turn; the turning radius must shrink as a missed waypoint gets closer. */
     turnBrake: 0.65,
     turnAligned: 0.85,
@@ -854,14 +950,14 @@ export const tuning = {
     carveSpeed: 9,
     /** How far out the frost starts and how near the bed it comes, from `frost` 0 to 1. */
     frostFrom: 30,
-    frostTo: 2,
+    frostTo: -1.4,
     /**
      * The frosted sward. A blade here keeps this much of its height, and rather less of its width, so cropping
      * leaves fine stubble instead of blades wider than they are tall and a bird stays legible in it. The odd
      * tall tuft is cut back; the remaining stems bend into low tufts rather than standing like stakes.
      */
-    swardCrop: 0.68,
-    swardWidth: 0.18,
+    swardCrop: 0.76,
+    swardWidth: 0.12,
     /** Close winter turf needs more stems on the sparse phone tier; fades into the ordinary LOD. */
     swardDensity: 2.6,
     swardDetailFrom: 12,
@@ -934,13 +1030,17 @@ export const tuning = {
     featherBrushRadius: 0.36,
 
     /**
-     * The bird acts between two player gestures: a brush of the pillow, then circles at the summit.
-     * The walk is assisted, and the shiver resumes by itself if the player leaves it alone.
+     * Broad sweeps free the feather and open two passages; circles support the final leap.
+     * Walking is assisted, while each encounter waits for real player input.
      */
     /** Bedside choreography: a pause, the bird stepping off, sitting, resisting sleep, reclining and tucking. */
     tiredStroll: 0.68,
     bedPauseFor: 3.8,
     bedBirdFor: 2.4,
+    bedBirdPace: .8,
+    bedHopFor: .85,
+    bedHopHeight: .38,
+    blanketOpen: .85,
     bedSitFor: 3.2,
     bedDrowseFor: 4.5,
     climbsIn: 4.8,
@@ -948,30 +1048,53 @@ export const tuning = {
     bedSettleFor: 3.8,
     blanketHandLift: 0.45,
     /** Seconds asleep before the bird starts trying, and between its three tries. */
-    triesFrom: 2.4,
-    triesEvery: 4.4,
+    triesFrom: 1.2,
+    triesEvery: 3.2,
     /** Screen travel across the pillow needed to free the feather after the call. */
     featherStroke: 0.16,
     /** Local circling sensitivity: a gentle loop takes about 2–3 seconds. */
     twirlGain: 2.0,
-    /** Seconds it stands at the edge of the trodden grass, and how long each look back at the bed lasts. */
-    edgeFor: 8,
+    /** Seconds each look back toward the bed lasts. */
     looksBack: 2.2,
-    /** How far up the hill it sits down, 0 the bed to 1 the top, and the seconds before it gets up regardless. */
-    shiverAt: 0.5,
-    shiverFor: 9,
     /** What the wind under it has to do at the hilltop before it goes. */
     liftToFly: 0.9,
     /** The glide down: seconds it takes, and how far it holds above the straight line from the hill to the bed. */
     leapFor: 2.0,
+    ribbonReachArc: 0.22,
+    ribbonReleaseOpening: 0.28,
     ribbonTugFor: 1.6,
     ribbonPull: 0.85,
     ledgeStudyFor: 6.5,
-    glideFor: 18,
+    selfUnwrapFor: 4.2,
+    glideFor: 11,
     glideArc: 2.6,
     /** How far the frost has come in by the time the bird gives up on the child, and by the hilltop. */
-    frostAsleep: 0.62,
-    frostWorst: 0.95,
+    frostAsleep: 0.88,
+    frostWorst: 1.0,
+    /** Wind travel through the snow and fog; earned clearance stays open while the bird passes. */
+    snowBrushRadius: .16,
+    mistBrushRadius: .72,
+    featherTakeRate: 3.8,
+    snowStroke: 0.34,
+    mistStroke: 0.46,
+    encounterNoticeFor: 2.2,
+    climbPace: 0.40,
+    climbEncouragement: 0.22,
+    routeReach: 0.75,
+    snowDepth: 1.65,
+    winterLamp: 0.24,
+    winterFirstCold: .16,
+    winterBedCold: .65,
+    winterBeginsAt: 2.1,
+    winterArrivesFor: 8.6,
+    winterBreeze: 1.05,
+    winterGreen: .66,
+    winterGust: .8,
+    snowCount: 2100,
+    snowFall: 0.75,
+    hearthX: -171.2, hearthZ: -1913.8,
+    hearthGutter: .10, hearthOut: .45, hearthAsh: .62,
+    alarmFor: 3.2, alarmRock: .14,
     /** Seconds the waking takes: the light on the face, the sitting up, and the bird gathered into the lap. */
     wakeFor: 12,
 

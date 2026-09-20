@@ -68,11 +68,15 @@ is replaced by a short swim back to waiting hands. The recovering wing is wrappe
 unwrapped at the sleeping hilltop before its first glide; see `docs/cygnet.md`, “The recovering wing”.
 
 Pond visibility follow-up: Jeremy's screenshot showed only the child's hat above the foreground bank. The approach
-camera now lets the departing flock leave the frame and comes round over the water, keeping the child and shore
-as its subjects. The set-down, swim and gathering frame both companions in landscape and portrait. The child
+camera comes round over the water, keeping the child and shore as its subjects. A later playtest found that
+this turn happened too soon and hid the swans' reaction. The approach now holds the child and the whole flock
+through the raised heads, staggered runs and climb, then turns toward the shore over 3.5 seconds before the
+set-down. The set-down, swim and gathering frame both companions in landscape and portrait. The child
 stops closer to the water; a short, fine grass margin and an opening in the southern reeds expose their hands
 and the cygnet's route. `tools/pond-view-check.mjs` checks framing and terrain/grass sight lines through the real
-sequence from two approaches, alongside browser captures of set-down, swimming and return.
+sequence from two approaches at 30/60/120 fps, including every swan through departure. Earlier browser captures
+cover set-down, swimming and return; the revised departure still needs a GPU capture (the shared browser was
+occupied by another task's full playthrough during this fix).
 
 Meadow navigation follow-up: throws and airborne guidance now share the next destination, with an unfinished
 piano or pond stop taking priority over the final boat marker. After swimming, guidance and pursuit bend around

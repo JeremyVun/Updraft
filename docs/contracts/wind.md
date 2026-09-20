@@ -34,24 +34,29 @@ On the CPU, sample the wind, pass it through `feltWind(sample, wind.calm)`, and 
 
 ## Frame order
 
-1. During the frame, callers queue splats with `wind.addSplat(splat)`. At most 8 per frame; extra ones are dropped.
+1. During the frame, callers queue splats with `wind.addSplat(splat)`. Each sustained force has a stable `source` identity; `trail: true` means its segment traces movement during this render interval. One-off story gusts set `impulse: true`.
 2. `main.ts` sets `wind.breeze` (the prevailing breeze vector, about 2.6 units/s, slowly veering).
-3. `wind.step(dt, time)` runs 1 or 2 substeps of 1/60 s (never more: a slow frame must not multiply the sim's cost, so under heavy load the wind runs slower than real time): force (breeze and splats; splats only in the first substep), curl, vorticity confinement, divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass spring and the sway spring.
+3. `wind.step(dt, time)` accumulates elapsed game time and runs fixed 1/60 s ticks (zero on some high-refresh frames, two at 30 fps, up to six at the game's 100 ms stall cap; the lite preset uses the same clock): force (breeze and resampled splats), curl, vorticity confinement, divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass spring and the sway spring.
 4. `main.ts` copies the current textures into `atmo.uniforms` after the step. Textures ping-pong, so never keep a texture reference from an earlier frame.
-5. The step ends by requesting a readback of a 128 × 128 copy (`src/gl/readback.ts`), which lands at the next frame's `pollReadbacks()` once the GPU has finished it, without the CPU ever waiting. `wind.sample(x, z, out)` reads that copy bilinearly. It is normally one or two frames behind the GPU; when the GPU is saturated it can fall a few more frames behind (see `docs/engine.md`). It covers the domain that was current when it was requested.
+5. After the final world substep of a rendered frame, if any wind tick ran, the field requests a readback of a 128 × 128 copy (`src/gl/readback.ts`), which lands at the next frame's `pollReadbacks()` once the GPU has finished it, without the CPU ever waiting. `wind.sample(x, z, out)` reads that copy bilinearly. It is normally one or two frames behind the GPU; when the GPU is saturated it can fall a few more frames behind (see `docs/engine.md`). It covers the domain that was current when it was requested.
 
 ## Splats
+
+`src/wind/clock.ts` retains inputs until their render interval is consumed. It splits movement segments at tick boundaries and combines samples of the same source into one duration-weighted force per tick. Stationary brush segments retain their extent. Impulses are consumed exactly once. GPU force passes batch eight sources at a time without dropping extras; ambient relaxation runs only in the first batch. Pressure/advection/springs still run once per tick.
 
 A splat pushes air along the segment from `(ax, az)` to `(bx, bz)`, with a Gaussian falloff of `radius` world units around it.
 
 - `vx, vz`: push velocity. The splat only adds air along the push direction until the local wind reaches the push speed, plus a 12% blend toward it. A slow stroke never stops a strong wind.
-- `energy`: gust energy added at full weight on the segment.
+- `energy`: gust energy added per 1/60 s of sustained exposure (or once for an impulse), at full spatial weight on the segment.
 - `swirl`: tangential acceleration around the end point `b`, peaking at about 0.7 × radius. It spins the grass and the wind lines.
 - `lift`: updraft added per second around `b`.
 
 Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and lift in the middle of circles traced with the cursor: `charge` winds up with how fast the stroke's heading turns, `tuning.pointer.twirlFrom`/`twirlFull`, and runs down when the circling stops. Nothing needs a button press. While a chapter `invitesFlight`, `main.ts` sets `input.anchor` to the cygnet, and circles drawn within `tuning.pointer.anchorNear` screen heights of it stand their column at the bird rather than at the cursor's ground point, which under a low camera is a long ellipse that would put the air anywhere but under it) and the glider's wake when it skims low.
 
 Pointer strokes project both screen endpoints through the current camera, so camera motion cannot generate wind. An idle pointer performs no ground picks; the last gesture's gust settles at its existing world point. A new touch or re-entry starts a fresh stroke without connecting it to the previous contact.
+
+`tuning.pointer.minGust` and `minLift` are shared with gesture audio. Any input strong enough to write wind
+must qualify for its chime response; piano and rescue behavior are defined in `audio.md`.
 
 The cygnet reads `lift` at its own position (plus `tuning.colt.reach` around it) and takes off above `Cygnet.liftToFly` once it has been held there for `liftFor` seconds (`Cygnet.needs`; a flick anywhere else, `tuning.summit` at the end). Gust `energy` under it counts as lift at `tuning.colt.gustLift`, enough to make it hope and open its wings but never to lift it: the updraft is the spiral the wind shows the player (`Coax`, drawn by `fx/swirl.ts`) and the player draws it.
 
@@ -91,6 +96,14 @@ keeps its note timing and key path while sharing this readable material. Setting
 
 `tools/wind-invitation-check.mjs` captures the game cameras and checks idle gates and fanning handover;
 `tools/scarf-check.mjs` checks rejection of straight strokes, circular release, saves and departure.
+
+## Ordinary sailing
+
+At the ordinary 2.6-unit breeze, hull drive is 4.5 units/s, with up to 1 additional unit/s in a following
+wind. Player gusts can raise forward speed to the shared 10 units/s ceiling, including dolphin nudges.
+The meadow, sea and home crossings use the ordinary breeze rather than route-specific boosts. Turns,
+acceleration, landing/mooring and the cygnet's swim can bring speed below the cruise range. Settings:
+`tuning.sail`; passage measurements and physical-layout recommendations: [geography](../geography.md).
 
 ## Storm passage
 
@@ -170,6 +183,12 @@ Ambient wind and invitation ribbons cannot release it. The feather's own `brush`
 screen-space exception like the glider's. During the assisted walk, strokes build forward encouragement
 inside the current route corridor. They retain lift and sway without projecting the feather backwards
 down a steep hill. Strong correct strokes move it faster than idle guidance.
+
+At the two ascent encounters, `windInvitation` instead points to the loose snow or the fog ahead.
+`brushDry` accumulates real screen travel, including during the short noticing action; `snowStroke`/`mistStroke` tune
+completion. Progress persists when input pauses, and the opened passage stays clear. Ambient wind and
+route wisps do not advance these gates. Bird errands follow the shared grass centreline even when gestures
+push the feather sideways. Each waypoint is reached before the next becomes active.
 
 At the summit `invitesFlight` anchors real updrafts at the cygnet. `Chapter.twirlGain` is copied into
 `PointerInput` each frame (default 1); this chapter uses `tuning.sleeping.twirlGain` only while inviting

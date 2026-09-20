@@ -164,10 +164,12 @@ void main() {
   if (!gl_FrontFacing) N = -N;
   int mat = int(vMat.x + 0.5);
   float k = vMat.y;
+  // MSAA can extrapolate beyond thin wing triangles; keep underside shading in its physical range.
+  float under = clamp(vUnder, 0.0, 1.0);
   vec3 alb = PLUME;
   float fuzz = 0.5;
   float thin = 0.3;
-  float ao = 1.0 - vUnder * 0.44 - k * 0.12;
+  float ao = 1.0 - under * 0.44 - k * 0.12;
   if (mat == ${VANE}) {
     /** The flight feathers are a single layer of quills: the low sun comes through them and lights the far wing. */
     alb = PLUME * (1.0 - k * 0.06);
@@ -175,7 +177,7 @@ void main() {
     alb *= 1.0 - smoothstep(0.55, 1.0, k) * 0.12;
     thin = 0.34 + 0.5 * k;
     fuzz = 0.42;
-    ao = 1.0 - vUnder * 0.42;
+    ao = 1.0 - under * 0.42;
   } else if (mat == ${BILL}) {
     alb = mix(SLATE, HORN, k * 0.55);
     fuzz = 0.05;
@@ -193,7 +195,7 @@ void main() {
     ao = 1.0;
   }
   /** White stays white in the sun and goes cool and heavy underneath, which is the only way it reads on a pale sky. */
-  if (mat == ${VANE} || mat == ${PLUME}) alb = mix(alb, alb * SHADED, vUnder);
+  if (mat == ${VANE} || mat == ${PLUME}) alb = mix(alb, alb * SHADED, under);
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, 1.0);
   if (mat == ${EYE}) col += uSunColor * 0.8 * catchlight(N, vWorld);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);

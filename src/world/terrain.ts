@@ -182,7 +182,7 @@ void main() {
     winterGrass *= 0.88 + winterFibre * 0.09 + grain * 0.12;
     alb = mix(alb, winterGrass, sleepingFloor * 0.92);
   }
-  alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frostAt(xz) * 0.5);
+  alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frostAt(xz) * mix(0.42, 0.88, smoothstep(0.42, 0.66, fbm(xz * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = mix(col, fog.rgb, fog.a);

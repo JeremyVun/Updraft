@@ -337,6 +337,7 @@ export function createJetty(): THREE.Object3D {
   const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide }));
   mesh.position.set(HOME_JETTY.x, 0, MID_Z);
   const group = new THREE.Group();
+  group.name = 'home-jetty';
   group.add(mesh, shadow());
   return group;
 }
