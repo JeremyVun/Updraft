@@ -859,11 +859,13 @@ export class HomeChapter implements Chapter {
     // a push-in during unfolding would make the paper grow as well as open.
     const retreat = beat === 'fold' ? THREE.MathUtils.smootherstep(this.t, 0, 1 / FOLD_RATE) : close ? 0 : 1;
     const shoulderArc = THREE.MathUtils.lerp(reveal.portraitShoulderArc, reveal.shoulderArc,
-      THREE.MathUtils.smoothstep(aspect, 1, 1.5));
+      THREE.MathUtils.smoothstep(aspect, 0.46, 1));
     const arc = THREE.MathUtils.lerp(shoulderArc * Math.min(1, aspect / 0.46), reveal.walkArc, retreat);
-    const near = portrait ? reveal.portraitBack * Math.max(1, (0.46 / aspect) ** 2) : reveal.shoulderBack;
+    const portraitBack = THREE.MathUtils.lerp(reveal.narrowPortraitBack, reveal.portraitBack,
+      THREE.MathUtils.smoothstep(aspect, 0.36, 0.46));
+    const near = portrait ? portraitBack * Math.max(1, (0.46 / aspect) ** 2) : reveal.shoulderBack;
     const dist = THREE.MathUtils.lerp(near, reveal.walkBack, retreat);
-    const closeRise = reveal.shoulderRise + Math.max(0, near - reveal.portraitBack) * 0.45;
+    const closeRise = reveal.shoulderRise + Math.max(0, near - portraitBack) * 0.45;
     const rise = THREE.MathUtils.lerp(closeRise, reveal.walkRise, retreat);
     this.side.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y).applyAxisAngle(UP, arc);
     s.eye = this.eyeAt.copy(c).addScaledVector(this.side, dist).setY(c.y + rise);

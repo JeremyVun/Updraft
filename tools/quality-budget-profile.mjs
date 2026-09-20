@@ -10,10 +10,7 @@ const results=[];
 const variants=[
   {name:'full',density:1,reach:1,ratio:1,detail:2,mirror:1},
   {name:'no-grass',density:1,reach:1,ratio:1,detail:2,mirror:1,hideGrass:true},
-  {name:'no-reflection',density:1,reach:1,ratio:1,detail:2,mirror:0},
   {name:'no-bloom',density:1,reach:1,ratio:1,detail:2,mirror:1,noBloom:true},
-  {name:'density-75',density:.75,reach:1,ratio:1,detail:2,mirror:1},
-  {name:'reach-85',density:1,reach:.85,ratio:1,detail:2,mirror:1},
   {name:'old-medium',density:.55,reach:.85,ratio:1,detail:1,mirror:1},
   {name:'medium-candidate',density:.8,reach:.95,ratio:1,detail:1,mirror:1},
   {name:'old-low',density:.25,reach:.7,ratio:.72,detail:0,mirror:2},
@@ -92,7 +89,7 @@ try {
    const round=n=>Math.round(n*100)/100;
    const row={chapter,pair:pair.name,deltaMs:round(median(runs.map(r=>r.delta))),percent:round(median(runs.map(r=>r.percent))),
     rangeMs:[round(Math.min(...runs.map(r=>r.delta))),round(Math.max(...runs.map(r=>r.delta)))],runs};
-   results.push(row);console.log(JSON.stringify(row));
+   results.push(row);console.log(JSON.stringify({...row,runs:undefined}));
   }
   for(const name of ['full','old-medium','medium-candidate','old-low','low-candidate']){
    await page.evaluate(v=>{__qualityProbe.configure(v);__qualityProbe.draw()},variants.find(v=>v.name===name));

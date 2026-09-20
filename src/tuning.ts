@@ -34,8 +34,8 @@ export const tuning = {
     /** Let recognition settle, then refold while the melody continues. */
     recogniseFor: 8,
     /** One shoulder composition holds both the paper and the distant house. */
-    shoulderArc: 0.52, portraitShoulderArc: 0.36, shoulderBack: 4.6, shoulderRise: 3.4,
-    portraitBack: 6.1, paperWeight: 0.56, portraitPaperWeight: 0.68,
+    shoulderArc: 0.52, portraitShoulderArc: 0.38, shoulderBack: 4.6, shoulderRise: 3.4,
+    portraitBack: 6.5, narrowPortraitBack: 6.1, paperWeight: 0.56, portraitPaperWeight: 0.62,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
   },
   swanDeparture: {

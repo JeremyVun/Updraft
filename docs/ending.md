@@ -302,8 +302,11 @@ walk or seven-second wait between reading the picture and finding the house.
 
 The camera establishes the house on the walk, eases onto the shoulder while the hands rise, and holds that
 composition through the unfolding and recognition. Paper and cottage share the view. Portrait screens get
-more distance and a different balance between those subjects. The camera eases out through refolding and
-follows the plane after release. `tuning.homeReveal` holds the timing and composition controls.
+more distance and a different balance between those subjects. After Jeremy found the sheet covering the
+house, the shoulder angle moved farther sideways, with separate portrait framing. The whole sheet and
+cottage now stay apart throughout the eight-second hold, including the child's glance back to the house.
+The camera eases out through refolding and follows the plane after release. `tuning.homeReveal` holds the
+timing and composition controls.
 
 `Chapter.afterCamera` checks the actual eased camera, including terrain sight lines and all four paper corners.
 A missed view holds recognition rather than playing its music offscreen. The motif starts from audio time

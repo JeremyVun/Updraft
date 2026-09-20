@@ -116,7 +116,7 @@ establish adaptation and rendering correctness; they do not establish frame rate
 
 ### Grass budget comparison (2026-09-20)
 
-Jeremy prefers fuller Medium/Low grass and accepts 30 fps on Low. Candidate values are 80% density/95%
+Jeremy prefers fuller Medium/Low grass and accepts 30 fps on Low. The selected values are 80% density/95%
 reach for Medium at 1× scale, and 55%/85% for Low at 0.85×. The 25%/70% at 0.72× fallback remains
 available only to Auto. Presets keep the same simulation fidelity and do not cap frame rate.
 
@@ -132,6 +132,27 @@ Other sessions are using the GPU: small or sign-changing deltas are inconclusive
 cannot establish device headroom. Earlier standalone live frame-rate samples were discarded as a basis
 for preset decisions because their background load was not comparable. Physical-device checks remain
 necessary before claiming sustained 30/60 fps.
+
+Paired median changes in completed-work cost (five rounds; positive means more work):
+
+| Change | Island | Meadow | Sky mirror |
+| --- | ---: | ---: | ---: |
+| Density 55% → 80%, other settings fixed | +1.23 ms / +8.8% | +0.44 ms / +3.9% | +0.10 ms (noise) |
+| Density 25% → 55%, other settings fixed | +1.58 ms / +16.2% | +0.60 ms / +6.9% | −0.26 ms (noise) |
+| Reach 85% → 95%, other settings fixed | +0.20 ms | +0.56 ms | +0.12 ms (noise) |
+| Render scale 0.72× → 0.85× | +0.95 ms | +1.06 ms | +0.67 ms |
+| Reflection every frame → alternate frames | −0.44 ms | −0.69 ms | −0.81 ms |
+| Bloom disabled | −0.39 ms | −0.74 ms | −0.71 ms |
+| Grass hidden entirely | −2.24 ms | −2.67 ms | −0.02 ms (noise) |
+| Render scale 1× → 2× | +10.76 ms | +12.11 ms | +11.59 ms |
+| Complete old → new Medium | +0.54 ms / +5.3% | +0.68 ms / +4.7% | −0.15 ms (noise) |
+| Complete old → new Low | +2.16 ms / +34.5% | +2.71 ms / +28.7% | +1.24 ms / +18.7% |
+
+The mirror camera has no grass, providing a noise check. Small changes are not precise: the complete
+Medium deltas span −0.41 to +1.46 ms on the island and −1.34 to +1.46 ms in the meadow. The complete
+Low delta spans +1.17 to +2.63 ms on the island, −1.59 to +3.34 ms in the meadow. Density-only 25% → 55%
+was positive in all five pairs in both land views. Resolution 1× → 2× was consistently much more
+expensive than adding the grass. These results justify trying the richer presets, not an FPS guarantee.
 
 ## Post chain (`src/post/post.ts`)
 

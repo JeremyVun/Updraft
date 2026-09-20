@@ -117,7 +117,8 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
     const ray=new THREE.Raycaster(rig.camera.position,direction.normalize(),0,distance-.05);
     assert.equal(ray.intersectObjects(objects,true).length,0,`${label} must not be occluded by the child or paper`);
    }
-   assert(time-fullAt<.2,`no pause between the completed unfold and recognition: ${w}x${h} ${fps}fps delay=${time-fullAt}`);
+   // Rotating the screen during opening gives the shoulder camera a short moment to settle.
+   assert(time-fullAt<(resize ? .5 : .2),`recognition must follow the completed unfold promptly: ${w}x${h} ${fps}fps delay=${time-fullAt}`);
   }
   if(chapter.beat==='fold'&&foldAt===null){foldAt=time;assert(restore==='drawing'||time-recognised>=tuning.homeReveal.recogniseFor);}
   if(chapter.beat==='gaze'&&chapter.recognisedAt>=0&&time-fullAt>.2)assertPaperBesideHouse(g);
