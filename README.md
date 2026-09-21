@@ -10,6 +10,14 @@ You guide a child and a young swan from island to island by moving the air aroun
 
 The story is told without dialogue. Grass bends, washing billows and music answers your gestures. You can linger to play with the wind or help the travellers on their way.
 
+| Autumn birches | Little boats |
+| --- | --- |
+| ![The child and young swan enter a golden birch wood, with a red scarf winding between the trees.](docs/images/updraft-autumn-birches.jpg) | ![The young swan swims among toy sailboats beside the child, with a giant bathtub on the bank.](docs/images/updraft-little-boats.jpg) |
+
+| Drowned village | Sky mirror |
+| --- | --- |
+| ![A red-sailed boat passes the rooftops and church of a village beneath the sea.](docs/images/updraft-drowned-village.jpg) | ![The child and young swan cross still water reflecting pink clouds, with a kite and jetty ahead.](docs/images/updraft-sky-mirror.jpg) |
+
 ## How to play
 
 - Move the pointer with a mouse or trackpad, or swipe on a touchscreen, to make a gust.
