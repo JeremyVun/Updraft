@@ -166,7 +166,7 @@ the child waits behind. **Jeremy picks; nothing is built until he does.**
 
 Everything in this round is on `main`. Jeremy gave the Fable lead ownership of the visual work after the Opus 5 limit was hit, and it was all done by capture from the lead's own worktrees. Still wanting his eye and ear: the piano's loudness and hush, the traces and the greening as played, the finale's rise, the three on the line, and the washing in a gust.
 
-Review follow-up: Jeremy wants to discuss how the piano puzzle works before changing it, after the other review fixes. The reported finale issue (restoring the whole meadow immediately while the green wave is still travelling) remains unresolved; no piano behavior is changed in this pass. The full phone/portrait gameplay pass is captured in `backlog/portrait-gameplay/design.md` and is outside this session.
+Review follow-up: Jeremy wants to discuss how the piano puzzle works before changing it, after the other review fixes. The reported finale issue (restoring the whole meadow immediately while the green wave is still travelling) remains unresolved; no piano behavior is changed in this pass. A full physical-phone gameplay pass was outside this review.
 
 
 ## Shared objective sound (September 19)
