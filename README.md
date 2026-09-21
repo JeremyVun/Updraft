@@ -40,19 +40,6 @@ npm run preview
 
 The build writes to `dist/`. The preview command prints its local address.
 
-## Inside the game
-
-Updraft is built with **Three.js, TypeScript, Vite and Web Audio**. A shared wind simulation drives the grass, cloth, leaves and sailing. The music and sounds are generated in the browser.
-
-If you're exploring the source:
-
-- [The creative brief and story](docs/journey.md) explain what the game is trying to do. Contains spoilers.
-- [Engine notes](docs/engine.md) cover rendering, camera movement and performance.
-- [The wind simulation](docs/contracts/wind.md) describes how the world responds to a gesture.
-- [Testing](docs/testing.md) covers mechanics, saves, audio and visual playthroughs. The browser tools currently use Google Chrome on macOS.
-
-Found a rough edge? [Open an issue](https://github.com/JeremyVun/Updraft/issues) with your browser, device and what was happening in the game. A screenshot or short recording helps.
-
 ## License
 
 [MIT](LICENSE) © 2026 Jeremy Vun.
