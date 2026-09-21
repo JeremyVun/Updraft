@@ -10,13 +10,14 @@ You guide a child and a young swan from island to island by moving the air aroun
 
 The story is told without dialogue. Grass bends, washing billows and music answers your gestures. You can linger to play with the wind or help the travellers on their way.
 
-| Autumn birches | Little boats |
-| --- | --- |
-| ![The child and young swan enter a golden birch wood, with a red scarf winding between the trees.](docs/images/updraft-autumn-birches.jpg) | ![The young swan swims among toy sailboats beside the child, with a giant bathtub on the bank.](docs/images/updraft-little-boats.jpg) |
-
-| Drowned village | Sky mirror |
-| --- | --- |
-| ![A red-sailed boat passes the rooftops and church of a village beneath the sea.](docs/images/updraft-drowned-village.jpg) | ![The child and young swan cross still water reflecting pink clouds, with a kite and jetty ahead.](docs/images/updraft-sky-mirror.jpg) |
+<p>
+  <img width="49%" src="docs/images/updraft-autumn-birches.jpg" alt="The child and young swan enter a golden birch wood, with a red scarf winding between the trees.">
+  <img width="49%" src="docs/images/updraft-little-boats.jpg" alt="The young swan swims among toy sailboats beside the child, with a giant bathtub on the bank.">
+</p>
+<p>
+  <img width="49%" src="docs/images/updraft-drowned-village.jpg" alt="A red-sailed boat passes the rooftops and church of a village beneath the sea.">
+  <img width="49%" src="docs/images/updraft-sky-mirror.jpg" alt="The child and young swan cross still water reflecting pink clouds, with a kite and jetty ahead.">
+</p>
 
 ## How to play
 
