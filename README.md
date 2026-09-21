@@ -16,7 +16,7 @@ The story is told without dialogue. Grass bends, washing billows and music answe
 </p>
 <p>
   <img width="49%" src="docs/images/updraft-drowned-village.jpg" alt="A red-sailed boat passes the rooftops and church of a village beneath the sea.">
-  <img width="49%" src="docs/images/updraft-sky-mirror.jpg" alt="The child and young swan cross still water reflecting pink clouds, with a kite and jetty ahead.">
+  <img width="49%" src="docs/images/updraft-sky-mirror-wide.jpg" alt="The child and young swan cross still water reflecting pink clouds, with a kite and jetty ahead.">
 </p>
 
 ## How to play
