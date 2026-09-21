@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { indexedNormals } from '../gl/indexed-normals';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
@@ -12,7 +13,7 @@ export const SCARF_SNAGS = [
   { x: 10, z: -1088, treeX: 14, treeZ: -1089, stopX: 3, stopZ: -1081, kind: 'lift' },
   { x: -10, z: -1139, treeX: -10, treeZ: -1139, stopX: -3, stopZ: -1132, kind: 'unwind' },
   { x: 2, z: -1163, treeX: -23, treeZ: -1166, stopX: -5, stopZ: -1157, kind: 'pull' },
-  { x: -5, z: -1182, treeX: -13, treeZ: -1180, stopX: -3, stopZ: -1176, kind: 'bow' },
+  { x: -10.2, z: -1179.2, treeX: -13, treeZ: -1180, stopX: -3, stopZ: -1176, kind: 'bow' },
 ] as const;
 
 /** These are real trees: the long runs double back around them, rather than floating between knots. */
@@ -132,6 +133,32 @@ export class BirchScarf {
   private readonly physical = new Set<number>();
   private restoring = false;
   readonly stump = { x: SCARF_SNAGS[1].treeX, z: SCARF_SNAGS[1].treeZ, height: 4.1, radius: .47 };
+  /** The slipped loop catches on an upturned splinter of a fallen birch, clear of the walking sightline. */
+  readonly slipBranch: ClothCapsule[] = (() => {
+    const c = this.snags[2].center;
+    const points = [ground(c.x + .8, c.z - 1.2, .3),
+      c.clone().add(new THREE.Vector3(.6, -.9, -.7)),
+      c.clone().add(new THREE.Vector3(.25, -.3, -.3)),
+      c.clone().add(new THREE.Vector3(-.12, .12, -.15))];
+    return points.slice(1).map((b, i) => ({ a: points[i], b, radius: [.25, .18, .12][i] }));
+  })();
+  /** A heavy, tapering trunk lies along the slope behind the loop, not across the child's path. */
+  readonly slipLog: ClothCapsule[] = (() => {
+    const c = this.snags[2].center;
+    const points = Array.from({ length: 5 }, (_, i) => ground(c.x + .8 + i * 1.9, c.z - 1.2 - i * .85, .23));
+    return points.slice(1).map((b, i) => ({ a: points[i], b, radius: .43 - i * .065 }));
+  })();
+  /** The final bow stays on a standing birch's low limb. Render and collision share the endpoints. */
+  readonly bowBranch = this.supportBranch();
+
+  private supportBranch(): ClothCapsule[] {
+    const s = SCARF_SNAGS[3], c = this.snags[3].center;
+    const elbow = c.clone().add(new THREE.Vector3(-.5, -.35, -.18));
+    return [
+      { a: new THREE.Vector3(s.treeX, c.y + .65, s.treeZ), b: elbow, radius: .18 },
+      { a: elbow, b: c.clone().add(new THREE.Vector3(.65, .25, -.15)), radius: .12 },
+    ];
+  }
 
   constructor() {
     this.route();
@@ -215,7 +242,8 @@ export class BirchScarf {
   setTrees(trees: { x: number; y: number; z: number; scale: number }[], settle = true): void {
     this.collisions.splice(0, this.collisions.length, ...trees.map(t => ({
       a: new THREE.Vector3(t.x, t.y, t.z), b: new THREE.Vector3(t.x, t.y + t.scale * .85, t.z), radius: .42,
-    })), { a: ground(this.stump.x, this.stump.z, 0), b: ground(this.stump.x, this.stump.z, this.stump.height), radius: this.stump.radius });
+    })), { a: ground(this.stump.x, this.stump.z, 0), b: ground(this.stump.x, this.stump.z, this.stump.height), radius: this.stump.radius },
+    ...this.slipLog, ...this.slipBranch, ...this.bowBranch);
     const capsules: ClothCapsule[] = trees.filter(t => t.z > -1104 && t.z < -1055 && t.x > -5 && t.x < 26).map(t => ({
       a: new THREE.Vector3(t.x, t.y, t.z), b: new THREE.Vector3(t.x, t.y + t.scale * .85, t.z), radius: .42,
     }));
@@ -293,10 +321,13 @@ export class BirchScarf {
     for (let i = 0; i < ROWS; i++) {
       if (i <= this.firstEnd) continue;
       const s = this.snags[this.owner[i]];
-      const loose = s && this.owner[i] !== 1 ? smooth(s.work) : 0;
+      const supported = this.owner[i] === 2 || this.owner[i] === 3;
+      const loose = s && this.owner[i] !== 1 ? smooth(supported ? s.work / .7 : s.work) : 0;
       const p = this.centre[i].lerpVectors(this.tied[i], this.loose[i], loose);
       const w = wind.sample(p.x, p.z, this.air);
-      const f = this.pins[i] * THREE.MathUtils.smoothstep(p.y - this.heights[i], 0.1, 0.8);
+      // The collar stays on the wood while the loops draw through it; only its hanging lengths flutter.
+      const contact = supported ? THREE.MathUtils.smoothstep(p.distanceTo(s.center), .45, 1.3) : 1;
+      const f = this.pins[i] * THREE.MathUtils.smoothstep(p.y - this.heights[i], 0.1, 0.8) * contact;
       const step = Math.min(dt, .05);
       this.point.set(w.x * 0.028, w.lift * 0.12, w.z * 0.028).clampLength(0, 0.7);
       this.velocities[i].addScaledVector(this.point.sub(this.winds[i]), k.windResponse * k.windResponse * step)
@@ -310,6 +341,15 @@ export class BirchScarf {
         p.x += Math.sin(wave * 2.2) * s.impulse * f * 0.25;
       }
       p.y = Math.max(this.heights[i] + 0.09, p.y);
+      if (supported) {
+        const u = (i - this.owner.indexOf(this.owner[i])) / (this.owner[i] === 2 ? 100 : 110);
+        const attachment = smooth(Math.min(u / .16, (1 - u) / .16));
+        // Draw the collapsed loop beyond the broken tip before gravity takes its weight.
+        const slip = smooth((s.work - .7) / .3);
+        p.x += slip * 1.65 * attachment;
+        p.z += slip * .8 * attachment;
+        p.y -= smooth((s.work - .9) / .1) * .9 * attachment;
+      }
       if (this.owner[i] === 1) {
         // The closed coils keep their winding around the wood until ALL of them clear its broken top.
         const u = (i - this.owner.indexOf(1)) / 130;
@@ -438,16 +478,22 @@ export class BirchScarf {
     }
     wrap.push(b1);
     add(wrap,130,1,[b0,local(b,3,4.5,1),local(b,2,3,-2),b1]);
-    const c0=local(c,-2,1,4),c1=local(c,2,-.4,-3);
-    const d0=local(d,3.5,1,3),d1=local(d,-3,1,-2.5);
+    const c0=local(c,-1.5,-.8,2.4),c1=local(c,2,-1.3,-2);
+    // Both tails pass in front of the fallen limb so the solved loop can drop clear of its tip.
+    const d0=local(d,3.5,-.6,3),d1=local(d,-3,-1.5,2);
     add(drape(b1,[coil(5,.9,1),coil(6,-.8)],d0),130);
-    // A slipped loop between two trees: pull the right-hand fold through its loose collar.
-    add([d0,local(d,1,.4,1),local(d,-1,.1,.5),local(d,-2.2,1,0),local(d,-.2,2,-.2),
-      local(d,1.9,1,0),local(d,.4,0,.3),local(d,-1,-.7,-.5),d1],100,2,
-      [d0,local(d,2.2,-.8,1),local(d,.6,-1.8,-.5),d1]);
+    const collapse = (points: THREE.Vector3[], center: THREE.Vector3) => points.map((p, i) =>
+      i === 0 || i === points.length - 1 ? p.clone()
+        : local(center,(p.x-center.x)*.22,(p.y-center.y)*.22,(p.z-center.z)*.4));
+    // A single slipped fold hangs from the limb; its right-hand loop draws through the collar.
+    const slipped = [d0,local(d,-.22,.08,-.08),local(d,1.9,-.35,.45),local(d,2.1,-1.25,.65),
+      local(d,.5,-1.45,.55),local(d,-.16,.12,-.25),d1];
+    add(slipped,100,2,collapse(slipped,d));
     add(drape(d1,[coil(7,1.2,2),coil(8,-.65),coil(9,.9,1)],c0),130);
-    add([c0,local(c,-.3,0,.1),local(c,2.5,1.1,-.1),local(c,3,.1,.4),local(c,.1,-.2,0),local(c,-2.6,1,.4),local(c,-3,-.2,.6),local(c,-.1,.1,-.4),c1],110,3,
-      [c0,local(c,-1,-1.5,1),local(c,1,-1.7,-1),c1]);
+    // Uneven, heavy loops hang BELOW their collar, with the pale branch visible through the centre.
+    const bow = [c0,local(c,-.22,.08,-.08),local(c,1.65,-.35,.45),local(c,1.8,-1.15,.65),
+      local(c,.12,-.16,.38),local(c,-1.5,-.5,.6),local(c,-1.65,-1.35,.8),local(c,-.16,.12,-.25),c1];
+    add(bow,110,3,collapse(bow,c));
     add([c1,at(-1,-1188,.4),at(-7,-1191,.3),at(-4,-1197,3)],60);
   }
 
@@ -489,12 +535,28 @@ export class BirchScarf {
         const k = (i * RING + j) * 3;
         this.point.copy(p).addScaledVector(this.side, across * width * .5 * bunched * taper)
           .addScaledVector(this.normal, (fold * foldRoom + thickness) * taper);
+        if ((this.owner[i] === 2 || this.owner[i] === 3) && !physical && this.gathering === 0) {
+          // The broad hem must wrap around the support too, rather than cut through it as the bow tightens.
+          for (const limb of this.owner[i] === 2 ? this.slipBranch : this.bowBranch) {
+            const ax = limb.b.x - limb.a.x, ay = limb.b.y - limb.a.y, az = limb.b.z - limb.a.z;
+            const t = THREE.MathUtils.clamp(((this.point.x - limb.a.x) * ax + (this.point.y - limb.a.y) * ay
+              + (this.point.z - limb.a.z) * az) / (ax * ax + ay * ay + az * az), 0, 1);
+            const x = limb.a.x + ax * t, y = limb.a.y + ay * t, z = limb.a.z + az * t;
+            const dx = this.point.x - x, dy = this.point.y - y, dz = this.point.z - z;
+            const distance = Math.hypot(dx, dy, dz), radius = limb.radius + .035;
+            if (distance < radius) {
+              if (distance < .00001) this.point.set(x, y + radius, z);
+              else this.point.set(x + dx / distance * radius, y + dy / distance * radius, z + dz / distance * radius);
+            }
+          }
+        }
         if (physical) this.point.y = Math.max(Math.max(0, heightAt(this.point.x, this.point.z)) + .035, this.point.y);
         this.positions[k]=this.point.x;this.positions[k+1]=this.point.y;this.positions[k+2]=this.point.z;
       }
     }
     this.geometry.attributes.position.needsUpdate=true;
     // Lighting must follow each fold, including the back and the thick hem, not just the centreline.
-    this.geometry.computeVertexNormals();
+    indexedNormals(this.positions, this.normals, this.geometry.index!.array);
+    this.geometry.attributes.normal.needsUpdate = true;
   }
 }

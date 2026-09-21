@@ -1,7 +1,8 @@
+import { JOURNEY_THEME, polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 /** The approved sea revision, divided at its existing musical transitions for live story timing. */
 export type SeaScorePhase = 'open' | 'swim' | 'return' | 'arrival';
 type Voice = 'pad' | 'soft' | 'pluck';
-interface Note { voice: Voice; midi: number; at: number; duration: number; level: number; pan: number }
+interface Note { role?: 'melody' | 'accompaniment'; voice: Voice; midi: number; at: number; duration: number; level: number; pan: number }
 const beds: [number, number, number[], number][] = [
   [0, 14, [45, 57, 64, 69], 0.0065],
   [12, 12, [43, 54, 59, 64], 0.0075],
@@ -19,14 +20,16 @@ export const SEA_AUDITION_NOTES: readonly Note[] = [
     [49,69,4,0.005], [55,66,3,0.0045]].map(([at, midi, duration, level]): Note =>
       ({ voice: 'soft', midi, at, duration, level: level * 0.5, pan: 0.05 })),
   ...[[18.5,64], [26.5,66], [51.5,64]].map(([at, midi]): Note =>
-    ({ voice: 'pluck', midi, at, duration: 3, level: 0.004, pan: -0.18 })),
+    ({ role: 'accompaniment', voice: 'pluck', midi, at, duration: 3, level: 0.004, pan: -0.18 })),
 ].sort((a, b) => a.at - b.at);
 
-interface Section { seconds: number; notes: readonly Note[]; chords: [number, number][] }
-const section = (from: number, to: number, seconds: number): Section => ({ seconds,
+interface Section extends Phrase<Note> { chords: [number, number][] }
+const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: SEA_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
   chords: beds.flatMap(([at], index) => at >= from && at < to ? [[at - from, index] as [number, number]] : []),
-});
+}, from === 0 ? { melody: JOURNEY_THEME.map((midi, i): Note => ({ voice: 'soft', midi,
+  at: [8,14,21,29][i], duration: 3.5, level: [.00275,.003,.00325,.003][i], pan: .05,
+})) } : {});
 export const SEA_SECTIONS: Record<SeaScorePhase, Section> = {
   open: section(0, 33, 36),
   swim: section(33, 44, 13),
@@ -56,7 +59,7 @@ export class SeaScore {
     this.bus = ctx.createGain(); this.bus.gain.value = 0; this.bus.connect(output);
   }
 
-  update(phase: SeaScorePhase, level: number): void {
+  update(phase: SeaScorePhase, level: number, until = Infinity): void {
     if (this.stopped) return;
     const now = this.ctx.currentTime;
     this.bus.gain.setTargetAtTime(level, now, 0.8);
@@ -69,38 +72,36 @@ export class SeaScore {
     }
     const part = this.current, pattern = SEA_SECTIONS[phase];
     // Suspension freezes audio time. A stalled game frame skips missed notes instead of bunching them up.
-    const cycle = Math.floor(Math.max(0, now - part.epoch) / pattern.seconds);
-    if (cycle > part.cycle) { part.cycle = cycle; part.next = 0; }
-    for (;;) {
-      const note = pattern.notes[part.next], at = part.epoch + part.cycle * pattern.seconds + note.at;
-      if (at > now + 0.25) break;
-      if (at >= now - 0.04) this.play(part, note, Math.max(now + 0.008, at));
-      if (++part.next === pattern.notes.length) { part.next = 0; part.cycle++; }
-    }
+    schedulePhrase(part, pattern, now, (note, at) => this.play(part, note, at), until);
   }
 
   chordAt(now: number): number {
     if (!this.current) return 0;
     const pattern = SEA_SECTIONS[this.current.phase];
-    const time = Math.max(0, now - this.current.epoch) % pattern.seconds;
+    const time = phrasePosition(pattern, this.current.epoch, now);
     for (let i = pattern.chords.length - 1; i >= 0; i--) if (pattern.chords[i][0] <= time) return pattern.chords[i][1];
     return pattern.chords[0][1];
   }
 
-  stop(): void {
+  handoffAt(now: number): number {
+    return this.current ? phraseHandoff(SEA_SECTIONS[this.current.phase], this.current.epoch, now) : now;
+  }
+
+  stop(fade = 1.8): void {
     if (this.stopped) return;
     this.stopped = true;
-    for (const part of this.parts) this.release(part);
+    for (const part of this.parts) this.release(part, fade);
     this.disconnectIfDone();
   }
 
-  private release(part: Part): void {
+  private release(part: Part, fade = 1.8): void {
     if (part.stopped) return;
     part.stopped = true;
     const now = this.ctx.currentTime;
     part.bus.gain.cancelAndHoldAtTime(now);
-    part.bus.gain.linearRampToValueAtTime(0, now + 1.8);
-    for (const voice of part.voices) voice.stop(now + 1.8);
+    part.bus.gain.setValueAtTime(part.bus.gain.value, now);
+    part.bus.gain.linearRampToValueAtTime(0, now + fade);
+    for (const voice of part.voices) voice.stop(now + fade);
     if (!part.voices.size) this.finish(part);
   }
 

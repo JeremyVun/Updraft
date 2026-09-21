@@ -8,7 +8,7 @@ import type { Terrain } from './terrain';
 import type { Water } from './water';
 
 /** Two places joined by one ordinary door. Neither shore is visible around its frame. */
-export const DOOR_EXIT = new THREE.Vector3(240, heightAt(240, -451) - 0.1, -451);
+export const DOOR_EXIT = new THREE.Vector3(DOOR_SHORE.x, heightAt(DOOR_SHORE.x, DOOR_SHORE.z + 9) - 0.1, DOOR_SHORE.z + 9);
 export const DOOR_SHIFT = DOOR_EXIT.clone().sub(door.group.position);
 export const doorway = {
   crossed: false, travelling: false,
@@ -141,7 +141,7 @@ export class DoorwayView {
       this.waterAt.copy(this.water.mesh.position);
       this.water.mesh.position.set(cam.position.x, 0, cam.position.z);
       waterMat.uniforms.uMirrorOn.value = 0;
-      atmo.uniforms.uRoom.value.set(240, -460, 48);
+      atmo.uniforms.uRoom.value.set(DOOR_SHORE.x, DOOR_SHORE.z, 48);
       for (const actor of this.actorOffsets) {
         actor.offset.copy(DOOR_SHIFT);
         // The two shores meet at the sill, but slope differently after it. Keep the feet on the
@@ -161,7 +161,7 @@ export class DoorwayView {
         r.setRenderTarget(prev);
       }
     }
-    atmo.uniforms.uRoom.value.set(doorway.crossed ? 240 : 14, doorway.crossed ? -460 : -368.4, doorway.crossed ? 48 : 96);
+    atmo.uniforms.uRoom.value.set(doorway.crossed ? DOOR_SHORE.x : 14, doorway.crossed ? DOOR_SHORE.z : -368.4, doorway.crossed ? 48 : 96);
     try { this.inRoom(doorway.crossed ? this.destination : this.source, draw); }
     finally { atmo.uniforms.uRoom.value.set(0, 0, 0); u.uDoorClip.value.z = 0; }
   }

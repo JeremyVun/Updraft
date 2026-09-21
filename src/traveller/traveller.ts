@@ -200,7 +200,7 @@ export class Traveller {
   }
 
   /**
-   * The middle of the sheet at reading height, with the near edge within a relaxed reach of both hands.
+   * The middle of the sheet at reading height, with its near edge within reach of the hands.
    */
   presentPoint(out: THREE.Vector3): THREE.Vector3 {
     const hold = tuning.homeReveal;

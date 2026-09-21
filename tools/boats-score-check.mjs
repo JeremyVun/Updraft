@@ -30,7 +30,7 @@ try {
       check(notes.every(n => n.at >= 0.08), `Local entry clock at ${fps} Hz`);
       check(new Set(notes.map(n => `${n.at.toFixed(5)}:${n.note.midi}:${n.note.voice}`)).size === notes.length,
         `No duplicate notes at ${fps} Hz`);
-      const firstNotes = notes.filter(n => n.note === BOATS_NOTES[0]);
+      const firstNotes = notes.filter(n => n.note.voice === BOATS_NOTES[0].voice && n.note.midi === BOATS_NOTES[0].midi && n.note.at === BOATS_NOTES[0].at);
       check(firstNotes.length === 3 && Math.abs(firstNotes[2].at - firstNotes[0].at - 72) < 0.03,
         `Complete phrase repeats without clock drift at ${fps} Hz`);
       check(notes.filter(n => n.at >= 16 && n.at < 16.1).length <= 2, `No catch-up burst after a stalled frame at ${fps} Hz`);

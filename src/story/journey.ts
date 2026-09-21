@@ -1,7 +1,7 @@
 import { SkyMirrorChapter } from './sky-mirror';
-import { MIRROR_LANDING } from '../world/sky-mirror-layout';
+import { MIRROR_LANDING, MIRROR_BERTH } from '../world/sky-mirror-layout';
 import { LittleBoatsChapter } from './little-boats';
-import { BOATS_LANDING, BOATS_BERTH } from '../world/little-boats-layout';
+import { BOATS_LANDING } from '../world/little-boats-layout';
 import * as THREE from 'three';
 import { tuning } from '../tuning';
 import type { Mood } from '../audio/audio';
@@ -57,31 +57,29 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(60, -195),
     LINES_LANDING,
   ],
-  toBoats: [new THREE.Vector2(265, -512), new THREE.Vector2(330, -502), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
-  toMeadow: [new THREE.Vector2(355, -683), new THREE.Vector2(305, -682), new THREE.Vector2(230, -574), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING],
+  toBoats: [new THREE.Vector2(305, -397), new THREE.Vector2(310, -425), new THREE.Vector2(285, -435), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
+  toMeadow: [new THREE.Vector2(230, -582), new THREE.Vector2(174, -575), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /** A short hop west, round the wood's north shore: the frosted island is on them in a few minutes. */
   toSleeping: [
-    new THREE.Vector2(-38, -1922),
-    new THREE.Vector2(-80, -1928),
-    new THREE.Vector2(-115, -1924),
+    new THREE.Vector2(-45, -1940),
+    new THREE.Vector2(-80, -1974),
+    new THREE.Vector2(-105, -1962), new THREE.Vector2(-118, -1935),
     SLEEP_LANDING,
   ],
   /** The offshore passage keeps the dolphins and brave swim, then moors beside the entry jetty. */
   toMirror: [
-    new THREE.Vector2(-330, -1990), new THREE.Vector2(-445, -2095),
-    new THREE.Vector2(-533, -2215),
-    new THREE.Vector2(-542, -2253), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
+    new THREE.Vector2(-300, -1950), new THREE.Vector2(-375, -1970),
+    new THREE.Vector2(-408, -2003),
+    new THREE.Vector2(-421, -2034), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
-    new THREE.Vector2(-347, -2315), new THREE.Vector2(-310, -2135),
-    new THREE.Vector2(-242, -2012),
-    new THREE.Vector2(-180, -1994), new THREE.Vector2(-158, -1980),
-    new THREE.Vector2(-140, -1966), new THREE.Vector2(-120, -1948),
-    new THREE.Vector2(-80, -1932), new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
+    new THREE.Vector2(MIRROR_BERTH.x + 20, MIRROR_BERTH.z - 17), new THREE.Vector2(MIRROR_BERTH.x + 65, MIRROR_BERTH.z - 52),
+    new THREE.Vector2(MIRROR_BERTH.x + 110, MIRROR_BERTH.z - 71), new THREE.Vector2(MIRROR_BERTH.x + 145, MIRROR_BERTH.z - 73),
+    new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
   ],
   /** Previous uninterrupted passage: retained for existing toHome entry/swim saves. */
   toHome: [
@@ -245,7 +243,7 @@ export class Journey {
   get haze(): number {
     return this.chapter.haze ?? 0;
   }
-  /** Crossings take the music of wherever they are going, so the sea is never silent between two rooms. */
+  /** The crossing supplies its sailing bed; arrivalMusic requests the destination after a musical rest. */
   get music(): Mood {
     return this.chapter.music ?? 'sea';
   }
@@ -298,6 +296,8 @@ export class Journey {
       case 'toLines':
         return new CrossingChapter(cast, {
           route: ROUTES.toLines,
+          music: 'still',
+          arrivalMusic: 'lines',
           season: 0.14,
           lookBack: FIRST_ISLAND,
           farewell: 30,
@@ -308,54 +308,56 @@ export class Journey {
       case 'lines':
         return new LinesChapter(cast);
       case 'toBoats':
-        return new CrossingChapter(cast, {route: ROUTES.toBoats, haze: 1.05, season: 0.22, music: 'lines'});
+        return new CrossingChapter(cast, {route: ROUTES.toBoats, haze: 1.05, season: 0.22, music: 'lines', linesScore: 'shore', arrivalMusic: 'boats'});
       case 'boats':
         return new LittleBoatsChapter(cast);
       case 'toMeadow':
         /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
-        return new CrossingChapter(cast, { route: cast.boat.position.x < BOATS_BERTH.x - 70 ? [new THREE.Vector2(224, -521), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING] : ROUTES.toMeadow, haze: 0.9, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed });
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.9, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow' });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
-        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'birches' });
+        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'meadow', meadowScore: 'return', arrivalMusic: 'birches' });
       case 'birches':
         return new BirchesChapter(cast);
       case 'drowned':
         return new DrownedChapter(cast);
       case 'toWood':
-        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1, music: 'wood', season: 0.7 });
+        return new CrossingChapter(cast, { route: ROUTES.toWood, haze: 0.94, dusk: 1.75, storm: 1, music: 'wood', season: 0.7, arrivalMusic: 'wood' });
       case 'wood':
         return new WoodChapter(cast);
       case 'toSleeping':
         /** Still the wood's night and the last of its weather, and over before the storm is properly gone. */
-        return new CrossingChapter(cast, { route: ROUTES.toSleeping, haze: 0.92, dusk: 1.85, season: 0.85, music: 'wood' });
+        return new CrossingChapter(cast, { route: ROUTES.toSleeping, haze: 0.92, dusk: 1.85, season: 0.85, music: 'wood', hush: .55, arrivalMusic: 'sleeping' });
       case 'sleeping':
         return new SleepingChapter(cast);
       case 'toMirror':
         return new CrossingChapter(cast, {
           route: ROUTES.toMirror, haze: tuning.seaPassage.haze,
+          arrivalMusic: 'mirror',
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
           whaleAt: 42, whaleEvery: 0, dolphins: true,
           swimAt: tuning.seaPassage.swimAt, season: 0.92,
-          moor: MIRROR_LANDING, arrivalSpeed: 3,
+          moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
         });
       case 'mirror': return new SkyMirrorChapter(cast);
       case 'toHarbour':
-        if (cast.skyMirror.progress < 3) cast.skyMirror.restore(3);
+        if (cast.skyMirror.progress < cast.skyMirror.stars.length) cast.skyMirror.restore(cast.skyMirror.stars.length);
         return new CrossingChapter(cast, {
           // Saves from the first mirror version departed from its northern arrival shelf.
-          route: cast.boat.position.x < -420 && cast.boat.position.z > -2280
-            ? [new THREE.Vector2(-455, -2205), ...ROUTES.toHarbour.slice(1)] : ROUTES.toHarbour,
-          haze: 0.92, dusk: tuning.skyMirror.duskTo,
-          season: 0.98, moor: HOME_MOORING, music: 'home',
+          route: cast.boat.position.x < MIRROR_BERTH.x - 30
+            ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_BERTH.x + 40, MIRROR_BERTH.z + 4), ...ROUTES.toHarbour] : ROUTES.toHarbour,
+          haze: 0.92, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
+          season: 0.98, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home',
         });
       case 'toHome':
         /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */
         return new CrossingChapter(cast, {
           route: ROUTES.toHome,
+          arrivalMusic: 'home',
           haze: tuning.seaPassage.haze,
           dusk: 1.02,
-          duskTo: 0.25,
+          duskTo: tuning.homeLight.daylight,
           whaleAt: 42,
           whaleEvery: 0,
           dolphins: true,
@@ -364,7 +366,7 @@ export class Journey {
           moor: HOME_MOORING,
         });
       case 'home':
-        return new HomeChapter(cast, tuning.skyMirror.duskTo);
+        return new HomeChapter(cast);
       case 'stage':
         return new StageChapter(cast);
       default:

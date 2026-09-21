@@ -54,7 +54,7 @@ try {
   };
   const cases = [
     ['island', '', 8.5, 21.5, .95], ['lines', 'washing', 240, -483.5, .1],
-    ['boats', 'boats', 353, -652, Math.PI], ['meadow', 'meadow', -2 / 3, -974 - 2 / 3, .2],
+    ['boats', 'boats', 353, -652, Math.PI], ['meadow', 'meadow', null, null, .2],
     ['birches', 'birches', -4, -1197, .15], ['wood', 'wood', -34, -1908, .2],
     ['sleeping', 'sleeping', -214.5, -1926, -1.76], ['mirror', 'mirror', -390, -2323, Math.PI],
   ].filter(([name]) => !process.env.ONLY || process.env.ONLY.split(',').includes(name));
@@ -86,6 +86,10 @@ try {
     }
     await page.evaluate(({ name, x, z, yaw }) => {
       const g = __game, c = g.story.current;
+      if (name === 'meadow') {
+        c.skipAhead(); c.crestDone = true; c.update(0, 0);
+        x = g.boat.position.x; z = g.boat.position.z;
+      }
       g.child.stop(); g.child.standUp(); g.child.dismount();
       g.boat.beach(x, z, yaw); g.boat.grounded = true;
       g.child.place(name === 'sleeping' ? x + 20 : x, name === 'sleeping' ? z : name === 'island' ? z - 12 : z + 20, Math.PI);

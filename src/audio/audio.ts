@@ -1,12 +1,16 @@
+import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase, type DrownedScorePhase } from './dream-score';
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
 import { BOATS_CHORDS, LittleBoatsScore } from './little-boats-score';
 import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
-import { SleepingScore, type SleepingScorePhase } from './sleeping-score';
-import { MeadowScore, type MeadowScorePhase } from './meadow-score';
-import { BirchesScore, type BirchesScorePhase } from './birches-score';
-import { LinesScore, type LinesScorePhase } from './lines-score';
+import { SleepingScore, SLEEPING_SECTIONS, type SleepingScorePhase } from './sleeping-score';
+import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
+import { BirchesScore, BIRCHES_SECTIONS, type BirchesScorePhase } from './birches-score';
+import { LinesScore, LINES_SECTIONS, type LinesScorePhase } from './lines-score';
+import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
+import { chordNote } from './gesture-harmony';
+import { playFoghorn } from './foghorn';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -21,6 +25,12 @@ export interface AudioEmitter {
 }
 
 export interface SoundState {
+  /** True only during the opening island chapter, never its departing crossing. */
+  startingIsland?: boolean;
+  /** The actual forest chapter; Sleeping also uses the wood music mood. */
+  forestWind?: boolean;
+  /** Only the feather-guided climb on Sleeping, ending before the summit. */
+  sleepingWind?: boolean;
   /** Player gust speed, 0..~26. */
   gust: number;
   winterGust?: number;
@@ -61,10 +71,13 @@ export interface SoundState {
   flockChatter?: boolean;
   /** Which room's music is playing. */
   music: Mood;
+  arrivalMusic?: ArrivalMusic;
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
+  mirrorScore?: MirrorScorePhase;
+  drownedScore?: DrownedScorePhase;
   seaScore?: SeaScorePhase;
   sleepingScore?: SleepingScorePhase;
-  /** The approved arrangement starts after the piano and ends before departure. */
+  /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
   meadowScore?: MeadowScorePhase;
   birchesScore?: BirchesScorePhase;
   linesScore?: LinesScorePhase;
@@ -92,7 +105,7 @@ interface MoodMusic {
   cutoff: number;
   /** How loud the pad sits in this room, 1 being the meadow. */
   level: number;
-  /** The notes the player's gestures ring. */
+  /** Desired gesture contour/register, quantized to the sounding harmony. */
   scale: number[];
 }
 
@@ -123,8 +136,9 @@ const SEA_SCORE_MOOD: MoodMusic = { ...MOODS.sea, chords: SEA_CHORDS, level: 0 }
 const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
-const PHRASES: Record<Cue, [number, number][]> = {
+const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   /** Never played: the cygnet's voice is its own, not a musical phrase. */
+  star: [],
   distress: [],
   calling: [],
   bugle: [],
@@ -156,9 +170,11 @@ const PHRASES: Record<Cue, [number, number][]> = {
   /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
   finale: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'overhead' | 'fallen' | 'landed'>, number> = { feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'overhead' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
+// The tail blends into this prefix; loop playback resumes immediately after it.
+const NOISE_OVERLAP = 0.04;
 
 function pinkNoise(ctx: AudioContext, seconds: number): AudioBuffer {
   const buffer = ctx.createBuffer(2, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
@@ -175,6 +191,12 @@ function pinkNoise(ctx: AudioContext, seconds: number): AudioBuffer {
       b5 = -0.7616 * b5 - white * 0.016898;
       d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
       b6 = white * 0.115926;
+    }
+    const overlap = Math.floor(ctx.sampleRate * NOISE_OVERLAP);
+    for (let i = 0; i < overlap; i++) {
+      const angle = i / (overlap - 1) * Math.PI / 2;
+      const tail = d.length - overlap + i;
+      d[tail] = d[tail] * Math.cos(angle) + d[i] * Math.sin(angle);
     }
   }
   return buffer;
@@ -197,8 +219,19 @@ export class Soundscape {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
   private reverb!: GainNode;
-  /** Everything that is music, so it can be cut in one place and the wind and the crickets left playing. */
+  /** Gesture chimes and authored cues; the ending cuts this alongside the background bus. */
   private musicBus!: GainNode;
+  /** Background has its own wet tail, so an arrival rest never silences gestures or physical sounds. */
+  private backgroundBus!: GainNode;
+  private backgroundDry!: GainNode;
+  private backgroundWet!: GainNode;
+  private backgroundGate!: GainNode;
+  private backgroundDuck!: GainNode;
+  private cueSpaceUntil = 0;
+  private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
+  private backgroundReverb!: ConvolverNode;
+  private reverbImpulse!: AudioBuffer;
+  private readonly arrivalTransition = new ArrivalTransition();
   private finaleUntil = 0;
   private noise!: AudioBuffer;
   private breezeGain!: GainNode;
@@ -219,7 +252,6 @@ export class Soundscape {
   private noteIndex = 4;
   private lastNote = -Infinity;
   private lastArp = -Infinity;
-  private wasGusting = false;
   private prevGliderLift = 0;
   private lastGlider = 0;
   private activity = 0;
@@ -241,6 +273,8 @@ export class Soundscape {
   private meadowScore: MeadowScore | null = null;
   private birchesScore: BirchesScore | null = null;
   private linesScore: LinesScore | null = null;
+  private dreamScore: DreamScore | null = null;
+  private forestBlendUntil = 0;
   private linesCueUntil = 0;
 
   get running(): boolean {
@@ -294,6 +328,7 @@ export class Soundscape {
 
     const convolver = ctx.createConvolver();
     convolver.buffer = impulse(ctx, 4.5);
+    this.reverbImpulse = convolver.buffer;
     this.reverb = ctx.createGain();
     this.reverb.gain.value = 0.55;
     this.reverb.connect(convolver).connect(this.master);
@@ -302,6 +337,15 @@ export class Soundscape {
     const musicSend = ctx.createGain();
     musicSend.gain.value = 0.9;
     this.musicBus.connect(musicSend).connect(this.reverb);
+    this.backgroundDuck = ctx.createGain(); this.backgroundDuck.connect(this.master);
+    this.backgroundGate = ctx.createGain(); this.backgroundGate.connect(this.backgroundDuck);
+    this.backgroundDry = ctx.createGain(); this.backgroundDry.connect(this.backgroundGate);
+    this.backgroundWet = ctx.createGain(); this.backgroundWet.gain.value = .55;
+    this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+    this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
+    this.backgroundBus = ctx.createGain(); this.backgroundBus.connect(this.backgroundDry);
+    const backgroundSend = ctx.createGain(); backgroundSend.gain.value = .9;
+    this.backgroundBus.connect(backgroundSend).connect(this.backgroundWet);
 
     [this.breezeGain, this.breezeFilter] = this.noiseLayer('lowpass', 520, 0.4, 0);
     const breezeLfo = ctx.createOscillator();
@@ -331,7 +375,7 @@ export class Soundscape {
     padFilter.Q.value = 0.3;
     this.padFilter = padFilter;
     this.padGain.connect(padFilter);
-    padFilter.connect(this.musicBus);
+    padFilter.connect(this.backgroundBus);
     for (let v = 0; v < 4; v++) {
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -355,6 +399,12 @@ export class Soundscape {
     this.syncPlayback();
   }
 
+  /** An unseen ship beyond the lighthouse, outside the musical cue/ducking path. */
+  foghorn(): ReturnType<typeof playFoghorn> | null {
+    if (!this.running || !this.ctx) return null;
+    return playFoghorn(this.ctx, this.master, this.reverb);
+  }
+
   /** Rolling thunder, with a sharper, immediate crack for the one close strike in the wood. */
   thunder(strength: number, pan: number, close = false): void {
     if (!this.running || !this.ctx) return;
@@ -369,6 +419,7 @@ export class Soundscape {
       const source = ctx.createBufferSource();
       source.buffer = this.noise;
       source.loop = true;
+      source.loopStart = NOISE_OVERLAP;
       source.playbackRate.value = layer === 0 ? 0.65 : 1;
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
@@ -403,7 +454,7 @@ export class Soundscape {
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
     src.loop = true;
-    src.loopStart = Math.random() * 3;
+    src.loopStart = NOISE_OVERLAP;
     const filter = ctx.createBiquadFilter();
     filter.type = type;
     filter.frequency.value = freq;
@@ -421,7 +472,7 @@ export class Soundscape {
     return [gain, filter];
   }
 
-  private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2, soft = false): void {
+  private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2, soft = false, gesture = false): void {
     const ctx = this.ctx!;
     const out = ctx.createGain();
     const panner = ctx.createStereoPanner();
@@ -429,20 +480,30 @@ export class Soundscape {
     out.connect(panner);
     panner.connect(this.musicBus);
     const f = hz(midi);
-    const partials: [number, number][] = soft
+    const partials: [number, number][] = soft || gesture
       ? [[1, 1], [2, 0.12], [3, 0.025]]
       : [[1, 1], [2.0, 0.28], [3.01, 0.1], [4.2, 0.04]];
+    if (gesture) this.gestureVoices.push({ midi, at: when, out });
+    let remaining = partials.length;
     for (const [ratio, amp] of partials) {
       const o = ctx.createOscillator();
       o.type = 'sine';
       o.frequency.value = f * ratio;
       const g = ctx.createGain();
-      const peak = velocity * amp * 0.16;
+      const peak = velocity * amp * 0.16 * (gesture ? tuning.audio.gestureLevel : 1);
       g.gain.value = 0;
       g.gain.setValueAtTime(0, when);
-      g.gain.linearRampToValueAtTime(peak, when + (soft ? tuning.audio.careChimeAttack : 0.006));
+      g.gain.linearRampToValueAtTime(peak, when + (soft ? tuning.audio.careChimeAttack : gesture ? tuning.audio.gestureAttack : 0.006));
       g.gain.exponentialRampToValueAtTime(0.0001, when + decay / ratio);
+      g.gain.linearRampToValueAtTime(0, when + decay + 0.08);
       o.connect(g).connect(out);
+      o.onended = () => {
+        o.disconnect(); g.disconnect();
+        if (--remaining === 0) {
+          out.disconnect(); panner.disconnect();
+          this.gestureVoices = this.gestureVoices.filter(v => v.out !== out);
+        }
+      };
       o.start(when);
       o.stop(when + decay + 0.1);
     }
@@ -462,11 +523,13 @@ export class Soundscape {
     const panner = ctx.createStereoPanner();
     panner.pan.value = pan;
     o.connect(g).connect(panner).connect(this.master);
-    if (wet > 0) {
-      const send = ctx.createGain();
+    const send = wet > 0 ? ctx.createGain() : null;
+    if (send) {
       send.gain.value = wet;
       panner.connect(send).connect(this.reverb);
     }
+    g.gain.linearRampToValueAtTime(0, when + length + 0.04);
+    o.onended = () => { o.disconnect(); g.disconnect(); panner.disconnect(); send?.disconnect(); };
     o.start(when);
     o.stop(when + length + 0.05);
   }
@@ -481,7 +544,7 @@ export class Soundscape {
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
     src.loop = true;
-    src.loopStart = Math.random() * 3;
+    src.loopStart = NOISE_OVERLAP;
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.Q.value = 0.9;
@@ -497,6 +560,7 @@ export class Soundscape {
     const send = ctx.createGain();
     send.gain.value = 0.3;
     gain.connect(send).connect(this.reverb);
+    src.onended = () => { src.disconnect(); filter.disconnect(); gain.disconnect(); send.disconnect(); };
     src.start(t0, Math.random() * 4);
     src.stop(t0 + 2);
   }
@@ -545,6 +609,7 @@ export class Soundscape {
 
     /** Calling out to them is lower and longer than calling for help: less panic in it, and more hope. */
     const calls = longing ? 2 : 2 + Math.floor(Math.random() * 2);
+    let remaining = calls;
     let at = t0;
     for (let i = 0; i < calls; i++) {
       const len = (longing ? 0.4 : 0.16) + Math.random() * 0.08;
@@ -571,6 +636,11 @@ export class Soundscape {
       env.gain.setValueAtTime(peak, at + len * 0.5);
       env.gain.exponentialRampToValueAtTime(0.0001, at + len);
       osc.connect(throat).connect(env).connect(out);
+      osc.onended = () => {
+        osc.disconnect(); throat.disconnect(); env.disconnect();
+        if (--remaining === 0) { out.disconnect(); panner.disconnect(); send.disconnect(); }
+      };
+      waver.onended = () => { waver.disconnect(); depth.disconnect(); };
       osc.start(at);
       osc.stop(at + len + 0.05);
       waver.start(at);
@@ -607,6 +677,7 @@ export class Soundscape {
     voice.connect(tone).connect(p);
     p.connect(dry).connect(out.bus);
     p.connect(send).connect(out.reverb);
+    let remaining = 2;
     let at = now;
     for (const [ratio, len] of [
       [1, 0.2],
@@ -638,6 +709,10 @@ export class Soundscape {
       thin.gain.value = 0.5;
       osc.connect(nose).connect(thin).connect(env);
       env.connect(voice);
+      osc.onended = () => {
+        osc.disconnect(); mouth.disconnect(); nose.disconnect(); thin.disconnect(); env.disconnect();
+        if (--remaining === 0) { voice.disconnect(); tone.disconnect(); p.disconnect(); dry.disconnect(); send.disconnect(); }
+      };
       osc.start(at);
       osc.stop(at + len + 0.05);
       at += len + 0.05;
@@ -672,7 +747,7 @@ export class Soundscape {
     this.finaleUntil = t0 + 22;
   }
 
-  private phrase(name: Cue): void {
+  private phrase(name: Exclude<Cue, 'foghorn'>, harmonyAt?: (at: number) => readonly number[]): void {
     // A quick release keeps the recognition melody; do not stack a second tune over it.
     if (name === 'release' && this.ctx!.currentTime < this.recognitionUntil) return;
     if (name === 'finale') {
@@ -688,6 +763,7 @@ export class Soundscape {
       // These cues follow the animation's clock, without waiting for the musical pulse.
       // Fit the whole phrase to its beat and leave only a short tail after touchdown.
       const duration = name === 'overhead' ? tuning.opening.flight : tuning.opening.fall;
+      this.cueSpaceUntil = Math.max(this.cueSpaceUntil, this.ctx!.currentTime + duration + .35);
       const notes = PHRASES[name];
       const units = notes.reduce((sum, [, beats]) => sum + beats, 0);
       const start = this.ctx!.currentTime + 0.02;
@@ -700,11 +776,17 @@ export class Soundscape {
       return;
     }
     const beat = PHRASE_BEAT[name];
+    const reward = name === 'delight' || name === 'restored' || name === 'breeze';
+    if (!reward && name !== 'comfort' && name !== 'kindled' && PHRASES[name].length) {
+      const length = PHRASES[name].reduce((sum, [, beats]) => sum + beats * beat, 0);
+      this.cueSpaceUntil = Math.max(this.cueSpaceUntil, this.ctx!.currentTime + length + 1.5);
+    }
     // Recognition follows the visible house and drawing, without a beat-grid delay.
     let at = name === 'unfold' ? this.ctx!.currentTime + 0.02 : this.nextPulse() + 0.05;
     for (const [midi, beats] of PHRASES[name]) {
-      if (midi > 0) this.chime(midi, name === 'unfold' ? 0.55 : name === 'comfort' ? 0.5 * tuning.audio.careChimeLevel : name === 'feather' ? 0.32 : 0.5,
-        0, at, Math.max(2.2, beats * beat * 3), name === 'comfort');
+      const pitch = reward && harmonyAt ? chordNote(midi, harmonyAt(at), 62, 86) : midi;
+      if (midi > 0) this.chime(pitch, name === 'unfold' ? 0.55 : name === 'comfort' ? 0.5 * tuning.audio.careChimeLevel : name === 'feather' ? 0.32 : 0.5,
+        0, at, Math.max(2.2, beats * beat * 3), name === 'comfort' || reward, reward);
       at += beats * beat;
     }
     if (name === 'unfold') this.recognitionUntil = at;
@@ -722,7 +804,14 @@ export class Soundscape {
     const tc = 0.08;
     const g = Math.min(s.gust / 26, 1);
     const winter = s.winterGust ?? 0;
-    const airGust = Math.max(g, winter * .76);
+    const weatherGust = winter * .76;
+    const filterGust = Math.max(g * tuning.audio.playerWindFilterRange, weatherGust);
+    const musicalWind = s.startingIsland || s.forestWind || s.sleepingWind;
+    const playerWind = s.startingIsland ? 1 : 10 ** (tuning.audio.laterWindDb / 20);
+    // Preserve the weather floor while trimming only the player contribution.
+    const gustLevel = Math.max(Math.pow(g, 1.4) * playerWind, Math.pow(weatherGust, 1.4));
+    const whistleLevel = Math.max(Math.max(0, g - .55) * playerWind, Math.max(0, weatherGust - .55));
+    const rustleLevel = Math.max(Math.pow(g, 1.2) * playerWind, Math.pow(weatherGust, 1.2));
     const piano = s.piano ?? 0;
     const air = 1 - piano * 0.82;
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
@@ -731,91 +820,166 @@ export class Soundscape {
     this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
     this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
     this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
-    this.gustGain.gain.setTargetAtTime(Math.pow(airGust, 1.4) * 0.55 * air, now, tc);
-    this.gustFilter.frequency.setTargetAtTime(260 + airGust * 1100, now, tc);
+    this.gustGain.gain.setTargetAtTime(gustLevel * 0.55 * air, now, tc);
+    this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);
-    this.whistleGain.gain.setTargetAtTime(Math.max(0, airGust - 0.55) * 0.12 * air, now, tc);
-    this.whistleFilter.frequency.setTargetAtTime(900 + airGust * 900, now, tc);
-    this.rustleGain.gain.setTargetAtTime((s.overLand || winter > 0) ? Math.pow(airGust, 1.2) * 0.2 * air : 0, now, tc);
-    this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air, now, 0.15);
-    this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500, now, 0.2);
+    this.whistleGain.gain.setTargetAtTime(whistleLevel * 0.12 * air, now, tc);
+    this.whistleFilter.frequency.setTargetAtTime(900 + filterGust * 900, now, tc);
+    this.rustleGain.gain.setTargetAtTime((s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
+    this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air * playerWind, now, 0.15);
+    this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    if (s.music === 'boats' && !s.silence) {
-      this.boatsScore ??= new LittleBoatsScore(ctx, this.musicBus);
+    const activeScore = this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;
+    const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
+    if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
+      // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
+      const fade = arrival.stage === 'fade' ? tuning.audio.arrivalFadeOut : .08;
+      for (const score of [this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore]) score?.stop(fade);
+    }
+    const backgroundPaused = arrival.stage === 'gap';
+    if (arrival.changed && arrival.stage !== 'wait' && !arrival.legato) {
+      const gain = this.backgroundGate.gain;
+      gain.cancelAndHoldAtTime(now);
+      // Holding an already constant parameter need not insert an automation event. Without
+      // this anchor, the incoming ramp can start at the beginning of the rest.
+      gain.setValueAtTime(gain.value, now);
+      if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + tuning.audio.arrivalFadeOut);
+      else if (backgroundPaused) gain.setValueAtTime(0, now);
+      else {
+        // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
+        this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
+        this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+        this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
+        gain.linearRampToValueAtTime(1, now + tuning.audio.arrivalFadeIn);
+      }
+    }
+    if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
+      this.boatsScore ??= new LittleBoatsScore(ctx, this.backgroundBus);
       if (s.cues.includes('restored') || s.cues.includes('delight')) {
         this.boatsCueUntil = now + tuning.audio.boatsCueSpace;
       }
-      this.boatsScore.update(tuning.audio.boatsScoreLevel * (1 - 0.92 * s.hush) / (1 - 0.92 * 0.28)
-        * (1 - piano) * (now < this.boatsCueUntil ? tuning.audio.boatsCueDuck : 1));
+      this.boatsScore.update(tuning.audio.boatsScoreLevel * (1 - 0.92 * bg.hush) / (1 - 0.92 * 0.28)
+        * (1 - piano) * (now < this.boatsCueUntil ? tuning.audio.boatsCueDuck : 1), arrival.handoffAt);
     } else if (this.boatsScore) {
       this.boatsScore.stop(); this.boatsScore = null; this.boatsCueUntil = 0;
     }
-    if (s.music === 'sea' && s.seaScore && !s.silence) {
-      if (!this.seaScore) { this.seaScore = new SeaScore(ctx, this.musicBus); this.chord = -1; }
-      this.seaScore.update(s.seaScore, tuning.audio.seaScoreLevel * (1 - 0.92 * s.hush) * (1 - piano));
+    if (bg.music === 'sea' && bg.seaScore && !s.silence && !backgroundPaused) {
+      if (!this.seaScore) { this.seaScore = new SeaScore(ctx, this.backgroundBus); this.chord = -1; }
+      this.seaScore.update(bg.seaScore, tuning.audio.seaScoreLevel * (1 - 0.92 * bg.hush) * (1 - piano), arrival.handoffAt);
     } else if (this.seaScore) {
       this.seaScore.stop(); this.seaScore = null; this.chord = -1;
     }
-    if (s.sleepingScore && !s.silence) {
-      this.sleepingScore ??= new SleepingScore(this.output!, out => {
+    if (bg.sleepingScore && !s.silence && !backgroundPaused) {
+      this.sleepingScore ??= new SleepingScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
         const piano = new PianoStrings(); piano.setOutput(out); return piano;
       });
       // The approved arrangement already contains its quiet dynamics and true rests.
-      this.sleepingScore.update(s.sleepingScore, tuning.audio.sleepingScoreLevel * (1 - piano));
+      this.sleepingScore.update(bg.sleepingScore, tuning.audio.sleepingScoreLevel * (1 - piano), arrival.handoffAt);
     } else if (this.sleepingScore) {
       this.sleepingScore.stop(s.silence ? 0.12 : 1.8); this.sleepingScore = null;
     }
-    if (s.music === 'meadow' && s.meadowScore && !s.silence) {
-      this.meadowScore ??= new MeadowScore(ctx, this.musicBus);
+    if (bg.music === 'meadow' && bg.meadowScore && !s.silence && !backgroundPaused) {
+      this.meadowScore ??= new MeadowScore(ctx, this.backgroundBus);
       // The audition already includes the quieter flock/pond dynamics; don't apply that hush twice.
-      this.meadowScore.update(s.meadowScore, tuning.audio.meadowScoreLevel * (1 - piano));
+      this.meadowScore.update(bg.meadowScore, tuning.audio.meadowScoreLevel * (1 - piano), arrival.handoffAt);
     } else if (this.meadowScore) {
       this.meadowScore.stop(s.silence ? 0.12 : 1.8); this.meadowScore = null;
     }
-    if (s.music === 'birches' && s.birchesScore && !s.silence) {
-      this.birchesScore ??= new BirchesScore(ctx, this.musicBus);
-      this.birchesScore.update(s.birchesScore, tuning.audio.birchesScoreLevel * (1 - piano));
+    if (bg.music === 'birches' && bg.birchesScore && !s.silence && !backgroundPaused) {
+      this.birchesScore ??= new BirchesScore(ctx, this.backgroundBus);
+      this.birchesScore.update(bg.birchesScore, tuning.audio.birchesScoreLevel * (1 - piano), arrival.handoffAt);
     } else if (this.birchesScore) {
       this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
     }
-    if (s.music === 'lines' && s.linesScore && !s.silence) {
-      this.linesScore ??= new LinesScore(ctx, this.musicBus);
+    if (bg.music === 'lines' && bg.linesScore && !s.silence && !backgroundPaused) {
+      this.linesScore ??= new LinesScore(ctx, this.backgroundBus);
       if (s.cues.includes('delight') || s.cues.includes('restored')) this.linesCueUntil = now + tuning.audio.linesCueSpace;
-      this.linesScore.update(s.linesScore, tuning.audio.linesScoreLevel * (1 - piano),
-        10 ** (tuning.audio.linesMelodyDb / 20), s.linesMelodyQuiet || now < this.linesCueUntil);
+      this.linesScore.update(bg.linesScore, tuning.audio.linesScoreLevel * (1 - piano),
+        10 ** (tuning.audio.linesMelodyDb / 20), bg.linesMelodyQuiet || now < this.linesCueUntil, arrival.handoffAt);
     } else if (this.linesScore) {
       this.linesScore.stop(s.silence ? .12 : 1.8); this.linesScore = null; this.linesCueUntil = 0;
     }
-    const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[s.music] ?? MOODS.meadow;
+    const forestEntry = arrival.legato && arrival.stage === 'blend' && arrival.changed;
+    if (forestEntry) this.forestBlendUntil = now + tuning.audio.forestMusicBlend;
+    const dreamKind = bg.mirrorScore ? 'mirror' : bg.drownedScore ? 'drowned' : null;
+    const dreamPhase = bg.mirrorScore ?? bg.drownedScore;
+    if (dreamKind && dreamPhase && !s.silence && !backgroundPaused) {
+      if (this.dreamScore?.kind !== dreamKind) {
+        this.dreamScore?.stop(); this.dreamScore = new DreamScore(ctx, this.backgroundBus, dreamKind);
+      }
+      // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
+      this.dreamScore.update(dreamPhase, (dreamKind === 'mirror' ? tuning.audio.mirrorScoreLevel : tuning.audio.drownedScoreLevel) * (1-piano), arrival.handoffAt);
+    } else if (this.dreamScore) {
+      this.dreamScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : tuning.audio.dreamPhaseFade);
+      this.dreamScore = null;
+    }
+    const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[bg.music] ?? MOODS.meadow;
     const chord = this.seaScore ? this.seaScore.chordAt(now) : this.boatsScore ? this.boatsScore.chordAt(now)
-      : Math.floor(now / mood.seconds) % mood.chords.length;
+      : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
-    if (s.silence) this.musicBus.gain.setTargetAtTime(0, now, 0.12);
-    if (!finale && (chord !== this.chord || s.music !== this.mood)) {
+    if (s.silence) {
+      this.musicBus.gain.setTargetAtTime(0, now, 0.12);
+      this.backgroundBus?.gain.setTargetAtTime(0, now, 0.12);
+    }
+    if (!finale && (chord !== this.chord || bg.music !== this.mood)) {
       /** A room change glides the voices to their new notes rather than cutting: the chord bends into the next. */
-      const glide = s.music !== this.mood ? 3.5 : 1.2;
+      const glide = bg.music !== this.mood ? 3.5 : 1.2;
       this.chord = chord;
-      this.mood = s.music;
+      this.mood = bg.music;
       this.padVoices.forEach((voice, i) => {
         const f = hz(mood.chords[chord][i]);
-        voice.osc.forEach((o) => o.frequency.setTargetAtTime(f, now, glide));
+        voice.osc.forEach((o) => {
+          // The pad was inaudible under the composed score. Tune it before bringing it in.
+          if (forestEntry) { o.frequency.cancelScheduledValues(now); o.frequency.setValueAtTime(f, now); }
+          else o.frequency.setTargetAtTime(f, now, glide);
+        });
         voice.gain.gain.setTargetAtTime(0.25, now, 2.5);
       });
     }
-    const hush = (1 - 0.92 * s.hush) * (1 - piano);
+    const hush = (1 - 0.92 * bg.hush) * (1 - piano);
     /** The finale swells, night or no night: it is the one time the music is meant to be the loudest thing there is. */
     const swell = finale ? 1.6 + 0.8 * (1 - (this.finaleUntil - now) / 22) : 1;
     this.padGain.gain.setTargetAtTime(
-      this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * 0.09) * hush * mood.level * swell,
+      backgroundPaused || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel) * hush * mood.level * swell,
       now,
-      piano > 0 ? tuning.piano.mixResponse : s.hush > 0.5 ? 0.7 : 1.5,
+      piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
+    const harmonyAt = (at: number): readonly number[] => {
+      const composed = this.dreamScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
+        ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at);
+      if (composed) return composed;
+      // During the music-free arrival gap, use the opening harmony of the incoming composition.
+      if (backgroundPaused) {
+        if (bg.mirrorScore || bg.drownedScore) return DREAM_SECTIONS[(bg.mirrorScore ?? bg.drownedScore)!].chords[0].tones;
+        if (bg.linesScore) return LINES_SECTIONS[bg.linesScore].chords[0].tones;
+        if (bg.birchesScore) return BIRCHES_SECTIONS[bg.birchesScore].chords[0].tones;
+        if (bg.meadowScore) return MEADOW_SECTIONS[bg.meadowScore].chords[0].tones;
+        if (bg.sleepingScore) return SLEEPING_SECTIONS[bg.sleepingScore].chords[0]?.tones ?? [50,57];
+        if (bg.music === 'boats') return BOATS_CHORDS[0];
+      }
+      const index = this.seaScore?.chordAt(at) ?? this.boatsScore?.chordAt(at)
+        ?? Math.floor(at / mood.seconds) % mood.chords.length;
+      const tones = mood.chords[index];
+      // The wood's upper semitones belong to its unsettled drone; touch answers on its steady D/A pedal.
+      return bg.music === 'wood' ? MOODS.wood.chords[0] : tones;
+    };
+    // Release gesture tails outside musical wind scenes, and incompatible notes at harmonic changes.
+    this.gestureVoices = this.gestureVoices.filter(voice => {
+      if (musicalWind && harmonyAt(Math.max(now, voice.at)).some(m => (m - voice.midi) % 12 === 0)) return true;
+      voice.out.gain.cancelAndHoldAtTime(now);
+      voice.out.gain.setValueAtTime(voice.out.gain.value, now);
+      voice.out.gain.linearRampToValueAtTime(0, now + tuning.audio.gestureTailRelease);
+      return false;
+    });
+
     for (const name of s.cues) {
-      if (name === 'kindled' || name === 'comfort') {
+      if (name === 'foghorn') { this.foghorn(); }
+      else if (name === 'star') { this.dreamScore?.bloom(); }
+      else if (name === 'kindled' || name === 'comfort') {
         this.flare();
-        this.phrase(name);
+        this.phrase(name, harmonyAt);
       } else if (name === 'distress' || name === 'calling') {
         this.peep(name === 'distress' ? 1 : 0.95, name === 'calling', s.cygnet);
         this.flockQuietUntil = now + tuning.audio.callSpace;
@@ -823,8 +987,11 @@ export class Soundscape {
         this.bugle(s.flock);
         this.flockQuietUntil = now + tuning.audio.callSpace;
       }
-      else this.phrase(name);
+      else this.phrase(name, harmonyAt);
     }
+
+    this.backgroundDuck.gain.setTargetAtTime(now < this.cueSpaceUntil ? tuning.audio.authoredCueDuck : 1,
+      now, now < this.cueSpaceUntil ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease);
 
     if (s.flockChatter !== false && s.flock?.active && now > this.nextFlock && now > this.flockQuietUntil) {
       this.bugle(s.flock, 0.8 + Math.random() * 0.4);
@@ -846,53 +1013,43 @@ export class Soundscape {
       this.nextLark = now + 6 + Math.random() * 10;
     }
 
-    /** The chimes are the player's own voice in the music, so they only answer gestures that are doing something. */
-    // Hush belongs to the score. Every playable wind stroke keeps its musical answer;
-    // the piano supplies that answer itself while the duet is engaged.
-    const gestures = !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
-    const care = s.caringWind ?? false;
+    // Musical wind wakes the opening island, accompanies the forest search and encourages the feather climb.
+    const gestures = musicalWind && !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
+    const care = !!(s.caringWind || s.sleepingWind);
     const scale = care ? [62, 64, 69, 71, 74, 76] : mood.scale;
-    const velocity = care ? tuning.audio.careChimeLevel : 1;
+    const velocity = (s.sleepingWind ? tuning.audio.sleepingChimeLevel : care ? tuning.audio.careChimeLevel : 1) * (now < this.cueSpaceUntil ? .55 : 1);
     const gusting = s.gust > tuning.pointer.minGust && gestures;
-    if (gusting) {
-      const interval = s.gust > 17 ? PULSE : PULSE * 2;
-      const at = this.nextPulse();
-      if (!this.wasGusting || at - this.lastNote >= interval - 1e-3) {
-        if (at > this.lastNote + 1e-3) {
-          const step = (s.rise >= 0 ? 1 : -1) * (s.gust > 18 ? 2 : 1);
-          this.noteIndex += step;
-          if (this.noteIndex > scale.length - 1) this.noteIndex -= 5;
-          if (this.noteIndex < 0) this.noteIndex += 5;
-          this.chime(scale[Math.min(this.noteIndex, scale.length - 1)], (0.45 + g * 0.55) * velocity, s.pan, at, 2.2, care);
-          this.lastNote = at;
-        }
-      }
-    }
-    this.wasGusting = gusting;
-
-    if (s.charge > tuning.pointer.minLift && gestures) {
-      const interval = PULSE * (s.charge > 0.7 ? 1 : 2);
-      const at = this.nextPulse();
-      if (at - this.lastArp >= interval - 1e-3) {
-        const chordTones = care ? [62, 69, 74, 81]
-          : (this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at) ?? mood.chords[this.chord % mood.chords.length]).map((m) => m + 12);
-        const tone = chordTones[Math.floor((now / interval) % chordTones.length)] + (!care && s.charge > 0.6 ? 12 : 0);
-        this.chime(tone, (0.25 + s.charge * 0.35) * velocity, s.pan, at, 1.6, care);
-        this.lastArp = at;
-      }
-    }
-
-    if (s.gliderLift > 0.45 && this.prevGliderLift <= 0.45 && now - this.lastGlider > 2.5 && gestures) {
-      const base = (this.linesScore?.chordAt(this.nextPulse()) ?? this.birchesScore?.chordAt(this.nextPulse()) ?? mood.chords[this.chord % mood.chords.length])[0] + 24;
-      this.chime(base, 0.4 * velocity, 0, this.nextPulse(), 1.8, care);
-      this.chime(base + 7, 0.35 * velocity, 0, this.nextPulse() + PULSE, 2.2, care);
+    const lifting = s.charge > tuning.pointer.minLift && gestures;
+    const at = this.nextPulse();
+    const glider = !s.sleepingWind && s.gliderLift > .45 && this.prevGliderLift <= .45 && now - this.lastGlider > 2.5 && gestures;
+    if (glider && at > Math.max(this.lastNote, this.lastArp) + 1e-3) {
+      const base = chordNote(harmonyAt(at)[0] + 24, harmonyAt(at), 62, 81);
+      this.chime(base, .4 * velocity, 0, at, 1.8, care, true);
+      this.chime(chordNote(base + 7, harmonyAt(at + PULSE), base + 1, Math.min(86, base + 12)),
+        .35 * velocity, 0, at + PULSE, 2.2, care, true);
+      this.lastNote = this.lastArp = at + PULSE;
       this.lastGlider = now;
+    } else if ((gusting || lifting) && at - Math.max(this.lastNote, this.lastArp) >= PULSE * (s.sleepingWind ? tuning.audio.sleepingChimePulses : 2) - 1e-3) {
+      // One answer per pulse: circular pointer input can be both gust and lift.
+      if (lifting) {
+        const wanted = [62, 66, 69, 74][Math.floor(at / (PULSE * 2)) % 4];
+        this.chime(chordNote(wanted, harmonyAt(at), 62, 81),
+          (.25 + s.charge * .35) * velocity, s.pan, at, 1.6, care, true);
+        this.lastArp = at;
+      } else {
+        this.noteIndex = (this.noteIndex + (s.rise >= 0 ? 1 : -1) + scale.length) % scale.length;
+        const wanted = scale[this.noteIndex];
+        this.chime(chordNote(wanted, harmonyAt(at), scale[0], Math.min(86, scale[scale.length - 1])),
+          (.45 + g * .55) * velocity, s.pan, at, 2.2, care, true);
+        this.lastNote = at;
+      }
     }
+
     this.prevGliderLift = s.gliderLift;
   }
 }
 
-/** The notes a room's gestures ring out of its music. Anything else played in that room takes them too. */
+/** The room's established melodic palette; live gestures also follow the active background chord. */
 export function moodScale(mood: Mood): readonly number[] {
   return (MOODS[mood] ?? MOODS.meadow).scale;
 }

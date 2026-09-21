@@ -1,4 +1,4 @@
-// Home suppresses only the sky mirror's surface appearance; earlier rooms render the legacy water identically.
+// The sea starts blue, the mirror develops on arrival, and Home excludes the distant mirror region.
 // BASE selects a built preview. Uses the shared GPU lock. Captures in /tmp.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -18,19 +18,20 @@ try {
   }
   await page.screenshot({path:`${prefix}-${chapter}-${width}.png`});
   const result=await page.evaluate(()=>{
-   const g=__game,mat=g.water.mesh.material,source=mat.fragmentShader;
-   // Both renders use the same camera, geometry, uniforms and simulation instant. Only the fragment
-   // expression differs, giving a pixel comparison against the water before this change.
+   const g=__game,mat=g.water.mesh.material;
+   // The draw scope has ended, but the shader retains the journey's room pair.
+   // Changing only the mirror appearance must have no effect once Home excludes that room.
    g.renderer.render(g.scene,g.rig.camera);
-   const current=g.renderer.domElement.toDataURL();
-   mat.fragmentShader=source.replace('mirrorWater(xz) * uSkyMirrorAppearance','mirrorWater(xz)');
-   mat.needsUpdate=true;g.renderer.render(g.scene,g.rig.camera);
-   const legacy=g.renderer.domElement.toDataURL();
-   mat.fragmentShader=source;mat.needsUpdate=true;
-   return {chapter:g.story.name,amount:mat.uniforms.uSkyMirrorAppearance.value,identical:current===legacy};
+   const current=g.renderer.domElement.toDataURL(), amount=mat.uniforms.uSkyMirrorAppearance.value;
+   mat.uniforms.uSkyMirrorAppearance.value=1-amount;
+   g.renderer.render(g.scene,g.rig.camera);
+   const opposite=g.renderer.domElement.toDataURL();
+   mat.uniforms.uSkyMirrorAppearance.value=amount;
+   return {chapter:g.story.name,amount,identical:current===opposite,rooms:mat.uniforms.uJourneyRooms.value.toArray()};
   });
-  assert.equal(result.amount,chapter==='summit'?0:1,`${chapter}: wrong appearance weight`);
-  assert.equal(result.identical,chapter!=='summit',`${chapter}: unexpected difference from legacy water`);
+  assert.equal(result.amount,chapter==='summit'||chapter==='sea'?0:1,`${chapter}: wrong appearance weight`);
+  if(chapter==='summit')assert(result.identical,'Home excludes the mirror even when its appearance is forced on');
+  if(chapter==='mirror')assert(!result.identical,'The active mirror contributes its reflected surface');
   assert.equal(errors.length,0,errors.join('\n'));
   results.push({...result,width,height});console.log(results.at(-1));
   await page.close();

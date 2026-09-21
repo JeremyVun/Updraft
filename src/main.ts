@@ -1,3 +1,4 @@
+import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, type Room } from './world/journey-rooms';
 import { LittleBoats } from './world/little-boats';
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
@@ -42,7 +43,6 @@ import { createWindDebug } from './wind/debug';
 import { WindField, type WindSample } from './wind/field';
 import { CLOUD_SPAN, atmo } from './world/atmosphere';
 import { CloudShadows } from './world/clouds';
-import { createDistantIslands } from './world/distant';
 import { Grass } from './world/grass';
 import { sleepingGust } from './world/sleeping-wind';
 import { HEARTH } from './world/sleeping-hearth';
@@ -89,6 +89,7 @@ import { startScreen } from './start-screen';
 import { contextRecovery } from './gl/context-recovery';
 import { telemetry } from './analytics/telemetry';
 import { frameTiming } from './gl/frame-time';
+import { FramePacer } from './gl/frame-pacer';
 
 declare global {
   interface Window {
@@ -154,8 +155,8 @@ scene.add(terrain.mesh);
 scene.add(water.mesh);
 const pond = new Pond();
 pond.objects.forEach((o) => scene.add(o));
-scene.add(createRocks());
-scene.add(createDistantIslands());
+const islandRocks = createRocks();
+scene.add(islandRocks);
 scene.add(tree.group);
 await yieldBoot();
 const grass = new Grass();
@@ -183,11 +184,6 @@ await yieldBoot();
 const departureKites = new DepartureKites(wind);
 const kite = departureKites.markers.lines;
 for (const marker of Object.values(departureKites.markers)) scene.add(marker.group);
-const shoreFamily = new WashingLines([], 91, {
-  a: new THREE.Vector3(234.8, heightAt(240, -462) + 5.2, -462),
-  b: new THREE.Vector3(245.2, heightAt(240, -462) + 5.2, -462), sag: 0.18,
-});
-scene.add(shoreFamily.group);
 const shoreGrass = createDoorShoreGrass();
 scene.add(shoreGrass);
 const pinwheels = new Pinwheels(wind, LINES_WALK);
@@ -324,10 +320,10 @@ const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, sleeping, littleBoats, skyMirror, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
-water.skyMirrorAppearance = story.name === 'home' ? 0 : 1;
+water.skyMirrorAppearance = story.name === 'toMirror' ? 0 : story.name === 'home' ? 0 : 1;
 rig.cut(story.shot);
 const windDebug = params.debug === 'wind' || params.debug === 'sway' ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
@@ -360,19 +356,31 @@ const sheepFolds = [
 ];
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
 scene.add(hillCreatures.group);
+clipJourneyProps(hillCreatures.group);
+const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
+  island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
+  shore: [shoreGrass, kite.group], boats: [littleBoats.group],
+  meadow: [piano.group, ...pond.objects], birches: [...birches.objects], drowned: [...village.objects],
+  wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty],
+};
+for (const [name, marker] of Object.entries(departureKites.markers)) {
+  if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
+}
 
 await yieldBoot();
-const maxPixelRatio = params.ratio ?? Math.min(window.devicePixelRatio, 2);
-/** Phones open at a modest scale and climb if they prove smooth; opening at full scale costs seconds of crawl. */
+const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
+// Keep full scene detail while avoiding Retina's disproportionate pixel/bandwidth cost.
+const maxPixelRatio = params.ratio ?? Math.min(nativePixelRatio, 1.5);
+/** Touch Auto keeps a smaller sustained resolution budget than High. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-const post = new Post(renderer, scene, rig.camera, params.msaa ?? (maxPixelRatio >= 1.75 ? 2 : 4));
+const post = new Post(renderer, scene, rig.camera, params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4));
 const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
 const doorwayShared = [sky, terrain.mesh, water.mesh, ...doorwayActors];
 const doorwaySource = new Set([...doorwayShared, grass.group, washing.group, washingBaskets, pinwheels.group, door.group, lines.batch.mesh, swirl.batch.mesh, washingInvitation.batch.mesh]);
-const doorwayDestination = new Set([...doorwayShared, shoreGrass, shoreFamily.group, kite.group, lines.batch.mesh]);
+const doorwayDestination = new Set([...doorwayShared, shoreGrass, kite.group, lines.batch.mesh]);
 const doorwayView = new DoorwayView(renderer, scene, terrain, water,
   doorwaySource, doorwayDestination,
-  [shoreGrass, shoreFamily.group, kite.group],
+  [shoreGrass, kite.group],
   [{ objects: [...child.objects, ...glider.objects], at: child.position }, { objects: cygnet.objects, at: cygnet.position }]);
 const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, coarsePointer ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
   const resizeTargets = pixelRatio !== level.ratio || post.samples !== level.samples;
@@ -381,7 +389,7 @@ const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, wind
   applyWorldQuality(level);
   telemetry.quality(level.ratio, level.samples, level.detail);
   if (resizeTargets) resize();
-}, coarsePointer ? 1 : 2, controls.qualityMode);
+}, coarsePointer ? 1 : 2, controls.qualityMode, coarsePointer ? 1.25 : maxPixelRatio);
 function applyWorldQuality(level: QualityLevel, immediate = false): void {
   const detail = WORLD_QUALITY[params.lite ? 0 : level.detail];
   grass.setQuality(level.grassDensity ?? detail.grassDensity, level.grassReach ?? detail.grassReach, immediate);
@@ -478,7 +486,10 @@ function resize(): void {
   post.setSize(w, h, pixelRatio);
   rig.resize(w, h);
 }
-window.addEventListener('resize', resize);
+window.addEventListener('resize', () => {
+  quality.resize(window.innerWidth, window.innerHeight, performance.now());
+  resize();
+});
 resize();
 
 let heightParity = 0;
@@ -491,8 +502,10 @@ function ease(from: number, to: number, rate: number, dt: number): number {
 }
 let time = 0;
 let last = performance.now();
+const pacer = new FramePacer();
 document.addEventListener('visibilitychange', () => {
   last = performance.now();
+  pacer.reset(last);
   quality.reset(last);
 });
 let frames = 0;
@@ -633,7 +646,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const tread = atmo.uniforms.uTrodden.value;
   if (flat) tread.set(flat.x, flat.z, flat.y, ease(tread.w, 1, 1.4, dt));
   else tread.w = ease(tread.w, 0, 1.4, dt);
-  applyPalette(story.worldLife, dusk, shower, squall);
+  // The mirror's suspended light clears on the crossing; home has the low sun drawn on the paper.
+  const homeLight = story.name === 'home' ? 1 : story.name === 'toHarbour' || story.name === 'toHome'
+    ? 1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, tuning.skyMirror.duskTo) : 0;
+  applyPalette(story.worldLife, dusk, shower, squall, homeLight);
   applySleepingPalette(sleeping.presence);
   shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0, 1.2, dt);
   stormWeather.update(dt, storm, boat.afloat ? boat.yaw : child.yaw,
@@ -643,9 +659,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
    * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
    * sea keeps the stars on it all the way out.
    */
-  // The final hill sees ordinary sea beyond the cottage. Fade only the distant mirror's special shading;
-  // its walkable flat, local reflections and every earlier chapter retain their original behaviour.
-  water.skyMirrorAppearance = ease(water.skyMirrorAppearance, story.name === 'home' ? 0 : 1, 1.2, dt);
+  // Let the pod finish diving before the mirror develops; fade back to ordinary sea on the final hill.
+  water.skyMirrorAppearance = ease(water.skyMirrorAppearance, story.current.mirrorArrival ?? (story.name === 'home' ? 0 : 1), 1.2, dt);
   if (story.name === 'home' && water.skyMirrorAppearance < 0.001) water.skyMirrorAppearance = 0;
   atmo.uniforms.uOpenSea.value = ease(atmo.uniforms.uOpenSea.value, story.current.openSea ?? 0, 0.7, dt);
   // Keep the meadow's own hills clear while concealing every shore beyond it, including in the sea's mirror.
@@ -710,7 +725,13 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.gliderLift = glider.lift;
   soundState.life = story.worldLife;
   soundState.night = atmo.uniforms.uNight.value;
+  soundState.startingIsland = story.name === 'island';
+  soundState.forestWind = story.name === 'wood';
+  soundState.sleepingWind = story.name === 'sleeping' && story.current.sleepingScore === 'climb';
   soundState.music = story.music;
+  soundState.arrivalMusic = story.current.arrivalMusic;
+  soundState.mirrorScore = story.current.mirrorScore;
+  soundState.drownedScore = story.current.drownedScore;
   soundState.seaScore = story.current.seaScore;
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.meadowScore = story.current.meadowScore;
@@ -729,7 +750,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   rig.camera.near = story.name === 'lines' && doorway.travelling ? 0.035 : 0.5;
   rig.camera.updateProjectionMatrix();
-  rig.update(dt, time, story.shot, story.pace);
+  rig.update(dt, time, story.shot, story.pace, !!(story.current.scripted || story.current.invitesSail
+    || story.current.invitesFlight || story.current.windInvitation || story.current.pianoActive));
   story.current.afterCamera?.(rig.camera);
   rig.camera.updateMatrixWorld();
   if (finalStep) followWindow(...windowAim());
@@ -856,10 +878,14 @@ function frame(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
+  if (!params.shot && !pacer.due(now, quality.frameRate)) {
+    requestAnimationFrame(frame);
+    return;
+  }
   const cpuStart = performance.now();
   const realDt = (now - last) / 1000;
   telemetry.frame(now - last);
-  quality.frame(now, now - last);
+  quality.frame(now, params.shot ? now - last : pacer.intervalMs);
   last = now;
   const timing = frameTiming(params.shot ? 1 / 60 : realDt);
   const dt = timing.dt;
@@ -881,11 +907,13 @@ function frame(now: number): void {
   // The home landing belongs to the final approach, including in the water's reflection.
   homeJetty.visible = story.name === 'home' || story.name === 'toHarbour' || story.name === 'toHome';
   // The shore behind the impossible door can recede during its departure, but never reappear later.
-  doorwayView.render(rig.camera, story.name === 'lines', story.name !== 'toBoats', () => {
+  const rooms = visibleRooms(story.name, boat.position.z);
+  setJourneyRooms(rooms);
+  drawJourneyRooms(rooms, roomObjects, () => doorwayView.render(rig.camera, story.name === 'lines', story.name !== 'toBoats', () => {
     // The sea's reflection belongs to the same room as the main view.
     water.update(rig.camera, (mirrorCamera) => terrain.beginMirror(mirrorCamera), () => terrain.endMirror());
     post.render(time);
-  });
+  }));
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);
 
@@ -958,6 +986,8 @@ async function boot(): Promise<void> {
   await yieldBoot();
   await precompile(renderer, scene, rig.camera, post.sceneTarget);
   await precompileSim(renderer, bakes.ground);
+  terrain.fields.bake(renderer);
+  terrain.colour.bake(renderer);
   await grass.precompile(renderer);
   await yieldBoot();
   followWindow(...windowAim(), true);
@@ -982,6 +1012,7 @@ async function boot(): Promise<void> {
       setSound(controls.soundOn);
     }
     last = performance.now();
+    pacer.reset(last);
     quality.reset(last);
     fpsWindowStart = last;
     requestAnimationFrame(frame);

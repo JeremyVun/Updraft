@@ -72,6 +72,9 @@ export class PianoStop {
   private readonly mid = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   private readonly hands = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly approachChild = new THREE.Vector3();
+  private readonly approachFrame = { primary: this.approachChild, secondary: piano.keys,
+    margin: tuning.piano.approachMargin, extra: tuning.piano.approachExtra };
 
   /** QA: how far the stop has got, from noticing it to walking on. */
   get at(): string {
@@ -96,6 +99,7 @@ export class PianoStop {
   hold(dt: number, time: number, cast: Cast): boolean {
     this.now = time;
     const c = cast.child;
+    this.approachChild.copy(c.position).y += 1.2;
     piano.engaged = this.beat !== 'ahead' && this.beat !== 'done';
     // Ownership starts on approach, but music stays with the walk and the first look at the keys.
     const playing = this.beat === 'sitting' || this.beat === 'seated' || this.beat === 'leaving';
@@ -188,6 +192,15 @@ export class PianoStop {
     let height = t.frameUp + t.frameHigh * (1 - settled);
     this.mid.set(piano.keys.x, piano.keys.y + t.frameLook, piano.keys.z - t.frameOn);
     shot.fitWidth = true;
+    shot.subjects = undefined;
+    if (this.beat === 'walking') {
+      // Introduce the instrument with the approaching child. Looking straight at the keys too early
+      // let the child leave the bottom of the frame while climbing the last slope.
+      const gap = Math.hypot(this.approachChild.x - piano.stand.x, this.approachChild.z - piano.stand.z);
+      this.mid.lerp(this.approachChild, THREE.MathUtils.smoothstep(gap, 4, NOTICE) * t.approachShare);
+      distance += gap * t.approachBack;
+      shot.subjects = this.approachFrame;
+    }
     if (this.responseAt >= 0 && this.roseFrom === 0) {
       const age = this.now - this.responseAt;
       const open = THREE.MathUtils.smoothstep(age, 0, t.responseLift)

@@ -40,7 +40,7 @@ try {
   await page.goto(base+'?analytics=0&progress=0'); await start(page);
   assert.equal(await page.locator('#quality-menu [aria-checked="true"]').getAttribute('data-mode'), 'auto');
   await select(page, 'low', .55, .85);
-  await select(page, 'high', 1, 2);
+  await select(page, 'high', 1, 1.5);
   // A sustained synthetic overload still must not override the player's setting.
   assert.equal(await page.evaluate(() => {
     for(let t=0;t<20000;t+=40)__game.quality.frame(performance.now()+t,40);
@@ -62,7 +62,7 @@ try {
   await page.locator('#quality').focus(); await page.keyboard.press('Enter'); await page.keyboard.press('m'); await page.keyboard.press('Enter'); await page.keyboard.press('Tab');
   assert.equal(await page.locator('#quality-menu [aria-checked="true"]').getAttribute('data-mode'), 'medium');
   assert.equal(await page.locator('#sound').getAttribute('data-on'), sound, 'Medium type-ahead must not mute audio');
-  await select(page, 'high', 1, 2);
+  await select(page, 'high', 1, 1.5);
   await page.goto(base+'?shot&ratio=.6&analytics=0');
   await page.waitForFunction(() => window.__ready, null, {timeout:90000});
   assert.equal(await page.locator('#quality-control').isVisible(), false);

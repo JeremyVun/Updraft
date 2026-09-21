@@ -1,3 +1,4 @@
+import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsOut, boatsLevel } from './little-boats-layout';
@@ -141,11 +142,11 @@ export const ISLES = {
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
   /** The frosted island the bed stands on, out west on the long crossing's own detour. */
   sleeping: { x: -175, z: -1922, rx: 42, rz: 46 },
-  home: { x: -45, z: -2120, rx: 190, rz: 165 },
+  home: { x: -45 + HOME_SHIFT.x, z: -2120 + HOME_SHIFT.z, rx: 190, rz: 165 },
 } as const;
 
 /** The small shore reached only through the red door; separated from the washing island by open sea. */
-export const DOOR_SHORE = { x: 240, z: -460, rx: 23, rz: 30 } as const;
+export const DOOR_SHORE = { x: 240 + SHORE_SHIFT.x, z: -460 + SHORE_SHIFT.z, rx: 23, rz: 30 } as const;
 function doorShoreHeight(x: number, z: number): number {
   const r = Math.hypot((x - DOOR_SHORE.x) / DOOR_SHORE.rx, (z - DOOR_SHORE.z) / DOOR_SHORE.rz);
   return 3.4 - smoothstep(0.35, 1.08, r) * 5.2 - smoothstep(1, 1.6, r) * 8;
@@ -185,7 +186,7 @@ function littleBoatsHeight(x: number, z: number): number {
   const c = LITTLE_BOATS;
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = 3.5 - smoothstep(0.58, 1.08, r) * 5.1 - smoothstep(1, 1.5, r) * 8;
-  h += Math.max(0, 1 - r) * gnoise(x * 0.07, z * 0.07) * 0.55;
+  h += Math.max(0, 1 - r) * gnoise((x - BOATS_SHIFT.x) * 0.07, (z - BOATS_SHIFT.z) * 0.07) * 0.55;
   const d = boatsOut(x, z);
   if (d > 1.65) return h;
   const level = boatsLevel(c.startZ - z);
@@ -313,16 +314,16 @@ function sleepingHeight(x: number, z: number): number {
 }
 
 /** The top of the last hill, where the journey ends. */
-export const LAST_HILL = { x: -30, z: -2060 } as const;
+export const LAST_HILL = { x: -30 + HOME_SHIFT.x, z: -2060 + HOME_SHIFT.z } as const;
 
 /** Home: one long hill to come over, with the cottage in the valley beyond it. */
 function homeHeight(x: number, z: number): number {
-  const d = isleCoast(x, z, ISLES.home, 0.1, 51);
+  const d = isleCoast(x - HOME_SHIFT.x, z - HOME_SHIFT.z, { ...ISLES.home, x: -45, z: -2120 }, 0.1, 51);
   const land = smoothstep(10, -22, d);
   /** The shore shelves up onto the island over a long way: a beach the boat runs up and a slope off it, not a cliff. */
   const inland = smoothstep(4, -110, d);
   let h = land * 4 - 1.6;
-  h += land * inland * (14 + gfbm(x * 0.006, z * 0.006, 3, 52) * 12);
+  h += land * inland * (14 + gfbm((x - HOME_SHIFT.x) * 0.006, (z - HOME_SHIFT.z) * 0.006, 3, 52) * 12);
   const r2 = (x - LAST_HILL.x) ** 2 + (z - LAST_HILL.z) ** 2;
   h += land * (34 * Math.exp(-r2 / (2 * 58 ** 2)) + inland * 18 * Math.exp(-r2 / (2 * 170 ** 2)));
   return h - smoothstep(0, 70, d) * 8;
@@ -353,8 +354,8 @@ function rawHeight(x: number, z: number): number {
   h = smax(h, woodHeight(x, z), 6);
   h = smax(h, sleepingHeight(x, z), 6);
   h = Math.max(smax(h, homeHeight(x, z), 6), mirrorBed(x, z));
-  // A submerged channel between sleeping and home: the coastal approach must clear the boat's keel.
-  const channel = Math.hypot((x + 150) / 24, (z + 1974) / 17);
+  // The submerged western approach moves with home and clears the boat's keel.
+  const channel = Math.hypot((x - HOME_SHIFT.x + 150) / 24, (z - HOME_SHIFT.z + 1974) / 17);
   return h - (1 - smoothstep(0.25, 1, channel)) * 1.5;
 }
 
@@ -394,7 +395,7 @@ function pondHeight(h: number, x: number, z: number): number {
 }
 
 /** The cottage below the last hill sits on a levelled pad. */
-export const COTTAGE = { x: -70, z: -2124, radius: 13, approachRadius: 26 } as const;
+export const COTTAGE = { x: -70 + HOME_SHIFT.x, z: -2124 + HOME_SHIFT.z, radius: 13, approachRadius: 26 } as const;
 const cottageApproachLength = Math.hypot(LAST_HILL.x - COTTAGE.x, LAST_HILL.z - COTTAGE.z);
 const COTTAGE_APPROACH = {
   x: (LAST_HILL.x - COTTAGE.x) / cottageApproachLength,
@@ -592,11 +593,11 @@ float hf_sleeping(vec2 p) {
 float hf_home(vec2 p) {
   vec2 c = vec2(${ISLES.home.x}.0, ${ISLES.home.z}.0);
   vec2 r = vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0);
-  float d = hf_isleCoast(p, c, r, 0.1, 51.0);
+  float d = hf_isleCoast(p - vec2(${glsl(HOME_SHIFT.x)}, ${glsl(HOME_SHIFT.z)}), vec2(-45.0, -2120.0), r, 0.1, 51.0);
   float land = smoothstep(10.0, -22.0, d);
   float inland = smoothstep(4.0, -110.0, d);
   float h = land * 4.0 - 1.6;
-  h += land * inland * (14.0 + gfbm(p * 0.006, 3, 52.0) * 12.0);
+  h += land * inland * (14.0 + gfbm((p - vec2(${glsl(HOME_SHIFT.x)}, ${glsl(HOME_SHIFT.z)})) * 0.006, 3, 52.0) * 12.0);
   float r2 = sq(p.x - ${LAST_HILL.x}.0) + sq(p.y - (${LAST_HILL.z}.0));
   h += land * (34.0 * exp(-r2 / (2.0 * 3364.0)) + inland * 18.0 * exp(-r2 / (2.0 * 28900.0)));
   return h - smoothstep(0.0, 70.0, d) * 8.0;
@@ -629,7 +630,7 @@ ${LITTLE_BOATS_GLSL}
 float hf_littleBoats(vec2 p) {
   float r = length((p - vec2(${glsl(LITTLE_BOATS.x)}, ${glsl(LITTLE_BOATS.z)})) / vec2(${glsl(LITTLE_BOATS.rx)}, ${glsl(LITTLE_BOATS.rz)}));
   float h = 3.5 - smoothstep(0.58, 1.08, r) * 5.1 - smoothstep(1.0, 1.5, r) * 8.0;
-  h += max(0.0, 1.0 - r) * gnoise(p * 0.07) * 0.55;
+  h += max(0.0, 1.0 - r) * gnoise((p - vec2(${glsl(BOATS_SHIFT.x)}, ${glsl(BOATS_SHIFT.z)})) * 0.07) * 0.55;
   float d = boatsOut(p);
   if (d > 1.65) return h;
   float level = boatsLevel(${glsl(LITTLE_BOATS.startZ)} - p.y);
@@ -651,7 +652,7 @@ float worldHeight(vec2 p) {
   h = hf_smax(h, hf_sleeping(p), 6.0);
   h = hf_smax(h, hf_home(p), 6.0);
   h = max(h, mirrorBed(p));
-  float channel = length((p - vec2(-150.0, -1974.0)) / vec2(24.0, 17.0));
+  float channel = length((p - vec2(${glsl(-150 + HOME_SHIFT.x)}, ${glsl(-1974 + HOME_SHIFT.z)})) / vec2(24.0, 17.0));
   h -= (1.0 - smoothstep(0.25, 1.0, channel)) * 1.5;
   h = hf_pond(h, p);
   vec2 cottageDelta = p - vec2(${COTTAGE.x.toFixed(1)}, ${COTTAGE.z.toFixed(1)});

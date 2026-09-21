@@ -18,9 +18,9 @@ const {Carry}=await import('../src/companion/carry.ts');
 const {SwanFlock}=await import('../src/creatures/flock.ts');
 const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
-const {MeadowChapter,ROUTE}=await import('../src/story/meadow.ts');
+const {MeadowChapter,ROUTE,FAR_SHORE}=await import('../src/story/meadow.ts');
 const {piano}=await import('../src/world/piano.ts');
-const {POND,POND_LEVEL,pondOut,meadowPoint}=await import('../src/world/heightfield.ts');
+const {POND,POND_LEVEL,pondOut}=await import('../src/world/heightfield.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {tuning}=await import('../src/tuning.ts');
 const {mulberry32}=await import('../src/world/noise.ts');
@@ -45,7 +45,7 @@ function fixture() {
   }};
 }
 function direction(from,to) {return new THREE.Vector2(to.x-from.x,to.z-from.z).normalize();}
-const shore=meadowPoint(-6,-1172);
+const shore=FAR_SHORE;
 // Exercise all route cursors: required stops must win even after a sideways detour past a waypoint.
 for(const stop of ['piano','pond','shore']) for(const leg of [0,1,2,3,4,5,6]) {
   const {cast:{child,plane,boat},chapter}=fixture();

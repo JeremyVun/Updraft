@@ -1,9 +1,10 @@
+import { BOATS_SHIFT } from './geography';
 import { glsl, tuning } from '../tuning';
 
 /** Shared by the ground, water, fleet and bank walkers. Positive s travels toward the far shore. */
-export const LITTLE_BOATS = { x: 350, z: -590, rx: 48, rz: 70, startZ: -548, length: 101 } as const;
-export const BOATS_LANDING = { x: 367, z: -536 };
-export const BOATS_BERTH = { x: 353, z: -652 };
+export const LITTLE_BOATS = { x: 350 + BOATS_SHIFT.x, z: -590 + BOATS_SHIFT.z, rx: 48, rz: 70, startZ: -548 + BOATS_SHIFT.z, length: 101 } as const;
+export const BOATS_LANDING = { x: 367 + BOATS_SHIFT.x, z: -536 + BOATS_SHIFT.z };
+export const BOATS_BERTH = { x: 353 + BOATS_SHIFT.x, z: -652 + BOATS_SHIFT.z };
 export function boatsX(s: number): number {
   return LITTLE_BOATS.x + 7 * Math.sin(s * 0.087) - 3;
 }
@@ -58,7 +59,7 @@ export function boatsRipple(x: number, z: number, time: number): number {
   return (
     shelter *
     tuning.littleBoats.rippleHeight *
-    (Math.sin(x * 0.72 + z * 0.43 - time * 1.65) + 0.45 * Math.sin(x * 1.13 - z * 0.61 - time * 2.2))
+    (Math.sin((x-BOATS_SHIFT.x) * 0.72 + (z-BOATS_SHIFT.z) * 0.43 - time * 1.65) + 0.45 * Math.sin((x-BOATS_SHIFT.x) * 1.13 - (z-BOATS_SHIFT.z) * 0.61 - time * 2.2))
   );
 }
 export function boatsWaterHeight(x: number, z: number, time: number): number {
@@ -86,7 +87,7 @@ float boatsRipple(vec2 p, float time) {
   float s = ${glsl(LITTLE_BOATS.startZ)} - p.y;
   float shelter = (1.0 - smoothstep(0.7, 1.2, boatsOut(p))) * (1.0 - smoothstep(92.0, 107.0, s));
   return shelter * ${glsl(tuning.littleBoats.rippleHeight)} *
-    (sin(p.x * 0.72 + p.y * 0.43 - time * 1.65) + 0.45 * sin(p.x * 1.13 - p.y * 0.61 - time * 2.2));
+    (sin((p.x - (${glsl(BOATS_SHIFT.x)})) * 0.72 + (p.y - (${glsl(BOATS_SHIFT.z)})) * 0.43 - time * 1.65) + 0.45 * sin((p.x - (${glsl(BOATS_SHIFT.x)})) * 1.13 - (p.y - (${glsl(BOATS_SHIFT.z)})) * 0.61 - time * 2.2));
 }
 float boatsDry(vec2 p, float h) {
   if (abs(p.x - ${glsl(LITTLE_BOATS.x)}) > 65.0 || abs(p.y - ${glsl(LITTLE_BOATS.z)}) > 85.0) return 1.0;

@@ -93,7 +93,7 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
     if(c.done){completed=true;results.push({fps,gust,portrait,seconds:+time.toFixed(1),heroEdge,worstGap,clipped,transitions});break;}
   }
   assert(completed,'passage reaches home');assert.equal(c.swim,'done');
-  assert(swimFrames>fps*20,'a sustained swim');assert(worstGap<3.5,`bird fell behind ${worstGap}`);
+  assert(swimFrames>=fps*(tuning.seaPassage.swimFor-3)-1,'keeps the authored swim after its entry');assert(worstGap<3.5,`bird fell behind ${worstGap}`);
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(swimStart>30,'the pod has time to arrive and play before the swim');

@@ -165,7 +165,6 @@ export class Pond {
     water.position.set(POND.x, POND_LEVEL, POND.z);
     water.scale.set(POND.rx * 1.2, 1, POND.rz * 1.2);
     water.renderOrder = 2;
-    water.frustumCulled = false;
 
     const reeds = new THREE.InstancedBufferGeometry();
     const blade = reedBlade(4);
@@ -196,7 +195,8 @@ export class Pond {
     reeds.setAttribute('iReed', new THREE.InstancedBufferAttribute(at, 4));
     reeds.setAttribute('iLook', new THREE.InstancedBufferAttribute(look, 4));
     reeds.instanceCount = n;
-    reeds.boundingSphere = new THREE.Sphere(this.centre.clone(), POND.rx * 2);
+    // Include full height and generous wind bend beyond the field's vorticity clamp.
+    reeds.boundingSphere = new THREE.Sphere(this.centre.clone(), Math.max(POND.rx, POND.rz) * 1.2 + 45);
     const bed = new THREE.Mesh(
       reeds,
       new THREE.ShaderMaterial({
@@ -206,7 +206,6 @@ export class Pond {
         side: THREE.DoubleSide,
       }),
     );
-    bed.frustumCulled = false;
     this.objects = [water, bed];
   }
 }

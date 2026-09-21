@@ -15,6 +15,24 @@ globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo()
 const {PianoStop}=await import('../src/story/piano.ts');
 const {piano}=await import('../src/world/piano.ts');
 const {CameraRig}=await import('../src/camera.ts');
+const {heightAt}=await import('../src/world/island.ts');
+// The actual approach hands camera ownership to the piano while the child is still on its slope.
+// Keep both in frame through that handoff, including a player approaching from either side.
+for(const [w,h] of [[1280,800],[390,844]])for(const bearing of [-1.1,0,1.1]){
+ const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='walking';
+ const child=stop.approachChild;
+ const shot={target:new THREE.Vector3(),distance:36,height:13};
+ for(let f=0;f<=600;f++){
+  const gap=26*(1-f/600);
+  child.set(piano.stand.x+Math.sin(bearing)*gap,0,piano.stand.z+Math.cos(bearing)*gap);
+  child.y=Math.max(0,heightAt(child.x,child.z))+1.2;
+  if(f===0){shot.target.copy(child);rig.cut(shot);}
+  stop.now=f/60;const pace=stop.frame(shot);rig.update(1/60,stop.now,shot,pace,true);
+  const p=child.clone().project(rig.camera);
+  assert(p.z<1&&Math.abs(p.x)<.95&&Math.abs(p.y)<.95,`approaching child clipped at ${w}x${h}, ${bearing}, ${gap}`);
+ }
+}
+console.log('Piano approach keeps the walking child visible from three directions in landscape and portrait.');
 for(const [w,h] of [[1600,900],[2048,1023],[390,844]])for(let stage=1;stage<=4;stage++){
  const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='seated';
  const shot={target:new THREE.Vector3(),distance:19,height:4};stop.frame(shot);rig.cut(shot);

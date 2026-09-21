@@ -1,3 +1,4 @@
+import { JOURNEY_ANSWER, polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 /** The approved Birches revision: autumn walk, optional swing, scarf work and the far beach. */
 export type BirchesScorePhase = 'walk' | 'swing' | 'scarf' | 'return';
 type Voice = 'pad' | 'muted-string';
@@ -24,11 +25,13 @@ export const BIRCHES_AUDITION_NOTES: readonly Note[] = [
     .map(([at, midi, level]): Note => ({ voice: 'muted-string', role: 'accompaniment', at, midi, level, duration: 3.8, pan: -.2 })),
 ].sort((a, b) => a.at - b.at);
 
-interface Section { seconds: number; notes: readonly Note[]; chords: { at: number; tones: readonly number[] }[] }
-const section = (from: number, to: number, seconds: number): Section => ({ seconds,
+interface Section extends Phrase<Note> { chords: { at: number; tones: readonly number[] }[] }
+const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: BIRCHES_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
   chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
-});
+}, from === 0 ? { to: 9, melody: JOURNEY_ANSWER.slice(0, 4).map((midi, i): Note => ({
+  voice: 'muted-string', midi, at: [2, 4.5, 6, 7.5][i], duration: 1.3, level: [0.009, 0.009, 0.008, 0.008][i], pan: -.1,
+})) } : {});
 export const BIRCHES_SECTIONS: Record<BirchesScorePhase, Section> = {
   walk: section(0, 18, 22),
   swing: section(18, 35, 22),
@@ -59,13 +62,13 @@ export class BirchesScore {
   /** Gesture harmony follows this section; the shared pad's transition clock remains independent. */
   chordAt(when: number): readonly number[] {
     const part = this.current, pattern = BIRCHES_SECTIONS[part?.phase ?? 'walk'];
-    const time = part ? Math.max(0, when - part.epoch) % pattern.seconds : 0;
+    const time = part ? phrasePosition(pattern, part.epoch, when) : 0;
     let chord = pattern.chords[0].tones;
     for (const next of pattern.chords) { if (next.at > time) break; chord = next.tones; }
     return chord;
   }
 
-  update(phase: BirchesScorePhase, level: number): void {
+  update(phase: BirchesScorePhase, level: number, until = Infinity): void {
     if (this.stopped) return;
     const now = this.ctx.currentTime;
     this.bus.gain.setTargetAtTime(level, now, .8);
@@ -78,14 +81,11 @@ export class BirchesScore {
     }
     const part = this.current, pattern = BIRCHES_SECTIONS[phase];
     // Audio suspension freezes the phrase; missed frames skip old attacks instead of playing a burst.
-    const cycle = Math.floor(Math.max(0, now - part.epoch) / pattern.seconds);
-    if (cycle > part.cycle) { part.cycle = cycle; part.next = 0; }
-    for (;;) {
-      const note = pattern.notes[part.next], at = part.epoch + part.cycle * pattern.seconds + note.at;
-      if (at > now + .25) break;
-      if (at >= now - .04) this.play(part, note, Math.max(now + .008, at));
-      if (++part.next === pattern.notes.length) { part.next = 0; part.cycle++; }
-    }
+    schedulePhrase(part, pattern, now, (note, at) => this.play(part, note, at), until);
+  }
+
+  handoffAt(now: number): number {
+    return this.current ? phraseHandoff(BIRCHES_SECTIONS[this.current.phase], this.current.epoch, now) : now;
   }
 
   stop(fade = 1.8): void {
@@ -100,6 +100,7 @@ export class BirchesScore {
     part.stopped = true;
     const now = this.ctx.currentTime;
     part.bus.gain.cancelAndHoldAtTime(now);
+    part.bus.gain.setValueAtTime(part.bus.gain.value, now);
     part.bus.gain.linearRampToValueAtTime(0, now + fade);
     for (const voice of part.voices) voice.stop(now + fade);
     if (!part.voices.size) this.finish(part);

@@ -81,37 +81,39 @@ export class Foley {
         this.blip(at, 155, 205, 0.22, level * 0.006, pan, 'triangle');
       }
     } else if (kind === 'dolphin-surface') {
-      // A short sheet of water leaving the back; lighter than the landing splash.
-      this.puff({ at, len: 0.38, level: level * 0.065, pan, type: 'bandpass',
-        from: 1400, to: 650, q: 0.5, attack: 0.028, wet: 0.06 });
-      this.puff({ at: at + 0.04, len: 0.2, level: level * 0.022, pan,
-        type: 'highpass', from: 2300, attack: 0.025 });
+      // A soft sheet of water, with a filtered spray rather than a bright hiss.
+      const dolphin = level * tuning.audio.dolphinLevel;
+      this.puff({ at, len: 0.46, level: dolphin * 0.065, pan, type: 'bandpass',
+        from: 1000, to: 450, q: 0.5, attack: tuning.audio.dolphinAttack, wet: 0.04 });
+      this.puff({ at: at + 0.06, len: 0.25, level: dolphin * 0.016, pan,
+        type: 'bandpass', from: 1700, to: 800, q: 0.5, attack: 0.06 });
     } else if (kind === 'whale-blow') {
       // An airy exhalation above the water, with a low body and a soft spray tail.
-      this.puff({ at, len: 1.35, level: level * 0.17, pan, type: 'bandpass',
-        from: 1250, to: 420, q: 0.45, attack: 0.065, wet: 0.04 });
-      this.puff({ at, len: 0.9, level: level * 0.075, pan, type: 'lowpass',
-        from: 380, to: 180, attack: 0.09 });
-      this.puff({ at: at + 0.18, len: 0.85, level: level * 0.024, pan,
-        type: 'highpass', from: 2200, attack: 0.12 });
+      this.puff({ at, len: 1.65, level: level * 0.13, pan, type: 'bandpass',
+        from: 650, to: 260, q: 0.45, attack: tuning.audio.whaleAttack, wet: 0.025 });
+      this.puff({ at, len: 1.1, level: level * 0.06, pan, type: 'lowpass',
+        from: 280, to: 150, attack: 0.22 });
+      this.puff({ at: at + 0.22, len: 0.95, level: level * 0.012, pan,
+        type: 'bandpass', from: 1100, to: 500, q: 0.45, attack: 0.18 });
     } else if (kind === 'whale-drain') {
       // Water pouring from the raised flukes, falling away into individual drops.
       this.puff({ at, len: 2.2, level: level * 0.075, pan, type: 'bandpass',
-        from: 1900, to: 650, q: 0.5, attack: 0.18, wet: 0.05 });
+        from: 1250, to: 500, q: 0.5, attack: tuning.audio.whaleAttack, wet: 0.035 });
       for (let i = 0; i < 5; i++) this.puff({ at: at + 0.25 + i * 0.24, len: 0.22,
         level: level * 0.022 * (1 - i * 0.12), pan, type: 'bandpass',
-        from: 850 + i * 120, to: 380, q: 0.7, attack: 0.012 });
+        from: 650 + i * 80, to: 320, q: 0.5, attack: 0.05 });
     } else if (kind === 'whale-surface' || kind === 'whale-dive') {
       const dive = kind === 'whale-dive';
       this.puff({ at, len: dive ? 2.1 : 1.6, level: level * (dive ? 0.17 : 0.13), pan,
-        type: 'bandpass', from: dive ? 650 : 480, to: 180, q: 0.5, attack: dive ? 0.07 : 0.16, wet: 0.08 });
+        type: 'bandpass', from: dive ? 480 : 380, to: 160, q: 0.5, attack: tuning.audio.whaleAttack, wet: 0.05 });
       this.puff({ at: at + 0.08, len: dive ? 1.1 : 0.8, level: level * 0.045, pan,
-        type: 'bandpass', from: 1800, to: 700, q: 0.5, attack: 0.1 });
+        type: 'bandpass', from: 1100, to: 450, q: 0.5, attack: 0.2 });
     } else {
-      this.puff({ at, len: 0.66, level: level * 0.13, pan, type: 'bandpass',
-        from: 950, to: 270, q: 0.5, attack: 0.016, wet: 0.18 });
-      this.puff({ at: at + 0.08, len: 0.35, level: level * 0.048, pan,
-        type: 'highpass', from: 1700, attack: 0.025, wet: 0.1 });
+      const dolphin = level * tuning.audio.dolphinLevel;
+      this.puff({ at, len: 0.8, level: dolphin * 0.13, pan, type: 'bandpass',
+        from: 700, to: 220, q: 0.5, attack: tuning.audio.dolphinAttack, wet: 0.08 });
+      this.puff({ at: at + 0.09, len: 0.4, level: dolphin * 0.024, pan,
+        type: 'bandpass', from: 1500, to: 650, q: 0.5, attack: 0.07, wet: 0.04 });
     }
   }
 

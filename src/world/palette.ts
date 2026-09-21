@@ -37,6 +37,17 @@ const ALIVE: Palette = {
   fog: 0.0011,
 };
 
+/** Home is warm but clear: the paper and the red door carry the colour, rather than a gold veil. */
+const HOME_DAY: Palette = {
+  sun: hdr('#ffe0b5', 1.65),
+  zenith: hdr('#6394bd', 0.85),
+  horizon: hdr('#b9c9d2', 0.8),
+  horizonSun: hdr('#e7c7a6', 0.85),
+  ambient: hdr('#adc5df', 0.52),
+  bounce: hdr('#7f8a6b', 0.2),
+  fog: 0.0011,
+};
+
 const SUNSET: Palette = {
   sun: hdr('#ff9650', 2.3),
   zenith: hdr('#3a4f8c', 0.85),
@@ -143,20 +154,28 @@ export function sunDirection(azDeg: number, elDeg: number, out = new THREE.Vecto
 export const MOON = { az: -38, el: 12 } as const;
 
 /** Where the light comes from for a time of day: the sun sinks into the north-west, then the moon takes over. */
-function lightAngles(dusk: number): [number, number] {
+function lightAngles(dusk: number, home: number): [number, number] {
   if (params.sun) return [params.sun[0], params.sun[1]];
-  if (dusk <= 1) return [THREE.MathUtils.lerp(52, 32, dusk), THREE.MathUtils.lerp(13, 3.2, dusk)];
-  if (dusk <= 1.5) return [32, THREE.MathUtils.lerp(3.2, -2.5, (dusk - 1) / 0.5)];
+  const homeElevation = THREE.MathUtils.lerp(tuning.homeLight.sunElevation, -2.5,
+    THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, 1.5));
+  const sunsetAzimuth = THREE.MathUtils.lerp(32, tuning.homeLight.sunAzimuth, home);
+  if (dusk <= 1) return [
+    THREE.MathUtils.lerp(THREE.MathUtils.lerp(52, 32, dusk), tuning.homeLight.sunAzimuth, home),
+    THREE.MathUtils.lerp(THREE.MathUtils.lerp(13, 3.2, dusk), homeElevation, home),
+  ];
+  if (dusk <= 1.5) return [sunsetAzimuth,
+    THREE.MathUtils.lerp(THREE.MathUtils.lerp(3.2, -2.5, (dusk - 1) / 0.5), homeElevation, home)];
   const night = THREE.MathUtils.smoothstep(dusk, tuning.sky.moonHandoffFrom, tuning.sky.moonHandoffTo);
-  return [THREE.MathUtils.lerp(32, MOON.az, night), THREE.MathUtils.lerp(-2.5, MOON.el, night)];
+  return [THREE.MathUtils.lerp(sunsetAzimuth, MOON.az, night), THREE.MathUtils.lerp(-2.5, MOON.el, night)];
 }
 
 /**
  * Sets sky, light and haze from how alive the world is (0 still, 1 living) and the time of day
  * (`dusk`: 0 golden afternoon, 1 sunset, 1.5 last light, 2 night), veiled by a passing `shower` (0..1)
  * and drained by a `storm` (0..1).
+ * `home` blends in clear afternoon light and the drawing's low sun, keeping the shared sunset and moon.
  */
-export function applyPalette(life: number, dusk: number, shower = 0, storm = 0): void {
+export function applyPalette(life: number, dusk: number, shower = 0, storm = 0, home = 0): void {
   const u = atmo.uniforms;
   const k = THREE.MathUtils.smootherstep(life, 0, 1);
   u.uWorldLife.value = k;
@@ -167,6 +186,8 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
     else if (dusk <= 1.5) p = mixInto(outMix, SUNSET, DUSK, (dusk - 1) / 0.5);
     else p = mixInto(outMix, DUSK, NIGHT, THREE.MathUtils.smoothstep(dusk, 1.5, 2));
   }
+  const homeDay = home * (1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, 1));
+  if (homeDay > 0) p = mixInto(outMix, p, HOME_DAY, homeDay);
   veil(p, shower);
   const night = THREE.MathUtils.smoothstep(dusk, 1.45, 1.95);
   /** After the shower, which brightens as it greys: in a squall the weather takes the light, it does not lift it. */
@@ -189,7 +210,7 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0):
   u.uStarlight.value = starlight;
   u.uFogDensity.value = p.fog * (1 - 0.35 * starlight);
   u.uMist.value = Math.max(0.42 * (1 - k), 0.3 * night * (1 - 0.6 * starlight)) + 0.22 * shower;
-  const [az, el] = lightAngles(dusk);
+  const [az, el] = lightAngles(dusk, home);
   sunDirection(az, el, u.uSunDir.value);
 }
 

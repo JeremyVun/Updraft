@@ -19,8 +19,8 @@ export const WORLD_QUALITY = [
 ] as const;
 
 const RECENT = 90;
-/** Pixels the opening level may render; the level climbs from there if frames prove smooth. */
-const OPENING_PIXELS = 2.2e6;
+/** Sustained Auto budget. Smooth vsync alone is not evidence of spare power. */
+const AUTO_PIXELS = 2.4e6;
 /** Trimmed mean interval above which the frame is judged over budget (a saturated GPU alternates 16.7 and 33 ms). */
 const SLOW_MS = 17.6;
 const SMOOTH_MS = 17.2;
@@ -46,9 +46,10 @@ export class Quality {
   private climbMs = CLIMB_MS;
   private lastStepUp = false;
   private selectedMode: QualityMode;
+  private autoCeiling = 0;
 
-  /** Opens at the highest level within the pixel budget for a `width` × `height` view (and `startRatio`); the rest is climbed into. */
-  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2, mode: QualityMode = 'auto') {
+  /** Starts conservatively, then restores detail within Auto's sustained pixel/scale budget. */
+  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2, mode: QualityMode = 'auto', private readonly autoMaxRatio = maxRatio) {
     this.selectedMode = locked ? 'auto' : mode;
     // QA overrides are exact, including subpixel scales; neither the startup cap nor
     // the adaptive ladder may silently substitute a different resolution.
@@ -56,7 +57,7 @@ export class Quality {
       this.levels.push({ ratio: maxRatio, samples, detail: 2 });
       return;
     }
-    if (!location.search.includes('nocap')) startRatio = Math.min(startRatio, Math.sqrt(OPENING_PIXELS / Math.max(1, width * height)));
+    startRatio = Math.min(startRatio, Math.sqrt(AUTO_PIXELS / Math.max(1, width * height)));
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples, detail: 2 });
     const baseRatio = Math.min(1, maxRatio);
     this.levels.push({ ratio: baseRatio, samples, detail: 2 });
@@ -74,12 +75,32 @@ export class Quality {
     this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0, grassDensity: 0.25, grassReach: 0.7 });
     const opening = this.levels.findIndex((l) => l.ratio <= startRatio && l.detail <= startDetail);
     this.index = opening < 0 ? this.levels.length - 1 : opening;
+    this.autoCeiling = this.ceilingIndex(width, height);
+    this.index = Math.max(this.index, this.autoCeiling);
     if (this.selectedMode !== 'auto') this.index = this.presetIndex(this.selectedMode);
   }
 
   get mode(): QualityMode { return this.selectedMode; }
+  get frameRate(): 30 | 60 { return this.selectedMode === 'low' ? 30 : 60; }
 
-  /** Manual settings hold their level. Auto resumes here, with fresh timing and no old climb penalty. */
+  private ceilingIndex(width: number, height: number): number {
+    const ratio = Math.min(this.autoMaxRatio, Math.sqrt(AUTO_PIXELS / Math.max(1, width * height)));
+    const index = this.levels.findIndex(level => level.ratio <= ratio);
+    return index < 0 ? this.levels.length - 1 : index;
+  }
+
+  /** Fullscreen/rotation cannot silently outgrow Auto's pixel budget. */
+  resize(width: number, height: number, now: number): void {
+    if (this.locked) return;
+    this.autoCeiling = this.ceilingIndex(width, height);
+    if (this.selectedMode === 'auto' && this.index < this.autoCeiling) {
+      this.index = this.autoCeiling;
+      this.reset(now);
+      this.apply(this.level);
+    }
+  }
+
+  /** Manual settings hold. Auto resumes within its budget, with fresh timing and no old climb penalty. */
   setMode(mode: QualityMode, now: number): void {
     if (this.locked || mode === this.selectedMode) return;
     this.selectedMode = mode;
@@ -88,6 +109,9 @@ export class Quality {
     this.reset(now);
     if (mode !== 'auto') {
       this.index = this.presetIndex(mode);
+      this.apply(this.level);
+    } else if (this.index < this.autoCeiling) {
+      this.index = this.autoCeiling;
       this.apply(this.level);
     }
   }
@@ -128,7 +152,7 @@ export class Quality {
       if (this.index < this.levels.length - 1) this.change(now, Math.min(this.levels.length - 1, this.index + step));
     } else if (p90 > SMOOTH_MS) {
       this.smoothSince = now;
-    } else if (now - this.smoothSince > this.climbMs && this.index > 0) {
+    } else if (now - this.smoothSince > this.climbMs && this.index > this.autoCeiling) {
       this.change(now, this.index - 1);
     }
   }

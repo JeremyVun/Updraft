@@ -374,7 +374,7 @@ for (let frame = 0; frame < 60 * 100; frame++) {
 }
 assert(worstJump < 0.12, `outlet transition jumped: ${worstJump}`);
 assert(
-  outgoing.room.toys.every((t) => t.s >= 210 && t.group.position.x > 420 && !t.group.visible),
+  outgoing.room.toys.every((t) => t.s >= 210 && t.group.position.x > L.x + 70 && !t.group.visible),
   'whole fleet sails out to the right and leaves view',
 );
 assert(!outgoing.room.departing, 'offscreen fleet stops updating');

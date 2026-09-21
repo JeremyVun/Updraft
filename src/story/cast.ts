@@ -1,3 +1,4 @@
+import type { MirrorScorePhase, DrownedScorePhase } from '../audio/dream-score';
 import type { StormStrike } from '../fx/storm';
 import type { SkyMirror } from '../world/sky-mirror';
 import type { LittleBoats } from '../world/little-boats';
@@ -8,6 +9,7 @@ import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
 import type { LinesScorePhase } from '../audio/lines-score';
+import type { ArrivalMusic } from '../audio/arrival-music';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
@@ -29,6 +31,7 @@ import type { Tree } from '../world/tree';
 
 /** Everyone and everything the story directs. */
 export interface Cast {
+  village?: { cameraObstacles: readonly THREE.Box3[] };
   child: Traveller;
   plane: Glider;
   boat: Boat;
@@ -78,6 +81,7 @@ export interface Chapter {
   readonly haze?: number;
   /** At open sea, distant land dissolves into the sky without leaving a tinted silhouette. */
   readonly openSea?: number;
+  readonly mirrorArrival?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
   /** The piano owns both the melody and the player's gesture sound during its duet. */
@@ -90,7 +94,11 @@ export interface Chapter {
   readonly flockChatter?: boolean;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
+  /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
+  readonly arrivalMusic?: ArrivalMusic;
   /** The long sea arrangement follows actual swimming and coastal approach. */
+  readonly mirrorScore?: MirrorScorePhase;
+  readonly drownedScore?: DrownedScorePhase;
   readonly seaScore?: SeaScorePhase;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;
@@ -111,7 +119,7 @@ export interface Chapter {
   readonly storm?: number;
   /** Null reserves lightning for this chapter; a new object fires one authored strike. */
   readonly stormStrike?: StormStrike | null;
-  /** A patch of grass to press flat so something small in it can be seen: centre (x, z) and radius. */
+  /** A patch of grass to press flat: Vector3(x, radius, z), with y holding a positive radius. */
   readonly trodden?: THREE.Vector3 | null;
   /** How awake the embers in the leaf litter are, 0 none to 1: the only light in the dark wood. */
   readonly embers?: number;

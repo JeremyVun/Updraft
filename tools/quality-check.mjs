@@ -5,9 +5,9 @@ import { transformSync } from 'rolldown/utils';
 const source = fs.readFileSync(new URL('../src/gl/quality.ts', import.meta.url), 'utf8');
 const { Quality } = await import('data:text/javascript;base64,' + Buffer.from(transformSync('quality.ts', source).code).toString('base64'));
 globalThis.location = { search: '' };
-const create = (ratio, width, height, locked = false, start = ratio, detail = 2) => {
+const create = (ratio, width, height, locked = false, start = ratio, detail = 2, autoRatio = ratio) => {
   const changes = [];
-  const quality = new Quality(ratio, 4, width, height, start, locked, level => changes.push({ ...level }), detail);
+  const quality = new Quality(ratio, 4, width, height, start, locked, level => changes.push({ ...level }), detail, 'auto', autoRatio);
   return { quality, changes };
 };
 for (const ratio of [0.5, 0.85, 1, 1.5, 2]) {
@@ -26,7 +26,7 @@ quality.reset(60000);
 for (let now = 60000; now < 71000; now += 1000 / 60) quality.frame(now, 1000 / 60);
 assert.deepEqual(quality.level, opening, 'waiting to begin must not pay the climb delay');
 for (let now = 71000; now < 74500; now += 1000 / 60) quality.frame(now, 1000 / 60);
-assert(changes.length > 0, 'a real smooth stretch earns a quality increase');
+assert.deepEqual(quality.level, opening, 'smooth vsync cannot exceed the sustained pixel budget');
 quality.reset(200000);
 const resumed = { ...quality.level };
 for (let now = 200000; now < 210000; now += 1000 / 60) quality.frame(now, 1000 / 60);
@@ -35,12 +35,27 @@ const slow = create(2, 1600, 900);
 slow.quality.reset(0);
 for (let now = 0; now < 6000; now += 33.3) slow.quality.frame(now, 33.3);
 assert(slow.quality.level.ratio < opening.ratio, 'sustained missed frames lower quality');
-// A coarse pointer chooses only the opening rung; it has the same ceiling as a mouse.
-const touch = create(2, 1376, 1032, false, 1.25, 1);
+// Touch restores full grass before spending its sustained budget on resolution.
+const touch = create(2, 1376, 1032, false, 1.25, 1, 1.25);
 assert.equal(touch.quality.level.detail, 1);
 touch.quality.reset(0);
 for (let now = 0; now < 85000; now += 1000 / 60) touch.quality.frame(now, 1000 / 60);
-assert.deepEqual(touch.quality.level, { ratio: 2, samples: 4, detail: 2 });
+assert.deepEqual(touch.quality.level, { ratio: 1.25, samples: 4, detail: 2 });
+touch.quality.setMode('high', 90000);
+assert.equal(touch.quality.level.ratio, 2, 'High uses the caller-provided maximum');
+touch.quality.setMode('auto', 90001);
+assert.equal(touch.quality.level.ratio, 1.25, 'Auto immediately reapplies its budget');
+touch.quality.resize(1920, 1200, 90002);
+assert.equal(touch.quality.level.ratio, 1, 'fullscreen must respect the pixel budget');
+touch.quality.resize(1376, 1032, 90003);
+for (let now = 90003; now < 110000; now += 1000 / 60) touch.quality.frame(now, 1000 / 60);
+assert.equal(touch.quality.level.ratio, 1.25, 'smaller viewport can recover resolution');
+touch.quality.setMode('high', 110001);
+touch.quality.resize(1920, 1200, 110002);
+assert.equal(touch.quality.level.ratio, 2, 'manual quality survives resize');
+const phone = create(2, 390, 844, false, 1.25, 1, 1.25);
+for (let now = 0; now < 100000; now += 1000 / 60) phone.quality.frame(now, 1000 / 60);
+assert.equal(phone.quality.level.ratio, 1.25, 'small touch screens also retain headroom');
 // Rendering at DPR 1 must still shed geometry/reflection work, and recover it later.
 const geometry = create(1, 1024, 768);
 geometry.quality.reset(0);
@@ -59,6 +74,7 @@ for (const [mode, expected] of [
 ]) {
   manual.quality.setMode(mode, 0);
   assert.equal(manual.quality.mode, mode);
+  assert.equal(manual.quality.frameRate, mode === 'low' ? 30 : 60);
   assert.deepEqual(manual.quality.level, expected);
   for (let now = 0; now < 20000; now += 40) manual.quality.frame(now, 40);
   for (let now = 20000; now < 45000; now += 1000 / 120) manual.quality.frame(now, 1000 / 120);

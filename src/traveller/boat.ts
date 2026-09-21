@@ -1,3 +1,4 @@
+import { mirrorWater } from '../world/sky-mirror-layout';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glsl, tuning } from '../tuning';
@@ -389,6 +390,13 @@ export class Boat {
     return out.set(0, 2.2, 0.55).applyMatrix4(this.group.matrixWorld);
   }
 
+  /** The visible hull's ends, so landmark framing keeps the whole boat within the screen. */
+  hullEnds(bow: THREE.Vector3, stern: THREE.Vector3): void {
+    this.group.updateMatrixWorld(true);
+    bow.set(0, 0.28, LENGTH * 0.55).applyMatrix4(this.group.matrixWorld);
+    stern.set(0, 0, -LENGTH * 0.45).applyMatrix4(this.group.matrixWorld);
+  }
+
   /**
    * Something in the water leans on the hull from `side` (+1 for the hull's own +x, the side a crossing calls
    * left), `strength` 1 being about a dolphin's shoulder: the boat heels away from the shove, its head is knocked
@@ -599,7 +607,7 @@ export class Boat {
    */
   private swellUnder(x: number, z: number, time: number): number {
     swellAt(x, z, time, this.sea);
-    const damp = this.afloat ? THREE.MathUtils.smoothstep(Math.max(-heightAt(x, z), 0), 0.6, 4.5) : 0;
+    const damp = this.afloat ? THREE.MathUtils.smoothstep(Math.max(-heightAt(x, z), 0), 0.6, 4.5) * (1 - mirrorWater(x, z)) : 0;
     this.sea.height *= damp;
     this.sea.slopeX *= damp;
     this.sea.slopeZ *= damp;

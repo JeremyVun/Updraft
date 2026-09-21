@@ -1,10 +1,11 @@
+import { JOURNEY_ROOMS_GLSL } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
 import { params } from '../params';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
-import { COTTAGE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, POND_LEVEL, pondOut } from './heightfield';
+import { COTTAGE, DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, POND_LEVEL, pondOut } from './heightfield';
 
 /**
  * How much height grass keeps on grazed islands and the pond's margin. The bank stays short enough to see the
@@ -99,16 +100,29 @@ const LODS: LodSpec[] = [
   { cols: 8, rows: 16, segments: 4, reach: 176, thinFrom: 0.8, widthScale: 1.7, maxTiles: 1600 },
 ];
 
+/** Static spatial inputs, kept separate from the live palette and turning season. */
+export const GRASS_PATTERN_GLSL = /* glsl */ `
+/** 1 on the mainland's grazed pasture, 0 on the island's wild meadow. */
+float pastureAt(vec2 xz) {
+  return smoothstep(-600.0, -660.0, xz.y);
+}
+vec3 grassPatternAt(vec2 xz) {
+  float pasture = pastureAt(xz);
+  return vec3(
+    fbm(xz * 0.022 + vec2(3.1, 7.7)),
+    pasture < 1.0 ? fbm(xz * 0.041 - vec2(5.3, 1.9)) : 0.0,
+    pasture > 0.0 ? fbm(xz * 0.03 + 11.0) : 0.0
+  );
+}
+`;
+
 /** The meadow palette and tint pattern, shared with the terrain so far grass matches the blades. */
 export const GRASS_GLSL = /* glsl */ `
 uniform vec3 uGrassRoot;
 uniform vec3 uTipLush;
 uniform vec3 uTipDry;
 uniform vec3 uTipCool;
-/** 1 on the mainland's grazed pasture, 0 on the island's wild meadow. */
-float pastureAt(vec2 xz) {
-  return smoothstep(-600.0, -660.0, xz.y);
-}
+${GRASS_PATTERN_GLSL}
 /** 1 under the birches, where the floor is fallen gold and the little grass left in it has gone over with the year. */
 float birchFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
@@ -119,7 +133,7 @@ float pondBankAt(vec2 xz) {
 }
 /** How much of its height a blade keeps on the cropped islands and the pond's bank. */
 float croppedAt(vec2 xz) {
-  if (abs(xz.x - 350.0) < 55.0 && abs(xz.y + 590.0) < 78.0) return 0.22;
+  if (abs(xz.x - ${glsl(LITTLE_BOATS.x)}) < 55.0 && abs(xz.y - ${glsl(LITTLE_BOATS.z)}) < 78.0) return 0.22;
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   float bank = pondBankAt(xz);
   return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
@@ -142,18 +156,29 @@ float woodGrassCrop(vec2 xz) {
   float tuftPatch = smoothstep(0.42, 0.63, fbm(xz * ${glsl(tuning.wood.grassPatchScale)} + vec2(53.0, -17.0)));
   return mix(1.0, mix(${glsl(tuning.wood.grassBaseCrop)}, ${glsl(tuning.wood.grassTuftCrop)}, tuftPatch), wood);
 }
-vec3 grassTint(vec2 xz) {
-  float dry = smoothstep(0.58, 0.76, fbm(xz * 0.022 + vec2(3.1, 7.7)));
-  float cool = smoothstep(0.5, 0.68, fbm(xz * 0.041 - vec2(5.3, 1.9))) * (1.0 - dry);
+vec3 grassTintWithPattern(vec2 xz, vec3 pattern) {
+  float pasture = pastureAt(xz);
+  float dry = smoothstep(0.58, 0.76, pattern.x);
+  float cool = 0.0;
+  // Region weights are exactly zero/one away from their borders. Skip noise
+  // whose colour would be multiplied by zero; keep both sides at every blend.
+  if (pasture < 1.0) cool = smoothstep(0.5, 0.68, pattern.y) * (1.0 - dry);
   /** The year turning: more of the hillside goes over to seed, and the green that is left goes colder. */
   dry = clamp(dry + uSeason * 0.3, 0.0, 1.0);
   vec3 meadow = mix(mix(uTipLush, uTipDry, dry * 0.85), uTipCool, cool * 0.5);
-  vec3 emerald = mix(vec3(0.16, 0.36, 0.07), vec3(0.3, 0.46, 0.09), fbm(xz * 0.03 + 11.0));
-  emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);
-  vec3 tint = mix(meadow, emerald, pastureAt(xz));
+  vec3 emerald = vec3(0.0);
+  if (pasture > 0.0) {
+    emerald = mix(vec3(0.16, 0.36, 0.07), vec3(0.3, 0.46, 0.09), pattern.z);
+    emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);
+  }
+  vec3 tint = mix(meadow, emerald, pasture);
   tint = mix(tint, vec3(0.44, 0.31, 0.11), birchFloorAt(xz) * 0.72);
-  tint = mix(tint, mix(vec3(0.14, 0.19, 0.085), vec3(0.29, 0.27, 0.12), fbm(xz * 0.32)), woodFloorAt(xz) * 0.9);
+  float wood = woodFloorAt(xz);
+  if (wood > 0.0) tint = mix(tint, mix(vec3(0.14, 0.19, 0.085), vec3(0.29, 0.27, 0.12), fbm(xz * 0.32)), wood * 0.9);
   return mix(tint, mix(tint, vec3(0.4, 0.41, 0.31), 0.28) * 0.93, uSeason);
+}
+vec3 grassTint(vec2 xz) {
+  return grassTintWithPattern(xz, grassPatternAt(xz));
 }
 `;
 
@@ -684,6 +709,7 @@ void main() {
 }`;
 
 const FRAG = /* glsl */ `
+${JOURNEY_ROOMS_GLSL}
 uniform vec3 uRoom;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
@@ -705,8 +731,8 @@ in vec3 vLocalLight;
 in vec4 vFlower;
 
 void main() {
-  if (distance(vWorld.xz, vec2(240.0, -460.0)) < 48.0) discard;
-  if (uRoom.z > 0.0 && distance(vWorld.xz, uRoom.xy) > uRoom.z) discard;
+  if (distance(vWorld.xz, vec2(${glsl(DOOR_SHORE.x)}, ${glsl(DOOR_SHORE.z)})) < 48.0) discard;
+  if (uRoom.z > 0.0 ? distance(vWorld.xz, uRoom.xy) > uRoom.z : journeyHides(vWorld.xz)) discard;
   // Multisampling evaluates a sliver of a blade outside its own edges, where t extrapolates far past 1 and lights a pixel like a spark.
   float T = clamp(vT, 0.0, 1.0);
   float sun = clamp(vSun, 0.0, 1.0);

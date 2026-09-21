@@ -2,7 +2,10 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { COTTAGE, COTTAGE_Y } from './heightfield';
+import { COTTAGE, COTTAGE_Y, LAST_HILL } from './heightfield';
+import { tuning } from '../tuning';
+import { WashingLines } from './lines';
+import { heightAt } from './island';
 
 const LENGTH = 8.4;
 const DEPTH = 4.8;
@@ -188,6 +191,7 @@ export class Cottage {
   private doorTarget = 0;
   private readonly spill: THREE.ShaderMaterial;
   private spawn = 0;
+  readonly washing: WashingLines;
 
   constructor(private readonly wind: WindField) {
     const white = new THREE.Color('#ebe4d4');
@@ -231,10 +235,25 @@ export class Cottage {
     this.group.add(spill);
 
     this.group.position.copy(this.position);
-    this.group.rotation.y = Math.atan2(20 - COTTAGE.x, -1520 - COTTAGE.z);
+    // Echo the drawn front, with a little side still showing from the child's approach.
+    this.group.rotation.y = Math.atan2(LAST_HILL.x - COTTAGE.x, LAST_HILL.z - COTTAGE.z)
+      + tuning.homeReveal.cottageTurn;
     this.group.updateMatrixWorld(true);
     this.doorstep.set(0, 0, front + 2.2).applyMatrix4(this.group.matrixWorld);
     this.chimney.set(LENGTH / 2 - 0.55, RIDGE + 1.4, 0).applyMatrix4(this.group.matrixWorld);
+
+    // The same family from the island of lines, now at home. Keep its gesture separate:
+    // ordinary washing in the breeze, even when a saved Lines encounter has filled its sleeves.
+    const wash = tuning.homeWashing;
+    const centre = (wash.left + wash.right) * 0.5;
+    const half = (wash.right - wash.left) * 0.5;
+    const dx = Math.cos(wash.turn) * half, dz = Math.sin(wash.turn) * half;
+    const a = new THREE.Vector3(centre - dx, 0, wash.forward - dz).applyMatrix4(this.group.matrixWorld);
+    const b = new THREE.Vector3(centre + dx, 0, wash.forward + dz).applyMatrix4(this.group.matrixWorld);
+    const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z)) + wash.height;
+    a.y = b.y = top;
+    this.washing = new WashingLines([], 91, { a, b, sag: wash.sag },
+      { scale: wash.scale, gesture: new THREE.Vector2(), flutter: wash.flutter });
 
     const quad = new THREE.PlaneGeometry(2, 2);
     const smokeGeo = new THREE.InstancedBufferGeometry();
@@ -259,7 +278,7 @@ export class Cottage {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.group, this.smokeMesh];
+    return [this.group, this.smokeMesh, this.washing.group];
   }
 
   openDoor(open: boolean): void {
@@ -272,6 +291,7 @@ export class Cottage {
     const far = camera.position.distanceTo(this.position) > 1400;
     this.group.visible = !far;
     this.smokeMesh.visible = !far;
+    this.washing.group.visible = !far;
     if (far) return;
     this.doorOpen += (this.doorTarget - this.doorOpen) * (1 - Math.exp(-dt * 2.2));
     this.door.rotation.y = -this.doorOpen * 1.7;

@@ -4,16 +4,63 @@ The project already has focused mechanics, checkpoint, GPU and gesture tests in 
 They run locally; GitHub Actions is not required. The checks serve different purposes:
 
 - `npm run typecheck` and `npm run build`: TypeScript and the production bundle.
+- `node tools/plane-routing-check.mjs`: hidden-shore departure in four winds at 30/60/120 fps,
+  committed pickup under sustained gusts, opening/birches exits, scarf targets and encounter gates.
+- `node tools/meadow-route-check.mjs`: piano, crest/pond and departure routing, including restored bank walks.
+- `node tools/meadow-plane-check.mjs`: guided flight, gust recovery, companion bounds and framing.
 - `node tools/pointer-contact-check.mjs`: primary-contact ownership, cancellation, page lifecycle and viewport resize.
 - `node tools/touch-viewport-check.mjs`: real browser multi-touch, cancellation, canvas/camera dimensions,
   portrait resize and fullscreen entry/exit. The browser-controls case models a reduced `innerHeight`;
   Safari's native fullscreen-dismiss gesture still requires an iPad check.
 - `node tools/flock-audio-check.mjs`: wingbeat cadence, distance/mute backlog and resting/take-off gates.
 - `node tools/chapter-view-check.mjs`: prepared camera/focus across chapter transitions without an extra story tick.
+- `node tools/camera-direction-check.mjs`: shared composition decisions, orbital clearance, smooth turns,
+  carry/anchor changes, interaction holds, exact paths, portrait resize and decision-layer CPU cost.
+- `BASE=<preview> node tools/camera-chapters-browser-check.mjs`: all chapter entrances in landscape and
+  portrait, checking continuous turns and declared primary subjects; saves frames for visual review.
+- `node tools/crossing-camera-check.mjs`: departure/companions/arrival movement, whale pan and coverage,
+  farewell continuity, 10–120 Hz response, plus 24 real-boat passages in landscape/portrait and calm/gusts.
+- `node tools/drowned-camera-check.mjs`: village arc, church/spire coverage, sail and lighthouse framing,
+  traveller visibility, static scenery obstruction duration and completion in landscape/portrait at 30/60 Hz.
+- `BASE=<preview> node tools/drowned-camera-browser-check.mjs`: real village through forest landing,
+  including pointer strokes to fill the becalmed sail; `PORTRAIT=1` selects a phone viewport.
+  `REVIEW=1` adds one-second chronological frames; also supported by `piano-check.mjs`.
+- `BASE=<preview> node tools/crossing-camera-browser-check.mjs`: rendered farewell, companions, whale,
+  arrival and portrait pod/swim/shore checks. `CASE=crossing` or `CASE=sea` selects one passage.
+  Use a fixed preview build when other tasks are editing the shared checkout.
 - `node tools/chapter-view-browser-check.mjs`: real Sleeping/Home constructors at arranged crossing exits;
   checks the transition frame and captures the following view. Uses the shared GPU lock and supports `BASE`.
 - `node tools/frame-time-check.mjs`: 100 ms catch-up cap, bounded world steps, gesture subdivision and fresh contacts.
 - `node tools/frame-time-browser-check.mjs`: actual game loop at 10–60 fps, stalls, tab resume and one render per frame.
+- `node tools/frame-pacer-check.mjs`: 30/60 fps presentation limits across 30–144 Hz displays, overload timing,
+  stalls, resume and preset changes.
+- `node tools/power-browser-check.mjs`: production pacing with the real game loop; render/audio counts, fixed
+  60 Hz wind, elapsed game time and hidden-page resume in the island, birches and sky mirror.
+- `node tools/power-profile.mjs`: paired completed-work rendering costs and water-shader pixel parity in five
+  scenes, with old Retina/new High/Auto captures. Local GPU throughput, not iPad battery measurements.
+- `node tools/frame-profile.mjs`: nine chapter-entry CPU profiles, per-pass/object draw census and frozen
+  rendering ablations. Writes `/tmp/updraft-frame-profile.json` and Chrome `.cpuprofile` files. Set
+  `ABLATIONS=''` for CPU/census only; `ABLATIONS=culling-off CULLING_VIEWS=1` also checks final-pixel parity
+  with legacy culling disabled and near/edge views. `LEGACY_NORMALS=1` restores Three.js scarf normals in the
+  test browser for comparison. Hold the shared GPU lock; don't run other CPU benchmarks during timings.
+  `meadow:walk`, `meadow:crest`, `meadow:flock` and `meadow:pond` arrange later Meadow fixtures.
+  `ABLATIONS=full-tint` compares conditional regional colour noise with its original unconditional work;
+  `ROUNDS=0` runs pixel parity without timings. `FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables` measures the
+  extra cost of rebuilding all three blade tables, rather than assuming cache misses dominate.
+- `node tools/terrain-fields-check.mjs`: GPU field-cache accuracy over the atlas, exact wall/gate masks,
+  one-time bake behaviour and rendered life/season comparisons with and without grass.
+  `ABLATIONS=fields-direct CAPTURE=1 node tools/frame-profile.mjs meadow:walk meadow:crest` measures the
+  cache against the original calculation and saves paired images; differences must stay within 3/255 per
+  channel and a mean below 0.005/255. `BASE` selects the server for both tools.
+- `node tools/terrain-colour-check.mjs`: shared colour-pattern cache accuracy across every island and
+  three seasons, original tint-formula parity, one-time bake behaviour and 18 rendered life/season pairs.
+  `GROUND_VIEW=1 CAPTURE=1 CHAPTER=wood` exposes distant ground and saves a direct/cached image pair;
+  repeat with `CHAPTER=meadow` and `sleeping`. `OUT` selects the JSON path and image prefix.
+  `ABLATIONS=colour-direct CAPTURE=1 node tools/frame-profile.mjs island meadow:crest wood sleeping`
+  measures the cache against direct noise calculations. Normal-view differences must stay within 3/255
+  per channel and a mean below 0.01/255. Both tools support `BASE` and hold the shared GPU lock.
+- `node tools/scarf-normals-check.mjs`: exact Three.js normal-array parity over 15 real scarf states and
+  interleaved CPU timings. `node tools/scarf-geometry-check.mjs` checks contacts, releases and checkpoints.
 - `node tools/wind-clock-check.mjs`: fixed tick timing, input exposure, stroke resampling, impulses and stalls.
 - `node tools/wind-rate-check.mjs`: real GPU wind fields across render rates, in normal and lite simulation.
 - `node tools/wind-gesture-logic-check.mjs`: pointer circles, updraft and scarf interactions at 30/60/120 Hz.
@@ -28,6 +75,12 @@ They run locally; GitHub Actions is not required. The checks serve different pur
 - `node tools/playthrough.mjs /tmp/updraft-journey`: Begin through every chapter to credits, reload the completed
   checkpoint, then Play again. Uses only pointer gestures and natural story transitions, with a fresh browser
   profile. It fails on exceptions, wrong chapter order, a stalled chapter or a missing ending. Allow up to an hour.
+  `REVIEW=1` records video and one-second frames; review those chronologically rather than only chapter entries.
+  `UNTIL=<chapter>` ends a focused replay on entry. `SAVE_FILE=<json>` uses normal Continue from an actual
+  captured checkpoint; it does not claim a fresh uninterrupted run.
+- `node tools/camera-review-strip.mjs <capture-prefix> <first-frame> [count=30] [stride=2]`: chronological
+  contact sheets from review captures, read left-to-right/top-to-bottom using the emitted column count and beat metadata.
+  Inspect ambiguous frames at full size; this review does not replace physical-device or audio testing.
 - `node tools/ending-view-check.mjs`: ending order, camera visibility, narrow screens, resize, resume and motif timing.
 - `node tools/audio-check.mjs`: gesture thresholds/exceptions, cue timing, morning music, call spacing, habitat,
   material scheduling, stereo output, clipping stress and the final musical tail; requires the dev server, no GPU.
@@ -52,8 +105,14 @@ They run locally; GitHub Actions is not required. The checks serve different pur
   10–144 Hz loops, gesture harmony, voice cleanup and preservation of the shared pad's clock/glides.
 - `node tools/birches-score-browser-check.mjs`: real swing brush and scarf circles, then an arranged final
   bow through release/gathering and boarding; live routing, mute/resume, gesture harmony and cleanup.
-- `node tools/audio-transition-proposals.mjs`: current/proposed transition A/Bs in `/tmp`, with source hashes,
-  matched lead-ins, chord timing and level measurements; runtime transitions are unchanged.
+- `node tools/arrival-audio-check.mjs`: nine production destination renders, exact four-second background/reverb
+  silence, wind/gesture continuity, landing phrase continuity, suspension and stalled-frame recovery; no GPU.
+- `node tools/arrival-audio-browser-check.mjs`: arranged final sailing leg into Lines with the real game loop,
+  audio clock and pointer; checks the gap, pre-landing melody and continuous phrase ashore; shared GPU lock.
+- `node tools/gesture-harmony-check.mjs`: all 33 mood/score sections, cursor/updraft/glider notes, scheduled
+  chord-boundary crossings, Sleeping rests, caring rescue and piano ownership; no GPU.
+- `node tools/audio-transition-proposals.mjs`: historical rejected transition A/Bs in `/tmp`, with source hashes,
+  matched lead-ins, chord timing and level measurements; this is not the later approved arrival pause.
 - `node tools/sea-score-browser-check.mjs`: a complete long crossing with live score phases, mute/resume and
   release at the mirror; holds the GPU browser lock. Takes about three minutes.
 - `node tools/audio-theme-preview.mjs`: piano reference, current home melody and proposed reprise in `/tmp`.
@@ -124,7 +183,8 @@ indefinite player-paced pauses, wind feedback and full voice cleanup. Both settl
 measure below −90 dBFS. The ten-chapter game-loop suite passes its new Sleeping entry, morning restore and
 departure checks; shared audio and piano-approach regressions also pass. Transition A/Bs decode as 48-second
 stereo MP3s, with matching lead-ins and no clipping. Jeremy rejected the transition proposal on September 21;
-runtime transitions remain unchanged. Contextual listening for the integrated score/effects remains separate.
+that held-chord replacement remains rejected. The later arrival pause is recorded below. Contextual listening
+for the integrated score/effects remains separate.
 
 Meadow integration (September 21): 51 focused checks pass, including approved instrument waveform parity
 (relative error 2.2e−6), scene/checkpoint gates, scheduling at 10–144 Hz, wind feedback and unchanged legacy
@@ -161,3 +221,138 @@ The production mix peaks at −15.35 dBFS without clipping. Build, 87 shared aud
 70 Birches score regressions pass. Evidence: `/tmp/updraft-lines-score-check.json` and its WAV.
 Live game-loop/contextual verification remains outstanding because another progress check holds the browser;
 offline production audio and chapter tests do not constitute a live listening pass.
+
+
+Arrival timing and gesture harmony (September 21): 71 production-render checks pass for all nine destination
+profiles. Background plus reverb is exactly silent for four seconds; the mixed render keeps the environment
+and gesture response audible with no clipping. Landing preserves the score instance, phrase epoch and incoming
+reverb. Suspended time, early grounding, unrelated chapter jumps and a stalled frame are covered.
+
+The real boat/chapter pacing simulations pass all eight current passages under ordinary breeze, sustained
+gusts, a sudden gust at the handoff, 30 Hz and both wind-bearing variations, plus the unattended Drowned
+encounter. Incoming music begins at least 1.7 seconds before grounding in these fixtures; the ordinary opening-to-Lines run gives 11.35 seconds.
+Evidence: `/tmp/updraft-arrival-pacing.json` and `/tmp/updraft-arrival-audio.json`.
+
+Harmony checks pass across 33 sections and 3,196 scheduled gesture notes, including 609 that cross a chord
+boundary before sounding. Rescue timbre/level, piano ownership and Sleeping's harmony through its rests pass.
+Evidence: `/tmp/updraft-gesture-harmony.json`. Build, 87 shared audio checks/five renders, and Lines (92),
+Birches (70), Meadow (51), Sleeping (50) score regressions pass with approved compositions and levels intact.
+
+The live Lines arrival fixture passes with a 4.02-second background pause, incoming phrase starting 11.26
+seconds before grounding, four harmonically matched real-pointer chimes, no score restart ashore and no
+browser errors. Evidence: `/tmp/updraft-arrival-audio-browser.json`. This verifies arranged approach-to-landing
+wiring, not a continuous full-game listening pass.
+
+Camera follow-up (September 21): the focused crossing check passes 24 real-boat passages, plus
+10–120 Hz framing, farewell continuity and whale pan/release checks. Village checks cover the church,
+child, sail and lighthouse at 30/60 Hz, calm/gusts and both aspects. Real desktop and portrait village
+captures reached the wood after pointer-driven sail recovery; the portrait run kept the child's centre
+within 0.907 NDC. The rendered sea run retained the swimmer and approached the mirror without a camera cut.
+Evidence: `/tmp/updraft-crossing-camera*.json`, `/tmp/updraft-drowned-camera*.json` and
+`/tmp/updraft-camera-*.png`.
+
+The shared checkout changed during verification. A later sea suite failed its route-progress continuity
+assertion (about 0.055 at waypoint rounding on the shorter route); an instrumented run logging that
+assertion separately passed the remaining camera, swim and checkpoint assertions. Later combined renders
+also lost the water and reported missing fragment outputs. These results do not certify the concurrent
+geography/rendering edits. The final camera review uses a separate local build of the committed renderer
+with the camera/director changes; this is a review preview, not a release checkout or deployment.
+
+The final isolated crossing capture passed with the child within 0.800 NDC and the visible whale's sampled
+body bounds within 0.648 NDC; no camera cut or page exception was recorded. Its whale/release screenshots
+were visually reviewed. Camera review preview: `http://127.0.0.1:5249/?chapter=drowned`, built under
+`/tmp/updraft-camera-review-dist`; source fixes remain in the shared workspace.
+The final shared-tree typecheck was blocked by `src/audio/audio.ts:244` (`wasGusting` declared but unused)
+in the concurrent audio work. Earlier camera-stage typechecks and preview builds passed; the shared-tree
+production build did not run after that final typecheck failure.
+
+Marine/gait follow-up (September 21): 56 marine checks and seven production renders pass after softening dolphin and whale attacks, filtering spray, reducing levels and spacing pod events. A seeded old/new comparison measured roughly 6 dB lower peaks for dolphin landing and whale breath; all six marine voices have lower transient energy. Evidence: `/tmp/updraft-marine-softened.json` and its WAV.
+
+Sky Mirror's targeted companion/checkpoint tests pass with planted investigation steps, no swimming pose, no paddle/plunge events and no running wingbeats. Wing-care/pond/glide checks also pass at 30/60/120 Hz. The full Mirror simulation completes landscape, but the portrait constellation check fails its 0.95 framing margin (x≈−0.9505); the baseline gait also fails (x≈−0.9512). This separate framing issue is not certified by the gait fix. Before/after close-ups: `/tmp/updraft-mirror-gait-{before,after}-feet-*.png`.
+
+Shared cinematography (September 21): `camera-direction-check` passes orbital clearance and turn-rate
+checks at 10/30/60/120 Hz, near-reverse route noise, fast carry and anchor changes, stable composition
+choices, interaction holds, exact-path exits, portrait resize and multi-subject bounds. Local CPU
+microbenchmarks across sea, meadow, birches and wood measured about 0.003–0.005 ms per decision-layer
+update, amortized at 60 Hz; actual review updates measured about 0.08–0.13 ms and occur twice a second.
+These are desktop CPU measurements, not mobile frame-rate results; there are no additional GPU passes.
+
+The production build/typecheck and chapter-transition, crossing (24 real-boat passages), drowned,
+pond, sea, wood, sky-mirror and ending checks passed. The sky mirror now declares all three constellation
+points and gives the reveal a bounded extra retreat; its portrait completion/framing check passes.
+A real-browser entrance sweep passed 22 landscape/portrait cases with no page exceptions or camera
+turn discontinuities. The portrait village completed via real sail strokes with the child inside
+0.887 NDC and a maximum turn of 0.0099 radians per frame. Screenshots were reviewed for the village,
+meadow, forest, sleeping island and mirror. This is focused chapter verification, not a new uninterrupted
+start-to-credits manual playthrough. Evidence: `/tmp/updraft-camera-direction.json`,
+`/tmp/updraft-direction-chapters.json`, `/tmp/updraft-drowned-camera-390.json` and the camera check reports.
+
+Final shared-camera renders: the ordinary crossing retained the child within 0.623 NDC and the visible
+whale body within 0.581 NDC; maximum angular step was 0.0092 radians. The portrait mirror's three-star
+reveal was also visually reviewed. The local review preview is `http://127.0.0.1:5259/?chapter=drowned`
+from `/tmp/updraft-direction-preview`. Nothing was deployed.
+
+
+## Approved Mirror/Drowned scores and forest transition — September 21
+
+- `node tools/dream-score-check.mjs`: exact approved note/palette parity; phase envelopes; sustained loop
+  coverage; saved-phase entry without a bloom; real-return blooms; final cut and retired voice/echo/bus
+  cleanup; actual Drowned-to-Wood render with an open gate, retained reverb, tuned D/A entry and responsive
+  gestures. All three renders have no clipping. Evidence: `/tmp/updraft-dream-score-check.json`.
+- `node tools/dream-story-check.mjs`: actual chapter phase getters, four distinct star returns with one cue
+  each, no cue replay for completed progress, and Drowned's still/resumed/storm/loss phase selection.
+- `RESTORE_ONLY=1 node tools/sky-mirror-logic-check.mjs`: focused real actors, mirror mechanics and saves.
+- `node tools/arrival-audio-check.mjs`: all nine destination profiles, now including real DreamScore object
+  and clock continuity through landing; other arrivals retain the short background-only rest.
+- Existing `audio-check.mjs` (88 checks/five renders), `audio-direction-check.mjs` (67 checks/four renders)
+  and production build pass. This is audio integration verification, not a complete journey playtest.
+
+### Cinematic playthrough audit (September 21)
+
+`REVIEW=1` drove the real pointer interactions from Begin, then continued from the actual pond checkpoint
+through credits, completed-save reload and Play again. Visual review used chronological captures at
+1–2-second intervals, with full-size inspection of suspected problems. This is rendered sequence review,
+not a claim of real-time video listening or physical-device coverage; optional branches were not exhaustive.
+
+The fresh run found a genuine Meadow stall: paper resting on the elevated pond was considered fetchable
+land. The plane now shares the pond's water boundary and recovers through flight. Calm-water reproductions
+at 30/60/120 Hz pass, and normal Continue cleared the pond and reached Birches. Jeremy's relocated exit boat
+is preserved; the boarding view now looks back from the water and frames the approaching child with the hull.
+
+Other observed fixes: the Lines grass patch now follows `(x, radius, z)`; the opening rescue clears only its
+care patch; the first farewell uses the visible side of the sail; the piano approach includes the walking
+child; village roofs/chimneys/branches receive bounded, eased obstruction clearance, with bow/stern framing
+and room for the church reveal to ease into place; and the final paper
+release retains the child's standing silhouette before the descent. The shared village check covers 167
+static bounds, both screen shapes and calm/gust passages: longest measured obstruction 0.14 s, maximum
+frame turn 0.020 rad. The bounds-only CPU microbenchmark is roughly 0.001 ms here, not a device FPS estimate.
+
+Evidence: `/tmp/updraft-cinematic-playthrough*` (original failure), `/tmp/updraft-cinematic-continued*`
+(pond through ending), `/tmp/updraft-cinematic-boarding-replay*`, `/tmp/updraft-cinematic-reload.json`.
+The continued run's final harness assertion failed on capture-timer evaluations during reload, after both
+completion and Play again succeeded. The capture timer now stops before navigation; the separate actual
+completed-save replay passes with no errors. The original failed report remains intact.
+
+Focused replays also passed fresh Begin through all three Lines curtains and departure (323 s), the actual
+pond save through Meadow boarding and Birches (96 s), and all four piano gestures in landscape and portrait.
+The ending's arranged drawing-approach fixture passed through credits in both screen shapes; chronological
+review confirms the release no longer clips the child. These are focused confirmations, not additional
+uninterrupted full journeys. Type checking, production build and the camera/pond/ending regression checks pass.
+
+Final village GPU replays pass in 1280×720 and 390×844, including real sail strokes, storm and forest landing.
+Chronological review of `/tmp/updraft-drowned-hull-final-{1280,390}-frames/` confirms clear roof/church
+passage and complete hull framing. The old child-center-only check missed clipped bow/stern; the replay
+now checks those actual hull points too (worst viewport coordinate 0.800 landscape, 0.876 portrait; edge=1).
+Evidence includes `/tmp/updraft-drowned-camera-{1280,390}.json`, `/tmp/updraft-piano-new-*-report.json`
+and `/tmp/updraft-cinematic-ending-replay-*`. Final review preview: `http://127.0.0.1:5299/`.
+
+## Accepted lighthouse foghorn
+
+- `node tools/foghorn-story-check.mjs`: approved settings, one actual chapter cue at 30/60/144 Hz,
+  no calls before the storm, stale-event suppression, checkpoint behavior and inactive-audio handling.
+- `node tools/foghorn-preview.mjs /tmp/updraft-foghorn-integrated`: four production Web Audio renders;
+  integrated cue matches the frozen accepted reference within one PCM rounding step. Checks also cover
+  no accompaniment ducking, source cleanup, soft onset, thunder/plane clearance and encoded headroom.
+
+These checks, the existing chapter-audio checks, 140 audio regression checks with six renders, type checking
+and production build pass. This verifies the cue integration, not a new full-game listening playthrough.

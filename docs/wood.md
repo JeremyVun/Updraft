@@ -91,8 +91,10 @@ the mechanic itself: “that's too abstract for a child to understand” and “
 
 Freeing the plane from the branch is the complete paper interaction. The cygnet climbs into the satchel before
 pickup, freeing the child's hands; collecting the plane immediately resumes the route to the boat. The held
-paper never requests wind. Its wet shading fades during the walk, with no input or progression gate. Existing
-ember guidance continues along the remaining path. The legacy `dry` save key is retained for compatibility.
+paper never requests wind. Its wet shading fades during the walk, with no input or progression gate.
+One more forest ember guides the remaining path; the final ember by the shore is removed. After lighting
+that preceding ember, the child continues to the boat even if the light fades. The legacy `dry` save key is
+retained for compatibility, and old saves near the shore do not recreate the removed ember.
 
 ## Earlier progression defect
 

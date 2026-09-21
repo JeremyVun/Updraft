@@ -1,3 +1,4 @@
+import { JOURNEY_THEME, polishPhrase, phraseHandoff, schedulePhrase } from './phrasing';
 /** The 36-second composition Jeremy approved in the September 20 listening preview. */
 export const BOATS_PHRASE_SECONDS = 36;
 export const BOATS_CHORDS = [
@@ -14,28 +15,33 @@ const phrases = [
   [[0.75,67],[1.5,64],[3,61]],
   [[0.75,66],[1.5,64],[2.625,62]],
 ];
-interface Note { voice: 'pad' | 'pluck'; midi: number; at: number; duration: number; level: number; pan: number }
+interface Note { role?: 'melody' | 'accompaniment'; voice: 'pad' | 'pluck'; midi: number; at: number; duration: number; level: number; pan: number }
 export const BOATS_NOTES: readonly Note[] = BOATS_CHORDS.flatMap((chord, bar) => {
   const at = bar * 4.5, notes: Note[] = [];
   chord.slice(1, 3).forEach((midi, i) => notes.push({ voice: 'pad', midi, at: at + i * 0.035,
     duration: 3, level: 0.004 * (i === 0 ? 0.85 : 1), pan: (i - 0.5) * 0.23 }));
-  notes.push({ voice: 'pluck', midi: chord[0], at: at + 0.125, duration: 2.5, level: 0.04, pan: -0.22 });
-  if (bar !== 7) notes.push({ voice: 'pluck', midi: chord[1], at: at + 2.25, duration: 1.9, level: 0.025, pan: 0.22 });
+  notes.push({ role: 'accompaniment', voice: 'pluck', midi: chord[0], at: at + 0.125, duration: 2.5, level: 0.04, pan: -0.22 });
+  if (bar !== 7) notes.push({ role: 'accompaniment', voice: 'pluck', midi: chord[1], at: at + 2.25, duration: 1.9, level: 0.025, pan: 0.22 });
   phrases[bar].forEach(([offset, midi], i) => notes.push({ voice: 'pluck', midi, at: at + offset,
     duration: i === phrases[bar].length - 1 ? 2.8 : 1.7,
     level: 0.044 * [1, 0.83, 0.94, 0.77, 0.87][i], pan: Math.sin(bar * 0.8 + i * 0.6) * 0.22 }));
   return notes;
 }).sort((a, b) => a.at - b.at);
 
+export const BOATS_PHRASE = polishPhrase({ seconds: BOATS_PHRASE_SECONDS, notes: BOATS_NOTES }, {
+  to: 4.5, melody: JOURNEY_THEME.map((midi, i): Note => ({ voice: 'pluck', midi, at: [.75,1.5,2.25,3][i],
+    duration: i === 3 ? 2.8 : 1.7, level: .04, pan: -.1 + i * .07 })),
+});
+
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
 /** A chapter-local clock; hidden/muted AudioContext suspension preserves the phrase's position. */
 export class LittleBoatsScore {
   private readonly bus: GainNode;
-  private readonly epoch: number;
+  epoch: number;
   private readonly voices = new Set<OscillatorNode>();
-  private cycle = 0;
-  private next = 0;
+  cycle = 0;
+  next = 0;
   private stopped = false;
 
   constructor(private readonly ctx: AudioContext, output: AudioNode) {
@@ -47,28 +53,23 @@ export class LittleBoatsScore {
     return Math.floor(Math.max(0, now - this.epoch) % BOATS_PHRASE_SECONDS / 4.5);
   }
 
-  update(level: number): void {
+  update(level: number, until = Infinity): void {
     if (this.stopped) return;
     const now = this.ctx.currentTime;
     this.bus.gain.setTargetAtTime(level, now, level < this.bus.gain.value ? 0.15 : 0.8);
-    // A stalled frame skips missed notes; it never releases a backlog of attacks on resume.
-    const cycle = Math.floor(Math.max(0, now - this.epoch) / BOATS_PHRASE_SECONDS);
-    if (cycle > this.cycle) { this.cycle = cycle; this.next = 0; }
-    for (;;) {
-      const note = BOATS_NOTES[this.next], at = this.epoch + this.cycle * BOATS_PHRASE_SECONDS + note.at;
-      if (at > now + 0.25) break;
-      if (at >= now - 0.04) this.play(note, Math.max(now + 0.008, at));
-      if (++this.next === BOATS_NOTES.length) { this.next = 0; this.cycle++; }
-    }
+    schedulePhrase(this, BOATS_PHRASE, now, (note, at) => this.play(note, at), until);
   }
 
-  stop(): void {
+  handoffAt(now: number): number { return phraseHandoff(BOATS_PHRASE, this.epoch, now); }
+
+  stop(fade = 1.2): void {
     if (this.stopped) return;
     this.stopped = true;
     const now = this.ctx.currentTime;
     this.bus.gain.cancelAndHoldAtTime(now);
-    this.bus.gain.linearRampToValueAtTime(0, now + 1.2);
-    for (const voice of this.voices) voice.stop(now + 1.2);
+    this.bus.gain.setValueAtTime(this.bus.gain.value, now);
+    this.bus.gain.linearRampToValueAtTime(0, now + fade);
+    for (const voice of this.voices) voice.stop(now + fade);
     if (!this.voices.size) this.bus.disconnect();
   }
 

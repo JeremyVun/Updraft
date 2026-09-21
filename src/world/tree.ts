@@ -204,6 +204,16 @@ export interface Tree {
   life: { value: number };
 }
 
+/** Shader positions are world-space. Leave headroom above the wind's ±60 vorticity
+ * clamp because pressure projection follows it, then include sway and billboard size. */
+function swayBounds(points: THREE.BufferAttribute, base: THREE.Vector3, leafSize = 0): THREE.Sphere {
+  const bounds = new THREE.Box3().setFromBufferAttribute(points);
+  const wind = Math.SQRT2 * 60 * 4;
+  const lean = wind * 0.09 + Math.SQRT2 * (0.12 + wind * 0.03);
+  const k = Math.pow(Math.max(bounds.max.y - base.y, 0) / 16, 1.6);
+  return bounds.expandByScalar(Math.hypot(lean, lean * lean * 0.02) * k + leafSize).getBoundingSphere(new THREE.Sphere());
+}
+
 export function createTree(): Tree {
   const base = new THREE.Vector3(TREE.x, heightAt(TREE.x, TREE.z), TREE.z);
   const { limbs, canopy } = grow(base);
@@ -215,7 +225,7 @@ export function createTree(): Tree {
     mergeGeometries(barkGeo),
     new THREE.ShaderMaterial({ vertexShader: BARK_VERT, fragmentShader: BARK_FRAG, uniforms: shared }),
   );
-  bark.frustumCulled = false;
+  bark.geometry.boundingSphere = swayBounds(bark.geometry.getAttribute('position') as THREE.BufferAttribute, base);
 
   const rand = mulberry32(7);
   const leaves: number[] = [];
@@ -250,6 +260,7 @@ export function createTree(): Tree {
   leafGeo.setAttribute('aLeaf', new THREE.InstancedBufferAttribute(new Float32Array(leaves), 4));
   leafGeo.setAttribute('aShade', new THREE.InstancedBufferAttribute(new Float32Array(shades), 4));
   leafGeo.instanceCount = leaves.length / 4;
+  leafGeo.boundingSphere = swayBounds(leafGeo.getAttribute('aLeaf') as THREE.BufferAttribute, base, Math.SQRT2 * 1.15);
   const leafMat = new THREE.ShaderMaterial({
     vertexShader: LEAF_VERT,
     fragmentShader: LEAF_FRAG,
@@ -258,7 +269,6 @@ export function createTree(): Tree {
     alphaToCoverage: true,
   });
   const foliage = new THREE.Mesh(leafGeo, leafMat);
-  foliage.frustumCulled = false;
 
   const group = new THREE.Group();
   group.add(bark, foliage);

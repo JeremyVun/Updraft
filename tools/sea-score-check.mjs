@@ -49,7 +49,7 @@ try {
     story.wantsDolphins = false; check(phase.call(story) === undefined, 'Ordinary crossings retain their original music');
     const restored = Object.assign(Object.create(CrossingChapter.prototype), {
       wantsDolphins: true, route: [{ x: 0, y: 0 }, { x: 100, y: 0 }], cruiseSpeed: 10,
-      cast: { boat: { position: { x: 40, z: 0 }, mooring: {} } }, progress: () => 0.5,
+      cast: { sealife: { resumeDolphinsAfterSwim() {} }, boat: { position: { x: 40, z: 0 }, mooring: {} } }, progress: () => 0.5,
     });
     restored.restoreCheckpoint('swim', [0, 88]);
     check(restored.seaScore === 'return', 'A restored swim checkpoint starts after the swim, without replaying its lead-in');
@@ -65,7 +65,7 @@ try {
       }
       check(events.filter(e => e.phase === 'swim' || e.phase === 'arrival').every(e => e.note.voice === 'pad'),
         `Swim and approach have no automated melody at ${fps} Hz`);
-      const first = SEA_SECTIONS.open.notes[0], repeats = events.filter(e => e.note === first);
+      const first = SEA_SECTIONS.open.notes[0], repeats = events.filter(e => e.phase === 'open' && e.note.voice === first.voice && e.note.midi === first.midi && e.note.at === first.at);
       check(repeats.length === 2 && Math.abs(repeats[1].at - repeats[0].at - 36) < 0.02,
         `Long opening loops steadily at ${fps} Hz`);
       check(events.filter(e => e.at >= 18 && e.at < 18.1).length <= 1,

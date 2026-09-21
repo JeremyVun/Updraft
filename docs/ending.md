@@ -381,3 +381,143 @@ the mirror's terrain, wave flattening, props, puzzle and reflection pass are unt
 
 `tools/sky-mirror-visibility-check.mjs` compares rendered water against the legacy fragment expression at the
 same simulation instant in the mirror, crossing and washing, and captures the corrected ending in both orientations.
+
+
+## Daylight recognition, night at home (2026-09-21)
+
+Jeremy found that the drawing's sun did not match the dusk/night outside it. He approved holding warm
+daylight through the cygnet's farewell and the unfolding, then letting sunset develop during the child's
+descent and completing night after entry. The forest's night and sleeping island's return to day do not
+require another night at the summit; the sky mirror suspends time between them.
+
+The short harbour crossing now clears into afternoon. Home holds that light regardless of how long the
+player spends on the updraft. The drawing keeps its sun. A lower, wider shoulder view includes the real
+sun above and left of the cottage, the same relationship as the picture, with the whole paper and house
+clear of each other in landscape and portrait. Home's sun direction blends in over the crossing; other
+islands keep their existing light, and the final moon and stars keep their existing positions.
+
+After the paper's release, the child heads straight home. Sunset follows their progress down the hill;
+the former eleven-second seated nightfall wait is removed. The windows brighten as daylight fades, and
+full night arrives after entry for the rise to the stars. Reunion and drawing saves resume in daylight;
+completed saves remain at night. Controls live in `tuning.homeLight` and `tuning.homeReveal`.
+
+The camera returns from the departing plane before the child starts down the hill, then follows close
+enough to clear the foreground grass while keeping the cottage roof in frame. Verification covers both
+on-screen framing and the terrain/grass sight line to the child, rather than projection alone.
+
+Validation: production build and all fifteen ending-view cases pass, including 30/60/120 fps, portrait,
+narrow screens, rotation and resumed saves. Checks cover a minute of waiting for the player's updraft,
+a visible real sun above-left of the house, unobscured drawn sun and house, a continuous descent camera,
+daylight held until departure, sunset during the walk and full starlight at the credits. Desktop and phone
+GPU captures of unfolding through night are at `/tmp/updraft-ending-daylight-final-*`; the daylight
+farewell is `/tmp/updraft-ending-daylight-farewell-waiting.png`.
+The final descent camera is verified in both orientations at `/tmp/updraft-ending-descent-final-*`.
+
+## A quieter recognition (2026-09-21)
+
+Jeremy found the daylight reveal too bright and too far to the side. His refinement: "it's ok if some of
+the drawing is hidden ... just try to see what you can do to make the reveal more emotive."
+
+Home now has a clearer, softer afternoon palette: less gold in the horizon and reflected glare, with cool
+sky light in the shadows. It blends in during the crossing and rejoins the existing sunset during descent.
+The shoulder camera moves slightly towards the child's line of sight. The child reads the unfolded paper,
+slowly looks up at the house, then lets their hands settle a little before refolding. The existing recognition
+melody and eight-second hold remain; the moment gains a physical response rather than another pause.
+
+Partial occlusion of the drawing is intentional. Camera checks protect the drawn house and real cottage;
+they no longer require the drawn sun to be uncovered by the child's head.
+
+Validation: production build and all fifteen ending-view cases pass. Desktop and phone compositions were
+inspected using SwiftShader stills (`/tmp/updraft-reveal-soft-*-reading.png`, half render resolution).
+The shared GPU was occupied by a full playthrough, so this refinement has not had another GPU motion review.
+
+## Let the picture float (2026-09-21)
+
+The previous composition still hid the drawn sun. Jeremy asked for the paper farther out and flatter,
+with a higher camera over the shoulder: "It's ok if it's not completely connected to their hands, it
+should feel a bit surreal." This supersedes the permission above to obscure that part of the drawing.
+
+The sheet sits 2.65 units forward at a 32-degree tilt, with a higher shoulder camera in landscape and
+portrait. The hands still follow the folds within their normal reach; contact is allowed to loosen as
+the page opens. The look towards home, small settling gesture and softer daylight remain. Visibility
+checks now sample the drawn sun's centre and edges throughout recognition, as well as both houses.
+
+Validation: build and all fifteen ending-view cases pass. Full-resolution desktop and phone SwiftShader
+stills show the drawn sun clear above the child (`/tmp/updraft-reveal-floating-soft-*-reading.png`).
+GPU motion review remains unavailable while the shared browser is running a separate full playthrough.
+
+## Held paper, matching home (2026-09-21)
+
+After seeing the WebM, Jeremy found that the sheet looked as though it was floating away. He asked to
+bring the scene closer to the drawing's composition, especially the frontal house, with a slightly
+higher camera and a small shift left if needed.
+
+The sheet is back within reach (1.7 units forward), retaining the flatter tilt. The higher shoulder view
+keeps its sun visible. The cottage faces the last hill rather than an old fixed world coordinate, with
+a seven-degree turn that leaves a little side visible. Jeremy approved that slight angle after asking
+whether an exact frontal match would be too on the nose. The door and windows echo the drawing without
+making the cottage look arranged for it. Its doorstep and chimney follow the same orientation.
+Checks cover mitten contact throughout recognition, a nearly frontal cottage, both drawn landmarks,
+and the existing daylight, descent and final-night behavior.
+
+Validation: build and all fifteen ending-view cases pass. Desktop and phone GPU captures were inspected;
+the updated reveal was recorded with audio at normal speed (`/tmp/updraft-paper-held-preview.webm`).
+
+## The family washing at home (2026-09-21)
+
+Jeremy asked for the blue, red and yellow clothes from the island of lines beside the cottage. They
+represent the child's family: two adults with the small yellow jumper between them. The cygnet has
+found its family; the familiar washing says the child belongs here too.
+
+One short line stands behind the left side of the cottage, clear of the door's approach, at a domestic scale.
+It uses the original garment silhouettes, colours and blue–yellow–red order. The clothes move in the
+live breeze with an independent, quiet pose; the island's sleeve-reaching gesture is not replayed.
+There is no new camera beat, interaction or musical cue. The detail is part of the house and becomes
+clearer as the paper lowers and the child walks home. Placement and size live in `tuning.homeWashing`.
+
+Validation: build and all fifteen ending-view cases pass. Desktop and phone GPU captures show the
+three garments together from the hill and during the descent. At the phone's close doorway view,
+the blue garment leaves the edge of the frame as attention settles on the house. The full reveal
+and walk were recorded with audio (`/tmp/updraft-home-family-preview.webm`).
+
+Jeremy found the first placement too prominent and asked to turn the line slightly, move it toward the
+back of the house, and let the clothes flap gently. The line now sits behind the left corner, turned
+sixteen degrees away. Each garment has a small, independent flutter with its top edge pinned, including
+when the distant cottage is outside the local wind texture. Moving folds catch the light. The original
+island's cloth and family gesture retain their existing behavior.
+
+Validation: build and all fifteen ending-view cases pass. GPU captures checked the reveal, descent and
+doorway approach on desktop and phone; the roof partially overlaps the red garment, keeping the line
+behind the house. Updated recording with audio: `/tmp/updraft-home-family-refined-preview.webm`.
+
+## Stay at the crest for goodbye (2026-09-21)
+
+Jeremy: "The camera should stay at the hill crest and only pan to bring the house into focus as the
+child walks in. The camera shouldn't follow the child because it's a good bye and we need to be in a
+good position to do the pan into the rolling credits."
+
+The release settles at the crest. When the child leaves, preserve the actual rendered eye and gaze:
+the camera stays there through the walk and door entry, easing its gaze to the cottage over eight
+seconds. From the same position, the existing final cue and timing turn the view to the moon and sea
+for the credits. No tracking, dolly toward the house, or final upward crane. Completed-save reloads
+use the same crest area. This supersedes the earlier camera-following descent.
+
+Validation: build and all fifteen ending-view cases pass, including new assertions that the rendered
+camera stays fixed from the first homeward step through credits and neither pan introduces an angular
+jump. Existing child visibility, terrain clearance and reveal checks still pass. Desktop and phone GPU
+captures cover the walk, doorway and final moon framing. Recording: `/tmp/updraft-crest-goodbye-preview.webm`.
+
+## Night before the door opens (2026-09-21)
+
+Jeremy asked to bring night forward by about five seconds, so the scene is dark and the floating lights
+are already playing when the door opens. The fade now begins during the last watch of the released
+plane, five seconds before the walk, and reaches its night target over 7.5 seconds with the existing
+soft response. The cygnet farewell and drawing still hold daylight for as long as needed. The earlier
+requirement to finish darkening after entry is superseded.
+
+Door-opening checks include the renderer's additional light easing and require darkness with the
+fireflies lit. Desktop and phone GPU captures show the floating lights already playing as the door
+opens; the desktop capture measures 80% night intensity at that moment.
+
+Build and all fifteen ending-view cases pass, including saved-game resumes. Updated recording with
+audio: `/tmp/updraft-earlier-night-preview.webm`.

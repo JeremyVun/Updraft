@@ -1,5 +1,5 @@
-/** Story moments the music answers. */
-export type Cue = 'breeze' | 'delight' | 'restored' | 'overhead' | 'skein' | 'fallen' | 'landed' | 'kindled' | 'comfort' | 'distress' | 'calling' | 'bugle' | 'becalmed' | 'filled' | 'feather' | 'lifted' | 'wave' | 'unfold' | 'release' | 'home' | 'finale';
+/** One-way story sound events; environmental calls do not duck the music. */
+export type Cue = 'foghorn' | 'star' | 'breeze' | 'delight' | 'restored' | 'overhead' | 'skein' | 'fallen' | 'landed' | 'kindled' | 'comfort' | 'distress' | 'calling' | 'bugle' | 'becalmed' | 'filled' | 'feather' | 'lifted' | 'wave' | 'unfold' | 'release' | 'home' | 'finale';
 
 const pending: Cue[] = [];
 

@@ -728,6 +728,16 @@ export class Dolphins {
   private clock = 0;
   private next = 0;
   private turn = 0;
+  private pushed = false;
+  private resumed = false;
+  resumeAfterSwim(): void { this.resumed = true; }
+  get leapComplete(): boolean {
+    return this.turn >= 1 || this.stunt?.kind === 'leap' && this.stunt.phase === 'back' && this.stunt.t >= tuning.dolphins.leapRecovery;
+  }
+  get farewellReady(): boolean {
+    return this.pushed && (!this.stunt || this.stunt.kind === 'push' && this.stunt.phase === 'back'
+      && this.stunt.t >= tuning.dolphins.nudgeRecovery);
+  }
   private camera = 1;
   private busy = false;
   private quiet = 0;
@@ -829,7 +839,10 @@ export class Dolphins {
     if (!this.here || dt <= 0) return;
     if (!this.wanted) {
       this.going += dt;
-      if (this.going > 7) {
+      this.speed = Math.max(3, this.speed);
+      this.boat.x += Math.sin(this.head) * this.speed * dt;
+      this.boat.z += Math.cos(this.head) * this.speed * dt;
+      if (this.going > tuning.dolphins.departureFor) {
         this.here = false;
         this.mesh.visible = this.ghost.visible = false;
         this.geo.instanceCount = 0;
@@ -846,7 +859,7 @@ export class Dolphins {
     const fx = Math.sin(this.head);
     const fz = Math.cos(this.head);
     for (const p of this.packs) this.steer(p, dt);
-    if (this.wanted || this.stunt) this.show(dt);
+    if (this.wanted) this.show(dt);
     const A = this.iA.array as Float32Array;
     const B = this.iB.array as Float32Array;
     const C = this.iC.array as Float32Array;
@@ -946,12 +959,12 @@ export class Dolphins {
       this.lane(p, p.rider ? -rand(10, 20) : -rand(16 + n * 6, 22 + n * 7));
       p.side = n % 2 ? 1 : -1;
       p.sideAt = p.side;
-      p.delay = p.rider ? rand(4, 9) : rand(0, 3) * n;
+      p.delay = n * tuning.dolphins.arrivalSpacing + rand(0, 1.5);
       n++;
     }
     for (const d of this.pod) {
       d.placed = false;
-      d.y = d.hold = -rand(1.6, 3.4);
+      d.y = d.hold = -tuning.dolphins.arrivalDepth - rand(0, 1);
       d.arc = 0;
       d.once = false;
       d.wet = 0;
@@ -964,7 +977,9 @@ export class Dolphins {
     this.stunt = null;
     this.clock = 0;
     this.turn = 0;
-    this.next = rand(tuning.dolphins.leapAt - 6, tuning.dolphins.leapAt + 9);
+    this.pushed = false;
+    this.next = rand(tuning.dolphins.leapAt - tuning.dolphins.leapSpread, tuning.dolphins.leapAt + tuning.dolphins.leapSpread);
+    if (this.resumed) { this.turn = 1; this.next = 12; this.resumed = false; }
   }
 
   /** How far out from the boat's track a lane sits: it opens out as the pack surges away from its station. */
@@ -993,7 +1008,7 @@ export class Dolphins {
 
   private steer(p: Pack, dt: number): void {
     if (p.delay > 0) p.delay -= dt;
-    p.entry = this.wanted ? Math.min(0, p.entry + dt * p.close) : p.entry - dt * 3;
+    if (this.wanted && p.delay <= 0) p.entry = Math.min(0, p.entry + dt * p.close);
     p.phase += dt * p.rate;
     const was = p.along;
     p.along = p.station + p.swing * Math.sin(p.phase) + p.entry;
@@ -1007,7 +1022,7 @@ export class Dolphins {
     this.clock += dt;
     const s = this.stunt;
     if (!s) {
-      const kind: Show = this.turn === 0 ? 'leap' : this.turn === 1 ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
+      const kind: Show = this.turn === 0 ? 'leap' : !this.pushed ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
       if (!this.busy && this.wanted && this.clock > this.next) this.begin(kind);
       return;
     }
@@ -1032,7 +1047,7 @@ export class Dolphins {
     let d: Dolphin | null = null;
     let nearest = -1e9;
     for (const other of this.pod) {
-      if (!other.adult || other.pack.rider) continue;
+      if (!other.adult || other.pack.rider || other.pack.delay > 0) continue;
       const score = side * other.across;
       if (score > nearest) {
         nearest = score;
@@ -1108,8 +1123,8 @@ export class Dolphins {
   private shove(s: Stunt, dt: number): void {
     const d = s.d;
     if (s.phase === 'out') {
-      this.glide(s, -16, s.side * 7, 0.8, dt);
-      if (s.t > 3.2 && (s.along < -9 || s.t > 7)) {
+      this.glide(s, tuning.dolphins.nudgeApproachAlong, s.side * tuning.dolphins.nudgeApproachAcross, 0.8, dt);
+      if (s.t > tuning.dolphins.nudgeApproachFor && (s.along < 0 || s.t > tuning.dolphins.nudgeApproachMax)) {
         s.phase = 'run';
         s.t = 0;
         d.held = null;
@@ -1118,8 +1133,8 @@ export class Dolphins {
     } else if (s.phase === 'run') {
       this.glide(s, -4.5, s.side * 2.8, 0.45, dt);
       /** It stops porpoising first: the last arc has to come down before it can lie alongside. */
-      if (s.t > 4.5) d.hurry = false;
-      if (s.t > 4.5 && d.arc === 0) {
+      if (s.t > tuning.dolphins.nudgeRunFor) d.hurry = false;
+      if (s.t > tuning.dolphins.nudgeRunFor && d.arc === 0) {
         s.phase = 'act';
         s.t = 0;
         /** High enough that the flank it rolls onto stays out of the water, where the child can see the eye. */
@@ -1132,6 +1147,7 @@ export class Dolphins {
         if (Math.abs(s.across) < SHOVE_ACROSS + 0.06 && s.along > SHOVE_ALONG - 0.4) {
           s.hit = true;
           s.t = 0;
+          this.pushed = true;
           this.onShove?.(s.side, 1);
         } else if (s.t > 6) {
           /** It could not get alongside; the boat is never shoved by a dolphin that is not there. */
@@ -1169,7 +1185,7 @@ export class Dolphins {
       this.stunt = null;
       this.turn++;
       const t = tuning.dolphins;
-      this.next = this.turn === 1 ? rand(t.pushAt - 8, t.pushAt + 12) : this.clock + rand(t.restLeast, t.restLeast + t.restSpread);
+      this.next = !this.pushed ? Math.max(this.clock + 2, rand(t.pushAt - 8, t.pushAt + 12)) : this.clock + rand(t.restLeast, t.restLeast + t.restSpread);
     }
   }
 
@@ -1178,8 +1194,9 @@ export class Dolphins {
     const p = d.pack;
     const surging = d.hurry || (p.up && !p.rider && p.delay <= 0 && this.wanted);
     if (d.arc === 0) {
-      if (d.held !== null) d.hold = d.held;
-      else if (!this.wanted) d.hold -= dt * 0.55;
+      if (!this.wanted) d.hold = -tuning.dolphins.arrivalDepth - 2;
+      else if (d.held !== null) d.hold = d.held;
+      else if (p.delay > 0) d.hold = -tuning.dolphins.arrivalDepth;
       else if (d.hurry) d.hold = BASE_Y;
       else {
         d.breath -= dt;
@@ -1188,7 +1205,7 @@ export class Dolphins {
       }
       const to = d.hold + Math.sin(time * 0.5 + d.seed * 9) * 0.06;
       const was = d.y;
-      d.y += (to - d.y) * ease(dt, surging || d.held !== null ? 1.6 : 0.5);
+      d.y += (to - d.y) * ease(dt, !this.wanted ? 1 : surging || d.held !== null ? 1.6 : 0.5);
       d.vy += ((d.y - was) / dt - d.vy) * ease(dt, 6);
       const up = d.lift > 0 || (d.held === null && (d.hurry || d.breath <= 0));
       if (up && this.wanted && Math.abs(d.y - BASE_Y) < 0.1) {

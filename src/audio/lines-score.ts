@@ -1,3 +1,4 @@
+import { JOURNEY_THEME, polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 /** The approved Lines study, divided by the three curtains, family clothes, doorway and far shore. */
 export type LinesScorePhase = 'first' | 'second' | 'third' | 'family' | 'door' | 'shore';
 interface Note { voice: 'pad' | 'soft-reed'; midi: number; at: number; duration: number; level: number; pan: number }
@@ -21,11 +22,13 @@ export const LINES_AUDITION_NOTES: readonly Note[] = [
     .map(([at, midi, duration, level]): Note => ({ voice: 'soft-reed', at, midi, duration, level, pan: -.1 })),
 ].sort((a, b) => a.at - b.at);
 
-interface Section { seconds: number; notes: readonly Note[]; chords: { at: number; tones: readonly number[] }[] }
-const section = (from: number, to: number, seconds: number): Section => ({ seconds,
+interface Section extends Phrase<Note> { chords: { at: number; tones: readonly number[] }[] }
+const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: LINES_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
   chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
-});
+}, from === 0 ? { to: 8, melody: JOURNEY_THEME.slice(0, 3).map((midi, i): Note => ({
+  voice: 'soft-reed', midi, at: [2, 4, 5.4][i], duration: 1.3, level: [0.011, 0.01, 0.009][i], pan: -.1,
+})) } : {});
 export const LINES_SECTIONS: Record<LinesScorePhase, Section> = {
   first: section(0,22,26), second: section(22,34,18), third: section(34,47,18),
   family: section(47,54,18), door: section(54,63,12), shore: section(63,Infinity,16),
@@ -48,13 +51,13 @@ export class LinesScore {
 
   chordAt(when: number): readonly number[] {
     const part = this.current, pattern = LINES_SECTIONS[part?.phase ?? 'first'];
-    const time = part ? Math.max(0, when - part.epoch) % pattern.seconds : 0;
+    const time = part ? phrasePosition(pattern, part.epoch, when) : 0;
     let chord = pattern.chords[0].tones;
     for (const next of pattern.chords) { if (next.at > time) break; chord = next.tones; }
     return chord;
   }
 
-  update(phase: LinesScorePhase, level: number, melodyLevel: number, quiet = false): void {
+  update(phase: LinesScorePhase, level: number, melodyLevel: number, quiet = false, until = Infinity): void {
     if (this.stopped) return;
     const now = this.ctx.currentTime;
     this.bus.gain.setTargetAtTime(level, now, .8);
@@ -69,15 +72,13 @@ export class LinesScore {
     // Cue space also quiets a retiring phrase, including its scheduled lookahead notes.
     for (const part of this.parts) part.melody.gain.setTargetAtTime(quiet ? 0 : melodyLevel, now, quiet ? .06 : .5);
     const part = this.current, pattern = LINES_SECTIONS[phase];
-    const cycle = Math.floor(Math.max(0, now - part.epoch) / pattern.seconds);
-    if (cycle > part.cycle) { part.cycle = cycle; part.next = 0; }
-    for (;;) {
-      const note = pattern.notes[part.next], at = part.epoch + part.cycle * pattern.seconds + note.at;
-      if (at > now + .25) break;
-      // Missed or masked attacks expire; they never queue behind a cue or a stalled frame.
-      if (at >= now - .04 && !(quiet && note.voice === 'soft-reed')) this.play(part, note, Math.max(now + .008, at));
-      if (++part.next === pattern.notes.length) { part.next = 0; part.cycle++; }
-    }
+    schedulePhrase(part, pattern, now, (note, at) => {
+      if (!(quiet && note.voice === 'soft-reed')) this.play(part, note, at);
+    }, until);
+  }
+
+  handoffAt(now: number): number {
+    return this.current ? phraseHandoff(LINES_SECTIONS[this.current.phase], this.current.epoch, now) : now;
   }
 
   stop(fade = 1.8): void {
@@ -91,7 +92,9 @@ export class LinesScore {
     if (part.stopped) return;
     part.stopped = true;
     const now = this.ctx.currentTime;
-    part.bus.gain.cancelAndHoldAtTime(now); part.bus.gain.linearRampToValueAtTime(0, now + fade);
+    part.bus.gain.cancelAndHoldAtTime(now);
+    part.bus.gain.setValueAtTime(part.bus.gain.value, now);
+    part.bus.gain.linearRampToValueAtTime(0, now + fade);
     for (const voice of part.voices) voice.stop(now + fade);
     if (!part.voices.size) this.finish(part);
   }

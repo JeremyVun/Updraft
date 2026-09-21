@@ -27,7 +27,9 @@ Anything that appears later in the story (the whale, rain, fireflies, the drawin
 
 ## Frame order (`frame()` in `main.ts`)
 
-1. Measure the real frame interval once for telemetry and the quality governor. `gl/frame-time.ts` accepts up
+1. `gl/frame-pacer.ts` limits normal play to 60 presentations/s (30 on Low), skipping excess display callbacks
+   before input, simulation or rendering. `shot` bypasses pacing. Measure actual elapsed time between presented
+   frames for telemetry and simulation. `gl/frame-time.ts` accepts up
    to 100 ms and divides it into at most three world updates, each no larger than 1/30 s. Ordinary 30–144 fps
    updates remain single steps, avoiding duplicated CPU work around 60 fps. The GPU wind keeps its separate
    fixed 60 Hz clock: at most six wind ticks per rendered frame.
@@ -54,6 +56,35 @@ the origin and populate them during update. Reading them sooner caused a one-fra
 the origin. Retaining the view avoids an extra zero-time gameplay update at every transition; startup and
 checkpoint restoration still perform their existing zero-time setup before the first camera cut.
 
+## Cinematography (`src/camera.ts`, `src/camera-direction.ts`)
+
+Chapters supply a preferred composition and the subjects that must share it. Optional `Shot.attention`
+names a meaningful point, its presence and share of the gaze, and an optional preferred encounter angle.
+The shared director resolves that attention independently of the physical follow anchor. The whale and
+village church use this contract: changing focus turns the lens instead of translating the whole view.
+
+Subject-relative turns preserve distance and ease their angular velocity, including across chapters.
+Every half second, the director compares five nearby angles within 0.22 radians of the preferred view.
+It considers required framing distance and terrain clearance, favours the authored angle, and requires
+a material improvement and a 3.5-second hold before changing preference. It does not pan because a timer
+expired. Subject fitting accepts additional scene bounds (the sky mirror supplies its three returned stars),
+while retaining the primary when a group cannot fit within its retreat budget. Terrain correction remains
+a safeguard. Rooms can supply static `Shot.obstacles`: the drowned village builds bounds for roofs,
+chimneys and substantial branches once. Scalar sightline checks anticipate those bounds and smoothly
+raise the eye within a bounded height and speed, including the previous subject-fitting offset.
+No per-frame scene graph search, mesh raycast, GPU pass or readback is added; the work reuses its vectors.
+
+Scripted beats and explicit wind/piano interactions suppress optional angle selection. A placed `eye`
+retains its world-space approach, and `composition: 'hold'` preserves staged motion such as the pond's
+path beside the bank. `exact` preserves the doorway's own continuous choreography and resets residual
+motion/fitting state. Carry uses a physical `carryAnchor`, rejects anchor-identity changes and teleports,
+and accepts legitimate movement at low frame rates. Zero-time preparation cannot advance the camera.
+
+Feel values live in `tuning.cinematography`. `tools/camera-direction-check.mjs` covers orbital clearance,
+turn acceleration/rate, carry at 10–120 Hz, attention, stable composition choices, interaction holds,
+exact-path exits and portrait resizing. Its CPU microbenchmark measures the new decision layer alone;
+it is not a phone frame-rate or rendering benchmark.
+
 ## Readbacks (`src/gl/readback.ts`)
 
 The wind field, the life field and the height bake are read back to the CPU for gameplay. In Chrome, mapping a read buffer blocks until the GPU process has executed every command issued before the map, so a readback issued and mapped mid-frame stalls for the whole frame's rendering, and a GPU-bound frame turns into a CPU stall too (that was the original stutter: 60-140 ms every few frames).
@@ -65,12 +96,14 @@ If the GPU stays behind (a saturated device, or another process on the GPU), the
 ## Quality governor (`src/gl/quality.ts`)
 
 The bottom-right Graphics quality selector offers Auto, High, Medium and Low. Auto is the default and
-adapts in both directions. High holds full world detail at device pixel ratio (capped at 2); Medium holds
+adapts in both directions. High holds full world detail at device pixel ratio (capped at 1.5); Medium holds
 80% grass with 95% reach at at most 1× scale with up to two MSAA samples; Low holds 55% grass with
 85% reach at 0.85× scale (relative to the lesser of DPR and 1), also with up to two samples. Low prioritises
-a fuller meadow with 30 fps acceptable; this is a visual budget, not a frame cap or a guaranteed device fps.
+a fuller meadow and caps presentation at 30 fps. Auto, High and Medium cap at 60; these are ceilings, not
+guaranteed device frame rates. The wind retains its fixed 60 Hz simulation on every preset.
 Manual settings never respond to frame intervals.
-Switching back to Auto keeps the current level and resets its timing and failed-climb penalty.
+Switching back to Auto keeps the current level if within its sustained budget, otherwise reduces it immediately,
+and resets timing and the failed-climb penalty.
 The choice persists separately from story progress in `updraft.quality.v1`; unavailable storage falls back
 to Auto without preventing session changes. Shot mode and explicit graphics overrides ignore the saved
 choice and hide the selector. `node tools/quality-setting-check.mjs` checks the real control, full-grass
@@ -85,13 +118,15 @@ that exceeds the pixel budget, and applies its multisampling before allocating t
 resets its timing when play begins or page visibility changes: time behind Begin or in another tab cannot earn
 a quality increase. `node tools/quality-check.mjs` verifies these cases and normal adaptation.
 
-The governor targets 60 fps on every device. Every 1.5 seconds it reviews up to 90 real frame intervals,
+The governor targets 60 fps on every device. Every 1.5 seconds it reviews up to 90 frame timing samples,
 discarding the slowest 5%. A trimmed mean above 17.6 ms lowers quality; a sustained p90 below 17.2 ms for
 12 seconds earns one increase. Failed increases double the next wait, up to two minutes. A single hitch or
 hidden-tab time cannot earn a change. A new level settles for 2.5 seconds after a reduction, one second after
-an increase.
+an increase. Pacing reports the longest display callback interval since the preceding presentation, with a
+16.67 ms floor: intentionally skipped 120/144 Hz callbacks cannot masquerade as overload, but actual missed
+callbacks still count. Actual elapsed time, including skipped callbacks, always reaches gameplay.
 
-The ladder lowers render scale from DPR (capped at 2) to 1, then multisampling to 2, then world detail,
+The ladder lowers render scale from DPR (capped at 1.5) to 1, then multisampling to 2, then world detail,
 before resorting to subpixel scales of 0.85 and 0.72. A final Auto-only fallback retains the old 25% density
 and 70% reach at 0.72× for devices still overloaded; selecting Low never chooses that fallback. Auto still
 targets 60 fps. Full grass recovers before extra antialiasing. World detail controls:
@@ -103,8 +138,9 @@ targets 60 fps. Full grass recovers before extra antialiasing. World detail cont
 | Low | 55% | 85% | 1.1 | Alternate frames | 0.5 |
 | Auto fallback | 25% | 70% | 1.1 | Alternate frames | 0.5 |
 
-The opening pixel budget is 2.2 million. Touch starts at medium world detail and at most 1.25× render scale;
-this is only a starting point. It has the same full-quality ceiling as a mouse device. The governor restores
+Auto's sustained pixel budget is 2.4 million, re-evaluated on resize/fullscreen. Touch also has a sustained
+1.25× ceiling and starts at medium world detail; it can recover full grass. High permits 1.5× on both touch
+and mouse. Smooth vsync cannot prove spare power, so Auto never climbs beyond its budget. The governor restores
 full grass before climbing above 1×. Grass grows/shrinks in place over one second while its distance rings
 move continuously. Tables reserve capacity for all levels at boot; quality changes do not allocate or
 recompile grass resources. The lowest density skips fine populations after the fade completes.
@@ -129,7 +165,7 @@ establish adaptation and rendering correctness; they do not establish frame rate
 
 Jeremy prefers fuller Medium/Low grass and accepts 30 fps on Low. The selected values are 80% density/95%
 reach for Medium at 1× scale, and 55%/85% for Low at 0.85×. The 25%/70% at 0.72× fallback remains
-available only to Auto. Presets keep the same simulation fidelity and do not cap frame rate.
+available only to Auto. These September 20 comparisons preceded the presentation caps added September 21.
 
 `node tools/quality-budget-profile.mjs` compares frozen cameras in the island, meadow and sky mirror on
 local Chrome/Metal, M4 Pro, 1280×800 CSS pixels, 2× MSAA. Each comparison changes one setting, plus two
@@ -164,6 +200,249 @@ Medium deltas span −0.41 to +1.46 ms on the island and −1.34 to +1.46 ms in 
 Low delta spans +1.17 to +2.63 ms on the island, −1.59 to +3.34 ms in the meadow. Density-only 25% → 55%
 was positive in all five pairs in both land views. Resolution 1× → 2× was consistently much more
 expensive than adding the grass. These results justify trying the richer presets, not an FPS guarantee.
+
+### Battery and sustained rendering (2026-09-21)
+
+Jeremy reported a full playthrough on an M5 iPad Pro using **High** consumed about 20% battery and made the
+device warm. High bypassed adaptation, so Auto's former tendency to climb to full Retina does not explain
+that particular run. The code also rendered on every display callback without a 60 fps limit; the actual
+callback rate on Jeremy's iPad was not recorded.
+
+Changes: 1.5× maximum scale for High, 1.25× for touch Auto within its sustained pixel budget, 60 fps
+presentation limit (30 on Low), and exact-opacity shortcuts for hidden water shading. Ordinary sea covered
+completely by fog returns the fog colour. Fully reflective sky-mirror water skips ordinary sea shading and
+fog, which its reflection replaces. Its partially reflective edge still computes and blends both surfaces.
+Full world detail, grass populations, lighting, wind grid/solver and water geometry are retained on High.
+On a 2× display, 1.5× submits 43.75% fewer scene pixels. MSAA stays at two samples on those displays;
+reducing scale must not accidentally switch it to four. Explicit `?ratio=2` still reproduces the old resolution.
+
+`node tools/power-profile.mjs` uses Chrome/Metal on the local M4 Pro at 1376×1032 CSS pixels and 2× MSAA.
+Five interleaved A/B/B/A or B/A/A/B rounds compare frozen views, waiting for GPU completion after each
+12-draw batch. Work includes the wind solver, sea reflection and post chain, but excludes story updates,
+other world simulations and readbacks. These are **completed-work throughput costs, not FPS, watts or iPad
+battery measurements**. Background contention differed between the High and Auto experiments; compare
+paired deltas within each experiment, not their absolute times with one another.
+
+| Scene | Old 2× → new High 1.5× | Paired cost reduction range | Old 2× → touch Auto ceiling 1.25× |
+| --- | ---: | ---: | ---: |
+| Still island | 26.3% | 6.06–6.78 ms | 42.2% |
+| Meadow landing | 25.9% | 4.80–6.99 ms | 37.2% |
+| Sea | 31.6% | 6.14–10.52 ms | 44.1% |
+| Sky mirror | 37.1% | 9.15–9.99 ms | 51.0% |
+| Wood | 31.4% | 7.57–9.44 ms | 42.9% |
+
+Percentages are medians of paired changes. Every High/resolution pair improved in all five rounds.
+High's tradeoff is slight softness at fine edges. Frozen comparisons preserve composition, grass density,
+light and reflections; they do not establish aliasing behavior throughout an entire moving playthrough.
+Captures: `/tmp/updraft-power-<chapter>-{retina,high,auto}.png`.
+
+The isolated fog shortcut saved a median 1.67 ms in the opening view, but one pair changed sign. Other
+views were within noise, so no universal speedup is claimed. At fixed resolution its final pixels were
+identical in four scenes; the meadow differed in five color channels by 1/255, out of 8.88 million channels.
+Raw paired runs: `/tmp/updraft-power-profile.log` and `/tmp/updraft-power-high.log`. The script also writes
+JSON; `PAIR=retina-to-high` restricts a repeat to that comparison.
+
+A subsequent isolated mirror-shading comparison at 1.5× saved another **23.1%** in the mirror view
+(median paired 2.30 ms; every pair saved 2.07–3.05 ms), with no resolution or reflection-quality change.
+Its final image differed in 23 channels by 1/255. This shader change was added after the table's resolution
+measurements; those gains are not additive percentages. `PAIR=mirror-shading node tools/power-profile.mjs mirror island`
+repeats it with an ordinary-island control. The parity check also exercises mirror appearance at .999, .5
+and zero so the fade back to ordinary sea cannot bypass its blend. Evidence: `/tmp/updraft-power-mirror.log`.
+
+`tools/frame-pacer-check.mjs` checks cadence at 30–144 Hz, stalls, resume and preset changes.
+`tools/power-browser-check.mjs` drives the actual renderer/game loop with controlled callbacks: 60 or 30
+renders per simulated second, 60 wind ticks, unchanged game time, and hidden-page resume. This establishes
+work counts and timing, not sustainable hardware performance. The real quality-menu check covers saved
+presets, manual holds, keyboard selection, full grass restoration and the new High scale.
+
+Next acceptance check is a physical iPad A/B over the same route, brightness, audio volume and duration,
+starting cool and unplugged. Record battery drain, device warmth and sustained frame intervals on High
+and Auto. Safari's actual display-callback rate determines whether the 60 fps ceiling contributes savings.
+Do not convert the desktop throughput reductions into battery percentages. For investigating remaining
+cost, [WebKit's energy guidance](https://webkit.org/blog/8970/how-web-content-can-affect-power-usage/)
+and [CPU timeline](https://webkit.org/blog/8993/cpu-timeline-in-web-inspector/) describe Safari's power tools.
+
+### Draw and CPU audit (2026-09-21)
+
+`tools/frame-profile.mjs` now records raw Chrome CPU profiles, frame CPU duration, and draw/triangle counts
+by pass and owning world object. The first audit sampled nine chapter entries at High's 1.5× scale,
+1376×1032 CSS pixels, 2× MSAA, with audio running on the local M4 Pro. CPU sampling and the instrumented
+draw census run separately. These are short fixtures, not a continuous journey or Safari/iPad capture.
+
+Most chapters used 1.7–2.1 ms median JavaScript/frame; Birches used 6.8 ms. Its scarf rebuild accounted for
+about 5 ms/frame, including 2.7 ms in `computeVertexNormals`. `gl/indexed-normals.ts` retains the same
+triangle accumulation and Float32 rounding using packed arrays. Fifteen real scarf states (all release
+counts, calm and strong wind) match Three.js normals exactly. Eight interleaved microbenchmark pairs
+measured 3.26 → 0.37 ms median, an 89% reduction in that calculation. Separate browser runs with old/new
+normal code measured whole-frame CPU medians of 7.1 → 4.2 ms and p90 of 8.2 → 4.8 ms. Geometry, cloth
+physics and detail are unchanged; contact/release/checkpoint checks pass.
+
+The draw audit confirmed wasted submissions. Washing had a 10,000-unit bounding sphere: its vertex
+shader rejected distant sheets only after submission. The opening tree and pond disabled frustum culling.
+Their bounds now include their world-space instances and animation margins; each camera, including the
+reflection camera, can cull independently. Initial frozen comparisons removed 154,220–175,452 triangles
+and 5–7 calls in distant scenes, with identical final pixels in nine chapter samples. Paired completion
+times were within noise; this is a proven reduction in submitted work, not a measured battery/FPS gain.
+An additional 15 near/edge views of full tree foliage, pond and washing also matched exactly.
+
+Costs observed in that baseline (before these bounds and the concurrent journey-room scoping changes):
+
+- Land-heavy entry views submit roughly 1.3–1.7 million triangles/frame. Grass accounts for roughly
+  0.6–0.9 million. It already selects tiles by camera frustum and distance; terrain also has its own
+  culling/LOD. Their disabled Three.js culling flags are intentional, unlike the fixed objects above.
+- Drowned village meshes still disable culling and update outside their room. About 31,000 triangles
+  remain submitted in several unrelated chapters; hiding them changed no pixels in those fixtures.
+  Birches also submits about 428,000 triangles in the adjacent drowned entry view. Conservative animated
+  bounds and smaller spatial batches need testing; chapter-only visibility risks popping during travel.
+- Wind submits 22 small draws/tick including its readback reduction; petals run two simulation passes
+  and submit 16,384 triangles even in distant rooms. Water waves and cloud shadows add one pass each.
+  Bloom uses 12 intermediate draws, plus its blend, scene resolve and final grade. Offscreen targets are
+  often necessary calculations, not evidence of offscreen scenery rendering.
+- Frozen omission trials attributed about 0.4–1.1 ms to wind, 0.4–1.0 ms to bloom and 1.1–1.7 ms to grass
+  in the land views. The sky-mirror reflection cost about 1.16 ms (14%) in its fixture. These are completed
+  workload deltas, not hardware GPU timers, and are not additive. Omitting water sometimes made rendering
+  slower by exposing other work; triangle counts alone do not identify the largest cost.
+
+Raw audit: `/tmp/updraft-frame-census.json`, `/tmp/updraft-frame-census-<chapter>.cpuprofile`.
+Frozen omissions: `/tmp/updraft-frame-profile.json`; culling: `/tmp/updraft-culling-profile.json` and
+`/tmp/updraft-culling-edges.json`; scarf: `/tmp/updraft-scarf-{before,after}.json` and
+`/tmp/updraft-scarf-normals.json`. The profiler is test-only; no production instrumentation was added.
+
+Jeremy identified walking through Meadow and over its hill as the worst part on iPad. Follow-up CPU and
+draw profiles use arranged walk/crest states, then let the game run normally. Other tasks were editing the
+shared checkout, so the final runs used `/tmp/updraft-perf-snapshot` on port 5231, with a source hash manifest,
+and included the new journey-room scoping in both live frames and frozen comparisons.
+
+| Meadow fixture | Median frame CPU | p90 frame CPU | Grass draw cost when omitted | Grass-table draws/frame |
+| --- | ---: | ---: | ---: | ---: |
+| Walk | 3.0 ms | 8.0 ms | 1.70 ms / 11.7% | 0.80 |
+| Crest | 3.2 ms | 6.5 ms | 2.85 ms / 15.2% | 0.10 |
+
+These views submit about 100,000–106,000 blades and 1.6 million triangles. Readbacks were repeatedly
+deferred and eventually forced. The CPU samples contain uninterrupted `getBufferSubData` spans up to
+70 ms on the walk and 90 ms at the crest, with three spans over 16 ms in each six-second profile.
+The wider fixture counters, including warm-up, report worst waits of 84–90 ms. Short typical CPU frames plus backlogged
+GPU work point to rendering pressure causing stalls; this is desktop evidence, not a Safari diagnosis.
+Forcing all three grass tables to rebuild every draw added no consistent completion cost (median 0.015 ms,
+range −0.015 to +0.285 ms). Moving the sky after opaque geometry also had mixed-sign pairs. Neither
+experiment justifies a production change. Reducing grass density was not selected from these results.
+
+A subsequent same-resolution shader comparison found useful work to remove: `grassTint` computed
+pasture, wild-meadow and woodland noise even where their blend weights were exactly zero. It now skips
+those unused terms; transition regions still compute both sides. This shared function colours the terrain
+and cached blades. Six interleaved pairs per view measured:
+
+| View | Median completed-work saving | Relative reduction | Paired saving range |
+| --- | ---: | ---: | ---: |
+| Meadow walk | 0.88 ms | 6.0% | 0.19–3.58 ms |
+| Meadow crest | 1.01 ms | 7.0% | 0.54–1.39 ms |
+| Opening island | 0.56 ms | 5.1% | 0.21–0.79 ms |
+| Wood | 0.48 ms | 4.2% | 0.27–0.70 ms |
+| Sleeping | 0.48 ms | 4.0% | 0.03–1.01 ms |
+
+All 30 pairs improved; all five terrain comparisons had identical final pixels. Timing isolates the terrain
+shader change, without counting any possible blade-table saving. The test's `full-tint` variant forces the
+three formerly unconditional noise calculations back on. This remains a throughput comparison, not FPS
+or battery savings, and percentages cannot be added to the earlier resolution improvements.
+Evidence: `/tmp/updraft-meadow-fixed.json` and its two `.cpuprofile` files;
+`/tmp/updraft-meadow-bakes.json`, `/tmp/updraft-meadow-tint.json`, `/tmp/updraft-tint-parity.json`.
+The last file also compares regenerated blade tables against the unconditional shader: all five views
+match exactly, with no browser errors. Both the current checkout and the isolated snapshot build pass.
+
+The grass omission percentage is a **net saving**, not grass's standalone share: deleting geometry can
+expose more expensive terrain or water behind it. A follow-up used the same isolated source snapshot,
+five interleaved pairs per experiment, and 12 completed draws per batch. Its shorter live warm-up produces
+slightly different walk/crest states from the first capture; compare variants within each frozen fixture.
+
+| Diagnostic change | Walk saving | Crest saving |
+| --- | ---: | ---: |
+| Simple terrain surface colour, keeping terrain geometry, normals, room discard and fog | 7.37 ms / 45.9% | 7.62 ms / 49.5% |
+| Omit grass | 2.71 ms / 16.7% | 1.97 ms / 13.9% |
+| Copy the HDR/MSAA scene directly to screen, bypassing bloom and final grade | 1.23 ms / 7.6% | 1.26 ms / 8.2% |
+| Flat sky colour | 0.55 ms / 3.3% | No consistent saving |
+| Omit characters, animals, kites, petals and wind lines | 0.29 ms / 1.8% | 0.60 ms / 3.9% |
+| Omit wind simulation | No consistent saving | 0.58 ms / 3.7% |
+
+All ten terrain-simplification pairs improved (walk 6.65–7.76 ms, crest 7.42–7.79 ms). Calls and triangle
+counts stayed unchanged. This identifies detailed terrain surface shading as the largest measured target;
+it does **not** establish that a visually acceptable replacement can save the same amount. These diagnostic
+materials are test-only and intentionally change pixels. Even removing terrain entirely saved less than
+simplifying its surface, demonstrating why deletion deltas cannot be treated as an additive frame budget.
+The earlier water/reflection comparisons are separate evidence, not extra percentages to add to this table.
+
+Reproduce with `ABLATIONS=terrain-flat,sky-flat,wind,post,actors,grass,grass+terrain-flat,terrain` on
+`tools/frame-profile.mjs`. Raw evidence: `/tmp/updraft-meadow-costs.json`; captured source hashes:
+`/tmp/updraft-meadow-costs-manifest.json`. Both views completed without browser errors. Surface colour/noise
+caching and skipping unused terrain calculations deserve priority over reducing Meadow's width.
+
+### Static field-pattern cache (`world/terrain-fields.ts`)
+
+The ground no longer reconstructs Meadow's fixed field pattern for every visible fragment. A 1024² RGBA16F
+texture stores boundary distance, field kind, wall/gate identity and coastal presence. It is compiled with
+the other bake shaders and filled once before Begin; it uses 8 MiB and does not follow the moving wind
+window. The atlas bounds derive from Meadow's geography. Bilinear sampling replaces the 9-cell nearest-site
+and 25-cell boundary searches inside fields. Near field edges, wall lines, gates and the coastal transition,
+the original function still runs to preserve sharp identities and narrow marks. Outside the atlas it also
+uses the original function.
+
+This caches the fixed pattern, not the final lit colour. Grey-to-colour life, season, wind, shadows, fog,
+frost, shore movement and lighting remain live. No grass population, landscape or render scale changes.
+
+Five interleaved pairs per frozen High view, on a new fixed source snapshot, measured a median **2.42 ms /
+16.6%** reduction in completed rendering work on the walk and **2.82 ms / 18.0%** at the crest. All ten pairs
+improved. Walk pixels matched exactly; the crest differed in 19 colour channels, each by 1/255. These are
+desktop throughput comparisons against the original field calculation, not iPad FPS or battery results.
+
+`tools/terrain-fields-check.mjs` compares over a million sample locations across the atlas at three wall
+widths. Maximum field-colour error was 0.00071 in linear colour; maximum wall-mask error was below 3e-8.
+Eighteen rendered comparisons cover grey/partial/full life and three seasons, both with grass and with the
+ground exposed: maximum channel difference 1/255. Repeated bake calls submit no draws; a warm one-off
+rebake completed in 15.4 ms in this check. Evidence: `/tmp/updraft-fields-first-valid.json` and
+`/tmp/updraft-terrain-fields-check.json`; source snapshot: `/tmp/updraft-field-cache-snapshot`.
+Five additional frozen views passed: Meadow's pond and piano differed by at most 1/255 per channel;
+Island, Wood and Sleeping matched exactly (`/tmp/updraft-fields-regression.json`).
+
+### Shared static ground-colour patterns (`world/terrain-colour.ts`)
+
+A second atlas extends the technique across all islands: the opening island, named journey islands,
+doorway shore and sky mirror. It stores four low-frequency noise inputs for dry, cool and pasture grass
+colour and field grain. The final palette, season, grey-to-colour life, wind movement, shadows, frost,
+shore and lighting remain live. Fine woodland, soil and frost details still use the original calculation.
+World-aligned samples agree across overlapping patches; a two-texel edge blend returns to the original
+function outside the padded island bounds.
+
+The shared 1024×1376 RGBA16F atlas is baked once before Begin and consumes **10.75 MiB**, bringing the
+two static terrain caches to **18.75 MiB**. These are runtime GPU allocations, not downloadable image
+assets, and the allocation is shared by the entire journey rather than repeated per island. Repeated bake
+calls submit zero draws. One warm rebake took 4.7 ms; this is not a cold-start compilation measurement.
+
+Four interleaved pairs per frozen High view measured the following reductions in completed rendering work
+against direct colour-noise calculations. The Meadow field cache is enabled on both sides.
+
+| View | Median saving | Relative reduction |
+| --- | ---: | ---: |
+| Opening island | 0.66 ms | 5.6% |
+| Washing | 0.51 ms | 4.6% |
+| Little boats | 0.61 ms | 5.5% |
+| Meadow crest | 1.16 ms | 10.0% |
+| Birches | 0.69 ms | 6.2% |
+| Wood | 0.89 ms | 7.7% |
+| Sleeping | 0.90 ms | 7.9% |
+| Home jetty | 0.63 ms | 5.8% |
+
+All 32 pairs improved. Seven views matched exactly; Meadow's crest differed by at most 1/255 per channel
+(mean 0.000624/255), with no noticeable difference in the reviewed images. These are local Chrome/Metal
+throughput comparisons, not hardware GPU timers, gameplay FPS or iPad battery measurements. The savings
+are incremental to the earlier field cache and cannot be added to its percentages.
+
+The shared tint-function refactor matches the original formula within 5.96e-8 linear colour. GPU sample
+checks cover all 11 atlas patches at three seasons; maximum cached tint error was 0.0081 linear colour,
+with worst patch mean 0.00021. Eighteen rendered life/season pairs, with and without grass, differed by
+at most 1/255. Evidence: `/tmp/updraft-colour-first.json`, `/tmp/updraft-terrain-colour-check.json`;
+fixed source snapshot: `/tmp/updraft-colour-cache-snapshot`.
+Extended distant-ground captures (`GROUND_VIEW=1`) and Drowned/Mirror/Sea timing runs were queued
+behind another GPU capture and cancelled before acquiring the lock. They are not part of the completed
+visual or performance evidence above.
 
 ## Post chain (`src/post/post.ts`)
 

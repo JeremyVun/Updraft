@@ -13,8 +13,8 @@ import { audioPage, wav } from './lib/audio-render.mjs';
 const dir = path.resolve(process.argv[2] ?? '/tmp/updraft-transition-proposals');
 fs.mkdirSync(dir, { recursive: true });
 const snapshot = fs.mkdtempSync(path.join(os.tmpdir(), 'updraft-transition-source-'));
-const sources = ['src/audio/audio.ts', 'src/audio/little-boats-score.ts', 'src/audio/sea-score.ts',
-  'src/audio/sleeping-score.ts', 'src/audio/meadow-score.ts', 'src/audio/birches-score.ts', 'src/audio/lines-score.ts', 'src/tuning.ts'];
+const sources = ['src/audio/audio.ts', 'src/audio/arrival-music.ts', 'src/audio/gesture-harmony.ts', 'src/audio/little-boats-score.ts', 'src/audio/sea-score.ts',
+  'src/audio/sleeping-score.ts', 'src/audio/meadow-score.ts', 'src/audio/birches-score.ts', 'src/audio/lines-score.ts', 'src/audio/dream-score.ts', 'src/audio/dream-score-data.ts', 'src/audio/foghorn.ts', 'src/tuning.ts'];
 const hashes = {};
 for (const file of sources) {
   const text = fs.readFileSync(file, 'utf8'), target = path.join(snapshot, file);

@@ -142,6 +142,8 @@ for (const portrait of [false, true]) {
   let rescueLight = null, rescueAt = 0;
   let approachClearance = Infinity;
   let previousEye = null, firstLightCameraStep = 0;
+  const departureEmbers = new Set();
+  let shoreWithoutLight = false;
   for (let frame = 1; frame <= 30 * 400; frame++) {
     const dt = 1 / 30, time = frame * dt;
     const target = c.windInvitation;
@@ -200,6 +202,12 @@ for (const portrait of [false, true]) {
     if (c.beat === 'out') {
       assert(plane.held, 'retrieved plane stays safely held');
       assert.notEqual(c.windInvitation, plane.position, 'held paper must never ask for wind');
+      if (c.ahead) departureEmbers.add(c.chainAt);
+      else {
+        assert.equal(c.windInvitation, null, 'the open shore must not ask for another ember');
+        embers.clearCoals();
+        shoreWithoutLight = true;
+      }
     }
     if (c.beat !== last) { console.log(`${portrait ? 'portrait' : 'desktop'} route: ${c.beat} at ${time.toFixed(1)}s`); last = c.beat; }
     if (target && target === c.windInvitation && !child.moving && waited > 5) {
@@ -217,6 +225,8 @@ for (const portrait of [false, true]) {
     if (c.done) { complete = true; break; }
   }
   assert(complete, `route must complete: ${c.beat}, leg ${c.leg}, child ${child.position.toArray()}`);
+  assert.equal(departureEmbers.size, 1, 'only one forest ember remains after paper retrieval');
+  assert(shoreWithoutLight, 'boarding must remain possible after the last forest light goes out');
   assert(worstWaitFrame < 0.95, `waiting target must remain in frame: ${JSON.stringify(worst)}`);
   assert.equal(scrambleCount, 1, 'one audible feather scramble per escape');
   assert(sawCoax, 'the child must coax the cygnet out before lifting it');

@@ -1,3 +1,4 @@
+import { polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 /** Approved Meadow background: the walk after the piano, migration, paddle and onward companionship. */
 export type MeadowScorePhase = 'walk' | 'flock' | 'pond' | 'return';
 type Voice = 'pad' | 'soft' | 'pluck';
@@ -20,10 +21,11 @@ export const MEADOW_AUDITION_NOTES: readonly Note[] = [
     .map(([at, midi, level]): Note => ({ voice: 'pluck', at, midi, duration: 2.7, level, pan: -.22 })),
 ].sort((a, b) => a.at - b.at);
 
-interface Section { seconds: number; notes: readonly Note[] }
-const section = (from: number, to: number, seconds: number): Section => ({ seconds,
+interface Section extends Phrase<Note> { chords: { at: number; tones: readonly number[] }[] }
+const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: MEADOW_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
-});
+  chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
+}, { loopFrom: from === 50 ? 4 : 0 });
 export const MEADOW_SECTIONS: Record<MeadowScorePhase, Section> = {
   walk: section(0, 20, 24),
   flock: section(20, 37, 18),
@@ -53,7 +55,15 @@ export class MeadowScore {
     this.bus = ctx.createGain(); this.bus.gain.value = 0; this.bus.connect(output);
   }
 
-  update(phase: MeadowScorePhase, level: number): void {
+  chordAt(when: number): readonly number[] {
+    const part = this.current, pattern = MEADOW_SECTIONS[part?.phase ?? 'walk'];
+    const time = part ? phrasePosition(pattern, part.epoch, when) : 0;
+    let tones = pattern.chords[0].tones;
+    for (const chord of pattern.chords) { if (chord.at > time) break; tones = chord.tones; }
+    return tones;
+  }
+
+  update(phase: MeadowScorePhase, level: number, until = Infinity): void {
     if (this.stopped) return;
     const now = this.ctx.currentTime;
     this.bus.gain.setTargetAtTime(level, now, 0.8);
@@ -66,14 +76,11 @@ export class MeadowScore {
     }
     const part = this.current, pattern = MEADOW_SECTIONS[phase];
     // Suspension freezes audio time. A stalled game frame skips missed notes instead of bunching them up.
-    const cycle = Math.floor(Math.max(0, now - part.epoch) / pattern.seconds);
-    if (cycle > part.cycle) { part.cycle = cycle; part.next = 0; }
-    for (;;) {
-      const note = pattern.notes[part.next], at = part.epoch + part.cycle * pattern.seconds + note.at;
-      if (at > now + 0.25) break;
-      if (at >= now - 0.04) this.play(part, note, Math.max(now + 0.008, at));
-      if (++part.next === pattern.notes.length) { part.next = 0; part.cycle++; }
-    }
+    schedulePhrase(part, pattern, now, (note, at) => this.play(part, note, at), until);
+  }
+
+  handoffAt(now: number): number {
+    return this.current ? phraseHandoff(MEADOW_SECTIONS[this.current.phase], this.current.epoch, now) : now;
   }
 
   stop(fade = 1.8): void {
@@ -88,6 +95,7 @@ export class MeadowScore {
     part.stopped = true;
     const now = this.ctx.currentTime;
     part.bus.gain.cancelAndHoldAtTime(now);
+    part.bus.gain.setValueAtTime(part.bus.gain.value, now);
     part.bus.gain.linearRampToValueAtTime(0, now + fade);
     for (const voice of part.voices) voice.stop(now + fade);
     if (!part.voices.size) this.finish(part);

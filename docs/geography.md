@@ -1,4 +1,86 @@
-# Current island distances
+# Journey geography
+
+## September 21 follow-up: sea at most 100 seconds
+
+Jeremy asked to cap the sea chapter at 100 seconds while keeping Mirror → Home the same.
+The mirror and Home move together by `(50, 130)` from the first relocation, retaining every relative
+waypoint, heading and distance of the final crossing. Their centres are now `(-345, -2090)` and
+`(-100, -2370)`. The sea route is 269.7 units, down from 406.6; Home remains 201.9 units.
+
+The pod still begins joining after ten seconds, with staggered groups. The featured leap starts in a
+narrower window; the cygnet decides for 3 + 4 seconds and swims for 14 seconds. The nudge has a shorter
+approach but still makes physical hull contact. The nine-second underwater departure and ten-second
+mirror fade are unchanged. A fast arrival waits at the mooring for the fade to finish before handing
+off to the mirror chapter. Sailing speeds and camera framing are unchanged except for the sea's coastal
+speed limit, now 3.5 instead of 3. Geography revision 2 migrates both original and revision 1 saves.
+
+Thirty real-boat simulations (five random seeds, ordinary/gust/late-gust wind, varied bearings and
+30/60 Hz) finish in **87.7–95.5 seconds**. The pacing regression now asserts the 100-second ceiling,
+physical nudge, completed swim, submerged dolphins before mirror colour and completed arrival fade.
+Mirror → Home returns identical before/after timings in all six conditions: **39.3 seconds** in the
+ordinary breeze, 22.2 with sustained gusts. Save migration, shoreline clearance, swimmer safety and
+mirror/home chapter checks also pass. A fresh rendered approach was deferred because the camera
+session's full-game playthrough held the shared GPU slot; the previous rendered evidence below predates
+this follow-up. Evidence: `/tmp/updraft-sea-100-final-seed-*.log`, `/tmp/updraft-home-before-100.log`,
+`/tmp/updraft-home-after-100.log` and `/tmp/updraft-geography-100-check.log`.
+
+## Earlier September 21 relocation and visibility pass
+
+Jeremy asked for only the departure and destination islands during crossings, a shorter meadow/sea/home
+approach, a longer wood departure, later staggered dolphins and a gradual mirror transition. Implemented
+locally; the earlier measurements and recommendations below are historical.
+
+| Passage | Old route | New route | Old ordinary time | New ordinary time |
+|---|---:|---:|---:|---:|
+| Door shore → Little boats | 153.9 | 159.4 | 27 s | 31 s |
+| Little boats → Meadow | 486.9 | 302.1 | 99 s | 59 s |
+| Wood → Sleeping | 112.8 | 165.2 | 27 s | 38 s |
+| Sleeping → Sky mirror | 507.6 | 406.6 | 152 s | 144 s |
+| Sky mirror → Home | 586.6 | 201.9 | 122 s | 39 s |
+
+Route distances are horizontal world units; timings use the real boat at the existing ordinary wind speed.
+Meadow is 38% shorter by route and 40% shorter by time. Its varied-bearing checks take 58.6–59.4 seconds.
+The sea keeps the complete 32-second swim, dolphin leap, physical nudge and recovery before the pod dives;
+it takes 141.6–144.3 seconds across ordinary wind bearings, and 136 seconds under sustained synthetic gusts.
+No sailing speed boost was added. Wood's extra distance follows a wider sheltered bend; Sleeping stays put.
+
+The portal shore is now `(240, -365)`, Little Boats `(230, -495)`, the mirror `(-395, -2220)` and
+Home `(-150, -2500)`. Home is about 710 units from the wood's centre, previously 320. The mirror is
+371 units from Sleeping, previously 479. Terrain noise, local props, pools, walking targets, berths,
+the cottage terrace and shader height functions move together. Existing checkpoints carry a geography
+revision and migrate older coordinates; old open-sea swim saves resume in safe water with the swim complete.
+
+`world/journey-rooms.ts` defines the visible room pair. Terrain and grass discard excluded regions; water
+removes their shallows/surf; props are excluded from both scene and reflection renders without changing
+chapter-owned visibility. The doorway keeps its own source/destination override. Unrelated decorative
+island silhouettes are removed. The village passage changes from birches/village to village/wood mid-channel.
+
+Dolphins begin joining after ten seconds, with each group rising from deep water at a different time.
+After the nudge they continue forward and dive; their positions no longer move backwards from a frozen
+boat origin. The mirror's surface now fades between radii 75 and 145, previously 125 and 260. Its colour
+appears over ten seconds after the pod has submerged. Reflections are prepared for the entire approach at
+one resolution, and the boat's swell attenuation follows the water's spatial blend. Camera framing code
+remains owned by the separate camera session.
+
+Checks: `tools/geography-check.mjs`, `tools/journey-pacing-check.mjs`, `tools/little-boats-logic-check.mjs`,
+`tools/sky-mirror-logic-check.mjs`, `tools/sea-logic-check.mjs` and `tools/ending-view-check.mjs` pass.
+The geography check covers old-save translation, scoped prop restoration, mirror continuity, delayed pod
+growth, forward dives at 30/60/120 Hz and the requested route reductions. The pacing check now requires
+physical dolphin contact, the full swim, completed diving before mirror colour and a completed blend before
+mooring, in addition to shoreline clearance, waypoint completion and the speed ceiling.
+
+Renderer verification used a fixed local source snapshot because other sessions were editing camera/audio
+files concurrently. Full sea approaches and arranged departure/midpoint/arrival views were inspected at
+1440×900 and 390×844. The reflection target stayed at one size, the pod was below water before mirror
+colour began, and the blend finished before mooring. The portrait run reached the mirror at 149.8 simulated
+seconds; its largest per-frame appearance change was 0.00244 and camera step during the blend was 0.120
+world units. No game or shader errors were recorded; an unrelated missing favicon was excluded from the
+harness after the landscape run. Evidence: `/tmp/updraft-geography-views-*` and
+`/tmp/updraft-geography-portrait.json`. The surface-visibility suite also passes: the sea begins without
+mirror colour, the mirror chapter draws it, and Home excludes it even when its appearance is forced on
+(`/tmp/updraft-geography-surfaces.json`). These are focused approaches, not a new full-game release playthrough.
+
+## Historical layout and pacing study — September 20
 
 Snapshot of the local working tree on 2026-09-20, before any island relocation. This includes the recent
 route edits. The distance snapshot is unchanged; the pacing section below records the subsequently

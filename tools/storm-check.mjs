@@ -34,7 +34,7 @@ const steps = [
   wait('__game.story.current.stormTime>7.7'), { shot: 'shake' },
   { eval: `({state:__game.cygnet.state,seat:__game.cygnet.seat,visible:__game.cygnet.visible,act:__game.cygnet.mind.act})` },
   wait('__game.story.current.stormTime>12'), { shot: 'beam' },
-  { eval: `(() => {const g=__game;const p=g.boat.position.clone().set(65,11.35,-1580).project(g.rig.camera);if(Math.abs(p.x)>0.85||Math.abs(p.y)>0.95)throw new Error('Lighthouse outside frame: '+p.toArray());return {lighthouse:p.toArray()};})()` },
+  { eval: `(async () => {const {LIGHTHOUSE}=await import('/src/world/drowned.ts');const {LIGHTHOUSE_TOP_Y}=await import('/src/world/lighthouse.ts');const g=__game;const p=LIGHTHOUSE.clone().setY(LIGHTHOUSE_TOP_Y).project(g.rig.camera);if(Math.abs(p.x)>0.85||Math.abs(p.y)>0.95)throw new Error('Lighthouse outside frame: '+p.toArray());return {lighthouse:p.toArray()};})()` },
   wait('__game.story.current.stormTime>17'), { shot: 'passing' },
   wait('__game.story.current.stormTime>19.5'), { shot: 'comfort' },
   wait('__game.boat.sailMat.uniforms.uLightning.value.w>0.2'), { shot: 'lightning' },

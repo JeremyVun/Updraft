@@ -47,8 +47,11 @@ away during the next crossing. Other chapters retain ordinary haze.
 
 ## The sky mirror
 
-`world/sky-mirror-layout.ts` defines the submerged flat at (−455, −2310), three fallen lights, the outer
-boat channel and far pier. `mirrorBed` remains shared CPU/GPU terrain, 0.025 below sea level at its centre.
+`world/sky-mirror-layout.ts` defines the submerged flat at (−455, −2310), four fallen lights, the outer
+boat channel and far pier. Returned stars form a slightly crooked kite above the departure jetty;
+its four edges join adjacent returned endpoints, including the last-to-first edge. The top-to-bottom and
+left-to-right internal lines fade in only after all four stars reach the sky, including after restoration.
+`mirrorBed` remains shared CPU/GPU terrain, 0.025 below sea level at its centre.
 The entry mooring is offshore at (−515.66, −2271.09); a 16-unit timber jetty reaches the western flat at (−501, −2278).
 Its deck permits the shallow step off only at the shore end, preserving the deep-water walking boundary.
 The bubble redesign changes no terrain or shared water height. The old causeway overlay is removed.
@@ -79,6 +82,10 @@ A 320 × 320 square that follows the camera; see `wind.md` for how it moves. Eve
 - The meadow is held asleep until then by `uWaiting`: inside that ellipse wind does not raise life at all, so the island wakes all of a piece and never in blotches under the cursor. The story clears it only after the final wave covers the waiting ellipse, and from then on the wind wakes ground the ordinary way.
 - `lifeAt(xz)` in GLSL and `life.at(x, z)` on the CPU (one or two readbacks behind) must agree in spirit: grass, terrain, walls, the tree, petals and creatures all fade between grey and living with it.
 - Creatures are absent where life has not come back and appear as it arrives (see below), so the grey world is empty and the restored world is busy.
+
+During catch on the starting island, airborne paper plants a soft patch of lasting colour beneath it through
+`LifeField.bloom`. Held or grounded paper does not paint. This contributes to the same restoration threshold
+as wind and stops once the island is restored; its radius and strength live in `tuning.opening`.
 
 ## Fields and walls
 

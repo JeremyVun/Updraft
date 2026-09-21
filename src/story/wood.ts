@@ -165,7 +165,8 @@ export class WoodChapter implements Chapter {
       else if (remaining <= t.chainStep * 2.5 && spacing === t.chainStep) next = start + remaining / 2;
     }
     const along = this.bolted ? next : Math.min(next, APPROACH_ALONG);
-    if (along > PATH_LENGTH - 8) {
+    // The open shore needs no final fire; the preceding ember is enough to leave the wood.
+    if (along > PATH_LENGTH - (this.beat === 'out' ? t.chainStep : 8)) {
       this.ahead = null;
       return;
     }
@@ -208,7 +209,9 @@ export class WoodChapter implements Chapter {
     const earned = this.cast.embers.lay(c.x + 2, c.z);
     this.cast.embers.blow(earned, 0.8);
     this.cast.embers.takeCaught();
-    this.ahead = point !== 'dry' && this.chainAt >= PLANE_ALONG
+    this.ahead = point === 'dry' && this.chainAt > PATH_LENGTH - tuning.wood.chainStep
+      ? null
+      : point !== 'dry' && this.chainAt >= PLANE_ALONG
       ? (this.planeCoal = this.cast.embers.lay(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y))
       : this.cast.embers.lay(...this.at(this.chainAt, this.chainSide * tuning.wood.chainOffset));
   }
@@ -339,13 +342,15 @@ export class WoodChapter implements Chapter {
       return;
     }
 
-    // At the last shore, a spent final fire must still be recoverable after a long pause.
+    // Once the last forest ember is lit, continue across the open shore even if its light fades.
     const enteringGlade = !this.bolted && this.approachLit;
-    if (!this.ahead && this.lit < ENOUGH && !enteringGlade) {
+    const leavingWood = this.beat === 'out' && !this.ahead;
+    const needsLight = !enteringGlade && !leavingWood;
+    if (!this.ahead && this.lit < ENOUGH && needsLight) {
       this.ahead = this.cast.embers.lay(t.x, t.y);
     }
 
-    if (this.lit < ENOUGH && !enteringGlade) {
+    if (this.lit < ENOUGH && needsLight) {
       if (c.moving) c.stop();
       c.lookAt = this.ahead ? this.ahead.p : this.lit > 0 ? this.light : null;
       return;
@@ -356,7 +361,7 @@ export class WoodChapter implements Chapter {
     const gain = Math.hypot(c.position.x - t.x, c.position.z - t.y) - Math.hypot(this.light.x - t.x, this.light.z - t.y);
     const away = Math.hypot(this.light.x - c.position.x, this.light.z - c.position.z);
     // The last light marks the verge; keep walking along the path instead of steering into its glow.
-    const lead = !enteringGlade && gain > 1 && away > 3;
+    const lead = needsLight && gain > 1 && away > 3;
     const to = lead ? this.light : { x: t.x, z: t.y };
     if (!c.moving || this.now > this.aimed + 0.8) {
       this.aimed = this.now;

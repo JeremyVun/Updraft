@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { atmo, ATMO_GLSL } from './atmosphere';
 
+/** A child's remembered lighthouse: broad at the water, impossibly tall above it. */
+export const LIGHTHOUSE_SCALE = new THREE.Vector3(1.85, 2.15, 1.85);
+export const LIGHTHOUSE_LANTERN_Y = 13.85 * LIGHTHOUSE_SCALE.y;
+export const LIGHTHOUSE_TOP_Y = 16.6 * LIGHTHOUSE_SCALE.y;
+
 /** A turning light made visible by rain. Its last sweep dies before the paper plane is taken. */
 export class LighthouseLight {
   readonly object = new THREE.Group();
@@ -11,9 +16,9 @@ export class LighthouseLight {
   private readonly lamp = new THREE.MeshBasicMaterial({ color: '#ffe6ad', toneMapped: false });
 
   constructor(position: THREE.Vector3) {
-    this.object.position.copy(position).setY(11.35);
-    const cone = new THREE.CylinderGeometry(12, 0.5, 85, 32, 1, true);
-    cone.rotateX(Math.PI / 2).translate(0, 0, 42.5);
+    this.object.position.copy(position).setY(LIGHTHOUSE_LANTERN_Y);
+    const cone = new THREE.CylinderGeometry(16, 0.85, 110, 32, 1, true);
+    cone.rotateX(Math.PI / 2).translate(0, 0, 55);
     this.beam = new THREE.Mesh(cone, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, uStrength: this.strength },
       vertexShader: `
@@ -41,7 +46,7 @@ export class LighthouseLight {
       transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
     }));
     this.beam.rotation.order = 'YXZ';
-    this.object.add(this.beam, new THREE.Mesh(new THREE.SphereGeometry(0.68, 12, 8), this.lamp));
+    this.object.add(this.beam, new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 8), this.lamp));
   }
 
   update(dt: number, storm: number): void {
@@ -54,7 +59,7 @@ export class LighthouseLight {
     const power = (1 - dying) * falter;
     this.strength.value = power;
     this.lamp.color.setRGB(1.8, 1.15, 0.5).multiplyScalar(power);
-    this.beam.rotation.set(0.095, this.elapsed * s.lighthouseSweep + s.lighthouseSweepStart, 0);
+    this.beam.rotation.set(0.48, this.elapsed * s.lighthouseSweep + s.lighthouseSweepStart, 0);
     this.beam.visible = power > 0.001;
     atmo.uniforms.uHarbourLight.value.set(this.object.position.x, this.object.position.y, this.object.position.z, power);
     atmo.uniforms.uHarbourDirection.value.set(0, 0, 1).applyEuler(this.beam.rotation);

@@ -39,7 +39,7 @@ hoop are the small domestic fragment. The child sets down the cygnet near the la
 across the flat to the bowl, about ten seconds farther inland than the first version. They pick up the hoop and make bubbles
 with the player's wind. The paper remains visible on the backpack while the mitten holds the wand.
 
-Three lights lie on the surface. Sweeps make and steer bubbles; a low bubble touching a light catches it,
+Four lights lie on the surface. Sweeps make and steer bubbles; a low bubble touching a light catches it,
 and that patch of mirror goes dark. Circles lift a filled bubble. Once high enough it bursts gently and the
 light rises into its place in the sky, now reflected naturally below. Lights may be collected in any order;
 a sweep at a different fallen light asks the child to walk there with the bird. The paper leads the initial
@@ -64,7 +64,7 @@ The departure kite marks the far jetty throughout star play and is reflected in 
 the exit without unlocking it. The returned lights form a low constellation above that jetty. Each lights a stretch of broken reflection
 on the deep-water approach. The last joins those stretches and lets the empty boat approach the jetty;
 the camera widens for six seconds to show that connection before the child gathers the cygnet. The boat
-follows the existing deep outer channel and waits offshore until all three stars return, including after
+follows the existing deep outer channel and waits offshore until all four stars return, including after
 loading a partial save. Its hull never sails across the walkable flat.
 
 The bubble film is a transparent, lightly deforming sphere with view-dependent colour and reflected sky.
@@ -73,8 +73,9 @@ fallen lights, captured lights and restored stars use separate presentation stat
 Terrain and the shared water surface remain unchanged.
 
 Route: sleeping → `toMirror` (dolphins and brave swim) → `mirror` → `toHarbour` → home.
-Checkpoint `stars-<mask>` stores a completed-star bitmask and current destination. Restore clears transient bubbles
-and rebuilds the lights already overhead. Legacy moon/tide/lantern checkpoints map to 0/1/2 restored lights;
+Checkpoint `stars4-<mask>` stores a completed-star bitmask and current destination. Restore clears transient bubbles
+and rebuilds the lights already overhead. Three-star `stars`/`stars-<mask>` saves keep partial progress;
+a completed mask of 7 restores all four lights so an already finished room stays finished. Legacy moon/tide/lantern checkpoints map to 0/1/2 restored lights;
 reflection/window saves restart at the bowl's first star. Existing `toHome` crossings remain supported.
 
 Code: `world/sky-mirror.ts`, `world/mirror-soap.ts`, `story/sky-mirror.ts`; geometry and positions in
@@ -90,6 +91,20 @@ rising-star framing and the final constellation from each possible last stop. Ty
 The entry/capture follow-up also covers the sailing approach, the deck-to-flat step, a pending destination
 on the capture frame, another star returning during a capture, stroke reversal and coasting, and continuous
 lifting circles. Mouse and touch gesture checks pass; the browser touch run completes all stars and boarding.
+
+Fourth star (September 21): Jeremy found the room ended too soon after learning the first bubble.
+Four lights now share the same capture and lift rules, with another nearby stop, four reflected approach
+segments and a four-point kite constellation. Any light can finish the room; the boat waits for all four.
+Jeremy chose a slightly crooked kite instead of the shallow arch: a short upper point, a longer lower
+point, and a closed outline that appears as adjacent lights return. It echoes the departure kite below.
+After all four stars reach the sky, the top-to-bottom and left-to-right lines fade in to complete the kite.
+Partial saves keep those internal lines hidden; completed saves restore them.
+The ascent camera has additional framing room for the higher top star.
+The suggested flourish of tiny bubbles following the final released star is not implemented.
+Overlapping star hit areas now choose the strongest stroke contact rather than the last array entry.
+Build, 30/60 fps progression, all 16 save subsets, legacy completion, portrait framing and mouse/touch
+pointer checks pass. Rendered QA remains unverified: the shared GPU was occupied by a journey run,
+and the software-rendered fallback did not reach play.
 
 ## Journey pacing and the mirror companion (September 20)
 
@@ -221,3 +236,7 @@ The landing is now near x=10 instead of about x=62. The child starts climbing ro
 landing in the CPU and rendered checks, including the existing pause to look uphill. The meadow path and
 its reveal remain unchanged. The route check covers calm and gusty arrivals; the little-boats logic check
 also walks the actual child from the landed boat into the climb.
+
+### Mirror companion gait — September 21
+
+Short investigations now use a slow planted walk rather than the running/pattering gait that looked like paddling on the reflective surface. Running wing balance follows actual speed, including the exploration pace multiplier; walks alongside the moving child keep their existing pace. Targeted real-actor checks confirm walking contacts, no swimming pose, no paddle/plunge sounds, and normal gather/departure reset. Close-up frame sequences were reviewed.

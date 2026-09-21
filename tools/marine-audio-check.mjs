@@ -61,7 +61,9 @@ try {
     const near = new THREE.Vector3(8, 0, -20), far = new THREE.Vector3(0, 0, -1000);
     world.splash(near, 1, true); world.splash(near, 1, true); world.splash(near, 1);
     check(calls.length === 2, 'Pod emergence is bounded without suppressing its landing');
-    world.update(0.31); world.splash(near, 1, true);
+    world.update(0.2); world.splash(near, 1, true); world.splash(near, 1);
+    check(calls.length === 2, 'Closely spaced pod arcs cannot stack splash attacks');
+    world.update(0.41); world.splash(near, 1, true);
     check(calls.length === 3, 'Dolphin emergence re-arms after its brief spacing');
     world.splash(far, 1, true); world.whale('whale-blow', far);
     check(calls.length === 3, 'Distant marine events stay inaudible');

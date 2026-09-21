@@ -2,17 +2,29 @@
 // Real pointer gestures and natural story transitions only: never assigns beats, actors or puzzle progress.
 // Usage: node tools/playthrough.mjs [output-prefix]. BASE supports dev, preview or production.
 // Up to 60 minutes; uses the shared GPU lock. Screenshots and structured failure/progress evidence go to /tmp.
+// REVIEW=1 records video and one-second frames. UNTIL=<chapter> ends a focused replay on entering that chapter.
+// SAVE_FILE=<checkpoint.json> continues through the normal Continue button after a repaired failure.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {openBrowser} from './lib/browser.mjs';
 const prefix=process.argv[2]??'/tmp/updraft-playthrough';
 const base=process.env.BASE??'http://127.0.0.1:5230/';
+const review=process.env.REVIEW==='1';
 const expected=['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','home'];
+const until=process.env.UNTIL;
+if(until)assert(expected.includes(until),'UNTIL must be a journey chapter');
+const saved=process.env.SAVE_FILE?JSON.parse(fs.readFileSync(process.env.SAVE_FILE,'utf8')):null;
+if(saved)assert(expected.includes(saved.chapter),'Saved chapter must be part of the journey');
+const route=saved?expected.slice(expected.indexOf(saved.chapter)):expected;
 const {browser,close}=await openBrowser();
 const width=1280,height=800;
-const context=await browser.newContext({viewport:{width,height}});
+const context=await browser.newContext({viewport:{width,height},
+  ...(saved?{storageState:{cookies:[],origins:[{origin:new URL(base).origin,
+    localStorage:[{name:'updraft.progress.v1',value:JSON.stringify(saved)}]}]}}:{}),
+  ...(review?{recordVideo:{dir:prefix+'-video',size:{width,height}}}:{})});
 const page=await context.newPage();
 const report={chapters:[],beats:[],checkpoints:[],errors:[],completed:false,replayed:false};
+if(saved)report.startCheckpoint={chapter:saved.chapter,point:saved.point};
 page.on('pageerror',e=>report.errors.push(e.message));
 page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('favicon.ico'))report.errors.push(m.text())});
 await page.route('**/favicon.ico',r=>r.fulfill({status:204}));
@@ -26,6 +38,7 @@ const snapshot=()=>page.evaluate(()=>{
   }
   return {chapter:g.story.name,beat:c.beat,life:g.story.worldLife,scripted:c.scripted,finished:!!c.finished,
     checkpoint:JSON.parse(localStorage.getItem('updraft.progress.v1')??'null')?.point,
+    trodden:c.trodden?.toArray()??null,
     bird:project(g.cygnet.position),coax:project(c.coax?.at),wind:project(c.windInvitation),
     fleet:project(g.littleBoats.invitation),feather:project(g.sleeping.feather.position),
     snag,scarf:snag>=0?project(g.birches.scarf.snags[snag].center):null,
@@ -34,6 +47,21 @@ const snapshot=()=>page.evaluate(()=>{
     sail:project(g.boat.sailPoint(g.boat.position.clone())),stats:__stats};
 });
 const visible=p=>p&&p.z<1&&p.x>8&&p.x<width-8&&p.y>8&&p.y<height-8;
+let reviewTimer,reviewPending=Promise.resolve(),reviewBusy=false,reviewFrame=0;
+if(review)fs.mkdirSync(prefix+'-frames',{recursive:true});
+function startReview(){
+  if(!review)return;
+  reviewTimer=setInterval(()=>{
+    if(reviewBusy)return;
+    reviewBusy=true;
+    reviewPending=(async()=>{
+      const s=await snapshot(),index=reviewFrame++,file=String(index).padStart(5,'0')+'.jpg';
+      await page.screenshot({path:prefix+'-frames/'+file,type:'jpeg',quality:75});
+      fs.appendFileSync(prefix+'-frames.jsonl',JSON.stringify({index,file,chapter:s.chapter,beat:s.beat,
+        time:s.stats.time,wall:Date.now(),scripted:s.scripted})+'\n');
+    })().catch(e=>report.errors.push('Review capture: '+e.message)).finally(()=>{reviewBusy=false});
+  },1000);
+}
 let strokes=0;
 async function sweep(p,dx=1,dy=0,length=190,ms=550,fromCenter=false) {
   if(!visible(p))return false;
@@ -55,15 +83,18 @@ async function circle(p,radius=50,ms=850,track=null) {
 try {
   await page.goto(base+'?shot=1&start=1&progress=1');
   await page.waitForSelector('#veil.ready',{timeout:60000});
-  assert.equal(await page.locator('#begin').innerText(),'Begin');await page.locator('#begin').click();
+  assert.equal(await page.locator('#begin').innerText(),saved?'Continue':'Begin');await page.locator('#begin').click();
   await page.waitForFunction(()=>window.__ready===true,null,{timeout:60000});
+  startReview();
   const started=Date.now();let chapterAt=started,lastBeat='',lastSave='';
   while(Date.now()-started<60*60*1000){
     const s=await snapshot();
     report.saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('updraft.progress.v1')??'null'));
     assert.equal(report.errors.length,0,report.errors.slice(0,5).join('\n'));
+    if(s.trodden)assert(s.trodden.every(Number.isFinite)&&s.trodden[1]>0,
+      `Invalid grass patch (x, radius, z): ${s.chapter} ${s.trodden}`);
     if(report.chapters.at(-1)?.name!==s.chapter){
-      const index=report.chapters.length;assert.equal(s.chapter,expected[index],`Unexpected chapter after ${report.chapters.at(-1)?.name}`);
+      const index=report.chapters.length;assert.equal(s.chapter,route[index],`Unexpected chapter after ${report.chapters.at(-1)?.name}`);
       chapterAt=Date.now();report.chapters.push({name:s.chapter,seconds:(Date.now()-started)/1000});
       console.log(JSON.stringify({entered:s.chapter,seconds:report.chapters.at(-1).seconds}));
       await page.screenshot({path:`${prefix}-${String(index).padStart(2,'0')}-${s.chapter}.png`});
@@ -71,6 +102,7 @@ try {
     if(lastBeat!==s.chapter+'/'+s.beat){lastBeat=s.chapter+'/'+s.beat;report.beats.push({name:lastBeat,seconds:(Date.now()-started)/1000});console.log(JSON.stringify({beat:lastBeat,life:s.life}));}
     if(lastSave!==s.chapter+'/'+s.checkpoint){lastSave=s.chapter+'/'+s.checkpoint;report.checkpoints.push(lastSave);}
     report.last=s;report.strokes=strokes;fs.writeFileSync(prefix+'.json',JSON.stringify(report,null,2));
+    if(until&&s.chapter===until){report.reached=until;break;}
     assert(Date.now()-chapterAt<15*60*1000,`Chapter stalled: ${JSON.stringify(s)}`);
     if(s.finished){report.completed=true;break;}
     let acted=false;
@@ -99,11 +131,18 @@ try {
     else if(visible(s.coax))acted=await circle(s.coax,height*.065,850);
     if(!acted)await page.waitForTimeout(500);
   }
+  if(until){
+    assert.equal(report.reached,until,'Focused replay did not reach its final chapter');
+    assert.deepEqual(report.chapters.map(c=>c.name),route.slice(0,route.indexOf(until)+1));
+    console.log(`Focused replay reached ${until}.`);
+  }else{
   assert(report.completed,'Playthrough did not reach the ending');
-  assert.deepEqual(report.chapters.map(c=>c.name),expected);
+  assert.deepEqual(report.chapters.map(c=>c.name),route);
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('updraft.progress.v1')??'null')?.point==='complete');
   await page.waitForSelector('#credits.rolling');await page.waitForTimeout(6500);
   await page.screenshot({path:prefix+'-credits.png'});
+  // The journey capture ends here; reload intentionally has no game object until boot completes.
+  clearInterval(reviewTimer);await reviewPending;
   await page.reload();await page.waitForSelector('#veil.ready',{timeout:60000});
   assert.equal(await page.locator('#begin').innerText(),'Continue');await page.locator('#begin').click();
   await page.waitForFunction(()=>window.__game?.story.current.finished,null,{timeout:60000});
@@ -111,7 +150,12 @@ try {
   await page.waitForSelector('#veil.ready',{timeout:60000});assert.equal(await page.locator('#begin').innerText(),'Begin');
   await page.locator('#begin').click();await page.waitForFunction(()=>window.__ready===true);
   assert.equal((await snapshot()).chapter,'island');report.replayed=true;
-  assert.equal(report.errors.length,0);console.log('Full journey, completed-save reload and Play again passed.');
+  assert.equal(report.errors.length,0);console.log(`${saved?'Continued journey':'Full journey'}, completed-save reload and Play again passed.`);
+  }
 } catch(error) {
   report.failure=String(error);await page.screenshot({path:prefix+'-failure.png'}).catch(()=>{});throw error;
-} finally {fs.writeFileSync(prefix+'.json',JSON.stringify(report,null,2));await close();}
+} finally {
+  clearInterval(reviewTimer);await reviewPending;
+  fs.writeFileSync(prefix+'.json',JSON.stringify(report,null,2));
+  await context.close();await close();
+}

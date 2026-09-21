@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { LITTLE_BOATS as L, BOATS_BERTH, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
+import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
 import type { Cast, Chapter } from './cast';
 import { cue, completeObjective } from './cues';
 
@@ -89,7 +89,7 @@ export class LittleBoatsChapter implements Chapter {
         0.35,
       );
     // Approach outside the first pool even when the incoming boat grounds off-centre.
-    c.walkTo(367, -541, false, arrive, 0.6);
+    c.walkTo(BOATS_LANDING.x, BOATS_LANDING.z - 5, false, arrive, 0.6);
     this.frame();
   }
   get departureKite(): boolean { return this.cast.littleBoats.progress >= tuning.linesToys.boatKiteRevealAt; }

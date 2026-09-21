@@ -1,10 +1,12 @@
+import type { MirrorScorePhase } from '../audio/dream-score';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
-import { MIRROR_STARS, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, mirrorBed } from '../world/sky-mirror-layout';
+import { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, mirrorBed } from '../world/sky-mirror-layout';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 import { MirrorCompanion } from './mirror-companion';
+import { PlaneArrival } from './plane-arrival';
 
 type Beat = 'ashore' | 'setDown' | 'pickup' | 'play' | 'throw' | 'walk' | 'fetch' | 'reveal' | 'gather' | 'jetty' | 'boarding' | 'aboard';
 const T=tuning.skyMirror;
@@ -21,6 +23,14 @@ export class SkyMirrorChapter implements Chapter {
   readonly openSea=1;
   readonly music='mirror' as const;
   readonly hush=0.5;
+  get mirrorScore(): MirrorScorePhase {
+    const room=this.cast.skyMirror;
+    if(room.progress===room.stars.length)return ['gather','jetty','boarding','aboard'].includes(this.beat)?'depart':'constellation';
+    if(room.progress>=3)return 'three';
+    if(room.progress===2)return 'two';
+    if(room.progress===1)return 'one';
+    return room.holdingWand?'search':'approach';
+  }
   readonly pace=0.8;
   readonly focus=new THREE.Vector3();
   readonly shot: Shot={target:new THREE.Vector3(),distance:T.cameraDistance,height:T.cameraHeight,
@@ -32,12 +42,14 @@ export class SkyMirrorChapter implements Chapter {
   private returned=0;
   private readonly companion: MirrorCompanion;
   private nextChase=0;
+  private readonly arrival = new PlaneArrival();
   private readonly stand=new THREE.Vector3();
   private readonly aim=new THREE.Vector3();
   private readonly hand=new THREE.Vector3();
   private readonly velocity=new THREE.Vector3();
   private readonly direction=new THREE.Vector3();
   private readonly watched=new THREE.Vector3();
+  private readonly constellation: THREE.Vector3[];
   private readonly frameChild=new THREE.Vector3();
   private readonly framePlay=new THREE.Vector3();
   private readonly deck={...MIRROR_DECK};
@@ -48,6 +60,7 @@ export class SkyMirrorChapter implements Chapter {
     this.companion = new MirrorCompanion(cast);
     const {child,plane,cygnet,skyMirror,sealife,boat}=cast;
     skyMirror.reset(); skyMirror.active=true;
+    this.constellation=skyMirror.stars.map(star=>star.sky);
     sealife.dolphinsWith(null,0); sealife.onDolphinShove=()=>{};
     child.decks.push(this.deck,this.entryDeck);
     child.dismount(); child.stroll=T.stroll;
@@ -78,18 +91,21 @@ export class SkyMirrorChapter implements Chapter {
   get checkpoint(): string | null {
     // Journey saves when the checkpoint name changes; the bitmask makes every returned light durable.
     return this.cast.skyMirror.holdingWand && ['play','throw','walk','fetch','reveal','gather','jetty'].includes(this.beat)
-      ? `stars-${this.cast.skyMirror.completedMask}` : null;
+      ? `stars4-${this.cast.skyMirror.completedMask}` : null;
   }
   saveCheckpoint(): number[] { return [this.cast.skyMirror.completedMask,this.target]; }
   restoreCheckpoint(point: string,data: number[]): void {
     this.companion.reset();
     const {child,cygnet,skyMirror:room,plane,boat}=this.cast;
-    const starSave=point==='stars' || point.startsWith('stars-');
-    const mask=starSave?(data[0]|0)&7:point==='tide'?1:point==='lantern'?3:0;
+    const currentSave=point.startsWith('stars4-');
+    const starSave=currentSave || point==='stars' || point.startsWith('stars-');
+    const savedMask=(data[0]|0) & (currentSave?MIRROR_STAR_MASK:7);
+    // Preserve completed three-star rooms; partial saves keep their original returned lights.
+    const mask=starSave?(!currentSave && savedMask===7?MIRROR_STAR_MASK:savedMask):point==='tide'?1:point==='lantern'?3:0;
     room.restoreStars(mask); room.active=true;
     this.returned=room.progress;
-    this.target=starSave?THREE.MathUtils.clamp(data[1]|0,0,2):this.nearest();
-    if (room.stars[this.target].state==='sky' && room.progress<3) this.target=this.nearest();
+    this.target=starSave?THREE.MathUtils.clamp(data[1]|0,0,room.stars.length-1):this.nearest();
+    if (room.stars[this.target].state==='sky' && room.progress<room.stars.length) this.target=this.nearest();
     room.focusStar=this.target;
     child.stop(); child.dismount(); child.standUp(); child.kneeling=0;
     this.destination(this.target); child.place(this.stand.x,this.stand.z,Math.PI);
@@ -137,7 +153,8 @@ export class SkyMirrorChapter implements Chapter {
   update(dt: number,time: number): void {
     this.elapsed+=dt;
     const {child:c,cygnet:k,skyMirror:room,plane:p}=this.cast;
-    this.dusk=THREE.MathUtils.lerp(T.duskFrom,T.duskTo,room.progress/3);
+    p.guided = this.beat === 'throw' || this.beat === 'walk';
+    this.dusk=THREE.MathUtils.lerp(T.duskFrom,T.duskTo,room.progress/room.stars.length);
     this.driftBoat(dt);
     if(p.held)p.hold(c);
     if(this.beat==='pickup' && this.elapsed>1.2) {
@@ -146,13 +163,15 @@ export class SkyMirrorChapter implements Chapter {
     } else if(this.beat==='play') {
       const carried=room.carried;
       const rising=room.stars.find(s=>s.state==='rising');
+      const returnedNow=room.progress>this.returned;
+      if(returnedNow && !carried && !rising){this.returned=room.progress;cue('star');}
       c.lookAt=carried?.position ?? rising?.light.position ?? room.aim;
       // Capture happens later in the frame than story navigation. Even an empty bubble locks
       // manual destination changes; a filled or rising light also holds automatic progression.
       if(carried || rising) { room.requestedStar=-1; }
-      else if(room.progress===3) { room.ready=false; this.to('reveal'); }
-      else if(room.progress>this.returned) {
-        this.returned=room.progress; cue('delight'); this.walkToStar(this.nearest());
+      else if(room.progress===room.stars.length) { room.ready=false; this.to('reveal'); }
+      else if(returnedNow) {
+        this.walkToStar(this.nearest());
       } else if(room.requestedStar>=0 && room.requestedStar!==this.target && !room.bubbles.some(b=>b.pop===0)) {
         const choice=room.requestedStar; room.requestedStar=-1; this.walkToStar(choice);
       }
@@ -163,6 +182,9 @@ export class SkyMirrorChapter implements Chapter {
       // The player can play with the paper on the way; it settles close to the next fallen light.
       c.lookAt=p.position;
       const toStop=Math.hypot(c.position.x-this.stand.x,c.position.z-this.stand.z);
+      if (this.arrival.update(this.cast, toStop < 2, () => {
+        c.stowPlane(true); this.arrive();
+      })) { this.frame(); return; }
       if(p.landed && (toStop<9 || p.position.distanceTo(c.position)<3)) { this.fetchPlane(); }
       else if(time>this.nextChase) {
         this.aim.copy(p.position);
@@ -233,7 +255,7 @@ export class SkyMirrorChapter implements Chapter {
     child.pickUp(()=>{
       room.putDownWand(child.position);
       carry.gatherUp(()=>carry.stow(()=>{
-        this.to('jetty'); child.walkTo(-391.5,-2323,false,undefined,0.25);
+        this.to('jetty'); child.walkTo(MIRROR_BERTH.x-1.5,MIRROR_BERTH.z,false,undefined,0.25);
       }));
     });
   }
@@ -254,7 +276,7 @@ export class SkyMirrorChapter implements Chapter {
       boat.yaw += Math.atan2(Math.sin(yaw - boat.yaw), Math.cos(yaw - boat.yaw)) * (1 - Math.exp(-dt * 0.9));
     }
     if (distance < 0.15) {
-      if (this.drift === MIRROR_DRIFT.length-2 && skyMirror.progress<3) return;
+      if (this.drift === MIRROR_DRIFT.length-2 && skyMirror.progress<skyMirror.stars.length) return;
       if (this.drift < MIRROR_DRIFT.length - 1) this.drift++;
       else { this.boatReady = true; boat.mooring = MIRROR_BERTH; }
     }
@@ -265,6 +287,9 @@ export class SkyMirrorChapter implements Chapter {
     const leaving=['gather','jetty','boarding','aboard'].includes(this.beat);
     const playing=this.beat==='play';
     const reveal=this.beat==='reveal';
+    // The constellation is a group of subjects, so its whole shape survives different approaches/aspects.
+    this.shot.subjects!.points=reveal?this.constellation:undefined;
+    this.shot.smoothFit=reveal?1.5:undefined;
     const rising=room.stars.find(s=>s.state==='rising');
     const portrait=window.innerWidth<window.innerHeight;
     // Keep the ground destination fixed while steering: tracking the moving bubble would slide the
@@ -280,7 +305,7 @@ export class SkyMirrorChapter implements Chapter {
     this.shot.from!.set(-0.92,0,leaving?0.72:0.39).normalize();
     this.shot.distance=portrait?T.cameraPortraitDistance:T.cameraDistance;
     this.shot.height=portrait?T.cameraPortraitHeight:T.cameraHeight;
-    this.shot.subjects!.extra=rising && portrait?35:12;
+    this.shot.subjects!.extra=reveal?T.cameraRevealExtra:rising?T.cameraRiseExtra:12;
     if(rising) {
       this.shot.height=4; this.shot.target.y=4;
       this.shot.distance=portrait?T.cameraPortraitRiseDistance:T.cameraRiseDistance;

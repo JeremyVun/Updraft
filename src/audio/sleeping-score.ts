@@ -1,3 +1,4 @@
+import { WINTER_THEME, polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 import type { AudioOut } from '../creatures/voices';
 import type { PianoStrings } from './audio';
 
@@ -20,15 +21,17 @@ export const SLEEPING_AUDITION_NOTES: readonly Note[] = [
     .map(([at, midi, velocity]): Note => ({ voice: 'piano', at, midi, velocity })),
 ].sort((a, b) => a.at - b.at);
 
-interface Section { seconds: number; notes: readonly Note[] }
-const section = (from: number, to: number, seconds: number): Section => ({ seconds,
+interface Section extends Phrase<Note> { chords: { at: number; tones: readonly number[] }[] }
+const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: SLEEPING_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
-});
+  chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
+}, { sustain: from >= 70, loopFrom: from >= 70 ? 5 : 0,
+  ...(from === 36 ? { melody: WINTER_THEME.map((midi, i): Note => ({ voice: 'piano', midi, at: [2,6,11][i], velocity: .22 })) } : {}) });
 export const SLEEPING_SECTIONS: Record<SleepingScorePhase, Section> = {
   shelter: section(0, 18, 32),
-  cold: { seconds: 1, notes: [] },
+  cold: { seconds: 1, notes: [], chords: [] },
   climb: section(36, 54, 32),
-  summit: { seconds: 1, notes: [] },
+  summit: { seconds: 1, notes: [], chords: [] },
   // The flight cue has five seconds alone. The piano answer waits nineteen seconds after commitment.
   morning: section(70, Infinity, 48),
 };
@@ -49,9 +52,19 @@ export class SleepingScore {
   private readonly parts = new Set<Part>();
   private current: Part | null = null;
   private stopped = false;
+  private quietHarmony: readonly number[] = [50,57,64,69];
 
   constructor(out: AudioOut, private readonly makePiano: (out: AudioOut) => PianoStrings) {
     this.output = this.gates(out, 0);
+  }
+
+  chordAt(when: number): readonly number[] {
+    const part = this.current, pattern = SLEEPING_SECTIONS[part?.phase ?? 'shelter'];
+    if (!pattern.chords.length) return this.quietHarmony;
+    const time = part ? phrasePosition(pattern, part.epoch, when) : 0;
+    let tones = pattern.chords[0].tones;
+    for (const chord of pattern.chords) { if (chord.at > time) break; tones = chord.tones; }
+    return tones;
   }
 
   private gates(out: AudioOut, level: number): AudioOut & { bus: GainNode; reverb: GainNode } {
@@ -61,11 +74,12 @@ export class SleepingScore {
     return { ctx: out.ctx, bus, reverb };
   }
 
-  update(phase: SleepingScorePhase, level: number): void {
+  update(phase: SleepingScorePhase, level: number, until = Infinity): void {
     if (this.stopped) return;
     const now = this.output.ctx.currentTime;
     for (const gain of [this.output.bus, this.output.reverb]) gain.gain.setTargetAtTime(level, now, .8);
     if (this.current?.phase !== phase) {
+      this.quietHarmony = this.chordAt(now);
       if (this.current) this.release(this.current, 1.8);
       const out = this.gates(this.output, 1);
       this.current = { phase, out, piano: this.makePiano(out), epoch: now + .08, cycle: 0, next: 0,
@@ -75,14 +89,11 @@ export class SleepingScore {
     const part = this.current, pattern = SLEEPING_SECTIONS[phase];
     if (!pattern.notes.length) return;
     // Audio suspension freezes this clock. Slow frames skip missed attacks, never bunch them together.
-    const cycle = Math.floor(Math.max(0, now - part.epoch) / pattern.seconds);
-    if (cycle > part.cycle) { part.cycle = cycle; part.next = 0; }
-    for (;;) {
-      const note = pattern.notes[part.next], at = part.epoch + part.cycle * pattern.seconds + note.at;
-      if (at > now + .25) break;
-      if (at >= now - .04) this.play(part, note, Math.max(now + .008, at));
-      if (++part.next === pattern.notes.length) { part.next = 0; part.cycle++; }
-    }
+    schedulePhrase(part, pattern, now, (note, at) => this.play(part, note, at), until);
+  }
+
+  handoffAt(now: number): number {
+    return this.current ? phraseHandoff(SLEEPING_SECTIONS[this.current.phase], this.current.epoch, now) : now;
   }
 
   stop(fade = 1.8): void {
@@ -98,6 +109,7 @@ export class SleepingScore {
     const now = this.output.ctx.currentTime;
     for (const gain of [part.out.bus, part.out.reverb]) {
       gain.gain.cancelAndHoldAtTime(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
       gain.gain.linearRampToValueAtTime(0, now + fade);
     }
     for (const source of part.voices) source.stop(now + fade);

@@ -25,7 +25,7 @@ export class MirrorCompanion {
     if (k.carried || carry.busy || k.seating.move || k.state !== 'following') return;
     const T = tuning.mirrorCompanion;
     k.mind.trust(0.85);
-    k.pace = T.pace;
+    k.pace = playing ? T.explorePace : T.pace;
     const bubble = room.carried ?? room.bubbles.find(b => b.pop === 0);
     const rising = room.stars.findIndex(s => s.state === 'rising');
     const light = bubble?.star ?? -1;

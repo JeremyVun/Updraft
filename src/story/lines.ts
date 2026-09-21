@@ -8,6 +8,7 @@ import { CURTAINS, LINES_BERTH, LINES_LANDING, LINES_WALK, washingPassage } from
 import type { Cast, Chapter } from './cast';
 import { completeObjective, cue } from './cues';
 import type { LinesScorePhase } from '../audio/lines-score';
+import { PlaneArrival } from './plane-arrival';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
 const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
@@ -40,6 +41,7 @@ export class LinesChapter implements Chapter {
   private holdUntil = 0;
   private birdArrived = -1;
   private lastLegAt = 0;
+  private readonly arrival = new PlaneArrival();
   private noticed = false;
   private doorElapsed = 0;
   private readonly thresholdEye = new THREE.Vector3();
@@ -62,13 +64,12 @@ export class LinesChapter implements Chapter {
   }
 
   get scripted(): boolean {
-    return this.beat === 'ashore' || this.beat === 'wonder' || this.beat === 'family' ||
+    return this.arrival.active || this.beat === 'ashore' || this.beat === 'wonder' || this.beat === 'family' ||
       this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
   }
   get done(): boolean { return this.beat === 'aboard'; }
   get linesScore(): LinesScorePhase | undefined {
-    if (this.beat === 'ashore' || this.beat === 'push' || this.beat === 'aboard') return undefined;
-    if (this.beat === 'shore' || this.beat === 'walk' || this.beat === 'toBoat') return 'shore';
+    if (['shore', 'walk', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'shore';
     if (this.beat === 'throughDoor' || (this.beat === 'family' && door.opened)) return 'door';
     if (this.beat === 'familyApproach' || this.beat === 'family') return 'family';
     return this.gate === 0 ? 'first' : this.gate === 1 ? 'second' : 'third';
@@ -76,12 +77,12 @@ export class LinesChapter implements Chapter {
   /** The bird's lead and look back keep the foreground, without muting playable wind. */
   get linesMelodyQuiet(): boolean { return this.beat === 'birdThrough' || this.beat === 'childThrough'; }
   get trodden(): THREE.Vector3 | null {
-    if (this.beat === 'throughDoor') return this.flat.set(11, -398, 12);
+    if (this.beat === 'throughDoor') return this.flat.set(11, 12, -398);
     if (this.gate < CURTAINS.length) {
       const c = CURTAINS[this.gate];
-      return this.flat.set(c.center.x, c.center.z, 8);
+      return this.flat.set(c.center.x, 8, c.center.z);
     }
-    return this.beat === 'family' || this.beat === 'familyApproach' ? this.flat.set(11, -388, 9) : null;
+    return this.beat === 'family' || this.beat === 'familyApproach' ? this.flat.set(11, 9, -388) : null;
   }
   get checkpoint(): string | null {
     if (this.beat === 'approach' && this.gate > 0) return `curtain-${this.gate}`;
@@ -122,6 +123,7 @@ export class LinesChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now = time;
     const { child: c, plane: p, cygnet, boat, wind } = this.cast;
+    p.guided = this.beat === 'walk';
     const active = this.gate < CURTAINS.length ? CURTAINS[this.gate] : null;
     washingPassage.active = this.beat === 'curtain' ? active : null;
     CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active));
@@ -291,6 +293,9 @@ export class LinesChapter implements Chapter {
 
   private updateWalk(): void {
     const { child: c, plane: p, boat } = this.cast;
+    if (this.lastLegAt === 0) this.lastLegAt = this.now;
+    const nearBoat = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < 16;
+    if (this.arrival.update(this.cast, nearBoat || this.now - this.lastLegAt > 45, () => this.board())) return;
     if (this.play === 'watch') {
       c.lookAt = p.position;
       if (p.landed) this.fetch();
@@ -300,9 +305,7 @@ export class LinesChapter implements Chapter {
       c.lookAt = p.position;
       if (!p.landed && p.airborne) this.play = 'watch';
     } else if (this.play === 'hold' && !c.busy) {
-      const nearBoat = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < 16;
-      if (nearBoat || (this.lastLegAt > 0 && this.now - this.lastLegAt > 45)) this.board();
-      else if (this.now > this.holdUntil) this.throwAhead();
+      if (this.now > this.holdUntil) this.throwAhead();
     }
   }
 

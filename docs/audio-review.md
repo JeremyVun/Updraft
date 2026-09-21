@@ -11,6 +11,12 @@ masking and emotional impact still require listening in context.
 
 ## Decisions and implementation
 
+**September 21 refinement:** Jeremy now wants cursor chimes only on the starting island (+6 dB) and in the
+forest (also +6 dB, preserving the rescue voice’s relative softness), with player wind noise −3 dB after the opening.
+Jeremy also approved sparse, quiet chimes only during Sleeping’s feather-guided climb, ending before the
+summit. Explicit chapter/phase states keep retained music and other Sleeping scenes from enabling chimes.
+This supersedes the all-room gesture decision below. Authored cues and piano remain.
+
 Jeremy: "Whenever the player can generate wind, the gesture chimes should play." This supersedes the original
 recommendation to suppress them during playable quiet moments. `hush` withdraws the pad, not the player's
 musical feedback. Gusts and updrafts now use the same minimum thresholds as the wind input, including gentle

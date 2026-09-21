@@ -1,3 +1,4 @@
+import { DOOR_SHORE } from './heightfield';
 import * as THREE from 'three';
 import type { PointerInput } from '../input/pointer';
 import { screenBrush } from '../creatures/motion';
@@ -8,7 +9,7 @@ import { heightAt } from './island';
 /** The southern beach stays put; the extra fifteen percent of island is north of it. */
 export const LINES_LANDING = new THREE.Vector2(14, -308);
 // Rest the bow on the north beach, with dry sand beside the thwart for boarding.
-export const LINES_BERTH = new THREE.Vector3(240, 0, -483.5);
+export const LINES_BERTH = new THREE.Vector3(DOOR_SHORE.x, 0, DOOR_SHORE.z - 23.5);
 export const LINES_WALK = [
   new THREE.Vector2(12, -320), new THREE.Vector2(0, -330), new THREE.Vector2(0, -340),
   new THREE.Vector2(25, -351), new THREE.Vector2(25, -362),

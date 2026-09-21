@@ -3,9 +3,11 @@ import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, RIME_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
-import { GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
+import { DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 import { REFLECTION_LAYER } from './water/reflection';
 import { SURF_GLSL, surfUniforms } from './water/surf';
+import { TERRAIN_FIELDS_GLSL, TerrainFields } from './terrain-fields';
+import { TERRAIN_COLOUR_GLSL, TerrainColour } from './terrain-colour';
 
 const SEGMENTS = 32;
 const ROOT = 2048;
@@ -65,7 +67,9 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
+${TERRAIN_FIELDS_GLSL}
 ${GRASS_GLSL}
+${TERRAIN_COLOUR_GLSL}
 ${RIME_GLSL}
 ${SURF_GLSL}
 uniform vec3 uSand;
@@ -121,15 +125,17 @@ void main() {
   vec4 surf = surfaceAt(xz);
   alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
-  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), max(uMirrorPass, (1.0 - smoothstep(40.0, 48.0, distance(xz, vec2(240.0, -460.0)))) * 0.38));
-  vec3 tint = grassTint(xz);
-  vec4 fld = fieldAt(xz);
+  float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), max(uMirrorPass, (1.0 - smoothstep(40.0, 48.0, distance(xz, vec2(${DOOR_SHORE.x.toFixed(1)}, ${DOOR_SHORE.z.toFixed(1)})))) * 0.38));
+  vec4 colourPattern = terrainColourPattern(xz);
+  vec3 tint = grassTintWithPattern(xz, colourPattern.xyz);
+  float lineWidth = max(0.5, dist * 0.0024);
+  vec4 fld = terrainFieldAt(xz, lineWidth);
   float hay = step(fld.y, 0.22) * fld.w;
   float rush = step(0.86, fld.y) * fld.w;
   tint *= 0.92 + 0.16 * fract(fld.y * 7.3) * fld.w;
   tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
   tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
-  vec3 field = mix(uGrassRoot, tint, 0.62) * (0.9 + 0.16 * fbm(xz * 0.09 + 31.0));
+  vec3 field = mix(uGrassRoot, tint, 0.62) * (0.9 + 0.16 * colourPattern.w);
   vec2 dUv = domainUv(xz);
   float flattened = insideUv(dUv) ? smoothstep(0.3, 1.0, length(texture(uBendTex, dUv).xy)) : 0.0;
   float waves = fbm(xz * 0.016 - uBreeze * uTime * 0.016);
@@ -154,7 +160,6 @@ void main() {
     alb = mix(alb, floorColour, forest * 0.95);
   }
   alb = mix(alb, uRock * (0.8 + 0.4 * grain), smoothstep(0.42, 0.6, slope));
-  float lineWidth = max(0.5, dist * 0.0024);
   float wallLine = (1.0 - smoothstep(lineWidth * 0.45, lineWidth, fld.x)) * fld.z * fld.w;
   alb = mix(alb, vec3(0.14, 0.14, 0.12) * mix(1.0, 0.75, far), wallLine * 0.85);
 
@@ -228,6 +233,8 @@ interface LeafSet {
 }
 
 export class Terrain {
+  readonly fields = new TerrainFields();
+  readonly colour = new TerrainColour();
   readonly mesh: THREE.Mesh;
   private readonly main: LeafSet;
   private readonly mirror: LeafSet;
@@ -261,6 +268,8 @@ export class Terrain {
         ...atmo.uniforms,
         ...grassUniforms,
         ...surfUniforms,
+        ...this.fields.uniforms,
+        ...this.colour.uniforms,
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
         uGround: { value: new THREE.Color('#2e3f22') },

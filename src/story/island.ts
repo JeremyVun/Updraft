@@ -6,6 +6,7 @@ import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
 import { completeObjective, cue } from './cues';
 import { tuning } from '../tuning';
+import { PlaneArrival } from './plane-arrival';
 
 type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'skein' | 'toCygnet' | 'near' | 'kneel' | 'gather' | 'leaving' | 'toBoat' | 'push' | 'aboard';
 type Play = 'watch' | 'fetch' | 'hold';
@@ -45,6 +46,7 @@ export class IslandChapter implements Chapter {
   readonly season = 0.08;
   readonly focus = new THREE.Vector3();
   private play: Play = 'watch';
+  private readonly arrival = new PlaneArrival();
   private breezeTarget = 0;
   private stillSince = 0;
   private holdUntil = 0;
@@ -108,14 +110,14 @@ export class IslandChapter implements Chapter {
       || (this.beat === 'leaving' && this.downAt >= 0 && this.now - this.beatStart < 3);
     if (this.dropped && (this.cast.cygnet.grounded || rescuing)) {
       // Their shared patch stays pressed while the child lifts it, even after it is no longer grounded.
-      return this.flat.set(this.fallen.x, rescuing ? 5 : 2.5, this.fallen.z);
+      return this.flat.set(this.fallen.x, rescuing ? tuning.opening.careGrassRadius : 2.5, this.fallen.z);
     }
     return null;
   }
 
   /** Only catch and the first breeze answer the player; the rest of the island is the story playing itself out. */
   get scripted(): boolean {
-    return this.beat !== 'still' && this.beat !== 'play' && this.beat !== 'leaving';
+    return this.arrival.active || (this.beat !== 'still' && this.beat !== 'play' && this.beat !== 'leaving');
   }
 
   get done(): boolean {
@@ -139,6 +141,8 @@ export class IslandChapter implements Chapter {
     this.breeze += (this.breezeTarget - this.breeze) * (1 - Math.exp(-dt * 0.25));
     const { child: c, plane: p } = this.cast;
 
+    p.guided = this.beat === 'leaving' || this.beat === 'toTree';
+
     if (this.beat === 'still') {
       if (this.cast.input.gust > 5 && this.breezeTarget === 0) {
         this.breezeTarget = 1;
@@ -158,13 +162,10 @@ export class IslandChapter implements Chapter {
       const berth = this.cast.boat.position;
       p.home.set(berth.x, 0, berth.z);
       p.homeRadius = 24;
-      this.updatePlay(time);
       const b = this.cast.boat.position;
-      const planeNear = Math.hypot(p.position.x - b.x, p.position.z - b.z) < BOARDING;
       const childNear = Math.hypot(c.position.x - b.x, c.position.z - b.z) < BOARDING;
       const waited = time - this.beatStart;
-      // Nothing is ever stuck: if the plane will not come down by the boat, the child goes anyway.
-      if (!c.busy && (((planeNear || childNear) && this.play === 'hold') || waited > 50)) this.board();
+      if (!this.arrival.update(this.cast, childNear || waited > 50, () => this.board())) this.updatePlay(time);
     } else {
       this.updateFarewell(time);
     }
@@ -186,6 +187,11 @@ export class IslandChapter implements Chapter {
   private trackLife(dt: number): void {
     this.sinceLifeCheck += dt;
     const life = this.cast.life;
+    const plane = this.cast.plane;
+    // Catch leaves colour beneath the flying paper, using the same lasting life as the player's wind.
+    if (this.beat === 'play' && !this.restored && !plane.held && plane.airborne && !plane.landed) {
+      life.bloom(plane.position.x, plane.position.z, tuning.opening.planeBloomRadius, tuning.opening.planeBloomStrength);
+    }
     if (this.sinceLifeCheck > 0.5) {
       this.sinceLifeCheck = 0;
       const island = life.regions.island;
@@ -585,7 +591,7 @@ export class IslandChapter implements Chapter {
       s.from = close ? this.careView : this.rescueView;
       s.target.set((c.x + k.x) / 2, Math.max(c.y, k.y) + (close ? 0.75 : 1.1), (c.z + k.z) / 2);
       s.distance = close ? 5.8 : 14;
-      s.height = close ? 3.3 : 7;
+      s.height = close ? tuning.opening.careCameraHeight : 7;
       s.clearance = close ? 2.6 : 5.2;
       this.pace = 0.6;
       this.focus.copy(k);

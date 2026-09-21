@@ -14,10 +14,11 @@ globalThis.window={innerWidth:1600,innerHeight:900,matchMedia:()=>({matches:fals
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
 const {Glider}=await import('../src/glider/glider.ts');
 const {Traveller}=await import('../src/traveller/traveller.ts');
-const {MeadowChapter,ROUTE}=await import('../src/story/meadow.ts');
+const {MeadowChapter,ROUTE,FAR_SHORE}=await import('../src/story/meadow.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {tuning}=await import('../src/tuning.ts');
+const {POND,POND_LEVEL,pondOut}=await import('../src/world/heightfield.ts');
 function fixture(portrait,leg=2) {
   const air={x:0,z:-2,energy:0,lift:0};
   const wind={breeze:new THREE.Vector2(0,-2),sample(_x,_z,out){return Object.assign(out,air);},addSplat(){}};
@@ -35,6 +36,24 @@ function fixture(portrait,leg=2) {
   return {air,wind,child,plane,rig,chapter};
 }
 const results=[];
+// Reproduced during the full journey: paper resting on the elevated pond was treated as dry land,
+// so the child kept fetching an unreachable point. Calm water must recover it without another gesture.
+for(const fps of [30,60,120]){
+ const {air,child,plane,chapter}=fixture(false,5);
+ child.stop();child.place(24.9125,-875.0955,Math.PI);
+ plane.launch(new THREE.Vector3(POND.x,POND_LEVEL+.45,POND.z),new THREE.Vector3());
+ Object.assign(air,{x:0,z:0,energy:0,lift:0});
+ let dry=false,maxStep=0;
+ for(let i=0;i<fps*45;i++){
+  const before=plane.position.clone();chapter.update(1/fps,i/fps);child.update(1/fps);plane.update(1/fps,i/fps);
+  maxStep=Math.max(maxStep,before.distanceTo(plane.position));
+  const wet=pondOut(plane.position.x,plane.position.z)<1&&heightAt(plane.position.x,plane.position.z)<POND_LEVEL-.15;
+  assert(!wet||!plane.landed,'pond water must never become a fetchable landing');
+  if(!wet&&i>fps){dry=true;break;}
+ }
+ assert(dry,'paper must return to a reachable bank in calm air');
+ assert(maxStep<1,'pond recovery must fly continuously');
+}
 for(const fps of [30,60,120]) for(const portrait of [false,true]) for(const dir of [[26,0],[-26,0],[0,-26],[0,26]]) {
   const f=fixture(portrait),{air,child,plane,rig,chapter}=f;
   Object.assign(air,{x:dir[0],z:dir[1],energy:1,lift:1});
@@ -116,7 +135,22 @@ for(const leg of [0,3,6]) {
   assert(Math.hypot(plane.home.x-child.position.x,plane.home.z-child.position.z)<=24.001,'piano/pond/boat lead unbounded');
   chapter.beat='toBoat';chapter.update(1/60,2);
   assert.equal(plane.companion,null,'scripted scene retained flight constraint');
-  assert.equal(chapter.shot.subjects,undefined,'scripted scene retained playable framing');
+}
+// Boarding on the north beach must remain visible from the water, not behind the inland bank.
+for(const portrait of [false,true]){
+ const {child,rig,chapter}=fixture(portrait,6),boat=chapter.cast.boat;
+ boat.position.copy(FAR_SHORE);child.place(FAR_SHORE.x,FAR_SHORE.z+14,Math.PI);
+ chapter.frame();rig.cut(chapter.shot);chapter.beat='toBoat';
+ for(let i=0;i<600;i++){
+  child.place(FAR_SHORE.x,FAR_SHORE.z+14*Math.max(0,1-i/480),Math.PI);
+  chapter.frame();rig.update(1/60,i/60,chapter.shot,chapter.pace,true);
+  const subject=child.position.clone().add(new THREE.Vector3(0,1.2,0)),p=subject.clone().project(rig.camera);
+  assert(p.z<1&&Math.abs(p.x)<.96&&Math.abs(p.y)<.96,'boarding child left frame');
+  if(i>240)for(let j=1;j<32;j++){
+   const ray=rig.camera.position.clone().lerp(subject,j/32);
+   assert(heightAt(ray.x,ray.z)-ray.y<.25,'far-shore bank hides boarding child');
+  }
+ }
 }
 console.log(JSON.stringify(results.filter(r=>r.walkingFps),null,2));
 console.log(`Strong-gust maximum gap ${Math.max(...results.filter(r=>r.gap).map(r=>r.gap))}; worst projected edge ${Math.max(...results.filter(r=>r.edge).map(r=>r.edge))}.`);

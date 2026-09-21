@@ -1,4 +1,6 @@
 // Fallen stars: real mouse/touch sweeps and circles, companion walks, checkpoint reload and far-side boarding.
+// LAST_STAR_ONLY=1 restores three returned lights and plays the added fourth through departure.
+// SOFTWARE=1 uses SwiftShader without taking the shared GPU lock.
 // Usage: node tools/sky-mirror-check.mjs [prefix]; TOUCH=1 for 390x844. Shared GPU lock; captures in /tmp.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -47,11 +49,12 @@ const prefix = process.argv[2] ?? '/tmp/updraft-sky-mirror';
 const touch = process.env.TOUCH === '1',
   width = touch ? 390 : 1600,
   height = touch ? 844 : 900;
-await acquireLock();
+const software=process.env.SOFTWARE==='1',lastOnly=process.env.LAST_STAR_ONLY==='1';
+if(!software)await acquireLock();
 const browser = await chromium.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
+  args: [...(software?['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu']:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist']), '--autoplay-policy=no-user-gesture-required'],
 });
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, hasTouch: touch });
 const page = await context.newPage();
@@ -61,6 +64,7 @@ page.on('console', (m) => {
   if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text());
 });
 const cdp = await context.newCDPSession(page);
+const renderQuery=software?'&ratio=0.5&msaa=0':'';
 const base=process.env.BASE ?? 'http://127.0.0.1:5230/';
 const move=async(x,y,down=false)=>{
   if(touch) await cdp.send('Input.dispatchTouchEvent',{type:down?'touchStart':'touchMove',touchPoints:[{x,y,id:1}]});
@@ -84,12 +88,16 @@ async function sweep(p,dx,dy,length=100) {
   await up();await page.waitForTimeout(220);
 }
 try {
-  await page.goto(`${base}?shot=1&chapter=mirror&progress=1`,{waitUntil:'load'});
+  await page.goto(`${base}?shot=1&chapter=mirror&progress=1${renderQuery}`,{waitUntil:'load'});
   await page.waitForFunction(()=>window.__ready===true,null,{timeout:60000});
+  if(lastOnly)await page.evaluate(()=>{
+    __game.story.current.restoreCheckpoint('stars4-7',[7,3]);
+    __game.rig.cut(__game.story.current.shot);
+  });
   await page.waitForFunction(()=>__game.story.current.beat==='play',null,{timeout:90000});
   await page.screenshot({path:`${prefix}-wand.png`});
   const outcomes=[];
-  for(let star=0;star<3;star++) {
+  for(let star=lastOnly?3:0;star<4;star++) {
     await page.waitForFunction(()=>__game.story.current.beat==='play',null,{timeout:60000});
     for(let attempt=0;attempt<12;attempt++) {
       if(await page.evaluate(()=>__game.skyMirror.bubbles.some(b=>b.pop===0)))break;
@@ -145,20 +153,25 @@ try {
       await up();
     }
     console.log(JSON.stringify({star,peakCharge}));
-    await page.waitForFunction(n=>__game.skyMirror.progress>n,star,{timeout:15000});
+    await page.waitForFunction(n=>__game.skyMirror.progress>n,star,{timeout:software?60000:15000});
     outcomes.push(await page.evaluate(()=>({mask:__game.skyMirror.completedMask,stars:__game.skyMirror.stars.map(s=>s.state)})));
     console.log(JSON.stringify(outcomes.at(-1)));
     await page.screenshot({path:`${prefix}-returned-${star}.png`});
-    if(star===0) {
-      await page.waitForFunction(()=>JSON.parse(localStorage.getItem('updraft.progress.v1')??'null')?.data?.[0]===1);
-      await page.goto(`${base}?shot=1&progress=1`,{waitUntil:'load'});
+    if(star===0 || star===2) {
+      const mask=outcomes.at(-1).mask;
+      await page.waitForFunction(mask=>{const saved=JSON.parse(localStorage.getItem('updraft.progress.v1')??'null');
+        return saved?.data?.[0]===mask && saved?.point===`stars4-${mask}`;
+      },mask);
+      await page.goto(`${base}?shot=1&progress=1${renderQuery}`,{waitUntil:'load'});
       await page.waitForFunction(()=>window.__ready===true,null,{timeout:60000});
-      assert.equal(await page.evaluate(()=>__game.skyMirror.completedMask),1,'reload preserves the returned star');
+      assert.equal(await page.evaluate(()=>__game.skyMirror.completedMask),mask,'reload preserves every returned star, including the fourth bit');
     }
   }
-  await page.waitForFunction(()=>__game.story.name==='toHarbour',null,{timeout:120000});
+  await page.waitForTimeout(2500);
+  await page.screenshot({path:`${prefix}-constellation.png`});
+  await page.waitForFunction(()=>__game.story.name==='toHarbour',null,{timeout:software?360000:120000});
   const exit=await page.evaluate(()=>({childAboard:__game.child.riding,birdAboard:__game.cygnet.carried,active:__game.skyMirror.active,mask:__game.skyMirror.completedMask,paper:__game.glider.group.visible}));
-  assert(exit.childAboard && exit.birdAboard && !exit.active && exit.mask===7 && exit.paper);
+  assert(exit.childAboard && exit.birdAboard && !exit.active && exit.mask===15 && exit.paper);
   assert.deepEqual(errors,[]);
   await page.screenshot({path:`${prefix}-departure.png`});
   fs.writeFileSync(`${prefix}.json`,JSON.stringify({touch,outcomes,exit,errors},null,2));

@@ -24,9 +24,10 @@ const { CameraRig } = await import('../src/camera.ts');
 const { ROUTES } = await import('../src/story/journey.ts');
 const { HOME_MOORING } = await import('../src/story/home.ts');
 const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
-const { MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_WATCH, MIRROR_BERTH, mirrorBed } = await import('../src/world/sky-mirror-layout.ts');
+const { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_WATCH, MIRROR_BERTH, mirrorBed } = await import('../src/world/sky-mirror-layout.ts');
 const { worldHeight } = await import('../src/world/heightfield.ts');
 const { tuning } = await import('../src/tuning.ts');
+const { readProgress, saveProgress } = await import('../src/story/progress.ts');
 const { atmo } = await import('../src/world/atmosphere.ts');
 
 function fixture(fps, portrait = false) {
@@ -74,6 +75,12 @@ function fixture(fps, portrait = false) {
   }};
 }
 const results=[];
+assert.equal(MIRROR_STARS.length,4);
+for(const star of MIRROR_STARS) {
+  assert(mirrorBed(star.x,star.z)>-.04,'each light rests on the shallow flat');
+  assert(mirrorBed(star.x+2.8,star.z+5.5)>-.04,'each bubble stop has safe footing');
+}
+
 // Actual sailing physics stop alongside the entry jetty, well before the walkable shallows.
 {
   const f=fixture(60),{boat}=f.cast;
@@ -97,12 +104,20 @@ const results=[];
 {
   const f=fixture(60),{cygnet:k,skyMirror:room,child}=f.cast,c=f.chapter;
   c.restoreCheckpoint('stars-0',[0,0]);k.wing.restore('free',1);
-  const from=k.position.clone();
+  const from=k.position.clone(); let steps=0, paddles=0, swimming=0, peakPatter=0, peakFlap=0;
   for(let i=0;i<60*10;i++) {
     f.step();
     if(k.errand)assert(k.errand.distanceTo(child.position)<tuning.mirrorCompanion.exploreRadius+.2);
     assert(mirrorBed(k.position.x,k.position.z)>-.04,'exploration stays on the shallow flat');
+    swimming+=Number(k.state==='swimming' || k.poser.p.swim>.001);
+    for(const h of k.heard){if(h.kind==='paddle'||h.kind==='plunge')paddles++;if(h.kind==='step')steps++;}
+    k.heard.length=0;
+    if(i>60){peakPatter=Math.max(peakPatter,k.gait.pattering);peakFlap=Math.max(peakFlap,k.flap);}
   }
+  assert.equal(swimming,0,'mirror exploration never enters the swimming pose');
+  assert.equal(paddles,0,'mirror exploration emits neither paddle strokes nor splash-down sounds');
+  assert(steps>0,'the shallow flat retains real walking contacts');
+  assert(peakPatter<.01 && peakFlap<.05,'investigation stays on planted feet without running wingbeats');
   assert(k.position.distanceTo(from)>1,'the bird goes to investigate instead of staying a passenger');
   assert.equal(room.progress,0,'curiosity cannot complete a star');
   room.spawn();const b=room.bubbles.at(-1);b.position.copy(room.stars[0].origin).setY(b.radius+.08);
@@ -191,31 +206,76 @@ for(const [fps,portrait] of (process.env.RESTORE_ONLY?[]:[[60,false],[30,true]])
       const p=light.sky.clone().project(f.rig.camera);
       assert(Math.abs(p.x)<0.95 && Math.abs(p.y)<0.95,`whole constellation visible: ${p.toArray()}, portrait=${portrait}`);
     }
-    if(room.progress<3)assert(Math.hypot(f.cast.boat.position.x-MIRROR_BERTH.x,f.cast.boat.position.z-MIRROR_BERTH.z)>35,
+    if(room.progress<room.stars.length)assert(Math.hypot(f.cast.boat.position.x-MIRROR_BERTH.x,f.cast.boat.position.z-MIRROR_BERTH.z)>35,
       'the boat waits offshore until the constellation is complete');
   }
   assert(c.done,`chapter stalled: ${c.beat}, target ${c.target}, child ${f.cast.child.position.toArray()}, stand ${c.stand.toArray()}, plane ${f.cast.plane.position.toArray()}, held ${f.cast.plane.held}, moving ${f.cast.child.moving}, states ${room.stars.map(s=>s.state)}, bubbles ${JSON.stringify(room.bubbles.map(b=>({p:b.position.toArray(),star:b.star})))}`);
-  assert.equal(room.completedMask,7);assert.equal(room.progress,3);
+  assert.equal(room.completedMask,MIRROR_STAR_MASK);assert.equal(room.progress,room.stars.length);
   assert(f.cast.child.riding && f.cast.cygnet.carried,'both aboard');
   assert(!room.active && !f.cast.plane.landingGround && f.cast.cygnet.mayFly,'chapter cleaned up');
   assert(f.cast.boat.position.x>-400,'far pier exit');
   results.push({fps,portrait,arrival,sharedWalk,transitions});console.error(`completed ${fps} fps portrait=${portrait}`);
 }
 // Every subset is a legal save; selected stars do not prescribe collection order.
-for(let mask=0;mask<8;mask++) {
-  const f=fixture(60);f.chapter.restoreCheckpoint(`stars-${mask}`,[mask,2]);
-  assert.equal(f.chapter.checkpoint,`stars-${mask}`,'each completed subset has its own durable checkpoint');
+for(let mask=0;mask<=MIRROR_STAR_MASK;mask++) {
+  const f=fixture(60);f.chapter.restoreCheckpoint(`stars4-${mask}`,[mask,3]);
+  assert.equal(f.chapter.checkpoint,`stars4-${mask}`,'each completed subset has its own durable checkpoint');
   assert.equal(f.cast.skyMirror.completedMask,mask);
+  let stored=null;
+  globalThis.localStorage={setItem(_key,value){stored=value;},getItem(){return stored;}};
+  const regions={island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()};
+  saveProgress('mirror',f.chapter.checkpoint,f.chapter.saveCheckpoint(),{...f.cast,life:{regions}});
+  const saved=readProgress();
+  assert(saved,'every four-star subset validates through real save storage');
+  assert.deepEqual(saved.data,[mask,f.chapter.target]);
+  assert.deepEqual(f.cast.skyMirror.guideLights.toArray(),MIRROR_STARS.map((_,i)=>Number(!!(mask & (1<<i)))));
+  assert.equal(f.cast.skyMirror.constellationLines.length,4);
+  assert.equal(f.cast.skyMirror.constellationCrossbars.length,2);
+  for(const line of f.cast.skyMirror.constellationCrossbars)assert.equal(line.material.opacity,
+    mask===MIRROR_STAR_MASK?0.38:0,'both internal kite lines require the complete constellation');
+  f.cast.skyMirror.constellationLines.forEach((line,i)=>{
+    const joined=!!(mask & (1<<i)) && !!(mask & (1<<((i+1)%MIRROR_STARS.length)));
+    assert.equal(line.material.opacity,joined?0.38:0,'kite edges join only returned endpoints, including the closing edge');
+  });
+
   if(!mask)assert(mirrorBed(f.cast.boat.position.x,f.cast.boat.position.z)<-2,'empty saves use the offshore entry mooring');
   assert(f.chapter.departureKite, 'the far-jetty kite is visible before and after restoring any star subset');
   for(let i=0;i<60;i++)f.step();
   assert.equal(f.cast.skyMirror.progress,mask.toString(2).replaceAll('0','').length);
   assert(f.cast.skyMirror.stars.every((s,i)=>s.state===((mask & (1<<i))?'sky':'fallen')));
-  if(mask && mask<7)assert(Math.hypot(f.cast.boat.position.x-MIRROR_BERTH.x,f.cast.boat.position.z-MIRROR_BERTH.z)>35,
+  if(mask && mask<MIRROR_STAR_MASK)assert(Math.hypot(f.cast.boat.position.x-MIRROR_BERTH.x,f.cast.boat.position.z-MIRROR_BERTH.z)>35,
     'a partial save must not bypass the offshore gate');
 }
+// Whichever light finishes last, the crossbars wait for its arrival and then fade in.
+for(let last=0;last<MIRROR_STARS.length;last++) {
+  const f=fixture(60),room=f.cast.skyMirror;
+  const mask=MIRROR_STAR_MASK ^ (1<<last);
+  f.chapter.restoreCheckpoint(`stars4-${mask}`,[mask,last]);
+  const star=room.stars[last];star.state='rising';star.from.copy(star.sky);star.flight=0.99;
+  f.step();
+  assert(room.constellationCrossbars.every(line=>line.material.opacity===0),'no crossbars while the final star is still rising');
+  f.step();
+  assert.equal(room.progress,4);
+  assert(room.constellationCrossbars.every(line=>line.material.opacity>0 && line.material.opacity<0.38),
+    'crossbars fade in on completion rather than appearing at full brightness');
+  room.reset();
+  assert(room.constellationCrossbars.every(line=>line.material.opacity===0),'replay clears the completed kite');
+}
+// Three-star completions stay complete; partial old saves retain each returned light.
+for(let mask=0;mask<8;mask++)for(const point of ['stars',`stars-${mask}`]) {
+  const f=fixture(60);f.chapter.restoreCheckpoint(point,[mask,2]);
+  assert.equal(f.cast.skyMirror.completedMask,mask===7?MIRROR_STAR_MASK:mask);
+  f.step();assert.equal(f.chapter.beat,mask===7?'reveal':'play');
+}
+// A new three-of-four checkpoint must leave the fourth playable, with the boat offshore.
+{
+  const f=fixture(60);f.chapter.restoreCheckpoint('stars4-7',[7,2]);
+  assert.equal(f.chapter.target,3);
+  for(let i=0;i<120;i++)f.step();
+  assert.equal(f.chapter.beat,'play');assert.equal(f.cast.skyMirror.progress,3);
+}
 // The almost still mirror must keep its exit marker in view from every playable star stop.
-for (const portrait of [false, true]) for (const target of [0, 1, 2]) {
+for (const portrait of [false, true]) for (const target of [0, 1, 2, 3]) {
   const f = fixture(60, portrait); f.chapter.restoreCheckpoint('stars-0', [0, target]);
   const speed = tuning.wind.breeze * f.chapter.breeze;
   const wind = { calm: tuning.wind.calm * speed, sample(_x, _z, out) {
@@ -232,8 +292,8 @@ for (const portrait of [false, true]) for (const target of [0, 1, 2]) {
   }
 }
 // The player can finish at any star; portrait must show the whole constellation from each stop.
-for(const target of [0,1,2]) {
-  const f=fixture(60,true);f.chapter.restoreCheckpoint('stars-7',[7,target]);
+for(const target of [0,1,2,3]) {
+  const f=fixture(60,true);f.chapter.restoreCheckpoint('stars4-15',[MIRROR_STAR_MASK,target]);
   for(let i=0;i<240;i++) {
     f.step();
     if(i<180)continue;

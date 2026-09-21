@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { params } from './params';
 import { heightAt } from './world/island';
+import { CameraDirection, type CameraAttention } from './camera-direction';
+import { tuning } from './tuning';
+import { sceneryLift } from './camera-obstacles';
 
 const MIN_HFOV = 64;
 /** The camera always looks roughly north, from a little east of south, unless a shot says otherwise. */
@@ -9,6 +12,12 @@ const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 const GROUND_CLEARANCE = 2.8;
 
 export interface Shot {
+  /** Cheap static scenery bounds supplied by rooms with foreground buildings or branches. */
+  obstacles?: readonly THREE.Box3[];
+  /** A meaningful focus to notice from the foreground view, independent of its physical movement. */
+  attention?: CameraAttention;
+  /** Preserve a staged composition and its approach path while still following its subjects. */
+  composition?: 'hold';
   /** The point the camera looks at. */
   target: THREE.Vector3;
   /** Horizontal distance from the target. */
@@ -37,7 +46,9 @@ export interface Shot {
   /** An authored continuous threshold move supplies its own easing and ground clearance. */
   exact?: boolean;
   /** Optional playable pair. Fit both within a bounded retreat; the primary always keeps the frame. */
-  subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3; margin: number; extra: number };
+  subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3;
+    /** Additional meaningful bounds, such as the returned stars of a constellation. */
+    points?: readonly THREE.Vector3[]; margin: number; extra: number };
 }
 
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
@@ -47,18 +58,22 @@ export class CameraRig {
   private readonly eye = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly wantEye = new THREE.Vector3();
+  private readonly wantLook = new THREE.Vector3();
+  private readonly direction = new CameraDirection();
+  private turnSpeed = 0;
+  private carrySource?: THREE.Vector3;
+  private lastShot?: Shot;
   private readonly lastTarget = new THREE.Vector3();
   private readonly lastCarryAnchor = new THREE.Vector3();
   private readonly moved = new THREE.Vector3();
   private readonly want = new THREE.Vector3();
   private readonly probe = new THREE.Vector3();
   private lift = 0;
+  private sceneryRise = 0;
   private pull = 0;
   private clear = GROUND_CLEARANCE;
   private fitBack = 0;
   private readonly local = new THREE.Vector3();
-  private readonly second = new THREE.Vector3();
-  private readonly third = new THREE.Vector3();
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private readonly back = new THREE.Vector3();
@@ -88,10 +103,11 @@ export class CameraRig {
     else out.copy(shot.target)
       .addScaledVector(shot.from ?? FROM, shot.distance)
       .setY(shot.target.y + shot.height);
+    this.direction.compose(shot, out, this.wantLook);
     if (shot.fitWidth) {
       const horizontal = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect;
       const back = Math.max(1, Math.tan(THREE.MathUtils.degToRad(MIN_HFOV) / 2) / horizontal);
-      out.sub(shot.target).multiplyScalar(back).add(shot.target);
+      out.sub(this.wantLook).multiplyScalar(back).add(this.wantLook);
     }
     return out;
   }
@@ -99,44 +115,97 @@ export class CameraRig {
   /** Jumps straight to a shot (used once at the start). */
   cut(shot: Shot): void {
     if (this.fixed) return;
-    this.desired(shot, this.eye);
-    this.look.copy(shot.target);
+    if (shot.exact && shot.eye) {
+      this.eye.copy(shot.eye); this.wantLook.copy(shot.target);
+    } else this.desired(shot, this.eye);
+    this.look.copy(this.wantLook);
+    this.direction.reset();
+    this.turnSpeed = 0;
+    this.carrySource = shot.carryAnchor;
+    this.lastShot = shot;
     this.lastTarget.copy(shot.target);
     this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
     this.lift = 0;
+    this.sceneryRise = 0;
     this.pull = 0;
     this.clear = shot.clearance ?? GROUND_CLEARANCE;
-    this.place(0, Infinity);
+    if (shot.free || shot.exact) {
+      this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
+      this.fitBack = 0; this.fitOffset.set(0, 0, 0);
+      return;
+    }
     this.fitBack = 0;
     this.fitOffset.set(0, 0, 0);
+    this.place(0, Infinity, shot);
     this.fitSubjects(shot, Infinity);
   }
 
-  update(dt: number, time: number, shot: Shot, pace = 0.6): void {
+  update(dt: number, time: number, shot: Shot, pace = 0.6, holdComposition = false): void {
     if (this.fixed) return;
+    if (this.lastShot !== shot) {
+      this.direction.release();
+      this.lastShot = shot;
+    }
     if (shot.exact && shot.eye) {
       this.eye.copy(shot.eye); this.look.copy(shot.target); this.lastTarget.copy(shot.target);
+      this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
+      this.carrySource = shot.carryAnchor;
+      this.turnSpeed = 0; this.direction.reset();
+      this.fitBack = 0; this.fitOffset.set(0, 0, 0);
+      this.pull = 0; this.lift = 0; this.sceneryRise = 0;
       this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
       return;
     }
+    if (dt <= 0) return;
     const k = 1 - Math.exp(-dt * pace);
     this.moved.subVectors(shot.carryAnchor ?? shot.target, shot.carryAnchor ? this.lastCarryAnchor : this.lastTarget);
     this.lastTarget.copy(shot.target);
     this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
-    if (shot.carry && this.moved.lengthSq() < 1) {
+    if (shot.carry && this.carrySource === shot.carryAnchor
+      && this.moved.length() <= tuning.cinematography.maxCarrySpeed * dt) {
       this.eye.add(this.moved);
       this.look.add(this.moved);
     }
-    this.eye.lerp(this.desired(shot, this.wantEye), k);
-    this.look.lerp(shot.target, k);
+    this.carrySource = shot.carryAnchor;
+    this.desired(shot, this.wantEye);
     if (shot.free) {
-      this.camera.position.copy(this.eye);
-      this.camera.lookAt(this.look);
+      this.eye.lerp(this.wantEye, k); this.look.lerp(this.wantLook, k);
+      this.turnSpeed = 0; this.direction.reset();
+      this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
       return;
+    }
+    this.direction.adapt(dt, shot, this.wantEye, this.wantLook, this.camera, holdComposition);
+    if (shot.eye || shot.composition === 'hold') {
+      // A placed eye describes a path through the world (bedside, paper, doorway approach).
+      // Preserve that staging; only subject-relative views should orbit their gaze.
+      this.eye.lerp(this.wantEye, k);
+      this.look.lerp(this.wantLook, k);
+      this.turnSpeed = 0;
+    } else {
+      // Interpolate around the gaze, not across the subject. A large turn must not dolly through the child.
+      const x = this.eye.x - this.look.x, z = this.eye.z - this.look.z;
+      const dx = this.wantEye.x - this.wantLook.x, dz = this.wantEye.z - this.wantLook.z;
+      const bearing = Math.atan2(x, z);
+      let error = Math.atan2(Math.sin(Math.atan2(dx, dz) - bearing), Math.cos(Math.atan2(dx, dz) - bearing));
+      // Near a reverse angle, tiny route changes must not keep asking for the opposite way around.
+      if (Math.abs(error) > Math.PI - tuning.cinematography.reversalBand && Math.abs(this.turnSpeed) > 1e-4)
+        error = Math.sign(this.turnSpeed) * Math.abs(error);
+      const response = Math.max(0.01, pace * tuning.cinematography.turnResponse);
+      const decay = Math.exp(-response * dt);
+      const spring = this.turnSpeed - response * error;
+      const turn = error + (-error + spring * dt) * decay;
+      this.turnSpeed = (this.turnSpeed - response * spring * dt) * decay;
+      const limit = tuning.cinematography.maxTurnSpeed;
+      this.turnSpeed = THREE.MathUtils.clamp(this.turnSpeed, -limit, limit);
+      const angle = bearing + THREE.MathUtils.clamp(turn, -limit * dt, limit * dt);
+      const radius = THREE.MathUtils.lerp(Math.hypot(x, z), Math.hypot(dx, dz), k);
+      const eyeY = THREE.MathUtils.lerp(this.eye.y, this.wantEye.y, k);
+      this.look.lerp(this.wantLook, k);
+      this.eye.set(this.look.x + Math.sin(angle) * radius, eyeY, this.look.z + Math.cos(angle) * radius);
     }
     /** Eased like everything else the shot asks for: coming down to a bird's eye is a move, not a cut. */
     this.clear += ((shot.clearance ?? GROUND_CLEARANCE) - this.clear) * k;
-    this.place(time, dt);
+    this.place(time, dt, shot);
     this.fitSubjects(shot, dt);
   }
 
@@ -159,7 +228,9 @@ export class CameraRig {
     const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
     const horizontal = vertical * camera.aspect;
     let needed = 0;
-    for (const point of [pair.primary, pair.secondary, ...(pair.tertiary ? [pair.tertiary] : [])]) {
+    for (let i = 0; i < 3 + (pair.points?.length ?? 0); i++) {
+      const point = i === 0 ? pair.primary : i === 1 ? pair.secondary : i === 2 ? pair.tertiary : pair.points![i - 3];
+      if (!point) continue;
       this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
       needed = Math.max(needed, Math.abs(this.local.x) / horizontal + this.local.z,
         Math.abs(this.local.y) / vertical + this.local.z);
@@ -171,20 +242,23 @@ export class CameraRig {
     camera.updateMatrixWorld();
     this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
     const depth = Math.max(1, -this.local.z);
-    this.second.copy(pair.secondary).applyMatrix4(camera.matrixWorldInverse);
-    const otherDepth = Math.max(1, -this.second.z);
-    this.third.copy(pair.tertiary ?? pair.secondary).applyMatrix4(camera.matrixWorldInverse);
-    const thirdDepth = Math.max(1, -this.third.z);
     // Recompose within the available room before asking for any more distance. If an old runaway
     // cannot fit, the child's interval wins until the plane has flown back into reach.
-    const shift = (a: number, b: number, c: number, slope: number): number => {
-      const lo = a - depth * slope, hi = a + depth * slope;
-      const bothLo = Math.max(lo, b - otherDepth * slope, c - thirdDepth * slope);
-      const bothHi = Math.min(hi, b + otherDepth * slope, c + thirdDepth * slope);
-      return bothLo <= bothHi ? THREE.MathUtils.clamp(0, bothLo, bothHi) : THREE.MathUtils.clamp(0, lo, hi);
-    };
-    const x = shift(this.local.x, this.second.x, this.third.x, horizontal);
-    const y = shift(this.local.y, this.second.y, this.third.y, vertical);
+    const primaryLeft = this.local.x - depth * horizontal, primaryRight = this.local.x + depth * horizontal;
+    const primaryBottom = this.local.y - depth * vertical, primaryTop = this.local.y + depth * vertical;
+    let left = primaryLeft, right = primaryRight, bottom = primaryBottom, top = primaryTop;
+    for (let i = 1; i < 3 + (pair.points?.length ?? 0); i++) {
+      const point = i === 1 ? pair.secondary : i === 2 ? pair.tertiary : pair.points![i - 3];
+      if (!point) continue;
+      this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
+      const distance = Math.max(1, -this.local.z);
+      left = Math.max(left, this.local.x - distance * horizontal);
+      right = Math.min(right, this.local.x + distance * horizontal);
+      bottom = Math.max(bottom, this.local.y - distance * vertical);
+      top = Math.min(top, this.local.y + distance * vertical);
+    }
+    const x = left <= right ? THREE.MathUtils.clamp(0, left, right) : THREE.MathUtils.clamp(0, primaryLeft, primaryRight);
+    const y = bottom <= top ? THREE.MathUtils.clamp(0, bottom, top) : THREE.MathUtils.clamp(0, primaryBottom, primaryTop);
     camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
     camera.position.y = Math.max(camera.position.y, Math.max(heightAt(camera.position.x, camera.position.z), 0) + this.clear);
     if (shot.smoothFit && Number.isFinite(dt)) {
@@ -195,7 +269,7 @@ export class CameraRig {
     camera.updateMatrixWorld();
   }
 
-  private place(time: number, dt: number): void {
+  private place(time: number, dt: number, shot: Shot): void {
     const reach = Math.min(this.eye.distanceTo(this.look), 60);
     const want = this.want.copy(this.eye);
     want.x += Math.sin(time * 0.07 + 1.3) * 0.02 * reach;
@@ -221,6 +295,14 @@ export class CameraRig {
     pos.y += this.lift;
     const floor = Math.max(heightAt(pos.x, pos.z), heightAt(pos.x, pos.z - 6), 0) + this.clear;
     if (pos.y < floor) pos.y = floor;
+    const k = tuning.cinematography;
+    // Include the previous framing offset: portrait fitting can put the eye behind different scenery.
+    const rise = shot.obstacles && shot.subjects
+      ? Math.min(k.obstacleMaxRise, sceneryLift(this.probe.copy(pos).add(this.fitOffset), shot.subjects.primary, shot.obstacles, k.obstacleAhead)) : 0;
+    const change = (rise - this.sceneryRise) * (1 - Math.exp(-dt *
+      (rise > this.sceneryRise ? k.obstacleRise : k.obstacleRelease)));
+    this.sceneryRise += THREE.MathUtils.clamp(change, -dt * k.obstacleSpeed, dt * k.obstacleSpeed);
+    pos.y += this.sceneryRise;
     this.camera.lookAt(this.look);
   }
 

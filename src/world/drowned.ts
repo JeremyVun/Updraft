@@ -7,7 +7,7 @@ import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32 } from './noise';
 import { swellLift } from './water/swell';
-import { LighthouseLight } from './lighthouse';
+import { LighthouseLight, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
 
 /**
@@ -676,9 +676,9 @@ function buildChurch(into: Merged, rand: Rng): void {
   into.add(new THREE.SphereGeometry(0.11, 6, 5).translate(0, -0.42, 0), IRON, VANE, vane);
 }
 
-/** A small harbour light standing in the flood, its door below water and its lantern still turning. */
+/** A towering harbour light standing in the flood, its door below water and its lantern still turning. */
 function buildLighthouse(into: Merged): void {
-  const frame = new THREE.Matrix4().makeScale(1, 0.82, 1).setPosition(LIGHTHOUSE);
+  const frame = new THREE.Matrix4().makeScale(...LIGHTHOUSE_SCALE.toArray()).setPosition(LIGHTHOUSE);
   const lime = lin(0.52, 0.50, 0.43);
   const dark = lin(0.055, 0.065, 0.075);
   into.add(new THREE.CylinderGeometry(2.0, 2.9, 14, 14).translate(0, 5.4, 0), lime, PLAIN, frame);
@@ -866,7 +866,7 @@ function tube(part: number, mat: number, a: THREE.Vector3, b: THREE.Vector3, lif
 }
 
 /** Eight crowns along the drift, standing clear of the roofs; half of them still have leaves to give the water. */
-function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[]): THREE.BufferGeometry {
+function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[]): THREE.BufferGeometry {
   const limbs: THREE.BufferGeometry[] = [];
   const at = new THREE.Vector2();
   const tangent = new THREE.Vector2();
@@ -882,6 +882,10 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[]): THREE.Buffer
       if (Math.hypot(x - LIGHTHOUSE.x, z - LIGHTHOUSE.z) < 22) continue;
       const bare = twigs.length;
       for (const part of drownedTree(x, z, range(rand, 7, 10), rand, twigs)) {
+        part.computeBoundingBox();
+        const bounds = part.boundingBox!;
+        if (Math.max(bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y, bounds.max.z - bounds.min.z) > 3)
+          cameraObstacles.push(bounds.clone());
         const count = part.attributes.position.count;
         const base = new Float32Array(count * 3);
         for (let k = 0; k < count; k++) base.set([x, -2.4, z], k * 3);
@@ -1045,6 +1049,7 @@ interface Drifter {
  */
 export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
+  readonly cameraObstacles: THREE.Box3[] = [];
   private readonly storm = { value: 0 };
   private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
@@ -1062,7 +1067,13 @@ export class DrownedVillage {
     const body = new Merged();
     for (const h of houses) {
       const m = houseMatrix(h);
+      this.cameraObstacles.push(new THREE.Box3(
+        new THREE.Vector3(-h.len / 2 - 0.5, 0, -h.depth / 2 - 0.5),
+        new THREE.Vector3(h.len / 2 + 0.5, h.wall + h.rise + 0.4, h.depth / 2 + 0.5)).applyMatrix4(m));
       for (const perch of buildHouse(body, h, rand, m)) {
+        this.cameraObstacles.push(new THREE.Box3(
+          new THREE.Vector3(perch.x - 0.65, 0, perch.z - 0.65),
+          new THREE.Vector3(perch.x + 0.65, perch.y + 0.5, perch.z + 0.65)));
         if (perch.y > 2.2 && perch.y < 8 && offChannel(perch.x, perch.z).d < 34) this.roosts.push(perch);
       }
     }
@@ -1082,7 +1093,7 @@ export class DrownedVillage {
     const twigs: Twig[] = [];
     this.objects.push(
       new THREE.Mesh(
-        plantTrees(houses, rand, twigs),
+        plantTrees(houses, rand, twigs, this.cameraObstacles),
         new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: shared }),
       ),
     );

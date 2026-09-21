@@ -104,6 +104,9 @@ export class Glider {
    */
   readonly home = new THREE.Vector3(-6, 0, -14);
   homeRadius = 50;
+  /** A walking destination: let gestures play, but do not let the prevailing breeze choose the route. */
+  guided = false;
+  private settlingAt: THREE.Vector3 | null = null;
   /** Optional walking companion. The chapter clears this for authored scenes and sailing. */
   companion: THREE.Vector3 | null = null;
   private waiting = false;
@@ -111,6 +114,8 @@ export class Glider {
   private turnSide = 1;
   /** A chapter may offer a landing surface over water; null keeps the shared terrain and sea behaviour. */
   landingGround: ((x: number, z: number) => number | null) | null = null;
+  /** Inland water is also unreachable by the child, even when its bed is above sea level. */
+  water: { level: number; over(x: number, z: number): boolean } | null = null;
   /** False while it is down on the water, where the child cannot go and fetch it. */
   private aground = true;
   private readonly body: THREE.Mesh;
@@ -188,6 +193,8 @@ export class Glider {
 
   /** Held by the keel, or secured to the satchel when the child's arms are occupied. */
   hold(child: Traveller): void {
+    this.settlingAt = null;
+    this.guided = false;
     this.pinned = false;
     this.restingAt = null;
     this.carrier = child;
@@ -203,6 +210,7 @@ export class Glider {
   }
 
   launch(from: THREE.Vector3, velocity: THREE.Vector3): void {
+    this.settlingAt = null;
     this.pinned = false;
     this.restingAt = null;
     /** Release from the paper's actual centre, so the keel offset does not become a jump. */
@@ -252,7 +260,15 @@ export class Glider {
   }
 
   depart(heading: THREE.Vector3): void {
+    this.settlingAt = null;
     this.departing = heading.clone().normalize();
+  }
+
+  /** Finish an arrival by flying down to a fixed, reachable pickup spot. Never teleport the paper. */
+  settleAt(at: THREE.Vector3): void {
+    this.settlingAt = at.clone();
+    this.companion = null;
+    this.guided = true;
   }
 
   set visible(on: boolean) {
@@ -285,22 +301,25 @@ export class Glider {
     if (this.departing) this.thrust = Math.max(this.thrust, 5.2);
     const p = this.position;
     const v = this.velocity;
+    if (this.settlingAt) this.home.copy(this.settlingAt);
     const w = this.wind.sample(p.x, p.z, this.sample);
+    if (this.settlingAt) w.x = w.z = w.energy = w.lift = 0;
     const ground = this.landingGround?.(p.x, p.z) ?? heightAt(p.x, p.z);
-    const surface = Math.max(ground, 0);
-    const clearance = ground > GRASS_LINE ? 1.8 : 0.45;
+    const waterLevel = this.water?.over(p.x, p.z) ? this.water.level : 0;
+    const surface = Math.max(ground, waterLevel);
+    const clearance = ground > waterLevel && ground > GRASS_LINE ? 1.8 : 0.45;
     const floor = surface + clearance;
     const altitude = p.y - floor;
     const windSpeed = Math.hypot(w.x, w.z);
 
     this.thrust = Math.max(0, this.thrust - dt * 2.8);
-    const liftForce = w.energy * 8 + w.lift * 10 + Math.max(0, windSpeed - 5) * 0.25 + this.thrust * 0.42;
+    const liftForce = this.settlingAt ? 0 : w.energy * 8 + w.lift * 10 + Math.max(0, windSpeed - 5) * 0.25 + this.thrust * 0.42;
     this.lift += (Math.min(1, liftForce / 8) - this.lift) * (1 - Math.exp(-dt * 3));
     const resting = altitude < 0.3 && liftForce < 1.6;
     this.airborne = !resting;
     this.restTime = resting && Math.hypot(this.velocity.x, this.velocity.z) < 1.5 ? this.restTime + dt : 0;
 
-    this.aground = ground > 0;
+    this.aground = ground > waterLevel;
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
     const glide = resting ? 0 : 3.2;
@@ -349,6 +368,23 @@ export class Glider {
     const vyTarget = resting ? 0 : liftForce - 2.4;
     v.y += (vyTarget - v.y) * (1 - Math.exp(-dt * 1.4));
 
+    if (this.guided && !this.departing) {
+      const k = tuning.planeGuide;
+      // Local gesture energy keeps the player's gust; quiet air restores a definite course,
+      // including near the ground where altitude-only steering used to disappear.
+      const assistance = this.settlingAt ? 1 : 1 - THREE.MathUtils.smoothstep(Math.max(w.energy, w.lift), k.gustFrom, k.gustFull);
+      const speed = resting && !this.settlingAt ? 0 : Math.min(k.speed, toHome * k.approach);
+      const response = 1 - Math.exp(-dt * k.response * assistance);
+      v.x += ((toHome > 0 ? dx / toHome * speed : 0) - v.x) * response;
+      v.z += ((toHome > 0 ? dz / toHome * speed : 0) - v.z) * response;
+      if (this.settlingAt) {
+        // Stay above intervening ground, then come down at the pickup spot.
+        const landing = Math.max(this.landingGround?.(this.home.x, this.home.z) ?? heightAt(this.home.x, this.home.z), 0);
+        const y = Math.max(floor, landing + clearance + Math.min(k.travelHeight, toHome));
+        v.y += (THREE.MathUtils.clamp((y - p.y) * k.approach, -k.sinkSpeed, k.sinkSpeed) - v.y) * (1 - Math.exp(-dt * k.response));
+      }
+    }
+
     if (this.departing) {
       const k = 1 - Math.exp(-dt * 0.6);
       v.x += (this.departing.x * 9 - v.x) * k;
@@ -381,6 +417,19 @@ export class Glider {
       if (len < reach && len > 1e-3) v.addScaledVector(d, ((reach - len) / len) * dt * 6);
     }
 
+    if (this.guided && !this.departing && r > this.homeRadius) {
+      // A prolonged gust must not win forever against a small acceleration toward home.
+      // Spill outward speed at the edge; sideways play remains free and recovery is continuous.
+      const k = tuning.planeGuide;
+      const brake = THREE.MathUtils.smoothstep(r, this.homeRadius, this.homeRadius + k.returnMargin);
+      const radial = -(v.x * dx + v.z * dz) / r;
+      const limit = k.speed * (1 - brake) - k.returnSpeed * brake;
+      if (radial > limit) {
+        v.x -= dx / r * (limit - radial);
+        v.z -= dz / r * (limit - radial);
+      }
+    }
+
     if (escort) {
       // Spill only the outward part of a gust. Sideways play and lift remain responsive.
       // This bounds velocity, not position: even an old far-away save flies home continuously.
@@ -405,7 +454,8 @@ export class Glider {
     }
 
     p.addScaledVector(v, dt);
-    const newFloor = Math.max(this.landingGround?.(p.x, p.z) ?? heightAt(p.x, p.z), 0) + clearance;
+    const newFloor = Math.max(this.landingGround?.(p.x, p.z) ?? heightAt(p.x, p.z),
+      this.water?.over(p.x, p.z) ? this.water.level : 0) + clearance;
     if (p.y < newFloor) {
       p.y += (newFloor - p.y) * (1 - Math.exp(-dt * 12));
       if (v.y < 0) v.y *= 0.3;
@@ -456,7 +506,7 @@ export class Glider {
     }
     this.prev.copy(p);
 
-    this.shadow.position.set(p.x, surface + (ground > GRASS_LINE ? 1.6 : 0.05), p.z);
+    this.shadow.position.set(p.x, surface + (this.aground && ground > GRASS_LINE ? 1.6 : 0.05), p.z);
     const shadowAlt = p.y - this.shadow.position.y;
     this.shadow.scale.setScalar(1 + shadowAlt * 0.08);
     this.shadowMat.uniforms.uOpacity.value = 0.32 * Math.exp(-shadowAlt * 0.09);
@@ -472,7 +522,7 @@ export class Glider {
    * the ground under the cursor (where the wind field is pushed) lies well behind it.
    */
   brush(camera: THREE.Camera, a: THREE.Vector2, b: THREE.Vector2, gust: number, dir: THREE.Vector2, charge: number, dt: number): void {
-    if (this.restingAt) return;
+    if (this.restingAt || this.settlingAt) return;
     if (this.held) return;
     const s = this.scratch.copy(this.position).project(camera);
     const aspect = window.innerWidth / window.innerHeight;

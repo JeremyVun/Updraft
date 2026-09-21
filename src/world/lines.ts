@@ -18,6 +18,7 @@ in float aRole;
 in float aCurtain;
 uniform vec3 uCurtains;
 uniform vec2 uFamily;
+uniform float uFamilyFlutter;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vColor;
@@ -155,6 +156,14 @@ void main() {
   }
   vNormal = normalize(cross(down, along));
   if (aRole > -0.5) family(along, side, up, hang);
+  if (aRole > -0.5 && uFamilyFlutter > 0.0) {
+    // A distant domestic line still catches a little sea air outside the local wind texture.
+    // Independent phases loosen the hems while leaving the pegged top edge fixed.
+    float breath = uTime * 1.35 + aShape.w;
+    float wave = sin(breath - hang * 2.0) + 0.3 * sin(uTime * 3.1 + uv.x * 7.0 + aShape.w);
+    vWorld += side * wave * uFamilyFlutter * aShape.y * hang * hang;
+    vWorld.y += sin(breath + uv.x * 5.0) * uFamilyFlutter * 0.15 * hang;
+  }
   vColor = aColor;
   vSwing = swing;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -163,6 +172,7 @@ void main() {
 const CLOTH_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec4 uSubject;
+uniform float uFamilyFlutter;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vColor;
@@ -197,6 +207,10 @@ void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(cameraPosition - vWorld);
   if (!gl_FrontFacing) N = -N;
+  if (vRole > -0.5 && uFamilyFlutter > 0.0) {
+    // Let the small moving folds catch light instead of shading as a flat cutout.
+    N = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
+  }
   float ndl = dot(N, uSunDir);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
 
@@ -463,7 +477,8 @@ export class WashingLines {
   readonly subject = new THREE.Vector4();
   private readonly clothMat: THREE.ShaderMaterial;
 
-  constructor(specs: readonly LineSpec[], seed = 91, familyLine: LineSpec | null = null) {
+  constructor(specs: readonly LineSpec[], seed = 91, familyLine: LineSpec | null = null,
+    familyStyle: { scale?: number; gesture?: THREE.Vector2; flutter?: number } = {}) {
     const rand = mulberry32(seed);
     const woodMat = new THREE.ShaderMaterial({
       uniforms: atmo.uniforms,
@@ -471,7 +486,9 @@ export class WashingLines {
       fragmentShader: WOOD_FRAG,
     });
     this.clothMat = new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject }, uFamily: { value: family }, uCurtains: { value: curtainLift } },
+      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject },
+        uFamily: { value: familyStyle.gesture ?? family },
+        uFamilyFlutter: { value: familyStyle.flutter ?? 0 }, uCurtains: { value: curtainLift } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
@@ -563,14 +580,16 @@ export class WashingLines {
       }
       ropes.push(ropeGeometry(familyLine));
       for (const piece of FAMILY_PIECES) {
+        const scale = familyStyle.scale ?? 1;
+        const width = piece.width * scale;
         onLine(familyLine, piece.at - 0.02, point);
         onLine(familyLine, piece.at + 0.02, next);
         dir.subVectors(next, point).normalize();
         onLine(familyLine, piece.at, point);
         anchors.push(point.x, point.y, point.z);
         alongs.push(dir.x, dir.y, dir.z);
-        shapes.push(piece.width, piece.drop, rand() * 3, rand() * 6.28);
-        posts.push(pegGeometry(point, dir, piece.width * 0.46), pegGeometry(point, dir, -piece.width * 0.46));
+        shapes.push(width, piece.drop * scale, rand() * 3, rand() * 6.28);
+        posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
         const c = new THREE.Color(piece.colour);
         colors.push(c.r, c.g, c.b);
         kinds.push(1);
@@ -592,7 +611,15 @@ export class WashingLines {
     cloth.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(kinds), 1));
     cloth.setAttribute('aCurtain', new THREE.InstancedBufferAttribute(new Float32Array(curtains), 1));
     cloth.setAttribute('aRole', new THREE.InstancedBufferAttribute(new Float32Array(roles), 1));
-    cloth.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
+    // Shader instances live at their anchors, not at the template quad. Include the
+    // full drop, gust ripple, lifted curtains and the family's sleeve movements.
+    const clothBounds = new THREE.Box3();
+    let padding = 0;
+    for (let i = 0; i < cloth.instanceCount; i++) {
+      clothBounds.expandByPoint(point.fromArray(anchors, i * 3));
+      padding = Math.max(padding, 2 * (shapes[i * 4] + shapes[i * 4 + 1]) + 2);
+    }
+    cloth.boundingSphere = clothBounds.expandByScalar(padding).getBoundingSphere(new THREE.Sphere());
 
     this.group.add(new THREE.Mesh(mergeGeometries(posts), woodMat));
     this.group.add(new THREE.Mesh(mergeGeometries(ropes), woodMat));

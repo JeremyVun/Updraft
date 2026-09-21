@@ -694,6 +694,15 @@ export class AutumnBirches {
     ]);
     this.objects.push(new THREE.Mesh(branch, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared })));
 
+    const scarfBranches = mergeGeometries([
+      ...this.scarf.slipLog.map(limb => log(limb.a, limb.b, limb.radius, limb.radius - .065, 11)),
+      ...this.scarf.slipBranch.map((limb, i, limbs) => log(limb.a, limb.b, limb.radius, limbs[i + 1]?.radius ?? .055, 7)),
+      ...this.scarf.bowBranch.map((limb, i) => log(limb.a, limb.b, limb.radius, i === 0 ? .12 : .075, 9)),
+    ]);
+    this.objects.push(new THREE.Mesh(scarfBranches, new THREE.ShaderMaterial({
+      vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared,
+    })));
+
     const stump = this.scarf.stump, base = new THREE.Vector3(stump.x, Math.max(0, heightAt(stump.x, stump.z)), stump.z);
     const top = base.clone().add(new THREE.Vector3(0, stump.height, 0));
     const stumpGeo = log(base, top, stump.radius, stump.radius * .82, 12);

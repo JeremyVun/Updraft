@@ -71,7 +71,24 @@ export class WorldFoley {
 
   flow(source: object, kind: MaterialSound, at: THREE.Vector3, strength: number, active: boolean): void {
     const state = this.state(source, kind, 0);
+    const wasActive = state.active;
     state.active = active;
+    if (kind === 'sail') {
+      // A sustained luff is already carried by the wind. Sound only a fresh rise in tension,
+      // with hysteresis so the squall's small oscillations cannot become a flapping loop.
+      const before = state.value;
+      state.value = strength;
+      if (!active || !wasActive) { state.strength = strength; return; }
+      state.strength = Math.min(state.strength, strength);
+      const rise = strength - state.strength;
+      if (strength <= before || rise < tuning.audio.sailRise) return;
+      state.strength = strength;
+      if (this.time < state.next) return; // Expire masked gusts; never replay them later.
+      state.next = this.time + tuning.audio.sailEvery;
+      const level = Math.min(1, rise) * tuning.audio.sailLevel * this.heard(at);
+      if (level > 0.015) this.foley.material(kind, level, screenPan(this.camera, at));
+      return;
+    }
     if (!active) { state.strength = 0; return; }
     this.play(state, kind, at, strength);
   }

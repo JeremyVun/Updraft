@@ -3,6 +3,7 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import {reviewCapture} from './lib/review-capture.mjs';
 const viewport = { width: Number(process.env.W ?? 1440), height: Number(process.env.H ?? 900) };
 const portrait = viewport.width < viewport.height;
 const prefix = `/tmp/updraft-piano-new-${portrait ? 'portrait' : 'desktop'}`;
@@ -16,7 +17,7 @@ for (;;) {
     await new Promise(r=>setTimeout(r,500));
   }
 }
-let browser;
+let browser,stopReview;
 const report={viewport,states:[],errors:[]};
 try {
   browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,
@@ -26,6 +27,7 @@ try {
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))report.errors.push(m.text());});
   await page.goto(`${process.env.BASE??'http://127.0.0.1:5230/'}?shot=1&chapter=piano`);
   await page.waitForFunction(()=>window.__ready&&window.__game?.piano,null,{timeout:90000});
+  if(process.env.REVIEW==='1')stopReview=reviewCapture(page,prefix);
   await page.mouse.click(10,10);
   const state=()=>page.evaluate(()=>{
     const g=__game,p=g.piano,s=g.story.current.piano;
@@ -93,6 +95,8 @@ try {
   console.log('Piano passed: four real sweeps, no idle completion, visible guide, travelling restoration, departure.');
 } finally {
   fs.writeFileSync(`${prefix}-report.json`,JSON.stringify(report,null,2));
-  await browser?.close();
-  if(Number(fs.readFileSync(`${lock}/pid`,'utf8'))===process.pid)fs.rmSync(lock,{recursive:true,force:true});
+  try{await stopReview?.();}finally{
+    await browser?.close();
+    if(Number(fs.readFileSync(`${lock}/pid`,'utf8'))===process.pid)fs.rmSync(lock,{recursive:true,force:true});
+  }
 }

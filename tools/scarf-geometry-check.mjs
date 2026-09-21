@@ -14,7 +14,7 @@ const res=400,size=200,minX=-100,minZ=-1230,data=new Float32Array(res*res);
 for(let z=0;z<res;z++)for(let x=0;x<res;x++)data[z*res+x]=heightAt(minX+(x+.5)/res*size,minZ+(z+.5)/res*size);
 setHeightGrid({data,res,size,minX,minZ,stride:1});
 const scarf=new BirchScarf();
-scarf.setTrees([...SCARF_SNAGS.filter(s=>s.kind!=='unwind').map(s=>({x:s.treeX,z:s.treeZ})),...SCARF_PERCHES].map(s=>({...s,y:heightAt(s.x,s.z)-.25,scale:16})));
+scarf.setTrees([...SCARF_SNAGS.filter(s=>s.kind!=='unwind'&&s.kind!=='pull').map(s=>({x:s.treeX,z:s.treeZ})),...SCARF_PERCHES].map(s=>({...s,y:heightAt(s.x,s.z)-.25,scale:16})));
 const wind={sample(x,z,out){Object.assign(out,{x:0,z:0,lift:0,energy:0});return out;}};
 let supportGap=0,stretch=1;
 for(const work of [0,.25,.5,.75,.95]){
@@ -80,6 +80,39 @@ assert.ok(Math.hypot(scarf.tied[loop.start].x-before.x,scarf.tied[loop.start].z-
 assert.ok(Math.hypot(scarf.tied[loop.end].x-after.x,scarf.tied[loop.end].z-after.z)<1.05);
 assert.ok(loop.cloth.report().penetration<.02);
 assert.equal(scarf.finished,false,'Three releases must not finish the four-knot scarf');
+
+// Both late knots bear on real limbs through partial pulls, including their full-width hems.
+const vertex=scarf.snags[3].center.clone();
+for(const index of [2,3]){
+  scarf.restore(0);
+  const start=scarf.owner.indexOf(index),end=scarf.owner.lastIndexOf(index);
+  const branches=index===2?scarf.slipBranch:scarf.bowBranch;
+  const branchGap=p=>Math.min(...branches.map(b=>{
+    const axis=b.b.clone().sub(b.a);
+    const t=Math.max(0,Math.min(1,p.clone().sub(b.a).dot(axis)/axis.lengthSq()));
+    return p.distanceTo(b.a.clone().addScaledVector(axis,t))-b.radius;
+  }));
+  let clearance=Infinity;
+  for(const work of [0,.25,.5,.7,.85,.95]){
+    scarf.snags[index].work=scarf.snags[index].target=work;
+    scarf.update(1/60,wind);
+    let nearest=Infinity;
+    const p=scarf.mesh.geometry.attributes.position;
+    for(let row=start;row<=end;row++)for(let j=0;j<24;j++){
+      const i=row*24+j,gap=branchGap(vertex.set(p.getX(i),p.getY(i),p.getZ(i)));
+      nearest=Math.min(nearest,gap);clearance=Math.min(clearance,gap);
+    }
+    if(work<=.7)assert.ok(nearest<.06,`Knot ${index} floated off its support at ${work}: ${nearest}`);
+  }
+  assert.ok(clearance>.02,`Knot ${index} hem cut through its branch: ${clearance}`);
+  scarf.snags[index].work=scarf.snags[index].target=1;
+  for(let i=0;i<600;i++)scarf.update(1/60,wind);
+  const cloth=scarf.releasedCloth.get(index).cloth,release=cloth.report();
+  assert.ok(release.penetration<.02&&release.stretch<1.15,JSON.stringify(release));
+  assert.ok(Math.min(...cloth.positions.map(branchGap))>.35,`Released knot ${index} caught on its old branch`);
+  console.log(JSON.stringify({knot:index,clearance,release}));
+}
+
 const {BirchesChapter}=await import('../src/story/birches.ts');
 const saved={cast:{birches:{scarf},boat:{scarfSail:0},child:{stop(){}}}};
 BirchesChapter.prototype.restoreCheckpoint.call(saved,'scarf-3',[4,0,.65,3]);

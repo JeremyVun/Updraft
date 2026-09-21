@@ -37,7 +37,7 @@ try {
 
     const phase = Object.getOwnPropertyDescriptor(BirchesChapter.prototype, 'birchesScore').get;
     const scarf = { completed: 0, finished: false }, story = { beat: 'wonder', cast: { birches: { scarf } } };
-    for (const beat of ['wonder','walk','toScarf','scarf']) {
+    for (const beat of ['ashore','wonder','walk','toScarf','scarf']) {
       story.beat = beat; check(phase.call(story) === 'walk', `${beat}: the first loop keeps the opening phrase`);
     }
     scarf.completed = 1;
@@ -52,8 +52,8 @@ try {
     for (const beat of ['walk','gathering','toBoat']) {
       story.beat = beat; check(phase.call(story) === 'return', `${beat}: the completed sail selects the final walking phrase`);
     }
-    for (const beat of ['ashore','push','aboard']) {
-      story.beat = beat; check(phase.call(story) === undefined, `${beat}: the original transition pad keeps ownership`);
+    for (const beat of ['push','aboard']) {
+      story.beat = beat; check(phase.call(story) === 'return', `${beat}: the final phrase continues through departure`);
     }
     for (const count of [0,1,2,3,4]) {
       const restoredScarf = { restore(n) { this.completed = n; this.finished = n === 4; } };
@@ -73,7 +73,7 @@ try {
         scheduler.update(now < 50 ? 'walk' : now < 100 ? 'swing' : now < 150 ? 'scarf' : 'return', 1);
       }
       check(events.filter(e => e.phase === 'scarf').every(e => e.note.role !== 'melody'), `Long scarf waits remain without lead melody at ${fps} Hz`);
-      const first = BIRCHES_SECTIONS.walk.notes[0], repeats = events.filter(e => e.note === first);
+      const first = BIRCHES_SECTIONS.walk.notes[0], repeats = events.filter(e => e.phase === 'walk' && e.note.voice === first.voice && e.note.midi === first.midi && e.note.at === first.at);
       check(repeats.length === 3 && Math.abs(repeats[1].at - repeats[0].at - 22) < .02, `Opening repeats without clock drift at ${fps} Hz`);
       check(events.some(e => e.phase === 'swing' && e.at > 75 && e.note.role === 'melody'), `An extended swing keeps its own phrase at ${fps} Hz`);
       check(!events.some(e => e.at >= 13 && e.at < 13.1), `A stalled frame does not bunch missed notes at ${fps} Hz`);
@@ -114,8 +114,8 @@ try {
       if (tick === 32 * 8) retired = live.current;
       if (tick === 36 * 8) check(!retired.voices.size && !live.parts.has(retired), 'The swing melody releases on return to scarf work');
       if (tick === 40 * 8) check(sound.padGain.gain.value < .00001, 'The original pad stays out of the composed score');
-      if (tick === 54 * 8) check(!sound.birchesScore && live.stopped, 'Boarding retires the score before the existing transition');
-      if (tick === 57.5 * 8) check(sound.padGain.gain.value > .045, 'The original pad is audible before departure');
+      if (tick === 54 * 8) check(!sound.birchesScore && live.stopped, 'Explicitly clearing the score releases its voices');
+      if (tick === 57.5 * 8) check(sound.padGain.gain.value > .045, 'An explicit fallback still restores the shared pad');
       if (tick === 60 * 8) { resumed = sound.birchesScore; check(resumed !== live, 'A fresh entry creates a fresh score'); }
       if (tick === 62 * 8) check(!sound.birchesScore && resumed.stopped, 'Permanent silence stops Birches');
     };
@@ -127,7 +127,7 @@ try {
     }
     const buffer = await rendering;
     check([16,22,41].every(at => feedback.some(e => e.now >= at && e.now < at + .5)), 'Every playable stroke responds across the musical sections');
-    check(updraft.length > 10 && updraft.every(n => n.chord.includes(n.midi - 24)), 'Updraft chimes use the sounding score harmony, keeping their octave and rhythm');
+    check(updraft.length > 10 && updraft.every(n => n.midi >= 62 && n.midi <= 81 && n.chord.some(m => (m - n.midi) % 12 === 0)), 'Updraft chimes use the sounding score harmony, in the calmer gesture register');
     check(!feedback.some(e => e.now >= 42 && e.now < 42.75), 'Piano ownership still suppresses generic gesture notes');
     check(live.parts.size === 0 && resumed.parts.size === 0, 'Exited scores release all oscillators and buses');
     check(chords.every(s => s.chord === Math.floor(s.now / (s.music === 'birches' ? 11 : 13)) % 4),

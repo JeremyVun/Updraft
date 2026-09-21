@@ -63,7 +63,7 @@ try {
     door.open=1;story.beat='family';check(phase.call(story)==='door','Opening the door gives completion its accompaniment-only section');
     for(const beat of ['throughDoor','shore','walk','toBoat','ashore','push','aboard']) {
       story.beat=beat;
-      const want=beat==='throughDoor'?'door':['shore','walk','toBoat'].includes(beat)?'shore':undefined;
+      const want=beat==='throughDoor'?'door':['shore','walk','toBoat','push','aboard'].includes(beat)?'shore':'third';
       check(phase.call(story)===want,`${beat}: doorway, beach and original sailing transitions retain their places`);
     }
     // Exercise actual restoration; no cue or family reveal may replay from an existing save.
@@ -106,7 +106,7 @@ try {
     const {ctx,sound}=offlineSound(87), feedback=[],glides=[],chords=[];
     let live,retiring,resumed;
     const chime=sound.chime.bind(sound);
-    sound.chime=(...a)=>{feedback.push({now:ctx.currentTime,midi:a[0],duration:a[4],
+    sound.chime=(...a)=>{feedback.push({now:ctx.currentTime,at:a[3],midi:a[0],duration:a[4],
       chord:sound.linesScore?[...sound.linesScore.chordAt(a[3])]:null});chime(...a);};
     const freq=sound.padVoices[0].osc[0].frequency,setTarget=freq.setTargetAtTime.bind(freq);
     freq.setTargetAtTime=(...a)=>{glides.push(a);return setTarget(...a);};
@@ -123,8 +123,8 @@ try {
       if(now===19)check(!retiring.voices.size&&!live.parts.has(retiring),'A previous curtain section releases all its voices');
       if(now===14)check(live.current.melody.gain.value<.00001,'A passage and cue rapidly clear the lead melody');
       if(now===22)check(sound.padGain.gain.value<.00001,'The legacy pad stays out of the composed Lines score');
-      if(now===74)check(!sound.linesScore&&live.stopped,'Boarding retires Lines before the existing departure transition');
-      if(now===77.5)check(sound.padGain.gain.value>.045,'The original transition pad is audible before departure');
+      if(now===74)check(!sound.linesScore&&live.stopped,'Explicitly clearing the score retires its voices');
+      if(now===77.5)check(sound.padGain.gain.value>.045,'An explicit fallback still restores the shared pad');
       if(now===80){resumed=sound.linesScore;check(resumed!==live,'Fresh chapter entry gets a fresh score');}
       if(now===83)check(!sound.linesScore&&resumed.stopped,'Permanent music silence stops Lines');
     };
@@ -133,9 +133,9 @@ try {
       await pause;update(tick);if(tick+1<87*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();
     }
     const buffer=await rendering;
-    check([11,23,37,65].every(at=>feedback.some(e=>e.now>=at&&e.now<at+.5)),'Playable strokes respond even while the melody is quiet');
+    check([11,23,37,65].every(at=>feedback.some(e=>e.at>=at&&e.at<at+.5)),'Playable strokes respond even while the melody is quiet');
     const lifts=feedback.filter(e=>e.duration===1.6&&e.chord);
-    check(lifts.length>5&&lifts.every(e=>e.chord.includes(e.midi-24)),'Updraft notes follow Lines harmony without changing their register');
+    check(lifts.length>5&&lifts.every(e=>e.midi>=62&&e.midi<=81&&e.chord.some(m=>(m-e.midi)%12===0)),'Updraft notes follow Lines harmony in the calmer gesture register');
     check(!feedback.some(e=>e.now>=25&&e.now<25.75),'Piano ownership still suppresses generic chimes');
     check(!live.parts.size&&!resumed.parts.size,'Exited scores release every voice and bus');
     check(chords.every(s=>s.chord===Math.floor(s.now/(s.music==='lines'?9:8.5))%4),'Shared chord clock continues independently');

@@ -1,3 +1,4 @@
+import { HOME_SHIFT } from '../world/geography';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { COTTAGE, LAST_HILL } from '../world/heightfield';
@@ -27,7 +28,6 @@ type Beat =
   | 'crest'
   | 'brow'
   | 'release'
-  | 'nightfall'
   | 'home'
   | 'inside'
   | 'credits';
@@ -107,7 +107,6 @@ const TAKES = 0.4;
 const WATCHES_IT = 7;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
-const NIGHTFALL_FOR = 11;
 /** The rise to the stars: when it starts after the door, when it is done, when the music is cut, when the credits roll. */
 const RISE_FROM = 2;
 const RISE_TO = 24;
@@ -135,9 +134,9 @@ const SEA_LOOK = 100;
  * The jetty on the south beach: out from the shore over the water, with a deck the child walks in along. The one
  * arrival in the journey that has somewhere built for it, which is how you know it is home.
  */
-export const HOME_JETTY = { x: -45, shoreZ: -1954, endZ: -1927, halfWidth: 1.2, deck: 0.7 } as const;
+export const HOME_JETTY = { x: -45 + HOME_SHIFT.x, shoreZ: -1954 + HOME_SHIFT.z, endZ: -1927 + HOME_SHIFT.z, halfWidth: 1.2, deck: 0.7 } as const;
 /** Where the boat comes alongside the end of it and lies, bow to the east. */
-export const HOME_MOORING = { x: -45.3, z: -1926.25, yaw: Math.PI / 2 } as const;
+export const HOME_MOORING = { x: -45.3 + HOME_SHIFT.x, z: -1926.25 + HOME_SHIFT.z, yaw: Math.PI / 2 } as const;
 const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
 /** The top of the last hill, where the small one is put down. The cottage is still hidden behind the brow from here. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
@@ -170,13 +169,13 @@ export class HomeChapter implements Chapter {
   readonly worldLife = 1;
   pace = 0.35;
   readonly haze = 0.5;
-  dusk = 0.85;
+  dusk = tuning.homeLight.daylight;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly music = 'home' as const;
   readonly season = 1;
   readonly focus = new THREE.Vector3();
   private beatStart = 0;
-  private duskTarget = 0.85;
+  private duskTarget = tuning.homeLight.daylight;
   private now = 0;
   private readonly hand = new THREE.Vector3();
   private readonly paperFacing = new THREE.Quaternion();
@@ -188,6 +187,15 @@ export class HomeChapter implements Chapter {
   private readonly eyeAt = new THREE.Vector3();
   private readonly readingEye = new THREE.Vector3();
   private readonly paperEye = new THREE.Vector3();
+  private readonly descentChild = new THREE.Vector3();
+  private readonly descentHouse = new THREE.Vector3();
+  private readonly farewellEye = new THREE.Vector3();
+  private readonly farewellLook = new THREE.Vector3();
+  private farewellCaptured = false;
+  private readonly releaseFoot = new THREE.Vector3();
+  private readonly releaseHead = new THREE.Vector3();
+  private readonly releaseSubjects = { primary: this.releaseFoot, secondary: this.releaseHead,
+    tertiary: this.descentHouse, margin: 0.85, extra: 30 };
   private readonly moon = sunDirection(MOON.az, MOON.el);
   private readonly side = new THREE.Vector3();
   private readonly onCygnet = new THREE.Vector3();
@@ -234,8 +242,7 @@ export class HomeChapter implements Chapter {
   private coaxFrom = 0;
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
 
-  constructor(private readonly cast: Cast, private readonly duskFloor = 0.85) {
-    this.dusk = this.duskTarget = duskFloor;
+  constructor(private readonly cast: Cast) {
     cast.cygnet.mayFly = true;
     const { child, plane } = cast;
     plane.homeRadius = 70;
@@ -277,7 +284,7 @@ export class HomeChapter implements Chapter {
     const { child, cygnet, flock, plane, cottage } = this.cast;
     cygnet.visible = false;
     flock.clear();
-    this.dusk = this.duskTarget = point === 'complete' ? 2 : 1.15;
+    this.dusk = this.duskTarget = point === 'complete' ? 2 : tuning.homeLight.daylight;
     if (point === 'reunion') {
       this.skipToDrawing();
     } else if (point === 'drawing') {
@@ -312,8 +319,7 @@ export class HomeChapter implements Chapter {
     const { child, plane, cygnet, drawing } = this.cast;
     child.stop();
     cygnet.visible = false;
-    this.dusk = 1.15;
-    this.duskTarget = 1.15;
+    this.dusk = this.duskTarget = tuning.homeLight.daylight;
     child.place(open === undefined ? SUMMIT.x : BROW.x, open === undefined ? SUMMIT.y : BROW.y,
       Math.atan2(TO_COTTAGE.x, TO_COTTAGE.y));
     child.standUp();
@@ -346,7 +352,6 @@ export class HomeChapter implements Chapter {
       c.faceToward(SUMMIT.x + TOWARD_SUNSET.x, SUMMIT.y + TOWARD_SUNSET.y, 1);
       c.sitDown();
       this.to('summit');
-      this.duskTarget = 1;
     }, 0.8);
   }
 
@@ -358,8 +363,13 @@ export class HomeChapter implements Chapter {
     } else {
       this.updateEnding(dt);
     }
-    this.dusk = Math.max(this.dusk, this.duskFloor);
-    this.dusk += (Math.max(this.duskFloor, this.duskTarget) - this.dusk) * (1 - Math.exp(-dt * 0.22));
+    if ((this.beat === 'release' && !p.held && this.wentAt > 0) || this.beat === 'home') {
+      const light = tuning.homeLight;
+      const fade = this.now - this.wentAt - (WATCHES_IT - light.fadeLead);
+      this.duskTarget = THREE.MathUtils.lerp(light.daylight, light.doorstep,
+        THREE.MathUtils.smootherstep(fade, 0, light.fadeFor));
+    }
+    this.dusk += (this.duskTarget - this.dusk) * (1 - Math.exp(-dt * tuning.homeLight.response));
     const staged = this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered';
     if (!staged) this.hush += (this.hushFor - this.hush) * (1 - Math.exp(-dt * 0.5));
     if (p.held) p.hold(c);
@@ -398,8 +408,7 @@ export class HomeChapter implements Chapter {
     this.to('setDown');
     cygnet.watch(null);
     this.nextBugle = this.now + 4;
-    /** The last of the light: it goes while the sun is still going, and the night comes on after it. */
-    this.duskTarget = 1.15;
+    // The sunlight waits with them, however long the player needs to help the cygnet fly.
     cygnet.needs(tuning.summit.liftToFly, tuning.summit);
     c.standUp();
     const x = c.position.x + Math.sin(c.yaw) * 2.2;
@@ -723,7 +732,9 @@ export class HomeChapter implements Chapter {
       }
       if (this.recognisedAt >= 0) {
         const recognised = this.now - this.recognisedAt;
-        c.lookAt = recognised > 1.2 ? cottage.position : drawing.point(0, 0.3, this.watching);
+        const reveal = tuning.homeReveal;
+        c.lookAt = drawing.point(0, 0.3, this.watching).lerp(cottage.position,
+          THREE.MathUtils.smootherstep(recognised, reveal.lookUpFrom, reveal.lookUpUntil));
         if (recognised > GAZE_FOR) this.to('fold');
       }
     } else if (this.beat === 'fold') {
@@ -747,23 +758,15 @@ export class HomeChapter implements Chapter {
     } else if (this.beat === 'release') {
       this.updateRelease(dt, faceX, faceZ);
       if (!p.held && this.now - this.wentAt > WATCHES_IT) {
-        this.to('nightfall');
-        c.sitDown();
-        this.duskTarget = 2;
-        /** Somebody in the house has lit the fire as the light goes: the smoke is what asks the child in. */
-        cottage.smoking = true;
-      }
-    } else if (this.beat === 'nightfall') {
-      c.lookAt = this.sky;
-      if (p.position.distanceTo(c.position) > 160) p.visible = false;
-      if (this.t > NIGHTFALL_FOR) {
         this.to('home');
+        /** Somebody inside has lit the fire; the child heads home through the settling dusk. */
+        cottage.smoking = true;
         c.standUp();
-        /** Down the hill at a run: it is home, and the light is on. */
         c.walkTo(cottage.doorstep.x, cottage.doorstep.z, true, () => this.to('inside'), 0.5);
       }
     } else if (this.beat === 'home') {
       c.lookAt = cottage.position;
+      if (p.position.distanceTo(c.position) > 160) p.visible = false;
       /** Somebody inside hears them coming: the door opens a few strides out and the light is on the grass first. */
       if (!this.doorOpened && c.position.distanceTo(cottage.doorstep) < DOOR_OPENS_AT) {
         this.doorOpened = true;
@@ -771,6 +774,7 @@ export class HomeChapter implements Chapter {
         cue('home');
       }
     } else if (this.beat === 'inside') {
+      this.duskTarget = 2;
       if (this.t > 1.2 && this.t < 1.25) c.walkTo(cottage.position.x, cottage.position.z, false, undefined, 0.3);
       if (this.t > 2.6) c.visible = false;
       if (this.t > 4.2) cottage.openDoor(false);
@@ -789,8 +793,8 @@ export class HomeChapter implements Chapter {
       drawing.lift = this.lifted;
       drawing.turn = this.tilted;
       drawing.drawn = this.inked();
-      // A chest-height reading pose belongs to the child, independent of the viewing camera or head turn.
-      c.presentPoint(this.held);
+      // Hold the picture ahead of the child, independent of the viewing camera or head turn.
+      this.presentPoint(this.held);
       const tilt = THREE.MathUtils.degToRad(tuning.homeReveal.paperTilt);
       this.paperEye.copy(this.held).addScaledVector(this.forward(), -Math.sin(tilt));
       this.paperEye.y += Math.cos(tilt);
@@ -835,7 +839,7 @@ export class HomeChapter implements Chapter {
   /**
    * The two mittens on the paper: one keeps hold of the fold down the middle while the other lifts the near wing,
    * swings the sheet open and flicks the corners of the nose back, and then they take a bottom corner each. Every
-   * grip is a point of the sheet, so the hands go where the paper goes rather than to where it was.
+   * grip follows a point of the sheet; its near edge stays within the arms' reach when fully open.
    */
   private hands(): void {
     const { child: c, drawing } = this.cast;
@@ -850,6 +854,18 @@ export class HomeChapter implements Chapter {
     }
   }
 
+  /** Once they recognise home, the hands settle a little; both grips continue to follow the sheet. */
+  private presentPoint(out: THREE.Vector3): THREE.Vector3 {
+    this.cast.child.presentPoint(out);
+    if (this.recognisedAt >= 0) {
+      const reveal = tuning.homeReveal;
+      const rest = THREE.MathUtils.smootherstep(this.now - this.recognisedAt, reveal.relaxFrom, reveal.relaxUntil);
+      const folding = this.beat === 'fold' ? 1 - THREE.MathUtils.smootherstep(this.t, 0, 1 / FOLD_RATE) : 1;
+      out.y -= reveal.relaxDrop * rest * folding;
+    }
+    return out;
+  }
+
   /** Approach the house, settle onto the shoulder, then hold paper and destination together. */
   private frameDrawing(): boolean {
     const beat = this.beat;
@@ -861,6 +877,7 @@ export class HomeChapter implements Chapter {
     const reveal = tuning.homeReveal;
     const walking = beat === 'crest';
     const close = ['settle', 'unfold', 'gaze'].includes(beat);
+    s.clearance = reveal.shoulderClearance;
     // Ease toward the drawing over the first folds, rather than climbing as soon as the hands move.
     const approaching = beat === 'settle' || beat === 'unfold';
     const approach = approaching ? THREE.MathUtils.smootherstep(
@@ -883,7 +900,7 @@ export class HomeChapter implements Chapter {
     this.readingEye.copy(this.eyeAt).addScaledVector(this.side, -reveal.readingForward * reading);
     this.readingEye.y += reveal.readingRise * reading;
     s.eye = this.readingEye;
-    child.presentPoint(this.sheet);
+    this.presentPoint(this.sheet);
     // Share the child's view: the drawing in the foreground, the real house beyond it.
     this.aim.copy(cottage.position).y += 2.6;
     this.aim.sub(this.readingEye).normalize();
@@ -892,13 +909,34 @@ export class HomeChapter implements Chapter {
       portrait ? reveal.portraitPaperWeight : reveal.readingPaperWeight, reading);
     const weight = THREE.MathUtils.lerp(readingWeight, walking ? 0.15 : 0.25, retreat);
     this.aim.lerp(this.tmp, weight).normalize();
+    // Leave sky above the real cottage so its sun shares the frame with the sun on the paper.
+    this.aim.y += reveal.skyLookUp * (1 - retreat);
+    this.aim.normalize();
     // Keep the aim near the sheet. Extending a downward sight line into the hillside makes the
     // camera's terrain correction pull past the child during the reading move.
     s.target.copy(this.readingEye).addScaledVector(this.aim, this.readingEye.distanceTo(this.sheet));
+    if (beat === 'release') {
+      // Let the paper lead the gaze while retaining the child's full standing silhouette.
+      this.releaseFoot.copy(c).y += 0.3;
+      this.releaseHead.copy(c).y += 3.2;
+      this.descentHouse.copy(cottage.position).y += 6;
+      s.subjects = this.releaseSubjects;
+      s.smoothFit = reveal.descentFit;
+    }
     if (beat === 'release' && this.wentAt > 0) {
-      // Follow the plane only after it leaves the hand; ease back towards the wider nightfall shot.
-      const gone = THREE.MathUtils.smoothstep(this.now - this.wentAt, 0, 2.5);
+      // Follow the plane only after it leaves the hand; ease back towards the walk home.
+      const elapsed = this.now - this.wentAt;
+      const gone = THREE.MathUtils.smoothstep(elapsed, 0, 2.5)
+        * (1 - THREE.MathUtils.smootherstep(elapsed, reveal.returnFrom, WATCHES_IT));
       s.target.lerp(this.cast.plane.position, gone * 0.65);
+      // Settle at the crest before the child leaves us to walk home.
+      const home = THREE.MathUtils.smootherstep(elapsed, reveal.returnFrom, WATCHES_IT);
+      this.descentChild.copy(c).y += 1.5;
+      this.descentHouse.copy(this.cast.cottage.position).y += 6;
+      s.target.lerp(this.tmp.copy(this.descentChild).lerp(this.descentHouse, reveal.descentHouseWeight), home);
+      this.tmp.copy(c).addScaledVector(this.behind.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y), reveal.crestBack);
+      this.tmp.y += reveal.crestRise;
+      this.readingEye.lerp(this.tmp, home);
     }
     this.pace = close ? 1.6 : 0.8;
     this.focus.copy(c);
@@ -907,6 +945,12 @@ export class HomeChapter implements Chapter {
 
   /** Use the actual eased camera: timers alone cannot guarantee that the player saw either reveal. */
   afterCamera(camera: THREE.PerspectiveCamera): void {
+    if (this.beat === 'release') {
+      // Keep the actual eased view, not its requested endpoint, for a continuous stationary goodbye.
+      this.farewellEye.copy(camera.position);
+      camera.getWorldDirection(this.farewellLook).multiplyScalar(SEA_LOOK).add(camera.position);
+      this.farewellCaptured = true;
+    }
     if (!['brow', 'settle', 'unfold', 'gaze'].includes(this.beat)) return;
     camera.updateMatrixWorld();
     const visible = (point: THREE.Vector3, margin: number, grass = false): boolean => {
@@ -931,12 +975,34 @@ export class HomeChapter implements Chapter {
       visible(this.cast.drawing.point(x, y, this.sheet), 0.88)));
   }
 
+  /** A fixed place at the crest, including when loading the completed ending directly. */
+  private frameFarewell(): void {
+    if (!this.farewellCaptured) {
+      this.farewellEye.set(BROW.x, heightAt(BROW.x, BROW.y) + tuning.homeReveal.crestRise, BROW.y)
+        .addScaledVector(this.behind.set(-TO_COTTAGE.x, 0, -TO_COTTAGE.y), tuning.homeReveal.crestBack);
+    }
+    this.aim.copy(this.cast.cottage.position).y += 2.5;
+    this.aim.sub(this.farewellEye).normalize().multiplyScalar(SEA_LOOK).add(this.farewellEye);
+    if (!this.farewellCaptured) {
+      this.farewellLook.copy(this.aim);
+      this.farewellCaptured = true;
+    }
+    this.shot.eye = this.farewellEye;
+    this.shot.exact = true;
+  }
+
   private frame(): void {
     const c = this.cast.child.position;
     const s = this.shot;
     s.from = undefined;
     s.eye = undefined;
     s.fitWidth = false;
+    s.clearance = undefined;
+    s.carry = false;
+    s.carryAnchor = undefined;
+    s.subjects = undefined;
+    s.smoothFit = undefined;
+    s.exact = false;
     if (this.frameDrawing()) return;
     if (this.beat === 'answered') {
       /**
@@ -1015,33 +1081,25 @@ export class HomeChapter implements Chapter {
       this.focus.copy(c);
       return;
     }
-    if (this.beat === 'nightfall') {
-      const fwd = this.forward();
-      s.from = this.behind.copy(fwd).negate();
-      s.target.set(c.x + fwd.x * 9, c.y + 1.2, c.z + fwd.z * 9);
-      s.distance = 30;
-      s.height = 8;
-      this.pace = 0.3;
+    if (this.beat === 'home') {
+      const reveal = tuning.homeReveal;
+      this.frameFarewell();
+      s.target.lerpVectors(this.farewellLook, this.aim,
+        THREE.MathUtils.smootherstep(this.t, 0, reveal.homePanFor));
       this.focus.copy(c);
       return;
     }
-    if (this.beat === 'home' || this.beat === 'inside' || this.beat === 'credits') {
-      /** One framing from the run down to the door until the rise, so the door is never waited on by a camera re-settling. */
-      const cot = this.cast.cottage.position;
-      s.target.set(c.x * 0.3 + cot.x * 0.7, cot.y + 2.5, c.z * 0.3 + cot.z * 0.7);
-      s.from = this.behind.set(SUMMIT.x - cot.x, 0, SUMMIT.y - cot.z).normalize();
-      s.distance = 58;
-      s.height = 28;
-      this.pace = 0.2;
+    if (this.beat === 'inside' || this.beat === 'credits') {
+      /** Stay where we said goodbye; only our gaze leaves the cottage for the moon and stars. */
+      this.frameFarewell();
+      s.target.copy(this.aim);
       const lift = this.beat === 'credits' ? 1 : this.beat === 'inside' ? THREE.MathUtils.smootherstep(this.t, RISE_FROM, RISE_TO) : 0;
       if (lift > 0) {
-        s.eye = this.eyeAt.copy(s.target).addScaledVector(s.from, s.distance).setY(s.target.y + s.height + lift * 18);
         /** Out over the open sea north-east of the island, which is the one way from here that holds both. */
         const out = this.sky.copy(this.moon).setY(0).normalize().applyAxisAngle(UP, -MOON_OFF);
-        s.target.lerp(this.tmp.copy(s.eye).addScaledVector(out, SEA_LOOK).setY(s.eye.y + SEA_LOOK * Math.tan(SEA_PITCH)), lift);
+        s.target.lerp(this.tmp.copy(this.farewellEye).addScaledVector(out, SEA_LOOK)
+          .setY(this.farewellEye.y + SEA_LOOK * Math.tan(SEA_PITCH)), lift);
       }
-      /** Tighter as it goes, not looser: the pan has to have arrived by the time the credits are over it. */
-      this.pace = 0.2 + lift * 0.16;
       this.focus.copy(c);
       return;
     }

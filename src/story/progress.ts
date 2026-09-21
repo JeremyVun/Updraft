@@ -1,3 +1,6 @@
+import { migrateGeography } from './geography-progress';
+import { MIRROR_STAR_MASK } from '../world/sky-mirror-layout';
+import { GEOGRAPHY_VERSION } from '../world/geography';
 import type { Cast } from './cast';
 import type { ChapterName } from './journey';
 import type { Seat } from '../creatures/cygnet/ride';
@@ -7,6 +10,7 @@ export const PROGRESS_KEY = 'updraft.progress.v1';
 /** Versioned story checkpoints, not a dump of animations, callbacks or GPU textures. */
 export interface Progress {
   version: 1;
+  geography?: number;
   chapter: ChapterName;
   point: string;
   data: number[];
@@ -34,7 +38,13 @@ export const CHECKPOINTS: Partial<Record<ChapterName, Record<string, number>>> =
   drowned: { entry: 0, sail: 1 }, toWood: { entry: 0 },
   wood: { entry: 0, found: 2, dry: 2 }, toSleeping: { entry: 0 },
   sleeping: { entry: 0, feather: 0, morning: 0 },
-  toMirror: { entry: 0, swim: 2 }, mirror: { entry: 0, stars: 2, 'stars-0': 2, 'stars-1': 2, 'stars-2': 2, 'stars-3': 2, 'stars-4': 2, 'stars-5': 2, 'stars-6': 2, 'stars-7': 2, reflection: 1, window: 1, moon: 1, tide: 1, lantern: 1 },
+  toMirror: { entry: 0, swim: 2 }, mirror: {
+    entry: 0,
+    ...Object.fromEntries(Array.from({ length: MIRROR_STAR_MASK + 1 }, (_, mask) => [`stars4-${mask}`, 2])),
+    stars: 2, 'stars-0': 2, 'stars-1': 2, 'stars-2': 2, 'stars-3': 2,
+    'stars-4': 2, 'stars-5': 2, 'stars-6': 2, 'stars-7': 2,
+    reflection: 1, window: 1, moon: 1, tide: 1, lantern: 1,
+  },
   toHarbour: { entry: 0 }, toHome: { entry: 0, swim: 2 },
   home: { entry: 0, reunion: 0, drawing: 0, complete: 0 },
 };
@@ -52,7 +62,8 @@ export function readProgress(): Progress | null {
     if (!numbers(p.child, 5) || !numbers(p.boat, 5) || !numbers(p.bird, 7) || !numbers(p.plane, 2)) return null;
     if (p.seat !== null && !['cradle', 'satchel', 'lap'].includes(p.seat)) return null;
     if (!Array.isArray(p.life) || p.life.length !== 3 || !p.life.every((v: unknown) => numbers(v, 4))) return null;
-    return p as Progress;
+    if (p.geography !== undefined && (!Number.isInteger(p.geography) || p.geography < 1 || p.geography > GEOGRAPHY_VERSION)) return null;
+    return migrateGeography(p as Progress);
   } catch {
     // Storage can be unavailable or contain an old/incomplete save. Neither prevents playing.
     return null;
@@ -62,7 +73,7 @@ export function readProgress(): Progress | null {
 export function saveProgress(chapter: ChapterName, point: string, data: number[], cast: Cast): void {
   const { child: c, boat: b, cygnet: k, life, plane } = cast;
   const p: Progress = {
-    version: 1, chapter, point, data,
+    version: 1, geography: GEOGRAPHY_VERSION, chapter, point, data,
     child: [...c.position.toArray(), c.yaw, +c.riding],
     boat: [b.position.x, b.position.z, b.yaw, +b.afloat, +b.grounded],
     bird: [...k.position.toArray(), k.yaw, k.bond, k.flights, +k.visible],

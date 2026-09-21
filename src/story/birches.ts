@@ -8,6 +8,7 @@ import { tuning } from '../tuning';
 import { BirchLeafPlay } from './birches-play';
 import { SCARF_SNAGS } from '../world/birch-scarf';
 import type { BirchesScorePhase } from '../audio/birches-score';
+import { PlaneArrival } from './plane-arrival';
 
 const ROUTE = BIRCHES_WALK;
 /** The leg that ends in the clearing on the crest, where the swing is. */
@@ -48,6 +49,7 @@ export class BirchesChapter implements Chapter {
   private now = 0;
   private cheered = false;
   private lastLegAt = 0;
+  private readonly arrival = new PlaneArrival();
   private swings = 0;
   private swingOffered = false;
   private lastSwingInput = 0;
@@ -76,12 +78,12 @@ export class BirchesChapter implements Chapter {
 
   get scripted(): boolean {
     /** Exploring and playing with the cygnet never take control away from the wind. */
-    return !['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat);
+    return this.arrival.active || !['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat);
   }
 
   get birchesScore(): BirchesScorePhase | undefined {
-    // Arrival and boarding retain the original pad and its existing island transitions.
-    if (['ashore', 'push', 'aboard'].includes(this.beat)) return undefined;
+    // Keep the final phrase through boarding; Drowned owns the next arrival handoff.
+    if (['push', 'aboard'].includes(this.beat)) return 'return';
     if (this.beat === 'toSwing' || this.beat === 'swinging') return 'swing';
     const scarf = this.cast.birches.scarf;
     if (this.beat === 'unravelling') return 'scarf';
@@ -124,6 +126,7 @@ export class BirchesChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now = time;
     const { child: c, plane: p, boat, birches } = this.cast;
+    p.guided = this.beat === 'walk';
     const scarf = birches.scarf;
     const mast = boat.position.z < -1175 ? boat.sailPoint(this.scarfMast) : undefined;
     scarf.update(dt, this.cast.wind, mast);
@@ -247,6 +250,9 @@ export class BirchesChapter implements Chapter {
     if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 14 && this.leg < ROUTE.length - 1) this.leg++;
     const last = this.leg === ROUTE.length - 1 && scarf.finished;
     if (last && this.lastLegAt === 0) this.lastLegAt = time;
+    const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
+    const waited = this.lastLegAt > 0 && time - this.lastLegAt > LAST_LEG_PATIENCE;
+    if (this.arrival.update(this.cast, last && (childNear || waited), () => this.board())) return;
     if (this.play === 'watch') {
       c.lookAt = p.position;
       /** A gust that takes a cloud of gold off a whole stand at once is worth stopping for. */
@@ -265,11 +271,7 @@ export class BirchesChapter implements Chapter {
       if (!p.landed && p.airborne) this.play = 'watch';
     } else if (this.play === 'hold' && !c.busy) {
       if (last) c.lookAt = boat.position;
-      const nearBoat = Math.hypot(p.position.x - boat.position.x, p.position.z - boat.position.z) < BOARDING;
-      const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
-      const waited = this.lastLegAt > 0 && time - this.lastLegAt > LAST_LEG_PATIENCE;
-      if (last && (nearBoat || childNear || waited)) this.board();
-      else if (time > this.holdUntil) this.throwAhead();
+      if (time > this.holdUntil) this.throwAhead();
     }
   }
 

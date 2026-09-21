@@ -1,7 +1,9 @@
+import type { DrownedScorePhase } from '../audio/dream-score';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { WindSample } from '../wind/field';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
+import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
@@ -43,6 +45,15 @@ export class DrownedChapter implements Chapter {
   hush = 0.3;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
   readonly music = 'drowned' as const;
+  get drownedScore(): DrownedScorePhase {
+    if(this.beat==='still')return 'still';
+    if(this.beat==='gather')return 'gather';
+    if(this.beat==='snatch')return 'loss';
+    if(this.beat==='after')return this.t<12?'loss':'after';
+    return this.stirred?'resume':'rooftops';
+  }
+  private arrivalHeard = false;
+  get arrivalMusic(): 'drowned' | 'wood' { return this.arrivalHeard ? 'wood' : 'drowned'; }
   readonly season = 0.56;
   readonly focus = new THREE.Vector3();
   private leg = 0;
@@ -56,19 +67,35 @@ export class DrownedChapter implements Chapter {
   private readonly tmp = new THREE.Vector3();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private quarter = 1;
+  private stillBearing = Math.PI + 0.9;
   private filled = 0;
   private stirred = false;
   private stormTime = 0;
+  private hornPassed = false;
   private shook = false;
   private sheltered = false;
   private readonly departure = new THREE.Vector2();
+  private villageBearing = 0;
+  private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
+    bearing: tuning.drownedCamera.spireBearing, distance: tuning.drownedCamera.spireDistance,
+    height: tuning.drownedCamera.spireHeight };
+  private readonly hullFrame = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
+    points: this.hullFrame, margin: 0.8, extra: 16 };
+  private readonly churchSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
+    tertiary: new THREE.Vector3(), points: this.hullFrame, margin: tuning.drownedCamera.spireFrameMargin, extra: 32 };
+  private readonly stormSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
+    tertiary: new THREE.Vector3(), points: this.hullFrame, margin: 0.8, extra: 64 };
 
   constructor(private readonly cast: Cast) {
+    this.shot.obstacles = cast.village?.cameraObstacles;
     const { boat, plane } = cast;
     boat.becalmed = 0;
     boat.speedLimit = tuning.storm.passageSpeed;
     boat.mooring = null;
     this.departure.set(boat.position.x, boat.position.z);
+    this.shot.carryAnchor = boat.position;
+    this.quarter = -boat.sailSide || 1;
     boat.steerFor = DROWNED_CHANNEL[0];
     boat.canGround = false;
     boat.grounded = false;
@@ -159,7 +186,16 @@ export class DrownedChapter implements Chapter {
     }
 
     this.weather(dt, through);
+    // The lost-plane scene owns its score; the forest takes over only after that scene has ended.
+    if (this.beat === 'after' && this.leg === PASSAGE.length - 1 &&
+      Math.hypot(boat.position.x - WOOD_LANDING.x, boat.position.z - WOOD_LANDING.y) <
+        tuning.audio.arrivalShoreAllowance + tuning.audio.arrivalMusicLead * Math.max(4.5, boat.speed)) {
+      this.arrivalHeard = true;
+    }
     this.watch();
+    const sideResponse = this.beat === 'snatch' || (this.beat === 'after' && this.t < tuning.storm.planeLookFor) ? 3
+      : this.beat === 'still' ? 1.8 : tuning.drownedCamera.sideResponse;
+    this.quarter += (-boat.sailSide - this.quarter) * (1 - Math.exp(-dt * sideResponse));
     this.frame();
   }
 
@@ -167,6 +203,11 @@ export class DrownedChapter implements Chapter {
   private weather(dt: number, through: number): void {
     const gathering = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
     if (gathering) this.stormTime += dt;
+    if (!this.hornPassed && this.stormTime >= tuning.storm.foghornAt) {
+      this.hornPassed = true;
+      // Never replay a stale call into thunder or the plane loss after a large time jump.
+      if (this.beat === 'gather' && this.stormTime <= tuning.storm.foghornAt + tuning.storm.foghornLateAllowance) cue('foghorn');
+    }
     this.storm = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.weatherGatherFor);
     if (!this.shook && this.stormTime > tuning.storm.shakeAt) {
       this.shook = true;
@@ -198,6 +239,8 @@ export class DrownedChapter implements Chapter {
    * world is the player's. It is the first time the journey needs them rather than answering them.
    */
   private becalm(): void {
+    // Stay on the side from which the player was watching; crossing the boat would hide the invitation.
+    this.stillBearing = this.villageBearing - this.cast.boat.yaw;
     this.to('still');
     this.filled = 0;
     cue('becalmed');
@@ -277,6 +320,15 @@ export class DrownedChapter implements Chapter {
   private frame(): void {
     const { boat, plane: p } = this.cast;
     const s = this.shot;
+    s.eye = undefined;
+    s.attention = undefined;
+    s.composition = this.beat === 'still' ? 'hold' : undefined;
+    s.smoothFit = undefined;
+    this.subjects.primary.copy(this.cast.child.position).y += 1.2;
+    this.hullFrame[0].copy(boat.position);
+    boat.hullEnds(this.hullFrame[1], this.hullFrame[2]);
+    this.subjects.secondary.copy(boat.sailPoint(this.tmp));
+    s.subjects = this.subjects;
     const fx = Math.sin(boat.yaw);
     const fz = Math.cos(boat.yaw);
     if (this.beat === 'snatch' || (this.beat === 'after' && this.t < tuning.storm.planeLookFor)) {
@@ -284,7 +336,6 @@ export class DrownedChapter implements Chapter {
        * Astern and a little wider than the drift, so the frame holds the child with both arms out and the plane
        * going away up the channel in front of them. Chasing the plane itself would only show the player a dot.
        */
-      this.quarter += (-boat.sailSide - this.quarter) * 0.05;
       const bearing = boat.yaw + Math.PI + this.quarter * tuning.storm.cameraQuarter;
       s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
       const seat = this.cast.child.position;
@@ -296,9 +347,8 @@ export class DrownedChapter implements Chapter {
       return;
     }
     if (this.beat === 'still') {
-      /** Astern and low, with the slack sail filling the middle of the frame: the one thing there is to act on. */
-      this.quarter += (-boat.sailSide - this.quarter) * 0.03;
-      const astern = boat.yaw + Math.PI + this.quarter * 0.9;
+      /** Low, with the slack sail filling the middle of the frame: the one thing there is to act on. */
+      const astern = boat.yaw + this.stillBearing;
       s.from = this.from.set(Math.sin(astern), 0, Math.cos(astern));
       s.target.copy(boat.sailPoint(this.tmp));
       s.distance = 15;
@@ -307,7 +357,11 @@ export class DrownedChapter implements Chapter {
       this.focus.copy(boat.position);
       return;
     }
-    this.quarter += (-boat.sailSide - this.quarter) * 0.02;
+    if (this.beat === 'enter' || this.beat === 'drift') {
+      this.villageFrame(fx, fz);
+      this.focus.copy(boat.position);
+      return;
+    }
     const bearing = boat.yaw + Math.PI + this.quarter * tuning.storm.cameraQuarter;
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
     if (this.beat === 'gather') {
@@ -316,12 +370,17 @@ export class DrownedChapter implements Chapter {
       const towardLight = Math.atan2(LIGHTHOUSE.x - boat.position.x, LIGHTHOUSE.z - boat.position.z)
         + Math.PI + tuning.storm.lighthouseLookOffset;
       this.from.lerp(this.tmp.set(Math.sin(towardLight), 0, Math.cos(towardLight)), guide).normalize();
+      this.stormSubjects.primary.copy(this.subjects.primary);
+      this.stormSubjects.secondary.copy(this.subjects.secondary);
+      this.stormSubjects.tertiary.copy(LIGHTHOUSE).setY(LIGHTHOUSE_TOP_Y).lerp(this.subjects.secondary, 1 - guide);
+      s.subjects = this.stormSubjects;
+      s.smoothFit = 3;
     }
     /** Low and close to the water, because the village only reads as drowned from a hand's breadth above it. */
     const seat = this.cast.child.position;
     s.target.set(seat.x + fx * tuning.storm.lookAhead, seat.y + 0.9, seat.z + fz * tuning.storm.lookAhead);
-    s.distance = this.beat === 'enter' ? 26 : 16;
-    s.height = this.beat === 'enter' ? 6 : 2.8;
+    s.distance = 16;
+    s.height = 2.8;
     if (this.beat === 'gather') {
       const opening = THREE.MathUtils.smoothstep(this.stormTime, 0, 6);
       s.distance = THREE.MathUtils.lerp(16, tuning.storm.lighthouseFrameDistance, opening);
@@ -330,5 +389,33 @@ export class DrownedChapter implements Chapter {
     }
     this.pace = this.beat === 'gather' ? tuning.storm.lighthouseCameraPace : 0.4;
     this.focus.copy(boat.position);
+  }
+
+  /** The camera notices the village with the child: rooftops at water level, then the church passing overhead. */
+  private villageFrame(fx: number, fz: number): void {
+    const { boat, child } = this.cast;
+    const k = tuning.drownedCamera, s = this.shot;
+    const roofs = THREE.MathUtils.smootherstep(-boat.position.z, -k.roofFromZ, -k.roofUntilZ);
+    const past = SPIRE.z - boat.position.z;
+    const church = THREE.MathUtils.smootherstep(past, -k.spireEnter, -k.spireFull)
+      * (1 - THREE.MathUtils.smootherstep(past, -k.spireLeave, -k.spireGone));
+    const roofBearing = boat.yaw + Math.PI + this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs);
+    const churchBearing = k.spireBearing;
+    this.villageBearing = roofBearing + Math.atan2(Math.sin(churchBearing - roofBearing), Math.cos(churchBearing - roofBearing)) * church;
+    s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
+    s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
+    s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);
+    s.target.set(child.position.x + fx * tuning.storm.lookAhead, child.position.y + 0.9,
+      child.position.z + fz * tuning.storm.lookAhead);
+    this.churchAttention.strength = church;
+    s.attention = this.churchAttention;
+    if (church > 0) {
+      this.churchSubjects.primary.copy(this.subjects.primary);
+      this.churchSubjects.secondary.copy(SPIRE).setY(1).lerp(this.subjects.secondary, 1 - church);
+      this.churchSubjects.tertiary.copy(SPIRE).lerp(this.subjects.secondary, 1 - church);
+      s.subjects = this.churchSubjects;
+      s.smoothFit = 1.5;
+    }
+    this.pace = 0.65;
   }
 }

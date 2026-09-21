@@ -13,19 +13,19 @@ try {
     // Keep real instance state, substituting only AudioParams and the individual sound voices.
     function fixture(overrides = {}, start = 90) {
       const sound = new audioModule.Soundscape(), calls = [];
-      const parameter = () => ({ setTargetAtTime() {} });
+      const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; } });
       sound.ctx = { currentTime: 90 };
       Object.defineProperty(sound, 'running', { get: () => true });
-      for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain']) {
+      for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck']) {
         sound[name] = { gain: parameter() };
       }
       for (const name of ['gustFilter', 'whistleFilter', 'liftFilter', 'padFilter']) sound[name] = { frequency: parameter() };
       sound.gustPan = { pan: parameter() };
-      if (overrides.music === 'boats') sound.boatsScore = { update() {}, chordAt: () => 0, stop() {} };
+      if (overrides.music === 'boats') sound.boatsScore = { update() {}, handoffAt: now => now, chordAt: () => 0, stop() {} };
       for (const name of ['chime', 'cricket', 'owl', 'skylark', 'phrase', 'flare', 'peep', 'bugle']) {
         sound[name] = (...args) => calls.push({ name, args });
       }
-      const state = { ...baseState, ...overrides };
+      const state = { ...baseState, music: 'still', startingIsland: true, ...overrides };
       const update = (at = start, changes = {}) => { sound.ctx.currentTime = at; Object.assign(state, changes); sound.update(1 / 60, state); };
       update();
       return { sound, state, calls, update };
@@ -33,7 +33,9 @@ try {
     const chimes = f => f.calls.filter(c => c.name === 'chime');
     for (const music of ['still', 'lines', 'boats', 'meadow', 'birches', 'drowned', 'wood', 'sea', 'mirror', 'home']) {
       for (const input of [{ gust: tuning.pointer.minGust + 0.01 }, { charge: tuning.pointer.minLift + 0.001 }, { gliderLift: 1 }]) {
-        check(chimes(fixture({ music, hush: 1, ...input })).length > 0, `${music}: playable ${Object.keys(input)[0]} responds even at full hush`);
+        const startingIsland = music === 'still', forestWind = music === 'wood';
+        check((chimes(fixture({ music, startingIsland, forestWind, hush: 1, ...input })).length > 0) === (startingIsland || forestWind), `${music}: ${Object.keys(input)[0]} chimes only on the starting island or forest`);
+        check(chimes(fixture({ music, startingIsland: false, ...input })).length === 0, `${music}: music alone cannot enable gesture chimes`);
       }
     }
     for (const input of [{ gust: 26 }, { charge: 1 }, { gliderLift: 1 }]) {
@@ -45,9 +47,36 @@ try {
     check(chimes(fixture({ gust: tuning.pointer.minGust, charge: tuning.pointer.minLift })).length === 0, 'no chime below either wind threshold');
     check(chimes(fixture({ gust: 1 }, 0.001)).length === 1, 'first gust responds immediately after audio starts');
     check(chimes(fixture({ charge: 0.02 }, 0.001)).length === 1, 'first small updraft responds immediately after audio starts');
-    const ordinary = chimes(fixture({ gust: 26 }))[0].args;
-    const care = chimes(fixture({ gust: 26, caringWind: true }))[0].args;
-    check(care[1] > 0 && care[1] < ordinary[1] / 2 && care[5] === true, 'rescue gestures retain a quieter, softer voice');
+    const opening = fixture({ gust: 26, charge: 1 });
+    const later = fixture({ startingIsland: false, gust: 26, charge: 1 });
+    for (const name of ['gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
+      check(Math.abs(20 * Math.log10(later.sound[name].gain.value / opening.sound[name].gain.value) + 3) < 1e-9,
+        `${name}: player wind is 3 dB softer after departure`);
+    }
+    for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain']) {
+      check(later.sound[name].gain.value === opening.sound[name].gain.value, `${name}: ambient level is unchanged`);
+    }
+    for (const gust of [0, 3]) {
+      const before = fixture({ gust, winterGust: 1 });
+      const after = fixture({ startingIsland: false, gust, winterGust: 1 });
+      for (const name of ['gustGain', 'whistleGain', 'rustleGain']) {
+        check(before.sound[name].gain.value === after.sound[name].gain.value, `${name}: winter weather floor is preserved at gust ${gust}`);
+      }
+    }
+    for (const wind of [opening, later]) {
+      for (const [name, ceiling] of [['gustFilter', 1140], ['whistleFilter', 1620], ['liftFilter', 1420]]) {
+        check(wind.sound[name].frequency.value === ceiling, `${name}: cursor wind has a lower maximum frequency in both chapters`);
+      }
+    }
+    const weather = fixture({ startingIsland: false, winterGust: 1 });
+    check(weather.sound.gustFilter.frequency.value === 260 + .76 * 1100
+      && weather.sound.whistleFilter.frequency.value === 900 + .76 * 900, 'weather filter response is unchanged');
+    const openingChime = chimes(fixture({ gust: 26 }))[0].args;
+    const forestChime = chimes(fixture({ startingIsland: false, forestWind: true, music: 'wood', gust: 26 }))[0].args;
+    const rescueChime = chimes(fixture({ startingIsland: false, forestWind: true, music: 'wood', caringWind: true, gust: 26 }))[0].args;
+    check(openingChime[1] === forestChime[1] && Math.abs(20 * Math.log10(tuning.audio.gestureLevel / .7) - 6) < 1e-9,
+      'opening and forest chimes both gain 6 dB');
+    check(rescueChime[1] < forestChime[1] / 2 && rescueChime[5], 'forest rescue keeps its softer chime');
     const habitat = overrides => fixture({ night: 1, ...overrides }).calls.filter(c => c.name === 'cricket' || c.name === 'owl');
     check(habitat({ land: 0, sea: 1 }).length === 0, 'no land wildlife on open sea');
     check(habitat({ cold: 1 }).length === 0, 'no land wildlife on frozen ground');
@@ -155,7 +184,10 @@ try {
     for (let i = 0; i < 120; i++) {
       world.update(1 / 60); world.flow(object, 'sail', at, 1, true);
     }
-    check(sounds.length >= 10 && sounds.length <= 11, 'continuous material motion has bounded scheduling');
+    check(sounds.length === 1, 'sustained sail flutter never becomes repeated flaps');
+    world.update(3); world.flow(object, 'sail', at, 0, true);
+    world.update(.1); world.flow(object, 'sail', at, 1, true);
+    check(sounds.length === 2 && sounds.at(-1)[0] === 'sail', 'a fresh sail-tension change makes one restrained sound');
     const before = sounds.length;
     world.splash(at, 1); world.splash(at, 1); world.splash(far, 1);
     check(sounds.length === before + 1, 'dolphin splashes are distance gated and rate limited');
@@ -172,16 +204,16 @@ try {
   const render = await page.evaluate(async () => {
     const { Foley } = await import('/src/audio/foley.ts');
     const results = [];
-    for (const name of ['normal', 'care', 'materials', 'busy']) {
+    for (const name of ['normal', 'care', 'materials', 'busy', 'gesture']) {
       // Compare the two chime envelopes through the same noise and reverb realization.
       let seed = 926417;
       Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
       const { ctx, sound } = offlineSound(8);
       sound.master.gain.cancelScheduledValues(0); sound.master.gain.value = 0.9;
       const foley = new Foley(); foley.setOutput(sound.output);
-      if (name === 'normal' || name === 'care') {
+      if (name === 'normal' || name === 'care' || name === 'gesture') {
         const { tuning } = await productionModule('/src/tuning.ts');
-        sound.chime(74, name === 'care' ? tuning.audio.careChimeLevel : 1, -0.75, 0.1, 2.2, name === 'care');
+        sound.chime(74, name === 'care' ? tuning.audio.careChimeLevel : 1, -0.75, 0.1, 2.2, name === 'care', name === 'gesture');
       } else {
         for (const kind of ['cloth', 'wool', 'sail', 'water', 'paper', 'door', 'splash']) foley.material(kind, 1, 0.5);
         if (name === 'busy') {

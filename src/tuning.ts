@@ -3,7 +3,32 @@
  * for scale, the prevailing breeze blows at `wind.breeze` and the hardest stroke makes `pointer.maxGust`.
  */
 export const tuning = {
+  cinematography: {
+    /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
+    freedom: 0.22, reviewEvery: 0.5, holdFor: 3.5, improvement: 0.045,
+    authoredPreference: 0.16, compositionResponse: 0.55,
+    /** A turn eases into motion as well as out; orbiting preserves foreground distance. */
+    turnResponse: 3, maxTurnSpeed: 0.55, reversalBand: 0.12,
+    /** Carry motion is separate from gaze, with a speed bound to reject placement/teleport changes. */
+    maxCarrySpeed: 40,
+    /** Start clearing scenery before it crosses the child, then settle back slowly. */
+    obstacleAhead: 5, obstacleMaxRise: 18, obstacleRise: 4, obstacleRelease: 0.7, obstacleSpeed: 5,
+  },
   audio: {
+    /** Begin near shore, leaving time for a fade, a real musical rest, and the incoming phrase. */
+    arrivalMusicLead: 12, arrivalShoreAllowance: 25, arrivalMusicRouteShare: .95,
+    arrivalFadeOut: 1.5, arrivalQuiet: .4, arrivalFadeIn: 1.5,
+    arrivalPhraseWait: 2.5, phraseReleaseLead: .8,
+    /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */
+    laterWindDb: -3,
+    /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
+    playerWindFilterRange: .8,
+    gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .025, gestureTailRelease: .3,
+    /** Sparse, soft encouragement while guiding the feather uphill. */
+    sleepingChimeLevel: .7, sleepingChimePulses: 4,
+    authoredCueDuck: .32, authoredCueAttack: .45, authoredCueRelease: 1.3,
+    /** Wind can warm the background slightly without making the whole score surge. */
+    padActivityLevel: 0.015,
     /** Matches the approved Little Boats preview's music gain, before common playback normalization. */
     boatsScoreLevel: 3.67, boatsCueDuck: 0.28, boatsCueSpace: 3.8,
     /** Approved sea revision: +9.7 dB reference gain and +6.3 dB loudness match, without preview playback gain. */
@@ -16,6 +41,13 @@ export const tuning = {
     birchesScoreLevel: 10.35,
     /** Approved Lines balance (+17.6 dB), excluding preview playback gain; a separate, small melody trim. */
     linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
+    /** Approved revised study gains, excluding listening-file normalization. */
+    mirrorScoreLevel: 1, drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /** Approved distant foghorn; source gain excludes the listening export boost. */
+    foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
+      hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,
+      partials:[[1,.8],[2,.72],[3,.6],[4,.85],[5,.3],[6,.4],
+        [7,.18],[8,.08],[9,.22],[10,.055],[11,.035],[12,.025]] },
     careChimeLevel: 0.28, careChimeAttack: 0.035,
     cygnetFullDistance: 30, flockDistance: 320,
     /** Give an authored call and its answer a gap in the incidental flock chatter. */
@@ -28,38 +60,64 @@ export const tuning = {
     leafScuffLevel: 0.4, leafScuffEvery: 1.4, leafCoverMin: 0.55,
     swingCreakLevel: 0.5, swingCreakEvery: 2.4, swingCreakAngle: 0.16,
     birchesFoleyNear: 20, birchesFoleyFar: 65,
-    materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.16,
-    dolphinSurfaceEvery: 0.3,
+    materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.4,
+    /** Distinct sail-tension changes, never a repeated sound for sustained flutter. */
+    sailRise: 0.2, sailEvery: 2.4, sailLevel: 0.35,
+    /** Soft water displacement; separate pod budgets for emergence and re-entry. */
+    dolphinSurfaceEvery: 0.6, dolphinLevel: 0.65, dolphinAttack: 0.065,
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
-    whaleLevel: 1, whaleNear: 35, whaleFar: 190,
+    whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
+  },
+  cygnetMotion: {
+    /** Running balance should not become wingbeats during a deliberately slow walk. */
+    wingBalanceSpeed: 1.5,
   },
   mirrorCompanion: {
     exploreRadius: 7, bubbleStandOff: 2.2, starStandOff: 1.7,
-    pace: 1.12, chooseEvery: 0.55, inspectEvery: 6, stretchFor: 2.4,
+    /** Keep pace on walks with the child; investigate the reflected lights on planted feet. */
+    pace: 1.12, explorePace: 0.3, chooseEvery: 0.55, inspectEvery: 6, stretchFor: 2.4,
+  },
+  homeLight: {
+    /** Keep the drawing in daylight; begin dusk before the walk so the door opens into night. */
+    daylight: 0.25, doorstep: 2, response: 0.4, fadeLead: 5, fadeFor: 7.5,
+    /** The low sun sits to the left of the cottage, as it does on the unfolded drawing. */
+    sunAzimuth: 52, sunElevation: 3.5,
   },
   homeReveal: {
+    /** A slight angle keeps the real cottage natural while echoing the drawing's front. */
+    cottageTurn: -0.12,
     /** Stop beyond the convex shoulder, where the whole cottage clears the foreground grass. */
     stopAfter: 24,
     /** House first; a short look, hands up, then the unchanged 4.2-second physical unfold. */
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
     recogniseFor: 8,
+    lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.16,
     /** After refolding, offer the plane briefly before the wind takes it. */
     releaseFor: 2,
-    /** A relaxed reading hold: chest height, away from the face, tilted up from horizontal. */
-    paperHeight: 1.95, paperForward: 1.4, paperSide: 0, paperTilt: 40,
-    /** A little larger when open so the drawing reads without a camera climb. */
+    /** Hold the near edge within reach; the higher shoulder view keeps the drawn sun clear. */
+    paperHeight: 2.15, paperForward: 1.7, paperSide: 0, paperTilt: 32,
+    /** A little larger when open so the crayon landmarks read clearly. */
     paperScale: 1.1,
     /** One shoulder composition holds both the paper and the distant house. */
-    shoulderArc: 0.26, portraitShoulderArc: 0.16, shoulderBack: 3.8, shoulderRise: 5.5, portraitShoulderRise: 7.5,
+    shoulderArc: 0.42, portraitShoulderArc: 0.37, shoulderBack: 6.8, shoulderRise: 5.55, portraitShoulderRise: 7.9,
+    shoulderClearance: 1.5, skyLookUp: 0.17,
     /** Let the move develop through the hands coming up and the first folds opening. */
     approachFor: 4.4,
     /** A restrained drift keeps the child, drawing and real house together throughout recognition. */
-    readingRise: 0, readingForward: 0.2, readingArc: 0, portraitReadingArc: 0,
-    readingFrom: 1.5, readingUntil: 7, readingPaperWeight: 0.6,
-    portraitBack: 7.3, narrowPortraitBack: 7, paperWeight: 0.6, portraitPaperWeight: 0.65,
+    readingRise: 0, readingForward: 0.35, readingArc: 0, portraitReadingArc: 0,
+    readingFrom: 1.5, readingUntil: 7, readingPaperWeight: 0.65,
+    portraitBack: 9.5, narrowPortraitBack: 9.5, paperWeight: 0.65, portraitPaperWeight: 0.6,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
+    /** Settle at the crest, then stay there as our gaze pans to the house and finally the credits. */
+    crestBack: 12, crestRise: 18, homePanFor: 8, descentFit: 3, descentHouseWeight: 0.2,
+    returnFrom: 3,
+  },
+  homeWashing: {
+    /** Behind the left side of the cottage, with the far end turned gently away. */
+    left: -11.5, right: -5.3, forward: -4, turn: 0.28,
+    height: 3.2, scale: 0.62, sag: 0.12, flutter: 0.1,
   },
   swanDeparture: {
     /** Fractions of the travelling speed; ahead birds make room while stragglers gain only a little. */
@@ -73,6 +131,13 @@ export const tuning = {
     turnAhead: 3, setback: 7,
     /** The small one takes its tail station while the adults are still gathering. */
     cygnetJoin: 8,
+  },
+  planeGuide: {
+    speed: 6, approach: 1.4, response: 6,
+    gustFrom: 0.04, gustFull: 0.3,
+    travelHeight: 3, sinkSpeed: 5,
+    pickupAhead: 1.4,
+    returnMargin: 12, returnSpeed: 5,
   },
   meadowPlane: {
     /** Lead the child toward each discovery, then wheel nearby until they catch up. */
@@ -88,6 +153,8 @@ export const tuning = {
     edgeFade: 24, fadeRate: 8, opacity: 0.86,
   },
   skyMirror: {
+    waterInner: 75, waterOuter: 145, reflectionPrepare: 230,
+    arrivalBlendFor: 10,
     rippleSpeed: 3.6, rippleStrength: 0.06, settleRate: 0.55,
     bubbleRadius: 1.55, bubbleGrow: 1.25, bubbleSpeed: 6.5, bubbleResponse: 28, bubbleStrokeSpeed: 0.4,
     bubbleDrag: 1.4, bubbleFilledDrag: 2.6, bubbleVerticalDrag: 2.6,
@@ -97,6 +164,7 @@ export const tuning = {
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29, cameraHeight: 8,
     cameraPortraitHeight: 10, cameraLiftFollow: 0.28, constellationReveal: 6,
+    cameraRevealExtra: 48, cameraRiseExtra: 35,
     cameraRiseDistance: 32, cameraPortraitRiseDistance: 40,
   },
   littleBoats: {
@@ -126,6 +194,9 @@ export const tuning = {
     tapTravel: 12,
   },
   opening: {
+    /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */
+    planeBloomRadius: 4.5,
+    planeBloomStrength: 1.4,
     /** A held view of the sea, then one clear recovery before the small bird loses the V. */
     outlook: 3.5,
     flight: 5,
@@ -134,6 +205,9 @@ export const tuning = {
     flockHeight: 19,
     /** The landing stays this far ahead after the approach, plus any distance lost while struggling. */
     fallTravel: 18,
+    /** Give the kneeling hands a clear foreground while keeping the lost bird hidden before the rescue. */
+    careGrassRadius: 7.5,
+    careCameraHeight: 4.1,
     /** Sheltered cloth hangs deeper; the cove releases its shelter once the boat is afloat. */
     sailGather: 0.48,
     sailSag: 1.65,
@@ -448,6 +522,7 @@ export const tuning = {
     frameWide: 3,
     frameHigh: 1.8,
     framePace: 0.32,
+    approachShare: 0.65, approachBack: 0.45, approachMargin: 0.84, approachExtra: 35,
     /**
      * And the one move out of it, when the tune is whole and the island goes green: how long the rise takes, the
      * bearing it spirals round to, how far back and how high it comes to rest, how far along the way north its
@@ -756,13 +831,33 @@ export const tuning = {
     /** How far it bobs in the last place of the V once it has it: a station held, but not the way its family holds one. */
     joinBob: 0.32,
   },
+  crossingCamera: {
+    /** One journey through the shot: open departure, near companions, then room for the approaching shore. */
+    departureUntil: 0.32, arrivalFrom: 0.68,
+    nearDistance: 16, departureDistance: 23, arrivalDistance: 24,
+    nearHeight: 3.6, departureHeight: 5, arrivalHeight: 5.8,
+    nearBearing: 1.12, departureBearing: 0.65, arrivalBearing: 0.48,
+    nearLead: 1.5, departureLead: 3, arrivalLead: 5,
+    /** Look back past the open side of the sail, with enough lateral room to see the waving child. */
+    farewellBearing: 0.95,
+    sideResponse: 1.2, childTurn: 0.7,
+    whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
+  },
   seaPassage: {
     speed: 10,
+    arrivalSpeed: 3.5,
     swimSpeed: 1.5,
-    swimFor: 32,
-    swimAt: 0.38,
+    /** A shorter swim leaves room for the leap, nudge, dive and mirror fade within 100 seconds. */
+    swimFor: 14,
+    swimAnticipation: 3,
+    swimDecision: 4,
+    swimAt: 0.30,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
-    swimNotBefore: 32,
+    swimNotBefore: 25,
+    dolphinsAfter: 10,
+    waypointRadius: 10,
+    encounterHoldAt: 0.60,
+    encounterSpeed: 1.5,
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
@@ -772,7 +867,7 @@ export const tuning = {
     childTurn: 0.7,
     haze: 0.94,
     /** Begin easing away before the coastal approach. */
-    farewellAt: 0.76,
+    farewellAt: 0.66,
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
@@ -785,9 +880,20 @@ export const tuning = {
     breathLeast: 3.5,
     breathSpread: 5.5,
     leapChance: 0.18,
-    /** Seconds into the crossing for the first leap alongside, and for the first shove on the quarter. */
-    leapAt: 12,
-    pushAt: 57,
+    /** Seconds after the pod starts joining for its first leap and nudge; the swim postpones the nudge. */
+    leapAt: 8,
+    leapSpread: 2,
+    leapRecovery: 1.5,
+    arrivalSpacing: 3.5,
+    arrivalDepth: 7,
+    departureFor: 9,
+    nudgeRecovery: 2.5,
+    nudgeApproachAlong: -8,
+    nudgeApproachAcross: 5,
+    nudgeApproachFor: 2.4,
+    nudgeApproachMax: 4,
+    nudgeRunFor: 2.5,
+    pushAt: 35,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
@@ -908,18 +1014,31 @@ export const tuning = {
     moonHandoffFrom: 1.5,
     moonHandoffTo: 1.85,
   },
+  drownedCamera: {
+    /** Descend between the first roofs, then pass the church on its open western side. */
+    roofFromZ: -1260, roofUntilZ: -1360,
+    entryBearing: 0.55, roofBearing: 1.25,
+    entryDistance: 26, roofDistance: 19, entryHeight: 6, roofHeight: 2.8,
+    spireEnter: 110, spireFull: 55, spireLeave: -20, spireGone: -70,
+    spireBearing: -0.95, spireDistance: 27, spireHeight: 4.2, spireWeight: 0.38,
+    /** Reserve room for the bow and stern while the church reveal eases into place. */
+    spireFrameMargin: 0.7,
+    sideResponse: 1.2,
+  },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {
     passageSpeed: 5.8,
     startsFromShore: 210,
     gatherFor: 22,
+    /** One distant ship call, with its tail clear before the first thunder. */
+    foghornAt: 8, foghornLateAllowance: 0.25,
     weatherGatherFor: 14,
     lighthouseLookUntil: 21.5,
     lighthouseLookFrom: 3,
     lighthouseLookRelease: 19.5,
     lighthouseFrameDistance: 23,
-    lighthouseFrameHeight: 2.4,
-    lighthouseFrameUp: 1.9,
+    lighthouseFrameHeight: -5,
+    lighthouseFrameUp: 10,
     lighthouseComfortFor: 2.6,
     lighthouseStartle: 0.18,
     lighthouseLookOffset: 0.12,

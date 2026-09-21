@@ -27,9 +27,11 @@ Every chapter has an entry checkpoint. Additional exits:
   restores them open. Neither changes the payload or replays the bedside gesture.
 - Long crossing: companion's swim is over. The two-number payload remains leg/time; restore finds the nearest
   waypoint to the saved boat position so checkpoints from the shorter coastal route continue toward home.
-- Sky mirror: `stars-<mask>` stores the completed-star bitmask and current destination. Restore rebuilds the
+- Sky mirror: `stars4-<mask>` (0–15) stores the completed-star bitmask and current destination. Restore rebuilds the
   pair with the wand and held paper, preserves lights already overhead, and discards transient bubbles.
-  A partial constellation restores the boat offshore; only all three stars open its final approach.
+  A partial constellation restores the boat offshore; only all four stars open its final approach.
+  Older `stars`/`stars-<mask>` saves retain partial progress; mask 7 restores all four to preserve completion.
+  New `stars4-7` saves leave the fourth light playable.
   Legacy `moon`/`tide`/`lantern` map to 0/1/2 restored stars; `reflection`/`window` restart with none.
   Voyages use `toMirror` (entry/swim) and `toHarbour` (entry); old `toHome` saves keep the direct route.
 - Home: reunion is over (resume the walk toward the house); house/drawing recognition is complete (resume

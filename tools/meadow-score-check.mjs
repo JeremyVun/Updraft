@@ -44,7 +44,7 @@ try {
     story.piano.at = 'done';
     check(phase.call(story) === 'walk', 'The completed duet begins the Meadow walk arrangement');
     for (const [beat, wanted] of [['crest','flock'], ['down','flock'], ['pond','pond'], ['gather','return'],
-      ['toBoat',undefined], ['push',undefined], ['aboard',undefined]]) {
+      ['toBoat','return'], ['push','return'], ['aboard','return']]) {
       story.beat = beat; check(phase.call(story) === wanted, `${beat}: selects ${wanted ?? 'the original departure pad'}`);
     }
     story.beat = 'walk'; story.crestDone = true;
@@ -100,8 +100,8 @@ try {
       if (tick === 2 * 8) { live = sound.meadowScore; retired = live.current; }
       if (tick === 15 * 8) check(!retired.voices.size && !live.parts.has(retired), 'The melodic walk releases its voices at the flock scene');
       if (tick === 17 * 8) check(sound.padGain.gain.value < .00001, 'The old background is not layered under the new arrangement');
-      if (tick === 33 * 8) check(!sound.meadowScore && live.stopped, 'Boarding stops the new arrangement before the island transition');
-      if (tick === 39 * 8) check(sound.padGain.gain.value > .055, 'The original pad is audible again before departure');
+      if (tick === 33 * 8) check(!sound.meadowScore && live.stopped, 'Explicitly clearing the arrangement releases its voices');
+      if (tick === 39 * 8) check(sound.padGain.gain.value > .055, 'An explicit fallback still restores the shared pad');
       if (tick === 42 * 8) { resumed = sound.meadowScore; check(resumed !== live, 'A new chapter entry gets a new scheduler'); }
       if (tick === 44 * 8) check(!sound.meadowScore && resumed.stopped, 'Permanent silence stops the Meadow scheduler');
     };

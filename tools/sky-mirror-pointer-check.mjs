@@ -39,7 +39,10 @@ function fixture(fps, portrait = false) {
   boat.beach(MIRROR_LANDING.x, MIRROR_LANDING.z, Math.PI); boat.grounded = true;
   child.place(MIRROR_LANDING.x + 2, MIRROR_LANDING.z - 3, Math.PI);
   cygnet.visible = true; cygnet.rideIn('cradle');
-  const input=new PointerInput({addEventListener(){},getBoundingClientRect(){return {left:0,top:0,width:window.innerWidth,height:window.innerHeight};}});
+  const events={};
+  const input=new PointerInput({addEventListener(name,handler){events[name]=handler;},setPointerCapture(){},
+    getBoundingClientRect(){return {left:0,top:0,width:window.innerWidth,height:window.innerHeight};}});
+  const pointer=point=>({clientX:point.x,clientY:point.y,isPrimary:true,pointerId:1,pointerType:portrait?'touch':'mouse'});
 
   const cast = { boat, child, cygnet, carry, skyMirror, input, wind,
     plane: new Glider(wind, []),
@@ -48,9 +51,12 @@ function fixture(fps, portrait = false) {
   let chapter = new SkyMirrorChapter(cast), time=0;
   rig.cut(chapter.shot);
   const air={};
-  return {cast,rig,get chapter(){return chapter;},set chapter(value){chapter=value;},get time(){return time;}, step(stroke=false) {
+  return {cast,rig,release(){if(portrait)events.pointerup(pointer({x:0,y:0}));},get chapter(){return chapter;},set chapter(value){chapter=value;},get time(){return time;}, step(stroke=false) {
     const dt=1/fps;time+=dt;atmo.uniforms.uTime.value=time;
-    if(stroke) input.move({clientX:stroke.x,clientY:stroke.y});
+    if(stroke) {
+      if(portrait && !input.down)events.pointerdown(pointer(stroke));
+      events.pointermove(pointer(stroke));
+    }
     input.anchor=skyMirror.liftTarget; input.update(dt,rig.camera,wind);
     skyMirror.brush(dt,time,input,rig.camera);chapter.update(dt,time);
     cast.plane.update(dt,time);
@@ -72,6 +78,7 @@ function sweep(p,dx,dy,length=110){
   f.step({x:p.x-dy*length-dx*length/2,y:p.y+dx*length-dy*length/2});
   f.step(from);
   for(let i=1;i<=30;i++)f.step({x:from.x+dx*length*i/30,y:from.y+dy*length*i/30});
+  f.release();
   for(let i=0;i<14;i++)f.step();
 }
 for(let i=0;i<12 && !room.bubbles.length;i++)sweep(project(room.wand),1,0,140);
@@ -85,7 +92,7 @@ for(let i=0;i<30 && !room.carried;i++){
 }
 assert(room.carried,'real pointer sweeps collect the light');
 for(let circle=0;circle<12 && room.carried;circle++){
-  if(process.env.TOUCH) {f.cast.input.present=false; f.step();}
+  if(process.env.TOUCH) {f.release(); f.step();}
   for(let i=0;i<60 && room.carried;i++){
     const p=project(room.carried.position),a=i/60*Math.PI*2;
     f.step({x:p.x+Math.cos(a)*(process.env.TOUCH?18:28),y:p.y+Math.sin(a)*(process.env.TOUCH?18:28)});

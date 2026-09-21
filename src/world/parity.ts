@@ -1,3 +1,5 @@
+import { HOME_SHIFT } from './geography';
+import { SKY_MIRROR } from './sky-mirror-layout';
 import * as THREE from 'three';
 import { GpuRunner, simMaterial, simTarget } from '../gl/gpu';
 import { COTTAGE, HEIGHTFIELD_GLSL, LAST_HILL, SLEEP_HILL, worldHeight } from './heightfield';
@@ -12,7 +14,7 @@ const SAMPLES = 138 + 9 + (SLEEP_PATH.length - 1) * 9 + 9 + 21;
 export function measureHeightParity(renderer: THREE.WebGLRenderer): number {
   const points: THREE.Vector2[] = [];
   // The narrow homeward channel clears the hull in both the rendered and navigated seabed.
-  for (const x of [-168, -150, -132]) for (const z of [-1986, -1974, -1962]) points.push(new THREE.Vector2(x,z));
+  for (const x of [-168, -150, -132]) for (const z of [-1986, -1974, -1962]) points.push(new THREE.Vector2(x + HOME_SHIFT.x,z + HOME_SHIFT.z));
   for (let i = 0; i < 64; i++) {
     const a = i * 2.39996;
     const r = 30 + i * 26;
@@ -24,7 +26,7 @@ export function measureHeightParity(renderer: THREE.WebGLRenderer): number {
     points.push(new THREE.Vector2(boatsX(s) + boatsWidth(s) * [-1.4, 0, 0.8, 1.4][i % 4], LITTLE_BOATS.startZ - s));
   }
   // The mirror's shallow bed and shelf must agree closely enough that feet never disappear underwater.
-  for (let i = 0; i < 16; i++) points.push(new THREE.Vector2(-455 + i * 7 - 45, -2310 + i * 5 - 32));
+  for (let i = 0; i < 16; i++) points.push(new THREE.Vector2(SKY_MIRROR.x + i * 7 - 45, SKY_MIRROR.z + i * 5 - 32));
   // The piano approach saddle must match the rendered ground under the child's walk.
   for (let i = 0; i < 8; i++) points.push(new THREE.Vector2(-23 + (i % 2) * 12, -744 + i * 6));
   // The shorter sleeping ascent must put the cygnet and summit window on the same ground on CPU and GPU.

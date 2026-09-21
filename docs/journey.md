@@ -243,7 +243,78 @@ pulls away. A completed piano checkpoint resumes beyond the puzzle.
 Validation: `tools/piano-logic-check.mjs` checks gesture credit; `tools/piano-check.mjs` plays four real
 mouse/touch sweeps and checks idle behaviour, guide visibility, the travelling wave and departure.
 
+## Paper-plane routing audit (2026-09-21)
+
+Jeremy found the child repeatedly chasing the plane past the visible boat beyond the washing door.
+The shore already aimed throws and homing toward the boat's inland approach. The failures were shared:
+low-altitude steering faded almost to nothing against the prevailing breeze, and most departure checks
+(including their fallback timers) ran only after a successful pickup. Restoring the hidden shore also
+left its fallback clock unstarted.
+
+Walking flights now recover a definite course when a gesture settles, and spill outward speed at their
+flight boundary so sustained wind cannot send them indefinitely out to sea. At a completed exit, reaching the
+boat's approach commits the arrival: the child stops chasing, the paper flies down to a reachable spot,
+the child collects it, then boards. Continuous wind cannot interrupt this pickup, and paper is never
+teleported back from a distant flight. Required encounters still gate departure.
+
+| Room | Audited destination / arrival |
+| --- | --- |
+| Still island | Free catch, then tree; companion rescue precedes committed boat arrival. |
+| Lines | Paper held through curtains and door; inland boat target beyond the door; fresh and restored arrival. |
+| Little boats | Paper stowed; fleet encounters and scripted boarding own navigation. |
+| Meadow | Pending piano, route/crest, pond, then departure shore; throws and homing share the same target. |
+| Birches | All four pending scarf stops take precedence over later route markers; completed scarf permits departure. |
+| Drowned / wood | Paper stowed or storm-driven; ember path, snag recovery and drying own progress. |
+| Sleeping | Paper held; companion and feather own the encounter and departure. |
+| Mirror | Initial throw toward the wand bowl uses committed pickup on arrival; paper stays stowed between stars and at departure. |
+| Home / crossings | Authored walks and sailing; final paper release remains free of guidance and arrival constraints. |
+
+`tools/plane-routing-check.mjs` exercises real actors and flight at 30/60/120 fps, four shore wind bearings,
+a gust, sustained-wind arrivals, offshore recovery, every scarf route cursor and required-encounter gates.
+`tools/meadow-route-check.mjs`, `tools/meadow-plane-check.mjs` and `tools/sky-mirror-logic-check.mjs`
+cover the long walk, pond recovery, playable flight bounds and mirror progression.
+The production build passes. Browser review of the new pickup movement remains pending; another full
+playthrough held the shared capture slot during this audit.
+
+## Island visibility and relocation (2026-09-21)
+
+Crossings now show their departure and destination rooms only, including their reflections. Little Boats,
+its portal shore, the mirror and Home have moved; Home is beyond the mirror and clear of the wood.
+Ordinary crossings measure about 59 seconds to Meadow, 38 from Wood to Sleeping, 93–96 through the sea
+encounter and 39 from Mirror to Home. Jeremy’s follow-up caps the sea at 100 seconds: the swim is now
+14 seconds, and the mirror and Home moved together to preserve the final crossing’s distance and pacing. Dolphins arrive later in small groups and dive forward before
+the mirror develops gradually. Existing saves migrate to the new geography. Details, exact coordinates,
+route distances and verification are in [geography.md](geography.md); its older recommendations are superseded.
+
 ## Crossing and companion polish (2026-09-20)
+
+September 21 cinematography direction, Jeremy's words:
+
+> "it'd need to feel really nice and seamless throughout the entire game. Almost like there wasn't an
+> authored system in place. We must maintain the seamless, dreamlike state as much as possible while also
+> making sure we try to frame beautiful moments, scenes, and camera angles"
+
+The shared camera now interprets attention and framing constraints beneath the chapter choreography.
+Subject-relative turns ease around the travellers, retain their distance, and carry movement across rooms.
+Small composition corrections need a sustained, meaningful benefit; idle time alone never triggers a pan.
+Interactions settle onto their intended view. Placed views and delicate paths such as the pond, drawing
+and doorway retain their staging. The whale and church name their focus through the shared attention
+contract. Technical behavior and its bounded CPU work are documented in [engine.md](engine.md#cinematography-srccamerats-srccamera-directionts).
+
+September 21 camera playtest: Jeremy found sailing, particularly the drowned village, held one angle for too
+long. The shared rig was still running; ordinary crossings had used a close boat-relative composition since
+`cbb7f88` (September 16), and the village drift likewise had no camera response to its church. The child's gaze
+noticed landmarks that the lens did not. No recent global camera-disable change was found.
+
+Ordinary crossings now open on departure, arc closer alongside the companions and widen toward shore, driven
+by route progress. The whale gets a true pan and bounded coverage of both travellers and its body; swimming
+takes priority. After the pod leaves, the sea camera turns toward the approach. The farewell joins the actual
+sailing bearing. Boat translation uses a physical carry anchor, independent of changes of focus, and camera
+side response uses elapsed time. The village descends among the roofs, turns toward the church and frames its
+base and spire with the child before handing over to the lighthouse. Becalming keeps the current camera side
+while bringing the sail closer, avoiding a swing through the boat. Knobs: `tuning.crossingCamera` and
+`tuning.drownedCamera`. Focused checks: `tools/crossing-camera-check.mjs`, `tools/drowned-camera-check.mjs`;
+their `*-browser-check.mjs` companions capture real passages, including pointer-driven sail recovery.
 
 Jeremy's ordering review keeps the chapter sequence. He wants little boats to meadow under 60 seconds,
 shorter open sea before the mirror and a short final ride home. He rejected per-crossing speed boosts.
@@ -270,6 +341,10 @@ cannot start before 32 seconds, so strong wind does not skip the leap. Checks co
 passages, 30/60 fps, varied wind bearings, storm pacing and dolphin/swimmer camera projection.
 
 ## The storm passage (2026-09-19)
+
+September 21: Jeremy asked for a bigger, more imposing lighthouse, as a child might imagine it in a dream.
+It now stands 35.7 units above the water (2.6 times its former height), with a base 1.85 times wider.
+The low boat view holds its crown and the travellers together; the raised lantern sweeps down toward the water.
 
 Jeremy first requested 25–30 seconds from storm to forest. After playing that version, he revised the direction:
 
@@ -342,13 +417,13 @@ This carries the whole game:
 - It makes north mean something.
 - It makes the ending a real reveal. You thought you were on the bird's errand; then the drawing opens and it is a white cottage with a red door, and it is in the valley below you. The child never told you what they wanted.
 
-Two lost children: one who can't find home, one who can't fly. Both fears are faced, and the player is the answer to both — because flight is the player's verb. The fledgling flaps and drops on the island; glides a few metres on an updraft in the hills; is too frightened to come out in the dark; and at the end, one updraft and it goes, and the flock comes down out of the night for it.
+Two lost children: one who can't find home, one who can't fly. Both fears are faced, and the player is the answer to both — because flight is the player's verb. The fledgling flaps and drops on the island; glides a few metres on an updraft in the hills; is too frightened to come out in the dark; and at the end, one updraft and it goes, and the flock comes down through the afternoon light for it.
 
 ## The year
 
 Winter is **coming**, not gone. That is why the swans are flying, why the fledgling has to catch up, and why the journey has a clock without ever having a timer. The light and the warmth are draining out of the world ahead of them, and home has to be reached before the cold closes in.
 
-The season deepens island by island and never goes back: late autumn, a bright windy day, the last warm afternoon of the year, deep autumn, the first winter storm, a clear frozen night. The child leaves in autumn and arrives in winter, a year older, in one night.
+The season deepens island by island and never goes back: late autumn, a bright windy day, the last warm afternoon of the year, deep autumn, the first winter storm, a clear frozen night. The child leaves in autumn and arrives in winter, a year older, in one dream. Light can return without reversing the season: the sleeping island earns morning, the sky mirror suspends time, and home holds afternoon until the child walks down to the door.
 
 The grass keeps the green it is loved for — it just ages. Colour returns to the still island as green going gold, not spring green, and each island afterwards is a little further through the turn.
 
@@ -397,10 +472,11 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    Daylight stays across the island; the piano's dimmed-world technique is not repeated.
    **The door is the only way onward.** Jeremy's next brief: the round island makes walking around the sheets
    seem possible; opening the door onto another place would feel “like alice in wonderland almost”. Beyond it
-   he wants only the special family clothes, the kite and the boat. `world/doorway.ts` renders that separate shore
+   he originally wanted only the special family clothes, the kite and the boat. `world/doorway.ts` renders that separate shore
    inside the opening. Outside the frame there is sea, with no departure boat or onward land. The cygnet and child
-   pass through first; the camera follows continuously, then the forest of washing is gone. One family line stands
-   on the small grassy landing, with the kite and the waiting boat. The child throws the plane and the voyage resumes.
+   pass through first; the camera follows continuously, then the forest of washing is gone. **September 21:**
+   Jeremy approved removing the repeated family line from the destination. The family stays beside the red door;
+   beyond it is an open grassy landing, the kite and the waiting boat. The child throws the plane and the voyage resumes.
    Safe checkpoints follow the first and second curtains and the completed threshold crossing; the existing `family`
    checkpoint migrates older north-beach saves to this shore. Feel and crossing timings: `tuning.linesPassage`.
    Verified with `tools/lines-check.mjs`: full mouse passage through all three curtains, doorway and boat departure;
@@ -449,15 +525,18 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
    birds. Nothing is asked of the player except to sail. **Built** — `fx/sealife/dolphin.ts`.
-7. **Home** (`story/home.ts`) — clear, frozen, stars. **The reunion**, staged in four beats: the child stands the
+7. **Home** (`story/home.ts`) — warm afternoon for the farewell and drawing, night after the child returns indoors. **The reunion**, staged in four beats: the child stands the
    cygnet in the grass and steps back; it **tries twice by itself and drops both times**, so the player is shown
    rather than told that nobody else can do this; it calls north and nothing answers; and then the player raises
-   the wind under it and holds it there. The moment it has the air, **the family comes down out of the night and
+   the wind under it and holds it there. The moment it has the air, **the family comes down through the sunlight and
    wheels low over the hill** — a short, close thermal column a little to the north, framed from the child's
    shoulder so the sky is most of the frame — and the music, held back since the wood, comes back with it. The
    player is still holding the updraft through the whole reunion: they do not watch it happen, they are the reason
    it happens. Then they go north together. The child walks on, sees the house, and unfolds the plane. The drawing and
-   real house share the frame when the motif begins; then the release and the red door. **Built.**
+   real house share the frame with a visible sun matching the picture when the motif begins. After the release,
+   sunset begins while the child watches the plane depart; night and fireflies arrive before the red door opens. Beside the cottage hangs
+   the family washing from the island of lines: blue and red adults, the small yellow jumper between them.
+   The cygnet found its family, and the child belongs here too. See [ending.md](ending.md). **Built.**
 
 Crossings between them are all one class (`story/crossing.ts`) taking a route, a haze, what to look back at, a
 whale, a pod of dolphins, a storm, and where the time of day ends up. `story/journey.ts` runs the order:
@@ -576,6 +655,14 @@ fade and less enlargement in the distance, so gusts leave the puzzles visible. T
 second tangle passing through its tree. Yarn relief and colour contrast are softer, with a broad wool nap.
 The first supports now slide on the visible branch until release. Gesture distance drives eased progress;
 quiet wind traces demonstrate an upward sweep, a circle, a sideways pull and an outward pull. They never supply wind.
+
+**Late scarf supports (September 21).** Jeremy found the knot near the end floating in mid-air, then asked
+for variety after the first fix repeated the same fork and put a tree in the way. The slipped loop catches
+on the upturned limb of a fallen birch lying beside the ride; its added standing tree is removed. The final
+bow hangs from a low limb on a standing birch. Heavy loops droop below both collars. Visible supports share
+their endpoints with cloth collision, and hems stay outside the wood during partial pulls. The slipped
+loop's tails pass in front of the fallen limb so they drop clear after release. The four-stop order,
+sideways/outward gestures and saved progress are unchanged.
 
 **Wind invitations (September 20).** Jeremy approved one shared family of travelling gusts: a clear leading
 wisp, uneven trailing strands, curling dispersal, readable width and brightness, and immediate handover to

@@ -1262,7 +1262,8 @@ export class Cygnet {
       }
     }
     /** Wings out for balance when it runs, the way a chick that cannot fly still uses them. */
-    this.flap = ease(this.flap, this.hurry > 0.5 ? 0.75 : 0, 5, dt);
+    // Balance follows actual travel speed, including a chapter's slower exploration pace.
+    this.flap = ease(this.flap, speed > tuning.cygnetMotion.wingBalanceSpeed ? 0.75 : 0, 5, dt);
     if (this.mind.act === 'bowled') {
       /** Knocked a step or two downwind, and no further. */
       const push = this.mind.actEnv * 1.3 * dt;

@@ -1,3 +1,4 @@
+import { journeyRooms, JOURNEY_ROOMS_GLSL } from './journey-rooms';
 import { SKY_RADIANCE_GLSL } from './sky-radiance';
 import * as THREE from 'three';
 import { params } from '../params';
@@ -57,7 +58,9 @@ export const atmo = {
     uSeason: { value: 0 },
     /** 1 while the sea's mirror image is drawn: the ground paints its meadow instead of waiting for blades. */
     uMirrorPass: { value: 0 },
-    /** Centre x/z and radius: positive keeps this room, negative conceals it, zero shows all. */
+    /** At most two physical rooms, shared by land, grass, props and reflected views. */
+    uJourneyRooms: journeyRooms,
+    /** Doorway override: positive keeps this room, negative conceals it, zero uses the journey. */
     uRoom: { value: new THREE.Vector3(0, 0, 0) },
     /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
     uRainbow: { value: 0 },
@@ -205,10 +208,12 @@ uniform float uOpenSea;
 uniform vec4 uIslandVeil;
 uniform float uIslandVeilAmount;
 uniform vec3 uRoom;
+${JOURNEY_ROOMS_GLSL}
 /** Hidden land must also leave no shallows or surf in the water. */
 bool roomHides(vec2 p) {
   float d = distance(p, uRoom.xy);
-  return (uRoom.z > 0.0 && d > uRoom.z) || (uRoom.z < 0.0 && d < -uRoom.z);
+  if (uRoom.z > 0.0) return d > uRoom.z;
+  return journeyHides(p) || (uRoom.z < 0.0 && d < -uRoom.z);
 }
 uniform vec2 uCloudShift;
 uniform vec4 uDomain;

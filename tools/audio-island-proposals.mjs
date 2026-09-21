@@ -34,7 +34,7 @@ const birchesOnly = process.argv.includes('--birches');
 const refineBirches = process.argv.includes('--birches-refinement');
 const linesOnly = process.argv.includes('--lines');
 assert([refineSea, refineSleeping, meadowOnly, birchesOnly, refineBirches, linesOnly].filter(Boolean).length <= 1, 'Choose one study per run');
-const runtime = ['src/audio/audio.ts', 'src/audio/little-boats-score.ts', 'src/audio/sea-score.ts', 'src/audio/sleeping-score.ts', 'src/audio/meadow-score.ts', 'src/audio/birches-score.ts', 'src/audio/lines-score.ts', 'src/audio/foley.ts', 'src/story/home.ts', 'src/story/sleeping.ts',
+const runtime = ['src/audio/audio.ts', 'src/audio/arrival-music.ts', 'src/audio/gesture-harmony.ts', 'src/audio/little-boats-score.ts', 'src/audio/sea-score.ts', 'src/audio/sleeping-score.ts', 'src/audio/meadow-score.ts', 'src/audio/birches-score.ts', 'src/audio/lines-score.ts', 'src/audio/dream-score.ts', 'src/audio/dream-score-data.ts', 'src/audio/foghorn.ts', 'src/audio/foley.ts', 'src/story/home.ts', 'src/story/sleeping.ts',
   'src/story/little-boats.ts', 'src/story/crossing.ts', 'src/story/meadow.ts', 'src/story/piano.ts',
   'src/story/birches.ts', 'src/story/birches-play.ts', 'src/tuning.ts'];
 const hashes = files => Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));

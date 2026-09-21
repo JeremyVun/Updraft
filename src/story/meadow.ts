@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PlaneArrival } from './plane-arrival';
 import type { Shot } from '../camera';
 import { BANK, POND, POND_LEVEL, ISLES, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
 import { WAY } from '../world/fields';
@@ -24,7 +25,8 @@ const BEACH = new THREE.Vector2(LANDING.x - 2, mainlandCoastZ(LANDING.x) - 4);
 /** The piano, and the patch of colour it stands in: the one thing awake on a sleeping island. */
 const PIANO_AT = new THREE.Vector3(PLACE.x, heightAt(PLACE.x, PLACE.z) + 1.2, PLACE.z);
 const BROW_AT = new THREE.Vector3(BROW.x, heightAt(BROW.x, BROW.y) + 1.6, BROW.y);
-const shore = meadowPoint(-6, -1172);
+// The open beach east of the last hill keeps the hull in view on the descent.
+const shore = meadowPoint(24, -1176);
 /** Where the boat is waiting on the far shore. Nobody put it there, and nobody remarks on it. */
 export const FAR_SHORE = new THREE.Vector3(shore.x, 0, shore.z);
 
@@ -91,6 +93,7 @@ const BOARDING = 16;
  * crest and down to the pond, and ends where the boat is drawn up on the far shore.
  */
 export class MeadowChapter implements Chapter {
+  private readonly arrival = new PlaneArrival();
   beat: Beat = 'ashore';
   readonly breeze = 1;
   readonly worldLife = 1;
@@ -125,6 +128,7 @@ export class MeadowChapter implements Chapter {
   private nextLook = 0;
   private nextChase = 0;
   private readonly cameraChild = new THREE.Vector3();
+  private readonly boardingView = new THREE.Vector3(0.75, 0, -1).normalize();
   private readonly framing = { primary: this.cameraChild, secondary: new THREE.Vector3(),
     margin: tuning.meadowPlane.cameraMargin, extra: tuning.meadowPlane.cameraExtra };
   private readonly pondFraming = { primary: this.cameraChild, secondary: new THREE.Vector3(), margin: 0.7, extra: 14 };
@@ -179,6 +183,7 @@ export class MeadowChapter implements Chapter {
      */
     flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     cygnet.water = { level: POND_LEVEL, over: overPond };
+    plane.water = cygnet.water;
     plane.homeRadius = tuning.meadowPlane.reach;
     child.dismount();
     child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
@@ -191,6 +196,7 @@ export class MeadowChapter implements Chapter {
    */
   get scripted(): boolean {
     return (
+      this.arrival.active ||
       this.beat === 'ashore' ||
       this.beat === 'beach' ||
       this.beat === 'climb' ||
@@ -238,8 +244,8 @@ export class MeadowChapter implements Chapter {
     if (this.beat === 'pond') return 'pond';
     if (this.beat === 'gather' || this.beat === 'walk' && this.crestDone) return 'return';
     if (this.beat === 'walk') return 'walk';
-    // Restore the original pad while boarding, ahead of the unchanged transition into Birches.
-    return undefined;
+    // Carry the last phrase through boarding and the crossing, until Birches' arrival handoff.
+    return 'return';
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged; }
@@ -357,6 +363,7 @@ export class MeadowChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now = time;
     const { child: c, plane: p, life, boat } = this.cast;
+    p.guided = this.beat === 'walk';
     // Keep the boat at the landing until the walk has left the arrival bay behind.
     if (!this.boatMoved && this.leg >= CREST_LEG) {
       boat.beach(FAR_SHORE.x, FAR_SHORE.z, 0.2);
@@ -470,13 +477,12 @@ export class MeadowChapter implements Chapter {
       }
     }
     if (p.held) p.hold(c);
-    p.companion = this.beat === 'walk' ? c.position : null;
+    p.companion = this.beat === 'walk' && !this.arrival.active ? c.position : null;
     this.frame();
     /** The stop at the piano owns the camera while it has the child, and says how fast it should follow. */
     const pianoPace = this.piano.frame(this.shot);
     if (pianoPace !== null) {
       this.pace = pianoPace;
-      this.shot.subjects = undefined;
     }
   }
 
@@ -756,6 +762,9 @@ export class MeadowChapter implements Chapter {
       return;
     }
 
+    const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
+    if (this.arrival.update(this.cast, last && this.crestDone && (childNear || time - this.beatStart > 220), () => this.board())) return;
+
     if (time > this.nextLook && this.play === 'watch') {
       this.nextLook = time + 7;
       if (this.cast.nearby(c.position.x, c.position.z, 9, this.watched)) this.watchUntil = time + 3;
@@ -780,10 +789,7 @@ export class MeadowChapter implements Chapter {
       c.lookAt = p.position;
       if (!p.landed && p.airborne) this.play = 'watch';
     } else if (this.play === 'hold' && !c.busy) {
-      const nearBoat = Math.hypot(p.position.x - boat.position.x, p.position.z - boat.position.z) < BOARDING;
-      const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;
-      if (last && (nearBoat || childNear || this.now - this.beatStart > 220)) this.board();
-      else if (time > this.holdUntil) this.throwAhead();
+      if (time > this.holdUntil) this.throwAhead();
     }
   }
 
@@ -840,6 +846,8 @@ export class MeadowChapter implements Chapter {
     const p = this.cast.plane.position;
     const s = this.shot;
     s.from = undefined;
+    // The low pond view follows the open water beside the bank; preserve that staged approach.
+    s.composition = ['down', 'crest', 'pond', 'gather'].includes(this.beat) ? 'hold' : undefined;
     s.eye = undefined;
     s.subjects = undefined;
     s.fitWidth = false;
@@ -940,9 +948,15 @@ export class MeadowChapter implements Chapter {
     }
     if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
-      s.target.set((c.x + b.x) / 2, b.y + 2.2, (c.z + b.z) / 2 - 2);
+      // Look back from the water as they descend the far shore. The inland view hid the boarding
+      // behind the grassy bank, although the sail and the camera's target remained visible.
+      s.from = this.boardingView;
+      s.target.set((c.x + b.x) / 2, Math.max(c.y, b.y) + 1.5, (c.z + b.z) / 2);
       s.distance = 28;
       s.height = 7;
+      this.cameraChild.copy(c).y += 1.2;
+      this.framing.secondary.copy(b).y += 1.5;
+      s.subjects = this.framing;
       this.pace = 0.35;
       this.focus.copy(b);
       return;

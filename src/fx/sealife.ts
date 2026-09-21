@@ -73,6 +73,11 @@ export class SeaLife {
   }
 
   /** Where a dolphin is playing to the boat, for the child to look at; null when they are only running alongside. */
+  resumeDolphinsAfterSwim(): void { this.pod.resumeAfterSwim(); }
+
+  get dolphinLeapComplete(): boolean { return this.pod.leapComplete; }
+  get dolphinFarewellReady(): boolean { return this.pod.farewellReady; }
+
   get dolphinShow(): THREE.Vector3 | null {
     return this.pod.spotlight;
   }
