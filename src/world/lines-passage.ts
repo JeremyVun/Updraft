@@ -1,3 +1,4 @@
+import { CURTAIN_LAYOUT } from './lines-layout';
 import { DOOR_SHORE } from './heightfield';
 import * as THREE from 'three';
 import type { PointerInput } from '../input/pointer';
@@ -109,9 +110,5 @@ export class WashingCurtain {
 
 }
 
-export const CURTAINS = [
-  new WashingCurtain(0, 0, -335, 9, 1),
-  new WashingCurtain(1, 25, -357, 10, 2),
-  new WashingCurtain(2, 11, -378, 10.5, 1),
-];
+export const CURTAINS = CURTAIN_LAYOUT.map((c, i) => new WashingCurtain(i, c.x, c.z, c.width, c.panels));
 export const washingPassage: { active: WashingCurtain | null } = { active: null };

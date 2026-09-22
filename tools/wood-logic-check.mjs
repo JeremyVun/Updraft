@@ -142,6 +142,7 @@ for (const portrait of [false, true]) {
   let rescueLight = null, rescueAt = 0;
   let approachClearance = Infinity;
   let previousEye = null, firstLightCameraStep = 0;
+  let previousRotation = null, worstWalkTurn = 0;
   const departureEmbers = new Set();
   let shoreWithoutLight = false;
   for (let frame = 1; frame <= 30 * 400; frame++) {
@@ -158,6 +159,9 @@ for (const portrait of [false, true]) {
     if (litBefore && c.beat === 'compose') { rescueLight = {coal:litBefore,place:lightPlace}; rescueAt = time; }
     cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
     embers.update(dt, child.position, c.embers); rig.update(dt, time, c.shot, c.pace); c.afterCamera(rig.camera);
+    if (previousRotation && ['walk', 'out'].includes(c.beat))
+      worstWalkTurn = Math.max(worstWalkTurn, previousRotation.angleTo(rig.camera.quaternion));
+    previousRotation = rig.camera.quaternion.clone();
     if(previousEye&&c.beat==='walk'&&c.leg===0) firstLightCameraStep=Math.max(firstLightCameraStep,rig.camera.position.distanceTo(previousEye));
     previousEye=rig.camera.position.clone();
     assert(!takeCues().includes('restored'), 'the reunion must not play the level-complete cue');
@@ -235,6 +239,8 @@ for (const portrait of [false, true]) {
   console.log(`Approach ember clearance: ${approachClearance.toFixed(2)} units`);
   assert(firstLightCameraStep<0.6,`first ignition jumped the camera: ${firstLightCameraStep}`);
   console.log(`First-ember camera step: ${firstLightCameraStep.toFixed(3)} units at 30fps`);
+  console.log(`Walking camera maximum turn: ${(worstWalkTurn * 30 * 180 / Math.PI).toFixed(1)} degrees/second`);
+  assert(worstWalkTurn < .025, `walking camera whips after a staged scene: ${worstWalkTurn}`);
   assert(seen.has('snag') && seen.has('fall') && seen.has('pickup'), 'free the plane from the tree before collecting it');
   assert(plane.soggy.value <= 0.02);
   assert(seen.has('fright') && seen.has('bolt') && seen.has('lost'), 'thunder fright, continuous jump and rescue must all play');

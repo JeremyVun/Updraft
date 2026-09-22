@@ -16,10 +16,13 @@ try {
     await page.evaluate(()=>{
       const g=__game,c=g.story.current,original=g.rig.update.bind(g.rig),last=g.boat.position.clone();
       g.rig.camera.getWorldDirection(last);
-      window.villageCamera={frames:0,worstChild:0,worstHull:0,maxTurn:0,beats:[]};
+      window.villageCamera={frames:0,worstChild:0,worstHull:0,maxTurn:0,maxElevation:0,beats:[]};
       g.rig.update=(...args)=>{
         original(...args);if(g.story.current!==c)return;
         const p=g.child.position.clone();p.y+=1.2;p.project(g.rig.camera);
+        const subject=c.shot.subjects.primary,eye=g.rig.camera.position;
+        villageCamera.maxElevation=Math.max(villageCamera.maxElevation,Math.atan2(eye.y-subject.y,
+          Math.hypot(eye.x-subject.x,eye.z-subject.z)));
         villageCamera.worstChild=Math.max(villageCamera.worstChild,Math.abs(p.x),Math.abs(p.y));
         for(const point of c.shot.subjects.points??[]){
           const hull=point.clone().project(g.rig.camera);
@@ -57,6 +60,7 @@ try {
     assert(row.worstChild<1,'child remains on screen throughout the village and storm');
     assert(row.worstHull<.95,'hull retains breathing room throughout the village and storm');
     assert(row.maxTurn<.1,'continuous camera through all village beats');
+    assert(row.maxElevation<.4,'the rendered sailing view stays low instead of looking steeply down');
     await stopReview?.();stopReview=null;
     await page.close();
   }

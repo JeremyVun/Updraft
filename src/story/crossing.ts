@@ -24,7 +24,7 @@ const ROUNDED = 22;
 /** How long a rainbow lingers once the boat sets out. */
 const RAINBOW_FOR = 70;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
-const SWING = 9;
+const SWING = tuning.crossingCamera.farewellRelease;
 
 export interface CrossingOpts {
   /** Ambient breeze multiplier; ordinary transfers use 1 and encounters retain their own slower pace. */
@@ -41,6 +41,10 @@ export interface CrossingOpts {
   meadowScore?: MeadowScorePhase;
   hush?: number;
   arrivalMusic?: ArrivalMusic;
+  /** A different offshore composition, introduced after leaving the preceding island's music. */
+  departureMusic?: ArrivalMusic;
+  /** Start the final musical handoff on departure, opening after the mirror's first offshore turn. */
+  homeward?: boolean;
   /** How far through the year the crossing is: between the room behind them and the one ahead. */
   season?: number;
   /** What the child rides facing and waves at as it falls astern, or nothing to face the way ahead throughout. */
@@ -55,6 +59,8 @@ export interface CrossingOpts {
   dolphins?: boolean;
   /** Haze thick enough to hide where they are going, 0 to 1. */
   haze?: number;
+  /** Thicken the shared distance haze toward shore, after releasing any look back at the departure. */
+  arrivalHaze?: { strength: number; from: number; to: number };
   dusk?: number;
   /** Where the time of day ends up, if this crossing is long enough to change it: the last one ends the night. */
   duskTo?: number;
@@ -85,7 +91,8 @@ export class CrossingChapter implements Chapter {
   readonly worldLife = 1;
   pace = 0.4;
   dusk: number;
-  readonly haze: number;
+  private readonly departureHaze: number;
+  private readonly arrivalHaze?: CrossingOpts['arrivalHaze'];
   readonly storm: number;
   shower: number;
   rainbow = 0;
@@ -93,11 +100,13 @@ export class CrossingChapter implements Chapter {
   readonly focus = new THREE.Vector3();
   readonly escort = new THREE.Vector3();
   readonly music: Mood;
+  private readonly homeward: boolean;
   readonly mirrorScore?: MirrorScorePhase;
   readonly linesScore?: LinesScorePhase;
   readonly meadowScore?: MeadowScorePhase;
   readonly hush: number;
   private readonly destinationMusic?: ArrivalMusic;
+  private readonly departureMusic?: ArrivalMusic;
   private arrivalHeard = false;
   readonly season: number;
   private readonly route: THREE.Vector2[];
@@ -125,10 +134,15 @@ export class CrossingChapter implements Chapter {
   private readonly whaleAttention = { point: new THREE.Vector3(), strength: 0,
     weight: tuning.crossingCamera.whaleWeight, bearing: 0, distance: 0, height: 0 };
   private readonly whaleOffset = new THREE.Vector3();
+  private readonly farewellAttention = { point: new THREE.Vector3(), strength: 0,
+    weight: tuning.crossingCamera.farewellWeight };
   private readonly whaleRight = new THREE.Vector3();
   private readonly whaleSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
     tertiary: new THREE.Vector3(), margin: 0.8, extra: 60 };
   private readonly sailingSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.8, extra: 14 };
+  private readonly farewellBounds = Array.from({ length: 6 }, () => new THREE.Vector3());
+  private readonly farewellSubjects = { primary: this.sailingSubjects.primary, secondary: this.sailingSubjects.secondary,
+    tertiary: new THREE.Vector3(), points: this.farewellBounds, margin: 0.8, extra: 40 };
   private readonly swimSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.72, extra: 18 };
   private readonly spans: number[] = [];
   private readonly distances: number[] = [];
@@ -163,6 +177,8 @@ export class CrossingChapter implements Chapter {
     this.quarter = -cast.boat.sailSide || 1;
     cast.boat.speedLimit = this.cruiseSpeed;
     this.music = opts.music ?? 'sea';
+    this.homeward = opts.homeward ?? false;
+    this.departureMusic = opts.departureMusic;
     this.mirrorScore = opts.mirrorScore;
     this.linesScore = opts.linesScore;
     this.meadowScore = opts.meadowScore;
@@ -187,7 +203,8 @@ export class CrossingChapter implements Chapter {
       this.distances.push(this.routeLength);
       this.spans.push(span); this.routeLength += span; prev = point;
     }
-    this.haze = opts.haze ?? 0;
+    this.departureHaze = opts.haze ?? 0;
+    this.arrivalHaze = opts.arrivalHaze;
     this.duskFrom = opts.dusk ?? 0;
     this.duskTo = opts.duskTo ?? this.duskFrom;
     this.dusk = this.duskFrom;
@@ -216,21 +233,54 @@ export class CrossingChapter implements Chapter {
     return this.wantsDolphins ? 1 - THREE.MathUtils.smoothstep(this.progress(), 0.76, 0.94) : 0;
   }
 
+  get haze(): number {
+    const arrival = this.arrivalHaze;
+    if (!arrival) return this.departureHaze;
+    const shore = this.route[this.route.length - 1], boat = this.cast.boat.position;
+    const distance = Math.hypot(boat.x - shore.x, boat.z - shore.y);
+    const approach = 1 - THREE.MathUtils.smootherstep(distance, arrival.to, arrival.from);
+    const released = this.lookBack
+      ? THREE.MathUtils.smootherstep(this.time, this.farewellFor, this.farewellFor + SWING) : 1;
+    return THREE.MathUtils.lerp(this.departureHaze, arrival.strength, approach * released);
+  }
+
   get done(): boolean {
     // A fast sail can reach the jetty during the last seconds of the reflection fade.
     return this.cast.boat.grounded && (!this.wantsDolphins || this.mirrorArrival === 1);
   }
 
-  get arrivalMusic(): ArrivalMusic | undefined { return this.arrivalHeard ? this.destinationMusic : undefined; }
+  get arrivalMusic(): ArrivalMusic | undefined { return this.homeward || this.arrivalHeard ? this.destinationMusic : this.departureMusic; }
+
+  get arrivalReady(): boolean | undefined {
+    if (this.homeward || !this.destinationMusic) return undefined;
+    if (this.departureMusic && !this.arrivalHeard) return true;
+    if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
+    const speed=Math.max(4.5,Math.min(this.cast.boat.speed,this.arrivalSpeed));
+    const lead=tuning.audio.arrivalShoreAllowance+tuning.audio.arrivalEntranceLead*speed;
+    return this.cast.boat.grounded || this.remainingSail()<=Math.min(lead,this.routeLength*tuning.audio.arrivalEntranceRouteShare);
+  }
+
+  get homewardReady(): boolean | undefined {
+    if (!this.homeward) return undefined;
+    const { position, grounded } = this.cast.boat;
+    return grounded || (this.leg > 0 && Math.hypot(position.x-this.departure.x,position.z-this.departure.y)
+      >= tuning.audio.homewardClearDistance);
+  }
 
   /** Remaining sailing distance, not straight-line proximity across an intervening island. */
+  private remainingSail(): number {
+    const target=this.route[this.leg];
+    return Math.hypot(this.cast.boat.position.x-target.x,this.cast.boat.position.z-target.y)
+      +this.routeLength-this.distances[this.leg]-this.spans[this.leg];
+  }
+
   private prepareArrivalMusic(): void {
     if (!this.destinationMusic || this.arrivalHeard) return;
-    if (this.wantsDolphins && (this.swim !== 'done' || this.progress() < tuning.seaPassage.farewellAt)) return;
-    const target = this.route[this.leg];
-    const remaining = Math.hypot(this.cast.boat.position.x - target.x, this.cast.boat.position.z - target.y)
-      + this.routeLength - this.distances[this.leg] - this.spans[this.leg];
-    const lead = tuning.audio.arrivalShoreAllowance + tuning.audio.arrivalMusicLead * Math.max(4.5, this.cast.boat.speed);
+    if (this.wantsDolphins && (this.swim !== 'done' || this.podLeftAt === null)) return;
+    const remaining = this.remainingSail();
+    // A fast sail still slows at the meadow bank; use that approach speed so the rest doesn't begin offshore.
+    const speed=Math.max(4.5,Math.min(this.cast.boat.speed,this.arrivalSpeed));
+    const lead = tuning.audio.arrivalShoreAllowance + tuning.audio.arrivalMusicLead * speed;
     if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
       this.arrivalHeard = true;
     }
@@ -239,7 +289,7 @@ export class CrossingChapter implements Chapter {
   get seaScore(): SeaScorePhase | undefined {
     if (!this.wantsDolphins) return undefined;
     if (this.swim !== 'before' && this.swim !== 'done') return 'swim';
-    if (this.progress() >= tuning.seaPassage.farewellAt) return 'arrival';
+    if (this.podLeftAt !== null) return 'arrival';
     return this.swim === 'done' ? 'return' : 'open';
   }
 
@@ -488,12 +538,23 @@ export class CrossingChapter implements Chapter {
       this.shot.target.set(tx, THREE.MathUtils.lerp(3, seat.y + 1.15, swing), tz);
       this.shot.distance = THREE.MathUtils.lerp(26, distance, swing);
       this.shot.height = THREE.MathUtils.lerp(4.5, height, swing);
+      this.farewellAttention.point.copy(back);
+      this.farewellAttention.strength = 1 - swing;
+      this.shot.attention = this.farewellAttention;
+      const establish = THREE.MathUtils.smootherstep(this.time, 0, k.farewellEstablish) * (1 - swing);
+      this.farewellSubjects.tertiary.copy(this.sailingSubjects.primary).lerp(back, establish);
+      // Reserve the whole moving hull and sail, not just the child's centre, beside the island.
+      const extent = k.farewellBoatExtent, mast = k.farewellMastHeight;
+      this.farewellBounds[0].copy(boat.position).add(this.spot.set(-extent, mast / 2, 0));
+      this.farewellBounds[1].copy(boat.position).add(this.spot.set(extent, mast / 2, 0));
+      this.farewellBounds[2].copy(boat.position).add(this.spot.set(0, mast / 2, -extent));
+      this.farewellBounds[3].copy(boat.position).add(this.spot.set(0, mast / 2, extent));
+      this.farewellBounds[4].copy(boat.position).y += mast;
+      this.farewellBounds[5].copy(boat.position);
+      this.shot.subjects = this.farewellSubjects;
       this.pace = 1.2;
     } else {
-      /**
-       * Off the stern quarter, on whichever side the sail is not, and low enough to see the child's face and what
-       * they are holding. Dead astern put the sail straight through them and showed nothing but their back.
-       */
+      /** Follow behind the travellers, with a little clearance beside the mast and room for the route ahead. */
       this.shot.from = this.from.set(Math.sin(sailBearing), 0, Math.cos(sailBearing));
       this.shot.target.set(seat.x + fx * lead, seat.y + 1.15, seat.z + fz * lead);
       this.shot.distance = distance;
@@ -515,7 +576,9 @@ export class CrossingChapter implements Chapter {
         // Once the pod has said goodbye, turn with the voyage toward the shore again.
         const land = this.swim === 'done'
           ? THREE.MathUtils.smootherstep(progress, tuning.seaPassage.farewellAt, 1) : 0;
-        const bearing = boat.yaw + Math.PI + this.quarter * THREE.MathUtils.lerp(tuning.seaPassage.cameraBearing, angle, land);
+        const encounterBearing = THREE.MathUtils.lerp(tuning.seaPassage.cameraBearing,
+          tuning.seaPassage.swimCameraBearing, this.swimFrame);
+        const bearing = boat.yaw + Math.PI + this.quarter * THREE.MathUtils.lerp(encounterBearing, angle, land);
         this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
         this.shot.target.lerp(this.look.set(seat.x + fx * lead, seat.y + 1.15, seat.z + fz * lead), land);
         this.shot.distance = THREE.MathUtils.lerp(this.shot.distance, distance, land);

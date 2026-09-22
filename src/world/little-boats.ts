@@ -456,6 +456,12 @@ export class LittleBoats {
       }
       // Use the boats' actual order on the water, including independently sailed toys.
       this.fleet.sort((a, b) => a.s - b.s);
+      let heroEnd = this.progress < L.length ? Math.max(hero.s, Math.min(L.length, limit)) : k.offshoreEnd;
+      // Ease toward the walkers/swimmer instead of losing all momentum at each
+      // pool handoff. Contact from a following hull must obey the same easing.
+      // Leave the outlet free so the toy can cross it and start departing.
+      if (this.progress < L.length && limit < L.length)
+        heroEnd = Math.min(heroEnd, hero.s + Math.max(0, limit - hero.s) * dt / k.followEase);
       for (const [i, t] of this.toys.entries()) {
         if (this.progress > t.s - 5) t.joined = true;
         const carried = i === 0 ? push : t.joined ? push * k.fleetCarry : 0;
@@ -466,10 +472,9 @@ export class LittleBoats {
             : 0;
         const speed = Math.max(t.effort * k.speed, carried * k.speed, current);
         t.speed += (speed - t.speed) * (1 - Math.exp(-dt * k.drag));
-        const end = i === 0 && this.progress < L.length ? Math.min(L.length, limit) : k.offshoreEnd;
+        const end = i === 0 ? heroEnd : k.offshoreEnd;
         t.s = Math.max(t.s, Math.min(end, t.s + t.speed * dt));
       }
-      const heroEnd = this.progress < L.length ? Math.max(hero.previousS, Math.min(L.length, limit)) : k.offshoreEnd;
       // A rear push travels through the flotilla instead of through the hulls. Keep the
       // lane offsets and stream course, so a collision cannot shove a toy onto a bank.
       for (let i = 1; i < this.fleet.length; i++) {

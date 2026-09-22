@@ -57,8 +57,11 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(60, -195),
     LINES_LANDING,
   ],
-  toBoats: [new THREE.Vector2(305, -397), new THREE.Vector2(310, -425), new THREE.Vector2(285, -435), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
-  toMeadow: [new THREE.Vector2(230, -582), new THREE.Vector2(174, -575), new THREE.Vector2(100, -549), MEADOW_APPROACH, LANDING],
+  // Leave the door shore to the west, then round Little Boats into its arrival pool.
+  toBoats: [new THREE.Vector2(220, -410), new THREE.Vector2(190, -397), new THREE.Vector2(190, -350),
+    new THREE.Vector2(BOATS_LANDING.x + 26, BOATS_LANDING.z - 4), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
+  // Cross the open water north of the meadow, then approach its bank head-on.
+  toMeadow: [new THREE.Vector2(125, -510), new THREE.Vector2(60, -535), MEADOW_APPROACH, LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
@@ -304,6 +307,8 @@ export class Journey {
           rainbow: true,
           whaleAt: 52,
           haze: 0.35,
+          arrivalHaze: { strength: tuning.world.linesCrossingHaze,
+            from: tuning.world.linesHazeFrom, to: tuning.world.linesHazeTo },
         });
       case 'lines':
         return new LinesChapter(cast);
@@ -334,6 +339,7 @@ export class Journey {
       case 'toMirror':
         return new CrossingChapter(cast, {
           route: ROUTES.toMirror, haze: tuning.seaPassage.haze,
+          departureMusic: 'sea',
           arrivalMusic: 'mirror',
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
           whaleAt: 42, whaleEvery: 0, dolphins: true,
@@ -348,7 +354,7 @@ export class Journey {
           route: cast.boat.position.x < MIRROR_BERTH.x - 30
             ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_BERTH.x + 40, MIRROR_BERTH.z + 4), ...ROUTES.toHarbour] : ROUTES.toHarbour,
           haze: 0.92, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
-          season: 0.98, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home',
+          season: 0.98, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
         });
       case 'toHome':
         /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */

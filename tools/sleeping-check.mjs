@@ -4,13 +4,14 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
+import { reviewCapture } from './lib/review-capture.mjs';
 
 const prefix = process.argv[2] ?? '/tmp/updraft-sleeping';
 const touch=process.env.TOUCH==='1',width=Number(process.env.W??(touch?390:1600)),height=Number(process.env.H??(touch?844:900));
 const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',markers=[];
 const {browser,close}=await openBrowser();
 console.log('Graphics acquired; starting sleeping chapter');
-let finishRecording;
+let finishRecording,stopReview;
 try {
   const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,hasTouch:touch,isMobile:touch});
   const page=await context.newPage(),cdp=await context.newCDPSession(page),errors=[];
@@ -34,6 +35,7 @@ try {
   });
   await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot=1&chapter=sleeping'+(video?'&ratio=1':'')+(process.env.QUERY?'&'+process.env.QUERY:'' ));
   await page.waitForFunction(()=>window.__ready===true,null,{timeout:60000});
+  if(process.env.REVIEW==='1')stopReview=reviewCapture(page,prefix);
   assert.deepEqual(await page.evaluate(()=>[innerWidth,innerHeight]),[width,height]);
   assert.deepEqual(errors,[],'initial shader compilation');
   const heightParity=await page.evaluate(()=>__stats.heightParity);
@@ -262,5 +264,5 @@ try {
   fs.writeFileSync(prefix+'.json',JSON.stringify({touch,adversarial,liftSeconds,heightParity,result,markers,errors},null,2));
   console.log(JSON.stringify({touch,liftSeconds,heightParity,result,errors}));
 } finally {
-  try {await finishRecording?.();} finally {await close();}
+  try {await stopReview?.();await finishRecording?.();} finally {await close();}
 }

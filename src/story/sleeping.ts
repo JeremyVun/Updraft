@@ -1019,7 +1019,7 @@ export class SleepingChapter implements Chapter {
         this.bedFocus.copy(BED).setY(BED.y + 1.05);
         this.roomFocus.copy(this.beat === 'tuckIn' ? c : k.position).setY(this.beat === 'tuckIn' ? c.y + 1.4 : k.position.y + 0.65);
         s.target.copy(this.bedFocus);
-        s.eye = this.perch.set(BED.x + 7.1, BED.y + 4.0, BED.z + 6.4);
+        s.eye = this.perch.set(BED.x + T.cameraSide, BED.y + 4.0, BED.z + T.cameraBack);
         if(this.beat!=='asleep' || !this.called)this.subjects.tertiary=this.hearthFocus;
         if (this.beat === 'asleep' && this.called) {
           const h=this.t-this.callAt;
@@ -1097,7 +1097,9 @@ export class SleepingChapter implements Chapter {
         this.bedFocus.copy(CURTAIN_END).lerp(k.position,follow);
         this.cameraDetail.set(k.position.x-UPHILL.x*1.2,k.position.y+.5,k.position.z-UPHILL.y*1.2);
         s.target.copy(WINDOW).lerp(CURTAIN_END,.25).lerp(this.cameraDetail,follow);
-        this.cameraDetail.set(k.position.x+UPHILL.x*6.5,k.position.y+3.4,k.position.z+UPHILL.y*6.5);
+        // Track down the same side as the bedside view. Crossing behind the descending bird
+        // reversed the lens here, then reversed it again when the child woke.
+        this.cameraDetail.set(k.position.x+T.cameraSide,k.position.y+3.4,k.position.z+T.cameraBack);
         s.eye!.lerp(this.cameraDetail,follow);
         this.subjects.secondary.lerp(this.subjects.primary,follow);
         if(follow>0)this.subjects.tertiary=undefined;
@@ -1111,7 +1113,7 @@ export class SleepingChapter implements Chapter {
         this.bedFocus.copy(c).setY(c.y + 1.25);
         this.roomFocus.copy(this.bedFocus).addScaledVector(this.aim, 5);
         s.target.copy(this.bedFocus).addScaledVector(this.aim, 1.2);
-        s.eye = this.perch.set(c.x + 7.1, c.y + 4.2, c.z + 6.4);
+        s.eye = this.perch.set(c.x + T.cameraSide, c.y + 4.2, c.z + T.cameraBack);
         s.subjects = this.subjects;
         s.clearance = 1.4;
         this.pace = 1.2;

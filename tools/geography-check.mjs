@@ -22,7 +22,7 @@ globalThis.window = {matchMedia:()=>({matches:false})};
 const {ROOMS,visibleRooms,drawJourneyRooms} = await import('../src/world/journey-rooms.ts');
 const {mirrorWater,SKY_MIRROR,MIRROR_LANDING,MIRROR_BERTH} = await import('../src/world/sky-mirror-layout.ts');
 const {migrateGeography} = await import('../src/story/geography-progress.ts');
-const {BOATS_SHIFT,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
+const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
 const {Dolphins} = await import('../src/fx/sealife/dolphin.ts');
 const {tuning} = await import('../src/tuning.ts');
 const {worldHeight} = await import('../src/world/heightfield.ts');
@@ -76,7 +76,7 @@ for(const [name,start] of Object.entries({toBoats:LINES_BERTH,toMeadow:BOATS_BER
  let x=start.x,z=start.z,length=0;for(const p of ROUTES[name]){length+=Math.hypot(p.x-x,p.y-z);x=p.x;z=p.y;}
  const distance=Math.hypot(x-start.x,z-start.z);
  console.log(JSON.stringify({passage:name,direct:+distance.toFixed(1),route:+length.toFixed(1)}));
- if(name==='toMeadow')assert(length<486.9*.7,'Meadow distance is at least 30% shorter');
+ if(name==='toMeadow')assert(length<400,'the open-water meadow crossing stays within its route budget');
  if(name==='toHarbour')assert(length<250,'Home is a short onward passage');
 }
 
@@ -87,14 +87,16 @@ for(const [chapter,x,z,destination] of [['toMeadow',240,-483.5,BOATS_BERTH],['to
 }
 console.log('Pre-Little-Boats and northern-mirror-shelf saves resume at safe departure berths.');
 
-// The second relocation only moves the late islands, and never applies the first shift twice.
+// Revision 1 saves receive every later relocation, each exactly once.
+const boatsFromV2={x:BOATS_OFFSHORE_SHIFT.x+BOATS_SHORTENING.x,z:BOATS_OFFSHORE_SHIFT.z+BOATS_SHORTENING.z};
 for (const chapter of ['boats','toMeadow','toSleeping','sleeping','mirror','toHarbour','home']) {
  const late=['mirror','toHarbour','home'].includes(chapter), x=late?-330:233,z=late?-2233:-557;
  const saved={version:1,geography:1,chapter,point:'entry',data:[],child:[x,2,z,0,1],boat:[x,z,0,1,0],bird:[x,2,z,0,0,0,1],life:[[-395,-2220,1,2],[-150,-2500,1,2],[233,-495,1,2]]};
  const p=migrateGeography(saved);
  assert.equal(p.geography,GEOGRAPHY_VERSION);
- assert.equal(p.boat[0],x+(late?SEA_SHORTENING.x:0));assert.equal(p.boat[1],z+(late?SEA_SHORTENING.z:0));
- assert.deepEqual(p.life,[[-345,-2090,1,2],[-100,-2370,1,2],[233,-495,1,2]]);
+ const move=late?SEA_SHORTENING:['boats','toMeadow'].includes(chapter)?boatsFromV2:{x:0,z:0};
+ assert.equal(p.boat[0],x+move.x);assert.equal(p.boat[1],z+move.z);
+ assert.deepEqual(p.life,[[-345,-2090,1,2],[-100,-2370,1,2],[233+boatsFromV2.x,-495+boatsFromV2.z,1,2]]);
  const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
 }
 for (const geography of [undefined,1]) {
@@ -111,11 +113,54 @@ ROUTES.toHarbour.forEach((p,i)=>{
 console.log('Revision 1 saves, open-sea resumes and unchanged relative home route passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
-for(const geography of [undefined,1,2,3,-1,1.5,'1']) {
+for(const geography of [undefined,1,2,3,4,5,-1,1.5,'1']) {
  const saved={version:1,geography,chapter:'home',point:'entry',data:[],child:[-150,2,-2500,0,0],boat:[-150,-2306,0,0,1],bird:[-150,2,-2500,0,1,0,1],seat:'cradle',life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]};
  globalThis.localStorage={getItem(){return JSON.stringify(saved);}};
  const p=readProgress();
- if(geography===undefined||geography===1||geography===2)assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
+ if(geography===undefined||geography===1||geography===2||geography===3||geography===4)assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
  else assert.equal(p,null,'reject malformed or future geography');
 }
-console.log('Save reader accepts both supported geography revisions and rejects unknown versions.');
+console.log('Save reader accepts all supported geography revisions and rejects unknown versions.');
+
+// Revisions 2/3 only move Little Boats; late-island positions and swim progress stay intact.
+for (const geography of [2,3]) for (const chapter of ['boats','toMeadow','toBoats','lines','meadow','sleeping','toMirror','mirror','toHarbour','home']) {
+ const boats=['boats','toMeadow'].includes(chapter), swim=chapter==='toMirror';
+ const start=geography===2?{x:233,z:-557}:{x:203,z:-292};
+ const shift=geography===2?boatsFromV2:BOATS_SHORTENING;
+ const p={version:1,geography,chapter,point:swim?'swim':chapter==='boats'?'pool-2':'entry',data:swim?[3,84]:chapter==='boats'?[79]:[],
+  child:[start.x,2,start.z,0,1],boat:[start.x,start.z,0,1,0],bird:[start.x,2,start.z,0,0,0,1],
+  life:[[start.x-3,start.z+62,100,1],[-345,-2090,1,2],[-100,-2370,1,2]]};
+ const data=structuredClone(p.data);migrateGeography(p);
+ for (const [v,z] of [[p.child,2],[p.bird,2],[p.boat,1]]) {
+  assert.equal(v[0],start.x+(boats?shift.x:0));
+  assert.equal(v[z],start.z+(boats?shift.z:0));
+ }
+ assert.deepEqual(p.data,data,'keeps completed pools and revision 2 swim data');
+ assert.deepEqual(p.life,[[130,-420,100,1],[-345,-2090,1,2],[-100,-2370,1,2]]);
+ const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
+}
+
+// Separation is measured to actual dry terrain, not centres or the length of a detour.
+function dryPoints(room) {
+ const points=[];for(let z=room.z-room.rz*1.2;z<=room.z+room.rz*1.2;z+=4)
+  for(let x=room.x-room.rx*1.2;x<=room.x+room.rx*1.2;x+=4)if(worldHeight(x,z)>.25)points.push([x,z]);
+ return points;
+}
+function coastDistance(x,z,points) { let nearest=Infinity;for(const [px,pz] of points)nearest=Math.min(nearest,Math.hypot(x-px,z-pz));return nearest; }
+const meadowDry=dryPoints(ROOMS.meadow), boatsDry=dryPoints(ROOMS.boats);
+assert(coastDistance(LINES_BERTH.x,LINES_BERTH.z,boatsDry)>65,'Little Boats has clear water beyond the door shore');
+assert(coastDistance(BOATS_BERTH.x,BOATS_BERTH.z,meadowDry)>110,'the meadow is distant when the child boards');
+let length=0,px=BOATS_BERTH.x,pz=BOATS_BERTH.z;
+for(const p of ROUTES.toMeadow){length+=Math.hypot(p.x-px,p.y-pz);px=p.x;pz=p.y;}
+let traveled=0,closest=Infinity;px=BOATS_BERTH.x;pz=BOATS_BERTH.z;
+for(const p of ROUTES.toMeadow) {
+ const span=Math.hypot(p.x-px,p.y-pz);
+ for(let d=0;d<span&&traveled+d<length*2/3;d+=3)closest=Math.min(closest,coastDistance(px+(p.x-px)*d/span,pz+(p.y-pz)*d/span,meadowDry));
+ traveled+=span;px=p.x;pz=p.y;
+}
+assert(closest>35,`the first two thirds of the crossing run alongside the meadow: ${closest}`);
+const {boatsCourse}=await import('../src/world/little-boats-layout.ts');
+for(let s=135;s<=230;s+=.5) {
+ const p={};boatsCourse(s,p);assert(worldHeight(p.x,p.z)<-.5,'departing toy fleet must not cross the door shore');
+}
+console.log(JSON.stringify({revision:GEOGRAPHY_VERSION,meadowClearanceFirstTwoThirds:closest}));

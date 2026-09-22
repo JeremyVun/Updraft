@@ -11,6 +11,8 @@ export interface PhraseNote {
 }
 export interface Phrase<N extends PhraseNote> {
   seconds: number; notes: readonly N[]; loopFrom?: number; variants?: readonly (readonly N[])[];
+  /** Ends of short musical figures whose ringing tails overlap the following figure. */
+  handoffs?: readonly number[];
 }
 export interface PhraseClock { epoch: number; cycle: number; next: number }
 export const isMelody = (n: PhraseNote): boolean => n.role ? n.role === 'melody' : n.voice !== 'pad';
@@ -71,11 +73,19 @@ export function phraseHandoff(pattern: Phrase<PhraseNote>, epoch: number, now: n
   const cycle = cycleAt(pattern, epoch, now), from = pattern.loopFrom ?? 0;
   const base = epoch + cycle * (pattern.seconds - from);
   const melody = notesAt(pattern, cycle).filter(isMelody);
+  if(pattern.handoffs) {
+    const latest=[...pattern.handoffs].reverse().find(at=>base+at<=now);
+    if(latest!==undefined&&!melody.some(n=>base+n.at>base+latest&&base+n.at<=now))return now;
+    const next=pattern.handoffs.find(at=>base+at>=now&&base+at<=now+tuning.audio.arrivalPhraseWait);
+    return next===undefined?now:base+next;
+  }
+  // If the line has already rested, do not begin a new figure just to fade it out.
+  if(!melody.some(n=>base+n.at<=now&&base+n.at+(n.duration??2.5)>now))return now;
   for (let i = 0; i < melody.length; i++) {
     const note = melody[i], start = base + note.at, end = start + (note.duration ?? 2.5);
     const next = melody[i + 1];
-    if (start <= now && end > now && end <= now + tuning.audio.arrivalPhraseWait
-      && (!next || base + next.at >= end + .3)) return end;
+    if (end > now && end <= now + tuning.audio.arrivalPhraseWait
+      && (!next || base + next.at >= end + .8)) return end;
   }
   return now;
 }

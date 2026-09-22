@@ -225,6 +225,17 @@ clear of land, continuous motion at the mouth, and the fleet continuing after th
 Verified with a complete mouse playthrough, the 30/60 fps chapter checks and rendered views of the fleet
 clearing the mouth and spreading to the right offshore. Typecheck and the production build pass.
 
+### Orange-boat momentum (2026-09-22)
+
+The child's orange toy repeatedly hit a hard travel limit while the cygnet entered or left a pool,
+zeroing its speed even under steady wind. It now eases toward that limit (`littleBoats.followEase`),
+including when another hull pushes it from behind after a checkpoint restore. All three swims remain.
+
+The logic suite reproduces the old stop and passes fresh arrival and both checkpoints at 30/60/120 fps,
+plus existing idle, local-wind, spacing and offshore checks. Type checking and production build pass.
+The pointer replay now checks abrupt deceleration and backward movement; its rendered run remains
+pending because another full playthrough held the shared GPU lock.
+
 ## Meadow arrival (2026-09-20)
 
 Jeremy found the crossing landed too far along the meadow shore, leaving a long walk before the hill.

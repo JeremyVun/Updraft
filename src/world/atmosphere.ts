@@ -1,4 +1,4 @@
-import { journeyRooms, JOURNEY_ROOMS_GLSL } from './journey-rooms';
+import { journeyRooms, journeyReveal, JOURNEY_ROOMS_GLSL } from './journey-rooms';
 import { SKY_RADIANCE_GLSL } from './sky-radiance';
 import * as THREE from 'three';
 import { params } from '../params';
@@ -60,6 +60,8 @@ export const atmo = {
     uMirrorPass: { value: 0 },
     /** At most two physical rooms, shared by land, grass, props and reflected views. */
     uJourneyRooms: journeyRooms,
+    uJourneyVeils: journeyReveal.veils,
+    uJourneyVeilAmounts: journeyReveal.amounts,
     /** Doorway override: positive keeps this room, negative conceals it, zero uses the journey. */
     uRoom: { value: new THREE.Vector3(0, 0, 0) },
     /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
@@ -208,6 +210,8 @@ uniform float uOpenSea;
 uniform vec4 uIslandVeil;
 uniform float uIslandVeilAmount;
 uniform vec3 uRoom;
+uniform vec4 uJourneyVeils[2];
+uniform vec2 uJourneyVeilAmounts;
 ${JOURNEY_ROOMS_GLSL}
 /** Hidden land must also leave no shallows or surf in the water. */
 bool roomHides(vec2 p) {
@@ -442,6 +446,23 @@ float cloudShadow(vec2 xz) {
 
 ${SKY_RADIANCE_GLSL}
 
+/** Shared with emissive props that deliberately shine through the ordinary habitat fog. */
+float journeyVeilAt(vec3 wpos) {
+  float covered = 0.0;
+  for (int i = 0; i < 2; i++) {
+    if (uJourneyVeilAmounts[i] <= 0.0) continue;
+    vec4 coast = uJourneyVeils[i];
+    // Integrate along the sightline: sea behind a hill must have the same cover as the hill replacing it.
+    vec2 origin = (cameraPosition.xz - coast.xy) / coast.zw;
+    vec2 ray = (wpos.xz - cameraPosition.xz) / coast.zw;
+    float along = clamp(-dot(origin, ray) / max(dot(ray, ray), 1e-6), 0.0, 1.0);
+    float radius = length(origin + ray * along);
+    float hidden = (1.0 - smoothstep(${glsl(tuning.world.arrivalFogInner)}, ${glsl(tuning.world.arrivalFogOuter)}, radius)) * uJourneyVeilAmounts[i];
+    covered = 1.0 - (1.0 - covered) * (1.0 - hidden);
+  }
+  return covered;
+}
+
 /** rgb: haze colour toward this point, a: how much haze covers it. Cheap enough to evaluate per vertex. */
 vec4 fogOf(vec3 wpos) {
   vec3 rd = wpos - cameraPosition;
@@ -488,6 +509,11 @@ vec4 fogOf(vec3 wpos) {
       fogCol = mix(fogCol, skyRadiance(rd), hidden);
       amt = max(amt, hidden);
     }
+  }
+  float arriving = journeyVeilAt(wpos);
+  if (arriving > 0.0) {
+    fogCol = mix(fogCol, skyRadiance(rd), arriving);
+    amt = mix(amt, 1.0, arriving);
   }
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
 }

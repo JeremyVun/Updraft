@@ -288,6 +288,35 @@ route distances and verification are in [geography.md](geography.md); its older 
 
 ## Crossing and companion polish (2026-09-20)
 
+September 22 camera follow-up: Jeremy found changes of attention too fast and occasionally jarring.
+The shared rig now eases into focus, distance and height changes as well as turns, with a calmer speed
+limit and continuous velocity between staged views and orbits. Optional angle corrections wait longer
+and require a sustained benefit. Boat tracking remains immediate, so gentler framing does not trail the
+travellers. The authored encounters and exact doorway path keep their destinations and story timing.
+
+Jeremy's follow-up sets the sailing language: normally behind the sailboat, panning toward meaningful
+things, with the still island held through the departure corner. The drowned village should feel like
+travelling through its streets. Ordinary crossings now stay close to astern; the first farewell looks
+back at the island before a fourteen-second return to the route. The village keeps its travelling position
+behind the boat and pans up to the approaching church. After the becalmed sail interaction it continues
+down the channel instead of replaying the church reveal. The open sea starts astern too, opening beside
+the boat only for the cygnet's swim; the whale retains its distinct encounter pan.
+
+His portrait screenshot exposed a remaining failure: roof clearance lifted the camera into a steep view
+down at the child, with a large empty-water foreground. The lens now eases beside foreground scenery;
+remaining rises are constrained by the angle down to the traveller. The final-camera checks cover this
+angle as well as visibility. The intended view stays near the water, with the horizon present and buildings
+rising around the journey, rather than surveying the village from above.
+
+Jeremy then asked for every island to be checked, especially the feeling of walking through a dark forest.
+The wood now follows lower beneath the canopy, with less shoulder offset and a steady look toward the next
+coal; lighting a coal no longer kicks the camera forward. Returning from the shelter follows an arc around
+the child instead of crossing through them, and the extra room for a newly visible coal opens more slowly.
+The fright, search and warm shelter reveal keep their staging.
+The sleeping island's first glide stays on the bedside camera side through waking, removing two reversals.
+The mirror eases its framing throughout the star sequence, including changes of walking destination.
+Smoothed framing also keeps the primary subject inside an outer safety frame while secondary coverage settles.
+
 September 21 cinematography direction, Jeremy's words:
 
 > "it'd need to feel really nice and seamless throughout the entire game. Almost like there wasn't an

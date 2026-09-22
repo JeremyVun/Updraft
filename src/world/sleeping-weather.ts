@@ -41,9 +41,9 @@ export class SleepingWeather {
       }));mark.frustumCulled=false;this.objects.push(mark);
     }
     const glow=new THREE.Mesh(new THREE.PlaneGeometry(5,5),new THREE.ShaderMaterial({
-      uniforms:{uBeacon:this.beacon,uCold:this.cold},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+      uniforms:{...atmo.uniforms,uBeacon:this.beacon,uCold:this.cold},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
       vertexShader:`uniform vec3 uBeacon;out vec2 vUv;void main(){vec4 view=viewMatrix*vec4(uBeacon,1.0);view.xy+=position.xy;gl_Position=projectionMatrix*view;vUv=uv;}`,
-      fragmentShader:`uniform float uCold;in vec2 vUv;void main(){float r=length((vUv-.5)*2.0);float a=exp(-r*r*8.0)*(1.0-smoothstep(.6,1.0,r));gl_FragColor=vec4(1.0,.63,.27,a*(.12+uCold*.13));}`,
+      fragmentShader:`${ATMO_GLSL} uniform vec3 uBeacon;uniform float uCold;in vec2 vUv;void main(){float r=length((vUv-.5)*2.0);float a=exp(-r*r*8.0)*(1.0-smoothstep(.6,1.0,r))*(1.0-journeyVeilAt(uBeacon));gl_FragColor=vec4(1.0,.63,.27,a*(.12+uCold*.13));}`,
     }));glow.frustumCulled=false;glow.renderOrder=13;this.objects.push(glow);
     const fog=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
       uniforms:{...atmo.uniforms,uSleepVeil:this.veil,uPart:this.part},transparent:true,depthWrite:false,depthTest:false,

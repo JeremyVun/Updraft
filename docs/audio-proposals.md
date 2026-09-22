@@ -9,6 +9,239 @@ Jeremy approved the September 21 Meadow background study below; it is now integr
 Jeremy also approved the revised Birches composition after hearing its isolated music layer; it is integrated locally.
 Jeremy approved the Lines study with a slightly quieter melody; it is integrated locally with a 1.5 dB melody trim.
 
+## Opening and summit drone studies — September 22, 2026
+
+**Rejected.** Jeremy: “they both just stay the same pitch the whole time. very annoying sound and no
+musicality.” He invited exploration with the circle of fifths. Do not integrate either drone. Their slow
+pitch changes existed in the score but did not register as meaningful musical movement for the listener.
+
+Jeremy requested another background theme for both islands: nostalgic and dreamlike without stereotypical
+happiness. He clarified that the opening must draw the player into the dream, and that the original's
+“sort of off key droning” is central to why it works. These are new auditions, not approval to replace
+the current music or revive the rejected September 21 added-melody study.
+
+The starting island is unfamiliar, late-autumn ground: the first touch brings wind and colour before the
+fallen cygnet gives the child a purpose. Its background should invite discovery while leaving the place
+unexplained. The summit completes the bird's journey through the player's wind, then leaves the child
+alone to recognise their own home. Warmth belongs with separation and recognition, not a victory march.
+
+The opening proposal uses continuous triangle/sine voices with the original −6/+7-cent beating, a quiet
+inner note settling from between pitches, and independently sliding voices. The first ten seconds are
+part of the composition. Open D/A moves through suspended A, brief B minor and G before returning open.
+The summit gives those related harmonies steadier, softly bowed tones; its upper A–E–F♯–E–D line is inside
+the sustained chords. The final D retains B underneath it. Neither arrangement adds foreground melody,
+arpeggios, piano or reward cues. The earlier, more settled opening sketch is superseded by this drone revision.
+
+Reproduce: `node tools/opening-summit-preview.mjs /tmp/updraft-opening-summit-drone-sept22 --drone`.
+Composition: `tools/lib/opening-summit-proposal.mjs`. The tool snapshots the production audio source and
+renders without loading project env files or booting the game. Both studies last 80 seconds. Each
+`opening-comparison.mp3` / `summit-comparison.mp3` plays the current background first and the proposal at
+**1:22**. `opening-first20-comparison.mp3` compares the first twenty seconds, proposal at **0:22**.
+Individual `opening-proposal.mp3` and `summit-proposal.mp3` contain only the alternatives.
+
+The full music excerpts are loudness matched; the short entrance comparison retains those same gains.
+Listening gain is not an approved runtime mix. The files omit environment, gesture chimes and authored
+cues; they are composition fixtures with an illustrative chord-clock position, not gameplay recordings.
+Fourteen render checks cover clipping, decoded headroom, loudness matching and composed-voice cleanup.
+Technical validation does not establish emotional fit. No runtime code changed. Any later integration
+must follow actual life/story states, preserve opening gesture harmony and the fall's withdrawal, and
+protect the summit's flight, paper silence, approved `unfold` melody, finale and existing transitions.
+
+## Opening and summit fifths revision — September 22, 2026
+
+**Rejected for changing the style.** Jeremy: “keep the droning style, that is the style of the game.
+But it just can't be one single drone note the whole way through”. Preserve the drone instrument;
+improve its harmonic movement. The circle-of-fifths suggestion was not a request for piano or a new genre.
+
+The new audition replaces the continuous drones with authored piano phrases, changing bass notes, broken
+inner voicings and a quiet decaying string cushion. Harmony changes every 4.5 seconds; each 36-second
+phrase has an answer and breathing room, and the second pass varies the melody. Both clips last 80 seconds.
+The production piano instrument supplies distinct attacks and natural note decay; no sustained detuned
+voice carries the foreground. This composition direction was rejected; do not integrate it.
+
+The opening circles through **Bm9–Em9–A13–Dmaj9–Gmaj9–C♯m7♭5–F♯7(♭9)–Bm9**. Its F♯–A–C♯–B
+opening cell begins within the first second, returning with a changed answer. The final F♯ leaves it open.
+The summit starts on E minor, follows the fifths through D and B minor, and eventually turns through
+G minor before settling in D6/9. The borrowed minor chord carries some separation into the homecoming.
+This background melody is independent of the existing `unfold` cue, which remains approved and unchanged.
+
+Render: `node tools/opening-summit-preview.mjs /tmp/updraft-opening-summit-fifths-sept22 --fifths`.
+Composition: `tools/lib/opening-summit-fifths.mjs`. `opening-proposal.mp3` and `summit-proposal.mp3`
+are the revised music alone; comparison files play production first, then the revision at **1:22**.
+The entrance comparison changes versions at **0:22**. The same source snapshots, isolated-music fixtures
+and loudness matching apply. These exports do not change game code or the approved cue/transition behavior.
+
+## Original drone instrument, moving harmony — September 22, 2026
+
+This revision uses the actual production pad oscillators, original triangle/sine mixture, −6/+7-cent
+detuning, filter, life response and reverb. Only the preview's harmonic progression and within-phrase
+glide timing change. No piano, plucks, percussion or separate melodic voice. Chords turn every six seconds,
+with a 0.85-second pitch-response constant (about 2.6 seconds to settle 95%). The opening retains the original
+entrance for six seconds, then moves through B minor, E minor, A, D, G, C♯ diminished and F♯ before returning
+to open D. The summit follows related fifths, then G minor and D/F♯ into D6.
+
+Reproduce: `node tools/opening-summit-preview.mjs /tmp/updraft-moving-pad-sept22 --moving`.
+Composition: `tools/lib/opening-summit-moving-pad.mjs`. This establishes the requested droning palette;
+`--drone` and `--fifths` retain the rejected auditions for historical reproduction. Each proposal lasts
+80 seconds. Full comparisons switch from current to proposed at **1:22**; the opening entrance comparison
+switches at **0:22**. The actual audio source is snapshotted, and output is loudness matched.
+The game, approved recognition melody and chapter transitions remain unchanged. Pending listening approval.
+
+## Shape the harmony around the islands — September 22, 2026
+
+Jeremy continued the drone direction, asking for greater attention to what each island means and the
+opportunities for harmony between moving chords. This is refinement of the sustained style, not approval
+to integrate the prior progression. The new study retains the production instrument and replaces the
+regular circle with authored voice leading, suspensions, unequal phrase lengths and whole-phrase dynamics.
+
+**Opening:** lostness gives way to discovery and care. The first D and A remain through B minor and Gadd9,
+while the bass falls and an inner voice moves against it. E minor leads to A's suspension; its D resolves
+to C♯ before D major arrives at 0:34. The same warm upper chord then survives the bass descending D–C–B,
+making familiar notes strange again. A later dominant goes to B minor instead of D. The final open D
+retains E and withholds F♯: the island has awakened, but the journey is unanswered. The fall and care cues
+are deliberately outside this background-only study; their existing withdrawal remains required.
+
+**Summit:** the child's care enables departure; recognition of their own home comes afterward. The upper
+E–F♯–G–A gradually opens the middle phrase while the bass often moves the opposite way. At 0:58 the level
+recedes as D becomes B minor. At 1:10, G major becomes G minor: the inner B lowers to B♭, then to A over
+D/F♯. The fuller return to D6 waits until 1:30 and stays quieter than the flight section. The existing
+recognition melody, paper silence and finale remain separate and protected.
+
+Render: `node tools/opening-summit-preview.mjs /tmp/updraft-shaped-harmony-sept22 --shaped`.
+Composition: `tools/lib/opening-summit-shaped-pad.mjs`. `--moving`
+reproduces the earlier regular progression. Individual proposals last 100 seconds. Full comparisons
+switch versions at **1:42**; the entrance comparison switches at **0:22**. Source snapshots, matched
+loudness, output headroom, voice cleanup and the unchanged first six opening seconds are checked.
+These are compressed emotional studies, not gameplay recordings or fixed chapter timing. Any integration
+must follow player/story progress and preserve existing audio boundaries. Awaiting listening feedback.
+
+## Musical memory within the drone — September 22, 2026
+
+Jeremy approved trying another idea: fragments of the existing home-recognition theme hidden within the
+opening drones, becoming clearer at the summit. This authorizes an audition, not a replacement for the
+approved recognition cue. The original instrument remains: four continuous detuned pad voices, with no
+added instrument, piano or articulated melody. The remembered notes occupy its existing upper voice at
+the ordinary gain. The production `unfold` cue is unchanged.
+
+The opening introduces **D–F♯–A–B** from 0:06, an octave below the original cue, preserving its relative
+durations. It then loses the answer in E minor, Cmaj7 and B♭maj7. From 0:48, **B–A–F♯–E** returns, but
+the bass takes E into C major and the fragment wanders toward B♭ and G minor before an open D ending.
+These harmonic detours make the recognition notes belong to unfamiliar places.
+
+The summit carries the longer **D–F♯–A–B–A–F♯–E–F♯** phrase from 0:06, withholding its final D. After
+0:45 it grows quieter and answers in a lower register with **B–D–E–F♯–E–D**. The descending answer
+passes through G minor and D/F♯; the bass reaches root-position D only at 1:24. This is a condensed study
+of flight, separation and recognition, not a timeline for actual chapter playback. Before integration,
+the background must yield to the existing flight, paper/recognition and finale cues at their real states.
+
+Render: `node tools/opening-summit-preview.mjs /tmp/updraft-musical-memory-sept22`.
+Composition: `tools/lib/opening-summit-memory-pad.mjs`, now the default. `--shaped` reproduces the preceding
+study. Individual proposals last 100 seconds. Full comparisons switch at **1:42**; the short opening
+comparison switches at **0:22**. Source snapshots, loudness matching, clipping/headroom, voice release
+and the original opening's first six seconds use the existing checks. The game is unchanged; pending audition.
+
+## Twenty-second opening question — September 22
+
+**Direction endorsed.** Jeremy heard the passage and said: “yes, this is way more like it”. Use this
+twenty-second study as the reference for further development: the original drone character with audible,
+expressive movement between sustained voices. This endorses the direction, not integration or the earlier
+full-length studies. Preserve this audition when developing longer opening and summit arrangements.
+
+After the longer studies failed to establish a convincing direction, Jeremy approved testing one short
+phrase. The existing drone carries an upper **A–G–F♯–E** against bass **D–E–F♯–G**, with inner D held.
+Changes occur at 0:04.25, 0:08.5 and 0:12.75. At 0:17 an inner B lowers to B♭, changing G6 to Gm6 and
+leaving the phrase unanswered. The first chord is already tuned at entry; subsequent notes glide. This
+retains the production oscillators, detuning, filter and reverb, with no new instrument or cue.
+
+Render: `node tools/opening-summit-preview.mjs /tmp/updraft-opening-question-sept22 --question`.
+Composition: `tools/lib/opening-question.mjs`. `opening-proposal.mp3` is twenty seconds; the comparison
+plays the current entrance first, then the study at **0:22**. Gains are matched for listening. The source
+is unchanged in the game. This is a composition audition, not a perceptual sign-off or approved integration.
+
+## Full opening and summit backgrounds — September 22
+
+Jeremy requested complete backgrounds from the endorsed short passage, about 20% slower, with room for
+more nostalgic dissonance, especially on the lost starting island. Both arrangements retain its first
+five voicings exactly. Tempo is 80% of the reference: 4.25-second changes become 5.3125 seconds, without
+lowering pitches. The continuous note glides and entrance are slowed proportionately. The game’s original
+pad oscillators, detuning, filter and reverb supply every voice; no piano or new melodic instrument.
+
+Each listening version lasts **three minutes**, with four developed phrases of eight voicings and a final
+held ending. Phrase boundaries are at **0:00, 0:42.5, 1:25 and 2:07.5**.
+
+- **Opening:** the endorsed question; a wandering answer through F, B♭ and A suspensions; a glimpse of
+  warmer D harmony; the question returned with B♭ and F-natural colouring its inner voices. The final
+  D–A–D–E remains unresolved. The approved phrase is developed, not repeated unchanged for three minutes.
+- **Summit:** the same question; an upward E–F♯–G–A–B line against descending bass for flight; a quieter
+  passage with the upper voice absent; the question returning and finding D6. The upper voice fades out
+  at 1:22.5–1:27.5 and returns at 2:07.5–2:13.5. The final answer stays quieter than the flight section.
+
+Render: `node tools/opening-summit-preview.mjs /tmp/updraft-full-backgrounds-sept22 --full`.
+Composition: `tools/lib/opening-summit-full-score.mjs`. `opening-proposal.mp3` and `summit-proposal.mp3`
+are the full backgrounds; WAVs are also exported. Full comparisons play the current background first,
+then the composition at **3:02**. The short entrance comparison switches at **0:22**.
+
+The source is snapshotted for rendering. Pitch/timing checks verify the five endorsed voicings at the
+slower tempo; render checks cover output clipping, decoded headroom, loudness matching and voice cleanup.
+These are complete listening arrangements, not installed game tracks or fixed story schedules. Any
+integration must follow actual chapter/life states, preserve the opening fall/care withdrawal and playable
+chime harmony, and yield to the summit’s flight, paper silence, approved recognition melody and finale.
+These renders initially awaited a listening decision. The subsequent approval and revision are below.
+
+## Summit approved; opening middle revised — September 22
+
+Jeremy approved the full summit, particularly its passage from about 1:20 onward, and requested it from
+leaving Sky Mirror to the end. He asked for a good fade, at least five seconds of silence, and an entrance
+at the right cinematic moment. The opening begins beautifully but loses its harmonic direction around
+0:48–1:30; that passage needs another audition.
+
+**Implemented locally:** `src/audio/summit-score.ts` retains all 32 approved summit voicings, 80% tempo,
+the original triangle/sine drone and −6/+7-cent detuning. Shared notes keep their oscillator phase;
+moving voices glide from their current pitch, including when a story event interrupts a chord transition.
+The complete three-minute form plays offshore and repeats if needed, including its quieter second half.
+Landing preserves the score and clock. Reunion enters the flight section, the bird's departure removes
+the upper voice for the farewell section, and releasing the drawing brings the home section back.
+Existing chapter hush, recognition melody, cue ducking, finale and final silence remain in charge.
+
+On departure the mirror background fades for three seconds. Its dry signal and reverb then remain
+silent for at least five seconds. The summit enters with a three-second fade once the boat has passed
+its first route turn and cleared 30 world units from departure; slow sailing extends the rest. Wind,
+water and physical sounds continue. Audio-clock timing preserves the full rest through suspension or
+a stalled frame. `tuning.audio.homeward*` owns these settings.
+
+**Opening audition only:** `tools/lib/opening-harmony-revision.mjs` replaces nine voicings at
+0:47.8125–1:30.3125, returning to the existing score at 1:35.625. The wandering bass descends
+A–G–F♯–F–E–E♭–D beneath held D, then returns through G minor and a suspended leading harmony.
+The beginning, later sections, tempo and instrument remain intact. This revision is not installed.
+Render with `node tools/opening-summit-preview.mjs /tmp/updraft-opening-harmony-sept22 --harmony-revision`.
+The full revised track is `opening-proposal.mp3`; its comparison still uses the production opening,
+not the preceding three-minute audition. Earlier full renders remain reproducible with `--full`.
+
+`node tools/homeward-audio-check.mjs` produces `/tmp/updraft-homeward-transition.mp3`, a 90-second
+production-audio fixture: mirror music until 0:12, fade until 0:15, readiness deliberately held until
+0:24, then summit. It includes wind and sea; it is not a gameplay recording or a perceptual sign-off.
+
+## Opening resolution follow-up — September 22
+
+Jeremy preferred the revised opening but heard the 1:20 passage as unresolved before the motif at 1:25.
+`tools/lib/opening-resolution-revision.mjs` inserts one full 5.3125-second D/F♯ chord at 1:25 between
+Gm6 and the returning B-minor motif. Bass G falls to F♯, B♭ falls to A, D stays, and E rises to F♯.
+The next B-minor voicing retains D and the upper F♯. This gives the borrowed minor harmony an arrival
+before the next phrase; the motif now returns at 1:30.3125. Existing notes, glide timing and instrument
+remain; later events and dynamics move five seconds later. Full length: 3:05.3125.
+
+**Approved and integrated locally.** Jeremy: “ok yep, this is the one.” The production opening now uses
+`src/audio/opening-score.ts`: all 33 approved voicings, the 1:25 resolution, 80% tempo and the original
+eight pad oscillators. The full 185.3125-second form repeats for player pacing and continues into the first
+crossing. Existing life, hush and cue ducking retain the fall/care withdrawal. Wind notes use the new
+harmony at their scheduled onset; the Lines arrival retires the opening conductor through the existing gate.
+
+Reproduce the approved audition with `node tools/opening-summit-preview.mjs /tmp/updraft-opening-resolution-sept22 --resolution`.
+The previous `--harmony-revision` audition remains available. Summit is unchanged.
+
+Render checks passed for clipping, headroom and voice cleanup. The first 85 seconds match the previous
+audition within one PCM rounding step; all preceding and subsequent voicings are preserved.
+
 ## The three studies
 
 | Scene | Proposal | Listening structure |

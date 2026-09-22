@@ -20,14 +20,19 @@ the winter weather floor keep their existing levels. Cursor filter sweeps are 20
 1360/1800/1720 Hz. Weather filter response and wind mechanics are unchanged.
 
 Audio and `PointerInput` share `pointer.minGust` and `pointer.minLift`; first input after audio starts can
-schedule a note. Gust and lift share one answer on the 96-BPM grid, at most every two pulses; glider answers
-reserve their two pulses. Opening notes follow the background chord at their scheduled onset, with harmonic
-partials and a 25 ms attack. Lift stays in MIDI 62–81; strokes/glider answers stop at 86. Incompatible held
-notes fade over 300 ms at harmonic changes. `hush` attenuates the background score only.
+schedule a note. All gesture attacks share the 96-BPM grid and a minimum gap: two pulses (0.625 seconds)
+on the opening island, four (1.25 seconds) in the forest and Sleeping climb. Both notes of a glider answer
+obey the same gap and reserve that time against gusts and updrafts.
+Opening notes follow the background chord, with the original bell partials and 6 ms attack.
+Ordinary forest strokes use the original low minor palette (MIDI 50–72); updrafts use D3–A3–D4–A4.
+These minor colours ring over the forest drone without harmonic tail filtering. The rescue keeps its softer voice.
+Elsewhere lift stays in MIDI 62–81 and strokes/glider answers stop at 86; incompatible held notes fade over
+300 ms at harmonic changes. `hush` attenuates the background score only.
 
 The piano retains its own musical response. Authored cues, including the wood's rescue `comfort` and ordinary
-`kindled`, retain their existing sound and level. `breeze`, `delight` and `restored` follow the active chord;
-story melodies retain their authored pitches. Accompaniment ducks to 0.32 with a 0.45-second response and
+`kindled`, retain their existing sound and level. `breeze`, `delight` and `restored` use their original authored
+pitches, bell voice and level; they are independent of cursor harmony, gain and tail gating.
+Accompaniment ducks to 0.32 with a 0.45-second response and
 returns over 1.3 seconds. The finale and chosen home recognition melody are unchanged. `scripted`,
 `pianoActive` and the permanent ending `silence` still suppress gesture chimes.
 
@@ -41,6 +46,16 @@ These scene-specific rules supersede earlier all-room gesture descriptions in th
 
 ## Musical continuity
 
+`opening-score.ts` conducts the original four detuned pad voices for the approved 185.3125-second opening.
+All 33 voicings and the held D/F♯ resolution at 1:25 follow a local audio clock; changes are 5.3125 seconds
+apart, with the audition's longer final hold. Common pitches stay continuous; changed voices glide at the
+approved rate. The complete form repeats for player pacing. Main enables `openingScore` only on the first
+island and its crossing; the conductor and clock persist on departure, independently of opening gesture
+chimes, which end at the island. The existing pad filter, life response, restrained activity gain, chapter
+hush and cue ducking remain. Wind notes query the new harmony at their scheduled onset, including across
+chord/loop boundaries. Lines' arrival gate freezes and retires the conductor without allocating another
+pad or letting its notes return under the next composition. Mute and hidden-page suspension freeze audio time.
+
 `phrasing.ts` shares scheduling, lookahead, stalled-frame skipping and introductory-rest handling across all eight scores. Sustained harmony now bridges accidental loop-end holes; Sleeping shelter/climb retain their sparse rests. Repeating bodies alternate the main melody, a quieter sparse verse and the original melody. Historical `*_AUDITION_NOTES` exports preserve the reference studies; runtime sections contain the approved polish.
 
 The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the full plucked shape in Boats, the existing Meadow melody, B–F♯–E–D in Birches, and a stretched recollection at sea. Sleeping's climb remembers only D–E–F natural. Instrument voices, local harmony, story timing and home recognition remain distinct.
@@ -49,20 +64,46 @@ The piano's D–E–F♯–B question links the rooms: a three-note reed fragmen
 
 Jeremy rejected the earlier held-chord proposal. On September 21 he first requested a four-second arrival rest, then approved the audio-director priorities after the Meadow–Birches render exposed a perceived seven-second hole. Ordinary arrivals now use a short breath; Sleeping and ending retain their dramatic rests. The shared pad's pitch glides/global chord clock remain intact.
 
-`Chapter.arrivalMusic` anticipates the destination using remaining sailing distance and current boat speed.
-The handoff can wait up to 2.5 seconds for a nearby melodic ending. The outgoing background fades for 1.5 seconds, rests for 0.4, then the destination fades in over 1.5 seconds
-before landing. Its phrase continues across grounding/disembarkation. `arrival-music.ts` owns the audio-clock
+Jeremy's September 22 transition review supersedes the short breath: [every handoff](../audio-transition-review.md).
+`Chapter.arrivalMusic` anticipates the destination using remaining sailing distance and its shore speed cap,
+after at least 35% of the crossing. The handoff can wait up to 4.5 seconds for a nearby melodic ending.
+The outgoing background fades for three seconds, rests for three, then the destination fades in over 2.5.
+Sleeping rests for 3.5 seconds and Mirror four. `arrivalReady` also requires the final approach and, on the
+first crossing, release of the farewell camera. Its phrase continues across grounding/disembarkation;
+a very fast landing never abbreviates the rest. `arrival-music.ts` owns the audio-clock
 state; mute/hidden-page suspension freezes it. A separate background gate includes both dry sound and reverb,
 leaving water, wind, physical sounds, calls, cues and playable gestures outside the arrival pause. The old
-background echo is cleared before the incoming fade. Score scheduling stops at the handoff boundary and voices retire during the outgoing fade, so old sources cannot reappear when the gate reopens. A stalled frame still gets the full short rest.
+background echo is cleared before the incoming fade. Score scheduling stops at the handoff boundary and voices retire during the outgoing fade, so old sources cannot reappear when the gate reopens. A stalled frame still gets the full rest.
+
+The opening waits for its current drone voicing to settle before fading. Little Boats exposes ends of its
+short figures despite overlapping tails. Re-entering an already-playing piece does not create a second
+pause. Sleeping morning now hands off explicitly to `sea` on departure; the sea → Mirror request waits
+for the dolphins' actual farewell. Changes of section within one approved piece retain their existing
+continuity and authored rests.
 
 Every gain release/fade explicitly anchors its current value at the start time before the linear ramp.
 `cancelAndHoldAtTime` alone can leave the last constant event in the past: this caused the arrival fade-in to
 jump to about 75%, and Sleeping releases to drop about 83% immediately. Both now use the intended full fades.
-The still-island and mirror pads continue into their crossings; Wood also retains its .55 hush on departure.
+The still-island pad continues into its crossing; Wood also retains its .55 hush on departure.
 Strong wind adds at most about 2 dB to the fully alive daytime pad (previously about 8 dB), independently of
 its gesture notes. Ambient pink-noise loops blend their seam over 40 ms and retain randomized starting offsets.
 Finished chime, wildlife, call and ember nodes disconnect after their release.
+
+The final crossing is a deliberate exception to the short arrival breath. On departure from Sky Mirror,
+`homeward` requests Home immediately. Mirror fades for three seconds, its background/reverb gate remains
+closed for at least five, then Summit fades in over three once the boat clears the first offshore turn
+and 30 units from departure. Slow sailing extends the rest; once entered, sailing back cannot close it.
+Wind, water, foley and authored calls remain outside this musical silence. `homewardReady` and
+`tuning.audio.homeward*` own the spatial gate and timing. A restored home chapter can enter directly.
+
+`summit-score.ts` plays Jeremy's approved drone: all 32 voicings at 80% tempo, continuous detuned
+triangle/sine voices, shared pitches held and moving voices independently gliding. Offshore `approach`
+plays the whole 180-second form, repeating for a slow crossing; landing retains its instance and clock.
+`HomeChapter.summitScore` selects `flight` at answered/fledge, `farewell` from gone through fold, and
+`home` from release onward. Flight/farewell repeat their eight-chord sections; home holds its final D6.
+The upper voice withdraws during farewell. Existing hush and cue ducking protect the paper reveal and
+approved recognition melody. The once-only finale retires the new score and takes over on the original
+pad; a guard prevents the drone restarting underneath it. Permanent ending silence still stops music.
 
 Drowned starts its handoff on departure from Birches, then requests Wood only after the lost-plane scene.
 The long sea passage retains its swim/reunion music until the pod's farewell. Meadow arrival uses its grey
@@ -203,7 +244,10 @@ Motion sounds use differences in physical state: curtains opening, the family sl
 and gathering, paper unfolding/folding and doors swinging/shutting. New sources, inactive sources and the
 first frame after resume establish a silent baseline. Do not synthesize these from completion cues.
 
-Hull sounds use actual speed and pitch. Sail sound follows fresh rises in flutter, with a 2.4-second
+The sailing boat has no hull-water foley: its repeating bursts sounded like persistent flapping and Jeremy
+requested their removal. Toy-boat water sounds remain. A quiet canvas fold sounds once at full droop (0.995),
+re-arming only after the sail refills below 0.8 droop, with a 2.4-second minimum interval. Entry/resume is silent
+and muted, distant or cooldown arrivals expire. Sail flutter sound follows fresh rises in flutter, with a 2.4-second
 minimum interval and a quieter level; sustained luffing never retriggers it. Entry/resume establishes a silent
 baseline and inaudible/cooldown events expire. Tiny toy-boat flutter stays silent. Nearby laundry uses local wind with the
 cloth's spring and flutter thresholds, limited to three sources. Dolphin re-entry uses the same crossing of

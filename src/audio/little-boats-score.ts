@@ -28,7 +28,8 @@ export const BOATS_NOTES: readonly Note[] = BOATS_CHORDS.flatMap((chord, bar) =>
   return notes;
 }).sort((a, b) => a.at - b.at);
 
-export const BOATS_PHRASE = polishPhrase({ seconds: BOATS_PHRASE_SECONDS, notes: BOATS_NOTES }, {
+export const BOATS_PHRASE = polishPhrase({ seconds: BOATS_PHRASE_SECONDS, notes: BOATS_NOTES,
+  handoffs: phrases.map((phrase,bar)=>bar*4.5+phrase[phrase.length-1][0]+.7) }, {
   to: 4.5, melody: JOURNEY_THEME.map((midi, i): Note => ({ voice: 'pluck', midi, at: [.75,1.5,2.25,3][i],
     duration: i === 3 ? 2.8 : 1.7, level: .04, pan: -.1 + i * .07 })),
 });

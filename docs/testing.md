@@ -1,5 +1,44 @@
 # Local release checks
 
+September 22 transition spot check: [results and listening clips](audio-transition-review.md).
+
+- `node tools/music-transition-audit.mjs`: ten real Web Audio handoffs (104 checks) and forty adaptive
+  sections; silence/reverb, source retirement, continuous landing clocks, stalled frames and same-piece entry.
+- `node tools/journey-pacing-check.mjs`: all eight routes, two frame rates and varied wind/late gusts.
+  Records both music preparation and final-approach readiness. A fast landing must preserve the full rest.
+- `node tools/arrival-audio-browser-check.mjs`: the arranged final leg into Lines, after its farewell camera.
+- `node tools/transition-scenes-browser-check.mjs`: natural Meadow → Birches and Sleeping → Sea departures.
+- `node tools/piano-audio-browser-check.mjs`: real approach, stool fade and clear demonstration.
+- `node tools/arrival-audio-check.mjs`: ten destination profiles and 78 checks, now using full musical rests.
+
+September 22 approved opening integration:
+
+- `node tools/opening-score-check.mjs`: 18 checks over the actual 215-second Web Audio render. Exact
+  approved notes/timing/dynamics, D/F♯ resolution and delayed motif, complete loop, first crossing,
+  fall/care withdrawal, 201 harmonically matched gesture notes, shared oscillator identity and Lines handoff.
+  No clipping. Report: `/tmp/updraft-opening-score-check.json`.
+- `node tools/opening-score-browser-check.mjs`: actual main-loop activation, first chord change,
+  mute/resume, first crossing continuity and chapter cleanup, using a private server without env loading.
+  Report: `/tmp/updraft-opening-score-browser.json`.
+- The 81 audio-direction regression checks pass, including cue melodies and gesture gating.
+
+September 22 homeward score checks:
+
+- `node tools/homeward-audio-check.mjs`: approved voicing parity, full offshore form, five-second minimum
+  rest including reverb, spatial readiness, suspension/stalls, landing continuity, story phases, finale
+  takeover and oscillator cleanup. Writes `/tmp/updraft-homeward-audio.json` and a transition MP3 fixture.
+- `node tools/homeward-audio-browser-check.mjs`: private Vite server without env loading or HMR;
+  actual mirror berth, sailing physics, camera and audio entrance. The checked departure faded for
+  3.013 seconds, kept 5.024 seconds of musical silence, and entered on route leg 1 at 30.76 units
+  offshore. No browser errors. Screenshots and report: `/tmp/updraft-homeward-{entry,silence}.png`
+  and `/tmp/updraft-homeward-browser.json`. This arranges the completed mirror departure, not its puzzle.
+- `node tools/opening-summit-preview.mjs /tmp/updraft-opening-harmony-sept22 --harmony-revision`:
+  revised three-minute opening audition. Seven render checks passed; first 47.8 seconds match the
+  preceding full proposal within one PCM quantization step. New harmony remains pending listening.
+
+The 71 ordinary-arrival checks also pass with Summit included in score identity/clock verification.
+Its gesture fixture explicitly enables the opening voice; ordinary arrivals do not enable cursor chimes.
+
 The project already has focused mechanics, checkpoint, GPU and gesture tests in `tools/`.
 They run locally; GitHub Actions is not required. The checks serve different purposes:
 
@@ -345,6 +384,72 @@ passage and complete hull framing. The old child-center-only check missed clippe
 now checks those actual hull points too (worst viewport coordinate 0.800 landscape, 0.876 portrait; edge=1).
 Evidence includes `/tmp/updraft-drowned-camera-{1280,390}.json`, `/tmp/updraft-piano-new-*-report.json`
 and `/tmp/updraft-cinematic-ending-replay-*`. Final review preview: `http://127.0.0.1:5299/`.
+
+## Calmer camera motion (September 22)
+
+The shared rig's focus, dolly and height now ease into movement; ordinary orbit speed is capped at 0.3 rad/s.
+`camera-direction-check.mjs` adds 10/30/60/120 Hz reframing, stationary-target settling, moving handoffs
+between placed views and orbits, and rejection of short-lived composition improvements after a long rest.
+All pass. `crossing-camera-check.mjs` passes all 24 real ordinary routes with calm/gust and both aspects,
+including keeping the still-island focus visible through the first thirty seconds. Ordinary sailing is
+checked to stay close to astern; church coverage is checked during its approach reveal, before the sail
+interaction. The crossing mirror fixture includes the stars required by the current chapter constructor.
+
+`drowned-camera-check.mjs` keeps the child, hull, church, sail and lighthouse in frame. Maximum frame turn
+falls from 0.0216 to 0.0124 rad at 30 Hz landscape, 0.0106 to 0.0065 at 60 Hz portrait, and 0.0207 to 0.0118
+at 30 Hz portrait with gusts. Final elevation down to the child peaks at 18.0°, 17.6° and 17.1°;
+the regression gate is 23°. A conservative branch bound crosses the landscape sightline for 0.33 seconds;
+the portrait routes have no measured scenery obstruction. Small eased lateral clearance replaces the
+previous climb over foreground buildings. The renderer replay also checks the final elevation.
+Pond, ending, sea/swim, piano framing and chapter-handoff checks also pass.
+These are focused motion and visibility checks, not another uninterrupted full-game playthrough.
+
+The initial 1280×720 village GPU replay passes real sail strokes, storm and forest landing, with chronological
+review in `/tmp/updraft-calm-camera-final-1280-frames/`. Peak frame turn is 0.0061 rad; worst child/hull
+viewport coordinates are 0.707/0.841 (edge=1). The first dev-server capture was interrupted by a source
+reload; the completed replay used the built preview to avoid hot reloads during review.
+All eleven chapter entrances pass six-second renderer checks at 1280×720 and 390×844, with no page errors,
+invalid camera positions or lost primary subjects. That entrance sweep covers the shared motion changes;
+the subsequent astern sailing direction has separate route checks and renderer replays.
+
+Final low-camera village replays pass real sail strokes, storm and forest landing at 390×844 and 1280×720.
+Chronological evidence is `/tmp/updraft-low-camera-{390,1280}-frames/`; the landscape renderer's maximum
+elevation is 17.0°. The church view at about 36 seconds keeps the camera near 5.8 units above the water,
+instead of the rejected portrait view near 18.9. The farewell reserves the whole hull and sail beside the
+island, and introduces its distant framing bound over six seconds to avoid a jump from the boarding shot.
+
+### Island camera follow-up
+
+The natural forest baseline (`/tmp/updraft-islands-wood-before*`) exposed a roughly 143°/s turn when
+returning from the reunion. `wood-logic-check.mjs` now gates walking turns on the whole route: about 19°/s
+in landscape and portrait, with the next coal and rescue gesture still reachable. `camera-direction-check.mjs`
+also verifies a placed eye's return arc at 30/60/120 Hz and primary visibility during smoothed fitting.
+
+`sleeping-logic-check.mjs` now uses the real camera rig at 30/60 Hz in both aspects. The glide and waking
+peaks fall from about 97°/s and 148°/s to 4°/s and 3°/s. Every beat keeps its primary within 0.9 viewport
+coordinates (edge=1). The pose fixture uses a fixed random seed so unrelated idle preening is reproducible.
+`sky-mirror-logic-check.mjs` covers continuous framing throughout all four stars, constellation and departure;
+its previous multi-unit frame jumps are gone. Camera direction, pond, ending, drowned village, forest,
+sleeping and mirror regression checks pass with the shared framing safeguard.
+
+The uninterrupted renderer baseline (`/tmp/updraft-island-audit*`) passes Begin, all seventeen chapters,
+credits, completed-save reload and Play again with no browser errors. Chronological review covers the
+still island, all Lines curtains and doorway, the three boat pools, Meadow's climb/piano/pond, Birches,
+the drowned village, forest rescue and retrieval, sleeping ascent and descent, all four mirror lights,
+and Home through the final walk. This run retained the bundle loaded before the three island fixes;
+the revised shots are verified separately rather than described as another full-game run.
+
+The final portrait forest replay (`/tmp/updraft-islands-wood-settled-ready*`) passes the whole chapter with
+55 real pointer sweeps and no browser errors. Review includes the lower walking lens, close shelter reveal,
+slower return arc and widening, paper retrieval and shore descent. The first sleeping replay was interrupted
+by a dev-server reload; subsequent camera replays use a fixed source copy to isolate them from ongoing edits.
+The portrait summit replay (`/tmp/updraft-islands-sleeping-stable*`) passes ribbon input, window coverage,
+glide, waking and boarding without errors. Its chronological frames confirm the descent stays on the
+bedside camera side.
+The final portrait mirror checkpoint replay (`/tmp/updraft-islands-mirror-final*`) passes the fourth star,
+complete constellation and departure with no errors. The optional swing is also visually checked in
+1280×720 and 390×844 from a staged seat approach (`/tmp/updraft-islands-swing-final-*`), with the actual
+mounted state asserted before capture. Type checking, production build and whitespace checks pass.
 
 ## Accepted lighthouse foghorn
 

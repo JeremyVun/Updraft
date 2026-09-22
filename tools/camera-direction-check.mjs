@@ -16,6 +16,50 @@ const {tuning}=await import('../src/tuning.ts');
 const origin=new THREE.Vector3(-3000,2,-3000);
 const shot=()=>({target:origin.clone(),distance:20,height:5,from:new THREE.Vector3(0,0,1)});
 const samples=[];
+// Attention and staged changes build speed in every axis, even when a beat requests a fast response.
+// Sample at several frame rates: the same static destination should trace the same continuous motion.
+const reframes=[];
+for(const placed of [false,true]) for(const fps of [10,30,60,120]) {
+  const s=shot(),r=new CameraRig();
+  if(placed)s.eye=origin.clone().add(new THREE.Vector3(0,5,20));
+  r.cut(s);
+  s.target.add(new THREE.Vector3(8,3,-4));s.distance=32;s.height=9;
+  if(placed)s.eye.copy(s.target).add(new THREE.Vector3(0,9,32));
+  let first=0,peak=0,previousSpeed=0,maxAcceleration=0;
+  const before=r.eye.clone(),last=r.eye.clone();let halfway;
+  for(let i=1;i<=fps*10;i++) {
+    r.update(1/fps,i/fps,s,2.8);
+    const speed=r.eye.distanceTo(last)*fps;
+    if(i===1)first=speed;
+    peak=Math.max(peak,speed);maxAcceleration=Math.max(maxAcceleration,Math.abs(speed-previousSpeed)*fps);
+    last.copy(r.eye);previousSpeed=speed;
+    if(i===fps*2)halfway=r.eye.clone().sub(before).toArray();
+    assert(r.look.x<=s.target.x+1e-8,'focus must not overshoot its stationary destination');
+  }
+  assert(first<peak*.4,'reframing starts gently instead of at its peak speed');
+  assert(r.eye.distanceTo(s.eye??s.target.clone().add(new THREE.Vector3(0,9,32)))<.001,'reframe arrives');
+  reframes.push({placed,fps,first,peak,maxAcceleration,halfway});
+}
+for(const placed of [false,true]) {
+  const rows=reframes.filter(r=>r.placed===placed),reference=new THREE.Vector3(...rows[0].halfway);
+  for(const row of rows)assert(reference.distanceTo(new THREE.Vector3(...row.halfway))<1e-7,'frame-rate independent reframing');
+}
+// Changing staging modes preserves the motion already under way instead of stopping and restarting it.
+for(const placed of [false,true]) {
+  const rigs=[new CameraRig(),new CameraRig()],shots=[shot(),shot()];
+  for(let j=0;j<2;j++) {
+    const s=shots[j],r=rigs[j];
+    if(placed)s.eye=origin.clone().add(new THREE.Vector3(0,5,20));
+    r.cut(s);s.from.set(1,0,0);s.target.x+=3;s.distance=25;s.height=8;
+    if(placed)s.eye.copy(s.target).add(new THREE.Vector3(25,8,0));
+    for(let i=1;i<=60;i++)r.update(1/120,i/120,s,.6);
+  }
+  const changed=shots[1],before=rigs[1].eye.clone();
+  changed.eye=placed?undefined:changed.target.clone().add(new THREE.Vector3(25,8,0));
+  for(let j=0;j<2;j++)rigs[j].update(1/120,.5+1/120,shots[j],.6);
+  assert(before.distanceTo(rigs[1].eye)>.001,'handoff must be checked during motion');
+  assert(rigs[0].eye.distanceTo(rigs[1].eye)<.002,`staging handoff must retain velocity: placed=${placed}, error=${rigs[0].eye.distanceTo(rigs[1].eye)}, speeds=${rigs.map(r=>r.turnSpeed)}`);
+}
 // A reverse angle travels around the subject, without a close pass through it or an abrupt angular start.
 for(const fps of [10,30,60,120]) {
   const s=shot(),r=new CameraRig();r.resize(1600,900);r.cut(s);s.from.set(0,0,-1);
@@ -54,6 +98,19 @@ for(const fps of [10,30,60,120]) {
   r.update(1/fps,2,s,.6);assert(r.eye.distanceTo(eye)<1e-7,'anchor identity change does not carry an offset');
   const frozen=r.camera.position.clone();r.update(0,100,s,.6);assert(r.camera.position.equals(frozen),'zero-time updates do not move');
 }
+// A world-placed reunion eye can return around the child without crossing their position.
+for (const fps of [30, 60, 120]) {
+  const s=shot(),r=new CameraRig();s.eye=origin.clone().add(new THREE.Vector3(-8,3,-7));r.cut(s);
+  s.orbit=true;s.eye.copy(origin).add(new THREE.Vector3(3,3,13));
+  let previous=r.camera.quaternion.clone(),worstTurn=0;
+  for(let i=1;i<=fps*16;i++){
+    r.update(1/fps,i/fps,s,.65);
+    assert(Math.hypot(r.eye.x-r.look.x,r.eye.z-r.look.z)>10,'placed return crosses the subject');
+    worstTurn=Math.max(worstTurn,previous.angleTo(r.camera.quaternion));previous.copy(r.camera.quaternion);
+  }
+  assert(worstTurn*fps<.4,'placed return must retain the slow orbit limit');
+  assert(r.eye.distanceTo(s.eye)<.1,'placed orbit arrives at its authored eye');
+}
 // Attention moves the lens independently of physical travel, without mutating the chapter's preferred shot.
 {
   const d=new CameraDirection(),s=shot(),eye=origin.clone().add(new THREE.Vector3(0,5,20)),look=new THREE.Vector3();
@@ -67,6 +124,13 @@ for(const fps of [10,30,60,120]) {
   const d=new CameraDirection(),s=shot(),camera=new THREE.PerspectiveCamera(62,390/844,.5,7000);
   s.subjects={primary:origin.clone(),secondary:origin.clone().add(new THREE.Vector3(35,0,-8)),margin:.8,extra:40};
   const base=origin.clone().add(new THREE.Vector3(0,5,20)),eye=new THREE.Vector3();
+  // A brief peripheral subject after a long rest is not enough reason to change the composition.
+  for(let i=0;i<60*10;i++) {
+    s.subjects.secondary.x=origin.x+(i>=60*7&&i<60*7.7?35:0);
+    eye.copy(base);d.adapt(1/60,s,eye,s.target,camera,false);
+    assert.equal(d.wanted,0,'a transient framing benefit must not trigger a pan');
+  }
+  d.reset();s.subjects.secondary.x=origin.x+35;
   let switches=0,last=0,lastSwitch=-100;
   for(let i=0;i<60*18;i++) {
     s.subjects.secondary.z=origin.z-8+Math.sin(i*1.7)*.04;
@@ -109,6 +173,19 @@ for(const fps of [10,30,60,120]) {
   const primary=s.subjects.primary.clone().project(r.camera);
   assert(Math.abs(primary.x)<=.801&&Math.abs(primary.y)<=.801,'primary wins when the group cannot fit');
 }
+// Slow coverage must keep a moving primary visible without snapping a newly introduced secondary into view.
+for(const fps of [30,60,120]){
+  const r=new CameraRig(),s=shot();r.resize(390,844);s.smoothFit=.6;
+  s.subjects={primary:origin.clone(),secondary:origin.clone(),margin:.7,extra:30};r.cut(s);
+  s.subjects.secondary.x+=30;
+  const before=r.camera.position.clone();r.update(1/fps,0,s,.3);
+  assert(r.camera.position.distanceTo(before)<.1,'new secondary jumps the eased fit');
+  for(let i=1;i<=fps*6;i++){
+    s.subjects.primary.x+=3/fps;r.update(1/fps,i/fps,s,.3);
+    const p=s.subjects.primary.clone().project(r.camera);
+    assert(Math.max(Math.abs(p.x),Math.abs(p.y))<.90001,'eased coverage loses its primary');
+  }
+}
 // Amortized CPU cost of attention and candidate evaluation, including the twice-a-second terrain samples.
 const costs=[];
 for(const [name,at] of [['sea',[-3000,2,-3000]],['meadow',[5,20,-780]],['birches',[-15,8,-1090]],['wood',[-20,4,-1750]]]) {
@@ -128,7 +205,7 @@ for(const [name,at] of [['sea',[-3000,2,-3000]],['meadow',[5,20,-780]],['birches
   timings.sort((a,b)=>a-b);reviewCosts.sort((a,b)=>a-b);
   costs.push({name,millisecondsPerUpdate:timings[2],millisecondsPerReview:reviewCosts[2]});
 }
-const report={turns:samples,costs};
+const report={turns:samples,reframes,costs};
 fs.writeFileSync('/tmp/updraft-camera-direction.json',JSON.stringify(report,null,2));
 console.log('Camera direction: orbital clearance, eased/rate-limited turns, 10–120 Hz carry, attention, decision persistence, interaction hold, exact paths and portrait resizing passed.');
 console.log(JSON.stringify(report));

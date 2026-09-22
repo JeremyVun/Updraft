@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { DOOR_SHORE, ISLES } from './heightfield';
 import { SKY_MIRROR } from './sky-mirror-layout';
-import { glsl } from '../tuning';
+import { glsl, tuning } from '../tuning';
 import type { ChapterName } from '../story/journey';
 
 export const ROOMS = { island: { x: -6, z: -14, rx: 85, rz: 65 }, lines: ISLES.lines,
@@ -11,6 +11,43 @@ export type Room = keyof typeof ROOMS;
 const names = Object.keys(ROOMS) as Room[];
 export const MIRROR_ROOM = names.indexOf('mirror');
 export const journeyRooms = { value: new THREE.Vector2(-1, -1) };
+
+/** Conceal the water first, then enable the incoming coast under the same fog. */
+export class JourneyReveal {
+  readonly veils = { value: [new THREE.Vector4(), new THREE.Vector4()] };
+  readonly amounts = { value: new THREE.Vector2() };
+  private ages = new Map<Room, number>();
+  private initialized = false;
+
+  update(rooms: Room[], dt: number): Room[] {
+    const { arrivalFogCover, arrivalFogClear } = tuning.world;
+    const visible: Room[] = [];
+    this.amounts.value.set(0, 0);
+    let slot = 0;
+    for (const room of rooms) {
+      const previous = this.ages.get(room);
+      // Startup/resume is already behind the loading screen. The impossible shore has its own doorway reveal.
+      let age = !this.initialized || room === 'shore' ? Infinity
+        : previous === undefined ? 0 : previous + Math.max(0, dt);
+      // Render at least one completely covered frame, even if a slow frame spans the handoff.
+      if (previous !== undefined && previous < arrivalFogCover && age >= arrivalFogCover) age = arrivalFogCover;
+      this.ages.set(room, age);
+      if (age >= arrivalFogCover) visible.push(room);
+      if (age < arrivalFogCover + arrivalFogClear) {
+        const c = ROOMS[room];
+        this.veils.value[slot].set(c.x, c.z, c.rx, c.rz);
+        this.amounts.value.setComponent(slot++, THREE.MathUtils.clamp(age < arrivalFogCover
+          ? THREE.MathUtils.smootherstep(age, 0, arrivalFogCover)
+          : 1 - THREE.MathUtils.smootherstep(age, arrivalFogCover, arrivalFogCover + arrivalFogClear), 0, 1));
+      }
+    }
+    for (const room of this.ages.keys()) if (!rooms.includes(room)) this.ages.delete(room);
+    this.initialized = true;
+    return visible;
+  }
+}
+
+export const journeyReveal = new JourneyReveal();
 const passages: Partial<Record<ChapterName, Room[]>> = {
   toLines: ['island', 'lines'], lines: ['lines', 'shore'], toBoats: ['shore', 'boats'],
   toMeadow: ['boats', 'meadow'], toBirches: ['meadow', 'birches'],
@@ -23,13 +60,13 @@ export function visibleRooms(chapter: ChapterName, z: number): Room[] {
   return passages[chapter] ?? [chapter as Room];
 }
 export function setJourneyRooms(rooms: Room[]): void {
-  journeyRooms.value.set(names.indexOf(rooms[0]), rooms[1] ? names.indexOf(rooms[1]) : -2);
+  journeyRooms.value.set(rooms[0] ? names.indexOf(rooms[0]) : -2, rooms[1] ? names.indexOf(rooms[1]) : -2);
 }
 /** Coast-distance partition: boundaries fall in open sea, never across a visible island. */
 export const JOURNEY_ROOMS_GLSL = /* glsl */ `
 uniform vec2 uJourneyRooms;
 bool journeyHides(vec2 p) {
-  if (uJourneyRooms.x < 0.0) return false;
+  if (uJourneyRooms.x == -1.0) return false;
   float nearest = 1e20;
   float room = -1.0;
   ${Object.values(ROOMS).map((c, i) => `{

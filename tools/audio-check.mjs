@@ -188,6 +188,29 @@ try {
     world.update(3); world.flow(object, 'sail', at, 0, true);
     world.update(.1); world.flow(object, 'sail', at, 1, true);
     check(sounds.length === 2 && sounds.at(-1)[0] === 'sail', 'a fresh sail-tension change makes one restrained sound');
+    for (const fps of [10, 30, 60, 144]) {
+      const folds = [], sail = {}, settle = new WorldFoley({ material: (...args) => folds.push(args) }, camera);
+      const frame = (droop, active = true, position = at) => {
+        settle.update(1 / fps); settle.sailSettles(sail, position, droop, active);
+      };
+      frame(1);
+      check(folds.length === 0, `${fps} Hz: entering with a slack sail is silent`);
+      for (let i = 0; i <= fps * 2; i++) frame(i / (fps * 2));
+      check(folds.length === 1 && folds[0][0] === 'sail-settle' && folds[0][2] > 0,
+        `${fps} Hz: reaching full droop emits one positioned canvas fold`);
+      for (let i = 0; i < fps * 5; i++) frame(i % 2 ? 1 : 0.99);
+      check(folds.length === 1, `${fps} Hz: hanging and threshold jitter cannot repeat the fold`);
+      frame(0); frame(1);
+      check(folds.length === 2, `${fps} Hz: a refill allows another full-droop sound`);
+      frame(0); frame(1);
+      for (let i = 0; i < fps * 3; i++) frame(1);
+      check(folds.length === 2, `${fps} Hz: cooldown arrivals expire instead of playing later`);
+      frame(0); frame(1, false); frame(1);
+      check(folds.length === 2, `${fps} Hz: a muted droop cannot replay on resume`);
+      frame(0); frame(1, true, far);
+      for (let i = 0; i < fps * 3; i++) frame(1);
+      check(folds.length === 2, `${fps} Hz: an inaudible droop cannot replay on approach`);
+    }
     const before = sounds.length;
     world.splash(at, 1); world.splash(at, 1); world.splash(far, 1);
     check(sounds.length === before + 1, 'dolphin splashes are distance gated and rate limited');
@@ -215,7 +238,7 @@ try {
         const { tuning } = await productionModule('/src/tuning.ts');
         sound.chime(74, name === 'care' ? tuning.audio.careChimeLevel : 1, -0.75, 0.1, 2.2, name === 'care', name === 'gesture');
       } else {
-        for (const kind of ['cloth', 'wool', 'sail', 'water', 'paper', 'door', 'splash']) foley.material(kind, 1, 0.5);
+        for (const kind of ['cloth', 'wool', 'sail', 'sail-settle', 'water', 'paper', 'door', 'splash']) foley.material(kind, 1, 0.5);
         if (name === 'busy') {
           sound.update(1 / 60, { ...baseState, gust: 26, charge: 1, gliderLift: 1, shower: 1, cues: ['finale', 'distress'], cygnet: { active: true, pan: -0.8, distance: 10 } });
           sound.thunder(1, 0.5, true);

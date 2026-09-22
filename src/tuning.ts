@@ -5,25 +5,39 @@
 export const tuning = {
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
-    freedom: 0.22, reviewEvery: 0.5, holdFor: 3.5, improvement: 0.045,
-    authoredPreference: 0.16, compositionResponse: 0.55,
+    freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,
+    authoredPreference: 0.16, compositionResponse: 0.35,
     /** A turn eases into motion as well as out; orbiting preserves foreground distance. */
-    turnResponse: 3, maxTurnSpeed: 0.55, reversalBand: 0.12,
+    turnResponse: 2, maxTurnSpeed: 0.3, reversalBand: 0.12,
+    /** Ease focus, dolly and height into motion too. Two poles retain the old walking-follow lag. */
+    framingResponse: 2, maxResponse: 1.4,
+    primarySafetyMargin: 0.9,
     /** Carry motion is separate from gaze, with a speed bound to reject placement/teleport changes. */
     maxCarrySpeed: 40,
     /** Start clearing scenery before it crosses the child, then settle back slowly. */
-    obstacleAhead: 5, obstacleMaxRise: 18, obstacleRise: 4, obstacleRelease: 0.7, obstacleSpeed: 5,
+    obstacleAhead: 3, obstacleMaxRise: 12, obstacleMaxElevation: 0.3,
+    obstacleRise: 2, obstacleRelease: 0.7, obstacleSpeed: 3,
+    /** Ease beside a foreground roof while staying on the travelling side of the boat. */
+    obstacleSide: 8, obstacleSideResponse: 1, obstacleSideCost: 0.2, obstacleSideImprovement: 0.25,
   },
   audio: {
     /** Begin near shore, leaving time for a fade, a real musical rest, and the incoming phrase. */
-    arrivalMusicLead: 12, arrivalShoreAllowance: 25, arrivalMusicRouteShare: .95,
-    arrivalFadeOut: 1.5, arrivalQuiet: .4, arrivalFadeIn: 1.5,
-    arrivalPhraseWait: 2.5, phraseReleaseLead: .8,
+    arrivalMusicLead: 12, arrivalShoreAllowance: 25, arrivalMusicRouteShare: .65,
+    arrivalEntranceLead: 4, arrivalEntranceRouteShare: .4,
+    arrivalFadeOut: 3, arrivalQuiet: 3, arrivalFadeIn: 2.5,
+    sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
+    homewardFadeOut: 3, homewardQuiet: 5, homewardFadeIn: 3,
+    homewardClearDistance: 30,
+    summitScoreLevel: .06555,
+    arrivalPhraseWait: 4.5, phraseReleaseLead: .8,
+    openingHandoffSettle: 2.2,
     /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */
     laterWindDb: -3,
     /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
     playerWindFilterRange: .8,
-    gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .025, gestureTailRelease: .3,
+    gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
+    /** Minimum spacing between attacks, including both notes of a glider answer. */
+    gesturePulses: 2, forestChimePulses: 4,
     /** Sparse, soft encouragement while guiding the feather uphill. */
     sleepingChimeLevel: .7, sleepingChimePulses: 4,
     authoredCueDuck: .32, authoredCueAttack: .45, authoredCueRelease: 1.3,
@@ -63,6 +77,9 @@ export const tuning = {
     materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.4,
     /** Distinct sail-tension changes, never a repeated sound for sustained flutter. */
     sailRise: 0.2, sailEvery: 2.4, sailLevel: 0.35,
+    /** One quiet fold at full droop; a meaningful refill must re-arm it. */
+    sailSettleAt: 0.995, sailSettleRearm: 0.8, sailSettleLevel: 1.13,
+    sailSettleBoostDb: 7,
     /** Soft water displacement; separate pod budgets for emergence and re-entry. */
     dolphinSurfaceEvery: 0.6, dolphinLevel: 0.65, dolphinAttack: 0.065,
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
@@ -171,6 +188,8 @@ export const tuning = {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
     windFrom: 0.012, windFull: 0.18, speed: 2.4, drag: 1.7,
     fleetReach: 14, childLead: 4, bankOffset: 2.2,
+    /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
+    followEase: 1.5,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
     /** Course spacing leaves hull room even where the offshore turn compresses travel. */
@@ -336,6 +355,17 @@ export const tuning = {
     swayDamping: 4.2,
   },
   world: {
+    /** Seconds to cover an incoming shore before enabling it, then release it into the ordinary distance fog. */
+    arrivalFogCover: 1.2,
+    arrivalFogClear: 6,
+    /** Coast-relative radii: land and props sit inside the opaque centre; the outer edge dissolves over water. */
+    arrivalFogInner: 1.2,
+    arrivalFogOuter: 1.32,
+    /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
+    linesCrossingHaze: 1.03,
+    /** Metres from the arrival berth over which the stronger haze develops as the farewell camera releases. */
+    linesHazeFrom: 330,
+    linesHazeTo: 270,
     /** North to south length of the meadow. It was sculpted 600 long and is shown as a scale model of that. */
     meadowLength: 400,
     /** Offshore veil in multiples of the meadow's coastline radii; opaque before the neighbouring islands. */
@@ -590,8 +620,12 @@ export const tuning = {
     chainOffset: 2.6,
     /** Bring the next light closer after pickup and keep it beside the child's silhouette. */
     rescueChainStep: 12,
-    afterRescueCameraSide: 4.8,
-    cameraFitResponse: 2.5,
+    afterRescueCameraSide: 2.8,
+    cameraBack: 13,
+    cameraUp: 2.8,
+    cameraLead: 0.36,
+    cameraPace: 0.65,
+    cameraFitResponse: 1.2,
     /** A nearby separation: the child and bird share the frame throughout. */
     shelterDistance: 12,
     frightThunderDelay: 0.16,
@@ -746,6 +780,7 @@ export const tuning = {
     shorePlaneInset: 14, shorePlaneRadius: 5,
     walkDistance: 16, walkHeight: 1.4,
     curtainDistance: 17, curtainHeight: 0.9,
+    viewClearanceAhead: 31, viewClearanceRadius: 5.5,
   },
   family: {
     /** Soft fullness and shoulder movement, as fractions of the piece's width. */
@@ -835,11 +870,13 @@ export const tuning = {
     /** One journey through the shot: open departure, near companions, then room for the approaching shore. */
     departureUntil: 0.32, arrivalFrom: 0.68,
     nearDistance: 16, departureDistance: 23, arrivalDistance: 24,
-    nearHeight: 3.6, departureHeight: 5, arrivalHeight: 5.8,
-    nearBearing: 1.12, departureBearing: 0.65, arrivalBearing: 0.48,
+    nearHeight: 4.5, departureHeight: 5, arrivalHeight: 5.8,
+    /** Travel behind the boat; the small offset keeps the mast from bisecting the companions. */
+    nearBearing: 0.12, departureBearing: 0.18, arrivalBearing: 0.08,
     nearLead: 1.5, departureLead: 3, arrivalLead: 5,
     /** Look back past the open side of the sail, with enough lateral room to see the waving child. */
-    farewellBearing: 0.95,
+    farewellBearing: 0.45, farewellWeight: 0.3, farewellEstablish: 6, farewellRelease: 14,
+    farewellBoatExtent: 3.2, farewellMastHeight: 4.8,
     sideResponse: 1.2, childTurn: 0.7,
     whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
   },
@@ -863,7 +900,9 @@ export const tuning = {
     cameraHeight: 5.1,
     swimCameraDistance: 16,
     swimCameraHeight: 4.6,
-    cameraBearing: 1.25,
+    cameraBearing: 0.16,
+    /** Open a little beside the boat only while the cygnet is swimming. */
+    swimCameraBearing: 0.65,
     childTurn: 0.7,
     haze: 0.94,
     /** Begin easing away before the coastal approach. */
@@ -1015,12 +1054,13 @@ export const tuning = {
     moonHandoffTo: 1.85,
   },
   drownedCamera: {
-    /** Descend between the first roofs, then pass the church on its open western side. */
+    /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
-    entryBearing: 0.55, roofBearing: 1.25,
-    entryDistance: 26, roofDistance: 19, entryHeight: 6, roofHeight: 2.8,
-    spireEnter: 110, spireFull: 55, spireLeave: -20, spireGone: -70,
-    spireBearing: -0.95, spireDistance: 27, spireHeight: 4.2, spireWeight: 0.38,
+    entryBearing: 0.16, roofBearing: 0.10,
+    entryDistance: 23, roofDistance: 16, entryHeight: 5, roofHeight: 2.8,
+    /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
+    spireEnter: 110, spireFull: 55, spireLeave: 25, spireGone: -5,
+    spireDistance: 20, spireHeight: 3.4, spireWeight: 0.3,
     /** Reserve room for the bow and stern while the church reveal eases into place. */
     spireFrameMargin: 0.7,
     sideResponse: 1.2,
@@ -1055,7 +1095,7 @@ export const tuning = {
     shadowCovered: 0.98,
     snatchFor: 4,
     shakeAt: 7.5,
-    cameraQuarter: 1.08,
+    cameraQuarter: 0.16,
     lookAhead: 1.3,
     planeAhead: 2,
     planeLookUp: 1.8,
@@ -1080,6 +1120,9 @@ export const tuning = {
    * stands in. The story drives `fog`, `frost`, `dawn`, `curtains` and `blanket`; these are what those mean.
    */
   sleeping: {
+    /** Keep the glide and waking view on the same side of the bed. */
+    cameraSide: 7.1,
+    cameraBack: 6.4,
     /** How thick the pooled fog is at full `fog`, and how far out from the hollow it reaches. */
     fogThickness: 0.56,
     fogReach: 34,

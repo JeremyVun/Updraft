@@ -47,8 +47,8 @@ function fixture(fps, portrait = false) {
   };
   let chapter = new SkyMirrorChapter(cast), time=0;
   rig.cut(chapter.shot);
-  const air={};
-  return {cast,rig,get chapter(){return chapter;},set chapter(value){chapter=value;},get time(){return time;}, step(stroke=false) {
+  const air={},cameraMotion={};let lastEye=null,lastRotation=null;
+  return {cast,rig,cameraMotion,get chapter(){return chapter;},set chapter(value){chapter=value;},get time(){return time;}, step(stroke=false) {
     const dt=1/fps;time+=dt;atmo.uniforms.uTime.value=time;
     input.prevNdc.copy(input.ndc); input.gust=0; input.charge=0;
     if(stroke && chapter.beat==='play') {
@@ -72,6 +72,13 @@ function fixture(fps, portrait = false) {
     cygnet.update(dt,time,child.position,wind.sample(cygnet.position.x,cygnet.position.z,air));carry.after();
     skyMirror.update(dt,time,child.position,cygnet.position,!cygnet.carried);
     rig.update(dt,time,chapter.shot,chapter.pace);
+    if(time>3){
+      const phase=skyMirror.stars.some(s=>s.state==='rising')?'rising':chapter.beat;
+      const row=cameraMotion[phase]??={maxStep:0,maxTurn:0};
+      if(lastEye)row.maxStep=Math.max(row.maxStep,rig.camera.position.distanceTo(lastEye));
+      if(lastRotation)row.maxTurn=Math.max(row.maxTurn,lastRotation.angleTo(rig.camera.quaternion)/dt);
+    }
+    lastEye=rig.camera.position.clone();lastRotation=rig.camera.quaternion.clone();
   }};
 }
 const results=[];
@@ -214,7 +221,10 @@ for(const [fps,portrait] of (process.env.RESTORE_ONLY?[]:[[60,false],[30,true]])
   assert(f.cast.child.riding && f.cast.cygnet.carried,'both aboard');
   assert(!room.active && !f.cast.plane.landingGround && f.cast.cygnet.mayFly,'chapter cleaned up');
   assert(f.cast.boat.position.x>-400,'far pier exit');
-  results.push({fps,portrait,arrival,sharedWalk,transitions});console.error(`completed ${fps} fps portrait=${portrait}`);
+  for(const [phase,row] of Object.entries(f.cameraMotion))
+    assert(row.maxStep*fps<30, `${phase}: subject fitting jumps the camera (${row.maxStep})`);
+  results.push({fps,portrait,arrival,sharedWalk,transitions,cameraMotion:f.cameraMotion});
+  console.error(`completed ${fps} fps portrait=${portrait}`,JSON.stringify(f.cameraMotion));
 }
 // Every subset is a legal save; selected stars do not prescribe collection order.
 for(let mask=0;mask<=MIRROR_STAR_MASK;mask++) {

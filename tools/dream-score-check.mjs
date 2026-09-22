@@ -51,6 +51,7 @@ try {
             night:.55+Math.min(1,now/20)*.45,shower:Math.min(1,now/14),breeze:1,
             arrivalMusic:now>=46&&now<54?'wood':undefined,
             ...(now>=54?ARRIVAL_MUSIC.wood:{}),
+            forestWind:now>=54,
             cues:now===58?['kindled']:now===64?['comfort']:[],
             gust:now>=47&&now<48?7:0,charge:now>=55&&now<56?.18:0};
         }
@@ -83,7 +84,7 @@ try {
       } else {
         check(gateMin>.99,`${kind}: background gate stays open throughout the forest overlap`);
         check(windows.slice(43,59).every(db=>db>-65),`${kind}: music remains audible across the village/forest boundary`);
-        check(notes.some(n=>n[3]>=47&&n[3]<48)&&notes.some(n=>n[3]>=55&&n[3]<56),`${kind}: wind gestures remain audible on both sides`);
+        check(!notes.some(n=>n[6]&&n[3]>=47&&n[3]<48)&&notes.some(n=>n[6]&&n[3]>=55&&n[3]<56),`${kind}: musical wind begins in the actual forest, not the departing village`);
         const jumps=windows.slice(44,57).slice(1).map((db,i)=>Math.abs(db-windows[44+i]));
         if(kind==='music')check(Math.max(...jumps)<6,'Forest overlap has no one-second loudness jump over 6 dB');
       }

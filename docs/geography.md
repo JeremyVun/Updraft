@@ -1,5 +1,62 @@
 # Journey geography
 
+## September 22 follow-up: 30/40-second crossings
+
+Jeremy found the 57/80-second relocation too long and asked for roughly 30 seconds from the door shore
+to Little Boats and 40 seconds onward to the meadow. Little Boats now sits at `(130, -420)`, west of the
+door shore. Moving this one island reaches both targets; the meadow stays at its existing position.
+The incoming boat rounds the east bank into the arrival pool. The outgoing route crosses toward the
+meadow's landing instead of travelling along its coast. Boat speed is unchanged.
+
+| Passage | Before offshore move | First offshore move | Current ordinary time |
+|---|---:|---:|---:|
+| Door shore → Little Boats | 31 s | 57 s | 30.6 s |
+| Little Boats → Meadow | 59 s | 80 s | 39.3 s |
+
+Current routes are 161.6 and 202.4 units. Ordinary wind bearings and 30/60 Hz runs take 30.6–30.7 seconds
+and 38.4–39.7 seconds; sustained player gusts shorten them to 22.3 and 26.5 seconds. Berth-to-destination
+dry-land distances are about 71 and 118 units, still above the original 47 and 98. The first two thirds
+of the meadow route remain about 40 units or more off its dry coastline before the final approach.
+
+Geography revision 4 migrates original and revision 1/2/3 saves directly to this position, including
+checkpoints created during the longer offshore layout. Pool completion, other islands and the existing
+fog reveal are preserved. The pacing regression now guards both targets within five seconds across
+ordinary wind bearings and frame rates.
+
+Build, room mechanics, migration, shoreline clearance, toy-fleet paths, fog transitions and simulated
+camera checks pass. The rendered check was cancelled while waiting for the shared GPU slot; visual
+verification is pending. Timing evidence: `/tmp/updraft-short-crossings-boats.jsonl` and
+`/tmp/updraft-short-crossings-meadow.jsonl`.
+
+## Superseded September 22: Little Boats offshore
+
+Jeremy asked for more water between the door shore and Little Boats, and a crossing toward the meadow
+instead of sailing along its coast. Little Boats moves from `(230, -495)` to `(200, -230)`. Its terrain,
+pools, toy fleet, props and berths move together. The incoming route rounds its east side into the arrival
+pool; the outgoing route crosses open water and meets the meadow's northern bank head-on.
+
+| Passage | Previous route | Current route | Previous ordinary time | Current ordinary time |
+|---|---:|---:|---:|---:|
+| Door shore → Little Boats | 159.4 | 281.1 | 31 s | 57 s |
+| Little Boats → Meadow | 302.1 | 376.8 | 59 s | 80 s |
+
+From each departure berth to the nearest destination dry land, separation increases from about 47 to 104
+units and 98 to 320 units respectively. These are berth-to-coast distances, not minimum shoreline gaps.
+The first two thirds of the meadow route stay at least 94 units from its dry coast. Sailing speeds are
+unchanged; six wind/frame-rate cases take 31.9–57.7 seconds to Little Boats and 46.8–81.1 to the meadow.
+
+Geography revision 3 migrates old Little Boats checkpoints without replaying completed pools. Revision 2
+late-island saves stay in place. CPU checks cover migration, dry-land clearance, the departing toy fleet,
+both room handoffs, fog continuity and camera framing in landscape/portrait at varied frame rates.
+Typecheck and production build pass. The new rendered approach check could not acquire the shared GPU
+slot and was cancelled before capture; visual verification of this relocation is still pending.
+Run `BASE=<dev-server> node tools/boats-offshore-browser-check.mjs` when the slot is available.
+
+The boarding pop was a separate visibility handoff: the incoming room became drawable immediately.
+`JourneyReveal` now covers its region with fog before enabling it, then clears that fog over six seconds.
+The next closest departures remain Meadow → Birches (about 82 units to dry terrain) and Wood → Sleeping
+(103). Their islands have not moved in this pass.
+
 ## September 21 follow-up: sea at most 100 seconds
 
 Jeremy asked to cap the sea chapter at 100 seconds while keeping Mirror → Home the same.

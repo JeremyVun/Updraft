@@ -363,20 +363,27 @@ void main() {
 
 /** Morning held behind the summit curtains; a narrow seam is visible before they open. */
 const MORNING_FRAG = /* glsl */ `
+${ATMO_GLSL}
 uniform vec3 uOpen;
 in vec2 vUv;
+in vec3 vWorld;
 void main() {
   vec3 col = mix(vec3(1.0, 0.73, 0.44), vec3(1.0, 0.91, 0.73), smoothstep(0.0, 0.85, vUv.y));
   float cloud = sin(vUv.y * 28.0 + sin(vUv.x * 5.0) * 0.9) * 0.025;
-  gl_FragColor = vec4(col * (0.9 + uOpen.x * 0.65 + cloud), 1.0);
+  col *= 0.9 + uOpen.x * 0.65 + cloud;
+  float arriving = journeyVeilAt(vWorld);
+  if (arriving > 0.0) col = mix(col, skyRadiance(normalize(vWorld - cameraPosition)), arriving);
+  gl_FragColor = vec4(col, 1.0);
 }`;
 
 /** The first spill of light out of the window; the shared dawn lane carries it down the hill. */
 const SHAFT_VERT = /* glsl */ `
 out vec2 vUv;
+out vec3 vWorld;
 void main() {
   vUv = uv;
-  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+  vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
 const SHAFT_FRAG = /* glsl */ `
@@ -791,7 +798,7 @@ export class SleepingIsland {
       new THREE.ShaderMaterial({
         vertexShader: SHAFT_VERT,
         fragmentShader: MORNING_FRAG,
-        uniforms: { uOpen: { value: this.open } },
+        uniforms: { ...atmo.uniforms, uOpen: { value: this.open } },
         side: THREE.DoubleSide,
       }),
     );

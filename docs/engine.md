@@ -62,16 +62,33 @@ Chapters supply a preferred composition and the subjects that must share it. Opt
 names a meaningful point, its presence and share of the gaze, and an optional preferred encounter angle.
 The shared director resolves that attention independently of the physical follow anchor. The whale and
 village church use this contract: changing focus turns the lens instead of translating the whole view.
+Ordinary sailing stays close to astern. The church changes gaze from that travelling position, without
+an encounter orbit; after the sail interaction it is allowed to fall behind. Departure from the still
+island holds a look back, then joins the forward view over fourteen seconds. The sea opens beside the
+boat for the swim and returns astern afterward.
 
 Subject-relative turns preserve distance and ease their angular velocity, including across chapters.
-Every half second, the director compares five nearby angles within 0.22 radians of the preferred view.
+Focus, dolly and height use critically damped motion too: a change of attention builds speed rather than
+starting at full speed. The response is capped even when a chapter asks for fast following; the orbit is
+limited to 0.3 radians/second (about 17 degrees); faster momentum inherited from a placed view decays into
+that limit rather than stopping abruptly. Physical boat movement is still carried directly. At lower
+chapter paces, doubling the spring response preserves the former steady tracking lag. World-space staging
+and subject-relative orbits transfer their velocities on handoff, while cuts and exact paths clear them.
+An explicit eye can request `Shot.orbit` when a change of side must travel around its focus. The wood uses
+this on returning to the path after the reunion; its shelter choreography retains a placed eye. Smooth
+subject fitting retains a 0.9 NDC safety frame for the primary, so easing cannot leave the child or bird
+outside the image. The mirror keeps fitting eased between all phases, including the next star and departure.
+Every half second, the director compares five nearby angles within 0.18 radians of the preferred view.
 It considers required framing distance and terrain clearance, favours the authored angle, and requires
-a material improvement and a 3.5-second hold before changing preference. It does not pan because a timer
+a material improvement, a six-second hold and 1.5 seconds of consistent evidence before changing preference. It does not pan because a timer
 expired. Subject fitting accepts additional scene bounds (the sky mirror supplies its three returned stars),
 while retaining the primary when a group cannot fit within its retreat budget. Terrain correction remains
 a safeguard. Rooms can supply static `Shot.obstacles`: the drowned village builds bounds for roofs,
-chimneys and substantial branches once. Scalar sightline checks anticipate those bounds and smoothly
-raise the eye within a bounded height and speed, including the previous subject-fitting offset.
+chimneys and substantial branches once. Scalar sightline checks compare the current clearance with five
+small lateral offsets, easing beside a roof before asking for height. Any rise is limited by the angle
+down to the child (0.3 radians), as well as its height and speed. The checks include the previous fitting
+offset, so portrait coverage cannot silently send the lens behind a different roof. The final rendered
+elevation is tested too; fitting a landmark is not permission to turn the scene into an overhead view.
 No per-frame scene graph search, mesh raycast, GPU pass or readback is added; the work reuses its vectors.
 
 Scripted beats and explicit wind/piano interactions suppress optional angle selection. A placed `eye`
@@ -81,7 +98,7 @@ motion/fitting state. Carry uses a physical `carryAnchor`, rejects anchor-identi
 and accepts legitimate movement at low frame rates. Zero-time preparation cannot advance the camera.
 
 Feel values live in `tuning.cinematography`. `tools/camera-direction-check.mjs` covers orbital clearance,
-turn acceleration/rate, carry at 10–120 Hz, attention, stable composition choices, interaction holds,
+turn acceleration/rate, eased focus/dolly/height at 10–120 Hz, carry, attention, stable composition choices, interaction holds,
 exact-path exits and portrait resizing. Its CPU microbenchmark measures the new decision layer alone;
 it is not a phone frame-rate or rendering benchmark.
 

@@ -3,7 +3,7 @@ import type { AudioOut } from '../creatures/voices';
 import type { WhaleSound } from '../fx/sealife/wake';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
-export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'water' | 'paper' | 'door' | 'splash'
+export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | WhaleSound;
 
 /**
@@ -37,7 +37,11 @@ export class Foley {
     if (now === undefined || amount < 0.015) return;
     const at = now + 0.005;
     const level = Math.min(1.5, amount) * tuning.audio.materialLevel;
-    if (kind === 'cloth' || kind === 'wool' || kind === 'sail') {
+    if (kind === 'sail-settle') {
+      // Heavy canvas settling: low air movement, with the scratchy upper noise filtered away.
+      this.puff({ at, len: 0.5, level: level * 0.085 * 10 ** (tuning.audio.sailSettleBoostDb / 20), pan,
+        type: 'lowpass', from: 320, to: 150, q: 0.5, attack: 0.12, wet: 0.04 });
+    } else if (kind === 'cloth' || kind === 'wool' || kind === 'sail') {
       const wool = kind === 'wool', sail = kind === 'sail';
       this.puff({ at, len: wool ? 0.3 : 0.23, level: level * (wool ? 0.06 : 0.075), pan,
         type: 'bandpass', from: wool ? 850 : sail ? 650 : 1500, to: wool ? 480 : 700,

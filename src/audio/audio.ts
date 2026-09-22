@@ -1,4 +1,6 @@
 import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase, type DrownedScorePhase } from './dream-score';
+import { SummitScore, type SummitScorePhase } from './summit-score';
+import { OpeningScore } from './opening-score';
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
@@ -27,6 +29,8 @@ export interface AudioEmitter {
 export interface SoundState {
   /** True only during the opening island chapter, never its departing crossing. */
   startingIsland?: boolean;
+  /** Approved opening drone; continues on its own clock during the first crossing. */
+  openingScore?: boolean;
   /** The actual forest chapter; Sleeping also uses the wood music mood. */
   forestWind?: boolean;
   /** Only the feather-guided climb on Sleeping, ending before the summit. */
@@ -72,6 +76,11 @@ export interface SoundState {
   /** Which room's music is playing. */
   music: Mood;
   arrivalMusic?: ArrivalMusic;
+  /** The final approach is visible; a completed musical rest may now admit the destination. */
+  arrivalReady?: boolean;
+  /** False until the homeward boat clears its first turn; the musical rest may then finish. */
+  homewardReady?: boolean;
+  summitScore?: SummitScorePhase;
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   mirrorScore?: MirrorScorePhase;
   drownedScore?: DrownedScorePhase;
@@ -274,6 +283,9 @@ export class Soundscape {
   private birchesScore: BirchesScore | null = null;
   private linesScore: LinesScore | null = null;
   private dreamScore: DreamScore | null = null;
+  private summitScore: SummitScore | null = null;
+  private openingScore: OpeningScore | null = null;
+  private summitFinale = false;
   private forestBlendUntil = 0;
   private linesCueUntil = 0;
 
@@ -480,7 +492,7 @@ export class Soundscape {
     out.connect(panner);
     panner.connect(this.musicBus);
     const f = hz(midi);
-    const partials: [number, number][] = soft || gesture
+    const partials: [number, number][] = soft
       ? [[1, 1], [2, 0.12], [3, 0.025]]
       : [[1, 1], [2.0, 0.28], [3.01, 0.1], [4.2, 0.04]];
     if (gesture) this.gestureVoices.push({ midi, at: when, out });
@@ -725,6 +737,9 @@ export class Soundscape {
    * Then the story cuts the music, and what is left is the wind.
    */
   private finale(): void {
+    if (this.summitScore) {
+      this.summitScore.stop(.8); this.summitScore = null; this.summitFinale = true;
+    }
     const t0 = this.nextPulse() + 0.05;
     const steps: [number, number[]][] = [
       [0, [50, 57, 63, 68]],
@@ -747,7 +762,7 @@ export class Soundscape {
     this.finaleUntil = t0 + 22;
   }
 
-  private phrase(name: Exclude<Cue, 'foghorn'>, harmonyAt?: (at: number) => readonly number[]): void {
+  private phrase(name: Exclude<Cue, 'foghorn'>): void {
     // A quick release keeps the recognition melody; do not stack a second tune over it.
     if (name === 'release' && this.ctx!.currentTime < this.recognitionUntil) return;
     if (name === 'finale') {
@@ -784,9 +799,9 @@ export class Soundscape {
     // Recognition follows the visible house and drawing, without a beat-grid delay.
     let at = name === 'unfold' ? this.ctx!.currentTime + 0.02 : this.nextPulse() + 0.05;
     for (const [midi, beats] of PHRASES[name]) {
-      const pitch = reward && harmonyAt ? chordNote(midi, harmonyAt(at), 62, 86) : midi;
-      if (midi > 0) this.chime(pitch, name === 'unfold' ? 0.55 : name === 'comfort' ? 0.5 * tuning.audio.careChimeLevel : name === 'feather' ? 0.32 : 0.5,
-        0, at, Math.max(2.2, beats * beat * 3), name === 'comfort' || reward, reward);
+      // Rewards keep their original melody and bell voice, independent of cursor harmony and gating.
+      if (midi > 0) this.chime(midi, name === 'unfold' ? 0.55 : name === 'comfort' ? 0.5 * tuning.audio.careChimeLevel : name === 'feather' ? 0.32 : 0.5,
+        0, at, Math.max(2.2, beats * beat * 3), name === 'comfort');
       at += beats * beat;
     }
     if (name === 'unfold') this.recognitionUntil = at;
@@ -829,12 +844,12 @@ export class Soundscape {
     this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air * playerWind, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    const activeScore = this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;
+    const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;
     const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
     if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
       // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
-      const fade = arrival.stage === 'fade' ? tuning.audio.arrivalFadeOut : .08;
-      for (const score of [this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore]) score?.stop(fade);
+      const fade = arrival.stage === 'fade' ? (arrival.fadeOut ?? tuning.audio.arrivalFadeOut) : .08;
+      for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore]) score?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
     if (arrival.changed && arrival.stage !== 'wait' && !arrival.legato) {
@@ -843,14 +858,14 @@ export class Soundscape {
       // Holding an already constant parameter need not insert an automation event. Without
       // this anchor, the incoming ramp can start at the beginning of the rest.
       gain.setValueAtTime(gain.value, now);
-      if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + tuning.audio.arrivalFadeOut);
+      if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + (arrival.fadeOut ?? tuning.audio.arrivalFadeOut));
       else if (backgroundPaused) gain.setValueAtTime(0, now);
       else {
         // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
         this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
         this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
         this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
-        gain.linearRampToValueAtTime(1, now + tuning.audio.arrivalFadeIn);
+        gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
     }
     if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
@@ -913,6 +928,22 @@ export class Soundscape {
       this.dreamScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : tuning.audio.dreamPhaseFade);
       this.dreamScore = null;
     }
+    if (!bg.summitScore) this.summitFinale = false;
+    if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused) {
+      this.summitScore ??= new SummitScore(ctx, this.backgroundBus);
+      this.summitScore.update(bg.summitScore,
+        tuning.audio.summitScoreLevel * (1 - .35 * s.night) * (1 - .92 * bg.hush) * (1 - piano), s.night);
+    } else if (this.summitScore) {
+      this.summitScore.stop(s.silence ? .12 : 1.8); this.summitScore = null;
+    }
+    if (bg.music === 'still' && bg.openingScore && !s.silence && !backgroundPaused) {
+      this.openingScore ??= new OpeningScore(ctx, this.padVoices);
+      this.openingScore.update();
+      this.mood = bg.music;
+      this.chord = -1;
+    } else if (this.openingScore) {
+      this.openingScore.stop(); this.openingScore = null;
+    }
     const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[bg.music] ?? MOODS.meadow;
     const chord = this.seaScore ? this.seaScore.chordAt(now) : this.boatsScore ? this.boatsScore.chordAt(now)
       : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
@@ -921,7 +952,7 @@ export class Soundscape {
       this.musicBus.gain.setTargetAtTime(0, now, 0.12);
       this.backgroundBus?.gain.setTargetAtTime(0, now, 0.12);
     }
-    if (!finale && (chord !== this.chord || bg.music !== this.mood)) {
+    if (!finale && !this.openingScore && (chord !== this.chord || bg.music !== this.mood)) {
       /** A room change glides the voices to their new notes rather than cutting: the chord bends into the next. */
       const glide = bg.music !== this.mood ? 3.5 : 1.2;
       this.chord = chord;
@@ -940,14 +971,14 @@ export class Soundscape {
     /** The finale swells, night or no night: it is the one time the music is meant to be the loudest thing there is. */
     const swell = finale ? 1.6 + 0.8 * (1 - (this.finaleUntil - now) / 22) : 1;
     this.padGain.gain.setTargetAtTime(
-      backgroundPaused || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel) * hush * mood.level * swell,
+      backgroundPaused || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel) * hush * mood.level * swell * (this.openingScore?.gainAt(now) ?? 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     const harmonyAt = (at: number): readonly number[] => {
-      const composed = this.dreamScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
+      const composed = this.openingScore?.chordAt(at) ?? this.summitScore?.chordAt() ?? this.dreamScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
         ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at);
       if (composed) return composed;
       // During the music-free arrival gap, use the opening harmony of the incoming composition.
@@ -965,9 +996,12 @@ export class Soundscape {
       // The wood's upper semitones belong to its unsettled drone; touch answers on its steady D/A pedal.
       return bg.music === 'wood' ? MOODS.wood.chords[0] : tones;
     };
+    const forestChimes = !!s.forestWind && !s.caringWind && !s.sleepingWind;
+    // The wood's original minor palette includes notes outside the D/A pedal. Let them ring.
+    const gestureHarmonyAt = (at: number): readonly number[] => forestChimes ? MOODS.wood.scale : harmonyAt(at);
     // Release gesture tails outside musical wind scenes, and incompatible notes at harmonic changes.
     this.gestureVoices = this.gestureVoices.filter(voice => {
-      if (musicalWind && harmonyAt(Math.max(now, voice.at)).some(m => (m - voice.midi) % 12 === 0)) return true;
+      if (musicalWind && gestureHarmonyAt(Math.max(now, voice.at)).some(m => (m - voice.midi) % 12 === 0)) return true;
       voice.out.gain.cancelAndHoldAtTime(now);
       voice.out.gain.setValueAtTime(voice.out.gain.value, now);
       voice.out.gain.linearRampToValueAtTime(0, now + tuning.audio.gestureTailRelease);
@@ -979,7 +1013,7 @@ export class Soundscape {
       else if (name === 'star') { this.dreamScore?.bloom(); }
       else if (name === 'kindled' || name === 'comfort') {
         this.flare();
-        this.phrase(name, harmonyAt);
+        this.phrase(name);
       } else if (name === 'distress' || name === 'calling') {
         this.peep(name === 'distress' ? 1 : 0.95, name === 'calling', s.cygnet);
         this.flockQuietUntil = now + tuning.audio.callSpace;
@@ -987,7 +1021,7 @@ export class Soundscape {
         this.bugle(s.flock);
         this.flockQuietUntil = now + tuning.audio.callSpace;
       }
-      else this.phrase(name, harmonyAt);
+      else this.phrase(name);
     }
 
     this.backgroundDuck.gain.setTargetAtTime(now < this.cueSpaceUntil ? tuning.audio.authoredCueDuck : 1,
@@ -1016,30 +1050,35 @@ export class Soundscape {
     // Musical wind wakes the opening island, accompanies the forest search and encourages the feather climb.
     const gestures = musicalWind && !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
     const care = !!(s.caringWind || s.sleepingWind);
-    const scale = care ? [62, 64, 69, 71, 74, 76] : mood.scale;
+    const scale = care ? [62, 64, 69, 71, 74, 76] : forestChimes ? MOODS.wood.scale : mood.scale;
     const velocity = (s.sleepingWind ? tuning.audio.sleepingChimeLevel : care ? tuning.audio.careChimeLevel : 1) * (now < this.cueSpaceUntil ? .55 : 1);
     const gusting = s.gust > tuning.pointer.minGust && gestures;
     const lifting = s.charge > tuning.pointer.minLift && gestures;
     const at = this.nextPulse();
+    const interval = PULSE * (s.sleepingWind ? tuning.audio.sleepingChimePulses
+      : s.forestWind ? tuning.audio.forestChimePulses : tuning.audio.gesturePulses);
+    const ready = at - Math.max(this.lastNote, this.lastArp) >= interval - 1e-3;
     const glider = !s.sleepingWind && s.gliderLift > .45 && this.prevGliderLift <= .45 && now - this.lastGlider > 2.5 && gestures;
-    if (glider && at > Math.max(this.lastNote, this.lastArp) + 1e-3) {
-      const base = chordNote(harmonyAt(at)[0] + 24, harmonyAt(at), 62, 81);
+    if (glider && ready) {
+      const base = forestChimes ? MOODS.wood.chords[0][0] + 24 : chordNote(harmonyAt(at)[0] + 24, harmonyAt(at), 62, 81);
       this.chime(base, .4 * velocity, 0, at, 1.8, care, true);
-      this.chime(chordNote(base + 7, harmonyAt(at + PULSE), base + 1, Math.min(86, base + 12)),
-        .35 * velocity, 0, at + PULSE, 2.2, care, true);
-      this.lastNote = this.lastArp = at + PULSE;
+      this.chime(forestChimes ? base + 7 : chordNote(base + 7, harmonyAt(at + interval), base + 1, Math.min(86, base + 12)),
+        .35 * velocity, 0, at + interval, 2.2, care, true);
+      this.lastNote = this.lastArp = at + interval;
       this.lastGlider = now;
-    } else if ((gusting || lifting) && at - Math.max(this.lastNote, this.lastArp) >= PULSE * (s.sleepingWind ? tuning.audio.sleepingChimePulses : 2) - 1e-3) {
+    } else if ((gusting || lifting) && ready) {
       // One answer per pulse: circular pointer input can be both gust and lift.
       if (lifting) {
-        const wanted = [62, 66, 69, 74][Math.floor(at / (PULSE * 2)) % 4];
-        this.chime(chordNote(wanted, harmonyAt(at), 62, 81),
+        const step = Math.floor(at / (forestChimes ? interval : PULSE * 2)) % 4;
+        const pitch = forestChimes ? MOODS.wood.chords[0][step] + 12
+          : chordNote([62, 66, 69, 74][step], harmonyAt(at), 62, 81);
+        this.chime(pitch,
           (.25 + s.charge * .35) * velocity, s.pan, at, 1.6, care, true);
         this.lastArp = at;
       } else {
         this.noteIndex = (this.noteIndex + (s.rise >= 0 ? 1 : -1) + scale.length) % scale.length;
         const wanted = scale[this.noteIndex];
-        this.chime(chordNote(wanted, harmonyAt(at), scale[0], Math.min(86, scale[scale.length - 1])),
+        this.chime(forestChimes ? wanted : chordNote(wanted, harmonyAt(at), scale[0], Math.min(86, scale[scale.length - 1])),
           (.45 + g * .55) * velocity, s.pan, at, 2.2, care, true);
         this.lastNote = at;
       }

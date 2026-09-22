@@ -1,6 +1,7 @@
 import { HOME_SHIFT } from '../world/geography';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
+import type { SummitScorePhase } from '../audio/summit-score';
 import { COTTAGE, LAST_HILL } from '../world/heightfield';
 import { heightAt } from '../world/island';
 import { MOON, sunDirection } from '../world/palette';
@@ -172,6 +173,12 @@ export class HomeChapter implements Chapter {
   dusk = tuning.homeLight.daylight;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly music = 'home' as const;
+  get summitScore(): SummitScorePhase {
+    if (['answered','fledge'].includes(this.beat)) return 'flight';
+    if (['gone','crest','brow','settle','unfold','gaze','fold'].includes(this.beat)) return 'farewell';
+    if (['release','home','inside','credits'].includes(this.beat)) return 'home';
+    return 'approach';
+  }
   readonly season = 1;
   readonly focus = new THREE.Vector3();
   private beatStart = 0;

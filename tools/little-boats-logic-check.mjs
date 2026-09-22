@@ -119,6 +119,30 @@ function fixture(fps = 60, portrait = false) {
   };
 }
 const report = [];
+// Steady wind must not feel like a fresh launch at each pool handoff. Exercise the
+// real walkers and all three swims, since a fixed room limit misses these stops.
+for (const fps of [30, 60, 120]) {
+  for (const restored of [null, 33, 69]) {
+    const f = fixture(fps);
+    if (restored !== null) f.chapter.restoreCheckpoint(restored === 33 ? 'pool-1' : 'pool-2', [restored]);
+    f.cast.wind.push = 1;
+    let minSpeed = Infinity, maxDeceleration = 0;
+    for (let frame = 0; frame < fps * 180 && !f.chapter.done; frame++) {
+      const previousSpeed = f.room.toys[0].speed;
+      f.step();
+      if (f.chapter.beat !== 'sailing' || f.room.progress < (restored ?? 3) + 3) continue;
+      const speed = f.room.toys[0].speed;
+      minSpeed = Math.min(minSpeed, speed);
+      maxDeceleration = Math.max(maxDeceleration, (previousSpeed - speed) * fps);
+    }
+    const label = `${fps}fps from ${restored ?? 'arrival'}`;
+    assert(f.chapter.done, `${label}: steady wind completes all pool handoffs`);
+    assert.equal(f.cast.cygnet.swims, restored === 69 ? 1 : restored === 33 ? 2 : 3, 'preserve remaining swims');
+    assert(minSpeed > 0.05, `${label}: orange boat stopped despite steady wind: ${minSpeed}`);
+    assert(maxDeceleration < 3, `${label}: orange boat lost momentum abruptly: ${maxDeceleration}`);
+    report.push({ test: 'pool-handoff momentum', fps, restored, minSpeed, maxDeceleration });
+  }
+}
 for (const [fps, portrait] of [
   [60, false],
   [30, true],

@@ -69,6 +69,24 @@ export class WorldFoley {
     this.play(state, kind, at, Math.min(1, speed * 1.5));
   }
 
+  /** Full droop is a single arrival, not a loop; muted or distant arrivals expire. */
+  sailSettles(source: object, at: THREE.Vector3, droop: number, active: boolean): void {
+    const state = this.state(source, 'sail-settle', droop);
+    const wasActive = state.active;
+    state.active = active;
+    if (!active || !wasActive) {
+      state.strength = droop <= tuning.audio.sailSettleRearm ? 1 : 0;
+      return;
+    }
+    if (droop <= tuning.audio.sailSettleRearm) state.strength = 1;
+    if (!state.strength || droop < tuning.audio.sailSettleAt) return;
+    state.strength = 0;
+    if (this.time < state.next) return;
+    state.next = this.time + tuning.audio.sailEvery;
+    const level = tuning.audio.sailSettleLevel * this.heard(at);
+    if (level > 0.015) this.foley.material('sail-settle', level, screenPan(this.camera, at));
+  }
+
   flow(source: object, kind: MaterialSound, at: THREE.Vector3, strength: number, active: boolean): void {
     const state = this.state(source, kind, 0);
     const wasActive = state.active;

@@ -65,6 +65,17 @@ const cdp = await context.newCDPSession(page);
 try {
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=boats`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
+  await page.evaluate(() => {
+    const room = __game.littleBoats, update = room.update.bind(room);
+    window.__toyMotion = { maxDeceleration: 0, backwards: 0 };
+    room.update = (dt, ...args) => {
+      const s = room.toys[0].s, speed = room.toys[0].speed;
+      update(dt, ...args);
+      if (!room.launched || room.progress < 6 || room.departing || dt <= 0) return;
+      __toyMotion.maxDeceleration = Math.max(__toyMotion.maxDeceleration, (speed - room.toys[0].speed) / dt);
+      if (room.toys[0].s < s - 1e-8) __toyMotion.backwards++;
+    };
+  });
   for (const [beat, elapsed] of [
     ['notice', 0.3],
     ['pickup', 1.8],
@@ -149,6 +160,10 @@ try {
   if (!finished) throw new Error('Pointer strokes did not finish the room');
   const swims = await page.evaluate(() => __game.cygnet.swims);
   if (swims !== 3) throw new Error(`Expected three pool swims, got ${swims}`);
+  const motion = await page.evaluate(() => __toyMotion);
+  if (motion.backwards || motion.maxDeceleration > 5)
+    throw new Error(`Orange boat reset during pointer play: ${JSON.stringify(motion)}`);
+  console.log(JSON.stringify({ test: 'orange-boat momentum', ...motion }));
   await page.screenshot({ path: `${prefix}-departed.png` });
   if (errors.length) throw new Error(errors.join('\n').slice(0, 3000));
   console.log(JSON.stringify(await page.evaluate(() => ({ chapter: __game.story.name, stats: __stats })), null, 2));

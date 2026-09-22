@@ -1,4 +1,4 @@
-import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, type Room } from './world/journey-rooms';
+import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, journeyReveal, type Room } from './world/journey-rooms';
 import { LittleBoats } from './world/little-boats';
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
@@ -726,10 +726,14 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.life = story.worldLife;
   soundState.night = atmo.uniforms.uNight.value;
   soundState.startingIsland = story.name === 'island';
+  soundState.openingScore = story.name === 'island' || story.name === 'toLines';
   soundState.forestWind = story.name === 'wood';
   soundState.sleepingWind = story.name === 'sleeping' && story.current.sleepingScore === 'climb';
   soundState.music = story.music;
   soundState.arrivalMusic = story.current.arrivalMusic;
+  soundState.arrivalReady = story.current.arrivalReady;
+  soundState.homewardReady = story.current.homewardReady;
+  soundState.summitScore = story.current.summitScore;
   soundState.mirrorScore = story.current.mirrorScore;
   soundState.drownedScore = story.current.drownedScore;
   soundState.seaScore = story.current.seaScore;
@@ -807,8 +811,7 @@ function prepareWorldAudio(dt: number): void {
   worldFoley.motion(birches.scarf, 'wool', boat.position, birches.scarf.woven, dt, heard && story.name === 'birches');
   boat.sailPoint(materialAt);
   worldFoley.flow(boat, 'sail', materialAt, boat.sailFlutter * 0.65, heard && boat.group.visible);
-  worldFoley.flow(boat, 'water', boat.position, Math.min(0.7, boat.speed / 7 + Math.abs(boat.pitch) * 2),
-    heard && boat.group.visible && boat.afloat && !boat.grounded);
+  worldFoley.sailSettles(boat, materialAt, boat.sailDroop, heard && boat.group.visible);
   for (const toy of littleBoats.toys) {
     const active = heard && littleBoats.active && littleBoats.launched && toy.group.visible;
     worldFoley.flow(toy, 'water', toy.group.position, Math.min(0.14, toy.speed * 0.035), active);
@@ -907,7 +910,7 @@ function frame(now: number): void {
   // The home landing belongs to the final approach, including in the water's reflection.
   homeJetty.visible = story.name === 'home' || story.name === 'toHarbour' || story.name === 'toHome';
   // The shore behind the impossible door can recede during its departure, but never reappear later.
-  const rooms = visibleRooms(story.name, boat.position.z);
+  const rooms = journeyReveal.update(visibleRooms(story.name, boat.position.z), dt);
   setJourneyRooms(rooms);
   drawJourneyRooms(rooms, roomObjects, () => doorwayView.render(rig.camera, story.name === 'lines', story.name !== 'toBoats', () => {
     // The sea's reflection belongs to the same room as the main view.

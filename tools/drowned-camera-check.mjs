@@ -29,8 +29,9 @@ for(const [fps,portrait,gust] of [[30,false,0],[60,true,0],[30,true,8]]) {
   const village=new DrownedVillage(wind);
   const c=new DrownedChapter({boat,child,plane,cygnet,wind,village}),rig=new CameraRig();
   rig.resize(portrait?390:1600,portrait?844:900);c.update(0,0);rig.cut(c.shot);
-  let lighthouseAt=null;let worstAt=null;let worstChild=0,churchEdge=0,churchFrames=0,sailEdge=0,lighthouseEdge=0,minArc=Infinity,maxArc=-Infinity;
+  let lighthouseAt=null;let churchAt=null;let worstAt=null;let worstChild=0,churchEdge=0,churchFrames=0,sailEdge=0,lighthouseEdge=0,minArc=Infinity,maxArc=-Infinity;
   let obscured=0,streak=0,worstStreak=0,blockedAt,maxTurn=0,turnAt,worstHull=0;
+  let maxElevation=0,elevationAt;
   const lastView=new THREE.Vector3(),view=new THREE.Vector3();rig.camera.getWorldDirection(lastView);
   const ray=new THREE.Ray(),hit=new THREE.Vector3();
   for(let i=1;i<fps*210;i++){
@@ -56,12 +57,15 @@ for(const [fps,portrait,gust] of [[30,false,0],[60,true,0],[30,true,8]]) {
     }else streak=0;
     const edge=point=>{const p=point.clone().project(rig.camera);assert(p.z<1);return Math.max(Math.abs(p.x),Math.abs(p.y));};
     const childEdge=edge(child.position.clone().add(new THREE.Vector3(0,1.2,0)));
+    const elevation=Math.atan2(rig.camera.position.y-c.shot.subjects.primary.y,
+      Math.hypot(rig.camera.position.x-c.shot.subjects.primary.x,rig.camera.position.z-c.shot.subjects.primary.z));
+    if(elevation>maxElevation){maxElevation=elevation;elevationAt={t,beat:c.beat,eye:rig.camera.position.toArray()};}
     worstHull=Math.max(worstHull,...c.shot.subjects.points.map(edge));
     if(childEdge>worstChild){worstChild=childEdge;worstAt={t,beat:c.beat,boat:boat.position.toArray(),eye:rig.camera.position.toArray()};}
     if(c.beat==='drift'){
       const bearing=c.villageBearing-boat.yaw-Math.PI;
       const arc=Math.atan2(Math.sin(bearing),Math.cos(bearing));minArc=Math.min(minArc,arc);maxArc=Math.max(maxArc,arc);
-      if(boat.position.z<-1395&&boat.position.z>-1455&&c.t>2){churchEdge=Math.max(churchEdge,edge(SPIRE));churchFrames++;}
+      if(c.shot.attention?.strength>.9&&c.t>2){const e=edge(SPIRE);if(e>churchEdge){churchEdge=e;churchAt={t,beatTime:c.t,stirred:c.stirred,eye:rig.camera.position.toArray(),boat:boat.position.toArray(),screen:SPIRE.clone().project(rig.camera).toArray()};}churchFrames++;}
     }
     if(c.beat==='still'&&c.t>4)sailEdge=Math.max(sailEdge,edge(boat.sailPoint(new THREE.Vector3())));
     if(c.beat==='gather'&&c.stormTime>6&&c.stormTime<19.5){const e=edge(LIGHTHOUSE.clone().setY(LIGHTHOUSE_TOP_Y));if(e>lighthouseEdge){lighthouseEdge=e;lighthouseAt={time:c.stormTime,portrait,eye:rig.camera.position.toArray()};}}
@@ -69,15 +73,16 @@ for(const [fps,portrait,gust] of [[30,false,0],[60,true,0],[30,true,8]]) {
   }
   assert(c.done,'village and storm complete');assert(worstChild<1,`child: ${worstChild}, ${JSON.stringify(worstAt)}, portrait ${portrait}`);
   assert(worstHull<.95,`hull needs breathing room below the child: ${worstHull}, portrait ${portrait}`);
-  assert(churchFrames>0&&churchEdge<1,`spire visible while passing: ${churchEdge}, ${churchFrames} frames, ${fps}Hz gust=${gust}`);
+  assert(churchFrames>fps*2&&churchEdge<1,`spire visible during its approach reveal: ${churchEdge}, ${churchFrames} frames, ${fps}Hz gust=${gust}, ${JSON.stringify(churchAt)}`);
   assert(sailEdge<.85,`sail gesture target: ${sailEdge}`);assert(lighthouseEdge<1,`lighthouse: ${lighthouseEdge}, ${JSON.stringify(lighthouseAt)}`);
-  assert(maxArc-minArc>1,'village camera must move around the boat, not simply trail it');
+  assert(Math.max(Math.abs(minArc),Math.abs(maxArc))<.2,'village camera travels behind the boat through the channel');
   assert(worstStreak<.35,`scenery hides child for ${worstStreak}s: ${JSON.stringify(blockedAt)}`);
   assert(maxTurn<.1,`obstruction correction must stay continuous: ${maxTurn}, ${JSON.stringify(turnAt)}`);
+  assert(maxElevation<.4,`sailing camera looks steeply down at the child: ${maxElevation*180/Math.PI} degrees, ${JSON.stringify(elevationAt)}`);
   const before=performance.now();
   for(let i=0;i<10000;i++)sceneryLift(rig.camera.position,c.shot.subjects.primary,village.cameraObstacles,tuning.cinematography.obstacleAhead);
   const obstacleMs=(performance.now()-before)/10000;
-  results.push({fps,portrait,gust,maxTurn,obstacles:village.cameraObstacles.length,obstacleMs,worstChild,worstHull,churchEdge,sailEdge,lighthouseEdge,arc:maxArc-minArc,obscured,worstStreak});
+  results.push({fps,portrait,gust,maxTurn,maxElevation,obstacles:village.cameraObstacles.length,obstacleMs,worstChild,worstHull,churchEdge,sailEdge,lighthouseEdge,arc:maxArc-minArc,obscured,worstStreak});
 }
 fs.writeFileSync('/tmp/updraft-drowned-camera.json',JSON.stringify(results,null,2));
-console.log('Village camera: authored arc, spire, sail and lighthouse coverage, child visibility and passage completion pass at 30/60fps, calm/gust and both aspects.');
+console.log('Village camera: astern travel, approaching spire, sail and lighthouse coverage, child visibility and passage completion pass at 30/60fps, calm/gust and both aspects.');

@@ -5,6 +5,7 @@ import type { LittleBoats } from '../world/little-boats';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
 import type { SeaScorePhase } from '../audio/sea-score';
+import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
@@ -96,6 +97,9 @@ export interface Chapter {
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
   readonly arrivalMusic?: ArrivalMusic;
+  readonly arrivalReady?: boolean;
+  readonly homewardReady?: boolean;
+  readonly summitScore?: SummitScorePhase;
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;

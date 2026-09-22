@@ -95,14 +95,15 @@ try {
     for (const musicOnly of [false, true]) {
     const { ctx, sound } = offlineSound(50);
     if (musicOnly) for (const fn of ['chime', 'cricket', 'owl', 'skylark', 'peep', 'bugle']) sound[fn] = () => {};
-    let score, resumed, chimes = 0, retired;
-    const chime = sound.chime.bind(sound); sound.chime = (...args) => { chimes++; chime(...args); };
+    let score, resumed, retired;const chimes=[];
+    const chime = sound.chime.bind(sound); sound.chime = (...args) => { if(args[6])chimes.push(args[3]); chime(...args); };
     const update = tick => {
       const now = tick / 8, phase = now < 9 ? 'shelter' : now < 20 ? 'cold' : now < 27 ? 'climb'
         : now < 37 ? 'summit' : now < 45 ? 'morning' : now < 47 ? undefined : 'morning';
       sound.update(.125, { ...baseState, music: now < 37 ? 'wood' : 'sea', sleepingScore: phase,
-        night: 1, cold: .8, hush: .8, gust: now >= 16 && now < 16.5 || now >= 34 && now < 34.5 ? 9 : 0,
-        charge: now >= 35 && now < 35.5 ? .5 : 0, silence: now >= 48 });
+        sleepingWind:phase==='climb',
+        night: 1, cold: .8, hush: .8, gust: now >= 16 && now < 16.5 || now >= 22 && now < 22.5 || now >= 34 && now < 34.5 ? 9 : 0,
+        charge: now >= 24 && now < 24.5 || now >= 35 && now < 35.5 ? .5 : 0, silence: now >= 48 });
       if (tick === 0) { score = sound.sleepingScore; retired = score.current; }
       if (tick === 15 * 8 && !musicOnly) check(retired.voices.size === 0 && !score.parts.has(retired), 'Shelter voices and buses retire before the unanswered call');
       if (tick === 34 * 8 && !musicOnly) check(score.current.voices.size === 0 && sound.padGain.gain.value < 1e-8, 'Summit rest has no replacement drone');
@@ -122,7 +123,7 @@ try {
     const rendered = await render;
     if (!musicOnly) {
       buffer = rendered;
-      check(chimes > 3, 'Both music-free passages retain playable wind and updraft chimes');
+      check(chimes.length>=2&&chimes.every(at=>at>=20&&at<27), 'Only the feather climb has musical wind; cold and summit rests stay free of gesture chimes');
       check(score.parts.size === 0 && resumed.parts.size === 0, 'Departed scores release every piano, pad and phase bus');
     } else for (const [from, to] of [[16, 19], [34, 36.5]]) {
       let power = 0, count = 0;

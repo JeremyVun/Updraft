@@ -11,8 +11,8 @@ Every chapter has an entry checkpoint. Additional exits:
 - Still island: the tree/fall/gather sequence, companion now in the arms.
 - Washing: past curtains one and two (`curtain-1`, `curtain-2`, two-number payloads), then through the family’s door (`family`, its existing two-number payload). Completed curtains stay open after restore. `family` resumes on the separate shore with the doorway crossed; older family saves on the washing island migrate to that shore, including the departure boat. A reload during the camera crossing returns to the previous curtain checkpoint.
 - Little boats: `pool-1` and `pool-2`, each with one number for fleet progress. Restore the travellers on
-  the dry bank between swims and rebuild the gathered toys at rest. Existing `toMeadow` entry saves from
-  the washing shore keep their former direct crossing.
+  the dry bank between swims and rebuild the gathered toys at rest. Pre-Little-Boats `toMeadow` entry saves
+  from the washing shore resume at the current Little Boats departure berth.
 - Meadow: leaving the piano, then leaving the pond encounter.
 - Birches: each freed scarf tangle and leaving the one-time optional swing. `scarf4-1` through `scarf4-4`,
   plus their `-swing` variants and `scarf4-0-swing`, store route leg, swing-used count, dusk and freed-tangle
@@ -47,6 +47,13 @@ new serialized animation state. A reload before the sleeping glide repeats the h
 put the bandage back on.
 
 The record keeps the travellers' checkpoint positions, boat state, companion bond/flight count/seat, plane condition, life regions and chapter-specific progression. A completed piano is not replayed or re-scored; its wave and waiting region are retained. Transient wind, individual leaves, particle fields and animations are rebuilt, not serialized. Checkpoints wait until the current child/carry action is complete; restore starts from a stable pose with new callbacks and relative timers.
+
+Geography revision 4 places Little Boats west of the door shore for the shorter crossings. Original and
+revision 1/2/3 saves translate
+the travellers, boat and local life regions together at `boats` and `toMeadow` checkpoints, preserving pool
+progress. Revision 3 saves receive only the adjustment from the longer offshore layout. Revision 2/3 saves
+retain their existing mirror/home coordinates and swim progress; the earlier sea
+relocation applies only to older revisions. Migration runs once, before chapter restoration.
 
 Startup restores before the initial camera cut, terrain bake and warm render. `Play again` clears the record before reloading. The completed-ending checkpoint returns to credits until replay is chosen. `?shot` and `?chapter=` neither read nor write normal progress; use `?progress=1` explicitly for persistence QA, or `?progress=0` to disable it.
 

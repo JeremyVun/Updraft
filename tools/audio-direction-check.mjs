@@ -52,8 +52,31 @@ try {
     check(events.length>=14&&events.length<=17&&new Set(events.map(e=>e[3])).size===events.length,'Combined gust/lift emits one gentle response, at most 1.6 times per second');
     const pitchAtCharge=charge=>{events.length=0;sound.lastNote=sound.lastArp=-100;tick(10,{music:'still',startingIsland:true,charge});return events[0][0];};
     check(pitchAtCharge(.59)===pitchAtCharge(.61),'Crossing the former charge threshold does not jump an octave');
+    for (const fps of [30,60,144]) for (const forest of [false,true]) {
+      events.length=0;sound.lastNote=sound.lastArp=sound.lastGlider=-100;sound.prevGliderLift=0;
+      for(let frame=0;frame<fps*24;frame++)tick(frame/fps,{
+        music:forest?'wood':'still',startingIsland:!forest,forestWind:forest,
+        gust:26,charge:frame%fps<fps/2?.8:0,gliderLift:frame%(fps*3)<fps/3?1:0,
+      });
+      const times=events.map(e=>e[3]).sort((a,b)=>a-b),gap=forest?1.25:.625;
+      check(times.length>10&&times.slice(1).every((at,i)=>at-times[i]>=gap-1e-6),
+        `${fps} Hz ${forest?'forest':'opening'}: gust, lift and both glider notes share the minimum gap`);
+    }
+    for(const lift of [false,true]) {
+      events.length=0;sound.lastNote=sound.lastArp=-100;sound.noteIndex=0;
+      for(let now=0;now<22;now+=.05)tick(now,{music:'wood',forestWind:true,gust:lift?0:26,charge:lift?.8:0});
+      const notes=events.map(e=>e[0]);
+      check(notes.includes(50)&&notes.every(m=>m>=50&&m<=(lift?69:72)),
+        `Forest ${lift?'updraft':'stroke'} retains its low D register`);
+      if(!lift)check(notes.includes(53)&&notes.includes(60)&&notes.includes(65), 'Forest strokes retain the original minor colours outside the D/A pedal');
+    }
     events.length=0;tick(12,{music:'birches',birchesScore:'scarf'});tick(32,{music:'birches',birchesScore:'scarf',cues:['restored']});
-    check(events.length===7&&events.every(e=>sound.birchesScore.chordAt(e[3]).some(m=>(m-e[0])%12===0)),'The whole small reward follows the actual scarf harmony');
+    check(JSON.stringify(events.map(e=>e[0]))==='[62,66,69,74,78,81,86]', 'Completion retains its original melody over the scarf harmony');
+    check(events.every(e=>!e[5]&&!e[6]), 'Completion uses the original bell voice and is independent of cursor tail gating');
+    events.length=0;tick(34,{music:'birches',birchesScore:'scarf',cues:['delight']});
+    check(JSON.stringify(events.map(e=>e[0]))==='[81,86,90]'&&events.every(e=>!e[5]&&!e[6]), 'Small successes retain the original high three-note bell phrase');
+    events.length=0;tick(36,{music:'birches',birchesScore:'scarf',cues:['breeze']});
+    check(JSON.stringify(events.map(e=>e[0]))==='[74,78,81]', 'The first breeze retains its original three-note phrase');
     events.length=0;tick(40,{music:'home',cues:['unfold']});
     check(JSON.stringify(events.map(e=>e[0]))==='[74,78,81,83,81,78,76,78,74,71,74,76,78,76,74]','The selected home melody retains every pitch');
     check(sound.cueSpaceUntil>50,'The background makes room for the whole recognition melody');
@@ -69,6 +92,15 @@ try {
     await tail.ctx.resume();await rendering;
     check(held===1&&released===0,'A common-tone opening chime fades on departure even while the opening music continues');
     check(tail.sound.gestureVoices.length===0,'Finished gesture voices leave no tracked nodes');
+
+    const minor=offlineSound(1);
+    minor.sound.update(.1,{...baseState,music:'wood',forestWind:true});
+    minor.sound.chime(53,.5,0,.1,2.2,false,true);
+    minor.sound.update(.1,{...baseState,music:'wood',forestWind:true});
+    check(minor.sound.gestureVoices.length===1, 'The wood does not immediately mute its restored minor notes');
+    minor.sound.update(.1,{...baseState,music:'wood',forestWind:false});
+    check(minor.sound.gestureVoices.length===0, 'The restored forest palette still releases on departure');
+    await minor.ctx.startRendering();
 
     // Reviewable sustained passages expose joins, variation, reward overlap and phrase-aware departure.
     for (const item of [

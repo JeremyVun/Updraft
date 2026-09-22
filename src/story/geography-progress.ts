@@ -1,18 +1,22 @@
 import { BOATS_BERTH } from '../world/little-boats-layout';
 import { MIRROR_BERTH } from '../world/sky-mirror-layout';
 import type { Progress } from './progress';
-import { BOATS_SHIFT, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, GEOGRAPHY_VERSION } from '../world/geography';
+import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, GEOGRAPHY_VERSION } from '../world/geography';
 
 /** Preserve chapter progress when the islands move. Old sailing saves resume in safe open water. */
 export function migrateGeography(p: Progress): Progress {
   if (p.geography === GEOGRAPHY_VERSION) return p;
   const original = !p.geography;
+  const beforeSea = (p.geography ?? 0) < 2;
+  const boatsShift = p.geography === 3 ? BOATS_SHORTENING
+    : { x: BOATS_OFFSHORE_SHIFT.x + BOATS_SHORTENING.x, z: BOATS_OFFSHORE_SHIFT.z + BOATS_SHORTENING.z };
   let shift = { x: 0, z: 0 };
   if (original && ['boats', 'toMeadow'].includes(p.chapter)) shift = BOATS_SHIFT;
+  else if (['boats', 'toMeadow'].includes(p.chapter)) shift = boatsShift;
   else if (original && (p.chapter === 'toBoats' || p.chapter === 'lines' && p.point === 'family')) shift = SHORE_SHIFT;
-  else if (p.chapter === 'home') shift = original ? HOME_SHIFT : SEA_SHORTENING;
-  else if (p.chapter === 'mirror' || p.chapter === 'toHarbour') shift = original ? MIRROR_SHIFT : SEA_SHORTENING;
-  else if ((p.chapter === 'toMirror' || p.chapter === 'toHome') && p.point === 'swim') {
+  else if (beforeSea && p.chapter === 'home') shift = original ? HOME_SHIFT : SEA_SHORTENING;
+  else if (beforeSea && (p.chapter === 'mirror' || p.chapter === 'toHarbour')) shift = original ? MIRROR_SHIFT : SEA_SHORTENING;
+  else if (beforeSea && (p.chapter === 'toMirror' || p.chapter === 'toHome') && p.point === 'swim') {
     shift = { x: -385 - p.boat[0], z: -1985 - p.boat[1] };
     p.data[0] = 1;
   }
@@ -30,7 +34,9 @@ export function migrateGeography(p: Progress): Progress {
   }
   for (const region of p.life) {
     const [x,z] = region;
-    const move = !original ? (x < -270 && z < -2090 || x >= -270 && z < -2250 ? SEA_SHORTENING : null)
+    const oldBoats = p.geography === 3 ? { x: 200, z: -230 } : { x: 230, z: -495 };
+    const move = !original ? (Math.abs(x - oldBoats.x) < 70 && Math.abs(z - oldBoats.z) < 100 ? boatsShift
+      : beforeSea && (x < -270 && z < -2090 || x >= -270 && z < -2250) ? SEA_SHORTENING : null)
       : x > 280 && z < -500 && z > -720 ? BOATS_SHIFT
       : x < -330 && z < -2180 ? MIRROR_SHIFT
       : x > -240 && z < -1990 ? HOME_SHIFT : null;

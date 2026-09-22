@@ -77,7 +77,7 @@ export class DrownedChapter implements Chapter {
   private readonly departure = new THREE.Vector2();
   private villageBearing = 0;
   private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
-    bearing: tuning.drownedCamera.spireBearing, distance: tuning.drownedCamera.spireDistance,
+    distance: tuning.drownedCamera.spireDistance,
     height: tuning.drownedCamera.spireHeight };
   private readonly hullFrame = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
@@ -397,11 +397,13 @@ export class DrownedChapter implements Chapter {
     const k = tuning.drownedCamera, s = this.shot;
     const roofs = THREE.MathUtils.smootherstep(-boat.position.z, -k.roofFromZ, -k.roofUntilZ);
     const past = SPIRE.z - boat.position.z;
-    const church = THREE.MathUtils.smootherstep(past, -k.spireEnter, -k.spireFull)
+    // Once the sail has brought us forward again, let the church pass. Replaying its reveal would
+    // pull us back out of the street just as the player has set the journey moving.
+    const church = this.stirred ? 0 : THREE.MathUtils.smootherstep(past, -k.spireEnter, -k.spireFull)
       * (1 - THREE.MathUtils.smootherstep(past, -k.spireLeave, -k.spireGone));
     const roofBearing = boat.yaw + Math.PI + this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs);
-    const churchBearing = k.spireBearing;
-    this.villageBearing = roofBearing + Math.atan2(Math.sin(churchBearing - roofBearing), Math.cos(churchBearing - roofBearing)) * church;
+    // The church draws the gaze, not the camera's travelling position out of the channel.
+    this.villageBearing = roofBearing;
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
     s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);

@@ -28,7 +28,6 @@ export class LinesChapter implements Chapter {
   readonly season = 0.2;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 5 };
   readonly focus = new THREE.Vector3();
-  private readonly flat = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly watching = new THREE.Vector3();
@@ -76,14 +75,6 @@ export class LinesChapter implements Chapter {
   }
   /** The bird's lead and look back keep the foreground, without muting playable wind. */
   get linesMelodyQuiet(): boolean { return this.beat === 'birdThrough' || this.beat === 'childThrough'; }
-  get trodden(): THREE.Vector3 | null {
-    if (this.beat === 'throughDoor') return this.flat.set(11, 12, -398);
-    if (this.gate < CURTAINS.length) {
-      const c = CURTAINS[this.gate];
-      return this.flat.set(c.center.x, 8, c.center.z);
-    }
-    return this.beat === 'family' || this.beat === 'familyApproach' ? this.flat.set(11, 9, -388) : null;
-  }
   get checkpoint(): string | null {
     if (this.beat === 'approach' && this.gate > 0) return `curtain-${this.gate}`;
     return this.beat === 'walk' ? 'family' : null;

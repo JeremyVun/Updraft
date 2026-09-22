@@ -11,6 +11,34 @@ masking and emotional impact still require listening in context.
 
 ## Decisions and implementation
 
+**September 22 transition audit:** Jeremy requested enough silence to leave each tune's headspace and
+entrances that belong to the scene. [The complete review](audio-transition-review.md) covers ten handoffs,
+all forty adaptive score sections, the piano handover and ending. Ordinary rests are now three seconds;
+Sleeping gets 3.5, Mirror four, and homeward five. Short-crossing preparation, approach readiness, phrase
+endings, Sleeping → Sea and the dolphin farewell timing were corrected. The specifically approved
+Drowned → Wood storm overlap remains continuous.
+
+**September 22 summit approval:** Jeremy approved the full three-minute drone and requested it from
+Sky Mirror departure through the ending. It is integrated locally with a three-second mirror fade,
+at least five seconds of musical silence, and a three-second entrance after the first offshore turn.
+The complete piece plays across the sea; summit story states then guide flight, farewell and home.
+The approved recognition melody, original finale and ending cut remain. Jeremy subsequently approved the
+opening after its middle passage gained a held D/F♯ resolution before the returning motif. That complete
+185.3125-second arrangement is also integrated locally, using the original pad and life/care response.
+See [the latest audition and integration](audio-proposals.md#summit-approved-opening-middle-revised--september-22).
+
+**September 22 restoration:** Jeremy requested the earlier cursor-chime sound and the original completion
+and small-success sounds. Ordinary cursor chimes again use the September 15 bell partials and 6 ms attack.
+`restored`, `delight` and `breeze` retain their original pitches, bright bell voice and cue gain, with no cursor
+tail filtering. Current scene gates, note spacing, cursor levels, harmony selection and silence rules remain;
+the specifically approved soft forest-rescue and Sleeping voices remain.
+
+Jeremy's follow-up found the wood's darker register missing and chimes crowded together. Ordinary forest
+strokes now retain the original low minor palette, and updrafts return to D3–A3–D4–A4 instead of the shared
+higher register. Forest attacks are spaced at least 1.25 seconds apart. Glider answers now respect the same
+spacing as other input, including their second note; opening spacing stays 0.625 seconds and Sleeping 1.25.
+The rescue's softer voice and all scene/silence gates remain.
+
 **September 21 refinement:** Jeremy now wants cursor chimes only on the starting island (+6 dB) and in the
 forest (also +6 dB, preserving the rescue voice’s relative softness), with player wind noise −3 dB after the opening.
 Jeremy also approved sparse, quiet chimes only during Sleeping’s feather-guided climb, ending before the

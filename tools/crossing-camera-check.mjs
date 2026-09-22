@@ -10,7 +10,7 @@ registerHooks({
     source:transformSync(new URL(u).pathname,fs.readFileSync(new URL(u),'utf8')).code}:next(u,c); },
 });
 globalThis.location={search:'?shot'};
-const { CrossingChapter }=await import('../src/story/crossing.ts');
+const { CrossingChapter, FIRST_ISLAND }=await import('../src/story/crossing.ts');
 const { CameraRig }=await import('../src/camera.ts');
 function fixture(farewell=false) {
   const boat={position:new THREE.Vector3(-2000,0,-2000),yaw:Math.PI,sailSide:-1,speed:5,
@@ -37,14 +37,21 @@ for(const fps of [10,30,60,120]) for(const [w,h] of [[1600,900],[390,844]]) {
     assert(p.z<1&&Math.abs(p.x)<.95&&Math.abs(p.y)<.95,`traveller lost at ${fps}Hz ${w}x${h}`);
   }
   assert(maxDistance-minDistance>7,'crossing must open again for arrival');
-  assert(maxAngle-minAngle>.5,'crossing must change angle as well as track the boat');
+  assert(Math.max(Math.abs(minAngle),Math.abs(maxAngle))<.2,'ordinary sailing stays behind the boat');
   report.push({fps,w,h,dolly:maxDistance-minDistance,arcDegrees:(maxAngle-minAngle)*180/Math.PI,worstEdge});
 }
 // Farewell ends at the sailing shot, rather than asking the rig to hide a sudden second swing.
+for(const portrait of [false,true]) {
+  const {boat,chapter,rig}=fixture(true);rig.resize(portrait?390:1600,portrait?844:900);chapter.update(0);
+  // The island hands over its boarding view; adding a distant subject must not force a framing jump.
+  rig.cut({target:boat.position.clone().add(new THREE.Vector3(0,2.2,-2)),distance:26,height:6.5});
+  const before=rig.camera.position.clone();chapter.update(1/60);rig.update(1/60,1/60,chapter.shot,chapter.pace);
+  assert(rig.camera.position.distanceTo(before)<.1,'departure establishes its island framing without a jump');
+}
 {
-  const {chapter}=fixture(true);chapter.time=39-1e-5;chapter.update(0);
+  const {chapter}=fixture(true);chapter.time=44-1e-5;chapter.update(0);
   const from=chapter.shot.from.clone(),target=chapter.shot.target.clone(),distance=chapter.shot.distance;
-  chapter.time=39;chapter.update(0);
+  chapter.time=44;chapter.update(0);
   assert(from.distanceTo(chapter.shot.from)<1e-5&&target.distanceTo(chapter.shot.target)<1e-5);
   assert(Math.abs(distance-chapter.shot.distance)<1e-5);
 }
@@ -101,13 +108,22 @@ for(const [name,start] of Object.entries(starts))for(const portrait of [false,tr
     calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x+gust,z:this.breeze.y-gust,energy:gust?.8:0,lift:0});}};
   const boat=new Boat(wind);boat.beach(...start);boat.launch();
   const child={position:new THREE.Vector3(),ride(p){this.position.copy(p);},wave(){}};
-  const cast={boat,child,skyMirror:{progress:3},plane:{hold(){}},cygnet:{carried:false,wing:{restore(){}}},sealife:{whale:null,fishNear(){},dolphinsWith(){},surfaceWhale(){}}};
+  const cast={boat,child,skyMirror:{progress:3,stars:[{},{},{}]},plane:{hold(){}},cygnet:{carried:false,wing:{restore(){}}},sealife:{whale:null,fishNear(){},dolphinsWith(){},surfaceWhale(){}}};
   const chapter=Journey.prototype.make.call({cast},name),rig=new CameraRig();
   rig.resize(portrait?390:1600,portrait?844:900);chapter.update(0);rig.cut(chapter.shot);
   let worst=0,maxStep=0,seconds=0;const last=rig.camera.getWorldDirection(new THREE.Vector3()),direction=last.clone();
   for(let i=1;i<30*200;i++) {
     const dt=1/30;seconds=i*dt;chapter.update(dt,seconds);boat.update(dt,seconds);rig.update(dt,seconds,chapter.shot,chapter.pace);
     const p=child.position.clone();p.y+=1.2;p.project(rig.camera);
+    if(name==='toLines'&&seconds>3&&seconds<30) {
+      const island=FIRST_ISLAND.clone().project(rig.camera);
+      assert(island.z<1&&Math.abs(island.x)<1&&Math.abs(island.y)<1,
+        `still island lost around departure corner at ${seconds}, portrait=${portrait}: ${island.toArray()}`);
+      for(const point of chapter.farewellBounds) {
+        const screen=point.clone().project(rig.camera);
+        assert(screen.z<1&&Math.abs(screen.x)<.95&&Math.abs(screen.y)<.95,'farewell must retain the whole boat and sail');
+      }
+    }
     worst=Math.max(worst,Math.abs(p.x),Math.abs(p.y));
     rig.camera.getWorldDirection(direction);maxStep=Math.max(maxStep,direction.angleTo(last));last.copy(direction);
     assert(p.z<1&&Math.abs(p.x)<1&&Math.abs(p.y)<1,`${name} portrait=${portrait} gust=${gust} child lost at ${seconds}: ${p.toArray()}`);

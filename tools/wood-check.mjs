@@ -4,6 +4,7 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { reviewCapture } from './lib/review-capture.mjs';
 const portrait = process.argv.includes('portrait');
 const resumeRescue = process.argv.includes('rescue');
 const mode = (portrait ? 'portrait' : 'desktop') + (resumeRescue ? '-rescue' : '');
@@ -27,6 +28,7 @@ for (;;) {
 let browser;
 let video;
 let context;
+let stopReview;
 const report = { mode, beats: [], catches: [], errors: [] };
 try {
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
@@ -41,6 +43,7 @@ try {
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=wood`);
   await page.waitForFunction(() => window.__ready, null, { timeout: 60000 });
   await page.waitForFunction(() => __game.story.current.beat === 'first', null, { timeout: 30000 });
+  if (process.env.REVIEW === '1') stopReview = reviewCapture(page, prefix);
   const state = () => page.evaluate(() => {
     const g = __game, c = g.story.current;
     const target = c.windInvitation?.clone().project(g.rig.camera);
@@ -72,8 +75,8 @@ try {
     const g=__game, original=g.rig.update.bind(g.rig), samples=[], spikes=[];
     let previous=null, frame=0;
     window.__woodCamera={samples,spikes};
-    g.rig.update=(dt,time,shot,pace)=>{
-      original(dt,time,shot,pace);
+    g.rig.update=(dt,time,shot,pace,...rest)=>{
+      original(dt,time,shot,pace,...rest);
       const c=g.story.current,p=g.rig.camera.position.toArray(),q=g.rig.camera.quaternion.toArray();
       const sample={time,dt,beat:c.beat,leg:c.leg,chainAt:c.chainAt,eye:p,rotation:q,child:g.child.position.toArray(),
         aim:c.aim?.toArray(),glow:c.glow?.toArray(),fit:g.rig.fitBack};
@@ -164,6 +167,9 @@ try {
     const spikes=report.camera.spikes.filter(s=>forest.has(s.beat));
     assert(spikes.every(s=>s.step<1), 'forest camera must not jump a world unit in one render frame');
     assert(spikes.every(s=>s.turn<.08), 'forest camera must not snap its orientation');
+    const walking=report.camera.samples.concat(report.camera.spikes).filter(s=>['walk','out'].includes(s.beat));
+    report.maxWalkingTurn=Math.max(...walking.map(s=>(s.turn??0)/s.dt));
+    assert(report.maxWalkingTurn<.75, 'returning from the rescue must arc around the child');
   }
   assert(report.completed, `must reach the departure boat: ${JSON.stringify(report.final)}`);
   assert(report.beats.some(b => b.beat === 'lost'), 'the rescue must be encountered');
@@ -174,6 +180,7 @@ try {
   report.failure = error.stack;
   throw error;
 } finally {
+  await stopReview?.();
   try { report.camera ??= await context?.pages()[0]?.evaluate(()=>window.__woodCamera); } catch {}
   try {
     await context?.close();

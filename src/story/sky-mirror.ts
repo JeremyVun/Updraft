@@ -289,7 +289,8 @@ export class SkyMirrorChapter implements Chapter {
     const reveal=this.beat==='reveal';
     // The constellation is a group of subjects, so its whole shape survives different approaches/aspects.
     this.shot.subjects!.points=reveal?this.constellation:undefined;
-    this.shot.smoothFit=reveal?1.5:undefined;
+    // Coverage stays continuous from a rising light into the next walk and the constellation.
+    this.shot.smoothFit=1.5;
     const rising=room.stars.find(s=>s.state==='rising');
     const portrait=window.innerWidth<window.innerHeight;
     // Keep the ground destination fixed while steering: tracking the moving bubble would slide the

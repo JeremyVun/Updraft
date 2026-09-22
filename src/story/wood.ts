@@ -377,7 +377,6 @@ export class WoodChapter implements Chapter {
     for (const coal of this.cast.embers.takeCaught()) {
       if (!this.bolted && coal === this.ahead && this.chainAt === APPROACH_ALONG) this.approachLit = true;
       cue(coal === this.hearth ? 'comfort' : 'kindled');
-      this.flared = this.now;
       if (coal === this.planeCoal && this.beat === 'walk') continue;
       if (coal === this.ahead && this.beat === 'plane') continue;
       if (coal === this.ahead && this.beat !== 'compose' && this.beat !== 'fright' && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
@@ -385,7 +384,6 @@ export class WoodChapter implements Chapter {
     }
   }
 
-  private flared = -99;
   private aimed = 0;
   private moored = false;
 
@@ -732,6 +730,9 @@ export class WoodChapter implements Chapter {
     s.from = undefined;
     s.eye = undefined;
     s.subjects = undefined;
+    // Return from the shelter around the child. A straight eye interpolation crosses the subject
+    // and whips the view through a half-turn just as the walk resumes.
+    s.orbit = true;
     const ground = Math.max(heightAt(c.x, c.z), 0);
     if (['plane', 'snag', 'fall', 'pickup'].includes(this.beat)) {
       this.childSubject.copy(c).y += 1.5;
@@ -753,10 +754,9 @@ export class WoodChapter implements Chapter {
       return;
     }
     /** Close in behind them, leaning a little toward the light but never far enough to leave them behind. */
-    /** And when one takes, the camera turns further into the light for a moment, because they both looked. */
-    const rush = Math.max(0, 1 - (this.now - this.flared) / 1.4);
     const near = this.beat === 'compose' || this.beat === 'fright' || this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
     if (near) {
+      s.orbit = false;
       this.childSubject.copy(c).y += 1.5;
       this.birdSubject.copy(this.cast.cygnet.seating.shown.p).y += 0.4;
       const reveal = this.beat === 'compose' || this.beat === 'fright' ? 0
@@ -777,7 +777,7 @@ export class WoodChapter implements Chapter {
       this.focus.copy(s.target);
       return;
     }
-    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * (near ? 0.3 : 0.42 + rush * 0.3);
+    const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * tuning.wood.cameraLead;
     const dx = (this.glow.x - c.x) * lean;
     const dz = (this.glow.z - c.z) * lean;
     s.target.set(c.x + dx, ground + 1.9, c.z + dz);
@@ -790,16 +790,15 @@ export class WoodChapter implements Chapter {
     /** And it stands behind the way they are going, not behind north: the wood's path doubles back on itself, and
      * a camera that always looked up the island left the next coal out at the side of the frame on half the legs. */
     const shoulder = this.bolted ? tuning.wood.afterRescueCameraSide : 1.1;
-    const ex = c.x - this.aim.x * 13 - this.aim.z * shoulder;
-    const ez = c.z - this.aim.z * 13 + this.aim.x * shoulder;
-    s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + 4.2, ez);
+    const ex = c.x - this.aim.x * tuning.wood.cameraBack - this.aim.z * shoulder;
+    const ez = c.z - this.aim.z * tuning.wood.cameraBack + this.aim.x * shoulder;
+    s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + tuning.wood.cameraUp, ez);
     if (this.ahead?.live && !this.ahead.lit) {
       this.childSubject.copy(c).y += 1.5;
       // Preserve the same clear sightline to the next interaction that the rescue already has.
       s.subjects = { primary: this.childSubject, secondary: this.ahead.p, margin: 0.72, extra: 12 };
     }
-    /** The camera is quick to the fright and slow through the searching, which is how the two feel. */
-    this.pace = this.beat === 'bolt' ? 1.1 : near ? 0.45 : 0.9;
+    this.pace = tuning.wood.cameraPace;
     this.focus.copy(c);
   }
 }

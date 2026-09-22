@@ -1,4 +1,5 @@
 // Real sea approach plus arranged views of relocated routes, with the shared GPU lock.
+// BASE must be a Vite dev server so arranged departures use the current layout.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
@@ -40,9 +41,10 @@ try {
   assert(maxBlendStep<.025,`mirror colour jumped ${maxBlendStep}`);
   for(const name of ['toMeadow','toSleeping','toHarbour']) {
    for(const fraction of [.15,.55,.9]) {
-    const state=await page.evaluate(({name,fraction})=>{
+    const state=await page.evaluate(async ({name,fraction})=>{
+     const {BOATS_BERTH}=await import('/src/world/little-boats-layout.ts');
      const g=__game;
-     const starts={toMeadow:[233,-557,Math.PI],toSleeping:[-34,-1908,.2],toHarbour:[-280,-2103,Math.PI]};
+     const starts={toMeadow:[BOATS_BERTH.x,BOATS_BERTH.z,Math.PI],toSleeping:[-34,-1908,.2],toHarbour:[-280,-2103,Math.PI]};
      g.story.sail(...starts[name]);g.story.begin(name);
      const c=g.story.current;let left=c.routeLength*fraction,i=0;
      while(i<c.spans.length-1&&left>c.spans[i])left-=c.spans[i++];
@@ -52,7 +54,8 @@ try {
      c.update(1/60,0);g.rig.cut(c.shot);
      return {name,fraction,boat:g.boat.position.toArray()};
     },{name,fraction});
-    await page.waitForTimeout(900);
+    await page.waitForFunction(expected=>__game.water.mesh.material.uniforms.uJourneyRooms.value.toArray().every((v,i)=>v===expected[i]),
+     {toMeadow:[3,4],toSleeping:[7,8],toHarbour:[9,10]}[name]);
     await page.screenshot({path:`${prefix}-${width}-${name}-${fraction}.png`});
     const rooms=await page.evaluate(()=>__game.water.mesh.material.uniforms.uJourneyRooms.value.toArray());
     assert.deepEqual(rooms,{toMeadow:[3,4],toSleeping:[7,8],toHarbour:[9,10]}[name]);

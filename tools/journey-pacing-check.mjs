@@ -73,6 +73,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
     push=gust || (arrivalGust&&approaching?8:0) || (name==='drowned' && chapter.beat==='still' && !waitInVillage?8:0);
     chapter.update(dt,time);boat.swell=chapter.storm ?? 0;boat.update(dt,time);
     if(chapter.arrivalMusic && events[`music-${chapter.arrivalMusic}`]===undefined) events[`music-${chapter.arrivalMusic}`]=+time.toFixed(2);
+    if(chapter.arrivalHeard && chapter.arrivalReady && events.arrivalReady===undefined)events.arrivalReady=+time.toFixed(2);
     if(name==='toMirror'){child.update(dt);carry.update(dt);cygnet.update(dt,time,child.position,wind.sample(0,0,air));carry.after();rig.update(dt,time,chapter.shot,chapter.pace);sealife.update(dt,time);
       const stunt=sealife.pod.stunt,act=stunt?`${stunt.kind}:${stunt.phase}${stunt.hit?':contact':''}`:'none';
       if(act!==lastAct){dolphinActs.push([act,+time.toFixed(1)]);lastAct=act;}
@@ -94,7 +95,9 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
       const requestAt=events[`music-${target}`];
       assert(Number.isFinite(requestAt),`${name}: destination music was never requested`);
       const musicLead=time-requestAt-tuning.audio.arrivalFadeOut-tuning.audio.arrivalQuiet;
-      assert(musicLead>1,`${name}: destination music begins too late (${musicLead.toFixed(2)}s before landing)`);
+      // A sudden gust may land during the musical rest; preserve the rest rather than truncate it.
+      assert(musicLead>-tuning.audio.arrivalPhraseWait,`${name}: handoff requested too late (${musicLead.toFixed(2)}s before landing, before phrase wait)`);
+      if(!['drowned','toHarbour'].includes(name))assert(Number.isFinite(events.arrivalReady),`${name}: final-approach music gate never opens`);
       if(route)assert(shallow<-.3,`${name}: hull crossed land (${shallow}) at ${shallowAt}, time ${time}`);
       assert(Math.max(turn,worstTurn)<Math.PI*2,`${name}: circled a waypoint`);
       assert(peak<=10.000001,`${name}: exceeds approved forward speed cap`);
@@ -113,6 +116,11 @@ for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(s
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
   const lateGust=run(name,60,0,0,false,true);
   const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
+  if(name==='toBoats'||name==='toMeadow') {
+    const target=name==='toBoats'?30:40;
+    for(const result of [calm,lowFps,windLeft,windRight])
+      assert(Math.abs(result.seconds-target)<5,`${name}: ordinary passage exceeds its ${target}s pacing target (${result.seconds}s)`);
+  }
   if(name==='drowned')entry.noResponse=run(name,30,0,0,true);
   results.push(entry);console.log(JSON.stringify(entry));
 }

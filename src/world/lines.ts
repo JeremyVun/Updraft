@@ -723,7 +723,16 @@ export function lineField(
   const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
     pointToRun(11, -393, ax, az, bx, bz) < 12 ||
     pointToRun(11, -407, ax, az, bx, bz) < 8 ||
-    CURTAINS.some(c => pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7)
+    CURTAINS.some(c => {
+      if (pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7) return true;
+      // Reserve the low view as well as the child's standing place. Include portrait's
+      // extra retreat and the camera's breathing; ordinary poles/ropes stay to either side.
+      const k = tuning.linesPassage;
+      for (let behind = 7; behind <= k.viewClearanceAhead; behind += 2) {
+        if (pointToRun(c.center.x + behind * 0.12, c.center.z + behind, ax, az, bx, bz) < k.viewClearanceRadius) return true;
+      }
+      return false;
+    })
   );
   /** Lines strung by hand first, so the field keeps clear of them; they are not returned, only respected. */
   const specs: LineSpec[] = [...hung];

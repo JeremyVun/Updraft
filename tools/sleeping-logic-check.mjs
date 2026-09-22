@@ -10,7 +10,7 @@ registerHooks({
   load(u,c,n) { return u.endsWith('.ts') ? {format:'module',shortCircuit:true,source:transformSync(new URL(u).pathname,fs.readFileSync(new URL(u),'utf8')).code} : n(u,c); },
 });
 globalThis.location={search:'?shot'};
-globalThis.window={innerWidth:1600,innerHeight:900,matchMedia:()=>({matches:false})};
+globalThis.window={innerWidth:Number(process.env.W??1600),innerHeight:Number(process.env.H??900),matchMedia:()=>({matches:false})};
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
 const {Traveller}=await import('../src/traveller/traveller.ts');
 const {Cygnet}=await import('../src/creatures/cygnet.ts');
@@ -30,8 +30,11 @@ const {tuning}=await import('../src/tuning.ts');
 const {BED,WINDOW,PILLOW}=await import('../src/world/sleeping.ts');
 const {Feather}=await import('../src/fx/feather.ts');
 const {restoreWingCare}=await import('../src/story/wing-care.ts');
+const {CameraRig}=await import('../src/camera.ts');
+const {mulberry32}=await import('../src/world/noise.ts');
 
 function fixture(fps=60) {
+  Math.random=mulberry32(42);
   const air={x:0,z:0,energy:0,lift:0};
   const wind={breeze:new THREE.Vector2(),sample(_x,_z,out){return Object.assign(out,air);},addSplat(){}};
   const child=new Traveller(wind),cygnet=new Cygnet(),flock=new SwanFlock(),boat=new Boat(wind),plane=new Glider(wind,[]);
@@ -42,11 +45,20 @@ function fixture(fps=60) {
     sleeping:{hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
   };
   let time=0;
-  const camera=new THREE.PerspectiveCamera();
-  return {cast,air,get time(){return time;},step(chapter) {
+  const rig=new CameraRig();rig.resize(Number(process.env.W??1600),Number(process.env.H??900));
+  const camera=rig.camera,cameraMotion={};let prepared=false,previousRotation=null;
+  return {cast,air,cameraMotion,get time(){return time;},step(chapter) {
     const dt=1/fps;time+=dt;
     chapter?.update(dt,time);child.update(dt);carry.update(dt);flock.update(dt,time);
     cygnet.update(dt,time,child.position,air);carry.after();
+    if(chapter){
+      if(!prepared){rig.cut(chapter.shot);prepared=true;}else rig.update(dt,time,chapter.shot,chapter.pace);
+      const row=cameraMotion[chapter.beat]??={maxTurn:0,worstPrimary:0};
+      if(previousRotation)row.maxTurn=Math.max(row.maxTurn,previousRotation.angleTo(camera.quaternion)/dt);
+      previousRotation=camera.quaternion.clone();
+      if(chapter.shot.subjects){const p=chapter.shot.subjects.primary.clone().project(camera),edge=Math.max(Math.abs(p.x),Math.abs(p.y));
+        if(edge>row.worstPrimary){row.worstPrimary=edge;row.at=chapter.t;row.screen=p.toArray();}}
+    }
     const s=cast.sleeping,t=tuning.sleeping;
     s.trail.update(dt,time,s.dawn,camera,s.cold||0);
     s.shown.curtains+=(s.curtains-s.shown.curtains)*(1-Math.exp(-dt/t.ease));
@@ -144,6 +156,12 @@ for (const fps of [30,60]) {
   assert.equal(k.wing.state,'free');assert.equal(k.flights,1);
   assert(child.rig.coat.scale.distanceTo(new THREE.Vector3(1,1,1))<1e-5,'sleeping pose leaked into walking');
   assert(sleeping.dawn===1&&sleeping.curtains===1&&sleeping.fog===0);
+  fs.writeFileSync(`/tmp/updraft-sleeping-camera-${fps}-${process.env.W??1600}.json`,JSON.stringify(f.cameraMotion,null,2));
+  for(const [beat,row] of Object.entries(f.cameraMotion))
+    assert(row.worstPrimary<.901, `${beat}: primary leaves the eased frame (${row.worstPrimary})`);
+  for(const beat of ['glide','waking'])
+    assert(f.cameraMotion[beat].maxTurn<.2, `${beat}: camera reverses across the bird`);
+  console.log('Sleeping camera',JSON.stringify(f.cameraMotion));
   console.log(`${fps}fps: idle gates, modest pillow stroke, cold ascent, healed wing, gentle lift, dawn and boarding pass.`);
 }
 

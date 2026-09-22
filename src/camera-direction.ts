@@ -24,6 +24,9 @@ export class CameraDirection {
   private wanted = 0;
   private untilReview = 0;
   private heldFor = 0;
+  private proposed = 0;
+  private confirmedFor = 0;
+  private sinceReview = 0;
   private readonly relative = new THREE.Vector3();
   private readonly candidate = new THREE.Vector3();
   private readonly back = new THREE.Vector3();
@@ -33,10 +36,12 @@ export class CameraDirection {
 
   reset(): void {
     this.offset = this.wanted = this.untilReview = this.heldFor = 0;
+    this.proposed = this.confirmedFor = this.sinceReview = 0;
   }
 
   release(): void {
     this.wanted = this.untilReview = this.heldFor = 0;
+    this.proposed = this.confirmedFor = this.sinceReview = 0;
   }
 
   /** Resolve attention first. Unlike translating a follow shot, this actually turns the lens. */
@@ -63,12 +68,16 @@ export class CameraDirection {
     if (dt <= 0) return;
     this.untilReview -= dt;
     this.heldFor += dt;
+    this.sinceReview += dt;
     if (hold || shot.eye || shot.composition === 'hold') {
       // The rig glides from its current pose into this staged view. Do not bend the destination too.
       this.wanted = this.offset = this.heldFor = 0;
+      this.proposed = this.confirmedFor = this.sinceReview = 0;
       return;
     }
-    if (!shot.subjects) this.wanted = 0;
+    if (!shot.subjects) {
+      this.wanted = this.proposed = this.confirmedFor = this.sinceReview = 0;
+    }
     else if (this.untilReview <= 0) {
       this.untilReview = k.reviewEvery;
       let best = this.wanted;
@@ -79,9 +88,14 @@ export class CameraDirection {
         const score = this.score(angle, shot, eye, look, camera);
         if (score < bestScore) { bestScore = score; best = angle; }
       }
-      if (this.heldFor >= k.holdFor && current - bestScore > k.improvement) {
+      const useful = current - bestScore > k.improvement;
+      if (useful && best === this.proposed) this.confirmedFor += this.sinceReview;
+      else { this.proposed = best; this.confirmedFor = 0; }
+      if (!useful) this.confirmedFor = 0;
+      this.sinceReview = 0;
+      if (this.heldFor >= k.holdFor && this.confirmedFor >= k.confirmFor) {
         this.wanted = best;
-        this.heldFor = 0;
+        this.heldFor = this.confirmedFor = 0;
       }
     }
     this.offset += (this.wanted - this.offset) * (1 - Math.exp(-dt * k.compositionResponse));
