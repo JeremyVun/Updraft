@@ -11,6 +11,11 @@ masking and emotional impact still require listening in context.
 
 ## Decisions and implementation
 
+**September 23 live playtest:** Jeremy found the Still Island score much too quiet and requested the
+same correction for Home. Both approved drones now play 9 dB louder. The opening retains its life-driven
+growth and care hush; Home retains its composed dynamics and cue ducking. Notes, transitions, environmental
+sounds, gesture chimes and the separate finale are unchanged.
+
 **September 22 transition audit:** Jeremy requested enough silence to leave each tune's headspace and
 entrances that belong to the scene. [The complete review](audio-transition-review.md) covers ten handoffs,
 all forty adaptive score sections, the piano handover and ending. Ordinary rests are now three seconds;
