@@ -12,9 +12,15 @@ masking and emotional impact still require listening in context.
 ## Decisions and implementation
 
 **September 23 live playtest:** Jeremy found the Still Island score much too quiet and requested the
-same correction for Home. Both approved drones now play 9 dB louder. The opening retains its life-driven
+same correction for Home, then requested a further 3 dB after the first 9 dB lift. Both approved drones
+now play 12 dB louder than the original integration. The opening retains its life-driven
 growth and care hush; Home retains its composed dynamics and cue ducking. Notes, transitions, environmental
 sounds, gesture chimes and the separate finale are unchanged.
+
+Volume regression check: seeded 32-second background renders of Lines, Boats, both Meadow beds,
+Birches, Drowned, Wood, Sleeping shelter/morning, Sea and Sky Mirror match pre-integration commit
+`f5d2c8e` within 0.01 dB. All eleven finish with full arrival and cue-duck gains. This compares music
+levels, not perceived loudness against every gameplay sound. Report: `/tmp/updraft-music-volume-regression.json`.
 
 **September 22 transition audit:** Jeremy requested enough silence to leave each tune's headspace and
 entrances that belong to the scene. [The complete review](audio-transition-review.md) covers ten handoffs,

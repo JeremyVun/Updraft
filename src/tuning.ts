@@ -28,9 +28,9 @@ export const tuning = {
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
     homewardFadeOut: 3, homewardQuiet: 5, homewardFadeIn: 3,
     homewardClearDistance: 30,
-    /** Playtest correction: bring the opening and home drones forward by 9 dB. */
-    openingScoreDb: 9,
-    summitScoreLevel: .06555 * 10 ** (9 / 20),
+    /** Playtest correction: bring the opening and home drones forward by 12 dB. */
+    openingScoreDb: 12,
+    summitScoreLevel: .06555 * 10 ** (12 / 20),
     arrivalPhraseWait: 4.5, phraseReleaseLead: .8,
     openingHandoffSettle: 2.2,
     /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */
