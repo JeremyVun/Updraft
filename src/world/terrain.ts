@@ -94,7 +94,7 @@ vec3 mirrorShade(vec3 n, vec2 xz, float h) {
 
 void main() {
   if (roomHides(vWorld.xz)) discard;
-  vec4 fog = fogOf(vWorld);
+  vec4 fog = fogOf(vWorld, 1.0);
   // Fully veiled land contributes only the fog colour. Avoid its noise, field,
   // shore and lighting lookups, including in the reflection, without changing it.
   if (fog.a == 1.0) {
@@ -189,6 +189,20 @@ void main() {
   }
   alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frostAt(xz) * mix(0.42, 0.88, smoothstep(0.42, 0.66, fbm(xz * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
+  // Keep a textured pasture beyond the blade tiles. A smooth distant dome exposes their circular limit.
+  float homePasture = homeAt(xz) * grassy * far;
+  if (homePasture > 0.001) {
+    vec2 tuftUv = xz * vec2(3.6, 1.7);
+    float footprint = max(length(dFdx(tuftUv)), length(dFdy(tuftUv)));
+    float fibre = mix(vnoise(tuftUv), 0.5, smoothstep(0.8, 2.0, footprint));
+    float tip = smoothstep(0.28, 0.76, fibre);
+    vec3 tuftNormal = normalize(n * 0.55 + vec3((fibre - 0.5) * 0.6, 0.8, 0.0));
+    vec3 tuftAlbedo = mix(uGrassRoot, tint, 0.35 + tip * 0.5);
+    float tuftLight = clamp(dot(tuftNormal, uSunDir) * 0.6 + 0.4, 0.0, 1.0);
+    vec3 pasture = tuftAlbedo * (hemiLight(tuftNormal) + uSunColor * tuftLight * sun) * (0.62 + tip * 0.34)
+      + uSunColor * tint * back * 0.28 * sun;
+    col = mix(col, pasture, homePasture);
+  }
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = mix(col, fog.rgb, fog.a);
   gl_FragColor = vec4(col, 1.0);

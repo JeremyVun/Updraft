@@ -1,5 +1,13 @@
 # Journey geography
 
+## September 23: offshore approach to home
+
+Jeremy asked for a less direct approach to the jetty alongside lighter, broader haze. Mirror → Home now
+curves away from the beach before turning in, instead of running close along the coastline. Both berths
+stay fixed. The route grows from 201.9 to 206.1 units; ordinary sailing remains about 40 seconds (23 seconds
+with sustained gusts). Sampled terrain along the route stays below the hull. This supersedes the earlier
+requirement to retain every intermediate home waypoint; island placement and save migration are unchanged.
+
 ## September 22 follow-up: 30/40-second crossings
 
 Jeremy found the 57/80-second relocation too long and asked for roughly 30 seconds from the door shore

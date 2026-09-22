@@ -80,8 +80,10 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(-421, -2034), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
-    new THREE.Vector2(MIRROR_BERTH.x + 20, MIRROR_BERTH.z - 17), new THREE.Vector2(MIRROR_BERTH.x + 65, MIRROR_BERTH.z - 52),
-    new THREE.Vector2(MIRROR_BERTH.x + 110, MIRROR_BERTH.z - 71), new THREE.Vector2(MIRROR_BERTH.x + 145, MIRROR_BERTH.z - 73),
+    // Stay offshore before curving in; running along the beach cuts the hill across the fog's near edge.
+    new THREE.Vector2(MIRROR_BERTH.x + 20, MIRROR_BERTH.z + 5), new THREE.Vector2(MIRROR_BERTH.x + 70, MIRROR_BERTH.z),
+    new THREE.Vector2(MIRROR_BERTH.x + 115, MIRROR_BERTH.z - 20), new THREE.Vector2(MIRROR_BERTH.x + 145, MIRROR_BERTH.z - 47),
+    new THREE.Vector2(MIRROR_BERTH.x + 163, MIRROR_BERTH.z - 69),
     new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
   ],
   /** Previous uninterrupted passage: retained for existing toHome entry/swim saves. */
@@ -318,7 +320,7 @@ export class Journey {
         return new LittleBoatsChapter(cast);
       case 'toMeadow':
         /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: 0.9, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow' });
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: tuning.world.meadowCrossingHaze, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow' });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
@@ -353,7 +355,7 @@ export class Journey {
           // Saves from the first mirror version departed from its northern arrival shelf.
           route: cast.boat.position.x < MIRROR_BERTH.x - 30
             ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_BERTH.x + 40, MIRROR_BERTH.z + 4), ...ROUTES.toHarbour] : ROUTES.toHarbour,
-          haze: 0.92, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
+          haze: tuning.homeApproach.haze, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
           season: 0.98, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
         });
       case 'toHome':

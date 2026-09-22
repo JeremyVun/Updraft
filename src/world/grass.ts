@@ -56,7 +56,7 @@ function sleepFloorAt(x: number, z: number): number {
  * Home is the one island the pasture grass is let grow on: the last hill is lush rather than grazed, deep enough
  * to feel like the meadow again without swallowing the child. Mirrors `homeAt` in the blade shaders.
  */
-const HOME_LUSH = 0.8;
+const HOME_LUSH = tuning.homeGrass.height - 1;
 function homeAt(x: number, z: number): number {
   const d = Math.hypot((x - ISLES.home.x) / ISLES.home.rx, (z - ISLES.home.z) / ISLES.home.rz);
   return 1 - smoothstep(0.75, 1.05, d);
@@ -318,7 +318,8 @@ float densityAt(float dist) {
 float bladeDensityFor(vec2 root, float dist, float density) {
   float near = 1.0 - smoothstep(${glsl(SLEEP.swardDetailFrom)}, ${glsl(SLEEP.swardDetailTo)}, dist);
   float winter = 1.0 - smoothstep(0.72, 1.06, length((root - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})));
-  return min(1.0, density * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near));
+  float home = 1.0 - smoothstep(0.75, 1.05, length((root - vec2(${glsl(ISLES.home.x)}, ${glsl(ISLES.home.z)})) / vec2(${glsl(ISLES.home.rx)}, ${glsl(ISLES.home.rz)})));
+  return min(1.0, density * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near) * mix(1.0, ${glsl(tuning.homeGrass.density)}, home));
 }
 float bladeDensity(vec2 root, float dist) {
   return bladeDensityFor(root, dist, max(uDensity, uDensityPrevious));
@@ -573,7 +574,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(world);
+  vFog = fogOf(world, 1.0);
   vWorld = world;
   vT = t;
   vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
@@ -702,7 +703,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(world);
+  vFog = fogOf(world, 1.0);
   vWorld = world;
   vT = t;
   vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
@@ -1043,7 +1044,11 @@ export class Grass {
         if (!bounds || !this.frustum.intersectsSphere(bounds)) continue;
         /** A level can stand in for a tile only once every blade in it has thinned to that level; a finer one always can. */
         const winterDetail = sleepFloorAt(mx, mz) > 0.001 && nearest < SLEEP.swardDetailTo;
-        let li = winterDetail ? 0 : this.finest;
+        // A denser home tile may need blades omitted by the fallback quality's coarse grid.
+        const homeDetail = this.finest > 0 && tuning.homeGrass.density > 1 && (homeAt(mx, mz) > 0 ||
+          homeAt(mx - TILE / 2, mz - TILE / 2) > 0 || homeAt(mx + TILE / 2, mz - TILE / 2) > 0 ||
+          homeAt(mx - TILE / 2, mz + TILE / 2) > 0 || homeAt(mx + TILE / 2, mz + TILE / 2) > 0);
+        let li = winterDetail || homeDetail ? 0 : this.finest;
         // At quarter density the 16x16 table contains every surviving forest blade.
         // Only use it when the entire tile lies in the fully cropped interior.
         if (tuning.wood.grassDensity <= 0.25 &&

@@ -10,6 +10,7 @@ import type { ArrivalMusic } from '../audio/arrival-music';
 import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
 import { roundedWaypoint } from '../traveller/navigation';
+import { HOME_JETTY } from '../world/home-layout';
 
 /** The beach on the meadow's south shore, where the boat first comes ashore on the mainland-sized island. */
 export const LANDING = new THREE.Vector2(10, -600);
@@ -163,6 +164,8 @@ export class CrossingChapter implements Chapter {
   private swimSide = 1;
   private readonly beside = new THREE.Vector3();
   private readonly water = new THREE.Vector3();
+  private readonly homeEye = new THREE.Vector3();
+  private readonly dockEye = new THREE.Vector3();
 
   constructor(
     private readonly cast: Cast,
@@ -230,10 +233,17 @@ export class CrossingChapter implements Chapter {
   }
 
   get openSea(): number {
+    if (this.homeward) return 1;
     return this.wantsDolphins ? 1 - THREE.MathUtils.smoothstep(this.progress(), 0.76, 0.94) : 0;
   }
 
   get haze(): number {
+    if (this.homeward) {
+      const k = tuning.homeApproach, shore = this.route[this.route.length - 1], boat = this.cast.boat.position;
+      const gap = Math.hypot(boat.x - shore.x, boat.z - shore.y);
+      return THREE.MathUtils.lerp(k.dockHaze, this.departureHaze,
+        THREE.MathUtils.smootherstep(gap, k.clearAt, k.clearFrom));
+    }
     const arrival = this.arrivalHaze;
     if (!arrival) return this.departureHaze;
     const shore = this.route[this.route.length - 1], boat = this.cast.boat.position;
@@ -242,6 +252,10 @@ export class CrossingChapter implements Chapter {
     const released = this.lookBack
       ? THREE.MathUtils.smootherstep(this.time, this.farewellFor, this.farewellFor + SWING) : 1;
     return THREE.MathUtils.lerp(this.departureHaze, arrival.strength, approach * released);
+  }
+
+  get hazeFalloff(): number {
+    return this.homeward ? tuning.homeApproach.falloff : 1;
   }
 
   get done(): boolean {
@@ -501,11 +515,36 @@ export class CrossingChapter implements Chapter {
     return THREE.MathUtils.clamp((completed + Math.max(0, this.spans[this.leg] - remaining)) / Math.max(1, this.routeLength), 0, 1);
   }
 
+  /** The mirror gives way to a low view across the boat, then the same seaward quarter used on the planks. */
+  private frameHomeward(progress: number): void {
+    const k = tuning.homeApproach, s = this.shot, boat = this.cast.boat.position;
+    const child = this.cast.child.position, berth = this.route[this.route.length - 1];
+    const gap = Math.hypot(boat.x - berth.x, boat.z - berth.y);
+    const settle = 1 - THREE.MathUtils.smootherstep(gap, k.dockAt, k.dockFrom);
+    const discover = THREE.MathUtils.smootherstep(progress, k.turnFrom, k.turnTo);
+    const bearing = THREE.MathUtils.lerp(k.departureBearing, Math.atan2(k.dockEyeX, k.dockEyeZ), discover);
+    const notice = 1 - THREE.MathUtils.smootherstep(gap, k.noticeAt, k.noticeFrom);
+    const lead = Math.min(k.lookAhead, gap * k.lookShare) * notice * (1 - settle);
+    s.target.set(child.x + (berth.x - boat.x) / Math.max(gap, 1) * lead,
+      THREE.MathUtils.lerp(child.y + 1.15, HOME_JETTY.deck + 1.1, settle),
+      child.z + (berth.y - boat.z) / Math.max(gap, 1) * lead);
+    this.homeEye.set(boat.x + Math.sin(bearing) * k.distance, boat.y + k.height,
+      boat.z + Math.cos(bearing) * k.distance);
+    this.dockEye.set(HOME_JETTY.x + k.dockEyeX, k.dockEyeY, HOME_JETTY.endZ + k.dockEyeZ);
+    this.homeEye.lerp(this.dockEye, settle);
+    s.eye = this.homeEye;
+    s.orbit = true;
+    s.distance = k.distance;
+    s.height = k.height;
+    this.pace = k.response;
+  }
+
   /** Behind the sail, looking the way they are going; swung round to face what they are leaving, during a farewell. */
   private frame(back: THREE.Vector3 | null): void {
     const { boat } = this.cast;
     const k = tuning.crossingCamera;
     this.shot.eye = undefined;
+    this.shot.orbit = undefined;
     this.shot.attention = undefined;
     this.shot.smoothFit = undefined;
     this.sailingSubjects.primary.copy(this.cast.child.position).y += 1.2;
@@ -586,6 +625,8 @@ export class CrossingChapter implements Chapter {
         this.pace = 0.7;
       }
     }
+
+    if (this.homeward) this.frameHomeward(progress);
 
     // Turn the lens toward the encounter without translating the eye by the same amount.
     // Retain its last boat-relative position for the release; diving must not snap the focus home.

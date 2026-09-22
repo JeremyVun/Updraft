@@ -496,7 +496,7 @@ let heightParity = 0;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
-const shown = { dusk: NaN, haze: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN };
+const shown = { dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN };
 function ease(from: number, to: number, rate: number, dt: number): number {
   return Number.isNaN(from) ? to : from + (to - from) * (1 - Math.exp(-dt * rate));
 }
@@ -640,6 +640,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const overLand = THREE.MathUtils.smoothstep(heightAt(story.focus.x, story.focus.z), -1.5, 2.5);
   shown.dusk = dusk;
   shown.haze = haze;
+  shown.hazeFalloff = ease(shown.hazeFalloff, story.current.hazeFalloff ?? 1, 0.6, dt);
   shown.shower = shower;
   shown.storm = squall;
   const flat = story.current.trodden ?? null;
@@ -663,6 +664,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   water.skyMirrorAppearance = ease(water.skyMirrorAppearance, story.current.mirrorArrival ?? (story.name === 'home' ? 0 : 1), 1.2, dt);
   if (story.name === 'home' && water.skyMirrorAppearance < 0.001) water.skyMirrorAppearance = 0;
   atmo.uniforms.uOpenSea.value = ease(atmo.uniforms.uOpenSea.value, story.current.openSea ?? 0, 0.7, dt);
+  atmo.uniforms.uHomeHaze.value = ease(atmo.uniforms.uHomeHaze.value,
+    story.name === 'toHarbour' ? 1 : story.name === 'home' ? story.current.openSea ?? 0 : 0, 0.7, dt);
   // Keep the meadow's own hills clear while concealing every shore beyond it, including in the sea's mirror.
   // On departure the next room emerges gradually; direct chapter starts get the complete veil on frame one.
   const islandVeil = story.name === 'meadow' ? 1 : 0;
@@ -673,7 +676,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(
     THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),
-    THREE.MathUtils.lerp(0.002 + 0.03 * seen, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
+    THREE.MathUtils.lerp((0.002 + 0.03 * seen) * shown.hazeFalloff, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
   );
   post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
   surfUniforms.uSeaState.value = story.breeze;

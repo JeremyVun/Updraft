@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { HOME_JETTY } from '../story/home';
-import { glsl } from '../tuning';
+import { HOME_JETTY } from './home-layout';
+import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { mulberry32, smoothstep } from './noise';
@@ -91,9 +91,13 @@ void main() {
   float sun = cloudShadow(vWorld.xz);
   vec3 col = alb * (hemiLight(n) + uSunColor * mix(ndl, wrap, 0.3) * sun);
   /** Kept under the cottage windows: the light the child is walking toward is the one that should carry. */
-  vec3 lamp = vec3(1.0, 0.62, 0.28) * (0.3 + 3.1 * uNight);
+  vec3 lamp = vec3(1.0, 0.62, 0.28) * mix(${glsl(tuning.homeApproach.lanternDay)}, ${glsl(tuning.homeApproach.lanternNight)}, uNight);
   col = mix(col, lamp, vGlow);
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  vec4 fog = fogOf(vWorld);
+  // A small warm point precedes the timber; the room's initial concealment still covers both together.
+  float lantern = exp(-length(vWorld - cameraPosition) / ${glsl(tuning.homeApproach.lanternReach)}) * (1.0 - journeyVeilAt(vWorld));
+  fog.a = mix(fog.a, min(fog.a, 1.0 - lantern), vGlow);
+  gl_FragColor = vec4(mix(col, fog.rgb, fog.a), 1.0);
 }`;
 
 const SHADE_VERT = /* glsl */ `
@@ -281,8 +285,7 @@ function bollard(x: number, z: number): Part[] {
 }
 
 /**
- * The lantern on the tall post. It is out at dawn, as it has been all the way up the bay; at night the same glass
- * takes the light the cottage windows take, so the last thing standing out in the water is lit.
+ * The waiting lantern stays softly lit through the return of daylight; the post and planks emerge around it.
  */
 function lampPost(x: number, z: number): Part[] {
   const out: Part[] = [];

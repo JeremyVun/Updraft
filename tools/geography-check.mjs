@@ -104,13 +104,20 @@ for (const geography of [undefined,1]) {
  assert(worldHeight(p.boat[0],p.boat[1])<-.3,'old swim resumes in open water');
  assert.equal(p.data[1],84,'keeps completed swim story time');
 }
-// Translating both islands must preserve every relative waypoint of the final passage.
-const priorHomeRoute=[[-310,-2250],[-265,-2285],[-220,-2304],[-185,-2306],[-150.3,-2306.25]];
-ROUTES.toHarbour.forEach((p,i)=>{
- assert(Math.abs(p.x-SEA_SHORTENING.x-priorHomeRoute[i][0])<1e-6);
- assert(Math.abs(p.y-SEA_SHORTENING.z-priorHomeRoute[i][1])<1e-6);
-});
-console.log('Revision 1 saves, open-sea resumes and unchanged relative home route passed.');
+// The offshore curve changes the passage, while the relocated berth and safe water stay fixed.
+const homeEnd=ROUTES.toHarbour.at(-1);
+assert(Math.abs(homeEnd.x-SEA_SHORTENING.x-(-150.3))<1e-6);
+assert(Math.abs(homeEnd.y-SEA_SHORTENING.z-(-2306.25))<1e-6);
+let homeFrom=new THREE.Vector2(MIRROR_BERTH.x,MIRROR_BERTH.z);
+for(const point of ROUTES.toHarbour) {
+ const span=point.distanceTo(homeFrom);
+ for(let d=0;d<=span;d+=1) {
+  const p=homeFrom.clone().lerp(point,d/span);
+  assert(worldHeight(p.x,p.y)<-.3,'homeward curve stays in navigable water');
+ }
+ homeFrom=point;
+}
+console.log('Revision 1 saves, open-sea resumes, home berth and offshore route clearance passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
 for(const geography of [undefined,1,2,3,4,5,-1,1.5,'1']) {

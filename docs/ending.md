@@ -4,6 +4,29 @@ The summit, the fledging, the drawing, the red door and the credits. Read after 
 the end of the game. `docs/journey.md` holds the vision this serves; this file holds Jeremy's brief for the polish
 pass and the plan that answers it.
 
+## Sky mirror to home (2026-09-23)
+
+Jeremy asked for a more considered arrival before the ending, then found the close-up haze too strong and
+the divide between clear shoreline and obscured hillside too obvious. The boat now curves offshore before
+turning into the jetty, keeping more water between it and the beach. The passage remains about 40 seconds.
+A low camera arcs toward the jetty's seaward quarter; its lantern stays softly lit as daylight returns.
+Shared distance haze is lighter and spreads over nearly three times the usual depth. It eases between
+150 and 45 metres from the berth, leaving the nearby beach and grass clear. The remaining mist clears as
+the child walks the first 24 metres of the jetty. The climb, cottage reveal and ending score retain their
+existing timing.
+
+The lighter distance haze alone still left an oval of visible grass, which Jeremy rejected. A fog-disabled
+capture exposed the same outline at the end of the blade draw range. Home's distant terrain now carries
+filtered tuft shading using the grass palette, instead of becoming a smooth dome. During the approach,
+terrain and blades share a landscape fog depth derived from the jetty distance; the whole hill clears
+together. This applies only to Home's landscape, preserving the foreground boat, child and ordinary fog
+elsewhere. The profile eases back to normal during the jetty walk.
+
+`tools/home-approach-browser-check.mjs` runs the completed mirror departure through the real crossing,
+docking and shore approach on desktop and phone, captures each stage, and checks framing, continuous
+camera turns and haze clearing. `tools/crossing-haze-check.mjs` covers the distance transitions and summit
+light; `tools/crossing-camera-check.mjs` covers ordinary routes and gusts.
+
 ## Jeremy's brief (2026-09-18, verbatim)
 
 > "Your task is to tidy up the ending of the game (the summit arena). I think the ending at the summit is beautiful

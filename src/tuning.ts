@@ -101,6 +101,24 @@ export const tuning = {
     /** The low sun sits to the left of the cottage, as it does on the unfolded drawing. */
     sunAzimuth: 52, sunElevation: 3.5,
   },
+  homeApproach: {
+    /** Broad, light distance haze offshore; clear the shore early, then ease out during the jetty walk. */
+    haze: 1.04, falloff: 0.35, dockHaze: 0.96, clearFrom: 150, clearAt: 45, clearHaze: 0.5, clearBy: 24,
+    /** A shared optical depth lets the whole home hillside emerge together. */
+    landDepth: 40,
+    /** A low seaward arc discovers the landing, then settles on the existing docking view. */
+    departureBearing: -1.12, turnFrom: 0.42, turnTo: 0.96,
+    distance: 23, height: 3.4, lookAhead: 8, lookShare: 0.2, noticeFrom: 140, noticeAt: 40, response: 0.5,
+    dockFrom: 32, dockAt: 3, dockEyeX: 16, dockEyeY: 3.8, dockEyeZ: 14,
+    /** The small waiting lantern stays warm through the returning daylight. */
+    lanternDay: 1.6, lanternNight: 3.4, lanternReach: 70,
+  },
+  homeGrass: {
+    /** Retain more blades on home when quality thins the grass; capped at the full population. */
+    density: 1.0,
+    /** Pasture-height multiplier for the home island. */
+    height: 2.16,
+  },
   homeReveal: {
     /** A slight angle keeps the real cottage natural while echoing the drawing's front. */
     cottageTurn: -0.12,
@@ -366,6 +384,8 @@ export const tuning = {
     /** Metres from the arrival berth over which the stronger haze develops as the farewell camera releases. */
     linesHazeFrom: 330,
     linesHazeTo: 270,
+    /** Soften the meadow's bare distant bank while preserving the nearby Little Boats departure. */
+    meadowCrossingHaze: 0.98,
     /** North to south length of the meadow. It was sculpted 600 long and is shown as a scale model of that. */
     meadowLength: 400,
     /** Offshore veil in multiples of the meadow's coastline radii; opaque before the neighbouring islands. */

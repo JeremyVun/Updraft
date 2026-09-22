@@ -80,6 +80,8 @@ export interface Chapter {
   readonly shower?: number;
   /** Haze thick enough to hide what is ahead, 0 to 1. */
   readonly haze?: number;
+  /** Distance-haze density multiplier; lower values spread the veil over a longer depth. */
+  readonly hazeFalloff?: number;
   /** At open sea, distant land dissolves into the sky without leaving a tinted silhouette. */
   readonly openSea?: number;
   readonly mirrorArrival?: number;

@@ -5,6 +5,8 @@ import { params } from '../params';
 import { glsl, tuning } from '../tuning';
 import { WINDOW, onWindowMove } from './window';
 import { MUSIC_GROWTH_GLSL } from './music-growth';
+import { ISLES } from './heightfield';
+import { HOME_JETTY } from './home-layout';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
 export const LIVING_BEYOND = -150;
@@ -82,6 +84,7 @@ export const atmo = {
     uVeil: { value: new THREE.Vector2(1e5, 0) },
     /** Offshore fog converges to the sky itself, then releases on the approach to home. */
     uOpenSea: { value: 0 },
+    uHomeHaze: { value: 0 },
     /** An island's offshore veil is anchored to its coast, so looking from a hill cannot expose the next room. */
     uIslandVeil: { value: new THREE.Vector4(0, 0, 1, 1) },
     uIslandVeilAmount: { value: 0 },
@@ -207,6 +210,7 @@ uniform float uShower;
 uniform float uMist;
 uniform vec2 uVeil;
 uniform float uOpenSea;
+uniform float uHomeHaze;
 uniform vec4 uIslandVeil;
 uniform float uIslandVeilAmount;
 uniform vec3 uRoom;
@@ -464,14 +468,21 @@ float journeyVeilAt(vec3 wpos) {
 }
 
 /** rgb: haze colour toward this point, a: how much haze covers it. Cheap enough to evaluate per vertex. */
-vec4 fogOf(vec3 wpos) {
+vec4 fogOf(vec3 wpos, float landscape) {
   vec3 rd = wpos - cameraPosition;
   float dist = length(rd);
   rd /= dist;
+  // The home hillside clears as one landscape, not where a sphere around the camera cuts its slope.
+  float fogDistance = dist;
+  if (uHomeHaze * landscape > 0.0) {
+    float homeRegion = 1.0 - smoothstep(1.25, 1.65, length((wpos.xz - vec2(${glsl(ISLES.home.x)}, ${glsl(ISLES.home.z)})) / vec2(${glsl(ISLES.home.rx)}, ${glsl(ISLES.home.rz)})));
+    float homeDistance = distance(cameraPosition.xz, vec2(${glsl(HOME_JETTY.x)}, ${glsl(HOME_JETTY.endZ)})) + ${glsl(tuning.homeApproach.landDepth)};
+    fogDistance = mix(dist, homeDistance, homeRegion * uHomeHaze);
+  }
   float heightFactor = exp(-max(wpos.y, 0.0) * 0.06);
   float mist = uMist * exp(-max(min(wpos.y, cameraPosition.y), 0.0) * 0.22);
-  float veil = max(0.0, dist - uVeil.x) * uVeil.y;
-  float amt = 1.0 - exp(-dist * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
+  float veil = max(0.0, fogDistance - uVeil.x) * uVeil.y;
+  float amt = 1.0 - exp(-fogDistance * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
   // Ordinary haze has its own tint. Far offshore that tint must not reveal the outline of an island.
   if (uOpenSea > 0.001 && veil > 0.0) {
@@ -516,6 +527,10 @@ vec4 fogOf(vec3 wpos) {
     amt = mix(amt, 1.0, arriving);
   }
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
+}
+
+vec4 fogOf(vec3 wpos) {
+  return fogOf(wpos, 0.0);
 }
 
 vec3 applyFog(vec3 col, vec3 wpos) {

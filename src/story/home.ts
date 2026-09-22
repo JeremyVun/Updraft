@@ -1,4 +1,5 @@
-import { HOME_SHIFT } from '../world/geography';
+import { HOME_JETTY } from '../world/home-layout';
+export { HOME_JETTY, HOME_MOORING } from '../world/home-layout';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { SummitScorePhase } from '../audio/summit-score';
@@ -131,13 +132,6 @@ const MOON_OFF = THREE.MathUtils.degToRad(19);
 const SEA_PITCH = THREE.MathUtils.degToRad(1);
 const SEA_LOOK = 100;
 
-/**
- * The jetty on the south beach: out from the shore over the water, with a deck the child walks in along. The one
- * arrival in the journey that has somewhere built for it, which is how you know it is home.
- */
-export const HOME_JETTY = { x: -45 + HOME_SHIFT.x, shoreZ: -1954 + HOME_SHIFT.z, endZ: -1927 + HOME_SHIFT.z, halfWidth: 1.2, deck: 0.7 } as const;
-/** Where the boat comes alongside the end of it and lies, bow to the east. */
-export const HOME_MOORING = { x: -45.3 + HOME_SHIFT.x, z: -1926.25 + HOME_SHIFT.z, yaw: Math.PI / 2 } as const;
 const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
 /** The top of the last hill, where the small one is put down. The cottage is still hidden behind the brow from here. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
@@ -169,7 +163,16 @@ export class HomeChapter implements Chapter {
   readonly breeze = 1;
   readonly worldLife = 1;
   pace = 0.35;
-  readonly haze = 0.5;
+  get haze(): number {
+    return THREE.MathUtils.lerp(tuning.homeApproach.clearHaze, tuning.homeApproach.dockHaze, this.openSea);
+  }
+  get openSea(): number {
+    const walked = HOME_JETTY.endZ - this.cast.child.position.z;
+    return 1 - THREE.MathUtils.smootherstep(walked, 0, tuning.homeApproach.clearBy);
+  }
+  get hazeFalloff(): number {
+    return THREE.MathUtils.lerp(1, tuning.homeApproach.falloff, this.openSea);
+  }
   dusk = tuning.homeLight.daylight;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly music = 'home' as const;
@@ -1116,7 +1119,8 @@ export class HomeChapter implements Chapter {
        * the boat lying against the end, the length of the planks and the child walking in all in the one frame,
        * and the hill they are about to go up behind them. It hands over to the climb as they reach the sand.
        */
-      s.eye = this.eyeAt.set(HOME_JETTY.x + 16, 3.4, HOME_JETTY.endZ + 10);
+      const arrival = tuning.homeApproach;
+      s.eye = this.eyeAt.set(HOME_JETTY.x + arrival.dockEyeX, arrival.dockEyeY, HOME_JETTY.endZ + arrival.dockEyeZ);
       s.target.set(c.x, HOME_JETTY.deck + 1.1, c.z);
       this.pace = 0.5;
       this.focus.copy(c);
