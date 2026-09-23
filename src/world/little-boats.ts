@@ -499,7 +499,10 @@ export class LittleBoats {
         if (t === hero) t.speed = Math.min(t.speed, Math.max(0, heroEnd - t.s) / dt);
         for (let j = i + 1; j < this.fleet.length; j++) {
           const ahead = this.fleet[j], need = this.spacing(t, t.s, ahead, ahead.previousS);
-          if (need > 0) t.speed = Math.min(t.speed, Math.max(0, ahead.speed + (ahead.previousS - t.s - need - k.berth) / k.followEase));
+          if (need <= 0) continue;
+          // Offshore the spacing grows into the turn; allow for that growth before the hulls meet.
+          const growth = Math.max(0, this.spacing(t, t.s + t.speed * dt, ahead, ahead.s) - need) / dt;
+          t.speed = Math.min(t.speed, Math.max(0, ahead.speed - growth + (ahead.previousS - t.s - need - k.berth) / k.followEase));
         }
         t.s = Math.max(t.s, Math.min(t === hero ? heroEnd : k.offshoreEnd, t.s + t.speed * dt));
       }
@@ -543,11 +546,12 @@ export class LittleBoats {
     );
   }
 
-  /** Course distance two hulls keep: none when their lanes pass clear of each other. */
+  /** Course distance two hulls keep: none when their lanes pass clear of each other, more where the offshore turn compresses travel. */
   private spacing(a: Toy, sa: number, b: Toy, sb: number): number {
     const k = tuning.littleBoats;
     const apart = Math.abs(this.laneAt(a, sa) - this.laneAt(b, sb));
-    return k.hullSpacing * (1 - THREE.MathUtils.smoothstep(apart, k.passFrom, k.passClear));
+    const turn = 1 + k.turnRoom * THREE.MathUtils.smoothstep((sa + sb) / 2, 104, 113);
+    return k.hullSpacing * turn * (1 - THREE.MathUtils.smoothstep(apart, k.passFrom, k.passClear));
   }
 
   private pose(time: number): void {

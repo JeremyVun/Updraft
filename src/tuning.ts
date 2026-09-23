@@ -222,13 +222,13 @@ export const tuning = {
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
     /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */
     carryAhead: 0, carryAheadEnd: 6,
-    /** Course spacing leaves hull room even where the offshore turn compresses travel. */
-    hullSpacing: 3.4,
+    /** Course spacing between toys in one lane, and the share more they keep through the offshore turn, which compresses travel. */
+    hullSpacing: 3.4, turnRoom: 0.3,
     /**
      * The other toys sail either side of the child's centre lane, never nearer to it than `outletLane` even in the
      * narrow outlet. Hulls this far apart across the stream begin to pass, and pass freely at the second.
      */
-    sideLane: 1.55, outletLane: 1.5, passFrom: 1.1, passClear: 1.4,
+    sideLane: 1.75, outletLane: 1.6, passFrom: 1.2, passClear: 1.5,
     /** A hull this close behind a toy it cannot pass hands its own gust on to it; carried along, it keeps this much water spare. */
     nudge: 0.8, berth: 0.3,
     brushSpeed: 1.5, brushRadius: 0.085, brushWindRadius: 3.5, brushEnergyScale: 22,

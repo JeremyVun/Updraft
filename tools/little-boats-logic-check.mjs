@@ -391,15 +391,20 @@ console.log('Every sail responds independently; whole fleet clears the shore and
 
 // Reproduce repeated strokes over the rearmost sail. Check rendered hull centres,
 // not just course coordinates: the outlet bend compresses distance along the course.
+// Toys in clear lanes may sail abreast, so measure along and across their heading: two
+// hulls about 1.8 long and 1 wide stay apart outside this ellipse around each other.
 function hullClearance(room, label) {
   const visible = room.toys.filter((t) => t.group.visible);
   let closest = Infinity;
   for (let i = 0; i < visible.length; i++) {
     for (let j = i + 1; j < visible.length; j++) {
       const a = visible[i].group.position, b = visible[j].group.position;
-      const distance = Math.hypot(a.x - b.x, a.z - b.z);
-      closest = Math.min(closest, distance);
-      assert(distance > 1.9, `${label}: hulls overlap (${distance}), s=${visible[i].s},${visible[j].s}`);
+      const yaw = (visible[i].group.rotation.y + visible[j].group.rotation.y) / 2;
+      const along = Math.abs((b.x - a.x) * Math.sin(yaw) + (b.z - a.z) * Math.cos(yaw));
+      const across = Math.abs((b.x - a.x) * Math.cos(yaw) - (b.z - a.z) * Math.sin(yaw));
+      const clearance = Math.hypot(along / 1.9, across / 1.1);
+      closest = Math.min(closest, clearance);
+      assert(clearance > 1, `${label}: hulls overlap (along ${along}, across ${across}), s=${visible[i].s},${visible[j].s}`);
     }
   }
   return closest;
