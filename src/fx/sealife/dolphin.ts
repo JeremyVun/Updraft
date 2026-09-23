@@ -931,7 +931,7 @@ export class Dolphins {
         d.offAlong += tune.porpoiseBurst * dt;
       }
       const veer = d.burst > 0 ? p.sideAt * tune.porpoiseVeer : 0;
-      d.veer += THREE.MathUtils.clamp(veer - d.veer, -2 * dt, 2 * dt);
+      d.veer += THREE.MathUtils.clamp(veer - d.veer, -tune.porpoiseVeerRate * dt, tune.porpoiseVeerRate * dt);
       const lane = p.along + d.dAlong + this.lead;
       d.wantAlong = s ? s.along : lane + d.offAlong;
       d.wantAcross = s ? s.across : this.wide(d, lane) + d.offAcross + d.veer;
@@ -1512,14 +1512,13 @@ export class Dolphins {
     const k = tuning.dolphins;
     /**
      * A porpoise is run at, ahead of its lane and out from the boat, so the arc is long and low and seen from the
-     * side; one already busy with a set-piece only flies if it has the pace, since a thrown arc without pace is a nod.
+     * side. One on a set-piece only breathes: its run-up lies along the camera's line, where a thrown arc reads end-on.
      */
-    const spurt = this.stunt?.d !== d;
-    const porpoise = surging && Math.random() < k.leapChance && (spurt || d.pace >= k.porpoisePace);
+    const porpoise = surging && this.stunt?.d !== d && Math.random() < k.leapChance;
     d.kind = porpoise ? 'porpoise' : 'breath';
     const slope = (porpoise ? k.porpoiseSlope : k.breathSlope) * rand(0.85, 1.15);
-    if (porpoise && spurt) d.burst = k.porpoiseBurstFor;
-    return Math.min((d.pace + (porpoise && spurt ? k.porpoiseBurst : 0)) * slope, porpoise ? k.porpoiseMost : k.breathMost);
+    if (porpoise) d.burst = k.porpoiseBurstFor;
+    return Math.min((d.pace + (porpoise ? k.porpoiseBurst : 0)) * slope, porpoise ? k.porpoiseMost : k.breathMost);
   }
 
   /**

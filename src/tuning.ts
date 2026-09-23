@@ -998,7 +998,7 @@ export const tuning = {
     /** Quiet swimming between breaths, with only occasional low porpoises. */
     breathLeast: 3.5,
     breathSpread: 5.5,
-    leapChance: 0.18,
+    leapChance: 0.3,
     /**
      * Slopes a throw leaves the water at, rise over run, and the most either is in units a second: a breath rolls the
      * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
@@ -1009,12 +1009,14 @@ export const tuning = {
     porpoiseMost: 3.2,
     /** Seconds a breath takes rolling through the surface: it is a swimmer's undulation, never a thrown arc. */
     breathFor: 1.1,
-    /** The spurt a porpoise runs on, in units a second over its lane, for how long, and how far it veers out from the boat. */
+    /**
+     * The spurt a porpoise runs on, in units a second over its lane, for how long, and how far out from the boat it
+     * veers on it and how fast: the veer is what shows the arc from the side to a camera astern.
+     */
     porpoiseBurst: 3,
     porpoiseBurstFor: 1.4,
-    porpoiseVeer: 2.5,
-    /** The least pace a porpoise is thrown from without a spurt: below it the arc would be a short nod, so it breathes instead. */
-    porpoisePace: 5,
+    porpoiseVeer: 4,
+    porpoiseVeerRate: 4,
     /**
      * How a dolphin swims after its station: its fastest and slowest through the water, in units a second, how hard
      * it accelerates, in units a second a second, its tightest turn, in radians a second, and how closely it chases the
