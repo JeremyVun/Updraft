@@ -64,7 +64,7 @@ const alone = Object.fromEntries(names.map(room => [room, [room]])) as Record<Ro
 export function visibleRooms(chapter: ChapterName, z: number): readonly Room[] {
   if (chapter === 'stage') return STAGE;
   if (chapter === 'drowned') return z > ISLES.drowned.z ? DROWNED_FROM_BIRCHES : DROWNED_TO_WOOD;
-  return passages[chapter] ?? alone[chapter as Room];
+  return passages[chapter] ?? alone[chapter as Room] ?? [chapter as Room];
 }
 export function setJourneyRooms(rooms: Room[]): void {
   journeyRooms.value.set(rooms[0] ? names.indexOf(rooms[0]) : -2, rooms[1] ? names.indexOf(rooms[1]) : -2);

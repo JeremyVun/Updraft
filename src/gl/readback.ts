@@ -22,7 +22,6 @@ const DEPTH = Math.min(MAX_DEPTH, Math.max(1, Number(query.get('depth') ?? 2)));
  * display pipeline normally runs. It never goes further: nothing is ever mapped while the GPU is further behind.
  */
 const STALE_MS = Number(query.get('stale') ?? 100);
-const PBO = query.get('pbo') ?? 'copy';
 let frameGl: WebGL2RenderingContext | null = null;
 let lastDelivery = 0;
 
@@ -64,7 +63,10 @@ export class Readback<T> {
     for (let i = 0; i < inFlight; i++) {
       const buffer = gl.createBuffer()!;
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
-      gl.bufferData(gl.PIXEL_PACK_BUFFER, this.data.byteLength, PBO === 'copy' ? gl.STREAM_COPY : gl.STREAM_READ);
+      // Not a READ usage: Chrome shadows READ buffers into shared memory on every fence, a copy WebGL's
+      // getBufferSubData never reads, and warns each time a pooled one is refilled. ANGLE's Metal backend
+      // keeps STATIC_COPY buffers CPU-visible, as it does READ ones.
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, this.data.byteLength, gl.STATIC_COPY);
       this.free.push(buffer);
     }
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
@@ -85,7 +87,6 @@ export class Readback<T> {
     const prev = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(target);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
-    if (PBO === 'orphan') gl.bufferData(gl.PIXEL_PACK_BUFFER, this.data.byteLength, gl.STREAM_READ);
     gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.FLOAT, 0);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     this.renderer.setRenderTarget(prev);

@@ -117,11 +117,26 @@ separate. Surface lighting and Sleeping fog share the morning-lane function in `
 
 ## Readbacks (`src/gl/readback.ts`)
 
-The wind field, the life field and the height bake are read back to the CPU for gameplay. In Chrome, mapping a read buffer blocks until the GPU process has executed every command issued before the map, so a readback issued and mapped mid-frame stalls for the whole frame's rendering, and a GPU-bound frame turns into a CPU stall too (that was the original stutter: 60-140 ms every few frames).
+The wind field, the life field and the height bake are read back to the CPU for gameplay. In Chrome, WebGL's
+`getBufferSubData` is always a synchronous round trip: the page waits until the GPU process has worked through
+every command submitted before it. A readback issued and mapped mid-frame therefore stalls for the whole frame's
+rendering, and a GPU-bound frame turns into a CPU stall too (the original stutter: 60-140 ms every few frames).
 
-`Readback` therefore never waits: `request` copies the target into a fresh pixel buffer and fences it; `pollReadbacks` maps only buffers whose fence has signalled, and only when the fence of the frame before last has signalled as well (the display pipeline is normally two frames deep), so the map is a memcpy. A fresh buffer per request matters: the driver keeps a CPU shadow of a fenced read buffer, and reusing the buffer discards it and turns the read into a blocking GPU copy.
+`Readback` therefore maps only at the start of a frame, before anything new is submitted, and only buffers whose
+own fence has signalled, while the GPU has also finished the frame before last. After 100 ms without a delivery
+the gate relaxes to the frame before that, the deepest the display pipeline normally runs; it never goes further.
+There is no forced delivery: the old escape hatch mapped anyway after two seconds and could block for 60–90 ms
+under a saturated GPU. Each consumer allocates its in-flight pixel buffers once (`STATIC_COPY`: Chrome shadows
+READ-usage buffers into shared memory on every fence, a copy WebGL never reads, and warns whenever a pooled one is
+refilled; ANGLE's Metal backend keeps `STATIC_COPY` CPU-visible like READ) and reuses them after delivery.
 
-If the GPU stays behind (a saturated device, or another process on the GPU), the gate would starve the CPU copies. So one blocking delivery is accepted anyway now and then: a quarter second after a cheap one, two seconds after one that blocked for more than 6 ms, whatever the frame rate. The CPU wind copy is then up to a few frames older than usual, which the consumers tolerate, and the quality governor is stepping the load down meanwhile. `__stats.readbacksSkipped / readbacksForced / readbacksDelivered / readbackWorstMs` show what happened.
+Older data stays correct. The wind and life copies carry the window they were read in and are sampled in world
+space through it, so an old copy is late, never misplaced. The height copy is installed only if it belongs to the
+window last baked (and is re-requested until one lands); `heightAt` falls back to the exact procedural terrain
+outside whatever grid it has. The quality governor is meanwhile taking the load off the GPU.
+`__stats.readbacksSkipped / readbacksDelivered / readbackWorstMs` show what happened; `readbackWaitMs` and
+`readbackWaitWorstMs` time the round trips alone, and `readbackWindWorstMs / readbackLifeWorstMs /
+readbackHeightWorstMs` each consumer's handler. `?depth=1|2|3` and `?stale=<ms>` change the gate for comparison.
 
 ## Quality governor (`src/gl/quality.ts`)
 
