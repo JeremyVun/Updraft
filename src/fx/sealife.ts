@@ -49,10 +49,11 @@ export class SeaLife {
 
   /**
    * Keeps a pod of dolphins running with a boat at `near` on bearing `heading`; null sends them away. `camera` is
-   * which side of the stern the camera rides on, so their set-pieces play on screen, and `busy` holds those off.
+   * which side of the stern the camera rides on, so their set-pieces play on screen; `busy` holds those off, and
+   * none begins until `ready`.
    */
-  dolphinsWith(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false): void {
-    this.pod.run(near, heading, camera, busy);
+  dolphinsWith(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false, ready = true): void {
+    this.pod.run(near, heading, camera, busy, ready);
   }
 
   /** What to do when a dolphin shoulders the boat: the story hands the shove to the hull. */

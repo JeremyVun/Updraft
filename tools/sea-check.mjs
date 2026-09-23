@@ -38,7 +38,7 @@ const steps = [
   wait('__game.story.current.time>24'), { shot: 'open-water' },
   wait("['restless','side','in'].includes(__game.story.current.swim)", 90), { shot: 'curious' },
   wait("__game.story.current.swim==='in' && __game.story.current.swimT>4"), { shot: 'swim' },
-  wait("__game.story.current.swim==='in' && __game.story.current.swimT>17"), { shot: 'alongside' },
+  wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"), { shot: 'alongside' },
   wait("['drying','done'].includes(__game.story.current.swim)"), { shot: 'return' },
   wait("__game.story.current.swim==='done'"), { shot: 'together' },
   { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>3.5)throw Error(JSON.stringify(s));return s;})()` },

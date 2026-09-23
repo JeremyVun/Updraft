@@ -47,7 +47,7 @@ const results=[];
 for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
   const {chapter:c,wind,boat:b,child,cygnet:k,carry,rig,sealife}=fixture(gust,portrait);
   const air={x:0,z:0,energy:0,lift:0};
-  let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,completed=false,lastProgress=0;
+  let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
   const transitions=[];
   let last='';
   for(let i=0;i<fps*420;i++) {
@@ -66,6 +66,7 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
     // Turning a corner can briefly move away from the waypoint; progress must never leap by a whole leg.
     const progress=c.progress();assert(Math.abs(progress-lastProgress)<0.05,'distance progress jumped');lastProgress=progress;
     const act=sealife.pod.stunt;
+    if(act?.kind==='leap'&&act.phase==='act'&&!leapAt)leapAt=time;
     if(act?.kind==='leap'&&act.phase==='act'&&act.d.y>0) {
       const d=act.d;
       for(const along of [0,-tuning.dolphins.length*d.size]) {
@@ -86,7 +87,7 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
   assert(swimFrames>=fps*(tuning.seaPassage.swimFor-3)-1,'keeps the authored swim after its entry');assert(worstGap<3.5,`bird fell behind ${worstGap}`);
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
-  assert(swimStart>30,'the pod has time to arrive and play before the swim');
+  assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');
 }
 // An old swim checkpoint in the coastal channel should continue to the jetty, never return offshore.
 {

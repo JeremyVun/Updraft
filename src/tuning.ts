@@ -936,18 +936,37 @@ export const tuning = {
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    swimSpeed: 1.5,
-    /** A shorter swim leaves room for the leap, nudge, dive and mirror fade within 100 seconds. */
-    swimFor: 14,
-    swimAnticipation: 3,
-    swimDecision: 4,
-    swimAt: 0.30,
+    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
+    swimSpeed: 5,
+    /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
+    swimCarry: 0.75,
+    swimEase: 0.5,
+    swimFor: 12,
+    swimAnticipation: 2,
+    swimDecision: 3,
+    swimAt: 0.2,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
-    swimNotBefore: 25,
-    dolphinsAfter: 10,
+    swimNotBefore: 18,
+    dolphinsAfter: 5,
     waypointRadius: 10,
-    encounterHoldAt: 0.60,
-    encounterSpeed: 1.5,
+    /**
+     * How far along the route the first leap may begin: the sleeping island's night lifts only once it is well
+     * astern (its palette clears 110 to 150 units from the hollow), and the leap belongs to the first light.
+     */
+    leapFrom: 0.28,
+    /**
+     * Where along the route the pod says goodbye, and about how long its play takes from `leapFrom`: the leap, the
+     * swim and the nudge. A boat ahead of that is eased toward it, never below `leastSpeed`. Only a pod still
+     * playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
+     */
+    farewellAt: 0.8,
+    playFor: 41,
+    /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
+    openSpeed: 5.5,
+    leastSpeed: 3,
+    holdSpeed: 1,
+    holdAt: 0.92,
+    limitEase: 0.6,
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
@@ -958,34 +977,62 @@ export const tuning = {
     swimCameraBearing: 0.65,
     childTurn: 0.7,
     haze: 0.94,
-    /** Begin easing away before the coastal approach. */
-    farewellAt: 0.66,
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
     /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
     length: 4.35,
     girth: 1.22,
-    quietLead: 18,
+    quietLead: 8,
     quietEase: 0.22,
+    /** Most the lanes open ahead or fall back while the swim has the boat, in units a second on top of its speed. */
+    leadRate: 1.6,
     /** Quiet swimming between breaths, with only occasional low porpoises. */
     breathLeast: 3.5,
     breathSpread: 5.5,
     leapChance: 0.18,
-    /** Seconds after the pod starts joining for its first leap and nudge; the swim postpones the nudge. */
-    leapAt: 8,
-    leapSpread: 2,
-    leapRecovery: 1.5,
+    /**
+     * Slopes a throw leaves the water at, rise over run, and the most either is in units a second: a breath rolls the
+     * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
+     */
+    breathSlope: 0.22,
+    porpoiseSlope: 0.6,
+    breathMost: 1.3,
+    porpoiseMost: 3.2,
+    /**
+     * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
+     * keeping station on a slow boat is still swimming, and sliding back along it is swimming slower, not turning round.
+     */
+    leastPace: 2.5,
+    leastHeadway: 1.5,
+    /** How far below breathing depth a rise to the surface may start, and how fast the depth it swims at can change. */
+    riseFrom: 1.9,
+    depthRate: 1.4,
+    /** How fast a dolphin playing a set-piece gathers or sheds speed, in units a second a second. */
+    stuntAccel: 5,
+    /** How fast a rejoining dolphin lets go of what is left of its set-piece station, per second. */
+    rejoinEase: 0.8,
+    /** Seconds after the pod starts joining for its first leap; the nudge follows the swim, `nudgeAfter` at the soonest. */
+    leapAt: 5,
+    leapSpread: 1.5,
+    leapRecovery: 1,
+    nudgeAfter: 3,
+    /** Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw. */
+    leapOutFor: 2.8,
+    leapRunFor: 3.2,
+    /** Where the leaper runs beside the boat before the throw, how fast it drives forward into it, and its steepest take-off in radians. */
+    leapFrom: -1,
+    leapAlong: 3.2,
+    leapSteepest: 0.75,
     arrivalSpacing: 3.5,
     arrivalDepth: 7,
-    departureFor: 9,
-    nudgeRecovery: 2.5,
+    departureFor: 7,
+    nudgeRecovery: 1,
     nudgeApproachAlong: -8,
     nudgeApproachAcross: 5,
     nudgeApproachFor: 2.4,
-    nudgeApproachMax: 4,
-    nudgeRunFor: 2.5,
-    pushAt: 35,
+    nudgeApproachMax: 3,
+    nudgeRunFor: 1.8,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
