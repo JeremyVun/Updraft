@@ -712,7 +712,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   shown.isleMist = mistAhead ? 1 : ease(shown.isleMist, 0, tuning.world.isleMistLift, dt);
   if (shown.isleMist < 0.001) shown.isleMist = 0;
   atmo.uniforms.uIsleMist.value.set(isleMist.isle.x, isleMist.isle.z, isleMist.isle.rx, isleMist.isle.rz);
-  atmo.uniforms.uIsleMistRange.value.set(isleMist.range[0], isleMist.range[1], shown.isleMist);
+  atmo.uniforms.uIsleMistRange.value.set(isleMist.range.clear, isleMist.range.hidden, shown.isleMist, isleMist.range.edge);
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(
     THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),

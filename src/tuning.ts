@@ -386,11 +386,12 @@ export const tuning = {
     arrivalFogInner: 1.2,
     arrivalFogOuter: 1.32,
     /**
-     * The island ahead lies in mist beyond [clear, hidden] units from the eye: the wood past its farthest trees,
-     * the sleeping island everywhere but the shore the boat lands on. It lifts at this rate once they are ashore.
+     * The island ahead lies in mist beyond `clear` to `hidden` units from the eye: the wood past its farthest trees,
+     * the sleeping island everywhere but the shore the boat lands on. The bank thins away over the water by `edge`
+     * coast radii. It lifts at `isleMistLift` once they are ashore.
      */
-    woodMist: [110, 165] as const,
-    sleepingMist: [40, 72] as const,
+    woodMist: { clear: 110, hidden: 165, edge: 1.32 },
+    sleepingMist: { clear: 40, hidden: 72, edge: 2.4 },
     isleMistLift: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: 1.03,
