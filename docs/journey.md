@@ -1021,6 +1021,23 @@ about 650 units). The veil hides everything either side of it, so it reads as op
     `tuning.dolphins`. Verification: `tools/sea-check.mjs` (full GPU passage, desktop or `W=390 H=844`),
     `tools/sea-logic-check.mjs` (wind, frame rate, framing, completion and old swim checkpoints) and
     `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
+    Jeremy, September 24, after watching that: “The dolphin animations still need work during the sea scene.”
+    Four things still read wrong. The pod was bolted to the boat's frame, so at the route's turn every dolphin was
+    swung round like a spoke, turning 90° in under two seconds and banking past vertical. The featured leap ran
+    straight along the camera's line of sight, so from astern the arc collapsed into a dolphin standing up on its
+    tail and falling over. Every breath was a thrown ballistic arc a quarter of a second long, a sharp nod at the
+    surface thirty times a passage. And the nudge lay the dolphin on its side at the surface with its flukes
+    standing up out of the water. Now each dolphin swims after its station as a swimmer: it faces where it is
+    going, turns no tighter than its body allows, gathers and sheds speed at a fluke's rate, and is never moved
+    faster than it can swim, whatever the boat or its lane does; the lanes come round after the boat no faster
+    than that, and the pod keeps its spacing sideways rather than passing through itself. A breath is a slow roll
+    through the surface, back and blowhole out, on the same continuous path. A porpoise is run at, with a spurt
+    ahead of the lane and out from the boat, so the arc is long and low and seen from the side. The featured leap
+    runs up alongside and turns out through its last dip, so the camera sees a side-on arc, clean exit to head-first
+    entry, with a sheet of spray at both; on a narrow portrait frame, which cannot hold a side-on arc, it goes
+    straight ahead as before. The body sweeps sideways through a turn as well as bending in the vertical. The nudge
+    rolls the dolphin half onto its side, a little deeper, so the flukes stay in the water. All of it is in
+    `fx/sealife/dolphin.ts` and `tuning.dolphins`; the passage's pacing and beat order are unchanged.
 12c. **The cygnet's arc: built.** The glide is `Cygnet.soar`, on wind sampled **at the cygnet's own position**, so the
     player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the cygnet is set
     down in the grass, tries by itself and fails, the child sits down to watch, and there is nothing else on
