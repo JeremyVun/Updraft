@@ -195,8 +195,8 @@ void main() {
   vec4 B = texelFetch(uSegs, ivec2(s * 2 + 1, v), 0);
   vec3 wa = place(A.xyz);
   vec3 wb = place(B.xyz);
-  wa += bend(wa, A.y, smoothstep(0.013, 0.0015, A.w));
-  wb += bend(wb, B.y, smoothstep(0.013, 0.0015, B.w));
+  wa += bend(wa, A.y, (1.0 - smoothstep(0.0015, 0.013, A.w)));
+  wb += bend(wb, B.y, (1.0 - smoothstep(0.0015, 0.013, B.w)));
   vec3 mid = mix(wa, wb, position.y);
   vec3 axis = normalize(wb - wa);
   vec3 toCam = cameraPosition - mid;

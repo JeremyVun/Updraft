@@ -38,7 +38,7 @@ export class LighthouseLight {
         varying vec3 vNormal;
         void main() {
           float face = pow(abs(dot(normalize(vNormal), normalize(cameraPosition - vWorld))), 0.65);
-          float along = smoothstep(1.0, 0.15, vUv.y);
+          float along = (1.0 - smoothstep(0.15, 1.0, vUv.y));
           float rain = 0.7 + 0.3 * vnoise(vWorld.xz * 0.13 + uTime * 0.35);
           float alpha = face * along * rain * uStrength * 0.085 * (1.0 - fogOf(vWorld).a);
           gl_FragColor = vec4(vec3(0.9, 0.82, 0.62), alpha);

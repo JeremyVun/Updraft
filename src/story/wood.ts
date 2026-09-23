@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { StormStrike } from '../fx/storm';
 import type { Shot } from '../camera';
@@ -196,7 +197,7 @@ export class WoodChapter implements Chapter {
     // Keep the legacy checkpoint name so existing saves still resume after retrieval.
     return this.beat === 'out' ? 'dry' : this.bolted && this.beat === 'walk' ? 'found' : null;
   }
-  saveCheckpoint(): number[] { return [this.leg, this.chainAt]; }
+  saveCheckpoint(): CheckpointPayload<'wood'> { return [this.leg, this.chainAt]; }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, WOOD_PATH.length - 1);
     this.chainAt = data[1]; this.bolted = true;

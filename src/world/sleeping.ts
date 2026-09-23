@@ -1,3 +1,4 @@
+import { LANE_GLSL } from './lane';
 import * as THREE from 'three';
 import { SleepingWeather } from './sleeping-weather';
 import { SleepingHearth } from './sleeping-hearth';
@@ -90,18 +91,6 @@ const PRESENCE_TO = 110;
 
 const DOWN = 64;
 
-/** Mirrors `laneAt` in `ATMO_GLSL`, which a simulation pass cannot include; keep the two in step. */
-const LANE_GLSL = /* glsl */ `
-uniform vec4 uLane;
-uniform vec2 uLaneOpen;
-float laneCut(vec2 xz) {
-  if (uLaneOpen.y <= 0.0) return 0.0;
-  vec2 ab = uLane.zw - uLane.xy;
-  float t = clamp(dot(xz - uLane.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
-  float d = distance(xz, uLane.xy + ab * t);
-  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * (1.0 - smoothstep(uLaneOpen.y - 0.08, uLaneOpen.y + 0.08, t));
-}`;
-
 /**
  * The fog remembers where it has been blown apart. 1 is fog and 0 is clear air; it heals back toward 1 over a
  * few seconds, so a climb through it is made a few paces of clear air at a time.
@@ -129,7 +118,7 @@ void main() {
     float r = uStampArg[i].x;
     c -= exp(-d * d / (r * r)) * uStampArg[i].y;
   }
-  gl_FragColor = vec4(clamp(min(c, 1.0 - laneCut(world)), 0.0, 1.0), 0.0, 0.0, 1.0);
+  gl_FragColor = vec4(clamp(min(c, 1.0 - laneAt(world)), 0.0, 1.0), 0.0, 0.0, 1.0);
 }`;
 
 const FILL_FRAG = /* glsl */ `

@@ -52,10 +52,11 @@ export class SleepingHearth {
         void main(){vSeed=aSeed;vUv=uv;vec3 p=position;p.y*=.3+uFlame*.7;p.x+=sin(uFireTime*5.0+uv.y*5.0+aSeed*17.0)*uv.y*.065+uFireAir.x*uv.y*uv.y*.022;
           vWorld=(modelMatrix*vec4(p,1)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1);}`,
       fragmentShader:`${ATMO_GLSL} uniform float uFlame,uFireTime;in float vSeed;in vec2 vUv;in vec3 vWorld;
-        void main(){float y=vUv.y,x=(vUv.x-.5)*2.0;
+        void main(){float y=clamp(vUv.y,0.0,1.0),x=(vUv.x-.5)*2.0;
           x+=sin(y*8.0-uFireTime*5.2+vSeed*11.0)*.12*y;
           float edge=(1.0-y)*(.58+.10*sin(uFireTime*7.0+y*13.0+vSeed*19.0));
-          float a=(1.0-smoothstep(edge*.3,edge,abs(x)))*smoothstep(0.0,.13,y)*(1.0-smoothstep(.78,1.0,y))*uFlame;
+          float shape=edge>0.0?1.0-smoothstep(edge*.3,edge,abs(x)):0.0;
+          float a=shape*smoothstep(0.0,.13,y)*(1.0-smoothstep(.78,1.0,y))*uFlame;
           vec3 col=mix(vec3(1.2,.19,.025),vec3(2.0,1.15,.24),pow(1.0-y,1.5));gl_FragColor=vec4(applyFog(col,vWorld),a*.85);}`});
     for(let i=0;i<5;i++){
       const h=.5+rand()*.32,geo=new THREE.PlaneGeometry(.37,h,1,8).translate(0,h/2,0);

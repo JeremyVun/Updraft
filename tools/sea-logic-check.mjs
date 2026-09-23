@@ -1,20 +1,9 @@
 // Run the real sea chapter, boat, child, cygnet and pod without a renderer.
 // Usage: node tools/sea-logic-check.mjs. Covers strong wind, 30/60fps, passage completion and old saves.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) specifier += '.ts';
-    return next(specifier, context);
-  },
-  load(url, context, next) {
-    if (!url.endsWith('.ts')) return next(url, context);
-    return { format: 'module', shortCircuit: true, source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code };
-  },
-});
+
 // Canvas is only used to bake the silent call sprite; no pixels are needed by this mechanics check.
 globalThis.document = { createElement: () => ({getContext: () => ({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})}) };
 globalThis.location = { search: '?shot' };

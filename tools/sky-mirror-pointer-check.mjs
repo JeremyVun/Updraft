@@ -1,13 +1,8 @@
 // Real PointerInput gestures against the chapter and actors; TOUCH=1 checks portrait coordinates.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s, c, n) { return n(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c); },
-  load(u, c, n) { return u.endsWith('.ts') ? { format: 'module', shortCircuit: true, source: transformSync(new URL(u).pathname, fs.readFileSync(new URL(u), 'utf8')).code } : n(u, c); },
-});
+
 globalThis.document = { createElement: () => ({getContext: () => ({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})}) };
 globalThis.location = { search: '?shot' };
 globalThis.window = { innerWidth: 1600, innerHeight: 900, matchMedia: () => ({matches: false}) };
@@ -92,10 +87,10 @@ for(let i=0;i<30 && !room.carried;i++){
 }
 assert(room.carried,'real pointer sweeps collect the light');
 for(let circle=0;circle<12 && room.carried;circle++){
-  if(process.env.TOUCH) {f.release(); f.step();}
+  if(process.env.TOUCH==='1') {f.release(); f.step();}
   for(let i=0;i<60 && room.carried;i++){
     const p=project(room.carried.position),a=i/60*Math.PI*2;
-    f.step({x:p.x+Math.cos(a)*(process.env.TOUCH?18:28),y:p.y+Math.sin(a)*(process.env.TOUCH?18:28)});
+    f.step({x:p.x+Math.cos(a)*(process.env.TOUCH==='1'?18:28),y:p.y+Math.sin(a)*(process.env.TOUCH==='1'?18:28)});
   }
   console.log('circle',circle,room.carried?.position.y,f.cast.input.charge);
 }

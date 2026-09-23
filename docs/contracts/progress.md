@@ -40,6 +40,12 @@ Every chapter has an entry checkpoint. Additional exits:
 
 `Chapter.checkpoint` names a safe exit; `saveCheckpoint()` supplies its numeric story state and `restoreCheckpoint()` rebuilds its continuation. `CHECKPOINTS` declares permitted chapter/point pairs and payload lengths. Changing this schema incompatibly requires a version change or migration. Restore clamps route indices. Malformed/unknown saves and unavailable storage must not prevent playing.
 
+`story/checkpoint-data.ts` names the positional fields in `CHECKPOINT_FIELDS`, derives `CHECKPOINTS` lengths
+and supplies numeric tuple types to the current chapter writers. Legacy layouts remain explicit. The pure
+`decodeProgress(unknown)` validator is shared with `readProgress()`; chapter-specific restoration still
+owns semantic clamping and migration. `tools/progress-schema-check.mjs` compares all 69 layouts and valid/
+malformed records against the pre-refactor decoder. This consolidation does not change the v1 wire format.
+
 Wing care is reconstructed from chapter and checkpoint by `story/wing-care.ts`: bare before the fall, wrapped from
 the companion checkpoint through sleeping/feather, and free from sleeping/morning onward. The same rule migrates
 older saves and applies to chapter shortcuts. No checkpoint falls inside treatment or unwrapping, so there is no

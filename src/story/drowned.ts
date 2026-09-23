@@ -1,4 +1,5 @@
 import type { DrownedScorePhase } from '../audio/dream-score';
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { WindSample } from '../wind/field';
@@ -114,7 +115,7 @@ export class DrownedChapter implements Chapter {
   }
 
   get checkpoint(): string | null { return this.stirred && this.beat === 'drift' ? 'sail' : null; }
-  saveCheckpoint(): number[] { return [this.leg]; }
+  saveCheckpoint(): CheckpointPayload<'drowned'> { return [this.leg]; }
   restoreCheckpoint(_point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, DROWNED_CHANNEL.length - 1);
     this.stirred = true; this.beat = 'drift';

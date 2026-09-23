@@ -1,4 +1,5 @@
 import { journeyRooms, journeyReveal, JOURNEY_ROOMS_GLSL } from './journey-rooms';
+import { LANE_GLSL } from './lane';
 import { SKY_RADIANCE_GLSL } from './sky-radiance';
 import * as THREE from 'three';
 import { params } from '../params';
@@ -243,8 +244,6 @@ uniform vec3 uHollowTint;
 uniform sampler2D uCarveTex;
 uniform vec4 uCarveDomain;
 uniform vec4 uFrost;
-uniform vec4 uLane;
-uniform vec2 uLaneOpen;
 uniform vec4 uLamp;
 uniform vec4 uHearth;
 uniform vec2 uDawn;
@@ -329,17 +328,7 @@ vec3 emberLight(vec3 world, vec3 N) {
   return vec3(1.0, 0.54, 0.2) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.55 + 0.45, 0.0, 1.0);
 }
 
-/**
- * The lane the morning comes down the hill: 1 in the middle of it, 0 off it, and it opens from its first point
- * toward its last, so whatever comes down it arrives with the light rather than after it.
- */
-float laneAt(vec2 xz) {
-  if (uLaneOpen.y <= 0.0) return 0.0;
-  vec2 ab = uLane.zw - uLane.xy;
-  float t = clamp(dot(xz - uLane.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
-  float d = distance(xz, uLane.xy + ab * t);
-  return (1.0 - smoothstep(uLaneOpen.x * 0.45, uLaneOpen.x, d)) * (1.0 - smoothstep(uLaneOpen.y - 0.08, uLaneOpen.y + 0.08, t));
-}
+${LANE_GLSL}
 
 /** The window wakes the turf along its spill, then the green opens across the whole island. */
 float morningAt(vec2 xz) {

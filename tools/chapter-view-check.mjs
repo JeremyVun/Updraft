@@ -1,17 +1,8 @@
 // A chapter transition must not expose an uninitialized camera target or focus.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s, c, next) { return next(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c); },
-  load(u, c, next) {
-    return u.endsWith('.ts')
-      ? { format: 'module', shortCircuit: true, source: transformSync(new URL(u).pathname, fs.readFileSync(new URL(u), 'utf8')).code }
-      : next(u, c);
-  },
-});
+
 globalThis.location = { search: '?shot' };
 const { Journey } = await import('../src/story/journey.ts');
 const { CameraRig } = await import('../src/camera.ts');

@@ -1,7 +1,8 @@
 import { migrateGeography } from './geography-progress';
-import { MIRROR_STAR_MASK } from '../world/sky-mirror-layout';
 import { GEOGRAPHY_VERSION } from '../world/geography';
 import type { Cast } from './cast';
+import { CHECKPOINTS } from './checkpoint-data';
+export { CHECKPOINTS } from './checkpoint-data';
 import type { ChapterName } from './journey';
 import type { Seat } from '../creatures/cygnet/ride';
 import { restoreWingCare } from './wing-care';
@@ -22,48 +23,28 @@ export interface Progress {
   plane: number[]; // visible, sogginess
 }
 
-export const CHECKPOINTS: Partial<Record<ChapterName, Record<string, number>>> = {
-  island: { entry: 0, companion: 0 },
-  toLines: { entry: 0 }, lines: { entry: 0, 'curtain-1': 2, 'curtain-2': 2, family: 2 },
-  toBoats: { entry: 0 }, boats: { entry: 0, 'pool-1': 1, 'pool-2': 1 },
-  toMeadow: { entry: 0 }, meadow: { entry: 0, piano: 5, pond: 5 },
-  toBirches: { entry: 0 }, birches: {
-    entry: 0, swing: 3, leaves: 3,
-    'scarf-0-swing': 4, 'scarf-1': 4, 'scarf-1-swing': 4,
-    'scarf-2': 4, 'scarf-2-swing': 4, 'scarf-3': 4, 'scarf-3-swing': 4,
-    'scarf4-0-swing': 4, 'scarf4-1': 4, 'scarf4-1-swing': 4,
-    'scarf4-2': 4, 'scarf4-2-swing': 4, 'scarf4-3': 4, 'scarf4-3-swing': 4,
-    'scarf4-4': 4, 'scarf4-4-swing': 4,
-  },
-  drowned: { entry: 0, sail: 1 }, toWood: { entry: 0 },
-  wood: { entry: 0, found: 2, dry: 2 }, toSleeping: { entry: 0 },
-  sleeping: { entry: 0, feather: 0, morning: 0 },
-  toMirror: { entry: 0, swim: 2 }, mirror: {
-    entry: 0,
-    ...Object.fromEntries(Array.from({ length: MIRROR_STAR_MASK + 1 }, (_, mask) => [`stars4-${mask}`, 2])),
-    stars: 2, 'stars-0': 2, 'stars-1': 2, 'stars-2': 2, 'stars-3': 2,
-    'stars-4': 2, 'stars-5': 2, 'stars-6': 2, 'stars-7': 2,
-    reflection: 1, window: 1, moon: 1, tide: 1, lantern: 1,
-  },
-  toHarbour: { entry: 0 }, toHome: { entry: 0, swim: 2 },
-  home: { entry: 0, reunion: 0, drawing: 0, complete: 0 },
-};
-
 function numbers(value: unknown, count: number): value is number[] {
   return Array.isArray(value) && value.length === count && value.every(n => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) < 1e6);
 }
 
+/** Pure decoding keeps validation independent of browser storage and preserves every v1 legacy checkpoint. */
+export function decodeProgress(value: unknown): Progress | null {
+  if (!value || typeof value !== 'object') return null;
+  const p = value as Record<string, unknown>;
+  if (p.version !== 1 || typeof p.chapter !== 'string' || typeof p.point !== 'string' || !Object.hasOwn(CHECKPOINTS, p.chapter)) return null;
+  const points = CHECKPOINTS[p.chapter as ChapterName]!;
+  if (!Object.hasOwn(points, p.point) || !numbers(p.data, points[p.point])) return null;
+  if (!numbers(p.child, 5) || !numbers(p.boat, 5) || !numbers(p.bird, 7) || !numbers(p.plane, 2)) return null;
+  if (p.seat !== null && !['cradle', 'satchel', 'lap'].includes(p.seat as string)) return null;
+  if (!Array.isArray(p.life) || p.life.length !== 3 || !p.life.every((v: unknown) => numbers(v, 4))) return null;
+  if (p.geography !== undefined && (!Number.isInteger(p.geography) || (p.geography as number) < 1 || (p.geography as number) > GEOGRAPHY_VERSION)) return null;
+  return value as Progress;
+}
+
 export function readProgress(): Progress | null {
   try {
-    const p = JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? 'null');
-    if (!p || p.version !== 1 || typeof p.chapter !== 'string' || typeof p.point !== 'string' || !Object.hasOwn(CHECKPOINTS, p.chapter)) return null;
-    const points = CHECKPOINTS[p.chapter as ChapterName]!;
-    if (!Object.hasOwn(points, p.point) || !numbers(p.data, points[p.point])) return null;
-    if (!numbers(p.child, 5) || !numbers(p.boat, 5) || !numbers(p.bird, 7) || !numbers(p.plane, 2)) return null;
-    if (p.seat !== null && !['cradle', 'satchel', 'lap'].includes(p.seat)) return null;
-    if (!Array.isArray(p.life) || p.life.length !== 3 || !p.life.every((v: unknown) => numbers(v, 4))) return null;
-    if (p.geography !== undefined && (!Number.isInteger(p.geography) || p.geography < 1 || p.geography > GEOGRAPHY_VERSION)) return null;
-    return migrateGeography(p as Progress);
+    const p = decodeProgress(JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? 'null'));
+    return p && migrateGeography(p);
   } catch {
     // Storage can be unavailable or contain an old/incomplete save. Neither prevents playing.
     return null;

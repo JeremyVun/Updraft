@@ -1,20 +1,9 @@
 // Exercise the real sail shader's ripple phase under changing gusts, including late in a journey.
 // No browser needed: inspect the shader expression and uniforms produced by the real Boat.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) specifier += '.ts';
-    return next(specifier, context);
-  },
-  load(url, context, next) {
-    if (!url.endsWith('.ts')) return next(url, context);
-    return { format: 'module', shortCircuit: true, source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code };
-  },
-});
+
 globalThis.location = { search: '?shot' };
 globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { Boat } = await import('../src/traveller/boat.ts');

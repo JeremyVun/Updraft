@@ -10,6 +10,9 @@ const MIN_HFOV = 64;
 const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 /** How far above the ground a shot stands unless it says otherwise. */
 const GROUND_CLEARANCE = 2.8;
+const OCCLUSION_STEPS = [0.3, 0.55];
+const AXES = ['x', 'y', 'z'] as const;
+
 
 export interface Shot {
   /** Cheap static scenery bounds supplied by rooms with foreground buildings or branches. */
@@ -254,7 +257,7 @@ export class CameraRig {
   private ease(value: THREE.Vector3, velocity: THREE.Vector3, target: THREE.Vector3,
     response: number, dt: number): void {
     const decay = Math.exp(-response * dt);
-    for (const axis of ['x', 'y', 'z'] as const) {
+    for (const axis of AXES) {
       const error = value[axis] - target[axis];
       const spring = velocity[axis] + response * error;
       value[axis] = target[axis] + (error + spring * dt) * decay;
@@ -350,7 +353,7 @@ export class CameraRig {
      */
     let pull = 0;
     let lift = this.blocked(want);
-    for (const step of [0.3, 0.55]) {
+    for (const step of OCCLUSION_STEPS) {
       if (lift <= 0.05) break;
       this.probe.lerpVectors(want, this.look, step);
       pull = step;

@@ -219,7 +219,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float sun = cloudShadow(vWorld.xz);
   float back = pow(max(dot(-V, uSunDir), 0.0), 3.0);
-  vec3 alb = vColor * (1.0 - 0.35 * smoothstep(0.1, 0.0, abs(q.x)));
+  vec3 alb = vColor * (1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.1, abs(q.x))));
   vec3 col = alb * (hemiLight(n) * 1.6 + uSunColor * (max(dot(n, uSunDir), 0.0) * 0.8 + back * 0.9) * sun);
   col += uSunColor * pow(max(dot(reflect(-uSunDir, n), V), 0.0), 20.0) * sun * 0.2;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);

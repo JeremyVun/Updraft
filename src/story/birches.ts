@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK } from '../world/birches';
@@ -100,7 +101,7 @@ export class BirchesChapter implements Chapter {
     const count = this.cast.birches.scarf.completed;
     return count > 0 || this.swings > 0 ? `scarf4-${count}${this.swings > 0 ? '-swing' : ''}` : null;
   }
-  saveCheckpoint(): number[] { return [this.leg, this.swings, this.dusk, this.cast.birches.scarf.completed]; }
+  saveCheckpoint(): CheckpointPayload<'birches'> { return [this.leg, this.swings, this.dusk, this.cast.birches.scarf.completed]; }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
     this.swings = Math.max(0, data[1]); this.dusk = data[2];

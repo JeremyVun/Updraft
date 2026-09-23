@@ -102,9 +102,13 @@ try {
  report.checks.push('390px phone: touch drag stirs without starting, tap starts with sound');
  await mobile.close();
  const fault=await browser.newContext();const failure=await fault.newPage();
- await failure.route('**/assets/main-*.js',route=>route.abort());
- await failure.route('**/src/main.ts',route=>route.abort());
+ let blockedMain=0;
+ // Vite appends ?t= after edits; fault injection must match the module regardless of that timestamp.
+ await failure.route(url=>/\/assets\/main-[^/]+\.js$/.test(url.pathname)||url.pathname.endsWith('/src/main.ts'),route=>{
+   blockedMain++;return route.abort();
+ });
  await failure.goto(base);await failure.waitForSelector('#veil.ready',{timeout:20000});
+ assert(blockedMain>0,'the fixture actually blocked the game module');
  assert.equal(await failure.locator('#begin').innerText(),'Try again');
  await failure.screenshot({path:'/tmp/updraft-start-retry.png'});
  await failure.unrouteAll();await failure.locator('#begin').click();await failure.waitForSelector('#veil.ready',{timeout:60000});

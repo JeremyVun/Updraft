@@ -1,3 +1,4 @@
+import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
@@ -108,7 +109,7 @@ export class LittleBoatsChapter implements Chapter {
     if (this.beat !== 'sailing') return null;
     return this.savedPool ? `pool-${this.savedPool}` : null;
   }
-  saveCheckpoint(): number[] {
+  saveCheckpoint(): CheckpointPayload<'boats'> {
     return [this.cast.littleBoats.progress];
   }
   restoreCheckpoint(point: string, data: number[]): void {

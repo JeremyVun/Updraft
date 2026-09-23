@@ -29,17 +29,28 @@ export function rippleTexture(res = 256): THREE.DataTexture {
   }
   const gx = new Float32Array(res * res);
   const gy = new Float32Array(res * res);
+  // cos(x + y) reuses each row/column's phase instead of evaluating every wave at every texel.
+  // Keep Float64 intermediates and the original wave summation order; packed texture bytes stay identical.
+  const phases = waves.map(([kx, ky, amplitude, phase]) => {
+    const cx = new Float64Array(res), sx = new Float64Array(res);
+    const cy = new Float64Array(res), sy = new Float64Array(res);
+    for (let i = 0; i < res; i++) {
+      const x = 2 * Math.PI * kx * (i / res) + phase;
+      const y = 2 * Math.PI * ky * (i / res);
+      cx[i] = Math.cos(x); sx[i] = Math.sin(x);
+      cy[i] = Math.cos(y); sy[i] = Math.sin(y);
+    }
+    return { kx, ky, amplitude, cx, sx, cy, sy };
+  });
   let max = 0;
   for (let j = 0; j < res; j++) {
     for (let i = 0; i < res; i++) {
-      const u = i / res;
-      const v = j / res;
       let dx = 0;
       let dy = 0;
-      for (const [kx, ky, a, ph] of waves) {
-        const c = Math.cos(2 * Math.PI * (kx * u + ky * v) + ph) * a;
-        dx += c * kx;
-        dy += c * ky;
+      for (const wave of phases) {
+        const c = (wave.cx[i] * wave.cy[j] - wave.sx[i] * wave.sy[j]) * wave.amplitude;
+        dx += c * wave.kx;
+        dy += c * wave.ky;
       }
       gx[j * res + i] = dx;
       gy[j * res + i] = dy;
@@ -70,14 +81,15 @@ function cellBorders(res: number, cells: number, seed: number): Float32Array {
       const y = (j / res) * cells;
       const cx = Math.floor(x);
       const cy = Math.floor(y);
-      let f1 = 9;
-      let f2 = 9;
+      let f1 = 81;
+      let f2 = 81;
       for (let oy = -1; oy <= 1; oy++) {
         for (let ox = -1; ox <= 1; ox++) {
           const nx = cx + ox;
           const ny = cy + oy;
           const k = (((ny % cells) + cells) % cells) * cells + (((nx % cells) + cells) % cells);
-          const d = Math.hypot(nx + points[k * 2] - x, ny + points[k * 2 + 1] - y);
+          const dx = nx + points[k * 2] - x, dy = ny + points[k * 2 + 1] - y;
+          const d = dx * dx + dy * dy;
           if (d < f1) {
             f2 = f1;
             f1 = d;
@@ -86,7 +98,8 @@ function cellBorders(res: number, cells: number, seed: number): Float32Array {
           }
         }
       }
-      out[j * res + i] = f2 - f1;
+      // Ranking squared distances needs only the two winning square roots per texel.
+      out[j * res + i] = Math.sqrt(f2) - Math.sqrt(f1);
     }
   }
   return out;

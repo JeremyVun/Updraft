@@ -45,7 +45,7 @@ void main() {
   int part = int(aPart + 0.5);
   vec3 p = position;
   vec3 n = normal;
-  vUnder = smoothstep(0.1, -0.4, normal.y);
+  vUnder = (1.0 - smoothstep(-0.4, 0.1, normal.y));
   bool outer = part == ${OUTER_L} || part == ${OUTER_R};
   bool inner = part == ${INNER_L} || part == ${INNER_R};
   if (inner || outer) {

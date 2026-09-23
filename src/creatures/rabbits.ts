@@ -664,6 +664,9 @@ export class Rabbits {
     inst.set(5, i, r.fur.r, r.fur.g, r.fur.b, r.seed);
   }
 
+  /** Live positions for spatial queries; the inspection snapshot below remains detached. */
+  get positions(): readonly Readonly<{ x: number; y: number; z: number }>[] { return this.list; }
+
   /** Positions and activities, for inspection in `?shot` mode. */
   get state(): { x: number; y: number; z: number; activity: Activity; fleeing: boolean }[] {
     return this.list.map((r) => ({ x: r.x, y: r.y, z: r.z, activity: r.activity, fleeing: r.fleeing }));

@@ -1,18 +1,7 @@
 // Read current layout exports and print horizontal distances; never changes game files or saves.
 // Usage: node tools/geography-report.mjs > /tmp/updraft-geography.json
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
-registerHooks({
-  resolve(s, c, next) {
-    return next(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c);
-  },
-  load(url, c, next) {
-    if (!url.endsWith('.ts')) return next(url, c);
-    return { format: 'module', shortCircuit: true,
-      source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code };
-  },
-});
+import './lib/typescript.mjs';
+
 // Imported scene modules bake a call sprite and inspect query/accessibility settings at construction.
 globalThis.document = { createElement: () => ({ getContext: () => ({ beginPath(){}, moveTo(){}, quadraticCurveTo(){}, stroke(){} }) }) };
 globalThis.location = { search: '?shot' };

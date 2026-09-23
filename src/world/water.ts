@@ -148,9 +148,9 @@ float glintCells(vec2 xz, float cell, float density) {
   vec2 id = floor(p);
   float h = hash12(id + cell * 17.3);
   vec2 centre = vec2(hash12(id + 3.1), hash12(id + 8.7)) * 0.5 + 0.25;
-  float spot = smoothstep(0.3, 0.0, length(fract(p) - centre));
+  float spot = (1.0 - smoothstep(0.0, 0.3, length(fract(p) - centre)));
   float life = fract(uTime * (0.8 + 1.2 * h) + h * 23.0);
-  float flash = smoothstep(0.0, 0.06, life) * smoothstep(0.32, 0.06, life);
+  float flash = smoothstep(0.0, 0.06, life) * (1.0 - smoothstep(0.06, 0.32, life));
   return spot * flash * step(1.0 - density, fract(h * 91.7));
 }
 
@@ -179,7 +179,7 @@ float whitecaps(vec2 xz, vec2 flow, float storm) {
     vec2 d = xz - centre - flow * life * 0.04;
     vec2 local = vec2(dot(d, dir), dot(d, vec2(-dir.y, dir.x))) / (0.6 + 0.5 * h);
     local /= vec2(local.x > 0.0 ? 0.7 : 1.7, 0.4);
-    float grow = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.35, life) * smoothstep(chance, chance + 0.25, storm);
+    float grow = smoothstep(0.0, 0.15, life) * (1.0 - smoothstep(0.35, 1.0, life)) * smoothstep(chance, chance + 0.25, storm);
     caps = max(caps, (1.0 - smoothstep(0.1, 1.0, length(local))) * grow);
   }
   return caps;
@@ -286,11 +286,11 @@ void main() {
   float swellAmp = 0.0;
   if (offshore < 40.0 && pool < 0.99) {
     surf = surfWaves(xz, offshore, depth, surfBlur, fp) * (1.0 - pool);
-    swellAmp = 0.13 * uSeaState * smoothstep(4.5, 1.6, depth) * smoothstep(0.0, 1.5, offshore) * smoothstep(17.0, 5.0, offshore);
+    swellAmp = 0.13 * uSeaState * (1.0 - smoothstep(1.6, 4.5, depth)) * smoothstep(0.0, 1.5, offshore) * (1.0 - smoothstep(5.0, 17.0, offshore));
     vec2 toSea = -vec2(shoreDistance(xz + vec2(0.5, 0.0)) + offshore, shoreDistance(xz + vec2(0.0, 0.5)) + offshore) * 2.0;
     slope += toSea * surf.z * swellAmp;
   }
-  slope *= 1.0 - smoothstep(1.5, 0.0, offshore) * 0.7;
+  slope *= 1.0 - (1.0 - smoothstep(0.0, 1.5, offshore)) * 0.7;
   vec3 N = normalize(vec3(-slope.x, 1.0, -slope.y));
   // Rain takes the shine off water: too fine to resolve into rings, it shows as a matte over the whole sea.
   float unresolved = hidden * 2.0 + 0.004 + 0.02 * rough + 0.05 * storm + 0.018 * uShower;
@@ -326,17 +326,17 @@ void main() {
     vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
     vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
     float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
-    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * smoothstep(4.0, 2.5, bedDepth));
+    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
 
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
     float sunDown = max(-sunIn.y, 0.2);
     float sunVis = cloudShadow(bedXZ) * groundAt(bedXZ).w;
     float light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
-    light *= smoothstep(220.0, 60.0, dist);
+    light *= (1.0 - smoothstep(60.0, 220.0, dist));
     vec3 sunBed = uSunColor * max(uSunDir.y, 0.0) * 0.8 * exp(-uAbsorb * bedDepth / sunDown) * sunVis * (0.6 + 4.0 * light);
     vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
     vec3 seen = bed * (sunBed + skyBed) * exp(-uAbsorb * path);
-    body = mix(body, seen, exp(-path * 0.2) * smoothstep(9.0, 6.0, bedDepth));
+    body = mix(body, seen, exp(-path * 0.2) * (1.0 - smoothstep(6.0, 9.0, bedDepth)));
   }
   float crest = surf.y * swellAmp * 6.0;
   float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);
@@ -351,7 +351,7 @@ void main() {
   float facet = min(ggx(max(dot(N, H), 0.0), alpha2) * vis, 5.0);
   float tan2 = (1.0 - H.y * H.y) / max(H.y * H.y, 1e-4);
   float glitter = exp(-tan2 / (0.008 + unresolved));
-  float crisp = smoothstep(0.7, 0.1, footprint);
+  float crisp = (1.0 - smoothstep(0.1, 0.7, footprint));
   float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 

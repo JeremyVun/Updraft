@@ -293,16 +293,16 @@ Skin skin() {
   Skin k = Skin(CAPE, 0.0);
   if (part == ${BODY}) {
     float cape = smoothstep(-0.13, 0.13, v - capeLine(s) + grain * 0.11);
-    float floorLine = -0.4 - 0.38 * smoothstep(0.55, 0.95, s) + 0.28 * smoothstep(0.25, 0.06, s);
-    float pale = smoothstep(0.12, -0.12, v - floorLine + grain * 0.06);
+    float floorLine = -0.4 - 0.38 * smoothstep(0.55, 0.95, s) + 0.28 * (1.0 - smoothstep(0.06, 0.25, s));
+    float pale = (1.0 - smoothstep(-0.12, 0.12, v - floorLine + grain * 0.06));
     k.albedo = mix(mix(mix(TAN, ASH, smoothstep(0.44, 0.63, s)), BELLY, pale), CAPE, cape);
-    float stripe = smoothstep(0.11, 0.0, abs(v - mix(-0.5, -0.88, smoothstep(0.1, 0.21, s)))) * smoothstep(0.085, 0.105, s) * smoothstep(0.25, 0.2, s);
-    float beak = smoothstep(0.118, 0.08, s) * smoothstep(-0.6, -0.15, v);
+    float stripe = (1.0 - smoothstep(0.0, 0.11, abs(v - mix(-0.5, -0.88, smoothstep(0.1, 0.21, s))))) * smoothstep(0.085, 0.105, s) * (1.0 - smoothstep(0.2, 0.25, s));
+    float beak = (1.0 - smoothstep(0.08, 0.118, s)) * smoothstep(-0.6, -0.15, v);
     k.albedo = mix(k.albedo, INK, max(stripe * 0.75, beak * 0.85));
     float eye = length(vec2((s - 0.128) * ${f(DRAWN)}, (v - 0.3) * 0.17));
-    k.albedo = mix(k.albedo, INK, smoothstep(0.03, 0.017, eye));
+    k.albedo = mix(k.albedo, INK, (1.0 - smoothstep(0.017, 0.03, eye)));
   } else {
-    k.albedo = mix(CAPE, SLATE, smoothstep(0.25, -0.35, rn.y) * 0.45);
+    k.albedo = mix(CAPE, SLATE, (1.0 - smoothstep(-0.35, 0.25, rn.y)) * 0.45);
     k.thin = 0.35;
   }
   return k;
@@ -348,7 +348,7 @@ void main() {
 
   vec3 R = reflect(-V, N);
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
-  env = mix(env, uSeaTint * uSkyAmbient * 1.4, smoothstep(0.0, -0.3, R.y));
+  env = mix(env, uSeaTint * uSkyAmbient * 1.4, (1.0 - smoothstep(-0.3, 0.0, R.y)));
   float F = 0.035 + 0.965 * pow(1.0 - nv, 5.0);
   col = mix(col, env, F * (0.3 + 0.34 * gloss));
   vec3 H = normalize(uSunDir + V);
@@ -461,7 +461,7 @@ void main() {
   vec3 sky = uSkyAmbient * 1.25 + uGroundBounce * 0.4;
   float wisp = vnoise(vQ * 1.7 + vSeed * 31.0);
   float a = mix(
-    smoothstep(1.0, 0.0, r),
+    (1.0 - smoothstep(0.0, 1.0, r)),
     pow(1.0 - r, 1.3) * smoothstep(0.3, 0.75, wisp + 0.35 - r * 0.45),
     vSoft) * vAlpha;
   a *= smoothstep(-0.04, 0.25, vWorld.y);

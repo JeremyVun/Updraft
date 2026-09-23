@@ -70,9 +70,9 @@ void main() {
     vec3 c = uOccluders[i].xyz;
     float r = uOccluders[i].w;
     float t = dot(c - origin, uSunDir);
-    if (t <= 0.0) continue;
+    if (t <= 0.0 || r <= 0.0) continue;
     float miss = length(c - (origin + uSunDir * t));
-    vis *= 1.0 - 0.8 * smoothstep(r * 1.05, r * 0.55, miss);
+    vis *= 1.0 - 0.8 * (1.0 - smoothstep(r * 0.55, r * 1.05, miss));
   }
   gl_FragColor = vec4(hn.gba * 0.5 + 0.5, vis);
 }`;

@@ -19,7 +19,7 @@ out vec3 vRest;
 void main() {
   vec3 p = position;
   vec3 n = normal;
-  float tail = smoothstep(0.05, -0.3, position.z);
+  float tail = (1.0 - smoothstep(-0.3, 0.05, position.z));
   float wag = sin(iAtt.z) * 0.5 * tail;
   p = rotY(p - vec3(0.0, 0.0, 0.05), wag) + vec3(0.0, 0.0, 0.05);
   n = rotY(n, wag);

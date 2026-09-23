@@ -51,7 +51,7 @@ float chopHere(vec2 p, float fromCamera) {
   vec2 edge = min(uv, 1.0 - uv);
   float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
   float depth = -mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
-  return smoothstep(0.8, 3.5, depth) * smoothstep(95.0, 55.0, fromCamera);
+  return smoothstep(0.8, 3.5, depth) * (1.0 - smoothstep(55.0, 95.0, fromCamera));
 }
 
 /**
@@ -63,7 +63,7 @@ float swellHeight(vec2 p, float fromCamera) {
   vec2 edge = min(uv, 1.0 - uv);
   float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
   float depth = -mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
-  return uSwell * smoothstep(0.6, 4.5, depth) * smoothstep(105.0, 62.0, fromCamera);
+  return uSwell * smoothstep(0.6, 4.5, depth) * (1.0 - smoothstep(62.0, 105.0, fromCamera));
 }
 
 /** Surface at a world xz, undoing the waves' horizontal drag just as swellLift does on the CPU. */

@@ -123,9 +123,9 @@ vec3 surfWaves(vec2 xz, float offshore, float depth, float aa, Footprint fp) {
   float slope = -2.0 * u / (width * width) * height / BORE_SPACING;
 
   float wave = floor(phase + 0.5);
-  float breaking = smoothstep(1.9, 0.5, depth) * smoothstep(0.3, 0.62, vnoise(xz * 0.09 + wave * 3.1)) * uSeaState;
+  float breaking = (1.0 - smoothstep(0.5, 1.9, depth)) * smoothstep(0.3, 0.62, vnoise(xz * 0.09 + wave * 3.1)) * uSeaState;
   float trail = u < 0.0 ? smoothstep(-0.05 - aa, -0.03, u) : exp(-u * 5.0);
-  float wash = smoothstep(1.4, 0.0, offshore) * exp(-fract(cycle) * 3.0) * 0.6 * smoothstep(0.2, 0.55, vnoise(xz * 0.07 + floor(cycle) * 1.7));
+  float wash = (1.0 - smoothstep(0.0, 1.4, offshore)) * exp(-fract(cycle) * 3.0) * 0.6 * smoothstep(0.2, 0.55, vnoise(xz * 0.07 + floor(cycle) * 1.7));
   float foam = foamLace(max(breaking * trail, wash), xz + hash12(vec2(wave, 4.3)) * 37.0, fp);
   return vec3(foam, height, slope);
 }

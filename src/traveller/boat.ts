@@ -62,7 +62,7 @@ in vec3 vLocal;
 void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
-  float plank = smoothstep(0.02, 0.0, abs(fract(vLocal.y * 5.5 + 0.5) - 0.5) - 0.44);
+  float plank = (1.0 - smoothstep(0.0, 0.02, abs(fract(vLocal.y * 5.5 + 0.5) - 0.5) - 0.44));
   float grain = vnoise(vec2(vLocal.z * 3.0, vLocal.y * 22.0)) * 0.18;
   vec3 alb = vColor * (0.9 + grain) * (1.0 - plank * 0.35) * (gl_FrontFacing ? 1.0 : 0.72);
   float ndl = dot(N, uSunDir);

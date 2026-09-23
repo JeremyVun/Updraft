@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "node tools/check.mjs quick",
+    "check:mechanics": "node tools/check.mjs mechanics",
+    "check:browser": "node tools/check.mjs browser",
+    "check:release": "node tools/check.mjs release"
   },
   "dependencies": {
     "three": "^0.186.0"

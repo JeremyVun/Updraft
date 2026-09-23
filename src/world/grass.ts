@@ -105,7 +105,7 @@ const LODS: LodSpec[] = [
 export const GRASS_PATTERN_GLSL = /* glsl */ `
 /** 1 on the mainland's grazed pasture, 0 on the island's wild meadow. */
 float pastureAt(vec2 xz) {
-  return smoothstep(-600.0, -660.0, xz.y);
+  return 1.0 - smoothstep(-660.0, -600.0, xz.y);
 }
 vec3 grassPatternAt(vec2 xz) {
   float pasture = pastureAt(xz);

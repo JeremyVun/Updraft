@@ -6,7 +6,8 @@ import { AudioEnvironment } from './audio/environment';
 import { WorldFoley } from './audio/world-foley';
 import { BirchesFoley } from './audio/birches-foley';
 import { CameraRig } from './camera';
-import { Creatures } from './creatures/creatures';
+import { Creatures, type CreatureEnv } from './creatures/creatures';
+import { nearestCreature } from './creatures/nearby';
 import { islandHabitat, mainlandHabitat } from './creatures/habitat';
 import { Petals } from './fx/petals';
 import { Swirl } from './fx/swirl';
@@ -270,21 +271,9 @@ const stormWeather = new StormWeather((strength, pan, close) => {
 scene.add(rain.mesh);
 const starlings = new Murmuration();
 scene.add(starlings.mesh);
-/** The nearest rabbit or finch to a point, for the child to glance at as they pass. */
+/** The live populations retain their order, including exact-distance ties. */
 function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3): boolean {
-  let best = radius * radius;
-  let found = false;
-  for (const set of [creatures, hillCreatures]) {
-    for (const animal of [...set.rabbits.state, ...set.songbirds.state]) {
-      const d = (animal.x - x) ** 2 + (animal.z - z) ** 2;
-      if (d < best) {
-        best = d;
-        out.set(animal.x, animal.y + 0.35, animal.z);
-        found = true;
-      }
-    }
-  }
-  return found;
+  return nearestCreature(nearbyPopulations, x, z, radius, out);
 }
 await yieldBoot();
 const sealife = new SeaLife(wind, rig.camera);
@@ -530,6 +519,13 @@ function whaleForQa(): void {
   sealife.surfaceWhale(new THREE.Vector3(boat.position.x + fx * 125 + fz * 26, 0, boat.position.z + fz * 125 - fx * 26), boat.yaw - 0.3);
 }
 
+const nearbyPopulations = [creatures.rabbits.positions, creatures.songbirds.positions,
+  hillCreatures.rabbits.positions, hillCreatures.songbirds.positions];
+const creatureEnv: CreatureEnv = {
+  camera: rig.camera, input, glider: glider.position, walker: null,
+  life: (x, z) => life.at(x, z), breeze: 0, night: 0, audio: null,
+};
+
 /** World mechanics receive at most 1/30 s; wind subdivides to 1/60 s; input follows the same slice of the screen stroke. */
 function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   time += dt;
@@ -703,16 +699,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const pointerWorld = input.present ? input.world : null;
   lines.update(dt, pointerWorld, input.gust, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   swirl.update(dt, rig.camera, input, story.current.coax ?? (story.name === 'birches' ? scarfInvitation.coax : null));
-  const creatureEnv = {
-    camera: rig.camera,
-    input,
-    glider: glider.position,
-    walker: child.visible ? child.position : null,
-    life: (x: number, z: number) => life.at(x, z),
-    breeze: story.breeze,
-    night: atmo.uniforms.uNight.value,
-    audio: sound.output,
-  };
+  creatureEnv.walker = child.visible ? child.position : null;
+  creatureEnv.breeze = story.breeze;
+  creatureEnv.night = atmo.uniforms.uNight.value;
+  creatureEnv.audio = sound.output;
   creatures.update(dt, time, creatureEnv);
   hillCreatures.update(dt, time, creatureEnv);
 

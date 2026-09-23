@@ -1,24 +1,9 @@
 // Real chapter, actors and fleet without a renderer. Usage: node tools/little-boats-logic-check.mjs
 // Checks idle/local wind, 30/60fps completion, dry-bank walking, checkpoint restore and sailing routes.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s, c, n) {
-    return n(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c);
-  },
-  load(u, c, n) {
-    return u.endsWith('.ts')
-      ? {
-          format: 'module',
-          shortCircuit: true,
-          source: transformSync(new URL(u).pathname, fs.readFileSync(new URL(u), 'utf8')).code,
-        }
-      : n(u, c);
-  },
-});
+
 globalThis.document = {
   createElement: () => ({ getContext: () => ({ beginPath() {}, moveTo() {}, quadraticCurveTo() {}, stroke() {} }) }),
 };

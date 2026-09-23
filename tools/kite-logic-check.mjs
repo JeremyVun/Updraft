@@ -1,14 +1,9 @@
 // Independent kite simulation, shore grounding and chapter isolation without a GPU.
 // Run: node tools/kite-logic-check.mjs
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s, c, n) { return n(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c); },
-  load(u, c, n) { return u.endsWith('.ts') ? { format: 'module', shortCircuit: true, source: transformSync(new URL(u).pathname, fs.readFileSync(new URL(u), 'utf8')).code } : n(u, c); },
-});
+
 globalThis.location = { search: '?shot' };
 globalThis.window = { innerWidth: 1600, innerHeight: 900, matchMedia: () => ({ matches: false }) };
 const { DepartureKites } = await import('../src/story/departure-kites.ts');

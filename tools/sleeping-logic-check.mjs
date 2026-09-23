@@ -1,14 +1,9 @@
 // Sleeping island: real actors and feather, idle gates, gentle input, dawn and boarding.
 // Usage: node tools/sleeping-logic-check.mjs. CPU checks complement sleeping-check.mjs GPU playthroughs.
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s,c,n) { return n(s.startsWith('.') && !/\.[a-z]+$/i.test(s) ? s+'.ts' : s,c); },
-  load(u,c,n) { return u.endsWith('.ts') ? {format:'module',shortCircuit:true,source:transformSync(new URL(u).pathname,fs.readFileSync(new URL(u),'utf8')).code} : n(u,c); },
-});
+
 globalThis.location={search:'?shot'};
 globalThis.window={innerWidth:Number(process.env.W??1600),innerHeight:Number(process.env.H??900),matchMedia:()=>({matches:false})};
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
@@ -70,7 +65,6 @@ function fixture(fps=60) {
     cygnet.heard.length=0;
   }};
 }
-
 
 for (const fps of [30,60]) {
   const f=fixture(fps),{child,cygnet:k,plane,boat,sleeping}=f.cast;
