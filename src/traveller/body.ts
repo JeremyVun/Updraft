@@ -40,7 +40,7 @@ void main() {
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
   float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
   float ao = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
   vec3 col = vColor * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95);
   col += uSunColor * vColor * rim * 0.55 * sun;
   /**

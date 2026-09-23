@@ -186,7 +186,7 @@ void main() {
   alb = mix(vec3(0.20, 0.17, 0.15), alb, smoothstep(0.0, 0.14, vUp));
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   vec3 V = normalize(cameraPosition - vWorld);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 4.0) * max(dot(-V, uSunDir), 0.0);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0) * max(dot(-V, uSunDir), 0.0);
   /** White bark under a gold canopy is never cold: it takes the light back off the leaves and off the floor. */
   vec3 ambient = hemiLight(N) * vec3(1.15, 1.02, 0.82) + uGroundBounce * 0.6;
   vec3 col = alb * (ambient + uSunColor * max(dot(N, uSunDir), 0.0) * 0.8 * sun) + uSunColor * rim * 0.3 * sun;

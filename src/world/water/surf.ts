@@ -141,13 +141,13 @@ vec3 shadeSwash(vec3 col, vec4 swash, vec3 wpos, float sunVis) {
   vec3 V = normalize(cameraPosition - wpos);
   vec2 wobble = vec2(vnoise(wpos.xz * 1.3 + uTime * 0.9), vnoise(wpos.xz * 1.2 - uTime * 0.8)) - 0.5;
   vec3 N = normalize(vec3(wobble.x * 0.015, 1.0, wobble.y * 0.015));
-  float F = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+  float F = 0.02 + 0.98 * pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 5.0);
   float sheet = swash.x;
   col *= mix(vec3(1.0), exp(-vec3(0.5, 0.13, 0.1) * min(swash.w, 1.5) * 0.12), sheet);
   vec3 R = reflect(-V, N);
   R.y = abs(R.y);
   col = mix(col, skyColor(R), F * 0.6 * (sheet + swash.z * 0.3));
-  vec3 H = normalize(uSunDir + V);
+  vec3 H = halfVector(uSunDir, V);
   col += uSunColor * pow(max(dot(N, H), 0.0), 150.0) * (sheet + swash.z * 0.4) * 0.8 * sunVis;
   return mix(col, foamColor(V, sunVis), swash.y);
 }

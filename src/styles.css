@@ -405,6 +405,10 @@ body.shot.starting #veil { display: block; }
   color: #fff7ea;
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   text-align: center;
+  /* The roll rises out of a clear band, so no name ever passes behind Play again. */
+  --again-top: calc(max(82px, calc(env(safe-area-inset-bottom) + 64px)) + 56px);
+  -webkit-mask-image: linear-gradient(to top, transparent var(--again-top), #000 calc(var(--again-top) + 96px));
+  mask-image: linear-gradient(to top, transparent var(--again-top), #000 calc(var(--again-top) + 96px));
 }
 
 #credits.rolling {

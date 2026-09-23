@@ -399,7 +399,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float sun = cloudShadow(vWorld.xz);
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
-  float rim = pow(1.0 - abs(dot(N, V)), 4.0) * (0.45 + 0.8 * grain);
+  float rim = pow(1.0 - min(abs(dot(N, V)), 1.0), 4.0) * (0.45 + 0.8 * grain);
   /** Rain has been on it for an hour: the moon runs along a wet edge in patches, never as one clean stripe. */
   float wet = pow(max(dot(reflect(-V, N), uSunDir), 0.0), 16.0) * (0.3 + 0.7 * uStorm) * (0.35 + 0.9 * grain);
   vec3 col = alb * (hemiLight(N) * vAo + uSunColor * (wrap * wrap * 0.55 + 0.05) * sun * (0.25 + 0.75 * vAo));

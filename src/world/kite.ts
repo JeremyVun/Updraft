@@ -44,9 +44,9 @@ void main() {
   float ndl = dot(N, uSunDir);
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   float through = max(-ndl, 0.0) * 0.5;
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * (max(ndl, 0.0) * 0.65 + through * 0.8) * sun) + uSunColor * rim * 0.18;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 0.8, 3.0));
 }`;
 
 const DRIFT_VERT = /* glsl */ `
@@ -247,7 +247,7 @@ export class Kite {
     const log = new THREE.CylinderGeometry(0.16, 0.13, 1.8, 6).rotateZ(Math.PI / 2).rotateY(0.6).translate(x + 0.8, ground + 0.12, z + 0.55);
     this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
 
-    const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide });
+    const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sailGeometry(), paper));
     this.sail.add(new THREE.Mesh(sparGeometry(), drift));
     this.group.add(this.sail);

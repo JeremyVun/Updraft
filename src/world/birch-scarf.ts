@@ -68,7 +68,7 @@ void main() {
   red *= 1.0 - 0.018 * smoothstep(0.3, 0.48, abs(fract(vCloth.y / 7.0) - 0.5));
   float sun = max(0.35, groundAt(vWorld.xz).w) * cloudShadow(vWorld.xz);
   float through = max(0.0, dot(-N, uSunDir)) * 0.13;
-  float nap = pow(1.0 - abs(dot(N, V)), 1.6);
+  float nap = pow(1.0 - min(abs(dot(N, V)), 1.0), 1.6);
   vec3 col = red * (hemiLight(N) * 1.25 + uGroundBounce * 0.4 + uSunColor * (max(0.0, dot(N, uSunDir)) * 0.85 + through) * sun);
   col += vec3(0.19, 0.063, 0.058) * nap * (0.45 + 0.3 * sun);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);

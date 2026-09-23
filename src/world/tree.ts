@@ -56,7 +56,7 @@ void main() {
   float canopyShade = smoothstep(uBase.y + 3.0, uBase.y + 9.0, vWorld.y) * 0.6 + 0.4;
   float ao = smoothstep(uBase.y - 0.8, uBase.y + 2.0, vWorld.y) * 0.6 + 0.4;
   vec3 V = normalize(cameraPosition - vWorld);
-  float rim = pow(1.0 - max(dot(n, V), 0.0), 6.0) * max(dot(-V, uSunDir), 0.0);
+  float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 6.0) * max(dot(-V, uSunDir), 0.0);
   vec3 col = alb * (hemiLight(n) * 0.8 * ao + uSunColor * ndl * sun * canopyShade) + uSunColor * rim * 0.06 * sun;
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);

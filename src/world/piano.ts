@@ -124,10 +124,10 @@ void main() {
   albedo = mix(albedo, mix(albedo, vec3(0.1, 0.13, 0.06), 0.5), 1.0 - smoothstep(0.0, 0.45, vWorld.y - uFoot));
   albedo *= 0.78 + 0.22 * abs(N.y);
 
-  vec3 H = normalize(uSunDir + V);
+  vec3 H = halfVector(uSunDir, V);
   float spec = pow(max(dot(N, H), 0.0), 34.0) * vGloss;
   /** It stands with its back to a low sun like everything else here, so its edge is where the light is. */
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 2.6) * max(dot(-V, uSunDir), 0.0);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.6) * max(dot(-V, uSunDir), 0.0);
   /** And the face turned away from the sun is not black: bare wood in a field takes the light off the grass. */
   float wrap = pow(clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0), 1.7);
   vec3 col = albedo * (hemiLight(N) * 1.12 + uGroundBounce * 0.75) + (albedo * uSunColor * wrap * 0.9 + uSunColor * (spec + rim * 0.85)) * sun;

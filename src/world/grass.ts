@@ -755,7 +755,8 @@ void main() {
   float toward = max(dot(-V, uSunDir), 0.0);
   float back = (toward * toward) * (toward * toward);
   vec3 trans = uSunColor * vTint * back * T * T * 0.9;
-  vec3 H = normalize(uSunDir + V);
+  vec3 H = uSunDir + V;
+  H = dot(H, H) > 1e-12 ? normalize(H) : vec3(0.0);
   alb *= 1.0 - 0.14 * uShower;
   float spec = pow(max(dot(N, H), 0.0), 24.0 + 40.0 * uShower) * (0.16 + 0.5 * flattened + 0.9 * uShower) * T;
   vec3 ambient = mix(uGroundBounce, uSkyAmbient, N.y * 0.5 + 0.5);

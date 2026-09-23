@@ -68,7 +68,7 @@ void main() {
   float ndl = dot(N, uSunDir);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
   float sun = cloudShadow(vWorld.xz);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 4.0) * max(dot(-V, uSunDir), 0.0);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0) * max(dot(-V, uSunDir), 0.0);
   vec3 col = alb * (harbourLight(vWorld) + hemiLight(N) + uSunColor * wrap * wrap * sun * 0.9) + uSunColor * rim * 0.12 * sun;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -149,7 +149,7 @@ void main() {
   float sun = cloudShadow(vWorld.xz);
   vec3 col = cloth * (harbourLight(vWorld) + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
   col += cloth * cloth * uSunColor * through * 0.35 * sun;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 1.0, 3.5));
 }`;
 
 function paint(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
@@ -330,6 +330,7 @@ export class Boat {
       fragmentShader: SAIL_FRAG,
       uniforms: { ...atmo.uniforms, uScarf: { value: 0 }, uFill: { value: 0 }, uFlutter: { value: 0 }, uRipplePhase: { value: 0 }, uLuff: { value: 0 }, uDroop: { value: 1 }, uShelter: { value: 0 } },
       side: THREE.DoubleSide,
+      alphaToCoverage: true,
     });
     this.sailPivot.position.set(0, 0, 0.55);
     this.sailPivot.add(new THREE.Mesh(sailGeometry(), this.sailMat));

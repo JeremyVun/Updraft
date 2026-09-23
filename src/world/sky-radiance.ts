@@ -15,7 +15,8 @@ vec3 rainbow(vec3 d, vec3 sky) {
   float secondary = smoothstep(0.0, 0.4, q) * (1.0 - smoothstep(0.6, 1.0, q)) * 0.16;
   float inside = (1.0 - smoothstep(30.0, 40.5, a)) * smoothstep(0.0, 20.0, a) * 0.05;
   float gap = smoothstep(42.4, 43.4, a) * (1.0 - smoothstep(50.0, 51.0, a)) * 0.07;
-  float along = atan(d.x + uSunDir.x, d.z + uSunDir.z);
+  vec2 across = d.xz + uSunDir.xz;
+  float along = dot(across, across) > 1e-10 ? atan(across.x, across.y) : 0.0;
   float patchy = 0.55 + 0.45 * smoothstep(0.3, 0.7, fbm(vec2(along * 2.2, uTime * 0.004)));
   float fade = smoothstep(-0.01, 0.05, d.y) * patchy * uRainbow;
   vec3 light = uSunColor * 0.16;

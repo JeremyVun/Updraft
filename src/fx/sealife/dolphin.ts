@@ -351,7 +351,7 @@ void main() {
   env = mix(env, uSeaTint * uSkyAmbient * 1.4, (1.0 - smoothstep(-0.3, 0.0, R.y)));
   float F = 0.035 + 0.965 * pow(1.0 - nv, 5.0);
   col = mix(col, env, F * (0.3 + 0.34 * gloss));
-  vec3 H = normalize(uSunDir + V);
+  vec3 H = halfVector(uSunDir, V);
   col += uSunColor * pow(max(dot(N, H), 0.0), mix(60.0, 170.0, gloss)) * (0.35 + (0.7 + 0.9 * streak) * sheet) * sun;
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.2;
   col += uSunColor * pow(1.0 - nv, 6.0) * back * smoothstep(-0.3, 0.5, ndl) * 0.6 * sun;
