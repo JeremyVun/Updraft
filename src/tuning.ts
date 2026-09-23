@@ -1035,7 +1035,11 @@ export const tuning = {
     /** The most one banks into a turn, in radians, and how hard it leans per radian a second of turn. */
     bankMost: 0.45,
     bankLean: 0.35,
-    /** The most the spine bends, tail against beak, in radians, and the hardest the water slows a landing, in units a second a second. */
+    /**
+     * How much of the path's bend the spine takes, tail against beak, so a diving tail stays at the surface until the
+     * body has passed; the most it bends, in radians; and the hardest the water slows a landing, in units a second a second.
+     */
+    archFollow: 0.85,
     archMost: 0.62,
     diveAccel: 5,
     /**

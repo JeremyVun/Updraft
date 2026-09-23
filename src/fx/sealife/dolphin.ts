@@ -1348,7 +1348,8 @@ export class Dolphins {
         if (s.t > 1.8) {
           s.phase = 'back';
           s.t = 0;
-          d.held = -1.8;
+          /** It slides off shallow, still beside the boat, and dives only once it has let go. */
+          d.held = -0.6;
           d.tilt = null;
         }
       }
@@ -1433,7 +1434,7 @@ export class Dolphins {
     d.tuck += (tuck - d.tuck) * ease(dt, 10);
     const sway = Math.sin(time * 0.4 + d.seed * 5) * 0.05;
     /** A spine bends only so far: the path's curve beyond that is carried by the whole body turning. */
-    const arch = (d.pitch - tail) * 0.6 - d.tuck + sway;
+    const arch = (d.pitch - tail) * tuning.dolphins.archFollow - d.tuck + sway;
     d.arch += (k.archMost * Math.tanh(arch / k.archMost) - d.arch) * ease(dt, 10);
 
     const sunk = 1 - THREE.MathUtils.smoothstep(d.y, 0.0, 0.35);
