@@ -34,6 +34,15 @@ after the Home ending audio (`c7f41f0`) landed.
 | 8 | Still island: the plane stops greening below a speed threshold that is too high | lead | lead | fixed: greening was gated on `airborne`, which drops as soon as the plane settles to its glide height over the grass, while it still travels 60% of its path. It now greens while it moves (`planeBloomFrom` 0.3). Life along one throw's path, first/middle/last third: 0.77/0.14/0.00 before, 0.91/0.99/1.00 after |
 | 9 | Wood → sleeping: the island and its hill curtains show too early | lead | lead | fixed: the same island mist (`sleepingMist`, 40–72 units, a soft bank over the water) hides the island until the last few seconds; the near shore emerges first and the summit window stays hidden until they land, then the mist lifts |
 
+## Follow-up: the dolphins (2026-09-24)
+
+After watching the before/after recordings, Jeremy (verbatim):
+
+> The dolphin animations still need work during the sea scene. use a fable 5.1 sub agent to do this in a worktree
+
+A Fable 5.1 subagent owns it in `/private/tmp/updraft-dolphins` (branch `dolphins-0924`, dev server :5348),
+by Jeremy's explicit choice of model for this visual work. Status: in progress.
+
 ## Verification (2026-09-24, integrated `pt0923-lead`)
 
 - Typecheck and production build pass. Check groups: quick 12/14 and mechanics 48/50, the two failures
