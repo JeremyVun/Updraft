@@ -1,0 +1,9 @@
+analytics-check exit=0 time=0s
+arrival-audio-check exit=0 time=10s
+audio-check exit=0 time=3s
+audio-continuity-check exit=0 time=14s
+audio-direction-check exit=0 time=7s
+bandage-cost-check exit=0 time=2s
+birches-foley-check exit=0 time=2s
+birches-score-check exit=1 time=6s
+boat-check exit=0 time=37s

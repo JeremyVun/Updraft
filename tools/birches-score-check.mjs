@@ -126,8 +126,10 @@ try {
       await ctx.resume();
     }
     const buffer = await rendering;
-    check([16,22,41].every(at => feedback.some(e => e.now >= at && e.now < at + .5)), 'Every playable stroke responds across the musical sections');
-    check(updraft.length > 10 && updraft.every(n => n.midi >= 62 && n.midi <= 81 && n.chord.some(m => (m - n.midi) % 12 === 0)), 'Updraft chimes use the sounding score harmony, in the calmer gesture register');
+    // Cursor chimes are limited to the opening island, the forest and the Sleeping climb (docs/contracts/audio.md);
+    // Birches is none of those, so gusts and held updrafts stay silent across every musical section.
+    check(![16,22,41].some(at => feedback.some(e => e.now >= at && e.now < at + .5)), 'Playable strokes stay silent in Birches across the musical sections');
+    check(updraft.length === 0, 'Held updrafts do not trigger cursor chimes in Birches either');
     check(!feedback.some(e => e.now >= 42 && e.now < 42.75), 'Piano ownership still suppresses generic gesture notes');
     check(live.parts.size === 0 && resumed.parts.size === 0, 'Exited scores release all oscillators and buses');
     check(chords.every(s => s.chord === Math.floor(s.now / (s.music === 'birches' ? 11 : 13)) % 4),
