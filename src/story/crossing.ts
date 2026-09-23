@@ -424,7 +424,7 @@ export class CrossingChapter implements Chapter {
     const show = sealife.dolphinShow;
     if (whale) this.whaleOffset.subVectors(whale, boat.position);
     /** A dolphin playing right at the boat takes the eyes, and the lens, from a whale far off. */
-    const distant = whale && !farewell && !show;
+    const distant = whale !== null && !farewell && !show;
     if (distant) child.lookAt = whale;
     this.watching = distant ? Math.min(1, this.watching + dt * 0.5) : Math.max(0, this.watching - dt * 0.5);
     if (show && !farewell && !swimming) {
