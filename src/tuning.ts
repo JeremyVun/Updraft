@@ -937,26 +937,49 @@ export const tuning = {
     /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
     length: 4.35,
     girth: 1.22,
-    quietLead: 18,
+    quietLead: 12,
     quietEase: 0.22,
+    /** Most the lanes open ahead or fall back while the swim has the boat, in units a second on top of its speed. */
+    leadRate: 1.6,
     /** Quiet swimming between breaths, with only occasional low porpoises. */
     breathLeast: 3.5,
     breathSpread: 5.5,
     leapChance: 0.18,
-    /** Seconds after the pod starts joining for its first leap and nudge; the swim postpones the nudge. */
-    leapAt: 8,
-    leapSpread: 2,
+    /**
+     * Slopes a throw leaves the water at, rise over run, and the most either is in units a second: a breath rolls the
+     * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
+     */
+    breathSlope: 0.22,
+    porpoiseSlope: 0.6,
+    breathMost: 1.3,
+    porpoiseMost: 3.2,
+    /** The slowest they are ever shaped as swimming, in units a second: keeping station on a slow boat is still swimming. */
+    leastPace: 2.5,
+    /** How far below breathing depth a rise to the surface may start, and how fast a departing dolphin slants down. */
+    riseFrom: 1.9,
+    diveRate: 1.5,
+    /** How fast a dolphin playing a set-piece gathers or sheds speed, in units a second a second. */
+    stuntAccel: 5,
+    /** How fast a rejoining dolphin lets go of what is left of its set-piece station, per second. */
+    rejoinEase: 0.8,
+    /** Seconds after the pod starts joining for its first leap; the nudge follows the swim, `nudgeAfter` at the soonest. */
+    leapAt: 5,
+    leapSpread: 1.5,
     leapRecovery: 1.5,
+    nudgeAfter: 3,
+    /** Where the leaper runs beside the boat before the throw, how fast it drives forward into it, and its steepest take-off in radians. */
+    leapFrom: -1,
+    leapAlong: 3.2,
+    leapSteepest: 0.75,
     arrivalSpacing: 3.5,
     arrivalDepth: 7,
-    departureFor: 9,
-    nudgeRecovery: 2.5,
+    departureFor: 7,
+    nudgeRecovery: 1.5,
     nudgeApproachAlong: -8,
     nudgeApproachAcross: 5,
     nudgeApproachFor: 2.4,
     nudgeApproachMax: 4,
     nudgeRunFor: 2.5,
-    pushAt: 35,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
