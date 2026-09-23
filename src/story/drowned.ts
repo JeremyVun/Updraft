@@ -314,7 +314,7 @@ export class DrownedChapter implements Chapter {
     const away = boat.yaw + 0.4;
     const dir = this.tmp.set(Math.sin(away), 0.14, Math.cos(away)).normalize();
     p.launch(c.handPosition(this.hand), this.from.copy(dir).multiplyScalar(11).setY(2.2));
-    p.depart(dir, tuning.storm.planeAwaySpeed, tuning.storm.planeAwayRise);
+    p.depart(dir, tuning.storm.planeAway);
     this.lost = boat.position.x + dir.x * 60;
     c.reach();
   }

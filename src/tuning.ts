@@ -1136,11 +1136,10 @@ export const tuning = {
     planeAhead: 2,
     planeLookUp: 1.8,
     planeLookFor: 2,
-    /** The storm carries the plane off faster than the boat sails and up over the wood; it is put away once it is
-        out of frame or the rain has swallowed it (this many fog lengths deep), and whatever happens by the fallback. */
-    planeAwaySpeed: 13,
-    planeAwayRise: 3.5,
-    planeLostInFog: 3,
+    /** The storm carries the plane off ahead of the boat, low over the wood, until the rain swallows it (this many
+        fog lengths deep) or it leaves the frame; whatever happens, it is gone by the fallback. */
+    planeAway: { speed: 15, grip: 2.5, rise: 1.2 },
+    planeLostInFog: 2.5,
     planeLostAfter: 14,
     firstLightning: 16,
     lightningStormFrom: 0.85,
