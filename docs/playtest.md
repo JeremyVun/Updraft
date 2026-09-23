@@ -41,7 +41,11 @@ After watching the before/after recordings, Jeremy (verbatim):
 > The dolphin animations still need work during the sea scene. use a fable 5.1 sub agent to do this in a worktree
 
 A Fable 5.1 subagent owns it in `/private/tmp/updraft-dolphins` (branch `dolphins-0924`, dev server :5348),
-by Jeremy's explicit choice of model for this visual work. Status: in progress.
+by Jeremy's explicit choice of model for this visual work. Done and approved from the recordings: the pod
+swims after its stations instead of riding the boat's frame (the 'spasm' was the whole pod swung at the route's
+turn), breaths roll instead of hopping, the featured leap turns out so it reads side-on, the nudge keeps its
+flukes down. Fastest turn 226 → 63°/s, fastest pitch change 223 → 115°/s. Details in `docs/journey.md` 12b;
+recordings in `/tmp/updraft-dolphins-fable-Pt1f/compare-*.webm` (left current, right reworked).
 
 ## Verification (2026-09-24, integrated `pt0923-lead`)
 
