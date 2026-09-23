@@ -155,10 +155,10 @@ export class LittleBoatsChapter implements Chapter {
     const { child: c, plane: p, cygnet: k, littleBoats: room, wind, boat } = this.cast;
     const childS = L.startZ - c.position.z;
     let limit = Math.max(3, childS + tuning.littleBoats.childLead);
-    const pool = POOLS[this.pool];
-    if (this.swim === 'approach') limit = Math.min(limit, this.swimEntry + 5);
-    if (this.swim === 'water') limit = Math.min(limit, L.startZ - k.position.z + tuning.littleBoats.swimLead);
-    if (this.swim === 'out' && pool) limit = Math.min(limit, pool.leave + 3);
+    // The toy may sail this far ahead of the cygnet while it makes for the water, swims, and climbs out.
+    const swimLead = tuning.littleBoats.swimLead;
+    if (this.swim === 'approach') limit = Math.min(limit, this.swimEntry + swimLead);
+    if (this.swim === 'water' || this.swim === 'out') limit = Math.min(limit, L.startZ - k.position.z + swimLead);
     room.update(dt, time, wind, limit);
     if (this.beat === 'notice') {
       c.lookAt = room.focus;

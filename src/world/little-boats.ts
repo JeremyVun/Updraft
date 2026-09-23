@@ -477,10 +477,11 @@ export class LittleBoats {
           this.departing || t.s >= L.length
             ? THREE.MathUtils.lerp(k.outletCurrent, k.offshoreSpeed, THREE.MathUtils.smoothstep(t.s, 107, 135))
             : 0;
-        t.drive = Math.max(t.effort * k.speed, carried * k.speed, current);
+        const top = k.speed * k.pace[i];
+        t.drive = Math.max(Math.max(t.effort, carried) * top, current);
+        t.shove = i === 0 ? t.drive : t.effort * top;
       }
       // A hull's own gust nudges on a toy it is closing on and cannot pass, and through it any queue ahead.
-      for (const t of this.fleet) t.shove = t === hero ? t.drive : t.effort * k.speed;
       for (let i = 0; i < this.fleet.length; i++) {
         const t = this.fleet[i];
         for (let j = i + 1; j < this.fleet.length; j++) {
@@ -506,8 +507,8 @@ export class LittleBoats {
         }
         t.s = Math.max(t.s, Math.min(t === hero ? heroEnd : k.offshoreEnd, t.s + t.speed * dt));
       }
-      // A rear push travels through the flotilla instead of through the hulls. Keep the
-      // lane offsets and stream course, so a collision cannot shove a toy onto a bank.
+      // Should that fall short, a rear push travels through the flotilla instead of through the hulls.
+      // Keep the lane offsets and stream course, so a collision cannot shove a toy onto a bank.
       // Toys in clear lanes slip past each other; the frame's starting order holds where they cannot.
       for (let i = 1; i < this.fleet.length; i++) {
         const ahead = this.fleet[i];
