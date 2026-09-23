@@ -32,3 +32,16 @@ Branches from `8be5346`, each in its own worktree with its own dev server; merge
 | 7 | Drowned village: bare wood island visible at draw distance; hide it in haze | lead | lead | fixed: the wood draws trees only within 178 of the eye, so its bare hill showed over the rooftops. New island mist (`uIsleMist`, `tuning.world.woodMist`) hides it beyond 110–165 units; it comes out of the rain with its trees |
 | 8 | Still island: the plane stops greening below a speed threshold that is too high | lead | lead | fixed: greening was gated on `airborne`, which drops as soon as the plane settles to its glide height over the grass, while it still travels 60% of its path. It now greens while it moves (`planeBloomFrom` 0.3). Life along one throw's path, first/middle/last third: 0.77/0.14/0.00 before, 0.91/0.99/1.00 after |
 | 9 | Wood → sleeping: the island and its hill curtains show too early | lead | lead | fixed: the same island mist (`sleepingMist`, 40–72 units, a soft bank over the water) hides the island until the last few seconds; the near shore emerges first and the summit window stays hidden until they land, then the mist lifts |
+
+## Verification (2026-09-24, integrated `pt0923-lead`)
+
+- Typecheck and production build pass. Check groups: quick 12/14 and mechanics 48/50, the two failures
+  (`progress-schema`'s `stars4-*` arity and `camera-parity`'s last-digit float) identical on the untouched
+  `8be5346`; audio 17/17; browser 8/8. Sky mirror GPU run, sea logic, little boats logic, crossing camera and
+  geography pass.
+- Render parity against `8be5346` (12 frozen scenes) passes: wood, sleeping, mirror, home and portrait are
+  identical; the drowned village differs in 1.1% of pixels (the wood's mist), boats 0.15%, sea 0.06%.
+- Before/after recordings, before on the left, aligned by beat: `/tmp/updraft-pt-lead-rec/compare-*.webm`
+  (hoop, still-island, drowned-village, storm-plane, wood-to-sleeping, little-boats, sea-passage); the
+  separate takes are `before-*.webm` and `after-*.webm` beside them.
+- Not verified: a listening pass on the two music levels, and a physical iPad.
