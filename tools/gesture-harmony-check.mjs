@@ -15,7 +15,8 @@ try {
     const pitchIn=(midi,chord)=>chord.some(m=>(midi-m)%12===0);
     const plain=Object.entries(MOODS).filter(([name])=>name!=='boats').map(([music,m])=>({name:music,state:{music,startingIsland:music==='still',forestWind:music==='wood'},
       seconds:m.seconds*m.chords.length,changes:m.chords.map((_,i)=>i*m.seconds),
-      harmony:at=>music==='wood'?m.chords[0]:m.chords[Math.floor(at/m.seconds)%m.chords.length]}));
+      // Forest chimes use the original low minor palette (the whole scale), not filtered to the current chord's tones (docs/contracts/audio.md).
+      harmony:at=>music==='wood'?m.scale:m.chords[Math.floor(at/m.seconds)%m.chords.length]}));
     const {BOATS_CHORDS,BOATS_PHRASE_SECONDS}=await productionModule('/src/audio/little-boats-score.ts');
     cases.push(...plain,{name:'boats',state:{music:'boats'},key:'boatsScore',seconds:BOATS_PHRASE_SECONDS,
       changes:BOATS_CHORDS.map((_,i)=>i*4.5),harmony:(at,score)=>BOATS_CHORDS[Math.floor(Math.max(0,at-score.epoch)%BOATS_PHRASE_SECONDS/4.5)]});

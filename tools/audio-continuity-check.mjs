@@ -26,7 +26,9 @@ try {
       ['toHarbour', { music: 'mirror', hush: .5 }],
     ];
     const cast = { boat: { position: new THREE.Vector3(), sailSide: 1 }, plane: {},
-      cygnet: { wing: { restore() {} } }, skyMirror: { progress: 3 } };
+      cygnet: { wing: { restore() {} } },
+      // Journey.make('toHarbour') restores any unfound stars before departure; four stars, all found here.
+      skyMirror: { progress: 3, stars: [{}, {}, {}, {}], restore() {} } };
     const currentScore = sound => sound.linesScore ?? sound.boatsScore ?? sound.meadowScore ?? sound.birchesScore ?? sound.sleepingScore;
     for (const [name, outgoing] of cases) {
       let seed = 98765;

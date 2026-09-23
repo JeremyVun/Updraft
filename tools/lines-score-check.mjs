@@ -133,9 +133,11 @@ try {
       await pause;update(tick);if(tick+1<87*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();
     }
     const buffer=await rendering;
-    check([11,23,37,65].every(at=>feedback.some(e=>e.at>=at&&e.at<at+.5)),'Playable strokes respond even while the melody is quiet');
+    // Cursor chimes are limited to the opening island, the forest and the Sleeping climb (docs/contracts/audio.md);
+    // Lines is none of those, so gusts and held updrafts must stay silent even while the melody is quiet.
+    check(![11,23,37,65].some(at=>feedback.some(e=>e.at>=at&&e.at<at+.5)),'Gusts do not trigger cursor chimes in Lines');
     const lifts=feedback.filter(e=>e.duration===1.6&&e.chord);
-    check(lifts.length>5&&lifts.every(e=>e.midi>=62&&e.midi<=81&&e.chord.some(m=>(m-e.midi)%12===0)),'Updraft notes follow Lines harmony in the calmer gesture register');
+    check(lifts.length===0,'Held updrafts do not trigger cursor chimes in Lines');
     check(!feedback.some(e=>e.now>=25&&e.now<25.75),'Piano ownership still suppresses generic chimes');
     check(!live.parts.size&&!resumed.parts.size,'Exited scores release every voice and bus');
     check(chords.every(s=>s.chord===Math.floor(s.now/(s.music==='lines'?9:8.5))%4),'Shared chord clock continues independently');

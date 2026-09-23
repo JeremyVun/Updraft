@@ -112,8 +112,10 @@ try {
       await ctx.resume();
     }
     const buffer = await rendering;
-    check(feedback.some(at => at >= 16 && at < 17) && feedback.some(at => at >= 21 && at < 22),
-      'Wind and updraft chimes stay playable during the quiet flock and pond phases');
+    // Cursor chimes are limited to the opening island, the forest and the Sleeping climb (docs/contracts/audio.md);
+    // Meadow is none of those, so gusts and updrafts stay silent even during the quiet flock and pond phases.
+    check(!feedback.some(at => at >= 16 && at < 17) && !feedback.some(at => at >= 21 && at < 22),
+      'Wind and updraft chimes stay silent in Meadow during the quiet flock and pond phases');
     check(live.parts.size === 0 && resumed.parts.size === 0, 'Departed scores release all voices and buses');
     check(chords.every(s => s.chord === Math.floor(s.now / (s.music === 'meadow' ? 8.5 : 11)) % 4),
       'The original global chord clock continues unchanged while the new score plays');
