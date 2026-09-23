@@ -1023,7 +1023,7 @@ export const tuning = {
     swimMost: 7.5,
     swimLeast: 1.2,
     swimAccel: 5,
-    turnMost: 1.5,
+    turnMost: 1.1,
     chase: 1.3,
     /** How fast the pod's frame comes round when the boat turns, in radians a second: no faster than they can swim it. */
     headTurn: 0.4,
@@ -1065,7 +1065,10 @@ export const tuning = {
     leapFrom: -1,
     leapBeside: 4.8,
     leapSpeed: 5.5,
-    leapAngle: 0.95,
+    leapAngle: 0.9,
+    /** The width the lens shows beside the boat, in units, below which the leap goes straight ahead and above which it goes fully out. */
+    leapRoomLeast: 7,
+    leapRoomFull: 13,
     leapSteepest: 0.75,
     arrivalSpacing: 3.5,
     arrivalDepth: 7,

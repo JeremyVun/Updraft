@@ -17,12 +17,13 @@ export class SeaLife {
   private readonly slicks = new Marks();
   private readonly wake: WhaleWake;
   private readonly fish: Fish;
-  private readonly pod = new Dolphins();
+  private readonly pod: Dolphins;
   private swimMark = 0;
   private readonly seen = new THREE.Vector3();
 
-  constructor(wind: WindField, camera: THREE.Camera) {
+  constructor(wind: WindField, camera: THREE.PerspectiveCamera) {
     this.spray = new Spray(wind);
+    this.pod = new Dolphins(camera);
     this.wake = new WhaleWake(this.body, this.spray, this.foam, this.slicks);
     this.fish = new Fish(camera, this.spray, this.foam);
     this.slicks.mesh.renderOrder = 2;

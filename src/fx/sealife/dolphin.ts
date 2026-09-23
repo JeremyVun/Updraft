@@ -789,7 +789,7 @@ export class Dolphins {
   /** How far ahead the lanes run while the boat is busy; it opens and closes no faster than they can swim it. */
   private lead = 0;
 
-  constructor() {
+  constructor(private readonly lens: THREE.PerspectiveCamera) {
     const base = dolphinGeometry();
     this.geo.index = base.index;
     for (const name of ['position', 'normal', 'aRig']) this.geo.setAttribute(name, base.attributes[name]);
@@ -1254,8 +1254,15 @@ export class Dolphins {
       }
     } else if (s.phase === 'run') {
       if (d.lift > 0 && d.seg === 'dip' && d.next === d.lift) {
-        const out = k.leapAngle * THREE.MathUtils.smoothstep(d.segT / d.span, 0.05, 0.8);
-        this.swimAt(s, k.leapSpeed * Math.cos(out) - this.speed, s.side * k.leapSpeed * Math.sin(out), dt);
+        /** The turn out comes late in the dip, so it is still close beside the boat when it leaves the water. */
+        const out = this.leapOut() * THREE.MathUtils.smoothstep(d.segT / d.span, 0.4, 0.95);
+        const va = k.leapSpeed * Math.cos(out) - this.speed;
+        const vc = s.side * k.leapSpeed * Math.sin(out);
+        const most = k.stuntAccel * dt;
+        s.va += THREE.MathUtils.clamp(va - s.va, -most, most);
+        s.vc = vc;
+        s.along += s.va * dt;
+        s.across += s.vc * dt;
       } else this.glide(s, k.leapFrom, s.side * k.leapBeside, 0.55, dt);
       if (s.t > k.leapRunFor && !s.asked) {
         s.asked = true;
@@ -1274,7 +1281,8 @@ export class Dolphins {
         d.hurry = false;
         d.tilt = null;
         const v = k.leapSpeed * 0.55;
-        this.swimAt(s, v * Math.cos(k.leapAngle) - this.speed, s.side * v * Math.sin(k.leapAngle), dt);
+        const out = this.leapOut();
+        this.swimAt(s, v * Math.cos(out) - this.speed, s.side * v * Math.sin(out), dt);
         if (d.seg === 'hold' && d.segT > 0.6) {
           s.phase = 'back';
           s.t = 0;
@@ -1282,6 +1290,16 @@ export class Dolphins {
         }
       }
     }
+  }
+
+  /**
+   * How far off the boat's course the leap goes out: the full angle where the lens has the width for it, and
+   * straight ahead on a narrow portrait frame, which cannot hold a side-on arc and would cut the animal off.
+   */
+  private leapOut(): number {
+    const k = tuning.dolphins;
+    const room = tuning.seaPassage.cameraDistance * Math.tan(THREE.MathUtils.degToRad(this.lens.fov) / 2) * this.lens.aspect;
+    return k.leapAngle * THREE.MathUtils.smoothstep(room, k.leapRoomLeast, k.leapRoomFull);
   }
 
   /**
@@ -1345,7 +1363,10 @@ export class Dolphins {
     if (s.t > 1.5) d.held = null;
     const along = d.pack.along + d.dAlong + this.lead;
     const across = this.wide(d, along);
-    this.glide(s, along, across, 0.5, dt);
+    /** Back in a wide, easy curve: a set-piece never ends in a spin. */
+    const k = tuning.dolphins;
+    this.swimAt(s, THREE.MathUtils.clamp((along - s.along) * 0.35, -(this.speed - k.swimLeast), k.swimMost - this.speed),
+      THREE.MathUtils.clamp((across - s.across) * 0.35, -2.5, 2.5), dt);
     if (Math.hypot(along - s.along, across - s.across) < 1.2 || s.t > 16) {
       d.held = null;
       d.hurry = false;
@@ -1448,7 +1469,8 @@ export class Dolphins {
       d.seg = 'roll';
       d.v0 = v;
       d.next = -v;
-      d.span = tuning.dolphins.breathFor;
+      /** A quicker rise rolls through sooner, so the beak never stands clear of the water on a breath. */
+      d.span = Math.min(tuning.dolphins.breathFor, 1 / v);
       return;
     }
     d.seg = 'air';
