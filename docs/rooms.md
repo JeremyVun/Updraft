@@ -271,6 +271,25 @@ Changes (`src/world/little-boats.ts`, `src/story/little-boats.ts`, `tuning.littl
 The launch, the three pools and swims, the reveal and the offshore run keep their order. Sails still fill
 only with real local wind and hang empty while a toy glides.
 
+Measured in the rendered game with real mouse strokes (320 px over 0.8 s, 1600×900), before and after.
+One stroke over the orange toy: 3.7–5.9 units of travel, then 2.3–3.5 more once the stroke ends and under
+1 unit/s within 1.6 s; now 9–12.4 units, 7–9.3 after the stroke, under 1 unit/s after about 3 s and under
+0.5 after about 4.5 s. Peak speed 1.7–1.9 became 2.6–2.85. Slower strokes and strokes 110 px off the toy
+move it as far. A stroke every 2.5 s: the orange toy averaged 1.53 units/s and reached the mouth after
+about 65 s; now 1.92 units/s and about 50 s. It trailed the leader by 14.0 units on average (25.1 at most)
+and was last in every frame, 7.6 units behind the fleet's centre; now 6.2 (13.4 at most, mostly the width
+of two lane files ahead of it), last in 53% of frames and 2.2 units behind the centre. The teal toy was
+6.6 ahead on average and now 0.7; the yellow 10.1 and now 1.2. The cygnet's swims shorten with the room
+(47 of 66 s sailing, now 33 of 53 s).
+
+Verified: typecheck and production build (existing bundle-size warning); `tools/little-boats-logic-check.mjs`
+at 30/60/120 fps, including the orange toy's momentum through every pool handoff (worst deceleration 1.9
+units/s², limit 3). Its hull clearance check now measures along and across the heading, since toys in clear
+lanes may sail abreast, and its steady-wind swim check is a share of the sailing time (at least 60%, now
+73%) instead of a fixed 40 s. Mouse and `TOUCH=1` runs of `tools/little-boats-check.mjs` complete the room
+with three swims and no abrupt stops, and a `tools/play.mjs` run of eleven relaxed swipes, three seconds
+apart, reaches the reveal.
+
 ## Meadow arrival (2026-09-20)
 
 Jeremy found the crossing landed too far along the meadow shore, leaving a long walk before the hill.
