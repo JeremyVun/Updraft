@@ -151,6 +151,7 @@ export class Cygnet {
   /** 1 as it goes under on the way in, falling away as it bobs back up. */
   private dunk = 0;
   private swimSpeed = 0;
+  private readonly swimVel = new THREE.Vector2();
   private nextPaddle = 0;
   private gaitStale = true;
   private actWas: Drives['act'] = null;
@@ -644,6 +645,7 @@ export class Cygnet {
         this.seating.go({ seat: null, held: false }, 'hop', 0.7, 0.3);
         this.heard.push({ kind: 'flutter', amount: 0.9 });
         this.mind.perform('shake', 1.1);
+        this.swimCarry.set(0, 0);
       }
       this.state = 'perched';
       this.settle = 0;
@@ -671,6 +673,11 @@ export class Cygnet {
 
   /** The height of whatever it is swimming on: the sea, or a pond up the hill. */
   swimLevel = 0;
+  /**
+   * The water moving it along, in units a second: the wave a sailing boat pushes down its side, which it rides the
+   * way the pod rides the bow, paddling only to hold its place. Whoever puts it in beside a moving boat sets it.
+   */
+  readonly swimCarry = new THREE.Vector2();
   /** Playful paddling in the toy pools; zero keeps the later open-sea swim's existing character. */
   swimPlay = 0;
   private swimJoy = 0;
@@ -687,6 +694,7 @@ export class Cygnet {
     this.state = 'following';
     this.swimPlay = 0;
     this.swimJoy = 0;
+    this.swimCarry.set(0, 0);
     this.position.set(x, Math.max(heightAt(x, z), 0), z);
     this.yaw = yaw;
     this.landedAt = this.time;
@@ -1301,10 +1309,24 @@ export class Cygnet {
     const burst = this.swimJoy * (0.5 + 0.5 * Math.sin(this.swum * 2.4)) ** 2;
     const top = 2.3 + (tuning.littleBoats.swimSpeed - 2.3) * burst;
     const want = entering ? 0 : clamp(gap * (1.1 + burst * 0.65), 0, top);
-    this.swimSpeed = ease(this.swimSpeed, want, 1.6, dt);
-    if (gap > 0.15) this.turnTo(Math.atan2(dx, dz), 3, 2.2, dt);
-    this.position.x += Math.sin(this.yaw) * this.swimSpeed * dt;
-    this.position.z += Math.cos(this.yaw) * this.swimSpeed * dt;
+    if (this.swimCarry.lengthSq() > 0.01) {
+      /** Carried, it paddles across the moving water to its place and faces the way it is really going. */
+      const toward = gap > 1e-3 ? want / gap : 0;
+      this.swimVel.x = ease(this.swimVel.x, dx * toward, 1.6, dt);
+      this.swimVel.y = ease(this.swimVel.y, dz * toward, 1.6, dt);
+      this.swimSpeed = this.swimVel.length();
+      const vx = this.swimVel.x + this.swimCarry.x;
+      const vz = this.swimVel.y + this.swimCarry.y;
+      if (vx * vx + vz * vz > 0.09) this.turnTo(Math.atan2(vx, vz), 3, 2.2, dt);
+      this.position.x += vx * dt;
+      this.position.z += vz * dt;
+    } else {
+      this.swimSpeed = ease(this.swimSpeed, want, 1.6, dt);
+      if (gap > 0.15) this.turnTo(Math.atan2(dx, dz), 3, 2.2, dt);
+      this.position.x += Math.sin(this.yaw) * this.swimSpeed * dt;
+      this.position.z += Math.cos(this.yaw) * this.swimSpeed * dt;
+      this.swimVel.set(Math.sin(this.yaw) * this.swimSpeed, Math.cos(this.yaw) * this.swimSpeed);
+    }
     /** Down with the plunge and up again past where it floats, then the sea's own slow lift. */
     const bobbing = Math.sin(this.time * 1.3 + 0.7) * 0.03 + Math.sin(this.time * 2.7) * 0.012;
     this.position.y = this.swimLevel + bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;

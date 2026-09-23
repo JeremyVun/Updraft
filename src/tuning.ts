@@ -907,18 +907,30 @@ export const tuning = {
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    swimSpeed: 1.5,
-    /** A shorter swim leaves room for the leap, nudge, dive and mirror fade within 100 seconds. */
+    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
+    swimSpeed: 5,
+    /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
+    swimCarry: 0.75,
+    swimEase: 0.5,
     swimFor: 14,
-    swimAnticipation: 3,
-    swimDecision: 4,
-    swimAt: 0.30,
+    swimAnticipation: 2.5,
+    swimDecision: 3.5,
+    swimAt: 0.2,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
-    swimNotBefore: 25,
-    dolphinsAfter: 10,
+    swimNotBefore: 18,
+    dolphinsAfter: 5,
     waypointRadius: 10,
-    encounterHoldAt: 0.60,
-    encounterSpeed: 1.5,
+    /**
+     * Where along the route the pod says goodbye, and about when its play is done: a boat ahead of that is eased
+     * toward it, never below `leastSpeed`. Only a pod still playing past `farewellAt` slows it further, to
+     * `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
+     */
+    farewellAt: 0.76,
+    farewellBy: 57,
+    leastSpeed: 3,
+    holdSpeed: 1,
+    holdAt: 0.84,
+    limitEase: 0.6,
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
@@ -929,15 +941,13 @@ export const tuning = {
     swimCameraBearing: 0.65,
     childTurn: 0.7,
     haze: 0.94,
-    /** Begin easing away before the coastal approach. */
-    farewellAt: 0.66,
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
     /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
     length: 4.35,
     girth: 1.22,
-    quietLead: 12,
+    quietLead: 8,
     quietEase: 0.22,
     /** Most the lanes open ahead or fall back while the swim has the boat, in units a second on top of its speed. */
     leadRate: 1.6,
@@ -953,11 +963,15 @@ export const tuning = {
     porpoiseSlope: 0.6,
     breathMost: 1.3,
     porpoiseMost: 3.2,
-    /** The slowest they are ever shaped as swimming, in units a second: keeping station on a slow boat is still swimming. */
+    /**
+     * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
+     * keeping station on a slow boat is still swimming, and sliding back along it is swimming slower, not turning round.
+     */
     leastPace: 2.5,
-    /** How far below breathing depth a rise to the surface may start, and how fast a departing dolphin slants down. */
+    leastHeadway: 1.5,
+    /** How far below breathing depth a rise to the surface may start, and how fast the depth it swims at can change. */
     riseFrom: 1.9,
-    diveRate: 1.5,
+    depthRate: 1.4,
     /** How fast a dolphin playing a set-piece gathers or sheds speed, in units a second a second. */
     stuntAccel: 5,
     /** How fast a rejoining dolphin lets go of what is left of its set-piece station, per second. */
@@ -967,6 +981,9 @@ export const tuning = {
     leapSpread: 1.5,
     leapRecovery: 1.5,
     nudgeAfter: 3,
+    /** Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw. */
+    leapOutFor: 2.8,
+    leapRunFor: 3.2,
     /** Where the leaper runs beside the boat before the throw, how fast it drives forward into it, and its steepest take-off in radians. */
     leapFrom: -1,
     leapAlong: 3.2,

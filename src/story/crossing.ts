@@ -165,6 +165,9 @@ export class CrossingChapter implements Chapter {
   private swimSide = 1;
   private readonly beside = new THREE.Vector3();
   private readonly water = new THREE.Vector3();
+  /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
+  private limit: number;
+  private swimCap = 0;
   private readonly homeEye = new THREE.Vector3();
   private readonly dockEye = new THREE.Vector3();
 
@@ -176,6 +179,7 @@ export class CrossingChapter implements Chapter {
     this.breeze = opts.breeze ?? 1;
     this.arrivalSpeed = opts.arrivalSpeed ?? Infinity;
     this.cruiseSpeed = opts.speed ?? (opts.dolphins ? tuning.seaPassage.speed : Infinity);
+    this.limit = this.cruiseSpeed;
     this.departure.set(cast.boat.position.x, cast.boat.position.z);
     this.shot.carryAnchor = cast.boat.position;
     this.quarter = -cast.boat.sailSide || 1;
@@ -320,7 +324,7 @@ export class CrossingChapter implements Chapter {
         const gap = Math.hypot(point.x - this.cast.boat.position.x, point.y - this.cast.boat.position.z);
         if (gap < nearest) { nearest = gap; this.leg = index; }
       });
-      this.cast.boat.speedLimit = this.cruiseSpeed;
+      this.cast.boat.speedLimit = this.limit = this.cruiseSpeed;
     }
     this.time = data[1]; this.swim = 'done';
     this.cast.boat.steerFor = this.route[this.leg];
@@ -404,7 +408,8 @@ export class CrossingChapter implements Chapter {
     const withPod = this.wantsDolphins && this.time >= tuning.seaPassage.dolphinsAfter
       && (this.progress() < tuning.seaPassage.farewellAt || this.swim !== 'done' || !sealife.dolphinFarewellReady);
     if (this.wantsDolphins && !withPod && this.swim === 'done' && this.podLeftAt === null) this.podLeftAt = this.time;
-    sealife.dolphinsWith(withPod ? boat.position : null, boat.yaw, -this.quarter, swimming);
+    // The nudge may begin its approach, under water, while the cygnet is climbing back aboard.
+    sealife.dolphinsWith(withPod ? boat.position : null, boat.yaw, -this.quarter, swimming && this.swim !== 'drying');
     /** The night ends somewhere out here, by degrees, with nobody watching for it. */
     if (this.duskTo !== this.duskFrom) {
       this.dusk = THREE.MathUtils.lerp(this.duskFrom, this.duskTo, this.progress());
@@ -420,11 +425,7 @@ export class CrossingChapter implements Chapter {
     } else if (this.wantsDolphins && !swimming) this.cast.cygnet.watch(null);
 
     if (this.swimAt !== null) this.braveSwim(dt);
-    // Leave open water for the complete leap, swim and nudge even under sustained player gusts.
-    if (this.wantsDolphins && !sealife.dolphinFarewellReady && this.progress() >= tuning.seaPassage.encounterHoldAt) {
-      boat.speedLimit = Math.min(boat.speedLimit, tuning.seaPassage.encounterSpeed
-        * (1 - THREE.MathUtils.smoothstep(this.progress(), tuning.seaPassage.encounterHoldAt, 0.72)));
-    }
+    if (this.wantsDolphins) this.paceSea(dt, swimming);
 
     const wanted = this.wantsRainbow && this.time < RAINBOW_FOR ? 1 : 0;
     this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? 0.3 : 0.06)));
@@ -459,7 +460,6 @@ export class CrossingChapter implements Chapter {
       }
     } else if (this.swim === 'restless') {
       /** It has been looking over the side since the first crossing. This time it does not look away. */
-      boat.speedLimit = tuning.seaPassage.swimSpeed;
       cygnet.watch(this.water);
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > tuning.seaPassage.swimAnticipation) to('side');
@@ -475,12 +475,14 @@ export class CrossingChapter implements Chapter {
     } else if (this.swim === 'in') {
       cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, this.worldTime);
       cygnet.swimTo(this.water);
+      /** The boat sails on; the wave along its side carries the cygnet, which paddles only to keep its place in it. */
+      const carry = boat.speed * tuning.seaPassage.swimCarry;
+      cygnet.swimCarry.set(Math.sin(boat.yaw) * carry, Math.cos(boat.yaw) * carry);
       this.cast.sealife.swimmerNear(cygnet.position, this.worldTime);
       child.lookAt = cygnet.position;
-      /** Too much wind and the boat draws ahead of it; before it is left behind, the boat waits. */
+      /** If it ever falls behind anyway, the boat spills its wind and waits. Nothing is ever left behind. */
       const behind = cygnet.astern;
-      boat.speedLimit = behind > 2.8 ? 0.65 : tuning.seaPassage.swimSpeed;
-      boat.becalmed += ((behind > WAIT_FOR_IT ? 0.9 : behind > 3.5 ? 0.45 : 0.15) - boat.becalmed) * (1 - Math.exp(-dt * 0.8));
+      boat.becalmed += ((behind > WAIT_FOR_IT ? 0.9 : behind > 3.5 ? 0.45 : 0) - boat.becalmed) * (1 - Math.exp(-dt * 0.8));
       /** An arm hung over the side near it, whenever it is near enough for that to mean anything. */
       const hand = this.swimSide > 0 ? 0 : 1;
       if (behind < 1.6) child.reachFor(hand, this.look.copy(cygnet.position).setY(0.35).lerp(this.beside, 0.55));
@@ -502,9 +504,31 @@ export class CrossingChapter implements Chapter {
       }
     } else {
       boat.becalmed += (0 - boat.becalmed) * (1 - Math.exp(-dt * 0.6));
-      if (this.wantsDolphins) boat.speedLimit = this.leg >= this.route.length - 2
-        ? Math.min(this.cruiseSpeed, this.arrivalSpeed) : this.cruiseSpeed;
     }
+  }
+
+  /**
+   * How fast the sea passage lets the boat sail. The pod's play is spread over the open water by easing a boat
+   * that is ahead of it only as much as it needs, never below a sailing pace; the swim trims only a strong gust;
+   * and a pod still playing when the coast comes near is the one thing that holds the boat back. The cap eases, so
+   * the boat is never braked.
+   */
+  private paceSea(dt: number, swimming: boolean): void {
+    const k = tuning.seaPassage;
+    let limit = this.leg >= this.route.length - 2 ? Math.min(this.cruiseSpeed, this.arrivalSpeed) : this.cruiseSpeed;
+    if (this.podLeftAt === null) {
+      const progress = this.progress();
+      const ahead = (k.farewellAt - progress) * this.routeLength;
+      const left = k.farewellBy - this.time;
+      if (ahead > 0 && left > 0) limit = Math.min(limit, Math.max(k.leastSpeed, ahead / left));
+      if (this.swim !== 'done' || !this.cast.sealife.dolphinFarewellReady) {
+        limit = THREE.MathUtils.lerp(limit, Math.min(limit, k.holdSpeed), THREE.MathUtils.smoothstep(progress, k.farewellAt, k.holdAt));
+      }
+    }
+    this.swimCap += ((swimming ? 1 : 0) - this.swimCap) * (1 - Math.exp(-dt * k.swimEase));
+    limit = Math.min(limit, THREE.MathUtils.lerp(this.cruiseSpeed, k.swimSpeed, this.swimCap));
+    this.limit += (limit - this.limit) * (1 - Math.exp(-dt * (limit < this.limit ? k.limitEase : 2)));
+    this.cast.boat.speedLimit = this.limit;
   }
 
   /** How much of the route is behind them, 0 to 1. */
