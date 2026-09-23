@@ -1004,9 +1004,36 @@ export const tuning = {
      * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
      */
     breathSlope: 0.22,
-    porpoiseSlope: 0.6,
+    porpoiseSlope: 0.45,
     breathMost: 1.3,
     porpoiseMost: 3.2,
+    /** Seconds a breath takes rolling through the surface: it is a swimmer's undulation, never a thrown arc. */
+    breathFor: 1.1,
+    /** The spurt a porpoise runs on, in units a second over its lane, for how long, and how far it veers out from the boat. */
+    porpoiseBurst: 3,
+    porpoiseBurstFor: 1.4,
+    porpoiseVeer: 2.5,
+    /**
+     * How a dolphin swims after its station: its fastest and slowest through the water, in units a second, how hard
+     * it accelerates, in units a second a second, its tightest turn, in radians a second, and how closely it chases the
+     * station, per second. Nothing in the pod ever moves faster than this, whatever the boat or its lane does.
+     */
+    swimMost: 7.5,
+    swimLeast: 1.2,
+    swimAccel: 5,
+    turnMost: 1.5,
+    chase: 1.3,
+    /** How fast the pod's frame comes round when the boat turns, in radians a second: no faster than they can swim it. */
+    headTurn: 0.4,
+    /** The least room they leave each other, and how close to the planking any of them may come. */
+    spacing: 2.2,
+    hullClear: 1.2,
+    /** The most one banks into a turn, in radians, and how hard it leans per radian a second of turn. */
+    bankMost: 0.45,
+    bankLean: 0.35,
+    /** The most the spine bends, tail against beak, in radians, and the hardest the water slows a landing, in units a second a second. */
+    archMost: 0.62,
+    diveAccel: 12,
     /**
      * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
      * keeping station on a slow boat is still swimming, and sliding back along it is swimming slower, not turning round.
@@ -1028,9 +1055,15 @@ export const tuning = {
     /** Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw. */
     leapOutFor: 2.8,
     leapRunFor: 3.2,
-    /** Where the leaper runs beside the boat before the throw, how fast it drives forward into it, and its steepest take-off in radians. */
+    /**
+     * Where the leaper runs beside the boat before the throw, along and out from it, the speed through the water it
+     * leaves at, how far off the boat's course it turns out through the last dip (so the arc is seen from the side,
+     * not end-on from astern), and its steepest take-off in radians.
+     */
     leapFrom: -1,
-    leapAlong: 3.2,
+    leapBeside: 4.8,
+    leapSpeed: 5.5,
+    leapAngle: 0.95,
     leapSteepest: 0.75,
     arrivalSpacing: 3.5,
     arrivalDepth: 7,
@@ -1041,6 +1074,9 @@ export const tuning = {
     nudgeApproachFor: 2.4,
     nudgeApproachMax: 3,
     nudgeRunFor: 1.8,
+    /** The roll onto its side for the nudge, in radians, and the depth it holds it at: the flukes stay in the water. */
+    nudgeRoll: 0.8,
+    nudgeDepth: -0.22,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
