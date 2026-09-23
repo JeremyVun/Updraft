@@ -20,6 +20,7 @@ const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
 const { HOME_MOORING } = await import('../src/story/home.ts');
 const { heightAt } = await import('../src/world/island.ts');
 const { tuning } = await import('../src/tuning.ts');
+const { DOOR_EXIT } = await import('../src/world/doorway.ts');
 function fixture(gust = 0) {
   const wind = { breeze: new THREE.Vector2(2.47, -0.80), calm: 3,
     sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust ? 0.8 : 0, lift: 0 }); } };
@@ -67,9 +68,11 @@ for (const [name, at, yaw] of berths) {
   if(name==='lines') {
     const beside=b.boardingPoint(new THREE.Vector3());
     assert(heightAt(beside.x,beside.z)>0,'secret shore boarding point must be on dry sand');
+    // The child steps onto the shore at DOOR_EXIT (src/world/doorway.ts) after crossDoor() in
+    // src/story/lines.ts, then walks to the boat's boardingPoint() for board().
     for(let step=0;step<=20;step++) {
-      const x=THREE.MathUtils.lerp(240,beside.x,step/20);
-      const z=THREE.MathUtils.lerp(-470,beside.z,step/20);
+      const x=THREE.MathUtils.lerp(DOOR_EXIT.x,beside.x,step/20);
+      const z=THREE.MathUtils.lerp(DOOR_EXIT.z,beside.z,step/20);
       assert(heightAt(x,z)>0,'secret shore approach must not walk through water');
     }
   }
