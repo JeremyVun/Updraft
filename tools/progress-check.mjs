@@ -29,7 +29,7 @@ try {
 
   // Native story exits are arranged directly; the production Journey must notice and save them.
   const cases = [
-    ['island', '', 'companion', `c.beat='leaving';c.restored=true;c.worldLife=1;g.life.regions.island.w=1;g.cygnet.rideIn('cradle');`],
+    ['island', '', 'companion', `g.child.place(-12,-27,0);c.beat='leaving';c.restored=true;c.worldLife=1;g.life.regions.island.w=1;g.cygnet.rideIn('cradle');c.play='hold';c.holdUntil=1e6;`],
     ['lines', 'washing', 'family', `c.restoreCheckpoint('family',[2,1]);c.holdUntil=1e6;`],
     ['boats', 'boats', 'pool-1', `c.restoreCheckpoint('pool-1',[33]);`],
     ['boats', 'boats', 'pool-2', `c.restoreCheckpoint('pool-2',[69]);`],

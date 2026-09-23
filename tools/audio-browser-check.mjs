@@ -36,6 +36,8 @@ try {
       audioStates.length = 0; materials.length = 0;
     }, name);
     await page.waitForFunction(() => audioStates.length >= 6);
+    // A departure holds a musical rest before the crossing's arrangement enters.
+    if (name === 'toMirror') await page.waitForFunction(() => __game.sound.seaScore?.current, null, { timeout: 20000 });
     const state = await page.evaluate(() => ({ name: __game.story.name, audio: audioStates.at(-1), sounds: materials,
       boatsScore: !!__game.sound.boatsScore, boatsVoices: __game.sound.boatsScore?.voices.size ?? 0,
       seaScore: __game.sound.seaScore?.current?.phase,
