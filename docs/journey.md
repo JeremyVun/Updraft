@@ -526,7 +526,9 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    the boom, the water goes to glass and the world goes quiet, and nothing moves again until the player puts wind
    in the sail themselves. It is the first time the journey needs them rather than answering them, and it is the
    held breath before the weather. Then the storm gathers and takes the paper plane out of the child's hand, and
-   they reach after it and it is gone. **Built.** The drift *is* the crossing: there is no separate one before it.
+   they reach after it and it is gone: the storm carries it off ahead of the boat, fast and low over the wood
+   (`tuning.storm.planeAway`), and it is only put away once it has left the frame or the rain has swallowed it,
+   never while it can be seen. **Built.** The drift *is* the crossing: there is no separate one before it.
 5. **The dark wood** (`story/wood.ts`, `world/wood.ts`, `fx/embers.ts`) — the first winter storm, at night. There
    is no grass to bend and nothing to throw, so the wind does the only other thing it can do: it breathes on fire.
    The player fans embers awake out of the leaf litter and the child walks on for exactly as long as there is
