@@ -157,7 +157,7 @@ export class LittleBoatsChapter implements Chapter {
     let limit = Math.max(3, childS + tuning.littleBoats.childLead);
     const pool = POOLS[this.pool];
     if (this.swim === 'approach') limit = Math.min(limit, this.swimEntry + 5);
-    if (this.swim === 'water') limit = Math.min(limit, L.startZ - k.position.z + 5);
+    if (this.swim === 'water') limit = Math.min(limit, L.startZ - k.position.z + tuning.littleBoats.swimLead);
     if (this.swim === 'out' && pool) limit = Math.min(limit, pool.leave + 3);
     room.update(dt, time, wind, limit);
     if (this.beat === 'notice') {
@@ -242,6 +242,7 @@ export class LittleBoatsChapter implements Chapter {
       const s = room.progress;
       // Short goals follow the curved bank rather than cutting across the pools.
       const targetS = Math.min(s - 0.8, childS + 2.5);
+      c.stroll = 1 + tuning.littleBoats.childHurry * THREE.MathUtils.smoothstep(s - childS, 1.5, 4);
       this.bankAt(Math.max(3, targetS), this.bank);
       if (c.position.distanceTo(this.bank) > 0.75) c.walkTo(this.bank.x, this.bank.z, false, undefined, 0.3);
       c.lookAt = room.focus;
@@ -263,6 +264,7 @@ export class LittleBoatsChapter implements Chapter {
       if (s >= L.length && childS > 94 && this.pool === POOLS.length) {
         this.to('reveal');
         c.stop();
+        c.stroll = 1;
         c.lookAt = boat.position;
         completeObjective();
       }

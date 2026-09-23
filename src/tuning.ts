@@ -208,14 +208,27 @@ export const tuning = {
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
-    windFrom: 0.012, windFull: 0.18, speed: 2.4, drag: 1.7,
-    fleetReach: 14, childLead: 4, bankOffset: 2.2,
+    windFrom: 0.012, windFull: 0.18, speed: 2.9,
+    /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
+    drive: 1.7, drag: 0.45,
+    fleetReach: 14, childLead: 5.5, bankOffset: 2.2,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
+    /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */
+    childHurry: 0.35,
+    /** How far the child's toy may sail ahead of the swimming cygnet. */
+    swimLead: 6,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
+    /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */
+    carryAhead: 3, carryAheadEnd: 9,
     /** Course spacing leaves hull room even where the offshore turn compresses travel. */
     hullSpacing: 3.4,
+    /**
+     * The other toys sail either side of the child's centre lane. Hulls this far apart across the stream begin to
+     * pass, and pass freely at the second; the outlet narrows them into one file over the last course range.
+     */
+    sideLane: 1.55, passFrom: 1.1, passClear: 1.4, singleFileFrom: 86, singleFile: 96,
     brushSpeed: 1.5, brushRadius: 0.085, brushWindRadius: 3.5, brushEnergyScale: 22,
     inviteAfter: 4, revealFor: 4.5,
     rippleHeight: 0.065, toyDraft: 0.025, sailFillRate: 2.8, sailEmptyRate: 1.4,

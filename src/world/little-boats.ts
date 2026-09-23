@@ -173,6 +173,8 @@ interface Toy {
   effort: number;
   joined: boolean;
   seed: number;
+  /** Open water ahead of the hull before it would meet a toy it cannot pass. */
+  clear: number;
 }
 
 export class LittleBoats {
@@ -295,13 +297,14 @@ export class LittleBoats {
         shadow,
         rest: i === 0 ? 3 : [0, 12, 36, 49, 66, 79, 87][i],
         s: i === 0 ? 3 : [0, 12, 36, 49, 66, 79, 87][i],
-        lane: i === 0 ? 0 : (i % 2 ? 1 : -1) * (1.3 + i * 0.13),
+        lane: i === 0 ? 0 : (i % 2 ? 1 : -1) * (tuning.littleBoats.sideLane + i * 0.13),
         speed: 0,
         previousS: 0,
         fill: 0,
         effort: 0,
         joined: i === 0,
         seed: i * 1.7,
+        clear: Infinity,
       });
     }
     // A bathroom plug, with a brass eye and a chain that simply continues beyond sight.
@@ -456,6 +459,13 @@ export class LittleBoats {
       }
       // Use the boats' actual order on the water, including independently sailed toys.
       this.fleet.sort((a, b) => a.s - b.s);
+      for (const [i, t] of this.fleet.entries()) {
+        t.clear = Infinity;
+        for (const ahead of this.fleet.slice(i + 1)) {
+          const need = this.spacing(t, ahead);
+          if (need > 0) t.clear = Math.min(t.clear, ahead.s - t.s - need);
+        }
+      }
       let heroEnd = this.progress < L.length ? Math.max(hero.s, Math.min(L.length, limit)) : k.offshoreEnd;
       // Ease toward the walkers/swimmer instead of losing all momentum at each
       // pool handoff. Contact from a following hull must obey the same easing.
@@ -463,30 +473,42 @@ export class LittleBoats {
       if (this.progress < L.length && limit < L.length)
         heroEnd = Math.min(heroEnd, hero.s + Math.max(0, limit - hero.s) * dt / k.followEase);
       for (const [i, t] of this.toys.entries()) {
-        if (this.progress > t.s - 5) t.joined = true;
-        const carried = i === 0 ? push : t.joined ? push * k.fleetCarry : 0;
+        // Waiting toys join when the fleet reaches them, not only the child's toy.
+        if (!t.joined && this.toys.some((o) => o.joined && o.s > t.s - 5)) t.joined = true;
+        // The fleet sails in the child's toy's company: a toy that has run ahead of it leaves that wind behind.
+        const company = 1 - THREE.MathUtils.smoothstep(t.s - hero.s, k.carryAhead, k.carryAheadEnd);
+        const carried = i === 0 ? push : t.joined ? push * k.fleetCarry * company : 0;
         // Each sail owns its response; a following hull can carry that movement forward.
         const current =
           this.departing || t.s >= L.length
             ? THREE.MathUtils.lerp(k.outletCurrent, k.offshoreSpeed, THREE.MathUtils.smoothstep(t.s, 107, 135))
             : 0;
-        const speed = Math.max(t.effort * k.speed, carried * k.speed, current);
-        t.speed += (speed - t.speed) * (1 - Math.exp(-dt * k.drag));
+        // Only a toy's own gust shoves the one ahead in its lane; carried along, it keeps station behind it.
+        const drive = Math.max(t.effort * k.speed, Math.min(carried * k.speed, Math.max(0, t.clear) / k.followEase), current);
+        // A filled sail picks the hull up quickly; once the air eases, still water lets it glide on.
+        t.speed += (drive - t.speed) * (1 - Math.exp(-dt * (drive > t.speed ? k.drive : k.drag)));
         const end = i === 0 ? heroEnd : k.offshoreEnd;
         t.s = Math.max(t.s, Math.min(end, t.s + t.speed * dt));
       }
       // A rear push travels through the flotilla instead of through the hulls. Keep the
       // lane offsets and stream course, so a collision cannot shove a toy onto a bank.
+      // Toys in clear lanes slip past each other; the frame's starting order holds where they cannot.
       for (let i = 1; i < this.fleet.length; i++) {
-        const ahead = this.fleet[i], behind = this.fleet[i - 1];
-        if (ahead.s < behind.s + k.hullSpacing - 1e-8)
-          ahead.s = Math.min(ahead === hero ? heroEnd : k.offshoreEnd, behind.s + k.hullSpacing);
+        const ahead = this.fleet[i];
+        for (let j = 0; j < i; j++) {
+          const behind = this.fleet[j], need = this.spacing(behind, ahead);
+          if (need > 0 && ahead.s < behind.s + need - 1e-8)
+            ahead.s = Math.min(ahead === hero ? heroEnd : k.offshoreEnd, ahead.previousS + k.speed * dt, behind.s + need);
+        }
       }
       // The child's boat may be waiting for the walkers/swimmer. Let that stop travel
       // back through any boats behind it, without pushing it past the chapter limit.
       for (let i = this.fleet.length - 2; i >= 0; i--) {
-        const behind = this.fleet[i], ahead = this.fleet[i + 1];
-        if (behind.s > ahead.s - k.hullSpacing + 1e-8) behind.s = ahead.s - k.hullSpacing;
+        const behind = this.fleet[i];
+        for (let j = i + 1; j < this.fleet.length; j++) {
+          const ahead = this.fleet[j], need = this.spacing(behind, ahead);
+          if (need > 0 && behind.s > ahead.s - need + 1e-8) behind.s = Math.max(behind.previousS, ahead.s - need);
+        }
       }
       for (const t of this.fleet) t.speed = dt > 0 ? Math.max(0, (t.s - t.previousS) / dt) : 0;
       this.progress = Math.min(L.length, hero.s);
@@ -496,16 +518,31 @@ export class LittleBoats {
     this.pose(time);
   }
 
+  /** Offset across the stream at course position s, before wind drift. */
+  private laneAt(t: Toy, s: number): number {
+    const streamS = Math.min(s, 107);
+    if (t === this.toys[0]) return (1 - this.launch) * boatsWidth(streamS) * 0.92;
+    const narrow = Math.max(0.35, boatsWidth(streamS) - 1);
+    return THREE.MathUtils.lerp(
+      THREE.MathUtils.clamp(t.lane, -narrow * 0.7, narrow * 0.7),
+      t.lane * 1.5,
+      THREE.MathUtils.smoothstep(s, 109, 133),
+    );
+  }
+
+  /** Course distance two hulls keep: none in lanes that pass clear, full once the outlet funnels them into one file. */
+  private spacing(a: Toy, b: Toy): number {
+    const k = tuning.littleBoats;
+    const apart = Math.abs(this.laneAt(a, a.s) - this.laneAt(b, b.s));
+    const file = THREE.MathUtils.smoothstep((a.s + b.s) / 2, k.singleFileFrom, k.singleFile);
+    return k.hullSpacing * Math.max(1 - THREE.MathUtils.smoothstep(apart, k.passFrom, k.passClear), file);
+  }
+
   private pose(time: number): void {
     this.toys.forEach((t, i) => {
       if (i === 0 && this.held) return;
-      const streamS = Math.min(t.s, 107);
-      const narrow = Math.max(0.35, boatsWidth(streamS) - 1);
       const spread = THREE.MathUtils.smoothstep(t.s, 109, 133);
-      const lane =
-        i === 0
-          ? (1 - this.launch) * boatsWidth(streamS) * 0.92
-          : THREE.MathUtils.lerp(THREE.MathUtils.clamp(t.lane, -narrow * 0.7, narrow * 0.7), t.lane * 1.5, spread);
+      const lane = this.laneAt(t, t.s);
       boatsCourse(t.s, this.course);
       const yaw = this.course.yaw;
       const offset = lane + (i === 0 ? this.launch : 1) * t.drift;
