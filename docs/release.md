@@ -26,14 +26,31 @@ Baseline for before/after comparisons: `12a220a` in `/private/tmp/updraft-base`.
 
 | Item | Owner | Status |
 | --- | --- | --- |
-| Land `codex/production-hardening` (shader ramps, water textures, allocations, typed saves, check runner) | lead | merged `1fecb8b`; quick checks and 12-scene render parity pass |
-| Seven stale regression checks | parcel: tests | |
-| Failure paths (audio start, frame errors, entry load, WebGL2/float support), `_headers`, favicon/meta, QA clamps, mute memory | parcel: shell | |
-| iOS audio interruption, piano voices on mute, pinwheel voice, deferred audio synthesis, foghorn, `sound.output` | parcel: audio | |
-| Auto quality at 30 Hz and 4K, readbacks, doorway target, touch flicks, pointer picking, offscreen village, allocations | parcel: engine | |
-| Petals at the camera, dark canopy underside, sail/branch/kite occlusion, credits over Play again, shader hygiene, icons | lead (visual) | |
-| Show Jeremy the mirror band; propose a cottage setting | lead (visual) | |
-| Integrate, full checks, playthrough, before/after performance, docs, fast-forward `main` | lead | |
+| Land `codex/production-hardening` (shader ramps, water textures, allocations, typed saves, check runner) | lead | merged `1fecb8b`; 12-scene render parity against `12a220a` passes |
+| Stale regression checks | tests parcel + lead | nine stale fixtures updated (boat-ground, sea-logic, sea/lines/meadow/birches score, gesture-harmony, audio-continuity, audio-browser, progress companion); `audio` check group added |
+| Failure paths, `_headers`, metadata, QA clamps, sound preference | shell parcel | audio start cannot block Begin; frame errors open the recovery dialog; entry-load watchdog; WebGL2/float capability gate; build-generated CSP + immutable assets; OG tags; clamped `ratio`/`msaa`/`grass`; sound choice persists |
+| iOS interruptions, piano voices, pinwheel voice, deferred synthesis, foghorn, `sound.output` | audio parcel | cues held through interruptions (≤3 s replayed); reservations survive mute; pinwheel voice released; `start()` 59 → 12 ms; foghorn cue frame 26–107 → 1.2 ms |
+| Auto at 30 Hz and 4K, readbacks, doorway target, touch flicks, pointer picking, offscreen village, allocations | engine parcel | proven 30 fps cap judged as such; 4K budget rung; pooled/sliced readbacks and no forced blocking map (saturated max frame 100–117 → 50 ms); doorway frees 61.8 MiB after the crossing; flicks keep their full stroke; picks 3–10× faster; village rests while the boat is far |
+| Petals at the lens, canopy underside, sail/branch/kite occlusion, credits over Play again, shader hygiene, icons | lead | petals shrink within 1.5–5 m; daylight through the crown from beneath; kite/sail fade near the lens; the sail thins where it covers the child; birch branches dissolve at the lens; credits fade above Play again; rim/Fresnel clamps, guarded half vectors/bearings/rainbow angle, derivatives before early returns; favicon, touch icon, manifest |
+| Mirror band shown; cottage proposal | lead | shown to Jeremy, not changed (his call); cottage prototype on branch `proposal-cottage` |
 
 Out of scope by Jeremy's decision: keyboard-only play, a privacy notice, reduced-motion support.
 Not deploying: Jeremy did not ask for a deploy.
+
+## Verification (2026-09-23, integrated `release-0923`)
+
+- Typecheck and production build pass. Check groups: quick 14/14, mechanics 50/50, audio 17/17, browser 8/8;
+  also failure-paths, game-loop audio, power, and the full progress suite (48 cases). Render parity passes
+  in all 12 frozen scenes; the only intended differences are the near-lens fades and the sail giving way.
+- Full frozen-build journey: all 17 chapters, 43 checkpoints, credits, completed-save reload and Play again,
+  no page or console errors. Chronological frames reviewed for petals, the canopy, landings, the birch walk,
+  the kite and the ending.
+- `wrangler dev` serves the CSP and security headers on every path and `immutable` caching on `/assets/*`;
+  icons and the manifest are served with the right types.
+- Back-to-back frame timing against `12a220a` (1440×900 at DSF 2, Auto chose 1.25× with 2× MSAA, 12 s each):
+  Birches went from 11 hitched frames (p99 33.3 ms, worst 49.9 ms) to none (p99 16.8 ms); the sea's worst
+  frame fell from 150 ms to 50 ms; the other nine chapters held 16.7 ms p50 / 16.8 ms p99 in both builds.
+  Boot to ready is unchanged within noise (worst boot frame 267 vs 283 ms); whole-world construction before
+  Begin remains the main startup cost. Desktop Chrome/Metal measurements, not an iPad result.
+- Not verified here: a physical iPad (Low Power Mode quality, interruptions, touch flicks, Home Screen launch)
+  and a listening pass.
