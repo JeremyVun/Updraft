@@ -464,8 +464,8 @@ export class LittleBoats {
       // Ease toward the walkers/swimmer instead of losing all momentum at each
       // pool handoff. Contact from a following hull must obey the same easing.
       // Leave the outlet free so the toy can cross it and start departing.
-      if (this.progress < L.length && limit < L.length)
-        heroEnd = Math.min(heroEnd, hero.s + Math.max(0, limit - hero.s) * dt / k.followEase);
+      const waiting = this.progress < L.length && limit < L.length;
+      if (waiting) heroEnd = Math.min(heroEnd, hero.s + Math.max(0, limit - hero.s) * dt / k.followEase);
       for (const [i, t] of this.toys.entries()) {
         // Waiting toys join when the fleet reaches them, not only the child's toy.
         if (!t.joined && this.toys.some((o) => o.joined && o.s > t.s - 5)) t.joined = true;
@@ -479,6 +479,8 @@ export class LittleBoats {
             : 0;
         const top = k.speed * k.pace[i];
         t.drive = Math.max(Math.max(t.effort, carried) * top, current);
+        // The fleet waits for the travellers too, drifting to rest a little beyond the child's toy.
+        if (waiting && i > 0 && t.joined) t.drive = Math.min(t.drive, Math.max(0, limit + k.fleetLead - t.s) / k.followEase);
         t.shove = i === 0 ? t.drive : t.effort * top;
       }
       // A hull's own gust nudges on a toy it is closing on and cannot pass, and through it any queue ahead.

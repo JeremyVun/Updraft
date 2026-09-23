@@ -224,6 +224,8 @@ export const tuning = {
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
     /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */
     carryAhead: 0, carryAheadEnd: 6,
+    /** While the travellers catch up, gathered toys sail no further than this beyond where the child's toy may go. */
+    fleetLead: 3,
     /** Course spacing between toys in one lane, and the share more they keep through the offshore turn, which compresses travel. */
     hullSpacing: 3.4, turnRoom: 0.3,
     /**
