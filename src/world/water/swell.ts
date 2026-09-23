@@ -1,4 +1,5 @@
-import { glsl } from '../../tuning';
+import { glsl, tuning } from '../../tuning';
+import { SKY_MIRROR } from '../sky-mirror-layout';
 
 /**
  * The long swell: the only part of the sea that is real geometry. Everything finer than these waves is a normal
@@ -66,9 +67,13 @@ float swellHeight(vec2 p, float fromCamera) {
   return uSwell * smoothstep(0.6, 4.5, depth) * (1.0 - smoothstep(62.0, 105.0, fromCamera));
 }
 
-/** Surface at a world xz, undoing the waves' horizontal drag just as swellLift does on the CPU. */
+/**
+ * Surface at a world xz, undoing the waves' horizontal drag just as swellLift does on the CPU, and stilled over
+ * the sky mirror as the water mesh is, so wakes and foam there lie on the glass rather than under or over it.
+ */
 float seaSurfaceY(vec2 world) {
-  float height = swellHeight(world, distance(world, cameraPosition.xz));
+  float height = swellHeight(world, distance(world, cameraPosition.xz))
+    * smoothstep(${glsl(tuning.skyMirror.waterInner)}, ${glsl(tuning.skyMirror.waterOuter)}, distance(world, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
   vec2 base = world;
   for (int i = 0; i < 3; i++) base = world - swellShift(base, height).xz;
   return swellShift(base, height).y;
