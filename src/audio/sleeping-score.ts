@@ -2,10 +2,10 @@ import { WINTER_THEME, polishPhrase, phrasePosition, phraseHandoff, schedulePhra
 import type { AudioOut } from '../creatures/voices';
 import type { PianoStrings } from './audio';
 
-/** Approved Sleeping study, with player-paced rests rather than a timed soundtrack. */
+/** The bedside theme follows sleep, the frost, the bird's journey and returning warmth. */
 export type SleepingScorePhase = 'shelter' | 'cold' | 'climb' | 'summit' | 'morning';
 type Note = { voice: 'pad'; at: number; midi: number; duration: number; level: number; pan: number }
-  | { voice: 'piano'; at: number; midi: number; velocity: number };
+  | { voice: 'piano'; at: number; midi: number; velocity: number; role?: 'melody' | 'accompaniment' };
 const beds: [number, number, number[], number][] = [
   [0, 9.5, [50,57,64,69], .0055], [10, 5, [43,55,62,69], .0042],
   [36, 8, [50,57,62,65], .0032], [45, 5, [46,53,57,62], .0028],
@@ -25,13 +25,41 @@ interface Section extends Phrase<Note> { chords: { at: number; tones: readonly n
 const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: SLEEPING_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
   chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
-}, { sustain: from >= 70, loopFrom: from >= 70 ? 5 : 0,
-  ...(from === 36 ? { melody: WINTER_THEME.map((midi, i): Note => ({ voice: 'piano', midi, at: [2,6,11][i], velocity: .22 })) } : {}) });
+}, { sustain: true, loopFrom: from >= 70 ? 5 : 0 });
+const bedtimeChords = [
+  [50,57,64,69], [43,55,62,69], [47,54,62,66], [45,55,62,64],
+];
+const bedtime: Section = polishPhrase({ seconds: 32,
+  chords: bedtimeChords.map((tones, i) => ({ at: i * 8, tones })),
+  notes: [
+    ...bedtimeChords.flatMap((chord, k) => chord.map((midi, i): Note => ({ voice: 'pad',
+      at: k * 8 + i * .035, midi, duration: 7.2, level: [.0055,.0042,.0048,.0042][k] * (i === 0 ? .85 : 1),
+      pan: (i - 1.5) * .23 }))),
+    ...[69,64,62,57,59,66,64,62].map((midi, i): Note => ({ voice: 'piano', midi,
+      at: [2.5,6,10.5,14,18.5,22,26.5,30][i], velocity: [.29,.25,.27,.22,.24,.26,.23,.22][i] })),
+  ].sort((a, b) => a.at - b.at),
+});
+const journeyChords = [
+  [50,57,62,65], [46,53,62,64], [43,55,62,65], [45,52,62,64],
+];
+const journey: Section = polishPhrase({ seconds: 32,
+  chords: journeyChords.map((tones, i) => ({ at: i * 8, tones })),
+  notes: [
+    ...journeyChords.flatMap((chord, k) => chord.map((midi, i): Note => ({ voice: 'pad',
+      at: k * 8 + i * .035, midi, duration: 7.2, level: [ .0032, .0028, .0031, .0027 ][k] * (i === 0 ? .85 : 1),
+      pan: (i - 1.5) * .23 }))),
+    ...WINTER_THEME.map((midi, i): Note => ({ voice: 'piano', midi, at: [2,5,10][i], velocity: .22 })),
+    // The bird remembers the bedside melody over the unsettled second half.
+    ...[69,64,62,57].map((midi, i): Note => ({ voice: 'piano', midi, at: [17.5,21,25.5,29][i], velocity: [.25,.22,.24,.19][i] })),
+    ...[50,57,46,53,43,50,45,52].map((midi, i): Note => ({ voice: 'piano', midi, at: i * 4 + .15,
+      velocity: i % 2 ? .10 : .13, role: 'accompaniment' })),
+  ].sort((a, b) => a.at - b.at),
+});
 export const SLEEPING_SECTIONS: Record<SleepingScorePhase, Section> = {
-  shelter: section(0, 18, 32),
+  shelter: bedtime,
   cold: { seconds: 1, notes: [], chords: [] },
-  climb: section(36, 54, 32),
-  summit: { seconds: 1, notes: [], chords: [] },
+  climb: journey,
+  summit: journey,
   // The flight cue has five seconds alone. The piano answer waits nineteen seconds after commitment.
   morning: section(70, Infinity, 48),
 };
@@ -78,6 +106,7 @@ export class SleepingScore {
     if (this.stopped) return;
     const now = this.output.ctx.currentTime;
     for (const gain of [this.output.bus, this.output.reverb]) gain.gain.setTargetAtTime(level, now, .8);
+    if (this.current && SLEEPING_SECTIONS[this.current.phase] === SLEEPING_SECTIONS[phase]) this.current.phase = phase;
     if (this.current?.phase !== phase) {
       this.quietHarmony = this.chordAt(now);
       if (this.current) this.release(this.current, 1.8);

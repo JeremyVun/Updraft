@@ -6,6 +6,19 @@ adapt their approved compositions to story phases. `dream-score.ts` plays the ap
 physical sounds; `world-foley.ts` maps object motion to them. `environment.ts` derives local habitat and coast
 weights. Feel and distance settings live in `tuning.audio`.
 
+Approved September 24 Home ending: `tuning.audio.homeEndingSounds = false` disables the ending's `unfold`,
+`release`, `home` and `finale` cues plus paper handling and cottage door sounds. Their implementations remain
+available behind the switch. The accepted Home composition carries the entire ending on a fixed clock. This supersedes the earlier requirement to play the recognition and finale cues.
+`homeMusicDucking = false` also bypasses chapter hush and authored-cue ducking for the Home score, including
+its offshore approach. Its composed dynamics, night shading and arrival fades remain. Still's
+fall/rescue attenuation is unchanged pending a musical decision.
+
+Sleeping's September 23 approved revision continues the bedside melody over changing harmony until frost starts;
+the earlier static held-chord filler was rejected. Its darker journey
+variation adds a low piano pulse and recalls the bedside melody. Climb and summit share one phrase clock
+and voice set; reaching the summit no longer cuts the music. Frost remains silent, and the existing flight
+cue and morning answer retain their timing. See `audio-review.md` for Jeremy's brief and approvals.
+
 ## Player feedback
 
 Cursor chimes accompany the starting island, forest and the feather-guided climb on Sleeping.
@@ -56,9 +69,9 @@ hush and cue ducking remain. Wind notes query the new harmony at their scheduled
 chord/loop boundaries. Lines' arrival gate freezes and retires the conductor without allocating another
 pad or letting its notes return under the next composition. Mute and hidden-page suspension freeze audio time.
 
-`phrasing.ts` shares scheduling, lookahead, stalled-frame skipping and introductory-rest handling across all eight scores. Sustained harmony now bridges accidental loop-end holes; Sleeping shelter/climb retain their sparse rests. Repeating bodies alternate the main melody, a quieter sparse verse and the original melody. Historical `*_AUDITION_NOTES` exports preserve the reference studies; runtime sections contain the approved polish.
+`phrasing.ts` shares scheduling, lookahead, stalled-frame skipping and introductory-rest handling across all eight scores. Sustained harmony bridges loop-end holes, including Sleeping shelter/climb. Repeating bodies alternate the main melody, a quieter sparse verse and the original melody. Historical `*_AUDITION_NOTES` exports preserve the reference studies; runtime sections contain the approved polish.
 
-The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the full plucked shape in Boats, the existing Meadow melody, B–F♯–E–D in Birches, and a stretched recollection at sea. Sleeping's climb remembers only D–E–F natural. Instrument voices, local harmony, story timing and home recognition remain distinct.
+The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the full plucked shape in Boats, the existing Meadow melody, B–F♯–E–D in Birches, and a stretched recollection at sea. Sleeping's climb remembers D–E–F natural, then the bedside A–E–D–A. Instrument voices, local harmony and story timing remain distinct.
 
 ## Story timing
 
@@ -99,11 +112,13 @@ Wind, water, foley and authored calls remain outside this musical silence. `home
 `summit-score.ts` plays Jeremy's approved drone: all 32 voicings at 80% tempo, continuous detuned
 triangle/sine voices, shared pitches held and moving voices independently gliding. Offshore `approach`
 plays the whole 180-second form, repeating for a slow crossing; landing retains its instance and clock.
-`HomeChapter.summitScore` selects `flight` at answered/fledge, `farewell` from gone through fold, and
-`home` from release onward. Flight/farewell repeat their eight-chord sections; home holds its final D6.
-The upper voice withdraws during farewell. Existing hush and cue ducking protect the paper reveal and
-approved recognition melody. The once-only finale retires the new score and takes over on the original
-pad; a guard prevents the drone restarting underneath it. Permanent ending silence still stops music.
+`HomeChapter.homeEndingTime` starts at the successful updraft. From then on `SummitScore` plays the
+accepted flight/farewell/Home sequence once, preserving the live voices at entry. Two soft upper voices
+join during the walk; the final Dmaj9 becomes Dadd9 with only C-sharp rising to D. It holds its height
+and level until the final fade. Checkpoint restoration selects the matching reunion/drawing score time.
+The paper release is automatic. `home-ending.ts` shares the end times between story and audio; scene
+phase changes cannot restart the composition. The old phase arrangements remain available when no
+ending clock is supplied. Recognition/release/door/finale cues remain disabled behind their switch.
 
 Drowned starts its handoff on departure from Birches, then requests Wood only after the lost-plane scene.
 The long sea passage retains its swim/reunion music until the pod's farewell. Meadow arrival uses its grey
@@ -197,8 +212,9 @@ over `fadeIn` (3.2 seconds); restoring completion clears the piano mix immediate
 
 `SleepingChapter.sleepingScore` supplies shelter until the first frost; cold through the unanswered call and
 feather departure; climb through snow/mist; summit from unbinding through the ribbon tug; morning from release
-through departure. Main copies the optional state every frame and clears it on exit. Cold and summit schedule
-no accompaniment, however long the player takes. Existing voices fade over 1.8 seconds and their reverb clears.
+through departure. Main copies the optional state every frame and clears it on exit. Cold schedules
+no accompaniment, however long the player takes. Summit continues the climb without resetting its phrase.
+Other section changes release existing voices over 1.8 seconds, including their reverb sends.
 The generic pad is suppressed throughout Sleeping. Its authored dynamics replace `hush` attenuation for this
 arrangement; gesture chimes and physical sounds remain available under their usual rules.
 
@@ -212,9 +228,12 @@ scheduled sources so the score can release them; ordinary piano calls keep their
 `PianoStrings` voice reservations belong to its AudioContext: muting suspends that context with its notes still
 scheduled, so the ten reservations survive mute and are cleared only when a new context is installed.
 
-The ending fades the gesture/cue and background buses at 23.5 seconds inside the cottage and starts credits at 26 seconds. Its existing
-shared reverb tail is retained. Environmental sounds continue. Jeremy auditioned both home-melody versions
-and explicitly chose the existing `unfold` melody. Preserve it; the piano-lullaby replacement is rejected.
+Only Home's ending gets a 0.7-second fade, from 113.8 to 114.5 seconds after the successful updraft.
+It acts on the background gate after reverb, so the musical tail finishes within that same release;
+wind and wildlife remain. Credits start at 116.5 seconds, two seconds after the music ends. Their
+initial position is inside the bottom reveal band and opacity enters over 0.3 seconds, so the first
+line is visible at the intended time rather than travelling up from beneath the screen. Other chapter
+fades are unchanged. The old `unfold` melody is retained in code, with its ending cue disabled.
 
 ## Space and habitat
 

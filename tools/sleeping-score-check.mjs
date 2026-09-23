@@ -1,4 +1,4 @@
-// Approved-note/timbre parity, story-paced silence, feedback and score lifecycle in real Web Audio.
+// Reference timbres, continuous shelter/journey, frost silence and lifecycle in real Web Audio.
 // node tools/sleeping-score-check.mjs (Vite on port 5230, or BASE).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,13 +7,18 @@ import { audioPage, wav } from './lib/audio-render.mjs';
 const { browser, page } = await audioPage();
 try {
   const result = await page.evaluate(async () => {
-    const { SleepingScore, SLEEPING_AUDITION_NOTES } = await import('/src/audio/sleeping-score.ts');
+    const { SleepingScore, SLEEPING_AUDITION_NOTES, SLEEPING_SECTIONS } = await import('/src/audio/sleeping-score.ts');
     const { SleepingChapter } = await import('/src/story/sleeping.ts');
     const { scheduleProposal } = await import('/tools/lib/island-score-proposals.mjs');
     const { tuning } = await productionModule('/src/tuning.ts');
     const { takeCues } = await productionModule('/src/story/cues.ts');
     const { PianoStrings } = audioModule;
     const passed = [], check = (ok, message) => { if (!ok) throw Error(message); passed.push(message); };
+    const shelter = SLEEPING_SECTIONS.shelter;
+    check(shelter.chords.every((chord, i) => (shelter.chords[i + 1]?.at ?? shelter.seconds) - chord.at <= 10),
+      'Bedtime never fills a long gap by holding one chord');
+    check(shelter.variants.every(notes => notes.some(n => n.voice === 'piano' && n.at >= shelter.seconds / 2)),
+      'Every bedtime verse carries its melody into the second half');
     const piano = out => { const p = new PianoStrings(); p.setOutput(out); return p; };
     const output = ctx => ({ ctx, bus: ctx.destination, reverb: ctx.createGain() });
     const canonical = notes => notes.map(n => n.voice === 'pad'
@@ -78,7 +83,8 @@ try {
         Object.defineProperty(ctx, 'currentTime', { configurable: true, value: now });
         score.update(now < 50 ? 'shelter' : now < 100 ? 'cold' : now < 150 ? 'climb' : now < 200 ? 'summit' : 'morning', 1);
       }
-      check(events.every(e => e.phase !== 'cold' && e.phase !== 'summit'), `Long player waits schedule no score in either rest at ${fps} Hz`);
+      check(events.every(e => e.phase !== 'cold'), `Frost schedules no score even during long player waits at ${fps} Hz`);
+      check(events.some(e => e.phase === 'summit'), `The journey continues through the summit at ${fps} Hz`);
       check(events.filter(e => e.phase === 'morning')[0].at >= 205, `Flight retains its five-second lead at ${fps} Hz`);
       check(events.filter(e => e.phase === 'morning' && e.note.voice === 'piano')[0].at >= 219,
         `Piano answer waits until after the flight at ${fps} Hz`);
@@ -90,12 +96,12 @@ try {
       delete ctx.currentTime;
     }
 
-    // Full production mix for feedback/lifecycle, followed by the same music alone to measure both rests.
+    // Full production mix for feedback/lifecycle, then the background alone to measure continuity and frost.
     let buffer;
     for (const musicOnly of [false, true]) {
     const { ctx, sound } = offlineSound(50);
     if (musicOnly) for (const fn of ['chime', 'cricket', 'owl', 'skylark', 'peep', 'bugle']) sound[fn] = () => {};
-    let score, resumed, retired;const chimes=[];
+    let score, resumed, retired, climb;const chimes=[];
     const chime = sound.chime.bind(sound); sound.chime = (...args) => { if(args[6])chimes.push(args[3]); chime(...args); };
     const update = tick => {
       const now = tick / 8, phase = now < 9 ? 'shelter' : now < 20 ? 'cold' : now < 27 ? 'climb'
@@ -106,7 +112,8 @@ try {
         charge: now >= 24 && now < 24.5 || now >= 35 && now < 35.5 ? .5 : 0, silence: now >= 48 });
       if (tick === 0) { score = sound.sleepingScore; retired = score.current; }
       if (tick === 15 * 8 && !musicOnly) check(retired.voices.size === 0 && !score.parts.has(retired), 'Shelter voices and buses retire before the unanswered call');
-      if (tick === 34 * 8 && !musicOnly) check(score.current.voices.size === 0 && sound.padGain.gain.value < 1e-8, 'Summit rest has no replacement drone');
+      if (tick === 26 * 8) climb = score.current;
+      if (tick === 34 * 8 && !musicOnly) check(score.current === climb && sound.padGain.gain.value < 1e-8, 'Summit retains the climb voices and phrase clock without a replacement drone');
       if (tick === 45 * 8 && !musicOnly) check(score.stopped && !sound.sleepingScore, 'Chapter exit stops Sleeping');
       if (tick === 47 * 8) { resumed = sound.sleepingScore; if (!musicOnly) check(resumed !== score && resumed.current.phase === 'morning', 'A morning entry starts directly in the warm arrangement'); }
       if (tick === 48 * 8 && !musicOnly) check(resumed.stopped && !sound.sleepingScore, 'Permanent silence stops Sleeping');
@@ -131,7 +138,8 @@ try {
         power += sample * sample; count++;
       }
       const rms = 10 * Math.log10(Math.max(1e-20, power / count));
-      check(rms < -90, `Actual score and shared reverb settle below −90 dBFS during ${from}–${to}s (${rms})`);
+      check(from === 16 ? rms < -90 : rms > -60,
+        `${from === 16 ? 'Frost is silent' : 'Summit keeps its accompaniment'} during ${from}–${to}s (${rms} dBFS)`);
     }
     }
     return { passed, relativeError, ...encodeAudio(buffer) };

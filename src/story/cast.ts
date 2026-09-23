@@ -102,6 +102,7 @@ export interface Chapter {
   readonly arrivalReady?: boolean;
   readonly homewardReady?: boolean;
   readonly summitScore?: SummitScorePhase;
+  readonly homeEndingTime?: number;
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;

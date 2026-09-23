@@ -15,6 +15,8 @@ const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {tuning}=await import('../src/tuning.ts');
+// Retained cues mark narrative events in this geometry fixture; audio-check covers their disabled mix.
+tuning.audio.homeEndingSounds=true;
 const {Soundscape}=await import('../src/audio/audio.ts');
 
 const { HomeChapter } = await import('../src/story/home.ts');
@@ -99,7 +101,7 @@ cases.push({w:1600,h:900,fps:60,resize:true},{w:390,h:844,fps:60,restore:'drawin
 for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.w}x${c.h}`===process.env.ONLY)) {
  const g=make(w,h,restore),{chapter,drawing,rig,child}=g,dt=1/fps;
  let motifs=0,fullAt=null,recognised=null,houseAt=null,foldAt=null,changed=false,previousOpen=0,maxCameraStep=0;
- let checkedFacade=false, previousDusk=chapter.dusk, descent=false, insideDusk=null;
+ let checkedFacade=false, previousDusk=chapter.dusk, descent=false, insideDusk=null, silenceAt=null;
  let renderedDusk=chapter.dusk;
  const beats=[],lastEye=rig.camera.position.clone();
  let farewellEye=null;
@@ -110,6 +112,7 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
    window.innerWidth=390;window.innerHeight=844;rig.resize(390,844);changed=true;
   }
   const cues=step(g,dt,time);
+  if(chapter.silence&&silenceAt===null)silenceAt=chapter.homeEndingTime;
   // main.ts eases the chapter's light once more before applying the world palette.
   renderedDusk+=(chapter.dusk-renderedDusk)*(1-Math.exp(-dt*.5));
   if(['home','inside','credits'].includes(chapter.beat)) {
@@ -200,6 +203,8 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
   if(chapter.finished)break;
  }
  assert(chapter.finished,'ending must reach credits without input');
+ assert(Math.abs(chapter.homeEndingTime-116.5)<=1/fps+.001,'credits share the ending score clock');
+ assert(Math.abs(chapter.homeEndingTime-silenceAt-2)<=1/fps+.001,'credits leave two seconds after the music cut');
  assert(maxCameraStep<1,'the reveal-to-descent camera must move continuously');
  assert(descent&&insideDusk>1.94,'night must be established before the child enters');
  applyPalette(1,chapter.dusk,0,0,1);
@@ -214,6 +219,7 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
  g.cygnet.visible=true;g.cygnet.rideIn('satchel');g.chapter.skipToSummit();
  for(let i=0;i<600;i++)step(g,.1,i*.1);
  assert.equal(g.chapter.beat,'flying','the bird must still be waiting for the player');
+ assert.equal(g.chapter.homeEndingTime,undefined,'the ending score waits for a successful updraft');
  assert.equal(g.chapter.dusk,tuning.homeLight.daylight);
  const complete=make(1600,900,'complete');
  assert(complete.chapter.finished&&complete.chapter.dusk===2,'completed saves stay at night');

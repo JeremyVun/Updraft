@@ -413,13 +413,14 @@ body.shot.starting #veil { display: block; }
 
 #credits.rolling {
   opacity: 1;
+  transition-duration: 0.3s;
 }
 
 #credits .roll {
   position: absolute;
   left: 0;
   right: 0;
-  top: 100%;
+  top: calc(100% - var(--again-top) - 32px);
   padding-bottom: 20vh;
 }
 
