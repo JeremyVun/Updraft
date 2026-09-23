@@ -485,7 +485,9 @@ const soundState: SoundState = {
   cues: [],
 };
 const credits = document.getElementById('credits') as HTMLElement;
-document.getElementById('again')?.addEventListener('click', () => {
+const lastCredit = credits.querySelector('.entry:last-child') as HTMLElement;
+const again = document.getElementById('again') as HTMLButtonElement;
+again.addEventListener('click', () => {
   if (params.progress) clearProgress();
   location.reload();
 });
@@ -776,6 +778,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.scripted = story.current.scripted ?? false;
   soundState.silence = story.current.silence ?? false;
   if (story.current.finished && !credits.classList.contains('rolling')) credits.classList.add('rolling');
+  if (story.current.finished && !credits.classList.contains('replay-ready')
+    && lastCredit.getBoundingClientRect().bottom < again.getBoundingClientRect().top - 24) {
+    credits.classList.add('replay-ready');
+  }
   soundState.shower = shower;
 
   rig.camera.near = story.name === 'lines' && doorway.travelling ? 0.035 : 0.5;
