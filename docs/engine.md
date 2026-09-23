@@ -29,6 +29,22 @@ The start-screen check records the worst boot frame gap (default ceiling 500 ms,
 
 Anything that appears later in the story (the whale, rain, fireflies, the drawing) is already compiled and uploaded; showing it costs nothing.
 
+`index.html` carries a tiny inline classic watchdog before the entry module's `<script>` tag: if that chunk
+errors on load, or has not signalled within a generous timeout, it reproduces the ordinary start-screen
+failure state ("The game couldn't start. Try again.", reloading on click) with plain DOM calls, since none
+of the bundle's own JS ever ran to do it. `src/entry.ts` cancels the watchdog as its first statement once it
+is actually running; later failures are its own `startScreen.fail()` to handle. Before the world is built,
+`gl/graphics-capability.ts` checks WebGL2's `EXT_color_buffer_float` (the grass table's mixed float/half-float
+MRT, the multisampled half-float scene target and the wind field's float targets all need it) and GL size
+floors well below any fixed-size target the engine allocates; a shortfall shows the same failure text with
+Try again hidden instead, since retrying cannot help, distinguishing it from the ordinary transient case.
+`start-screen.ts`'s `fail()` takes this as a `permanent` flag and, once set, later ordinary failures cannot
+un-hide the button. A failed `sound.start()` (Web Audio unavailable, context quota) is caught in `main.ts`
+around the Begin handler, switches the sound control off and reports telemetry, but always still reaches
+`requestAnimationFrame(frame)`. Once the loop is running, an uncaught exception inside a frame is caught by
+a thin wrapper around it and routed through `contextRecovery.trigger('runtime', error)`, the same pause/mute/
+recovery-dialog path a lost WebGL context takes. `node tools/failure-paths-check.mjs` fault-injects all four.
+
 ## Frame order (`frame()` in `main.ts`)
 
 1. `gl/frame-pacer.ts` limits normal play to 60 presentations/s (30 on Low), skipping excess display callbacks
@@ -143,6 +159,12 @@ choices are applied after graphics warm-up; audio preferences never create an Au
 begins with sound enabled. `node tools/veil-controls-check.mjs` verifies that control clicks cannot start
 play, fullscreen works before module loading, and Begin preserves the selected mute state.
 
+The sound on/off choice persists the same way, in `src/sound-preference.ts` under `updraft.sound.v1`
+(guarded like the quality preference), read as `controls.ts`'s initial `soundOn` and saved whenever the
+player explicitly toggles it (the sound button, or `m`). Shot mode always keeps its muted default regardless
+of any remembered preference. Applying the preference (Begin, Continue, an audio-failure fallback) does not
+itself write a new preference; only a deliberate toggle does.
+
 Explicit render-scale overrides are exact, including values below 1. Startup selects the lowest rung if even
 that exceeds the pixel budget, and applies its multisampling before allocating the scene target. The governor
 resets its timing when play begins or page visibility changes: time behind Begin or in another tab cannot earn
@@ -180,6 +202,11 @@ grass density, `?mirror=` overrides reflection cadence, and `?lite=1` explicitly
 preset and cheaper simulation. Touch no longer implicitly enables lite. Wind resolution, solver cadence
 and water mesh topology stay fixed during play; changing simulation fidelity safely needs separate state
 transfer and gameplay verification. Normal play uses the full wind simulation and water mesh.
+
+`params.ts` sanity-clamps these before anything reads them, so a malformed shared URL cannot request an
+enormous framebuffer: `ratio` to (0, 4], `msaa` to [0, 16] and `grass` to [0, 4]. `msaa` is clamped again
+in `main.ts` against the device's real `MAX_SAMPLES` (from `gl/graphics-capability.ts`) once the GL context
+exists, which params.ts alone cannot know.
 
 `node tools/quality-check.mjs` checks touch promotion, geometry fallback/recovery, exact overrides and
 suspend/resume. `node tools/grass-quality-check.mjs meadow` checks both transition directions, unchanged

@@ -206,7 +206,9 @@
           var begin = document.getElementById('begin');
           var status = document.getElementById('start-status');
           if (!begin || !begin.disabled) return; // the real module already took over
-          document.getElementById('veil').setAttribute('aria-busy', 'false');
+          var veil = document.getElementById('veil');
+          veil.setAttribute('aria-busy', 'false');
+          veil.classList.add('ready'); // #begin stays invisible until the veil carries this class
           begin.firstElementChild.textContent = 'Try again';
           begin.disabled = false;
           status.textContent = "The game couldn't start. Try again.";

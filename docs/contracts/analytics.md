@@ -12,7 +12,7 @@ The shared analytics service at `https://analytics.jeremyvun.com` receives proje
 | `quality_changed` | Initial level or governor change | detail, scale bucket, samples, initial/changed |
 | `performance_sampled` | Each minute of visible play; shorter windows at chapter/quality changes or exit if at least ten seconds | FPS bucket, count of frames over 50 ms, detail, composite chapter.detail, chapter.fps and detail.fps |
 | `game_completed` | First completion in this playthrough | none; reopening completed credits does not count again |
-| `game_failed` | Startup rejection, uncaught error/rejection, WebGL loss | phase and coarse error kind, once per pair per page |
+| `game_failed` | Startup rejection, uncaught error/rejection, a frame-loop exception, a failed audio start, WebGL loss | phase (`boot`, `runtime`, `promise`, `graphics`, `audio`) and coarse error kind, once per pair per page |
 | `recovery_requested` | Graphics recovery button | none |
 
 Every event carries build revision, environment (`production` or `qa`) and chapter. Dimensions are bounded
