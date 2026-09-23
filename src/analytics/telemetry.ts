@@ -68,7 +68,7 @@ export const telemetry = {
     if (completed) return;
     completed = true; this.performance(); count('game_completed'); client.flush();
   },
-  failure(phase: 'boot' | 'runtime' | 'promise' | 'graphics', error?: unknown): void {
+  failure(phase: 'boot' | 'runtime' | 'promise' | 'graphics' | 'audio', error?: unknown): void {
     const kind = error instanceof TypeError ? 'type_error' : error instanceof RangeError ? 'range_error' : 'other';
     const key = `${phase}.${kind}`;
     if (failures.has(key)) return;

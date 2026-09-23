@@ -21,6 +21,7 @@ class StartScreen {
   private travel = 0;
   private cleanupTimer = 0;
   private disposed = false;
+  private failedPermanently = false;
 
   constructor() {
     if (params.shot) document.body.classList.add('shot');
@@ -87,9 +88,21 @@ class StartScreen {
     this.cleanupTimer = window.setTimeout(() => this.dispose(), this.reduced.matches ? 500 : 2300);
   }
 
-  fail(): void {
-    if (this.disposed) return;
+  /**
+   * `permanent`: a fixed hardware/driver limitation, not something a reload can fix (missing WebGL2 render
+   * target support). Hides Try again instead of wiring it to reload. A later, ordinary failure cannot
+   * un-hide it: once the game is known unplayable here, it stays that way for this page.
+   */
+  fail(permanent = false): void {
+    if (this.disposed || this.failedPermanently) return;
     this.started = false;
+    if (permanent) {
+      this.failedPermanently = true;
+      this.veil.setAttribute('aria-busy', 'false');
+      document.getElementById('start-status')!.textContent = "The game couldn't start.";
+      this.button.hidden = true;
+      return;
+    }
     this.button.firstElementChild!.textContent = 'Try again';
     document.getElementById('start-status')!.textContent = "The game couldn't start. Try again.";
     this.ready(() => location.reload());

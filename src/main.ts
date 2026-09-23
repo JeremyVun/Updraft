@@ -88,9 +88,11 @@ import { WINDOW, followWindow, onWindowMove, windowCentre } from './world/window
 import { tuning } from './tuning';
 import { startScreen } from './start-screen';
 import { contextRecovery } from './gl/context-recovery';
+import { checkGraphicsCapability } from './gl/graphics-capability';
 import { telemetry } from './analytics/telemetry';
 import { frameTiming } from './gl/frame-time';
 import { FramePacer } from './gl/frame-pacer';
+import { saveSoundPreference } from './sound-preference';
 
 declare global {
   interface Window {
@@ -106,6 +108,14 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPrefer
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.info.autoReset = false;
 if (params.shot) document.body.classList.add('shot');
+
+/** A missing float render-target format or an unusably small GL limit cannot be fixed by retrying. */
+const graphicsCapability = checkGraphicsCapability(renderer);
+if (!graphicsCapability.supported) {
+  telemetry.failure('graphics', new Error(graphicsCapability.reason));
+  startScreen.fail(true);
+  throw new Error(`Graphics capability check failed: ${graphicsCapability.reason}`);
+}
 
 const scene = new THREE.Scene();
 const rig = new CameraRig();
@@ -362,7 +372,7 @@ const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
 const maxPixelRatio = params.ratio ?? Math.min(nativePixelRatio, 1.5);
 /** Touch Auto keeps a smaller sustained resolution budget than High. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-const post = new Post(renderer, scene, rig.camera, params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4));
+const post = new Post(renderer, scene, rig.camera, Math.min(params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4), Math.max(0, graphicsCapability.maxSamples)));
 const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
 const doorwayShared = [sky, terrain.mesh, water.mesh, ...doorwayActors];
 const doorwaySource = new Set([...doorwayShared, grass.group, washing.group, washingBaskets, pinwheels.group, door.group, lines.batch.mesh, swirl.batch.mesh, washingInvitation.batch.mesh]);
@@ -404,7 +414,19 @@ const soundButton = document.getElementById('sound') as HTMLButtonElement;
 function setSound(on: boolean): void {
   if (contextRecovery.lost) return;
   sound.setMuted(!on);
-  if (on) sound.start();
+  if (on) {
+    // AudioContext construction can throw (Web Audio unavailable/disabled, context quota); sound must
+    // never block the frame loop from starting.
+    try {
+      sound.start();
+    } catch (error) {
+      console.error('Sound could not start', error);
+      telemetry.failure('audio', error);
+      sound.setMuted(true);
+      controls.setSound(false);
+      return;
+    }
+  }
   controls.setSound(on);
 }
 let soundChosen = false;
@@ -430,8 +452,10 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (startScreen.started && (e.key === 'm' || e.key === 'M')) {
+    const on = soundButton.dataset.on !== 'true';
     soundChosen = true;
-    setSound(soundButton.dataset.on !== 'true');
+    setSound(on);
+    saveSoundPreference(on);
   }
 });
 
@@ -856,7 +880,7 @@ function prepareFrame(dt: number): void {
   prepareWorldAudio(dt);
 }
 
-function frame(now: number): void {
+function frameInner(now: number): void {
   if (contextRecovery.lost) return;
   if (document.hidden) {
     last = now;
@@ -968,6 +992,16 @@ function frame(now: number): void {
     if (time > 0.75) window.__ready = true;
   }
   requestAnimationFrame(frame);
+}
+
+/** An exception here would otherwise stop scheduling and freeze the game silently; treat it like a lost context. */
+function frame(now: number): void {
+  try {
+    frameInner(now);
+  } catch (error) {
+    console.error('Frame loop failed', error);
+    contextRecovery.trigger('runtime', error);
+  }
 }
 
 if (params.shot) {
