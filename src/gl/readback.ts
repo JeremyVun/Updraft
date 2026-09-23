@@ -105,6 +105,23 @@ export function endFrame(renderer: THREE.WebGLRenderer): void {
   while (frameSyncs.length > PIPELINE_DEPTH) frameGl.deleteSync(frameSyncs.shift()!);
 }
 
+/** A timer that fires this late cannot tell whether the GPU finished by the deadline. */
+const LATE_MS = 2;
+
+/**
+ * Reports whether the GPU had finished everything submitted before the last `endFrame` by `deadline`, a
+ * `performance.now()` time. A timer that fires late reports false: only a clear early finish counts.
+ */
+export function timeLastFrame(deadline: number, report: (finished: boolean) => void): void {
+  const gl = frameGl;
+  const sync = frameSyncs[frameSyncs.length - 1];
+  if (!gl || !sync) return;
+  setTimeout(() => {
+    const onTime = performance.now() <= deadline + LATE_MS;
+    report(onTime && gl.isSync(sync) && gl.getSyncParameter(sync, gl.SYNC_STATUS) === gl.SIGNALED);
+  }, Math.max(0, deadline - performance.now()));
+}
+
 /**
  * Call after the frame's CPU-only work and before its first GPU command. Finished readbacks are delivered when
  * the GPU has also finished the frame before last (the display pipeline is normally two frames deep); mapping

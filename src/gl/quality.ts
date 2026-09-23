@@ -21,9 +21,19 @@ export const WORLD_QUALITY = [
 const RECENT = 90;
 /** Sustained Auto budget. Smooth vsync alone is not evidence of spare power. */
 const AUTO_PIXELS = 2.4e6;
+/** Auto's pixel-budget rung for very large viewports never renders softer than this. */
+const MIN_BUDGET_RATIO = 0.5;
 /** Trimmed mean interval above which the frame is judged over budget (a saturated GPU alternates 16.7 and 33 ms). */
 const SLOW_MS = 17.6;
 const SMOOTH_MS = 17.2;
+const REFRESH_MS = 1000 / 60;
+/** Presentation capped at 30 fps (iOS Low Power Mode, browser energy saving) delivers every other refresh. */
+const CAPPED_MS = 1000 / 30;
+/** Intervals faster than this cannot come from a 30 fps cap: the cap has been lifted. */
+const UNCAPPED_MS = 25;
+/** GPU timings needed in one review, and the share of them finished within a 60 Hz refresh, to prove a cap. */
+const CAP_PROBES = 8;
+const CAP_EARLY = 0.8;
 const REVIEW_MS = 1500;
 const SETTLE_MS = 2500;
 /** A level just climbed into shows whether it fits within a second; every further second spent finding out is spent hitching. */
@@ -35,6 +45,11 @@ const CLIMB_MS = 12000;
  * when frames run long, and creeping back up after a long smooth stretch. It judges by the trimmed mean and
  * the 90th percentile of recent frame intervals, so a single hitch (a window move, a tab switch) never costs
  * quality, while a GPU that misses every other refresh is caught at once.
+ *
+ * A steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps. While frames
+ * arrive that slowly, `probing` asks the caller to report whether the GPU finished each frame within one 60 Hz
+ * refresh (`gpu`). Frames that finish early yet still wait for every other refresh prove a cap, and Auto then
+ * judges against 30 fps until faster intervals show the cap has gone.
  */
 export class Quality {
   private readonly levels: QualityLevel[] = [];
@@ -47,6 +62,12 @@ export class Quality {
   private lastStepUp = false;
   private selectedMode: QualityMode;
   private autoCeiling = 0;
+  /** Index of the last rung of the fixed ladder; a pixel-budget rung for very large viewports may follow it. */
+  private readonly fallback: number = 0;
+  private capped = false;
+  private lastInterval = 0;
+  private probes = 0;
+  private early = 0;
 
   /** Starts conservatively, then restores detail within Auto's sustained pixel/scale budget. */
   constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2, mode: QualityMode = 'auto', private readonly autoMaxRatio = maxRatio) {
@@ -73,6 +94,8 @@ export class Quality {
     this.levels.push({ ratio: baseRatio * 0.85, samples: Math.min(samples, 2), detail: 0 });
     this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0 });
     this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0, grassDensity: 0.25, grassReach: 0.7 });
+    this.fallback = this.levels.length - 1;
+    this.fitBudget(width, height);
     const opening = this.levels.findIndex((l) => l.ratio <= startRatio && l.detail <= startDetail);
     this.index = opening < 0 ? this.levels.length - 1 : opening;
     this.autoCeiling = this.ceilingIndex(width, height);
@@ -83,19 +106,47 @@ export class Quality {
   get mode(): QualityMode { return this.selectedMode; }
   get frameRate(): 30 | 60 { return this.selectedMode === 'low' ? 30 : 60; }
 
+  /** Whether the caller should time the frame just submitted and report it through `gpu`. */
+  get probing(): boolean {
+    return !this.locked && this.selectedMode === 'auto' && !this.capped && this.lastInterval >= CAPPED_MS * 0.9;
+  }
+
+  /** One frame's GPU timing: whether it had finished all of its work within one 60 Hz refresh of the frame's start. */
+  gpu(early: boolean): void {
+    this.probes++;
+    if (early) this.early++;
+  }
+
+  private budgetRatio(width: number, height: number): number {
+    return Math.min(this.autoMaxRatio, Math.sqrt(AUTO_PIXELS / Math.max(1, width * height)));
+  }
+
   private ceilingIndex(width: number, height: number): number {
-    const ratio = Math.min(this.autoMaxRatio, Math.sqrt(AUTO_PIXELS / Math.max(1, width * height)));
+    const ratio = this.budgetRatio(width, height);
     const index = this.levels.findIndex(level => level.ratio <= ratio);
     return index < 0 ? this.levels.length - 1 : index;
+  }
+
+  /** Viewports too large for the fixed ladder's lowest scale get one more rung at the pixel budget. */
+  private fitBudget(width: number, height: number): void {
+    this.levels.length = this.fallback + 1;
+    const last = this.levels[this.fallback];
+    const ratio = Math.max(MIN_BUDGET_RATIO, this.budgetRatio(width, height));
+    if (ratio < last.ratio) this.levels.push({ ...last, ratio });
   }
 
   /** Fullscreen/rotation cannot silently outgrow Auto's pixel budget. */
   resize(width: number, height: number, now: number): void {
     if (this.locked) return;
+    const before = this.level.ratio;
+    this.fitBudget(width, height);
+    this.index = Math.min(this.index, this.levels.length - 1);
     this.autoCeiling = this.ceilingIndex(width, height);
     if (this.selectedMode === 'auto' && this.index < this.autoCeiling) {
       this.index = this.autoCeiling;
       this.reset(now);
+      this.apply(this.level);
+    } else if (this.level.ratio !== before) {
       this.apply(this.level);
     }
   }
@@ -118,15 +169,16 @@ export class Quality {
 
   private presetIndex(mode: Exclude<QualityMode, 'auto'>): number {
     if (mode === 'high') return 0;
-    // Low preserves the meadow at a 30-fps-tolerant visual budget. The two lower
+    // Low preserves the meadow at a 30-fps-tolerant visual budget. The lower
     // rungs remain available to Auto when it needs more headroom for its 60 fps target.
-    if (mode === 'low') return this.levels.length - 3;
+    if (mode === 'low') return this.fallback - 2;
     return this.levels.findIndex(level => level.detail === 1);
   }
 
   /** Time behind the start screen or in a hidden tab is not evidence of smooth play. */
   reset(now: number): void {
     this.recent.length = 0;
+    this.probes = this.early = 0;
     this.changedAt = this.lastReview = this.smoothSince = now;
   }
 
@@ -137,6 +189,7 @@ export class Quality {
   /** Records one real frame interval; may change the level (calling `apply`) about every 1.5 s. */
   frame(now: number, intervalMs: number): void {
     if (this.locked || this.selectedMode !== 'auto') return;
+    this.lastInterval = intervalMs;
     this.recent.push(intervalMs);
     if (this.recent.length > RECENT) this.recent.shift();
     const settle = this.lastStepUp ? SETTLE_UP_MS : SETTLE_MS;
@@ -146,11 +199,17 @@ export class Quality {
     const kept = sorted.slice(0, Math.max(1, Math.floor(sorted.length * 0.95)));
     const mean = kept.reduce((a, b) => a + b, 0) / kept.length;
     const p90 = sorted[Math.floor(sorted.length * 0.9)];
-    if (mean > SLOW_MS) {
+    const p10 = sorted[Math.floor(sorted.length * 0.1)];
+    if (this.capped && p10 < UNCAPPED_MS) this.capped = false;
+    else if (!this.capped && p10 > CAPPED_MS * 0.9 && p90 < CAPPED_MS * 1.1
+      && this.probes >= CAP_PROBES && this.early >= this.probes * CAP_EARLY) this.capped = true;
+    this.probes = this.early = 0;
+    const scale = this.capped ? CAPPED_MS / REFRESH_MS : 1;
+    if (mean > SLOW_MS * scale) {
       this.smoothSince = now;
-      const step = mean > SLOW_MS * 1.5 ? 2 : 1;
+      const step = mean > SLOW_MS * scale * 1.5 ? 2 : 1;
       if (this.index < this.levels.length - 1) this.change(now, Math.min(this.levels.length - 1, this.index + step));
-    } else if (p90 > SMOOTH_MS) {
+    } else if (p90 > SMOOTH_MS * scale) {
       this.smoothSince = now;
     } else if (now - this.smoothSince > this.climbMs && this.index > this.autoCeiling) {
       this.change(now, this.index - 1);
@@ -166,6 +225,7 @@ export class Quality {
     this.changedAt = now;
     this.smoothSince = now;
     this.recent.length = 0;
+    this.probes = this.early = 0;
     this.apply(this.level);
   }
 }

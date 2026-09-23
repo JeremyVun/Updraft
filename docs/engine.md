@@ -148,9 +148,15 @@ that exceeds the pixel budget, and applies its multisampling before allocating t
 resets its timing when play begins or page visibility changes: time behind Begin or in another tab cannot earn
 a quality increase. `node tools/quality-check.mjs` verifies these cases and normal adaptation.
 
-The governor targets 60 fps on every device. Every 1.5 seconds it reviews up to 90 frame timing samples,
+The governor targets 60 fps unless presentation is capped. Every 1.5 seconds it reviews up to 90 frame timing samples,
 discarding the slowest 5%. A trimmed mean above 17.6 ms lowers quality; a sustained p90 below 17.2 ms for
-12 seconds earns one increase. Failed increases double the next wait, up to two minutes. A single hitch or
+12 seconds earns one increase. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
+frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
+least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
+(35.2/34.4 ms) until intervals under 25 ms show the cap has lifted. A saturated GPU never finishes early, so it
+still steps down as before; 60/120/144 Hz cadences are never timed. A timer that fires late counts as not early,
+so a browser that coalesces timers keeps the old behaviour. Failed increases double the next wait, up to two minutes. A single hitch or
 hidden-tab time cannot earn a change. A new level settles for 2.5 seconds after a reduction, one second after
 an increase. Pacing reports the longest display callback interval since the preceding presentation, with a
 16.67 ms floor: intentionally skipped 120/144 Hz callbacks cannot masquerade as overload, but actual missed
@@ -168,7 +174,11 @@ targets 60 fps. Full grass recovers before extra antialiasing. World detail cont
 | Low | 55% | 85% | 1.1 | Alternate frames | 0.5 |
 | Auto fallback | 25% | 70% | 1.1 | Alternate frames | 0.5 |
 
-Auto's sustained pixel budget is 2.4 million, re-evaluated on resize/fullscreen. Touch also has a sustained
+Auto's sustained pixel budget is 2.4 million, re-evaluated on resize/fullscreen. Viewports too large for the
+fixed ladder's lowest scale (0.72× base, e.g. a 4K CSS viewport at DPR 1) get one more Auto-only rung at the
+budget ratio, never below 0.5×, with the fallback's world detail; it is rebuilt on resize and presets ignore it.
+The canvas and every render target share one scale, lowered if needed so no side exceeds `MAX_TEXTURE_SIZE`,
+`MAX_RENDERBUFFER_SIZE` or `MAX_VIEWPORT_DIMS`. Touch also has a sustained
 1.25× ceiling and starts at medium world detail; it can recover full grass. High permits 1.5× on both touch
 and mouse. Smooth vsync cannot prove spare power, so Auto never climbs beyond its budget. The governor restores
 full grass before climbing above 1×. Grass grows/shrinks in place over one second while its distance rings

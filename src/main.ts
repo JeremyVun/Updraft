@@ -37,7 +37,7 @@ import { params } from './params';
 import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
-import { endFrame, pollReadbacks, readbackStats } from './gl/readback';
+import { endFrame, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
 import { Post } from './post/post';
 import { createWindDebug } from './wind/debug';
@@ -391,6 +391,8 @@ applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;
 post.samples = quality.level.samples;
 
+const reportGpu = (early: boolean): void => quality.gpu(early);
+
 let graphicsReady = false;
 controls.onQualityChange = mode => {
   // A loading-time choice is applied after warm-up, without resizing targets mid-batch.
@@ -465,14 +467,19 @@ document.getElementById('again')?.addEventListener('click', () => {
 });
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
+const glLimits = renderer.getContext();
+/** The largest canvas/target side the GPU can allocate: a huge viewport scales every target down together. */
+const maxTargetSize = Math.min(renderer.capabilities.maxTextureSize, glLimits.getParameter(glLimits.MAX_RENDERBUFFER_SIZE),
+  ...glLimits.getParameter(glLimits.MAX_VIEWPORT_DIMS));
 function resize(): void {
   if (contextRecovery.lost) return;
   const w = window.innerWidth;
   const h = window.innerHeight;
-  renderer.setPixelRatio(pixelRatio);
+  const ratio = Math.min(pixelRatio, maxTargetSize / Math.max(1, w, h));
+  renderer.setPixelRatio(ratio);
   // Keep the displayed canvas and camera on the same viewport, including Safari's browser controls.
   renderer.setSize(w, h);
-  post.setSize(w, h, pixelRatio);
+  post.setSize(w, h, ratio);
   rig.resize(w, h);
 }
 window.addEventListener('resize', () => {
@@ -912,6 +919,7 @@ function frame(now: number): void {
   }));
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);
+  if (quality.probing) timeLastFrame(now + 1000 / 60, reportGpu);
 
   frames++;
   if (readout) {
