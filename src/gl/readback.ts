@@ -48,6 +48,9 @@ export class Readback<T> {
   private readonly pending: Pending<T>[] = [];
   private readonly free: WebGLBuffer[] = [];
   private readonly data: Float32Array;
+  /** Floats copied per frame, and how many of the oldest request's have been copied so far. */
+  private readonly slice: number;
+  private copied = 0;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
@@ -57,9 +60,12 @@ export class Readback<T> {
     /** Receives each delivery; `data` is reused by the next one, so copy what must be kept. */
     private readonly onData: (data: Float32Array, tag: T) => void,
     inFlight = 3,
+    /** A large copy is taken in this many slices, one per frame, so no single frame pays for all of it. */
+    slices = 1,
   ) {
     const gl = this.gl = renderer.getContext() as WebGL2RenderingContext;
     this.data = new Float32Array(width * height * 4);
+    this.slice = Math.ceil(this.data.length / slices);
     for (let i = 0; i < inFlight; i++) {
       const buffer = gl.createBuffer()!;
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
@@ -96,23 +102,29 @@ export class Readback<T> {
     return true;
   }
 
-  /** Delivers every finished request, oldest first. */
+  /** Delivers every finished request, oldest first; a sliced one over as many frames as it has slices. */
   poll(): void {
     const gl = this.gl;
     while (this.pending.length) {
       const next = this.pending[0];
-      const status = gl.clientWaitSync(next.sync, 0, 0);
-      if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) break;
-      this.pending.shift();
+      if (this.copied === 0) {
+        const status = gl.clientWaitSync(next.sync, 0, 0);
+        if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) break;
+      }
       const started = performance.now();
+      const count = Math.min(this.slice, this.data.length - this.copied);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, next.buffer);
-      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this.data);
+      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, this.copied * 4, this.data, this.copied, count);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-      gl.deleteSync(next.sync);
-      this.free.push(next.buffer);
+      this.copied += count;
       const mapped = performance.now();
       readbackStats.waitMs += mapped - started;
       readbackStats.waitWorstMs = Math.max(readbackStats.waitWorstMs, mapped - started);
+      if (this.copied < this.data.length) return;
+      this.copied = 0;
+      this.pending.shift();
+      gl.deleteSync(next.sync);
+      this.free.push(next.buffer);
       readbackStats.delivered++;
       lastDelivery = mapped;
       this.onData(this.data, next.tag);

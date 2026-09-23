@@ -157,7 +157,7 @@ export class GroundBakes {
       grid.set(data);
       this.gridInUse = 1 - this.gridInUse;
       setHeightGrid({ data: grid, ...window, res: RES, stride: 4 });
-    }, 2);
+    }, 2, 4);
     this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain });
     this.groundMat = simMaterial(GROUND_FRAG, {
       uHeightTex: { value: this.height.texture },

@@ -129,6 +129,7 @@ There is no forced delivery: the old escape hatch mapped anyway after two second
 under a saturated GPU. Each consumer allocates its in-flight pixel buffers once (`STATIC_COPY`: Chrome shadows
 READ-usage buffers into shared memory on every fence, a copy WebGL never reads, and warns whenever a pooled one is
 refilled; ANGLE's Metal backend keeps `STATIC_COPY` CPU-visible like READ) and reuses them after delivery.
+The 4 MiB height copy is taken in four 1 MiB slices on successive frames; it is installed only when complete.
 
 Older data stays correct. The wind and life copies carry the window they were read in and are sampled in world
 space through it, so an old copy is late, never misplaced. The height copy is installed only if it belongs to the
