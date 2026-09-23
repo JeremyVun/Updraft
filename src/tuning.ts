@@ -238,6 +238,8 @@ export const tuning = {
     /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */
     planeBloomRadius: 4.5,
     planeBloomStrength: 1.4,
+    /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
+    planeBloomFrom: 0.3,
     /** A held view of the sea, then one clear recovery before the small bird loses the V. */
     outlook: 3.5,
     flight: 5,
