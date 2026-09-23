@@ -1,31 +1,57 @@
-/** Sample frames generated per step: a fraction of a millisecond on a desktop, about one on a phone. */
-export const SLICE = 16384;
+/** Sample frames generated per step: a small fraction of a millisecond, even on a phone. */
+export const SLICE = 4096;
+/** Steps per second of story time: about 16k samples in a 60 Hz frame, and the Begin buffers in about a second. */
+export const SLICES_PER_SECOND = 240;
+/** Yielded before a step that is long and indivisible (a convolver analysing its impulse): it gets a frame to itself. */
+export const ALONE = Symbol('alone');
+export type Pace = typeof ALONE | void;
 
 /**
- * Buffer synthesis advanced one bounded slice per rendered frame, so neither the Begin gesture nor a cue's frame
- * pays for a whole buffer. A sound needed before its turn finishes the remaining work at once.
+ * Audio preparation advanced in bounded steps across rendered frames, so neither the Begin gesture nor a cue's frame
+ * pays for a whole buffer or convolver. A sound needed before its turn finishes the remaining work at once.
  */
 export class Sliced<T> {
-  private result: T | undefined;
+  private done = false;
+  private result!: T;
+  /** The next step must run alone in its frame. */
+  alone = false;
 
-  constructor(private readonly work: Iterator<void, T>) {}
+  constructor(private readonly work: Iterator<Pace, T>) {}
 
   get ready(): boolean {
-    return this.result !== undefined;
+    return this.done;
   }
 
-  /** Runs one slice; true once the result exists. */
+  /** Runs one step; true once the work is complete. */
   step(): boolean {
-    if (this.result === undefined) {
+    if (!this.done) {
       const next = this.work.next();
-      if (next.done) this.result = next.value;
+      if (next.done) {
+        this.done = true;
+        this.result = next.value;
+      } else this.alone = next.value === ALONE;
     }
-    return this.result !== undefined;
+    return this.done;
   }
 
   finish(): T {
     while (!this.step());
-    return this.result!;
+    return this.result;
+  }
+}
+
+/** Runs queued work for one frame: `share` slices, or a single step that needs the frame alone. */
+export function advance(queue: Sliced<unknown>[], share: number): void {
+  for (let steps = share; steps > 0 && queue.length;) {
+    const job = queue[0];
+    if (job.ready) queue.shift();
+    else if (job.alone) {
+      if (steps === share) job.step();
+      return;
+    } else {
+      job.step();
+      steps--;
+    }
   }
 }
 

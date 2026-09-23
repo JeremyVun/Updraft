@@ -1,10 +1,11 @@
 import { tuning } from '../tuning';
-import { Sliced, slices } from './sliced';
+import { ALONE, Sliced, slices, type Pace } from './sliced';
 
-export interface FoghornBuffers { impulse: AudioBuffer; air: AudioBuffer }
+/** The horn's breath and diffuse field. `diffuse` is analysed ahead of time and serves one call. */
+export interface FoghornParts { impulse: AudioBuffer; air: AudioBuffer; diffuse: ConvolverNode | null }
 
-/** The horn's diffuse field and breath. Seeded, so a preparation ahead of the storm is identical to the call's own. */
-export function* foghornBuffers(ctx: BaseAudioContext): Generator<void, FoghornBuffers> {
+/** Seeded, so parts prepared ahead of the storm are identical to a call's own. */
+export function* foghornParts(ctx: BaseAudioContext): Generator<Pace, FoghornParts> {
   const t=tuning.audio.foghorn;
   // Independent stereo channels have no discrete taps or repeated horn calls.
   const impulse=ctx.createBuffer(2,Math.ceil(ctx.sampleRate*t.diffuseSeconds),ctx.sampleRate);
@@ -28,19 +29,24 @@ export function* foghornBuffers(ctx: BaseAudioContext): Generator<void, FoghornB
     for(let i=from;i<to;i++){seed=Math.imul(seed,1664525)+1013904223|0;data[i]=(seed>>>0)/2147483648-1;}
     yield;
   }
-  return {impulse,air};
+  yield ALONE;
+  return {impulse,air,diffuse:diffuseField(ctx,impulse)};
+}
+
+function diffuseField(ctx: BaseAudioContext, impulse: AudioBuffer): ConvolverNode {
+  const diffuse=ctx.createConvolver();diffuse.normalize=false;diffuse.buffer=impulse;
+  return diffuse;
 }
 
 /** Approved distant ship call. Its generated diffuse field drains before all local nodes disconnect. */
 export function playFoghorn(ctx: BaseAudioContext, dry: AudioNode, wet: AudioNode, at = ctx.currentTime,
-  buffers = new Sliced(foghornBuffers(ctx)).finish()) {
+  parts = new Sliced(foghornParts(ctx)).finish()) {
   const t=tuning.audio.foghorn,end=at+t.duration;
   const pan=ctx.createStereoPanner();pan.pan.value=t.pan;
   const direct=ctx.createGain();direct.gain.value=t.dryLevel;pan.connect(direct).connect(dry);
   const send=ctx.createGain();send.gain.value=t.reverbSend;pan.connect(send).connect(wet);
   // A separate, slowly building diffuse field replaces the close source plus short room reverb.
-  const diffuse=ctx.createConvolver();diffuse.normalize=false;
-  diffuse.buffer=buffers.impulse;
+  const diffuse=parts.diffuse??diffuseField(ctx,parts.impulse);parts.diffuse=null;
   const diffuseGain=ctx.createGain();diffuseGain.gain.value=t.diffuseLevel;
   const diffuseFilter=ctx.createBiquadFilter();diffuseFilter.type='lowpass';diffuseFilter.frequency.value=850;diffuseFilter.Q.value=.5;
   diffuse.connect(diffuseFilter).connect(diffuseGain).connect(dry);
@@ -73,7 +79,7 @@ export function playFoghorn(ctx: BaseAudioContext, dry: AudioNode, wet: AudioNod
     gain.gain.value=level;osc.connect(gain).connect(env);track(osc,gain);
   }
   // Restrained air texture inside the same envelope; no separate hiss or impact.
-  const air=ctx.createBufferSource();air.buffer=buffers.air;
+  const air=ctx.createBufferSource();air.buffer=parts.air;
   const breath=ctx.createBiquadFilter();breath.type='bandpass';breath.frequency.value=780;breath.Q.value=.65;
   const airGain=ctx.createGain();airGain.gain.value=.18;
   air.connect(breath).connect(airGain).connect(env);localNodes.push(breath);track(air,airGain);

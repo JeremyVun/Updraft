@@ -12,8 +12,8 @@ import { BirchesScore, BIRCHES_SECTIONS, type BirchesScorePhase } from './birche
 import { LinesScore, LINES_SECTIONS, type LinesScorePhase } from './lines-score';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
-import { foghornBuffers, playFoghorn, type FoghornBuffers } from './foghorn';
-import { Sliced, slices } from './sliced';
+import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
+import { advance, ALONE, Sliced, slices, SLICES_PER_SECOND, type Pace } from './sliced';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -253,10 +253,11 @@ export class Soundscape {
   private reverbImpulse: AudioBuffer | null = null;
   private readonly arrivalTransition = new ArrivalTransition();
   private finaleUntil = 0;
+  /** A background reverb analysed on an earlier frame, ready to replace the old echo at the next arrival. */
+  private spareReverb: ConvolverNode | null = null;
   private noiseWork: Sliced<AudioBuffer> | null = null;
-  private impulseWork: Sliced<AudioBuffer> | null = null;
-  private foghornWork: Sliced<FoghornBuffers> | null = null;
-  /** Buffers still being synthesised, one slice per rendered frame, in order. */
+  private foghornWork: Sliced<FoghornParts> | null = null;
+  /** Buffers and convolvers still being prepared, in order, at a steady rate of story time. */
   private readonly synthesis: Sliced<unknown>[] = [];
   /** Ambient bed filters waiting for the loop noise. */
   private noiseInputs: AudioNode[] = [];
@@ -372,8 +373,7 @@ export class Soundscape {
       if (ctx.state === 'running' ? this.hidden || this.muted : this.interrupted) this.syncPlayback();
     });
     this.noiseWork = new Sliced(pinkNoise(ctx, 6));
-    this.impulseWork = new Sliced(impulse(ctx, 4.5));
-    this.synthesis.push(this.noiseWork, this.impulseWork);
+    this.synthesis.push(this.noiseWork, new Sliced(this.reverbs(ctx)));
 
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -18;
@@ -450,24 +450,35 @@ export class Soundscape {
     this.syncPlayback();
   }
 
-  /** Advances deferred synthesis by one slice and connects whatever has finished, on the audio clock. */
-  private synthesise(): void {
-    while (this.synthesis[0]?.ready) this.synthesis.shift();
-    this.synthesis[0]?.step();
+  /** The shared impulse, then each convolver's analysis of it (about ten milliseconds) on a frame of its own. */
+  private *reverbs(ctx: BaseAudioContext): Generator<Pace, void> {
+    const reverb = this.reverbImpulse = yield* impulse(ctx, 4.5);
+    yield ALONE;
+    this.reverbConvolver.buffer = reverb;
+    yield ALONE;
+    this.backgroundReverb.buffer ??= reverb;
+    yield* this.spare(ctx);
+  }
+
+  private *spare(ctx: BaseAudioContext): Generator<Pace, void> {
+    yield ALONE;
+    this.spareReverb = ctx.createConvolver();
+    this.spareReverb.buffer = this.reverbImpulse;
+  }
+
+  /** Advances deferred preparation by this frame's share and connects the noise once it exists, on the audio clock. */
+  private synthesise(dt: number): void {
+    advance(this.synthesis, Math.max(1, Math.round(dt * SLICES_PER_SECOND)));
     if (this.noiseInputs.length && this.noiseWork?.ready) this.startNoise();
-    if (!this.reverbImpulse && this.impulseWork?.ready) {
-      this.reverbImpulse = this.impulseWork.finish();
-      this.reverbConvolver.buffer = this.reverbImpulse;
-      this.backgroundReverb.buffer = this.reverbImpulse;
-    }
   }
 
   private startNoise(): void {
     const ctx = this.ctx!;
     const now = ctx.currentTime;
+    const noise = this.noise;
     for (const input of this.noiseInputs) {
       const src = ctx.createBufferSource();
-      src.buffer = this.noise;
+      src.buffer = noise;
       src.loop = true;
       src.loopStart = NOISE_OVERLAP;
       const entry = ctx.createGain();
@@ -493,10 +504,10 @@ export class Soundscape {
     return playFoghorn(this.ctx, this.master, this.reverb, this.ctx.currentTime, this.prepareFoghorn().finish());
   }
 
-  /** The horn's buffers are made ahead of the storm, so the cue's frame only connects nodes. */
-  private prepareFoghorn(): Sliced<FoghornBuffers> {
+  /** The horn's buffers and diffuse field are made ahead of the storm, so the cue's frame only connects nodes. */
+  private prepareFoghorn(): Sliced<FoghornParts> {
     if (!this.foghornWork) {
-      this.foghornWork = new Sliced(foghornBuffers(this.ctx!));
+      this.foghornWork = new Sliced(foghornParts(this.ctx!));
       this.synthesis.push(this.foghornWork);
     }
     return this.foghornWork;
@@ -902,7 +913,7 @@ export class Soundscape {
       return;
     }
     const cues = this.heldCues.length ? this.releaseCues(s.cues) : s.cues;
-    this.synthesise();
+    this.synthesise(dt);
     if (s.music === 'drowned' || s.drownedScore) this.prepareFoghorn();
     const now = ctx.currentTime;
     const tc = 0.08;
@@ -952,7 +963,12 @@ export class Soundscape {
       else {
         // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
         this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
-        this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+        if (this.spareReverb) {
+          this.backgroundReverb = this.spareReverb; this.spareReverb = null;
+          this.synthesis.push(new Sliced(this.spare(ctx)));
+        } else {
+          this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+        }
         this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
         gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
