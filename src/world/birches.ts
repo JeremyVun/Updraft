@@ -131,15 +131,16 @@ float birchDither(vec2 p) {
   return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
 }
 bool inTheWay(vec3 world, float width) {
-  if (uSubject.w < 0.5) return false;
-  vec3 toSubject = uSubject.xyz - cameraPosition;
-  float reach = length(toSubject);
-  vec3 dir = toSubject / max(reach, 0.001);
-  vec3 toHere = world - cameraPosition;
-  float along = dot(toHere, dir);
-  if (along <= 0.4 || along >= reach - 1.2) return false;
-  float side = length(toHere - dir * along);
-  float hide = 1.0 - smoothstep(width, width * 2.6, side);
+  // Branches right at the lens thin away too: a camera standing in a crown should not look through a thicket.
+  float hide = 1.0 - nearFade(world, 0.8, 2.6);
+  if (uSubject.w > 0.5) {
+    vec3 toSubject = uSubject.xyz - cameraPosition;
+    float reach = length(toSubject);
+    vec3 dir = toSubject / max(reach, 0.001);
+    vec3 toHere = world - cameraPosition;
+    float along = dot(toHere, dir);
+    if (along > 0.4 && along < reach - 1.2) hide = max(hide, 1.0 - smoothstep(width, width * 2.6, length(toHere - dir * along)));
+  }
   return hide > 0.02 && birchDither(gl_FragCoord.xy) < hide;
 }`;
 
