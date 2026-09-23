@@ -237,6 +237,60 @@ plus existing idle, local-wind, spacing and offshore checks. Type checking and p
 The pointer replay now checks abrupt deceleration and backward movement; its rendered run remains
 pending because another full playthrough held the shared GPU lock.
 
+### Momentum, pace and the orange toy (2026-09-23)
+
+Jeremy, after playing the release build: “The little boats need a bit more momentum and need to react to
+the wind a bit easier, right now, i have to keep rapidly creating wind the whole time or else the boats
+don't move (and they move a bit slow). Also an issue where the orange boat lags behind the rest a bit too
+much”.
+
+Causes found. A relaxed stroke already filled a sail completely (slow 250 px/s strokes and strokes 110 px
+off the boat too), so the sail thresholds were not the problem. The hull lost speed as fast as it gained
+it (`drag` 1.7/s), so a toy stopped about 3 s after the air went. The child's orange toy was held to about
+1.7 units/s by its ease toward the walking child, who aimed just behind it and slowed on arrival. The other
+toys had no such limit, and every gathered toy was carried by wind at the orange toy however far ahead it
+was. Toys could not pass each other, so the teal toy shoved the waiting toys ahead as one train and the
+orange toy trailed the fleet's leader by 14 units on average (25 at most), always last.
+
+Changes (`src/world/little-boats.ts`, `src/story/little-boats.ts`, `tuning.littleBoats`):
+
+- A filled sail picks the hull up at `drive`; once the air eases, still water takes the speed away slowly
+  (`drag` 0.5/s), so a toy glides on and slows gradually. `speed` is 2.9, and each toy has its own `pace`;
+  the child's toy is the quickest.
+- The child hurries along the bank while its toy sails away (`childHurry`). The toy may run further ahead
+  of the child (`childLead`) and of the cygnet (`swimLead`, which now also covers the cygnet making for the
+  water and climbing out, so the limit never jumps).
+- Carried toys lose the wind at the orange toy once they are ahead of it (`carryAhead` to `carryAheadEnd`).
+  While the travellers catch up, gathered toys drift to rest no further than `fleetLead` beyond where the
+  orange toy may go. Waiting toys join when any gathered toy reaches them.
+- The other toys sail in side lanes (`sideLane`), never nearer the centre than `outletLane`, even in the
+  outlet. The orange toy in the centre lane passes any of them, and opposite sides pass each other. Only
+  toys in one lane keep `hullSpacing`: a toy eases in behind one it cannot pass, keeping `berth` spare, and
+  its own gust nudges that toy on (`nudge`), through any queue ahead. The rigid push remains as a backstop.
+  `turnRoom` adds spacing through the offshore turn, which compresses travel on its inner side.
+
+The launch, the three pools and swims, the reveal and the offshore run keep their order. Sails still fill
+only with real local wind and hang empty while a toy glides.
+
+Measured in the rendered game with real mouse strokes (320 px over 0.8 s, 1600×900), before and after.
+One stroke over the orange toy: 3.7–5.9 units of travel, then 2.3–3.5 more once the stroke ends and under
+1 unit/s within 1.6 s; now 9–12.4 units, 7–9.3 after the stroke, under 1 unit/s after about 3 s and under
+0.5 after about 4.5 s. Peak speed 1.7–1.9 became 2.6–2.85. Slower strokes and strokes 110 px off the toy
+move it as far. A stroke every 2.5 s: the orange toy averaged 1.53 units/s and reached the mouth after
+about 65 s; now 1.92 units/s and about 50 s. It trailed the leader by 14.0 units on average (25.1 at most)
+and was last in every frame, 7.6 units behind the fleet's centre; now 6.2 (13.4 at most, mostly the width
+of two lane files ahead of it), last in 53% of frames and 2.2 units behind the centre. The teal toy was
+6.6 ahead on average and now 0.7; the yellow 10.1 and now 1.2. The cygnet's swims shorten with the room
+(47 of 66 s sailing, now 33 of 53 s).
+
+Verified: typecheck and production build (existing bundle-size warning); `tools/little-boats-logic-check.mjs`
+at 30/60/120 fps, including the orange toy's momentum through every pool handoff (worst deceleration 1.9
+units/s², limit 3). Its hull clearance check now measures along and across the heading, since toys in clear
+lanes may sail abreast, and its steady-wind swim check is a share of the sailing time (at least 60%, now
+73%) instead of a fixed 40 s. Mouse and `TOUCH=1` runs of `tools/little-boats-check.mjs` complete the room
+with three swims and no abrupt stops, and a `tools/play.mjs` run of eleven relaxed swipes, three seconds
+apart, reaches the reveal.
+
 ## Meadow arrival (2026-09-20)
 
 Jeremy found the crossing landed too far along the meadow shore, leaving a long walk before the hill.

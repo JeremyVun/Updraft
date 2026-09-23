@@ -208,14 +208,33 @@ export const tuning = {
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
-    windFrom: 0.012, windFull: 0.18, speed: 2.4, drag: 1.7,
-    fleetReach: 14, childLead: 4, bankOffset: 2.2,
+    windFrom: 0.012, windFull: 0.18, speed: 2.9,
+    /** Each toy's best speed as a share of `speed`: hulls sail a little differently, and the child's own (first) is the quickest. */
+    pace: [1, 0.93, 0.88, 0.95, 0.9, 0.86, 0.92],
+    /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
+    drive: 1.7, drag: 0.5,
+    fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
+    /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */
+    childHurry: 0.35,
+    /** How far the child's toy may sail ahead of the swimming cygnet. */
+    swimLead: 7.5,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
-    /** Course spacing leaves hull room even where the offshore turn compresses travel. */
-    hullSpacing: 3.4,
+    /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */
+    carryAhead: 0, carryAheadEnd: 6,
+    /** While the travellers catch up, gathered toys sail no further than this beyond where the child's toy may go. */
+    fleetLead: 3,
+    /** Course spacing between toys in one lane, and the share more they keep through the offshore turn, which compresses travel. */
+    hullSpacing: 3.4, turnRoom: 0.3,
+    /**
+     * The other toys sail either side of the child's centre lane, never nearer to it than `outletLane` even in the
+     * narrow outlet. Hulls this far apart across the stream begin to pass, and pass freely at the second.
+     */
+    sideLane: 1.75, outletLane: 1.6, passFrom: 1.2, passClear: 1.5,
+    /** A hull this close behind a toy it cannot pass hands its own gust on to it; carried along, it keeps this much water spare. */
+    nudge: 0.8, berth: 0.3,
     brushSpeed: 1.5, brushRadius: 0.085, brushWindRadius: 3.5, brushEnergyScale: 22,
     inviteAfter: 4, revealFor: 4.5,
     rippleHeight: 0.065, toyDraft: 0.025, sailFillRate: 2.8, sailEmptyRate: 1.4,
