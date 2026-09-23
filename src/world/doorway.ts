@@ -101,6 +101,8 @@ export class DoorwayView {
 
   render(view: THREE.PerspectiveCamera, active: boolean, concealShore: boolean, draw: () => void): void {
     this.surface.visible = active && !doorway.crossed && door.opened;
+    // A full-screen multisampled target is tens of megabytes; it is reallocated if the door is shown again.
+    if (!this.surface.visible && (this.target.width > 1 || this.target.height > 1)) this.target.setSize(1, 1);
     doorway.eye.copy(view.position);
     view.getWorldDirection(doorway.look).multiplyScalar(12).add(view.position);
     if (!active) {

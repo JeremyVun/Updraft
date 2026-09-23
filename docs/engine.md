@@ -623,7 +623,9 @@ Traveller shaders receive a render-only translation for the doorway view and a t
 view. Each traveller follows the destination ground height beyond the sill, so the old hillside cannot lower
 their feet into the new shore. World-space scarf vertices use the same translation. The camera waits for both travellers, crosses with an
 explicit continuous shot, and the chapter transfers their logical positions once. The ordinary camera and window
-follow then resume. The portal stops rendering after crossing. `tools/lines-check.mjs` checks the full route,
+follow then resume. The portal stops rendering after crossing, and whenever the door is not shown its target
+shrinks to 1×1, releasing the full-screen multisampled half-float colour and depth (about 32 bytes per drawing-buffer
+pixel); showing the door again, after a checkpoint restore, reallocates it. `tools/lines-check.mjs` checks the full route,
 per-view object visibility, both travellers' transfer and checkpoint restore.
 
 ## Startup and recovery follow-up (2026-09-20)
