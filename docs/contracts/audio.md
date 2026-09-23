@@ -318,7 +318,7 @@ weather sound or protagonist voice is added.
 The Begin gesture creates and resumes the AudioContext and builds its graph, nothing more. The six-second loop
 noise and the 4.5-second reverb impulse are synthesised afterwards in 4096-sample slices at 240 slices per second
 of story time (about 16k samples in a 60 Hz frame; both ready about a second after Begin), with unchanged
-formulas. Each long convolver analyses its impulse on the main thread (about ten milliseconds), so each gets a
+formulas. Each long convolver analyses its impulse on the main thread (10–30 ms on a desktop), so each gets a
 frame to itself: the shared reverb, the background reverb, a spare background reverb and, in Drowned, the
 foghorn's diffuse field. Ambient beds join with a 0.25-second fade and the reverbs start from silence, so nothing
 clicks; thunder or an ember needed sooner finishes the noise at once. An arrival that clears the old background

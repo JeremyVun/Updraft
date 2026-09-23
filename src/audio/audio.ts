@@ -450,7 +450,7 @@ export class Soundscape {
     this.syncPlayback();
   }
 
-  /** The shared impulse, then each convolver's analysis of it (about ten milliseconds) on a frame of its own. */
+  /** The shared impulse, then each convolver's analysis of it (10–30 ms on a desktop) on a frame of its own. */
   private *reverbs(ctx: BaseAudioContext): Generator<Pace, void> {
     const reverb = this.reverbImpulse = yield* impulse(ctx, 4.5);
     yield ALONE;
