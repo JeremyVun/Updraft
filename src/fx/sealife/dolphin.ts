@@ -1028,7 +1028,7 @@ export class Dolphins {
     this.turn = 0;
     this.pushed = false;
     this.next = rand(tuning.dolphins.leapAt - tuning.dolphins.leapSpread, tuning.dolphins.leapAt + tuning.dolphins.leapSpread);
-    if (this.resumed) { this.turn = 1; this.next = 12; this.resumed = false; }
+    if (this.resumed) { this.turn = 1; this.next = 6; this.resumed = false; }
   }
 
   /** How far out from the boat's track a lane sits: it opens out as the pack surges away from its station. */
