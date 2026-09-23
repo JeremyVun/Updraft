@@ -139,6 +139,8 @@ Focused checks:
 - `node tools/start-check.mjs`: keyboard/touch Begin, native audio unlock, Continue, reduced motion and
   bundle-load retry. Uses the shared GPU lock without bypassing browser autoplay restrictions.
 - `node tools/context-loss-check.mjs`: real WebGL context loss, pause, reload and working wind readbacks.
+- `node tools/failure-paths-check.mjs`: fault-injects a failed AudioContext, a thrown frame-loop exception,
+  a blocked entry-module chunk and a missing EXT_color_buffer_float, and checks each recovers as intended.
 - `node tools/playthrough.mjs /tmp/updraft-journey`: Begin through every chapter to credits, reload the completed
   checkpoint, then Play again. Uses only pointer gestures and natural story transitions, with a fresh browser
   profile. It fails on exceptions, wrong chapter order, a stalled chapter or a missing ending. Allow up to an hour.
