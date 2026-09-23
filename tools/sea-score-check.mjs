@@ -101,7 +101,9 @@ try {
       await ctx.resume();
     }
     const buffer = await render;
-    check(chimes > 2, 'Playable gusts and updrafts retain chimes during the quiet swim');
+    // Cursor chimes are limited to the opening island, the forest and the Sleeping climb (docs/contracts/audio.md);
+    // the long crossing is none of those, so gusts and updrafts stay silent even during the quiet swim.
+    check(chimes === 0, 'Gusts and updrafts stay silent during the crossing, including the quiet swim');
     check(score.parts.size === 0 && returned.parts.size === 0, 'Departed score releases all phase buses and voices');
     return { passed, relativeError, ...encodeAudio(buffer) };
   });

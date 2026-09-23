@@ -2,6 +2,7 @@
 // Usage: node tools/sleeping-logic-check.mjs. CPU checks complement sleeping-check.mjs GPU playthroughs.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import * as THREE from 'three';
 
 globalThis.location={search:'?shot'};
