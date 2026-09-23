@@ -39,7 +39,7 @@ is deleted.
 
 ## Who does the work
 
-Jeremy's global model routing sends visual work to Astra or Opus 5, and says why: to keep the expensive grind of
+Jeremy's global model routing sends visual work to Astra or Opus, and says why: to keep the expensive grind of
 iterating on a look off Fable, while a Fable lead still looks at results, accepts or rejects them and writes what it
 saw into the next brief. Asked whether that binds this feature, Jeremy left the decision to the owning session (his
 words are in `journey.md`). Decision:
@@ -48,7 +48,7 @@ words are in `journey.md`). Decision:
   sockets, the duet timeline, attention, feelings and the behaviour scheduler, locomotion and flight mechanics, the
   wind relationship, sound, the stage and the numeric gates), wires the story, looks at a handful of captures at
   each checkpoint, and decides what is accepted.
-- **Opus 5 agents** do the visual production: the model, the down shader and palette, the adult swans, and the
+- **Opus agents** do the visual production: the model, the down shader and palette, the adult swans, and the
   pose and timing passes that are judged by eye. Each gets one complete bounded parcel, its own worktree forked
   from `cygnet` under `/private/tmp`, its own dev-server port and `/tmp` prefix, and is never sent a follow-up; a
   further pass is a new agent with a new brief that carries the findings forward.

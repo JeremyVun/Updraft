@@ -587,7 +587,7 @@ The little boats are implemented after the washing, before the meadow, including
 alongside the toys. The sky mirror is implemented locally; the stairs remain planned.
 
 Jeremy approved all of this on 2026-09-17 and gave the orchestrating session ownership of building it. How it is
-being built: each piece is one bounded parcel given to an Opus 5 agent in its own worktree under `/private/tmp`
+being built: each piece is one bounded parcel given to an Opus agent in its own worktree under `/private/tmp`
 (`updraft-birches`, `updraft-linestoys`, `updraft-piano`, later `updraft-sleep` and `updraft-mirror`); the
 orchestrator looks at a handful of screenshots from each before accepting it, and merges to `main` itself. The
 sleeping island waits for the swan cygnet rebuild to land, because it is built on the companion; the sky mirror

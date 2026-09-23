@@ -121,7 +121,7 @@ after: a sheet under the stroke fills in about half a second, one 10 downwind fo
 downwind at about 1.4 s, and 15 upwind barely stirs. Nothing the grass reads was touched (the force, advection and
 grass-spring passes and the pointer's splats are as they were), so the grass cannot regress.
 
-Still to do, as one Opus 5 parcel once the sail has landed: the washing (swing on the sway texture per vertex, the
+Still to do, as one Opus parcel once the sail has landed: the washing (swing on the sway texture per vertex, the
 hem lagging the peg so a gust runs down the cloth, a belly out of the plane so a sheet fills rather than hinges, a
 ripple that rises with the wind), the kite, the pinwheels, the birch leaves on their twigs and the loose leaves, and
 the sail's one sampling function.
