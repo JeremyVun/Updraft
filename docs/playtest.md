@@ -19,7 +19,8 @@ Jeremy's issues from playing the release build. Read this first after any contex
 
 ## Work
 
-Branches from `8be5346`, each in its own worktree with its own dev server; merged to `main` at the end.
+Branches from `8be5346`, each in its own worktree with its own dev server; all merged to `main` at `105e066` on 2026-09-24,
+after the Home ending audio (`c7f41f0`) landed.
 
 | # | Issue | Owner | Worktree / port | Status |
 | --- | --- | --- | --- | --- |
