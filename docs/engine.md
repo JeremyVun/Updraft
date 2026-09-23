@@ -330,8 +330,12 @@ Costs observed in that baseline (before these bounds and the concurrent journey-
 - Land-heavy entry views submit roughly 1.3–1.7 million triangles/frame. Grass accounts for roughly
   0.6–0.9 million. It already selects tiles by camera frustum and distance; terrain also has its own
   culling/LOD. Their disabled Three.js culling flags are intentional, unlike the fixed objects above.
-- Drowned village meshes still disable culling and update outside their room. About 31,000 triangles
+- Drowned village meshes still disable culling. About 31,000 triangles
   remain submitted in several unrelated chapters; hiding them changed no pixels in those fixtures.
+  (Since 09-23 its vane and herons rest while the boat is more than 320 m from the village along the journey,
+  where its leaves already rested, and live through the last 10 s at 1/30 s steps when it comes near; the
+  lighthouse, which also lights shared shaders, always keeps time. `tools/drowned-gating-check.mjs` compares the
+  arrival state with a village updated every step.)
   Birches also submits about 428,000 triangles in the adjacent drowned entry view. Conservative animated
   bounds and smaller spatial batches need testing; chapter-only visibility risks popping during travel.
 - Wind submits 22 small draws/tick including its readback reduction; petals run two simulation passes
