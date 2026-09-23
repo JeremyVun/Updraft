@@ -140,6 +140,7 @@ for (const [fps, portrait] of [
     maxEdge = 0,
     minDry = Infinity,
     swimFrames = 0,
+    sailingFrames = 0,
     fastestSwim = 0,
     biggestFlap = 0;
   let biggestToyStep = 0,
@@ -193,6 +194,7 @@ for (const [fps, portrait] of [
       last = q.beat;
     }
     if (q.beat === 'sailing') {
+      sailingFrames++;
       for (const p of [c.child.position, c.cygnet.position]) {
         if (p === c.child.position || (c.cygnet.state !== 'swimming' && !c.cygnet.seating.move))
           minDry = Math.min(minDry, worldHeight(p.x, p.z) - boatsLevel(L.startZ - p.z));
@@ -223,7 +225,8 @@ for (const [fps, portrait] of [
     `chapter stalled: ${q.beat}, s=${r.progress}, child=${c.child.position.toArray()}, bird=${c.cygnet.position.toArray()}, state=${c.cygnet.state}, phase=${q.swim}, pool=${q.pool}, entry=${q.swimEntry}, birdAim=${q.swimAim.toArray()}, seating=${JSON.stringify(c.cygnet.seating.move)}, bank=${q.birdBank.toArray()}`,
   );
   assert.equal(c.cygnet.swims, 3, 'paddles in all three pools');
-  assert(swimFrames > fps * 40, 'sustained swims alongside toys');
+  // Steadier sailing shortens the room, so the swims are measured as a share of it.
+  assert(swimFrames > fps * 30 && swimFrames > sailingFrames * 0.6, `sustained swims alongside toys: ${swimFrames / fps}s of ${sailingFrames / fps}s`);
   assert(fastestSwim > 2.45 && biggestFlap > 0.45, 'playful swim includes faster paddles and wing flicks');
   assert(minDry > 0.01, `characters entered a pool: ${minDry}`);
   assert(maxEdge < 0.93, `characters left safe frame: ${maxEdge}, ${JSON.stringify(worstFrame)}`);
@@ -234,6 +237,7 @@ for (const [fps, portrait] of [
     minDry,
     maxEdge,
     swimFrames,
+    sailingFrames,
     fastestSwim,
     biggestFlap,
     biggestToyStep,

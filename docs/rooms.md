@@ -236,6 +236,41 @@ plus existing idle, local-wind, spacing and offshore checks. Type checking and p
 The pointer replay now checks abrupt deceleration and backward movement; its rendered run remains
 pending because another full playthrough held the shared GPU lock.
 
+### Momentum, pace and the orange toy (2026-09-23)
+
+Jeremy, after playing the release build: “The little boats need a bit more momentum and need to react to
+the wind a bit easier, right now, i have to keep rapidly creating wind the whole time or else the boats
+don't move (and they move a bit slow). Also an issue where the orange boat lags behind the rest a bit too
+much”.
+
+Causes found. A relaxed stroke already filled a sail completely (slow 250 px/s strokes and strokes 110 px
+off the boat too), so the sail thresholds were not the problem. The hull lost speed as fast as it gained
+it (`drag` 1.7/s), so a toy stopped about 3 s after the air went. The child's orange toy was held to about
+1.7 units/s by its ease toward the walking child, who aimed just behind it and slowed on arrival. The other
+toys had no such limit, and every gathered toy was carried by wind at the orange toy however far ahead it
+was. Toys could not pass each other, so the teal toy shoved the waiting toys ahead as one train and the
+orange toy trailed the fleet's leader by 14 units on average (25 at most), always last.
+
+Changes (`src/world/little-boats.ts`, `src/story/little-boats.ts`, `tuning.littleBoats`):
+
+- A filled sail picks the hull up at `drive`; once the air eases, still water takes the speed away slowly
+  (`drag` 0.5/s), so a toy glides on and slows gradually. `speed` is 2.9, and each toy has its own `pace`;
+  the child's toy is the quickest.
+- The child hurries along the bank while its toy sails away (`childHurry`). The toy may run further ahead
+  of the child (`childLead`) and of the cygnet (`swimLead`, which now also covers the cygnet making for the
+  water and climbing out, so the limit never jumps).
+- Carried toys lose the wind at the orange toy once they are ahead of it (`carryAhead` to `carryAheadEnd`).
+  While the travellers catch up, gathered toys drift to rest no further than `fleetLead` beyond where the
+  orange toy may go. Waiting toys join when any gathered toy reaches them.
+- The other toys sail in side lanes (`sideLane`), never nearer the centre than `outletLane`, even in the
+  outlet. The orange toy in the centre lane passes any of them, and opposite sides pass each other. Only
+  toys in one lane keep `hullSpacing`: a toy eases in behind one it cannot pass, keeping `berth` spare, and
+  its own gust nudges that toy on (`nudge`), through any queue ahead. The rigid push remains as a backstop.
+  `turnRoom` adds spacing through the offshore turn, which compresses travel on its inner side.
+
+The launch, the three pools and swims, the reveal and the offshore run keep their order. Sails still fill
+only with real local wind and hang empty while a toy glides.
+
 ## Meadow arrival (2026-09-20)
 
 Jeremy found the crossing landed too far along the meadow shore, leaving a long walk before the hill.
