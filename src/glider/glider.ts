@@ -97,6 +97,7 @@ export class Glider {
   /** Set once it has been let go at the end: it climbs away along this heading and never comes back. */
   departing: THREE.Vector3 | null = null;
   private departSpeed = 9;
+  private departRise: number | null = null;
   /** How wet it is, 0 dry to 1 sodden: the storm soaks it and the player's wind dries it out again. */
   readonly soggy = { value: 0 };
   /**
@@ -260,10 +261,12 @@ export class Glider {
     this.airborne = true;
   }
 
-  depart(heading: THREE.Vector3, speed = 9): void {
+  /** Without a `rise` it keeps its own lift; with one it climbs at that rate whatever the air under it does. */
+  depart(heading: THREE.Vector3, speed = 9, rise: number | null = null): void {
     this.settlingAt = null;
     this.departing = heading.clone().normalize();
     this.departSpeed = speed;
+    this.departRise = rise;
   }
 
   /** Finish an arrival by flying down to a fixed, reachable pickup spot. Never teleport the paper. */
@@ -371,7 +374,7 @@ export class Glider {
     }
     v.x += (w.x + gx * glide - v.x) * (1 - Math.exp(-dt * grip));
     v.z += (w.z + gz * glide - v.z) * (1 - Math.exp(-dt * grip));
-    const vyTarget = resting ? 0 : liftForce - 2.4;
+    const vyTarget = resting ? 0 : this.departing && this.departRise !== null ? this.departRise : liftForce - 2.4;
     v.y += (vyTarget - v.y) * (1 - Math.exp(-dt * 1.4));
 
     if (this.guided && !this.departing) {
