@@ -17,6 +17,10 @@ now play 12 dB louder than the original integration. The opening retains its lif
 growth and care hush; Home retains its composed dynamics and cue ducking. Notes, transitions, environmental
 sounds, gesture chimes and the separate finale are unchanged.
 
+**September 23 second playtest:** Home, from the Sky Mirror departure through the ending, was then too loud,
+so it comes back 4 dB (8 dB over the original integration). The Sky Mirror room's score was too soft and
+plays 4 dB louder (`mirrorScoreLevel`); the drowned village's share of the same dream score is unchanged.
+
 Volume regression check: seeded 32-second background renders of Lines, Boats, both Meadow beds,
 Birches, Drowned, Wood, Sleeping shelter/morning, Sea and Sky Mirror match pre-integration commit
 `f5d2c8e` within 0.01 dB. All eleven finish with full arrival and cue-duck gains. This compares music

@@ -28,9 +28,9 @@ export const tuning = {
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
     homewardFadeOut: 3, homewardQuiet: 5, homewardFadeIn: 3,
     homewardClearDistance: 30,
-    /** Playtest correction: bring the opening and home drones forward by 12 dB. */
+    /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
-    summitScoreLevel: .06555 * 10 ** (12 / 20),
+    summitScoreLevel: .06555 * 10 ** (8 / 20),
     arrivalPhraseWait: 4.5, phraseReleaseLead: .8,
     openingHandoffSettle: 2.2,
     /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */
@@ -59,8 +59,8 @@ export const tuning = {
     birchesScoreLevel: 10.35,
     /** Approved Lines balance (+17.6 dB), excluding preview playback gain; a separate, small melody trim. */
     linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
-    /** Approved revised study gains, excluding listening-file normalization. */
-    mirrorScoreLevel: 1, drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /** Approved revised study gains, excluding listening-file normalization; the mirror 4 dB up after playtest. */
+    mirrorScoreLevel: 10 ** (4 / 20), drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,
