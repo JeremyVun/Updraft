@@ -164,9 +164,9 @@ export function timeLastFrame(deadline: number, report: (finished: boolean) => v
   }, Math.max(0, deadline - performance.now()));
 }
 
-/** Whether the GPU has finished the frame `depth` frames back (with fewer fences, the oldest there is). */
+/** Whether the GPU has finished the frame `depth` frames back. */
 function finished(gl: WebGL2RenderingContext, depth: number): boolean {
-  const status = gl.clientWaitSync(frameSyncs[Math.max(0, frameSyncs.length - depth)], 0, 0);
+  const status = gl.clientWaitSync(frameSyncs[frameSyncs.length - depth], 0, 0);
   return status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED;
 }
 
@@ -186,7 +186,7 @@ export function holdForReadbacks(): boolean {
   const gl = frameGl;
   let waiting = false;
   for (const r of all) waiting ||= r.waiting;
-  if (!gl || !frameSyncs.length || !waiting || performance.now() - lastDelivery < STARVED_MS || finished(gl, DEPTH)) {
+  if (!gl || frameSyncs.length < MAX_DEPTH || !waiting || performance.now() - lastDelivery < STARVED_MS || finished(gl, DEPTH)) {
     held = 0;
     return false;
   }
@@ -212,7 +212,8 @@ export function holdForReadbacks(): boolean {
 export function pollReadbacks(): void {
   const started = performance.now();
   const gl = frameGl;
-  const open = !gl || !frameSyncs.length || finished(gl, DEPTH)
+  // Play begins on an idle GPU (boot waits for it), so the first frames map freely.
+  const open = !gl || frameSyncs.length < MAX_DEPTH || finished(gl, DEPTH)
     || (started - lastDelivery >= STALE_MS && finished(gl, MAX_DEPTH));
   if (!open && !forceNext) {
     readbackStats.skipped++;
