@@ -29,6 +29,11 @@ export const DROWNED_CHANNEL: THREE.Vector2[] = [
 export const SPIRE = new THREE.Vector3(14, 21, -1436);
 /** The boat follows the harbour light, then passes its drowned doorstep. */
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
+/** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
+const DROWNED_Z = -1440;
+const NEAR_Z = 320;
+const CATCH_UP_S = 10;
+const CATCH_UP_STEP = 1 / 30;
 
 /** Albedos are written linear: the renderer never tone-maps on the way in, so an sRGB hex would clip to white. */
 const lin = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
@@ -1060,6 +1065,8 @@ export class DrownedVillage {
   private readonly herons: Instances;
   private readonly drift: Drifter[] = [];
   private readonly leafPos: THREE.InstancedBufferAttribute;
+  /** Game time not yet lived through by the vane and herons, while the boat was far away. */
+  private idle = 0;
 
   constructor(private readonly wind: WindField) {
     const rand = mulberry32(3140);
@@ -1190,10 +1197,28 @@ export class DrownedVillage {
     }
   }
 
-  /** `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end. */
+  /**
+   * `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end.
+   * While the boat is far off, the vane and herons only count the time; when it comes near they live through the
+   * last `CATCH_UP_S` of it, so the vane has settled into the wind and the herons are mid-habit on arrival.
+   */
   update(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
     this.storm.value = storm;
+    // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
+    if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
+      this.idle = Math.min(CATCH_UP_S, this.idle + dt);
+      return;
+    }
+    if (this.idle > 0) {
+      const steps = Math.ceil(this.idle / CATCH_UP_STEP);
+      const step = this.idle / steps;
+      for (let i = 0; i < steps; i++) {
+        this.turnVane(step, storm);
+        this.flyHerons(step, time - this.idle + step * (i + 1), boat, storm);
+      }
+      this.idle = 0;
+    }
     this.turnVane(dt, storm);
     this.flyHerons(dt, time, boat, storm);
     this.driftLeaves(dt, time, boat, storm);
@@ -1347,7 +1372,6 @@ export class DrownedVillage {
   }
 
   private driftLeaves(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
-    if (Math.abs(boat.z + 1440) > 320) return;
     const pull = 0.2 + storm * 0.45;
     const array = this.leafPos.array as Float32Array;
     for (let i = 0; i < this.drift.length; i++) {

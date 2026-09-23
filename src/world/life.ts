@@ -96,7 +96,7 @@ export class LifeField {
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);
-    this.readback = new Readback(renderer, READ_RES, READ_RES, (data, window) => {
+    this.readback = new Readback(renderer, 'life', READ_RES, READ_RES, (data, window) => {
       this.cpu.set(data);
       this.cpuWindow = window;
     }, 2);

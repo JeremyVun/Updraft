@@ -148,7 +148,8 @@ export class WindField {
   private readonly readTarget: THREE.WebGLRenderTarget;
   private readonly readback: Readback<{ minX: number; minZ: number; size: number }>;
   private readonly cpu = new Float32Array(READ_RES * READ_RES * 4);
-  private splats: Splat[] = [];
+  private readonly splats: Splat[] = [];
+  private readonly runTick = (time: number, inputs: TimedSplat[]): void => this.substep(time, inputs);
 
   private readonly forceMat: THREE.ShaderMaterial;
   private readonly curlMat: THREE.ShaderMaterial;
@@ -178,7 +179,7 @@ export class WindField {
     this.curl = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.divergence = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.readTarget = simTarget(READ_RES, READ_RES, THREE.FloatType, THREE.NearestFilter);
-    this.readback = new Readback(renderer, READ_RES, READ_RES, (data, window) => {
+    this.readback = new Readback(renderer, 'wind', READ_RES, READ_RES, (data, window) => {
       this.cpu.set(data);
       this.cpuWindow = window;
     });
@@ -279,9 +280,8 @@ export class WindField {
 
   /** A fixed simulation clock, independent of display refresh and the graphics preset. */
   step(dt: number, time: number, requestReadback = true): void {
-    const splats = this.splats;
-    this.splats = [];
-    const steps = this.clock.advance(dt, time, splats, (t, inputs) => this.substep(t, inputs));
+    const steps = this.clock.advance(dt, time, this.splats, this.runTick);
+    this.splats.length = 0;
     this.steppedSinceReadback ||= steps > 0;
     if (requestReadback && this.steppedSinceReadback) {
       this.readBack();

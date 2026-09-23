@@ -1,9 +1,33 @@
 import * as THREE from 'three';
-import type { WindField } from '../wind/field';
+import type { Splat, WindField } from '../wind/field';
 import { heightAt } from '../world/island';
+import { ROOMS } from '../world/journey-rooms';
 import { tuning } from '../tuning';
 
 const T = tuning.pointer;
+const PICK_STEP = 2;
+const PICK_RANGE = 700;
+/**
+ * Every island lies inside this multiple of its room's ellipse (at most 1.16 when measured; the drowned village
+ * and the sky mirror never rise above the water), and no ground stands above the ceiling (at most 65). Beyond
+ * them the ground is the sea at 0, found without a height lookup: a ray over open water or high above the land
+ * would otherwise evaluate the procedural terrain hundreds of times. `tools/pointer-pick-check.mjs` re-measures
+ * both bounds and compares every pick with the plain march.
+ */
+export const LAND_REACH = 1.3;
+export const TERRAIN_CEILING = 80;
+export const LAND_ROOMS = Object.entries(ROOMS).filter(([name]) => name !== 'drowned' && name !== 'mirror').map(([, c]) => c);
+const LAND = LAND_ROOMS.map(c => ({ x: c.x, z: c.z, sx: 1 / (c.rx * LAND_REACH), sz: 1 / (c.rz * LAND_REACH) }));
+
+/** Height of the ground above the sea at (x, z): `max(heightAt, 0)`, without a lookup over open water. */
+export function groundAt(x: number, z: number): number {
+  for (const c of LAND) {
+    const ex = (x - c.x) * c.sx;
+    const ez = (z - c.z) * c.sz;
+    if (ex * ex + ez * ez < 1) return Math.max(heightAt(x, z), 0);
+  }
+  return 0;
+}
 
 /** Turns pointer motion into wind: gusts along the path, and an updraft in the middle of circles traced with it. */
 export class PointerInput {
@@ -50,6 +74,17 @@ export class PointerInput {
   private sinceHeading = 0;
   private activePointer: number | null = null;
   private listeners: ((kind: 'down' | 'up') => void)[] = [];
+  /**
+   * A touch stroke keeps where the finger landed and its last segment after lifting until a rendered frame has
+   * used them, so a flick made between two frames is wind rather than nothing.
+   */
+  private landed = false;
+  private released = false;
+  private frameLanded = false;
+  private frameReleased = false;
+  private readonly landedNdc = new THREE.Vector2();
+  private readonly gustSplat: Splat = { source: {}, trail: true, ax: 0, az: 0, bx: 0, bz: 0, vx: 0, vz: 0, radius: 0, energy: 0, swirl: 0, lift: 0 };
+  private readonly liftSplat: Splat = { source: 'pointer-lift', ax: 0, az: 0, bx: 0, bz: 0, vx: 0, vz: 0, radius: 0, energy: 0, swirl: 0, lift: 0 };
 
   constructor(private readonly el: HTMLElement) {
     el.addEventListener('pointermove', (e) => this.move(e));
@@ -58,8 +93,13 @@ export class PointerInput {
       this.activePointer = e.pointerId;
       this.down = true;
       this.present = true;
+      this.released = this.frameReleased = false;
       if (e.pointerType !== 'mouse') this.hasPrev = false;
       this.move(e);
+      if (e.pointerType !== 'mouse') {
+        this.landed = true;
+        this.landedNdc.copy(this.eventNdc);
+      }
       el.setPointerCapture(e.pointerId);
       this.listeners.forEach((l) => l('down'));
     });
@@ -67,7 +107,7 @@ export class PointerInput {
       if (e.pointerId !== this.activePointer) return;
       this.activePointer = null;
       this.down = false;
-      if (e.pointerType !== 'mouse') this.present = false;
+      if (e.pointerType !== 'mouse') this.released = true;
       this.listeners.forEach((l) => l('up'));
     };
     el.addEventListener('pointerup', up);
@@ -93,6 +133,7 @@ export class PointerInput {
   private move(e: PointerEvent): void {
     if (!e.isPrimary || (this.activePointer !== null && e.pointerId !== this.activePointer)) return;
     if (e.pointerType === 'touch' && this.activePointer === null) return;
+    if (this.activePointer === null && this.released) return;
     const rect = this.el.getBoundingClientRect();
     this.eventNdc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     if (!this.present) this.hasPrev = false;
@@ -104,6 +145,7 @@ export class PointerInput {
     const wasDown = this.down;
     this.activePointer = null;
     this.down = this.present = this.hasPrev = false;
+    this.landed = this.released = this.frameLanded = this.frameReleased = false;
     this.ndc.copy(this.eventNdc);
     this.prevNdc.copy(this.ndc);
     this.vel.set(0, 0);
@@ -112,19 +154,22 @@ export class PointerInput {
     if (wasDown) this.listeners.forEach(l => l('up'));
   }
 
+  /** Where the ray through `ndc` first meets the ground, marching 2 m at a time to 700 m; a miss lies on the sea. */
   private pick(camera: THREE.Camera, ndc: THREE.Vector2, out: THREE.Vector3): void {
     this.ray.setFromCamera(ndc, camera);
     const o = this.ray.ray.origin;
     const d = this.ray.ray.direction;
-    const ground = (t: number) => o.y + d.y * t - Math.max(heightAt(o.x + d.x * t, o.z + d.z * t), 0);
     let prevT = 0;
-    for (let t = 2; t < 700; t += 2) {
-      if (ground(t) <= 0) {
+    for (let t = PICK_STEP; t < PICK_RANGE; t += PICK_STEP) {
+      const y = o.y + d.y * t;
+      if (y > TERRAIN_CEILING) {
+        if (d.y >= 0) break;
+      } else if (y - groundAt(o.x + d.x * t, o.z + d.z * t) <= 0) {
         let lo = prevT;
         let hi = t;
         for (let i = 0; i < 12; i++) {
           const mid = (lo + hi) / 2;
-          if (ground(mid) > 0) lo = mid;
+          if (o.y + d.y * mid - groundAt(o.x + d.x * mid, o.z + d.z * mid) > 0) lo = mid;
           else hi = mid;
         }
         out.copy(d).multiplyScalar(hi).add(o);
@@ -132,7 +177,7 @@ export class PointerInput {
       }
       prevT = t;
     }
-    out.copy(d).multiplyScalar(700).add(o);
+    out.copy(d).multiplyScalar(PICK_RANGE).add(o);
     out.y = 0;
   }
 
@@ -177,7 +222,12 @@ export class PointerInput {
 
   /** Snapshot one rendered frame's gesture before the game divides it into simulation steps. */
   beginFrame(): void {
-    this.frameFrom.copy(this.hasPrev && this.present && !this.muted ? this.ndc : this.eventNdc);
+    // The previous frame used a lifted stroke's last segment; the contact has now ended.
+    if (this.frameReleased) this.present = false;
+    this.frameReleased = this.released;
+    this.frameLanded = this.landed;
+    this.released = this.landed = false;
+    this.frameFrom.copy(this.frameLanded ? this.landedNdc : this.hasPrev && this.present && !this.muted ? this.ndc : this.eventNdc);
     this.frameTo.copy(this.eventNdc);
   }
 
@@ -202,13 +252,16 @@ export class PointerInput {
     this.ndc.copy(target);
     if (!this.hasPrev) {
       this.strokeSource = {};
-      this.pick(camera, this.ndc, this.world);
-      this.prev.copy(this.world);
-      this.prevNdc.copy(this.ndc);
       this.vel.set(0, 0);
       this.gust = 0;
       this.hasPrev = true;
-      return;
+      // A touch stroke begins where the finger landed, so its first frame of movement is wind too.
+      this.prevNdc.copy(this.frameLanded ? this.frameFrom : this.ndc);
+      if (this.ndc.equals(this.prevNdc)) {
+        this.pick(camera, this.ndc, this.world);
+        this.prev.copy(this.world);
+      }
+      if (!this.frameLanded) return;
     }
 
     this.instVel.set(0, 0);
@@ -220,42 +273,35 @@ export class PointerInput {
     }
     /** With no new gesture, its last gust settles where it was made; no ground picking is needed. */
     this.vel.lerp(this.instVel, 1 - Math.exp(-dt * 30));
-    const raw = this.vel.length() * (this.down ? T.pressedGain : T.hoverGain);
+    const raw = this.vel.length() * (this.down || this.frameReleased ? T.pressedGain : T.hoverGain);
     const speed = T.maxGust * Math.tanh(raw / T.maxGust);
     this.gust = speed;
     if (speed > T.minGust) {
       const nx = this.vel.x / this.vel.length();
       const nz = this.vel.y / this.vel.length();
       this.gustDir.set(nx, nz);
-      wind.addSplat({ source: this.strokeSource, trail: true,
-        ax: this.prev.x,
-        az: this.prev.z,
-        bx: this.world.x,
-        bz: this.world.z,
-        vx: nx * speed,
-        vz: nz * speed,
-        radius: 3.4 + speed * 0.14,
-        energy: Math.min(1, speed / 20) * 0.5,
-        swirl: 0,
-        lift: 0,
-      });
+      const g = this.gustSplat;
+      g.source = this.strokeSource;
+      g.ax = this.prev.x;
+      g.az = this.prev.z;
+      g.bx = this.world.x;
+      g.bz = this.world.z;
+      g.vx = nx * speed;
+      g.vz = nz * speed;
+      g.radius = 3.4 + speed * 0.14;
+      g.energy = Math.min(1, speed / 20) * 0.5;
+      wind.addSplat(g);
     }
 
     this.twirl(dt, camera);
     if (this.charge > T.minLift) {
       /** No swirl of its own: the strokes going round it are already turning the air, the way the player drew it. */
-      wind.addSplat({ source: 'pointer-lift',
-        ax: this.updraftAt.x,
-        az: this.updraftAt.z,
-        bx: this.updraftAt.x,
-        bz: this.updraftAt.z,
-        vx: 0,
-        vz: 0,
-        radius: 5 + this.charge * 4,
-        energy: 0,
-        swirl: 0,
-        lift: 1.0 + this.charge * 2.2,
-      });
+      const l = this.liftSplat;
+      l.ax = l.bx = this.updraftAt.x;
+      l.az = l.bz = this.updraftAt.z;
+      l.radius = 5 + this.charge * 4;
+      l.lift = 1.0 + this.charge * 2.2;
+      wind.addSplat(l);
     }
     this.prev.copy(this.world);
   }

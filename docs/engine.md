@@ -133,11 +133,33 @@ separate. Surface lighting and Sleeping fog share the morning-lane function in `
 
 ## Readbacks (`src/gl/readback.ts`)
 
-The wind field, the life field and the height bake are read back to the CPU for gameplay. In Chrome, mapping a read buffer blocks until the GPU process has executed every command issued before the map, so a readback issued and mapped mid-frame stalls for the whole frame's rendering, and a GPU-bound frame turns into a CPU stall too (that was the original stutter: 60-140 ms every few frames).
+The wind field, the life field and the height bake are read back to the CPU for gameplay. In Chrome, WebGL's
+`getBufferSubData` is always a synchronous round trip: the page waits until the GPU process has worked through
+every command submitted before it. A readback issued and mapped mid-frame therefore stalls for the whole frame's
+rendering, and a GPU-bound frame turns into a CPU stall too (the original stutter: 60-140 ms every few frames).
 
-`Readback` therefore never waits: `request` copies the target into a fresh pixel buffer and fences it; `pollReadbacks` maps only buffers whose fence has signalled, and only when the fence of the frame before last has signalled as well (the display pipeline is normally two frames deep), so the map is a memcpy. A fresh buffer per request matters: the driver keeps a CPU shadow of a fenced read buffer, and reusing the buffer discards it and turns the read into a blocking GPU copy.
+`Readback` therefore maps only at the start of a frame, before anything new is submitted, and only buffers whose
+own fence has signalled, while the GPU has also finished the frame before last (the first three frames of play,
+which start on an idle GPU, map freely as before). After 100 ms without a delivery
+the gate relaxes to the frame before that, the deepest the display pipeline normally runs; it never goes further.
+The old escape hatch mapped anyway after two seconds and blocked for 60–110 ms under a saturated GPU (measured
+at a locked `ratio=2`). Now, after two seconds without a delivery, whole frames are held back instead (no
+simulation, no GPU work; the image stays up and the next frame catches the time up) until the GPU has finished
+the frame before last, so the map does not wait behind a backlog and the main thread is never blocked meanwhile.
+Only if it is still behind after four held frames is one map taken anyway. The bound matters: the piano, the
+curtains and the embers read the wind through these copies, and with no delivery at all they would stop
+answering the player. Shot mode (the QA tools drive frames synchronously) never holds a frame. Each consumer allocates its in-flight pixel buffers once (`STATIC_COPY`: Chrome shadows
+READ-usage buffers into shared memory on every fence, a copy WebGL never reads, and warns whenever a pooled one is
+refilled; ANGLE's Metal backend keeps `STATIC_COPY` CPU-visible like READ) and reuses them after delivery.
+The 4 MiB height copy is taken in four 1 MiB slices on successive frames; it is installed only when complete.
 
-If the GPU stays behind (a saturated device, or another process on the GPU), the gate would starve the CPU copies. So one blocking delivery is accepted anyway now and then: a quarter second after a cheap one, two seconds after one that blocked for more than 6 ms, whatever the frame rate. The CPU wind copy is then up to a few frames older than usual, which the consumers tolerate, and the quality governor is stepping the load down meanwhile. `__stats.readbacksSkipped / readbacksForced / readbacksDelivered / readbackWorstMs` show what happened.
+Older data stays correct. The wind and life copies carry the window they were read in and are sampled in world
+space through it, so an old copy is late, never misplaced. The height copy is installed only if it belongs to the
+window last baked (and is re-requested until one lands); `heightAt` falls back to the exact procedural terrain
+outside whatever grid it has. The quality governor is meanwhile taking the load off the GPU.
+`__stats.readbacksSkipped / readbacksDelivered / readbacksHeld / readbacksForced / readbackWorstMs` show what happened; `readbackWaitMs` and
+`readbackWaitWorstMs` time the round trips alone, and `readbackWindWorstMs / readbackLifeWorstMs /
+readbackHeightWorstMs` each consumer's handler. `?depth=1|2|3` and `?stale=<ms>` change the gate for comparison.
 
 ## Quality governor (`src/gl/quality.ts`)
 
@@ -170,9 +192,15 @@ that exceeds the pixel budget, and applies its multisampling before allocating t
 resets its timing when play begins or page visibility changes: time behind Begin or in another tab cannot earn
 a quality increase. `node tools/quality-check.mjs` verifies these cases and normal adaptation.
 
-The governor targets 60 fps on every device. Every 1.5 seconds it reviews up to 90 frame timing samples,
+The governor targets 60 fps unless presentation is capped. Every 1.5 seconds it reviews up to 90 frame timing samples,
 discarding the slowest 5%. A trimmed mean above 17.6 ms lowers quality; a sustained p90 below 17.2 ms for
-12 seconds earns one increase. Failed increases double the next wait, up to two minutes. A single hitch or
+12 seconds earns one increase. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
+frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
+least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
+(35.2/34.4 ms) until intervals under 25 ms show the cap has lifted. A saturated GPU never finishes early, so it
+still steps down as before; 60/120/144 Hz cadences are never timed. A timer that fires late counts as not early,
+so a browser that coalesces timers keeps the old behaviour. Failed increases double the next wait, up to two minutes. A single hitch or
 hidden-tab time cannot earn a change. A new level settles for 2.5 seconds after a reduction, one second after
 an increase. Pacing reports the longest display callback interval since the preceding presentation, with a
 16.67 ms floor: intentionally skipped 120/144 Hz callbacks cannot masquerade as overload, but actual missed
@@ -190,7 +218,11 @@ targets 60 fps. Full grass recovers before extra antialiasing. World detail cont
 | Low | 55% | 85% | 1.1 | Alternate frames | 0.5 |
 | Auto fallback | 25% | 70% | 1.1 | Alternate frames | 0.5 |
 
-Auto's sustained pixel budget is 2.4 million, re-evaluated on resize/fullscreen. Touch also has a sustained
+Auto's sustained pixel budget is 2.4 million, re-evaluated on resize/fullscreen. Viewports too large for the
+fixed ladder's lowest scale (0.72× base, e.g. a 4K CSS viewport at DPR 1) get one more Auto-only rung at the
+budget ratio, never below 0.5×, with the fallback's world detail; it is rebuilt on resize and presets ignore it.
+The canvas and every render target share one scale, lowered if needed so no side exceeds `MAX_TEXTURE_SIZE`,
+`MAX_RENDERBUFFER_SIZE` or `MAX_VIEWPORT_DIMS`. Touch also has a sustained
 1.25× ceiling and starts at medium world detail; it can recover full grass. High permits 1.5× on both touch
 and mouse. Smooth vsync cannot prove spare power, so Auto never climbs beyond its budget. The governor restores
 full grass before climbing above 1×. Grass grows/shrinks in place over one second while its distance rings
@@ -347,8 +379,12 @@ Costs observed in that baseline (before these bounds and the concurrent journey-
 - Land-heavy entry views submit roughly 1.3–1.7 million triangles/frame. Grass accounts for roughly
   0.6–0.9 million. It already selects tiles by camera frustum and distance; terrain also has its own
   culling/LOD. Their disabled Three.js culling flags are intentional, unlike the fixed objects above.
-- Drowned village meshes still disable culling and update outside their room. About 31,000 triangles
+- Drowned village meshes still disable culling. About 31,000 triangles
   remain submitted in several unrelated chapters; hiding them changed no pixels in those fixtures.
+  (Since 09-23 its vane and herons rest while the boat is more than 320 m from the village along the journey,
+  where its leaves already rested, and live through the last 10 s at 1/30 s steps when it comes near; the
+  lighthouse, which also lights shared shaders, always keeps time. `tools/drowned-gating-check.mjs` compares the
+  arrival state with a village updated every step.)
   Birches also submits about 428,000 triangles in the adjacent drowned entry view. Conservative animated
   bounds and smaller spatial batches need testing; chapter-only visibility risks popping during travel.
 - Wind submits 22 small draws/tick including its readback reduction; petals run two simulation passes
@@ -640,7 +676,9 @@ Traveller shaders receive a render-only translation for the doorway view and a t
 view. Each traveller follows the destination ground height beyond the sill, so the old hillside cannot lower
 their feet into the new shore. World-space scarf vertices use the same translation. The camera waits for both travellers, crosses with an
 explicit continuous shot, and the chapter transfers their logical positions once. The ordinary camera and window
-follow then resume. The portal stops rendering after crossing. `tools/lines-check.mjs` checks the full route,
+follow then resume. The portal stops rendering after crossing, and whenever the door is not shown its target
+shrinks to 1×1, releasing the full-screen multisampled half-float colour and depth (about 32 bytes per drawing-buffer
+pixel); showing the door again, after a checkpoint restore, reallocates it. `tools/lines-check.mjs` checks the full route,
 per-view object visibility, both travellers' transfer and checkpoint restore.
 
 ## Startup and recovery follow-up (2026-09-20)

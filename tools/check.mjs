@@ -18,7 +18,7 @@ const mechanics = [
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera',
   'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals',
+  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating',
 ];
 const browser = [
   'shader-browser', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
