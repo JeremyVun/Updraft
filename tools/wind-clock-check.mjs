@@ -30,3 +30,10 @@ const mixed=new WindClock();let elapsed=0,mixedTicks=0;
 for(let i=0;i<600;i++){const dt=[1/30,1/144,1/90,1/60][i%4];elapsed+=dt;mixed.advance(dt,elapsed,[],()=>mixedTicks++)}
 assert.equal(mixedTicks,Math.floor(elapsed*60+1e-8));
 console.log('Stroke resampling, independent sources beyond eight, and changing frame rates passed.');
+// Producers may reuse one splat object: the clock copies what it retains between frames.
+const reuse=new WindClock(),shared={...splat,energy:.25};let seen=[];
+reuse.advance(1/120,1/120,[shared],()=>assert.fail());
+shared.energy=.75;shared.ax=100;
+reuse.advance(1/120,1/60,[shared],(_,s)=>seen=s.map(i=>i.splat.energy));
+assert.deepEqual(seen,[.5],'the retained frame keeps the values it was given');
+console.log('Reused producer objects passed.');
