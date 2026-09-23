@@ -125,8 +125,13 @@ rendering, and a GPU-bound frame turns into a CPU stall too (the original stutte
 `Readback` therefore maps only at the start of a frame, before anything new is submitted, and only buffers whose
 own fence has signalled, while the GPU has also finished the frame before last. After 100 ms without a delivery
 the gate relaxes to the frame before that, the deepest the display pipeline normally runs; it never goes further.
-There is no forced delivery: the old escape hatch mapped anyway after two seconds and could block for 60–90 ms
-under a saturated GPU. Each consumer allocates its in-flight pixel buffers once (`STATIC_COPY`: Chrome shadows
+The old escape hatch mapped anyway after two seconds and blocked for 60–110 ms under a saturated GPU (measured
+at a locked `ratio=2`). Now, after two seconds without a delivery, whole frames are held back instead (no
+simulation, no GPU work; the image stays up and the next frame catches the time up) until the GPU has finished
+the frame before last, so the map does not wait behind a backlog and the main thread is never blocked meanwhile.
+Only if it is still behind after four held frames is one map taken anyway. The bound matters: the piano, the
+curtains and the embers read the wind through these copies, and with no delivery at all they would stop
+answering the player. Shot mode (the QA tools drive frames synchronously) never holds a frame. Each consumer allocates its in-flight pixel buffers once (`STATIC_COPY`: Chrome shadows
 READ-usage buffers into shared memory on every fence, a copy WebGL never reads, and warns whenever a pooled one is
 refilled; ANGLE's Metal backend keeps `STATIC_COPY` CPU-visible like READ) and reuses them after delivery.
 The 4 MiB height copy is taken in four 1 MiB slices on successive frames; it is installed only when complete.
@@ -135,7 +140,7 @@ Older data stays correct. The wind and life copies carry the window they were re
 space through it, so an old copy is late, never misplaced. The height copy is installed only if it belongs to the
 window last baked (and is re-requested until one lands); `heightAt` falls back to the exact procedural terrain
 outside whatever grid it has. The quality governor is meanwhile taking the load off the GPU.
-`__stats.readbacksSkipped / readbacksDelivered / readbackWorstMs` show what happened; `readbackWaitMs` and
+`__stats.readbacksSkipped / readbacksDelivered / readbacksHeld / readbacksForced / readbackWorstMs` show what happened; `readbackWaitMs` and
 `readbackWaitWorstMs` time the round trips alone, and `readbackWindWorstMs / readbackLifeWorstMs /
 readbackHeightWorstMs` each consumer's handler. `?depth=1|2|3` and `?stale=<ms>` change the gate for comparison.
 

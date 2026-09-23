@@ -28,6 +28,8 @@ let lastDelivery = 0;
 /** Lifetime diagnostics, shown in `?stats` and `window.__stats`. */
 export const readbackStats = {
   skipped: 0, delivered: 0,
+  /** Frames held back to let a saturated GPU catch up, and maps taken while it was still behind. */
+  held: 0, forced: 0,
   /** Longest whole `pollReadbacks`. */
   worstMs: 0,
   /** Time blocked in `getBufferSubData` (the round trip to the GPU process), total and longest. */
@@ -78,6 +80,10 @@ export class Readback<T> {
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     readbackStats.work[name] = 0;
     all.push(this as Readback<unknown>);
+  }
+
+  get waiting(): boolean {
+    return this.pending.length > 0;
   }
 
   /** Whether a request would be accepted now (a buffer is free: fewer than `inFlight` are waiting on the GPU). */
@@ -165,22 +171,55 @@ function finished(gl: WebGL2RenderingContext, depth: number): boolean {
 }
 
 /**
+ * Under sustained saturation the gate can stay shut, and the CPU copies would freeze: the piano, the curtains and
+ * the embers all read the wind through them. After `STARVED_MS` without a delivery, whole frames are held back,
+ * submitting nothing, until the GPU has finished the frame before last; the copies are then mapped without waiting
+ * behind a backlog. Only if it is still behind after `HOLD_FRAMES` held frames is one map taken anyway.
+ */
+const STARVED_MS = 2000;
+const HOLD_FRAMES = 4;
+let held = 0;
+let forceNext = false;
+
+/** Call before a frame's work: true when this frame should do nothing, so a saturated GPU can catch up. */
+export function holdForReadbacks(): boolean {
+  const gl = frameGl;
+  let waiting = false;
+  for (const r of all) waiting ||= r.waiting;
+  if (!gl || !frameSyncs.length || !waiting || performance.now() - lastDelivery < STARVED_MS || finished(gl, DEPTH)) {
+    held = 0;
+    return false;
+  }
+  if (held >= HOLD_FRAMES) {
+    held = 0;
+    forceNext = true;
+    return false;
+  }
+  held++;
+  readbackStats.held++;
+  return true;
+}
+
+/**
  * Call after the frame's CPU-only work and before its first GPU command. Finished readbacks are delivered when
  * the GPU has also finished the frame before last; after `STALE_MS` without a delivery, the frame before that
- * will do. There is no blocking escape hatch: while the GPU is further behind, nothing is mapped and the CPU
- * copies simply age. Every consumer stays correct with older data. The wind and life copies carry the window
- * they were read in and are sampled in world space through it, so an old copy is late, never misplaced. The
- * height copy is installed only if it is the window last baked, and `heightAt` falls back to the exact
- * procedural terrain outside whatever grid it has. The quality governor is meanwhile taking the load off the GPU.
+ * will do. While the GPU is further behind nothing is mapped and the CPU copies age (see `holdForReadbacks` for
+ * the bound). Every consumer stays correct with older data. The wind and life copies carry the window they were
+ * read in and are sampled in world space through it, so an old copy is late, never misplaced. The height copy is
+ * installed only if it is the window last baked, and `heightAt` falls back to the exact procedural terrain
+ * outside whatever grid it has. The quality governor is meanwhile taking the load off the GPU.
  */
 export function pollReadbacks(): void {
   const started = performance.now();
   const gl = frameGl;
-  if (gl && frameSyncs.length && !finished(gl, DEPTH)
-    && (started - lastDelivery < STALE_MS || !finished(gl, MAX_DEPTH))) {
+  const open = !gl || !frameSyncs.length || finished(gl, DEPTH)
+    || (started - lastDelivery >= STALE_MS && finished(gl, MAX_DEPTH));
+  if (!open && !forceNext) {
     readbackStats.skipped++;
     return;
   }
+  if (!open) readbackStats.forced++;
+  forceNext = false;
   for (const r of all) r.poll();
   readbackStats.worstMs = Math.max(readbackStats.worstMs, performance.now() - started);
 }

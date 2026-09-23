@@ -37,7 +37,7 @@ import { params } from './params';
 import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
-import { endFrame, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
+import { endFrame, holdForReadbacks, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
 import { Post } from './post/post';
 import { createWindDebug } from './wind/debug';
@@ -896,6 +896,11 @@ function frame(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
+  // Shot mode is driven frame by frame by the tools and never holds a frame back.
+  if (!params.shot && holdForReadbacks()) {
+    requestAnimationFrame(frame);
+    return;
+  }
   const cpuStart = performance.now();
   const realDt = (now - last) / 1000;
   telemetry.frame(now - last);
@@ -948,7 +953,7 @@ function frame(now: number): void {
         `cpu (js in frame) p50 ${percentile(cpuTimes, 0.5).toFixed(1)} p90 ${percentile(cpuTimes, 0.9).toFixed(1)} ms${params.lite ? '  LITE' : ''}`,
         `${quality.mode}  scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
         `grass ${(grass.quality.density * 100).toFixed(0)}%  reach ${(grass.quality.reach * 100).toFixed(0)}%  detail ${quality.level.detail}`,
-        `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} worst ${readbackStats.worstMs.toFixed(0)} ms (wait ${readbackStats.waitWorstMs.toFixed(0)})`,
+        `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} held ${readbackStats.held} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms (wait ${readbackStats.waitWorstMs.toFixed(0)})`,
         `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
         `boot ${bootMs.toFixed(0)} ms  ${story.name}`,
       ]);
@@ -975,6 +980,8 @@ function frame(now: number): void {
       grassReach: grass.quality.reach,
       readbacksSkipped: readbackStats.skipped,
       readbacksDelivered: readbackStats.delivered,
+      readbacksHeld: readbackStats.held,
+      readbacksForced: readbackStats.forced,
       readbackWorstMs: Math.round(readbackStats.worstMs * 10) / 10,
       readbackWaitMs: Math.round(readbackStats.waitMs * 10) / 10,
       readbackWaitWorstMs: Math.round(readbackStats.waitWorstMs * 10) / 10,
