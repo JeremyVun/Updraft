@@ -383,6 +383,13 @@ export const tuning = {
     /** Coast-relative radii: land and props sit inside the opaque centre; the outer edge dissolves over water. */
     arrivalFogInner: 1.2,
     arrivalFogOuter: 1.32,
+    /**
+     * The island ahead lies in mist beyond [clear, hidden] units from the eye: the wood past its farthest trees,
+     * the sleeping island everywhere but the shore the boat lands on. It lifts at this rate once they are ashore.
+     */
+    woodMist: [110, 165] as const,
+    sleepingMist: [40, 72] as const,
+    isleMistLift: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: 1.03,
     /** Metres from the arrival berth over which the stronger haze develops as the farewell camera releases. */
