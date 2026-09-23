@@ -33,7 +33,8 @@ Every chapter has an entry checkpoint. Additional exits:
   Older `stars`/`stars-<mask>` saves retain partial progress; mask 7 restores all four to preserve completion.
   New `stars4-7` saves leave the fourth light playable.
   Legacy `moon`/`tide`/`lantern` map to 0/1/2 restored stars; `reflection`/`window` restart with none.
-  Voyages use `toMirror` (entry/swim) and `toHarbour` (entry); old `toHome` saves keep the direct route.
+  Voyages use `toMirror` (entry/swim) and `toHarbour` (entry); old `toHome` saves continue through `toMirror`,
+  so players from before the sky mirror still reach it (a `swim` save resumes in open water on the new route).
 - Home: reunion is over (resume the walk toward the house); house/drawing recognition is complete (resume
   with the sheet open at the brow, without replaying the motif); completed ending. Existing checkpoint names
   `reunion`, `drawing` and `complete` remain valid.
