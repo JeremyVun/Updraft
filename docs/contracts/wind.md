@@ -42,7 +42,8 @@ On the CPU, sample the wind, pass it through `feltWind(sample, wind.calm)`, and 
 
 ## Splats
 
-`src/wind/clock.ts` retains inputs until their render interval is consumed. It splits movement segments at tick boundaries and combines samples of the same source into one duration-weighted force per tick. Stationary brush segments retain their extent. Impulses are consumed exactly once. GPU force passes batch eight sources at a time without dropping extras; ambient relaxation runs only in the first batch. Pressure/advection/springs still run once per tick.
+`src/wind/clock.ts` retains inputs until their render interval is consumed. It splits movement segments at tick boundaries and combines samples of the same source into one duration-weighted force per tick. Stationary brush segments retain their extent. Impulses are consumed exactly once. Splats are copied as they arrive, so a producer may reuse one object each
+step; the inputs handed to each tick are pooled and valid until the next `step`. GPU force passes batch eight sources at a time without dropping extras; ambient relaxation runs only in the first batch. Pressure/advection/springs still run once per tick.
 
 A splat pushes air along the segment from `(ax, az)` to `(bx, bz)`, with a Gaussian falloff of `radius` world units around it.
 
@@ -54,6 +55,12 @@ A splat pushes air along the segment from `(ax, az)` to `(bx, bz)`, with a Gauss
 Writers today: the pointer (`src/input/pointer.ts`: gusts along the stroke, and lift in the middle of circles traced with the cursor: `charge` winds up with how fast the stroke's heading turns, `tuning.pointer.twirlFrom`/`twirlFull`, and runs down when the circling stops. Nothing needs a button press. While a chapter `invitesFlight`, `main.ts` sets `input.anchor` to the cygnet, and circles drawn within `tuning.pointer.anchorNear` screen heights of it stand their column at the bird rather than at the cursor's ground point, which under a low camera is a long ellipse that would put the air anywhere but under it) and the glider's wake when it skims low.
 
 Pointer strokes project both screen endpoints through the current camera, so camera motion cannot generate wind. An idle pointer performs no ground picks; the last gesture's gust settles at its existing world point. A new touch or re-entry starts a fresh stroke without connecting it to the previous contact.
+A touch stroke starts where the finger landed, so its first frame of movement is wind, and after lifting its last
+segment is kept (with the pressed gain) until one rendered frame has used it: a flick made between two frames at
+30 fps still blows its whole length. Picks march the ray 2 m at a time to 700 m as before, but skip the height
+lookup where the ray is above every hill (80) or over open water clear of every island's room ellipse (×1.3);
+`tools/pointer-pick-check.mjs` re-measures both bounds and matches the plain march exactly on sky, horizon,
+far-hill and steep-slope rays.
 
 One primary pointer owns a contact until release. Additional fingers or another input device cannot move or
 release that stroke. Browser cancellation, lost capture, blur, page suspension and viewport resize discard

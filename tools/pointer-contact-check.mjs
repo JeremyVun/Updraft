@@ -20,7 +20,8 @@ function fixture() {
   const camera = new THREE.PerspectiveCamera(50, 1, .1, 1000);
   const splats = [], buttons = [];
   input.onButton(kind => buttons.push(kind));
-  const tick = () => { input.beginFrame(); input.update(1 / 60, camera, { addSplat: s => splats.push(s) }, 1); };
+  // Splats are copied as they arrive, like the wind clock does: the producer reuses its objects.
+  const tick = (dt = 1 / 60) => { input.beginFrame(); input.update(dt, camera, { addSplat: s => splats.push({ ...s }) }, 1); };
   const event = (type, values = {}) => element.dispatchEvent(Object.assign(new Event(type), {
     pointerType: 'touch', pointerId: 1, isPrimary: true, button: 0, clientX: 200, clientY: 500, ...values,
   }));
@@ -41,7 +42,8 @@ const tests = {
     assert.deepEqual(f.buttons, ['down']);
     f.event('pointermove', { clientX: 350 }); f.tick();
     assert(f.input.gust > 0, 'primary touch still supplies wind');
-    f.event('pointerup'); assert(!f.input.down && !f.input.present);
+    f.event('pointerup'); assert(!f.input.down);
+    f.tick(); f.tick(); assert(!f.input.present, 'a lifted touch ends once a frame has used its last segment');
   },
   'another primary pointer type cannot steal an active stroke'() {
     const f = fixture(); f.event('pointerdown'); f.tick();
@@ -94,6 +96,47 @@ const tests = {
     const count = t.splats.length;
     t.event('pointerdown', { pointerId: 4, clientX: 800 }); t.tick();
     assert.equal(t.splats.length, count, 'fresh touch cannot bridge between contacts');
+  },
+  'a flick between frames keeps its whole movement at 30 and 60 Hz'() {
+    const travelled = f => f.splats.filter(s => s.trail).reduce((sum, s) => sum + Math.hypot(s.bx - s.ax, s.bz - s.az), 0);
+    const slow = fixture();
+    slow.event('pointerdown', { clientX: 200 });
+    for (const clientX of [300, 400, 500]) slow.event('pointermove', { clientX });
+    slow.event('pointerup', { clientX: 500 }); slow.event('lostpointercapture');
+    slow.tick(1 / 30);
+    assert(Math.abs(travelled(slow) - 6) < 1e-9, `30 Hz flick inside one frame: ${travelled(slow)}`);
+    assert.equal(slow.splats[0].ax, -6, 'the stroke starts where the finger landed');
+    assert(slow.input.gust > 0);
+    slow.tick(1 / 30);
+    assert(!slow.input.present, 'the lifted stroke ends once a frame has used it');
+    const fast = fixture();
+    fast.event('pointerdown', { clientX: 200 });
+    fast.event('pointermove', { clientX: 300 }); fast.tick();
+    assert(Math.abs(travelled(fast) - 2) < 1e-9, 'the first frame after touching down makes wind');
+    fast.event('pointermove', { clientX: 400 }); fast.event('pointermove', { clientX: 500 });
+    fast.event('pointerup', { clientX: 500 }); fast.tick();
+    assert(Math.abs(travelled(fast) - 6) < 1e-9, `60 Hz flick over two frames: ${travelled(fast)}`);
+    fast.tick();
+    assert(!fast.input.present);
+    assert.equal(fast.splats.filter(s => s.trail).length, 2);
+  },
+  'a lifted stroke is discarded by cancellation and never bridges to the next contact'() {
+    for (const type of ['blur', 'visibilitychange', 'pagehide', 'resize']) {
+      const f = fixture(); f.event('pointerdown', { clientX: 200 });
+      f.event('pointermove', { clientX: 600 }); f.event('pointerup', { clientX: 600 });
+      if (type === 'visibilitychange') { f.document.hidden = true; f.document.dispatchEvent(new Event(type)); f.document.hidden = false; }
+      else f.document.defaultView.dispatchEvent(new Event(type));
+      f.tick();
+      assert.equal(f.splats.length, 0, type);
+      assert(!f.input.present, type);
+    }
+    const f = fixture(); f.event('pointerdown', { clientX: 200 });
+    f.event('pointermove', { clientX: 600 }); f.event('pointerup', { clientX: 600 });
+    f.event('pointerdown', { pointerId: 2, clientX: 900 }); f.tick();
+    assert.equal(f.splats.length, 0, 'a new contact starts from where it landed');
+    assert(f.input.present && f.input.down);
+    f.event('pointermove', { pointerId: 2, clientX: 800 }); f.tick();
+    assert(f.splats.every(s => s.ax >= 6 - 1e-9), 'nothing is drawn from the previous contact');
   },
 };
 let failed = 0;
