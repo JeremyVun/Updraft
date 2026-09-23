@@ -1,7 +1,7 @@
 import { HOME_JETTY } from '../world/home-layout';
 export { HOME_JETTY, HOME_MOORING } from '../world/home-layout';
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { verticalFov, type Shot } from '../camera';
 import type { SummitScorePhase } from '../audio/summit-score';
 import { COTTAGE, LAST_HILL } from '../world/heightfield';
 import { heightAt } from '../world/island';
@@ -120,13 +120,8 @@ function keyed(keys: number[][], t: number): number {
   }
   return keys[keys.length - 1][1];
 }
-/**
- * Where the rise ends up pointing: this far east of the moon, and barely above level. The moon then hangs in
- * the left of the frame with its path down the water under it, the horizon lies across the middle, and the
- * dark half of the screen the credits roll up is left alone. A moon in the middle is a lamp behind the text.
- */
+/** Keep the moon left of the credits and the horizon at the lower third. */
 const MOON_OFF = THREE.MathUtils.degToRad(19);
-const SEA_PITCH = THREE.MathUtils.degToRad(1);
 const SEA_LOOK = 100;
 
 const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
@@ -1095,9 +1090,12 @@ export class HomeChapter implements Chapter {
       const lift = this.beat === 'credits' ? 1 : this.beat === 'inside' ? THREE.MathUtils.smootherstep(this.t, RISE_FROM, RISE_TO) : 0;
       if (lift > 0) {
         /** Out over the open sea north-east of the island, which is the one way from here that holds both. */
-        const out = this.sky.copy(this.moon).setY(0).normalize().applyAxisAngle(UP, -MOON_OFF);
+        const aspect = typeof window === 'undefined' ? 16 / 9 : window.innerWidth / window.innerHeight;
+        const halfField = Math.tan(THREE.MathUtils.degToRad(verticalFov(aspect)) / 2);
+        const moonOffset = Math.min(MOON_OFF, Math.atan(halfField * aspect * 0.6));
+        const out = this.sky.copy(this.moon).setY(0).normalize().applyAxisAngle(UP, -moonOffset);
         s.target.lerp(this.tmp.copy(this.farewellEye).addScaledVector(out, SEA_LOOK)
-          .setY(this.farewellEye.y + SEA_LOOK * Math.tan(SEA_PITCH)), lift);
+          .setY(this.farewellEye.y + SEA_LOOK * halfField / 3), lift);
       }
       this.focus.copy(c);
       return;

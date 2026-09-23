@@ -6,6 +6,11 @@ import { tuning } from './tuning';
 import { sceneryLift } from './camera-obstacles';
 
 const MIN_HFOV = 64;
+export function verticalFov(aspect: number): number {
+  const hfov = THREE.MathUtils.degToRad(MIN_HFOV);
+  const vfovForWidth = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / aspect));
+  return THREE.MathUtils.clamp(Math.max(38, vfovForWidth), 38, 62);
+}
 /** The camera always looks roughly north, from a little east of south, unless a shot says otherwise. */
 const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 /** How far above the ground a shot stands unless it says otherwise. */
@@ -107,9 +112,7 @@ export class CameraRig {
   resize(width: number, height: number): void {
     const aspect = width / height;
     this.camera.aspect = aspect;
-    const hfov = THREE.MathUtils.degToRad(MIN_HFOV);
-    const vfovForWidth = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / aspect));
-    this.camera.fov = THREE.MathUtils.clamp(Math.max(38, vfovForWidth), 38, 62);
+    this.camera.fov = verticalFov(aspect);
     this.camera.updateProjectionMatrix();
   }
 

@@ -544,3 +544,28 @@ opens; the desktop capture measures 80% night intensity at that moment.
 
 Build and all fifteen ending-view cases pass, including saved-game resumes. Updated recording with
 audio: `/tmp/updraft-earlier-night-preview.webm`.
+
+## Credits framing (2026-09-24)
+
+Jeremy: "We need to refine the ending credits (do it in a worktree). move play again to bottom left,
+have the rolling credits roll in from the bottom fully, the ending shot should respect rule of thirds
+(one third is the water, 2 thirds sky) - currently it's half sky half water.
+
+And give me the full credits copy that gets played. i want changes made to it"
+
+The roll now starts below the bottom edge without a reveal mask. Play again sits in the bottom-left
+safe area. The final camera pitch follows the viewport's field of view to place the horizon at the
+lower third; narrow screens keep the moon to the left of the text. The score and credit start time
+retain their approved timings. Jeremy approved shortening the trimmed roll to 54 seconds and making
+Play again smaller (19–22px), while preserving its touch target.
+After seeing the phone layout, Jeremy asked to delay the replay control. It now fades in only once
+the final credit has cleared the button's area by 24px, then resumes its gentle glow.
+
+Jeremy's attribution edits: Story lists only Fable 5.1; Music and sound and Cinematography list only
+Astra; Animation lists Fable 5.1 and Astra; World and creatures lists Opus 5 twice. Visual effects,
+Playtesting, Copy and the closing thank-you line are removed. Play again has larger responsive margins from both screen edges,
+in addition to device safe areas. Vibe prompter guy now precedes Directed by.
+
+Validation: build and all fifteen ending-view cases pass. Desktop (1600×900) and phone (390×844)
+GPU captures confirm the full bottom entrance, bottom-left replay control and lower-third horizon.
+Review frames: `/tmp/updraft-credits-review-p9OjEV/`.

@@ -405,10 +405,6 @@ body.shot.starting #veil { display: block; }
   color: #fff7ea;
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   text-align: center;
-  /* The roll rises out of a clear band, so no name ever passes behind Play again. */
-  --again-top: calc(max(82px, calc(env(safe-area-inset-bottom) + 64px)) + 56px);
-  -webkit-mask-image: linear-gradient(to top, transparent var(--again-top), #000 calc(var(--again-top) + 96px));
-  mask-image: linear-gradient(to top, transparent var(--again-top), #000 calc(var(--again-top) + 96px));
 }
 
 #credits.rolling {
@@ -420,12 +416,12 @@ body.shot.starting #veil { display: block; }
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% - var(--again-top) - 32px);
+  top: 100%;
   padding-bottom: 20vh;
 }
 
 #credits.rolling .roll {
-  animation: roll 72s linear forwards;
+  animation: roll 54s linear forwards;
 }
 
 @keyframes roll {
@@ -452,22 +448,14 @@ body.shot.starting #veil { display: block; }
   text-shadow: 0 0 18px rgba(255, 236, 200, 0.35);
 }
 
-#credits .closing {
-  margin-top: 30vh;
-  font-size: 20px;
-  font-style: italic;
-  opacity: 0.85;
-}
-
 #again {
   visibility: hidden;
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  /* Keep a separate row above the controls, including the device's safe area. */
-  bottom: max(82px, calc(env(safe-area-inset-bottom) + 64px));
+  left: calc(env(safe-area-inset-left) + clamp(24px, 3vw, 48px));
+  bottom: calc(env(safe-area-inset-bottom) + clamp(24px, 4vh, 36px));
   min-height: 56px;
-  padding: 12px 24px;
+  padding: 12px 0;
+  font-size: clamp(19px, 1.6vw, 22px);
   white-space: nowrap;
   border: 0;
   background: none;
@@ -475,13 +463,14 @@ body.shot.starting #veil { display: block; }
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 4s ease 6s, visibility 0s linear 6s;
+  transition: opacity 2s ease;
 }
 
-#credits.rolling ~ #again {
+#credits.replay-ready ~ #again {
   visibility: visible;
   pointer-events: auto;
-  animation: glow 4.5s ease-in-out 6s infinite;
+  opacity: 0.32;
+  animation: glow 4.5s ease-in-out 2s infinite;
 }
 
 @keyframes glow {
