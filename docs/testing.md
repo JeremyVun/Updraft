@@ -157,6 +157,9 @@ Focused checks:
   material scheduling, stereo output, clipping stress and the final musical tail; requires the dev server, no GPU.
 - `node tools/piano-audio-check.mjs`: short/long approaches at 10–144 Hz, first-key overlap, demonstration,
   single attenuation, departure and completed restoration.
+- `node tools/audio-interruption-check.mjs [evidence.json]`: cues held through a simulated call and resume
+  retries, piano voices across mute, the cached output graph, Begin synthesis and convolvers paced across frames
+  without clicks, the arrival's spare reverb, the prepared foghorn and the retiring pinwheel voice; no GPU.
 - `node tools/piano-audio-browser-check.mjs`: real approach and first notes through the production audio graph;
   holds the GPU lock and supports `BASE` for a fixed build.
 - `node tools/audio-browser-check.mjs`: real game audio wiring across ten chapters, morning restore and a

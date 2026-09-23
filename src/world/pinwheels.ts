@@ -311,7 +311,9 @@ export class Pinwheels {
     const away = Math.hypot(camera.position.x - this.centre.x, camera.position.z - this.centre.z);
     this.group.visible = away < 220;
     if (!this.group.visible) {
-      this.flutter?.silence();
+      // Out of reach, the row's voice fades and stops; a new one is made if the row comes back into reach.
+      this.flutter?.retire();
+      this.flutter = null;
       return;
     }
     const k = tuning.linesToys;
@@ -357,6 +359,12 @@ function stickGeometry(x: number, z: number, ground: number, top: number, rand: 
   return g.translate(x, ground, z);
 }
 
+/** The flutter's paper noise, kept for the context so a returning voice does not synthesise it again. */
+const flutterNoise = new WeakMap<BaseAudioContext, AudioBuffer>();
+
+/** Long enough for the silencing ramp to fall far below hearing before the sources stop. */
+const FLUTTER_RETIRE = 1.5;
+
 /**
  * The dry tick and rustle of paper going round. One voice for the whole row, opened by the fastest wheel near
  * the camera, with the blade rate under it so it speeds up when they do.
@@ -366,18 +374,23 @@ class Flutter {
   private readonly gain: GainNode;
   private readonly band: BiquadFilterNode;
   private readonly rate: OscillatorNode;
-  private quiet = false;
+  private readonly src: AudioBufferSourceNode;
+  private readonly nodes: AudioNode[];
 
   constructor(out: AudioOut) {
     const { ctx } = out;
     this.ctx = ctx;
-    const seconds = 3;
-    const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    let buffer = flutterNoise.get(ctx);
+    if (!buffer) {
+      buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 3), ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      flutterNoise.set(ctx, buffer);
+    }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
+    this.src = src;
 
     this.band = ctx.createBiquadFilter();
     this.band.type = 'bandpass';
@@ -398,12 +411,12 @@ class Flutter {
     const wet = ctx.createGain();
     wet.gain.value = 0.25;
     this.gain.connect(wet).connect(out.reverb);
+    this.nodes = [src, this.band, trem, this.rate, depth, this.gain, wet];
     src.start();
     this.rate.start();
   }
 
   update(omega: number, away: number): void {
-    this.quiet = false;
     const near = 1 - THREE.MathUtils.smoothstep(away, 14, 60);
     const level = THREE.MathUtils.smoothstep(omega, 2.5, 22) * near * 0.05;
     this.gain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.12);
@@ -411,9 +424,12 @@ class Flutter {
     this.rate.frequency.setTargetAtTime(Math.max(4, (omega * SAILS) / (Math.PI * 2)), this.ctx.currentTime, 0.15);
   }
 
-  silence(): void {
-    if (this.quiet) return;
-    this.quiet = true;
-    this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2);
+  /** Fades to silence, then stops and disconnects every node. */
+  retire(): void {
+    const now = this.ctx.currentTime;
+    this.gain.gain.setTargetAtTime(0, now, 0.2);
+    this.src.onended = () => { for (const node of this.nodes) node.disconnect(); };
+    this.src.stop(now + FLUTTER_RETIRE);
+    this.rate.stop(now + FLUTTER_RETIRE);
   }
 }

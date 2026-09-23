@@ -150,8 +150,11 @@ by `hornPassed`. A call over 0.25 seconds late is discarded rather than overlapp
 `foghorn.ts` generates the accepted D3 horn and stereo diffuse field; `tuning.audio.foghorn` preserves its
 approved balance without the export listening gain. Its source lasts 4.6 seconds and the diffuse field
 drains over a further 4.4 seconds. The audio-clock cleanup marker releases every local node afterward.
-The cue bypasses musical phrases and accompaniment ducking. Muted/not-started audio consumes the cue
-without replaying it later; hidden-page suspension preserves active audio timing. Restoring the earlier
+Its seeded buffers and diffuse convolver are prepared across frames once Drowned's music begins (about two
+seconds), so the cue's frame only connects nodes; the prepared field serves one call, and a call before
+preparation finishes builds its parts on the spot. The cue bypasses musical phrases and accompaniment ducking.
+Muted/not-started audio consumes the cue without replaying it later; an interrupted context holds it only within
+the same 0.25-second allowance; hidden-page suspension preserves active audio timing. Restoring the earlier
 village sailing checkpoint can replay the passage, but does not itself emit a horn. Timing knobs live in
 `tuning.storm.foghornAt` and `foghornLateAllowance`.
 
@@ -206,6 +209,8 @@ does not emit the shared completion phrase: Jeremy approved retaining only the f
 selects climb and the wood register. Gesture pitches follow the selected arrangement in both cases. The dry score and its reverb sends share lifecycle gates; departure stops
 and releases all piano/pad sources. `PianoStrings.note` optionally accepts an audio-clock time and returns its
 scheduled sources so the score can release them; ordinary piano calls keep their immediate timing and sound.
+`PianoStrings` voice reservations belong to its AudioContext: muting suspends that context with its notes still
+scheduled, so the ten reservations survive mute and are cleared only when a new context is installed.
 
 The ending fades the gesture/cue and background buses at 23.5 seconds inside the cottage and starts credits at 26 seconds. Its existing
 shared reverb tail is retained. Environmental sounds continue. Jeremy auditioned both home-melody versions
@@ -261,8 +266,13 @@ All new material sounds use distance attenuation, screen panning
 and bounded per-source scheduling; dolphin scheduling is also bounded globally. Finished noise/tone nodes
 disconnect. No child voice or routine cygnet vocal chatter is added.
 
-Audio state is prepared once per rendered frame after the camera update. Existing hidden-page/mute lifecycle
-is unchanged; see `progress.md`. Tests: `tools/audio-check.mjs`, `tools/audio-browser-check.mjs` and the existing
+The Lines pinwheel flutter is one voice for the whole row. Once the row is out of reach (camera beyond 220
+units) the voice fades with its 0.2-second time constant, then its sources stop after 1.5 seconds and every node
+disconnects. A new voice, reusing the context's paper noise, is made if the row comes back into reach.
+
+Audio state is prepared once per rendered frame after the camera update. `Soundscape.output` returns one cached
+graph object while running and null otherwise. Existing hidden-page/mute lifecycle is unchanged, and interrupted
+audio keeps recent story cues; see `progress.md`. Tests: `tools/audio-check.mjs`, `tools/audio-browser-check.mjs` and the existing
 ending/checkpoint checks. `tools/marine-audio-check.mjs` checks actual surfacing events at 10–144 Hz, stereo,
 distance, scheduling and voice cleanup, and renders an isolated sample to `/tmp/updraft-marine-audio.wav`.
 Rendered previews and numerical checks do not replace listening through the game.
@@ -302,3 +312,16 @@ the forest pad enters on D/A; the previously inaudible pad is tuned before it be
 blend, the existing forest chord clock resumes with its slow pitch glide into the unsettled voicing.
 Other arrivals retain the 1.5-second fade, 0.4-second breath and 1.5-second fade-in. No new forest melody,
 weather sound or protagonist voice is added.
+
+## Start-up and preparation
+
+The Begin gesture creates and resumes the AudioContext and builds its graph, nothing more. The six-second loop
+noise and the 4.5-second reverb impulse are synthesised afterwards in 4096-sample slices at 240 slices per second
+of story time (about 16k samples in a 60 Hz frame; both ready about a second after Begin), with unchanged
+formulas. Each long convolver analyses its impulse on the main thread (10–30 ms on a desktop), so each gets a
+frame to itself: the shared reverb, the background reverb, a spare background reverb and, in Drowned, the
+foghorn's diffuse field. Ambient beds join with a 0.25-second fade and the reverbs start from silence, so nothing
+clicks; thunder or an ember needed sooner finishes the noise at once. An arrival that clears the old background
+echo swaps in the spare instead of analysing a new convolver in that frame, and a new spare follows on a later
+frame. `src/audio/sliced.ts` paces this work. `tools/audio-interruption-check.mjs` checks the pacing, entries,
+the prepared horn, piano reservations across mute, the cached output graph, interruptions and the pinwheel voice.

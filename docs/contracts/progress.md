@@ -71,6 +71,14 @@ Neither restore emits reward cues. See `audio.md` for gesture, source and cue co
 
 `Soundscape` responds to `visibilitychange`, `pagehide` and `pageshow`. It suspends the existing AudioContext while hidden or muted, and resumes it on return only if sound was already started and enabled. It never creates audio on a visibility event. If the browser requires a fresh gesture to resume, the next pointer-down retries. A rejected resume does not break gameplay.
 
+A call, Siri or another app can stop a visible, unmuted context (iOS reports `interrupted`, or it is left
+`suspended`). `Soundscape` then retries `resume()` on `statechange`, `pageshow`, window `focus` and any pointer
+press or release (a touch grants activation on release). Story cues raised meanwhile are held on the frame clock
+and play, in order and before that frame's own, once audio runs again, if they are younger than
+`tuning.audio.heldCueLife` (3 seconds); a held foghorn keeps its 0.25-second lateness allowance. Muted, hidden
+and not-started audio still consume cues, and muting or hiding drops any held ones. Score state already follows
+the story. `node tools/audio-interruption-check.mjs` checks this against a dev server (`BASE`).
+
 The frame loop skips simulation and rendering while hidden, and resets its time baseline on visibility changes. Story time therefore waits with audio; a long absence does not advance a scripted beat or appear to the quality governor as a slow frame.
 
 Verification: `node tools/progress-check.mjs` against a dev server; `BASE` selects another server. It uses an isolated browser profile and does not touch a player's saves. Logs and screenshots go to `/tmp`.

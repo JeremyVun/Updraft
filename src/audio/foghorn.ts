@@ -1,26 +1,52 @@
 import { tuning } from '../tuning';
+import { ALONE, Sliced, slices, type Pace } from './sliced';
+
+/** The horn's breath and diffuse field. `diffuse` is analysed ahead of time and serves one call. */
+export interface FoghornParts { impulse: AudioBuffer; air: AudioBuffer; diffuse: ConvolverNode | null }
+
+/** Seeded, so parts prepared ahead of the storm are identical to a call's own. */
+export function* foghornParts(ctx: BaseAudioContext): Generator<Pace, FoghornParts> {
+  const t=tuning.audio.foghorn;
+  // Independent stereo channels have no discrete taps or repeated horn calls.
+  const impulse=ctx.createBuffer(2,Math.ceil(ctx.sampleRate*t.diffuseSeconds),ctx.sampleRate);
+  for(let ch=0;ch<2;ch++){
+    let seed=1831+ch*3571,power=0;const data=impulse.getChannelData(ch);
+    for(const [from,to] of slices(data.length)){
+      for(let i=from;i<to;i++){
+        const time=i/ctx.sampleRate-t.predelay;
+        seed=Math.imul(seed,1664525)+1013904223|0;
+        const envelope=time<=0?0:Math.min(1,time/.22)*Math.exp(-time/1.25)*Math.min(1,(data.length-i)/(.65*ctx.sampleRate));
+        data[i]=((seed>>>0)/2147483648-1)*envelope;power+=data[i]*data[i];
+      }
+      yield;
+    }
+    const scale=1/Math.sqrt(power);
+    for(const [from,to] of slices(data.length)){for(let i=from;i<to;i++)data[i]*=scale;yield;}
+  }
+  const air=ctx.createBuffer(1,Math.ceil((t.duration+.1)*ctx.sampleRate),ctx.sampleRate);
+  let seed=7919;const data=air.getChannelData(0);
+  for(const [from,to] of slices(data.length)){
+    for(let i=from;i<to;i++){seed=Math.imul(seed,1664525)+1013904223|0;data[i]=(seed>>>0)/2147483648-1;}
+    yield;
+  }
+  yield ALONE;
+  return {impulse,air,diffuse:diffuseField(ctx,impulse)};
+}
+
+function diffuseField(ctx: BaseAudioContext, impulse: AudioBuffer): ConvolverNode {
+  const diffuse=ctx.createConvolver();diffuse.normalize=false;diffuse.buffer=impulse;
+  return diffuse;
+}
 
 /** Approved distant ship call. Its generated diffuse field drains before all local nodes disconnect. */
-export function playFoghorn(ctx: BaseAudioContext, dry: AudioNode, wet: AudioNode, at = ctx.currentTime) {
+export function playFoghorn(ctx: BaseAudioContext, dry: AudioNode, wet: AudioNode, at = ctx.currentTime,
+  parts = new Sliced(foghornParts(ctx)).finish()) {
   const t=tuning.audio.foghorn,end=at+t.duration;
   const pan=ctx.createStereoPanner();pan.pan.value=t.pan;
   const direct=ctx.createGain();direct.gain.value=t.dryLevel;pan.connect(direct).connect(dry);
   const send=ctx.createGain();send.gain.value=t.reverbSend;pan.connect(send).connect(wet);
   // A separate, slowly building diffuse field replaces the close source plus short room reverb.
-  // Independent stereo channels have no discrete taps or repeated horn calls.
-  const diffuse=ctx.createConvolver();diffuse.normalize=false;
-  const impulse=ctx.createBuffer(2,Math.ceil(ctx.sampleRate*t.diffuseSeconds),ctx.sampleRate);
-  for(let ch=0;ch<2;ch++){
-    let seed=1831+ch*3571,power=0;const data=impulse.getChannelData(ch);
-    for(let i=0;i<data.length;i++){
-      const time=i/ctx.sampleRate-t.predelay;
-      seed=Math.imul(seed,1664525)+1013904223|0;
-      const envelope=time<=0?0:Math.min(1,time/.22)*Math.exp(-time/1.25)*Math.min(1,(data.length-i)/(.65*ctx.sampleRate));
-      data[i]=((seed>>>0)/2147483648-1)*envelope;power+=data[i]*data[i];
-    }
-    const scale=1/Math.sqrt(power);for(let i=0;i<data.length;i++)data[i]*=scale;
-  }
-  diffuse.buffer=impulse;
+  const diffuse=parts.diffuse??diffuseField(ctx,parts.impulse);parts.diffuse=null;
   const diffuseGain=ctx.createGain();diffuseGain.gain.value=t.diffuseLevel;
   const diffuseFilter=ctx.createBiquadFilter();diffuseFilter.type='lowpass';diffuseFilter.frequency.value=850;diffuseFilter.Q.value=.5;
   diffuse.connect(diffuseFilter).connect(diffuseGain).connect(dry);
@@ -53,10 +79,7 @@ export function playFoghorn(ctx: BaseAudioContext, dry: AudioNode, wet: AudioNod
     gain.gain.value=level;osc.connect(gain).connect(env);track(osc,gain);
   }
   // Restrained air texture inside the same envelope; no separate hiss or impact.
-  const air=ctx.createBufferSource(),buffer=ctx.createBuffer(1,Math.ceil((t.duration+.1)*ctx.sampleRate),ctx.sampleRate);
-  let seed=7919;const data=buffer.getChannelData(0);
-  for(let i=0;i<data.length;i++){seed=Math.imul(seed,1664525)+1013904223|0;data[i]=(seed>>>0)/2147483648-1;}
-  air.buffer=buffer;
+  const air=ctx.createBufferSource();air.buffer=parts.air;
   const breath=ctx.createBiquadFilter();breath.type='bandpass';breath.frequency.value=780;breath.Q.value=.65;
   const airGain=ctx.createGain();airGain.gain.value=.18;
   air.connect(breath).connect(airGain).connect(env);localNodes.push(breath);track(air,airGain);

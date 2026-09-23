@@ -12,7 +12,8 @@ import { BirchesScore, BIRCHES_SECTIONS, type BirchesScorePhase } from './birche
 import { LinesScore, LINES_SECTIONS, type LinesScorePhase } from './lines-score';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
-import { playFoghorn } from './foghorn';
+import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
+import { advance, ALONE, Sliced, slices, SLICES_PER_SECOND, type Pace } from './sliced';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -185,21 +186,24 @@ const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 // The tail blends into this prefix; loop playback resumes immediately after it.
 const NOISE_OVERLAP = 0.04;
 
-function pinkNoise(ctx: AudioContext, seconds: number): AudioBuffer {
+function* pinkNoise(ctx: BaseAudioContext, seconds: number): Generator<void, AudioBuffer> {
   const buffer = ctx.createBuffer(2, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = buffer.getChannelData(ch);
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    for (let i = 0; i < d.length; i++) {
-      const white = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.969 * b2 + white * 0.153852;
-      b3 = 0.8665 * b3 + white * 0.3104856;
-      b4 = 0.55 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.016898;
-      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-      b6 = white * 0.115926;
+    for (const [from, to] of slices(d.length)) {
+      for (let i = from; i < to; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.969 * b2 + white * 0.153852;
+        b3 = 0.8665 * b3 + white * 0.3104856;
+        b4 = 0.55 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.016898;
+        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+      }
+      yield;
     }
     const overlap = Math.floor(ctx.sampleRate * NOISE_OVERLAP);
     for (let i = 0; i < overlap; i++) {
@@ -211,18 +215,24 @@ function pinkNoise(ctx: AudioContext, seconds: number): AudioBuffer {
   return buffer;
 }
 
-function impulse(ctx: AudioContext, seconds: number): AudioBuffer {
+function* impulse(ctx: BaseAudioContext, seconds: number): Generator<void, AudioBuffer> {
   const len = Math.floor(ctx.sampleRate * seconds);
   const buffer = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = buffer.getChannelData(ch);
-    for (let i = 0; i < len; i++) {
-      const t = i / len;
-      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (i < ctx.sampleRate * 0.012 ? i / (ctx.sampleRate * 0.012) : 1);
+    for (const [from, to] of slices(len)) {
+      for (let i = from; i < to; i++) {
+        const t = i / len;
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (i < ctx.sampleRate * 0.012 ? i / (ctx.sampleRate * 0.012) : 1);
+      }
+      yield;
     }
   }
   return buffer;
 }
+
+/** Ambient beds join the graph once their noise exists; a short fade keeps that late entry from clicking. */
+const NOISE_ENTRY = 0.25;
 
 export class Soundscape {
   private ctx: AudioContext | null = null;
@@ -239,10 +249,25 @@ export class Soundscape {
   private cueSpaceUntil = 0;
   private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
   private backgroundReverb!: ConvolverNode;
-  private reverbImpulse!: AudioBuffer;
+  private reverbConvolver!: ConvolverNode;
+  private reverbImpulse: AudioBuffer | null = null;
   private readonly arrivalTransition = new ArrivalTransition();
   private finaleUntil = 0;
-  private noise!: AudioBuffer;
+  /** A background reverb analysed on an earlier frame, ready to replace the old echo at the next arrival. */
+  private spareReverb: ConvolverNode | null = null;
+  private noiseWork: Sliced<AudioBuffer> | null = null;
+  private foghornWork: Sliced<FoghornParts> | null = null;
+  /** Buffers and convolvers still being prepared, in order, at a steady rate of story time. */
+  private readonly synthesis: Sliced<unknown>[] = [];
+  /** Ambient bed filters waiting for the loop noise. */
+  private noiseInputs: AudioNode[] = [];
+  private graph: AudioOut | null = null;
+  /** Only a real-time context can be interrupted; an offline render suspends itself on purpose. */
+  private realtime = false;
+  /** Story cues raised while a call or Siri interrupted a visible, unmuted context. */
+  private heldCues: { cue: Cue; at: number }[] = [];
+  /** Story time seen by `update`, which keeps running through an interruption. */
+  private cueClock = 0;
   private breezeGain!: GainNode;
   private breezeFilter!: BiquadFilterNode;
   private gustGain!: GainNode;
@@ -293,15 +318,29 @@ export class Soundscape {
     return this.ctx?.state === 'running' && !this.muted && !this.hidden;
   }
 
+  /** Something outside the game (a call, Siri, another app) has stopped audio the player expects to hear. */
+  private get interrupted(): boolean {
+    const state = this.ctx?.state;
+    return this.realtime && !this.muted && !this.hidden && state !== 'running' && state !== 'closed';
+  }
+
   constructor() {
     document.addEventListener('visibilitychange', () => this.setHidden(document.hidden));
     window.addEventListener('pagehide', () => this.setHidden(true));
     window.addEventListener('pageshow', () => this.setHidden(document.hidden));
+    window.addEventListener('focus', () => this.retry());
+    // A mouse grants activation on press, a touch on release.
+    for (const type of ['pointerdown', 'pointerup']) window.addEventListener(type, () => this.retry(), { capture: true, passive: true });
   }
 
   private setHidden(hidden: boolean): void {
     this.hidden = hidden;
+    if (hidden) this.heldCues.length = 0;
     this.syncPlayback();
+  }
+
+  private retry(): void {
+    if (this.interrupted) this.syncPlayback();
   }
 
   private syncPlayback(): void {
@@ -311,11 +350,16 @@ export class Soundscape {
   }
 
   /** The live audio graph for other modules' sounds: connect to `bus` (dry) and optionally `reverb` (wet). Null until sound starts or while muted. */
-  get output(): { ctx: AudioContext; bus: AudioNode; reverb: AudioNode } | null {
-    return this.running && this.ctx ? { ctx: this.ctx, bus: this.master, reverb: this.reverb } : null;
+  get output(): AudioOut | null {
+    return this.running ? this.graph : null;
   }
 
-  /** Must be called from a user gesture. */
+  /** The loop noise; a sound that needs it before its turn finishes the synthesis at once. */
+  private get noise(): AudioBuffer {
+    return this.noiseWork!.finish();
+  }
+
+  /** Must be called from a user gesture. Only the context and its graph are made here; buffers follow frame by frame. */
   start(): void {
     if (this.hidden) return;
     if (this.ctx) {
@@ -324,10 +368,12 @@ export class Soundscape {
     }
     const ctx = new AudioContext();
     this.ctx = ctx;
+    this.realtime = ctx instanceof AudioContext;
     ctx.addEventListener('statechange', () => {
-      if (ctx.state === 'running' && (this.hidden || this.muted)) this.syncPlayback();
+      if (ctx.state === 'running' ? this.hidden || this.muted : this.interrupted) this.syncPlayback();
     });
-    this.noise = pinkNoise(ctx, 6);
+    this.noiseWork = new Sliced(pinkNoise(ctx, 6));
+    this.synthesis.push(this.noiseWork, new Sliced(this.reverbs(ctx)));
 
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -18;
@@ -338,12 +384,10 @@ export class Soundscape {
     this.master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.8);
     this.master.connect(comp);
 
-    const convolver = ctx.createConvolver();
-    convolver.buffer = impulse(ctx, 4.5);
-    this.reverbImpulse = convolver.buffer;
+    this.reverbConvolver = ctx.createConvolver();
     this.reverb = ctx.createGain();
     this.reverb.gain.value = 0.55;
-    this.reverb.connect(convolver).connect(this.master);
+    this.reverb.connect(this.reverbConvolver).connect(this.master);
     this.musicBus = ctx.createGain();
     this.musicBus.connect(this.master);
     const musicSend = ctx.createGain();
@@ -353,7 +397,7 @@ export class Soundscape {
     this.backgroundGate = ctx.createGain(); this.backgroundGate.connect(this.backgroundDuck);
     this.backgroundDry = ctx.createGain(); this.backgroundDry.connect(this.backgroundGate);
     this.backgroundWet = ctx.createGain(); this.backgroundWet.gain.value = .55;
-    this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+    this.backgroundReverb = ctx.createConvolver();
     this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
     this.backgroundBus = ctx.createGain(); this.backgroundBus.connect(this.backgroundDry);
     const backgroundSend = ctx.createGain(); backgroundSend.gain.value = .9;
@@ -402,10 +446,53 @@ export class Soundscape {
       });
       this.padVoices.push({ osc, gain });
     }
+    this.graph = { ctx, bus: this.master, reverb: this.reverb };
+    this.syncPlayback();
+  }
+
+  /** The shared impulse, then each convolver's analysis of it (10–30 ms on a desktop) on a frame of its own. */
+  private *reverbs(ctx: BaseAudioContext): Generator<Pace, void> {
+    const reverb = this.reverbImpulse = yield* impulse(ctx, 4.5);
+    yield ALONE;
+    this.reverbConvolver.buffer = reverb;
+    yield ALONE;
+    this.backgroundReverb.buffer ??= reverb;
+    yield* this.spare(ctx);
+  }
+
+  private *spare(ctx: BaseAudioContext): Generator<Pace, void> {
+    yield ALONE;
+    this.spareReverb = ctx.createConvolver();
+    this.spareReverb.buffer = this.reverbImpulse;
+  }
+
+  /** Advances deferred preparation by this frame's share and connects the noise once it exists, on the audio clock. */
+  private synthesise(dt: number): void {
+    advance(this.synthesis, Math.max(1, Math.round(dt * SLICES_PER_SECOND)));
+    if (this.noiseInputs.length && this.noiseWork?.ready) this.startNoise();
+  }
+
+  private startNoise(): void {
+    const ctx = this.ctx!;
+    const now = ctx.currentTime;
+    const noise = this.noise;
+    for (const input of this.noiseInputs) {
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      src.loop = true;
+      src.loopStart = NOISE_OVERLAP;
+      const entry = ctx.createGain();
+      entry.gain.setValueAtTime(0, now);
+      entry.gain.linearRampToValueAtTime(1, now + NOISE_ENTRY);
+      src.connect(entry).connect(input);
+      src.start(now, Math.random() * 5);
+    }
+    this.noiseInputs = [];
   }
 
   setMuted(muted: boolean): void {
     this.muted = muted;
+    if (muted) this.heldCues.length = 0;
     if (!this.ctx) return;
     this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.25);
     this.syncPlayback();
@@ -414,7 +501,16 @@ export class Soundscape {
   /** An unseen ship beyond the lighthouse, outside the musical cue/ducking path. */
   foghorn(): ReturnType<typeof playFoghorn> | null {
     if (!this.running || !this.ctx) return null;
-    return playFoghorn(this.ctx, this.master, this.reverb);
+    return playFoghorn(this.ctx, this.master, this.reverb, this.ctx.currentTime, this.prepareFoghorn().finish());
+  }
+
+  /** The horn's buffers and diffuse field are made ahead of the storm, so the cue's frame only connects nodes. */
+  private prepareFoghorn(): Sliced<FoghornParts> {
+    if (!this.foghornWork) {
+      this.foghornWork = new Sliced(foghornParts(this.ctx!));
+      this.synthesis.push(this.foghornWork);
+    }
+    return this.foghornWork;
   }
 
   /** Rolling thunder, with a sharper, immediate crack for the one close strike in the wood. */
@@ -463,24 +559,20 @@ export class Soundscape {
     out?: AudioNode,
   ): [GainNode, BiquadFilterNode] {
     const ctx = this.ctx!;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noise;
-    src.loop = true;
-    src.loopStart = NOISE_OVERLAP;
     const filter = ctx.createBiquadFilter();
     filter.type = type;
     filter.frequency.value = freq;
     filter.Q.value = q;
     const gain = ctx.createGain();
     gain.gain.value = 0;
-    src.connect(filter).connect(gain);
+    filter.connect(gain);
     gain.connect(out ?? this.master);
     if (reverbSend > 0) {
       const send = ctx.createGain();
       send.gain.value = reverbSend;
       gain.connect(send).connect(this.reverb);
     }
-    src.start(0, Math.random() * 5);
+    this.noiseInputs.push(filter);
     return [gain, filter];
   }
 
@@ -813,8 +905,16 @@ export class Soundscape {
   }
 
   update(dt: number, s: SoundState): void {
+    this.cueClock += dt;
     const ctx = this.ctx;
-    if (!ctx || !this.running) return;
+    if (!ctx || !this.running) {
+      // Muted, hidden and not-started audio consume cues; an interruption keeps them briefly.
+      if (this.interrupted) this.holdCues(s.cues);
+      return;
+    }
+    const cues = this.heldCues.length ? this.releaseCues(s.cues) : s.cues;
+    this.synthesise(dt);
+    if (s.music === 'drowned' || s.drownedScore) this.prepareFoghorn();
     const now = ctx.currentTime;
     const tc = 0.08;
     const g = Math.min(s.gust / 26, 1);
@@ -863,14 +963,19 @@ export class Soundscape {
       else {
         // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
         this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
-        this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+        if (this.spareReverb) {
+          this.backgroundReverb = this.spareReverb; this.spareReverb = null;
+          this.synthesis.push(new Sliced(this.spare(ctx)));
+        } else {
+          this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
+        }
         this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
         gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
     }
     if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
       this.boatsScore ??= new LittleBoatsScore(ctx, this.backgroundBus);
-      if (s.cues.includes('restored') || s.cues.includes('delight')) {
+      if (cues.includes('restored') || cues.includes('delight')) {
         this.boatsCueUntil = now + tuning.audio.boatsCueSpace;
       }
       this.boatsScore.update(tuning.audio.boatsScoreLevel * (1 - 0.92 * bg.hush) / (1 - 0.92 * 0.28)
@@ -908,7 +1013,7 @@ export class Soundscape {
     }
     if (bg.music === 'lines' && bg.linesScore && !s.silence && !backgroundPaused) {
       this.linesScore ??= new LinesScore(ctx, this.backgroundBus);
-      if (s.cues.includes('delight') || s.cues.includes('restored')) this.linesCueUntil = now + tuning.audio.linesCueSpace;
+      if (cues.includes('delight') || cues.includes('restored')) this.linesCueUntil = now + tuning.audio.linesCueSpace;
       this.linesScore.update(bg.linesScore, tuning.audio.linesScoreLevel * (1 - piano),
         10 ** (tuning.audio.linesMelodyDb / 20), bg.linesMelodyQuiet || now < this.linesCueUntil, arrival.handoffAt);
     } else if (this.linesScore) {
@@ -1008,7 +1113,7 @@ export class Soundscape {
       return false;
     });
 
-    for (const name of s.cues) {
+    for (const name of cues) {
       if (name === 'foghorn') { this.foghorn(); }
       else if (name === 'star') { this.dreamScore?.bloom(); }
       else if (name === 'kindled' || name === 'comfort') {
@@ -1086,6 +1191,23 @@ export class Soundscape {
 
     this.prevGliderLift = s.gliderLift;
   }
+
+  private holdCues(cues: readonly Cue[]): void {
+    for (const cue of cues) this.heldCues.push({ cue, at: this.cueClock });
+    if (this.heldCues.length) this.heldCues = this.heldCues.filter(held => this.cueClock - held.at <= this.cueLife(held.cue));
+  }
+
+  /** Cues still meaningful after an interruption play before this frame's; stale ones are dropped. */
+  private releaseCues(cues: readonly Cue[]): Cue[] {
+    const fresh = this.heldCues.filter(held => this.cueClock - held.at <= this.cueLife(held.cue)).map(held => held.cue);
+    this.heldCues.length = 0;
+    return [...fresh, ...cues];
+  }
+
+  private cueLife(cue: Cue): number {
+    // The horn keeps its own lateness allowance, so a late call can never reach the thunder.
+    return cue === 'foghorn' ? tuning.storm.foghornLateAllowance : tuning.audio.heldCueLife;
+  }
 }
 
 /** The room's established melodic palette; live gestures also follow the active background chord. */
@@ -1109,15 +1231,19 @@ function outOfTune(midi: number): number {
  */
 export class PianoStrings {
   private out: AudioOut | null = null;
+  private ctx: BaseAudioContext | null = null;
   private knock: AudioBuffer | null = null;
   /** When each voice frees up, so a run can never start more notes than the piano has strings for. */
   private readonly ends = new Float64Array(PIANO_VOICES);
 
   setOutput(out: AudioOut | null): void {
-    if (out?.ctx === this.out?.ctx) return;
+    // Muting suspends the same context with its notes still scheduled, so reservations last as long as the context.
+    if (out && out.ctx !== this.ctx) {
+      this.ctx = out.ctx;
+      this.knock = null;
+      this.ends.fill(0);
+    }
     this.out = out;
-    this.knock = null;
-    this.ends.fill(0);
   }
 
   /** One note: velocity is strike strength, level is proximity. Optional audio time and returned sources

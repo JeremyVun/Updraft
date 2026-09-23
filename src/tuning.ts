@@ -43,6 +43,8 @@ export const tuning = {
     /** Sparse, soft encouragement while guiding the feather uphill. */
     sleepingChimeLevel: .7, sleepingChimePulses: 4,
     authoredCueDuck: .32, authoredCueAttack: .45, authoredCueRelease: 1.3,
+    /** A cue raised while a call or Siri interrupts audio still plays if the interruption ends within this. */
+    heldCueLife: 3,
     /** Wind can warm the background slightly without making the whole score surge. */
     padActivityLevel: 0.015,
     /** Matches the approved Little Boats preview's music gain, before common playback normalization. */
