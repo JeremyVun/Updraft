@@ -1013,6 +1013,8 @@ export const tuning = {
     porpoiseBurst: 3,
     porpoiseBurstFor: 1.4,
     porpoiseVeer: 2.5,
+    /** The least pace a porpoise is thrown from without a spurt: below it the arc would be a short nod, so it breathes instead. */
+    porpoisePace: 5,
     /**
      * How a dolphin swims after its station: its fastest and slowest through the water, in units a second, how hard
      * it accelerates, in units a second a second, its tightest turn, in radians a second, and how closely it chases the
@@ -1033,7 +1035,7 @@ export const tuning = {
     bankLean: 0.35,
     /** The most the spine bends, tail against beak, in radians, and the hardest the water slows a landing, in units a second a second. */
     archMost: 0.62,
-    diveAccel: 12,
+    diveAccel: 5,
     /**
      * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
      * keeping station on a slow boat is still swimming, and sliding back along it is swimming slower, not turning round.

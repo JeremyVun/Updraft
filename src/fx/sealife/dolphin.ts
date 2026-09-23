@@ -992,7 +992,7 @@ export class Dolphins {
       if (o === d || !o.placed) continue;
       const ox = d.x - o.x;
       const oz = d.z - o.z;
-      const gap = Math.hypot(ox, oz, (d.y - o.y) * 1.5);
+      const gap = Math.hypot(ox, oz);
       if (gap >= k.spacing || gap < 1e-3) continue;
       const push = ((1 - gap / k.spacing) * k.swimMost) / gap;
       dvx += ox * push;
@@ -1270,10 +1270,11 @@ export class Dolphins {
     } else if (s.phase === 'act') {
       if (d.seg === 'air') this.swimAt(s, s.va, s.vc, dt);
       else {
-        /** In, and the sea takes the run out of it. */
+        /** In, and the sea takes the run out of it; it holds its line while it slows, and only then comes round. */
         d.hurry = false;
         d.tilt = null;
-        this.swimAt(s, 0.3, 0, dt);
+        const v = k.leapSpeed * 0.55;
+        this.swimAt(s, v * Math.cos(k.leapAngle) - this.speed, s.side * v * Math.sin(k.leapAngle), dt);
         if (d.seg === 'hold' && d.segT > 0.6) {
           s.phase = 'back';
           s.t = 0;
@@ -1487,13 +1488,16 @@ export class Dolphins {
       return d.lift;
     }
     const k = tuning.dolphins;
-    const porpoise = surging && Math.random() < k.leapChance;
+    /**
+     * A porpoise is run at, ahead of its lane and out from the boat, so the arc is long and low and seen from the
+     * side; one already busy with a set-piece only flies if it has the pace, since a thrown arc without pace is a nod.
+     */
+    const spurt = this.stunt?.d !== d;
+    const porpoise = surging && Math.random() < k.leapChance && (spurt || d.pace >= k.porpoisePace);
     d.kind = porpoise ? 'porpoise' : 'breath';
     const slope = (porpoise ? k.porpoiseSlope : k.breathSlope) * rand(0.85, 1.15);
-    /** A porpoise is run at, ahead of its lane and out from the boat, so the arc is long and low and seen from the side. */
-    const spurt = porpoise && this.stunt?.d !== d;
-    if (spurt) d.burst = k.porpoiseBurstFor;
-    return Math.min((d.pace + (spurt ? k.porpoiseBurst : 0)) * slope, porpoise ? k.porpoiseMost : k.breathMost);
+    if (porpoise && spurt) d.burst = k.porpoiseBurstFor;
+    return Math.min((d.pace + (porpoise && spurt ? k.porpoiseBurst : 0)) * slope, porpoise ? k.porpoiseMost : k.breathMost);
   }
 
   /**
