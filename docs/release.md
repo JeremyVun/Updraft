@@ -19,6 +19,15 @@ The "things for my eye" are accepted as they are: the long crossing's quick midd
 of grass around the cottage, the sky mirror's horizon band, the dark wood's brightness and the repeated
 Opus credit. Nothing changes there. Jeremy wants to *see* the mirror band and a *proposal* for the cottage.
 
+After seeing them:
+
+> "- `The credits no longer scroll behind Play again` how did you fix this?
+> - The dark band on sky mirror is fine right? Was that a deliberate artistic decision, or would you recommend fixing it and think there's a better visual look that we can have here?
+> - On the cottage, i dont understand why this is an improvement unless you show me two webm recordings of this moment in the game to compare and contrast"
+
+Then, on the before/after recordings: "yea good call. removing the dark band is approved". The band was not
+deliberate (the Sky Mirror brief keeps an uninterrupted mirror), so it is removed; the cottage stays as it is.
+
 ## Work
 
 Integration branch `release-0923` in `/private/tmp/updraft-release`; `main` is untouched until the end.
@@ -32,7 +41,7 @@ Baseline for before/after comparisons: `12a220a` in `/private/tmp/updraft-base`.
 | iOS interruptions, piano voices, pinwheel voice, deferred synthesis, foghorn, `sound.output` | audio parcel | cues held through interruptions (≤3 s replayed); reservations survive mute; pinwheel voice released; `start()` 59 → 12 ms; foghorn cue frame 26–107 → 1.2 ms |
 | Auto at 30 Hz and 4K, readbacks, doorway target, touch flicks, pointer picking, offscreen village, allocations | engine parcel | proven 30 fps cap judged as such; 4K budget rung; pooled/sliced readbacks and no forced blocking map (saturated max frame 100–117 → 50 ms); doorway frees 61.8 MiB after the crossing; flicks keep their full stroke; picks 3–10× faster; village rests while the boat is far |
 | Petals at the lens, canopy underside, sail/branch/kite occlusion, credits over Play again, shader hygiene, icons | lead | petals shrink within 1.5–5 m; daylight through the crown from beneath; kite/sail fade near the lens; the sail thins where it covers the child; birch branches dissolve at the lens; credits fade above Play again; rim/Fresnel clamps, guarded half vectors/bearings/rainbow angle, derivatives before early returns; favicon, touch icon, manifest |
-| Mirror band shown; cottage proposal | lead | shown to Jeremy, not changed (his call); cottage prototype on branch `proposal-cottage` |
+| Mirror band; cottage proposal | lead | band removed: seen from the flat, the open sea turns to glass 40–110 m from the camera, so the mirror runs on to the horizon (render parity: only the mirror's horizon changes, 5.3% of pixels; other 11 scenes pass). Cottage proposal withdrawn: with a smaller pad the house sinks behind the slope from the brow and the ending waits there |
 
 Out of scope by Jeremy's decision: keyboard-only play, a privacy notice, reduced-motion support.
 Not deploying: Jeremy did not ask for a deploy.

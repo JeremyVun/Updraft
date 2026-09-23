@@ -193,6 +193,10 @@ export const tuning = {
   },
   skyMirror: {
     waterInner: 75, waterOuter: 145, reflectionPrepare: 230,
+    /** From on the flat the open sea turns to glass this far from the camera, so the mirror runs on to the horizon. */
+    horizonGlassFrom: 40, horizonGlassTo: 110,
+    /** How far the camera may be from the flat's centre before the open sea is ordinary again. */
+    horizonOnFlat: 160, horizonOffFlat: 320,
     arrivalBlendFor: 10,
     rippleSpeed: 3.6, rippleStrength: 0.06, settleRate: 0.55,
     bubbleRadius: 1.55, bubbleGrow: 1.25, bubbleSpeed: 6.5, bubbleResponse: 28, bubbleStrokeSpeed: 0.4,
