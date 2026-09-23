@@ -38,7 +38,7 @@ void main() {
   alb = mix(alb, vec3(0.95, 0.45, 0.45), margin * 0.35);
   float ndl = dot(N, uSunDir);
   float through = max(-ndl, 0.0) * 0.45 * (1.0 - uSodden);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through)) + uSunColor * rim * 0.22;
   /** Paper held against a child in bed: it takes the room's own light, and the lamp on the side turned to it. */
   col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N));

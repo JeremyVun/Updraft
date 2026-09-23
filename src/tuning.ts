@@ -976,6 +976,9 @@ export const tuning = {
     /** Wind speeds between which a bare gust, with no updraft, starts to lift resting petals. */
     liftFrom: 9,
     liftTo: 20,
+    /** Camera distances over which a petal shrinks away, so one passing the lens never fills it as a flat disc. */
+    nearHide: 1.5,
+    nearShow: 5,
   },
   water: {
     /** Seconds for wind ripples to build and to settle after a gust. */

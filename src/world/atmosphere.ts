@@ -408,7 +408,8 @@ vec3 skyColor(vec3 d) {
   float h = clamp(y, 0.0, 1.0);
   float sd = max(dot(d, uSunDir), 0.0);
   vec3 col = mix(uSkyHorizon, uSkyZenith, pow(h, 0.38));
-  float toward = pow(max(dot(normalize(vec3(d.x, 0.0, d.z)), normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 2.5);
+  // Straight up or down has no compass bearing; normalizing it would be undefined.
+  float toward = dot(d.xz, d.xz) > 1e-8 ? pow(max(dot(normalize(d.xz), normalize(uSunDir.xz)), 0.0), 2.5) : 0.0;
   col = mix(col, uSkyHorizonSun, toward * pow(1.0 - h, 3.0) * 0.95);
   col += uSunColor * (0.025 * pow(sd, 5.0) + 0.1 * pow(sd, 40.0) + 0.45 * pow(sd, 500.0));
   if (y < 0.0) col = mix(col, mix(uSkyHorizon, uSkyHorizonSun, toward * 0.6) * 0.92, clamp(-y * 8.0, 0.0, 1.0));
@@ -423,6 +424,18 @@ vec3 harbourLight(vec3 world) {
   float cone = smoothstep(0.968, 0.994, dot(d / max(dist, 0.001), uHarbourDirection));
   float fall = 1.0 - smoothstep(35.0, 95.0, dist);
   return vec3(0.9, 0.78, 0.52) * cone * fall * uHarbourLight.w;
+}
+
+/** 0 within hide metres of the lens, 1 beyond show: a large prop passing the camera fades instead of filling the view. */
+float nearFade(vec3 world, float hide, float show) {
+  return smoothstep(hide, show, distance(world, cameraPosition));
+}
+
+/** The half vector for highlights; looking straight back along the light it has no direction, so there is no highlight. */
+vec3 halfVector(vec3 l, vec3 v) {
+  vec3 h = l + v;
+  float len2 = dot(h, h);
+  return len2 > 1e-12 ? h * inversesqrt(len2) : vec3(0.0);
 }
 
 vec3 hemiLight(vec3 n) {

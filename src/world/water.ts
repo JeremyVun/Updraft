@@ -221,6 +221,22 @@ void main() {
   float dist = length(toCam);
   vec3 V = toCam / dist;
   vec2 xz = vWorld.xz;
+  // Screen-space derivatives stay in uniform control flow, ahead of the early returns below.
+  vec2 uv = domainUv(xz);
+  vec2 edge = min(uv, 1.0 - uv);
+  /** Wide, because the wind beyond the window is only an approximation of it and the join must not show. */
+  float inside = smoothstep(0.0, 0.11, min(edge.x, edge.y));
+  if (roomHides(xz)) inside = 0.0;
+  Footprint fp = footprintOf(xz);
+  float footprint = max(length(fp.dx), length(fp.dy));
+  float poolLevel = roomHides(xz) ? 0.0 : boatsWaterBase(xz);
+  float pool = smoothstep(0.0, 0.3, poolLevel);
+  float offshore = mix(60.0, -shoreDistance(xz), inside);
+  if (pool > 0.0) {
+    float bankDistance = max(0.0, (1.08 - boatsOut(xz)) * boatsWidth(${glsl(LITTLE_BOATS.startZ)} - xz.y));
+    offshore = mix(offshore, bankDistance, pool);
+  }
+  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
   float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
   // The full mirror replaces ordinary water, including its fog. Its transition
   // edge still evaluates both surfaces and blends them exactly as before.
@@ -235,13 +251,6 @@ void main() {
     gl_FragColor = vec4(fog.rgb, 1.0);
     return;
   }
-  vec2 uv = domainUv(xz);
-  vec2 edge = min(uv, 1.0 - uv);
-  /** Wide, because the wind beyond the window is only an approximation of it and the join must not show. */
-  float inside = smoothstep(0.0, 0.11, min(edge.x, edge.y));
-  if (roomHides(xz)) inside = 0.0;
-  Footprint fp = footprintOf(xz);
-  float footprint = max(length(fp.dx), length(fp.dy));
 
   // Weather owns the underlying ripple drift and lighting. Cursor reversals cannot move their phase.
   float settled = length(uBreeze);
@@ -253,16 +262,8 @@ void main() {
   float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
-  float poolLevel = roomHides(xz) ? 0.0 : boatsWaterBase(xz);
-  float pool = smoothstep(0.0, 0.3, poolLevel);
   float depth = max(poolLevel - ground, 0.0);
   vec4 bedN = groundAt(xz);
-  float offshore = mix(60.0, -shoreDistance(xz), inside);
-  if (pool > 0.0) {
-    float bankDistance = max(0.0, (1.08 - boatsOut(xz)) * boatsWidth(${glsl(LITTLE_BOATS.startZ)} - xz.y));
-    offshore = mix(offshore, bankDistance, pool);
-  }
-  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
 
   /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
   vec2 drift = along * settled * 0.22;
@@ -296,7 +297,7 @@ void main() {
   float unresolved = hidden * 2.0 + 0.004 + 0.02 * rough + 0.05 * storm + 0.018 * uShower;
   float alpha2 = 0.0012 + unresolved + footprint * footprint * 0.00002;
 
-  float nv = max(dot(N, V), 0.02);
+  float nv = clamp(dot(N, V), 0.02, 1.0);
   vec3 R = reflect(-V, N);
   R = normalize(vec3(R.x, abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv), R.z));
   vec3 sky = skyColor(R);
@@ -344,9 +345,9 @@ void main() {
   body *= 1.0 - rough * 0.08 - storm * 0.15;
 
   vec3 L = uSunDir;
-  vec3 H = normalize(L + V);
+  vec3 H = halfVector(L, V);
   float nl = max(dot(N, L), 0.0);
-  float fh = 0.02 + 0.98 * pow(1.0 - max(dot(V, H), 0.0), 5.0);
+  float fh = 0.02 + 0.98 * pow(1.0 - clamp(dot(V, H), 0.0, 1.0), 5.0);
   float vis = smithVis(nv, nl, alpha2) * nl * fh;
   float facet = min(ggx(max(dot(N, H), 0.0), alpha2) * vis, 5.0);
   float tan2 = (1.0 - H.y * H.y) / max(H.y * H.y, 1e-4);

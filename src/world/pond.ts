@@ -55,7 +55,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 R = reflect(-V, N);
   R.y = abs(R.y) + 0.02;
-  float nv = max(dot(N, V), 0.02);
+  float nv = clamp(dot(N, V), 0.02, 1.0);
   float F = 0.02 + 0.98 * pow(1.0 - nv, 5.0);
 
   float sh = cloudShadow(xz);
@@ -67,7 +67,7 @@ void main() {
   /** Peat water takes more out of the sky than the sea does: what comes back off it is dimmer and greener. */
   vec3 col = mix(body, sky * vec3(0.78, 0.82, 0.8), clamp(F * 1.2, 0.0, 0.88));
 
-  vec3 H = normalize(uSunDir + V);
+  vec3 H = halfVector(uSunDir, V);
   col += uSunColor * pow(max(dot(N, H), 0.0), 220.0) * 1.6 * sh;
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
   gl_FragColor = vec4(applyFog(col, vWorld), alpha);

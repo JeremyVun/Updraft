@@ -691,8 +691,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
-  /** And so do the birches, for the same reason. */
+  /** And so do the birches and the sail, for the same reason. */
   birches.subject.copy(washing.subject);
+  boat.subject.copy(washing.subject);
 
   homePetals();
   petals.update(dt, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);

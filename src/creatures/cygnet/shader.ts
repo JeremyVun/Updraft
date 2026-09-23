@@ -271,7 +271,7 @@ void main() {
   if (uWet > 0.0 && m != ${EYE}) {
     /** Wet feathers go glassy at a glancing angle long before they do face on, which is what reads as soaked. */
     vec3 V = normalize(cameraPosition - vWorld);
-    float gloss = pow(max(dot(N, normalize(V + uSunDir)), 0.0), 110.0) * (0.06 + 0.94 * pow(1.0 - max(dot(N, V), 0.0), 4.0));
+    float gloss = pow(max(dot(N, halfVector(uSunDir, V)), 0.0), 110.0) * (0.06 + 0.94 * pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0));
     col += uSunColor * gloss * uWet * 1.1 * cloudShadow(vWorld.xz);
   }
   /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */

@@ -34,7 +34,7 @@ export function soapMaterial(): THREE.ShaderMaterial {
       varying vec3 vWorld; varying vec3 vNormal;
       void main() {
         vec3 n = normalize(vNormal), eye = normalize(cameraPosition - vWorld);
-        float facing = max(dot(n, eye), 0.0);
+        float facing = clamp(dot(n, eye), 0.0, 1.0);
         float rim = pow(1.0 - facing, 3.5);
         float film = facing * 5.0 + n.y * 2.3 + 0.3 * sin(n.x * 5.0 + uTime * 0.55);
         vec3 rainbow = 0.55 + 0.45 * cos(film * 3.0 + vec3(0.0, 2.1, 4.2));

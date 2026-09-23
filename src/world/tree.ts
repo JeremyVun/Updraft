@@ -56,7 +56,7 @@ void main() {
   float canopyShade = smoothstep(uBase.y + 3.0, uBase.y + 9.0, vWorld.y) * 0.6 + 0.4;
   float ao = smoothstep(uBase.y - 0.8, uBase.y + 2.0, vWorld.y) * 0.6 + 0.4;
   vec3 V = normalize(cameraPosition - vWorld);
-  float rim = pow(1.0 - max(dot(n, V), 0.0), 6.0) * max(dot(-V, uSunDir), 0.0);
+  float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 6.0) * max(dot(-V, uSunDir), 0.0);
   vec3 col = alb * (hemiLight(n) * 0.8 * ao + uSunColor * ndl * sun * canopyShade) + uSunColor * rim * 0.06 * sun;
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
@@ -118,6 +118,10 @@ void main() {
   float sun = cloudShadow(vWorld.xz);
   vec3 col = alb * hemiLight(N) * mix(0.35, 1.0, vDepth) + alb * uSunColor * pow(wrap, 2.5) * sun * 1.3;
   col += vec3(0.45, 0.55, 0.1) * uSunColor * back * sun * 0.3;
+  // From beneath, the crown is seen against the sky: daylight through the leaves, not their shaded backs.
+  float beneath = smoothstep(0.05, 0.6, -V.y);
+  vec3 daylight = hemiLight(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * sun * 0.3;
+  col += lit * daylight * beneath * mix(0.4, 0.18, vDepth) * (0.6 + 0.8 * fract(vSeed * 7.7));
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
 }`;

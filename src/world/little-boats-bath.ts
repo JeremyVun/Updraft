@@ -31,7 +31,7 @@ export function littleBoatsBath(): THREE.Group {
         vec3 alb = uColour * mix(vec3(0.68, 0.75, 0.72), vec3(1.0), smoothstep(0.2, 1.6, vHeight));
         float shadow = cloudShadow(vWorld.xz);
         vec3 col = alb * (hemiLight(N) + uSunColor * max(0.0, dot(N, uSunDir)) * shadow * 0.65);
-        col += uSunColor * pow(max(0.0, dot(N, normalize(V + uSunDir))), 65.0) * uShine * shadow;
+        col += uSunColor * pow(max(0.0, dot(N, halfVector(uSunDir, V))), 65.0) * uShine * shadow;
         gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
       }`,
   });

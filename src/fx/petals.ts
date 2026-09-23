@@ -119,6 +119,7 @@ void main() {
   vec3 t2 = cross(n, t1);
   float kind = step(0.8, fract(seed * 7.31));
   float size = (kind > 0.5 ? 0.13 : 0.21 + seed * 0.11) * smoothstep(0.45, 0.85, lifeAt(p.xz));
+  size *= smoothstep(${glsl(tuning.petals.nearHide)}, ${glsl(tuning.petals.nearShow)}, distance(p.xyz, cameraPosition));
   vec3 world = p.xyz + (t1 * position.x + t2 * position.y * 0.62) * size;
   vCorner = position.xy;
   vWorld = world;
@@ -150,7 +151,7 @@ void main() {
   float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.25);
   float wrap = abs(dot(N, uSunDir)) * 0.35 + 0.45;
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
-  vec3 H = normalize(uSunDir + V);
+  vec3 H = halfVector(uSunDir, V);
   float glint = pow(abs(dot(N, H)), 60.0) * 1.8;
   vec3 col = alb * (hemiLight(vec3(0.0, 1.0, 0.0)) * 0.7 + uSunColor * (wrap + back * 0.6) * sun * 0.55);
   col += uSunColor * glint * sun;

@@ -155,7 +155,7 @@ void main() {
   vec3 alb = mix(gl_FrontFacing ? col : paper, paper * 0.72, crease);
   float ndl = dot(N, uSunDir);
   float through = max(-ndl, 0.0) * 0.45;
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 lit = alb * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through)) + uSunColor * rim * 0.22;
   gl_FragColor = vec4(applyFog(lit, vWorld), 1.0);
 }`;

@@ -129,7 +129,7 @@ void main() {
   vec3 col = alb * (hemiLight(n) * ao + uSunColor * mix(ndl, wrap * wrap, 0.25) * sun);
   vec3 V = normalize(cameraPosition - vWorld);
   float back = pow(max(dot(-V, uSunDir), 0.0), 3.0);
-  float edge = pow(1.0 - max(dot(n, V), 0.0), 3.0);
+  float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * (kind == ${THATCHED} ? 0.55 : 0.16) * (0.35 + alb);
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
@@ -164,7 +164,7 @@ void main() {
   alb = mix(alb * vec3(0.5, 0.6, 0.45), alb, smoothstep(0.0, 1.1, vWorld.y));
   vec3 V = normalize(cameraPosition - vWorld);
   float sun = cloudShadow(vWorld.xz);
-  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.5);
+  float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.5);
   vec3 col = alb * (hemiLight(n) + uSunColor * max(dot(n, uSunDir), 0.0) * sun) + uSunColor * rim * sun * 0.12;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;

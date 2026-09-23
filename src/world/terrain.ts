@@ -93,6 +93,8 @@ vec3 mirrorShade(vec3 n, vec2 xz, float h) {
 }
 
 void main() {
+  // Derivatives are taken before any fragment can leave, so every quad computes them together.
+  Footprint fp = footprintOf(vWorld.xz);
   if (roomHides(vWorld.xz)) discard;
   vec4 fog = fogOf(vWorld, 1.0);
   // Fully veiled land contributes only the fog colour. Avoid its noise, field,
@@ -114,7 +116,6 @@ void main() {
   float ripples = mix(0.5, sin(dot(xz, vec2(0.9, 0.45)) * 2.2 + vnoise(xz * 0.3) * 6.0) * 0.5 + 0.5, detail);
   vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
   float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
-  Footprint fp = footprintOf(xz);
   float shore = h < 2.5 ? shoreDistance(xz) : 1e3;
   bool beach = shore < 6.0 && grassy < 1.0;
   vec4 swash = beach ? beachSwash(xz, shore, -normalize(n.xz + 1e-5), fp) * (1.0 - grassy) : vec4(0.0);
@@ -193,7 +194,7 @@ void main() {
   float homePasture = homeAt(xz) * grassy * far;
   if (homePasture > 0.001) {
     vec2 tuftUv = xz * vec2(3.6, 1.7);
-    float footprint = max(length(dFdx(tuftUv)), length(dFdy(tuftUv)));
+    float footprint = max(length(fp.dx * vec2(3.6, 1.7)), length(fp.dy * vec2(3.6, 1.7)));
     float fibre = mix(vnoise(tuftUv), 0.5, smoothstep(0.8, 2.0, footprint));
     float tip = smoothstep(0.28, 0.76, fibre);
     vec3 tuftNormal = normalize(n * 0.55 + vec3((fibre - 0.5) * 0.6, 0.8, 0.0));
