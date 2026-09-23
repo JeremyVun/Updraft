@@ -123,7 +123,8 @@ every command submitted before it. A readback issued and mapped mid-frame theref
 rendering, and a GPU-bound frame turns into a CPU stall too (the original stutter: 60-140 ms every few frames).
 
 `Readback` therefore maps only at the start of a frame, before anything new is submitted, and only buffers whose
-own fence has signalled, while the GPU has also finished the frame before last. After 100 ms without a delivery
+own fence has signalled, while the GPU has also finished the frame before last (the first three frames of play,
+which start on an idle GPU, map freely as before). After 100 ms without a delivery
 the gate relaxes to the frame before that, the deepest the display pipeline normally runs; it never goes further.
 The old escape hatch mapped anyway after two seconds and blocked for 60–110 ms under a saturated GPU (measured
 at a locked `ratio=2`). Now, after two seconds without a delivery, whole frames are held back instead (no
