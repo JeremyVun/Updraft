@@ -918,7 +918,7 @@ export const tuning = {
     swimAt: 0.2,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
     swimNotBefore: 18,
-    dolphinsAfter: 8,
+    dolphinsAfter: 5,
     waypointRadius: 10,
     /**
      * How far along the route the first leap may begin: the sleeping island's night lifts only once it is well
