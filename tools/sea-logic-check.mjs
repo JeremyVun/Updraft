@@ -58,9 +58,10 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
     k.update(dt,time,child.position,wind.sample(0,0,air));
     rig.update(dt,time,c.shot,c.pace);sealife.update(dt,time);
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
+    // seaScore now turns 'arrival' once the dolphin pod has actually left (podLeftAt), not at a route fraction (ac4de1c).
     const scorePhase = !['before','done'].includes(c.swim) ? 'swim'
-      : c.progress() >= tuning.seaPassage.farewellAt ? 'arrival' : c.swim === 'done' ? 'return' : 'open';
-    assert.equal(c.seaScore, scorePhase, 'Music follows the actual swim and route at every sailing speed');
+      : c.podLeftAt !== null ? 'arrival' : c.swim === 'done' ? 'return' : 'open';
+    assert.equal(c.seaScore, scorePhase, 'Music follows the actual swim and pod departure at every sailing speed');
     assert(Number.isFinite(k.position.y)&&Number.isFinite(b.position.y),'finite swimming and sailing');
     // Turning a corner can briefly move away from the waypoint; progress must never leap by a whole leg.
     const progress=c.progress();assert(Math.abs(progress-lastProgress)<0.05,'distance progress jumped');lastProgress=progress;

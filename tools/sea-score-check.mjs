@@ -38,18 +38,19 @@ try {
       'Runtime gain preserves the approved mix without the preview playback boost');
 
     const phase = Object.getOwnPropertyDescriptor(CrossingChapter.prototype, 'seaScore').get;
-    const story = { wantsDolphins: true, swim: 'before', time: 999, progress: () => 0.2 };
+    const story = { wantsDolphins: true, swim: 'before', time: 999, podLeftAt: null };
     check(phase.call(story) === 'open', 'Elapsed time alone cannot trigger the swim music');
     for (const beat of ['restless', 'side', 'in', 'drying']) {
       story.swim = beat; check(phase.call(story) === 'swim', `${beat} keeps the quiet accompaniment`);
     }
     story.swim = 'done'; check(phase.call(story) === 'return', 'Music returns after the bird settles in the arms');
-    story.progress = () => 0.8; check(phase.call(story) === 'arrival', 'Coastal approach uses the final harmony');
-    story.swim = 'in'; check(phase.call(story) === 'swim', 'An unfinished swim retains priority near shore');
+    story.podLeftAt = story.time; check(phase.call(story) === 'arrival', 'Music moves to the final harmony once the pod has left');
+    story.swim = 'in'; check(phase.call(story) === 'swim', 'An unfinished swim retains priority near shore even after the pod has left');
     story.wantsDolphins = false; check(phase.call(story) === undefined, 'Ordinary crossings retain their original music');
     const restored = Object.assign(Object.create(CrossingChapter.prototype), {
       wantsDolphins: true, route: [{ x: 0, y: 0 }, { x: 100, y: 0 }], cruiseSpeed: 10,
       cast: { sealife: { resumeDolphinsAfterSwim() {} }, boat: { position: { x: 40, z: 0 }, mooring: {} } }, progress: () => 0.5,
+      podLeftAt: null,
     });
     restored.restoreCheckpoint('swim', [0, 88]);
     check(restored.seaScore === 'return', 'A restored swim checkpoint starts after the swim, without replaying its lead-in');
