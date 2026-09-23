@@ -11,6 +11,9 @@ import { REFLECTION_LAYER } from './water/reflection';
 
 const T = tuning.skyMirror;
 const COUNT = 12;
+/** The handle leans forward and out from the hand, carrying the ring clear of the child's head. */
+const WAND_PITCH = 0.35;
+const WAND_ROLL = 0.45;
 export const mirrorUniforms = {
   uMirrorRings: { value: Array.from({ length: COUNT }, () => new THREE.Vector4(0, 0, -100, 0)) },
 };
@@ -242,7 +245,7 @@ export class SkyMirror {
   pose(child: Traveller): void {
     if (this.active && this.holdingWand) {
       child.mitten(1,this.hand); this.hoop.position.copy(this.hand);
-      this.hoop.rotation.set(0,child.yaw,0.08);
+      this.hoop.rotation.set(WAND_PITCH,child.yaw,WAND_ROLL,'YXZ');
     }
     this.hoop.updateMatrixWorld(true);
     this.wand.set(0,0.95,0).applyMatrix4(this.hoop.matrixWorld);
