@@ -32,9 +32,9 @@ export const tuning = {
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
     homewardFadeOut: 3, homewardQuiet: 5, homewardFadeIn: 3,
     homewardClearDistance: 30,
-    /** Playtest correction: bring the opening and home drones forward by 12 dB. */
+    /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
-    summitScoreLevel: .06555 * 10 ** (12 / 20),
+    summitScoreLevel: .06555 * 10 ** (8 / 20),
     arrivalPhraseWait: 4.5, phraseReleaseLead: .8,
     openingHandoffSettle: 2.2,
     /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */
@@ -63,8 +63,8 @@ export const tuning = {
     birchesScoreLevel: 10.35,
     /** Approved Lines balance (+17.6 dB), excluding preview playback gain; a separate, small melody trim. */
     linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
-    /** Approved revised study gains, excluding listening-file normalization. */
-    mirrorScoreLevel: 1, drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /** Approved revised study gains, excluding listening-file normalization; the mirror 4 dB up after playtest. */
+    mirrorScoreLevel: 10 ** (4 / 20), drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,
@@ -216,14 +216,33 @@ export const tuning = {
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
-    windFrom: 0.012, windFull: 0.18, speed: 2.4, drag: 1.7,
-    fleetReach: 14, childLead: 4, bankOffset: 2.2,
+    windFrom: 0.012, windFull: 0.18, speed: 2.9,
+    /** Each toy's best speed as a share of `speed`: hulls sail a little differently, and the child's own (first) is the quickest. */
+    pace: [1, 0.93, 0.88, 0.95, 0.9, 0.86, 0.92],
+    /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
+    drive: 1.7, drag: 0.5,
+    fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
+    /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */
+    childHurry: 0.35,
+    /** How far the child's toy may sail ahead of the swimming cygnet. */
+    swimLead: 7.5,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
-    /** Course spacing leaves hull room even where the offshore turn compresses travel. */
-    hullSpacing: 3.4,
+    /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */
+    carryAhead: 0, carryAheadEnd: 6,
+    /** While the travellers catch up, gathered toys sail no further than this beyond where the child's toy may go. */
+    fleetLead: 3,
+    /** Course spacing between toys in one lane, and the share more they keep through the offshore turn, which compresses travel. */
+    hullSpacing: 3.4, turnRoom: 0.3,
+    /**
+     * The other toys sail either side of the child's centre lane, never nearer to it than `outletLane` even in the
+     * narrow outlet. Hulls this far apart across the stream begin to pass, and pass freely at the second.
+     */
+    sideLane: 1.75, outletLane: 1.6, passFrom: 1.2, passClear: 1.5,
+    /** A hull this close behind a toy it cannot pass hands its own gust on to it; carried along, it keeps this much water spare. */
+    nudge: 0.8, berth: 0.3,
     brushSpeed: 1.5, brushRadius: 0.085, brushWindRadius: 3.5, brushEnergyScale: 22,
     inviteAfter: 4, revealFor: 4.5,
     rippleHeight: 0.065, toyDraft: 0.025, sailFillRate: 2.8, sailEmptyRate: 1.4,
@@ -246,6 +265,8 @@ export const tuning = {
     /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */
     planeBloomRadius: 4.5,
     planeBloomStrength: 1.4,
+    /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
+    planeBloomFrom: 0.3,
     /** A held view of the sea, then one clear recovery before the small bird loses the V. */
     outlook: 3.5,
     flight: 5,
@@ -391,6 +412,14 @@ export const tuning = {
     /** Coast-relative radii: land and props sit inside the opaque centre; the outer edge dissolves over water. */
     arrivalFogInner: 1.2,
     arrivalFogOuter: 1.32,
+    /**
+     * The island ahead lies in mist beyond `clear` to `hidden` units from the eye: the wood past its farthest trees,
+     * the sleeping island everywhere but the shore the boat lands on. The bank thins away over the water by `edge`
+     * coast radii. It lifts at `isleMistLift` once they are ashore.
+     */
+    woodMist: { clear: 110, hidden: 165, edge: 1.32 },
+    sleepingMist: { clear: 40, hidden: 72, edge: 2.4 },
+    isleMistLift: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: 1.03,
     /** Metres from the arrival berth over which the stronger haze develops as the farewell camera releases. */
@@ -915,18 +944,37 @@ export const tuning = {
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    swimSpeed: 1.5,
-    /** A shorter swim leaves room for the leap, nudge, dive and mirror fade within 100 seconds. */
-    swimFor: 14,
-    swimAnticipation: 3,
-    swimDecision: 4,
-    swimAt: 0.30,
+    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
+    swimSpeed: 5,
+    /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
+    swimCarry: 0.75,
+    swimEase: 0.5,
+    swimFor: 12,
+    swimAnticipation: 2,
+    swimDecision: 3,
+    swimAt: 0.2,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
-    swimNotBefore: 25,
-    dolphinsAfter: 10,
+    swimNotBefore: 18,
+    dolphinsAfter: 5,
     waypointRadius: 10,
-    encounterHoldAt: 0.60,
-    encounterSpeed: 1.5,
+    /**
+     * How far along the route the first leap may begin: the sleeping island's night lifts only once it is well
+     * astern (its palette clears 110 to 150 units from the hollow), and the leap belongs to the first light.
+     */
+    leapFrom: 0.28,
+    /**
+     * Where along the route the pod says goodbye, and about how long its play takes from `leapFrom`: the leap, the
+     * swim and the nudge. A boat ahead of that is eased toward it, never below `leastSpeed`. Only a pod still
+     * playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
+     */
+    farewellAt: 0.8,
+    playFor: 41,
+    /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
+    openSpeed: 5.5,
+    leastSpeed: 3,
+    holdSpeed: 1,
+    holdAt: 0.92,
+    limitEase: 0.6,
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
@@ -937,34 +985,62 @@ export const tuning = {
     swimCameraBearing: 0.65,
     childTurn: 0.7,
     haze: 0.94,
-    /** Begin easing away before the coastal approach. */
-    farewellAt: 0.66,
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
     /** A grown one, beak to fluke notch, in world units; the boat it runs with is 4.8 long. */
     length: 4.35,
     girth: 1.22,
-    quietLead: 18,
+    quietLead: 8,
     quietEase: 0.22,
+    /** Most the lanes open ahead or fall back while the swim has the boat, in units a second on top of its speed. */
+    leadRate: 1.6,
     /** Quiet swimming between breaths, with only occasional low porpoises. */
     breathLeast: 3.5,
     breathSpread: 5.5,
     leapChance: 0.18,
-    /** Seconds after the pod starts joining for its first leap and nudge; the swim postpones the nudge. */
-    leapAt: 8,
-    leapSpread: 2,
-    leapRecovery: 1.5,
+    /**
+     * Slopes a throw leaves the water at, rise over run, and the most either is in units a second: a breath rolls the
+     * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
+     */
+    breathSlope: 0.22,
+    porpoiseSlope: 0.6,
+    breathMost: 1.3,
+    porpoiseMost: 3.2,
+    /**
+     * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
+     * keeping station on a slow boat is still swimming, and sliding back along it is swimming slower, not turning round.
+     */
+    leastPace: 2.5,
+    leastHeadway: 1.5,
+    /** How far below breathing depth a rise to the surface may start, and how fast the depth it swims at can change. */
+    riseFrom: 1.9,
+    depthRate: 1.4,
+    /** How fast a dolphin playing a set-piece gathers or sheds speed, in units a second a second. */
+    stuntAccel: 5,
+    /** How fast a rejoining dolphin lets go of what is left of its set-piece station, per second. */
+    rejoinEase: 0.8,
+    /** Seconds after the pod starts joining for its first leap; the nudge follows the swim, `nudgeAfter` at the soonest. */
+    leapAt: 5,
+    leapSpread: 1.5,
+    leapRecovery: 1,
+    nudgeAfter: 3,
+    /** Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw. */
+    leapOutFor: 2.8,
+    leapRunFor: 3.2,
+    /** Where the leaper runs beside the boat before the throw, how fast it drives forward into it, and its steepest take-off in radians. */
+    leapFrom: -1,
+    leapAlong: 3.2,
+    leapSteepest: 0.75,
     arrivalSpacing: 3.5,
     arrivalDepth: 7,
-    departureFor: 9,
-    nudgeRecovery: 2.5,
+    departureFor: 7,
+    nudgeRecovery: 1,
     nudgeApproachAlong: -8,
     nudgeApproachAcross: 5,
     nudgeApproachFor: 2.4,
-    nudgeApproachMax: 4,
-    nudgeRunFor: 2.5,
-    pushAt: 35,
+    nudgeApproachMax: 3,
+    nudgeRunFor: 1.8,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
@@ -1135,7 +1211,11 @@ export const tuning = {
     planeAhead: 2,
     planeLookUp: 1.8,
     planeLookFor: 2,
-    planeLostAfter: 6.5,
+    /** The storm carries the plane off ahead of the boat, low over the wood, until the rain swallows it (this many
+        fog lengths deep) or it leaves the frame; whatever happens, it is gone by the fallback. */
+    planeAway: { speed: 15, grip: 2.5, rise: 1.2 },
+    planeLostInFog: 2.5,
+    planeLostAfter: 14,
     firstLightning: 16,
     lightningStormFrom: 0.85,
     lightningNightFrom: 0.06,

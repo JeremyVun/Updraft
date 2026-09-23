@@ -6,6 +6,7 @@ import type { WindSample } from '../wind/field';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
 import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
+import { atmo } from '../world/atmosphere';
 import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
@@ -66,6 +67,7 @@ export class DrownedChapter implements Chapter {
   private readonly look = new THREE.Vector3();
   private readonly from = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly seen = new THREE.Vector3();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private quarter = 1;
   private stillBearing = Math.PI + 0.9;
@@ -179,8 +181,7 @@ export class DrownedChapter implements Chapter {
         if (this.t > tuning.storm.snatchFor) this.to('after');
         break;
       case 'after':
-        /** Once the rain has it, it is gone. Nothing in the story goes to look for it; it turns up in the wood. */
-        if (p.position.distanceTo(boat.position) > 130 || this.t > tuning.storm.planeLostAfter) p.visible = false;
+        if (this.t > tuning.storm.planeLostAfter) p.visible = false;
         break;
       default:
         break;
@@ -313,9 +314,19 @@ export class DrownedChapter implements Chapter {
     const away = boat.yaw + 0.4;
     const dir = this.tmp.set(Math.sin(away), 0.14, Math.cos(away)).normalize();
     p.launch(c.handPosition(this.hand), this.from.copy(dir).multiplyScalar(11).setY(2.2));
-    p.depart(dir);
+    p.depart(dir, tuning.storm.planeAway);
     this.lost = boat.position.x + dir.x * 60;
     c.reach();
+  }
+
+  /** Once the rain has it, it is gone: never while it can still be seen. It turns up again in the wood. */
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    const p = this.cast.plane;
+    if (this.beat !== 'after' || !p.visible) return;
+    const veil = atmo.uniforms.uVeil.value;
+    const swallowed = (p.position.distanceTo(camera.position) - veil.x) * veil.y > tuning.storm.planeLostInFog;
+    const s = this.seen.copy(p.position).project(camera);
+    if (swallowed || s.z > 1 || Math.abs(s.x) > 1.05 || Math.abs(s.y) > 1.05) p.visible = false;
   }
 
   private frame(): void {

@@ -89,6 +89,12 @@ export const atmo = {
     /** An island's offshore veil is anchored to its coast, so looking from a hill cannot expose the next room. */
     uIslandVeil: { value: new THREE.Vector4(0, 0, 1, 1) },
     uIslandVeilAmount: { value: 0 },
+    /**
+     * The island ahead lies in its own mist (centre, radii) beyond a distance from the eye: near, far, amount,
+     * and how far out over the water the bank thins away, in coast radii.
+     */
+    uIsleMist: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uIsleMistRange: { value: new THREE.Vector4(0, 1, 0, 1.32) },
     uCloudShift: { value: new THREE.Vector2() },
     /** The world window (minX, minZ, 1/size, 1/size) for the wind, grass lean and height textures. */
     uDomain: { value: windowDomain() },
@@ -214,6 +220,8 @@ uniform float uOpenSea;
 uniform float uHomeHaze;
 uniform vec4 uIslandVeil;
 uniform float uIslandVeilAmount;
+uniform vec4 uIsleMist;
+uniform vec4 uIsleMistRange;
 uniform vec3 uRoom;
 uniform vec4 uJourneyVeils[2];
 uniform vec2 uJourneyVeilAmounts;
@@ -452,19 +460,27 @@ float cloudShadow(vec2 xz) {
 
 ${SKY_RADIANCE_GLSL}
 
+/** How much of a sightline to wpos passes over a coast; sea behind a hill must have the same cover as the hill. */
+float coastCover(vec4 coast, vec3 wpos, float inner, float outer) {
+  vec2 origin = (cameraPosition.xz - coast.xy) / coast.zw;
+  vec2 ray = (wpos.xz - cameraPosition.xz) / coast.zw;
+  float along = clamp(-dot(origin, ray) / max(dot(ray, ray), 1e-6), 0.0, 1.0);
+  float radius = length(origin + ray * along);
+  return 1.0 - smoothstep(inner, outer, radius);
+}
+
 /** Shared with emissive props that deliberately shine through the ordinary habitat fog. */
 float journeyVeilAt(vec3 wpos) {
   float covered = 0.0;
   for (int i = 0; i < 2; i++) {
     if (uJourneyVeilAmounts[i] <= 0.0) continue;
-    vec4 coast = uJourneyVeils[i];
-    // Integrate along the sightline: sea behind a hill must have the same cover as the hill replacing it.
-    vec2 origin = (cameraPosition.xz - coast.xy) / coast.zw;
-    vec2 ray = (wpos.xz - cameraPosition.xz) / coast.zw;
-    float along = clamp(-dot(origin, ray) / max(dot(ray, ray), 1e-6), 0.0, 1.0);
-    float radius = length(origin + ray * along);
-    float hidden = (1.0 - smoothstep(${glsl(tuning.world.arrivalFogInner)}, ${glsl(tuning.world.arrivalFogOuter)}, radius)) * uJourneyVeilAmounts[i];
+    float hidden = coastCover(uJourneyVeils[i], wpos, ${glsl(tuning.world.arrivalFogInner)}, ${glsl(tuning.world.arrivalFogOuter)}) * uJourneyVeilAmounts[i];
     covered = 1.0 - (1.0 - covered) * (1.0 - hidden);
+  }
+  if (uIsleMistRange.z > 0.0) {
+    float misted = coastCover(uIsleMist, wpos, ${glsl(tuning.world.arrivalFogInner)}, uIsleMistRange.w)
+      * smoothstep(uIsleMistRange.x, uIsleMistRange.y, distance(wpos, cameraPosition));
+    covered = 1.0 - (1.0 - covered) * (1.0 - misted * uIsleMistRange.z);
   }
   return covered;
 }

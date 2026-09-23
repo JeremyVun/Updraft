@@ -518,7 +518,12 @@ let heightParity = 0;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
-const shown = { dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN };
+const shown = { dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
+const ISLE_MISTS = {
+  wood: { isle: ISLES.wood, range: tuning.world.woodMist },
+  sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
+};
+let isleMist: (typeof ISLE_MISTS)[keyof typeof ISLE_MISTS] = ISLE_MISTS.wood;
 function ease(from: number, to: number, rate: number, dt: number): number {
   return Number.isNaN(from) ? to : from + (to - from) * (1 - Math.exp(-dt * rate));
 }
@@ -702,6 +707,14 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (Math.abs(shown.islandVeil - islandVeil) < 0.001) shown.islandVeil = islandVeil;
   atmo.uniforms.uIslandVeil.value.set(ISLES.meadow.x, ISLES.meadow.z, ISLES.meadow.rx, ISLES.meadow.rz);
   atmo.uniforms.uIslandVeilAmount.value = shown.islandVeil;
+  // The island ahead is seen only as near as its detail is drawn, and not at all from across the water.
+  const mistAhead = story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
+    : story.name === 'toSleeping' ? ISLE_MISTS.sleeping : null;
+  if (mistAhead) isleMist = mistAhead;
+  shown.isleMist = mistAhead ? 1 : ease(shown.isleMist, 0, tuning.world.isleMistLift, dt);
+  if (shown.isleMist < 0.001) shown.isleMist = 0;
+  atmo.uniforms.uIsleMist.value.set(isleMist.isle.x, isleMist.isle.z, isleMist.isle.rx, isleMist.isle.rz);
+  atmo.uniforms.uIsleMistRange.value.set(isleMist.range.clear, isleMist.range.hidden, shown.isleMist, isleMist.range.edge);
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(
     THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),

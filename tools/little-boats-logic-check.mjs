@@ -140,6 +140,7 @@ for (const [fps, portrait] of [
     maxEdge = 0,
     minDry = Infinity,
     swimFrames = 0,
+    sailingFrames = 0,
     fastestSwim = 0,
     biggestFlap = 0;
   let biggestToyStep = 0,
@@ -193,6 +194,7 @@ for (const [fps, portrait] of [
       last = q.beat;
     }
     if (q.beat === 'sailing') {
+      sailingFrames++;
       for (const p of [c.child.position, c.cygnet.position]) {
         if (p === c.child.position || (c.cygnet.state !== 'swimming' && !c.cygnet.seating.move))
           minDry = Math.min(minDry, worldHeight(p.x, p.z) - boatsLevel(L.startZ - p.z));
@@ -223,7 +225,8 @@ for (const [fps, portrait] of [
     `chapter stalled: ${q.beat}, s=${r.progress}, child=${c.child.position.toArray()}, bird=${c.cygnet.position.toArray()}, state=${c.cygnet.state}, phase=${q.swim}, pool=${q.pool}, entry=${q.swimEntry}, birdAim=${q.swimAim.toArray()}, seating=${JSON.stringify(c.cygnet.seating.move)}, bank=${q.birdBank.toArray()}`,
   );
   assert.equal(c.cygnet.swims, 3, 'paddles in all three pools');
-  assert(swimFrames > fps * 40, 'sustained swims alongside toys');
+  // Steadier sailing shortens the room, so the swims are measured as a share of it.
+  assert(swimFrames > fps * 30 && swimFrames > sailingFrames * 0.6, `sustained swims alongside toys: ${swimFrames / fps}s of ${sailingFrames / fps}s`);
   assert(fastestSwim > 2.45 && biggestFlap > 0.45, 'playful swim includes faster paddles and wing flicks');
   assert(minDry > 0.01, `characters entered a pool: ${minDry}`);
   assert(maxEdge < 0.93, `characters left safe frame: ${maxEdge}, ${JSON.stringify(worstFrame)}`);
@@ -234,6 +237,7 @@ for (const [fps, portrait] of [
     minDry,
     maxEdge,
     swimFrames,
+    sailingFrames,
     fastestSwim,
     biggestFlap,
     biggestToyStep,
@@ -391,15 +395,20 @@ console.log('Every sail responds independently; whole fleet clears the shore and
 
 // Reproduce repeated strokes over the rearmost sail. Check rendered hull centres,
 // not just course coordinates: the outlet bend compresses distance along the course.
+// Toys in clear lanes may sail abreast, so measure along and across their heading: two
+// hulls about 1.8 long and 1 wide stay apart outside this ellipse around each other.
 function hullClearance(room, label) {
   const visible = room.toys.filter((t) => t.group.visible);
   let closest = Infinity;
   for (let i = 0; i < visible.length; i++) {
     for (let j = i + 1; j < visible.length; j++) {
       const a = visible[i].group.position, b = visible[j].group.position;
-      const distance = Math.hypot(a.x - b.x, a.z - b.z);
-      closest = Math.min(closest, distance);
-      assert(distance > 1.9, `${label}: hulls overlap (${distance}), s=${visible[i].s},${visible[j].s}`);
+      const yaw = (visible[i].group.rotation.y + visible[j].group.rotation.y) / 2;
+      const along = Math.abs((b.x - a.x) * Math.sin(yaw) + (b.z - a.z) * Math.cos(yaw));
+      const across = Math.abs((b.x - a.x) * Math.cos(yaw) - (b.z - a.z) * Math.sin(yaw));
+      const clearance = Math.hypot(along / 1.9, across / 1.1);
+      closest = Math.min(closest, clearance);
+      assert(clearance > 1, `${label}: hulls overlap (along ${along}, across ${across}), s=${visible[i].s},${visible[j].s}`);
     }
   }
   return closest;

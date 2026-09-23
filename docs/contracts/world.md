@@ -45,6 +45,14 @@ land, props, sea and reflections into the sky outside its shoreline, hiding neig
 through departure. `tuning.world.meadowVeilFrom/To` set its reach relative to `ISLES.meadow`; `main.ts` eases it
 away during the next crossing. Other chapters retain ordinary haze.
 
+The island ahead can also lie in its own mist (`uIsleMist`, `uIsleMistRange`), part of `journeyVeilAt` so
+emissive props obey it too. Any sightline over that coast dissolves into `skyRadiance` beyond a distance from the
+eye, so the near shore comes out of it first and nothing behind the island shows through. The drowned village
+keeps the wood in it past its farthest drawn trees (the bare hill was visible from the rooftops); the crossing to
+the sleeping island keeps all but the landing shore in it, so the summit window and its curtains are found
+ashore. `tuning.world.woodMist` / `sleepingMist` set the clear and hidden distances and how far the bank thins
+over the water; `main.ts` lifts it at `isleMistLift` once they land.
+
 ## The sky mirror
 
 `world/sky-mirror-layout.ts` defines the submerged flat at (−455, −2310), four fallen lights, the outer

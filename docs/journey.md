@@ -526,7 +526,9 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    the boom, the water goes to glass and the world goes quiet, and nothing moves again until the player puts wind
    in the sail themselves. It is the first time the journey needs them rather than answering them, and it is the
    held breath before the weather. Then the storm gathers and takes the paper plane out of the child's hand, and
-   they reach after it and it is gone. **Built.** The drift *is* the crossing: there is no separate one before it.
+   they reach after it and it is gone: the storm carries it off ahead of the boat, fast and low over the wood
+   (`tuning.storm.planeAway`), and it is only put away once it has left the frame or the rain has swallowed it,
+   never while it can be seen. **Built.** The drift *is* the crossing: there is no separate one before it.
 5. **The dark wood** (`story/wood.ts`, `world/wood.ts`, `fx/embers.ts`) — the first winter storm, at night. There
    is no grass to bend and nothing to throw, so the wind does the only other thing it can do: it breathes on fire.
    The player fans embers awake out of the leaf litter and the child walks on for exactly as long as there is
@@ -997,16 +999,28 @@ about 650 units). The veil hides everything either side of it, so it reads as op
     through the room. The wood's coast was shelved out because the first version came out of the sea as a cliff
     and a child in the dark could not get off the boat.
 12b. **The long crossing: built.** `fx/sealife/dolphin.ts` — a pod that surges fore and aft of the boat in
-    desynchronised lanes, porpoises in real ballistic arcs, and puts two riders on the bow wave. The route stands
-    a long way out west into open water and comes back, because after the wood the point of it is not to arrive.
-    The September 19 polish gives that relief room: a roughly 900-unit offshore route, about three and a half
-    minutes in the current breeze. Larger dolphins spend longer swimming beneath the surface, with one near-side
-    leap and a gentler nudge. The camera sees the child's face and holds the whole featured animal even in portrait.
-    The pod moves ahead while the cygnet chooses a 32-second swim; the boat slows to stay beside it, and both remain
-    in view. Dolphins, foam, wake and swimmer follow the same swell. The paper stays stowed while sailing. Distant
-    land dissolves into the sky until the pod leaves and the approach to home begins. Feel knobs: `tuning.seaPassage`
-    and `tuning.dolphins`. Verification: `tools/sea-check.mjs` (full GPU passage, desktop or `W=390 H=844`) and
-    `tools/sea-logic-check.mjs` (wind, frame rate, framing, completion and old swim checkpoints).
+    desynchronised lanes, porpoises in real ballistic arcs, and puts two riders on the bow wave. It is now the
+    sleeping island → sky mirror passage (`toMirror`, about 265 units), about 77 seconds in the ordinary breeze.
+    The boat leaves in the last of the night and the pod rises around it. The featured near-side leap waits
+    for the first light, once the sleeping island's night has lifted astern. A whale surfaces far ahead as it
+    leaps. Then the cygnet makes its brave swim: it goes over the side and swims 12 seconds in the wave along the
+    hull while the boat sails on, and the whale dives as the swim ends. The nudge follows; its approach begins
+    under water while the cygnet climbs back aboard. The pod then dives away ahead before the mirror's quiet
+    water appears.
+    Jeremy, September 23: “the dolphin animations spasm out of the water, and the speed of the boat slows down a
+    lot when the cygnet drops down to swim (this whole part of the story is not well paced)”. The boat is never
+    braked now. Over the open stretch it settles gradually from the ordinary pace into the one pace, about 3.3
+    units a second, that fits the pod's play to the water it has. It keeps that pace through the leap, the swim
+    and the nudge. During the swim only a strong gust is trimmed. Only a pod still playing when the coast is near
+    holds it back further. The dolphins keep one continuous path through every breath, porpoise and set-piece.
+    Every join matches height and speed, and a throw's steepness follows the dolphin's own pace. The tail follows
+    the path the beak really swam. A dolphin dropping back on the boat swims slower rather than turning round.
+    Dolphins and the swimmer ride the swell as the water is drawn, calming over the mirror's water. The camera
+    sees the child's face and holds the whole featured animal even in portrait. The paper stays stowed while
+    sailing. Distant land dissolves into the sky until the pod leaves. Feel knobs: `tuning.seaPassage` and
+    `tuning.dolphins`. Verification: `tools/sea-check.mjs` (full GPU passage, desktop or `W=390 H=844`),
+    `tools/sea-logic-check.mjs` (wind, frame rate, framing, completion and old swim checkpoints) and
+    `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
 12c. **The cygnet's arc: built.** The glide is `Cygnet.soar`, on wind sampled **at the cygnet's own position**, so the
     player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the cygnet is set
     down in the grass, tries by itself and fails, the child sits down to watch, and there is nothing else on

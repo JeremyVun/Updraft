@@ -80,6 +80,12 @@ const SCALE = 0.85;
 export const PAPER_GRIP = new THREE.Vector3(0, -0.2, -0.45);
 /** How long a wingtip trail lingers in the air. */
 const TRAIL_SECONDS = 1.6;
+/**
+ * How a plane that is let go leaves: ground speed along its heading, how firmly it holds that against the air
+ * (per second), and a climb rate, or null to keep its own lift.
+ */
+export interface Departure { speed: number; grip: number; rise: number | null }
+const HOME_DEPARTURE: Departure = { speed: 9, grip: 0.6, rise: null };
 
 /** A paper glider carried by the wind. It glides forward, sinks slowly, rides gusts and updrafts, and never leaves the island for long. */
 export class Glider {
@@ -96,6 +102,7 @@ export class Glider {
   restTime = 0;
   /** Set once it has been let go at the end: it climbs away along this heading and never comes back. */
   departing: THREE.Vector3 | null = null;
+  private departure: Departure = HOME_DEPARTURE;
   /** How wet it is, 0 dry to 1 sodden: the storm soaks it and the player's wind dries it out again. */
   readonly soggy = { value: 0 };
   /**
@@ -259,9 +266,10 @@ export class Glider {
     this.airborne = true;
   }
 
-  depart(heading: THREE.Vector3): void {
+  depart(heading: THREE.Vector3, departure: Departure = HOME_DEPARTURE): void {
     this.settlingAt = null;
     this.departing = heading.clone().normalize();
+    this.departure = departure;
   }
 
   /** Finish an arrival by flying down to a fixed, reachable pickup spot. Never teleport the paper. */
@@ -269,6 +277,10 @@ export class Glider {
     this.settlingAt = at.clone();
     this.companion = null;
     this.guided = true;
+  }
+
+  get visible(): boolean {
+    return this.group.visible;
   }
 
   set visible(on: boolean) {
@@ -365,7 +377,7 @@ export class Glider {
     }
     v.x += (w.x + gx * glide - v.x) * (1 - Math.exp(-dt * grip));
     v.z += (w.z + gz * glide - v.z) * (1 - Math.exp(-dt * grip));
-    const vyTarget = resting ? 0 : liftForce - 2.4;
+    const vyTarget = resting ? 0 : this.departing && this.departure.rise !== null ? this.departure.rise : liftForce - 2.4;
     v.y += (vyTarget - v.y) * (1 - Math.exp(-dt * 1.4));
 
     if (this.guided && !this.departing) {
@@ -386,9 +398,9 @@ export class Glider {
     }
 
     if (this.departing) {
-      const k = 1 - Math.exp(-dt * 0.6);
-      v.x += (this.departing.x * 9 - v.x) * k;
-      v.z += (this.departing.z * 9 - v.z) * k;
+      const k = 1 - Math.exp(-dt * this.departure.grip);
+      v.x += (this.departing.x * this.departure.speed - v.x) * k;
+      v.z += (this.departing.z * this.departure.speed - v.z) * k;
     }
     const r = Math.hypot(p.x - this.home.x, p.z - this.home.z);
     if (r > this.homeRadius && !this.departing) {

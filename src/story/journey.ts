@@ -344,7 +344,7 @@ export class Journey {
           departureMusic: 'sea',
           arrivalMusic: 'mirror',
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
-          whaleAt: 42, whaleEvery: 0, dolphins: true,
+          whaleAt: 27, whaleEvery: 0, dolphins: true,
           swimAt: tuning.seaPassage.swimAt, season: 0.92,
           moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
         });

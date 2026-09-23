@@ -188,8 +188,9 @@ export class IslandChapter implements Chapter {
     this.sinceLifeCheck += dt;
     const life = this.cast.life;
     const plane = this.cast.plane;
-    // Catch leaves colour beneath the flying paper, using the same lasting life as the player's wind.
-    if (this.beat === 'play' && !this.restored && !plane.held && plane.airborne && !plane.landed) {
+    // Catch leaves colour beneath the paper for as long as it travels, including its long low glide over the grass.
+    if (this.beat === 'play' && !this.restored && !plane.held && !plane.landed
+      && Math.hypot(plane.velocity.x, plane.velocity.z) > tuning.opening.planeBloomFrom) {
       life.bloom(plane.position.x, plane.position.z, tuning.opening.planeBloomRadius, tuning.opening.planeBloomStrength);
     }
     if (this.sinceLifeCheck > 0.5) {
