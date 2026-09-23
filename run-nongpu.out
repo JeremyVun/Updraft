@@ -1,8 +1,0 @@
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24261 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24273 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24422 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24463 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24613 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24719 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24774 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
-/tmp/updraft-p-tests/run-nongpu.sh: line 14: 24821 Terminated: 15          ( sleep 180; kill -TERM "$pid" 2> /dev/null )
