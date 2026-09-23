@@ -3,6 +3,13 @@ import './controls';
 import { telemetry } from './analytics/telemetry';
 import { contextRecovery } from './gl/context-recovery';
 
+declare global {
+  interface Window { __cancelEntryWatchdog?: () => void }
+}
+// The module has now loaded and begun running: index.html's inline watchdog no longer needs to
+// suspect a failed or stalled fetch of this chunk. Later failures are this module's own to handle.
+window.__cancelEntryWatchdog?.();
+
 const loadingStarted = performance.now();
 let previous = loadingStarted, worst = 0, loading = true;
 function measureLoading(now: number): void {

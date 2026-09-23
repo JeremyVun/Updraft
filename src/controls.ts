@@ -1,12 +1,14 @@
 import { params } from './params';
 import type { QualityMode } from './gl/quality';
 import { readQualityMode, saveQualityMode } from './gl/quality-preference';
+import { readSoundPreference, saveSoundPreference } from './sound-preference';
 
 /** Lightweight controls work before the game bundle loads; engine callbacks attach later. */
 class Controls {
   readonly qualityEnabled = !params.shot && !params.lite && params.ratio === null && params.msaa === null && params.grass === null && params.mirror === null;
   qualityMode: QualityMode = this.qualityEnabled ? readQualityMode() : 'auto';
-  soundOn = !params.shot;
+  /** Shot mode keeps its muted default regardless of any remembered preference. */
+  soundOn = params.shot ? false : readSoundPreference();
   onSoundChange: ((on: boolean) => void) | null = null;
   onQualityChange: ((mode: QualityMode) => void) | null = null;
   private readonly sound = document.getElementById('sound') as HTMLButtonElement;
@@ -17,6 +19,7 @@ class Controls {
     this.setSound(this.soundOn);
     this.sound.addEventListener('click', () => {
       this.setSound(!this.soundOn);
+      saveSoundPreference(this.soundOn);
       this.onSoundChange?.(this.soundOn);
     });
     const quality = document.getElementById('quality') as HTMLButtonElement;

@@ -4,6 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Updraft</title>
+    <meta name="description" content="A quiet browser game where you play the wind." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Updraft" />
+    <meta property="og:description" content="A quiet browser game where you play the wind." />
+    <meta property="og:url" content="https://updraft.perch-admin.workers.dev/" />
+    <meta property="og:image" content="https://updraft.perch-admin.workers.dev/og.jpg" />
+    <meta property="og:image:width" content="1920" />
+    <meta property="og:image:height" content="1080" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Updraft" />
+    <meta name="twitter:description" content="A quiet browser game where you play the wind." />
+    <meta name="twitter:image" content="https://updraft.perch-admin.workers.dev/og.jpg" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body class="starting">
@@ -177,6 +189,34 @@
       </div>
     </div>
     <button id="again" type="button">Play again</button>
+    <script>
+      (function () {
+        // The entry module's own failure handling lives inside it; if the chunk itself never loads
+        // (network, filtering, a stale deploy) that code never runs and the veil would wait forever.
+        // This plain script needs nothing from the bundle, so it can catch that case here instead.
+        function cancelWatchdog() {
+          window.removeEventListener('error', onScriptError, true);
+          clearTimeout(watchdogTimer);
+        }
+        function onScriptError(event) {
+          if (event.target && event.target.tagName === 'SCRIPT') fail();
+        }
+        function fail() {
+          cancelWatchdog();
+          var begin = document.getElementById('begin');
+          var status = document.getElementById('start-status');
+          if (!begin || !begin.disabled) return; // the real module already took over
+          document.getElementById('veil').setAttribute('aria-busy', 'false');
+          begin.firstElementChild.textContent = 'Try again';
+          begin.disabled = false;
+          status.textContent = "The game couldn't start. Try again.";
+          begin.addEventListener('click', function () { location.reload(); }, { once: true });
+        }
+        window.addEventListener('error', onScriptError, true);
+        var watchdogTimer = setTimeout(fail, 20000);
+        window.__cancelEntryWatchdog = cancelWatchdog;
+      })();
+    </script>
     <script type="module" src="/src/entry.ts"></script>
   </body>
 </html>

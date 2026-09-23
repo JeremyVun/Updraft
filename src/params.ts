@@ -13,23 +13,33 @@ function num(key: string): number | null {
 }
 
 const lite = q.has('lite') && q.get('lite') !== '0';
-const ratio = num('ratio');
+const rawRatio = num('ratio');
+/**
+ * A malformed shared URL must not be able to request an enormous framebuffer or sample count. These are
+ * sanity floors/ceilings only: ratio's true ceiling is the device pixel ratio the renderer actually uses,
+ * and msaa's is the renderer's MAX_SAMPLES, clamped once the GL context exists (`gl/graphics-capability.ts`).
+ */
+const ratio = rawRatio !== null && rawRatio > 0 ? Math.min(rawRatio, 4) : null;
+const rawMsaa = num('msaa');
+const msaa = rawMsaa !== null ? Math.min(Math.max(0, rawMsaa), 16) : null;
+const rawGrass = num('grass');
+const grass = rawGrass !== null ? Math.min(Math.max(0, rawGrass), 4) : null;
 
 export const params = {
   /** Set by the QA tools: exposes `window.__game`, `__stats`, `__ready` and steps time at a fixed rate. */
   shot: q.has('shot'),
   /** `wind` overlays the wind field. */
   debug: q.get('debug') ?? '',
-  /** Fixed render scale; disables the automatic step-down. */
-  ratio: ratio !== null && ratio > 0 ? ratio : null,
+  /** Fixed render scale; disables the automatic step-down. Clamped to (0, 4]. */
+  ratio,
   /** Camera override: x,y,z,targetX,targetY,targetZ. */
   cam: nums('cam'),
   /** Sun override: azimuthDeg,elevationDeg (azimuth 0 = straight ahead of the default camera). */
   sun: nums('sun'),
-  /** Fixed grass density multiplier; overrides the adaptive world tier. */
-  grass: num('grass'),
-  /** MSAA sample count for the scene render (default 4). */
-  msaa: num('msaa'),
+  /** Fixed grass density multiplier; overrides the adaptive world tier. Clamped to [0, 4]. */
+  grass,
+  /** MSAA sample count for the scene render (default 4). Clamped to [0, 16] here, then to the device's MAX_SAMPLES once the GL context exists. */
+  msaa,
   /** Time of day override: 0 afternoon, 1 sunset, 2 night. */
   dusk: num('dusk'),
   /** Shower override, 0 dry to 1. */
