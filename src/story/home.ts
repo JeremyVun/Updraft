@@ -9,9 +9,9 @@ import { MOON, sunDirection } from '../world/palette';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Deck } from '../traveller/traveller';
-import type { WindSample } from '../wind/field';
 import type { Cast, Chapter } from './cast';
 import { completeObjective, cue } from './cues';
+import { HOME_ENDING } from './home-ending';
 
 type Beat =
   | 'ashore'
@@ -104,16 +104,13 @@ const GRIPS: [0 | 1, number[][]][] = [
 ];
 /** The paper held up into the wind: this long before the island's own takes it, so the ending cannot be made to wait. */
 const HOLDS_UP = tuning.homeReveal.releaseFor;
-/** Seconds of the player's own wind on it that carry it off, and how long they watch it go afterwards. */
-const TAKES = 0.4;
+/** How long they watch the paper go before walking home. */
 const WATCHES_IT = 7;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
-/** The rise to the stars: when it starts after the door, when it is done, when the music is cut, when the credits roll. */
+/** When the gaze turns toward the sea, measured from the doorway. */
 const RISE_FROM = 2;
 const RISE_TO = 24;
-const SILENCE_AT = 23.5;
-const CREDITS_AT = 26;
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** A value read off a list of [seconds, amount] keys, eased between them. */
@@ -187,6 +184,10 @@ export class HomeChapter implements Chapter {
   private beatStart = 0;
   private duskTarget = tuning.homeLight.daylight;
   private now = 0;
+  private endingAt: number | null = null;
+  get homeEndingTime(): number | undefined {
+    return this.endingAt === null ? undefined : Math.max(0, this.now - this.endingAt);
+  }
   private readonly hand = new THREE.Vector3();
   private readonly paperFacing = new THREE.Quaternion();
   private readonly tmp = new THREE.Vector3();
@@ -222,14 +223,12 @@ export class HomeChapter implements Chapter {
   private recognisedAt = -1;
   private readonly screen = new THREE.Vector3();
   private readonly sight = new THREE.Vector3();
-  /** When the paper went, and how much of the player's wind has been on it. */
+  /** When the paper went. */
   private wentAt = 0;
-  private taken = 0;
   private gusted = false;
   private wentOn = false;
   private doorOpened = false;
   private finaleStarted = false;
-  private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   trodden: THREE.Vector3 | null = null;
   hush = 0;
   readonly flockChatter = false;
@@ -266,13 +265,9 @@ export class HomeChapter implements Chapter {
     }, 1);
   }
 
-  /**
-   * The ending is watched, not played, with two exceptions — and they are the two that matter. The player puts the
-   * cygnet into the air for the last time, and the player sends the paper plane away.
-   */
+  /** The updraft is the last required input; the paper release is automatic. */
   get scripted(): boolean {
     return (
-      this.beat !== 'release' &&
       this.beat !== 'setDown' &&
       this.beat !== 'tries' &&
       this.beat !== 'flying' &&
@@ -314,6 +309,7 @@ export class HomeChapter implements Chapter {
   /** For testing the ending: straight to the top of the hill, plane in hand. */
   skipToSummit(): void {
     const { child, plane } = this.cast;
+    this.endingAt = null;
     child.stop();
     child.place(SUMMIT.x + 5, SUMMIT.y + 26, Math.PI);
     child.standUp();
@@ -327,6 +323,7 @@ export class HomeChapter implements Chapter {
    */
   skipToDrawing(open?: number): void {
     const { child, plane, cygnet, drawing } = this.cast;
+    this.endingAt = this.now - (open === undefined ? HOME_ENDING.reunionAt : HOME_ENDING.drawingAt);
     child.stop();
     cygnet.visible = false;
     this.dusk = this.duskTarget = tuning.homeLight.daylight;
@@ -527,6 +524,7 @@ export class HomeChapter implements Chapter {
   private answered(): void {
     const { child: c, flock } = this.cast;
     this.to('answered');
+    this.endingAt = this.now;
     /**
      * Wheeling a little way off to the north rather than straight overhead: a column of swans turning in the
      * sky is only legible side on, and directly above the child it is a tower nobody can see the top of.
@@ -657,15 +655,9 @@ export class HomeChapter implements Chapter {
     if (this.houseSeenAt >= 0 && this.now - this.houseSeenAt > BROW_FOR && this.houseInFrame && !c.busy) this.openIt();
   }
 
-  /**
-   * The last thing the player does. The child holds the paper up into the wind, and the player's own stroke
-   * carries it off into the sunset the way it carried the small one up. The stroke is read as a stroke and not as
-   * a place: from the brow the ground under the cursor is half a mile of sea, so asking them to draw it over the
-   * paper would be asking them to aim at something the camera has put nowhere. If they only watch, the island's
-   * own wind comes up the hill and takes it, because the end of the story may not be made to wait on anybody.
-   */
+  /** The island's wind takes the paper at a fixed time, preserving the musical phrase. */
   private updateRelease(dt: number, faceX: number, faceZ: number): void {
-    const { child: c, plane: p, input, wind } = this.cast;
+    const { child: c, plane: p, wind } = this.cast;
     c.lookAt = p.position;
     if (!p.held) {
       if (this.now - this.wentAt > 1.6 && this.now - this.wentAt < 1.65) c.cheer();
@@ -675,9 +667,6 @@ export class HomeChapter implements Chapter {
     const fwd = this.forward();
     /** The hand the plane has ridden in the whole way (`handPosition` is that one), out and up, offering it. */
     c.reachFor(0, this.held.set(c.position.x + fwd.x * 0.74, c.position.y + 2.46, c.position.z + fwd.z * 0.74));
-    const w = wind.sample(p.position.x, p.position.z, this.air);
-    const stroke = input.present && !input.muted ? Math.max(0, (input.gust - 2) / 3) : 0;
-    this.taken += dt * Math.min(1.4, Math.max(stroke, w.energy * 2.6));
     if (this.t > HOLDS_UP - 1.2 && !this.gusted) {
       this.gusted = true;
       wind.addSplat({ source: this,
@@ -694,11 +683,11 @@ export class HomeChapter implements Chapter {
         lift: 0.5,
       });
     }
-    if (this.taken > TAKES || this.t > HOLDS_UP) {
+    if (this.t > HOLDS_UP) {
       c.reachFor(0, null);
       p.launch(c.handPosition(this.hand), this.tmp.set(TOWARD_SUNSET.x * 5.5, 5.4, TOWARD_SUNSET.y * 5.5));
       p.depart(this.tmp.set(TOWARD_SUNSET.x, 0, TOWARD_SUNSET.y));
-      cue('release');
+      if (tuning.audio.homeEndingSounds) cue('release');
       this.wentAt = this.now;
     }
   }
@@ -738,7 +727,7 @@ export class HomeChapter implements Chapter {
       c.lookAt = drawing.point(0, 0.3, this.watching);
       if (this.recognisedAt < 0 && drawing.drawn > 0.97 && this.houseInFrame && this.paperInFrame) {
         this.recognisedAt = this.now;
-        cue('unfold');
+        if (tuning.audio.homeEndingSounds) cue('unfold');
       }
       if (this.recognisedAt >= 0) {
         const recognised = this.now - this.recognisedAt;
@@ -758,7 +747,7 @@ export class HomeChapter implements Chapter {
       }
       if (drawing.open <= 0) {
         this.paper = false; drawing.mesh.visible = false; p.visible = true;
-        this.to('release'); this.taken = 0;
+        this.to('release');
       }
     } else if (this.beat === 'crest') {
       c.presenting = Math.max(0, c.presenting - dt * 1.2);
@@ -781,7 +770,7 @@ export class HomeChapter implements Chapter {
       if (!this.doorOpened && c.position.distanceTo(cottage.doorstep) < DOOR_OPENS_AT) {
         this.doorOpened = true;
         cottage.openDoor(true);
-        cue('home');
+        if (tuning.audio.homeEndingSounds) cue('home');
       }
     } else if (this.beat === 'inside') {
       this.duskTarget = 2;
@@ -790,10 +779,10 @@ export class HomeChapter implements Chapter {
       if (this.t > 4.2) cottage.openDoor(false);
       if (this.t >= RISE_FROM && !this.finaleStarted && !this.silence) {
         this.finaleStarted = true;
-        cue('finale');
+        if (tuning.audio.homeEndingSounds) cue('finale');
       }
-      if (this.t > SILENCE_AT) this.silence = true;
-      if (this.t > CREDITS_AT) {
+      if ((this.homeEndingTime ?? 0) >= HOME_ENDING.musicEndsAt) this.silence = true;
+      if ((this.homeEndingTime ?? 0) >= HOME_ENDING.creditsAt) {
         this.finished = true;
         this.to('credits');
       }

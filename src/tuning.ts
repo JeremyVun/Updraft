@@ -21,6 +21,10 @@ export const tuning = {
     obstacleSide: 8, obstacleSideResponse: 1, obstacleSideCost: 0.2, obstacleSideImprovement: 0.25,
   },
   audio: {
+    /** Keep the ending cue and material implementations available for comparison. */
+    homeEndingSounds: false,
+    /** Let the Home composition carry the story without extra attenuation for cues. */
+    homeMusicDucking: false,
     /** Begin near shore, leaving time for a fade, a real musical rest, and the incoming phrase. */
     arrivalMusicLead: 12, arrivalShoreAllowance: 25, arrivalMusicRouteShare: .65,
     arrivalEntranceLead: 4, arrivalEntranceRouteShare: .4,

@@ -100,17 +100,22 @@ try {
     const { SleepingChapter } = await import('/src/story/sleeping.ts');
     const { WoodChapter } = await import('/src/story/wood.ts');
     const cues = await productionModule('/src/story/cues.ts');
-    for (const fps of [10, 30, 60, 120, 144]) {
-      const home = { beat: 'inside', silence: false, t: 0, sky: { set() {} },
-        cast: { child: { position: { x: 0, y: 0, z: 0 } }, plane: {}, drawing: {}, cottage: {} } };
-      cues.takeCues();
-      let count = 0;
-      for (let time = 1.91; time < 2.5; time += 1 / fps) {
-        home.t = time; HomeChapter.prototype.updateEnding.call(home, 1 / fps);
-        count += cues.takeCues().filter(c => c === 'finale').length;
+    const endingSounds = tuning.audio.homeEndingSounds;
+    for (const enabled of [false, true]) {
+      tuning.audio.homeEndingSounds = enabled;
+      for (const fps of [10, 30, 60, 120, 144]) {
+        const home = { beat: 'inside', silence: false, t: 0, sky: { set() {} },
+          cast: { child: { position: { x: 0, y: 0, z: 0 } }, plane: {}, drawing: {}, cottage: {} } };
+        cues.takeCues();
+        let count = 0;
+        for (let time = 1.91; time < 2.5; time += 1 / fps) {
+          home.t = time; HomeChapter.prototype.updateEnding.call(home, 1 / fps);
+          count += cues.takeCues().filter(c => c === 'finale').length;
+        }
+        check(count === Number(enabled), `finale ${enabled ? 'schedules once' : 'stays disabled'} at ${fps} Hz`);
       }
-      check(count === 1, `finale schedules once at ${fps} Hz, including a skipped old trigger window`);
     }
+    tuning.audio.homeEndingSounds = endingSounds;
     const morning = Object.assign(Object.create(SleepingChapter.prototype), {
       music: 'wood', hush: 0.5, now: 0, laneFrom: null, laneTo: null, seat: null,
       cast: { child: { stop() {}, walkTo() {} }, cygnet: { watch() {} },

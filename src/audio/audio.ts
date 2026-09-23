@@ -1,5 +1,6 @@
 import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase, type DrownedScorePhase } from './dream-score';
 import { SummitScore, type SummitScorePhase } from './summit-score';
+import { HOME_ENDING } from '../story/home-ending';
 import { OpeningScore } from './opening-score';
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
@@ -82,6 +83,7 @@ export interface SoundState {
   /** False until the homeward boat clears its first turn; the musical rest may then finish. */
   homewardReady?: boolean;
   summitScore?: SummitScorePhase;
+  homeEndingTime?: number;
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   mirrorScore?: MirrorScorePhase;
   drownedScore?: DrownedScorePhase;
@@ -247,6 +249,7 @@ export class Soundscape {
   private backgroundGate!: GainNode;
   private backgroundDuck!: GainNode;
   private cueSpaceUntil = 0;
+  private homeFadeScheduled = false;
   private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
   private backgroundReverb!: ConvolverNode;
   private reverbConvolver!: ConvolverNode;
@@ -952,6 +955,7 @@ export class Soundscape {
       for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore]) score?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
+    const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
     if (arrival.changed && arrival.stage !== 'wait' && !arrival.legato) {
       const gain = this.backgroundGate.gain;
       gain.cancelAndHoldAtTime(now);
@@ -972,6 +976,15 @@ export class Soundscape {
         this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
         gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
+    }
+    if (s.homeEndingTime === undefined) this.homeFadeScheduled = false;
+    else if (!this.homeFadeScheduled && s.homeEndingTime >= HOME_ENDING.fadeFrom) {
+      // Fade after the reverb so this ending's short release includes its tail.
+      const gate = this.backgroundGate.gain;
+      gate.cancelAndHoldAtTime(now);
+      gate.setValueAtTime(gate.value, now);
+      gate.linearRampToValueAtTime(0, now + Math.max(0, HOME_ENDING.musicEndsAt - s.homeEndingTime));
+      this.homeFadeScheduled = true;
     }
     if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
       this.boatsScore ??= new LittleBoatsScore(ctx, this.backgroundBus);
@@ -1037,7 +1050,7 @@ export class Soundscape {
     if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused) {
       this.summitScore ??= new SummitScore(ctx, this.backgroundBus);
       this.summitScore.update(bg.summitScore,
-        tuning.audio.summitScoreLevel * (1 - .35 * s.night) * (1 - .92 * bg.hush) * (1 - piano), s.night);
+        tuning.audio.summitScoreLevel * (1 - .35 * s.night) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano), s.night, s.homeEndingTime);
     } else if (this.summitScore) {
       this.summitScore.stop(s.silence ? .12 : 1.8); this.summitScore = null;
     }
@@ -1129,8 +1142,9 @@ export class Soundscape {
       else this.phrase(name);
     }
 
-    this.backgroundDuck.gain.setTargetAtTime(now < this.cueSpaceUntil ? tuning.audio.authoredCueDuck : 1,
-      now, now < this.cueSpaceUntil ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease);
+    const cueDucking = !homeMusicForward && now < this.cueSpaceUntil;
+    this.backgroundDuck.gain.setTargetAtTime(cueDucking ? tuning.audio.authoredCueDuck : 1,
+      now, cueDucking ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease);
 
     if (s.flockChatter !== false && s.flock?.active && now > this.nextFlock && now > this.flockQuietUntil) {
       this.bugle(s.flock, 0.8 + Math.random() * 0.4);

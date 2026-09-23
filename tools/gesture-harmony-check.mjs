@@ -72,9 +72,9 @@ try {
     events.length=0;tick(11,{music:'wood',sleepingScore:'climb',sleepingWind:true,gliderLift:1});
     check(events.length===0,'The stowed glider cannot add chimes during the feather climb');
     tick(12,{music:'wood',sleepingScore:'climb'});
-    const held=[...sound.sleepingScore.chordAt(12)];
+    const climb=sound.sleepingScore.current, epoch=climb.epoch;
     tick(13,{music:'wood',sleepingScore:'summit',gust:20,charge:.8});
-    check(JSON.stringify(sound.sleepingScore.chordAt(50))===JSON.stringify(held),'Sleeping carries the preceding harmony into its intentional rest');
+    check(sound.sleepingScore.current===climb&&climb.epoch===epoch,'Sleeping carries the ongoing harmony and clock through the summit');
     check(events.length===0,'Sleeping summit wind has no chimes');
     events.length=0;tick(15,{music:'wood',forestWind:true,caringWind:true,gust:20,charge:.8,gliderLift:.8});
     check(events.length>0&&events.every(e=>e[5]===true&&e[1]<.4&&pitchIn(e[0],[38,45])),'Forest rescue keeps its quiet caring timbre and stable harmony');

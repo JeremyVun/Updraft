@@ -20,7 +20,8 @@ try {
     check(JSON.stringify(melody(BOATS_PHRASE).slice(0,4)) === JSON.stringify(JOURNEY_THEME), 'Boats recalls the theme in its plucked voice');
     check(JSON.stringify(melody(BIRCHES_SECTIONS.walk).slice(0,4)) === JSON.stringify(JOURNEY_ANSWER), 'Birches answers with the theme in reverse');
     check(JSON.stringify(melody(SEA_SECTIONS.open)) === JSON.stringify(JOURNEY_THEME), 'The sea stretches the same theme across its opening');
-    check(JSON.stringify(melody(SLEEPING_SECTIONS.climb)) === '[62,64,65]', 'The winter recollection changes to minor and remains incomplete');
+    check(JSON.stringify(melody(SLEEPING_SECTIONS.climb).slice(0,3)) === '[62,64,65]', 'The winter recollection begins in minor');
+    check(JSON.stringify(melody(SLEEPING_SECTIONS.climb).slice(3)) === '[69,64,62,57]', 'The cygnet remembers the bedside melody during the journey');
     for (const [name, pattern] of [['meadow',MEADOW_SECTIONS.return],['morning',SLEEPING_SECTIONS.morning]]) {
       const clock = {epoch:.08,cycle:0,next:0}, events=[];
       for (let now=0; now<pattern.seconds*4; now+=1/60) schedulePhrase(clock,pattern,now,(n,at)=>events.push({n,at}));
@@ -36,7 +37,8 @@ try {
       check(lastPad.at+lastPad.duration>p.seconds-1,`${name}: harmony covers the end of its loop`);
       check(p.variants[1].filter(isMelody).length<=Math.ceil(p.notes.filter(isMelody).length/2),`${name}: alternating verse makes melodic space`);
     }
-    check(SLEEPING_SECTIONS.cold.notes.length===0&&SLEEPING_SECTIONS.summit.notes.length===0,'The two dramatic Sleeping rests remain empty');
+    check(SLEEPING_SECTIONS.cold.notes.length===0,'Frost retains its deliberate musical silence');
+    check(SLEEPING_SECTIONS.summit===SLEEPING_SECTIONS.climb,'The climb carries its phrase through the summit');
     const end=phraseHandoff(LINES_SECTIONS.first,.08,6);
     check(end>6&&end<8,'A handoff near the end of a melodic gesture waits for it');
     const transition=new ArrivalTransition(), state={...baseState,music:'lines',linesScore:'first',arrivalMusic:'boats'};

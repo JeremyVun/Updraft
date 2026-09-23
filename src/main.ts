@@ -772,6 +772,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.arrivalReady = story.current.arrivalReady;
   soundState.homewardReady = story.current.homewardReady;
   soundState.summitScore = story.current.summitScore;
+  soundState.homeEndingTime = story.current.homeEndingTime;
   soundState.mirrorScore = story.current.mirrorScore;
   soundState.drownedScore = story.current.drownedScore;
   soundState.seaScore = story.current.seaScore;
@@ -855,8 +856,8 @@ function prepareWorldAudio(dt: number): void {
     worldFoley.flow(toy, 'water', toy.group.position, Math.min(0.14, toy.speed * 0.035), active);
     worldFoley.flow(toy, 'sail', toy.group.position, toy.luff * 0.12, active);
   }
-  worldFoley.motion(drawing, 'paper', drawing.mesh.position, drawing.open, dt, heard && drawing.mesh.visible);
-  worldFoley.motion(cottage, 'door', cottage.doorstep, cottage.doorOpening, dt, heard && story.name === 'home');
+  worldFoley.motion(drawing, 'paper', drawing.mesh.position, drawing.open, dt, heard && drawing.mesh.visible && tuning.audio.homeEndingSounds);
+  worldFoley.motion(cottage, 'door', cottage.doorstep, cottage.doorOpening, dt, heard && story.name === 'home' && tuning.audio.homeEndingSounds);
   worldFoley.motion(door, 'door', door.group.position, door.doorOpening, dt, heard && story.name === 'lines');
 }
 
