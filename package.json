@@ -11,6 +11,7 @@
     "check": "node tools/check.mjs quick",
     "check:mechanics": "node tools/check.mjs mechanics",
     "check:browser": "node tools/check.mjs browser",
+    "check:audio": "node tools/check.mjs audio",
     "check:release": "node tools/check.mjs release"
   },
   "dependencies": {

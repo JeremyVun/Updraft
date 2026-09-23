@@ -16,12 +16,21 @@ const mechanics = [
   'little-boats-logic', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
   'scarf-geometry', 'sea-logic', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
+  'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera',
+  'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
+  'plane-routing', 'scarf-normals',
 ];
 const browser = [
   'shader-browser', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
   'progress', 'frame-time-browser', 'journey-view',
 ];
-const groups = { quick, mechanics, browser, release: [...mechanics, ...browser, 'playthrough'] };
+// Audio/score checks render through a headless dev server (no GPU); BASE selects it.
+const audio = [
+  'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'birches-foley', 'birches-score',
+  'boats-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
+  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score',
+];
+const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';
 if (!Object.hasOwn(groups, group)) {
   throw new Error(`Unknown group ${group}; choose ${Object.keys(groups).join(', ')}`);

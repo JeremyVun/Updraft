@@ -49,8 +49,12 @@ Common groups run sequentially and preserve each check's log plus `results.json`
   and portrait touch Mirror collection). About five minutes locally.
 - `npm run check:browser`: shader backends, touch/viewport, transitions, context loss, Begin, saves, frame
   scheduling and chapter views. Requires a running dev server; `BASE` selects it.
-- `npm run check:release`: mechanics, browser checks and the continuous journey. Allow at least an hour.
-  Audio/artistic checks below remain separate; this group does not replace listening or device QA.
+- `npm run check:audio`: every audio/score regression check that renders through a headless dev server
+  without the GPU — gesture chimes and harmony, cue timing/continuity/direction, marine and foley sounds,
+  and each room's approved score (Lines, Boats, Meadow, Birches, Sleeping, Sea, Mirror/Drowned, opening,
+  homeward and arrival). Requires a running dev server; `BASE` selects it.
+- `npm run check:release`: mechanics, browser and audio checks, then the continuous journey. Allow at
+  least an hour. Listening/device QA below remain separate; this group does not replace them.
 
 Set `CHECK_OUTPUT=/tmp/<name>` to choose the evidence directory. `tools/lib/typescript.mjs` is the shared
 loader for Node mechanics fixtures. Camera/progress refactor checks read baseline source from Git, default
