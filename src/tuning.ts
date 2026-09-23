@@ -912,24 +912,31 @@ export const tuning = {
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
     swimCarry: 0.75,
     swimEase: 0.5,
-    swimFor: 14,
-    swimAnticipation: 2.5,
-    swimDecision: 3.5,
+    swimFor: 12,
+    swimAnticipation: 2,
+    swimDecision: 3,
     swimAt: 0.2,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
     swimNotBefore: 18,
-    dolphinsAfter: 5,
+    dolphinsAfter: 8,
     waypointRadius: 10,
     /**
-     * Where along the route the pod says goodbye, and about when its play is done: a boat ahead of that is eased
-     * toward it, never below `leastSpeed`. Only a pod still playing past `farewellAt` slows it further, to
-     * `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
+     * How far along the route the first leap may begin: the sleeping island's night lifts only once it is well
+     * astern (its palette clears 110 to 150 units from the hollow), and the leap belongs to the first light.
      */
-    farewellAt: 0.76,
-    farewellBy: 57,
+    leapFrom: 0.28,
+    /**
+     * Where along the route the pod says goodbye, and about how long its play takes from `leapFrom`: the leap, the
+     * swim and the nudge. A boat ahead of that is eased toward it, never below `leastSpeed`. Only a pod still
+     * playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
+     */
+    farewellAt: 0.8,
+    playFor: 41,
+    /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
+    openSpeed: 5.5,
     leastSpeed: 3,
     holdSpeed: 1,
-    holdAt: 0.84,
+    holdAt: 0.92,
     limitEase: 0.6,
     swimBeside: 2.4,
     cameraDistance: 23,
@@ -979,7 +986,7 @@ export const tuning = {
     /** Seconds after the pod starts joining for its first leap; the nudge follows the swim, `nudgeAfter` at the soonest. */
     leapAt: 5,
     leapSpread: 1.5,
-    leapRecovery: 1.5,
+    leapRecovery: 1,
     nudgeAfter: 3,
     /** Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw. */
     leapOutFor: 2.8,
@@ -991,12 +998,12 @@ export const tuning = {
     arrivalSpacing: 3.5,
     arrivalDepth: 7,
     departureFor: 7,
-    nudgeRecovery: 1.5,
+    nudgeRecovery: 1,
     nudgeApproachAlong: -8,
     nudgeApproachAcross: 5,
     nudgeApproachFor: 2.4,
-    nudgeApproachMax: 4,
-    nudgeRunFor: 2.5,
+    nudgeApproachMax: 3,
+    nudgeRunFor: 1.8,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,

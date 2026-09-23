@@ -759,6 +759,7 @@ export class Dolphins {
   }
   private camera = 1;
   private busy = false;
+  private ready = true;
   private quiet = 0;
   /** How far ahead the lanes run while the boat is busy; it opens and closes no faster than they can swim it. */
   private lead = 0;
@@ -826,13 +827,14 @@ export class Dolphins {
 
   /**
    * Keeps the pod running with a boat at `near` on bearing `heading`; a null `near` sends them away. `camera` is
-   * which side of the stern the camera rides on, so the set-pieces play where they can be seen, and `busy` holds
-   * them off while something else has the boat.
+   * which side of the stern the camera rides on, so the set-pieces play where they can be seen, `busy` holds
+   * them off while something else has the boat, and until `ready` none begins.
    */
-  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false): void {
+  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false, ready = true): void {
     this.wanted = near !== null;
     this.camera = camera < 0 ? -1 : 1;
     this.busy = busy;
+    this.ready = ready;
     if (!near) return;
     if (!this.here || this.boat.distanceToSquared(near) > 1e4) {
       this.boat.copy(near);
@@ -895,8 +897,9 @@ export class Dolphins {
         d.offAlong -= d.offAlong * ease(dt, tune.rejoinEase);
         d.offAcross -= d.offAcross * ease(dt, tune.rejoinEase);
       }
-      const along = s ? s.along : p.along + d.dAlong + this.lead + d.offAlong;
-      const across = s ? s.across : this.wide(d, along) + d.offAcross;
+      const lane = p.along + d.dAlong + this.lead;
+      const along = s ? s.along : lane + d.offAlong;
+      const across = s ? s.across : this.wide(d, lane) + d.offAcross;
       const oldX = d.x, oldZ = d.z;
       d.across = across;
       d.x = this.boat.x + fx * along + fz * across;
@@ -1067,7 +1070,7 @@ export class Dolphins {
     const s = this.stunt;
     if (!s) {
       const kind: Show = this.turn === 0 ? 'leap' : !this.pushed ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
-      if (!this.busy && this.wanted && this.clock > this.next) this.begin(kind);
+      if (!this.busy && this.ready && this.wanted && this.clock > this.next) this.begin(kind);
       return;
     }
     /** Anything that comes up mid-approach sends it back to the pod; nothing is ever cut away from. */
@@ -1082,7 +1085,10 @@ export class Dolphins {
     else this.shove(s, dt);
   }
 
-  /** Sends one of the grown ones out of its lane, already on the side it is wanted, so nothing jumps across. */
+  /**
+   * Sends one of the grown ones out of its lane, already on the side it is wanted, so nothing jumps across, and of
+   * those the one furthest astern, which has the least water to cover to its mark.
+   */
   private begin(kind: Show): void {
     if (this.stunt) return;
     const side = this.camera;
@@ -1090,7 +1096,7 @@ export class Dolphins {
     let nearest = -1e9;
     for (const other of this.pod) {
       if (!other.adult || other.pack.rider || other.pack.delay > 0) continue;
-      const score = side * other.across;
+      const score = side * other.across > 0 ? 1000 - other.pack.along - other.dAlong : side * other.across;
       if (score > nearest) {
         nearest = score;
         d = other;
@@ -1196,7 +1202,7 @@ export class Dolphins {
     } else if (s.phase === 'act') {
       d.tilt = -s.side * 1.5;
       if (!s.hit) {
-        this.glide(s, SHOVE_ALONG, s.side * SHOVE_ACROSS, 1.1, dt);
+        this.glide(s, SHOVE_ALONG, s.side * SHOVE_ACROSS, 1.6, dt);
         if (Math.abs(s.across) < SHOVE_ACROSS + 0.06 && s.along > SHOVE_ALONG - 0.4) {
           s.hit = true;
           s.t = 0;
