@@ -238,6 +238,9 @@ void main() {
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
   float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
+  // Ordinary sea beyond the flat would show as a dark band under the horizon.
+  float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
+  glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
   // The full mirror replaces ordinary water, including its fog. Its transition
   // edge still evaluates both surfaces and blends them exactly as before.
   if (glass == 1.0) {
