@@ -4,6 +4,7 @@ import { CREATURE_GLSL } from '../../creatures/shading';
 import { flipWinding } from '../../creatures/shapes';
 import { tuning } from '../../tuning';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
+import { mirrorWater } from '../../world/sky-mirror-layout';
 import { REFLECTION_LAYER } from '../../world/water/reflection';
 import { SWELL_GLSL, swellLift, swellUniforms } from '../../world/water/swell';
 import { curve } from './curve';
@@ -916,7 +917,8 @@ export class Dolphins {
       d.yaw = d.placed ? d.yaw + turn * ease(dt, 7) : this.head;
       d.placed = true;
       const drift = Math.atan2(Math.sin(d.yaw - this.head), Math.cos(d.yaw - this.head));
-      d.surface = swellLift(d.x, d.z, time);
+      // The swell dies away over the sky mirror's calm water, as the sea there is drawn.
+      d.surface = swellLift(d.x, d.z, time) * (1 - mirrorWater(d.x, d.z));
       this.swim(d, dt, time);
       this.bank(d, dt, time, drift);
       const k = i * 4;

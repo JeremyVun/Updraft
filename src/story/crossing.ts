@@ -12,6 +12,7 @@ import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
 import { roundedWaypoint } from '../traveller/navigation';
 import { HOME_JETTY } from '../world/home-layout';
+import { mirrorWater } from '../world/sky-mirror-layout';
 
 /** The beach on the meadow's south shore, where the boat first comes ashore on the mainland-sized island. */
 export const LANDING = new THREE.Vector2(10, -600);
@@ -480,7 +481,8 @@ export class CrossingChapter implements Chapter {
         to('in');
       }
     } else if (this.swim === 'in') {
-      cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, this.worldTime);
+      cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, this.worldTime)
+        * (1 - mirrorWater(cygnet.position.x, cygnet.position.z));
       cygnet.swimTo(this.water);
       /** The boat sails on; the wave along its side carries the cygnet, which paddles only to keep its place in it. */
       const carry = boat.speed * tuning.seaPassage.swimCarry;
