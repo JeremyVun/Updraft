@@ -151,7 +151,7 @@ export class GroundBakes {
     this.gpu = new GpuRunner(renderer);
     this.filterable = renderer.extensions.has('OES_texture_float_linear');
     this.height = simTarget(RES, RES, THREE.FloatType, this.filterable ? THREE.LinearFilter : THREE.NearestFilter);
-    this.readback = new Readback(renderer, RES, RES, (data, window) => {
+    this.readback = new Readback(renderer, 'height', RES, RES, (data, window) => {
       if (window !== this.wanted) return;
       const grid = this.grids[1 - this.gridInUse];
       grid.set(data);

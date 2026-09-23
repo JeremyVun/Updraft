@@ -822,6 +822,12 @@ function prepareWorldAudio(dt: number): void {
   worldFoley.motion(door, 'door', door.group.position, door.doorOpening, dt, heard && story.name === 'lines');
 }
 
+function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vector3, active: boolean): void {
+  emitter.pan = screenPan(rig.camera, at);
+  emitter.distance = rig.camera.position.distanceTo(at);
+  emitter.active = active;
+}
+
 /** Expensive view preparation and audio scheduling run once per rendered frame. */
 function prepareFrame(dt: number): void {
   const u = atmo.uniforms;
@@ -848,18 +854,23 @@ function prepareFrame(dt: number): void {
   soundState.meadow = audioEnvironment.meadow;
   soundState.land = audioEnvironment.land;
   soundState.cold = story.name === 'sleeping' ? sleeping.cold * (1 - sleeping.dawn) : 0;
-  for (const [emitter, at, active] of [
-    [soundState.cygnet!, cygnet.position, cygnet.visible],
-    [soundState.flock!, flock.head, flock.active],
-  ] as const) {
-    emitter.pan = screenPan(rig.camera, at);
-    emitter.distance = rig.camera.position.distanceTo(at);
-    emitter.active = active;
-  }
+  placeEmitter(soundState.cygnet!, cygnet.position, cygnet.visible);
+  placeEmitter(soundState.flock!, flock.head, flock.active);
   soundState.cues = takeCues();
   soundState.winterGust = story.name === 'sleeping' ? sleepingGust(time, sleeping.cold, sleeping.dawn) : 0;
   sound.update(dt, soundState);
   prepareWorldAudio(dt);
+}
+
+const beginMirror = (mirrorCamera: THREE.PerspectiveCamera): void => terrain.beginMirror(mirrorCamera);
+const endMirror = (): void => terrain.endMirror();
+/** The sea's reflection belongs to the same room as the main view. */
+function drawView(): void {
+  water.update(rig.camera, beginMirror, endMirror);
+  post.render(time);
+}
+function drawRooms(): void {
+  doorwayView.render(rig.camera, story.name === 'lines', story.name !== 'toBoats', drawView);
 }
 
 function frame(now: number): void {
@@ -912,11 +923,7 @@ function frame(now: number): void {
   // The shore behind the impossible door can recede during its departure, but never reappear later.
   const rooms = journeyReveal.update(visibleRooms(story.name, boat.position.z), dt);
   setJourneyRooms(rooms);
-  drawJourneyRooms(rooms, roomObjects, () => doorwayView.render(rig.camera, story.name === 'lines', story.name !== 'toBoats', () => {
-    // The sea's reflection belongs to the same room as the main view.
-    water.update(rig.camera, (mirrorCamera) => terrain.beginMirror(mirrorCamera), () => terrain.endMirror());
-    post.render(time);
-  }));
+  drawJourneyRooms(rooms, roomObjects, drawRooms);
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);
   if (quality.probing) timeLastFrame(now + 1000 / 60, reportGpu);
@@ -941,7 +948,7 @@ function frame(now: number): void {
         `cpu (js in frame) p50 ${percentile(cpuTimes, 0.5).toFixed(1)} p90 ${percentile(cpuTimes, 0.9).toFixed(1)} ms${params.lite ? '  LITE' : ''}`,
         `${quality.mode}  scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
         `grass ${(grass.quality.density * 100).toFixed(0)}%  reach ${(grass.quality.reach * 100).toFixed(0)}%  detail ${quality.level.detail}`,
-        `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms`,
+        `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} worst ${readbackStats.worstMs.toFixed(0)} ms (wait ${readbackStats.waitWorstMs.toFixed(0)})`,
         `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
         `boot ${bootMs.toFixed(0)} ms  ${story.name}`,
       ]);
@@ -967,9 +974,13 @@ function frame(now: number): void {
       grassDensity: grass.quality.density,
       grassReach: grass.quality.reach,
       readbacksSkipped: readbackStats.skipped,
-      readbacksForced: readbackStats.forced,
       readbacksDelivered: readbackStats.delivered,
       readbackWorstMs: Math.round(readbackStats.worstMs * 10) / 10,
+      readbackWaitMs: Math.round(readbackStats.waitMs * 10) / 10,
+      readbackWaitWorstMs: Math.round(readbackStats.waitWorstMs * 10) / 10,
+      readbackWindWorstMs: Math.round(readbackStats.work.wind * 10) / 10,
+      readbackLifeWorstMs: Math.round(readbackStats.work.life * 10) / 10,
+      readbackHeightWorstMs: Math.round(readbackStats.work.height * 10) / 10,
       heightParity,
     };
     if (time > 0.75) window.__ready = true;

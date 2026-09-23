@@ -18,10 +18,13 @@ export class JourneyReveal {
   readonly amounts = { value: new THREE.Vector2() };
   private ages = new Map<Room, number>();
   private initialized = false;
+  /** Reused every frame: valid until the next `update`. */
+  private readonly visible: Room[] = [];
 
-  update(rooms: Room[], dt: number): Room[] {
+  update(rooms: readonly Room[], dt: number): Room[] {
     const { arrivalFogCover, arrivalFogClear } = tuning.world;
-    const visible: Room[] = [];
+    const visible = this.visible;
+    visible.length = 0;
     this.amounts.value.set(0, 0);
     let slot = 0;
     for (const room of rooms) {
@@ -54,10 +57,14 @@ const passages: Partial<Record<ChapterName, Room[]>> = {
   toWood: ['drowned', 'wood'], toSleeping: ['wood', 'sleeping'],
   toMirror: ['sleeping', 'mirror'], toHarbour: ['mirror', 'home'], toHome: ['sleeping', 'home'],
 };
-export function visibleRooms(chapter: ChapterName, z: number): Room[] {
-  if (chapter === 'stage') return ['meadow'];
-  if (chapter === 'drowned') return z > ISLES.drowned.z ? ['birches', 'drowned'] : ['drowned', 'wood'];
-  return passages[chapter] ?? [chapter as Room];
+const STAGE: Room[] = ['meadow'];
+const DROWNED_FROM_BIRCHES: Room[] = ['birches', 'drowned'];
+const DROWNED_TO_WOOD: Room[] = ['drowned', 'wood'];
+const alone = Object.fromEntries(names.map(room => [room, [room]])) as Record<Room, Room[]>;
+export function visibleRooms(chapter: ChapterName, z: number): readonly Room[] {
+  if (chapter === 'stage') return STAGE;
+  if (chapter === 'drowned') return z > ISLES.drowned.z ? DROWNED_FROM_BIRCHES : DROWNED_TO_WOOD;
+  return passages[chapter] ?? alone[chapter as Room];
 }
 export function setJourneyRooms(rooms: Room[]): void {
   journeyRooms.value.set(rooms[0] ? names.indexOf(rooms[0]) : -2, rooms[1] ? names.indexOf(rooms[1]) : -2);
@@ -78,12 +85,14 @@ bool journeyHides(vec2 p) {
 `;
 
 /** Scope prop exclusions to drawing so chapter-owned visibility and animation stay intact. */
-export function drawJourneyRooms(rooms: Room[], objects: Partial<Record<Room, THREE.Object3D[]>>, draw: () => void): void {
-  const hidden: THREE.Object3D[] = [];
-  for (const [name, roots] of Object.entries(objects)) if (!rooms.includes(name as Room)) {
-    for (const root of roots!) if (root.visible) { hidden.push(root); root.visible = false; }
+const hiddenProps: THREE.Object3D[] = [];
+export function drawJourneyRooms(rooms: readonly Room[], objects: Partial<Record<Room, THREE.Object3D[]>>, draw: () => void): void {
+  const hidden = hiddenProps;
+  hidden.length = 0;
+  for (const name in objects) if (!rooms.includes(name as Room)) {
+    for (const root of objects[name as Room]!) if (root.visible) { hidden.push(root); root.visible = false; }
   }
-  try { draw(); } finally { for (const root of hidden) root.visible = true; }
+  try { draw(); } finally { for (const root of hidden) root.visible = true; hidden.length = 0; }
 }
 
 /** The meadow and home animals share instanced batches; exclude each animal in its own world position. */

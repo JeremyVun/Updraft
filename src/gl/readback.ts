@@ -7,67 +7,85 @@ interface Pending<T> {
 }
 
 const all: Readback<unknown>[] = [];
-/** Fences of the last frames, oldest first; the pipeline is allowed to be this many frames deep. */
+const query = new URLSearchParams(location.search);
+/** Fences of the last frames, oldest first. */
 const frameSyncs: WebGLSync[] = [];
+const MAX_DEPTH = 3;
 /**
- * Three, not two: under load the GPU runs a frame further behind than the display pipeline, and a fence it has
- * not reached yet means the copies are skipped instead of delivered. Costing them one more frame of age is worth
- * four times as many deliveries in the meadow (65 in fourteen seconds at two, 257 at three).
+ * Copies are mapped only once the GPU has finished the frame before last. In Chrome every `getBufferSubData`
+ * is a synchronous round trip that waits until the GPU process has worked through everything submitted before
+ * it, so each further frame allowed in flight is a further frame the map can wait behind.
  */
-const PIPELINE_DEPTH = Number(new URLSearchParams(location.search).get('depth') ?? 3);
+const DEPTH = Math.min(MAX_DEPTH, Math.max(1, Number(query.get('depth') ?? 2)));
+/**
+ * When nothing has been delivered for this long the gate relaxes to the frame before that, the deepest the
+ * display pipeline normally runs. It never goes further: nothing is ever mapped while the GPU is further behind.
+ */
+const STALE_MS = Number(query.get('stale') ?? 100);
+const PBO = query.get('pbo') ?? 'copy';
 let frameGl: WebGL2RenderingContext | null = null;
-let nextForceAt = 0;
 let lastDelivery = 0;
-/** A forced delivery that blocked for long is not repeated for this long; a cheap one much sooner. */
-const COSTLY_WAIT_MS = 2000;
-const CHEAP_WAIT_MS = 250;
-const COSTLY_MS = 6;
-/** How old the CPU copies may get before one blocking delivery is worth a hitch. */
-const STALE_MS = Number(new URLSearchParams(location.search).get('stale') ?? 2000);
-export const readbackStats = { skipped: 0, forced: 0, delivered: 0, worstMs: 0 };
+
+/** Lifetime diagnostics, shown in `?stats` and `window.__stats`. */
+export const readbackStats = {
+  skipped: 0, delivered: 0,
+  /** Longest whole `pollReadbacks`. */
+  worstMs: 0,
+  /** Time blocked in `getBufferSubData` (the round trip to the GPU process), total and longest. */
+  waitMs: 0, waitWorstMs: 0,
+  /** Longest delivery handler of each consumer (`Readback.name`). */
+  work: {} as Record<string, number>,
+};
 
 /**
- * Copies a float render target to the CPU without ever making the CPU wait for the GPU. `request` copies the
- * target into a pixel buffer and fences it; `pollReadbacks`, called first thing in a frame while the GPU queue
- * is empty, delivers only requests whose fence has already signalled. Anything still in flight waits a frame.
- *
- * Mapping a buffer in Chrome blocks until the GPU process has executed every command issued before the map,
- * so a readback issued and mapped mid-frame stalls for the whole frame's rendering. This never maps mid-frame.
- * Each request gets a fresh buffer: the driver keeps a CPU copy of a fenced read buffer, and reusing the
- * buffer before that copy is read throws it away and turns the read into a blocking GPU copy.
+ * Copies a float render target to the CPU without making the CPU wait on the GPU's rendering. `request` copies
+ * the target into a pixel buffer and fences it; `pollReadbacks`, called first thing in a frame while nothing new
+ * has been submitted, delivers requests whose own fence has signalled, and only while the GPU has finished the
+ * frame before last. Anything still in flight waits a frame. Each consumer keeps its own `inFlight` buffers,
+ * allocated once and reused after delivery.
  */
 export class Readback<T> {
   private readonly gl: WebGL2RenderingContext;
   private readonly pending: Pending<T>[] = [];
+  private readonly free: WebGLBuffer[] = [];
   private readonly data: Float32Array;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
+    readonly name: string,
     readonly width: number,
     readonly height: number,
     /** Receives each delivery; `data` is reused by the next one, so copy what must be kept. */
     private readonly onData: (data: Float32Array, tag: T) => void,
-    private readonly inFlight = 3,
+    inFlight = 3,
   ) {
-    this.gl = renderer.getContext() as WebGL2RenderingContext;
+    const gl = this.gl = renderer.getContext() as WebGL2RenderingContext;
     this.data = new Float32Array(width * height * 4);
+    for (let i = 0; i < inFlight; i++) {
+      const buffer = gl.createBuffer()!;
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, this.data.byteLength, PBO === 'copy' ? gl.STREAM_COPY : gl.STREAM_READ);
+      this.free.push(buffer);
+    }
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    readbackStats.work[name] = 0;
     all.push(this as Readback<unknown>);
   }
 
-  /** Whether a request would be accepted now (fewer than `inFlight` are waiting on the GPU). */
+  /** Whether a request would be accepted now (a buffer is free: fewer than `inFlight` are waiting on the GPU). */
   get ready(): boolean {
-    return this.pending.length < this.inFlight;
+    return this.free.length > 0;
   }
 
   /** Queues a copy of `target` (RGBA float, at least this size) tagged with `tag`; false when too many are in flight. */
   request(target: THREE.WebGLRenderTarget, tag: T): boolean {
-    if (!this.ready) return false;
+    const buffer = this.free.pop();
+    if (!buffer) return false;
     const gl = this.gl;
-    const buffer = gl.createBuffer()!;
     const prev = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(target);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
-    gl.bufferData(gl.PIXEL_PACK_BUFFER, this.width * this.height * 16, gl.STREAM_READ);
+    if (PBO === 'orphan') gl.bufferData(gl.PIXEL_PACK_BUFFER, this.data.byteLength, gl.STREAM_READ);
     gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.FLOAT, 0);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     this.renderer.setRenderTarget(prev);
@@ -85,14 +103,19 @@ export class Readback<T> {
       const status = gl.clientWaitSync(next.sync, 0, 0);
       if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) break;
       this.pending.shift();
+      const started = performance.now();
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, next.buffer);
       gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this.data);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-      gl.deleteBuffer(next.buffer);
       gl.deleteSync(next.sync);
+      this.free.push(next.buffer);
+      const mapped = performance.now();
+      readbackStats.waitMs += mapped - started;
+      readbackStats.waitWorstMs = Math.max(readbackStats.waitWorstMs, mapped - started);
       readbackStats.delivered++;
-      lastDelivery = performance.now();
+      lastDelivery = mapped;
       this.onData(this.data, next.tag);
+      readbackStats.work[this.name] = Math.max(readbackStats.work[this.name], performance.now() - mapped);
     }
   }
 }
@@ -102,7 +125,7 @@ export function endFrame(renderer: THREE.WebGLRenderer): void {
   frameGl = renderer.getContext() as WebGL2RenderingContext;
   frameSyncs.push(frameGl.fenceSync(frameGl.SYNC_GPU_COMMANDS_COMPLETE, 0)!);
   frameGl.flush();
-  while (frameSyncs.length > PIPELINE_DEPTH) frameGl.deleteSync(frameSyncs.shift()!);
+  while (frameSyncs.length > MAX_DEPTH) frameGl.deleteSync(frameSyncs.shift()!);
 }
 
 /** A timer that fires this late cannot tell whether the GPU finished by the deadline. */
@@ -122,33 +145,29 @@ export function timeLastFrame(deadline: number, report: (finished: boolean) => v
   }, Math.max(0, deadline - performance.now()));
 }
 
+/** Whether the GPU has finished the frame `depth` frames back (with fewer fences, the oldest there is). */
+function finished(gl: WebGL2RenderingContext, depth: number): boolean {
+  const status = gl.clientWaitSync(frameSyncs[Math.max(0, frameSyncs.length - depth)], 0, 0);
+  return status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED;
+}
+
 /**
  * Call after the frame's CPU-only work and before its first GPU command. Finished readbacks are delivered when
- * the GPU has also finished the frame before last (the display pipeline is normally two frames deep); mapping
- * while it is further behind blocks until it catches up.
- * When the GPU stays behind (it is saturated) and nothing has been delivered for half a second, one such
- * blocking delivery is accepted rather than letting the CPU copies go stale — but no oftener than every quarter
- * second while they prove cheap, or every two seconds while they block for long, whatever the frame rate. While
- * deliveries are landing on their own nothing is forced at all. The quality governor is meanwhile taking the
- * load off the GPU.
+ * the GPU has also finished the frame before last; after `STALE_MS` without a delivery, the frame before that
+ * will do. There is no blocking escape hatch: while the GPU is further behind, nothing is mapped and the CPU
+ * copies simply age. Every consumer stays correct with older data. The wind and life copies carry the window
+ * they were read in and are sampled in world space through it, so an old copy is late, never misplaced. The
+ * height copy is installed only if it is the window last baked, and `heightAt` falls back to the exact
+ * procedural terrain outside whatever grid it has. The quality governor is meanwhile taking the load off the GPU.
  */
 export function pollReadbacks(): void {
-  let forced = false;
   const started = performance.now();
-  if (frameSyncs.length >= PIPELINE_DEPTH && frameGl) {
-    const status = frameGl.clientWaitSync(frameSyncs[0], 0, 0);
-    if (status !== frameGl.ALREADY_SIGNALED && status !== frameGl.CONDITION_SATISFIED) {
-      /** Only worth a hitch if the copies have actually gone stale: while deliveries are landing, they have not. */
-      if (started < nextForceAt || started - lastDelivery < STALE_MS) {
-        readbackStats.skipped++;
-        return;
-      }
-      forced = true;
-      readbackStats.forced++;
-    }
+  const gl = frameGl;
+  if (gl && frameSyncs.length && !finished(gl, DEPTH)
+    && (started - lastDelivery < STALE_MS || !finished(gl, MAX_DEPTH))) {
+    readbackStats.skipped++;
+    return;
   }
   for (const r of all) r.poll();
-  const cost = performance.now() - started;
-  if (cost > readbackStats.worstMs) readbackStats.worstMs = cost;
-  if (forced) nextForceAt = started + cost + (cost > COSTLY_MS ? COSTLY_WAIT_MS : CHEAP_WAIT_MS);
+  readbackStats.worstMs = Math.max(readbackStats.worstMs, performance.now() - started);
 }

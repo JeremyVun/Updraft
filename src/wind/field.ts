@@ -179,7 +179,7 @@ export class WindField {
     this.curl = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.divergence = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.readTarget = simTarget(READ_RES, READ_RES, THREE.FloatType, THREE.NearestFilter);
-    this.readback = new Readback(renderer, READ_RES, READ_RES, (data, window) => {
+    this.readback = new Readback(renderer, 'wind', READ_RES, READ_RES, (data, window) => {
       this.cpu.set(data);
       this.cpuWindow = window;
     });

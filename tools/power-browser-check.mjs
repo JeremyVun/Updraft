@@ -28,7 +28,7 @@ try {
       window.requestAnimationFrame = cb => { if (cb.name === 'frame') { window.__nextFrame = cb; return 1; } return raf(cb); };
       window.__drive = ms => { window.__clock += ms; const cb = window.__nextFrame; window.__nextFrame = null; cb(window.__clock); };
     });
-    await page.goto('http://127.0.0.1:5230/?shot&analytics=0&progress=0' + (chapter === 'island' ? '' : '&chapter=' + chapter));
+    await page.goto((process.env.BASE ?? 'http://127.0.0.1:5230/') + '?shot&analytics=0&progress=0' + (chapter === 'island' ? '' : '&chapter=' + chapter));
     await page.waitForFunction(() => !!window.__nextFrame, null, { timeout: 120000 });
     const rows = await page.evaluate(async () => {
       const g = __game, rows = [];

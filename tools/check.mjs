@@ -15,7 +15,7 @@ const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'journey-pacing', 'kite-logic',
   'little-boats-logic', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
   'scarf-geometry', 'sea-logic', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
-  'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
+  'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view', 'pointer-pick', 'drowned-gating',
 ];
 const browser = [
   'shader-browser', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',

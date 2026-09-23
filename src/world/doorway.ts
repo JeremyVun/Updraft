@@ -10,6 +10,7 @@ import type { Water } from './water';
 /** Two places joined by one ordinary door. Neither shore is visible around its frame. */
 export const DOOR_EXIT = new THREE.Vector3(DOOR_SHORE.x, heightAt(DOOR_SHORE.x, DOOR_SHORE.z + 9) - 0.1, DOOR_SHORE.z + 9);
 export const DOOR_SHIFT = DOOR_EXIT.clone().sub(door.group.position);
+const THRESHOLD_NORMAL = new THREE.Vector3(0, 0, -1);
 export const doorway = {
   crossed: false, travelling: false,
   eye: new THREE.Vector3(), look: new THREE.Vector3(),
@@ -29,6 +30,8 @@ export class DoorwayView {
   private readonly q = new THREE.Vector4();
   private readonly waterAt = new THREE.Vector3();
   private readonly actorOffsets: { at: THREE.Vector3; offset: THREE.Vector3 }[] = [];
+  /** Objects hidden for the pass being drawn; the passes run one after another, never nested. */
+  private readonly hidden: THREE.Object3D[] = [];
   private readonly clipUniforms = {
     uDoorClip: { value: new THREE.Vector4() },
     uDoorInverse: { value: new THREE.Matrix4() },
@@ -94,9 +97,10 @@ export class DoorwayView {
 
   /** Visibility is scoped to rendering; simulation and other chapters keep their own visibility decisions. */
   private inRoom(objects: Set<THREE.Object3D>, draw: () => void): void {
-    const hidden: THREE.Object3D[] = [];
+    const hidden = this.hidden;
+    hidden.length = 0;
     for (const o of this.scene.children) if (o.visible && !objects.has(o)) { hidden.push(o); o.visible = false; }
-    try { draw(); } finally { for (const o of hidden) o.visible = true; }
+    try { draw(); } finally { for (const o of hidden) o.visible = true; hidden.length = 0; }
   }
 
   render(view: THREE.PerspectiveCamera, active: boolean, concealShore: boolean, draw: () => void): void {
@@ -109,11 +113,14 @@ export class DoorwayView {
       this.clipUniforms.uDoorClip.value.set(0, 0, 0, 0);
       // Outside the doorway and its outgoing crossing, only the secret shore is absent. The occupied
       // boat and other rooms remain visible. The reflection uses the same exclusion; restore state afterward.
-      const hidden = concealShore ? this.shoreObjects.filter(o => o.visible) : [];
+      const hidden = this.hidden;
+      hidden.length = 0;
+      if (concealShore) for (const o of this.shoreObjects) if (o.visible) hidden.push(o);
       for (const o of hidden) o.visible = false;
       atmo.uniforms.uRoom.value.set(DOOR_SHORE.x, DOOR_SHORE.z, concealShore ? -48 : 0);
       try { draw(); } finally {
         for (const o of hidden) o.visible = true;
+        hidden.length = 0;
         atmo.uniforms.uRoom.value.set(0, 0, 0);
       }
       return;
@@ -130,7 +137,7 @@ export class DoorwayView {
       const cam = this.camera;
       cam.copy(view); cam.position.add(DOOR_SHIFT); cam.updateMatrixWorld(true);
       // Oblique near clipping keeps the destination behind its own threshold.
-      this.plane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, -1), DOOR_EXIT).applyMatrix4(cam.matrixWorldInverse);
+      this.plane.setFromNormalAndCoplanarPoint(THRESHOLD_NORMAL, DOOR_EXIT).applyMatrix4(cam.matrixWorldInverse);
       this.clip.set(this.plane.normal.x, this.plane.normal.y, this.plane.normal.z, this.plane.constant);
       const e = cam.projectionMatrix.elements;
       this.q.set((Math.sign(this.clip.x) + e[8]) / e[0], (Math.sign(this.clip.y) + e[9]) / e[5], -1, (1 + e[10]) / e[14]);
