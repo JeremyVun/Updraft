@@ -1067,7 +1067,7 @@ async function boot(): Promise<void> {
   await precompileSim(renderer, bakes.ground);
   terrain.fields.bake(renderer);
   terrain.colour.bake(renderer);
-  terrainHeights.bake(renderer);
+  if (params.heights !== 'direct') terrainHeights.bake(renderer);
   await grass.precompile(renderer);
   await yieldBoot();
   followWindow(...windowAim(), true);
