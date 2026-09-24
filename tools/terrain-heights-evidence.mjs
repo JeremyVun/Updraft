@@ -181,6 +181,10 @@ async function motion(fixture, out) {
         fs.writeFileSync(`${dir}/${fixture}-worst-old.png`, encodePng(W, H, oldRgb));
         fs.writeFileSync(`${dir}/${fixture}-worst-new.png`, encodePng(W, H, nowRgb));
         fs.writeFileSync(`${dir}/${fixture}-worst-heatmap.png`, encodePng(W, H, heatmap(now, d, W, H)));
+        let at = 0;
+        for (let i = 1; i < d.length; i++) if (d[i] > d[at]) at = i;
+        const size = 96, x0 = Math.max(0, Math.min(W - size, (at % W) - size / 2)), y0 = Math.max(0, Math.min(H - size, Math.floor(at / W) - size / 2));
+        for (const [k, src] of [['old', old], ['new', now], ['diff-x40', amplified(d, W, H)]]) fs.writeFileSync(`${dir}/${fixture}-worst-crop-${k}.png`, encodePng(size * 4, size * 4, crop(src, W, x0, y0, size, 4, 4)));
       }
     };
     if (fixture === 'pan') {
