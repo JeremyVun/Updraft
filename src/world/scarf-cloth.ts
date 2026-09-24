@@ -14,6 +14,11 @@ export class ScarfCloth {
   private readonly home: THREE.Vector3[] = [];
   private readonly pos: Float64Array;
   private readonly prev: Float64Array;
+  private readonly velocity: Float64Array;
+  private readonly shared: Float64Array;
+  /** Pinned particles, and each particle's greatest material distance from each of them. */
+  private readonly anchors: Int32Array;
+  private readonly reach: Float64Array;
   private readonly weights: Float64Array;
   private readonly floors: Float64Array;
   private readonly linkA: Int32Array;
@@ -62,14 +67,18 @@ export class ScarfCloth {
 
   get length(): number { return this.lengths[this.lengths.length - 1]; }
 
+  /** `across`, when given, is the direction the width already lies in at each point, so taking over shows no turn. */
   constructor(points: THREE.Vector3[], width: number, supports: number[], permanent: number[],
-    private readonly floor: (x: number, z: number) => number) {
+    private readonly floor: (x: number, z: number) => number, across?: THREE.Vector3[]) {
     for (let i = 0; i < points.length; i++) {
       if (i) this.lengths.push(this.lengths[i - 1] + points[i].distanceTo(points[i - 1]));
       this.tangent.subVectors(points[Math.min(i + 1, points.length - 1)], points[Math.max(0, i - 1)]).normalize();
-      this.side.set(-this.tangent.z, 0, this.tangent.x).normalize();
-      if (this.side.lengthSq() < .1) this.side.set(1, 0, 0);
-      this.side.applyAxisAngle(this.tangent, Math.sin(this.lengths[i] * .23) * .65);
+      if (across) this.side.copy(across[i]).addScaledVector(this.tangent, -across[i].dot(this.tangent)).normalize();
+      else {
+        this.side.set(-this.tangent.z, 0, this.tangent.x).normalize();
+        if (this.side.lengthSq() < .1) this.side.set(1, 0, 0);
+        this.side.applyAxisAngle(this.tangent, Math.sin(this.lengths[i] * .23) * .65);
+      }
       for (const sign of [-1, 1]) {
         const p = points[i].clone().addScaledVector(this.side, sign * width * .5);
         this.positions.push(p); this.previous.push(p.clone()); this.home.push(p.clone());
@@ -79,6 +88,7 @@ export class ScarfCloth {
     }
     const count = this.positions.length;
     this.pos = new Float64Array(count * 3); this.prev = new Float64Array(count * 3);
+    this.velocity = new Float64Array(count * 3); this.shared = new Float64Array(count * 3);
     this.weights = new Float64Array(count).fill(1); this.floors = new Float64Array(count);
     this.positions.forEach((p, i) => { p.toArray(this.pos, i * 3); p.toArray(this.prev, i * 3); });
     const links: { a: number; b: number; rest: number; compliance: number }[] = [];
@@ -105,6 +115,15 @@ export class ScarfCloth {
     this.alpha = Float64Array.from(links, l => l.compliance / (H * H)); this.lambda = new Float64Array(links.length);
     this.pins = Uint8Array.from(this.positions, (_, i) => (this.permanent.has(i) ? PERMANENT : 0) | (this.supports.has(i) ? SUPPORT : 0));
     for (const pin of this.supports) if (!this.supportRows.includes(pin >> 1)) this.supportRows.push(pin >> 1);
+    this.anchors = Int32Array.from([...this.permanent, ...this.supports]);
+    const edge = this.positions.map((p, i) => i < 2 ? 0 : p.distanceTo(this.positions[i - 2]));
+    for (let i = 2; i < count; i++) edge[i] += edge[i - 2];
+    // The yarn path along the stitch's own edge, then across: never shorter than the real one.
+    this.reach = Float64Array.from({ length: count * this.anchors.length }, (_, k) => {
+      const i = Math.floor(k / this.anchors.length), a = this.anchors[k % this.anchors.length];
+      const along = Math.abs(edge[i] - edge[(a & ~1) | (i & 1)]);
+      return along + ((i & 1) === (a & 1) ? 0 : this.positions[a].distanceTo(this.positions[a ^ 1]));
+    });
     this.pullWeights = Float64Array.from({ length: count * this.supportRows.length }, (_, k) => {
       const d = this.lengths[Math.floor(k / this.supportRows.length) >> 1] - this.lengths[this.supportRows[k % this.supportRows.length]];
       return Math.exp(-d * d / 12);
@@ -140,7 +159,6 @@ export class ScarfCloth {
   private step(h: number, wind?: WindField): void {
     const k = tuning.birches.scarf;
     const { pos, prev } = this;
-    const drag = Math.exp(-k.clothDrag * h);
     this.slide += (this.work - this.slide) * (1 - Math.exp(-h * k.clothSlideResponse));
     if (this.releaseRequested && !this.released && this.slide > .985) this.slipTime += h;
     if (this.releaseRequested && !this.released && this.slipTime >= k.clothSlipSeconds) {
@@ -157,43 +175,74 @@ export class ScarfCloth {
         prev[i * 3] += this.tangent.x * shift; prev[i * 3 + 1] += this.tangent.y * shift; prev[i * 3 + 2] += this.tangent.z * shift;
       }
     }
-    for (let i = 0; i < this.home.length; i++) {
-      const o = i * 3, pins = this.pins[i];
-      const pinned = (pins & PERMANENT) !== 0 || (!this.released && (pins & SUPPORT) !== 0);
-      this.weights[i] = pinned ? 0 : 1;
-      if (pinned) {
-        prev[o] = pos[o]; prev[o + 1] = pos[o + 1]; prev[o + 2] = pos[o + 2];
-        const p = this.point.copy(this.home[i]);
-        if (!(pins & PERMANENT) && this.supportRail) {
-          const row = i & ~1;
-          this.side.subVectors(this.home[row + 1], this.home[row]).multiplyScalar(i % 2 ? .5 : -.5);
-          p.lerpVectors(this.supportRail.a, this.supportRail.b, this.slide).add(this.side);
-          p.y += .19;
-          if (this.slipTime > 0) {
-            // Carry the loop beyond the finite tip, then down its OUTSIDE before relinquishing it.
-            // Merely removing the pins at the tip lets gravity put it straight back on the branch.
-            const t = Math.min(1, this.slipTime / k.clothSlipSeconds);
-            const out = THREE.MathUtils.smootherstep(t / .65, 0, 1);
-            const down = THREE.MathUtils.smootherstep((t - .45) / .55, 0, 1);
-            this.tangent.subVectors(this.supportRail.b, this.supportRail.a).setY(0).normalize();
-            p.addScaledVector(this.tangent, out * k.clothSlipReach);
-            p.y += Math.sin(out * Math.PI) * .3 - down * k.clothSlipDrop;
+    const count = this.home.length, rows = count >> 1;
+    const { velocity, shared, floors } = this;
+    for (let i = 0; i < count * 3; i++) velocity[i] = pos[i] - prev[i];
+    // Wool's internal friction: each stitch shares its motion with its neighbours, so a length swings as one piece
+    // instead of wriggling.
+    const share = 1 - Math.exp(-k.clothViscosity * h);
+    for (let i = 0; i < count; i++) {
+      const o = i * 3, partner = (i ^ 1) * 3, before = i > 1 ? o - 6 : partner, after = i < count - 2 ? o + 6 : partner;
+      for (let c = 0; c < 3; c++) {
+        const mean = (velocity[partner + c] + velocity[before + c] + velocity[after + c]) / 3;
+        shared[o + c] = velocity[o + c] + (mean - velocity[o + c]) * share;
+      }
+    }
+    const drag = Math.exp(-k.clothDrag * h);
+    for (let row = 0; row < rows; row++) {
+      const a = row * 6, b = a + 3;
+      const lo = Math.max(0, row - 1) * 6, hi = Math.min(rows - 1, row + 1) * 6;
+      const tx = pos[hi] + pos[hi + 3] - pos[lo] - pos[lo + 3], ty = pos[hi + 1] + pos[hi + 4] - pos[lo + 1] - pos[lo + 4];
+      const tz = pos[hi + 2] + pos[hi + 5] - pos[lo + 2] - pos[lo + 5];
+      const sx = pos[b] - pos[a], sy = pos[b + 1] - pos[a + 1], sz = pos[b + 2] - pos[a + 2];
+      let nx = ty * sz - tz * sy, ny = tz * sx - tx * sz, nz = tx * sy - ty * sx;
+      const n = Math.hypot(nx, ny, nz);
+      if (n > 1e-9) { nx /= n; ny /= n; nz /= n; }
+      for (let i = row * 2; i < row * 2 + 2; i++) {
+        const o = i * 3, pins = this.pins[i];
+        const pinned = (pins & PERMANENT) !== 0 || (!this.released && (pins & SUPPORT) !== 0);
+        this.weights[i] = pinned ? 0 : 1;
+        if (pinned) {
+          prev[o] = pos[o]; prev[o + 1] = pos[o + 1]; prev[o + 2] = pos[o + 2];
+          const p = this.point.copy(this.home[i]);
+          if (!(pins & PERMANENT) && this.supportRail) {
+            const pair = i & ~1;
+            this.side.subVectors(this.home[pair + 1], this.home[pair]).multiplyScalar(i % 2 ? .5 : -.5);
+            p.lerpVectors(this.supportRail.a, this.supportRail.b, this.slide).add(this.side);
+            p.y += .19;
+            if (this.slipTime > 0) {
+              // Carry the loop beyond the finite tip, then down its OUTSIDE before relinquishing it.
+              // Merely removing the pins at the tip lets gravity put it straight back on the branch.
+              const t = Math.min(1, this.slipTime / k.clothSlipSeconds);
+              const out = THREE.MathUtils.smootherstep(t / .65, 0, 1);
+              const down = THREE.MathUtils.smootherstep((t - .45) / .55, 0, 1);
+              this.tangent.subVectors(this.supportRail.b, this.supportRail.a).setY(0).normalize();
+              p.addScaledVector(this.tangent, out * k.clothSlipReach);
+              p.y += Math.sin(out * Math.PI) * .3 - down * k.clothSlipDrop;
+            }
           }
+          p.toArray(pos, o);
+          continue;
         }
-        p.toArray(pos, o);
-        continue;
+        const x = pos[o], y = pos[o + 1], z = pos[o + 2];
+        const vx = shared[o] * drag, vy = shared[o + 1] * drag, vz = shared[o + 2] * drag;
+        prev[o] = x; prev[o + 1] = y; prev[o + 2] = z;
+        let pull = 0;
+        if (!this.released) for (let r = 0, supports = this.supportRows.length; r < supports; r++) {
+          pull = Math.max(pull, this.pullWeights[i * supports + r] * this.lift * k.clothLift);
+        }
+        // Air pushes on the face of the wool and barely on its edge; the litter shelters what lies on the ground.
+        const w = wind?.sample(x, z, this.air);
+        const shelter = THREE.MathUtils.smoothstep(y - floors[i], 0, k.clothShelter);
+        const rx = (w ? w.x * shelter : 0) - vx / h, ry = (w ? w.lift * k.clothUpdraft * shelter : 0) - vy / h;
+        const rz = (w ? w.z * shelter : 0) - vz / h, face = rx * nx + ry * ny + rz * nz;
+        const ax = THREE.MathUtils.clamp(face * nx * k.clothFace + (rx - face * nx) * k.clothEdge, -8, 8);
+        const ay = THREE.MathUtils.clamp(face * ny * k.clothFace + (ry - face * ny) * k.clothEdge, -8, 8);
+        const az = THREE.MathUtils.clamp(face * nz * k.clothFace + (rz - face * nz) * k.clothEdge, -8, 8);
+        pos[o] = x + vx + ax * h * h;
+        pos[o + 1] = y + vy + (ay - k.clothGravity + pull) * h * h;
+        pos[o + 2] = z + vz + az * h * h;
       }
-      const x = pos[o], y = pos[o + 1], z = pos[o + 2];
-      const w = wind?.sample(x, z, this.air);
-      const vx = (x - prev[o]) * drag, vy = (y - prev[o + 1]) * drag, vz = (z - prev[o + 2]) * drag;
-      prev[o] = x; prev[o + 1] = y; prev[o + 2] = z;
-      let pull = 0;
-      if (!this.released) for (let r = 0, rows = this.supportRows.length; r < rows; r++) {
-        pull = Math.max(pull, this.pullWeights[i * rows + r] * this.lift * k.clothLift);
-      }
-      pos[o] = x + (vx + THREE.MathUtils.clamp((w?.x ?? 0) * k.clothWind, -8, 8) * h * h);
-      pos[o + 1] = y + (vy + (-k.clothGravity + (w?.lift ?? 0) * .5 + pull) * h * h);
-      pos[o + 2] = z + (vz + THREE.MathUtils.clamp((w?.z ?? 0) * k.clothWind, -8, 8) * h * h);
     }
     const { linkA, linkB, rest, alpha, lambda, weights } = this, links = linkA.length;
     lambda.fill(0);
@@ -214,7 +263,27 @@ export class ScarfCloth {
         pos[a] -= dx * amount * wa; pos[a + 1] -= dy * amount * wa; pos[a + 2] -= dz * amount * wa;
         pos[b] += dx * amount * wb; pos[b + 1] += dy * amount * wb; pos[b + 2] += dz * amount * wb;
       }
-      this.collide(iteration === k.clothIterations - 1, iteration === 0 || iteration === k.clothIterations - 1);
+      const last = iteration === k.clothIterations - 1;
+      if (last) this.tether();
+      this.collide(last, iteration === 0 || last);
+    }
+  }
+
+  /** Knitted wool gives a little, never like elastic: nothing may lie further from a held point than the yarn between them. */
+  private tether(): void {
+    const { pos, anchors, reach, weights } = this, count = anchors.length, slack = tuning.birches.scarf.clothGive;
+    for (let n = 0; n < count; n++) {
+      const a = anchors[n];
+      if (weights[a]) continue;
+      const ax = pos[a * 3], ay = pos[a * 3 + 1], az = pos[a * 3 + 2];
+      for (let i = 0; i < this.home.length; i++) {
+        if (!weights[i]) continue;
+        const o = i * 3, dx = pos[o] - ax, dy = pos[o + 1] - ay, dz = pos[o + 2] - az;
+        const limit = reach[i * count + n] * slack, d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 <= limit * limit) continue;
+        const scale = limit / Math.sqrt(d2);
+        pos[o] = ax + dx * scale; pos[o + 1] = ay + dy * scale; pos[o + 2] = az + dz * scale;
+      }
     }
   }
 
@@ -262,7 +331,7 @@ export class ScarfCloth {
   }
 
   private collide(friction: boolean, refreshFloor: boolean): void {
-    const margin = tuning.birches.scarf.clothClearance;
+    const k = tuning.birches.scarf, margin = k.clothClearance, stick = k.clothStick * H, slide = k.clothSlide;
     if (margin !== this.grid.margin) this.buildGrid(margin);
     const { pos, prev, grid } = this, count = this.capsuleList.length;
     for (let i = 0; i < this.home.length; i++) {
@@ -284,8 +353,10 @@ export class ScarfCloth {
       if (pos[o + 1] < floor) {
         pos[o + 1] = floor;
         if (friction) {
-          prev[o] = pos[o] - (pos[o] - prev[o]) * .75;
-          prev[o + 2] = pos[o + 2] - (pos[o + 2] - prev[o + 2]) * .75;
+          // Wool on leaf litter holds where it lies: slow pulls do not move it, and a dragged length soon stops.
+          const dx = pos[o] - prev[o], dz = pos[o + 2] - prev[o + 2];
+          if (dx * dx + dz * dz < stick * stick) { pos[o] = prev[o]; pos[o + 2] = prev[o + 2]; }
+          else { prev[o] = pos[o] - dx * slide; prev[o + 2] = pos[o + 2] - dz * slide; }
           prev[o + 1] = pos[o + 1];
         }
       }

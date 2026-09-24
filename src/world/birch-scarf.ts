@@ -44,9 +44,10 @@ in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vCloth;
 uniform float uScarfLength;
+uniform float uScarfStart;
 void main() {
   // Split the two ends into tassels, with little irregular lengths of yarn.
-  float end = min(vCloth.y, uScarfLength - vCloth.y);
+  float end = min(vCloth.y - uScarfStart, uScarfLength - vCloth.y);
   float yarn = fract(vCloth.x * 17.0);
   if (end < 0.8 && (yarn > 0.67 || end < hash12(vec2(floor(vCloth.x * 17.0), 4.0)) * 0.18)) discard;
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
@@ -116,6 +117,15 @@ export class BirchScarf {
   private readonly lengths: number[] = [];
   private readonly ownerStart: number[];
   private readonly rollBase = new Float64Array(ROWS);
+  /** Each row's frame as authored, so a moved row turns its surface locally instead of re-twisting the whole strip. */
+  private readonly restTangent = new Float64Array(ROWS * 3);
+  private readonly restSide = new Float64Array(ROWS * 3);
+  private readonly restAcross = new Float64Array(ROWS * 3);
+  private readonly frameTangent = new Float64Array(ROWS * 3);
+  private readonly frameSide = new Float64Array(ROWS * 3);
+  private readonly windTarget = new Float64Array(ROWS * 3);
+  private readonly windSum = new Float64Array((ROWS + 1) * 3);
+  private readonly gust = new Float64Array(ROWS);
   private readonly bunched = new Float64Array(ROWS);
   private readonly folds = new Float64Array(ROWS * ACROSS);
   private readonly positions = new Float32Array(ROWS * RING * 3);
@@ -126,6 +136,8 @@ export class BirchScarf {
   private readonly tangent = new THREE.Vector3();
   private readonly normal = new THREE.Vector3();
   private readonly transported = new THREE.Vector3();
+  private readonly rest = new THREE.Vector3();
+  private readonly twist = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly projected = new THREE.Vector3();
   private readonly boatEnd = new THREE.Vector3(-4, 3, -1197);
@@ -137,6 +149,7 @@ export class BirchScarf {
   private readonly collisions: ClothCapsule[] = [];
   private readonly physical = new Uint8Array(ROWS);
   private restoring = false;
+  private drawnIn = false;
   readonly stump = { x: SCARF_SNAGS[1].treeX, z: SCARF_SNAGS[1].treeZ, height: 4.1, radius: .47 };
   /** The slipped loop catches on an upturned splinter of a fallen birch, clear of the walking sightline. */
   readonly slipBranch: ClothCapsule[] = (() => {
@@ -194,6 +207,16 @@ export class BirchScarf {
           + Math.sin(length * 2.1 + across * 2.4) * .025;
       }
     }
+    this.transported.set(1, 0, 0);
+    for (let i = 0; i < ROWS; i++) {
+      this.tangent.subVectors(this.tied[Math.min(ROWS - 1, i + 1)], this.tied[Math.max(0, i - 1)]).normalize();
+      this.transported.addScaledVector(this.tangent, -this.transported.dot(this.tangent)).normalize();
+      this.side.copy(this.transported).applyAxisAngle(this.tangent, this.rollBase[i]);
+      this.tangent.toArray(this.restTangent, i * 3); this.side.toArray(this.restSide, i * 3);
+      this.side.set(-this.tangent.z, 0, this.tangent.x);
+      if (this.side.lengthSq() < 1e-6) this.side.set(1, 0, 0);
+      this.side.normalize().toArray(this.restAcross, i * 3);
+    }
     const perch = SCARF_PERCHES[0];
     const knotStart = this.owner.indexOf(0), knotEnd = this.owner.lastIndexOf(0) + 1;
     this.firstEnd = this.tied.findIndex((p, i) => i >= knotEnd && Math.hypot(p.x - perch.x, p.z - perch.z) < 1.05);
@@ -229,13 +252,13 @@ export class BirchScarf {
     }
     this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setAttribute('normal', new THREE.BufferAttribute(this.normals, 3).setUsage(THREE.DynamicDrawUsage));
-    this.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    this.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setIndex(indices);
     this.mesh = new THREE.Mesh(this.geometry, new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG,
-      uniforms: { ...atmo.uniforms, uScarfLength: { value: length } }, side: THREE.DoubleSide }));
+      uniforms: { ...atmo.uniforms, uScarfLength: { value: length }, uScarfStart: { value: 0 } }, side: THREE.DoubleSide }));
     this.mesh.name = 'impossibly-long-red-scarf';
     this.mesh.frustumCulled = false;
-    this.write(0);
+    this.write();
   }
 
   get completed(): number { return this.snags.filter(s => s.freed).length; }
@@ -338,28 +361,44 @@ export class BirchScarf {
     this.woven = smooth(Math.max(0, this.gathering / k.gatherSeconds - 0.45) / 0.55);
     this.mesh.visible = this.woven < 1;
     const step = Math.min(dt, .05);
-    const spring = k.windResponse * k.windResponse * step, damping = Math.exp(-step * k.windResponse * 1.3);
+    const spring = k.windResponse * k.windResponse * step, damping = Math.exp(-2 * k.windDamping * k.windResponse * step);
     const top = Math.max(0, heightAt(this.stump.x, this.stump.z)) + this.stump.height;
-    for (let i = 0; i < ROWS; i++) {
-      if (i <= this.firstEnd) continue;
+    const { windTarget, windSum, gust } = this;
+    for (let i = this.firstEnd + 1; i < ROWS; i++) {
       const s = this.snags[this.owner[i]];
       const supported = this.owner[i] === 2 || this.owner[i] === 3;
       const loose = s && this.owner[i] !== 1 ? smooth(supported ? s.work / .7 : s.work) : 0;
       const p = this.centre[i].lerpVectors(this.tied[i], this.loose[i], loose);
       const w = wind.sample(p.x, p.z, this.air);
-      // The collar stays on the wood while the loops draw through it; only its hanging lengths flutter.
-      const contact = supported ? THREE.MathUtils.smoothstep(p.distanceTo(s.center), .45, 1.3) : 1;
-      const f = this.pins[i] * THREE.MathUtils.smoothstep(p.y - this.heights[i], 0.1, 0.8) * contact;
-      this.point.set(w.x * 0.028, w.lift * 0.12, w.z * 0.028).clampLength(0, 0.7);
+      windTarget[i * 3] = w.x; windTarget[i * 3 + 1] = w.lift; windTarget[i * 3 + 2] = w.z;
+    }
+    // A heavy length answers the air over its whole span, not each breath at each stitch.
+    const reach = k.windSpan;
+    for (let i = 0; i < ROWS * 3; i++) windSum[i + 3] = windSum[i] + windTarget[i];
+    for (let i = this.firstEnd + 1; i < ROWS; i++) {
+      const lo = Math.max(this.firstEnd + 1, i - reach), hi = Math.min(ROWS - 1, i + reach), n = hi - lo + 1;
+      const x = (windSum[hi * 3 + 3] - windSum[lo * 3]) / n, lift = (windSum[hi * 3 + 4] - windSum[lo * 3 + 1]) / n;
+      const z = (windSum[hi * 3 + 5] - windSum[lo * 3 + 2]) / n;
+      gust[i] = Math.hypot(x, z);
+      this.point.set(x * 0.028, lift * 0.12, z * 0.028).clampLength(0, 0.7);
       this.velocities[i].addScaledVector(this.point.sub(this.winds[i]), spring).multiplyScalar(damping);
       this.winds[i].addScaledVector(this.velocities[i], step);
+    }
+    for (let i = this.firstEnd + 1; i < ROWS; i++) {
+      const s = this.snags[this.owner[i]];
+      const supported = this.owner[i] === 2 || this.owner[i] === 3;
+      const p = this.centre[i];
+      // The collar stays on the wood while the loops draw through it; only its hanging lengths move.
+      const contact = supported ? THREE.MathUtils.smoothstep(p.distanceTo(s.center), .45, 1.3) : 1;
+      const f = this.pins[i] * THREE.MathUtils.smoothstep(p.y - this.heights[i], 0.1, 0.8) * contact;
       p.addScaledVector(this.winds[i], f);
-      const wave = this.elapsed * 1.7 - i * 0.14;
-      p.y += Math.sin(wave) * k.flutter * f;
-      if (s && s.release < 1) {
-        p.y += s.work * f * 0.45;
-        p.x += Math.sin(wave * 2.2) * s.impulse * f * 0.25;
-      }
+      // Slow, nearly in step along each span: the swing of a heavy length, never a ripple running down the strip.
+      const length = this.lengths[i];
+      const sway = k.sway * f * (.4 + Math.min(1, gust[i] / 4))
+        * (Math.sin(this.elapsed * .62 + length * .021) * .7 + Math.sin(this.elapsed * 1.07 + 1.3 + length * .047) * .3);
+      p.x += this.restAcross[i * 3] * sway; p.z += this.restAcross[i * 3 + 2] * sway;
+      p.y -= Math.abs(sway) * .3;
+      if (s && s.release < 1) p.y += s.work * f * 0.45;
       p.y = Math.max(this.heights[i] + 0.09, p.y);
       if (supported) {
         const u = (i - this.ownerStart[this.owner[i]]) / (this.owner[i] === 2 ? 100 : 110);
@@ -410,18 +449,7 @@ export class BirchScarf {
     for (let i = ROWS - 20; i < ROWS; i++) {
       this.centre[i].lerp(this.boatEnd, smooth((i - ROWS + 20) / 19));
     }
-    if (this.gathering > 0) {
-      const drawn = smooth(this.gathering / k.gatherSeconds);
-      // A travelling free end follows the entire drape into the mast; the strip never pops away in sections.
-      for (let i = 0; i < ROWS; i++) {
-        const travel = drawn * (ROWS - 1 - i);
-        const at = i + travel, lo = Math.min(ROWS - 1, Math.floor(at)), hi = Math.min(ROWS - 1, lo + 1);
-        this.point.lerpVectors(this.centre[lo], this.centre[hi], at - lo);
-        this.tiedScratch[i].copy(this.point);
-      }
-      for (let i = 0; i < ROWS; i++) this.centre[i].copy(this.tiedScratch[i]);
-    }
-    this.write(this.elapsed);
+    this.write();
   }
 
   /** Capture the actual released shape; gravity takes over without a second animated destination. */
@@ -438,21 +466,21 @@ export class BirchScarf {
     const distances = [0];
     for (let i = start + 1; i <= end; i++) distances.push(distances[i - start - 1] + this.centre[i].distanceTo(this.centre[i - 1]));
     const length = distances[distances.length - 1], count = Math.ceil(length / .35);
-    const points: THREE.Vector3[] = [];
+    const points: THREE.Vector3[] = [], across: THREE.Vector3[] = [];
     let source = 0;
     for (let row = 0; row <= count; row++) {
       const distance = length * row / count;
       while (source + 1 < distances.length - 1 && distances[source + 1] < distance) source++;
-      points.push(this.centre[start + source].clone().lerp(this.centre[start + source + 1],
-        (distance - distances[source]) / Math.max(.0001, distances[source + 1] - distances[source])));
+      const t = (distance - distances[source]) / Math.max(.0001, distances[source + 1] - distances[source]), a = (start + source) * 3;
+      points.push(this.centre[start + source].clone().lerp(this.centre[start + source + 1], t));
+      across.push(new THREE.Vector3().fromArray(this.frameSide, a).lerp(this.point.fromArray(this.frameSide, a + 3), t));
     }
-    const cloth = new ScarfCloth(points, tuning.birches.scarf.width * .85, [], [0, count], (x, z) => Math.max(0, heightAt(x, z)));
+    const cloth = new ScarfCloth(points, tuning.birches.scarf.width * .85, [], [0, count], (x, z) => Math.max(0, heightAt(x, z)), across);
     cloth.capsules = this.collisions.filter(c => points.some(p => Math.hypot(p.x - c.a.x, p.z - c.a.z) < 8));
     cloth.release();
     this.releasedCloth.set(index, { start, end, cloth, distances });
   }
 
-  private readonly tiedScratch = Array.from({ length: ROWS }, () => new THREE.Vector3());
 
   private route(): void {
     const at = (x: number, z: number, h: number) => ground(x, z, h);
@@ -516,61 +544,106 @@ export class BirchScarf {
     add([c1,at(-1,-1188,.4),at(-7,-1191,.3),at(-4,-1197,3)],60);
   }
 
-  private write(time: number): void {
+  private write(): void {
     const width = tuning.birches.scarf.width;
     const taper = 1 - this.woven * 0.75;
     const thickness = .025 * width;
-    this.transported.set(1, 0, 0);
+    const { centre, frameTangent, frameSide, restTangent, restSide } = this;
     for (let i = 0; i < ROWS; i++) {
-      const p = this.centre[i];
-      this.tangent.subVectors(this.centre[Math.min(ROWS - 1, i + 1)], this.centre[Math.max(0, i - 1)]).normalize();
-      if (this.tangent.lengthSq() < 0.01) this.tangent.set(0, 0, -1);
-      // Parallel transport avoids the abrupt flips a horizontal ribbon frame makes on hanging folds.
-      this.transported.addScaledVector(this.tangent, -this.transported.dot(this.tangent)).normalize();
-      if (this.transported.lengthSq() < 0.01) this.transported.set(0, 0, 1).cross(this.tangent).normalize();
-      const physical = this.physical[i] === 1 && this.gathering === 0;
-      if (physical) {
-        this.side.copy(this.clothAcross[i]);
-        if (this.side.lengthSq() < .1) this.side.copy(this.transported);
+      const o = i * 3;
+      this.tangent.subVectors(centre[Math.min(ROWS - 1, i + 1)], centre[Math.max(0, i - 1)]);
+      if (this.tangent.lengthSq() < 1e-8) this.tangent.fromArray(restTangent, o);
+      this.tangent.normalize();
+      // Turn the authored frame by the least rotation onto this row's tangent: nothing is carried from row to row.
+      this.side.fromArray(restSide, o);
+      this.rest.fromArray(restTangent, o);
+      const c = this.rest.dot(this.tangent);
+      if (c > -.999) {
+        this.twist.crossVectors(this.rest, this.tangent);
+        const k = this.twist.dot(this.side) / (1 + c);
+        this.normal.crossVectors(this.twist, this.side);
+        this.side.multiplyScalar(c).add(this.normal).addScaledVector(this.twist, k);
+      }
+      this.side.addScaledVector(this.tangent, -this.side.dot(this.tangent)).normalize();
+      const across = this.clothAcross[i];
+      if (this.physical[i] === 1 && across.lengthSq() > .1) {
+        // Where a fold lays the cloth's width along its length, its own across is noise: lean on the authored frame.
+        const along = across.dot(this.tangent), spread = Math.sqrt(Math.max(0, 1 - along * along));
+        const held = THREE.MathUtils.smoothstep(spread, .25, .6);
+        this.rest.copy(across).addScaledVector(this.tangent, -along);
+        if (held > 0 && this.rest.lengthSq() > 1e-8) {
+          this.rest.normalize();
+          this.side.multiplyScalar((1 - held) * Math.sign(this.rest.dot(this.side) || 1)).addScaledVector(this.rest, held).normalize();
+        }
+      }
+      this.tangent.toArray(frameTangent, o); this.side.toArray(frameSide, o);
+    }
+    const k = tuning.birches.scarf;
+    // Drawn in, the strip keeps to the path it lay along and only its free end runs home, so no row ever jumps.
+    const drawn = this.gathering > 0 ? smooth(this.gathering / k.gatherSeconds) : 0;
+    const uv = this.geometry.attributes.uv as THREE.BufferAttribute;
+    if (drawn === 0 && this.drawnIn) {
+      for (let i = 0; i < ROWS; i++) for (let j = 0; j < RING; j++) uv.array[(i * RING + j) * 2 + 1] = this.lengths[i];
+      (this.mesh.material as THREE.ShaderMaterial).uniforms.uScarfStart.value = 0;
+      uv.needsUpdate = true;
+    }
+    this.drawnIn = drawn > 0;
+    for (let i = 0; i < ROWS; i++) {
+      let p = centre[i];
+      let bunched = this.bunched[i], fold = i * ACROSS, foldNext = fold, foldMix = 0;
+      let physical = this.physical[i], rowHeight = this.heights[i];
+      if (drawn > 0) {
+        const at = i + drawn * (ROWS - 1 - i), lo = Math.min(ROWS - 1, Math.floor(at)), hi = Math.min(ROWS - 1, lo + 1), t = at - lo;
+        p = this.point.lerpVectors(centre[lo], centre[hi], t);
+        this.tangent.set(frameTangent[lo * 3] * (1 - t) + frameTangent[hi * 3] * t, frameTangent[lo * 3 + 1] * (1 - t) + frameTangent[hi * 3 + 1] * t,
+          frameTangent[lo * 3 + 2] * (1 - t) + frameTangent[hi * 3 + 2] * t).normalize();
+        this.side.set(frameSide[lo * 3] * (1 - t) + frameSide[hi * 3] * t, frameSide[lo * 3 + 1] * (1 - t) + frameSide[hi * 3 + 1] * t,
+          frameSide[lo * 3 + 2] * (1 - t) + frameSide[hi * 3 + 2] * t);
         this.side.addScaledVector(this.tangent, -this.side.dot(this.tangent)).normalize();
+        bunched = this.bunched[lo] * (1 - t) + this.bunched[hi] * t;
+        fold = lo * ACROSS; foldNext = hi * ACROSS; foldMix = t;
+        // Rows take on the ground contact of the place they pass through, blended so none snaps.
+        physical = this.physical[lo] * (1 - t) + this.physical[hi] * t;
+        rowHeight = this.heights[lo] * (1 - t) + this.heights[hi] * t;
+        const v = this.lengths[lo] * (1 - t) + this.lengths[hi] * t;
+        for (let j = 0; j < RING; j++) uv.array[(i * RING + j) * 2 + 1] = v;
+        if (i === 0) (this.mesh.material as THREE.ShaderMaterial).uniforms.uScarfStart.value = v;
       } else {
-        const roll = this.rollBase[i] + Math.sin(time * .8 - this.lengths[i] * .35) * .07;
-        this.side.copy(this.transported).applyAxisAngle(this.tangent, roll);
+        this.tangent.fromArray(frameTangent, i * 3); this.side.fromArray(frameSide, i * 3);
       }
       this.normal.crossVectors(this.tangent, this.side).normalize();
-      const bunched = this.bunched[i];
-      const floor = physical ? Math.max(0, heightAt(p.x, p.z)) : this.heights[i];
+      const floor = physical > 0 ? THREE.MathUtils.lerp(rowHeight, Math.max(0, heightAt(p.x, p.z)), physical) : rowHeight;
       const foldRoom = THREE.MathUtils.smoothstep(p.y - floor, .1, .5);
       // The broad hem must wrap around the support too, rather than cut through it as the bow tightens.
-      const limbs = physical || this.gathering !== 0 ? null
-        : this.owner[i] === 2 ? this.slipBranch : this.owner[i] === 3 ? this.bowBranch : null;
+      const limbs = physical > 0 || drawn > 0 ? null : this.owner[i] === 2 ? this.slipBranch : this.owner[i] === 3 ? this.bowBranch : null;
       for (let a = 0; a < ACROSS; a++) {
         const out = ACROSS_AT[a] * width * .5 * bunched * taper;
-        const fold = this.folds[i * ACROSS + a] * width * foldRoom;
+        const folded = (this.folds[fold + a] * (1 - foldMix) + this.folds[foldNext + a] * foldMix) * width * foldRoom;
         for (let back = 0; back < 2; back++) {
-          const k = (i * RING + (back ? RING - 1 - a : a)) * 3;
-          this.point.copy(p).addScaledVector(this.side, out)
-            .addScaledVector(this.normal, (fold + (back ? -thickness : thickness)) * taper);
+          const vertex = (i * RING + (back ? RING - 1 - a : a)) * 3;
+          const q = this.projected.copy(p).addScaledVector(this.side, out)
+            .addScaledVector(this.normal, (folded + (back ? -thickness : thickness)) * taper);
           if (limbs) for (const limb of limbs) {
             const ax = limb.b.x - limb.a.x, ay = limb.b.y - limb.a.y, az = limb.b.z - limb.a.z;
-            const t = THREE.MathUtils.clamp(((this.point.x - limb.a.x) * ax + (this.point.y - limb.a.y) * ay
-              + (this.point.z - limb.a.z) * az) / (ax * ax + ay * ay + az * az), 0, 1);
+            const t = THREE.MathUtils.clamp(((q.x - limb.a.x) * ax + (q.y - limb.a.y) * ay
+              + (q.z - limb.a.z) * az) / (ax * ax + ay * ay + az * az), 0, 1);
             const x = limb.a.x + ax * t, y = limb.a.y + ay * t, z = limb.a.z + az * t;
-            const dx = this.point.x - x, dy = this.point.y - y, dz = this.point.z - z, radius = limb.radius + .035;
+            const dx = q.x - x, dy = q.y - y, dz = q.z - z, radius = limb.radius + .035;
             // Clearly outside: the margin dwarfs any rounding in the exact distance, which only nearer points need.
             if (dx * dx + dy * dy + dz * dz > radius * radius * 1.000001) continue;
             const distance = Math.hypot(dx, dy, dz);
             if (distance < radius) {
-              if (distance < .00001) this.point.set(x, y + radius, z);
-              else this.point.set(x + dx / distance * radius, y + dy / distance * radius, z + dz / distance * radius);
+              if (distance < .00001) q.set(x, y + radius, z);
+              else q.set(x + dx / distance * radius, y + dy / distance * radius, z + dz / distance * radius);
             }
           }
-          if (physical) this.point.y = Math.max(Math.max(0, heightAt(this.point.x, this.point.z)) + .035, this.point.y);
-          this.positions[k]=this.point.x;this.positions[k+1]=this.point.y;this.positions[k+2]=this.point.z;
+          if (physical > 0) q.y += Math.max(0, Math.max(0, heightAt(q.x, q.z)) + .035 - q.y) * physical;
+          this.positions[vertex] = q.x; this.positions[vertex + 1] = q.y; this.positions[vertex + 2] = q.z;
         }
       }
     }
-    this.geometry.attributes.position.needsUpdate=true;
+    if (drawn > 0) uv.needsUpdate = true;
+    this.geometry.attributes.position.needsUpdate = true;
     // Lighting must follow each fold, including the back and the thick hem, not just the centreline.
     indexedNormals(this.positions, this.normals, this.geometry.index!.array);
     this.geometry.attributes.normal.needsUpdate = true;
