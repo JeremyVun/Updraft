@@ -25,6 +25,7 @@
 // its turn and a step alone takes 3-5 ms (tools/wind-cost.mjs, perf-bakes design F).
 // Any ablation suffixed @drain (bloom@drain) waits for the GPU after every draw the same way; bloom and other chains of
 // small passes the frame reads back lose overlap with the next draw when drawn back to back.
+// QUIET=600 waits up to 600 s before each chapter until no other non-system process is above 50% CPU; rows record it.
 // POLL=timeout polls fences with setTimeout(0), the pre-9b69229 behaviour, for A/B checks of the poll.
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
@@ -44,6 +45,19 @@ const busy = () => {
   const own=new Set([process.pid]);for(let grew=true;grew;){grew=false;for(const r of rows)if(!own.has(r.pid)&&own.has(r.ppid)){own.add(r.pid);grew=true;}}
   return rows.filter(r=>r.cpu>=15).sort((a,b)=>b.cpu-a.cpu).slice(0,8).map(r=>({cpu:r.cpu,command:r.command,...own.has(r.pid)&&{own:true}}));
 };
+// Holding the browser lock keeps other browser checks out; QUIET waits for anything else (ffmpeg, simulators, VMs).
+const QUIET_S=Number(process.env.QUIET??0), SYSTEM=/^(secd|WindowServer|kernel_task|ctkd|launchd|logd|mds.*|coreaudiod|runningboardd|trustd|syspolicyd|.*intelligenceplatformd|\(proactiveeventtr\))$/;
+async function quiet() {
+  const start=Date.now(),samples=[];
+  for(;;) {
+    let hot=[];
+    for(let i=0;i<4;i++){const b=busy();samples.push(b);hot.push(...b.filter(r=>!r.own&&r.cpu>50&&!SYSTEM.test(r.command)));await new Promise(r=>setTimeout(r,2500));}
+    const waitedS=(Date.now()-start)/1000;
+    if(!hot.length||waitedS>=QUIET_S)return {waitedS,contended:hot.length>0,hot,samples:samples.slice(-4)};
+    console.warn('Waiting for quiet: '+[...new Set(hot.map(h=>h.command))].join(', '));
+    await new Promise(r=>setTimeout(r,15000));
+  }
+}
 const median = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 function cpuSummary(profile, frames) {
   const nodes = new Map(profile.nodes.map(n => [n.id, n])), parents = new Map(), self = new Map(), total = new Map();
@@ -257,6 +271,7 @@ const { browser, close } = await openBrowser();
 const report=[],inexact=[];
 try {
   for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
+    const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
     const [entry,fixture]=chapter.split(':'),busyAtStart=busy();
     const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
     const errors=[]; page.on('pageerror',e=>errors.push(e.message));
@@ -370,7 +385,7 @@ try {
     }
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,busy:busyAtStart,frameTimes,cpu,census,ablations,cullingViews,errors};report.push(row);
+    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
