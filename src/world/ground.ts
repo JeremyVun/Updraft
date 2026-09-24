@@ -12,18 +12,26 @@ const SURFACE_RES = 256;
 const MAX_OCCLUDERS = 24;
 const MAX_SHAPES = 64;
 
+/** Heights over the window plus a one-texel margin all round: texel (i, j) is output texel (i - 1, j - 1). */
 const HEIGHT_FRAG = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
 uniform vec4 uDomain;
-in vec2 vUv;
 void main() {
-  vec2 p = vUv / uDomain.zw + uDomain.xy;
+  vec2 uv = (gl_FragCoord.xy - 1.0) / ${RES}.0;
+  gl_FragColor = vec4(worldHeight(uv / uDomain.zw + uDomain.xy), 0.0, 0.0, 1.0);
+}`;
+
+const NORMAL_FRAG = /* glsl */ `
+uniform sampler2D uHeights;
+uniform vec4 uDomain;
+void main() {
+  ivec2 c = ivec2(gl_FragCoord.xy) + 1;
   float e = 1.0 / (uDomain.z * ${RES}.0);
-  float h = worldHeight(p);
-  float hl = worldHeight(p - vec2(e, 0.0));
-  float hr = worldHeight(p + vec2(e, 0.0));
-  float hb = worldHeight(p - vec2(0.0, e));
-  float ht = worldHeight(p + vec2(0.0, e));
+  float h = texelFetch(uHeights, c, 0).r;
+  float hl = texelFetch(uHeights, c - ivec2(1, 0), 0).r;
+  float hr = texelFetch(uHeights, c + ivec2(1, 0), 0).r;
+  float hb = texelFetch(uHeights, c - ivec2(0, 1), 0).r;
+  float ht = texelFetch(uHeights, c + ivec2(0, 1), 0).r;
   gl_FragColor = vec4(h, normalize(vec3(hl - hr, 2.0 * e, hb - ht)));
 }`;
 
@@ -133,10 +141,20 @@ function nearest<T>(items: T[], at: (t: T) => [number, number], max: number): T[
  */
 export class GroundBakes {
   readonly height: THREE.WebGLRenderTarget;
+  private readonly heights = new THREE.WebGLRenderTarget(RES + 2, RES + 2, {
+    type: THREE.FloatType,
+    format: THREE.RedFormat,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    depthBuffer: false,
+    stencilBuffer: false,
+    generateMipmaps: false,
+  });
   readonly ground = simTarget(RES, RES, THREE.HalfFloatType, THREE.LinearFilter);
   readonly surface = simTarget(SURFACE_RES, SURFACE_RES, THREE.UnsignedByteType, THREE.LinearFilter);
   private readonly gpu: GpuRunner;
   private readonly heightMat: THREE.ShaderMaterial;
+  private readonly normalMat: THREE.ShaderMaterial;
   private readonly groundMat: THREE.ShaderMaterial;
   private readonly surfaceMat: THREE.ShaderMaterial;
   private readonly readback: Readback<{ minX: number; minZ: number; size: number }>;
@@ -159,6 +177,7 @@ export class GroundBakes {
       setHeightGrid({ data: grid, ...window, res: RES, stride: 4 });
     }, 2, 4);
     this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain });
+    this.normalMat = simMaterial(NORMAL_FRAG, { uHeights: { value: this.heights.texture }, uDomain: atmo.uniforms.uDomain });
     this.groundMat = simMaterial(GROUND_FRAG, {
       uHeightTex: { value: this.height.texture },
       uSunDir: atmo.uniforms.uSunDir,
@@ -181,7 +200,8 @@ export class GroundBakes {
 
   /** Bakes everything for the current window (`atmo.uniforms.uDomain` must already match `WINDOW`). */
   bake(inputs: BakeInputs): void {
-    this.gpu.run(this.heightMat, this.height);
+    this.gpu.run(this.heightMat, this.heights);
+    this.gpu.run(this.normalMat, this.height);
     this.bakeLight(inputs);
 
     const su = this.surfaceMat.uniforms;
