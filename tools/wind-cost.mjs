@@ -1,7 +1,7 @@
 // Where the wind step's GPU cost comes from (perf-bakes design F). Loads a chapter like frame-profile.mjs, pauses
 // the loop, then:
-//   census    counts what one synthetic step submits (ticks, passes, framebuffer binds, clears, readbacks) and what
-//             one frame of the real loop submits.
+//   census    counts what one synthetic step submits (ticks, passes, framebuffer binds, clears, readbacks), what the
+//             scene submits, and what `wind.step` submits in each of five frames of the real loop.
 //   variants  interleaved batches of synthetic draws, per round in ABC…CBA order, each timed to GPU completion:
 //             full       step, rebind the wind textures, draw the scene (frame-profile's baseline)
 //             scene      the scene alone (frame-profile's `wind` ablation)
@@ -125,10 +125,10 @@ window.__wind = {
     else if(v==='calib'){wind.gpu.run(this.calibMat,this.calibTarget);}
     else throw Error('unknown variant '+v);
   },
-  census() {
+  count(fn) {
     const gl=renderer.getContext(),names=['bindFramebuffer','drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced','clear',
       'readPixels','fenceSync','clientWaitSync','getBufferSubData','useProgram','bindTexture','texImage2D','texSubImage2D','invalidateFramebuffer','blitFramebuffer','flush','finish'];
-    const count=fn=>{
+    {
       const counts={},orig={};let bound=null,lastDrawn=undefined,passes=0,targets=new Set();
       for(const n of names){orig[n]=gl[n];gl[n]=function(...a){counts[n]=(counts[n]||0)+1;
         if(n==='bindFramebuffer'&&(a[0]===gl.FRAMEBUFFER||a[0]===gl.DRAW_FRAMEBUFFER))bound=a[1];
@@ -137,7 +137,18 @@ window.__wind = {
       let ticks=0;const substep=wind.substep;wind.substep=function(...a){ticks++;return substep.apply(this,a);};
       try{fn();}finally{for(const n of names)gl[n]=orig[n];wind.substep=substep;}
       return {ticks,renderPasses:passes,distinctTargets:targets.size,calls:counts};
-    };
+    }
+  },
+  async censusReal(n) {
+    const results=[],step=wind.step,self=this;
+    wind.step=function(...a){let r;results.push(self.count(()=>{r=step.apply(this,a);}));return r;};
+    window.__paused=false;
+    try{await new Promise(done=>{let k=0;const f=()=>{if(++k>n)done();else requestAnimationFrame(f);};requestAnimationFrame(f);});}
+    finally{window.__paused=true;wind.step=step;}
+    return results;
+  },
+  census() {
+    const count=fn=>this.count(fn);
     this.ensure();
     const texBefore=[wind.texture,wind.bendTexture,wind.swayTexture].map(t=>t.uuid);
     const step=count(()=>this.step());
@@ -222,6 +233,7 @@ try {
     await page.waitForTimeout(300);
     if (modes.includes('census')) {
       row.census = await page.evaluate(() => __wind.census());
+      row.census.realFrames = await page.evaluate(() => __wind.censusReal(5));
       console.log(JSON.stringify({ chapter, census: row.census }));
     }
 
