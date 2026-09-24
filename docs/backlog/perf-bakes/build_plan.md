@@ -7,6 +7,12 @@ The design is in `design.md` in this folder; its item letters (A–H) are used b
 corrected two-pass height bake. The distant-height atlas and the surf cache are experiments. They are kept only
 if they pass their stronger checks.
 
+**Approved to build (Jeremy, 2026-09-24):** phases 0, 1, 2, 4 and 5, plus 5b (the scarf's look and behaviour,
+design G2). Phases 3 and 6 are on hold until he approves them.
+
+**Running order:** phase 0 and phase 2 run together first. Phase 1 starts on phase 0's branch once it lands.
+Phase 4 follows, on phase 0's branch. Then phase 5, then 5b on phase 5's branch.
+
 ## Standing rules for every phase
 
 - **Worktrees:** work in a worktree under `/private/tmp`, forked from current `main`. Before forking, run
@@ -108,7 +114,8 @@ Report the worst gap and p99 at each move.
 
 ## Phase 3: distant-height atlas (item B, experiment)
 
-**Status:** not started. Starts after phase 1 merges, because it shares `terrain.ts`.
+**Status:** on hold (Jeremy, 2026-09-24). When approved, it starts after phase 1 merges, because it shares
+`terrain.ts`, and it adds a before/after video of the Meadow walk and sailing past the window edge for Jeremy.
 
 **Owns:**
 - a new `src/world/terrain-heights.ts`
@@ -204,9 +211,26 @@ worktree.
 **Gate: motion.** If motion changes, record before/after video of the scarf in play (`VIDEO=1 node tools/play.mjs`).
 An allowed visual model reviews it, and it goes to Jeremy before merge.
 
+## Phase 5b: the scarf's look and behaviour (design G2)
+
+**Status:** not started. Starts on phase 5's branch after phase 5's exactness gates pass. Visual work (motion
+and look), so an allowed visual model only: Opus.
+
+**Owns:** the same files as phase 5, plus the scarf's shader in `src/world/birch-scarf.ts` and scarf numbers in
+`src/tuning.ts`.
+
+**Work:**
+1. Record before-video of the scarf in play and diagnose what reads as simulation (design G2). Write the
+   diagnosis into `design.md`.
+2. Change the motion (and the look if it helps). Put new feel numbers in `src/tuning.ts`.
+3. Record after-video at the same moments.
+
+**Gates:** `PHYSICS=1 node tools/scarf-check.mjs` and `node tools/scarf-geometry-check.mjs` pass. The Birches CPU
+median is no higher than phase 5's. The videos go to Jeremy; **no merge without his verdict**.
+
 ## Phase 6: bake the fine grain and noise (item E, including the surf experiment)
 
-**Status:** not started. Starts after phases 1–3 merge. Visual implementation, so an allowed visual model only.
+**Status:** on hold (Jeremy, 2026-09-24). When approved, it starts after phases 1–3 merge. Visual implementation, so an allowed visual model only.
 
 **Owns:**
 - `src/world/terrain.ts` (`FRAG`)

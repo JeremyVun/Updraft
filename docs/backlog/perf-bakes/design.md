@@ -27,6 +27,15 @@ led to these changes:
   - "Unchanged" scarf sections were undefined.
   - `frostAt` also runs in vertex shaders.
 
+Build ruling, 2026-09-24 (verbatim):
+
+> Ok proceed with phase 0, 1, 2, 4, and 5. And if you can find ways to make the birches scarf look and behave
+> better, go ahead (currently it feels too "physic simulationy" if that makes sense).
+
+- Phases 3 (item B, the distant-height atlas) and 6 (item E, the grain bake) are **on hold** until Jeremy approves
+  them. He asked to be told of any risk of visual regression, so both would bring him video before merging.
+- The scarf's look and behaviour are now in scope as item G2 below. They follow item G's exact CPU work.
+
 ## Why
 
 The target is the iPad. Jeremy named the Meadow walk as the worst part of the game there (see `docs/engine.md`).
@@ -283,6 +292,29 @@ tick.
 
 Any change that alters the motion (fewer substeps or constraint iterations, cheaper collision) needs before/after
 video of the scarf in play, reviewed like item E.
+
+### G2. The scarf looks and behaves less like a simulation (look change, Jeremy's verdict)
+
+Jeremy, 2026-09-24: the scarf "feels too 'physic simulationy'". He gave latitude to make it look and behave
+better. The scarf is his "impossibly long red scarf", "make it really beautiful" (`docs/journey.md`, Birches).
+
+**Reading of the brief:** the released lengths should read as heavy, soft knitted wool with intent in how they
+move, not as a generic cloth solver. Typical tells of a simulation are rubbery stretch and rebound, jitter or
+buzzing at rest, uniform floppiness along the whole length, over-eager reaction to every breath of wind, and
+bouncy settling. The agent diagnoses from video of the scarf in play which of these (or others) are present
+before changing anything, and records the diagnosis here.
+
+**Must keep:**
+- the four tangles, their gestures, the order, saved progress and checkpoint restore;
+- gravity and settling: nothing floats (Jeremy's earlier floating-scarf findings);
+- branch and trunk contact, and clearance around the broken birch during the lift;
+- the gathering into the red sail;
+- equal motion at 30/60 Hz;
+- item G's CPU savings. The CPU cost must not rise above item G's result.
+
+**Checks:** `PHYSICS=1 node tools/scarf-check.mjs`, `node tools/scarf-geometry-check.mjs`, and before/after
+**video** of the scarf in play: each release, the settling, the scarf moving in the player's wind, and the gathering.
+An allowed visual model reviews it, then it goes to Jeremy. **No merge without Jeremy's verdict.**
 
 ### H. Repair the profiler
 
