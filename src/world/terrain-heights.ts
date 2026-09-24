@@ -166,22 +166,24 @@ export class TerrainHeights {
   private readonly size = { value: new THREE.Vector2() };
   private readonly material = simMaterial(BAKE, { uHeightBakePatch: this.patch, uHeightBakeSize: this.size });
 
-  bake(renderer: THREE.WebGLRenderer): void {
+  /** About 75 ms of GPU on an M4 Pro, so `between` can let each patch finish before the next is queued. */
+  async bake(renderer: THREE.WebGLRenderer, between?: () => Promise<void>): Promise<void> {
     if (this.uniforms.uTerrainHeightsReady.value) return;
     const gpu = new GpuRunner(renderer);
-    this.target.scissorTest = true;
-    try {
-      for (const p of TERRAIN_HEIGHT_PATCHES) {
-        this.patch.value.set(p.minX, p.minZ, p.x, p.y);
-        this.size.value.set(p.width, p.height);
-        this.target.viewport.set(p.x, p.y, p.width, p.height);
-        this.target.scissor.copy(this.target.viewport);
+    for (const p of TERRAIN_HEIGHT_PATCHES) {
+      this.patch.value.set(p.minX, p.minZ, p.x, p.y);
+      this.size.value.set(p.width, p.height);
+      this.target.viewport.set(p.x, p.y, p.width, p.height);
+      this.target.scissor.copy(this.target.viewport);
+      this.target.scissorTest = true;
+      try {
         gpu.run(this.material, this.target);
+      } finally {
+        this.target.scissorTest = false;
+        this.target.viewport.set(0, 0, HEIGHT_LAYOUT.width, HEIGHT_LAYOUT.height);
       }
-      this.uniforms.uTerrainHeightsReady.value = 1;
-    } finally {
-      this.target.scissorTest = false;
-      this.target.viewport.set(0, 0, HEIGHT_LAYOUT.width, HEIGHT_LAYOUT.height);
+      await between?.();
     }
+    this.uniforms.uTerrainHeightsReady.value = 1;
   }
 }

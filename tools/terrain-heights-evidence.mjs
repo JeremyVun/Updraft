@@ -300,7 +300,8 @@ window.__evidence = {
   return page;
 }
 
-const VISTAS = [
+function vistaList() {
+  return [
   { query: 'chapter=meadow', label: 'Meadow, crest looking north', name: 'vista-meadow-crest-north', eye: [9, -636], target: [15, -960] },
   { query: 'chapter=meadow', label: 'Meadow, looking west to the cliffs', name: 'vista-meadow-west-cliffs', eye: [40, -790], target: [-260, -790] },
   { query: 'chapter=meadow', label: 'Meadow, pond looking south', name: 'vista-meadow-pond-south', eye: [24, -910], target: [0, -600] },
@@ -311,13 +312,14 @@ const VISTAS = [
   { query: 'chapter=jetty', label: 'Home, last hill looking south', name: 'vista-home-hill-south', eye: [-85, -2310], target: [-150, -2600] },
   { query: 'chapter=wood', label: 'Wood, north shore looking south', name: 'vista-wood-across', eye: [-30, -1690], target: [-30, -1950] },
 ];
+}
 
 /** Held views where ground beyond the window fills part of the frame; the window placed as the camera would place it. */
 async function captureVistas(out) {
   const { openBrowser } = await import('./lib/browser.mjs');
   fs.mkdirSync(`${out}/pairs`, { recursive: true });
   const { browser, close } = await openBrowser();
-  const errors = [], done = [];
+  const errors = [], done = [], VISTAS = vistaList();
   try {
     for (const query of [...new Set(VISTAS.map((v) => v.query))]) {
       const page = await openGame(browser, errors, 1376, 1032, 2);
