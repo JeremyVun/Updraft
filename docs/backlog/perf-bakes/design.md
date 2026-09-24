@@ -215,7 +215,8 @@ shadows marched over it. The gates:
 
 **Kept away from item C.** The window height bake does not read the atlas.
 
-**Result (2026-09-24, branch `perf-bakes-p3`, awaiting Jeremy's verdict):**
+**Result (2026-09-24, merged 2ec20d2).** Jeremy's verdict on the evidence, verbatim: "yep merge phase 3, looks
+good." He accepted the far-skyline edge-pixel change in place of the 2/255 gate.
 - **Upper bound.** Replacing every height read beyond the window with a constant saved 11–21% per chapter.
   96% of the light bake's cost is those reads.
 - **Built:**

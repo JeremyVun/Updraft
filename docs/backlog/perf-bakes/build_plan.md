@@ -127,8 +127,8 @@ Report the worst gap and p99 at each move.
 
 ## Phase 3: distant-height atlas (item B, experiment)
 
-**Status:** built on `perf-bakes-p3` (6f5525f), awaiting Jeremy's verdict (design B, Result). It exceeds the
-2/255 gate at far-skyline edge pixels.
+**Status:** done 2026-09-24 (merged 2ec20d2). Jeremy approved the far-skyline edge-pixel change after seeing
+the evidence (design B, Result).
 Jeremy judges the regression from difference maps, worst-region crops and before/after video. **No merge without
 his verdict.**
 
