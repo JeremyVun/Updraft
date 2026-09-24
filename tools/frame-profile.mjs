@@ -145,7 +145,11 @@ window.__audit = {
   },
   draw(sim=true) {
     renderer.info.reset();
-    if (sim && this.omit !== 'wind') wind.step(1/60,time,false);
+    if (sim && this.omit !== 'wind') {
+      wind.step(1/60,time,false);
+      // The ping-pong targets swap every step, so rebind them as the real loop does.
+      const u=atmo.uniforms;u.uWindTex.value=wind.texture;u.uBendTex.value=wind.bendTexture;u.uSwayTex.value=wind.swayTexture;
+    }
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
