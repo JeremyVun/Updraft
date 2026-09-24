@@ -16,6 +16,7 @@ import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
+const STRADDLE = 1.4;
 const median = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 function cpuSummary(profile, frames) {
   const nodes = new Map(profile.nodes.map(n => [n.id, n])), parents = new Map(), self = new Map(), total = new Map();
@@ -290,12 +291,14 @@ try {
         probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images};
       },{omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1'});
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
-      const row={omit,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],runs:result.runs};
+      const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
+      const row={omit,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
-      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs}));
+      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle}));
+      if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
