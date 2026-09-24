@@ -279,6 +279,19 @@ An allowed visual model reviews the videos, then they go to Jeremy. **No merge w
 
 **Gate: saving.** Paired rounds per chapter with the new textures against the live noise.
 
+## Phase R: re-profile `main` after phases 0–5
+
+**Status:** running (Jeremy, 2026-09-24: "ok reprofile now"). Measurement only; no game change. Phase 5b is not
+merged yet, so Birches CPU is re-checked when it lands.
+
+**Owns:** nothing in `src/`. It may improve `tools/frame-profile.mjs` measurement (for example `MessageChannel`
+fence polling) if it shows the change doesn't shift results systematically.
+
+**Deliverable:**
+- A new table in design.md, "Profile after phases 0–5", laid out like the 09-24 table.
+- Every pair's baseline, with any straddled or contended row repeated.
+- A ranked list of the largest remaining costs per chapter.
+
 ## Phase 7: close
 
 **Status:** not started. Run the backlog-item close stage:
