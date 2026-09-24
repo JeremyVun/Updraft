@@ -406,6 +406,33 @@ tick.
 Any change that alters the motion (fewer substeps or constraint iterations, cheaper collision) needs before/after
 video of the scarf in play, reviewed like item E.
 
+**Result (2026-09-24, merged 9252bd9):**
+- **CPU.** The scarf's `update` fell from 2.77 to 1.76 ms per frame (−36%), and the Birches frame median from
+  about 4.8 to 3.7 ms, on a busy machine. Per function:
+
+  | Function | Before (ms) | After (ms) |
+  |---|---:|---:|
+  | `write` | 1.14 | 0.33 |
+  | `collide` | 0.33 | 0.09 (+0.05 `push`) |
+  | `step` | 0.76 | 0.77 (unchanged; now the largest cost) |
+
+- **How:**
+  - Fold, roll and bunching are precomputed per length, and the roll is skipped where the cloth sets the width.
+  - Per-row lookups use tables, and the per-row wind and stump values are computed once per frame.
+  - The solver works on packed `Float64Array`s, with precomputed link alphas and support Gaussians.
+  - Capsules are found through a ground grid, and an exact early-out skips points clearly clear of a capsule.
+- **Exact.** `tools/scarf-exact-check.mjs` runs old and new in lockstep in Node over 24 phases and 4,300 frames:
+  tied in wind and calm, every release, the slip, checkpoint restores, 30 Hz, and the gathering. Positions,
+  normals and cloth particles are byte-identical. One nudged normal fails the check.
+- **Impossible without changing the motion:**
+  - *Section skipping:* the roll and flutter have time terms, and the transported frame carries them along the
+    whole strip.
+  - *Cloth rest:* the ambient wind at the scarf is never zero, and even in dead calm the cloth still creeps
+    about 1 mm/s after 4 minutes.
+- **Pre-existing on `main`:** `PHYSICS=1 tools/scarf-check.mjs` fails at tangle 4, which needs 7 strokes against
+  its limit of 5, on the unmodified build too. Its physics section's wall-clock thresholds (stretch 1.15, settle
+  speed) fail intermittently under machine load, on both builds.
+
 ### G2. The scarf looks and behaves less like a simulation (look change, Jeremy's verdict)
 
 Jeremy, 2026-09-24: the scarf "feels too 'physic simulationy'". He gave latitude to make it look and behave

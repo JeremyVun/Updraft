@@ -200,7 +200,7 @@ textures bit-identical, or within 1e-5.
 
 ## Phase 5: Birches scarf CPU (item G)
 
-**Status:** not started. Independent; don't run it beside phase 4.
+**Status:** done 2026-09-24 (merged 9252bd9). See design G.
 
 **Owns:**
 - `src/world/birch-scarf.ts`
