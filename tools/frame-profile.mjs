@@ -25,6 +25,7 @@
 // its turn and a step alone takes 3-5 ms (tools/wind-cost.mjs, perf-bakes design F).
 // Any ablation suffixed @drain (bloom@drain) waits for the GPU after every draw the same way; bloom and other chains of
 // small passes the frame reads back lose overlap with the next draw when drawn back to back.
+// POLL=timeout polls fences with setTimeout(0), the pre-9b69229 behaviour, for A/B checks of the poll.
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
@@ -36,8 +37,13 @@ import { openBrowser } from './lib/browser.mjs';
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
 // Other processes' load, recorded with every row: it inflates GPU numbers (perf-bakes design F).
-const busy = () => execFileSync('ps',['-Ao','pcpu=,comm='],{encoding:'utf8'}).split('\n').map(l=>l.trim().match(/^([\d.]+)\s+(.*)$/))
-  .filter(m=>m&&Number(m[1])>=15).map(m=>({cpu:Number(m[1]),command:m[2].split('/').pop()})).sort((a,b)=>b.cpu-a.cpu).slice(0,6);
+// This tool's own browser is flagged own:true so another Chrome stands out.
+const busy = () => {
+  const rows=execFileSync('ps',['-Ao','pid=,ppid=,pcpu=,comm='],{encoding:'utf8'}).split('\n').map(l=>l.trim().match(/^(\d+)\s+(\d+)\s+([\d.]+)\s+(.*)$/))
+    .filter(Boolean).map(m=>({pid:Number(m[1]),ppid:Number(m[2]),cpu:Number(m[3]),command:m[4].split('/').pop()}));
+  const own=new Set([process.pid]);for(let grew=true;grew;){grew=false;for(const r of rows)if(!own.has(r.pid)&&own.has(r.ppid)){own.add(r.pid);grew=true;}}
+  return rows.filter(r=>r.cpu>=15).sort((a,b)=>b.cpu-a.cpu).slice(0,8).map(r=>({cpu:r.cpu,command:r.command,...own.has(r.pid)&&{own:true}}));
+};
 const median = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 function cpuSummary(profile, frames) {
   const nodes = new Map(profile.nodes.map(n => [n.id, n])), parents = new Map(), self = new Map(), total = new Map();
@@ -308,7 +314,7 @@ try {
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
       const busyBefore=busy();
-      const result=await page.evaluate(async ({name,rounds,draws,capture})=>{
+      const result=await page.evaluate(async ({name,rounds,draws,capture,poll})=>{
         const [omit,mode]=name.split('@');
         const gl=__game.renderer.getContext(), probe=__audit;probe.pairRebake=probe.changesHeights(omit);
         // setTimeout(0) polls in ~4.5 ms steps once nested; a message round trip is far finer.
@@ -316,7 +322,7 @@ try {
         async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();const end=performance.now()+20000;
           try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;
             if(s===gl.WAIT_FAILED||performance.now()>end)throw Error('GPU completion timeout');
-            await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}
+            await new Promise(r=>{if(poll==='timeout')setTimeout(r,0);else{wake=r;channel.port2.postMessage(0);}});}}
           finally{gl.deleteSync(fence);}}
         const read=v=>{probe.configure(v);probe.draw(false);const data=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);
           gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,data);return data;};
@@ -344,7 +350,7 @@ try {
         const submitted={baseline:counts(null),omitted:counts(omit)};
         const stepMs=omit==='wind'?await stepAlone():undefined;
         probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain};
-      },{name:omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1'});
+      },{name:omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL});
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
       const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
