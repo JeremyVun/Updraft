@@ -269,9 +269,12 @@ export class ScarfCloth {
     }
   }
 
-  /** Knitted wool gives a little, never like elastic: nothing may lie further from a held point than the yarn between them. */
+  /**
+   * Knitted wool gives a little, never like elastic: nothing may lie further from a held point than the yarn between
+   * them. The stitch is carried, not flung: its velocity is kept, so a moving support drags rather than whips.
+   */
   private tether(): void {
-    const { pos, anchors, reach, weights } = this, count = anchors.length, slack = tuning.birches.scarf.clothGive;
+    const { pos, prev, anchors, reach, weights } = this, count = anchors.length, slack = tuning.birches.scarf.clothGive;
     for (let n = 0; n < count; n++) {
       const a = anchors[n];
       if (weights[a]) continue;
@@ -281,8 +284,9 @@ export class ScarfCloth {
         const o = i * 3, dx = pos[o] - ax, dy = pos[o + 1] - ay, dz = pos[o + 2] - az;
         const limit = reach[i * count + n] * slack, d2 = dx * dx + dy * dy + dz * dz;
         if (d2 <= limit * limit) continue;
-        const scale = limit / Math.sqrt(d2);
-        pos[o] = ax + dx * scale; pos[o + 1] = ay + dy * scale; pos[o + 2] = az + dz * scale;
+        const scale = limit / Math.sqrt(d2) - 1;
+        pos[o] += dx * scale; pos[o + 1] += dy * scale; pos[o + 2] += dz * scale;
+        prev[o] += dx * scale; prev[o + 1] += dy * scale; prev[o + 2] += dz * scale;
       }
     }
   }
