@@ -18,7 +18,7 @@
 //             raw        the step, copied into alternating snapshot sets that the scene reads: the scene still waits
 //                        for the step, but the step never overwrites what the last scene read
 //             full-itN   full, with N pressure iterations instead of 24 (N/2 fused passes): a shorter chain of the same
-//                        kind, to see whether the cost follows the chain's length. snap-itN likewise.
+//                        kind, to see whether the cost follows the chain's length. snap-itN and step-itN likewise.
 //             calib      a fixed ALU-bound pass: its time tracks the GPU's clock and contention, not the scene
 //   proc      long batches of each variant: wall time to completion per draw, and the CPU time per draw of this
 //             run's Chrome GPU process and renderer (ps), to tell GPU-process command work from GPU execution.
@@ -27,7 +27,8 @@
 //   loop      the real frame loop at RATIO, alternating LOOP_MS windows with and without `wind.step`, reporting
 //             the mean rAF interval of each window.
 // A variant suffixed @t polls the completion fence with setTimeout(0) (clamped to about 4 ms once nested, as
-// frame-profile.mjs polled until phase 4), @m with a MessageChannel; POLL sets the default.
+// frame-profile.mjs's complete() polls), @m with a MessageChannel; POLL sets the default.
+// CONTEND=<iterations> adds another process's GPU load; UNCAPPED=1 runs the real loop without vsync (see below).
 // Before every round the page is idle for 300 ms and the machine's GPU utilisation (ioreg) is sampled: that is
 // other processes' GPU load. A round whose `scene` time is over 1.4x the chapter minimum is marked slow.
 // node tools/wind-cost.mjs [washing wood sleeping ...]
@@ -90,19 +91,19 @@ window.__wind = {
   scene() {
     const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,drawRooms);
   },
-  step() { wind.step(1/60,time,false); },
+  step(iterations=wind.iterations) { const it=wind.iterations;wind.iterations=iterations;try{wind.step(1/60,time,false);}finally{wind.iterations=it;} },
   copy(alternate) {
     const set=alternate&&(this.flip^=1)?this.snaps2:this.snaps;
     [wind.texture,wind.bendTexture,wind.swayTexture].forEach((t,i)=>{this.copyMat.uniforms.uSrc.value=t;wind.gpu.run(this.copyMat,set[i]);});
     const u=atmo.uniforms;[u.uWindTex.value,u.uBendTex.value,u.uSwayTex.value]=set.map(t=>t.texture);
   },
-  detached(targetOf) {
+  detached(separate) {
     const saved=[];const snap=this.snaps[0].texture;
     for(const m of new Set(this.sequence))for(const [k,u] of Object.entries(m.uniforms))
       if(['uVel','uCurl','uPressure','uDivergence','uBend','uSway','uSrc'].includes(k)){saved.push([u,u.value]);u.value=snap;}
     try {
       const prev=renderer.getRenderTarget();
-      if(targetOf===null){renderer.setRenderTarget(this.scratch[0]);for(const m of this.sequence){wind.gpu.quad.material=m;wind.gpu.quad.render(renderer);}}
+      if(!separate){renderer.setRenderTarget(this.scratch[0]);for(const m of this.sequence){wind.gpu.quad.material=m;wind.gpu.quad.render(renderer);}}
       else for(let i=0;i<this.sequence.length;i++){renderer.setRenderTarget(this.scratch[i]);wind.gpu.quad.material=this.sequence[i];wind.gpu.quad.render(renderer);}
       renderer.setRenderTarget(prev);
     } finally { for(const [u,v] of saved)u.value=v; }
@@ -114,14 +115,14 @@ window.__wind = {
     else if(v==='step'){this.step();this.bindLive();}
     else if(v==='snap'){this.step();this.bindSnap();this.scene();}
     else if(v==='scene-snap'){this.bindSnap();this.scene();}
-    else if(v==='switch21'){this.detached([]);this.bindSnap();this.scene();}
-    else if(v==='flat21'){this.detached(null);this.bindSnap();this.scene();}
+    else if(v==='switch21'){this.detached(true);this.bindSnap();this.scene();}
+    else if(v==='flat21'){this.detached(false);this.bindSnap();this.scene();}
     else if(v==='copy3'){this.copy(false);this.scene();}
     else if(v==='copy3-alt'){this.copy(true);this.scene();}
     else if(v==='raw'){this.step();this.copy(true);this.scene();}
-    else if(v.startsWith('full-it')){const it=wind.iterations;wind.iterations=Number(v.slice(7));try{this.step();}finally{wind.iterations=it;}this.bindLive();this.scene();}
-    else if(v.startsWith('snap-it')){const it=wind.iterations;wind.iterations=Number(v.slice(7));try{this.step();}finally{wind.iterations=it;}this.bindSnap();this.scene();}
-    else if(v.startsWith('step-it')){const it=wind.iterations;wind.iterations=Number(v.slice(7));try{this.step();}finally{wind.iterations=it;}this.bindLive();}
+    else if(v.startsWith('full-it')){this.step(Number(v.slice(7)));this.bindLive();this.scene();}
+    else if(v.startsWith('snap-it')){this.step(Number(v.slice(7)));this.bindSnap();this.scene();}
+    else if(v.startsWith('step-it')){this.step(Number(v.slice(7)));this.bindLive();}
     else if(v==='calib'){wind.gpu.run(this.calibMat,this.calibTarget);}
     else throw Error('unknown variant '+v);
   },
