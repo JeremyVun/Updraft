@@ -13,6 +13,7 @@ export class SleepingWeather {
   private readonly veil = {value:0};
   private readonly part = {value:0};
   private readonly beacon = {value:new THREE.Vector3()};
+  private readonly fogMaterial: THREE.ShaderMaterial;
   constructor() {
     const breathGeo=new THREE.BufferGeometry();
     breathGeo.setAttribute('position',new THREE.Float32BufferAttribute(Array.from({length:24},(_,i)=>[i/24,0,0]).flat(),3));
@@ -45,7 +46,7 @@ export class SleepingWeather {
       vertexShader:`uniform vec3 uBeacon;out vec2 vUv;void main(){vec4 view=viewMatrix*vec4(uBeacon,1.0);view.xy+=position.xy;gl_Position=projectionMatrix*view;vUv=uv;}`,
       fragmentShader:`${ATMO_GLSL} uniform vec3 uBeacon;uniform float uCold;in vec2 vUv;void main(){float r=length((vUv-.5)*2.0);float a=exp(-r*r*8.0)*(1.0-smoothstep(.6,1.0,r))*(1.0-journeyVeilAt(uBeacon));gl_FragColor=vec4(1.0,.63,.27,a*(.12+uCold*.13));}`,
     }));glow.frustumCulled=false;glow.renderOrder=13;this.objects.push(glow);
-    const fog=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+    this.fogMaterial=new THREE.ShaderMaterial({
       uniforms:{...atmo.uniforms,uSleepVeil:this.veil,uPart:this.part},transparent:true,depthWrite:false,depthTest:false,
       vertexShader:`out vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
       fragmentShader:`${ATMO_GLSL} uniform float uSleepVeil,uPart;in vec2 vUv;
@@ -57,7 +58,8 @@ export class SleepingWeather {
           float opening=1.0-uPart*(1.0-smoothstep(.10,.49,bankEdge));
           opening*=.55+rim*1.0;
           vec3 tint=vec3(.20,.26,.33);gl_FragColor=vec4(tint,uSleepVeil*(.35+n*.65)*opening);}`,
-    }));fog.frustumCulled=false;fog.renderOrder=12;this.objects.push(fog);
+    });
+    const fog=new THREE.Mesh(new THREE.PlaneGeometry(2,2),this.fogMaterial);fog.frustumCulled=false;fog.renderOrder=12;this.objects.push(fog);
   }
   update(time:number,cold:number,sleep:number,dawn:number,face:THREE.Vector3,camera:THREE.Camera,part:number,beacon:THREE.Vector3,quiet:number,enclosure=1):void {
     this.beacon.value.copy(beacon);
@@ -66,6 +68,8 @@ export class SleepingWeather {
     this.face.value.copy(face);
     const near=1-THREE.MathUtils.smoothstep(camera.position.distanceTo(MIST_AT),8,28);
     this.veil.value=cold*(1-dawn)*(.10+near*.65)*enclosure;
+    // A zero veil blends to nothing. The material flag, not the mesh's, since the room system owns that one.
+    this.fogMaterial.visible=this.veil.value!==0;
     this.part.value=part;
   }
 }

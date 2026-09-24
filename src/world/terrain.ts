@@ -127,25 +127,30 @@ void main() {
   alb = mix(alb, uGround * vec3(1.35, 1.05, 0.8) * (0.8 + 0.3 * grain), grassy * (1.0 - surf.x));
   grassy *= smoothstep(0.34, 0.45, 1.0 - slope) * surf.x;
   float far = max(smoothstep(${FIELD_FROM}.0, ${FIELD_TO}.0, length(xz - cameraPosition.xz)), max(uMirrorPass, (1.0 - smoothstep(40.0, 48.0, distance(xz, vec2(${DOOR_SHORE.x.toFixed(1)}, ${DOOR_SHORE.z.toFixed(1)})))) * 0.38));
-  vec4 colourPattern = terrainColourPattern(xz);
-  vec3 tint = grassTintWithPattern(xz, colourPattern.xyz);
   float lineWidth = max(0.5, dist * 0.0024);
   vec4 fld = terrainFieldAt(xz, lineWidth);
-  float hay = step(fld.y, 0.22) * fld.w;
-  float rush = step(0.86, fld.y) * fld.w;
-  tint *= 0.92 + 0.16 * fract(fld.y * 7.3) * fld.w;
-  tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
-  tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
-  vec3 field = mix(uGrassRoot, tint, 0.62) * (0.9 + 0.16 * colourPattern.w);
-  vec2 dUv = domainUv(xz);
-  float flattened = insideUv(dUv) ? smoothstep(0.3, 1.0, length(texture(uBendTex, dUv).xy)) : 0.0;
-  float waves = fbm(xz * 0.016 - uBreeze * uTime * 0.016);
-  field *= 0.88 + 0.24 * waves + 0.35 * flattened;
-  vec3 under = uGround * (0.85 + 0.3 * grain);
   float life = lifeAt(xz);
-  field = mix(stillGrey(field), field, life);
+  // Where far is 0 the field and tint only ever reach the colour multiplied by it, so zero stands in exactly.
+  vec3 tint = vec3(0.0);
+  vec3 field = vec3(0.0);
+  if (far > 0.0) {
+    vec4 colourPattern = terrainColourPattern(xz);
+    tint = grassTintWithPattern(xz, colourPattern.xyz);
+    float hay = step(fld.y, 0.22) * fld.w;
+    float rush = step(0.86, fld.y) * fld.w;
+    tint *= 0.92 + 0.16 * fract(fld.y * 7.3) * fld.w;
+    tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
+    tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
+    field = mix(uGrassRoot, tint, 0.62) * (0.9 + 0.16 * colourPattern.w);
+    vec2 dUv = domainUv(xz);
+    float flattened = insideUv(dUv) ? smoothstep(0.3, 1.0, length(texture(uBendTex, dUv).xy)) : 0.0;
+    float waves = fbm(xz * 0.016 - uBreeze * uTime * 0.016);
+    field *= 0.88 + 0.24 * waves + 0.35 * flattened;
+    field = mix(stillGrey(field), field, life);
+    tint = mix(stillGrey(tint), tint, life);
+  }
+  vec3 under = uGround * (0.85 + 0.3 * grain);
   under = mix(stillGrey(under), under, life);
-  tint = mix(stillGrey(tint), tint, life);
   alb = mix(stillGrey(alb) * 1.04, alb, 0.45 + 0.55 * life);
   alb = mix(alb, mix(under, field, far), grassy);
   /** Under the birches the floor is leaf mould, not soil: what shows between the fallen leaves stays warm. */
@@ -188,7 +193,8 @@ void main() {
     winterGrass *= 0.88 + winterFibre * 0.09 + grain * 0.12;
     alb = mix(alb, winterGrass, sleepingFloor * 0.92);
   }
-  alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frostAt(xz) * mix(0.42, 0.88, smoothstep(0.42, 0.66, fbm(xz * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
+  float frost = frostAt(xz);
+  if (frost > 0.0) alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frost * mix(0.42, 0.88, smoothstep(0.42, 0.66, fbm(xz * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   // Keep a textured pasture beyond the blade tiles. A smooth distant dome exposes their circular limit.
   float homePasture = homeAt(xz) * grassy * far;

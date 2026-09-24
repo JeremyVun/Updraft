@@ -206,14 +206,15 @@ vec3 glassColour(vec3 V, vec2 xz) {
   vec2 ringSlope = mirrorSlope(xz);
   vec3 mirrorNormal = normalize(vec3(-ringSlope.x, 1.0, -ringSlope.y));
   vec3 ray = reflect(-V, mirrorNormal);
-  vec3 reflectedSky = skyRadiance(normalize(vec3(ray.x, abs(ray.y), ray.z)));
   vec4 projected = uMirrorMatrix * vec4(vWorld, 1.0);
   vec2 mirrorUv = projected.xy / projected.w + ringSlope * 0.12;
   vec2 border = min(mirrorUv, 1.0 - mirrorUv);
   float on = projected.w > 0.0 ? uMirrorOn * smoothstep(0.0, 0.025, min(border.x, border.y)) : 0.0;
   vec3 reflectedScene = textureLod(uMirror, clamp(mirrorUv, 0.0, 1.0), min(3.0, length(ringSlope) * 24.0)).rgb;
+  vec3 reflected = reflectedScene;
+  if (on < 1.0) reflected = mix(skyRadiance(normalize(vec3(ray.x, abs(ray.y), ray.z))), reflectedScene, on);
   // A trace of cool water keeps the horizon legible without hiding the doubled clouds.
-  return mix(reflectedSky, reflectedScene, on) * 0.96 + vec3(0.003, 0.006, 0.012);
+  return reflected * 0.96 + vec3(0.003, 0.006, 0.012);
 }
 
 void main() {
