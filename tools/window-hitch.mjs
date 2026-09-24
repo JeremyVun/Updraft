@@ -4,7 +4,8 @@
 //   boats   the little-boats room sailed with real pointer strokes, then the crossing that follows;
 //   bench   loop paused: forced window moves, then the height, light and shore bakes alone, each timed from
 //           submission to GPU completion.
-//   env: BASE (default http://127.0.0.1:5230/), W/H viewport (1600x900), WARMUP (ms after ready, 1500),
+//   env: BASE (default http://127.0.0.1:5230/), W/H viewport (1600x900), DSF (device scale, 1), QUERY (appended),
+//        WARMUP (ms after ready, 1500),
 //        AFTER (frames after the move's own frame counted as its gaps, default 5), OUT (JSON path)
 // Takes the shared browser lock. Other GPU users inflate every number: check `ps` first.
 import assert from 'node:assert/strict';
@@ -21,14 +22,15 @@ const chapter = fixture === 'boats' ? 'boats' : 'meadow';
 const { browser, close } = await openBrowser();
 const errors = [];
 try {
-  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: Number(process.env.DSF ?? 1) });
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
   await page.addInitScript(() => {
     window.__frames = [];
     const raf = window.requestAnimationFrame.bind(window);
-    window.requestAnimationFrame = (cb) => raf((t) => { window.__frames.push(t); cb(t); });
+    // Several callbacks can share one frame's timestamp; count each frame once.
+    window.requestAnimationFrame = (cb) => raf((t) => { if (window.__frames.at(-1) !== t) window.__frames.push(t); cb(t); });
   });
   if (fixture === 'bench') await page.route('**/src/main.ts*', async (route) => {
     const response = await route.fetch();
@@ -39,7 +41,7 @@ try {
     source += '\nwindow.__hitchBakes={bakes,water};';
     await route.fulfill({ response, body: source });
   });
-  await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=${chapter}&analytics=0&progress=0`, { waitUntil: 'load' });
+  await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=${chapter}&analytics=0&progress=0${process.env.QUERY ? '&' + process.env.QUERY : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
   await page.waitForTimeout(Number(process.env.WARMUP ?? 1500));
   await page.evaluate(async () => {
