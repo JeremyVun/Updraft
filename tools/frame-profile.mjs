@@ -10,6 +10,9 @@
 // These destructive diagnostics expose costs; they are not proposed production visuals.
 // ABLATIONS=fields-direct compares the baked field pattern with its original shader; CAPTURE=1 saves both images.
 // ABLATIONS=colour-direct compares the all-island colour-pattern atlas with direct noise calculations.
+// terrain-skips-off restores the terrain's dead distant-field (a1-off), frost (a2-off) and outside-atlas field
+// (a3-off) work; veil-always draws the sleeping veil at zero; glass-sky-always computes the sky under a full mirror.
+// STATE='<js>' runs in main.ts's scope after the census, before the ablations, to force a state for both sides.
 // FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables measures the cost of rebuilding all three tables each draw.
 // Ablations named in heightSources re-run the window-move bakes (ground, light, shore, grass tables) in configure
 // on both sides of every pair, outside timed draws. ABLATIONS=rebake is the baseline re-baked; it must match exactly.
@@ -119,17 +122,29 @@ window.__audit = {
     if(this.diagnosticMaterials)for(const [m,fragment]of this.diagnosticMaterials){if(m.fragmentShader!==fragment){m.fragmentShader=fragment;m.needsUpdate=true;}}
     sky.renderOrder=omit==='sky-last'?10:this.skyOrder;
     this.tintMaterials ??= [terrain.mesh.material,...grass.lods.map(l=>l.tableMat)].map(m=>[m,m.fragmentShader]);
+    const skips=(omit||'').split('+'),skipsOff=name=>skips.includes(name)||skips.includes('terrain-skips-off');
+    const restore=(fragment,from,to)=>{if(!fragment.includes(from))throw Error('Missing skip: '+from);return fragment.replace(from,to);};
     let tintChanged=false;
     for(const [material,original] of this.tintMaterials) {
-      const fragment=omit==='full-tint'?original
+      let fragment=omit==='full-tint'?original
         .replace('pasture < 1.0 ?', 'true ?')
         .replace('pasture > 0.0 ?', 'true ?')
         .replace('if (pasture < 1.0)', 'if (true)')
         .replace('if (pasture > 0.0)', 'if (true)')
         .replace('if (wood > 0.0)', 'if (true)'):original;
-      if(material.fragmentShader!==fragment){material.fragmentShader=fragment;material.needsUpdate=true;tintChanged=true;}
+      if(material===terrain.mesh.material) {
+        if(skipsOff('a1-off'))fragment=restore(fragment,'if (far > 0.0) {','if (true) {');
+        if(skipsOff('a2-off'))fragment=restore(fragment,'if (frost > 0.0) alb','if (true) alb');
+        if(skipsOff('a3-off'))fragment=restore(fragment,'any(greaterThan(uv, vec2(0.999)))) return vec4(99.0, 0.0, 0.0, 0.0);','any(greaterThan(uv, vec2(0.999)))) return fieldAt(p);');
+      }
+      if(material.fragmentShader!==fragment){material.fragmentShader=fragment;material.needsUpdate=true;tintChanged||=material!==terrain.mesh.material;}
     }
     if(tintChanged){grass.tablesDirty=true;grass.bake(renderer);}
+    const veil=sleeping.weather.fogMaterial;this.veilVisible??=veil.visible;
+    veil.visible=skips.includes('veil-always')||this.veilVisible;
+    const glass=water.mesh.material;this.glassFragment??=glass.fragmentShader;
+    const glassFragment=skips.includes('glass-sky-always')?restore(this.glassFragment,'if (on < 1.0) reflected','if (true) reflected'):this.glassFragment;
+    if(glass.fragmentShader!==glassFragment){glass.fragmentShader=glassFragment;glass.needsUpdate=true;}
     this.culling=[];
     if (omit==='culling-off') {
       const roots=[...this.groups.tree,...this.groups.pond];
@@ -179,6 +194,8 @@ window.__audit = {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);
     } else draw();
   },
+  // STATE forces a condition for every ablation after the census; it runs in this module's scope.
+  state(code) { return eval(code); },
   inspect() {
     let count=0, hidden=0, drawables=0, uncullable=0;
     scene.traverse(o=>{count++;if(!o.visible)hidden++;if(o.material){drawables++;if(!o.frustumCulled)uncullable++;}});
@@ -263,6 +280,8 @@ try {
     assert(census.frames > 0, 'No census frames recorded');
     assert.deepEqual(errors, [], 'Browser errors invalidate the profile');
     if(process.env.FORCE_GRASS_BAKES==='1') await page.evaluate(()=>{__audit.forceGrassBakes=true;});
+    const state=process.env.STATE?await page.evaluate(code=>__audit.state(code),process.env.STATE):undefined;
+    if(state!==undefined)console.log(JSON.stringify({chapter,state}));
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
       const result=await page.evaluate(async ({omit,rounds,draws,capture})=>{
@@ -298,7 +317,11 @@ try {
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
       const row={omit,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
-      if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
+      if (['culling-off','sky-last','full-tint','veil-always','glass-sky-always'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
+      if (['terrain-skips-off','a1-off','a2-off','a3-off'].includes(omit)) {
+        assert(result.pixels.max <= 1, omit+' changed visible pixels');
+        if (result.pixels.max) console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
+      }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
       ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle}));
