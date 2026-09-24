@@ -36,8 +36,13 @@ if they pass their stronger checks.
 
 **Work:**
 1. Remove `shoreFamily` from `groups` and from the `culling-off` root list.
-2. Add an option for ablations to re-run `bakes.bake` and `bakes.bakeLight` before each measured side. Later
-   phases use it.
+2. After each synthetic `wind.step()` in `draw()`, rebind `uWindTex`, `uBendTex` and `uSwayTex` as the real loop
+   does (design H).
+3. Add an option for ablations to re-run everything a window move re-runs before capturing each side:
+   `bakes.bake`, `bakes.bakeLight`, `water.bakeShore(WINDOW.size)`, and a grass-table rebake
+   (`grass.tablesDirty = true`, then `grass.bake`). Keep it out of timed draws. Later phases use it.
+4. Record every pair's baseline in the report, and flag an ablation whose baselines straddle the two GPU states
+   (design, profile caveats).
 
 **Gate:** `node tools/frame-profile.mjs island` exits 0 with no browser errors. The 09-24 table in `design.md` is
 the baseline; no full re-baseline is needed.
@@ -216,8 +221,9 @@ An allowed visual model reviews it, and it goes to Jeremy before merge.
    savings.
 2. Implement only the terms with a consistent saving.
 3. Textures must be mipmapped and sampled with explicit gradients where they sit in branches.
-4. **Frost:** one sampling-level policy for `frostAt` shared by every stage and shader that calls it, the grass
-   vertex shader included (design E).
+4. **Frost and Wood tint:** one fixed world-space sampling level for each, shared by every stage that calls it:
+   the grass vertex shader and grass tables included (design E). Compare surviving blades across LOD transitions
+   and table rebakes.
 
 **Gate: surf.** The surf cache is kept only if both hold:
 - Frame comparisons over complete wave cycles, and across window moves, show no visible change in the foam

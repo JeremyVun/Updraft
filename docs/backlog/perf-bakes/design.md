@@ -44,30 +44,38 @@ inputs never change:
 **Fixture:** `tools/frame-profile.mjs` in a 1376×1032 view at device scale 2, with `ratio=1.5` and `msaa=2`. It
 ran from an isolated worktree with its own server.
 
-**How it measures:** each figure is completed GPU work per frame. A component's saving is the median of four
-interleaved pairs, with the component turned off in one half of each pair.
+**How it measures:** each cell is one component's paired saving: the median of four interleaved pairs, with the
+component turned off in one half of each pair. It is written as a percentage of that pair's own baseline, followed
+by milliseconds saved "of" that baseline.
 
 **Caveats:**
 - These figures are not hardware timers or fps.
 - Savings overlap, so they can't be added up.
-- Another app was using about 90% of a CPU core throughout, so absolute times are inflated. Compare only
-  within a pair.
+- **The GPU ran in two states.** Within a single chapter, pair baselines jumped between about 11–13 ms and about
+  20–27 ms from one ablation to the next. The cause may be another app (one was using about 90% of a CPU core)
+  or a GPU clock state. Millisecond savings from the two states aren't comparable, so compare percentages, and
+  only within a row.
+- There is no single "GPU work per frame" figure for a chapter.
+- Future runs should record the baseline of every pair and repeat any ablation whose baselines straddle the two
+  states.
 
 Raw data: `/tmp/updraft-perf-0924/profile.json` (in `/tmp`, so it won't survive a reboot; the table below is the record).
 
-| Chapter | CPU median | GPU work | Terrain shading | Grass | Post | Sky | Notable |
-|---|---:|---:|---:|---:|---:|---:|---|
-| Island | 1.3 ms | 11.7 ms | 3.8 (14%) | 1.4 (12%) | 1.2 | 0.5 | reflection 0.9 |
-| Washing | 1.7 | 11.6 | 2.2 (19%) | 2.1 (19%) | 3.0 | 1.0 | wind 5.4 (range −2.9..5.7) |
-| Meadow walk | 2.6 | 12.5 | 5.1 (19%) | 3.0 (23%) | 1.4 | ≈0 | |
-| Birches | 4.4 | 22.1 | 3.5 (27%) | 2.3 (18%) | 1.4 | 0.5 | birch room 4.8 (18%); scarf CPU ≈2.6 |
-| Drowned | 1.8 | 8.8 | 0.8 | — | 0.9 | 0.4 | |
-| Wood | 1.5 | 23.2 | 3.7 (34%) | 1.3 | 1.0 | 0.6 | wind 4.7 |
-| Sleeping | 1.4 | 26.3 | 4.1 (16%) | 3.2 | 4.1 | 1.2 | wind 6.1 (4.7..7.1) |
-| Boats | 1.6 | 11.2 | 5.5 (24%) | 2.5 | 1.1 | 0.7 | |
-| Jetty | 1.5 | 12.3 | 2.6 (21%) | 1.8 | 0.9 | 0.4 | |
-| Sea | 1.5 | 21.5 | — | 1.1 | 3.5 (16%) | 3.6 (15%) | reflection 3.2 |
-| Mirror | 1.5 | 19.8 | 1.4 | 0.8 | 4.6 (22%) | 2.5 (13%) | reflection 3.2 |
+Each cell is the saving as a percentage (ms saved of the pair's baseline ms):
+
+| Chapter | CPU median (ms) | Terrain shading | Grass | Post | Sky | Reflection | Wind step | Room |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| Island | 1.3 | 14% (3.8 of 27) | 12% (1.4 of 11) | 10% (1.2 of 12) | 4% (0.5 of 12) | 7% (0.9 of 12) | 8% (0.9 of 12) | |
+| Washing | 1.7 | 19% (2.2 of 11) | 19% (2.1 of 11) | 11% (3.0 of 23) | 10% (1.0 of 11) | 4% (1.1 of 27) | 23% (5.4 of 19) | |
+| Meadow walk | 2.6 | 19% (5.1 of 27) | 23% (3.0 of 13) | 11% (1.4 of 13) | 0% (0.0 of 20) | 7% (0.9 of 13) | 9% (1.2 of 13) | |
+| Birches | 4.4 | 27% (3.5 of 13) | 18% (2.3 of 13) | 11% (1.4 of 13) | 4% (0.5 of 13) | 2% (0.2 of 13) | 12% (1.6 of 22) | birches 18% (4.8 of 27); scarf CPU ≈2.6 ms |
+| Drowned | 1.8 | 6% (0.8 of 20) | −1% | 10% (0.9 of 9) | 2% (0.4 of 21) | −2% | 9% (0.8 of 9) | village 4% (0.4 of 9) |
+| Wood | 1.5 | 34% (3.6 of 11) | 12% (1.3 of 11) | 9% (1.0 of 11) | 5% (0.6 of 11) | 1% (0.2 of 11) | 20% (4.7 of 23) | wood 7% (1.7 of 25) |
+| Sleeping | 1.4 | 16% (4.1 of 26) | 12% (3.2 of 26) | 16% (4.1 of 26) | 5% (1.2 of 26) | 0% | 22% (6.1 of 27) | sleeping 8% (2.1 of 25) |
+| Boats | 1.6 | 24% (5.5 of 23) | 11% (2.5 of 23) | 10% (1.1 of 11) | 3% (0.7 of 24) | 6% (0.9 of 20) | 8% (0.9 of 11) | |
+| Jetty | 1.5 | 21% (2.6 of 12) | 15% (1.8 of 13) | 7% (0.9 of 12) | 3% (0.4 of 12) | 1% (0.1 of 12) | 6% (0.8 of 12) | |
+| Sea | 1.5 | 1% (0.2 of 24) | 4% (1.1 of 24) | 16% (3.5 of 22) | 15% (3.6 of 24) | 15% (3.2 of 22) | 8% (1.7 of 21) | |
+| Mirror | 1.5 | 7% (1.4 of 20) | 4% (0.8 of 20) | 22% (4.6 of 21) | 13% (2.5 of 19) | 16% (3.2 of 22) | 10% (2.1 of 21) | |
 
 The terrain figure comes from the `terrain-flat` test, which keeps the terrain geometry. So the vertex-shader cost
 of the distant terrain (item B below) is **not** included in it.
@@ -210,21 +218,28 @@ aliases less at a distance.
        `surfReach`).
      - It stays procedural unless it passes comparisons over complete wave cycles, and across window moves
        (the bake is window-aligned), plus the video review.
-   - **The frost pattern.** `frostAt` runs in the grass **vertex** shader (`grass.ts`) and in six other shaders
-     (`terrain.ts`, `sleeping.ts`, `sleeping-birches.ts`, `sleeping-trail.ts`, `sleeping-hearth.ts`). A texture
-     replacement needs one explicit sampling-level policy, so that frost on blades, ground and props stays
-     consistent: `textureLod` at a fixed level, the same in every stage.
+   - **Terms shared across stages: the frost pattern and the Wood tint.**
+     - `frostAt` runs in the grass **vertex** shader (`grass.ts`) and in six other shaders (`terrain.ts`,
+       `sleeping.ts`, `sleeping-birches.ts`, `sleeping-trail.ts`, `sleeping-hearth.ts`).
+     - The Wood tint `fbm(0.32)` sits in `grassTintWithPattern`. That runs in the terrain fragment shader, in the
+       grass tables' `TABLE_FRAG` and in the direct-vertex path `VERT_DIRECT`. The table's fragments are packed
+       blade indices, not a screen footprint, so implicit derivatives, or gradients derived from table
+       coordinates, would pick unrelated mip levels.
+     - A texture replacement of either term samples with `textureLod` at one fixed world-space level, the same in
+       every stage. That level is independent of table packing and grass LOD, so blades, ground and props agree.
+     - Compare surviving blades across LOD transitions and table rebakes.
 2. Bake only the terms that measurably pay.
 3. Show before/after **video** of the moment in play (Jeremy's standing preference, not stills) for Wood, Sleeping,
    Meadow and a beach. An allowed visual model reviews it before anything merges, and Jeremy sees the video.
 
 ### F. Wind-cost anomaly (investigate)
 
-In paired tests, skipping `wind.step(1/60, time, false)` saved 4.7–6.1 ms in Washing, Wood and Sleeping, and
-0.8–2.1 ms elsewhere. The step is 21–22 passes at 256² (plus one at 128²) with cheap shaders
+In paired tests, skipping `wind.step(1/60, time, false)` saved 20–23% in Washing, Wood and Sleeping (4.7–6.1 ms,
+measured in the slow 19–27 ms GPU state), and 6–12% elsewhere. The step is 21–22 passes at 256² (plus one at 128²) with cheap shaders
 (`src/wind/shaders.ts`), so that saving is implausible.
 
 **Establish:**
+- whether the saving belongs to the slow GPU state (see the profile caveats);
 - whether the saving is a measurement artefact (the draw loop, sim pause or clock behaviour in `frame-profile.mjs`);
 - or whether it's a real stall: render-target switching on a tile-based GPU, or the textures the step writes
   being read by scene shaders in the same frame.
@@ -242,7 +257,7 @@ Birches is the only chapter where the CPU matters: 4.4 ms median. Profile self-t
 - `collide`: 0.32 ms
 
 **Try exact changes first:**
-- write and recompute normals only for sections that are unchanged by the definition below;
+- skip writing and recomputing normals only for sections that are unchanged by the definition below;
 - skip cloth that is at rest;
 - remove per-frame allocations.
 
@@ -275,6 +290,13 @@ video of the scarf in play, reviewed like item E.
 game never reports ready. The fix is to remove it from `groups` and from the `culling-off` root list (proved in
 the 09-24 run).
 
+The tool's frozen `draw()` also calls `wind.step()` without rebinding the shared wind uniforms. The real loop sets
+`uWindTex`, `uBendTex` and `uSwayTex` from `wind.texture`, `wind.bendTexture` and `wind.swayTexture` after
+stepping (`src/main.ts`, where it sets `u.uWindTex`). The ping-pong targets swap every tick, so without the
+rebinding the synthetic draws alternate between current and stale spring textures. H rebinds all three after each
+synthetic step, as the real loop does. This must land before item F's investigation and before any later gate
+relies on the tool.
+
 Every later phase measures through this tool. Add an ablation for each new cache or skip that restores the old
 path in the page, following the existing examples:
 - the `fields-direct` and `colour-direct` ready uniforms;
@@ -293,8 +315,15 @@ path in the page, following the existing examples:
   - An exact skip is kept unless it measurably costs time.
 - **Shadows in frozen comparisons:**
   - The profiler's frozen `draw()` renders without re-running `bakeLight` or `bake`. Any variant that changes a
-    height source (`heights-direct`, the item C passes) must re-bake the window and the light for **each** side of
-    every pair. Otherwise both sides share one shadow texture.
+    height source (`heights-direct`, the item C passes) must re-run everything a window move re-runs, for **each**
+    side of every pair, before capturing pixels. That means:
+    - `bakes.bake`, then `bakes.bakeLight`;
+    - `water.bakeShore(WINDOW.size)`, which derives waterline crossings from the heights (`src/main.ts`
+      `onWindowMove`);
+    - the grass tables: set `grass.tablesDirty`, then `grass.bake`. The tables consume heights and normals.
+
+    Otherwise both sides share stale shadow, shore or blade data. This preparation is for correctness; keep it
+    out of steady-state timing.
   - `?dusk=` fixes the sun, so timing the light bake needs a fixture where the sun actually moves: step
     `uSunDir` through a sunset arc between draws, or run the real dusk transition.
 - **Hitches:** item C is judged by window-move frame gaps on a travelling fixture (`tools/perf.mjs frames` while
