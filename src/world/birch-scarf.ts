@@ -413,8 +413,11 @@ export class BirchScarf {
         // The closed coils keep their winding around the wood until ALL of them clear its broken top.
         const u = (i - this.ownerStart[1]) / 130;
         const attachment = smooth(Math.min(u / .065, (1 - u) / .065));
-        const lift = smooth(s.work / .72), slip = smooth((s.work - .72) / .28);
-        p.y = THREE.MathUtils.lerp(p.y, top + .85 + (p.y - this.snags[1].center.y) * .2, lift * attachment);
+        // The top coils climb first and loosen as they rise, then slide off one after another: an unwinding, not a lid.
+        const lift = smooth((s.work - u * .2) / .58), slip = smooth((s.work - .78 - u * .08) / .14);
+        const loosen = 1 + .28 * lift * attachment;
+        p.x = this.stump.x + (p.x - this.stump.x) * loosen; p.z = this.stump.z + (p.z - this.stump.z) * loosen;
+        p.y = THREE.MathUtils.lerp(p.y, top + .85 + (p.y - this.snags[1].center.y) * .34, lift * attachment);
         p.x += slip * 3.4 * attachment;
         const dx = p.x - this.stump.x, dz = p.z - this.stump.z, radius = Math.hypot(dx, dz);
         if (p.y < top + .65 && radius < 1.15) {
