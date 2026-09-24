@@ -11,6 +11,10 @@
 // ABLATIONS=fields-direct compares the baked field pattern with its original shader; CAPTURE=1 saves both images.
 // ABLATIONS=colour-direct compares the all-island colour-pattern atlas with direct noise calculations.
 // FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables measures the cost of rebuilding all three tables each draw.
+// Ablations named in heightSources re-run the window-move bakes (ground, light, shore, grass tables) in configure
+// on both sides of every pair, outside timed draws. ABLATIONS=rebake is the baseline re-baked; it must match exactly.
+// Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
+// it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
