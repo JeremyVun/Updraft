@@ -87,7 +87,10 @@ Wood, Sleeping, Sea, Mirror, Boats and Jetty:
 
 ## Phase 2: two-pass window height bake (item C)
 
-**Status:** not started. Independent of phase 1's files, so it can run beside it (at most two agents).
+**Status:** done 2026-09-24 (merged d2fea04). Bit-identical heights and normals over 20 windows (5.24 M texels),
+including real walk moves and a device without linear float filtering. `tools/height-bake-check.mjs` proves this,
+and its `MUTATE=` options show it fails when the bake is broken. The frame-gap gate can't tell the builds apart
+on this Mac. `tools/window-hitch.mjs bench` is the discriminating measure (see design C).
 
 **Owns:**
 - `src/world/ground.ts` (`HEIGHT_FRAG`, a new normals pass, the `bake` pass order, a new (512+2)² R32F

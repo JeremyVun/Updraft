@@ -189,6 +189,19 @@ CPU probe.)
 
 The output layout and the `setHeightGrid` and readback consumers stay unchanged.
 
+**Result (2026-09-24):**
+- **Exactness.** The output is bit-identical to the single-pass bake: max height and normal differences are 0
+  over 20 windows. Positions come from `gl_FragCoord`, not `vUv`. Window corners are multiples of 10 m, so sample
+  positions are exact.
+- **GPU cost** (`tools/window-hitch.mjs bench`, medians):
+  - the height stage falls from 4.2 ms to 1.3 ms;
+  - a whole window move falls from 24.6–25.2 ms to 21.6–22.5 ms.
+- **The light bake** (`GROUND_FRAG`, about 20 ms) is now almost all of a move's cost. Its march falls back to
+  `worldHeight` beyond the window, which item B's atlas would address.
+- **Frame gaps** at window moves showed no difference between builds on the Mac; the GPU absorbs the burst.
+  Only the iPad would show a visible effect.
+- **Memory:** the 514² R32F intermediate adds 1.0 MiB.
+
 **Rejected for now:** re-baking only the newly exposed strip. The light bake re-marches the whole window on
 every move anyway, so the strip would save less than it costs in complexity. Revisit only if travel hitches
 remain after C.
