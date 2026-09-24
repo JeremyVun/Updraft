@@ -136,8 +136,6 @@ export class BirchScarf {
   private readonly tangent = new THREE.Vector3();
   private readonly normal = new THREE.Vector3();
   private readonly transported = new THREE.Vector3();
-  private readonly rest = new THREE.Vector3();
-  private readonly twist = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly projected = new THREE.Vector3();
   private readonly boatEnd = new THREE.Vector3(-4, 3, -1197);
@@ -561,33 +559,36 @@ export class BirchScarf {
     const thickness = .025 * width;
     const { centre, frameTangent, frameSide, restTangent, restSide } = this;
     for (let i = 0; i < ROWS; i++) {
-      const o = i * 3;
-      this.tangent.subVectors(centre[Math.min(ROWS - 1, i + 1)], centre[Math.max(0, i - 1)]);
-      if (this.tangent.lengthSq() < 1e-8) this.tangent.fromArray(restTangent, o);
-      this.tangent.normalize();
+      const o = i * 3, a = centre[Math.max(0, i - 1)], b = centre[Math.min(ROWS - 1, i + 1)];
+      const rx = restTangent[o], ry = restTangent[o + 1], rz = restTangent[o + 2];
+      let tx = b.x - a.x, ty = b.y - a.y, tz = b.z - a.z, length = Math.hypot(tx, ty, tz);
+      if (length < 1e-4) { tx = rx; ty = ry; tz = rz; length = 1; }
+      tx /= length; ty /= length; tz /= length;
       // Turn the authored frame by the least rotation onto this row's tangent: nothing is carried from row to row.
-      this.side.fromArray(restSide, o);
-      this.rest.fromArray(restTangent, o);
-      const c = this.rest.dot(this.tangent);
+      let sx = restSide[o], sy = restSide[o + 1], sz = restSide[o + 2];
+      const c = rx * tx + ry * ty + rz * tz;
       if (c > -.999) {
-        this.twist.crossVectors(this.rest, this.tangent);
-        const k = this.twist.dot(this.side) / (1 + c);
-        this.normal.crossVectors(this.twist, this.side);
-        this.side.multiplyScalar(c).add(this.normal).addScaledVector(this.twist, k);
+        const kx = ry * tz - rz * ty, ky = rz * tx - rx * tz, kz = rx * ty - ry * tx;
+        const f = (kx * sx + ky * sy + kz * sz) / (1 + c);
+        const cx = ky * sz - kz * sy, cy = kz * sx - kx * sz, cz = kx * sy - ky * sx;
+        sx = sx * c + cx + kx * f; sy = sy * c + cy + ky * f; sz = sz * c + cz + kz * f;
       }
-      this.side.addScaledVector(this.tangent, -this.side.dot(this.tangent)).normalize();
+      let d = sx * tx + sy * ty + sz * tz;
+      sx -= tx * d; sy -= ty * d; sz -= tz * d;
       const across = this.clothAcross[i];
       if (this.physical[i] === 1 && across.lengthSq() > .1) {
         // Where a fold lays the cloth's width along its length, its own across is noise: lean on the authored frame.
-        const along = across.dot(this.tangent), spread = Math.sqrt(Math.max(0, 1 - along * along));
-        const held = THREE.MathUtils.smoothstep(spread, .25, .6);
-        this.rest.copy(across).addScaledVector(this.tangent, -along);
-        if (held > 0 && this.rest.lengthSq() > 1e-8) {
-          this.rest.normalize();
-          this.side.multiplyScalar((1 - held) * Math.sign(this.rest.dot(this.side) || 1)).addScaledVector(this.rest, held).normalize();
+        d = across.x * tx + across.y * ty + across.z * tz;
+        const held = THREE.MathUtils.smoothstep(Math.sqrt(Math.max(0, 1 - d * d)), .25, .6);
+        const ax = across.x - tx * d, ay = across.y - ty * d, az = across.z - tz * d, al = Math.hypot(ax, ay, az);
+        if (held > 0 && al > 1e-4) {
+          const sl = Math.hypot(sx, sy, sz) || 1, keep = (1 - held) * Math.sign(ax * sx + ay * sy + az * sz || 1) / sl;
+          sx = sx * keep + ax / al * held; sy = sy * keep + ay / al * held; sz = sz * keep + az / al * held;
         }
       }
-      this.tangent.toArray(frameTangent, o); this.side.toArray(frameSide, o);
+      const sl = Math.hypot(sx, sy, sz) || 1;
+      frameTangent[o] = tx; frameTangent[o + 1] = ty; frameTangent[o + 2] = tz;
+      frameSide[o] = sx / sl; frameSide[o + 1] = sy / sl; frameSide[o + 2] = sz / sl;
     }
     const k = tuning.birches.scarf;
     // Drawn in, the strip keeps to the path it lay along and only its free end runs home, so no row ever jumps.

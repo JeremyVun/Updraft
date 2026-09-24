@@ -758,7 +758,7 @@ export const tuning = {
       clothBend: 0.003,
       clothLift: 12,
       clothClearance: 0.1,
-      clothIterations: 14,
+      clothIterations: 10,
       clothSlideResponse: 10,
       clothSlipSpeed: 1.1,
       clothSlipSeconds: 1.2,
