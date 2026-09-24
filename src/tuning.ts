@@ -737,7 +737,7 @@ export const tuning = {
       /** The tied lengths' spring to the wind (rad/s) and its damping ratio, over the air of ±`windSpan` rows. */
       windResponse: 2.2,
       windDamping: 0.9,
-      windSpan: 24,
+      windSpan: 12,
       /** Metres a tied length swings in step across its span, fuller in a breeze. */
       sway: 0.05,
       clothGravity: 9.8,
