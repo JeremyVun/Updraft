@@ -394,7 +394,8 @@ ${chart(m)}
 <div class="pair"><figure><video src="motion/${m.summary.fixture}-side-by-side.webm" controls loop muted></video><figcaption>old left, new right</figcaption></figure>
 <figure><video src="motion/${m.summary.fixture}-diff.webm" controls loop muted></video><figcaption>difference heatmap, frame by frame</figcaption></figure></div>
 <p>Separately: <a href="motion/${m.summary.fixture}-old.webm">old.webm</a>, <a href="motion/${m.summary.fixture}-new.webm">new.webm</a>.
-Worst frame (#${m.summary.worstFrame?.index}): <a href="motion/${m.summary.fixture}-worst-old.png">old</a>, <a href="motion/${m.summary.fixture}-worst-new.png">new</a>, <a href="motion/${m.summary.fixture}-worst-heatmap.png">heatmap</a>.</p>`).join('')}
+Worst frame (#${m.summary.worstFrame?.index}): <a href="motion/${m.summary.fixture}-worst-old.png">old</a>, <a href="motion/${m.summary.fixture}-worst-new.png">new</a>, <a href="motion/${m.summary.fixture}-worst-heatmap.png">heatmap</a>.</p>
+${fs.existsSync(`${out}/motion/${m.summary.fixture}-worst-crop-old.png`) ? `<p>Its worst spot, enlarged 4x (old, new, difference x40):</p><div class="three crop">${['old', 'new', 'diff-x40'].map((k) => `<img src="motion/${m.summary.fixture}-worst-crop-${k}.png">`).join('')}</div>` : ''}`).join('')}
 <h2>Accuracy maps (CPU, before any shader work)</h2>
 <p>Red: bilinear height error over 5 cm; yellow: 2 m normal over 0.01; orange both; magenta: cells the atlas flags for the
 direct calculation. One pixel per metre, patches packed as in a 2 m layout, blue is ground under -2 m.</p>
