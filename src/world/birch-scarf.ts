@@ -27,6 +27,7 @@ export const SCARF_PERCHES = [
 const ROWS = 1140;
 const ACROSS = 12;
 const RING = ACROSS * 2;
+const ACROSS_AT = Array.from({ length: ACROSS }, (_, a) => a / (ACROSS - 1) * 2 - 1);
 const VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
@@ -113,6 +114,10 @@ export class BirchScarf {
   private readonly pins: number[] = [];
   private readonly heights: number[] = [];
   private readonly lengths: number[] = [];
+  private readonly ownerStart: number[];
+  private readonly rollBase = new Float64Array(ROWS);
+  private readonly bunched = new Float64Array(ROWS);
+  private readonly folds = new Float64Array(ROWS * ACROSS);
   private readonly positions = new Float32Array(ROWS * RING * 3);
   private readonly normals = new Float32Array(ROWS * RING * 3);
   private readonly geometry = new THREE.BufferGeometry();
@@ -130,7 +135,7 @@ export class BirchScarf {
   private readonly clothAcross: THREE.Vector3[] = [];
   private readonly releasedCloth = new Map<number, { start: number; end: number; cloth: ScarfCloth; distances: number[] }>();
   private readonly collisions: ClothCapsule[] = [];
-  private readonly physical = new Set<number>();
+  private readonly physical = new Uint8Array(ROWS);
   private restoring = false;
   readonly stump = { x: SCARF_SNAGS[1].treeX, z: SCARF_SNAGS[1].treeZ, height: 4.1, radius: .47 };
   /** The slipped loop catches on an upturned splinter of a fallen birch, clear of the walking sightline. */
@@ -175,6 +180,20 @@ export class BirchScarf {
     }
     let length = 0;
     this.tied.forEach((p, i) => { if (i) length += p.distanceTo(this.tied[i - 1]); this.lengths.push(length); });
+    this.ownerStart = [0, 1, 2, 3].map(owner => this.owner.indexOf(owner));
+    for (let i = 0; i < ROWS; i++) {
+      const length = this.lengths[i];
+      this.rollBase[i] = length * .13 + Math.sin(length * .31) * .75 + Math.sin(length * .83) * .23;
+      const rumple = .5 + .5 * Math.sin(length * .57 + Math.sin(length * .2));
+      this.bunched[i] = .66 + .34 * (1 - rumple);
+      for (let a = 0; a < ACROSS; a++) {
+        const across = ACROSS_AT[a];
+        // Deep, uneven lengthwise folds and softly rolled hems give the yarn a substantial silhouette.
+        this.folds[i * ACROSS + a] = Math.sin(across * Math.PI * 1.6 + length * .24) * (.09 + rumple * .1)
+          + Math.pow(Math.abs(across), 5) * .13 * Math.sin(length * .42 + .5)
+          + Math.sin(length * 2.1 + across * 2.4) * .025;
+      }
+    }
     const perch = SCARF_PERCHES[0];
     const knotStart = this.owner.indexOf(0), knotEnd = this.owner.lastIndexOf(0) + 1;
     this.firstEnd = this.tied.findIndex((p, i) => i >= knotEnd && Math.hypot(p.x - perch.x, p.z - perch.z) < 1.05);
@@ -318,6 +337,9 @@ export class BirchScarf {
     if (this.completed === this.snags.length) this.gathering = Math.min(k.gatherSeconds, this.gathering + dt);
     this.woven = smooth(Math.max(0, this.gathering / k.gatherSeconds - 0.45) / 0.55);
     this.mesh.visible = this.woven < 1;
+    const step = Math.min(dt, .05);
+    const spring = k.windResponse * k.windResponse * step, damping = Math.exp(-step * k.windResponse * 1.3);
+    const top = Math.max(0, heightAt(this.stump.x, this.stump.z)) + this.stump.height;
     for (let i = 0; i < ROWS; i++) {
       if (i <= this.firstEnd) continue;
       const s = this.snags[this.owner[i]];
@@ -328,10 +350,8 @@ export class BirchScarf {
       // The collar stays on the wood while the loops draw through it; only its hanging lengths flutter.
       const contact = supported ? THREE.MathUtils.smoothstep(p.distanceTo(s.center), .45, 1.3) : 1;
       const f = this.pins[i] * THREE.MathUtils.smoothstep(p.y - this.heights[i], 0.1, 0.8) * contact;
-      const step = Math.min(dt, .05);
       this.point.set(w.x * 0.028, w.lift * 0.12, w.z * 0.028).clampLength(0, 0.7);
-      this.velocities[i].addScaledVector(this.point.sub(this.winds[i]), k.windResponse * k.windResponse * step)
-        .multiplyScalar(Math.exp(-step * k.windResponse * 1.3));
+      this.velocities[i].addScaledVector(this.point.sub(this.winds[i]), spring).multiplyScalar(damping);
       this.winds[i].addScaledVector(this.velocities[i], step);
       p.addScaledVector(this.winds[i], f);
       const wave = this.elapsed * 1.7 - i * 0.14;
@@ -342,7 +362,7 @@ export class BirchScarf {
       }
       p.y = Math.max(this.heights[i] + 0.09, p.y);
       if (supported) {
-        const u = (i - this.owner.indexOf(this.owner[i])) / (this.owner[i] === 2 ? 100 : 110);
+        const u = (i - this.ownerStart[this.owner[i]]) / (this.owner[i] === 2 ? 100 : 110);
         const attachment = smooth(Math.min(u / .16, (1 - u) / .16));
         // Draw the collapsed loop beyond the broken tip before gravity takes its weight.
         const slip = smooth((s.work - .7) / .3);
@@ -352,10 +372,9 @@ export class BirchScarf {
       }
       if (this.owner[i] === 1) {
         // The closed coils keep their winding around the wood until ALL of them clear its broken top.
-        const u = (i - this.owner.indexOf(1)) / 130;
+        const u = (i - this.ownerStart[1]) / 130;
         const attachment = smooth(Math.min(u / .065, (1 - u) / .065));
         const lift = smooth(s.work / .72), slip = smooth((s.work - .72) / .28);
-        const top = ground(this.stump.x, this.stump.z, this.stump.height).y;
         p.y = THREE.MathUtils.lerp(p.y, top + .85 + (p.y - this.snags[1].center.y) * .2, lift * attachment);
         p.x += slip * 3.4 * attachment;
         const dx = p.x - this.stump.x, dz = p.z - this.stump.z, radius = Math.hypot(dx, dz);
@@ -366,7 +385,7 @@ export class BirchScarf {
         }
       }
     }
-    this.physical.clear();
+    this.physical.fill(0);
     for (let index = 1; index < this.snags.length; index++) {
       if (this.snags[index].work < 1) continue;
       if (!this.releasedCloth.has(index)) this.releaseSpan(index);
@@ -375,7 +394,7 @@ export class BirchScarf {
       span.cloth.update(dt, wind);
       for (let i = span.start; i <= span.end; i++) {
         span.cloth.sample(span.distances[i - span.start], this.centre[i], this.clothAcross[i]);
-        this.physical.add(i);
+        this.physical[i] = 1;
       }
     }
     this.restoring = false;
@@ -383,7 +402,7 @@ export class BirchScarf {
     if (this.snags[0].work >= 1) this.firstCloth.release();
     this.firstCloth.update(dt, wind);
     for (let i = 0; i <= this.firstEnd; i++) {
-      this.physical.add(i);
+      this.physical[i] = 1;
       this.firstCloth.sample(this.lengths[i] / this.lengths[this.firstEnd] * this.firstCloth.length,
         this.centre[i], this.clothAcross[i]);
     }
@@ -499,6 +518,8 @@ export class BirchScarf {
 
   private write(time: number): void {
     const width = tuning.birches.scarf.width;
+    const taper = 1 - this.woven * 0.75;
+    const thickness = .025 * width;
     this.transported.set(1, 0, 0);
     for (let i = 0; i < ROWS; i++) {
       const p = this.centre[i];
@@ -507,51 +528,46 @@ export class BirchScarf {
       // Parallel transport avoids the abrupt flips a horizontal ribbon frame makes on hanging folds.
       this.transported.addScaledVector(this.tangent, -this.transported.dot(this.tangent)).normalize();
       if (this.transported.lengthSq() < 0.01) this.transported.set(0, 0, 1).cross(this.tangent).normalize();
-      this.side.copy(this.transported);
-      const length = this.lengths[i];
-      const roll = length * .13 + Math.sin(length * .31) * .75 + Math.sin(length * .83) * .23
-        + Math.sin(time * .8 - length * .35) * .07;
-      this.side.applyAxisAngle(this.tangent, roll);
-      if (this.physical.has(i) && this.gathering === 0) {
+      const physical = this.physical[i] === 1 && this.gathering === 0;
+      if (physical) {
         this.side.copy(this.clothAcross[i]);
         if (this.side.lengthSq() < .1) this.side.copy(this.transported);
         this.side.addScaledVector(this.tangent, -this.side.dot(this.tangent)).normalize();
+      } else {
+        const roll = this.rollBase[i] + Math.sin(time * .8 - this.lengths[i] * .35) * .07;
+        this.side.copy(this.transported).applyAxisAngle(this.tangent, roll);
       }
       this.normal.crossVectors(this.tangent, this.side).normalize();
-      const taper = 1 - this.woven * 0.75;
-      const rumple = .5 + .5 * Math.sin(length * .57 + Math.sin(length * .2));
-      const bunched = .66 + .34 * (1 - rumple);
-      const physical = this.physical.has(i) && this.gathering === 0;
+      const bunched = this.bunched[i];
       const floor = physical ? Math.max(0, heightAt(p.x, p.z)) : this.heights[i];
       const foldRoom = THREE.MathUtils.smoothstep(p.y - floor, .1, .5);
-      for (let j = 0; j < RING; j++) {
-        const back = j >= ACROSS;
-        const across = (back ? RING - 1 - j : j) / (ACROSS - 1) * 2 - 1;
-        // Deep, uneven lengthwise folds and softly rolled hems give the yarn a substantial silhouette.
-        const fold = (Math.sin(across * Math.PI * 1.6 + length * .24) * (.09 + rumple * .1)
-          + Math.pow(Math.abs(across), 5) * .13 * Math.sin(length * .42 + .5)
-          + Math.sin(length * 2.1 + across * 2.4) * .025) * width;
-        const thickness = (back ? -1 : 1) * .025 * width;
-        const k = (i * RING + j) * 3;
-        this.point.copy(p).addScaledVector(this.side, across * width * .5 * bunched * taper)
-          .addScaledVector(this.normal, (fold * foldRoom + thickness) * taper);
-        if ((this.owner[i] === 2 || this.owner[i] === 3) && !physical && this.gathering === 0) {
-          // The broad hem must wrap around the support too, rather than cut through it as the bow tightens.
-          for (const limb of this.owner[i] === 2 ? this.slipBranch : this.bowBranch) {
+      // The broad hem must wrap around the support too, rather than cut through it as the bow tightens.
+      const limbs = physical || this.gathering !== 0 ? null
+        : this.owner[i] === 2 ? this.slipBranch : this.owner[i] === 3 ? this.bowBranch : null;
+      for (let a = 0; a < ACROSS; a++) {
+        const out = ACROSS_AT[a] * width * .5 * bunched * taper;
+        const fold = this.folds[i * ACROSS + a] * width * foldRoom;
+        for (let back = 0; back < 2; back++) {
+          const k = (i * RING + (back ? RING - 1 - a : a)) * 3;
+          this.point.copy(p).addScaledVector(this.side, out)
+            .addScaledVector(this.normal, (fold + (back ? -thickness : thickness)) * taper);
+          if (limbs) for (const limb of limbs) {
             const ax = limb.b.x - limb.a.x, ay = limb.b.y - limb.a.y, az = limb.b.z - limb.a.z;
             const t = THREE.MathUtils.clamp(((this.point.x - limb.a.x) * ax + (this.point.y - limb.a.y) * ay
               + (this.point.z - limb.a.z) * az) / (ax * ax + ay * ay + az * az), 0, 1);
             const x = limb.a.x + ax * t, y = limb.a.y + ay * t, z = limb.a.z + az * t;
-            const dx = this.point.x - x, dy = this.point.y - y, dz = this.point.z - z;
-            const distance = Math.hypot(dx, dy, dz), radius = limb.radius + .035;
+            const dx = this.point.x - x, dy = this.point.y - y, dz = this.point.z - z, radius = limb.radius + .035;
+            // Clearly outside: the margin dwarfs any rounding in the exact distance, which only nearer points need.
+            if (dx * dx + dy * dy + dz * dz > radius * radius * 1.000001) continue;
+            const distance = Math.hypot(dx, dy, dz);
             if (distance < radius) {
               if (distance < .00001) this.point.set(x, y + radius, z);
               else this.point.set(x + dx / distance * radius, y + dy / distance * radius, z + dz / distance * radius);
             }
           }
+          if (physical) this.point.y = Math.max(Math.max(0, heightAt(this.point.x, this.point.z)) + .035, this.point.y);
+          this.positions[k]=this.point.x;this.positions[k+1]=this.point.y;this.positions[k+2]=this.point.z;
         }
-        if (physical) this.point.y = Math.max(Math.max(0, heightAt(this.point.x, this.point.z)) + .035, this.point.y);
-        this.positions[k]=this.point.x;this.positions[k+1]=this.point.y;this.positions[k+2]=this.point.z;
       }
     }
     this.geometry.attributes.position.needsUpdate=true;
