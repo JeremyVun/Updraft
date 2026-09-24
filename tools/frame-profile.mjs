@@ -16,6 +16,10 @@
 // FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables measures the cost of rebuilding all three tables each draw.
 // Ablations named in heightSources re-run the window-move bakes (ground, light, shore, grass tables) in configure
 // on both sides of every pair, outside timed draws. ABLATIONS=rebake is the baseline re-baked; it must match exactly.
+// The wind ablation waits for the GPU after every draw, as a frame boundary does, and also times 60 steps alone
+// (stepMs). Back to back, the scene's read of what the step just wrote stops one draw overlapping the next, which
+// inflated the saving several-fold; under another process's GPU load each of the step's 21 dependent passes waits
+// its turn and a step alone takes 3-5 ms (tools/wind-cost.mjs, perf-bakes design F).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -171,13 +175,14 @@ window.__audit = {
     }
     if(this.pairRebake)this.rebake();
   },
+  stepWind() {
+    wind.step(1/60,time,false);
+    // The ping-pong targets swap every step, so rebind them as the real loop does.
+    const u=atmo.uniforms;u.uWindTex.value=wind.texture;u.uBendTex.value=wind.bendTexture;u.uSwayTex.value=wind.swayTexture;
+  },
   draw(sim=true) {
     renderer.info.reset();
-    if (sim && this.omit !== 'wind') {
-      wind.step(1/60,time,false);
-      // The ping-pong targets swap every step, so rebind them as the real loop does.
-      const u=atmo.uniforms;u.uWindTex.value=wind.texture;u.uBendTex.value=wind.bendTexture;u.uSwayTex.value=wind.swayTexture;
-    }
+    if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
@@ -302,8 +307,16 @@ try {
           ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
         };
         const images=capture?{baseline:encode(a),variant:encode(b)}:undefined;
+        const channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+        async function settle(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+          try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;
+            if(s===gl.WAIT_FAILED)throw Error('GPU completion failed');await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}
+          finally{gl.deleteSync(fence);}}
+        const drain=omit==='wind';
         async function measure(v){probe.configure(v);for(let i=0;i<3;i++)probe.draw();await complete();
-          const start=performance.now();for(let i=0;i<draws;i++)probe.draw();await complete();return (performance.now()-start)/draws;}
+          const start=performance.now();for(let i=0;i<draws;i++){probe.draw();if(drain)await settle();}await complete();return (performance.now()-start)/draws;}
+        async function stepAlone(){probe.configure(null);for(let i=0;i<3;i++)probe.stepWind();await settle();
+          const start=performance.now();for(let i=0;i<60;i++)probe.stepWind();await settle();return (performance.now()-start)/60;}
         const runs=[];
         for(let round=0;round<rounds;round++) {const order=round%2?[omit,null,null,omit]:[null,omit,omit,null];const values={baseline:[],omitted:[]};
           for(const v of order)values[v?'omitted':'baseline'].push(await measure(v));
@@ -311,11 +324,12 @@ try {
           runs.push({baseline,omitted,saved:baseline-omitted,percent:(1-omitted/baseline)*100});}
         const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
-        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images};
+        const stepMs=drain?await stepAlone():undefined;
+        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain};
       },{omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1'});
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
-      const row={omit,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
+      const row={omit,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
@@ -326,7 +340,8 @@ try {
       }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
-      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle}));
+      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs}));
+      if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
