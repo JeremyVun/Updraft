@@ -36,7 +36,9 @@ Phase 4 follows, on phase 0's branch. Then phase 5, then 5b on phase 5's branch.
 
 ## Phase 0: repair the profiler (item H)
 
-**Status:** not started
+**Status:** done 2026-09-24 (6b3deee). The gate passed: island exits 0 with no errors. Height-source ablations are
+declared in `__audit.heightSources` and re-bake both sides automatically. Each row reports `baselines` and flags
+`straddle` (max/min pair baseline > 1.4).
 
 **Owns:** `tools/frame-profile.mjs`
 

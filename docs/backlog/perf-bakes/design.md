@@ -329,6 +329,13 @@ rebinding the synthetic draws alternate between current and stale spring texture
 synthetic step, as the real loop does. This must land before item F's investigation and before any later gate
 relies on the tool.
 
+**Result (2026-09-24):**
+- Repaired, with the wind rebinding, the re-bake hook and straddle flagging.
+- With the wind textures rebound, skipping `wind.step` still saved 18.8% in Washing, all in the slow GPU state
+  (pair baselines 25–28 ms).
+- On the island it saved 9.8% in the fast state (baselines about 10 ms) and 20.0% in the slow state (22–26 ms).
+  This is a lead for item F.
+
 Every later phase measures through this tool. Add an ablation for each new cache or skip that restores the old
 path in the page, following the existing examples:
 - the `fields-direct` and `colour-direct` ready uniforms;
