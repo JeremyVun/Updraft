@@ -239,9 +239,11 @@ export class ScarfCloth {
         const shelter = THREE.MathUtils.smoothstep(y - floors[i], 0, k.clothShelter);
         const rx = (w ? w.x * shelter : 0) - vx / h, ry = (w ? w.lift * k.clothUpdraft * shelter : 0) - vy / h;
         const rz = (w ? w.z * shelter : 0) - vz / h, face = rx * nx + ry * ny + rz * nz;
-        const ax = THREE.MathUtils.clamp(face * nx * k.clothFace + (rx - face * nx) * k.clothEdge, -8, 8);
-        const ay = THREE.MathUtils.clamp(face * ny * k.clothFace + (ry - face * ny) * k.clothEdge, -8, 8);
-        const az = THREE.MathUtils.clamp(face * nz * k.clothFace + (rz - face * nz) * k.clothEdge, -8, 8);
+        // Pressure grows with the square of the air speed: a breath barely stirs heavy wool, a real gust takes it.
+        const push = face * Math.abs(face) * k.clothFace;
+        const ax = THREE.MathUtils.clamp(push * nx + (rx - face * nx) * k.clothEdge, -8, 8);
+        const ay = THREE.MathUtils.clamp(push * ny + (ry - face * ny) * k.clothEdge, -8, 8);
+        const az = THREE.MathUtils.clamp(push * nz + (rz - face * nz) * k.clothEdge, -8, 8);
         pos[o] = x + vx + ax * h * h;
         pos[o + 1] = y + vy + (ay - k.clothGravity + pull) * h * h;
         pos[o + 2] = z + vz + az * h * h;

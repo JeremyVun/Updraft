@@ -741,9 +741,9 @@ export const tuning = {
       /** Metres a tied length swings in step across its span, fuller in a breeze. */
       sway: 0.05,
       clothGravity: 9.8,
-      /** Still-air loss per second; the air itself pushes through `clothFace` (on the face) and `clothEdge` (along it). */
+      /** Still-air loss per second; the air pushes through `clothFace` (per m/s squared, on the face) and `clothEdge` (along it). */
       clothDrag: 0.25,
-      clothFace: 1.2,
+      clothFace: 0.12,
       clothEdge: 0.15,
       /** Height over the ground below which lying wool is sheltered from the wind, and how an updraft counts as air. */
       clothShelter: 0.6,
