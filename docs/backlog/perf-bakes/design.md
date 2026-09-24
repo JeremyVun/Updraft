@@ -103,6 +103,47 @@ Each cell is the saving as a percentage (ms saved of the pair's baseline ms):
 The terrain figure comes from the `terrain-flat` test, which keeps the terrain geometry. So the vertex-shader cost
 of the distant terrain (item B below) is **not** included in it.
 
+## Profile after phases 0–5 (2026-09-25, `main` at 2e9603f, before 5b)
+
+**Fixture:** the same as 09-24, on a machine with no contention.
+- Clean baselines were 5–8 ms back to back and 7–11 ms drained.
+- Wind `stepMs` stayed at 0.26–0.52 ms throughout.
+- Two page loads per chapter, 6 pairs each, pooled. Rows that straddled or were contended were dropped.
+- † marks a cell from one load only.
+- The 09-24 baselines were in the contended slow state, so compare percentages, not ms.
+- Raw data: `/tmp/updraft-pb-reprofile2-data/`.
+
+| Chapter | CPU (ms) | Terrain | Grass | Post | Bloom | Sky | Reflection | Water | Wind (drained) | Room |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| Island | 1.4–1.6 | 12% | 21% | 9% | 10% | 5% | 3% | 7.5% | 3.5% | |
+| Washing | 1.8–2.2 | 8% | 26% | 9% | 6% | 6%† | 0%† | 10% | 3.0% | washing 5% |
+| Meadow walk | 2.2–2.3 | 16% | 33% | 9% | 6% | 1% | 2% | 7.5% | 1.6% | |
+| Birches | 3.4–3.6 | 14% | 18% | 11% | 6–9% | 4% | −1% | 5%† | 3.3%† | birches 24% |
+| Drowned | 1.8–1.9 | 0%† | −2%† | 12%† | 9% | 8%† | 0%† | 3.5%† | 2.1%† | village 1.4% |
+| Wood | 1.8–1.9 | 19% | 17% | 10% | 5% | 5% | 0% | 6% | −0.7% | wood 4.7% |
+| Sleeping | 1.8–1.9 | 14% | 19% | 9% | 6% | 9% | −1% | 12% | 0.4% | sleeping 0.6% |
+| Boats | 1.7–2.0 | 10% | 23% | 12% | 7% | 2% | 1% | 12% | 1.6% | |
+| Jetty | 1.6 | 12% | 17% | 8% | 6% | 2% | 0% | 7.5% | 2.6% | |
+| Sea | 1.6–1.8 | 1% | 1% | 13% | 8% | 16% | 11% | — | 2.7% | |
+| Mirror | 1.8–1.9 | 2% | 0% | 15% | 12% | 21% | 17% | — | 1.7% | |
+
+**Readings:**
+- **Grass is now the largest cost in every land chapter.** It has about the same ms as on 09-24; A and B
+  removed the work around it.
+- **Terrain shading's share roughly halved** on land (A).
+- **The wind is 0–3.5%** (F).
+- **Rooms:** the Sleeping room fell from 8% to 0.6% (D). The Birches room is 24% of its chapter: 428k triangles
+  in 16 calls, not yet split into trunks, leaves and scarf.
+- **The final grade is free.** Post is essentially bloom plus the resolve.
+- **Draining** does not shrink bloom the way it shrank the wind.
+- **The top CPU self-time** is the height readback's `getBufferSubData` (0.15–0.29 ms per frame).
+- **Candidates for a next round**, each to be measured before any decision:
+  - a grass breakdown: vertex against fragment, the LOD tiers, and the frost and tint terms;
+  - a split of the Birches room;
+  - an audit of the water surface on land (6–12%) for dead terms, like A.
+
+  Bloom resolution and item E would change the look.
+
 ## What changes
 
 ### A. Skip terrain fragment work that is thrown away (exact)
