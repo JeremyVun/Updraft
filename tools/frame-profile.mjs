@@ -42,7 +42,7 @@ window.__audit = {
     littleBoats: [littleBoats.group], islandCreatures: [creatures.group], meadowCreatures: [hillCreatures.group],
     child: child.objects, cygnet: cygnet.objects, glider: glider.objects, boat: boat.objects,
     flock: [flock.mesh], petals: [petals.mesh], windLines: [lines.batch.mesh],
-    shoreFamily: [shoreFamily.group], rain: [rain.mesh], fireflies: [fireflies.mesh],
+    rain: [rain.mesh], fireflies: [fireflies.mesh],
     drawing: [drawing.mesh], embers: [embers.mesh], starlings: [starlings.mesh], seaLife: sealife.objects,
     kites: Object.values(departureKites.markers).map(m => m.group),
   },
@@ -121,7 +121,7 @@ window.__audit = {
     this.culling=[];
     if (omit==='culling-off') {
       const roots=[...this.groups.tree,...this.groups.pond];
-      for (const root of [...this.groups.washing,...this.groups.shoreFamily]) root.traverse(o=>{
+      for (const root of this.groups.washing) root.traverse(o=>{
         if(o.geometry?.attributes.aAnchor) roots.push(o);
       });
       for (const root of roots) root.traverse(o=>{if(o.isMesh){this.culling.push([o,o.frustumCulled]);o.frustumCulled=false;}});
