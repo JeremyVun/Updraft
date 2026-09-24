@@ -57,7 +57,11 @@ the baseline; no full re-baseline is needed.
 
 ## Phase 1: exact terrain, veil and mirror-sky skips (items A and D)
 
-**Status:** not started
+**Status:** done 2026-09-24 (merged 8a1027e). Exact in all 11 chapters, with two recorded exceptions:
+- A1 differs by 1 float ulp (≤1/255 in ≤4 channels) in Birches and on the Jetty.
+- D2 removes specks that the **old** mirror code drew.
+
+Results are in design A and D.
 
 **Owns:**
 - `src/world/terrain.ts` (`FRAG` only)

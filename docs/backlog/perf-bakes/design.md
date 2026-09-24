@@ -123,6 +123,35 @@ the atlas rather than approximate.
 branches are safe. Any sampler with mipmaps moved inside a branch must use `textureLod`/`textureGrad`, or the
 `Footprint` taken at the top of `main`.
 
+**Result (2026-09-24, merged 8a1027e):**
+- **A3's precondition holds.**
+  - An analytic bound (noise ≤ 2.8) puts any presence inside a scaled meadow ellipse. That ellipse clears the uv
+    0.001/0.999 cut by at least 26 m.
+  - A 6.9 M-sample CPU sweep (`tools/fields-border-check.mjs`) found no presence outside.
+  - `fieldAt` returns exactly `vec4(99,0,0,0)` there.
+- **Exactness:**
+  - A2, A3 and D1 are bit-identical in all 11 chapters, including forced frost on/off, veil 0/mid, and both
+    sides of the `far` edge.
+  - A1 is bit-identical except for 1 float ulp from the leaf-mould line on, in Birches and on the Jetty. The
+    Metal compiler (fast math) combines operations differently once the surrounding code changes. That shows as
+    ≤1/255 in ≤4 channels, in some frames. Nothing that line reads changed.
+- **Saving** (terrain skips, median of paired rounds, all in the fast GPU state):
+
+  | Chapter | Saving |
+  |---|---:|
+  | Island | 10–11% |
+  | Washing | 14–15% |
+  | Meadow walk | 12–15% |
+  | Birches | 12–16% |
+  | Wood | 15% |
+  | Sleeping | 8–10% |
+  | Boats | 15% |
+  | Jetty | 10–16% |
+  | Drowned | 1–3%, within noise |
+  | Sea, Mirror | none, within noise |
+
+  A1 carries most of it (9–16% on land), with A3 at 1–5% and A2 at 2–5%.
+
 ### B. Distant-height atlas (experiment, kept only if it passes the accuracy gates below)
 
 **The problem.** `groundHeight()` in the terrain vertex shader falls back to `worldHeight()` outside the 320 m
@@ -214,6 +243,17 @@ remain after C.
 - **Sky mirror `glassColour`** (`water.ts`): it computes `skyRadiance` even where `on == 1` and only the planar
   reflection is kept. Branch on `on < 1.0`.
 The surf phase cache is **not** an exact skip and has moved to item E as an experiment (see there).
+
+**Result (2026-09-24, merged 8a1027e):**
+- **The veil** is exact in every state. It is hidden through `material.visible`, so the room system's `visible`
+  writes are untouched. It saves 8% in Sleeping and 7% in Sea, where the sleeping room is drawn with the veil
+  at 0.
+- **The mirror sky branch** is bit-identical in float32 at `on` 1, 0.5 and 0, and saves 19–21% in Mirror.
+- **The old mirror code drew specks.** In the real half-float pipeline on ANGLE/Metal, the **old** code draws
+  about 100–300 specks in some frames: one or two channels drop to 0, giving teal and orange dots up to 188/255,
+  and once a short streak. The lead confirmed them on the flat in captures. The new code draws none at any `on`
+  value. So the change removes a visible glitch in the shipped game rather than adding one; whether the iPad
+  shows the specks is unknown. The profiler tolerates the old path's specks in `glass-sky-always`.
 
 ### E. Bake the fine ground grain and noise (changes the look; visual review)
 
