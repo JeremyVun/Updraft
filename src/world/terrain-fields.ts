@@ -6,6 +6,12 @@ import { HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 const RES = 1024;
 const SPAN = Math.ceil((Math.max(ISLES.meadow.rx, ISLES.meadow.rz) * 2 + 32) / 64) * 64;
 const TEXEL = SPAN / RES;
+/** World-aligned origin and span of the field atlas. */
+export const FIELD_ATLAS = {
+  minX: Math.floor((ISLES.meadow.x - SPAN / 2) / TEXEL) * TEXEL,
+  minZ: Math.floor((ISLES.meadow.z - SPAN / 2) / TEXEL) * TEXEL,
+  span: SPAN,
+};
 
 /** Fixed geography only: field identity, boundary distance, walls/gates and coastal presence. */
 const BAKE = /* glsl */ `
@@ -36,11 +42,7 @@ export class TerrainFields {
   readonly target = simTarget(RES, RES, THREE.HalfFloatType, THREE.LinearFilter);
   readonly uniforms = {
     uTerrainFields: { value: this.target.texture },
-    uTerrainFieldDomain: { value: new THREE.Vector4(
-      Math.floor((ISLES.meadow.x - SPAN / 2) / TEXEL) * TEXEL,
-      Math.floor((ISLES.meadow.z - SPAN / 2) / TEXEL) * TEXEL,
-      1 / SPAN, 1 / SPAN,
-    ) },
+    uTerrainFieldDomain: { value: new THREE.Vector4(FIELD_ATLAS.minX, FIELD_ATLAS.minZ, 1 / SPAN, 1 / SPAN) },
     uTerrainFieldsReady: { value: 0 },
   };
   private readonly material = simMaterial(BAKE, this.uniforms);
