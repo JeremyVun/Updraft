@@ -36,6 +36,20 @@ Build ruling, 2026-09-24 (verbatim):
   them. He asked to be told of any risk of visual regression, so both would bring him video before merging.
 - The scarf's look and behaviour are now in scope as item G2 below. They follow item G's exact CPU work.
 
+Phase 3 approved, 2026-09-24 (verbatim):
+
+> can we do phase 3 carefully and show me where there is regression so i can judge?
+
+- **Order.** Phase 3 first measures the most it could save, as an upper bound, and stops if that is small.
+- **Scale of the error.** The 20 cm interpolation error, at 38° vertical field of view on a 1032-pixel-tall
+  iPad view, is about 2 px at 130 m and 1 px at 300 m. The 5 cm gate is under a pixel at 130 m. Distant leaves
+  already have 2 m or more vertex spacing with flat triangles between vertices.
+- **What Jeremy sees.** He judges the regression himself from:
+  - per-chapter difference maps, amplified;
+  - side-by-side crops of the worst regions;
+  - before/after video of the Meadow walk, sailing and a pan across the window edge.
+- **Merging.** Nothing merges without his verdict.
+
 ## Why
 
 The target is the iPad. Jeremy named the Meadow walk as the worst part of the game there (see `docs/engine.md`).

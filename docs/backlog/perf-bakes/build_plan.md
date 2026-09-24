@@ -7,8 +7,12 @@ The design is in `design.md` in this folder; its item letters (A–H) are used b
 corrected two-pass height bake. The distant-height atlas and the surf cache are experiments. They are kept only
 if they pass their stronger checks.
 
-**Approved to build (Jeremy, 2026-09-24):** phases 0, 1, 2, 4 and 5, plus 5b (the scarf's look and behaviour,
-design G2). Phases 3 and 6 are on hold until he approves them.
+**Approved to build (Jeremy, 2026-09-24):**
+- phases 0, 1, 2, 4 and 5;
+- phase 5b, the scarf's look and behaviour (design G2);
+- phase 3, approved later the same day, with regression evidence for his judgement.
+
+Phase 6 is on hold until he approves it.
 
 **Running order:** phase 0 and phase 2 run together first. Phase 1 starts on phase 0's branch once it lands.
 Phase 4 follows, on phase 0's branch. Then phase 5, then 5b on phase 5's branch.
@@ -123,8 +127,9 @@ Report the worst gap and p99 at each move.
 
 ## Phase 3: distant-height atlas (item B, experiment)
 
-**Status:** on hold (Jeremy, 2026-09-24). When approved, it starts after phase 1 merges, because it shares
-`terrain.ts`, and it adds a before/after video of the Meadow walk and sailing past the window edge for Jeremy.
+**Status:** approved 2026-09-24 (design, "Phase 3 approved"). It runs beside phase 5; they share no files.
+Jeremy judges the regression from difference maps, worst-region crops and before/after video. **No merge without
+his verdict.**
 
 **Owns:**
 - a new `src/world/terrain-heights.ts`
