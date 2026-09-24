@@ -215,6 +215,44 @@ shadows marched over it. The gates:
 
 **Kept away from item C.** The window height bake does not read the atlas.
 
+**Result (2026-09-24, branch `perf-bakes-p3`, awaiting Jeremy's verdict):**
+- **Upper bound.** Replacing every height read beyond the window with a constant saved 11–21% per chapter.
+  96% of the light bake's cost is those reads.
+- **Built:**
+  - 1 m texels in R32F with manual bilinear filtering.
+  - Cells where the atlas misses the formula by more than 1 cm and that reach above −4 m (4.8% of visible cells:
+    creases, cliff lips, pool banks, pond rim) keep the direct formula. The flag is a +1000 offset in the cell's
+    first texel.
+  - The open sea is an exact `seaFloor` expression.
+  - Memory: 6.64 MiB (693×2513).
+  - The atlas bakes patch by patch before Begin, at about 75 ms of M4 Pro GPU.
+  - The boot gap is unchanged (250–317 ms against a 500 ms ceiling).
+- **Accuracy as built (GPU-measured):** visible height ≤ 1.36 cm; the 2 m normal ≤ 0.0077.
+- **Saving (paired, no straddles):**
+
+  | Chapter | Island | Washing | Meadow walk | Birches | Drowned | Wood | Sleeping | Boats | Jetty | Sea | Mirror |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | Saving | 12.8% | 9.5% | 13.1% | 9.2% | 11.2% | 5.6% | 12.3% | 14.4% | 12.9% | 14.6% | 14.3% |
+
+  - A window move drops from 24–30 ms to 3–8 ms of GPU work.
+  - The sunset shadow re-march (every third frame) drops from about 23 ms to 2–4 ms.
+- **What changes on screen:**
+  - Single anti-aliased pixels on distant skylines change colour, because a far ridge's outline moves by a
+    fraction of a pixel. There is also 1/255 shading on hazy far slopes.
+  - It **exceeds the plan's 2/255 frozen-frame gate** on those edge pixels: up to 41/255 in a still and 68/255 on
+    one pixel in motion.
+  - 10 of 11 chapter-entry frames are identical. The Meadow walk changes a median of 161 of 921,600 pixels per
+    frame.
+  - No seam shows at the window or patch edges. Frame-to-frame change is equal for old and new (no added
+    shimmer).
+  - The lead reviewed the worst crops (4× enlarged): old and new are indistinguishable by eye. Only the ×40
+    difference shows them.
+  - Evidence: `/tmp/updraft-pb-p3-evidence/index.html`.
+- **Found in passing:** the sleeping island's notch is written in `birchesHeight` without its `land` factor. It
+  cuts an unbounded 11 m strip 0.157 m deeper under the open sea. It's invisible, but `seaFloor` reproduces it,
+  so fixing the notch means changing both.
+- **Not measured:** the iPad, where the boot bake may be 3–5× slower.
+
 ### C. Cheaper window height re-bake (exact)
 
 `HEIGHT_FRAG` in `ground.ts` calls `worldHeight` 5 times per texel over 512² on every window move: the centre plus
