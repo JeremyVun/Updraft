@@ -3,18 +3,25 @@ import type { WindField } from '../wind/field';
 import { tuning } from '../tuning';
 
 export interface ClothCapsule { a: THREE.Vector3; b: THREE.Vector3; radius: number }
-interface Link { a: number; b: number; rest: number; compliance: number; alpha: number; lambda: number }
 const H = 1 / 120;
 const PERMANENT = 1, SUPPORT = 2;
 
 /** Two connected edges of wool. The detailed knitted surface is drawn over this small physical mesh. */
 export class ScarfCloth {
+  /** Read-only copies of the solver's particles, refreshed after every update. */
   readonly positions: THREE.Vector3[] = [];
   private readonly previous: THREE.Vector3[] = [];
   private readonly home: THREE.Vector3[] = [];
-  private readonly weights: number[] = [];
-  private readonly floors: number[] = [];
-  private readonly links: Link[] = [];
+  private readonly pos: Float64Array;
+  private readonly prev: Float64Array;
+  private readonly weights: Float64Array;
+  private readonly floors: Float64Array;
+  private readonly linkA: Int32Array;
+  private readonly linkB: Int32Array;
+  private readonly rest: Float64Array;
+  private readonly compliance: Float64Array;
+  private readonly alpha: Float64Array;
+  private readonly lambda: Float64Array;
   private readonly supports = new Set<number>();
   private readonly permanent = new Set<number>();
   private readonly pins: Uint8Array;
@@ -24,6 +31,7 @@ export class ScarfCloth {
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly side = new THREE.Vector3();
   private readonly tangent = new THREE.Vector3();
+  private readonly point = new THREE.Vector3();
   private accumulator = 0;
   private released = false;
   private releaseRequested = false;
@@ -34,6 +42,8 @@ export class ScarfCloth {
   private capsuleList: ClothCapsule[] = [];
   /** Per capsule: endpoint bounds in x and z, then its axis and squared length. */
   private capsuleShape = new Float64Array(0);
+  /** Which capsules each ground cell could touch, in capsule order, for the clearance the grid was built with. */
+  private grid = { margin: NaN, x: 0, z: 0, cell: 1, width: 0, depth: 0, start: new Int32Array(1), items: new Int32Array(0) };
   private supportRail: { a: THREE.Vector3; b: THREE.Vector3 } | null = null;
 
   setSupportRail(a: THREE.Vector3, b: THREE.Vector3): void { this.supportRail = { a, b }; }
@@ -47,6 +57,7 @@ export class ScarfCloth {
       this.capsuleShape.set([Math.min(a.x, b.x), Math.max(a.x, b.x), Math.min(a.z, b.z), Math.max(a.z, b.z),
         dx, dy, dz, dx * dx + dy * dy + dz * dz], c * 8);
     });
+    this.grid.margin = NaN;
   }
 
   get length(): number { return this.lengths[this.lengths.length - 1]; }
@@ -61,13 +72,18 @@ export class ScarfCloth {
       this.side.applyAxisAngle(this.tangent, Math.sin(this.lengths[i] * .23) * .65);
       for (const sign of [-1, 1]) {
         const p = points[i].clone().addScaledVector(this.side, sign * width * .5);
-        this.positions.push(p); this.previous.push(p.clone()); this.home.push(p.clone()); this.weights.push(1); this.floors.push(0);
+        this.positions.push(p); this.previous.push(p.clone()); this.home.push(p.clone());
       }
       if (supports.includes(i)) { this.supports.add(i * 2); this.supports.add(i * 2 + 1); }
       if (permanent.includes(i)) { this.permanent.add(i * 2); this.permanent.add(i * 2 + 1); }
     }
+    const count = this.positions.length;
+    this.pos = new Float64Array(count * 3); this.prev = new Float64Array(count * 3);
+    this.weights = new Float64Array(count).fill(1); this.floors = new Float64Array(count);
+    this.positions.forEach((p, i) => { p.toArray(this.pos, i * 3); p.toArray(this.prev, i * 3); });
+    const links: { a: number; b: number; rest: number; compliance: number }[] = [];
     const add = (a: number, b: number, compliance: number, rest = this.positions[a].distanceTo(this.positions[b])) => {
-      this.links.push({ a, b, rest, compliance, alpha: compliance / (H * H), lambda: 0 });
+      links.push({ a, b, rest, compliance });
     };
     for (let row = 0; row < points.length; row++) {
       add(row * 2, row * 2 + 1, .000001);
@@ -84,9 +100,12 @@ export class ScarfCloth {
         add(a, b, tuning.birches.scarf.clothBend, rest * .97);
       }
     }
+    this.linkA = Int32Array.from(links, l => l.a); this.linkB = Int32Array.from(links, l => l.b);
+    this.rest = Float64Array.from(links, l => l.rest); this.compliance = Float64Array.from(links, l => l.compliance);
+    this.alpha = Float64Array.from(links, l => l.compliance / (H * H)); this.lambda = new Float64Array(links.length);
     this.pins = Uint8Array.from(this.positions, (_, i) => (this.permanent.has(i) ? PERMANENT : 0) | (this.supports.has(i) ? SUPPORT : 0));
     for (const pin of this.supports) if (!this.supportRows.includes(pin >> 1)) this.supportRows.push(pin >> 1);
-    this.pullWeights = Float64Array.from({ length: this.positions.length * this.supportRows.length }, (_, k) => {
+    this.pullWeights = Float64Array.from({ length: count * this.supportRows.length }, (_, k) => {
       const d = this.lengths[Math.floor(k / this.supportRows.length) >> 1] - this.lengths[this.supportRows[k % this.supportRows.length]];
       return Math.exp(-d * d / 12);
     });
@@ -104,16 +123,23 @@ export class ScarfCloth {
     this.released = released && !this.supportRail;
     this.slipTime = 0;
     this.work = this.slide = released ? 1 : 0; this.lift = 0; this.accumulator = 0;
-    this.positions.forEach((p, i) => { p.copy(this.home[i]); this.previous[i].copy(p); });
+    this.home.forEach((p, i) => { p.toArray(this.pos, i * 3); p.toArray(this.prev, i * 3); });
+    this.publish();
   }
 
   update(dt: number, wind?: WindField): void {
     this.accumulator += Math.min(dt, .06);
     while (this.accumulator >= H - 1e-8) { this.step(H, wind); this.accumulator -= H; }
+    this.publish();
+  }
+
+  private publish(): void {
+    this.positions.forEach((p, i) => { p.fromArray(this.pos, i * 3); this.previous[i].fromArray(this.prev, i * 3); });
   }
 
   private step(h: number, wind?: WindField): void {
     const k = tuning.birches.scarf;
+    const { pos, prev } = this;
     const drag = Math.exp(-k.clothDrag * h);
     this.slide += (this.work - this.slide) * (1 - Math.exp(-h * k.clothSlideResponse));
     if (this.releaseRequested && !this.released && this.slide > .985) this.slipTime += h;
@@ -121,22 +147,23 @@ export class ScarfCloth {
       this.released = true;
       const rail = this.supportRail!;
       this.tangent.subVectors(rail.b, rail.a).normalize();
-      for (let i = 0; i < this.positions.length; i++) {
+      for (let i = 0; i < this.home.length; i++) {
         let weight = 0;
         for (const pin of this.supports) {
           const distance = this.lengths[i >> 1] - this.lengths[pin >> 1];
           weight = Math.max(weight, Math.exp(-distance * distance / 4));
         }
-        this.previous[i].addScaledVector(this.tangent, -k.clothSlipSpeed * h * weight);
+        const shift = -k.clothSlipSpeed * h * weight;
+        prev[i * 3] += this.tangent.x * shift; prev[i * 3 + 1] += this.tangent.y * shift; prev[i * 3 + 2] += this.tangent.z * shift;
       }
     }
-    for (let i = 0; i < this.positions.length; i++) {
-      const p = this.positions[i], old = this.previous[i], home = this.home[i];
-      const pins = this.pins[i];
+    for (let i = 0; i < this.home.length; i++) {
+      const o = i * 3, pins = this.pins[i];
       const pinned = (pins & PERMANENT) !== 0 || (!this.released && (pins & SUPPORT) !== 0);
       this.weights[i] = pinned ? 0 : 1;
       if (pinned) {
-        old.copy(p); p.copy(home);
+        prev[o] = pos[o]; prev[o + 1] = pos[o + 1]; prev[o + 2] = pos[o + 2];
+        const p = this.point.copy(this.home[i]);
         if (!(pins & PERMANENT) && this.supportRail) {
           const row = i & ~1;
           this.side.subVectors(this.home[row + 1], this.home[row]).multiplyScalar(i % 2 ? .5 : -.5);
@@ -153,68 +180,113 @@ export class ScarfCloth {
             p.y += Math.sin(out * Math.PI) * .3 - down * k.clothSlipDrop;
           }
         }
+        p.toArray(pos, o);
         continue;
       }
-      const w = wind?.sample(p.x, p.z, this.air);
-      const vx = (p.x - old.x) * drag, vy = (p.y - old.y) * drag, vz = (p.z - old.z) * drag;
-      old.copy(p);
+      const x = pos[o], y = pos[o + 1], z = pos[o + 2];
+      const w = wind?.sample(x, z, this.air);
+      const vx = (x - prev[o]) * drag, vy = (y - prev[o + 1]) * drag, vz = (z - prev[o + 2]) * drag;
+      prev[o] = x; prev[o + 1] = y; prev[o + 2] = z;
       let pull = 0;
       if (!this.released) for (let r = 0, rows = this.supportRows.length; r < rows; r++) {
         pull = Math.max(pull, this.pullWeights[i * rows + r] * this.lift * k.clothLift);
       }
-      p.x += vx + THREE.MathUtils.clamp((w?.x ?? 0) * k.clothWind, -8, 8) * h * h;
-      p.y += vy + (-k.clothGravity + (w?.lift ?? 0) * .5 + pull) * h * h;
-      p.z += vz + THREE.MathUtils.clamp((w?.z ?? 0) * k.clothWind, -8, 8) * h * h;
+      pos[o] = x + (vx + THREE.MathUtils.clamp((w?.x ?? 0) * k.clothWind, -8, 8) * h * h);
+      pos[o + 1] = y + (vy + (-k.clothGravity + (w?.lift ?? 0) * .5 + pull) * h * h);
+      pos[o + 2] = z + (vz + THREE.MathUtils.clamp((w?.z ?? 0) * k.clothWind, -8, 8) * h * h);
     }
-    for (const link of this.links) link.lambda = 0;
+    const { linkA, linkB, rest, alpha, lambda, weights } = this, links = linkA.length;
+    lambda.fill(0);
     for (let iteration = 0; iteration < k.clothIterations; iteration++) {
       // Alternating the solve direction carries tension along the whole strip without a preferred end.
       const reverse = iteration % 2 === 1;
-      for (let j = 0; j < this.links.length; j++) {
-        const link = this.links[reverse ? this.links.length - 1 - j : j];
-        const a = this.positions[link.a], b = this.positions[link.b];
-        const wa = this.weights[link.a], wb = this.weights[link.b];
+      for (let j = 0; j < links; j++) {
+        const l = reverse ? links - 1 - j : j;
+        const wa = weights[linkA[l]], wb = weights[linkB[l]];
         if (wa + wb === 0) continue;
-        const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+        const a = linkA[l] * 3, b = linkB[l] * 3;
+        const dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
         const length = Math.hypot(dx, dy, dz);
         if (length < .000001) continue;
-        const change = (-(length - link.rest) - link.alpha * link.lambda) / (wa + wb + link.alpha);
-        link.lambda += change;
+        const change = (-(length - rest[l]) - alpha[l] * lambda[l]) / (wa + wb + alpha[l]);
+        lambda[l] += change;
         const amount = change / length;
-        a.x -= dx * amount * wa; a.y -= dy * amount * wa; a.z -= dz * amount * wa;
-        b.x += dx * amount * wb; b.y += dy * amount * wb; b.z += dz * amount * wb;
+        pos[a] -= dx * amount * wa; pos[a + 1] -= dy * amount * wa; pos[a + 2] -= dz * amount * wa;
+        pos[b] += dx * amount * wb; pos[b + 1] += dy * amount * wb; pos[b + 2] += dz * amount * wb;
       }
       this.collide(iteration === k.clothIterations - 1, iteration === 0 || iteration === k.clothIterations - 1);
     }
   }
 
+  /** Cells cover each capsule's full test box, so a particle only meets the capsules its own cell lists. */
+  private buildGrid(margin: number): void {
+    const shape = this.capsuleShape, count = this.capsuleList.length;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (let c = 0; c < count; c++) {
+      const radius = this.capsuleList[c].radius + margin;
+      minX = Math.min(minX, shape[c * 8] - radius); maxX = Math.max(maxX, shape[c * 8 + 1] + radius);
+      minZ = Math.min(minZ, shape[c * 8 + 2] - radius); maxZ = Math.max(maxZ, shape[c * 8 + 3] + radius);
+    }
+    const cell = Math.max(1, (maxX - minX) / 128, (maxZ - minZ) / 128);
+    const width = count ? Math.floor((maxX - minX) / cell) + 1 : 0, depth = count ? Math.floor((maxZ - minZ) / cell) + 1 : 0;
+    const lists: number[][] = Array.from({ length: width * depth }, () => []);
+    for (let c = 0; c < count; c++) {
+      const radius = this.capsuleList[c].radius + margin;
+      const x0 = Math.floor((shape[c * 8] - radius - minX) / cell), x1 = Math.floor((shape[c * 8 + 1] + radius - minX) / cell);
+      const z0 = Math.floor((shape[c * 8 + 2] - radius - minZ) / cell), z1 = Math.floor((shape[c * 8 + 3] + radius - minZ) / cell);
+      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) lists[z * width + x].push(c);
+    }
+    const start = new Int32Array(lists.length + 1);
+    lists.forEach((list, i) => { start[i + 1] = start[i] + list.length; });
+    this.grid = { margin, x: minX, z: minZ, cell, width, depth, start, items: Int32Array.from(lists.flat()) };
+  }
+
+  /** Push a particle out of one capsule. True if it was inside and moved. */
+  private push(o: number, c: number, margin: number): boolean {
+    const pos = this.pos, shape = this.capsuleShape, s = c * 8, capsule = this.capsuleList[c], a = capsule.a;
+    const radius = capsule.radius + margin;
+    if (pos[o] < shape[s] - radius || pos[o] > shape[s + 1] + radius
+      || pos[o + 2] < shape[s + 2] - radius || pos[o + 2] > shape[s + 3] + radius) return false;
+    const dx = shape[s + 4], dy = shape[s + 5], dz = shape[s + 6];
+    const t = THREE.MathUtils.clamp(((pos[o] - a.x) * dx + (pos[o + 1] - a.y) * dy + (pos[o + 2] - a.z) * dz) / shape[s + 7], 0, 1);
+    const x = pos[o] - a.x - t * dx, y = pos[o + 1] - a.y - t * dy, z = pos[o + 2] - a.z - t * dz;
+    // Clearly outside: the margin dwarfs any rounding in the exact distance, which only nearer points need.
+    if (x * x + y * y + z * z > radius * radius * 1.000001) return false;
+    const distance = Math.hypot(x, y, z);
+    if (distance < radius && distance > .00001) {
+      const amount = radius / distance - 1;
+      pos[o] += x * amount; pos[o + 1] += y * amount; pos[o + 2] += z * amount;
+      return true;
+    }
+    return false;
+  }
+
   private collide(friction: boolean, refreshFloor: boolean): void {
     const margin = tuning.birches.scarf.clothClearance;
-    for (let i = 0; i < this.positions.length; i++) {
+    if (margin !== this.grid.margin) this.buildGrid(margin);
+    const { pos, prev, grid } = this, count = this.capsuleList.length;
+    for (let i = 0; i < this.home.length; i++) {
       if (!this.weights[i]) continue;
-      const p = this.positions[i], old = this.previous[i];
-      for (let c = 0; c < this.capsuleList.length; c++) {
-        const a = this.capsuleList[c].a, shape = this.capsuleShape, o = c * 8;
-        const radius = this.capsuleList[c].radius + margin;
-        if (p.x < shape[o] - radius || p.x > shape[o + 1] + radius
-          || p.z < shape[o + 2] - radius || p.z > shape[o + 3] + radius) continue;
-        const dx = shape[o + 4], dy = shape[o + 5], dz = shape[o + 6];
-        const t = THREE.MathUtils.clamp(((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / shape[o + 7], 0, 1);
-        const x = p.x - a.x - t * dx, y = p.y - a.y - t * dy, z = p.z - a.z - t * dz;
-        const distance = Math.hypot(x, y, z);
-        if (distance < radius && distance > .00001) {
-          const amount = radius / distance - 1;
-          p.x += x * amount; p.y += y * amount; p.z += z * amount;
+      const o = i * 3;
+      const x = Math.floor((pos[o] - grid.x) / grid.cell), z = Math.floor((pos[o + 2] - grid.z) / grid.cell);
+      if (x >= 0 && z >= 0 && x < grid.width && z < grid.depth) {
+        const cell = z * grid.width + x;
+        for (let e = grid.start[cell]; e < grid.start[cell + 1]; e++) {
+          // Once pushed, the particle may have left its cell, so every later capsule is tested as before.
+          if (this.push(o, grid.items[e], margin)) {
+            for (let c = grid.items[e] + 1; c < count; c++) this.push(o, c, margin);
+            break;
+          }
         }
       }
-      if (refreshFloor) this.floors[i] = this.floor(p.x, p.z) + margin;
+      if (refreshFloor) this.floors[i] = this.floor(pos[o], pos[o + 2]) + margin;
       const floor = this.floors[i];
-      if (p.y < floor) {
-        p.y = floor;
+      if (pos[o + 1] < floor) {
+        pos[o + 1] = floor;
         if (friction) {
-          old.x = p.x - (p.x - old.x) * .75;
-          old.z = p.z - (p.z - old.z) * .75;
-          old.y = p.y;
+          prev[o] = pos[o] - (pos[o] - prev[o]) * .75;
+          prev[o + 2] = pos[o + 2] - (pos[o + 2] - prev[o + 2]) * .75;
+          prev[o + 1] = pos[o + 1];
         }
       }
     }
@@ -236,8 +308,8 @@ export class ScarfCloth {
 
   report(): { stretch: number; speed: number; penetration: number } {
     let stretch = 1, speed = 0, penetration = 0;
-    for (const link of this.links) if (link.compliance < .000001) {
-      stretch = Math.max(stretch, this.positions[link.a].distanceTo(this.positions[link.b]) / link.rest);
+    for (let l = 0; l < this.linkA.length; l++) if (this.compliance[l] < .000001) {
+      stretch = Math.max(stretch, this.positions[this.linkA[l]].distanceTo(this.positions[this.linkB[l]]) / this.rest[l]);
     }
     this.positions.forEach((p, i) => {
       speed = Math.max(speed, p.distanceTo(this.previous[i]) * 120);
