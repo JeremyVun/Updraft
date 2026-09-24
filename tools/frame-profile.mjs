@@ -46,6 +46,13 @@ window.__audit = {
     drawing: [drawing.mesh], embers: [embers.mesh], starlings: [starlings.mesh], seaLife: sealife.objects,
     kites: Object.values(departureKites.markers).map(m => m.group),
   },
+  // Ablations that change a height source: both sides of each of their pairs re-run the window-move bakes.
+  heightSources: ['rebake'],
+  changesHeights(omit) { return (omit||'').split('+').some(v=>this.heightSources.includes(v)); },
+  rebake() {
+    bakedSun.copy(atmo.uniforms.uSunDir.value);bakes.bake(bakeInputs);water.bakeShore(WINDOW.size);
+    grass.tablesDirty=true;grass.bake(renderer);
+  },
   record(cpuStart, realDt) { if (!this.paused) this.frames.push({ cpuMs: performance.now()-cpuStart, intervalMs: realDt*1000 }); },
   install() {
     const owners = new Map();
@@ -142,6 +149,7 @@ window.__audit = {
     for (const key of variants.includes('actors')?actors:variants)for(const object of this.groups[key]||[]) {
       this.hidden.push([object,object.visible]);object.visible=false;
     }
+    if(this.pairRebake)this.rebake();
   },
   draw(sim=true) {
     renderer.info.reset();
@@ -253,7 +261,7 @@ try {
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
       const result=await page.evaluate(async ({omit,rounds,draws,capture})=>{
-        const gl=__game.renderer.getContext(), probe=__audit;
+        const gl=__game.renderer.getContext(), probe=__audit;probe.pairRebake=probe.changesHeights(omit);
         async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();const end=performance.now()+20000;
           try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;
             if(s===gl.WAIT_FAILED||performance.now()>end)throw Error('GPU completion timeout');await new Promise(r=>setTimeout(r,0));}}
@@ -279,10 +287,11 @@ try {
           runs.push({baseline,omitted,saved:baseline-omitted,percent:(1-omitted/baseline)*100});}
         const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
-        probe.configure(null);return {pixels,runs,submitted,images};
+        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images};
       },{omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1'});
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const row={omit,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],runs:result.runs};
+      if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
