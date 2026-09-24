@@ -11,6 +11,8 @@
 //        Every captured frame is drawn twice, old then new, from one simulation, so the only difference is the
 //        heights: old.webm, new.webm, side-by-side.webm, diff.webm (amplified) and per-frame stats, including the
 //        frame-to-frame change of each side (crawling or swimming shows as a difference between the two).
+//   vistas <out>                         held views where ground beyond the window fills part of the frame (Meadow,
+//        also at sunset when the shadows reach furthest, Home, the wood), stored as pairs that `stills` then maps.
 //   index <out>                          writes index.html over everything in <out>.
 // env: BASE (dev server), W/H (motion viewport, 1280x720), SECONDS (game seconds, meadow 40, boats 40),
 //      EVERY (capture every n-th frame, 2), STEPS (pan frames, 240).
@@ -76,16 +78,19 @@ if (mode === 'stills') {
   const [prefix, out] = args;
   fs.mkdirSync(`${out}/stills`, { recursive: true });
   const chapters = ['island', 'washing', 'meadow:walk', 'birches', 'drowned', 'wood', 'sleeping', 'boats', 'jetty', 'sea', 'mirror'];
+  const sources = chapters.map((chapter) => ({ group: 'chapter', chapter, name: chapter.replace(':', '-'),
+    now: `${prefix}-${chapter}-heights-direct-baseline.png`, old: `${prefix}-${chapter}-heights-direct-variant.png` }));
+  const vistas = fs.existsSync(`${out}/pairs/vistas.json`) ? JSON.parse(fs.readFileSync(`${out}/pairs/vistas.json`, 'utf8')) : [];
+  for (const v of vistas) sources.push({ group: 'vista', chapter: v.label, name: v.name, now: `${out}/pairs/${v.name}-new.png`, old: `${out}/pairs/${v.name}-old.png` });
   const rows = [], blocks = [];
-  for (const chapter of chapters) {
-    const now = decodePng(fs.readFileSync(`${prefix}-${chapter}-heights-direct-baseline.png`));
-    const old = decodePng(fs.readFileSync(`${prefix}-${chapter}-heights-direct-variant.png`));
-    const { width: w, height: h } = now, d = diffOf(old.data, now.data, w * h), name = chapter.replace(':', '-');
+  for (const { group, chapter, name, now: nowFile, old: oldFile } of sources) {
+    const now = decodePng(fs.readFileSync(nowFile)), old = decodePng(fs.readFileSync(oldFile));
+    const { width: w, height: h } = now, d = diffOf(old.data, now.data, w * h);
     fs.writeFileSync(`${out}/stills/${name}-new.png`, encodePng(w, h, toRgb(now.data, w, h)));
     fs.writeFileSync(`${out}/stills/${name}-old.png`, encodePng(w, h, toRgb(old.data, w, h)));
     fs.writeFileSync(`${out}/stills/${name}-heatmap.png`, encodePng(w, h, heatmap(now.data, d, w, h)));
     const s = statsOf(d);
-    rows.push({ chapter, name, width: w, height: h, ...s });
+    rows.push({ group, chapter, name, width: w, height: h, ...s });
     console.log(JSON.stringify({ chapter, ...s }));
     const B = 32;
     for (let by = 0; by + B <= h; by += B) for (let bx = 0; bx + B <= w; bx += B) {
@@ -111,6 +116,8 @@ if (mode === 'stills') {
   });
   fs.writeFileSync(`${out}/stills/stills.json`, JSON.stringify({ rows, regions }, null, 2));
   console.log(JSON.stringify(regions));
+} else if (mode === 'vistas') {
+  await captureVistas(args[0]);
 } else if (mode === 'motion') {
   const [fixture, out] = args;
   assert(['meadow', 'boats', 'pan'].includes(fixture), `unknown fixture ${fixture}`);
@@ -118,7 +125,7 @@ if (mode === 'stills') {
 } else if (mode === 'index') {
   writeIndex(args[0]);
 } else {
-  throw new Error('usage: stills <prefix> <out> | motion <meadow|boats|pan> <out> | index <out>');
+  throw new Error('usage: vistas <out> | stills <prefix> <out> | motion <meadow|boats|pan> <out> | index <out>');
 }
 
 function toRgb(rgba, w, h) {
@@ -146,58 +153,7 @@ async function motion(fixture, out) {
   const { browser, close } = await openBrowser();
   const errors = [];
   try {
-    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-    page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
-    await page.route('**/@vite/client', (r) => r.fulfill({ contentType: 'application/javascript', body: '' }));
-    await page.route('**/src/main.ts*', async (route) => {
-      const response = await route.fetch();
-      let source = await response.text();
-      const hook = 'function frame(now) {', draw = 'drawJourneyRooms(rooms, roomObjects, drawRooms);';
-      assert(source.includes(hook) && source.split(draw).length === 2);
-      source = source.replace(hook, hook + ' if(window.__evidencePaused){requestAnimationFrame(frame);return;}');
-      source = source.replace(draw, draw + ' window.__evidence?.frame(() => drawJourneyRooms(rooms, roomObjects, drawRooms));');
-      source += `
-window.__evidence = {
-  on: false, count: 0, every: 1, pending: null, lastDraw: null,
-  frame(draw) {
-    this.lastDraw = draw;
-    if (!this.on || this.count++ % this.every) return;
-    this.capture(draw);
-    window.__evidencePaused = true;
-  },
-  side(ready, draw) {
-    terrainHeights.uniforms.uTerrainHeightsReady.value = ready;
-    bakes.bakeLight(bakeInputs);
-    draw();
-    const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    return px;
-  },
-  capture(draw) {
-    const old = this.side(0, draw), now = this.side(1, draw);
-    const gl = renderer.getContext();
-    this.pending = { old, now, w: gl.drawingBufferWidth, h: gl.drawingBufferHeight, frame: frameIndex, camera: rig.camera.position.toArray(), window: [WINDOW.minX, WINDOW.minZ] };
-  },
-  hold(pose) {
-    rig.camera.position.fromArray(pose.position);
-    rig.camera.lookAt(new THREE.Vector3().fromArray(pose.target));
-    rig.camera.updateMatrixWorld();
-    terrain.update(rig.camera);
-    grass.update(rig.camera, 0);
-    grass.bake(renderer);
-    this.capture(this.lastDraw);
-  },
-  take() {
-    const p = this.pending, flip = (px) => { const out = new Uint8Array(px.length), row = p.w * 4;
-      for (let y = 0; y < p.h; y++) out.set(px.subarray(y * row, (y + 1) * row), (p.h - 1 - y) * row); return out; };
-    const b64 = (px) => { let s = ''; for (let i = 0; i < px.length; i += 0x8000) s += String.fromCharCode.apply(null, px.subarray(i, i + 0x8000)); return btoa(s); };
-    this.pending = null;
-    return { old: b64(flip(p.old)), now: b64(flip(p.now)), w: p.w, h: p.h, frame: p.frame, camera: p.camera, window: p.window };
-  },
-};`;
-      await route.fulfill({ response, body: source });
-    });
+    const page = await openGame(browser, errors, W, H, 1);
     const chapter = fixture === 'boats' ? 'boats' : 'meadow';
     await page.goto(`${BASE}?shot&chapter=${chapter}&ratio=1&msaa=2&analytics=0&progress=0`);
     await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
@@ -250,8 +206,8 @@ window.__evidence = {
         await consume(pose);
       }
     } else {
-      await page.evaluate((every) => { window.__evidence.every = every; window.__evidence.count = 0; window.__evidence.on = true; }, every);
       if (fixture === 'boats') await page.waitForFunction(() => __game.story.current.beat === 'sailing', null, { timeout: 60000 });
+      await page.evaluate((every) => { window.__evidence.every = every; window.__evidence.count = 0; window.__evidence.on = true; }, every);
       const total = Math.round((seconds * 60) / every);
       let stroke = 0;
       for (let i = 0; i < total; i++) {
@@ -282,6 +238,112 @@ window.__evidence = {
     };
     fs.writeFileSync(`${dir}/${fixture}.json`, JSON.stringify({ summary, frames }, null, 1));
     console.log(JSON.stringify(summary));
+    assert.deepEqual(errors, []);
+  } finally {
+    await close();
+  }
+}
+
+async function openGame(browser, errors, W, H, dsf) {
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dsf });
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
+  await page.route('**/@vite/client', (r) => r.fulfill({ contentType: 'application/javascript', body: '' }));
+  await page.route('**/src/main.ts*', async (route) => {
+    const response = await route.fetch();
+    let source = await response.text();
+    const hook = 'function frame(now) {', draw = 'drawJourneyRooms(rooms, roomObjects, drawRooms);';
+    assert(source.includes(hook) && source.split(draw).length === 2);
+    source = source.replace(hook, hook + ' if(window.__evidencePaused){requestAnimationFrame(frame);return;}');
+    source = source.replace(draw, draw + ' window.__evidence?.frame(() => drawJourneyRooms(rooms, roomObjects, drawRooms));');
+    source += `
+window.__evidence = {
+  on: false, count: 0, every: 1, pending: null, lastDraw: null,
+  frame(draw) {
+  this.lastDraw = draw;
+  if (!this.on || this.count++ % this.every) return;
+  this.capture(draw);
+  window.__evidencePaused = true;
+  },
+  side(ready, draw) {
+  terrainHeights.uniforms.uTerrainHeightsReady.value = ready;
+  bakes.bakeLight(bakeInputs);
+  draw();
+  const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  return px;
+  },
+  capture(draw) {
+  const old = this.side(0, draw), now = this.side(1, draw);
+  const gl = renderer.getContext();
+  this.pending = { old, now, w: gl.drawingBufferWidth, h: gl.drawingBufferHeight, frame: frameIndex, camera: rig.camera.position.toArray(), window: [WINDOW.minX, WINDOW.minZ] };
+  },
+  hold(pose) {
+  rig.camera.position.fromArray(pose.position);
+  rig.camera.lookAt(new THREE.Vector3().fromArray(pose.target));
+  rig.camera.updateMatrixWorld();
+  terrain.update(rig.camera);
+  grass.update(rig.camera, 0);
+  grass.bake(renderer);
+  this.capture(this.lastDraw);
+  },
+  take() {
+  const p = this.pending, flip = (px) => { const out = new Uint8Array(px.length), row = p.w * 4;
+    for (let y = 0; y < p.h; y++) out.set(px.subarray(y * row, (y + 1) * row), (p.h - 1 - y) * row); return out; };
+  const b64 = (px) => { let s = ''; for (let i = 0; i < px.length; i += 0x8000) s += String.fromCharCode.apply(null, px.subarray(i, i + 0x8000)); return btoa(s); };
+  this.pending = null;
+  return { old: b64(flip(p.old)), now: b64(flip(p.now)), w: p.w, h: p.h, frame: p.frame, camera: p.camera, window: p.window };
+  },
+};`;
+    await route.fulfill({ response, body: source });
+  });
+  return page;
+}
+
+const VISTAS = [
+  { query: 'chapter=meadow', label: 'Meadow, crest looking north', name: 'vista-meadow-crest-north', eye: [9, -636], target: [15, -960] },
+  { query: 'chapter=meadow', label: 'Meadow, looking west to the cliffs', name: 'vista-meadow-west-cliffs', eye: [40, -790], target: [-260, -790] },
+  { query: 'chapter=meadow', label: 'Meadow, pond looking south', name: 'vista-meadow-pond-south', eye: [24, -910], target: [0, -600] },
+  { query: 'chapter=meadow&dusk=0.9', label: 'Meadow at sunset, crest looking north', name: 'vista-meadow-dusk-crest-north', eye: [9, -636], target: [15, -960] },
+  { query: 'chapter=meadow&dusk=0.9', label: 'Meadow at sunset, looking west to the cliffs', name: 'vista-meadow-dusk-west-cliffs', eye: [40, -790], target: [-260, -790] },
+  { query: 'chapter=meadow&dusk=0.9', label: 'Meadow at sunset, pond looking south', name: 'vista-meadow-dusk-pond-south', eye: [24, -910], target: [0, -600] },
+  { query: 'chapter=jetty', label: 'Home, from the jetty looking south', name: 'vista-home-jetty-south', eye: [-100, -2190], target: [-100, -2500] },
+  { query: 'chapter=jetty', label: 'Home, last hill looking south', name: 'vista-home-hill-south', eye: [-85, -2310], target: [-150, -2600] },
+  { query: 'chapter=wood', label: 'Wood, north shore looking south', name: 'vista-wood-across', eye: [-30, -1690], target: [-30, -1950] },
+];
+
+/** Held views where ground beyond the window fills part of the frame; the window placed as the camera would place it. */
+async function captureVistas(out) {
+  const { openBrowser } = await import('./lib/browser.mjs');
+  fs.mkdirSync(`${out}/pairs`, { recursive: true });
+  const { browser, close } = await openBrowser();
+  const errors = [], done = [];
+  try {
+    for (const query of [...new Set(VISTAS.map((v) => v.query))]) {
+      const page = await openGame(browser, errors, 1376, 1032, 2);
+      await page.goto(`${BASE}?shot&${query}&ratio=1.5&msaa=2&analytics=0&progress=0`);
+      await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
+      await page.waitForTimeout(1500);
+      for (const v of VISTAS.filter((x) => x.query === query)) {
+        const r = await page.evaluate(async (v) => {
+          window.__evidencePaused = true;
+          await new Promise((r) => setTimeout(r, 50));
+          const { followWindow } = await import('/src/world/window.ts');
+          const { worldHeight } = await import('/src/world/heightfield.ts');
+          const y = Math.max(0, worldHeight(v.eye[0], v.eye[1])) + 8;
+          const dx = v.target[0] - v.eye[0], dz = v.target[1] - v.eye[1], l = Math.hypot(dx, dz);
+          followWindow(v.eye[0] + (dx / l) * 100, v.eye[1] + (dz / l) * 100, true);
+          const ty = Math.max(0, worldHeight(v.target[0], v.target[1]));
+          window.__evidence.hold({ position: [v.eye[0], y, v.eye[1]], target: [v.target[0], ty, v.target[1]] });
+          return window.__evidence.take();
+        }, v);
+        for (const [side, data] of [['old', r.old], ['new', r.now]]) fs.writeFileSync(`${out}/pairs/${v.name}-${side}.png`, encodePng(r.w, r.h, toRgb(Buffer.from(data, 'base64'), r.w, r.h)));
+        done.push({ name: v.name, label: v.label, query: v.query, window: r.window });
+        console.log(JSON.stringify({ vista: v.name, window: r.window }));
+      }
+      await page.close();
+    }
+    fs.writeFileSync(`${out}/pairs/vistas.json`, JSON.stringify(done, null, 2));
     assert.deepEqual(errors, []);
   } finally {
     await close();
