@@ -3,6 +3,10 @@
 The design is in `design.md` in this folder; its item letters (A–H) are used below. Engine background:
 `docs/engine.md`.
 
+**Order (after the 2026-09-24 review):** the exact work comes first: A, the veil and mirror-sky skips, and the
+corrected two-pass height bake. The distant-height atlas and the surf cache are experiments. They are kept only
+if they pass their stronger checks.
+
 ## Standing rules for every phase
 
 - **Worktrees:** work in a worktree under `/private/tmp`, forked from current `main`. Before forking, run
@@ -13,15 +17,18 @@ The design is in `design.md` in this folder; its item letters (A–H) are used b
     checking the listener's cwd.
   - Only one browser gate runs at a time; the tools share `/tmp/updraft-chromium.lock`.
   - Check `ps` for busy processes before timing anything, and record what was running.
+- **Frozen comparisons re-bake shadows:** the profiler's frozen `draw()` does not re-bake. Any variant that
+  changes a height source must re-run the window bake and `bakeLight` on each side of every pair (design, "How
+  every phase is judged").
 - **Agents:**
   - Run at most one or two build agents alongside peer sessions.
   - Nonvisual phases go to Opus subagents.
-  - Visual work (the phase 6 look, and the phase 5 motion review if motion changes) goes to an allowed visual
-    model: Opus, or Astra with Jeremy's authorisation.
+  - Visual work (phase 6, and the phase 5 motion review if motion changes) goes to an allowed visual model: Opus,
+    or Astra with Jeremy's authorisation.
 - **Record results:** each phase writes its measured numbers into `design.md` under its item, and marks itself
   done here.
 
-## Phase 0: repair the profiler and re-baseline (item H)
+## Phase 0: repair the profiler (item H)
 
 **Status:** not started
 
@@ -29,14 +36,13 @@ The design is in `design.md` in this folder; its item letters (A–H) are used b
 
 **Work:**
 1. Remove `shoreFamily` from `groups` and from the `culling-off` root list.
-2. Run the default ablation set on Island only, to prove the tool starts and completes. A full re-baseline is
-   unnecessary: the 09-24 table in `design.md` is the baseline.
+2. Add an option for ablations to re-run `bakes.bake` and `bakes.bakeLight` before each measured side. Later
+   phases use it.
 
-**Seam:** later phases add their own ablation names to this tool.
+**Gate:** `node tools/frame-profile.mjs island` exits 0 with no browser errors. The 09-24 table in `design.md` is
+the baseline; no full re-baseline is needed.
 
-**Gate:** `node tools/frame-profile.mjs island` exits 0 with no browser errors.
-
-## Phase 1: exact terrain and small skips (items A and D)
+## Phase 1: exact terrain, veil and mirror-sky skips (items A and D)
 
 **Status:** not started
 
@@ -45,25 +51,17 @@ The design is in `design.md` in this folder; its item letters (A–H) are used b
 - `src/world/terrain-fields.ts`
 - `src/world/sleeping-weather.ts`
 - `src/world/water.ts` (`glassColour` only)
-- `src/world/water/surf.ts`
-- `src/world/water/shore.ts`
 - `tools/frame-profile.mjs` (new ablations)
 - a new `tools/fields-border-check.mjs`
 
 **Work:**
 1. Write the A3 border-presence sweep before the A3 change. If it fails, stop and report.
-2. Implement A1, A2, A3 and D.
+2. Implement A1, A2, A3, the sleeping-veil hide and the `glassColour` branch.
 
-**Ablations:** one per skip, each restoring the old path in the page:
+**Ablations:** each restores the old path in the page:
 - `terrain-skips-off`: shader string replacement.
 - `veil-always`.
 - `glass-sky-always`.
-- `surf-direct`: a ready uniform on the baked surf phase.
-
-**Seams:**
-- The shore bake's output keeps R as the signed shore distance; G becomes the surf phase noise (not the
-  time term).
-- Every consumer of `surfCycle` gets the same value within half-float precision.
 
 **Gate: exactness.** Frame-difference against each ablation in Island, Washing, Meadow walk, Birches, Drowned,
 Wood, Sleeping, Sea, Mirror, Boats and Jetty:
@@ -74,65 +72,26 @@ Wood, Sleeping, Sea, Mirror, Boats and Jetty:
 
 **Gate: build.** `npm run typecheck` and `npm run build` pass.
 
-## Phase 2: distant-height atlas (item B)
+## Phase 2: two-pass window height bake (item C)
 
-**Status:** not started. Starts after phase 1 merges, because it shares `terrain.ts`.
-
-**Owns:**
-- a new `src/world/terrain-heights.ts`
-- `src/world/terrain.ts` (`VERT` and wiring)
-- `src/world/ground.ts` (`GROUND_FRAG` `heightAt` only)
-- the bake wiring in `src/main.ts`
-- `tools/frame-profile.mjs` (ablation `heights-direct`)
-- a new `tools/terrain-heights-check.mjs`
-
-**Work:**
-1. First establish what `worldHeight` returns outside the patches, and whether any pixel can show it. Record the
-   finding in `design.md`.
-2. Pick the open-sea treatment accordingly.
-3. Bake before Begin. Precompile through the bake registry so there's no first-frame compile.
-
-**Seam:**
-- `groundHeight(q)` and `heightAt(p)` return window texture, then atlas, then open-sea expression or
-  `worldHeight`.
-- Callers see heights only; nothing else changes.
-
-**Memory arithmetic:**
-- R16F is 2 bytes per texel.
-- The colour atlas's 1024×1376 footprint at 1 m texels is 1.41 M texels, about 2.75 MiB.
-- At 2 m texels it is about 0.69 MiB.
-- Report the chosen size's actual allocation.
-
-**Gate: parity.**
-- The check sweeps every patch.
-- Max |atlas − worldHeight| ≤ 3 cm at texel centres, with the bilinear error between texels reported.
-- No NaN.
-
-**Gate: frames.** Frame-difference against `heights-direct` in all eleven chapters: max ≤ 2/255, and no seam at
-the window edge in the Island, Meadow walk, Sea and Mirror views.
-
-**Gate: saving.**
-- Paired `heights-direct` rounds per chapter.
-- Also the shadow-bake cost while the sun is moving: a dusk fixture (`?dusk=`) timed with `bakeLight` running.
-
-**Gate: boot.** The boot-gap check in `docs/testing.md` stays under its ceiling.
-
-## Phase 3: cheaper window height re-bake (item C)
-
-**Status:** not started. Starts after phase 2, whose atlas it uses at the border.
+**Status:** not started. Independent of phase 1's files, so it can run beside it (at most two agents).
 
 **Owns:**
-- `src/world/ground.ts` (`HEIGHT_FRAG` and the `bake` pass order)
-- `tools/frame-profile.mjs` or a new check script
+- `src/world/ground.ts` (`HEIGHT_FRAG`, a new normals pass, the `bake` pass order, a new (512+2)² R32F
+  intermediate target)
+- a new check script
 
 **Seam:**
-- The height texture keeps `r` height and `gba` normal.
+- The height texture keeps `r` height and `gba` normal, `FloatType`.
 - `setHeightGrid`, the height readback and the shadow bake read it unchanged.
 - It is re-baked in the same frame as the window move.
+- Border neighbours come from the calculated one-texel margin, never from an atlas.
 
-**Gate: parity.** New against old texture over several window positions:
+**Gate: parity.** New against old texture at several window positions, including positions after moves:
 - heights identical;
-- normals within 1e-3.
+- normals within 1e-5, beyond sample-position rounding.
+
+Record the maximum.
 
 **Gate: hitches.** Frame gaps at window moves on a travelling fixture, compared back to back in two worktrees:
 - a Meadow walk with `tools/perf.mjs frames` and a scripted walk;
@@ -141,6 +100,55 @@ the window edge in the Island, Meadow walk, Sea and Mirror views.
 Report the worst gap and p99 at each move.
 
 **Gate: build.** `npm run typecheck` and `npm run build` pass.
+
+## Phase 3: distant-height atlas (item B, experiment)
+
+**Status:** not started. Starts after phase 1 merges, because it shares `terrain.ts`.
+
+**Owns:**
+- a new `src/world/terrain-heights.ts`
+- `src/world/terrain.ts` (`VERT` and wiring)
+- `src/world/ground.ts` (`GROUND_FRAG` `heightAt` only)
+- the bake wiring in `src/main.ts`
+- `tools/frame-profile.mjs` (ablation `heights-direct`, with shadow re-bakes on both sides)
+- a new `tools/terrain-heights-check.mjs`
+
+**Work:**
+1. First establish what `worldHeight` returns outside the patches, and whether any pixel can show it. Record the
+   finding in `design.md`.
+2. Measure the interpolation error per patch at 1 m and 2 m texels, before any shader work. If the fallbacks
+   needed to meet the bounds would eat most of the saving, stop and report. Dropping B is an acceptable outcome.
+3. Bake before Begin. Precompile through the bake registry so there's no first-frame compile.
+
+**Seam:**
+- `groundHeight(q)` and `heightAt(p)` return window texture, then atlas (or the direct calculation where the
+  atlas is flagged), then open-sea expression or `worldHeight`.
+- The window height bake (phase 2) never reads the atlas.
+
+**Memory arithmetic:**
+- R16F is 2 bytes per texel.
+- The colour atlas's 1024×1376 footprint at 1 m texels is 1.41 M texels, about 2.75 MiB.
+- At 2 m texels it is about 0.69 MiB.
+- A second mask channel doubles the chosen size.
+- Report the actual allocation.
+
+**Gate: accuracy (design B).** At sub-texel points in every patch:
+- height error ≤ 5 cm;
+- normal error ≤ 0.01 per component.
+
+Report the maximum and p99 per patch.
+
+**Gate: frames.**
+- Frozen frame-difference against `heights-direct`, with shadows re-baked on both sides, in all eleven chapters:
+  max ≤ 2/255.
+- Moving-camera comparisons (Meadow walk, sailing, a pan across the window edge): no seam and no swimming,
+  judged from frame differences.
+
+**Gate: saving.**
+- Paired `heights-direct` rounds per chapter.
+- The shadow-bake cost with the sun moving through a sunset arc between draws. A fixed `?dusk=` does not move it.
+
+**Gate: boot.** The boot-gap check in `docs/testing.md` stays under its ceiling.
 
 ## Phase 4: wind-cost anomaly (item F)
 
@@ -159,8 +167,8 @@ Report the worst gap and p99 at each move.
 **Deliverable:** the explanation in `design.md` item F, with evidence. If the cost is real, a fix. If it's an
 artefact, a corrected ablation.
 
-**Gate: wind parity.** A fix must leave the wind field bit-identical, or within 1e-5, over 300 ticks with scripted
-splats (compare the read-back velocity texture).
+**Gate: wind parity.** Over 300 ticks with scripted splats, a fix must leave the velocity, grass bend and sway
+textures bit-identical, or within 1e-5.
 
 **Gate: `docs/contracts/wind.md`** still holds.
 
@@ -174,27 +182,33 @@ splats (compare the read-back velocity texture).
 - `src/gl/indexed-normals.ts` (only if needed)
 
 **Work:**
-1. Exact changes first: skip writes and normals for unchanged sections, skip resting cloth, remove allocations.
-2. Measure.
-3. Only then consider changes that alter the motion.
+1. First remove allocations and redundant work inside `write` without skipping sections.
+2. Then skip sections and rest cloth only under the design G definition and wake-up rules.
+3. Measure after each step.
+4. Only then consider changes that alter the motion.
 
-**Gate: CPU.** Median and p90 frame CPU in Birches, using `frame-profile.mjs birches` in a CPU-only run, compared
-with 4.4 / 4.6 ms (09-24) and with a back-to-back old worktree.
+**Gate: CPU.** Median and p90 frame CPU in Birches, compared with 4.4 / 4.6 ms (09-24) and with a back-to-back old
+worktree.
 
-**Gate: exactness.** For exact changes, the scarf's vertex positions are identical over a scripted 20 s of play.
+**Gate: exactness.** Positions and normals match the unmodified build over scripted runs of:
+- the tied scarf in wind;
+- release and the slip;
+- the child gathering it;
+- a checkpoint restore mid-sequence.
 
 **Gate: motion.** If motion changes, record before/after video of the scarf in play (`VIDEO=1 node tools/play.mjs`).
 An allowed visual model reviews it, and it goes to Jeremy before merge.
 
-## Phase 6: bake the fine grain and noise (item E)
+## Phase 6: bake the fine grain and noise (item E, including the surf experiment)
 
 **Status:** not started. Starts after phases 1–3 merge. Visual implementation, so an allowed visual model only.
 
 **Owns:**
 - `src/world/terrain.ts` (`FRAG`)
-- `src/world/grass.ts` (tint only)
+- `src/world/grass.ts` (tint and `frostAt` use only)
 - `src/world/atmosphere.ts` (`frostAt` only)
 - `src/world/water.ts` (bed noise only)
+- `src/world/water/surf.ts` and `src/world/water/shore.ts` (the surf experiment)
 - a new tiling noise texture module
 
 **Work:**
@@ -202,12 +216,19 @@ An allowed visual model reviews it, and it goes to Jeremy before merge.
    savings.
 2. Implement only the terms with a consistent saving.
 3. Textures must be mipmapped and sampled with explicit gradients where they sit in branches.
+4. **Frost:** one sampling-level policy for `frostAt` shared by every stage and shader that calls it, the grass
+   vertex shader included (design E).
+
+**Gate: surf.** The surf cache is kept only if both hold:
+- Frame comparisons over complete wave cycles, and across window moves, show no visible change in the foam
+  edges.
+- It passes the video review.
 
 **Gate: video.** Before/after webm of the moment in play:
 - walking through the Wood floor;
 - the Sleeping island at dawn frost;
 - the Meadow walk;
-- a beach at the opening island.
+- a beach at the opening island, which also covers surf.
 
 An allowed visual model reviews the videos, then they go to Jeremy. **No merge without Jeremy's verdict.**
 

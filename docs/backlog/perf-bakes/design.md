@@ -14,6 +14,19 @@ Scope rulings, 2026-09-24:
 - **Out of scope:** drawing the sky at lower resolution or less often at sea and on the mirror, even though it
   costs 13–15% there. That changes the look, so it's a separate decision.
 
+Review folded in, 2026-09-24. An external review (code reading plus CPU numerical probes, not GPU or iPad runs)
+led to these changes:
+
+- **Build first:** A, the veil and mirror-sky skips, and a corrected two-pass height bake.
+- **Treat as experiments:** the distant-height atlas (B) and the surf cache, until their stronger checks pass.
+- **Specific findings:**
+  - The atlas interpolates with about 20 cm of error between texels.
+  - Atlas heights at the window border would give a 0.048 error in the normals.
+  - The surf phase error is amplified at foam edges.
+  - The profiler's frozen draws never re-bake the shadows.
+  - "Unchanged" scarf sections were undefined.
+  - `frostAt` also runs in vertex shaders.
+
 ## Why
 
 The target is the iPad. Jeremy named the Meadow walk as the worst part of the game there (see `docs/engine.md`).
@@ -93,7 +106,7 @@ the atlas rather than approximate.
 branches are safe. Any sampler with mipmaps moved inside a branch must use `textureLod`/`textureGrad`, or the
 `Footprint` taken at the top of `main`.
 
-### B. Distant-height atlas (exact within a measured tolerance)
+### B. Distant-height atlas (experiment, kept only if it passes the accuracy gates below)
 
 **The problem.** `groundHeight()` in the terrain vertex shader falls back to `worldHeight()` outside the 320 m
 window. It calls it 3 times per vertex (h, hx, hz), on every distant leaf, in both the main pass and the sea-mirror
@@ -119,19 +132,45 @@ nothing can, replace it with a cheap sea-floor expression that matches the patch
 of at least two texels, as the colour atlas does. If something can show it, keep `worldHeight` there and record
 the reason.
 
-**Tolerance.** Heights must agree with `worldHeight` within 3 cm at texel centres, and the error of the bilinear
-interpolation must be recorded. The chapter views must show no visible seam at the window edge or the patch
-edges.
+**Accuracy.** Checking texel centres alone is not enough. A CPU probe of the 1 m layout found about 20 cm of
+error *between* samples, before any half-float rounding. That error bends distant terrain, its normals and the
+shadows marched over it. The gates:
+
+- **Interpolation error:**
+  - Sample each patch at sub-texel points: at least the texel quarter-points, plus random points.
+  - Compare the atlas's bilinear value, in the stored format, with `worldHeight`.
+  - Record the maximum and the 99th percentile, per patch.
+- **Height and normal bounds:**
+  - Height error ≤ 5 cm.
+  - Normals (from h, hx, hz at the leaf's vertex spacing) within 0.01 per component.
+- **Fallback where the bounds fail:**
+  - Where a region can't meet the bounds at an affordable resolution, keep the direct calculation for it. Flag
+    such regions in a second channel (RG16F or R32F plus a mask), or give those patches finer texels.
+  - Record the memory each option costs.
+  - If most of the saving goes to fallbacks, drop B and record why.
+- **Moving camera:** compare the old and new rendering while the camera moves: the Meadow walk, sailing, and a
+  pan across the window edge. Compare frames exactly as in "How every phase is judged". No seam may show at the
+  window edge or at a patch edge, and there must be no visible swimming.
+- **Shadows:** re-bake the shadows for each variant before comparing (see the profiler rule below).
+
+**Kept away from item C.** The window height bake does not read the atlas.
 
 ### C. Cheaper window height re-bake (exact)
 
 `HEIGHT_FRAG` in `ground.ts` calls `worldHeight` 5 times per texel over 512² on every window move: the centre plus
 four neighbours exactly one texel away. Split it into two passes:
-1. The height alone.
-2. The normal, from neighbouring texels.
 
-Border texels take neighbours outside the window from the item B atlas, or from `worldHeight`. The output layout
-(`r` height, `gba` normal) and `setHeightGrid`/readback consumers stay unchanged.
+1. **Heights.** Compute `worldHeight` into an intermediate R32F target of (512+2)², covering a one-texel margin
+   all round. Keep full float precision, like the current `FloatType` height target.
+2. **Normals.** Take each texel's normal from its four neighbours in that intermediate target. Write `r` height
+   and `gba` normal into the existing target.
+
+The border texels' neighbours come from the calculated margin, so every value equals today's calculation.
+Floating-point rounding of the sample positions is the only difference, and it is recorded. This phase does not
+depend on the item B atlas. (Using atlas heights for border neighbours gave a 0.048 normal-component error in a
+CPU probe.)
+
+The output layout and the `setHeightGrid` and readback consumers stay unchanged.
 
 **Rejected for now:** re-baking only the newly exposed strip. The light bake re-marches the whole window on
 every move anyway, so the strip would save less than it costs in complexity. Revisit only if travel hitches
@@ -144,9 +183,7 @@ remain after C.
   of 0 with normal blending changes nothing.
 - **Sky mirror `glassColour`** (`water.ts`): it computes `skyRadiance` even where `on == 1` and only the planar
   reflection is kept. Branch on `on < 1.0`.
-- **Surf phase** (`surf.ts` `surfCycle`): the two static `vnoise` terms (0.016 and 0.057 cycles/m) can move into
-  the unused G channel of the shore bake's resolve pass (`water/shore.ts`), which already re-bakes with the
-  window. This is near-exact: half-float phase error is about 1e-3 cycles, within 1/255.
+The surf phase cache is **not** an exact skip and has moved to item E as an experiment (see there).
 
 ### E. Bake the fine ground grain and noise (changes the look; visual review)
 
@@ -164,7 +201,19 @@ mipmapped tiling noise textures. The pattern stays statistically similar but is 
 aliases less at a distance.
 
 **Approach:**
-1. Measure each term's cost first, by replacing it with a constant in a paired profile.
+1. Measure each term's cost first, by replacing it with a constant in a paired profile. The candidates include:
+   - **The surf phase** (`surf.ts` `surfCycle`). Its two static `vnoise` terms (0.016 and 0.057 cycles/m) could
+     go into the unused G channel of the shore bake (`water/shore.ts`), which re-bakes with the window. This is
+     not exact:
+     - Narrow foam edges amplify even a 1e-3 phase error.
+     - When the phase crosses a whole number, it changes the wave's random pattern (`floor(c)` seeds
+       `surfReach`).
+     - It stays procedural unless it passes comparisons over complete wave cycles, and across window moves
+       (the bake is window-aligned), plus the video review.
+   - **The frost pattern.** `frostAt` runs in the grass **vertex** shader (`grass.ts`) and in six other shaders
+     (`terrain.ts`, `sleeping.ts`, `sleeping-birches.ts`, `sleeping-trail.ts`, `sleeping-hearth.ts`). A texture
+     replacement needs one explicit sampling-level policy, so that frost on blades, ground and props stays
+     consistent: `textureLod` at a fixed level, the same in every stage.
 2. Bake only the terms that measurably pay.
 3. Show before/after **video** of the moment in play (Jeremy's standing preference, not stills) for Wood, Sleeping,
    Meadow and a beach. An allowed visual model reviews it before anything merges, and Jeremy sees the video.
@@ -181,7 +230,8 @@ In paired tests, skipping `wind.step(1/60, time, false)` saved 4.7–6.1 ms in W
   being read by scene shaders in the same frame.
 
 **Deliverable:** the explanation, with evidence. If the cost is real, a fix that leaves the wind field numerically
-identical (for example, fewer target switches or fused passes). If it's an artefact, a corrected tool.
+identical (for example, fewer target switches or fused passes). The identity check covers the velocity texture
+**and** the grass bend and sway textures. If it's an artefact, a corrected tool.
 
 ### G. Birches scarf CPU (reduce without changing the motion)
 
@@ -192,9 +242,29 @@ Birches is the only chapter where the CPU matters: 4.4 ms median. Profile self-t
 - `collide`: 0.32 ms
 
 **Try exact changes first:**
-- write and recompute normals only for sections that moved;
+- write and recompute normals only for sections that are unchanged by the definition below;
 - skip cloth that is at rest;
 - remove per-frame allocations.
+
+**Definition of "unchanged".** A strip's mesh is more than each section's position. It depends on:
+- the time-driven roll;
+- the tangents of neighbouring sections;
+- an orientation carried along the whole strip.
+
+A section may skip its write only if **every** input to its vertices and normals is unchanged, including those
+three. Otherwise a fold freezes or the lighting shifts. The first thing to try is safest: remove allocations
+and redundant work inside `write`, without skipping sections.
+
+**Rest and wake-up.** Cloth counts as resting only if its positions stay put and none of these are active: wind at
+its sections, a moving attachment or support rail, release progress, or slip time. Any of them wakes it the same
+tick.
+
+**Tests:**
+- Positions **and normals** match the unmodified build over scripted runs covering:
+  - the tied scarf in wind;
+  - release and the slip off the branch;
+  - the child gathering it;
+  - restoring from a checkpoint mid-sequence.
 
 Any change that alters the motion (fewer substeps or constraint iterations, cheaper collision) needs before/after
 video of the scarf in play, reviewed like item E.
@@ -213,13 +283,20 @@ path in the page, following the existing examples:
 ## How every phase is judged
 
 - **Exactness:**
-  - Items A–D compare rendered frames with the old path restored in the same page. The maximum channel difference
-    is ≤1/255 in every chapter listed in the profile. A exceptions are expected to be 0.
+  - Items A, C and D compare rendered frames with the old path restored in the same page. The maximum channel
+    difference is ≤1/255 in every chapter listed in the profile; item A differences are expected to be 0.
+  - Item B uses its own accuracy gates plus ≤2/255 frames.
   - Items B and C also compare texture values, as `tools/terrain-fields-check.mjs` does.
 - **Saving:**
   - The saving is the median of at least four interleaved pairs per chapter, reported with its range.
   - A change that isn't exact must show a consistent saving to be kept.
   - An exact skip is kept unless it measurably costs time.
+- **Shadows in frozen comparisons:**
+  - The profiler's frozen `draw()` renders without re-running `bakeLight` or `bake`. Any variant that changes a
+    height source (`heights-direct`, the item C passes) must re-bake the window and the light for **each** side of
+    every pair. Otherwise both sides share one shadow texture.
+  - `?dusk=` fixes the sun, so timing the light bake needs a fixture where the sun actually moves: step
+    `uSunDir` through a sunset arc between draws, or run the real dusk transition.
 - **Hitches:** item C is judged by window-move frame gaps on a travelling fixture (`tools/perf.mjs frames` while
   walking in Meadow or sailing), not by steady-state cost.
 - **Measuring conditions:**
