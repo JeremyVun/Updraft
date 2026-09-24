@@ -76,7 +76,8 @@ export class ScarfCloth {
     for (let i = 0; i < points.length; i++) {
       if (i) this.lengths.push(this.lengths[i - 1] + points[i].distanceTo(points[i - 1]));
       this.tangent.subVectors(points[Math.min(i + 1, points.length - 1)], points[Math.max(0, i - 1)]).normalize();
-      if (across) this.side.copy(across[i]).addScaledVector(this.tangent, -across[i].dot(this.tangent)).normalize();
+      if (across) this.side.copy(across[i]).addScaledVector(this.tangent, -across[i].dot(this.tangent));
+      if (across && this.side.lengthSq() > .25) this.side.normalize();
       else {
         this.side.set(-this.tangent.z, 0, this.tangent.x).normalize();
         if (this.side.lengthSq() < .1) this.side.set(1, 0, 0);
@@ -84,6 +85,8 @@ export class ScarfCloth {
       }
       for (const sign of [-1, 1]) {
         const p = points[i].clone().addScaledVector(this.side, sign * width * .5);
+        // An edge that starts under the ground would be flung out of it on the first step.
+        p.y = Math.max(p.y, floor(p.x, p.z) + tuning.birches.scarf.clothClearance);
         this.positions.push(p); this.previous.push(p.clone()); this.home.push(p.clone());
       }
       if (supports.includes(i)) { this.supports.add(i * 2); this.supports.add(i * 2 + 1); }
