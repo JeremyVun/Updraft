@@ -3,7 +3,9 @@ import type { WindField } from '../wind/field';
 import { tuning } from '../tuning';
 
 export interface ClothCapsule { a: THREE.Vector3; b: THREE.Vector3; radius: number }
-interface Link { a: number; b: number; rest: number; compliance: number; lambda: number }
+interface Link { a: number; b: number; rest: number; compliance: number; alpha: number; lambda: number }
+const H = 1 / 120;
+const PERMANENT = 1, SUPPORT = 2;
 
 /** Two connected edges of wool. The detailed knitted surface is drawn over this small physical mesh. */
 export class ScarfCloth {
@@ -15,6 +17,9 @@ export class ScarfCloth {
   private readonly links: Link[] = [];
   private readonly supports = new Set<number>();
   private readonly permanent = new Set<number>();
+  private readonly pins: Uint8Array;
+  private readonly supportRows: number[] = [];
+  private readonly pullWeights: Float64Array;
   private readonly lengths: number[] = [0];
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly side = new THREE.Vector3();
@@ -26,10 +31,23 @@ export class ScarfCloth {
   private work = 0;
   private slide = 0;
   private lift = 0;
-  capsules: ClothCapsule[] = [];
+  private capsuleList: ClothCapsule[] = [];
+  /** Per capsule: endpoint bounds in x and z, then its axis and squared length. */
+  private capsuleShape = new Float64Array(0);
   private supportRail: { a: THREE.Vector3; b: THREE.Vector3 } | null = null;
 
   setSupportRail(a: THREE.Vector3, b: THREE.Vector3): void { this.supportRail = { a, b }; }
+
+  get capsules(): ClothCapsule[] { return this.capsuleList; }
+  set capsules(list: ClothCapsule[]) {
+    this.capsuleList = list;
+    this.capsuleShape = new Float64Array(list.length * 8);
+    list.forEach(({ a, b }, c) => {
+      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+      this.capsuleShape.set([Math.min(a.x, b.x), Math.max(a.x, b.x), Math.min(a.z, b.z), Math.max(a.z, b.z),
+        dx, dy, dz, dx * dx + dy * dy + dz * dz], c * 8);
+    });
+  }
 
   get length(): number { return this.lengths[this.lengths.length - 1]; }
 
@@ -49,7 +67,7 @@ export class ScarfCloth {
       if (permanent.includes(i)) { this.permanent.add(i * 2); this.permanent.add(i * 2 + 1); }
     }
     const add = (a: number, b: number, compliance: number, rest = this.positions[a].distanceTo(this.positions[b])) => {
-      this.links.push({ a, b, rest, compliance, lambda: 0 });
+      this.links.push({ a, b, rest, compliance, alpha: compliance / (H * H), lambda: 0 });
     };
     for (let row = 0; row < points.length; row++) {
       add(row * 2, row * 2 + 1, .000001);
@@ -66,6 +84,12 @@ export class ScarfCloth {
         add(a, b, tuning.birches.scarf.clothBend, rest * .97);
       }
     }
+    this.pins = Uint8Array.from(this.positions, (_, i) => (this.permanent.has(i) ? PERMANENT : 0) | (this.supports.has(i) ? SUPPORT : 0));
+    for (const pin of this.supports) if (!this.supportRows.includes(pin >> 1)) this.supportRows.push(pin >> 1);
+    this.pullWeights = Float64Array.from({ length: this.positions.length * this.supportRows.length }, (_, k) => {
+      const d = this.lengths[Math.floor(k / this.supportRows.length) >> 1] - this.lengths[this.supportRows[k % this.supportRows.length]];
+      return Math.exp(-d * d / 12);
+    });
   }
 
   setPull(work: number, lift: number): void { this.work = work; this.lift = lift; }
@@ -84,9 +108,8 @@ export class ScarfCloth {
   }
 
   update(dt: number, wind?: WindField): void {
-    const h = 1 / 120;
     this.accumulator += Math.min(dt, .06);
-    while (this.accumulator >= h - 1e-8) { this.step(h, wind); this.accumulator -= h; }
+    while (this.accumulator >= H - 1e-8) { this.step(H, wind); this.accumulator -= H; }
   }
 
   private step(h: number, wind?: WindField): void {
@@ -109,11 +132,12 @@ export class ScarfCloth {
     }
     for (let i = 0; i < this.positions.length; i++) {
       const p = this.positions[i], old = this.previous[i], home = this.home[i];
-      const pinned = this.permanent.has(i) || (!this.released && this.supports.has(i));
+      const pins = this.pins[i];
+      const pinned = (pins & PERMANENT) !== 0 || (!this.released && (pins & SUPPORT) !== 0);
       this.weights[i] = pinned ? 0 : 1;
       if (pinned) {
         old.copy(p); p.copy(home);
-        if (!this.permanent.has(i) && this.supportRail) {
+        if (!(pins & PERMANENT) && this.supportRail) {
           const row = i & ~1;
           this.side.subVectors(this.home[row + 1], this.home[row]).multiplyScalar(i % 2 ? .5 : -.5);
           p.lerpVectors(this.supportRail.a, this.supportRail.b, this.slide).add(this.side);
@@ -135,9 +159,8 @@ export class ScarfCloth {
       const vx = (p.x - old.x) * drag, vy = (p.y - old.y) * drag, vz = (p.z - old.z) * drag;
       old.copy(p);
       let pull = 0;
-      if (!this.released) for (const pin of this.supports) {
-        const d = this.lengths[i >> 1] - this.lengths[pin >> 1];
-        pull = Math.max(pull, Math.exp(-d * d / 12) * this.lift * k.clothLift);
+      if (!this.released) for (let r = 0, rows = this.supportRows.length; r < rows; r++) {
+        pull = Math.max(pull, this.pullWeights[i * rows + r] * this.lift * k.clothLift);
       }
       p.x += vx + THREE.MathUtils.clamp((w?.x ?? 0) * k.clothWind, -8, 8) * h * h;
       p.y += vy + (-k.clothGravity + (w?.lift ?? 0) * .5 + pull) * h * h;
@@ -155,8 +178,7 @@ export class ScarfCloth {
         const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
         const length = Math.hypot(dx, dy, dz);
         if (length < .000001) continue;
-        const alpha = link.compliance / (h * h);
-        const change = (-(length - link.rest) - alpha * link.lambda) / (wa + wb + alpha);
+        const change = (-(length - link.rest) - link.alpha * link.lambda) / (wa + wb + link.alpha);
         link.lambda += change;
         const amount = change / length;
         a.x -= dx * amount * wa; a.y -= dy * amount * wa; a.z -= dz * amount * wa;
@@ -171,13 +193,13 @@ export class ScarfCloth {
     for (let i = 0; i < this.positions.length; i++) {
       if (!this.weights[i]) continue;
       const p = this.positions[i], old = this.previous[i];
-      for (const capsule of this.capsules) {
-        const a = capsule.a, b = capsule.b;
-        const radius = capsule.radius + margin;
-        if (p.x < Math.min(a.x,b.x)-radius || p.x > Math.max(a.x,b.x)+radius
-          || p.z < Math.min(a.z,b.z)-radius || p.z > Math.max(a.z,b.z)+radius) continue;
-        const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
-        const t = THREE.MathUtils.clamp(((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / (dx * dx + dy * dy + dz * dz), 0, 1);
+      for (let c = 0; c < this.capsuleList.length; c++) {
+        const a = this.capsuleList[c].a, shape = this.capsuleShape, o = c * 8;
+        const radius = this.capsuleList[c].radius + margin;
+        if (p.x < shape[o] - radius || p.x > shape[o + 1] + radius
+          || p.z < shape[o + 2] - radius || p.z > shape[o + 3] + radius) continue;
+        const dx = shape[o + 4], dy = shape[o + 5], dz = shape[o + 6];
+        const t = THREE.MathUtils.clamp(((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / shape[o + 7], 0, 1);
         const x = p.x - a.x - t * dx, y = p.y - a.y - t * dy, z = p.z - a.z - t * dz;
         const distance = Math.hypot(x, y, z);
         if (distance < radius && distance > .00001) {
