@@ -1,7 +1,8 @@
 // Checks the two-pass window height bake against the single-pass bake it replaced, texel for texel.
 // Windows set across the world (the real move path, loop paused), then real moves during a Meadow walk.
 // Usage: node tools/height-bake-check.mjs; env BASE (dev server), OUT (JSON path), WALK_MS (default 60000),
-//   MUTATE=margin|half|border breaks the new pass on purpose to prove the check fails.
+//   MUTATE=margin|half|border breaks the new pass on purpose to prove the check fails;
+//   UNFILTERABLE=1 runs as a device without linear float filtering (nearest-filtered height texture).
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
@@ -45,11 +46,15 @@ try {
   });
   const mutation = MUTATIONS[process.env.MUTATE];
   if (process.env.MUTATE) assert(mutation, `unknown MUTATE ${process.env.MUTATE}`);
-  if (mutation) await page.route('**/src/world/ground.ts*', async (route) => {
+  const unfilterable = ['renderer.extensions.has("OES_texture_float_linear")', 'false'];
+  if (mutation || process.env.UNFILTERABLE) await page.route('**/src/world/ground.ts*', async (route) => {
     const response = await route.fetch();
-    const source = await response.text();
-    assert(source.includes(mutation[0]), 'mutation hook missing');
-    await route.fulfill({ response, body: source.replace(mutation[0], mutation[1]) });
+    let source = await response.text();
+    for (const [from, to] of [mutation, process.env.UNFILTERABLE && unfilterable].filter(Boolean)) {
+      assert(source.includes(from), `hook missing: ${from}`);
+      source = source.replace(from, to);
+    }
+    await route.fulfill({ response, body: source });
   });
   await page.goto((process.env.BASE ?? 'http://127.0.0.1:5230/') + '?shot&chapter=meadow&analytics=0&progress=0');
   await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
