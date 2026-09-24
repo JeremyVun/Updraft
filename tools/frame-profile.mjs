@@ -223,7 +223,7 @@ window.__audit = {
 `;
 
 const { browser, close } = await openBrowser();
-const report=[];
+const report=[],inexact=[];
 try {
   for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow','birches','drowned','wood','sleeping','sea','mirror']) {
     const [entry,fixture]=chapter.split(':');
@@ -317,10 +317,11 @@ try {
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
       const row={omit,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
-      if (['culling-off','sky-last','full-tint','veil-always','glass-sky-always'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
-      if (['terrain-skips-off','a1-off','a2-off','a3-off'].includes(omit)) {
-        assert(result.pixels.max <= 1, omit+' changed visible pixels');
-        if (result.pixels.max) console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
+      if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
+      // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
+      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always'].includes(omit) && result.pixels.max) {
+        console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
+        if (result.pixels.max > 1) inexact.push({chapter,omit,...result.pixels});
       }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
@@ -334,4 +335,5 @@ try {
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
   }
+  assert.deepEqual(inexact,[],'exact skips changed visible pixels');
 } finally { await close(); }
