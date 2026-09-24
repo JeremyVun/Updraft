@@ -444,6 +444,23 @@ buzzing at rest, uniform floppiness along the whole length, over-eager reaction 
 bouncy settling. The agent diagnoses from video of the scarf in play which of these (or others) are present
 before changing anything, and records the diagnosis here.
 
+Jeremy, later on 2026-09-24 (verbatim):
+
+> one of the problems i had with the scarf was that it felt very jittery. especially when its drawing into the boat
+> sail at the end. is there a way to make it feel a bit smoother?
+
+So jitter is the first symptom to fix, and it is worst during the gathering into the sail. The lead read the
+gathering code and found these candidate causes. They are hypotheses; the measured symptom is what's binding.
+- **The frame pops when the gathering starts.** On its first frame, every cloth row switches from the cloth's
+  across vector to the transported frame plus the roll (`physical = … && this.gathering === 0` in `write`).
+- **The geometry slides under the surface shapes.** The gathering slides each row along the polyline
+  (`at = i + travel`, lerp between `centre[lo]` and `centre[hi]`). Folds, roll and bunching stay fixed per row
+  while the shape slides beneath them. So tangents jump as samples cross the polyline's corners, and the
+  parallel-transported frame, carried from row 0, re-twists along the whole strip every frame.
+- **The wind steps.** The CPU wind copy updates every other frame, which steps the authored rows' wind spring.
+- **The mast end may lag a frame** (`boatEnd.copy(boatMast)`) while the boat rides the swell, depending on
+  frame order.
+
 **Must keep:**
 - the four tangles, their gestures, the order, saved progress and checkpoint restore;
 - gravity and settling: nothing floats (Jeremy's earlier floating-scarf findings);
