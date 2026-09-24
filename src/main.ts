@@ -75,6 +75,7 @@ import { AutumnBirches } from './world/birches';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
+import { TerrainHeights } from './world/terrain-heights';
 import { Cottage } from './world/cottage';
 import { createJetty } from './world/jetty';
 import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
@@ -137,7 +138,8 @@ const cursor = new Cursor(canvas);
 await yieldBoot();
 const tree = createTree();
 const hillFlowers = wildflowersAlong(ROUTE);
-const bakes = new GroundBakes(renderer);
+const terrainHeights = new TerrainHeights();
+const bakes = new GroundBakes(renderer, terrainHeights);
 const bakeInputs: BakeInputs = {
   occluders: tree.canopy,
   clearings: [
@@ -161,7 +163,7 @@ const life = new LifeField(renderer);
 const clouds = new CloudShadows(renderer);
 const sky = createSky();
 scene.add(sky);
-const terrain = new Terrain(wind.breeze, bakes.filterable);
+const terrain = new Terrain(wind.breeze, bakes.filterable, terrainHeights);
 scene.add(terrain.mesh);
 scene.add(water.mesh);
 const pond = new Pond();
@@ -1065,6 +1067,7 @@ async function boot(): Promise<void> {
   await precompileSim(renderer, bakes.ground);
   terrain.fields.bake(renderer);
   terrain.colour.bake(renderer);
+  if (params.heights !== 'direct') await terrainHeights.bake(renderer, () => gpuIdle(renderer));
   await grass.precompile(renderer);
   await yieldBoot();
   followWindow(...windowAim(), true);

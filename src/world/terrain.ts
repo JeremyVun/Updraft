@@ -8,6 +8,7 @@ import { REFLECTION_LAYER } from './water/reflection';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { TERRAIN_FIELDS_GLSL, TerrainFields } from './terrain-fields';
 import { TERRAIN_COLOUR_GLSL, TerrainColour } from './terrain-colour';
+import { TERRAIN_HEIGHTS_GLSL, TerrainHeights } from './terrain-heights';
 
 const SEGMENTS = 32;
 const ROOT = 2048;
@@ -24,6 +25,7 @@ const FIELD_TO = 172;
 
 const VERT = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
+${TERRAIN_HEIGHTS_GLSL}
 uniform float uMirrorPass;
 uniform sampler2D uHeightTex;
 uniform vec4 uDomain;
@@ -31,10 +33,10 @@ in vec3 aNode;
 out vec3 vWorld;
 out vec3 vNormal;
 
-/** The window's height bake where it has one (much cheaper than the height function), the function beyond it. */
+/** The window's height bake where it has one, the islands' height atlas beyond it. */
 float groundHeight(vec2 q) {
   vec2 uv = (q - uDomain.xy) * uDomain.zw;
-  if (any(lessThan(uv, vec2(0.003))) || any(greaterThan(uv, vec2(0.997)))) return worldHeight(q);
+  if (any(lessThan(uv, vec2(0.003))) || any(greaterThan(uv, vec2(0.997)))) return terrainHeightAt(q);
 #ifdef HEIGHT_FILTERABLE
   return textureLod(uHeightTex, uv, 0.0).r;
 #else
@@ -267,7 +269,7 @@ export class Terrain {
   private split = SPLIT;
   detail = SPLIT;
 
-  constructor(breeze: THREE.Vector2, heightFilterable: boolean) {
+  constructor(breeze: THREE.Vector2, heightFilterable: boolean, readonly heights: TerrainHeights) {
     const template = leafTemplate(SEGMENTS);
     const makeSet = (): LeafSet => {
       const geo = new THREE.InstancedBufferGeometry();
@@ -291,6 +293,7 @@ export class Terrain {
         ...surfUniforms,
         ...this.fields.uniforms,
         ...this.colour.uniforms,
+        ...heights.uniforms,
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
         uGround: { value: new THREE.Color('#2e3f22') },

@@ -5,6 +5,7 @@ import { Readback } from '../gl/readback';
 import { atmo } from './atmosphere';
 import { HEIGHTFIELD_GLSL } from './heightfield';
 import { setHeightGrid } from './island';
+import { TERRAIN_HEIGHTS_GLSL, TerrainHeights } from './terrain-heights';
 import { WINDOW } from './window';
 
 const RES = 512;
@@ -38,6 +39,7 @@ void main() {
 /** Soft sun visibility marched over the terrain; the hills and the tree canopies cast long low-sun shadows. */
 const GROUND_FRAG = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
+${TERRAIN_HEIGHTS_GLSL}
 uniform sampler2D uHeightTex;
 uniform vec3 uSunDir;
 uniform float uStormCover;
@@ -49,7 +51,7 @@ in vec2 vUv;
 float heightAt(vec2 p) {
   vec2 uv = (p - uDomain.xy) * uDomain.zw;
   if (all(greaterThan(uv, vec2(0.0))) && all(lessThan(uv, vec2(1.0)))) return texture(uHeightTex, uv).r;
-  return worldHeight(p);
+  return terrainHeightAt(p);
 }
 
 void main() {
@@ -165,7 +167,7 @@ export class GroundBakes {
   /** Whether the float height bake can be filtered linearly on this device. */
   readonly filterable: boolean;
 
-  constructor(renderer: THREE.WebGLRenderer) {
+  constructor(renderer: THREE.WebGLRenderer, heights: TerrainHeights) {
     this.gpu = new GpuRunner(renderer);
     this.filterable = renderer.extensions.has('OES_texture_float_linear');
     this.height = simTarget(RES, RES, THREE.FloatType, this.filterable ? THREE.LinearFilter : THREE.NearestFilter);
@@ -179,6 +181,7 @@ export class GroundBakes {
     this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain });
     this.normalMat = simMaterial(NORMAL_FRAG, { uHeights: { value: this.heights.texture }, uDomain: atmo.uniforms.uDomain });
     this.groundMat = simMaterial(GROUND_FRAG, {
+      ...heights.uniforms,
       uHeightTex: { value: this.height.texture },
       uSunDir: atmo.uniforms.uSunDir,
       uStormCover: atmo.uniforms.uStormCover,

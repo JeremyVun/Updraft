@@ -14,6 +14,9 @@
 // (a3-off) work; veil-always draws the sleeping veil at zero; glass-sky-always computes the sky under a full mirror.
 // STATE='<js>' runs in main.ts's scope after the census, before the ablations, to force a state for both sides.
 // FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables measures the cost of rebuilding all three tables each draw.
+// heights-direct turns the distant-height atlas off (uTerrainHeightsReady 0): every lookup beyond the window calls
+// worldHeight again, as before phase 3. heights-const is the upper bound on the distant-height atlas: every height read beyond the window (terrain
+// vertices, main and mirror, and the light bake's march) returns the open-sea floor instead of calling worldHeight.
 // Ablations named in heightSources re-run the window-move bakes (ground, light, shore, grass tables) in configure
 // on both sides of every pair, outside timed draws. ABLATIONS=rebake is the baseline re-baked; it must match exactly.
 // The wind ablation waits for the GPU after every draw, as a frame boundary does, and also times 60 steps alone
@@ -59,7 +62,7 @@ window.__audit = {
     kites: Object.values(departureKites.markers).map(m => m.group),
   },
   // Ablations that change a height source: both sides of each of their pairs re-run the window-move bakes.
-  heightSources: ['rebake'],
+  heightSources: ['rebake','heights-const','heights-direct'],
   changesHeights(omit) { return (omit||'').split('+').some(v=>this.heightSources.includes(v)); },
   rebake() {
     bakedSun.copy(atmo.uniforms.uSunDir.value);bakes.bake(bakeInputs);water.bakeShore(WINDOW.size);
@@ -119,6 +122,7 @@ window.__audit = {
   },
   configure(omit) {
     if (terrain.fields) terrain.fields.uniforms.uTerrainFieldsReady.value = omit === 'fields-direct' ? 0 : 1;
+    if (terrain.heights) terrain.heights.uniforms.uTerrainHeightsReady.value = (omit||'').split('+').includes('heights-direct') ? 0 : 1;
     if (terrain.colour) terrain.colour.uniforms.uTerrainColourReady.value = omit === 'colour-direct' || ${JSON.stringify((process.env.ABLATIONS ?? '').split(',').includes('full-tint'))} ? 0 : 1;
     if (this.hidden) for (const [object,visible] of this.hidden) object.visible=visible;
     if (this.culling) for (const [object,culled] of this.culling) object.frustumCulled=culled;
@@ -146,6 +150,11 @@ window.__audit = {
     if(tintChanged){grass.tablesDirty=true;grass.bake(renderer);}
     const veil=sleeping.weather.fogMaterial;this.veilVisible??=veil.visible;
     veil.visible=skips.includes('veil-always')||this.veilVisible;
+    this.heightShaders??=[[terrain.mesh.material,'vertexShader','return worldHeight(q);'],[bakes.groundMat,'fragmentShader','return worldHeight(p);']].map(([m,key,from])=>[m,key,from,m[key]]);
+    for(const [m,key,from,original]of this.heightShaders){
+      const source=skips.includes('heights-const')?restore(original,from,'return -5.1198557;'):original;
+      if(m[key]!==source){m[key]=source;m.needsUpdate=true;}
+    }
     const glass=water.mesh.material;this.glassFragment??=glass.fragmentShader;
     const glassFragment=skips.includes('glass-sky-always')?restore(this.glassFragment,'if (on < 1.0) reflected','if (true) reflected'):this.glassFragment;
     if(glass.fragmentShader!==glassFragment){glass.fragmentShader=glassFragment;glass.needsUpdate=true;}

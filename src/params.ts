@@ -58,6 +58,8 @@ export const params = {
   mirrorlod: q.get('mirrorlod') ?? 'coarse',
   /** QA: `blades=direct` uses the old per-vertex grass shader instead of the blade table, for before/after comparison. */
   blades: q.get('blades') ?? 'table',
+  /** QA: `heights=direct` skips the distant-height atlas, so the ground beyond the window uses the height function as before. */
+  heights: q.get('heights') ?? 'atlas',
   /** QA: `grasslod=<0|1>` is the coarsest grass level any tile may use. The picture should not change (beyond the second ring with `0`, where the finest blade has no second segment to close): a coarser level only ever stands in for blades that have already thinned and closed up to it. */
   grasslod: num('grasslod'),
   /** QA: `hold=<frame>` freezes the world after that frame (it keeps drawing the same state), so two runs can capture the very same frame. */
