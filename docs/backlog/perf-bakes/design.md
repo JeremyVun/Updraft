@@ -512,6 +512,56 @@ gathering code and found these candidate causes. They are hypotheses; the measur
 **video** of the scarf in play: each release, the settling, the scarf moving in the player's wind, and the gathering.
 An allowed visual model reviews it, then it goes to Jeremy. **No merge without Jeremy's verdict.**
 
+**Result (2026-09-25, branch `perf-bakes-p5b` at 78e94d4, awaiting Jeremy's verdict):**
+
+*Diagnosis, from before-video.* Five things read as simulation:
+- **The gathering jittered.** Width, twist and folds flickered every frame, and near the end the strip broke into
+  dotted fragments. Rows slid through the tree wraps, tangents snapped at the path's corners, and surface detail
+  stayed on row indices. The parallel transport from row 0 re-twisted the whole strip, and the first gathering
+  frame popped.
+- **A travelling sine** ran along every tied length, with a twist wave on top.
+- **Wool on the ground** snaked into S-curves under the brush and kept creeping (0.16 m/s after 30 s calm).
+- **The first loop** stretched 15% into a thin ribbon and whipped at up to 10 m/s on release.
+- **The coils** rose as one rigid lid and landed as a pancake.
+
+*Changes:*
+- **Released cloth:**
+  - Air pressure acts on the face and grows with the square of the speed, capped below gravity, with shelter
+    on the ground.
+  - Neighbouring stitches share their motion (viscosity).
+  - Tethers limit stretch without adding velocity.
+  - Static friction holds wool still against slow pulls.
+  - Gravity is 9.8, bending is stiffer, and the solver runs 10 iterations.
+- **Tied lengths:** span-averaged damped wind plus a slow in-step sway replace the ripple. Each row's frame is
+  local, with no transport along the strip.
+- **Gathering:** the strip keeps to its path with blended frames, and only the free end runs home to the sail.
+- **Knobs:** new `birches.scarf` knobs; `flutter` and `clothWind` are removed.
+- **Tools:** `tools/scarf-video.mjs` records true 60 fps clips, and `tools/scarf-feel-probe.mjs` measures in
+  Node.
+
+*Measured (base → new):*
+- Gathering surface motion: mean 50 → 2.4 mm, p95 388 → 19 mm.
+- Close-up red-pixel flicker: 4.97% → 0.38%.
+- Creep after 30 s calm: 0.16 → 0 m/s.
+- First-release peak stretch: 1.15 → 1.09; it now settles in 4.9 s, where before it never settled.
+- CPU is about 6% below base in alternated pairs on a busy machine.
+
+*Checks:*
+- Gates behave the same as on `main`: geometry passes, and `PHYSICS=1 scarf-check` fails only at the
+  pre-existing tangle 4.
+- **The lead's review of the frames:**
+  - Consecutive gathering frames are steady where the base visibly re-twisted every frame.
+  - The coils in the unwind still rise as a fairly compact wound block and land as a neat round coil, a modest
+    improvement.
+
+*Worse or uncertain (agent):*
+- Resting shapes differ: the first length rests in its authored Z fold instead of creeping straight.
+- Mid-gathering is quick.
+- The tied drapes sway only about 5 cm.
+- Released spans pinned between two trees can still lie taut and straight.
+
+Videos: `/tmp/updraft-pb-p5b-video/index.html`.
+
 ### H. Repair the profiler
 
 `tools/frame-profile.mjs` still lists `shoreFamily` (removed from `main.ts`), so the injected audit throws and the
