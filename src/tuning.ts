@@ -745,6 +745,7 @@ export const tuning = {
       clothDrag: 0.25,
       clothFace: 0.12,
       clothEdge: 0.15,
+      clothPushMax: 3.5,
       /** Height over the ground below which lying wool is sheltered from the wind, and how an updraft counts as air. */
       clothShelter: 0.6,
       clothUpdraft: 0.5,

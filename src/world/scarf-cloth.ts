@@ -241,9 +241,11 @@ export class ScarfCloth {
         const rz = (w ? w.z * shelter : 0) - vz / h, face = rx * nx + ry * ny + rz * nz;
         // Pressure grows with the square of the air speed: a breath barely stirs heavy wool, a real gust takes it.
         const push = face * Math.abs(face) * k.clothFace;
-        const ax = THREE.MathUtils.clamp(push * nx + (rx - face * nx) * k.clothEdge, -8, 8);
-        const ay = THREE.MathUtils.clamp(push * ny + (ry - face * ny) * k.clothEdge, -8, 8);
-        const az = THREE.MathUtils.clamp(push * nz + (rz - face * nz) * k.clothEdge, -8, 8);
+        let ax = push * nx + (rx - face * nx) * k.clothEdge, ay = push * ny + (ry - face * ny) * k.clothEdge;
+        let az = push * nz + (rz - face * nz) * k.clothEdge;
+        // Even a full gust moves the wool less than its weight does, so it billows and never takes flight.
+        const air = Math.hypot(ax, ay, az);
+        if (air > k.clothPushMax) { const f = k.clothPushMax / air; ax *= f; ay *= f; az *= f; }
         pos[o] = x + vx + ax * h * h;
         pos[o + 1] = y + vy + (ay - k.clothGravity + pull) * h * h;
         pos[o + 2] = z + vz + az * h * h;
