@@ -556,8 +556,10 @@ export class BirchScarf {
             const t = THREE.MathUtils.clamp(((this.point.x - limb.a.x) * ax + (this.point.y - limb.a.y) * ay
               + (this.point.z - limb.a.z) * az) / (ax * ax + ay * ay + az * az), 0, 1);
             const x = limb.a.x + ax * t, y = limb.a.y + ay * t, z = limb.a.z + az * t;
-            const dx = this.point.x - x, dy = this.point.y - y, dz = this.point.z - z;
-            const distance = Math.hypot(dx, dy, dz), radius = limb.radius + .035;
+            const dx = this.point.x - x, dy = this.point.y - y, dz = this.point.z - z, radius = limb.radius + .035;
+            // Clearly outside: the margin dwarfs any rounding in the exact distance, which only nearer points need.
+            if (dx * dx + dy * dy + dz * dz > radius * radius * 1.000001) continue;
+            const distance = Math.hypot(dx, dy, dz);
             if (distance < radius) {
               if (distance < .00001) this.point.set(x, y + radius, z);
               else this.point.set(x + dx / distance * radius, y + dy / distance * radius, z + dz / distance * radius);
