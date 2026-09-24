@@ -51,6 +51,9 @@ export class ScarfCloth {
   private grid = { margin: NaN, x: 0, z: 0, cell: 1, width: 0, depth: 0, start: new Int32Array(1), items: new Int32Array(0) };
   private supportRail: { a: THREE.Vector3; b: THREE.Vector3 } | null = null;
 
+  /** Off while a length is laid out before it is seen, so it slides into a natural rest rather than holding its folds. */
+  gripping = true;
+
   setSupportRail(a: THREE.Vector3, b: THREE.Vector3): void { this.supportRail = { a, b }; }
 
   get capsules(): ClothCapsule[] { return this.capsuleList; }
@@ -359,7 +362,7 @@ export class ScarfCloth {
         if (friction) {
           // Wool on leaf litter holds where it lies: slow pulls do not move it, and a dragged length soon stops.
           const dx = pos[o] - prev[o], dz = pos[o + 2] - prev[o + 2];
-          if (dx * dx + dz * dz < stick * stick) { pos[o] = prev[o]; pos[o + 2] = prev[o + 2]; }
+          if (this.gripping && dx * dx + dz * dz < stick * stick) { pos[o] = prev[o]; pos[o + 2] = prev[o + 2]; }
           else { prev[o] = pos[o] - dx * slide; prev[o + 2] = pos[o + 2] - dz * slide; }
           prev[o + 1] = pos[o + 1];
         }

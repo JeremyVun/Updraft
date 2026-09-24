@@ -275,10 +275,12 @@ export class BirchScarf {
     this.gathering = count >= this.snags.length ? tuning.birches.scarf.gatherSeconds : 0;
     this.woven = count >= this.snags.length ? 1 : 0;
     this.firstCloth.reset(count > 0);
+    this.firstCloth.gripping = false;
     if (count === 0) for (let i = 0; i < 180; i++) this.firstCloth.update(1 / 60);
     this.releasedCloth.clear(); this.restoring = count > 0;
     // A saved release restores settled cloth, not a second falling animation or a floating loop.
     if (count > 0 && count < this.snags.length) for (let i = 0; i < 360; i++) this.firstCloth.update(1 / 60);
+    this.firstCloth.gripping = true;
   }
 
   setTrees(trees: { x: number; y: number; z: number; scale: number }[], settle = true): void {
@@ -299,7 +301,9 @@ export class BirchScarf {
 
   /** Same fixed cloth steps, exposed so startup can give the veil a paint between batches. */
   *settle(): Generator<void> {
+    this.firstCloth.gripping = false;
     for (let i = 0; i < 180; i++) { this.firstCloth.update(1 / 60); yield; }
+    this.firstCloth.gripping = true;
   }
 
   /** Stroke the cloth the player sees, rather than the ground beyond it under a low camera. */
@@ -432,7 +436,11 @@ export class BirchScarf {
       if (this.snags[index].work < 1) continue;
       if (!this.releasedCloth.has(index)) this.releaseSpan(index);
       const span = this.releasedCloth.get(index)!;
-      if (this.restoring) for (let frame = 0; frame < 300; frame++) span.cloth.update(1 / 60);
+      if (this.restoring) {
+        span.cloth.gripping = false;
+        for (let frame = 0; frame < 300; frame++) span.cloth.update(1 / 60);
+        span.cloth.gripping = true;
+      }
       span.cloth.update(dt, wind);
       for (let i = span.start; i <= span.end; i++) {
         span.cloth.sample(span.distances[i - span.start], this.centre[i], this.clothAcross[i]);
