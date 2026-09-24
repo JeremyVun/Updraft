@@ -173,7 +173,7 @@ Report the maximum and p99 per patch.
 
 ## Phase 4: wind-cost anomaly (item F)
 
-**Status:** not started. Independent of phases 1–3; it can run beside one of them.
+**Status:** done 2026-09-24 (merged 92990f8). The saving was an artefact; no change to `src/wind`. See design F.
 
 **Owns:**
 - `src/wind/*` (only if a fix is needed)

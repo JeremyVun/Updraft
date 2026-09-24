@@ -310,6 +310,52 @@ measured in the slow 19–27 ms GPU state), and 6–12% elsewhere. The step is 2
 identical (for example, fewer target switches or fused passes). The identity check covers the velocity texture
 **and** the grass bend and sway textures. If it's an artefact, a corrected tool.
 
+**Result (2026-09-24, merged 92990f8): an artefact.** There are two causes.
+
+1. **GPU contention from other processes (the "slow state").** A second Chrome running a heavy shader
+   reproduces the slow state's signature:
+   - baselines of 20–34 ms;
+   - an ALU-bound calibration pass 2× slower;
+   - the wind step alone 10–13× slower.
+
+   The step is a chain of 21 small, dependent passes, and under contention each waits its turn (about 0.2 ms
+   instead of about 20 µs). So its share of the frame doubles. A clock or power state would scale everything
+   evenly, and the step does not itself cause the slow state.
+2. **Back-to-back synthetic draws.** The scene reads what the step wrote in the same draw, so consecutive draws
+   lose overlap that real frames never had. Render-target switches and overwriting what the last scene read
+   were both ruled out.
+
+**The step's real cost** is 0.4–0.6 ms alone.
+
+**Corrected profile:** the `wind` ablation now drains the GPU after each draw and records `stepMs`. It warns
+above 1 ms, which indicates contention. The corrected saving, from 6 uncontended pairs each:
+
+| Chapter | Saving |
+|---|---:|
+| Island | 0.8% |
+| Washing | 1.1% |
+| Meadow walk | 1.7% |
+| Birches | 2.6% |
+| Drowned | −0.8% |
+| Wood | 1.6% |
+| Sleeping | 3.1% |
+| Sea | −0.4% |
+| Mirror | 3.7% |
+| Boats | 1.4% |
+| Jetty | 2.4% |
+
+Investigation tool: `tools/wind-cost.mjs`.
+
+**Not built:**
+- **An exact pass fusion** (21 → about 12 passes: fold the pressure scale in, fuse curl with vorticity, write
+  bend and sway in one pass, diamond-fused pressure). It would save about 0.1–0.2 ms uncontended, which isn't
+  worth the shader complexity at the Mac numbers. The Mac does not show whether a tile-based iPad GPU pays
+  more per pass: each pass there stores its tile memory back out. Revisit only if an iPad profile points at the
+  step.
+- **A tooling follow-up:** `frame-profile`'s `complete()` polls with `setTimeout(0)` (about 4.5 ms quantum). A
+  `MessageChannel` poll would cut noise for every ablation. Every ablation made of chained small passes (bloom,
+  bakes) is also inflated under contention, so read `baselines` and `straddle` first.
+
 ### G. Birches scarf CPU (reduce without changing the motion)
 
 Birches is the only chapter where the CPU matters: 4.4 ms median. Profile self-time per frame:
