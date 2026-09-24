@@ -1,7 +1,7 @@
 // CPU sampling + submitted-draw census + paired GPU-completion ablations.
 // No production instrumentation. Excludes boot. GPU ablations are throughput,
 // not timer-query milliseconds, energy measurements, or additive component costs.
-// node tools/frame-profile.mjs [island washing meadow birches drowned wood sleeping sea mirror]
+// node tools/frame-profile.mjs [island washing meadow:walk birches drowned wood sleeping sea mirror boats jetty]
 // CPU_MS=6000 CENSUS_MS=2000 ROUNDS=4 DRAWS=10 ABLATIONS=wind,reflection,... OUT=/tmp/updraft-frame-profile
 // ABLATIONS=culling-off CULLING_VIEWS=1 checks culling parity; LEGACY_NORMALS=1 profiles the old scarf normals.
 // terrain-flat retains terrain positions, normals, fog and room discard but removes surface shading.
@@ -23,14 +23,21 @@
 // (stepMs). Back to back, the scene's read of what the step just wrote stops one draw overlapping the next, which
 // inflated the saving several-fold; under another process's GPU load each of the step's 21 dependent passes waits
 // its turn and a step alone takes 3-5 ms (tools/wind-cost.mjs, perf-bakes design F).
+// Any ablation suffixed @drain (bloom@drain) waits for the GPU after every draw the same way; bloom and other chains of
+// small passes the frame reads back lose overlap with the next draw when drawn back to back.
+// grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
+// Other processes' load, recorded with every row: it inflates GPU numbers (perf-bakes design F).
+const busy = () => execFileSync('ps',['-Ao','pcpu=,comm='],{encoding:'utf8'}).split('\n').map(l=>l.trim().match(/^([\d.]+)\s+(.*)$/))
+  .filter(m=>m&&Number(m[1])>=15).map(m=>({cpu:Number(m[1]),command:m[2].split('/').pop()})).sort((a,b)=>b.cpu-a.cpu).slice(0,6);
 const median = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 function cpuSummary(profile, frames) {
   const nodes = new Map(profile.nodes.map(n => [n.id, n])), parents = new Map(), self = new Map(), total = new Map();
@@ -56,7 +63,7 @@ window.__audit = {
     cottage: cottage.objects, jetty: [homeJetty], piano: [piano.group], mirror: [skyMirror.group],
     littleBoats: [littleBoats.group], islandCreatures: [creatures.group], meadowCreatures: [hillCreatures.group],
     child: child.objects, cygnet: cygnet.objects, glider: glider.objects, boat: boat.objects,
-    flock: [flock.mesh], petals: [petals.mesh], windLines: [lines.batch.mesh],
+    flock: flock.objects, rocks: [islandRocks], shoreGrass: [shoreGrass], petals: [petals.mesh], windLines: [lines.batch.mesh],
     rain: [rain.mesh], fireflies: [fireflies.mesh],
     drawing: [drawing.mesh], embers: [embers.mesh], starlings: [starlings.mesh], seaLife: sealife.objects,
     kites: Object.values(departureKites.markers).map(m => m.group),
@@ -166,7 +173,7 @@ window.__audit = {
       });
       for (const root of roots) root.traverse(o=>{if(o.isMesh){this.culling.push([o,o.frustumCulled]);o.frustumCulled=false;}});
     }
-    this.diagnosticMaterials ??= [terrain.mesh.material,sky.material].map(m=>[m,m.fragmentShader]);
+    this.diagnosticMaterials ??= [terrain.mesh.material,sky.material,post.gradeMat].map(m=>[m,m.fragmentShader]);
     const variants=(omit||'').split('+');
     if(variants.includes('terrain-flat')) {
       const m=terrain.mesh.material,original=this.diagnosticMaterials[0][1];
@@ -177,6 +184,10 @@ window.__audit = {
     if(variants.includes('sky-flat')) {
       const m=sky.material;
       m.fragmentShader=this.diagnosticMaterials[1][1].replace('skyRadiance(normalize(vDir))','vec3(0.5,0.6,0.7)');m.needsUpdate=true;
+    }
+    if(variants.includes('grade')) {
+      const m=post.gradeMat,original=this.diagnosticMaterials[2][1];
+      m.fragmentShader=original.slice(0,original.lastIndexOf('void main() {'))+'void main() { gl_FragColor=vec4(texture2D(tDiffuse,vUv).rgb,1.0); }';m.needsUpdate=true;
     }
     const actors=['child','cygnet','boat','glider','flock','meadowCreatures','islandCreatures','kites','petals','windLines'];
     for (const key of variants.includes('actors')?actors:variants)for(const object of this.groups[key]||[]) {
@@ -239,8 +250,8 @@ window.__audit = {
 const { browser, close } = await openBrowser();
 const report=[],inexact=[];
 try {
-  for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow','birches','drowned','wood','sleeping','sea','mirror']) {
-    const [entry,fixture]=chapter.split(':');
+  for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
+    const [entry,fixture]=chapter.split(':'),busyAtStart=busy();
     const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
     const errors=[]; page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
@@ -257,8 +268,6 @@ try {
       assert(source.includes('window.__audit?.paused'),'Missing pause hook');
       assert.equal(source.split('frames++;').length, 2, 'Missing or ambiguous frame hook');
       source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
-      source=source.replace('scene.add(createRocks());','scene.add(Object.assign(createRocks(), {name:"rocks"}));');
-      source=source.replace('scene.add(createDistantIslands());','scene.add(Object.assign(createDistantIslands(), {name:"distant-islands"}));');
       await route.fulfill({response,body:source+injection});
     });
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio=1.5&msaa=2&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
@@ -298,11 +307,16 @@ try {
     if(state!==undefined)console.log(JSON.stringify({chapter,state}));
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
-      const result=await page.evaluate(async ({omit,rounds,draws,capture})=>{
+      const busyBefore=busy();
+      const result=await page.evaluate(async ({name,rounds,draws,capture})=>{
+        const [omit,mode]=name.split('@');
         const gl=__game.renderer.getContext(), probe=__audit;probe.pairRebake=probe.changesHeights(omit);
+        // setTimeout(0) polls in ~4.5 ms steps once nested; a message round trip is far finer.
+        const channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
         async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();const end=performance.now()+20000;
           try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;
-            if(s===gl.WAIT_FAILED||performance.now()>end)throw Error('GPU completion timeout');await new Promise(r=>setTimeout(r,0));}}
+            if(s===gl.WAIT_FAILED||performance.now()>end)throw Error('GPU completion timeout');
+            await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}
           finally{gl.deleteSync(fence);}}
         const read=v=>{probe.configure(v);probe.draw(false);const data=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);
           gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,data);return data;};
@@ -316,16 +330,11 @@ try {
           ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
         };
         const images=capture?{baseline:encode(a),variant:encode(b)}:undefined;
-        const channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
-        async function settle(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
-          try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;
-            if(s===gl.WAIT_FAILED)throw Error('GPU completion failed');await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}
-          finally{gl.deleteSync(fence);}}
-        const drain=omit==='wind';
+        const drain=omit==='wind'||mode==='drain';
         async function measure(v){probe.configure(v);for(let i=0;i<3;i++)probe.draw();await complete();
-          const start=performance.now();for(let i=0;i<draws;i++){probe.draw();if(drain)await settle();}await complete();return (performance.now()-start)/draws;}
-        async function stepAlone(){probe.configure(null);for(let i=0;i<3;i++)probe.stepWind();await settle();
-          const start=performance.now();for(let i=0;i<60;i++)probe.stepWind();await settle();return (performance.now()-start)/60;}
+          const start=performance.now();for(let i=0;i<draws;i++){probe.draw();if(drain)await complete();}await complete();return (performance.now()-start)/draws;}
+        async function stepAlone(){probe.configure(null);for(let i=0;i<3;i++)probe.stepWind();await complete();
+          const start=performance.now();for(let i=0;i<60;i++)probe.stepWind();await complete();return (performance.now()-start)/60;}
         const runs=[];
         for(let round=0;round<rounds;round++) {const order=round%2?[omit,null,null,omit]:[null,omit,omit,null];const values={baseline:[],omitted:[]};
           for(const v of order)values[v?'omitted':'baseline'].push(await measure(v));
@@ -333,12 +342,12 @@ try {
           runs.push({baseline,omitted,saved:baseline-omitted,percent:(1-omitted/baseline)*100});}
         const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
-        const stepMs=drain?await stepAlone():undefined;
+        const stepMs=omit==='wind'?await stepAlone():undefined;
         probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain};
-      },{omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1'});
+      },{name:omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1'});
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
-      const row={omit,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
+      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
@@ -355,7 +364,7 @@ try {
     }
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,frameTimes,cpu,census,ablations,cullingViews,errors};report.push(row);
+    const row={chapter,busy:busyAtStart,frameTimes,cpu,census,ablations,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
