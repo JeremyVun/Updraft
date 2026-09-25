@@ -116,14 +116,21 @@ vec3 mirrored(vec3 R, float lod, out float seen) {
   return textureLod(uMirror, clamp(uv, 0.0, 1.0), lod).rgb;
 }
 
-/** Ripple slopes carried along by the wind; two phases cross-fade so the drift never stretches the pattern. */
-vec3 driftingRipples(vec2 p, vec2 drift, float period) {
+/** Where a layer of ripples carried along by the wind samples its two cross-fading phases (xy, zw). */
+vec4 ripplePhases(vec2 p, vec2 drift, float period) {
   float t = uTime / period;
-  float ph0 = fract(t);
-  float ph1 = fract(t + 0.5);
-  float w = abs(1.0 - 2.0 * ph0);
-  vec4 a = texture(uRipple, p - drift * ph0 * period + hash12(vec2(floor(t), 1.7)) * 7.3);
-  vec4 b = texture(uRipple, p - drift * ph1 * period + hash12(vec2(floor(t + 0.5), 5.1)) * 7.3);
+  return vec4(p - drift * fract(t) * period + hash12(vec2(floor(t), 1.7)) * 7.3,
+              p - drift * fract(t + 0.5) * period + hash12(vec2(floor(t + 0.5), 5.1)) * 7.3);
+}
+
+/**
+ * Ripple slopes carried along by the wind; two phases cross-fade so the drift never stretches the pattern. The
+ * phases' screen derivatives are taken ahead of the sea's early returns, where every pixel of the quad has them.
+ */
+vec3 driftingRipples(vec4 uv, vec4 dx, vec4 dy, float period) {
+  float w = abs(1.0 - 2.0 * fract(uTime / period));
+  vec4 a = textureGrad(uRipple, uv.xy, dx.xy, dy.xy);
+  vec4 b = textureGrad(uRipple, uv.zw, dx.zw, dy.zw);
   vec4 r = mix(a, b, w);
   vec2 slope = (r.rg * 2.0 - 1.0) / sqrt(w * w + (1.0 - w) * (1.0 - w));
   float variance = max(r.b - dot(r.rg * 2.0 - 1.0, r.rg * 2.0 - 1.0), 0.0);
@@ -266,12 +273,16 @@ void main() {
   vec2 flow = uBreeze;
   /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
   vec2 drift = along * settled * 0.22;
-  vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1);
-  vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
-  vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
-  vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
+  vec4 ripple0 = ripplePhases(xz * 0.041, drift * 0.041, 3.1);
+  vec4 ripple1 = ripplePhases(xz * 0.113 + 0.5, drift * 0.113, 2.3);
+  vec4 ripple2 = ripplePhases(xz * 0.31 + 0.25, drift * 0.31, 1.7);
+  vec2 swellUv = mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013);
+  vec4 ripple0x = dFdx(ripple0), ripple0y = dFdy(ripple0);
+  vec4 ripple1x = dFdx(ripple1), ripple1y = dFdy(ripple1);
+  vec4 ripple2x = dFdx(ripple2), ripple2y = dFdy(ripple2);
+  vec2 swellX = dFdx(swellUv), swellY = dFdy(swellUv);
   // The terrain draws over sea under land (they sort by material, not depth), so its shading would be thrown away.
-  // Hidden rooms keep theirs: their land is not drawn. Every derivative this shader takes, the ripples' included, is above.
+  // Hidden rooms keep theirs: their land is not drawn. Every derivative this shader takes is above.
   if (inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0)) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
@@ -293,10 +304,14 @@ void main() {
   float depth = max(poolLevel - ground, 0.0);
   vec4 bedN = groundAt(xz);
 
+  vec3 r0 = driftingRipples(ripple0, ripple0x, ripple0y, 3.1);
+  vec3 r1 = driftingRipples(ripple1, ripple1x, ripple1y, 2.3);
+  vec3 r2 = driftingRipples(ripple2, ripple2x, ripple2y, 1.7);
   float calm = 0.2 + 0.8 * uSeaState;
   float a0 = 0.05 * calm + 0.055 * rough + 0.05 * storm;
   float a1 = 0.035 * calm + 0.085 * rough + 0.1 * storm;
   float a2 = 0.045 * calm + 0.115 * rough + 0.16 * storm;
+  vec4 sw = textureGrad(uRipple, swellUv, swellX, swellY);
   vec3 swell = vec3(sw.rg * 2.0 - 1.0, max(sw.b - dot(sw.rg * 2.0 - 1.0, sw.rg * 2.0 - 1.0), 0.0));
   /** The painted swell gives way to the modelled one as it comes close enough to the camera to be geometry. */
   float A_SWELL = 0.07 * calm * (1.0 - vSwell.z);
