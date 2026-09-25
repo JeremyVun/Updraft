@@ -53,7 +53,7 @@ const MOMENTS = {
       : sweep(i, 110, [W * 0.1, H * 0.2], [W * 0.85, H * 0.26], 40)),
   },
   sailing: {
-    label: 'Sailing: mast, rigging and sail, blown along',
+    label: 'Sailing: mast, boom and sail, blown along past the kite island',
     query: 'chapter=crossing', frames: 600, warm: 240,
     pointer: 'boat',
   },
@@ -380,9 +380,8 @@ are the very same moment; only the setting differs.</p>
 size on this page, so the browser scales them up as the iPad scales the canvas. Press <b>1:1 as on the iPad</b> to show
 them at 1376 CSS pixels wide: on this page opened on the iPad itself, or on a Retina Mac (about the iPad's pixel
 density), that is the size you play at. Encoding: H.264 High, CRF 12 (full frames) and CRF 10 (crops), preset slow,
-4:2:0, a keyframe every half second. The table shows how far the encode is from the lossless frames (PSNR against
-the lossless capture) next to how far each lever is from A: the encode error is much smaller than the lever's
-difference, so compression is not hiding it.</p>
+4:2:0, a keyframe every half second. The table below sets how far each encode is from its lossless frames beside how
+far each lever is from A. The still crops are lossless.</p>
 <p>Crops are cut from the lossless frames: 320x240 CSS pixels, scaled bilinearly to the iPad's 2 device pixels per
 CSS pixel (what the screen shows), then enlarged 2x with square pixels. So one screen pixel of the iPad is a 2x2 block.</p>
 <table><tr><th>Moment</th><th>Encode vs lossless, A / L1 / L2</th><th>A vs L1</th><th>A vs L2</th></tr>
