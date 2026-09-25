@@ -217,17 +217,6 @@ vec3 glassColour(vec3 V, vec2 xz) {
   return reflected * 0.96 + vec3(0.003, 0.006, 0.012);
 }
 
-float groundUnder(vec2 xz) {
-  return texture(uHeightTex, clamp(domainUv(xz), 0.0, 1.0)).r;
-}
-
-/** Ground over every corner of this pixel's patch of sea by more than \`above\`, so no sample of it can show water. */
-bool underLand(vec2 xz, Footprint fp, float above) {
-  vec2 a = 0.5 * (fp.dx + fp.dy);
-  vec2 b = 0.5 * (fp.dx - fp.dy);
-  return min(min(groundUnder(xz + a), groundUnder(xz - a)), min(groundUnder(xz + b), groundUnder(xz - b))) > above;
-}
-
 void main() {
   vec3 toCam = cameraPosition - vWorld;
   float dist = length(toCam);
@@ -271,35 +260,25 @@ void main() {
   float settled = length(uBreeze);
   vec2 along = normalize(uBreeze + vec2(1e-4, 0.0));
   vec2 flow = uBreeze;
-  /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
-  vec2 drift = along * settled * 0.22;
-  vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1);
-  vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
-  vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
-  vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
-  // The terrain draws over sea under land (they sort by material, not depth), so the rest of its shading would be
-  // thrown away. Hidden rooms keep theirs: their land is not drawn. The ripples above keep their implicit
-  // derivatives exactly as before: no pixel of the quad has left by a new path when they are sampled.
-  float groundHere = texture(uHeightTex, clamp(uv, 0.0, 1.0)).r;
-  if (inside == 1.0 && groundHere > vWorld.y + 1.0) {
-    if (underLand(xz, fp, vWorld.y + 1.0)) {
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-      return;
-    }
-  }
   float paw = catsPaw(xz, along);
   float rough = clamp(max(smoothstep(1.2, 7.5, settled) * paw, uSquall), 0.0, 1.0);
   float storm = clamp(max(smoothstep(18.0, 34.0, settled) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
   float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
 
-  float ground = mix(-12.0, groundHere, inside);
+  float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(poolLevel - ground, 0.0);
   vec4 bedN = groundAt(xz);
 
+  /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
+  vec2 drift = along * settled * 0.22;
+  vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1);
+  vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
+  vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
   float calm = 0.2 + 0.8 * uSeaState;
   float a0 = 0.05 * calm + 0.055 * rough + 0.05 * storm;
   float a1 = 0.035 * calm + 0.085 * rough + 0.1 * storm;
   float a2 = 0.045 * calm + 0.115 * rough + 0.16 * storm;
+  vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
   vec3 swell = vec3(sw.rg * 2.0 - 1.0, max(sw.b - dot(sw.rg * 2.0 - 1.0, sw.rg * 2.0 - 1.0), 0.0));
   /** The painted swell gives way to the modelled one as it comes close enough to the camera to be geometry. */
   float A_SWELL = 0.07 * calm * (1.0 - vSwell.z);
