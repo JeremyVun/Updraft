@@ -256,17 +256,6 @@ void main() {
     offshore = mix(offshore, bankDistance, pool);
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
-  float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
-  // Ordinary sea beyond the flat would show as a dark band under the horizon.
-  float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
-  glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
-  // The full mirror replaces ordinary water, including its fog. Its transition
-  // edge still evaluates both surfaces and blends them exactly as before.
-  if (glass == 1.0) {
-    gl_FragColor = vec4(glassColour(V, xz), 1.0);
-    return;
-  }
-
   // Weather owns the underlying ripple drift and lighting. Cursor reversals cannot move their phase.
   float settled = length(uBreeze);
   vec2 along = normalize(uBreeze + vec2(1e-4, 0.0));
@@ -285,6 +274,16 @@ void main() {
   // Hidden rooms keep theirs: their land is not drawn. Every derivative this shader takes is above.
   if (inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0)) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+  float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
+  // Ordinary sea beyond the flat would show as a dark band under the horizon.
+  float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
+  glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
+  // The full mirror replaces ordinary water, including its fog. Its transition
+  // edge still evaluates both surfaces and blends them exactly as before.
+  if (glass == 1.0) {
+    gl_FragColor = vec4(glassColour(V, xz), 1.0);
     return;
   }
   vec4 fog = fogOf(vWorld);
