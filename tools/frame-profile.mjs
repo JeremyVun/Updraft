@@ -28,6 +28,12 @@
 // QUIET=600 waits up to 600 s before each chapter until no other non-system process is above 50% CPU; rows record it.
 // POLL=timeout polls fences with setTimeout(0), the pre-9b69229 behaviour, for A/B checks of the poll.
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
+// RATIO and MSAA override the page's ratio=1.5&msaa=2. DRAIN=1 waits for the GPU after every draw in every ablation.
+// Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half; none pairs the baseline with itself.
+// Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
+// grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
+// water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
+// water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -87,6 +93,10 @@ window.__audit = {
     rain: [rain.mesh], fireflies: [fireflies.mesh],
     drawing: [drawing.mesh], embers: [embers.mesh], starlings: [starlings.mesh], seaLife: sealife.objects,
     kites: Object.values(departureKites.markers).map(m => m.group),
+    birchesTrunks: birches.objects.filter(o => o.geometry?.attributes?.aIndex && !o.material?.alphaToCoverage),
+    birchesCanopy: birches.objects.filter(o => o.material?.uniforms?.uCanopyMotion),
+    birchesLitter: [birches.litterMesh], birchesScarf: [birches.scarf.mesh], birchesLeaves: [birches.leaves.mesh],
+    grassLod0: [grass.group.children[0]], grassLod1: [grass.group.children[1]], grassLod2: [grass.group.children[2]],
   },
   // Ablations that change a height source: both sides of each of their pairs re-run the window-move bakes.
   heightSources: ['rebake','heights-const','heights-direct'],
@@ -97,6 +107,8 @@ window.__audit = {
   },
   record(cpuStart, realDt) { if (!this.paused) this.frames.push({ cpuMs: performance.now()-cpuStart, intervalMs: realDt*1000 }); },
   install() {
+    const split=['birchesTrunks','birchesCanopy','birchesLitter','birchesScarf','birchesLeaves'].flatMap(k=>this.groups[k]);
+    this.groups.birchesOther=birches.objects.filter(o=>!split.includes(o));
     const owners = new Map();
     for (const [name, roots] of Object.entries(this.groups)) for (const root of roots) root?.traverse(o => owners.set(o, name));
     for (const root of scene.children) root.traverse(o => { if (!owners.has(o)) owners.set(o, root.name || 'unlabelled-'+root.id); });
@@ -213,7 +225,81 @@ window.__audit = {
     for (const key of variants.includes('actors')?actors:variants)for(const object of this.groups[key]||[]) {
       this.hidden.push([object,object.visible]);object.visible=false;
     }
+    this.levers(variants);
+    this.patchShaders(variants);
     if(this.pairRebake)this.rebake();
+  },
+  // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
+  levers(variants) {
+    this.baseRatio??=pixelRatio;this.baseSamples??=post.samples;
+    const scale=variants.find(v=>v.startsWith('scale-')),samples=variants.find(v=>v.startsWith('msaa-'));
+    const ratio=scale?Number(scale.slice(6)):this.baseRatio,count=samples?Number(samples.slice(5)):this.baseSamples;
+    if(post.samples!==count)post.samples=count;
+    if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
+    const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
+    const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
+    if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
+  },
+  // Diagnostic shader edits for the grass, water and terrain breakdowns (perf-bakes round 2). Each names what it removes.
+  patchShaders(variants) {
+    const main=(source,body)=>source.slice(0,source.lastIndexOf('void main() {'))+body;
+    const sub=(source,from,to)=>{if(typeof from==='string'?!source.includes(from):!from.test(source))throw Error('Missing patch site: '+from);return source.replace(from,to);};
+    const grassMats=grass.group.children.filter(o=>o.isMesh).map(o=>o.material),waterMat=water.mesh.material;
+    this.patchOriginals??=new Map([...grassMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
+    const patches={
+      'grass-frag-flat':[grassMats,'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vTint * 0.5 + vRoot * 0.1 + vFlower.rgb * vFlower.a * 0.01 + vec3(vT, vFlat, vSun) * 0.01 + vec3(vAo, 0.0) * 0.01 + vLocalLight * 0.01 + (vNormal + vSideDir + vGroundN) * 0.001 + vWorld * 1e-6 + vFog.rgb * vFog.a * 0.01, 1.0); }')],
+      'grass-nodiscard':[grassMats,'fragmentShader',s=>sub(s,/discard;/g,'{}')],
+      'grass-fog':[grassMats,'vertexShader',s=>sub(s,'vFog = fogOf(world, 1.0);','vFog = vec4(0.0);')],
+      'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
+      'grass-shade':[grassMats,'vertexShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
+      'grass-life':[grassMats,'vertexShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
+      'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\n  ivec2 at','void main() { collapse(); return;\n  ivec2 at')],
+      'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],
+      'water-vert-flat':[[waterMat],'vertexShader',s=>main(s,'void main() { vec3 w = (modelMatrix * vec4(position, 1.0)).xyz; vSwell = vec3(0.0); vWorld = w; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0); }')],
+      'water-bed':[[waterMat],'fragmentShader',s=>sub(s,'if (depth < 9.0) {','if (false) {')],
+      'water-surf':[[waterMat],'fragmentShader',s=>sub(s,'if (offshore < 40.0 && pool < 0.99) {','if (false) {')],
+      'water-glints':[[waterMat],'fragmentShader',s=>sub(s,'glints(xz, footprint, glitter)','0.0')],
+      'water-ripples':[[waterMat],'fragmentShader',s=>['r0 = driftingRipples(xz * 0.041','r1 = driftingRipples(xz * 0.113','r2 = driftingRipples(xz * 0.31'].reduce((t,f)=>sub(t,f,f.slice(0,5)+'vec3(0.0); // '),s)],
+      'water-mirror':[[waterMat],'fragmentShader',s=>sub(s,'vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool));','vec3 refl = sky;')],
+      'water-wind':[[waterMat],'fragmentShader',s=>sub(sub(s,'slope += windWaveSlope(xz, footprint);',''),'float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);','float stroke = 0.0;')],
+      'water-paw':[[waterMat],'fragmentShader',s=>sub(s,'float paw = catsPaw(xz, along);','float paw = 1.0;')],
+      'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
+    };
+    const wanted=new Map();
+    for(const [m,orig] of this.patchOriginals){wanted.set(m.uuid+'|vertexShader',[m,'vertexShader',orig.vertexShader]);if(m!==waterMat)wanted.set(m.uuid+'|fragmentShader',[m,'fragmentShader',orig.fragmentShader]);}
+    // The water fragment and terrain fragment were already restored by the glass and tint handling above.
+    for(const v of variants)if(patches[v]){const [mats,key,edit]=patches[v];for(const m of mats){const k=m.uuid+'|'+key;const cur=wanted.get(k)?.[2]??m[key];wanted.set(k,[m,key,edit(cur)]);}}
+    for(const [,[m,key,source]] of wanted)if(m[key]!==source){m[key]=source;m.needsUpdate=true;}
+    water.mesh.renderOrder=variants.includes('water-last')?1:0;
+  },
+  // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
+  async postPasses(reps, complete) {
+    const b=post.bloom,q=b._fsQuad,r=renderer,out={};
+    const quad=(material,target,clear)=>{q.material=material;r.setRenderTarget(target);if(clear)r.clear();q.render(r);};
+    const oldAuto=r.autoClear;r.autoClear=false;
+    const stages={
+      scene:()=>{r.setRenderTarget(post.sceneTarget);r.clear();r.render(scene,rig.camera);},
+      'msaa-clear-resolve':()=>{r.setRenderTarget(post.sceneTarget);r.clear();r.render(new THREE.Scene(),rig.camera);},
+      clamp:()=>{post.quad.material=post.resolveMat;r.setRenderTarget(post.clean);post.quad.render(r);},
+      'bloom-bright':()=>{b.highPassUniforms.tDiffuse.value=post.clean.texture;quad(b.materialHighPassFilter,b.renderTargetBright,true);},
+    };
+    for(let i=0;i<b.nMips;i++){
+      const m=b.separableBlurMaterials[i],input=i?b.renderTargetsVertical[i-1]:b.renderTargetBright;
+      stages['bloom-blur'+i+'-h']=()=>{m.uniforms.colorTexture.value=input.texture;m.uniforms.direction.value=b.constructor.BlurDirectionX;quad(m,b.renderTargetsHorizontal[i],true);};
+      stages['bloom-blur'+i+'-v']=()=>{m.uniforms.colorTexture.value=b.renderTargetsHorizontal[i].texture;m.uniforms.direction.value=b.constructor.BlurDirectionY;quad(m,b.renderTargetsVertical[i],true);};
+    }
+    stages['bloom-composite']=()=>quad(b.compositeMaterial,b.renderTargetsHorizontal[0],true);
+    stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
+    stages.grade=()=>{post.quad.material=post.gradeMat;r.setRenderTarget(null);post.quad.render(r);};
+    try {
+      for(const [name,stage] of Object.entries(stages)){
+        const n=name==='scene'?Math.max(4,reps>>3):reps,samples=[];
+        for(let round=0;round<5;round++){stage();await complete();const start=performance.now();for(let i=0;i<n;i++)stage();await complete();samples.push((performance.now()-start)/n);}
+        samples.sort((x,y)=>x-y);out[name]={ms:samples[2],min:samples[0],max:samples[4]};
+      }
+    } finally {r.autoClear=oldAuto;r.setRenderTarget(null);}
+    out.sizes={scene:[post.sceneTarget.width,post.sceneTarget.height,post.sceneTarget.samples],bright:[b.renderTargetBright.width,b.renderTargetBright.height]};
+    return out;
   },
   stepWind() {
     wind.step(1/60,time,false);
@@ -291,7 +377,7 @@ try {
       source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
       await route.fulfill({response,body:source+injection});
     });
-    await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio=1.5&msaa=2&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
+    await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
     await page.waitForSelector('#veil.ready',{timeout:120000});await page.locator('#begin').click();
     await page.waitForFunction(()=>window.__ready,null,{timeout:120000});
     if(fixture) await page.evaluate(fixture=>{
@@ -329,7 +415,7 @@ try {
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
       const busyBefore=busy();
-      const result=await page.evaluate(async ({name,rounds,draws,capture,poll})=>{
+      const result=await page.evaluate(async ({name,rounds,draws,capture,poll,drainAll})=>{
         const [omit,mode]=name.split('@');
         const gl=__game.renderer.getContext(), probe=__audit;probe.pairRebake=probe.changesHeights(omit);
         // setTimeout(0) polls in ~4.5 ms steps once nested; a message round trip is far finer.
@@ -351,7 +437,7 @@ try {
           ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
         };
         const images=capture?{baseline:encode(a),variant:encode(b)}:undefined;
-        const drain=omit==='wind'||mode==='drain';
+        const drain=omit==='wind'||mode==='drain'||drainAll;
         async function measure(v){probe.configure(v);for(let i=0;i<3;i++)probe.draw();await complete();
           const start=performance.now();for(let i=0;i<draws;i++){probe.draw();if(drain)await complete();}await complete();return (performance.now()-start)/draws;}
         async function stepAlone(){probe.configure(null);for(let i=0;i<3;i++)probe.stepWind();await complete();
@@ -365,7 +451,7 @@ try {
         const submitted={baseline:counts(null),omitted:counts(omit)};
         const stepMs=omit==='wind'?await stepAlone():undefined;
         probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain};
-      },{name:omit,rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL});
+      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL});
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
       const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
@@ -383,9 +469,16 @@ try {
       if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
+    const postPasses=process.env.POST_PASSES==='1'?await page.evaluate(async reps=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      __audit.configure(null);return __audit.postPasses(reps,complete);
+    },Number(process.env.POST_REPS??40)):undefined;
+    if(postPasses)console.log(JSON.stringify({chapter,postPasses}));
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,cullingViews,errors};report.push(row);
+    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
