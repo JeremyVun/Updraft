@@ -1,10 +1,10 @@
 // Evidence for the look levers (perf-bakes phase V): the same game frames rendered at High (A: 1.5x, MSAA 2),
 // at 1.25x with MSAA 2 (L1) and at 1.5x without MSAA (L2), in an iPad-like page (1376x1032 CSS, device scale 2).
 //
-//   capture <moment> <out>  plays the moment with the page's animation frames stepped one at a time (shot mode:
+//   capture <out> <moment...>  plays each moment with the page's animation frames stepped one at a time (shot mode:
 //        1/60 s of game per frame, so the clip is real time whatever the machine's load). After every step the
 //        frame is drawn again for each side from the same state, switching render scale and MSAA as the quality
-//        ladder does, and read back losslessly: <out>/raw/<moment>-<side>.mkv (RGB, x264 qp 0) and <moment>.json.
+//        ladder does, and read back losslessly: <out>/raw/<moment>-<side>.mkv (RGB, FFV1) and <moment>.json.
 //   derive <out>            from the lossless clips: playback mp4s at each side's own render size, side-by-side
 //        crop videos (A|L1, A|L2) and enlarged still crops for the regions in CROPS, plus encode-error numbers.
 //   index <out>             writes <out>/index.html (notes from <out>/notes.html).
@@ -38,24 +38,28 @@ const sweep = (i, period, from, to, rest = 0) => {
 
 const MOMENTS = {
   meadow: {
-    label: 'Meadow walk through the grass',
-    query: 'chapter=meadow', frames: 900, warm: 420,
+    label: 'Meadow walk through the grass, woken, toward the crest',
+    query: 'chapter=meadow', frames: 600, warm: 120,
+    setup: async (page) => {
+      await page.evaluate(() => { const c = __game.story.current; c.skipToCrest(); c.update(0, c.now); __game.rig.cut(c.shot); });
+      await page.waitForTimeout(1500);
+    },
   },
   washing: {
     label: 'Washing lines, blown with slow sweeps',
-    query: 'chapter=washing', frames: 900, warm: 240,
+    query: 'chapter=washing', frames: 600, warm: 240,
     pointer: (i) => (Math.floor(i / 150) % 2
       ? sweep(i, 110, [W * 0.85, H * 0.42], [W * 0.15, H * 0.36], 40)
       : sweep(i, 110, [W * 0.15, H * 0.36], [W * 0.85, H * 0.42], 40)),
   },
   sailing: {
     label: 'Sailing: mast, rigging and sail, blown along',
-    query: 'chapter=crossing', frames: 900, warm: 240,
+    query: 'chapter=crossing', frames: 600, warm: 240,
     pointer: 'boat',
   },
   birches: {
     label: 'Birches: the red scarf tied through the trees, brushed by the wind',
-    query: 'chapter=birches', frames: 900, warm: 30,
+    query: 'chapter=birches', frames: 600, warm: 30,
     setup: async (page) => {
       await page.waitForTimeout(5500);
       await page.waitForFunction(() => !__game.carry.busy && !__game.child.acting, null, { timeout: 60000 });
@@ -80,15 +84,15 @@ const MOMENTS = {
   },
   summit: {
     label: 'Summit: the view from the top of the hill, plane in hand',
-    query: 'chapter=summit', frames: 900, warm: 360,
+    query: 'chapter=summit', frames: 600, warm: 360,
     pointer: (i) => sweep(i, 150, [W * 0.2, H * 0.55], [W * 0.8, H * 0.5], 90),
   },
 };
 
-if (mode === 'capture') await capture(args[0], args[1]);
+if (mode === 'capture') await capture(args[0], args.slice(1));
 else if (mode === 'derive') derive(args[0]);
 else if (mode === 'index') writeIndex(args[0]);
-else throw new Error('usage: capture <moment> <out> | derive <out> | index <out>');
+else throw new Error('usage: capture <out> <moment...> | derive <out> | index <out>');
 
 function manualFrames() {
   const real = window.requestAnimationFrame.bind(window);
@@ -102,12 +106,22 @@ function manualFrames() {
   window.__step = () => { const q = queue; queue = []; now += 1000 / 60; for (const c of q) c(now); return q.length; };
 }
 
-async function capture(name, out) {
+async function capture(out, names) {
+  for (const name of names) assert(MOMENTS[name], `unknown moment ${name}`);
+  fs.mkdirSync(`${out}/raw`, { recursive: true });
+  const { openBrowser } = await import('./lib/browser.mjs');
+  const { browser, close } = await openBrowser();
+  try {
+    for (const name of names) await captureMoment(browser, name, out);
+  } finally {
+    await close();
+  }
+}
+
+async function captureMoment(browser, name, out) {
   const moment = MOMENTS[name];
-  assert(moment, `unknown moment ${name}`);
   const sides = (process.env.SIDES ?? 'A,L1,L2').split(',').map((s) => SIDES[s]);
   const frames = Number(process.env.FRAMES ?? moment.frames);
-  fs.mkdirSync(`${out}/raw`, { recursive: true });
   const encoders = {};
   const server = http.createServer((req, res) => {
     const [, side, w, h] = req.url.split('/');
@@ -124,12 +138,9 @@ async function capture(name, out) {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const sink = `http://127.0.0.1:${server.address().port}`;
-
-  const { openBrowser } = await import('./lib/browser.mjs');
-  const { browser, close } = await openBrowser();
   const errors = [], log = [];
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: DSF });
   try {
-    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: DSF });
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
     await page.addInitScript(manualFrames);
@@ -183,7 +194,7 @@ window.__evidence = {
       }
     }
   } finally {
-    await close();
+    await page.close();
     await Promise.all(Object.values(encoders).map((e) => e.end()));
     server.close();
   }
@@ -193,7 +204,7 @@ window.__evidence = {
 
 function lossless(file, w, h) {
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${w}x${h}`, '-r', '60', '-i', '-',
-    '-vf', 'vflip', '-c:v', 'libx264rgb', '-qp', '0', '-preset', 'ultrafast', '-pix_fmt', 'bgr0', file], { stdio: ['pipe', 'inherit', 'inherit'] });
+    '-vf', 'vflip', '-c:v', 'ffv1', '-level', '3', '-threads', '8', '-slices', '16', '-pix_fmt', 'gbrp', file], { stdio: ['pipe', 'inherit', 'inherit'] });
   const done = new Promise((resolve, reject) => ff.on('close', (c) => (c ? reject(new Error(`ffmpeg ${c}`)) : resolve())));
   return {
     size: `${w}x${h}`,
