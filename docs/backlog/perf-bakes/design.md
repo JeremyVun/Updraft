@@ -187,6 +187,332 @@ the Mac can still save energy.
 exact (no look change) and look-changing, each with its expected saving of the whole playthrough, written here
 under "Round 2 profile".
 
+## Round 2 profile (2026-09-25, `main` at e44447e)
+
+Jeremy's steer, mid-census (via the lead): drop the full playthrough, go straight to the profile, estimate the
+minutes, and give a ranked list of concrete things to cut, CPU and GPU.
+
+**Fixture:**
+- `tools/frame-profile.mjs` in a 1376×1032 view at device scale 2, `ratio=1.5`, `msaa=2` (High), from worktree
+  `/private/tmp/updraft-pb-m` with its own server.
+- Every draw is **drained**: the tool waits for the GPU after each one, as a frame boundary does (`DRAIN=1`).
+  Each cell is the median of 4–6 interleaved pairs per load, pooled over two loads where both were clean.
+- A drained draw is the wind step, the sea reflection, the scene and post. It leaves out the other per-frame GPU
+  work (life field, petals, clouds, water waves, the Birches leaves), readbacks and all CPU.
+- **The machine was busy throughout:** other sessions' Chrome captures, an Android emulator, a VM and Brave.
+  `GPU_QUIET=1` waited for other GPU processes before each chapter and each ablation (up to 20 s). Rows whose
+  median pair baseline was over 1.3× the load's cleanest were dropped, as were straddled rows. Within a kept row
+  pairs still range about ±10%. † marks a cell from one load.
+- The `none` ablation pairs the baseline with itself. Weighted over the playthrough it read 0.4%, so treat any
+  whole-playthrough saving under about 1% as noise.
+- Percentages within a row compare. Milliseconds don't transfer to the iPad.
+- Raw data: `/tmp/updraft-pb-m-l1-*.json`, `/tmp/updraft-pb-m-l2-*.json` (profile), `/tmp/updraft-pb-m-audio.json`
+  (audio), `/tmp/updraft-pb-m-journey.json` (minutes).
+
+### Minutes per chapter (estimates)
+
+The full playthrough was stopped at Sleeping on Jeremy's steer. The minutes are the bot's pace, not Jeremy's:
+today's run (`tools/playthrough.mjs`, game time) up to Sleeping, and the complete 09-21 run
+(`/tmp/updraft-production-review/journey.json`) for Sleeping onward. A person probably lingers longer in the rooms.
+
+**Fixture per chapter:** crossings without a fixture use the mean of `lines` (the crossing out of home) and `sea`
+(the open sea before the mirror). Meadow uses the mean of its landing and its walk; Home uses the mean of the
+jetty and the summit.
+
+Drained cost per frame is nearly flat across chapters: 10–12 ms at 1.5×, 8–10 ms at 1.25×. So energy follows
+minutes: each chapter's share is close to its share of the time.
+
+| Chapter | Minutes | Fixture | ms/frame 1.5× | Share 1.5× | ms/frame 1.25× | Share 1.25× |
+|---|---:|---|---:|---:|---:|---:|
+| Island | 1.9 | Island | 11.5 | 5.9% | 9.8 | 6.0% |
+| Crossing to Washing | 1.6 | `lines` | 10.7 | 4.4% | 9.0 | 4.4% |
+| Washing | 1.8 | Washing | 11.7 | 5.5% | 10.0 | 5.6% |
+| Crossing to Boats | 0.5 | crossing | 11.1 | 1.5% | 9.3 | 1.5% |
+| Boats | 1.6 | Boats | 11.1 | 4.9% | 8.8 | 4.6% |
+| Crossing to Meadow | 0.7 | crossing | 11.1 | 1.9% | 9.3 | 1.9% |
+| Meadow | 5.1 | Meadow landing + walk | 11.3 | 15.3% | 9.9 | 16.0% |
+| Crossing to Birches | 0.3 | crossing | 11.1 | 1.0% | 9.3 | 1.0% |
+| Birches | 2.0 | Birches | 11.5 | 6.1% | 9.6 | 6.1% |
+| Drowned (drift) | 1.8 | Drowned | 11.1 | 5.3% | 9.3 | 5.3% |
+| Wood | 2.5 | Wood | 10.0 | 6.5% | 8.0 | 6.2% |
+| Crossing to Sleeping | 0.6 | crossing | 11.1 | 1.8% | 9.3 | 1.8% |
+| Sleeping | 3.3 | Sleeping | 12.3 | 10.7% | 10.4 | 10.7% |
+| Open sea to Mirror | 2.5 | `sea` | 11.4 | 7.6% | 9.6 | 7.6% |
+| Mirror | 2.2 | Mirror | 9.9 | 5.7% | 8.0 | 5.5% |
+| Crossing home | 2.0 | crossing | 11.1 | 5.8% | 9.3 | 5.8% |
+| Home | 3.5 | Jetty + Summit | 10.9 | 10.0% | 9.0 | 9.9% |
+
+The 1.25× column is the 1.5× cost less that fixture's measured `scale-1.25` saving (the median, 16%, where a
+fixture lacks one). The crossings, the drift and the open sea together are about 10 of the 34 minutes (30%).
+
+### Where the playthrough's GPU work goes (1.5×)
+
+Each line is one paired omission, weighted by cost × minutes over the whole playthrough. They overlap and don't
+add up. Per-chapter values are in the tables below.
+
+| Component (ablation) | Share of playthrough | Highest chapters |
+|---|---:|---|
+| Sea surface shading (flat fragment) (`water-frag-flat`) | 19.4% | Drowned (drift) 41%, Open sea to Mirror 38%, Crossing to Boats 31% |
+| Grass (hidden) (`grass`) | 13.3% | Meadow 28%, Washing 25%, Home 20% |
+| Terrain surface shading (`terrain-flat`) | 10.2% | Wood 17%, Meadow 16%, Birches 15% |
+| Post (straight copy) (`post`) | 12.2% | Home 17%, Mirror 15%, Wood 14% |
+| Bloom (`bloom`) | 10.3% | Mirror 17%, Home 13%, Crossing to Boats 12% |
+| Sky radiance (flat) (`sky-flat`) | 4.6% | Crossing to Washing 13%, Crossing to Boats 12%, Crossing to Meadow 12% |
+| Sea reflection pass (`reflection`) | 2.5% | Open sea to Mirror 14%, Crossing to Boats 8%, Crossing to Meadow 8% |
+| Characters, animals, kites, petals, wind lines (`actors`) | 2.3% | Birches 5%, Open sea to Mirror 5%, Crossing to Washing 4% |
+| Wind step (`wind`) | 0.6% | Birches 4%, Meadow 2%, Drowned (drift) 2% |
+| Birches room (`birches`) | 1.3% | Birches 21% |
+
+### Grass
+
+| Fixture | Hide grass | Blades quit at once | LOD0 | LOD1 | LOD2 | Flat fragment | Vertex fog | Frost/dawn/lamp | No discard |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Island | 16%† | 12%† | 16%† | 10%† | 2%⁰† | 8%† | 7%† | 4%⁰† | 3%⁰† |
+| Crossing out (`lines`) | 7%† | 10%† | 3%† | 5%† | 5%† | 3%† | 0%† | -1%⁰† | 2%⁰† |
+| Washing | 25%† | 21%† | 16%† | 7%† | -5%⁰† | 3%† | 1%† | 0%⁰† | 2%⁰† |
+| Boats | — | — | — | — | — | — | — | — | — |
+| Meadow landing | 29%† | 19%† | 19%† | 2%⁰† | 2%⁰† | 8%† | 8%† | 0%⁰† | 4%⁰† |
+| Meadow walk | 28% | 22% | 20% | 10% | 2%† | 7% | 5% | 2%⁰ | 5%⁰ |
+| Birches | 17%† | 5%† | 7%† | 11%† | 4%⁰† | 3%† | 4%† | 1%⁰ | 2%⁰† |
+| Drowned | — | — | — | — | — | — | -2%⁰† | — | 0%⁰† |
+| Wood | 17%† | 7%† | 15%† | 9%† | 5%⁰† | 5%† | — | -7%† | 5%⁰† |
+| Sleeping | 13%† | 13% | 15% | 2% | 1%⁰† | 3%† | 3% | -1% | 3%⁰ |
+| Open sea (`sea`) | 2%⁰ | 0%⁰ | -2%⁰† | -1%⁰† | 2%⁰† | 0%⁰ | -0%⁰ | 1%⁰† | -4%⁰ |
+| Mirror | 2%⁰† | — | — | 2%⁰† | 7%⁰† | — | 2%⁰† | — | 1%⁰† |
+| Jetty | 11%† | 5%† | — | 9%† | 6%† | 1%† | 3%† | -1%† | -1%⁰† |
+| Summit | 28% | 20%† | 20% | 5%⁰ | 1%⁰† | 5%† | 4%† | 3%⁰ | 5%⁰ |
+
+⁰ = no pixel changed (a candidate for an exact skip where it saves).
+
+- **Grass is vertex-bound.** `grass-collapse` makes every blade quit at its first instruction; it saves nearly all
+  of what hiding the grass saves. What's left, the empty vertex invocations, is 0–8% of a frame.
+  A constant-colour fragment (`grass-frag-flat`) saves only 3–8%.
+- **The near level (LOD0, to 52 m) is most of it:** 15–20% of a land frame, against 2–11% for LOD1 and 1–5% for LOD2.
+- **Per-vertex fog** (`fogOf` on all 9–13 vertices of every blade) is 3–8% of a land frame.
+- **The frost, dawn and lamp terms** (`grass-shade`) change no pixels outside Sleeping and save 0–4%, within noise.
+  They already early-out on their uniforms.
+- **The discards** (door shore, hidden rooms): removing them changes no pixels in any fixture and saves 2–6%
+  on land. Apple GPUs can't cull hidden fragments ahead of shading for a shader that discards.
+
+### The Birches room (one clean load, 6 pairs)
+
+| Part | Saving | Triangles |
+|---|---:|---:|
+| Whole room | 21% | 428k |
+| Canopy | 8–10% | 123k |
+| Trunks | 5% | 111k |
+| Leaves (fallen, simulated) | 3% | 74k |
+| Other (swing, fallen log, branches, stump) | 5% | 0.3k |
+| Scarf | 3%, one contended load only | 55k |
+| Litter | 1%, one contended load only | 65k |
+
+The Birches chapter is about 6% of the playthrough, so the whole room is about 1.3% of it. The scarf's CPU,
+about 1.5 ms per frame (`step`, `indexedNormals`, `write`), is phase 5b's.
+
+### The water surface
+
+| Fixture | Flat fragment | Skip under land | Seabed | Fog | Glints | Ripples | Surf | Wind waves | Sky colour | Mirror sample | Flat vertex | Reflection pass |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Island | 19%† | — | — | — | — | — | — | 3%⁰† | — | — | -4%⁰† | 7%⁰† |
+| Crossing out (`lines`) | 25%† | — | 5%† | — | 4%† | 6%† | 6%† | 4%† | — | 2%† | 1%† | 3%⁰† |
+| Washing | 13%† | — | 1%⁰† | — | 0%⁰† | 6%† | 0%⁰† | 1%⁰† | — | -0%† | -0%⁰† | 5%⁰† |
+| Boats | — | — | — | — | — | — | — | — | — | — | — | 0%⁰† |
+| Meadow landing | 11%† | — | — | — | -5%⁰† | — | 1%⁰† | — | — | 2%⁰† | -15%⁰† | 7%⁰† |
+| Meadow walk | 10% | 3%⁰† | 1% | — | 0%⁰ | -1% | -0% | 1% | 3%† | 0% | -0%⁰† | 5%⁰ |
+| Birches | 9% | 2%⁰† | 1% | 5%† | -0%† | 1%† | -4% | -0%† | 2%† | 0%⁰† | 0%⁰† | -1%⁰† |
+| Drowned | 41%† | — | 7%† | — | — | — | 3%† | — | — | — | -2%† | -7%⁰† |
+| Wood | 6%† | — | 1%† | — | 4%⁰† | -1%† | -3%† | 0%⁰† | — | -4%⁰† | — | -1%⁰† |
+| Sleeping | 19%† | 4%⁰† | — | 5%† | 10%⁰† | 4%† | — | — | -2%† | — | — | -4%⁰ |
+| Open sea (`sea`) | 38% | 3%⁰† | 9% | 8%† | 2% | 3% | 3% | 2% | 1%† | -2% | -1%† | 14%⁰ |
+| Mirror | 23%† | — | 5%⁰† | — | — | — | 0%⁰† | -1%⁰† | — | — | 1%⁰† | — |
+| Jetty | 25%† | — | 7%† | — | 4%† | 2%† | 6%† | 3%† | — | 2%† | -1%† | — |
+| Summit | 12%⁰ | 6%⁰† | -5%⁰ | 3%⁰† | -1%⁰ | 1%⁰† | -0%⁰† | 3%⁰† | — | 0%⁰† | 1%⁰† | -4%⁰ |
+
+- **The sea surface's fragment shader is the largest single GPU cost of the playthrough (19%).** It's 31–41% of a
+  frame on the crossings, the drift and the open sea, and 6–25% on land.
+- **The measured terms:**
+  - the seabed (`water-bed`): 5–9% at sea and near shores;
+  - fog: 5–8%;
+  - glints: 2–10%;
+  - ripples: 2–6%;
+  - surf: 0–6%;
+  - wind waves: 0–4%;
+  - sky colour: 1–3%.
+
+  None of these is invisible where it runs; each changed pixels in the fixtures where it saved.
+- **Water under land is shaded and then covered.** `water-landskip` returns before any shading where the baked
+  ground is a metre above the sea (and the room isn't hidden). No pixel changed in any fixture. It saved 2–4% on
+  land, the crossings and the sea. The terrain and grass discard, and they draw after the water (opaques sort by
+  material id, not depth), so the tiler can't cull the water beneath them.
+- **Drawing the water last instead (`water-last`) is worse:** 27–38% slower at sea. It isn't exact either (55/255
+  where the terrain and sea meet).
+- **The mirror's reflection** is invisible in the Birches view (`water-mirror` changes no pixel), but the pass
+  costs nothing measurable there. It's 14% at sea and 5–7% on the island and in the Meadow.
+- **The vertex shader** (swell, three surface samples per vertex) is within noise everywhere (`water-vert-flat`).
+
+### Post
+
+Each stage drawn alone 40 times, then drained, median of 5 (`POST_PASSES=1`), load 1:
+
+| Fixture | Scene | MSAA clear + resolve | Clamp copy | Bloom (12 passes + blend) | Grade |
+|---|---:|---:|---:|---:|---:|
+| Island | 12.5 | 1.87 | 0.14 | 0.90 | 0.08 |
+| Crossing out (`lines`) | 6.4 | 0.86 | 0.07 | 0.95 | 0.04 |
+| Washing | 7.4 | 0.87 | 0.06 | 0.46 | 0.03 |
+| Boats | 9.6 | 1.48 | 0.07 | 0.94 | 0.04 |
+| Meadow landing | 5.9 | 0.68 | 0.06 | 0.44 | 0.03 |
+| Meadow walk | 7.1 | 0.78 | 0.07 | 0.55 | 0.04 |
+| Birches | 8.3 | 1.10 | 0.07 | 0.57 | 0.04 |
+| Drowned | 8.4 | 1.22 | 0.15 | 0.76 | 0.04 |
+| Wood | 5.3 | 0.81 | 0.06 | 0.47 | 0.04 |
+| Sleeping | 8.5 | 1.06 | 0.07 | 0.60 | 0.04 |
+| Open sea (`sea`) | 5.9 | 0.86 | 0.06 | 0.48 | 0.03 |
+| Mirror | 4.4 | 0.99 | 0.06 | 0.56 | 0.04 |
+| Jetty | 7.5 | 0.78 | 0.06 | 0.49 | 0.04 |
+| Summit | 5.8 | 0.73 | 0.05 | 0.45 | 0.04 |
+
+- **Bloom is almost all of post.** Dropping bloom saves 6–17% of a frame, and post as a whole 7–21%. Its 12
+  half-resolution-and-smaller passes are each at the timer's floor (about 0.05 ms). Run inside a frame, the
+  chain costs more than its passes' sum: the 09-24 finding for chained small passes.
+- **The MSAA clear and resolve** of the 2064×1548 half-float target is 0.7–1.9 ms: 10–15% of the scene pass.
+  Three's `resolveDepthBuffer: false` is not a free exact skip here. On a live target, toggling it made the output
+  identical to `msaa=0`. A target built with it (plus `storeMultisampledDepthBuffer: false`) also rendered
+  without antialiasing, and was no faster.
+
+### CPU
+
+`frame-profile`'s CPU sample over 6 s of live play at 1.5× (load 1, the quieter CPU run):
+
+| Fixture | Script ms/frame (median / p90) | Draw calls | Largest items (ms/frame) |
+|---|---:|---:|---|
+| Island | 1.5 / 1.9 | 102 | readback 0.23, grass select 0.10, wind 0.18 |
+| Crossing out (`lines`) | 3.0 / 5.2 | 120 | **readback 1.31**, cygnet 0.61, island creatures 0.52 |
+| Washing | 1.8 / 2.0 | 92 | island creatures 0.39, readback 0.20 |
+| Boats | 2.0 / 2.6 | 154 | readback 0.27, cygnet 0.28 |
+| Meadow walk | 2.1 / 2.6 | 114 | readback 0.36, meadow creatures 0.34, cygnet 0.20 |
+| Birches | 3.5 / 3.9 | 99 | **scarf ≈1.5** (step 0.79, normals 0.35, write 0.33), readback 0.25 |
+| Drowned | 2.4 / 3.1 | 92 | readback 0.41, cygnet 0.40, **Birches update 0.22 while in the village** |
+| Wood | 1.8 / 2.3 | 78 | readback 0.30, wind 0.21 |
+| Sleeping | 1.7 / 2.0 | 105 | readback 0.19, cygnet 0.21 |
+| Sea | 1.5 / 1.8 | 143 | nothing over 0.15 |
+| Mirror | 1.7 / 2.0 | 232 | readback 0.26 |
+| Jetty | 1.5 / 1.9 | 81 | readback 0.23 |
+| Summit | 2.1 / 2.6 | 76 | **moored boat 0.71** (hull contacts → procedural `heightAt`) |
+
+- **Native overhead:** `(program)`, which is mostly GL calls, is a steady 0.5–0.8 ms per frame.
+- **The readback:** `getBufferSubData`, the wind, life and height copies, costs 0.2–0.4 ms per frame, and
+  1.3 ms on the crossing out.
+- **The moored boat at the summit:** `Boat.pose` tests its hull contacts against the ground whenever it is near
+  the shore. At the summit the boat is outside the 320 m height window, so every contact goes to the procedural
+  `rawHeight`. That costs 0.7 ms per frame, a third of the Summit's script, for a boat that isn't moving.
+
+### Audio
+
+`tools/audio-cost.mjs`: Chrome's renderer-process CPU over alternating 8 s windows, sound on against muted
+(muting suspends the context), 2 pairs per chapter. The ablations disconnect a group's outputs so that nothing
+pulls it. Values are CPU ms per wall-clock second (1000 = one M4 Pro core).
+
+| Fixture | Sound on − muted | Score playing | Cut the 2 convolvers | Cut the silent noise layers + silent pad |
+|---|---:|---|---:|---:|
+| Island | 106–167 | opening | 106–108 | 40–47 |
+| Washing | 142–149 | lines | | |
+| Meadow walk | 127–139 | meadow | 81–147 | none (the score feeds both reverbs) |
+| Birches | 129–150 | birches | | |
+| Wood | 134–144 | none (rain) | | |
+| Sleeping | 147–151 | sleeping | | |
+| Sea | 139–160 | sea | 146–154 | 45–93 |
+| Mirror | 183–193 | dream | | |
+| Jetty | 115–217 | summit | | |
+
+- **Sound costs about as much CPU as the whole game script.** Sound on costs 110–220 ms/s, 11–22% of a core.
+  The game's script is 90–210 ms/s (1.5–3.5 ms × 60).
+- **Nearly all of it is the two 4.5 s stereo convolvers** (`reverbConvolver`, `backgroundReverb`).
+  Disconnecting their outputs removes 80–150 ms/s, which is most of the difference between on and muted.
+- **Zero-gain layers keep the convolvers running.** Six of the eight looping noise layers sit at exactly zero gain
+  in most chapters: gust, whistle, rustle and lift, and rain and patter outside the Wood. Their gains are
+  re-targeted every frame with `setTargetAtTime`, so Chrome treats them as live automation, not silence. Their
+  reverb sends keep `reverbConvolver` fed. The same goes for the pad's 8 oscillators at zero gain, which feed
+  `backgroundReverb`.
+
+  Disconnecting the silent layers and pad let the convolver fed only by them go idle: 40–93 ms/s saved on the
+  island and at sea. In the Meadow the score feeds both reverbs, so it saved nothing.
+- **Census of nodes that run while silent:**
+
+  | Node | What it is | Status |
+  |---|---|---|
+  | Pad oscillators (8) | 4 voices × triangle + sine | Always started; the pad's gain is 0 outside the island, the Wood and the finale. Cheap on their own; their cost is keeping `backgroundReverb` busy. |
+  | Noise layers (8) | Looping pink-noise sources, 8 biquads, 8 gains, 6 reverb sends | Only breeze and sea are ever audible outside weather. |
+  | Breeze LFO (1) | Oscillator | Negligible. |
+  | Convolvers (2) | `reverbConvolver`, `backgroundReverb`, 4.5 s stereo at 48 kHz | Each about 45–75 ms/s while fed. |
+  | Spare convolver | Buffer set, not connected | Costs nothing per frame. It is analysed once when made (10–30 ms, on a frame of its own). |
+  | Foghorn convolver | Transient | Only during the Drowned foghorn; it is disconnected after its tail. |
+  | Compressor | Master bus | Always on; unmeasured, small. |
+
+- **Would stopping them be audible?**
+  - Disconnecting a noise layer or pad voice while its gain is exactly 0 is inaudible. It must reconnect before
+    its gain rises: the gains move on 80 ms–1.2 s time constants, so reconnecting the frame the target leaves 0
+    is in time.
+  - Letting a convolver idle is inaudible once its input has been silent for longer than its 4.5 s tail.
+  - Merging the two convolvers, or shortening the impulse, changes the sound.
+
+### Levers that change the look (costed only)
+
+| Lever | Share of playthrough | Per chapter |
+|---|---:|---|
+| Render scale 1.5× → 1.25× | 16.2% | Boats 21%, Wood 21%, Mirror 20% |
+| Render scale 1.5× → 1× | 30.2% | Mirror 38%, Sleeping 36%, Wood 33% |
+| MSAA 2 → 0 | 15.8% | Island 21%, Mirror 20%, Crossing to Washing 16% |
+| Bloom off | 10.3% | Mirror 17%, Home 13%, Crossing to Boats 12% |
+| Bloom at half resolution | 3.3% | Home 6%, Island 5%, Meadow 5% |
+| Sky at lower resolution on the sea chapters and the mirror (upper bound: sky radiance removed there) | 3.2% | Crossing to Washing 13%, Crossing to Boats 12%, Crossing to Meadow 12% |
+
+### Ranked candidates
+
+Savings are shares of the playthrough's measured GPU work at 1.5× (cost × estimated minutes), or of CPU where
+stated. **Battery framing:** 09-25's assumption puts the display and system floor at about 8 of Jeremy's 15–18
+points. That leaves 7–10 points for GPU, CPU and audio together. So a cut of x% of GPU work is worth at most
+x% of those 7–10 points, and less by whatever share the CPU and audio hold. For example, 10% of GPU work is at
+most 0.7–1.0 points.
+
+**Exact (no visible or audible change):**
+
+| # | Candidate | Estimated saving | Confidence |
+|---|---|---|---|
+| E1 | **Audio: disconnect the noise layers and pad voices while their gain is exactly 0**, and reconnect them the frame their target leaves 0. The reverb they feed then goes idle after its 4.5 s tail. | Audio CPU −40 to −93 ms/s on the island and at sea, about 30–60% of the audio cost there. Nothing while a score feeds both reverbs (Meadow). | High for the mechanism; medium for how many chapters it helps (3 fixtures measured). |
+| E2 | **Moored boat at the summit:** cache the ground height under its hull contacts while it lies at the home mooring, instead of calling the procedural `rawHeight` every frame. | CPU −0.7 ms/frame at the summit, about a third of Home's script. | High. |
+| E3 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–4% of land, crossing and sea frames. | Medium. No pixel changed in 4 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
+| E4 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.8%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
+| E5 | **Birches update while in the Drowned village** (0.22 ms/frame; the drift starts off the Birches beach). | CPU −0.2 ms/frame for 1.8 min, if the room is out of sight. | Low: check what is visible first. |
+| — | Not worth building: terrain without its discard (0%), grass frost/dawn/lamp (0%), skipping the mirror reflection where it's invisible (its pass is free there), drawing the water last (slower). | | |
+
+**Look-changing (Jeremy's decision):**
+
+| # | Candidate | Estimated saving | Confidence |
+|---|---|---|---|
+| L1 | **Render scale 1.5× → 1.25×** (touch Auto's ceiling). | 16% of GPU work (13–21% per chapter). 1× would be 30%. | High: every chapter, every clean pair. |
+| L2 | **MSAA 2 → 0.** | 16% (11–21% per chapter). | High. |
+| L3 | **Bloom off / at half resolution.** | 10% / 3%. | Medium to high. |
+| L4 | **The near grass level (LOD0, to 52 m):** a sparser or shorter near meadow. | Up to 10% of GPU work (15–20% of land frames); a partial cut saves in proportion. | Upper bound. |
+| L5 | **Sea surface detail:** the seabed in shallows, per-pixel fog, glints, ripples. | Seabed ≤3%, fog ≤2.6%, glints and ripples about 2% each. | Medium; each is an upper bound (the term removed). |
+| L6 | **Sky at lower resolution on the sea chapters and the mirror.** | ≤3% (11–13% of those frames). | Upper bound (radiance removed entirely). |
+| L7 | **Grass fog once per blade** (at its root) instead of per vertex. | ≤2.4% (3–8% of land frames). | Upper bound. |
+| L8 | **Audio: one reverb instead of two, or a shorter impulse.** | The two convolvers are 80–150 ms/s of CPU; one would save about half. | Medium. Changes the arrival reverb swap and the tail. |
+| L9 | **Wind and life readbacks every other frame.** | CPU about −0.1 to −0.2 ms/frame (0.2–0.4 ms now, 1.3 on the crossing out). | Low; adds a frame of latency to what reads the wind. |
+
+### Surprises
+
+- **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
+  of the minutes are spent afloat, where the water shader is 31–41% of a frame.
+- **Audio costs about as much CPU as the game's script**, and almost all of it is two convolvers. Zero-gain layers
+  keep them running, because their gains are automated every frame.
+- **Per-frame GPU cost is flat across chapters** (10–12 ms drained at 1.5×). Minutes, not a heavy chapter, decide
+  the energy: the Meadow (15%), Sleeping (11%) and Home (10%) lead.
+- **Drawing the water after the land made sea frames 27–38% slower** and wasn't exact.
+- **Toggling `resolveDepthBuffer` on the live MSAA scene target silently dropped the antialiasing.** Its pixels
+  matched `msaa=0` exactly. A target built with it also rendered unantialiased. Any future depth-resolve change
+  needs a pixel check against the current output.
+- **A boat standing still at the jetty costs 0.7 ms of script per frame at the summit.**
+
 ## What changes
 
 ### A. Skip terrain fragment work that is thrown away (exact)

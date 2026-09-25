@@ -295,7 +295,10 @@ fence polling) if it shows the change doesn't shift results systematically.
 
 ## Phase M: battery census (round 2, design "Round 2: battery")
 
-**Status:** started 2026-09-25. Measurement only.
+**Status:** done 2026-09-25 on `perf-bakes-m`; results in design, "Round 2 profile". On Jeremy's steer the full
+playthrough was stopped at Sleeping and the minutes are estimates. Tools added: `tools/audio-cost.mjs`, and
+`frame-profile.mjs` gained `RATIO`/`MSAA`/`DRAIN`/`GPU_QUIET`, the look levers, the grass/water/Birches breakdowns
+and `POST_PASSES`. Next: Jeremy picks from the ranked list; nothing in `src/` has changed.
 
 **Owns:** nothing in `src/`. New or extended tools under `tools/` (for example new `frame-profile.mjs`
 ablations, an audio census). The results go into design.md under "Round 2 profile".
