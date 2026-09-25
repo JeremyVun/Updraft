@@ -64,8 +64,9 @@ const CLIMB_MS = 12000;
  * can't be timed, a long smooth stretch climbs instead.
  *
  * A steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps. While frames
- * arrive that slowly, the probe asks whether the GPU finished each frame within one 60 Hz refresh. Frames that finish early yet still wait for every other refresh prove a cap, and Auto then
- * judges against 30 fps until faster intervals show the cap has gone.
+ * arrive that slowly, the probe asks whether the GPU finished each frame within one 60 Hz refresh. Frames that
+ * finish early yet still wait for every other refresh prove a cap, and Auto then judges against 30 fps until faster
+ * intervals show the cap has gone.
  */
 export class Quality {
   private readonly levels: QualityLevel[] = [];
