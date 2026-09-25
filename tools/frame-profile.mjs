@@ -425,8 +425,8 @@ try {
     if(state!==undefined)console.log(JSON.stringify({chapter,state}));
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
-      // With GPU_QUIET, each ablation also waits (up to 120 s) for other GPU users to go quiet, not just each chapter.
-      for(const start=Date.now();GPU_QUIET&&Date.now()-start<120000&&busy().some(r=>!r.own&&GPU_USER.test(r.command));)await new Promise(r=>setTimeout(r,3000));
+      // With GPU_QUIET, each ablation also waits (up to GATE_S, default 20 s) for other GPU users to go quiet, not just each chapter.
+      for(const start=Date.now();GPU_QUIET&&Date.now()-start<Number(process.env.GATE_S??20)*1000&&busy().some(r=>!r.own&&GPU_USER.test(r.command));)await new Promise(r=>setTimeout(r,3000));
       const busyBefore=busy();
       const result=await page.evaluate(async ({name,rounds,draws,capture,poll,drainAll})=>{
         const [omit,mode]=name.split('@');
