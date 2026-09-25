@@ -228,8 +228,7 @@ An allowed visual model reviews it, and it goes to Jeremy before merge.
 
 ## Phase 5b: the scarf's look and behaviour (design G2)
 
-**Status:** not started. Starts on phase 5's branch after phase 5's exactness gates pass. Visual work (motion
-and look), so an allowed visual model only: Opus.
+**Status:** done 2026-09-25 (merged bc6ecdb, Jeremy approved). Typecheck, build and the geometry check pass on main; the browser scarf-check and the Birches CPU re-measure wait for the census to free the browser.
 
 **Owns:** the same files as phase 5, plus the scarf's shader in `src/world/birch-scarf.ts` and scarf numbers in
 `src/tuning.ts`.

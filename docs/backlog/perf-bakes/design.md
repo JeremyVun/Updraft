@@ -181,6 +181,20 @@ Jeremy's answers, 2026-09-25 (verbatim):
   for display and system over a playthrough of about an hour on a ~39 Wh battery, that floor is about 8%, so
   the reachable part is roughly half of what's left. Jeremy's playthrough time and brightness would firm this up.
 
+**Auto on capable devices (open, 2026-09-25).** How Auto behaves on a touch device today (`src/gl/quality.ts`,
+the `Quality` construction in `src/main.ts`):
+- Touch starts at **1× scale and Medium world detail**: the opening rung is the first with ratio ≤ 1.25 *and*
+  detail ≤ 1, which is `{1×, detail 1}`, below the `{1.25×, detail 2}` rung.
+- Touch Auto's ceiling is **1.25× with full detail** (the 2.4 M-pixel budget allows 1.30× at 1376×1032). It
+  never reaches High's 1.5×, by design, because "smooth vsync cannot prove spare power".
+- It climbs one rung only after **12 s in which every 1.5 s review has p90 frame interval < 17.2 ms**; one step
+  back doubles that wait (up to 2 min). The selector's bars follow world detail, so a single successful climb
+  (to `{1×, detail 2}`) would already show High.
+- So on Jeremy's iPad Auto either never passes a 12 s smooth window, or climbs and falls back. Which one is not
+  known from the Mac. The `?stats` readout on the iPad (quality level, frame percentiles) would settle it.
+- The game already times frames' GPU completion with a fence to detect a 30 fps cap (`probing`). The same timing
+  could prove spare GPU power directly, instead of inferring it from vsync intervals.
+
 **Measure first (phase M).** No `src/` change until the numbers are in and Jeremy has seen the ranked list.
 1. **Minutes per chapter.** Chapter entry times from a full `tools/playthrough.mjs` run (`report.chapters`),
    as the weight for everything else. The bot's pace is a proxy for Jeremy's.
