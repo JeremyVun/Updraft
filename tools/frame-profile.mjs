@@ -30,7 +30,8 @@
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // RATIO and MSAA override the page's ratio=1.5&msaa=2. DRAIN=1 waits for the GPU after every draw in every ablation.
 // Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half; none pairs the baseline with itself.
-// msaa-nodepth (exact): the scene target neither resolves nor stores its multisampled depth.
+// msaa-nodepth swaps in a scene target built to neither resolve nor store its multisampled depth. On Chrome/ANGLE Metal
+// it renders without antialiasing (pixels match msaa-0) and is no faster (perf-bakes round 2), so it is not an exact skip.
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
