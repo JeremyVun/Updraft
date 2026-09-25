@@ -332,20 +332,21 @@ about 1.5 ms per frame (`step`, `indexedNormals`, `write`), is phase 5b's.
 | Jetty | 25%† | — | 7%† | — | 4%† | 2%† | 6%† | 3%† | — | 2%† | -1%† | — |
 | Summit | 12%⁰ | 6%⁰† | -5%⁰ | 3%⁰† | -1%⁰ | 1%⁰† | -0%⁰† | 3%⁰† | — | 0%⁰† | 1%⁰† | -4%⁰ |
 
-- **The sea surface's fragment shader is the largest single GPU cost of the playthrough (19%).** It's 31–41% of a
-  frame on the crossings, the drift and the open sea, and 6–25% on land.
+- **The sea surface's fragment shader is the largest single GPU cost of the playthrough (19%).** It's 25–41% of a
+  frame afloat (the crossings, the drift, the open sea) and 6–25% on land.
 - **The measured terms:**
   - the seabed (`water-bed`): 5–9% at sea and near shores;
-  - fog: 5–8%;
+  - fog: 2–8%;
   - glints: 2–10%;
   - ripples: 2–6%;
   - surf: 0–6%;
   - wind waves: 0–4%;
   - sky colour: 1–3%.
 
-  None of these is invisible where it runs; each changed pixels in the fixtures where it saved.
+  Most changed pixels wherever they saved. **The exception is the glints:** in Sleeping (10%, one load) and the
+  Wood (4%) removing them changed no pixel. There, at night and under the storm, the sun term they feed is zero.
 - **Water under land is shaded and then covered.** `water-landskip` returns before any shading where the baked
-  ground is a metre above the sea (and the room isn't hidden). No pixel changed in any fixture. It saved 2–4% on
+  ground is a metre above the sea (and the room isn't hidden). No pixel changed in any fixture. It saved 2–6% on
   land, the crossings and the sea. The terrain and grass discard, and they draw after the water (opaques sort by
   material id, not depth), so the tiler can't cull the water beneath them.
 - **Drawing the water last instead (`water-last`) is worse:** 27–38% slower at sea. It isn't exact either (55/255
@@ -378,7 +379,7 @@ Each stage is drawn alone 40 times, then drained; median of 5 rounds (`POST_PASS
 - **Bloom is almost all of post.** Dropping bloom saves 6–17% of a frame, and post as a whole 7–21%. Its 12
   half-resolution-and-smaller passes are each at the timer's floor (about 0.05 ms). Run inside a frame, the
   chain costs more than its passes' sum: the 09-24 finding for chained small passes.
-- **The MSAA clear and resolve** of the 2064×1548 half-float target is 0.7–1.9 ms: 10–15% of the scene pass.
+- **The MSAA clear and resolve** of the 2064×1548 half-float target is 0.7–1.5 ms: 11–22% of the scene pass.
   Three's `resolveDepthBuffer: false` is not a free exact skip here. On a live target, toggling it made the output
   identical to `msaa=0`. A target built with it (plus `storeMultisampledDepthBuffer: false`) also rendered
   without antialiasing, and was no faster.
@@ -486,6 +487,7 @@ most 0.7–1.0 points.
 | E2 | **Moored boat at the summit:** cache the ground height under its hull contacts while it lies at the home mooring, instead of calling the procedural `rawHeight` every frame. | CPU −0.7 ms/frame at the summit, about a third of Home's script. | High. |
 | E3 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–6% of land, crossing and sea frames. At the summit no sea pixel is visible at all, yet its shading costs 12%. | Medium. No pixel changed in 5 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
 | E3b | **Don't submit grass tiles where no blade stands** (the Birches and Wood floors, cropped ground). The shader discards those blades today, one vertex invocation at a time. | Up to about 4% of the playthrough (hide minus collapse); 10–12% of Birches and Wood frames. | Upper bound. The share of submitted blades that stand wasn't measured. A tile skip is exact only for tiles where nothing stands at any density. |
+| E3c | **Skip the sun glints when the sun can't light them** (a uniform test on the sun's strength). | About 1.3%: 10% of Sleeping frames, 4% of Wood frames. | Low to medium: exact in both, one load each. |
 | E4 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.9%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
 | E5 | **Birches update while in the Drowned village** (0.22 ms/frame; the drift starts off the Birches beach). | CPU −0.2 ms/frame for 1.8 min, if the room is out of sight. | Low: check what is visible first. |
 | — | Not worth building: terrain without its discard (0%), grass frost/dawn/lamp (0%), skipping the mirror reflection where it's invisible (its pass is free there), drawing the water last (slower). | | |
