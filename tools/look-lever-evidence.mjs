@@ -15,7 +15,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import http from 'node:http';
+import { WebSocketServer } from 'ws';
 
 const [mode, ...args] = process.argv.slice(2);
 const BASE = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -49,8 +49,8 @@ const MOMENTS = {
     label: 'Washing lines, blown with slow sweeps',
     query: 'chapter=washing', frames: 600, warm: 240,
     pointer: (i) => (Math.floor(i / 150) % 2
-      ? sweep(i, 110, [W * 0.85, H * 0.42], [W * 0.15, H * 0.36], 40)
-      : sweep(i, 110, [W * 0.15, H * 0.36], [W * 0.85, H * 0.42], 40)),
+      ? sweep(i, 110, [W * 0.85, H * 0.26], [W * 0.1, H * 0.2], 40)
+      : sweep(i, 110, [W * 0.1, H * 0.2], [W * 0.85, H * 0.26], 40)),
   },
   sailing: {
     label: 'Sailing: mast, rigging and sail, blown along',
@@ -123,21 +123,23 @@ async function captureMoment(browser, name, out) {
   const sides = (process.env.SIDES ?? 'A,L1,L2').split(',').map((s) => SIDES[s]);
   const frames = Number(process.env.FRAMES ?? moment.frames);
   const encoders = {};
-  const server = http.createServer((req, res) => {
-    const [, side, w, h] = req.url.split('/');
-    const chunks = [];
-    req.on('data', (c) => chunks.push(c));
-    req.on('end', async () => {
-      const body = Buffer.concat(chunks);
-      assert.equal(body.length, w * h * 4);
-      encoders[side] ??= lossless(`${out}/raw/${name}-${side}.mkv`, +w, +h);
-      assert.equal(encoders[side].size, `${w}x${h}`);
-      await encoders[side].write(body);
-      res.end('ok');
+  const server = new WebSocketServer({ host: '127.0.0.1', port: 0, maxPayload: 1 << 26 });
+  server.on('connection', (socket) => {
+    let header = null, queue = Promise.resolve();
+    socket.on('message', (data, binary) => {
+      if (!binary) { header = JSON.parse(data.toString()); return; }
+      const { side, w, h } = header;
+      assert.equal(data.length, w * h * 4);
+      queue = queue.then(async () => {
+        encoders[side] ??= lossless(`${out}/raw/${name}-${side}.mkv`, w, h);
+        assert.equal(encoders[side].size, `${w}x${h}`);
+        await encoders[side].write(data);
+        socket.send('ok');
+      });
     });
   });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  const sink = `http://127.0.0.1:${server.address().port}`;
+  await new Promise((r) => server.on('listening', r));
+  const sink = `ws://127.0.0.1:${server.address().port}`;
   const errors = [], log = [];
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: DSF });
   try {
@@ -153,15 +155,30 @@ async function captureMoment(browser, name, out) {
       source = source.replace(draw, `${draw} if (window.__evidence) window.__evidence.redraw = () => drawJourneyRooms(rooms, roomObjects, drawRooms);`);
       source += `
 window.__evidence = {
-  redraw: null,
+  redraw: null, socket: null, acks: [],
+  ms: { draw: 0, read: 0, send: 0 },
   async capture(sides, sink) {
+    if (!this.socket) {
+      this.socket = new WebSocket(sink);
+      this.socket.binaryType = 'arraybuffer';
+      this.socket.onmessage = () => this.acks.shift()();
+      await new Promise((r) => { this.socket.onopen = r; });
+    }
     const gl = renderer.getContext();
     for (const side of sides) {
+      let t = performance.now();
       if (pixelRatio !== side.ratio || post.samples !== side.msaa) { pixelRatio = side.ratio; post.samples = side.msaa; resize(); }
       this.redraw();
+      gl.finish();
+      this.ms.draw += performance.now() - t; t = performance.now();
       const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * h * 4);
       gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-      await fetch(sink + '/' + side.name + '/' + w + '/' + h, { method: 'POST', body: px, mode: 'no-cors' });
+      this.ms.read += performance.now() - t; t = performance.now();
+      const ack = new Promise((r) => this.acks.push(r));
+      this.socket.send(JSON.stringify({ side: side.name, w, h }));
+      this.socket.send(px);
+      await ack;
+      this.ms.send += performance.now() - t;
     }
   },
 };`;
@@ -176,8 +193,11 @@ window.__evidence = {
     await page.waitForTimeout(300);
     const step = () => page.evaluate(() => window.__step());
     for (let i = 0; i < moment.warm; i++) await step();
-    const t0 = Date.now();
+    const t0 = Date.now(), ms = { pointer: 0, step: 0, capture: 0 };
+    let tick = Date.now();
+    const lap = (k) => { const now = Date.now(); ms[k] += now - tick; tick = now; };
     for (let i = 0; i < frames; i++) {
+      tick = Date.now();
       let at = null;
       if (moment.pointer === 'boat') {
         const p = await page.evaluate(() => { const g = __game, p = g.boat.position.clone().project(g.rig.camera); return [(p.x + 1) / 2, (1 - p.y) / 2]; });
@@ -185,18 +205,21 @@ window.__evidence = {
         at = k <= 36 ? [p[0] * W + (k / 36 - 0.5) * 260, p[1] * H + 40 + Math.sin((k / 36) * Math.PI) * 8] : [W - 3, H - 3];
       } else if (moment.pointer) at = moment.pointer(i);
       if (at) await page.mouse.move(Math.max(4, Math.min(W - 4, at[0])), Math.max(4, Math.min(H - 4, at[1])));
+      lap('pointer');
       await step();
+      lap('step');
       await page.evaluate(({ sides, sink }) => window.__evidence.capture(sides, sink), { sides, sink });
+      lap('capture');
       if (i % 60 === 0) {
-        const state = await page.evaluate(() => ({ story: __game.story.name, beat: __game.story.current.beat ?? null, camera: __game.rig.camera.position.toArray().map((v) => +v.toFixed(2)) }));
+        const state = await page.evaluate(() => ({ inPage: Object.fromEntries(Object.entries(window.__evidence.ms).map(([k, v]) => [k, Math.round(v)])), story: __game.story.name, beat: __game.story.current.beat ?? null, camera: __game.rig.camera.position.toArray().map((v) => +v.toFixed(2)) }));
         log.push({ frame: i, ...state });
-        console.log(JSON.stringify({ name, frame: i, ...state, perFrameMs: Math.round((Date.now() - t0) / (i + 1)) }));
+        console.log(JSON.stringify({ name, frame: i, ...state, perFrameMs: Math.round((Date.now() - t0) / (i + 1)), ms }));
       }
     }
   } finally {
     await page.close();
-    await Promise.all(Object.values(encoders).map((e) => e.end()));
     server.close();
+    await Promise.all(Object.values(encoders).map((e) => e.end()));
   }
   fs.writeFileSync(`${out}/raw/${name}.json`, JSON.stringify({ name, label: moment.label, frames, viewport: [W, H], dsf: DSF, sides, log, errors }, null, 1));
   assert.deepEqual(errors, []);
