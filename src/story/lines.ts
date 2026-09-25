@@ -7,15 +7,13 @@ import { DOOR_EXIT, DOOR_SHIFT, doorway } from '../world/doorway';
 import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import { CURTAINS, LINES_BERTH, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
 import type { Cast, Chapter } from './cast';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
 import type { LinesScorePhase } from '../audio/lines-score';
-import { PlaneArrival } from './plane-arrival';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
 const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
 const ROUTE = LINES_WALK;
 type Beat = 'ashore' | 'wonder' | 'approach' | 'curtain' | 'birdThrough' | 'childThrough' | 'familyApproach' | 'family' | 'throughDoor' | 'shore' | 'walk' | 'toBoat' | 'push' | 'aboard';
-type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /** Small beneath somebody's washing. The wind makes a way, and the little bird learns to go first. */
 export class LinesChapter implements Chapter {
@@ -29,19 +27,15 @@ export class LinesChapter implements Chapter {
   readonly season = 0.2;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 5 };
   readonly focus = new THREE.Vector3();
-  private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly watching = new THREE.Vector3();
   private readonly from = new THREE.Vector3(0.12, 0, 1).normalize();
   private gate = 0;
   private leg = ROUTE.length - 1;
-  private play: Play = 'carry';
   private now = 0;
   private beatStart = 0;
-  private holdUntil = 0;
   private birdArrived = -1;
-  private lastLegAt = 0;
-  private readonly arrival = new PlaneArrival();
+  private boarding = false;
   private noticed = false;
   private doorElapsed = 0;
   private readonly thresholdEye = new THREE.Vector3();
@@ -64,7 +58,7 @@ export class LinesChapter implements Chapter {
   }
 
   get scripted(): boolean {
-    return this.arrival.active || this.beat === 'ashore' || this.beat === 'wonder' || this.beat === 'family' ||
+    return this.beat === 'ashore' || this.beat === 'wonder' || this.beat === 'family' ||
       this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
   }
   get done(): boolean { return this.beat === 'aboard'; }
@@ -96,7 +90,7 @@ export class LinesChapter implements Chapter {
       this.gate = CURTAINS.length;
       CURTAINS.forEach(g => g.reset(true));
       this.leg = ROUTE.length - 1;
-      this.to('walk'); this.play = 'hold'; this.holdUntil = 1;
+      this.to('walk');
       door.open = data[1] ? 1 : 0;
     } else {
       this.gate = THREE.MathUtils.clamp(Math.floor(data[0]), 1, CURTAINS.length - 1);
@@ -114,15 +108,11 @@ export class LinesChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now = time;
-    const { child: c, plane: p, cygnet, boat, wind } = this.cast;
-    p.guided = this.beat === 'walk';
+    const { child: c, plane: p, cygnet, wind } = this.cast;
     const active = this.gate < CURTAINS.length ? CURTAINS[this.gate] : null;
     washingPassage.active = this.beat === 'curtain' ? active : null;
     CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active));
-    if (this.beat === 'walk') {
-      p.home.set(boat.position.x, boat.position.y, boat.position.z + tuning.linesPassage.shorePlaneInset);
-      p.homeRadius = tuning.linesPassage.shorePlaneRadius;
-    } else if (active) {
+    if (active) {
       p.home.copy(active.before); p.homeRadius = 12;
     }
     switch (this.beat) {
@@ -188,12 +178,12 @@ export class LinesChapter implements Chapter {
         if (this.t > tuning.linesPassage.shorePause) {
           doorway.travelling = false;
           cygnet.errand = null; cygnet.stay = false; cygnet.watch(null);
-          this.to('walk'); this.play = 'hold'; this.holdUntil = this.now + 0.8; this.lastLegAt = this.now;
+          this.to('walk');
         }
         break;
       case 'walk':
         family.multiplyScalar(Math.exp(-dt * 0.35));
-        this.updateWalk();
+        if (!this.boarding && !c.busy) this.board();
         break;
       case 'push':
         break;
@@ -258,7 +248,6 @@ export class LinesChapter implements Chapter {
     if (family.y > tuning.family.doorAt && !door.opened) {
       door.open = 1;
       cygnet.bind(0.05);
-      completeObjective();
     }
     if (this.t > k.revealFill + k.revealHold && !c.busy) {
       this.to('throughDoor'); this.doorElapsed = 0; doorway.begin();
@@ -283,50 +272,14 @@ export class LinesChapter implements Chapter {
     this.to('shore');
   }
 
-  private updateWalk(): void {
-    const { child: c, plane: p, boat } = this.cast;
-    if (this.lastLegAt === 0) this.lastLegAt = this.now;
-    const nearBoat = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < 16;
-    if (this.arrival.update(this.cast, nearBoat || this.now - this.lastLegAt > 45, () => this.board())) return;
-    if (this.play === 'watch') {
-      c.lookAt = p.position;
-      if (p.landed) this.fetch();
-      else if (!c.moving && Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 9)
-        c.walkTo(p.position.x, p.position.z, true, undefined, 5);
-    } else if (this.play === 'fetch') {
-      c.lookAt = p.position;
-      if (!p.landed && p.airborne) this.play = 'watch';
-    } else if (this.play === 'hold' && !c.busy) {
-      if (this.now > this.holdUntil) this.throwAhead();
-    }
-  }
-
-  private throwAhead(): void {
-    const { child: c, plane, boat } = this.cast;
-    const angle = Math.atan2(boat.position.x - c.position.x, boat.position.z + tuning.linesPassage.shorePlaneInset - c.position.z);
-    c.throwToward(boat.position.x, boat.position.z + tuning.linesPassage.shorePlaneInset, () => {
-      plane.launch(c.handPosition(this.hand), this.tmp.set(Math.sin(angle) * 7.4, 5.4, Math.cos(angle) * 7.4));
-      this.play = 'watch'; c.lookAt = plane.position;
-    });
-  }
-  private fetch(): void {
-    const { child: c, plane: p } = this.cast;
-    this.play = 'fetch';
-    c.walkTo(p.position.x, p.position.z, true, () => {
-      if (this.play !== 'fetch') return;
-      if (Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 2.6 || !p.landed) {
-        this.play = 'watch'; return;
-      }
-      c.pickUp(() => { p.hold(c); this.play = 'hold'; this.holdUntil = this.now + 0.8; });
-    }, 1.2);
-  }
   private board(): void {
     const { child: c, boat, cygnet } = this.cast;
     washingPassage.active = null;
     cygnet.stay = false; cygnet.errand = null; cygnet.watch(null);
-    this.to('toBoat'); c.lookAt = null;
+    this.boarding = true; c.lookAt = null;
     const beside = boat.boardingPoint(this.tmp);
     c.walkTo(beside.x, beside.z, false, () => {
+      this.to('toBoat');
       this.cast.carry.gatherUp(() => {
         c.lookAt = null; this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);

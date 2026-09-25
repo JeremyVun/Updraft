@@ -43,6 +43,8 @@ export const tuning = {
     openingPadRise: 0.0141,
     arrivalPhraseWait: 4.5, phraseReleaseLead: .8,
     openingHandoffSettle: 2.2,
+    /** After the rescue the opening begins again from its first chord, rising out of silence over this long. */
+    openingReturn: 4,
     /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */
     laterWindDb: -3,
     /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
@@ -861,7 +863,6 @@ export const tuning = {
     revealFill: 2.8, revealHold: 4.5,
     doorApproach: 5.5, doorCross: 7, shorePause: 4,
     portalScale: 0.75,
-    shorePlaneInset: 14, shorePlaneRadius: 5,
     walkDistance: 16, walkHeight: 1.4,
     curtainDistance: 17, curtainHeight: 0.9,
     viewClearanceAhead: 31, viewClearanceRadius: 5.5,

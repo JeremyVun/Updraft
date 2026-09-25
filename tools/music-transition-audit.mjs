@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {audioPage,wav} from './lib/audio-render.mjs';
 const dir=path.resolve(process.argv[2]??'/tmp/updraft-music-transitions');fs.mkdirSync(dir,{recursive:true});
 const cases=[
-  ['opening-lines','Opening → Lines',{music:'still',openingScore:true},'lines'],
+  ['opening-lines','Opening → Lines',{music:'still',openingScore:'wander'},'lines'],
   ['lines-boats','Lines → Little Boats',{music:'lines',linesScore:'shore'},'boats'],
   ['boats-meadow','Little Boats → grey Meadow',{music:'boats',hush:.28},'meadow'],
   ['meadow-birches','Meadow → Birches',{music:'meadow',meadowScore:'return'},'birches'],

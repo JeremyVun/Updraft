@@ -1,7 +1,7 @@
 import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase, type DrownedScorePhase } from './dream-score';
 import { SummitScore, type SummitScorePhase } from './summit-score';
 import { HOME_ENDING } from '../story/home-ending';
-import { OpeningScore } from './opening-score';
+import { OpeningScore, type OpeningScorePhase } from './opening-score';
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
@@ -32,7 +32,7 @@ export interface SoundState {
   /** True only during the opening island chapter, never its departing crossing. */
   startingIsland?: boolean;
   /** Approved opening drone; continues on its own clock during the first crossing. */
-  openingScore?: boolean;
+  openingScore?: OpeningScorePhase;
   /** The actual forest chapter; Sleeping also uses the wood music mood. */
   forestWind?: boolean;
   /** Only the feather-guided climb on Sleeping, ending before the summit. */
@@ -160,8 +160,6 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   comfort: [[62, 1], [69, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
-  /** The opening V is still flying: an open fourth lifts and hangs, without anticipating the fall. */
-  overhead: [[81, 1], [86, 3]],
   /** High and thin and going away from you, the way a skein sounds when you look up too late. */
   skein: [[86, 2], [83, 2], [81, 3], [78, 2], [76, 4]],
   /** Keep descending into the lower register; the final low D belongs to contact with the ground. */
@@ -182,7 +180,7 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
   finale: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'overhead' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
@@ -870,17 +868,17 @@ export class Soundscape {
       this.chime(PHRASES.landed[0][0], 0.5, 0, this.ctx!.currentTime + 0.02, 1.8);
       return;
     }
-    if (name === 'overhead' || name === 'fallen') {
-      // These cues follow the animation's clock, without waiting for the musical pulse.
+    if (name === 'fallen') {
+      // The fall follows the animation's clock, without waiting for the musical pulse.
       // Fit the whole phrase to its beat and leave only a short tail after touchdown.
-      const duration = name === 'overhead' ? tuning.opening.flight : tuning.opening.fall;
+      const duration = tuning.opening.fall;
       this.cueSpaceUntil = Math.max(this.cueSpaceUntil, this.ctx!.currentTime + duration + .35);
       const notes = PHRASES[name];
       const units = notes.reduce((sum, [, beats]) => sum + beats, 0);
       const start = this.ctx!.currentTime + 0.02;
       let elapsed = 0;
       for (const [midi, beats] of notes) {
-        this.chime(midi, name === 'overhead' ? 0.3 : 0.5, 0, start + elapsed,
+        this.chime(midi, 0.5, 0, start + elapsed,
           Math.min(2.2, duration - elapsed + 0.35));
         elapsed += beats / units * duration;
       }
@@ -1057,7 +1055,7 @@ export class Soundscape {
     }
     if (bg.music === 'still' && bg.openingScore && !s.silence && !backgroundPaused) {
       this.openingScore ??= new OpeningScore(ctx, this.padVoices);
-      this.openingScore.update();
+      this.openingScore.update(bg.openingScore);
       this.mood = bg.music;
       this.chord = -1;
     } else if (this.openingScore) {

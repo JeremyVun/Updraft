@@ -768,7 +768,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.life = story.worldLife;
   soundState.night = atmo.uniforms.uNight.value;
   soundState.startingIsland = story.name === 'island';
-  soundState.openingScore = story.name === 'island' || story.name === 'toLines';
+  soundState.openingScore = story.name === 'island' || story.name === 'toLines' ? story.current.openingScore ?? 'wander' : undefined;
   soundState.forestWind = story.name === 'wood';
   soundState.sleepingWind = story.name === 'sleeping' && story.current.sleepingScore === 'climb';
   soundState.music = story.music;

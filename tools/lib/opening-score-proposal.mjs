@@ -25,7 +25,7 @@ export function openingState(t,base) {
     sea:t<80?.4:1,land:t<80?1:0,night:0,meadow:0,cold:0,flockChatter:false,
     scripted:t>=56&&t<76,pianoActive:false,
     gust:[6,13,20,29,34,82,88].some(at=>t>=at&&t<at+.625)?6:0,
-    cues:t===6?['breeze']:t===40?['restored']:t===56?['overhead']:t===61?['fallen']:t===66?['landed']:[]};
+    cues:t===6?['breeze']:t===40?['restored']:t===61?['fallen']:t===66?['landed']:[]};
 }
 
 /** The added voice sits inside the same room as the original, with a soft onset and few overtones. */

@@ -5,7 +5,7 @@ export type ArrivalMusic = 'lines' | 'boats' | 'meadow' | 'birches' | 'drowned' 
 type Stage = 'wait' | 'none' | 'fade' | 'gap' | 'incoming' | 'blend';
 type Background = Pick<SoundState, 'music' | 'hush' | 'seaScore' | 'sleepingScore' | 'meadowScore' | 'birchesScore' | 'linesScore' | 'linesMelodyQuiet' | 'mirrorScore' | 'drownedScore' | 'summitScore' | 'openingScore'>;
 const empty = { seaScore: undefined, sleepingScore: undefined, meadowScore: undefined,
-  birchesScore: undefined, linesScore: undefined, linesMelodyQuiet: false, mirrorScore: undefined, drownedScore: undefined, summitScore: undefined, openingScore: false };
+  birchesScore: undefined, linesScore: undefined, linesMelodyQuiet: false, mirrorScore: undefined, drownedScore: undefined, summitScore: undefined, openingScore: undefined };
 export const ARRIVAL_MUSIC: Record<ArrivalMusic, Background> = {
   lines: { ...empty, music: 'lines', hush: 0, linesScore: 'first' },
   boats: { ...empty, music: 'boats', hush: .28 },

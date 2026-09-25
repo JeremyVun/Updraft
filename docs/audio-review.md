@@ -11,6 +11,17 @@ masking and emotional impact still require listening in context.
 
 ## Decisions and implementation
 
+**September 26 still island fall:** Jeremy, verbatim: "On the still island, when the cygnet falls down, we play a
+series of tones. However, i dont think they fit into the still island music anymore. … Also, the still island music
+does't completely silence during the sequence, which makes it feel a bit odd." The falling phrase was written for the
+old two-chord pad; the approved opening wanders through F, B♭ and E♭ in 11 of its 33 chords, and its clock decided
+which one the fall landed on. The hush left the pad about 22 dB down and still changing chords, and the fall cue's
+duck lifted it by about 10 dB just as the bird landed. Approved direction: the music comes home to D under the
+skein, goes out with the falling bird, stays silent through the rescue and begins again from the top once they
+set off. Jeremy then asked to "get rid of the two tone sound that plays when the swans appear": the `overhead`
+cue is gone, so the swans' own calls announce the skein. The falling phrase is unchanged. Comparison render: `/tmp/updraft-opening-fall-compare.mp3`
+(before, two seconds of silence, after; the fall crosses the E♭ chord at 1:09).
+
 **September 24 accepted Home ending, integrated locally:** the approved complete score now uses the
 successful-updraft clock in `HomeChapter`, with the fixed paper release and the revised upward-resolving
 last chord. Jeremy approved the full in-game recording, with this feedback verbatim:
@@ -451,6 +462,8 @@ current recognition melody and keep the objective signature distinct from it.
 The transition audition is resolved: on September 21 Jeremy rejected the proposed crossfades and directed
 that existing transitions remain unchanged. Preserve the shared pad's global chord clock and pitch glides.
 The earlier concern was not a confirmed defect; the preview was never integrated.
+
+The Lines score stays as shipped. On September 25 Jeremy reported "sometimes almost like missing notes in the melody". The fix: the quiet verse rests whole reply figures, and cue space lets a sounding figure finish (`contracts/audio.md`). He then heard a from-scratch candidate, rebuilt as loops with a continuous chord clock, layers added at each curtain and the whole theme at the door (branch `lines-score-candidate`). His verdict: "nope, your version is a clear downgrade. stay with lines-shipped, and remove the piano theme on hte door for the island of lines". Don't propose that rewrite again. The door now opens without the shared completion phrase.
 
 ## Evidence and work order
 

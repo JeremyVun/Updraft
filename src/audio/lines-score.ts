@@ -1,4 +1,4 @@
-import { JOURNEY_THEME, polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
+import { JOURNEY_THEME, isMelody, polishPhrase, phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 /** The approved Lines study, divided by the three curtains, family clothes, doorway and far shore. */
 export type LinesScorePhase = 'first' | 'second' | 'third' | 'family' | 'door' | 'shore';
 interface Note { voice: 'pad' | 'soft-reed'; midi: number; at: number; duration: number; level: number; pan: number }
@@ -9,6 +9,7 @@ const beds: [number, number, number[], number][] = [
   [42,4,[43,55,62,67],.004], [47,6,[43,55,59,62],.0058],
   [54,7,[50,57,62,66],.003], [63,6,[50,57,62,66],.0048],
 ];
+const reed = ([at, midi, duration, level]: number[]): Note => ({ voice: 'soft-reed', at, midi, duration, level, pan: -.1 });
 /** Preserve the audition exactly here; the independent melody trim is applied at playback. */
 export const LINES_AUDITION_NOTES: readonly Note[] = [
   ...beds.flatMap(([at, duration, chord, level]) => chord.map((midi, i): Note => ({ voice: 'pad', midi,
@@ -19,23 +20,39 @@ export const LINES_AUDITION_NOTES: readonly Note[] = [
     [34,71,1.3,.011], [35.6,69,1,.010], [36.8,66,1.05,.010],
     [47.4,67,1.2,.012], [48.9,71,1.25,.011], [50.4,69,1,.010], [51.7,67,1.25,.010],
     [64,69,1.25,.010], [65.6,66,1.15,.0095], [67,64,1.1,.009], [68.4,62,1.8,.009]]
-    .map(([at, midi, duration, level]): Note => ({ voice: 'soft-reed', at, midi, duration, level, pan: -.1 })),
+    .map(reed),
 ].sort((a, b) => a.at - b.at);
+/** Each curtain's figure gets a reply over its second chord, so it is not left hanging for the rest of the loop. */
+const answers: Partial<Record<LinesScorePhase, number[][]>> = {
+  first: [[17,71,1.15,.010], [18.4,69,1.15,.0095], [19.8,67,1.6,.009]],
+  second: [[8,73,1.15,.010], [9.4,71,1.15,.0095], [10.8,69,1.6,.009]],
+  third: [[9,67,1.15,.010], [10.4,69,1.15,.0095], [11.8,71,1.6,.009]],
+  family: [[10,74,1.2,.010], [11.5,71,1.25,.0095], [13,69,1,.009], [14.3,67,1.6,.009]],
+};
+/** Melody attacks further apart than this belong to separate figures. */
+const FIGURE_GAP = 1.5;
 
 interface Section extends Phrase<Note> { chords: { at: number; tones: readonly number[] }[] }
-const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
-  notes: LINES_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
-  chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
-}, from === 0 ? { to: 8, melody: JOURNEY_THEME.slice(0, 3).map((midi, i): Note => ({
-  voice: 'soft-reed', midi, at: [2, 4, 5.4][i], duration: 1.3, level: [0.011, 0.01, 0.009][i], pan: -.1,
-})) } : {});
+const section = (phase: LinesScorePhase, from: number, to: number, seconds: number): Section => {
+  const answer = (answers[phase] ?? []).map(reed);
+  const polished = polishPhrase<Note, Section>({ seconds,
+    notes: [...LINES_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })), ...answer]
+      .sort((a, b) => a.at - b.at),
+    chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
+  }, from === 0 ? { to: 8, melody: JOURNEY_THEME.slice(0, 3).map((midi, i): Note => ({
+    voice: 'soft-reed', midi, at: [2, 4, 5.4][i], duration: 1.3, level: [0.011, 0.01, 0.009][i], pan: -.1,
+  })) } : {});
+  // The quieter verse rests the reply whole; dropping single notes left holes inside the figures.
+  const rested = polished.notes.filter(n => !isMelody(n) || !answer.some(a => a.at === n.at && a.midi === n.midi));
+  return { ...polished, variants: [polished.notes, rested, polished.variants?.[2] ?? polished.notes] };
+};
 export const LINES_SECTIONS: Record<LinesScorePhase, Section> = {
-  first: section(0,22,26), second: section(22,34,18), third: section(34,47,18),
-  family: section(47,54,18), door: section(54,63,12), shore: section(63,Infinity,16),
+  first: section('first',0,22,26), second: section('second',22,34,18), third: section('third',34,47,18),
+  family: section('family',47,54,18), door: section('door',54,63,12), shore: section('shore',63,Infinity,16),
 };
 interface Part {
   phase: LinesScorePhase; bus: GainNode; melody: GainNode; epoch: number; cycle: number; next: number;
-  stopped: boolean; voices: Set<OscillatorNode>;
+  stopped: boolean; voices: Set<OscillatorNode>; melodyEnd: number; resting: boolean;
 }
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
@@ -66,14 +83,23 @@ export class LinesScore {
       const bus = this.ctx.createGain(); bus.gain.value = 0; bus.connect(this.bus);
       bus.gain.setTargetAtTime(1, now, .8);
       const melody = this.ctx.createGain(); melody.gain.value = quiet ? 0 : melodyLevel; melody.connect(bus);
-      this.current = { phase, bus, melody, epoch: now + .08, cycle: 0, next: 0, stopped: false, voices: new Set() };
+      this.current = { phase, bus, melody, epoch: now + .08, cycle: 0, next: 0, stopped: false, voices: new Set(),
+        melodyEnd: -Infinity, resting: quiet };
       this.parts.add(this.current);
     }
-    // Cue space also quiets a retiring phrase, including its scheduled lookahead notes.
-    for (const part of this.parts) part.melody.gain.setTargetAtTime(quiet ? 0 : melodyLevel, now, quiet ? .06 : .5);
+    // Cue space lets a sounding figure finish, then quiets it, including a retiring phrase's lookahead notes.
+    for (const part of this.parts) {
+      const clear = quiet && now >= part.melodyEnd;
+      part.melody.gain.setTargetAtTime(clear ? 0 : melodyLevel, now, clear ? .06 : .5);
+    }
     const part = this.current, pattern = LINES_SECTIONS[phase];
     schedulePhrase(part, pattern, now, (note, at) => {
-      if (!(quiet && note.voice === 'soft-reed')) this.play(part, note, at);
+      if (note.voice === 'soft-reed') {
+        if (at > part.melodyEnd + FIGURE_GAP) part.resting = quiet;
+        if (part.resting) return;
+        part.melodyEnd = Math.max(part.melodyEnd, at + note.duration);
+      }
+      this.play(part, note, at);
     }, until);
   }
 

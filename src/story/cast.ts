@@ -10,6 +10,7 @@ import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
 import type { LinesScorePhase } from '../audio/lines-score';
+import type { OpeningScorePhase } from '../audio/opening-score';
 import type { ArrivalMusic } from '../audio/arrival-music';
 import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
@@ -101,6 +102,8 @@ export interface Chapter {
   readonly arrivalMusic?: ArrivalMusic;
   readonly arrivalReady?: boolean;
   readonly homewardReady?: boolean;
+  /** The opening holds its home chord under the skein and rests from the fall until the child carries the bird away. */
+  readonly openingScore?: OpeningScorePhase;
   readonly summitScore?: SummitScorePhase;
   readonly homeEndingTime?: number;
   /** The long sea arrangement follows actual swimming and coastal approach. */
