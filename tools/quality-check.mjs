@@ -201,13 +201,15 @@ console.log('Budget rung for very large viewports and 30 fps presentation caps p
 // can't be timed; `lie` for headroom timings that claim room the next rung doesn't have.
 const REFRESH = 1000 / 60;
 const touchDevice = () => create(2, 1376, 1032, false, 1.25, 2);
-const play = (q, from, to, ms, { fence = true, lie = false, cap = 1 } = {}) => {
+const play = (q, from, to, ms, { fence = true, lie = false, cap = 1, late = 0 } = {}) => {
   const seen = [];
-  let interval = REFRESH * cap;
+  let interval = REFRESH * cap, frame = 0;
   for (let now = from; now < to; now += interval) {
     q.frame(now, interval);
     const work = ms(q.level, now) * q.level.ratio ** 2 * [.7, .85, 1][q.level.detail];
-    if (q.probing && fence) { const deadline = q.probeDeadline(0, 0); q.gpu(work <= deadline || lie && deadline < REFRESH); }
+    // `late` is the share of frames whose finished fence is reported too late, as a busy shared GPU does.
+    const reportedLate = frame++ % 10 < late * 10;
+    if (q.probing && fence) { const deadline = q.probeDeadline(0, 0); q.gpu(!reportedLate && work <= deadline || lie && deadline < REFRESH); }
     interval = Math.max(cap, Math.ceil(work / REFRESH - 1e-6)) * REFRESH;
     seen.push({ now, ratio: q.level.ratio, detail: q.level.detail });
   }
@@ -236,16 +238,17 @@ const atTop = row => row.ratio === 1.25 && row.detail === 2;
 }
 {
   // Headroom at the ceiling (6 ms of work at 1×), pushed down by a four-times load for ten seconds.
-  const lifted = fence => {
+  const lifted = (fence, late = 0) => {
     const { quality: q } = touchDevice();
     q.reset(0);
-    const seen = play(q, 0, 60000, (_, now) => now < 10000 ? 24 : 6, { fence });
+    const seen = play(q, 0, 60000, (_, now) => now < 10000 ? 24 : 6, { fence, late });
     assert(seen.some(row => row.now < 10000 && row.ratio < 1), 'the load pushes it well down');
     return seen.find(row => row.now >= 10000 && atTop(row)).now - 10000;
   };
-  const timed = lifted(true), untimed = lifted(false);
+  const timed = lifted(true), untimed = lifted(false), unclear = lifted(true, .3);
   assert(timed <= 8000, `a device with headroom climbs back within seconds once load lifts: ${Math.round(timed)} ms`);
   assert(untimed > 12000, `without GPU timings the smooth window is the fallback: ${Math.round(untimed)} ms`);
+  assert.equal(unclear, untimed, 'timings that neither prove nor rule out headroom leave it to the smooth window');
 }
 {
   // A 30 fps display: the cap is recognised at the ceiling, which then stops timing frames.

@@ -44,6 +44,11 @@ const HEADROOM_MS = 10;
 /** Timed frames needed in one review, and the share of them that must meet the deadline, to climb at once. */
 const HEADROOM_PROBES = 30;
 const HEADROOM_EARLY = 0.95;
+/**
+ * Fewer on time than this rules a climb out. In between, the smooth window decides: a browser can be slow to report
+ * a finished fence (2–4 ms in Chrome), and a GPU shared with other work finishes late now and then.
+ */
+const HEADROOM_NONE = 0.5;
 const REVIEW_MS = 1500;
 const SETTLE_MS = 2500;
 /** A level just climbed into shows whether it fits within a second; every further second spent finding out is spent hitching. */
@@ -222,9 +227,12 @@ export class Quality {
     if (this.capped && p10 < UNCAPPED_MS) this.capped = false;
     else if (!this.capped && p10 > CAPPED_MS * 0.9 && p90 < CAPPED_MS * 1.1
       && this.probes >= CAP_PROBES && this.early >= this.probes * CAP_EARLY) this.capped = true;
-    // Fence evidence skips the smooth window's first wait, not the doubling a failed climb adds to it.
-    const fenced = this.timed >= HEADROOM_PROBES;
-    const climbMs = !fenced ? this.climbMs : this.early >= this.timed * HEADROOM_EARLY ? this.climbMs - CLIMB_MS : Infinity;
+    let climbMs = this.climbMs;
+    if (this.timed >= HEADROOM_PROBES) {
+      // Fence evidence skips the smooth window's first wait, not the doubling a failed climb adds to it.
+      if (this.early >= this.timed * HEADROOM_EARLY) climbMs -= CLIMB_MS;
+      else if (this.early < this.timed * HEADROOM_NONE) climbMs = Infinity;
+    }
     this.probes = this.early = this.timed = 0;
     const scale = this.capped ? CAPPED_MS / REFRESH_MS : 1;
     if (mean > SLOW_MS * scale) {
