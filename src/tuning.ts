@@ -976,9 +976,11 @@ export const tuning = {
     farewellBoatExtent: 3.2, farewellMastHeight: 4.8,
     sideResponse: 1.2, childTurn: 0.7,
     /** Seconds the sail must stay across before the lens changes quarter; the farewell's release of the island. */
-    sideCommit: 5, farewellLetGo: 0.35,
-    /** The whale is watched from within this arc of the travelling view, radians. */
-    whaleArc: 0.8,
+    sideCommit: 5, farewellLetGo: 0.35, farewellSwing: 22,
+    /** How quickly the travelling view follows the hull's heading, per second. */
+    headingResponse: 0.6,
+    /** The whale is watched from within this arc of the travelling view, and let go over `whalePass` beyond it. */
+    whaleArc: 0.8, whalePass: 0.6,
     whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
   },
   seaPassage: {

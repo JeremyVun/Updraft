@@ -1,12 +1,13 @@
 // Real mouse/touch sweeps through the piano; idle, colour-front and completion checks.
 // W=390 H=844 node tools/piano-check.mjs for portrait. Captures/reports stay in /tmp.
+// PREFIX=<path> names the outputs; VIDEO=1 also records <prefix>-video/*.webm of the whole puzzle.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {reviewCapture} from './lib/review-capture.mjs';
 const viewport = { width: Number(process.env.W ?? 1440), height: Number(process.env.H ?? 900) };
 const portrait = viewport.width < viewport.height;
-const prefix = `/tmp/updraft-piano-new-${portrait ? 'portrait' : 'desktop'}`;
+const prefix = process.env.PREFIX ?? `/tmp/updraft-piano-new-${portrait ? 'portrait' : 'desktop'}`;
 const lock = '/tmp/updraft-chromium.lock';
 for (;;) {
   try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
@@ -22,7 +23,9 @@ const report={viewport,states:[],errors:[]};
 try {
   browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,
     args:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist','--autoplay-policy=no-user-gesture-required']});
-  const page=await browser.newPage({viewport,hasTouch:portrait});
+  const context=await browser.newContext({viewport,hasTouch:portrait,
+    ...(process.env.VIDEO==='1'?{recordVideo:{dir:prefix+'-video',size:viewport}}:{})});
+  const page=await context.newPage();
   page.on('pageerror',e=>report.errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))report.errors.push(m.text());});
   await page.goto(`${process.env.BASE??'http://127.0.0.1:5230/'}?shot=1&chapter=piano`);
