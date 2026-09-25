@@ -195,13 +195,17 @@ a quality increase. `node tools/quality-check.mjs` verifies these cases and norm
 The governor targets 60 fps unless presentation is capped. Auto opens at its ceiling with full world detail, on
 touch as on mouse. Every 1.5 seconds it reviews up to 90 frame timing samples, discarding the slowest 5%. A trimmed
 mean above 17.6 ms lowers quality (two rungs above 26.4 ms). Below its ceiling Auto climbs on evidence: `main.ts`
-polls each frame's fence 10 ms after the frame began (`timeLastFrame`: one timer and a `getSyncParameter` poll,
-never a wait), and a review with p90 under 17.2 ms in which at least 95% of 30 or more timed frames had finished by
-then climbs one rung at once. The next rung costs at most 1.56× the pixels (1× → 1.25×), so 10 ms of work stays
-inside one refresh there; the frame's CPU time counts against the deadline without growing with pixels, so the test
-errs safe. Frames that were timed and missed it hold the level. Where frames can't be timed (no fence, or timers
-firing more than 2 ms late), a sustained p90 below 17.2 ms for 12 seconds earns one increase instead. At the ceiling
-and on manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+polls each frame's fence 10 ms after the frame was submitted (`timeLastFrame`: one timer and a `getSyncParameter`
+poll, never a wait), and a review with p90 under 17.2 ms in which at least 95% of 30 or more timed frames had
+finished by then climbs one rung at once. The next rung costs at most 1.56× the pixels (1× → 1.25×), so 10 ms of work
+stays inside one refresh there. The deadline runs from submission, not the frame's start, because the script's time
+doesn't grow with pixels: timed from the start, even 1× frames on the M4 Pro (about 3 ms of script) almost never met
+10 ms while 1.25× ran at a steady 60. The 2–4 ms Chrome takes to report a finished fence (a clear-only frame)
+still counts against it, so the test errs safe. Measured from submission at 1376×1032 CSS, DPR 2, MSAA 2, 98% of
+frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Frames that
+were timed and missed the deadline hold the level. Where frames can't be timed (no fence, or timers firing more than
+2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below 17.2 ms for 12
+seconds earns one increase instead. At the ceiling and on manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
 capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
 frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
 least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
