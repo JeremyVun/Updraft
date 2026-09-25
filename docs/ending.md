@@ -605,8 +605,13 @@ The climb keeps its length. What a recording of the whole summit measured, and w
   rubbed against the C-sharp on top of the ending's first chord.
 - **Watching the family go** is a second shorter (`WATCHES_FOR` 15).
 - **Camera jolts:** the family's arrival and the walk over the brow start from the rendered camera and ease onto
-  their framing (`HANDOVER`, 5 and 8 s) instead of kicking to 10–16°/s; the goodbye view that followed the paper
-  keeps its last motion for up to three seconds (`COAST`) instead of stopping dead in one frame, then holds.
+  their framing (`HANDOVER`, 5 and 8 s) instead of kicking to 10–16°/s. The view that follows the paper returns to
+  the crest on a sine curve over six seconds (`returnFrom` 2.5, `WATCHES_IT` 8.5: the walk home starts 1.5 s later),
+  peaking at 11°/s instead of 16, and keeps its last motion for up to three seconds (`COAST`) instead of stopping
+  dead in one frame, then holds. On the harbour crossing, route progress jumped 0.67 → 0.78 when a waypoint was
+  recognised early and swung the lens at once; crossings now frame from a damped follower of progress
+  (`FRAMED_RESPONSE`), leaving the music's gates on the real value. `tools/ending-view-check.mjs` fails any staged
+  view whose turn rate changes by 2.5°/s or more within a quarter second.
 
 `tools/summit-film.mjs` records the summit with the game's own audio on a fixed clock and logs the camera's turn
 rate per frame; `tools/ending-audition.mjs` renders the ending score for side-by-side auditions.
