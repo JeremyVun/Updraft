@@ -201,14 +201,16 @@ export class PianoStop {
       distance += gap * t.approachBack;
       shot.subjects = this.approachFrame;
     }
-    if (this.responseAt >= 0 && this.roseFrom === 0) {
-      const age = this.now - this.responseAt;
-      const open = THREE.MathUtils.smoothstep(age, 0, t.responseLift)
-        * (1 - THREE.MathUtils.smoothstep(age, t.responseHold, t.responseReturn));
-      const step = Math.min(2, this.heardTo - 1);
-      distance += (t.responseBack[step] - distance) * open;
-      height += (t.responseUp[step] - height) * open;
-      this.mid.z -= (t.responseOn[step] - t.frameOn) * open;
+    if (this.heardTo > 0 && this.roseFrom === 0) {
+      // Each answer steps the view back and up to take in the colour it sent, and the view stays there: the
+      // field grows with the music, and the lens never pumps out and back to the keys between answers.
+      const step = Math.min(t.restBack.length, this.heardTo);
+      const ease = THREE.MathUtils.smoothstep(this.now - this.responseAt, 0, t.restEase);
+      const rest = (list: readonly number[], base: number, n: number): number => n > 0 ? list[n - 1] : base;
+      const on = THREE.MathUtils.lerp(rest(t.restOn, t.frameOn, step - 1), rest(t.restOn, t.frameOn, step), ease);
+      distance = THREE.MathUtils.lerp(rest(t.restBack, distance, step - 1), rest(t.restBack, distance, step), ease);
+      height = THREE.MathUtils.lerp(rest(t.restUp, height, step - 1), rest(t.restUp, height, step), ease);
+      this.mid.z -= on - t.frameOn;
     }
     if (this.roseFrom > 0) {
       /** Eased at both ends, so the rise begins and settles without a hand on it anywhere in between. */

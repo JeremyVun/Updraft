@@ -234,7 +234,7 @@ camera holds the child, keys and field together and sits slightly farther back a
 feedback. The child's first note sends a wind trace into the grass; the player's answers plant colour as
 their notes travel. Repeated quiet demonstrations do not spend the field's colour. Every answered sweep
 sends a broad musical front from the piano: radii 45, 85 and 125, then the whole island.
-The camera opens over the field for each answer and returns to the keys before the next invitation. Loose curling gusts, overlapping soft blooms and an uneven front of moving grass travel with the colour; the final lullaby restores the island while the
+Each answer steps the camera back and up over the field and it stays there (September 25: it used to return to the keys each time, an in-and-out per answer; see [camera.md](camera.md)). Loose curling gusts, overlapping soft blooms and an uneven front of moving grass travel with the colour; the final lullaby restores the island while the
 cygnet walks the keys. The final camera rises and widens with that wave, retaining the piano and child.
 The meadow's grey hold is released only after the front covers it. The pond retains its later close reveal.
 Competing wind sounds and gesture chimes are hushed during the duet; the piano remains present as the camera

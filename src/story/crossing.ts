@@ -163,6 +163,9 @@ export class CrossingChapter implements Chapter {
   private readonly departure = new THREE.Vector2();
   /** Which side of the stern the camera rides on; eased, so it never snaps across when the boom swings. */
   private quarter = 1;
+  /** The side the lens has committed to; a boom that swings across has to stay there a while to move it. */
+  private side = 1;
+  private sideAgainst = 0;
   private nextGlance = 8;
   private glanceUntil = 0;
   private readonly swimAt: number | null;
@@ -188,7 +191,7 @@ export class CrossingChapter implements Chapter {
     this.limit = this.cruiseSpeed;
     this.departure.set(cast.boat.position.x, cast.boat.position.z);
     this.shot.carryAnchor = cast.boat.position;
-    this.quarter = -cast.boat.sailSide || 1;
+    this.quarter = this.side = -cast.boat.sailSide || 1;
     cast.boat.speedLimit = this.cruiseSpeed;
     this.music = opts.music ?? 'sea';
     this.homeward = opts.homeward ?? false;
@@ -445,8 +448,13 @@ export class CrossingChapter implements Chapter {
     this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? 0.3 : 0.06)));
 
     this.swimFrame += ((swimming ? 1 : 0) - this.swimFrame) * (1 - Math.exp(-dt * 0.65));
-    if (!this.wantsDolphins) this.quarter += (-boat.sailSide - this.quarter)
-      * (1 - Math.exp(-dt * tuning.crossingCamera.sideResponse));
+    if (!this.wantsDolphins) {
+      // The look back keeps its side until it has swung home: rounding a headland must not send it round the boat.
+      const lookingBack = this.lookBack !== null && this.time < this.farewellFor + SWING;
+      this.sideAgainst = -boat.sailSide !== this.side && !lookingBack ? this.sideAgainst + dt : 0;
+      if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
+      this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * tuning.crossingCamera.sideResponse));
+    }
     this.frame(back);
   }
 
@@ -635,7 +643,10 @@ export class CrossingChapter implements Chapter {
       this.farewellAttention.point.copy(back);
       this.farewellAttention.strength = 1 - swing;
       this.shot.attention = this.farewellAttention;
-      const establish = THREE.MathUtils.smootherstep(this.time, 0, k.farewellEstablish) * (1 - swing);
+      // The island is behind the child anyway; its claim on the frame lets go as the swing home begins, so the lens
+      // never backs away from the child to keep it.
+      const establish = THREE.MathUtils.smootherstep(this.time, 0, k.farewellEstablish)
+        * (1 - THREE.MathUtils.smootherstep(swing, 0, k.farewellLetGo));
       this.farewellSubjects.tertiary.copy(this.sailingSubjects.primary).lerp(back, establish);
       // Reserve the whole moving hull and sail, not just the child's centre, beside the island.
       const extent = k.farewellBoatExtent, mast = k.farewellMastHeight;
@@ -691,7 +702,11 @@ export class CrossingChapter implements Chapter {
       this.look.y = Math.max(this.look.y, 1.5);
       // Put the whale ahead in depth, with the boat in the foreground. A broadside fit of two distant
       // subjects pulled so far away that it miniaturised both of them.
-      const encounter = Math.atan2(boat.position.x - this.look.x, boat.position.z - this.look.z) + this.quarter * 0.2;
+      const toward = Math.atan2(boat.position.x - this.look.x, boat.position.z - this.look.z) + this.quarter * 0.2;
+      // Turn toward the whale from the travelling view, but never chase it round the boat as they pass it.
+      const astern = boat.yaw + Math.PI + this.quarter * angle;
+      const encounter = astern + THREE.MathUtils.clamp(
+        Math.atan2(Math.sin(toward - astern), Math.cos(toward - astern)), -k.whaleArc, k.whaleArc);
       this.whaleAttention.point.copy(this.look);
       this.whaleAttention.strength = watching;
       this.whaleAttention.bearing = encounter;

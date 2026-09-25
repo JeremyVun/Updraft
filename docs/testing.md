@@ -74,7 +74,6 @@ Focused checks:
   exercises another compiler/backend, not another physical GPU family or Safari.
 - `node tools/water-texture-check.mjs`: exact original texture bytes and settings at five resolutions.
 - `node tools/nearby-check.mjs`: 2,000 nearest-creature comparisons, ties, boundaries and live populations.
-- `node tools/camera-parity-check.mjs`: 7,200 exact original/refactored camera frames, including rotation.
 - `node tools/progress-schema-check.mjs`: current/legacy checkpoint layouts and malformed-record parity.
 - `COMPARE_BASE=http://127.0.0.1:5233/ BASE=http://127.0.0.1:5235/ node tools/render-parity-check.mjs /tmp/updraft-render`:
   12 seeded frozen scene comparisons against an unchanged build, actor/camera bounds, terrain parity and
@@ -87,6 +86,9 @@ Focused checks:
 - `node tools/chapter-view-check.mjs`: prepared camera/focus across chapter transitions without an extra story tick.
 - `node tools/camera-direction-check.mjs`: shared composition decisions, orbital clearance, smooth turns,
   carry/anchor changes, interaction holds, exact paths, portrait resize and decision-layer CPU cost.
+- `BASE=<dev> TRACE=1 node tools/playthrough.mjs <prefix>` then `node tools/camera-intent-report.mjs <prefix>`:
+  records every camera step of a real journey and lists stalls, in-and-out dollies, pan reversals and jerks by
+  chapter and beat, naming the rig correction that moved across each. See [camera.md](camera.md).
 - `BASE=<preview> node tools/camera-chapters-browser-check.mjs`: all chapter entrances in landscape and
   portrait, checking continuous turns and declared primary subjects; saves frames for visual review.
 - `node tools/crossing-camera-check.mjs`: departure/companions/arrival movement, whale pan and coverage,

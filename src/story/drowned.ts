@@ -70,6 +70,9 @@ export class DrownedChapter implements Chapter {
   private readonly seen = new THREE.Vector3();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private quarter = 1;
+  /** The side the lens has committed to; the sail must stay across a while before the view changes quarter. */
+  private side = 1;
+  private sideAgainst = 0;
   private stillBearing = Math.PI + 0.9;
   private filled = 0;
   private stirred = false;
@@ -98,7 +101,7 @@ export class DrownedChapter implements Chapter {
     boat.mooring = null;
     this.departure.set(boat.position.x, boat.position.z);
     this.shot.carryAnchor = boat.position;
-    this.quarter = -boat.sailSide || 1;
+    this.quarter = this.side = -boat.sailSide || 1;
     boat.steerFor = DROWNED_CHANNEL[0];
     boat.canGround = false;
     boat.grounded = false;
@@ -197,7 +200,9 @@ export class DrownedChapter implements Chapter {
     this.watch();
     const sideResponse = this.beat === 'snatch' || (this.beat === 'after' && this.t < tuning.storm.planeLookFor) ? 3
       : this.beat === 'still' ? 1.8 : tuning.drownedCamera.sideResponse;
-    this.quarter += (-boat.sailSide - this.quarter) * (1 - Math.exp(-dt * sideResponse));
+    this.sideAgainst = -boat.sailSide !== this.side ? this.sideAgainst + dt : 0;
+    if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
+    this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * sideResponse));
     this.frame();
   }
 

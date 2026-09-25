@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { Commitment, type Shot } from '../camera';
 import type { WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
 import { TREE } from '../world/landmarks';
@@ -61,6 +61,9 @@ export class IslandChapter implements Chapter {
   /** The opening bearing: a little west of south, so the beached boat sits at the right of frame beside the child. */
   private readonly opening = new THREE.Vector3(-0.28, 0, 0.96).normalize();
   private now = 0;
+  /** Room for the plane's flights: opened for the longest recent throw, not pumped in and out with each one. */
+  private readonly reach = new Commitment();
+  private reachBeat = '';
   private sinceLifeCheck = 0;
   private islandLife = 0;
   private restoredAt = 0;
@@ -180,7 +183,7 @@ export class IslandChapter implements Chapter {
     this.hush += (this.hushWanted - this.hush) * (1 - Math.exp(-dt * 0.9));
 
     if (p.held) p.hold(c);
-    this.frame();
+    this.frame(dt);
   }
 
   /** Measures the island's life a few times a second; once most of it lives, the rest follows on its own. */
@@ -544,7 +547,7 @@ export class IslandChapter implements Chapter {
   }
 
   /** Close on the child at first; wide enough for child and plane while they play; low beside the tree at the end. */
-  private frame(): void {
+  private frame(dt = Infinity): void {
     const c = this.cast.child.position;
     const s = this.shot;
     if (this.beat === 'still') {
@@ -614,7 +617,10 @@ export class IslandChapter implements Chapter {
     const fy = Math.max(heightAt(fx, fz), 0) * 0.6 + 2 + Math.max(0, p.y - 12) * 0.4;
     s.target.set(fx, fy, fz);
     const spread = Math.hypot(p.x - c.x, p.z - c.z) + Math.max(0, p.y - c.y - 6) * 0.8;
-    s.distance = THREE.MathUtils.clamp(30 + spread * 0.9, 36, 84);
+    const k = tuning.cinematography;
+    const reach = THREE.MathUtils.clamp(30 + spread * 0.9, 36, 84);
+    if (this.reachBeat !== this.beat) { this.reachBeat = this.beat; this.reach.reset(reach); }
+    s.distance = this.reach.update(reach, dt, k.reachOpen, k.reachSettle, k.reachHold);
     s.height = s.distance * 0.25;
     if (this.beat === 'toTree') {
       // Round the eastern side during the climb, arriving behind the child for the outlook.

@@ -117,6 +117,14 @@ path beside the bank. `exact` preserves the doorway's own continuous choreograph
 motion/fitting state. Carry uses a physical `carryAnchor`, rejects anchor-identity changes and teleports,
 and accepts legitimate movement at low frame rates. Zero-time preparation cannot advance the camera.
 
+Corrections commit (September 25, [camera.md](camera.md)). Subject fitting and ground occlusion go through
+`Commitment`: a critically damped move toward what is needed that keeps room it has made until the need has stayed
+smaller for `fitHold`/`occlusionHold` seconds, then settles slowly; only the primary's 0.9 safety frame is enforced
+at once. A follow carries `followShare` of its target's smoothed travel, so walking and pausing do not stretch the
+shot; staged eyes and boat carry are unaffected, and the share moves with the gaze velocity at staging handovers.
+Boat carry takes up the anchor's speed at once but brakes no harder than `carryBrake`. Chapters can size room for
+play with the same `Commitment` (the still island's plane).
+
 Feel values live in `tuning.cinematography`. `tools/camera-direction-check.mjs` covers orbital clearance,
 turn acceleration/rate, eased focus/dolly/height at 10–120 Hz, carry, attention, stable composition choices, interaction holds,
 exact-path exits and portrait resizing. Its CPU microbenchmark measures the new decision layer alone;
@@ -124,8 +132,7 @@ it is not a phone frame-rate or rendering benchmark.
 
 The creature environment and its life callback are reused between simulation steps. Nearby-creature queries
 iterate persistent population arrays, preserving their tie order and strict radius. Camera subject fitting
-uses the same arithmetic without per-step arrays or a capturing closure; 7,200 frames match the original
-camera exactly (`tools/camera-parity-check.mjs`). These changes do not reorder simulation work.
+uses the same arithmetic without per-step arrays or a capturing closure. These changes do not reorder simulation work.
 
 GLSL descending ramps use `1.0 - smoothstep(low, high, x)` with distinct, ascending edges. Reversed or equal
 GLSL edges are undefined, even if a local driver draws the expected curve. CPU reversible helpers remain

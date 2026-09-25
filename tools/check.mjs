@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const quick = [
-  'shader', 'water-texture', 'progress-schema', 'nearby', 'camera-parity', 'pointer-contact',
+  'shader', 'water-texture', 'progress-schema', 'nearby', 'pointer-contact',
   'chapter-view', 'flock-audio', 'frame-time', 'wind-clock', 'wind-gesture-logic', 'quality',
   'boot-cloth', 'analytics',
 ];

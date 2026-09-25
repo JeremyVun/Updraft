@@ -4,12 +4,14 @@
 // Up to 60 minutes; uses the shared GPU lock. Screenshots and structured failure/progress evidence go to /tmp.
 // REVIEW=1 records video and one-second frames. UNTIL=<chapter> ends a focused replay on entering that chapter.
 // SAVE_FILE=<checkpoint.json> continues through the normal Continue button after a repaired failure.
+// TRACE=1 writes every camera step (eye, gaze, subject and the rig's corrections) to <prefix>-camera.jsonl.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {openBrowser} from './lib/browser.mjs';
 const prefix=process.argv[2]??'/tmp/updraft-playthrough';
 const base=process.env.BASE??'http://127.0.0.1:5230/';
 const review=process.env.REVIEW==='1';
+const trace=process.env.TRACE==='1';
 const expected=['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','home'];
 const until=process.env.UNTIL;
 if(until)assert(expected.includes(until),'UNTIL must be a journey chapter');
@@ -86,9 +88,22 @@ try {
   assert.equal(await page.locator('#begin').innerText(),saved?'Continue':'Begin');await page.locator('#begin').click();
   await page.waitForFunction(()=>window.__ready===true,null,{timeout:60000});
   startReview();
+  if(trace){fs.writeFileSync(prefix+'-camera.jsonl','');await page.evaluate(()=>{
+    const g=__game,rig=g.rig,original=rig.update.bind(rig),r=v=>v?[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]:null;
+    let label='';window.__cameraTrace=[];
+    rig.update=(dt,time,shot,pace,hold)=>{
+      original(dt,time,shot,pace,hold);
+      const now=g.story.name+'/'+g.story.current.beat;
+      window.__cameraTrace.push({t:+time.toFixed(4),dt,...(now!==label?{at:(label=now)}:{}),eye:r(rig.camera.position),look:r(rig.look),
+        target:r(shot.target),want:shot.eye?r(shot.eye):null,primary:r(shot.subjects?.primary),focus:r(g.story.focus),child:r(g.child.position),
+        fit:+rig.fitBack.toFixed(3),pull:+rig.pull.toFixed(3),lift:+rig.lift.toFixed(3),rise:+rig.sceneryRise.toFixed(3),
+        side:r(rig.sceneryOffset),offset:+rig.direction.offset.toFixed(4),pace,hold,placed:rig.placed,transition:!!g.story.transitionView});
+    };
+  });}
   const started=Date.now();let chapterAt=started,lastBeat='',lastSave='';
   while(Date.now()-started<60*60*1000){
     const s=await snapshot();
+    if(trace)fs.appendFileSync(prefix+'-camera.jsonl',(await page.evaluate(()=>window.__cameraTrace.splice(0).map(e=>JSON.stringify(e)).join('\n')+'\n')).replace(/^\n$/,''));
     report.saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('updraft.progress.v1')??'null'));
     assert.equal(report.errors.length,0,report.errors.slice(0,5).join('\n'));
     if(s.trodden)assert(s.trodden.every(Number.isFinite)&&s.trodden[1]>0,

@@ -61,6 +61,35 @@ export interface Shot {
     points?: readonly THREE.Vector3[]; margin: number; extra: number };
 }
 
+/**
+ * A framing correction with intent. It moves toward what the scene needs on a critically damped curve, keeps room
+ * it has made until the need has stayed smaller for a while, and so never pumps in and out with each passing change.
+ */
+export class Commitment {
+  value = 0;
+  private speed = 0;
+  private goal = 0;
+  private calm = 0;
+
+  reset(value = 0): void {
+    this.value = this.goal = value;
+    this.speed = this.calm = 0;
+  }
+
+  update(need: number, dt: number, open: number, settle: number, hold: number): number {
+    if (!Number.isFinite(dt)) { this.reset(need); return need; }
+    if (dt <= 0) return this.value;
+    if (need >= this.goal) { this.goal = need; this.calm = 0; }
+    else if ((this.calm += dt) >= hold) this.goal = need;
+    const response = this.goal >= this.value ? open : settle;
+    const decay = Math.exp(-response * dt);
+    const error = this.value - this.goal, spring = this.speed + response * error;
+    this.value = this.goal + (error + spring * dt) * decay;
+    this.speed = (this.speed - response * spring * dt) * decay;
+    return this.value;
+  }
+}
+
 /** Glides between the shots the story asks for, breathing gently, never cutting. */
 export class CameraRig {
   readonly camera = new THREE.PerspectiveCamera(38, 1, 0.5, 7000);
@@ -82,8 +111,19 @@ export class CameraRig {
   private readonly lastTarget = new THREE.Vector3();
   private readonly lastCarryAnchor = new THREE.Vector3();
   private readonly moved = new THREE.Vector3();
+  /** The target's own travel, smoothed: a follow carries part of it so a walking subject does not stretch the shot. */
+  private readonly following = new THREE.Vector3();
+  /** The carried velocity: it takes up the anchor's speed at once but brakes no harder than the lens can. */
+  private readonly carried = new THREE.Vector3();
+  private readonly carrying = new THREE.Vector3();
   private readonly want = new THREE.Vector3();
   private readonly probe = new THREE.Vector3();
+  private readonly pullCommitment = new Commitment();
+  private readonly liftCommitment = new Commitment();
+  private readonly fitCommitment = new Commitment();
+  private readonly fitShift = new THREE.Vector3();
+  private readonly fitShiftSpeed = new THREE.Vector3();
+  private readonly fitShiftWant = new THREE.Vector3();
   private lift = 0;
   private sceneryRise = 0;
   private readonly sceneryOffset = new THREE.Vector3();
@@ -140,6 +180,7 @@ export class CameraRig {
     this.direction.reset();
     this.turnSpeed = 0;
     this.eyeSpeed.set(0, 0, 0); this.lookSpeed.set(0, 0, 0); this.orbitSpeed.set(0, 0, 0);
+    this.following.set(0, 0, 0); this.carried.set(0, 0, 0);
     this.placed = !!(shot.eye && !shot.orbit || shot.composition === 'hold');
     this.carrySource = shot.carryAnchor;
     this.lastShot = shot;
@@ -149,6 +190,8 @@ export class CameraRig {
     this.sceneryRise = 0;
     this.sceneryOffset.set(0, 0, 0); this.sceneryVelocity.set(0, 0, 0);
     this.pull = 0;
+    this.pullCommitment.reset(); this.liftCommitment.reset(); this.fitCommitment.reset();
+    this.fitShift.set(0, 0, 0); this.fitShiftSpeed.set(0, 0, 0);
     this.clear = shot.clearance ?? GROUND_CLEARANCE;
     if (shot.free || shot.exact) {
       this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
@@ -173,9 +216,12 @@ export class CameraRig {
       this.carrySource = shot.carryAnchor;
       this.turnSpeed = 0; this.direction.reset();
       this.eyeSpeed.set(0, 0, 0); this.lookSpeed.set(0, 0, 0); this.orbitSpeed.set(0, 0, 0);
+      this.following.set(0, 0, 0); this.carried.set(0, 0, 0);
       this.placed = true;
       this.fitBack = 0; this.fitOffset.set(0, 0, 0);
       this.pull = 0; this.lift = 0; this.sceneryRise = 0;
+      this.pullCommitment.reset(); this.liftCommitment.reset(); this.fitCommitment.reset();
+      this.fitShift.set(0, 0, 0); this.fitShiftSpeed.set(0, 0, 0);
       this.sceneryOffset.set(0, 0, 0); this.sceneryVelocity.set(0, 0, 0);
       this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
       return;
@@ -183,13 +229,21 @@ export class CameraRig {
     if (dt <= 0) return;
     const k = 1 - Math.exp(-dt * pace);
     this.moved.subVectors(shot.carryAnchor ?? shot.target, shot.carryAnchor ? this.lastCarryAnchor : this.lastTarget);
+    const travel = shot.carry || this.moved.length() > tuning.cinematography.maxCarrySpeed * dt ? 0 : 1 / dt;
+    this.following.lerp(this.want.copy(this.moved).multiplyScalar(travel),
+      1 - Math.exp(-dt / tuning.cinematography.followSmoothing));
     this.lastTarget.copy(shot.target);
     this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
-    if (shot.carry && this.carrySource === shot.carryAnchor
-      && this.moved.length() <= tuning.cinematography.maxCarrySpeed * dt) {
-      this.eye.add(this.moved);
-      this.look.add(this.moved);
-    }
+    // A new chapter's anchor is not motion to coast on. A boat running aground stops dead; the lens brakes.
+    if (this.carrySource !== shot.carryAnchor) this.carried.set(0, 0, 0);
+    const carries = shot.carry && this.carrySource === shot.carryAnchor
+      && this.moved.length() <= tuning.cinematography.maxCarrySpeed * dt;
+    this.carrying.copy(this.moved).multiplyScalar(carries ? 1 / dt : 0);
+    const brake = tuning.cinematography.carryBrake * dt;
+    if (carries && this.carrying.length() >= this.carried.length() - brake) this.carried.copy(this.carrying);
+    else this.carried.add(this.carrying.sub(this.carried).clampLength(0, brake));
+    this.eye.addScaledVector(this.carried, dt);
+    this.look.addScaledVector(this.carried, dt);
     this.carrySource = shot.carryAnchor;
     this.desired(shot, this.wantEye);
     if (shot.free) {
@@ -204,7 +258,10 @@ export class CameraRig {
     const motion = tuning.cinematography;
     const response = Math.max(0.01, Math.min(motion.maxResponse, pace * motion.framingResponse));
     const placed = !!(shot.eye && !shot.orbit || shot.composition === 'hold');
+    const share = tuning.cinematography.followShare;
     if (placed !== this.placed) {
+      // The carried share of the target's travel is part of an orbit's gaze velocity, not a placed view's.
+      if (placed) this.lookSpeed.addScaledVector(this.following, share);
       // Carry the current velocity between world-space staging and an orbit, as well as its position.
       const x = this.eye.x - this.look.x, z = this.eye.z - this.look.z;
       const radius = Math.max(0.001, Math.hypot(x, z)), sx = x / radius, sz = z / radius;
@@ -216,6 +273,7 @@ export class CameraRig {
         const vx = this.eyeSpeed.x - this.lookSpeed.x, vz = this.eyeSpeed.z - this.lookSpeed.z;
         this.orbitSpeed.set(vx * sx + vz * sz, this.eyeSpeed.y - this.lookSpeed.y, 0);
         this.turnSpeed = (vx * sz - vz * sx) / radius;
+        this.lookSpeed.addScaledVector(this.following, -share);
       }
       this.placed = placed;
     }
@@ -238,6 +296,7 @@ export class CameraRig {
       const decay = Math.exp(-turnResponse * dt);
       const spring = this.turnSpeed - turnResponse * error;
       const turn = error + (-error + spring * dt) * decay;
+      this.look.addScaledVector(this.following, share * dt);
       // A placed move can arrive above the orbit limit. Shed that inherited speed instead of braking in one frame.
       const limit = Math.max(motion.maxTurnSpeed, Math.abs(this.turnSpeed) * Math.exp(-motion.maxResponse * dt));
       this.turnSpeed = (this.turnSpeed - turnResponse * spring * dt) * decay;
@@ -268,22 +327,29 @@ export class CameraRig {
     }
   }
 
-  /** Use the final camera, after terrain correction, so a hill cannot silently undo the fit. */
+  /**
+   * Use the final camera, after terrain correction, so a hill cannot silently undo the fit. Room for the subjects is
+   * a committed move (see `Commitment`); only the primary's outer safety frame is ever enforced at once.
+   */
   private fitSubjects(shot: Shot, dt: number): void {
     const pair = shot.subjects;
     const camera = this.camera;
-    if (!pair) {
-      this.fitBack = 0;
-      this.fitOffset.multiplyScalar(Math.exp(-dt * 2));
-      camera.position.add(this.fitOffset);
-      camera.updateMatrixWorld();
-      return;
-    }
+    const c = tuning.cinematography;
+    const open = shot.smoothFit ?? c.fitOpen, settle = Math.min(open, c.fitSettle);
     this.fitOrigin.copy(camera.position);
     camera.updateMatrixWorld();
     this.right.setFromMatrixColumn(camera.matrixWorld, 0);
     this.up.setFromMatrixColumn(camera.matrixWorld, 1);
     this.back.setFromMatrixColumn(camera.matrixWorld, 2);
+    if (!pair) {
+      this.fitBack = this.fitCommitment.update(0, dt, open, settle, 0);
+      camera.position.addScaledVector(this.back, this.fitBack);
+      this.easeShift(this.fitShiftWant.set(0, 0, 0), open, dt);
+      camera.position.add(this.fitShift);
+      this.fitOffset.subVectors(camera.position, this.fitOrigin);
+      camera.updateMatrixWorld();
+      return;
+    }
     const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
     const horizontal = vertical * camera.aspect;
     let needed = 0;
@@ -295,8 +361,7 @@ export class CameraRig {
         Math.abs(this.local.y) / vertical + this.local.z);
     }
     needed = Math.min(pair.extra, needed);
-    // Respond as an edge approaches; release the extra space slowly when they come together.
-    this.fitBack = shot.smoothFit ? THREE.MathUtils.lerp(this.fitBack, Math.max(0,needed),1-Math.exp(-dt*shot.smoothFit)) : Math.max(needed, this.fitBack * Math.exp(-dt * 0.8));
+    this.fitBack = this.fitCommitment.update(Math.max(0, needed), dt, open, settle, c.fitHold);
     camera.position.addScaledVector(this.back, this.fitBack);
     camera.updateMatrixWorld();
     this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
@@ -318,28 +383,30 @@ export class CameraRig {
     }
     const x = left <= right ? THREE.MathUtils.clamp(0, left, right) : THREE.MathUtils.clamp(0, primaryLeft, primaryRight);
     const y = bottom <= top ? THREE.MathUtils.clamp(0, bottom, top) : THREE.MathUtils.clamp(0, primaryBottom, primaryTop);
-    camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
+    this.easeShift(this.fitShiftWant.copy(this.right).multiplyScalar(x).addScaledVector(this.up, y), open, dt);
+    camera.position.add(this.fitShift);
     camera.position.y = Math.max(camera.position.y, Math.max(heightAt(camera.position.x, camera.position.z), 0) + this.clear);
-    if (shot.smoothFit && Number.isFinite(dt)) {
-      this.want.subVectors(camera.position,this.fitOrigin);
-      this.fitOffset.lerp(this.want,1-Math.exp(-dt*shot.smoothFit));
-      camera.position.copy(this.fitOrigin).add(this.fitOffset);
-    } else this.fitOffset.subVectors(camera.position, this.fitOrigin);
     camera.updateMatrixWorld();
-    if (shot.smoothFit && Number.isFinite(dt)) {
-      // Let coverage settle while keeping the primary inside an outer safety frame.
-      // New secondary subjects still enter the tighter authored composition gradually.
-      this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
-      const depth = Math.max(1, -this.local.z);
-      const safeV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
-        * Math.max(pair.margin, tuning.cinematography.primarySafetyMargin);
-      const safeH = safeV * camera.aspect;
-      const x = this.local.x - THREE.MathUtils.clamp(this.local.x, -depth * safeH, depth * safeH);
-      const y = this.local.y - THREE.MathUtils.clamp(this.local.y, -depth * safeV, depth * safeV);
-      camera.position.addScaledVector(this.right, x).addScaledVector(this.up, y);
-      this.fitOffset.subVectors(camera.position, this.fitOrigin);
+    // Keep the primary inside an outer safety frame while the committed coverage is still on its way.
+    this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
+    const safeDepth = Math.max(1, -this.local.z);
+    const safeV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * Math.max(pair.margin, c.primarySafetyMargin);
+    const safeH = safeV * camera.aspect;
+    const sx = this.local.x - THREE.MathUtils.clamp(this.local.x, -safeDepth * safeH, safeDepth * safeH);
+    const sy = this.local.y - THREE.MathUtils.clamp(this.local.y, -safeDepth * safeV, safeDepth * safeV);
+    if (sx || sy) {
+      this.probe.copy(this.right).multiplyScalar(sx).addScaledVector(this.up, sy);
+      camera.position.add(this.probe);
+      this.fitShift.add(this.probe);
       camera.updateMatrixWorld();
     }
+    this.fitOffset.subVectors(camera.position, this.fitOrigin);
+  }
+
+  /** The sideways part of a fit eases like the rest of the rig; a cut places it at once. */
+  private easeShift(want: THREE.Vector3, response: number, dt: number): void {
+    if (!Number.isFinite(dt)) { this.fitShift.copy(want); this.fitShiftSpeed.set(0, 0, 0); return; }
+    if (dt > 0) this.ease(this.fitShift, this.fitShiftSpeed, want, response, dt);
   }
 
   private place(time: number, dt: number, shot: Shot): void {
@@ -362,8 +429,9 @@ export class CameraRig {
       pull = step;
       lift = this.blocked(this.probe);
     }
-    this.pull += (pull - this.pull) * (1 - Math.exp(-dt * (pull > this.pull ? 3 : 0.5)));
-    this.lift += (lift - this.lift) * (1 - Math.exp(-dt * (lift > this.lift ? 4 : 0.5)));
+    const c = tuning.cinematography;
+    this.pull = Math.max(0, this.pullCommitment.update(pull, dt, c.occlusionOpen, c.occlusionSettle, c.occlusionHold));
+    this.lift = Math.max(0, this.liftCommitment.update(lift, dt, c.occlusionOpen, c.occlusionSettle, c.occlusionHold));
     const pos = this.camera.position.lerpVectors(want, this.look, this.pull);
     pos.y += this.lift;
     const floor = Math.max(heightAt(pos.x, pos.z), heightAt(pos.x, pos.z - 6), 0) + this.clear;

@@ -156,6 +156,7 @@ export class SleepingChapter implements Chapter {
   private readonly perch = new THREE.Vector3();
   private readonly cameraDetail = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3(0, 0, -1);
+  private readonly upward = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
   private readonly laneFrom = new THREE.Vector2(WINDOW.x, WINDOW.z);
@@ -964,6 +965,13 @@ export class SleepingChapter implements Chapter {
     const k = this.cast.cygnet;
     this.ahead.lerp(this.side.set(Math.sin(k.yaw), 0, Math.cos(k.yaw)), 1 - Math.exp(-dt * 1.2));
     if (this.ahead.lengthSq() > 0.01) this.ahead.normalize();
+    const a = SLEEP_ROUTE[Math.max(0, this.routeIndex - 1)], b = SLEEP_ROUTE[this.routeIndex];
+    this.side.set(b.x - a.x, 0, b.z - a.z);
+    if (this.side.lengthSq() > 0.01) {
+      if (this.upward.lengthSq() < 0.01) this.upward.copy(this.side.normalize());
+      this.upward.lerp(this.side.normalize(), 1 - Math.exp(-dt * 0.5));
+      if (this.upward.lengthSq() > 0.01) this.upward.normalize();
+    }
   }
 
   /** The destination and the bird share the shot, including the first spill of morning. */
@@ -1050,10 +1058,10 @@ export class SleepingChapter implements Chapter {
         const interest=this.beat==='snow'?trail.snowTarget:this.beat==='mist'?trail.mistTarget:SLEEP_ROUTE[this.routeIndex];
         this.roomFocus.copy(interest).setY(interest.y+0.7);
         s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.35);
-        const a=SLEEP_ROUTE[Math.max(0,this.routeIndex-1)],b=SLEEP_ROUTE[this.routeIndex];
-        const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz);
-        const ex=k.position.x-dx/len*6.4-dz/len*3.2;
-        const ez=k.position.z-dz/len*6.4+dx/len*3.2;
+        // Behind the way up, turning with it gradually as the bird passes each marker of the route.
+        const dx=this.upward.x,dz=this.upward.z;
+        const ex=k.position.x-dx*6.4-dz*3.2;
+        const ez=k.position.z-dz*6.4+dx*3.2;
         s.eye = this.perch.set(ex, Math.max(ground + 2.4, heightAt(ex, ez) + 1.2), ez);
         if (this.routeIndex >= 6) {
           this.subjects.tertiary = WINDOW;

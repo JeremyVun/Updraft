@@ -12,8 +12,21 @@ export const tuning = {
     /** Ease focus, dolly and height into motion too. Two poles retain the old walking-follow lag. */
     framingResponse: 2, maxResponse: 1.4,
     primarySafetyMargin: 0.9,
+    /**
+     * Room made for the subjects commits: it opens on an eased move, holds while the need may return, and only
+     * then settles back, so the lens never pumps in and out as a plane or bird comes and goes.
+     */
+    fitOpen: 2.2, fitSettle: 0.45, fitHold: 4,
+    /** Chapters' room for play (a thrown plane, a wandering bird): opened within a throw, kept while play goes on. */
+    reachOpen: 1.1, reachSettle: 0.25, reachHold: 8,
+    /** Ground in the way: come closer or rise promptly, stay until the view has been clear a while, then ease back. */
+    occlusionOpen: 4.5, occlusionSettle: 0.5, occlusionHold: 2.5,
+    /** A follow travels with part of its target's own smoothed motion, so walking and pausing do not stretch the shot. */
+    followShare: 0.5, followSmoothing: 0.8,
     /** Carry motion is separate from gaze, with a speed bound to reject placement/teleport changes. */
     maxCarrySpeed: 40,
+    /** The hardest the lens slows when what carries it stops (a hull on the sand), units per second squared. */
+    carryBrake: 9,
     /** Start clearing scenery before it crosses the child, then settle back slowly. */
     obstacleAhead: 3, obstacleMaxRise: 12, obstacleMaxElevation: 0.3,
     obstacleRise: 2, obstacleRelease: 0.7, obstacleSpeed: 3,
@@ -543,8 +556,8 @@ export const tuning = {
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
-    responseLift: 2.2, responseHold: 5.4, responseReturn: 8,
-    responseBack: [34, 46, 58], responseUp: [19, 30, 41], responseOn: [13, 16, 21],
+    /** The playing view after each answer: it steps back and up over `restEase` seconds and stays. */
+    restEase: 4.5, restBack: [24, 29, 34], restUp: [7, 10.5, 14], restOn: [8.5, 11, 13.5],
     waveWidth: 0.65, waveAlpha: 0.55, waveOver: 1.3,
     growthRoughness: 14, growthSoftness: 6,
     traceCurl: 0.9, traceOrbit: 0.9, traceDrift: 0.55,
@@ -962,6 +975,10 @@ export const tuning = {
     farewellBearing: 0.45, farewellWeight: 0.3, farewellEstablish: 6, farewellRelease: 14,
     farewellBoatExtent: 3.2, farewellMastHeight: 4.8,
     sideResponse: 1.2, childTurn: 0.7,
+    /** Seconds the sail must stay across before the lens changes quarter; the farewell's release of the island. */
+    sideCommit: 5, farewellLetGo: 0.35,
+    /** The whale is watched from within this arc of the travelling view, radians. */
+    whaleArc: 0.8,
     whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
   },
   seaPassage: {
