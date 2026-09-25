@@ -1,5 +1,5 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
-import { JOURNEY_ROOMS_GLSL } from './journey-rooms';
+import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
 import { params } from '../params';
@@ -711,7 +711,8 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
 
-const FRAG = /* glsl */ `
+/** The blade fragment shader; without \`clip\` it cannot discard, which lets the GPU cull hidden blade pixels before shading them. */
+const bladeFragment = (clip: boolean): string => /* glsl */ `
 ${JOURNEY_ROOMS_GLSL}
 uniform vec3 uRoom;
 uniform vec3 uSunDir;
@@ -733,9 +734,9 @@ in float vSun;
 in vec3 vLocalLight;
 in vec4 vFlower;
 
-void main() {
-  if (distance(vWorld.xz, vec2(${glsl(DOOR_SHORE.x)}, ${glsl(DOOR_SHORE.z)})) < 48.0) discard;
-  if (uRoom.z > 0.0 ? distance(vWorld.xz, uRoom.xy) > uRoom.z : journeyHides(vWorld.xz)) discard;
+void main() {${clip ? `
+  if (distance(vWorld.xz, vec2(${glsl(DOOR_SHORE.x)}, ${glsl(DOOR_SHORE.z)})) < ${glsl(DOOR_SHORE_CUT)}) discard;
+  if (uRoom.z > 0.0 ? distance(vWorld.xz, uRoom.xy) > uRoom.z : journeyHides(vWorld.xz)) discard;` : ''}
   // Multisampling evaluates a sliver of a blade outside its own edges, where t extrapolates far past 1 and lights a pixel like a spark.
   float T = clamp(vT, 0.0, 1.0);
   float sun = clamp(vSun, 0.0, 1.0);
@@ -764,6 +765,54 @@ void main() {
   vec3 col = alb * (ambient + vLocalLight) * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * sun;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), 1.0);
 }`;
+/** Blades within this of the door shore are cut away, so its grass never shows on this side of the door. */
+const DOOR_SHORE_CUT = 48;
+const FRAG = bladeFragment(true);
+const FRAG_UNCLIPPED = bladeFragment(false);
+/**
+ * How far past the last level's reach a blade fragment can land: the far corner of a tile picked by its nearest
+ * point, a blade laid flat, and slack for a multisampled sliver whose pixel centre lies past the blade's edge.
+ */
+const FRAGMENT_SLACK = TILE * Math.SQRT2 + MAX_BLADE + 8;
+const JOURNEY_ROOMS = Object.values(ROOMS);
+
+/**
+ * How much nearer (x, z) is to the nearest shown room than to the nearest hidden one, by `journeyHides`' own
+ * measure. Each room's measure changes by at most a metre per metre, so this changes by at most two.
+ */
+function roomMargin(x: number, z: number, a: number, b: number): number {
+  let shown = Infinity;
+  let hidden = Infinity;
+  for (let i = 0; i < JOURNEY_ROOMS.length; i++) {
+    const c = JOURNEY_ROOMS[i];
+    const d = (Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz) - 1) * Math.min(c.rx, c.rz);
+    if (i === a || i === b) shown = Math.min(shown, d);
+    else hidden = Math.min(hidden, d);
+  }
+  return hidden - shown;
+}
+
+/**
+ * Whether the blade shader would discard nothing within \`reach\` of (x, z): nothing near the door shore, nothing
+ * outside \`room\` (\`uRoom\`), nothing in a room \`rooms\` (\`uJourneyRooms\`) hides. Conservative: false when unsure.
+ */
+export function grassUnclipped(x: number, z: number, reach: number, rooms: THREE.Vector2, room: THREE.Vector3): boolean {
+  if (Math.hypot(x - DOOR_SHORE.x, z - DOOR_SHORE.z) < DOOR_SHORE_CUT + reach) return false;
+  if (room.z > 0) return Math.hypot(x - room.x, z - room.y) + reach <= room.z;
+  if (rooms.x === -1) return true;
+  if (roomMargin(x, z, rooms.x, rooms.y) > 2 * reach + 1) return true;
+  // Near a boundary: every point of the disc lies within half a cell diagonal of a grid point that clears it.
+  const cell = 16;
+  const half = cell * Math.SQRT1_2;
+  const span = Math.ceil((reach + half) / cell);
+  for (let j = -span; j <= span; j++) {
+    for (let i = -span; i <= span; i++) {
+      if (Math.hypot(i * cell, j * cell) > reach + half) continue;
+      if (roomMargin(x + i * cell, z + j * cell, rooms.x, rooms.y) <= 2 * half + 1) return false;
+    }
+  }
+  return true;
+}
 
 /**
  * x is the side, y the height along the blade. z is the height the vertex slides to as the blade nears the next
@@ -831,6 +880,10 @@ export class Grass {
   /** `?blades=direct`: the per-vertex blade shader, for before/after comparison with the table. */
   private readonly direct = params.blades === 'direct';
   private readonly coarsest = Math.min(params.grasslod ?? LODS.length - 1, LODS.length - 1);
+  /** Draw with the program that cannot discard wherever nothing in reach would be discarded; off restores the old path. */
+  unclipped = true;
+  private readonly clipState = new Float64Array(8).fill(NaN);
+  private clipFree = false;
 
   private readonly thinning;
   private reachScale = 1;
@@ -919,6 +972,8 @@ export class Grass {
       });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.frustumCulled = false;
+      // Rooms and the doorway set their uniforms around each draw, after the render list holds this material.
+      mesh.onBeforeRender = () => this.pickProgram(mat);
       this.group.add(mesh);
       this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
@@ -973,22 +1028,48 @@ export class Grass {
     return this.lods.reduce((n, l) => n + l.count * l.spec.cols * l.spec.rows, 0);
   }
 
-  /** These MRT shaders are not scene materials or ordinary single-target simulations. */
+  /** Picks the blade program for this draw; a program swap finds the one already built by \`precompile\`. */
+  private pickProgram(mat: THREE.ShaderMaterial): void {
+    if (mat.fragmentShader !== FRAG && mat.fragmentShader !== FRAG_UNCLIPPED) return;
+    const reach = this.lods[this.lods.length - 1].spec.reach + FRAGMENT_SLACK;
+    const rooms = atmo.uniforms.uJourneyRooms.value;
+    const room = atmo.uniforms.uRoom.value;
+    const state = this.clipState;
+    const eye = this.eye.value;
+    if (state[0] !== eye.x || state[1] !== eye.y || state[2] !== reach || state[3] !== rooms.x || state[4] !== rooms.y ||
+      state[5] !== room.x || state[6] !== room.y || state[7] !== room.z) {
+      state.set([eye.x, eye.y, reach, rooms.x, rooms.y, room.x, room.y, room.z]);
+      this.clipFree = grassUnclipped(eye.x, eye.y, reach, rooms, room);
+    }
+    const fragment = this.unclipped && this.clipFree ? FRAG_UNCLIPPED : FRAG;
+    if (mat.fragmentShader === fragment) return;
+    mat.fragmentShader = fragment;
+    mat.needsUpdate = true;
+  }
+
+  /** These MRT shaders are not scene materials or ordinary single-target simulations; nor are the unclipped blades. */
   async precompile(renderer: THREE.WebGLRenderer): Promise<void> {
-    if (this.direct) return;
     const previous = renderer.getRenderTarget();
     const geometry = new THREE.PlaneGeometry(2, 2);
     const mesh = new THREE.Mesh(geometry, this.lods[0].tableMat);
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     scene.add(mesh);
+    const blades = this.group.children.map((o) => (o as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material);
     try {
-      for (const lod of this.lods) {
-        mesh.material = lod.tableMat;
-        renderer.setRenderTarget(lod.table);
-        await renderer.compileAsync(scene, camera);
+      if (!this.direct) {
+        for (const lod of this.lods) {
+          mesh.material = lod.tableMat;
+          renderer.setRenderTarget(lod.table);
+          await renderer.compileAsync(scene, camera);
+        }
       }
+      // Any offscreen target builds the same program as the scene's.
+      renderer.setRenderTarget(this.lods[0].table);
+      for (const m of blades) { m.fragmentShader = FRAG_UNCLIPPED; m.needsUpdate = true; }
+      await renderer.compileAsync(this.group, camera, this.group.parent instanceof THREE.Scene ? this.group.parent : null);
     } finally {
+      for (const m of blades) { m.fragmentShader = FRAG; m.needsUpdate = true; }
       renderer.setRenderTarget(previous);
       geometry.dispose();
     }

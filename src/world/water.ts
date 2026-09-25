@@ -116,14 +116,19 @@ vec3 mirrored(vec3 R, float lod, out float seen) {
   return textureLod(uMirror, clamp(uv, 0.0, 1.0), lod).rgb;
 }
 
+/** The ripple texture filtered for this pixel's footprint: a neighbour in its quad may have returned early. */
+vec4 ripple(vec2 uv, Footprint fp) {
+  return textureGrad(uRipple, uv, fp.dx, fp.dy);
+}
+
 /** Ripple slopes carried along by the wind; two phases cross-fade so the drift never stretches the pattern. */
-vec3 driftingRipples(vec2 p, vec2 drift, float period) {
+vec3 driftingRipples(vec2 p, vec2 drift, float period, Footprint fp) {
   float t = uTime / period;
   float ph0 = fract(t);
   float ph1 = fract(t + 0.5);
   float w = abs(1.0 - 2.0 * ph0);
-  vec4 a = texture(uRipple, p - drift * ph0 * period + hash12(vec2(floor(t), 1.7)) * 7.3);
-  vec4 b = texture(uRipple, p - drift * ph1 * period + hash12(vec2(floor(t + 0.5), 5.1)) * 7.3);
+  vec4 a = ripple(p - drift * ph0 * period + hash12(vec2(floor(t), 1.7)) * 7.3, fp);
+  vec4 b = ripple(p - drift * ph1 * period + hash12(vec2(floor(t + 0.5), 5.1)) * 7.3, fp);
   vec4 r = mix(a, b, w);
   vec2 slope = (r.rg * 2.0 - 1.0) / sqrt(w * w + (1.0 - w) * (1.0 - w));
   float variance = max(r.b - dot(r.rg * 2.0 - 1.0, r.rg * 2.0 - 1.0), 0.0);
@@ -217,6 +222,17 @@ vec3 glassColour(vec3 V, vec2 xz) {
   return reflected * 0.96 + vec3(0.003, 0.006, 0.012);
 }
 
+float groundUnder(vec2 xz) {
+  return texture(uHeightTex, clamp(domainUv(xz), 0.0, 1.0)).r;
+}
+
+/** Ground over every corner of this pixel's patch of sea by more than \`above\`, so no sample of it can show water. */
+bool underLand(vec2 xz, Footprint fp, float above) {
+  vec2 a = 0.5 * (fp.dx + fp.dy);
+  vec2 b = 0.5 * (fp.dx - fp.dy);
+  return min(min(groundUnder(xz + a), groundUnder(xz - a)), min(groundUnder(xz + b), groundUnder(xz - b))) > above;
+}
+
 void main() {
   vec3 toCam = cameraPosition - vWorld;
   float dist = length(toCam);
@@ -238,6 +254,12 @@ void main() {
     offshore = mix(offshore, bankDistance, pool);
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
+  // The terrain draws over sea under land (they sort by material, not depth), so its shading would be thrown away.
+  // Hidden rooms keep theirs: their land is not drawn. Every derivative this shader takes is above this line.
+  if (inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0)) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
   float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
   // Ordinary sea beyond the flat would show as a dark band under the horizon.
   float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
@@ -271,14 +293,15 @@ void main() {
 
   /** Carried at the weather's pace: ripples dragged along at a stroke's speed smear into a slick behind it. */
   vec2 drift = along * settled * 0.22;
-  vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1);
-  vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3);
-  vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7);
+  vec3 r0 = driftingRipples(xz * 0.041, drift * 0.041, 3.1, Footprint(fp.dx * 0.041, fp.dy * 0.041));
+  vec3 r1 = driftingRipples(xz * 0.113 + 0.5, drift * 0.113, 2.3, Footprint(fp.dx * 0.113, fp.dy * 0.113));
+  vec3 r2 = driftingRipples(xz * 0.31 + 0.25, drift * 0.31, 1.7, Footprint(fp.dx * 0.31, fp.dy * 0.31));
   float calm = 0.2 + 0.8 * uSeaState;
   float a0 = 0.05 * calm + 0.055 * rough + 0.05 * storm;
   float a1 = 0.035 * calm + 0.085 * rough + 0.1 * storm;
   float a2 = 0.045 * calm + 0.115 * rough + 0.16 * storm;
-  vec4 sw = texture(uRipple, mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013));
+  mat2 swellTurn = mat2(0.94, -0.34, 0.34, 0.94) * 0.011;
+  vec4 sw = ripple(mat2(0.94, -0.34, 0.34, 0.94) * xz * 0.011 + vec2(uTime * 0.0041, uTime * 0.0013), Footprint(swellTurn * fp.dx, swellTurn * fp.dy));
   vec3 swell = vec3(sw.rg * 2.0 - 1.0, max(sw.b - dot(sw.rg * 2.0 - 1.0, sw.rg * 2.0 - 1.0), 0.0));
   /** The painted swell gives way to the modelled one as it comes close enough to the camera to be geometry. */
   float A_SWELL = 0.07 * calm * (1.0 - vSwell.z);
@@ -357,7 +380,9 @@ void main() {
   float tan2 = (1.0 - H.y * H.y) / max(H.y * H.y, 1e-4);
   float glitter = exp(-tan2 / (0.008 + unresolved));
   float crisp = (1.0 - smoothstep(0.1, 0.7, footprint));
-  float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
+  // Outside the glitter lobe 1.0 - glitter rounds to 1, so every glint cell is exactly dark.
+  float sparkle = 0.0;
+  if (glitter > 1e-9) sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 
   /**
