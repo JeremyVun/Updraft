@@ -12,6 +12,35 @@ try {
     check(JSON.stringify(OPENING_CHORDS)===JSON.stringify(approved.chords.map(c=>c[2])),'Every approved opening voicing is preserved');
     check(OPENING_SECONDS===approved.seconds&&approved.chords.every((c,i)=>c[0]===i*OPENING_STEP),'Approved tempo, resolution hold and full duration are preserved');
     check(JSON.stringify(OPENING_DYNAMICS)===JSON.stringify(approved.dynamics),'Approved phrase dynamics are preserved');
+    // The skein holds the home chord, the fall empties the pad, and the rescue's end starts the piece again.
+    const fallSequence=async check=>{
+      const {tuning}=await productionModule('/src/tuning.ts');
+      const {ctx,sound}=offlineSound(44),home=20,rest=25,back=35,step=1/16,seen={};
+      const phase=t=>t>=home&&t<rest?'home':t>=rest&&t<back?'rest':'wander';
+      const level=()=>sound.padVoices.reduce((sum,v)=>sum+v.gain.gain.value,0)/4;
+      const update=tick=>{
+        const t=tick*step;
+        sound.update(step,{...baseState,music:'still',openingScore:phase(t),startingIsland:true,life:1,
+          scripted:t>=home&&t<back,cues:t===rest?['fallen']:[]});
+        const score=sound.openingScore,now=ctx.currentTime;
+        if(t===rest-.5)seen.home=[...score.chordAt(now)];
+        if(t===rest-.5)seen.homePitch=sound.padVoices.map(v=>Math.round(12*Math.log2(v.osc[0].frequency.value/440)+69));
+        if(t===rest+tuning.opening.fall+.5)seen.rest=level();
+        if(t===back-.5)seen.restEnd=level();
+        if(t===back+.5)seen.restart=[...score.chordAt(now)];
+        if(t===back+tuning.audio.openingReturn+.5)seen.returned=level();
+        if(t===back+OPENING_STEP+.5)seen.second=[...score.chordAt(now)];
+      };
+      update(0);
+      const ticks=Math.floor(44/step);let pause=ctx.suspend(step);const rendering=ctx.startRendering();
+      for(let tick=1;tick<ticks;tick++){await pause;update(tick);if(tick+1<ticks)pause=ctx.suspend((tick+1)*step);await ctx.resume();}
+      await rendering;
+      check(JSON.stringify(seen.home)===JSON.stringify(OPENING_CHORDS[0])&&JSON.stringify(seen.homePitch)===JSON.stringify(OPENING_CHORDS[0]),'The skein settles the pad on the home chord the falling phrase is written in');
+      check(seen.rest===0&&seen.restEnd===0,'The pad is silent from the end of the fall through the rescue');
+      check(JSON.stringify(seen.restart)===JSON.stringify(OPENING_CHORDS[0])&&JSON.stringify(seen.second)===JSON.stringify(OPENING_CHORDS[1]),'After the rescue the piece begins again from its first chord');
+      check(Math.abs(seen.returned-.25)<.01,'The pad returns to its full voice level');
+      return seen;
+    };
     const {ctx,sound}=offlineSound(215),notes=[],stages=[];
     let score,epoch,normal,quiet,duck,looped=false;
     const voices=sound.padVoices.map(v=>v.osc),chime=sound.chime.bind(sound);
@@ -21,7 +50,7 @@ try {
     };
     const update=tick=>{
       const t=tick/8,care=t>=60&&t<70,crossing=t>=192,landed=t>=207;
-      sound.update(.125,{...baseState,music:landed?'lines':'still',openingScore:!landed,
+      sound.update(.125,{...baseState,music:landed?'lines':'still',openingScore:landed?undefined:'wander',
         startingIsland:!crossing,linesScore:landed?'first':undefined,
         arrivalMusic:t>=198&&!landed?'lines':undefined,
         life:Math.min(1,.1+t*.8/48),hush:care?1:0,scripted:care,flockChatter:false,
@@ -54,7 +83,8 @@ try {
     check(sound.padVoices.every((v,i)=>v.osc===voices[i]),'Loops and departure allocate no replacement pad oscillators');
     let peak=0;for(let ch=0;ch<2;ch++)for(const sample of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(sample));
     check(peak<1,'The mixed production render does not clip');
-    return {checks,stages,gestureNotes:notes.length,careLevelRatio:quiet/normal,peakDbFS:20*Math.log10(peak)};
+    const fall=await fallSequence(check);
+    return {checks,stages,gestureNotes:notes.length,careLevelRatio:quiet/normal,peakDbFS:20*Math.log10(peak),fall};
   },studies.opening);
   assert(report.checks.length>10);
   fs.writeFileSync('/tmp/updraft-opening-score-check.json',JSON.stringify(report,null,2));

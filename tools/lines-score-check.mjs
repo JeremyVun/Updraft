@@ -88,7 +88,9 @@ try {
         Object.defineProperty(ctx,'currentTime',{configurable:true,value:now});
         score.update(phases[Math.floor(now/60)],1,.8,now>=20&&now<35);
       }
-      check(!events.some(e=>e.now>=20&&e.now<35&&e.n.voice==='soft-reed'),`${fps} Hz: quiet passages discard melody attacks`);
+      const reeds=events.filter(e=>e.n.voice==='soft-reed');
+      check(reeds.every((e,i)=>!(e.now>=20&&e.now<35)||i&&reeds[i-1].phase===e.phase&&e.at-reeds[i-1].at-reeds[i-1].n.duration<=1.5),
+        `${fps} Hz: quiet passages start no new figure and only finish one already sounding`);
       check(!events.some(e=>e.now>=13&&e.now<13.1),`${fps} Hz: stalled frames do not replay missed notes`);
       check(events.filter(e=>e.phase==='door').every(e=>e.n.voice==='pad'),`${fps} Hz: extended doorway waits have no lead melody`);
       check(phases.every(p=>events.some(e=>e.phase===p&&e.now%60>30)),`${fps} Hz: all sections can continue at the player's pace`);
@@ -121,7 +123,7 @@ try {
       if(now===4)live=sound.linesScore;
       if(now===15.5)retiring=live.current;
       if(now===19)check(!retiring.voices.size&&!live.parts.has(retiring),'A previous curtain section releases all its voices');
-      if(now===14)check(live.current.melody.gain.value<.00001,'A passage and cue rapidly clear the lead melody');
+      if(now===14)check(live.current.resting&&live.current.melodyEnd<=now,'A passage and cue let the sounding figure finish, then hold the lead melody');
       if(now===22)check(sound.padGain.gain.value<.00001,'The legacy pad stays out of the composed Lines score');
       if(now===74)check(!sound.linesScore&&live.stopped,'Explicitly clearing the score retires its voices');
       if(now===77.5)check(sound.padGain.gain.value>.045,'An explicit fallback still restores the shared pad');

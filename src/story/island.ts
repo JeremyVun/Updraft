@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Commitment, type Shot } from '../camera';
+import type { OpeningScorePhase } from '../audio/opening-score';
 import type { WindSample } from '../wind/field';
 import { heightAt } from '../world/island';
 import { TREE } from '../world/landmarks';
@@ -125,6 +126,13 @@ export class IslandChapter implements Chapter {
 
   get done(): boolean {
     return this.beat === 'aboard';
+  }
+
+  /** The falling phrase is in D, so the music comes home to D under the skein and goes out with the bird. */
+  get openingScore(): OpeningScorePhase {
+    if (this.beat === 'skein' && !this.dropped) return 'home';
+    const rescue = this.beat === 'skein' || this.beat === 'toCygnet' || this.beat === 'near' || this.beat === 'kneel' || this.beat === 'gather';
+    return this.dropped && rescue ? 'rest' : 'wander';
   }
 
   get checkpoint(): string | null { return this.beat === 'leaving' ? 'companion' : null; }
@@ -415,7 +423,6 @@ export class IslandChapter implements Chapter {
           .setY(c.position.y + tuning.opening.flockHeight);
         flock.carryCygnet(tuning.opening.flockSpeed, this.tmp);
         cygnet.flyWith(flock.tail(this.left), flock.heading, 0.6);
-        cue('overhead');
       }
     } else if (this.beat === 'skein') {
       const { cygnet, flock } = this.cast;

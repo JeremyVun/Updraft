@@ -185,8 +185,8 @@ try {
   await page.screenshot({ path: `${prefix}-family.png` });
   report.family = await state();
   report.completion = await page.evaluate(() => ({ cues: window.__objectiveCues, played: window.__completionPhrases }));
-  assert.deepEqual(report.completion.cues, [{ name: 'restored', beat: 'family' }], 'door opening must use the opening-island completion cue once');
-  assert.equal(report.completion.played, 1, 'the shared completion phrase must reach the audio engine');
+  assert.deepEqual(report.completion.cues, [], 'the door opens without the shared completion cue');
+  assert.equal(report.completion.played, 0, 'the shared completion phrase must not play at the door');
   assert(report.family.held); console.log('family revealed');
   await page.waitForFunction(() => __game.story.current.beat === 'throughDoor' && __game.story.current.doorElapsed > 9.5, null, { timeout: 60000 });
   assert(!(await state()).crossed, 'camera must remain on the washing side until it reaches the threshold');

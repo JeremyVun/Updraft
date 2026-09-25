@@ -19,6 +19,9 @@ try {
       'Bedtime never fills a long gap by holding one chord');
     check(shelter.variants.every(notes => notes.some(n => n.voice === 'piano' && n.at >= shelter.seconds / 2)),
       'Every bedtime verse carries its melody into the second half');
+    const morning = SLEEPING_SECTIONS.morning, lastMorningNote = Math.max(...morning.notes.map(n => n.at));
+    check(morning.notes.every(n => n.voice !== 'pad' || n.at + n.duration <= lastMorningNote + 1),
+      'The morning answer ends with its melody instead of holding its last chord until the repeat');
     const piano = out => { const p = new PianoStrings(); p.setOutput(out); return p; };
     const output = ctx => ({ ctx, bus: ctx.destination, reverb: ctx.createGain() });
     const canonical = notes => notes.map(n => n.voice === 'pad'

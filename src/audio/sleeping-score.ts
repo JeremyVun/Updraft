@@ -25,7 +25,7 @@ interface Section extends Phrase<Note> { chords: { at: number; tones: readonly n
 const section = (from: number, to: number, seconds: number): Section => polishPhrase({ seconds,
   notes: SLEEPING_AUDITION_NOTES.filter(n => n.at >= from && n.at < to).map(n => ({ ...n, at: n.at - from })),
   chords: beds.filter(([at]) => at >= from && at < to).map(([at, , tones]) => ({ at: at - from, tones })),
-}, { sustain: true, loopFrom: from >= 70 ? 5 : 0 });
+}, { sustain: false, loopFrom: from >= 70 ? 5 : 0 });
 const bedtimeChords = [
   [50,57,64,69], [43,55,62,69], [47,54,62,66], [45,55,62,64],
 ];

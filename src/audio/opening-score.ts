@@ -18,6 +18,8 @@ export const OPENING_DYNAMICS: readonly (readonly [number,number])[] = [
   [132.8125,.92],[154.0625,.84],[174.3125,.82],[181.3125,.78],
 ];
 type PadVoice = {osc: OscillatorNode[];gain: GainNode};
+/** Wandering through the piece, held on its home chord while the skein passes, or silent from the fall to the rescue. */
+export type OpeningScorePhase = 'wander' | 'home' | 'rest';
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
 /** Conducts the original pad: no second instrument, extra oscillators or independent life/hush mix. */
@@ -25,18 +27,21 @@ export class OpeningScore {
   readonly epoch: number;
   private chord: readonly number[] = [];
   private stoppedAt?: number;
+  private start: number;
+  private phase: OpeningScorePhase = 'wander';
 
   constructor(private readonly ctx: AudioContext,private readonly voices: PadVoice[]) {
-    this.epoch=ctx.currentTime;
+    this.epoch=this.start=ctx.currentTime;
     for(const voice of voices) {
       voice.gain.gain.cancelAndHoldAtTime(this.epoch);
       voice.gain.gain.setTargetAtTime(.25,this.epoch,.75/.8);
     }
   }
 
-  private position(at: number): number {return Math.max(0,(this.stoppedAt??at)-this.epoch)%OPENING_SECONDS;}
+  private position(at: number): number {return Math.max(0,(this.stoppedAt??at)-this.start)%OPENING_SECONDS;}
 
   chordAt(at: number): readonly number[] {
+    if(this.phase!=='wander')return OPENING_CHORDS[0];
     return OPENING_CHORDS[Math.min(OPENING_CHORDS.length-1,Math.floor(this.position(at)/OPENING_STEP))];
   }
 
@@ -49,9 +54,16 @@ export class OpeningScore {
     return OPENING_DYNAMICS[OPENING_DYNAMICS.length-1][1];
   }
 
-  update(): void {
+  update(phase: OpeningScorePhase = 'wander'): void {
     if(this.stoppedAt!==undefined)return;
-    const now=this.ctx.currentTime,chord=this.chordAt(now);
+    const now=this.ctx.currentTime;
+    if(phase!==this.phase) {
+      // The fall takes the music down with it; afterwards the piece begins again from its first chord.
+      if(phase==='rest')this.fade(0,tuning.opening.fall);
+      else if(this.phase==='rest') {this.start=now;this.chord=[];this.fade(.25,tuning.audio.openingReturn);}
+      this.phase=phase;
+    }
+    const chord=this.chordAt(now);
     this.voices.forEach((voice,i)=>{
       if(this.chord[i]===chord[i])return;
       for(const osc of voice.osc) {
@@ -61,6 +73,16 @@ export class OpeningScore {
       }
     });
     this.chord=chord;
+  }
+
+  private fade(to: number,seconds: number): void {
+    const now=this.ctx.currentTime;
+    for(const voice of this.voices) {
+      const gain=voice.gain.gain;
+      gain.cancelAndHoldAtTime(now);
+      gain.setValueAtTime(gain.value,now);
+      gain.linearRampToValueAtTime(to,now+seconds);
+    }
   }
 
   handoffAt(now: number): number {

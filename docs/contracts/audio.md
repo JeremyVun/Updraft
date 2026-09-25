@@ -10,8 +10,13 @@ Approved September 24 Home ending: `tuning.audio.homeEndingSounds = false` disab
 `release`, `home` and `finale` cues plus paper handling and cottage door sounds. Their implementations remain
 available behind the switch. The accepted Home composition carries the entire ending on a fixed clock. This supersedes the earlier requirement to play the recognition and finale cues.
 `homeMusicDucking = false` also bypasses chapter hush and authored-cue ducking for the Home score, including
-its offshore approach. Its composed dynamics, night shading and arrival fades remain. Still's
-fall/rescue attenuation is unchanged pending a musical decision.
+its offshore approach. Its composed dynamics, night shading and arrival fades remain.
+
+The still island's fall (September 26): the island chapter's `openingScore` phase holds the opening on its first
+chord (D) while the skein passes, so the D-major `fallen` phrase always sits in its harmony; the skein itself has no phrase, only the swans' calls. The pad
+then fades to silence over the fall and stays silent through the rescue, leaving the calls, wind and sea. When the child
+carries the bird away, the piece begins again from its first chord (`tuning.audio.openingReturn`). Render the sequence
+with `node tools/opening-fall-render.mjs <out.wav>`.
 
 Sleeping's September 23 approved revision continues the bedside melody over changing harmony until frost starts;
 the earlier static held-chord filler was rejected. Its darker journey
@@ -77,7 +82,7 @@ hush and cue ducking remain. Wind notes query the new harmony at their scheduled
 chord/loop boundaries. Lines' arrival gate freezes and retires the conductor without allocating another
 pad or letting its notes return under the next composition. Mute and hidden-page suspension freeze audio time.
 
-`phrasing.ts` shares scheduling, lookahead, stalled-frame skipping and introductory-rest handling across all eight scores. Sustained harmony bridges loop-end holes, including Sleeping shelter/climb. Repeating bodies alternate the main melody, a quieter sparse verse and the original melody. Historical `*_AUDITION_NOTES` exports preserve the reference studies; runtime sections contain the approved polish.
+`phrasing.ts` shares scheduling, lookahead, stalled-frame skipping and introductory-rest handling across all eight scores. Sustained harmony bridges loop-end holes, including Sleeping shelter/climb. Repeating bodies alternate the main melody, a quieter sparse verse and the original melody. Lines' sparse verse rests its reply figure whole instead of dropping alternate notes, which read as missing notes inside its three-note figures; each curtain section answers its figure over its second chord, and cue space lets a sounding figure finish, then starts no new one. Historical `*_AUDITION_NOTES` exports preserve the reference studies; runtime sections contain the approved polish.
 
 The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the full plucked shape in Boats, the existing Meadow melody, B–F♯–E–D in Birches, and a stretched recollection at sea. Sleeping's climb remembers D–E–F natural, then the bedside A–E–D–A. Instrument voices, local harmony and story timing remain distinct.
 
@@ -136,7 +141,7 @@ distance allowances and fade/rest durations.
 `LinesChapter.linesScore` follows the three curtains, the family approach, open doorway and far shore.
 The first section begins on the approach crossing and continues ashore; the shore section continues through
 boarding and the crossing to Little Boats, retaining the same score instance and phrase clock.
-`linesMelodyQuiet` withdraws the reed while the bird leads and the child follows; existing delight/completion cues also clear it for four seconds. Gesture feedback stays
+`linesMelodyQuiet` withdraws the reed while the bird leads and the child follows; the curtains' delight cues also clear it for four seconds. The door opens without the shared completion phrase: on September 25 Jeremy asked for the piano phrase to be taken off the door. Gesture feedback stays
 active whenever input is playable. Masked melody attacks expire, with no delayed burst after a cue.
 The original audition's +17.6 dB backing gain excludes preview normalization; `linesMelodyDb` trims only
 the reed (currently −1.5 dB). Sections repeat for player pacing and checkpoint restores emit no reward.
@@ -226,7 +231,7 @@ Other section changes release existing voices over 1.8 seconds, including their 
 The generic pad is suppressed throughout Sleeping. Its authored dynamics replace `hush` attenuation for this
 arrangement; gesture chimes and physical sounds remain available under their usual rules.
 
-Shelter/climb phrases repeat after 32 seconds. Morning has a 48-second first pass, then repeats its 43-second body without the initial rest. Morning leaves five seconds for `lifted`
+Shelter/climb phrases repeat after 32 seconds. Morning has a 48-second first pass, then repeats its 43-second body without the initial rest. Morning keeps its authored chord lengths: its last chord ends with the melody rather than being held until the repeat, which sounded like a stuck note. Morning leaves five seconds for `lifted`
 alone and nineteen before its piano answer. The pillow feather emits the two-note `feather` hint. Landing
 does not emit the shared completion phrase: Jeremy approved retaining only the flight reward here. Restoring
 `morning` selects the warm arrangement and sea gesture register without emitting a cue; the feather checkpoint

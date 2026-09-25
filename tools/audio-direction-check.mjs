@@ -35,7 +35,12 @@ try {
       if (!p.variants) continue;
       const lastPad=p.notes.filter(n=>n.voice==='pad').at(-1);
       check(lastPad.at+lastPad.duration>p.seconds-1,`${name}: harmony covers the end of its loop`);
-      check(p.variants[1].filter(isMelody).length<=Math.ceil(p.notes.filter(isMelody).length/2),`${name}: alternating verse makes melodic space`);
+      if(table===LINES_SECTIONS){
+        const whole=p.variants[1].filter(isMelody), full=p.notes.filter(isMelody);
+        check(whole.length<full.length||full.length<=4,`${name}: alternating verse makes melodic space`);
+        const figures=full.reduce((all,n,i)=>(i&&n.at-full[i-1].at-full[i-1].duration<=1.5?all.at(-1).push(n):all.push([n]),all),[]);
+        check(figures.every(f=>f.every(n=>whole.includes(n))||!f.some(n=>whole.includes(n))),`${name}: alternating verse rests whole figures, never a note inside one`);
+      } else check(p.variants[1].filter(isMelody).length<=Math.ceil(p.notes.filter(isMelody).length/2),`${name}: alternating verse makes melodic space`);
     }
     check(SLEEPING_SECTIONS.cold.notes.length===0,'Frost retains its deliberate musical silence');
     check(SLEEPING_SECTIONS.summit===SLEEPING_SECTIONS.climb,'The climb carries its phrase through the summit');
