@@ -38,6 +38,8 @@
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
 // Phase X2's exact skips, each restoring the old path: e4-off (sea shaded under land, implicit ripple gradients),
 // e4-return-off, e4-grad-off (its two halves), e5-off (grass always drawn with its discards), e6-off (glints everywhere).
+// PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
+// the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -359,6 +361,10 @@ window.__audit = {
   },
   // STATE forces a condition for every ablation after the census; it runs in this module's scope.
   state(code) { return eval(code); },
+  // PATH moves the camera for step k (0..PATH_STEPS-1); the window then follows it and the frame is prepared as the loop does.
+  pathStep(code,k) { eval(code); rig.camera.updateMatrixWorld(); followWindow(...windowAim()); prepareFrame(0); },
+  pathSave() { return {position:rig.camera.position.clone(),quaternion:rig.camera.quaternion.clone()}; },
+  pathRestore(saved) { rig.camera.position.copy(saved.position); rig.camera.quaternion.copy(saved.quaternion); rig.camera.updateMatrixWorld(); followWindow(...windowAim()); prepareFrame(0); },
   inspect() {
     let count=0, hidden=0, drawables=0, uncullable=0;
     scene.traverse(o=>{count++;if(!o.visible)hidden++;if(o.material){drawables++;if(!o.frustumCulled)uncullable++;}});
@@ -449,7 +455,7 @@ try {
       // With GPU_QUIET, each ablation also waits (up to GATE_S, default 20 s) for other GPU users to go quiet, not just each chapter.
       for(const start=Date.now();GPU_QUIET&&Date.now()-start<Number(process.env.GATE_S??20)*1000&&busy().some(r=>!r.own&&GPU_USER.test(r.command));)await new Promise(r=>setTimeout(r,3000));
       const busyBefore=busy();
-      const result=await page.evaluate(async ({name,rounds,draws,capture,poll,drainAll})=>{
+      const result=await page.evaluate(async ({name,rounds,draws,capture,poll,drainAll,pathCode,pathSteps})=>{
         const [omit,mode]=name.split('@');
         const gl=__game.renderer.getContext(), probe=__audit;probe.pairRebake=probe.changesHeights(omit);
         // setTimeout(0) polls in ~4.5 ms steps once nested; a message round trip is far finer.
@@ -484,11 +490,19 @@ try {
         const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
         const stepMs=omit==='wind'?await stepAlone():undefined;
-        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain};
-      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL});
+        // Moving-camera exactness: the same pair of frames at every step of PATH, worst pixel over the path.
+        let path;
+        if(pathCode){const saved=probe.pathSave();path={steps:pathSteps,changed:0,max:0,worst:-1,stepsChanged:0};
+          try{for(let k=0;k<pathSteps;k++){probe.pathStep(pathCode,k);const a=read(null),b=read(omit);let changed=0,max=0;
+            for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;if(d>max)max=d;}}
+            path.changed+=changed;if(changed)path.stepsChanged++;if(max>path.max){path.max=max;path.worst=k;if(capture)path.images={baseline:encode(a),variant:encode(b)};}}}
+          finally{probe.configure(null);probe.pathRestore(saved);}}
+        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain,path};
+      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL,pathCode:process.env.PATH_JS,pathSteps:Number(process.env.PATH_STEPS??40)});
+      if(result.path?.images){for(const [name,data]of Object.entries(result.path.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-path-'+name+'.png',Buffer.from(data,'base64'));delete result.path.images;}
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
-      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
+      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,path:result.path,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
@@ -497,9 +511,13 @@ try {
         // The old glass path (not the new one) drops channels to 0 in scattered half-float samples on ANGLE/Metal.
         if (result.pixels.max > 1 && !(omit==='glass-sky-always' && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
       }
+      if (result.path?.max) {
+        console.warn(`WARNING ${chapter} ${omit}: along PATH, ${result.path.max}/255 at step ${result.path.worst}, ${result.path.changed} channels over ${result.path.stepsChanged} steps`);
+        if (result.path.max > 1) inexact.push({chapter,omit,path:result.path});
+      }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
-      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs}));
+      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs,pixels:row.pixels,path:row.path}));
       if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
