@@ -442,8 +442,8 @@ try {
       await route.fulfill({response,body:source+injection});
     });
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
-    await page.waitForSelector('#veil.ready',{timeout:120000});await page.locator('#begin').click();
-    await page.waitForFunction(()=>window.__ready,null,{timeout:120000});
+    await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
+    await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
     if(fixture) await page.evaluate(fixture=>{
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
