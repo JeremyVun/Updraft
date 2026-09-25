@@ -26,13 +26,15 @@ async function record(browser, url, run, verify) {
     const { tuning } = await import(performance.getEntriesByType('resource')
       .findLast(r => new URL(r.name).pathname === '/src/tuning.ts')?.name ?? '/src/tuning.ts');
     const boat = __game.boat, update = boat.update.bind(boat), contact = boat.contact.clone();
-    const log = window.__boatLog = { poses: [], skipped: 0, tested: 0, closest: Infinity, violations: [], measured: 0 };
+    const log = window.__boatLog = { poses: [], skipped: 0, tested: 0, closest: Infinity, violations: [], measured: 0, ms: [] };
     let measure = boat.measureCeiling?.bind(boat);
     if (measure) boat.measureCeiling = (...a) => { log.measured++; return measure(...a); };
     let nudged = false;
     boat.update = (dt, time) => {
       if (!nudged && time >= nudgeAt) { boat.position.x += 2.4; nudged = true; }
+      const started = performance.now();
       update(dt, time);
+      log.ms.push(performance.now() - started);
       const q = boat.group.quaternion, p = boat.position;
       log.poses.push([time, p.x, p.y, p.z, q.x, q.y, q.z, q.w, boat.pitch, boat.roll, boat.yaw]);
       if (!verify || !boat.afloat || !boat.grounded || !boat.mooring) return;
@@ -58,11 +60,12 @@ async function record(browser, url, run, verify) {
 
 const { browser, close } = await openBrowser();
 const report = {};
+const median = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 try {
   for (const run of runs) {
     const now = await record(browser, base, run, true);
     const entry = report[run.name] = { frames: now.poses.length, skipped: now.skipped, tested: now.tested, measured: now.measured,
-      closestGap: now.closest, violations: now.violations.slice(0, 5), errors: now.errors };
+      closestGap: now.closest, violations: now.violations.slice(0, 5), errors: now.errors, updateMs: median(now.ms) };
     if (old) {
       const before = await record(browser, old, run, false);
       // Recording starts on whichever frame the page reached; pair frames by game time.
@@ -70,6 +73,7 @@ try {
       const pairs = now.poses.filter(pose => at.has(pose[0]));
       const first = pairs.find(pose => at.get(pose[0]).some((v, k) => !Object.is(v, pose[k])));
       entry.compared = pairs.length;
+      entry.previousUpdateMs = median(before.ms);
       entry.identical = pairs.length > 0.9 * run.frames && !first;
       entry.firstDifference = first ? { old: at.get(first[0]), new: first } : null;
     }

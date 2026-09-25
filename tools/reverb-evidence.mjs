@@ -139,10 +139,10 @@ function writePage() {
     <audio preload="auto" src="${clip.files.two}"></audio>
     <audio preload="auto" src="${clip.files.one}" muted></audio>
   </div>
-  <p>${clip.differs.length ? `They differ from ${clip.differs[0]} s to ${clip.differs.at(-1) + 1} s into the clip.` : 'They sound the same throughout.'}
-  <a href="${clip.files.apart}">The difference on its own</a>, 20 dB louder than it is in the mix.</p>
+  <p>${clip.differs.length ? `They differ from ${clip.differs[0]} s to ${clip.differs.at(-1) + 1} s into the clip.
+  <a href="${clip.files.apart}">The difference on its own</a>, 20 dB louder than it is in the mix.` : 'They are the same throughout.'}</p>
   <p class="files">Files: <a href="${clip.files.two}">two reverbs (the game now)</a> · <a href="${clip.files.one}">one reverb</a>.
-  ${clip.seconds.toFixed(0)} s. The two differ by ${clip.differenceDb.toFixed(0)} dB (difference against the mix).
+  ${clip.seconds.toFixed(0)} s. Over the whole clip the difference is ${(-clip.differenceDb).toFixed(0)} dB below the mix.
   Offline render: ${two} ms with two, ${one} ms with one (${Math.round(100 * (1 - one / two))}% less).</p>
 </section>`;
   }).join('\n');
