@@ -572,6 +572,99 @@ most 0.7–1.0 points.
   needs a pixel check against the current output.
 - **A boat standing still at the jetty costs 0.7 ms of script per frame at the summit.**
 
+### Phase X2 results: E3–E6 (2026-09-26, branch `perf-bakes-x2`)
+
+Built and kept: **E5** (grass without its discards) and **E6** (glints skipped outside the glitter lobe). Dropped:
+**E3** (nothing to skip) and **E4** (exact, but no net saving). Every kept cut is bit-identical to the old path in
+every chapter and restores it behind a `frame-profile` ablation (`e5-off`, `e6-off`).
+
+**How it was measured:**
+- Exactness: `frame-profile` compares the new frame with the ablation's in the same page, static and along a
+  40-step camera path per chapter (`PATH_JS`; the window follows and `prepareFrame` runs as in the loop). The paths:
+  forward along the Meadow walk, sailing past the Birches beach (x −150 to +150 at z −1012, 4 m up), and a sideways
+  sweep of the fixture camera elsewhere, including the jetty. All twelve fixtures: the eleven chapters and the summit.
+- Saving: the machine was busy for the whole phase (other sessions' playthroughs, video encodes at 700% CPU), so the
+  full-frame pairs ranged ±10% and their medians ±3%. The kept numbers come from a **focused frame**: `STATE` hides
+  everything but the sky, the sea, the terrain and the grass, `DRAIN=1`, 10 pairs of 20 draws per load, `GPU_QUIET=1`,
+  `RATIO=1.5 MSAA=2`, pooled over three or four loads, straddled rows dropped. The `none` ablation there reads within
+  ±1% per chapter. A focused frame is 70–90% of the full one (8–10 ms against 9–13 ms drained), so milliseconds
+  transfer and percentages of the full frame are about 0.8× the ones below. Raw data: `/tmp/updraft-pb-x2-f[1-6].json`,
+  `/tmp/updraft-pb-x2-x[1-5].json` (exactness), `/tmp/updraft-pb-x2-l1.json` (the first, contended full-frame load).
+
+**E3, tiles where no blade stands: dropped, nothing worth skipping.**
+- A census read every submitted tile's blade table back: a tile is empty at every density only if every blade's
+  `keep` is 0 (then `rank >= thinned * density * keep` holds for any rank, density and reach).
+- Such tiles are rare: 0% of the grass's blade instances in the Wood, the Meadow walk, the sea, the mirror and the
+  summit, 0.3–0.8% in the Meadow and on the jetty, 3–7% on the island, the Washing, the Birches, Sleeping and the Boats,
+  11% in the Drowned drift. The Wood's and Birches' floors thin their blades by rank against `keep` (0.25 under the
+  Wood), not to zero, so their tiles always hold standing blades; the Wood's interior already drops to the 16×16 level.
+- Leaving out exactly those tiles (`grass-bare-tiles`, an oracle from the tables: no pixel changed) saved nothing
+  measurable: −6.6% to +4.1% on the contended full frame, where that run's `none` read −3.7% to +2.8%. The ceiling is the empty
+  tiles' share of the invocation overhead (hide minus collapse): under 1% of a Birches frame.
+
+**E4, the sea under land: dropped, no net saving.**
+- Built as an early return where the baked ground at all four corners of the pixel's patch of sea (from its
+  footprint) is over 1 m above the displaced water, inside the window and outside hidden rooms. The corners keep every
+  multisample of the pixel under the terrain; the terrain between the camera and such water lies on the same land, so
+  a room boundary (always in open sea) never removes it.
+- Derivatives: the return cannot sit before the ripple samples. A quad neighbour that returned early leaves implicit
+  derivatives undefined, and explicit gradients (`textureGrad` with `fp`, or with `dFdx` of the ripple coordinates
+  taken first) are not bit-identical on ANGLE/Metal: the tiny slope change flips glint cells, up to 93–117/255 in
+  single pixels along the paths. Sampling the ripples above the fog's own return was exact but made the open sea 7%
+  slower (it samples seven anisotropic textures for fully fogged water). The exact version samples them right after the
+  fog's return and returns just after them: bit-identical except 1/255 in ≤11 channels in the Wood.
+- Saving (focused, two loads): +1.2 to +3.3% on land (Island 1.3, Meadow walk 1.2, Birches 1.8, Wood 3.1, Sleeping
+  3.3) but −1.6 to −4.2% on the sea chapters (Drowned −3.1, open sea −1.6, Mirror −4.2), and −1 to +1% elsewhere.
+  Weighted by minutes that is about zero. The loss afloat survives testing the pixel's own ground first (one compare
+  for visible water), so it is the bigger shader, not the test. The round 2 bound (`water-landskip`, returning before
+  anything) measured +0.5 to +2.2% over the first built version on the summit, the jetty and the sea: the sea pixels under land
+  simply aren't many once the fog's return and the ripples are paid for.
+
+**E5, grass without its discards: kept.**
+- A second blade program without the two discard lines (door shore within 48 m; outside `uRoom`'s circle, or in a room
+  `journeyHides` hides). Each level's mesh picks it in `onBeforeRender`, after the rooms and the doorway have set
+  `uRoom` and `uJourneyRooms` for that draw, so the main view, the mirror and the doorway each get their own answer.
+  Swapping swaps the `fragmentShader` string; `precompile` builds both programs at boot, and a check forcing the swap
+  both ways on the island and in the Wood compiled no new program (206 and 207 before and after).
+- The choice, per submitted tile (`tileUnclipped`): every blade fragment lands within `TILE_SPREAD` (19.7 m) of its
+  tile's centre: half the tile's diagonal, a blade laid flat (6 m) and 8 m of slack for a multisampled sliver whose
+  pixel centre lies past its blade. The tile must be that far clear of the door shore, inside `uRoom`'s circle when it
+  clips, and have `roomMargin` (nearest hidden room's measure minus nearest shown room's) over `2 × TILE_SPREAD + 1`.
+  Each room's `journeyHides` measure changes by at most a metre per metre, so the margin by at most two: a tile that
+  passes has no hidden point within its spread. Margins are cached per tile for the current rooms.
+- **The sweep** (`node tools/grass-unclipped-check.mjs`): source checks that the clip block holds the only two discards;
+  the 1-Lipschitz bound sampled 200k times; then every 8 m tile over the journey (plus 300 m) for all 68 room
+  configurations (every pair, every single room, none, and `-1`), under the four `uRoom` states the game sets (none, the concealed door shore, the doorway's
+  two circles). Every passing tile's disc was checked point by point with a float32 port of `journeyHides`, the door
+  shore and the circles: 1.39 M passing tiles, 1.66 G points, no discarded point. In each chapter's rooms it passes
+  159/159 land tiles on the island, 2318/2318 in the Meadow, 203/203 in the Birches, 666/670 in the Wood, 1537/1537 at
+  home, 92/107 on the sleeping island; the doorway chapters (Washing, the crossing to the Boats) keep the clipped program.
+- Exactness: no changed pixel in any of the twelve fixtures, static or along the paths, in three path runs. One
+  earlier path run showed 16 channels (up to 103/255) change at one step of 40 on the island, never reproduced; the
+  likely cause is a multisampled sliver interpolated far past its blade into a hidden room, a sample the old program
+  discarded and the new one draws like any other sliver sample.
+- Saving (focused, four loads, median of 30–40 pairs): **Island 3.4% (0.32 ms), Meadow walk 2.8% (0.34 ms), Summit
+  4.4% (0.38 ms)**, every load positive; Wood 1.0%, Jetty 0.7%, elsewhere within ±1% (the program stays clipped by
+  the doorway in the Washing, and little grass is drawn at sea). As shares of the full frame about 2.7–4.2% there;
+  weighted by minutes, about 0.9% of the playthrough's GPU work.
+
+**E6, glints outside the glitter lobe: kept, as a per-pixel test.**
+- The uniform test the list proposed can't be exact: at night the moon is the sun (`MOON` at 12°, 0.42 strength) and
+  the Wood's storm keeps 17% of it, so `uSunColor` is never zero where the glints were measured. The measured zero
+  there came from the lobe being off screen.
+- Instead: `glintCells` ends in `step(1.0 - density, fract(h * 91.7))` with `fract < 1`. For a density below 1e-9,
+  `1.0 - density` rounds to 1 in float32 and `fract + density` stays below 1 even if the compiler reorders the
+  comparison, so every cell is exactly 0 and `sparkle` is exactly 0. `if (glitter > 1e-9)` skips `glints` there,
+  which is most of the sea outside the sun's (or moon's) path. No derivative is taken inside it.
+- Exactness: no changed pixel static in any fixture; along the paths at most 1/255 in ≤7 channels. In one path run
+  (with E4's variants in the shader) the **old** glints drew the half-float specks the D result describes, magenta
+  and violet streaks up to 143/255 in the Mirror and Sleeping at dusk and night; the new path drew none there. The
+  specks move with any change to this shader, so `frame-profile` tolerates them in `e6-off` as in `glass-sky-always`.
+- Saving (focused, three to four loads): Drowned 2.1%, Island 1.6%, Jetty 1.5%, Meadow walk 1.4%, open sea 1.4%,
+  Mirror 1.4%, Washing 1.0%; 0–0.5% in the Birches, the Wood, Sleeping, the Boats and the summit (no lobe on screen,
+  or little water). Small against the pair spread, but positive in nearly every load where water is in view. As
+  shares of the full frame about 1–1.7%; weighted by minutes, about 0.9% of the playthrough's GPU work.
+
 ## What changes
 
 ### A. Skip terrain fragment work that is thrown away (exact)
