@@ -41,9 +41,12 @@ const CAP_EARLY = 0.8;
  * a browser takes to report a finished fence still counts against it, so this errs safe.
  */
 const HEADROOM_MS = 10;
-/** Timed frames needed in one review, and the share of them that must meet the deadline, to climb at once. */
+/**
+ * Timed frames needed in one review, and the share of them that must meet the deadline, to climb at once. The fence
+ * is seen 2–4 ms after it finishes (Chrome), time that doesn't grow with pixels, so a frame just over still fits.
+ */
 const HEADROOM_PROBES = 30;
-const HEADROOM_EARLY = 0.95;
+const HEADROOM_EARLY = 0.9;
 /**
  * Fewer on time than this rules a climb out. In between, the smooth window decides: at low detail the reflection
  * renders on alternate frames, so half the frames can run late while the next rung still fits.

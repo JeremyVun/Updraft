@@ -196,14 +196,14 @@ The governor targets 60 fps unless presentation is capped. Auto opens at its cei
 touch as on mouse. Every 1.5 seconds it reviews up to 90 frame timing samples, discarding the slowest 5%. A trimmed
 mean above 17.6 ms lowers quality (two rungs above 26.4 ms). Below its ceiling Auto climbs on evidence: `main.ts`
 polls each frame's fence 10 ms after the frame was submitted (`timeLastFrame`: one timer and a `getSyncParameter`
-poll, never a wait), and a review with p90 under 17.2 ms in which at least 95% of 30 or more timed frames had
+poll, never a wait), and a review with p90 under 17.2 ms in which at least 90% of 30 or more timed frames had
 finished by then climbs one rung at once. The next rung costs at most 1.56× the pixels (1× → 1.25×), so 10 ms of work
 stays inside one refresh there. The deadline runs from submission, not the frame's start, because the script's time
 doesn't grow with pixels: timed from the start, even 1× frames on the M4 Pro (about 3 ms of script) almost never met
 10 ms while 1.25× ran at a steady 60. The 2–4 ms Chrome takes to report a finished fence (a clear-only frame)
 still counts against it, so the test errs safe. Measured from submission at 1376×1032 CSS, DPR 2, MSAA 2, 98% of
 frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Fewer than a
-quarter on time rules a climb out. Between a quarter and 95%, and where frames can't be timed (no fence, or timers
+quarter on time rules a climb out. Between a quarter and 90%, and where frames can't be timed (no fence, or timers
 firing more than 2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below
 17.2 ms for 12 seconds earns one increase instead, as before. The band is wide because low world detail renders the
 reflection on alternate frames: at 1× with `mirror=2`, 70% of frames met 10 ms against 94% with the reflection every
