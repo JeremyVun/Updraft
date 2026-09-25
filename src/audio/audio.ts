@@ -15,6 +15,7 @@ import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
 import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
 import { advance, ALONE, Sliced, slices, SLICES_PER_SECOND, type Pace } from './sliced';
+import { params } from '../params';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -251,6 +252,10 @@ export class Soundscape {
   private backgroundWet!: GainNode;
   private backgroundGate!: GainNode;
   private backgroundDuck!: GainNode;
+  /** With one reverb, the background's wet send is gated and ducked on its way into the shared reverb. */
+  oneReverb = params.reverb === 'one';
+  private wetGate: GainNode | null = null;
+  private wetDuck: GainNode | null = null;
   private cueSpaceUntil = 0;
   private homeFadeScheduled = false;
   private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
@@ -357,6 +362,11 @@ export class Soundscape {
     void (this.hidden || this.muted ? this.ctx.suspend() : this.ctx.resume()).catch(() => undefined);
   }
 
+  /** The background's arrival and ending gates: its own reverb sits inside one; with one reverb, its send has a second. */
+  private get gates(): AudioParam[] {
+    return this.wetGate ? [this.backgroundGate.gain, this.wetGate.gain] : [this.backgroundGate.gain];
+  }
+
   /** The live audio graph for other modules' sounds: connect to `bus` (dry) and optionally `reverb` (wet). Null until sound starts or while muted. */
   get output(): AudioOut | null {
     return this.running ? this.graph : null;
@@ -405,8 +415,14 @@ export class Soundscape {
     this.backgroundGate = ctx.createGain(); this.backgroundGate.connect(this.backgroundDuck);
     this.backgroundDry = ctx.createGain(); this.backgroundDry.connect(this.backgroundGate);
     this.backgroundWet = ctx.createGain(); this.backgroundWet.gain.value = .55;
-    this.backgroundReverb = ctx.createConvolver();
-    this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
+    if (this.oneReverb) {
+      this.wetDuck = ctx.createGain(); this.wetDuck.connect(this.reverbConvolver);
+      this.wetGate = ctx.createGain(); this.wetGate.connect(this.wetDuck);
+      this.backgroundWet.connect(this.wetGate);
+    } else {
+      this.backgroundReverb = ctx.createConvolver();
+      this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
+    }
     this.backgroundBus = ctx.createGain(); this.backgroundBus.connect(this.backgroundDry);
     const backgroundSend = ctx.createGain(); backgroundSend.gain.value = .9;
     this.backgroundBus.connect(backgroundSend).connect(this.backgroundWet);
@@ -463,6 +479,7 @@ export class Soundscape {
     const reverb = this.reverbImpulse = yield* impulse(ctx, 4.5);
     yield ALONE;
     this.reverbConvolver.buffer = reverb;
+    if (this.oneReverb) return;
     yield ALONE;
     this.backgroundReverb.buffer ??= reverb;
     yield* this.spare(ctx);
@@ -988,15 +1005,17 @@ export class Soundscape {
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
     if (arrival.changed && arrival.stage !== 'wait' && !arrival.legato) {
-      const gain = this.backgroundGate.gain;
-      gain.cancelAndHoldAtTime(now);
-      // Holding an already constant parameter need not insert an automation event. Without
-      // this anchor, the incoming ramp can start at the beginning of the rest.
-      gain.setValueAtTime(gain.value, now);
-      if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + (arrival.fadeOut ?? tuning.audio.arrivalFadeOut));
-      else if (backgroundPaused) gain.setValueAtTime(0, now);
-      else {
-        // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
+      for (const gain of this.gates) {
+        gain.cancelAndHoldAtTime(now);
+        // Holding an already constant parameter need not insert an automation event. Without
+        // this anchor, the incoming ramp can start at the beginning of the rest.
+        gain.setValueAtTime(gain.value, now);
+        if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + (arrival.fadeOut ?? tuning.audio.arrivalFadeOut));
+        else if (backgroundPaused) gain.setValueAtTime(0, now);
+        else gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
+      }
+      // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
+      if (arrival.stage !== 'fade' && !backgroundPaused && !this.oneReverb) {
         this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
         if (this.spareReverb) {
           this.backgroundReverb = this.spareReverb; this.spareReverb = null;
@@ -1005,16 +1024,16 @@ export class Soundscape {
           this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
         }
         this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
-        gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
     }
     if (s.homeEndingTime === undefined) this.homeFadeScheduled = false;
     else if (!this.homeFadeScheduled && s.homeEndingTime >= HOME_ENDING.fadeFrom) {
       // Fade after the reverb so this ending's short release includes its tail.
-      const gate = this.backgroundGate.gain;
-      gate.cancelAndHoldAtTime(now);
-      gate.setValueAtTime(gate.value, now);
-      gate.linearRampToValueAtTime(0, now + Math.max(0, HOME_ENDING.musicEndsAt - s.homeEndingTime));
+      for (const gate of this.gates) {
+        gate.cancelAndHoldAtTime(now);
+        gate.setValueAtTime(gate.value, now);
+        gate.linearRampToValueAtTime(0, now + Math.max(0, HOME_ENDING.musicEndsAt - s.homeEndingTime));
+      }
       this.homeFadeScheduled = true;
     }
     if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
@@ -1177,8 +1196,10 @@ export class Soundscape {
     }
 
     const cueDucking = !homeMusicForward && now < this.cueSpaceUntil;
-    this.backgroundDuck.gain.setTargetAtTime(cueDucking ? tuning.audio.authoredCueDuck : 1,
-      now, cueDucking ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease);
+    const duck = cueDucking ? tuning.audio.authoredCueDuck : 1;
+    const duckTime = cueDucking ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease;
+    this.backgroundDuck.gain.setTargetAtTime(duck, now, duckTime);
+    this.wetDuck?.gain.setTargetAtTime(duck, now, duckTime);
 
     if (s.flockChatter !== false && s.flock?.active && now > this.nextFlock && now > this.flockQuietUntil) {
       this.bugle(s.flock, 0.8 + Math.random() * 0.4);

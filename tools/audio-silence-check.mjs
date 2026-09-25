@@ -18,6 +18,7 @@ await page.route(new URL('**', old).href, async route => {
 try {
   const result = await page.evaluate(async ({ old, reps, rate }) => {
     const previous = await import(new URL('src/audio/audio.ts', old).href);
+    const { ARRIVAL_MUSIC } = await productionModule('/src/audio/arrival-music.ts');
     const smooth = (t, a, b) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
     const bump = (t, a, b, c, d) => smooth(t, a, b) * (1 - smooth(t, c, d));
     const layers = ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'padGain', 'musicBus', 'backgroundBus'];
@@ -37,6 +38,9 @@ try {
         : t < 45 ? { music: 'meadow' }
         : t < 70 ? { music: 'sea', seaScore: 'open', sea: 1, land: 0 }
         : { music: 'wood', forestWind: true, land: 1, gust: 18 * bump(t, 75, 75.5, 76, 77) } },
+      // Meadow to Birches: the arrival fade, rest and swap to a fresh background echo, sailing with the pad held off.
+      arrival: { seconds: 45, state: t => ({ land: 0, ...(t < 28 ? { music: 'meadow', meadowScore: 'walk' } : ARRIVAL_MUSIC.birches),
+        arrivalMusic: t >= 20 && t < 28 ? 'birches' : undefined, gust: 16 * bump(t, 33, 33.5, 34, 35) }) },
       // The ending: the music is cut for good and both buses fall to 0 under a live pad.
       ending: { seconds: 60, state: t => ({ music: 'home', summitScore: 'approach', night: smooth(t, 0, 10), land: 0, meadow: 0,
         flockChatter: false, scripted: true, silence: t >= 20, gust: 20 * bump(t, 40, 41, 42, 43) }) },
@@ -55,9 +59,12 @@ try {
         try { sound.start(); } finally { window.AudioContext = Native; }
         Object.defineProperty(sound, 'running', { get: () => true });
         const held = Object.fromEntries(layers.map(k => [k, { seconds: 0, entries: 0, releases: 0 }]));
+        const stages = [];
         const update = tick => {
           const t = Math.round(tick * step * 1e6) / 1e6;
           sound.update(step, { ...baseState, breeze: .3, ...state(t) });
+          const stage = sound.arrivalTransition.stage;
+          if (stage !== stages.at(-1)) stages.push(stage);
           if (!track) return;
           for (const k of layers) {
             const f = sound.fades.get(sound[k].gain), h = held[k];
@@ -77,7 +84,7 @@ try {
         }
         const buffer = await rendering;
         for (const h of Object.values(held)) delete h.was;
-        return { buffer, ms: performance.now() - started, held };
+        return { buffer, ms: performance.now() - started, held, stages };
       } finally { Math.random = random; }
     }
     const report = {};
@@ -99,7 +106,7 @@ try {
           }
         }
         compared = { maxDiffDbFS: max ? 20 * Math.log10(max) : -Infinity, maxDiffAt: at, differingSamples: differing,
-          samples: a.buffer.length * 2, peakDbFS: 20 * Math.log10(peak), rmsDbFS: 10 * Math.log10(power / (a.buffer.length * 2)),
+          samples: a.buffer.length * 2, stages: b.stages, peakDbFS: 20 * Math.log10(peak), rmsDbFS: 10 * Math.log10(power / (a.buffer.length * 2)),
           held: Object.fromEntries(Object.entries(b.held).filter(([, h]) => h.entries).map(([k, h]) => [k, { ...h, seconds: Math.round(h.seconds * 10) / 10 }])) };
       }
       report[name] = { ...compared, renderMs: times };
