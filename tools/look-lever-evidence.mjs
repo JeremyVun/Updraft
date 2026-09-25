@@ -241,6 +241,7 @@ const CROPS = {
     { label: 'Reeds at the pond\'s edge, swans on the water', x: 560, y: 260, frame: 400 },
     { label: 'The kite, its string and a far sail on the sea horizon', x: 700, y: 100, frame: 400 },
     { label: 'Near grass', x: 520, y: 700, frame: 400 },
+    { label: 'The child and the cygnet (the still; in the clip they walk out of this window)', x: 100, y: 620, frame: 450 },
   ],
   washing: [
     { label: 'Washing lines and posts against the sky', x: 480, y: 160, frame: 200 },
@@ -274,11 +275,13 @@ const H264 = (crf) => ['-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf)
   '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-movflags', '+faststart'];
 const TO_YUV = 'scale=out_color_matrix=bt709:out_range=tv';
 
-/** Mean PSNR (dB) over the clip, compared in RGB after each side's chain. */
+/** Mean luma PSNR (dB) over the clip, frames paired by index, both sides as BT.709 after each side's chain. */
 function psnrOf(a, b, chainA = 'null', chainB = 'null') {
-  const r = spawnSync('ffmpeg', ['-hide_banner', '-i', a, '-i', b, '-lavfi',
-    `[0:v]${chainA},format=gbrp[x];[1:v]${chainB},format=gbrp[y];[x][y]psnr`, '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
-  const m = /average:([0-9.]+|inf)/.exec(r.stderr);
+  const luma = 'scale=out_color_matrix=bt709:out_range=tv,format=yuv444p';
+  // A forced input rate numbers both clips' frames alike: the lossless clips carry millisecond timestamps.
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-r', '60', '-i', a, '-r', '60', '-i', b, '-lavfi',
+    `[0:v]${chainA},${luma}[x];[1:v]${chainB},${luma}[y];[x][y]psnr`, '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  const m = /PSNR y:([0-9.]+|inf)/.exec(r.stderr);
   assert(m, r.stderr.slice(-2000));
   return m[1] === 'inf' ? Infinity : +(+m[1]).toFixed(1);
 }
@@ -308,13 +311,13 @@ function derive(out, only) {
       const crop = { ...r, id, stills: {}, videos: {} };
       for (const s of sides) {
         const png = `${out}/crops/${id}-${s}.png`;
-        ff(['-ss', String(r.frame / 60), '-i', raw(s), '-frames:v', '1', '-vf', cropChain(s, r), png]);
+        if (!fs.existsSync(png)) ff(['-ss', String(r.frame / 60), '-i', raw(s), '-frames:v', '1', '-vf', cropChain(s, r), png]);
         crop.stills[s] = `crops/${id}-${s}.png`;
       }
       for (const [a, b] of PAIRS) {
         if (!sides.includes(b)) continue;
         const file = `${out}/crops/${id}-${a}-vs-${b}.mp4`;
-        ff(['-i', raw(a), '-i', raw(b), '-filter_complex',
+        if (!fs.existsSync(file)) ff(['-i', raw(a), '-i', raw(b), '-filter_complex',
           `[0:v]${cropChain(a, r)},pad=iw+${GAP}:ih:0:0:0x202020[x];[1:v]${cropChain(b, r)}[y];[x][y]hstack,${TO_YUV}`, ...H264(10), file]);
         crop.videos[`${a}-${b}`] = `crops/${id}-${a}-vs-${b}.mp4`;
       }
