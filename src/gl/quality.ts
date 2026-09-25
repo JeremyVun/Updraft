@@ -45,10 +45,10 @@ const HEADROOM_MS = 10;
 const HEADROOM_PROBES = 30;
 const HEADROOM_EARLY = 0.95;
 /**
- * Fewer on time than this rules a climb out. In between, the smooth window decides: a browser can be slow to report
- * a finished fence (2–4 ms in Chrome), and a GPU shared with other work finishes late now and then.
+ * Fewer on time than this rules a climb out. In between, the smooth window decides: at low detail the reflection
+ * renders on alternate frames, so half the frames can run late while the next rung still fits.
  */
-const HEADROOM_NONE = 0.5;
+const HEADROOM_NONE = 0.25;
 const REVIEW_MS = 1500;
 const SETTLE_MS = 2500;
 /** A level just climbed into shows whether it fits within a second; every further second spent finding out is spent hitching. */

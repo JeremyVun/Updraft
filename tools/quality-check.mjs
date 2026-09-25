@@ -207,7 +207,7 @@ const play = (q, from, to, ms, { fence = true, lie = false, cap = 1, late = 0 } 
   for (let now = from; now < to; now += interval) {
     q.frame(now, interval);
     const work = ms(q.level, now) * q.level.ratio ** 2 * [.7, .85, 1][q.level.detail];
-    // `late` is the share of frames whose finished fence is reported too late, as a busy shared GPU does.
+    // `late` is the share of frames that finish after the deadline whatever the level, as heavier alternate frames do.
     const reportedLate = frame++ % 10 < late * 10;
     if (q.probing && fence) { const deadline = q.probeDeadline(0, 0); q.gpu(!reportedLate && work <= deadline || lie && deadline < REFRESH); }
     interval = Math.max(cap, Math.ceil(work / REFRESH - 1e-6)) * REFRESH;
@@ -245,10 +245,10 @@ const atTop = row => row.ratio === 1.25 && row.detail === 2;
     assert(seen.some(row => row.now < 10000 && row.ratio < 1), 'the load pushes it well down');
     return seen.find(row => row.now >= 10000 && atTop(row)).now - 10000;
   };
-  const timed = lifted(true), untimed = lifted(false), unclear = lifted(true, .3);
+  const timed = lifted(true), untimed = lifted(false), unclear = lifted(true, .5);
   assert(timed <= 8000, `a device with headroom climbs back within seconds once load lifts: ${Math.round(timed)} ms`);
   assert(untimed > 12000, `without GPU timings the smooth window is the fallback: ${Math.round(untimed)} ms`);
-  assert.equal(unclear, untimed, 'timings that neither prove nor rule out headroom leave it to the smooth window');
+  assert.equal(unclear, untimed, 'half the frames late (alternate-frame reflections) neither proves nor rules out headroom');
 }
 {
   // A 30 fps display: the cap is recognised at the ceiling, which then stops timing frames.

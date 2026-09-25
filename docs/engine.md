@@ -202,13 +202,13 @@ stays inside one refresh there. The deadline runs from submission, not the frame
 doesn't grow with pixels: timed from the start, even 1× frames on the M4 Pro (about 3 ms of script) almost never met
 10 ms while 1.25× ran at a steady 60. The 2–4 ms Chrome takes to report a finished fence (a clear-only frame)
 still counts against it, so the test errs safe. Measured from submission at 1376×1032 CSS, DPR 2, MSAA 2, 98% of
-frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Fewer than half
-on time rules a climb out. Between half and 95%, and where frames can't be timed (no fence, or timers firing more
-than 2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below 17.2 ms for 12
-seconds earns one increase instead, as before. The band exists because the evidence is noisy on a shared GPU: with
-other sessions' Chrome captures running, a 0.85× low-detail frame on the M4 Pro presented at a steady 60 fps yet
-only two thirds of its timed frames met the deadline, and a third of the timers fired late. At the ceiling and on
-manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Fewer than a
+quarter on time rules a climb out. Between a quarter and 95%, and where frames can't be timed (no fence, or timers
+firing more than 2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below
+17.2 ms for 12 seconds earns one increase instead, as before. The band is wide because low world detail renders the
+reflection on alternate frames: at 1× with `mirror=2`, 70% of frames met 10 ms against 94% with the reflection every
+frame, and live play pushed down to `{1×, detail 0}` saw 48% while presenting at a steady 60 fps. Evidence is also
+noisier while other sessions' Chrome captures share the GPU. At the ceiling and on manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
 capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
 frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
 least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
