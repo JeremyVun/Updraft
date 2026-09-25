@@ -583,6 +583,75 @@ most 0.7–1.0 points.
 - Before/after evidence wanted for three look levers: **resolution 1.25×** (L1), **antialiasing off** (L2) and
   **one reverb** (L8). Bloom at half resolution was not picked.
 
+### Round 2 results: phase X1 (E1, E2, E7, L8)
+
+Built on branch `perf-bakes-x1` (from b9aad91). Tools: `tools/audio-silence-check.mjs` (E1 exactness),
+`tools/audio-cost.mjs` (`PAIRS=unheld,onereverb`, `STIR=1`), `tools/boat-mooring-check.mjs` (E2),
+`tools/birches-drift-check.mjs` (E7), `tools/reverb-evidence.mjs` (L8).
+
+**E1, silent gains held at 0: built.**
+- **How:** a gain that `setTargetAtTime` has brought within 10⁻⁶ (−120 dB) of a zero target is held at exactly 0:
+  its automation is cancelled and it is set once, instead of being re-targeted every frame. The eight noise layers,
+  the pad's master gain and the two buses the ending cuts go through `Soundscape.fade`. Whether a gain is that close
+  comes from its own schedule (the `setTargetAtTime` curve followed on the CPU), and the engine's reported value must
+  agree, in case its clock runs behind.
+- **Not a disconnect.** A disconnected looping source stops advancing in Chrome (measured: its playhead froze for the
+  second it was out), so its noise would come back at a different place than the old graph's. A gain held at a
+  constant 0 is reported as silence, and the convolvers behind it idle after their tails, in Chrome and in WebKit
+  (offline microbenchmark: 4 convolved noise layers at an automated 0 against a held 0 cost 2.4 s against 0.47 s to
+  render in Chrome, 0.68 s against 0.19 s in WebKit). The sources keep running, so nothing restarts and nothing can
+  click.
+- **Exactness** (`audio-silence-check`, 48 kHz, 60 Hz updates, the previous build's `audio.ts` rendered alongside with
+  the same seed): the largest difference from the old graph is −113 dBFS (player wind, lift, a shower, winter weather
+  and the piano taking the pad, each entering and leaving silence), −140 dBFS (composed scores taking the pad away
+  and giving it back), −143 dBFS (Meadow → Birches arrival: fade, rest, echo swap) and −153 dBFS (the ending's cut).
+  Every sequence holds and releases layers. The existing offline audio checks pass (`audio-check`,
+  `audio-continuity-check`, `audio-interruption-check`, `audio-direction-check`, `opening-score-check`,
+  `meadow-score-check`, `lines-score-check`, `birches-score-check`, `piano-audio-check`, `arrival-audio-check`,
+  `homeward-audio-check`, `flock-audio-check`, `marine-audio-check`), as do `audio-browser-check` and
+  `piano-audio-browser-check`. `meadow-score-browser-check`, `birches-score-browser-check` and
+  `sea-score-browser-check` time out or fail at their real-gesture steps,
+  and fail at the same line on the untouched base build (b9aad91), so the failures predate X1.
+- **Saving:** offline, the same sequences render 18% (wind), 38% (scores), 13% (arrival) and 46% (ending) faster.
+  @@E1LIVE@@
+
+**E2, the moored hull's ground: built.**
+- **How:** while the boat is made fast at a berth (`afloat`, `grounded`, `mooring`), it measures once the highest
+  ground within reach of any hull contact: heights 0.5 m apart over the square the hull can reach from within 1 m of
+  where it lies, plus the largest step between samples and 0.25 m for the height window's differences. It is kept
+  until the boat moves 1 m. Each frame it takes the lowest contact after pitch and roll (a rotation, no height
+  lookups). If even that ceiling leaves the hull clear, the 210 contacts are not tested: testing them could not have
+  moved it. Otherwise they are tested as before.
+- **Exactness:** @@E2@@
+
+**E7, the Birches update in the Drowned drift: dropped, because the room is visible.**
+- `birches-drift-check` follows the drift from its start for 145 s of game time, until the room stops being drawn.
+  Every 15 frames it freezes the frame, redraws it (and the sea's reflection) with and without the Birches objects,
+  and compares; a redraw with no change is the control, and it never differed. The room is on screen for the first
+  3.7 s (84,000 pixels at the start, falling to 400 as the camera turns towards the village) and never again.
+- The full update only runs while the camera is within the floor range, which ends 22.5 s into the drift; after
+  that it returns early. So the profile's "0.22 ms for 1.8 min" was really 0.22 ms for about 20 s. A gate after the
+  room leaves the screen would save about 19 s × 0.22 ms per playthrough, and it would freeze the room's state 19 s
+  earlier than now, exact only while no player's camera turns back towards it. Not worth the risk.
+- Evidence: `/tmp/updraft-pb-x1-drift.json`, and the first and last visible samples as
+  `/tmp/updraft-pb-x1-drift-{60,270}-{with,without}.png`.
+
+**L8, one reverb: evidence built, the default unchanged.** `reverb=one` sends the background music's wet send
+through the shared reverb instead of its own, gated and ducked before the reverb rather than after, and never makes
+the second convolver or its spare. With the flag unset the graph is the old one (the E1 exactness renders above
+include the refactored arrival and ending gates).
+- **What changes:** both reverbs use the same impulse, so while a room plays steadily the two mixes are identical
+  (the Meadow render differs by −140 dB). They differ only where the background's gate or duck moves: at an arrival
+  (two reverbs cut the old echo at the rest and start the new room in a fresh reverb; with one, the echo rings on into
+  the rest), under a ducking cue, and after the ending's cut (the tail rings out). The largest difference is about
+  −51 dBFS, 15–20 dB below the wind and sea at those moments.
+- **Listening page:** `/tmp/updraft-pb-x1-reverb/index.html`: the Meadow score, the arrivals at the island of lines
+  and at the birches, and the ending to the credits, each rendered twice from the same seed, with a synced switch
+  and the difference on its own.
+- **Saving:** offline, one reverb renders the Meadow 32% faster, the arrivals 7–8% and the ending 3%: it only saves
+  where both reverbs would be busy at once, which after E1 means a score playing while the wind, calls, chimes or
+  foley feed the shared reverb. @@L8LIVE@@
+
 ### Surprises
 
 - **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
