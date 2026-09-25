@@ -28,6 +28,14 @@ const PUSH_OFF_LONGEST = 8;
 const TURN_SLOW = 0.5;
 const TURN_FAST = 0.25;
 /**
+ * Made fast at a berth, the hull only tests its contacts against the ground when the highest ground within its reach
+ * could touch it: that ground is sampled this finely, kept while the boat stays this close to where it was measured,
+ * and raised by this much beyond the slope between samples, for the height window's small differences.
+ */
+const CEILING_STEP = 0.5;
+const CEILING_SLACK = 1;
+const CEILING_MARGIN = 0.25;
+/**
  * How the sail is cut: the foot from mast to clew, the luff from tack to head, how far it narrows toward the
  * head, how far the foot rises to the clew and how high the tack sits. The shader cuts the same cloth from these
  * numbers, so the mesh only has to carry the uv and a shape to be measured for.
@@ -293,6 +301,10 @@ export class Boat {
   /** The actual shell vertices, before merging, so every part of the hull clears the sand. */
   private readonly hullContacts: THREE.BufferAttribute;
   private readonly contact = new THREE.Vector3();
+  /** How far any contact can lie from the hull's origin, however it is turned. */
+  private readonly reach: number;
+  /** Above the highest ground within reach of the hull while it lies near (x, z). */
+  private readonly ceiling = { x: NaN, z: NaN, height: Infinity };
   private nearShore = true;
   private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -332,6 +344,9 @@ export class Boat {
     const trim = new THREE.Color('#5d3d27');
     const shellGeometry = hull();
     this.hullContacts = shellGeometry.getAttribute('position') as THREE.BufferAttribute;
+    let reach = 0;
+    for (let i = 0; i < this.hullContacts.count; i++) reach = Math.max(reach, this.contact.fromBufferAttribute(this.hullContacts, i).length());
+    this.reach = reach;
     const shell = paint(shellGeometry, wood);
     const deck = paint(floorboards(), trim);
     const thwart = paint(new THREE.BoxGeometry(1.7, 0.08, 0.34).translate(0, 0.02, -0.25), trim);
@@ -656,7 +671,8 @@ export class Boat {
     // Floating height alone lets an arriving bow, or a departing stern, pass through the beach.
     // Resolve the shell against the ground after applying its complete pitch and roll.
     let supported = -Infinity;
-    for (let i = 0; this.nearShore && i < this.hullContacts.count; i++) {
+    const touching = this.nearShore && !this.clearOfGround();
+    for (let i = 0; touching && i < this.hullContacts.count; i++) {
       const p = this.contact.fromBufferAttribute(this.hullContacts, i).applyQuaternion(this.group.quaternion);
       supported = Math.max(supported, heightAt(this.position.x + p.x, this.position.z + p.z) - p.y);
     }
@@ -664,6 +680,39 @@ export class Boat {
     this.group.position.copy(this.position);
     this.sailPivot.rotation.y = this.boom;
     this.group.updateMatrixWorld(true);
+  }
+
+  /**
+   * True only when no contact can reach the ground, so testing them would leave the hull where it is. Outside the
+   * height window every contact's ground is the procedural island, which costs most of a moored boat's frame.
+   */
+  private clearOfGround(): boolean {
+    if (!this.afloat || !this.grounded || !this.mooring) return false;
+    const p = this.position, c = this.ceiling;
+    if (!(Math.hypot(p.x - c.x, p.z - c.z) <= CEILING_SLACK)) this.measureCeiling(p.x, p.z);
+    let lowest = Infinity;
+    for (let i = 0; i < this.hullContacts.count; i++) {
+      lowest = Math.min(lowest, this.contact.fromBufferAttribute(this.hullContacts, i).applyQuaternion(this.group.quaternion).y);
+    }
+    return c.height - lowest + tuning.sail.hullClearance < p.y;
+  }
+
+  private measureCeiling(x: number, z: number): void {
+    const n = Math.ceil((this.reach + CEILING_SLACK) / CEILING_STEP) + 1, side = 2 * n + 1;
+    const h = new Float64Array(side * side);
+    let top = -Infinity, slope = 0;
+    for (let j = 0; j < side; j++) {
+      for (let i = 0; i < side; i++) {
+        const k = j * side + i;
+        h[k] = heightAt(x + (i - n) * CEILING_STEP, z + (j - n) * CEILING_STEP);
+        top = Math.max(top, h[k]);
+        if (i) slope = Math.max(slope, Math.abs(h[k] - h[k - 1]));
+        if (j) slope = Math.max(slope, Math.abs(h[k] - h[k - side]));
+      }
+    }
+    this.ceiling.x = x;
+    this.ceiling.z = z;
+    this.ceiling.height = top + slope + CEILING_MARGIN;
   }
 
   /** Rest along a sloping beach instead of holding a level hull on its highest corner. */
