@@ -53,11 +53,14 @@ const busy = () => {
 };
 // Holding the browser lock keeps other browser checks out; QUIET waits for anything else (ffmpeg, simulators, VMs).
 const QUIET_S=Number(process.env.QUIET??0), SYSTEM=/^(secd|WindowServer|kernel_task|ctkd|launchd|logd|mds.*|coreaudiod|runningboardd|trustd|syspolicyd|.*intelligenceplatformd|\(proactiveeventtr\))$/;
+// GPU_QUIET=1 waits only for other GPU users (another Chrome's GPU process, a simulator, ffmpeg) over 15% CPU:
+// CPU-only background load (build watchers, servers) no longer holds every chapter for the whole QUIET window.
+const GPU_QUIET=process.env.GPU_QUIET==='1',GPU_USER=/\(GPU\)|Simulator|ffmpeg|qemu/;
 async function quiet() {
   const start=Date.now(),samples=[];
   for(;;) {
     let hot=[];
-    for(let i=0;i<4;i++){const b=busy();samples.push(b);hot.push(...b.filter(r=>!r.own&&r.cpu>50&&!SYSTEM.test(r.command)));await new Promise(r=>setTimeout(r,2500));}
+    for(let i=0;i<4;i++){const b=busy();samples.push(b);hot.push(...b.filter(r=>!r.own&&(GPU_QUIET?GPU_USER.test(r.command):r.cpu>50&&!SYSTEM.test(r.command))));await new Promise(r=>setTimeout(r,2500));}
     const waitedS=(Date.now()-start)/1000;
     if(!hot.length||waitedS>=QUIET_S)return {waitedS,contended:hot.length>0,hot,samples:samples.slice(-4)};
     console.warn('Waiting for quiet: '+[...new Set(hot.map(h=>h.command))].join(', '));
@@ -253,7 +256,7 @@ window.__audit = {
       'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
       'grass-shade':[grassMats,'vertexShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
       'grass-life':[grassMats,'vertexShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
-      'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\n  ivec2 at','void main() { collapse(); return;\n  ivec2 at')],
+      'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\\n  ivec2 at','void main() { collapse(); return;\\n  ivec2 at')],
       'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],
       'water-vert-flat':[[waterMat],'vertexShader',s=>main(s,'void main() { vec3 w = (modelMatrix * vec4(position, 1.0)).xyz; vSwell = vec3(0.0); vWorld = w; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0); }')],
       'water-bed':[[waterMat],'fragmentShader',s=>sub(s,'if (depth < 9.0) {','if (false) {')],
