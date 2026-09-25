@@ -144,6 +144,49 @@ of the distant terrain (item B below) is **not** included in it.
 
   Bloom resolution and item E would change the look.
 
+## Round 2: battery (2026-09-25)
+
+Jeremy, 2026-09-25 (verbatim):
+
+> Previously, a full playthrough cost 30% of my ipad battery, but now after all the optimisations to date it only
+> costs 15-18% of my ipad battery. So good progress, but i want to try and get it down even more.
+
+**The target is now energy over a whole playthrough, not frame time.** Energy is roughly each chapter's work per
+frame × frames rendered × minutes spent there, plus what doesn't show in a GPU profile: CPU script, the audio
+graph (which runs every audio frame whether or not a layer is audible), and the display. So a cost in a chapter
+the player spends 10 minutes in outweighs the same cost in a 1-minute one, and a skip that saves no frame time on
+the Mac can still save energy.
+
+**Assumptions to state, not rely on:**
+- The M4 Pro Mac and the M5 iPad have the same family of tile-based Apple GPU, and Chrome and Safari both run
+  WebGL through ANGLE on Metal. So a pass's share of GPU time on the Mac is taken as its share of GPU energy on
+  the iPad. Absolute milliseconds don't transfer.
+- The display and the system take a share of the 15–18% that no rendering change touches. At a guessed 3 W
+  for display and system over a playthrough of about an hour on a ~39 Wh battery, that floor is about 8%, so
+  the reachable part is roughly half of what's left. Jeremy's playthrough time and brightness would firm this up.
+
+**Measure first (phase M).** No `src/` change until the numbers are in and Jeremy has seen the ranked list.
+1. **Minutes per chapter.** Chapter entry times from a full `tools/playthrough.mjs` run (`report.chapters`),
+   as the weight for everything else. The bot's pace is a proxy for Jeremy's.
+2. **Cost per frame per chapter**, drained, at the scale Jeremy plays (High is 1.5×, touch Auto 1.25×; both
+   are measured until he says which).
+3. **Breakdowns of the known large costs**, paired as before:
+   - grass: vertex against fragment, each LOD tier, and the frost and tint terms;
+   - the Birches room: trunks, leaves, scarf and the rest;
+   - the water surface on land (6–12%): dead or invisible terms, as item A found in the terrain;
+   - post: bloom pass by pass, and the MSAA resolve.
+4. **CPU per chapter:** frame script time, draw calls and the top self-time functions.
+5. **Audio:** the audio thread's CPU with sound on against muted, per chapter, and a census of nodes that run
+   while silent (zero-gain oscillators and noise layers, the two 4.5 s convolvers, the spare convolver), with
+   which of them could be stopped without any audible change.
+6. **Levers that change the look, costed only:** render scale 1.5× → 1.25× → 1×, MSAA 2 → 0, bloom at lower
+   resolution, and the sky at lower resolution at sea and on the mirror. These are Jeremy's decisions; the
+   numbers only inform them.
+
+**Deliverable:** a table of energy share by chapter (cost × minutes), a ranked list of candidates split into
+exact (no look change) and look-changing, each with its expected saving of the whole playthrough, written here
+under "Round 2 profile".
+
 ## What changes
 
 ### A. Skip terrain fragment work that is thrown away (exact)

@@ -293,6 +293,19 @@ fence polling) if it shows the change doesn't shift results systematically.
 - Every pair's baseline, with any straddled or contended row repeated.
 - A ranked list of the largest remaining costs per chapter.
 
+## Phase M: battery census (round 2, design "Round 2: battery")
+
+**Status:** started 2026-09-25. Measurement only.
+
+**Owns:** nothing in `src/`. New or extended tools under `tools/` (for example new `frame-profile.mjs`
+ablations, an audio census). The results go into design.md under "Round 2 profile".
+
+**Work:** the six measurements in design "Round 2: battery", in that order of priority. Pool at least two page
+loads per chapter and drop straddled or contended rows, as in phase R.
+
+**Gate:** every number states its fixture, scale, the machine's load and its pair range. No saving is quoted
+as a battery percentage without the minutes weighting and the display floor beside it.
+
 ## Phase 7: close
 
 **Status:** not started. Run the backlog-item close stage:
