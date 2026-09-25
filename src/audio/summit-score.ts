@@ -22,15 +22,19 @@ const dynamics: Record<SummitScorePhase, readonly (readonly [number, number])[]>
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 /** Seconds the scripted ending takes to rise from wherever the approach left the music. */
 const ENTRY_EASE = 4;
-/** The last cadence broadens instead of hurrying (5.1, 5.5, 6 s) and the final chord rings 7 s before the fade. */
+/**
+ * After the minor iv the music climbs home by steps over a held D (B-flat, C, D), broadening as it goes (5.1, 5.5,
+ * 6 s), and the final chord rings 7 s before the fade.
+ */
 export const HOME_ENDING_CHORDS: readonly (readonly [number, readonly number[]])[] = [
   ...Array.from({length:8},(_,i): [number,readonly number[]] => [i*5.25,SUMMIT_CHORDS[8+i]]),
   ...Array.from({length:8},(_,i): [number,readonly number[]] => [41+i*4.25,SUMMIT_CHORDS[16+i]]),
-  ...[73.05,78.15,83.25,88.35,93.45,98.55,103.65].map((at,i): [number,readonly number[]] => [at,SUMMIT_CHORDS[24+i]]),
+  ...[73.05,78.15,83.25,88.35,93.45].map((at,i): [number,readonly number[]] => [at,SUMMIT_CHORDS[24+i]]),
+  [98.55,[46,53,62,65]], [103.65,[48,55,62,64]],
   [109.15,[50,57,61,66]], [115.15,[50,57,62,66]],
 ];
 const endingUpper: readonly (readonly [number, readonly number[]])[] = [
-  [0,[69,73]], [93.45,[69,74]], [98.55,[69,73]], [103.65,[67,71]], [109.15,[69,76]],
+  [0,[69,73]], [93.45,[69,74]], [98.55,[69,72]], [103.65,[69,74]], [109.15,[69,76]],
 ];
 const endingDynamics = [[0,.92],[21,1.06],[40,.825],[46,.65],[61,.58],[70,.64],
   [73.05,.68],[88.35,.78],[98.55,.82],[109.15,.90]];
