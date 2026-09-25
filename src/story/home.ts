@@ -44,7 +44,7 @@ const JOIN_AT = 8;
 const LEAVE_SPEED = 11;
 const LEAVE_CLIMB = 1;
 /** Seconds the child watches them go before walking on: long enough for the V to grow small. */
-const WATCHES_FOR = 16;
+const WATCHES_FOR = 15;
 /** How slowly they walk on afterwards, as a share of their usual pace. */
 const STROLL = 0.7;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
@@ -110,9 +110,13 @@ const WATCHES_IT = 7;
 const DOOR_OPENS_AT = 9;
 /** When the gaze turns toward the sea, measured from the doorway. */
 const RISE_FROM = 2;
-/** Once the child is inside, the gaze leaves the house and settles on the moon as the music ends. */
+/** Seconds after the child goes in that the gaze leaves the house; it settles on the moon as the music fades. */
 const TURN_FROM = 3;
-const TURN_TO = 26;
+/** A new staged view starts from wherever the camera is and eases onto its framing over this many seconds. */
+const HANDOVER: Partial<Record<Beat, number>> = { summit: 5, crest: 8 };
+/** How quickly the camera's last movement dies away once the goodbye view stops following the paper, and when it rests. */
+const COAST = 1.5;
+const COAST_FOR = 3;
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** A value read off a list of [seconds, amount] keys, eased between them. */
@@ -204,6 +208,17 @@ export class HomeChapter implements Chapter {
   private readonly farewellEye = new THREE.Vector3();
   private readonly farewellLook = new THREE.Vector3();
   private readonly fromCottage = new THREE.Vector3();
+  /** The camera as last rendered, and as it was when the current staged view took over. */
+  private readonly seenEye = new THREE.Vector3();
+  private readonly seenDir = new THREE.Vector3();
+  private seen = false;
+  private readonly handEye = new THREE.Vector3();
+  private readonly handDir = new THREE.Vector3();
+  private handing = false;
+  /** The goodbye view's velocity as it stops following the paper, left to die away rather than stop dead. */
+  private readonly eyeDrift = new THREE.Vector3();
+  private readonly lookDrift = new THREE.Vector3();
+  private capturedAt = -1;
   private insideAt = -1;
   private farewellCaptured = false;
   private readonly releaseFoot = new THREE.Vector3();
@@ -346,6 +361,19 @@ export class HomeChapter implements Chapter {
     this.beat = beat;
     this.beatStart = this.now;
     if (beat === 'inside') this.insideAt = this.now;
+    this.handing = this.seen && HANDOVER[beat] !== undefined;
+    if (this.handing) { this.handEye.copy(this.seenEye); this.handDir.copy(this.seenDir); }
+  }
+
+  /** Blend a newly staged view in from the rendered camera, so a change of shot starts and ends at rest. */
+  private easeHandover(): void {
+    const s = this.shot, over = HANDOVER[this.beat];
+    if (!this.handing || over === undefined || !s.eye) return;
+    const k = glide(this.t, 0, over);
+    if (k >= 1) { this.handing = false; return; }
+    const reach = s.target.distanceTo(s.eye);
+    s.eye.lerpVectors(this.handEye, s.eye, k);
+    s.target.lerpVectors(this.tmp.copy(this.handDir).multiplyScalar(reach).add(this.handEye), s.target, k);
   }
 
   private get t(): number {
@@ -384,7 +412,15 @@ export class HomeChapter implements Chapter {
     const staged = this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered';
     if (!staged) this.hush += (this.hushFor - this.hush) * (1 - Math.exp(-dt * 0.5));
     if (p.held) p.hold(c);
+    if (this.beat === 'home') {
+      const keep = this.t < COAST_FOR ? Math.exp(-dt * COAST) : 0;
+      this.farewellEye.addScaledVector(this.eyeDrift, (1 - keep) / COAST);
+      this.farewellLook.addScaledVector(this.lookDrift, (1 - keep) / COAST);
+      this.eyeDrift.multiplyScalar(keep);
+      this.lookDrift.multiplyScalar(keep);
+    }
     this.frame();
+    this.easeHandover();
   }
 
   /**
@@ -947,10 +983,20 @@ export class HomeChapter implements Chapter {
 
   /** Use the actual eased camera: timers alone cannot guarantee that the player saw either reveal. */
   afterCamera(camera: THREE.PerspectiveCamera): void {
+    camera.getWorldDirection(this.seenDir);
+    this.seenEye.copy(camera.position);
+    this.seen = true;
     if (this.beat === 'release') {
-      // Keep the actual eased view, not its requested endpoint, for a continuous stationary goodbye.
+      // Keep the actual eased view, and how it is moving, for a continuous stationary goodbye.
+      this.tmp.copy(this.seenDir).multiplyScalar(SEA_LOOK).add(camera.position);
+      const dt = this.now - this.capturedAt;
+      if (this.capturedAt >= 0 && dt > 0) {
+        this.eyeDrift.subVectors(camera.position, this.farewellEye).divideScalar(dt);
+        this.lookDrift.subVectors(this.tmp, this.farewellLook).divideScalar(dt);
+      }
       this.farewellEye.copy(camera.position);
-      camera.getWorldDirection(this.farewellLook).multiplyScalar(SEA_LOOK).add(camera.position);
+      this.farewellLook.copy(this.tmp);
+      this.capturedAt = this.now;
       this.farewellCaptured = true;
     }
     if (!['brow', 'settle', 'unfold', 'gaze'].includes(this.beat)) return;
@@ -1095,9 +1141,10 @@ export class HomeChapter implements Chapter {
       /** Stay where we said goodbye; only our gaze leaves the cottage for the moon and stars. */
       this.frameFarewell();
       s.target.copy(this.aim);
-      // The move may still be settling as the credits begin; a completed save opens on its end.
-      const since = this.insideAt < 0 ? Infinity : this.now - this.insideAt;
-      const turn = glide(since, TURN_FROM, TURN_TO);
+      // It arrives as the music fades, on the score's own clock; a completed save opens on its end.
+      const turnFrom = this.insideAt + TURN_FROM;
+      const turnTo = Math.max(turnFrom + 10, (this.endingAt ?? -Infinity) + HOME_ENDING.fadeFrom);
+      const turn = this.insideAt < 0 ? 1 : glide(this.now, turnFrom, turnTo);
       if (turn > 0) {
         /** Out over the open sea north-east of the island, which is the one way from here that holds both. */
         const aspect = typeof window === 'undefined' ? 16 / 9 : window.innerWidth / window.innerHeight;

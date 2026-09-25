@@ -14,6 +14,7 @@ const {SwanFlock}=await import('../src/creatures/flock.ts');
 const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {CameraRig}=await import('../src/camera.ts');
+const {HOME_ENDING}=await import('../src/story/home-ending.ts');
 const {tuning}=await import('../src/tuning.ts');
 // Retained cues mark narrative events in this geometry fixture; audio-check covers their disabled mix.
 tuning.audio.homeEndingSounds=true;
@@ -116,9 +117,14 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
   // main.ts eases the chapter's light once more before applying the world palette.
   renderedDusk+=(chapter.dusk-renderedDusk)*(1-Math.exp(-dt*.5));
   if(['home','inside','credits'].includes(chapter.beat)) {
-   farewellEye??=lastEye.clone();
-   assert(rig.camera.position.distanceTo(farewellEye)<1e-7,
-    'the goodbye camera must remain at the crest through the walk, entry and credits');
+   // The last of the paper-following move dies away in the first seconds of the walk, then the camera holds.
+   const settling=chapter.beat==='home'&&chapter.t<3+dt;
+   if(settling)assert(rig.camera.position.distanceTo(lastEye)<.2,'the goodbye camera settles without a jump');
+   else {
+    farewellEye??=rig.camera.position.clone();
+    assert(rig.camera.position.distanceTo(farewellEye)<1e-7,
+     'the goodbye camera must remain at the crest through the walk, entry and credits');
+   }
    assert(lastRotation.angleTo(rig.camera.quaternion)<.035,
     'the house and credits pans must join without an angular jump');
   }
@@ -203,7 +209,7 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
   if(chapter.finished)break;
  }
  assert(chapter.finished,'ending must reach credits without input');
- assert(Math.abs(chapter.homeEndingTime-116.5)<=1/fps+.001,'credits share the ending score clock');
+ assert(Math.abs(chapter.homeEndingTime-HOME_ENDING.creditsAt)<=1/fps+.001,'credits share the ending score clock');
  assert(Math.abs(chapter.homeEndingTime-silenceAt-2)<=1/fps+.001,'credits leave two seconds after the music cut');
  assert(maxCameraStep<1,'the reveal-to-descent camera must move continuously');
  assert(descent&&insideDusk>1.94,'night must be established before the child enters');
