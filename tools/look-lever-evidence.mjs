@@ -89,11 +89,6 @@ const MOMENTS = {
   },
 };
 
-if (mode === 'capture') await capture(args[0], args.slice(1));
-else if (mode === 'derive') derive(args[0], args.slice(1));
-else if (mode === 'index') writeIndex(args[0]);
-else throw new Error('usage: capture <out> <moment...> | derive <out> | index <out>');
-
 function manualFrames() {
   const real = window.requestAnimationFrame.bind(window);
   let stepping = false, queue = [], now = 0;
@@ -454,3 +449,8 @@ addEventListener('keydown', (e) => {
   fs.writeFileSync(`${out}/index.html`, html);
   console.log(`${out}/index.html`);
 }
+
+if (mode === 'capture') await capture(args[0], args.slice(1));
+else if (mode === 'derive') derive(args[0], args.slice(1));
+else if (mode === 'index') writeIndex(args[0]);
+else throw new Error('usage: capture <out> <moment...> | derive <out> | index <out>');
