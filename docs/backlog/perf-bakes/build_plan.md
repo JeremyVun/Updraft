@@ -310,7 +310,7 @@ as a battery percentage without the minutes weighting and the display floor besi
 
 ## Phase Q: Auto starts at the top and climbs on evidence (design "Auto on capable devices")
 
-**Status:** built 2026-09-25 on `perf-bakes-q`, not merged. Nonvisual (governor logic), Opus. Touch Auto opens at
+**Status:** done 2026-09-25, merged to `main`. Nonvisual (governor logic), Opus. Touch Auto opens at
 `{1.25×, detail 2}`. Below the ceiling each frame's fence is polled 10 ms after submission: ≥90% of ≥30 timed frames
 on time in a review climbs one rung at once, <25% rules a climb out, and anything between (or untimed) falls back to
 the 12 s smooth window. After a failed climb, fence evidence skips only the first 12 s of the doubled wait. The
@@ -353,7 +353,7 @@ the same page, and records its measured saving under its E item in design.md.
 
 ### Phase X1: CPU and audio cuts (E1, E2, E7) and the one-reverb evidence (L8)
 
-**Status:** done 2026-09-26 on `perf-bakes-x1`, not merged. E1 and E2 built and pass their gates; E7 dropped (the
+**Status:** done 2026-09-26, merged to `main`. E1 and E2 built and pass their gates; E7 dropped (the
 Birches room is on screen for the first 3.7 s of the drift, and its full update already stops 22.5 s in); L8's
 `reverb=one` evidence is at `/tmp/updraft-pb-x1-reverb/index.html`, default unchanged, awaiting Jeremy's verdict.
 Numbers in design.md, "Round 2 results: phase X1". The E1 gain hold replaces a disconnect: a disconnected looping
@@ -383,7 +383,7 @@ the Birches room's update gating (E7), `tools/audio-cost.mjs`.
 
 ### Phase X2: GPU cuts (E3, E4, E5, E6)
 
-**Status:** done 2026-09-26 on branch `perf-bakes-x2`, not merged. Kept E5 (grass without its discards where nothing
+**Status:** done 2026-09-26, merged to `main`. Kept E5 (grass without its discards where nothing
 in reach is clipped) and E6 (glints skipped outside the glitter lobe, a per-pixel test: a uniform one can't be exact
 because the moon lights the night sea). Dropped E3 (almost no tile is empty at every density; the ceiling is under 1%
 of a Birches frame) and E4 (exact, but +1–3% on land against −2–4% afloat). Gates: no changed pixel in any of the
@@ -404,7 +404,7 @@ early return, the glint skip), `tools/frame-profile.mjs` (ablations restoring ea
 
 ### Phase V: look-lever evidence (L1, L2)
 
-**Status:** built on branch `perf-bakes-v`; awaiting Jeremy's verdict. Evidence and review notes:
+**Status:** evidence merged to `main` 2026-09-26; L2 ruled out by the lead (it breaks the sail's see-through cutaway); L1 awaits Jeremy's verdict. Evidence and review notes:
 `/tmp/updraft-pb-v-evidence/index.html`, summarised in design.md under "Phase V evidence". The tool is
 `tools/look-lever-evidence.mjs`. The main finding: L2 turns off every alpha-to-coverage fade, so the sail no longer
 shows the child through it. L1 is a mild softening with no designed effect lost. Visual (capture and review), Opus.
