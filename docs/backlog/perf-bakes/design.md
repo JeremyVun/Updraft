@@ -518,6 +518,31 @@ pulls it. Values are CPU ms per wall-clock second (1000 = one M4 Pro core).
 | Bloom at half resolution | 3.1% | Home 6%, Meadow 5%, Birches 5% |
 | Sky at lower resolution on the sea chapters and the mirror (upper bound: sky radiance removed there) | 3.2% | Crossing to Washing 13%, Crossing to Boats 12%, Crossing to Meadow 12% |
 
+**Phase V evidence (2026-09-26, captured at b190fc5):** `/tmp/updraft-pb-v-evidence/index.html`.
+- **What was captured:** High (A) against L1 (1.25×, MSAA 2) and L2 (1.5×, MSAA 0) in a 1376×1032 page at device
+  scale 2. There are five 10 s moments: the woken Meadow walk to the pond, the washing lines, sailing past the kite
+  island, the last climb to the summit, and the Birches scarf.
+- **How:** every game frame was drawn three times from the same state, switching scale and MSAA as the quality
+  ladder does, and read back losslessly. The page has full-frame clips with a synced A/L1/L2 toggle and flip, 2×
+  side-by-side crop clips, lossless still crops and a per-crop flicker measure. Tool:
+  `tools/look-lever-evidence.mjs`.
+- **L2 changes a designed effect, not just edges.** The sail's see-through window over the child and its near fade
+  use alpha-to-coverage, which does nothing without MSAA. In L2 the sail is solid and hides the child's face for the
+  whole sailing clip, which is plain at any distance.
+  - Other alpha-to-coverage materials: tree and birch canopies, Birches litter, kite paper, gold leaves,
+    butterflies, the dark wood, and the sleeping island's floors. They showed no visible change in the Meadow and
+    Birches clips. The wood and the sleeping island weren't captured.
+  - The quality ladder never drops MSAA below 2 by itself, so L2 would be a new state on capable devices.
+  - Thin things sparkle in motion: pond reeds, the kite string, and grass tips on the summit skyline. The flicker
+    measure rises 8–12% there, against 0–4% over open grass, water, the canopy and the swans.
+- **L1 is a mild overall softening** (a render pixel is 1.6 screen pixels instead of 1.33). It shows on the child,
+  the cygnet's face and the kite. Lines thinner than a render pixel break into crawling dashes, clearest on the
+  washing lines. There's no added shimmer (flicker −7% to +1%). At tablet distance I expect it to go unnoticed
+  except side by side. It changes no designed effect.
+- **Not yet seen on the iPad itself**, which is the real test (the page has a 1:1 button). The encode's luma error
+  is 6–9 dB below each lever's difference, except the Birches under L2, which differ from A by no more than the
+  encode (40 dB).
+
 ### Ranked candidates
 
 Savings are shares of the playthrough's measured GPU work at 1.5× (cost × estimated minutes), or of CPU where

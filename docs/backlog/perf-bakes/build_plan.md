@@ -394,7 +394,11 @@ early return, the glint skip), `tools/frame-profile.mjs` (ablations restoring ea
 
 ### Phase V: look-lever evidence (L1, L2)
 
-**Status:** not started. Visual (capture and review), Opus. No `src/` change: `?ratio=` and `?msaa=` exist.
+**Status:** built on branch `perf-bakes-v`; awaiting Jeremy's verdict. Evidence and review notes:
+`/tmp/updraft-pb-v-evidence/index.html`, summarised in design.md under "Phase V evidence". The tool is
+`tools/look-lever-evidence.mjs`. The main finding: L2 turns off every alpha-to-coverage fade, so the sail no longer
+shows the child through it. L1 is a mild softening with no designed effect lost. Visual (capture and review), Opus.
+No `src/` change: `?ratio=` and `?msaa=` exist.
 
 **Deliverable:** frame-locked before/after video and enlarged crops, at an iPad-like viewport (1376×1032 CSS,
 DPR 2), of High (1.5×, MSAA 2) against 1.25× with MSAA 2 (L1) and 1.5× with MSAA 0 (L2). Moments with fine edges
