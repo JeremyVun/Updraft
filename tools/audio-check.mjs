@@ -13,7 +13,7 @@ try {
     // Keep real instance state, substituting only AudioParams and the individual sound voices.
     function fixture(overrides = {}, start = 90) {
       const sound = new audioModule.Soundscape(), calls = [];
-      const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; } });
+      const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; }, cancelScheduledValues() {}, setValueAtTime(value) { this.value = value; } });
       sound.ctx = { currentTime: 90 };
       Object.defineProperty(sound, 'running', { get: () => true });
       for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck']) {

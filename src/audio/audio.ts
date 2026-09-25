@@ -234,6 +234,10 @@ function* impulse(ctx: BaseAudioContext, seconds: number): Generator<void, Audio
 
 /** Ambient beds join the graph once their noise exists; a short fade keeps that late entry from clicking. */
 const NOISE_ENTRY = 0.25;
+/** −120 dB: a gain this close to a zero target is held at exactly 0. */
+const SILENT = 1e-6;
+
+interface Fade { value: number; target: number; at: number; tc: number; held: boolean }
 
 export class Soundscape {
   private ctx: AudioContext | null = null;
@@ -283,6 +287,8 @@ export class Soundscape {
   private liftFilter!: BiquadFilterNode;
   private padVoices: { osc: OscillatorNode[]; gain: GainNode }[] = [];
   private padGain!: GainNode;
+  /** Each faded gain's last scheduled target and its value then, following `setTargetAtTime`'s curve. */
+  private readonly fades = new Map<AudioParam, Fade>();
   private chord = -1;
   private mood: Mood | null = null;
   private noteIndex = 4;
@@ -576,6 +582,32 @@ export class Soundscape {
     }
     this.noiseInputs.push(filter);
     return [gain, filter];
+  }
+
+  /**
+   * `setTargetAtTime`, except that a gain within `SILENT` of a zero target is held at exactly 0. Re-targeted every frame,
+   * a gain counts as automation even at 0, and its zeros keep every convolver it feeds running; held, they idle after
+   * their tails. The engine's own value must agree too, in case its clock runs behind the schedule.
+   */
+  private fade(param: AudioParam, target: number, now: number, tc: number): void {
+    let f = this.fades.get(param);
+    if (!f) this.fades.set(param, f = { value: param.value, target: param.value, at: now, tc, held: false });
+    const value = f.target + (f.value - f.target) * Math.exp(-(now - f.at) / f.tc);
+    if (target === 0 && f.target === 0 && Math.abs(value) < SILENT && Math.abs(param.value) < SILENT) {
+      if (!f.held) {
+        param.cancelScheduledValues(0);
+        param.setValueAtTime(0, now);
+      }
+      f.value = 0;
+      f.held = true;
+    } else {
+      param.setTargetAtTime(target, now, tc);
+      f.value = value;
+      f.held = false;
+    }
+    f.target = target;
+    f.at = now;
+    f.tc = tc;
   }
 
   private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2, soft = false, gesture = false): void {
@@ -933,17 +965,17 @@ export class Soundscape {
     const air = 1 - piano * 0.82;
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
-    this.breezeGain.gain.setTargetAtTime((0.02 + s.breeze * 0.2) * air, now, 0.5);
-    this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
-    this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
-    this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
-    this.gustGain.gain.setTargetAtTime(gustLevel * 0.55 * air, now, tc);
+    this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air, now, 0.5);
+    this.fade(this.rainGain.gain, s.shower * 0.07, now, 1.2);
+    this.fade(this.patterGain.gain, s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
+    this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
+    this.fade(this.gustGain.gain, gustLevel * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);
-    this.whistleGain.gain.setTargetAtTime(whistleLevel * 0.12 * air, now, tc);
+    this.fade(this.whistleGain.gain, whistleLevel * 0.12 * air, now, tc);
     this.whistleFilter.frequency.setTargetAtTime(900 + filterGust * 900, now, tc);
-    this.rustleGain.gain.setTargetAtTime((s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
-    this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air * playerWind, now, 0.15);
+    this.fade(this.rustleGain.gain, (s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
+    this.fade(this.liftGain.gain, s.charge * 0.35 * air * playerWind, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
     const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;
@@ -1066,8 +1098,8 @@ export class Soundscape {
       : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
     if (s.silence) {
-      this.musicBus.gain.setTargetAtTime(0, now, 0.12);
-      this.backgroundBus?.gain.setTargetAtTime(0, now, 0.12);
+      this.fade(this.musicBus.gain, 0, now, 0.12);
+      if (this.backgroundBus) this.fade(this.backgroundBus.gain, 0, now, 0.12);
     }
     if (!finale && !this.openingScore && (chord !== this.chord || bg.music !== this.mood)) {
       /** A room change glides the voices to their new notes rather than cutting: the chord bends into the next. */
@@ -1090,7 +1122,7 @@ export class Soundscape {
     const padLife = 0.012 + 0.045 * s.life;
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
-    this.padGain.gain.setTargetAtTime(
+    this.fade(this.padGain.gain,
       backgroundPaused || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
