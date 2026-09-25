@@ -284,9 +284,13 @@ add up. Per-chapter values are in the tables below.
 
 ⁰ = no pixel changed (a candidate for an exact skip where it saves).
 
-- **Grass is vertex-bound.** `grass-collapse` makes every blade quit at its first instruction; it saves nearly all
-  of what hiding the grass saves. What's left, the empty vertex invocations, is 0–8% of a frame.
-  A constant-colour fragment (`grass-frag-flat`) saves only 3–8%.
+- **Grass is vertex-bound.** `grass-collapse` makes every blade quit at its first instruction. On open meadow
+  (Island, Washing, Meadow, Summit) it saves 70–80% of what hiding the grass saves. A constant-colour fragment
+  (`grass-frag-flat`) saves only 3–8%.
+- **Empty blades cost the most where little grass stands.** The gap between hiding the grass and collapsing it is
+  the cost of vertex invocations that do nothing. It is 4–8% of a frame on open meadow, but 10–12% in the Birches
+  and the Wood. Their floors thin the blades in the shader after the tiles are submitted, so most of the
+  submitted blades there never stand.
 - **The near level (LOD0, to 52 m) is most of it:** 15–20% of a land frame, against 2–11% for LOD1 and 1–5% for LOD2.
 - **Per-vertex fog** (`fogOf` on all 9–13 vertices of every blade) is 3–8% of a land frame.
 - **The frost, dawn and lamp terms** (`grass-shade`) change no pixels outside Sleeping and save 0–4%, within noise.
@@ -352,7 +356,7 @@ about 1.5 ms per frame (`step`, `indexedNormals`, `write`), is phase 5b's.
 
 ### Post
 
-Each stage drawn alone 40 times, then drained, median of 5 (`POST_PASSES=1`), load 1:
+Each stage is drawn alone 40 times, then drained; median of 5 rounds (`POST_PASSES=1`), pooled over loads, in ms:
 
 | Fixture | Scene | MSAA clear + resolve | Clamp copy | Bloom (12 passes + blend) | Grade |
 |---|---:|---:|---:|---:|---:|
@@ -480,7 +484,8 @@ most 0.7–1.0 points.
 |---|---|---|---|
 | E1 | **Audio: disconnect the noise layers and pad voices while their gain is exactly 0**, and reconnect them the frame their target leaves 0. The reverb they feed then goes idle after its 4.5 s tail. | Audio CPU −40 to −93 ms/s on the island and at sea, about 30–60% of the audio cost there. Nothing while a score feeds both reverbs (Meadow). | High for the mechanism; medium for how many chapters it helps (3 fixtures measured). |
 | E2 | **Moored boat at the summit:** cache the ground height under its hull contacts while it lies at the home mooring, instead of calling the procedural `rawHeight` every frame. | CPU −0.7 ms/frame at the summit, about a third of Home's script. | High. |
-| E3 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–4% of land, crossing and sea frames. | Medium. No pixel changed in 4 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
+| E3 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–6% of land, crossing and sea frames. At the summit no sea pixel is visible at all, yet its shading costs 12%. | Medium. No pixel changed in 5 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
+| E3b | **Don't submit grass tiles where no blade stands** (the Birches and Wood floors, cropped ground). The shader discards those blades today, one vertex invocation at a time. | Up to about 4% of the playthrough (hide minus collapse); 10–12% of Birches and Wood frames. | Upper bound. The share of submitted blades that stand wasn't measured. A tile skip is exact only for tiles where nothing stands at any density.
 | E4 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.8%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
 | E5 | **Birches update while in the Drowned village** (0.22 ms/frame; the drift starts off the Birches beach). | CPU −0.2 ms/frame for 1.8 min, if the room is out of sight. | Low: check what is visible first. |
 | — | Not worth building: terrain without its discard (0%), grass frost/dawn/lamp (0%), skipping the mirror reflection where it's invisible (its pass is free there), drawing the water last (slower). | | |
