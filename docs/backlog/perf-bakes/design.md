@@ -591,6 +591,10 @@ every chapter and restores it behind a `frame-profile` ablation (`e5-off`, `e6-o
   transfer and percentages of the full frame are about 0.8× the ones below. Raw data: `/tmp/updraft-pb-x2-f[1-6].json`,
   `/tmp/updraft-pb-x2-x[1-5].json` (exactness), `/tmp/updraft-pb-x2-l1.json` (the first, contended full-frame load).
 
+**Both kept cuts together, full frame** (one load, 8 pairs, `DRAIN=1`, the final code; `none` within ±2%): Island
+3.3%, open sea 3.3%, Birches 2.6%, Meadow walk 2.4%, Jetty 1.3%; within noise elsewhere (Summit 0.3% here, against E5's
+4.4% focused). Raw data: `/tmp/updraft-pb-x2-g1.json`.
+
 **E3, tiles where no blade stands: dropped, nothing worth skipping.**
 - A census read every submitted tile's blade table back: a tile is empty at every density only if every blade's
   `keep` is 0 (then `rank >= thinned * density * keep` holds for any rank, density and reach).
