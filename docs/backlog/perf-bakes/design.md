@@ -553,6 +553,11 @@ most 0.7–1.0 points.
 | L8 | **Audio: one reverb instead of two, or a shorter impulse.** | The two convolvers are 80–150 ms/s of CPU; one would save about half. | Medium. Changes the arrival reverb swap and the tail. |
 | L9 | **Wind and life readbacks every other frame.** | CPU about −0.1 to −0.2 ms/frame (0.2–0.4 ms now, 1.3 on the crossing out). | Low; adds a frame of latency to what reads the wind. |
 
+**Jeremy's rulings on the ranked list (2026-09-25):**
+- Build the exact cuts (E1–E7): "Yes, build them".
+- Before/after evidence wanted for three look levers: **resolution 1.25×** (L1), **antialiasing off** (L2) and
+  **one reverb** (L8). Bloom at half resolution was not picked.
+
 ### Surprises
 
 - **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
