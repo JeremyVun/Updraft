@@ -110,7 +110,9 @@ const WATCHES_IT = 7;
 const DOOR_OPENS_AT = 9;
 /** When the gaze turns toward the sea, measured from the doorway. */
 const RISE_FROM = 2;
-const RISE_TO = 24;
+/** Once the child is inside, the gaze leaves the house and settles on the moon as the music ends. */
+const TURN_FROM = 3;
+const TURN_TO = 26;
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** A value read off a list of [seconds, amount] keys, eased between them. */
@@ -119,6 +121,10 @@ function keyed(keys: number[][], t: number): number {
     if (t <= keys[i + 1][0]) return THREE.MathUtils.lerp(keys[i][1], keys[i + 1][1], THREE.MathUtils.smootherstep(t, keys[i][0], keys[i + 1][0]));
   }
   return keys[keys.length - 1][1];
+}
+/** A sine ease: the gentlest peak speed for a move that starts and stops at rest. */
+function glide(t: number, from: number, to: number): number {
+  return (1 - Math.cos(Math.PI * THREE.MathUtils.clamp((t - from) / (to - from), 0, 1))) / 2;
 }
 /** Keep the moon left of the credits and the horizon at the lower third. */
 const MOON_OFF = THREE.MathUtils.degToRad(19);
@@ -197,6 +203,8 @@ export class HomeChapter implements Chapter {
   private readonly descentHouse = new THREE.Vector3();
   private readonly farewellEye = new THREE.Vector3();
   private readonly farewellLook = new THREE.Vector3();
+  private readonly fromCottage = new THREE.Vector3();
+  private insideAt = -1;
   private farewellCaptured = false;
   private readonly releaseFoot = new THREE.Vector3();
   private readonly releaseHead = new THREE.Vector3();
@@ -337,6 +345,7 @@ export class HomeChapter implements Chapter {
   private to(beat: Beat): void {
     this.beat = beat;
     this.beatStart = this.now;
+    if (beat === 'inside') this.insideAt = this.now;
   }
 
   private get t(): number {
@@ -1087,15 +1096,24 @@ export class HomeChapter implements Chapter {
       /** Stay where we said goodbye; only our gaze leaves the cottage for the moon and stars. */
       this.frameFarewell();
       s.target.copy(this.aim);
-      const lift = this.beat === 'credits' ? 1 : this.beat === 'inside' ? THREE.MathUtils.smootherstep(this.t, RISE_FROM, RISE_TO) : 0;
-      if (lift > 0) {
+      // The move may still be settling as the credits begin; a completed save opens on its end.
+      const since = this.insideAt < 0 ? Infinity : this.now - this.insideAt;
+      const turn = glide(since, TURN_FROM, TURN_TO);
+      if (turn > 0) {
         /** Out over the open sea north-east of the island, which is the one way from here that holds both. */
         const aspect = typeof window === 'undefined' ? 16 / 9 : window.innerWidth / window.innerHeight;
         const halfField = Math.tan(THREE.MathUtils.degToRad(verticalFov(aspect)) / 2);
         const moonOffset = Math.min(MOON_OFF, Math.atan(halfField * aspect * 0.6));
         const out = this.sky.copy(this.moon).setY(0).normalize().applyAxisAngle(UP, -moonOffset);
-        s.target.lerp(this.tmp.copy(this.farewellEye).addScaledVector(out, SEA_LOOK)
-          .setY(this.farewellEye.y + SEA_LOOK * halfField / 3), lift);
+        const from = this.fromCottage.copy(this.aim).sub(this.farewellEye);
+        const to = this.tmp.copy(out).multiplyScalar(SEA_LOOK).setY(SEA_LOOK * halfField / 3);
+        // Pan and tilt like a tripod head: a straight line between two far points hurries through its middle.
+        const yaw0 = Math.atan2(from.x, from.z);
+        const yaw1 = Math.atan2(to.x, to.z);
+        const yaw = yaw0 + Math.atan2(Math.sin(yaw1 - yaw0), Math.cos(yaw1 - yaw0)) * turn;
+        const pitch = THREE.MathUtils.lerp(Math.atan2(from.y, Math.hypot(from.x, from.z)), Math.atan2(to.y, Math.hypot(to.x, to.z)), turn);
+        s.target.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch))
+          .multiplyScalar(SEA_LOOK).add(this.farewellEye);
       }
       this.focus.copy(c);
       return;
