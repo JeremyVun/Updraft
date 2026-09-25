@@ -30,6 +30,7 @@
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // RATIO and MSAA override the page's ratio=1.5&msaa=2. DRAIN=1 waits for the GPU after every draw in every ablation.
 // Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half; none pairs the baseline with itself.
+// msaa-nodepth (exact): the scene target neither resolves nor stores its multisampled depth.
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
@@ -238,6 +239,8 @@ window.__audit = {
     const scale=variants.find(v=>v.startsWith('scale-')),samples=variants.find(v=>v.startsWith('msaa-'));
     const ratio=scale?Number(scale.slice(6)):this.baseRatio,count=samples?Number(samples.slice(5)):this.baseSamples;
     if(post.samples!==count)post.samples=count;
+    // msaa-nodepth: the scene's depth is never read after the scene, so skip resolving it and let the tiler discard it.
+    const t=post.sceneTarget,noDepth=variants.includes('msaa-nodepth');t.resolveDepthBuffer=!noDepth;t.storeMultisampledDepthBuffer=!noDepth;
     if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
     const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
