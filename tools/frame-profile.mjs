@@ -33,7 +33,7 @@
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
-// water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
+// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -266,6 +266,11 @@ window.__audit = {
       'water-mirror':[[waterMat],'fragmentShader',s=>sub(s,'vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool));','vec3 refl = sky;')],
       'water-wind':[[waterMat],'fragmentShader',s=>sub(sub(s,'slope += windWaveSlope(xz, footprint);',''),'float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);','float stroke = 0.0;')],
       'water-paw':[[waterMat],'fragmentShader',s=>sub(s,'float paw = catsPaw(xz, along);','float paw = 1.0;')],
+      'water-fog':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = fogOf(vWorld);','vec4 fog = vec4(0.0);')],
+      'water-sky':[[waterMat],'fragmentShader',s=>sub(s,'vec3 sky = skyColor(R);','vec3 sky = vec3(0.4, 0.5, 0.6);')],
+      'water-cloud':[[waterMat],'fragmentShader',s=>sub(s,'float sh = cloudShadow(xz) *','float sh = 1.0 *')],
+      // Water under land the terrain will cover: returns before any shading where the baked ground is a metre above the sea.
+      'water-landskip':[[waterMat],'fragmentShader',s=>sub(s,'void main() {\\n  vec3 toCam','void main() {\\n  { vec2 u0 = domainUv(vWorld.xz); if (insideUv(u0) && texture(uHeightTex, u0).r > 1.0 && !roomHides(vWorld.xz)) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; } }\\n  vec3 toCam')],
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
     };
     const wanted=new Map();
