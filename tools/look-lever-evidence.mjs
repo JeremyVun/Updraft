@@ -328,14 +328,12 @@ function derive(out, only) {
     });
     console.log(JSON.stringify({ moment: m, ...report[m], crops: report[m].crops.length }));
   }
-  const file = `${out}/report.json`, all = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
-  for (const m of moments) all[m] = report[m];
-  const ordered = Object.fromEntries(Object.keys(MOMENTS).filter((m) => all[m]).map((m) => [m, all[m]]));
-  fs.writeFileSync(file, JSON.stringify(ordered, null, 1));
+  for (const m of moments) fs.writeFileSync(`${out}/report-${m}.json`, JSON.stringify(report[m], null, 1));
 }
 
 function writeIndex(out) {
-  const report = JSON.parse(fs.readFileSync(`${out}/report.json`, 'utf8'));
+  const report = Object.fromEntries(Object.keys(MOMENTS).filter((m) => fs.existsSync(`${out}/report-${m}.json`))
+    .map((m) => [m, JSON.parse(fs.readFileSync(`${out}/report-${m}.json`, 'utf8'))]));
   const notes = fs.existsSync(`${out}/notes.html`) ? fs.readFileSync(`${out}/notes.html`, 'utf8') : '';
   const momentNotes = fs.existsSync(`${out}/moment-notes.json`) ? JSON.parse(fs.readFileSync(`${out}/moment-notes.json`, 'utf8')) : {};
   const side = (s) => SIDES[s].label;
