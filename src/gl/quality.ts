@@ -34,6 +34,15 @@ const UNCAPPED_MS = 25;
 /** GPU timings needed in one review, and the share of them finished within a 60 Hz refresh, to prove a cap. */
 const CAP_PROBES = 8;
 const CAP_EARLY = 0.8;
+/**
+ * Below its ceiling, Auto climbs as soon as frames prove headroom: the GPU finishes a frame within this long of its
+ * start. The next rung up renders up to 1.56× the pixels (1× → 1.25×), so 10 ms becomes at most about 15.6 ms, still
+ * inside one 16.7 ms refresh. CPU time counts against the deadline without growing with pixels, so this errs safe.
+ */
+const HEADROOM_MS = 10;
+/** Timed frames needed in one review, and the share of them that must meet the deadline, to climb at once. */
+const HEADROOM_PROBES = 30;
+const HEADROOM_EARLY = 0.95;
 const REVIEW_MS = 1500;
 const SETTLE_MS = 2500;
 /** A level just climbed into shows whether it fits within a second; every further second spent finding out is spent hitching. */
@@ -42,13 +51,14 @@ const CLIMB_MS = 12000;
 
 /**
  * Targets smooth 60 fps by stepping down render scale, world detail and multisampling
- * when frames run long, and creeping back up after a long smooth stretch. It judges by the trimmed mean and
- * the 90th percentile of recent frame intervals, so a single hitch (a window move, a tab switch) never costs
- * quality, while a GPU that misses every other refresh is caught at once.
+ * when frames run long. It judges by the trimmed mean and the 90th percentile of recent frame intervals, so a
+ * single hitch (a window move, a tab switch) never costs quality, while a GPU that misses every other refresh is
+ * caught at once. Auto opens at its ceiling. Below it, `probing` asks the caller to time each frame's GPU work
+ * against `probeMs`; a review in which nearly every frame finished that early climbs one rung. Where frames can't
+ * be timed, a long smooth stretch climbs instead.
  *
  * A steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps. While frames
- * arrive that slowly, `probing` asks the caller to report whether the GPU finished each frame within one 60 Hz
- * refresh (`gpu`). Frames that finish early yet still wait for every other refresh prove a cap, and Auto then
+ * arrive that slowly, the probe asks whether the GPU finished each frame within one 60 Hz refresh. Frames that finish early yet still wait for every other refresh prove a cap, and Auto then
  * judges against 30 fps until faster intervals show the cap has gone.
  */
 export class Quality {
@@ -68,9 +78,10 @@ export class Quality {
   private lastInterval = 0;
   private probes = 0;
   private early = 0;
+  private timed = 0;
 
-  /** Starts conservatively, then restores detail within Auto's sustained pixel/scale budget. */
-  constructor(maxRatio: number, samples: number, width: number, height: number, startRatio: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, startDetail: 0 | 1 | 2 = 2, mode: QualityMode = 'auto', private readonly autoMaxRatio = maxRatio) {
+  /** Auto opens at the top of its sustained pixel/scale budget, with full world detail. */
+  constructor(maxRatio: number, samples: number, width: number, height: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, mode: QualityMode = 'auto', private readonly autoMaxRatio = maxRatio) {
     this.selectedMode = locked ? 'auto' : mode;
     // QA overrides are exact, including subpixel scales; neither the startup cap nor
     // the adaptive ladder may silently substitute a different resolution.
@@ -78,7 +89,6 @@ export class Quality {
       this.levels.push({ ratio: maxRatio, samples, detail: 2 });
       return;
     }
-    startRatio = Math.min(startRatio, Math.sqrt(AUTO_PIXELS / Math.max(1, width * height)));
     for (let ratio = maxRatio; ratio > 1; ratio = Math.max(1, ratio - 0.25)) this.levels.push({ ratio, samples, detail: 2 });
     const baseRatio = Math.min(1, maxRatio);
     this.levels.push({ ratio: baseRatio, samples, detail: 2 });
@@ -96,10 +106,7 @@ export class Quality {
     this.levels.push({ ratio: baseRatio * 0.72, samples: Math.min(samples, 2), detail: 0, grassDensity: 0.25, grassReach: 0.7 });
     this.fallback = this.levels.length - 1;
     this.fitBudget(width, height);
-    const opening = this.levels.findIndex((l) => l.ratio <= startRatio && l.detail <= startDetail);
-    this.index = opening < 0 ? this.levels.length - 1 : opening;
-    this.autoCeiling = this.ceilingIndex(width, height);
-    this.index = Math.max(this.index, this.autoCeiling);
+    this.autoCeiling = this.index = this.ceilingIndex(width, height);
     if (this.selectedMode !== 'auto') this.index = this.presetIndex(this.selectedMode);
   }
 
@@ -108,13 +115,22 @@ export class Quality {
 
   /** Whether the caller should time the frame just submitted and report it through `gpu`. */
   get probing(): boolean {
-    return !this.locked && this.selectedMode === 'auto' && !this.capped && this.lastInterval >= CAPPED_MS * 0.9;
+    return this.probeMs > 0;
   }
 
-  /** One frame's GPU timing: whether it had finished all of its work within one 60 Hz refresh of the frame's start. */
-  gpu(early: boolean): void {
+  /** How long after the frame's start its GPU work must be finished to count as early; 0 when not probing. */
+  get probeMs(): number {
+    if (this.locked || this.selectedMode !== 'auto') return 0;
+    if (!this.capped && this.lastInterval >= CAPPED_MS * 0.9) return REFRESH_MS;
+    if (this.index > this.autoCeiling) return this.capped ? HEADROOM_MS * CAPPED_MS / REFRESH_MS : HEADROOM_MS;
+    return 0;
+  }
+
+  /** One frame's GPU timing: whether it had finished by `probeMs`, or null when the timer fired too late to tell. */
+  gpu(early: boolean | null): void {
     this.probes++;
     if (early) this.early++;
+    if (early !== null) this.timed++;
   }
 
   private budgetRatio(width: number, height: number): number {
@@ -178,7 +194,7 @@ export class Quality {
   /** Time behind the start screen or in a hidden tab is not evidence of smooth play. */
   reset(now: number): void {
     this.recent.length = 0;
-    this.probes = this.early = 0;
+    this.probes = this.early = this.timed = 0;
     this.changedAt = this.lastReview = this.smoothSince = now;
   }
 
@@ -203,7 +219,10 @@ export class Quality {
     if (this.capped && p10 < UNCAPPED_MS) this.capped = false;
     else if (!this.capped && p10 > CAPPED_MS * 0.9 && p90 < CAPPED_MS * 1.1
       && this.probes >= CAP_PROBES && this.early >= this.probes * CAP_EARLY) this.capped = true;
-    this.probes = this.early = 0;
+    // Fence evidence skips the smooth window's first wait, not the doubling a failed climb adds to it.
+    const fenced = this.timed >= HEADROOM_PROBES;
+    const climbMs = !fenced ? this.climbMs : this.early >= this.timed * HEADROOM_EARLY ? this.climbMs - CLIMB_MS : Infinity;
+    this.probes = this.early = this.timed = 0;
     const scale = this.capped ? CAPPED_MS / REFRESH_MS : 1;
     if (mean > SLOW_MS * scale) {
       this.smoothSince = now;
@@ -211,7 +230,7 @@ export class Quality {
       if (this.index < this.levels.length - 1) this.change(now, Math.min(this.levels.length - 1, this.index + step));
     } else if (p90 > SMOOTH_MS * scale) {
       this.smoothSince = now;
-    } else if (now - this.smoothSince > this.climbMs && this.index > this.autoCeiling) {
+    } else if (now - this.smoothSince > climbMs && this.index > this.autoCeiling) {
       this.change(now, this.index - 1);
     }
   }
@@ -225,7 +244,7 @@ export class Quality {
     this.changedAt = now;
     this.smoothSince = now;
     this.recent.length = 0;
-    this.probes = this.early = 0;
+    this.probes = this.early = this.timed = 0;
     this.apply(this.level);
   }
 }
