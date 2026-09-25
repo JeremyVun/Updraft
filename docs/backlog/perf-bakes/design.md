@@ -211,8 +211,10 @@ Auto's touch ceiling stays 1.25× until the census prices 1.25× against 1.5×; 
 Jeremy's call. Phase Q builds it.
 
 **Measure first (phase M).** No `src/` change until the numbers are in and Jeremy has seen the ranked list.
-1. **Minutes per chapter.** Chapter entry times from a full `tools/playthrough.mjs` run (`report.chapters`),
-   as the weight for everything else. The bot's pace is a proxy for Jeremy's.
+1. **Minutes per chapter:** a labelled estimate only. Jeremy, 2026-09-25 (verbatim): "is it also doing a
+   profile? The whole reason for my "battery test" metric is to figure out what else we can cut. Why are we
+   doing a one hour play through?!" So the full playthrough is dropped; the profile and the list of cuts come
+   first.
 2. **Cost per frame per chapter**, drained, at the scale Jeremy plays (High is 1.5×, touch Auto 1.25×; both
    are measured until he says which).
 3. **Breakdowns of the known large costs**, paired as before:
