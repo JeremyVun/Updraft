@@ -197,23 +197,27 @@ touch as on mouse. Every 1.5 seconds it reviews up to 90 frame timing samples, d
 mean above 17.6 ms lowers quality (two rungs above 26.4 ms). Below its ceiling Auto climbs on evidence: `main.ts`
 polls each frame's fence 10 ms after the frame was submitted (`timeLastFrame`: one timer and a `getSyncParameter`
 poll, never a wait), and a review with p90 under 17.2 ms in which at least 90% of 30 or more timed frames had
-finished by then climbs one rung at once. The next rung costs at most 1.56× the pixels (1× → 1.25×), so 10 ms of work
-stays inside one refresh there. The deadline runs from submission, not the frame's start, because the script's time
-doesn't grow with pixels: timed from the start, even 1× frames on the M4 Pro (about 3 ms of script) almost never met
-10 ms while 1.25× ran at a steady 60. The 2–4 ms Chrome takes to report a finished fence (a clear-only frame)
-still counts against it, so the test errs safe. Measured from submission at 1376×1032 CSS, DPR 2, MSAA 2, 98% of
-frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Fewer than a
-quarter on time rules a climb out. Between a quarter and 90%, and where frames can't be timed (no fence, or timers
-firing more than 2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below
-17.2 ms for 12 seconds earns one increase instead, as before. The band is wide because low world detail renders the
-reflection on alternate frames: at 1× with `mirror=2`, 70% of frames met 10 ms against 94% with the reflection every
-frame, and live play pushed down to `{1×, detail 0}` saw 48% while presenting at a steady 60 fps. Evidence is also
-noisier while other sessions' Chrome captures share the GPU. At the ceiling and on manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+finished by then climbs one rung at once. The next rung costs at most 1.56× the pixels (1× → 1.25×), so 10 ms stays
+inside one refresh there. Fewer than a quarter on time rules a climb out. Between the two, and where frames can't be
+timed (no fence, or timers firing more than 2 ms late), a sustained p90 below 17.2 ms for 12 seconds earns one
+increase instead, as before. At the ceiling and on manual presets no frame is timed.
+
+The evidence behind those numbers (M4 Pro, Chrome, touch emulation at 1376×1032, DPR 2, MSAA 2, with peers'
+simulators and browsers running): timed from the frame's start, even 1× rarely met 10 ms, because the script's
+~3 ms counts and doesn't grow with pixels, so the deadline runs from submission. Chrome reports a finished fence
+2–4 ms late (a clear-only frame), which also counts against it and makes the test err safe. From submission, 98% of
+frames met 10 ms at 1× and 1.25× and 75% at 1.5×, all presenting at 60 fps. The rungs below 1.25× met it on 95–99%
+of frames once play had run 20 s, but on 19–82% in the first 20 s, and alternate-frame reflections (`mirror=2`) cut
+a fixed 1× view from 94% to 70%; hence the wide band left to the smooth window. In steady play, switching Medium back
+to Auto reached the ceiling in 4.0–4.1 s in five of five tries (2.5 s settle, then one rung per 1.5 s review).
+
+A steady 33 ms cadence is either a GPU missing every other refresh or a display
 capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
 frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
 least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
 (35.2/34.4 ms, and a 20 ms headroom deadline) until intervals under 25 ms show the cap has lifted. A saturated GPU never finishes early, so it
-still steps down as before; 60/120/144 Hz cadences are never timed. A timer that fires late counts as not early,
+still steps down as before; 60/120/144 Hz cadences are never timed for the cap. A timer that fires late counts as
+not early for the cap (and is left out of the headroom evidence),
 so a browser that coalesces timers keeps the old behaviour. Failed increases double the next wait, up to two minutes;
 fence evidence skips only the first 12 s of it, so after one failed climb the next needs 12 s of smooth play as well
 as the evidence, after two 36 s, and so on. A single hitch or
