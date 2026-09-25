@@ -569,3 +569,44 @@ in addition to device safe areas. Vibe prompter guy now precedes Directed by.
 Validation: build and all fifteen ending-view cases pass. Desktop (1600×900) and phone (390×844)
 GPU captures confirm the full bottom entrance, bottom-left replay control and lower-third horizon.
 Review frames: `/tmp/updraft-credits-review-p9OjEV/`.
+
+## Summit pacing, the last cadence and the credits pan (2026-09-25)
+
+Jeremy, verbatim:
+
+> "I think we do need a look at the pacing and audio on the summit island in particular. The camera pan to the
+> ending credits is a bit fast and the audio overall just isn't that cohesive."
+
+After the review:
+
+> "- Agreed with normalising volumes across the rooms.
+> - I think it's not just the panning but the audio still feels rushed to find a conclusion before the rolling credits.
+> - yea, remove the reward bells on the summit island. maybe even on the still island too
+> - do you think the climb up the summit is too long? I thought it was ok - were you thinking of making the hill shorter?
+> - after the updraft, we could reduce the watching them go by a second or so, but definitely not 7 seconds?
+> - yes smooth all camera jolts
+> - ifyou think ripples, wet shine, and sleeping island mist makes the game better, try it out in a worktree and give me before and after."
+
+> "you have permission to adjust the fixed ending tune to fit better if you can think of better chord progressions btw. just make sure to give me comparison clips"
+
+The climb keeps its length. What a recording of the whole summit measured, and what changed:
+
+- **The credits pan** slid its look point in a straight line between two points 100 units away, so it hurried
+  through the middle: 80 of its 92 degrees in ten seconds, peaking at 10°/s. It now pans and tilts like a tripod
+  head on one sine ease, from three seconds after the child goes in to the music's fade (on the ending clock),
+  and keeps the same start and final framing.
+- **The last cadence** used to arrive faster and faster (5.1, 4.25, 3.75, 3.25 s) with four seconds of final
+  chord. It now broadens (5.1, 5.5, 6 s) and the final chord rings seven seconds before the unchanged 0.7-second
+  fade; credits follow two seconds later, at 124.85 s. Offered alongside for Jeremy's ear: the same broadening with
+  a new approach home, B-flat maj9 and C6/9 over the held D in place of D/F-sharp and A9, before the approved
+  Dmaj9 → Dadd9.
+- **The entrance to the scripted ending** rises over four seconds from wherever the approach left the music,
+  instead of stepping up by up to 5.5 dB. The shared reward bells no longer play at the updraft: their D major
+  rubbed against the C-sharp on top of the ending's first chord.
+- **Watching the family go** is a second shorter (`WATCHES_FOR` 15).
+- **Camera jolts:** the family's arrival and the walk over the brow start from the rendered camera and ease onto
+  their framing (`HANDOVER`, 5 and 8 s) instead of kicking to 10–16°/s; the goodbye view that followed the paper
+  keeps its last motion for up to three seconds (`COAST`) instead of stopping dead in one frame, then holds.
+
+`tools/summit-film.mjs` records the summit with the game's own audio on a fixed clock and logs the camera's turn
+rate per frame; `tools/ending-audition.mjs` renders the ending score for side-by-side auditions.

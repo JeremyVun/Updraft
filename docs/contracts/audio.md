@@ -19,6 +19,14 @@ variation adds a low piano pulse and recalls the bedside melody. Climb and summi
 and voice set; reaching the summit no longer cuts the music. Frost remains silent, and the existing flight
 cue and morning answer retain their timing. See `audio-review.md` for Jeremy's brief and approvals.
 
+## Room levels
+
+Every piece sits near one reference, about −29 LUFS in its main section (September 25 audit and Jeremy's approval):
+`tuning.audio.roomTrimDb` trims Home −6, the Sky Mirror +6, the drowned village and Sleeping +2.5 and the birches
+−2.5 dB over their approved levels, and the opening grows about 5 dB with life instead of 12 (`openingPadRise`),
+keeping its quiet start. The grey meadow, the wood and the Sleeping climb stay quiet by design. The level constants
+below remain the approved study matches; add new rooms at the reference rather than by ear against the old pad.
+
 ## Player feedback
 
 Cursor chimes accompany the starting island, forest and the feather-guided climb on Sleeping.
