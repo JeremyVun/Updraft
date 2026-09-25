@@ -202,10 +202,13 @@ stays inside one refresh there. The deadline runs from submission, not the frame
 doesn't grow with pixels: timed from the start, even 1× frames on the M4 Pro (about 3 ms of script) almost never met
 10 ms while 1.25× ran at a steady 60. The 2–4 ms Chrome takes to report a finished fence (a clear-only frame)
 still counts against it, so the test errs safe. Measured from submission at 1376×1032 CSS, DPR 2, MSAA 2, 98% of
-frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Frames that
-were timed and missed the deadline hold the level. Where frames can't be timed (no fence, or timers firing more than
-2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below 17.2 ms for 12
-seconds earns one increase instead. At the ceiling and on manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+frames finished within 10 ms at 1× and at 1.25×, and 75% at 1.5× (all three presenting at 60 fps). Fewer than half
+on time rules a climb out. Between half and 95%, and where frames can't be timed (no fence, or timers firing more
+than 2 ms late, as when a long script pushes the deadline past the next frame), a sustained p90 below 17.2 ms for 12
+seconds earns one increase instead, as before. The band exists because the evidence is noisy on a shared GPU: with
+other sessions' Chrome captures running, a 0.85× low-detail frame on the M4 Pro presented at a steady 60 fps yet
+only two thirds of its timed frames met the deadline, and a third of the timers fired late. At the ceiling and on
+manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
 capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
 frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
 least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
@@ -256,7 +259,7 @@ exists, which params.ts alone cannot know.
 `node tools/quality-check.mjs` checks the opening level, geometry fallback/recovery, exact overrides and
 suspend/resume, and drives a model iPad-sized touch device through overload from the top (down within 2.5 s, never
 back into overload; lying timings back off by doubling), a ten-second load that pushes it down (back at the ceiling
-6.6 s after the load lifts with timed frames, 44 s without) and a 30 fps display. `node tools/grass-quality-check.mjs meadow` checks both transition directions, unchanged
+6.6 s after the load lifts with timed frames, 44 s without or with inconclusive timings) and a 30 fps display. `node tools/grass-quality-check.mjs meadow` checks both transition directions, unchanged
 blade roots, resource identity and pixel-identical restoration in a frozen GPU scene. `TOUCH=1` in
 `tools/play.mjs` emulates a coarse pointer for integration checks, not iPad GPU performance.
 `node tools/quality-browser-check.mjs` drives measured-interval scenarios through the real coarse-pointer
