@@ -36,6 +36,8 @@
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
+// Phase X2's exact skips, each restoring the old path: e4-off (sea shaded under land, implicit ripple gradients),
+// e4-return-off, e4-grad-off (its two halves), e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -264,7 +266,8 @@ window.__audit = {
     this.patchOriginals??=new Map([...grassMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
     const patches={
       'grass-frag-flat':[grassMats,'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vTint * 0.5 + vRoot * 0.1 + vFlower.rgb * vFlower.a * 0.01 + vec3(vT, vFlat, vSun) * 0.01 + vec3(vAo, 0.0) * 0.01 + vLocalLight * 0.01 + (vNormal + vSideDir + vGroundN) * 0.001 + vWorld * 1e-6 + vFog.rgb * vFog.a * 0.01, 1.0); }')],
-      'grass-nodiscard':[grassMats,'fragmentShader',s=>sub(s,/discard;/g,'{}')],
+      // The unclipped blade program (E5) has no discards to remove.
+      'grass-nodiscard':[grassMats,'fragmentShader',s=>s.replace(/discard;/g,'{}')],
       'grass-fog':[grassMats,'vertexShader',s=>sub(s,'vFog = fogOf(world, 1.0);','vFog = vec4(0.0);')],
       'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
       'grass-shade':[grassMats,'vertexShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
@@ -285,6 +288,12 @@ window.__audit = {
       // Water under land the terrain will cover: returns before any shading where the baked ground is a metre above the sea.
       'water-landskip':[[waterMat],'fragmentShader',s=>sub(s,'void main() {\\n  vec3 toCam','void main() {\\n  { vec2 u0 = domainUv(vWorld.xz); if (insideUv(u0) && texture(uHeightTex, u0).r > 1.0 && !roomHides(vWorld.xz)) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; } }\\n  vec3 toCam')],
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
+      // Phase X2's exact skips, each restoring the old path: E4 the sea under land (e4-return-off keeps the explicit
+      // ripple gradients, e4-grad-off only restores the implicit ones), E6 the glints outside the glitter lobe.
+      'e4-off':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (inside == 1.0 && underLand(','if (false && underLand('),'return textureGrad(uRipple, uv, fp.dx, fp.dy);','return texture(uRipple, uv);')],
+      'e4-return-off':[[waterMat],'fragmentShader',s=>sub(s,'if (inside == 1.0 && underLand(','if (false && underLand(')],
+      'e4-grad-off':[[waterMat],'fragmentShader',s=>sub(s,'return textureGrad(uRipple, uv, fp.dx, fp.dy);','return texture(uRipple, uv);')],
+      'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
     };
     const wanted=new Map();
     for(const [m,orig] of this.patchOriginals){wanted.set(m.uuid+'|vertexShader',[m,'vertexShader',orig.vertexShader]);if(m!==waterMat)wanted.set(m.uuid+'|fragmentShader',[m,'fragmentShader',orig.fragmentShader]);}
@@ -292,6 +301,8 @@ window.__audit = {
     for(const v of variants)if(patches[v]){const [mats,key,edit]=patches[v];for(const m of mats){const k=m.uuid+'|'+key;const cur=wanted.get(k)?.[2]??m[key];wanted.set(k,[m,key,edit(cur)]);}}
     for(const [,[m,key,source]] of wanted)if(m[key]!==source){m[key]=source;m.needsUpdate=true;}
     water.mesh.renderOrder=variants.includes('water-last')?1:0;
+    // E5: the blades always drawn with the program that discards, as before.
+    grass.unclipped=!variants.includes('e5-off');
   },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
@@ -481,7 +492,7 @@ try {
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
-      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always'].includes(omit) && result.pixels.max) {
+      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e3-off','e4-off','e4-return-off','e4-grad-off','e5-off','e6-off'].includes(omit) && result.pixels.max) {
         console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
         // The old glass path (not the new one) drops channels to 0 in scattered half-float samples on ANGLE/Metal.
         if (result.pixels.max > 1 && !(omit==='glass-sky-always' && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});

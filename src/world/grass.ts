@@ -770,17 +770,17 @@ const DOOR_SHORE_CUT = 48;
 const FRAG = bladeFragment(true);
 const FRAG_UNCLIPPED = bladeFragment(false);
 /**
- * How far past the last level's reach a blade fragment can land: the far corner of a tile picked by its nearest
- * point, a blade laid flat, and slack for a multisampled sliver whose pixel centre lies past the blade's edge.
+ * Blade fragments of a tile land within this of its centre: half its diagonal, a blade laid flat, and slack for a
+ * multisampled sliver whose pixel centre lies past its blade's edge.
  */
-const FRAGMENT_SLACK = TILE * Math.SQRT2 + MAX_BLADE + 8;
+const TILE_SPREAD = TILE * Math.SQRT1_2 + MAX_BLADE + 8;
 const JOURNEY_ROOMS = Object.values(ROOMS);
 
 /**
- * How much nearer (x, z) is to the nearest shown room than to the nearest hidden one, by `journeyHides`' own
+ * How much nearer (x, z) is to the nearest shown room than to the nearest hidden one, by \`journeyHides\`' own
  * measure. Each room's measure changes by at most a metre per metre, so this changes by at most two.
  */
-function roomMargin(x: number, z: number, a: number, b: number): number {
+export function roomMargin(x: number, z: number, a: number, b: number): number {
   let shown = Infinity;
   let hidden = Infinity;
   for (let i = 0; i < JOURNEY_ROOMS.length; i++) {
@@ -793,25 +793,13 @@ function roomMargin(x: number, z: number, a: number, b: number): number {
 }
 
 /**
- * Whether the blade shader would discard nothing within \`reach\` of (x, z): nothing near the door shore, nothing
- * outside \`room\` (\`uRoom\`), nothing in a room \`rooms\` (\`uJourneyRooms\`) hides. Conservative: false when unsure.
+ * Whether the blade shader discards nothing of the tile centred at (x, z): it is clear of the door shore, inside
+ * \`room\` (\`uRoom\`) where that clips, and in no room \`rooms\` (\`uJourneyRooms\`) hides. \`margin\` is \`roomMargin\` there.
  */
-export function grassUnclipped(x: number, z: number, reach: number, rooms: THREE.Vector2, room: THREE.Vector3): boolean {
-  if (Math.hypot(x - DOOR_SHORE.x, z - DOOR_SHORE.z) < DOOR_SHORE_CUT + reach) return false;
-  if (room.z > 0) return Math.hypot(x - room.x, z - room.y) + reach <= room.z;
-  if (rooms.x === -1) return true;
-  if (roomMargin(x, z, rooms.x, rooms.y) > 2 * reach + 1) return true;
-  // Near a boundary: every point of the disc lies within half a cell diagonal of a grid point that clears it.
-  const cell = 16;
-  const half = cell * Math.SQRT1_2;
-  const span = Math.ceil((reach + half) / cell);
-  for (let j = -span; j <= span; j++) {
-    for (let i = -span; i <= span; i++) {
-      if (Math.hypot(i * cell, j * cell) > reach + half) continue;
-      if (roomMargin(x + i * cell, z + j * cell, rooms.x, rooms.y) <= 2 * half + 1) return false;
-    }
-  }
-  return true;
+export function tileUnclipped(x: number, z: number, margin: number, rooms: THREE.Vector2, room: THREE.Vector3): boolean {
+  if (Math.hypot(x - DOOR_SHORE.x, z - DOOR_SHORE.z) < DOOR_SHORE_CUT + TILE_SPREAD) return false;
+  if (room.z > 0) return Math.hypot(x - room.x, z - room.y) + TILE_SPREAD <= room.z;
+  return rooms.x === -1 || margin > 2 * TILE_SPREAD + 1;
 }
 
 /**
@@ -882,8 +870,13 @@ export class Grass {
   private readonly coarsest = Math.min(params.grasslod ?? LODS.length - 1, LODS.length - 1);
   /** Draw with the program that cannot discard wherever nothing in reach would be discarded; off restores the old path. */
   unclipped = true;
-  private readonly clipState = new Float64Array(8).fill(NaN);
+  private readonly clipState = new Float64Array(6).fill(NaN);
   private clipFree = false;
+  /** Bumped whenever \`update\` changes a level's tiles. */
+  private tileVersion = 0;
+  /** \`roomMargin\` at tile centres, for the journey rooms in \`marginRooms\`. */
+  private readonly margins = new Map<number, number>();
+  private readonly marginRooms = new THREE.Vector2(NaN, NaN);
 
   private readonly thinning;
   private reachScale = 1;
@@ -1031,20 +1024,43 @@ export class Grass {
   /** Picks the blade program for this draw; a program swap finds the one already built by \`precompile\`. */
   private pickProgram(mat: THREE.ShaderMaterial): void {
     if (mat.fragmentShader !== FRAG && mat.fragmentShader !== FRAG_UNCLIPPED) return;
-    const reach = this.lods[this.lods.length - 1].spec.reach + FRAGMENT_SLACK;
     const rooms = atmo.uniforms.uJourneyRooms.value;
     const room = atmo.uniforms.uRoom.value;
     const state = this.clipState;
-    const eye = this.eye.value;
-    if (state[0] !== eye.x || state[1] !== eye.y || state[2] !== reach || state[3] !== rooms.x || state[4] !== rooms.y ||
-      state[5] !== room.x || state[6] !== room.y || state[7] !== room.z) {
-      state.set([eye.x, eye.y, reach, rooms.x, rooms.y, room.x, room.y, room.z]);
-      this.clipFree = grassUnclipped(eye.x, eye.y, reach, rooms, room);
+    if (state[0] !== this.tileVersion || state[1] !== rooms.x || state[2] !== rooms.y || state[3] !== room.x || state[4] !== room.y || state[5] !== room.z) {
+      state.set([this.tileVersion, rooms.x, rooms.y, room.x, room.y, room.z]);
+      this.clipFree = this.tilesUnclipped(rooms, room);
     }
     const fragment = this.unclipped && this.clipFree ? FRAG_UNCLIPPED : FRAG;
     if (mat.fragmentShader === fragment) return;
     mat.fragmentShader = fragment;
     mat.needsUpdate = true;
+  }
+
+  private tilesUnclipped(rooms: THREE.Vector2, room: THREE.Vector3): boolean {
+    if (!rooms.equals(this.marginRooms) || this.margins.size > 60000) {
+      this.margins.clear();
+      this.marginRooms.copy(rooms);
+    }
+    const measured = room.z <= 0 && rooms.x !== -1;
+    for (const l of this.lods) {
+      const tiles = l.tiles.array;
+      for (let i = 0; i < l.count; i++) {
+        const x = tiles[i * 2] + TILE / 2;
+        const z = tiles[i * 2 + 1] + TILE / 2;
+        let margin = 0;
+        if (measured) {
+          const key = tiles[i * 2] / TILE * 100003 + tiles[i * 2 + 1] / TILE;
+          margin = this.margins.get(key) ?? NaN;
+          if (Number.isNaN(margin)) {
+            margin = roomMargin(x, z, rooms.x, rooms.y);
+            this.margins.set(key, margin);
+          }
+        }
+        if (!tileUnclipped(x, z, margin, rooms, room)) return false;
+      }
+    }
+    return true;
   }
 
   /** These MRT shaders are not scene materials or ordinary single-target simulations; nor are the unclipped blades. */
@@ -1152,6 +1168,7 @@ export class Grass {
     }
     for (const l of this.lods) {
       if (l.tilesChanged || l.count !== l.previousCount) {
+        this.tileVersion++;
         if (l.count) {
           l.tiles.clearUpdateRanges();
           l.tiles.addUpdateRange(0, l.count * 2);
