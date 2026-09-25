@@ -315,7 +315,7 @@ window.__audit = {
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
       // Phase X2's exact skips, each restoring the old path: E4 the sea shaded under land (the ripples it samples
       // before the new return are sampled where they always were, after the fog's), E6 the glints outside the glitter lobe.
-      'e4-off':[[waterMat],'fragmentShader',s=>sub(s,'if (inside == 1.0 && underLand(','if (false && underLand(')],
+      'e4-off':[[waterMat],'fragmentShader',s=>sub(s,'if (inside == 1.0 && groundHere > vWorld.y + 1.0) {','if (false) {')],
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
     };
     const wanted=new Map();

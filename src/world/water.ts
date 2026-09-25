@@ -280,16 +280,19 @@ void main() {
   // The terrain draws over sea under land (they sort by material, not depth), so the rest of its shading would be
   // thrown away. Hidden rooms keep theirs: their land is not drawn. The ripples above keep their implicit
   // derivatives exactly as before: no pixel of the quad has left by a new path when they are sampled.
-  if (inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0)) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
+  float groundHere = texture(uHeightTex, clamp(uv, 0.0, 1.0)).r;
+  if (inside == 1.0 && groundHere > vWorld.y + 1.0) {
+    if (underLand(xz, fp, vWorld.y + 1.0)) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+      return;
+    }
   }
   float paw = catsPaw(xz, along);
   float rough = clamp(max(smoothstep(1.2, 7.5, settled) * paw, uSquall), 0.0, 1.0);
   float storm = clamp(max(smoothstep(18.0, 34.0, settled) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
   float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
 
-  float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
+  float ground = mix(-12.0, groundHere, inside);
   float depth = max(poolLevel - ground, 0.0);
   vec4 bedN = groundAt(xz);
 
