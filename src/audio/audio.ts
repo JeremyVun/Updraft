@@ -15,6 +15,7 @@ import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
 import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
 import { advance, ALONE, Sliced, slices, SLICES_PER_SECOND, type Pace } from './sliced';
+import { params } from '../params';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -234,6 +235,10 @@ function* impulse(ctx: BaseAudioContext, seconds: number): Generator<void, Audio
 
 /** Ambient beds join the graph once their noise exists; a short fade keeps that late entry from clicking. */
 const NOISE_ENTRY = 0.25;
+/** −120 dB: a gain this close to a zero target is held at exactly 0. */
+const SILENT = 1e-6;
+
+interface Fade { value: number; target: number; at: number; tc: number; held: boolean }
 
 export class Soundscape {
   private ctx: AudioContext | null = null;
@@ -247,6 +252,10 @@ export class Soundscape {
   private backgroundWet!: GainNode;
   private backgroundGate!: GainNode;
   private backgroundDuck!: GainNode;
+  /** With one reverb, the background's wet send is gated and ducked on its way into the shared reverb. */
+  oneReverb = params.reverb === 'one';
+  private wetGate: GainNode | null = null;
+  private wetDuck: GainNode | null = null;
   private cueSpaceUntil = 0;
   private homeFadeScheduled = false;
   private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
@@ -283,6 +292,8 @@ export class Soundscape {
   private liftFilter!: BiquadFilterNode;
   private padVoices: { osc: OscillatorNode[]; gain: GainNode }[] = [];
   private padGain!: GainNode;
+  /** Each faded gain's last scheduled target and its value then, following `setTargetAtTime`'s curve. */
+  private readonly fades = new Map<AudioParam, Fade>();
   private chord = -1;
   private mood: Mood | null = null;
   private noteIndex = 4;
@@ -351,6 +362,11 @@ export class Soundscape {
     void (this.hidden || this.muted ? this.ctx.suspend() : this.ctx.resume()).catch(() => undefined);
   }
 
+  /** The background's arrival and ending gates: its own reverb sits inside one; with one reverb, its send has a second. */
+  private get gates(): AudioParam[] {
+    return this.wetGate ? [this.backgroundGate.gain, this.wetGate.gain] : [this.backgroundGate.gain];
+  }
+
   /** The live audio graph for other modules' sounds: connect to `bus` (dry) and optionally `reverb` (wet). Null until sound starts or while muted. */
   get output(): AudioOut | null {
     return this.running ? this.graph : null;
@@ -399,8 +415,14 @@ export class Soundscape {
     this.backgroundGate = ctx.createGain(); this.backgroundGate.connect(this.backgroundDuck);
     this.backgroundDry = ctx.createGain(); this.backgroundDry.connect(this.backgroundGate);
     this.backgroundWet = ctx.createGain(); this.backgroundWet.gain.value = .55;
-    this.backgroundReverb = ctx.createConvolver();
-    this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
+    if (this.oneReverb) {
+      this.wetDuck = ctx.createGain(); this.wetDuck.connect(this.reverbConvolver);
+      this.wetGate = ctx.createGain(); this.wetGate.connect(this.wetDuck);
+      this.backgroundWet.connect(this.wetGate);
+    } else {
+      this.backgroundReverb = ctx.createConvolver();
+      this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
+    }
     this.backgroundBus = ctx.createGain(); this.backgroundBus.connect(this.backgroundDry);
     const backgroundSend = ctx.createGain(); backgroundSend.gain.value = .9;
     this.backgroundBus.connect(backgroundSend).connect(this.backgroundWet);
@@ -457,6 +479,7 @@ export class Soundscape {
     const reverb = this.reverbImpulse = yield* impulse(ctx, 4.5);
     yield ALONE;
     this.reverbConvolver.buffer = reverb;
+    if (this.oneReverb) return;
     yield ALONE;
     this.backgroundReverb.buffer ??= reverb;
     yield* this.spare(ctx);
@@ -576,6 +599,32 @@ export class Soundscape {
     }
     this.noiseInputs.push(filter);
     return [gain, filter];
+  }
+
+  /**
+   * `setTargetAtTime`, except that a gain within `SILENT` of a zero target is held at exactly 0. Re-targeted every frame,
+   * a gain counts as automation even at 0, and its zeros keep every convolver it feeds running; held, they idle after
+   * their tails. The engine's own value must agree too, in case its clock runs behind the schedule.
+   */
+  private fade(param: AudioParam, target: number, now: number, tc: number): void {
+    let f = this.fades.get(param);
+    if (!f) this.fades.set(param, f = { value: param.value, target: param.value, at: now, tc, held: false });
+    const value = f.target + (f.value - f.target) * Math.exp(-(now - f.at) / f.tc);
+    if (target === 0 && f.target === 0 && Math.abs(value) < SILENT && Math.abs(param.value) < SILENT) {
+      if (!f.held) {
+        param.cancelScheduledValues(0);
+        param.setValueAtTime(0, now);
+      }
+      f.value = 0;
+      f.held = true;
+    } else {
+      param.setTargetAtTime(target, now, tc);
+      f.value = value;
+      f.held = false;
+    }
+    f.target = target;
+    f.at = now;
+    f.tc = tc;
   }
 
   private chime(midi: number, velocity: number, pan: number, when: number, decay = 2.2, soft = false, gesture = false): void {
@@ -933,17 +982,17 @@ export class Soundscape {
     const air = 1 - piano * 0.82;
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
-    this.breezeGain.gain.setTargetAtTime((0.02 + s.breeze * 0.2) * air, now, 0.5);
-    this.rainGain.gain.setTargetAtTime(s.shower * 0.07, now, 1.2);
-    this.patterGain.gain.setTargetAtTime(s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
-    this.seaGain.gain.setTargetAtTime((0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
-    this.gustGain.gain.setTargetAtTime(gustLevel * 0.55 * air, now, tc);
+    this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air, now, 0.5);
+    this.fade(this.rainGain.gain, s.shower * 0.07, now, 1.2);
+    this.fade(this.patterGain.gain, s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
+    this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
+    this.fade(this.gustGain.gain, gustLevel * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);
-    this.whistleGain.gain.setTargetAtTime(whistleLevel * 0.12 * air, now, tc);
+    this.fade(this.whistleGain.gain, whistleLevel * 0.12 * air, now, tc);
     this.whistleFilter.frequency.setTargetAtTime(900 + filterGust * 900, now, tc);
-    this.rustleGain.gain.setTargetAtTime((s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
-    this.liftGain.gain.setTargetAtTime(s.charge * 0.35 * air * playerWind, now, 0.15);
+    this.fade(this.rustleGain.gain, (s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
+    this.fade(this.liftGain.gain, s.charge * 0.35 * air * playerWind, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
     const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;
@@ -956,15 +1005,17 @@ export class Soundscape {
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
     if (arrival.changed && arrival.stage !== 'wait' && !arrival.legato) {
-      const gain = this.backgroundGate.gain;
-      gain.cancelAndHoldAtTime(now);
-      // Holding an already constant parameter need not insert an automation event. Without
-      // this anchor, the incoming ramp can start at the beginning of the rest.
-      gain.setValueAtTime(gain.value, now);
-      if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + (arrival.fadeOut ?? tuning.audio.arrivalFadeOut));
-      else if (backgroundPaused) gain.setValueAtTime(0, now);
-      else {
-        // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
+      for (const gain of this.gates) {
+        gain.cancelAndHoldAtTime(now);
+        // Holding an already constant parameter need not insert an automation event. Without
+        // this anchor, the incoming ramp can start at the beginning of the rest.
+        gain.setValueAtTime(gain.value, now);
+        if (arrival.stage === 'fade') gain.linearRampToValueAtTime(0, now + (arrival.fadeOut ?? tuning.audio.arrivalFadeOut));
+        else if (backgroundPaused) gain.setValueAtTime(0, now);
+        else gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
+      }
+      // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
+      if (arrival.stage !== 'fade' && !backgroundPaused && !this.oneReverb) {
         this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
         if (this.spareReverb) {
           this.backgroundReverb = this.spareReverb; this.spareReverb = null;
@@ -973,16 +1024,16 @@ export class Soundscape {
           this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
         }
         this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
-        gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
     }
     if (s.homeEndingTime === undefined) this.homeFadeScheduled = false;
     else if (!this.homeFadeScheduled && s.homeEndingTime >= HOME_ENDING.fadeFrom) {
       // Fade after the reverb so this ending's short release includes its tail.
-      const gate = this.backgroundGate.gain;
-      gate.cancelAndHoldAtTime(now);
-      gate.setValueAtTime(gate.value, now);
-      gate.linearRampToValueAtTime(0, now + Math.max(0, HOME_ENDING.musicEndsAt - s.homeEndingTime));
+      for (const gate of this.gates) {
+        gate.cancelAndHoldAtTime(now);
+        gate.setValueAtTime(gate.value, now);
+        gate.linearRampToValueAtTime(0, now + Math.max(0, HOME_ENDING.musicEndsAt - s.homeEndingTime));
+      }
       this.homeFadeScheduled = true;
     }
     if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
@@ -1066,8 +1117,8 @@ export class Soundscape {
       : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
     if (s.silence) {
-      this.musicBus.gain.setTargetAtTime(0, now, 0.12);
-      this.backgroundBus?.gain.setTargetAtTime(0, now, 0.12);
+      this.fade(this.musicBus.gain, 0, now, 0.12);
+      if (this.backgroundBus) this.fade(this.backgroundBus.gain, 0, now, 0.12);
     }
     if (!finale && !this.openingScore && (chord !== this.chord || bg.music !== this.mood)) {
       /** A room change glides the voices to their new notes rather than cutting: the chord bends into the next. */
@@ -1090,7 +1141,7 @@ export class Soundscape {
     const padLife = 0.012 + 0.045 * s.life;
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
-    this.padGain.gain.setTargetAtTime(
+    this.fade(this.padGain.gain,
       backgroundPaused || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
@@ -1145,8 +1196,10 @@ export class Soundscape {
     }
 
     const cueDucking = !homeMusicForward && now < this.cueSpaceUntil;
-    this.backgroundDuck.gain.setTargetAtTime(cueDucking ? tuning.audio.authoredCueDuck : 1,
-      now, cueDucking ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease);
+    const duck = cueDucking ? tuning.audio.authoredCueDuck : 1;
+    const duckTime = cueDucking ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease;
+    this.backgroundDuck.gain.setTargetAtTime(duck, now, duckTime);
+    this.wetDuck?.gain.setTargetAtTime(duck, now, duckTime);
 
     if (s.flockChatter !== false && s.flock?.active && now > this.nextFlock && now > this.flockQuietUntil) {
       this.bugle(s.flock, 0.8 + Math.random() * 0.4);
