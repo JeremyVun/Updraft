@@ -346,6 +346,61 @@ M4 Pro: Medium → Auto reached the ceiling in 4.0–4.1 s, five of five. The ev
   once load lifts; a 30 fps-capped display is still recognised.
 - `npm run typecheck` and `npm run build` pass.
 
+## Round 2 phases (design "Round 2 profile", Jeremy's rulings 2026-09-25)
+
+Each exact phase restores its old path behind an ablation or query flag so frames and audio can be compared in
+the same page, and records its measured saving under its E item in design.md.
+
+### Phase X1: CPU and audio cuts (E1, E2, E7) and the one-reverb evidence (L8)
+
+**Status:** not started. Nonvisual, Opus. Runs after phase V frees an agent slot.
+
+**Owns:** `src/audio/*` (silent-layer gating, the one-reverb option), the moored boat's hull-contact code (E2),
+the Birches room's update gating (E7), `tools/audio-cost.mjs`.
+
+**Work:**
+- E1: disconnect a noise layer or pad voice while its gain is exactly 0 and its target is 0; reconnect it before
+  its target leaves 0, so nothing audible changes. The reverbs then idle after their tails.
+- E2: cache the ground heights under the moored hull's contacts while it lies at the home mooring.
+- E7: first prove from frames whether the Birches room is visible anywhere in the Drowned drift. Gate its update
+  only where it is not.
+- L8: a one-reverb option behind a query flag (`reverb=one`), for evidence only, not the default.
+
+**Gates:**
+- E1: offline renders (`OfflineAudioContext`) of scripted sequences, including layers entering and leaving
+  silence, are sample-identical or below −100 dBFS difference against the old graph. `tools/audio-cost.mjs`
+  shows the saving per chapter. The existing audio checks pass.
+- E2: the boat's pose is bit-identical over a scripted run at the mooring, including the walk and departure.
+- E7: frames identical through the drift.
+- L8: paired WAV renders (two reverbs against one) of the Meadow score, the island arrival swap and the finale,
+  with an index page for Jeremy. **No change to the default without Jeremy's verdict.**
+- `npm run typecheck`, `npm run build`.
+
+### Phase X2: GPU cuts (E3, E4, E5, E6)
+
+**Status:** not started. Nonvisual (exact skips judged by frame difference), Opus.
+
+**Owns:** `src/world/grass.ts` (tile submission, the discard-free program), `src/world/water.ts` (the under-land
+early return, the glint skip), `tools/frame-profile.mjs` (ablations restoring each old path).
+
+**Gates:**
+- Exactness: frame difference against each ablation in all eleven chapters, max ≤1/255 with any exception
+  explained. E3 is exact only for tiles where nothing stands at any density; prove the tile test.
+- E4 (early return before `fwidth` and the footprint): moving-camera comparisons along shorelines (a Meadow
+  walk, sailing past the Birches beach, the jetty) show no changed pixel beyond 1/255.
+- E5: the program choice covers every hidden room and the door shore within grass reach; prove it with a sweep.
+- Saving: paired rounds per chapter, pooled over two loads, with `GPU_QUIET=1`.
+- `npm run typecheck`, `npm run build`.
+
+### Phase V: look-lever evidence (L1, L2)
+
+**Status:** not started. Visual (capture and review), Opus. No `src/` change: `?ratio=` and `?msaa=` exist.
+
+**Deliverable:** frame-locked before/after video and enlarged crops, at an iPad-like viewport (1376×1032 CSS,
+DPR 2), of High (1.5×, MSAA 2) against 1.25× with MSAA 2 (L1) and 1.5× with MSAA 0 (L2). Moments with fine edges
+and motion: the Meadow walk through grass, the washing lines, sailing (mast and rigging), the Birches with the
+scarf, the summit view. An index page in `/tmp` for Jeremy, and the reviewer's notes on where each lever shows.
+
 ## Phase 7: close
 
 **Status:** not started. Run the backlog-item close stage:
