@@ -48,8 +48,8 @@ const HEADROOM_MS = 10;
 const HEADROOM_PROBES = 30;
 const HEADROOM_EARLY = 0.9;
 /**
- * Fewer on time than this rules a climb out. In between, the smooth window decides: at low detail the reflection
- * renders on alternate frames, so half the frames can run late while the next rung still fits.
+ * Fewer on time than this rules a climb out. In between, the smooth window decides: the evidence is noisy in the
+ * first seconds of play and on a GPU shared with other work, and alternate-frame reflections at low detail split it.
  */
 const HEADROOM_NONE = 0.25;
 const REVIEW_MS = 1500;
