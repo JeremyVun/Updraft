@@ -622,7 +622,16 @@ Built on branch `perf-bakes-x1` (from b9aad91). Tools: `tools/audio-silence-chec
   until the boat moves 1 m. Each frame it takes the lowest contact after pitch and roll (a rotation, no height
   lookups). If even that ceiling leaves the hull clear, the 210 contacts are not tested: testing them could not have
   moved it. Otherwise they are tested as before.
-- **Exactness:** @@E2@@
+- **Exactness** (`boat-mooring-check`): two runs at the home mooring, `chapter=jetty` for 40 s (the child's walk off
+  the boat and along the jetty, with the boat pushed 2.4 m off its berth at 15 s so it settles back and re-measures)
+  and `chapter=summit` for 15 s. On every frame where the contacts were skipped (all 3,314), the tool tested them
+  anyway: the hull stayed at least 2.16 m clear of where they would have lifted it, so each frame's pose is exactly
+  what the old code computes from the same state. Across runs, the boat's position is bit-identical to the previous
+  build's on every frame. Its pitch and roll differ by up to 3×10⁻⁵ rad, but so do two runs of the same build: the
+  sail's wind is read back from the GPU a frame or two apart from run to run.
+- **Saving:** `Boat.update` at the summit, where the mooring is outside the height window, went from 0.60 to 0.05 ms
+  per frame (mean over 900 frames, the same machine and session). At the jetty, inside the window, from 0.13 to
+  0.03 ms.
 
 **E7, the Birches update in the Drowned drift: dropped, because the room is visible.**
 - `birches-drift-check` follows the drift from its start for 145 s of game time, until the room stops being drawn.
