@@ -157,6 +157,22 @@ graph (which runs every audio frame whether or not a layer is audible), and the 
 the player spends 10 minutes in outweighs the same cost in a 1-minute one, and a skip that saves no frame time on
 the Mac can still save energy.
 
+Jeremy's answers, 2026-09-25 (verbatim):
+
+> 1. it's an m5 ipad pro, and it plays fine on high. But auto always sets it to medium, so i set it to high
+>    manually. That's the other thing i dont like - it set it to medium even though when i play it on high i dont
+>    get any lag.
+> 2. typical playthrough with no delays or gaps. It's not about screen brightness either, I know that the game
+>    still needs optimisation because the back of ipad still gets hot. There must certainly be more computation
+>    (cpu or gpu) that we can save on in the game.
+> 3. and yes the scarf rework is approed
+
+- **The fixture is High (1.5×, MSAA 2).** That's what Jeremy plays; savings are judged there first.
+- **The heat is the evidence**, not the battery figure alone: the aim is less computation, CPU and GPU.
+- **Auto under-selects on his iPad** (it settles on Medium where High runs without lag). This is a separate
+  item from the savings; see "Auto on capable devices" below once designed.
+- Phase 5b (the scarf) is approved.
+
 **Assumptions to state, not rely on:**
 - The M4 Pro Mac and the M5 iPad have the same family of tile-based Apple GPU, and Chrome and Safari both run
   WebGL through ANGLE on Metal. So a pass's share of GPU time on the Mac is taken as its share of GPU energy on
