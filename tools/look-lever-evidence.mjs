@@ -5,7 +5,7 @@
 //        1/60 s of game per frame, so the clip is real time whatever the machine's load). After every step the
 //        frame is drawn again for each side from the same state, switching render scale and MSAA as the quality
 //        ladder does, and read back losslessly: <out>/raw/<moment>-<side>.mkv (RGB, FFV1) and <moment>.json.
-//   derive <out>            from the lossless clips: playback mp4s at each side's own render size, side-by-side
+//   derive <out> [moment...] from the lossless clips: playback mp4s at each side's own render size, side-by-side
 //        crop videos (A|L1, A|L2) and enlarged still crops for the regions in CROPS, plus encode-error numbers.
 //   index <out>             writes <out>/index.html (notes from <out>/notes.html).
 // Moments: meadow washing sailing birches summit. env: BASE, FRAMES (captured frames, default per moment),
@@ -83,14 +83,14 @@ const MOMENTS = {
     },
   },
   summit: {
-    label: 'Summit: the view from the top of the hill, plane in hand',
+    label: 'Summit: the last climb to the hilltop against the sky, then swans over the sea',
     query: 'chapter=summit', frames: 600, warm: 360,
     pointer: (i) => sweep(i, 150, [W * 0.2, H * 0.55], [W * 0.8, H * 0.5], 90),
   },
 };
 
 if (mode === 'capture') await capture(args[0], args.slice(1));
-else if (mode === 'derive') derive(args[0]);
+else if (mode === 'derive') derive(args[0], args.slice(1));
 else if (mode === 'index') writeIndex(args[0]);
 else throw new Error('usage: capture <out> <moment...> | derive <out> | index <out>');
 
@@ -241,10 +241,34 @@ function ff(argv) {
 }
 
 /** Places where the levers show, in CSS pixels of the 1376x1032 page, with the frame (0-based) for the still. */
-const CROPS = {};
+const CROPS = {
+  meadow: [
+    { label: 'Reeds at the pond\'s edge, swans on the water', x: 560, y: 260, frame: 400 },
+    { label: 'The kite, its string and a far sail on the sea horizon', x: 700, y: 100, frame: 400 },
+    { label: 'Near grass', x: 520, y: 700, frame: 400 },
+  ],
+  washing: [
+    { label: 'Washing lines and posts against the sky', x: 480, y: 160, frame: 200 },
+    { label: 'Far lines, pegs and cloth edges', x: 80, y: 160, frame: 200 },
+  ],
+  sailing: [
+    { label: 'Sail and mast, with the child seen through the sail', x: 160, y: 590, frame: 150 },
+    { label: 'The kite string over the island\'s grass', x: 600, y: 300, frame: 150 },
+    { label: 'Sun glints on the water', x: 560, y: 620, frame: 150 },
+  ],
+  summit: [
+    { label: 'Hilltop grass against the sky', x: 900, y: 480, frame: 150 },
+    { label: 'Swans flying over the sea horizon', x: 300, y: 330, frame: 450 },
+  ],
+  birches: [
+    { label: 'The red scarf\'s knot on the fallen birch, falling leaves', x: 780, y: 340, frame: 300 },
+    { label: 'Far scarves and birch trunks in the haze', x: 260, y: 200, frame: 300 },
+    { label: 'Canopy: leaves and twigs', x: 1000, y: 20, frame: 300 },
+  ],
+};
 
 const PAIRS = [['A', 'L1'], ['A', 'L2']];
-const CROP_W = 320, CROP_H = 240, GAP = 16;
+const GAP = 16;
 
 function cropChain(side, r, scale = 2) {
   const k = SIDES[side].ratio, px = (v) => Math.round(v * k);
@@ -264,15 +288,15 @@ function psnrOf(a, b, chainA = 'null', chainB = 'null') {
   return m[1] === 'inf' ? Infinity : +(+m[1]).toFixed(1);
 }
 
-function derive(out) {
-  const moments = Object.keys(MOMENTS).filter((m) => fs.existsSync(`${out}/raw/${m}.json`));
+function derive(out, only) {
+  const moments = (only.length ? only : Object.keys(MOMENTS)).filter((m) => fs.existsSync(`${out}/raw/${m}.json`));
   for (const dir of ['video', 'crops']) fs.mkdirSync(`${out}/${dir}`, { recursive: true });
   const report = {};
   for (const m of moments) {
     const meta = JSON.parse(fs.readFileSync(`${out}/raw/${m}.json`, 'utf8'));
     const raw = (s) => `${out}/raw/${m}-${s}.mkv`;
     const sides = ['A', 'L1', 'L2'].filter((s) => fs.existsSync(raw(s)));
-    report[m] = { label: meta.label, frames: meta.frames, videos: {}, crops: [] };
+    report[m] = { label: MOMENTS[m].label, frames: meta.frames, videos: {}, crops: [] };
     for (const s of sides) {
       const file = `${out}/video/${m}-${s}.mp4`;
       if (!fs.existsSync(file)) ff(['-i', raw(s), '-vf', TO_YUV, ...H264(12), file]);
@@ -284,7 +308,7 @@ function derive(out) {
     }
     const toScreen = (s) => `scale=${W * DSF}:${H * DSF}:flags=bilinear`;
     for (const [a, b] of PAIRS) if (sides.includes(b)) report[m][`${a}vs${b}Psnr`] = psnrOf(raw(a), raw(b), toScreen(a), toScreen(b));
-    (CROPS[m] ?? []).forEach((r, i) => {
+    (CROPS[m] ?? []).map((r) => ({ w: 320, h: 240, ...r })).forEach((r, i) => {
       const id = `${m}-${i + 1}`;
       const crop = { ...r, id, stills: {}, videos: {} };
       for (const s of sides) {
@@ -304,7 +328,10 @@ function derive(out) {
     });
     console.log(JSON.stringify({ moment: m, ...report[m], crops: report[m].crops.length }));
   }
-  fs.writeFileSync(`${out}/report.json`, JSON.stringify(report, null, 1));
+  const file = `${out}/report.json`, all = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+  for (const m of moments) all[m] = report[m];
+  const ordered = Object.fromEntries(Object.keys(MOMENTS).filter((m) => all[m]).map((m) => [m, all[m]]));
+  fs.writeFileSync(file, JSON.stringify(ordered, null, 1));
 }
 
 function writeIndex(out) {
