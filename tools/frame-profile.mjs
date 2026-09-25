@@ -240,7 +240,7 @@ window.__audit = {
     const ratio=scale?Number(scale.slice(6)):this.baseRatio,count=samples?Number(samples.slice(5)):this.baseSamples;
     if(post.samples!==count)post.samples=count;
     // msaa-nodepth: the scene's depth is never read after the scene, so skip resolving it and let the tiler discard it.
-    const t=post.sceneTarget,noDepth=variants.includes('msaa-nodepth');t.resolveDepthBuffer=!noDepth;t.storeMultisampledDepthBuffer=!noDepth;
+    const t=post.sceneTarget,noDepth=variants.includes('msaa-nodepth');t.resolveDepthBuffer=!noDepth&&!variants.includes('msaa-noresolvedepth');t.storeMultisampledDepthBuffer=!noDepth&&!variants.includes('msaa-nostoredepth');
     if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
     const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
