@@ -95,11 +95,11 @@ try {
       `Invalid grass patch (x, radius, z): ${s.chapter} ${s.trodden}`);
     if(report.chapters.at(-1)?.name!==s.chapter){
       const index=report.chapters.length;assert.equal(s.chapter,route[index],`Unexpected chapter after ${report.chapters.at(-1)?.name}`);
-      chapterAt=Date.now();report.chapters.push({name:s.chapter,seconds:(Date.now()-started)/1000});
+      chapterAt=Date.now();report.chapters.push({name:s.chapter,seconds:(Date.now()-started)/1000,gameSeconds:s.stats?.time,frame:s.stats?.frame});
       console.log(JSON.stringify({entered:s.chapter,seconds:report.chapters.at(-1).seconds}));
       await page.screenshot({path:`${prefix}-${String(index).padStart(2,'0')}-${s.chapter}.png`});
     }
-    if(lastBeat!==s.chapter+'/'+s.beat){lastBeat=s.chapter+'/'+s.beat;report.beats.push({name:lastBeat,seconds:(Date.now()-started)/1000});console.log(JSON.stringify({beat:lastBeat,life:s.life}));}
+    if(lastBeat!==s.chapter+'/'+s.beat){lastBeat=s.chapter+'/'+s.beat;report.beats.push({name:lastBeat,seconds:(Date.now()-started)/1000,gameSeconds:s.stats?.time});console.log(JSON.stringify({beat:lastBeat,life:s.life}));}
     if(lastSave!==s.chapter+'/'+s.checkpoint){lastSave=s.chapter+'/'+s.checkpoint;report.checkpoints.push(lastSave);}
     report.last=s;report.strokes=strokes;fs.writeFileSync(prefix+'.json',JSON.stringify(report,null,2));
     if(until&&s.chapter===until){report.reached=until;break;}

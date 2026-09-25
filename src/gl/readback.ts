@@ -152,16 +152,21 @@ const LATE_MS = 2;
 
 /**
  * Reports whether the GPU had finished everything submitted before the last `endFrame` by `deadline`, a
- * `performance.now()` time. A timer that fires late reports false: only a clear early finish counts.
+ * `performance.now()` time: false if the frame's own script already ran past it, null if the timer fired too late
+ * to tell. The status is polled, never waited on.
  */
-export function timeLastFrame(deadline: number, report: (finished: boolean) => void): void {
+export function timeLastFrame(deadline: number, report: (finished: boolean | null) => void): void {
   const gl = frameGl;
   const sync = frameSyncs[frameSyncs.length - 1];
   if (!gl || !sync) return;
+  if (performance.now() > deadline) {
+    report(false);
+    return;
+  }
   setTimeout(() => {
-    const onTime = performance.now() <= deadline + LATE_MS;
-    report(onTime && gl.isSync(sync) && gl.getSyncParameter(sync, gl.SYNC_STATUS) === gl.SIGNALED);
-  }, Math.max(0, deadline - performance.now()));
+    if (performance.now() > deadline + LATE_MS) report(null);
+    else report(gl.isSync(sync) && gl.getSyncParameter(sync, gl.SYNC_STATUS) === gl.SIGNALED);
+  }, deadline - performance.now());
 }
 
 /** Whether the GPU has finished the frame `depth` frames back. */
