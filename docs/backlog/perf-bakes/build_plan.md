@@ -310,7 +310,17 @@ as a battery percentage without the minutes weighting and the display floor besi
 
 ## Phase Q: Auto starts at the top and climbs on evidence (design "Auto on capable devices")
 
-**Status:** started 2026-09-25. Nonvisual (governor logic), Opus.
+**Status:** built 2026-09-25 on `perf-bakes-q`, not merged. Nonvisual (governor logic), Opus. Touch Auto opens at
+`{1.25×, detail 2}`. Below the ceiling each frame's fence is polled 10 ms after submission: ≥90% of ≥30 timed frames
+on time in a review climbs one rung at once, <25% rules a climb out, and anything between (or untimed) falls back to
+the 12 s smooth window. After a failed climb, fence evidence skips only the first 12 s of the doubled wait. The
+constructor lost its `startRatio`/`startDetail` arguments (Auto always opens at its ceiling); `timeLastFrame` now
+reports null for a late timer. Gates: `quality-check` (opening-level asserts changed, new touch scenarios: down from
+the top in 2.5 s and never back into overload; lying timings back off at 6.5/33/108/278 s; back at the ceiling 6.6 s
+after a load lifts, 44 s untimed or inconclusive; 30 fps cap recognised and climbed back under), `quality-browser-check`
+(opening assert changed from "conservative" to the ceiling), `frame-pacer-check`, `power-browser-check`,
+`quality-setting-check`, `quality-menu-check` (constructor call only), typecheck and build all pass. Live Chrome on the
+M4 Pro: Medium → Auto reached the ceiling in 4.0–4.1 s, five of five. The evidence is in `docs/engine.md`.
 
 **Owns:** `src/gl/quality.ts`, the `Quality` construction and probing call in `src/main.ts`, `src/gl/readback.ts`
 (`timeLastFrame` only, if needed), the quality check tools, and the "Quality governor" section of `docs/engine.md`.

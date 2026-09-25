@@ -5,13 +5,13 @@ import { transformSync } from 'rolldown/utils';
 const source = fs.readFileSync(new URL('../src/gl/quality.ts', import.meta.url), 'utf8');
 const { Quality } = await import('data:text/javascript;base64,' + Buffer.from(transformSync('quality.ts', source).code).toString('base64'));
 globalThis.location = { search: '' };
-const create = (ratio, width, height, locked = false, start = ratio, detail = 2, autoRatio = ratio) => {
+const create = (ratio, width, height, locked = false, autoRatio = ratio, samples = 4) => {
   const changes = [];
-  const quality = new Quality(ratio, 4, width, height, start, locked, level => changes.push({ ...level }), detail, 'auto', autoRatio);
+  const quality = new Quality(ratio, samples, width, height, locked, level => changes.push({ ...level }), 'auto', autoRatio);
   return { quality, changes };
 };
 for (const ratio of [0.5, 0.85, 1, 1.5, 2]) {
-  const { quality, changes } = create(ratio, 3840, 2160, true, 1.25);
+  const { quality, changes } = create(ratio, 3840, 2160, true);
   assert.deepEqual(quality.level, { ratio, samples: 4, detail: 2 });
   for (let now = 0; now < 20000; now += 40) quality.frame(now, 40);
   assert.equal(changes.length, 0, 'locked levels must stay exact');
@@ -35,9 +35,9 @@ const slow = create(2, 1600, 900);
 slow.quality.reset(0);
 for (let now = 0; now < 6000; now += 33.3) slow.quality.frame(now, 33.3);
 assert(slow.quality.level.ratio < opening.ratio, 'sustained missed frames lower quality');
-// Touch restores full grass before spending its sustained budget on resolution.
-const touch = create(2, 1376, 1032, false, 1.25, 1, 1.25);
-assert.equal(touch.quality.level.detail, 1);
+// Touch Auto opens at its ceiling with full grass, and holds it while frames are smooth.
+const touch = create(2, 1376, 1032, false, 1.25);
+assert.deepEqual(touch.quality.level, { ratio: 1.25, samples: 4, detail: 2 });
 touch.quality.reset(0);
 for (let now = 0; now < 85000; now += 1000 / 60) touch.quality.frame(now, 1000 / 60);
 assert.deepEqual(touch.quality.level, { ratio: 1.25, samples: 4, detail: 2 });
@@ -53,7 +53,7 @@ assert.equal(touch.quality.level.ratio, 1.25, 'smaller viewport can recover reso
 touch.quality.setMode('high', 110001);
 touch.quality.resize(1920, 1200, 110002);
 assert.equal(touch.quality.level.ratio, 2, 'manual quality survives resize');
-const phone = create(2, 390, 844, false, 1.25, 1, 1.25);
+const phone = create(2, 390, 844, false, 1.25);
 for (let now = 0; now < 100000; now += 1000 / 60) phone.quality.frame(now, 1000 / 60);
 assert.equal(phone.quality.level.ratio, 1.25, 'small touch screens also retain headroom');
 // Rendering at DPR 1 must still shed geometry/reflection work, and recover it later.
@@ -89,8 +89,8 @@ manual.quality.setMode('high', 65000);
 manual.quality.setMode('auto', 65000);
 for (let now = 65000; now < 72000; now += 40) manual.quality.frame(now, 40);
 assert(manual.quality.level.ratio < 2, 'Auto must lower quality again');
-const saved = new Quality(2, 2, 1376, 1032, 1.25, false, () => {}, 1, 'high');
-assert.deepEqual(saved.level, { ratio: 2, samples: 2, detail: 2 }, 'saved High overrides conservative touch startup');
+const saved = new Quality(2, 2, 1376, 1032, false, () => {}, 'high', 1.25);
+assert.deepEqual(saved.level, { ratio: 2, samples: 2, detail: 2 }, 'saved High overrides touch Auto startup');
 const fixed = create(.85, 1600, 900, true).quality;
 fixed.setMode('low', 0);
 assert.deepEqual(fixed.level, { ratio: .85, samples: 4, detail: 2 }, 'manual selection cannot alter QA locks');
@@ -162,7 +162,7 @@ assert(capped.quality.level.ratio >= lowered, 'a smooth capped cadence does not 
 run(capped.quality, 70000, 200000, 1000 / 60, null);
 assert.deepEqual(capped.quality.level, top, 'lifting the cap returns to 60 fps judgement and recovers');
 run(capped.quality, 200000, 210000, 1000 / 60, null);
-assert(!capped.quality.probing, '60 Hz frames are never timed');
+assert(!capped.quality.probing, '60 Hz frames at the ceiling are never timed');
 const saturated = create(2, 1600, 900);
 saturated.quality.reset(0);
 run(saturated.quality, 0, 6000, 1000 / 30, false);
@@ -194,3 +194,74 @@ for (const hz of [30, 60, 120, 144]) {
   assert.equal(timed > 0, hz === 30, `${hz} Hz timing requests`);
 }
 console.log('Budget rung for very large viewports and 30 fps presentation caps passed.');
+
+// A GPU-bound iPad-sized touch device: frame work scales with pixels and eases with world detail, and a frame that
+// misses a refresh waits for the next one (`cap` 2 for a 30 fps display). Work is timed from submission; the model's
+// script takes no time. `fence` false stands for frames that
+// can't be timed; `lie` for headroom timings that claim room the next rung doesn't have.
+const REFRESH = 1000 / 60;
+const touchDevice = () => create(2, 1376, 1032, false, 1.25, 2);
+const play = (q, from, to, ms, { fence = true, lie = false, cap = 1, late = 0 } = {}) => {
+  const seen = [];
+  let interval = REFRESH * cap, frame = 0;
+  for (let now = from; now < to; now += interval) {
+    q.frame(now, interval);
+    const work = ms(q.level, now) * q.level.ratio ** 2 * [.7, .85, 1][q.level.detail];
+    // `late` is the share of frames that finish after the deadline whatever the level, as heavier alternate frames do.
+    const reportedLate = frame++ % 10 < late * 10;
+    if (q.probing && fence) { const deadline = q.probeDeadline(0, 0); q.gpu(!reportedLate && work <= deadline || lie && deadline < REFRESH); }
+    interval = Math.max(cap, Math.ceil(work / REFRESH - 1e-6)) * REFRESH;
+    seen.push({ now, ratio: q.level.ratio, detail: q.level.detail });
+  }
+  return seen;
+};
+const atTop = row => row.ratio === 1.25 && row.detail === 2;
+{
+  // 17.2 ms at the ceiling misses every other refresh; 11 ms at 1× is smooth but too close to prove room for 1.25×.
+  const { quality: q } = touchDevice();
+  q.reset(0);
+  const seen = play(q, 0, 300000, () => 11);
+  const firstDrop = seen.find(row => !atTop(row)).now;
+  assert(firstDrop <= 4000, `overloaded touch steps down from the top within seconds: ${firstDrop}`);
+  assert(!seen.some(row => row.now > firstDrop && atTop(row)), 'truthful timings never climb back into overload');
+  assert.deepEqual({ ratio: q.level.ratio, detail: q.level.detail }, { ratio: 1, detail: 2 }, 'but it recovers the rung that fits');
+  assert(q.probing && q.probeDeadline(0, 0) === 10, 'below the ceiling it keeps timing frames against the headroom deadline');
+}
+{
+  // Timings that lie: every climb back fails, and the waits between them double.
+  const { quality: q } = touchDevice();
+  q.reset(0);
+  const seen = play(q, 0, 300000, () => 11, { lie: true });
+  const returns = seen.filter((row, i) => i && atTop(row) && !atTop(seen[i - 1])).map(row => row.now);
+  const gaps = returns.slice(1).map((t, i) => t - returns[i]);
+  assert(returns.length <= 5 && gaps.every((gap, i) => !i || gap > gaps[i - 1]), `failed climbs back off: ${returns.map(Math.round)}`);
+}
+{
+  // Headroom at the ceiling (6 ms of work at 1×), pushed down by a four-times load for ten seconds.
+  const lifted = (fence, late = 0) => {
+    const { quality: q } = touchDevice();
+    q.reset(0);
+    const seen = play(q, 0, 60000, (_, now) => now < 10000 ? 24 : 6, { fence, late });
+    assert(seen.some(row => row.now < 10000 && row.ratio < 1), 'the load pushes it well down');
+    return seen.find(row => row.now >= 10000 && atTop(row)).now - 10000;
+  };
+  const timed = lifted(true), untimed = lifted(false), unclear = lifted(true, .5);
+  assert(timed <= 8000, `a device with headroom climbs back within seconds once load lifts: ${Math.round(timed)} ms`);
+  assert(untimed > 12000, `without GPU timings the smooth window is the fallback: ${Math.round(untimed)} ms`);
+  assert.equal(unclear, untimed, 'half the frames late (alternate-frame reflections) neither proves nor rules out headroom');
+}
+{
+  // A 30 fps display: the cap is recognised at the ceiling, which then stops timing frames.
+  const { quality: q, changes } = touchDevice();
+  q.reset(0);
+  play(q, 0, 60000, () => 8, { cap: 2 });
+  assert.equal(changes.length, 0, 'a capped touch display with GPU to spare keeps the ceiling');
+  assert(!q.probing, 'a proven cap at the ceiling is not timed');
+  // Pushed down at the cap, it climbs back against the doubled headroom deadline.
+  play(q, 60000, 70000, () => 30, { cap: 2 });
+  assert(!atTop(q.level), 'overload at the cap steps down');
+  const seen = play(q, 70000, 90000, () => 8, { cap: 2 });
+  assert(!q.probing, 'back at the ceiling, frames are no longer timed');
+  assert(seen.find(atTop).now - 70000 <= 8000, 'and climbs back within seconds once load lifts');
+}
+console.log('Touch Auto: opening at the ceiling, stepping down under overload without looping back, climbing on GPU headroom within seconds, and 30 fps caps passed.');

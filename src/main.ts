@@ -383,14 +383,14 @@ const doorwayView = new DoorwayView(renderer, scene, terrain, water,
   doorwaySource, doorwayDestination,
   [shoreGrass, kite.group],
   [{ objects: [...child.objects, ...glider.objects], at: child.position }, { objects: cygnet.objects, at: cygnet.position }]);
-const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, coarsePointer ? 1.25 : maxPixelRatio, params.ratio !== null || params.msaa !== null, (level) => {
+const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, params.ratio !== null || params.msaa !== null, (level) => {
   const resizeTargets = pixelRatio !== level.ratio || post.samples !== level.samples;
   pixelRatio = level.ratio;
   post.samples = level.samples;
   applyWorldQuality(level);
   telemetry.quality(level.ratio, level.samples, level.detail);
   if (resizeTargets) resize();
-}, coarsePointer ? 1 : 2, controls.qualityMode, coarsePointer ? 1.25 : maxPixelRatio);
+}, controls.qualityMode, coarsePointer ? 1.25 : maxPixelRatio);
 function applyWorldQuality(level: QualityLevel, immediate = false): void {
   const detail = WORLD_QUALITY[params.lite ? 0 : level.detail];
   grass.setQuality(level.grassDensity ?? detail.grassDensity, level.grassReach ?? detail.grassReach, immediate);
@@ -403,7 +403,7 @@ applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;
 post.samples = quality.level.samples;
 
-const reportGpu = (early: boolean): void => quality.gpu(early);
+const reportGpu = (early: boolean | null): void => quality.gpu(early);
 
 let graphicsReady = false;
 controls.onQualityChange = mode => {
@@ -978,7 +978,7 @@ function frameInner(now: number): void {
   drawJourneyRooms(rooms, roomObjects, drawRooms);
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);
-  if (quality.probing) timeLastFrame(now + 1000 / 60, reportGpu);
+  if (quality.probing) timeLastFrame(quality.probeDeadline(now, performance.now()), reportGpu);
 
   frames++;
   if (readout) {

@@ -5,7 +5,7 @@ function check() {
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
   assert(matchMedia('(pointer: coarse)').matches, 'Touch emulation missing');
   assert(wind.res === 256, 'Touch must not force the cheaper solver');
-  assert(quality.level.detail <= 1, 'Touch should open conservatively');
+  assert(quality.level.detail === 2 && quality.level.ratio <= 1.25, 'Touch Auto should open at its ceiling with full detail');
   quality.reset(0);
   for (let now = 0; now < 90000; now += 1000 / 60) quality.frame(now, 1000 / 60);
   grass.update(rig.camera, 1); grass.bake(__game.renderer);
