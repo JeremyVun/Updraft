@@ -10,7 +10,7 @@ import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Deck } from '../traveller/traveller';
 import type { Cast, Chapter } from './cast';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
 import { HOME_ENDING } from './home-ending';
 
 type Beat =
@@ -537,7 +537,6 @@ export class HomeChapter implements Chapter {
     /** Fewer of them than at the crest, so the small one can be picked out among them when it goes to join. */
     flock.circle(this.gathering.x, this.gathering.z, this.gathering.y, 20, 16, 18);
     this.nextCall = this.now + 1.2;
-    completeObjective();
   }
 
   /**

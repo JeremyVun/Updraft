@@ -35,6 +35,12 @@ export const tuning = {
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
+    /**
+     * One loudness reference across rooms (about -29 LUFS in each piece's main section), over the approved levels.
+     * The opening keeps its quiet start and swells about 5 dB, not 12, as the island wakes (`openingPadRise`).
+     */
+    roomTrimDb: { home: -6, mirror: 6, drowned: 2.5, sleeping: 2.5, birches: -2.5 },
+    openingPadRise: 0.0141,
     arrivalPhraseWait: 4.5, phraseReleaseLead: .8,
     openingHandoffSettle: 2.2,
     /** Opening-island and forest chimes gain 6 dB; player wind elsewhere loses 3 dB. */

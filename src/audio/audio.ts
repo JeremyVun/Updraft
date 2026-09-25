@@ -185,6 +185,7 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
 const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'overhead' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
+const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
 // The tail blends into this prefix; loop playback resumes immediately after it.
 const NOISE_OVERLAP = 0.04;
 
@@ -1007,7 +1008,7 @@ export class Soundscape {
         const piano = new PianoStrings(); piano.setOutput(out); return piano;
       });
       // The approved arrangement already contains its quiet dynamics and true rests.
-      this.sleepingScore.update(bg.sleepingScore, tuning.audio.sleepingScoreLevel * (1 - piano), arrival.handoffAt);
+      this.sleepingScore.update(bg.sleepingScore, tuning.audio.sleepingScoreLevel * roomTrim('sleeping') * (1 - piano), arrival.handoffAt);
     } else if (this.sleepingScore) {
       this.sleepingScore.stop(s.silence ? 0.12 : 1.8); this.sleepingScore = null;
     }
@@ -1020,7 +1021,7 @@ export class Soundscape {
     }
     if (bg.music === 'birches' && bg.birchesScore && !s.silence && !backgroundPaused) {
       this.birchesScore ??= new BirchesScore(ctx, this.backgroundBus);
-      this.birchesScore.update(bg.birchesScore, tuning.audio.birchesScoreLevel * (1 - piano), arrival.handoffAt);
+      this.birchesScore.update(bg.birchesScore, tuning.audio.birchesScoreLevel * roomTrim('birches') * (1 - piano), arrival.handoffAt);
     } else if (this.birchesScore) {
       this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
     }
@@ -1041,7 +1042,7 @@ export class Soundscape {
         this.dreamScore?.stop(); this.dreamScore = new DreamScore(ctx, this.backgroundBus, dreamKind);
       }
       // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
-      this.dreamScore.update(dreamPhase, (dreamKind === 'mirror' ? tuning.audio.mirrorScoreLevel : tuning.audio.drownedScoreLevel) * (1-piano), arrival.handoffAt);
+      this.dreamScore.update(dreamPhase, (dreamKind === 'mirror' ? tuning.audio.mirrorScoreLevel : tuning.audio.drownedScoreLevel) * roomTrim(dreamKind) * (1-piano), arrival.handoffAt);
     } else if (this.dreamScore) {
       this.dreamScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : tuning.audio.dreamPhaseFade);
       this.dreamScore = null;
@@ -1050,7 +1051,7 @@ export class Soundscape {
     if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused) {
       this.summitScore ??= new SummitScore(ctx, this.backgroundBus);
       this.summitScore.update(bg.summitScore,
-        tuning.audio.summitScoreLevel * (1 - .35 * s.night) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano), s.night, s.homeEndingTime);
+        tuning.audio.summitScoreLevel * roomTrim('home') * (1 - .35 * s.night) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano), s.night, s.homeEndingTime);
     } else if (this.summitScore) {
       this.summitScore.stop(s.silence ? .12 : 1.8); this.summitScore = null;
     }
@@ -1088,8 +1089,11 @@ export class Soundscape {
     const hush = (1 - 0.92 * bg.hush) * (1 - piano);
     /** The finale swells, night or no night: it is the one time the music is meant to be the loudest thing there is. */
     const swell = finale ? 1.6 + 0.8 * (1 - (this.finaleUntil - now) / 22) : 1;
+    const padLife = 0.012 + 0.045 * s.life;
+    // The opening grows less with life; wind warms it in the same proportion.
+    const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
     this.padGain.gain.setTargetAtTime(
-      backgroundPaused || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : ((0.012 + 0.045 * s.life) * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      backgroundPaused || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
