@@ -317,9 +317,9 @@ window.__audit = {
       // Phase X2's exact skips, each restoring the old path: E4 the sea under land (e4-return-off keeps the ripple
       // samples above the fog's early return, e4-off moves them back below it), E6 the glints outside the glitter lobe.
       'e4-off':[[waterMat],'fragmentShader',s=>{
-        const start=s.indexOf('\n  // Weather owns'),skip=s.indexOf('  // The terrain draws over sea'),fog=s.indexOf('  vec4 fog = fogOf(vWorld);'),paw=s.indexOf('  float paw = catsPaw');
+        const start=s.indexOf('\\n  // Weather owns'),skip=s.indexOf('  // The terrain draws over sea'),fog=s.indexOf('  vec4 fog = fogOf(vWorld);'),paw=s.indexOf('  float paw = catsPaw');
         if(start<0||skip<start||fog<skip||paw<fog)throw Error('Missing patch site: e4-off');
-        return s.slice(0,start)+'\n'+s.slice(fog,paw)+s.slice(start+1,skip)+s.slice(paw);}],
+        return s.slice(0,start)+'\\n'+s.slice(fog,paw)+s.slice(start+1,skip)+s.slice(paw);}],
       'e4-return-off':[[waterMat],'fragmentShader',s=>sub(s,'if (inside == 1.0 && underLand(','if (false && underLand(')],
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
     };
