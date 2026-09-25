@@ -5,7 +5,6 @@
 // Ablations disconnect a group's outputs, so nothing pulls it: pad (8 pad oscillators), noise (the 8 looping noise-layer
 // sources), reverbs (the two 4.5 s convolvers' outputs), silent (pad voices and noise layers whose gain is under 1e-4).
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-audio-cost';
@@ -27,12 +26,6 @@ const instrument = () => {
   S.start = function (...args) { reg.live.add(this); this.addEventListener('ended', () => reg.live.delete(this)); return start.apply(this, args); };
 };
 
-function threads(pid) {
-  const rows = execFileSync('ps', ['-M', '-p', String(pid)], { encoding: 'utf8' }).split('\n').slice(1).filter(Boolean);
-  const t = s => { const m = s.match(/(?:(\d+):)?(\d+):(\d+\.\d+)/); return m ? ((Number(m[1] ?? 0) * 60 + Number(m[2])) * 60 + Number(m[3])) * 1000 : 0; };
-  return rows.map(r => { const f = r.trim().split(/\s+/); const i = f.findIndex(x => /^\d+:\d+\.\d+$/.test(x)); return { pri: f[i - 1], ms: t(f[i]) + t(f[i + 1]) }; });
-}
-
 const { browser, close } = await openBrowser();
 const report = [];
 try {
@@ -50,12 +43,10 @@ try {
     if (fixture) await page.evaluate(() => __game.story.current.skipToCrest());
     await page.evaluate(() => { __game.sound.setMuted(false); __game.sound.start(); });
     await page.waitForTimeout(10000);
-    const renderers = (await processes()).filter(p => p.type === 'renderer').map(p => p.id);
-    const pid = renderers.at(-1);
     const sample = async () => {
       const list = await processes(), by = {};
       for (const p of list) by[p.type] = (by[p.type] ?? 0) + p.cpuTime * 1000;
-      return { at: Date.now(), by, threads: threads(pid) };
+      return { at: Date.now(), by };
     };
     const census = () => page.evaluate(() => {
       const s = __game.sound, reg = __audioReg, count = {};
@@ -77,8 +68,7 @@ try {
       await teardown?.();
       const s = (b.at - a.at) / 1000, row = { state, seconds: s };
       for (const k of Object.keys(b.by)) row[k] = (b.by[k] - (a.by[k] ?? 0)) / s;
-      row.threads = b.threads.map((t, i) => ({ pri: t.pri, msPerS: (t.ms - (a.threads[i]?.ms ?? t.ms)) / s })).map((t, i) => ({ i, ...t })).sort((x, y) => y.msPerS - x.msPerS).slice(0, 6);
-      windows.push(row); console.log(JSON.stringify({ chapter, state, renderer: row.renderer?.toFixed(1), utility: row.utility?.toFixed(1), top: row.threads.slice(0, 3) }));
+      windows.push(row); console.log(JSON.stringify({ chapter, state, renderer: row.renderer?.toFixed(1), utility: row.utility?.toFixed(1) }));
     };
     const censusOn = await census();
     const mute = m => page.evaluate(m => __game.sound.setMuted(m), m);
