@@ -474,7 +474,7 @@ pulls it. Values are CPU ms per wall-clock second (1000 = one M4 Pro core).
 ### Ranked candidates
 
 Savings are shares of the playthrough's measured GPU work at 1.5× (cost × estimated minutes), or of CPU where
-stated. **Battery framing:** 09-25's assumption puts the display and system floor at about 8 of Jeremy's 15–18
+stated. The exact list puts CPU and audio first (different units), then GPU items by size. **Battery framing:** the assumption in "Round 2: battery" puts the display and system floor at about 8 of Jeremy's 15–18
 points. That leaves 7–10 points for GPU, CPU and audio together. So a cut of x% of GPU work is worth at most
 x% of those 7–10 points, and less by whatever share the CPU and audio hold. For example, 10% of GPU work is at
 most 0.7–1.0 points.
@@ -485,11 +485,11 @@ most 0.7–1.0 points.
 |---|---|---|---|
 | E1 | **Audio: disconnect the noise layers and pad voices while their gain is exactly 0**, and reconnect them the frame their target leaves 0. The reverb they feed then goes idle after its 4.5 s tail. | Audio CPU −40 to −93 ms/s on the island and at sea, about 30–60% of the audio cost there. Nothing while a score feeds both reverbs (Meadow). | High for the mechanism; medium for how many chapters it helps (3 fixtures measured). |
 | E2 | **Moored boat at the summit:** cache the ground height under its hull contacts while it lies at the home mooring, instead of calling the procedural `rawHeight` every frame. | CPU −0.7 ms/frame at the summit, about a third of Home's script. | High. |
-| E3 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–6% of land, crossing and sea frames. At the summit no sea pixel is visible at all, yet its shading costs 12%. | Medium. No pixel changed in 5 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
-| E3b | **Don't submit grass tiles where no blade stands** (the Birches and Wood floors, cropped ground). The shader discards those blades today, one vertex invocation at a time. | Up to about 4% of the playthrough (hide minus collapse); 10–12% of Birches and Wood frames. | Upper bound. The share of submitted blades that stand wasn't measured. A tile skip is exact only for tiles where nothing stands at any density. |
-| E3c | **Skip the sun glints when the sun can't light them** (a uniform test on the sun's strength). | About 1.3%: 10% of Sleeping frames, 4% of Wood frames. | Low to medium: exact in both, one load each. |
-| E4 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.9%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
-| E5 | **Birches update while in the Drowned village** (0.22 ms/frame; the drift starts off the Birches beach). | CPU −0.2 ms/frame for 1.8 min, if the room is out of sight. | Low: check what is visible first. |
+| E3 | **Don't submit grass tiles where no blade stands** (the Birches and Wood floors, cropped ground). The shader discards those blades today, one vertex invocation at a time. | Up to about 4% of the playthrough (hide minus collapse); 10–12% of Birches and Wood frames. | Upper bound. The share of submitted blades that stand wasn't measured. A tile skip is exact only for tiles where nothing stands at any density. |
+| E4 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–6% of land, crossing and sea frames. At the summit no sea pixel is visible at all, yet its shading costs 12%. | Medium. No pixel changed in 5 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
+| E5 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.9%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
+| E6 | **Skip the sun glints when the sun can't light them** (a uniform test on the sun's strength). | About 1.3%: 10% of Sleeping frames, 4% of Wood frames. | Low to medium: exact in both, one load each. |
+| E7 | **Birches update while in the Drowned village** (0.22 ms/frame; the drift starts off the Birches beach). | CPU −0.2 ms/frame for 1.8 min, if the room is out of sight. | Low: check what is visible first. |
 | — | Not worth building: terrain without its discard (0%), grass frost/dawn/lamp (0%), skipping the mirror reflection where it's invisible (its pass is free there), drawing the water last (slower). | | |
 
 **Look-changing (Jeremy's decision):**
@@ -509,7 +509,7 @@ most 0.7–1.0 points.
 ### Surprises
 
 - **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
-  of the minutes are spent afloat, where the water shader is 31–41% of a frame.
+  of the minutes are spent afloat, where the water shader is 25–41% of a frame.
 - **Audio costs about as much CPU as the game's script**, and almost all of it is two convolvers. Zero-gain layers
   keep them running, because their gains are automated every frame.
 - **Per-frame GPU cost is flat across chapters** (10–12 ms drained at 1.5×). Minutes, not a heavy chapter, decide
