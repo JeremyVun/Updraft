@@ -38,8 +38,10 @@
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
 // Phase X2's exact skips, each restoring the old path: e4-off (sea shaded under land, implicit ripple gradients),
 // e4-return-off, e4-grad-off (its two halves), e5-off (grass always drawn with its discards), e6-off (glints everywhere).
+// grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
+// PATH_ABLATIONS=e4-off,... limits the path to those ablations.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -236,6 +238,7 @@ window.__audit = {
     }
     this.levers(variants);
     this.patchShaders(variants);
+    this.bareTiles(variants.includes('grass-bare-tiles'));
     if(this.pairRebake)this.rebake();
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
@@ -259,6 +262,27 @@ window.__audit = {
     const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
     if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
+  },
+  // grass-bare-tiles: the upper bound on E3, tiles in which no blade can stand (every blade's keep is 0 in its table)
+  // left out of the draw. Reads the tables back once; the tiles are restored for every other variant.
+  bareTiles(on) {
+    if(on===!!this.bare)return;
+    if(on){
+      this.bare=grass.lods.map(l=>{
+        const per=l.spec.cols*l.spec.rows,rows=Math.ceil(l.count*per/1024),saved={count:l.count,tiles:l.tiles.array.slice(0,l.count*2)};
+        if(!l.count)return saved;
+        const buf=new Float32Array(1024*rows*4);renderer.readRenderTargetPixels(l.table,0,0,1024,rows,buf,undefined,1);
+        let kept=0;
+        for(let t=0;t<l.count;t++){let live=false;for(let b=t*per;b<(t+1)*per&&!live;b++)live=buf[b*4]>0;
+          if(live){l.tiles.array[kept*2]=saved.tiles[t*2];l.tiles.array[kept*2+1]=saved.tiles[t*2+1];kept++;}}
+        saved.bare=l.count-kept;l.count=kept;return saved;
+      });
+    } else {
+      grass.lods.forEach((l,i)=>{const saved=this.bare[i];l.tiles.array.set(saved.tiles);l.count=saved.count;});
+      this.bare=null;
+    }
+    for(const l of grass.lods){l.tiles.clearUpdateRanges();l.tiles.addUpdateRange(0,Math.max(1,l.count)*2);l.tiles.needsUpdate=true;l.tileTex.needsUpdate=true;l.dirty=true;l.previousCount=l.count;l.geo.instanceCount=l.count*l.spec.cols*l.spec.rows;}
+    grass.tileVersion++;grass.bake(renderer);
   },
   // Diagnostic shader edits for the grass, water and terrain breakdowns (perf-bakes round 2). Each names what it removes.
   patchShaders(variants) {
@@ -498,7 +522,7 @@ try {
             path.changed+=changed;if(changed)path.stepsChanged++;if(max>path.max){path.max=max;path.worst=k;if(capture)path.images={baseline:encode(a),variant:encode(b)};}}}
           finally{probe.configure(null);probe.pathRestore(saved);}}
         probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain,path};
-      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL,pathCode:process.env.PATH_JS,pathSteps:Number(process.env.PATH_STEPS??40)});
+      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL,pathCode:(process.env.PATH_ABLATIONS??omit).split(',').includes(omit)?process.env.PATH_JS:undefined,pathSteps:Number(process.env.PATH_STEPS??40)});
       if(result.path?.images){for(const [name,data]of Object.entries(result.path.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-path-'+name+'.png',Buffer.from(data,'base64'));delete result.path.images;}
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
