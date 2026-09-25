@@ -765,6 +765,7 @@ void main() {${clip ? `
   vec3 col = alb * (ambient + vLocalLight) * ao + (alb * uSunColor * diff * ao + trans + uSunColor * spec) * sun;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), 1.0);
 }`;
+
 /** Blades within this of the door shore are cut away, so its grass never shows on this side of the door. */
 const DOOR_SHORE_CUT = 48;
 const FRAG = bladeFragment(true);
@@ -1048,14 +1049,11 @@ export class Grass {
       for (let i = 0; i < l.count; i++) {
         const x = tiles[i * 2] + TILE / 2;
         const z = tiles[i * 2 + 1] + TILE / 2;
-        let margin = 0;
-        if (measured) {
-          const key = tiles[i * 2] / TILE * 100003 + tiles[i * 2 + 1] / TILE;
-          margin = this.margins.get(key) ?? NaN;
-          if (Number.isNaN(margin)) {
-            margin = roomMargin(x, z, rooms.x, rooms.y);
-            this.margins.set(key, margin);
-          }
+        const key = tiles[i * 2] / TILE * 100003 + tiles[i * 2 + 1] / TILE;
+        let margin = measured ? this.margins.get(key) : 0;
+        if (margin === undefined) {
+          margin = roomMargin(x, z, rooms.x, rooms.y);
+          this.margins.set(key, margin);
         }
         if (!tileUnclipped(x, z, margin, rooms, room)) return false;
       }
