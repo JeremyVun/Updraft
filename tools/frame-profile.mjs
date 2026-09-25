@@ -36,6 +36,11 @@
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
+// Phase X2's exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
+// grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
+// PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
+// the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
+// PATH_ABLATIONS=e5-off,... limits the path to those ablations.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -232,6 +237,7 @@ window.__audit = {
     }
     this.levers(variants);
     this.patchShaders(variants);
+    this.bareTiles(variants.includes('grass-bare-tiles'));
     if(this.pairRebake)this.rebake();
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
@@ -256,6 +262,27 @@ window.__audit = {
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
     if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
   },
+  // grass-bare-tiles: the upper bound on E3, tiles in which no blade can stand (every blade's keep is 0 in its table)
+  // left out of the draw. Reads the tables back once; the tiles are restored for every other variant.
+  bareTiles(on) {
+    if(on===!!this.bare)return;
+    if(on){
+      this.bare=grass.lods.map(l=>{
+        const per=l.spec.cols*l.spec.rows,rows=Math.ceil(l.count*per/1024),saved={count:l.count,tiles:l.tiles.array.slice(0,l.count*2)};
+        if(!l.count)return saved;
+        const buf=new Float32Array(1024*rows*4);renderer.readRenderTargetPixels(l.table,0,0,1024,rows,buf,undefined,1);
+        let kept=0;
+        for(let t=0;t<l.count;t++){let live=false;for(let b=t*per;b<(t+1)*per&&!live;b++)live=buf[b*4]>0;
+          if(live){l.tiles.array[kept*2]=saved.tiles[t*2];l.tiles.array[kept*2+1]=saved.tiles[t*2+1];kept++;}}
+        saved.bare=l.count-kept;l.count=kept;return saved;
+      });
+    } else {
+      grass.lods.forEach((l,i)=>{const saved=this.bare[i];l.tiles.array.set(saved.tiles);l.count=saved.count;});
+      this.bare=null;
+    }
+    for(const l of grass.lods){l.tiles.clearUpdateRanges();l.tiles.addUpdateRange(0,Math.max(1,l.count)*2);l.tiles.needsUpdate=true;l.tileTex.needsUpdate=true;l.dirty=true;l.previousCount=l.count;l.geo.instanceCount=l.count*l.spec.cols*l.spec.rows;}
+    grass.tileVersion++;grass.bake(renderer);
+  },
   // Diagnostic shader edits for the grass, water and terrain breakdowns (perf-bakes round 2). Each names what it removes.
   patchShaders(variants) {
     const main=(source,body)=>source.slice(0,source.lastIndexOf('void main() {'))+body;
@@ -264,7 +291,8 @@ window.__audit = {
     this.patchOriginals??=new Map([...grassMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
     const patches={
       'grass-frag-flat':[grassMats,'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vTint * 0.5 + vRoot * 0.1 + vFlower.rgb * vFlower.a * 0.01 + vec3(vT, vFlat, vSun) * 0.01 + vec3(vAo, 0.0) * 0.01 + vLocalLight * 0.01 + (vNormal + vSideDir + vGroundN) * 0.001 + vWorld * 1e-6 + vFog.rgb * vFog.a * 0.01, 1.0); }')],
-      'grass-nodiscard':[grassMats,'fragmentShader',s=>sub(s,/discard;/g,'{}')],
+      // The unclipped blade program (E5) has no discards to remove.
+      'grass-nodiscard':[grassMats,'fragmentShader',s=>s.replace(/discard;/g,'{}')],
       'grass-fog':[grassMats,'vertexShader',s=>sub(s,'vFog = fogOf(world, 1.0);','vFog = vec4(0.0);')],
       'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
       'grass-shade':[grassMats,'vertexShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
@@ -285,6 +313,8 @@ window.__audit = {
       // Water under land the terrain will cover: returns before any shading where the baked ground is a metre above the sea.
       'water-landskip':[[waterMat],'fragmentShader',s=>sub(s,'void main() {\\n  vec3 toCam','void main() {\\n  { vec2 u0 = domainUv(vWorld.xz); if (insideUv(u0) && texture(uHeightTex, u0).r > 1.0 && !roomHides(vWorld.xz)) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; } }\\n  vec3 toCam')],
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
+      // Phase X2's exact skip, restoring the old path: E6 the glints outside the glitter lobe.
+      'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
     };
     const wanted=new Map();
     for(const [m,orig] of this.patchOriginals){wanted.set(m.uuid+'|vertexShader',[m,'vertexShader',orig.vertexShader]);if(m!==waterMat)wanted.set(m.uuid+'|fragmentShader',[m,'fragmentShader',orig.fragmentShader]);}
@@ -292,6 +322,8 @@ window.__audit = {
     for(const v of variants)if(patches[v]){const [mats,key,edit]=patches[v];for(const m of mats){const k=m.uuid+'|'+key;const cur=wanted.get(k)?.[2]??m[key];wanted.set(k,[m,key,edit(cur)]);}}
     for(const [,[m,key,source]] of wanted)if(m[key]!==source){m[key]=source;m.needsUpdate=true;}
     water.mesh.renderOrder=variants.includes('water-last')?1:0;
+    // E5: the blades always drawn with the program that discards, as before.
+    grass.unclipped=!variants.includes('e5-off');
   },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
@@ -348,6 +380,10 @@ window.__audit = {
   },
   // STATE forces a condition for every ablation after the census; it runs in this module's scope.
   state(code) { return eval(code); },
+  // PATH moves the camera for step k (0..PATH_STEPS-1); the window then follows it and the frame is prepared as the loop does.
+  pathStep(code,k) { eval(code); rig.camera.updateMatrixWorld(); followWindow(...windowAim()); prepareFrame(0); },
+  pathSave() { return {position:rig.camera.position.clone(),quaternion:rig.camera.quaternion.clone()}; },
+  pathRestore(saved) { rig.camera.position.copy(saved.position); rig.camera.quaternion.copy(saved.quaternion); rig.camera.updateMatrixWorld(); followWindow(...windowAim()); prepareFrame(0); },
   inspect() {
     let count=0, hidden=0, drawables=0, uncullable=0;
     scene.traverse(o=>{count++;if(!o.visible)hidden++;if(o.material){drawables++;if(!o.frustumCulled)uncullable++;}});
@@ -374,6 +410,7 @@ window.__audit = {
 };
 `;
 
+const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
 const { browser, close } = await openBrowser();
 const report=[],inexact=[];
 try {
@@ -399,8 +436,8 @@ try {
       await route.fulfill({response,body:source+injection});
     });
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
-    await page.waitForSelector('#veil.ready',{timeout:120000});await page.locator('#begin').click();
-    await page.waitForFunction(()=>window.__ready,null,{timeout:120000});
+    await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
+    await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
     if(fixture) await page.evaluate(fixture=>{
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
@@ -438,7 +475,7 @@ try {
       // With GPU_QUIET, each ablation also waits (up to GATE_S, default 20 s) for other GPU users to go quiet, not just each chapter.
       for(const start=Date.now();GPU_QUIET&&Date.now()-start<Number(process.env.GATE_S??20)*1000&&busy().some(r=>!r.own&&GPU_USER.test(r.command));)await new Promise(r=>setTimeout(r,3000));
       const busyBefore=busy();
-      const result=await page.evaluate(async ({name,rounds,draws,capture,poll,drainAll})=>{
+      const result=await page.evaluate(async ({name,rounds,draws,capture,poll,drainAll,pathCode,pathSteps})=>{
         const [omit,mode]=name.split('@');
         const gl=__game.renderer.getContext(), probe=__audit;probe.pairRebake=probe.changesHeights(omit);
         // setTimeout(0) polls in ~4.5 ms steps once nested; a message round trip is far finer.
@@ -473,22 +510,34 @@ try {
         const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
         const stepMs=omit==='wind'?await stepAlone():undefined;
-        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain};
-      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL});
+        // Moving-camera exactness: the same pair of frames at every step of PATH, worst pixel over the path.
+        let path;
+        if(pathCode){const saved=probe.pathSave();path={steps:pathSteps,changed:0,max:0,worst:-1,stepsChanged:0};
+          try{for(let k=0;k<pathSteps;k++){probe.pathStep(pathCode,k);const a=read(null),b=read(omit);let changed=0,max=0;
+            for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;if(d>max)max=d;}}
+            path.changed+=changed;if(changed)path.stepsChanged++;if(max>path.max){path.max=max;path.worst=k;if(capture)path.images={baseline:encode(a),variant:encode(b)};}}}
+          finally{probe.configure(null);probe.pathRestore(saved);}}
+        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain,path};
+      },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL,pathCode:(process.env.PATH_ABLATIONS??omit).split(',').includes(omit)?process.env.PATH_JS:undefined,pathSteps:Number(process.env.PATH_STEPS??40)});
+      if(result.path?.images){for(const [name,data]of Object.entries(result.path.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-path-'+name+'.png',Buffer.from(data,'base64'));delete result.path.images;}
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
-      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
+      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,path:result.path,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
-      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always'].includes(omit) && result.pixels.max) {
+      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e5-off','e6-off'].includes(omit) && result.pixels.max) {
         console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
-        // The old glass path (not the new one) drops channels to 0 in scattered half-float samples on ANGLE/Metal.
-        if (result.pixels.max > 1 && !(omit==='glass-sky-always' && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
+        // The old glass path and the old glints (not the new ones) drop channels to 0 in scattered half-float samples on ANGLE/Metal.
+        if (result.pixels.max > 1 && !(specks(omit) && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
+      }
+      if (result.path?.max) {
+        console.warn(`WARNING ${chapter} ${omit}: along PATH, ${result.path.max}/255 at step ${result.path.worst}, ${result.path.changed} channels over ${result.path.stepsChanged} steps`);
+        if (result.path.max > 1 && !(specks(omit) && result.path.changed / result.path.stepsChanged < 2000)) inexact.push({chapter,omit,path:result.path});
       }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
-      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs}));
+      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs,pixels:row.pixels,path:row.path}));
       if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }

@@ -357,7 +357,9 @@ void main() {
   float tan2 = (1.0 - H.y * H.y) / max(H.y * H.y, 1e-4);
   float glitter = exp(-tan2 / (0.008 + unresolved));
   float crisp = (1.0 - smoothstep(0.1, 0.7, footprint));
-  float sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
+  // Outside the glitter lobe 1.0 - glitter rounds to 1, so every glint cell is exactly dark.
+  float sparkle = 0.0;
+  if (glitter > 1e-9) sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
 
   /**

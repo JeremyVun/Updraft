@@ -383,7 +383,12 @@ the Birches room's update gating (E7), `tools/audio-cost.mjs`.
 
 ### Phase X2: GPU cuts (E3, E4, E5, E6)
 
-**Status:** not started. Nonvisual (exact skips judged by frame difference), Opus.
+**Status:** done 2026-09-26 on branch `perf-bakes-x2`, not merged. Kept E5 (grass without its discards where nothing
+in reach is clipped) and E6 (glints skipped outside the glitter lobe, a per-pixel test: a uniform one can't be exact
+because the moon lights the night sea). Dropped E3 (almost no tile is empty at every density; the ceiling is under 1%
+of a Birches frame) and E4 (exact, but +1–3% on land against −2–4% afloat). Gates: no changed pixel in any of the
+twelve fixtures for E5 and E6, static or along 40-step camera paths; `tools/grass-unclipped-check.mjs` passes;
+`npm run typecheck` and `npm run build` pass. Results and numbers: design, "Phase X2 results".
 
 **Owns:** `src/world/grass.ts` (tile submission, the discard-free program), `src/world/water.ts` (the under-land
 early return, the glint skip), `tools/frame-profile.mjs` (ablations restoring each old path).
