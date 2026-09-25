@@ -195,6 +195,21 @@ the `Quality` construction in `src/main.ts`):
 - The game already times frames' GPU completion with a fence to detect a 30 fps cap (`probing`). The same timing
   could prove spare GPU power directly, instead of inferring it from vsync intervals.
 
+Jeremy, 2026-09-25 (verbatim):
+
+> yea things should start on high and then drop down, or start on low and respond upwards much faster.
+
+**Decision (lead, within that ruling): both halves.**
+1. **Start at the top.** Touch Auto opens at its ceiling with full world detail, as a mouse device already does,
+   and steps down only on real overload (the existing review: trimmed mean > 17.6 ms).
+2. **Climb on evidence, in seconds.** While Auto sits below its ceiling, it times each frame's GPU completion
+   against a deadline well inside one refresh. When nearly all frames in a short window finish by that deadline,
+   it climbs one rung at once, without waiting out the 12 s smooth window. That window stays as the fallback
+   where fences can't be timed. A climb that fails still doubles the next wait, so levels never oscillate.
+
+Auto's touch ceiling stays 1.25× until the census prices 1.25× against 1.5×; that's one constant to change, and
+Jeremy's call. Phase Q builds it.
+
 **Measure first (phase M).** No `src/` change until the numbers are in and Jeremy has seen the ranked list.
 1. **Minutes per chapter.** Chapter entry times from a full `tools/playthrough.mjs` run (`report.chapters`),
    as the weight for everything else. The bot's pace is a proxy for Jeremy's.

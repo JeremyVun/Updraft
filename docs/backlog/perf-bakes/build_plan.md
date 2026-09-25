@@ -305,6 +305,34 @@ loads per chapter and drop straddled or contended rows, as in phase R.
 **Gate:** every number states its fixture, scale, the machine's load and its pair range. No saving is quoted
 as a battery percentage without the minutes weighting and the display floor beside it.
 
+## Phase Q: Auto starts at the top and climbs on evidence (design "Auto on capable devices")
+
+**Status:** started 2026-09-25. Nonvisual (governor logic), Opus.
+
+**Owns:** `src/gl/quality.ts`, the `Quality` construction and probing call in `src/main.ts`, `src/gl/readback.ts`
+(`timeLastFrame` only, if needed), the quality check tools, and the "Quality governor" section of `docs/engine.md`.
+
+**Work:**
+1. Touch Auto opens at its ceiling (`{1.25×, detail 2}` today) with full detail.
+2. While Auto is below its ceiling, time frames' GPU completion against a headroom deadline inside one refresh,
+   and climb one rung as soon as a short window proves headroom. Keep the 12 s smooth window as the fallback,
+   and the doubling after a failed climb. Put the thresholds' reasoning beside them: the next rung costs up to
+   about 1.56× the pixels (1× → 1.25×), so the deadline must leave that much room.
+3. Keep: 30 fps cap detection, manual presets holding, `?ratio`/`?msaa` locks, hidden-tab and Begin resets, the
+   Auto-only fallback rungs, no allocation on detail changes.
+
+**Seam:** `Quality`'s public surface (`level`, `mode`, `frameRate`, `probing`, `gpu`, `frame`, `setMode`,
+`resize`, `reset`) may gain a field for the headroom deadline; `main.ts` stays the only caller.
+
+**Gates:**
+- `node tools/quality-check.mjs`, `node tools/quality-browser-check.mjs`, `node tools/frame-pacer-check.mjs`,
+  `node tools/power-browser-check.mjs`, `node tools/quality-setting-check.mjs` pass, updated only where the new
+  opening level or climb is the intended change (say which).
+- Scripted scenarios: an overloaded touch device steps down from the top within a few seconds and never climbs
+  back into overload in a loop; a device with headroom that was pushed down climbs back within a few seconds
+  once load lifts; a 30 fps-capped display is still recognised.
+- `npm run typecheck` and `npm run build` pass.
+
 ## Phase 7: close
 
 **Status:** not started. Run the backlog-item close stage:
