@@ -353,7 +353,12 @@ the same page, and records its measured saving under its E item in design.md.
 
 ### Phase X1: CPU and audio cuts (E1, E2, E7) and the one-reverb evidence (L8)
 
-**Status:** not started. Nonvisual, Opus. Runs after phase V frees an agent slot.
+**Status:** done 2026-09-26 on `perf-bakes-x1`, not merged. E1 and E2 built and pass their gates; E7 dropped (the
+Birches room is on screen for the first 3.7 s of the drift, and its full update already stops 22.5 s in); L8's
+`reverb=one` evidence is at `/tmp/updraft-pb-x1-reverb/index.html`, default unchanged, awaiting Jeremy's verdict.
+Numbers in design.md, "Round 2 results: phase X1". The E1 gain hold replaces a disconnect: a disconnected looping
+source stops advancing in Chrome, so it could not be sample-identical. `meadow-score-browser-check`,
+`birches-score-browser-check` and `sea-score-browser-check` fail on the untouched base too.
 
 **Owns:** `src/audio/*` (silent-layer gating, the one-reverb option), the moored boat's hull-contact code (E2),
 the Birches room's update gating (E7), `tools/audio-cost.mjs`.

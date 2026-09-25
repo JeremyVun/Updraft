@@ -613,7 +613,28 @@ Built on branch `perf-bakes-x1` (from b9aad91). Tools: `tools/audio-silence-chec
   `sea-score-browser-check` time out or fail at their real-gesture steps,
   and fail at the same line on the untouched base build (b9aad91), so the failures predate X1.
 - **Saving:** offline, the same sequences render 18% (wind), 38% (scores), 13% (arrival) and 46% (ending) faster.
-  @@E1LIVE@@
+  Live (`audio-cost PAIRS=unheld`, Chrome renderer CPU in ms per wall-clock second, 1000 = one M4 Pro core, two
+  interleaved 8 s pairs per chapter in one load, each after a 6 s settle; the machine also ran another session's GPU
+  profiler throughout, so pairs spread by about ±20). The old per-frame re-targeting is put back on the same live
+  graph for the paired window.
+
+  | Chapter | Sound on − muted | E1 saving, pointer still | E1 saving, pointer circling |
+  |---|---:|---:|---:|
+  | Island | 82 | 33–34 | 10–14 |
+  | Washing | 143 | −4 to 4 | |
+  | Meadow walk | 138 | 3–11 | 6–14 |
+  | Birches | 130 | 1–13 | 0–2 |
+  | Wood | 133 | −4 to 10 | |
+  | Sleeping | 187 | 32–51 | |
+  | Sea | 136 | 22–47 | −5 to 24 |
+  | Mirror | 157 | 43–53 | |
+  | Jetty | 123 | −13 to −7 | −122 to −7 (one outlier) |
+
+  It saves 20–50 ms/s where only the silent layers kept the shared reverb running (the island, Sleeping, the sea,
+  the Mirror) and nothing where a score, rain, cloth or other sounds keep both reverbs fed anyway. While the player
+  moves the pointer, the gust layers sound and feed the shared reverb, so most of the saving comes in the pauses and
+  the scripted stretches: a gust layer is held again about 1–2 s after the wind stops, and its reverb idles 4.5 s
+  after that.
 
 **E2, the moored hull's ground: built.**
 - **How:** while the boat is made fast at a berth (`afloat`, `grounded`, `mooring`), it measures once the highest
@@ -659,7 +680,23 @@ include the refactored arrival and ending gates).
   and the difference on its own.
 - **Saving:** offline, one reverb renders the Meadow 32% faster, the arrivals 7–8% and the ending 3%: it only saves
   where both reverbs would be busy at once, which after E1 means a score playing while the wind, calls, chimes or
-  foley feed the shared reverb. @@L8LIVE@@
+  foley feed the shared reverb. Live (`audio-cost PAIRS=onereverb`: the background's send moved to the shared reverb on the same live graph, the
+  CPU equivalent of `reverb=one` with its gates open), in ms per second of Chrome renderer CPU:
+
+  | Chapter | Pointer still | Pointer circling |
+  |---|---:|---:|
+  | Island | −12 to −2 | 15–46 |
+  | Washing | 50–61 | |
+  | Meadow walk | 18–49 | 38–51 |
+  | Birches | 43–53 | 43–57 |
+  | Wood | 22–52 | |
+  | Sleeping | 2–6 | |
+  | Sea | −8 to 43 | 23–63 |
+  | Mirror | −8 to 2 | |
+  | Jetty | 55–56 | 34–56 |
+
+  (positive = one reverb uses less.) Where a score plays and anything else feeds the shared reverb, one reverb saves
+  roughly 40–60 ms/s, a third of the sound's whole cost; on top of E1 it adds nothing where only one reverb is busy.
 
 ### Surprises
 
