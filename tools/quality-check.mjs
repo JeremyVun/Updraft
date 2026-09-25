@@ -196,7 +196,8 @@ for (const hz of [30, 60, 120, 144]) {
 console.log('Budget rung for very large viewports and 30 fps presentation caps passed.');
 
 // A GPU-bound iPad-sized touch device: frame work scales with pixels and eases with world detail, and a frame that
-// misses a refresh waits for the next one (`cap` 2 for a 30 fps display). `fence` false stands for frames that
+// misses a refresh waits for the next one (`cap` 2 for a 30 fps display). Work is timed from submission; the model's
+// script takes no time. `fence` false stands for frames that
 // can't be timed; `lie` for headroom timings that claim room the next rung doesn't have.
 const REFRESH = 1000 / 60;
 const touchDevice = () => create(2, 1376, 1032, false, 1.25, 2);
@@ -206,7 +207,7 @@ const play = (q, from, to, ms, { fence = true, lie = false, cap = 1 } = {}) => {
   for (let now = from; now < to; now += interval) {
     q.frame(now, interval);
     const work = ms(q.level, now) * q.level.ratio ** 2 * [.7, .85, 1][q.level.detail];
-    if (q.probing && fence) q.gpu(work <= q.probeMs || lie && q.probeMs < REFRESH);
+    if (q.probing && fence) { const deadline = q.probeDeadline(0, 0); q.gpu(work <= deadline || lie && deadline < REFRESH); }
     interval = Math.max(cap, Math.ceil(work / REFRESH - 1e-6)) * REFRESH;
     seen.push({ now, ratio: q.level.ratio, detail: q.level.detail });
   }
@@ -222,7 +223,7 @@ const atTop = row => row.ratio === 1.25 && row.detail === 2;
   assert(firstDrop <= 4000, `overloaded touch steps down from the top within seconds: ${firstDrop}`);
   assert(!seen.some(row => row.now > firstDrop && atTop(row)), 'truthful timings never climb back into overload');
   assert.deepEqual({ ratio: q.level.ratio, detail: q.level.detail }, { ratio: 1, detail: 2 }, 'but it recovers the rung that fits');
-  assert(!q.probing || q.probeMs === 10, 'below the ceiling it keeps timing frames against the headroom deadline');
+  assert(q.probing && q.probeDeadline(0, 0) === 10, 'below the ceiling it keeps timing frames against the headroom deadline');
 }
 {
   // Timings that lie: every climb back fails, and the waits between them double.
@@ -257,7 +258,7 @@ const atTop = row => row.ratio === 1.25 && row.detail === 2;
   play(q, 60000, 70000, () => 30, { cap: 2 });
   assert(!atTop(q.level), 'overload at the cap steps down');
   const seen = play(q, 70000, 90000, () => 8, { cap: 2 });
-  assert.equal(q.probeMs, 0);
+  assert(!q.probing, 'back at the ceiling, frames are no longer timed');
   assert(seen.find(atTop).now - 70000 <= 8000, 'and climbs back within seconds once load lifts');
 }
 console.log('Touch Auto: opening at the ceiling, stepping down under overload without looping back, climbing on GPU headroom within seconds, and 30 fps caps passed.');

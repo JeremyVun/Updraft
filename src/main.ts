@@ -978,7 +978,7 @@ function frameInner(now: number): void {
   drawJourneyRooms(rooms, roomObjects, drawRooms);
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);
-  if (quality.probing) timeLastFrame(now + quality.probeMs, reportGpu);
+  if (quality.probing) timeLastFrame(quality.probeDeadline(now, performance.now()), reportGpu);
 
   frames++;
   if (readout) {

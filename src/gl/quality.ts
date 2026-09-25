@@ -36,8 +36,9 @@ const CAP_PROBES = 8;
 const CAP_EARLY = 0.8;
 /**
  * Below its ceiling, Auto climbs as soon as frames prove headroom: the GPU finishes a frame within this long of its
- * start. The next rung up renders up to 1.56× the pixels (1× → 1.25×), so 10 ms becomes at most about 15.6 ms, still
- * inside one 16.7 ms refresh. CPU time counts against the deadline without growing with pixels, so this errs safe.
+ * submission. The next rung up renders up to 1.56× the pixels (1× → 1.25×), so 10 ms becomes at most about 15.6 ms,
+ * inside one 16.7 ms refresh. Timed from submission because the frame's script doesn't grow with pixels; the 2–4 ms
+ * a browser takes to report a finished fence still counts against it, so this errs safe.
  */
 const HEADROOM_MS = 10;
 /** Timed frames needed in one review, and the share of them that must meet the deadline, to climb at once. */
@@ -54,8 +55,8 @@ const CLIMB_MS = 12000;
  * when frames run long. It judges by the trimmed mean and the 90th percentile of recent frame intervals, so a
  * single hitch (a window move, a tab switch) never costs quality, while a GPU that misses every other refresh is
  * caught at once. Auto opens at its ceiling. Below it, `probing` asks the caller to time each frame's GPU work
- * against `probeMs`; a review in which nearly every frame finished that early climbs one rung. Where frames can't
- * be timed, a long smooth stretch climbs instead.
+ * against `probeDeadline`; a review in which nearly every frame finished that early climbs one rung. Where frames
+ * can't be timed, a long smooth stretch climbs instead.
  *
  * A steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps. While frames
  * arrive that slowly, the probe asks whether the GPU finished each frame within one 60 Hz refresh. Frames that finish early yet still wait for every other refresh prove a cap, and Auto then
@@ -115,18 +116,20 @@ export class Quality {
 
   /** Whether the caller should time the frame just submitted and report it through `gpu`. */
   get probing(): boolean {
-    return this.probeMs > 0;
+    return this.probingCap || (!this.locked && this.selectedMode === 'auto' && this.index > this.autoCeiling);
   }
 
-  /** How long after the frame's start its GPU work must be finished to count as early; 0 when not probing. */
-  get probeMs(): number {
-    if (this.locked || this.selectedMode !== 'auto') return 0;
-    if (!this.capped && this.lastInterval >= CAPPED_MS * 0.9) return REFRESH_MS;
-    if (this.index > this.autoCeiling) return this.capped ? HEADROOM_MS * CAPPED_MS / REFRESH_MS : HEADROOM_MS;
-    return 0;
+  private get probingCap(): boolean {
+    return !this.locked && this.selectedMode === 'auto' && !this.capped && this.lastInterval >= CAPPED_MS * 0.9;
   }
 
-  /** One frame's GPU timing: whether it had finished by `probeMs`, or null when the timer fired too late to tell. */
+  /** By when the frame that began at `start` and was submitted at `submitted` must have finished to count as early. */
+  probeDeadline(start: number, submitted: number): number {
+    if (this.probingCap) return start + REFRESH_MS;
+    return submitted + (this.capped ? HEADROOM_MS * CAPPED_MS / REFRESH_MS : HEADROOM_MS);
+  }
+
+  /** One frame's GPU timing: whether it had finished by `probeDeadline`, or null when the timer fired too late to tell. */
   gpu(early: boolean | null): void {
     this.probes++;
     if (early) this.early++;
