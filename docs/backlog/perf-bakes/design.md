@@ -224,22 +224,22 @@ minutes: each chapter's share is close to its share of the time.
 
 | Chapter | Minutes | Fixture | ms/frame 1.5× | Share 1.5× | ms/frame 1.25× | Share 1.25× |
 |---|---:|---|---:|---:|---:|---:|
-| Island | 1.9 | Island | 11.5 | 5.9% | 9.8 | 6.0% |
-| Crossing to Washing | 1.6 | `lines` | 10.7 | 4.4% | 9.0 | 4.4% |
-| Washing | 1.8 | Washing | 11.7 | 5.5% | 10.0 | 5.6% |
-| Crossing to Boats | 0.5 | crossing | 11.1 | 1.5% | 9.3 | 1.5% |
+| Island | 1.9 | Island | 12.1 | 6.2% | 10.0 | 6.1% |
+| Crossing to Washing | 1.6 | `lines` | 10.7 | 4.4% | 8.9 | 4.4% |
+| Washing | 1.8 | Washing | 11.7 | 5.5% | 10.0 | 5.7% |
+| Crossing to Boats | 0.5 | crossing | 11.1 | 1.5% | 9.2 | 1.5% |
 | Boats | 1.6 | Boats | 11.1 | 4.9% | 8.8 | 4.6% |
-| Crossing to Meadow | 0.7 | crossing | 11.1 | 1.9% | 9.3 | 1.9% |
+| Crossing to Meadow | 0.7 | crossing | 11.1 | 1.9% | 9.2 | 1.9% |
 | Meadow | 5.1 | Meadow landing + walk | 11.3 | 15.3% | 9.9 | 16.0% |
-| Crossing to Birches | 0.3 | crossing | 11.1 | 1.0% | 9.3 | 1.0% |
+| Crossing to Birches | 0.3 | crossing | 11.1 | 1.0% | 9.2 | 1.0% |
 | Birches | 2.0 | Birches | 11.5 | 6.1% | 9.6 | 6.1% |
-| Drowned (drift) | 1.8 | Drowned | 11.1 | 5.3% | 9.3 | 5.3% |
+| Drowned (drift) | 1.8 | Drowned | 11.1 | 5.3% | 9.2 | 5.3% |
 | Wood | 2.5 | Wood | 10.0 | 6.5% | 8.0 | 6.2% |
-| Crossing to Sleeping | 0.6 | crossing | 11.1 | 1.8% | 9.3 | 1.8% |
-| Sleeping | 3.3 | Sleeping | 12.3 | 10.7% | 10.4 | 10.7% |
-| Open sea to Mirror | 2.5 | `sea` | 11.4 | 7.6% | 9.6 | 7.6% |
+| Crossing to Sleeping | 0.6 | crossing | 11.1 | 1.8% | 9.2 | 1.8% |
+| Sleeping | 3.3 | Sleeping | 12.3 | 10.6% | 10.4 | 10.7% |
+| Open sea to Mirror | 2.5 | `sea` | 11.4 | 7.6% | 9.5 | 7.6% |
 | Mirror | 2.2 | Mirror | 9.9 | 5.7% | 8.0 | 5.5% |
-| Crossing home | 2.0 | crossing | 11.1 | 5.8% | 9.3 | 5.8% |
+| Crossing home | 2.0 | crossing | 11.1 | 5.8% | 9.2 | 5.7% |
 | Home | 3.5 | Jetty + Summit | 10.9 | 10.0% | 9.0 | 9.9% |
 
 The 1.25× column is the 1.5× cost less that fixture's measured `scale-1.25` saving (the median, 16%, where a
@@ -253,21 +253,21 @@ add up. Per-chapter values are in the tables below.
 | Component (ablation) | Share of playthrough | Highest chapters |
 |---|---:|---|
 | Sea surface shading (flat fragment) (`water-frag-flat`) | 19.4% | Drowned (drift) 41%, Open sea to Mirror 38%, Crossing to Boats 31% |
-| Grass (hidden) (`grass`) | 13.3% | Meadow 28%, Washing 25%, Home 20% |
-| Terrain surface shading (`terrain-flat`) | 10.2% | Wood 17%, Meadow 16%, Birches 15% |
-| Post (straight copy) (`post`) | 12.2% | Home 17%, Mirror 15%, Wood 14% |
+| Grass (hidden) (`grass`) | 13.4% | Meadow 28%, Washing 25%, Home 20% |
+| Terrain surface shading (`terrain-flat`) | 10.1% | Wood 17%, Meadow 16%, Birches 15% |
+| Post (straight copy) (`post`) | 12.0% | Home 17%, Mirror 15%, Wood 14% |
 | Bloom (`bloom`) | 10.3% | Mirror 17%, Home 13%, Crossing to Boats 12% |
 | Sky radiance (flat) (`sky-flat`) | 4.6% | Crossing to Washing 13%, Crossing to Boats 12%, Crossing to Meadow 12% |
 | Sea reflection pass (`reflection`) | 2.5% | Open sea to Mirror 14%, Crossing to Boats 8%, Crossing to Meadow 8% |
 | Characters, animals, kites, petals, wind lines (`actors`) | 2.3% | Birches 5%, Open sea to Mirror 5%, Crossing to Washing 4% |
-| Wind step (`wind`) | 0.6% | Birches 4%, Meadow 2%, Drowned (drift) 2% |
+| Wind step (`wind`) | 0.9% | Island 6%, Birches 4%, Meadow 2% |
 | Birches room (`birches`) | 1.3% | Birches 21% |
 
 ### Grass
 
 | Fixture | Hide grass | Blades quit at once | LOD0 | LOD1 | LOD2 | Flat fragment | Vertex fog | Frost/dawn/lamp | No discard |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Island | 16%† | 12%† | 16%† | 10%† | 2%⁰† | 8%† | 7%† | 4%⁰† | 3%⁰† |
+| Island | 19% | 16% | 16% | 2% | 2%⁰† | 8%† | 7%† | 4%⁰† | 5%⁰ |
 | Crossing out (`lines`) | 7%† | 10%† | 3%† | 5%† | 5%† | 3%† | 0%† | -1%⁰† | 2%⁰† |
 | Washing | 25%† | 21%† | 16%† | 7%† | -5%⁰† | 3%† | 1%† | 0%⁰† | 2%⁰† |
 | Boats | — | — | — | — | — | — | — | — | — |
@@ -317,7 +317,7 @@ about 1.5 ms per frame (`step`, `indexedNormals`, `write`), is phase 5b's.
 
 | Fixture | Flat fragment | Skip under land | Seabed | Fog | Glints | Ripples | Surf | Wind waves | Sky colour | Mirror sample | Flat vertex | Reflection pass |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Island | 19%† | — | — | — | — | — | — | 3%⁰† | — | — | -4%⁰† | 7%⁰† |
+| Island | 19% | — | 7%† | 2%† | 0%⁰† | — | 5%† | 2%⁰ | -0%† | -1%† | -4%⁰† | 7%⁰ |
 | Crossing out (`lines`) | 25%† | — | 5%† | — | 4%† | 6%† | 6%† | 4%† | — | 2%† | 1%† | 3%⁰† |
 | Washing | 13%† | — | 1%⁰† | — | 0%⁰† | 6%† | 0%⁰† | 1%⁰† | — | -0%† | -0%⁰† | 5%⁰† |
 | Boats | — | — | — | — | — | — | — | — | — | — | — | 0%⁰† |
@@ -360,7 +360,7 @@ Each stage is drawn alone 40 times, then drained; median of 5 rounds (`POST_PASS
 
 | Fixture | Scene | MSAA clear + resolve | Clamp copy | Bloom (12 passes + blend) | Grade |
 |---|---:|---:|---:|---:|---:|
-| Island | 12.5 | 1.87 | 0.14 | 0.90 | 0.08 |
+| Island | 10.2 | 1.38 | 0.10 | 0.69 | 0.06 |
 | Crossing out (`lines`) | 6.4 | 0.86 | 0.07 | 0.95 | 0.04 |
 | Washing | 7.4 | 0.87 | 0.06 | 0.46 | 0.03 |
 | Boats | 9.6 | 1.48 | 0.07 | 0.94 | 0.04 |
@@ -463,11 +463,11 @@ pulls it. Values are CPU ms per wall-clock second (1000 = one M4 Pro core).
 
 | Lever | Share of playthrough | Per chapter |
 |---|---:|---|
-| Render scale 1.5× → 1.25× | 16.2% | Boats 21%, Wood 21%, Mirror 20% |
-| Render scale 1.5× → 1× | 30.2% | Mirror 38%, Sleeping 36%, Wood 33% |
+| Render scale 1.5× → 1.25× | 16.6% | Boats 21%, Wood 21%, Mirror 20% |
+| Render scale 1.5× → 1× | 30.4% | Mirror 38%, Sleeping 36%, Island 34% |
 | MSAA 2 → 0 | 15.8% | Island 21%, Mirror 20%, Crossing to Washing 16% |
 | Bloom off | 10.3% | Mirror 17%, Home 13%, Crossing to Boats 12% |
-| Bloom at half resolution | 3.3% | Home 6%, Island 5%, Meadow 5% |
+| Bloom at half resolution | 3.1% | Home 6%, Meadow 5%, Birches 5% |
 | Sky at lower resolution on the sea chapters and the mirror (upper bound: sky radiance removed there) | 3.2% | Crossing to Washing 13%, Crossing to Boats 12%, Crossing to Meadow 12% |
 
 ### Ranked candidates
@@ -486,7 +486,7 @@ most 0.7–1.0 points.
 | E2 | **Moored boat at the summit:** cache the ground height under its hull contacts while it lies at the home mooring, instead of calling the procedural `rawHeight` every frame. | CPU −0.7 ms/frame at the summit, about a third of Home's script. | High. |
 | E3 | **Skip the sea's shading under land:** return early where the baked ground is over 1 m above the sea and the room isn't hidden. | About 2% of the playthrough's GPU work; 2–6% of land, crossing and sea frames. At the summit no sea pixel is visible at all, yet its shading costs 12%. | Medium. No pixel changed in 5 fixtures, mostly one load. The early return sits before `fwidth` and the footprint, so shoreline pixels need a moving check. |
 | E3b | **Don't submit grass tiles where no blade stands** (the Birches and Wood floors, cropped ground). The shader discards those blades today, one vertex invocation at a time. | Up to about 4% of the playthrough (hide minus collapse); 10–12% of Birches and Wood frames. | Upper bound. The share of submitted blades that stand wasn't measured. A tile skip is exact only for tiles where nothing stands at any density. |
-| E4 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.8%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
+| E4 | **Grass without its discards** where no hidden room and not the door shore is within grass reach: a second program chosen on the CPU. | About 1.9%; 2–6% of land frames. | Low to medium: exact in every fixture, but noisy. |
 | E5 | **Birches update while in the Drowned village** (0.22 ms/frame; the drift starts off the Birches beach). | CPU −0.2 ms/frame for 1.8 min, if the room is out of sight. | Low: check what is visible first. |
 | — | Not worth building: terrain without its discard (0%), grass frost/dawn/lamp (0%), skipping the mirror reflection where it's invisible (its pass is free there), drawing the water last (slower). | | |
 
