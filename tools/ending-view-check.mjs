@@ -107,6 +107,7 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
  const beats=[],lastEye=rig.camera.position.clone();
  let farewellEye=null;
  const lastRotation=rig.camera.quaternion.clone();
+ const turns=[],span=Math.round(.25*fps),peaks={};let jolt=0,joltAt='';
  for(let frame=0;frame<fps*160;frame++) {
   const time=frame*dt;
   if(resize&&!changed&&chapter.beat==='unfold'&&drawing.open>.5){
@@ -127,6 +128,12 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
    }
    assert(lastRotation.angleTo(rig.camera.quaternion)<.035,
     'the house and credits pans must join without an angular jump');
+  }
+  // How fast the view turns, and how suddenly that changes: a staged shot should start and stop at rest.
+  const turn=THREE.MathUtils.radToDeg(lastRotation.angleTo(rig.camera.quaternion))/dt;
+  if(time>1){
+   turns.push(turn);peaks[chapter.beat]=Math.max(peaks[chapter.beat]??0,turn);
+   if(turns.length>span&&Math.abs(turn-turns[turns.length-1-span])>jolt){jolt=Math.abs(turn-turns[turns.length-1-span]);joltAt=`${chapter.beat} ${chapter.t.toFixed(2)}`;}
   }
   lastRotation.copy(rig.camera.quaternion);
   assert(chapter.dusk>=previousDusk-1e-8,'the ending must never turn its clock backwards');
@@ -212,12 +219,13 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
  assert(Math.abs(chapter.homeEndingTime-HOME_ENDING.creditsAt)<=1/fps+.001,'credits share the ending score clock');
  assert(Math.abs(chapter.homeEndingTime-silenceAt-2)<=1/fps+.001,'credits leave two seconds after the music cut');
  assert(maxCameraStep<1,'the reveal-to-descent camera must move continuously');
+ if(!resize)assert(jolt<2.5,`staged views must start and stop at rest, not jolt: ${jolt.toFixed(1)} deg/s within 0.25 s at ${joltAt}`);
  assert(descent&&insideDusk>1.94,'night must be established before the child enters');
  applyPalette(1,chapter.dusk,0,0,1);
  assert(atmo.uniforms.uStarlight.value>.99,'the credits retain full night and reflected stars');
  assert.equal(motifs,restore==='drawing'?0:1,'recognition plays once; resume never repeats it');
  if(!restore)assert.deepEqual(beats.slice(0,7),['crest','brow','settle','unfold','gaze','fold','release']);
- console.log(`ok ${w}x${h} ${fps}fps${resize?' resize':''}${restore?' resume '+restore:''}; recognition=${recognised?.toFixed(2)??'saved'}, camera step=${maxCameraStep.toFixed(3)}`);
+ console.log(`ok ${w}x${h} ${fps}fps${resize?' resize':''}${restore?' resume '+restore:''}; recognition=${recognised?.toFixed(2)??'saved'}, camera step=${maxCameraStep.toFixed(3)}, jolt=${jolt.toFixed(1)} (${joltAt}), peaks ${Object.entries(peaks).map(([b,v])=>b+' '+v.toFixed(1)).join(', ')}`);
 }
 // Helping the bird has no timeout and must not consume the daylight needed for the picture.
 {

@@ -26,6 +26,8 @@ export const FIRST_ISLAND = new THREE.Vector3(-8, 9, -18);
 const ROUNDED = 22;
 /** How long a rainbow lingers once the boat sets out. */
 const RAINBOW_FOR = 70;
+/** How quickly the lens catches up with route progress, which jumps when a waypoint is passed early in its channel. */
+const FRAMED_RESPONSE = 1.2;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
 const SWING = tuning.crossingCamera.farewellRelease;
 
@@ -133,6 +135,9 @@ export class CrossingChapter implements Chapter {
   private worldTime = 0;
   private seaTurn = 0;
   private swimFrame = 0;
+  /** Route progress as the camera and the child's gaze follow it: continuous, even when the real value jumps. */
+  private framed = -1;
+  private framedSpeed = 0;
   private readonly framing = new THREE.Vector3();
   private readonly whaleAttention = { point: new THREE.Vector3(), strength: 0,
     weight: tuning.crossingCamera.whaleWeight, bearing: 0, distance: 0, height: 0 };
@@ -352,6 +357,7 @@ export class CrossingChapter implements Chapter {
     this.time += dt;
     this.worldTime = time;
     this.steer();
+    this.followProgress(dt);
     this.prepareArrivalMusic();
     const { child, boat, plane, sealife } = this.cast;
     const back = this.lookBack;
@@ -368,7 +374,7 @@ export class CrossingChapter implements Chapter {
       this.seaTurn += (turnTo - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
       seatYaw += this.seaTurn;
     } else {
-      const k = tuning.crossingCamera, progress = this.progress();
+      const k = tuning.crossingCamera, progress = this.framed;
       const near = THREE.MathUtils.smootherstep(progress, 0, k.departureUntil)
         * (1 - THREE.MathUtils.smootherstep(progress, k.arrivalFrom, 1)) * (1 - turn);
       this.seaTurn += (-this.quarter * k.childTurn * near - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
@@ -545,6 +551,16 @@ export class CrossingChapter implements Chapter {
     this.cast.boat.speedLimit = this.limit;
   }
 
+  /** A critically damped follower of `progress()`, so a sudden jump in it becomes a gentle catch-up. */
+  private followProgress(dt: number): void {
+    const actual = this.progress();
+    if (this.framed < 0 || dt <= 0) { this.framed = actual; return; }
+    const decay = Math.exp(-FRAMED_RESPONSE * dt);
+    const error = this.framed - actual, spring = this.framedSpeed + FRAMED_RESPONSE * error;
+    this.framed = actual + (error + spring * dt) * decay;
+    this.framedSpeed = (this.framedSpeed - FRAMED_RESPONSE * spring * dt) * decay;
+  }
+
   /** How much of the route is behind them, 0 to 1. */
   private progress(): number {
     const wp = this.route[this.leg];
@@ -591,7 +607,7 @@ export class CrossingChapter implements Chapter {
     this.shot.subjects = this.wantsDolphins ? undefined : this.sailingSubjects;
     const fx = Math.sin(boat.yaw);
     const fz = Math.cos(boat.yaw);
-    const progress = this.progress();
+    const progress = this.framed;
     const departure = 1 - THREE.MathUtils.smootherstep(progress, 0, k.departureUntil);
     const arrival = THREE.MathUtils.smootherstep(progress, k.arrivalFrom, 1);
     const distance = k.nearDistance + (k.departureDistance - k.nearDistance) * departure

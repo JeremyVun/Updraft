@@ -161,7 +161,7 @@ export const tuning = {
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
     /** Settle at the crest, then stay there as our gaze pans to the house and finally the credits. */
     crestBack: 12, crestRise: 18, homePanFor: 8, descentFit: 3, descentHouseWeight: 0.2,
-    returnFrom: 3,
+    returnFrom: 2.5,
   },
   homeWashing: {
     /** Behind the left side of the cottage, with the far end turned gently away. */

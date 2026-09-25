@@ -105,7 +105,7 @@ const GRIPS: [0 | 1, number[][]][] = [
 /** The paper held up into the wind: this long before the island's own takes it, so the ending cannot be made to wait. */
 const HOLDS_UP = tuning.homeReveal.releaseFor;
 /** How long they watch the paper go before walking home. */
-const WATCHES_IT = 7;
+const WATCHES_IT = 8.5;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
 /** When the gaze turns toward the sea, measured from the doorway. */
@@ -412,8 +412,8 @@ export class HomeChapter implements Chapter {
     const staged = this.beat === 'setDown' || this.beat === 'tries' || this.beat === 'flying' || this.beat === 'answered';
     if (!staged) this.hush += (this.hushFor - this.hush) * (1 - Math.exp(-dt * 0.5));
     if (p.held) p.hold(c);
-    if (this.beat === 'home') {
-      const keep = this.t < COAST_FOR ? Math.exp(-dt * COAST) : 0;
+    if (this.beat === 'home' && this.t < COAST_FOR) {
+      const keep = Math.exp(-dt * COAST);
       this.farewellEye.addScaledVector(this.eyeDrift, (1 - keep) / COAST);
       this.farewellLook.addScaledVector(this.lookDrift, (1 - keep) / COAST);
       this.eyeDrift.multiplyScalar(keep);
@@ -965,10 +965,10 @@ export class HomeChapter implements Chapter {
       // Follow the plane only after it leaves the hand; ease back towards the walk home.
       const elapsed = this.now - this.wentAt;
       const gone = THREE.MathUtils.smoothstep(elapsed, 0, 2.5)
-        * (1 - THREE.MathUtils.smootherstep(elapsed, reveal.returnFrom, WATCHES_IT));
+        * (1 - glide(elapsed, reveal.returnFrom, WATCHES_IT));
       s.target.lerp(this.cast.plane.position, gone * 0.65);
       // Settle at the crest before the child leaves us to walk home.
-      const home = THREE.MathUtils.smootherstep(elapsed, reveal.returnFrom, WATCHES_IT);
+      const home = glide(elapsed, reveal.returnFrom, WATCHES_IT);
       this.descentChild.copy(c).y += 1.5;
       this.descentHouse.copy(this.cast.cottage.position).y += 6;
       s.target.lerp(this.tmp.copy(this.descentChild).lerp(this.descentHouse, reveal.descentHouseWeight), home);
