@@ -192,15 +192,24 @@ that exceeds the pixel budget, and applies its multisampling before allocating t
 resets its timing when play begins or page visibility changes: time behind Begin or in another tab cannot earn
 a quality increase. `node tools/quality-check.mjs` verifies these cases and normal adaptation.
 
-The governor targets 60 fps unless presentation is capped. Every 1.5 seconds it reviews up to 90 frame timing samples,
-discarding the slowest 5%. A trimmed mean above 17.6 ms lowers quality; a sustained p90 below 17.2 ms for
-12 seconds earns one increase. A steady 33 ms cadence is either a GPU missing every other refresh or a display
+The governor targets 60 fps unless presentation is capped. Auto opens at its ceiling with full world detail, on
+touch as on mouse. Every 1.5 seconds it reviews up to 90 frame timing samples, discarding the slowest 5%. A trimmed
+mean above 17.6 ms lowers quality (two rungs above 26.4 ms). Below its ceiling Auto climbs on evidence: `main.ts`
+polls each frame's fence 10 ms after the frame began (`timeLastFrame`: one timer and a `getSyncParameter` poll,
+never a wait), and a review with p90 under 17.2 ms in which at least 95% of 30 or more timed frames had finished by
+then climbs one rung at once. The next rung costs at most 1.56× the pixels (1× → 1.25×), so 10 ms of work stays
+inside one refresh there; the frame's CPU time counts against the deadline without growing with pixels, so the test
+errs safe. Frames that were timed and missed it hold the level. Where frames can't be timed (no fence, or timers
+firing more than 2 ms late), a sustained p90 below 17.2 ms for 12 seconds earns one increase instead. At the ceiling
+and on manual presets no frame is timed. A steady 33 ms cadence is either a GPU missing every other refresh or a display
 capped at 30 fps (iOS Low Power Mode, browser energy saving). While intervals are that long, `main.ts` times each
 frame's fence one 60 Hz refresh after the frame began (`timeLastFrame`). If intervals hold at 30–36.7 ms and at
 least 80% of eight or more timed frames finished early, the cap is proven and Auto judges against 30 fps
-(35.2/34.4 ms) until intervals under 25 ms show the cap has lifted. A saturated GPU never finishes early, so it
+(35.2/34.4 ms, and a 20 ms headroom deadline) until intervals under 25 ms show the cap has lifted. A saturated GPU never finishes early, so it
 still steps down as before; 60/120/144 Hz cadences are never timed. A timer that fires late counts as not early,
-so a browser that coalesces timers keeps the old behaviour. Failed increases double the next wait, up to two minutes. A single hitch or
+so a browser that coalesces timers keeps the old behaviour. Failed increases double the next wait, up to two minutes;
+fence evidence skips only the first 12 s of it, so after one failed climb the next needs 12 s of smooth play as well
+as the evidence, after two 36 s, and so on. A single hitch or
 hidden-tab time cannot earn a change. A new level settles for 2.5 seconds after a reduction, one second after
 an increase. Pacing reports the longest display callback interval since the preceding presentation, with a
 16.67 ms floor: intentionally skipped 120/144 Hz callbacks cannot masquerade as overload, but actual missed
@@ -223,7 +232,7 @@ fixed ladder's lowest scale (0.72× base, e.g. a 4K CSS viewport at DPR 1) get o
 budget ratio, never below 0.5×, with the fallback's world detail; it is rebuilt on resize and presets ignore it.
 The canvas and every render target share one scale, lowered if needed so no side exceeds `MAX_TEXTURE_SIZE`,
 `MAX_RENDERBUFFER_SIZE` or `MAX_VIEWPORT_DIMS`. Touch also has a sustained
-1.25× ceiling and starts at medium world detail; it can recover full grass. High permits 1.5× on both touch
+1.25× ceiling. High permits 1.5× on both touch
 and mouse. Smooth vsync cannot prove spare power, so Auto never climbs beyond its budget. The governor restores
 full grass before climbing above 1×. Grass grows/shrinks in place over one second while its distance rings
 move continuously. Tables reserve capacity for all levels at boot; quality changes do not allocate or
@@ -240,8 +249,10 @@ enormous framebuffer: `ratio` to (0, 4], `msaa` to [0, 16] and `grass` to [0, 4]
 in `main.ts` against the device's real `MAX_SAMPLES` (from `gl/graphics-capability.ts`) once the GL context
 exists, which params.ts alone cannot know.
 
-`node tools/quality-check.mjs` checks touch promotion, geometry fallback/recovery, exact overrides and
-suspend/resume. `node tools/grass-quality-check.mjs meadow` checks both transition directions, unchanged
+`node tools/quality-check.mjs` checks the opening level, geometry fallback/recovery, exact overrides and
+suspend/resume, and drives a model iPad-sized touch device through overload from the top (down within 2.5 s, never
+back into overload; lying timings back off by doubling), a ten-second load that pushes it down (back at the ceiling
+6.6 s after the load lifts with timed frames, 44 s without) and a 30 fps display. `node tools/grass-quality-check.mjs meadow` checks both transition directions, unchanged
 blade roots, resource identity and pixel-identical restoration in a frozen GPU scene. `TOUCH=1` in
 `tools/play.mjs` emulates a coarse pointer for integration checks, not iPad GPU performance.
 `node tools/quality-browser-check.mjs` drives measured-interval scenarios through the real coarse-pointer
