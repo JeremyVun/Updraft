@@ -417,6 +417,7 @@ window.__audit = {
 };
 `;
 
+const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
 const { browser, close } = await openBrowser();
 const report=[],inexact=[];
 try {
@@ -534,12 +535,12 @@ try {
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
       if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e4-off','e4-return-off','e5-off','e6-off'].includes(omit) && result.pixels.max) {
         console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
-        // The old glass path (not the new one) drops channels to 0 in scattered half-float samples on ANGLE/Metal.
-        if (result.pixels.max > 1 && !(omit==='glass-sky-always' && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
+        // The old glass path and the old glints (not the new ones) drop channels to 0 in scattered half-float samples on ANGLE/Metal.
+        if (result.pixels.max > 1 && !(specks(omit) && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
       }
       if (result.path?.max) {
         console.warn(`WARNING ${chapter} ${omit}: along PATH, ${result.path.max}/255 at step ${result.path.worst}, ${result.path.changed} channels over ${result.path.stepsChanged} steps`);
-        if (result.path.max > 1) inexact.push({chapter,omit,path:result.path});
+        if (result.path.max > 1 && !(specks(omit) && result.path.changed / result.path.stepsChanged < 2000)) inexact.push({chapter,omit,path:result.path});
       }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
