@@ -734,15 +734,32 @@ export const tuning = {
       swingOfferSeconds: 12,
       releaseSeconds: 2.6,
       gatherSeconds: 8,
-      windResponse: 2.8,
-      flutter: 0.1,
-      clothGravity: 8.5,
-      clothDrag: 1.1,
-      clothBend: 0.018,
-      clothWind: 0.22,
+      /** The tied lengths' spring to the wind (rad/s) and its damping ratio, over the air of ±`windSpan` rows. */
+      windResponse: 2.2,
+      windDamping: 0.9,
+      windSpan: 12,
+      /** Metres a tied length swings in step across its span, fuller in a breeze. */
+      sway: 0.05,
+      clothGravity: 9.8,
+      /** Still-air loss per second; the air pushes through `clothFace` (per m/s squared, on the face) and `clothEdge` (along it). */
+      clothDrag: 0.25,
+      clothFace: 0.12,
+      clothEdge: 0.15,
+      clothPushMax: 3.5,
+      /** Height over the ground below which lying wool is sheltered from the wind, and how an updraft counts as air. */
+      clothShelter: 0.6,
+      clothUpdraft: 0.5,
+      /** Per second: how quickly neighbouring stitches share their motion, so lengths swing rather than wriggle. */
+      clothViscosity: 8,
+      /** How far past the yarn between them a free stitch may pull from a held point. */
+      clothGive: 1.02,
+      /** Ground speed below which lying wool holds, and the share of its speed a dragged length keeps per step. */
+      clothStick: 0.12,
+      clothSlide: 0.6,
+      clothBend: 0.003,
       clothLift: 12,
       clothClearance: 0.1,
-      clothIterations: 14,
+      clothIterations: 10,
       clothSlideResponse: 10,
       clothSlipSpeed: 1.1,
       clothSlipSeconds: 1.2,
