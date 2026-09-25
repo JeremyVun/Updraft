@@ -286,6 +286,15 @@ function psnrOf(a, b, chainA = 'null', chainB = 'null') {
   return m[1] === 'inf' ? Infinity : +(+m[1]).toFixed(1);
 }
 
+/** Mean frame-to-frame luma change (0-255) in the crop as the screen shows it: shimmer and crawl add to it. */
+function flickerOf(file, chain) {
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', file, '-vf', `${chain},format=gray,tblend=all_mode=difference,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-`,
+    '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  const v = [...r.stdout.matchAll(/YAVG=([0-9.]+)/g)].map((m) => +m[1]);
+  assert(v.length > 100, r.stderr);
+  return +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2);
+}
+
 function derive(out, only) {
   const moments = (only.length ? only : Object.keys(MOMENTS)).filter((m) => fs.existsSync(`${out}/raw/${m}.json`));
   for (const dir of ['video', 'crops']) fs.mkdirSync(`${out}/${dir}`, { recursive: true });
@@ -308,8 +317,9 @@ function derive(out, only) {
     for (const [a, b] of PAIRS) if (sides.includes(b)) report[m][`${a}vs${b}Psnr`] = psnrOf(raw(a), raw(b), toScreen(a), toScreen(b));
     (CROPS[m] ?? []).map((r) => ({ w: 320, h: 240, ...r })).forEach((r, i) => {
       const id = `${m}-${i + 1}`;
-      const crop = { ...r, id, stills: {}, videos: {} };
+      const crop = { ...r, id, stills: {}, videos: {}, flicker: {} };
       for (const s of sides) {
+        crop.flicker[s] = flickerOf(raw(s), cropChain(s, r, 1));
         const png = `${out}/crops/${id}-${s}.png`;
         if (!fs.existsSync(png)) ff(['-ss', String(r.frame / 60), '-i', raw(s), '-frames:v', '1', '-vf', cropChain(s, r), png]);
         crop.stills[s] = `crops/${id}-${s}.png`;
@@ -375,11 +385,11 @@ the lossless capture) next to how far each lever is from A: the encode error is 
 difference, so compression is not hiding it.</p>
 <p>Crops are cut from the lossless frames: 320x240 CSS pixels, scaled bilinearly to the iPad's 2 device pixels per
 CSS pixel (what the screen shows), then enlarged 2x with square pixels. So one screen pixel of the iPad is a 2x2 block.</p>
-<table><tr><th>Moment</th><th>Encode PSNR A / L1 / L2</th><th>A vs L1 PSNR</th><th>A vs L2 PSNR</th></tr>
+<table><tr><th>Moment</th><th>Encode vs lossless, A / L1 / L2</th><th>A vs L1</th><th>A vs L2</th></tr>
 ${Object.entries(report).map(([m, r]) => `<tr><td><a href="#${m}">${r.label}</a></td><td>${['A', 'L1', 'L2'].map((s) => r.videos[s]?.encodePsnr ?? '').join(' / ')} dB</td><td>${r.AvsL1Psnr ?? ''} dB</td><td>${r.AvsL2Psnr ?? ''} dB</td></tr>`).join('')}
 </table>
-<p style="color:#999;font-size:13px">PSNR: higher is closer. Lever PSNR compares the lossless frames scaled to the
-iPad's screen size. Every frame of every clip is compared.</p>
+<p style="color:#999;font-size:13px">Luma PSNR in dB over every frame: higher is closer, and 6 dB is half the
+error. The lever columns compare the lossless frames scaled to the iPad's screen size.</p>
 <h2>Controls</h2>
 <p>Keys work on the player under the pointer: <b>1</b> A, <b>2</b> L1, <b>3</b> L2, <b>space</b> play or pause,
 <b>,</b> and <b>.</b> step one frame back or forward, <b>f</b> flips between A and the last lever chosen every half
@@ -393,6 +403,8 @@ ${momentNotes[m] ? `<div class="note">${momentNotes[m]}</div>` : ''}
 </div>
 <p style="color:#999;font-size:13px">Files: ${['A', 'L1', 'L2'].filter((s) => r.videos[s]).map((s) => `<a href="${r.videos[s].file}">${s} (${r.videos[s].size.join('x')}, ${r.videos[s].mb} MB)</a>`).join(', ')}</p>
 ${r.crops.map((c) => `<h3>${c.label}</h3>
+<p style="color:#999;font-size:13px">Frame-to-frame change in this window over the clip (shimmer and crawl add to it; the motion itself is the same on every side):
+${['A', 'L1', 'L2'].filter((s) => c.flicker?.[s] !== undefined).map((s) => `${s} ${c.flicker[s]}${s === 'A' ? '' : ` (${c.flicker[s] >= c.flicker.A ? '+' : ''}${Math.round((c.flicker[s] / c.flicker.A - 1) * 100)}%)`}`).join(', ')}</p>
 <div class="three crop">${['A', 'L1', 'L2'].filter((s) => c.stills[s]).map((s) => `<figure><img src="${c.stills[s]}" loading="lazy"><figcaption>${s === 'A' ? 'A: High today' : s === 'L1' ? 'L1: 1.25x, MSAA 2' : 'L2: 1.5x, no MSAA'}, frame ${c.frame}, 2x of the iPad screen</figcaption></figure>`).join('')}</div>
 ${Object.entries(c.videos).map(([k, f]) => `<figure><video class="pair" src="${f}" controls muted loop playsinline preload="metadata"></video><figcaption>In motion, A left and ${k.split('-')[1]} right (${k.split('-')[1] === 'L1' ? 'L1: 1.25x, MSAA 2' : 'L2: 1.5x, no MSAA'}), 2x of the iPad screen, frame-locked</figcaption></figure>`).join('')}`).join('')}`).join('')}
 <script>
