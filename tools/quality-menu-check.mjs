@@ -53,7 +53,7 @@ try {
       const url = performance.getEntriesByType('resource').find(r=>new URL(r.name).pathname==='/src/controls.ts').name;
       const {controls}=await import(url);
       const {Quality}=await import('/src/gl/quality.ts');
-      const governor=new Quality(1,2,800,600,1,false,level=>controls.setQualityDetail(level.detail));
+      const governor=new Quality(1,2,800,600,false,level=>controls.setQualityDetail(level.detail));
       controls.setQualityDetail(governor.level.detail);
       window.__governor=governor;
     });
