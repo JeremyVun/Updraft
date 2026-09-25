@@ -36,8 +36,8 @@
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
-// Phase X2's exact skips, each restoring the old path: e4-off (sea shaded under land, implicit ripple gradients),
-// e4-return-off, e4-grad-off (its two halves), e5-off (grass always drawn with its discards), e6-off (glints everywhere).
+// Phase X2's exact skips, each restoring the old path: e4-off (sea shaded under land, ripples sampled after the fog),
+// e4-return-off (only the early return off), e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -314,11 +314,13 @@ window.__audit = {
       // Water under land the terrain will cover: returns before any shading where the baked ground is a metre above the sea.
       'water-landskip':[[waterMat],'fragmentShader',s=>sub(s,'void main() {\\n  vec3 toCam','void main() {\\n  { vec2 u0 = domainUv(vWorld.xz); if (insideUv(u0) && texture(uHeightTex, u0).r > 1.0 && !roomHides(vWorld.xz)) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; } }\\n  vec3 toCam')],
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
-      // Phase X2's exact skips, each restoring the old path: E4 the sea under land (e4-return-off keeps the explicit
-      // ripple gradients, e4-grad-off only restores the implicit ones), E6 the glints outside the glitter lobe.
-      'e4-off':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (inside == 1.0 && underLand(','if (false && underLand('),'return textureGrad(uRipple, uv, fp.dx, fp.dy);','return texture(uRipple, uv);')],
+      // Phase X2's exact skips, each restoring the old path: E4 the sea under land (e4-return-off keeps the ripple
+      // samples above the fog's early return, e4-off moves them back below it), E6 the glints outside the glitter lobe.
+      'e4-off':[[waterMat],'fragmentShader',s=>{
+        const start=s.indexOf('\n  // Weather owns'),skip=s.indexOf('  // The terrain draws over sea'),fog=s.indexOf('  vec4 fog = fogOf(vWorld);'),paw=s.indexOf('  float paw = catsPaw');
+        if(start<0||skip<start||fog<skip||paw<fog)throw Error('Missing patch site: e4-off');
+        return s.slice(0,start)+'\n'+s.slice(fog,paw)+s.slice(start+1,skip)+s.slice(paw);}],
       'e4-return-off':[[waterMat],'fragmentShader',s=>sub(s,'if (inside == 1.0 && underLand(','if (false && underLand(')],
-      'e4-grad-off':[[waterMat],'fragmentShader',s=>sub(s,'return textureGrad(uRipple, uv, fp.dx, fp.dy);','return texture(uRipple, uv);')],
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
     };
     const wanted=new Map();
@@ -530,7 +532,7 @@ try {
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
-      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e3-off','e4-off','e4-return-off','e4-grad-off','e5-off','e6-off'].includes(omit) && result.pixels.max) {
+      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e4-off','e4-return-off','e5-off','e6-off'].includes(omit) && result.pixels.max) {
         console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
         // The old glass path (not the new one) drops channels to 0 in scattered half-float samples on ANGLE/Metal.
         if (result.pixels.max > 1 && !(omit==='glass-sky-always' && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
