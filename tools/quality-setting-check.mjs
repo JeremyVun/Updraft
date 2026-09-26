@@ -39,7 +39,7 @@ try {
   const page = await prepare(context);
   await page.goto(base+'?analytics=0&progress=0'); await start(page);
   assert.equal(await page.locator('#quality-menu [aria-checked="true"]').getAttribute('data-mode'), 'auto');
-  await select(page, 'low', .55, .85);
+  await select(page, 'low', .8, .85);
   await select(page, 'high', 1, 1.5);
   // A sustained synthetic overload still must not override the player's setting.
   assert.equal(await page.evaluate(() => {
@@ -47,7 +47,7 @@ try {
     return __game.quality.level.detail;
   }), 2);
   await page.screenshot({path:'/tmp/updraft-quality-setting-desktop.png'});
-  await select(page, 'medium', .8, 1);
+  await select(page, 'medium', 1, 1);
   await page.reload(); await start(page);
   assert.equal(await page.locator('#quality-menu [aria-checked="true"]').getAttribute('data-mode'), 'medium');
   assert.equal(await page.evaluate(() => __game.quality.level.detail), 1);
@@ -71,7 +71,7 @@ try {
   const mobile = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const phone = await prepare(mobile);
   await phone.goto(base+'?analytics=0&progress=0'); await start(phone);
-  await select(phone, 'medium', .8, 1);
+  await select(phone, 'medium', 1, 1);
   const boxes = await phone.locator('#quality-control, #sound, #fullscreen').evaluateAll(elements => elements.filter(e=>!e.hidden).map(e=>{
     const r=e.getBoundingClientRect();return {x:r.x,right:r.right,y:r.y,bottom:r.bottom};
   }));

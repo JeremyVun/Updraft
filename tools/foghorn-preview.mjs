@@ -35,7 +35,7 @@ try{
         let calls=0;
         const productionHorn=sound.foghorn.bind(sound);
         sound.foghorn=()=>{calls++;horn=productionHorn();return horn;};
-        if(kind==='isolated')sound.backgroundGate.disconnect();
+        if(kind==='isolated'){sound.backgroundGate.disconnect();sound.wetGate.disconnect();}
         if(kind!=='isolated'){
           Object.defineProperty(ctx,'currentTime',{configurable:true,value:17.4});
           try{sound.thunder(.22,-.15);}finally{delete ctx.currentTime;}

@@ -68,8 +68,6 @@ export const params = {
   stats: q.has('stats'),
   /** QA: a whale surfaces ahead of the crossing a few seconds in (and again every so often), fish leap by the boat. */
   whale: q.has('whale'),
-  /** Evidence only: `reverb=one` gives the background music the shared reverb instead of its own, gated before it rather than after. */
-  reverb: q.get('reverb') === 'one' ? 'one' : 'two',
   /** Prototype: hangs the island of lines' washing over the still island. */
   lines: q.has('lines'),
 };

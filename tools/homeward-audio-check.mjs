@@ -29,7 +29,7 @@ try {
 
     // Render the complete offshore form, then exercise actual story phases, finale and permanent silence.
     const {ctx,sound}=offlineSound(274),phases=[],chords=[];
-    // Keep the real mixed output; separately record the background gate to verify reverb silence.
+    // Keep the real mixed output; separately record the background and its reverb send to verify silence.
     let incoming,epoch,reverb,retired,homeScore;
     const update=tick=>{
       const t=tick/8,landed=t>=210;
@@ -39,10 +39,10 @@ try {
         silence:t>=270,cues:t===247?['finale']:[],sea:landed?.1:.85});
       const stage=sound.arrivalTransition.stage;
       if(phases.at(-1)?.stage!==stage)phases.push({at:t,stage});
-      if(sound.summitScore&&t<210){incoming??=sound.summitScore;epoch??=incoming.epoch;reverb??=sound.backgroundReverb;
+      if(sound.summitScore&&t<210){incoming??=sound.summitScore;epoch??=incoming.epoch;reverb??=sound.reverbConvolver;
         const chord=[...incoming.chordAt()];if(JSON.stringify(chords.at(-1))!==JSON.stringify(chord))chords.push(chord);}
       if(t===211){check(sound.summitScore===incoming&&incoming.epoch===epoch,'Landing preserves the offshore score and its clock');
-        check(sound.backgroundReverb===reverb,'Landing preserves the incoming reverb');}
+        check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       if(t===215)check(sound.summitScore.phase==='flight','Reunion enters the flight section');
       if(t===232)check(sound.summitScore.phase==='farewell'&&sound.summitScore.voices[3].gain.gain.value<.03,'The upper voice leaves with the bird');
       if(t===245){homeScore=sound.summitScore;check(homeScore.phase==='home','Recognition returns the home section');}
@@ -55,7 +55,7 @@ try {
     check(retired.remaining===0,'All eight retired drone oscillators disconnect');
     check(approved.every(chord=>chords.some(c=>JSON.stringify(c)===JSON.stringify(chord))),'The crossing reaches every approved chord, including the second half');
     const {ctx:quietCtx,sound:quietSound}=offlineSound(38);
-    quietSound.master.disconnect();quietSound.backgroundGate.disconnect();quietSound.backgroundGate.connect(quietCtx.destination);
+    backgroundOnly(quietCtx,quietSound);
     const quietPhases=[];
     function quietUpdate(tick){const t=tick/8;
       quietSound.update(.125,{...mirror,arrivalMusic:t>=12?'home':undefined,homewardReady:t>=24});

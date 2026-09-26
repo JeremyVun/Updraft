@@ -32,7 +32,7 @@ export function openingState(t,base) {
 export function scheduleOpening(ctx,sound) {
   const gate=ctx.createGain(),dry=ctx.createGain(),wet=ctx.createGain(),verb=ctx.createConvolver();
   gate.connect(sound.backgroundDuck);dry.connect(gate);wet.gain.value=.495;
-  verb.buffer=sound.reverbImpulse;wet.connect(verb).connect(gate);
+  verb.buffer=sound.reverbConvolver.buffer;wet.connect(verb).connect(gate);
   // Retire the added dry sound AND its reverberation before the opening's authored fall sequence.
   gate.gain.setValueAtTime(1,0);gate.gain.setValueAtTime(1,54.5);
   gate.gain.linearRampToValueAtTime(0,56);gate.gain.setValueAtTime(0,80);

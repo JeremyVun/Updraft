@@ -35,7 +35,7 @@ try {
       const originalChime=sound.chime.bind(sound),notes=[];
       sound.chime=(...a)=>{notes.push(a);originalChime(...a);};
       for(const method of ['cricket','owl','skylark','peep','bugle'])sound[method]=()=>{};
-      if(kind==='music'){sound.master.disconnect();sound.backgroundGate.disconnect();sound.backgroundGate.connect(ctx.destination);}
+      if(kind==='music')backgroundOnly(ctx,sound);
       const update=tick=>{
         const now=tick/8;
         let state;
@@ -62,8 +62,8 @@ try {
           sound.dreamScore.bloom=()=>{blooms++;bloom();};
         }
         if(name==='drowned') {
-          if(now===45)reverb=sound.backgroundReverb;
-          if(now>=46){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value);check(sound.backgroundReverb===reverb,`wood ${now}: existing reverb survives`);}
+          if(now===45)reverb=sound.reverbConvolver;
+          if(now>=46){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value,sound.wetGate.gain.value);check(sound.reverbConvolver===reverb,`wood ${now}: the shared reverb survives`);}
           if(now===46.125)check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
             'Forest pad starts on the shared D/A pitches before becoming audible');
         }

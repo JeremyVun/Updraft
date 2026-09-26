@@ -698,6 +698,45 @@ include the refactored arrival and ending gates).
   (positive = one reverb uses less.) Where a score plays and anything else feeds the shared reverb, one reverb saves
   roughly 40–60 ms/s, a third of the sound's whole cost; on top of E1 it adds nothing where only one reverb is busy.
 
+**Jeremy, 2026-09-26 (verbatim):**
+
+> - Ok i think what i want is to keep high the same, but on medium and low, the grass density drop shouldn't be as
+>   drastic. I think there should be no grass density drop on medium.
+> - I struggle to hear the difference between one reverb and two reverbs, lets just use one reverb
+> - Explain the ground texture bakes from the first round. I thought those were already approved to go in?
+
+- **L1 rejected:** High stays at 1.5× with MSAA 2.
+- **Medium keeps full grass density; Low thins only to 80%.** Jeremy's picks, 2026-09-26: Low "80%"; reach "Keep
+  the reach drops" (Medium 95%, Low 85%). Built on `perf-bakes-grass`.
+- **Phase 6 (item E) approved, measure first:** "Yes, measure first". Each term is measured, only the ones that
+  pay are baked, and video goes to Jeremy before anything merges.
+- **L8 approved:** one reverb becomes the only path (phase X3).
+
+### Phase X3 results: one reverb (L8, 2026-09-26, branch `perf-bakes-x3`)
+
+Jeremy, having heard the paired renders: "I struggle to hear the difference between one reverb and two reverbs,
+lets just use one reverb". The `reverb=one` graph is now the only one: the background's wet send passes its own
+gate and duck and then goes into the shared reverb, and arrivals and the ending move both background gates together.
+The second convolver, the spare, the arrival swap and the `reverb=` flag are gone, so the Begin analyses one convolver
+instead of three and an arrival analyses none. Rendered offline against the base build's Soundscape with `oneReverb`
+forced on, it matches to −113 dBFS or better, as close as two renders of one build. Against the old two-reverb default
+it differs where L8 said it would (up to −43 dBFS in the arrival fade, when the echo is no longer cut). The checks
+that held the background convolver now assert that the shared reverb survives each landing, that the dry and
+reverb gates move together and shut through the rest, and that nothing from the music enters the reverb during the
+rest. `audio-cost` pairs against the old graph with `PAIRS=tworeverb`, putting a second convolver after the gate on the
+live page. Offline render time (`audio-silence-check REPS=5`, medians, busy machine): the wind sequence 28% faster,
+scores 17%, the arrival 17%, the ending 4%.
+
+Live saving: `audio-cost PAIRS=tworeverb ABLATE= REPS=2` on island, meadow:walk, birches, sea and jetty. Each chapter
+ran twice with the pointer still and twice with `STIR=1`. The numbers are renderer CPU in ms per wall second, with
+the old graph minus the new one in paired windows. With the pointer circling, as in play, the median of 10 pairs is
+**76 ms/s**. Per chapter: island 74 and 77, meadow 30 and 77, birches 97 and −7, sea 95 and 40, jetty 75 and 104. That
+is about 20–25% of the renderer's 200–380 ms/s. With the pointer still, the median is 25 ms/s (range 4–73), because
+the quiet wind layers leave less for the second convolver to process. That matches L8's 40–60 ms/s. The machine was
+busy (load average 10–18; peers' Chrome captures, `secd` and `PerfPowerServices` at 50–160% CPU), which explains the
+wide spread. Every pair but one favours one reverb. Raw data: `/tmp/updraft-pb-x3f-cost.json` (still) and
+`/tmp/updraft-pb-x3f-cost-stir.json`.
+
 ### Surprises
 
 - **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
@@ -808,6 +847,29 @@ every chapter and restores it behind a `frame-profile` ablation (`e5-off`, `e6-o
   Mirror 1.4%, Washing 1.0%; 0–0.5% in the Birches, the Wood, Sleeping, the Boats and the summit (no lobe on screen,
   or little water). Small against the pair spread, but positive in nearly every load where water is in view. As
   shares of the full frame about 1–1.7%; weighted by minutes, about 0.9% of the playthrough's GPU work.
+
+## Round 3: the sea (2026-09-26)
+
+The sea surface is the largest GPU cost of the playthrough (19%; design "Round 2 profile", The water surface), and
+its reflection pass costs 14% of a frame at sea and 5–7% on the island and in the Meadow. Jeremy: "I really like
+the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
+
+> 1. yea, good idea to redraw it only once every other frame. I guess i just need to make sure that the sky mirror
+>    isn't affected
+> 2. yea, we shouldn't be drawing the sea bed if it's hidden by water. shallow should still draw though
+> 3. ok, have a look
+> 4. before after for more coars fog would be good to see a comparison
+> 5. agreed, dont touch glint, ripples, surf, and windsteraks.
+
+- **S1, reflection every other frame (approved).** The ordinary sea's planar reflection re-renders on alternate
+  frames. The sky mirror (`mirrorJourney`, on the flat) keeps rendering every frame at its own scale.
+- **S2, skip the seabed where the water hides it (approved).** Skip the bed branch where its weight in the final
+  colour can't reach 1/255; shallows draw exactly as now. The bed's static noise belongs to phase 6.
+- **S3, repeated work (approved to audit).** Values computed two or three times per pixel (`roomHides`, the
+  height texture read, `cloudShadow`, `groundAt`); fold them only where it measurably saves and stays exact.
+- **S4, coarser fog (evidence only).** Fog evaluated more coarsely (per vertex or similar), behind a flag, with
+  before/after video for Jeremy. Not the default without his verdict.
+- **Untouched:** glints, ripples, surf and wind streaks.
 
 ## What changes
 

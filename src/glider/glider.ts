@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Traveller } from '../traveller/traveller';
 import { tuning } from '../tuning';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
-import type { WindField, WindSample } from '../wind/field';
+import { feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
 
@@ -314,7 +314,8 @@ export class Glider {
     const p = this.position;
     const v = this.velocity;
     if (this.settlingAt) this.home.copy(this.settlingAt);
-    const w = this.wind.sample(p.x, p.z, this.sample);
+    // Only the player's gusts carry it; the prevailing breeze never chooses its course.
+    const w = feltWind(this.wind.sample(p.x, p.z, this.sample), 0);
     if (this.settlingAt) w.x = w.z = w.energy = w.lift = 0;
     const ground = this.landingGround?.(p.x, p.z) ?? heightAt(p.x, p.z);
     const waterLevel = this.water?.over(p.x, p.z) ? this.water.level : 0;
