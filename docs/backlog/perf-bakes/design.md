@@ -878,6 +878,8 @@ code path. Look changes awaiting his verdict sit on their own commit or branch u
 - **S4, coarser fog (evidence only).** Fog evaluated more coarsely (per vertex or similar), behind a flag, with
   before/after video for Jeremy. Not the default without his verdict.
 - **Untouched:** glints, ripples, surf and wind streaks.
+- **S4 verdict, Jeremy 2026-09-26 (verbatim):** "I can't tell teh difference either. this is approved". Merged; the
+  sea's fog is per vertex.
 
 ### Phase S results (2026-09-26, branch `perf-bakes-s`)
 
