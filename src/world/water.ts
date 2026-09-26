@@ -69,6 +69,8 @@ vec3 surfaceShift(vec2 p, float distanceToCamera) {
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
 out vec3 vSwell;
+/** The haze toward this vertex: it changes slowly enough across a triangle of sea to be interpolated. */
+out vec4 vFog;
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
@@ -82,6 +84,7 @@ void main() {
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
+  vFog = fogOf(vWorld);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -104,6 +107,7 @@ uniform vec3 uSand;
 uniform vec3 uWetSand;
 in vec3 vWorld;
 in vec3 vSwell;
+in vec4 vFog;
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -250,7 +254,7 @@ void main() {
     gl_FragColor = vec4(glassColour(V, xz), 1.0);
     return;
   }
-  vec4 fog = fogOf(vWorld);
+  vec4 fog = vFog;
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {
