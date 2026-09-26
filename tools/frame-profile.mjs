@@ -40,7 +40,8 @@
 // Phase 6 (item E) noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
 // ripples), n-moss (Wood floor moss and flecks), n-tuft (Sleeping floor tuft and fibre), n-frost (frostAt's pattern),
 // n-frostline (the terrain's frost-edge pattern), n-woodtint (the Wood tint), n-bed (the shallow seabed), n-surfphase
-// (the surf's static phase). Combine with +. noise-live computes the tiled terms procedurally again, as ?noise=live does.
+// (the surf's static phase). Combine with +. noise-live computes the tiled terms procedurally again, as ?noise=live does;
+// live-grain, live-moss, live-tuft, live-frost, live-frostline and live-bed each do so for one term.
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -347,6 +348,14 @@ window.__audit = {
       'n-surfphase':[[['vnoise(xz * 0.016) * 1.8 + vnoise(xz * 0.057 + 7.3) * 0.3'],'0.5']],
       // The procedural noise in place of the tiles (the page's ?noise=live), for pairing the bake against what it replaced.
       'noise-live':[[['#define NOISE_LIVE 0'],'#define NOISE_LIVE 1']],
+      // One tiled term computed procedurally again: the pair is that term's own net saving.
+      'live-grain':[[[T('xz * 1.7','1.7')+' * 0.5 + '+T('xz * 6.0','6.0')+' * 0.5'],'vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5'],[[T('xz * 0.3','0.3')+' * 6.0'],'vnoise(xz * 0.3) * 6.0']],
+      'live-moss':[[[F('xz * 0.24 + 19.0','0.24')],'fbm(xz * 0.24 + 19.0)'],[[T('xz * 9.0','9.0')],'vnoise(xz * 9.0)']],
+      'live-tuft':[[[F('xz * 0.17 + 13.0','0.17')],'fbm(xz * 0.17 + 13.0)'],[[T('xz * vec2(12.0, 5.0)','vec2(12.0, 5.0)')],'vnoise(xz * vec2(12.0, 5.0))']],
+      'live-frost':[[['tiledFbmFixed(xz * 0.12)'],'fbm(xz * 0.12)']],
+      'live-frostline':[[[F('xz * 0.35','0.35')],'fbm(xz * 0.35)']],
+      'live-bed':[[[T('bedXZ * 1.7','1.7')+' * 0.5 + '+T('bedXZ * 6.0','6.0')+' * 0.5'],'vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5'],[[T('bedXZ * 0.3','0.3')+' * 6.0'],'vnoise(bedXZ * 0.3) * 6.0'],
+        [[T('bedXZ * 0.08 + 3.1','0.08')+' * 0.75 + '+T('bedXZ * 0.27','0.27')+' * 0.25'],'vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25']],
     };
     const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
     const mats=new Set([terrain.mesh.material,water.mesh.material,...grass.lods.map(l=>l.tableMat)]);
