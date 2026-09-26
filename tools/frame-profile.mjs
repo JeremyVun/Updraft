@@ -43,8 +43,8 @@
 // n-frostline (the terrain's frost-edge pattern), n-woodtint (the Wood tint), n-bed (the shallow seabed), n-surfphase
 // (the surf's static phase). Combine with +. noise-live computes every term the noise tile replaced procedurally again, as
 // before phase 6; live-tuft, live-frost and live-frostline each do so for one term.
-// Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-coarse is the S4
-// look option, the sea's fog per vertex. Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
+// Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-fine restores
+// the sea's fog per pixel (S4 made it per vertex). Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
 // and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
@@ -317,7 +317,7 @@ window.__audit = {
       'water-mirror':[[waterMat],'fragmentShader',s=>sub(s,'vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool));','vec3 refl = sky;')],
       'water-wind':[[waterMat],'fragmentShader',s=>sub(sub(s,'slope += windWaveSlope(xz, footprint);',''),'float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);','float stroke = 0.0;')],
       'water-paw':[[waterMat],'fragmentShader',s=>sub(s,'float paw = catsPaw(xz, along);','float paw = 1.0;')],
-      'water-fog':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = fogOf(vWorld);','vec4 fog = vec4(0.0);')],
+      'water-fog':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog;','vec4 fog = vec4(0.0);')],
       'water-sky':[[waterMat],'fragmentShader',s=>sub(s,'vec3 sky = skyColor(R);','vec3 sky = vec3(0.4, 0.5, 0.6);')],
       'water-cloud':[[waterMat],'fragmentShader',s=>sub(s,'float sh = cloudShadow(xz) *','float sh = 1.0 *')],
       // Water under land the terrain will cover: returns before any shading where the baked ground is a metre above the sea.
@@ -329,12 +329,11 @@ window.__audit = {
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
-      // S4, a look change costed only: the sea's fog worked out per vertex and interpolated.
-      'seafog-coarse':[[waterMat],'fragmentShader',s=>sub(sub(s,'in vec3 vSwell;','in vec3 vSwell;\\nin vec4 vFog;'),'vec4 fog = fogOf(vWorld);','vec4 fog = vFog;')],
-      'seafog-coarse-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'out vec3 vSwell;','out vec3 vSwell;\\nout vec4 vFog;'),'vWorld = w + at;','vWorld = w + at;\\n  vFog = fogOf(vWorld);')],
+      // S4, restoring the old path: the sea's fog worked out per pixel.
+      'seafog-fine':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog;','vec4 fog = fogOf(vWorld);')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
     };
-    for(const v of ['s3-off','seafog-coarse'])if(variants.includes(v))variants=[...variants,v+'-vert'];
+    if(variants.includes('s3-off'))variants=[...variants,'s3-off-vert'];
     const wanted=new Map();
     for(const [m,orig] of this.patchOriginals){wanted.set(m.uuid+'|vertexShader',[m,'vertexShader',orig.vertexShader]);if(m!==waterMat)wanted.set(m.uuid+'|fragmentShader',[m,'fragmentShader',orig.fragmentShader]);}
     // The water fragment and terrain fragment were already restored by the glass and tint handling above.
