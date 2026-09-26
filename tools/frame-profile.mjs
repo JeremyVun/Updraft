@@ -37,8 +37,9 @@
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
 // Phase X2's exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
-// Phase S: s1-off (the ordinary sea's reflection every frame), s2-off (the seabed wherever depth < 9), s3-off (roomHides at
-// each use); seafog-coarse is the S4 look option, the sea's fog per vertex. Draws alternate the reflection, so time S1 with DRAWS even.
+// Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-coarse is the S4
+// look option, the sea's fog per vertex. Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
+// and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -317,10 +318,10 @@ window.__audit = {
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
       // Phase X2's exact skip, restoring the old path: E6 the glints outside the glitter lobe.
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
-      // Phase S, each restoring the old path: s2-off the seabed wherever it is under 9 m of water, s3-off roomHides
-      // evaluated at each use (three times per pixel, twice per surface sample).
-      's2-off':[[waterMat],'fragmentShader',s=>sub(s,'if (bedShown >= BED_SEEN) {','if (depth < 9.0) {')],
+      // Phase S, restoring the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
+      'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
+      'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
     };
     if(variants.includes('s3-off'))variants=[...variants,'s3-off-vert'];
@@ -538,7 +539,7 @@ try {
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
-      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e5-off','e6-off','s2-off','s3-off'].includes(omit) && result.pixels.max) {
+      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e5-off','e6-off','s3-off'].includes(omit) && result.pixels.max) {
         console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
         // The old glass path and the old glints (not the new ones) drop channels to 0 in scattered half-float samples on ANGLE/Metal.
         if (result.pixels.max > 1 && !(specks(omit) && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});

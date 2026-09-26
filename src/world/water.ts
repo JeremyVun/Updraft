@@ -113,11 +113,6 @@ in vec3 vSwell;
 #ifdef COARSE_FOG
 in vec4 vFog;
 #endif
-/**
- * The least the seabed must change the scene colour by to be drawn. The grade's steepest slope is 6.4 (ACES then
- * sRGB, near black) and its tint and saturation add up to 1.5 more, so this keeps the screen within 1/255 with room.
- */
-const float BED_SEEN = 1.0 / 4096.0;
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -339,25 +334,11 @@ void main() {
   float sh = cloudShadow(xz) * mix(1.0, bedN.w, inside);
   vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
   vec3 body = uDeep * scatterLight;
-  /**
-   * The seabed is drawn only where it can move the final colour: its weight, times the brighter of the lit bed and
-   * the water body, times what the Fresnel, fog and sky mirror let through, must reach BED_SEEN.
-   */
-  float bedShown = 0.0;
-  float tDown = 1.0;
-  vec2 bedXZ = xz;
-  float bedDepth = 0.0;
   if (depth < 9.0) {
     vec3 T = refract(-V, N, 0.75);
-    tDown = max(-T.y, 0.25);
-    bedXZ = xz + T.xz / tDown * depth * 0.8;
-    bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
-    float weight = exp(-bedDepth / tDown * 0.2) * (1.0 - smoothstep(6.0, 9.0, bedDepth));
-    vec3 lit = uSand * 1.05 * (uSunColor * max(uSunDir.y, 0.0) * 3.68 + uSkyAmbient * 1.25) * exp(-uAbsorb * bedDepth / tDown);
-    vec3 most = max(lit, body);
-    bedShown = weight * max(most.r, max(most.g, most.b)) * (1.0 - F) * (1.0 - fog.a) * (1.0 - glass);
-  }
-  if (bedShown >= BED_SEEN) {
+    float tDown = max(-T.y, 0.25);
+    vec2 bedXZ = xz + T.xz / tDown * depth * 0.8;
+    float bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
     float path = bedDepth / tDown;
 
     float grain = vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5;
