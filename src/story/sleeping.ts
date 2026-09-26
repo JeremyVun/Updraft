@@ -220,7 +220,7 @@ export class SleepingChapter implements Chapter {
       sleeping.sleeper = 1; sleeping.frost = T.frostAsleep;
       // Resume once the bird has left the bed, so its low camera starts clear of the sleeping child.
       sleeping.feather.release(this.spot.copy(k.position).setY(k.position.y + 1.4), this.side.set(UPHILL.x * 0.4, 0.2, UPHILL.y * 0.4));
-      k.release(EDGE); k.stay = false;
+      k.release(EDGE); k.seating.snap(); k.stay = false;
       this.routeIndex = 2; this.departureIndex = 2;
       sleeping.feather.position.copy(EDGE).setY(EDGE.y + 1.4);
       sleeping.feather.goal.copy(SLEEP_ROUTE[2]).setY(SLEEP_ROUTE[2].y + 1.4);

@@ -111,7 +111,7 @@ export class SkyMirrorChapter implements Chapter {
     room.focusStar=this.target;
     child.stop(); child.dismount(); child.standUp(); child.kneeling=0;
     this.destination(this.target); child.place(this.stand.x,this.stand.z,Math.PI);
-    this.watched.copy(child.position).add(new THREE.Vector3(-1.6,0,0.2)); cygnet.release(this.watched);
+    this.watched.copy(child.position).add(new THREE.Vector3(-1.6,0,0.2)); cygnet.release(this.watched); cygnet.seating.snap();
     cygnet.stay=false; cygnet.mayFly=false; child.stowPlane(true,true); plane.hold(child); plane.visible=true;
     room.holdingWand=true; room.ready=true; child.reachLocal(1,GRIP); room.pose(child);
     if (mask) {

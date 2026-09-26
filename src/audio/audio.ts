@@ -378,6 +378,7 @@ export class Soundscape {
       this.syncPlayback();
       return;
     }
+    holdFallback();
     const ctx = new AudioContext();
     this.ctx = ctx;
     this.realtime = ctx instanceof AudioContext;
@@ -1397,4 +1398,15 @@ export class PianoStrings {
     src.stop(t0 + 0.12);
     return sources;
   }
+}
+
+/** Firefox has no `cancelAndHoldAtTime`, and every score relies on it; hold the current value instead. */
+function holdFallback(): void {
+  const param: Partial<AudioParam> = AudioParam.prototype;
+  if (param.cancelAndHoldAtTime) return;
+  param.cancelAndHoldAtTime = function (this: AudioParam, time: number): AudioParam {
+    const value = this.value;
+    this.cancelScheduledValues(time);
+    return this.setValueAtTime(value, time);
+  };
 }
