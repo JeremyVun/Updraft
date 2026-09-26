@@ -402,9 +402,24 @@ early return, the glint skip), `tools/frame-profile.mjs` (ablations restoring ea
 - Saving: paired rounds per chapter, pooled over two loads, with `GPU_QUIET=1`.
 - `npm run typecheck`, `npm run build`.
 
+### Phase X3: one reverb (L8, Jeremy approved 2026-09-26)
+
+**Status:** started 2026-09-26. Nonvisual, Opus.
+
+**Owns:** `src/audio/audio.ts` (reverb graph), `src/params.ts` (remove `reverb=`), the audio checks that hold the
+background convolver or the spare, `tools/audio-cost.mjs`, `tools/reverb-evidence.mjs` (retire or keep as a
+two-reverb comparison only if cheap), `docs/contracts/audio.md`.
+
+**Work:** make the one-reverb graph the only one: the background's wet send is gated and ducked into the shared
+reverb, and the second convolver, its spare and the arrival swap are deleted. Update the checks that asserted the
+swap to assert the new arrival behaviour instead.
+
+**Gates:** every audio check passes (offline and browser), updated only where the swap was the asserted
+behaviour; `tools/audio-cost.mjs` confirms the saving; `npm run typecheck`, `npm run build`.
+
 ### Phase V: look-lever evidence (L1, L2)
 
-**Status:** evidence merged to `main` 2026-09-26; L2 ruled out by the lead (it breaks the sail's see-through cutaway); L1 awaits Jeremy's verdict. Evidence and review notes:
+**Status:** evidence merged to `main` 2026-09-26; L2 ruled out by the lead (it breaks the sail's see-through cutaway); L1 rejected by Jeremy 2026-09-26 (High stays 1.5×). Evidence and review notes:
 `/tmp/updraft-pb-v-evidence/index.html`, summarised in design.md under "Phase V evidence". The tool is
 `tools/look-lever-evidence.mjs`. The main finding: L2 turns off every alpha-to-coverage fade, so the sail no longer
 shows the child through it. L1 is a mild softening with no designed effect lost. Visual (capture and review), Opus.

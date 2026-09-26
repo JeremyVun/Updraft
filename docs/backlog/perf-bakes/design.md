@@ -698,6 +698,17 @@ include the refactored arrival and ending gates).
   (positive = one reverb uses less.) Where a score plays and anything else feeds the shared reverb, one reverb saves
   roughly 40–60 ms/s, a third of the sound's whole cost; on top of E1 it adds nothing where only one reverb is busy.
 
+**Jeremy, 2026-09-26 (verbatim):**
+
+> - Ok i think what i want is to keep high the same, but on medium and low, the grass density drop shouldn't be as
+>   drastic. I think there should be no grass density drop on medium.
+> - I struggle to hear the difference between one reverb and two reverbs, lets just use one reverb
+> - Explain the ground texture bakes from the first round. I thought those were already approved to go in?
+
+- **L1 rejected:** High stays at 1.5× with MSAA 2.
+- **Medium keeps full grass density;** Low's drop is to be gentler (number pending).
+- **L8 approved:** one reverb becomes the only path (phase X3).
+
 ### Surprises
 
 - **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
