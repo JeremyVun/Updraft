@@ -244,7 +244,7 @@ median is no higher than phase 5's. The videos go to Jeremy; **no merge without 
 
 ## Phase 6: bake the fine grain and noise (item E, including the surf experiment)
 
-**Status:** on hold (Jeremy, 2026-09-24). When approved, it starts after phases 1–3 merge. Visual implementation, so an allowed visual model only.
+**Status:** approved 2026-09-26 (Jeremy: measure first, then video for his verdict); started. Visual implementation, so an allowed visual model only.
 
 **Owns:**
 - `src/world/terrain.ts` (`FRAG`)

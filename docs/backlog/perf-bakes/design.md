@@ -706,7 +706,10 @@ include the refactored arrival and ending gates).
 > - Explain the ground texture bakes from the first round. I thought those were already approved to go in?
 
 - **L1 rejected:** High stays at 1.5× with MSAA 2.
-- **Medium keeps full grass density;** Low's drop is to be gentler (number pending).
+- **Medium keeps full grass density; Low thins only to 80%.** Jeremy's picks, 2026-09-26: Low "80%"; reach "Keep
+  the reach drops" (Medium 95%, Low 85%). Built on `perf-bakes-grass`.
+- **Phase 6 (item E) approved, measure first:** "Yes, measure first". Each term is measured, only the ones that
+  pay are baked, and video goes to Jeremy before anything merges.
 - **L8 approved:** one reverb becomes the only path (phase X3).
 
 ### Surprises
