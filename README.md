@@ -2,9 +2,9 @@
 
 A quiet browser game where you play the wind.
 
-[![A child at a piano among sunlit green hills, with wind trails sweeping through the grass.](docs/images/updraft-meadow.jpg)](https://updraft.perch-admin.workers.dev)
+[![A child at a piano among sunlit green hills, with wind trails sweeping through the grass.](docs/images/updraft-meadow.jpg)](https://updraft.jeremyvun.com)
 
-**[Play Updraft](https://updraft.perch-admin.workers.dev)**
+**[Play Updraft](https://updraft.jeremyvun.com)**
 
 You guide a child and a young swan from island to island by moving the air around them. A gust carries their paper plane, fills their sail and brings colour back to the land. They cross rolling meadows, autumn woods and a village half beneath the sea, finding small, unexpected things along the way.
 
