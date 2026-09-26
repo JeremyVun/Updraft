@@ -862,10 +862,12 @@ the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
 > 5. agreed, dont touch glint, ripples, surf, and windsteraks.
 
 **Testing scope, Jeremy 2026-09-26 (verbatim):** "are we over testing? I can playtest most of it, i dont need full
-video capture of the entire game". From here on, look changes ship behind a query flag that restores the old
-path, so he compares them in play; agents run only quick safety checks (typecheck, build, a short frame-difference
+video capture of the entire game". From here on, agents run only quick safety checks (typecheck, build, a short frame-difference
 pass for exact items, one quick saving measurement) and no full video capture. He added: "some very quick screenshots or recordings will help, but i dont think it's
 necessary for the entire game", so each look change comes with a few quick before/after shots of its key moments.
+And: "i dont want switches for the deployed version though". No query flags ship in `src/`; old paths for
+measuring live in the tools (page-side patching) or on the pre-change commit, and an approved change is the only
+code path. Look changes awaiting his verdict sit on their own commit or branch until he decides.
 
 - **S1, reflection every other frame (approved).** The ordinary sea's planar reflection re-renders on alternate
   frames. The sky mirror (`mirrorJourney`, on the flat) keeps rendering every frame at its own scale.
