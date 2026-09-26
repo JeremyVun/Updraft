@@ -1472,7 +1472,7 @@ export const tuning = {
     snowBrushRadius: .16,
     mistBrushRadius: .72,
     featherTakeRate: 3.8,
-    snowStroke: 0.34,
+    snowStroke: 1.6,
     mistStroke: 0.46,
     encounterNoticeFor: 2.2,
     climbPace: 0.40,

@@ -22,7 +22,7 @@ const SNOW_RIGHT = new THREE.Vector3(-SNOW_FORWARD.z, 0, SNOW_FORWARD.x);
 /** How deeply the wind scoops and ridges the drift's thick middle, as a share of its depth; the thin edges keep their shape. */
 const SNOW_SCULPT = 0.24;
 /** How far the swept channel's floor and its bank tops move out from the path; the wide gap keeps the banks rounded. */
-const CHANNEL_WIDEN = 1.65, CHANNEL_SOFTEN = 3.2;
+const CHANNEL_WIDEN = .85, CHANNEL_SOFTEN = 1.75;
 const POWDER_COUNT = 560;
 
 const VERT = `
