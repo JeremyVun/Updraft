@@ -29,12 +29,7 @@ const sweep = (i, period, from, to, rest = 0) => {
 const MOMENTS = {
   wood: {
     label: 'The Wood: walking the path through the dark wood, fanning the embers',
-    query: 'chapter=wood', frames: 600, warm: 60,
-    setup: async (page) => {
-      await page.waitForTimeout(3000);
-      await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('found'); });
-      await page.waitForTimeout(1500);
-    },
+    query: 'chapter=wood', frames: 600, warm: 420,
     pointer: 'wind',
   },
   sleeping: {
@@ -171,18 +166,19 @@ window.__evidence = {
     await page.evaluate(() => window.__manual());
     await page.waitForTimeout(300);
     const step = () => page.evaluate(() => window.__step());
-    for (let i = 0; i < moment.warm; i++) await step();
     const t0 = Date.now();
     let swept = 0;
-    for (let i = 0; i < frames; i++) {
+    // Warm frames play (and take the pointer) like the rest but are not captured; i < 0 there.
+    for (let i = -moment.warm; i < frames; i++) {
       if (moment.at?.[i]) await page.evaluate(moment.at[i]);
       let at = null;
       if (moment.pointer === 'wind') {
         const p = await page.evaluate(() => { const g = __game, w = g.story.current.windInvitation; if (!w) return null; const q = w.clone().project(g.rig.camera); return q.z < 1 ? [(q.x + 1) / 2, (1 - q.y) / 2] : null; });
         if (p) { const k = swept++ % 40, t = k / 39; at = [p[0] * W + (Math.floor(swept / 40) % 2 ? 1 - t : t) * 240 - 120, p[1] * H + Math.sin(t * Math.PI) * 10]; }
-      } else if (moment.pointer) at = moment.pointer(i);
+      } else if (moment.pointer) at = moment.pointer(i + moment.warm);
       if (at) await page.mouse.move(Math.max(4, Math.min(W - 4, at[0])), Math.max(4, Math.min(H - 4, at[1])));
       await step();
+      if (i < 0) continue;
       await page.evaluate((sink) => window.__evidence.capture(sink), sink);
       if (i % 60 === 0) {
         const state = await page.evaluate(() => ({ story: __game.story.name, beat: __game.story.current.beat ?? null, camera: __game.rig.camera.position.toArray().map((v) => +v.toFixed(2)) }));

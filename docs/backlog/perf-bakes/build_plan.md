@@ -244,7 +244,7 @@ median is no higher than phase 5's. The videos go to Jeremy; **no merge without 
 
 ## Phase 6: bake the fine grain and noise (item E, including the surf experiment)
 
-**Status:** approved 2026-09-26 (Jeremy: measure first, then video for his verdict); started. Visual implementation, so an allowed visual model only.
+**Status:** approved 2026-09-26 (Jeremy: measure first, then video for his verdict). In progress on `perf-bakes-p6`: the noise tile is built and wired behind `?noise=live`, and one measuring load is done (design E, "Progress"). Paused 2026-09-26 because the shared browser lock was held by a deadlocked capture from another session; the second load, the paired saving, the evidence video and the review remain. Visual implementation, so an allowed visual model only.
 
 **Owns:**
 - `src/world/terrain.ts` (`FRAG`)
