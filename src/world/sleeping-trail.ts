@@ -21,6 +21,9 @@ const MIST_FORWARD = point(SLEEP_MIST_STOP+1).sub(point(SLEEP_MIST_STOP)).setY(0
 const SNOW_RIGHT = new THREE.Vector3(-SNOW_FORWARD.z, 0, SNOW_FORWARD.x);
 /** How deeply the wind scoops and ridges the drift's thick middle, as a share of its depth; the thin edges keep their shape. */
 const SNOW_SCULPT = 0.24;
+/** How far the swept channel's floor and its bank tops move out from the path; the wide gap keeps the banks rounded. */
+const CHANNEL_WIDEN = 1.65, CHANNEL_SOFTEN = 3.2;
+const POWDER_COUNT = 560;
 
 const VERT = `
   uniform vec2 uDawn; in float aSnow; in vec3 color; out vec3 vWorld; out vec3 vNormal; out vec3 vColor;
@@ -168,7 +171,7 @@ export class SleepingTrail {
         float depthAt(vec2 local){
           vec2 drift=local+vec2(.35*sin(local.y*1.2),.25*sin(local.x*.65));
           float bank=pow(max(0.0,1.0-dot(drift/vec2(11.5,3.25),drift/vec2(11.5,3.25))),1.6);
-          float channel=1.0-smoothstep(.55+uSwept*1.65,1.25+uSwept*1.65,passageDistance(local));
+          float channel=1.0-smoothstep(.55+uSwept*${CHANNEL_WIDEN},1.25+uSwept*${CHANNEL_SOFTEN},passageDistance(local));
           float crest=1.0+.12*sin(local.x*1.7)+.06*sin(local.y*3.5+local.x);
           float depth=${tuning.sleeping.snowDepth.toFixed(2)}*bank*crest*(1.0-uSwept*channel)*(1.0-uThaw);
           float sculpt=.5*sin(local.x*.83+1.4*sin(local.y*.9+local.x*.31))+.3*sin(local.x*2.1+local.y*1.3+2.0*sin(local.x*.47));
@@ -216,19 +219,36 @@ export class SleepingTrail {
           col+=(uSunColor*1.5+uSkyAmbient*.7)*fleck*(.45+.55*hash12(cell+3.1))*max(.25,sun)*cover;
           gl_FragColor=vec4(applyFog(col,vWorld),cover*smoothstep(.004,.12,vDepth));}`,
     }));snow.frustumCulled=false;this.objects.push(snow);
-    const powderGeo=new THREE.BufferGeometry(),powderSeeds=new Float32Array(420*3);
-    for(let i=0;i<powderSeeds.length;i++)powderSeeds[i]=rand();
-    powderGeo.setAttribute('position',new THREE.BufferAttribute(powderSeeds,3));
+    // Powder lifts off the drift's own surface inside the channel, so the snow visibly leaves where it is cleared.
+    const powderRand=mulberry32(52231),spawn:number[]=[],info:number[]=[];
+    while(info.length<POWDER_COUNT*4){
+      const p=SNOW_AT.clone().addScaledVector(SNOW_RIGHT,(powderRand()-.5)*23).addScaledVector(SNOW_FORWARD,(powderRand()-.5)*6.5);
+      const distance=sleepPathAt(p.x,p.z).distance,depth=this.snowDepthAt(p.x,p.z);
+      if(distance>4.2||depth<.2)continue;
+      spawn.push(p.x,heightAt(p.x,p.z),p.z);
+      info.push(distance,depth,powderRand(),powderRand()<.3?1:0);
+    }
+    const powderGeo=new THREE.BufferGeometry();
+    powderGeo.setAttribute('position',new THREE.Float32BufferAttribute(spawn,3));
+    powderGeo.setAttribute('aInfo',new THREE.Float32BufferAttribute(info,4));
     const powder=new THREE.Points(powderGeo,new THREE.ShaderMaterial({
-      uniforms:{...atmo.uniforms,uClock:this.clock,uBlow:this.blow,uOrigin:{value:SNOW_AT},uRight:{value:SNOW_RIGHT}},transparent:true,depthWrite:false,
-      vertexShader:`uniform float uClock,uBlow;uniform vec3 uOrigin,uRight;out vec3 vWorld;out float vAlpha;
-        void main(){float age=fract(position.x+uClock*.65);vWorld=uOrigin+uRight*((position.y-.5)*2.0+age*7.5);
-          vWorld.y+=.45+sin(age*3.14159)*1.25;vWorld.z+=(position.z-.5)*2.5;
-          vAlpha=sin(age*3.14159)*uBlow;vec4 view=viewMatrix*vec4(vWorld,1.0);gl_Position=projectionMatrix*view;
-          gl_PointSize=clamp(90.0/max(1.0,-view.z),2.0,7.0);}`,
-      fragmentShader:`${ATMO_GLSL} in vec3 vWorld;in float vAlpha;
-        void main(){float a=1.0-smoothstep(.12,.5,length(gl_PointCoord-.5));if(a*vAlpha<.01)discard;
-          gl_FragColor=vec4(applyFog(hemiLight(vec3(0,1,0))*1.9+vec3(.28,.34,.4),vWorld),a*vAlpha*.65);}`,
+      uniforms:{...atmo.uniforms,uClock:this.clock,uBlow:this.blow,uSwept:this.swept,uWind:{value:SNOW_RIGHT}},transparent:true,depthWrite:false,
+      vertexShader:`uniform float uClock,uBlow,uSwept;uniform vec3 uWind;in vec4 aInfo;out vec3 vWorld;out float vAlpha,vPuff;
+        void main(){float seed=aInfo.z;vPuff=aInfo.w;
+          float age=fract(seed*7.13+uClock*mix(.6+.35*fract(seed*3.7),.4,vPuff));
+          float lifting=1.0-smoothstep(.55+uSwept*${CHANNEL_WIDEN},1.25+uSwept*${CHANNEL_SOFTEN},aInfo.x);
+          vec3 side=normalize(cross(uWind,vec3(0,1,0)));
+          vWorld=position;vWorld.y+=aInfo.y*(1.0-uSwept*lifting);
+          vWorld+=uWind*age*(3.0+3.0*fract(seed*13.7))*mix(1.0,.7,vPuff)+side*sin(uClock*2.3+seed*40.0)*.35*age;
+          vWorld.y+=(1.0-exp(-age*5.0))*(.4+1.1*fract(seed*5.3))-age*age*.5;
+          vAlpha=smoothstep(0.0,.12,age)*pow(1.0-age,1.5)*uBlow*lifting;
+          vec4 view=viewMatrix*vec4(vWorld,1.0);gl_Position=projectionMatrix*view;float far=max(1.0,-view.z);
+          gl_PointSize=vPuff>.5?clamp((.6+1.4*age)*520.0/far,12.0,140.0):clamp((55.0+55.0*fract(seed*3.1))/far,1.5,6.0);}`,
+      fragmentShader:`${ATMO_GLSL} in vec3 vWorld;in float vAlpha,vPuff;
+        void main(){float r=length(gl_PointCoord-.5)*2.0;
+          float a=vPuff>.5?exp(-r*r*5.5)*(1.0-smoothstep(.6,1.0,r))*.34:(1.0-smoothstep(.3,1.0,r))*.85;
+          if(a*vAlpha<.004)discard;
+          gl_FragColor=vec4(applyFog(hemiLight(vec3(0,1,0))*1.9+vec3(.28,.34,.4),vWorld),a*vAlpha);}`,
     }));powder.frustumCulled=false;this.objects.push(powder);
 
     // The bank is integrated by atmosphere.hollowDensity in every material, without intersecting fog cards.
@@ -285,7 +305,7 @@ export class SleepingTrail {
     const bx=lx+.35*Math.sin(ly*1.2),by=ly+.25*Math.sin(lx*.65);
     const bank=Math.max(0,1-(bx/11.5)**2-(by/3.25)**2)**1.6;
     const s=this.swept.value;
-    const channel=1-THREE.MathUtils.smoothstep(sleepPathAt(x,z).distance,.55+s*1.65,1.25+s*1.65);
+    const channel=1-THREE.MathUtils.smoothstep(sleepPathAt(x,z).distance,.55+s*CHANNEL_WIDEN,1.25+s*CHANNEL_SOFTEN);
     const depth=tuning.sleeping.snowDepth*bank*(1+.12*Math.sin(lx*1.7)+.06*Math.sin(ly*3.5+lx))*(1-s*channel)*(1-this.thaw.value);
     const sculpt=.5*Math.sin(lx*.83+1.4*Math.sin(ly*.9+lx*.31))+.3*Math.sin(lx*2.1+ly*1.3+2*Math.sin(lx*.47));
     return depth*(1+SNOW_SCULPT*sculpt*THREE.MathUtils.smoothstep(depth,.2,.7));
