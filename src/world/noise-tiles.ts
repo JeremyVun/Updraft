@@ -10,7 +10,7 @@ import { params } from '../params';
 const SIZE = 512;
 const NOISE_CELLS = 128;
 const FBM_CELLS = 32;
-/** Patterns that several stages must agree on (the frost, the Wood's tint) sample this one level everywhere. */
+/** The frost pattern, which the blades, the ground and the props must agree on, samples this one level everywhere. */
 const FIXED_LEVEL = 0;
 
 function fract(x: number): number {
