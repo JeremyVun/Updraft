@@ -81,5 +81,5 @@ const json = JSON.parse(probe.stderr.slice(probe.stderr.lastIndexOf('{'), probe.
 const gain = -14 - Number(json.input_i);
 run(['-map', '[vout]', '-map', '[aout]', '-c:v', 'libx264', '-preset', 'slow', '-crf', String(edit.crf ?? 17), '-profile:v', 'high',
   '-pix_fmt', 'yuv420p', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv', '-r', String(FPS), '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-movflags', '+faststart', out],
-  `[mix]volume=${gain.toFixed(2)}dB,alimiter=limit=0.89:level=false[aout]`);
+  `[mix]volume=${gain.toFixed(2)}dB,alimiter=limit=0.85:level=false[aout]`);
 console.log(JSON.stringify({ out, seconds: end, inputLoudness: Number(json.input_i), gainDb: +gain.toFixed(2) }));

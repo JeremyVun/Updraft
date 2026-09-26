@@ -2,7 +2,7 @@
 // every frame supersampled, and the game's audio rendered offline in step as two stems (the score, and the rest).
 // Usage: node tools/promo-film.mjs <shot> [outDir]. Shots live in tools/promo/shots.mjs.
 // env: FORMAT=landscape|portrait (default landscape), PREVIEW=1 (a small JPEG every half second, no audio, fast),
-//      SECONDS overrides the shot's length (to stop after the last still),
+//      LENGTH overrides the shot's length (to stop after the last still),
 //      STILLS=<capture seconds, comma-separated> (full-resolution PNGs, cursor ring hidden), FROM=<seconds> overrides the shot's `from`:
 //      the story plays (hand, sound and all) from its start and only frames from then on are kept.
 // Writes <shot>.mp4 (picture only, 60 fps), <shot>-world.wav, <shot>-score.wav, <shot>-marks.json.
@@ -26,7 +26,7 @@ const out = outArg ?? fs.mkdtempSync(`/tmp/updraft-promo-${name}-`);
 fs.mkdirSync(out, { recursive: true });
 const RATE = 48000, FPS = 60;
 const lead = shot.lead ?? 3;
-const seconds = Number(process.env.SECONDS ?? shot.seconds);
+const seconds = Number(process.env.LENGTH ?? shot.seconds);
 const dsf = preview ? 1 : format.scale;
 const [W, H] = format.viewport;
 
