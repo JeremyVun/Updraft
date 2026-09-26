@@ -326,11 +326,11 @@ void main() {
     float bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
     float path = bedDepth / tDown;
 
-    float grain = tiledNoise(bedXZ * 1.7, fp.dx * 1.7, fp.dy * 1.7) * 0.5 + tiledNoise(bedXZ * 6.0, fp.dx * 6.0, fp.dy * 6.0) * 0.5;
-    float ripples = sin(dot(bedXZ, vec2(0.9, 0.45)) * 2.2 + tiledNoise(bedXZ * 0.3, fp.dx * 0.3, fp.dy * 0.3) * 6.0) * 0.5 + 0.5;
+    float grain = vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5;
+    float ripples = sin(dot(bedXZ, vec2(0.9, 0.45)) * 2.2 + vnoise(bedXZ * 0.3) * 6.0) * 0.5 + 0.5;
     vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
     vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
-    float weed = smoothstep(0.58, 0.72, tiledNoise(bedXZ * 0.08 + 3.1, fp.dx * 0.08, fp.dy * 0.08) * 0.75 + tiledNoise(bedXZ * 0.27, fp.dx * 0.27, fp.dy * 0.27) * 0.25);
+    float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
     bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
 
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);

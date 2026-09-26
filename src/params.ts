@@ -62,8 +62,6 @@ export const params = {
   heights: q.get('heights') ?? 'atlas',
   /** QA: `grasslod=<0|1>` is the coarsest grass level any tile may use. The picture should not change (beyond the second ring with `0`, where the finest blade has no second segment to close): a coarser level only ever stands in for blades that have already thinned and closed up to it. */
   grasslod: num('grasslod'),
-  /** QA: `noise=live` computes the fine ground noise in the shaders, as before its tiling textures (`world/noise-tiles.ts`). */
-  noise: q.get('noise') === 'live' ? 'live' : 'tiles',
   /** QA: `hold=<frame>` freezes the world after that frame (it keeps drawing the same state), so two runs can capture the very same frame. */
   hold: num('hold'),
   /** QA: an on-screen readout of frame times, quality level and readbacks, for phones. */

@@ -114,8 +114,8 @@ void main() {
   }
   float dist = length(vWorld - cameraPosition);
   float detail = 1.0 - smoothstep(60.0, 260.0, dist);
-  float grain = mix(0.5, tiledNoise(xz * 1.7, fp.dx * 1.7, fp.dy * 1.7) * 0.5 + tiledNoise(xz * 6.0, fp.dx * 6.0, fp.dy * 6.0) * 0.5, detail);
-  float ripples = mix(0.5, sin(dot(xz, vec2(0.9, 0.45)) * 2.2 + tiledNoise(xz * 0.3, fp.dx * 0.3, fp.dy * 0.3) * 6.0) * 0.5 + 0.5, detail);
+  float grain = mix(0.5, vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5, detail);
+  float ripples = mix(0.5, sin(dot(xz, vec2(0.9, 0.45)) * 2.2 + vnoise(xz * 0.3) * 6.0) * 0.5 + 0.5, detail);
   vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
   float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
   float shore = h < 2.5 ? shoreDistance(xz) : 1e3;
@@ -162,7 +162,7 @@ void main() {
   float forest = woodFloorAt(xz) * grassy;
   if (forest > 0.0) {
     float moss = smoothstep(0.38, 0.68, tiledFbm(xz * 0.24 + 19.0, fp.dx * 0.24, fp.dy * 0.24));
-    float flecks = tiledNoise(xz * 9.0, fp.dx * 9.0, fp.dy * 9.0) * detail;
+    float flecks = vnoise(xz * 9.0) * detail;
     vec3 floorColour = mix(vec3(0.105, 0.071, 0.038), vec3(0.095, 0.13, 0.057), moss);
     floorColour *= 0.67 + grain * 0.5 + flecks * 0.26;
     alb = mix(alb, floorColour, forest * 0.95);
@@ -188,7 +188,7 @@ void main() {
   float winterFibre = 0.0;
   if (sleepingFloor > 0.001) {
     float winterTuft = tiledFbm(xz * 0.17 + 13.0, fp.dx * 0.17, fp.dy * 0.17);
-    winterFibre = tiledNoise(xz * vec2(12.0, 5.0), fp.dx * vec2(12.0, 5.0), fp.dy * vec2(12.0, 5.0)) * detail;
+    winterFibre = vnoise(xz * vec2(12.0, 5.0)) * detail;
     vec3 winterGrass = mix(vec3(0.14, 0.22, 0.17), vec3(0.27, 0.31, 0.22), smoothstep(0.2, 0.85, winterTuft));
     vec3 awakeGrass = mix(vec3(0.09, 0.22, 0.06), vec3(0.19, 0.32, 0.11), winterTuft);
     winterGrass = mix(winterGrass, awakeGrass, morningAt(xz));
