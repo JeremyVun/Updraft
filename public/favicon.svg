@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="dusk" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#b5a477"/>
-      <stop offset=".5" stop-color="#6f8474"/>
-      <stop offset="1" stop-color="#294958"/>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4e0a2"/>
+      <stop offset="1" stop-color="#e3b562"/>
     </linearGradient>
+    <clipPath id="t"><rect width="64" height="64" rx="14"/></clipPath>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#dusk)"/>
-  <g transform="translate(34.5 28) rotate(-18) scale(1.45) translate(-16 -16)">
-    <path d="M3 4 L29 16 L3 28 L8 16 Z" fill="#fff7e6" stroke="#4d5160" stroke-width=".8" stroke-linejoin="round"/>
-    <path d="M8 16 L29 16 L11 21 Z" fill="#d6d2c7"/>
-    <path d="M8 16 L29 16" fill="none" stroke="#92928f" stroke-width=".65"/>
+  <g clip-path="url(#t)">
+    <rect width="64" height="64" fill="url(#s)"/>
+    <path d="M4 66 C6 54 11 44 21 38 C26 35 31 35 34 38 C27 39 20 44 16 52 C14 57 13 62 13 66 Z" fill="#6a9a30"/>
+    <path d="M17 66 C18 46 22 28 36 19 C45 13 53 15 58 21 C49 19 40 23 34 31 C29 39 27 52 28 66 Z" fill="#4f822c"/>
+    <path d="M35 66 C37 55 41 47 49 43 C54 41 58 42 61 45 C55 46 49 50 46 56 C44 60 44 63 44 66 Z" fill="#3a6526"/>
   </g>
 </svg>
