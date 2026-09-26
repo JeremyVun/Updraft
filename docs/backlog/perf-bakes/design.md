@@ -873,10 +873,13 @@ the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
 
 ### Phase S results (2026-09-26, branch `perf-bakes-s`)
 
-Built: **S1** (the ordinary sea's reflection every other frame) and **S3** (`roomHides` once per sample). Dropped:
-**S2** (the seabed is never hidden where it is drawn). **S4** is built behind `seafog=coarse` for Jeremy's verdict
-only; the default is unchanged. Glints, ripples, surf and wind streaks are untouched. Evidence page:
-`/tmp/updraft-pb-s-evidence/index.html`.
+Built on `perf-bakes-s`: **S1** (the ordinary sea's reflection every other frame) and **S3** (`roomHides` once per
+sample), each the only code path. Dropped: **S2** (the seabed is never hidden where it is drawn). **S4** (coarse fog)
+is on the sibling branch `perf-bakes-s-fog`, one commit on top, to merge or drop on Jeremy's verdict. Glints,
+ripples, surf and wind streaks are untouched. Jeremy (mid-phase): "are we over testing? I can playtest most of it" and
+"i dont want switches for the deployed version", so the game has no new query flags; the old paths live only in
+`frame-profile` ablations (`s1-off`, `s3-off`; `seafog-coarse` on `perf-bakes-s`, `seafog-fine` on the fog branch), and
+the frame-locked evidence page was stopped. Quick shots: `/tmp/updraft-pb-s-shots/`.
 
 **How it was measured.** `tools/frame-profile.mjs` from this worktree's own server, `RATIO=1.5 MSAA=2 DRAIN=1
 GPU_QUIET=1`, iPad-sized page. The machine was busy for the whole phase (`secd` at 80–200% CPU, a VM, Brave, another
@@ -894,7 +897,8 @@ frames), `-w1/-w2` (the sea alone).
   ordinary sea uses `max(mirrorEvery, seaMirrorEvery = 2)`. It also redraws at once, whatever the counter, when the
   view has cut (moved over 2 m or turned over 5° since the last render), when the target no longer fits (resize, or
   the scale changed on leaving the mirror journey), and when `uJourneyRooms` or `uRoom` changed (chapter handoffs, the
-  doorway). The first frame the mirror is switched on renders, as before. `mirror=1` restores every frame everywhere.
+  doorway). The first frame the mirror is switched on renders, as before. The existing QA flag `mirror=1` still forces
+  every frame everywhere; `seaMirrorEvery` is a field, set to 1 by the profiler's `s1-off`.
 - **Pairing.** `uMirrorMatrix` is the reflection's own `matrix` object, written only when the reflection renders, so a
   stale frame always samples the texture with the projection it was drawn with: the reflected world stays where it was
   drawn, one frame old, rather than swimming with the new camera.
@@ -908,8 +912,17 @@ frames), `-w1/-w2` (the sea alone).
   island, 3.6–4.0% on the crossing out, 2.1–2.6% in the Washing, 1.7–1.9% on the Meadow walk, 2.4–3.1% at the
   Boats**. Paired full frames (`s1-off`, three loads) read −3 to +2% there, inside that run's noise.
 - **Sky mirror unchanged.** `s1-off` against the new code in the Mirror and the open sea to it: no changed pixel,
-  static in three loads and along a 24-step camera path. The frame-locked capture compares every frame (below).
-- Motion: see "S1 motion review" below.
+  static in three loads and along a 24-step camera path. A frame-locked capture (iPad size, 1/60 s steps, the camera
+  panning ±20° every 4 s) drew each frame twice, once as the game does and once with the reflection redrawn into a
+  spare target: all 240 frames identical on the flat and all 240 on the open sea to it.
+- **Motion (reviewed from the same capture while sailing past the kite island, 600 frames, before Jeremy stopped
+  the capture).** Fresh frames are identical to the old path; the stale (odd) frames differ in about 6% of pixels,
+  by 0.3 of a luma level on average in the boat's reflection and 0.1 across the island's reflection, against 6–8 levels
+  of frame-to-frame change from the scene's own motion. The largest single-pixel differences (median 28/255, at worst
+  92/255, under 0.01% of pixels above 24) sit on the hard edge of the island's reflected beach, where the 0.25-scale
+  reflection steps by one texel. Frame-to-frame change in the reflection has no odd/even beat (5.99 against 5.99), so no
+  30 Hz judder, and enlarged frame strips show the boat and its soft reflection moving together. My read: no
+  visible judder or lag between the reflection and the sea.
 
 **S2, skip the seabed where the water hides it: dropped, it is never hidden where it is drawn.**
 - The bound was built from the shader's own terms: the bed's weight `exp(−path·0.2)·(1 − smoothstep(6, 9, bedDepth))`,
@@ -944,15 +957,19 @@ frames), `-w1/-w2` (the sea alone).
   frame, so about 2–3% of a frame; the focused frames agree (pooled medians 1.5–3.6% in six of seven chapters, 0 in
   the Meadow walk).
 
-**S4, coarser fog: built behind `seafog=coarse`, evidence only.**
-- `COARSE_FOG` moves `fogOf(vWorld)` to the vertex shader and interpolates it; the fragment keeps its early return
-  where the interpolated fog is fully opaque. The profiler toggles it as `seafog-coarse`.
+**S4, coarser fog: built on `perf-bakes-s-fog`, awaiting Jeremy's verdict.**
+- `fogOf(vWorld)` moves to the vertex shader and is interpolated (`vFog`); the fragment keeps its early return where
+  the interpolated fog is fully opaque. The profiler costs it as `seafog-coarse` on `perf-bakes-s` (a shader patch) and
+  restores the per-pixel fog as `seafog-fine` on the fog branch.
 - **Saving:** the sea alone is 8.8–18.7% cheaper (medians: open sea 18.7, Meadow walk 14.9, Boats 14.5, Drowned 13.5,
   Mirror 13.4, Jetty 12.9, Washing 11.3, crossing out 9.3, island 8.8). Full frames, three contended loads: open sea
   9.5–11.8%, Jetty 6.3–13.1%, Drowned 4.2–14.2%, Boats 4.1–4.5%, island 1.2–12.1%; focused frames 2–8%.
 - **Static difference** (fixture frame): at most 1/255 on the island and in the Washing, 3 on the crossing out, 6–7 at
   the Boats, 6–10 on the Jetty, 7–12 at sea, 14–17 in the Drowned drift.
-- Look: see "S4 look review" below.
+- Look: the fixture frames differ by little, but the sea grid opens out geometrically (cells about a tenth of their
+  distance), so near the horizon the haze is interpolated across triangles tens of metres wide; the fog colour carries
+  the sun's glow (`skyColor` of the ray), which is where it could show. Before/after stills toward a low sun:
+  `/tmp/updraft-pb-s-shots/`.
 
 ## What changes
 

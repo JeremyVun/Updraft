@@ -436,8 +436,11 @@ behaviour; `tools/audio-cost.mjs` confirms the saving; `npm run typecheck`, `npm
 
 ### Phase S: the sea (design "Round 3: the sea")
 
-**Status:** queued 2026-09-26; starts when an agent slot frees. Visual judgement is needed for S1's motion and S4's
-look, so Opus.
+**Status:** built 2026-09-26, not merged. `perf-bakes-s`: S1 and S3 (exact, no changed pixel in 13 fixtures static
+and along paths; the sky mirror frame-identical), S2 dropped (the bed is seen wherever it is drawn). `perf-bakes-s-fog`:
+S4 (per-vertex fog) as one commit on top, for Jeremy's verdict from the shots in `/tmp/updraft-pb-s-shots/`. On
+Jeremy's steer: no query flags in the game, old paths as `frame-profile` ablations only, no evidence page. Results:
+design, "Phase S results".
 
 **Owns:** `src/world/water.ts` and `src/world/water/reflection.ts`, except the seabed's noise terms (phase 6 owns
 them; keep edits to the bed branch's guard so the two merge cleanly), `tools/frame-profile.mjs` (ablations).
