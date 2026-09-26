@@ -404,8 +404,8 @@ early return, the glint skip), `tools/frame-profile.mjs` (ablations restoring ea
 
 ### Phase X3: one reverb (L8, Jeremy approved 2026-09-26)
 
-**Status:** built 2026-09-26 on branch `perf-bakes-x3` (from 1c69cff), not merged; the browser gates and the live
-saving are still to run. One reverb is the only graph; `reverb=`, the second convolver, the spare and the arrival
+**Status:** built and gated 2026-09-26 on branch `perf-bakes-x3` (from 1c69cff), not merged. Live saving: about
+75 ms/s of renderer CPU with the pointer moving, 25 ms/s with it still. One reverb is the only graph; `reverb=`, the second convolver, the spare and the arrival
 swap are gone, and `tools/reverb-evidence.mjs` is retired. Results in design.md, "Phase X3 results".
 - Passed: typecheck, build; offline `audio-check`, `arrival-audio-check`, `audio-interruption-check`,
   `audio-continuity-check`, `audio-direction-check`, `dream-score-check`, `homeward-audio-check`,
@@ -413,12 +413,12 @@ swap are gone, and `tools/reverb-evidence.mjs` is retired. Results in design.md,
   lines, meadow, opening, sea and sleeping `*-score-check`s; browser `audio-browser-check`,
   `piano-audio-browser-check`, `arrival-audio-browser-check`, `homeward-audio-browser-check`,
   `opening-score-browser-check`.
-- `meadow-score-browser-check` (timeout at line 72, the gesture-chime wait) and `birches-score-browser-check`
-  (line 82, "Real scarf circles create chimes and puzzle progress") fail at their real-gesture steps, as on b9aad91
-  before X1; not yet rerun on 1c69cff to confirm the same failure.
-- Not run: `sea-score-browser-check` on either build, and `audio-cost PAIRS=tworeverb`. From about 11:03 the
-  browser lock was held by a peer's capture script (`/tmp/updraft-rainbow-shots-T7AX/film.mjs`, pid 66144) that
-  takes the lock itself and then calls `openBrowser`, which waits on that lock forever. It never released it.
+- Fail the same way on the base 1c69cff (rerun there on its own server), so X3 did not cause them:
+  `meadow-score-browser-check` (timeout at line 72, the gesture-chime wait), `birches-score-browser-check` (line 82,
+  "Real scarf circles create chimes and puzzle progress") and `sea-score-browser-check` (timeout at line 44, waiting
+  for the real swipe's chime). All three stop where a real gesture should make a chime. Before that step, the sea
+  check passes its open phase and mute/resume assertions on both builds.
+- `audio-cost PAIRS=tworeverb REPS=2`, with and without `STIR=1`: see design.md, "Phase X3 results".
 - `audio-silence-check` no longer applies as a gate: it requires matching the two-reverb graph, which X3 changes on
   purpose (largest difference −43 dBFS during an arrival fade, −56 to −69 dBFS elsewhere). Run with `oneReverb` forced
   on the base build's Soundscape, it matches: −113 to −147 dBFS, the same as two renders of one build.

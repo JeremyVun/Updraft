@@ -722,8 +722,17 @@ that held the background convolver now assert that the shared reverb survives ea
 reverb gates move together and shut through the rest, and that nothing from the music enters the reverb during the
 rest. `audio-cost` pairs against the old graph with `PAIRS=tworeverb`, putting a second convolver after the gate on the
 live page. Offline render time (`audio-silence-check REPS=5`, medians, busy machine): the wind sequence 28% faster,
-scores 17%, the arrival 17%, the ending 4%. The live saving is still to measure; L8 measured 40–60 ms/s of
-renderer CPU where a score and another sound share the reverb.
+scores 17%, the arrival 17%, the ending 4%.
+
+Live saving: `audio-cost PAIRS=tworeverb ABLATE= REPS=2` on island, meadow:walk, birches, sea and jetty. Each chapter
+ran twice with the pointer still and twice with `STIR=1`. The numbers are renderer CPU in ms per wall second, with
+the old graph minus the new one in paired windows. With the pointer circling, as in play, the median of 10 pairs is
+**76 ms/s**. Per chapter: island 74 and 77, meadow 30 and 77, birches 97 and −7, sea 95 and 40, jetty 75 and 104. That
+is about 20–25% of the renderer's 200–380 ms/s. With the pointer still, the median is 25 ms/s (range 4–73), because
+the quiet wind layers leave less for the second convolver to process. That matches L8's 40–60 ms/s. The machine was
+busy (load average 10–18; peers' Chrome captures, `secd` and `PerfPowerServices` at 50–160% CPU), which explains the
+wide spread. Every pair but one favours one reverb. Raw data: `/tmp/updraft-pb-x3f-cost.json` (still) and
+`/tmp/updraft-pb-x3f-cost-stir.json`.
 
 ### Surprises
 
