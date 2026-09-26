@@ -864,7 +864,8 @@ the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
 **Testing scope, Jeremy 2026-09-26 (verbatim):** "are we over testing? I can playtest most of it, i dont need full
 video capture of the entire game". From here on, look changes ship behind a query flag that restores the old
 path, so he compares them in play; agents run only quick safety checks (typecheck, build, a short frame-difference
-pass for exact items, one quick saving measurement) and no video capture unless he asks for it.
+pass for exact items, one quick saving measurement) and no full video capture. He added: "some very quick screenshots or recordings will help, but i dont think it's
+necessary for the entire game", so each look change comes with a few quick before/after shots of its key moments.
 
 - **S1, reflection every other frame (approved).** The ordinary sea's planar reflection re-renders on alternate
   frames. The sky mirror (`mirrorJourney`, on the flat) keeps rendering every frame at its own scale.
