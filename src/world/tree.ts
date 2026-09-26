@@ -107,6 +107,9 @@ void main() {
   vec2 p = vUv;
   float leaf = length(vec2(p.x * 1.7, p.y + p.x * p.x * 0.35));
   if (leaf > 1.0) discard;
+  // A camera following the child under the tree must not look out through a wall of dark leaves at the lens.
+  float shown = nearFade(vWorld, 2.0, 5.0);
+  if (shown < 0.02) discard;
   vec3 N = normalize(vNormal);
   vec3 V = normalize(cameraPosition - vWorld);
   float ndl = dot(N, uSunDir);
@@ -123,7 +126,7 @@ void main() {
   vec3 daylight = hemiLight(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * sun * 0.3;
   col += lit * daylight * beneath * mix(0.4, 0.18, vDepth) * (0.6 + 0.8 * fract(vSeed * 7.7));
   col = applyFog(col, vWorld);
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col, shown);
 }`;
 
 function tube(limb: Limb, radial = 8, segments = 10): THREE.BufferGeometry {
