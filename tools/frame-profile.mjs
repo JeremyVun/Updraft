@@ -35,7 +35,8 @@
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
-// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone.
+// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
+// WATER_PASS=s3-off,none,... the sea alone against each listed variant (WATER_ROUNDS, POST_REPS).
 // Phase X2's exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-coarse is the S4
 // look option, the sea's fog per vertex. Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
@@ -376,6 +377,20 @@ window.__audit = {
     samples.sort((x,y)=>x-y);
     return {ms:samples[3],min:samples[0],max:samples[6],scale:refl.scale,size:[refl.target.width,refl.target.height],mirrored:water.mesh.material.uniforms.uMirrorOn.value};
   },
+  // WATER_PASS=1: the sea alone drawn into the scene target many times over, then drained, for each variant in turn
+  // (ABBA order over the rounds): the shader's own cost with the rest of the frame out of the way.
+  async waterPass(variants, reps, rounds, complete) {
+    const shown=[];for(const o of scene.children)if(o.visible&&o!==water.mesh){shown.push(o);o.visible=false;}
+    const out=Object.fromEntries(variants.map(v=>[v,[]]));
+    try {
+      const run=()=>{renderer.setRenderTarget(post.sceneTarget);renderer.clear();renderer.render(scene,rig.camera);};
+      for(let round=0;round<rounds;round++)for(const v of round%2?[...variants].reverse():variants){
+        this.configure(v==='new'?null:v);run();await complete();
+        const start=performance.now();for(let i=0;i<reps;i++)run();await complete();out[v].push((performance.now()-start)/reps);
+      }
+    } finally {this.configure(null);for(const o of shown)o.visible=true;renderer.setRenderTarget(null);}
+    return out;
+  },
   stepWind() {
     wind.step(1/60,time,false);
     // The ping-pong targets swap every step, so rebind them as the real loop does.
@@ -577,9 +592,16 @@ try {
       __audit.configure(null);return __audit.reflectionPass(reps,complete);
     },Number(process.env.POST_REPS??40)):undefined;
     if(reflectionPass)console.log(JSON.stringify({chapter,reflectionPass}));
+    const waterPass=process.env.WATER_PASS?await page.evaluate(async ({variants,reps,rounds})=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      return __audit.waterPass(variants,reps,rounds,complete);
+    },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
+    if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,cullingViews,errors};report.push(row);
+    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
