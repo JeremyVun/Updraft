@@ -46,7 +46,7 @@ void main() {
   float through = max(-ndl, 0.0) * 0.5;
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * (max(ndl, 0.0) * 0.65 + through * 0.8) * sun) + uSunColor * rim * 0.18;
-  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 0.8, 3.0));
+  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 3.0, 8.0));
 }`;
 
 const DRIFT_VERT = /* glsl */ `
@@ -69,7 +69,11 @@ void main() {
   float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
   vec3 col = wood * (hemiLight(N) + uSunColor * max(dot(N, uSunDir), 0.0) * 0.7 * sun);
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+#ifdef LENS_FADE
+  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 3.0, 8.0));
+#else
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+#endif
 }`;
 
 /** A line of one thickness in the air, kept at least a pixel wide so it never breaks up at distance. */
@@ -249,7 +253,9 @@ export class Kite {
 
     const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sailGeometry(), paper));
-    this.sail.add(new THREE.Mesh(sparGeometry(), drift));
+    // A kite a few paces from the lens fills the frame, so the sail and its sticks give way early.
+    const spars = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG, defines: { LENS_FADE: 1 }, alphaToCoverage: true });
+    this.sail.add(new THREE.Mesh(sparGeometry(), spars));
     this.group.add(this.sail);
     this.group.add(this.cord.mesh);
     this.group.add(this.tailBatch.mesh);
