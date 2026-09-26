@@ -347,7 +347,7 @@ void main() {
   vSide = right;
   vFace = normalize(cross(right, up) + vec3(uStormDir.x, 0.0, uStormDir.y) * 0.5);
   vCard = corner;
-  vLeaf = 1.0;
+  vLeaf = 1.25;
   vAo = 1.0;
   vSolid = 1.0;
   vSeed = aMote.y;
@@ -412,10 +412,12 @@ void main() {
    * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
    * the room can never do is hide the child, so anything between the two of them gets out of the way.
    */
-  float clear = vLeaf > 0.5 ? 1.0 : smoothstep(1.2, 6.5, distance(cameraPosition, vWorld));
+  float lens = distance(cameraPosition, vWorld);
+  // Leaves go with their trunk; the storm's flying scraps only thin right at the glass; the floor stays.
+  float clear = vLeaf > 1.5 ? 1.0 : vLeaf > 1.1 ? smoothstep(0.6, 2.5, lens) : smoothstep(1.2, 6.5, lens);
   clear *= mix(1.0, min(clearSight(uViewA), clearSight(uViewB)), uViewClear);
-  // Also clear the sightline on devices without MSAA, where alpha-to-coverage has no effect.
-  if (clear < 0.99 && hash12(floor(gl_FragCoord.xy)) > clear) discard;
+  // Coverage alone, not a pixel dither, which the grade's lens fringe breaks into coloured grain.
+  if (clear < 0.02) discard;
   gl_FragColor = vec4(applyFog(col, vWorld), clear);
 }`;
 
