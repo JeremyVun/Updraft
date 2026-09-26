@@ -63,11 +63,15 @@ ${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
 vec3 surfaceShift(vec2 p, float distanceToCamera) {
-  return (swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera) + (roomHides(p) ? 0.0 : boatsWaterBase(p) + boatsRipple(p, uTime)), 0.0)) * (1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)));
+  bool hides = roomHides(p);
+  return (swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera) + (hides ? 0.0 : boatsWaterBase(p) + boatsRipple(p, uTime)), 0.0)) * (1.0 - (hides ? 0.0 : mirrorWater(p)));
 }
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
 out vec3 vSwell;
+#ifdef COARSE_FOG
+out vec4 vFog;
+#endif
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
@@ -81,6 +85,9 @@ void main() {
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
+#ifdef COARSE_FOG
+  vFog = fogOf(vWorld);
+#endif
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -103,6 +110,14 @@ uniform vec3 uSand;
 uniform vec3 uWetSand;
 in vec3 vWorld;
 in vec3 vSwell;
+#ifdef COARSE_FOG
+in vec4 vFog;
+#endif
+/**
+ * The least the seabed must change the scene colour by to be drawn. The grade's steepest slope is 6.4 (ACES then
+ * sRGB, near black) and its tint and saturation add up to 1.5 more, so this keeps the screen within 1/255 with room.
+ */
+const float BED_SEEN = 1.0 / 4096.0;
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -227,10 +242,11 @@ void main() {
   vec2 edge = min(uv, 1.0 - uv);
   /** Wide, because the wind beyond the window is only an approximation of it and the join must not show. */
   float inside = smoothstep(0.0, 0.11, min(edge.x, edge.y));
-  if (roomHides(xz)) inside = 0.0;
+  bool hides = roomHides(xz);
+  if (hides) inside = 0.0;
   Footprint fp = footprintOf(xz);
   float footprint = max(length(fp.dx), length(fp.dy));
-  float poolLevel = roomHides(xz) ? 0.0 : boatsWaterBase(xz);
+  float poolLevel = hides ? 0.0 : boatsWaterBase(xz);
   float pool = smoothstep(0.0, 0.3, poolLevel);
   float offshore = mix(60.0, -shoreDistance(xz), inside);
   if (pool > 0.0) {
@@ -238,7 +254,7 @@ void main() {
     offshore = mix(offshore, bankDistance, pool);
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
-  float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
+  float glass = hides ? 0.0 : mirrorWater(xz) * uSkyMirrorAppearance;
   // Ordinary sea beyond the flat would show as a dark band under the horizon.
   float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
   glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
@@ -248,7 +264,11 @@ void main() {
     gl_FragColor = vec4(glassColour(V, xz), 1.0);
     return;
   }
+#ifdef COARSE_FOG
+  vec4 fog = vFog;
+#else
   vec4 fog = fogOf(vWorld);
+#endif
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {
@@ -319,11 +339,25 @@ void main() {
   float sh = cloudShadow(xz) * mix(1.0, bedN.w, inside);
   vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
   vec3 body = uDeep * scatterLight;
+  /**
+   * The seabed is drawn only where it can move the final colour: its weight, times the brighter of the lit bed and
+   * the water body, times what the Fresnel, fog and sky mirror let through, must reach BED_SEEN.
+   */
+  float bedShown = 0.0;
+  float tDown = 1.0;
+  vec2 bedXZ = xz;
+  float bedDepth = 0.0;
   if (depth < 9.0) {
     vec3 T = refract(-V, N, 0.75);
-    float tDown = max(-T.y, 0.25);
-    vec2 bedXZ = xz + T.xz / tDown * depth * 0.8;
-    float bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
+    tDown = max(-T.y, 0.25);
+    bedXZ = xz + T.xz / tDown * depth * 0.8;
+    bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
+    float weight = exp(-bedDepth / tDown * 0.2) * (1.0 - smoothstep(6.0, 9.0, bedDepth));
+    vec3 lit = uSand * 1.05 * (uSunColor * max(uSunDir.y, 0.0) * 3.68 + uSkyAmbient * 1.25) * exp(-uAbsorb * bedDepth / tDown);
+    vec3 most = max(lit, body);
+    bedShown = weight * max(most.r, max(most.g, most.b)) * (1.0 - F) * (1.0 - fog.a) * (1.0 - glass);
+  }
+  if (bedShown >= BED_SEEN) {
     float path = bedDepth / tDown;
 
     float grain = vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5;
@@ -419,6 +453,7 @@ export class Water {
     this.shore = new ShoreBake(renderer, height);
     surfUniforms.uShoreTex.value = this.shore.target.texture;
     const mat = new THREE.ShaderMaterial({
+      defines: params.seafog === 'coarse' ? { COARSE_FOG: 1 } : {},
       vertexShader: VERT,
       fragmentShader: FRAG,
       uniforms: {
