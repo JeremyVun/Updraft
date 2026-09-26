@@ -161,7 +161,7 @@ void main() {
   // Damp leaf mould and moss remain textured when lightning exposes the gaps between tufts.
   float forest = woodFloorAt(xz) * grassy;
   if (forest > 0.0) {
-    float moss = smoothstep(0.38, 0.68, tiledFbm(xz * 0.24 + 19.0, fp.dx * 0.24, fp.dy * 0.24));
+    float moss = smoothstep(0.38, 0.68, fbm(xz * 0.24 + 19.0));
     float flecks = vnoise(xz * 9.0) * detail;
     vec3 floorColour = mix(vec3(0.105, 0.071, 0.038), vec3(0.095, 0.13, 0.057), moss);
     floorColour *= 0.67 + grain * 0.5 + flecks * 0.26;

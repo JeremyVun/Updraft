@@ -41,7 +41,7 @@
 // ripples), n-moss (Wood floor moss and flecks), n-tuft (Sleeping floor tuft and fibre), n-frost (frostAt's pattern),
 // n-frostline (the terrain's frost-edge pattern), n-woodtint (the Wood tint), n-bed (the shallow seabed), n-surfphase
 // (the surf's static phase). Combine with +. noise-live computes every term the noise tile replaced procedurally again, as
-// before phase 6; live-moss, live-tuft, live-frost and live-frostline each do so for one term.
+// before phase 6; live-tuft, live-frost and live-frostline each do so for one term.
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -335,10 +335,10 @@ window.__audit = {
   // fragment programs are left alone (E5 swaps them by string, and none of them calls these terms).
   noiseTerms(variants) {
     // Each substitution lists the procedural call, then the tile's (phase 6) where it has one.
-    const T=(p,d)=>'tiledNoise('+p+', fp.dx * '+d+', fp.dy * '+d+')',F=(p,d)=>'tiledFbm('+p+', fp.dx * '+d+', fp.dy * '+d+')';
+    const F=(p,d)=>'tiledFbm('+p+', fp.dx * '+d+', fp.dy * '+d+')';
     const terms={
       'n-grain':[[['vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5'],'0.5'],[['vnoise(xz * 0.3) * 6.0'],'3.0']],
-      'n-moss':[[['fbm(xz * 0.24 + 19.0)',F('xz * 0.24 + 19.0','0.24')],'0.5'],[['vnoise(xz * 9.0)'],'0.5']],
+      'n-moss':[[['fbm(xz * 0.24 + 19.0)'],'0.5'],[['vnoise(xz * 9.0)'],'0.5']],
       'n-tuft':[[['fbm(xz * 0.17 + 13.0)',F('xz * 0.17 + 13.0','0.17')],'0.5'],[['vnoise(xz * vec2(12.0, 5.0))'],'0.5']],
       'n-frost':[[['fbm(xz * 0.12)','tiledFbmFixed(xz * 0.12)'],'0.5']],
       'n-frostline':[[['fbm(xz * 0.35)',F('xz * 0.35','0.35')],'0.5']],
@@ -347,13 +347,12 @@ window.__audit = {
         [['vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25'],'0.5']],
       'n-surfphase':[[['vnoise(xz * 0.016) * 1.8 + vnoise(xz * 0.057 + 7.3) * 0.3'],'0.5']],
       // One tiled term computed procedurally again, as before phase 6: the pair is that term's own net saving.
-      'live-moss':[[[F('xz * 0.24 + 19.0','0.24')],'fbm(xz * 0.24 + 19.0)']],
       'live-tuft':[[[F('xz * 0.17 + 13.0','0.17')],'fbm(xz * 0.17 + 13.0)']],
       'live-frost':[[['tiledFbmFixed(xz * 0.12)'],'fbm(xz * 0.12)']],
       'live-frostline':[[[F('xz * 0.35','0.35')],'fbm(xz * 0.35)']],
     };
     // Every tiled term procedural again: the texture paired against what it replaced.
-    terms['noise-live']=['live-moss','live-tuft','live-frost','live-frostline'].flatMap(v=>terms[v]);
+    terms['noise-live']=['live-tuft','live-frost','live-frostline'].flatMap(v=>terms[v]);
     const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
     const mats=new Set([terrain.mesh.material,water.mesh.material,...grass.lods.map(l=>l.tableMat)]);
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
