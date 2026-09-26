@@ -244,7 +244,7 @@ median is no higher than phase 5's. The videos go to Jeremy; **no merge without 
 
 ## Phase 6: bake the fine grain and noise (item E, including the surf experiment)
 
-**Status:** built, awaiting Jeremy's playtest (2026-09-26, branch `perf-bakes-p6`; not merged). Jeremy dropped the video gates the same day ("I can playtest most of it") and ruled out a switch in the deployed game. Only the Sleeping island's three four-octave terms (tuft, frost edge, `frostAt`) sample the tile, saving roughly 3–5% of a Sleeping frame; everything else, the Wood moss and tint, the grain, the seabed and the surf included, stays procedural because a single sample costs about as much as one octave (design E, "Result"). The surf gate and the video gate below were not run.
+**Status:** done 2026-09-26, merged (Jeremy approved after mid-spread frost screenshots).
 
 **Owns:**
 - `src/world/terrain.ts` (`FRAG`)
