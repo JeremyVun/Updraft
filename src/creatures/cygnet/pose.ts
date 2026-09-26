@@ -369,10 +369,11 @@ export class Poser {
     /** A wingbeat pulls the head down a little; a passenger's head lags every jolt the child gives it. */
     a += sway + d.jostle * 3;
     b += sway * 0.6 - d.effort * Math.max(0, Math.sin(d.flapPhase)) * 0.08;
-    n[NECK[0]].rotation.x = a * 0.55;
-    n[NECK[1]].rotation.x = a * 0.45;
-    n[NECK[2]].rotation.x = b * 0.5;
-    n[NECK[3]].rotation.x = b * 0.5;
+    /** Every axis is set: the preen solver rotates these bones freely, and anything left over would bend the next frame's neck. */
+    n[NECK[0]].rotation.set(a * 0.55, 0, 0);
+    n[NECK[1]].rotation.set(a * 0.45, 0, 0);
+    n[NECK[2]].rotation.set(b * 0.5, 0, 0);
+    n[NECK[3]].rotation.set(b * 0.5, 0, 0);
 
     /** Where the head points. An act that uses the head takes it over; otherwise it goes where the mind is looking. */
     let wantYaw = d.gaze.yaw;
