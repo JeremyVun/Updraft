@@ -26,7 +26,7 @@ try {
       const {tuning}=await productionModule('/src/tuning.ts');
       const checks=[],check=(ok,message)=>{if(!ok)throw Error(`${target}: ${message}`);checks.push(message);};
       const {ctx,sound}=offlineSound(50),phases=[];
-      sound.master.disconnect();sound.backgroundGate.disconnect();sound.backgroundGate.connect(ctx.destination);
+      backgroundOnly(ctx,sound);
       let outgoing,incoming,epoch,reverb;
       const score=()=>sound.openingScore??sound.summitScore??sound.dreamScore??sound.linesScore??sound.boatsScore
         ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaScore;
@@ -37,10 +37,10 @@ try {
         const stage=sound.arrivalTransition.stage;
         if(phases.at(-1)?.stage!==stage)phases.push({at:t,stage});
         if(t===17)outgoing=score();
-        if(t===39){incoming=score();epoch=incoming?.current?.epoch??incoming?.epoch;reverb=sound.backgroundReverb;}
+        if(t===39){incoming=score();epoch=incoming?.current?.epoch??incoming?.epoch;reverb=sound.reverbConvolver;}
         if(t===44){check(score()===incoming,'Landing keeps the incoming score');
           check((score()?.current?.epoch??score()?.epoch)===epoch,'Landing keeps its musical clock');
-          check(sound.backgroundReverb===reverb,'Landing keeps its reverberation');}
+          check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       };
       update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
       for(let tick=1;tick<400;tick++){await pause;update(tick);if(tick+1<400)pause=ctx.suspend((tick+1)/8);await ctx.resume();}

@@ -117,7 +117,7 @@ try {
       {name:'phrase-handoff',seconds:16,state:{music:'lines',linesScore:'first'}},
     ]) {
       const {ctx,sound}=offlineSound(item.seconds), phases=[];let outgoing, checkedRetirement=false;
-      if(item.name==='lines-loops'){sound.master.disconnect();sound.backgroundGate.disconnect();sound.backgroundGate.connect(ctx.destination);}
+      if(item.name==='lines-loops')backgroundOnly(ctx,sound);
       const update=tick=>{
         const now=tick/8;
         if(now===6)outgoing=sound.linesScore;

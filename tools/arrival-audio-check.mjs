@@ -16,11 +16,11 @@ try {
       seaScore:target==='mirror'?'arrival':undefined,flockChatter:false,startingIsland:true});
     for(const target of Object.keys(ARRIVAL_MUSIC)) {
       const {ctx,sound}=offlineSound(36), notes=[], phases=[];
-      // Hear just the background, including its reverb, while still scheduling real gestures and environment.
-      sound.master.disconnect();sound.backgroundGate.disconnect();sound.backgroundGate.connect(ctx.destination);
+      // Hear just the background and its send into the reverb, while still scheduling real gestures and environment.
+      backgroundOnly(ctx,sound);
       const chime=sound.chime.bind(sound);
       sound.chime=(...a)=>{notes.push({now:ctx.currentTime,midi:a[0]});chime(...a);};
-      let incoming, epoch, reverb;
+      let incoming, epoch, reverb, gatesApart=0;
       const score=()=>sound.seaScore??sound.summitScore??sound.dreamScore??sound.linesScore??sound.boatsScore??sound.birchesScore??sound.sleepingScore;
       const update=tick=>{
         const now=tick/8, landed=now>=28;
@@ -28,15 +28,17 @@ try {
           arrivalMusic:now>=8&&!landed?target:undefined,
           gust:now>=10&&now<10.5?10:0,charge:now>=12&&now<13?.65:0});
         const stage=sound.arrivalTransition.stage;if(phases.at(-1)?.stage!==stage)phases.push({at:now,stage});
+        gatesApart=Math.max(gatesApart,Math.abs(sound.backgroundGate.gain.value-sound.wetGate.gain.value));
+        if(stage==='gap')check(sound.backgroundGate.gain.value===0&&sound.wetGate.gain.value===0,`${target}: both background gates are shut through the rest`);
         if(now===22){incoming=score();epoch=incoming?.current?.epoch??incoming?.epoch;}
         if(now===27){
-          reverb=sound.backgroundReverb;
+          reverb=sound.reverbConvolver;
           check(sound.mood===ARRIVAL_MUSIC[target].music,`${target}: the destination mood is active before landing`);
         }
         if(now===30){
           check(score()===incoming,`${target}: landing does not replace its score`);
           check((score()?.current?.epoch??score()?.epoch)===epoch,`${target}: landing does not restart its phrase`);
-          check(sound.backgroundReverb===reverb,`${target}: landing retains the incoming reverberation`);
+          check(sound.reverbConvolver===reverb,`${target}: landing keeps the shared reverb`);
         }
       };
       update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
@@ -49,7 +51,8 @@ try {
         for(let i=6*24000;i<7*24000;i++)before+=data[i]**2;
         for(let i=18*24000;i<21*24000;i++)after+=data[i]**2;
       }
-      check(gapPeak===0,`${target}: background rest is digitally silent, including reverb`);
+      check(gapPeak===0,`${target}: background rest is digitally silent, including its reverb send`);
+      check(gatesApart===0&&sound.backgroundGate.gain.value===1&&sound.wetGate.gain.value===1,`${target}: the dry and reverb gates move together and reopen fully`);
       check(before>1e-5&&after>1e-5,`${target}: music sounds on both sides of the gap`);
       check(notes.some(n=>n.now>=10&&n.now<10.5)&&notes.some(n=>n.now>=12&&n.now<13),`${target}: cursor and updraft chimes remain responsive through the handoff`);
       renders.push({target,gapPeak,phases});

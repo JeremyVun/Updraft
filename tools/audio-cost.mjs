@@ -3,11 +3,11 @@
 // node tools/audio-cost.mjs [island meadow sea ...]  WINDOW_S=8 REPS=3 ABLATE=island,meadow,sea OUT=/tmp/updraft-audio-cost
 // Windows alternate so drift in the game's own CPU cancels; each row is CPU ms per wall second (1000 = one core).
 // Ablations disconnect a group's outputs, so nothing pulls it: pad (8 pad oscillators), noise (the 8 looping noise-layer
-// sources), reverbs (the two 4.5 s convolvers' outputs), silent (pad voices and noise layers whose gain is under 1e-4).
-// PAIRS=unheld,onereverb adds paired windows for every chapter against the current graph: `unheld` re-targets silent
-// gains every frame as before perf-bakes E1; `onereverb` sends the background's echo into the shared reverb, as
-// `reverb=one` does once its gates are open. STIR=1 circles the pointer through every window, so the player's wind
-// layers sound as they do in play. QUERY adds URL parameters.
+// sources), reverb (the 4.5 s convolver's output), silent (pad voices and noise layers whose gain is under 1e-4).
+// PAIRS=unheld,tworeverb adds paired windows for every chapter against the current graph: `unheld` re-targets silent
+// gains every frame as before perf-bakes E1; `tworeverb` gives the background its own convolver again, after its gate,
+// as before perf-bakes X3. STIR=1 circles the pointer through every window, so the player's wind layers sound as they
+// do in play. QUERY adds URL parameters.
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
 
@@ -71,7 +71,7 @@ try {
         pad: { master: g(s.padGain), voices: s.padVoices.map(v => g(v.gain)) },
         held: s.fades ? [...s.fades].filter(([, f]) => f.held).length : null,
         convolvers: reg.nodes.filter(n => n.type === 'Convolver').map(n => ({ seconds: n.node.buffer?.duration ?? null, channels: n.node.buffer?.numberOfChannels ?? null,
-          role: n.node === s.reverbConvolver ? 'reverb' : n.node === s.backgroundReverb ? 'background' : n.node === s.spareReverb ? 'spare' : 'other' })),
+          role: n.node === s.reverbConvolver ? 'reverb' : 'other' })),
         scores: ['openingScore', 'summitScore', 'dreamScore', 'linesScore', 'boatsScore', 'meadowScore', 'birchesScore', 'sleepingScore', 'seaScore'].filter(k => s[k]),
       };
     });
@@ -103,7 +103,7 @@ try {
           pad: () => pad,
           noise: () => noiseEdges,
           silent: () => [...pad.filter(e => Math.abs(e.to.gain.value * s.padGain.gain.value) < 1e-4), ...noiseEdges.filter(e => Math.abs(e.layer.gain.value) < 1e-4)],
-          reverbs: () => [{ node: s.reverbConvolver, to: s.master }, { node: s.backgroundReverb, to: s.backgroundGate }],
+          reverb: () => [{ node: s.reverbConvolver, to: s.master }],
         };
         let cut = [];
         window.__audioCut = (name, on) => {
@@ -111,7 +111,7 @@ try {
           cut = groups[name](); for (const e of cut) e.node.disconnect(e.to); return cut.length;
         };
       });
-      for (const name of ['pad', 'noise', 'silent', 'reverbs']) for (let r = 0; r < REPS; r++) {
+      for (const name of ['pad', 'noise', 'silent', 'reverb']) for (let r = 0; r < REPS; r++) {
         await measure('on');
         await measure('cut:' + name, () => cut(name), restore);
       }
@@ -120,8 +120,12 @@ try {
     const paired = {
       unheld: [() => page.evaluate(() => { const s = __game.sound; s.fade = (param, target, now, tc) => param.setTargetAtTime(target, now, tc); }),
         () => page.evaluate(() => { const s = __game.sound; delete s.fade; s.fades.clear(); })],
-      onereverb: [() => page.evaluate(() => { const s = __game.sound; s.backgroundWet.disconnect(s.backgroundReverb); s.backgroundWet.connect(s.reverbConvolver); }),
-        () => page.evaluate(() => { const s = __game.sound; s.backgroundWet.disconnect(s.reverbConvolver); s.backgroundWet.connect(s.backgroundReverb); })],
+      tworeverb: [() => page.evaluate(() => {
+        const s = __game.sound, own = s.twoReverb = s.ctx.createConvolver();
+        own.buffer = s.reverbConvolver.buffer; s.backgroundWet.disconnect(s.wetGate); s.backgroundWet.connect(own).connect(s.backgroundGate);
+      }), () => page.evaluate(() => {
+        const s = __game.sound; s.backgroundWet.disconnect(s.twoReverb); s.twoReverb.disconnect(); delete s.twoReverb; s.backgroundWet.connect(s.wetGate);
+      })],
     };
     for (const name of pairs) for (let r = 0; r < REPS; r++) {
       await measure('ref:' + name, null, null, 6000);

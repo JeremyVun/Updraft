@@ -16,7 +16,7 @@ try {
       const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; }, cancelScheduledValues() {}, setValueAtTime(value) { this.value = value; } });
       sound.ctx = { currentTime: 90 };
       Object.defineProperty(sound, 'running', { get: () => true });
-      for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck']) {
+      for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck', 'wetDuck']) {
         sound[name] = { gain: parameter() };
       }
       for (const name of ['gustFilter', 'whistleFilter', 'liftFilter', 'padFilter']) sound[name] = { frequency: parameter() };
