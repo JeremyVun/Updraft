@@ -50,8 +50,8 @@ const MOMENTS = {
     pointer: 'boat', sides: ['fine', 'coarse'], video: true,
   },
   sunset: {
-    part: 'S4', label: 'Sailing toward a low sun: the haze carries the sun\'s glow', query: 'chapter=crossing&dusk=1&sun=0,4', frames: 600, warm: 240,
-    pointer: 'boat', turn: { amp: 12, period: 8 }, sides: ['fine', 'coarse'], video: true,
+    part: 'S4', label: 'Sunset behind the first island: the haze carries the sun\'s glow, the camera panning slowly', query: 'chapter=crossing&cam=40,3.5,-235,0,6,-40&dusk=1&sun=180,4',
+    frames: 600, warm: 120, turn: { amp: 15, period: 10 }, sides: ['fine', 'coarse'], video: true,
   },
   island: {
     part: 'S4', label: 'The first island from the water, a still camera', query: 'chapter=crossing&cam=40,3.5,-235,0,6,-40', frames: 480, warm: 120,
@@ -177,12 +177,12 @@ async function captureMoment(browser, name, out) {
       const response = await route.fetch();
       let source = await response.text();
       const draw = 'drawJourneyRooms(rooms, roomObjects, drawRooms);';
-      const prepare = '  prepareFrame(dt);\n  // The boat belongs';
-      const poll = '  pollReadbacks();\n  input.beginFrame();';
-      for (const hook of [draw, prepare, poll]) assert.equal(source.split(hook).length, 2, `hook ${hook}`);
+      const prepare = /^(\s*)prepareFrame\(dt\);$/m, poll = /^(\s*)pollReadbacks\(\);$/m;
+      assert.equal(source.split(draw).length, 2, 'draw hook');
+      for (const hook of [prepare, poll]) assert.equal(source.match(new RegExp(hook.source, 'gm'))?.length, 1, `hook ${hook}`);
       source = source.replace(draw, `${draw} if (window.__evidence) window.__evidence.redraw = () => drawJourneyRooms(rooms, roomObjects, drawRooms);`)
-        .replace(prepare, `  window.__evidence?.turn(rig.camera);\n${prepare}`)
-        .replace(poll, `  window.__evidence?.unturn(rig.camera);\n${poll}`);
+        .replace(prepare, '$1window.__evidence?.turn(rig.camera);$1prepareFrame(dt);')
+        .replace(poll, '$1window.__evidence?.unturn(rig.camera);$1pollReadbacks();');
       await route.fulfill({ response, body: source + PAGE });
     });
     await page.goto(`${BASE}?shot&${moment.query}&ratio=${RATIO}&msaa=${MSAA}&analytics=0&progress=0`);
