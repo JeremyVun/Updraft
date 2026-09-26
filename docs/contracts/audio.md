@@ -97,9 +97,10 @@ The outgoing background fades for three seconds, rests for three, then the desti
 Sleeping rests for 3.5 seconds and Mirror four. `arrivalReady` also requires the final approach and, on the
 first crossing, release of the farewell camera. Its phrase continues across grounding/disembarkation;
 a very fast landing never abbreviates the rest. `arrival-music.ts` owns the audio-clock
-state; mute/hidden-page suspension freezes it. A separate background gate includes both dry sound and reverb,
-leaving water, wind, physical sounds, calls, cues and playable gestures outside the arrival pause. The old
-background echo is cleared before the incoming fade. Score scheduling stops at the handoff boundary and voices retire during the outgoing fade, so old sources cannot reappear when the gate reopens. A stalled frame still gets the full rest.
+state; mute/hidden-page suspension freezes it. There is one reverb, shared by every sound. The background music
+reaches it through its own gate and duck, a pair matching the gates on its dry sound, so the arrival pause
+leaves water, wind, physical sounds, calls, cues and playable gestures untouched. Nothing from the background
+enters the reverb during the rest; the echo already in it rings out over the rest rather than being cut. Score scheduling stops at the handoff boundary and voices retire during the outgoing fade, so old sources cannot reappear when the gate reopens. A stalled frame still gets the full rest.
 
 The opening waits for its current drone voicing to settle before fading. Little Boats exposes ends of its
 short figures despite overlapping tails. Re-entering an already-playing piece does not create a second
@@ -116,7 +117,7 @@ its gesture notes. Ambient pink-noise loops blend their seam over 40 ms and reta
 Finished chime, wildlife, call and ember nodes disconnect after their release.
 
 The final crossing is a deliberate exception to the short arrival breath. On departure from Sky Mirror,
-`homeward` requests Home immediately. Mirror fades for three seconds, its background/reverb gate remains
+`homeward` requests Home immediately. Mirror fades for three seconds, its background gates remain
 closed for at least five, then Summit fades in over three once the boat clears the first offshore turn
 and 30 units from departure. Slow sailing extends the rest; once entered, sailing back cannot close it.
 Wind, water, foley and authored calls remain outside this musical silence. `homewardReady` and
@@ -242,7 +243,7 @@ scheduled sources so the score can release them; ordinary piano calls keep their
 scheduled, so the ten reservations survive mute and are cleared only when a new context is installed.
 
 Only Home's ending gets a 0.7-second fade, from 113.8 to 114.5 seconds after the successful updraft.
-It acts on the background gate after reverb, so the musical tail finishes within that same release;
+It acts on the background's dry sound and its send into the reverb, so the reverb's tail rings on after the music;
 wind and wildlife remain. Credits start at 116.5 seconds, two seconds after the music ends. Their
 initial position is inside the bottom reveal band and opacity enters over 0.3 seconds, so the first
 line is visible at the intended time rather than travelling up from beneath the screen. Other chapter
@@ -339,7 +340,7 @@ levels already include the withdrawal, so chapter hush is not applied a second t
 cue still ducks the background. Wind feedback follows each score's current chord.
 
 **Drowned → Wood is a four-second overlap**, replacing the ordinary arrival pause for this boundary only.
-The common background gate stays open and its reverb is retained. The retiring village score fades while
+The background gates stay open. The retiring village score fades while
 the forest pad enters on D/A; the previously inaudible pad is tuned before it becomes audible. After the
 blend, the existing forest chord clock resumes with its slow pitch glide into the unsettled voicing.
 Other arrivals retain the 1.5-second fade, 0.4-second breath and 1.5-second fade-in. No new forest melody,
@@ -351,9 +352,7 @@ The Begin gesture creates and resumes the AudioContext and builds its graph, not
 noise and the 4.5-second reverb impulse are synthesised afterwards in 4096-sample slices at 240 slices per second
 of story time (about 16k samples in a 60 Hz frame; both ready about a second after Begin), with unchanged
 formulas. Each long convolver analyses its impulse on the main thread (10–30 ms on a desktop), so each gets a
-frame to itself: the shared reverb, the background reverb, a spare background reverb and, in Drowned, the
-foghorn's diffuse field. Ambient beds join with a 0.25-second fade and the reverbs start from silence, so nothing
-clicks; thunder or an ember needed sooner finishes the noise at once. An arrival that clears the old background
-echo swaps in the spare instead of analysing a new convolver in that frame, and a new spare follows on a later
-frame. `src/audio/sliced.ts` paces this work. `tools/audio-interruption-check.mjs` checks the pacing, entries,
+frame to itself: the reverb and, in Drowned, the foghorn's diffuse field. Ambient beds join with a 0.25-second
+fade and the reverb starts from silence, so nothing clicks; thunder or an ember needed sooner finishes the noise
+at once. Arrivals only move gates, so they make and analyse no convolver. `src/audio/sliced.ts` paces this work. `tools/audio-interruption-check.mjs` checks the pacing, entries,
 the prepared horn, piano reservations across mute, the cached output graph, interruptions and the pinwheel voice.

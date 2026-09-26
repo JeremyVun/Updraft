@@ -3,7 +3,7 @@
 September 22 transition spot check: [results and listening clips](audio-transition-review.md).
 
 - `node tools/music-transition-audit.mjs`: ten real Web Audio handoffs (104 checks) and forty adaptive
-  sections; silence/reverb, source retirement, continuous landing clocks, stalled frames and same-piece entry.
+  sections; silence of the music and its reverb send, source retirement, continuous landing clocks, stalled frames and same-piece entry.
 - `node tools/journey-pacing-check.mjs`: all eight routes, two frame rates and varied wind/late gusts.
   Records both music preparation and final-approach readiness. A fast landing must preserve the full rest.
 - `node tools/arrival-audio-browser-check.mjs`: the arranged final leg into Lines, after its farewell camera.
@@ -25,7 +25,7 @@ September 22 approved opening integration:
 September 22 homeward score checks:
 
 - `node tools/homeward-audio-check.mjs`: approved voicing parity, full offshore form, five-second minimum
-  rest including reverb, spatial readiness, suspension/stalls, landing continuity, story phases, finale
+  rest including the reverb send, spatial readiness, suspension/stalls, landing continuity, story phases, finale
   takeover and oscillator cleanup. Writes `/tmp/updraft-homeward-audio.json` and a transition MP3 fixture.
 - `node tools/homeward-audio-browser-check.mjs`: private Vite server without env loading or HMR;
   actual mirror berth, sailing physics, camera and audio entrance. The checked departure faded for
@@ -163,7 +163,7 @@ Focused checks:
   single attenuation, departure and completed restoration.
 - `node tools/audio-interruption-check.mjs [evidence.json]`: cues held through a simulated call and resume
   retries, piano voices across mute, the cached output graph, Begin synthesis and convolvers paced across frames
-  without clicks, the arrival's spare reverb, the prepared foghorn and the retiring pinwheel voice; no GPU.
+  without clicks, an arrival that keeps the one reverb, the prepared foghorn and the retiring pinwheel voice; no GPU.
 - `node tools/piano-audio-browser-check.mjs`: real approach and first notes through the production audio graph;
   holds the GPU lock and supports `BASE` for a fixed build.
 - `node tools/audio-browser-check.mjs`: real game audio wiring across ten chapters, morning restore and a
@@ -183,8 +183,8 @@ Focused checks:
   10–144 Hz loops, gesture harmony, voice cleanup and preservation of the shared pad's clock/glides.
 - `node tools/birches-score-browser-check.mjs`: real swing brush and scarf circles, then an arranged final
   bow through release/gathering and boarding; live routing, mute/resume, gesture harmony and cleanup.
-- `node tools/arrival-audio-check.mjs`: nine production destination renders, exact four-second background/reverb
-  silence, wind/gesture continuity, landing phrase continuity, suspension and stalled-frame recovery; no GPU.
+- `node tools/arrival-audio-check.mjs`: nine production destination renders, exact four-second silence of the music
+  and its reverb send, dry and reverb gates moving together, wind/gesture continuity, landing phrase continuity, suspension and stalled-frame recovery; no GPU.
 - `node tools/arrival-audio-browser-check.mjs`: arranged final sailing leg into Lines with the real game loop,
   audio clock and pointer; checks the gap, pre-landing melody and continuous phrase ashore; shared GPU lock.
 - `node tools/gesture-harmony-check.mjs`: all 33 mood/score sections, cursor/updraft/glider notes, scheduled
@@ -375,7 +375,7 @@ from `/tmp/updraft-direction-preview`. Nothing was deployed.
 
 - `node tools/dream-score-check.mjs`: exact approved note/palette parity; phase envelopes; sustained loop
   coverage; saved-phase entry without a bloom; real-return blooms; final cut and retired voice/echo/bus
-  cleanup; actual Drowned-to-Wood render with an open gate, retained reverb, tuned D/A entry and responsive
+  cleanup; actual Drowned-to-Wood render with open gates, the shared reverb kept, tuned D/A entry and responsive
   gestures. All three renders have no clipping. Evidence: `/tmp/updraft-dream-score-check.json`.
 - `node tools/dream-story-check.mjs`: actual chapter phase getters, four distinct star returns with one cue
   each, no cue replay for completed progress, and Drowned's still/resumed/storm/loss phase selection.
