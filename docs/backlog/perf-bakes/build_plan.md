@@ -417,6 +417,28 @@ swap to assert the new arrival behaviour instead.
 **Gates:** every audio check passes (offline and browser), updated only where the swap was the asserted
 behaviour; `tools/audio-cost.mjs` confirms the saving; `npm run typecheck`, `npm run build`.
 
+### Phase S: the sea (design "Round 3: the sea")
+
+**Status:** queued 2026-09-26; starts when an agent slot frees. Visual judgement is needed for S1's motion and S4's
+look, so Opus.
+
+**Owns:** `src/world/water.ts` and `src/world/water/reflection.ts`, except the seabed's noise terms (phase 6 owns
+them; keep edits to the bed branch's guard so the two merge cleanly), `tools/frame-profile.mjs` (ablations).
+
+**Work and gates:**
+- **S1:** ordinary-sea reflection on alternate frames; the sky mirror every frame. Gate: before/after video (true
+  60 fps) of sailing with the boat and islands reflected and a turning camera, reviewed for judder or lag between
+  the reflection and the sea; the sky mirror journey unchanged frame for frame; paired saving at sea, island,
+  Meadow.
+- **S2:** bed skip where its contribution is below 1/255. Gate: frame difference ≤1/255 in every chapter with
+  sea, plus a moving check along a shelving shore; paired saving.
+- **S3:** fold repeated terms only where exact (≤1/255) and measurably cheaper.
+- **S4:** coarse fog behind a flag (`seafog=coarse`), paired saving, and frame-locked before/after video at the
+  iPad viewport (1376×1032, DPR 2, ratio 1.5, msaa 2) of the open sea toward the horizon, a crossing, and the
+  island from the water, under `/tmp/updraft-pb-s-evidence/`. **No default change without Jeremy's verdict.**
+- Glints, ripples, surf and wind streaks are not touched.
+- `npm run typecheck`, `npm run build`.
+
 ### Phase V: look-lever evidence (L1, L2)
 
 **Status:** evidence merged to `main` 2026-09-26; L2 ruled out by the lead (it breaks the sail's see-through cutaway); L1 rejected by Jeremy 2026-09-26 (High stays 1.5×). Evidence and review notes:

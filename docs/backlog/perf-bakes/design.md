@@ -823,6 +823,29 @@ every chapter and restores it behind a `frame-profile` ablation (`e5-off`, `e6-o
   or little water). Small against the pair spread, but positive in nearly every load where water is in view. As
   shares of the full frame about 1–1.7%; weighted by minutes, about 0.9% of the playthrough's GPU work.
 
+## Round 3: the sea (2026-09-26)
+
+The sea surface is the largest GPU cost of the playthrough (19%; design "Round 2 profile", The water surface), and
+its reflection pass costs 14% of a frame at sea and 5–7% on the island and in the Meadow. Jeremy: "I really like
+the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
+
+> 1. yea, good idea to redraw it only once every other frame. I guess i just need to make sure that the sky mirror
+>    isn't affected
+> 2. yea, we shouldn't be drawing the sea bed if it's hidden by water. shallow should still draw though
+> 3. ok, have a look
+> 4. before after for more coars fog would be good to see a comparison
+> 5. agreed, dont touch glint, ripples, surf, and windsteraks.
+
+- **S1, reflection every other frame (approved).** The ordinary sea's planar reflection re-renders on alternate
+  frames. The sky mirror (`mirrorJourney`, on the flat) keeps rendering every frame at its own scale.
+- **S2, skip the seabed where the water hides it (approved).** Skip the bed branch where its weight in the final
+  colour can't reach 1/255; shallows draw exactly as now. The bed's static noise belongs to phase 6.
+- **S3, repeated work (approved to audit).** Values computed two or three times per pixel (`roomHides`, the
+  height texture read, `cloudShadow`, `groundAt`); fold them only where it measurably saves and stays exact.
+- **S4, coarser fog (evidence only).** Fog evaluated more coarsely (per vertex or similar), behind a flag, with
+  before/after video for Jeremy. Not the default without his verdict.
+- **Untouched:** glints, ripples, surf and wind streaks.
+
 ## What changes
 
 ### A. Skip terrain fragment work that is thrown away (exact)
