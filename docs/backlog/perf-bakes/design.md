@@ -861,6 +861,11 @@ the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
 > 4. before after for more coars fog would be good to see a comparison
 > 5. agreed, dont touch glint, ripples, surf, and windsteraks.
 
+**Testing scope, Jeremy 2026-09-26 (verbatim):** "are we over testing? I can playtest most of it, i dont need full
+video capture of the entire game". From here on, look changes ship behind a query flag that restores the old
+path, so he compares them in play; agents run only quick safety checks (typecheck, build, a short frame-difference
+pass for exact items, one quick saving measurement) and no video capture unless he asks for it.
+
 - **S1, reflection every other frame (approved).** The ordinary sea's planar reflection re-renders on alternate
   frames. The sky mirror (`mirrorJourney`, on the flat) keeps rendering every frame at its own scale.
 - **S2, skip the seabed where the water hides it (approved).** Skip the bed branch where its weight in the final
