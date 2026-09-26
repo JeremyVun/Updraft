@@ -167,7 +167,7 @@ export class WoodChapter implements Chapter {
     }
     const along = this.bolted ? next : Math.min(next, APPROACH_ALONG);
     // The open shore needs no final fire; the preceding ember is enough to leave the wood.
-    if (along > PATH_LENGTH - (this.beat === 'out' ? t.chainStep : 8)) {
+    if (along > PATH_LENGTH - 8) {
       this.ahead = null;
       return;
     }
@@ -203,6 +203,9 @@ export class WoodChapter implements Chapter {
     this.chainAt = data[1]; this.bolted = true;
     this.stormStrike = null;
     this.beat = point === 'dry' ? 'out' : 'walk';
+    // Older saves aimed straight at the shore from the tree, through the trunks beside the last bend.
+    const bend = WOOD_PATH.length - 2;
+    if (point === 'dry' && pathAlong(this.cast.child.position.x, this.cast.child.position.z) < LEG_END[bend] - REACHED) this.leg = bend;
     this.cast.embers.clearCoals();
     this.chainSide = 1;
     // Restore the light already earned at this checkpoint, without lighting or skipping the next ember.
@@ -210,9 +213,9 @@ export class WoodChapter implements Chapter {
     const earned = this.cast.embers.lay(c.x + 2, c.z);
     this.cast.embers.blow(earned, 0.8);
     this.cast.embers.takeCaught();
-    this.ahead = point === 'dry' && this.chainAt > PATH_LENGTH - tuning.wood.chainStep
+    this.ahead = point === 'dry'
       ? null
-      : point !== 'dry' && this.chainAt >= PLANE_ALONG
+      : this.chainAt >= PLANE_ALONG
       ? (this.planeCoal = this.cast.embers.lay(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y))
       : this.cast.embers.lay(...this.at(this.chainAt, this.chainSide * tuning.wood.chainOffset));
   }
@@ -345,7 +348,7 @@ export class WoodChapter implements Chapter {
 
     // Once the last forest ember is lit, continue across the open shore even if its light fades.
     const enteringGlade = !this.bolted && this.approachLit;
-    const leavingWood = this.beat === 'out' && !this.ahead;
+    const leavingWood = this.beat === 'out';
     const needsLight = !enteringGlade && !leavingWood;
     if (!this.ahead && this.lit < ENOUGH && needsLight) {
       this.ahead = this.cast.embers.lay(t.x, t.y);
@@ -670,8 +673,8 @@ export class WoodChapter implements Chapter {
     c.pickUp(() => {
       p.hold(c);
       this.to('out');
-      this.leg = WOOD_PATH.length - 1;
-      this.layNext();
+      // The fire by the tree lights them out; the path's last bend keeps them in the corridor clear of trunks.
+      this.ahead = null;
     });
   }
 

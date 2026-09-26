@@ -18,6 +18,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 
 ## Where things are
 
+- Sharing with friends, promotional assets and the proposed Steam release: `docs/launch.md`.
 - Feel knobs (gust strength, wind decay, grass spring, washing sensitivity, petal counts): `src/tuning.ts`. Put new player-feel numbers there rather than inline; GLSL takes them through `glsl()`.
 - Engine layer (boot, readbacks, quality governor, sim-pass helpers): `src/gl/`. Post chain: `src/post/post.ts`.
 - Shared shader uniforms and GLSL (sky, fog, lighting, cloud shadows, domain helpers): `src/world/atmosphere.ts`. Include `ATMO_GLSL` once per shader stage.

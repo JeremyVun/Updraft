@@ -237,11 +237,11 @@ export const tuning = {
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
-    windFrom: 0.012, windFull: 0.18, speed: 2.9,
+    windFrom: 0.012, windFull: 0.18, speed: 3.1,
     /** Each toy's best speed as a share of `speed`: hulls sail a little differently, and the child's own (first) is the quickest. */
     pace: [1, 0.93, 0.88, 0.95, 0.9, 0.86, 0.92],
     /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
-    drive: 1.7, drag: 0.5,
+    drive: 1.4, drag: 0.38,
     fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
@@ -563,7 +563,7 @@ export const tuning = {
     callEvery: 9,
   },
   piano: {
-    initialRadius: 13, initialSoft: 4,
+    initialRadius: 15, initialSoft: 4,
     /** The visible sweep is the hit target, measured in screen heights rather than terrain distance. */
     guideSpan: 1.65, guideOver: 1.35, guideTolerance: 0.045,
     guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
@@ -659,7 +659,7 @@ export const tuning = {
     riseUp: 46,
     riseOn: 24,
     risePace: 0.6,
-    restFor: 9,
+    restFor: 6,
     riseQuiet: 0.72,
   },
   wood: {

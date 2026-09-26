@@ -80,6 +80,7 @@ in vec4 iLook;
 out vec3 vWorld;
 out float vSeed;
 out float vUp;
+out float vLife;
 void main() {
   vec2 root = iReed.xy;
   float up = position.y;
@@ -95,6 +96,8 @@ void main() {
   vWorld = w;
   vUp = up;
   vSeed = iReed.w;
+  /** The meadow waits grey around the pond too, reed bed and all, until the lullaby reaches it. */
+  vLife = lifeAt(root);
   gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
 }`;
 
@@ -105,13 +108,14 @@ uniform vec3 uReedTip;
 in vec3 vWorld;
 in float vSeed;
 in float vUp;
+in float vLife;
 void main() {
   vec3 col = mix(uReedRoot, uReedTip, vUp * (0.6 + 0.6 * fract(vSeed)));
   /** Backlit: the low sun comes through a rush rather than off it, which is what makes a reed bed glow. */
   vec3 V = normalize(cameraPosition - vWorld);
   float through = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   col *= uSkyAmbient * 1.2 + uSunColor * (0.55 + 0.9 * through) * cloudShadow(vWorld.xz);
-  col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
+  col = mix(stillGrey(col) * 1.05, col, (0.35 + 0.65 * uWorldLife) * vLife);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 

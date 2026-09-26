@@ -16,3 +16,4 @@ dist
 .vscode
 .idea
 *.webm
+docs/launch.md

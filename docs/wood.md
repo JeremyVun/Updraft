@@ -92,8 +92,9 @@ the mechanic itself: “that's too abstract for a child to understand” and “
 Freeing the plane from the branch is the complete paper interaction. The cygnet climbs into the satchel before
 pickup, freeing the child's hands; collecting the plane immediately resumes the route to the boat. The held
 paper never requests wind. Its wet shading fades during the walk, with no input or progression gate.
-One more forest ember guides the remaining path; the final ember by the shore is removed. After lighting
-that preceding ember, the child continues to the boat even if the light fades. The legacy `dry` save key is
+The fire lit by the tree is the last ember: Jeremy found the one after pickup unnecessary (September 26),
+so the child walks out to the boat without another light. The walk out follows the path's last bend
+instead of heading straight for the berth, which had cut about nine units through the trunks. The legacy `dry` save key is
 retained for compatibility, and old saves near the shore do not recreate the removed ember.
 
 ## Earlier progression defect

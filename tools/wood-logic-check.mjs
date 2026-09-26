@@ -95,7 +95,14 @@ const { Boat } = await import('../src/traveller/boat.ts');
 const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { WoodChapter } = await import('../src/story/wood.ts');
-const { WOOD_APPROACH_LIGHT } = await import('../src/world/wood.ts');
+const { WOOD_APPROACH_LIGHT, WOOD_LANDING, WOOD_PATH, WOOD_BERTH } = await import('../src/world/wood.ts');
+const WAY = [WOOD_LANDING, ...WOOD_PATH, new THREE.Vector2(WOOD_BERTH.x, WOOD_BERTH.z)];
+/** Trunks stand at least 5 units from this line (`CORRIDOR` in world/wood.ts). */
+const offPath = (x, z) => Math.min(...WAY.slice(1).map((b, i) => {
+  const a = WAY[i], dx = b.x - a.x, dz = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - a.x - dx * t, z - a.y - dz * t);
+}));
 const { takeCues } = await import('../src/story/cues.ts');
 const { CameraRig } = await import('../src/camera.ts');
 const { Glider } = await import('../src/glider/glider.ts');
@@ -132,8 +139,7 @@ for (const portrait of [false, true]) {
   let approachClearance = Infinity;
   let previousEye = null, firstLightCameraStep = 0;
   let previousRotation = null, worstWalkTurn = 0;
-  const departureEmbers = new Set();
-  let shoreWithoutLight = false;
+  let exitOffPath = 0;
   for (let frame = 1; frame <= 30 * 400; frame++) {
     const dt = 1 / 30, time = frame * dt;
     const target = c.windInvitation;
@@ -195,13 +201,11 @@ for (const portrait of [false, true]) {
     if (c.beat === 'out') {
       assert(plane.held, 'retrieved plane stays safely held');
       assert.notEqual(c.windInvitation, plane.position, 'held paper must never ask for wind');
-      if (c.ahead) departureEmbers.add(c.chainAt);
-      else {
-        assert.equal(c.windInvitation, null, 'the open shore must not ask for another ember');
-        embers.clearCoals();
-        shoreWithoutLight = true;
-      }
+      assert.equal(c.ahead, null, 'the fire by the tree is the last ember');
+      assert.equal(c.windInvitation, null, 'leaving the wood never asks for another ember');
+      embers.clearCoals();
     }
+    if (['out', 'toBoat'].includes(c.beat)) exitOffPath = Math.max(exitOffPath, offPath(child.position.x, child.position.z));
     if (c.beat !== last) { console.log(`${portrait ? 'portrait' : 'desktop'} route: ${c.beat} at ${time.toFixed(1)}s`); last = c.beat; }
     if (target && target === c.windInvitation && !child.moving && waited > 5) {
       const p = target.clone().project(rig.camera);
@@ -212,14 +216,14 @@ for (const portrait of [false, true]) {
       assert.equal(data.length, 2, 'keep the existing save schema valid');
       c.restoreCheckpoint(point, data); resumed.add(point);
       assert.equal(c.chainAt, along, 'resume must not skip the waiting ember');
-      assert.equal(c.ahead.lit, false, 'resume must not solve the waiting ember');
+      if (point === 'dry') assert.equal(c.ahead, null, 'resuming the walk out adds no ember');
+      else assert.equal(c.ahead.lit, false, 'resume must not solve the waiting ember');
       assert.equal(embers.takeCaught().length, 0, 'restored light must not emit another progress event');
     }
     if (c.done) { complete = true; break; }
   }
   assert(complete, `route must complete: ${c.beat}, leg ${c.leg}, child ${child.position.toArray()}`);
-  assert.equal(departureEmbers.size, 1, 'only one forest ember remains after paper retrieval');
-  assert(shoreWithoutLight, 'boarding must remain possible after the last forest light goes out');
+  assert(exitOffPath < 3.5, `the walk out must stay clear of the trunks: ${exitOffPath.toFixed(2)} off the path`);
   assert(worstWaitFrame < 0.95, `waiting target must remain in frame: ${JSON.stringify(worst)}`);
   assert.equal(scrambleCount, 1, 'one audible feather scramble per escape');
   assert(sawCoax, 'the child must coax the cygnet out before lifting it');
