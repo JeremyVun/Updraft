@@ -35,13 +35,17 @@
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
-// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
+// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
+// WATER_PASS=s3-off,none,... the sea alone against each listed variant (WATER_ROUNDS, POST_REPS).
 // Phase X2's exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // Phase 6 (item E) noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
 // ripples), n-moss (Wood floor moss and flecks), n-tuft (Sleeping floor tuft and fibre), n-frost (frostAt's pattern),
 // n-frostline (the terrain's frost-edge pattern), n-woodtint (the Wood tint), n-bed (the shallow seabed), n-surfphase
 // (the surf's static phase). Combine with +. noise-live computes every term the noise tile replaced procedurally again, as
 // before phase 6; live-tuft, live-frost and live-frostline each do so for one term.
+// Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-coarse is the S4
+// look option, the sea's fog per vertex. Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
+// and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -321,7 +325,16 @@ window.__audit = {
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
       // Phase X2's exact skip, restoring the old path: E6 the glints outside the glitter lobe.
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
+      // Phase S, restoring the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
+      's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
+      'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
+      'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
+      // S4, a look change costed only: the sea's fog worked out per vertex and interpolated.
+      'seafog-coarse':[[waterMat],'fragmentShader',s=>sub(sub(s,'in vec3 vSwell;','in vec3 vSwell;\\nin vec4 vFog;'),'vec4 fog = fogOf(vWorld);','vec4 fog = vFog;')],
+      'seafog-coarse-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'out vec3 vSwell;','out vec3 vSwell;\\nout vec4 vFog;'),'vWorld = w + at;','vWorld = w + at;\\n  vFog = fogOf(vWorld);')],
+      's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
     };
+    for(const v of ['s3-off','seafog-coarse'])if(variants.includes(v))variants=[...variants,v+'-vert'];
     const wanted=new Map();
     for(const [m,orig] of this.patchOriginals){wanted.set(m.uuid+'|vertexShader',[m,'vertexShader',orig.vertexShader]);if(m!==waterMat)wanted.set(m.uuid+'|fragmentShader',[m,'fragmentShader',orig.fragmentShader]);}
     // The water fragment and terrain fragment were already restored by the glass and tint handling above.
@@ -330,6 +343,8 @@ window.__audit = {
     water.mesh.renderOrder=variants.includes('water-last')?1:0;
     // E5: the blades always drawn with the program that discards, as before.
     grass.unclipped=!variants.includes('e5-off');
+    // S1: the ordinary sea's reflection every frame, as before.
+    water.seaMirrorEvery=variants.includes('s1-off')?1:2;
   },
   // Phase 6 (item E): each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
   // fragment programs are left alone (E5 swaps them by string, and none of them calls these terms).
@@ -395,6 +410,29 @@ window.__audit = {
       }
     } finally {r.autoClear=oldAuto;r.setRenderTarget(null);}
     out.sizes={scene:[post.sceneTarget.width,post.sceneTarget.height,post.sceneTarget.samples],bright:[b.renderTargetBright.width,b.renderTargetBright.height]};
+    return out;
+  },
+  // REFLECTION_PASS=1: the sea's reflection pass drawn alone, many times over, then drained, in this chapter's rooms.
+  async reflectionPass(reps, complete) {
+    const refl=water.reflection,u=atmo.uniforms,samples=[];
+    const pass=()=>{u.uMirrorPass.value=1;refl.render(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());u.uMirrorPass.value=0;};
+    const run=()=>{const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,pass);};
+    for(let round=0;round<7;round++){run();await complete();const start=performance.now();for(let i=0;i<reps;i++)run();await complete();samples.push((performance.now()-start)/reps);}
+    samples.sort((x,y)=>x-y);
+    return {ms:samples[3],min:samples[0],max:samples[6],scale:refl.scale,size:[refl.target.width,refl.target.height],mirrored:water.mesh.material.uniforms.uMirrorOn.value};
+  },
+  // WATER_PASS=1: the sea alone drawn into the scene target many times over, then drained, for each variant in turn
+  // (ABBA order over the rounds): the shader's own cost with the rest of the frame out of the way.
+  async waterPass(variants, reps, rounds, complete) {
+    const shown=[];for(const o of scene.children)if(o.visible&&o!==water.mesh){shown.push(o);o.visible=false;}
+    const out=Object.fromEntries(variants.map(v=>[v,[]]));
+    try {
+      const run=()=>{renderer.setRenderTarget(post.sceneTarget);renderer.clear();renderer.render(scene,rig.camera);};
+      for(let round=0;round<rounds;round++)for(const v of round%2?[...variants].reverse():variants){
+        this.configure(v==='new'?null:v);run();await complete();
+        const start=performance.now();for(let i=0;i<reps;i++)run();await complete();out[v].push((performance.now()-start)/reps);
+      }
+    } finally {this.configure(null);for(const o of shown)o.visible=true;renderer.setRenderTarget(null);}
     return out;
   },
   stepWind() {
@@ -569,7 +607,7 @@ try {
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
-      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e5-off','e6-off'].includes(omit) && result.pixels.max) {
+      if (['terrain-skips-off','a1-off','a2-off','a3-off','veil-always','glass-sky-always','e5-off','e6-off','s3-off'].includes(omit) && result.pixels.max) {
         console.warn(`WARNING ${chapter} ${omit}: exact skip differs by ${result.pixels.max}/255 in ${result.pixels.changed} channels`);
         // The old glass path and the old glints (not the new ones) drop channels to 0 in scattered half-float samples on ANGLE/Metal.
         if (result.pixels.max > 1 && !(specks(omit) && result.pixels.changed < 2000)) inexact.push({chapter,omit,...result.pixels});
@@ -591,9 +629,23 @@ try {
       __audit.configure(null);return __audit.postPasses(reps,complete);
     },Number(process.env.POST_REPS??40)):undefined;
     if(postPasses)console.log(JSON.stringify({chapter,postPasses}));
+    const reflectionPass=process.env.REFLECTION_PASS==='1'?await page.evaluate(async reps=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      __audit.configure(null);return __audit.reflectionPass(reps,complete);
+    },Number(process.env.POST_REPS??40)):undefined;
+    if(reflectionPass)console.log(JSON.stringify({chapter,reflectionPass}));
+    const waterPass=process.env.WATER_PASS?await page.evaluate(async ({variants,reps,rounds})=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      return __audit.waterPass(variants,reps,rounds,complete);
+    },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
+    if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,cullingViews,errors};report.push(row);
+    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();

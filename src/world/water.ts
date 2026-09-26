@@ -63,7 +63,8 @@ ${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
 vec3 surfaceShift(vec2 p, float distanceToCamera) {
-  return (swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera) + (roomHides(p) ? 0.0 : boatsWaterBase(p) + boatsRipple(p, uTime)), 0.0)) * (1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)));
+  bool hides = roomHides(p);
+  return (swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera) + (hides ? 0.0 : boatsWaterBase(p) + boatsRipple(p, uTime)), 0.0)) * (1.0 - (hides ? 0.0 : mirrorWater(p)));
 }
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
@@ -227,10 +228,11 @@ void main() {
   vec2 edge = min(uv, 1.0 - uv);
   /** Wide, because the wind beyond the window is only an approximation of it and the join must not show. */
   float inside = smoothstep(0.0, 0.11, min(edge.x, edge.y));
-  if (roomHides(xz)) inside = 0.0;
+  bool hides = roomHides(xz);
+  if (hides) inside = 0.0;
   Footprint fp = footprintOf(xz);
   float footprint = max(length(fp.dx), length(fp.dy));
-  float poolLevel = roomHides(xz) ? 0.0 : boatsWaterBase(xz);
+  float poolLevel = hides ? 0.0 : boatsWaterBase(xz);
   float pool = smoothstep(0.0, 0.3, poolLevel);
   float offshore = mix(60.0, -shoreDistance(xz), inside);
   if (pool > 0.0) {
@@ -238,7 +240,7 @@ void main() {
     offshore = mix(offshore, bankDistance, pool);
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
-  float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz) * uSkyMirrorAppearance;
+  float glass = hides ? 0.0 : mirrorWater(xz) * uSkyMirrorAppearance;
   // Ordinary sea beyond the flat would show as a dark band under the horizon.
   float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
   glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
@@ -407,6 +409,10 @@ export class Water {
   skyMirrorAppearance = 1;
   mirrorEvery = params.lite ? 2 : 1;
   mirrorScale = params.lite ? 0.5 : 0.75;
+  /** The ordinary sea's reflection is soft and small, so it is redrawn at most every other frame; the sky mirror keeps `mirrorEvery`. */
+  seaMirrorEvery = 2;
+  private readonly renderedRooms = new THREE.Vector2();
+  private readonly renderedRoom = new THREE.Vector3();
   private readonly windWaves: WindWaves;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
@@ -451,7 +457,8 @@ export class Water {
   }
 
   /**
-   * Renders the mirror at the current quality cadence (every frame, or alternate frames on the low tier).
+   * Renders the mirror at the current quality cadence: the sky mirror every frame (alternate frames on the low
+   * tier), the ordinary sea every other frame unless the view has cut or the rooms have changed since.
    * Call after the camera has moved, before the scene is drawn.
    */
   update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
@@ -460,15 +467,19 @@ export class Water {
     this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
     /** Where there is no mirror the sea must not read one: the last one drawn is a different room by now. */
     const onFlat = Math.hypot(camera.position.x - SKY_MIRROR.x, camera.position.z - SKY_MIRROR.z) < tuning.skyMirror.reflectionPrepare;
-    const mirrorJourney = atmo.uniforms.uJourneyRooms.value.y === MIRROR_ROOM || atmo.uniforms.uJourneyRooms.value.x === MIRROR_ROOM;
-    this.reflection.scale = mirrorJourney || onFlat ? this.mirrorScale : 0.25;
-    const mirrorEvery = params.mirror ?? this.mirrorEvery;
-    const mirrored = !!mirrorEvery && (mirrorJourney || onFlat || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
+    const rooms = atmo.uniforms.uJourneyRooms.value, room = atmo.uniforms.uRoom.value;
+    const sky = rooms.y === MIRROR_ROOM || rooms.x === MIRROR_ROOM || onFlat;
+    this.reflection.scale = sky ? this.mirrorScale : 0.25;
+    const mirrorEvery = params.mirror ?? (sky ? this.mirrorEvery : Math.max(this.mirrorEvery, this.seaMirrorEvery));
+    const mirrored = !!mirrorEvery && (sky || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
     const mirrorUniform = (this.mesh.material as THREE.ShaderMaterial).uniforms.uMirrorOn;
     const first = mirrored && mirrorUniform.value === 0;
     mirrorUniform.value = mirrored ? 1 : 0;
     if (!mirrored) return;
-    if (this.frame++ % mirrorEvery && !first) return;
+    const unchanged = sky || (this.renderedRooms.equals(rooms) && this.renderedRoom.equals(room) && this.reflection.holds(camera));
+    if (this.frame++ % mirrorEvery && !first && unchanged) return;
+    this.renderedRooms.copy(rooms);
+    this.renderedRoom.copy(room);
     atmo.uniforms.uMirrorPass.value = 1;
     this.reflection.render(camera, before, after);
     atmo.uniforms.uMirrorPass.value = 0;
