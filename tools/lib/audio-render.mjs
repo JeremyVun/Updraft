@@ -27,6 +27,11 @@ export async function audioPage(base = process.env.BASE ?? 'http://127.0.0.1:523
         Object.defineProperty(sound, 'running', { get: () => true });
         return { ctx, sound };
       };
+      // The background alone: its dry sound and its send into the shared reverb, each after its gate.
+      window.backgroundOnly = (ctx, sound) => {
+        sound.master.disconnect(); sound.backgroundGate.disconnect();
+        sound.backgroundGate.connect(ctx.destination); sound.wetDuck.connect(ctx.destination);
+      };
       window.encodeAudio = buffer => {
         const channels = [buffer.getChannelData(0), buffer.getChannelData(1)];
         const pcm = new Int16Array(buffer.length * 2);

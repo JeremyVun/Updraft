@@ -137,7 +137,7 @@ try {
     await ctx.close();
 
     // Begin makes only the context and graph. Noise and reverb follow in slices at a steady rate of story time, and
-    // each long convolver analyses its impulse on a frame of its own.
+    // the reverb's convolver analyses its impulse on a frame of its own.
     const FRAME = 768 / 48000;
     let steps = 0, analyses = 0;
     const step = Sliced.prototype.step;
@@ -198,7 +198,7 @@ try {
       const random = Math.random;
       Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
       try {
-        const run = offline(3), { s, off } = run, events = {}, crowded = [];
+        const run = offline(3), { s, off } = run, events = {}, crowded = [], analysedBefore = analyses;
         run.madeAtStart = run.made.length;
         // Silence the slow pad so the beds' own entry is measured; the shower adds bright rain to them.
         s.padGain.gain.setTargetAtTime = () => s.padGain.gain;
@@ -221,10 +221,8 @@ try {
           if (analyses > analysed && (analyses - analysed > 1 || steps - stepped > 1)) crowded.push(off.currentTime);
           if (events.noise === undefined && !s.noiseInputs.length) events.noise = off.currentTime;
           if (events.reverb === undefined && s.reverbConvolver.buffer) events.reverb = off.currentTime;
-          if (events.background === undefined && s.backgroundReverb.buffer) events.background = off.currentTime;
-          if (events.spare === undefined && s.spareReverb) events.spare = off.currentTime;
         });
-        return { ...run, buffer, env: envelope(buffer), events, mostSteps, crowded };
+        return { ...run, buffer, env: envelope(buffer), events, mostSteps, crowded, analysed: analyses - analysedBefore };
       } finally { Math.random = random; }
     };
     const eased = await begin(false), abrupt = await begin(true);
@@ -233,12 +231,12 @@ try {
     check(events.noise > FRAME && events.noise < 1 && events.reverb > events.noise && events.reverb < 1.3,
       `Noise (${events.noise.toFixed(2)} s) and reverb (${events.reverb.toFixed(2)} s) arrive over frames, within about a second`);
     check(eased.mostSteps <= Math.round(FRAME * 240), 'No frame synthesises more than its share');
-    check(events.background > events.reverb && events.spare > events.background && !eased.crowded.length,
-      'Each reverb convolver is analysed on a frame of its own, with no synthesis beside it');
+    check(eased.analysed === 1 && !eased.crowded.length,
+      'The one reverb convolver is analysed on a frame of its own, with no synthesis beside it');
     check(eased.s.foghornWork === null, 'The foghorn is not prepared outside Drowned');
     const { env } = eased, noise = events.noise, reverb = events.reverb;
     Object.assign(metrics, { startMs: eased.startMs, noiseReadyAt: noise, reverbReadyAt: reverb,
-      backgroundReverbReadyAt: events.background, spareReverbReadyAt: events.spare, mostStepsPerFrame: eased.mostSteps,
+      mostStepsPerFrame: eased.mostSteps,
       bedEntryRise: rise(env, noise - FRAME, noise + .3), bedSteadyRise: rise(env, noise + .3, noise + 1.3),
       abruptEntryRise: rise(abrupt.env, abrupt.events.noise - FRAME, abrupt.events.noise + .3),
       abruptEntryLevel: mean(abrupt.env, abrupt.events.noise + .01, abrupt.events.noise + .06),
@@ -254,18 +252,21 @@ try {
     early.s.update(FRAME, { ...baseState, cues: ['kindled'] });
     check(early.s.noiseWork.ready, 'Thunder or an ember before the noise is ready finishes it at once, without throwing');
 
-    // An arrival swaps in the spare background reverb instead of analysing a new one in its frame.
+    // An arrival only moves the background's gates: the shared reverb stays, and no convolver is made or analysed.
     const { ARRIVAL_MUSIC } = await productionModule('/src/audio/arrival-music.ts');
     const arrival = offline(18, 24000);
-    let swaps = 0, swapAnalyses = -1;
+    let reverb = null, arrivalAnalyses = 0, convolvers = 0;
+    const createConvolver = arrival.off.createConvolver;
+    arrival.off.createConvolver = function () { convolvers++; return createConvolver.call(this); };
     await render(arrival.off, 18, tick => {
-      const now = tick / 8, landed = now >= 16, reverbBefore = arrival.s.backgroundReverb, analysed = analyses;
+      const now = tick / 8, landed = now >= 16, analysed = analyses;
+      if (now === 3) { reverb = arrival.s.reverbConvolver; convolvers = 0; }
       arrival.s.update(.125, { ...baseState, music: 'sea', flockChatter: false, ...(landed ? ARRIVAL_MUSIC.lines : {}),
         arrivalMusic: now >= 8 && !landed ? 'lines' : undefined });
-      if (now > 2 && arrival.s.backgroundReverb !== reverbBefore) { swaps++; swapAnalyses = analyses - analysed; }
+      if (now >= 3) arrivalAnalyses += analyses - analysed;
     }, .125);
-    check(swaps === 1 && swapAnalyses === 0, 'The arrival clears the old echo with the spare reverb, analysing nothing in that frame');
-    check(arrival.s.spareReverb !== null, 'A new spare is prepared on a later frame');
+    check(reverb?.buffer && arrival.s.reverbConvolver === reverb && arrivalAnalyses === 0 && convolvers === 0,
+      'The arrival keeps the shared reverb, making and analysing no convolver');
 
     // The foghorn's buffers and diffuse field are made during Drowned, so the cue's frame only connects nodes.
     const storm = offline(1), drowned = { ...baseState, music: 'drowned', drownedScore: 'gather', sea: 1, land: 0 };
