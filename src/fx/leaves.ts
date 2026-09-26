@@ -71,6 +71,7 @@ export const LITTER_BOX = {
 /** Reading the litter field: shared by the sim, the floor of leaves and anything that wants to know how deep it lies. */
 export const LITTER_GLSL = /* glsl */ `
 uniform sampler2D uLitterTex;
+uniform bool uLitterFiltered;
 vec2 litterUv(vec2 xz) {
   return (xz - vec2(${glsl(LITTER_BOX.x)}, ${glsl(LITTER_BOX.z)})) / vec2(${glsl(LITTER_BOX.sx)}, ${glsl(LITTER_BOX.sz)});
 }
@@ -81,7 +82,18 @@ vec2 litterWorld(vec2 uv) {
 float litterDepth(vec2 xz) {
   vec2 uv = litterUv(xz);
   if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return 0.0;
-  return texture(uLitterTex, uv).r;
+  if (uLitterFiltered) return texture(uLitterTex, uv).r;
+  const float res = ${glsl(LITTER_RES)};
+  vec2 st = uv * res - 0.5;
+  vec2 base = floor(st);
+  vec2 f = st - base;
+  vec2 at = (base + 0.5) / res;
+  float texel = 1.0 / res;
+  float a = texture(uLitterTex, at).r;
+  float b = texture(uLitterTex, at + vec2(texel, 0.0)).r;
+  float c = texture(uLitterTex, at + vec2(0.0, texel)).r;
+  float d = texture(uLitterTex, at + vec2(texel)).r;
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }`;
 
 const LITTER_SIM_FRAG = /* glsl */ `
@@ -423,12 +435,15 @@ export interface Shake {
 export class LitterField {
   readonly uniforms: Record<string, THREE.IUniform>;
   private readonly gpu: GpuRunner;
-  // Repeated transport needs full precision or small rounding losses slowly erase the floor.
-  private readonly field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, THREE.LinearFilter);
+  private readonly field: PingPong;
   private readonly mat: THREE.ShaderMaterial;
 
   constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4) {
     this.gpu = new GpuRunner(renderer);
+    // Repeated transport needs full precision or small rounding losses slowly erase the floor. A float texture
+    // that the GPU cannot filter reads as empty, so without the extension `litterDepth` blends texels itself.
+    const filtered = renderer.extensions.has('OES_texture_float_linear');
+    this.field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, filtered ? THREE.LinearFilter : THREE.NearestFilter);
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, { uSrc: { value: null } });
     const tex = dataTexture(seed, LITTER_RES, LITTER_RES);
     copy.uniforms.uSrc.value = tex;
@@ -436,7 +451,7 @@ export class LitterField {
     this.gpu.run(copy, this.field.write);
     tex.dispose();
     copy.dispose();
-    this.uniforms = { uLitterTex: { value: this.field.texture } };
+    this.uniforms = { uLitterTex: { value: this.field.texture }, uLitterFiltered: { value: filtered } };
     this.mat = simMaterial(LITTER_SIM_FRAG, {
       uField: { value: null },
       uLitterTex: { value: null },

@@ -127,7 +127,7 @@ export class LittleBoatsChapter implements Chapter {
     this.bankAt(room.progress - 1, this.bank);
     child.place(this.bank.x, this.bank.z, Math.PI);
     this.bankAt(room.progress, this.birdBank, 1.3);
-    cygnet.release(this.birdBank);
+    cygnet.release(this.birdBank); cygnet.seating.snap();
     cygnet.stay = false;
     this.to('sailing');
     child.stowPlane(true, true);

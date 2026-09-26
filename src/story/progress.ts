@@ -78,7 +78,7 @@ export function placeProgress(p: Progress, cast: Cast): void {
   if (p.child[4]) c.ride(b.seat(c.position.clone()), b.yaw);
   k.bond = Math.max(0, Math.min(1, p.bird[4])); k.flights = Math.max(0, Math.floor(p.bird[5]));
   if (p.seat) k.rideIn(p.seat);
-  else k.release(k.position.clone().fromArray(p.bird));
+  else { k.release(k.position.clone().fromArray(p.bird)); k.seating.snap(); }
   k.yaw = p.bird[3]; k.visible = !!p.bird[6];
   restoreWingCare(k, p.chapter, p.point);
   plane.hold(c); plane.visible = !!p.plane[0]; plane.soggy.value = p.plane[1];

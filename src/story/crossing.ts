@@ -335,6 +335,8 @@ export class CrossingChapter implements Chapter {
       this.cast.boat.speedLimit = this.limit = this.cruiseSpeed;
     }
     this.time = data[1]; this.swim = 'done';
+    // A one-off whale already surfaced before this save; the resumed passage must not bring it up again.
+    if (this.whaleAt !== null && this.whaleEvery === 0 && this.time >= this.whaleAt) { this.whaleCalled = true; this.nextWhale = 1e9; }
     this.cast.boat.steerFor = this.route[this.leg];
     this.cast.boat.canGround = this.leg === this.route.length - 1 && !this.cast.boat.mooring;
     this.prepareArrivalMusic();
