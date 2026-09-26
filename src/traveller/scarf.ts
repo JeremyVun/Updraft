@@ -89,10 +89,10 @@ export class Scarf {
   }
 
   /**
-   * `anchor` is the knot at the neck, `bodyCentre` and `bodyRadius` keep the scarf outside the child,
+   * `anchor` is the knot at the neck, `keepOut` moves a point to the outside of the child,
    * `wind` is the air at the child, `ground` the surface height below.
    */
-  update(dt: number, anchor: THREE.Vector3, bodyCentre: THREE.Vector3, bodyRadius: number, wind: WindSample, ground: number, groundPos: THREE.Vector3): void {
+  update(dt: number, anchor: THREE.Vector3, keepOut: (p: THREE.Vector3) => void, wind: WindSample, ground: number, groundPos: THREE.Vector3): void {
     this.time += dt;
     const h = Math.min(dt, 1 / 30);
     const speed = Math.hypot(wind.x, wind.z);
@@ -121,9 +121,7 @@ export class Scarf {
         this.dir.subVectors(b, a);
         const len = this.dir.length() || 1e-5;
         b.copy(a).addScaledVector(this.dir, SEGMENT / len);
-        this.tmp.subVectors(b, bodyCentre);
-        const d = this.tmp.length();
-        if (d < bodyRadius) b.copy(bodyCentre).addScaledVector(this.tmp, bodyRadius / Math.max(d, 1e-4));
+        keepOut(b);
         if (b.y < ground + 0.04) b.y = ground + 0.04;
       }
     }

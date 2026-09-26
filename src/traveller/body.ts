@@ -100,6 +100,50 @@ export type SocketName = 'cradle' | 'satchel' | 'shoulder' | 'lap';
 export const UPPER_ARM = 0.29;
 export const FOREARM = 0.32;
 
+const COAT_PROFILE = [
+  [0.0, -0.08], [0.58, -0.08], [0.62, 0.0], [0.56, 0.18], [0.46, 0.5], [0.37, 0.78], [0.3, 0.94], [0.2, 1.02], [0.0, 1.04],
+].map(([r, y]) => new THREE.Vector2(r, y));
+
+function coatRadius(y: number): number {
+  let r = 0;
+  for (let i = 1; i < COAT_PROFILE.length; i++) {
+    const a = COAT_PROFILE[i - 1];
+    const b = COAT_PROFILE[i];
+    if (a.y !== b.y && y >= Math.min(a.y, b.y) && y <= Math.max(a.y, b.y)) r = Math.max(r, THREE.MathUtils.mapLinear(y, a.y, b.y, a.x, b.x));
+  }
+  return r;
+}
+
+const HOOD = new THREE.Vector3(0, 1.43, -0.02);
+const BAG = new THREE.Vector3(0, 0.78, -0.56);
+const away = new THREE.Vector3();
+
+function outOfBall(p: THREE.Vector3, centre: THREE.Vector3, radius: number): void {
+  away.subVectors(p, centre);
+  const d = away.length();
+  if (d < radius) p.copy(centre).addScaledVector(away, radius / Math.max(d, 1e-4));
+}
+
+/**
+ * Moves a point in the body's frame to the outside of the child: the coat, the scarf's collar, the hood and the
+ * satchel. `coatScale` is the coat's squash when they lie down. The scarf hangs on this, so it lies over the coat
+ * instead of through it.
+ */
+export function keepOffChild(p: THREE.Vector3, coatScale: THREE.Vector3): void {
+  if (p.y > -0.1 && p.y < 1.14) {
+    const r = Math.max(coatRadius(p.y) + 0.035, p.y > 0.9 ? 0.36 : 0);
+    const x = p.x / coatScale.x;
+    const z = p.z / coatScale.z;
+    const d = Math.hypot(x, z);
+    if (d < r) {
+      p.x = d > 1e-4 ? (x * r * coatScale.x) / d : 0;
+      p.z = d > 1e-4 ? (z * r * coatScale.z) / d : r * coatScale.z;
+    }
+  }
+  outOfBall(p, HOOD, 0.49);
+  outOfBall(p, BAG, 0.33);
+}
+
 /**
  * A small child about 2.3 units tall: bell-shaped mustard raincoat, pointed hood, red mittens and scarf knot,
  * dark boots. Pivots sit at hips, shoulders and neck so poses are just rotations.
@@ -119,10 +163,7 @@ export function buildChild(): Rig {
   body.position.y = 0.62;
   root.add(body);
 
-  const coatProfile = [
-    [0.0, -0.08], [0.58, -0.08], [0.62, 0.0], [0.56, 0.18], [0.46, 0.5], [0.37, 0.78], [0.3, 0.94], [0.2, 1.02], [0.0, 1.04],
-  ].map(([r, y]) => new THREE.Vector2(r, y));
-  const coat = paint(new THREE.LatheGeometry(coatProfile, 20), PALETTE.coat);
+  const coat = paint(new THREE.LatheGeometry(COAT_PROFILE, 20), PALETTE.coat);
   const hem = paint(at(new THREE.TorusGeometry(0.585, 0.045, 6, 24).rotateX(Math.PI / 2), 0, 0.02, 0), PALETTE.coatShade);
   /**
    * The satchel is the cygnet's seat, and the game is played from behind the child, so it is a soft pouch of a bag

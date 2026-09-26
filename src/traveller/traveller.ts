@@ -5,7 +5,7 @@ import { fieldAt, type FieldSample } from '../world/fields';
 import { heightAt } from '../world/island';
 import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
-import { buildChild, FOREARM, UPPER_ARM, type Rig, type SocketName } from './body';
+import { buildChild, FOREARM, keepOffChild, UPPER_ARM, type Rig, type SocketName } from './body';
 import { Scarf } from './scarf';
 import type { Boat } from './boat';
 
@@ -169,6 +169,11 @@ export class Traveller {
   private readonly tmp2 = new THREE.Vector3();
   private readonly shadowMat: THREE.ShaderMaterial;
   private time = 0;
+  private readonly bodyInverse = new THREE.Matrix4();
+  private readonly keepOffChild = (p: THREE.Vector3) => {
+    keepOffChild(p.applyMatrix4(this.bodyInverse), this.rig.coat.scale);
+    p.applyMatrix4(this.rig.body.matrixWorld);
+  };
 
   constructor(private readonly wind: WindField) {
     this.rig = buildChild();
@@ -501,13 +506,11 @@ export class Traveller {
     }
 
     const neck = this.rig.neck.getWorldPosition(this.tmp);
-    const centre = this.tmp2.set(p.x, p.y + (this.sitting ? 0.7 : 1.1), p.z);
+    this.bodyInverse.copy(this.rig.body.matrixWorld).invert();
     const onBed = THREE.MathUtils.smoothstep(this.abed, 0.2, 0.8);
-    if (onBed > 0) this.rig.body.localToWorld(centre.set(0, 0.45, 0.1));
     const floor = this.riding ? p.y - 0.2 : Math.max(this.ground(p.x, p.z), 0);
     const mattress = this.bedAt.y - tuning.sleeping.lieHigh + 0.68;
-    this.scarf.update(dt, neck, centre, THREE.MathUtils.lerp(0.52, 0.36, onBed), w,
-      THREE.MathUtils.lerp(floor, mattress, onBed), p);
+    this.scarf.update(dt, neck, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
