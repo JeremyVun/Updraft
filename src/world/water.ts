@@ -407,6 +407,10 @@ export class Water {
   skyMirrorAppearance = 1;
   mirrorEvery = params.lite ? 2 : 1;
   mirrorScale = params.lite ? 0.5 : 0.75;
+  /** The ordinary sea's reflection is soft and small, so it is redrawn at most every other frame; the sky mirror keeps `mirrorEvery`. */
+  seaMirrorEvery = 2;
+  private readonly renderedRooms = new THREE.Vector2();
+  private readonly renderedRoom = new THREE.Vector3();
   private readonly windWaves: WindWaves;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
@@ -451,7 +455,8 @@ export class Water {
   }
 
   /**
-   * Renders the mirror at the current quality cadence (every frame, or alternate frames on the low tier).
+   * Renders the mirror at the current quality cadence: the sky mirror every frame (alternate frames on the low
+   * tier), the ordinary sea every other frame unless the view has cut or the rooms have changed since.
    * Call after the camera has moved, before the scene is drawn.
    */
   update(camera: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
@@ -460,15 +465,19 @@ export class Water {
     this.mesh.position.set(Math.round(camera.position.x / STEP) * STEP, 0, Math.round(camera.position.z / STEP) * STEP);
     /** Where there is no mirror the sea must not read one: the last one drawn is a different room by now. */
     const onFlat = Math.hypot(camera.position.x - SKY_MIRROR.x, camera.position.z - SKY_MIRROR.z) < tuning.skyMirror.reflectionPrepare;
-    const mirrorJourney = atmo.uniforms.uJourneyRooms.value.y === MIRROR_ROOM || atmo.uniforms.uJourneyRooms.value.x === MIRROR_ROOM;
-    this.reflection.scale = mirrorJourney || onFlat ? this.mirrorScale : 0.25;
-    const mirrorEvery = params.mirror ?? this.mirrorEvery;
-    const mirrored = !!mirrorEvery && (mirrorJourney || onFlat || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
+    const rooms = atmo.uniforms.uJourneyRooms.value, room = atmo.uniforms.uRoom.value;
+    const sky = rooms.y === MIRROR_ROOM || rooms.x === MIRROR_ROOM || onFlat;
+    this.reflection.scale = sky ? this.mirrorScale : 0.25;
+    const mirrorEvery = params.mirror ?? (sky ? this.mirrorEvery : Math.max(this.mirrorEvery, this.seaMirrorEvery));
+    const mirrored = !!mirrorEvery && (sky || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT);
     const mirrorUniform = (this.mesh.material as THREE.ShaderMaterial).uniforms.uMirrorOn;
     const first = mirrored && mirrorUniform.value === 0;
     mirrorUniform.value = mirrored ? 1 : 0;
     if (!mirrored) return;
-    if (this.frame++ % mirrorEvery && !first) return;
+    const unchanged = sky || (this.renderedRooms.equals(rooms) && this.renderedRoom.equals(room) && this.reflection.holds(camera));
+    if (this.frame++ % mirrorEvery && !first && unchanged) return;
+    this.renderedRooms.copy(rooms);
+    this.renderedRoom.copy(room);
     atmo.uniforms.uMirrorPass.value = 1;
     this.reflection.render(camera, before, after);
     atmo.uniforms.uMirrorPass.value = 0;

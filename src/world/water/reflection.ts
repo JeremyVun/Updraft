@@ -7,6 +7,9 @@ const BIAS = new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 
 const UP = new THREE.Vector3(0, 1, 0);
 /** A hair above the sea, so the seabed right at the waterline never shows in the mirror. */
 const CLIP_POINT = new THREE.Vector3(0, 0.02, 0);
+/** A view that moved or turned this far since the last render has cut, and a stale reflection would not match it. */
+const CUT_MOVE = 2;
+const CUT_TURN = Math.cos(THREE.MathUtils.degToRad(5));
 
 /**
  * The world above y = 0 seen through a mirror under the sea, rendered at reduced resolution with mipmaps
@@ -21,6 +24,10 @@ export class PlanarReflection {
   private readonly clipPlane = new THREE.Vector4();
   private readonly plane = new THREE.Plane();
   private readonly q = new THREE.Vector4();
+  private readonly look = new THREE.Vector3();
+  private readonly renderedFrom = new THREE.Vector3();
+  private readonly renderedLook = new THREE.Vector3();
+  private rendered = false;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
@@ -42,14 +49,34 @@ export class PlanarReflection {
     return this.camera;
   }
 
-  render(view: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
-    const r = this.renderer;
-    r.getDrawingBufferSize(this.size);
+  private fit(): boolean {
+    this.renderer.getDrawingBufferSize(this.size);
     const w = Math.max(1, Math.round(this.size.x * this.scale));
     const h = Math.max(1, Math.round(this.size.y * this.scale));
-    if (this.target.width !== w || this.target.height !== h) this.target.setSize(w, h);
+    if (this.target.width === w && this.target.height === h) return true;
+    this.target.setSize(w, h);
+    return false;
+  }
+
+  /**
+   * Whether the last render can stand in for this view: `matrix` is still the one it was drawn with, so the
+   * water reads it where it was, but a resize or a cut since then leaves nothing valid to read.
+   */
+  holds(view: THREE.PerspectiveCamera): boolean {
+    if (!this.rendered || !this.fit()) return false;
+    view.updateMatrixWorld();
+    view.getWorldDirection(this.look);
+    return view.position.distanceToSquared(this.renderedFrom) < CUT_MOVE * CUT_MOVE && this.look.dot(this.renderedLook) > CUT_TURN;
+  }
+
+  render(view: THREE.PerspectiveCamera, before?: (mirrorCamera: THREE.PerspectiveCamera) => void, after?: () => void): void {
+    const r = this.renderer;
+    this.fit();
 
     view.updateMatrixWorld();
+    this.renderedFrom.copy(view.position);
+    view.getWorldDirection(this.renderedLook);
+    this.rendered = true;
     const cam = this.camera;
     const p = view.position;
     cam.position.set(p.x, -p.y, p.z);
