@@ -26,7 +26,7 @@ try {
   await page.locator('.veil-loading').evaluate(e=>{for(const a of e.getAnimations({subtree:true}))a.play()});
   if(viewport.width===390)await page.waitForTimeout(3000);
   await page.emulateMedia({reducedMotion:'reduce'});
-  assert.equal(await page.locator('.veil-loading svg').evaluate(e=>getComputedStyle(e).animationName),'none');
+  assert.equal(await page.locator('.veil-loading svg').first().evaluate(e=>getComputedStyle(e).animationName),'none');
   assert.equal(await page.locator('.veil-loading').evaluate(e=>e.getAnimations({subtree:true}).length),0);
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.locator('#veil').evaluate(e=>e.classList.add('ready'));
