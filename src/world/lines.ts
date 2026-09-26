@@ -181,17 +181,13 @@ in float vSwing;
 in float vRole;
 in float vCurtain;
 
-/** Interleaved gradient noise: a dither pattern that holds still on screen instead of crawling. */
-float clothDither(vec2 p) {
-  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
-}
-
 void main() {
   /**
    * Washing standing between the camera and the child dissolves out of the way. On a hill strung with two
    * hundred lines they would otherwise lose sight of who they are playing, which is the one thing this game
    * must never let happen.
    */
+  float shown = 1.0;
   if (uSubject.w > 0.5) {
     vec3 toSubject = uSubject.xyz - cameraPosition;
     float reach = length(toSubject);
@@ -201,7 +197,9 @@ void main() {
     if (along > 0.4 && along < reach - 1.0) {
       float side = length(toHere - dir * along);
       float hide = 1.0 - smoothstep(1.1, 3.2, side);
-      if (hide > 0.02 && clothDither(gl_FragCoord.xy) < hide) discard;
+      // Coverage rather than a screen dither: the lens fringe in the grade turns a pixel dither into coloured moiré.
+      shown = 1.0 - hide;
+      if (shown < 0.02) discard;
     }
   }
   vec3 N = normalize(vNormal);
@@ -236,7 +234,7 @@ void main() {
   vec3 col = cloth * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.55 + through * 0.7) * sun);
   col += cloth * cloth * uSunColor * through * 0.4 * sun;
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  gl_FragColor = vec4(applyFog(col, vWorld), shown);
 }`;
 
 const WOOD_VERT = /* glsl */ `
@@ -492,6 +490,7 @@ export class WashingLines {
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
+      alphaToCoverage: true,
     });
 
     const posts: THREE.BufferGeometry[] = [];
