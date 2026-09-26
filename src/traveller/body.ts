@@ -5,68 +5,23 @@ import { ATMO_GLSL, atmo } from '../world/atmosphere';
 export const PALETTE = {
   /** The yellow of the jumper on the family's washing line (`world/lines.ts`), which is this child's. */
   coat: new THREE.Color('#f0bb35'),
-  coatShade: new THREE.Color('#c8912a'),
+  coatShade: new THREE.Color('#b9832a'),
   scarf: new THREE.Color('#c8372d'),
   skin: new THREE.Color('#f3c9a4'),
-  cheek: new THREE.Color('#f3b09f'),
+  cheek: new THREE.Color('#ee9d8e'),
   eye: new THREE.Color('#2a1a14'),
-  lips: new THREE.Color('#8a4038'),
   boot: new THREE.Color('#4a3326'),
   trousers: new THREE.Color('#3e4a5c'),
 };
 
-/** A tube along `path` that narrows from `from` to `to`, closed at both ends. */
-function taperedTube(path: THREE.Curve<THREE.Vector3>, from: number, to: number): THREE.BufferGeometry {
-  const rings = 24;
-  const sides = 14;
-  const frames = path.computeFrenetFrames(rings, false);
-  const positions: number[] = [];
-  const index: number[] = [];
-  const p = new THREE.Vector3();
-  for (let i = 0; i <= rings; i++) {
-    const t = i / rings;
-    path.getPointAt(t, p);
-    const r = THREE.MathUtils.lerp(from, to, t ** 0.8);
-    for (let j = 0; j < sides; j++) {
-      const a = (j / sides) * Math.PI * 2;
-      const n = frames.normals[i].clone().multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
-      positions.push(p.x + n.x * r, p.y + n.y * r, p.z + n.z * r);
-    }
-  }
-  for (let i = 0; i < rings; i++) {
-    for (let j = 0; j < sides; j++) {
-      const a = i * sides + j;
-      const b = i * sides + ((j + 1) % sides);
-      index.push(a, a + sides, b, b, a + sides, b + sides);
-    }
-  }
-  for (const [ring, t] of [[0, 0], [rings, 1]] as const) {
-    const centre = positions.length / 3;
-    path.getPointAt(t, p);
-    positions.push(p.x, p.y, p.z);
-    for (let j = 0; j < sides; j++) index.push(centre, ring * sides + j, ring * sides + ((j + 1) % sides));
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  g.setIndex(index);
-  g.computeVertexNormals();
-  return g;
-}
-
-/** How each part takes the light. */
-const KIND = { cloth: 0, skin: 1, glint: 2 } as const;
-
 const VERT = /* glsl */ `
 in vec3 color;
-in float aKind;
 out vec3 vColor;
 out vec3 vWorld;
 out vec3 vNormal;
-flat out int vKind;
 void main() {
   vec4 w = modelMatrix * vec4(position, 1.0);
   vColor = color;
-  vKind = int(aKind + 0.5);
   vWorld = w.xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * w;
@@ -79,33 +34,15 @@ uniform vec3 uGroundPos;
 in vec3 vColor;
 in vec3 vWorld;
 in vec3 vNormal;
-flat in int vKind;
 void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
-  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
-  if (vKind == ${KIND.glint}) {
-    gl_FragColor = vec4(applyFog(vec3(0.95, 0.93, 0.9) * (0.75 + 0.25 * sun), vWorld), 1.0);
-    return;
-  }
   float ndl = dot(N, uSunDir);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
+  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
   float ao = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
-  vec3 hemi = hemiLight(N);
-  vec3 lit = uSunColor * wrap * wrap * sun * 0.95;
-  if (vKind == ${KIND.skin}) {
-    /** Skin keeps its warmth in shade: the cold sky is let in at half strength and light that gets under it glows red at the terminator. */
-    hemi = mix(hemi, vec3(dot(hemi, vec3(0.333))) * vec3(1.12, 0.95, 0.84), 0.55) * 1.3;
-    lit += uSunColor * vec3(1.0, 0.42, 0.3) * (1.0 - abs(ndl)) * sun * 0.28;
-    ao = 1.0;
-  }
-  /** A painter's shadow: colours deepen toward amber as they leave the sun, so the mustard coat goes ochre and not olive. */
-  vec3 amber = vKind == ${KIND.skin} ? vec3(1.0, 0.93, 0.86) : vec3(1.0, 0.9, 0.76);
-  vec3 alb = vColor * mix(amber, vec3(1.0), clamp(wrap * wrap * sun * 1.4, 0.0, 1.0));
-  /** The inside of the hood and coat is in its own shadow, which is what frames the face. */
-  if (!gl_FrontFacing) alb *= 0.5;
-  vec3 col = alb * (hemi * 1.05 * ao + lit);
+  vec3 col = vColor * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95);
   col += uSunColor * vColor * rim * 0.55 * sun;
   /**
    * The light a room makes for itself: the coals the child walks toward, the bedside lamp, the first morning.
@@ -121,12 +58,11 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-function paint(geo: THREE.BufferGeometry, color: THREE.Color, kind: number = KIND.cloth): THREE.BufferGeometry {
+function paint(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
   const colors = new Float32Array(g.attributes.position.count * 3);
   for (let i = 0; i < colors.length; i += 3) colors.set([color.r, color.g, color.b], i);
   g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  g.setAttribute('aKind', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(kind), 1));
   g.deleteAttribute('uv');
   return g;
 }
@@ -143,8 +79,6 @@ export interface Rig {
   /** The coat itself, so it can be flattened on its own: everything else on the body must keep its size. */
   coat: THREE.Mesh;
   head: THREE.Group;
-  /** The loose point of the hood, hung off the crown. */
-  hoodTip: THREE.Group;
   armL: THREE.Group;
   armR: THREE.Group;
   /** The elbows: each forearm hangs off its upper arm and carries the mitten. */
@@ -278,44 +212,18 @@ export function buildChild(): Rig {
   const head = new THREE.Group();
   head.position.y = 1.38;
   body.add(head);
-  const face = paint(at(new THREE.SphereGeometry(0.37, 28, 20), 0, 0, 0.05), PALETTE.skin, KIND.skin);
-  /**
-   * An open hood: a shell with a round opening at the front that the face sits in, so its lining is in shadow round
-   * the face instead of the face showing only where it pushes through a closed ball.
-   */
-  const HOOD_OPEN = Math.acos(0.325 / 0.46);
-  const hood = paint(
-    at(new THREE.SphereGeometry(0.46, 32, 20, 0, Math.PI * 2, HOOD_OPEN, Math.PI - HOOD_OPEN).rotateX(Math.PI / 2), 0, 0.05, -0.07),
-    PALETTE.coat,
-  );
-  const rim = paint(at(new THREE.TorusGeometry(0.46 * Math.sin(HOOD_OPEN), 0.045, 10, 40), 0, 0.05, 0.255), PALETTE.coatShade);
-  const cheeks = [-1, 1].map((s) =>
-    paint(at(new THREE.SphereGeometry(0.068, 12, 8), s * 0.195, -0.085, 0.36, 1, 0.58, 0.35), PALETTE.cheek, KIND.skin),
-  );
-  head.add(mesh([face, hood, rim, ...cheeks]));
-  /**
-   * The hood's long point: soft cloth that rises off the crown, falls back and flops over to one side, with the
-   * pompom on the end. It hangs from its own pivot so it can lag the head and lean with the wind.
-   */
-  const tip = new THREE.Group();
-  tip.position.set(0, 0.34, -0.22);
-  head.add(tip);
-  const tipPath = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, -0.06, 0.04), new THREE.Vector3(0, 0.14, -0.12), new THREE.Vector3(0.03, 0.25, -0.34),
-    new THREE.Vector3(0.13, 0.2, -0.52), new THREE.Vector3(0.23, 0.04, -0.6),
-  ]);
-  const end = tipPath.getPoint(1);
-  tip.add(mesh([
-    paint(taperedTube(tipPath, 0.2, 0.035), PALETTE.coat),
-    paint(at(new THREE.SphereGeometry(0.105, 16, 12), end.x + 0.02, end.y - 0.07, end.z), PALETTE.scarf),
-  ]));
-  const eyes = mesh([-1, 1].flatMap((s) => [
-    paint(at(new THREE.SphereGeometry(0.044, 12, 10), s * 0.125, -0.005, 0.4, 1, 1.22, 0.6), PALETTE.eye),
-    paint(at(new THREE.SphereGeometry(0.012, 8, 6), s * 0.125 + 0.014, 0.017, 0.424), PALETTE.eye, KIND.glint),
-  ]));
+  const face = paint(at(new THREE.SphereGeometry(0.37, 20, 14), 0, 0, 0.05), PALETTE.skin);
+  const hood = paint(at(new THREE.SphereGeometry(0.45, 20, 14), 0, 0.05, -0.07), PALETTE.coat);
+  const tip = paint(at(new THREE.ConeGeometry(0.22, 0.5, 12).rotateX(-1.05), 0, 0.36, -0.36), PALETTE.coat);
+  const tipEnd = paint(at(new THREE.ConeGeometry(0.1, 0.34, 10).rotateX(-1.9), 0, 0.42, -0.66), PALETTE.coat);
+  const pompom = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, 0.32, -0.83), PALETTE.scarf);
+  const rim = paint(at(new THREE.TorusGeometry(0.34, 0.06, 8, 20), 0, 0.02, 0.3, 1, 1.08, 1), PALETTE.coatShade);
+  const cheeks = [-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.06, 8, 6), s * 0.19, -0.1, 0.36, 1, 0.6, 0.5), PALETTE.cheek));
+  head.add(mesh([face, hood, tip, tipEnd, pompom, rim, ...cheeks]));
+  const eyes = mesh([-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.04, 8, 6), s * 0.12, 0.0, 0.405, 1, 1.25, 0.6), PALETTE.eye)));
   head.add(eyes);
-  const yawnMouth = mesh([paint(new THREE.SphereGeometry(0.055, 12, 10), PALETTE.lips)]);
-  yawnMouth.position.set(0, -0.13, 0.397);
+  const yawnMouth = mesh([paint(new THREE.SphereGeometry(0.055, 12, 10), PALETTE.eye)]);
+  yawnMouth.position.set(0, -0.135, 0.397);
   yawnMouth.scale.set(0.7, 1, 0.25);
   yawnMouth.visible = false;
   head.add(yawnMouth);
@@ -387,7 +295,6 @@ export function buildChild(): Rig {
     body,
     coat: bell,
     head,
-    hoodTip: tip,
     armL: left.g,
     armR: right.g,
     foreL: left.fore,

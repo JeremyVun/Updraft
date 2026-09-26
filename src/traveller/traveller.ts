@@ -170,7 +170,6 @@ export class Traveller {
   private readonly shadowMat: THREE.ShaderMaterial;
   private time = 0;
   private readonly bodyInverse = new THREE.Matrix4();
-  private readonly hoodTip = { x: 0, y: 0, vx: 0, vy: 0, bob: 0, headYaw: 0 };
   private readonly keepOffChild = (p: THREE.Vector3) => {
     keepOffChild(p.applyMatrix4(this.bodyInverse), this.rig.coat.scale);
     p.applyMatrix4(this.rig.body.matrixWorld);
@@ -704,27 +703,6 @@ export class Traveller {
     }
   }
 
-  /**
-   * The hood's point is loose cloth on a spring: it bounces a beat behind each step, trails the head's turns and
-   * leans with the wind.
-   */
-  private flopHoodTip(dt: number): void {
-    const h = Math.min(dt, 1 / 30);
-    if (h <= 0) return;
-    const ahead = this.sample.x * Math.sin(this.yaw) + this.sample.z * Math.cos(this.yaw);
-    const across = this.sample.x * Math.cos(this.yaw) - this.sample.z * Math.sin(this.yaw);
-    const restX = THREE.MathUtils.clamp(ahead * 0.02, -0.25, 0.3);
-    const restY = THREE.MathUtils.clamp(-across * 0.02, -0.3, 0.3);
-    const s = this.hoodTip;
-    s.vx += ((restX - s.x) * 70 - s.vx * 6) * h + (this.bob - s.bob) * 14;
-    s.vy += ((restY - s.y) * 70 - s.vy * 6) * h - (this.headYaw - s.headYaw) * 9;
-    s.x = THREE.MathUtils.clamp(s.x + s.vx * h, -0.4, 0.45);
-    s.y = THREE.MathUtils.clamp(s.y + s.vy * h, -0.45, 0.45);
-    s.bob = this.bob;
-    s.headYaw = this.headYaw;
-    this.rig.hoodTip.rotation.set(s.x, s.y, 0);
-  }
-
   private pose(dt: number): void {
     const r = this.rig;
     const t = this.time;
@@ -886,7 +864,6 @@ export class Traveller {
     this.headYaw = damp(this.headYaw, wantYaw, 5, dt || 1);
     this.headPitch = damp(this.headPitch, wantPitch, 5, dt || 1);
     r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05 + tiltNow);
-    this.flopHoodTip(dt);
     r.eyes.scale.set(1, this.blink > 0 ? 0.15 : 1, 1);
     r.coat.scale.set(1, 1, 1);
     const abed = this.abedGlide.step(this.abed, 0.8, dt || 1);
