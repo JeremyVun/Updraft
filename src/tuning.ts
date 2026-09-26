@@ -505,6 +505,18 @@ export const tuning = {
     /** Seconds it keeps its eyes on the sky they left by, after which they are out of sight for good. */
     watches: 7,
   },
+  /** The rainbow the meadow's shower leaves, standing over the sea ahead of the walk to the boat. */
+  rainbow: {
+    /** How far through the shower's steady rain the sun breaks through and the bow starts to form (0..1), and how fast it comes and goes. */
+    formsAt: 0.5, grows: 0.2, fades: 0.15,
+    /** Where it stands: degrees east of north, and how far below the horizon its centre lies, which sets how low the arch is. */
+    bearing: 14, sink: 31,
+    /**
+     * The walking camera's glance: the share of its gaze given to the bow, the point it looks toward (metres out, and
+     * rise per metre), and how far the camera settles to let the sky in.
+     */
+    gaze: 0.08, aim: 180, aimUp: 0.25, settle: 5,
+  },
   wingCare: {
     dressFor: 4.8,
     lookBackFor: 2.2,

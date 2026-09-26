@@ -1,21 +1,22 @@
 /** Shared sky radiance: the open-sea veil must dissolve into the same clouds, light and stars as the backdrop. */
 export const SKY_RADIANCE_GLSL = /* glsl */ `
 uniform float uRainbow;
+uniform vec3 uRainbowAxis;
 
 vec3 spectrum(float t) {
   return clamp(vec3(1.6 - abs(t - 0.95) * 3.0, 1.4 - abs(t - 0.55) * 3.2, 1.3 - abs(t - 0.12) * 3.4), 0.0, 1.0);
 }
 
-/** Light added by a rainbow round the point opposite the sun: the bright primary bow, a faint reversed secondary, and the darker band between. */
+/** Light added by a rainbow round its centre: the bright primary bow, a faint reversed secondary, and the darker band between. */
 vec3 rainbow(vec3 d, vec3 sky) {
-  float a = degrees(acos(clamp(dot(d, -uSunDir), -1.0, 1.0)));
+  float a = degrees(acos(clamp(dot(d, uRainbowAxis), -1.0, 1.0)));
   float p = (a - 40.2) / 2.6;
   float primary = smoothstep(0.0, 0.25, p) * (1.0 - smoothstep(0.7, 1.0, p));
   float q = (53.8 - a) / 3.2;
   float secondary = smoothstep(0.0, 0.4, q) * (1.0 - smoothstep(0.6, 1.0, q)) * 0.16;
   float inside = (1.0 - smoothstep(30.0, 40.5, a)) * smoothstep(0.0, 20.0, a) * 0.05;
   float gap = smoothstep(42.4, 43.4, a) * (1.0 - smoothstep(50.0, 51.0, a)) * 0.07;
-  vec2 across = d.xz + uSunDir.xz;
+  vec2 across = d.xz - uRainbowAxis.xz;
   float along = dot(across, across) > 1e-10 ? atan(across.x, across.y) : 0.0;
   float patchy = 0.55 + 0.45 * smoothstep(0.3, 0.7, fbm(vec2(along * 2.2, uTime * 0.004)));
   float fade = smoothstep(-0.01, 0.05, d.y) * patchy * uRainbow;

@@ -24,8 +24,6 @@ export const FIRST_ISLAND = new THREE.Vector3(-8, 9, -18);
 
 /** How near a waypoint counts as rounded. */
 const ROUNDED = 22;
-/** How long a rainbow lingers once the boat sets out. */
-const RAINBOW_FOR = 70;
 /** How quickly the lens catches up with route progress, which jumps when a waypoint is passed early in its channel. */
 const FRAMED_RESPONSE = 1.2;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
@@ -55,7 +53,6 @@ export interface CrossingOpts {
   /** What the child rides facing and waves at as it falls astern, or nothing to face the way ahead throughout. */
   lookBack?: THREE.Vector3 | null;
   farewell?: number;
-  rainbow?: boolean;
   /** When the whale comes up ahead, or nothing for a crossing without one. */
   whaleAt?: number | null;
   /** How often it comes up again after that, for a crossing long enough to want a second one. */
@@ -100,7 +97,6 @@ export class CrossingChapter implements Chapter {
   private readonly arrivalHaze?: CrossingOpts['arrivalHaze'];
   readonly storm: number;
   shower: number;
-  rainbow = 0;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 6.5, carry: true };
   readonly focus = new THREE.Vector3();
   readonly escort = new THREE.Vector3();
@@ -119,7 +115,6 @@ export class CrossingChapter implements Chapter {
   private readonly cruiseSpeed: number;
   private readonly lookBack: THREE.Vector3 | null;
   private readonly farewellFor: number;
-  private readonly wantsRainbow: boolean;
   private readonly whaleAt: number | null;
   private readonly whaleEvery: number;
   private readonly wantsDolphins: boolean;
@@ -207,7 +202,6 @@ export class CrossingChapter implements Chapter {
     this.season = opts.season ?? 0.3;
     this.lookBack = opts.lookBack ?? null;
     this.farewellFor = this.lookBack ? (opts.farewell ?? 30) : 0;
-    this.wantsRainbow = opts.rainbow ?? false;
     this.whaleAt = opts.whaleAt ?? null;
     this.whaleEvery = opts.whaleEvery ?? 0;
     this.wantsDolphins = opts.dolphins ?? false;
@@ -446,9 +440,6 @@ export class CrossingChapter implements Chapter {
 
     if (this.swimAt !== null) this.braveSwim(dt);
     if (this.wantsDolphins) this.paceSea(dt, swimming);
-
-    const wanted = this.wantsRainbow && this.time < RAINBOW_FOR ? 1 : 0;
-    this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? 0.3 : 0.06)));
 
     this.swimFrame += ((swimming ? 1 : 0) - this.swimFrame) * (1 - Math.exp(-dt * 0.65));
     if (!this.wantsDolphins) {

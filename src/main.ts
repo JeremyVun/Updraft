@@ -520,7 +520,7 @@ let heightParity = 0;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
-const shown = { dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
+const shown = { rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
 const ISLE_MISTS = {
   wood: { isle: ISLES.wood, range: tuning.world.woodMist },
   sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
@@ -592,7 +592,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (story.current.finished) telemetry.complete();
   if (story.name !== 'boats' && littleBoats.departing) littleBoats.update(dt, time, wind, Infinity);
   creatures.gulls.follow(story.escort);
-  atmo.uniforms.uRainbow.value = story.rainbow;
+  // The bow keeps its place and fades on across a change of chapter rather than vanishing with it.
+  shown.rainbow = ease(shown.rainbow, story.rainbow, 0.6, dt);
+  atmo.uniforms.uRainbow.value = shown.rainbow;
+  if (story.rainbowAxis) atmo.uniforms.uRainbowAxis.value.copy(story.rainbowAxis);
   boat.update(dt, time);
   child.update(dt);
   skyMirror.pose(child);

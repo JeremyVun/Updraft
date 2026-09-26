@@ -258,6 +258,9 @@ export class Journey {
   get rainbow(): number {
     return this.chapter.rainbow ?? 0;
   }
+  get rainbowAxis(): THREE.Vector3 | undefined {
+    return this.chapter.rainbowAxis;
+  }
   get escort(): THREE.Vector3 | null {
     return this.chapter.escort ?? null;
   }
@@ -306,7 +309,6 @@ export class Journey {
           season: 0.14,
           lookBack: FIRST_ISLAND,
           farewell: 30,
-          rainbow: true,
           whaleAt: 52,
           haze: 0.35,
           arrivalHaze: { strength: tuning.world.linesCrossingHaze,

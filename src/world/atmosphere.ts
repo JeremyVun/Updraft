@@ -67,8 +67,10 @@ export const atmo = {
     uJourneyVeilAmounts: journeyReveal.amounts,
     /** Doorway override: positive keeps this room, negative conceals it, zero uses the journey. */
     uRoom: { value: new THREE.Vector3(0, 0, 0) },
-    /** 0 none, 1 a full rainbow opposite the sun (drawn by the sky). */
+    /** 0 none, 1 a full rainbow (drawn by the sky). */
     uRainbow: { value: 0 },
+    /** Where the bow is centred. Opposite the sun in nature; a chapter places it where the walk will see it. */
+    uRainbowAxis: { value: new THREE.Vector3(0, -0.5, -1).normalize() },
     /** A passing shower, 0 dry to 1: wet sheen on the grass. */
     uShower: { value: 0 },
     uStormCover: { value: 0 },

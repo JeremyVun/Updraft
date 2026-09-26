@@ -20,7 +20,7 @@ Jeremy played it (2026-09-16): sound is good and touch works beautifully.
 Jeremy's brief for this milestone and the story as built are in `journey.md`: a wordless story from a grey, still island across the sea to endless green hills and a cottage at night. The restoration is simpler than first planned: wind itself brings life back (no seeds, rain or fire elements), which keeps the one verb.
 
 - The traveller (a child with a paper plane), the grey still world and life returning where the wind goes.
-- The crossing by boat: farewell under a rainbow, gulls, a whale and fish (whale and fish on a subagent branch).
+- The crossing by boat: farewell to the still island, gulls, a whale and fish (whale and fish on a subagent branch).
 - The mainland: streamed terrain, grass, field patchwork, dry-stone walls, wildflowers; the green wave; a sun shower; a murmuration at sunset.
 - Creatures: rabbits, finches, gulls, butterflies (sheep on a subagent branch).
 - Time of day from golden afternoon to night; the drawing, the release, the cottage, the moon.

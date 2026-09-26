@@ -2,6 +2,7 @@ import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import { PlaneArrival } from './plane-arrival';
 import type { Shot } from '../camera';
+import type { CameraAttention } from '../camera-direction';
 import { BANK, POND, POND_LEVEL, ISLES, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
 import { WAY } from '../world/fields';
 import { piano, PATCH, PLACE } from '../world/piano';
@@ -84,6 +85,11 @@ const GUST_FOR = 15;
 const UNANSWERED = 0.45;
 /** The sun shower on the walk: it gathers, falls steadily, then drifts away (seconds). */
 const SHOWER = { gather: 10, fall: 30, clear: 16 };
+/** The shower's rainbow is placed rather than put opposite the sun, which at the meadow is behind the walk: it stands ahead, over the sea. */
+const RAINBOW_AXIS = (() => {
+  const b = THREE.MathUtils.degToRad(tuning.rainbow.bearing), e = THREE.MathUtils.degToRad(tuning.rainbow.sink);
+  return new THREE.Vector3(Math.sin(b) * Math.cos(e), -Math.sin(e), -Math.cos(b) * Math.cos(e));
+})();
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 16;
 
@@ -103,6 +109,10 @@ export class MeadowChapter implements Chapter {
   private beatHush = 0;
   dusk = 0;
   shower = 0;
+  rainbow = 0;
+  readonly rainbowAxis = RAINBOW_AXIS;
+  /** The walk keeps going and the camera keeps following; its gaze only lifts a little toward the bow while it stands. */
+  private readonly bowAttention: CameraAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.rainbow.gaze };
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 40, height: 12 };
   readonly music = 'meadow' as const;
   readonly season = 0.32;
@@ -441,6 +451,10 @@ export class MeadowChapter implements Chapter {
         t < gather
           ? THREE.MathUtils.smoothstep(t, 0, gather)
           : 1 - THREE.MathUtils.smoothstep(t, gather + fall, gather + fall + clear);
+      /** The sun breaks through while it is still raining, and the bow stands in the rain ahead until they reach the boat. */
+      const bow = tuning.rainbow;
+      const wanted = t > gather + fall * bow.formsAt && !this.arrival.active ? 1 : 0;
+      this.rainbow += (wanted - this.rainbow) * (1 - Math.exp(-dt * (wanted > this.rainbow ? bow.grows : bow.fades)));
     }
     /**
      * From the brow on, the walk faces north over open water toward the next island, so the veil that stands
@@ -847,6 +861,7 @@ export class MeadowChapter implements Chapter {
     const p = this.cast.plane.position;
     const s = this.shot;
     s.from = undefined;
+    s.attention = undefined;
     // The low pond view follows the open water beside the bank; preserve that staged approach.
     s.composition = ['down', 'crest', 'pond', 'gather'].includes(this.beat) ? 'hold' : undefined;
     s.eye = undefined;
@@ -976,5 +991,19 @@ export class MeadowChapter implements Chapter {
     s.subjects = this.framing;
     this.pace = guide.cameraPace;
     this.focus.set(fx, ground, fz);
+    this.glanceAtBow(ground);
+  }
+
+  private glanceAtBow(ground: number): void {
+    const s = this.shot;
+    const a = this.bowAttention;
+    a.strength = THREE.MathUtils.smoothstep(this.rainbow, 0.05, 0.9);
+    if (a.strength <= 0) return;
+    const r = tuning.rainbow;
+    const c = this.cast.child.position;
+    const across = Math.hypot(RAINBOW_AXIS.x, RAINBOW_AXIS.z);
+    a.point.set(c.x + RAINBOW_AXIS.x / across * r.aim, ground + r.aim * r.aimUp, c.z + RAINBOW_AXIS.z / across * r.aim);
+    a.height = s.height - r.settle;
+    s.attention = a;
   }
 }

@@ -518,7 +518,10 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    patch of colour in it and a piano standing there, on the way and about a minute off. Every note the wind finds
    on it sends a trace up the hill that greens the grass it runs over; the lullaby wakes the rest in waves, and the
    camera rises off the piano to watch the last of it roll toward the crest. The long walk follows the plane
-   through a sun shower, over the brow, where the pond is revealed lying on the open slope below, and down to it.
+   over the brow, where the pond is revealed lying on the open slope below, and down to it. Walking on from the
+   pond, a sun shower passes; halfway through it the sun breaks out and a rainbow stands in the rain over the sea
+   ahead, where the boat is waiting. The walk does not stop for it; the camera's gaze only lifts a little toward it
+   until they reach the boat.
    **Built**, and still needs the cygnet's first glide on the player's updraft.
 4. **The drowned village** (`story/drowned.ts`, `world/drowned.ts`) — the long dusk drift between rooftops, a
    spire, treetops, a turning weathervane, herons on chimneys, autumn leaves on black water. Homes the water took.

@@ -123,8 +123,9 @@ export interface Chapter {
   readonly season?: number;
   /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
   readonly scripted?: boolean;
-  /** How strongly a rainbow shows opposite the sun, 0..1. */
+  /** How strongly a rainbow shows, 0..1, and the direction of its centre. */
   readonly rainbow?: number;
+  readonly rainbowAxis?: THREE.Vector3;
   /** The winter storm, 0 calm to 1: how hard the trees and the village are being worked over. */
   readonly storm?: number;
   /** Null reserves lightning for this chapter; a new object fires one authored strike. */
