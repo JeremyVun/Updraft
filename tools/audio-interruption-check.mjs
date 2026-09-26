@@ -255,17 +255,17 @@ try {
     // An arrival only moves the background's gates: the shared reverb stays, and no convolver is made or analysed.
     const { ARRIVAL_MUSIC } = await productionModule('/src/audio/arrival-music.ts');
     const arrival = offline(18, 24000);
-    let reverb = null, arrivalAnalyses = 0, convolvers = 0;
+    let shared = null, arrivalAnalyses = 0, convolvers = 0;
     const createConvolver = arrival.off.createConvolver;
     arrival.off.createConvolver = function () { convolvers++; return createConvolver.call(this); };
     await render(arrival.off, 18, tick => {
       const now = tick / 8, landed = now >= 16, analysed = analyses;
-      if (now === 3) { reverb = arrival.s.reverbConvolver; convolvers = 0; }
+      if (now === 3) { shared = arrival.s.reverbConvolver; convolvers = 0; }
       arrival.s.update(.125, { ...baseState, music: 'sea', flockChatter: false, ...(landed ? ARRIVAL_MUSIC.lines : {}),
         arrivalMusic: now >= 8 && !landed ? 'lines' : undefined });
       if (now >= 3) arrivalAnalyses += analyses - analysed;
     }, .125);
-    check(reverb?.buffer && arrival.s.reverbConvolver === reverb && arrivalAnalyses === 0 && convolvers === 0,
+    check(shared?.buffer && arrival.s.reverbConvolver === shared && arrivalAnalyses === 0 && convolvers === 0,
       'The arrival keeps the shared reverb, making and analysing no convolver');
 
     // The foghorn's buffers and diffuse field are made during Drowned, so the cue's frame only connects nodes.
