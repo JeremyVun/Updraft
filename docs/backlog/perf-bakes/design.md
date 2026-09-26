@@ -709,6 +709,22 @@ include the refactored arrival and ending gates).
 - **Medium keeps full grass density;** Low's drop is to be gentler (number pending).
 - **L8 approved:** one reverb becomes the only path (phase X3).
 
+### Phase X3 results: one reverb (L8, 2026-09-26, branch `perf-bakes-x3`)
+
+Jeremy, having heard the paired renders: "I struggle to hear the difference between one reverb and two reverbs,
+lets just use one reverb". The `reverb=one` graph is now the only one: the background's wet send passes its own
+gate and duck and then goes into the shared reverb, and arrivals and the ending move both background gates together.
+The second convolver, the spare, the arrival swap and the `reverb=` flag are gone, so the Begin analyses one convolver
+instead of three and an arrival analyses none. Rendered offline against the base build's Soundscape with `oneReverb`
+forced on, it matches to −113 dBFS or better, as close as two renders of one build. Against the old two-reverb default
+it differs where L8 said it would (up to −43 dBFS in the arrival fade, when the echo is no longer cut). The checks
+that held the background convolver now assert that the shared reverb survives each landing, that the dry and
+reverb gates move together and shut through the rest, and that nothing from the music enters the reverb during the
+rest. `audio-cost` pairs against the old graph with `PAIRS=tworeverb`, putting a second convolver after the gate on the
+live page. Offline render time (`audio-silence-check REPS=5`, medians, busy machine): the wind sequence 28% faster,
+scores 17%, the arrival 17%, the ending 4%. The live saving is still to measure; L8 measured 40–60 ms/s of
+renderer CPU where a score and another sound share the reverb.
+
 ### Surprises
 
 - **The biggest GPU cost of the playthrough is the sea surface's shading (19%), not the grass (13%).** About 30%
