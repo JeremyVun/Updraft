@@ -871,6 +871,89 @@ the sea though". His rulings on the lead's proposals, 2026-09-26 (verbatim):
   before/after video for Jeremy. Not the default without his verdict.
 - **Untouched:** glints, ripples, surf and wind streaks.
 
+### Phase S results (2026-09-26, branch `perf-bakes-s`)
+
+Built: **S1** (the ordinary sea's reflection every other frame) and **S3** (`roomHides` once per sample). Dropped:
+**S2** (the seabed is never hidden where it is drawn). **S4** is built behind `seafog=coarse` for Jeremy's verdict
+only; the default is unchanged. Glints, ripples, surf and wind streaks are untouched. Evidence page:
+`/tmp/updraft-pb-s-evidence/index.html`.
+
+**How it was measured.** `tools/frame-profile.mjs` from this worktree's own server, `RATIO=1.5 MSAA=2 DRAIN=1
+GPU_QUIET=1`, iPad-sized page. The machine was busy for the whole phase (`secd` at 80–200% CPU, a VM, Brave, another
+session's Chrome captures and profiles, `none` reading −4 to +14% in full frames), so full-frame pairs could not resolve
+a 2–3% change. Two quieter measures were added to the profiler and carry the numbers:
+- `REFLECTION_PASS=1`: the reflection pass alone, in the chapter's rooms, 40 passes then drained, median of 7 rounds.
+- `WATER_PASS=<variants>`: the sea alone drawn into the scene target, 30 draws then drained per variant, 12 ABBA rounds;
+  each round's new-against-variant ratio is pooled over two loads (24 pairs). `none` is the self-control.
+Raw data: `/tmp/updraft-pb-s-l1..l3.json` (full frames, exactness), `-r1/-r2` (reflection pass), `-f1/-f2` (focused
+frames), `-w1/-w2` (the sea alone).
+
+**S1, the ordinary sea's reflection every other frame: built.**
+- `Water.update`: the sky mirror (the mirror room in `uJourneyRooms`, or the camera within `reflectionPrepare` of the
+  flat) takes exactly the old path: `mirrorEvery` from the quality ladder, its own scale, the same frame counter. The
+  ordinary sea uses `max(mirrorEvery, seaMirrorEvery = 2)`. It also redraws at once, whatever the counter, when the
+  view has cut (moved over 2 m or turned over 5° since the last render), when the target no longer fits (resize, or
+  the scale changed on leaving the mirror journey), and when `uJourneyRooms` or `uRoom` changed (chapter handoffs, the
+  doorway). The first frame the mirror is switched on renders, as before. `mirror=1` restores every frame everywhere.
+- **Pairing.** `uMirrorMatrix` is the reflection's own `matrix` object, written only when the reflection renders, so a
+  stale frame always samples the texture with the projection it was drawn with: the reflected world stays where it was
+  drawn, one frame old, rather than swimming with the new camera.
+- **Where it applies.** The ordinary sea's reflection is only drawn south of the meadow's coast (`SEA_OUT_OF_SIGHT`):
+  the island, the crossing out, the Washing, the crossings to the Boats and the Meadow, the Boats and the Meadow. The
+  open sea to the mirror and the crossing home are the mirror journey, where Jeremy's ruling keeps every frame at the
+  sky mirror's 0.75 scale; that pass is 1.10–1.18 ms (about 5–6% of a frame) and is unchanged. North of the Meadow
+  (Birches to Sleeping, home) no reflection is drawn at all.
+- **Saving.** The pass alone at 0.25 scale (516×387): island 0.45–0.53 ms, crossing out 0.79–0.90, Washing 0.48–0.54,
+  Meadow walk 0.44–0.47, Boats 0.65–0.72. S1 saves half of it each frame: **about 2.0–2.5% of a drained frame on the
+  island, 3.6–4.0% on the crossing out, 2.1–2.6% in the Washing, 1.7–1.9% on the Meadow walk, 2.4–3.1% at the
+  Boats**. Paired full frames (`s1-off`, three loads) read −3 to +2% there, inside that run's noise.
+- **Sky mirror unchanged.** `s1-off` against the new code in the Mirror and the open sea to it: no changed pixel,
+  static in three loads and along a 24-step camera path. The frame-locked capture compares every frame (below).
+- Motion: see "S1 motion review" below.
+
+**S2, skip the seabed where the water hides it: dropped, it is never hidden where it is drawn.**
+- The bound was built from the shader's own terms: the bed's weight `exp(−path·0.2)·(1 − smoothstep(6, 9, bedDepth))`,
+  times the brighter of the brightest lit bed and the water body, times `(1 − F)(1 − fog.a)(1 − glass)`, against
+  1/4096 (the grade's steepest slope is 6.4, ACES then sRGB near black, and its tint and saturation add 1.5 more).
+- A diagnostic colouring every sea pixel by branch found almost nothing below the bound: 0 pixels at sea, 0 on the
+  island, 8 on the crossing out, 0 in the Drowned drift, 595 of 1.42 M on the Meadow walk. Inside the window the open
+  sea floor lies 5.1 m down (`seaFloor`), so the bed branch runs over nearly all visible sea, and Snell's window keeps
+  `tDown` ≥ 0.66 even at grazing angles: the bed weighs 0.2–0.3 in the water's body colour out to the window's edge,
+  where `inside` drops the floor to 12 m and the old `depth < 9` guard already skips it. The bed is part of the open
+  sea's colour everywhere it is computed. The code was reverted; the bed branch is exactly as on `main`.
+- **Exact skips inside the bed that remain (not built; the bed's noise belongs to phase 6):** the weed term is
+  multiplied by exactly 0 outside bed depths 0.9–4 m, which is the whole open sea (two `vnoise` per pixel); the
+  caustics are multiplied by exactly 0 beyond 220 m and above 0.1 m of water (two `textureGrad`). Removing each
+  entirely (`water-weed`, `water-caustics`, one contended load) read 1–10% and 1–9%, an upper bound only.
+
+**S3, repeated work: `roomHides` folded; built.**
+- The audit: `roomHides(xz)` ran three times per sea pixel with one argument (the `inside` cut, the pool level, the
+  sky-mirror glass) and twice per surface sample in the vertex shader (three samples per vertex). Each is about eleven
+  ellipse tests. Now once per pixel and once per sample. Nothing else repeats with one argument in `water.ts`: the
+  height read, `groundAt`, `cloudShadow` and `boatsWaterBase` are each taken at the pixel and again at the refracted
+  bed point, which differ, so folding them would change the picture.
+- Outside the owned files, two exact folds remain: `waterWindAt(xz)` is read by `stroke` and again inside
+  `windWaveSlope` (`wind-waves.ts`), and `foamColor` recomputes the `backlit` term (`surf.ts`). In `fogOf`
+  (`atmosphere.ts`) `skyRadiance(rd)` can be evaluated up to three times for one ray (open-sea veil, island veil,
+  arrival veil).
+- **Exactness:** no changed pixel in any of the 13 fixtures (the eleven chapters, the crossing out and the summit),
+  static and along a 24-step sideways camera path, in three loads.
+- **Saving (the sea alone, two loads, 24 pairs):** the new sea is 4.8–10.2% cheaper than `s3-off` (medians: Mirror
+  10.2, island 8.9, Drowned 8.4, sea 8.0, Boats 7.6, Meadow walk 6.9, crossing out 6.3, Washing 5.4, Jetty 4.8;
+  interquartile ranges mostly above 0), where `none` reads −3.9 to +5.1%. The sea is about 3–6 ms of a 10–12 ms drained
+  frame, so about 2–3% of a frame; the focused frames agree (pooled medians 1.5–3.6% in six of seven chapters, 0 in
+  the Meadow walk).
+
+**S4, coarser fog: built behind `seafog=coarse`, evidence only.**
+- `COARSE_FOG` moves `fogOf(vWorld)` to the vertex shader and interpolates it; the fragment keeps its early return
+  where the interpolated fog is fully opaque. The profiler toggles it as `seafog-coarse`.
+- **Saving:** the sea alone is 8.8–18.7% cheaper (medians: open sea 18.7, Meadow walk 14.9, Boats 14.5, Drowned 13.5,
+  Mirror 13.4, Jetty 12.9, Washing 11.3, crossing out 9.3, island 8.8). Full frames, three contended loads: open sea
+  9.5–11.8%, Jetty 6.3–13.1%, Drowned 4.2–14.2%, Boats 4.1–4.5%, island 1.2–12.1%; focused frames 2–8%.
+- **Static difference** (fixture frame): at most 1/255 on the island and in the Washing, 3 on the crossing out, 6–7 at
+  the Boats, 6–10 on the Jetty, 7–12 at sea, 14–17 in the Drowned drift.
+- Look: see "S4 look review" below.
+
 ## What changes
 
 ### A. Skip terrain fragment work that is thrown away (exact)
