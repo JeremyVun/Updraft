@@ -172,7 +172,7 @@ readbackHeightWorstMs` each consumer's handler. `?depth=1|2|3` and `?stale=<ms>`
 
 The bottom-right Graphics quality selector offers Auto, High, Medium and Low. Auto is the default and
 adapts in both directions. High holds full world detail at device pixel ratio (capped at 1.5); Medium holds
-80% grass with 95% reach at at most 1× scale with up to two MSAA samples; Low holds 55% grass with
+full grass density with 95% reach at at most 1× scale with up to two MSAA samples; Low holds 80% grass with
 85% reach at 0.85× scale (relative to the lesser of DPR and 1), also with up to two samples. Low prioritises
 a fuller meadow and caps presentation at 30 fps. Auto, High and Medium cap at 60; these are ceilings, not
 guaranteed device frame rates. The wind retains its fixed 60 Hz simulation on every preset.
@@ -241,8 +241,8 @@ targets 60 fps. Full grass recovers before extra antialiasing. World detail cont
 | Level | Grass density | Grass reach | Terrain split factor | Reflection cadence | Sky-mirror scale |
 | --- | --- | --- | --- | --- | --- |
 | Full | 100% | 100% | 1.6 | Every frame | 0.75 |
-| Medium | 80% | 95% | 1.35 | Every frame | 0.625 |
-| Low | 55% | 85% | 1.1 | Alternate frames | 0.5 |
+| Medium | 100% | 95% | 1.35 | Every frame | 0.625 |
+| Low | 80% | 85% | 1.1 | Alternate frames | 0.5 |
 | Auto fallback | 25% | 70% | 1.1 | Alternate frames | 0.5 |
 
 Auto's sustained pixel budget is 2.4 million, re-evaluated on resize/fullscreen. Viewports too large for the
@@ -281,8 +281,9 @@ establish adaptation and rendering correctness; they do not establish frame rate
 
 ### Grass budget comparison (2026-09-20)
 
-Jeremy prefers fuller Medium/Low grass and accepts 30 fps on Low. The selected values are 80% density/95%
-reach for Medium at 1× scale, and 55%/85% for Low at 0.85×. The 25%/70% at 0.72× fallback remains
+Jeremy prefers fuller Medium/Low grass and accepts 30 fps on Low. On 2026-09-26 he ruled that Medium keeps full
+density and Low drops only to 80%: 100%/95% reach for Medium at 1× scale, and 80%/85% for Low at 0.85×. The
+comparison below measured the earlier 80%/55% presets. The 25%/70% at 0.72× fallback remains
 available only to Auto. These September 20 comparisons preceded the presentation caps added September 21.
 
 `node tools/quality-budget-profile.mjs` compares frozen cameras in the island, meadow and sky mirror on

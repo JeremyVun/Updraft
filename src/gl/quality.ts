@@ -13,8 +13,8 @@ export interface QualityLevel {
 export type QualityMode = 'auto' | 'high' | 'medium' | 'low';
 
 export const WORLD_QUALITY = [
-  { grassDensity: 0.55, grassReach: 0.85, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
-  { grassDensity: 0.8, grassReach: 0.95, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625 },
+  { grassDensity: 0.8, grassReach: 0.85, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
+  { grassDensity: 1, grassReach: 0.95, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625 },
   { grassDensity: 1, grassReach: 1, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75 },
 ] as const;
 
