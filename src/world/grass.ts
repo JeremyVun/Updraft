@@ -176,7 +176,7 @@ vec3 grassTintWithPattern(vec2 xz, vec3 pattern) {
   vec3 tint = mix(meadow, emerald, pasture);
   tint = mix(tint, vec3(0.44, 0.31, 0.11), birchFloorAt(xz) * 0.72);
   float wood = woodFloorAt(xz);
-  if (wood > 0.0) tint = mix(tint, mix(vec3(0.14, 0.19, 0.085), vec3(0.29, 0.27, 0.12), fbm(xz * 0.32)), wood * 0.9);
+  if (wood > 0.0) tint = mix(tint, mix(vec3(0.14, 0.19, 0.085), vec3(0.29, 0.27, 0.12), tiledFbmFixed(xz * 0.32)), wood * 0.9);
   return mix(tint, mix(tint, vec3(0.4, 0.41, 0.31), 0.28) * 0.93, uSeason);
 }
 vec3 grassTint(vec2 xz) {

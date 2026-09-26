@@ -40,7 +40,7 @@
 // Phase 6 (item E) noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
 // ripples), n-moss (Wood floor moss and flecks), n-tuft (Sleeping floor tuft and fibre), n-frost (frostAt's pattern),
 // n-frostline (the terrain's frost-edge pattern), n-woodtint (the Wood tint), n-bed (the shallow seabed), n-surfphase
-// (the surf's static phase). Combine with +.
+// (the surf's static phase). Combine with +. noise-live computes the tiled terms procedurally again, as ?noise=live does.
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -333,26 +333,31 @@ window.__audit = {
   // Phase 6 (item E): each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
   // fragment programs are left alone (E5 swaps them by string, and none of them calls these terms).
   noiseTerms(variants) {
+    // Each substitution lists the procedural call, then the tile's (phase 6) where it has one.
+    const T=(p,d)=>'tiledNoise('+p+', fp.dx * '+d+', fp.dy * '+d+')',F=(p,d)=>'tiledFbm('+p+', fp.dx * '+d+', fp.dy * '+d+')';
     const terms={
-      'n-grain':[['vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5','0.5'],['vnoise(xz * 0.3) * 6.0','3.0']],
-      'n-moss':[['fbm(xz * 0.24 + 19.0)','0.5'],['vnoise(xz * 9.0)','0.5']],
-      'n-tuft':[['fbm(xz * 0.17 + 13.0)','0.5'],['vnoise(xz * vec2(12.0, 5.0))','0.5']],
-      'n-frost':[['fbm(xz * 0.12)','0.5']],
-      'n-frostline':[['fbm(xz * 0.35)','0.5']],
-      'n-woodtint':[['fbm(xz * 0.32)','0.5']],
-      'n-bed':[['vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5','0.5'],['vnoise(bedXZ * 0.3) * 6.0','3.0'],['vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25','0.5']],
-      'n-surfphase':[['vnoise(xz * 0.016) * 1.8 + vnoise(xz * 0.057 + 7.3) * 0.3','0.5']],
+      'n-grain':[[['vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5',T('xz * 1.7','1.7')+' * 0.5 + '+T('xz * 6.0','6.0')+' * 0.5'],'0.5'],[['vnoise(xz * 0.3) * 6.0',T('xz * 0.3','0.3')+' * 6.0'],'3.0']],
+      'n-moss':[[['fbm(xz * 0.24 + 19.0)',F('xz * 0.24 + 19.0','0.24')],'0.5'],[['vnoise(xz * 9.0)',T('xz * 9.0','9.0')],'0.5']],
+      'n-tuft':[[['fbm(xz * 0.17 + 13.0)',F('xz * 0.17 + 13.0','0.17')],'0.5'],[['vnoise(xz * vec2(12.0, 5.0))',T('xz * vec2(12.0, 5.0)','vec2(12.0, 5.0)')],'0.5']],
+      'n-frost':[[['fbm(xz * 0.12)','tiledFbmFixed(xz * 0.12)'],'0.5']],
+      'n-frostline':[[['fbm(xz * 0.35)',F('xz * 0.35','0.35')],'0.5']],
+      'n-woodtint':[[['fbm(xz * 0.32)','tiledFbmFixed(xz * 0.32)'],'0.5']],
+      'n-bed':[[['vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5',T('bedXZ * 1.7','1.7')+' * 0.5 + '+T('bedXZ * 6.0','6.0')+' * 0.5'],'0.5'],[['vnoise(bedXZ * 0.3) * 6.0',T('bedXZ * 0.3','0.3')+' * 6.0'],'3.0'],
+        [['vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25',T('bedXZ * 0.08 + 3.1','0.08')+' * 0.75 + '+T('bedXZ * 0.27','0.27')+' * 0.25'],'0.5']],
+      'n-surfphase':[[['vnoise(xz * 0.016) * 1.8 + vnoise(xz * 0.057 + 7.3) * 0.3'],'0.5']],
+      // The procedural noise in place of the tiles (the page's ?noise=live), for pairing the bake against what it replaced.
+      'noise-live':[[['#define NOISE_LIVE 0'],'#define NOISE_LIVE 1']],
     };
     const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
     const mats=new Set([terrain.mesh.material,water.mesh.material,...grass.lods.map(l=>l.tableMat)]);
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
-    const tagged=(v,i,to)=>'('+to+'/*nz:'+v+':'+i+'*/)';
+    const tagged=(v,i,k,to)=>to.startsWith('#')?to+' // nz:'+v+':'+i+':'+k:'('+to+'/*nz:'+v+':'+i+':'+k+'*/)';
     let tables=false;const hits=new Set();
     for(const m of mats)for(const key of ['vertexShader','fragmentShader']) {
       if(key==='fragmentShader'&&blades.has(m))continue;
       let source=m[key];
-      for(const [v,subs] of Object.entries(terms))subs.forEach(([from,to],i)=>{source=source.split(tagged(v,i,to)).join(from);});
-      for(const v of variants)(terms[v]||[]).forEach(([from,to],i)=>{if(source.includes(from))hits.add(v+':'+i);source=source.split(from).join(tagged(v,i,to));});
+      for(const [v,subs] of Object.entries(terms))subs.forEach(([froms,to],i)=>froms.forEach((from,k)=>{source=source.split(tagged(v,i,k,to)).join(from);}));
+      for(const v of variants)(terms[v]||[]).forEach(([froms,to],i)=>froms.forEach((from,k)=>{if(source.includes(from))hits.add(v+':'+i);source=source.split(from).join(tagged(v,i,k,to));}));
       if(m[key]!==source){m[key]=source;m.needsUpdate=true;tables||=grass.lods.some(l=>l.tableMat===m);}
     }
     for(const v of variants)(terms[v]||[]).forEach((_,i)=>{if(!hits.has(v+':'+i))throw Error('Missing noise term: '+v+':'+i);});
