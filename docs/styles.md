@@ -106,6 +106,9 @@ A narrow slit of window light briefly reaches the pillow before the bird leaves.
 with continuous convex slopes, sparse buried exposures and snow pockets. Never flatten a strip under
 the walking route or cut an inset shelf below the window. The summit curtain remains clear against the sky.
 The route is suggested by short moving wind wisps and the feather's lean. A snowdrift fills a natural notch between rock and the drop; wind exposes the grassy footing.
+The drift reads as snow, not a laid sheet: the wind has scooped and ridged its thick middle, its thin rim breaks into
+patches with turf showing through, faces turned from the moon go blue rather than grey, a few single crystals glint as
+the eye moves, gathered where the crust is polished, and faint spindrift crosses it on the gusts.
 Bedroom details cluster around the bed and summit window, leaving the hillside natural. The chapter reaches full winter before its morning transformation.
 
 Short, curved winter blades retain the meadow's wind response. A bounded patch of extra stems near

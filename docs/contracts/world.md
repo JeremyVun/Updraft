@@ -192,6 +192,8 @@ with the loose ribbon hanging over the naturally steep face.
 `SleepingChapter` advances one waypoint at a time; snow and mist stops are named layout indices.
 `sleeping-trail.ts` owns sparse buried rocks, snow deposits, seed heads and guiding wind wisps.
 `trail.snow` and `trail.mist` retain earned progress. Snow clears into rounded banks, without cut walls.
+The drift's wind sculpting (`SNOW_SCULPT`) only reshapes depth over 0.2, so paths cleared below that are unchanged;
+`snowDepthAt` repeats it, so brushing and footing still test the surface that is drawn. Its patchy rim is alpha only.
 
 The pillow releases after the unanswered call, a view of the warm seam and real brushing. The side path
 ends at `SLEEP_LEDGE`, where the bird studies the unreachable ribbon and releases its healed wing.

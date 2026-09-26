@@ -4,7 +4,7 @@ import { sleepingBirches } from './sleeping-birches';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ATMO_GLSL, atmo } from './atmosphere';
+import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { SLEEP_PATH, SLEEP_SNOW_STOP, SLEEP_MIST_STOP, sleepPathAt } from './sleeping-layout';
 import { mulberry32 } from './noise';
@@ -19,6 +19,8 @@ MIST_AT.y = heightAt(MIST_AT.x, MIST_AT.z);
 const SNOW_FORWARD = point(SLEEP_SNOW_STOP+1).sub(point(SLEEP_SNOW_STOP)).setY(0).normalize();
 const MIST_FORWARD = point(SLEEP_MIST_STOP+1).sub(point(SLEEP_MIST_STOP)).setY(0).normalize();
 const SNOW_RIGHT = new THREE.Vector3(-SNOW_FORWARD.z, 0, SNOW_FORWARD.x);
+/** How deeply the wind scoops and ridges the drift's thick middle, as a share of its depth; the thin edges keep their shape. */
+const SNOW_SCULPT = 0.24;
 
 const VERT = `
   uniform vec2 uDawn; in float aSnow; in vec3 color; out vec3 vWorld; out vec3 vNormal; out vec3 vColor;
@@ -151,7 +153,7 @@ export class SleepingTrail {
     }
     driftGeometry.computeVertexNormals();
     const snow=new THREE.Mesh(driftGeometry,new THREE.ShaderMaterial({
-      uniforms:{...atmo.uniforms,uSwept:this.swept,uThaw:this.thaw,uSnowRight:{value:SNOW_RIGHT},uSnowForward:{value:SNOW_FORWARD}},
+      uniforms:{...atmo.uniforms,uSwept:this.swept,uThaw:this.thaw,uGust:this.gust,uSnowRight:{value:SNOW_RIGHT},uSnowForward:{value:SNOW_FORWARD}},
       side:THREE.DoubleSide,transparent:true,
       vertexShader:`uniform float uSwept,uThaw;uniform vec3 uSnowRight,uSnowForward;
         out vec3 vWorld;out vec3 vNormal;out float vDepth;
@@ -168,7 +170,9 @@ export class SleepingTrail {
           float bank=pow(max(0.0,1.0-dot(drift/vec2(11.5,3.25),drift/vec2(11.5,3.25))),1.6);
           float channel=1.0-smoothstep(.55+uSwept*1.65,1.25+uSwept*1.65,passageDistance(local));
           float crest=1.0+.12*sin(local.x*1.7)+.06*sin(local.y*3.5+local.x);
-          return ${tuning.sleeping.snowDepth.toFixed(2)}*bank*crest*(1.0-uSwept*channel)*(1.0-uThaw);
+          float depth=${tuning.sleeping.snowDepth.toFixed(2)}*bank*crest*(1.0-uSwept*channel)*(1.0-uThaw);
+          float sculpt=.5*sin(local.x*.83+1.4*sin(local.y*.9+local.x*.31))+.3*sin(local.x*2.1+local.y*1.3+2.0*sin(local.x*.47));
+          return depth*(1.0+${SNOW_SCULPT}*sculpt*smoothstep(.2,.7,depth));
         }
         void main(){vec2 local=(uv-.5)*vec2(23.0,6.5);vDepth=depthAt(local);
           vec2 slope=vec2(depthAt(local+vec2(.06,0))-depthAt(local-vec2(.06,0)),
@@ -178,11 +182,39 @@ export class SleepingTrail {
           vNormal=normalize(vec3(ground.x-gradient.x*ground.y,ground.y,ground.z-gradient.y*ground.y));
           vWorld=position;vWorld.y+=vDepth;gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.0);}`,
       fragmentShader:`${ATMO_GLSL}
+        ${NOISE_GRAD_GLSL}
+        uniform float uGust;uniform vec3 uSnowRight,uSnowForward;
         in vec3 vWorld;in vec3 vNormal;in float vDepth;
-        void main(){if(vDepth<.004)discard;vec3 n=normalize(vNormal);
-          vec3 base=vec3(.79,.85,.90);float grain=.97+.03*sin(vWorld.x*56.0)*sin(vWorld.z*45.0);
-          vec3 col=base*grain*(hemiLight(n)*(.82+.48*max(0.0,n.y))+uSunColor*max(0.0,dot(n,uSunDir))*.7+lampLight(vWorld,n)+dawnLight(vWorld,n));
-          gl_FragColor=vec4(applyFog(col,vWorld),smoothstep(.004,.22,vDepth));}`,
+        void main(){
+          vec2 xz=vWorld.xz,dx=dFdx(xz),dy=dFdy(xz);float pixel=max(length(dx),length(dy));
+          if(vDepth<.004)discard;
+          // Thin snow lies in patches, so the rim wanders in and out instead of tracing the drift's outline.
+          float patches=vnoise(xz*.42+3.7)*.5+vnoise(xz*1.3)*.3+vnoise(xz*3.9)*.2;
+          float cover=smoothstep(.05,.24,vDepth*(.3+1.4*patches));
+          if(cover<.01)discard;
+          // Carved by the wind: long soft ridges down the drift, fine powder over them, resolved only while a pixel is smaller.
+          vec2 local=vec2(dot(xz,uSnowRight.xz),dot(xz,uSnowForward.xz));
+          vec3 ridge=vnoiseGrad(local*vec2(.32,1.05));
+          vec3 powder=vnoiseGrad(xz*4.2)*(1.0-smoothstep(.02,.06,pixel));
+          vec2 carve=(uSnowRight.xz*ridge.y*.32+uSnowForward.xz*ridge.z*1.05)*.3+powder.yz*.008;
+          vec3 n=normalize(normalize(vNormal)-vec3(carve.x,0.0,carve.y)*smoothstep(.02,.3,vDepth));
+          float ndl=dot(n,uSunDir),sun=max(0.0,ndl)*cloudShadow(xz);
+          // Light soaks into snow, so faces turned away go blue rather than grey.
+          vec3 base=mix(vec3(.62,.74,.90),vec3(.86,.9,.94),smoothstep(-.25,.45,ndl));
+          vec3 col=base*(hemiLight(n)*(.8+.45*max(0.0,n.y))+uSunColor*(sun*.75+clamp(ndl*.5+.3,0.0,1.0)*.12)+lampLight(vWorld,n)+dawnLight(vWorld,n));
+          // Where it thins over the turf it takes the ground's shade.
+          col*=mix(.78,1.0,smoothstep(.02,.45,vDepth));
+          // Spindrift: faint streaks of blown powder crossing the surface on the gusts.
+          float blown=smoothstep(.62,.95,vnoise(vec2(local.x*.55-uTime*(.9+uGust*2.5),local.y*2.6+ridge.x*1.5)));
+          col+=hemiLight(vec3(0,1,0))*blown*(.05+.12*uGust)*cover;
+          // Crystals catch the light one at a time as the eye moves; too small to show once they would shimmer.
+          vec2 cell=floor(xz*26.0);vec3 V=normalize(cameraPosition-vWorld);
+          float facet=hash12(cell+floor(V.xz*7.0+V.y*5.0)*17.0);
+          // Sparse, and gathered where the wind has polished the crust rather than spread evenly.
+          float polished=smoothstep(.45,.85,vnoise(xz*.55+9.1));
+          float fleck=step(mix(.9985,.993,polished),facet)*(1.0-smoothstep(.13,.34,length(fract(xz*26.0)-.5)))*(1.0-smoothstep(.012,.028,pixel));
+          col+=(uSunColor*1.5+uSkyAmbient*.7)*fleck*(.45+.55*hash12(cell+3.1))*max(.25,sun)*cover;
+          gl_FragColor=vec4(applyFog(col,vWorld),cover*smoothstep(.004,.12,vDepth));}`,
     }));snow.frustumCulled=false;this.objects.push(snow);
     const powderGeo=new THREE.BufferGeometry(),powderSeeds=new Float32Array(420*3);
     for(let i=0;i<powderSeeds.length;i++)powderSeeds[i]=rand();
@@ -254,7 +286,9 @@ export class SleepingTrail {
     const bank=Math.max(0,1-(bx/11.5)**2-(by/3.25)**2)**1.6;
     const s=this.swept.value;
     const channel=1-THREE.MathUtils.smoothstep(sleepPathAt(x,z).distance,.55+s*1.65,1.25+s*1.65);
-    return tuning.sleeping.snowDepth*bank*(1+.12*Math.sin(lx*1.7)+.06*Math.sin(ly*3.5+lx))*(1-s*channel)*(1-this.thaw.value);
+    const depth=tuning.sleeping.snowDepth*bank*(1+.12*Math.sin(lx*1.7)+.06*Math.sin(ly*3.5+lx))*(1-s*channel)*(1-this.thaw.value);
+    const sculpt=.5*Math.sin(lx*.83+1.4*Math.sin(ly*.9+lx*.31))+.3*Math.sin(lx*2.1+ly*1.3+2*Math.sin(lx*.47));
+    return depth*(1+SNOW_SCULPT*sculpt*THREE.MathUtils.smoothstep(depth,.2,.7));
   }
 
   update(dt: number, time: number, dawn: number, camera: THREE.Camera, cold = 0): void {

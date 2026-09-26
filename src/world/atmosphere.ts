@@ -193,6 +193,22 @@ float fbm(vec2 p) {
 }
 `;
 
+/** Value noise with its gradient (yz), from the same four hashes as vnoise. Needs NOISE_GLSL or ATMO_GLSL first. */
+export const NOISE_GRAD_GLSL = /* glsl */ `
+vec3 vnoiseGrad(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  vec2 du = 6.0 * f * (1.0 - f);
+  float a = hash12(i);
+  float b = hash12(i + vec2(1.0, 0.0));
+  float c = hash12(i + vec2(0.0, 1.0));
+  float d = hash12(i + vec2(1.0, 1.0));
+  float k = a - b - c + d;
+  return vec3(a + (b - a) * u.x + (c - a) * u.y + k * u.x * u.y, du * vec2(b - a + k * u.y, c - a + k * u.x));
+}
+`;
+
 /** Declares the shared uniforms and the sky, fog, lighting and wind helpers. Include once per shader stage. */
 export const ATMO_GLSL = /* glsl */ `
 uniform float uTime;
