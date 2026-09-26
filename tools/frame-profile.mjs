@@ -35,7 +35,7 @@
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
-// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS).
+// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone.
 // Phase X2's exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-coarse is the S4
 // look option, the sea's fog per vertex. Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
@@ -367,6 +367,15 @@ window.__audit = {
     out.sizes={scene:[post.sceneTarget.width,post.sceneTarget.height,post.sceneTarget.samples],bright:[b.renderTargetBright.width,b.renderTargetBright.height]};
     return out;
   },
+  // REFLECTION_PASS=1: the sea's reflection pass drawn alone, many times over, then drained, in this chapter's rooms.
+  async reflectionPass(reps, complete) {
+    const refl=water.reflection,u=atmo.uniforms,samples=[];
+    const pass=()=>{u.uMirrorPass.value=1;refl.render(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());u.uMirrorPass.value=0;};
+    const run=()=>{const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,pass);};
+    for(let round=0;round<7;round++){run();await complete();const start=performance.now();for(let i=0;i<reps;i++)run();await complete();samples.push((performance.now()-start)/reps);}
+    samples.sort((x,y)=>x-y);
+    return {ms:samples[3],min:samples[0],max:samples[6],scale:refl.scale,size:[refl.target.width,refl.target.height],mirrored:water.mesh.material.uniforms.uMirrorOn.value};
+  },
   stepWind() {
     wind.step(1/60,time,false);
     // The ping-pong targets swap every step, so rebind them as the real loop does.
@@ -561,9 +570,16 @@ try {
       __audit.configure(null);return __audit.postPasses(reps,complete);
     },Number(process.env.POST_REPS??40)):undefined;
     if(postPasses)console.log(JSON.stringify({chapter,postPasses}));
+    const reflectionPass=process.env.REFLECTION_PASS==='1'?await page.evaluate(async reps=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      __audit.configure(null);return __audit.reflectionPass(reps,complete);
+    },Number(process.env.POST_REPS??40)):undefined;
+    if(reflectionPass)console.log(JSON.stringify({chapter,reflectionPass}));
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,cullingViews,errors};report.push(row);
+    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();

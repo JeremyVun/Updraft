@@ -11,7 +11,7 @@
 //   every  the same frame with the reflection redrawn now into a spare target, as before S1. The game's own target,
 //          matrix and cadence are restored afterwards, so the alt side never sees it.
 //   fine   the game's own frame (the sea's fog per pixel); coarse the same frame with COARSE_FOG (S4, `seafog=coarse`).
-// Moments: sail mirror approach (S1), horizon crossing island (S4). env: BASE, FRAMES.
+// Moments: sail mirror approach (S1), horizon crossing sunset island (S4). env: BASE, FRAMES.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -48,6 +48,10 @@ const MOMENTS = {
   crossing: {
     part: 'S4', label: 'A crossing: sailing past the kite island', query: 'chapter=crossing', frames: 600, warm: 240,
     pointer: 'boat', sides: ['fine', 'coarse'], video: true,
+  },
+  sunset: {
+    part: 'S4', label: 'Sailing toward a low sun: the haze carries the sun\'s glow', query: 'chapter=crossing&dusk=1&sun=0,4', frames: 600, warm: 240,
+    pointer: 'boat', turn: { amp: 12, period: 8 }, sides: ['fine', 'coarse'], video: true,
   },
   island: {
     part: 'S4', label: 'The first island from the water, a still camera', query: 'chapter=crossing&cam=40,3.5,-235,0,6,-40', frames: 480, warm: 120,
@@ -234,6 +238,7 @@ const CROPS = {
   sail: [{ label: 'The boat and its reflection, followed as the camera pans', track: 'boat', w: 400, h: 300 }, { label: 'The middle of the frame: the island\'s shore, its reflection and the sea', x: 488, y: 330, w: 400, h: 300 }],
   horizon: [{ label: 'The horizon', x: 520, y: 170 }, { label: 'Far water under the haze', x: 120, y: 260 }],
   crossing: [{ label: 'The horizon behind the boat', x: 520, y: 150 }, { label: 'Far water and the island\'s edge', x: 60, y: 250 }],
+  sunset: [{ label: 'The horizon under the sun', x: 520, y: 150 }, { label: 'Far water beside the sun\'s path', x: 150, y: 230 }],
   island: [{ label: 'The island\'s foot and the water before it', x: 520, y: 360 }, { label: 'The horizon beside the island', x: 1000, y: 330 }],
 };
 
