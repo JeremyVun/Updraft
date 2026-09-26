@@ -1070,25 +1070,26 @@ aliases less at a distance.
 **Result (2026-09-26, branch `perf-bakes-p6`; built, awaiting Jeremy's playtest).** Jeremy trimmed the evidence the
 same day: no video capture ("I can playtest most of it"), a few before/after screenshots, and no switch in the deployed
 game ("i dont want switches for the deployed version though").
-- **Baked: only the four-octave `fbm` terms.** `src/world/noise-tiles.ts` is one 512² R8 tiling texture (mipmapped,
+- **Baked: the Sleeping island's three four-octave `fbm` terms.** `src/world/noise-tiles.ts` is one 512² R8 tiling texture (mipmapped,
   repeat-wrapped, about 0.35 MiB with mips), four octaves of value noise (lacunarity 2, unrotated, each octave shifted
   off the one below) over 32 base cells, baked on the CPU during world construction (`bakeNoiseTiles()` in `main.ts`,
   under 10 ms). Its value histogram matches the procedural `fbm` to within about 1% per decile. `tiledFbm(p, dx, dy)`
   samples it with `textureGrad` from the terrain's `Footprint`; `tiledFbmFixed(p)` samples level 0 with `textureLod`,
-  the same in every stage. Four terms use it:
-  - the Wood floor's moss, `fbm(0.24)` (terrain);
+  the same in every stage. Three terms use it, all on the Sleeping island:
   - the Sleeping floor's tuft, `fbm(0.17)` (terrain);
   - the frost-edge pattern, `fbm(0.35)` (terrain);
   - `frostAt`'s `fbm(0.12)`, fixed level, in the grass vertex shader, the terrain and the five Sleeping props.
 - **Kept procedural:** every single-octave `vnoise` (grain and ripples, the Wood flecks, the winter fibre, the seabed's
-  five), the Wood tint and the surf phase. One sample costs about as much as one `vnoise` on the M4 Pro: the per-term
-  pairs of the tiled grain and seabed against their procedural code came out at 0 ± 1.5% in every chapter, while the
-  `fbm` terms, four octaves for one sample, paid. The Wood tint's bound (−0.8 to 1.4%) is inside the control's spread.
+  five), the Wood moss, the Wood tint and the surf phase. One sample costs about as much as one `vnoise` on the M4 Pro:
+  the per-term pairs of the tiled grain and seabed against their procedural code came out at 0 ± 1.5% in every chapter,
+  while the Sleeping `fbm` terms, four octaves for one sample, paid. The Wood moss (`fbm(0.24)`) netted −2.1 to 1.6%
+  over three loads, not a consistent saving, so the Wood floor is unchanged. The Wood tint's bound (−0.8 to 1.4%) is
+  inside the control's spread.
   The surf phase was not tried (round 3 leaves the surf alone). The seabed edits were reverted, so `water.ts` is
   untouched and phase S merges cleanly.
 - **No switch in `src`.** The comparison lives in the tools: `frame-profile.mjs` `noise-live` swaps every tiled call
-  back to its procedural code by string, page-side, and `live-moss`, `live-tuft`, `live-frost` and `live-frostline`
-  do so for one term each. The screenshots' "before" is the pre-phase source (a034161) on its own dev server.
+  back to its procedural code by string, page-side, and `live-tuft`, `live-frost` and `live-frostline` do so for one
+  term each. The screenshots swap the same strings page-side in one frozen frame.
 - **Upper bounds** (each procedural term replaced with a constant; full frame, `RATIO=1.5 MSAA=2 DRAIN=1 GPU_QUIET=1`,
   10 pairs of 16 draws per cell, three loads). Other sessions' browsers loaded the GPU through most of the afternoon,
   so pair medians swung ±5% and most cells straddled; the table uses each side's floor (the mean of its three fastest
@@ -1108,24 +1109,26 @@ game ("i dont want switches for the deployed version though").
   | Sea | 0.8 | | 4.7 | −1.3 | | | | | | 8.4 |
 
 - **Saving, the texture against the procedural noise it replaced** (same conditions, floors; `live-*` per term,
-  `noise-live` for all four; 16 pairs a cell in the final loads). The tile only runs in the Wood and Sleeping, so other
-  chapters are unchanged by construction.
+  `noise-live` for all of them; 16 pairs a cell in the final loads). The tile only runs on the Sleeping island, so every
+  other chapter is unchanged by construction (the opening beach redraws identically).
 
-  | Chapter | moss | tuft | frost edge | `frostAt` | all four (`noise-live`) |
+  | Chapter | moss (dropped) | tuft | frost edge | `frostAt` | all tiled terms (`noise-live`) |
   |---|---:|---:|---:|---:|---:|
-  | Wood | 1.6, 0.9 | | | | 0.9, P3WOOD |
-  | Sleeping | | 3.3, 2.5 | 3.0, 1.9 | 1.3, 1.9 | 2.8, P3SLEEP |
+  | Wood | 1.6, 0.9, −2.1 | | | | |
+  | Sleeping | | 3.3, 2.5 | 3.0, 1.9 | 1.3, 1.9 | 2.8, 5.4 |
 
-  Two loads per cell, first then second. Roughly 2–3% of a Sleeping frame (0.3 ms of about 11 ms) and about 1% in the
-  Wood. The moss is the smallest; it stays because a sample cannot cost more than four octaves and both loads agree in
-  sign.
-- **Checks:** `npm run typecheck` and `npm run build` pass. Boot gap BOOTGAP (`tools/start-check.mjs`, ceiling
+  One cell per load. The Sleeping island saves roughly 3–5% of a frame (0.3–0.6 ms of about 11 ms); each of its three
+  terms paid in both loads.
+- **Checks:** `npm run typecheck` and `npm run build` pass. Boot gap 283 and 267 ms against 300 and 250 ms before, unchanged (`tools/start-check.mjs`, ceiling
   500 ms). Frost on surviving blades: in a frozen Sleeping night with the frost out (`uFrost.w` 1), a forced rebake of
   every grass table redraws the frame identically (max channel difference 0), and the frost has no table term to
   disagree with: every stage calls `frostAt` with the same fixed-level sample, independent of screen footprint and
   grass level. The Wood tint is procedural again, so its table and terrain paths are as before.
 - **Screenshots** (texture against the pre-phase source, the same frozen frame on two dev servers; `hold=`):
-  `/tmp/updraft-pb-p6-shots/`. SHOTNOTE
+  `/tmp/updraft-pb-p6-shots/`, taken in one frozen frame each with the tiled calls swapped back page-side (1376×1032
+  CSS, ratio 1.5, MSAA 2). Sleeping night: the rime's blotches lie differently but read the same (soft, irregular,
+  about the same size and contrast); no repetition in view, since the tiles repeat every 91–267 m at these frequencies.
+  Sleeping dawn: the tuft tint between blades differs only faintly. Opening beach: identical.
 
 ### F. Wind-cost anomaly (investigate)
 
