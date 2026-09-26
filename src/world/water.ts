@@ -69,9 +69,6 @@ vec3 surfaceShift(vec2 p, float distanceToCamera) {
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
 out vec3 vSwell;
-#ifdef COARSE_FOG
-out vec4 vFog;
-#endif
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
@@ -85,9 +82,6 @@ void main() {
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
-#ifdef COARSE_FOG
-  vFog = fogOf(vWorld);
-#endif
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -110,9 +104,6 @@ uniform vec3 uSand;
 uniform vec3 uWetSand;
 in vec3 vWorld;
 in vec3 vSwell;
-#ifdef COARSE_FOG
-in vec4 vFog;
-#endif
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -259,11 +250,7 @@ void main() {
     gl_FragColor = vec4(glassColour(V, xz), 1.0);
     return;
   }
-#ifdef COARSE_FOG
-  vec4 fog = vFog;
-#else
   vec4 fog = fogOf(vWorld);
-#endif
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {
@@ -434,7 +421,6 @@ export class Water {
     this.shore = new ShoreBake(renderer, height);
     surfUniforms.uShoreTex.value = this.shore.target.texture;
     const mat = new THREE.ShaderMaterial({
-      defines: params.seafog === 'coarse' ? { COARSE_FOG: 1 } : {},
       vertexShader: VERT,
       fragmentShader: FRAG,
       uniforms: {

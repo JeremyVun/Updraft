@@ -54,8 +54,6 @@ export const params = {
   lite,
   /** Fixed reflection cadence: every frame (1), alternate frames (2), or never (0). Otherwise follows world quality. */
   mirror: q.get('mirror') !== null ? Number(q.get('mirror')) || 0 : null,
-  /** Evidence only: `seafog=coarse` evaluates the sea's haze per vertex instead of per pixel, for comparison. */
-  seafog: q.get('seafog') ?? 'fine',
   /** QA: `mirrorlod=full` gives the sea's mirror the main view's terrain detail instead of a coarser set, for comparison. */
   mirrorlod: q.get('mirrorlod') ?? 'coarse',
   /** QA: `blades=direct` uses the old per-vertex grass shader instead of the blade table, for before/after comparison. */

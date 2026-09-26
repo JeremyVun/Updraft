@@ -323,9 +323,12 @@ window.__audit = {
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
+      // S4, a look change costed only: the sea's fog worked out per vertex and interpolated.
+      'seafog-coarse':[[waterMat],'fragmentShader',s=>sub(sub(s,'in vec3 vSwell;','in vec3 vSwell;\nin vec4 vFog;'),'vec4 fog = fogOf(vWorld);','vec4 fog = vFog;')],
+      'seafog-coarse-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'out vec3 vSwell;','out vec3 vSwell;\nout vec4 vFog;'),'vWorld = w + at;','vWorld = w + at;\n  vFog = fogOf(vWorld);')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
     };
-    if(variants.includes('s3-off'))variants=[...variants,'s3-off-vert'];
+    for(const v of ['s3-off','seafog-coarse'])if(variants.includes(v))variants=[...variants,v+'-vert'];
     const wanted=new Map();
     for(const [m,orig] of this.patchOriginals){wanted.set(m.uuid+'|vertexShader',[m,'vertexShader',orig.vertexShader]);if(m!==waterMat)wanted.set(m.uuid+'|fragmentShader',[m,'fragmentShader',orig.fragmentShader]);}
     // The water fragment and terrain fragment were already restored by the glass and tint handling above.
@@ -334,10 +337,8 @@ window.__audit = {
     water.mesh.renderOrder=variants.includes('water-last')?1:0;
     // E5: the blades always drawn with the program that discards, as before.
     grass.unclipped=!variants.includes('e5-off');
-    // S1: the ordinary sea's reflection every frame, as before. S4 (a look change, costed only): the sea's fog per vertex.
+    // S1: the ordinary sea's reflection every frame, as before.
     water.seaMirrorEvery=variants.includes('s1-off')?1:2;
-    const coarse=variants.includes('seafog-coarse');
-    if(coarse!==('COARSE_FOG' in waterMat.defines)){if(coarse)waterMat.defines.COARSE_FOG=1;else delete waterMat.defines.COARSE_FOG;waterMat.needsUpdate=true;}
   },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
