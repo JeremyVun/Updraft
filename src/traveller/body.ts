@@ -39,6 +39,44 @@ function hairCap(radius: number): THREE.BufferGeometry {
   return g;
 }
 
+/** A tube along `path` that narrows from `from` to `to`, closed at both ends. */
+function taperedTube(path: THREE.Curve<THREE.Vector3>, from: number, to: number): THREE.BufferGeometry {
+  const rings = 24;
+  const sides = 14;
+  const frames = path.computeFrenetFrames(rings, false);
+  const positions: number[] = [];
+  const index: number[] = [];
+  const p = new THREE.Vector3();
+  for (let i = 0; i <= rings; i++) {
+    const t = i / rings;
+    path.getPointAt(t, p);
+    const r = THREE.MathUtils.lerp(from, to, t ** 0.8);
+    for (let j = 0; j < sides; j++) {
+      const a = (j / sides) * Math.PI * 2;
+      const n = frames.normals[i].clone().multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
+      positions.push(p.x + n.x * r, p.y + n.y * r, p.z + n.z * r);
+    }
+  }
+  for (let i = 0; i < rings; i++) {
+    for (let j = 0; j < sides; j++) {
+      const a = i * sides + j;
+      const b = i * sides + ((j + 1) % sides);
+      index.push(a, a + sides, b, b, a + sides, b + sides);
+    }
+  }
+  for (const [ring, t] of [[0, 0], [rings, 1]] as const) {
+    const centre = positions.length / 3;
+    path.getPointAt(t, p);
+    positions.push(p.x, p.y, p.z);
+    for (let j = 0; j < sides; j++) index.push(centre, ring * sides + j, ring * sides + ((j + 1) % sides));
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  g.setIndex(index);
+  g.computeVertexNormals();
+  return g;
+}
+
 /** How each part takes the light. */
 const KIND = { cloth: 0, skin: 1, glint: 2 } as const;
 
@@ -127,6 +165,8 @@ export interface Rig {
   /** The coat itself, so it can be flattened on its own: everything else on the body must keep its size. */
   coat: THREE.Mesh;
   head: THREE.Group;
+  /** The loose point of the hood, hung off the crown. */
+  hoodTip: THREE.Group;
   armL: THREE.Group;
   armR: THREE.Group;
   /** The elbows: each forearm hangs off its upper arm and carries the mitten. */
@@ -268,14 +308,32 @@ export function buildChild(): Rig {
    */
   const fringe = paint(at(hairCap(0.382), 0, 0, 0.05, 1.03, 0.97, 1), PALETTE.hair);
   const hood = paint(at(new THREE.SphereGeometry(0.45, 20, 14), 0, 0.05, -0.07), PALETTE.coat);
-  const tip = paint(at(new THREE.ConeGeometry(0.22, 0.5, 12).rotateX(-1.05), 0, 0.36, -0.36), PALETTE.coat);
-  const tipEnd = paint(at(new THREE.ConeGeometry(0.1, 0.34, 10).rotateX(-1.9), 0, 0.42, -0.66), PALETTE.coat);
-  const pompom = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, 0.32, -0.83), PALETTE.scarf);
+  /** A seam over the crown from the nape to the brow, which is what makes the ball of the head read as a hood from behind. */
+  const seam = paint(
+    at(new THREE.TorusGeometry(0.452, 0.012, 5, 40, 3.0).rotateZ(-0.6).rotateY(Math.PI / 2), 0, 0.05, -0.07),
+    PALETTE.coatShade,
+  );
   const rim = paint(at(new THREE.TorusGeometry(0.335, 0.048, 10, 36), 0, 0.02, 0.3, 1, 1.08, 1), PALETTE.coatShade);
   const cheeks = [-1, 1].map((s) =>
     paint(at(new THREE.SphereGeometry(0.068, 12, 8), s * 0.195, -0.085, 0.36, 1, 0.58, 0.35), PALETTE.cheek, KIND.skin),
   );
-  head.add(mesh([face, nose, fringe, hood, tip, tipEnd, pompom, rim, ...cheeks]));
+  head.add(mesh([face, nose, fringe, hood, seam, rim, ...cheeks]));
+  /**
+   * The hood's long point: soft cloth that rises off the crown, falls back and flops over to one side, with the
+   * pompom on the end. It hangs from its own pivot so it can lag the head and lean with the wind.
+   */
+  const tip = new THREE.Group();
+  tip.position.set(0, 0.34, -0.22);
+  head.add(tip);
+  const tipPath = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, -0.06, 0.04), new THREE.Vector3(0, 0.14, -0.12), new THREE.Vector3(0.03, 0.25, -0.34),
+    new THREE.Vector3(0.13, 0.2, -0.52), new THREE.Vector3(0.23, 0.04, -0.6),
+  ]);
+  const end = tipPath.getPoint(1);
+  tip.add(mesh([
+    paint(taperedTube(tipPath, 0.2, 0.035), PALETTE.coat),
+    paint(at(new THREE.SphereGeometry(0.105, 16, 12), end.x + 0.02, end.y - 0.07, end.z), PALETTE.scarf),
+  ]));
   const eyes = mesh([-1, 1].flatMap((s) => [
     paint(at(new THREE.SphereGeometry(0.044, 12, 10), s * 0.125, -0.005, 0.4, 1, 1.22, 0.6), PALETTE.eye),
     paint(at(new THREE.SphereGeometry(0.012, 8, 6), s * 0.125 + 0.014, 0.017, 0.424), PALETTE.eye, KIND.glint),
@@ -354,6 +412,7 @@ export function buildChild(): Rig {
     body,
     coat: bell,
     head,
+    hoodTip: tip,
     armL: left.g,
     armR: right.g,
     foreL: left.fore,
