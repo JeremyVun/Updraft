@@ -15,7 +15,6 @@ import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
 import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
 import { advance, ALONE, Sliced, slices, SLICES_PER_SECOND, type Pace } from './sliced';
-import { params } from '../params';
 
 /**
  * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
@@ -246,26 +245,21 @@ export class Soundscape {
   private reverb!: GainNode;
   /** Gesture chimes and authored cues; the ending cuts this alongside the background bus. */
   private musicBus!: GainNode;
-  /** Background has its own wet tail, so an arrival rest never silences gestures or physical sounds. */
+  /** Background music is gated and ducked apart from everything else, so an arrival rest never silences gestures or physical sounds. */
   private backgroundBus!: GainNode;
   private backgroundDry!: GainNode;
   private backgroundWet!: GainNode;
   private backgroundGate!: GainNode;
   private backgroundDuck!: GainNode;
-  /** With one reverb, the background's wet send is gated and ducked on its way into the shared reverb. */
-  oneReverb = params.reverb === 'one';
-  private wetGate: GainNode | null = null;
-  private wetDuck: GainNode | null = null;
+  /** The background's wet send is gated and ducked on its way into the shared reverb. */
+  private wetGate!: GainNode;
+  private wetDuck!: GainNode;
   private cueSpaceUntil = 0;
   private homeFadeScheduled = false;
   private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
-  private backgroundReverb!: ConvolverNode;
   private reverbConvolver!: ConvolverNode;
-  private reverbImpulse: AudioBuffer | null = null;
   private readonly arrivalTransition = new ArrivalTransition();
   private finaleUntil = 0;
-  /** A background reverb analysed on an earlier frame, ready to replace the old echo at the next arrival. */
-  private spareReverb: ConvolverNode | null = null;
   private noiseWork: Sliced<AudioBuffer> | null = null;
   private foghornWork: Sliced<FoghornParts> | null = null;
   /** Buffers and convolvers still being prepared, in order, at a steady rate of story time. */
@@ -362,9 +356,9 @@ export class Soundscape {
     void (this.hidden || this.muted ? this.ctx.suspend() : this.ctx.resume()).catch(() => undefined);
   }
 
-  /** The background's arrival and ending gates: its own reverb sits inside one; with one reverb, its send has a second. */
+  /** The background's arrival and ending gates: one on its dry sound, one on its send to the reverb. */
   private get gates(): AudioParam[] {
-    return this.wetGate ? [this.backgroundGate.gain, this.wetGate.gain] : [this.backgroundGate.gain];
+    return [this.backgroundGate.gain, this.wetGate.gain];
   }
 
   /** The live audio graph for other modules' sounds: connect to `bus` (dry) and optionally `reverb` (wet). Null until sound starts or while muted. */
@@ -415,14 +409,9 @@ export class Soundscape {
     this.backgroundGate = ctx.createGain(); this.backgroundGate.connect(this.backgroundDuck);
     this.backgroundDry = ctx.createGain(); this.backgroundDry.connect(this.backgroundGate);
     this.backgroundWet = ctx.createGain(); this.backgroundWet.gain.value = .55;
-    if (this.oneReverb) {
-      this.wetDuck = ctx.createGain(); this.wetDuck.connect(this.reverbConvolver);
-      this.wetGate = ctx.createGain(); this.wetGate.connect(this.wetDuck);
-      this.backgroundWet.connect(this.wetGate);
-    } else {
-      this.backgroundReverb = ctx.createConvolver();
-      this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
-    }
+    this.wetDuck = ctx.createGain(); this.wetDuck.connect(this.reverbConvolver);
+    this.wetGate = ctx.createGain(); this.wetGate.connect(this.wetDuck);
+    this.backgroundWet.connect(this.wetGate);
     this.backgroundBus = ctx.createGain(); this.backgroundBus.connect(this.backgroundDry);
     const backgroundSend = ctx.createGain(); backgroundSend.gain.value = .9;
     this.backgroundBus.connect(backgroundSend).connect(this.backgroundWet);
@@ -474,21 +463,11 @@ export class Soundscape {
     this.syncPlayback();
   }
 
-  /** The shared impulse, then each convolver's analysis of it (10–30 ms on a desktop) on a frame of its own. */
+  /** The impulse, then the convolver's analysis of it (10–30 ms on a desktop) on a frame of its own. */
   private *reverbs(ctx: BaseAudioContext): Generator<Pace, void> {
-    const reverb = this.reverbImpulse = yield* impulse(ctx, 4.5);
+    const reverb = yield* impulse(ctx, 4.5);
     yield ALONE;
     this.reverbConvolver.buffer = reverb;
-    if (this.oneReverb) return;
-    yield ALONE;
-    this.backgroundReverb.buffer ??= reverb;
-    yield* this.spare(ctx);
-  }
-
-  private *spare(ctx: BaseAudioContext): Generator<Pace, void> {
-    yield ALONE;
-    this.spareReverb = ctx.createConvolver();
-    this.spareReverb.buffer = this.reverbImpulse;
   }
 
   /** Advances deferred preparation by this frame's share and connects the noise once it exists, on the audio clock. */
@@ -1014,21 +993,10 @@ export class Soundscape {
         else if (backgroundPaused) gain.setValueAtTime(0, now);
         else gain.linearRampToValueAtTime(1, now + (arrival.fadeIn ?? tuning.audio.arrivalFadeIn));
       }
-      // Discard only the outgoing background echo; gesture, cue and environmental reverb is untouched.
-      if (arrival.stage !== 'fade' && !backgroundPaused && !this.oneReverb) {
-        this.backgroundWet.disconnect(this.backgroundReverb); this.backgroundReverb.disconnect();
-        if (this.spareReverb) {
-          this.backgroundReverb = this.spareReverb; this.spareReverb = null;
-          this.synthesis.push(new Sliced(this.spare(ctx)));
-        } else {
-          this.backgroundReverb = ctx.createConvolver(); this.backgroundReverb.buffer = this.reverbImpulse;
-        }
-        this.backgroundWet.connect(this.backgroundReverb).connect(this.backgroundGate);
-      }
     }
     if (s.homeEndingTime === undefined) this.homeFadeScheduled = false;
     else if (!this.homeFadeScheduled && s.homeEndingTime >= HOME_ENDING.fadeFrom) {
-      // Fade after the reverb so this ending's short release includes its tail.
+      // The send is cut before the shared reverb, so the music's tail rings on past its end.
       for (const gate of this.gates) {
         gate.cancelAndHoldAtTime(now);
         gate.setValueAtTime(gate.value, now);
@@ -1199,7 +1167,7 @@ export class Soundscape {
     const duck = cueDucking ? tuning.audio.authoredCueDuck : 1;
     const duckTime = cueDucking ? tuning.audio.authoredCueAttack : tuning.audio.authoredCueRelease;
     this.backgroundDuck.gain.setTargetAtTime(duck, now, duckTime);
-    this.wetDuck?.gain.setTargetAtTime(duck, now, duckTime);
+    this.wetDuck.gain.setTargetAtTime(duck, now, duckTime);
 
     if (s.flockChatter !== false && s.flock?.active && now > this.nextFlock && now > this.flockQuietUntil) {
       this.bugle(s.flock, 0.8 + Math.random() * 0.4);
