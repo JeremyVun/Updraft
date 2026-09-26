@@ -324,8 +324,8 @@ window.__audit = {
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
       // S4, a look change costed only: the sea's fog worked out per vertex and interpolated.
-      'seafog-coarse':[[waterMat],'fragmentShader',s=>sub(sub(s,'in vec3 vSwell;','in vec3 vSwell;\nin vec4 vFog;'),'vec4 fog = fogOf(vWorld);','vec4 fog = vFog;')],
-      'seafog-coarse-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'out vec3 vSwell;','out vec3 vSwell;\nout vec4 vFog;'),'vWorld = w + at;','vWorld = w + at;\n  vFog = fogOf(vWorld);')],
+      'seafog-coarse':[[waterMat],'fragmentShader',s=>sub(sub(s,'in vec3 vSwell;','in vec3 vSwell;\\nin vec4 vFog;'),'vec4 fog = fogOf(vWorld);','vec4 fog = vFog;')],
+      'seafog-coarse-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'out vec3 vSwell;','out vec3 vSwell;\\nout vec4 vFog;'),'vWorld = w + at;','vWorld = w + at;\\n  vFog = fogOf(vWorld);')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
     };
     for(const v of ['s3-off','seafog-coarse'])if(variants.includes(v))variants=[...variants,v+'-vert'];
