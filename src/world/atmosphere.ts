@@ -8,6 +8,7 @@ import { WINDOW, onWindowMove } from './window';
 import { MUSIC_GROWTH_GLSL } from './music-growth';
 import { ISLES } from './heightfield';
 import { HOME_JETTY } from './home-layout';
+import { NOISE_TILES_GLSL, noiseTileUniforms } from './noise-tiles';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
 export const LIVING_BEYOND = -150;
@@ -155,6 +156,7 @@ export const atmo = {
     uLifeWave: { value: new THREE.Vector4(0, 0, -1, 1) },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
+    uNoiseTile: noiseTileUniforms.uNoiseTile,
   },
 };
 
@@ -285,6 +287,7 @@ uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
 ${NOISE_GLSL}
+${NOISE_TILES_GLSL}
 
 vec2 domainUv(vec2 xz) {
   return (xz - uDomain.xy) * uDomain.zw;
@@ -368,7 +371,7 @@ float morningAt(vec2 xz) {
 /** Frost on the grass: hard out at the rim of the hollow, closing in on the bed as the night goes on. */
 float frostAt(vec2 xz) {
   if (uFrost.w <= 0.0) return 0.0;
-  float d = distance(xz, uFrost.xy) * (0.86 + 0.28 * fbm(xz * 0.12));
+  float d = distance(xz, uFrost.xy) * (0.86 + 0.28 * tiledFbmFixed(xz * 0.12));
   return uFrost.w * smoothstep(uFrost.z - 4.0, uFrost.z + 4.0, d) * (1.0 - laneAt(xz));
 }
 

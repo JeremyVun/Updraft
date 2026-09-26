@@ -187,7 +187,7 @@ void main() {
   float sleepingFloor = grassy * sleepFloorAt(xz);
   float winterFibre = 0.0;
   if (sleepingFloor > 0.001) {
-    float winterTuft = fbm(xz * 0.17 + 13.0);
+    float winterTuft = tiledFbm(xz * 0.17 + 13.0, fp.dx * 0.17, fp.dy * 0.17);
     winterFibre = vnoise(xz * vec2(12.0, 5.0)) * detail;
     vec3 winterGrass = mix(vec3(0.14, 0.22, 0.17), vec3(0.27, 0.31, 0.22), smoothstep(0.2, 0.85, winterTuft));
     vec3 awakeGrass = mix(vec3(0.09, 0.22, 0.06), vec3(0.19, 0.32, 0.11), winterTuft);
@@ -196,7 +196,7 @@ void main() {
     alb = mix(alb, winterGrass, sleepingFloor * 0.92);
   }
   float frost = frostAt(xz);
-  if (frost > 0.0) alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frost * mix(0.42, 0.88, smoothstep(0.42, 0.66, fbm(xz * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
+  if (frost > 0.0) alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frost * mix(0.42, 0.88, smoothstep(0.42, 0.66, tiledFbm(xz * 0.35, fp.dx * 0.35, fp.dy * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
   vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   // Keep a textured pasture beyond the blade tiles. A smooth distant dome exposes their circular limit.
   float homePasture = homeAt(xz) * grassy * far;

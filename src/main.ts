@@ -43,6 +43,7 @@ import { Post } from './post/post';
 import { createWindDebug } from './wind/debug';
 import { WindField, type WindSample } from './wind/field';
 import { CLOUD_SPAN, atmo } from './world/atmosphere';
+import { bakeNoiseTiles } from './world/noise-tiles';
 import { CloudShadows } from './world/clouds';
 import { Grass } from './world/grass';
 import { sleepingGust } from './world/sleeping-wind';
@@ -136,6 +137,7 @@ const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
 await yieldBoot();
+bakeNoiseTiles();
 const tree = createTree();
 const hillFlowers = wildflowersAlong(ROUTE);
 const terrainHeights = new TerrainHeights();
