@@ -7,20 +7,52 @@ export const PALETTE = {
   coatShade: new THREE.Color('#b9832a'),
   scarf: new THREE.Color('#c8372d'),
   skin: new THREE.Color('#f3c9a4'),
-  cheek: new THREE.Color('#ee9d8e'),
+  nose: new THREE.Color('#efb896'),
+  cheek: new THREE.Color('#f3b09f'),
+  hair: new THREE.Color('#86573a'),
   eye: new THREE.Color('#2a1a14'),
+  lips: new THREE.Color('#8a4038'),
   boot: new THREE.Color('#4a3326'),
   trousers: new THREE.Color('#3e4a5c'),
 };
 
+/**
+ * The top of a sphere whose lower edge is a fringe: it reaches down the brow in soft points, longer on one side
+ * where it is swept across, and stays short at the back, where the hood covers it anyway.
+ */
+function hairCap(radius: number): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(radius, 48, 10, 0, Math.PI * 2, 0, 1);
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const theta = Math.acos(THREE.MathUtils.clamp(v.y / radius, -1, 1));
+    const phi = Math.atan2(v.z, -v.x);
+    const front = Math.sqrt(Math.max(0, Math.sin(phi)));
+    const edge = 0.6 + front * (0.52 + 0.12 * Math.cos(phi) + 0.07 * Math.abs(Math.sin(phi * 7)));
+    const t = theta * edge;
+    /** Fuller over the brow, where it has to fill the hood's opening. */
+    const r = radius * (1 + 0.1 * front ** 4 * Math.sin(Math.min(t * 1.6, Math.PI)));
+    p.setXYZ(i, -Math.cos(phi) * Math.sin(t) * r, Math.cos(t) * r, Math.sin(phi) * Math.sin(t) * r);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** How each part takes the light. */
+const KIND = { cloth: 0, skin: 1, glint: 2 } as const;
+
 const VERT = /* glsl */ `
 in vec3 color;
+in float aKind;
 out vec3 vColor;
 out vec3 vWorld;
 out vec3 vNormal;
+flat out int vKind;
 void main() {
   vec4 w = modelMatrix * vec4(position, 1.0);
   vColor = color;
+  vKind = int(aKind + 0.5);
   vWorld = w.xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * w;
@@ -33,15 +65,31 @@ uniform vec3 uGroundPos;
 in vec3 vColor;
 in vec3 vWorld;
 in vec3 vNormal;
+flat in int vKind;
 void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
+  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
+  if (vKind == ${KIND.glint}) {
+    gl_FragColor = vec4(applyFog(vec3(0.95, 0.93, 0.9) * (0.75 + 0.25 * sun), vWorld), 1.0);
+    return;
+  }
   float ndl = dot(N, uSunDir);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
-  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
   float ao = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
-  vec3 col = vColor * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95);
+  vec3 hemi = hemiLight(N);
+  vec3 lit = uSunColor * wrap * wrap * sun * 0.95;
+  if (vKind == ${KIND.skin}) {
+    /** Skin keeps its warmth in shade: the cold sky is let in at half strength and light that gets under it glows red at the terminator. */
+    hemi = mix(hemi, vec3(dot(hemi, vec3(0.333))) * vec3(1.12, 0.95, 0.84), 0.55) * 1.3;
+    lit += uSunColor * vec3(1.0, 0.42, 0.3) * (1.0 - abs(ndl)) * sun * 0.28;
+    ao = 1.0;
+  }
+  /** A painter's shadow: colours deepen toward amber as they leave the sun, so the mustard coat goes ochre and not olive. */
+  vec3 amber = vKind == ${KIND.skin} ? vec3(1.0, 0.93, 0.86) : vec3(1.0, 0.84, 0.66);
+  vec3 alb = vColor * mix(amber, vec3(1.0), clamp(wrap * wrap * sun * 1.4, 0.0, 1.0));
+  vec3 col = alb * (hemi * 1.05 * ao + lit);
   col += uSunColor * vColor * rim * 0.55 * sun;
   /**
    * The light a room makes for itself: the coals the child walks toward, the bedside lamp, the first morning.
@@ -57,11 +105,12 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-function paint(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
+function paint(geo: THREE.BufferGeometry, color: THREE.Color, kind: number = KIND.cloth): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
   const colors = new Float32Array(g.attributes.position.count * 3);
   for (let i = 0; i < colors.length; i += 3) colors.set([color.r, color.g, color.b], i);
   g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  g.setAttribute('aKind', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(kind), 1));
   g.deleteAttribute('uv');
   return g;
 }
@@ -211,20 +260,31 @@ export function buildChild(): Rig {
   const head = new THREE.Group();
   head.position.y = 1.38;
   body.add(head);
-  const face = paint(at(new THREE.SphereGeometry(0.37, 20, 14), 0, 0, 0.05), PALETTE.skin);
+  const face = paint(at(new THREE.SphereGeometry(0.37, 28, 20), 0, 0, 0.05, 1.03, 0.97, 1), PALETTE.skin, KIND.skin);
+  const nose = paint(at(new THREE.SphereGeometry(0.028, 10, 8), 0, -0.055, 0.41, 1.2, 0.85, 0.75), PALETTE.nose, KIND.skin);
+  /**
+   * A fringe swept to one side under the hood's rim. It is also what closes the gap between the face and the rim
+   * at the brow, where the hood's lining used to show as a pale band across the forehead.
+   */
+  const fringe = paint(at(hairCap(0.382), 0, 0, 0.05, 1.03, 0.97, 1), PALETTE.hair);
   const hood = paint(at(new THREE.SphereGeometry(0.45, 20, 14), 0, 0.05, -0.07), PALETTE.coat);
   const tip = paint(at(new THREE.ConeGeometry(0.22, 0.5, 12).rotateX(-1.05), 0, 0.36, -0.36), PALETTE.coat);
   const tipEnd = paint(at(new THREE.ConeGeometry(0.1, 0.34, 10).rotateX(-1.9), 0, 0.42, -0.66), PALETTE.coat);
   const pompom = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, 0.32, -0.83), PALETTE.scarf);
-  const rim = paint(at(new THREE.TorusGeometry(0.34, 0.06, 8, 20), 0, 0.02, 0.3, 1, 1.08, 1), PALETTE.coatShade);
-  const cheeks = [-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.06, 8, 6), s * 0.19, -0.1, 0.36, 1, 0.6, 0.5), PALETTE.cheek));
-  head.add(mesh([face, hood, tip, tipEnd, pompom, rim, ...cheeks]));
-  const eyes = mesh([-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.04, 8, 6), s * 0.12, 0.0, 0.405, 1, 1.25, 0.6), PALETTE.eye)));
+  const rim = paint(at(new THREE.TorusGeometry(0.335, 0.048, 10, 36), 0, 0.02, 0.3, 1, 1.08, 1), PALETTE.coatShade);
+  const cheeks = [-1, 1].map((s) =>
+    paint(at(new THREE.SphereGeometry(0.068, 12, 8), s * 0.195, -0.085, 0.36, 1, 0.58, 0.35), PALETTE.cheek, KIND.skin),
+  );
+  head.add(mesh([face, nose, fringe, hood, tip, tipEnd, pompom, rim, ...cheeks]));
+  const eyes = mesh([-1, 1].flatMap((s) => [
+    paint(at(new THREE.SphereGeometry(0.044, 12, 10), s * 0.125, -0.005, 0.4, 1, 1.22, 0.6), PALETTE.eye),
+    paint(at(new THREE.SphereGeometry(0.012, 8, 6), s * 0.125 + 0.014, 0.017, 0.424), PALETTE.eye, KIND.glint),
+  ]));
   head.add(eyes);
-  const yawnMouth = mesh([paint(new THREE.SphereGeometry(0.055, 12, 10), PALETTE.eye)]);
-  yawnMouth.position.set(0, -0.135, 0.397);
-  yawnMouth.scale.set(0.7, 1, 0.25);
-  yawnMouth.visible = false;
+  /** A small closed mouth, which is the same shape the yawn opens. */
+  const yawnMouth = mesh([paint(new THREE.SphereGeometry(0.055, 12, 10), PALETTE.lips)]);
+  yawnMouth.position.set(0, -0.13, 0.397);
+  yawnMouth.scale.set(0.55, 0.12, 0.25);
   head.add(yawnMouth);
 
   const arm = (side: number) => {

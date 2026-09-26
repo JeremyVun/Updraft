@@ -874,8 +874,7 @@ export class Traveller {
     r.head.rotation.x += this.sleepiness * 0.24 * (1 - abed) - yawn * 0.2;
     r.body.rotation.x += this.sleepiness * 0.07 * (1 - abed);
     r.body.scale.y *= 1 + yawn * 0.025;
-    r.mouth.visible = yawn > 0.025;
-    r.mouth.scale.y = 0.2 + yawn * 1.2;
+    r.mouth.scale.set(0.55 + yawn * 0.15, 0.12 + yawn * 1.08, 0.25);
     // A hand covers the yawn once the bird is safely on the blanket. Contact IK still has the final say.
     if (!this.armsFull && abed < 0.2) {
       r.armR.rotation.x = THREE.MathUtils.lerp(r.armR.rotation.x, -2.0, yawn);
