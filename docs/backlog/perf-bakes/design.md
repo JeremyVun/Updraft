@@ -968,8 +968,13 @@ frames), `-w1/-w2` (the sea alone).
   the Boats, 6–10 on the Jetty, 7–12 at sea, 14–17 in the Drowned drift.
 - Look: the fixture frames differ by little, but the sea grid opens out geometrically (cells about a tenth of their
   distance), so near the horizon the haze is interpolated across triangles tens of metres wide; the fog colour carries
-  the sun's glow (`skyColor` of the ray), which is where it could show. Before/after stills toward a low sun:
-  `/tmp/updraft-pb-s-shots/`.
+  the sun's glow (`skyColor` of the ray), which is where it could show. Before/after stills toward a low sun, the same
+  held frame on each branch (`hold=200`, fixed camera, `dusk=1&sun=180,4`, iPad viewport, 1.5×, MSAA 2):
+  `/tmp/updraft-pb-s-shots/horizon-fog-per-pixel.png` and `horizon-fog-per-vertex.png`. They differ by at most 2/255
+  except two pixels (22/255 on the island's skyline); 1,311 of 1.42 M pixels by more than 2. Enlarged 16 times, the
+  difference is faint triangle-shaped bands of the sea grid under the sun's path. I can't tell them apart at 1:1.
+- S1 clip, sailing past the kite island on `perf-bakes-s` (a `VIDEO=1` screencast, not frame-locked):
+  `/tmp/updraft-pb-s-shots/sailing-reflection-every-other-frame.webm`.
 
 ## What changes
 
