@@ -1,7 +1,10 @@
 import { glsl, tuning } from '../../tuning';
 import { ATMO_GLSL } from '../../world/atmosphere';
-import { BEAM, BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, SHEER, SPRING, STERN_Z } from './form';
-import { KIND, STRAKES } from './parts';
+import {
+  BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z, STRAKES,
+  gunwale, gunwaleHalf,
+} from './form';
+import { KIND } from './parts';
 
 export const HULL_VERT = /* glsl */ `
 uniform mat4 uHullFrame;
@@ -25,12 +28,21 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-/** The hull's form from `form.ts` again, for the shade its sides cast inside it. */
+/** The hull's form from `form.ts` again, sampled along its length, for the shade its sides cast inside it. */
+const STATIONS = 32;
+const sampled = (f: (u: number) => number) => Array.from({ length: STATIONS + 1 }, (_, i) => glsl(f(i / STATIONS))).join(', ');
 const FORM_GLSL = /* glsl */ `
-float hullHalfWidth(float u) { return ${glsl(BEAM)} * (1.0 - pow(u, 3.2)) * (0.7 + 0.3 * sin(u * 3.14159265)); }
+const float HULL_TOP[${STATIONS + 1}] = float[](${sampled(gunwale)});
+const float HULL_HALF[${STATIONS + 1}] = float[](${sampled(gunwaleHalf)});
 float hullTop(float u) {
-  return ${glsl(SHEER)} * u * u + ${glsl(SPRING.stern)} * pow(max(0.0, 1.0 - u / ${glsl(SPRING.sternTo)}), 2.0)
-    + ${glsl(SPRING.bow)} * smoothstep(${glsl(SPRING.bowFrom)}, 1.0, u);
+  float x = clamp(u, 0.0, 1.0) * ${glsl(STATIONS)};
+  int i = min(int(x), ${STATIONS - 1});
+  return mix(HULL_TOP[i], HULL_TOP[i + 1], x - float(i));
+}
+float hullHalfWidth(float u) {
+  float x = clamp(u, 0.0, 1.0) * ${glsl(STATIONS)};
+  int i = min(int(x), ${STATIONS - 1});
+  return mix(HULL_HALF[i], HULL_HALF[i + 1], x - float(i));
 }
 float stationOf(float z) { return clamp(z / ${glsl(LENGTH)} + 0.45, 0.0, 1.0); }
 `;

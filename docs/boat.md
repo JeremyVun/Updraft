@@ -21,4 +21,8 @@ for the whole game.
 - First pass (6 commits from 02e8887): clinker strakes in the shader, a pale gunwale rail, ribs, floorboards, seats,
   foredeck, stem, rudder and tiller; tapered mast with hoops; the boom under the sail's clew; a masthead pennant; the
   quilt sail stitched and hemmed; LENGTH, BEAM, DEPTH, DRAFT, the contact shell, physics and public API unchanged.
-- Open: Jeremy's note above. The hull must become deeper and fuller, closer to the concept.
+- Pass 2, proportion study (in progress): `?hull=waist|tub|big` picks a study hull in `form.ts` (`first` is the first
+  pass). Only the drawn hull, the seat and the rig's height change; the contact shell, physics and berths do not. The
+  new hulls take the concept's finish: honey planking, a cream rubbing strake hung with rope, a stout dark mast, a
+  raked stem and transom. The switch is temporary: the chosen hull becomes the only form, then boarding, the jetty
+  step, grounding and berths are reconciled with it.

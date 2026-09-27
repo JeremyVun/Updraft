@@ -8,7 +8,7 @@ import { heightAt } from '../world/island';
 import { type Swell, swellAt } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
-import { BEAM, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, contactShell } from './boat/form';
+import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
 import { boomGeometry, hullGeometry, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
 
@@ -92,7 +92,7 @@ export class Boat {
   /** Above the highest ground within reach of the hull while it lies near (x, z). */
   private readonly ceiling = { x: NaN, z: NaN, height: Infinity };
   private nearShore = true;
-  private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
+  private readonly seatLocal = new THREE.Vector3(0, SEAT_Y, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   /** The wind the sail feels, on the hanging things' spring: it fills when a gust arrives, not when the air moves. */
   private readonly sway = new Sway();
@@ -211,7 +211,7 @@ export class Boat {
   /** World position of the middle of the sail, for anyone who needs to look at it. */
   sailPoint(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
-    return out.set(0, 2.2, MAST_Z).applyMatrix4(this.group.matrixWorld);
+    return out.set(0, SAIL_TACK + 1.45, MAST_Z).applyMatrix4(this.group.matrixWorld);
   }
 
   /** Put a stroke that crosses the sail on screen onto the sail; from low behind the boat the pointer's ray meets water beyond it. */
@@ -231,8 +231,8 @@ export class Boat {
   /** The visible hull's ends, so landmark framing keeps the whole boat within the screen. */
   hullEnds(bow: THREE.Vector3, stern: THREE.Vector3): void {
     this.group.updateMatrixWorld(true);
-    bow.set(0, 0.28, LENGTH * 0.55).applyMatrix4(this.group.matrixWorld);
-    stern.set(0, 0, -LENGTH * 0.45).applyMatrix4(this.group.matrixWorld);
+    bow.set(0, gunwale(1) - 0.05, BOW_Z).applyMatrix4(this.group.matrixWorld);
+    stern.set(0, 0, STERN_Z).applyMatrix4(this.group.matrixWorld);
   }
 
   /**

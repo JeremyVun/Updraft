@@ -2,18 +2,18 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {
-  BOOM_LENGTH, BOW_Z, FLOOR_Y, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z,
-  floorAt, gunwale, halfWidth, hullDepth, sheer, spring, stationU, stationZ,
+  BOOM_LENGTH, BOW_Z, CONCEPT, FLOOR_Y, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, SEAT_Y, STERN_Z,
+  STRAKES, flare, floorAt, gunwale, gunwaleHalf, halfWidth, hullDepth, rake, sheer, stationU, stationZ,
 } from './form';
 
 /** What the hull shader makes of a surface: see `HULL_FRAG`. */
 export const KIND = { planks: 0, boards: 1, wood: 2, paint: 3, transom: 4 } as const;
 
-/** Clinker strakes a side, keel to gunwale. */
-export const STRAKES = 8;
-
 const WOOD = {
-  planks: new THREE.Color('#87583b'),
+  planks: new THREE.Color(CONCEPT ? '#a26c45' : '#87583b'),
+  strake: new THREE.Color('#e3d2b0'),
+  rope: new THREE.Color('#cbb389'),
+  mast: new THREE.Color('#6f4a31'),
   rail: new THREE.Color('#d9bf98'),
   ribs: new THREE.Color('#a57a51'),
   boards: new THREE.Color('#ad875c'),
@@ -116,7 +116,7 @@ function sweep(centres: THREE.Vector3[], outs: THREE.Vector3[], ups: THREE.Vecto
 
 /**
  * The half-section of the planking at station `u`, sampled evenly along the girth from the keel up to the top
- * of the planking: the shell's own curve, then straight up the spring the topsides stand above it.
+ * of the planking: the shell's own curve, then the topsides standing above it, flaring out to the gunwale.
  */
 function halfSection(u: number, count: number): { points: THREE.Vector2[]; girth: number } {
   const dense: THREE.Vector2[] = [];
@@ -128,8 +128,14 @@ function halfSection(u: number, count: number): { points: THREE.Vector2[]; girth
     const th = (Math.PI / 2) * (1 - (k / S) ** 1.6);
     dense.push(new THREE.Vector2(hw * Math.cos(th), sheer(u) - d * Math.pow(Math.sin(th), 0.7)));
   }
-  const lift = spring(u);
-  if (lift > 1e-4) dense.push(new THREE.Vector2(hw, sheer(u) + lift));
+  const rim = sheer(u);
+  const top = gunwale(u);
+  if (top - rim > 1e-4) {
+    for (let k = 1; k <= 40; k++) {
+      const t = k / 40;
+      dense.push(new THREE.Vector2(hw * (1 + flare(u) * t ** 1.4), rim + (top - rim) * t));
+    }
+  }
   const arc = [0];
   for (let k = 1; k < dense.length; k++) arc.push(arc[k - 1] + dense[k].distanceTo(dense[k - 1]));
   const girth = arc[arc.length - 1];
@@ -149,8 +155,8 @@ function halfSection(u: number, count: number): { points: THREE.Vector2[]; girth
  * are drawn by the shader along the girth, so they stay fine lines however far away the boat is.
  */
 function planking(): THREE.BufferGeometry {
-  const U = 30;
-  const T = 12;
+  const U = CONCEPT ? 36 : 30;
+  const T = Math.round(STRAKES * 1.5);
   const rows = 2 * T + 1;
   const pos: number[] = [];
   const grain: number[] = [];
@@ -224,7 +230,7 @@ function rails(): THREE.BufferGeometry[] {
     const centres: THREE.Vector3[] = [];
     for (let i = 0; i <= N; i++) {
       const u = i === 0 ? -0.004 : 1 - (1 - i / N) ** 1.25;
-      const w = halfWidth(THREE.MathUtils.clamp(u, 0, 1));
+      const w = gunwaleHalf(THREE.MathUtils.clamp(u, 0, 1));
       centres.push(new THREE.Vector3(side * (w + 0.006), gunwale(THREE.MathUtils.clamp(u, 0, 1)) - 0.017, stationZ(u)));
     }
     const outs: THREE.Vector3[] = [];
@@ -237,7 +243,7 @@ function rails(): THREE.BufferGeometry[] {
     }
     parts.push(dress(sweep(centres, outs, ups, (i) => [0.03 * (1 - 0.35 * (i / N) ** 4), 0.022], 8, 0.7), WOOD.rail, KIND.wood));
   }
-  const w = halfWidth(0) + 0.02;
+  const w = gunwaleHalf(0) + 0.02;
   const cap = [new THREE.Vector3(-w, gunwale(0) - 0.017, STERN_Z - 0.012), new THREE.Vector3(w, gunwale(0) - 0.017, STERN_Z - 0.012)];
   parts.push(dress(sweep(cap, [new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, -1)], [Y, Y], () => [0.028, 0.022], 8, 0.7), WOOD.rail, KIND.wood));
   return parts;
@@ -270,11 +276,59 @@ function girthAt(u: number, y: number): number {
   return 1;
 }
 
+/** A point `drop` below the gunwale on the outside of the planking at station `u`, and the way out of the hull there. */
+function outside(u: number, drop: number, side: number): { p: THREE.Vector3; out: THREE.Vector3 } {
+  const { p, into } = inside(u, girthAt(u, gunwale(u) - drop), side);
+  return { p, out: into.negate() };
+}
+
+/** The broad cream rubbing strake along the top of the planking, and a rope hung along it in swags. */
+function strake(): THREE.BufferGeometry[] {
+  const parts: THREE.BufferGeometry[] = [];
+  const N = 30;
+  const Z = new THREE.Vector3(0, 0, 1);
+  for (const side of [1, -1]) {
+    const centres: THREE.Vector3[] = [];
+    const outs: THREE.Vector3[] = [];
+    const ups: THREE.Vector3[] = [];
+    for (let i = 0; i <= N; i++) {
+      const u = THREE.MathUtils.lerp(0.01, 0.975, 1 - (1 - i / N) ** 1.25);
+      const { p, out } = outside(u, 0.095, side);
+      centres.push(p.addScaledVector(out, 0.012));
+      outs.push(out);
+      ups.push(new THREE.Vector3().crossVectors(Z, out).multiplyScalar(side).normalize());
+    }
+    parts.push(dress(sweep(centres, outs, ups, (i) => [0.016, 0.074 * (1 - 0.4 * (i / N) ** 6)], 8, 0.35), WOOD.strake, KIND.wood));
+
+    const hangs: THREE.Vector3[] = [];
+    for (let z = STERN_Z + 0.25; z < BOW_Z - 0.3; z += 0.5) {
+      const { p, out } = outside(stationU(z), 0.15, side);
+      hangs.push(p.addScaledVector(out, 0.03));
+    }
+    for (let k = 0; k < hangs.length - 1; k++) {
+      const rope: THREE.Vector3[] = [];
+      for (let m = 0; m <= 8; m++) {
+        const t = m / 8;
+        const z = THREE.MathUtils.lerp(hangs[k].z, hangs[k + 1].z, t);
+        const { p, out } = outside(stationU(z), 0.15 + 0.1 * Math.sin(t * Math.PI), side);
+        rope.push(p.addScaledVector(out, 0.02 + 0.012 * Math.sin(t * Math.PI)));
+      }
+      const outsR = rope.map((q) => outside(stationU(q.z), 0.15, side).out);
+      const upsR = rope.map((_, m) => {
+        const t = new THREE.Vector3().subVectors(rope[Math.min(m + 1, 8)], rope[Math.max(m - 1, 0)]).normalize();
+        return new THREE.Vector3().crossVectors(t, outsR[m]).normalize();
+      });
+      parts.push(dress(sweep(rope, outsR, upsR, () => [0.014, 0.014], 5), WOOD.rope, KIND.wood));
+    }
+  }
+  return parts;
+}
+
 /** The frames: bent ribs up the inside of the planking from the floorboards to the rail, and the risers the seats rest on. */
 function frames(): THREE.BufferGeometry[] {
   const parts: THREE.BufferGeometry[] = [];
   const Z = new THREE.Vector3(0, 0, 1);
-  for (let z = STERN_Z + 0.3; z < 1.9; z += 0.34) {
+  for (let z = STERN_Z + 0.3; z < BOW_Z - 0.74; z += 0.34) {
     const u = stationU(z);
     const from = girthAt(u, floorAt(u).y - 0.03);
     const to = girthAt(u, gunwale(u) - 0.04);
@@ -282,10 +336,10 @@ function frames(): THREE.BufferGeometry[] {
       const centres: THREE.Vector3[] = [];
       const outs: THREE.Vector3[] = [];
       const ups: THREE.Vector3[] = [];
-      const M = 5;
+      const M = CONCEPT ? 12 : 5;
       for (let m = 0; m <= M; m++) {
         const { p, into } = inside(u, THREE.MathUtils.lerp(from, to, m / M), side);
-        centres.push(p.addScaledVector(into, 0.02));
+        centres.push(p.addScaledVector(into, CONCEPT ? 0.04 : 0.02));
         outs.push(into);
         ups.push(Z);
       }
@@ -296,8 +350,8 @@ function frames(): THREE.BufferGeometry[] {
     const centres: THREE.Vector3[] = [];
     const outs: THREE.Vector3[] = [];
     const ups: THREE.Vector3[] = [];
-    const y = -0.05;
-    for (let z = STERN_Z + 0.2; z <= 1.75; z += 0.2) {
+    const y = SEAT_Y - 0.07;
+    for (let z = STERN_Z + 0.2; z <= BOW_Z - 0.89; z += 0.2) {
       const u = stationU(z);
       const { p, into } = inside(u, girthAt(u, y), side);
       centres.push(p.addScaledVector(into, 0.022));
@@ -337,12 +391,19 @@ function board(w: number, h: number, d: number, x: number, y: number, z: number,
   return dress(geo, color, KIND.wood, (p) => [p.x, p.z, 0], new THREE.Vector3(1, 0, 0));
 }
 
+/** The width across the inside of the planking at `z` and height `y`, less a little for the ends of a board. */
+function across(z: number, y: number): number {
+  const u = stationU(z);
+  return 2 * Math.abs(inside(u, girthAt(u, y), 1).p.x) - 0.04;
+}
+
 /** The seats: the thwart the child sits on, the mast thwart and the stern sheets. */
 function seats(): THREE.BufferGeometry[] {
+  const stern = STERN_Z + 0.24;
   return [
-    board(1.7, 0.08, 0.34, 0, 0.02, -0.25, WOOD.seat),
-    board(1.52, 0.07, 0.2, 0, 0.03, MAST_Z, WOOD.seat),
-    board(1.28, 0.05, 0.36, 0, -0.035, STERN_Z + 0.24, WOOD.seat),
+    board(across(-0.25, SEAT_Y), 0.08, 0.34, 0, SEAT_Y, -0.25, WOOD.seat),
+    board(across(MAST_Z, SEAT_Y + 0.01), 0.07, 0.2, 0, SEAT_Y + 0.01, MAST_Z, WOOD.seat),
+    board(across(stern, SEAT_Y - 0.055), 0.05, 0.36, 0, SEAT_Y - 0.055, stern, WOOD.seat),
   ];
 }
 
@@ -354,7 +415,7 @@ function foredeck(): THREE.BufferGeometry {
   const idx: number[] = [];
   for (let i = 0; i <= U; i++) {
     const u = THREE.MathUtils.lerp(0.84, 1, i / U);
-    const w = halfWidth(u);
+    const w = gunwaleHalf(u);
     for (let k = 0; k <= X; k++) {
       const f = (k / X) * 2 - 1;
       pos.push(f * w, gunwale(u) - 0.012 + 0.018 * (1 - f * f), stationZ(u));
@@ -439,15 +500,17 @@ function rudder(): THREE.BufferGeometry[] {
 /** The mast, tapering to its truck, with the hoops the sail's luff is laced to. */
 function mast(): THREE.BufferGeometry[] {
   const height = MAST_TOP - FLOOR_Y;
-  const spar = new THREE.CylinderGeometry(0.036, 0.07, height, 12, 3).translate(0, (MAST_TOP + FLOOR_Y) / 2, MAST_Z);
-  const truck = new THREE.SphereGeometry(0.048, 10, 4).scale(1, 0.55, 1).translate(0, MAST_TOP, MAST_Z);
+  const [top, foot] = CONCEPT ? [0.055, 0.1] : [0.036, 0.07];
+  const colour = CONCEPT ? WOOD.mast : WOOD.spar;
+  const spar = new THREE.CylinderGeometry(top, foot, height, 12, 3).translate(0, (MAST_TOP + FLOOR_Y) / 2, MAST_Z);
+  const truck = new THREE.SphereGeometry(top + 0.012, 10, 4).scale(1, 0.55, 1).translate(0, MAST_TOP, MAST_Z);
   const parts = [
-    dress(spar, WOOD.spar, KIND.wood, (p) => [p.y, Math.atan2(p.x, p.z - MAST_Z) * 0.07, 0], Y),
-    dress(truck, WOOD.spar, KIND.wood, (p) => [p.y, p.x, 0], Y),
+    dress(spar, colour, KIND.wood, (p) => [p.y, Math.atan2(p.x, p.z - MAST_Z) * 0.07, 0], Y),
+    dress(truck, colour, KIND.wood, (p) => [p.y, p.x, 0], Y),
   ];
   for (let k = 1; k <= 5; k++) {
     const y = SAIL_TACK + (k / 5.6) * SAIL_HOIST;
-    const r = 0.07 - 0.034 * ((y - FLOOR_Y) / height) + 0.028;
+    const r = foot - (foot - top) * ((y - FLOOR_Y) / height) + 0.028;
     const hoop = new THREE.TorusGeometry(r, 0.011, 4, 10).rotateX(Math.PI / 2).translate(0, y, MAST_Z);
     parts.push(dress(hoop, WOOD.hoop, KIND.wood, (p) => [Math.atan2(p.x, p.z - MAST_Z) * r, p.y, 0], new THREE.Vector3(1, 0, 0)));
   }
@@ -456,7 +519,22 @@ function mast(): THREE.BufferGeometry[] {
 
 /** Everything fixed to the hull, in one geometry for one draw. */
 export function hullGeometry(): THREE.BufferGeometry {
-  const parts = [planking(), transom(), ...rails(), ...frames(), floorboards(), ...seats(), foredeck(), stem(), ...rudder(), ...mast()];
+  const hull = [planking(), transom(), ...rails(), ...(CONCEPT ? strake() : []), ...frames(), floorboards(), ...seats(), foredeck(), stem(), ...rudder()];
+  const p = new THREE.Vector3();
+  for (const g of hull) {
+    const pos = g.getAttribute('position') as THREE.BufferAttribute;
+    let moved = false;
+    for (let i = 0; i < pos.count; i++) {
+      const z = pos.getZ(i);
+      rake(p.fromBufferAttribute(pos, i));
+      if (p.z !== z) {
+        pos.setZ(i, p.z);
+        moved = true;
+      }
+    }
+    if (moved && g.index) g.computeVertexNormals();
+  }
+  const parts = [...hull, ...mast()];
   const merged = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)));
   if (!merged) throw new Error('boat parts do not merge');
   return merged;
