@@ -154,7 +154,7 @@ try {
   assert(report.completed,'Playthrough did not reach the ending');
   assert.deepEqual(report.chapters.map(c=>c.name),route);
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('updraft.progress.v1')??'null')?.point==='complete');
-  await page.waitForSelector('#credits.rolling');await page.waitForTimeout(6500);
+  await page.waitForSelector('#ending.visible');await page.waitForTimeout(6500);
   await page.screenshot({path:prefix+'-credits.png'});
   // The journey capture ends here; reload intentionally has no game object until boot completes.
   clearInterval(reviewTimer);await reviewPending;

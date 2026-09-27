@@ -143,8 +143,10 @@ body.starting #plane-guide { visibility: hidden; }
   min-width: 120px;
   min-height: 56px;
   padding: 12px 24px;
-  border: 1px solid #fff0d64d;
-  border-radius: 30px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 0;
   background: none;
   color: #fff2db;
   text-shadow: 0 0 9px #ffe8cc30;
@@ -167,7 +169,6 @@ body.starting #plane-guide { visibility: hidden; }
 }
 .begin-mouse .begin-mouse-button { fill: currentColor; fill-opacity: .45; stroke: none; }
 @media (hover: hover) and (pointer: fine) {
-  #begin { border-color: transparent; }
   .begin-mouse { display: block; }
 }
 #veil.ready #begin { visibility: visible; opacity: 1; }
@@ -176,7 +177,7 @@ body.starting #plane-guide { visibility: hidden; }
   0%, 100% { opacity: .95; }
   50% { opacity: .82; }
 }
-#begin:focus-visible { outline: 1px solid #fff3e280; outline-offset: 5px; }
+#begin:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 7px; }
 #veil.departing #begin, #veil.departing .veil-wind, #veil.departing .veil-rest { opacity: 0; pointer-events: none; }
 #veil.departing #begin span { animation: none; }
 body.starting #cursor, body.starting #again { visibility: hidden; }
@@ -395,99 +396,53 @@ body.shot.starting #veil { display: block; }
   }
 }
 
-#credits {
+#ending {
   position: fixed;
   inset: 0;
-  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  visibility: hidden;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 3s ease;
   color: #fff7ea;
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   text-align: center;
+  text-shadow: 0 2px 12px #182a36;
 }
-
-#credits.rolling {
-  opacity: 1;
-  transition-duration: 0.3s;
+#ending.visible { visibility: visible; }
+#ending p, .ending-actions { grid-area: 1 / 1; opacity: 0; }
+#ending p {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.35;
+  transition: opacity 3s ease;
 }
-
-#credits .roll {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  padding-bottom: 20vh;
-}
-
-#credits.rolling .roll {
-  animation: roll 54s linear forwards;
-}
-
-@keyframes roll {
-  to {
-    transform: translateY(calc(-100% - 100vh));
-  }
-}
-
-#credits .entry {
-  margin: 0 0 46px;
-}
-
-#credits .role {
-  font-size: 12px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  opacity: 0.55;
-  margin-bottom: 10px;
-}
-
-#credits .name {
-  font-size: 24px;
-  line-height: 1.5;
-  text-shadow: 0 0 18px rgba(255, 236, 200, 0.35);
-}
-
+#ending.visible p { opacity: 1; }
+#ending.farewell p { opacity: 0; transition-duration: 2s; }
+.ending-actions { visibility: hidden; transition: opacity 2s ease; }
+#ending.replay-ready .ending-actions { visibility: visible; opacity: 1; pointer-events: auto; }
 #again {
-  visibility: hidden;
-  position: fixed;
-  left: calc(env(safe-area-inset-left) + clamp(24px, 3vw, 48px));
-  bottom: calc(env(safe-area-inset-bottom) + clamp(24px, 4vh, 36px));
+  appearance: none;
+  -webkit-appearance: none;
   min-height: 56px;
-  padding: 12px 0;
-  font-size: clamp(19px, 1.6vw, 22px);
-  white-space: nowrap;
+  padding: 12px 24px;
   border: 0;
   background: none;
-  color: #fff2db;
+  color: inherit;
+  text-shadow: inherit;
   cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-
-#credits.replay-ready ~ #again {
-  visibility: visible;
-  pointer-events: auto;
-  opacity: 0.32;
-  animation: glow 4.5s ease-in-out 2s infinite;
+#ending.replay-ready #again span { display: inline-block; animation: replay-breathe 4.5s ease-in-out 2s infinite; }
+@keyframes replay-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
 }
-
-@keyframes glow {
-  0%,
-  100% {
-    opacity: 0.32;
-    text-shadow: 0 0 6px rgba(255, 236, 200, 0.3);
-  }
-  50% {
-    opacity: 0.9;
-    text-shadow: 0 0 16px rgba(255, 236, 200, 0.75);
-  }
-}
-
-#again:hover {
-  animation-play-state: paused;
-  opacity: 1;
+#again:hover span { animation-play-state: paused; }
+#again:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 7px; }
+@media (prefers-reduced-motion: reduce) {
+  #ending p, .ending-actions { transition: none; }
+  #ending.replay-ready #again span { animation: none; }
 }
 
 body.shot #sound,

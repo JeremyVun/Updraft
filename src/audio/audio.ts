@@ -953,8 +953,8 @@ export class Soundscape {
     const weatherGust = winter * .76;
     const filterGust = Math.max(g * tuning.audio.playerWindFilterRange, weatherGust);
     const musicalWind = s.startingIsland || s.forestWind || s.sleepingWind;
-    const playerWind = s.startingIsland ? 1 : 10 ** (tuning.audio.laterWindDb / 20);
-    // Preserve the weather floor while trimming only the player contribution.
+    const playerWind = 1 - tuning.audio.playerWindEase * g * g;
+    // Preserve the weather floor while easing only the player contribution.
     const gustLevel = Math.max(Math.pow(g, 1.4) * playerWind, Math.pow(weatherGust, 1.4));
     const whistleLevel = Math.max(Math.max(0, g - .55) * playerWind, Math.max(0, weatherGust - .55));
     const rustleLevel = Math.max(Math.pow(g, 1.2) * playerWind, Math.pow(weatherGust, 1.2));
@@ -972,7 +972,7 @@ export class Soundscape {
     this.fade(this.whistleGain.gain, whistleLevel * 0.12 * air, now, tc);
     this.whistleFilter.frequency.setTargetAtTime(900 + filterGust * 900, now, tc);
     this.fade(this.rustleGain.gain, (s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
-    this.fade(this.liftGain.gain, s.charge * 0.35 * air * playerWind, now, 0.15);
+    this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
     const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;

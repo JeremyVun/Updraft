@@ -171,6 +171,7 @@ export class Traveller {
   private glanceYaw = 0;
   private glancePitch = 0;
   private glances = 0;
+  private gusted = 0;
   private nextGlance = 5;
   private readonly kneel = new Glide();
   private readonly abedGlide = new Glide();
@@ -1106,10 +1107,10 @@ export class Traveller {
     const settle = 1 - 0.75 * moving;
     this.nextGlance -= h;
     if (this.nextGlance <= 0) {
-      this.glanceUntil = t + 1.4 + Math.random() * 0.8;
-      this.nextGlance = 6 + Math.random() * 6;
-      /** A different look each time without drawing on the shared random sequence. */
+      /** A different look each time, at uneven times, without drawing on the shared random sequence. */
       const k = ++this.glances;
+      this.nextGlance = 6 + 6 * ((k * 0.570796) % 1);
+      this.glanceUntil = t + 1.4 + 0.8 * ((k * 0.414214) % 1);
       this.glanceYaw = (k % 2 ? 1 : -1) * (0.55 + 0.45 * ((k * 0.618034) % 1));
       this.glancePitch = -0.3 + 0.36 * ((k * 0.754878) % 1);
     }
@@ -1117,6 +1118,24 @@ export class Traveller {
     this.glance = damp(this.glance, idle && t < this.glanceUntil ? 1 : 0, 3.5, h);
     let wantYaw = lerp(Math.sin(t * 0.37) * 0.35 * settle, this.glanceYaw, this.glance);
     let wantPitch = lerp(Math.sin(t * 0.23) * 0.08 * settle + 0.06 * running, this.glancePitch, this.glance);
+    /**
+     * A gust arriving is felt: they look round toward where it comes from, unless something else has their
+     * attention, and give a little with its push.
+     */
+    const ws = this.sample;
+    const arrived = smooth(ws.energy, tuning.wind.arriveFrom, tuning.wind.arriveFull);
+    this.gusted = damp(this.gusted, arrived, arrived > this.gusted ? 6 : 1.2, h);
+    const windAhead = ws.x * Math.sin(this.yaw) + ws.z * Math.cos(this.yaw);
+    const windLeft = ws.x * Math.cos(this.yaw) - ws.z * Math.sin(this.yaw);
+    const push = this.gusted * (1 - this.sit) * (1 - this.abedGlide.value);
+    if (Math.hypot(windAhead, windLeft) > 1) {
+      const from = THREE.MathUtils.clamp(Math.atan2(-windLeft, -windAhead), -1, 1);
+      const turn = 0.8 * push * (1 - this.glance);
+      wantYaw = lerp(wantYaw, from, turn);
+      wantPitch = lerp(wantPitch, -0.1, turn);
+    }
+    lean += THREE.MathUtils.clamp(windAhead * 0.008, -0.08, 0.08) * push;
+    const sway = THREE.MathUtils.clamp(-windLeft * 0.008, -0.08, 0.08) * push;
     if (this.lookAt) {
       r.root.updateMatrixWorld(true);
       const head = r.face.getWorldPosition(this.tmp);
@@ -1144,7 +1163,7 @@ export class Traveller {
 
     P.lean = lean;
     P.twist = twist;
-    P.tilt = 0;
+    P.tilt = sway;
     P.bend = bend;
     P.rise = rise;
     P.sit = sit;
@@ -1214,8 +1233,9 @@ export class Traveller {
   private stoop(dt: number): number {
     const r = this.rig;
     let over = -1;
+    const onFeet = !this.sitting && !this.riding && this.abed < 0.01;
     for (const hand of [0, 1] as const) {
-      if (this.reachNow[hand] < 0.5 || this.reachInBody[hand]) continue;
+      if (!onFeet || this.reachNow[hand] < 0.5 || this.reachInBody[hand]) continue;
       const target = this.reachAt[hand];
       const shoulder = r.bones[hand === 0 ? BONE.upperL : BONE.upperR].getWorldPosition(this.tmp2);
       const ahead = (target.x - shoulder.x) * Math.sin(this.yaw) + (target.z - shoulder.z) * Math.cos(this.yaw);

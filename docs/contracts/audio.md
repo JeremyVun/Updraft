@@ -39,8 +39,8 @@ Cursor chimes accompany the starting island, forest and the feather-guided climb
 These chapter gates are independent of departing music and Sleeping's wood mood.
 Gusts, held updrafts and glider-lift answers stop scheduling chimes outside these scenes; existing gesture tails fade
 out over 300 ms. Opening and forest chimes are both +6 dB above the previous 0.7 gain trim, preserving the rescue voice’s
-relative softness. Everywhere after the opening, including the forest, player gust,
-whistle, ground rustle and updraft noise are −3 dB (`tuning.audio.laterWindDb`). Ambient breeze, sea, rain and
+relative softness. Player gust, whistle, ground rustle and updraft noise are the same level in every room and ease off
+as a stroke strengthens (`tuning.audio.playerWindEase`): about −1 dB at half strength, −6 dB at full. Ambient breeze, sea, rain and
 the winter weather floor keep their existing levels. Cursor filter sweeps are 20% smaller
 (`playerWindFilterRange`): maximum gust cutoff 1140 Hz, whistle 1620 Hz and updraft 1420 Hz, down from
 1360/1800/1720 Hz. Weather filter response and wind mechanics are unchanged.

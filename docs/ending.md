@@ -615,3 +615,12 @@ The climb keeps its length. What a recording of the whole summit measured, and w
 
 `tools/summit-film.mjs` records the summit with the game's own audio on a fixed clock and logs the camera's turn
 rate per frame; `tools/ending-audition.mjs` renders the ending score for side-by-side auditions.
+
+## Quiet completion screen (2026-09-27)
+
+Jeremy approved replacing the prototype's joke credit roll, then asked for a simpler ending:
+“thanks for bringing them home in the center of the screen”, fading out before a pulsing Play again.
+The existing final camera and audio timing remain. “Thanks for bringing them home.” fades in over three
+seconds, holds for three, then fades out over two. At nine seconds, Play again fades in at the same position
+and gently pulses. There is no Credits button. Third-party notices remain in the distributed assets.
+Replay still clears the completed save. Reduced-motion preferences disable fades and pulsing.

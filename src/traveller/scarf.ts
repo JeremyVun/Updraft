@@ -35,16 +35,16 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float ndl = dot(N, uSunDir);
   float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
-  /** Wool lets the low sun through its thin edges and glows red when the light is behind it. */
-  float through = max(-ndl, 0.0) * 0.55 + pow(max(dot(-V, uSunDir), 0.0), 3.0) * 0.45;
+  /** Lit as the wrap round the neck is (the child's knit), so the ends are the same red. */
   float st = knit(vSurf, 1.0);
   vec3 alb = uColor * (0.8 + 0.3 * st);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
   float ground = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
-  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
+  float facing = clamp(dot(N, V), 0.0, 1.0);
+  float rim = pow(1.0 - facing, 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
   float ao = ground * 0.85;
-  vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * (wrap * wrap * 0.9 * mix(0.6, 1.0, ao) + through * 0.4) * sun);
-  col += uSunColor * alb * rim * 0.6 * sun;
+  vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95 * mix(0.6, 1.0, ao));
+  col += uSunColor * alb * rim * 0.755 * sun;
   col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -152,7 +152,8 @@ export class Scarf {
           if (i < rings - 1) {
             const a = e.offset + i * SECTION + j;
             const b = e.offset + i * SECTION + ((j + 1) % SECTION);
-            index.push(a, b, a + SECTION, b, b + SECTION, a + SECTION);
+            /** Wound so the outside faces out, the way its normals point. */
+            index.push(a, a + SECTION, b, b, a + SECTION, b + SECTION);
           }
         }
       }
@@ -162,8 +163,8 @@ export class Scarf {
         for (let j = 0; j < SECTION; j++) {
           const a = e.offset + ring * SECTION + j;
           const b = e.offset + ring * SECTION + ((j + 1) % SECTION);
-          if (flip) index.push(c, b, a);
-          else index.push(c, a, b);
+          if (flip) index.push(c, a, b);
+          else index.push(c, b, a);
         }
       }
     }
@@ -209,15 +210,20 @@ export class Scarf {
     const k = tuning.scarf;
     const span = Math.min(Math.max(dt, 1e-4), 0.1);
     this.time += span;
-    this.tmp.set((anchor.x - this.lastAnchor.x) / span, 0, (anchor.z - this.lastAnchor.z) / span);
+    this.tmp.subVectors(anchor, this.lastAnchor).divideScalar(span);
     if (this.tmp.length() > MAX_CARRY) this.tmp.copy(this.carried);
     this.tmp.lerpVectors(this.carried, this.tmp, 1 - Math.exp(-span * 8));
-    /** Starting and stopping swing the ends back and forward, but only a share of what the child's own speed would. */
+    /**
+     * Starting and stopping swing the ends back and forward, and a squat or a hop bobs them, but only a share of what
+     * the child's own motion would: carried down into a squat, they are not left in the air to fling over the hood.
+     */
     const lurchX = ((this.carried.x - this.tmp.x) / span) * k.inertia;
+    const lurchY = ((this.carried.y - this.tmp.y) / span) * k.inertia * 0.4;
     const lurchZ = ((this.carried.z - this.tmp.z) / span) * k.inertia;
     this.carried.copy(this.tmp);
     this.lastAnchor.copy(anchor);
     const moveX = this.carried.x;
+    const moveY = this.carried.y;
     const moveZ = this.carried.z;
 
     /**
@@ -302,11 +308,11 @@ export class Scarf {
            * behind rather than hanging across the arm; the very end dips a little.
            */
           const held = 0.82 + 0.18 * smooth(f, 0, 0.5) - 0.2 * smooth(f, 0.7, 1);
-          const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still);
+          const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still) + lurchY;
           /** It moves in the child's company: the chain keeps only its own motion from step to step, not theirs. */
-          this.tmp.set(p.x + moveX * h, p.y, p.z + moveZ * h);
+          this.tmp.set(p.x + moveX * h, p.y + moveY * h, p.z + moveZ * h);
           p.x += (p.x - q.x) * carry + ax * h * h + moveX * h;
-          p.y += (p.y - q.y) * carry + ay * h * h;
+          p.y += (p.y - q.y) * carry + ay * h * h + moveY * h;
           p.z += (p.z - q.z) * carry + az * h * h + moveZ * h;
           q.copy(this.tmp);
         }
