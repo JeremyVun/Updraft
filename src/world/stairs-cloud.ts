@@ -231,6 +231,10 @@ vec3 cloudTop(vec2 xz, vec4 calm, vec2 detail, float fine, out vec2 fold) {
     crease += (1.0 - smoothstep(0.0, 0.4, s.x)) * 0.3;
   }
   fold = vec2(clamp(crease, 0.0, 1.0), crown);
+  // Its creases never dip below the top of the deck, or what stands just inside the cloud would show through them.
+  float below = h.x - 0.1;
+  float soft = sqrt(below * below + 0.02);
+  h = vec3(0.1 + 0.5 * (below + soft), h.yz * 0.5 * (1.0 + below / soft));
   return h - furrow(xz) * 0.6;
 }
 /** How far the heaps between a point and the low sun keep the light off it: their long shadows across the cloud. */
