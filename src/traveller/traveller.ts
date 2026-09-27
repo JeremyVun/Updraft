@@ -145,7 +145,7 @@ export class Traveller {
   private readonly look = newPose();
   private readonly drive: Drive = {
     dt: 0, time: 0, speed: 0, gait: 0, ground: (x, z) => this.floorAt(x, z), windX: 0, windZ: 0, gust: 0,
-    velocity: new THREE.Vector3(), turn: 0,
+    velocity: new THREE.Vector3(), turn: 0, bagOpen: false,
   };
   private lastYaw = 0;
   private turnRate = 0;
@@ -345,6 +345,12 @@ export class Traveller {
 
   /** Both hands belong to the cygnet; the plane's keel goes under the satchel's outer flap. */
   armsFull = false;
+
+  /** Throws the bag's flap open for good, the first time the cygnet rides in it; `now` skips the swing over. */
+  openBag(now = false): void {
+    this.drive.bagOpen = true;
+    if (now) this.motion.flapOpened();
+  }
   /** Keeps the free mitten outside the bell of the coat while it grips the paper. */
   carryingPlane = false;
   private stowed = 0;

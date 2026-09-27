@@ -27,11 +27,15 @@ export const BONE = {
   footR: 19,
   bag: 20,
   hem: 21,
+  /** The bag's flap: hinged along the top of its outer face, rolling over the hinge in two bones, then its free half. */
+  flap: 29,
+  flapRoll: 30,
+  flapTip: 31,
 } as const;
 
 /** The coat's hem hangs off a ring of bones round the waist, one every eighth of a turn from the front. */
 export const HEM_BONES = 8;
-export const BONES = BONE.hem + HEM_BONES;
+export const BONES = BONE.flapTip + 1;
 
 export const UPPER_ARM = 0.29;
 /** Elbow to wrist, and wrist to the middle of the mitten: a reach is measured to the mitten, as one straight forearm. */
@@ -74,6 +78,9 @@ const JOINTS: Joint[] = [
   [BONE.shinR, BONE.thighR, [0, -THIGH, 0]],
   [BONE.footR, BONE.shinR, [0, -SHIN, 0]],
   [BONE.bag, BONE.chest, [0, 0.24, -0.27]],
+  [BONE.flap, BONE.bag, [0, -0.03, -0.425]],
+  [BONE.flapRoll, BONE.flap, [0, 0.012, 0.03]],
+  [BONE.flapTip, BONE.flapRoll, [0, 0.02, 0.19]],
 ];
 for (let i = 0; i < HEM_BONES; i++) {
   const a = hemAngle(i);

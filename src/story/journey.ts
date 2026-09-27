@@ -132,6 +132,7 @@ export class Journey {
         }
       }
       restoreLife(saved, cast);
+      if (cast.cygnet.seat === 'satchel') cast.child.openBag(true);
       this.savedPoint = saved.point;
       return;
     }
@@ -292,6 +293,8 @@ export class Journey {
   private begin(name: ChapterName): void {
     this.transitionView = this.transitionView ?? this.chapter;
     this.name = name;
+    /** The cygnet first rides in the bag on the little boats' island; from then on its flap is left open. */
+    if (ORDER.indexOf(name) > ORDER.indexOf('boats')) this.cast.child.openBag(true);
     this.chapter = this.make(name);
     this.savedPoint = '';
   }
