@@ -6,7 +6,7 @@ import type { PointerInput } from '../input/pointer';
 import type { Deck } from './decks';
 import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
+import { hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import {
@@ -257,6 +257,23 @@ function cloudUnder(index: number): number {
   return index === 1 ? 0 : index === 2 ? 0.55 : index <= BELOW_CLOUD ? 0.9 : 1.3;
 }
 
+/**
+ * The haze a flight and the landing it arrives on rest on, placed relative to `origin`. Each flight's haze runs on
+ * into its landing's, and each landing's into the next flight's where there is haze to meet.
+ */
+function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THREE.Mesh[] {
+  if (amount <= 0) return [];
+  const L = landingOf(f.index);
+  const floor = at(landingFrame(L), (L.x0 + L.x1) / 2, 0, (L.z0 + L.z1) / 2);
+  const haze = [
+    hazeUnderFlight(flightFrame(f), FLIGHT_RUN, FLIGHT_RISE, STEP.width + 2 * STRING.thick, amount,
+      { z0: f.index > 1 && cloudUnder(f.index - 1) > 0, z1: true }),
+    hazeUnderLanding(floor, L.x1 - L.x0, L.z1 - L.z0, amount, { z0: true, x0: L.exit === -1, x1: L.exit === 1 }),
+  ];
+  for (const m of haze) m.matrix.premultiply(new THREE.Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z));
+  return haze;
+}
+
 function stairMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: atmo.uniforms,
@@ -318,20 +335,14 @@ export class CloudStairs {
   constructor() {
     this.group.name = 'stairs-in-the-clouds';
     const material = stairMaterial();
-    const puffs = puffMaterial();
     const fixed = new Build();
-    const cloud: Puff[] = [];
     for (let i = 1; i <= FLIGHTS; i++) {
       if ((LOOSE as readonly number[]).includes(i)) continue;
       const f = flight(i);
       buildFlight(fixed, f);
       buildLanding(fixed, f);
-      cloud.push(...flightPuffs(f, cloudUnder(i)));
+      for (const haze of hazeUnder(f, cloudUnder(i))) this.group.add(haze);
     }
-    const under = new THREE.Mesh(puffGeometry(cloud), puffs);
-    under.name = 'stairs-cloud';
-    under.frustumCulled = false;
-    this.group.add(under);
     // Side by side at the open edge, toes to the drop and the sun.
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.07, 0, -0.02)).multiply(new THREE.Matrix4().makeRotationY(0.14)));
@@ -361,9 +372,7 @@ export class CloudStairs {
       const group = new THREE.Group();
       group.name = `stairs-loose-${index}`;
       group.add(new THREE.Mesh(geo, material));
-      const fluff = new THREE.Mesh(puffGeometry(flightPuffs(f, cloudUnder(index)), pivot), puffs);
-      fluff.frustumCulled = false;
-      group.add(fluff);
+      group.add(...hazeUnder(f, cloudUnder(index), pivot));
       const ghost = new THREE.Mesh(geo, ghostMaterial);
       ghost.position.copy(pivot);
       ghost.visible = false;
