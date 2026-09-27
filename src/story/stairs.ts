@@ -289,6 +289,12 @@ export class StairsChapter implements Chapter {
     child.stop();
     child.position.y = level === 0 ? 0 : flight(level).top.y;
     child.place(s.x, s.z, Math.PI);
+    // On its own feet a stop behind them, as it would be if they had climbed here together.
+    const behind = this.stops[Math.max(0, at - 1)];
+    if (cygnet.carried) cygnet.release(this.birdAt.set(behind.x, 0, behind.z));
+    cygnet.standAt(behind.x, levelHeight(behind.level), behind.z, Math.PI);
+    cygnet.stay = false;
+    this.birdStop = Math.max(0, at - 1);
     this.stop = at;
     this.limit = n < LOOSE.length ? at : this.reachable();
     this.to(n < LOOSE.length ? 'waiting' : 'climb');
@@ -422,6 +428,7 @@ export class StairsChapter implements Chapter {
       default:
         break;
     }
+    this.keepOnTheStair();
     this.cloud();
     this.loopScenery(dt);
     this.lanternGlow();
@@ -585,7 +592,7 @@ export class StairsChapter implements Chapter {
       }
       case 'round': {
         k.stay = false;
-        k.pace = 1.05;
+        k.pace = 0.75;
         const to = this.roundWay[this.roundLeg];
         k.errand = this.birdAt.copy(to).setY(0);
         this.unstick(to);
@@ -640,6 +647,20 @@ export class StairsChapter implements Chapter {
       }
     }
     this.lastDt = dt;
+  }
+
+  /**
+   * Once they are up the stair the bird is always on it. Should anything ever put it off, it is back on it a stop
+   * behind the child inside a wisp of cloud, rather than left on the grass or the sea far below them.
+   */
+  private keepOnTheStair(): void {
+    const { child: c, cygnet: k } = this.cast;
+    if (k.carried || this.stop < 2 || !['climb', 'waiting', 'hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat)) return;
+    if (k.position.y > c.position.y - 3) return;
+    const back = this.stops[Math.max(0, this.stop - 1)];
+    k.standAt(back.x, levelHeight(back.level), back.z, k.yaw);
+    this.world.wisps.engulf(this.tmp.copy(k.position).setY(k.position.y + 0.3), 1.2);
+    this.birdStop = Math.max(0, this.stop - 1);
   }
 
   /**

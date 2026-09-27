@@ -13,6 +13,9 @@ import { Poser, type Drives } from './cygnet/pose';
 import { applyLook, cygnetMaterial, downShells, newLook } from './cygnet/shader';
 import { Ride, type Mount, type Seat } from './cygnet/ride';
 
+/** Which ways it tries to step, off the way it faces, when the straight step would take it over an edge. */
+const STEP_ASIDE = [0, 0.5, -0.5, 1.1, -1.1] as const;
+
 const PREEN_NECK = [...NECK].reverse();
 const PREEN_JOINTS = [HEAD, ...PREEN_NECK];
 
@@ -92,6 +95,7 @@ export class Cygnet {
   stay = false;
   /** How fast it walks, as a share of its usual. A bird following something floating in the air ambles after it. */
   pace = 1;
+  private readonly walkTo = new THREE.Vector2();
   /**
    * How big it is drawn, 1 as it is. Only for a trick of the eye: where a stair is built smaller so as to look
    * further off than it is, whatever walks on it has to be smaller too.
@@ -1195,8 +1199,12 @@ export class Cygnet {
     this.position.y = ground + rise * rise * 0.1 * amp;
     if (rise > 0.3) {
       this.stride += dt * 9 * amp;
-      this.position.x += Math.sin(this.yaw) * dt * 0.35 * amp;
-      this.position.z += Math.cos(this.yaw) * dt * 0.35 * amp;
+      const nx = this.position.x + Math.sin(this.yaw) * dt * 0.35 * amp;
+      const nz = this.position.z + Math.cos(this.yaw) * dt * 0.35 * amp;
+      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+        this.position.x = nx;
+        this.position.z = nz;
+      }
     }
     this.roll = ease(this.roll, rise > 0.05 ? Math.sin(this.stride * 0.5) * 0.25 * amp : 0, 4, dt);
     if (rise < 0.05 && this.time > this.nextCall) {
@@ -1276,12 +1284,22 @@ export class Cygnet {
     const speed = this.hurry * (1.5 + 2.9 * this.hurry) * this.pace;
     if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
-      const nx = this.position.x + Math.sin(this.yaw) * speed * dt;
-      const nz = this.position.z + Math.cos(this.yaw) * speed * dt;
-      // Up a staircase in the air it never walks off the edge, however it has to turn at the corners.
-      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
-        this.position.x = nx;
-        this.position.z = nz;
+      // Up a staircase in the air it never walks off the edge; brought up against a rail it goes along it, whichever
+      // way along keeps it nearer where it is going, rather than standing stuck at it.
+      const want = Math.atan2(dx, dz);
+      let best = -Infinity;
+      for (const turn of STEP_ASIDE) {
+        const way = this.yaw + turn;
+        const nx = this.position.x + Math.sin(way) * speed * dt;
+        const nz = this.position.z + Math.cos(way) * speed * dt;
+        const toward = Math.cos(way - want) - Math.abs(turn) * 0.05;
+        if (toward <= best || (turn !== 0 && toward < 0) || offTheEdge(this.decks, nx, nz, this.position.y)) continue;
+        best = toward;
+        this.walkTo.set(nx, nz);
+      }
+      if (best > -Infinity) {
+        this.position.x = this.walkTo.x;
+        this.position.z = this.walkTo.y;
       }
       this.stride += dt * (6 + speed * 2.8);
       this.settle = Math.max(0, this.settle - dt * 2.5);
@@ -1302,8 +1320,12 @@ export class Cygnet {
       /** Knocked a step or two downwind, and no further. */
       const push = this.mind.actEnv * 1.3 * dt;
       const speedNow = Math.hypot(this.windNow.x, this.windNow.z) || 1;
-      this.position.x += (this.windNow.x / speedNow) * push;
-      this.position.z += (this.windNow.z / speedNow) * push;
+      const nx = this.position.x + (this.windNow.x / speedNow) * push;
+      const nz = this.position.z + (this.windNow.z / speedNow) * push;
+      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+        this.position.x = nx;
+        this.position.z = nz;
+      }
       this.stride += dt * 14 * this.mind.actEnv;
     }
     this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
