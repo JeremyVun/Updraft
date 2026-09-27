@@ -103,6 +103,10 @@ export interface Chapter {
   readonly flockChatter?: boolean;
   /** The low cloud deck over the stairs, while this chapter wants it; eased out when a chapter leaves it unset. */
   readonly cloudDeck?: CloudDeckState;
+  /** The departure kite tied to a moving boat's bow and flying ahead of it on a heading, while this chapter wants it. */
+  readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
+  /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */
+  readonly cameraCut?: number;
   /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
   readonly pointerFloor?: number | null;
   /** Which room's music this chapter is played to. */

@@ -8,9 +8,14 @@ import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
 import { CloudWisps } from './stairs-wisps';
+import { CloudWake } from './stairs-wake';
 import {
-  BELOW_CLOUD, CLOUD, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LANE, LOOSE, LOOSE_START, SLIPPERS, STAIRS_ISLE, STEP, flight, landingOf, type Flight,
+  BELOW_CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LANE, LOOSE, LOOSE_START, SLIPPERS, STAIRS_ISLE, STEP, flight, landingOf, type Flight,
 } from './stairs-layout';
+
+/** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
+const ROUTE_POINTS = CLOUD_ROUTE.length + 2;
+const TRAIL_POINTS = 16;
 
 /** What each part of the staircase is made of, read by the shader to decide its surface. */
 const PAINT = 0, WOOD = 1, RUNNER = 2, FELT = 3, SOLE = 4;
@@ -110,6 +115,8 @@ const TOP_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec2 uCentre;
 uniform vec3 uCalmAt;
+uniform vec2 uRoute[${ROUTE_POINTS}];
+uniform vec4 uTrail[${TRAIL_POINTS}];
 out vec3 vWorld;
 out float vRing;
 BILLOW
@@ -124,6 +131,8 @@ const TOP_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec2 uCentre;
 uniform vec3 uCalmAt;
+uniform vec2 uRoute[${ROUTE_POINTS}];
+uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform float uReach;
 in vec3 vWorld;
 in float vRing;
@@ -154,7 +163,11 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), cover);
 }`;
 
-/** Round heaps of cloud: cellular domes in three sizes, low and gentle near the stair and the way the boat goes. */
+/**
+ * Round heaps of cloud: cellular domes in three sizes. Low and gentle round the top landing and all along the way
+ * the boat goes, so it sails down a valley between them; and where the hull has just been, a furrow that closes
+ * up again behind it, with a soft lip either side.
+ */
 const BILLOW_GLSL = /* glsl */ `
 float domes(vec2 p) {
   vec2 i = floor(p);
@@ -169,12 +182,35 @@ float domes(vec2 p) {
   }
   return best;
 }
+float toSegment(vec2 p, vec2 a, vec2 b) {
+  vec2 ab = b - a;
+  float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+  return length(p - a - ab * t);
+}
+float fromRoute(vec2 p) {
+  float d = 1e5;
+  for (int i = 0; i < ${ROUTE_POINTS - 1}; i++) d = min(d, toSegment(p, uRoute[i], uRoute[i + 1]));
+  return d;
+}
+float furrow(vec2 p) {
+  float g = 0.0;
+  for (int i = 0; i < ${TRAIL_POINTS - 1}; i++) {
+    vec4 a = uTrail[i];
+    vec4 b = uTrail[i + 1];
+    vec2 ab = b.xy - a.xy;
+    float t = clamp(dot(p - a.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+    float d = length(p - a.xy - ab * t);
+    float fresh = mix(a.z, b.z, t);
+    g = max(g, fresh * (exp(-d * d / 1.1) - 0.3 * exp(-(d - 1.9) * (d - 1.9) / 0.4)));
+  }
+  return g;
+}
 float billow(vec2 xz) {
   vec2 p = xz + uCloudShift * 0.6;
-  float calm = smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy));
-  float swell = domes(p * 0.09) * 1.1 + domes(p * 0.23 + 3.1) * 0.35;
+  float calm = min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(12.0, 55.0, fromRoute(xz)));
+  float swell = (domes(p * 0.09) * 1.1 + domes(p * 0.23 + 3.1) * 0.35) * (0.4 + 0.6 * calm);
   float heaps = domes(p * 0.028 + 9.7) * 7.5 + domes(p * 0.07 + 5.3) * 2.2;
-  return mix(swell, swell + heaps, calm);
+  return mix(swell, swell + heaps, calm) - furrow(xz) * 0.6;
 }`;
 
 /**
@@ -448,7 +484,12 @@ export class CloudStairs {
   /** 0 hides the ghost of the next missing flight; 1 draws it. */
   ghostShown = 0;
   private readonly ghostUniform = { value: 0 };
-  private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number } };
+  private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] } };
+  /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
+  private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
+  private trailFrom = new THREE.Vector2(1e5, 1e5);
+  readonly wake: CloudWake;
   private readonly bellyUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number } };
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
@@ -514,9 +555,13 @@ export class CloudStairs {
 
     this.topUniforms = {
       uCentre: { value: new THREE.Vector2(STAIRS_ISLE.x, STAIRS_ISLE.z) },
-      uCalmAt: { value: new THREE.Vector3(STAIRS_ISLE.x - 10, STAIRS_ISLE.z - 20, 95) },
+      uCalmAt: { value: new THREE.Vector3(LANE.west, CLOUD_BERTH.z, 45) },
       uReach: { value: 1500 },
+      uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone()), DESCENT_END.clone()] },
+      uTrail: { value: this.trail },
     };
+    this.wake = new CloudWake();
+    this.group.add(this.wake.mesh);
     const rings = 150, spokes = 160, reach = 1500;
     const pos: number[] = [];
     const index: number[] = [];
@@ -558,8 +603,8 @@ export class CloudStairs {
     };
     this.cloudBelly = new THREE.Mesh(top, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.bellyUniforms },
-      vertexShader: BELLY_VERT.replace('BILLOW', BILLOW_GLSL + BELLY_GLSL),
-      fragmentShader: BELLY_FRAG.replace('BILLOW', BILLOW_GLSL + BELLY_GLSL),
+      vertexShader: BELLY_VERT.replace('BILLOW', BELLY_GLSL),
+      fragmentShader: BELLY_FRAG.replace('BILLOW', BELLY_GLSL),
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     }));
@@ -650,6 +695,22 @@ export class CloudStairs {
     }
   }
 
+  /**
+   * The hull going through the top of the cloud: it leaves a furrow that closes up behind it, and throws up puffs
+   * at the bow and off the quarters that curl away and thin out. `hull` is null when it is not on the cloud.
+   */
+  sailing(hull: { position: THREE.Vector3; yaw: number; speed: number } | null, dt: number): void {
+    for (const t of this.trail) t.z = Math.max(0, t.z - dt / 14);
+    this.wake.emit(hull, dt);
+    if (!hull) return;
+    const p = hull.position;
+    if (Math.hypot(p.x - this.trailFrom.x, p.z - this.trailFrom.y) > 1.3) {
+      for (let i = TRAIL_POINTS - 1; i > 0; i--) this.trail[i].copy(this.trail[i - 1]);
+      this.trailFrom.set(p.x, p.z);
+    }
+    this.trail[0].set(p.x, p.z, Math.min(1, hull.speed / 2.5), 0);
+  }
+
   update(dt: number, time: number, camera: THREE.Camera): void {
     this.time = time;
     const k = tuning.stairs;
@@ -714,9 +775,10 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     const deck = atmo.uniforms.uCloudDeck.value;
-    this.cloudTop.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
+    this.cloudTop.visible = deck.w > 0.01 && camera.position.y > atmo.uniforms.uCloudDeckY.value.y - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
     this.wisps.update(dt, time);
+    this.wake.update(dt);
     this.cloudBelly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 0.3;
     this.bellyUniforms.uCentre.value.copy(this.topUniforms.uCentre.value);
   }

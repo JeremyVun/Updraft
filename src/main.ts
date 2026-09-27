@@ -523,6 +523,8 @@ window.addEventListener('resize', () => {
 resize();
 
 let heightParity = 0;
+let lastCameraCut = 0;
+let cutChapter: unknown = null;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
@@ -587,7 +589,7 @@ function updateCloudDeck(dt: number): void {
     base = CLOUD.base + (1 - near) * 30;
   }
   deckShown.amount = ease(deckShown.amount, amount, story.name === 'drowned' ? 0.18 : 0.8, dt);
-  deckShown.base = want || story.name === 'toStairs' ? ease(deckShown.base, base, 1.5, dt) : deckShown.base;
+  deckShown.base = want?.snap ? base : want || story.name === 'toStairs' ? ease(deckShown.base, base, 1.5, dt) : deckShown.base;
   if (deckShown.amount < 0.002 && amount === 0) deckShown.amount = 0;
   const bubble = want?.bubble;
   deckShown.bubble = ease(deckShown.bubble, bubble?.w ?? 0, 1.2, dt);
@@ -841,6 +843,14 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   rig.camera.near = story.name === 'lines' && doorway.travelling ? 0.035 : 0.5;
   rig.camera.updateProjectionMatrix();
+  const cut = story.current.cameraCut ?? 0;
+  if (story.current !== cutChapter) {
+    cutChapter = story.current;
+    lastCameraCut = cut;
+  } else if (cut !== lastCameraCut) {
+    lastCameraCut = cut;
+    rig.cut(story.shot);
+  }
   rig.update(dt, time, story.shot, story.pace, !!(story.current.scripted || story.current.invitesSail
     || story.current.invitesFlight || story.current.windInvitation || story.current.pianoActive));
   story.current.afterCamera?.(rig.camera);

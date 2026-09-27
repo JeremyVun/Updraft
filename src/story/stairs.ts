@@ -6,8 +6,9 @@ import type { Deck } from '../world/decks';
 import type { StairsAir } from '../audio/stairs-air';
 import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
+import { bowLantern } from '../world/stairs-lantern';
 import {
-  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
+  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FOG_FROM, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
   STAIRS_FOOT, STAIRS_GROUND, STAIRS_Z, STEP, TOP, TOP_EDGE, flight, levelHeight,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
@@ -16,7 +17,7 @@ import { completeObjective, cue } from './cues';
 
 type Beat =
   | 'ashore' | 'wonder' | 'climb' | 'waiting' | 'hesitate' | 'birdFirst' | 'follow' | 'loop' | 'together' | 'emerge'
-  | 'nest' | 'skein' | 'lean' | 'gather' | 'boarding' | 'sail' | 'descend' | 'down';
+  | 'nest' | 'skein' | 'lean' | 'gather' | 'boarding' | 'sail' | 'fog' | 'thin' | 'down';
 
 /** What the story asks of the cloud deck each frame; main eases the sky toward it. */
 export interface CloudDeckState {
@@ -26,11 +27,16 @@ export interface CloudDeckState {
   bubble: THREE.Vector4;
   /** How thick the cloud still is in the pocket round the child, per metre. */
   clearing?: number;
+  /** Take the base as it is, at once, rather than easing to it: for a move made where nothing can be seen. */
+  snap?: boolean;
 }
 
 
 /** The landing in the white where the stair goes round in a ring: up the next flight and back up the one below. */
 const RING_LEVEL = BELOW_CLOUD + 3;
+
+/** How high the hull rides on the top of the cloud. */
+const RIDE = CLOUD.top + 0.45;
 
 /** One stop on the way up: where to stand and the level of the landing or flight it is on. */
 interface Stop { x: number; z: number; level: number }
@@ -111,6 +117,15 @@ export class StairsChapter implements Chapter {
   private ringLeg = 0;
   private readonly ringAt = new THREE.Vector3();
   private lastDt = 0;
+  /** The lantern hung at the bow for the way over the cloud, and the kite's tie-off there. */
+  private readonly lantern = bowLantern();
+  private readonly bow = new THREE.Vector3();
+  private readonly stern = new THREE.Vector3();
+  private readonly tow = { at: new THREE.Vector3(), heading: 0 };
+  private berthed = false;
+  private cuts = 0;
+  /** How far the cloud has swelled up round the boat on the way down, 0 to 1. */
+  private swell = 0;
   private readonly air: StairsAir = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
   private readonly oldRadius: number;
 
@@ -175,7 +190,7 @@ export class StairsChapter implements Chapter {
   }
 
   get departureKite(): boolean {
-    return ['emerge', 'nest', 'skein', 'lean', 'gather', 'boarding', 'sail'].includes(this.beat);
+    return ['emerge', 'nest', 'skein', 'lean', 'gather', 'boarding', 'sail', 'fog'].includes(this.beat);
   }
 
   get invitesSail(): boolean {
@@ -193,6 +208,19 @@ export class StairsChapter implements Chapter {
   /** Above the cloud the pointer lands on its top, so a gust meant for the sail reaches the sail. */
   get pointerFloor(): number | null {
     return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
+  }
+
+  /** From the moment they are out on top, the kite is tied to the bow of the boat waiting on the cloud. */
+  get kiteTow(): { at: THREE.Vector3; heading: number } | null {
+    if (!this.berthed || this.beat === 'thin' || this.beat === 'down') return null;
+    this.cast.boat.hullEnds(this.bow, this.stern);
+    this.tow.at.copy(this.bow).y += 0.3;
+    this.tow.heading = this.cast.boat.yaw;
+    return this.tow;
+  }
+
+  get cameraCut(): number {
+    return this.cuts;
   }
 
   get stairsAir(): StairsAir {
@@ -302,6 +330,7 @@ export class StairsChapter implements Chapter {
         this.birdBehind();
         break;
       case 'emerge':
+        if (!this.berthed) this.berthOnCloud();
         this.walkOn();
         if (c.position.y > CLOUD.top + 0.6 && !c.moving) this.nest();
         break;
@@ -333,10 +362,13 @@ export class StairsChapter implements Chapter {
       case 'boarding':
         break;
       case 'sail':
-        this.sail();
+        this.sail(dt);
         break;
-      case 'descend':
-        this.descend(dt);
+      case 'fog':
+        this.fog(dt);
+        break;
+      case 'thin':
+        this.thin(dt);
         break;
       default:
         break;
@@ -349,17 +381,18 @@ export class StairsChapter implements Chapter {
   private measureAir(dt: number): void {
     const { child, boat } = this.cast;
     const a = this.air;
-    const afloat = this.beat === 'sail' || this.beat === 'descend' || this.beat === 'down';
-    const y = afloat ? boat.position.y : child.position.y;
+    const afloat = ['sail', 'fog', 'thin', 'down'].includes(this.beat);
+    const y = afloat ? RIDE : child.position.y;
     const S = THREE.MathUtils.smoothstep;
     a.climb = THREE.MathUtils.clamp((y - CLOUD.base) / (CLOUD.top - CLOUD.base), 0, 1);
-    a.fog = this.beat === 'descend' ? S(this.t, 0, 4) : 0;
+    // Up to white in the cloud bank, and thinning again over the village's water.
+    a.fog = this.beat === 'fog' ? this.swell : this.beat === 'thin' ? 1 - 0.8 * S(this.t, 0.6, tuning.stairs.fogLift) : 0;
     a.cloud = afloat ? a.fog : S(y, CLOUD.base - 1.5, CLOUD.base + 1.5) * (1 - S(y, CLOUD.top - 1.2, CLOUD.top + 0.4));
     const top = ['nest', 'skein', 'lean', 'gather', 'boarding'].includes(this.beat);
     const out = afloat || top || (y > CLOUD.top - 0.4 && this.beat === 'emerge');
     a.open += ((out ? 1 - a.fog : 0) - a.open) * (1 - Math.exp(-dt * 0.8));
     a.speed = afloat ? boat.speed : 0;
-    a.phase = this.beat === 'down' ? 'down' : this.beat === 'descend' ? 'fog' : this.beat === 'sail' ? 'sail'
+    a.phase = this.beat === 'down' ? 'down' : this.beat === 'fog' || this.beat === 'thin' ? 'fog' : this.beat === 'sail' ? 'sail'
       : out ? 'above' : a.cloud > 0.5 || ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat) ? 'cloud' : 'under';
   }
 
@@ -596,36 +629,76 @@ export class StairsChapter implements Chapter {
     });
   }
 
-  private sail(): void {
+  /**
+   * The boat has been waiting on the cloud all along, under the kite: it is made fast there while nobody can see,
+   * so it is simply there when they come out on top. The lantern is already lit.
+   */
+  private berthOnCloud(): void {
+    const { boat } = this.cast;
+    this.berthed = true;
+    boat.position.set(CLOUD_BERTH.x, RIDE, CLOUD_BERTH.z);
+    boat.yaw = CLOUD_BERTH.yaw;
+    boat.altitude = RIDE;
+    boat.afloat = true;
+    boat.grounded = false;
+    boat.speed = 0;
+    boat.mooring = CLOUD_BERTH;
+    this.lantern.position.set(0, 0.28, 2.0);
+    boat.group.add(this.lantern);
+  }
+
+  private sail(dt: number): void {
     const { boat, child: c } = this.cast;
     c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
-    boat.altitude = CLOUD.top + 0.35;
+    boat.altitude = RIDE;
+    boat.speedLimit = tuning.stairs.sailSpeed;
     if (boat.speed > 1.5) boat.becalmed = Math.max(0, boat.becalmed - 0.01);
+    this.world.sailing(boat, dt);
     const from = this.leg === 0 ? this.berth : CLOUD_ROUTE[this.leg - 1];
     const wp = CLOUD_ROUTE[this.leg];
     if (roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, 9)) {
       this.leg++;
       if (this.leg >= CLOUD_ROUTE.length) {
         boat.steerFor = DESCENT_END;
-        this.to('descend');
         return;
       }
       boat.steerFor = CLOUD_ROUTE[this.leg];
     }
+    if (this.leg >= FOG_FROM) this.to('fog');
   }
 
-  /** The cloud closes round them and the hull goes down through it, until it is on the water. */
-  private descend(dt: number): void {
+  /**
+   * Into the cloud bank. They sail on level and the cloud swells up round the hull and over them, until there is
+   * nothing but white and the lantern. In the white the hull is let down onto the sea, which nobody can see, and
+   * the camera goes with it at once.
+   */
+  private fog(dt: number): void {
     const { boat, child: c } = this.cast;
     c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
-    const k = tuning.stairs;
-    const altitude = Math.max(0, (boat.altitude ?? CLOUD.top) - dt * k.sinkRate * THREE.MathUtils.smoothstep(this.t, 0, 3));
-    boat.altitude = altitude;
-    boat.speedLimit = 2.2;
-    if (altitude <= 0.001) {
-      boat.altitude = null;
-      this.to('down');
+    boat.speedLimit = Math.min(tuning.stairs.sailSpeed, 3.4);
+    boat.becalmed = 0;
+    this.swell = THREE.MathUtils.smoothstep(this.t, 0, tuning.stairs.fogRise);
+    if (boat.altitude !== null) {
+      boat.altitude = RIDE;
+      this.world.sailing(boat, dt);
     }
+    const wp = CLOUD_ROUTE[CLOUD_ROUTE.length - 1];
+    if (Math.hypot(boat.position.x - wp.x, boat.position.z - wp.y) < 9) boat.steerFor = DESCENT_END;
+    if (this.t > tuning.stairs.fogRise + 1.2) {
+      boat.altitude = null;
+      boat.group.remove(this.lantern);
+      this.world.sailing(null, dt);
+      this.cuts++;
+      this.to('thin');
+    }
+  }
+
+  /** Still in the white, but it is grey now and going blue, and water is moving under the hull. */
+  private thin(_dt: number): void {
+    const { boat, child: c } = this.cast;
+    c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
+    boat.speedLimit = 3;
+    if (this.t > tuning.stairs.fogLift) this.to('down');
   }
 
   /** A point out toward the setting sun, level with the top landing, wherever the sky has put it. */
@@ -647,11 +720,32 @@ export class StairsChapter implements Chapter {
     d.amount = 1;
     d.top = CLOUD.top;
     d.clearing = undefined;
+    d.snap = this.beat === 'fog' || this.beat === 'thin' || this.beat === 'down';
     const wisps = this.world.wisps;
-    if (this.beat === 'descend') {
-      d.base = THREE.MathUtils.lerp(CLOUD.base, -3, S(this.t, 0, 4));
-      d.bubble.set(boat.position.x, boat.position.y + 1.2, boat.position.z, k.bubble * 1.25);
-      wisps.amount = 0;
+    const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
+    if (this.beat === 'fog') {
+      // The cloud swells up round the hull and over them; the pocket round the boat closes and fills.
+      d.base = CLOUD.base;
+      d.top = CLOUD.top + this.swell * 10;
+      d.bubble.set(boat.position.x, boat.position.y + 1.2, boat.position.z, THREE.MathUtils.lerp(7, 2.4, this.swell));
+      d.clearing = THREE.MathUtils.lerp(k.clearing, 0.3, this.swell);
+      wisps.amount = this.swell;
+      wisps.centre.set(boat.position.x, boat.position.y + 1.5, boat.position.z);
+      wisps.wind.set(-fx, 0.05, -fz).multiplyScalar(boat.speed + 2.5);
+      this.breeze = 0.35;
+      return;
+    }
+    if (this.beat === 'thin' || this.beat === 'down') {
+      // Down on the water inside it, and it grey and blue now, lifting.
+      d.base = -3;
+      d.top = 40;
+      const lift = S(this.t, 0.6, tuning.stairs.fogLift);
+      d.amount = 1 - 0.8 * lift;
+      d.bubble.set(boat.position.x, boat.position.y + 1.2, boat.position.z, THREE.MathUtils.lerp(2.4, 30, lift));
+      d.clearing = THREE.MathUtils.lerp(0.3, 0.1, lift);
+      wisps.amount = 1 - lift;
+      wisps.centre.set(boat.position.x, boat.position.y + 1.5, boat.position.z);
+      wisps.wind.set(-fx, 0.05, -fz).multiplyScalar(boat.speed + 1.5);
       return;
     }
     d.base = CLOUD.base;
@@ -794,12 +888,13 @@ export class StairsChapter implements Chapter {
       default: {
         // Behind the boat and a little to one side, sailing into the sun over the cloud.
         const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
-        const down = this.beat === 'descend';
-        const bearing = boat.yaw + Math.PI + (down ? 0.9 : 0.42);
+        const white = this.beat === 'fog' || this.beat === 'thin';
+        const close = white ? THREE.MathUtils.smoothstep(this.beat === 'fog' ? this.swell : 1, 0.2, 0.9) : 0;
+        const bearing = boat.yaw + Math.PI + THREE.MathUtils.lerp(0.5, 0.8, close);
         s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
-        s.target.set(boat.position.x + fx * 3, boat.position.y + 1.8, boat.position.z + fz * 3);
-        s.distance = down ? 9 : 14;
-        s.height = down ? 2.6 : 3.4;
+        s.target.set(boat.position.x + fx * 4, boat.position.y + 1.9, boat.position.z + fz * 4);
+        s.distance = THREE.MathUtils.lerp(15, 8, close);
+        s.height = THREE.MathUtils.lerp(4.2, 2.2, close);
         s.carry = true;
         s.carryAnchor = boat.position;
         this.pace = 0.35;

@@ -107,14 +107,24 @@ export const SLIPPERS = new THREE.Vector3(TOP_EDGE + 0.3, TOP.y, TOP.z + 0.35);
 export const SIT = new THREE.Vector3(TOP_EDGE + 0.42, TOP.y, TOP.z - 0.3);
 export const CLOUD_BERTH = { x: TOP_EDGE - 1.45, z: TOP.z + 0.1, yaw: Math.PI } as const;
 
-/** Round the tower and away north-west into the sun, then down through the cloud onto the water where the village begins. */
+/**
+ * The way over the cloud: out from the top landing and round in a slow loop, past the stair again from far off,
+ * then west into the sun, into the cloud bank where the village is waiting under it.
+ */
 export const CLOUD_ROUTE = [
-  new THREE.Vector2(92, -1240),
-  new THREE.Vector2(74, -1244),
-  new THREE.Vector2(56, -1251),
-  new THREE.Vector2(38, -1257),
+  new THREE.Vector2(101, -1260),
+  new THREE.Vector2(120, -1276),
+  new THREE.Vector2(144, -1266),
+  new THREE.Vector2(152, -1240),
+  new THREE.Vector2(138, -1216),
+  new THREE.Vector2(112, -1207),
+  new THREE.Vector2(84, -1213),
+  new THREE.Vector2(60, -1226),
+  new THREE.Vector2(38, -1240),
 ] as const;
-/** Where the hull has come down onto the sea when the drowned village takes over. */
+/** On the last leg the cloud swells up round them. */
+export const FOG_FROM = CLOUD_ROUTE.length - 1;
+/** Where the hull is sailing on the sea when the drowned village takes over. */
 export const DESCENT_END = new THREE.Vector2(16, -1254);
 
 /**

@@ -50,6 +50,10 @@ export class DepartureKites {
       }
       this.chapter = story.name;
     }
+    // Over the cloud the kite is tied to the bow and draws the boat along.
+    const tow = story.name === 'stairs' ? story.current.kiteTow ?? null : null;
+    this.markers.stairs.follow = tow?.at ?? null;
+    this.markers.stairs.ahead = tow?.heading ?? null;
     for (const [name, kite] of Object.entries(this.markers)) {
       const enabled = name === story.name ? story.current.departureKite !== false : name === this.crossing;
       kite.update(dt, time, camera, enabled);

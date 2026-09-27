@@ -144,6 +144,13 @@ try {
   s = await until((x) => x.beat === 'follow', 30000, 100);
   await page.waitForTimeout(4500);
   await shot('08-in-cloud');
+  s = await until((x) => x.beat === 'loop', 60000, 100);
+  for (let i = 1; i <= 12; i++) {
+    await page.waitForTimeout(1500);
+    const now = await state();
+    if (now.beat !== 'loop') break;
+    await shot(`08-ring-${String(i).padStart(2, '0')}`);
+  }
   s = await until((x) => x.beat === 'emerge', 90000, 100);
   await page.waitForTimeout(1200);
   await shot('09-emerge');
@@ -156,7 +163,7 @@ try {
   s = await until((x) => x.beat === 'sail', 60000);
   await page.waitForTimeout(2000);
   await shot('12-aboard');
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 180; i++) {
     s = await state();
     if (s.beat !== 'sail') break;
     // Sweep across the sail, toward the way they are going.
@@ -168,11 +175,13 @@ try {
     }, [width, height]);
     await swipe([at[0] - 60, at[1] + 140], [at[0] + 20, at[1] - 160], 380);
     await page.waitForTimeout(400);
-    if (i === 10) await shot('13-sail');
+    if (i % 8 === 4) await shot(`13-sail-${String(i).padStart(2, '0')}`);
   }
-  s = await until((x) => x.beat === 'descend' || x.chapter !== 'stairs', 60000);
-  await page.waitForTimeout(3500);
-  await shot('14-descend');
+  s = await until((x) => x.beat === 'fog' || x.chapter !== 'stairs', 90000);
+  for (let i = 1; i <= 6; i++) {
+    await page.waitForTimeout(1500);
+    await shot(`14-fog-${i}`);
+  }
   s = await until((x) => x.chapter !== 'stairs', 60000);
   log('after', JSON.stringify(s));
   await page.waitForTimeout(4000);

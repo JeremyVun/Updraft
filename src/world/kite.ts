@@ -231,6 +231,9 @@ export class Kite {
   private shown = 0;
   private phase = 0;
   private asleep = true;
+  /** Tied to something that moves (the bow of a boat) instead of its post, and flying ahead of it on this heading. */
+  follow: THREE.Vector3 | null = null;
+  ahead: number | null = null;
 
   constructor(
     private readonly wind: WindField,
@@ -294,6 +297,7 @@ export class Kite {
   get tieOff(): THREE.Vector3 { return this.anchor; }
 
   update(dt: number, time: number, camera: THREE.Camera, enabled = true): void {
+    if (this.follow) this.anchor.copy(this.follow);
     const away = Math.hypot(camera.position.x - this.anchor.x, camera.position.z - this.anchor.z);
     this.group.visible = enabled && away < 300;
     if (!this.group.visible) {
@@ -309,7 +313,10 @@ export class Kite {
     const speed = Math.hypot(air.x, air.z);
     const strength = THREE.MathUtils.smoothstep(speed, 0.5, 5);
 
-    if (speed > 0.25) {
+    if (this.ahead !== null) {
+      const turn = this.ahead - this.azimuth;
+      this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.8));
+    } else if (speed > 0.25) {
       const turn = Math.atan2(air.x, air.z) - this.azimuth;
       this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.55));
     }
