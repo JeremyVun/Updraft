@@ -105,6 +105,7 @@ export class Scarf {
   private readonly turn = new THREE.Quaternion();
   private readonly face = new THREE.Vector3();
   private readonly tip = new THREE.Vector3();
+  private readonly pushed = new THREE.Vector3();
   /** The child's velocity over the ground, smoothed of the bob in their stride. */
   private readonly carried = new THREE.Vector3();
   private readonly gust = new THREE.Vector3();
@@ -292,15 +293,15 @@ export class Scarf {
           const vx = (p.x - q.x) / last;
           const vy = (p.y - q.y) / last;
           const vz = (p.z - q.z) / last;
-          /** Near the knot the child's body shelters it from the air. */
-          const open = 0.4 + 0.6 * f;
+          /** Near the knot the child's body shelters it from the air, but not so much that it hangs down over the arm. */
+          const open = 0.55 + 0.45 * f;
           const ax = (flowX * open - vx) * k.drag + crossX * across + lurchX;
           const az = (flowZ * open - vz) * k.drag + crossZ * across + lurchZ;
           /**
            * The air holds up the middle of an end more than the part near the knot, so it droops from the knot and
            * then streams, and a little more than the very end, which dips.
            */
-          const held = 0.3 + 0.7 * smooth(f, 0, 0.6) * (1 - 0.3 * smooth(f, 0.6, 1));
+          const held = 0.5 + 0.5 * smooth(f, 0, 0.6) * (1 - 0.3 * smooth(f, 0.6, 1));
           const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still);
           /** It moves in the child's company: the chain keeps only its own motion from step to step, not theirs. */
           this.tmp.set(p.x + moveX * h, p.y, p.z + moveZ * h);
@@ -321,8 +322,11 @@ export class Scarf {
             this.dir.subVectors(b, a);
             const len = this.dir.length() || 1e-5;
             b.copy(a).addScaledVector(this.dir, e.segment / len);
+            /** Pushed aside by the child or the ground, it is moved, not thrown: the push takes its last position along. */
+            this.pushed.copy(b);
             if (i > 1) keepOut(b);
             if (b.y < ground + 0.04) b.y = ground + 0.04;
+            e.prev[i].add(this.pushed.subVectors(b, this.pushed));
           }
         }
         last = h;

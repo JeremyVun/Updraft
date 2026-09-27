@@ -29,7 +29,10 @@ function lookup(table: number[][], key: number, col: number): number {
 // ---------------------------------------------------------------------------------------------------------------
 // The coat
 
-/** Height, half-width, half-depth and how far forward the middle of the coat is, from the collar to below the hem. */
+/**
+ * Height, half-width, half-depth and how far forward the middle of the coat is, from the collar to below the hem. Below
+ * the bag it flares as much front to back as side to side, so it keeps the concept's A-line from every angle.
+ */
 const COAT = [
   [1.625, 0.13, 0.125, 0.0],
   [1.6, 0.175, 0.16, 0.0],
@@ -38,12 +41,12 @@ const COAT = [
   [1.46, 0.29, 0.248, 0.02],
   [1.4, 0.305, 0.264, 0.032],
   [1.3, 0.332, 0.29, 0.04],
-  [1.18, 0.353, 0.304, 0.038],
-  [1.04, 0.377, 0.314, 0.028],
-  [0.88, 0.404, 0.33, 0.012],
-  [0.72, 0.438, 0.356, 0.0],
-  [0.58, 0.47, 0.382, -0.01],
-  [0.45, 0.495, 0.404, -0.018],
+  [1.18, 0.353, 0.306, 0.04],
+  [1.04, 0.377, 0.322, 0.036],
+  [0.88, 0.404, 0.372, 0.032],
+  [0.72, 0.438, 0.432, 0.028],
+  [0.58, 0.47, 0.49, 0.022],
+  [0.45, 0.495, 0.535, 0.016],
 ];
 export const COAT_TOP = 1.625;
 

@@ -228,7 +228,7 @@ export class ChildMotion {
     const reach = stance * step * stride;
     const accel = (d.speed - this.lastSpeed) / dt;
     this.lastSpeed = d.speed;
-    const leanTarget = (0.06 * moving + 0.24 * running) * plant + THREE.MathUtils.clamp(accel * 0.03, -0.14, 0.18) * plant;
+    const leanTarget = (0.06 * moving + 0.3 * running) * plant + THREE.MathUtils.clamp(accel * 0.03, -0.14, 0.18) * plant;
     const paceLean = this.leanSpring.step(leanTarget, dt);
 
     this.nextShift -= dt;
@@ -243,13 +243,13 @@ export class ChildMotion {
     hips.position.copy(rest[BONE.hips]);
     /** Weight over the foot in stance: the hips ride side to side, turn with the stride and drop on the swinging side. */
     const sway = Math.sin(phase) * stride;
-    hips.position.x += -0.022 * sway * (1 - running * 0.6) + 0.02 * this.weight * plant;
+    hips.position.x += -0.022 * sway * (1 - running * 0.6) + 0.035 * this.weight * plant;
     /** Walking, the body vaults over each planted foot; running, it drops into the stance and springs out of it. */
-    const bounce = stride * (moving * (1 - running) * (0.024 * Math.cos(2 * phase) - 0.01) + running * (0.07 * Math.abs(Math.sin(phase)) - 0.05));
+    const bounce = stride * (moving * (1 - running) * (0.024 * Math.cos(2 * phase) - 0.01) + running * (0.1 * Math.abs(Math.sin(phase)) - 0.065));
     hips.position.y += bounce;
     hips.position.z += -0.05 * pose.bend;
     const hipYaw = 0.14 * sway * (1 - 0.3 * running);
-    const hipRoll = -0.045 * Math.cos(phase) * stride + 0.03 * this.weight * plant;
+    const hipRoll = -0.045 * Math.cos(phase) * stride + 0.05 * this.weight * plant;
     hips.rotation.set(-0.08 * pose.sit + 0.06 * pose.bend, hipYaw, hipRoll);
 
     const spine = b[BONE.spine];
@@ -262,13 +262,16 @@ export class ChildMotion {
     chest.position.copy(rest[BONE.chest]).sub(rest[BONE.spine]);
     chest.position.y += pose.breath * 0.006;
 
-    /** The head keeps still while the body moves under it: most of what the spine does is taken back at the neck. */
+    /**
+     * The head keeps still while the body moves under it: most of what the spine does is taken back at the neck.
+     * Running, it goes with the lean more, so the whole child drives forward.
+     */
     const neck = b[BONE.neck];
     const head = b[BONE.head];
     const bodyPitch = spine.rotation.x + chest.rotation.x;
     const bodyYaw = spine.rotation.y + chest.rotation.y + hipYaw;
     const bodyRoll = spine.rotation.z + chest.rotation.z + hipRoll;
-    const steady = 0.7 * plant;
+    const steady = 0.7 * plant * (1 - 0.45 * running);
     neck.rotation.set(pose.headPitch * 0.35 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
     head.rotation.set(pose.headPitch * 0.65 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
 

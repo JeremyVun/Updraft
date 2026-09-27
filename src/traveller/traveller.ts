@@ -154,6 +154,9 @@ export class Traveller {
   private nextBlink = 2;
   private headYaw = 0;
   private headPitch = 0;
+  private glance = 0;
+  private glanceUntil = 0;
+  private nextGlance = 5;
   private readonly kneel = new Glide();
   private readonly abedGlide = new Glide();
   private readonly sideGlide = new Glide();
@@ -818,11 +821,16 @@ export class Traveller {
     const [L, R] = P.arms;
     const lerp = THREE.MathUtils.lerp;
     const smooth = THREE.MathUtils.smoothstep;
-    /** Arms swing against the legs, a beat behind them, bent and pumping when they run. */
-    const pace = 0.52 * moving + 0.4 * running;
+    /**
+     * Arms swing against the legs, a beat behind them, as far back past the hip as forward. Running they stay bent
+     * at the elbow and pump from the shoulder, the hands going from behind the hip to the chest.
+     */
+    const pace = 0.5 * moving + 0.25 * running;
     const armSwing = Math.cos(this.gait - 0.35);
-    arm(L, -pace * armSwing + 0.04, 0.24 + 0.13 * running, 0, 0.14 + 1.06 * running + Math.max(0, -armSwing) * 0.45 * moving, 0.12);
-    arm(R, pace * armSwing + 0.04, 0.24 + 0.13 * running, 0, 0.14 + 1.06 * running + Math.max(0, armSwing) * 0.45 * moving, 0.12);
+    const armBack = 0.04 * moving + 0.12 * running;
+    const walkBend = 0.22 * moving * (1 - running);
+    arm(L, -pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running + Math.max(0, -armSwing) * walkBend, 0.12);
+    arm(R, pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running + Math.max(0, armSwing) * walkBend, 0.12);
     let lean = 0;
     let twist = 0;
     let rise = 0;
@@ -982,18 +990,29 @@ export class Traveller {
         m.elbow = lerp(m.elbow, 0.65, this.swing);
       }
     }
-    if (this.carryingPlane && !a && this.presenting < 0.01 && this.swing < 0.01) {
+    const carry = this.carryingPlane && !a && this.presenting < 0.01 && this.swing < 0.01 ? 1 - this.stowed : 0;
+    if (carry > 0) {
       /** A quiet carry at the hip: running must not swing the wing back through the coat. Companion IK still wins. */
-      L.raise = 0.2 - armSwing * moving * 0.12;
-      L.out = 0.58;
-      L.elbow = 0.45;
-      L.twist = 0;
+      L.raise = lerp(L.raise, 0.2 - armSwing * moving * 0.12, carry);
+      L.out = lerp(L.out, 0.58, carry);
+      L.elbow = lerp(L.elbow, 0.45, carry);
+      L.twist = lerp(L.twist, 0, carry);
     }
 
-    /** Idle, the gaze wanders; on the move it settles on the way ahead. */
+    /**
+     * Idle, the gaze wanders, and every so often they glance back over the left shoulder at the bag, where the bird
+     * rides; on the move it settles on the way ahead.
+     */
     const settle = 1 - 0.75 * moving;
-    let wantYaw = Math.sin(t * 0.37) * 0.35 * settle;
-    let wantPitch = Math.sin(t * 0.23) * 0.08 * settle + 0.06 * running;
+    this.nextGlance -= h;
+    if (this.nextGlance <= 0) {
+      this.glanceUntil = t + 1.6;
+      this.nextGlance = 7 + Math.random() * 6;
+    }
+    const idle = moving < 0.05 && !a && !this.sitting && this.presenting < 0.01;
+    this.glance = damp(this.glance, idle && t < this.glanceUntil ? 1 : 0, 3.5, h);
+    let wantYaw = lerp(Math.sin(t * 0.37) * 0.35 * settle, 0.95, this.glance);
+    let wantPitch = lerp(Math.sin(t * 0.23) * 0.08 * settle + 0.06 * running, 0.14, this.glance);
     if (this.lookAt) {
       r.root.updateMatrixWorld(true);
       const head = r.face.getWorldPosition(this.tmp);
