@@ -10,7 +10,7 @@ import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puf
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
-import { drawIn, toCopy } from './stairs-penrose';
+import { LOOP_BANK, drawIn, toCopy } from './stairs-penrose';
 import {
   BELOW_CLOUD, FLIGHTS, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Face, type Flight, type Landing,
 } from './stairs-layout';
@@ -396,7 +396,7 @@ export class CloudStairs {
     this.trick.name = 'stairs-loop-trick';
     this.trick.visible = false;
     this.group.add(this.trick);
-    this.bank = new CloudBank(onLanding(landingOf(LOOP.onward), 0, 2.3).setY(landingOf(LOOP.onward).centre.y + 1.5), 2.5, 30);
+    this.bank = new CloudBank(LOOP_BANK, 2.6, 46);
     this.group.add(this.bank.mesh);
 
     const ghostMaterial = new THREE.ShaderMaterial({

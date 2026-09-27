@@ -33,8 +33,8 @@ export class CloudBank {
     for (let i = 0; i < count; i++) {
       const t = rnd() * Math.PI * 2, u = rnd() * 2 - 1, k = Math.cbrt(rnd());
       const home = new THREE.Vector3(Math.cos(t) * Math.sqrt(1 - u * u), u * 0.6, Math.sin(t) * Math.sqrt(1 - u * u))
-        .multiplyScalar(radius * 0.75 * k).add(centre);
-      const lump = { home, p: home.clone(), v: new THREE.Vector3(), r: radius * (0.6 + 0.3 * rnd()), a: 1 };
+        .multiplyScalar(radius * 0.6 * k).add(centre);
+      const lump = { home, p: home.clone(), v: new THREE.Vector3(), r: radius * (0.7 + 0.35 * rnd()), a: 1 };
       this.lumps.push(lump);
       puffs.push({ x: home.x, y: home.y, z: home.z, r: lump.r, a: lump.a });
     }

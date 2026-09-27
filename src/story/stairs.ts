@@ -348,12 +348,16 @@ export class StairsChapter implements Chapter {
         // back. The bird comes up beside them and looks too.
         const up = flight(BELOW_CLOUD + 1);
         c.lookAt = this.look.copy(up.top).setY(CLOUD.base + 1.5);
-        if (!c.moving) c.lean = -0.06;
+        if (!c.moving) {
+          c.lean = -0.06;
+          c.faceToward(up.bottom.x, up.bottom.z, 1 - Math.exp(-dt * 3));
+        }
         this.birdBehind();
         k.watch(this.look);
         if (this.t > 3.4 && !c.moving) {
           c.lean = 0;
           k.watch(null);
+          k.stay = false;
           this.birdLeg = 0;
           this.to('birdFirst');
         }

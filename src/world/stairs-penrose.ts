@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, STEP, along, landingOf } from './stairs-layout';
+import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, STEP, along, landingOf, onLanding } from './stairs-layout';
 
 /**
  * The loop that seems to climb for ever, and where it has to be seen from. The loop's last flight is built going on
@@ -11,7 +11,7 @@ import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, STEP, along, landingOf } from './s
 /** How far from the loop's near corner the eye stands, back along the line the join lies on. */
 const EYE_DISTANCE = 30;
 /** The lens it is seen through from there. */
-export const LOOP_ZOOM = 2.6;
+export const LOOP_ZOOM = 2.2;
 
 const corner = landingOf(LOOP.corner);
 export const LOOP_EYE = corner.centre.clone().addScaledVector(LOOP_GAP.clone().normalize(), EYE_DISTANCE);
@@ -19,9 +19,12 @@ export const LOOP_EYE = corner.centre.clone().addScaledVector(LOOP_GAP.clone().n
 export const LOOP_SHRINK = (EYE_DISTANCE - LOOP_GAP.length()) / EYE_DISTANCE;
 /** The copy's middle, which from the eye lies exactly in front of the corner's middle. */
 export const LOOP_COPY = corner.centre.clone().add(LOOP_GAP);
-/** Where the eye looks: the middle of the loop, a little above its floors. */
+/** The heap of cloud on the loop's far corner, over the foot of the way on. */
+export const LOOP_BANK = onLanding(landingOf(LOOP.onward), 0, 2.3).setY(landingOf(LOOP.onward).centre.y + 1.5);
+/** Where the eye looks: the middle of the loop, drawn a little toward the heap so that it is in the frame too. */
 export const LOOP_LOOK = [corner.centre, landingOf(LOOP.wait).centre, landingOf(LOOP.onward).centre, LOOP_FAR.landing.centre]
-  .reduce((sum, p) => sum.add(p), new THREE.Vector3()).multiplyScalar(0.25).setY(landingOf(LOOP.wait).centre.y + 0.4);
+  .reduce((sum, p) => sum.add(p), new THREE.Vector3()).multiplyScalar(0.25).lerp(LOOP_BANK, 0.22)
+  .setY(landingOf(LOOP.wait).centre.y + 0.4);
 
 /** From a point on the near corner to the same point on its copy, and back. */
 export function toCopy(p: THREE.Vector3, out = new THREE.Vector3()): THREE.Vector3 {
