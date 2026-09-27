@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { deckGround, type Deck } from '../world/decks';
+import { deckGround, offTheEdge, type Deck } from '../world/decks';
 import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
 import { LooseDown } from '../fx/loose-down';
@@ -1261,8 +1261,13 @@ export class Cygnet {
     const speed = this.hurry * (1.5 + 2.9 * this.hurry) * this.pace;
     if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
-      this.position.x += Math.sin(this.yaw) * speed * dt;
-      this.position.z += Math.cos(this.yaw) * speed * dt;
+      const nx = this.position.x + Math.sin(this.yaw) * speed * dt;
+      const nz = this.position.z + Math.cos(this.yaw) * speed * dt;
+      // Up a staircase in the air it never walks off the edge, however it has to turn at the corners.
+      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+        this.position.x = nx;
+        this.position.z = nz;
+      }
       this.stride += dt * (6 + speed * 2.8);
       this.settle = Math.max(0, this.settle - dt * 2.5);
     } else {

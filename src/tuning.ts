@@ -243,6 +243,8 @@ export const tuning = {
     turn: 0.13, drag: 1.1, spinDrag: 1.4,
     /** A flight never drifts further than this from its place. */
     reach: 11,
+    /** And never nearer the camera than this, across the ground. */
+    lensClear: 11,
     /** A flight whose bottom tread comes this near its place, turned no further than this, draws itself home. */
     captureGap: 1.8, captureTurn: 0.6, settleSeconds: 1.1,
     /** Inside this much misplacement (metres, with a radian of turn counting as two) a flight is drawn toward home. */

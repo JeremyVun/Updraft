@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { WindField, WindSample } from '../wind/field';
 import { tuning } from '../tuning';
 import { fieldAt, type FieldSample } from '../world/fields';
-import { deckGround, type Deck } from '../world/decks';
+import { deckGround, offTheEdge, type Deck } from '../world/decks';
 import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
 import { buildChild, FOREARM, keepOffChild, UPPER_ARM, type Rig, type SocketName } from './body';
@@ -534,6 +534,10 @@ export class Traveller {
         nx = r.x + (ox / od) * keep;
         nz = r.z + (oz / od) * keep;
       }
+    }
+    if (this.decks.some(d => d.height1 !== undefined) && offTheEdge(this.decks, nx, nz, p.y)) {
+      this.speed *= 0.5;
+      return;
     }
     const nextH = this.ground(nx, nz);
     /** The inland pond sits above sea level; its bed is ground, but is not somewhere to walk. */

@@ -527,6 +527,15 @@ export class CloudStairs {
       o.x += v.x * dt;
       o.z += v.z * dt;
       o.y += v.y * dt;
+      // Nothing drifts up to the lens, where a flight would fill the view and dissolve out of reach.
+      const cx = piece.pivot.x + o.x - camera.position.x, cz = piece.pivot.z + o.z - camera.position.z;
+      const near = Math.hypot(cx, cz);
+      if (near < k.lensClear && near > 1e-3) {
+        o.x += cx / near * (k.lensClear - near);
+        o.z += cz / near * (k.lensClear - near);
+        const into = (v.x * cx + v.z * cz) / near;
+        if (into < 0) { v.x -= into * cx / near; v.z -= into * cz / near; }
+      }
       const far = Math.hypot(o.x, o.z);
       if (far > k.reach) {
         o.x *= k.reach / far;
@@ -557,7 +566,7 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     const deck = atmo.uniforms.uCloudDeck.value;
-    this.cloudTop.visible = deck.w > 0.01 && camera.position.y > CLOUD.base;
+    this.cloudTop.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
   }
 

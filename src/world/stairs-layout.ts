@@ -76,8 +76,8 @@ export const STAIRS_ARRIVAL = new THREE.Vector2(86, -1233);
  */
 export const TOP = flight(FLIGHTS).landing;
 export const TOP_EDGE = MID_X - STEP.width - STEP.gap / 2 - 0.05;
-export const SLIPPERS = new THREE.Vector3(TOP_EDGE + 0.2, TOP.y, TOP.z - 0.32);
-export const SIT = new THREE.Vector3(TOP_EDGE + 0.32, TOP.y, TOP.z + 0.24);
+export const SLIPPERS = new THREE.Vector3(TOP_EDGE + 0.2, TOP.y, TOP.z + 0.3);
+export const SIT = new THREE.Vector3(TOP_EDGE + 0.32, TOP.y, TOP.z - 0.25);
 export const CLOUD_BERTH = { x: TOP_EDGE - 1.45, z: TOP.z + 0.1, yaw: Math.PI } as const;
 
 /** Round the tower and away north-west into the sun, then down through the cloud onto the water where the village begins. */

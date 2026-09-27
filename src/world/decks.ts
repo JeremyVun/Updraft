@@ -13,6 +13,11 @@ export interface Deck {
   /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
   stepOffDepth?: number;
 }
+/** True where a step to (x, z) would carry a walker on a raised deck off its edge into a drop. */
+export function offTheEdge(decks: readonly Deck[], x: number, z: number, y: number): boolean {
+  return decks.length > 0 && deckGround(decks, x, z, y) < y - 0.8;
+}
+
 /** How far up a walker can step from where they stand onto the next surface. */
 const STEP_UP = 0.5;
 

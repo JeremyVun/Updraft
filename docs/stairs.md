@@ -75,15 +75,32 @@ light. Courage passes back and forth between them; the stairs are where it start
 
 ## Build notes
 
-- Layout constants: `src/world/stairs-layout.ts`. World: `src/world/stairs.ts`. Chapter: `src/story/stairs.ts`.
-- The cloud deck is analytic, in the shared fog (`atmosphere.ts`, `cloudDeck`), so everything in or behind it is
-  covered consistently, sky included.
+- Layout constants: `src/world/stairs-layout.ts`. World (staircase, loose flights, ghost, slippers, cloud top):
+  `src/world/stairs.ts`. Chapter: `src/story/stairs.ts`. Feel knobs: `tuning.stairs`.
+- Order: birches → `toStairs` (short hop east, the deck comes down over the sea) → `stairs` → drowned. The boat
+  finishes the room on the water at `DESCENT_END`, where the drowned chapter picks it up; `?chapter=drowned` now starts
+  there. Old saves still sailing from the birches' beach keep the birches visible (`drownedEntry`).
+- The cloud deck is analytic, in the shared fog (`cloudDeck` in `atmosphere.ts`) and the sky, so everything in or
+  behind it is covered consistently: a slab with a soft fringe under it, clipped to a disc, with a pocket of thinner
+  cloud round whoever is inside. Seen from above, a billowing mesh (`cloudTop`) is the surface. Under the deck the
+  sun is taken out of `cloudShadow` while the camera is below it.
+- Loose flights take strokes read at their own depth (across the screen is across the view, up the screen is away),
+  not the ground-projected gust, which is meaningless for something hanging in the air. A push on an end turns a
+  flight. Near its place, and only for a couple of seconds after a push, a flight feels its way home; it only turns
+  itself the last of the way once it is roughly the right way round.
+- Walking on stairs: `Deck.height1` makes a strip a flight. Where strips stack, a walker stands on the highest one it
+  can step up onto; neither the child nor the cygnet can step off a raised edge into a drop (`offTheEdge`). The
+  cygnet has `decks` like the child.
+- The boat floats at `boat.altitude` on the cloud; the pointer lands on the cloud's top (`Chapter.pointerFloor`) so
+  gusts reach the sail.
+- `node tools/stairs-check.mjs <prefix>` plays the room with real strokes against a dev server (`BASE=`), docking
+  each flight by aiming at where it is, and captures each beat; `FROM=n` starts with n flights home.
 - `?chapter=stairs` starts on the island.
 
-## Status
+## Status (2026-09-27)
 
-- [ ] Island, staircase, loose flights, slippers
-- [ ] Cloud deck in the shared fog and the sky
-- [ ] Walking on stairs (child and cygnet), boat floating on cloud
-- [ ] Chapter beats 1–5 and the handover to the drowned village
-- [ ] Screens for Jeremy
+- Built and playing end to end: arrival, three loose flights (automated strokes dock them in about 1, 3 and 7–11
+  strokes), the bird going first into the cloud and leading the climb, the top landing, the skein across the sun,
+  boarding, the sail over the cloud and the descent onto the village's water.
+- Still to do: the child and bird's nest-and-lean beat needs a proper look; a wooden knock for a docking flight;
+  music is the birches' closing phrase throughout; a first-person human play for feel; performance check.
