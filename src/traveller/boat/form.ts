@@ -23,6 +23,8 @@ interface Form {
   section: number;
   /** How far the keel lifts toward the transom, so the stern sweeps up clear of the water. */
   rocker: number;
+  /** The keel's height along the hull, where it is not the shell's own. */
+  keel?: (u: number) => number;
   /** How far the stem swells forward and the transom aft between the keel and the gunwale. */
   rake: { bow: number; stern: number };
   /** Where the child sits: the thwart's height. */
@@ -37,6 +39,15 @@ interface Form {
 /** A sheer that sweeps up from its lowest point `low` of the way along to `stern` and `bow` at the ends. */
 const sweep = (mid: number, stern: number, bow: number, low: number, bend = 2) => (u: number) =>
   mid + (u < low ? (stern - mid) * ((low - u) / low) ** bend : (bow - mid) * ((u - low) / (1 - low)) ** bend);
+
+/** A keel that runs level at `depth` and curves up only near the ends: to `bow` at the stem, `stern` at the transom. */
+const flatKeel = (depth: number, bow: number, stern: number, bowFrom = 0.8, sternTo = 0.16) => (u: number) => {
+  if (u > bowFrom) {
+    const v = (u - bowFrom) / (1 - bowFrom);
+    return depth + (bow - depth) * (1 - Math.sqrt(1 - v * v));
+  }
+  return u < sternTo ? depth + (stern - depth) * (1 - u / sternTo) ** 2 : depth;
+};
 
 const firstSpring = { stern: 0.13, sternTo: 0.42, bow: 0.05, bowFrom: 0.75 };
 const FORMS: Record<string, Form> = {
@@ -54,8 +65,8 @@ const FORMS: Record<string, Form> = {
   },
   /** A little smaller than waist-deep, round in every direction, wide planks, a white post and lantern at the stem. */
   cute: {
-    length: 4.4, beam: 1.0, fullness: 3.4, round: 0.72, transom: 0.52, flare: 0.07, section: 0.88, rocker: 0.36,
-    rake: { bow: 0.26, stern: 0.24 }, seat: 0.02, strakes: 6, concept: true, lantern: true,
+    length: 4.4, beam: 1.0, fullness: 3.4, round: 0.72, transom: 0.52, flare: 0.07, section: 0.62, rocker: 0,
+    keel: flatKeel(-0.46, -0.12, -0.39), rake: { bow: 0.22, stern: 0.24 }, seat: 0.02, strakes: 6, concept: true, lantern: true,
     gunwale: sweep(0.5, 0.86, 1.1, 0.46, 2.0),
   },
 };
@@ -83,8 +94,9 @@ export const halfWidth = (u: number) =>
   BEAM * (1 - Math.pow(u, FORM.fullness)) ** FORM.round * (FORM.transom + (1 - FORM.transom) * Math.sin(u * Math.PI));
 export const sheer = (u: number) => SHELL.sheer * u * u;
 /** How far the keel lies below the turn of the bilge: shallowest at the stem, lifting toward the transom. */
-export const keelDrop = (u: number) =>
-  DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI)) * (1 - 0.5 * u * u) * (1 - FORM.rocker * (1 - u) ** 3);
+export const keelDrop = (u: number) => FORM.keel
+  ? sheer(u) - FORM.keel(u)
+  : DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI)) * (1 - 0.5 * u * u) * (1 - FORM.rocker * (1 - u) ** 3);
 export const keel = (u: number) => sheer(u) - keelDrop(u);
 /** The top of the planking, where the gunwale rail runs. */
 export const gunwale = (u: number) => Math.max(FORM.gunwale(u), sheer(u));
