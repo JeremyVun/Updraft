@@ -52,6 +52,7 @@ export class BirchesChapter implements Chapter {
   private readonly arrival = new PlaneArrival();
   private swings = 0;
   private swingOffered = false;
+  private puttingDown = false;
   private lastSwingInput = 0;
   private leavingSwing = false;
   private readonly mountFrom = new THREE.Vector3();
@@ -110,7 +111,12 @@ export class BirchesChapter implements Chapter {
     const count = THREE.MathUtils.clamp(!point.startsWith('scarf4-') && saved >= 3 ? SCARF_SNAGS.length : saved, 0, SCARF_SNAGS.length);
     this.cast.birches.scarf.restore(count);
     this.cast.boat.scarfSail = count === SCARF_SNAGS.length ? 1 : 0;
-    this.cast.child.stop();
+    const { child, cygnet } = this.cast;
+    child.stop();
+    if (cygnet.carried) {
+      cygnet.release(this.tmp.set(child.position.x - Math.cos(child.yaw) * 1.2, 0, child.position.z + Math.sin(child.yaw) * 1.2));
+      cygnet.seating.snap();
+    }
     this.beat = 'walk'; this.play = 'hold';
   }
 
@@ -159,9 +165,10 @@ export class BirchesChapter implements Chapter {
 
     switch (this.beat) {
       case 'wonder':
-        /** A moment looking up the ride at all that gold before the game starts again. */
+        /** A moment looking up the ride at all that gold, and the cygnet is put down to walk it with them. */
+        if (this.puttingDown) break;
         c.lookAt = this.crest;
-        if (this.t > 4 && !c.busy) this.setOff();
+        if (this.t > 4 && !c.busy) this.putDown();
         break;
       case 'walk':
         this.updateWalk(time);
@@ -208,13 +215,28 @@ export class BirchesChapter implements Chapter {
     this.frame();
   }
 
-  /**
-   * It starts in the satchel; nearby leaves can tempt it down while the walk continues.
-   */
+  /** Set down on the sand where they came ashore, facing up the ride, rather than carried until the leaves call it. */
+  private putDown(): void {
+    const { child: c, cygnet, carry } = this.cast;
+    if (!cygnet.carried) { this.setOff(); return; }
+    this.puttingDown = true;
+    c.lookAt = null;
+    const up = Math.atan2(this.crest.x - c.position.x, this.crest.z - c.position.z);
+    const down = () => carry.setDown(() => this.setOff(), up);
+    /** A step to the side first, so they kneel side-on to the camera behind them and the bird is not hidden in front. */
+    const aside = up - Math.PI / 2;
+    c.walkTo(c.position.x + Math.sin(aside) * 1.6, c.position.z + Math.cos(aside) * 1.6, false, () => {
+      if (cygnet.seat === 'satchel') carry.unstow(down);
+      else down();
+    }, 0.3);
+  }
+
+  /** On foot from the beach; the leaves along the way can draw it off to play while the walk goes on. */
   private setOff(): void {
-    const { cygnet, carry } = this.cast;
-    if (cygnet.seat === 'cradle') carry.stow();
-    else cygnet.rideIn('satchel');
+    const { cygnet } = this.cast;
+    cygnet.stay = false;
+    cygnet.errand = null;
+    cygnet.watch(null);
     this.to('walk');
     this.play = 'carry';
     this.throwAhead();

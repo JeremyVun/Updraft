@@ -23,19 +23,6 @@ export class BirchLeafPlay {
     const pile = BIRCH_PILES.reduce((best, p) =>
       Math.hypot(p.x - child.position.x, p.z - child.position.z) < Math.hypot(best.x - child.position.x, best.z - child.position.z) ? p : best);
     const near = Math.hypot(pile.x - child.position.x, pile.z - child.position.z);
-    const breeze = wind.sample(pile.x, pile.z, this.air);
-    if (bird.carried) {
-      if (bird.seat !== 'satchel' || near > knobs.playRadius || (near > knobs.playHopNear && breeze.energy < knobs.playWind)) return;
-      // Hop rearward out of the bag, clear of the child's body, even while they walk.
-      const angle = child.yaw + Math.PI + 0.5;
-      this.spot.set(child.position.x + Math.sin(angle) * knobs.playHopReach, 0, child.position.z + Math.cos(angle) * knobs.playHopReach);
-      if (heightAt(this.spot.x, this.spot.z) < knobs.playDryHeight) return;
-      bird.release(this.spot);
-      bird.errand = null;
-      this.last.copy(bird.position);
-      this.nextChoice = time + knobs.playHopPause;
-      return;
-    }
     if (bird.state !== 'following') return;
     const gap = Math.hypot(bird.position.x - child.position.x, bird.position.z - child.position.z);
     bird.stay = time < this.restingUntil && gap < knobs.playRummageNear;

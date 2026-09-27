@@ -15,6 +15,8 @@ export interface WingPose {
   twist: number;
   /** Frightened or cold: held tighter to the body than folded, 0..1. */
   clamp: number;
+  /** Stowed in the satchel: the hands swept further round over the rump, 0..1. */
+  tuck: number;
   /** Extra lift of one wing by itself (preening under it, a hand out for balance), radians, left then right. */
   raise: [number, number];
   /** A shiver or a shake running through both, radians. */
@@ -68,6 +70,7 @@ export function poseWings(n: THREE.Object3D[], w: WingPose): void {
       twist += w.twist * (0.6 + i * 0.5) + (i === 2 ? w.lag * 0.3 : 0) * open;
       /** Clamped in, it is tighter than merely folded: swept further back and pulled down onto the flank. */
       sweep += w.clamp * 0.13 * shut;
+      sweep += w.tuck * (i === 0 ? 0 : i === 1 ? 0.4 : 0.8) * shut;
       sweep += guard * 0.1;
       lift -= guard * 0.055;
       lift -= w.clamp * 0.07;

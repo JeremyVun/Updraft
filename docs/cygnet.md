@@ -218,7 +218,7 @@ session that built it died; a new session took over from this file. What the mer
   `circle`/`goOn` stay in the flock for the reunion at home.
 - Gusts count as lift under the cygnet (`tuning.colt.gustLift`), as they did for the colt: cursor movement is the
   only verb. The home summit's `coax` swirl follows the cygnet.
-- The birches carry it in the satchel (`carry.stow()` on setting off).
+- The birches: it is set down on the beach where they land (`carry.setDown`, after a step aside so the camera behind sees it) and walks the gold with them; the leaves draw it off to play (2026-09-27, it used to ride in the satchel until a pile tempted it out).
 - Gates on `main` after the merge: the same marginal misses as before (gather jerk 0.0211, gap 0.0649; down jerk
   0.0241, gap 0.0678; walk turn 0.1018). The crest scene runs end to end at 60 fps with no console errors.
 

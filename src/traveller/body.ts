@@ -285,7 +285,7 @@ export function buildChild(): Rig {
      * Down inside the bag, not on it: its flanks and folded wings are in the pouch and the rim closes round them,
      * with the breast against the coat and the shoulders clear of the low back edge of the mouth.
      */
-    satchel: socket(body, 0, 0.89, -0.545),
+    satchel: socket(body, 0, 0.895, -0.515),
     shoulder: socket(body, -0.3, 1.04, -0.02),
     lap: socket(body, 0, 0.16, 0.52),
   };
