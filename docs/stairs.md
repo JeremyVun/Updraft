@@ -19,6 +19,10 @@ no "the cygnet can't fly" beat, which belongs to the home reunion.
 Also, on a playful winter room: "the problem with having a snowman after the sleeping island is that the curtain
 opening is the greening moment that moves the game from winter to spring." (So no snow play after the sleeping island.)
 
+## Jeremy's first reaction (2026-09-27, verbatim)
+
+> "I feel like the stairs are too finely defined and don't quite fit the dream like nature of the game."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
