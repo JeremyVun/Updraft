@@ -489,10 +489,10 @@ float cloudShadow(vec2 xz) {
   vec2 edge = min(uv, 1.0 - uv);
   /** Past the sheet the edge texel would streak out over the world as a hard wedge, so it opens to clear sky. */
   float lit = mix(1.0, texture(uCloudTex, clamp(uv, 0.0, 1.0)).r, smoothstep(0.0, 0.04, min(edge.x, edge.y)));
-  // Under the stairs' cloud deck the sun is gone. Seen from below, everything in view is below it too.
+  // Under the stairs' cloud deck most of the sun is gone; what is left is the low sun slipping in under its far edge.
   if (uCloudDeck.w > 0.0) {
     float under = 1.0 - smoothstep(uCloudDeckY.x - 2.0, uCloudDeckY.y, cameraPosition.y);
-    lit *= 1.0 - 0.8 * uCloudDeck.w * under;
+    lit *= 1.0 - 0.55 * uCloudDeck.w * under;
   }
   return lit;
 }

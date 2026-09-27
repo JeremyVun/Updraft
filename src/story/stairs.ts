@@ -7,7 +7,7 @@ import type { StairsAir } from '../audio/stairs-air';
 import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import {
-  CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
+  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
   STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, flight,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
@@ -144,7 +144,7 @@ export class StairsChapter implements Chapter {
   /** The last stop the child can reach: the landing before the first flight still loose, or the top. */
   private reachable(): number {
     const loose = this.world.waiting;
-    const level = loose ? loose.flight.index - 1 : this.birdLed ? FLIGHTS : LOOSE[LOOSE.length - 1];
+    const level = loose ? loose.flight.index - 1 : this.birdLed ? FLIGHTS : BELOW_CLOUD;
     let last = 0;
     this.stops.forEach((s, i) => { if (s.level <= level) last = i; });
     // Wait in the lane the next flight leaves from, facing the gap; under the cloud, in the lane that goes up into it.
@@ -253,7 +253,7 @@ export class StairsChapter implements Chapter {
       }
       case 'hesitate':
         // The white starts a few steps up. They stop, look up into it, and hold the bird closer.
-        c.lookAt = this.look.set(LANE.west, CLOUD.base + 1.5, flight(7).top.z);
+        c.lookAt = this.look.set(flight(BELOW_CLOUD + 1).bottom.x, CLOUD.base + 1.5, flight(BELOW_CLOUD + 1).top.z);
         c.tighter = Math.min(1, c.tighter + dt * 1.2);
         c.lean = -0.06;
         if (this.t > 3.2 && !carry.busy) {
@@ -261,6 +261,9 @@ export class StairsChapter implements Chapter {
           c.lean = 0;
           this.birdStarted = false;
           this.to('birdFirst');
+          // Across the landing toward the flight that goes up, so the bird is set down on the boards.
+          const up = flight(BELOW_CLOUD + 1);
+          c.faceToward(up.bottom.x, c.position.z, 1);
           carry.setDown(() => {
             k.stay = false;
             this.birdStarted = true;
@@ -361,7 +364,7 @@ export class StairsChapter implements Chapter {
   private birdGoesFirst(): void {
     const { cygnet: k, child: c } = this.cast;
     if (!this.birdStarted || k.carried) return;
-    const f = flight(7);
+    const f = flight(BELOW_CLOUD + 1);
     // Along the landing into the lane that goes up, then up it into the white.
     const cross = this.stops[this.limit + 1];
     const up = this.birdLeg === 0 ? this.birdAt.set(cross.x, 0, cross.z)
