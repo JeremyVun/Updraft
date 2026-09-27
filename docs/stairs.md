@@ -121,14 +121,15 @@ light. Courage passes back and forth between them; the stairs are where it start
 3. **Into the cloud.** On the last landing below the white the child steps aside into its far corner and hangs back,
    looking up; the bird comes past them, looks up too, and goes up into the white first, and waits.
 4. **The loop (Jeremy's Penrose stairs).** Halfway up the white the stair comes up into a hollow of clear air, onto
-   the corner of a square of flights, two short and two long. The child waits on the next corner. The lens rises
-   out of the white behind them to the one place high over the square from which it climbs for ever, and holds there
-   dead still. The bird runs on up and round: up, and up, and up, and comes up the flight below, behind the child,
-   where it started. It looks up the way it went, down the way it came, and asks (a small questioning peep). Round
-   again. A heap of cloud sits on the far corner; after the first round a blow can scatter it, and after the second
-   a sweep is drawn across it. Blown off, it shows a flight going on up from that corner that nobody could see; next
-   time round the bird takes it, the child follows, and the lens comes down after them, and from anywhere else the
-   square comes apart (its last flight shrinks toward a small copy of the corner, floating in front of it).
+   the corner of a ring of stairs, two short sides and two long, with a rail round its outside and every step's end
+   showing. The child stops a few treads short of the corner. The lens rises out of the white behind them to the one
+   place high over the ring from which it climbs for ever, and holds there dead still. The bird runs on up and round:
+   up, and up, and up, and up, and comes up onto the corner it set off from, right over the child. It looks up the
+   way it went, back the way it came, and down at her, and asks (a small questioning peep); they both look across at
+   a heap of cloud sitting on the far corner, and a sweep is drawn across it. Round again. Blown off, the heap shows
+   a flight going on up from that corner that nobody could see; next time round the bird takes it, the child
+   follows, and the lens comes round and down beside the ring while its last flight lets go of the trick and is seen
+   to climb on past the corner and stop in the air, a storey too high.
 5. **Above the clouds.** As the second pass: out of the wind into a vast calm; the slippers; the bird settles in one,
    the child sits beside it; a skein goes north across the sun; the boat waits on the cloud under the kite.
 6. **The sail over the cloud.** As the second pass.
