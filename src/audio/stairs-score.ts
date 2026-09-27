@@ -66,7 +66,9 @@ const ABOVE_CHORDS: Chord[] = [
   { at: 19, deep: [47], haze: [54, 64, 69, 74] },
   { at: 27, deep: [40], haze: [55, 62, 66, 71] },
 ];
-const ABOVE_HARMONY = harmony(ABOVE_CHORDS, 35, 3.2, .0039, .0024, 5.5);
+// The first sound after the wind is a high, open fifth on its own; the warmth under it follows.
+const ABOVE_HARMONY = harmony(ABOVE_CHORDS, 35, 3.2, .0039, .0024, 5.5)
+  .map(n => n.at < 4 && n.midi < 69 ? { ...n, at: n.at + 1.8 } : n);
 const ABOVE_MELODY = line('light', [
   [6.5, 74, 3.8, .0094], [9.5, 76, 3.4, .009], [12.5, 78, 4.4, .0094], [16.5, 85, 6.4, .0081],
   [24, 83, 3.4, .0081], [27.5, 79, 3.6, .0077], [31, 78, 4.8, .0072],
@@ -85,10 +87,14 @@ const SAIL_CHORDS: Chord[] = [
   { at: 42, deep: [45], haze: [57, 62, 64, 69] },
 ];
 const RIPPLES = [[57, 64, 69, 66], [59, 66, 71, 67], [57, 62, 69, 66], [59, 66, 73, 67], [57, 64, 71, 69], [59, 66, 69, 64], [59, 66, 69, 67], [57, 62, 69, 64]];
-const RIPPLE_AT = [.05, 1.57, 3.04, 4.53];
+/** Mostly even, with a skip here and there and a breath where the tune soars or the phrase turns home. */
+const RIPPLE_AT = [
+  [.05, 1.57, 3.04, 4.53], [.05, 1.57, 3.04, 4.53], [.05, 1.57, 2.32, 4.53], [.05, 1.57, 3.04, 4.53],
+  [.05, 1.57, 3.04], [.05, 1.57, 3.04, 4.53], [.05, 1.57, 2.32, 4.53], [.05, 1.57, 3.04],
+];
 const RIPPLE_LEVEL = [.0056, .0042, .0048, .0038];
-const SAIL_RIPPLE = SAIL_CHORDS.flatMap((c, chord) => RIPPLES[chord].map((midi, i): Note => ({
-  voice: 'harp', midi, at: c.at + RIPPLE_AT[i], duration: 2.8, level: RIPPLE_LEVEL[i],
+const SAIL_RIPPLE = SAIL_CHORDS.flatMap((c, chord) => RIPPLE_AT[chord].map((at, i): Note => ({
+  voice: 'harp', midi: RIPPLES[chord][i], at: c.at + at, duration: 2.8, level: RIPPLE_LEVEL[i],
   pan: (i % 2 ? .24 : -.24) * (chord % 2 ? -1 : 1), role: 'accompaniment',
 })));
 const SAIL_HARMONY = harmony(SAIL_CHORDS, 48, 2.6, .0042, .0032);
@@ -113,7 +119,8 @@ export const STAIRS_SECTIONS: Record<StairsScorePhase, Section> = {
 
 /** The music of the room follows the air: nothing in the white, the bloom on top, the sail over it and into the fog. */
 export function stairsScorePhase(air: StairsAir): StairsScorePhase | undefined {
-  if (air.phase === 'above') return 'above';
+  // Once out on top, a frame back in the cloud's edge must not restart the bloom.
+  if (air.phase === 'above' || (air.phase === 'cloud' && air.open > 0.2)) return 'above';
   if (air.phase === 'sail' || air.phase === 'fog') return 'sail';
   return undefined;
 }

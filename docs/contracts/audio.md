@@ -136,7 +136,7 @@ The paper release is automatic. `home-ending.ts` shares the end times between st
 phase changes cannot restart the composition. The old phase arrangements remain available when no
 ending clock is supplied. Recognition/release/door/finale cues remain disabled behind their switch.
 
-Drowned starts its handoff on departure from Birches, then requests Wood only after the lost-plane scene.
+Drowned starts its handoff in the stairs' fog (see the stairs in the clouds, below), then requests Wood only after the lost-plane scene.
 The long sea passage retains its swim/reunion music until the pod's farewell. Meadow arrival uses its grey
 pre-piano bed; the approved post-piano composition still waits for the duet. `tuning.audio.arrival*` owns the
 distance allowances and fade/rest durations.
@@ -347,6 +347,41 @@ the forest pad enters on D/A; the previously inaudible pad is tuned before it be
 blend, the existing forest chord clock resumes with its slow pitch glide into the unsettled voicing.
 Other arrivals retain the 1.5-second fade, 0.4-second breath and 1.5-second fade-in. No new forest melody,
 weather sound or protagonist voice is added.
+
+## The stairs in the clouds — September 27 proposal
+
+Awaiting Jeremy's audition; nothing here is approved. The room's sound follows `SoundState.stairsAir`
+(`src/audio/stairs-air.ts`), which the chapter measures every frame; no clock decides a phase. `stairs-sound.ts`
+owns the air and the knock, `stairs-score.ts` the new music. Render the whole arc with
+`node tools/stairs-audio-proposal.mjs [outDir]` against a dev server (`BASE`): it drives the production soundscape
+through a synthetic timeline and writes the mix, the music alone, a cue sheet and measurements.
+
+- **Under the cloud** the birches' approved closing phrase (`birchesScore = 'return'`) carries on through the puzzle.
+  Each flight that docks raises `flightHome`: a soft wooden tok, a smaller tk as it settles and a puff of cloud,
+  a physical sound outside the cue ducking (`tuning.audio.flightKnock`). The third flight keeps the shared
+  completion phrase.
+- **In the white** the music goes out completely. Once the phase is `cloud` (or `cloud` rises under the deck) the
+  birches' phrase drains at about 4 dB a second and is let go below −46 dB; it never comes back in this room. The
+  shared pad stays silent throughout the room. The wind is close and muffled: low noise that buffets every few
+  seconds low down and every second or two near the top, a moan that climbs with `climb`, and a rush on the strongest
+  buffets. It is heard faintly from below while the bird goes first. The breeze bed and the sea fall away as they
+  climb (`climb`), so the island is gone by halfway.
+- **Out on top** the wind drops with `cloud` and `open`, the last of it sweeping past to one side, and the room is
+  nearly silent: a thin high air, the breeze bed at a fifth. Three seconds later the bloom starts from nothing. The
+  skein is only the flock's own calls; the cygnet is silent throughout the room.
+- **The sail** crossfades from the bloom over four seconds. The hull's soft hiss through the cloud tops follows
+  `speed` and wanders slowly; it is continuous, never a repeated burst (Jeremy removed the sea hull's flapping
+  bursts). It is heard only while the hull is up on the cloud.
+- **The fog** thins the sail (`fog`), and the chapter asks for the village's music (`arrivalMusic = 'drowned'` while the
+  phase is `fog` or `down`): the ordinary arrival pause, three seconds' fade, three of rest in the white, 2.5 in.
+  The stairs score takes part in the phrase-aware handoff and retires with the other scores. The sea comes back
+  as the hull comes down (`climb` is the hull's height while afloat) and clears as the fog thins.
+- **Down** on the village water the drowned chapter owns everything. The room's own layers fade and disconnect five
+  seconds after the chapter stops describing its air; outside the room every level multiplier is exactly 1.
+
+The score sits at the room reference: about −30 LUFS in the bloom and the sail, beside −32 for the birches' phrase and
+−30 for the drowned village's in the same render. The wind at the top of the climb is about −27 LUFS and the calm
+after it about −41. `tuning.audio.stairsAir`, `stairsAirLevel`, `stairsScoreLevel` and `stairsPhaseFade` own these.
 
 ## Start-up and preparation
 
