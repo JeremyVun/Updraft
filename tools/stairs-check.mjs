@@ -178,9 +178,15 @@ try {
     if (i % 8 === 4) await shot(`13-sail-${String(i).padStart(2, '0')}`);
   }
   s = await until((x) => x.beat === 'fog' || x.chapter !== 'stairs', 90000);
-  for (let i = 1; i <= 6; i++) {
-    await page.waitForTimeout(1500);
+  for (let i = 1; i <= 8; i++) {
+    await page.waitForTimeout(1200);
     await shot(`14-fog-${i}`);
+    log('  fog', await page.evaluate(() => {
+      const g = window.__game, s = g.story.current, u = g.cloudStairs.cloudTop.material.uniforms;
+      const r = (v) => v.toArray().map((x) => +x.toFixed(2));
+      return JSON.stringify({ beat: `${g.story.name}:${s.beat}`, deck: r(u.uCloudDeck.value), deckY: r(u.uCloudDeckY.value), bubble: r(u.uCloudBubble.value),
+        cam: r(g.rig.camera.position), boat: r(g.boat.position) });
+    }));
   }
   s = await until((x) => x.chapter !== 'stairs', 60000);
   log('after', JSON.stringify(s));

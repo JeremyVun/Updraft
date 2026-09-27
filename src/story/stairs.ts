@@ -752,8 +752,8 @@ export class StairsChapter implements Chapter {
       d.base = CLOUD.base;
       d.top = CLOUD.top + this.swell * 10;
       // The pocket shrinks round the stern and the child, so the bow and the lantern go into the white first.
-      d.bubble.set(boat.position.x - fx * 1.6, boat.position.y + 1.2, boat.position.z - fz * 1.6, THREE.MathUtils.lerp(7, 3.4, this.swell));
-      d.clearing = THREE.MathUtils.lerp(k.clearing, 0.13, this.swell);
+      d.bubble.set(boat.position.x - fx * 1.6, boat.position.y + 1.2, boat.position.z - fz * 1.6, THREE.MathUtils.lerp(9, 5.2, this.swell));
+      d.clearing = THREE.MathUtils.lerp(k.clearing, 0.1, this.swell);
       this.world.cloudHole = false;
       wisps.amount = this.swell;
       wisps.centre.set(boat.position.x, boat.position.y + 1.5, boat.position.z);
@@ -767,8 +767,8 @@ export class StairsChapter implements Chapter {
       d.top = 40;
       const lift = S(this.t, 2.2, tuning.stairs.fogLift);
       d.amount = 1 - 0.8 * lift;
-      d.bubble.set(boat.position.x - fx * 1.6, boat.position.y + 1.2, boat.position.z - fz * 1.6, THREE.MathUtils.lerp(3.4, 30, lift));
-      d.clearing = THREE.MathUtils.lerp(0.13, 0.08, lift);
+      d.bubble.set(boat.position.x - fx * 1.6, boat.position.y + 1.2, boat.position.z - fz * 1.6, THREE.MathUtils.lerp(5.2, 30, lift));
+      d.clearing = THREE.MathUtils.lerp(0.1, 0.07, lift);
       wisps.amount = 1 - lift;
       wisps.centre.set(boat.position.x, boat.position.y + 1.5, boat.position.z);
       wisps.wind.set(-fx, 0.05, -fz).multiplyScalar(boat.speed + 1.5);
@@ -780,7 +780,10 @@ export class StairsChapter implements Chapter {
     d.bubble.set(c.position.x, c.position.y + 1.1, c.position.z, inCloud ? THREE.MathUtils.lerp(k.bubble, k.bubbleTop, climb) : 0);
     // On the ring's landing the clear air leans toward the lens, so the child and both flights' feet are seen
     // and the tops of the flights are lost in the white.
-    if (this.beat === 'loop') d.bubble.set(c.position.x + 1.4, c.position.y + 1.4, c.position.z + 2.6, 6.2);
+    if (this.beat === 'loop') {
+      d.bubble.set(c.position.x + 1.4, c.position.y + 1.4, c.position.z + 2.6, 6.2);
+      d.clearing = k.clearing * 0.6;
+    }
     if (inCloud) d.clearing = THREE.MathUtils.lerp(k.clearing, k.clearingTop, climb);
     const white = ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat);
     wisps.amount = white ? S(c.position.y + 1.2, CLOUD.base - 2, CLOUD.base + 0.8) * (1 - S(c.position.y, CLOUD.top - 0.8, CLOUD.top + 0.6)) : 0;
@@ -928,7 +931,7 @@ export class StairsChapter implements Chapter {
         const bearing = boat.yaw + Math.PI + THREE.MathUtils.lerp(0.5, 0.8, close);
         s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
         s.target.set(boat.position.x + fx * 4, boat.position.y + 1.9, boat.position.z + fz * 4);
-        s.distance = THREE.MathUtils.lerp(15, 6.2, close);
+        s.distance = THREE.MathUtils.lerp(15, 5.4, close);
         s.height = THREE.MathUtils.lerp(4.2, 1.6, close);
         s.carry = true;
         s.carryAnchor = boat.position;

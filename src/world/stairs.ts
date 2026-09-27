@@ -10,7 +10,7 @@ import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puf
 import { CloudWisps } from './stairs-wisps';
 import { CloudWake } from './stairs-wake';
 import {
-  BELOW_CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LANE, LOOSE, LOOSE_START, SLIPPERS, STAIRS_ISLE, STEP, flight, landingOf, type Flight,
+  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LANE, LOOSE, LOOSE_START, SLIPPERS, STAIRS_ISLE, STEP, flight, landingOf, type Flight,
 } from './stairs-layout';
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
@@ -117,13 +117,14 @@ uniform vec2 uCentre;
 uniform vec3 uCalmAt;
 uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
+uniform float uSurface;
 out vec3 vWorld;
 out float vRing;
 BILLOW
 void main() {
   vec2 xz = position.xz + uCentre;
   vRing = length(position.xz);
-  vWorld = vec3(xz.x, uCloudDeckY.y + billow(xz), xz.y);
+  vWorld = vec3(xz.x, uSurface + billow(xz), xz.y);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -135,6 +136,7 @@ uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform float uReach;
 uniform float uHole;
+uniform float uSurface;
 in vec3 vWorld;
 in float vRing;
 BILLOW
@@ -143,7 +145,7 @@ void main() {
   vec2 xz = vWorld.xz;
   if (uCloudBubble.w > 0.0 && uHole > 0.5) {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
-    if (hole < 0.0 && uCloudBubble.y < uCloudDeckY.y + 0.5) discard;
+    if (hole < 0.0 && uCloudBubble.y < uSurface + 0.5) discard;
   }
   float e = 0.6;
   float h = billow(xz);
@@ -263,7 +265,9 @@ void main() {
   vec3 sunlit = uSunColor * wrap * wrap * (0.25 + 0.9 * low + 1.1 * sunward * far);
   vec3 col = shade * (0.92 + 0.16 * vnoise(xz * 0.11)) + sunlit + uSunColor * rim * wrap * (0.15 + 0.7 * sunward) * low;
   float edge = 1.0 - smoothstep(0.55, 0.98, length(xz - uCloudDeck.xy) / uCloudDeck.z);
-  gl_FragColor = vec4(applyFog(col, vWorld), uCloudDeck.w * edge);
+  // Seen from just under it, a ceiling is a line; the fringe of the deck takes over there.
+  float under = smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y);
+  gl_FragColor = vec4(applyFog(col, vWorld), uCloudDeck.w * edge * under);
 }`;
 
 /** Bellies of cloud hanging from the deck: big slow heaps with smaller ones on them, none near the stair. */
@@ -487,7 +491,7 @@ export class CloudStairs {
   ghostShown = 0;
   private readonly ghostUniform = { value: 0 };
   private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uHole: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uHole: { value: number }; uSurface: { value: number } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
@@ -562,6 +566,8 @@ export class CloudStairs {
       uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone()), DESCENT_END.clone()] },
       uTrail: { value: this.trail },
       uHole: { value: 1 },
+      // The surface stays where the cloud's top is, even while the deck swells above it into fog.
+      uSurface: { value: CLOUD.top },
     };
     this.wake = new CloudWake();
     this.group.add(this.wake.mesh);
@@ -778,11 +784,11 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     const deck = atmo.uniforms.uCloudDeck.value;
-    this.cloudTop.visible = deck.w > 0.01 && camera.position.y > atmo.uniforms.uCloudDeckY.value.y - 0.4;
+    this.cloudTop.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
     this.wisps.update(dt, time);
     this.wake.update(dt);
-    this.cloudBelly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 0.3;
+    this.cloudBelly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 1;
     this.bellyUniforms.uCentre.value.copy(this.topUniforms.uCentre.value);
   }
 
