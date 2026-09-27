@@ -568,7 +568,7 @@ export class Traveller {
     const onBed = THREE.MathUtils.smoothstep(this.abed, 0.2, 0.8);
     const floor = this.riding ? p.y - 0.2 : Math.max(this.ground(p.x, p.z), 0);
     const mattress = this.bedAt.y - tuning.sleeping.lieHigh + 0.68;
-    this.scarf.update(dt, neck, this.rig.body.matrixWorld, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p);
+    this.scarf.update(dt, neck, this.rig.body.matrixWorld, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p, this.yaw, onBed);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
     this.motion.hoodForward(this.rig.material.uniforms.uHoodForward.value);
 
