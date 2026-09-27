@@ -367,6 +367,11 @@ export class WindField {
       pp.swap();
     }
     this.gpu.clear(this.pressure.read);
+    // The shaders still hold this frame's unshifted textures, which they would read against the moved window.
+    const u = atmo.uniforms;
+    u.uWindTex.value = this.vel.texture;
+    u.uBendTex.value = this.bend.texture;
+    u.uSwayTex.value = this.sway.texture;
   }
 
   private readBack(): void {

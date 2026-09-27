@@ -87,7 +87,7 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 | 2 | Cygnet seen through the child from behind | open |
 | 3 | Drowned sail gesture lands behind the sail | open |
 | 4 | Still island: gesture on the plane when held and when grounded | open |
-| 5 | Grass stutters as the camera turns | open |
+| 5 | Grass stutters as the camera turns | Fixed. The simulated window sits 100 m ahead of the camera, so turning moves it every 17° or so. On each move the wind field shifted its velocity, lean and sway textures and swapped them, but the shaders kept the textures bound earlier in the frame and read them against the moved window, so for that one frame every blade took the lean of grass 10–40 m away (the sail and the trees too), then snapped back. `WindField.shift` (`src/wind/field.ts`) now rebinds `uWindTex`, `uBendTex` and `uSwayTex`, as the life field and wind waves already did. Checked with a 0.5°-a-frame turn over the meadow, compared with the same run with the window pinned: on the move frame the whole-frame difference was 7.26 of 255 before the fix (2.4 on the frames either side) and 1.65 after it, the same as its neighbours. |
 | 6 | Birches: scarf drawn into the boat too fast | open |
 | 7 | Mirror: cygnet stuck paddling, even in the backpack | open |
 | 8 | Boat to jetty is a teleport | open |
