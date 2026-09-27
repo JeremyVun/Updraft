@@ -50,6 +50,12 @@ On the air boat, after animating each concept himself (`~/Desktop/cloud-boats.mp
 > "I feel like the boat on the right with the lantern and the kite sailing through the clouds feels the best (if you can get a nice wake effect through the clouds as it sails through them). It may also be worth finally getting an opus 5.5 sub agent to have a look at improving the visuals of the sail boat (right now it's quite simple looking). The improved sailboat doesnt need to be super detailed and high definition, but i do think we need to target a higher quality bar. "
 
 
+Mid-build (2026-09-27, verbatim):
+
+> "question, do you reckon you could throw in a fun little penrose stairs sequence in there for fun? I'm envisioning the cygnet running around and getting confused / making noises"
+
+Offered an opener on the grass (recommended), inside the cloud, or on top in the calm, he chose **inside the cloud**.
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
