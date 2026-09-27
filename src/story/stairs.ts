@@ -15,6 +15,7 @@ import {
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
 import { completeObjective, cue } from './cues';
+import { Track } from './stairs-track';
 
 type Beat =
   | 'ashore' | 'wonder' | 'climb' | 'waiting' | 'hesitate' | 'birdFirst' | 'follow' | 'loop' | 'together' | 'emerge'
@@ -99,7 +100,6 @@ export class StairsChapter implements Chapter {
   private beatStart = 0;
   private leg = 0;
   private skeinSent = false;
-  private birdLeg = 0;
   private birdStop = 0;
   /** The furthest stop the bird has got to in the cloud; the child never goes past it. */
   private birdReached = 0;
@@ -122,10 +122,18 @@ export class StairsChapter implements Chapter {
   private lap = 0;
   private round: 'settle' | 'round' | 'puzzled' = 'settle';
   private roundT = 0;
-  private roundLeg = 0;
-  /** The bird's way round the loop, and where it waits at the foot of the loop's first flight. */
-  private readonly roundWay: THREE.Vector3[];
+  /** Whether it is on its way home round the loop, after it has come across onto the corner. */
+  private homeward = false;
+  /** The line up the stair the bird keeps to, and where on it the stops are. */
+  private readonly track: Track;
+  /** The bird's way round the loop: out to the top of its last flight, and home from the corner to the child. */
+  private readonly roundOut: Track;
+  private readonly roundHome: Track;
+  private readonly sOnward: number;
+  private readonly sBack: number;
+  /** Where it waits for the child on the loop's first flight, on its first tread. */
   private readonly waitUp: THREE.Vector3;
+  private readonly sWaitUp: number;
   private readonly waitAside: THREE.Vector3;
   private loopFrom = 0;
   private readonly eyeFrom = new THREE.Vector3();
@@ -134,8 +142,7 @@ export class StairsChapter implements Chapter {
   /** While the lens is up in the white over the loop, the cloud is kept deep enough round it. */
   private lofted = false;
   private trickGone = 0;
-  private stuckGap = Infinity;
-  private stuckLeg = -1;
+  private stuckLeft = Infinity;
   private stuckSince = 0;
   private lastDt = 0;
   /** The lantern hung at the bow for the way over the cloud, and the kite's tie-off there. */
@@ -158,13 +165,21 @@ export class StairsChapter implements Chapter {
     const on = (p: THREE.Vector3, yaw: number, d: number) => p.clone().addScaledVector(along(yaw), d);
     const up = flight(LOOP.wait + 1), into = flight(LOOP.wait), far = LOOP_FAR.flight;
     const wait = landingOf(LOOP.wait);
-    this.roundWay = [
-      on(up.top, up.yaw, 0.35), landingOf(LOOP.onward).centre,
-      on(far.bottom, far.yaw, 0.2), on(far.top, far.yaw, 0.35), LOOP_FAR.landing.centre.clone(),
-      on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 1)),
-      on(into.bottom, into.yaw, 0.25), on(into.top, into.yaw, 0.3), onLanding(wait, 0, -0.45),
-    ];
-    this.waitUp = on(up.bottom, up.yaw, 0.3);
+    const onward = landingOf(LOOP.onward), corner = landingOf(LOOP.corner), farL = LOOP_FAR.landing;
+    this.track = new Track(this.stops.map(p => new THREE.Vector3(p.x, levelHeight(p.level), p.z)));
+    this.waitUp = on(up.bottom, up.yaw, 0.3).setY(up.bottom.y + STEP.rise);
+    this.sWaitUp = this.track.project(this.waitUp);
+    this.roundOut = new Track([
+      this.waitUp.clone(), on(up.top, up.yaw, 0.35), onward.centre.clone(), onLanding(onward, onward.x1 - 0.2, 0),
+      on(far.bottom, far.yaw, 0.2), on(far.top, far.yaw, 0.35), farL.centre.clone(), onLanding(farL, farL.x1 - 0.2, 0),
+      on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(LOOP_BACK.top.clone()), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 0.8)),
+    ]);
+    this.sOnward = this.roundOut.project(onward.centre);
+    this.sBack = this.roundOut.project(LOOP_BACK.bottom);
+    this.roundHome = new Track([
+      onLanding(corner, corner.x1 - 0.15, 0), corner.centre.clone(), on(into.bottom, into.yaw, 0.25),
+      on(into.top, into.yaw, 0.3), onLanding(wait, 0, -0.45),
+    ]);
     this.waitAside = onLanding(wait, -0.42, 0.38);
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
@@ -364,7 +379,6 @@ export class StairsChapter implements Chapter {
           c.lean = 0;
           k.watch(null);
           k.stay = false;
-          this.birdLeg = 0;
           this.to('birdFirst');
         }
         break;
@@ -499,19 +513,11 @@ export class StairsChapter implements Chapter {
   private birdGoesFirst(): void {
     const { cygnet: k, child: c } = this.cast;
     const f = flight(BELOW_CLOUD + 1);
-    // Across the landing to where the walk turns up into the white, then up it.
-    const turn = this.stops[this.limit];
-    const up = this.birdLeg === 0 ? this.birdAt.set(turn.x, 0, turn.z)
-      : this.birdAt.copy(f.bottom).addScaledVector(along(f.yaw), STEP.going * 7).setY(0);
+    const up = this.tmp2.copy(f.bottom).addScaledVector(along(f.yaw), STEP.going * 7).setY(f.bottom.y + STEP.rise * 7);
+    const left = this.track.lead(k.position, this.track.project(up), this.birdAt);
     c.lookAt = k.position;
-    // It drops an errand within 0.45 of the spot, so arriving is measured just outside that.
-    const there = Math.hypot(k.position.x - up.x, k.position.z - up.z) < 0.55;
-    if (this.birdLeg === 0 && there) {
-      this.birdLeg = 1;
-      return;
-    }
-    if (!k.stay && !there && this.t < 14) {
-      k.errand = up;
+    if (!k.stay && left > 0.5 && this.t < 14) {
+      k.errand = this.birdAt;
       return;
     }
     if (!k.stay) {
@@ -537,15 +543,14 @@ export class StairsChapter implements Chapter {
     c.lookAt = k.position;
     if (this.birdStop < this.stop) this.birdStop = this.stop;
     const last = this.looped ? this.stops.length - 1 : this.loopStop;
-    const spot = (i: number) => (!this.looped && i === this.loopStop ? this.waitUp : this.stops[i]);
-    const at = spot(this.birdStop);
-    const reached = Math.hypot(k.position.x - at.x, k.position.z - at.z) < 0.55;
+    const spot = (i: number) => (!this.looped && i === this.loopStop ? this.sWaitUp : this.track.to(i));
+    let left = this.track.lead(k.position, spot(this.birdStop), this.birdAt);
+    const reached = left < 0.5;
     if (reached) this.birdReached = Math.max(this.birdReached, this.birdStop);
-    if (reached && this.birdStop < Math.min(this.stop + 2, last)) this.birdStop++;
-    const want = spot(this.birdStop);
-    const waiting = reached && (this.birdStop >= this.stop + 2 || this.birdStop === last);
+    if (reached && this.birdStop < Math.min(this.stop + 2, last)) left = this.track.lead(k.position, spot(++this.birdStop), this.birdAt);
+    const waiting = left < 0.5 && (this.birdStop >= this.stop + 2 || this.birdStop === last);
     k.stay = waiting;
-    k.errand = waiting ? null : this.birdAt.set(want.x, 0, want.z);
+    k.errand = waiting ? null : this.birdAt;
   }
 
   private goRoundFirst(): void {
@@ -554,7 +559,7 @@ export class StairsChapter implements Chapter {
     this.lofted = true;
     this.lap = 0;
     this.round = 'settle';
-    this.roundLeg = 0;
+    this.homeward = false;
     this.roundT = this.now;
     this.loopFrom = this.now;
     this.eyeFrom.copy(this.world.eye);
@@ -576,29 +581,37 @@ export class StairsChapter implements Chapter {
     const { cygnet: k, child: c } = this.cast;
     const bank = this.world.bank;
     const dt = this.now - this.roundT;
-    const at = (p: THREE.Vector3) => Math.hypot(k.position.x - p.x, k.position.z - p.z) < 0.55;
     c.lookAt = k.position;
     bank.yielding = this.lap >= 1;
-    k.scale = this.round === 'round' && this.roundLeg === 6 ? sizeOnBack(k.position) : 1;
+    const way = this.homeward ? this.roundHome : this.roundOut;
+    k.scale = this.round === 'round' && !this.homeward && way.project(k.position) > this.sBack ? sizeOnBack(k.position) : 1;
     switch (this.round) {
       case 'settle': {
-        k.errand = at(this.waitUp) ? null : this.birdAt.copy(this.waitUp).setY(0);
-        k.stay = at(this.waitUp);
-        if (this.now - this.loopFrom > LOOP_SETTLE - 0.5) {
-          this.round = 'round';
-          this.roundLeg = 0;
-        }
+        const left = this.track.lead(k.position, this.sWaitUp, this.birdAt);
+        k.stay = left < 0.5;
+        k.errand = k.stay ? null : this.birdAt;
+        if (this.now - this.loopFrom > LOOP_SETTLE - 0.5) this.setOff();
         break;
       }
       case 'round': {
         k.stay = false;
         k.pace = 0.75;
-        const to = this.roundWay[this.roundLeg];
-        k.errand = this.birdAt.copy(to).setY(0);
-        this.unstick(to);
-        // Past the top of the drawn-in flight it is on the copy of the corner: it goes across at once onto the
-        // corner itself, which from here is the same place.
-        if (this.roundLeg === 6) {
+        const left = way.lead(k.position, way.length, this.birdAt);
+        k.errand = this.birdAt;
+        this.unstick(left);
+        if (!this.homeward) {
+          // With the cloud gone off the far corner, it sees the way on as it comes onto that corner, and takes it.
+          if (bank.cleared && Math.abs(way.project(k.position) - this.sOnward) < 0.4) {
+            k.scale = 1;
+            k.decks = this.decks();
+            this.birdStop = this.loopStop + 2;
+            this.birdReached = this.birdStop;
+            this.limit = this.reachable();
+            this.to('follow');
+            break;
+          }
+          // Past the top of the drawn-in flight it is on the copy of the corner: it goes across at once onto the
+          // corner itself, which from here is the same place.
           if (upBack(k.position) > 1) {
             fromCopy(k.position, this.tmp);
             k.scale = 1;
@@ -608,21 +621,12 @@ export class StairsChapter implements Chapter {
               onLanding(landingOf(LOOP.corner), 0.7, 0, this.tmp);
               k.standAt(this.tmp.x, this.tmp.y, this.tmp.z, k.yaw);
             }
-            this.roundLeg++;
+            this.homeward = true;
+            this.stuckLeft = Infinity;
           }
           break;
         }
-        if (!at(to)) break;
-        // With the cloud gone off the far corner, it sees the way on, and takes it.
-        if (this.roundLeg === 1 && bank.cleared) {
-          k.decks = this.decks();
-          this.birdStop = this.loopStop + 2;
-          this.birdReached = this.birdStop;
-          this.limit = this.reachable();
-          this.to('follow');
-          break;
-        }
-        if (++this.roundLeg >= this.roundWay.length) {
+        if (left < 0.5) {
           this.round = 'puzzled';
           this.roundT = this.now;
           k.errand = null;
@@ -640,13 +644,35 @@ export class StairsChapter implements Chapter {
         if (again && dt > 3.0 && this.lastDt <= 3.0) k.does('shake', undefined, 0.9);
         if (dt > (again ? 4.6 : 3.4)) {
           this.lap++;
-          this.round = 'round';
-          this.roundLeg = 0;
+          this.setOff();
         }
         break;
       }
     }
     this.lastDt = dt;
+  }
+
+  private setOff(): void {
+    this.round = 'round';
+    this.homeward = false;
+    this.stuckLeft = Infinity;
+  }
+
+  /**
+   * Should it ever stop making way along its line and stay stopped, it is set on along it inside a wisp of the white.
+   */
+  private unstick(left: number): void {
+    const k = this.cast.cygnet;
+    if (left < this.stuckLeft - 0.1) {
+      this.stuckLeft = left;
+      this.stuckSince = this.now;
+      return;
+    }
+    if (this.now - this.stuckSince < 3) return;
+    this.world.wisps.engulf(this.tmp.copy(k.position).setY(k.position.y + 0.3), 1.2);
+    k.standAt(this.birdAt.x, this.birdAt.y, this.birdAt.z, k.yaw);
+    this.stuckSince = this.now;
+    this.stuckLeft = Infinity;
   }
 
   /**
@@ -663,27 +689,6 @@ export class StairsChapter implements Chapter {
     this.birdStop = Math.max(0, this.stop - 1);
   }
 
-  /**
-   * Should it ever stop short of where it is going and stay stopped, off the edge of the boards or caught on a newel,
-   * it is set back on its way at the last place it was sure of, inside a wisp of the white.
-   */
-  private unstick(to: THREE.Vector3): void {
-    const k = this.cast.cygnet;
-    const gap = Math.hypot(k.position.x - to.x, k.position.z - to.z);
-    if (gap < this.stuckGap - 0.08 || this.stuckLeg !== this.roundLeg) {
-      this.stuckGap = gap;
-      this.stuckLeg = this.roundLeg;
-      this.stuckSince = this.now;
-      return;
-    }
-    if (this.now - this.stuckSince < 3) return;
-    const back = this.roundLeg > 0 ? this.roundWay[this.roundLeg - 1] : this.waitUp;
-    this.world.wisps.engulf(this.tmp.copy(k.position).setY(k.position.y + 0.3), 1.2);
-    k.standAt(back.x, back.y, back.z, k.yaw);
-    this.stuckSince = this.now;
-    this.stuckGap = Infinity;
-  }
-
   /** At the child's heel, one stop behind, all the way up; on the grass it just keeps close. */
   private birdBehind(): void {
     const { cygnet: k } = this.cast;
@@ -693,11 +698,11 @@ export class StairsChapter implements Chapter {
       return;
     }
     this.birdStop = Math.max(this.birdStop, this.stop - 1);
-    const want = this.stops[this.birdStop];
-    const there = Math.hypot(k.position.x - want.x, k.position.z - want.z) < 0.55;
+    const there = this.track.lead(k.position, this.track.to(this.birdStop), this.birdAt) < 0.5;
     k.stay = there;
-    k.errand = there ? null : this.birdAt.set(want.x, 0, want.z);
+    k.errand = there ? null : this.birdAt;
   }
+
 
   private nest(): void {
     const { child: c, cygnet: k } = this.cast;
