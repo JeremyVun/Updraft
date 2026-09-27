@@ -390,7 +390,7 @@ export const tuning = {
     lift: 0.9, liftSpeed: 7,
     /** Upward pull per unit of the player's updraft. */
     updraft: 5,
-    /** The slow wave down a streaming end: its rate (radians a second) in the breeze and at `liftSpeed`, and its push. */
+    /** The slow wave down a streaming end: its rate (radians a second) in a breeze and at `liftSpeed`; its push. */
     waveRate: 2.1, waveRateFast: 4.2, wave: 1.4, waveFast: 3.4,
     /** How far (units) the ripple running down a streaming end stands out of its face at the free end. */
     ripple: 0.12,
