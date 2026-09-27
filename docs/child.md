@@ -66,6 +66,12 @@ the concept's, the promo header, the concept sheet):
 > it's starting to look like a bin instead of an open backpack like in the concepts [Image #9] [Image #10]. And the
 > backpack straps on the front need look correctly attached to the bag around and under the child's shoulders.
 
+And on `/tmp/child3/checkpoint3-walk-behind.png` (verbatim):
+
+> Also, if i look at the checkpoint3-walk-behind.pnd - the coat looks like it's slightly too long due to the
+> perspective of the camera, i think we may need to use a trick and shorten the coat by just a tiny little bit so it
+> looks less like a dress and more like an oversized coat.
+
 Earlier attempts on the child's model are not a guide. Do not mine old transcripts or git history for them.
 
 ## The target
