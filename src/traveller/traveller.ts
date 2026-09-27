@@ -356,7 +356,10 @@ export class Traveller {
   }
 
   place(x: number, z: number, yaw: number): void {
-    if (this.action?.kind === 'alight') this.action = null;
+    if (this.action?.kind === 'alight') {
+      this.action = null;
+      this.riding = false;
+    }
     this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.pose(0);
