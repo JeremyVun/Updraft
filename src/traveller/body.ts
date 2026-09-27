@@ -1,312 +1,142 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { BAG, COAT_TOP, FACE, HOOD, KNOT_THETA, buildGarments, coatAt, hemY, wrapPath } from './child/garments';
+import { childMaterial, PALETTE } from './child/shader';
+import { BONE, buildBones, restPositions, UPPER_ARM, FOREARM, PALM } from './child/skeleton';
 
-export const PALETTE = {
-  /** The yellow of the jumper on the family's washing line (`world/lines.ts`), which is this child's. */
-  coat: new THREE.Color('#f0bb35'),
-  coatShade: new THREE.Color('#b9832a'),
-  scarf: new THREE.Color('#c8372d'),
-  skin: new THREE.Color('#f3c9a4'),
-  cheek: new THREE.Color('#ee9d8e'),
-  eye: new THREE.Color('#2a1a14'),
-  boot: new THREE.Color('#4a3326'),
-  trousers: new THREE.Color('#3e4a5c'),
-};
-
-const VERT = /* glsl */ `
-in vec3 color;
-out vec3 vColor;
-out vec3 vWorld;
-out vec3 vNormal;
-void main() {
-  vec4 w = modelMatrix * vec4(position, 1.0);
-  vColor = color;
-  vWorld = w.xyz;
-  vNormal = normalize(mat3(modelMatrix) * normal);
-  gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-/** Soft, warm, slightly toy-like shading: wrap light, a low-sun rim and a little ambient occlusion toward the ground. */
-const FRAG = /* glsl */ `
-${ATMO_GLSL}
-uniform vec3 uGroundPos;
-in vec3 vColor;
-in vec3 vWorld;
-in vec3 vNormal;
-void main() {
-  vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
-  vec3 V = normalize(cameraPosition - vWorld);
-  float ndl = dot(N, uSunDir);
-  float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
-  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
-  float ao = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
-  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
-  vec3 col = vColor * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95);
-  col += uSunColor * vColor * rim * 0.55 * sun;
-  /**
-   * The light a room makes for itself: the coals the child walks toward, the bedside lamp, the first morning.
-   * The lamp stands a stride from the pillow, so it is taken square on the side turned to it and nearly let go
-   * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
-   */
-  col += vColor * (emberLight(vWorld, N) + dawnLight(vWorld, N));
-  if (uLamp.w > 0.0) {
-    vec3 toLamp = uLamp.xyz - vWorld;
-    float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
-    col += vColor * lampLight(vWorld, N) * (0.28 + 0.72 * lampSide);
-  }
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
-
-function paint(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  const colors = new Float32Array(g.attributes.position.count * 3);
-  for (let i = 0; i < colors.length; i += 3) colors.set([color.r, color.g, color.b], i);
-  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  g.deleteAttribute('uv');
-  return g;
-}
-
-function at(geo: THREE.BufferGeometry, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1): THREE.BufferGeometry {
-  geo.scale(sx, sy, sz);
-  geo.translate(x, y, z);
-  return geo;
-}
-
-export interface Rig {
-  root: THREE.Group;
-  body: THREE.Group;
-  /** The coat itself, so it can be flattened on its own: everything else on the body must keep its size. */
-  coat: THREE.Mesh;
-  head: THREE.Group;
-  armL: THREE.Group;
-  armR: THREE.Group;
-  /** The elbows: each forearm hangs off its upper arm and carries the mitten. */
-  foreL: THREE.Group;
-  foreR: THREE.Group;
-  handL: THREE.Object3D;
-  legL: THREE.Group;
-  legR: THREE.Group;
-  eyes: THREE.Mesh;
-  mouth: THREE.Mesh;
-  handR: THREE.Object3D;
-  neck: THREE.Object3D;
-  /** Places on the child where a companion rides. They belong to the bones they sit on, so a passenger gets every lean, breath and step for free. */
-  sockets: Record<SocketName, THREE.Object3D>;
-  material: THREE.ShaderMaterial;
-}
+export { PALETTE, UPPER_ARM, FOREARM, BONE };
 
 export type SocketName = 'cradle' | 'satchel' | 'shoulder' | 'lap';
 
-export const UPPER_ARM = 0.29;
-export const FOREARM = 0.32;
-
-const COAT_PROFILE = [
-  [0.0, -0.08], [0.58, -0.08], [0.62, 0.0], [0.56, 0.18], [0.46, 0.5], [0.37, 0.78], [0.3, 0.94], [0.2, 1.02], [0.0, 1.04],
-].map(([r, y]) => new THREE.Vector2(r, y));
-
-function coatRadius(y: number): number {
-  let r = 0;
-  for (let i = 1; i < COAT_PROFILE.length; i++) {
-    const a = COAT_PROFILE[i - 1];
-    const b = COAT_PROFILE[i];
-    if (a.y !== b.y && y >= Math.min(a.y, b.y) && y <= Math.max(a.y, b.y)) r = Math.max(r, THREE.MathUtils.mapLinear(y, a.y, b.y, a.x, b.x));
-  }
-  return r;
+export interface Rig {
+  root: THREE.Group;
+  bones: THREE.Bone[];
+  mesh: THREE.SkinnedMesh;
+  /**
+   * The frame the story places things in: its origin at the height of the hips when standing, carried by the chest,
+   * so whatever is held against the child or reached for in their frame leans and breathes with them.
+   */
+  body: THREE.Object3D;
+  /** The same frame carried by the hips instead, for what sits in the lap. */
+  seat: THREE.Object3D;
+  /** The middle of each mitten, where a hand holds things. Left is the child's own left, +x. */
+  gripL: THREE.Object3D;
+  gripR: THREE.Object3D;
+  /** The middle of the face. */
+  face: THREE.Object3D;
+  /** Where the scarf's ends come out of its knot. */
+  knot: THREE.Object3D;
+  /** Places on the child where a companion rides. They belong to the bones they sit on, so a passenger gets every lean, breath and step for free. */
+  sockets: Record<SocketName, THREE.Object3D>;
+  material: THREE.ShaderMaterial;
+  /** Every bone's position in the root's frame in the pose the mesh was modelled in. */
+  rest: THREE.Vector3[];
 }
 
-const HOOD = new THREE.Vector3(0, 1.43, -0.02);
-const BAG = new THREE.Vector3(0, 0.78, -0.56);
-const away = new THREE.Vector3();
+/** The story's frame: the child's middle at the height of the hips, as the whole game has always measured them. */
+export const BODY_ORIGIN = new THREE.Vector3(0, 0.62, 0);
 
-function outOfBall(p: THREE.Vector3, centre: THREE.Vector3, radius: number): void {
-  away.subVectors(p, centre);
-  const d = away.length();
-  if (d < radius) p.copy(centre).addScaledVector(away, radius / Math.max(d, 1e-4));
-}
-
-/**
- * Moves a point in the body's frame to the outside of the child: the coat, the scarf's collar, the hood and the
- * satchel. `coatScale` is the coat's squash when they lie down. The scarf hangs on this, so it lies over the coat
- * instead of through it.
- */
-export function keepOffChild(p: THREE.Vector3, coatScale: THREE.Vector3): void {
-  if (p.y > -0.1 && p.y < 1.14) {
-    const r = Math.max(coatRadius(p.y) + 0.035, p.y > 0.9 ? 0.36 : 0);
-    const x = p.x / coatScale.x;
-    const z = p.z / coatScale.z;
-    const d = Math.hypot(x, z);
-    if (d < r) {
-      p.x = d > 1e-4 ? (x * r * coatScale.x) / d : 0;
-      p.z = d > 1e-4 ? (z * r * coatScale.z) / d : r * coatScale.z;
-    }
-  }
-  outOfBall(p, HOOD, 0.49);
-  outOfBall(p, BAG, 0.33);
+/** An empty placed on a bone at a point given in the root's rest frame. */
+function on(bone: THREE.Bone, rest: THREE.Vector3, at: THREE.Vector3): THREE.Object3D {
+  const o = new THREE.Object3D();
+  o.position.copy(at).sub(rest);
+  bone.add(o);
+  return o;
 }
 
 /**
- * A small child about 2.3 units tall: bell-shaped mustard raincoat, pointed hood, red mittens and scarf knot,
- * dark boots. Pivots sit at hips, shoulders and neck so poses are just rotations.
+ * The child, about 2.8 units tall: a mustard hooded coat to the knee, a chunky red scarf, mittens, wellingtons and a
+ * leather bag on the back for the cygnet. One skinned mesh; the story poses it through `bones`.
  */
 export function buildChild(): Rig {
-  const material = new THREE.ShaderMaterial({
-    vertexShader: VERT,
-    fragmentShader: FRAG,
-    uniforms: { ...atmo.uniforms, uGroundPos: { value: new THREE.Vector3() } },
-    side: THREE.DoubleSide,
-  });
-  const mesh = (parts: THREE.BufferGeometry[]) => new THREE.Mesh(mergeGeometries(parts), material);
-
   const root = new THREE.Group();
-  root.scale.setScalar(1.12);
-  const body = new THREE.Group();
-  body.position.y = 0.62;
-  root.add(body);
+  const bones = buildBones();
+  root.add(bones[BONE.hips]);
+  root.updateMatrixWorld(true);
+  const rest = restPositions(bones);
+  const bind = bones.map((b) => b.matrixWorld.clone());
+  const geometry = buildGarments(rest, bind).geometry();
+  const material = childMaterial();
+  const mesh = new THREE.SkinnedMesh(geometry, material);
+  mesh.frustumCulled = false;
+  root.add(mesh);
+  mesh.bind(new THREE.Skeleton(bones));
 
-  const coat = paint(new THREE.LatheGeometry(COAT_PROFILE, 20), PALETTE.coat);
-  const hem = paint(at(new THREE.TorusGeometry(0.585, 0.045, 6, 24).rotateX(Math.PI / 2), 0, 0.02, 0), PALETTE.coatShade);
-  /**
-   * The satchel is the cygnet's seat, and the game is played from behind the child, so it is a soft pouch of a bag
-   * that the bird sits down INTO rather than on: one rounded body of worn leather sagging under the weight, pressed
-   * against the coat, with a slack mouth round the top. The mouth is tipped so its far edge — the one the camera
-   * behind is looking over — is a good way lower than the edge against the child's back. That is what lets the
-   * cygnet be nestled in deep and still show its breast, neck and head over the rim from directly behind.
-   */
-  const LEATHER = new THREE.Color('#8d6440');
-  const WORN = new THREE.Color('#78543a');
-  const RIM = new THREE.Color('#b0855a');
-  const bag: THREE.BufferGeometry[] = [];
-  const ball = (rx: number, ry: number, rz: number, x: number, y: number, z: number, color: THREE.Color, seg = 16) =>
-    bag.push(paint(at(new THREE.SphereGeometry(1, seg, Math.round(seg * 0.7)), x, y, z, rx, ry, rz), color));
-  ball(0.29, 0.25, 0.29, 0, 0.79, -0.56, LEATHER, 18);
-  /** The belly of the bag, slumped below the rest of it: a bag with something heavy in it does not keep its shape. */
-  ball(0.265, 0.15, 0.265, 0, 0.675, -0.555, WORN, 14);
-  /**
-   * The mouth: a slack ring lying on the pouch where the pouch is that wide, so it reads as the bag's own opening
-   * and not as a hoop over it. Tipped so its far edge sits a hand's breadth below the edge against the coat.
-   */
-  const mouth = new THREE.TorusGeometry(0.27, 0.04, 7, 24).rotateX(Math.PI / 2).rotateX(-0.34);
-  bag.push(paint(at(mouth, 0, 0.95, -0.56, 0.98, 1, 0.95), RIM));
-  /** The lid, unbuckled and flopped down the back, and the buckle it is not fastened to. */
-  bag.push(paint(at(new THREE.SphereGeometry(1, 14, 10).rotateX(-0.22), 0, 0.78, -0.825, 0.235, 0.17, 0.035), RIM));
-  bag.push(paint(at(new THREE.SphereGeometry(0.038, 8, 6), 0, 0.63, -0.815, 1, 1, 0.6), PALETTE.coatShade));
-  /** Straps over the shoulders and down the chest, following the coat's own curve so they lie on it and never in it. */
-  for (const s of [-1, 1]) {
-    bag.push(paint(at(new THREE.BoxGeometry(0.08, 0.03, 0.5).rotateX(-0.5), s * 0.185, 1.02, -0.43), LEATHER));
-    bag.push(paint(at(new THREE.BoxGeometry(0.075, 0.03, 0.44).rotateX(0.62), s * 0.195, 0.86, 0.29), LEATHER));
-  }
-  const satchel = mergeGeometries(bag)!;
-  const buttons = [0.35, 0.58, 0.8].map((y) =>
-    paint(at(new THREE.SphereGeometry(0.035, 6, 4), 0, y, 0.43 - y * 0.12), PALETTE.coatShade),
-  );
-  const collar = paint(at(new THREE.TorusGeometry(0.22, 0.11, 8, 16).rotateX(Math.PI / 2), 0, 1.02, 0), PALETTE.scarf);
-  const knot = paint(at(new THREE.SphereGeometry(0.12, 10, 8), 0.12, 0.98, 0.18, 1, 0.85, 0.9), PALETTE.scarf);
-  const bell = mesh([coat, hem, satchel, ...buttons, collar, knot]);
-  body.add(bell);
-
-  const neck = new THREE.Object3D();
-  neck.position.set(0.12, 1.0, 0.16);
-  body.add(neck);
-
-  const head = new THREE.Group();
-  head.position.y = 1.38;
-  body.add(head);
-  const face = paint(at(new THREE.SphereGeometry(0.37, 20, 14), 0, 0, 0.05), PALETTE.skin);
-  const hood = paint(at(new THREE.SphereGeometry(0.45, 20, 14), 0, 0.05, -0.07), PALETTE.coat);
-  const tip = paint(at(new THREE.ConeGeometry(0.22, 0.5, 12).rotateX(-1.05), 0, 0.36, -0.36), PALETTE.coat);
-  const tipEnd = paint(at(new THREE.ConeGeometry(0.1, 0.34, 10).rotateX(-1.9), 0, 0.42, -0.66), PALETTE.coat);
-  const pompom = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, 0.32, -0.83), PALETTE.scarf);
-  const rim = paint(at(new THREE.TorusGeometry(0.34, 0.06, 8, 20), 0, 0.02, 0.3, 1, 1.08, 1), PALETTE.coatShade);
-  const cheeks = [-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.06, 8, 6), s * 0.19, -0.1, 0.36, 1, 0.6, 0.5), PALETTE.cheek));
-  head.add(mesh([face, hood, tip, tipEnd, pompom, rim, ...cheeks]));
-  const eyes = mesh([-1, 1].map((s) => paint(at(new THREE.SphereGeometry(0.04, 8, 6), s * 0.12, 0.0, 0.405, 1, 1.25, 0.6), PALETTE.eye)));
-  head.add(eyes);
-  const yawnMouth = mesh([paint(new THREE.SphereGeometry(0.055, 12, 10), PALETTE.eye)]);
-  yawnMouth.position.set(0, -0.135, 0.397);
-  yawnMouth.scale.set(0.7, 1, 0.25);
-  yawnMouth.visible = false;
-  head.add(yawnMouth);
-
-  const arm = (side: number) => {
-    const g = new THREE.Group();
-    /**
-     * The shoulders sit forward of the coat's widest line, the way a child's do. Set back on the barrel, a
-     * cross-body reach runs out of arm and brings whatever is being held across the child's own face from the front.
-     */
-    g.position.set(side * 0.33, 0.88, 0.12);
-    /** A gathered, puffed sleeve: fullest at the shoulder, drawn in toward the elbow, the way a child's coat is cut. */
-    const puff = paint(at(new THREE.SphereGeometry(0.138, 12, 10), 0, -0.035, 0, 1, 0.95, 1), PALETTE.coat);
-    const upper = paint(at(new THREE.CapsuleGeometry(0.093, UPPER_ARM - 0.1, 4, 10), 0, -UPPER_ARM / 2 - 0.02, 0), PALETTE.coat);
-    g.add(mesh([puff, upper]));
-    const fore = new THREE.Group();
-    fore.position.set(0, -UPPER_ARM, 0);
-    /** The elbow is its own soft ball on the forearm, so a bent arm creases instead of breaking into two sticks. */
-    const elbow = paint(at(new THREE.SphereGeometry(0.096, 10, 8), 0, 0.005, 0), PALETTE.coat);
-    const sleeve = paint(at(new THREE.CapsuleGeometry(0.09, FOREARM - 0.16, 4, 10), 0, -(FOREARM - 0.1) / 2, 0), PALETTE.coat);
-    const cuff = paint(at(new THREE.TorusGeometry(0.087, 0.028, 6, 12).rotateX(Math.PI / 2), 0, -FOREARM + 0.1, 0), PALETTE.coatShade);
-    const mitten = paint(at(new THREE.SphereGeometry(0.1, 10, 8), 0, -FOREARM + 0.02, 0.01, 1, 1.15, 1), PALETTE.scarf);
-    /** A thumb on the inner edge of each mitten, which is what lets a hand read as holding rather than as touching. */
-    const thumb = paint(
-      at(new THREE.CapsuleGeometry(0.042, 0.06, 4, 8).rotateZ(side * 0.7).rotateX(-0.35), -side * 0.072, -FOREARM + 0.02, 0.045),
-      PALETTE.scarf,
-    );
-    fore.add(mesh([elbow, sleeve, cuff, mitten, thumb]));
-    g.add(fore);
-    const hand = new THREE.Object3D();
-    hand.position.set(0, -FOREARM, 0.02);
-    fore.add(hand);
-    return { g, fore, hand };
-  };
-  const left = arm(-1);
-  const right = arm(1);
-  body.add(left.g, right.g);
-
-  const leg = (side: number) => {
-    const g = new THREE.Group();
-    g.position.set(side * 0.15, 0.62, 0);
-    const trouser = paint(at(new THREE.CapsuleGeometry(0.1, 0.32, 4, 8), 0, -0.3, 0), PALETTE.trousers);
-    const boot = paint(at(new THREE.SphereGeometry(0.13, 10, 8), 0, -0.56, 0.06, 1, 0.75, 1.45), PALETTE.boot);
-    g.add(mesh([trouser, boot]));
-    root.add(g);
-    return g;
-  };
-
+  const frame = (bone: number) => on(bones[bone], rest[bone], BODY_ORIGIN);
+  const body = frame(BONE.chest);
+  const seat = frame(BONE.hips);
+  const bagFrame = frame(BONE.bag);
   const socket = (parent: THREE.Object3D, x: number, y: number, z: number) => {
     const o = new THREE.Object3D();
     o.position.set(x, y, z);
     parent.add(o);
     return o;
   };
-  const sockets = {
+  const sockets: Record<SocketName, THREE.Object3D> = {
     /** In against the chest, and near enough that both mittens can rest on it without the arms running out of reach. */
     cradle: socket(body, 0, 0.79, 0.5),
     /**
      * Down inside the bag, not on it: its flanks and folded wings are in the pouch and the rim closes round them,
-     * with the breast against the coat and the shoulders clear of the low back edge of the mouth.
+     * with the breast against the child's back and the shoulders clear of the low far edge of the mouth. It hangs
+     * on the bag's own bone, so the bird sways with the bag.
      */
-    satchel: socket(body, 0, 0.895, -0.515),
+    satchel: socket(bagFrame, 0, BAG.c.y - BODY_ORIGIN.y + 0.115, BAG.c.z + 0.02),
     shoulder: socket(body, -0.3, 1.04, -0.02),
-    lap: socket(body, 0, 0.16, 0.52),
+    lap: socket(seat, 0, 0.16, 0.52),
   };
-
-  return {
+  const grip = (hand: number) => {
+    const o = new THREE.Object3D();
+    o.position.set(0, -PALM, 0.005);
+    bones[hand].add(o);
+    return o;
+  };
+  const rig: Rig = {
     root,
+    bones,
+    mesh,
     body,
-    coat: bell,
-    head,
-    armL: left.g,
-    armR: right.g,
-    foreL: left.fore,
-    foreR: right.fore,
-    handL: left.hand,
+    seat,
+    gripL: grip(BONE.handL),
+    gripR: grip(BONE.handR),
+    face: on(bones[BONE.head], rest[BONE.head], FACE.c),
+    knot: on(bones[BONE.chest], rest[BONE.chest], wrapPath(KNOT_THETA).add(new THREE.Vector3(0.03, -0.05, 0.03))),
     sockets,
-    legL: leg(-1),
-    legR: leg(1),
-    eyes,
-    mouth: yawnMouth,
-    handR: right.hand,
-    neck,
     material,
+    rest,
   };
+  root.scale.setScalar(1.12);
+  return rig;
+}
+
+const HOOD_AT = HOOD.c.clone().sub(BODY_ORIGIN);
+const HOOD_KEEP = HOOD.r.clone().addScalar(0.04);
+const BAG_AT = new THREE.Vector3(BAG.c.x, BAG.c.y - BODY_ORIGIN.y, BAG.c.z - 0.02);
+const BAG_KEEP = new THREE.Vector3(0.33, 0.31, 0.3);
+const sample = { p: new THREE.Vector3(), n: new THREE.Vector3(), fold: 0 };
+const away = new THREE.Vector3();
+
+function outOfEllipsoid(p: THREE.Vector3, centre: THREE.Vector3, r: THREE.Vector3): void {
+  away.subVectors(p, centre).divide(r);
+  const d = away.length();
+  if (d < 1) p.copy(centre).add(away.multiplyScalar(1 / Math.max(d, 1e-4)).multiply(r));
+}
+
+/**
+ * Moves a point in the body's frame to the outside of the child: the coat, the scarf's wrap, the hood and the bag.
+ * The scarf's ends hang on this, so they lie over the coat instead of through it.
+ */
+export function keepOffChild(p: THREE.Vector3): void {
+  const y = p.y + BODY_ORIGIN.y;
+  const a = Math.atan2(p.x, p.z);
+  if (y > hemY(a) - 0.05 && y < COAT_TOP + 0.08) {
+    coatAt(a, THREE.MathUtils.clamp(y, hemY(a), COAT_TOP), sample);
+    /** Further out low down, where the hem swings out beyond its resting shape. */
+    const r = Math.max(Math.hypot(sample.p.x, sample.p.z) + 0.045 + 0.1 * THREE.MathUtils.smoothstep(y, 1.05, 0.6), y > 1.5 ? 0.31 : 0);
+    const d = Math.hypot(p.x, p.z);
+    if (d < r) {
+      p.x = d > 1e-4 ? (p.x * r) / d : 0;
+      p.z = d > 1e-4 ? (p.z * r) / d : r;
+    }
+  }
+  outOfEllipsoid(p, HOOD_AT, HOOD_KEEP);
+  outOfEllipsoid(p, BAG_AT, BAG_KEEP);
 }

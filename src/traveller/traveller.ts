@@ -5,7 +5,8 @@ import { fieldAt, type FieldSample } from '../world/fields';
 import { heightAt } from '../world/island';
 import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
-import { buildChild, FOREARM, keepOffChild, UPPER_ARM, type Rig, type SocketName } from './body';
+import { buildChild, keepOffChild, type Rig, type SocketName } from './body';
+import { ChildMotion, newPose, stepLength, type ArmPose, type Drive } from './child/motion';
 import { Scarf } from './scarf';
 import type { Boat } from './boat';
 
@@ -66,6 +67,7 @@ function rampHeight(d: Deck, x: number, z: number): number | null {
 }
 const WALK = 2.6;
 const RUN = 5.4;
+const TURN_RATE = 7;
 const SHADOW_FRAG = /* glsl */ `
 uniform float uOpacity;
 in vec2 vUv;
@@ -133,6 +135,15 @@ export class Traveller {
   sleepiness = 0;
   yawn = 0;
   private readonly rig: Rig;
+  private readonly motion: ChildMotion;
+  private readonly look = newPose();
+  private readonly drive: Drive = {
+    dt: 0, time: 0, speed: 0, gait: 0, ground: (x, z) => this.floorAt(x, z), windX: 0, windZ: 0, gust: 0,
+    velocity: new THREE.Vector3(), turn: 0,
+  };
+  private lastYaw = 0;
+  private turnRate = 0;
+  private breathT = 0;
   private goal: Goal | null = null;
   private action: Action | null = null;
   private speed = 0;
@@ -141,7 +152,6 @@ export class Traveller {
   private brace = 0;
   private blink = 0;
   private nextBlink = 2;
-  private bob = 0;
   private headYaw = 0;
   private headPitch = 0;
   private readonly kneel = new Glide();
@@ -166,18 +176,6 @@ export class Traveller {
   private readonly reachWant = [0, 0];
   private readonly reachInBody = [false, false];
   private readonly reachNow = [0, 0];
-  private readonly ik = {
-    target: new THREE.Vector3(),
-    dir: new THREE.Vector3(),
-    pole: new THREE.Vector3(),
-    elbow: new THREE.Vector3(),
-    upper: new THREE.Quaternion(),
-    fore: new THREE.Quaternion(),
-    bend: new THREE.Quaternion(),
-    down: new THREE.Vector3(0, -1, 0),
-    u: new THREE.Vector3(),
-    f: new THREE.Vector3(),
-  };
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly field: FieldSample = { edge: 99, kind: 0, wall: false, presence: 0 };
   /** Height of the clamber over a stone wall, 0 on open ground. */
@@ -189,12 +187,13 @@ export class Traveller {
   private time = 0;
   private readonly bodyInverse = new THREE.Matrix4();
   private readonly keepOffChild = (p: THREE.Vector3) => {
-    keepOffChild(p.applyMatrix4(this.bodyInverse), this.rig.coat.scale);
+    keepOffChild(p.applyMatrix4(this.bodyInverse));
     p.applyMatrix4(this.rig.body.matrixWorld);
   };
 
   constructor(private readonly wind: WindField) {
     this.rig = buildChild();
+    this.motion = new ChildMotion(this.rig);
     /** Yaw first, then the tilt of whatever is carrying them, the same order the boat lies in. */
     this.rig.root.rotation.order = 'YXZ';
     this.shadowMat = new THREE.ShaderMaterial({
@@ -268,12 +267,12 @@ export class Traveller {
 
   /** Where the child's face is, for something small to look up at. */
   face(out: THREE.Vector3): THREE.Vector3 {
-    return this.rig.head.getWorldPosition(out);
+    return this.rig.face.getWorldPosition(out);
   }
 
   /** The mouth, rather than the centre of the head, for visible breath in cold air. */
   breathFrom(out: THREE.Vector3): THREE.Vector3 {
-    return this.rig.head.localToWorld(out.set(0, -0.10, 0.43));
+    return this.rig.face.localToWorld(out.set(0, -0.15, 0.23));
   }
 
   /** A world point in the frame of the child's body, as posed this frame. */
@@ -293,7 +292,7 @@ export class Traveller {
   /** World position of either mitten. */
   mitten(hand: 0 | 1, out: THREE.Vector3): THREE.Vector3 {
     this.rig.root.updateMatrixWorld(true);
-    return (hand === 0 ? this.rig.handR : this.rig.handL).getWorldPosition(out);
+    return (hand === 0 ? this.rig.gripL : this.rig.gripR).getWorldPosition(out);
   }
 
   /** Set while the child is in the middle of something with somebody else (gathering the cygnet up, setting it down), so the story waits for it like any other action. */
@@ -311,7 +310,7 @@ export class Traveller {
   }
 
   /** Alternating contacts from the distance-driven walking pose; riding does not advance it. */
-  get footContact(): number { return Math.floor((this.gait + Math.PI / 2) / Math.PI); }
+  get footContact(): number { return Math.floor(this.gait / Math.PI + 0.05); }
 
   /** Both hands belong to the cygnet; the plane's keel goes under the satchel's outer flap. */
   armsFull = false;
@@ -332,9 +331,9 @@ export class Traveller {
   /** The paper's grip, either in the mitten or against the outside of the bag. */
   handPosition(out: THREE.Vector3): THREE.Vector3 {
     this.rig.root.updateMatrixWorld(true);
-    this.rig.handR.getWorldPosition(out);
+    this.rig.gripL.getWorldPosition(out);
     if (this.stowed < 0.001) return out;
-    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.78, -0.88));
+    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.78, -0.8));
     out.lerp(tucked, this.stowed);
     /** Carry it round the outside of the shoulder, clear of the hood and the bird. */
     this.tmp2.set(Math.sin(this.stowed * Math.PI) * tuning.paperCarry.transferArc, 0, 0);
@@ -381,7 +380,8 @@ export class Traveller {
     this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.pose(0);
-    this.scarf.reset(this.rig.neck.getWorldPosition(this.tmp));
+    this.rig.root.updateMatrixWorld(true);
+    this.scarf.reset(this.rig.knot.getWorldPosition(this.tmp), this.rig.body.matrixWorld);
   }
 
   /**
@@ -563,13 +563,14 @@ export class Traveller {
       });
     }
 
-    const neck = this.rig.neck.getWorldPosition(this.tmp);
+    const neck = this.rig.knot.getWorldPosition(this.tmp);
     this.bodyInverse.copy(this.rig.body.matrixWorld).invert();
     const onBed = THREE.MathUtils.smoothstep(this.abed, 0.2, 0.8);
     const floor = this.riding ? p.y - 0.2 : Math.max(this.ground(p.x, p.z), 0);
     const mattress = this.bedAt.y - tuning.sleeping.lieHigh + 0.68;
-    this.scarf.update(dt, neck, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p);
+    this.scarf.update(dt, neck, this.rig.body.matrixWorld, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
+    this.motion.hoodForward(this.rig.material.uniforms.uHoodForward.value);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
     this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3;
@@ -595,7 +596,7 @@ export class Traveller {
         const want = this.steer(Math.atan2(dx, dz), da);
         let dy = want - this.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-        this.yaw += Math.sign(dy) * Math.min(Math.abs(dy), dt * 7);
+        this.yaw += Math.sign(dy) * Math.min(Math.abs(dy), dt * TURN_RATE);
       }
     }
     this.speed = damp(this.speed, target, target > this.speed ? 6 : 9, dt);
@@ -633,7 +634,7 @@ export class Traveller {
       }
       return;
     }
-    this.gait += (step / (this.speed > 4 ? 1.5 : 1.1)) * Math.PI;
+    this.gait += (step / stepLength(this.speed)) * Math.PI;
     p.set(nx, Math.max(nextH, 0), nz);
     const f = fieldAt(nx, nz, this.field);
     const over = f.wall && f.presence > 0.5 ? 1 - THREE.MathUtils.smoothstep(f.edge, 0.2, 1.1) : 0;
@@ -799,283 +800,309 @@ export class Traveller {
     }
   }
 
+  /** The floor under a foot: the ground, a deck, or the boards of the boat they are riding in. */
+  private floorAt(x: number, z: number): number {
+    const ground = Math.max(this.ground(x, z), 0);
+    if (!this.riding) return ground;
+    return Math.max(this.ground(x, z), this.position.y - 0.26 * this.sit);
+  }
+
   private pose(dt: number): void {
     const r = this.rig;
     const t = this.time;
-    this.sit = damp(this.sit, this.sitting ? 1 : 0, 4, dt || 1);
+    const P = this.look;
+    const h = dt || 1;
+    this.sit = damp(this.sit, this.sitting ? 1 : 0, 4, h);
     const moving = Math.min(1, this.speed / WALK);
-    const running = Math.min(1, Math.max(0, (this.speed - WALK) / (RUN - WALK)));
-    const swing = Math.sin(this.gait);
-    const legAmp = 0.55 * moving + 0.25 * running;
-    const armAmp = 0.45 * moving + 0.35 * running;
-    this.bob = Math.abs(Math.cos(this.gait)) * (0.06 + 0.07 * running) * moving;
-
-    let armLX = -swing * armAmp;
-    let armRX = swing * armAmp;
-    let armLZ = -0.4 - 0.1 * running;
-    let armRZ = 0.4 + 0.1 * running;
-    /** Elbows: a little bent at rest, pumping when they run, and folded by whatever the arms are doing. */
-    let elbowL = 0.3 + 0.75 * running + Math.max(0, swing) * 0.5 * moving;
-    let elbowR = 0.3 + 0.75 * running + Math.max(0, -swing) * 0.5 * moving;
-    let bodyX = 0.12 * moving + 0.16 * running;
-    let bodyY = 0;
-    let lift = 0;
+    const running = THREE.MathUtils.clamp((this.speed - WALK) / (RUN - WALK), 0, 1);
+    const [L, R] = P.arms;
+    const lerp = THREE.MathUtils.lerp;
+    const smooth = THREE.MathUtils.smoothstep;
+    /** Arms swing against the legs, a beat behind them, bent and pumping when they run. */
+    const pace = 0.4 * moving + 0.35 * running;
+    const armSwing = Math.cos(this.gait - 0.35);
+    arm(L, -pace * armSwing + 0.04, 0.3 + 0.08 * running, 0, 0.3 + 0.9 * running + Math.max(0, -armSwing) * 0.45 * moving, 0.12);
+    arm(R, pace * armSwing + 0.04, 0.3 + 0.08 * running, 0, 0.3 + 0.9 * running + Math.max(0, armSwing) * 0.45 * moving, 0.12);
+    let lean = 0;
+    let twist = 0;
+    let rise = 0;
     let crouch = 0;
-    let boardingStep = 0;
-    let boardingSide = 1;
-    let alightLead = 0;
-    let alightTrail = 0;
+    let bend = 0;
+    let headDown = 0;
+    P.step[0] = P.step[1] = 0;
 
     const a = this.action;
     if (a?.kind === 'throw') {
-      /** Keep the held wing outside the coat as the arm comes up beside the hood. */
-      armRZ = 0.65;
-      const wind = THREE.MathUtils.smoothstep(a.t, 0, 0.55);
-      const fling = THREE.MathUtils.smoothstep(a.t, 0.55, 0.72);
-      const settle = THREE.MathUtils.smoothstep(a.t, 0.8, 1.1);
-      armRX = THREE.MathUtils.lerp(armRX, (-2.5 * wind + 3.6 * fling) * (1 - settle), 1 - settle * 0.3);
-      bodyY = (-0.35 * wind + 0.6 * fling) * (1 - settle);
-      bodyX = -0.12 * wind + 0.25 * fling * (1 - settle);
-      armLX = 0.5 * wind * (1 - settle);
+      /** Up and back with the paper beside the hood, the body winding with it; then the arm goes through. */
+      const wind = smooth(a.t, 0, 0.55);
+      const fling = smooth(a.t, 0.52, 0.72);
+      const settle = smooth(a.t, 0.78, 1.1);
+      const k = 1 - settle;
+      const cock = wind * (1 - fling);
+      L.raise = lerp(L.raise, 2.75 * cock + 1.0 * fling, k);
+      L.out = lerp(L.out, 0.55 * cock + 0.3 * fling, k);
+      L.elbow = lerp(L.elbow, 1.35 * cock + 0.15 * fling, k);
+      L.twist = -0.35 * cock * k;
+      R.raise = lerp(R.raise, 0.85 * cock + 0.2 * fling, k);
+      R.elbow = lerp(R.elbow, 0.8 * cock + 0.3, k);
+      twist = (-0.42 * cock + 0.38 * fling) * k;
+      lean = (-0.12 * cock + 0.3 * fling) * k;
+      P.step[1] = -0.25 * cock * k + 0.15 * fling * k;
     } else if (a?.kind === 'pickup') {
       const down = Math.sin(Math.min(1, a.t / 0.9) * Math.PI);
-      bodyX = 0.9 * down;
-      crouch = 0.28 * down;
-      armRX = -1.2 * down;
-      armLX = -0.8 * down;
-      elbowL = elbowR = 0.3 + 0.5 * down;
+      bend = 0.9 * down;
+      crouch = 0.3 * down;
+      L.raise = lerp(L.raise, 1.1, down);
+      R.raise = lerp(R.raise, 0.8, down);
+      L.elbow = R.elbow = 0.3 + 0.4 * down;
+      headDown = 0.35 * down;
     } else if (a?.kind === 'cheer') {
       const up = Math.sin(Math.min(1, a.t / 1.3) * Math.PI);
-      armLX = armRX = -3.1 * Math.min(1, up * 1.8);
-      armLZ = -0.55 * up;
-      armRZ = 0.55 * up;
-      lift = Math.max(0, Math.sin(a.t * 7.5)) * 0.46 * up;
-      bodyY = Math.sin(a.t * 5.2) * 0.3 * up;
-      bodyX = -0.3 * up;
+      const arms = Math.min(1, up * 1.8);
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 3.0, arms);
+        m.out = lerp(m.out, 0.62, up);
+        m.elbow = lerp(m.elbow, 0.22, arms);
+      }
+      rise = Math.max(0, Math.sin(a.t * 7.5)) * 0.46 * up;
+      twist = Math.sin(a.t * 5.2) * 0.3 * up;
+      lean = -0.25 * up;
+      P.step[0] = P.step[1] = 0.55 * smooth(rise, 0.02, 0.2);
     } else if (a?.kind === 'wave') {
       const up = Math.min(1, a.t * 4) * Math.min(1, (1.8 - a.t) * 4);
-      armRX = -2.6 * up;
-      armRZ = 0.3 + Math.sin(a.t * 12) * 0.35 * up;
+      L.raise = lerp(L.raise, 2.7, up);
+      L.out = lerp(L.out, 0.45 + Math.sin(a.t * 11) * 0.3, up);
+      L.elbow = lerp(L.elbow, 0.55 + 0.25 * Math.sin(a.t * 11 + 0.8), up);
+      L.wrist = 0.35 * Math.sin(a.t * 11 - 0.6) * up;
+      twist = 0.08 * up;
     } else if (a?.kind === 'reach') {
       /** Straight out and then slowly down: the arms give up a long time after the rest of them does. */
-      const out = Math.min(1, a.t * 5) * (1 - THREE.MathUtils.smoothstep(a.t, 1.6, 4.2));
-      armLX = armRX = -2.45 * out;
-      armLZ = 0.4 * out;
-      armRZ = -0.4 * out;
-      bodyX = -0.22 * out;
+      const out = Math.min(1, a.t * 5) * (1 - smooth(a.t, 1.6, 4.2));
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 2.45, out);
+        m.out = lerp(m.out, -0.2, out);
+        m.elbow = lerp(m.elbow, 0.12, out);
+      }
+      lean = -0.22 * out;
+      rise = 0.05 * out;
     } else if (a?.kind === 'push') {
-      const lean = Math.min(1, a.t * 2) * Math.min(1, (2.4 - a.t) * 2);
-      bodyX = 0.75 * lean;
-      armLX = armRX = -1.4 * lean;
-      crouch = 0.1 * lean;
+      const k = Math.min(1, a.t * 2) * Math.min(1, (2.4 - a.t) * 2);
+      bend = 0.35 * k;
+      lean = 0.35 * k;
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 1.45, k);
+        m.elbow = lerp(m.elbow, 0.45, k);
+        m.out = lerp(m.out, 0.1, k);
+      }
+      crouch = 0.1 * k;
+      P.step[1] = -0.35 * k;
     } else if (a?.kind === 'board') {
       const k = tuning.boarding;
-      const press = THREE.MathUtils.smoothstep(a.t, 0, k.push) * (1 - THREE.MathUtils.smoothstep(a.t, k.push, k.rail));
+      const press = smooth(a.t, 0, k.push) * (1 - smooth(a.t, k.push, k.rail));
       const climb = THREE.MathUtils.smootherstep(a.t, k.push * 0.78, k.inside);
       const settle = THREE.MathUtils.smootherstep(a.t, k.inside, k.settle);
-      bodyX = 0.7 * press + 0.22 * climb * (1 - settle);
-      bodyY = a.side * Math.sin(climb * Math.PI) * 0.24;
+      lean = 0.5 * press + 0.22 * climb * (1 - settle);
+      bend = 0.25 * press;
+      twist = a.side * Math.sin(climb * Math.PI) * 0.24;
       crouch = 0.12 * press + Math.sin(climb * Math.PI) * 0.08;
-      armLX = THREE.MathUtils.lerp(-1.35, -0.45, climb);
-      armRX = THREE.MathUtils.lerp(-1.35, -0.55, climb);
-      boardingStep = Math.sin(THREE.MathUtils.smoothstep(a.t, k.push * 0.82, k.inside) * Math.PI);
-      boardingSide = a.side;
+      R.raise = lerp(1.35, 0.45, climb);
+      L.raise = lerp(1.35, 0.55, climb);
+      R.elbow = L.elbow = 0.45;
+      /** The near knee clears first; the other leg stays long for the last push off the sand. */
+      const step = Math.sin(smooth(a.t, k.push * 0.82, k.inside) * Math.PI);
+      P.step[a.side < 0 ? 1 : 0] = 1.05 * step;
+      P.step[a.side < 0 ? 0 : 1] = -0.28 * step;
     } else if (a?.kind === 'alight') {
       const k = tuning.boarding;
       const up = THREE.MathUtils.smootherstep(a.t, k.alightStand * 0.7, k.alightLift);
       const u = THREE.MathUtils.smootherstep(a.t, k.alightLift, k.alightAcross);
-      const settle = Math.sin(THREE.MathUtils.smoothstep(a.t, k.alightAcross - 0.1, k.alightSettle) * Math.PI);
-      const reach = THREE.MathUtils.smoothstep(a.t, k.alightStand * 0.4, k.alightLift) * (1 - THREE.MathUtils.smoothstep(a.t, k.alightAcross, k.alightSettle));
+      const settle = Math.sin(smooth(a.t, k.alightAcross - 0.1, k.alightSettle) * Math.PI);
+      const reach = smooth(a.t, k.alightStand * 0.4, k.alightLift) * (1 - smooth(a.t, k.alightAcross, k.alightSettle));
       /** The lead leg lifts onto the boards and straightens under the weight; the other pushes off and swings through. */
-      alightLead = -k.alightStep * up * (1 - u);
-      alightTrail = 0.35 * Math.sin(Math.min(1, u * 2.2) * Math.PI * 0.5) * (1 - u) - 0.55 * Math.sin(u * Math.PI) * THREE.MathUtils.smoothstep(u, 0.25, 0.6);
-      /** Across a wider gap it is a little hop: both knees come up under the coat, and the landing gives more. */
-      alightLead -= a.hop * 0.35 * Math.sin(u * Math.PI);
-      alightTrail -= a.hop * 0.3 * Math.sin(u * Math.PI);
-      bodyX = 0.28 * up * (1 - u) + 0.12 * Math.sin(u * Math.PI);
+      P.step[0] = k.alightStep * up * (1 - u) + a.hop * 0.35 * Math.sin(u * Math.PI);
+      P.step[1] = -0.35 * Math.sin(Math.min(1, u * 2.2) * Math.PI * 0.5) * (1 - u)
+        + 0.55 * Math.sin(u * Math.PI) * smooth(u, 0.25, 0.6) + a.hop * 0.3 * Math.sin(u * Math.PI);
+      lean = 0.28 * up * (1 - u) + 0.12 * Math.sin(u * Math.PI);
       crouch = 0.05 * up * (1 - u) + (0.09 + 0.06 * a.hop) * settle;
-      armLX = armRX = -0.75 * reach;
-      armLZ = -0.4 - 0.3 * reach;
-      armRZ = 0.4 + 0.3 * reach;
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 0.75, reach);
+        m.out = lerp(m.out, 0.62, reach);
+      }
     }
 
     if (this.presenting > 0.01) {
       const k = this.presenting;
-      armLX = THREE.MathUtils.lerp(armLX, -1.75, k);
-      armRX = THREE.MathUtils.lerp(armRX, -1.75, k);
-      elbowL = THREE.MathUtils.lerp(elbowL, 0.9, k);
-      elbowR = THREE.MathUtils.lerp(elbowR, 0.9, k);
-      armLZ = THREE.MathUtils.lerp(armLZ, 0.25, k);
-      armRZ = THREE.MathUtils.lerp(armRZ, -0.25, k);
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 1.75, k);
+        m.elbow = lerp(m.elbow, 0.9, k);
+        m.out = lerp(m.out, -0.25, k);
+      }
     }
 
     const brace = this.brace;
     if (brace > 0.02 && !a) {
-      armLX = THREE.MathUtils.lerp(armLX, -2.7, brace);
-      armLZ = THREE.MathUtils.lerp(armLZ, -0.9, brace);
-      bodyX += 0.22 * brace;
+      /** Into a strong wind: an arm up across the face, leaning into it, chin down. */
+      R.raise = lerp(R.raise, 2.2, brace);
+      R.out = lerp(R.out, 0.9, brace);
+      R.elbow = lerp(R.elbow, 1.2, brace);
+      lean += 0.22 * brace;
+      headDown += 0.15 * brace;
     }
 
     const sit = this.sit;
     const kneel = this.kneel.step(this.kneeling, 0.55, dt) * (1 - sit);
     const leanNow = this.leanNow.step(this.lean, 0.4, dt);
     const tiltNow = this.tiltNow.step(this.tilt, 0.4, dt);
-    r.root.position.copy(this.position);
-    r.root.position.y += lift - crouch - sit * 0.5 - kneel * 0.56 + this.hop;
-    r.root.rotation.set(this.riding ? this.ridePitch : 0, this.yaw, this.riding ? this.rideRoll : 0);
-    /**
-     * The coat is a rigid bell, so bending over something is not a rotation. Most of a lean is the whole body carried
-     * forward and settled down over the knees, with the bell squashing as the weight comes onto it, and only a little
-     * of it is the bell tipping. Any more than this and the hem planks over and the child reads as falling.
-     */
-    const bend = leanNow;
-    r.body.position.set(0, 0.62 + this.bob + Math.sin(t * 2.2) * 0.008 - bend * 0.16 - kneel * 0.04, bend * 0.34);
-    r.body.rotation.set(bodyX * (1 - sit) - sit * 0.1 + kneel * 0.1 + bend * 0.45, bodyY, 0);
-    r.body.scale.set(1 + bend * 0.07, 1 + Math.sin(t * 2.2) * 0.012 - bend * 0.09, 1 + bend * 0.05);
-    /** Kneeling, the shins go back under the coat and the hem settles on the ground round them. */
-    r.legL.rotation.set(swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.22, 0, -0.05 - sit * 0.15);
-    r.legR.rotation.set(-swing * legAmp * (1 - sit) * (1 - kneel) - sit * 1.45 + kneel * 1.22, 0, 0.05 + sit * 0.15);
-    if (boardingStep > 0) {
-      /** The near knee clears first; the other leg stays long for the last push off the sand. */
-      const near = boardingSide < 0 ? r.legL : r.legR;
-      const far = boardingSide < 0 ? r.legR : r.legL;
-      near.rotation.x -= boardingStep * 1.05;
-      far.rotation.x += boardingStep * 0.28;
-    }
-    r.legR.rotation.x += alightLead;
-    r.legL.rotation.x += alightTrail;
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
-    r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
-    r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);
+    /** Seated, idle hands come to rest on the lap. */
+    const rest = sit * armsFree;
+    L.raise = lerp(L.raise, 0.55, rest);
+    R.raise = lerp(R.raise, 0.5, rest);
+    L.elbow = lerp(L.elbow, 0.85, rest);
+    R.elbow = lerp(R.elbow, 0.85, rest);
+    L.out = lerp(L.out, 0.22, rest);
+    R.out = lerp(R.out, 0.22, rest);
+    lean += -0.06 * sit + 0.1 * kneel;
+    bend += leanNow;
+
     if (this.swing > 0.01) {
       /** Hands on the ropes, and the legs going: the joy is in the body, because there is never a sound. */
       const k = this.kick * this.swing;
-      r.legL.rotation.x -= k * 0.95;
-      r.legR.rotation.x -= k * 0.95;
-      r.body.rotation.x -= k * 0.4;
-      r.armL.rotation.set(-1.35 * this.swing, 0, -0.3 * this.swing);
-      r.armR.rotation.set(-1.35 * this.swing, 0, 0.3 * this.swing);
+      lean -= k * 0.3;
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 1.35, this.swing);
+        m.out = lerp(m.out, 0.3, this.swing);
+        m.elbow = lerp(m.elbow, 0.65, this.swing);
+      }
     }
-    r.foreL.rotation.set(-elbowL, 0, 0);
-    r.foreR.rotation.set(-elbowR, 0, 0);
     if (this.carryingPlane && !a && this.presenting < 0.01 && this.swing < 0.01) {
       /** A quiet carry at the hip: running must not swing the wing back through the coat. Companion IK still wins. */
-      r.armR.rotation.set(-0.2 + swing * moving * 0.12, 0, 0.65);
-      r.foreR.rotation.set(-0.4, 0, 0);
+      L.raise = 0.2 - armSwing * moving * 0.12;
+      L.out = 0.58;
+      L.elbow = 0.45;
+      L.twist = 0;
     }
 
     let wantYaw = Math.sin(t * 0.37) * 0.35;
     let wantPitch = Math.sin(t * 0.23) * 0.08;
     if (this.lookAt) {
       r.root.updateMatrixWorld(true);
-      const head = r.head.getWorldPosition(this.tmp);
+      const head = r.face.getWorldPosition(this.tmp);
       const dx = this.lookAt.x - head.x;
       const dy = this.lookAt.y - head.y;
       const dz = this.lookAt.z - head.z;
       const yawTo = Math.atan2(dx, dz) - this.yaw;
       wantYaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(yawTo), Math.cos(yawTo)), -1.1, 1.1);
-      /** Looking down at something at their own feet takes a real chin-down, not a glance. */
       /** Looking down at something at their own feet takes a real chin-down; past this the hood swallows the face. */
       wantPitch = THREE.MathUtils.clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -0.9, 0.52);
     }
-    this.headYaw = damp(this.headYaw, wantYaw, 5, dt || 1);
-    this.headPitch = damp(this.headPitch, wantPitch, 5, dt || 1);
-    r.head.rotation.set(this.headPitch, this.headYaw, Math.sin(t * 0.6) * 0.05 + tiltNow);
-    r.eyes.scale.set(1, this.blink > 0 ? 0.15 : 1, 1);
-    r.coat.scale.set(1, 1, 1);
-    const abed = this.abedGlide.step(this.abed, 0.8, dt || 1);
-    if (abed > 0.001) this.layDown(abed, t, dt || 1);
-    const yawn = this.yawnGlide.step(this.yawn, 0.35, dt || 1);
-    const shut = this.shutGlide.step(Math.max(this.eyesShut, yawn * 0.9), 0.4, dt || 1);
-    r.eyes.scale.y = Math.min(r.eyes.scale.y, THREE.MathUtils.lerp(1, 0.15, shut));
-    r.head.rotation.x += this.sleepiness * 0.24 * (1 - abed) - yawn * 0.2;
-    r.body.rotation.x += this.sleepiness * 0.07 * (1 - abed);
-    r.body.scale.y *= 1 + yawn * 0.025;
-    r.mouth.visible = yawn > 0.025;
-    r.mouth.scale.y = 0.2 + yawn * 1.2;
+    this.headYaw = damp(this.headYaw, wantYaw, 5, h);
+    this.headPitch = damp(this.headPitch, wantPitch, 5, h);
+    const abed = this.abedGlide.step(this.abed, 0.8, h);
+    const yawn = this.yawnGlide.step(this.yawn, 0.35, h);
+    const shut = this.shutGlide.step(Math.max(this.eyesShut, yawn * 0.9), 0.4, h);
+    P.headYaw = this.headYaw;
+    P.headPitch = this.headPitch + headDown + this.sleepiness * 0.24 * (1 - abed) - yawn * 0.2;
+    P.headRoll = Math.sin(t * 0.6) * 0.05 + tiltNow;
+    lean += this.sleepiness * 0.07 * (1 - abed);
+    this.breathT += h * lerp(2.2, 0.75, abed);
+    P.breath = Math.sin(this.breathT) * (1 + yawn * 2 + abed * 2.5);
+
+    P.lean = lean;
+    P.twist = twist;
+    P.tilt = 0;
+    P.bend = bend;
+    P.rise = rise;
+    P.sit = sit;
+    P.kneel = kneel;
+    P.swing = this.swing;
+    P.kick = this.kick;
+    P.lie = 0;
+
+    r.root.position.copy(this.position);
+    r.root.position.y += rise - crouch - sit * SIT_DROP - kneel * KNEEL_DROP + this.hop;
+    r.root.rotation.set(this.riding ? this.ridePitch : 0, this.yaw, this.riding ? this.rideRoll : 0);
+    if (abed > 0.001) this.layDown(abed);
+
+    const d = this.drive;
+    d.dt = h;
+    d.time = t;
+    d.speed = this.speed;
+    d.gait = this.gait;
+    d.windX = this.sample.x;
+    d.windZ = this.sample.z;
+    d.gust = this.sample.energy;
+    d.velocity.set((this.position.x - this.prev.x) / h, 0, (this.position.z - this.prev.z) / h);
+    const turn = Math.atan2(Math.sin(this.yaw - this.lastYaw), Math.cos(this.yaw - this.lastYaw)) / h;
+    this.lastYaw = this.yaw;
+    this.turnRate = damp(this.turnRate, THREE.MathUtils.clamp(turn, -TURN_RATE, TURN_RATE), 8, h);
+    d.turn = this.turnRate;
+    this.motion.update(P, d);
+
     // A hand covers the yawn once the bird is safely on the blanket. Contact IK still has the final say.
-    if (!this.armsFull && abed < 0.2) {
-      r.armR.rotation.x = THREE.MathUtils.lerp(r.armR.rotation.x, -2.0, yawn);
-      r.armR.rotation.z = THREE.MathUtils.lerp(r.armR.rotation.z, -0.2, yawn);
-      r.foreR.rotation.x = THREE.MathUtils.lerp(r.foreR.rotation.x, -1.0, yawn);
+    if (!this.armsFull && abed < 0.2 && yawn > 0.01) {
+      this.breathFrom(this.tmp);
+      r.face.getWorldDirection(this.tmp2);
+      this.motion.reach(true, this.tmp.addScaledVector(this.tmp2, 0.12), yawn);
     }
     r.root.updateMatrixWorld(true);
     for (const hand of [0, 1] as const) {
       this.reachNow[hand] = THREE.MathUtils.clamp(this.reachGlide[hand].step(this.reachWant[hand], 0.45, dt), 0, 1);
-      if (this.reachNow[hand] > 0.001) this.solveArm(hand);
+      if (this.reachNow[hand] <= 0.001) continue;
+      const target = this.reachInBody[hand] ? r.body.localToWorld(this.tmp.copy(this.reachAt[hand])) : this.tmp.copy(this.reachAt[hand]);
+      this.motion.reach(hand === 0, target, this.reachNow[hand]);
     }
     r.root.updateMatrixWorld(true);
+    const u = r.material.uniforms;
+    u.uBlink.value = Math.max(this.blink > 0 ? 1 : 0, shut);
+    u.uYawn.value = yawn;
   }
 
   /**
-   * Asleep. The coat cannot bend, so nothing here tries to make it: the whole child is tipped onto their back,
-   * rolled onto one side, propped so the head lands on the pillow, and flattened into the mattress until what is
-   * left above the blanket is a low mound and a face in a hood. The arms stay round what they are holding.
+   * Asleep: the whole child is tipped onto their back, rolled onto one side and propped so the head lands on the
+   * pillow, reclining around the hips so the seat stays supported. The arms stay round what they are holding.
    */
-  private layDown(w: number, t: number, dt: number): void {
+  private layDown(w: number): void {
     const r = this.rig;
+    const P = this.look;
     const s = tuning.sleeping;
-    const side = this.sideGlide.step(this.abedSide, 0.9, dt);
+    const side = this.sideGlide.step(this.abedSide, 0.9, this.drive.dt || 1 / 60);
     this.lie
       .setFromAxisAngle(this.axisY, this.bedYaw)
       .multiply(this.spin.setFromAxisAngle(this.axisX, -Math.PI / 2 + s.lieTip))
       .multiply(this.spin.setFromAxisAngle(this.axisY, (0.8 + side * 0.2) * s.lieSide));
-    // Recline around the hips, so the seat remains supported as the shoulders find the pillow.
     this.hipFrom.copy(this.hipPivot).applyQuaternion(r.root.quaternion).add(r.root.position);
     this.hipTo.copy(this.hipPivot).applyQuaternion(this.lie).add(this.bedAt);
     r.root.quaternion.slerp(this.lie, w);
     r.root.position.lerpVectors(this.hipFrom, this.hipTo, w)
       .sub(this.tmp.copy(this.hipPivot).applyQuaternion(r.root.quaternion));
-    /** Breathing, which is the whole point of the beat: the scarf hangs off the neck and rises and falls with it. */
-    const breath = Math.sin(t * 0.75) * 0.045 * w;
-    r.body.position.set(0, THREE.MathUtils.lerp(r.body.position.y, 0.62 + breath, w), THREE.MathUtils.lerp(r.body.position.z, 0, w));
-    r.body.rotation.x = THREE.MathUtils.lerp(r.body.rotation.x, 0.06, w);
-    r.body.rotation.z = THREE.MathUtils.lerp(r.body.rotation.z, 0, w);
-    /** Only the bell is flattened: the head, the hood and the mittens on top of the blanket keep their size. */
-    r.coat.scale.set(THREE.MathUtils.lerp(1, s.lieSquash * (1 + breath * 0.8), w), 1, THREE.MathUtils.lerp(1, s.lieDeep, w));
-    /** Boots settle along the mattress; folding the one-piece legs sharply drives them through it. */
-    const curl = w * 0.9;
-    r.legL.rotation.set(THREE.MathUtils.lerp(r.legL.rotation.x, 0.10, curl), 0, -0.12);
-    r.legR.rotation.set(THREE.MathUtils.lerp(r.legR.rotation.x, 0.06, curl), 0, 0.12);
+    const lerp = THREE.MathUtils.lerp;
+    P.lie = w;
+    P.sit *= 1 - w;
+    P.lean = lerp(P.lean, 0.06, w);
+    P.bend *= 1 - w;
+    P.twist *= 1 - w;
     /** Both arms round what they are holding, drawn in under the chin, and tighter every time they are woken. */
-    const hug = w;
-    r.armL.rotation.set(THREE.MathUtils.lerp(r.armL.rotation.x, 0.15, w), 0, THREE.MathUtils.lerp(r.armL.rotation.z, 0.12, w));
-    r.armR.rotation.set(THREE.MathUtils.lerp(r.armR.rotation.x, 0.15, w), 0, THREE.MathUtils.lerp(r.armR.rotation.z, -0.12, w));
-    r.foreL.rotation.x = THREE.MathUtils.lerp(r.foreL.rotation.x, -(2.35 + this.tighter * 0.15), hug);
-    r.foreR.rotation.x = THREE.MathUtils.lerp(r.foreR.rotation.x, -(2.35 + this.tighter * 0.15), hug);
-    /** Chin down toward the plane against their chest, the way a child actually sleeps holding something. */
-    r.head.rotation.x = THREE.MathUtils.lerp(r.head.rotation.x, 0.3, w);
-    r.head.rotation.y = THREE.MathUtils.lerp(r.head.rotation.y, -0.2 * side, w);
-
-  }
-
-  /**
-   * Two-bone reach, in the body's own frame. The elbow goes out and back and a little down, where a child's elbow
-   * goes; a point too far away is reached toward at full stretch rather than refused.
-   */
-  private solveArm(hand: 0 | 1): void {
-    const r = this.rig;
-    const k = this.ik;
-    const upper = hand === 0 ? r.armR : r.armL;
-    const fore = hand === 0 ? r.foreR : r.foreL;
-    const side = hand === 0 ? 1 : -1;
-    const target = (this.reachInBody[hand] ? k.target.copy(this.reachAt[hand]) : r.body.worldToLocal(k.target.copy(this.reachAt[hand]))).sub(upper.position);
-    const a = UPPER_ARM;
-    const b = FOREARM;
-    const span = THREE.MathUtils.clamp(target.length(), Math.abs(a - b) + 0.02, a + b - 0.004);
-    k.dir.copy(target).normalize();
-    const along = (a * a - b * b + span * span) / (2 * span);
-    const out = Math.sqrt(Math.max(0, a * a - along * along));
-    k.pole.set(side * 0.75, -0.45, -0.5);
-    k.pole.addScaledVector(k.dir, -k.pole.dot(k.dir)).normalize();
-    k.elbow.copy(k.dir).multiplyScalar(along).addScaledVector(k.pole, out);
-    k.u.copy(k.elbow).normalize();
-    k.f.copy(k.dir).multiplyScalar(span).sub(k.elbow).normalize();
-    k.upper.setFromUnitVectors(k.down, k.u);
-    k.bend.setFromUnitVectors(k.u, k.f);
-    k.fore.copy(k.upper).invert().multiply(k.bend).multiply(k.upper);
-    const w = this.reachNow[hand];
-    upper.quaternion.slerp(k.upper, w);
-    fore.quaternion.slerp(k.fore, w);
+    for (const m of P.arms) {
+      m.raise = lerp(m.raise, 0.7, w);
+      m.out = lerp(m.out, -0.1, w);
+      m.elbow = lerp(m.elbow, 2.2 + this.tighter * 0.15, w);
+      m.twist = lerp(m.twist, 0.3, w);
+    }
+    /** Chin down toward what they are holding, the way a child actually sleeps. */
+    P.headPitch = lerp(P.headPitch, 0.3, w);
+    P.headYaw = lerp(P.headYaw, -0.2 * side, w);
   }
 }
+
+function arm(m: ArmPose, raise: number, out: number, twist: number, elbow: number, wrist: number): void {
+  m.raise = raise;
+  m.out = out;
+  m.twist = twist;
+  m.elbow = elbow;
+  m.wrist = wrist;
+}
+
+/** How far the root comes down when they sit (on the ground, a thwart, a stool) and when they kneel back on their heels. */
+const SIT_DROP = 0.67;
+const KNEEL_DROP = 0.54;
