@@ -724,7 +724,6 @@ export class MeadowChapter implements Chapter {
     cygnet.watch(this.far);
     c.lookAt = this.far;
     if (time > this.nextCall) {
-      cue('calling');
       cygnet.call(true);
       this.nextCall = time + 5 + Math.random();
     }

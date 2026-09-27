@@ -4,6 +4,7 @@ import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
 import { LooseDown } from '../fx/loose-down';
 import { CallMarks } from '../fx/call-marks';
+import { cue } from '../story/cues';
 import type { WindSample } from '../wind/field';
 import { BODY, NECK, BONES, FOOT_L, FOOT_R, FORE_L, HEAD, HOLDS, REST, ROOT, SIZE, SKELETON, cygnetGeometry } from './cygnet/body';
 import { WingBandage } from './cygnet/bandage';
@@ -1471,8 +1472,9 @@ export class Cygnet {
     this.mind.update(dt, s);
   }
 
-  /** Stretches up and opens its bill, two or three times; the sound is the story's to make, at the same moment. */
+  /** Stretches up and opens its bill, two or three times, and is heard: the marks and the voice always go together. */
   call(longing: boolean): void {
+    cue(longing ? 'calling' : 'distress');
     this.callT = longing ? 1.4 : 0.8 - this.fear * 0.25;
     this.callLong = longing;
   }

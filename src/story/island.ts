@@ -453,7 +453,6 @@ export class IslandChapter implements Chapter {
       /** It lands. The child does not move for a moment, and then runs. */
       /** It calls the whole way down and keeps calling on the ground. Nothing else is making a sound. */
       if (this.dropped && !cygnet.carried && time > this.nextCall) {
-        cue('distress');
         cygnet.call(false);
         this.nextCall = time + (cygnet.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
       }
@@ -473,7 +472,6 @@ export class IslandChapter implements Chapter {
     } else if (this.beat === 'toCygnet' || this.beat === 'near' || this.beat === 'kneel') {
       c.lookAt = this.cast.cygnet.position;
       if (this.dropped && !this.cast.cygnet.carried && time > this.nextCall) {
-        cue('distress');
         this.cast.cygnet.call(false);
         this.nextCall = time + 2.1 + Math.random() * 0.6;
       }

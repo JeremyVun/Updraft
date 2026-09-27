@@ -324,7 +324,7 @@ holds, and hair and face may stray from it to show her. Built on branch `child-f
 
 - **Eyes:** big dark upright ovals (half 0.043 × 0.053), a warm brown low in the iris, a sliver of white at the outer
   corner, one soft glint (without it they read as holes), two lash flicks at the outer corner. Set a little lower
-  (0.048 below the face's middle). Shut, only the lash line shows.
+  (0.048 below the face's middle). Shut, only the lash line shows. (Since made younger: see the next section.)
 - **Face:** narrower (`rx` 0.238). At the old width the hood's inside showed in front of the cheeks, the "brown thing"
   he saw. Baby fat (`FACE.fat` 0.13) is a broad fullness low in the cheeks, widest just below the mouth, above a
   small round chin. **Not local pads:** a round pad under each eye was the "alien" version.
@@ -344,3 +344,19 @@ holds, and hair and face may stray from it to show her. Built on branch `child-f
   gameplay distance only (not the face up close, nor in motion). Closeout: the helper worktrees
   `updraft-child2-before`, `-scarf` and `-base`, the servers on :5373–:5375 and :5377, and `/tmp/child3/snaps` are
   gone. The `child-rebuild` worktree and `/tmp/child3`'s scripts stay for further child work.
+
+## Younger: lashes off, bigger eyes, lower brows (2026-09-28)
+
+Jeremy, verbatim: "The purpose of this session is to figure out how to make the child model look more like a child
+instead of a teen. I have a feeling the eyes need to be slightly bigger and the lashes need to go?" Shown lashes off,
+then eyes 1.15×, 1.2× (with brows and mouth moved) and 1.3×, he asked for "C + brows" and chose it.
+
+- **Lashes gone.** The two flicks at the outer corner read as a made-up, older eye; taking them off was the biggest
+  single step.
+- **Eyes 1.15× about their old centre** (half 0.0495 × 0.061), with the white sliver, iris warmth, glint and the shut
+  lash line scaled with them. 1.3× started to read as a doll, and took over the face at half-body distance.
+- **Brows set 0.014 lower** (0.068 above the face's middle), close over the eyes. Floating high they read surprised and
+  older.
+- Knobs in `shader.ts` (`paintFace`). Sheet: `/tmp/childyoung/c-brows.png` (now, C, C + brows, F).
+- Not changed, next if she still reads older: the lower face is long from nose to mouth to chin; a young child's is
+  short. That is the face's shape (`FACE.down`, `facePoint`), not its paint.
