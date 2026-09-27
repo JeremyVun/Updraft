@@ -218,14 +218,18 @@ vec3 patchColour(vec2 cell) {
   float pick = hash12(cell + 7.0);
   return pick < 0.3 ? vec3(0.93, 0.88, 0.76) : pick < 0.52 ? vec3(0.82, 0.38, 0.3) : pick < 0.74 ? vec3(0.9, 0.7, 0.3) : pick < 0.9 ? vec3(0.5, 0.66, 0.78) : vec3(0.62, 0.74, 0.5);
 }
-/** The scarf's red wool, faded by weather where it has been out longest, knitted ribs showing close to. */
+/**
+ * The scarf's red wool, wound across the sail in courses: faded by weather where it has been out longest, each
+ * course a little different, the knitting's ribs running along it close to.
+ */
+const float WOOL_COURSE = 0.37;
 vec3 woolColour(vec2 cut, float aa) {
   vec3 wool = vec3(0.57, 0.023, 0.036);
-  float weather = smoothstep(0.35, 0.8, vnoise(cut * vec2(1.3, 0.9) + 4.0)) * 0.6 + smoothstep(1.2, 3.8, cut.y) * 0.4;
-  wool = mix(wool, vec3(0.64, 0.12, 0.095), 0.22 + 0.3 * weather);
-  float rib = 0.5 + 0.5 * sin(cut.x * 6.28318 / 0.03);
-  wool *= 1.0 - 0.07 * mix(rib, 0.5, smoothstep(0.004, 0.012, aa));
-  wool *= 0.95 + 0.05 * sin(cut.y * 6.28318 / 0.23);
+  float course = floor(cut.y / WOOL_COURSE);
+  float weather = smoothstep(0.35, 0.8, vnoise(cut * vec2(0.9, 1.4) + 4.0)) * 0.5 + smoothstep(1.2, 3.8, cut.y) * 0.3 + hash12(vec2(course, 5.0)) * 0.2;
+  wool = mix(wool, vec3(0.64, 0.12, 0.095), 0.1 + 0.26 * weather);
+  float rib = 0.5 + 0.5 * sin(cut.y * 6.28318 / 0.024);
+  wool *= 1.0 - 0.08 * mix(rib, 0.5, smoothstep(0.003, 0.009, aa));
   return wool;
 }
 `;
@@ -279,9 +283,14 @@ void main() {
   float seamD = min(toSeam.x, toSeam.y);
   float seamAlong = vertical ? vCut.y : vCut.x;
 
-  vec3 quilt = patchColour(cell);
-  vec3 cloth = mix(quilt, woolColour(vCut, aa), smoothstep(vUv.y * 0.75, vUv.y * 0.75 + 0.25, uScarf));
   // The impossible scarf gathers into the sail, its red wool carried into the colder chapters.
+  float woven = smoothstep(vUv.y * 0.75, vUv.y * 0.75 + 0.25, uScarf);
+  vec3 cloth = mix(patchColour(cell), woolColour(vCut, aa), woven);
+  if (woven > 0.5) {
+    /** Wool has no quilt squares: only the joins between its courses. */
+    seamD = abs(fract(vCut.y / WOOL_COURSE + 0.5) - 0.5) * WOOL_COURSE;
+    seamAlong = vCut.x;
+  }
 
   /** Weather: slubs in the weave, a little staining low down, and colour bleached toward the free edges. */
   float slub = vnoise(vCut * vec2(2.5, 16.0));
@@ -375,7 +384,7 @@ in vec3 vWorld;
 in vec3 vNormal;
 void main() {
   vec3 cloth = mix(vec3(0.82, 0.38, 0.3), vec3(0.93, 0.88, 0.76), step(0.62, vUv.x));
-  cloth = mix(cloth, woolColour(vUv * vec2(0.6, 0.13), 0.02), smoothstep(0.75, 1.0, uScarf));
+  cloth = mix(cloth, woolColour(vUv * vec2(0.6, 0.13) + vec2(0.0, 3.5), 0.02), smoothstep(0.75, 1.0, uScarf));
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   float ndl = dot(N, uSunDir);

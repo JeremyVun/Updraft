@@ -13,11 +13,11 @@ export const KIND = { planks: 0, boards: 1, wood: 2, paint: 3, transom: 4 } as c
 export const STRAKES = 6;
 
 const WOOD = {
-  planks: new THREE.Color('#936649'),
+  planks: new THREE.Color('#87583b'),
   rail: new THREE.Color('#d9bf98'),
-  ribs: new THREE.Color('#b0845a'),
-  boards: new THREE.Color('#bb9467'),
-  seat: new THREE.Color('#c9a376'),
+  ribs: new THREE.Color('#a57a51'),
+  boards: new THREE.Color('#ad875c'),
+  seat: new THREE.Color('#c29d70'),
   stem: new THREE.Color('#8f5d3c'),
   spar: new THREE.Color('#c2a07a'),
   hoop: new THREE.Color('#d9c09a'),
