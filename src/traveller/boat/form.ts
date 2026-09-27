@@ -13,6 +13,8 @@ interface Form {
   fullness: number;
   /** Below 1 the planking closes to the stem in a rounded curve rather than a point. */
   round: number;
+  /** A pram bow: the planking ends at a small board this wide, as a fraction of the beam, instead of a stem. */
+  bow: number;
   /** The transom's width, as a fraction of the beam. */
   transom: number;
   /** The top of the planking `u` of the way from transom (0) to stem (1). */
@@ -40,11 +42,14 @@ interface Form {
 const sweep = (mid: number, stern: number, bow: number, low: number, bend = 2) => (u: number) =>
   mid + (u < low ? (stern - mid) * ((low - u) / low) ** bend : (bow - mid) * ((u - low) / (1 - low)) ** bend);
 
-/** A keel that runs level at `depth` and curves up only near the ends: to `bow` at the stem, `stern` at the transom. */
-const flatKeel = (depth: number, bow: number, stern: number, bowFrom = 0.8, sternTo = 0.16) => (u: number) => {
+/**
+ * A keel that runs level at `depth` and curves up only near the ends: to `bow` at the stem, `stern` at the
+ * transom. `lift` 0 turns up to meet an upright stem; above 0 it sweeps up at that power to meet a pram's board.
+ */
+const flatKeel = (depth: number, bow: number, stern: number, bowFrom = 0.8, lift = 0, sternTo = 0.16) => (u: number) => {
   if (u > bowFrom) {
     const v = (u - bowFrom) / (1 - bowFrom);
-    return depth + (bow - depth) * (1 - Math.sqrt(1 - v * v));
+    return depth + (bow - depth) * (lift ? v ** lift : 1 - Math.sqrt(1 - v * v));
   }
   return u < sternTo ? depth + (stern - depth) * (1 - u / sternTo) ** 2 : depth;
 };
@@ -52,22 +57,31 @@ const flatKeel = (depth: number, bow: number, stern: number, bowFrom = 0.8, ster
 const firstSpring = { stern: 0.13, sternTo: 0.42, bow: 0.05, bowFrom: 0.75 };
 const FORMS: Record<string, Form> = {
   first: {
-    length: 4.8, beam: 0.95, fullness: 3.2, round: 1, transom: 0.7, flare: 0, section: 0.7, rocker: 0, rake: { bow: 0, stern: 0 },
+    length: 4.8, beam: 0.95, fullness: 3.2, round: 1, bow: 0, transom: 0.7, flare: 0, section: 0.7, rocker: 0, rake: { bow: 0, stern: 0 },
     seat: 0.02, strakes: 8, concept: false, lantern: false,
     gunwale: (u) => SHELL.sheer * u * u + firstSpring.stern * Math.max(0, 1 - u / firstSpring.sternTo) ** 2
       + firstSpring.bow * THREE.MathUtils.smoothstep(u, firstSpring.bowFrom, 1),
   },
   /** Sides raised to the seated child's waist; the seat, length and beam as they were. */
   waist: {
-    length: 4.8, beam: 1.02, fullness: 3.6, round: 1, transom: 0.5, flare: 0.08, section: 0.7, rocker: 0, rake: { bow: 0.2, stern: 0.2 },
+    length: 4.8, beam: 1.02, fullness: 3.6, round: 1, bow: 0, transom: 0.5, flare: 0.08, section: 0.7, rocker: 0, rake: { bow: 0.2, stern: 0.2 },
     seat: 0.02, strakes: 10, concept: true, lantern: false,
     gunwale: sweep(0.62, 1.0, 1.3, 0.42, 2.2),
   },
-  /** A little smaller than waist-deep, round in every direction, wide planks, a white post and lantern at the stem. */
+  /**
+   * A little smaller than waist-deep, round and flat-bottomed, wide planks, a white post and lantern at the stem,
+   * the sheer only lifting a little toward the ends.
+   */
   cute: {
-    length: 4.4, beam: 1.0, fullness: 3.4, round: 0.72, transom: 0.52, flare: 0.07, section: 0.62, rocker: 0,
-    keel: flatKeel(-0.46, -0.12, -0.39), rake: { bow: 0.22, stern: 0.24 }, seat: 0.02, strakes: 6, concept: true, lantern: true,
-    gunwale: sweep(0.5, 0.86, 1.1, 0.46, 2.0),
+    length: 4.4, beam: 1.0, fullness: 3.4, round: 0.72, bow: 0, transom: 0.52, flare: 0.07, section: 0.62, rocker: 0,
+    keel: flatKeel(-0.46, -0.12, -0.39), rake: { bow: 0.1, stern: 0.14 }, seat: 0.02, strakes: 6, concept: true, lantern: true,
+    gunwale: sweep(0.5, 0.68, 0.76, 0.48, 2.2),
+  },
+  /** The same boat with the concept's blunt pram bow: a small board across the bow, the white post against it. */
+  pram: {
+    length: 4.3, beam: 1.02, fullness: 2.6, round: 0.8, bow: 0.4, transom: 0.55, flare: 0.07, section: 0.62, rocker: 0,
+    keel: flatKeel(-0.46, -0.17, -0.39, 0.66, 1.7), rake: { bow: 0.1, stern: 0.14 }, seat: 0.02, strakes: 6, concept: true, lantern: true,
+    gunwale: sweep(0.5, 0.68, 0.74, 0.48, 2.2),
   },
 };
 const FORM = FORMS[typeof location === 'undefined' ? '' : new URLSearchParams(location.search).get('hull') ?? ''] ?? FORMS.first;
@@ -79,6 +93,7 @@ export const STRAKES = FORM.strakes;
 export const CONCEPT = FORM.concept;
 export const LANTERN = FORM.lantern;
 export const SECTION = FORM.section;
+export const PRAM = FORM.bow > 0;
 /** Floorboards, laid across the ribs. They sit above the waterline, so the sea is never seen inside the hull. */
 export const FLOOR_Y = -0.24;
 /** How deep the hull floats: local y 0 rides this far above the sea, putting the waterline below the floorboards. */
@@ -91,7 +106,8 @@ export const MAST_Z = 0.55;
 
 /** Half-width of the hull at the turn of the bilge `u` of the way from transom (0) to stem (1). */
 export const halfWidth = (u: number) =>
-  BEAM * (1 - Math.pow(u, FORM.fullness)) ** FORM.round * (FORM.transom + (1 - FORM.transom) * Math.sin(u * Math.PI));
+  BEAM * (1 - (1 - FORM.bow) * Math.pow(u, FORM.fullness)) ** FORM.round
+  * (FORM.transom + (1 - FORM.transom) * Math.sin((PRAM ? Math.min(u, 0.5) : u) * Math.PI));
 export const sheer = (u: number) => SHELL.sheer * u * u;
 /** How far the keel lies below the turn of the bilge: shallowest at the stem, lifting toward the transom. */
 export const keelDrop = (u: number) => FORM.keel
