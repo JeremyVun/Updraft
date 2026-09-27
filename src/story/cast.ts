@@ -19,6 +19,7 @@ import type { Carry } from '../companion/carry';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
 import type { Coax } from '../fx/swirl';
+import type { GustFront } from '../fx/windlines';
 import type { SwanFlock } from '../creatures/flock';
 import type { Boat } from '../traveller/boat';
 import type { SeaLife } from '../fx/sealife';
@@ -138,6 +139,8 @@ export interface Chapter {
   readonly escort?: THREE.Vector3 | null;
   /** Where the chapter is waiting for the player to twirl up an updraft, so the wind shows the gesture there. */
   readonly coax?: Coax | null;
+  /** A gust the story blows by itself, drawn and heard as the player's wind is. */
+  readonly gustFront?: GustFront | null;
   /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
   readonly invitesFlight?: boolean;
   /** Sensitivity for deliberate circling; other chapters retain the normal wind response. */

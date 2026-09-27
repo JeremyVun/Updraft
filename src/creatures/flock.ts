@@ -85,9 +85,12 @@ interface Bird {
   hold: number;
   /** How far through a ring of its own it is, or negative when it is not making one. */
   ring: number;
+  /** How hard a passing gust has hold of it, 0 to 1. */
+  buffet: number;
 }
 
 const tmp = new THREE.Vector3();
+const tmp2 = new THREE.Vector3();
 const tmp4 = new THREE.Vector4();
 
 /**
@@ -135,6 +138,9 @@ export class SwanFlock {
   private readonly companionVelocity = new THREE.Vector3();
   /** Set when a bird has dropped out, so the story knows where it came down. */
   readonly dropped = new THREE.Vector3();
+  private readonly gust = new THREE.Vector3();
+  private readonly gustDir = new THREE.Vector2();
+  private gusting = false;
 
   constructor() {
     this.swans = new Instances(swanGeometry(), MAX, ['iPos', 'iAir', 'iNeck', 'iBody', 'iSteady']);
@@ -478,6 +484,13 @@ export class SwanFlock {
     return true;
   }
 
+  /** A gust front crossing the skein this frame: each of them takes it as it reaches them, and rides it out. */
+  buffet(at: THREE.Vector3, dir: THREE.Vector2): void {
+    this.gust.copy(at);
+    this.gustDir.copy(dir);
+    this.gusting = true;
+  }
+
   update(dt: number, time: number): void {
     if (this.mode === 'idle') return;
     if (this.mode === 'wheel') this.wheel(dt, time);
@@ -520,6 +533,7 @@ export class SwanFlock {
       rate: range(Math.random, 0.93, 1.07),
       hold: 0,
       ring: -1,
+      buffet: 0,
     };
   }
 
@@ -563,14 +577,19 @@ export class SwanFlock {
       const sag = b.labour * (0.55 + 0.45 * Math.sin(time * 1.55 + b.seed));
       const ox = (b.offset.x + wx) * cy + (b.offset.z + wz - b.labour * 5.5) * sy;
       const oz = -(b.offset.x + wx) * sy + (b.offset.z + wz - b.labour * 5.5) * cy;
-      b.beat += dt * BEAT * b.rate * (1 + b.labour * 0.22);
+      const into = this.gusting ? (b.at.x - this.gust.x) * this.gustDir.x + (b.at.z - this.gust.z) * this.gustDir.y : Infinity;
+      const hit = Math.exp(-((into / 7) ** 2));
+      b.buffet = ease(b.buffet, hit, hit > b.buffet ? 7 : 1.1, dt);
+      /** Which side the gust takes it from: it is heeled over away from it. */
+      const windward = this.dir.x * this.gustDir.y - this.dir.z * this.gustDir.x;
+      b.beat += dt * BEAT * b.rate * (1 + b.labour * 0.22 + b.buffet * 0.6);
       b.flap = 1 - sag * 0.5;
       b.bob = stroke(b.beat) * -0.055 * b.flap;
       const to = tmp.set(
         this.lead.x + ox,
-        this.lead.y + b.offset.y + Math.sin(time * 0.5 + b.seed) * 0.35 - b.labour * 2.6 - sag * 0.7,
+        this.lead.y + b.offset.y + Math.sin(time * 0.5 + b.seed) * 0.35 - b.labour * 2.6 - sag * 0.7 + b.buffet * 1.6,
         this.lead.z + oz,
-      );
+      ).addScaledVector(tmp2.set(this.gustDir.x, 0, this.gustDir.y), b.buffet * 1.5);
       b.hold = ease(b.hold, 1, 0.45, dt);
       if (this.departing) this.gather(b, to, dt);
       else {
@@ -581,7 +600,7 @@ export class SwanFlock {
           b.rise = (b.at.y - y) / dt;
         }
         b.yaw = yaw + wrapAngle(b.yaw - yaw) * Math.exp(-dt * (0.9 + 3 * b.hold));
-        b.roll = ease(b.roll, wrapAngle(b.yaw - yaw) * -1.6 + Math.sin(time * 0.43 + b.seed * 5) * 0.05, 2, dt);
+        b.roll = ease(b.roll, wrapAngle(b.yaw - yaw) * -1.6 + Math.sin(time * 0.43 + b.seed * 5) * 0.05 + windward * b.buffet * 0.6, b.buffet > 0.05 ? 5 : 2, dt);
         b.pitch = ease(b.pitch, -0.03 + sag * 0.16, 2, dt);
       }
       b.neck.lerp(tmp4.set(FLY[0], FLY[1] + sag * 0.12, FLY[2] - sag * 0.2, 0), 1 - Math.exp(-dt * 2));
@@ -590,6 +609,7 @@ export class SwanFlock {
       b.fold = ease(b.fold, 0, 4, dt);
       b.feet = ease(b.feet, 0, 3, dt);
     }
+    this.gusting = false;
     if (!anyVisible || this.lead.distanceToSquared(this.dropped) > 1400 * 1400) this.clear();
   }
 

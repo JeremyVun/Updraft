@@ -13,6 +13,20 @@ interface Line extends Ribbon {
   altitude: number;
   curl: number;
   dying: boolean;
+  /** Up in the open air rather than over the ground: the height it holds, and how fast that height climbs. */
+  level: number | null;
+  climb: number;
+  /** Its least speed, and how quickly it turns to follow the air it is in. */
+  pace: number;
+  steer: number;
+}
+
+/** A wall of wind going across the world: where its middle is, the way and how fast it is going, how hard 0 to 1. */
+export interface GustFront {
+  at: THREE.Vector3;
+  dir: THREE.Vector2;
+  speed: number;
+  strength: number;
 }
 
 const MAX_LINES = 40;
@@ -30,6 +44,7 @@ export class WindLines {
   private gustTimer = 0;
   private liftTimer = 0;
   private ambientTimer = 1.5;
+  private frontTimer = 0;
 
   constructor(private readonly wind: WindField) {}
 
@@ -53,7 +68,31 @@ export class WindLines {
       altitude,
       curl: Math.random() < 0.5 ? -1 : 1,
       dying: false,
+      level: null,
+      climb: 0,
+      pace: 2.5,
+      steer: 10,
     });
+  }
+
+  /** The front lays its streaks along its whole width, in the air at its own height, all going its way. */
+  blowFront(dt: number, f: GustFront): void {
+    this.frontTimer -= dt;
+    if (f.strength < 0.15 || this.frontTimer > 0) return;
+    this.frontTimer = 0.05 / f.strength;
+    const spread = (Math.random() - 0.5) * 30;
+    const x = f.at.x - f.dir.y * spread - f.dir.x * Math.random() * 4;
+    const z = f.at.z + f.dir.x * spread - f.dir.y * Math.random() * 4;
+    this.spawn(x, z, 0, 1.3 + Math.random() * 0.9, 0.3 + f.strength * 0.25);
+    const l = this.lines[this.lines.length - 1];
+    if (!l || l.age > 0) return;
+    l.level = f.at.y + (Math.random() - 0.4) * 6;
+    l.head.y = l.level;
+    l.points[0].copy(l.head);
+    l.climb = 1.5 + Math.random() * 2;
+    l.heading.copy(f.dir);
+    l.pace = f.speed * (0.7 + Math.random() * 0.2);
+    l.steer = 1.2;
   }
 
   update(dt: number, gustAt: THREE.Vector3 | null, gust: number, liftAt: THREE.Vector3 | null, charge: number): void {
@@ -89,18 +128,19 @@ export class WindLines {
       l.age += dt;
       if (!l.dying) {
         const w = this.wind.sample(l.head.x, l.head.z, this.sample);
-        const speed = Math.max(2.5, Math.hypot(w.x, w.z));
+        const speed = Math.max(l.pace, Math.hypot(w.x, w.z));
         const remaining = l.life - l.age;
         if (remaining < 0.5) {
           l.heading.rotateAround(ORIGIN, l.curl * dt * (5 + (0.5 - remaining) * 22));
         } else {
           const len = Math.hypot(w.x, w.z);
-          if (len > 1e-3) l.heading.lerp(this.flow.set(w.x / len, w.z / len), 1 - Math.exp(-dt * 10)).normalize();
+          if (len > 1e-3) l.heading.lerp(this.flow.set(w.x / len, w.z / len), 1 - Math.exp(-dt * l.steer)).normalize();
         }
         l.head.x += l.heading.x * speed * dt;
         l.head.z += l.heading.y * speed * dt;
         const ground = surfaceHeight(l.head.x, l.head.z);
-        const targetY = ground + l.altitude + w.lift * 7;
+        if (l.level !== null) l.level += l.climb * dt;
+        const targetY = Math.max(l.level ?? 0, ground + l.altitude) + w.lift * 7;
         l.head.y += (targetY - l.head.y) * (1 - Math.exp(-dt * 2.5)) + w.lift * dt * 5;
         const n = l.points.length;
         if (n < 2 || l.points[n - 2].distanceTo(l.head) > STEP) {

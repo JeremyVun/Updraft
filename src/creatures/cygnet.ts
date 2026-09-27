@@ -124,6 +124,14 @@ export class Cygnet {
   /** A visual echo of its voice, shared by every chapter and carried pose. */
   private readonly callMarks = new CallMarks();
   private formationEffort = 0;
+  private formationYaw = 0;
+  /** Seconds into the tumble a gust gave it, or negative; which way it went over, and the roll it went over from. */
+  private tumbleT = -1;
+  private tumbleSide = 1;
+  private tumbleRoll = 0;
+  private tumblePitch = 0;
+  /** The left wing the gust bent back: held half shut from the tumble until it lands and is cared for. */
+  private wrench = 0;
   private wasVisible = false;
   /** How many times the player has put it in the air. It has never flown before the first. */
   flights = 0;
@@ -311,8 +319,21 @@ export class Cygnet {
     this.visible = true;
     this.state = 'flying';
     this.position.copy(from);
-    this.yaw = heading;
+    this.formationYaw = heading;
+    if (this.tumbleT < 0) this.yaw = heading;
     this.formationEffort = effort;
+  }
+
+  /**
+   * The gust has it: rolled right over, away from the wind, with the left wing caught and bent back. It rights
+   * itself and fights on, but from here that wing only half opens.
+   */
+  tumble(side: number): void {
+    this.tumbleT = 0;
+    this.tumbleSide = side < 0 ? -1 : 1;
+    this.tumbleRoll = this.roll;
+    this.tumblePitch = this.pitch;
+    this.heard.push({ kind: 'flutter', amount: 1 });
   }
 
   /**
@@ -762,12 +783,17 @@ export class Cygnet {
     const lift = afoot || this.state === 'gliding' ? wind.lift : 0;
     this.hope = ease(this.hope, afoot && this.hopT <= 0 ? THREE.MathUtils.smoothstep(lift, LIFT_TO_HOPE, this.liftToFly) : 0, 2.5, dt);
 
-    if (this.state === 'flying') {
+    if (this.state === 'flying' && this.tumbleT >= 0 && this.tumbleT < tuning.opening.tumbleFor) this.tumbling(dt);
+    else if (this.state === 'flying') {
       this.effort = this.formationEffort;
       this.flap = 0.6 + this.effort * 0.4;
       this.flapPhase += dt * (7 + this.effort * 7);
       this.pitch = ease(this.pitch, 0.12 - this.effort * 0.3, 3, dt);
-      this.roll = ease(this.roll, Math.sin(time * 2.1) * 0.12 * (1 - this.effort), 3, dt);
+      /** Lopsided on the bent wing, it keeps dipping to that side. */
+      this.roll = ease(this.roll, Math.sin(time * 2.1) * 0.12 * (1 - this.effort) + Math.sin(time * 3.3) * 0.3 * this.wrench, 3, dt);
+      this.slew = ease(this.slew, 0, 2, dt);
+      this.yaw = this.formationYaw + this.slew;
+      this.tucked = ease(this.tucked, 1, 4, dt);
     } else if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
     else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
@@ -793,7 +819,7 @@ export class Cygnet {
     else if (this.state === 'downed') this.struggling(dt);
     else this.passenger(dt);
     /** Off its own wings the legs come back down under it; left carried up, they trail behind it like a swimmer's. */
-    if (this.state !== 'gliding' && this.state !== 'fledging' && this.state !== 'leaving') this.tucked = ease(this.tucked, 0, 4, dt);
+    if (this.state !== 'gliding' && this.state !== 'fledging' && this.state !== 'leaving' && this.state !== 'flying') this.tucked = ease(this.tucked, 0, 4, dt);
 
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
@@ -1098,6 +1124,24 @@ export class Cygnet {
     }
   }
 
+  /** Over and round once, nose flung up and then down, wings everywhere; it comes out of it facing a little downwind. */
+  private tumbling(dt: number): void {
+    this.tumbleT += dt;
+    const k = Math.min(1, this.tumbleT / tuning.opening.tumbleFor);
+    const bump = (a: number, b: number) => Math.sin(Math.PI * clamp((k - a) / (b - a), 0, 1));
+    const over = THREE.MathUtils.smootherstep(k, 0.05, 0.9);
+    this.roll = this.tumbleRoll + this.tumbleSide * (over * Math.PI * 2 + bump(0, 1) * 0.35);
+    this.pitch = lerp(this.tumblePitch, 0.2, k) - 0.75 * bump(0, 0.35) + 0.65 * bump(0.3, 1);
+    this.slew = this.tumbleSide * 0.7 * bump(0, 1.4);
+    this.yaw = this.formationYaw + this.slew;
+    this.effort = 1 - 0.6 * bump(0.1, 0.8);
+    this.flap = 0.9;
+    this.flapPhase += dt * 17;
+    this.tucked = ease(this.tucked, 0.4, 6, dt);
+    this.wrench = 0.85 * THREE.MathUtils.smoothstep(k, 0.1, 0.4) * (1 - 0.45 * THREE.MathUtils.smoothstep(k, 0.6, 1));
+    if (k >= 1) this.roll -= this.tumbleSide * Math.PI * 2;
+  }
+
   /**
    * The descent. Along the flock's line at first, sinking; then away from it and down. Every burst of flapping
    * lifts it a little and pitches it up, and every time the burst gives out it sags, drops a wing and slews.
@@ -1136,6 +1180,7 @@ export class Cygnet {
 
     if (this.fallT >= 1) {
       this.wing.restore('hurt');
+      this.wrench = 0;
       this.state = 'downed';
       this.heard.push({ kind: 'tumble', amount: 1 });
       this.struggle = 0;
@@ -1533,7 +1578,7 @@ export class Cygnet {
     d.actSide = m.actSide;
     d.breath = this.breath;
     d.blink = this.blink;
-    d.wingGuard = this.wing.guard;
+    d.wingGuard = Math.max(this.wing.guard, this.wrench);
     d.wingOpening = this.wing.opening;
 
     const yaw = this.seating.yaw;

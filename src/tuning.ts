@@ -296,9 +296,25 @@ export const tuning = {
     planeInviteAlpha: 0.8, planeInviteWidth: 0.12, planeInviteSpan: 5.5, planeInviteStandOff: 0.6,
     /** The first, held throw's gust: how steeply it climbs the frame (radians) and how far it runs. */
     planeInviteRise: 0.6, planeInviteIntoSpan: 7,
-    /** A held view of the sea, then one clear recovery before the small bird loses the V. */
+    /**
+     * A held view of the sea, then the skein. The island's new wind rises off the slope and crosses the V (`gustRun`
+     * seconds from the grass to the birds); the adults ride it, and it reaches the smallest one `gustAt` seconds
+     * in and rolls it over. It fights its way back toward its station for `recoverFor` seconds, and at `flight` it
+     * has nothing left and goes.
+     */
     outlook: 3.5,
-    flight: 5,
+    gustAt: 3.4,
+    gustRun: 2.4,
+    /** How far the gust carries the tumbling bird sideways and down, metres, over `tumbleFor` seconds. */
+    gustShove: 7,
+    gustDrop: 3.5,
+    /** How fast the gust front crosses to the V, metres a second. */
+    gustSpeed: 22,
+    /** As the gust reaches the V the camera goes this share of the way toward the back of it, and holds there. */
+    gustPush: 0.5,
+    tumbleFor: 1.15,
+    recoverFor: 1.7,
+    flight: 6.25,
     fall: 5,
     flockSpeed: 6.5,
     flockHeight: 19,

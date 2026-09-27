@@ -62,7 +62,7 @@ steps.push({ eval: `(() => {
     callFrames:rows.filter(r=>r.calls).length, state:__game.story.current.beat};
   if (air.length < 100 || outside.length || report.worstTurnDegrees > 1 || !report.callFrames
     || report.fallForward < 18 || !report.northbound || backwards.length
-    || report.flightSeconds < 5 || report.flightSeconds > 5.1 || Math.abs(report.fallSeconds - 5) > 0.05) {
+    || report.flightSeconds < 6.25 || report.flightSeconds > 6.35 || Math.abs(report.fallSeconds - 5) > 0.05) {
     throw new Error('Opening framing failed: ' + JSON.stringify(report));
   }
   return report;
