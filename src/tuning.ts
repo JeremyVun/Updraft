@@ -247,8 +247,8 @@ export const tuning = {
     followEase: 1.5,
     /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */
     childHurry: 0.35,
-    /** How far the child's toy may sail ahead of the swimming cygnet. */
-    swimLead: 7.5,
+    /** How fast the cygnet is already swimming as it hops into a pool, so it can make up ground on the toy sailing ahead. */
+    swimLaunch: 2.3,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
     /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */
@@ -1232,7 +1232,7 @@ export const tuning = {
   },
   petals: {
     /** Share of the 8192 petals alive on the still island, and in the short pasture past z = -600. */
-    stillIslandShare: 0.7,
+    stillIslandShare: 0.49,
     pastureShare: 0.12,
     /** Wind speeds between which a bare gust, with no updraft, starts to lift resting petals. */
     liftFrom: 9,

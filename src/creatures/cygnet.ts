@@ -152,6 +152,7 @@ export class Cygnet {
   /** 1 as it goes under on the way in, falling away as it bobs back up. */
   private dunk = 0;
   private swimSpeed = 0;
+  private swimLaunch = 0;
   private readonly swimVel = new THREE.Vector2();
   private nextPaddle = 0;
   private gaitStale = true;
@@ -659,9 +660,10 @@ export class Cygnet {
    * Into the water, and swimming for the place it is given, which whoever is sailing beside it moves along. It has
    * never done this before the first time, and goes in like a dropped loaf.
    */
-  swimTo(target: THREE.Vector3): void {
+  swimTo(target: THREE.Vector3, launch = 0): void {
     if (this.state !== 'swimming') {
       this.seating.go({ seat: null, held: false }, 'hop', 0.75, 0.22);
+      this.swimSpeed = this.swimLaunch = launch;
       this.position.set(target.x, this.swimLevel, target.z);
       this.state = 'swimming';
       this.swum = 0;
@@ -1311,7 +1313,7 @@ export class Cygnet {
     this.swimJoy = ease(this.swimJoy, entering ? 0 : this.swimPlay, 3, dt);
     const burst = this.swimJoy * (0.5 + 0.5 * Math.sin(this.swum * 2.4)) ** 2;
     const top = 2.3 + (tuning.littleBoats.swimSpeed - 2.3) * burst;
-    const want = entering ? 0 : clamp(gap * (1.1 + burst * 0.65), 0, top);
+    const want = entering ? this.swimLaunch : clamp(gap * (1.1 + burst * 0.65), 0, top);
     if (this.swimCarry.lengthSq() > 0.01) {
       /** Carried, it paddles across the moving water to its place and faces the way it is really going. */
       const toward = gap > 1e-3 ? want / gap : 0;

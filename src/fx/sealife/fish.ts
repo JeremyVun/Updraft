@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
+import { SKY_MIRROR } from '../../world/sky-mirror-layout';
 import { Marks, RING } from './marks';
 import { Spray } from './spray';
 
 const MAX = 8;
 const GRAVITY = 9.8;
 const rand = (lo: number, hi: number) => lo + (hi - lo) * Math.random();
+/** The sky mirror is still, shallow water: nothing leaps within this reach of it. */
+const MIRROR_CALM = 90;
+const nearMirror = (x: number, z: number) =>
+  ((x - SKY_MIRROR.x) / (SKY_MIRROR.rx + MIRROR_CALM)) ** 2 + ((z - SKY_MIRROR.z) / (SKY_MIRROR.rz + MIRROR_CALM)) ** 2 < 1;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -207,6 +212,7 @@ export class Fish {
       const a = Math.random() * Math.PI * 2;
       const r = rand(5, 15);
       this.probe.set(this.near.x + Math.cos(a) * r, 0, this.near.z + Math.sin(a) * r);
+      if (nearMirror(this.probe.x, this.probe.z)) continue;
       this.toCamera.copy(this.probe).project(this.camera);
       if (this.toCamera.z > 1 || Math.abs(this.toCamera.x) > 0.85 || Math.abs(this.toCamera.y) > 0.85) continue;
       const height = rand(0.55, 1.3);

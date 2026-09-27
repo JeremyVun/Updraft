@@ -154,12 +154,7 @@ export class LittleBoatsChapter implements Chapter {
     this.elapsed += dt;
     const { child: c, plane: p, cygnet: k, littleBoats: room, wind, boat } = this.cast;
     const childS = L.startZ - c.position.z;
-    let limit = Math.max(3, childS + tuning.littleBoats.childLead);
-    // The toy may sail this far ahead of the cygnet while it makes for the water, swims, and climbs out.
-    const swimLead = tuning.littleBoats.swimLead;
-    if (this.swim === 'approach') limit = Math.min(limit, this.swimEntry + swimLead);
-    if (this.swim === 'water' || this.swim === 'out') limit = Math.min(limit, L.startZ - k.position.z + swimLead);
-    room.update(dt, time, wind, limit);
+    room.update(dt, time, wind, Math.max(3, childS + tuning.littleBoats.childLead));
     if (this.beat === 'notice') {
       c.lookAt = room.focus;
       if (this.elapsed > 1.2) {
@@ -315,6 +310,8 @@ export class LittleBoatsChapter implements Chapter {
         bird.errand = null;
         bird.swimLevel = boatsWaterHeight(bird.position.x, bird.position.z, time);
         this.swimAim.set(boatsX(s) + boatsWidth(s) * 0.7, bird.swimLevel, L.startZ - s);
+        bird.swimTo(this.swimAim, tuning.littleBoats.swimLaunch);
+        this.swimAim.set(boatsX(s + 3) + boatsWidth(s + 3) * 0.48, boatsLevel(s + 3), L.startZ - s - 3);
         bird.swimTo(this.swimAim);
         this.swim = 'water';
       }
