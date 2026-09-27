@@ -4,8 +4,10 @@ import { atmo, ATMO_GLSL } from './atmosphere';
 
 /** A child's remembered lighthouse: broad at the water, impossibly tall above it. */
 export const LIGHTHOUSE_SCALE = new THREE.Vector3(1.85, 2.15, 1.85);
-export const LIGHTHOUSE_LANTERN_Y = 13.85 * LIGHTHOUSE_SCALE.y;
-export const LIGHTHOUSE_TOP_Y = 16.6 * LIGHTHOUSE_SCALE.y;
+/** The top of the rock it stands on, above the flood. */
+export const LIGHTHOUSE_BASE_Y = 4.5;
+export const LIGHTHOUSE_LANTERN_Y = LIGHTHOUSE_BASE_Y + 13.85 * LIGHTHOUSE_SCALE.y;
+export const LIGHTHOUSE_TOP_Y = LIGHTHOUSE_BASE_Y + 16.6 * LIGHTHOUSE_SCALE.y;
 
 /** A turning light made visible by rain. Its last sweep dies before the paper plane is taken. */
 export class LighthouseLight {

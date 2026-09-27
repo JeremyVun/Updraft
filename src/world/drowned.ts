@@ -7,7 +7,7 @@ import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32 } from './noise';
 import { swellLift } from './water/swell';
-import { LighthouseLight, LIGHTHOUSE_SCALE } from './lighthouse';
+import { LighthouseLight, LIGHTHOUSE_BASE_Y, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
 
 /**
@@ -27,7 +27,7 @@ export const DROWNED_CHANNEL: THREE.Vector2[] = [
 
 /** The church spire: the one vertical in the village, standing east of the channel at its midpoint. */
 export const SPIRE = new THREE.Vector3(14, 21, -1436);
-/** The boat follows the harbour light, then passes its drowned doorstep. */
+/** The boat follows the harbour light, then passes the rock it stands on. */
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 /** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
 const DROWNED_Z = -1440;
@@ -54,8 +54,9 @@ const THATCHED = 1;
 const SLATED = 2;
 const OPENING = 3;
 const MASONRY = 4;
-const ROPE = 5;
-const VANE = 6;
+const ROCK = 5;
+const ROPE = 6;
+const VANE = 7;
 
 const VILLAGE_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -117,6 +118,11 @@ void main() {
   } else if (kind == ${SLATED}) {
     float row = vLocal.y * 3.4;
     alb *= (0.8 + 0.4 * vnoise(vec2(vLocal.x * 4.5, floor(row)))) * (0.8 + 0.25 * smoothstep(0.0, 0.2, fract(row)));
+  } else if (kind == ${ROCK}) {
+    float strata = sin(vWorld.y * 2.4 + vnoise(vWorld.xz * 0.4) * 3.0) * 0.5 + 0.5;
+    alb *= 0.9 + 0.14 * strata;
+    float turf = smoothstep(0.5, 0.75, n.y + (grain - 0.5) * 0.6) * smoothstep(1.8, 3.0, vWorld.y);
+    alb = mix(alb, vec3(0.085, 0.105, 0.045) * (0.8 + 0.4 * grain), turf);
   }
 
   /** Where the flood has stood: dark, green and slick, with the tide mark the water keeps washing. */
@@ -681,14 +687,14 @@ function buildChurch(into: Merged, rand: Rng): void {
   into.add(new THREE.SphereGeometry(0.11, 6, 5).translate(0, -0.42, 0), IRON, VANE, vane);
 }
 
-/** A towering harbour light standing in the flood, its door below water and its lantern still turning. */
+/** A towering harbour light on its rock above the flood, its lantern still turning. */
 function buildLighthouse(into: Merged): void {
-  const frame = new THREE.Matrix4().makeScale(...LIGHTHOUSE_SCALE.toArray()).setPosition(LIGHTHOUSE);
+  const frame = new THREE.Matrix4().makeScale(...LIGHTHOUSE_SCALE.toArray()).setPosition(LIGHTHOUSE.x, LIGHTHOUSE_BASE_Y, LIGHTHOUSE.z);
   const lime = lin(0.52, 0.50, 0.43);
   const dark = lin(0.055, 0.065, 0.075);
   into.add(new THREE.CylinderGeometry(2.0, 2.9, 14, 14).translate(0, 5.4, 0), lime, PLAIN, frame);
-  into.add(new THREE.CylinderGeometry(3.2, 3.6, 1.3, 14).translate(0, -0.3, 0), STONE, MASONRY, frame);
-  into.add(new THREE.CylinderGeometry(2.23, 2.34, 1.7, 14).translate(0, 8.1, 0), dark, PLAIN, frame);
+  into.add(new THREE.CylinderGeometry(3.1, 3.35, 0.7, 14).translate(0, 0.1, 0), STONE, MASONRY, frame);
+  into.add(new THREE.CylinderGeometry(2.3, 2.41, 1.7, 14).translate(0, 8.1, 0), dark, PLAIN, frame);
   into.add(new THREE.CylinderGeometry(2.85, 2.55, 0.4, 14).translate(0, 12.5, 0), dark, MASONRY, frame);
   into.add(new THREE.CylinderGeometry(1.65, 1.65, 0.18, 8).translate(0, 12.7, 0), dark, MASONRY, frame);
   for (let i = 0; i < 8; i++) {
@@ -700,9 +706,43 @@ function buildLighthouse(into: Merged): void {
   into.add(new THREE.TorusGeometry(2.65, 0.055, 5, 24).rotateX(Math.PI / 2).translate(0, 13.6, 0), IRON, MASONRY, frame);
   into.add(new THREE.ConeGeometry(2.15, 1.35, 8).translate(0, 15.65, 0), dark, MASONRY, frame);
   into.add(new THREE.SphereGeometry(0.15, 6, 5).translate(0, 16.45, 0), IRON, MASONRY, frame);
-  // A tall slit and the submerged door face the passing boat.
   into.add(new THREE.BoxGeometry(0.08, 1.65, 0.48).translate(2.42, 5.7, 0), HOLLOW, OPENING, frame);
-  into.add(new THREE.BoxGeometry(0.1, 2.0, 1.0).translate(2.75, 0, 0), HOLLOW, OPENING, frame);
+  buildSkerry(into);
+}
+
+const ROCK_COLOURS = [lin(0.2, 0.185, 0.165), lin(0.17, 0.16, 0.15), lin(0.23, 0.205, 0.175)];
+
+/** The rock the lighthouse was built on: a table under the tower, shoulders round it and a spill into the flood. */
+function buildSkerry(into: Merged): void {
+  const rand = mulberry32(1580);
+  const stone = (angle: number, dist: number, y: number, r: number, tall: number) => {
+    const geo = new THREE.IcosahedronGeometry(1, 2);
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    const seed = rand() * 10;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), py = pos.getY(i), z = pos.getZ(i);
+      const wear = 1 + 0.13 * Math.sin(x * 4.1 + py * 2.3 + z * 3.7 + seed) + 0.06 * Math.sin(z * 8.3 - x * 5.2 + seed * 2);
+      pos.setXYZ(i, x * wear, Math.min(py * wear, 0.55 + 0.1 * Math.sin(x * 3 + seed)), z * wear);
+    }
+    geo.deleteAttribute('normal');
+    geo.scale(r, tall, r * (0.75 + rand() * 0.4)).rotateY(rand() * Math.PI);
+    geo.translate(LIGHTHOUSE.x + Math.sin(angle) * dist, y, LIGHTHOUSE.z + Math.cos(angle) * dist);
+    into.add(geo, ROCK_COLOURS[Math.floor(rand() * ROCK_COLOURS.length)], ROCK);
+  };
+  const top = (angle: number, dist: number, peak: number, r: number, tall: number) => stone(angle, dist, peak - 0.55 * tall, r, tall);
+  top(0, 0, LIGHTHOUSE_BASE_Y + 0.1, 10, 10);
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + rand() * 0.6;
+    top(a, 5.5 + rand() * 2, LIGHTHOUSE_BASE_Y - 0.2 - rand() * 0.8, 4.5 + rand() * 1.5, 9 + rand() * 2);
+  }
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + rand() * 0.5;
+    top(a, 9 + rand() * 2.5, 1.2 + rand() * 1.8, 2.6 + rand() * 1.4, 5 + rand() * 2);
+  }
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + rand() * 0.5;
+    top(a, 12.5 + rand() * 3, 0.1 + rand() * 0.7, 1.2 + rand() * 1.3, 2 + rand() * 1.2);
+  }
 }
 
 /** The apexes of a house's two gables, where a line could be tied. */
