@@ -42,7 +42,7 @@ export const SAIL_SHOTS: readonly Framing[] = [
 ];
 
 /** On the sea, as the white thins: back and up to where the drowned village's own lens takes them. */
-export const OUT_OF_THE_WHITE: Framing = { at: 0, bearing: Math.PI - 0.12, distance: 21, height: 5.4, ahead: 1.3, up: 0.9, zoom: 1 };
+export const OUT_OF_THE_WHITE: Framing = { at: 0, bearing: Math.PI - 0.12, distance: 21.5, height: 6.2, ahead: 1.3, up: 0.9, zoom: 1 };
 
 const PLACE = ['bearing', 'distance', 'height', 'zoom'] as const;
 const LOOK = ['ahead', 'up'] as const;

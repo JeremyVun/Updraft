@@ -5,6 +5,7 @@ import { roundedWaypoint } from '../traveller/navigation';
 import type { Deck } from '../world/decks';
 import type { StairsAir } from '../audio/stairs-air';
 import { atmo } from '../world/atmosphere';
+import { stairsDescent } from '../world/journey-rooms';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
 import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
@@ -196,6 +197,7 @@ export class StairsChapter implements Chapter {
       on(into.top, into.yaw, 0.3), onLanding(wait, 0, -0.45),
     ]);
     this.waitAside = onLanding(wait, -0.42, 0.38);
+    stairsDescent.down = false;
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
     cygnet.mayFly = false;
@@ -895,6 +897,8 @@ export class StairsChapter implements Chapter {
     this.world.cloud.wake.shift(dx, dy, dz);
     this.world.sailing(null, 0);
     boat.steerFor = DESCENT_END;
+    // The village is there under the white from now on, coming up out of its own veil before the white thins.
+    stairsDescent.down = true;
     boat.group.remove(this.lantern.body);
     Object.assign(this.framingFrom, this.framing);
     this.cuts++;
@@ -908,8 +912,8 @@ export class StairsChapter implements Chapter {
   private thin(dt: number): void {
     const { boat, child: c } = this.cast;
     c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
-    boat.speedLimit = 3;
-    boat.speed = Math.max(boat.speed, 1.6);
+    boat.speedLimit = 3.4;
+    boat.speed = Math.max(boat.speed, 2.6);
     this.dusk = THREE.MathUtils.lerp(0.62, 0.75, THREE.MathUtils.smoothstep(this.t, 0, tuning.stairs.fogLift));
     // The lens comes round onto the way the hull is going as the village comes up ahead.
     const turn = Math.atan2(Math.sin(boat.yaw - this.voyageYaw), Math.cos(boat.yaw - this.voyageYaw));
@@ -955,16 +959,17 @@ export class StairsChapter implements Chapter {
     const t = this.t, lift = k.fogLift;
     fog.floor = SEA_RIDE - (RIDE - CLOUD.top + 0.3);
     fog.top = fog.floor + k.bankHeight;
-    // Its back comes to meet them, and goes by: the white ahead thins, and they are out of it.
-    fog.deep = fog.depthOf(boat.position.x, boat.position.z) + THREE.MathUtils.lerp(500, -8, S(t, 1, lift * 0.75));
-    fog.amount = 1 - S(t, lift * 0.6, lift);
+    // Its back comes to meet them and goes by: the white ahead thins, and all at once they are out of it, with the
+    // bank left standing behind them on the water and melting away.
+    fog.deep = fog.depthOf(boat.position.x, boat.position.z) + THREE.MathUtils.lerp(300, -10, S(t, 3, lift * 0.8));
+    fog.amount = 1 - S(t, lift * 0.7, lift);
     fog.clear = 0.5 + 0.35 * S(t, 0, 2.5);
-    this.white = 1 - S(t, 2, lift * 0.8);
+    this.white = 1 - S(t, 5, lift * 0.8);
     // From the gold of the cloud to the grey and blue of the dusk over the sea, and the sun going out of it.
     const dusk = this.glowFrom.copy(u.uSkyAmbient.value).multiplyScalar(1.3).add(this.tmpColor.copy(u.uSkyHorizon.value).multiplyScalar(0.5))
       .add(this.tmpColor.copy(u.uSunColor.value).multiplyScalar(0.05));
-    fog.light.lerp(dusk, S(t, 1.2, lift * 0.55));
-    fog.glow = 1 - 0.6 * S(t, 1.2, lift * 0.55);
+    fog.light.lerp(dusk, S(t, 1.2, 5.5));
+    fog.glow = 1 - 0.6 * S(t, 1.2, 5.5);
   }
 
   /** A point out toward the setting sun, level with the top landing, wherever the sky has put it. */
@@ -993,6 +998,8 @@ export class StairsChapter implements Chapter {
       const sea = this.beat !== 'fog';
       d.base = sea ? -60 : CLOUD.base;
       d.top = sea ? -50 : CLOUD.top;
+      // And goes, all but a trace that keeps the bank of mist drawn until it too has gone.
+      d.amount = sea ? 0.001 : 1;
       this.world.cloudHole = false;
       // The pocket of clearer air in the white takes in the boat and the lens behind it.
       const hull = boat.position;
@@ -1171,7 +1178,7 @@ export class StairsChapter implements Chapter {
         // as the white thins, back and up behind them to where the village's own lens takes them.
         const S = THREE.MathUtils.smootherstep;
         const f = this.beat === 'down' ? blend(OUT_OF_THE_WHITE, OUT_OF_THE_WHITE, 0, this.framing)
-          : this.beat === 'thin' ? blend(this.framingFrom, OUT_OF_THE_WHITE, S(this.t, 2.5, tuning.stairs.fogLift), this.framing)
+          : this.beat === 'thin' ? blend(this.framingFrom, OUT_OF_THE_WHITE, S(this.t, 1, 8), this.framing)
             : framingAt(this.sailed, this.framing);
         frameVoyage(s, f, boat.position, child.position, this.voyageYaw, this.eye);
         this.pace = 0.5;

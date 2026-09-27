@@ -12,6 +12,8 @@ const names = Object.keys(ROOMS) as Room[];
 export const MIRROR_ROOM = names.indexOf('mirror');
 export const journeyRooms = { value: new THREE.Vector2(-1, -1) };
 
+/** Set once the stairs have let the boat down onto the sea in the white: the village is there under it from then on. */
+export const stairsDescent = { down: false };
 /** Conceal the water first, then enable the incoming coast under the same fog. */
 export class JourneyReveal {
   readonly veils = { value: [new THREE.Vector4(), new THREE.Vector4()] };
@@ -29,8 +31,9 @@ export class JourneyReveal {
     let slot = 0;
     for (const room of rooms) {
       const previous = this.ages.get(room);
-      // Startup/resume is already behind the loading screen. The impossible shore has its own doorway reveal.
-      let age = !this.initialized || room === 'shore' ? Infinity
+      // Startup/resume is already behind the loading screen. The impossible shore has its own doorway reveal, and
+      // the drowned village comes up under the white the stairs let the boat down into.
+      let age = !this.initialized || room === 'shore' || (room === 'drowned' && stairsDescent.down) ? Infinity
         : previous === undefined ? 0 : previous + Math.max(0, dt);
       // Render at least one completely covered frame, even if a slow frame spans the handoff.
       if (previous !== undefined && previous < arrivalFogCover && age >= arrivalFogCover) age = arrivalFogCover;
@@ -66,6 +69,7 @@ const alone = Object.fromEntries(names.map(room => [room, [room]])) as Record<Ro
 export const drownedEntry = { fromBirches: false };
 export function visibleRooms(chapter: ChapterName, z: number): readonly Room[] {
   if (chapter === 'stage') return STAGE;
+  if (chapter === 'stairs' && stairsDescent.down) return DROWNED_FROM_STAIRS;
   if (chapter === 'drowned') return z > ISLES.drowned.z ? drownedEntry.fromBirches ? DROWNED_FROM_BIRCHES : DROWNED_FROM_STAIRS : DROWNED_TO_WOOD;
   return passages[chapter] ?? alone[chapter as Room] ?? [chapter as Room];
 }
