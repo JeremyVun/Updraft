@@ -686,14 +686,26 @@ export const tuning = {
     grassBaseCrop: 0.15,
     grassTuftCrop: 0.70,
     grassPatchScale: 0.22,
-    /** Ignition gained per screen-height unit brushed directly across the ember. */
-    catchRate: 1.8,
-    /** A deliberate sweep must cross the ember itself; residual wind cannot finish the gesture. */
+    /**
+     * Only an updraft lights a coal: ignition gained per second over a full column, the updraft charge at which it
+     * starts and reaches full breath, and how far (world units) the column may stand from the coal. Circling within
+     * `pointer.anchorNear` of the waiting coal stands the column on it. About four seconds of circling, as the old fanning took.
+     */
+    updraftCatch: 0.33,
+    updraftFrom: 0.12,
+    updraftFull: 0.55,
+    updraftReach: 3,
+    /** Share of the field's rising air that fans a coal already burning; straight gusts no longer do. */
+    fanLift: 0.6,
+    /** A deliberate sweep must cross the caught paper itself; residual wind cannot finish the gesture. */
     brushRadius: 0.2,
     brushTravelMin: 0.001,
     brushStepMax: 0.06,
     wakeCool: 0.045,
     inviteAfter: 5,
+    /** The updraft shown over a waiting coal: its loops' radius in world units, and how plainly it asks. */
+    inviteCoalRadius: 1.3,
+    inviteCoalUrgency: 0.8,
     inviteSweep: 1.8,
     invitePause: 1.5,
     inviteSpan: 3.8,

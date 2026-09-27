@@ -580,7 +580,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.muted = story.current.scripted ?? false;
   input.twirlGain = story.current.twirlGain ?? 1;
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
-    : story.name === 'birches' ? birches.scarf.updraftTarget : null;
+    : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind);
@@ -590,6 +590,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     birches.swing.brush(rig.camera, input, wind);
   }
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
+  embers.updraft(input, story.current.updraftTarget ?? null);
   const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
   story.current.brushDry?.(story.name==='sleeping' ? sleeping.trail.brush(rig.camera,input,dt) ?? emberBreath : emberBreath);
   skyMirror.brush(dt, time, input, rig.camera);
@@ -811,7 +812,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   rig.camera.near = story.name === 'lines' && doorway.travelling ? 0.035 : 0.5;
   rig.camera.updateProjectionMatrix();
   rig.update(dt, time, story.shot, story.pace, !!(story.current.scripted || story.current.invitesSail
-    || story.current.invitesFlight || story.current.windInvitation || story.current.pianoActive));
+    || story.current.invitesFlight || story.current.windInvitation || story.current.updraftTarget || story.current.pianoActive));
   story.current.afterCamera?.(rig.camera);
   rig.camera.updateMatrixWorld();
   if (finalStep) followWindow(...windowAim());
