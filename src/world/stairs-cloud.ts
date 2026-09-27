@@ -25,9 +25,11 @@ void main() {
   vec2 xz = position.xz + uCentre;
   vRing = length(position.xz);
   float c = calmAt(xz);
-  vCalm = vec4(c, vec2(calmAt(xz + vec2(1.5, 0.0)) - c, calmAt(xz + vec2(0.0, 1.5)) - c) / 1.5, smoothstep(2.5, 10.0, fromRoute(xz)));
+  vec2 slope = vec2(calmAt(xz + vec2(1.5, 0.0)) - c, calmAt(xz + vec2(0.0, 1.5)) - c) / 1.5;
+  vCalm = vec4(c, slope, smoothstep(2.5, 10.0, fromRoute(xz)));
   vec2 fold;
-  float h = cloudTop(xz, vCalm, vec2(1.0 - smoothstep(50.0, 140.0, vRing), 1.0 - smoothstep(260.0, 520.0, vRing)), 0.0, fold).x;
+  vec2 detail = 1.0 - vec2(smoothstep(50.0, 140.0, vRing), smoothstep(260.0, 520.0, vRing));
+  float h = cloudTop(xz, vCalm, detail, 0.0, fold).x;
   vShade = heapShade(xz, h);
   vWorld = vec3(xz.x, uSurface + h, xz.y);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -185,7 +187,7 @@ vec3 heapAt(vec2 p) {
   float k = clamp((m.x - 0.3) / 0.18, 0.0, 1.0);
   return vec3(k * k * (3.0 - 2.0 * k), 6.0 * k * (1.0 - k) / 0.18 * m.yz);
 }
-/** The towers of a heap, rising from the calm cloud in round heads: x their height as a share of TOWER, yz its slope. */
+/** The towers of a heap, rising from the calm cloud in round heads: x their height as a share of TOWER, yz slope. */
 vec3 towers(vec2 p) {
   vec3 t = lobes(p / 32.0 + 3.9, 0.8);
   return vec3(t.x + 0.3, t.yz / 32.0);
@@ -242,7 +244,9 @@ float heapShade(vec2 xz, float h) {
     vec2 q = xz + toSun * t;
     float far = farOut(q);
     float rise = heapAt(q + drift).x * calmAt(q) * nearHeap(far);
-    float over = rise * (RISE * (0.6 + 1.2 * far) + TOWER * (0.2 + 1.1 * far) * towers(q + drift).x) + (BIG.x + BIG.y * rise) * 0.45 - h - t * climb;
+    float stands = rise * (RISE * (0.6 + 1.2 * far) + TOWER * (0.2 + 1.1 * far) * towers(q + drift).x)
+      + (BIG.x + BIG.y * rise) * 0.45;
+    float over = stands - h - t * climb;
     shade = max(shade, smoothstep(0.0, 1.5 + t * 0.04, over));
   }
   return shade;
