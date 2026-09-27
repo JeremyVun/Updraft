@@ -75,7 +75,8 @@ void main() {
   float body = 1.0 - smoothstep(0.35, 1.0, length(vUv * vec2(0.8, 1.6)));
   if (body < 0.01) discard;
   vec4 f = fogOf(vWorld);
-  vec3 col = mix(vec3(0.04, 0.035, 0.05) + uSkyHorizon * 0.05, f.rgb, f.a * 0.45);
+  // Haze only softens it, but in fog thick enough to hide everything else it is hidden too.
+  vec3 col = mix(vec3(0.04, 0.035, 0.05) + uSkyHorizon * 0.05, f.rgb, max(f.a * 0.45, pow(f.a, 8.0)));
   gl_FragColor = vec4(col, body * vShade * 0.8);
 }`;
 

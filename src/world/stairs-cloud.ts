@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
+import { tuning } from '../tuning';
 import { CloudWake } from './stairs-wake';
-import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, STAIRS_ISLE, flight } from './stairs-layout';
+import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, STAIRS_ISLE, TOWER_GATE, flight } from './stairs-layout';
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
-const ROUTE_POINTS = CLOUD_ROUTE.length + 2;
+const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
 const TRAIL_POINTS = 16;
 
 /** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
@@ -15,6 +16,7 @@ uniform vec2 uCentre;
 uniform vec3 uCalmAt;
 uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
+uniform vec4 uGate;
 uniform float uSurface;
 out vec3 vWorld;
 out float vRing;
@@ -42,6 +44,7 @@ uniform vec2 uCentre;
 uniform vec3 uCalmAt;
 uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
+uniform vec4 uGate;
 uniform float uReach;
 uniform float uHole;
 uniform float uSurface;
@@ -136,9 +139,16 @@ float fromRoute(vec2 p) {
   for (int i = 0; i < ${ROUTE_POINTS - 1}; i++) d = min(d, toSegment(p, uRoute[i], uRoute[i + 1]));
   return d;
 }
+/** 1 along the stretch of the way where the towers crowd in close either side of it, 0 elsewhere. */
+float gateAt(vec2 xz) {
+  vec2 ab = uGate.zw - uGate.xy;
+  float t = clamp(dot(xz - uGate.xy, ab) / dot(ab, ab), 0.0, 1.0);
+  return (1.0 - smoothstep(20.0, 60.0, length(xz - uGate.xy - ab * t))) * smoothstep(0.0, 0.25, t) * (1.0 - smoothstep(0.75, 1.0, t));
+}
 /** 0 round the top landing and along the way, 1 out in the open where the heaps are. */
 float calmAt(vec2 xz) {
-  return min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(5.0, 28.0, fromRoute(xz)));
+  float g = gateAt(xz);
+  return min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(5.0 - g, 28.0 - 14.0 * g, fromRoute(xz)));
 }
 /** x how deep the furrow is (its lip is negative), yz its slope: from the nearest point of the hull's fresh way. */
 vec3 furrow(vec2 p) {
@@ -176,7 +186,7 @@ const vec2 MID = vec2(0.38, 1.9);
 const vec2 FINE = vec2(0.14, 0.45);
 /** 0 round the top landing and the way the boat goes, 1 far out, where the heaps tower up. */
 float farOut(vec2 xz) {
-  return smoothstep(90.0, 320.0, length(xz - uCalmAt.xy));
+  return max(smoothstep(90.0, 320.0, length(xz - uCalmAt.xy)), 0.75 * gateAt(xz));
 }
 /** How high the heaps stand near the landing and the way, as a share of how high they stand far off. */
 float nearHeap(float far) {
@@ -203,6 +213,7 @@ vec3 towers(vec2 p) {
 vec3 cloudTop(vec2 xz, vec4 calm, vec2 detail, float fine, out vec2 fold) {
   vec2 p = xz + uCloudShift * 0.6;
   vec3 heap = heapAt(p);
+  heap.x = max(heap.x, 0.85 * gateAt(xz));
   float rise = heap.x * calm.x;
   vec2 dRise = heap.yz * calm.x + heap.x * calm.yz;
   float far = farOut(xz);
@@ -249,7 +260,7 @@ float heapShade(vec2 xz, float h) {
     float t = 2.5 + 1.6 * float(i * i);
     vec2 q = xz + toSun * t;
     float far = farOut(q);
-    float rise = heapAt(q + drift).x * calmAt(q) * nearHeap(far);
+    float rise = max(heapAt(q + drift).x, 0.85 * gateAt(q)) * calmAt(q) * nearHeap(far);
     float stands = rise * (RISE * (0.6 + 1.2 * far) + TOWER * (0.2 + 1.1 * far) * towers(q + drift).x)
       + (BIG.x + BIG.y * rise) * 0.45;
     float over = stands - h - t * climb;
@@ -352,6 +363,57 @@ float bellyThick(vec2 xz, float fine) {
 }`;
 
 /**
+ * The bank of mist the boat sails into at the end of the way over the cloud, and which is still round it on the
+ * sea until it sails out of the back of it. The story asks for it every frame it wants it; left alone it thins away.
+ */
+export class FogBank {
+  /** A point on its front, and the way into it. */
+  readonly at = new THREE.Vector2();
+  readonly into = new THREE.Vector2(0, 1);
+  floor = 0;
+  top = 1;
+  /** How far it goes on from its front to its back. */
+  deep = 1e4;
+  amount = 0;
+  /** The light of its white, how brightly the sun glows through it, and how clear the pocket round the boat is. */
+  readonly light = new THREE.Color(1, 1, 1);
+  glow = 0;
+  clear = 0;
+  private asked = false;
+  private shown = 0;
+
+  ask(): this {
+    this.asked = true;
+    return this;
+  }
+
+  /** Lays its front across a point, facing the way into it. */
+  face(x: number, z: number, yaw: number): void {
+    this.at.set(x, z);
+    this.into.set(Math.sin(yaw), Math.cos(yaw));
+  }
+
+  /** How far past its front line a point is. */
+  depthOf(x: number, z: number): number {
+    return (x - this.at.x) * this.into.x + (z - this.at.y) * this.into.y;
+  }
+
+  update(dt: number, eye: THREE.Vector3): void {
+    this.shown = this.asked ? this.amount : this.shown * Math.exp(-dt * 0.8);
+    if (this.shown < 0.002 && !this.asked) this.shown = 0;
+    this.asked = false;
+    const u = atmo.uniforms;
+    u.uFogBank.value.set(this.at.x, this.at.y, this.into.x, this.into.y);
+    u.uFogBankShape.value.set(this.floor, this.top, this.deep, this.shown);
+    u.uFogBankLight.value.set(this.light.r, this.light.g, this.light.b, this.glow);
+    // How far into the white the eye is: it goes along the way the boat goes, where the front is straight across it.
+    const into = this.depthOf(eye.x, eye.z);
+    const inside = THREE.MathUtils.clamp(into / tuning.stairs.bankFront, 0, 1) * THREE.MathUtils.clamp((this.deep - into) / tuning.stairs.bankBack, 0, 1);
+    u.uFogBankEye.value.set(this.clear, eye.y > this.floor && eye.y < this.top ? inside * this.shown : 0);
+  }
+}
+
+/**
  * The cloud deck as the stairs room sees it from outside: its underside hanging over the island, heavy and lit by
  * the low sun, and its top lying to the horizon under the sunset with a furrow where the hull has been. Inside it,
  * the shared analytic deck in the fog takes over.
@@ -361,8 +423,9 @@ export class StairsCloud {
   readonly top: THREE.Mesh;
   readonly belly: THREE.Mesh;
   readonly wake = new CloudWake();
+  readonly fog = new FogBank();
   private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uHole: { value: number }; uSurface: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uSurface: { value: number } };
   private readonly bellyUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
@@ -374,8 +437,9 @@ export class StairsCloud {
       uCentre: { value: new THREE.Vector2(STAIRS_ISLE.x, STAIRS_ISLE.z) },
       uCalmAt: { value: new THREE.Vector3(CLOUD_BERTH.x, CLOUD_BERTH.z, 45) },
       uReach: { value: 1500 },
-      uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone()), DESCENT_END.clone()] },
+      uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone())] },
       uTrail: { value: this.trail },
+      uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
       uSurface: { value: CLOUD.top },
@@ -455,6 +519,7 @@ export class StairsCloud {
     this.top.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
     this.wake.update(dt);
+    this.fog.update(dt, camera.position);
     this.belly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 1;
     this.bellyUniforms.uCentre.value.copy(this.topUniforms.uCentre.value);
   }

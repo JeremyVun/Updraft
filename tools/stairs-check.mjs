@@ -1,6 +1,6 @@
 // Plays the stairs in the clouds with real pointer gestures: brings each loose flight home, follows the climb into
-// the cloud, the top landing, boarding and the sail over the cloud until the boat is down on the drowned village's
-// water. Captures stills at each beat.
+// the cloud, the top landing, boarding and the sail over the cloud into the bank of mist, until the boat has sailed
+// out of it onto the drowned village's water. Captures stills at each beat.
 // Usage: node tools/stairs-check.mjs <out-prefix>   env: BASE (default http://127.0.0.1:5230/), W/H, QUERY
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -177,30 +177,54 @@ try {
   s = await until((x) => x.beat === 'sail', 60000);
   await page.waitForTimeout(2000);
   await shot('12-aboard');
-  for (let i = 0; i < 180; i++) {
-    s = await state();
-    if (s.beat !== 'sail') break;
-    // Sweep across the sail, toward the way they are going.
+  // Over the cloud: push the boat along with sweeps through the hull the way it is going, and shoot each framing
+  // of the lens's way round it as the boat comes to it (by how far it has come), then the bank, the white, the
+  // swap onto the sea and the white thinning off the water.
+  const sweep = async () => {
     const at = await page.evaluate(([w, h]) => {
-      const g = window.__game;
-      const p = g.boat.position.clone(); p.y += 1.5;
-      const q = p.clone().project(g.rig.camera);
-      return [(q.x * 0.5 + 0.5) * w, (0.5 - q.y * 0.5) * h];
+      const g = window.__game, b = g.boat, cam = g.rig.camera;
+      const scr = (v) => { const q = v.clone().project(cam); return [(q.x * 0.5 + 0.5) * w, (0.5 - q.y * 0.5) * h]; };
+      const f = { x: Math.sin(b.yaw), y: 0, z: Math.cos(b.yaw) };
+      const p = b.position.clone(); p.y += 0.3;
+      return { at: scr(p), back: scr(p.clone().addScaledVector(f, -3)), fore: scr(p.clone().addScaledVector(f, 4)) };
     }, [width, height]);
-    await swipe([at[0] - 60, at[1] + 140], [at[0] + 20, at[1] - 160], 380);
-    await page.waitForTimeout(400);
-    if (i % 8 === 4) await shot(`13-sail-${String(i).padStart(2, '0')}`);
+    let a = at.back, z = at.fore;
+    if (Math.hypot(z[0] - a[0], z[1] - a[1]) < 120) { a = [at.at[0] - 180, at.at[1] + 30]; z = [at.at[0] + 180, at.at[1] - 30]; }
+    const inside = (q) => [Math.min(Math.max(q[0], 20), width - 20), Math.min(Math.max(q[1], 20), height - 20)];
+    await swipe(inside(a), inside(z), 380);
+  };
+  const voyage = () => page.evaluate(() => {
+    const g = window.__game, s = g.story.current, f = g.cloudStairs.cloud.fog, b = g.boat;
+    return { chapter: g.story.name, beat: s.beat, t: +(s.now - s.beatStart).toFixed(1), sailed: Math.round(s.sailed ?? 0),
+      depth: +f.depthOf(b.position.x, b.position.z).toFixed(1), speed: +b.speed.toFixed(1) };
+  });
+  const moments = [[8, 'leaving'], [30, 'stair-behind'], [75, 'faces'], [135, 'rising'], [190, 'wide'], [228, 'descent'], [262, 'bank-looms']];
+  let v = await voyage();
+  for (let i = 0; i < 400 && v.beat === 'sail'; i++) {
+    await sweep();
+    await page.waitForTimeout(250);
+    v = await voyage();
+    while (moments.length && v.sailed >= moments[0][0]) {
+      const [, name] = moments.shift();
+      await shot(`13-sail-${name}`);
+      log('  sail', JSON.stringify(v));
+    }
   }
   s = await until((x) => x.beat === 'fog' || x.chapter !== 'stairs', 90000);
-  for (let i = 1; i <= 8; i++) {
-    await page.waitForTimeout(1200);
-    await shot(`14-fog-${i}`);
-    log('  fog', await page.evaluate(() => {
-      const g = window.__game, s = g.story.current, u = g.cloudStairs.cloud.top.material.uniforms;
-      const r = (v) => v.toArray().map((x) => +x.toFixed(2));
-      return JSON.stringify({ beat: `${g.story.name}:${s.beat}`, deck: r(u.uCloudDeck.value), deckY: r(u.uCloudDeckY.value), bubble: r(u.uCloudBubble.value),
-        cam: r(g.rig.camera.position), boat: r(g.boat.position) });
-    }));
+  let taken = 0;
+  for (let i = 0; i < 200; i++) {
+    v = await voyage();
+    if (v.chapter !== 'stairs' || v.beat === 'down') break;
+    if (v.beat === 'fog') await sweep(); else await page.waitForTimeout(300);
+    if (i % 3 === 0) {
+      await shot(`14-${v.beat}-${String(taken++).padStart(2, '0')}`);
+      log('  fog', JSON.stringify(v), await page.evaluate(() => {
+        const u = window.__game.cloudStairs.cloud.top.material.uniforms;
+        const r = (x) => x.toArray().map((y) => +y.toFixed(2));
+        return JSON.stringify({ deckY: r(u.uCloudDeckY.value), bubble: r(u.uCloudBubble.value), bank: r(u.uFogBankShape.value), light: r(u.uFogBankLight.value),
+          cam: r(window.__game.rig.camera.position), boat: r(window.__game.boat.position) });
+      }));
+    }
   }
   s = await until((x) => x.chapter !== 'stairs', 60000);
   log('after', JSON.stringify(s));

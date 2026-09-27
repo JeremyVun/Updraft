@@ -132,8 +132,18 @@ light. Courage passes back and forth between them; the stairs are where it start
    to climb on past the corner and stop in the air, a storey too high.
 5. **Above the clouds.** As the second pass: out of the wind into a vast calm; the slippers; the bird settles in one,
    the child sits beside it; a skein goes north across the sun; the boat waits on the cloud under the kite.
-6. **The sail over the cloud.** As the second pass.
-7. **Down to the village.** As the second pass.
+6. **The sail over the cloud.** Off the landing in one slow turn to port, away from the stair, then a long straight
+   run toward the low sun (about 300 m, a minute or more of sailing), the player's gusts filling the sail. Far ahead
+   a bank of mist stands on the cloud sea, and the sun goes down into its top as they come. The lens goes once
+   round the boat and never back: ahead of them looking back at the stair standing out of the cloud; across the bow
+   in close to their faces in the lantern light and the sun, with heaped towers crowding the way behind them; up
+   and away astern until the boat is small on the cloud under the sun, the bank on the horizon; and down behind
+   them as the bank looms.
+7. **Into the mist and out onto the village's water.** They sail into the bank level: the bow and the lantern go
+   into the white first, then the child, until there is nothing but white. There, unseen, the boat is put down on
+   the sea where the village begins (the one camera cut), in the same white. It turns from the gold of the cloud to
+   the grey and blue of dusk, the water shows under the hull, and all at once they sail out of the back of the
+   bank into the drowned village at sunset.
 
 ## Principles this room keeps
 
@@ -179,6 +189,16 @@ light. Courage passes back and forth between them; the stairs are where it start
 - Walking on stairs: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge (`offTheEdge`).
   The bird is routed stop by stop (it cuts corners) and drops an errand within 0.45 m, so arrival is checked at
   0.55 m. `Cygnet.standAt` puts it somewhere at once.
+- The sail: the route is `CLOUD_ROUTE` (the turn, then `RUN_YAW`), the bank's front `FOG_BANK`, the towers along the
+  way `TOWER_GATE`. The lens is authored by how far the boat has come (`SAIL_SHOTS` in `src/story/stairs-sail.ts`).
+  The bank of mist is an analytic volume in the shared fog (`fogBank` in `atmosphere.ts`, folded into `cloudDeck`),
+  driven by `FogBank` in `stairs-cloud.ts`: a slab beyond a line across the way, soft and heaving along its front and
+  top, thicker over its floor, with the deck's pocket kept clear round the boat and the lens. At `bankSwap` metres
+  in, the boat and the bank are moved down onto the sea by the same offset, so the white is unchanged; the deck is
+  put under the water, and the village is shown from then on without its own arrival veil (`stairsDescent` in
+  `journey-rooms.ts`). On the sea the bank's back comes to meet the boat and it sails out of it. Under sail the
+  pointer lands about at the boom (`POINTER_OVER_HULL`), so strokes over the hull and across the sail both fill it;
+  while the lens is below the sail on their faces the kite draws them on (`kiteDraws`).
 - Over the cloud the boat rides at a fixed height (`RIDE`); `Chapter.kiteTow` ties the stairs' departure kite to the
   bow and flies it ahead; `Chapter.cameraCut` lets the story cut the camera where nothing can be seen (the swap to
   sea level in the fog).
