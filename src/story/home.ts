@@ -274,13 +274,11 @@ export class HomeChapter implements Chapter {
     const { child, plane } = cast;
     plane.homeRadius = 70;
     child.decks = [JETTY_DECK];
-    child.dismount();
     /** Out of the boat onto the end of the jetty, in along it to the sand, and then up. */
-    child.place(HOME_JETTY.x, HOME_JETTY.endZ - 0.4, NORTH);
-    child.walkTo(HOME_JETTY.x, HOME_JETTY.shoreZ - 3, false, () => {
+    child.alight(cast.boat, JETTY_DECK, () => child.walkTo(HOME_JETTY.x, HOME_JETTY.shoreZ - 3, false, () => {
       const from = child.position;
       child.walkTo(from.x + (SUMMIT.x - from.x) * 0.45, from.z + (SUMMIT.y - from.z) * 0.45, false, () => this.climb(), 2);
-    }, 1);
+    }, 1));
   }
 
   /** The updraft is the last required input; the paper release is automatic. */

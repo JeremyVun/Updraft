@@ -65,17 +65,16 @@ export class SkyMirrorChapter implements Chapter {
     this.constellation=skyMirror.stars.map(star=>star.sky);
     sealife.dolphinsWith(null,0); sealife.onDolphinShove=()=>{};
     child.decks.push(this.deck,this.entryDeck);
-    child.dismount(); child.stroll=T.stroll;
+    child.stroll=T.stroll;
     boat.afloat=boat.grounded=true; boat.mooring=MIRROR_LANDING; boat.canGround=false;
     const entryLength=Math.hypot(this.entryDeck.x1-this.entryDeck.x0,this.entryDeck.z1-this.entryDeck.z0);
     const entryX=(this.entryDeck.x1-this.entryDeck.x0)/entryLength,entryZ=(this.entryDeck.z1-this.entryDeck.z0)/entryLength;
-    child.place(this.entryDeck.x0+entryX*2,this.entryDeck.z0+entryZ*2,MIRROR_LANDING.yaw);
     cygnet.mayFly=false; cygnet.watch(null);
     this.oldRadius=plane.homeRadius;
     plane.homeRadius=7;
     plane.landingGround=(x,z)=>mirrorBed(x,z)>-0.04?0.001:null;
     plane.hold(child); plane.visible=true;
-    child.walkTo(this.entryDeck.x1+entryX,this.entryDeck.z1+entryZ,false,()=>this.setDown(),0.3);
+    child.alight(boat,this.entryDeck,()=>child.walkTo(this.entryDeck.x1+entryX,this.entryDeck.z1+entryZ,false,()=>this.setDown(),0.3));
     this.shot.subjects={primary:this.frameChild,secondary:this.framePlay,margin:0.76,extra:12};
     this.frame();
   }

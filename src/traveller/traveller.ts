@@ -19,6 +19,10 @@ type Action =
   | {
       kind: 'board'; t: number; boat: Boat; from: THREE.Vector3; local: THREE.Vector3;
       fromYaw: number; side: number; launched: boolean; onDone: () => void;
+    }
+  | {
+      kind: 'alight'; t: number; boat: Boat; to: THREE.Vector3; rail: THREE.Vector3;
+      fromYaw: number; toYaw: number; side: number; onDone: () => void;
     };
 
 interface Goal {
@@ -352,6 +356,7 @@ export class Traveller {
   }
 
   place(x: number, z: number, yaw: number): void {
+    if (this.action?.kind === 'alight') this.action = null;
     this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.pose(0);
@@ -455,6 +460,34 @@ export class Traveller {
     this.action = {
       kind: 'board', t: 0, boat, from, local: new THREE.Vector3(), fromYaw: this.yaw,
       side: from.x < 0 ? -1 : 1, launched: false, onDone,
+    };
+  }
+
+  /**
+   * Out of the boat onto a deck alongside: up off the thwart, a foot onto the gunwale on the deck's side and down
+   * onto the boards, then the story has the child back. The reverse of `board`, without the push.
+   */
+  alight(boat: Boat, deck: Deck, onDone: () => void): void {
+    const k = tuning.boarding;
+    this.goal = null;
+    boat.group.updateMatrixWorld(true);
+    const near = (side: number, out: THREE.Vector3) => out.set(side * k.railIn, k.railHeight, -0.08).applyMatrix4(boat.group.matrixWorld);
+    const dx = deck.x1 - deck.x0, dz = deck.z1 - deck.z0, len = Math.hypot(dx, dz);
+    const offDeck = (p: THREE.Vector3) => {
+      const t = THREE.MathUtils.clamp(((p.x - deck.x0) * dx + (p.z - deck.z0) * dz) / (len * len), 0, 1);
+      return Math.hypot(p.x - (deck.x0 + dx * t), p.z - (deck.z0 + dz * t));
+    };
+    const side = offDeck(near(1, this.tmp)) <= offDeck(near(-1, this.tmp2)) ? 1 : -1;
+    const rail = near(side, new THREE.Vector3());
+    const along = THREE.MathUtils.clamp(((rail.x - deck.x0) * dx + (rail.z - deck.z0) * dz) / (len * len),
+      k.alightEnd / len, 1 - k.alightEnd / len);
+    const room = Math.max(0, deck.halfWidth - k.alightEdge);
+    const across = THREE.MathUtils.clamp(((rail.x - deck.x0) * dz - (rail.z - deck.z0) * dx) / len, -room, room);
+    const to = new THREE.Vector3(deck.x0 + dx * along + dz / len * across, 0, deck.z0 + dz * along - dx / len * across);
+    to.y = Math.max(deck.height, heightAt(to.x, to.z));
+    this.action = {
+      kind: 'alight', t: 0, boat, to, rail, fromYaw: this.yaw,
+      toYaw: Math.atan2(to.x - rail.x, to.z - rail.z), side, onDone,
     };
   }
 
@@ -700,6 +733,36 @@ export class Traveller {
         this.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
         a.onDone();
       }
+    } else if (a.kind === 'alight') {
+      const k = tuning.boarding;
+      const boat = a.boat;
+      boat.group.updateMatrixWorld(true);
+      const seat = this.tmp.set(0, 0.02, -0.25);
+      const inside = this.tmp2.set(a.side * k.insideIn, k.insideHeight, -0.25);
+      if (a.t < k.alightStand) {
+        this.position.lerpVectors(seat, inside, THREE.MathUtils.smootherstep(a.t, 0, k.alightStand)).applyMatrix4(boat.group.matrixWorld);
+      } else if (a.t < k.alightRail) {
+        const u = THREE.MathUtils.smootherstep(a.t, k.alightStand, k.alightRail);
+        this.position.lerpVectors(inside, seat.set(a.side * k.railIn, k.railHeight, -0.08), u);
+        this.position.y += Math.sin(u * Math.PI) * k.stepArc * 0.55;
+        this.position.applyMatrix4(boat.group.matrixWorld);
+        a.rail.copy(this.position);
+      } else {
+        const u = THREE.MathUtils.smootherstep(a.t, k.alightRail, k.alightAshore);
+        this.position.lerpVectors(a.rail, a.to, u);
+        this.position.y += Math.sin(u * Math.PI) * k.stepArc;
+      }
+      const turn = Math.atan2(Math.sin(a.toYaw - a.fromYaw), Math.cos(a.toYaw - a.fromYaw));
+      this.yaw = a.fromYaw + turn * THREE.MathUtils.smootherstep(a.t, 0, k.alightAshore);
+      this.riding = a.t < k.alightRail;
+      this.sitting = false;
+      this.rideRoll = this.riding ? boat.roll * 0.55 : 0;
+      this.ridePitch = this.riding ? boat.pitch * 0.55 : 0;
+      if (a.t >= k.alightSettle) {
+        this.action = null;
+        this.position.copy(a.to);
+        a.onDone();
+      }
     }
   }
 
@@ -781,6 +844,17 @@ export class Traveller {
       armLX = THREE.MathUtils.lerp(-1.35, -0.45, climb);
       armRX = THREE.MathUtils.lerp(-1.35, -0.55, climb);
       boardingStep = Math.sin(THREE.MathUtils.smoothstep(a.t, k.push * 0.82, k.inside) * Math.PI);
+      boardingSide = a.side;
+    } else if (a?.kind === 'alight') {
+      const k = tuning.boarding;
+      const step = Math.sin(THREE.MathUtils.smoothstep(a.t, k.alightStand * 0.6, k.alightAshore) * Math.PI);
+      bodyX = 0.18 * step;
+      bodyY = a.side * step * 0.2;
+      crouch = Math.sin(THREE.MathUtils.smoothstep(a.t, k.alightRail, k.alightSettle) * Math.PI) * 0.1;
+      armLX = armRX = -0.5 * step;
+      armLZ = -0.4 - 0.35 * step;
+      armRZ = 0.4 + 0.35 * step;
+      boardingStep = step;
       boardingSide = a.side;
     }
 

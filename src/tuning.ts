@@ -327,6 +327,14 @@ export const tuning = {
     insideIn: 0.28,
     insideHeight: 0.3,
     stepArc: 0.24,
+    /** Getting out onto a deck: standing up off the thwart, a foot on the gunwale, down on the boards, weight settled. */
+    alightStand: 0.55,
+    alightRail: 1.15,
+    alightAshore: 1.8,
+    alightSettle: 2.1,
+    /** Where the foot comes down: at least this far inside the deck's edge and back from either end of it. */
+    alightEdge: 0.4,
+    alightEnd: 0.6,
   },
   cygnetCalls: {
     /** Three cream strokes accompany the cygnet's voice throughout the journey. */
