@@ -55,14 +55,12 @@ export interface Flight {
 }
 
 /**
- * The loop halfway up the white: four short flights round a square. The two far sides are longer by just so much
- * that from one place, and only from there, the top of the last flight lies exactly in front of the foot of the
- * first, so the square seems to climb for ever. That place is south of it, looking down at `LOOP_TILT`.
+ * The loop halfway up the white: four flights round a square, two short and two long. The long ones are longer by
+ * just so much that from one place, and only from there, the top of the last flight lies exactly in front of the
+ * foot of the first, so the square seems to climb for ever. That place is south of it, looking steeply down.
  */
-export const LOOP_RISERS = 4;
-export const LOOP_TILT = THREE.MathUtils.degToRad(45);
-const LOOP_RISE = LOOP_RISERS * STEP.rise;
-const LONG = (4 * LOOP_RISE) / (Math.SQRT2 * Math.tan(LOOP_TILT));
+const LOOP_SHORT = 3;
+const LOOP_LONG = 9;
 
 interface Spec { yaw: number; risers: number; exit: 'left' | 'right' | 'ahead' | null; x1?: number; z1?: number; extra?: { face: Face; at: number }[]; bare?: Face[] }
 
@@ -83,11 +81,11 @@ const SPECS: Spec[] = [
   { yaw: NW, risers: 11, exit: 'right' },
   { yaw: NE, risers: 11, exit: 'left' },
   { yaw: NW, risers: 11, exit: 'right' },
-  // The loop's near corner: its left runs out long, and is open where the loop's last flight seems to come onto it.
-  { yaw: NE, risers: 11, exit: 'ahead', x1: H + LONG, extra: [{ face: 'left', at: 0 }] },
-  { yaw: NE, risers: LOOP_RISERS, exit: 'left' },
-  // The loop's far corner: the way on goes straight ahead from it, and the loop turns off to the left, long.
-  { yaw: NW, risers: LOOP_RISERS, exit: 'ahead', x1: H + LONG, extra: [{ face: 'left', at: 0 }] },
+  // The loop's near corner, open on its left where the loop's last flight seems to come onto it.
+  { yaw: NE, risers: 11, exit: 'ahead', extra: [{ face: 'left', at: 0 }] },
+  { yaw: NE, risers: LOOP_SHORT, exit: 'left' },
+  // The loop's far corner: the way on goes straight ahead from it, and the loop turns off to the left.
+  { yaw: NW, risers: LOOP_SHORT, exit: 'ahead', extra: [{ face: 'left', at: 0 }] },
   { yaw: NW, risers: 11, exit: 'right' },
   { yaw: NE, risers: 11, exit: 'left' },
   { yaw: NW, risers: 11, exit: 'right' },
@@ -141,15 +139,15 @@ const built = (() => {
   // The rest of the loop, which only the bird goes round: down the long far side from the corner the way on leaves
   // from, round the far corner, and back along the other long side toward the corner it seems to close on.
   const onward = landings[LOOP.onward - 1];
-  const far = lay(0, point(onward, onward.x1, 0), { yaw: SW, risers: LOOP_RISERS, exit: 'left' });
+  const far = lay(0, point(onward, onward.x1, 0), { yaw: SW, risers: LOOP_LONG, exit: 'left' });
   const [cx, cz] = faceOf(far.landing, 'left');
   const bottom = point(far.landing, cx, cz);
-  const top = bottom.clone().addScaledVector(along(SE), STEP.going * (LOOP_RISERS - 1)).setY(bottom.y + LOOP_RISE);
+  const top = bottom.clone().addScaledVector(along(SE), STEP.going * (LOOP_LONG - 1)).setY(bottom.y + LOOP_LONG * STEP.rise);
   // It comes onto a copy of the near corner by that corner's long left side, as if onto the corner itself.
   const corner = landings[LOOP.corner - 1];
   const reach = corner.x1;
   const centre = top.clone().addScaledVector(along(SE), reach);
-  const back: Flight = { index: 0, bottom, top, landing: centre, yaw: SE, risers: LOOP_RISERS };
+  const back: Flight = { index: 0, bottom, top, landing: centre, yaw: SE, risers: LOOP_LONG };
   return { flights, landings, far, back, gap: centre.clone().sub(corner.centre) };
 })();
 
@@ -189,7 +187,7 @@ export const CLOUD = { base: levelHeight(BELOW_CLOUD) + 1.5, top: levelHeight(FL
 export const STAIRS_FOOT = flight(1).bottom.clone().addScaledVector(along(NE), -1.2);
 
 export const STAIRS_LANDING = new THREE.Vector2(76, -1231);
-export const STAIRS_ARRIVAL = new THREE.Vector2(88, -1219);
+export const STAIRS_ARRIVAL = new THREE.Vector2(92, -1219);
 
 /**
  * The top landing, open on its left side to the sun: the slippers are by that edge, the child sits there with their

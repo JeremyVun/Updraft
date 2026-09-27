@@ -7,7 +7,7 @@ import type { StairsAir } from '../audio/stairs-air';
 import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
-import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack } from '../world/stairs-penrose';
+import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
 import {
   BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_FROM, FLIGHTS, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
   STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, LOOP, LOOP_BACK, LOOP_FAR, along, flight, landingOf, levelHeight, onLanding,
@@ -131,7 +131,6 @@ export class StairsChapter implements Chapter {
   private readonly eyeFrom = new THREE.Vector3();
   private readonly lookFrom = new THREE.Vector3();
   private readonly loopEye = new THREE.Vector3();
-  private readonly backWay = along(LOOP_BACK.yaw);
   /** While the lens is up in the white over the loop, the cloud is kept deep enough round it. */
   private lofted = false;
   private trickGone = 0;
@@ -456,12 +455,12 @@ export class StairsChapter implements Chapter {
   private walkOn(): void {
     const { child: c } = this.cast;
     if (c.moving || c.busy) return;
-    // In the cloud the bird goes first, and the child goes only as far as it has.
-    if (this.beat === 'follow' && this.stop + 1 > this.birdReached && this.stop + 1 < this.stops.length - 1) return;
     if (this.beat === 'follow' && this.stop === this.loopStop && !this.looped) {
       this.goRoundFirst();
       return;
     }
+    // In the cloud the bird goes first, and the child goes only as far as it has.
+    if (this.beat === 'follow' && this.stop + 1 > this.birdReached && this.stop + 1 < this.stops.length - 1) return;
     if (this.stop >= this.limit) {
       if (this.world.waiting) { this.to('waiting'); return; }
       if (this.beat === 'climb') {
@@ -577,17 +576,21 @@ export class StairsChapter implements Chapter {
       }
       case 'round': {
         k.stay = false;
-        k.pace = 1.2;
+        k.pace = 1.05;
         const to = this.roundWay[this.roundLeg];
         k.errand = this.birdAt.copy(to).setY(0);
         // Past the top of the drawn-in flight it is on the copy of the corner: it goes across at once onto the
         // corner itself, which from here is the same place.
         if (this.roundLeg === 6) {
-          const past = (k.position.x - LOOP_BACK.top.x) * this.backWay.x + (k.position.z - LOOP_BACK.top.z) * this.backWay.z;
-          if (past > -0.02 && k.position.y > LOOP_BACK.top.y - 0.3) {
+          if (upBack(k.position) > 1) {
             fromCopy(k.position, this.tmp);
             k.scale = 1;
             k.standAt(this.tmp.x, this.tmp.y, this.tmp.z, k.yaw);
+            // Should it ever come down short of the corner, it is on the corner all the same.
+            if (k.position.y < this.tmp.y - 0.3) {
+              onLanding(landingOf(LOOP.corner), 0.7, 0, this.tmp);
+              k.standAt(this.tmp.x, this.tmp.y, this.tmp.z, k.yaw);
+            }
             this.roundLeg++;
           }
           break;
@@ -861,8 +864,12 @@ export class StairsChapter implements Chapter {
     // Over the loop the clear air opens out into a hollow in the white big enough for the lens and the whole
     // square; the cloud is made deep enough overhead that the lens, up there, is still in it.
     if (this.beat === 'loop') {
-      d.bubble.set((LOOP_EYE.x + LOOP_LOOK.x) / 2, (LOOP_EYE.y + LOOP_LOOK.y) / 2, (LOOP_EYE.z + LOOP_LOOK.z) / 2, LOOP_EYE.distanceTo(LOOP_LOOK) / 2 + 5);
-      d.clearing = 0.012;
+      // The pocket's clear heart reaches from the lens to just past the loop; beyond that it thickens to white, and
+      // the cloud goes on down under the loop far enough that nothing shows through from below.
+      const heart = LOOP_EYE.distanceTo(LOOP_LOOK) / 2 + 1.5;
+      d.bubble.set((LOOP_EYE.x + LOOP_LOOK.x) / 2, (LOOP_EYE.y + LOOP_LOOK.y) / 2, (LOOP_EYE.z + LOOP_LOOK.z) / 2, heart / 0.6);
+      d.clearing = 0.006;
+      d.base = LOOP_LOOK.y - 14;
     }
     if (this.lofted && this.beat !== 'loop' && this.world.eye.y < CLOUD.top - 1.5) this.lofted = false;
     if (this.lofted) d.top = LOOP_EYE.y + 6;

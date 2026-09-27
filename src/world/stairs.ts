@@ -12,7 +12,7 @@ import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
 import { drawIn, toCopy } from './stairs-penrose';
 import {
-  BELOW_CLOUD, FLIGHTS, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Face, type Flight, type Landing,
+  BELOW_CLOUD, FLIGHTS, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Face, type Flight, type Landing,
 } from './stairs-layout';
 
 /** What each part of the staircase is made of, read by the shader to decide its surface. */
@@ -396,7 +396,7 @@ export class CloudStairs {
     this.trick.name = 'stairs-loop-trick';
     this.trick.visible = false;
     this.group.add(this.trick);
-    this.bank = new CloudBank(onLanding(landingOf(LOOP.onward), 0, 1.7).setY(landingOf(LOOP.onward).centre.y + 0.9), 1.9);
+    this.bank = new CloudBank(onLanding(landingOf(LOOP.onward), 0, 2.3).setY(landingOf(LOOP.onward).centre.y + 1.5), 2.5, 30);
     this.group.add(this.bank.mesh);
 
     const ghostMaterial = new THREE.ShaderMaterial({
@@ -613,10 +613,13 @@ export class CloudStairs {
   /** Where only the bird walks: the loop's far side, and its last flight drawn in toward the copy of the corner. */
   static loopDecks(): Deck[] {
     const top = drawIn(LOOP_BACK.top.clone());
+    const onto = drawIn(LOOP_BACK.top.clone().addScaledVector(along(LOOP_BACK.yaw), 0.8));
     return [
       ...CloudStairs.flightDecks(LOOP_FAR.flight, LOOP_FAR.landing),
       { x0: LOOP_BACK.bottom.x, z0: LOOP_BACK.bottom.z, x1: top.x, z1: top.z, halfWidth: STEP.width * 0.45,
         height: LOOP_BACK.bottom.y, height1: top.y },
+      // The edge of the copy of the corner, as far as it goes before it is on the corner itself.
+      { x0: top.x, z0: top.z, x1: onto.x, z1: onto.z, halfWidth: 0.5, height: top.y },
     ];
   }
 

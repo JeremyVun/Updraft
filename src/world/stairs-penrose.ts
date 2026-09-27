@@ -9,9 +9,9 @@ import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, STEP, along, landingOf } from './s
  */
 
 /** How far from the loop's near corner the eye stands, back along the line the join lies on. */
-const EYE_DISTANCE = 26;
+const EYE_DISTANCE = 30;
 /** The lens it is seen through from there. */
-export const LOOP_ZOOM = 2.3;
+export const LOOP_ZOOM = 2.6;
 
 const corner = landingOf(LOOP.corner);
 export const LOOP_EYE = corner.centre.clone().addScaledVector(LOOP_GAP.clone().normalize(), EYE_DISTANCE);
@@ -46,7 +46,25 @@ export function drawIn(v: THREE.Vector3): THREE.Vector3 {
   return v.lerp(shrunk, s);
 }
 
+/** The loop's last flight as drawn in, up its middle from the foot to where it comes onto the copy. */
+const drawnLine = Array.from({ length: 25 }, (_, i) => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, i / 24)));
+
+/**
+ * How far up the loop's last flight, as drawn in, something standing on it is: 0 at its foot, 1 at its top, and
+ * more than 1 once it is past the top onto the copy of the corner.
+ */
+export function upBack(p: THREE.Vector3): number {
+  let best = 0, near = Infinity;
+  drawnLine.forEach((q, i) => {
+    const d = Math.hypot(p.x - q.x, p.z - q.z);
+    if (d < near) { near = d; best = i; }
+  });
+  const top = drawnLine[24], before = drawnLine[23];
+  const past = ((p.x - top.x) * (top.x - before.x) + (p.z - top.z) * (top.z - before.z)) / Math.max(1e-4, before.distanceToSquared(top));
+  return best === 24 && past > 0 ? 1 + past / 24 : best / 24;
+}
+
 /** How big anything on the loop's last flight has to be drawn so that from the eye it is the size it would be on the corner. */
 export function sizeOnBack(p: THREE.Vector3): number {
-  return THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(p));
+  return THREE.MathUtils.lerp(1, LOOP_SHRINK, Math.min(1, upBack(p)));
 }

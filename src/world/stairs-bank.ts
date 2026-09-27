@@ -24,6 +24,7 @@ export class CloudBank {
   private readonly alphas: THREE.BufferAttribute;
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
+  private readonly tmp = new THREE.Vector3();
 
   constructor(readonly centre: THREE.Vector3, readonly radius: number, count = 22) {
     let seed = 11;
@@ -33,7 +34,7 @@ export class CloudBank {
       const t = rnd() * Math.PI * 2, u = rnd() * 2 - 1, k = Math.cbrt(rnd());
       const home = new THREE.Vector3(Math.cos(t) * Math.sqrt(1 - u * u), u * 0.6, Math.sin(t) * Math.sqrt(1 - u * u))
         .multiplyScalar(radius * 0.75 * k).add(centre);
-      const lump = { home, p: home.clone(), v: new THREE.Vector3(), r: radius * (0.55 + 0.3 * rnd()), a: 0.85 + 0.15 * rnd() };
+      const lump = { home, p: home.clone(), v: new THREE.Vector3(), r: radius * (0.6 + 0.3 * rnd()), a: 1 };
       this.lumps.push(lump);
       puffs.push({ x: home.x, y: home.y, z: home.z, r: lump.r, a: lump.a });
     }
@@ -99,5 +100,4 @@ export class CloudBank {
     if (this.gone && this.whole <= 0.01) this.mesh.visible = false;
   }
 
-  private readonly tmp = new THREE.Vector3();
 }

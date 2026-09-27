@@ -145,11 +145,23 @@ try {
   await page.waitForTimeout(4500);
   await shot('08-in-cloud');
   s = await until((x) => x.beat === 'loop', 60000, 100);
-  for (let i = 1; i <= 12; i++) {
+  // Watch the bird go round the loop, and once the sweep is drawn over the cloud on its far corner, blow it off.
+  for (let i = 1; i <= 60; i++) {
     await page.waitForTimeout(1500);
     const now = await state();
     if (now.beat !== 'loop') break;
-    await shot(`08-ring-${String(i).padStart(2, '0')}`);
+    if (i <= 24) await shot(`08-loop-${String(i).padStart(2, '0')}`);
+    const bank = await page.evaluate(([w, h]) => {
+      const g = window.__game;
+      const hint = g.story.current.windInvitation;
+      if (!hint) return null;
+      const p = hint.clone().project(g.rig.camera);
+      return [(p.x * 0.5 + 0.5) * w, (0.5 - p.y * 0.5) * h];
+    }, [width, height]);
+    if (bank) {
+      log('  blowing the bank', i, JSON.stringify(bank));
+      await swipe([bank[0] - 160, bank[1] + 40], [bank[0] + 180, bank[1] - 30], 450);
+    }
   }
   s = await until((x) => x.beat === 'emerge', 90000, 100);
   for (let i = 1; i <= 6; i++) {
