@@ -792,6 +792,8 @@ export class Cygnet {
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
     else this.passenger(dt);
+    /** Off its own wings the legs come back down under it; left carried up, they trail behind it like a swimmer's. */
+    if (this.state !== 'gliding' && this.state !== 'fledging' && this.state !== 'leaving') this.tucked = ease(this.tucked, 0, 4, dt);
 
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
@@ -1479,8 +1481,10 @@ export class Cygnet {
     const n = this.nodes;
     const st = this.state;
     const d = this.drives;
-    // The grass visibility bias must ease away afloat, or submerged feet draw over the water.
-    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, st === 'swimming' || st === 'gliding' || this.flightPose > 0 || this.billGrip ? 0 : 2.4, 8, dt);
+    // The grass visibility bias must ease away afloat, or submerged feet draw over the water, and on the child,
+    // where pulling it toward a distant camera draws it through their coat and out through the satchel.
+    const lifted = st === 'swimming' || st === 'gliding' || this.carried || this.seating.held || this.flightPose > 0 || this.billGrip;
+    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, lifted ? 0 : 2.4, 8, dt);
     const m = this.mind;
     if (this.debug.stand) this.settle = 0;
     d.time = this.time;
