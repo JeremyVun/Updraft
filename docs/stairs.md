@@ -31,6 +31,10 @@ Then (2026-09-27, verbatim):
 > 3) flying / sailing ontop of the clouds should be refined a bit more. It should be a slightly longer, more beautiful journey. Maybe the sailboat can be modified tastefully just for this journey to look more like an air ship / air boat instead of just the same sail boat
 > 4) The transition to the drowning island needs a better look at it. Right now, it's very obvious to the player that they are being invisibly dropped (the downward motion is seen and felt) through the clouds instead of the dreamlike nature of sailing through clouds and fog and suddenly emerging into the drowning village."
 
+And (2026-09-27, verbatim):
+
+> "More thought and intentionality is needed also around how the player interacts with the stairs to move them into place. Right now, the perspective makes it very hard to do this. This is a problem we solved with the bubbles and the stars in the sky mirror chapter, so we should take inspiration from that (the player can basically in effect click and drag the bubbles over the stars)"
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
