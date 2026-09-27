@@ -222,11 +222,12 @@ export const DESCENT_END = new THREE.Vector2(16, -1254);
 
 /**
  * Where each loose flight is hanging when the room begins, as an offset from where it belongs (x and z in the
- * world) and a turn. All three hang out east of the stair, on the side the puzzle is seen from: the first just out
- * beside its place, the second further off and turned across, the third low and away south, turned right round.
+ * world) and a turn. Each hangs level with its place and off to one side of it as the puzzle is seen from behind the
+ * child, never between the lens and its drawing: the first out to the right, the second to the left and turned
+ * across, the third to the right again and turned right round.
  */
 export const LOOSE_START = [
-  { x: 4.2, z: 1.2, yaw: 0.35 },
-  { x: 5.5, z: -3.5, yaw: 1.4 },
-  { x: 3.2, z: 6.5, yaw: -2.4 },
+  { x: 4.2, z: 0, yaw: 0.4 },
+  { x: -4.6, z: -0.4, yaw: -1.3 },
+  { x: 4.6, z: 0.4, yaw: -2.4 },
 ] as const;

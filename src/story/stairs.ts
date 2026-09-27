@@ -305,7 +305,8 @@ export class StairsChapter implements Chapter {
     const s = this.stops[at];
     child.stop();
     child.position.y = level === 0 ? 0 : flight(level).top.y;
-    child.place(s.x, s.z, Math.PI);
+    const spot = n < LOOSE.length ? this.waitSpot(level) : s;
+    child.place(spot.x, spot.z, Math.PI);
     // On its own feet a stop behind them, as it would be if they had climbed here together.
     const behind = this.stops[Math.max(0, at - 1)];
     if (cygnet.carried) cygnet.release(this.birdAt.set(behind.x, 0, behind.z));
@@ -481,6 +482,12 @@ export class StairsChapter implements Chapter {
       : out ? 'above' : a.cloud > 0.5 || ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat) ? 'cloud' : 'under';
   }
 
+  /** Where they wait on a landing for its next flight: its back corner away from that flight, clear of its drawing. */
+  private waitSpot(level: number): THREE.Vector3 {
+    const L = landingOf(level);
+    return onLanding(L, L.openings.some(o => o.face === 'left') ? -0.5 : 0.5, -0.35, this.tmp);
+  }
+
   /** Up the stair, stop by stop, as far as it goes. */
   private walkOn(): void {
     const { child: c } = this.cast;
@@ -493,7 +500,12 @@ export class StairsChapter implements Chapter {
     // In the cloud the bird goes first, and the child goes only as far as it has.
     if (this.beat === 'follow' && this.stop + 1 > this.birdReached && this.stop + 1 < this.stops.length - 1) return;
     if (this.stop >= this.limit) {
-      if (this.world.waiting) { this.to('waiting'); return; }
+      if (this.world.waiting) {
+        this.to('waiting');
+        const spot = this.waitSpot(this.stops[this.stop].level);
+        c.walkTo(spot.x, spot.z, false, undefined, 0.12);
+        return;
+      }
       if (this.beat === 'climb') {
         this.to('hesitate');
         c.walkTo(ASIDE.x, ASIDE.z, false, undefined, 0.12);
@@ -977,9 +989,11 @@ export class StairsChapter implements Chapter {
       }
       case 'climb':
       case 'waiting': {
-        // One side of the stair, a little above it, and the same way on through the puzzle: looking down across
-        // the gap, the loose flight and the gold drawing of where it goes, and holding still while it is moved.
-        s.from = this.from.set(0.92, 0, 0.4).normalize();
+        // From behind them and above, looking up the stair the way it climbs, and the same way on through the
+        // puzzle: the gold drawing of the missing flight straight on up the stair from them, the loose flight
+        // hanging level with it off to one side, so that a stroke carries it across the screen onto its drawing;
+        // and holding still while it is moved.
+        s.from = this.from.set(0.12, 0, 1).normalize();
         this.subjects.primary.copy(c).y += 1.1;
         const piece = this.world.waiting;
         const high = c.y > levelHeight(BELOW_CLOUD - 1);
@@ -991,9 +1005,9 @@ export class StairsChapter implements Chapter {
           s.smoothFit = 1.5;
           s.target.copy(c).lerp(home, 0.6);
           s.target.y = THREE.MathUtils.lerp(c.y + 1, home.y, 0.5);
-          s.distance = 17;
+          s.distance = 13;
           // Up over the gap, but never into the cloud.
-          s.height = Math.min(7.5, CLOUD.base - 2.4 - s.target.y);
+          s.height = Math.min(6.5, CLOUD.base - 2.4 - s.target.y);
         } else if (c.y < STAIRS_GROUND + 0.3) {
           // Still on the grass: from the south, the stair ahead of them, as they first saw it.
           s.from = this.from.set(-0.1, 0, 1).normalize();
