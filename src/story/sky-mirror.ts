@@ -74,7 +74,8 @@ export class SkyMirrorChapter implements Chapter {
     plane.homeRadius=7;
     plane.landingGround=(x,z)=>mirrorBed(x,z)>-0.04?0.001:null;
     plane.hold(child); plane.visible=true;
-    child.alight(boat,this.entryDeck,()=>child.walkTo(this.entryDeck.x1+entryX,this.entryDeck.z1+entryZ,false,()=>this.setDown(),0.3));
+    const off=this.entryDeck.rampLength+1;
+    child.alight(boat,this.entryDeck,()=>child.walkTo(this.entryDeck.x1+entryX*off,this.entryDeck.z1+entryZ*off,false,()=>this.setDown(),0.3));
     this.shot.subjects={primary:this.frameChild,secondary:this.framePlay,margin:0.76,extra:12};
     this.frame();
   }
@@ -256,7 +257,9 @@ export class SkyMirrorChapter implements Chapter {
     child.pickUp(()=>{
       room.putDownWand(child.position);
       carry.gatherUp(()=>carry.stow(()=>{
-        this.to('jetty'); child.walkTo(MIRROR_BERTH.x-1.5,MIRROR_BERTH.z,false,undefined,0.25);
+        // Round to the foot of the ramp and up it, not onto the boards over their side.
+        const foot=this.deck.x0-this.deck.rampLength-1;
+        this.to('jetty'); child.walkTo(foot,this.deck.z0,false,()=>child.walkTo(MIRROR_BERTH.x-1.5,MIRROR_BERTH.z,false,undefined,0.25),0.5);
       }));
     });
   }

@@ -49,6 +49,20 @@ export interface Deck {
   height: number;
   /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
   stepOffDepth?: number;
+  /** A ramp this long runs on from one end of the deck down to the ground. */
+  rampAt?: 'start' | 'end';
+  rampLength?: number;
+}
+
+/** The height of a deck's ramp under (x, z), or null off it. */
+function rampHeight(d: Deck, x: number, z: number): number | null {
+  if (!d.rampAt || !d.rampLength) return null;
+  const dx = d.x1 - d.x0, dz = d.z1 - d.z0, len = Math.hypot(dx, dz);
+  const along = ((x - d.x0) * dx + (z - d.z0) * dz) / len;
+  const beyond = d.rampAt === 'end' ? along - len : -along;
+  if (beyond < 0 || beyond > d.rampLength) return null;
+  if (Math.abs((x - d.x0) * dz - (z - d.z0) * dx) / len > d.halfWidth) return null;
+  return THREE.MathUtils.lerp(d.height, heightAt(x, z), beyond / d.rampLength);
 }
 const WALK = 2.6;
 const RUN = 5.4;
@@ -352,6 +366,10 @@ export class Traveller {
       const pz = d.z0 + dz * t;
       if (Math.hypot(x - px, z - pz) <= d.halfWidth) return Math.max(d.height, heightAt(x, z));
     }
+    for (const d of this.decks) {
+      const ramp = rampHeight(d, x, z);
+      if (ramp !== null) return Math.max(ramp, heightAt(x, z));
+    }
     return heightAt(x, z);
   }
 
@@ -598,7 +616,11 @@ export class Traveller {
     const shore = atPond ? POND_LEVEL + 0.2 : 0.2;
     const deckLanding=this.decks.some(d=>d.stepOffDepth!==undefined && nextH>=d.stepOffDepth &&
       Math.hypot(nx-d.x1,nz-d.z1)<d.halfWidth);
-    if (nextH < shore && nextH < this.ground(p.x, p.z) && !deckLanding) {
+    const here = this.ground(p.x, p.z);
+    // Down a ramp, and off its foot, but never off its sides.
+    const downRamp = this.decks.some((d) => rampHeight(d, nx, nz) !== null
+      || (rampHeight(d, p.x, p.z) !== null && nextH > here - 0.08));
+    if (nextH < shore && nextH < here && !deckLanding && !downRamp) {
       this.speed = 0;
       if (this.goal) {
         const arrive = this.goal.onArrive;

@@ -4,7 +4,7 @@ import { glsl, tuning } from '../tuning';
 /** A sandbank just beneath the sea, well west of home. Nothing rises above the reflected horizon. */
 export const SKY_MIRROR = { x: -455 + MIRROR_SHIFT.x, z: -2310 + MIRROR_SHIFT.z, rx: 82, rz: 70 } as const;
 /** Moor offshore, alongside a wooden walk that reaches the submerged flat. */
-export const MIRROR_ENTRY_DECK = { x0: -514.12 + MIRROR_SHIFT.x, z0: -2268.87 + MIRROR_SHIFT.z, x1: -501 + MIRROR_SHIFT.x, z1: -2278 + MIRROR_SHIFT.z, halfWidth: 1.15, height: 0.28, stepOffDepth: -0.04 };
+export const MIRROR_ENTRY_DECK = { x0: -514.12 + MIRROR_SHIFT.x, z0: -2268.87 + MIRROR_SHIFT.z, x1: -501 + MIRROR_SHIFT.x, z1: -2278 + MIRROR_SHIFT.z, halfWidth: 1.15, height: 0.28, stepOffDepth: -0.04, rampAt: 'end', rampLength: 2.6 } as const;
 export const MIRROR_LANDING = { x: -515.66 + MIRROR_SHIFT.x, z: -2271.09 + MIRROR_SHIFT.z, yaw: Math.atan2(13.12,-9.13) } as const;
 export const MIRROR_WATCH = { x: -454 + MIRROR_SHIFT.x, z: -2281 + MIRROR_SHIFT.z } as const;
 /** Legacy causeway stops, retained for existing checkpoint and route tooling. */
@@ -13,7 +13,7 @@ export const MIRROR_PATH = [
   { x: -436 + MIRROR_SHIFT.x, z: -2320 + MIRROR_SHIFT.z }, { x: -406 + MIRROR_SHIFT.x, z: -2323 + MIRROR_SHIFT.z },
 ] as const;
 export const MIRROR_BERTH = { x: -390 + MIRROR_SHIFT.x, z: -2323 + MIRROR_SHIFT.z, yaw: Math.PI } as const;
-export const MIRROR_DECK = { x0: -407 + MIRROR_SHIFT.x, z0: -2323 + MIRROR_SHIFT.z, x1: -391 + MIRROR_SHIFT.x, z1: -2323 + MIRROR_SHIFT.z, halfWidth: 1.15, height: 0.22 };
+export const MIRROR_DECK = { x0: -407 + MIRROR_SHIFT.x, z0: -2323 + MIRROR_SHIFT.z, x1: -391 + MIRROR_SHIFT.x, z1: -2323 + MIRROR_SHIFT.z, halfWidth: 1.15, height: 0.22, rampAt: 'start', rampLength: 2.6 } as const;
 /** The empty hull drifts through the deep channel, never over the walkable mirror. */
 export const MIRROR_DRIFT = [
   { x: -532 + MIRROR_SHIFT.x, z: -2259 + MIRROR_SHIFT.z }, { x: -533 + MIRROR_SHIFT.x, z: -2215 + MIRROR_SHIFT.z }, { x: -403 + MIRROR_SHIFT.x, z: -2206 + MIRROR_SHIFT.z },

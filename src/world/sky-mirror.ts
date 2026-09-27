@@ -183,6 +183,18 @@ export class SkyMirror {
     for(const side of [-1,1])part(new THREE.BoxGeometry(0.14,0.22,length),(entry.x0+entry.x1)/2+Math.cos(entryYaw)*side*0.85,
       entry.height-0.23,(entry.z0+entry.z1)/2-Math.sin(entryYaw)*side*0.85);
     add(mergeGeometries(entryParts),0,0,0);entryParts.forEach(g=>g.dispose());
+    // Each jetty runs down a ramp onto the mirror at its island end, so the walk on and off it is a walk.
+    const rampParts: THREE.BufferGeometry[]=[];
+    for(const deck of [MIRROR_ENTRY_DECK,MIRROR_DECK]) {
+      const out=deck.rampAt==='end'?1:-1, dx=deck.x1-deck.x0, dz=deck.z1-deck.z0;
+      const yaw=Math.atan2(dx*out,dz*out), run=deck.rampLength, fall=Math.atan2(deck.height,run), slant=Math.hypot(deck.height,run);
+      const [ex,ez]=out>0?[deck.x1,deck.z1]:[deck.x0,deck.z0];
+      const lay=(g:THREE.BufferGeometry,along:number,y:number)=>rampParts.push(g.rotateX(fall).translate(0,y,along).rotateY(yaw).translate(ex,0,ez));
+      const planks=Math.ceil(slant/0.5);
+      for(let i=0;i<planks;i++){const u=(i+0.5)/planks;lay(new THREE.BoxGeometry(deck.halfWidth*2,0.12,slant/planks-0.015),u*run,deck.height*(1-u)-0.06);}
+      for(const side of [-1,1])lay(new THREE.BoxGeometry(0.14,0.2,slant).translate(side*(deck.halfWidth-0.3),0,0),run/2,deck.height/2-0.19);
+    }
+    add(mergeGeometries(rampParts),0,0,0);rampParts.forEach(g=>g.dispose());
     // A lone lamppost comes into view along the curve, with no house or second red door.
     add(new THREE.CylinderGeometry(0.075, 0.11, 5, 9), MIRROR_BERTH.x - 4, 2.2, MIRROR_BERTH.z - 1.05);
     add(new THREE.BoxGeometry(0.76, 0.12, 0.62), MIRROR_BERTH.x - 4, 4.85, MIRROR_BERTH.z - 1.05);
