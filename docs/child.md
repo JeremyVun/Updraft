@@ -72,6 +72,10 @@ And on `/tmp/child3/checkpoint3-walk-behind.png` (verbatim):
 > perspective of the camera, i think we may need to use a trick and shorten the coat by just a tiny little bit so it
 > looks less like a dress and more like an oversized coat.
 
+His ruling during that round (2026-09-27). Asked whether to turn the cygnet sideways in the bag, as both concepts
+show, so the bag can be a flatter backpack instead of as deep as the bird is long, he chose "Turn it sideways
+(Recommended)".
+
 Earlier attempts on the child's model are not a guide. Do not mine old transcripts or git history for them.
 
 ## The target
@@ -168,5 +172,46 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
 - Face details still at **D** until Jeremy rules on the shape.
 - Capture harness for this round, in `/tmp/child3`:
   - `snap.sh <tag>` freezes the worktree as a build served at `:5377/<tag>/`, so edits don't disturb captures.
-  - `studio.sh <tag>` shoots the child alone on cream through a long lens (`URL=`, `BIRD=1`, `ONLY=1`).
+  - `studio.sh <tag>` shoots the child alone on cream through a long lens (`URL=`, `BIRD=1`, `ONLY=1`; `FACE=1` for
+    the close face views, `STRAPS=1` for the straps). The gaze is held straight ahead, so the head doesn't turn.
   - `overlay.py`, `compare.py`, `faces.py` and `checkpoint.py` build the comparisons with the concept.
+  - `headcmp.py <tag>` puts the concept's head into our face shot at full-body scale (hood top to sole matched). It
+    is the fair way to compare the hood and face, because matching on the eyes hides that ours sit higher.
+  - `birdfit.sh <tag>` skins the cygnet's vertices on the CPU and reports any outside the bag's walls or over its rim.
+    `headfit.sh <tag>` reports how close its head comes to the hood. Their bag and hood numbers are copies of
+    `garments.ts`; update them when those change.
+- Round 3 (2026-09-27, `child-rebuild` to `a2a83ee`), after Jeremy's ask above. The knobs are in `garments.ts` unless
+  noted.
+  - **Hood opening.** Measured at body scale, the two openings were the same width at eye level, but ours was broad
+    and low at the top and closed in a U under the chin. The concept's is a tall, narrow arch whose sides run down
+    beside the jaw into the scarf. The opening is now drawn as that front outline, an egg with its narrow end up
+    (`OPENING`: top, widest point, bottom, half-width, and how the width falls away above and below it). The cut
+    angle round the hood (`hoodOpen`) is solved from it once. The rolled rim is thicker (radius 0.05) and the brim
+    lifts less. The hair cap is taller (`HAIR.ry` 0.296), because the face's crown showed through it under the
+    taller arch.
+  - **Bag.** It looked like a bin because the cygnet sat facing forward, its body front to back, so the bag had to be
+    as deep as the bird is long. Its tail poked out of the far side even then. Per Jeremy's ruling, the cygnet now
+    sits across the bag, facing out past the child's left shoulder and a little back:
+    - `SEATS.satchel` yaw 1.9 in `creatures/cygnet/ride.ts`.
+    - The satchel socket's x is +0.01 in `body.ts`.
+    - The stowed neck stands nearly straight in `creatures/cygnet/pose.ts`.
+    - Its head is beside the hood where the camera behind sees it, as in the promo header. Before, its head was
+      inside the hood's volume most of the time.
+
+    The bag is a soft satchel, wider than it is deep:
+    - `bagSize` gives a half-width of 0.292 + belly, 0.232 toward the child, and 0.19 + belly away.
+    - It is fuller low down, with a rounded bottom (`BAG_ROWS`) and softer corners (`BAG_SQUARE` 3.2).
+    - The rim is lower (`BAG.lip` 1.46), sagging between the corners, so the bag is shorter and the bird's back shows.
+    - `BAG_KEEP` in `body.ts` follows the new shape.
+    - Every cygnet vertex is inside the walls, the worst 2% in from the wall.
+  - **Straps** (`strap()`). Each one leaves the top of the bag's near face and goes over the shoulder. It comes down
+    the chest to the second button, runs round under the arm on the coat, and curves into the lower corner of the
+    bag's near face. Both ends are skinned to the bag and sink into the leather.
+  - **Hem** raised from 0.56 to 0.6 in every place that has it: `hemY`, the lowest `COAT` rows (a touch wider, to
+    keep the flare), and the shader's hem ripple and stitch line.
+  - **Gates**, both builds back to back. Stow, unstow and set-down match the starting build (stow turn 0.0619 against
+    0.0614). The failures are the known flakes, on both builds: jerk 0.0201–0.0205, and gather turn about 0.10.
+  - **Noticed, not changed** (face work, for later). At body scale our eyes sit about 0.04 higher in the head than
+    the concept's, and our face is about 12% wider. The concept's ears are larger and show inside the opening.
+  - Sheets shown to Jeremy, in `/tmp/child3`: `checkpoint4-hood.png`, `checkpoint4-bag.png`,
+    `checkpoint4-straps.png` and `checkpoint4-walk-behind.png`.
