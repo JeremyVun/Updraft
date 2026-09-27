@@ -1,4 +1,4 @@
-// Real fanning and visual states of the approved orb. node tools/ember-check.mjs [portrait]
+// Real updrafts and visual states of the approved orb; straight sweeps must not wake it. node tools/ember-check.mjs [portrait]
 // BASE selects the server. PNGs, movie and report go to /tmp/updraft-orb-<mode>-*.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -43,37 +43,48 @@ try {
   await page.waitForTimeout(2000);
   report.waiting = await state(); assert.equal(report.waiting.lit, false); assert.equal(report.waiting.light, 0);
   await page.screenshot({ path: `${prefix}-waiting.png` });
-  await page.waitForFunction(() => __game.emberInvitation.batch.mesh.visible, null, { timeout: 12000 });
+  await page.waitForFunction(() => __game.swirl.glow > .35 && __game.story.current.coax, null, { timeout: 12000 });
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${prefix}-invitation.png` });
   const touch = portrait ? await context.newCDPSession(page) : null;
-  for (let stroke = 0; stroke < 7; stroke++) {
-    const s = await state();
-    const x = (s.screen[0] + 1) * viewport.width / 2, y = (1 - s.screen[1]) * viewport.height / 2;
-    const radius = viewport.height * 0.075;
+  const radius = viewport.height * 0.075;
+  const centre = async () => { const s = await state(); return [(s.screen[0] + 1) * viewport.width / 2, (1 - s.screen[1]) * viewport.height / 2]; };
+  const pointer = (type, x, y) => touch ? touch.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+    : type === 'touchEnd' ? null : page.mouse.move(x, y);
+  report.straight = [];
+  for (let stroke = 0; stroke < 6; stroke++) {
+    const [x, y] = await centre();
     const start = x + (stroke % 2 ? radius : -radius), end = x + (stroke % 2 ? -radius : radius);
-    if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: start, y }] });
-    else await page.mouse.move(start, y);
-    for (let step = 1; step <= 36; step++) {
-      const at = start + (end - start) * step / 36;
-      if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: at, y }] });
-      else await page.mouse.move(at, y);
-      await page.waitForTimeout(20);
+    await pointer('touchStart', start, y);
+    for (let step = 1; step <= 36; step++) { await pointer('touchMove', start + (end - start) * step / 36, y); await page.waitForTimeout(20); }
+    await pointer('touchEnd');
+    report.straight.push(await state());
+  }
+  assert(report.straight.every(s => !s.lit && s.wake === 0), 'straight sweeps across the orb must not wake it');
+  // Timed by the clock rather than by step count, so slower touch dispatch still circles about once a second.
+  let [x, y] = await centre();
+  await pointer('touchStart', x + radius, y);
+  for (let loop = 0; loop < 12; loop++) {
+    [x, y] = await centre();
+    for (let angle = 0, began = Date.now(); angle < Math.PI * 2;) {
+      angle = Math.min(Math.PI * 2, (Date.now() - began) / 900 * Math.PI * 2);
+      await pointer('touchMove', x + Math.cos(angle) * radius, y - Math.sin(angle) * radius);
+      await page.waitForTimeout(12);
     }
-    if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     const after = await state(); report.sweeps.push(after);
     if (!after.lit) {
       const previous = report.sweeps.at(-2) ?? report.waiting;
-      assert(after.size > previous.size, 'fanning should progressively grow the orb');
-      assert(after.alpha > previous.alpha, 'fanning should progressively brighten the orb');
+      assert(after.size > previous.size, 'an updraft should progressively grow the orb');
+      assert(after.alpha > previous.alpha, 'an updraft should progressively brighten the orb');
       assert(after.illumination > previous.illumination, 'forest illumination should grow before ignition');
       assert.equal(after.light, 0, 'warming light must not open the story gate');
-      await page.screenshot({ path: `${prefix}-sweep-${stroke + 1}.png` });
+      await page.screenshot({ path: `${prefix}-circle-${loop + 1}.png` });
     }
-    if (stroke === 0) { assert(!after.lit, 'one casual pass must not ignite'); await page.screenshot({ path: `${prefix}-fanning.png` }); }
+    if (loop === 0) { assert(!after.lit, 'one loop must not ignite'); await page.screenshot({ path: `${prefix}-fanning.png` }); }
     if (after.lit) break;
   }
-  assert(report.sweeps.at(-1).lit, 'deliberate sweeps must light the orb');
+  await pointer('touchEnd');
+  assert(report.sweeps.at(-1).lit, 'circling over the orb must light it');
   assert(report.sweeps.at(-1).size > report.waiting.size * 2.5, 'resting orb should be much smaller');
   assert(report.sweeps.at(-1).alpha > report.waiting.alpha * 3, 'resting orb should be much dimmer');
   await page.waitForTimeout(400);

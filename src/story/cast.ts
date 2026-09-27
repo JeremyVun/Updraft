@@ -146,8 +146,10 @@ export interface Chapter {
   readonly invitesSail?: boolean;
   /** While the paper plane waits for wind: where a sweep across it should head. */
   readonly planeInvitation?: THREE.Vector3 | null;
-  /** A chapter target, such as a waiting ember or caught plane, that needs a deliberate sweep. */
+  /** A chapter target, such as a caught plane, that needs a deliberate sweep. */
   readonly windInvitation?: THREE.Vector3 | null;
+  /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
+  readonly updraftTarget?: THREE.Vector3 | null;
   /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */

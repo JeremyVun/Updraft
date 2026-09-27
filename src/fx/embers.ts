@@ -75,14 +75,14 @@ interface Spark {
 }
 
 /**
- * One light-orb ember: a warm heart wrapped in breathing veils. Its visible centre is also its brush target.
- * Fanning wakes it; the resulting light burns down again unless it is fanned.
+ * One light-orb ember: a warm heart wrapped in breathing veils. Its visible centre is also where its updraft stands.
+ * An updraft wound up over it wakes it; the resulting light burns down again unless rising air fans it.
  */
 export interface Coal {
   readonly p: THREE.Vector3;
   /** How steadily it is burning, 0 to 1. */
   heat: number;
-  /** The rush of a gust across it, on top of the heat: what throws the light and the sparks. */
+  /** The rush of rising air through it, on top of the heat: what throws the light and the sparks. */
   flare: number;
   lit: boolean;
   /** How much breath an unlit coal has had, 0 to 1. */
@@ -90,7 +90,7 @@ export interface Coal {
   live: boolean;
   /** Visibility of an authored reveal; zero keeps an unlit ember concealed in its shelter. */
   reveal: number;
-  /** When it was laid: the gust that lit the last one must not run straight on into this one. */
+  /** When it was laid: the updraft that lit the last one must not run straight on into this one. */
   laid: number;
   seed: number;
   breath: number;
@@ -98,8 +98,8 @@ export interface Coal {
 
 /**
  * Embers in the leaf litter of the dark wood. In every other room the wind is seen in the grass; here there is no
- * grass and no light, and the wind is seen only in what it does to fire: a gust wakes a coal and it goes up in a
- * rush of sparks, and the child walks toward wherever the player has made it bright. The light is the only path.
+ * grass and no light, and the wind is seen only in what it does to fire: an updraft wakes a coal and it goes up in
+ * a rush of sparks, and the child walks toward wherever the player has made it bright. The light is the only path.
  *
  * The room lays the coals (`lay`) one ahead of the last, so there is always exactly one obvious thing to blow on.
  * Anywhere else a gust still stirs cinders out of the wet leaves: the wind always answers, it just cannot walk a
@@ -234,21 +234,35 @@ export class Embers {
     }
   }
 
-  /** Only motion across the visible coal feeds ignition; a distant gust or its fading wake cannot. */
+  /**
+   * Screen travel across a chapter target such as the wood's caught paper or the sleeping island's pillow.
+   * Coals take no breath from it: only an updraft wakes them (`updraft`).
+   */
   brush(camera: THREE.Camera, input: PointerInput, target: THREE.Vector3 | null, dt: number): number {
-    for (const coal of this.coals) coal.breath = 0;
     if (!target || input.muted || !input.present) return 0;
     const t = tuning.wood;
     const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1;
     const travel = Math.hypot((input.ndc.x - input.prevNdc.x) * aspect, input.ndc.y - input.prevNdc.y);
     if (travel < t.brushTravelMin || dt <= 0) return 0;
     const touch = screenBrush(camera, target, input.prevNdc, input.ndc, t.brushRadius);
-    // Accumulate distance brushed across the ember, independent of terrain projection or event rate.
-    // Cap a single event so entering the canvas or a cursor jump cannot finish a coal.
-    const breath = Math.sqrt(touch) * Math.min(travel, t.brushStepMax) / dt;
+    // Accumulate distance brushed across the target, independent of terrain projection or event rate.
+    // Cap a single event so entering the canvas or a cursor jump cannot finish it.
+    return Math.sqrt(touch) * Math.min(travel, t.brushStepMax) / dt;
+  }
+
+  /**
+   * Only the player's own updraft, wound up over the waiting coal, feeds ignition: straight strokes build no charge,
+   * and a column wound up anywhere else, or the fading lift it leaves in the field, cannot.
+   */
+  updraft(input: PointerInput, target: THREE.Vector3 | null): void {
+    for (const coal of this.coals) coal.breath = 0;
+    if (!target || input.muted || !input.present) return;
     const coal = this.coals.find(c => c.live && c.p === target);
-    if (coal) coal.breath = breath;
-    return breath;
+    if (!coal) return;
+    const t = tuning.wood;
+    const over = 1 - THREE.MathUtils.smoothstep(Math.hypot(input.updraftAt.x - coal.p.x, input.updraftAt.z - coal.p.z),
+      t.updraftReach * 0.5, t.updraftReach);
+    coal.breath = THREE.MathUtils.smoothstep(input.charge, t.updraftFrom, t.updraftFull) * over;
   }
 
   private throwSparks(coal: Coal, count: number): void {
@@ -288,11 +302,11 @@ export class Embers {
     for (const c of this.coals) {
       if (!c.live) continue;
       const w = this.wind.sample(c.p.x, c.p.z, this.sample);
-      // The field fans existing fires. Ignition additionally needs a fresh stroke across this coal.
-      const breath = w.energy;
+      // Rising air in the field fans existing fires. Ignition additionally needs an updraft over this coal.
+      const breath = w.lift * t.fanLift;
       if (!c.lit) {
         if (time - c.laid < 1.4) continue;
-        c.wake = THREE.MathUtils.clamp(c.wake + (c.breath > 0 ? c.breath * t.catchRate : -t.wakeCool) * dt, 0, 1);
+        c.wake = THREE.MathUtils.clamp(c.wake + (c.breath > 0 ? c.breath * t.updraftCatch : -t.wakeCool) * dt, 0, 1);
         c.heat = c.wake * 0.12;
         if (c.wake >= 1) {
           c.lit = true;
@@ -354,7 +368,7 @@ export class Embers {
         this.scatter(s, near);
       }
       const w = this.wind.sample(s.p.x, s.p.z, this.sample);
-      /** A gust is breath on a coal, and away from the coals it still turns up cinders out of the wet leaves. */
+      /** Any wind turns up cinders out of the wet leaves; only an updraft is breath on a coal. */
       s.heat = Math.min(s.max, s.heat + (w.energy * t.stir + w.lift * 1.3) * dt);
       s.heat *= Math.exp(-dt * (0.16 + 0.22 * s.heat + (s.max < 1 ? 0.5 : 0)));
       const ground = Math.max(heightAt(s.p.x, s.p.z), 0);

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { StormStrike } from '../fx/storm';
 import type { Shot } from '../camera';
 import type { Coal } from '../fx/embers';
+import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
@@ -323,6 +324,7 @@ export class WoodChapter implements Chapter {
     }
 
     this.paperBreath = 0;
+    this.watchInvitation();
     this.heading(dt);
     this.weather(dt);
     if (p.held) p.hold(c);
@@ -680,14 +682,42 @@ export class WoodChapter implements Chapter {
 
   private paperBreath = 0;
 
-  /** Screen-local breath, supplied by the same deliberate gesture that fans the embers. */
+  /** Screen-local breath from deliberate strokes across the caught paper. */
   brushDry(amount: number): void { this.paperBreath = amount; }
 
   get windInvitation(): THREE.Vector3 | null {
-    if (this.scripted || this.beat === 'bolt' || this.beat === 'toBoat') return null;
-    if (this.beat === 'snag') return this.cast.plane.position;
+    return this.beat === 'snag' && !this.scripted ? this.cast.plane.position : null;
+  }
+
+  private get waitingCoal(): Coal | null {
+    if (this.scripted || this.beat === 'bolt' || this.beat === 'toBoat' || this.beat === 'snag') return null;
     const coal = this.beat === 'lost' ? (this.hearth && this.hearth.reveal > 0.95 ? this.hearth : null) : this.ahead;
-    return coal?.live && !coal.lit ? coal.p : null;
+    return coal?.live && !coal.lit ? coal : null;
+  }
+
+  get updraftTarget(): THREE.Vector3 | null {
+    return this.waitingCoal?.p ?? null;
+  }
+
+  private readonly asking: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
+  private askedFor: Coal | null = null;
+  private askedAt = 0;
+  private workedAt = -Infinity;
+
+  /** The waiting coal's updraft shows after the same wait as other invitations, and gives way while the player works it. */
+  private watchInvitation(): void {
+    const coal = this.waitingCoal;
+    if (coal !== this.askedFor) { this.askedFor = coal; this.askedAt = this.now; this.workedAt = -Infinity; }
+    if (coal && coal.breath > 0) this.workedAt = this.now;
+  }
+
+  get coax(): Coax | null {
+    const coal = this.waitingCoal;
+    if (!coal || coal !== this.askedFor || this.now - this.askedAt < tuning.wood.inviteAfter
+      || this.now - this.workedAt < tuning.invitation.resumeAfter) return null;
+    // Wound from the litter beneath the orb, so the loops rise through the light rather than above it.
+    this.asking.at.set(coal.p.x, Math.max(heightAt(coal.p.x, coal.p.z), 0), coal.p.z);
+    return this.asking;
   }
 
   private board(): void {

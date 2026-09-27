@@ -30,7 +30,7 @@ fright has one unmistakable cause; the authored event cannot repeat during an id
 The shelter is an uneven cluster of partly buried boulders beneath a tilted slab, with a low west-facing
 crevice. Broken chips, broad weathered facets and patches of moss tie it to the forest floor. Its ember is inside, concealed during
 the approach and fright. It becomes visible only when the camera has turned toward the entrance after the
-jump. The player fans it awake, revealing the frightened bird. The child hesitates, then crosses to a spot
+jump. The player winds an updraft over it to wake it, revealing the frightened bird. The child hesitates, then crosses to a spot
 outside the rock, kneels and offers a still hand. After 2.2 seconds the cygnet walks out to them. The pickup
 begins only once the bird is outside too. The reunion has no level-complete musical cue.
 The child first needed light for their own next step; now they use it to help their companion. Care gives them
@@ -97,6 +97,35 @@ so the child walks out to the boat without another light. The walk out follows t
 instead of heading straight for the berth, which had cut about nine units through the trunks. The legacy `dry` save key is
 retained for compatibility, and old saves near the shore do not recreate the removed ember.
 
+## Updrafts light the embers (September 27)
+
+> “On the woods island, i want the embers to only respond to updrafts (change the indicative gesture appropriately)”
+
+A coal now takes breath only from the player's updraft: circling the cursor winds up `input.charge`, and while
+the chapter waits on a coal (`WoodChapter.updraftTarget`, the same coal the sweep used to point at) circles drawn
+within `tuning.pointer.anchorNear` of it on screen stand the column on the coal (`input.anchor`), as they do under
+the cygnet and at the scarf's wrapped trunk. `Embers.updraft` turns that charge into the coal's breath
+(`updraftFrom`/`updraftFull`, and only while the column stands within `updraftReach` of it), and ignition gains
+`updraftCatch` a second at full breath. Straight strokes build no charge, so they no longer wake a coal; circling
+somewhere else in the wood leaves it cold. A burning coal flares and is topped up by the field's rising air
+(`fanLift`) rather than gust energy. Loose cinders in the litter still answer any wind, and the orb's veils still
+lean with passing air, so a sweep is seen without lighting anything.
+
+The waiting coal's invitation is the updraft spiral (`coax`, drawn by `fx/swirl.ts`) wound from the litter under the
+orb, radius `inviteCoalRadius`, instead of the straight sweep. It keeps the sweep's timing: it appears
+`inviteAfter` seconds after the coal starts waiting, gives way while the player's updraft is feeding the coal, and
+returns `tuning.invitation.resumeAfter` seconds after that stops. The camera holds its composition while a coal
+waits exactly as before. The caught paper is unchanged: strokes across it still free it (`windInvitation`,
+`brushDry`), with the same sweep invitation.
+
+Checked with real mouse gestures over the first coal at 1600×900: before the change straight passes lit it in
+3.82 s of game time; after it, 14 straight passes over 13 s leave it at wake 0, circling over it at about a loop a
+second lights it in 3.95 s, and the same circling 450 px to the side leaves it cold. `wood-check` reaches the boat
+with real circles and paper sweeps on desktop and portrait touch; `ember-check`, `wood-logic-check` and the wood
+scene of `wind-invitation-check` pass. `wood-scene-check` times out waiting for its SwiftShader fixture, the same on
+`aa1293f`. Stills: `/tmp/updraft-pt0927-embers-invite-first-*.png` (first coal) and
+`/tmp/updraft-pt0927-embers-hearth-lost-*.png` (the refuge, where the rock hides the back of each loop).
+
 ## Earlier progression defect
 
 The plane's wetness previously changed only its shader. At the plane ember, `reachPlane` waited for the real
@@ -122,7 +151,10 @@ Lighting does not contribute to ignition or the child's movement gate. Jeremy ap
 
 ## Verification
 
-- `tools/wood-logic-check.mjs`: actual child, cygnet, carry, camera and glider; full wind against the wet paper;
+- `tools/ember-check.mjs [portrait]`: real straight sweeps leave the first orb cold, then real circles over it grow
+  and light it; the spiral invitation's still.
+- `tools/wood-logic-check.mjs`: straight sweeps, weak circling and a distant updraft leave a coal cold while an
+  updraft over it lights it; actual child, cygnet, carry, camera and glider; full wind against the wet paper;
   full route and both checkpoint restores; ignition/idle gates at 30/60/120 fps; separation continuity;
   a fixed landing before running; exactly one close clap and feather scramble; hidden ember before the
   reveal and through ember-pool reuse; coaxing and pickup outside the rock; no restored cue during the reunion;
@@ -133,7 +165,8 @@ Lighting does not contribute to ignition or the child's movement gate. Jeremy ap
 - Add `plane` to the scene check for the tree interaction: actual screen-space brush hit testing, missed
   strokes, retained partial progress, fall and retrieval. Its material-owned atmosphere uniforms avoid stale
   lighting when Vite has versioned dependencies during another task's edits.
-- `VIDEO=1 node tools/wood-check.mjs [portrait]`: real pointer/touch strokes from landing through boarding;
+- `VIDEO=1 node tools/wood-check.mjs [portrait]`: real pointer/touch circles over the coals and strokes across the
+  paper from landing through boarding, after checking that straight sweeps leave the first coal cold;
   long-idle gates, captures of the fright, run, rescue and plane. Evidence stays under `/tmp/updraft-wood-*`.
   `NATURAL=1` skips synthetic clock jumps for a continuous playthrough; `BASE` pins a production preview,
   and `PREFIX` keeps before/after captures separate. Reports include render-loop camera positions and spikes.

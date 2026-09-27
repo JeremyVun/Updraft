@@ -53,7 +53,7 @@ try {
     });
     await page.waitForFunction(scene => {
       const g = __game;
-      if (scene === 'summit' || scene === 'wrap') return g.swirl.glow > .35 && g.swirl.ghost.strands[0].points.length > 20;
+      if (scene === 'summit' || scene === 'wrap' || scene === 'wood') return g.swirl.glow > .35 && g.swirl.ghost.strands[0].points.length > 20;
       if (scene === 'sail') return g.scene.getObjectByName('sail-invitation')?.visible;
       if (scene === 'piano') return g.piano.line.batch.mesh.visible && g.piano.line.ribbon.alpha > .4;
       const cue = scene === 'washing' ? g.washingInvitation : scene === 'scarf' ? g.scarfInvitation : g.emberInvitation;
@@ -75,12 +75,28 @@ try {
     if (state.curtain !== undefined) assert.equal(state.curtain, 0, 'Invitation must not open washing');
     if (state.scarf !== undefined) assert.equal(state.scarf, 0, 'Invitation must not loosen scarf');
     if (state.ember) { assert.equal(state.ember.lit, false); assert.equal(state.ember.wake, 0); }
-    if (scene === 'wood' || (scene === 'moon' || scene === 'soap')) {
-      const at = await page.evaluate(scene => {
-        const p = ((scene === 'moon' || scene === 'soap') ? __game.skyMirror.wand : __game.story.current.windInvitation).clone().project(__game.rig.camera);
+    if (scene === 'wood') {
+      const at = await page.evaluate(() => {
+        const p = __game.story.current.updraftTarget.clone().project(__game.rig.camera);
         return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 };
-      }, scene);
-      const extent = (scene === 'moon' || scene === 'soap') ? viewport.width * .07 : viewport.height * .09;
+      });
+      const radius = viewport.height * .075;
+      await page.mouse.move(at.x + radius, at.y);
+      for (let step = 1; step <= 80; step++) {
+        await page.mouse.move(at.x + Math.cos(step * Math.PI / 20) * radius, at.y - Math.sin(step * Math.PI / 20) * radius);
+        await page.waitForTimeout(16);
+      }
+      assert(await page.evaluate(() => __game.story.current.coax === null && __game.swirl.ghost.strands[0].alpha < .1), 'Invitation must yield while the player winds an updraft over the coal');
+      await page.screenshot({ path: `${prefix}-${scene}-handover.png` });
+      await page.waitForFunction(() => __game.swirl.glow > .35 && !__game.story.current.ahead.lit, null, { timeout: 8000 });
+      state.handover = 'yields to the player\'s updraft and returns after inactivity';
+    }
+    if (scene === 'moon' || scene === 'soap') {
+      const at = await page.evaluate(() => {
+        const p = __game.skyMirror.wand.clone().project(__game.rig.camera);
+        return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 };
+      });
+      const extent = viewport.width * .07;
       await page.mouse.move(at.x - extent, at.y);
       for (let step = 1; step <= 36; step++) {
         await page.mouse.move(at.x + (step / 36 - .5) * extent * 2, at.y);
@@ -89,7 +105,7 @@ try {
       assert(await page.evaluate(() => __game.emberInvitation.alpha < .1), 'Invitation must yield during real fanning');
       await page.screenshot({ path: `${prefix}-${scene}-handover.png` });
       await page.waitForFunction(() => __game.emberInvitation.alpha > .4 && __game.emberInvitation.batch.mesh.visible, null, { timeout: 8000 });
-      state.handover = (scene === 'moon' || scene === 'soap') ? 'wand sweeps suppress the soap hint' : 'fades during fanning and returns after inactivity';
+      state.handover = 'wand sweeps suppress the soap hint';
     }
     report.states.push(state); console.log(JSON.stringify(state));
   }

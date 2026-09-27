@@ -19,12 +19,12 @@ for (const fps of [30, 60, 120]) {
   coal.breath = 1; e.update(1 / fps, near, 1); coal.breath = 0;
   for (let i = 0; i < fps * 5; i++) e.update(1 / fps, near, 1);
   assert.equal(coal.lit, false);
-  for (let i = 0; i < fps; i++) { coal.breath = 1; e.update(1 / fps, near, 1); }
-  assert(coal.lit, 'sustained direct fanning must light the coal');
+  for (let i = 0; i < Math.ceil(fps * 1.05 / tuning.wood.updraftCatch); i++) { coal.breath = 1; e.update(1 / fps, near, 1); }
+  assert(coal.lit, 'a sustained updraft over the coal must light it');
   assert(e.brightest(near.clone()) > 1.2); assert.equal(e.takeCaught().length, 1);
   assert.equal(e.takeCaught().length, 0, 'a catch is emitted once');
   e.clearCoals(); assert.equal(e.takeCaught().length, 0);
-  console.log(`${fps}fps: no idle/residual ignition or spark bypass; deliberate fanning lights once`);
+  console.log(`${fps}fps: no idle/residual ignition or spark bypass; a sustained updraft lights once`);
 }
 // Render light may build while the gate remains closed; ignition must not flash the scene in one frame.
 for (const fps of [30, 60, 120]) {
@@ -67,25 +67,31 @@ for (const fps of [30, 60, 120]) {
   const e = new Embers(wind), coal = e.lay(-18, -1712), near = coal.p.clone();
   camera.position.copy(coal.p).add(new THREE.Vector3(0, 4, 10));
   camera.lookAt(coal.p); camera.updateMatrixWorld();
-  const input = { present: true, muted: false, ndc: new THREE.Vector2(), prevNdc: new THREE.Vector2() };
-  for (let i = 0; i < fps * 2; i++) e.update(1 / fps, near, 1);
-  // A two-pixel nudge at a 900px viewport, followed by idle air, cannot light it.
-  input.ndc.x = 2 / 900 * 2;
-  e.brush(camera, input, coal.p, 1 / fps); e.update(1 / fps, near, 1);
-  input.prevNdc.copy(input.ndc);
-  for (let i = 0; i < fps * 4; i++) { e.brush(camera, input, coal.p, 1 / fps); e.update(1 / fps, near, 1); }
-  assert.equal(coal.lit, false);
-  let strokes = 0;
-  while (!coal.lit && strokes < 8) {
+  const input = { present: true, muted: false, ndc: new THREE.Vector2(), prevNdc: new THREE.Vector2(), charge: 0, updraftAt: coal.p.clone() };
+  const frame = () => { e.updraft(input, coal.p); e.brush(camera, input, coal.p, 1 / fps); e.update(1 / fps, near, 1); };
+  for (let i = 0; i < fps * 2; i++) frame();
+  // Straight sweeps straight across the coal build no updraft charge and no longer light it.
+  for (let stroke = 0; stroke < 12; stroke++) {
     for (let i = 0; i < fps; i++) {
       input.prevNdc.copy(input.ndc);
-      input.ndc.set((strokes % 2 ? 1 : -1) * (0.15 - 0.3 * i / fps) / camera.aspect, 0);
-      e.brush(camera, input, coal.p, 1 / fps); e.update(1 / fps, near, 1);
+      input.ndc.set((stroke % 2 ? 1 : -1) * (0.15 - 0.3 * i / fps) / camera.aspect, 0);
+      frame();
     }
-    strokes++;
   }
-  assert(coal.lit); assert(strokes >= 2 && strokes <= 5, `${fps}fps took ${strokes} strokes`);
-  console.log(`${fps}fps: tiny motion stays unlit; ${strokes} real brush sweeps ignite`);
+  assert.equal(coal.lit, false); assert.equal(coal.wake, 0, 'straight sweeps must not wake a coal');
+  // Weak circling, and a full updraft wound up away from the coal, cannot light it either.
+  input.charge = tuning.wood.updraftFrom * 0.9;
+  for (let i = 0; i < fps * 10; i++) frame();
+  input.charge = 1; input.updraftAt.set(coal.p.x + tuning.wood.updraftReach * 1.2, coal.p.y, coal.p.z);
+  for (let i = 0; i < fps * 10; i++) frame();
+  assert.equal(coal.lit, false); assert.equal(coal.wake, 0, 'only an updraft over the coal feeds it');
+  // An updraft over the coal lights it in about the old fanning's time.
+  input.updraftAt.copy(coal.p);
+  let frames = 0;
+  while (!coal.lit && frames < fps * 10) { input.charge = Math.min(1, frames / fps); frame(); frames++; }
+  assert(coal.lit, 'an updraft over the coal must light it');
+  assert(frames / fps > 2.5 && frames / fps < 5, `${fps}fps took ${frames / fps}s`);
+  console.log(`${fps}fps: straight sweeps, weak circling and a distant updraft stay unlit; an updraft over it lights in ${(frames / fps).toFixed(2)}s`);
 }
 
 // Exercise the actual child, carrying, route and boarding with an explicit sustained-fanning fixture.
@@ -134,7 +140,7 @@ for (const portrait of [false, true]) {
   let last = '', complete = false, worstWaitFrame = 0, worst = null, waited = 0, previousTarget = null;
   let birdBefore = null, worstBirdStep = 0, wetPaper = null, worstEscapeFrame = 0;
   const seen = new Set();
-  let scrambleCount = 0, sawCoax = false; takeCues();
+  let scrambleCount = 0, sawCoax = false, coaxShown = 0, coaxYielded = 0; takeCues();
   let rescueLight = null, rescueAt = 0;
   let approachClearance = Infinity;
   let previousEye = null, firstLightCameraStep = 0;
@@ -142,8 +148,9 @@ for (const portrait of [false, true]) {
   let exitOffPath = 0;
   for (let frame = 1; frame <= 30 * 400; frame++) {
     const dt = 1 / 30, time = frame * dt;
-    const target = c.windInvitation;
+    const target = c.updraftTarget ?? c.windInvitation;
     waited = target === previousTarget ? waited + dt : 0; previousTarget = target;
+    assert(!c.updraftTarget || !c.windInvitation, 'a coal never asks for a sweep');
     for (const coal of embers.coals) coal.breath = coal.p === target && c.t > 6 ? 1 : 0;
     c.brushDry(c.t > 6 && c.beat === 'snag' ? 1 : 0);
     const litBefore = c.beat === 'walk' ? embers.coals.filter(k=>k.live&&k.lit).sort((a,b)=>b.laid-a.laid)[0] : null;
@@ -202,12 +209,21 @@ for (const portrait of [false, true]) {
       assert(plane.held, 'retrieved plane stays safely held');
       assert.notEqual(c.windInvitation, plane.position, 'held paper must never ask for wind');
       assert.equal(c.ahead, null, 'the fire by the tree is the last ember');
-      assert.equal(c.windInvitation, null, 'leaving the wood never asks for another ember');
+      assert.equal(c.updraftTarget, null, 'leaving the wood never asks for another ember');
+      assert.equal(c.windInvitation, null, 'leaving the wood never asks for wind');
       embers.clearCoals();
     }
     if (['out', 'toBoat'].includes(c.beat)) exitOffPath = Math.max(exitOffPath, offPath(child.position.x, child.position.z));
     if (c.beat !== last) { console.log(`${portrait ? 'portrait' : 'desktop'} route: ${c.beat} at ${time.toFixed(1)}s`); last = c.beat; }
-    if (target && target === c.windInvitation && !child.moving && waited > 5) {
+    if (target && target === c.updraftTarget) {
+      const coax = c.coax;
+      if (waited > tuning.wood.inviteAfter + 0.1 && c.t <= 6) {
+        assert(coax && Math.hypot(coax.at.x - target.x, coax.at.z - target.z) < 1e-6, 'the waiting coal shows the updraft over it');
+        coaxShown++;
+      }
+      if (c.t > 6 && waited > 6.2) { assert.equal(coax, null, 'the updraft invitation gives way while the coal is worked'); coaxYielded++; }
+    }
+    if (target && target === (c.updraftTarget ?? c.windInvitation) && !child.moving && waited > 5) {
       const p = target.clone().project(rig.camera);
       if (Math.max(Math.abs(p.x), Math.abs(p.y)) > worstWaitFrame) { worstWaitFrame = Math.max(Math.abs(p.x), Math.abs(p.y)); worst = { beat: c.beat, time, target: target.toArray(), child: child.position.toArray(), projected: p.toArray() }; }
     }
@@ -227,6 +243,7 @@ for (const portrait of [false, true]) {
   assert(worstWaitFrame < 0.95, `waiting target must remain in frame: ${JSON.stringify(worst)}`);
   assert.equal(scrambleCount, 1, 'one audible feather scramble per escape');
   assert(sawCoax, 'the child must coax the cygnet out before lifting it');
+  assert(coaxShown > 0 && coaxYielded > 0, `updraft invitation shown ${coaxShown}, yielded ${coaxYielded} frames`);
   assert(rescueLight, 'the route must enter the rescue from an earned approach light');
   assert(approachClearance>2.4, `child walked through the approach ember: ${approachClearance}`);
   console.log(`Approach ember clearance: ${approachClearance.toFixed(2)} units`);
