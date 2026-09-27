@@ -134,6 +134,9 @@ export class StairsChapter implements Chapter {
   /** While the lens is up in the white over the loop, the cloud is kept deep enough round it. */
   private lofted = false;
   private trickGone = 0;
+  private stuckGap = Infinity;
+  private stuckLeg = -1;
+  private stuckSince = 0;
   private lastDt = 0;
   /** The lantern hung at the bow for the way over the cloud, and the kite's tie-off there. */
   private readonly lantern = new BowLantern();
@@ -161,7 +164,7 @@ export class StairsChapter implements Chapter {
       on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 1)),
       on(into.bottom, into.yaw, 0.25), on(into.top, into.yaw, 0.3), onLanding(wait, 0, -0.45),
     ];
-    this.waitUp = onLanding(wait, 0.45, 0);
+    this.waitUp = on(up.bottom, up.yaw, 0.3);
     this.waitAside = onLanding(wait, -0.42, 0.38);
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
@@ -455,7 +458,8 @@ export class StairsChapter implements Chapter {
   private walkOn(): void {
     const { child: c } = this.cast;
     if (c.moving || c.busy) return;
-    if (this.beat === 'follow' && this.stop === this.loopStop && !this.looped) {
+    // Onto the loop's landing, and straight across to its far corner, out of the bird's way.
+    if (this.beat === 'follow' && this.stop === this.loopStop - 1 && !this.looped) {
       this.goRoundFirst();
       return;
     }
@@ -545,6 +549,7 @@ export class StairsChapter implements Chapter {
     this.eyeFrom.copy(this.world.eye);
     this.lookFrom.copy(this.world.looking);
     k.decks = [...this.decks(), ...CloudStairs.loopDecks()];
+    this.stop = this.loopStop;
     c.walkTo(this.waitAside.x, this.waitAside.z, false, undefined, 0.12);
     this.to('loop');
   }
@@ -579,6 +584,7 @@ export class StairsChapter implements Chapter {
         k.pace = 1.05;
         const to = this.roundWay[this.roundLeg];
         k.errand = this.birdAt.copy(to).setY(0);
+        this.unstick(to);
         // Past the top of the drawn-in flight it is on the copy of the corner: it goes across at once onto the
         // corner itself, which from here is the same place.
         if (this.roundLeg === 6) {
@@ -630,6 +636,27 @@ export class StairsChapter implements Chapter {
       }
     }
     this.lastDt = dt;
+  }
+
+  /**
+   * Should it ever stop short of where it is going and stay stopped, off the edge of the boards or caught on a newel,
+   * it is set back on its way at the last place it was sure of, inside a wisp of the white.
+   */
+  private unstick(to: THREE.Vector3): void {
+    const k = this.cast.cygnet;
+    const gap = Math.hypot(k.position.x - to.x, k.position.z - to.z);
+    if (gap < this.stuckGap - 0.08 || this.stuckLeg !== this.roundLeg) {
+      this.stuckGap = gap;
+      this.stuckLeg = this.roundLeg;
+      this.stuckSince = this.now;
+      return;
+    }
+    if (this.now - this.stuckSince < 3) return;
+    const back = this.roundLeg > 0 ? this.roundWay[this.roundLeg - 1] : this.waitUp;
+    this.world.wisps.engulf(this.tmp.copy(k.position).setY(k.position.y + 0.3), 1.2);
+    k.standAt(back.x, back.y, back.z, k.yaw);
+    this.stuckSince = this.now;
+    this.stuckGap = Infinity;
   }
 
   /** At the child's heel, one stop behind, all the way up; on the grass it just keeps close. */
