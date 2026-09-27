@@ -32,10 +32,10 @@ export const SAIL_SHOTS: readonly Framing[] = [
   { at: 95, bearing: 0.42, distance: 6.6, height: 1.2, ahead: 0, up: 1.1, zoom: 1.4 },
   // Up and away astern to port, still on them until it is well back: the boat small on the sea of cloud, the sun
   // low ahead over the bank of mist and the kite going before them.
-  { at: 182, bearing: 2.2, distance: 48, height: 15, ahead: 45, up: 8, zoom: 1, lookLag: 0.4 },
-  { at: 208, bearing: 2.25, distance: 48, height: 15, ahead: 45, up: 8, zoom: 1 },
+  { at: 195, bearing: 2.3, distance: 48, height: 15, ahead: 36, up: 7.5, zoom: 1, lookLag: 0.4 },
+  { at: 215, bearing: 2.33, distance: 48, height: 15, ahead: 36, up: 7.5, zoom: 1 },
   // Down behind them as the bank comes up ahead and the sun goes down into it.
-  { at: 252, bearing: 2.78, distance: 14, height: 3.4, ahead: 16, up: 3, zoom: 1 },
+  { at: 255, bearing: 2.78, distance: 14, height: 3.4, ahead: 12, up: 3, zoom: 1 },
   { at: 272, bearing: 2.82, distance: 12.5, height: 3.4, ahead: 12, up: 2.2, zoom: 1 },
   // After them into the white, level.
   { at: 300, bearing: 2.88, distance: 12, height: 3.4, ahead: 8, up: 1.6, zoom: 1 },
