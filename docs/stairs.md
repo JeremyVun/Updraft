@@ -56,6 +56,10 @@ Mid-build (2026-09-27, verbatim):
 
 Offered an opener on the grass (recommended), inside the cloud, or on top in the calm, he chose **inside the cloud**.
 
+After the second pass's stills (`/tmp/updraft-stairs-show2/`) and the sound render, Jeremy's handoff note
+(2026-09-27, verbatim): "next session to continue working on the stairs chapter. I'd like to get it looking more like
+the concept art `/tmp/updraft-stairs-concepts/stairs-c.png`" (kept at `assets/art-direction/stairs-concept-c.png`).
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
