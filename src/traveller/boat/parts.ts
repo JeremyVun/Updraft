@@ -473,9 +473,9 @@ function lantern(base: THREE.Vector3): THREE.BufferGeometry[] {
 }
 
 /**
- * The stem: the post the planking runs into, from the forefoot round the bow to a rounded head. With the lantern,
- * a thick white post stands upright against its upper half, a little proud of the gunwale, with the lantern on
- * it. The stem is laid along the raked bow, so it is left out of the rake itself.
+ * The stem: the post the planking runs into, from the forefoot up the raked bow, and the thick white post laid
+ * along it, standing a little proud of the gunwale with the lantern on it. Both are laid along the raked bow, so
+ * they are left out of the rake itself.
  */
 function stem(): THREE.BufferGeometry[] {
   const centres: THREE.Vector3[] = [];
@@ -496,16 +496,11 @@ function stem(): THREE.BufferGeometry[] {
   for (const c of centres) rake(c);
   const parts = [centreline(centres, (i) => [0.024, i === centres.length - 1 ? 0.026 : 0.03], WOOD.stem, KIND.wood)];
 
-  // Down low the post follows the stem round toward the forefoot; higher up it straightens to stand upright.
-  const upright = rake(new THREE.Vector3(0, gunwale(1), BOW_Z)).z - 0.02;
+  // The post runs straight up the raked stem from its foot and on a little past the gunwale.
+  const foot = rake(new THREE.Vector3(0, keel(1), BOW_Z));
+  const along = rake(new THREE.Vector3(0, gunwale(1), BOW_Z)).sub(foot);
   const post: THREE.Vector3[] = [];
-  for (let i = 0; i <= 14; i++) {
-    const s = THREE.MathUtils.lerp(0.08, 1.12, i / 14);
-    const p = rake(new THREE.Vector3(0, THREE.MathUtils.lerp(keel(1), gunwale(1), Math.min(s, 1)), BOW_Z));
-    p.y = THREE.MathUtils.lerp(keel(1), gunwale(1), s);
-    p.z = THREE.MathUtils.lerp(p.z, upright, THREE.MathUtils.smoothstep(s, 0.25, 0.7));
-    post.push(p);
-  }
+  for (let i = 0; i <= 14; i++) post.push(foot.clone().addScaledVector(along, THREE.MathUtils.lerp(0.08, 1.16, i / 14)));
   const thick = (i: number) => THREE.MathUtils.smoothstep(i / 14, 0, 0.4);
   return [...parts, centreline(post, (i) => [0.035 + 0.045 * thick(i), 0.03 + 0.045 * thick(i)], WOOD.post, KIND.paint), ...lantern(post[14])];
 }

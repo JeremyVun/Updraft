@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const LENGTH = 4.4;
+export const LENGTH = 4.2;
 export const BEAM = 1.0;
 /** Clinker strakes a side, keel to gunwale: few and wide. */
 export const STRAKES = 6;
@@ -17,9 +17,16 @@ export const BOW_Z = 0.55 * LENGTH;
 /** The mast stands this far forward of the hull's origin; the sail swings about it. */
 export const MAST_Z = 0.55;
 
-/** How far the topsides swell out above the turn of the bilge, and how far the stem and transom lean out. */
+/** How far the topsides swell out above the turn of the bilge. */
 const FLARE = 0.07;
-const RAKE = { bow: 0.1, stern: 0.14 };
+/**
+ * The forefoot, where the keel sweeps up into the stem: an arc that rises this far from the level keel and turns
+ * this far from horizontal, so the stem carries on up at the same lean like a rowing boat's.
+ */
+const FOREFOOT = { rise: 0.46, turn: THREE.MathUtils.degToRad(65) };
+const FOREFOOT_RADIUS = FOREFOOT.rise / (1 - Math.cos(FOREFOOT.turn));
+const FOREFOOT_FROM = 1 - (FOREFOOT_RADIUS * Math.sin(FOREFOOT.turn)) / LENGTH;
+const KEEL = -0.46;
 
 /**
  * Half-width of the hull at the turn of the bilge `u` of the way from transom (0) to stem (1): full through the
@@ -29,13 +36,15 @@ export const halfWidth = (u: number) => BEAM * (1 - u ** 3.4) ** 0.72 * (0.52 + 
 /** The height of the turn of the bilge, where the bottom turns up into the topsides. */
 export const bilge = (u: number) => 0.28 * u * u;
 /**
- * The keel runs level just below the waterline for most of the length, turns up in a short forefoot at the stem
+ * The keel runs level just below the waterline for most of the length, sweeps up round the forefoot to the stem
  * and only just touches the water at the transom, so the boat sits flat in the sea.
  */
 export function keel(u: number): number {
-  const level = -0.46;
-  if (u > 0.8) return level + 0.34 * (1 - Math.sqrt(1 - ((u - 0.8) / 0.2) ** 2));
-  return u < 0.16 ? level + 0.07 * (1 - u / 0.16) ** 2 : level;
+  if (u > FOREFOOT_FROM) {
+    const z = (u - FOREFOOT_FROM) * LENGTH;
+    return KEEL + FOREFOOT_RADIUS - Math.sqrt(FOREFOOT_RADIUS ** 2 - z * z);
+  }
+  return u < 0.16 ? KEEL + 0.07 * (1 - u / 0.16) ** 2 : KEEL;
 }
 export const keelDrop = (u: number) => bilge(u) - keel(u);
 /** The top of the planking, where the gunwale rail runs: low amidships, lifting only a little toward the ends. */
@@ -65,15 +74,19 @@ export const MAST_TOP = SAIL_TACK + 4.2;
 /** The boom reaches a little past the clew of a full sail. */
 export const BOOM_LENGTH = 2.8;
 
+/** How far the stem head leans out past the foot of the stem, carrying on the forefoot's turn in a straight line. */
+const STEM_RAKE = (gunwale(1) - keel(1)) / Math.tan(FOREFOOT.turn);
+const TRANSOM_RAKE = 0.14;
+
 /**
- * The ends swell out between the keel and the gunwale, the stem forward and the transom aft, so the hull's
- * profile is round at both ends. Above the gunwale they stand upright.
+ * The ends lean out between the keel and the gunwale: the stem forward in a straight rake, the transom aft in a
+ * round swell. Above the gunwale they stand upright.
  */
 export function rake(p: THREE.Vector3): THREE.Vector3 {
   const u = stationU(p.z);
   const s = THREE.MathUtils.clamp((p.y - keel(u)) / Math.max(gunwale(u) - keel(u), 1e-3), 0, 1);
-  const lean = RAKE.bow * THREE.MathUtils.smoothstep(u, 0.72, 1) - RAKE.stern * (1 - THREE.MathUtils.smoothstep(u, 0, 0.32));
-  p.z += lean * (1 - (1 - s) ** 2);
+  p.z += STEM_RAKE * THREE.MathUtils.smoothstep(u, 0.72, 1) * s
+    - TRANSOM_RAKE * (1 - THREE.MathUtils.smoothstep(u, 0, 0.32)) * (1 - (1 - s) ** 2);
   return p;
 }
 
