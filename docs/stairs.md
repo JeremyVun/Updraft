@@ -60,6 +60,17 @@ After the second pass's stills (`/tmp/updraft-stairs-show2/`) and the sound rend
 (2026-09-27, verbatim): "next session to continue working on the stairs chapter. I'd like to get it looking more like
 the concept art `/tmp/updraft-stairs-concepts/stairs-c.png`" (kept at `assets/art-direction/stairs-concept-c.png`).
 
+Then, on the second pass's stills (2026-09-27, verbatim):
+
+> "yep, i think
+> - the cloud duvet looks a little too much like a literal duvet, which is a nice dreamlike texture, but could be dialled back a bit. From below, it looks like a white sheet instead of a beautiful cloud layer with beautiful reflected sunlight
+> - In hte concept art, the first part of the stairs has an instant visual direction to it (it's going up and forwar). In the game, the stairs go forward, then back again (the visual direction isn't clear, or leading to the player). And honestly, seeing the underside of a staircase so blankly doesn't make for a great screenshot when we add photo mode later.
+> - The stairs that have been built in hte game also don't have those thicker bannisters and pillars that the concept art have (which makes the in game stairs feel a bit thin
+> - the ingame staircases try to emulate cloud fog but it just reads as very small and regular puffs of fog instead of a nice volumetric haze (it doesn't look good and i know you can do a lot better
+> - the platforms between stairs are completely missing a railing.
+> - I don't see the penrose stairs. How did you fit that into the gameplay?
+> - I see the cygnett getting carried up the stairs, but shouldn't it be walking up itself for this one?"
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
