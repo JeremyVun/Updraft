@@ -197,7 +197,21 @@ export const CLOUD = { base: levelHeight(BELOW_CLOUD) + 1.5, top: levelHeight(FL
 export const STAIRS_FOOT = flight(1).bottom.clone().addScaledVector(along(NE), -1.2);
 
 export const STAIRS_LANDING = new THREE.Vector2(76, -1231);
-export const STAIRS_ARRIVAL = new THREE.Vector2(92, -1219);
+/** Where the child stops, on the level grass a few steps short of the first tread, to look up the stair. */
+export const STAIRS_ARRIVAL = new THREE.Vector2(96.4, -1219.2);
+/** What the lens looks up at over her shoulder there: the stair going up from her toward the cloud (its height is hers). */
+export const STAIRS_LOOK_UP = new THREE.Vector3(99.8, 0, -1231);
+/**
+ * Where the lens stands for it, with a longer lens (`STAIRS_LOOK_ZOOM`): well down the slope behind her and off to
+ * her right, over the grass, so that she stands at the left of the frame with all of her in it and the stair looms
+ * over her.
+ */
+export const STAIRS_LOOK_FROM = (() => {
+  const back = new THREE.Vector3(STAIRS_ARRIVAL.x - STAIRS_LOOK_UP.x, 0, STAIRS_ARRIVAL.y - STAIRS_LOOK_UP.z).normalize();
+  return new THREE.Vector3(STAIRS_ARRIVAL.x, 0, STAIRS_ARRIVAL.y)
+    .addScaledVector(back, 13).addScaledVector(new THREE.Vector3(back.z, 0, -back.x), 3.4);
+})();
+export const STAIRS_LOOK_ZOOM = 1.3;
 
 /**
  * The top landing, open on its left side to the sun: the slippers are by that edge, the child sits there with their

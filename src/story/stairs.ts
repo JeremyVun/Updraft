@@ -9,8 +9,8 @@ import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
 import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
 import {
-  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_FROM, FLIGHTS, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
-  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, LOOP, LOOP_BACK, LOOP_FAR, along, flight, landingOf, levelHeight, onLanding,
+  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_FROM, FLIGHTS, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL, STAIRS_LOOK_FROM, STAIRS_LOOK_UP, STAIRS_LOOK_ZOOM,
+  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, LOOP, LOOP_BACK, LOOP_FAR, along, flight, landingOf, leftOf, levelHeight, onLanding,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
@@ -118,6 +118,7 @@ export class StairsChapter implements Chapter {
   private readonly tmp2 = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly look2 = new THREE.Vector3();
+  private readonly arrivalEye = new THREE.Vector3();
   private readonly birdAt = new THREE.Vector3();
   private readonly sun = new THREE.Vector3();
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
@@ -354,7 +355,7 @@ export class StairsChapter implements Chapter {
       case 'wonder':
         // Out of the satchel and down onto the grass: this room it climbs on its own feet. Then both of them look
         // up the stair to where it goes into the cloud.
-        c.lookAt = this.look.set(STAIRS_FOOT.x, CLOUD.base - 3, STAIRS_FOOT.z - 12);
+        c.lookAt = this.look.copy(STAIRS_LOOK_UP).setY(CLOUD.base - 3);
         if (this.t > 0.8 && k.carried && !carry.busy) {
           const down = () => carry.setDown(() => {
             k.stay = true;
@@ -364,7 +365,7 @@ export class StairsChapter implements Chapter {
           else down();
         }
         if (!k.carried && !carry.busy) k.watch(this.look);
-        if (this.t > 2.6 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
+        if (this.t > 4.2 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
           c.lookAt = null;
           k.watch(null);
           k.stay = false;
@@ -1038,13 +1039,23 @@ export class StairsChapter implements Chapter {
     switch (this.beat) {
       case 'ashore':
       case 'wonder': {
-        // From the south, low: the child small on the grass, the stair going up and away from them into the cloud,
-        // the sun going down on the left.
-        s.from = this.from.set(0.206, 0, 0.979);
-        s.target.set(STAIRS_FOOT.x + 2, CLOUD.base - 7.5, STAIRS_FOOT.z - 17);
-        s.distance = 38.8;
-        s.height = -7;
-        this.pace = 0.3;
+        if (this.beat === 'wonder') {
+          // Where she stops: low on the slope behind her and off to one side, looking up past her the way she looks,
+          // up the stair to where it goes into the cloud.
+          s.eye = this.arrivalEye.copy(STAIRS_LOOK_FROM).setY(c.y + 1.4);
+          s.target.copy(STAIRS_LOOK_UP).setY(c.y + 4);
+          s.zoom = STAIRS_LOOK_ZOOM;
+          s.clearance = 0.9;
+          this.pace = 0.3;
+          return;
+        }
+        // Up the grass from the boat with her, the foot of the stair ahead of them.
+        s.from = this.from.set(-0.42, 0, 1).normalize();
+        s.target.copy(c).lerp(STAIRS_FOOT, 0.35);
+        s.target.y = c.y + 2.4;
+        s.distance = 12.5;
+        s.height = 1.4;
+        this.pace = 0.35;
         return;
       }
       case 'climb':
@@ -1084,12 +1095,14 @@ export class StairsChapter implements Chapter {
       }
       case 'hesitate':
       case 'birdFirst': {
-        // From outside the rail, a little ahead: their face turned up at where the stair goes into the white.
-        s.from = this.from.set(-0.3, 0, -1).normalize();
-        s.target.copy(c).lerp(cygnet.position, 0.45);
-        s.target.y = c.y + 1.5;
-        s.distance = 4.6;
-        s.height = -0.25;
+        // Out past the landing's far corner, level with her and clear of the flight overhead: her face turned up at
+        // where the stair goes into the white, and that flight going up beside her, the bird on it.
+        const L = landingOf(BELOW_CLOUD);
+        s.from = this.from.copy(along(L.yaw)).addScaledVector(leftOf(L.yaw), 0.5).normalize();
+        s.target.copy(c).lerp(cygnet.position, 0.35);
+        s.target.y = c.y + 1.3;
+        s.distance = 5.8;
+        s.height = 0.2;
         s.clearance = 0.4;
         this.pace = 0.3;
         return;
