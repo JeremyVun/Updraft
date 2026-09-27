@@ -55,6 +55,7 @@ export class BirchesChapter implements Chapter {
   private puttingDown = false;
   private lastSwingInput = 0;
   private leavingSwing = false;
+  private swingPushed = false;
   private readonly mountFrom = new THREE.Vector3();
   private readonly scarfMast = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
@@ -208,7 +209,8 @@ export class BirchesChapter implements Chapter {
     }
 
     if (['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat)) this.leafPlay.update(dt, time);
-    birches.swing.invited = this.swings === 0 && (this.beat === 'swingOffer' || (this.beat === 'walk' && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 16));
+    birches.swing.invited = (this.beat === 'swinging' && !this.swingPushed && !this.leavingSwing)
+      || (this.swings === 0 && (this.beat === 'swingOffer' || (this.beat === 'walk' && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 16)));
     birches.swing.update(dt, this.cast.wind);
     if (this.beat !== 'swinging') birches.shake(0);
     if (p.held) p.hold(c);
@@ -315,6 +317,7 @@ export class BirchesChapter implements Chapter {
     birches.swing.braking = false;
     this.lastSwingInput = this.now + tuning.birches.scarf.swingMountSeconds;
     this.leavingSwing = false;
+    this.swingPushed = false;
     this.mountFrom.copy(c.position);
   }
 
@@ -331,8 +334,12 @@ export class BirchesChapter implements Chapter {
     c.kick = THREE.MathUtils.clamp(swing.angle / 0.5, -1, 1);
     const out = Math.abs(swing.angle);
     birches.shake(Math.min(1, out * 1.6));
-    if (!this.leavingSwing && input.present && (input.gust > 1.4 || input.charge > 0.15)) this.lastSwingInput = this.now;
-    if (this.now - this.lastSwingInput > tuning.birches.scarf.quietToLeaveSwing) this.leavingSwing = true;
+    if (!this.leavingSwing && input.present && (input.gust > 1.4 || input.charge > 0.15) && this.t > tuning.birches.scarf.swingMountSeconds) {
+      this.lastSwingInput = this.now;
+      this.swingPushed = true;
+    }
+    const patience = this.swingPushed ? tuning.birches.scarf.quietToLeaveSwing : tuning.birches.scarf.firstPushWait;
+    if (this.now - this.lastSwingInput > patience) this.leavingSwing = true;
     swing.braking = this.leavingSwing;
     if (this.leavingSwing && out < 0.12 && Math.abs(swing.speed) < 0.3) {
       swing.rider = 0;

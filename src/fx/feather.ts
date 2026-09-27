@@ -213,6 +213,7 @@ export class Feather {
     }
     /** Never lost: down on the grass too long and a breath of its own picks it up again. */
     this.encouragement *= Math.exp(-dt * 0.75);
+    let pullX = 0, pullZ = 0;
     if (this.follow && this.routeStart) {
       const rx = this.goal.x - this.routeStart.x, rz = this.goal.z - this.routeStart.z;
       const length = Math.hypot(rx, rz) || 1, ax = rx / length, az = rz / length;
@@ -224,7 +225,7 @@ export class Feather {
       v.z = az * forward + ax * side;
       const lateral = -az * (p.x - this.routeStart.x) + ax * (p.z - this.routeStart.z);
       const correction = (lateral - THREE.MathUtils.clamp(lateral, -t.featherCorridor, t.featherCorridor)) * blend;
-      p.x += az * correction; p.z -= ax * correction;
+      pullX += az * correction; pullZ -= ax * correction;
       p.y += (floor + t.featherHangs + this.clearance - p.y) * (1 - Math.exp(-dt * 3));
     }
     const down = p.y <= floor + 0.05;
@@ -235,13 +236,17 @@ export class Feather {
     }
     p.addScaledVector(v, dt);
     if (this.follow) {
-      const dx = p.x - this.follow.x, dz = p.z - this.follow.z;
+      const dx = p.x + pullX - this.follow.x, dz = p.z + pullZ - this.follow.z;
       const gap = Math.hypot(dx, dz);
       if (gap > t.featherLead) {
         const pull = (gap - t.featherLead) * (1 - Math.exp(-dt * t.featherCatch));
-        p.x -= dx / gap * pull; p.z -= dz / gap * pull;
+        pullX -= dx / gap * pull; pullZ -= dz / gap * pull;
       }
     }
+    // Blown far off before the leash took it, it floats back into place rather than jumping there.
+    const pulled = Math.hypot(pullX, pullZ), most = (t.featherReturn + Math.hypot(v.x, v.z)) * dt;
+    const scale = pulled > most ? most / pulled : 1;
+    p.x += pullX * scale; p.z += pullZ * scale;
     floor = Math.max(heightAt(p.x, p.z), 0) + 0.06;
     if (p.y < floor) {
       p.y = floor;

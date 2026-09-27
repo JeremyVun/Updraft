@@ -846,8 +846,10 @@ export const tuning = {
       clothSlipReach: 2,
       clothSlipDrop: 1.1,
       arriveWithin: 9.5,
-      quietToLeaveSwing: 2.6,
-      swingBrake: 3.2,
+      /** Seconds the seated child waits, under the invitation, for the player's first push; then quiet seconds between pushes before they drag their feet (`swingBrake`, per second) and step off. */
+      firstPushWait: 7,
+      quietToLeaveSwing: 4,
+      swingBrake: 0.9,
       swingMountSeconds: 0.8,
     },
     /** The companion explores within sight of the child and responds to local gusts. */
@@ -1480,6 +1482,8 @@ export const tuning = {
     /** Maximum lead on the walking bird, and how quickly a gust carries it back into sight. */
     featherLead: 3.6,
     featherCatch: 4,
+    /** Fastest it drifts back to the bird and the route, in m/s beyond its own speed, when the climb picks it up far off. */
+    featherReturn: 1.5,
     featherCorridor: 1.1,
     featherEncouragement: 1.6,
     featherBrushRadius: 0.36,
@@ -1528,10 +1532,10 @@ export const tuning = {
     frostWorst: 1.0,
     /** Wind travel through the snow and fog; earned clearance stays open while the bird passes. */
     snowBrushRadius: .16,
-    mistBrushRadius: .72,
+    mistBrushRadius: .55,
     featherTakeRate: 3.8,
     snowStroke: 1.0,
-    mistStroke: 0.46,
+    mistStroke: 0.7,
     encounterNoticeFor: 2.2,
     climbPace: 0.40,
     climbEncouragement: 0.22,
