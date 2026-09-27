@@ -42,7 +42,6 @@ const VERT = /* glsl */ `
 #include <skinning_pars_vertex>
 in vec4 aLook;
 in vec2 aSurf;
-uniform float uNose;
 uniform float uFlutter;
 uniform vec3 uFlow;
 uniform float uTime;
@@ -55,7 +54,6 @@ void main() {
   vec3 transformed = position;
   vec3 objectNormal = normal;
   int mat = int(aLook.x + 0.5);
-  if (mat == ${MAT.skin}) transformed += normal * aLook.y * uNose * 0.034;
   /** A fine ripple running round the hem in the wind, strongest where the air leaves the coat. */
   if (mat == ${MAT.coat} && position.y < 1.05 && uFlutter > 0.0) {
     float a = atan(position.x, position.z);
@@ -134,44 +132,46 @@ float ellipse(vec2 p, vec2 r) {
 }
 
 /**
- * The face is painted, the way it would be remembered: two small dark eyes with a glint, small brows, warm cheeks.
+ * The face is painted, the way it would be remembered: two big dark eyes, small brows, warm cheeks.
  * Drawn in the rest frame of the head, so every blink and turn carries it.
  */
 vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   vec3 q = rest - ${v3(FACE.c)};
   if (q.z < 0.05) return alb;
   vec2 p = q.xy;
-  vec2 e = vec2(abs(p.x) - 0.126, p.y + 0.027);
-  float side = sign(p.x);
+  vec2 e = vec2(abs(p.x) - 0.122, p.y + 0.048);
   /** Cheeks: warmth, not a painted disc. */
-  vec2 c = vec2(abs(p.x) - 0.158, p.y + 0.108);
+  vec2 c = vec2(abs(p.x) - 0.148, p.y + 0.122);
   float cheek = exp(-dot(c, c) / 0.0034);
   alb = mix(alb, uCheek, cheek * 0.55);
   /** A tiny warm tip where the nose would catch the light. */
-  alb = mix(alb, uCheek, (0.12 + 0.22 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.088), p - vec2(0.0, -0.088)) / 0.0006));
+  alb = mix(alb, uCheek, (0.2 + 0.32 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.104), p - vec2(0.0, -0.104)) / 0.0007));
   /** And the soft shade under it, which is what lets a small nose read from straight in front. */
-  alb *= 1.0 - 0.16 * uNoseTip * exp(-(p.x * p.x) / 0.0008 - (p.y + 0.116) * (p.y + 0.116) / 0.00012);
-  /** Brows: short soft strokes, the only thing that carries a mood. */
-  vec2 b = vec2(abs(p.x) - 0.128, p.y - 0.095 + 4.5 * (abs(p.x) - 0.128) * (abs(p.x) - 0.128));
-  float brow = fill(ellipse(b, vec2(0.034, 0.0072)));
+  alb *= 1.0 - 0.2 * uNoseTip * exp(-(p.x * p.x) / 0.0009 - (p.y + 0.134) * (p.y + 0.134) / 0.00012);
+  /** Brows: short soft arcs, fuller toward the nose, the only thing that carries a mood. */
+  vec2 b = vec2(abs(p.x) - 0.122, p.y - 0.082 + 7.0 * (abs(p.x) - 0.122) * (abs(p.x) - 0.122));
+  float brow = fill(ellipse(b, vec2(0.031, 0.0105 - 0.1 * clamp(b.x, 0.0, 0.031))));
   alb = mix(alb, uBrow, brow * 0.85);
   float open = 1.0 - clamp(uBlink, 0.0, 1.0);
   if (uWhites > 0.5) {
-    /** A sliver of white either side of a dark eye, never a ring round it. */
-    float white = fill(ellipse(e, vec2(0.042, 0.034 * open + 0.001)));
-    alb = mix(alb, uWhite, white * 0.9);
+    /** A sliver of white at the outer corner of a dark eye, never a ring round it. */
+    float white = fill(ellipse(e - vec2(0.007, -0.004), vec2(0.043, 0.042 * open + 0.001)));
+    alb = mix(alb, uWhite, white * 0.9 * smoothstep(0.1, 0.4, open));
   }
-  /** The eye: a small upright oval; shut, it is a soft curved lash line. */
-  float eye = fill(ellipse(e, vec2(0.029, 0.037 * open + 0.001)));
-  float lid = fill(abs(e.y + 0.014 - 5.0 * e.x * e.x) - 0.0038) * step(abs(e.x), 0.032) * (1.0 - open);
-  alb = mix(alb, uEye, max(eye, lid));
-  /** Glints, larger and upper-outer, a smaller one lower-inner: what makes a small dark eye alive. */
-  vec2 g = vec2(e.x * side, e.y);
-  float glint = fill(length(g - vec2(0.01, 0.015)) - 0.009) + 0.7 * fill(length(g - vec2(-0.009, -0.014)) - 0.004);
-  alb = mix(alb, vec3(1.0), clamp(glint, 0.0, 1.0) * eye * open);
+  /** The eye: a big dark upright oval, a young child's; shut, it is a soft curved lash line. */
+  float eye = fill(ellipse(e, vec2(0.043, 0.053 * open + 0.001))) * smoothstep(0.05, 0.3, open);
+  float lid = fill(abs(e.y + 0.018 - 3.5 * e.x * e.x) - 0.0045) * step(abs(e.x), 0.046) * (1.0 - open);
+  /** Warm brown low in the eye, where the light comes through, so it is an eye and not a bead. */
+  vec3 iris = mix(uEye, uBrow * 1.25, 0.8 * smoothstep(0.0, -0.046, e.y) * smoothstep(0.04, 0.02, length(e * vec2(1.0, 0.8))));
+  alb = mix(alb, mix(uEye, iris, open), max(eye, lid));
+  /** One soft glint, high on the outer side, which is what keeps a big dark eye from reading as a hole. */
+  vec2 g = vec2(e.x * sign(p.x), e.y);
+  alb = mix(alb, vec3(1.0), 0.85 * fill(length(g - vec2(0.014, 0.02)) - 0.008) * eye * open);
   /** The mouth: a small relaxed line; a yawn opens it into a soft dark oval. */
-  vec2 m = vec2(p.x, p.y + 0.172);
-  float line = fill(abs(m.y - 2.2 * m.x * m.x) - 0.0032) * step(abs(m.x), 0.021) * uMouth;
+  vec2 m = vec2(p.x, p.y + 0.176);
+  float line = fill(abs(m.y - 4.0 * m.x * m.x) - 0.0034 * (1.0 - 0.5 * abs(m.x) / 0.032)) * step(abs(m.x), 0.032) * uMouth;
+  /** The soft fullness of the lower lip, only a warmth. */
+  alb = mix(alb, uCheek, 0.3 * uMouth * exp(-(m.x * m.x) / 0.0005 - (m.y + 0.014) * (m.y + 0.014) / 0.00006));
   float yawn = fill(ellipse(m + vec2(0.0, 0.006), vec2(0.018 + 0.006 * uYawn, 0.004 + 0.03 * uYawn))) * step(0.02, uYawn);
   alb = mix(alb, uLip, line * 0.8);
   alb = mix(alb, uEye * 1.6, yawn);
@@ -210,7 +210,7 @@ void main() {
     alb = uSkin * (0.97 + 0.05 * grain);
     alb = paintFace(alb, vRest, N, V, gloss);
     /** The throat, down in the shadow between the chin and the scarf. */
-    alb *= 1.0 - 0.45 * smoothstep(${f(FACE.c.y - FACE.down + 0.01)}, ${f(FACE.c.y - FACE.down - 0.04)}, vRest.y);
+    alb *= 1.0 - 0.6 * smoothstep(${f(FACE.c.y - FACE.down + 0.035)}, ${f(FACE.c.y - FACE.down - 0.015)}, vRest.y);
     fuzz = 0.3;
   } else if (m == ${MAT.hair}) {
     alb = uHair * (0.85 + 0.25 * vnoise3(vec3(vSurf.y * 9.0, vRest.y * 60.0, vSurf.x * 3.0)));
@@ -326,7 +326,6 @@ export function childMaterial(): THREE.ShaderMaterial {
       uYawn: { value: 0 },
       uMouth: { value: 1 },
       uWhites: { value: 1 },
-      uNose: { value: 1 },
       uNoseTip: { value: 1 },
       uFlutter: { value: 0 },
       uFlow: { value: new THREE.Vector3() },

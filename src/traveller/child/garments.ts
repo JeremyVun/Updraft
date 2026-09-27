@@ -401,17 +401,17 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
  * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
  */
-export const FACE = { c: V(0, 2.03, 0.09), rx: 0.262, rz: 0.25, up: 0.3, down: 0.278 };
+export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
   const ct = Math.cos(theta);
   /** Full cheeks below the eyes, rounding in to a smaller chin: a soft U, never a V and never a box. */
   const ring = ct >= 0 ? Math.sin(theta) : Math.pow(1 - Math.pow(-ct, 2.3), 1 / 2.3);
-  const cheek = bump(ct + 0.4, 0.35);
-  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.08 * cheek);
+  const cheek = bump(ct + 0.45, 0.32);
+  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.13 * cheek);
   const y = (ct >= 0 ? FACE.up : FACE.down) * ct;
-  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.05 * cheek * bump(Math.abs(phi) - 0.8, 0.7));
+  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.1 * cheek * bump(Math.abs(phi) - 0.8, 0.6));
   if (z > 0) z *= 0.93;
   return out.set(x, y, z).add(FACE.c);
 }
@@ -430,31 +430,46 @@ function face(b: Builder): void {
       const phi = (j / AROUND) * TAU;
       const p = facePoint(theta, phi);
       const ct = Math.cos(theta);
-      /** How much of a small button nose this vertex carries; the shader raises it. */
-      const nose = bump(ct + 0.32, 0.075) * bump(angleTo(phi, 0), 0.11);
       const skin: Skin = ct < -0.75 ? [[BONE.head, 0.8], [BONE.neck, 0.2]] : [[BONE.head, 1]];
-      return { p, skin, mat: MAT.skin, k: nose, ao: 1 - 0.45 * smooth(-0.8, -0.98, ct), uv: [phi, ct] as [number, number] };
+      return { p, skin, mat: MAT.skin, ao: 1 - 0.45 * smooth(-0.8, -0.98, ct), uv: [phi, ct] as [number, number] };
     }));
   }
   b.rows(rows, true, FACE.c);
-  tube(b, V(0, 1.54, -0.005), V(0, 1, 0.12), V(1, 0, 0), [
-    { s: 0, rx: 0.078, ry: 0.076, skin: [[BONE.chest, 0.5], [BONE.neck, 0.5]], mat: MAT.skin, ao: 0.2 },
-    { s: 0.12, rx: 0.076, ry: 0.074, skin: [[BONE.neck, 1]], mat: MAT.skin, ao: 0.25 },
-    { s: 0.24, rx: 0.08, ry: 0.078, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, ao: 0.35 },
-  ], 16, V(0, 1.66, 0.01));
+  /** A short neck, tucked in behind the chin so the face sits down on the scarf. */
+  tube(b, V(0, 1.54, -0.03), V(0, 1, 0.12), V(1, 0, 0), [
+    { s: 0, rx: 0.07, ry: 0.068, skin: [[BONE.chest, 0.5], [BONE.neck, 0.5]], mat: MAT.skin, ao: 0.2 },
+    { s: 0.12, rx: 0.068, ry: 0.066, skin: [[BONE.neck, 1]], mat: MAT.skin, ao: 0.25 },
+    { s: 0.24, rx: 0.072, ry: 0.07, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, ao: 0.35 },
+  ], 16, V(0, 1.66, -0.015));
+  /** A small round button nose, set into the face so only its front stands out. */
+  const tip = facePoint(Math.acos(-0.38), 0);
+  const nose = tip.clone().add(V(0, 0, -0.009));
+  const noseRows: Point[][] = [];
+  for (let i = 0; i <= 8; i++) {
+    const th = (i / 8) * Math.PI;
+    noseRows.push(Array.from({ length: i === 0 || i === 8 ? 1 : 14 }, (_, j) => {
+      const a = (j / 14) * TAU;
+      return {
+        p: nose.clone().add(V(Math.cos(a) * 0.03 * Math.sin(th), Math.cos(th) * 0.025, Math.sin(a) * 0.026 * Math.sin(th))),
+        skin: [[BONE.head, 1]] as Skin,
+        mat: MAT.skin,
+      };
+    }));
+  }
+  b.rows(noseRows, true, nose);
   for (const mx of [1, -1]) {
-    const c = V(mx * 0.258, 1.925, 0.042);
+    const c = V(mx * (FACE.rx + 0.006), 1.93, 0.04);
     const rows: Point[][] = [];
     for (let i = 0; i <= 6; i++) {
       const th = (i / 6) * Math.PI;
       if (i === 0 || i === 6) {
-        rows.push([{ p: c.clone().add(V(0, Math.cos(th) * 0.058, 0)), skin: [[BONE.head, 1]], mat: MAT.skin, ao: 0.8 }]);
+        rows.push([{ p: c.clone().add(V(0, Math.cos(th) * 0.07, 0)), skin: [[BONE.head, 1]], mat: MAT.skin, ao: 0.8 }]);
         continue;
       }
       rows.push(Array.from({ length: 12 }, (_, j) => {
         const a = (j / 12) * TAU;
         return {
-          p: c.clone().add(V(Math.cos(a) * 0.03 * Math.sin(th), Math.cos(th) * 0.058, Math.sin(a) * 0.042 * Math.sin(th))),
+          p: c.clone().add(V(Math.cos(a) * 0.036 * Math.sin(th), Math.cos(th) * 0.07, Math.sin(a) * 0.05 * Math.sin(th))),
           skin: [[BONE.head, 1]] as Skin,
           mat: MAT.skin,
           ao: 0.8,
@@ -468,7 +483,7 @@ function face(b: Builder): void {
 /** The hairline's height on the head relative to the face's middle, by angle from the front. */
 function hairline(phi: number): number {
   const c = Math.cos(phi);
-  return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
+  return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
 }
 
 const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.296, rz: 0.282 };
@@ -487,10 +502,10 @@ const LOCKS: [number, number, number, number, number, number][] = [
   [0.3, 0.75, 0.02, 0.3, 0.13, 0.06],
   [0.6, 0.74, 1.05, 0.44, 0.12, -0.05],
   [0.82, 0.72, 1.15, 0.2, 0.11, -0.05],
-  [1.02, 0.66, 1.18, -0.28, 0.11, 0.06],
-  [-1.08, 0.64, -1.2, -0.34, 0.115, -0.06],
-  [1.3, 0.54, 1.36, -0.16, 0.1, 0.05],
-  [-1.32, 0.52, -1.4, -0.22, 0.1, -0.05],
+  [1.02, 0.66, 1.14, 0.12, 0.11, 0.06],
+  [-1.08, 0.64, -1.16, 0.08, 0.115, -0.06],
+  [1.3, 0.54, 1.34, 0.18, 0.1, 0.05],
+  [-1.32, 0.52, -1.36, 0.16, 0.1, -0.05],
   [1.75, 0.45, 1.8, -0.32, 0.12, 0.04],
   [-1.75, 0.45, -1.8, -0.3, 0.12, -0.04],
 ];
@@ -505,7 +520,8 @@ function hair(b: Builder): void {
       const phi = (j / AROUND) * TAU;
       const end = Math.acos(THREE.MathUtils.clamp((hairline(phi) - lift) / HAIR.ry, -1, 1));
       const th = (i / ROWS) * end;
-      const p = HAIR.c.clone().add(V(HAIR.rx * Math.sin(th) * Math.sin(phi), HAIR.ry * Math.cos(th), HAIR.rz * Math.sin(th) * Math.cos(phi)));
+      const flare = hairFlare(phi, Math.cos(th));
+      const p = HAIR.c.clone().add(V(HAIR.rx * flare * Math.sin(th) * Math.sin(phi), HAIR.ry * Math.cos(th), HAIR.rz * flare * Math.sin(th) * Math.cos(phi)));
       return { p, skin: [[BONE.head, 1]] as Skin, mat: MAT.hair, ao: i === ROWS ? 0.7 : 1, uv: [phi, th] as [number, number] };
     }));
   }
@@ -513,11 +529,17 @@ function hair(b: Builder): void {
   for (const [phi0, c0, phi1, c1, width, swing] of LOCKS) lock(b, phi0, c0, phi1, c1, width, swing);
 }
 
+/** Low at the sides the hair stands out over the full cheeks, so it ends in a hairline rather than cutting into them. */
+function hairFlare(phi: number, ct: number): number {
+  return 1 + 0.14 * smooth(0.45, -0.55, ct) * Math.sin(phi) ** 2;
+}
+
 /** A point on the hair's shell, by angle from the front and the cosine of the angle down from the crown. */
 function onHair(phi: number, ct: number, lift: number): { p: THREE.Vector3; n: THREE.Vector3 } {
   const st = Math.sqrt(Math.max(0, 1 - ct * ct));
-  const n = V(Math.sin(phi) * st / HAIR.rx, ct / HAIR.ry, Math.cos(phi) * st / HAIR.rz).normalize();
-  const p = HAIR.c.clone().add(V(HAIR.rx * st * Math.sin(phi), HAIR.ry * ct, HAIR.rz * st * Math.cos(phi))).addScaledVector(n, lift);
+  const flare = hairFlare(phi, ct);
+  const n = V(Math.sin(phi) * st / (HAIR.rx * flare), ct / HAIR.ry, Math.cos(phi) * st / (HAIR.rz * flare)).normalize();
+  const p = HAIR.c.clone().add(V(HAIR.rx * flare * st * Math.sin(phi), HAIR.ry * ct, HAIR.rz * flare * st * Math.cos(phi))).addScaledVector(n, lift);
   return { p, n };
 }
 
