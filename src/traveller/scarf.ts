@@ -129,8 +129,8 @@ export class Scarf {
       offset: 0,
     });
     this.ends = [
-      end(13, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.7, 1, 0),
-      end(9, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.25, 0.55, 2.1),
+      end(15, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.95, 1, 0),
+      end(10, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.25, 0.55, 2.1),
     ];
     let verts = 0;
     for (const e of this.ends) {
@@ -250,11 +250,12 @@ export class Scarf {
     for (const e of this.ends) {
       /**
        * The air past the child that the end streams on, in their frame: the breeze, out behind and round toward the
-       * knot's side, and the air of their going, straighter behind. A gust swings it round to its own way and never
-       * weakens it, so the ends follow a gust rather than falling slack where it meets the breeze.
+       * knot's side, and the air of their going, a little straighter behind, so seen from behind the ends still reach
+       * out past the bag. A gust swings it round to its own way and never weakens it, so the ends follow a gust
+       * rather than falling slack where it meets the breeze.
        */
-      const left = Math.sin(e.splay) * breeze + Math.sin(e.splay * 0.5) * pace;
-      const back = Math.cos(e.splay) * breeze + Math.cos(e.splay * 0.5) * pace;
+      const left = Math.sin(e.splay) * breeze + Math.sin(e.splay * 0.8) * pace;
+      const back = Math.cos(e.splay) * breeze + Math.cos(e.splay * 0.8) * pace;
       const own = Math.hypot(left, back);
       const angle = THREE.MathUtils.lerp(Math.atan2(left, back), gustAngle, takeover);
       const strength = THREE.MathUtils.lerp(own, Math.max(felt, own), takeover);
