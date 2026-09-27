@@ -59,6 +59,13 @@ Steer during the proportions round (2026-09-27, verbatim):
 > chin looks like it's missing. the child's shoulders are too wide, causing the coat flare sillouhette to not stand out
 > like in the concept.
 
+Next round's ask (2026-09-27, verbatim; his images are `/tmp/child3/jeremy-handoff-image-{1,2,3}.jpg`: our face beside
+the concept's, the promo header, the concept sheet):
+
+> do the sillouhettes of the hood openings look the same to you? [Image #8]. The backpack also looks a bit too big -
+> it's starting to look like a bin instead of an open backpack like in the concepts [Image #9] [Image #10]. And the
+> backpack straps on the front need look correctly attached to the bag around and under the child's shoulders.
+
 Earlier attempts on the child's model are not a guide. Do not mine old transcripts or git history for them.
 
 ## The target
