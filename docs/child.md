@@ -292,3 +292,49 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
     land), `acts.sh <tag>` (the quick actions pinned at fixed times), `pickup.sh <tag>` (the pick-up in real time: it
     runs on its own clock, so pinning cannot show it), `paperthrow.sh <tag>`, `boat.sh <tag>` (boarding at the
     birches, alighting at the home jetty), `rows.py` (labelled sheets). `studio.sh` scrub actions cannot contain `;`.
+
+## The face round: a little girl (2026-09-27/28)
+
+Jeremy, verbatim, in order:
+
+> I dont know why, but the child model looks older in age than a the child age we are aiming for. is it the size of
+> the eyes being too small?
+
+> can the eyes be made larger? It still doesn't read as a child. Also, do we need the little white dots in the
+> child's pupils? Also, there's some kind of brown thing on the side of their face. It looks like a man with side
+> burns rather than a small girl child.
+
+> Its definitely supposed to be a little girl. If you can stray from the concept art and make the hair under the hood
+> reflect this, as well as the face shape.
+>
+> I think i also figured out why the concept art looks like a child more than the in game model - because our ingame
+> model doesn't have those chubby cheeks. do you see what i mean?
+
+> hey, whatever you did to the cheeks, it looks horrendous, change it back and try again. You were supposed to add
+> baby fat to the cheeks, not make them look like an alien
+
+> ok, the problem with the baby fat is you moved it too high on the cheek instead of lower down, and the baby fat is
+> slightly a bit too much.
+
+> yea ok, lets go with lower, a little more, and maybe fix the bangs so it doesn't look so much like a bowl cut
+
+He approved the result ("looks good"). The child is a little girl; the concept sheet's gender-neutral note no longer
+holds, and hair and face may stray from it to show her. Built on branch `child-face`, merged. The knobs are in
+`garments.ts` (`FACE`, `facePoint`, `BANGS`, `BOB`, `bob`, `strand`) and `shader.ts` (`paintFace`).
+
+- **Eyes:** big dark upright ovals (half 0.043 × 0.053), a warm brown low in the iris, a sliver of white at the outer
+  corner, one soft glint (without it they read as holes), two lash flicks at the outer corner. Set a little lower
+  (0.048 below the face's middle). Shut, only the lash line shows.
+- **Face:** narrower (`rx` 0.238). At the old width the hood's inside showed in front of the cheeks, the "brown thing"
+  he saw. Baby fat (`FACE.fat` 0.13) is a broad fullness low in the cheeks, widest just below the mouth, above a
+  small round chin. **Not local pads:** a round pad under each eye was the "alien" version.
+- **Nose, mouth, brows, ears:** a small round button nose (its own mesh; a vertex bump on the face read as a spike in
+  profile), a small smile, soft arched brows, bigger ears.
+- **Hair:** bangs parted a little off the middle, sweeping away from the parting at uneven lengths, the outer ones
+  longer to the temples (a single straight line read as a bowl cut). A bob falls past the cheeks behind their outline
+  and turns under at the jaw.
+- **Neck:** shaded as a whole (vertex tag `k` on the neck tube). The idle pose lifts the head and shows a strip of it
+  that sits inside the head at rest, so shading by rest height could not reach it.
+- Sheets shown to Jeremy, in `/tmp/childface`: `face-before-after.png`, `babyfat2.png`, `bangs.png`,
+  `full-girl.png`. Harness: `snap.sh` and `studio.sh` (copies of `/tmp/child3`'s, serving on :5393).
+- Not yet checked in a level from the play camera, or in motion.
