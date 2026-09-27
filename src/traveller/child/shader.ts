@@ -258,7 +258,8 @@ void main() {
   /** Inside the hood the face only takes the sun that comes in through the opening. */
   if (m == ${MAT.skin} || m == ${MAT.hair}) {
     float into = dot(uSunDir, uHoodForward);
-    sun *= mix(0.25, 1.0, smoothstep(-0.1, 0.6, into));
+    /** Skin takes the sun softly: a bare forehead square to a low sun would otherwise flare white. */
+    sun *= mix(0.25, 1.0, smoothstep(-0.1, 0.6, into)) * (m == ${MAT.skin} ? 0.7 : 1.0);
     vec3 q = vRest - ${v3(FACE.c)};
     bakedAo *= 1.0 - 0.3 * smoothstep(0.0, 0.2, q.y) - 0.25 * smoothstep(0.12, 0.26, abs(q.x));
   }
