@@ -1,4 +1,4 @@
-// Real pointer sweeps through the dark wood, plus long-idle and accidental-motion regressions.
+// Real pointer gestures through the dark wood (updrafts over the coals, sweeps across the caught paper), plus long-idle and accidental-motion regressions.
 // node tools/wood-check.mjs [portrait] [rescue]. NATURAL=1 skips clock probes; BASE pins a build; PREFIX separates captures.
 // Rescue stages the bolt after the first-coal idle/input checks. Captures and report: /tmp/updraft-wood-<mode>-*.
 import { chromium } from 'playwright-core';
@@ -46,12 +46,12 @@ try {
   if (process.env.REVIEW === '1') stopReview = reviewCapture(page, prefix);
   const state = () => page.evaluate(() => {
     const g = __game, c = g.story.current;
-    const target = c.windInvitation?.clone().project(g.rig.camera);
+    const target = (c.updraftTarget ?? c.windInvitation)?.clone().project(g.rig.camera);
     return { chapter: g.story.name, beat: c.beat, leg: c.leg, chainAt: c.chainAt, t: c.t,
       child: g.child.position.toArray(), moving: g.child.moving, soggy: g.glider.soggy.value,
       bird: g.cygnet.seating.shown.p.toArray(), birdState: g.cygnet.state, carry: g.carry.playing,
       plane: g.glider.position.toArray(), landed: g.glider.landed,
-      target: target && [target.x, target.y, target.z],
+      target: target && [target.x, target.y, target.z], updraft: !!c.updraftTarget,
       coals: g.embers.coals.filter(c => c.live).map(c => ({ lit: c.lit, wake: c.wake, p: c.p.toArray() })) };
   });
   // Timer jumps test the old 35/75/170-second skips without changing any input or light.
@@ -87,7 +87,7 @@ try {
       previous=sample;
     };
   });
-  await page.waitForFunction(() => __game.emberInvitation.batch.mesh.visible, null, { timeout: 12000 });
+  await page.waitForFunction(() => __game.swirl.glow > .35 && __game.story.current.coax, null, { timeout: 12000 });
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${prefix}-invitation.png` });
   const initial = await state();
@@ -113,6 +113,31 @@ try {
     }
     if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   }
+  let angle = 0, circling = false;
+  async function circle(target) {
+    const x = (target[0] + 1) * viewport.width / 2;
+    const y = (1 - target[1]) * viewport.height / 2;
+    const radius = viewport.height * 0.075;
+    const at = () => [Math.max(4, Math.min(viewport.width - 4, x + Math.cos(angle) * radius)), y - Math.sin(angle) * radius];
+    // A finger stays down from one loop to the next, as a player keeps circling.
+    if (touch && !circling) await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: at()[0], y: at()[1] }] });
+    else if (!touch) await page.mouse.move(...at());
+    circling = true;
+    // Timed by the clock, so slower touch dispatch still circles about once a second.
+    for (let from = Date.now(), start = angle; angle < start + Math.PI * 3;) {
+      angle = start + (Date.now() - from) / 900 * Math.PI * 2;
+      if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: at()[0], y: at()[1] }] });
+      else await page.mouse.move(...at());
+      await page.waitForTimeout(12);
+    }
+  }
+  async function lift() {
+    if (touch && circling) await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    circling = false;
+  }
+  for (let i = 0; i < 4; i++) await sweep((await state()).target, i % 2 === 1);
+  report.straightSweeps = await state();
+  assert(report.straightSweeps.coals.every(c => !c.lit && c.wake === 0), 'straight sweeps must not wake the first coal');
   if (resumeRescue) await page.evaluate(() => {
     const g = __game, c = g.story.current;
     g.child.stop(); g.child.place(-18, -1786, Math.PI); c.leg = 2; c.chainAt = 108;
@@ -152,9 +177,10 @@ try {
     const litCount = s.coals.filter(c => c.lit).length;
     if (s.chainAt !== lastCoal) { lastCoal = s.chainAt; report.catches.push(s); }
     if (s.target && s.target[2] < 1 && Math.abs(s.target[0]) < 0.96 && Math.abs(s.target[1]) < 0.96) {
-      await sweep(s.target, strokes++ % 2 === 1);
-      if (strokes % 10 === 0) console.log(`sweep ${strokes}: ${JSON.stringify(await state())}`);
-    } else await page.waitForTimeout(300);
+      if (s.updraft) { await circle(s.target); strokes++; }
+      else { await lift(); await sweep(s.target, strokes++ % 2 === 1); }
+      if (strokes % 10 === 0) console.log(`gesture ${strokes}: ${JSON.stringify(await state())}`);
+    } else { await lift(); await page.waitForTimeout(300); }
     if (litCount && !report.litShot) {
       await page.screenshot({ path: `${prefix}-lit.png` }); report.litShot = true;
     }
@@ -175,7 +201,7 @@ try {
   assert(report.beats.some(b => b.beat === 'lost'), 'the rescue must be encountered');
   assert(report.beats.some(b => b.beat === 'out'), 'retrieval must continue toward the boat');
   assert.equal(report.errors.length, 0, report.errors.join('\n'));
-  console.log(`Wood complete with ${strokes} sweeps; no browser errors.`);
+  console.log(`Wood complete with ${strokes} gestures; no browser errors.`);
 } catch (error) {
   report.failure = error.stack;
   throw error;
