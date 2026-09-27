@@ -35,16 +35,16 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float ndl = dot(N, uSunDir);
   float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
-  /** Wool lets the low sun through its thin edges and glows red when the light is behind it. */
-  float through = max(-ndl, 0.0) * 0.55 + pow(max(dot(-V, uSunDir), 0.0), 3.0) * 0.45;
+  /** Lit as the wrap round the neck is (the child's knit), so the ends are the same red. */
   float st = knit(vSurf, 1.0);
   vec3 alb = uColor * (0.8 + 0.3 * st);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
   float ground = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
-  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
+  float facing = clamp(dot(N, V), 0.0, 1.0);
+  float rim = pow(1.0 - facing, 3.0) * (0.35 + 0.65 * max(dot(-V, uSunDir), 0.0));
   float ao = ground * 0.85;
-  vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * (wrap * wrap * 0.9 * mix(0.6, 1.0, ao) + through * 0.4) * sun);
-  col += uSunColor * alb * rim * 0.6 * sun;
+  vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95 * mix(0.6, 1.0, ao));
+  col += uSunColor * alb * rim * 0.755 * sun;
   col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -152,7 +152,8 @@ export class Scarf {
           if (i < rings - 1) {
             const a = e.offset + i * SECTION + j;
             const b = e.offset + i * SECTION + ((j + 1) % SECTION);
-            index.push(a, b, a + SECTION, b, b + SECTION, a + SECTION);
+            /** Wound so the outside faces out, the way its normals point. */
+            index.push(a, a + SECTION, b, b, a + SECTION, b + SECTION);
           }
         }
       }
@@ -162,8 +163,8 @@ export class Scarf {
         for (let j = 0; j < SECTION; j++) {
           const a = e.offset + ring * SECTION + j;
           const b = e.offset + ring * SECTION + ((j + 1) % SECTION);
-          if (flip) index.push(c, b, a);
-          else index.push(c, a, b);
+          if (flip) index.push(c, a, b);
+          else index.push(c, b, a);
         }
       }
     }
