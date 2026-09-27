@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ATMO_GLSL, atmo } from './atmosphere';
+import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { CloudWake } from './stairs-wake';
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, LANE, STAIRS_ISLE, flight } from './stairs-layout';
 
@@ -10,6 +10,7 @@ const TRAIL_POINTS = 16;
 /** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
 const TOP_VERT = /* glsl */ `
 ${ATMO_GLSL}
+${NOISE_GRAD_GLSL}
 uniform vec2 uCentre;
 uniform vec3 uCalmAt;
 uniform vec2 uRoute[${ROUTE_POINTS}];
@@ -17,16 +18,24 @@ uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform float uSurface;
 out vec3 vWorld;
 out float vRing;
-BILLOW
+out vec3 vCalm;
+out float vShade;
+TOP
 void main() {
   vec2 xz = position.xz + uCentre;
   vRing = length(position.xz);
-  vWorld = vec3(xz.x, uSurface + billow(xz), xz.y);
+  float c = calmAt(xz);
+  vCalm = vec3(c, vec2(calmAt(xz + vec2(1.5, 0.0)) - c, calmAt(xz + vec2(0.0, 1.5)) - c) / 1.5);
+  float fold;
+  float h = cloudTop(xz, vCalm, 1.0 - smoothstep(50.0, 140.0, vRing), 0.0, fold).x;
+  vShade = heapShade(xz, h);
+  vWorld = vec3(xz.x, uSurface + h, xz.y);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
 const TOP_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${NOISE_GRAD_GLSL}
 uniform vec2 uCentre;
 uniform vec3 uCalmAt;
 uniform vec2 uRoute[${ROUTE_POINTS}];
@@ -36,7 +45,9 @@ uniform float uHole;
 uniform float uSurface;
 in vec3 vWorld;
 in float vRing;
-BILLOW
+in vec3 vCalm;
+in float vShade;
+TOP
 void main() {
   if (vRing > uReach) discard;
   vec2 xz = vWorld.xz;
@@ -44,45 +55,62 @@ void main() {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
     if (hole < 0.0 && uCloudBubble.y < uSurface + 0.5) discard;
   }
-  float e = 0.6;
-  float h = billow(xz);
-  vec3 N = normalize(vec3(h - billow(xz + vec2(e, 0.0)), e, h - billow(xz + vec2(0.0, e))));
+  float fold;
+  vec3 top = cloudTop(xz, vCalm, 1.0, 1.0, fold);
+  // Low round the landing and along the way, so the light makes more of its shape there than its height does.
+  vec3 N = normalize(vec3(-top.yz * mix(2.0, 1.0, vCalm.x), 1.0).xzy);
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 L = normalize(uSunDir + vec3(0.0, 0.08, 0.0));
-  // Lit hard from the side by the low sun: gold on every flank that faces it, lilac in the folds that do not.
-  float wrap = clamp(dot(N, L) * 0.85 + 0.2, 0.0, 1.0);
-  float toward = pow(max(0.0, dot(-V, L)), 6.0);
-  float rim = pow(1.0 - max(0.0, dot(N, V)), 3.0);
-  float crest = smoothstep(0.0, 4.0, h);
-  float fold = vnoise(xz * 0.21) * 0.5 + vnoise(xz * 0.63) * 0.25;
-  vec3 shade = mix(vec3(0.54, 0.52, 0.76), vec3(0.76, 0.74, 0.88), crest) * (uSkyAmbient * 0.85 + vec3(0.1));
-  vec3 sunlit = uSunColor * (0.95 + 0.4 * toward) * wrap * wrap * 1.25;
-  vec3 col = shade * (0.85 + 0.3 * fold) + sunlit * (0.7 + 0.3 * crest);
-  col += uSunColor * rim * (0.25 + 1.4 * toward) * wrap;
-  col *= 0.94 + 0.12 * vnoise(xz * 2.3);
-  float cover = uCloudDeck.w;
-  gl_FragColor = vec4(applyFog(col, vWorld), cover);
+  vec3 L = normalize(uSunDir);
+  // Lit from the side by the low sun, which the cloud scatters across its whole top: peach where the light lies
+  // across it, gold on the flanks turned full to it, lilac and violet in the folds, on the sides turned away and in
+  // the long shadows of the heaps. Against the light it glows through its crests and thin edges.
+  float facing = dot(N, L);
+  float lit = clamp(facing * 1.5 + 0.22, 0.0, 1.0) * (1.0 - 0.9 * vShade) * (1.0 - 0.5 * fold);
+  float full = smoothstep(0.2, 0.85, facing) * (1.0 - vShade);
+  float toward = pow(max(0.0, dot(-V, L)), 2.0);
+  float edgeOn = pow(1.0 - abs(dot(N, V)), 2.0);
+  vec3 lilac = uSkyAmbient * vec3(1.2, 0.88, 1.08) + uGroundBounce * 0.3;
+  vec3 violet = uSkyAmbient * vec3(0.75, 0.52, 0.95);
+  vec3 shade = mix(violet, lilac, clamp(N.y * 1.3 - 0.2, 0.0, 1.0) * (1.0 - 0.6 * fold));
+  vec3 col = mix(shade, uSunColor * vec3(0.62, 0.6, 0.5) + shade * 0.3, lit);
+  col += uSunColor * vec3(1.0, 0.95, 0.75) * full * 0.45;
+  col += uSunColor * toward * (1.0 - 0.8 * vShade) * (0.02 + 0.5 * edgeOn * (1.0 - fold));
+  col *= 0.95 + 0.1 * vnoise(xz * 1.7);
+  // Far off it goes into the haze of the horizon beyond it, gold toward the sun and rose away from it.
+  vec3 ahead = vWorld - cameraPosition;
+  float dist = length(ahead);
+  col = mix(col, skyRadiance(normalize(vec3(ahead.x, dist * 0.03, ahead.z))), (1.0 - exp(-dist / 650.0)) * 0.75);
+  // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it.
+  gl_FragColor = vec4(applyFog(col, vec3(vWorld.x, max(vWorld.y, uSurface + 0.05), vWorld.z)), uCloudDeck.w);
+}`;
+
+/** Round lobes on a jittered grid, run together where they meet: x their height in cells, yz its slope. */
+const LOBES_GLSL = /* glsl */ `
+vec3 lobes(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float sum = 0.0;
+  vec2 slope = vec2(0.0);
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+    vec2 g = vec2(float(x), float(y));
+    vec2 o = g + vec2(hash12(i + g), hash12(i + g + 17.3)) * 0.9 + 0.05 - f;
+    float r = 0.4 + 0.6 * hash12(i + g + 41.7);
+    // Some stand taller than their neighbours, so they heap up rather than lying in a quilt.
+    float w = exp(9.0 * (r * (1.0 - dot(o, o) / (r * r)) + 0.4 * hash12(i + g + 63.1)));
+    sum += w;
+    slope += w * o / r;
+  }
+  return vec3(log(sum) / 9.0 - 0.3, slope * 2.0 / sum);
 }`;
 
 /**
- * Round heaps of cloud: cellular domes in three sizes. Low and gentle round the top landing and all along the way
- * the boat goes, so it sails down a valley between them; and where the hull has just been, a furrow that closes
- * up again behind it, with a soft lip either side.
+ * The top of the cloud: heaped cumulus in the open, big round lobes run together into heaps and smaller ones on
+ * those, with soft creases where they meet. Low and gentle round the top landing and all along the way the boat
+ * goes, so it sails down a valley between the heaps; and where the hull has just been, a furrow that closes up
+ * again behind it, with a soft lip either side.
  */
-const BILLOW_GLSL = /* glsl */ `
-float domes(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  float best = 0.0;
-  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-    vec2 g = vec2(float(x), float(y));
-    vec2 o = vec2(hash12(i + g), hash12(i + g + 17.3)) * 0.8 + 0.1;
-    float r = 0.55 + 0.35 * hash12(i + g + 41.7);
-    float d = length(g + o - f) / r;
-    best = max(best, sqrt(max(0.0, 1.0 - d * d)) * r);
-  }
-  return best;
-}
+const TOP_GLSL = /* glsl */ `
+${LOBES_GLSL}
 float toSegment(vec2 p, vec2 a, vec2 b) {
   vec2 ab = b - a;
   float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
@@ -93,31 +121,95 @@ float fromRoute(vec2 p) {
   for (int i = 0; i < ${ROUTE_POINTS - 1}; i++) d = min(d, toSegment(p, uRoute[i], uRoute[i + 1]));
   return d;
 }
-float furrow(vec2 p) {
-  float g = 0.0;
+/** 0 round the top landing and along the way, 1 out in the open where the heaps are. */
+float calmAt(vec2 xz) {
+  return min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(5.0, 28.0, fromRoute(xz)));
+}
+/** x how deep the furrow is (a lip is negative), yz its slope. */
+vec3 furrow(vec2 p) {
+  vec3 trench = vec3(0.0);
+  vec3 lip = vec3(0.0);
   for (int i = 0; i < ${TRAIL_POINTS - 1}; i++) {
     vec4 a = uTrail[i];
     vec4 b = uTrail[i + 1];
     vec2 ab = b.xy - a.xy;
     float t = clamp(dot(p - a.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
-    float d = length(p - a.xy - ab * t);
+    vec2 off = p - a.xy - ab * t;
+    float d = max(length(off), 1e-3);
     float fresh = mix(a.z, b.z, t);
-    g = max(g, fresh * (exp(-d * d / 1.1) - 0.3 * exp(-(d - 1.9) * (d - 1.9) / 0.4)));
+    float dig = fresh * exp(-d * d / 1.1);
+    if (dig > trench.x) trench = vec3(dig, dig * (-2.0 * d / 1.1) * off / d);
+    float rim = (d - 1.9);
+    float heap = -0.3 * fresh * exp(-rim * rim / 0.4);
+    if (heap < lip.x) lip = vec3(heap, heap * (-2.0 * rim / 0.4) * off / d);
   }
-  return g;
+  return trench + lip;
 }
-float billow(vec2 xz) {
+/** How high the heaps stand: a smooth rise, big lobes and smaller ones, each on the calm cloud and on a heap. */
+const float RISE = 2.8;
+const vec2 BIG = vec2(0.8, 5.6);
+const vec2 MID = vec2(0.38, 1.5);
+const vec2 FINE = vec2(0.14, 0.3);
+/** 0 near the top landing, 1 far out, where the heaps tower. */
+float farOut(vec2 xz) {
+  return smoothstep(70.0, 260.0, length(xz - uCalmAt.xy));
+}
+/** Where the heaps gather: round clusters with open cloud between them. x how much, yz its slope. */
+vec3 heapAt(vec2 p) {
+  vec3 site = lobes(p / 80.0 + 11.3);
+  vec3 m = vec3(site.x, site.yz / 80.0) * 0.65 + vnoiseGrad(p * 0.021 + 2.3) * vec3(0.35, 0.35 * 0.021, 0.35 * 0.021);
+  float k = clamp((m.x - 0.22) / 0.4, 0.0, 1.0);
+  return vec3(k * k * (3.0 - 2.0 * k), 6.0 * k * (1.0 - k) / 0.4 * m.yz);
+}
+/**
+ * x the height of the cloud's top over the surface, yz its slope. calm is calmAt with its slope. detail scales the
+ * middle lobes and fine adds the smallest, for the light: the mesh further off is too coarse to carry them. fold
+ * says how far down in a crease between lobes the point is.
+ */
+vec3 cloudTop(vec2 xz, vec3 calm, float detail, float fine, out float fold) {
   vec2 p = xz + uCloudShift * 0.6;
-  float calm = min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(5.0, 28.0, fromRoute(xz)));
-  float swell = (domes(p * 0.09) * 1.1 + domes(p * 0.23 + 3.1) * 0.35 + domes(p * 0.55 + 7.7) * 0.12) * (0.7 + 0.3 * calm);
-  float heaps = domes(p * 0.028 + 9.7) * 7.5 + domes(p * 0.07 + 5.3) * 2.2;
-  return mix(swell, swell + heaps, calm) - furrow(xz) * 0.6;
+  vec3 heap = heapAt(p);
+  float rise = heap.x * calm.x;
+  vec2 dRise = heap.yz * calm.x + heap.x * calm.yz;
+  float tall = RISE * (1.0 + 1.6 * farOut(xz));
+  vec3 big = lobes(p / 17.0 + 5.3);
+  vec3 mid = lobes(p / 6.5 + 1.7);
+  float aBig = BIG.x + BIG.y * rise;
+  float aMid = (MID.x + MID.y * rise) * detail;
+  vec3 h = vec3(rise * tall, dRise * tall)
+    + vec3(big.x * aBig, big.yz / 17.0 * aBig + big.x * BIG.y * dRise)
+    + vec3(mid.x * aMid, mid.yz / 6.5 * aMid + mid.x * MID.y * detail * dRise);
+  fold = (1.0 - smoothstep(0.0, 0.5, big.x)) * (0.3 + 0.4 * rise) + (1.0 - smoothstep(0.0, 0.45, mid.x)) * 0.6;
+  if (fine > 0.0) {
+    vec3 s = lobes(p / 2.4 + 7.7);
+    float aFine = FINE.x + FINE.y * rise;
+    h += vec3(s.x * aFine, s.yz / 2.4 * aFine);
+    fold += (1.0 - smoothstep(0.0, 0.4, s.x)) * 0.3;
+  }
+  fold = clamp(fold, 0.0, 1.0);
+  return h - furrow(xz) * 0.6;
+}
+/** How far the heaps between a point and the low sun keep the light off it: their long shadows across the cloud. */
+float heapShade(vec2 xz, float h) {
+  vec2 toSun = normalize(uSunDir.xz + 1e-5);
+  float climb = max(uSunDir.y, 0.02) / max(length(uSunDir.xz), 1e-3);
+  vec2 drift = uCloudShift * 0.6;
+  float shade = 0.0;
+  for (int i = 1; i <= 6; i++) {
+    float t = 2.5 + 1.6 * float(i * i);
+    vec2 q = xz + toSun * t;
+    float rise = heapAt(q + drift).x * calmAt(q);
+    float over = rise * RISE * (1.0 + 1.6 * farOut(q)) + (BIG.x + BIG.y * rise) * 0.45 - h - t * climb;
+    shade = max(shade, smoothstep(0.0, 1.5 + t * 0.04, over));
+  }
+  return shade;
 }`;
 
 /**
- * The underside of the cloud seen from below: heavy bellies hanging out of it, lilac in their hollows and lit
- * gold on the flanks the low sun reaches under the edge of the deck. Flat and high round the stair, so it goes
- * up into the white through a level ceiling and there is room under it to work on the loose flights.
+ * The underside of the cloud seen from below: bellies hanging out of it and soft cells across it, lilac in their
+ * hollows and lit gold and rose where the low sun reaches in under the edge of the deck. Flat and high round the
+ * stair, so it goes up into the white through a level ceiling and there is room under it to work on the loose
+ * flights; further off it breaks up into separate clouds with the sky between them, their thin edges lit through.
  */
 const BELLY_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -126,11 +218,11 @@ uniform vec3 uCalmAt;
 uniform vec2 uStairAt;
 out vec3 vWorld;
 out float vRing;
-BILLOW
+BELLY
 void main() {
   vec2 xz = position.xz + uCentre;
   vRing = length(position.xz);
-  vWorld = vec3(xz.x, uCloudDeckY.x + 0.6 - belly(xz), xz.y);
+  vWorld = vec3(xz.x, uCloudDeckY.x + 0.6 - belly(xz, deckCover(xz)), xz.y);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -142,44 +234,61 @@ uniform vec2 uStairAt;
 uniform float uReach;
 in vec3 vWorld;
 in float vRing;
-BILLOW
+BELLY
 void main() {
   if (vRing > uReach) discard;
   vec2 xz = vWorld.xz;
-  float e = 0.8;
-  float h = belly(xz);
-  // Hanging down, so the surface faces down and its normal is the slope of the bellies seen from below.
-  vec3 N = normalize(vec3(belly(xz + vec2(e, 0.0)) - h, -e, belly(xz + vec2(0.0, e)) - h));
-  vec3 V = normalize(cameraPosition - vWorld);
-  vec3 L = normalize(vec3(uSunDir.x, max(uSunDir.y, 0.0) * 0.4 + 0.02, uSunDir.z));
-  float wrap = clamp(dot(N, L) * 0.85 + 0.25, 0.0, 1.0);
+  float cover = deckCover(xz);
+  vec2 toSun = normalize(uSunDir.xz + 1e-5);
+  // Seen from below the cloud is darker the thicker it is: lilac and violet in the bodies of its cells, lighter in
+  // the thin seams between them. The low sun reaches in sideways through whatever is thin between it and a
+  // point, so each cell is lit gold along the side it faces the sun from, and more so far off toward the sun.
+  float thick = bellyThick(xz) * smoothstep(0.1, 0.9, cover);
+  float before = bellyThick(xz + toSun * 4.0) * smoothstep(0.1, 0.9, deckCover(xz + toSun * 4.0));
+  float thin = 1.0 - smoothstep(0.2, 0.75, cover);
+  vec3 col = deckUnderside(xz, cameraPosition, thin);
   vec2 away = xz - cameraPosition.xz;
   float reach = length(away);
-  float sunward = reach > 1.0 ? pow(max(0.0, dot(away / reach, normalize(uSunDir.xz + 1e-5))), 2.0) : 0.0;
-  float rim = pow(1.0 - abs(dot(N, V)), 2.5);
-  // The lowest parts of the bellies catch the sun coming in under the deck; the hollows between stay lilac.
-  float low = smoothstep(0.5, 6.0, h);
-  vec3 shade = mix(uSkyAmbient * 0.55 + uGroundBounce * 0.2, uSkyAmbient * 0.72 + uGroundBounce * 0.12, low);
-  float far = smoothstep(15.0, 350.0, reach);
-  vec3 sunlit = uSunColor * wrap * wrap * (0.25 + 0.9 * low + 1.1 * sunward * far);
-  vec3 col = shade * (0.92 + 0.16 * vnoise(xz * 0.11)) + sunlit + uSunColor * rim * wrap * (0.15 + 0.7 * sunward) * low;
+  float sunward = reach > 1.0 ? max(0.0, dot(away / reach, toSun)) : 0.0;
+  float far = smoothstep(20.0, 300.0, reach);
+  float sunIn = exp(-2.6 * before) * (1.0 - 0.6 * thick);
+  col *= mix(1.25, 0.72, thick);
+  col += uSkyAmbient * vec3(0.05, 0.0, 0.12) * thick;
+  col += uSkyHorizonSun * sunIn * (0.14 + 0.35 * sunward * far + 0.12 * far);
   float edge = 1.0 - smoothstep(0.55, 0.98, length(xz - uCloudDeck.xy) / uCloudDeck.z);
   // Seen from just under it, a ceiling is a line; the fringe of the deck takes over there.
   float under = smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y);
-  gl_FragColor = vec4(applyFog(col, vWorld), uCloudDeck.w * edge * under);
+  float there = smoothstep(0.08, 0.4, cover);
+  gl_FragColor = vec4(applyFog(col, vWorld), uCloudDeck.w * edge * under * there);
 }`;
 
-/** Bellies of cloud hanging from the deck: big slow heaps with smaller ones on them, none near the stair. */
+/**
+ * The underside's shape: big rounded bellies with smaller ones across them, shallow over the stair and hanging
+ * deeper in the open, drawn up into the cloud at the thin edges where it breaks apart, and a belly of its own
+ * round the stair, which goes up into it.
+ */
 const BELLY_GLSL = /* glsl */ `
-float belly(vec2 xz) {
-  vec2 p = xz + uCloudShift * 0.6;
-  float calm = smoothstep(uCalmAt.z * 0.45, uCalmAt.z, length(xz - uCalmAt.xy));
-  float big = vnoise(p * 0.024 + 2.3);
-  float heaps = big * big * 7.0 + vnoise(p * 0.07 + 7.1) * 2.2 + vnoise(p * 0.19 + 1.7) * 0.6;
-  // Round the stair it hangs down in a belly of its own, and the stair goes up into it.
+${LOBES_GLSL}
+/** 0 over the stair and the room round it, 1 out in the open. */
+float bellyOpen(vec2 xz) {
+  return smoothstep(uCalmAt.z * 0.45, uCalmAt.z, length(xz - uCalmAt.xy));
+}
+float edgeLift(float cover) {
+  return (1.0 - smoothstep(0.15, 0.85, cover)) * 2.2;
+}
+/** How far the underside hangs below the base. */
+float belly(vec2 xz, float cover) {
+  vec2 p = xz + uCloudShift * 0.5;
+  float open = bellyOpen(xz);
+  float h = lobes(p / 26.0 + 2.3).x * (0.6 + 3.8 * open) + lobes(p / 9.0 + 7.1).x * (0.4 + 0.8 * open);
   vec2 fromStair = xz - uStairAt;
   float swallow = 2.8 * exp(-dot(fromStair, fromStair) / 60.0) * (0.85 + 0.3 * vnoise(xz * 0.5 + uTime * 0.05));
-  return heaps * (0.1 + 0.9 * calm) + swallow;
+  return h * smoothstep(0.15, 0.85, cover) - edgeLift(cover) + swallow;
+}
+/** How thick the underside is at a point: 0 in the seams between its cells, 1 in the middle of one. */
+float bellyThick(vec2 xz) {
+  vec2 p = xz + uCloudShift * 0.5;
+  return smoothstep(0.1, 0.55, lobes(p / 26.0 + 2.3).x * 0.45 + lobes(p / 9.0 + 7.1).x * 0.55);
 }`;
 
 /**
@@ -234,8 +343,8 @@ export class StairsCloud {
     disc.setIndex(index);
     this.top = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.topUniforms },
-      vertexShader: TOP_VERT.replace('BILLOW', BILLOW_GLSL),
-      fragmentShader: TOP_FRAG.replace('BILLOW', BILLOW_GLSL),
+      vertexShader: TOP_VERT.replace('TOP', TOP_GLSL),
+      fragmentShader: TOP_FRAG.replace('TOP', TOP_GLSL),
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     }));
@@ -253,8 +362,8 @@ export class StairsCloud {
     };
     this.belly = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.bellyUniforms },
-      vertexShader: BELLY_VERT.replace('BILLOW', BELLY_GLSL),
-      fragmentShader: BELLY_FRAG.replace('BILLOW', BELLY_GLSL),
+      vertexShader: BELLY_VERT.replace('BELLY', BELLY_GLSL),
+      fragmentShader: BELLY_FRAG.replace('BELLY', BELLY_GLSL),
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     }));
