@@ -27,7 +27,7 @@ void main() {
   float c = calmAt(xz);
   vCalm = vec4(c, vec2(calmAt(xz + vec2(1.5, 0.0)) - c, calmAt(xz + vec2(0.0, 1.5)) - c) / 1.5, smoothstep(2.5, 10.0, fromRoute(xz)));
   vec2 fold;
-  float h = cloudTop(xz, vCalm, 1.0 - smoothstep(50.0, 140.0, vRing), 0.0, fold).x;
+  float h = cloudTop(xz, vCalm, vec2(1.0 - smoothstep(50.0, 140.0, vRing), 1.0 - smoothstep(260.0, 520.0, vRing)), 0.0, fold).x;
   vShade = heapShade(xz, h);
   vWorld = vec3(xz.x, uSurface + h, xz.y);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -56,7 +56,7 @@ void main() {
     if (hole < 0.0 && uCloudBubble.y < uSurface + 0.5) discard;
   }
   vec2 fold;
-  vec3 top = cloudTop(xz, vCalm, 1.0, 1.0, fold);
+  vec3 top = cloudTop(xz, vCalm, vec2(1.0), 1.0, fold);
   // Low round the landing and along the way, so the light makes more of its shape there than its height does.
   vec3 N = normalize(vec3(-top.yz * mix(2.0, 1.0, vCalm.x), 1.0).xzy);
   vec3 V = normalize(cameraPosition - vWorld);
@@ -192,11 +192,11 @@ vec3 towers(vec2 p) {
 }
 /**
  * x the height of the cloud's top over the surface, yz its slope. calm is calmAt with its slope, and in w 0 right
- * along the way the boat goes, where the cloud lies smoother so the hull rides on it. detail scales the middle
- * lobes and fine adds the smallest, for the light: the mesh further off is too coarse to carry them. fold.x says
- * how far down in a crease between lobes the point is, fold.y how far up its heap it stands.
+ * along the way the boat goes, where the cloud lies smoother so the hull rides on it. detail scales the middle and
+ * the big lobes and fine adds the smallest, for the light: the mesh further off is too coarse to carry them.
+ * fold.x says how far down in a crease between lobes the point is, fold.y how far up its heap it stands.
  */
-vec3 cloudTop(vec2 xz, vec4 calm, float detail, float fine, out vec2 fold) {
+vec3 cloudTop(vec2 xz, vec4 calm, vec2 detail, float fine, out vec2 fold) {
   vec2 p = xz + uCloudShift * 0.6;
   vec3 heap = heapAt(p);
   float rise = heap.x * calm.x;
@@ -205,19 +205,20 @@ vec3 cloudTop(vec2 xz, vec4 calm, float detail, float fine, out vec2 fold) {
   vec3 tower = towers(p);
   // Near, the heaps are low mounds, so the cloud lies open all round; the towers stand far off.
   float stand = RISE * (0.6 + 1.2 * far);
-  float lift = TOWER * (0.2 + 1.3 * far);
+  float lift = TOWER * (0.2 + 1.1 * far);
   vec3 big = lobes(p / 17.0 + 5.3, rise * 0.7);
   vec3 mid = lobes(p / 6.5 + 1.7, rise * 0.7);
   float stature = nearHeap(far);
   float aTower = lift * rise * stature;
   float even = 0.4 + 0.6 * calm.w;
-  float aBig = BIG.x * even + BIG.y * rise * stature;
-  float aMid = (MID.x * even + MID.y * rise * stature) * detail;
+  float aBig = (BIG.x * even + BIG.y * rise * stature) * detail.y;
+  float aMid = (MID.x * even + MID.y * rise * stature) * detail.x;
   dRise *= stature;
   vec3 h = vec3(rise * stature, dRise) * stand
     + vec3(tower.x * aTower, tower.yz * aTower + tower.x * lift * dRise)
-    + vec3(big.x * aBig, big.yz / 17.0 * aBig + big.x * BIG.y * dRise)
-    + vec3(mid.x * aMid, mid.yz / 6.5 * aMid + mid.x * MID.y * detail * dRise);
+    + vec3(big.x * aBig, big.yz / 17.0 * aBig + big.x * BIG.y * detail.y * dRise)
+    + vec3(mid.x * aMid, mid.yz / 6.5 * aMid + mid.x * MID.y * detail.x * dRise)
+    + vec3(0.2 * (1.0 - calm.w), 0.0, 0.0);
   float crease = (1.0 - smoothstep(0.2, 0.8, tower.x)) * rise * 0.6
     + (1.0 - smoothstep(0.0, 0.5, big.x)) * (0.3 + 0.4 * rise) + (1.0 - smoothstep(0.0, 0.45, mid.x)) * 0.6;
   float crown = mix(1.0, clamp(h.x / max((stand + lift * 1.1) * stature + aBig * 0.8, 0.5), 0.0, 1.0), rise);
@@ -241,7 +242,7 @@ float heapShade(vec2 xz, float h) {
     vec2 q = xz + toSun * t;
     float far = farOut(q);
     float rise = heapAt(q + drift).x * calmAt(q) * nearHeap(far);
-    float over = rise * (RISE * (0.6 + 1.2 * far) + TOWER * (0.2 + 1.3 * far) * towers(q + drift).x) + (BIG.x + BIG.y * rise) * 0.45 - h - t * climb;
+    float over = rise * (RISE * (0.6 + 1.2 * far) + TOWER * (0.2 + 1.1 * far) * towers(q + drift).x) + (BIG.x + BIG.y * rise) * 0.45 - h - t * climb;
     shade = max(shade, smoothstep(0.0, 1.5 + t * 0.04, over));
   }
   return shade;
@@ -285,8 +286,8 @@ void main() {
   // Seen from below the cloud is darker the thicker it is: lilac and violet in the bodies of its cells, lighter in
   // the thin seams between them. The low sun reaches in sideways through whatever is thin between it and a
   // point, so each cell is lit gold along the side it faces the sun from, and more so far off toward the sun.
-  float thick = bellyThick(xz) * smoothstep(0.1, 0.9, cover);
-  float before = bellyThick(xz + toSun * 6.0) * smoothstep(0.1, 0.9, deckCover(xz + toSun * 6.0));
+  float thick = bellyThick(xz, 1.0) * smoothstep(0.1, 0.9, cover);
+  float before = bellyThick(xz + toSun * 6.0, 0.0) * smoothstep(0.1, 0.9, deckCover(xz + toSun * 6.0));
   float thin = 1.0 - smoothstep(0.2, 0.75, cover);
   vec3 col = deckUnderside(xz, cameraPosition, thin);
   vec2 away = xz - cameraPosition.xz;
@@ -328,9 +329,11 @@ float belly(vec2 xz, float cover) {
   return h * smoothstep(0.15, 0.85, cover) - edgeLift(cover) + swallow;
 }
 /** How thick the underside is at a point: 0 in the seams between its cells, 1 in the middle of one. */
-float bellyThick(vec2 xz) {
+float bellyThick(vec2 xz, float fine) {
   vec2 p = xz + uCloudShift * 0.5;
-  return smoothstep(0.12, 0.5, lobes(p / 26.0 + 2.3).x * 0.4 + lobes(p / 9.0 + 7.1).x * 0.4 + lobes(p / 3.6 + 4.4).x * 0.2);
+  float cells = lobes(p / 26.0 + 2.3).x * 0.4 + lobes(p / 9.0 + 7.1).x * 0.4;
+  cells += fine > 0.0 ? lobes(p / 3.6 + 4.4).x * 0.2 : 0.07;
+  return smoothstep(0.12, 0.5, cells);
 }`;
 
 /**
