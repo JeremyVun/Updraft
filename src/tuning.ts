@@ -386,11 +386,11 @@ export const tuning = {
     /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
     inertia: 0.35,
     gravity: 6.5,
-    /** The share of its weight the air holds up at the free end once air passes the child at `liftSpeed` or more. */
+    /** The most of an end's weight the air holds up, along its middle, once air passes the child at `liftSpeed`. */
     lift: 0.9, liftSpeed: 7,
     /** Upward pull per unit of the player's updraft. */
     updraft: 5,
-    /** The slow wave down a streaming end: its rate (radians per second) in still air and at `liftSpeed`, and its push. */
+    /** The slow wave down a streaming end: its rate (radians a second) in the breeze and at `liftSpeed`, and its push. */
     waveRate: 2.1, waveRateFast: 4.2, wave: 1.4, waveFast: 3.4,
     /** How far (units) the ripple running down a streaming end stands out of its face at the free end. */
     ripple: 0.12,
