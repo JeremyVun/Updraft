@@ -36,8 +36,7 @@ const YAW = -0.12;
 const WIDTH = 1.85;
 const DEPTH = 0.72;
 const TOP = 1.6;
-/** The underside of the case above the keyboard, and the keybed the keys lie on. */
-const CASE_Y = 0.95;
+/** The keybed the keys lie on. */
 const KEY_Y = 0.8;
 /** Where a key is hinged, back under the case, and how far it reaches out from there. */
 const KEY_BACK = 0.3;
@@ -193,36 +192,52 @@ function caseGeometry(): THREE.BufferGeometry {
   const rand = mulberry32(713);
   const parts: THREE.BufferGeometry[] = [];
   const add = (geo: THREE.BufferGeometry, colour: THREE.Color, gloss = 0.3) => parts.push(tinted(geo, colour, 'aGloss', gloss));
-  const front = DEPTH / 2 + 0.06;
+  const back = -DEPTH / 2;
+  const front = KEY_BACK + 0.12;
+  const keyFront = KEY_BACK + KEY_LEN;
+  const keybed = KEY_Y - 0.07;
+  /** Between the sides is exactly the keyboard's width, so the end keys run up against them. */
+  const inner = WIDTH - 0.12;
+  const well = TOP - 0.14;
 
-  add(box(WIDTH, 0.17, DEPTH, 0, 0, 0), WOOD_DARK);
-  /** The lower front panel, set back between the two leg posts, with the pedals coming out under it. */
-  add(box(WIDTH * 0.88, 0.6, DEPTH * 0.78, 0, 0.17, -0.05), WOOD);
-  for (const side of [-1, 1]) add(box(0.15, 0.78, DEPTH, side * (WIDTH / 2 - 0.075), 0, 0), WOOD);
-  add(box(0.3, 0.22, 0.12, 0, 0.16, 0.3), WOOD_DARK);
-  for (const side of [-1, 1]) add(box(0.09, 0.022, 0.26, side * 0.08, 0.22, 0.44), BRASS, 0.9);
+  /** Each side is one board from the grass to the top, running on beside the keys as an arm with a leg under it. */
+  for (const side of [-1, 1]) {
+    const x = side * (WIDTH / 2 - 0.03);
+    add(box(0.06, TOP, front - back, x, 0, (front + back) / 2), WOOD);
+    add(box(0.06, 0.13, keyFront + 0.04 - front, x, KEY_Y, (front + keyFront + 0.04) / 2), WOOD);
+    add(box(0.06, keybed, 0.06, x, 0, keyFront - 0.02), WOOD_DARK);
+  }
+  /** The back is one board between the sides, from the grass to the top. */
+  const inside = back + 0.06;
+  add(box(inner, TOP, 0.06, 0, 0, back + 0.03), WOOD);
+  /** The lower panel, set back under the keys, and three pedals out of the toe board below it. */
+  add(box(inner, 0.12, KEY_BACK + 0.04 - inside, 0, 0, (KEY_BACK + 0.04 + inside) / 2), WOOD_DARK);
+  add(box(inner, keybed - 0.12, KEY_BACK - inside, 0, 0.12, (KEY_BACK + inside) / 2), WOOD_WORN);
+  for (let i = -1; i <= 1; i++) add(box(0.05, 0.022, 0.2, i * 0.12, 0.06, KEY_BACK + 0.1), BRASS, 0.9);
+  /** The keybed, inside the case and then out across the arms to the legs. */
+  add(box(inner, 0.07, front - inside, 0, keybed, (front + inside) / 2), WOOD);
+  add(box(WIDTH, 0.07, keyFront + 0.08 - front, 0, keybed, (front + keyFront + 0.08) / 2), WOOD);
 
-  /** The keybed the keys lie on, out past the case at both ends, and the blocks that close the keyboard off. */
-  add(box(WIDTH, 0.07, DEPTH + 0.48, 0, KEY_Y - 0.07, 0.24), WOOD);
-  for (const side of [-1, 1]) add(box(0.08, 0.13, 0.32, side * (WIDTH / 2 - 0.04), KEY_Y, 0.42), WOOD);
-  /** The case above the keyboard, and the lip under its front that the key backs run away into. */
-  add(box(WIDTH, TOP - CASE_Y, DEPTH + 0.12, 0, CASE_Y, front - (DEPTH + 0.12) / 2), WOOD);
-  add(box(WIDTH, 0.16, 0.1, 0, 0.9, front - 0.05), WOOD_DARK);
-  /** The music desk, leaning back with nothing on it, on the ledge above the keys. */
+  /** The top is open under the lid: a dark well with the tuning pins standing in it. */
+  add(box(inner, well - KEY_Y, KEY_BACK - inside, 0, KEY_Y, (KEY_BACK + inside) / 2), WOOD);
+  add(box(inner, 0.01, front - inside - 0.06, 0, well, (front - 0.06 + inside) / 2), CAVITY, 0);
+  add(box(inner, TOP - 1.0, 0.06, 0, 1.0, front - 0.03), WOOD);
+  add(box(inner - 0.1, 0.035, 0.06, 0, well + 0.01, -0.02), BRASS, 0.8);
+  for (let i = 0; i < 11; i++) {
+    add(box(0.02, 0.075, 0.02, (i / 10 - 0.5) * (inner - 0.2), well + 0.01, -0.02 + (rand() - 0.5) * 0.03), BRASS, 0.9);
+  }
+  /** The fallboard, folded back over the ends of the keys where they run into the case. */
+  add(box(inner, 0.12, 0.16, 0, 0.88, front - 0.04), WOOD_DARK);
+  /** The music desk, leaning back with nothing on it, on its ledge. */
+  add(box(WIDTH * 0.7, 0.035, 0.12, 0, 1.0, front + 0.06), WOOD_WORN);
   const desk = box(WIDTH * 0.66, 0.42, 0.03, 0, 0, 0);
   desk.rotateX(-0.11);
-  add(desk.translate(0, 1.06, front + 0.07), WOOD_WORN, 0.5);
-  add(box(WIDTH * 0.7, 0.035, 0.11, 0, 1.04, front + 0.05), WOOD_WORN);
+  add(desk.translate(0, 1.035, front + 0.07), WOOD_WORN, 0.5);
 
-  /** The top stands open: a dark slot with the tuning pins in it, and the lid up over the back of the case. */
-  add(box(WIDTH - 0.16, 0.14, DEPTH - 0.14, 0, TOP - 0.15, 0), CAVITY, 0);
-  add(box(WIDTH - 0.26, 0.035, 0.06, 0, TOP - 0.1, -0.1), BRASS, 0.8);
-  for (let i = 0; i < 11; i++) {
-    add(box(0.02, 0.075, 0.02, (i / 10 - 0.5) * (WIDTH - 0.32), TOP - 0.11, -0.1 + (rand() - 0.5) * 0.03), BRASS, 0.9);
-  }
-  const lid = box(WIDTH + 0.06, 0.05, DEPTH + 0.1, 0, 0, (DEPTH + 0.1) / 2);
-  lid.rotateX(-1.28);
-  add(lid.translate(0, TOP, -DEPTH / 2), WOOD, 0.55);
+  /** The lid is hinged at the back and propped part way up, as whoever tuned it last left it. */
+  const lid = box(WIDTH + 0.04, 0.04, front - back + 0.04, 0, 0, (front - back + 0.04) / 2);
+  lid.rotateX(-0.5);
+  add(lid.translate(0, TOP, back - 0.02), WOOD, 0.55);
 
   /** The stool, left standing a little askew, as if somebody had got up from it and not come back. */
   const stool: THREE.BufferGeometry[] = [box(0.68, 0.09, 0.48, 0, 0.41, 0)];
