@@ -10,6 +10,7 @@ import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
 import { SleepingScore, SLEEPING_SECTIONS, type SleepingScorePhase } from './sleeping-score';
 import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
 import { BirchesScore, BIRCHES_SECTIONS, type BirchesScorePhase } from './birches-score';
+import type { StairsAir } from './stairs-air';
 import { LinesScore, LINES_SECTIONS, type LinesScorePhase } from './lines-score';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
@@ -92,6 +93,7 @@ export interface SoundState {
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
   meadowScore?: MeadowScorePhase;
   birchesScore?: BirchesScorePhase;
+  stairsAir?: StairsAir;
   linesScore?: LinesScorePhase;
   linesMelodyQuiet?: boolean;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
@@ -179,8 +181,10 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
   /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
   finale: [],
+  /** A flight of the stairs knocking home is a physical sound, not a phrase. */
+  flightHome: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);

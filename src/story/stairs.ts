@@ -3,6 +3,7 @@ import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
 import type { Deck } from '../world/decks';
+import type { StairsAir } from '../audio/stairs-air';
 import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import {
@@ -96,6 +97,7 @@ export class StairsChapter implements Chapter {
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
   private readonly invitation = new THREE.Vector3();
   private lastPush = 0;
+  private readonly air: StairsAir = { cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
   private readonly oldRadius: number;
 
   constructor(private readonly cast: Cast) {
@@ -178,6 +180,10 @@ export class StairsChapter implements Chapter {
     return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
   }
 
+  get stairsAir(): StairsAir {
+    return this.air;
+  }
+
   get arrivalMusic(): 'drowned' | undefined {
     return this.beat === 'descend' ? 'drowned' : undefined;
   }
@@ -213,6 +219,7 @@ export class StairsChapter implements Chapter {
   private docked(index: number): void {
     const { child, cygnet } = this.cast;
     child.decks = cygnet.decks = this.decks();
+    cue('flightHome');
     if (index === LOOSE[LOOSE.length - 1]) completeObjective(); else cue('star');
     if (cygnet.carried) cygnet.mind.perform('wag', 0.9);
     this.limit = this.reachable();
@@ -309,7 +316,22 @@ export class StairsChapter implements Chapter {
         break;
     }
     this.cloud();
+    this.measureAir(dt);
     this.frame();
+  }
+
+  private measureAir(dt: number): void {
+    const { child, boat } = this.cast;
+    const a = this.air;
+    const afloat = this.beat === 'sail' || this.beat === 'descend' || this.beat === 'down';
+    const y = afloat ? boat.position.y : child.position.y;
+    const S = THREE.MathUtils.smoothstep;
+    a.climb = THREE.MathUtils.clamp((y - CLOUD.base) / (CLOUD.top - CLOUD.base), 0, 1);
+    a.fog = this.beat === 'descend' ? S(this.t, 0, 4) : 0;
+    a.cloud = afloat ? a.fog : S(y, CLOUD.base - 1.5, CLOUD.base + 1.5) * (1 - S(y, CLOUD.top - 1.2, CLOUD.top + 0.4));
+    const out = afloat || (y > CLOUD.top - 0.4 && ['emerge', 'nest', 'skein', 'lean', 'gather', 'boarding'].includes(this.beat));
+    a.open += ((out ? 1 - a.fog : 0) - a.open) * (1 - Math.exp(-dt * 0.8));
+    a.speed = afloat ? boat.speed : 0;
   }
 
   /** Up the stair, stop by stop, as far as it goes. */

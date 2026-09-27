@@ -821,6 +821,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.meadowScore = story.current.meadowScore;
   soundState.birchesScore = story.current.birchesScore;
+  soundState.stairsAir = story.current.stairsAir;
   soundState.linesScore = story.current.linesScore;
   soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));

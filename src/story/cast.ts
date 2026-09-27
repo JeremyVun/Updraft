@@ -9,6 +9,7 @@ import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
+import type { StairsAir } from '../audio/stairs-air';
 import type { LinesScorePhase } from '../audio/lines-score';
 import type { OpeningScorePhase } from '../audio/opening-score';
 import type { ArrivalMusic } from '../audio/arrival-music';
@@ -124,6 +125,8 @@ export interface Chapter {
   readonly meadowScore?: MeadowScorePhase;
   /** Birches follows the optional swing, scarf work and the walk to the far beach. */
   readonly birchesScore?: BirchesScorePhase;
+  /** The air round the travellers in the stairs in the clouds: in the white, out on top, the fog on the way down. */
+  readonly stairsAir?: StairsAir;
   /** Lines follows each curtain, the family clothes and the walk beyond the doorway. */
   readonly linesScore?: LinesScorePhase;
   readonly linesMelodyQuiet?: boolean;
