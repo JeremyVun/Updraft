@@ -74,7 +74,7 @@ interface End {
 const STEP = 1 / 60;
 /** Faster than the child ever goes: a jump in the knot's position is a teleport, not a speed. */
 const MAX_CARRY = 15;
-/** How far each step draws a point toward its neighbours: enough to smooth a kink, not to stiffen the wave. */
+/** How far each 60th of a second draws a point toward its neighbours: enough to smooth a kink, not to stiffen the wave. */
 const SOFT = 0.06;
 
 /**
@@ -125,8 +125,8 @@ export class Scarf {
       offset: 0,
     });
     this.ends = [
-      end(13, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.75, 1, 0),
-      end(9, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.2, 0.7, 2.1),
+      end(13, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.7, 1, 0),
+      end(9, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.25, 0.55, 2.1),
     ];
     let verts = 0;
     for (const e of this.ends) {
@@ -240,6 +240,7 @@ export class Scarf {
     const pace = Math.hypot(this.carried.x, this.carried.z) * k.carry;
     const steps = Math.max(1, Math.ceil(span / STEP - 1e-3));
     const h = span / steps;
+    const soft = (SOFT * h) / STEP;
     let rate = 0;
 
     for (const e of this.ends) {
@@ -295,7 +296,7 @@ export class Scarf {
            * then streams, and a little more than the very end, which dips.
            */
           const held = 0.3 + 0.7 * THREE.MathUtils.smoothstep(f, 0, 0.6) * (1 - 0.3 * THREE.MathUtils.smoothstep(f, 0.6, 1));
-          const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft;
+          const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still);
           /** It moves in the child's company: the chain keeps only its own motion from step to step, not theirs. */
           this.tmp.set(p.x + moveX * h, p.y, p.z + moveZ * h);
           p.x += (p.x - q.x) * carry + ax * h * h + moveX * h;
@@ -307,7 +308,7 @@ export class Scarf {
           /** Knitted wool is heavy and soft: no kinks, however the points were pushed about. */
           for (let i = 1; i < n - 1; i++) {
             this.a.addVectors(e.pts[i - 1], e.pts[i + 1]).multiplyScalar(0.5);
-            e.pts[i].lerp(this.a, SOFT);
+            e.pts[i].lerp(this.a, soft);
           }
           for (let i = 1; i < n; i++) {
             const a = e.pts[i - 1];
