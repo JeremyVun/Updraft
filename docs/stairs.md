@@ -71,6 +71,16 @@ Then, on the second pass's stills (2026-09-27, verbatim):
 > - I don't see the penrose stairs. How did you fit that into the gameplay?
 > - I see the cygnett getting carried up the stairs, but shouldn't it be walking up itself for this one?"
 
+Asked (2026-09-27) what the Penrose stairs should be, given that they were only a scripted beat in the white with
+nothing impossible to see, Jeremy chose **"Visible loop, playable"**: a clearing in the cloud with four short flights
+round a square, the camera holding the one angle where they seem to climb forever; the bird runs round and keeps
+arriving back behind the child, peeping, until the player's wind blows the cloud off the corner where the real
+flight goes on up; then the camera eases round and the loop comes apart.
+
+Asked which layout answers "the stairs go forward, then back again", he chose **"Up and onward"** over a side-on
+zigzag like concept C: every flight climbs away from you, zigzagging left and right toward the cloud and never
+coming back, more a path into the sky, walking out over the sea.
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
