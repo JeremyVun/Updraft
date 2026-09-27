@@ -35,6 +35,10 @@ And (2026-09-27, verbatim):
 
 > "More thought and intentionality is needed also around how the player interacts with the stairs to move them into place. Right now, the perspective makes it very hard to do this. This is a problem we solved with the bubbles and the stars in the sky mirror chapter, so we should take inspiration from that (the player can basically in effect click and drag the bubbles over the stars)"
 
+And (2026-09-27, verbatim):
+
+> "the sky mirror is also very good at placing the camera at just the right position so that the player has the right perspectiv eto move the bublbe intot he right place."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
