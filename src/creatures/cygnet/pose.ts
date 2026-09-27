@@ -324,12 +324,12 @@ export class Poser {
     head = lerp(head, 0.25, p.hunch);
     const heldNeck = p.held * (1 - p.curl) * (1 - p.sleep);
     /**
-     * In the arms the neck lies out along the child; sitting across the bag it stands nearly straight up out of the
-     * rim at the child's left, so the head comes up beside the hood rather than behind it.
+     * In the arms the neck lies out along the child; sitting across the bag it rises out of the rim at the child's
+     * left in a soft S that carries the head out beside the hood rather than behind it.
      */
-    a = lerp(a, lerp(-0.15, 0.08, p.stowed), heldNeck);
-    b = lerp(b, lerp(0.05, 0.3, p.stowed), heldNeck);
-    head = lerp(head, lerp(-0.1, -0.15, p.stowed), heldNeck);
+    a = lerp(a, lerp(-0.15, -0.28, p.stowed), heldNeck);
+    b = lerp(b, lerp(0.05, 0.62, p.stowed), heldNeck);
+    head = lerp(head, lerp(-0.1, -0.22, p.stowed), heldNeck);
     a = lerp(a, -1.5, p.sleep);
     b = lerp(b, 1.9, p.sleep);
     head = lerp(head, 0.5, p.sleep);

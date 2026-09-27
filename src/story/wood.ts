@@ -677,7 +677,7 @@ export class WoodChapter implements Chapter {
       this.to('out');
       // The fire by the tree lights them out; the path's last bend keeps them in the corridor clear of trunks.
       this.ahead = null;
-    });
+    }, p.position);
   }
 
   private paperBreath = 0;

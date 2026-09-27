@@ -836,7 +836,7 @@ export class MeadowChapter implements Chapter {
         p.hold(c);
         this.play = 'hold';
         this.holdUntil = this.now + 0.4 + Math.random() * 0.55;
-      });
+      }, p.position);
     }, 1.2);
   }
 

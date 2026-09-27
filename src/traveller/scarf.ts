@@ -130,8 +130,8 @@ export class Scarf {
       offset: 0,
     });
     this.ends = [
-      end(15, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.95, 1, 0),
-      end(10, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.25, 0.55, 2.1),
+      end(15, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.75, 1, 0),
+      end(10, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.05, 0.55, 2.1),
     ];
     let verts = 0;
     for (const e of this.ends) {
@@ -255,8 +255,8 @@ export class Scarf {
        * out past the bag. A gust swings it round to its own way and never weakens it, so the ends follow a gust
        * rather than falling slack where it meets the breeze.
        */
-      const left = Math.sin(e.splay) * breeze + Math.sin(e.splay * 0.8) * pace;
-      const back = Math.cos(e.splay) * breeze + Math.cos(e.splay * 0.8) * pace;
+      const left = Math.sin(e.splay) * breeze + Math.sin(e.splay * 0.65) * pace;
+      const back = Math.cos(e.splay) * breeze + Math.cos(e.splay * 0.65) * pace;
       const own = Math.hypot(left, back);
       const angle = THREE.MathUtils.lerp(Math.atan2(left, back), gustAngle, takeover);
       const strength = THREE.MathUtils.lerp(own, Math.max(felt, own), takeover);
@@ -294,14 +294,14 @@ export class Scarf {
           const vy = (p.y - q.y) / last;
           const vz = (p.z - q.z) / last;
           /** Near the knot the child's body shelters it from the air, but not so much that it hangs down over the arm. */
-          const open = 0.55 + 0.45 * f;
+          const open = 0.75 + 0.25 * f;
           const ax = (flowX * open - vx) * k.drag + crossX * across + lurchX;
           const az = (flowZ * open - vz) * k.drag + crossZ * across + lurchZ;
           /**
-           * The air holds up the middle of an end more than the part near the knot, so it droops from the knot and
-           * then streams, and a little more than the very end, which dips.
+           * The air holds an end up along its length, so it leaves the knot level over the shoulder and streams out
+           * behind rather than hanging across the arm; the very end dips a little.
            */
-          const held = 0.5 + 0.5 * smooth(f, 0, 0.6) * (1 - 0.3 * smooth(f, 0.6, 1));
+          const held = 0.82 + 0.18 * smooth(f, 0, 0.5) - 0.2 * smooth(f, 0.7, 1);
           const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still);
           /** It moves in the child's company: the chain keeps only its own motion from step to step, not theirs. */
           this.tmp.set(p.x + moveX * h, p.y, p.z + moveZ * h);

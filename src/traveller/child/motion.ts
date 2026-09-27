@@ -218,7 +218,8 @@ export class ChildMotion {
     const moving = Math.min(1, d.speed / WALK);
     const running = THREE.MathUtils.clamp((d.speed - WALK) / (RUN - WALK), 0, 1);
     const plant = (1 - pose.sit) * (1 - pose.kneel) * (1 - pose.swing) * (1 - pose.lie);
-    this.stride = damp(this.stride, d.speed > 0.05 ? 1 : 0, d.speed > 0.05 ? 10 : 5, dt);
+    const stepping = d.speed > 0.05 || Math.abs(d.turn) > 1.2;
+    this.stride = damp(this.stride, stepping ? 1 : 0, stepping ? 10 : 5, dt);
     const stride = this.stride * plant;
 
     // -- The walk: pelvis, spine and the rhythm of it, from the phase of the stride.
@@ -272,7 +273,9 @@ export class ChildMotion {
     const bodyYaw = spine.rotation.y + chest.rotation.y + hipYaw;
     const bodyRoll = spine.rotation.z + chest.rotation.z + hipRoll;
     const steady = 0.7 * plant * (1 - 0.45 * running);
-    neck.rotation.set(pose.headPitch * 0.35 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
+    /** The head goes into a turn ahead of the body. */
+    const lead = THREE.MathUtils.clamp(d.turn * 0.07, -0.35, 0.35) * plant;
+    neck.rotation.set(pose.headPitch * 0.35 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6 + lead, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
     head.rotation.set(pose.headPitch * 0.65 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
 
     // -- Arms, from the story's pose.
@@ -306,9 +309,10 @@ export class ChildMotion {
 
   /**
    * Reaches a mitten to a point in the world: the elbow finds its own place, out and back and a little down where a
-   * child's elbow goes. `w` blends from the pose's own arm.
+   * child's elbow goes, unless `elbow` says which way it points (in the chest's frame, as for the left arm; the right
+   * mirrors it). `w` blends from the pose's own arm.
    */
-  reach(left: boolean, world: THREE.Vector3, w: number): void {
+  reach(left: boolean, world: THREE.Vector3, w: number, elbow?: THREE.Vector3): void {
     if (w <= 0.001) return;
     const b = this.b;
     const clav = b[left ? BONE.clavL : BONE.clavR];
@@ -317,9 +321,9 @@ export class ChildMotion {
     const hand = b[left ? BONE.handL : BONE.handR];
     clav.updateMatrixWorld(true);
     const target = clav.worldToLocal(this.va.copy(world)).sub(upper.position);
-    /** The grip is at the middle of the mitten, a little forward of the forearm's line. */
     const s = left ? 1 : -1;
-    this.vb.set(s * 0.75, -0.45, -0.5);
+    if (elbow) this.vb.set(s * elbow.x, elbow.y, elbow.z).applyQuaternion(this.qc.copy(clav.quaternion).invert());
+    else this.vb.set(s * 0.75, -0.45, -0.5);
     twoBone(target, UPPER_ARM, FOREARM, this.vb, this.qa, this.qb, this.t);
     upper.quaternion.slerp(this.qa, w);
     fore.quaternion.slerp(this.qb, w);

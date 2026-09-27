@@ -82,6 +82,10 @@ const damp = (a: number, b: number, rate: number, dt: number) => a + (b - a) * (
 class Glide {
   value = 0;
   private velocity = 0;
+  snap(value: number): void {
+    this.value = value;
+    this.velocity = 0;
+  }
   step(target: number, time: number, dt: number): number {
     if (dt <= 0) return this.value;
     const w = 2 / time;
@@ -143,6 +147,12 @@ export class Traveller {
   };
   private lastYaw = 0;
   private turnRate = 0;
+  /**
+   * A story that turns them round on the spot all at once is shown as a quick turn with a step or two, not a snap:
+   * what is left of the turn eases out, and turns no faster than walking ones pass straight through.
+   */
+  private readonly yawLag = new Glide();
+  private lastSetYaw = 0;
   private breathT = 0;
   private goal: Goal | null = null;
   private action: Action | null = null;
@@ -156,6 +166,8 @@ export class Traveller {
   private headPitch = 0;
   private glance = 0;
   private glanceUntil = 0;
+  private glanceYaw = 0;
+  private glancePitch = 0;
   private nextGlance = 5;
   private readonly kneel = new Glide();
   private readonly abedGlide = new Glide();
@@ -174,6 +186,17 @@ export class Traveller {
   private readonly leanNow = new Glide();
   private readonly tiltNow = new Glide();
   private readonly reachGlide = [new Glide(), new Glide()];
+  /**
+   * Where an action puts each mitten this frame: in the body's frame (x as for the left hand, mirrored for the right)
+   * or in the world, which way its elbow points, and how much of the arm it takes over.
+   */
+  private readonly grips = [0, 1].map(() => ({ at: new THREE.Vector3(), elbow: new THREE.Vector3(), w: 0, world: false }));
+  /** Where an action wants the head to look, in the body's frame, overriding the gaze by `w`. */
+  private readonly gaze = { yaw: 0, pitch: 0, w: 0 };
+  private readonly straps = new Glide();
+  private pickupT = Infinity;
+  private readonly pickupAt = new THREE.Vector3();
+  private stillFor = 0;
   /** Where each mitten has been asked to be, in the world, and how far it has got there (0 the pose's own arm, 1 on the point). */
   private readonly reachAt = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly reachWant = [0, 0];
@@ -336,7 +359,7 @@ export class Traveller {
     this.rig.root.updateMatrixWorld(true);
     this.rig.gripL.getWorldPosition(out);
     if (this.stowed < 0.001) return out;
-    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.62, -0.86));
+    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.48, -0.69));
     out.lerp(tucked, this.stowed);
     /** Carry it round the outside of the shoulder, clear of the hood and the bird. */
     this.tmp2.set(Math.sin(this.stowed * Math.PI) * tuning.paperCarry.transferArc, 0, 0);
@@ -382,6 +405,8 @@ export class Traveller {
     }
     this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
+    this.lastSetYaw = yaw;
+    this.yawLag.snap(0);
     this.pose(0);
     this.rig.root.updateMatrixWorld(true);
     this.scarf.reset(this.rig.knot.getWorldPosition(this.tmp), this.rig.body.matrixWorld);
@@ -448,9 +473,21 @@ export class Traveller {
     this.action = { kind: 'throw', t: 0, released: false, onRelease };
   }
 
-  pickUp(onDone: () => void): void {
+  /**
+   * Down into a squat for something on the ground at `at` (or just ahead of them), with the left mitten. `onDone`
+   * comes as the mitten gets there, so what it takes comes up with it; they stand up again on their own.
+   */
+  pickUp(onDone: () => void, at?: THREE.Vector3): void {
     this.goal = null;
     this.action = { kind: 'pickup', t: 0, onDone };
+    this.pickupT = 0;
+    this.pickupAt.set(0.2, 0, 0.62).applyAxisAngle(this.axisY, this.yaw).add(this.position);
+    if (at) {
+      /** No further out than a squatting child can reach. */
+      const dx = at.x - this.position.x, dz = at.z - this.position.z, d = Math.hypot(dx, dz);
+      const k = Math.min(1, 0.8 / Math.max(d, 1e-3));
+      this.pickupAt.set(this.position.x + dx * k, 0, this.position.z + dz * k);
+    }
   }
 
   cheer(): void {
@@ -702,6 +739,7 @@ export class Traveller {
   }
 
   private updateAction(dt: number): void {
+    if (this.pickupT < PICKUP) this.pickupT += dt;
     const a = this.action;
     if (!a) return;
     a.t += dt;
@@ -712,7 +750,7 @@ export class Traveller {
       }
       if (a.t > 1.1) this.action = null;
     } else if (a.kind === 'pickup') {
-      if (a.t > 0.9) {
+      if (a.t > PICKUP_GRAB) {
         this.action = null;
         a.onDone();
       }
@@ -822,84 +860,96 @@ export class Traveller {
     const lerp = THREE.MathUtils.lerp;
     const smooth = THREE.MathUtils.smoothstep;
     /**
-     * Arms swing against the legs, a beat behind them, as far back past the hip as forward. Running they stay bent
-     * at the elbow and pump from the shoulder, the hands going from behind the hip to the chest.
+     * Arms swing against the legs, a beat behind them, as far back past the hip as forward. Running they pump from
+     * the shoulder: the elbow opens as the arm drives back past the hip and closes as the mitten comes up to the chest.
      */
     const pace = 0.5 * moving + 0.25 * running;
     const armSwing = Math.cos(this.gait - 0.35);
     const armBack = 0.04 * moving + 0.12 * running;
     const walkBend = 0.22 * moving * (1 - running);
-    arm(L, -pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running + Math.max(0, -armSwing) * walkBend, 0.12);
-    arm(R, pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running + Math.max(0, armSwing) * walkBend, 0.12);
+    const pump = 0.4 * running;
+    arm(L, -pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running - pump * armSwing + Math.max(0, -armSwing) * walkBend, 0.12);
+    arm(R, pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running + pump * armSwing + Math.max(0, armSwing) * walkBend, 0.12);
     let lean = 0;
     let twist = 0;
     let rise = 0;
     let crouch = 0;
     let bend = 0;
     let headDown = 0;
+    let tiltHead = 0;
     P.step[0] = P.step[1] = 0;
 
     const a = this.action;
+    this.grips[0].w = this.grips[1].w = 0;
+    this.gaze.w = 0;
     if (a?.kind === 'throw') {
-      /** Up and back with the paper beside the hood, the body winding with it; then the arm goes through. */
-      const wind = smooth(a.t, 0, 0.55);
-      const fling = smooth(a.t, 0.52, 0.72);
-      const settle = smooth(a.t, 0.78, 1.1);
-      const k = 1 - settle;
-      const cock = wind * (1 - fling);
-      /** Cocked out beside the hood with the paper behind it, never across the face; then long and low through. */
-      L.raise = lerp(L.raise, 2.75 * cock + 1.15 * fling, k);
-      L.out = lerp(L.out, 0.95 * cock + 0.25 * fling, k);
-      L.elbow = lerp(L.elbow, 1.45 * cock + 0.12 * fling, k);
-      L.twist = (0.3 * cock + 0.1 * fling) * k;
-      L.wrist = 0.5 * cock * k;
-      R.raise = lerp(R.raise, 1.0 * cock + 0.35 * fling, k);
-      R.out = lerp(R.out, 0.35, k);
-      R.elbow = lerp(R.elbow, 0.7 * cock + 0.3, k);
-      twist = (-0.5 * cock + 0.45 * fling) * k;
-      lean = (-0.14 * cock + 0.32 * fling) * k;
-      P.step[1] = -0.25 * cock * k + 0.15 * fling * k;
-    } else if (a?.kind === 'pickup') {
-      const down = Math.sin(Math.min(1, a.t / 0.9) * Math.PI);
-      bend = 0.9 * down;
-      crouch = 0.3 * down;
-      L.raise = lerp(L.raise, 1.1, down);
-      R.raise = lerp(R.raise, 0.8, down);
-      L.elbow = R.elbow = 0.3 + 0.4 * down;
-      headDown = 0.35 * down;
+      /**
+       * The paper is taken up beside the hood with the elbow out and the shoulder drawn back, held a beat, then the
+       * body unwinds and the arm goes through long, forward and up, and follows through across the front.
+       */
+      const cock = smooth(a.t, 0.05, 0.45) * (1 - smooth(a.t, 0.52, 0.64));
+      const fling = smooth(a.t, 0.52, 0.66) * (1 - smooth(a.t, 0.8, 1.1));
+      const k = smooth(a.t, 0, 0.14) * (1 - smooth(a.t, 0.82, 1.1));
+      this.grip(0, THROW, a.t, k, THROW_ELBOW);
+      R.raise = lerp(R.raise, 1.15, cock);
+      R.out = lerp(R.out, 0.3, cock);
+      R.elbow = lerp(R.elbow, 0.45, cock);
+      R.raise = lerp(R.raise, 0.15, fling);
+      R.elbow = lerp(R.elbow, 1.0, fling);
+      twist = 0.42 * cock - 0.34 * fling;
+      lean = -0.1 * cock + 0.26 * fling;
+      crouch = 0.04 * cock;
+      P.step[1] = 0.22 * cock;
+      this.gazeAt(0, -0.12 + 0.08 * fling, k);
     } else if (a?.kind === 'cheer') {
-      const up = Math.sin(Math.min(1, a.t / 1.3) * Math.PI);
-      const arms = Math.min(1, up * 1.8);
-      /** A wide V, up past the hood: the whole of them in it. */
-      for (const m of [L, R]) {
-        m.raise = lerp(m.raise, 2.75, arms);
-        m.out = lerp(m.out, 1.0, up);
-        m.elbow = lerp(m.elbow, 0.18, arms);
-        m.wrist = -0.3 * arms;
+      /** A dip, a hop with both arms flung up in a wide V, a smaller hop, and down again: the whole of them in it. */
+      const hop = (from: number, to: number) => {
+        const u = THREE.MathUtils.clamp((a.t - from) / (to - from), 0, 1);
+        return 4 * u * (1 - u);
+      };
+      const air = 0.3 * hop(0.16, 0.56) + 0.16 * hop(0.7, 1.0);
+      const dip = Math.sin(THREE.MathUtils.clamp(a.t / 0.16, 0, 1) * Math.PI) + 0.7 * Math.sin(THREE.MathUtils.clamp((a.t - 0.56) / 0.14, 0, 1) * Math.PI)
+        + 0.5 * Math.sin(THREE.MathUtils.clamp((a.t - 1.0) / 0.16, 0, 1) * Math.PI);
+      rise = air;
+      crouch = 0.07 * dip;
+      const k = smooth(a.t, 0.04, 0.26) * (1 - smooth(a.t, 1.0, 1.3));
+      const pump = 0.05 * Math.sin(a.t * 14);
+      for (const hand of [0, 1] as const) {
+        const g = this.grips[hand];
+        g.w = k;
+        g.world = false;
+        g.at.set(0.6, 1.33 + pump, 0.1);
+        g.elbow.set(1, -0.5, -0.5);
       }
-      rise = Math.max(0, Math.sin(a.t * 7.5)) * 0.46 * up;
-      twist = Math.sin(a.t * 5.2) * 0.3 * up;
-      lean = -0.25 * up;
-      P.step[0] = P.step[1] = 0.55 * smooth(rise, 0.02, 0.2);
+      twist = Math.sin(a.t * 6) * 0.12 * k;
+      lean = -0.12 * k;
+      P.step[0] = P.step[1] = 0.45 * Math.min(1, air * 6);
+      this.gazeAt(0, -0.28, k);
     } else if (a?.kind === 'wave') {
-      const up = Math.min(1, a.t * 4) * Math.min(1, (1.8 - a.t) * 4);
-      /** Out to the side at the height of the hood, the forearm up and the mitten going. */
-      L.raise = lerp(L.raise, 1.55, up);
-      L.out = lerp(L.out, 1.2 + Math.sin(a.t * 10) * 0.12, up);
-      L.elbow = lerp(L.elbow, 1.15 + 0.35 * Math.sin(a.t * 10 + 0.8), up);
-      L.twist = 0.9 * up;
-      L.wrist = 0.4 * Math.sin(a.t * 10 - 0.6) * up;
-      twist = 0.08 * up;
+      /** The free hand up beside the hood, the forearm upright and the mitten going side to side from the elbow. */
+      const hand = this.carryingPlane && this.stowed < 0.5 ? 1 : 0;
+      const k = smooth(a.t, 0, 0.3) * (1 - smooth(a.t, 1.45, 1.8));
+      const g = this.grips[hand];
+      g.w = k;
+      g.world = false;
+      g.at.set(0.58 + 0.1 * Math.sin(a.t * 11), 1.28 + 0.025 * Math.cos(a.t * 22), 0.28);
+      g.elbow.set(1, -0.8, 0.1);
+      twist = 0.1 * k * (hand === 0 ? 1 : -1);
+      tiltHead = 0.1 * k * (hand === 0 ? 1 : -1);
     } else if (a?.kind === 'reach') {
-      /** Straight out and then slowly down: the arms give up a long time after the rest of them does. */
-      const out = Math.min(1, a.t * 5) * (1 - smooth(a.t, 1.6, 4.2));
-      for (const m of [L, R]) {
-        m.raise = lerp(m.raise, 2.45, out);
-        m.out = lerp(m.out, -0.2, out);
-        m.elbow = lerp(m.elbow, 0.12, out);
+      /** Both arms out after it, up on their toes; then the arms give up, slowly, a long time after the rest of them. */
+      const out = smooth(a.t, 0, 0.22);
+      const give = smooth(a.t, 1.4, 4.0);
+      for (const hand of [0, 1] as const) {
+        const g = this.grips[hand];
+        g.w = out * (1 - smooth(a.t, 3.4, 4.2));
+        g.world = false;
+        g.at.set(lerp(0.2, 0.26, give), lerp(1.12, 0.62, give), lerp(0.62, 0.4, give));
+        g.elbow.set(1, -1, 0);
       }
-      lean = -0.22 * out;
-      rise = 0.05 * out;
+      lean = 0.16 * out * (1 - give) + 0.04;
+      rise = 0.05 * out * (1 - give);
+      headDown = -0.18 * out * (1 - give) + 0.1 * give;
     } else if (a?.kind === 'push') {
       const k = Math.min(1, a.t * 2) * Math.min(1, (2.4 - a.t) * 2);
       bend = 0.35 * k;
@@ -945,6 +995,30 @@ export class Traveller {
       }
     }
 
+    if (this.pickupT < PICKUP) {
+      /**
+       * Down into a squat with the other hand on a knee and the mitten to the ground, and up again: it carries on
+       * after the story has what they picked up, into whatever comes next.
+       */
+      const u = this.pickupT;
+      const down = smooth(u, 0, 0.36) * (1 - smooth(u, 0.52, PICKUP)) * (1 - 0.6 * moving);
+      bend += 0.6 * down;
+      lean += 0.22 * down;
+      crouch += 0.54 * down;
+      const g = this.grips[0];
+      if (g.w === 0) {
+        g.w = smooth(u, 0, 0.3) * (1 - smooth(u, 0.55, PICKUP));
+        g.world = true;
+        g.at.copy(this.pickupAt);
+        g.at.y = this.ground(g.at.x, g.at.z) + 0.1;
+        g.elbow.set(0.7, 0.2, -1);
+      }
+      R.raise = lerp(R.raise, 0.95, down);
+      R.out = lerp(R.out, 0.35, down);
+      R.elbow = lerp(R.elbow, 1.2, down);
+      if (this.gaze.w === 0) this.gazeAt(0, 0.5, down);
+    }
+
     if (this.presenting > 0.01) {
       const k = this.presenting;
       for (const m of [L, R]) {
@@ -956,10 +1030,12 @@ export class Traveller {
 
     const brace = this.brace;
     if (brace > 0.02 && !a) {
-      /** Into a strong wind: an arm up across the face, leaning into it, chin down. */
-      R.raise = lerp(R.raise, 2.2, brace);
-      R.out = lerp(R.out, 0.9, brace);
-      R.elbow = lerp(R.elbow, 1.2, brace);
+      /** Into a strong wind: a forearm up across the lower face with the elbow out, leaning into it, chin down. */
+      const g = this.grips[1];
+      g.w = brace;
+      g.world = false;
+      g.at.set(0, 1.25, 0.34);
+      g.elbow.set(1, -0.2, 0.3);
       lean += 0.22 * brace;
       headDown += 0.15 * brace;
     }
@@ -990,7 +1066,9 @@ export class Traveller {
         m.elbow = lerp(m.elbow, 0.65, this.swing);
       }
     }
-    const carry = this.carryingPlane && !a && this.presenting < 0.01 && this.swing < 0.01 ? 1 - this.stowed : 0;
+    /** Actions that leave the paper hand alone, or take it from the carry, keep it underneath. */
+    const carryOk = !a || a.kind === 'throw' || a.kind === 'wave' || a.kind === 'cheer' || a.kind === 'reach';
+    const carry = this.carryingPlane && carryOk && this.presenting < 0.01 && this.swing < 0.01 ? 1 - this.stowed : 0;
     if (carry > 0) {
       /** A quiet carry at the hip: running must not swing the wing back through the coat. Companion IK still wins. */
       L.raise = lerp(L.raise, 0.2 - armSwing * moving * 0.12, carry);
@@ -998,21 +1076,38 @@ export class Traveller {
       L.elbow = lerp(L.elbow, 0.45, carry);
       L.twist = lerp(L.twist, 0, carry);
     }
+    /** Standing a while, whatever hand is free holds a strap of the bag at their chest. */
+    const handsFree = !a && !this.sitting && this.presenting < 0.01 && this.swing < 0.01 && !this.armsFull
+      && this.reachWant[0] === 0 && this.reachWant[1] === 0 && this.brace < 0.1 && this.kneeling < 0.1 && this.abed < 0.01;
+    this.stillFor = moving < 0.05 && handsFree ? this.stillFor + h : 0;
+    const holding = this.stillFor > 1.2;
+    const straps = this.straps.step(holding ? 1 : 0, holding ? 0.55 : 0.18, dt);
+    if (straps > 0.001) {
+      for (const g of this.grips) {
+        if (g === this.grips[0] && carry > 0.01) continue;
+        g.w = straps;
+        g.world = false;
+        g.at.set(0.19, 0.76, 0.3);
+        g.elbow.set(0.5, -1, -0.35);
+      }
+    }
 
     /**
-     * Idle, the gaze wanders, and every so often they glance back over the left shoulder at the bag, where the bird
-     * rides; on the move it settles on the way ahead.
+     * Idle, the gaze wanders, and every so often they look away round to one side or up at the sky for a moment; on
+     * the move it settles on the way ahead.
      */
     const settle = 1 - 0.75 * moving;
     this.nextGlance -= h;
     if (this.nextGlance <= 0) {
-      this.glanceUntil = t + 1.6;
-      this.nextGlance = 7 + Math.random() * 6;
+      this.glanceUntil = t + 1.4 + Math.random() * 0.8;
+      this.nextGlance = 6 + Math.random() * 6;
+      this.glanceYaw = (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.45);
+      this.glancePitch = -0.3 + Math.random() * 0.36;
     }
     const idle = moving < 0.05 && !a && !this.sitting && this.presenting < 0.01;
     this.glance = damp(this.glance, idle && t < this.glanceUntil ? 1 : 0, 3.5, h);
-    let wantYaw = lerp(Math.sin(t * 0.37) * 0.35 * settle, 0.95, this.glance);
-    let wantPitch = lerp(Math.sin(t * 0.23) * 0.08 * settle + 0.06 * running, 0.14, this.glance);
+    let wantYaw = lerp(Math.sin(t * 0.37) * 0.35 * settle, this.glanceYaw, this.glance);
+    let wantPitch = lerp(Math.sin(t * 0.23) * 0.08 * settle + 0.06 * running, this.glancePitch, this.glance);
     if (this.lookAt) {
       r.root.updateMatrixWorld(true);
       const head = r.face.getWorldPosition(this.tmp);
@@ -1024,6 +1119,8 @@ export class Traveller {
       /** Looking down at something at their own feet takes a real chin-down; past this the hood swallows the face. */
       wantPitch = THREE.MathUtils.clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -0.9, 0.52);
     }
+    wantYaw = lerp(wantYaw, this.gaze.yaw, this.gaze.w);
+    wantPitch = lerp(wantPitch, this.gaze.pitch, this.gaze.w);
     this.headYaw = damp(this.headYaw, wantYaw, 5, h);
     this.headPitch = damp(this.headPitch, wantPitch, 5, h);
     const abed = this.abedGlide.step(this.abed, 0.8, h);
@@ -1031,7 +1128,7 @@ export class Traveller {
     const shut = this.shutGlide.step(Math.max(this.eyesShut, yawn * 0.9), 0.4, h);
     P.headYaw = this.headYaw;
     P.headPitch = this.headPitch + headDown + this.sleepiness * 0.24 * (1 - abed) - yawn * 0.2;
-    P.headRoll = Math.sin(t * 0.6) * 0.05 + tiltNow;
+    P.headRoll = Math.sin(t * 0.6) * 0.05 + tiltNow + tiltHead;
     lean += this.sleepiness * 0.07 * (1 - abed);
     this.breathT += h * lerp(2.2, 0.75, abed);
     P.breath = Math.sin(this.breathT) * (1 + yawn * 2 + abed * 2.5);
@@ -1049,7 +1146,12 @@ export class Traveller {
 
     r.root.position.copy(this.position);
     r.root.position.y += rise - crouch - sit * SIT_DROP - kneel * KNEEL_DROP + this.hop;
-    r.root.rotation.set(this.riding ? this.ridePitch : 0, this.yaw, this.riding ? this.rideRoll : 0);
+    const jump = Math.atan2(Math.sin(this.yaw - this.lastSetYaw), Math.cos(this.yaw - this.lastSetYaw));
+    this.lastSetYaw = this.yaw;
+    if (dt > 0 && Math.abs(jump) > TURN_RATE * 1.6 * dt && abed < 0.01) this.yawLag.value -= jump;
+    /** Half a turn takes about half a second, a small one less. */
+    const shownYaw = this.yaw + this.yawLag.step(0, 0.2 + 0.2 * Math.min(1, Math.abs(this.yawLag.value) / Math.PI), dt);
+    r.root.rotation.set(this.riding ? this.ridePitch : 0, shownYaw, this.riding ? this.rideRoll : 0);
     if (abed > 0.001) this.layDown(abed);
 
     const d = this.drive;
@@ -1061,8 +1163,10 @@ export class Traveller {
     d.windZ = this.sample.z;
     d.gust = this.sample.energy;
     d.velocity.set((this.position.x - this.prev.x) / h, 0, (this.position.z - this.prev.z) / h);
-    const turn = Math.atan2(Math.sin(this.yaw - this.lastYaw), Math.cos(this.yaw - this.lastYaw)) / h;
-    this.lastYaw = this.yaw;
+    const turn = Math.atan2(Math.sin(shownYaw - this.lastYaw), Math.cos(shownYaw - this.lastYaw)) / h;
+    this.lastYaw = shownYaw;
+    /** Turning on the spot, the feet step round with it. */
+    if (dt > 0) this.gait += Math.abs(turn) * h * 1.3 * (1 - moving);
     this.turnRate = damp(this.turnRate, THREE.MathUtils.clamp(turn, -TURN_RATE, TURN_RATE), 8, h);
     d.turn = this.turnRate;
     this.motion.update(P, d);
@@ -1077,6 +1181,12 @@ export class Traveller {
     }
     r.root.updateMatrixWorld(true);
     for (const hand of [0, 1] as const) {
+      const g = this.grips[hand];
+      if (g.w <= 0.001) continue;
+      const at = g.world ? this.tmp.copy(g.at) : r.body.localToWorld(this.tmp.set(hand === 0 ? g.at.x : -g.at.x, g.at.y, g.at.z));
+      this.motion.reach(hand === 0, at, g.w, g.elbow);
+    }
+    for (const hand of [0, 1] as const) {
       this.reachNow[hand] = THREE.MathUtils.clamp(this.reachGlide[hand].step(this.reachWant[hand], 0.45, dt), 0, 1);
       if (this.reachNow[hand] <= 0.001) continue;
       const target = this.reachInBody[hand] ? r.body.localToWorld(this.tmp.copy(this.reachAt[hand])) : this.tmp.copy(this.reachAt[hand]);
@@ -1086,6 +1196,21 @@ export class Traveller {
     const u = r.material.uniforms;
     u.uBlink.value = Math.max(this.blink > 0 ? 1 : 0, shut);
     u.uYawn.value = yawn;
+  }
+
+  /** Sends a mitten along an action's path, `w` of the way from the pose's own arm. */
+  private grip(hand: 0 | 1, keys: readonly Key[], t: number, w: number, elbow: THREE.Vector3): void {
+    const g = this.grips[hand];
+    g.w = w;
+    g.world = false;
+    along(keys, t, g.at);
+    g.elbow.copy(elbow);
+  }
+
+  private gazeAt(yaw: number, pitch: number, w: number): void {
+    this.gaze.yaw = yaw;
+    this.gaze.pitch = pitch;
+    this.gaze.w = w;
   }
 
   /**
@@ -1125,6 +1250,35 @@ export class Traveller {
   }
 }
 
+/** A mitten's way through an action: [time, x, y, z] in the body's frame, passed through smoothly. */
+type Key = readonly [number, number, number, number];
+
+function along(keys: readonly Key[], t: number, out: THREE.Vector3): THREE.Vector3 {
+  const n = keys.length;
+  let i = 0;
+  while (i < n - 2 && t > keys[i + 1][0]) i++;
+  const k0 = keys[Math.max(0, i - 1)], k1 = keys[i], k2 = keys[i + 1], k3 = keys[Math.min(n - 1, i + 2)];
+  const u = THREE.MathUtils.clamp((t - k1[0]) / (k2[0] - k1[0]), 0, 1);
+  const u2 = u * u, u3 = u2 * u;
+  const cr = (j: number) => 0.5 * (2 * k1[j] + (k2[j] - k0[j]) * u + (2 * k0[j] - 5 * k1[j] + 4 * k2[j] - k3[j]) * u2
+    + (3 * k1[j] - k0[j] - 3 * k2[j] + k3[j]) * u3);
+  return out.set(cr(1), cr(2), cr(3));
+}
+
+/**
+ * The throwing hand: from the hip up beside the hood, drawn back a touch as the body winds, then long and up through
+ * the release (at 0.62) and down across the front.
+ */
+const THROW: readonly Key[] = [
+  [0, 0.45, 0.28, 0.12],
+  [0.4, 0.5, 1.3, -0.1],
+  [0.52, 0.5, 1.34, -0.15],
+  [0.62, 0.3, 1.24, 0.48],
+  [0.78, 0.14, 0.6, 0.42],
+  [1.1, 0.42, 0.3, 0.14],
+];
+const THROW_ELBOW = new THREE.Vector3(1, -0.35, -0.25);
+
 function arm(m: ArmPose, raise: number, out: number, twist: number, elbow: number, wrist: number): void {
   m.raise = raise;
   m.out = out;
@@ -1132,6 +1286,10 @@ function arm(m: ArmPose, raise: number, out: number, twist: number, elbow: numbe
   m.elbow = elbow;
   m.wrist = wrist;
 }
+
+/** How long a pick-up takes, and when the mitten gets to the ground. */
+const PICKUP = 0.9;
+const PICKUP_GRAB = 0.46;
 
 /** How far the root comes down when they sit (on the ground, a thwart, a stool) and when they kneel back on their heels. */
 const SIT_DROP = 0.67;
