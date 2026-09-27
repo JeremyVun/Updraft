@@ -562,10 +562,10 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
 // The hood
 
 export const HOOD = {
-  c: V(0, 2.065, -0.05),
-  r: V(0.4, 0.36, 0.405),
-  /** The opening faces forward and down, so the brim comes over the top of the fringe. */
-  tilt: 0.2,
+  c: V(0, 2.075, -0.025),
+  r: V(0.4, 0.372, 0.42),
+  /** The opening faces forward and down, so the brim comes out over the top of the fringe. */
+  tilt: 0.17,
 };
 
 /**
@@ -576,7 +576,7 @@ export const HOOD = {
 function hoodOpen(lambda: number): number {
   const s = Math.sin(lambda);
   const c = Math.cos(lambda);
-  return 0.72 + 0.42 * s * s * (1 - 0.5 * Math.max(0, -c)) + 0.12 * Math.pow(Math.max(0, -c), 2);
+  return 0.74 + 0.4 * s * s * (1 - 0.5 * Math.max(0, -c)) + 0.12 * Math.pow(Math.max(0, -c), 2);
 }
 const hoodF = V(0, -Math.sin(HOOD.tilt), Math.cos(HOOD.tilt));
 const hoodUp = V(0, Math.cos(HOOD.tilt), Math.sin(HOOD.tilt));
@@ -627,7 +627,10 @@ function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.
   fold += nape * (0.014 * Math.sin(lambda * 7 + 0.6));
   /** The centre seam sits in a very slight valley. */
   const seam = -0.004 * bump(p.x, 0.012) * smooth(-0.3, 0.2, yN);
-  p.addScaledVector(n, fold + seam);
+  /** Over the brow the edge stands off the head in an arch, so the hood sits roomy rather than pulled down tight. */
+  const brim = (1 - smooth(hoodOpen(lambda), hoodOpen(lambda) + 0.45, gamma)) * bump(angleTo(lambda, 0), 0.95);
+  p.addScaledVector(n, fold + seam + 0.024 * brim);
+  p.y += 0.014 * brim;
   /** In front, below the chin, the hood goes in behind the scarf rather than lying over it. */
   const y = p.y + HOOD.c.y;
   const front = smooth(-0.05, 0.45, hz);
