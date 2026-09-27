@@ -238,13 +238,19 @@ export const tuning = {
   /** The stairs in the clouds: the loose flights the player's gusts bring home, and the climb. */
   stairs: {
     /** Screen radius a stroke has to pass within to push a part of a flight, and how hard it pushes. */
-    brushRadius: 0.16, push: 0.018, gustCap: 26,
+    brushRadius: 0.16, push: 0.09, strokeCap: 30,
     /** How strongly a push off the middle turns a flight, and how quickly moving and turning die away. */
-    turn: 0.055, drag: 1.1, spinDrag: 1.6,
+    turn: 0.13, drag: 1.1, spinDrag: 1.4,
     /** A flight never drifts further than this from its place. */
     reach: 11,
     /** A flight whose bottom tread comes this near its place, turned no further than this, draws itself home. */
-    captureGap: 1.25, captureTurn: 0.42, settleSeconds: 1.1,
+    captureGap: 1.8, captureTurn: 0.6, settleSeconds: 1.1,
+    /** Inside this much misplacement (metres, with a radian of turn counting as two) a flight is drawn toward home. */
+    pullFrom: 6.5, pull: 1.6,
+    /** Turned further than this from its place, a flight has to be brought round before it will draw itself home. */
+    alignWithin: 1.2,
+    /** How long after a push that feeling for home lasts. */
+    handled: 2.5,
     /** The child's pace on the stairs, as a share of a walk. */
     climb: 0.52,
     /** Cloud thickness per metre inside the deck, and inside the pocket round the child. */

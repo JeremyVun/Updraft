@@ -48,6 +48,8 @@ export class PointerInput {
    * anywhere along it but under the bird.
    */
   anchor: THREE.Vector3 | null = null;
+  /** A surface the pointer lands on high above the ground, such as the top of a cloud, or null for the ground. */
+  floor: number | null = null;
   /** Chapter-local sensitivity for slow, deliberate circles. */
   twirlGain = 1;
   present = false;
@@ -159,6 +161,12 @@ export class PointerInput {
     this.ray.setFromCamera(ndc, camera);
     const o = this.ray.ray.origin;
     const d = this.ray.ray.direction;
+    if (this.floor !== null && o.y > this.floor) {
+      const t = d.y < -1e-4 ? Math.min((this.floor - o.y) / d.y, PICK_RANGE) : PICK_RANGE;
+      out.copy(d).multiplyScalar(t).add(o);
+      out.y = this.floor;
+      return;
+    }
     let prevT = 0;
     for (let t = PICK_STEP; t < PICK_RANGE; t += PICK_STEP) {
       const y = o.y + d.y * t;

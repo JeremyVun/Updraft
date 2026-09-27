@@ -606,6 +606,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   input.muted = story.current.scripted ?? false;
   input.twirlGain = story.current.twirlGain ?? 1;
+  input.floor = story.current.pointerFloor ?? null;
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
     : story.name === 'birches' ? birches.scarf.updraftTarget : null;
   input.update(dt, rig.camera, wind, inputFraction);

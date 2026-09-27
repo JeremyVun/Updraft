@@ -72,26 +72,40 @@ try {
       await page.waitForTimeout(ms / n);
     }
   };
-  /** Where the waiting flight's two ends are on screen now, and where they belong. */
+  /**
+   * Where the waiting flight's two ends are on screen now, and how far each is from home in the view's own
+   * terms: across the screen, and away from the lens (up the screen), which is how a stroke pushes a flight.
+   */
   const aim = () => page.evaluate(([w, h]) => {
     const g = window.__game;
     const piece = g.cloudStairs.waiting;
     if (!piece) return null;
     const cam = g.rig.camera;
+    const fwd = cam.getWorldDirection(g.child.position.clone()).setY(0).normalize();
     const scr = (v) => { const p = v.clone().project(cam); return [(p.x * 0.5 + 0.5) * w, (0.5 - p.y * 0.5) * h]; };
     const f = piece.flight;
-    const bottomNow = g.cloudStairs.pointOn(piece, f.bottom.clone(), f.bottom.clone());
-    const topNow = g.cloudStairs.pointOn(piece, f.landing.clone(), f.landing.clone());
-    return { bottomNow: scr(bottomNow), topNow: scr(topNow), bottom: scr(f.bottom.clone()), top: scr(f.landing.clone()),
-      turned: piece.offset.y, gap: Math.hypot(bottomNow.x - f.bottom.x, bottomNow.z - f.bottom.z), settling: piece.settling };
+    const ends = [f.bottom, f.landing].map((home) => {
+      const now = g.cloudStairs.pointOn(piece, home.clone(), home.clone());
+      const ex = home.x - now.x, ez = home.z - now.z;
+      return { at: scr(now), across: ex * -fwd.z + ez * fwd.x, away: ex * fwd.x + ez * fwd.z, far: Math.hypot(ex, ez) };
+    });
+    // A push across the landing end turns the flight about its pivot; this is the way that undoes the turn.
+    const top = g.cloudStairs.pointOn(piece, f.landing.clone(), f.landing.clone());
+    const rx = top.x - (piece.pivot.x + piece.offset.x), rz = top.z - (piece.pivot.z + piece.offset.z);
+    const r = Math.hypot(rx, rz) || 1, sign = -Math.sign(piece.offset.y);
+    const tx = sign * rz / r, tz = sign * -rx / r;
+    const spin = { at: scr(top), across: tx * -fwd.z + tz * fwd.x, away: tx * fwd.x + tz * fwd.z, far: Math.abs(piece.offset.y) * 1.5 };
+    return { ends, spin, settling: piece.settling, turn: +piece.offset.y.toFixed(2), off: [+piece.offset.x.toFixed(2), +piece.offset.z.toFixed(2)] };
   }, [width, height]);
 
   await page.waitForTimeout(2500);
   await shot('01-arrive');
+  const first = Number(process.env.FROM ?? 0);
+  if (first) await page.evaluate((n) => window.__game.story.current.restoreCheckpoint(`flight-${n}`, [n]), first);
   let s = await until((x) => x.beat === 'climb', 20000);
   await page.waitForTimeout(3000);
   await shot('02-climb');
-  for (let n = 0; n < 3; n++) {
+  for (let n = first; n < 3; n++) {
     s = await until((x) => x.beat === 'waiting', 60000);
     log('waiting', JSON.stringify(s));
     await page.waitForTimeout(1500);
@@ -100,16 +114,13 @@ try {
     for (; strokes < 60; strokes++) {
       const a = await aim();
       if (!a || a.settling > 0) break;
-      // Push whichever end is further from home, along the way it needs to go.
-      const eb = [a.bottom[0] - a.bottomNow[0], a.bottom[1] - a.bottomNow[1]];
-      const et = [a.top[0] - a.topNow[0], a.top[1] - a.topNow[1]];
-      const useTop = Math.hypot(...et) > Math.hypot(...eb);
-      const at = useTop ? a.topNow : a.bottomNow;
-      const e = useTop ? et : eb;
-      const len = Math.hypot(...e) || 1;
-      const d = [e[0] / len, e[1] / len];
-      const reach = Math.min(160, 40 + len * 0.6);
-      await swipe([at[0] - d[0] * 60, at[1] - d[1] * 60], [at[0] + d[0] * reach, at[1] + d[1] * reach], 260 + Math.min(300, len));
+      if (strokes % 5 === 0) log('  stroke', strokes, JSON.stringify({ off: a.off, turn: a.turn }));
+      // Push whichever end is further from home, the way it needs to go.
+      const end = Math.abs(a.turn) > 0.9 ? a.spin : a.ends[0].far >= a.ends[1].far ? a.ends[0] : a.ends[1];
+      const len = Math.hypot(end.across, end.away) || 1;
+      const d = [end.across / len, -end.away / len];
+      const reach = Math.min(200, 60 + end.far * 30);
+      await swipe([end.at[0] - d[0] * 50, end.at[1] - d[1] * 50], [end.at[0] + d[0] * reach, end.at[1] + d[1] * reach], 220 + Math.min(260, end.far * 40));
       await page.waitForTimeout(650);
       if (strokes === 4) await shot(`04-push-${n + 1}`);
     }
@@ -143,7 +154,14 @@ try {
   for (let i = 0; i < 80; i++) {
     s = await state();
     if (s.beat !== 'sail') break;
-    await swipe([width * 0.3, height * 0.55], [width * 0.7, height * 0.45], 380);
+    // Sweep across the sail, toward the way they are going.
+    const at = await page.evaluate(([w, h]) => {
+      const g = window.__game;
+      const p = g.boat.position.clone(); p.y += 1.5;
+      const q = p.clone().project(g.rig.camera);
+      return [(q.x * 0.5 + 0.5) * w, (0.5 - q.y * 0.5) * h];
+    }, [width, height]);
+    await swipe([at[0] - 60, at[1] + 140], [at[0] + 20, at[1] - 160], 380);
     await page.waitForTimeout(400);
     if (i === 10) await shot('13-sail');
   }

@@ -102,6 +102,8 @@ export interface Chapter {
   readonly flockChatter?: boolean;
   /** The low cloud deck over the stairs, while this chapter wants it; eased out when a chapter leaves it unset. */
   readonly cloudDeck?: CloudDeckState;
+  /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
+  readonly pointerFloor?: number | null;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */

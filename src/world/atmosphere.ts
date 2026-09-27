@@ -537,11 +537,14 @@ float deckSpan(vec2 a, vec2 b) {
  * top, lilac grey underneath, and lighter the higher up in it you are.
  */
 vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
-  vec2 slab = deckSlab(ro, rd, uCloudDeckY.x, uCloudDeckY.y, far);
+  // A thin fringe hangs under the body of the cloud, so its underside is soft rather than ruled.
   vec2 disc = deckColumn(ro, rd, uCloudDeck.xy, uCloudDeck.z);
+  vec2 body = deckSlab(ro, rd, uCloudDeckY.x + 1.4, uCloudDeckY.y, far);
+  vec2 fringe = deckSlab(ro, rd, uCloudDeckY.x - 1.6, uCloudDeckY.x + 1.4, far);
+  vec2 slab = vec2(min(body.x, fringe.x), max(body.y, fringe.y));
   vec2 inside = vec2(max(slab.x, disc.x), min(slab.y, disc.y));
-  float len = inside.y - inside.x;
-  if (len <= 0.0) return vec4(0.0);
+  float len = deckSpan(body, disc) + 0.28 * deckSpan(fringe, disc);
+  if (inside.y - inside.x <= 0.0) return vec4(0.0);
   float thin = uCloudDeckY.z - uCloudDeckY.w;
   float cleared = 0.0;
   if (uCloudBubble.w > 0.0) {

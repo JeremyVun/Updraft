@@ -23,19 +23,34 @@ const STEP_UP = 0.5;
 export function deckGround(decks: readonly Deck[], x: number, z: number, near: number): number {
   const land = heightAt(x, z);
   const flat = decks.every(d => d.height1 === undefined);
-  let best = land;
-  for (const d of decks) {
-    const dx = d.x1 - d.x0;
-    const dz = d.z1 - d.z0;
-    const len2 = dx * dx + dz * dz;
-    const t = ((x - d.x0) * dx + (z - d.z0) * dz) / len2;
-    if (t < 0 || t > 1) continue;
-    const px = d.x0 + dx * t;
-    const pz = d.z0 + dz * t;
-    if (Math.hypot(x - px, z - pz) > d.halfWidth) continue;
-    const h = Math.max(d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * t, land);
-    if (flat) return h;
-    if (h <= near + STEP_UP && h > best) best = h;
+  if (flat) {
+    for (const d of decks) {
+      const h = underDeck(d, x, z, 0);
+      if (h !== null) return Math.max(h, land);
+    }
+    return land;
   }
-  return best;
+  // A staircase is never stepped off: a seam or a stray foot finds the tread it was nearly on.
+  for (const slack of [0, 0.35]) {
+    let best = land;
+    for (const d of decks) {
+      const h = underDeck(d, x, z, slack);
+      if (h !== null && h <= near + STEP_UP && h > best) best = h;
+    }
+    if (best > near - 0.6 || slack > 0) return best;
+  }
+  return land;
+}
+
+/** The deck's height under (x, z), or null off it; slack widens it and lets it run on past its ends. */
+function underDeck(d: Deck, x: number, z: number, slack: number): number | null {
+  const dx = d.x1 - d.x0;
+  const dz = d.z1 - d.z0;
+  const len = Math.sqrt(dx * dx + dz * dz);
+  const t = len > 0 ? ((x - d.x0) * dx + (z - d.z0) * dz) / (len * len) : 0;
+  const over = slack / Math.max(len, 1e-3);
+  if (t < -over || t > 1 + over) return null;
+  const u = Math.min(1, Math.max(0, t));
+  if (Math.hypot(x - (d.x0 + dx * u), z - (d.z0 + dz * u)) > d.halfWidth + slack) return null;
+  return d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * u;
 }

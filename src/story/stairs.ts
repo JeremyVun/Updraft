@@ -5,8 +5,8 @@ import { roundedWaypoint } from '../traveller/navigation';
 import type { Deck } from '../world/decks';
 import { CloudStairs } from '../world/stairs';
 import {
-  CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHTS, LANE, LOOSE, SLIPPERS, STAIRS_ARRIVAL, STAIRS_FOOT,
-  STEP, TOP, flight,
+  CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
+  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, flight,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
@@ -163,6 +163,11 @@ export class StairsChapter implements Chapter {
     const piece = this.world.waiting;
     if (!piece) return null;
     return this.world.pointOn(piece, this.tmp2.lerpVectors(piece.flight.bottom, piece.flight.landing, 0.5), this.invitation);
+  }
+
+  /** Above the cloud the pointer lands on its top, so a gust meant for the sail reaches the sail. */
+  get pointerFloor(): number | null {
+    return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
   }
 
   get arrivalMusic(): 'drowned' | undefined {
@@ -361,11 +366,13 @@ export class StairsChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.to('nest');
     k.decks = this.decks();
-    k.errand = this.birdAt.set(SLIPPERS.x - 0.07, 0, SLIPPERS.z);
+    k.errand = this.birdAt.set(SLIPPERS.x, 0, SLIPPERS.z - 0.05);
     k.stay = false;
-    c.walkTo(SLIPPERS.x - 0.55, SLIPPERS.z + 0.15, false, () => {
-      c.faceToward(this.sun.x, this.sun.z, 1);
-      c.sitDown();
+    c.walkTo(SIT.x + 0.3, SIT.z, false, () => {
+      c.walkTo(SIT.x, SIT.z, false, () => {
+        c.faceToward(this.sun.x, this.sun.z, 1);
+        c.sitDown();
+      }, 0.12);
     }, 0.2);
   }
 
@@ -390,7 +397,7 @@ export class StairsChapter implements Chapter {
     carry.gatherUp(() => {
       boat.mooring = CLOUD_BERTH;
       const beside = boat.boardingPoint(this.tmp);
-      c.walkTo(Math.min(beside.x, TOP.x + 0.4), TOP.z + STEP.landing / 2 - 0.1, false, () => {
+      c.walkTo(Math.max(beside.x, TOP_EDGE + 0.25), TOP.z + 0.1, false, () => {
         this.to('boarding');
         c.faceToward(boat.position.x, boat.position.z, 1);
         c.board(boat, () => {
@@ -463,7 +470,7 @@ export class StairsChapter implements Chapter {
       return;
     }
     d.base = CLOUD.base;
-    const inCloud = c.position.y > CLOUD.base - 3 && c.position.y < CLOUD.top + 3;
+    const inCloud = c.position.y > CLOUD.base - 3 && c.position.y < CLOUD.top - 0.3;
     d.bubble.set(c.position.x, c.position.y + 1.1, c.position.z, inCloud ? k.bubble : 0);
   }
 
@@ -511,23 +518,29 @@ export class StairsChapter implements Chapter {
       }
       case 'hesitate':
       case 'birdFirst': {
-        s.from = this.from.set(0.9, 0, -0.1).normalize();
-        s.target.copy(c).lerp(cygnet.position, 0.4);
-        s.target.y = c.y + 1.3;
-        s.distance = 6;
-        s.height = 0.6;
+        // From outside the rail, a little ahead: their face turned up at where the stair goes into the white.
+        s.from = this.from.set(-0.86, 0, -0.5).normalize();
+        s.target.copy(c).lerp(cygnet.position, 0.45);
+        s.target.y = c.y + 1.25;
+        s.distance = 5.2;
+        s.height = 0.15;
+        s.clearance = 0.4;
         this.pace = 0.3;
         return;
       }
       case 'follow':
       case 'emerge': {
-        s.from = this.from.set(0.85, 0, 0.5).normalize();
-        s.target.copy(c).lerp(cygnet.position, 0.3);
-        s.target.y = Math.max(c.y, cygnet.position.y) + 1.1;
-        s.distance = this.beat === 'emerge' ? 7 : 4.6;
-        s.height = this.beat === 'emerge' ? 1.4 : 0.9;
-        s.clearance = 0.5;
-        this.pace = 0.35;
+        // In the cloud: side on from the west, the bird a few treads ahead and the rail between them and the white.
+        const onFlight = THREE.MathUtils.clamp(Math.ceil((c.y - STAIRS_GROUND) / FLIGHT_RISE), 1, FLIGHTS);
+        const west = onFlight % 2 === 1;
+        const up = Math.max(0, c.y - CLOUD.top + 1.5);
+        s.from = this.from.set(-1, 0, west ? -0.25 : 0.25).normalize();
+        s.target.copy(c).lerp(cygnet.position, 0.4);
+        s.target.y = Math.max(c.y, cygnet.position.y) + 1.0;
+        s.distance = (west ? 4.4 : 5.6) + up * 1.8;
+        s.height = 0.5 + up * 0.8;
+        s.clearance = 0.4;
+        this.pace = 0.3;
         return;
       }
       case 'nest':
@@ -535,25 +548,30 @@ export class StairsChapter implements Chapter {
       case 'lean':
       case 'gather':
       case 'boarding': {
+        // Behind them, low, with the sun and all of the cloud in front: two small shapes on the edge of the top step.
         const back = this.tmp.copy(TOP).sub(this.sun).setY(0).normalize();
-        s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.45);
-        s.target.copy(c).lerp(this.sun, this.beat === 'skein' ? 0.12 : 0.05);
-        s.target.y = TOP.y + (this.beat === 'skein' ? 3.2 : 1.6);
-        s.distance = this.beat === 'skein' ? 11 : 7.5;
-        s.height = this.beat === 'skein' ? 0.6 : 1.8;
-        this.pace = 0.25;
+        const skein = this.beat === 'skein';
+        s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.32);
+        s.target.copy(SIT).lerp(this.sun, skein ? 0.18 : 0.08);
+        s.target.y = TOP.y + (skein ? 4.5 : 1.4);
+        s.distance = skein ? 16 : 9;
+        s.height = skein ? -1.2 : 1.1;
+        this.focus.copy(SIT);
+        this.pace = 0.2;
         return;
       }
       default: {
+        // Behind the boat and a little to one side, sailing into the sun over the cloud.
         const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
-        const bearing = boat.yaw + Math.PI + 0.55;
+        const down = this.beat === 'descend';
+        const bearing = boat.yaw + Math.PI + (down ? 0.9 : 0.42);
         s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
-        s.target.set(boat.position.x + fx * 2, boat.position.y + 1.6, boat.position.z + fz * 2);
-        s.distance = this.beat === 'descend' ? 9 : 17;
-        s.height = this.beat === 'descend' ? 2.2 : 4.5;
+        s.target.set(boat.position.x + fx * 3, boat.position.y + 1.8, boat.position.z + fz * 3);
+        s.distance = down ? 9 : 14;
+        s.height = down ? 2.6 : 3.4;
         s.carry = true;
         s.carryAnchor = boat.position;
-        this.pace = 0.4;
+        this.pace = 0.35;
         this.focus.copy(boat.position);
       }
     }

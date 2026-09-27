@@ -32,7 +32,7 @@ export function levelHeight(level: number): number {
 }
 
 /** The cloud lies over everything from here to here; the top landing stands just clear of it. */
-export const CLOUD = { base: levelHeight(6) + 0.9, top: levelHeight(FLIGHTS) - 1.25 } as const;
+export const CLOUD = { base: levelHeight(6) + 2.1, top: levelHeight(FLIGHTS) - 1.25 } as const;
 
 export interface Flight {
   index: number;
@@ -70,18 +70,22 @@ export const STAIRS_FOOT = new THREE.Vector3(LANE.west, STAIRS_GROUND, ZA + 1.6)
 export const STAIRS_LANDING = new THREE.Vector2(76, -1231);
 export const STAIRS_ARRIVAL = new THREE.Vector2(86, -1233);
 
-/** The top landing: where the slippers are, and where the boat lies alongside on the cloud. */
+/**
+ * The top landing, open on its west side to the sun: the slippers are by the edge, the child sits there with their
+ * feet over the cloud, and the boat lies alongside.
+ */
 export const TOP = flight(FLIGHTS).landing;
-export const SLIPPERS = new THREE.Vector3(MID_X + 0.18, TOP.y, ZA + 0.2);
-export const CLOUD_BERTH = { x: MID_X + 0.35, z: ZA + STEP.landing + 1.85, yaw: Math.PI * 0.5 } as const;
+export const TOP_EDGE = MID_X - STEP.width - STEP.gap / 2 - 0.05;
+export const SLIPPERS = new THREE.Vector3(TOP_EDGE + 0.2, TOP.y, TOP.z - 0.32);
+export const SIT = new THREE.Vector3(TOP_EDGE + 0.32, TOP.y, TOP.z + 0.24);
+export const CLOUD_BERTH = { x: TOP_EDGE - 1.45, z: TOP.z + 0.1, yaw: Math.PI } as const;
 
 /** Round the tower and away north-west into the sun, then down through the cloud onto the water where the village begins. */
 export const CLOUD_ROUTE = [
-  new THREE.Vector2(113, -1226),
-  new THREE.Vector2(117, -1249),
-  new THREE.Vector2(98, -1271),
-  new THREE.Vector2(66, -1274),
-  new THREE.Vector2(40, -1261),
+  new THREE.Vector2(92, -1240),
+  new THREE.Vector2(74, -1244),
+  new THREE.Vector2(56, -1251),
+  new THREE.Vector2(38, -1257),
 ] as const;
 /** Where the hull has come down onto the sea when the drowned village takes over. */
 export const DESCENT_END = new THREE.Vector2(16, -1254);

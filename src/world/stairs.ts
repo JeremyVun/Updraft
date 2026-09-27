@@ -120,7 +120,7 @@ void main() {
   vec2 xz = vWorld.xz;
   if (uCloudBubble.w > 0.0) {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
-    if (hole < 0.0 && uCloudBubble.y < uCloudDeckY.y + 2.0) discard;
+    if (hole < 0.0 && uCloudBubble.y < uCloudDeckY.y + 0.5) discard;
   }
   float e = 0.6;
   float h = billow(xz);
@@ -278,19 +278,12 @@ function buildLanding(b: Build, f: Flight, boarding: boolean): void {
   const rail = () => y + RAIL_HEIGHT + 0.06;
   const outer = x1 - 0.022, other = x0 + 0.022;
   balustrade(b, F, outer, s0 + 0.05, s1 - 0.05, flat, rail, 0.12, false);
-  balustrade(b, F, other, s0 + 0.05, s1 - 0.05, flat, rail, 0.12, false);
+  // The top landing is open on the side the sun sets.
+  if (!boarding) balustrade(b, F, other, s0 + 0.05, s1 - 0.05, flat, rail, 0.12, false);
   const edge = FLIGHT_RUN + landing - 0.022;
   const across = new THREE.Matrix4().copy(F).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2));
-  if (boarding) {
-    // A gap in the far rail where the boat comes alongside, and a rail across the empty lane at the top.
-    balustrade(b, across, -edge, x0 + 0.05, cx - 0.45, flat, rail, 0.12, false);
-    balustrade(b, across, -edge, cx + 0.45, x1 - 0.05, flat, rail, 0.12, false);
-    newel(b, F, cx - 0.47, edge, y, false);
-    newel(b, F, cx + 0.47, edge, y, false);
-    balustrade(b, across, -(s0 + 0.022), x0 + 0.05, OTHER + width / 2, flat, rail, 0.12, false);
-  } else {
-    balustrade(b, across, -edge, x0 + 0.05, x1 - 0.05, flat, rail, 0.12, false);
-  }
+  balustrade(b, across, -edge, x0 + 0.05, x1 - 0.05, flat, rail, 0.12, false);
+  if (boarding) balustrade(b, across, -(s0 + 0.022), x0 + 0.05, OTHER + width / 2, flat, rail, 0.12, false);
   newel(b, F, outer, s1 - 0.02, y, true);
   newel(b, F, other, s1 - 0.02, y, true);
   newel(b, F, other, s0, y, true);
@@ -329,6 +322,8 @@ export interface LoosePiece {
   readonly pivot: THREE.Vector3;
   /** How much the player's wind has worked on it, for sounds and for the story to notice. */
   worked: number;
+  /** Seconds left of feeling for its place after the player last pushed it; it never finds its way on its own. */
+  handled: number;
 }
 
 /**
@@ -348,6 +343,8 @@ export class CloudStairs {
   private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number } };
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
+  private readonly forward = new THREE.Vector3();
+  private readonly right = new THREE.Vector3();
   private time = 0;
 
   constructor() {
@@ -361,8 +358,8 @@ export class CloudStairs {
       buildLanding(fixed, f, i === FLIGHTS);
     }
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z);
-    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.07, 0, 0)).multiply(new THREE.Matrix4().makeRotationY(0.12)));
-    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.08, 0, 0.03)).multiply(new THREE.Matrix4().makeRotationY(-0.2)));
+    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.02, 0, -0.07)).multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2 + 0.14)));
+    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.03, 0, 0.08)).multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2 - 0.22)));
     const standing = new THREE.Mesh(fixed.result(), material);
     standing.name = 'stairs-standing';
     this.group.add(standing);
@@ -395,7 +392,7 @@ export class CloudStairs {
       this.group.add(group, ghost);
       const start = LOOSE_START[i];
       this.pieces.push({ flight: f, group, ghost, offset: new THREE.Vector3(start.x, start.yaw, start.z),
-        velocity: new THREE.Vector3(), docked: false, settling: 0, pivot, worked: 0 });
+        velocity: new THREE.Vector3(), docked: false, settling: 0, pivot, worked: 0, handled: 0 });
     });
 
     this.topUniforms = {
@@ -468,26 +465,37 @@ export class CloudStairs {
 
   /**
    * The player's strokes push whatever part of a loose flight they cross, the way a gust pushes a toy boat: a
-   * push on its middle moves it, a push on one end turns it about the other.
+   * push on its middle moves it, a push on one end turns it about the other. The flights hang in the air, so a
+   * stroke is read at the flight's own depth: across the screen is across the view, up the screen is away.
    */
-  brush(camera: THREE.Camera, input: PointerInput, dt: number): void {
-    if (!input.present || input.muted || input.gust < 1.2 || input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
+  brush(camera: THREE.PerspectiveCamera, input: PointerInput, dt: number): void {
+    if (!input.present || input.muted || dt <= 0) return;
+    const sx = (input.ndc.x - input.prevNdc.x) * camera.aspect, sy = input.ndc.y - input.prevNdc.y;
+    if (sx * sx + sy * sy < 1e-8) return;
     const k = tuning.stairs;
+    camera.getWorldDirection(this.forward).setY(0).normalize();
+    this.right.set(-this.forward.z, 0, this.forward.x);
+    const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     for (const piece of this.pieces) {
       if (piece.docked || piece.settling > 0) continue;
       const f = piece.flight;
-      for (const at of [0.05, 0.5, 0.95]) {
+      for (const at of [0.04, 0.5, 0.96]) {
         this.tmp.lerpVectors(f.bottom, f.landing, at).y += 0.6;
         const p = this.pointOn(piece, this.tmp, this.tmp);
         const w = screenBrush(camera, p, input.prevNdc, input.ndc, k.brushRadius);
         if (w <= 0) continue;
-        const push = Math.min(input.gust, k.gustCap) * w * k.push * dt * 60;
-        const fx = input.gustDir.x * push, fz = input.gustDir.y * push;
+        const depth = p.distanceTo(camera.position) * halfHeight;
+        const vx = (this.right.x * sx + this.forward.x * sy) * depth / dt;
+        const vz = (this.right.z * sx + this.forward.z * sy) * depth / dt;
+        const speed = Math.hypot(vx, vz);
+        const scale = speed > k.strokeCap ? k.strokeCap / speed : 1;
+        const fx = vx * scale * w * k.push, fz = vz * scale * w * k.push;
         piece.velocity.x += fx;
         piece.velocity.z += fz;
         const rx = p.x - (piece.pivot.x + piece.offset.x), rz = p.z - (piece.pivot.z + piece.offset.z);
         piece.velocity.y += (rz * fx - rx * fz) * k.turn;
         piece.worked += w * dt;
+        piece.handled = tuning.stairs.handled;
       }
     }
   }
@@ -527,9 +535,19 @@ export class CloudStairs {
         v.z *= 0.5;
       }
       if (piece === next) {
-        const turned = Math.abs(Math.atan2(Math.sin(o.y), Math.cos(o.y)));
+        o.y = Math.atan2(Math.sin(o.y), Math.cos(o.y));
+        const turned = Math.abs(o.y);
         const bottom = this.pointOn(piece, piece.flight.bottom, this.tmp);
         const gap = Math.hypot(bottom.x - piece.flight.bottom.x, bottom.z - piece.flight.bottom.z);
+        // Near its place a flight feels where it belongs, and leans that way: a near miss slides home.
+        piece.handled = Math.max(0, piece.handled - dt);
+        const near = Math.min(1, piece.handled) * (1 - THREE.MathUtils.smoothstep(Math.hypot(o.x, o.z), k.pullFrom * 0.4, k.pullFrom));
+        if (near > 0) {
+          v.x -= o.x * k.pull * near * dt;
+          v.z -= o.z * k.pull * near * dt;
+          // It only turns itself the rest of the way once it is roughly the right way round.
+          v.y -= o.y * k.pull * 1.5 * near * (1 - THREE.MathUtils.smoothstep(turned, k.alignWithin * 0.6, k.alignWithin)) * dt;
+        }
         if (gap < k.captureGap && turned < k.captureTurn) {
           piece.settling = 1e-3;
           o.y = Math.atan2(Math.sin(o.y), Math.cos(o.y));
@@ -560,9 +578,9 @@ export class CloudStairs {
     const lx = f.landing.x;
     const halfSpan = STEP.width + STEP.gap / 2;
     return [
-      { x0: f.bottom.x, z0: f.bottom.z, x1: f.top.x, z1: f.top.z, halfWidth: STEP.width / 2 - 0.12,
+      { x0: f.bottom.x, z0: f.bottom.z, x1: f.top.x, z1: f.top.z, halfWidth: STEP.width / 2,
         height: f.bottom.y, height1: f.top.y },
-      { x0: lx - halfSpan + 0.3, z0: f.landing.z, x1: lx + halfSpan - 0.3, z1: f.landing.z, halfWidth: STEP.landing / 2 + 0.1,
+      { x0: lx - halfSpan, z0: f.landing.z, x1: lx + halfSpan, z1: f.landing.z, halfWidth: STEP.landing / 2 + 0.1,
         height: f.top.y },
     ];
   }
