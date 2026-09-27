@@ -121,7 +121,10 @@ puzzle events, remain within a small radius of the child and never capture, burs
 player. The bird stays on its feet; the farewell flight still belongs to home. Movement and attention are
 cleared before gathering and on checkpoint restoration. The original three lights and gestures remain.
 
-## 3. The stairs in the clouds — planned
+## 3. The stairs in the clouds — being built
+
+September 27: Jeremy asked for it to be built, with creative ownership. Concept and status: [stairs.md](stairs.md).
+The original note:
 
 Before the drowned village. A grassy island climbs into low cloud; its path becomes a household staircase
 and banister without a house. Wind parts the cloud to reveal solid steps ahead. The cygnet goes a few steps
