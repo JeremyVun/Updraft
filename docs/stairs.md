@@ -39,6 +39,17 @@ And (2026-09-27, verbatim):
 
 > "the sky mirror is also very good at placing the camera at just the right position so that the player has the right perspectiv eto move the bublbe intot he right place."
 
+Shown three stair directions (A floating treads, B stairs made of cloud, C soft toy staircase) and three air boats
+(wings, quilt balloon, kite-drawn with a lantern) as concept art (`/tmp/updraft-stairs-concepts/`), Jeremy answered
+(2026-09-27, verbatim):
+
+> "I think C should be the direction. It should feel like the stairs that a child would dream about. It'd be cool to see if you can get it turning into B (cloud stairs) convincingly, but it has to be done really well or else it's not worth it. Also, i noticed that the child picks up the cygnet and puts it down outside of the stairs (in mid air), because the stairs are kinda small in those areas and dont have space for the child to move around. The way they disappear into the clouds in the concept is really nice too. If we can get dynamic "clouds" moving across during the ascent that would be quite nice. It should feel like like an emotional release / entering another world once the child climbs through to the top of the stairs. Same feeling i think as flying through the storm and emerging into the eye of the storm where it's eerily calm. The climb through teh clouds doesn't need to be stormy, maybe claustrophic and a bit scary with no visibility and a fair bit of wind, but it'd be good to capture the same kind of feeling when you finally climb above it all. I leave the details and the pacing to you."
+
+On the air boat, after animating each concept himself (`~/Desktop/cloud-boats.mp4`):
+
+> "I feel like the boat on the right with the lantern and the kite sailing through the clouds feels the best (if you can get a nice wake effect through the clouds as it sails through them). It may also be worth finally getting an opus 5.5 sub agent to have a look at improving the visuals of the sail boat (right now it's quite simple looking). The improved sailboat doesnt need to be super detailed and high definition, but i do think we need to target a higher quality bar. "
+
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
