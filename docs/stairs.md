@@ -182,10 +182,15 @@ light. Courage passes back and forth between them; the stairs are where it start
 
 ## Status (2026-09-27, third pass, in progress)
 
-- Done on `stairs`: the stair climbs up and onward; fat rails both sides, big newels, rails round every landing,
-  stepped undersides; the cygnet walks the whole way; the Penrose loop, playable.
-- In progress on their own branches: the cloud's look from above and below (`stairs-cloud`), a volumetric haze
-  under the flights to replace the puff cards (`stairs-haze`). The boat's look is another session's (`boat-look`).
+- Done on `stairs`, playing end to end with the driver (about 4.3 minutes): the stair climbs up and onward; fat
+  rails both sides, big newels, rails round every landing, stepped undersides; the cygnet walks the whole way (it
+  keeps to a line down the middle of the stair, `src/story/stairs-track.ts`, and goes along a rail rather than
+  sticking at it); the Penrose loop, playable; the cloud's new look from above (a heaped sea of cumulus rather than
+  a quilt) and from below (cells lit gold toward the sun, breaking into separate clouds away from the stair).
+- In progress on its own branch: a volumetric haze under the flights to replace the puff cards (`stairs-haze`).
+  The boat's look is another session's (`boat-look`).
+- Open: the heap of cloud on the loop's far corner is still puff cards; the hesitation shot catches the child's
+  back while they step aside.
 
 ## Status (2026-09-27, second pass)
 
