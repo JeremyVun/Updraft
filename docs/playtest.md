@@ -107,3 +107,14 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 | 13 | No `skein` phrase when the swans fly away at home | done: the child still cheers as the family goes north, in silence; the skein's arrival over the summit keeps its phrase |
 | 14 | Dark wood: embers answer only updrafts, with the updraft gesture | open |
 | 15 | Sky mirror: ramps off the entry jetty and onto the departure jetty; the child's path out | done: each jetty runs down a 2.6 m plank ramp into the mirror at its island end (`rampAt`/`rampLength` on the deck, built in `world/sky-mirror.ts`, walkable through `rampHeight` in the child's ground, which lets them down a ramp and off its foot but not off its sides). Arriving, the child walks down the entry ramp before setting the cygnet down; leaving, they walk to the foot of the departure ramp and up it along the boards to the boat, instead of cutting onto the jetty over its side halfway along. Traced: 0 → 0.17 → 0.22 up the ramp, then along the deck's centreline to the berth. Stills `/tmp/updraft-pt0927-lead-ramps.png`, `/tmp/updraft-pt0927-lead-entry2-grid.png` |
+
+### Follow-up 2 (2026-09-27, Jeremy verbatim)
+
+> Two more playtest feedback which i need looked at and fixed if it's not fixed already
+> - when the child is leaving the woods island, the whole scene "stutters" / "reloads" instead of smoothly transitioning. Try to identify the root cause and fix it.
+> - [screenshot: sailing west into the sun toward the sky mirror, dolphins alongside] there are black lines under the sun. It looks like some kind of rendering artifact
+
+| # | Issue | Status |
+| --- | --- | --- |
+| 16 | Leaving the dark wood: the scene stutters / reloads | open |
+| 17 | Black lines under the sun (sea passage to the sky mirror) | open |
