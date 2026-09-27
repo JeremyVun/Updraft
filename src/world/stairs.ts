@@ -395,6 +395,8 @@ export class CloudStairs {
   readonly eye = new THREE.Vector3();
   readonly looking = new THREE.Vector3();
   private readonly trickUniform = { value: 0 };
+  /** Every piece of haze under the flights, so those the white hides whole need not be drawn. */
+  private readonly hazes: THREE.Mesh[] = [];
   private readonly undrawUniform = { value: 0 };
   /** Called with a piece's flight number as it knocks home. */
   onDocked: (index: number) => void = () => {};
@@ -414,7 +416,10 @@ export class CloudStairs {
       const f = flight(i);
       buildFlight(fixed, f, i === LOOP.wait || i === LOOP.onward);
       buildLanding(fixed, landingOf(i));
-      for (const haze of hazeUnder(f, cloudUnder(i))) this.group.add(haze);
+      for (const haze of hazeUnder(f, cloudUnder(i))) {
+        this.group.add(haze);
+        this.hazes.push(haze);
+      }
     }
     // Side by side at the open edge, toes to the drop and the sun.
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
@@ -469,7 +474,9 @@ export class CloudStairs {
       const group = new THREE.Group();
       group.name = `stairs-loose-${index}`;
       group.add(new THREE.Mesh(geo, material));
-      group.add(...hazeUnder(f, cloudUnder(index), pivot));
+      const haze = hazeUnder(f, cloudUnder(index), pivot);
+      group.add(...haze);
+      this.hazes.push(...haze);
       const ghost = new THREE.Mesh(geo, ghostMaterial);
       ghost.position.copy(pivot);
       ghost.visible = false;
@@ -637,7 +644,25 @@ export class CloudStairs {
     this.wisps.update(dt, time);
     this.bank.update(dt);
     this.cloud.update(dt, camera);
+    this.hideHazeInTheWhite(camera);
     if (this.hideTop) this.cloud.top.visible = false;
+  }
+
+  /**
+   * Inside the cloud nothing is seen beyond a few metres past the pocket of clearer air, so the haze further off than
+   * that is not drawn at all; its sightlines are all white by then.
+   */
+  private hideHazeInTheWhite(camera: THREE.Camera): void {
+    const deck = atmo.uniforms.uCloudDeck.value, y = atmo.uniforms.uCloudDeckY.value, bubble = atmo.uniforms.uCloudBubble.value;
+    const inside = deck.w > 0.9 && camera.position.y > y.x + 1 && camera.position.y < y.y - 1 && bubble.w < 15;
+    const pocket = this.tmp.set(bubble.x, bubble.y, bubble.z);
+    for (const h of this.hazes) {
+      if (!inside) { h.visible = true; continue; }
+      const at = this.tmp2.setFromMatrixPosition(h.matrixWorld);
+      const e = h.matrixWorld.elements;
+      const reach = Math.hypot(e[0], e[1], e[2], e[4], e[5], e[6], e[8], e[9], e[10]) / 2;
+      h.visible = at.distanceTo(camera.position) - reach < 12 || at.distanceTo(pocket) - reach < bubble.w + 8;
+    }
   }
 
   private pose(): void {

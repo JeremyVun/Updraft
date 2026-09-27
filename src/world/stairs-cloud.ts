@@ -271,11 +271,15 @@ uniform vec3 uCalmAt;
 uniform vec2 uStairAt;
 out vec3 vWorld;
 out float vRing;
+out float vBefore;
 BELLY
 void main() {
   vec2 xz = position.xz + uCentre;
   vRing = length(position.xz);
   vWorld = vec3(xz.x, uCloudDeckY.x + 0.6 - belly(xz, deckCover(xz)), xz.y);
+  // How much cloud lies just sunward of here changes slowly across the underside, so it is found per vertex.
+  vec2 sunward = xz + normalize(uSunDir.xz + 1e-5) * 6.0;
+  vBefore = bellyThick(sunward, 0.0) * smoothstep(0.1, 0.9, deckCover(sunward));
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -287,6 +291,7 @@ uniform vec2 uStairAt;
 uniform float uReach;
 in vec3 vWorld;
 in float vRing;
+in float vBefore;
 BELLY
 void main() {
   if (vRing > uReach) discard;
@@ -297,7 +302,7 @@ void main() {
   // the thin seams between them. The low sun reaches in sideways through whatever is thin between it and a
   // point, so each cell is lit gold along the side it faces the sun from, and more so far off toward the sun.
   float thick = bellyThick(xz, 1.0) * smoothstep(0.1, 0.9, cover);
-  float before = bellyThick(xz + toSun * 6.0, 0.0) * smoothstep(0.1, 0.9, deckCover(xz + toSun * 6.0));
+  float before = vBefore;
   float thin = 1.0 - smoothstep(0.2, 0.75, cover);
   vec3 col = deckUnderside(xz, cameraPosition, thin);
   vec2 away = xz - cameraPosition.xz;

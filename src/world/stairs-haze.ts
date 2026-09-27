@@ -292,7 +292,7 @@ void main() {
   float far = t0 * reach;
   // Steps a fixed length on from where the sightline enters, so that neighbouring pixels sample the same air and
   // a step is only ever gained or lost at the far wall, where there is no vapour; a change in the count would band.
-  float stride = max(mix(0.2, 0.55, smoothstep(12.0, 70.0, far)), (t1 - t0) * reach / 18.0);
+  float stride = max(mix(0.24, 0.6, smoothstep(12.0, 70.0, far)), (t1 - t0) * reach / 12.0);
   float dt = stride / reach;
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
   vec3 homeFrom = (uHome * vec4(vEye, 1.0)).xyz;
@@ -313,7 +313,7 @@ void main() {
   float T = 1.0;
   vec3 light = vec3(0.0);
   float seen = 0.0, at = 0.0;
-  for (int i = 0; i < 18; i++) {
+  for (int i = 0; i < 12; i++) {
     float t = t0 + dt * (float(i) + jitter);
     if (t > t1 || T < 0.02) break;
     vec3 p = vEye + rd * t;

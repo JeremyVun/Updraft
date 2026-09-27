@@ -14,8 +14,21 @@ out vec2 vCorner;
 out vec3 vWorld;
 out vec3 vCentre;
 out float vAlpha;
+out vec4 vFog;
+out float vSun;
+out float vNear;
 void main() {
   vec3 c = (modelMatrix * vec4(aCentre, 1.0)).xyz;
+  // Right at the lens a card would fill the screen for nothing, it has faded out by then: it is not drawn at all.
+  float near = distance(c, cameraPosition);
+  vNear = smoothstep(1.2, 3.4, near);
+  if (vNear <= 0.0) {
+    gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+    return;
+  }
+  // The haze and the light change little across one ball, so they are found once for the whole of it.
+  vFog = fogOf(c);
+  vSun = cloudShadow(c.xz);
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
   // Each one breathes a little, out of step with the rest.
@@ -35,6 +48,9 @@ in vec2 vCorner;
 in vec3 vWorld;
 in vec3 vCentre;
 in float vAlpha;
+in vec4 vFog;
+in float vSun;
+in float vNear;
 void main() {
   float d = length(vCorner);
   float around = atan(vCorner.y, vCorner.x);
@@ -42,18 +58,18 @@ void main() {
     + 0.5 * vnoise(vec2(around * 4.3 - vCentre.y * 3.0, uTime * 0.2));
   // Soft all the way from the middle, so overlapping balls add up to mist rather than show as a bunch of balls.
   float body = 1.0 - smoothstep(0.0, 0.8 + 0.3 * lump, d);
-  float a = body * body * vAlpha * uPuffs * smoothstep(0.8, 3.0, distance(vCentre, cameraPosition));
+  float a = body * body * vAlpha * uPuffs * vNear;
   if (a <= 0.004) discard;
   float k = min(d, 1.0);
   vec3 nv = vec3(vCorner / max(d, 1.0), sqrt(max(0.0, 1.0 - k * k)));
   vec3 N = normalize(transpose(mat3(viewMatrix)) * nv);
   vec3 V = normalize(cameraPosition - vWorld);
-  float sun = cloudShadow(vWorld.xz);
+  float sun = vSun;
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float toward = pow(max(0.0, dot(-V, uSunDir)), 4.0);
   vec3 shade = mix(vec3(0.66, 0.62, 0.76), vec3(0.84, 0.8, 0.88), N.y * 0.5 + 0.5) * (uSkyAmbient * 0.9 + vec3(0.12));
   vec3 col = shade + uSunColor * (wrap * 0.55 + toward * 0.35) * sun;
-  gl_FragColor = vec4(applyFog(col, vWorld), a);
+  gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
 }`;
 
 export function puffMaterial(amount = { value: 1 }): THREE.ShaderMaterial {
