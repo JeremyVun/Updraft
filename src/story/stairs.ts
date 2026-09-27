@@ -643,7 +643,6 @@ export class StairsChapter implements Chapter {
             k.decks = this.decks();
             k.mind.perform('wag', 0.9);
             this.revealFrom = this.now;
-            this.revealEye.copy(LOOP_EYE);
             this.birdStop = this.loopStop + 4;
             this.birdReached = this.birdStop;
             this.limit = this.reachable();
@@ -967,16 +966,19 @@ export class StairsChapter implements Chapter {
     const climb = this.air.climb;
     const inCloud = c.position.y > CLOUD.base - 3 && c.position.y < CLOUD.top - 0.3;
     d.bubble.set(c.position.x, c.position.y + 1.1, c.position.z, inCloud ? THREE.MathUtils.lerp(k.bubble, k.bubbleTop, climb) : 0);
-    if (inCloud) d.clearing = THREE.MathUtils.lerp(k.clearing, k.clearingTop, climb);
+    if (inCloud) {
+      // Seen from further off, the pocket is clearer too, or the length of it would still hide her.
+      d.clearing = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.clearing, k.clearingTop, climb), 0.02, this.takeInTheLens(d.bubble));
+    }
     // Over the loop the clear air opens out into a hollow in the white big enough for the lens and the whole
     // square; the cloud is made deep enough overhead that the lens, up there, is still in it. It stays open while
     // the lens comes down after them, so the square is seen to come apart, and closes in once the lens is down.
     if (this.beat === 'loop' || this.lofted) {
       // The pocket's clear heart reaches from the lens to just past the loop; beyond that it thickens to white, and
-      // the cloud goes on down under the loop far enough that nothing shows through from below. While the lens comes
-      // round beside the loop the pocket goes with it.
-      const lens = this.revealing ? this.revealEye : LOOP_EYE;
-      const heart = lens.distanceTo(LOOP_LOOK) / 2 + 1.5;
+      // the cloud goes on down under the loop far enough that nothing shows through from below. Wherever the lens is,
+      // on its way up to the one place or coming round beside the loop after, the pocket goes with it.
+      const lens = this.world.eye;
+      const heart = lens.distanceTo(LOOP_LOOK) / 2 + 2.5;
       d.bubble.set((lens.x + LOOP_LOOK.x) / 2, (lens.y + LOOP_LOOK.y) / 2, (lens.z + LOOP_LOOK.z) / 2, heart / 0.6);
       d.clearing = 0.006;
       d.base = LOOP_LOOK.y - 14;
@@ -993,6 +995,22 @@ export class StairsChapter implements Chapter {
     // The wind in the white rises as they climb; on top it has gone.
     const out = this.air.open;
     this.breeze = white ? THREE.MathUtils.lerp(0.35, 1.3, climb) * (1 - out) + 0.12 * out : this.air.open > 0.5 ? 0.12 : 0.35;
+  }
+
+  /**
+   * In the white the pocket of clearer air is round the child, and the lens, close behind her, is in its thin edge.
+   * When the lens is further off than that, coming back to her from somewhere else, the pocket stretches to take it
+   * in too, so it is never left in blank white looking for her; it draws back round her as the lens comes in.
+   */
+  private takeInTheLens(bubble: THREE.Vector4): number {
+    const lens = this.world.eye;
+    const far = lens.distanceTo(this.tmp2.set(bubble.x, bubble.y, bubble.z));
+    const w = THREE.MathUtils.smoothstep(far, 6, 10);
+    if (w <= 0) return 0;
+    const mid = this.tmp2.lerp(lens, 0.5 * w);
+    const heart = Math.max(mid.distanceTo(lens), mid.distanceTo(this.tmp.set(bubble.x, bubble.y, bubble.z))) + 1.5;
+    bubble.set(mid.x, mid.y, mid.z, Math.max(bubble.w, w * heart / 0.6));
+    return w;
   }
 
   /** Whether the lens is still showing the loop come apart after the bird found the way on. */
