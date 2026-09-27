@@ -200,7 +200,7 @@ float bodyAt(vec3 c, vec3 home) {
   r *= r;
   // The edge wavers, round the sides and up and down them, so no side of the box ever shows.
   float waver = vnoise(vec2(home.x * 1.4 + home.y * 0.8, home.z * 1.4 - home.y * 0.6)) - 0.5;
-  float sides = 1.0 - smoothstep(0.35 - 0.2 * k, 0.9 - 0.35 * k, sqrt(sqrt(dot(r, r))) + waver * 0.3);
+  float sides = 1.0 - smoothstep(0.35 - 0.2 * k, 0.9 - 0.35 * k, sqrt(sqrt(dot(r, r))) + waver * 0.45);
   return hang * ends * sides;
 }
 
@@ -326,9 +326,11 @@ let noise: THREE.Data3DTexture | null = null;
 /** Which sides of a piece meet the next piece's haze: across (x0, x1) and along (z0, z1). The rest are open air. */
 export interface HazeJoins { x0?: boolean; x1?: boolean; z0?: boolean; z1?: boolean }
 
-/** How deep the haze hangs under a piece for `amount` of cloud, and how far out it billows past the steps' sides. */
+/** How deep the haze hangs under a piece for `amount` of cloud, and how far out it billows past its open sides. */
 const hangs = (amount: number) => 0.8 + 2.0 * amount;
 const spills = (amount: number) => 0.3 + 0.2 * Math.min(amount, 1);
+/** How far a box reaches past a side of its piece. */
+const reach = (joined: boolean | undefined, amount: number) => (joined ? OVERLAP : spills(amount));
 
 /** A box of haze: `shape` takes the unit cube to the piece's own frame, `frame` places that frame in the world. */
 function hazeBox(frame: THREE.Matrix4, shape: THREE.Matrix4, size: THREE.Vector4, amount: number, joins: HazeJoins, name: string): THREE.Mesh {
@@ -371,13 +373,14 @@ export function hazeUnderFlight(frame: THREE.Matrix4, run: number, rise: number,
   joins: HazeJoins = { z0: true, z1: true }, soffit = 0.3): THREE.Mesh {
   const depth = hangs(amount);
   const across = width + 2 * spills(amount);
-  const along = run + 2 * OVERLAP;
+  const z0 = -reach(joins.z0, amount), z1 = run + reach(joins.z1, amount);
+  const along = z1 - z0, mid = (z0 + z1) / 2;
   const slope = rise / run;
   // Unit cube to the flight's frame: x across, y down from the sloping ceiling, z along, sheared up the slope.
   const shape = new THREE.Matrix4().set(
     across, 0, 0, 0,
-    0, depth, slope * along, slope * run / 2 - soffit - depth / 2,
-    0, 0, along, run / 2,
+    0, depth, slope * along, slope * mid - soffit - depth / 2,
+    0, 0, along, mid,
     0, 0, 0, 1,
   );
   return hazeBox(frame, shape, new THREE.Vector4(across, depth, along, OVERLAP), amount, joins, 'stairs-haze-flight');
@@ -391,7 +394,9 @@ export function hazeUnderFlight(frame: THREE.Matrix4, run: number, rise: number,
 export function hazeUnderLanding(frame: THREE.Matrix4, width: number, depth: number, amount: number,
   joins: HazeJoins = {}, slab = 0.3): THREE.Mesh {
   const hang = hangs(amount);
-  const shape = new THREE.Matrix4().makeTranslation(0, -slab - hang / 2, 0)
-    .multiply(new THREE.Matrix4().makeScale(width + 2 * OVERLAP, hang, depth + 2 * OVERLAP));
-  return hazeBox(frame, shape, new THREE.Vector4(width + 2 * OVERLAP, hang, depth + 2 * OVERLAP, OVERLAP), amount, joins, 'stairs-haze-landing');
+  const x0 = -width / 2 - reach(joins.x0, amount), x1 = width / 2 + reach(joins.x1, amount);
+  const z0 = -depth / 2 - reach(joins.z0, amount), z1 = depth / 2 + reach(joins.z1, amount);
+  const shape = new THREE.Matrix4().makeTranslation((x0 + x1) / 2, -slab - hang / 2, (z0 + z1) / 2)
+    .multiply(new THREE.Matrix4().makeScale(x1 - x0, hang, z1 - z0));
+  return hazeBox(frame, shape, new THREE.Vector4(x1 - x0, hang, z1 - z0, OVERLAP), amount, joins, 'stairs-haze-landing');
 }
