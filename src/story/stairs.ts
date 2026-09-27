@@ -143,6 +143,8 @@ export class StairsChapter implements Chapter {
   private lofted = false;
   private trickGone = 0;
   private stuckLeft = Infinity;
+  /** How far round the loop the bird had got last frame. */
+  private alongWas = 0;
   private stuckSince = 0;
   private lastDt = 0;
   /** The lantern hung at the bow for the way over the cloud, and the kite's tie-off there. */
@@ -601,7 +603,11 @@ export class StairsChapter implements Chapter {
         this.unstick(left);
         if (!this.homeward) {
           // With the cloud gone off the far corner, it sees the way on as it comes onto that corner, and takes it.
-          if (bank.cleared && Math.abs(way.project(k.position) - this.sOnward) < 0.4) {
+          // Round the corner it cuts inside the turn, so it counts as there once it has come past it.
+          const along = way.project(k.position);
+          const there = this.alongWas < this.sOnward + 0.2 && along >= this.sOnward - 0.4;
+          this.alongWas = along;
+          if (bank.cleared && there) {
             k.scale = 1;
             k.decks = this.decks();
             this.birdStop = this.loopStop + 2;
@@ -655,6 +661,7 @@ export class StairsChapter implements Chapter {
   private setOff(): void {
     this.round = 'round';
     this.homeward = false;
+    this.alongWas = 0;
     this.stuckLeft = Infinity;
   }
 
