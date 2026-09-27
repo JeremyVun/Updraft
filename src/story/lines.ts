@@ -7,7 +7,6 @@ import { DOOR_EXIT, DOOR_SHIFT, doorway } from '../world/doorway';
 import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import { CURTAINS, LINES_BERTH, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
 import type { LinesScorePhase } from '../audio/lines-score';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
@@ -138,7 +137,6 @@ export class LinesChapter implements Chapter {
           cygnet.does('nibble', g.after, 1.6);
           this.birdArrived = -1;
           this.to('birdThrough');
-          cue('delight');
         }
         break;
       }

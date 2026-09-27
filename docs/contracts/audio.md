@@ -56,8 +56,10 @@ Elsewhere lift stays in MIDI 62–81 and strokes/glider answers stop at 86; inco
 300 ms at harmonic changes. `hush` attenuates the background score only.
 
 The piano retains its own musical response. Authored cues, including the wood's rescue `comfort` and ordinary
-`kindled`, retain their existing sound and level. `breeze`, `delight` and `restored` use their original authored
-pitches, bell voice and level; they are independent of cursor harmony, gain and tail gating.
+`kindled`, retain their existing sound and level. `breeze` and `restored` use their original authored
+pitches, bell voice and level; they are independent of cursor harmony, gain and tail gating. The story no longer
+cues `delight`, the chime that went with the child's cheer: on September 27 Jeremy had it taken out because it no
+longer fits the music.
 Accompaniment ducks to 0.32 with a 0.45-second response and
 returns over 1.3 seconds. The finale and chosen home recognition melody are unchanged. `scripted`,
 `pianoActive` and the permanent ending `silence` still suppress gesture chimes.
@@ -142,7 +144,7 @@ distance allowances and fade/rest durations.
 `LinesChapter.linesScore` follows the three curtains, the family approach, open doorway and far shore.
 The first section begins on the approach crossing and continues ashore; the shore section continues through
 boarding and the crossing to Little Boats, retaining the same score instance and phrase clock.
-`linesMelodyQuiet` withdraws the reed while the bird leads and the child follows; the curtains' delight cues also clear it for four seconds. The door opens without the shared completion phrase: on September 25 Jeremy asked for the piano phrase to be taken off the door. Gesture feedback stays
+`linesMelodyQuiet` withdraws the reed while the bird leads and the child follows; a `restored` cue also clears it for four seconds. The door opens without the shared completion phrase: on September 25 Jeremy asked for the piano phrase to be taken off the door. Gesture feedback stays
 active whenever input is playable. Masked melody attacks expire, with no delayed burst after a cue.
 The original audition's +17.6 dB backing gain excludes preview normalization; `linesMelodyDb` trims only
 the reed (currently −1.5 dB). Sections repeat for player pacing and checkpoint restores emit no reward.
@@ -152,7 +154,7 @@ Phase/exit releases last 1.8 seconds, permanent silence 0.12; finished voices an
 Little Boats uses the `boats` mood and its approved 36-second plucked phrase; the shared pad fades out.
 Gesture notes follow its current chord. Entry starts at the beginning of the phrase, suspension
 preserves audio time, missed frames skip stale attacks, and its arrival handoff retires all score voices.
-The delight and restoration cues temporarily duck this background. The approach crossing retains the Lines shore section
+The restoration cue temporarily ducks this background. The approach crossing retains the Lines shore section
 until its arrival handoff starts Boats. Boats then continues on the crossing to Meadow, at its island level,
 until the Meadow arrival handoff.
 

@@ -262,7 +262,6 @@ export class IslandChapter implements Chapter {
       if (!this.cheered && (altitude > 8 || time - this.flightStart > 4.5) && !p.landed) {
         this.cheered = true;
         c.cheer();
-        cue('delight');
       }
       const far = Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z);
       if (far > 8 && !c.moving) c.walkTo(p.position.x, p.position.z, far > 20 || altitude > 9, undefined, 5);
@@ -322,7 +321,6 @@ export class IslandChapter implements Chapter {
     this.cheered = false;
     this.flightStart = time;
     c.cheer();
-    cue('delight');
   }
 
   /**

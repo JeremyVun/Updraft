@@ -59,3 +59,38 @@ recordings in `/tmp/updraft-dolphins-fable-Pt1f/compare-*.webm` (left current, r
   (hoop, still-island, drowned-village, storm-plane, wood-to-sleeping, little-boats, sea-passage); the
   separate takes are `before-*.webm` and `after-*.webm` beside them.
 - Not verified: a listening pass on the two music levels, and a physical iPad.
+
+# Playtest fixes — 2026-09-27
+
+Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
+
+## Jeremy's words (verbatim)
+
+> We're almost there to release. I found a few bugs during playtest that i'd like to get fixed. Do not focus on running perf profiles or hour long playthroughs, i just want the bugs fixed and surgically verified.
+> 1. Remove from the game the two tone sound that plays when i suspect the child "cheers". It no longer fits with the music
+> 2. When the child is carrying the cygnet in front, when the camera is viewing them from behind the child, i can see the cygnet through the player.
+> 3. In the drowned forest sequence when the wind dies out, there is an indicative gesture drawn on the sail, but nothing happens when the player traces that outline - the player actualy has to draw beind on the boat (i think when the player traces across the sail, it creates wind further behind the sail instead of on the sail.
+> 4. On the still island, I want an indicative wind gesture drawn on the paper plane at the beginning when the child is holding it, and then anytime it is on the ground on the still island and not moving (indicating that the player should try to make it move again to continue greening the island).
+> 5. There is some strange rendering bug where as the camera rotates, the grass sort of "Stutters", almost as if the state of the grass gets reset and loads back in or something
+> 6. On the island of birches, when the scarf gets drawn into the boat, it happens very quickly. Much more quickly than before the recent scarf physics refactor
+> 7. On the sky mirror island, the cygnet gets stuck in a swimming pose (it paddles instead of walks). It then gets stuck in that paddle pose even while in the child's backpack
+> 8. When the child gets out of the boat and onto a jetty, they basically teleport onto the jetty, which doesn't look good. I need a better animation.
+> 9. When the child lands on the birches island, they don't put the cygnet down. Only until the child reaches the swing does the cygnet suddenly teleport out ontot he ground
+> 10. When the cygnet is in the backpack, parts of it are clipping out of the backpack.
+> 11. Reduce the drag by 30% on the island of little boats and increase the max speed by 10%
+
+## Status
+
+| # | Issue | Status |
+| --- | --- | --- |
+| 1 | Cheer two-tone | open |
+| 2 | Cygnet seen through the child from behind | open |
+| 3 | Drowned sail gesture lands behind the sail | open |
+| 4 | Still island: gesture on the plane when held and when grounded | open |
+| 5 | Grass stutters as the camera turns | open |
+| 6 | Birches: scarf drawn into the boat too fast | open |
+| 7 | Mirror: cygnet stuck paddling, even in the backpack | open |
+| 8 | Boat to jetty is a teleport | open |
+| 9 | Birches landing: cygnet not put down until the swing | open |
+| 10 | Cygnet clips out of the backpack | open |
+| 11 | Little boats: drag −30%, max speed +10% | open |

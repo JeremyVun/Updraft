@@ -4,7 +4,6 @@ import type { Shot } from '../camera';
 import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK } from '../world/birches';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
 import { tuning } from '../tuning';
 import { BirchLeafPlay } from './birches-play';
 import { SCARF_SNAGS } from '../world/birch-scarf';
@@ -183,7 +182,6 @@ export class BirchesChapter implements Chapter {
       case 'scarf':
         c.lookAt = scarf.focus;
         if (scarf.active >= 0 && scarf.snags[scarf.active].freed) {
-          cue('delight');
           if (scarf.completed === SCARF_SNAGS.length) this.to('unravelling');
           else this.resumeWalk();
         }
@@ -261,7 +259,6 @@ export class BirchesChapter implements Chapter {
       if (!this.cheered && (Math.hypot(w.x, w.z) > 12 || p.position.y - heightAt(p.position.x, p.position.z) > 8)) {
         this.cheered = true;
         c.cheer();
-        cue('delight');
       }
       if (p.landed) this.fetch();
       else if (!c.moving && Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 8) {

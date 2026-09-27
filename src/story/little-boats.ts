@@ -5,7 +5,7 @@ import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
 import type { Cast, Chapter } from './cast';
-import { cue, completeObjective } from './cues';
+import { completeObjective } from './cues';
 
 const POOLS = [
   { enter: 4, leave: 30 },
@@ -235,7 +235,6 @@ export class LittleBoatsChapter implements Chapter {
           room.launched = true;
           room.idle = 0;
           this.to('sailing');
-          cue('delight');
         }
       }
     } else if (this.beat === 'sailing') {
