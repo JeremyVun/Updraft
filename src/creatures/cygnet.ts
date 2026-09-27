@@ -93,6 +93,11 @@ export class Cygnet {
   /** How fast it walks, as a share of its usual. A bird following something floating in the air ambles after it. */
   pace = 1;
   /**
+   * How big it is drawn, 1 as it is. Only for a trick of the eye: where a stair is built smaller so as to look
+   * further off than it is, whatever walks on it has to be smaller too.
+   */
+  scale = 1;
+  /**
    * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
    * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
    */
@@ -1606,7 +1611,7 @@ export class Cygnet {
       this.nextRustle = this.time + 0.16 + Math.random() * 0.14;
     }
 
-    this.root.scale.setScalar(SIZE);
+    this.root.scale.setScalar(SIZE * this.scale);
     const posed = this.poser.update(n, d, dt);
     this.bodyLift = posed.bodyLift;
 

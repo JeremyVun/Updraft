@@ -51,6 +51,8 @@ export interface Shot {
   clearance?: number;
   /** Smooth authored changes of subject coverage instead of jumping to the fit. */
   smoothFit?: number;
+  /** A longer lens: 2 halves the field of view. For a view that has to be taken from far off; eased in and out. */
+  zoom?: number;
   /** QA: the camera goes exactly where it is put, with no ground clearance, no sight-line correction and no breathing. */
   free?: boolean;
   /** An authored continuous threshold move supplies its own easing and ground clearance. */
@@ -94,6 +96,8 @@ export class Commitment {
 export class CameraRig {
   readonly camera = new THREE.PerspectiveCamera(38, 1, 0.5, 7000);
   private readonly fixed: boolean;
+  private wideFov = 38;
+  private zoomed = 1;
   private readonly eye = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly wantEye = new THREE.Vector3();
@@ -152,7 +156,12 @@ export class CameraRig {
   resize(width: number, height: number): void {
     const aspect = width / height;
     this.camera.aspect = aspect;
-    this.camera.fov = verticalFov(aspect);
+    this.wideFov = verticalFov(aspect);
+    this.lens();
+  }
+
+  private lens(): void {
+    this.camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.wideFov) / 2) / this.zoomed));
     this.camera.updateProjectionMatrix();
   }
 
@@ -206,6 +215,11 @@ export class CameraRig {
 
   update(dt: number, time: number, shot: Shot, pace = 0.6, holdComposition = false): void {
     if (this.fixed) return;
+    const zoom = shot.zoom ?? 1;
+    if (Math.abs(zoom - this.zoomed) > 1e-4) {
+      this.zoomed += (zoom - this.zoomed) * (1 - Math.exp(-dt * 1.1));
+      this.lens();
+    }
     if (this.lastShot !== shot) {
       this.direction.release();
       this.lastShot = shot;

@@ -184,7 +184,7 @@ try {
     await page.waitForTimeout(1200);
     await shot(`14-fog-${i}`);
     log('  fog', await page.evaluate(() => {
-      const g = window.__game, s = g.story.current, u = g.cloudStairs.cloudTop.material.uniforms;
+      const g = window.__game, s = g.story.current, u = g.cloudStairs.cloud.top.material.uniforms;
       const r = (v) => v.toArray().map((x) => +x.toFixed(2));
       return JSON.stringify({ beat: `${g.story.name}:${s.beat}`, deck: r(u.uCloudDeck.value), deckY: r(u.uCloudDeckY.value), bubble: r(u.uCloudBubble.value),
         cam: r(g.rig.camera.position), boat: r(g.boat.position) });

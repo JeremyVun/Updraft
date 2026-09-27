@@ -9,8 +9,10 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
+import { CloudBank } from './stairs-bank';
+import { drawIn, toCopy } from './stairs-penrose';
 import {
-  BELOW_CLOUD, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LOOSE, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Flight, type Landing,
+  BELOW_CLOUD, FLIGHTS, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Face, type Flight, type Landing,
 } from './stairs-layout';
 
 /** What each part of the staircase is made of, read by the shader to decide its surface. */
@@ -48,6 +50,7 @@ void main() {
  */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uShown;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vUv;
@@ -59,6 +62,7 @@ void main() {
   float fray = vnoise(vWorld.xz * 1.3 + vec2(vWorld.y * 1.1, uTime * 0.12)) * 0.65 + vnoise(vWorld.xy * 2.9 - uTime * 0.08) * 0.35;
   float gone = vMist + (fray - 0.5) * 0.7;
   float keep = nearFade(vWorld, 0.3, 1.1) * (1.0 - smoothstep(0.72, 1.0, gone));
+  keep *= uShown;
   if (keep <= 0.0) discard;
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
@@ -145,6 +149,9 @@ const STRING = { thick: 0.16, above: 0.12, below: 0.24 } as const;
 /** How deep each step's block goes under its tread, so that from below the flight is a stack of steps. */
 const STEP_BLOCK = STEP.rise + 0.24;
 const NEWEL = 0.24;
+/** Newels stand this far in from a landing's edge, and a flight meets a landing between two of them. */
+const INSET = NEWEL / 2 + 0.02;
+const OPENING = STEP.landing / 2 - INSET;
 
 const block = (w: number, h: number, d: number, r = 0.045) => new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2));
 /** A fat turned baluster one unit tall: a round foot, a belly and a collar under the rail. */
@@ -197,7 +204,8 @@ function railing(b: Build, frame: THREE.Matrix4, x: number, s0: number, s1: numb
 function buildFlight(b: Build, f: Flight): void {
   const F = flightFrame(f);
   const inv = F.clone().invert();
-  const { rise, going, risers, width } = STEP;
+  const { rise, going, width } = STEP;
+  const risers = f.risers;
   const local = new THREE.Vector3();
   const nosing = (s: number) => rise + s * (rise / going);
   // Only the very bottom of the stack of steps frays into the cloud under it.
@@ -213,43 +221,63 @@ function buildFlight(b: Build, f: Flight): void {
     b.add(block(0.98, 0.022, d - 0.02, 0.01), at(F, 0, top + 0.009, s0 + d / 2 - 0.03), RUNNER, undefined, mist);
     b.add(block(0.98, rise - 0.01, 0.022, 0.01), at(F, 0, top - rise / 2 + 0.004, s0 - 0.04), RUNNER, undefined, mist);
   }
-  const run = FLIGHT_RUN;
-  const len = Math.hypot(run + going, FLIGHT_RISE) + 0.1;
+  const run = going * (risers - 1);
+  const len = Math.hypot(run + going, risers * rise) + 0.1;
   const mid = (run - going * 0.5) / 2;
   const centre = nosing(mid) + (STRING.above - STRING.below) / 2 - rise / 2;
   const side = width / 2 + STRING.thick / 2 - 0.01;
   const stringTop = (s: number) => nosing(s) + STRING.above - rise / 2 - 0.02;
+  const railTop = (s: number) => THREE.MathUtils.clamp(nosing(s), rise, risers * rise) + RAIL_HEIGHT - 0.1;
   for (const x of [-side, side]) {
     b.add(block(STRING.thick, STRING.above + STRING.below, len, 0.06), at(F, x, centre, mid).multiply(new THREE.Matrix4().makeRotationX(-PITCH)), PAINT, undefined, mist);
-    railing(b, F, x, 0.05, run - 0.05, stringTop, (s) => nosing(s) + RAIL_HEIGHT - 0.1, 3, mist);
-    newel(b, F, x, -0.1, 0, mist);
+    railing(b, F, x, -INSET, run + INSET, stringTop, railTop, Math.max(1, risers >> 2), mist);
   }
+  // Where the landing below has its own newels, so a loose flight has them with it and a docked one shares them.
+  for (const x of [-OPENING, OPENING]) newel(b, F, x, -INSET, 0, mist);
 }
 
 /**
- * The landing a flight arrives on, with a rail right round it but where a flight comes onto it or leaves it, and a
- * newel at every corner that the flights' rails run into. The top landing is open on its left, to the sun.
+ * A landing, with a rail right round it but where a flight comes onto it or leaves it, and a newel at every corner
+ * and wherever a rail stops, which the flights' own rails run into. The top landing is bare on its left, to the sun.
  */
-function buildLanding(b: Build, f: Flight): void {
-  const L = landingOf(f.index);
-  const top = f.index === FLIGHTS;
+function buildLanding(b: Build, L: Landing): void {
   const F = landingFrame(L);
-  const y = L.centre.y;
-  const mist = (p: THREE.Vector3) => (y - p.y - 0.3) / 0.35;
+  const mist = (p: THREE.Vector3) => (L.centre.y - p.y - 0.3) / 0.35;
   const w = L.x1 - L.x0, d = L.z1 - L.z0;
   const cx = (L.x0 + L.x1) / 2, cz = (L.z0 + L.z1) / 2;
   b.add(block(w, 0.34, d, 0.07), at(F, cx, -0.17, cz), PAINT, undefined, mist);
   b.add(block(w - 0.5, 0.02, d - 0.5, 0.01), at(F, cx, 0.008, cz), RUNNER, undefined, mist);
   const flat = () => 0;
   const rail = () => RAIL_HEIGHT + 0.02;
-  const inset = NEWEL / 2 + 0.02;
-  const x0 = L.x0 + inset, x1 = L.x1 - inset, z0 = L.z0 + inset, z1 = L.z1 - inset;
+  const x0 = L.x0 + INSET, x1 = L.x1 - INSET, z0 = L.z0 + INSET, z1 = L.z1 - INSET;
   const across = new THREE.Matrix4().makeRotationY(Math.PI / 2);
-  // Along the far side, and down the side no flight leaves from; the top landing is open on its left.
-  railing(b, at(F, 0, 0, z1).multiply(across), 0, -x1, -x0, flat, rail, top ? 5 : 3, mist);
-  const sides = L.exit === 1 ? [x0] : L.exit === -1 ? [x1] : [x0];
-  for (const x of sides) railing(b, F, x, z0, z1, flat, rail, top ? 4 : 3, mist);
-  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) newel(b, F, x, z, 0, mist);
+  const posts: [number, number][] = [];
+  const post = ([x, z]: [number, number]) => {
+    if (!posts.some(([a, c]) => Math.hypot(a - x, c - z) < 0.2)) posts.push([x, z]);
+  };
+  const faces: { face: Face; from: number; to: number; line: number }[] = [
+    { face: 'back', from: x0, to: x1, line: z0 }, { face: 'ahead', from: x0, to: x1, line: z1 },
+    { face: 'left', from: z0, to: z1, line: x1 }, { face: 'right', from: z0, to: z1, line: x0 },
+  ];
+  for (const f of faces) {
+    const crosswise = f.face === 'back' || f.face === 'ahead';
+    const pos = (s: number): [number, number] => (crosswise ? [s, f.line] : [f.line, s]);
+    post(pos(f.from));
+    post(pos(f.to));
+    if (L.bare.includes(f.face)) continue;
+    let spans = [[f.from, f.to]];
+    for (const o of L.openings.filter(o => o.face === f.face)) {
+      spans = spans.flatMap(([a, c]) => [[a, Math.min(c, o.at - OPENING)], [Math.max(a, o.at + OPENING), c]]).filter(([a, c]) => c - a > 0.05);
+    }
+    for (const [a, c] of spans) {
+      post(pos(a));
+      post(pos(c));
+      if (c - a < 0.35) continue;
+      const frame = crosswise ? at(F, 0, 0, f.line).multiply(across) : F;
+      railing(b, frame, crosswise ? 0 : f.line, a, c, flat, rail, Math.max(1, Math.round((c - a) / 0.5)), mist);
+    }
+  }
+  for (const [x, z] of posts) newel(b, F, x, z, 0, mist);
 }
 
 /** How much cloud a flight rests on: none on the grass, more the higher it hangs, and in the white it is half cloud. */
@@ -257,9 +285,9 @@ function cloudUnder(index: number): number {
   return index === 1 ? 0 : index === 2 ? 0.55 : index <= BELOW_CLOUD ? 0.9 : 1.3;
 }
 
-function stairMaterial(): THREE.ShaderMaterial {
+function stairMaterial(shown = { value: 1 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: atmo.uniforms,
+    uniforms: { ...atmo.uniforms, uShown: shown },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,
@@ -306,6 +334,16 @@ export class CloudStairs {
   readonly cloud = new StairsCloud();
   /** The cloud streaming past on the way up through the white. */
   readonly wisps = new CloudWisps();
+  /** The loop's last flight and the copy of its corner, drawn only while it is seen from the one place it works from. */
+  readonly trick: THREE.Mesh;
+  /** The cloud sitting over the foot of the way on out of the loop. */
+  readonly bank: CloudBank;
+  /** Whether the top of the cloud is kept out of sight, while the lens is up in the white looking down on the loop. */
+  hideTop = false;
+  /** Where the lens is, and a point it is looking at, as of the last frame. */
+  readonly eye = new THREE.Vector3();
+  readonly looking = new THREE.Vector3();
+  private readonly trickUniform = { value: 0 };
   /** Called with a piece's flight number as it knocks home. */
   onDocked: (index: number) => void = () => {};
   /** 0 hides the ghost of the next missing flight; 1 draws it. */
@@ -325,7 +363,7 @@ export class CloudStairs {
       if ((LOOSE as readonly number[]).includes(i)) continue;
       const f = flight(i);
       buildFlight(fixed, f);
-      buildLanding(fixed, f);
+      buildLanding(fixed, landingOf(i));
       cloud.push(...flightPuffs(f, cloudUnder(i)));
     }
     const under = new THREE.Mesh(puffGeometry(cloud), puffs);
@@ -336,9 +374,30 @@ export class CloudStairs {
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.07, 0, -0.02)).multiply(new THREE.Matrix4().makeRotationY(0.14)));
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.08, 0, 0.03)).multiply(new THREE.Matrix4().makeRotationY(-0.22)));
+    // The loop's far side, which only the bird goes round.
+    buildFlight(fixed, LOOP_FAR.flight);
+    buildLanding(fixed, LOOP_FAR.landing);
     const standing = new THREE.Mesh(fixed.result(), material);
     standing.name = 'stairs-standing';
     this.group.add(standing);
+
+    // The loop's trick: its last flight drawn in to a small copy of the corner it seems to come back to.
+    const trick = new Build();
+    buildFlight(trick, LOOP_BACK);
+    const back = trick.result();
+    buildLanding(trick, landingOf(LOOP.corner));
+    const copy = trick.result();
+    const v = new THREE.Vector3();
+    for (const [geo, move] of [[back, drawIn], [copy, (p: THREE.Vector3) => toCopy(p, p)]] as const) {
+      const pos = geo.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) pos.setXYZ(i, ...move(v.fromBufferAttribute(pos, i)).toArray());
+    }
+    this.trick = new THREE.Mesh(mergeGeometries([back, copy]), stairMaterial(this.trickUniform));
+    this.trick.name = 'stairs-loop-trick';
+    this.trick.visible = false;
+    this.group.add(this.trick);
+    this.bank = new CloudBank(onLanding(landingOf(LOOP.onward), 0, 1.7).setY(landingOf(LOOP.onward).centre.y + 0.9), 1.9);
+    this.group.add(this.bank.mesh);
 
     const ghostMaterial = new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, uShow: this.ghostUniform },
@@ -354,7 +413,7 @@ export class CloudStairs {
       const f = flight(index);
       const b = new Build();
       buildFlight(b, f);
-      buildLanding(b, f);
+      buildLanding(b, landingOf(index));
       const geo = b.result();
       const pivot = new THREE.Vector3().lerpVectors(f.bottom, f.landing, 0.55);
       geo.translate(-pivot.x, -pivot.y, -pivot.z);
@@ -422,6 +481,7 @@ export class CloudStairs {
    */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, dt: number): void {
     this.wisps.brush(camera, input, dt);
+    this.bank.brush(camera, input, dt);
     if (!input.present || input.muted || dt <= 0) return;
     if (input.ndc.distanceTo(input.prevNdc) < 5e-4) return;
     const k = tuning.stairs;
@@ -464,6 +524,8 @@ export class CloudStairs {
 
   update(dt: number, time: number, camera: THREE.Camera): void {
     this.time = time;
+    this.eye.copy(camera.position);
+    this.looking.copy(camera.position).addScaledVector(camera.getWorldDirection(this.tmp), 12);
     const k = tuning.stairs;
     const next = this.waiting;
     for (const piece of this.pieces) {
@@ -526,7 +588,9 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     this.wisps.update(dt, time);
+    this.bank.update(dt, time);
     this.cloud.update(dt, camera);
+    if (this.hideTop) this.cloud.top.visible = false;
   }
 
   private pose(): void {
@@ -540,6 +604,22 @@ export class CloudStairs {
     });
   }
 
+  /** 0 hides the loop's trick, 1 shows it; in between it comes and goes in a scatter. */
+  set trickShown(amount: number) {
+    this.trickUniform.value = amount;
+    this.trick.visible = amount > 0.005;
+  }
+
+  /** Where only the bird walks: the loop's far side, and its last flight drawn in toward the copy of the corner. */
+  static loopDecks(): Deck[] {
+    const top = drawIn(LOOP_BACK.top.clone());
+    return [
+      ...CloudStairs.flightDecks(LOOP_FAR.flight, LOOP_FAR.landing),
+      { x0: LOOP_BACK.bottom.x, z0: LOOP_BACK.bottom.z, x1: top.x, z1: top.z, halfWidth: STEP.width * 0.45,
+        height: LOOP_BACK.bottom.y, height1: top.y },
+    ];
+  }
+
   /** Whether the pocket round a climber opens a hole in the top of the cloud; not while the cloud is swelling up round a hull. */
   set cloudHole(open: boolean) {
     this.cloud.hole = open;
@@ -547,8 +627,10 @@ export class CloudStairs {
 
   /** The walking strips for a flight and the landing it arrives on, for the child's feet. */
   static decks(index: number): Deck[] {
-    const f = flight(index);
-    const L = landingOf(index);
+    return CloudStairs.flightDecks(flight(index), landingOf(index));
+  }
+
+  private static flightDecks(f: Flight, L: Landing): Deck[] {
     const cz = (L.z0 + L.z1) / 2;
     const a = onLanding(L, L.x0 + 0.12, cz), b = onLanding(L, L.x1 - 0.12, cz);
     return [

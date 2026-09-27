@@ -7,9 +7,10 @@ import type { StairsAir } from '../audio/stairs-air';
 import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
+import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack } from '../world/stairs-penrose';
 import {
   BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_FROM, FLIGHTS, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
-  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, along, flight, landingOf, levelHeight, onLanding,
+  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, LOOP, LOOP_BACK, LOOP_FAR, along, flight, landingOf, levelHeight, onLanding,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
@@ -32,8 +33,8 @@ export interface CloudDeckState {
 }
 
 
-/** The landing in the white where the stair goes round in a ring: up the next flight and back up the one below. */
-const RING_LEVEL = BELOW_CLOUD + 3;
+/** How long the lens takes to rise out over the loop to the one place it has to be seen from. */
+const LOOP_SETTLE = 5;
 
 /**
  * Where the child stands aside on the last landing under the white, in its far corner, clear of the way the bird
@@ -41,7 +42,7 @@ const RING_LEVEL = BELOW_CLOUD + 3;
  */
 const ASIDE = (() => {
   const L = landingOf(BELOW_CLOUD);
-  return onLanding(L, -0.42 * L.exit, 0.38);
+  return onLanding(L, L.openings.some(o => o.face === 'left') ? -0.42 : 0.42, 0.38);
 })();
 
 /** How high the hull rides on the top of the cloud. */
@@ -115,14 +116,25 @@ export class StairsChapter implements Chapter {
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
   private readonly invitation = new THREE.Vector3();
   private lastPush = 0;
-  /** The stop on the ring's landing where the child waits while the bird goes round, and how the bird is getting on. */
-  private readonly ringStop: number;
-  private ringed = false;
+  /** The stop on the loop's landing where the child waits while the bird goes round, and how the bird is getting on. */
+  private readonly loopStop: number;
+  private looped = false;
   private lap = 0;
-  private ring: 'up' | 'hidden' | 'back' | 'puzzled' = 'up';
-  private ringT = 0;
-  private ringLeg = 0;
-  private readonly ringAt = new THREE.Vector3();
+  private round: 'settle' | 'round' | 'puzzled' = 'settle';
+  private roundT = 0;
+  private roundLeg = 0;
+  /** The bird's way round the loop, and where it waits at the foot of the loop's first flight. */
+  private readonly roundWay: THREE.Vector3[];
+  private readonly waitUp: THREE.Vector3;
+  private readonly waitAside: THREE.Vector3;
+  private loopFrom = 0;
+  private readonly eyeFrom = new THREE.Vector3();
+  private readonly lookFrom = new THREE.Vector3();
+  private readonly loopEye = new THREE.Vector3();
+  private readonly backWay = along(LOOP_BACK.yaw);
+  /** While the lens is up in the white over the loop, the cloud is kept deep enough round it. */
+  private lofted = false;
+  private trickGone = 0;
   private lastDt = 0;
   /** The lantern hung at the bow for the way over the cloud, and the kite's tie-off there. */
   private readonly lantern = new BowLantern();
@@ -140,7 +152,18 @@ export class StairsChapter implements Chapter {
     const world = cast.stairs;
     this.world = world;
     const { child, plane, cygnet, boat } = cast;
-    this.ringStop = this.stops.findIndex(p => p.level === RING_LEVEL && Math.abs(p.x - flight(RING_LEVEL).landing.x) < 0.01);
+    this.loopStop = this.stops.findIndex(p => p.level === LOOP.wait && Math.abs(p.x - flight(LOOP.wait).landing.x) < 0.01);
+    const on = (p: THREE.Vector3, yaw: number, d: number) => p.clone().addScaledVector(along(yaw), d);
+    const up = flight(LOOP.wait + 1), into = flight(LOOP.wait), far = LOOP_FAR.flight;
+    const wait = landingOf(LOOP.wait);
+    this.roundWay = [
+      on(up.top, up.yaw, 0.35), landingOf(LOOP.onward).centre,
+      on(far.bottom, far.yaw, 0.2), on(far.top, far.yaw, 0.35), LOOP_FAR.landing.centre.clone(),
+      on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 1)),
+      on(into.bottom, into.yaw, 0.25), on(into.top, into.yaw, 0.3), onLanding(wait, 0, -0.45),
+    ];
+    this.waitUp = onLanding(wait, 0.45, 0);
+    this.waitAside = onLanding(wait, -0.42, 0.38);
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
     cygnet.mayFly = false;
@@ -206,6 +229,8 @@ export class StairsChapter implements Chapter {
 
   /** A slow sweep drawn across the loose flight when the stair has been waiting on it a while. */
   get windInvitation(): THREE.Vector3 | null {
+    // Round the loop a second time and the cloud on its far corner is still there: a sweep across it.
+    if (this.beat === 'loop') return this.lap >= 2 && !this.world.bank.cleared ? this.world.bank.centre : null;
     if (this.beat !== 'waiting' || this.now - this.lastPush < 6) return null;
     const piece = this.world.waiting;
     if (!piece) return null;
@@ -287,10 +312,14 @@ export class StairsChapter implements Chapter {
         // Out of the satchel and down onto the grass: this room it climbs on its own feet. Then both of them look
         // up the stair to where it goes into the cloud.
         c.lookAt = this.look.set(STAIRS_FOOT.x, CLOUD.base - 3, STAIRS_FOOT.z - 12);
-        if (this.t > 0.8 && k.seat === 'satchel' && !carry.busy) carry.unstow(() => carry.setDown(() => {
-          k.stay = true;
-          this.beatStart = this.now;
-        }));
+        if (this.t > 0.8 && k.carried && !carry.busy) {
+          const down = () => carry.setDown(() => {
+            k.stay = true;
+            this.beatStart = this.now;
+          });
+          if (k.seat === 'satchel') carry.unstow(down);
+          else down();
+        }
         if (!k.carried && !carry.busy) k.watch(this.look);
         if (this.t > 2.6 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
           c.lookAt = null;
@@ -388,9 +417,21 @@ export class StairsChapter implements Chapter {
         break;
     }
     this.cloud();
+    this.loopScenery(dt);
     this.lanternGlow();
     this.measureAir(dt);
     this.frame();
+  }
+
+  /**
+   * The loop's trick is drawn only while the lens is at the one place it works from, and after, until they are well
+   * on up past it; the heap of cloud sits on its far corner from the time they come up into the loop.
+   */
+  private loopScenery(dt: number): void {
+    const e = this.beat === 'loop' ? THREE.MathUtils.smoothstep(this.now - this.loopFrom, LOOP_SETTLE * 0.7, LOOP_SETTLE) : 0;
+    if (this.looped && this.beat !== 'loop' && this.stop > this.loopStop + 4) this.trickGone = Math.min(1, this.trickGone + dt / 2);
+    this.world.trickShown = this.beat === 'loop' ? e : this.looped ? 1 - this.trickGone : 0;
+    this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
   }
 
   private measureAir(dt: number): void {
@@ -417,7 +458,7 @@ export class StairsChapter implements Chapter {
     if (c.moving || c.busy) return;
     // In the cloud the bird goes first, and the child goes only as far as it has.
     if (this.beat === 'follow' && this.stop + 1 > this.birdReached && this.stop + 1 < this.stops.length - 1) return;
-    if (this.beat === 'follow' && this.stop === this.ringStop && !this.ringed) {
+    if (this.beat === 'follow' && this.stop === this.loopStop && !this.looped) {
       this.goRoundFirst();
       return;
     }
@@ -473,79 +514,97 @@ export class StairsChapter implements Chapter {
     }
   }
 
-  /** In the cloud it keeps a few treads ahead, stop by stop, and waits on each landing until they come. */
+  /**
+   * In the cloud it keeps a few treads ahead, stop by stop, and waits on each landing until they come. On the loop's
+   * landing it waits at the foot of the next flight up for them.
+   */
   private birdAhead(): void {
     const { cygnet: k, child: c } = this.cast;
     c.lookAt = k.position;
     if (this.birdStop < this.stop) this.birdStop = this.stop;
-    const at = this.stops[this.birdStop];
+    const last = this.looped ? this.stops.length - 1 : this.loopStop;
+    const spot = (i: number) => (!this.looped && i === this.loopStop ? this.waitUp : this.stops[i]);
+    const at = spot(this.birdStop);
     const reached = Math.hypot(k.position.x - at.x, k.position.z - at.z) < 0.55;
     if (reached) this.birdReached = Math.max(this.birdReached, this.birdStop);
-    if (reached && this.birdStop < Math.min(this.stop + 2, this.stops.length - 1)) this.birdStop++;
-    const want = this.stops[this.birdStop];
-    const waiting = reached && this.birdStop >= this.stop + 2;
+    if (reached && this.birdStop < Math.min(this.stop + 2, last)) this.birdStop++;
+    const want = spot(this.birdStop);
+    const waiting = reached && (this.birdStop >= this.stop + 2 || this.birdStop === last);
     k.stay = waiting;
     k.errand = waiting ? null : this.birdAt.set(want.x, 0, want.z);
   }
 
   private goRoundFirst(): void {
-    this.ringed = true;
+    const { child: c, cygnet: k } = this.cast;
+    this.looped = true;
+    this.lofted = true;
     this.lap = 0;
-    this.ring = 'up';
-    this.ringLeg = 0;
-    this.ringT = 0;
+    this.round = 'settle';
+    this.roundLeg = 0;
+    this.roundT = this.now;
+    this.loopFrom = this.now;
+    this.eyeFrom.copy(this.world.eye);
+    this.lookFrom.copy(this.world.looking);
+    k.decks = [...this.decks(), ...CloudStairs.loopDecks()];
+    c.walkTo(this.waitAside.x, this.waitAside.z, false, undefined, 0.12);
     this.to('loop');
   }
 
   /**
-   * Halfway up the white the stair goes round in a ring. The bird runs on up the next flight into the cloud and
-   * comes back up the flight below, behind the child. It stops, looks up, looks down, and asks. Twice. Then the
-   * child goes first, and it comes along at their heel, and this time the stair goes on up.
+   * Halfway up the white the stair goes round a square, and seen from the one place the lens rises to, it climbs for
+   * ever. The bird runs up it, round, up and up, and comes up the flight below behind the child, where it started.
+   * It looks up the way it went, and down the way it came, and asks. And again. A heap of cloud sits on the far
+   * corner; when the player's wind blows it off, there is a flight going on up from there that nobody could see, and
+   * the bird takes it next time round, and the lens comes down after them, and the square comes apart.
    */
   private goRound(): void {
     const { cygnet: k, child: c } = this.cast;
-    const dt = this.now - this.ringT;
-    const up = [this.stops[this.ringStop + 1], this.stops[this.ringStop + 2], this.stops[this.ringStop + 3]];
-    const below = flight(RING_LEVEL);
-    const back = [this.stops[this.ringStop - 2], { x: (below.top.x + c.position.x) / 2, z: this.stops[this.ringStop].z + 0.25 }];
-    const at = (p: { x: number; z: number }) => Math.hypot(k.position.x - p.x, k.position.z - p.z) < 0.55;
-    c.lookAt = this.ring === 'hidden' ? this.look.copy(flight(RING_LEVEL + 1).top).setY(flight(RING_LEVEL + 1).top.y + 0.6) : k.position;
-    switch (this.ring) {
-      case 'up': {
-        k.stay = false;
-        k.pace = 1.35;
-        const to = up[this.ringLeg];
-        k.errand = this.birdAt.set(to.x, 0, to.z);
-        if (!at(to)) break;
-        // The white closes round it at the top of the flight.
-        if (this.ringLeg === 0) this.world.wisps.engulf(this.ringAt.set(up[1].x, levelHeight(RING_LEVEL + 1) + 0.3, up[1].z), 2.2);
-        if (++this.ringLeg >= 2) {
-          this.ring = 'hidden';
-          this.ringT = this.now;
+    const bank = this.world.bank;
+    const dt = this.now - this.roundT;
+    const at = (p: THREE.Vector3) => Math.hypot(k.position.x - p.x, k.position.z - p.z) < 0.55;
+    c.lookAt = k.position;
+    bank.yielding = this.lap >= 1;
+    k.scale = this.round === 'round' && this.roundLeg === 6 ? sizeOnBack(k.position) : 1;
+    switch (this.round) {
+      case 'settle': {
+        k.errand = at(this.waitUp) ? null : this.birdAt.copy(this.waitUp).setY(0);
+        k.stay = at(this.waitUp);
+        if (this.now - this.loopFrom > LOOP_SETTLE - 0.5) {
+          this.round = 'round';
+          this.roundLeg = 0;
         }
         break;
       }
-      case 'hidden': {
-        k.stay = true;
-        k.errand = null;
-        const from = this.ringAt.copy(below.bottom).addScaledVector(along(below.yaw), 0.5).setY(levelHeight(RING_LEVEL - 1));
-        if (dt > 0.9 && dt - this.lastDt <= 0.9) this.world.wisps.engulf(this.tmp.copy(from).setY(from.y + 0.3), 2.4);
-        if (dt > 1.4) {
-          k.standAt(from.x, from.y, from.z, below.yaw);
-          this.ring = 'back';
-          this.ringLeg = 0;
-          this.ringT = this.now;
-        }
-        break;
-      }
-      case 'back': {
+      case 'round': {
         k.stay = false;
         k.pace = 1.2;
-        const to = back[this.ringLeg];
-        k.errand = this.birdAt.set(to.x, 0, to.z);
-        if (at(to) && ++this.ringLeg >= back.length) {
-          this.ring = 'puzzled';
-          this.ringT = this.now;
+        const to = this.roundWay[this.roundLeg];
+        k.errand = this.birdAt.copy(to).setY(0);
+        // Past the top of the drawn-in flight it is on the copy of the corner: it goes across at once onto the
+        // corner itself, which from here is the same place.
+        if (this.roundLeg === 6) {
+          const past = (k.position.x - LOOP_BACK.top.x) * this.backWay.x + (k.position.z - LOOP_BACK.top.z) * this.backWay.z;
+          if (past > -0.02 && k.position.y > LOOP_BACK.top.y - 0.3) {
+            fromCopy(k.position, this.tmp);
+            k.scale = 1;
+            k.standAt(this.tmp.x, this.tmp.y, this.tmp.z, k.yaw);
+            this.roundLeg++;
+          }
+          break;
+        }
+        if (!at(to)) break;
+        // With the cloud gone off the far corner, it sees the way on, and takes it.
+        if (this.roundLeg === 1 && bank.cleared) {
+          k.decks = this.decks();
+          this.birdStop = this.loopStop + 2;
+          this.birdReached = this.birdStop;
+          this.limit = this.reachable();
+          this.to('follow');
+          break;
+        }
+        if (++this.roundLeg >= this.roundWay.length) {
+          this.round = 'puzzled';
+          this.roundT = this.now;
           k.errand = null;
           k.stay = true;
           k.does('look-about', undefined, 2);
@@ -554,22 +613,15 @@ export class StairsChapter implements Chapter {
       }
       case 'puzzled': {
         // It came up behind them. It looks up the way it went, and down the way it came, and asks.
-        const second = this.lap > 0;
+        const again = this.lap > 0;
         if (dt > 0.5 && this.lastDt <= 0.5) { cue('puzzled'); k.call(false); }
-        if (dt > 1.6 && this.lastDt <= 1.6) k.does('look-back', this.look.copy(flight(RING_LEVEL + 1).top), 1.6);
-        if (second && dt > 2.2 && this.lastDt <= 2.2) { cue('puzzled'); k.call(false); }
-        if (second && dt > 3.0 && this.lastDt <= 3.0) k.does('shake', undefined, 0.9);
-        if (dt > (second ? 4.6 : 3.4)) {
-          if (++this.lap < 2) {
-            this.ring = 'up';
-            this.ringLeg = 0;
-          } else {
-            // The child goes first now, and the bird keeps close.
-            k.pace = 1;
-            this.limit = this.reachable();
-            this.birdStop = this.ringStop;
-            this.to('together');
-          }
+        if (dt > 1.6 && this.lastDt <= 1.6) k.does('look-back', this.look.copy(flight(LOOP.wait + 1).top), 1.6);
+        if (again && dt > 2.2 && this.lastDt <= 2.2) { cue('puzzled'); k.call(false); }
+        if (again && dt > 3.0 && this.lastDt <= 3.0) k.does('shake', undefined, 0.9);
+        if (dt > (again ? 4.6 : 3.4)) {
+          this.lap++;
+          this.round = 'round';
+          this.roundLeg = 0;
         }
         break;
       }
@@ -805,16 +857,19 @@ export class StairsChapter implements Chapter {
     const climb = this.air.climb;
     const inCloud = c.position.y > CLOUD.base - 3 && c.position.y < CLOUD.top - 0.3;
     d.bubble.set(c.position.x, c.position.y + 1.1, c.position.z, inCloud ? THREE.MathUtils.lerp(k.bubble, k.bubbleTop, climb) : 0);
-    // On the ring's landing the clear air leans toward the lens, so the child and both flights' feet are seen
-    // and the tops of the flights are lost in the white.
-    if (this.beat === 'loop') {
-      d.bubble.set(c.position.x + 1.4, c.position.y + 1.4, c.position.z + 2.6, 6.2);
-      d.clearing = k.clearing * 0.6;
-    }
     if (inCloud) d.clearing = THREE.MathUtils.lerp(k.clearing, k.clearingTop, climb);
+    // Over the loop the clear air opens out into a hollow in the white big enough for the lens and the whole
+    // square; the cloud is made deep enough overhead that the lens, up there, is still in it.
+    if (this.beat === 'loop') {
+      d.bubble.set((LOOP_EYE.x + LOOP_LOOK.x) / 2, (LOOP_EYE.y + LOOP_LOOK.y) / 2, (LOOP_EYE.z + LOOP_LOOK.z) / 2, LOOP_EYE.distanceTo(LOOP_LOOK) / 2 + 5);
+      d.clearing = 0.012;
+    }
+    if (this.lofted && this.beat !== 'loop' && this.world.eye.y < CLOUD.top - 1.5) this.lofted = false;
+    if (this.lofted) d.top = LOOP_EYE.y + 6;
+    this.world.hideTop = this.lofted;
     const white = ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat);
     wisps.amount = (white ? S(c.position.y + 1.2, CLOUD.base - 2, CLOUD.base + 0.8) * (1 - S(c.position.y, CLOUD.top - 0.8, CLOUD.top + 0.6)) : 0)
-      * (this.beat === 'loop' ? 0.55 : 1);
+      * (this.beat === 'loop' ? 0.35 : 1);
     wisps.centre.set(c.position.x, c.position.y + 1, c.position.z);
     // Across both the side view up the stair and the view along it on the ring's landing.
     wisps.wind.set(0.7, 0.12, -0.7).normalize().multiplyScalar(k.windInCloud * (0.45 + 0.55 * climb));
@@ -833,6 +888,8 @@ export class StairsChapter implements Chapter {
     s.carryAnchor = undefined;
     s.clearance = undefined;
     s.smoothFit = undefined;
+    s.exact = false;
+    s.zoom = undefined;
     this.focus.copy(c);
     switch (this.beat) {
       case 'ashore':
@@ -892,14 +949,13 @@ export class StairsChapter implements Chapter {
         return;
       }
       case 'loop': {
-        // Along the ring's landing from the south: the flight going on up into the white on one side, and the one
-        // they came up by on the other, coming up out of it.
-        const L = flight(RING_LEVEL).landing;
-        s.from = this.from.set(0.45, 0, 1).normalize();
-        s.target.set(L.x + 0.4, L.y + 1.0, L.z + 0.6);
-        s.distance = 7.5;
-        s.height = 2.4;
-        s.clearance = 0.4;
+        // Up out of the white over the loop, to the one place it climbs for ever from, and held there dead still.
+        const e = THREE.MathUtils.smoothstep(this.now - this.loopFrom, 0, LOOP_SETTLE);
+        s.eye = this.loopEye.lerpVectors(this.eyeFrom, LOOP_EYE, e);
+        s.target.lerpVectors(this.lookFrom, LOOP_LOOK, e);
+        s.exact = true;
+        s.zoom = LOOP_ZOOM;
+        this.focus.copy(LOOP_LOOK);
         this.pace = 0.25;
         return;
       }
