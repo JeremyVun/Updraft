@@ -276,10 +276,18 @@ export const tuning = {
     bubble: 6.5, bubbleTop: 4.4,
     /** The wind through the white near its top, metres a second. */
     windInCloud: 5.5,
-    /** Top speed over the cloud, metres a second, and how long the cloud takes to swell up over them on the way down. */
-    sailSpeed: 5, fogRise: 6,
-    /** How long the fog takes to lift off the village's water before the village has them. */
-    fogLift: 8.5,
+    /** Top speed over the cloud, and in the mist, metres a second. */
+    sailSpeed: 5, fogSpeed: 3.4,
+    /**
+     * The bank of mist across the way: how high it stands over the cloud, how thick it is per metre, and how much
+     * thicker over its floor (per metre, falling away over bankLow metres); how far its front, its back and its top
+     * take to thicken.
+     */
+    bankHeight: 28, bankDensity: 0.14, bankFloor: 0.3, bankLow: 1.1, bankFront: 28, bankBack: 16, bankSoft: 6,
+    /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
+    bankSwap: 34,
+    /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
+    fogLift: 11,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */

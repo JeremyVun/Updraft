@@ -63,6 +63,11 @@ export class CloudWake {
     }
   }
 
+  /** Moves everything the hull has thrown up at once, with the hull. */
+  shift(dx: number, dy: number, dz: number): void {
+    for (const s of this.spray) s.p.set(s.p.x + dx, s.p.y + dy, s.p.z + dz);
+  }
+
   update(dt: number): void {
     let alive = false;
     this.spray.forEach((s, i) => {

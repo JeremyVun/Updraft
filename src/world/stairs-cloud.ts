@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { CloudWake } from './stairs-wake';
-import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, STAIRS_ISLE, flight } from './stairs-layout';
+import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, STAIRS_ISLE, flight } from './stairs-layout';
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
-const ROUTE_POINTS = CLOUD_ROUTE.length + 2;
+const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
 const TRAIL_POINTS = 16;
 
 /** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
@@ -345,6 +345,54 @@ float bellyThick(vec2 xz, float fine) {
 }`;
 
 /**
+ * The bank of mist the boat sails into at the end of the way over the cloud, and which is still round it on the
+ * sea until it sails out of the back of it. The story asks for it every frame it wants it; left alone it thins away.
+ */
+export class FogBank {
+  /** A point on its front, and the way into it. */
+  readonly at = new THREE.Vector2();
+  readonly into = new THREE.Vector2(0, 1);
+  floor = 0;
+  top = 1;
+  /** How far it goes on from its front to its back. */
+  deep = 1e4;
+  amount = 0;
+  /** The light of its white, how brightly the sun glows through it, and how clear the pocket round the boat is. */
+  readonly light = new THREE.Color(1, 1, 1);
+  glow = 0;
+  clear = 0;
+  private asked = false;
+  private shown = 0;
+
+  ask(): this {
+    this.asked = true;
+    return this;
+  }
+
+  /** Lays its front across a point, facing the way into it. */
+  face(x: number, z: number, yaw: number): void {
+    this.at.set(x, z);
+    this.into.set(Math.sin(yaw), Math.cos(yaw));
+  }
+
+  /** How far past its front line a point is. */
+  depthOf(x: number, z: number): number {
+    return (x - this.at.x) * this.into.x + (z - this.at.y) * this.into.y;
+  }
+
+  update(dt: number): void {
+    this.shown = this.asked ? this.amount : this.shown * Math.exp(-dt * 0.8);
+    if (this.shown < 0.002 && !this.asked) this.shown = 0;
+    this.asked = false;
+    const u = atmo.uniforms;
+    u.uFogBank.value.set(this.at.x, this.at.y, this.into.x, this.into.y);
+    u.uFogBankShape.value.set(this.floor, this.top, this.deep, this.shown);
+    u.uFogBankLight.value.set(this.light.r, this.light.g, this.light.b, this.glow);
+    u.uFogBankClear.value = this.clear;
+  }
+}
+
+/**
  * The cloud deck as the stairs room sees it from outside: its underside hanging over the island, heavy and lit by
  * the low sun, and its top lying to the horizon under the sunset with a furrow where the hull has been. Inside it,
  * the shared analytic deck in the fog takes over.
@@ -354,6 +402,7 @@ export class StairsCloud {
   readonly top: THREE.Mesh;
   readonly belly: THREE.Mesh;
   readonly wake = new CloudWake();
+  readonly fog = new FogBank();
   private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
     uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uHole: { value: number }; uSurface: { value: number } };
   private readonly bellyUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
@@ -367,7 +416,7 @@ export class StairsCloud {
       uCentre: { value: new THREE.Vector2(STAIRS_ISLE.x, STAIRS_ISLE.z) },
       uCalmAt: { value: new THREE.Vector3(CLOUD_BERTH.x, CLOUD_BERTH.z, 45) },
       uReach: { value: 1500 },
-      uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone()), DESCENT_END.clone()] },
+      uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone())] },
       uTrail: { value: this.trail },
       uHole: { value: 1 },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
@@ -448,6 +497,7 @@ export class StairsCloud {
     this.top.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
     this.wake.update(dt);
+    this.fog.update(dt);
     this.belly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 1;
     this.bellyUniforms.uCentre.value.copy(this.topUniforms.uCentre.value);
   }

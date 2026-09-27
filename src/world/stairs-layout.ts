@@ -208,15 +208,31 @@ export const CLOUD_BERTH = (() => {
 /** Where the kite is tied off: the top landing's rail at the far corner of the open edge. */
 export const KITE_TIE = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.05, TOP_LANDING.z1 - 0.05);
 
+/** The long run over the cloud goes this way: toward the low sun, which stands a little to starboard of it. */
+export const RUN_YAW = -2.2;
+/** How far the boat comes round off the landing, and how long the run is to where the bank of mist stands across it. */
+const TURN_RADIUS = 22;
+const RUN_TO_BANK = 237;
+
 /**
- * The way over the cloud: out from the top landing and round in a slow loop, past the stair again from far off,
- * then west into the sun, into the cloud bank where the village is waiting under it. Laid out from the top landing.
+ * The way over the cloud: off the top landing in one slow turn to port, away from the stair and round toward the
+ * low sun, then a long run straight on across the open cloud into the bank of mist standing on it far off.
  */
-export const CLOUD_ROUTE = [
-  [-2, -24], [17, -40], [41, -30], [49, -4], [35, 20], [9, 29], [-19, 23], [-43, 10], [-65, -4],
-].map(([x, z]) => new THREE.Vector2(TOP.x + x, TOP.z + z));
-/** On the last leg the cloud swells up round them. */
-export const FOG_FROM = CLOUD_ROUTE.length - 1;
+export const CLOUD_ROUTE = (() => {
+  const centre = new THREE.Vector3(CLOUD_BERTH.x, 0, CLOUD_BERTH.z).addScaledVector(leftOf(CLOUD_BERTH.yaw), TURN_RADIUS);
+  const round = (yaw: number) => centre.clone().addScaledVector(leftOf(yaw), -TURN_RADIUS);
+  const turn = RUN_YAW + Math.PI * 2 - CLOUD_BERTH.yaw;
+  const points = [0.3, 0.55, 0.8, 1].map(k => round(CLOUD_BERTH.yaw + turn * k));
+  const out = points[points.length - 1];
+  points.push(out.clone().addScaledVector(along(RUN_YAW), RUN_TO_BANK + 90));
+  return points.map(p => new THREE.Vector2(p.x, p.z));
+})();
+/** The bank of mist across the way: a point on its front, and the way into it. */
+export const FOG_BANK = (() => {
+  const out = CLOUD_ROUTE[CLOUD_ROUTE.length - 2];
+  const into = along(RUN_YAW);
+  return { x: out.x + into.x * RUN_TO_BANK, z: out.y + into.z * RUN_TO_BANK, yaw: RUN_YAW } as const;
+})();
 /** Where the hull is sailing on the sea when the drowned village takes over. */
 export const DESCENT_END = new THREE.Vector2(16, -1254);
 

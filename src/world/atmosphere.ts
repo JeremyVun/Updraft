@@ -163,6 +163,17 @@ export const atmo = {
     uCloudDeckY: { value: new THREE.Vector4(0, 1, 0.5, 0.05) },
     /** The pocket of thinner cloud the story keeps round whoever is climbing through it: centre and radius. */
     uCloudBubble: { value: new THREE.Vector4(0, -1e4, 0, 0) },
+    /**
+     * A bank of mist standing across the way over the cloud, and later round the boat on the sea: a point on its
+     * front (x, z) and the way into it (z, w). Only drawn with the deck.
+     */
+    uFogBank: { value: new THREE.Vector4(0, 0, 0, 1) },
+    /** Its floor and top heights, how deep it is from its front to its back, and how much of it there is. */
+    uFogBankShape: { value: new THREE.Vector4(0, 1, 1, 0) },
+    /** The light of its white (rgb) and how brightly the low sun glows through it (a). */
+    uFogBankLight: { value: new THREE.Vector4(1, 1, 1, 0) },
+    /** How clear the pocket round the boat is kept in it (the deck's pocket, `uCloudBubble`), 0 to 1. */
+    uFogBankClear: { value: 0 },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
     uNoiseTile: noiseTileUniforms.uNoiseTile,
@@ -295,6 +306,10 @@ uniform vec4 uLifeWave;
 uniform vec4 uCloudDeck;
 uniform vec4 uCloudDeckY;
 uniform vec4 uCloudBubble;
+uniform vec4 uFogBank;
+uniform vec4 uFogBankShape;
+uniform vec4 uFogBankLight;
+uniform float uFogBankClear;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -483,6 +498,38 @@ vec3 hemiLight(vec3 n) {
   return mix(uGroundBounce, uSkyAmbient, n.y * 0.5 + 0.5);
 }
 
+/**
+ * How the bank of mist heaves at a point across it (v) and into it (u): x how far its front stands out from its
+ * line, y how far its top heaves above or below its height. It rolls slowly sideways.
+ */
+vec2 bankHeave(float v, float u) {
+  vec2 q = vec2(v + uTime * 0.7, u);
+  float big = vnoise(q * vec2(0.012, 0.02) + 3.1);
+  float mid = vnoise(q * vec2(0.037, 0.05) + 7.7);
+  float fine = vnoise(q * vec2(0.1, 0.1) + 1.3);
+  // Its front lies straight across the way itself, so the boat goes into it where the story expects.
+  float front = ((big - 0.5) * 34.0 + (mid - 0.5) * 12.0) * smoothstep(30.0, 120.0, abs(v));
+  return vec2(front, (big - 0.5) * 18.0 + (mid - 0.5) * 10.0 + (fine - 0.5) * 3.0);
+}
+/** The height of its top across it: highest where the way goes into it, and down into the cloud toward its ends. */
+float bankTop(float v, float heave) {
+  float tall = uFogBankShape.y - uFogBankShape.x;
+  return uFogBankShape.x + (tall + heave) * (1.0 - smoothstep(150.0, 460.0, abs(v)));
+}
+/** How thick the bank is at a point, 0 to 1, without its thicker floor. */
+float bankAt(vec3 p) {
+  if (uFogBankShape.w <= 0.0) return 0.0;
+  vec2 o = p.xz - uFogBank.xy;
+  float u = dot(o, uFogBank.zw), v = dot(o, vec2(-uFogBank.w, uFogBank.z));
+  vec2 heave = bankHeave(v, u);
+  float into = u - heave.x;
+  float body = clamp(into / ${glsl(tuning.stairs.bankFront)}, 0.0, 1.0)
+    * clamp((uFogBankShape.z - into) / ${glsl(tuning.stairs.bankBack)}, 0.0, 1.0);
+  float top = bankTop(v, heave.y);
+  float under = 1.0 - clamp((p.y - top + ${glsl(tuning.stairs.bankSoft)}) / ${glsl(tuning.stairs.bankSoft)}, 0.0, 1.0);
+  return uFogBankShape.w * body * under * step(uFogBankShape.x, p.y);
+}
+
 /** Sun let through by the drifting clouds, baked each frame by world/clouds.ts. */
 float cloudShadow(vec2 xz) {
   vec2 uv = (xz - uCloudDomain.xy) * uCloudDomain.zw;
@@ -493,6 +540,8 @@ float cloudShadow(vec2 xz) {
   if (uCloudDeck.w > 0.0) {
     float under = 1.0 - smoothstep(uCloudDeckY.x - 2.0, uCloudDeckY.y, cameraPosition.y);
     lit *= 1.0 - 0.55 * uCloudDeck.w * under;
+    // In the white of the bank of mist the sun comes through it softly, from all round.
+    lit *= 1.0 - 0.5 * bankAt(cameraPosition);
   }
   return lit;
 }
@@ -558,13 +607,79 @@ vec3 deckUnderside(vec2 xz, vec3 ro, float thin) {
   return body + glow * (0.5 + 0.9 * far) + uSunColor * thin * (0.1 + 0.3 * toward);
 }
 
+float rampArea(float x, float w) {
+  return x <= 0.0 ? 0.0 : x < w ? x * x / (2.0 * w) : x - 0.5 * w;
+}
 /**
- * The stairs' cloud deck along a sightline of length far: rgb its light, a how much of the view it covers.
- * Analytic, so it costs the same per vertex as per pixel: a slab, clipped to its disc, with the pocket round
- * the child hollowed out of it. Its light comes from where a sightline first gets well into it: sunlit gold on
- * top, lilac grey underneath, and lighter the higher up in it you are.
+ * How much of the stretch [t0, t1] of a sightline lies past a soft edge, along which some measure goes a + b t: the
+ * edge begins where that measure is lo and is whole w further on.
  */
-vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
+float pastEdge(float a, float b, float t0, float t1, float lo, float w) {
+  if (abs(b) < 2e-3) return clamp((a + b * 0.5 * (t0 + t1) - lo) / w, 0.0, 1.0) * (t1 - t0);
+  return (rampArea(a + b * t1 - lo, w) - rampArea(a + b * t0 - lo, w)) / b;
+}
+
+/**
+ * The bank of mist along a sightline of length far: rgb its light, a how much of the view it covers. It stands
+ * on its floor beyond a line across the way, soft and heaving along its front and its top, thick all through and
+ * thicker still low down over its floor; far enough in it is nothing but white, but for the pocket kept round the
+ * boat. Lit through by the low sun: glowing toward it, brightest along its top.
+ */
+vec4 fogBank(vec3 ro, vec3 rd, float far) {
+  vec2 n = uFogBank.zw;
+  vec2 o = ro.xz - uFogBank.xy;
+  float u0 = dot(o, n), du = dot(rd.xz, n);
+  float v0 = dot(o, vec2(-n.y, n.x)), dv = dot(rd.xz, vec2(-n.y, n.x));
+  // Its front and top as they are where the sightline comes to it, or just ahead if it is in the bank already.
+  float meet = u0 < 0.0 ? (du > 1e-4 ? -u0 / du : far) : 8.0;
+  if (meet >= far) return vec4(0.0);
+  vec2 heave = bankHeave(v0 + dv * meet, max(0.0, u0 + du * meet));
+  float into0 = u0 - heave.x;
+  float top = bankTop(v0 + dv * meet, heave.y);
+  float fl = uFogBankShape.x, deep = uFogBankShape.z;
+  vec2 span = deckSlab(ro, rd, fl, top, far);
+  if (abs(du) > 1e-5) {
+    float a = -into0 / du, b = (deep - into0) / du;
+    span = vec2(max(span.x, min(a, b)), min(span.y, max(a, b)));
+  } else if (into0 < 0.0 || into0 > deep) return vec4(0.0);
+  float len = span.y - span.x;
+  if (len <= 0.0) return vec4(0.0);
+  const float FRONT = ${glsl(tuning.stairs.bankFront)}, BACK = ${glsl(tuning.stairs.bankBack)};
+  const float SOFT = ${glsl(tuning.stairs.bankSoft)}, LOW = ${glsl(tuning.stairs.bankLow)};
+  float along = pastEdge(into0, du, span.x, span.y, 0.0, FRONT) - pastEdge(into0, du, span.x, span.y, deep - BACK, BACK);
+  float high = len - pastEdge(ro.y, rd.y, span.x, span.y, top - SOFT, SOFT);
+  float y0 = ro.y + rd.y * span.x - fl, y1 = ro.y + rd.y * span.y - fl;
+  float low = abs(rd.y) > 1e-3 ? LOW * (exp(-y0 / LOW) - exp(-y1 / LOW)) / rd.y : exp(-0.5 * (y0 + y1) / LOW) * len;
+  float thick = ${glsl(tuning.stairs.bankDensity)} * uFogBankShape.w;
+  float depth = along / len * (thick * high + ${glsl(tuning.stairs.bankFloor)} * uFogBankShape.w * low);
+  if (uCloudBubble.w > 0.0 && uFogBankClear > 0.0) {
+    float cleared = 0.55 * deckSpan(span, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w))
+      + 0.45 * deckSpan(span, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w * 0.6));
+    depth = max(0.0, depth - uFogBankClear * thick * cleared);
+  }
+  float cover = 1.0 - exp(-depth);
+  vec3 near = ro + rd * min(span.x + 5.0, span.y), deeper = ro + rd * min(span.x + 13.0, span.y);
+  float billow = vnoise(near.xz * 0.11 + near.y * 0.07) * 0.5 + vnoise(deeper.xz * 0.05 + vec2(uTime * 0.02, 0.0)) * 0.5;
+  float up = clamp((near.y - fl) / max(top - fl, 1.0), 0.0, 1.0);
+  float toward = max(0.0, dot(rd, uSunDir));
+  // Seen from outside, its face is in its own shade, the low sun being beyond it, and lighter toward its top.
+  vec3 face = uFogBankLight.rgb * vec3(0.5, 0.5, 0.6) * mix(0.85, 1.15, up) * (0.85 + 0.3 * billow)
+    + uSunColor * uFogBankLight.a * pow(toward, 3.0) * 0.06;
+  // From inside it is white all round, and lighter toward the sun; the white streams past as the boat goes.
+  vec3 white = uFogBankLight.rgb * (0.9 + 0.2 * billow) * mix(0.8, 1.0, smoothstep(0.3, 1.0, toward));
+  float inside = clamp(into0 / FRONT, 0.0, 1.0) * clamp((deep - into0) / BACK, 0.0, 1.0)
+    * (1.0 - clamp((ro.y - top + SOFT) / SOFT, 0.0, 1.0)) * step(fl, ro.y);
+  vec3 light = mix(face, white, inside);
+  // The sun glows through it, and lights it through where it is thin along its top.
+  float halo = pow(toward, 6.0) * 0.12 + pow(toward, 40.0) * 0.3;
+  float rim = 4.0 * cover * (1.0 - cover);
+  light += uSunColor * uFogBankLight.a * (halo * (0.3 * inside + rim) + pow(toward, 12.0) * rim * 0.25);
+  // Far off it goes into the haze of the horizon, as the cloud does.
+  light = mix(light, skyColor(normalize(vec3(rd.x, 0.01, rd.z))), (1.0 - exp(-span.x / 650.0)) * 0.7);
+  return vec4(light, cover);
+}
+
+vec4 deckLayer(vec3 ro, vec3 rd, float far) {
   // A thin fringe hangs under the body of the cloud, so its underside is soft rather than ruled.
   vec2 disc = deckColumn(ro, rd, uCloudDeck.xy, uCloudDeck.z);
   vec2 body = deckSlab(ro, rd, uCloudDeckY.x + 1.4, uCloudDeckY.y, far);
@@ -613,6 +728,20 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   vec3 light = mix(under, over, smoothstep(0.0, 1.0, pow(up, 1.4)));
   light *= 0.66 + 0.55 * billow;
   return vec4(light, clamp(cover, 0.0, 1.0));
+}
+
+/**
+ * The stairs' cloud deck along a sightline of length far: rgb its light, a how much of the view it covers.
+ * Analytic, so it costs the same per vertex as per pixel: a slab, clipped to its disc, with the pocket round
+ * the child hollowed out of it. Its light comes from where a sightline first gets well into it: sunlit gold on
+ * top, lilac grey underneath, and lighter the higher up in it you are. The bank of mist stands on it.
+ */
+vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
+  vec4 deck = deckLayer(ro, rd, far);
+  if (uFogBankShape.w <= 0.0) return deck;
+  vec4 bank = fogBank(ro, rd, far);
+  float a = 1.0 - (1.0 - bank.a) * (1.0 - deck.a);
+  return vec4((bank.rgb * bank.a + deck.rgb * deck.a * (1.0 - bank.a)) / max(a, 1e-4), a);
 }
 
 /** How much of a sightline to wpos passes over a coast; sea behind a hill must have the same cover as the hill. */
