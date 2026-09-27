@@ -635,14 +635,16 @@ export class CloudStairs {
       const from = this.onLevel(input.prevNdc, level, camera, this.tmp);
       const to = from && this.onLevel(input.ndc, level, camera, this.tmp2);
       if (!from || !to) continue;
-      let vx = (to.x - from.x) / dt, vz = (to.z - from.z) / dt;
+      // The flights the stair is not waiting for yet only stir.
+      const share = piece === next ? 1 : k.stir;
+      let vx = (to.x - from.x) / dt * share, vz = (to.z - from.z) / dt * share;
       const speed = Math.hypot(vx, vz);
       if (speed > k.dragSpeed) { vx *= k.dragSpeed / speed; vz *= k.dragSpeed / speed; }
-      // Following a reversal at once rather than adding up forces until they cancel. The flights the stair is not
-      // waiting for yet only stir.
-      const response = (1 - Math.exp(-dt * k.follow * Math.min(1, Math.sqrt(hit) * 2))) * (piece === next ? 1 : k.stir);
+      // Following a reversal at once rather than adding up forces until they cancel.
+      const response = 1 - Math.exp(-dt * k.follow * Math.min(1, Math.sqrt(hit) * 2));
       piece.velocity.x += (vx - piece.velocity.x) * response;
       piece.velocity.z += (vz - piece.velocity.z) * response;
+      if (piece !== next) continue;
       piece.worked += hit * dt;
       piece.handled = k.handled;
     }
