@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Rig } from '../body';
 import { ANKLE, BONE, FOREARM, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
-import { HOOD, coatAt, hemY } from './garments';
+import { HOOD, coatAt, hemY, type CoatSample } from './garments';
 
 /** One arm, as the story poses it. Left is the child's own left, +x. */
 export interface ArmPose {
@@ -114,6 +114,8 @@ const FLAP_OPEN = [2.3, 2.25, 0.3];
 
 const Y = new THREE.Vector3(0, 1, 0);
 const DOWN = new THREE.Vector3(0, -1, 0);
+const SIDES = [true, false] as const;
+const coatSample: CoatSample = { p: new THREE.Vector3(), n: new THREE.Vector3(), fold: 0 };
 
 /**
  * Two bones hanging along -y from a joint: the rotations that put the end of the second on `target` (in the joint's
@@ -179,6 +181,12 @@ export class ChildMotion {
   private readonly va = new THREE.Vector3();
   private readonly vb = new THREE.Vector3();
   private readonly vc = new THREE.Vector3();
+  private readonly ankle = new THREE.Vector3();
+  private readonly accel = new THREE.Vector3();
+  private readonly hipsGravity = new THREE.Vector3();
+  private readonly chestGravity = new THREE.Vector3();
+  private readonly air = new THREE.Vector3();
+  private readonly outs = new Array<number>(HEM_BONES).fill(0);
   private readonly m = new THREE.Matrix4();
   private readonly hemOut = HEM.map(() => new Spring(1.75, 0.3));
   private readonly hemSide = HEM.map(() => new Spring(1.1, 0.35));
@@ -343,7 +351,7 @@ export class ChildMotion {
     const root = this.rig.root;
     const hips = b[BONE.hips];
     const rest = this.rig.rest;
-    for (const left of [true, false]) {
+    for (const left of SIDES) {
       const s = left ? 1 : -1;
       const thigh = b[left ? BONE.thighL : BONE.thighR];
       const shin = b[left ? BONE.shinL : BONE.shinR];
@@ -386,7 +394,7 @@ export class ChildMotion {
 
       // Blend: the planted walk, the sit, and a lifted knee for a step up.
       const standW = 1 - pose.sit;
-      const ankle = new THREE.Vector3().copy(standAnkle).multiplyScalar(standW).addScaledVector(sitAnkle, pose.sit);
+      const ankle = this.ankle.copy(standAnkle).multiplyScalar(standW).addScaledVector(sitAnkle, pose.sit);
       const stepUp = pose.step[left ? 0 : 1];
       ankle.y += 0.4 * Math.max(0, stepUp);
       ankle.z += 0.3 * stepUp;
@@ -447,31 +455,30 @@ export class ChildMotion {
       this.chestVel.set(0, 0, 0);
     }
     const hv = this.vc.copy(this.va).sub(this.lastHips).divideScalar(dt);
-    this.hipsAcc.lerp(hv.clone().sub(this.hipsVel).divideScalar(dt).clampLength(0, 30), 1 - Math.exp(-dt * 10));
+    this.hipsAcc.lerp(this.accel.copy(hv).sub(this.hipsVel).divideScalar(dt).clampLength(0, 30), 1 - Math.exp(-dt * 10));
     this.hipsVel.copy(hv);
     this.lastHips.copy(this.va);
     const cv = this.vc.copy(this.vb).sub(this.lastChest).divideScalar(dt);
-    this.chestAcc.lerp(cv.clone().sub(this.chestVel).divideScalar(dt).clampLength(0, 30), 1 - Math.exp(-dt * 10));
+    this.chestAcc.lerp(this.accel.copy(cv).sub(this.chestVel).divideScalar(dt).clampLength(0, 30), 1 - Math.exp(-dt * 10));
     this.chestVel.copy(cv);
     this.lastChest.copy(this.vb);
 
     const hipsQ = hips.getWorldQuaternion(this.qa);
     const inv = this.qb.copy(hipsQ).invert();
     /** Gravity as the hips feel it: down, less whatever they are accelerating by. */
-    const g = new THREE.Vector3(0, -GRAVITY, 0).sub(this.hipsAcc).applyQuaternion(inv);
+    const g = this.hipsGravity.set(0, -GRAVITY, 0).sub(this.hipsAcc).applyQuaternion(inv);
     g.y = Math.min(g.y, -GRAVITY * 0.4);
-    const air = new THREE.Vector3(d.windX - d.velocity.x, 0, d.windZ - d.velocity.z).applyQuaternion(inv);
+    const air = this.air.set(d.windX - d.velocity.x, 0, d.windZ - d.velocity.z).applyQuaternion(inv);
     const airSpeed = Math.hypot(air.x, air.z);
-    const flow = air.clone().setY(0).normalize();
+    const flow = this.flow.copy(air).setY(0).normalize();
     const flutterAmp = Math.min(1, airSpeed / 6) * (0.6 + 0.4 * Math.min(1, d.gust * 4));
     this.flutter = flutterAmp;
-    this.flow.copy(flow);
 
     // -- The hem: it hangs where gravity and the air put it, and nothing inside it gets through.
     const legPts = this.legPoints();
     const groundY = (d.ground(root.position.x, root.position.z) - root.position.y) / SCALE;
     const pivotY = hips.position.y + WAIST.y - this.rig.rest[BONE.hips].y;
-    const outs: number[] = [];
+    const outs = this.outs;
     for (let i = 0; i < HEM_BONES; i++) {
       const h = HEM[i];
       /** Swung by the body's own motion, blown out on the side the air leaves, pressed in on the side it meets. */
@@ -493,7 +500,7 @@ export class ChildMotion {
         this.hemOut[i].x = floor;
         this.hemOut[i].v = Math.max(0, this.hemOut[i].v);
       }
-      outs.push(a);
+      outs[i] = a;
     }
     for (let i = 0; i < HEM_BONES; i++) {
       const h = HEM[i];
@@ -515,7 +522,7 @@ export class ChildMotion {
     this.lastHeadYaw = hy;
     this.lastHeadPitch = hp;
     head.getWorldQuaternion(this.qa);
-    const headAir = new THREE.Vector3(d.windX - d.velocity.x, 0, d.windZ - d.velocity.z).applyQuaternion(this.qb.copy(this.qa).invert());
+    const headAir = this.air.set(d.windX - d.velocity.x, 0, d.windZ - d.velocity.z).applyQuaternion(this.qb.copy(this.qa).invert());
     const hood = b[BONE.hood];
     const pitch = this.hoodPitch.step(THREE.MathUtils.clamp(-this.headPitchVel * 0.05 + headAir.z * 0.006 - this.chestAcc.y * 0.002, -0.14, 0.14), dt);
     const yaw = this.hoodYaw.step(THREE.MathUtils.clamp(-this.headYawVel * 0.06 + headAir.x * 0.004, -0.14, 0.14), dt);
@@ -525,7 +532,7 @@ export class ChildMotion {
     // -- The bag swings from its straps and bumps with every step.
     chest.getWorldQuaternion(this.qa);
     const ci = this.qb.copy(this.qa).invert();
-    const cg = new THREE.Vector3(0, -GRAVITY, 0).sub(this.chestAcc).applyQuaternion(ci);
+    const cg = this.chestGravity.set(0, -GRAVITY, 0).sub(this.chestAcc).applyQuaternion(ci);
     cg.y = Math.min(cg.y, -GRAVITY * 0.4);
     const bag = b[BONE.bag];
     /** It can swing out from the back but not in through it. */
@@ -559,7 +566,7 @@ export class ChildMotion {
     hips.updateMatrixWorld(true);
     this.m.copy(hips.matrixWorld).invert();
     let n = 0;
-    for (const left of [true, false]) {
+    for (const left of SIDES) {
       const shin = b[left ? BONE.shinL : BONE.shinR];
       const foot = b[left ? BONE.footL : BONE.footR];
       const thigh = b[left ? BONE.thighL : BONE.thighR];
@@ -581,7 +588,7 @@ export class ChildMotion {
     if (Math.abs(across) > 0.26) return -Infinity;
     const out = p.x * h.radial.x + p.z * h.radial.z + 0.1 * (1 - Math.abs(across) / 0.26) + 0.02;
     const below = Math.max(0.05, WAIST.y - y);
-    const surface = coatAt(h.a, Math.max(y, hemY(h.a)));
+    const surface = coatAt(h.a, Math.max(y, hemY(h.a)), coatSample);
     const r = surface.p.x * h.radial.x + surface.p.z * h.radial.z;
     if (out <= r) return -Infinity;
     return Math.asin(THREE.MathUtils.clamp((out - r) / below, -1, 1));
