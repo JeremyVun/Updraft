@@ -829,7 +829,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   scarfInvitation.update(dt, rig.camera, story.name === 'birches' ? birches : null);
   washingInvitation.update(dt, rig.camera, story.name === 'lines' ? washingPassage.active : null);
   sailInvitation.update(dt, rig.camera, boat, story.current.invitesSail ?? false, input);
-  planeInvitation.update(dt, rig.camera, glider, startScreen.started ? story.current.planeInvitation ?? null : null, input);
+  planeInvitation.update(dt, rig.camera, glider, startScreen.started ? story.current.planeInvitation ?? null : null, input,
+    story.current.planeInvitationInto ?? false);
   birches.update(dt, rig.camera, child.visible ? child.position : null);
   /** Under the wood's canopy a sheltered population stays low despite the storm outside. */
   const inWood = story.name === 'wood';

@@ -131,4 +131,4 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 
 | # | Issue | Status |
 | --- | --- | --- |
-| 19 | Still island start: the plane's gust runs bottom right to top left, into the grass (only the first, held one) | open |
+| 19 | Still island start: the plane's gust runs bottom right to top left, into the grass (only the first, held one) | done: while the child holds the plane before the first breeze the gust is drawn right to left and climbing (`WindGesture.draw` takes a screen tilt; `opening.planeInviteRise` 0.6 rad, span 7), from low beside the plane, through it, curling away into the grass; grounded planes keep the level sweep. Tracing it sends the plane up into the grass toward (−6, −6), greening a swath inland; the old across-the-beach stroke sends it along the shore to (10, 3). Stills `/tmp/updraft-alight-plane-sheet.png`, `/tmp/updraft-alight-throw-cmp.png` |

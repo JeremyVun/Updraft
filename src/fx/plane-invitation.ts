@@ -16,7 +16,8 @@ export class PlaneInvitation {
   private quiet = 0;
   private alpha = 0;
 
-  update(dt: number, camera: THREE.Camera, plane: Glider, aim: THREE.Vector3 | null, input: PointerInput): void {
+  /** `into`: the held plane's first gust, drawn from the bottom right of the frame up to the top left, into the grass. */
+  update(dt: number, camera: THREE.Camera, plane: Glider, aim: THREE.Vector3 | null, input: PointerInput, into = false): void {
     const k = tuning.opening;
     this.gesture.hide();
     if (!aim) { this.elapsed = 0; this.alpha = 0; return; }
@@ -31,8 +32,9 @@ export class PlaneInvitation {
     this.toward.subVectors(camera.position, this.center).normalize();
     this.center.addScaledVector(this.toward, k.planeInviteStandOff);
     this.right.setFromMatrixColumn(camera.matrixWorld, 0);
-    const direction = (aim.x - plane.position.x) * this.right.x + (aim.z - plane.position.z) * this.right.z >= 0 ? 1 : -1;
+    const direction = into ? -1 : (aim.x - plane.position.x) * this.right.x + (aim.z - plane.position.z) * this.right.z >= 0 ? 1 : -1;
     const phase = (Math.max(0, this.elapsed - k.planeInviteAfter) % (k.planeInviteSweep + k.planeInvitePause)) / k.planeInviteSweep;
-    this.gesture.draw(camera, this.center, phase, k.planeInviteSpan, this.alpha, k.planeInviteWidth, 'across', direction);
+    this.gesture.draw(camera, this.center, phase, into ? k.planeInviteIntoSpan : k.planeInviteSpan, this.alpha, k.planeInviteWidth,
+      'across', direction, into ? -k.planeInviteRise : 0);
   }
 }
