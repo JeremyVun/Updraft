@@ -13,6 +13,9 @@ interface Line extends Ribbon {
   altitude: number;
   curl: number;
   dying: boolean;
+  /** A scripted gust holds its own heading and pace instead of tracing the field. */
+  drive?: THREE.Vector2;
+  pace?: number;
 }
 
 const MAX_LINES = 40;
@@ -56,6 +59,22 @@ export class WindLines {
     });
   }
 
+  /** A burst of lines sweeping through (x, z) along (dx, dz): a gust the story plays, not one the player makes. */
+  gust(x: number, z: number, dx: number, dz: number, count: number, pace: number): void {
+    const len = Math.hypot(dx, dz) || 1;
+    const ux = dx / len, uz = dz / len;
+    for (let i = 0; i < count; i++) {
+      const back = -3 + Math.random() * 4;
+      const side = (Math.random() - 0.5) * 5;
+      this.spawn(x + ux * back - uz * side, z + uz * back + ux * side, 0.8 + Math.random() * 2.2, 0.9 + Math.random() * 0.7, 0.2);
+      const line = this.lines[this.lines.length - 1];
+      if (!line || line.age > 0) continue;
+      line.drive = new THREE.Vector2(ux, uz);
+      line.heading.copy(line.drive);
+      line.pace = pace * (0.85 + Math.random() * 0.3);
+    }
+  }
+
   update(dt: number, gustAt: THREE.Vector3 | null, gust: number, liftAt: THREE.Vector3 | null, charge: number): void {
     if (gustAt && gust > 6) {
       this.gustTimer -= dt;
@@ -89,10 +108,12 @@ export class WindLines {
       l.age += dt;
       if (!l.dying) {
         const w = this.wind.sample(l.head.x, l.head.z, this.sample);
-        const speed = Math.max(2.5, Math.hypot(w.x, w.z));
+        const speed = Math.max(l.pace ?? 2.5, Math.hypot(w.x, w.z));
         const remaining = l.life - l.age;
         if (remaining < 0.5) {
           l.heading.rotateAround(ORIGIN, l.curl * dt * (5 + (0.5 - remaining) * 22));
+        } else if (l.drive) {
+          l.heading.lerp(l.drive, 1 - Math.exp(-dt * 10)).normalize();
         } else {
           const len = Math.hypot(w.x, w.z);
           if (len > 1e-3) l.heading.lerp(this.flow.set(w.x / len, w.z / len), 1 - Math.exp(-dt * 10)).normalize();

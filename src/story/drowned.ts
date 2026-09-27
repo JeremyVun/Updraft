@@ -318,7 +318,9 @@ export class DrownedChapter implements Chapter {
     /** Out over the bow, so it goes away up the channel in front of them and the player watches it the whole way. */
     const away = boat.yaw + 0.4;
     const dir = this.tmp.set(Math.sin(away), 0.14, Math.cos(away)).normalize();
-    p.launch(c.handPosition(this.hand), this.from.copy(dir).multiplyScalar(11).setY(2.2));
+    const hand = c.handPosition(this.hand);
+    this.cast.lines.gust(hand.x, hand.z, dir.x, dir.z, tuning.storm.snatchGust.lines, tuning.storm.snatchGust.speed);
+    p.launch(hand, this.from.copy(dir).multiplyScalar(11).setY(2.2));
     p.depart(dir, tuning.storm.planeAway);
     this.lost = boat.position.x + dir.x * 60;
     c.reach();

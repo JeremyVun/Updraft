@@ -1383,7 +1383,7 @@ export const tuning = {
     lighthouseLookOffset: 0.12,
     lighthouseCameraPace: 1.1,
     darkBy: 33,
-    lighthouseOutAt: 19,
+    lighthouseOutAt: 23,
     lighthouseFadeFor: 2.5,
     lighthouseSweep: 0.38,
     lighthouseSweepStart: 1.7,
@@ -1402,6 +1402,8 @@ export const tuning = {
     /** The storm carries the plane off ahead of the boat, low over the wood, until the rain swallows it (this many
         fog lengths deep) or it leaves the frame; whatever happens, it is gone by the fallback. */
     planeAway: { speed: 15, grip: 2.5, rise: 1.2 },
+    /** The gust that takes it, shown as wind lines sweeping past the child's hand. */
+    snatchGust: { lines: 10, speed: 17 },
     planeLostInFog: 2.5,
     planeLostAfter: 14,
     firstLightning: 16,
