@@ -394,7 +394,7 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
  * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
  */
-export const FACE = { c: V(0, 2.03, 0.07), rx: 0.262, rz: 0.25, up: 0.3, down: 0.262 };
+export const FACE = { c: V(0, 2.03, 0.09), rx: 0.262, rz: 0.25, up: 0.3, down: 0.262 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
@@ -436,7 +436,7 @@ function face(b: Builder): void {
     { s: 0.24, rx: 0.08, ry: 0.078, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, ao: 0.35 },
   ], 16, V(0, 1.66, 0.01));
   for (const mx of [1, -1]) {
-    const c = V(mx * 0.258, 1.925, 0.022);
+    const c = V(mx * 0.258, 1.925, 0.042);
     const rows: Point[][] = [];
     for (let i = 0; i <= 6; i++) {
       const th = (i / 6) * Math.PI;
@@ -464,7 +464,7 @@ function hairline(phi: number): number {
   return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35);
 }
 
-const HAIR = { c: FACE.c.clone().add(V(0, 0.015, -0.02)), rx: 0.282, ry: 0.296, rz: 0.282 };
+const HAIR = { c: FACE.c.clone().add(V(0, 0.012, -0.02)), rx: 0.282, ry: 0.284, rz: 0.282 };
 
 /**
  * The fringe and the hair round the face, as locks: angle from the front and the cosine down from the crown where
@@ -477,8 +477,8 @@ const LOCKS: [number, number, number, number, number, number][] = [
   [0.16, 0.9, -0.44, 0.27, 0.14, 0.08],
   [-0.08, 0.86, -0.74, 0.2, 0.13, 0.06],
   [-0.4, 0.8, -0.98, 0.06, 0.12, 0.05],
-  [0.5, 0.88, 0.22, 0.3, 0.12, -0.07],
-  [0.62, 0.82, 0.66, 0.34, 0.11, -0.09],
+  [0.5, 0.88, 0.22, 0.24, 0.13, -0.07],
+  [0.62, 0.82, 0.66, 0.28, 0.12, -0.09],
   [0.76, 0.76, 0.98, 0.18, 0.11, -0.07],
   [1.02, 0.66, 1.18, -0.28, 0.11, 0.06],
   [-1.08, 0.64, -1.2, -0.34, 0.115, -0.06],
@@ -527,7 +527,7 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
     const t = i / STEPS;
     const [phi, ct] = at(t);
     /** Full at the root, tapering to a soft point that lifts a little off the head, the way a wave of hair ends. */
-    const taper = t < 0.45 ? 1 : 1 - Math.pow((t - 0.45) / 0.55, 1.5);
+    const taper = t < 0.4 ? 1 : 1 - Math.pow((t - 0.4) / 0.6, 1.25);
     const thick = 0.026 * (1 - 0.5 * t) * Math.max(taper, 0.2);
     const w = width * 0.5 * (0.8 + 0.25 * Math.sin(Math.min(1, t / 0.4) * (Math.PI / 2))) * taper;
     const { p, n } = onHair(phi, ct, 0.003 + thick * 0.85 + 0.012 * Math.sin(t * Math.PI) + 0.018 * smooth(0.7, 1, t));
@@ -558,7 +558,7 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
 // The hood
 
 export const HOOD = {
-  c: V(0, 2.065, -0.03),
+  c: V(0, 2.065, -0.055),
   r: V(0.4, 0.368, 0.372),
   /** The opening faces forward and a touch down, so the brim just shades the fringe. */
   tilt: 0.1,
@@ -572,7 +572,7 @@ export const HOOD = {
 function hoodOpen(lambda: number): number {
   const s = Math.sin(lambda);
   const c = Math.cos(lambda);
-  return 0.8 + 0.3 * s * s * (1 - 0.55 * Math.max(0, -c)) + 0.08 * Math.pow(Math.max(0, -c), 2);
+  return 0.8 + 0.4 * s * s * (1 - 0.5 * Math.max(0, -c)) + 0.08 * Math.pow(Math.max(0, -c), 2);
 }
 const hoodF = V(0, -Math.sin(HOOD.tilt), Math.cos(HOOD.tilt));
 const hoodUp = V(0, Math.cos(HOOD.tilt), Math.sin(HOOD.tilt));
