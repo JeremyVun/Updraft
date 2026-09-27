@@ -368,6 +368,24 @@ export const tuning = {
     /** A released plane levels into flight rather than snapping out of the carry angle. */
     releaseSeconds: 0.22,
   },
+  scarf: {
+    /**
+     * The dream's own breeze, always carrying the ends out behind the child (units per second), and how much it
+     * swells and eases. It turns with the child, and a player's gust takes over from it.
+     */
+    breeze: 2.4, breezeSwell: 0.3,
+    /** How much of the child's own speed adds to the air carrying the ends out behind them. */
+    carry: 1,
+    /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
+    drag: 3.2,
+    gravity: 6.5,
+    /** The share of its weight the air holds up at the free end once air passes the child at `liftSpeed` or more. */
+    lift: 0.9, liftSpeed: 7,
+    /** Upward pull per unit of the player's updraft. */
+    updraft: 5,
+    /** The slow wave down a streaming end: its rate (radians per second) in still air and at `liftSpeed`, and its push. */
+    waveRate: 2.1, waveRateFast: 4.2, wave: 1.4, waveFast: 3.4,
+  },
   pointer: {
     /** The wind speed a stroke can never exceed; faster strokes ease toward it. */
     maxGust: 26,

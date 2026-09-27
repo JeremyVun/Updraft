@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tuning } from '../tuning';
 import type { WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { PALETTE } from './body';
@@ -6,7 +7,7 @@ import { KNIT_GLSL } from './child/shader';
 
 /** Across the strip, as a flattened loop: wide faces front and back, rounded edges. */
 const SECTION = 10;
-const WIDTH = 0.2;
+const WIDTH = 0.25;
 const THICK = 0.07;
 
 const VERT = /* glsl */ `
@@ -56,15 +57,29 @@ interface End {
   segment: number;
   /** Where on the knot it leaves from, in the frame of the child's body. */
   root: THREE.Vector3;
+  /** Where it left the knot last frame, so the root travels smoothly through the steps in between. */
+  from: THREE.Vector3;
+  /** How far round from straight behind toward the knot's side the breeze carries it, and how well the air holds
+   * it up: the two ends splay apart, the shorter one lower. */
+  splay: number;
+  lift: number;
   /** A little of its own timing, so the two ends never move as one. */
   phase: number;
   offset: number;
 }
 
+/** Steps no longer than this, so the ends swing alike at any frame rate. */
+const STEP = 1 / 60;
+/** Faster than the child ever goes: a jump in the knot's position is a teleport, not a speed. */
+const MAX_CARRY = 15;
+/** How far each step draws a point toward its neighbours: enough to smooth a kink, not to stiffen the wave. */
+const SOFT = 0.06;
+
 /**
- * The scarf's two loose ends: knitted strips that hang from the knot on a chain of points. Not a cloth simulation:
- * each end streams where the air round the child would carry it, lags behind their moves and settles softly, with
- * a slow wave running down it in a breeze.
+ * The scarf's two loose ends: knitted strips on a chain of points, streaming from the knot. Not a cloth simulation:
+ * each end is carried by the air round the child, a breeze of the dream's own that always lifts them out behind,
+ * the air of their walking, and any gust the player makes; they lag behind turns, starts and stops and settle
+ * softly, with a slow wave running down them.
  */
 export class Scarf {
   readonly mesh: THREE.Mesh;
@@ -80,21 +95,34 @@ export class Scarf {
   private readonly b = new THREE.Vector3();
   private readonly n = new THREE.Vector3();
   private readonly rootAt = new THREE.Vector3();
+  private readonly rootNow = new THREE.Vector3();
   private readonly turn = new THREE.Quaternion();
   private readonly face = new THREE.Vector3();
+  /** The child's own velocity over the ground, smoothed of the bob in their stride. */
+  private readonly carried = new THREE.Vector3();
+  private readonly lastAnchor = new THREE.Vector3();
+  private anchored = false;
+  private lastStep = STEP;
+  private wave = 0;
   private time = 0;
 
   constructor() {
-    const end = (count: number, segment: number, root: THREE.Vector3, phase: number): End => ({
+    const end = (count: number, segment: number, root: THREE.Vector3, splay: number, lift: number, phase: number): End => ({
       pts: Array.from({ length: count }, (_, i) => new THREE.Vector3(0, -i * segment, 0)),
       prev: Array.from({ length: count }, (_, i) => new THREE.Vector3(0, -i * segment, 0)),
       side: Array.from({ length: count }, () => new THREE.Vector3(1, 0, 0)),
       segment,
       root,
+      from: new THREE.Vector3(),
+      splay,
+      lift,
       phase,
       offset: 0,
     });
-    this.ends = [end(11, 0.105, new THREE.Vector3(0.03, -0.02, 0.01), 0), end(8, 0.095, new THREE.Vector3(-0.035, 0.005, 0.025), 2.1)];
+    this.ends = [
+      end(13, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.75, 1, 0),
+      end(9, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.2, 0.7, 2.1),
+    ];
     let verts = 0;
     for (const e of this.ends) {
       e.offset = verts;
@@ -148,67 +176,112 @@ export class Scarf {
     for (const e of this.ends) {
       this.rootAt.copy(anchor);
       if (body) this.rootAt.add(this.tmp.copy(e.root).transformDirection(body).multiplyScalar(e.root.length()));
-      e.pts.forEach((p, i) => p.copy(this.rootAt).add(this.tmp.set(0, -i * e.segment * 0.8, i * e.segment * 0.5)));
+      this.dir.set(Math.sin(e.splay) * 0.5, -0.75, -Math.cos(e.splay) * 0.5);
+      if (body) this.dir.transformDirection(body);
+      e.pts.forEach((p, i) => p.copy(this.rootAt).addScaledVector(this.dir, i * e.segment));
       e.prev.forEach((p, i) => p.copy(e.pts[i]));
+      e.from.copy(this.rootAt);
     }
+    this.lastAnchor.copy(anchor);
+    this.carried.set(0, 0, 0);
+    this.anchored = true;
   }
 
   /**
    * `anchor` is the knot, `body` the child's body frame, `keepOut` moves a point to the outside of the child,
-   * `wind` is the air at the child, `ground` the surface height below.
+   * `wind` is the air at the child, `ground` the surface height below, `facing` the child's heading, and `still`
+   * how far they are tucked up in bed, out of the breeze.
    */
-  update(dt: number, anchor: THREE.Vector3, body: THREE.Matrix4, keepOut: (p: THREE.Vector3) => void, wind: WindSample, ground: number, groundPos: THREE.Vector3): void {
-    this.time += dt;
-    const h = Math.min(Math.max(dt, 1e-4), 1 / 30);
-    const speed = Math.hypot(wind.x, wind.z);
-    const gust = Math.min(1, speed / 14 + wind.energy * 0.5);
-    /** Sideways to the wind, for the wave that runs down a streaming end. */
-    const crossX = speed > 1e-3 ? -wind.z / speed : 1;
-    const crossZ = speed > 1e-3 ? wind.x / speed : 0;
+  update(dt: number, anchor: THREE.Vector3, body: THREE.Matrix4, keepOut: (p: THREE.Vector3) => void, wind: WindSample,
+    ground: number, groundPos: THREE.Vector3, facing: number, still: number): void {
+    if (!this.anchored) this.reset(anchor, body);
+    const k = tuning.scarf;
+    const span = Math.min(Math.max(dt, 1e-4), 0.1);
+    this.time += span;
+    this.tmp.set((anchor.x - this.lastAnchor.x) / span, 0, (anchor.z - this.lastAnchor.z) / span);
+    if (this.tmp.length() > MAX_CARRY) this.tmp.set(0, 0, 0);
+    this.carried.lerp(this.tmp, 1 - Math.exp(-span * 8));
+    this.lastAnchor.copy(anchor);
+
+    /** Only air with a gust in it counts: the rest round the child is mostly the air they drag along themselves. */
+    const arrived = THREE.MathUtils.smoothstep(wind.energy, tuning.wind.arriveFrom, tuning.wind.arriveFull);
+    const swell = 1 + k.breezeSwell * (0.6 * Math.sin(this.time * 0.63) + 0.4 * Math.sin(this.time * 1.37 + 2));
+    const breeze = k.breeze * swell * (1 - still);
+    const pace = Math.hypot(this.carried.x, this.carried.z) * k.carry;
+    const cos = Math.cos(facing);
+    const sin = Math.sin(facing);
+    const steps = Math.max(1, Math.ceil(span / STEP - 1e-3));
+    const h = span / steps;
+    let rate = 0;
+
     for (const e of this.ends) {
-      this.rootAt.copy(anchor).add(this.tmp.copy(e.root).transformDirection(body).multiplyScalar(e.root.length()));
+      /**
+       * The air past the child that the end streams on: the breeze, out behind and round toward the knot's side,
+       * and the air of their going, straighter behind; both turn with them. A gust adds to it.
+       */
+      const bx = Math.sin(e.splay) * breeze + Math.sin(e.splay * 0.5) * pace;
+      const bz = -Math.cos(e.splay) * breeze - Math.cos(e.splay * 0.5) * pace;
+      const flowX = bx * cos + bz * sin + wind.x * arrived;
+      const flowZ = bz * cos - bx * sin + wind.z * arrived;
+      const flow = Math.hypot(flowX, flowZ);
+      const full = Math.min(1, flow / k.liftSpeed);
+      const lift = k.lift * e.lift * full * (2 - full);
+      rate = Math.max(rate, THREE.MathUtils.lerp(k.waveRate, k.waveRateFast, full));
+      /** Sideways to the air going past, for the wave; in still air, across the child. */
+      const crossX = flow > 1e-3 ? -flowZ / flow : cos;
+      const crossZ = flow > 1e-3 ? flowX / flow : -sin;
+      const swing = (k.wave * Math.min(1, flow / k.breeze) + k.waveFast * full) * (0.75 + 0.25 * Math.sin(this.time * 0.31 + e.phase));
+      this.rootNow.copy(anchor).add(this.tmp.copy(e.root).transformDirection(body).multiplyScalar(e.root.length()));
       const n = e.pts.length;
-      e.pts[0].copy(this.rootAt);
-      e.prev[0].copy(this.rootAt);
-      for (let i = 1; i < n; i++) {
-        const p = e.pts[i];
-        const q = e.prev[i];
-        const f = i / (n - 1);
-        const t = this.time * (2.6 + gust * 3) - i * 0.4 + e.phase;
-        /** A slow wave down the length, growing toward the free end: wool is heavy, it undulates, it does not flap. */
-        const wave = Math.sin(t) * (0.3 + gust * 1.7) * f;
-        const vx = (p.x - q.x) / h;
-        const vy = (p.y - q.y) / h;
-        const vz = (p.z - q.z) / h;
-        /** The air takes it: its own velocity is drawn toward the wind's, strongly, so it streams and settles. */
-        const drag = 2.6;
-        const ax = (wind.x * 1.3 - vx) * drag + wave * crossX * 1.4;
-        const az = (wind.z * 1.3 - vz) * drag + wave * crossZ * 1.4;
-        const ay = -7.5 + gust * 6 + wind.lift * 5 + Math.sin(t * 0.7 + 1.3) * (0.4 + gust * 1.6) * f - vy * 1.2;
-        this.tmp.copy(p);
-        p.x += vx * h * 0.94 + ax * h * h;
-        p.y += vy * h * 0.94 + ay * h * h;
-        p.z += vz * h * 0.94 + az * h * h;
-        q.copy(this.tmp);
-      }
-      for (let k = 0; k < 5; k++) {
+      for (let s = 1; s <= steps; s++) {
+        this.rootAt.lerpVectors(e.from, this.rootNow, s / steps);
         e.pts[0].copy(this.rootAt);
+        e.prev[0].copy(this.rootAt);
+        const carry = h / this.lastStep;
         for (let i = 1; i < n; i++) {
-          const a = e.pts[i - 1];
-          const b = e.pts[i];
-          this.dir.subVectors(b, a);
-          const len = this.dir.length() || 1e-5;
-          b.copy(a).addScaledVector(this.dir, e.segment / len);
-          if (i > 1) keepOut(b);
-          if (b.y < ground + 0.04) b.y = ground + 0.04;
+          const p = e.pts[i];
+          const q = e.prev[i];
+          const f = i / (n - 1);
+          /** A slow wave down the length, growing toward the free end: wool is heavy, it undulates, it does not flap. */
+          const t = this.wave - i * 0.7 + e.phase;
+          const across = Math.sin(t) * swing * f;
+          const rise = Math.sin(t * 0.7 + 1.1) * swing * 0.45 * f;
+          const vx = (p.x - q.x) / this.lastStep;
+          const vy = (p.y - q.y) / this.lastStep;
+          const vz = (p.z - q.z) / this.lastStep;
+          /** Near the knot the child's body shelters it from the air. */
+          const open = 0.4 + 0.6 * f;
+          const ax = (this.carried.x + flowX * open - vx) * k.drag + crossX * across;
+          const az = (this.carried.z + flowZ * open - vz) * k.drag + crossZ * across;
+          /** The air holds up the free end more than the part near the knot, so an end droops from it, then streams. */
+          const ay = -k.gravity * (1 - lift * (0.3 + 0.7 * f)) - vy * k.drag * 0.6 + rise + wind.lift * k.updraft;
+          this.tmp.copy(p);
+          p.x += (p.x - q.x) * carry + ax * h * h;
+          p.y += (p.y - q.y) * carry + ay * h * h;
+          p.z += (p.z - q.z) * carry + az * h * h;
+          q.copy(this.tmp);
         }
-        /** Knitted wool is heavy and soft: no kinks, however the points were pushed about. */
-        for (let i = 1; i < n - 1; i++) {
-          this.a.addVectors(e.pts[i - 1], e.pts[i + 1]).multiplyScalar(0.5);
-          e.pts[i].lerp(this.a, 0.3);
+        for (let it = 0; it < 2; it++) {
+          /** Knitted wool is heavy and soft: no kinks, however the points were pushed about. */
+          for (let i = 1; i < n - 1; i++) {
+            this.a.addVectors(e.pts[i - 1], e.pts[i + 1]).multiplyScalar(0.5);
+            e.pts[i].lerp(this.a, SOFT);
+          }
+          for (let i = 1; i < n; i++) {
+            const a = e.pts[i - 1];
+            const b = e.pts[i];
+            this.dir.subVectors(b, a);
+            const len = this.dir.length() || 1e-5;
+            b.copy(a).addScaledVector(this.dir, e.segment / len);
+            if (i > 1) keepOut(b);
+            if (b.y < ground + 0.04) b.y = ground + 0.04;
+          }
         }
       }
+      e.from.copy(this.rootNow);
     }
+    this.lastStep = h;
+    this.wave += rate * span;
     this.write(groundPos);
     this.material.uniforms.uGroundPos.value.copy(groundPos);
   }
@@ -251,7 +324,7 @@ export class Scarf {
         const centre = this.b.copy(e.pts[k]);
         if (i === rings - 1) centre.addScaledVector(this.dir, 0.02);
         /** Knitted wool stretches and gathers: the width breathes a little along it. */
-        const w = WIDTH * 0.5 * (k === 0 ? 0.6 : 1 + 0.07 * Math.sin(k * 1.3 + this.time * 1.9 + e.phase));
+        const w = WIDTH * 0.5 * (k === 0 ? 0.6 : 1 + 0.07 * Math.sin(k * 1.3 + this.time * 1.9 + e.phase)) * (1 + 0.12 * f * f);
         for (let j = 0; j < SECTION; j++) {
           const ang = (j / SECTION) * Math.PI * 2;
           const c = Math.cos(ang);
