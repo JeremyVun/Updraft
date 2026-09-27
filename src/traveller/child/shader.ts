@@ -314,7 +314,7 @@ export function childMaterial(): THREE.ShaderMaterial {
       uBlink: { value: 0 },
       uYawn: { value: 0 },
       uMouth: { value: 1 },
-      uWhites: { value: 0 },
+      uWhites: { value: 1 },
       uNose: { value: 1 },
       uNoseTip: { value: 1 },
       uFlutter: { value: 0 },
