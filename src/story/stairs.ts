@@ -51,6 +51,8 @@ const ASIDE = (() => {
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
 const SEA_RIDE = 0.4;
+/** The white on the sea goes grey and blue with the dusk. */
+const DUSK_MIST = new THREE.Color(0.9, 0.96, 1.14);
 
 /** One stop on the way up: where to stand and the level of the landing or flight it is on. */
 interface Stop { x: number; z: number; level: number }
@@ -966,8 +968,8 @@ export class StairsChapter implements Chapter {
     fog.clear = 0.5 + 0.35 * S(t, 0, 2.5);
     this.white = 1 - S(t, 5, lift * 0.8);
     // From the gold of the cloud to the grey and blue of the dusk over the sea, and the sun going out of it.
-    const dusk = this.glowFrom.copy(u.uSkyAmbient.value).multiplyScalar(1.3).add(this.tmpColor.copy(u.uSkyHorizon.value).multiplyScalar(0.5))
-      .add(this.tmpColor.copy(u.uSunColor.value).multiplyScalar(0.05));
+    const dusk = this.glowFrom.copy(u.uSkyAmbient.value).multiplyScalar(1.4).add(this.tmpColor.copy(u.uSkyHorizon.value).multiplyScalar(0.35))
+      .multiply(DUSK_MIST);
     fog.light.lerp(dusk, S(t, 1.2, 5.5));
     fog.glow = 1 - 0.6 * S(t, 1.2, 5.5);
   }

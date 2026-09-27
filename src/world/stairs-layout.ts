@@ -233,6 +233,14 @@ export const FOG_BANK = (() => {
   const into = along(RUN_YAW);
   return { x: out.x + into.x * RUN_TO_BANK, z: out.y + into.z * RUN_TO_BANK, yaw: RUN_YAW } as const;
 })();
+/**
+ * The stretch of the run where the heaped towers crowd in close either side and the boat sails between them, lit
+ * gold behind the child and the bird as the lens looks back at their faces.
+ */
+export const TOWER_GATE = (() => {
+  const out = CLOUD_ROUTE[CLOUD_ROUTE.length - 2], way = CLOUD_ROUTE[CLOUD_ROUTE.length - 1].clone().sub(out).normalize();
+  return { from: out.clone().addScaledVector(way, 4), to: out.clone().addScaledVector(way, 84) } as const;
+})();
 /** Where the hull is sailing on the sea when the drowned village takes over. */
 export const DESCENT_END = new THREE.Vector2(16, -1254);
 
