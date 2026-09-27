@@ -73,6 +73,8 @@ export interface Drive {
   velocity: THREE.Vector3;
   /** How fast they are turning, radians a second. */
   turn: number;
+  /** Whether the bag's flap is thrown open; it stays shut over the mouth until the cygnet first rides in the bag. */
+  bagOpen: boolean;
 }
 
 export const WALK = 2.6;
@@ -106,6 +108,9 @@ class Spring {
     return this.x;
   }
 }
+
+/** How far each of the bag flap's bones is turned back over the hinge, radians: it is modelled shut over the mouth. */
+const FLAP_OPEN = [2.3, 2.25, 0.3];
 
 const Y = new THREE.Vector3(0, 1, 0);
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -182,6 +187,8 @@ export class ChildMotion {
   private readonly hoodRoll = new Spring(2.0, 0.4);
   private readonly bagPitch = new Spring(1.9, 0.3);
   private readonly bagRoll = new Spring(1.7, 0.32);
+  private readonly flapOpen = new Spring(1.3, 0.5);
+  private readonly flapSwing = new Spring(1.5, 0.28);
   private readonly lastHips = new THREE.Vector3();
   private readonly hipsVel = new THREE.Vector3();
   private readonly hipsAcc = new THREE.Vector3();
@@ -526,6 +533,21 @@ export class ChildMotion {
     const bp = this.bagPitch.step(THREE.MathUtils.clamp(Math.atan2(-cg.z, -cg.y) * 0.4 * still, -0.04, 0.1), dt);
     const br = this.bagRoll.step(THREE.MathUtils.clamp(Math.atan2(cg.x, -cg.y) * 0.4 * still, -0.16, 0.16), dt);
     bag.rotation.set(Math.max(bp, -0.04), 0, br);
+
+    // -- Thrown open, the flap goes over the hinge and flops down the outer face, then swings away from it with the
+    // bag, never into it.
+    const open = this.flapOpen.step(d.bagOpen ? 1 : 0, dt);
+    const flapTarget = Math.atan2(-cg.z, -cg.y) * 0.8 * still + 0.1 * flutterAmp * Math.max(0, Math.sin(d.time * 6.3));
+    const swing = THREE.MathUtils.clamp(this.flapSwing.step(THREE.MathUtils.clamp(flapTarget, 0, 0.3), dt), 0, 0.4) * Math.min(1, open);
+    b[BONE.flap].rotation.x = -FLAP_OPEN[0] * open;
+    b[BONE.flapRoll].rotation.x = -FLAP_OPEN[1] * open + 0.6 * swing;
+    b[BONE.flapTip].rotation.x = -FLAP_OPEN[2] * open + 0.4 * swing;
+  }
+
+  /** The flap already open, with no swing over: for a story that starts after the cygnet has ridden in the bag. */
+  flapOpened(): void {
+    this.flapOpen.x = 1;
+    this.flapOpen.v = 0;
   }
 
   private readonly legScratch = Array.from({ length: 8 }, () => new THREE.Vector3());

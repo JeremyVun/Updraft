@@ -974,6 +974,83 @@ function bag(b: Builder): void {
   b.rows(rim, true, V(0, bagLip(0) + BAG.c.y, BAG.c.z), true);
 }
 
+/**
+ * Out from the rolled rim, the flap's edge: how far out and up from the top of the rim, and which way its top faces
+ * (up, out). It lies on the roll, curves over it and hangs a little way down the outside.
+ */
+const FLAP_EDGE: [out: number, up: number, nUp: number, nOut: number][] = [
+  [0, 0.03, 1, 0.15], [0.02, 0.024, 0.8, 0.6], [0.034, 0.008, 0.4, 0.92], [0.041, -0.018, 0.1, 1], [0.044, -0.042, 0, 1],
+];
+const FLAP_THICK = 0.012;
+
+/**
+ * The flap: a leather lid cut to the bag's own outline and a little larger, modelled shut, lying on the rolled rim.
+ * It is hinged along the top of the outer face and always thrown back down it, so the bag reads as a satchel left
+ * open, not a bucket.
+ */
+function flap(b: Builder, rest: THREE.Vector3[]): void {
+  const AROUND = 48;
+  const hinge = rest[BONE.flap];
+  const tip = rest[BONE.flapTip];
+  const skinAt = (p: THREE.Vector3): Skin => {
+    const d = p.z - hinge.z;
+    const on = smooth(-0.025, 0.045, d);
+    const rolled = smooth(0.025, 0.1, d);
+    const free = smooth(tip.z - hinge.z - 0.08, tip.z - hinge.z + 0.04, d);
+    return [[BONE.bag, 1 - on], [BONE.flap, on * (1 - rolled)], [BONE.flapRoll, on * rolled * (1 - free)], [BONE.flapTip, on * rolled * free]];
+  };
+  const top = (phi: number) => BAG.c.y + bagLip(phi) + 0.028;
+  const farZ = bagPoint(Math.PI, bagLip(Math.PI)).z;
+  const nearZ = bagPoint(0, bagLip(0)).z;
+  /** Across the middle it lies on a plane between the far rim and the near one, which stands higher. */
+  const plane = (z: number) => THREE.MathUtils.lerp(top(Math.PI), top(0), THREE.MathUtils.clamp((z - farZ) / (nearZ - farZ), 0, 1));
+  const SAG = 0.035;
+  const up = V(0, 1, 0);
+  const topRows: Point[][] = [];
+  const underRows: Point[][] = [];
+  const point = (p: THREE.Vector3, n: THREE.Vector3, j: number, rim: number): [Point, Point] => {
+    const uv: [number, number] = [0, (j / AROUND) * TAU];
+    const under = p.clone().addScaledVector(n, -FLAP_THICK);
+    return [
+      { p, skin: skinAt(p), mat: MAT.leather, ao: 1 - 0.15 * rim, uv },
+      { p: under, skin: skinAt(under), mat: MAT.leather, k: 0.3, ao: 0.6, uv },
+    ];
+  };
+  const ring = (at: (phi: number) => [THREE.Vector3, THREE.Vector3], rim: number) => {
+    const t: Point[] = [];
+    const u: Point[] = [];
+    for (let j = 0; j < AROUND; j++) {
+      const [p, n] = at((j / AROUND) * TAU);
+      const [a, c] = point(p, n, j, rim);
+      t.push(a);
+      u.push(c);
+    }
+    topRows.push(t);
+    underRows.push(u);
+  };
+  for (const s of [0.3, 0.55, 0.75, 0.88, 0.96]) {
+    ring((phi) => {
+      const p = bagPoint(phi, bagLip(phi), 0.985 * s);
+      return [p.setY(THREE.MathUtils.lerp(plane(p.z), top(phi), s * s * s) + 0.03 - SAG * (1 - s * s)), up];
+    }, 0);
+  }
+  for (const [o, dh, nUp, nOut] of FLAP_EDGE) {
+    ring((phi) => {
+      const out = bagOutward(phi);
+      const p = bagPoint(phi, bagLip(phi), 0.985).addScaledVector(out, o).setY(top(phi) + dh);
+      return [p, V().addScaledVector(up, nUp).addScaledVector(out, nOut).normalize()];
+    }, 1);
+  }
+  const middle = V(BAG.c.x, plane(BAG.c.z) + 0.03 - SAG, BAG.c.z);
+  const under = middle.clone().setY(middle.y - FLAP_THICK);
+  b.rows([
+    [{ p: middle, skin: skinAt(middle), mat: MAT.leather, ao: 1 }],
+    ...topRows,
+    ...underRows.reverse(),
+    [{ p: under, skin: skinAt(under), mat: MAT.leather, k: 0.3, ao: 0.6 }],
+  ], true, middle.clone().setY(middle.y - FLAP_THICK / 2));
+}
+
 interface StrapStation {
   p: THREE.Vector3;
   n: THREE.Vector3;
@@ -1064,6 +1141,7 @@ export function buildGarments(rest: THREE.Vector3[], bind: THREE.Matrix4[]): Bui
   hood(b);
   wrap(b);
   bag(b);
+  flap(b, rest);
   strap(b, true);
   strap(b, false);
   return b;

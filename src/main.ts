@@ -605,6 +605,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   atmo.uniforms.uRainbow.value = shown.rainbow;
   if (story.rainbowAxis) atmo.uniforms.uRainbowAxis.value.copy(story.rainbowAxis);
   boat.update(dt, time);
+  if (cygnet.seat === 'satchel') child.openBag();
   child.update(dt);
   skyMirror.pose(child);
   glider.update(dt, time);

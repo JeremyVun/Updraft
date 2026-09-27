@@ -344,3 +344,30 @@ holds, and hair and face may stray from it to show her. Built on branch `child-f
   gameplay distance only (not the face up close, nor in motion). Closeout: the helper worktrees
   `updraft-child2-before`, `-scarf` and `-base`, the servers on :5373–:5375 and :5377, and `/tmp/child3/snaps` are
   gone. The `child-rebuild` worktree and `/tmp/child3`'s scripts stay for further child work.
+
+## The bag's flap (2026-09-28)
+
+Jeremy (verbatim): "I think the child's backpack is good, but it just needs a flap or something for the bag cover if
+thawt makes sense. right now, when the cygnet is not in the backpack, it looks like a bucket"
+
+After the first cut, which closed the flap over the empty bag (verbatim): "It's ok for the bag to be open for most of
+hte game but just to have the flap showing on the side of the bag or osmething. you know what i mean? like the bag is
+open and not just a bucket"
+
+Then, asked whether the bag is closed until she first puts the cygnet in it: "lets do that."
+
+- A leather lid (`flap()` in `garments.ts`, `FLAP_EDGE`, `FLAP_THICK`) cut to the bag's own outline and a little
+  larger, modelled shut over the mouth. It is hinged along the top of the outer face on three bones hung off the bag
+  (`BONE.flap`, `flapRoll`, `flapTip` in `skeleton.ts`).
+- Until the cygnet first rides in the bag, the flap lies shut over the mouth. The first time its seat is the
+  satchel (in the little boats, where it is gathered up and climbs in before boarding), the flap is thrown back over
+  the hinge (`child.openBag()`, called from `main.ts`) and stays open for the rest of the game, hanging down the outer
+  face (`FLAP_OPEN`, on the `flapOpen` spring in `motion.ts`, so it flops a little as it lands).
+- A story that starts after the little boats (`Journey.begin`), or a save resumed with the cygnet in the bag, starts
+  with the flap already open. Checked: `?chapter=washing` and `boats` start shut; `meadow` and `home` open. A resumed
+  save is not yet checked.
+- Open, the flap swings away from the face with the bag's own swing and a little in the wind (`flapSwing`), never into
+  it. It doesn't flop with each step or sway side to side.
+- The paper, stowed, lies over it; checked in the stage.
+- Stills in `/tmp/bagflap`: `sheet.png` (before, shut, open), `open-sheet.png` (open), `v8-first-stow.png` (shut, the
+  first climb in, open after it climbs out). Not yet checked in a level from the play camera.
