@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { FLIGHT_RUN, landingOf, onLanding, type Flight } from './stairs-layout';
 
 /** A ball of cloud: where it is, how big, and how much of it there is. */
 export interface Puff { x: number; y: number; z: number; r: number; a: number }
@@ -96,59 +95,4 @@ export function puffGeometry(puffs: readonly Puff[], offset = new THREE.Vector3(
   g.setIndex(index);
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
   return g;
-}
-
-/** A small repeatable scatter, so the cloud under each flight is the same every time the room is built. */
-function scatter(seed: number): () => number {
-  let s = seed * 9301 + 49297;
-  return () => {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280;
-  };
-}
-
-/**
- * The cloud a flight and its landing rest on: a row of puffs down each side of its underside and a few wisps
- * trailing under that. `amount` 0 leaves it bare; past 1 the puffs grow up round its sides as well.
- */
-export function flightPuffs(f: Flight, amount: number): Puff[] {
-  if (amount <= 0) return [];
-  const rnd = scatter(f.index * 31 + 7);
-  const out: Puff[] = [];
-  const along = new THREE.Vector3().subVectors(f.top, f.bottom).setY(0).normalize();
-  const across = new THREE.Vector3(-along.z, 0, along.x);
-  const walk = new THREE.Vector3();
-  const size = 0.8 + 0.3 * Math.min(amount, 1.4);
-  for (let s = 0.3; s < FLIGHT_RUN - 0.1; s += 0.7 / Math.min(1.3, amount)) {
-    walk.lerpVectors(f.bottom, f.top, s / FLIGHT_RUN);
-    for (const side of [-1, 1]) {
-      const x = side * (0.32 + rnd() * 0.2);
-      out.push({ x: walk.x + across.x * x + along.x * (rnd() - 0.5) * 0.3, y: walk.y - 0.95 - rnd() * 0.15,
-        z: walk.z + across.z * x + along.z * (rnd() - 0.5) * 0.3, r: (0.6 + rnd() * 0.2) * size, a: 0.75 });
-    }
-    if (rnd() < 0.4 * amount) {
-      out.push({ x: walk.x + across.x * (rnd() - 0.5) * 0.9, y: walk.y - 1.3 - rnd() * 0.6,
-        z: walk.z + across.z * (rnd() - 0.5) * 0.9, r: (0.45 + rnd() * 0.2) * size, a: 0.45 });
-    }
-    if (amount > 1) {
-      for (const side of [-1, 1]) {
-        if (rnd() > (amount - 1) * 1.6) continue;
-        out.push({ x: walk.x + across.x * side * (0.95 + rnd() * 0.2), y: walk.y - 0.45 + rnd() * 0.2,
-          z: walk.z + across.z * side * (0.95 + rnd() * 0.2), r: (0.4 + rnd() * 0.15) * size, a: 0.4 });
-      }
-    }
-  }
-  const L = landingOf(f.index);
-  const p = new THREE.Vector3();
-  for (let x = L.x0 + 0.45; x < L.x1 - 0.3; x += 0.85) {
-    for (let z = L.z0 + 0.45; z < L.z1 - 0.3; z += 0.85) {
-      onLanding(L, x + (rnd() - 0.5) * 0.3, z + (rnd() - 0.5) * 0.3, p);
-      out.push({ x: p.x, y: L.centre.y - 0.72 - rnd() * 0.1, z: p.z, r: (0.56 + rnd() * 0.16) * size, a: 0.75 });
-      if (rnd() < 0.3 * amount) {
-        onLanding(L, x + (rnd() - 0.5) * 0.5, z + (rnd() - 0.5) * 0.5, p);
-        out.push({ x: p.x, y: L.centre.y - 1.2 - rnd() * 0.6, z: p.z, r: (0.42 + rnd() * 0.16) * size, a: 0.42 });
-      }
-    }
-  }
-  return out;
 }

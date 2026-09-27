@@ -186,12 +186,14 @@ float bodyAt(vec3 c, vec3 home) {
   float k = 0.5 - c.y;
   float h = k * uSize.y;
   float lump = vnoise(home.xz * 1.1 + vec2(uTime * 0.02, 7.3));
-  float trail = uSize.y * mix(0.15, 0.65, lump);
-  float hang = max(exp(-h / trail), 1.0 - smoothstep(0.2, mix(0.55, 1.3, lump), h));
-  float ends = smoothstep(0.0, 0.3, h) * (1.0 - smoothstep(0.75, 1.0, k));
+  float trail = uSize.y * mix(0.1, 0.45, lump);
+  float hang = max(exp(-h / trail), 1.0 - smoothstep(0.2, mix(0.5, 1.2, lump), h));
+  float ends = smoothstep(0.0, 0.3, h) * (1.0 - smoothstep(0.6, 1.0, k));
   vec2 r = abs(c.xz) * 2.0 * openAt(c);
   r *= r;
-  float sides = 1.0 - smoothstep(0.4 - 0.2 * k, 0.94 - 0.35 * k, sqrt(sqrt(dot(r, r))));
+  // The edge wavers, round the sides and up and down them, so no side of the box ever shows.
+  float waver = vnoise(vec2(home.x * 1.4 + home.y * 0.8, home.z * 1.4 - home.y * 0.6)) - 0.5;
+  float sides = 1.0 - smoothstep(0.35 - 0.2 * k, 0.9 - 0.35 * k, sqrt(sqrt(dot(r, r))) + waver * 0.3);
   return hang * ends * sides;
 }
 
@@ -216,7 +218,7 @@ float bodyNoise(vec3 home, float k) {
 
 /** Nearly continuous where the body is thick; where it thins, toward its sides and foot, the noise has more say. */
 float coverOf(float body, float n) {
-  return clamp((n - 0.45 + 0.55 * body) / 0.65, 0.0, 1.0) * pow(body, 0.6);
+  return clamp((n - 0.5 + 0.6 * body) / 0.6, 0.0, 1.0) * pow(body, 0.8);
 }
 
 float densityAt(vec3 c, vec3 home) {
@@ -264,7 +266,7 @@ void main() {
   vec3 sun = uSunColor * cloudShadow(vWorld.xz) * phase * 0.45;
   // Lit through and through by the sky round it, so that even its shade is a pale lilac.
   vec3 lilac = (uSkyHorizon * 0.55 + uSkyZenith * 0.6 + uSkyAmbient * 0.8) * vec3(0.95, 0.9, 1.0);
-  float sigma = 1.9 * mix(0.6, 1.0, min(uHaze.x, 1.0));
+  float sigma = 1.6 * mix(0.6, 1.0, min(uHaze.x, 1.0));
   float T = 1.0;
   vec3 light = vec3(0.0);
   float seen = 0.0, at = 0.0;
@@ -303,7 +305,7 @@ let noise: THREE.Data3DTexture | null = null;
 export interface HazeJoins { x0?: boolean; x1?: boolean; z0?: boolean; z1?: boolean }
 
 /** How deep the haze hangs under a piece for `amount` of cloud, and how far out it billows past the steps' sides. */
-const hangs = (amount: number) => 0.9 + 2.4 * amount;
+const hangs = (amount: number) => 0.8 + 2.0 * amount;
 const spills = (amount: number) => 0.3 + 0.2 * Math.min(amount, 1);
 
 /** A box of haze: `shape` takes the unit cube to the piece's own frame, `frame` places that frame in the world. */
