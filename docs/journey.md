@@ -822,14 +822,16 @@ that answers cursor wind until a soft breeze carries the boat away.
    rather than a random drop, and suggested a gust. It is the wind the player woke on this island, blowing by itself:
    white streaks like the player's own rise off the slope, lifting a plume of the island's petals, and sweep across
    the frame through the V from left to right, heard as the player's wind. The adults heel over and ride it one by one
-   as it reaches them. It reaches the smallest 3.4 seconds in and rolls it right over, carries it sideways and down,
-   and bends its left wing back: the wing the child bandages, and the one it flies lopsided on from there. It fights
-   back toward its station for under two seconds and has nothing left. The camera pushes in toward the back of the
-   V as the gust arrives and holds there until the fall takes over. This gives the cygnet's fear of the wind (see
-   *The companion*) its reason, and turns the ending, where it trusts the wind to hold it up, into the wind making
+   as it reaches them. At 4.5 seconds it reaches the smallest, lifts it, rolls it right over away from the wind and
+   carries it out of the V sideways, and that same moment is the fall: there is no flying on afterwards. The left
+   wing is bent back in the tumble: the wing the child bandages. It comes out of the roll into its first burst of
+   flapping and fights the whole way down. Jeremy's first look (2026-09-28): the idea works, but blow, tumble, fly on,
+   then drop read as separate events, so the tumble is now the start of the fall and the descent leaves at the speed
+   it was flying. The camera pushes in toward where the gust meets the V and blends from there into the descent.
+   This gives the cygnet's fear of the wind (see *The companion*) its reason, and turns the ending, where it trusts the wind to hold it up, into the wind making
    amends. Nothing says so; a player who notices it was their wind feels it. Knobs: `gustAt`, `gustRun`,
-   `gustShove`, `gustDrop`, `gustSpeed`, `gustPush`, `tumbleFor`, `recoverFor` in `tuning.opening`.
-4. At 6.25 seconds the cygnet loses the formation and descends for five seconds, travelling forward onto the near slope while
+   `gustLift`, `gustShove`, `gustSpeed`, `gustPush`, `tumbleFor` in `tuning.opening`.
+4. From the gust the cygnet descends for five seconds, travelling forward onto the near slope while
    the family continues north. Its landing remains ahead along the flock's bearing, and its descent curve
    cannot overshoot and double back. The camera eases along the slope to follow the descent, keeping the island
    as a reference. No camera snap at separation. The descending music starts on separation without waiting

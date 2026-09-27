@@ -88,8 +88,9 @@ export class IslandChapter implements Chapter {
   private readonly front: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(), speed: 0, strength: 0 };
   private readonly station = new THREE.Vector3();
   private readonly pushEye = new THREE.Vector3();
+  /** Where the gust will meet the back of the V, known before it sets off. */
+  private readonly hitPoint = new THREE.Vector3();
   private gustFrom = 0;
-  private hit = false;
   private readonly eye = new THREE.Vector3();
   private watchUntil = 0;
   private nextLook = 0;
@@ -437,7 +438,7 @@ export class IslandChapter implements Chapter {
         this.findFallen(c.position.x, c.position.z);
         flock.pass(c.position.x, c.position.z, c.position.y + tuning.opening.flockHeight, -2.5, 9, 0);
         this.tmp.copy(this.fallen)
-          .addScaledVector(flock.direction, -(tuning.opening.flockSpeed * tuning.opening.flight + tuning.opening.fallTravel))
+          .addScaledVector(flock.direction, -(tuning.opening.flockSpeed * tuning.opening.gustAt + tuning.opening.fallTravel))
           .setY(c.position.y + tuning.opening.flockHeight);
         flock.carryCygnet(tuning.opening.flockSpeed, this.tmp);
         cygnet.flyWith(flock.tail(this.left), flock.heading, 0.6);
@@ -445,44 +446,30 @@ export class IslandChapter implements Chapter {
       }
     } else if (this.beat === 'skein') {
       const { cygnet, flock } = this.cast;
-      c.lookAt = t < tuning.opening.flight * 0.4 ? flock.head : cygnet.position;
+      const o = tuning.opening;
+      c.lookAt = t < o.gustAt * 0.4 ? flock.head : cygnet.position;
+      flock.tail(this.station);
+      this.blowGust(t);
       if (!this.dropped) {
-        const o = tuning.opening;
-        flock.tail(this.station);
-        this.blowGust(t);
-        const since = t - o.gustAt;
-        if (since >= 0 && !this.hit) {
-          this.hit = true;
-          const d = flock.direction;
-          cygnet.tumble(d.x * this.front.dir.y - d.z * this.front.dir.x);
-          cygnet.call(false);
-          this.nextCall = time + 1.3;
-        }
-        /**
-         * Working harder than the adults and just holding its place, until the gust puts it over and out of it.
-         * Then everything it has, back toward its station, and not enough.
-         */
-        const recovered = THREE.MathUtils.clamp((since - o.tumbleFor) / o.recoverFor, 0, 1);
-        const effort = since < 0 ? 0.55 + 0.15 * Math.sin(t * 2.3) : 0.2 + 0.8 * (1 - THREE.MathUtils.smoothstep(recovered, 0.35, 1));
-        const shoved = since < 0 ? 0 : THREE.MathUtils.smootherstep(since, 0, o.tumbleFor * 1.1);
-        const dropped = since < 0 ? 0 : THREE.MathUtils.smootherstep(since, 0.1, o.tumbleFor + 0.4);
-        this.left.copy(this.station)
-          .addScaledVector(flock.direction, -t * 0.12 - Math.max(0, since) * 1.8 - recovered * recovered * 4)
-          .add(this.tmp.set(this.front.dir.x, 0, this.front.dir.y).multiplyScalar(o.gustShove * shoved));
-        this.left.y += -t * 0.05 - o.gustDrop * dropped + Math.sin(Math.PI * recovered) * 1.1;
-        cygnet.flyWith(this.left, flock.heading, effort);
-        if (t > tuning.opening.flight) {
+        /** Working harder than the adults and only just holding its place, until the gust puts it over and out of it. */
+        this.left.copy(this.station).addScaledVector(flock.direction, -t * 0.12);
+        this.left.y -= t * 0.05;
+        cygnet.flyWith(this.left, flock.heading, 0.55 + 0.15 * Math.sin(t * 2.3));
+        if (t >= o.gustAt) {
           // Retire the reserved station, retaining the companion's exact last position for the descent.
           flock.dropOne(this.tmp);
           this.dropped = true;
           this.fallAt = time;
-          cygnet.plummet(this.left, this.fallen, tuning.opening.fall, flock.heading);
+          const d = flock.direction;
+          const shove = this.tmp.set(this.front.dir.x, 0, this.front.dir.y).multiplyScalar(o.gustShove)
+            .addScaledVector(d, o.flockSpeed - 0.12);
+          cygnet.plummet(this.left, this.fallen, o.fall, flock.heading, shove, d.x * this.front.dir.y - d.z * this.front.dir.x);
           cue('fallen');
         }
       }
       /** It lands. The child does not move for a moment, and then runs. */
       /** It calls the whole way down and keeps calling on the ground. Nothing else is making a sound. */
-      if ((this.dropped || this.hit) && !cygnet.carried && time > this.nextCall) {
+      if (this.dropped && !cygnet.carried && time > this.nextCall) {
         cygnet.call(false);
         this.nextCall = time + (cygnet.state === 'falling' ? 1.1 : 1.9) + Math.random() * 0.5;
       }
@@ -531,7 +518,8 @@ export class IslandChapter implements Chapter {
   private aimGust(): void {
     const o = tuning.opening;
     const d = this.cast.flock.direction;
-    this.tmp.copy(this.left).addScaledVector(d, o.flockSpeed * o.gustAt).sub(this.outlookEye);
+    this.hitPoint.copy(this.left).addScaledVector(d, o.flockSpeed * o.gustAt);
+    this.tmp.copy(this.hitPoint).sub(this.outlookEye);
     this.front.dir.set(-this.tmp.z, this.tmp.x).normalize();
     this.front.speed = o.gustSpeed;
     this.front.strength = 0;
@@ -539,7 +527,6 @@ export class IslandChapter implements Chapter {
     this.tmp.x -= this.front.dir.x * o.gustSpeed * o.gustRun;
     this.tmp.z -= this.front.dir.y * o.gustSpeed * o.gustRun;
     this.gustFrom = Math.max(heightAt(this.tmp.x, this.tmp.z), 0) + 2;
-    this.hit = false;
   }
 
   /** Up off the grass of the slope and into the sky, reaching the back of the V at `gustAt`, and on past it. */
@@ -652,14 +639,14 @@ export class IslandChapter implements Chapter {
     if (this.beat === 'skein') {
       const k = this.cast.cygnet.position;
       const t = this.now - this.beatStart;
-      const follow = THREE.MathUtils.smootherstep(t, 0.25, tuning.opening.flight * 0.45);
-      const closer = THREE.MathUtils.smootherstep(t, tuning.opening.flight * 0.5, tuning.opening.flight);
+      const follow = THREE.MathUtils.smootherstep(t, 0.25, tuning.opening.gustAt * 0.45);
+      const closer = THREE.MathUtils.smootherstep(t, tuning.opening.gustAt * 0.5, tuning.opening.gustAt);
       const descent = this.dropped ? THREE.MathUtils.smootherstep(this.now - this.fallAt, 0, tuning.opening.fall) : 0;
       const landing = this.dropped ? THREE.MathUtils.smootherstep(this.now - this.fallAt, tuning.opening.fall * 0.7, tuning.opening.fall) : 0;
       this.skyLook.copy(k).lerp(this.cast.flock.head, 0.5 * (1 - closer));
       // In toward the one the gust has hold of, then on down the slope with it to make room for the landing.
       const o = tuning.opening;
-      if (!this.dropped) this.pushEye.lerpVectors(this.outlookEye, this.station, o.gustPush * THREE.MathUtils.smootherstep(t, o.gustAt - 0.8, o.gustAt + 1.6));
+      this.pushEye.lerpVectors(this.outlookEye, this.hitPoint, o.gustPush * THREE.MathUtils.smootherstep(t, o.gustAt - 1.4, o.gustAt + 1));
       this.skyEye.copy(this.fallen).add(this.tmp.set(12, 9, -22));
       this.skyEye.lerpVectors(this.pushEye, this.skyEye, descent);
       // Keep the bird above centre, leaving the sea and slope below it as a distance reference.
