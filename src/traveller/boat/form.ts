@@ -11,19 +11,27 @@ interface Form {
   beam: number;
   /** Higher keeps the hull full further forward before it closes to the stem. */
   fullness: number;
+  /** Below 1 the planking closes to the stem in a rounded curve rather than a point. */
+  round: number;
   /** The transom's width, as a fraction of the beam. */
   transom: number;
   /** The top of the planking `u` of the way from transom (0) to stem (1). */
   gunwale: (u: number) => number;
   /** How much wider the hull is at the gunwale than at the turn of the bilge. */
   flare: number;
-  /** How far the stem leans forward and the transom aft as they rise above the shell. */
+  /** How round the bottom is: 0.7 is the shell's own boxy U, 1 an ellipse. */
+  section: number;
+  /** How far the keel lifts toward the transom, so the stern sweeps up clear of the water. */
+  rocker: number;
+  /** How far the stem swells forward and the transom aft between the keel and the gunwale. */
   rake: { bow: number; stern: number };
   /** Where the child sits: the thwart's height. */
   seat: number;
   strakes: number;
   /** The concept's finish: honey planking, a cream strake hung with rope, a stout dark mast. */
   concept: boolean;
+  /** A white post at the stem carrying a lantern. */
+  lantern: boolean;
 }
 
 /** A sheer that sweeps up from its lowest point `low` of the way along to `stern` and `bow` at the ends. */
@@ -33,24 +41,22 @@ const sweep = (mid: number, stern: number, bow: number, low: number, bend = 2) =
 const firstSpring = { stern: 0.13, sternTo: 0.42, bow: 0.05, bowFrom: 0.75 };
 const FORMS: Record<string, Form> = {
   first: {
-    length: 4.8, beam: 0.95, fullness: 3.2, transom: 0.7, flare: 0, rake: { bow: 0, stern: 0 }, seat: 0.02, strakes: 8, concept: false,
+    length: 4.8, beam: 0.95, fullness: 3.2, round: 1, transom: 0.7, flare: 0, section: 0.7, rocker: 0, rake: { bow: 0, stern: 0 },
+    seat: 0.02, strakes: 8, concept: false, lantern: false,
     gunwale: (u) => SHELL.sheer * u * u + firstSpring.stern * Math.max(0, 1 - u / firstSpring.sternTo) ** 2
       + firstSpring.bow * THREE.MathUtils.smoothstep(u, firstSpring.bowFrom, 1),
   },
   /** Sides raised to the seated child's waist; the seat, length and beam as they were. */
   waist: {
-    length: 4.8, beam: 1.02, fullness: 3.6, transom: 0.5, flare: 0.08, rake: { bow: 0.28, stern: 0.3 }, seat: 0.02, strakes: 10, concept: true,
+    length: 4.8, beam: 1.02, fullness: 3.6, round: 1, transom: 0.5, flare: 0.08, section: 0.7, rocker: 0, rake: { bow: 0.2, stern: 0.2 },
+    seat: 0.02, strakes: 10, concept: true, lantern: false,
     gunwale: sweep(0.62, 1.0, 1.3, 0.42, 2.2),
   },
-  /** The concept's tub: shorter and beamier, the child sat low with the gunwale at the chest, a strong sheer. */
-  tub: {
-    length: 4.1, beam: 1.1, fullness: 4.2, transom: 0.47, flare: 0.1, rake: { bow: 0.3, stern: 0.32 }, seat: -0.14, strakes: 11, concept: true,
-    gunwale: sweep(0.86, 1.3, 1.62, 0.44, 2.2),
-  },
-  /** The tub at full length and broader still: a bigger boat as well as a deeper one. */
-  big: {
-    length: 4.8, beam: 1.2, fullness: 4.2, transom: 0.47, flare: 0.1, rake: { bow: 0.3, stern: 0.32 }, seat: -0.14, strakes: 12, concept: true,
-    gunwale: sweep(0.9, 1.36, 1.72, 0.44, 2.2),
+  /** A little smaller than waist-deep, round in every direction, wide planks, a white post and lantern at the stem. */
+  cute: {
+    length: 4.4, beam: 1.0, fullness: 3.4, round: 0.72, transom: 0.52, flare: 0.07, section: 0.88, rocker: 0.36,
+    rake: { bow: 0.26, stern: 0.24 }, seat: 0.02, strakes: 6, concept: true, lantern: true,
+    gunwale: sweep(0.5, 0.86, 1.1, 0.46, 2.0),
   },
 };
 const FORM = FORMS[typeof location === 'undefined' ? '' : new URLSearchParams(location.search).get('hull') ?? ''] ?? FORMS.first;
@@ -60,6 +66,8 @@ export const BEAM = FORM.beam;
 export const DEPTH = SHELL.depth;
 export const STRAKES = FORM.strakes;
 export const CONCEPT = FORM.concept;
+export const LANTERN = FORM.lantern;
+export const SECTION = FORM.section;
 /** Floorboards, laid across the ribs. They sit above the waterline, so the sea is never seen inside the hull. */
 export const FLOOR_Y = -0.24;
 /** How deep the hull floats: local y 0 rides this far above the sea, putting the waterline below the floorboards. */
@@ -70,13 +78,17 @@ export const BOW_Z = 0.55 * LENGTH;
 /** The mast stands this far forward of the hull's origin; the sail swings about it. */
 export const MAST_Z = 0.55;
 
-/** Half-width, depth and sheer of the hull `u` of the way from transom (0) to stem (1). */
-export const halfWidth = (u: number) => BEAM * (1 - Math.pow(u, FORM.fullness)) * (FORM.transom + (1 - FORM.transom) * Math.sin(u * Math.PI));
-export const hullDepth = (u: number) => DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI));
+/** Half-width of the hull at the turn of the bilge `u` of the way from transom (0) to stem (1). */
+export const halfWidth = (u: number) =>
+  BEAM * (1 - Math.pow(u, FORM.fullness)) ** FORM.round * (FORM.transom + (1 - FORM.transom) * Math.sin(u * Math.PI));
 export const sheer = (u: number) => SHELL.sheer * u * u;
+/** How far the keel lies below the turn of the bilge: shallowest at the stem, lifting toward the transom. */
+export const keelDrop = (u: number) =>
+  DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI)) * (1 - 0.5 * u * u) * (1 - FORM.rocker * (1 - u) ** 3);
+export const keel = (u: number) => sheer(u) - keelDrop(u);
 /** The top of the planking, where the gunwale rail runs. */
 export const gunwale = (u: number) => Math.max(FORM.gunwale(u), sheer(u));
-/** How much the topsides flare out from the turn of the bilge: most amidships, none at the transom or the stem. */
+/** How much the topsides swell out above the turn of the bilge: most amidships, none at the transom or the stem. */
 export const flare = (u: number) => FORM.flare * Math.sin(u * Math.PI) ** 0.6;
 /** The planking's half-width at the gunwale. */
 export const gunwaleHalf = (u: number) => halfWidth(u) * (1 + flare(u));
@@ -99,24 +111,16 @@ export const MAST_TOP = SAIL_TACK + 4.2;
 export const BOOM_LENGTH = 2.8;
 
 /**
- * The ends lean out as they rise above the shell, the stem forward and the transom aft, easing in from upright so
- * the planking bends rather than kinks. Only the drawn hull leans; the shell it rests on does not.
+ * The ends swell out between the keel and the gunwale, the stem forward and the transom aft, so the hull's
+ * profile is round at both ends. Above the gunwale they stand upright. Only the drawn hull changes; the shell it
+ * rests on does not.
  */
 export function rake(p: THREE.Vector3): THREE.Vector3 {
   const u = stationU(p.z);
-  const h = Math.max(0, p.y - sheer(u));
+  const s = THREE.MathUtils.clamp((p.y - keel(u)) / Math.max(gunwale(u) - keel(u), 1e-3), 0, 1);
   const lean = FORM.rake.bow * THREE.MathUtils.smoothstep(u, 0.72, 1) - FORM.rake.stern * (1 - THREE.MathUtils.smoothstep(u, 0, 0.32));
-  p.z += lean * (h * h) / (h + 0.3);
+  p.z += lean * (1 - (1 - s) ** 2);
   return p;
-}
-
-/** A point on the shell: `th` runs round the section from the starboard gunwale (0) under the keel to port (PI). */
-export function shellPoint(u: number, th: number, out: THREE.Vector3): THREE.Vector3 {
-  return out.set(
-    halfWidth(u) * Math.cos(th),
-    sheer(u) - hullDepth(u) * Math.pow(Math.sin(th), 0.7) * (1 - 0.5 * u * u),
-    stationZ(u),
-  );
 }
 
 /**
@@ -155,11 +159,11 @@ export function contactShell(): THREE.BufferGeometry {
   return geo;
 }
 
-/** Where the floorboards meet the inside of the shell at station `u`: their height and half-width there. */
+/** Where the floorboards meet the inside of the hull at station `u`: their height and half-width there. */
 export function floorAt(u: number): { y: number; half: number } {
-  // At the narrow bow the shell rises above the main floor level. Follow it inside the hull.
-  const y = Math.max(FLOOR_Y, sheer(u) - hullDepth(u) * (1 - 0.5 * u * u) + 0.02);
-  const drop = (sheer(u) - y) / (hullDepth(u) * (1 - 0.5 * u * u));
-  const sin = Math.min(1, Math.max(0, drop)) ** (1 / 0.7);
+  // At the narrow bow the hull rises above the main floor level. Follow it inside.
+  const y = Math.max(FLOOR_Y, keel(u) + 0.02);
+  const drop = (sheer(u) - y) / keelDrop(u);
+  const sin = Math.min(1, Math.max(0, drop)) ** (1 / SECTION);
   return { y, half: halfWidth(u) * Math.sqrt(Math.max(0, 1 - sin * sin)) };
 }

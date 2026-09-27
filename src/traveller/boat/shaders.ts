@@ -132,7 +132,7 @@ void main() {
     /** Worn through to the wood along the bottom, where it drags. */
     float worn = (1.0 - smoothstep(-0.52, -0.36, vLocal.y)) * smoothstep(0.35, 0.7, vnoise(vec2(along, across) * 9.0));
     alb = mix(alb, vec3(0.42, 0.24, 0.12), worn * 0.6);
-  } else {
+  } else if (kind < ${glsl(KIND.transom + 0.5)}) {
     float b = (vLocal.y - ${glsl(FLOOR_Y)}) / 0.19;
     alb *= 1.0 + (hash12(vec2(floor(b), 23.0)) - 0.5) * 0.1 * (1.0 - smoothstep(0.2, 0.5, fwidth(b)));
     alb *= 1.0 - lines(b, 0.03) * 0.4;
@@ -164,6 +164,12 @@ void main() {
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0) * max(dot(-V, uSunDir), 0.0);
   col += uSunColor * rim * 0.12 * sun;
   col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
+  if (kind > ${glsl(KIND.transom + 0.5)}) {
+    /** The lantern's glass: dull amber by day, lit from within as the sun goes down and through the night. */
+    float lit = max(uNight, 1.0 - smoothstep(0.04, 0.28, uSunDir.y));
+    vec3 flame = vec3(1.9, 1.2, 0.55) * (0.9 + 0.1 * sin(uTime * 7.0) * sin(uTime * 3.1));
+    col = mix(col * 0.8 + uSunColor * sheen * 2.0, flame, lit);
+  }
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 

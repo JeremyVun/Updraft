@@ -11,6 +11,10 @@ After seeing the first pass (before/after stills in `/tmp/updraft-boat-look-shot
 
 > "boat is a bit too shallow and small. would like to see it look more like the concept art boat./Users/jeremy/Desktop/cloud-boats.mp4 - specifically teh boat on the right"
 
+On the three study hulls (A waist-deep, B concept tub, C big tub):
+
+> "ok, i think it should be just a bit slightly smaller than waist deep. With a cuter, more rounded sillouhette and wider planks like in the concept, and a thicker white beam at the front with the lamp. B and C all look way too big and unmanageable and don't let the game feel like a dream."
+
 The reference, kept here: `assets/art-direction/boat-concept-kite-drawn.png` and `-2.png` (frames of the right-hand boat
 in his animation, which plays backwards) and `boat-concept-kite-drawn-still.png` (the concept still it came from). The
 kite tow and the bow lantern in it belong to the stairs chapter only (branch `stairs`); the boat itself is the target
@@ -26,3 +30,8 @@ for the whole game.
   new hulls take the concept's finish: honey planking, a cream rubbing strake hung with rope, a stout dark mast, a
   raked stem and transom. The switch is temporary: the chosen hull becomes the only form, then boarding, the jetty
   step, grounding and berths are reconciled with it.
+- Jeremy chose a hull a little smaller than waist-deep: `?hull=cute`. It is 4.4 m long; the gunwale sits at the
+  seated child's belly. It is round everywhere: an elliptical bottom, sides that swell, a stern that lifts clear of
+  the water, and a stem and transom that curve out. It has six wide strakes. A thick white post stands at the stem
+  with a lantern on it, lit from sunset through the night. The stairs branch hangs its own bow lantern for that
+  chapter; when the branches meet, the chapter should light this one instead.
