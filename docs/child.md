@@ -231,8 +231,8 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
     the concept's, and our face is about 12% wider. The concept's ears are larger and show inside the opening.
   - Sheets shown to Jeremy, in `/tmp/child3`: `checkpoint4-hood.png`, `checkpoint4-bag.png`,
     `checkpoint4-straps.png` and `checkpoint4-walk-behind.png`.
-- Round 4, animation (2026-09-27, `child-rebuild` to `b64c47b`), approved by Jeremy, after his ask above. The knobs are in
-  `traveller.ts` unless noted.
+- Round 4, animation (2026-09-27, `child-rebuild` to `b64c47b`), approved by Jeremy, after his ask above. The knobs
+  are in `traveller.ts` unless noted.
   - **Coat from the side** (`COAT` in `garments.ts`): below 1.18 the rows are deeper and further forward, so the hem
     flares front and back as well as sideways and keeps the concept's A-line in profile. The back at bag height barely
     moved, so the bag still sits on the coat.
