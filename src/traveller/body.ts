@@ -110,7 +110,7 @@ export function buildChild(): Rig {
 const HOOD_AT = HOOD.c.clone().sub(BODY_ORIGIN);
 const HOOD_KEEP = HOOD.r.clone().addScalar(0.04);
 const BAG_AT = new THREE.Vector3(BAG.c.x, BAG.c.y - BODY_ORIGIN.y, BAG.c.z - 0.02);
-const BAG_KEEP = new THREE.Vector3(0.33, 0.3, 0.26);
+const BAG_KEEP = new THREE.Vector3(0.35, 0.36, 0.27);
 const sample = { p: new THREE.Vector3(), n: new THREE.Vector3(), fold: 0 };
 const away = new THREE.Vector3();
 

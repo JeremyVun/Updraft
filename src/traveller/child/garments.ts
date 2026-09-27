@@ -37,13 +37,13 @@ const COAT = [
   [1.51, 0.268, 0.222, 0.002],
   [1.46, 0.29, 0.238, 0.006],
   [1.4, 0.303, 0.252, 0.012],
-  [1.3, 0.318, 0.272, 0.02],
-  [1.18, 0.338, 0.29, 0.024],
-  [1.04, 0.366, 0.306, 0.02],
+  [1.3, 0.33, 0.28, 0.022],
+  [1.18, 0.352, 0.298, 0.026],
+  [1.04, 0.377, 0.312, 0.02],
   [0.88, 0.404, 0.33, 0.01],
-  [0.72, 0.443, 0.358, 0.0],
-  [0.58, 0.48, 0.386, -0.01],
-  [0.45, 0.512, 0.41, -0.018],
+  [0.72, 0.434, 0.354, 0.0],
+  [0.58, 0.464, 0.378, -0.01],
+  [0.45, 0.49, 0.4, -0.018],
 ];
 export const COAT_TOP = 1.625;
 
@@ -398,17 +398,17 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
  * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
  */
-export const FACE = { c: V(0, 2.03, 0.09), rx: 0.262, rz: 0.25, up: 0.3, down: 0.262 };
+export const FACE = { c: V(0, 2.03, 0.09), rx: 0.262, rz: 0.25, up: 0.3, down: 0.278 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
   const ct = Math.cos(theta);
-  /** Below the eyes the face fills out and stays full to a round chin: a broad U, never a V. */
-  const ring = ct >= 0 ? Math.sin(theta) : Math.pow(1 - Math.pow(-ct, 2.2), 1 / 2.2);
-  const low = smooth(0.1, -0.55, ct);
-  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.1 * low);
+  /** Full cheeks below the eyes, rounding in to a smaller chin: a soft U, never a V and never a box. */
+  const ring = ct >= 0 ? Math.sin(theta) : Math.pow(1 - Math.pow(-ct, 2.3), 1 / 2.3);
+  const cheek = bump(ct + 0.4, 0.35);
+  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.08 * cheek);
   const y = (ct >= 0 ? FACE.up : FACE.down) * ct;
-  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.06 * low * bump(Math.abs(phi) - 0.8, 0.7));
+  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.05 * cheek * bump(Math.abs(phi) - 0.8, 0.7));
   if (z > 0) z *= 0.93;
   return out.set(x, y, z).add(FACE.c);
 }
@@ -428,7 +428,7 @@ function face(b: Builder): void {
       const p = facePoint(theta, phi);
       const ct = Math.cos(theta);
       /** How much of a small button nose this vertex carries; the shader raises it. */
-      const nose = bump(ct + 0.4, 0.075) * bump(angleTo(phi, 0), 0.11);
+      const nose = bump(ct + 0.32, 0.075) * bump(angleTo(phi, 0), 0.11);
       const skin: Skin = ct < -0.75 ? [[BONE.head, 0.8], [BONE.neck, 0.2]] : [[BONE.head, 1]];
       return { p, skin, mat: MAT.skin, k: nose, ao: 1 - 0.45 * smooth(-0.8, -0.98, ct), uv: [phi, ct] as [number, number] };
     }));
@@ -465,7 +465,7 @@ function face(b: Builder): void {
 /** The hairline's height on the head relative to the face's middle, by angle from the front. */
 function hairline(phi: number): number {
   const c = Math.cos(phi);
-  return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35);
+  return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
 }
 
 const HAIR = { c: FACE.c.clone().add(V(0, 0.012, -0.02)), rx: 0.282, ry: 0.284, rz: 0.282 };
@@ -481,9 +481,9 @@ const LOCKS: [number, number, number, number, number, number][] = [
   [0.16, 0.9, -0.44, 0.27, 0.14, 0.08],
   [-0.08, 0.86, -0.74, 0.2, 0.13, 0.06],
   [-0.4, 0.8, -0.98, 0.06, 0.12, 0.05],
-  [0.5, 0.88, 0.22, 0.24, 0.13, -0.07],
-  [0.62, 0.82, 0.66, 0.28, 0.12, -0.09],
-  [0.76, 0.76, 0.98, 0.18, 0.11, -0.07],
+  [0.3, 0.9, 0.02, 0.3, 0.13, 0.06],
+  [0.6, 0.86, 1.05, 0.44, 0.12, -0.05],
+  [0.82, 0.78, 1.15, 0.2, 0.11, -0.05],
   [1.02, 0.66, 1.18, -0.28, 0.11, 0.06],
   [-1.08, 0.64, -1.2, -0.34, 0.115, -0.06],
   [1.3, 0.54, 1.36, -0.16, 0.1, 0.05],
@@ -563,7 +563,7 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
 
 export const HOOD = {
   c: V(0, 2.065, -0.055),
-  r: V(0.4, 0.368, 0.372),
+  r: V(0.4, 0.36, 0.372),
   /** The opening faces forward and a touch down, so the brim just shades the fringe. */
   tilt: 0.1,
 };
@@ -608,10 +608,12 @@ function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.
   const back = smooth(0.3, -0.6, hz);
   const p = V(
     r.x * ring * hx * (1 - 0.11 * egg) * (1 + 0.05 * skirt),
-    r.y * yN - 0.09 * skirt * skirt * (0.45 + 0.55 * back),
+    r.y * yN - 0.06 * skirt * skirt * (0.45 + 0.55 * back),
     r.z * ring * hz * (1 - 0.05 * egg) * (1 + 0.05 * skirt * back),
   );
   p.y += 0.024 * smooth(0.5, 1.0, yN) * Math.exp(-(p.x * p.x) / 0.025);
+  /** The crown rides back over the head, the way a soft hood falls, rather than standing straight up. */
+  p.z -= 0.07 * smooth(0.2, 1.0, yN);
   const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
   const fromRim = smooth(hoodOpen(lambda), hoodOpen(lambda) + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
@@ -709,7 +711,7 @@ function hood(b: Builder): void {
 /** Where the scarf's wrap runs round the neck, by angle from the front: two turns, the lower one fuller. */
 const BANDS = [
   { y: 1.6, x: 0.262, z: 0.232, sag: 0.03, ry: 0.086, rr: 0.078, phase: 0 },
-  { y: 1.672, x: 0.232, z: 0.212, sag: -0.012, ry: 0.078, rr: 0.07, phase: 2.2 },
+  { y: 1.672, x: 0.232, z: 0.212, sag: 0.006, ry: 0.078, rr: 0.07, phase: 2.2 },
 ];
 export function wrapPath(theta: number, out = V(), band = 0): THREE.Vector3 {
   const w = BANDS[band];
@@ -757,15 +759,15 @@ function wrapBand(b: Builder, band: number): void {
 }
 
 /** Low on the back, as in the concept: the bird rides at the shoulders with its head beside the hood, not in it. */
-export const BAG = { c: V(0, 1.23, -0.48), lip: 1.42 };
-const BAG_BOTTOM = -0.27;
+export const BAG = { c: V(0, 1.23, -0.48), lip: 1.5 };
+const BAG_BOTTOM = -0.34;
 /** How square the box is round its sides: 2 would be an ellipse, higher a box with rounder and rounder corners. */
 const BAG_SQUARE = 4;
 
 /** Half-width and half-depth by how far up from the bottom (0..1): soft leather bellies out low down, under the weight. */
 function bagSize(f: number): [number, number] {
   const belly = bump(f - 0.3, 0.38);
-  return [0.25 + 0.03 * belly, 0.165 + 0.035 * belly];
+  return [0.27 + 0.03 * belly, 0.172 + 0.035 * belly];
 }
 
 /** The open top sags between the corners, and its near side, against the child, stands higher than the far. */

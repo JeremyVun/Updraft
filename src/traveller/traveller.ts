@@ -821,8 +821,8 @@ export class Traveller {
     /** Arms swing against the legs, a beat behind them, bent and pumping when they run. */
     const pace = 0.52 * moving + 0.4 * running;
     const armSwing = Math.cos(this.gait - 0.35);
-    arm(L, -pace * armSwing + 0.04, 0.3 + 0.08 * running, 0, 0.3 + 0.9 * running + Math.max(0, -armSwing) * 0.45 * moving, 0.12);
-    arm(R, pace * armSwing + 0.04, 0.3 + 0.08 * running, 0, 0.3 + 0.9 * running + Math.max(0, armSwing) * 0.45 * moving, 0.12);
+    arm(L, -pace * armSwing + 0.04, 0.24 + 0.13 * running, 0, 0.14 + 1.06 * running + Math.max(0, -armSwing) * 0.45 * moving, 0.12);
+    arm(R, pace * armSwing + 0.04, 0.24 + 0.13 * running, 0, 0.14 + 1.06 * running + Math.max(0, armSwing) * 0.45 * moving, 0.12);
     let lean = 0;
     let twist = 0;
     let rise = 0;

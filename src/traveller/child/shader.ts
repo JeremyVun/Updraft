@@ -148,11 +148,11 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   float cheek = exp(-dot(c, c) / 0.0034);
   alb = mix(alb, uCheek, cheek * 0.55);
   /** A tiny warm tip where the nose would catch the light. */
-  alb = mix(alb, uCheek, (0.12 + 0.22 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.1), p - vec2(0.0, -0.1)) / 0.0006));
+  alb = mix(alb, uCheek, (0.12 + 0.22 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.088), p - vec2(0.0, -0.088)) / 0.0006));
   /** And the soft shade under it, which is what lets a small nose read from straight in front. */
-  alb *= 1.0 - 0.16 * uNoseTip * exp(-(p.x * p.x) / 0.0008 - (p.y + 0.128) * (p.y + 0.128) / 0.00012);
+  alb *= 1.0 - 0.16 * uNoseTip * exp(-(p.x * p.x) / 0.0008 - (p.y + 0.116) * (p.y + 0.116) / 0.00012);
   /** Brows: short soft strokes, the only thing that carries a mood. */
-  vec2 b = vec2(abs(p.x) - 0.128, p.y - 0.08 + 4.5 * (abs(p.x) - 0.128) * (abs(p.x) - 0.128));
+  vec2 b = vec2(abs(p.x) - 0.128, p.y - 0.095 + 4.5 * (abs(p.x) - 0.128) * (abs(p.x) - 0.128));
   float brow = fill(ellipse(b, vec2(0.034, 0.0072)));
   alb = mix(alb, uBrow, brow * 0.85);
   float open = 1.0 - clamp(uBlink, 0.0, 1.0);
