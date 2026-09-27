@@ -46,7 +46,7 @@ export interface Pose {
 }
 
 export function restArm(): ArmPose {
-  return { raise: 0, out: 0.19, twist: 0, elbow: 0.25, wrist: 0 };
+  return { raise: 0, out: 0.12, twist: 0, elbow: 0.25, wrist: 0 };
 }
 
 export function newPose(): Pose {

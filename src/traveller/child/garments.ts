@@ -286,8 +286,8 @@ function mitten(b: Builder, bind: THREE.Matrix4[], left: boolean): void {
     [-0.1, 0.046, 0.06], [-0.13, 0.04, 0.052], [-0.152, 0.03, 0.038], [-0.166, 0.016, 0.02], [-0.171, 0, 0],
   ];
   for (const [y0, rx0, rz0] of prof) {
-    const y = y0 * 1.2;
-    const rx = rx0 * 1.45;
+    const y = y0 * 1.12;
+    const rx = rx0 * 1.72;
     const rz = rz0 * 1.42;
     if (rx === 0) {
       rows.push([{ p: V(0, y, 0.005).applyMatrix4(m), skin, mat: MAT.mitten }]);
@@ -300,8 +300,8 @@ function mitten(b: Builder, bind: THREE.Matrix4[], left: boolean): void {
   }
   b.rows(rows, true, V(0, -0.06, 0.005).applyMatrix4(m));
   /** The thumb, on the inside edge and forward, which is what lets a mitten read as holding rather than touching. */
-  const base = V(-mx * 0.02, -0.042, 0.075);
-  const dir = V(-mx * 0.35, -0.62, 0.7).normalize();
+  const base = V(-mx * 0.012, -0.04, 0.08);
+  const dir = V(-mx * 0.22, -0.6, 0.77).normalize();
   const rowsT: Point[][] = [];
   const side = V(mx, 0, 0).sub(dir.clone().multiplyScalar(dir.x * mx)).normalize();
   const other = V().crossVectors(dir, side);
@@ -366,8 +366,8 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
     /** Width across the foot and height through it: a wide shaft flaring to its top, broad and low along the foot. */
     const footness = smooth(0.42, 0.62, along);
     const flare = 0.012 * smooth(0.18, 0.0, along);
-    const rx = (THREE.MathUtils.lerp(0.138, 0.14, footness) + flare) * (1 - 0.68 * smooth(0.9, 1.0, along) ** 1.5);
-    const ry = (THREE.MathUtils.lerp(0.13, 0.092, footness) + flare) * (1 - 0.72 * smooth(0.88, 1.0, along) ** 1.5);
+    const rx = (THREE.MathUtils.lerp(0.13, 0.158, footness) + flare) * (1 - 0.68 * smooth(0.9, 1.0, along) ** 1.5);
+    const ry = (THREE.MathUtils.lerp(0.125, 0.094, footness) + flare) * (1 - 0.72 * smooth(0.88, 1.0, along) ** 1.5);
     const side = V(1, 0, 0);
     const up = V().crossVectors(tan, side).normalize();
     const w = smooth(0.4, 0.58, along);
@@ -379,7 +379,11 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
       if (p.z > 0.13) p.x *= 1 + 0.05 * smooth(0.13, 0.22, p.z);
       p.y = Math.max(p.y, 0.006);
       p.x += at.x;
+      /** The sole stands a little proud all round, so the boot sits on a welt rather than a cut-off tube. */
       const sole = 1 - smooth(0.014, 0.034, p.y);
+      const welt = 0.012 * (1 - smooth(0.03, 0.05, p.y));
+      p.x += Math.cos(a) * welt;
+      if (p.z > 0.15 || p.z < 0.0) p.z += Math.sign(p.z - 0.08) * welt;
       return { p, skin, mat: MAT.boot, k: sole, ao: 1 - 0.3 * sole, uv: [along, a] as [number, number] };
     }));
   }
