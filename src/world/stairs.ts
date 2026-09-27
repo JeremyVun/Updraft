@@ -226,6 +226,7 @@ const BELLY_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec2 uCentre;
 uniform vec3 uCalmAt;
+uniform vec2 uStairAt;
 out vec3 vWorld;
 out float vRing;
 BILLOW
@@ -240,6 +241,7 @@ const BELLY_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec2 uCentre;
 uniform vec3 uCalmAt;
+uniform vec2 uStairAt;
 uniform float uReach;
 in vec3 vWorld;
 in float vRing;
@@ -277,7 +279,10 @@ float belly(vec2 xz) {
   float calm = smoothstep(uCalmAt.z * 0.45, uCalmAt.z, length(xz - uCalmAt.xy));
   float big = vnoise(p * 0.024 + 2.3);
   float heaps = big * big * 7.0 + vnoise(p * 0.07 + 7.1) * 2.2 + vnoise(p * 0.19 + 1.7) * 0.6;
-  return heaps * (0.1 + 0.9 * calm);
+  // Round the stair it hangs down in a belly of its own, and the stair goes up into it.
+  vec2 fromStair = xz - uStairAt;
+  float swallow = 2.8 * exp(-dot(fromStair, fromStair) / 60.0) * (0.85 + 0.3 * vnoise(xz * 0.5 + uTime * 0.05));
+  return heaps * (0.1 + 0.9 * calm) + swallow;
 }`;
 
 /** Gathers blocks, rails and posts into one geometry with a colour, a material id and a mist amount on every vertex. */
@@ -496,7 +501,7 @@ export class CloudStairs {
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
   readonly wake: CloudWake;
-  private readonly bellyUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number } };
+  private readonly bellyUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private time = 0;
@@ -609,6 +614,7 @@ export class CloudStairs {
       uCentre: { value: new THREE.Vector2(STAIRS_ISLE.x, STAIRS_ISLE.z) },
       uCalmAt: { value: new THREE.Vector3(LANE.east - 1, STAIRS_ISLE.z, 55) },
       uReach: { value: 1500 },
+      uStairAt: { value: new THREE.Vector2((LANE.west + LANE.east) / 2, flight(BELOW_CLOUD + 1).landing.z) },
     };
     this.cloudBelly = new THREE.Mesh(top, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.bellyUniforms },

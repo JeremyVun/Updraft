@@ -788,7 +788,8 @@ export class StairsChapter implements Chapter {
     }
     if (inCloud) d.clearing = THREE.MathUtils.lerp(k.clearing, k.clearingTop, climb);
     const white = ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat);
-    wisps.amount = white ? S(c.position.y + 1.2, CLOUD.base - 2, CLOUD.base + 0.8) * (1 - S(c.position.y, CLOUD.top - 0.8, CLOUD.top + 0.6)) : 0;
+    wisps.amount = (white ? S(c.position.y + 1.2, CLOUD.base - 2, CLOUD.base + 0.8) * (1 - S(c.position.y, CLOUD.top - 0.8, CLOUD.top + 0.6)) : 0)
+      * (this.beat === 'loop' ? 0.55 : 1);
     wisps.centre.set(c.position.x, c.position.y + 1, c.position.z);
     // Across both the side view up the stair and the view along it on the ring's landing.
     wisps.wind.set(0.7, 0.12, -0.7).normalize().multiplyScalar(k.windInCloud * (0.45 + 0.55 * climb));
@@ -813,9 +814,9 @@ export class StairsChapter implements Chapter {
       case 'wonder': {
         // From the south, low: the child small on the grass, the stair going up into the cloud, the sun off to the left.
         s.from = this.from.set(-0.22, 0, 1).normalize();
-        s.target.set(STAIRS_FOOT.x - 5, CLOUD.base - 8, STAIRS_FOOT.z - 2);
-        s.distance = 30;
-        s.height = -3.5;
+        s.target.set(STAIRS_FOOT.x - 5, CLOUD.base - 5, STAIRS_FOOT.z - 2);
+        s.distance = 34;
+        s.height = -7;
         this.pace = 0.3;
         return;
       }

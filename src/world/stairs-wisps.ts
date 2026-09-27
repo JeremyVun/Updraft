@@ -79,7 +79,7 @@ export class CloudWisps {
       w.p.set(at.x + Math.cos(t) * 0.35, at.y + 0.2 + (i % 2) * 0.35, at.z + Math.sin(t) * 0.35);
       w.v.set(0, 0, 0);
       w.r = 1.3 + (i % 3) * 0.15;
-      w.a = 0.95;
+      w.a = 1.6;
       w.age = 0.6;
       w.hold = seconds;
     }

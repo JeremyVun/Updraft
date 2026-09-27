@@ -152,8 +152,10 @@ try {
     await shot(`08-ring-${String(i).padStart(2, '0')}`);
   }
   s = await until((x) => x.beat === 'emerge', 90000, 100);
-  await page.waitForTimeout(1200);
-  await shot('09-emerge');
+  for (let i = 1; i <= 6; i++) {
+    await page.waitForTimeout(900);
+    await shot(`09-emerge-${i}`);
+  }
   s = await until((x) => x.beat === 'nest', 40000, 100);
   await page.waitForTimeout(3500);
   await shot('10-nest');
