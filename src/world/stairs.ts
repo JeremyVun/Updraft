@@ -6,7 +6,7 @@ import type { PointerInput } from '../input/pointer';
 import type { Deck } from './decks';
 import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
+import { HAZE_SHADE_GLSL, hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
@@ -50,6 +50,7 @@ void main() {
  */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${HAZE_SHADE_GLSL}
 uniform float uShown;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -86,8 +87,9 @@ void main() {
   float toward = max(0.0, dot(-V, uSunDir)) * 0.6 + 0.4;
   float rim = pow(1.0 - max(0.0, dot(N, V)), 3.0) * toward;
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * wrap * wrap * sun * 0.95) + uSunColor * (gloss + rim * 0.3) * sun;
-  vec3 mist = uSkyAmbient * 0.85 + uSunColor * 0.1;
-  col = mix(col, mist, smoothstep(0.1, 0.8, vMist) * 0.55);
+  // The bottoms of the steps go into the haze they rest on, in its colour.
+  vec3 mist = hazeShade() * 0.85 + uSunColor * 0.12 * sun;
+  col = mix(col, mist, smoothstep(0.0, 0.3, vMist) * (0.4 + 0.4 * fray));
   gl_FragColor = vec4(applyFog(col, vWorld), keep);
 }`;
 
@@ -282,7 +284,28 @@ function buildLanding(b: Build, L: Landing): void {
 
 /** How much cloud a flight rests on: none on the grass, more the higher it hangs, and in the white it is half cloud. */
 function cloudUnder(index: number): number {
+  // The loop hangs clear in its hollow in the white, over nothing: its last flight is drawn in to fool the eye, and
+  // haze under the rest and none under that would give it away.
+  if (index >= LOOP.corner && index <= LOOP.onward) return 0;
   return index === 1 ? 0 : index === 2 ? 0.55 : index <= BELOW_CLOUD ? 0.9 : 1.3;
+}
+
+/**
+ * The haze a flight and the landing it arrives on rest on, placed relative to `origin`. Each flight's haze runs on
+ * into its landing's, and each landing's into the next flight's where there is haze to meet.
+ */
+function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THREE.Mesh[] {
+  if (amount <= 0) return [];
+  const L = landingOf(f.index);
+  const floor = at(landingFrame(L), (L.x0 + L.x1) / 2, 0, (L.z0 + L.z1) / 2);
+  const meets = (face: Face) => L.openings.some(o => o.face === face);
+  const haze = [
+    hazeUnderFlight(flightFrame(f), STEP.going * (f.risers - 1), STEP.rise * f.risers, STEP.width + 2 * STRING.thick, amount,
+      { z0: f.index > 1 && cloudUnder(f.index - 1) > 0, z1: true }),
+    hazeUnderLanding(floor, L.x1 - L.x0, L.z1 - L.z0, amount, { z0: true, x0: meets('right'), x1: meets('left'), z1: meets('ahead') }),
+  ];
+  for (const m of haze) m.matrix.premultiply(new THREE.Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z));
+  return haze;
 }
 
 function stairMaterial(shown = { value: 1 }): THREE.ShaderMaterial {
@@ -356,20 +379,14 @@ export class CloudStairs {
   constructor() {
     this.group.name = 'stairs-in-the-clouds';
     const material = stairMaterial();
-    const puffs = puffMaterial();
     const fixed = new Build();
-    const cloud: Puff[] = [];
     for (let i = 1; i <= FLIGHTS; i++) {
       if ((LOOSE as readonly number[]).includes(i)) continue;
       const f = flight(i);
       buildFlight(fixed, f);
       buildLanding(fixed, landingOf(i));
-      cloud.push(...flightPuffs(f, cloudUnder(i)));
+      for (const haze of hazeUnder(f, cloudUnder(i))) this.group.add(haze);
     }
-    const under = new THREE.Mesh(puffGeometry(cloud), puffs);
-    under.name = 'stairs-cloud';
-    under.frustumCulled = false;
-    this.group.add(under);
     // Side by side at the open edge, toes to the drop and the sun.
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.07, 0, -0.02)).multiply(new THREE.Matrix4().makeRotationY(0.14)));
@@ -420,9 +437,7 @@ export class CloudStairs {
       const group = new THREE.Group();
       group.name = `stairs-loose-${index}`;
       group.add(new THREE.Mesh(geo, material));
-      const fluff = new THREE.Mesh(puffGeometry(flightPuffs(f, cloudUnder(index)), pivot), puffs);
-      fluff.frustumCulled = false;
-      group.add(fluff);
+      group.add(...hazeUnder(f, cloudUnder(index), pivot));
       const ghost = new THREE.Mesh(geo, ghostMaterial);
       ghost.position.copy(pivot);
       ghost.visible = false;
