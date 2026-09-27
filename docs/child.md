@@ -231,3 +231,60 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
     the concept's, and our face is about 12% wider. The concept's ears are larger and show inside the opening.
   - Sheets shown to Jeremy, in `/tmp/child3`: `checkpoint4-hood.png`, `checkpoint4-bag.png`,
     `checkpoint4-straps.png` and `checkpoint4-walk-behind.png`.
+- Round 4, animation (2026-09-27, `child-rebuild` to `da86f16`), after Jeremy's ask above. The knobs are in
+  `traveller.ts` unless noted.
+  - **Coat from the side** (`COAT` in `garments.ts`): below 1.18 the rows are deeper and further forward, so the hem
+    flares front and back as well as sideways and keeps the concept's A-line in profile. The back at bag height barely
+    moved, so the bag still sits on the coat.
+  - **Quick actions by hand targets.** The arm angles compose badly for a raised arm (the raise rolls an arm already
+    lifted out), which put the mitten across the face in the throw and the reach. Each action now places the mittens
+    in the body's frame with the elbow's direction given (`grips`, `motion.reach(…, elbow)`):
+    - throw (`THROW` keys): up beside the hood with the shoulder drawn back (`twist`), a beat, then long, forward and
+      up through the release at 0.62 and down across the front;
+    - pick-up (`PICKUP` 0.9 s): a squat with the other hand on a knee and the left mitten to where the paper lies.
+      `onDone` comes at `PICKUP_GRAB` 0.46 s, as the mitten reaches the ground, so the paper comes up in the hand;
+      the stand-up plays on after, into whatever comes next. Five story call sites pass the paper's position
+      (`pickUp(onDone, at)`);
+    - cheer: a dip, a hop into a wide V, a smaller hop, down;
+    - wave: the free hand (the right while the left holds the paper) up by the hood, waving from the elbow;
+    - reach: both arms out after it, up on the toes, then giving up slowly;
+    - bracing in a strong wind: a forearm across the lower face, elbow out.
+  - **Idle:** after 1.2 s standing, whatever hand is free holds a strap at the chest (`straps`), as in the concept's
+    three-quarter view. Glances go round to either side or up (`glanceYaw`, `glancePitch`), not back at the bag,
+    because `companion/carry.ts` already has the child look back whenever the bird nuzzles, peers or flinches. The
+    glance draws no `Math.random`: seeded checks (`flock-flight`, `sleeping-logic`) are chaotic in the random
+    sequence and flip on any extra draw.
+  - **Turns on the spot.** Story code snaps the child round with `faceToward(…, 1)` in 25 places. A turn faster than
+    walking now eases round (`yawLag`: about half a second for half a turn), the feet stepping (the gait advances with
+    the turn; `stepping` in `motion.ts`) and the head leading (`lead`). Turns no faster than walking pass straight
+    through, so walking and the boat are unchanged.
+  - **Stops:** the feet finish the step they are in and come together under the hips (`PASSING`) instead of sliding.
+  - **Run:** the elbow opens as the arm drives back past the hip and closes as the mitten comes up (`pump`).
+  - **Scarf** (`scarf.ts`): the air holds an end up near the knot (`held`, `open`), and the ends stream further
+    behind (long end's splay 0.75, was 0.95; short 1.05, was 1.25; the air of their going at `splay * 0.65`). Walking
+    and running, from the side it streams back at neck height instead of lying across the arm like a sash; from
+    behind the long end still reaches out past the bag. The dream breeze is 3 (was 2.4, `tuning.scarf.breeze`), so
+    standing it streams out rather than hanging across the arm. The chain is carried with the child's vertical
+    motion too, keeping 40% of the starts-and-stops share (`inertia`) as a bob (`lurchY`), so squatting to the paper
+    or hopping in a cheer no longer leaves the ends in the air to fling over the hood.
+  - **Gusts:** a gust arriving (`tuning.wind.arriveFrom`–`arriveFull`) turns the head toward where it comes from,
+    unless the story has their attention, and the body gives a little with its push (`gusted`, `P.tilt`).
+  - **Low reaches** (`stoop`): a story reach for something low in front, further than the arms go, bends the child
+    further over toward it, only as far as it takes, then eases back up. Only on their feet or kneeling.
+  - **Little boats:** the new arms could not reach the stranded toy hull from the old kneeling spot (a pre-existing
+    failure on the branch, gap 0.58). They now kneel 0.9 from it (`story/little-boats.ts`); gap 0.058.
+  - **Stowed paper** (`PAPER_STOW`, read by `little-boats-logic-check`): against the bag's far face and lower, so the
+    bird shows above it. It is wider than the bag, so from behind it still covers the bag.
+  - **Checks, browser-free:** all pass except `little-boats-logic-check` (characters leave the safe frame, 1.150) and
+    `plane-routing-check` (an old field), which fail identically on main. `sleeping-logic-check` now asks the pose,
+    not the old coat mesh, whether lying down has let go.
+  - **Cygnet gates**, both builds back to back: every gate passes on `085d356`. The pre-rebuild build fails only the
+    known gather turn (0.1025); ours is 0.049, and the gather's hand gap is 0.016 against 0.031.
+  - **Tried and reverted:** a soft S in the cygnet's neck in the bag. It brought the head into the hood more often
+    (`headfit` 10th percentile 0.66 against 0.81). The straight neck still reads as a post from behind and the side.
+  - Sheets for Jeremy, in `/tmp/child3`: `checkpoint5-coat-scarf.png`, `checkpoint5-walk-run.png`,
+    `checkpoint5-actions.png`, `checkpoint5-actions-behind.png` and `checkpoint5-turn-idle.png`.
+  - Capture harness additions: `verify.sh <tag>` (walk, run, idle, turn and stop on the studio set, walking over
+    land), `acts.sh <tag>` (the quick actions pinned at fixed times), `pickup.sh <tag>` (the pick-up in real time: it
+    runs on its own clock, so pinning cannot show it), `paperthrow.sh <tag>`, `boat.sh <tag>` (boarding at the
+    birches, alighting at the home jetty), `rows.py` (labelled sheets). `studio.sh` scrub actions cannot contain `;`.
