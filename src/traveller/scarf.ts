@@ -45,7 +45,7 @@ void main() {
   float ao = ground * 0.85;
   vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95 * mix(0.6, 1.0, ao));
   col += uSunColor * alb * rim * 0.755 * sun;
-  col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
+  col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 

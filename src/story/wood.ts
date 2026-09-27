@@ -467,7 +467,6 @@ export class WoodChapter implements Chapter {
     cygnet.pace = tuning.wood.frightenedPace;
     c.lean = 0;
     cygnet.call(false);
-    cue('distress');
     this.to('bolt');
   }
 
@@ -498,7 +497,6 @@ export class WoodChapter implements Chapter {
       cygnet.cower();
       cygnet.watch(c.position);
       cygnet.call(false);
-      cue('distress');
       this.nextCall = this.now + 4;
     }
     c.lookAt = cygnet.position;
@@ -516,7 +514,6 @@ export class WoodChapter implements Chapter {
     c.lookAt = cygnet.position;
     if (this.hearth && this.entranceVisible) this.hearth.reveal = 1;
     if (time > this.nextCall) {
-      cue('distress');
       cygnet.call(false);
       this.nextCall = time + 3.4 + Math.random() * 1.6;
     }

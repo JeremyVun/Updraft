@@ -18,6 +18,9 @@ export const WORLD_QUALITY = [
   { grassDensity: 1, grassReach: 1, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75 },
 ] as const;
 
+/** The High preset keeps the meadow dense further out than Auto's top rung ever does; its edge stays put. */
+export const HIGH_GRASS_REACH = 1.15;
+
 const RECENT = 90;
 /** Sustained Auto budget. Smooth vsync alone is not evidence of spare power. */
 const AUTO_PIXELS = 2.4e6;

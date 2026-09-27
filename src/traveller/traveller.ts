@@ -1142,8 +1142,16 @@ export class Traveller {
       const dx = this.lookAt.x - head.x;
       const dy = this.lookAt.y - head.y;
       const dz = this.lookAt.z - head.z;
-      const yawTo = Math.atan2(dx, dz) - this.yaw;
-      wantYaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(yawTo), Math.cos(yawTo)), -1.1, 1.1);
+      /**
+       * Which way to turn is judged from the neck, which the turn does not move: judged from the face, something held
+       * close under the chin flicks the head from side to side as each turn moves the face past it.
+       */
+      const neck = r.bones[BONE.neck].getWorldPosition(this.tmp2);
+      const nx = this.lookAt.x - neck.x;
+      const nz = this.lookAt.z - neck.z;
+      const yawTo = Math.atan2(nx, nz) - this.yaw;
+      const beneath = smooth(Math.hypot(nx, nz), 0.08, 0.25);
+      wantYaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(yawTo), Math.cos(yawTo)), -1.1, 1.1) * beneath;
       /** Looking down at something at their own feet takes a real chin-down; past this the hood swallows the face. */
       wantPitch = THREE.MathUtils.clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -0.9, 0.52);
     }

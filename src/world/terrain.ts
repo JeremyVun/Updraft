@@ -197,7 +197,7 @@ void main() {
   }
   float frost = frostAt(xz);
   if (frost > 0.0) alb = mix(alb, rimeColour() * (0.8 + 0.12 * grain + 0.06 * winterFibre), frost * mix(0.42, 0.88, smoothstep(0.42, 0.66, tiledFbm(xz * 0.35, fp.dx * 0.35, fp.dy * 0.35))) * mix(0.18, 1.0, smoothstep(0.35, 0.75, n.y)));
-  vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
+  vec3 col = alb * (hemiLight(n) + uSunColor * lit * sun + lampLight(vWorld, n) + lanternLight(vWorld, n) + dawnLight(vWorld, n)) + uSunColor * tint * back * 0.45 * sun;
   // Keep a textured pasture beyond the blade tiles. A smooth distant dome exposes their circular limit.
   float homePasture = homeAt(xz) * grassy * far;
   if (homePasture > 0.001) {

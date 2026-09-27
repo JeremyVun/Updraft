@@ -541,7 +541,6 @@ export class SleepingChapter implements Chapter {
       this.called = true;
       this.callAt = this.t;
       k.call(true);
-      cue('calling');
     }
     // A few quiet strokes suffice; time and ambient breeze never release the feather.
     if (this.windInvitation) {

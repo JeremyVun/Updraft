@@ -36,7 +36,7 @@ import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
-import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
+import { HIGH_GRASS_REACH, Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
 import { endFrame, holdForReadbacks, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
@@ -398,7 +398,8 @@ const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, wind
 }, controls.qualityMode, coarsePointer ? 1.25 : maxPixelRatio);
 function applyWorldQuality(level: QualityLevel, immediate = false): void {
   const detail = WORLD_QUALITY[params.lite ? 0 : level.detail];
-  grass.setQuality(level.grassDensity ?? detail.grassDensity, level.grassReach ?? detail.grassReach, immediate);
+  const reach = !params.lite && quality.mode === 'high' ? HIGH_GRASS_REACH : detail.grassReach;
+  grass.setQuality(level.grassDensity ?? detail.grassDensity, level.grassReach ?? reach, immediate);
   terrain.detail = detail.terrainSplit;
   water.mirrorEvery = detail.mirrorEvery;
   water.mirrorScale = detail.mirrorScale;

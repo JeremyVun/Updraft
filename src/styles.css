@@ -499,7 +499,8 @@ body.graphics-lost #veil { visibility: hidden; }
   margin-top: 14px;
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   font-size: 15px;
-  letter-spacing: .08em;
+  font-style: italic;
+  letter-spacing: .045em;
   white-space: nowrap;
   color: #fff2db;
   opacity: .62;

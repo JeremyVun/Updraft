@@ -441,7 +441,6 @@ export class HomeChapter implements Chapter {
     }
     if (this.passed && !this.criedAfter && this.t > f.callAt) {
       this.criedAfter = true;
-      cue('calling');
       cygnet.call(true);
     }
     if (c.sitting && this.t > f.setDownAt && !c.busy) this.setDown();
@@ -509,7 +508,6 @@ export class HomeChapter implements Chapter {
         cygnet.tryToFly();
       }
       if (this.t > 8 && this.now > this.nextCall) {
-        cue('calling');
         cygnet.call(true);
         this.nextCall = this.now + 6;
       }
@@ -588,7 +586,6 @@ export class HomeChapter implements Chapter {
     const phase = cygnet.fledgePhase;
     if (phase === 'turn' && !this.called) {
       this.called = true;
-      cue('calling');
       cygnet.call(true);
       this.nextCall = this.now + 1.4;
     }

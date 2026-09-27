@@ -148,31 +148,25 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   alb = mix(alb, uCheek, (0.2 + 0.32 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.104), p - vec2(0.0, -0.104)) / 0.0007));
   /** And the soft shade under it, which is what lets a small nose read from straight in front. */
   alb *= 1.0 - 0.2 * uNoseTip * exp(-(p.x * p.x) / 0.0009 - (p.y + 0.134) * (p.y + 0.134) / 0.00012);
-  /** Brows: short soft arcs, fuller toward the nose, the only thing that carries a mood. */
-  vec2 b = vec2(abs(p.x) - 0.122, p.y - 0.082 + 7.0 * (abs(p.x) - 0.122) * (abs(p.x) - 0.122));
+  /** Brows: short soft arcs close over the eyes, fuller toward the nose, the only thing that carries a mood. */
+  vec2 b = vec2(abs(p.x) - 0.122, p.y - 0.068 + 7.0 * (abs(p.x) - 0.122) * (abs(p.x) - 0.122));
   float brow = fill(ellipse(b, vec2(0.031, 0.0105 - 0.1 * clamp(b.x, 0.0, 0.031))));
   alb = mix(alb, uBrow, brow * 0.85);
   float open = 1.0 - clamp(uBlink, 0.0, 1.0);
   if (uWhites > 0.5) {
     /** A sliver of white at the outer corner of a dark eye, never a ring round it. */
-    float white = fill(ellipse(e - vec2(0.007, -0.004), vec2(0.043, 0.042 * open + 0.001)));
+    float white = fill(ellipse(e - vec2(0.008, -0.0046), vec2(0.0495, 0.0483 * open + 0.001)));
     alb = mix(alb, uWhite, white * 0.9 * smoothstep(0.1, 0.4, open));
   }
   /** The eye: a big dark upright oval, a young child's; shut, it is a soft curved lash line. */
-  float eye = fill(ellipse(e, vec2(0.043, 0.053 * open + 0.001))) * smoothstep(0.05, 0.3, open);
-  float lid = fill(abs(e.y + 0.018 - 3.5 * e.x * e.x) - 0.0045) * step(abs(e.x), 0.046) * (1.0 - open);
+  float eye = fill(ellipse(e, vec2(0.0495, 0.061 * open + 0.001))) * smoothstep(0.05, 0.3, open);
+  float lid = fill(abs(e.y + 0.0207 - 3.04 * e.x * e.x) - 0.0052) * step(abs(e.x), 0.053) * (1.0 - open);
   /** Warm brown low in the eye, where the light comes through, so it is an eye and not a bead. */
-  vec3 iris = mix(uEye, uBrow * 1.25, 0.8 * smoothstep(0.0, -0.046, e.y) * smoothstep(0.04, 0.02, length(e * vec2(1.0, 0.8))));
+  vec3 iris = mix(uEye, uBrow * 1.25, 0.8 * smoothstep(0.0, -0.053, e.y) * smoothstep(0.046, 0.023, length(e * vec2(1.0, 0.8))));
   alb = mix(alb, mix(uEye, iris, open), max(eye, lid));
-  /** Two short lashes flicking up off the outer corner. */
-  vec2 l1 = e - vec2(0.036, 0.03);
-  vec2 l2 = e - vec2(0.042, 0.014);
-  float lash = fill(length(l1 - vec2(0.8, 0.6) * clamp(dot(l1, vec2(0.8, 0.6)), 0.0, 0.017)) - 0.0042 + 0.12 * max(dot(l1, vec2(0.8, 0.6)), 0.0));
-  lash = max(lash, fill(length(l2 - vec2(0.95, 0.31) * clamp(dot(l2, vec2(0.95, 0.31)), 0.0, 0.013)) - 0.0038 + 0.12 * max(dot(l2, vec2(0.95, 0.31)), 0.0)));
-  alb = mix(alb, uEye, lash * open);
   /** One soft glint, high on the outer side, which is what keeps a big dark eye from reading as a hole. */
   vec2 g = vec2(e.x * sign(p.x), e.y);
-  alb = mix(alb, vec3(1.0), 0.85 * fill(length(g - vec2(0.014, 0.02)) - 0.008) * eye * open);
+  alb = mix(alb, vec3(1.0), 0.85 * fill(length(g - vec2(0.0161, 0.023)) - 0.0092) * eye * open);
   /** The mouth: a small relaxed line; a yawn opens it into a soft dark oval. */
   vec2 m = vec2(p.x, p.y + 0.176);
   float line = fill(abs(m.y - 4.0 * m.x * m.x) - 0.0034 * (1.0 - 0.5 * abs(m.x) / 0.032)) * step(abs(m.x), 0.032) * uMouth;
@@ -297,7 +291,7 @@ void main() {
    * The lamp stands a stride from the pillow, so it is taken square on the side turned to it and nearly let go
    * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
    */
-  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N)) * mix(0.5, 1.0, ao);
+  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N)) * mix(0.5, 1.0, ao);
   if (uLamp.w > 0.0) {
     vec3 toLamp = uLamp.xyz - vWorld;
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);

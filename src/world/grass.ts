@@ -3,6 +3,7 @@ import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
 import { params } from '../params';
+import { HIGH_GRASS_REACH } from '../gl/quality';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { FIELDS_GLSL, fieldAt, type FieldSample } from './fields';
@@ -473,6 +474,7 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   /** A rimed blade is shaded flat rather than rounded off like a stem, so a sward reads as one surface. */
   vSideDir *= 1.0 - 0.5 * rime;
   vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
+            + lanternLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
   vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)});
   vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)});
@@ -904,7 +906,7 @@ export class Grass {
       const blades = spec.cols * spec.rows;
       // Reserve all quality levels once. Sparse tiers may cover the inner rings too;
       // promotion must never allocate a new MRT or drop tiles because the lite pool was smaller.
-      spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach, 0));
+      spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach * HIGH_GRASS_REACH, 0));
       const template = bladeTemplate(spec.segments, level < specs.length - 1);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
@@ -980,7 +982,7 @@ export class Grass {
   setQuality(density: number, reach: number, immediate = false): void {
     const u = this.thinning;
     density = Math.max(0, Math.min(1, params.grass ?? (params.lite ? 0.25 : density)));
-    reach = params.lite ? 0.7 : THREE.MathUtils.clamp(reach, 0.7, 1);
+    reach = params.lite ? 0.7 : THREE.MathUtils.clamp(reach, 0.7, HIGH_GRASS_REACH);
     if (!immediate && density === u.uDensity.value && reach === this.reachTarget) return;
     u.uDensityPrevious.value = immediate ? density : THREE.MathUtils.lerp(u.uDensityPrevious.value, u.uDensity.value, u.uQualityBlend.value);
     u.uDensity.value = density;
@@ -999,7 +1001,9 @@ export class Grass {
     this.reachScale = THREE.MathUtils.lerp(this.reachFrom, this.reachTarget, u.uQualityBlend.value);
     for (let i = 0; i < this.lods.length; i++) {
       const l = this.lods[i];
-      l.spec.reach = LODS[i].reach * this.reachScale;
+      // Reach above 1 brings detail further out, never the meadow's edge.
+      const scale = i === this.lods.length - 1 ? Math.min(1, this.reachScale) : this.reachScale;
+      l.spec.reach = LODS[i].reach * scale;
       const mat = (this.group.children[i] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material;
       mat.uniforms.uClose.value.set(l.spec.reach * l.spec.thinFrom, l.spec.reach);
     }
