@@ -576,7 +576,7 @@ const creatureEnv: CreatureEnv = {
  * The low cloud over the stairs. It comes down over the sea on the way there, lies over the room, and lifts off
  * the water once the village has them: eased like the rest of the sky, so it never appears or goes at a cut.
  */
-const deckShown = { amount: 0, base: CLOUD.base, top: CLOUD.top, bubble: 0 };
+const deckShown = { amount: 0, base: CLOUD.base, top: CLOUD.top, bubble: 0, clearing: tuning.stairs.clearing };
 function updateCloudDeck(dt: number): void {
   const want = story.current.cloudDeck;
   let amount = want?.amount ?? 0;
@@ -593,7 +593,8 @@ function updateCloudDeck(dt: number): void {
   deckShown.bubble = ease(deckShown.bubble, bubble?.w ?? 0, 1.2, dt);
   const u = atmo.uniforms;
   u.uCloudDeck.value.set(STAIRS_ISLE.x, STAIRS_ISLE.z, 1400, deckShown.amount);
-  u.uCloudDeckY.value.set(deckShown.base, want?.top ?? deckShown.top, tuning.stairs.density, tuning.stairs.clearing);
+  deckShown.clearing = ease(deckShown.clearing, want?.clearing ?? tuning.stairs.clearing, 1.2, dt);
+  u.uCloudDeckY.value.set(deckShown.base, want?.top ?? deckShown.top, tuning.stairs.density, deckShown.clearing);
   if (bubble) u.uCloudBubble.value.set(bubble.x, bubble.y, bubble.z, deckShown.bubble);
   else u.uCloudBubble.value.w = deckShown.bubble;
 }

@@ -3,7 +3,7 @@ import type { PointerInput } from '../input/pointer';
 import { screenBrush } from '../creatures/motion';
 import { puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
 
-interface Wisp { p: THREE.Vector3; v: THREE.Vector3; r: number; a: number; age: number }
+interface Wisp { p: THREE.Vector3; v: THREE.Vector3; r: number; a: number; age: number; hold: number }
 
 /** How far round the child the streaming cloud reaches: across, below and above. */
 const BOX = { half: 7, below: 2.5, above: 5 } as const;
@@ -26,11 +26,12 @@ export class CloudWisps {
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private seed = 1;
+  private next = 0;
 
   constructor(count = 56) {
     const puffs: Puff[] = [];
     for (let i = 0; i < count; i++) {
-      const w: Wisp = { p: new THREE.Vector3(), v: new THREE.Vector3(), r: 1, a: 0, age: 0 };
+      const w: Wisp = { p: new THREE.Vector3(), v: new THREE.Vector3(), r: 1, a: 0, age: 0, hold: 0 };
       this.spawn(w, false);
       this.wisps.push(w);
       puffs.push({ x: 0, y: 0, z: 0, r: w.r, a: 0 });
@@ -63,9 +64,25 @@ export class CloudWisps {
     }
     w.p.add(this.centre);
     w.v.set(0, 0, 0);
+    w.hold = 0;
     w.r = 1.1 + r() * 1.6;
     w.a = 0.22 + r() * 0.3;
     w.age = upwind ? 0 : r() * 2;
+  }
+
+  /** Draws a few of the rags together round a point for a while, thick enough to hide what is in it. */
+  engulf(at: THREE.Vector3, seconds: number): void {
+    for (let i = 0; i < 6; i++) {
+      const w = this.wisps[this.next];
+      this.next = (this.next + 1) % this.wisps.length;
+      const t = (i / 6) * Math.PI * 2;
+      w.p.set(at.x + Math.cos(t) * 0.35, at.y + 0.2 + (i % 2) * 0.35, at.z + Math.sin(t) * 0.35);
+      w.v.set(0, 0, 0);
+      w.r = 1.3 + (i % 3) * 0.15;
+      w.a = 0.95;
+      w.age = 0.6;
+      w.hold = seconds;
+    }
   }
 
   /** A stroke across a wisp on screen carries it the way the stroke went. */
@@ -93,11 +110,14 @@ export class CloudWisps {
       // Gusty: each rag goes at its own speed, and they all surge together now and then.
       const surge = 0.75 + 0.35 * Math.sin(time * 0.9 + i * 0.7) + 0.25 * Math.sin(time * 2.3 + i);
       w.v.multiplyScalar(Math.exp(-dt * 1.8));
-      w.p.addScaledVector(this.wind, surge * dt).addScaledVector(w.v, dt);
+      if (w.hold > 0) {
+        w.hold -= dt;
+        w.p.addScaledVector(this.wind, surge * dt * 0.08);
+      } else w.p.addScaledVector(this.wind, surge * dt).addScaledVector(w.v, dt);
       w.age += dt;
       const dx = w.p.x - this.centre.x, dz = w.p.z - this.centre.z, dy = w.p.y - this.centre.y;
       const downwind = (dx * this.wind.x + dz * this.wind.z) / len;
-      if (downwind > BOX.half || Math.abs(dx) > BOX.half * 1.4 || Math.abs(dz) > BOX.half * 1.4 || dy < -BOX.below - 1 || dy > BOX.above + 1) {
+      if (w.hold <= 0 && (downwind > BOX.half || Math.abs(dx) > BOX.half * 1.4 || Math.abs(dz) > BOX.half * 1.4 || dy < -BOX.below - 1 || dy > BOX.above + 1)) {
         this.spawn(w, true);
       }
       const fade = Math.min(1, w.age / 1.2);

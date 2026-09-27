@@ -185,8 +185,10 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   finale: [],
   /** A flight of the stairs knocking home is a physical sound, not a phrase. */
   flightHome: [],
+  /** The cygnet's own small question, not a phrase. */
+  puzzled: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
@@ -737,7 +739,7 @@ export class Soundscape {
    * matter: a small bird calling for a family that is not coming back. Thin, high, and pitched to be heard over
    * nothing at all.
    */
-  private peep(loudness = 1, longing = false, source?: AudioEmitter): void {
+  private peep(loudness = 1, longing = false, source?: AudioEmitter, asking = false): void {
     const ctx = this.ctx!;
     const t0 = ctx.currentTime + 0.02;
     const out = ctx.createGain();
@@ -751,18 +753,24 @@ export class Soundscape {
     panner.connect(send).connect(this.reverb);
 
     /** Calling out to them is lower and longer than calling for help: less panic in it, and more hope. */
-    const calls = longing ? 2 : 2 + Math.floor(Math.random() * 2);
+    const calls = asking ? 1 : longing ? 2 : 2 + Math.floor(Math.random() * 2);
     let remaining = calls;
     let at = t0;
     for (let i = 0; i < calls; i++) {
-      const len = (longing ? 0.4 : 0.16) + Math.random() * 0.08;
+      const len = (longing ? 0.4 : asking ? 0.24 : 0.16) + Math.random() * 0.08;
       /** A cygnet's note is a thin whistle, well above where a crane chick's sat. */
-      const f = (longing ? 1480 : 2050) + Math.random() * 380 - i * 70;
+      const f = (longing ? 1480 : asking ? 1850 : 2050) + Math.random() * 380 - i * 70;
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(f * 0.72, at);
-      osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
-      osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);
+      if (asking) {
+        // A question: it dips and then goes up at the end.
+        osc.frequency.exponentialRampToValueAtTime(f * 0.66, at + len * 0.45);
+        osc.frequency.exponentialRampToValueAtTime(f * 1.3, at + len);
+      } else {
+        osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
+        osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);
+      }
       const waver = ctx.createOscillator();
       waver.frequency.value = 17 + Math.random() * 6;
       const depth = ctx.createGain();
@@ -1174,6 +1182,8 @@ export class Soundscape {
       else if (name === 'kindled' || name === 'comfort') {
         this.flare();
         this.phrase(name);
+      } else if (name === 'puzzled') {
+        this.peep(0.6, false, s.cygnet, true);
       } else if (name === 'distress' || name === 'calling') {
         this.peep(name === 'distress' ? 1 : 0.95, name === 'calling', s.cygnet);
         this.flockQuietUntil = now + tuning.audio.callSpace;

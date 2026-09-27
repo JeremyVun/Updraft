@@ -518,6 +518,16 @@ export class Cygnet {
     this.visible = true;
   }
 
+  /** On its feet at a spot at once, facing yaw: a move nobody sees, made while the cloud hides it. */
+  standAt(x: number, y: number, z: number, yaw: number): void {
+    this.position.set(x, y, z);
+    this.position.y = Math.max(this.ground(x, z), 0);
+    this.yaw = yaw;
+    this.seating.seat = null;
+    this.seating.snap();
+    this.state = 'following';
+  }
+
   /** Who carries it. Set once; every seat is a place on their body. */
   set mount(m: Mount) {
     this.seating.mount = m;

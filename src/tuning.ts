@@ -270,8 +270,12 @@ export const tuning = {
     handled: 1.5,
     /** The child's pace on the stairs, as a share of a walk. */
     climb: 0.52,
-    /** Cloud thickness per metre inside the deck, and inside the pocket round the child. */
-    density: 0.42, clearing: 0.055, bubble: 6.5,
+    /** Cloud thickness per metre inside the deck, and inside the pocket round the child, at the bottom of the white and at the top. */
+    density: 0.42, clearing: 0.055, clearingTop: 0.1,
+    /** How far the pocket of thinner cloud round the child reaches, at the bottom of the white and at the top. */
+    bubble: 6.5, bubbleTop: 4.4,
+    /** The wind through the white near its top, metres a second. */
+    windInCloud: 5.5,
     /** How fast the hull goes down through the cloud onto the water, metres a second. */
     sinkRate: 1.9,
   },
