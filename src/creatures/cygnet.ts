@@ -1292,8 +1292,14 @@ export class Cygnet {
         const way = this.yaw + turn;
         const nx = this.position.x + Math.sin(way) * speed * dt;
         const nz = this.position.z + Math.cos(way) * speed * dt;
+        if (offTheEdge(this.decks, nx, nz, this.position.y)) continue;
+        if (turn === 0) {
+          this.walkTo.set(nx, nz);
+          best = Infinity;
+          break;
+        }
         const toward = Math.cos(way - want) - Math.abs(turn) * 0.05;
-        if (toward <= best || (turn !== 0 && toward < 0) || offTheEdge(this.decks, nx, nz, this.position.y)) continue;
+        if (toward <= Math.max(best, 0)) continue;
         best = toward;
         this.walkTo.set(nx, nz);
       }
