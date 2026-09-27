@@ -244,7 +244,7 @@ export class SkyMirrorChapter implements Chapter {
         child.stowPlane(true); plane.hold(child);
         if(this.cast.skyMirror.holdingWand)child.reachLocal(1,GRIP);
         child.walkTo(this.stand.x,this.stand.z,false,()=>this.arrive(),0.5); this.to('walk');
-      });
+      },plane.position);
     },1.1);
   }
   private gather(): void {

@@ -39,7 +39,7 @@ export class PlaneArrival {
           plane.hold(child);
           this.phase = 'done';
           next();
-        });
+        }, plane.position);
       }
     }
     return true;

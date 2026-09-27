@@ -403,7 +403,7 @@ export class BirchesChapter implements Chapter {
         p.hold(c);
         this.play = 'hold';
         this.holdUntil = this.now + 0.6 + Math.random() * 0.8;
-      });
+      }, p.position);
     }, 1.2);
   }
 

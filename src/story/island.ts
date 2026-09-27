@@ -315,7 +315,7 @@ export class IslandChapter implements Chapter {
           this.play = 'hold';
           this.holdUntil = this.now + 1.6 + Math.random() * 1.4;
           if (Math.random() < 0.35) c.wave();
-        });
+        }, p.position);
       },
       1.2,
     );

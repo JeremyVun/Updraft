@@ -165,7 +165,7 @@ export class LittleBoatsChapter implements Chapter {
       if (this.elapsed > 1.2) {
         // Stand close enough that the mittens can actually reach the stranded hull.
         c.walkTo(
-          room.stranded.x + 1.5,
+          room.stranded.x + 0.9,
           room.stranded.z,
           false,
           () => {

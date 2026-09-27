@@ -12,7 +12,7 @@ globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { tuning } = await import('../src/tuning.ts');
 const { Boat } = await import('../src/traveller/boat.ts');
 const { Glider, PAPER_GRIP } = await import('../src/glider/glider.ts');
-const { Traveller } = await import('../src/traveller/traveller.ts');
+const { Traveller, PAPER_STOW } = await import('../src/traveller/traveller.ts');
 const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { CameraRig } = await import('../src/camera.ts');
@@ -94,7 +94,7 @@ function fixture(fps = 60, portrait = false) {
       if (!chapter.done) {
         assert(plane.group.visible && plane.held, 'paper stays visible and secured throughout the boats chapter');
         const grip = PAPER_GRIP.clone().applyMatrix4(plane.body.matrixWorld);
-        const backpack = child.fromBody(new THREE.Vector3(0.06, 0.78, -0.88), new THREE.Vector3());
+        const backpack = child.fromBody(PAPER_STOW.clone(), new THREE.Vector3());
         assert(grip.distanceTo(backpack) < 0.001, `paper left backpack: ${grip.distanceTo(backpack)}`);
       }
     },

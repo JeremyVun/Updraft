@@ -368,6 +368,33 @@ export const tuning = {
     /** A released plane levels into flight rather than snapping out of the carry angle. */
     releaseSeconds: 0.22,
   },
+  scarf: {
+    /**
+     * The dream's own breeze, always carrying the ends out behind the child (units per second), and how much it
+     * swells and eases. It turns with the child, and a player's gust takes over from it.
+     */
+    breeze: 3, breezeSwell: 0.3,
+    /** How much of the child's own speed adds to the air carrying the ends out behind them. */
+    carry: 1,
+    /**
+     * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
+     * times as hard as it blows, and one felt at `gustTakeover` units per second or more carries them its own way.
+     */
+    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5,
+    /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
+    drag: 3.2,
+    /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
+    inertia: 0.35,
+    gravity: 6.5,
+    /** The most of an end's weight the air holds up, along its middle, once air passes the child at `liftSpeed`. */
+    lift: 0.9, liftSpeed: 7,
+    /** Upward pull per unit of the player's updraft. */
+    updraft: 5,
+    /** The slow wave down a streaming end: its rate (radians a second) in a breeze and at `liftSpeed`; its push. */
+    waveRate: 2.1, waveRateFast: 4.2, wave: 1.4, waveFast: 3.4,
+    /** How far (units) the ripple running down a streaming end stands out of its face at the free end. */
+    ripple: 0.12,
+  },
   pointer: {
     /** The wind speed a stroke can never exceed; faster strokes ease toward it. */
     maxGust: 26,
