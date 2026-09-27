@@ -30,12 +30,15 @@ export const BOOM_LENGTH = 2.8;
 /** Half-width, depth and sheer of the hull `u` of the way from transom (0) to stem (1). */
 export const halfWidth = (u: number) => BEAM * (1 - Math.pow(u, 3.2)) * (0.7 + 0.3 * Math.sin(u * Math.PI));
 export const hullDepth = (u: number) => DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI));
-export const sheer = (u: number) => 0.28 * u * u;
+export const SHEER = 0.28;
+export const sheer = (u: number) => SHEER * u * u;
 /**
  * The planking stands this far above the shell the hull rests on, so the gunwale sweeps up to the transom and
  * the stem instead of running level off the stern. Nothing changes where the child sits or steps aboard.
  */
-export const spring = (u: number) => 0.13 * Math.max(0, 1 - u / 0.42) ** 2 + 0.05 * THREE.MathUtils.smoothstep(u, 0.75, 1);
+export const SPRING = { stern: 0.13, sternTo: 0.42, bow: 0.05, bowFrom: 0.75 };
+export const spring = (u: number) =>
+  SPRING.stern * Math.max(0, 1 - u / SPRING.sternTo) ** 2 + SPRING.bow * THREE.MathUtils.smoothstep(u, SPRING.bowFrom, 1);
 /** The top of the planking, where the gunwale rail runs. */
 export const gunwale = (u: number) => sheer(u) + spring(u);
 export const stationZ = (u: number) => (u - 0.45) * LENGTH;

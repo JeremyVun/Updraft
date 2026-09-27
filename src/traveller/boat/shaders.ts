@@ -1,6 +1,6 @@
 import { glsl, tuning } from '../../tuning';
 import { ATMO_GLSL } from '../../world/atmosphere';
-import { BEAM, BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z } from './form';
+import { BEAM, BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, SHEER, SPRING, STERN_Z } from './form';
 import { KIND, STRAKES } from './parts';
 
 export const HULL_VERT = /* glsl */ `
@@ -25,11 +25,12 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-/** The hull's form again, for the shade its sides cast inside it; `form.ts` has the same numbers. */
+/** The hull's form from `form.ts` again, for the shade its sides cast inside it. */
 const FORM_GLSL = /* glsl */ `
 float hullHalfWidth(float u) { return ${glsl(BEAM)} * (1.0 - pow(u, 3.2)) * (0.7 + 0.3 * sin(u * 3.14159265)); }
 float hullTop(float u) {
-  return 0.28 * u * u + 0.13 * pow(max(0.0, 1.0 - u / 0.42), 2.0) + 0.05 * smoothstep(0.75, 1.0, u);
+  return ${glsl(SHEER)} * u * u + ${glsl(SPRING.stern)} * pow(max(0.0, 1.0 - u / ${glsl(SPRING.sternTo)}), 2.0)
+    + ${glsl(SPRING.bow)} * smoothstep(${glsl(SPRING.bowFrom)}, 1.0, u);
 }
 float stationOf(float z) { return clamp(z / ${glsl(LENGTH)} + 0.45, 0.0, 1.0); }
 `;
