@@ -34,13 +34,13 @@ const COAT = [
   [1.625, 0.13, 0.125, 0.0],
   [1.6, 0.175, 0.16, 0.0],
   [1.56, 0.232, 0.197, 0.0],
-  [1.51, 0.268, 0.222, 0.002],
-  [1.46, 0.29, 0.238, 0.006],
-  [1.4, 0.303, 0.252, 0.012],
-  [1.3, 0.33, 0.28, 0.022],
-  [1.18, 0.352, 0.298, 0.026],
-  [1.04, 0.377, 0.312, 0.02],
-  [0.88, 0.404, 0.33, 0.01],
+  [1.51, 0.268, 0.228, 0.008],
+  [1.46, 0.29, 0.248, 0.02],
+  [1.4, 0.305, 0.264, 0.032],
+  [1.3, 0.332, 0.29, 0.04],
+  [1.18, 0.353, 0.304, 0.038],
+  [1.04, 0.377, 0.314, 0.028],
+  [0.88, 0.404, 0.33, 0.012],
   [0.72, 0.434, 0.354, 0.0],
   [0.58, 0.464, 0.378, -0.01],
   [0.45, 0.49, 0.4, -0.018],
@@ -159,7 +159,7 @@ function coat(b: Builder): void {
   }
   b.rows(rows, true, V(0, 1.1, 0));
 
-  for (const y of [1.3, 1.1, 0.9]) {
+  for (const y of [1.39, 1.18, 0.97]) {
     coatAt(0, y, s);
     const above = coatAt(0, y + 0.01).p;
     const below = coatAt(0, y - 0.01).p;
@@ -468,7 +468,7 @@ function hairline(phi: number): number {
   return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
 }
 
-const HAIR = { c: FACE.c.clone().add(V(0, 0.012, -0.02)), rx: 0.282, ry: 0.284, rz: 0.282 };
+const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.276, rz: 0.282 };
 
 /**
  * The fringe and the hair round the face, as locks: angle from the front and the cosine down from the crown where
@@ -477,13 +477,13 @@ const HAIR = { c: FACE.c.clone().add(V(0, 0.012, -0.02)), rx: 0.282, ry: 0.284, 
  * of the ears.
  */
 const LOCKS: [number, number, number, number, number, number][] = [
-  [0.36, 0.92, -0.12, 0.2, 0.15, 0.1],
-  [0.16, 0.9, -0.44, 0.27, 0.14, 0.08],
-  [-0.08, 0.86, -0.74, 0.2, 0.13, 0.06],
-  [-0.4, 0.8, -0.98, 0.06, 0.12, 0.05],
-  [0.3, 0.9, 0.02, 0.3, 0.13, 0.06],
-  [0.6, 0.86, 1.05, 0.44, 0.12, -0.05],
-  [0.82, 0.78, 1.15, 0.2, 0.11, -0.05],
+  [0.36, 0.75, -0.12, 0.2, 0.15, 0.1],
+  [0.16, 0.75, -0.44, 0.27, 0.14, 0.08],
+  [-0.08, 0.74, -0.74, 0.2, 0.13, 0.06],
+  [-0.4, 0.72, -0.98, 0.06, 0.12, 0.05],
+  [0.3, 0.75, 0.02, 0.3, 0.13, 0.06],
+  [0.6, 0.74, 1.05, 0.44, 0.12, -0.05],
+  [0.82, 0.72, 1.15, 0.2, 0.11, -0.05],
   [1.02, 0.66, 1.18, -0.28, 0.11, 0.06],
   [-1.08, 0.64, -1.2, -0.34, 0.115, -0.06],
   [1.3, 0.54, 1.36, -0.16, 0.1, 0.05],
@@ -562,10 +562,10 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
 // The hood
 
 export const HOOD = {
-  c: V(0, 2.065, -0.055),
-  r: V(0.4, 0.36, 0.372),
-  /** The opening faces forward and a touch down, so the brim just shades the fringe. */
-  tilt: 0.1,
+  c: V(0, 2.065, -0.05),
+  r: V(0.4, 0.36, 0.405),
+  /** The opening faces forward and down, so the brim comes over the top of the fringe. */
+  tilt: 0.2,
 };
 
 /**
@@ -576,7 +576,7 @@ export const HOOD = {
 function hoodOpen(lambda: number): number {
   const s = Math.sin(lambda);
   const c = Math.cos(lambda);
-  return 0.8 + 0.4 * s * s * (1 - 0.5 * Math.max(0, -c)) + 0.08 * Math.pow(Math.max(0, -c), 2);
+  return 0.72 + 0.42 * s * s * (1 - 0.5 * Math.max(0, -c)) + 0.12 * Math.pow(Math.max(0, -c), 2);
 }
 const hoodF = V(0, -Math.sin(HOOD.tilt), Math.cos(HOOD.tilt));
 const hoodUp = V(0, Math.cos(HOOD.tilt), Math.sin(HOOD.tilt));
@@ -607,13 +607,13 @@ function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.
   const skirt = smooth(-0.15, -0.9, yN);
   const back = smooth(0.3, -0.6, hz);
   const p = V(
-    r.x * ring * hx * (1 - 0.11 * egg) * (1 + 0.05 * skirt),
+    r.x * ring * hx * (1 - 0.11 * egg) * (1 + 0.075 * bump(yN + 0.35, 0.3)) * (1 - 0.03 * skirt),
     r.y * yN - 0.06 * skirt * skirt * (0.45 + 0.55 * back),
     r.z * ring * hz * (1 - 0.05 * egg) * (1 + 0.05 * skirt * back),
   );
   p.y += 0.024 * smooth(0.5, 1.0, yN) * Math.exp(-(p.x * p.x) / 0.025);
-  /** The crown rides back over the head, the way a soft hood falls, rather than standing straight up. */
-  p.z -= 0.07 * smooth(0.2, 1.0, yN);
+  /** The crown rides a little back over the head, the way a soft hood falls, rather than standing straight up. */
+  p.z -= 0.025 * smooth(0.2, 1.0, yN);
   const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
   const fromRim = smooth(hoodOpen(lambda), hoodOpen(lambda) + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
@@ -785,8 +785,8 @@ function bagPoint(phi: number, h: number, scale = 1, crease = 0): THREE.Vector3 
   /** Soft creases where the leather gives under the weight, down the far face and the sides. */
   const give = 1 + crease * 0.03 * Math.sin(7 * phi + 1.3) * Math.max(0, -c + 0.4);
   const x = a * scale * give * Math.sign(s) * Math.pow(Math.abs(s), e);
-  /** Pressed against the child's back, the near face takes up the gap between them. */
-  let z = b * (c > 0 ? 1.15 : 1) * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
+  /** Pressed against the child's back, the near face takes up the gap between them; the far half is deep enough for the bird. */
+  let z = b * (c > 0 ? 1.35 : 1.4) * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
   /** Its weight slumps the far face out and down. */
   if (c < 0) z -= 0.03 * smooth(0.4, 0.0, f) * -c;
   return V(x, h, z).add(BAG.c);
