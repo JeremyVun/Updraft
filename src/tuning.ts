@@ -1403,7 +1403,7 @@ export const tuning = {
         fog lengths deep) or it leaves the frame; whatever happens, it is gone by the fallback. */
     planeAway: { speed: 15, grip: 2.5, rise: 1.2 },
     /** The gust that takes it, shown as wind lines sweeping past the child's hand. */
-    snatchGust: { lines: 10, speed: 17 },
+    snatchGust: { lines: 8, speed: 17 },
     planeLostInFog: 2.5,
     planeLostAfter: 14,
     firstLightning: 16,
