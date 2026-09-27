@@ -62,7 +62,7 @@ progress. Revision 3 saves receive only the adjustment from the longer offshore 
 retain their existing mirror/home coordinates and swim progress; the earlier sea
 relocation applies only to older revisions. Migration runs once, before chapter restoration.
 
-Startup restores before the initial camera cut, terrain bake and warm render. `Play again` clears the record before reloading. The completed-ending checkpoint returns to credits until replay is chosen. `?shot` and `?chapter=` neither read nor write normal progress; use `?progress=1` explicitly for persistence QA, or `?progress=0` to disable it.
+Startup restores before the initial camera cut, terrain bake and warm render. `Play again` clears the record before reloading. The completed-ending checkpoint returns to the thank-you screen until replay is chosen. `?shot` and `?chapter=` neither read nor write normal progress; use `?progress=1` explicitly for persistence QA, or `?progress=0` to disable it.
 
 Restore the musical phase with the story state. Sleeping's `morning` selects the sea mood and `hush=0.1`;
 earlier Sleeping progression retains wood. Completed piano restoration clears pending completion audio.

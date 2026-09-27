@@ -68,7 +68,7 @@ try {
    for(let i=0;i<count;i++){await pause;__drive();pause=ctx.suspend(++tick/60);await ctx.resume();}
    const c=g.story.current;
    if(c.beat==='credits'){
-    for(const a of document.getAnimations()){const t=a.effect?.target;if(t?.closest('#credits,#again')){a.pause();a.currentTime=c.t*1000;}}
+    for(const a of document.getAnimations()){const t=a.effect?.target;if(t?.closest('#ending')){a.pause();a.currentTime=c.t*1000;}}
    }
    return {chapter:g.story.name,beat:c.beat,t:c.t,audio:ctx.currentTime};
   };

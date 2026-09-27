@@ -491,8 +491,9 @@ const soundState: SoundState = {
   silence: false,
   cues: [],
 };
-const credits = document.getElementById('credits') as HTMLElement;
-const lastCredit = credits.querySelector('.entry:last-child') as HTMLElement;
+const ending = document.getElementById('ending') as HTMLElement;
+const endingActions = ending.querySelector('.ending-actions') as HTMLElement;
+let endingTime = 0;
 const again = document.getElementById('again') as HTMLButtonElement;
 again.addEventListener('click', () => {
   if (params.progress) clearProgress();
@@ -804,10 +805,17 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.flockChatter = story.current.flockChatter ?? true;
   soundState.scripted = story.current.scripted ?? false;
   soundState.silence = story.current.silence ?? false;
-  if (story.current.finished && !credits.classList.contains('rolling')) credits.classList.add('rolling');
-  if (story.current.finished && !credits.classList.contains('replay-ready')
-    && lastCredit.getBoundingClientRect().bottom < again.getBoundingClientRect().top - 24) {
-    credits.classList.add('replay-ready');
+  if (story.current.finished) {
+    endingTime += dt;
+    if (!ending.classList.contains('visible')) {
+      ending.classList.add('visible');
+      ending.setAttribute('aria-hidden', 'false');
+    }
+    if (endingTime >= 6) ending.classList.add('farewell');
+    if (endingTime >= 9 && endingActions.inert) {
+      endingActions.inert = false;
+      ending.classList.add('replay-ready');
+    }
   }
   soundState.shower = shower;
 
