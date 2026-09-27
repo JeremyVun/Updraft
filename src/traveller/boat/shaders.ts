@@ -1,7 +1,8 @@
+import * as THREE from 'three';
 import { glsl, tuning } from '../../tuning';
 import { ATMO_GLSL } from '../../world/atmosphere';
 import {
-  BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z, STRAKES,
+  BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, PAINT, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z, STRAKES,
   gunwale, gunwaleHalf,
 } from './form';
 import { KIND } from './parts';
@@ -99,6 +100,7 @@ void main() {
      */
     float g = vGrain.w * ${glsl(STRAKES)};
     float k = floor(g);
+    ${PAINT ? `if (outside && k > ${glsl(STRAKES - 1.5)}) alb = vec3(${new THREE.Color(PAINT).toArray().map(glsl).join(', ')});` : ''}
     float f = g - k;
     float fw = fwidth(g);
     float sharp = 1.0 - smoothstep(0.18, 0.45, fw);
