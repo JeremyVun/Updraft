@@ -209,6 +209,8 @@ export class LittleBoats {
   private readonly course = { x: 0, z: 0, yaw: 0 };
   private readonly swell = { height: 0, slopeX: 0, slopeZ: 0 };
   private time = 0;
+  /** The chapter's limit as the child's toy is held to it: a limit that drops under a sailing hull is let in over its stopping room. */
+  private heldLimit = Infinity;
   private readonly brushAt = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly fleet: Toy[] = [];
@@ -403,6 +405,7 @@ export class LittleBoats {
 
   /** Restores a completed pool, without retaining velocities or a half-played hand animation. */
   restore(s: number): void {
+    this.heldLimit = Infinity;
     this.progress = THREE.MathUtils.clamp(s, 3, L.length);
     this.departing = false;
     this.launched = true;
@@ -453,6 +456,9 @@ export class LittleBoats {
     this.idle = push > 0.1 ? 0 : this.idle + dt;
     if (this.launched) {
       const hero = this.toys[0];
+      this.heldLimit = limit >= this.heldLimit ? limit
+        : Math.max(limit, Math.min(this.heldLimit, hero.s + hero.speed * k.followEase));
+      limit = this.heldLimit;
       this.fleet.length = 0;
       for (const t of this.toys) {
         t.previousS = t.s;

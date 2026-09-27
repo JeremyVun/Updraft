@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 globalThis.location = { search: '?shot' };
 globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { SwanFlock } = await import('../src/creatures/flock.ts');
+const { Group } = await import('three');
 const { wrapAngle } = await import('../src/creatures/motion.ts');
 const { tuning } = await import('../src/tuning.ts');
 let seed;
@@ -126,7 +127,7 @@ for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (co
   cygnet.mount = child;
   const plane = { hold(c) { c.carryingPlane = true; }, held: false };
   const chapter = new HomeChapter({
-    child, cygnet, flock, carry, plane,
+    child, cygnet, flock, carry, plane, boat: { group: new Group(), roll: 0, pitch: 0 },
     drawing: { mesh: { visible: false } }, cottage: { position: child.position.clone() },
   });
   child.stop();

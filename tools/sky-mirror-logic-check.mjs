@@ -98,7 +98,8 @@ for(const star of MIRROR_STARS) {
   for(let i=0;i<60*12;i++) {
     f.step();const p=f.cast.child.position;
     const along=((p.x-d.x0)*dx+(p.z-d.z0)*dz)/length;
-    if(along<length)assert(Math.abs((p.x-d.x0)*dz-(p.z-d.z0)*dx)/length<0.2 && p.y>=0.27,'walk stays on entry planks');
+    // The child steps out over the gunwale onto the planks' near side, then walks in along them.
+    if(!f.cast.child.acting && along<length)assert(Math.abs((p.x-d.x0)*dz-(p.z-d.z0)*dx)/length<d.halfWidth-0.3 && p.y>=0.27,'walk stays on entry planks');
   }
   assert(f.cast.child.position.z<MIRROR_ENTRY_DECK.z1,'child steps from the jetty onto the flat');
 }
