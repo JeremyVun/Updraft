@@ -73,10 +73,10 @@ try {
     }
   };
   /** Where the waiting flight is on screen now, and where its gold drawing is, both at the flight's own level. */
-  const aim = () => page.evaluate(([w, h]) => {
+  const aim = (n) => page.evaluate(([w, h, n]) => {
     const g = window.__game;
-    const piece = g.cloudStairs.waiting;
-    if (!piece) return null;
+    const piece = g.cloudStairs.pieces[n];
+    if (!piece || piece.docked) return null;
     const cam = g.rig.camera;
     const scr = (v) => { const p = v.clone().project(cam); return [(p.x * 0.5 + 0.5) * w, (0.5 - p.y * 0.5) * h]; };
     const f = piece.flight;
@@ -84,7 +84,7 @@ try {
     const now = g.cloudStairs.pointOn(piece, home.clone(), home.clone());
     return { at: scr(now), to: scr(home), far: +now.distanceTo(home).toFixed(2), settling: piece.settling,
       turn: +piece.offset.y.toFixed(2), off: [+piece.offset.x.toFixed(2), +piece.offset.z.toFixed(2)] };
-  }, [width, height]);
+  }, [width, height, n]);
 
   // Every change of beat, with the time, so a skipped or hurried beat shows up in the log.
   await page.evaluate(() => {
@@ -104,14 +104,15 @@ try {
   let s = await until((x) => x.beat === 'climb', 20000);
   await page.waitForTimeout(3000);
   await shot('02-climb');
-  for (let n = first; n < 3; n++) {
+  const last = Number(process.env.UNTIL ?? 3);
+  for (let n = first; n < last; n++) {
     s = await until((x) => x.beat === 'waiting', 60000);
     log('waiting', JSON.stringify(s));
     await page.waitForTimeout(1500);
     await shot(`03-wait-${n + 1}`);
     let strokes = 0;
     for (; strokes < 60; strokes++) {
-      const a = await aim();
+      const a = await aim(n);
       if (!a || a.settling > 0) break;
       if (strokes % 5 === 0) log('  stroke', strokes, JSON.stringify({ off: a.off, turn: a.turn }));
       // Take hold of it where it is and draw it over its gold drawing, the way you would by hand.
@@ -122,6 +123,13 @@ try {
       if (strokes === 1) await shot(`04-push-${n + 1}`);
     }
     log('strokes', strokes);
+    if (process.env.TRACE) {
+      for (let i = 0; i < 16; i++) {
+        log('  trace', await page.evaluate(() => window.__game.cloudStairs.pieces.map((p) => [p.docked ? 'D' : p.settling > 0 ? 'S' : '-',
+          p.offset.x.toFixed(2), p.offset.z.toFixed(2), p.offset.y.toFixed(2), p.velocity.x.toFixed(2), p.velocity.z.toFixed(2), p.handled.toFixed(1)].join(',')).join(' | ')));
+        await page.waitForTimeout(250);
+      }
+    }
     s = await until((x) => x.docked > n, 8000);
     log('docked', JSON.stringify(s));
     await page.waitForTimeout(900);
