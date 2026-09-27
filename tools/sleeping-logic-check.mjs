@@ -149,7 +149,7 @@ for (const fps of [30,60]) {
   for(let i=0;i<fps*75&&!c.done;i++)step();
   assert(c.done,'both travellers must reach the boat');
   assert.equal(k.wing.state,'free');assert.equal(k.flights,1);
-  assert(child.rig.coat.scale.distanceTo(new THREE.Vector3(1,1,1))<1e-5,'sleeping pose leaked into walking');
+  assert(child.look.lie<1e-5,'sleeping pose leaked into walking');
   assert(sleeping.dawn===1&&sleeping.curtains===1&&sleeping.fog===0);
   fs.writeFileSync(`/tmp/updraft-sleeping-camera-${fps}-${process.env.W??1600}.json`,JSON.stringify(f.cameraMotion,null,2));
   for(const [beat,row] of Object.entries(f.cameraMotion))

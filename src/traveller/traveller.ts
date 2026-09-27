@@ -1106,10 +1106,10 @@ export class Traveller {
     const settle = 1 - 0.75 * moving;
     this.nextGlance -= h;
     if (this.nextGlance <= 0) {
-      this.glanceUntil = t + 1.4 + Math.random() * 0.8;
-      this.nextGlance = 6 + Math.random() * 6;
-      /** A different look each time without drawing on the shared random sequence. */
+      /** A different look each time, at uneven times, without drawing on the shared random sequence. */
       const k = ++this.glances;
+      this.nextGlance = 6 + 6 * ((k * 0.570796) % 1);
+      this.glanceUntil = t + 1.4 + 0.8 * ((k * 0.414214) % 1);
       this.glanceYaw = (k % 2 ? 1 : -1) * (0.55 + 0.45 * ((k * 0.618034) % 1));
       this.glancePitch = -0.3 + 0.36 * ((k * 0.754878) % 1);
     }
@@ -1214,8 +1214,9 @@ export class Traveller {
   private stoop(dt: number): number {
     const r = this.rig;
     let over = -1;
+    const onFeet = !this.sitting && !this.riding && this.abed < 0.01;
     for (const hand of [0, 1] as const) {
-      if (this.reachNow[hand] < 0.5 || this.reachInBody[hand]) continue;
+      if (!onFeet || this.reachNow[hand] < 0.5 || this.reachInBody[hand]) continue;
       const target = this.reachAt[hand];
       const shoulder = r.bones[hand === 0 ? BONE.upperL : BONE.upperR].getWorldPosition(this.tmp2);
       const ahead = (target.x - shoulder.x) * Math.sin(this.yaw) + (target.z - shoulder.z) * Math.cos(this.yaw);
