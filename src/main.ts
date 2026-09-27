@@ -501,6 +501,7 @@ again.addEventListener('click', () => {
   location.reload();
 });
 const breezeSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+const frontNdc = new THREE.Vector3();
 
 const glLimits = renderer.getContext();
 /** The largest canvas/target side the GPU can allocate: a huge viewport scales every target down together. */
@@ -761,6 +762,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   petals.update(dt, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   const pointerWorld = input.present ? input.world : null;
   lines.update(dt, pointerWorld, input.gust, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
+  const gustFront = story.current.gustFront;
+  if (gustFront) lines.blowFront(dt, gustFront);
   swirl.update(dt, rig.camera, input, story.current.coax ?? (story.name === 'birches' ? scarfInvitation.coax : null));
   creatureEnv.walker = child.visible ? child.position : null;
   creatureEnv.breeze = story.breeze;
@@ -773,6 +776,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.rise += (Math.sign(riseNow) - soundState.rise) * (Math.abs(riseNow) > 1e-4 ? 0.3 : 0);
   soundState.gust = input.present ? input.gust : 0;
   soundState.pan = input.ndc.x;
+  if (gustFront && gustFront.strength * tuning.pointer.maxGust > soundState.gust) {
+    soundState.gust = gustFront.strength * tuning.pointer.maxGust;
+    soundState.pan = THREE.MathUtils.clamp(frontNdc.copy(gustFront.at).project(rig.camera).x, -1, 1);
+  }
   soundState.charge = input.charge;
   soundState.overLand = heightAt(input.world.x, input.world.z) > 0.5;
   /** The wind where the story is, not where it started: the rooms past the first island are most of the game. */

@@ -816,10 +816,22 @@ that answers cursor wind until a soft breeze carries the boat away.
    favouring the baby. The music pulls back; a quiet rising fourth accompanies the entrance, keeping the
    descending phrase for the fall itself.
    The distant haze conceals the next island throughout the aerial shot.
-3. The companion's own body occupies the last station from the beginning. Over five seconds its faster wingbeats
-   win one small recovery, then fade as it falls further behind and lower. The adult renderer reserves that station;
-   separation never swaps one model for another.
-4. The cygnet loses the formation and descends for five seconds, travelling forward onto the near slope while
+3. The companion's own body occupies the last station from the beginning, beating faster than the adults just to
+   hold it. The adult renderer reserves that station; separation never swaps one model for another.
+3a. **What brings it down is the wind: the player's own.** Jeremy asked (2026-09-28) for the fall to have a cause
+   rather than a random drop, and suggested a gust. It is the wind the player woke on this island, blowing by itself:
+   white streaks like the player's own rise off the slope, lifting a plume of the island's petals, and sweep across
+   the frame through the V from left to right, heard as the player's wind. The adults heel over and ride it one by one
+   as it reaches them. At 4.5 seconds it reaches the smallest, lifts it, rolls it right over away from the wind and
+   carries it out of the V sideways, and that same moment is the fall: there is no flying on afterwards. The left
+   wing is bent back in the tumble: the wing the child bandages. It comes out of the roll into its first burst of
+   flapping and fights the whole way down. Jeremy's first look (2026-09-28): the idea works, but blow, tumble, fly on,
+   then drop read as separate events, so the tumble is now the start of the fall and the descent leaves at the speed
+   it was flying. The camera pushes in toward where the gust meets the V and blends from there into the descent.
+   This gives the cygnet's fear of the wind (see *The companion*) its reason, and turns the ending, where it trusts the wind to hold it up, into the wind making
+   amends. Nothing says so; a player who notices it was their wind feels it. Knobs: `gustAt`, `gustRun`,
+   `gustLift`, `gustShove`, `gustSpeed`, `gustPush`, `tumbleFor` in `tuning.opening`.
+4. From the gust the cygnet descends for five seconds, travelling forward onto the near slope while
    the family continues north. Its landing remains ahead along the flock's bearing, and its descent curve
    cannot overshoot and double back. The camera eases along the slope to follow the descent, keeping the island
    as a reference. No camera snap at separation. The descending music starts on separation without waiting
@@ -858,7 +870,7 @@ Things that raise the bond, all of them things the player causes or witnesses:
 - It is lost and found.
 
 The cygnet's arc is flight: flaps and drops, then glides, then cannot help in the dark, then flies. It has a second
-bond, with the wind, which is the player: afraid of it, then curious, then asking for it, and at the end trusting
+bond, with the wind, which is the player: afraid of it (a gust of that wind is what put it out of the sky), then curious, then asking for it, and at the end trusting
 it to hold it up. And it has one brave thing of its own, the swim on the long crossing. Where it rides matters as
 much: **in the satchel on the child's back** on the walks, where the camera behind them always sees it and it can
 look back at the wind (cygnets ride on their parents' backs); **across the chest in both arms** for the tender

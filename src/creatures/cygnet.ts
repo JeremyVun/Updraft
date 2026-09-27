@@ -125,6 +125,14 @@ export class Cygnet {
   /** A visual echo of its voice, shared by every chapter and carried pose. */
   private readonly callMarks = new CallMarks();
   private formationEffort = 0;
+  /** Seconds since a gust put it over and out of the V, or negative; which way it went over, and how it was lying. */
+  private tumbleT = -1;
+  private tumbleSide = 1;
+  private tumbleRoll = 0;
+  private tumblePitch = 0;
+  /** The left wing the gust bent back: held half shut from the tumble until it lands and is cared for. */
+  private wrench = 0;
+  private fallLine = 0;
   private wasVisible = false;
   /** How many times the player has put it in the air. It has never flown before the first. */
   flights = 0;
@@ -320,8 +328,10 @@ export class Cygnet {
   /**
    * Out of the flock and down. A long shallow descent with the wings going the whole way and no lift in them,
    * then a hard landing. It is the only thing in the game that is not gentle, and it is meant to hurt.
+   * Given the speed it was going and which way a gust is putting it over, it leaves at that speed, rolled right
+   * over away from the wind with the left wing caught and bent back, and fights the rest of the way down.
    */
-  plummet(from: THREE.Vector3, to: THREE.Vector3, seconds: number, heading?: number): void {
+  plummet(from: THREE.Vector3, to: THREE.Vector3, seconds: number, heading?: number, velocity?: THREE.Vector3, tumble = 0): void {
     this.fallFrom.copy(from);
     this.fallTo.copy(to);
     this.fallTo.y = Math.max(heightAt(to.x, to.z), 0);
@@ -332,15 +342,21 @@ export class Cygnet {
      * thing that tells the player it fell out of the V rather than choosing to come down.
      * When the landing is ahead, keep the tangent short enough that the curve never passes it and doubles back.
      */
-    this.fallDrift
+    if (velocity) this.fallDrift.copy(velocity).multiplyScalar(seconds / 2).add(from).setY(from.y - (from.y - this.fallTo.y) * 0.1);
+    else this.fallDrift
       .set(Math.sin(line), 0, Math.cos(line))
       .multiplyScalar(ahead > 0 ? Math.min(38, ahead * 0.7) : 38)
       .add(from)
       .setY(from.y - (from.y - this.fallTo.y) * 0.1);
+    this.fallLine = line;
     this.fallFor = seconds;
     this.fallT = 0;
-    this.roll = 0;
-    this.slew = 0;
+    this.tumbleT = tumble ? 0 : -1;
+    this.tumbleSide = tumble < 0 ? -1 : 1;
+    this.tumbleRoll = this.roll;
+    this.tumblePitch = this.pitch;
+    if (tumble) this.heard.push({ kind: 'flutter', amount: 1 });
+    else this.roll = this.slew = 0;
     this.state = 'falling';
     this.visible = true;
     this.position.copy(from);
@@ -771,6 +787,7 @@ export class Cygnet {
       this.flapPhase += dt * (7 + this.effort * 7);
       this.pitch = ease(this.pitch, 0.12 - this.effort * 0.3, 3, dt);
       this.roll = ease(this.roll, Math.sin(time * 2.1) * 0.12 * (1 - this.effort), 3, dt);
+      this.tucked = ease(this.tucked, 1, 4, dt);
     } else if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
     else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
@@ -796,7 +813,7 @@ export class Cygnet {
     else if (this.state === 'downed') this.struggling(dt);
     else this.passenger(dt);
     /** Off its own wings the legs come back down under it; left carried up, they trail behind it like a swimmer's. */
-    if (this.state !== 'gliding' && this.state !== 'fledging' && this.state !== 'leaving') this.tucked = ease(this.tucked, 0, 4, dt);
+    if (this.state !== 'gliding' && this.state !== 'fledging' && this.state !== 'leaving' && this.state !== 'flying') this.tucked = ease(this.tucked, 0, 4, dt);
 
     /** Enough wind under it and it goes — but not the instant it lands, or one long hold would juggle it. */
     /** Wind under it during the run of a try is the try working: the bound that was never enough is, this once. */
@@ -1109,17 +1126,27 @@ export class Cygnet {
   private descend(dt: number): void {
     this.fallT = Math.min(1, this.fallT + dt / this.fallFor);
     const k = this.fallT;
-    const phase = ((k * this.fallFor) / 2.05) * Math.PI * 2;
-    const burst = THREE.MathUtils.smoothstep(Math.sin(phase), -0.1, 0.55);
-    this.effort = burst;
-    this.flap = 0.3 + burst * 0.7;
-    this.flapPhase += dt * (5 + burst * 8);
+    const o = tuning.opening;
+    /** After a tumble its first burst of flapping is the one that rights it, and they go on from there. */
+    const tumbled = this.tumbleT >= 0;
+    if (tumbled) this.tumbleT += dt;
+    const j = tumbled ? Math.min(1, this.tumbleT / o.tumbleFor) : 1;
+    const righted = tumbled ? THREE.MathUtils.smoothstep(this.tumbleT, o.tumbleFor * 0.6, o.tumbleFor + 0.4) : 1;
+    const phase = ((k * this.fallFor - (tumbled ? o.tumbleFor * 0.75 : 0)) / 2.05) * Math.PI * 2;
+    const burst = THREE.MathUtils.smoothstep(Math.sin(phase), -0.1, 0.55) * righted;
+    const bump = (a: number, b: number) => Math.sin(Math.PI * clamp((j - a) / (b - a), 0, 1));
+    const out = THREE.MathUtils.smoothstep(j, 0.7, 1);
+    this.effort = lerp(1 - 0.6 * bump(0.1, 0.8), burst, out);
+    this.flap = lerp(0.9, 0.3 + burst * 0.7, out);
+    this.flapPhase += dt * lerp(17, 5 + burst * 8, out);
 
     const u = 1 - k;
     const drop = this.fallFrom.y - this.fallTo.y;
+    /** The gust lifts it before it puts it over. */
+    const lifted = tumbled ? o.gustLift * Math.sin(Math.PI * clamp(this.tumbleT / (o.tumbleFor * 0.8), 0, 1)) : 0;
     this.position.set(
       u * u * this.fallFrom.x + 2 * u * k * this.fallDrift.x + k * k * this.fallTo.x,
-      u * u * this.fallFrom.y + 2 * u * k * this.fallDrift.y + k * k * this.fallTo.y + burst * 0.07 * u * drop,
+      u * u * this.fallFrom.y + 2 * u * k * this.fallDrift.y + k * k * this.fallTo.y + burst * 0.07 * u * drop + lifted,
       u * u * this.fallFrom.z + 2 * u * k * this.fallDrift.z + k * k * this.fallTo.z,
     );
     const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
@@ -1129,9 +1156,16 @@ export class Cygnet {
     this.roll = Math.sin(phase * 0.63 + 0.8) * (0.45 + 0.45 * k) * (1 - burst * 0.5) + losing * 1.35;
     this.pitch = lerp(0.42 + 0.2 * k, -0.4, burst) + losing * 0.3;
     this.slew = Math.sin(phase * 0.41) * 0.5;
+    if (tumbled) {
+      /** Over and round once, away from the wind, nose flung up and then down, coming out of it into the fall. */
+      const over = THREE.MathUtils.smootherstep(j, 0.05, 0.9);
+      if (j < 1) this.roll = lerp(this.tumbleRoll, this.roll, over) + this.tumbleSide * (over * Math.PI * 2 + bump(0, 1) * 0.35);
+      this.pitch = lerp(this.tumblePitch, this.pitch, j) - 0.75 * bump(0, 0.35) + 0.65 * bump(0.3, 1);
+      this.slew = lerp(0, this.slew, out) + this.tumbleSide * 0.7 * bump(0, 1);
+      this.wrench = 0.85 * THREE.MathUtils.smoothstep(j, 0.1, 0.4) * (1 - 0.45 * THREE.MathUtils.smoothstep(j, 0.6, 1));
+    }
     const travel = Math.atan2(this.fallTo.x - this.fallFrom.x, this.fallTo.z - this.fallFrom.z);
-    const line = Math.atan2(this.fallDrift.x - this.fallFrom.x, this.fallDrift.z - this.fallFrom.z);
-    this.yaw = line + wrapAngle(travel - line) * k + this.slew;
+    this.yaw = this.fallLine + wrapAngle(travel - this.fallLine) * k + this.slew;
     if (this.time > this.nextCall) {
       this.call(false);
       this.nextCall = this.time + 1.2 + Math.random() * 0.5;
@@ -1139,6 +1173,8 @@ export class Cygnet {
 
     if (this.fallT >= 1) {
       this.wing.restore('hurt');
+      this.wrench = 0;
+      this.tumbleT = -1;
       this.state = 'downed';
       this.heard.push({ kind: 'tumble', amount: 1 });
       this.struggle = 0;
@@ -1537,7 +1573,7 @@ export class Cygnet {
     d.actSide = m.actSide;
     d.breath = this.breath;
     d.blink = this.blink;
-    d.wingGuard = this.wing.guard;
+    d.wingGuard = Math.max(this.wing.guard, this.wrench);
     d.wingOpening = this.wing.opening;
 
     const yaw = this.seating.yaw;
