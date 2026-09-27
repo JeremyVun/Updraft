@@ -217,7 +217,7 @@ export class Scarf {
      * the child's own motion would: carried down into a squat, they are not left in the air to fling over the hood.
      */
     const lurchX = ((this.carried.x - this.tmp.x) / span) * k.inertia;
-    const lurchY = ((this.carried.y - this.tmp.y) / span) * k.inertia;
+    const lurchY = ((this.carried.y - this.tmp.y) / span) * k.inertia * 0.4;
     const lurchZ = ((this.carried.z - this.tmp.z) / span) * k.inertia;
     this.carried.copy(this.tmp);
     this.lastAnchor.copy(anchor);
