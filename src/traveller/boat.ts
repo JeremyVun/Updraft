@@ -1,22 +1,17 @@
 import { mirrorWater } from '../world/sky-mirror-layout';
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { glsl, tuning } from '../tuning';
+import { tuning } from '../tuning';
 import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
-import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { atmo } from '../world/atmosphere';
 import { FOAM, Marks } from '../fx/sealife/marks';
 import { heightAt } from '../world/island';
 import { type Swell, swellAt } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
+import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
+import { boomGeometry, hullGeometry, pennantGeometry, sailGeometry } from './boat/parts';
+import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
 
-const LENGTH = 4.8;
-const BEAM = 0.95;
-const DEPTH = 0.62;
-/** Floorboards, laid across the ribs. They sit above the waterline, so the sea is never seen inside the hull. */
-const FLOOR_Y = -0.24;
-/** How deep the hull floats: local y 0 rides this far above the sea, putting the waterline below the floorboards. */
-const DRAFT = 0.42;
 /**
  * Pushed off a beach, a boat goes out the way the sand slopes, whichever way its bow is pointing, and is brought
  * round by hand before the sail can take it: how fast it drifts out, how fast it comes round, how nearly it has
@@ -37,228 +32,8 @@ const TURN_FAST = 0.25;
 const CEILING_STEP = 0.5;
 const CEILING_SLACK = 1;
 const CEILING_MARGIN = 0.25;
-/**
- * How the sail is cut: the foot from mast to clew, the luff from tack to head, how far it narrows toward the
- * head, how far the foot rises to the clew and how high the tack sits. The shader cuts the same cloth from these
- * numbers, so the mesh only has to carry the uv and a shape to be measured for.
- */
-const SAIL_SPAN = 2.7;
-const SAIL_HOIST = 3.7;
-const SAIL_TAPER = 0.55;
-const SAIL_RISE = 0.35;
-const SAIL_TACK = 0.75;
-
-const HULL_VERT = /* glsl */ `
-in vec3 color;
-out vec3 vColor;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vLocal;
-void main() {
-  vec4 w = modelMatrix * vec4(position, 1.0);
-  vColor = color;
-  vWorld = w.xyz;
-  vLocal = position;
-  vNormal = normalize(mat3(modelMatrix) * normal);
-  gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const HULL_FRAG = /* glsl */ `
-${ATMO_GLSL}
-in vec3 vColor;
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
-void main() {
-  vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
-  vec3 V = normalize(cameraPosition - vWorld);
-  float plank = (1.0 - smoothstep(0.0, 0.02, abs(fract(vLocal.y * 5.5 + 0.5) - 0.5) - 0.44));
-  float grain = vnoise(vec2(vLocal.z * 3.0, vLocal.y * 22.0)) * 0.18;
-  vec3 alb = vColor * (0.9 + grain) * (1.0 - plank * 0.35) * (gl_FrontFacing ? 1.0 : 0.72);
-  float ndl = dot(N, uSunDir);
-  float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
-  float sun = cloudShadow(vWorld.xz);
-  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0) * max(dot(-V, uSunDir), 0.0);
-  vec3 col = alb * (harbourLight(vWorld) + hemiLight(N) + uSunColor * wrap * wrap * sun * 0.9) + uSunColor * rim * 0.12 * sun;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
-
-/** The patchwork sail: quilt squares in faded colours, stitched, billowing with the wind and glowing when backlit. */
-const SAIL_VERT = /* glsl */ `
-uniform float uFill;
-uniform float uFlutter;
-uniform float uRipplePhase;
-uniform float uLuff;
-uniform float uDroop;
-uniform float uShelter;
-uniform float uTime;
-out vec2 vUv;
-out vec3 vWorld;
-out vec3 vNormal;
-
-/**
- * Where a point of the cloth is, across the sail from the mast (s) and up it from the boom (t). With wind in it
- * the sail bellies and a ripple travels out to the leech; with none the leech falls in toward the mast and the
- * cloth it gives up hangs in slow vertical folds.
- */
-vec3 cloth(vec2 st) {
-  float s = st.x;
-  float t = st.y;
-  float cut = s * (1.0 - uDroop * s * mix(${glsl(tuning.sail.gather)}, ${glsl(tuning.opening.sailGather)}, uShelter));
-  vec3 p = vec3(
-    -cut * ${glsl(SAIL_SPAN)} * (1.0 - t * ${glsl(SAIL_TAPER)}),
-    ${glsl(SAIL_TACK)} + t * ${glsl(SAIL_HOIST)} + cut * ${glsl(SAIL_RISE)},
-    0.0);
-  p.y -= uDroop * s * (0.4 + 0.6 * sin(t * 3.14159)) * mix(${glsl(tuning.sail.sag)}, ${glsl(tuning.opening.sailSag)}, uShelter);
-  float folds = sin(s * ${glsl(tuning.sail.folds)} * 6.28318 + 1.1 + t * 0.7) * smoothstep(0.0, 0.2, s) * (0.3 + 0.7 * sin(t * 3.14159));
-  float breathe = 0.7 + 0.3 * sin(uTime * 0.55 + t * 1.5);
-  p.z += uDroop * (folds * breathe * ${glsl(tuning.sail.fold)} + s * sin(uTime * 0.4) * 0.08);
-  /** A gust crossing the sail breaks along the free edge first: the leech shakes, then the belly fills again. */
-  float leech = smoothstep(0.15, 1.0, s) * (0.4 + 0.6 * t);
-  float belly = sin(s * 3.14159) * sin(t * 3.14159 * 0.9) * (1.0 - 0.3 * uLuff * leech);
-  float ripple = sin(uRipplePhase - s * 6.5 + t * 3.0) * uFlutter * (0.25 + 0.75 * s * s);
-  float shake = (uLuff + uFlutter * 0.35) * leech;
-  p.z += belly * uFill + ripple * ${glsl(tuning.sail.ripple)} + sin(uTime * 19.0 - s * 12.0 + t * 4.0) * shake * ${glsl(tuning.sail.shake)};
-  return p;
-}
-
-void main() {
-  vec3 p = cloth(uv);
-  /** The cloth is what it is doing, so the light on it is taken from the shape itself rather than guessed at. */
-  vec3 pu = cloth(uv + vec2(0.012, 0.0));
-  vec3 pv = cloth(uv + vec2(0.0, 0.012));
-  vec4 w = modelMatrix * vec4(p, 1.0);
-  vUv = uv;
-  vWorld = w.xyz;
-  vNormal = normalize(mat3(modelMatrix) * normalize(cross(pv - p, pu - p)));
-  gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const SAIL_FRAG = /* glsl */ `
-${ATMO_GLSL}
-uniform float uScarf;
-uniform vec4 uSubject;
-/** Where the cloth hangs between the camera and the child it thins, so the child is never lost behind the sail. */
-float givesWay(vec3 world) {
-  if (uSubject.w < 0.5 || uMirrorPass > 0.5) return 1.0;
-  vec3 toSubject = uSubject.xyz - cameraPosition;
-  float reach = length(toSubject);
-  vec3 dir = toSubject / max(reach, 0.001);
-  vec3 toHere = world - cameraPosition;
-  float along = dot(toHere, dir);
-  if (along <= 0.4 || along >= reach - 0.6) return 1.0;
-  return mix(0.3, 1.0, smoothstep(0.9, 2.2, length(toHere - dir * along)));
-}
-in vec2 vUv;
-in vec3 vWorld;
-in vec3 vNormal;
-void main() {
-  vec2 cell = floor(vUv * vec2(4.0, 5.0));
-  float pick = hash12(cell + 7.0);
-  vec3 cloth = pick < 0.3 ? vec3(0.93, 0.88, 0.76) : pick < 0.52 ? vec3(0.82, 0.38, 0.3) : pick < 0.74 ? vec3(0.9, 0.7, 0.3) : pick < 0.9 ? vec3(0.5, 0.66, 0.78) : vec3(0.62, 0.74, 0.5);
-  vec2 f = fract(vUv * vec2(4.0, 5.0));
-  float seam = 1.0 - smoothstep(0.0, 0.05, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
-  float stitch = seam * step(0.5, fract((vUv.x + vUv.y) * 60.0));
-  cloth *= 1.0 - seam * 0.18 - stitch * 0.1;
-  // The impossible scarf gathers into the sail, its red wool carried into the colder chapters.
-  float woven = smoothstep(vUv.y * 0.75, vUv.y * 0.75 + 0.25, uScarf);
-  vec3 wool = vec3(0.57, 0.023, 0.036) * (0.94 + 0.06 * sin(vUv.y * 100.0));
-  cloth = mix(cloth, wool, woven);
-  vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
-  vec3 V = normalize(cameraPosition - vWorld);
-  float ndl = dot(N, uSunDir);
-  float through = max(-ndl, 0.0) * 0.45 + pow(max(dot(-V, uSunDir), 0.0), 3.0) * 0.25;
-  float sun = cloudShadow(vWorld.xz);
-  vec3 col = cloth * (harbourLight(vWorld) + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
-  col += cloth * cloth * uSunColor * through * 0.35 * sun;
-  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 1.0, 3.5) * givesWay(vWorld));
-}`;
-
-function paint(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  const colors = new Float32Array(g.attributes.position.count * 3);
-  for (let i = 0; i < colors.length; i += 3) colors.set([color.r, color.g, color.b], i);
-  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  g.deleteAttribute('uv');
-  return g;
-}
-
-/** Hull shell: U-shaped sections along the length, a flat transom at the stern, rising to a point at the bow. */
-function hull(): THREE.BufferGeometry {
-  const U = 18;
-  const T = 10;
-  const pos: number[] = [];
-  const idx: number[] = [];
-  const width = (u: number) => BEAM * (1 - Math.pow(u, 3.2)) * (0.7 + 0.3 * Math.sin(u * Math.PI));
-  const depth = (u: number) => DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI));
-  const sheer = (u: number) => 0.28 * u * u;
-  for (let i = 0; i <= U; i++) {
-    const u = i / U;
-    const z = (u - 0.45) * LENGTH;
-    for (let j = 0; j <= T; j++) {
-      const th = (j / T) * Math.PI;
-      const x = width(u) * Math.cos(th);
-      const y = sheer(u) - depth(u) * Math.pow(Math.sin(th), 0.7) * (1 - 0.5 * u * u);
-      pos.push(x, y, z);
-    }
-  }
-  for (let i = 0; i < U; i++) {
-    for (let j = 0; j < T; j++) {
-      const a = i * (T + 1) + j;
-      const b = a + T + 1;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
-    }
-  }
-  const centre = pos.length / 3;
-  pos.push(0, sheer(0) - depth(0) * 0.45, -0.45 * LENGTH);
-  for (let j = 0; j < T; j++) idx.push(centre, j, j + 1);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  return geo;
-}
-
-/** The floorboards: a flat deck lofted to the inside of the hull at the height the boards are laid. */
-function floorboards(): THREE.BufferGeometry {
-  const U = 18;
-  const pos: number[] = [];
-  const idx: number[] = [];
-  const width = (u: number) => BEAM * (1 - Math.pow(u, 3.2)) * (0.7 + 0.3 * Math.sin(u * Math.PI));
-  const depth = (u: number) => DEPTH * (0.8 + 0.2 * Math.sin(u * Math.PI));
-  const sheer = (u: number) => 0.28 * u * u;
-  for (let i = 0; i <= U; i++) {
-    const u = i / U;
-    // At the narrow bow the shell rises above the main floor level. Follow it inside the hull.
-    const floor = Math.max(FLOOR_Y, sheer(u) - depth(u) * (1 - 0.5 * u * u) + 0.02);
-    const drop = (sheer(u) - floor) / (depth(u) * (1 - 0.5 * u * u));
-    const sin = Math.min(1, Math.max(0, drop)) ** (1 / 0.7);
-    const half = width(u) * Math.sqrt(Math.max(0, 1 - sin * sin));
-    const z = (u - 0.45) * LENGTH;
-    pos.push(-half, floor, z, half, floor, z);
-  }
-  for (let i = 0; i < U; i++) {
-    const a = i * 2;
-    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  return geo;
-}
-
-/** Enough of a grid for the cloth to hang in folds; the shader moves every point of it from its uv. */
-function sailGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.PlaneGeometry(1, 1, 18, 16);
-  const pos = geo.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) {
-    const s = pos.getX(i) + 0.5;
-    const t = pos.getY(i) + 0.5;
-    pos.setXYZ(i, -s * SAIL_SPAN * (1 - t * SAIL_TAPER), SAIL_TACK + t * SAIL_HOIST + s * SAIL_RISE, 0);
-  }
-  return geo;
-}
+/** The way the boom's mesh lies before it is turned to the clew. */
+const BOOM_REST = new THREE.Vector3(-1, 0, 0);
 
 /**
  * The child's little boat. It waits on a beach, is pushed into the water, and then sails where it is steered,
@@ -297,6 +72,15 @@ export class Boat {
    */
   readonly sailWind = { blowing: 0, taken: 0, along: 0, made: 0 };
   private readonly sailPivot = new THREE.Group();
+  /** The boom itself, turned every frame to the clew of the cloth the shader draws. */
+  private readonly spar = new THREE.Mesh();
+  private readonly clewAt = new THREE.Vector3();
+  /** The world as the hull sees it, for the shade its own sides cast inside it. */
+  private readonly hullFrame = new THREE.Matrix4();
+  private readonly pennantMat: THREE.ShaderMaterial;
+  /** The air the pennant streams in, in the hull's own frame, and how far out it lifts. */
+  private readonly pennantAir = new THREE.Vector2();
+  private pennantLift = 0;
   /** The child the sail gives way to (w = 1 while there is one to watch). */
   readonly subject = new THREE.Vector4();
   private readonly sailMat: THREE.ShaderMaterial;
@@ -308,7 +92,7 @@ export class Boat {
   /** Above the highest ground within reach of the hull while it lies near (x, z). */
   private readonly ceiling = { x: NaN, z: NaN, height: Infinity };
   private nearShore = true;
-  private readonly seatLocal = new THREE.Vector3(0, 0.02, -0.25);
+  private readonly seatLocal = new THREE.Vector3(0, SEAT_Y, -0.25);
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   /** The wind the sail feels, on the hanging things' spring: it fills when a gust arrives, not when the air moves. */
   private readonly sway = new Sway();
@@ -341,22 +125,14 @@ export class Boat {
     const hullMat = new THREE.ShaderMaterial({
       vertexShader: HULL_VERT,
       fragmentShader: HULL_FRAG,
-      uniforms: { ...atmo.uniforms },
+      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame } },
       side: THREE.DoubleSide,
     });
-    const wood = new THREE.Color('#9a6a42');
-    const trim = new THREE.Color('#5d3d27');
-    const shellGeometry = hull();
-    this.hullContacts = shellGeometry.getAttribute('position') as THREE.BufferAttribute;
+    this.hullContacts = contactShell().getAttribute('position') as THREE.BufferAttribute;
     let reach = 0;
     for (let i = 0; i < this.hullContacts.count; i++) reach = Math.max(reach, this.contact.fromBufferAttribute(this.hullContacts, i).length());
     this.reach = reach;
-    const shell = paint(shellGeometry, wood);
-    const deck = paint(floorboards(), trim);
-    const thwart = paint(new THREE.BoxGeometry(1.7, 0.08, 0.34).translate(0, 0.02, -0.25), trim);
-    const mast = paint(new THREE.CylinderGeometry(0.06, 0.08, 4.6, 8).translate(0, 2.2, 0.55), trim);
-    const boomBar = paint(new THREE.CylinderGeometry(0.04, 0.04, 2.8, 6).rotateZ(Math.PI / 2).translate(-1.35, 0.78, 0.55), trim);
-    this.group.add(new THREE.Mesh(mergeGeometries([shell, deck, thwart, mast]), hullMat));
+    this.group.add(new THREE.Mesh(hullGeometry(), hullMat));
 
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
@@ -365,10 +141,23 @@ export class Boat {
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     });
-    this.sailPivot.position.set(0, 0, 0.55);
+    this.sailPivot.position.set(0, 0, MAST_Z);
     this.sailPivot.add(new THREE.Mesh(sailGeometry(), this.sailMat));
-    this.sailPivot.add(new THREE.Mesh(boomBar.translate(0, 0, -0.55), hullMat));
+    this.spar.position.set(0, SAIL_TACK, 0);
+    this.spar.geometry = boomGeometry();
+    this.spar.material = hullMat;
+    this.sailPivot.add(this.spar);
     this.group.add(this.sailPivot);
+
+    this.pennantMat = new THREE.ShaderMaterial({
+      vertexShader: PENNANT_VERT,
+      fragmentShader: PENNANT_FRAG,
+      uniforms: { ...atmo.uniforms, uPennant: { value: new THREE.Vector4(0, -1, 0, 0) }, uScarf: { value: 0 } },
+      side: THREE.DoubleSide,
+    });
+    const pennant = new THREE.Mesh(pennantGeometry(), this.pennantMat);
+    pennant.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, MAST_TOP - 0.3, MAST_Z), 0.9);
+    this.group.add(pennant);
   }
 
   get objects(): THREE.Object3D[] {
@@ -422,7 +211,7 @@ export class Boat {
   /** World position of the middle of the sail, for anyone who needs to look at it. */
   sailPoint(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
-    return out.set(0, 2.2, 0.55).applyMatrix4(this.group.matrixWorld);
+    return out.set(0, SAIL_TACK + 1.45, MAST_Z).applyMatrix4(this.group.matrixWorld);
   }
 
   /** Put a stroke that crosses the sail on screen onto the sail; from low behind the boat the pointer's ray meets water beyond it. */
@@ -442,8 +231,8 @@ export class Boat {
   /** The visible hull's ends, so landmark framing keeps the whole boat within the screen. */
   hullEnds(bow: THREE.Vector3, stern: THREE.Vector3): void {
     this.group.updateMatrixWorld(true);
-    bow.set(0, 0.28, LENGTH * 0.55).applyMatrix4(this.group.matrixWorld);
-    stern.set(0, 0, -LENGTH * 0.45).applyMatrix4(this.group.matrixWorld);
+    bow.set(0, gunwale(1) - 0.05, BOW_Z).applyMatrix4(this.group.matrixWorld);
+    stern.set(0, 0, STERN_Z).applyMatrix4(this.group.matrixWorld);
   }
 
   /**
@@ -604,8 +393,43 @@ export class Boat {
     const spilling = this.becalmed * Math.min(1, (air.blowing - air.made) / tuning.sail.hangsBelow);
     const squallLuff = this.swell * tuning.sail.squallLuff * (0.58 + 0.42 * Math.sin(this.time * 2.7) ** 2);
     sail.uLuff.value = Math.max(this.luff, spilling, squallLuff) * (this.afloat ? 1 : 0.5);
+    this.flyPennant(dt, across, along, air.blowing);
+    this.trimBoom(time);
     this.pose(dt);
     this.updateWake(dt, time);
+  }
+
+  /** The pennant streams the way the air in the sail is going, lifting out as it freshens. */
+  private flyPennant(dt: number, across: number, along: number, blowing: number): void {
+    const k = 1 - Math.exp(-dt * 2.5);
+    this.pennantAir.x += (across - this.pennantAir.x) * k;
+    this.pennantAir.y += (along - this.pennantAir.y) * k;
+    this.pennantLift += (1 - Math.exp(-blowing / 2.2) - this.pennantLift) * k;
+    const u = this.pennantMat.uniforms;
+    const length = this.pennantAir.length();
+    const [x, z] = length > 1e-3 ? [this.pennantAir.x / length, this.pennantAir.y / length] : [0, -1];
+    u.uPennant.value.set(x, z, this.pennantLift, (u.uPennant.value.w + dt * (5 + 10 * this.pennantLift)) % (Math.PI * 200));
+    u.uScarf.value = this.scarfSail;
+  }
+
+  /**
+   * Where the clew of the cloth is this frame, worked out exactly as the sail's shader does at the corner of its
+   * foot, so the boom can lie under it: out to the clew of a full sail, swinging with the leech as it shakes.
+   */
+  private trimBoom(time: number): void {
+    const u = this.sailMat.uniforms;
+    const k = tuning.sail;
+    const droop = u.uDroop.value;
+    const shelter = u.uShelter.value;
+    const cut = 1 - droop * THREE.MathUtils.lerp(k.gather, tuning.opening.sailGather, shelter);
+    const y = SAIL_TACK + cut * SAIL_RISE - droop * 0.4 * THREE.MathUtils.lerp(k.sag, tuning.opening.sailSag, shelter);
+    const folds = Math.sin(k.folds * Math.PI * 2 + 1.1) * 0.3;
+    const breathe = 0.7 + 0.3 * Math.sin(time * 0.55);
+    const ripple = Math.sin(u.uRipplePhase.value - 6.5) * u.uFlutter.value;
+    const shake = (u.uLuff.value + u.uFlutter.value * 0.35) * 0.4;
+    const z = droop * (folds * breathe * k.fold + Math.sin(time * 0.4) * 0.08) + ripple * k.ripple + Math.sin(time * 19 - 12) * shake * k.shake;
+    this.clewAt.set(-cut * SAIL_SPAN, y - SAIL_TACK, z).normalize();
+    this.spar.quaternion.setFromUnitVectors(BOOM_REST, this.clewAt);
   }
 
   /** The air the sail is standing in: the one place the boat reads the wind field. */
@@ -699,6 +523,7 @@ export class Boat {
     this.group.position.copy(this.position);
     this.sailPivot.rotation.y = this.boom;
     this.group.updateMatrixWorld(true);
+    this.hullFrame.copy(this.group.matrixWorld).invert();
   }
 
   /**
