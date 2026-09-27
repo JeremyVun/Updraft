@@ -66,12 +66,12 @@ const ABOVE_CHORDS: Chord[] = [
   { at: 19, deep: [47], haze: [54, 64, 69, 74] },
   { at: 27, deep: [40], haze: [55, 62, 66, 71] },
 ];
-const ABOVE_HARMONY = harmony(ABOVE_CHORDS, 35, 3.2, .0046, .0036, 5.5);
+const ABOVE_HARMONY = harmony(ABOVE_CHORDS, 35, 3.2, .0039, .0031, 5.5);
 const ABOVE_MELODY = line('light', [
-  [6.5, 74, 3.8, .011], [9.5, 76, 3.4, .0105], [12.5, 78, 4.4, .011], [16.5, 85, 6.4, .0095],
-  [24, 83, 3.4, .0095], [27.5, 79, 3.6, .009], [31, 78, 4.8, .0085],
+  [6.5, 74, 3.8, .0094], [9.5, 76, 3.4, .009], [12.5, 78, 4.4, .0094], [16.5, 85, 6.4, .0081],
+  [24, 83, 3.4, .0081], [27.5, 79, 3.6, .0077], [31, 78, 4.8, .0072],
 ], -.08);
-const ABOVE_SPARE = line('light', [[16.5, 85, 6.4, .0085], [24, 83, 3.4, .008], [31, 78, 4.8, .0075]], -.08);
+const ABOVE_SPARE = line('light', [[16.5, 85, 6.4, .0072], [24, 83, 3.4, .0068], [31, 78, 4.8, .0064]], -.08);
 
 /** Over the cloud the bass walks up the scale, D to B, and comes home by G and A. */
 const SAIL_CHORDS: Chord[] = [

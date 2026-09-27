@@ -119,12 +119,12 @@ export const tuning = {
     stairsAir: {
       /** The wind in the white, heard from the landing below while the bird goes up first. */
       fromBelow: 0.35,
-      bodyLevel: 0.45, howlLevel: 1.2, rushLevel: 0.25, highLevel: 0.05, hullLevel: 0.12, fogLevel: 0.3, lastGustLevel: 0.2,
+      bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.05, hullLevel: 0.12, fogLevel: 0.3, lastGustLevel: 0.2,
       /** The birches' phrase drains away over about this many seconds per 4 dB once they go up into the white. */
       drain: 2.2,
     },
-    flightKnock: { level: 0.5, reverb: 0.25, pitch: 220, puff: 0.08 },
-    stairsScoreLevel: 8, stairsPhaseFade: 4,
+    flightKnock: { level: 0.13, reverb: 0.25, pitch: 220, puff: 0.08 },
+    stairsScoreLevel: 6, stairsPhaseFade: 4,
   },
   cygnetMotion: {
     /** Running balance should not become wingbeats during a deliberately slow walk. */
