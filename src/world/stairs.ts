@@ -150,13 +150,14 @@ void main() {
   vec3 N = normalize(vec3(h - billow(xz + vec2(e, 0.0)), e, h - billow(xz + vec2(0.0, e))));
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 L = normalize(uSunDir + vec3(0.0, 0.08, 0.0));
-  float wrap = clamp(dot(N, L) * 0.6 + 0.4, 0.0, 1.0);
+  // Lit hard from the side by the low sun: gold on every flank that faces it, lilac in the folds that do not.
+  float wrap = clamp(dot(N, L) * 0.85 + 0.2, 0.0, 1.0);
   float toward = pow(max(0.0, dot(-V, L)), 6.0);
   float rim = pow(1.0 - max(0.0, dot(N, V)), 3.0);
   float crest = smoothstep(0.0, 4.0, h);
   float fold = vnoise(xz * 0.21) * 0.5 + vnoise(xz * 0.63) * 0.25;
-  vec3 shade = mix(vec3(0.60, 0.58, 0.78), vec3(0.78, 0.76, 0.88), crest) * (uSkyAmbient * 0.9 + vec3(0.12));
-  vec3 sunlit = uSunColor * (0.95 + 0.4 * toward) * wrap;
+  vec3 shade = mix(vec3(0.54, 0.52, 0.76), vec3(0.76, 0.74, 0.88), crest) * (uSkyAmbient * 0.85 + vec3(0.1));
+  vec3 sunlit = uSunColor * (0.95 + 0.4 * toward) * wrap * wrap * 1.25;
   vec3 col = shade * (0.85 + 0.3 * fold) + sunlit * (0.7 + 0.3 * crest);
   col += uSunColor * rim * (0.25 + 1.4 * toward) * wrap;
   col *= 0.94 + 0.12 * vnoise(xz * 2.3);
@@ -209,7 +210,7 @@ float furrow(vec2 p) {
 float billow(vec2 xz) {
   vec2 p = xz + uCloudShift * 0.6;
   float calm = min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(5.0, 28.0, fromRoute(xz)));
-  float swell = (domes(p * 0.09) * 1.1 + domes(p * 0.23 + 3.1) * 0.35) * (0.4 + 0.6 * calm);
+  float swell = (domes(p * 0.09) * 1.1 + domes(p * 0.23 + 3.1) * 0.35 + domes(p * 0.55 + 7.7) * 0.12) * (0.7 + 0.3 * calm);
   float heaps = domes(p * 0.028 + 9.7) * 7.5 + domes(p * 0.07 + 5.3) * 2.2;
   return mix(swell, swell + heaps, calm) - furrow(xz) * 0.6;
 }`;
