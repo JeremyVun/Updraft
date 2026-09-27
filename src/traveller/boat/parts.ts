@@ -58,7 +58,7 @@ function dress(geo: THREE.BufferGeometry, color: THREE.Color, kind: number,
  * `half` gives its two half-sizes at every point, and `square` near 0 squares the section off.
  */
 function sweep(centres: THREE.Vector3[], outs: THREE.Vector3[], ups: THREE.Vector3[],
-  half: (i: number) => [number, number], sides: number, square = 1): THREE.BufferGeometry {
+  half: (i: number) => [number, number], sides: number, square = 1, turn = 0): THREE.BufferGeometry {
   const pos: number[] = [];
   const grain: number[] = [];
   const tan: number[] = [];
@@ -70,7 +70,7 @@ function sweep(centres: THREE.Vector3[], outs: THREE.Vector3[], ups: THREE.Vecto
     dir.subVectors(centres[Math.min(i + 1, centres.length - 1)], centres[Math.max(i - 1, 0)]).normalize();
     const [a, b] = half(i);
     for (let k = 0; k <= sides; k++) {
-      const th = (k / sides) * Math.PI * 2;
+      const th = ((k + turn) / sides) * Math.PI * 2;
       const c = Math.cos(th);
       const s = Math.sin(th);
       const cx = Math.sign(c) * Math.abs(c) ** square;
@@ -149,8 +149,8 @@ function halfSection(u: number, count: number): { points: THREE.Vector2[]; girth
  * are drawn by the shader along the girth, so they stay fine lines however far away the boat is.
  */
 function planking(): THREE.BufferGeometry {
-  const U = 44;
-  const T = 16;
+  const U = 30;
+  const T = 12;
   const rows = 2 * T + 1;
   const pos: number[] = [];
   const grain: number[] = [];
@@ -191,10 +191,10 @@ function planking(): THREE.BufferGeometry {
 
 /** The transom: a flat board a little proud of the plank ends, closing the stern. */
 function transom(): THREE.BufferGeometry {
-  const T = 16;
+  const T = 12;
   const { points } = halfSection(0, T);
   const outline: THREE.Vector3[] = [];
-  const z = STERN_Z - 0.014;
+  const z = STERN_Z - 0.004;
   for (let j = 0; j <= 2 * T; j++) {
     const k = j <= T ? T - j : j - T;
     const side = j < T ? 1 : -1;
@@ -219,7 +219,7 @@ const Y = new THREE.Vector3(0, 1, 0);
 /** The gunwale: a rounded rail capping the planking down each side, and across the top of the transom. */
 function rails(): THREE.BufferGeometry[] {
   const parts: THREE.BufferGeometry[] = [];
-  const N = 48;
+  const N = 30;
   for (const side of [1, -1]) {
     const centres: THREE.Vector3[] = [];
     for (let i = 0; i <= N; i++) {
@@ -235,11 +235,11 @@ function rails(): THREE.BufferGeometry[] {
       outs.push(out);
       ups.push(new THREE.Vector3().crossVectors(t, out).normalize().multiplyScalar(side));
     }
-    parts.push(dress(sweep(centres, outs, ups, (i) => [0.03 * (1 - 0.35 * (i / N) ** 4), 0.022], 10, 0.7), WOOD.rail, KIND.wood));
+    parts.push(dress(sweep(centres, outs, ups, (i) => [0.03 * (1 - 0.35 * (i / N) ** 4), 0.022], 8, 0.7), WOOD.rail, KIND.wood));
   }
   const w = halfWidth(0) + 0.02;
   const cap = [new THREE.Vector3(-w, gunwale(0) - 0.017, STERN_Z - 0.012), new THREE.Vector3(w, gunwale(0) - 0.017, STERN_Z - 0.012)];
-  parts.push(dress(sweep(cap, [new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, -1)], [Y, Y], () => [0.028, 0.022], 10, 0.7), WOOD.rail, KIND.wood));
+  parts.push(dress(sweep(cap, [new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, -1)], [Y, Y], () => [0.028, 0.022], 8, 0.7), WOOD.rail, KIND.wood));
   return parts;
 }
 
@@ -282,14 +282,14 @@ function frames(): THREE.BufferGeometry[] {
       const centres: THREE.Vector3[] = [];
       const outs: THREE.Vector3[] = [];
       const ups: THREE.Vector3[] = [];
-      const M = 7;
+      const M = 5;
       for (let m = 0; m <= M; m++) {
         const { p, into } = inside(u, THREE.MathUtils.lerp(from, to, m / M), side);
         centres.push(p.addScaledVector(into, 0.02));
         outs.push(into);
         ups.push(Z);
       }
-      parts.push(dress(sweep(centres, outs, ups, () => [0.012, 0.022], 8, 0.35), WOOD.ribs, KIND.wood));
+      parts.push(dress(sweep(centres, outs, ups, () => [0.012, 0.022], 4, 0, 0.5), WOOD.ribs, KIND.wood));
     }
   }
   for (const side of [1, -1]) {
@@ -297,7 +297,7 @@ function frames(): THREE.BufferGeometry[] {
     const outs: THREE.Vector3[] = [];
     const ups: THREE.Vector3[] = [];
     const y = -0.05;
-    for (let z = STERN_Z + 0.2; z <= 1.75; z += 0.12) {
+    for (let z = STERN_Z + 0.2; z <= 1.75; z += 0.2) {
       const u = stationU(z);
       const { p, into } = inside(u, girthAt(u, y), side);
       centres.push(p.addScaledVector(into, 0.022));
@@ -305,7 +305,7 @@ function frames(): THREE.BufferGeometry[] {
       outs.push(out);
       ups.push(Y);
     }
-    parts.push(dress(sweep(centres, outs, ups, () => [0.012, 0.028], 8, 0.35), WOOD.ribs, KIND.wood));
+    parts.push(dress(sweep(centres, outs, ups, () => [0.012, 0.028], 4, 0, 0.5), WOOD.ribs, KIND.wood));
   }
   return parts;
 }
@@ -333,7 +333,7 @@ function floorboards(): THREE.BufferGeometry {
 }
 
 function board(w: number, h: number, d: number, x: number, y: number, z: number, color: THREE.Color): THREE.BufferGeometry {
-  const geo = new RoundedBoxGeometry(w, h, d, 2, Math.min(h, d) * 0.3).translate(x, y, z);
+  const geo = new RoundedBoxGeometry(w, h, d, 1, Math.min(h, d) * 0.3).translate(x, y, z);
   return dress(geo, color, KIND.wood, (p) => [p.x, p.z, 0], new THREE.Vector3(1, 0, 0));
 }
 
@@ -410,14 +410,15 @@ function rudder(): THREE.BufferGeometry[] {
   // Distance aft of the transom, height.
   shape.moveTo(0, top + 0.1);
   shape.lineTo(0.075, top + 0.1);
-  shape.quadraticCurveTo(0.1, top - 0.02, 0.13, -0.06);
-  shape.quadraticCurveTo(0.33, -0.2, 0.33, -0.4);
-  shape.quadraticCurveTo(0.32, -0.53, 0.2, -0.54);
-  shape.lineTo(0.02, -0.52);
-  shape.lineTo(0, -0.46);
+  shape.quadraticCurveTo(0.1, top - 0.02, 0.13, -0.05);
+  shape.quadraticCurveTo(0.32, -0.16, 0.32, -0.34);
+  // No deeper than the keel at the transom, so a boat lying stern-up a beach does not bury it.
+  shape.quadraticCurveTo(0.31, -0.445, 0.19, -0.452);
+  shape.lineTo(0.02, -0.44);
+  shape.lineTo(0, -0.4);
   shape.lineTo(0, top + 0.1);
   const thick = 0.03;
-  const blade = new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.008, bevelSegments: 1, curveSegments: 6 });
+  const blade = new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.008, bevelSegments: 1, curveSegments: 4 });
   blade.rotateY(Math.PI / 2).translate(-thick / 2, 0, STERN_Z - 0.03);
   const tiller: THREE.Vector3[] = [];
   for (let i = 0; i <= 6; i++) {
@@ -439,7 +440,7 @@ function rudder(): THREE.BufferGeometry[] {
 function mast(): THREE.BufferGeometry[] {
   const height = MAST_TOP - FLOOR_Y;
   const spar = new THREE.CylinderGeometry(0.036, 0.07, height, 12, 3).translate(0, (MAST_TOP + FLOOR_Y) / 2, MAST_Z);
-  const truck = new THREE.SphereGeometry(0.048, 12, 6).scale(1, 0.55, 1).translate(0, MAST_TOP, MAST_Z);
+  const truck = new THREE.SphereGeometry(0.048, 10, 4).scale(1, 0.55, 1).translate(0, MAST_TOP, MAST_Z);
   const parts = [
     dress(spar, WOOD.spar, KIND.wood, (p) => [p.y, Math.atan2(p.x, p.z - MAST_Z) * 0.07, 0], Y),
     dress(truck, WOOD.spar, KIND.wood, (p) => [p.y, p.x, 0], Y),
@@ -447,7 +448,7 @@ function mast(): THREE.BufferGeometry[] {
   for (let k = 1; k <= 5; k++) {
     const y = SAIL_TACK + (k / 5.6) * SAIL_HOIST;
     const r = 0.07 - 0.034 * ((y - FLOOR_Y) / height) + 0.028;
-    const hoop = new THREE.TorusGeometry(r, 0.011, 5, 16).rotateX(Math.PI / 2).translate(0, y, MAST_Z);
+    const hoop = new THREE.TorusGeometry(r, 0.011, 4, 10).rotateX(Math.PI / 2).translate(0, y, MAST_Z);
     parts.push(dress(hoop, WOOD.hoop, KIND.wood, (p) => [Math.atan2(p.x, p.z - MAST_Z) * r, p.y, 0], new THREE.Vector3(1, 0, 0)));
   }
   return parts;
