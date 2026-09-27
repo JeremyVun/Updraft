@@ -46,7 +46,8 @@ export class CloudBank {
     this.mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.material);
     this.mesh.name = 'stairs-cloud-bank';
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = 6;
+    // Under the sweep that invites the player to blow it away.
+    this.mesh.renderOrder = 4;
     this.mesh.visible = false;
   }
 

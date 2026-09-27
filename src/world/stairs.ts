@@ -36,19 +36,26 @@ out float vMist;
 flat out float vPart;
 #ifdef TRICK
 uniform vec3 uLoopEye;
+uniform float uUndraw;
 in float aDepth;
+in vec3 aBuilt;
 #endif
 void main() {
   vUv = uv;
   vColor = color;
   vPart = aPart;
   vMist = aMist;
+#ifdef TRICK
+  // Drawn in toward the eye, or let go back to how it is really built, climbing on past the corner into the air.
+  vWorld = (modelMatrix * vec4(mix(position, aBuilt, uUndraw), 1.0)).xyz;
+#else
   vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+#endif
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 #ifdef TRICK
-  // Drawn in toward the eye, but in front of and behind everything else as if it stood where it seems to.
-  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * aDepth, 1.0);
+  // Drawn in, it is in front of and behind everything else as if it stood where it seems to.
+  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * mix(aDepth, 1.0, uUndraw), 1.0);
   gl_Position.z = seems.z / seems.w * gl_Position.w;
 #endif
 }`;
@@ -328,10 +335,10 @@ function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THR
   return haze;
 }
 
-function stairMaterial(shown = { value: 1 }, trick = false): THREE.ShaderMaterial {
+function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     defines: trick ? { TRICK: 1 } : {},
-    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE } },
+    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uUndraw: undraw },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,
@@ -388,6 +395,7 @@ export class CloudStairs {
   readonly eye = new THREE.Vector3();
   readonly looking = new THREE.Vector3();
   private readonly trickUniform = { value: 0 };
+  private readonly undrawUniform = { value: 0 };
   /** Called with a piece's flight number as it knocks home. */
   onDocked: (index: number) => void = () => {};
   /** 0 hides the ghost of the next missing flight; 1 draws it. */
@@ -426,13 +434,14 @@ export class CloudStairs {
     const v = new THREE.Vector3();
     const pos = back.getAttribute('position');
     const depth = new Float32Array(pos.count);
+    back.setAttribute('aBuilt', new THREE.BufferAttribute(Float32Array.from(pos.array as Float32Array), 3));
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
       depth[i] = 1 / THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v));
       pos.setXYZ(i, ...drawIn(v).toArray());
     }
     back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
-    this.trick = new THREE.Mesh(back, stairMaterial(this.trickUniform, true));
+    this.trick = new THREE.Mesh(back, stairMaterial(this.trickUniform, true, this.undrawUniform));
     this.trick.name = 'stairs-loop-trick';
     this.trick.visible = false;
     this.group.add(this.trick);
@@ -640,6 +649,11 @@ export class CloudStairs {
       piece.group.rotation.set(sway * 0.4, piece.offset.y, sway);
       piece.ghost.visible = piece === next && this.ghostUniform.value > 0.01;
     });
+  }
+
+  /** 0 draws the loop's last flight in, so from the one place it seems to close the loop; 1 as it is really built. */
+  set undraw(amount: number) {
+    this.undrawUniform.value = amount;
   }
 
   /** 0 hides the loop's trick, 1 shows it; in between it comes and goes in a scatter. */

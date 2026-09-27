@@ -36,6 +36,12 @@ export interface CloudDeckState {
 
 /** How long the lens takes to rise out over the loop to the one place it has to be seen from. */
 const LOOP_SETTLE = 5;
+/**
+ * Once the bird has found the way on: how long the lens stays at the one place, then how long it takes to come round
+ * and down beside the loop while its last flight lets go of the trick and climbs on past the corner into the air.
+ */
+const REVEAL_HOLD = 1.4;
+const REVEAL = 7.5;
 
 /**
  * Where the child stands aside on the last landing under the white, in its far corner, clear of the way the bird
@@ -111,6 +117,7 @@ export class StairsChapter implements Chapter {
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
+  private readonly look2 = new THREE.Vector3();
   private readonly birdAt = new THREE.Vector3();
   private readonly sun = new THREE.Vector3();
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
@@ -143,6 +150,10 @@ export class StairsChapter implements Chapter {
   /** While the lens is up in the white over the loop, the cloud is kept deep enough round it. */
   private lofted = false;
   private trickGone = 0;
+  /** When the bird found the way on, so the loop is seen to come apart; below zero until then. */
+  private revealFrom = -1;
+  private readonly revealEye = new THREE.Vector3();
+  private readonly revealLook = new THREE.Vector3();
   private stuckLeft = Infinity;
   /** How far round the loop the bird had got last frame. */
   private alongWas = 0;
@@ -247,11 +258,19 @@ export class StairsChapter implements Chapter {
   /** A slow sweep drawn across the loose flight when the stair has been waiting on it a while. */
   get windInvitation(): THREE.Vector3 | null {
     // Back where it started, and the cloud on the loop's far corner is still there: a sweep across it.
-    if (this.beat === 'loop') return (this.lap >= 1 || this.round === 'puzzled') && !this.world.bank.cleared ? this.world.bank.centre : null;
+    if (this.beat === 'loop') {
+      const bank = this.world.bank;
+      return (this.lap >= 1 || this.round === 'puzzled') && !bank.cleared ? bank.centre : null;
+    }
     if (this.beat !== 'waiting' || this.now - this.lastPush < 6) return null;
     const piece = this.world.waiting;
     if (!piece) return null;
     return this.world.pointOn(piece, this.tmp2.lerpVectors(piece.flight.bottom, piece.flight.landing, 0.5), this.invitation);
+  }
+
+  /** The heap on the loop's far corner: the sweep goes right across it, from the clear air on one side to the other. */
+  get invitationRadius(): number {
+    return this.beat === 'loop' ? this.world.bank.radius * 1.5 : 0;
   }
 
   /** Above the cloud the pointer lands on its top, so a gust meant for the sail reaches the sail. */
@@ -459,6 +478,7 @@ export class StairsChapter implements Chapter {
     const e = this.beat === 'loop' ? THREE.MathUtils.smoothstep(this.now - this.loopFrom, LOOP_SETTLE * 0.7, LOOP_SETTLE) : 0;
     if (this.looped && this.beat !== 'loop' && this.stop > this.loopStop + 6) this.trickGone = Math.min(1, this.trickGone + dt / 2);
     this.world.trickShown = this.beat === 'loop' ? e : this.looped ? 1 - this.trickGone : 0;
+    this.world.undraw = this.revealFrom < 0 ? 0 : THREE.MathUtils.smoothstep(this.now - this.revealFrom, REVEAL_HOLD + 0.4, REVEAL - 1);
     this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
   }
 
@@ -620,6 +640,9 @@ export class StairsChapter implements Chapter {
           if (bank.cleared && there) {
             k.scale = 1;
             k.decks = this.decks();
+            k.mind.perform('wag', 0.9);
+            this.revealFrom = this.now;
+            this.revealEye.copy(LOOP_EYE);
             this.birdStop = this.loopStop + 4;
             this.birdReached = this.birdStop;
             this.limit = this.reachable();
@@ -664,6 +687,9 @@ export class StairsChapter implements Chapter {
         }
         if (again && dt > 5.6 && this.lastDt <= 5.6) { cue('puzzled'); k.call(false); }
         if (again && dt > 6.2 && this.lastDt <= 6.2) k.does('shake', undefined, 0.9);
+        // Then they both look across at the cloud on the far corner.
+        if (dt > 5.2) c.lookAt = this.look2.copy(bank.centre);
+        if (dt > (again ? 6.6 : 5.4) && this.lastDt <= (again ? 6.6 : 5.4)) k.does('look-back', this.look2, 1.2);
         if (dt > (again ? 7.4 : 6.2)) {
           this.lap++;
           this.setOff();
@@ -946,13 +972,15 @@ export class StairsChapter implements Chapter {
     // the lens comes down after them, so the square is seen to come apart, and closes in once the lens is down.
     if (this.beat === 'loop' || this.lofted) {
       // The pocket's clear heart reaches from the lens to just past the loop; beyond that it thickens to white, and
-      // the cloud goes on down under the loop far enough that nothing shows through from below.
-      const heart = LOOP_EYE.distanceTo(LOOP_LOOK) / 2 + 1.5;
-      d.bubble.set((LOOP_EYE.x + LOOP_LOOK.x) / 2, (LOOP_EYE.y + LOOP_LOOK.y) / 2, (LOOP_EYE.z + LOOP_LOOK.z) / 2, heart / 0.6);
+      // the cloud goes on down under the loop far enough that nothing shows through from below. While the lens comes
+      // round beside the loop the pocket goes with it.
+      const lens = this.revealing ? this.revealEye : LOOP_EYE;
+      const heart = lens.distanceTo(LOOP_LOOK) / 2 + 1.5;
+      d.bubble.set((lens.x + LOOP_LOOK.x) / 2, (lens.y + LOOP_LOOK.y) / 2, (lens.z + LOOP_LOOK.z) / 2, heart / 0.6);
       d.clearing = 0.006;
       d.base = LOOP_LOOK.y - 14;
     }
-    if (this.lofted && this.beat !== 'loop' && this.world.eye.y < CLOUD.top - 1.5) this.lofted = false;
+    if (this.lofted && this.beat !== 'loop' && !this.revealing && this.world.eye.y < CLOUD.top - 1.5) this.lofted = false;
     if (this.lofted) d.top = LOOP_EYE.y + 6;
     this.world.hideTop = this.lofted;
     const white = ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat);
@@ -964,6 +992,34 @@ export class StairsChapter implements Chapter {
     // The wind in the white rises as they climb; on top it has gone.
     const out = this.air.open;
     this.breeze = white ? THREE.MathUtils.lerp(0.35, 1.3, climb) * (1 - out) + 0.12 * out : this.air.open > 0.5 ? 0.12 : 0.35;
+  }
+
+  /** Whether the lens is still showing the loop come apart after the bird found the way on. */
+  private get revealing(): boolean {
+    return this.revealFrom >= 0 && this.now - this.revealFrom < REVEAL;
+  }
+
+  /**
+   * The lens stays a moment where the loop closes, then comes round beside it and lower, while its last flight lets
+   * go of the trick: seen from here it climbs on past the corner and stops in the air, a whole round too high.
+   */
+  private revealShot(): void {
+    const s = this.shot;
+    const e = THREE.MathUtils.smoothstep(this.now - this.revealFrom, REVEAL_HOLD, REVEAL);
+    const from = this.tmp.subVectors(LOOP_EYE, LOOP_LOOK);
+    // Round and down to nearly level with the loop, where the last flight is plainly a storey too high, and inside
+    // the white again, so the hollow can close behind the lens.
+    const reach = from.length() * THREE.MathUtils.lerp(1, 0.65, e);
+    const rise = THREE.MathUtils.lerp(Math.asin(from.y / from.length()), 0.18, e);
+    const bearing = Math.atan2(from.x, from.z) + 0.95 * e;
+    this.revealLook.copy(LOOP_LOOK).y += 1.2 * e;
+    s.eye = this.revealEye.set(Math.sin(bearing) * Math.cos(rise), Math.sin(rise), Math.cos(bearing) * Math.cos(rise))
+      .multiplyScalar(reach).add(this.revealLook);
+    s.target.copy(this.revealLook);
+    s.exact = true;
+    s.zoom = THREE.MathUtils.lerp(LOOP_ZOOM, 1.5, e);
+    this.focus.copy(LOOP_LOOK);
+    this.pace = 0.25;
   }
 
   private frame(): void {
@@ -1052,6 +1108,10 @@ export class StairsChapter implements Chapter {
       case 'follow':
       case 'together':
       case 'emerge': {
+        if (this.revealing) {
+          this.revealShot();
+          return;
+        }
         const head = c.y - CLOUD.top;
         if (this.beat === 'emerge' && head > -0.6) {
           // Out of the white: from behind them, rising and drawing back as the cloud opens out to the sun.

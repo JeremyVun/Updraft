@@ -161,6 +161,8 @@ export interface Chapter {
   readonly invitesSail?: boolean;
   /** A chapter target, such as a waiting ember or caught plane, that needs a deliberate sweep. */
   readonly windInvitation?: THREE.Vector3 | null;
+  /** How big that target is, when it is big enough that the sweep has to go across it and out the other side. */
+  readonly invitationRadius?: number;
   /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */

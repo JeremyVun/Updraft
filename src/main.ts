@@ -874,7 +874,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const flyWeather = inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6);
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
-    undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : 0);
+    undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.illumination(emberAt);
   atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, Math.min(2.6, emberLit * 0.5));
