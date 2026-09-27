@@ -362,6 +362,11 @@ export class WoodChapter implements Chapter {
       return;
     }
     c.lookAt = this.glow;
+    const waiting = this.ahead?.live && !this.ahead.lit ? this.ahead.p : null;
+    if (waiting && Math.hypot(waiting.x - c.position.x, waiting.z - c.position.z) < tuning.wood.waitShort) {
+      if (c.moving) c.stop();
+      return;
+    }
     if (c.busy) return;
     /** Toward the light when it is out ahead of them, and on up the path when it is not. */
     const gain = Math.hypot(c.position.x - t.x, c.position.z - t.y) - Math.hypot(this.light.x - t.x, this.light.z - t.y);

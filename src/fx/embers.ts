@@ -305,7 +305,7 @@ export class Embers {
       // Rising air in the field fans existing fires. Ignition additionally needs an updraft over this coal.
       const breath = w.lift * t.fanLift;
       if (!c.lit) {
-        if (time - c.laid < 1.4) continue;
+        if (time - c.laid < 0.6) continue;
         c.wake = THREE.MathUtils.clamp(c.wake + (c.breath > 0 ? c.breath * t.updraftCatch : -t.wakeCool) * dt, 0, 1);
         c.heat = c.wake * 0.12;
         if (c.wake >= 1) {

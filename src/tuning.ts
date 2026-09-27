@@ -736,9 +736,9 @@ export const tuning = {
     /**
      * Only an updraft lights a coal: ignition gained per second over a full column, the updraft charge at which it
      * starts and reaches full breath, and how far (world units) the column may stand from the coal. Circling within
-     * `pointer.anchorNear` of the waiting coal stands the column on it. About four seconds of circling, as the old fanning took.
+     * `pointer.anchorNear` of the waiting coal stands the column on it. About two seconds of circling.
      */
-    updraftCatch: 0.33,
+    updraftCatch: 0.6,
     updraftFrom: 0.12,
     updraftFull: 0.55,
     updraftReach: 3,
@@ -766,6 +766,8 @@ export const tuning = {
     orbRestAlpha: 0.24,
     orbLightResponse: 2.8,
     orbHover: 0.95,
+    /** The child waits this far short of a coal the player has not lit, so it stays out ahead of her in frame. */
+    waitShort: 7,
     orbBob: 0.055,
     orbResponse: 5,
     orbWindLean: 0.08,
