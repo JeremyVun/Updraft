@@ -338,3 +338,9 @@ holds, and hair and face may stray from it to show her. Built on branch `child-f
 - Sheets shown to Jeremy, in `/tmp/childface`: `face-before-after.png`, `babyfat2.png`, `bangs.png`,
   `full-girl.png`. Harness: `snap.sh` and `studio.sh` (copies of `/tmp/child3`'s, serving on :5393).
 - Not yet checked in a level from the play camera, or in motion.
+- **Merged into main** (2026-09-28): `child-rebuild` (`fea312e`), then `child-face` (`edea896`). Checked on the
+  combined build: typecheck; every cygnet gate (27); the story checks, as main (little boats' safe frame and
+  plane routing fail there too); studio stills; and the play camera in the birches, at home and in the meadow, at
+  gameplay distance only (not the face up close, nor in motion). Closeout: the helper worktrees
+  `updraft-child2-before`, `-scarf` and `-base`, the servers on :5373–:5375 and :5377, and `/tmp/child3/snaps` are
+  gone. The `child-rebuild` worktree and `/tmp/child3`'s scripts stay for further child work.
