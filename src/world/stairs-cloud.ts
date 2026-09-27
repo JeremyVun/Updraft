@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { CloudWake } from './stairs-wake';
-import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, LANE, STAIRS_ISLE, flight } from './stairs-layout';
+import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, STAIRS_ISLE, flight } from './stairs-layout';
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 2;
@@ -203,7 +203,7 @@ export class StairsCloud {
     this.group.name = 'stairs-cloud';
     this.topUniforms = {
       uCentre: { value: new THREE.Vector2(STAIRS_ISLE.x, STAIRS_ISLE.z) },
-      uCalmAt: { value: new THREE.Vector3(LANE.west, CLOUD_BERTH.z, 45) },
+      uCalmAt: { value: new THREE.Vector3(CLOUD_BERTH.x, CLOUD_BERTH.z, 45) },
       uReach: { value: 1500 },
       uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone()), DESCENT_END.clone()] },
       uTrail: { value: this.trail },
@@ -247,9 +247,9 @@ export class StairsCloud {
 
     this.bellyUniforms = {
       uCentre: { value: new THREE.Vector2(STAIRS_ISLE.x, STAIRS_ISLE.z) },
-      uCalmAt: { value: new THREE.Vector3(LANE.east - 1, STAIRS_ISLE.z, 55) },
+      uCalmAt: { value: new THREE.Vector3(flight(BELOW_CLOUD).bottom.x, flight(BELOW_CLOUD).bottom.z + 8, 55) },
       uReach: { value: 1500 },
-      uStairAt: { value: new THREE.Vector2((LANE.west + LANE.east) / 2, flight(BELOW_CLOUD + 1).landing.z) },
+      uStairAt: { value: new THREE.Vector2(flight(BELOW_CLOUD + 1).landing.x, flight(BELOW_CLOUD + 1).landing.z) },
     };
     this.belly = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.bellyUniforms },

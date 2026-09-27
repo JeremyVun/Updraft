@@ -4,7 +4,7 @@ import { Kite } from '../world/kite';
 import { tuning } from '../tuning';
 import { BOATS_BERTH } from '../world/little-boats-layout';
 import { BIRCHES_BERTH } from '../world/birches';
-import { CLOUD_BERTH, TOP, TOP_EDGE } from '../world/stairs-layout';
+import { CLOUD_BERTH, KITE_TIE, TOP } from '../world/stairs-layout';
 import { WOOD_BERTH } from '../world/wood';
 import { SLEEP_BERTH } from '../world/sleeping';
 import { MIRROR_BERTH, MIRROR_DECK } from '../world/sky-mirror-layout';
@@ -31,7 +31,7 @@ export class DepartureKites {
       meadow: new Kite(wind, FAR_SHORE, { offset: [-9, 0], stringLength: tuning.linesToys.shoreKiteStringLength }),
       birches: new Kite(wind, BIRCHES_BERTH, { offset: [-9, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       // Flies over the boat waiting on the cloud, tied off on the top landing's rail.
-      stairs: new Kite(wind, CLOUD_BERTH, { offset: [TOP_EDGE + 0.03 - CLOUD_BERTH.x, 0.52], ground: TOP.y, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
+      stairs: new Kite(wind, CLOUD_BERTH, { offset: [KITE_TIE.x - CLOUD_BERTH.x, KITE_TIE.z - CLOUD_BERTH.z], ground: TOP.y, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
       wood: new Kite(wind, WOOD_BERTH, { offset: [-8, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       sleeping: new Kite(wind, SLEEP_BERTH, { offset: [2, 4], stringLength: tuning.linesToys.shoreKiteStringLength }),
       // Tie off on the landing stage and start north of it in the near-still air, within the star-play views.

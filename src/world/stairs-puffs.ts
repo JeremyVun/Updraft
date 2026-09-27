@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { FLIGHT_RUN, landingOf, type Flight } from './stairs-layout';
+import { FLIGHT_RUN, landingOf, onLanding, type Flight } from './stairs-layout';
 
 /** A ball of cloud: where it is, how big, and how much of it there is. */
 export interface Puff { x: number; y: number; z: number; r: number; a: number }
@@ -139,13 +139,14 @@ export function flightPuffs(f: Flight, amount: number): Puff[] {
     }
   }
   const L = landingOf(f.index);
+  const p = new THREE.Vector3();
   for (let x = L.x0 + 0.45; x < L.x1 - 0.3; x += 0.85) {
     for (let z = L.z0 + 0.45; z < L.z1 - 0.3; z += 0.85) {
-      out.push({ x: x + (rnd() - 0.5) * 0.3, y: L.y - 0.72 - rnd() * 0.1, z: z + (rnd() - 0.5) * 0.3,
-        r: (0.56 + rnd() * 0.16) * size, a: 0.75 });
+      onLanding(L, x + (rnd() - 0.5) * 0.3, z + (rnd() - 0.5) * 0.3, p);
+      out.push({ x: p.x, y: L.centre.y - 0.72 - rnd() * 0.1, z: p.z, r: (0.56 + rnd() * 0.16) * size, a: 0.75 });
       if (rnd() < 0.3 * amount) {
-        out.push({ x: x + (rnd() - 0.5) * 0.5, y: L.y - 1.2 - rnd() * 0.6, z: z + (rnd() - 0.5) * 0.5,
-          r: (0.42 + rnd() * 0.16) * size, a: 0.42 });
+        onLanding(L, x + (rnd() - 0.5) * 0.5, z + (rnd() - 0.5) * 0.5, p);
+        out.push({ x: p.x, y: L.centre.y - 1.2 - rnd() * 0.6, z: p.z, r: (0.42 + rnd() * 0.16) * size, a: 0.42 });
       }
     }
   }

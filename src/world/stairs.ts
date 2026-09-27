@@ -10,7 +10,7 @@ import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puf
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import {
-  BELOW_CLOUD, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LANE, LOOSE, LOOSE_START, SLIPPERS, STEP, flight, landingOf, type Flight,
+  BELOW_CLOUD, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LOOSE, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Flight, type Landing,
 } from './stairs-layout';
 
 /** What each part of the staircase is made of, read by the shader to decide its surface. */
@@ -138,35 +138,44 @@ class Build {
   }
 }
 
-const RAIL_HEIGHT = 0.82;
+const RAIL_HEIGHT = 0.86;
 const PITCH = Math.atan2(STEP.rise, STEP.going);
-/** How far under the line of its nosings a flight's blocks and strings go down. */
-const BODY = 0.42;
-const STRING = { thick: 0.12, above: 0.14, below: 0.5 } as const;
+/** A string along each side of a flight, just under its nosings; the steps' own blocks show below it. */
+const STRING = { thick: 0.16, above: 0.12, below: 0.24 } as const;
+/** How deep each step's block goes under its tread, so that from below the flight is a stack of steps. */
+const STEP_BLOCK = STEP.rise + 0.24;
+const NEWEL = 0.24;
 
 const block = (w: number, h: number, d: number, r = 0.045) => new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2));
 /** A fat turned baluster one unit tall: a round foot, a belly and a collar under the rail. */
 const BALUSTER = new THREE.LatheGeometry([
-  [0.0, 0.0], [0.045, 0.0], [0.05, 0.03], [0.042, 0.07], [0.03, 0.12], [0.036, 0.3], [0.052, 0.48], [0.036, 0.66],
-  [0.026, 0.8], [0.04, 0.86], [0.04, 0.94], [0.03, 1.0], [0.0, 1.0],
-].map(([r, y]) => new THREE.Vector2(r, y)), 14);
-const KNOB = new THREE.SphereGeometry(0.1, 18, 12);
-const RAIL = new THREE.CylinderGeometry(0.045, 0.045, 1, 14, 1).rotateX(Math.PI / 2);
+  [0.0, 0.0], [0.08, 0.0], [0.088, 0.035], [0.074, 0.08], [0.052, 0.13], [0.062, 0.3], [0.094, 0.48], [0.064, 0.66],
+  [0.046, 0.79], [0.07, 0.855], [0.07, 0.935], [0.052, 1.0], [0.0, 1.0],
+].map(([r, y]) => new THREE.Vector2(r, y)), 16);
+const KNOB = new THREE.SphereGeometry(0.155, 20, 14);
+const RAIL = new THREE.CylinderGeometry(0.072, 0.072, 1, 16, 1).rotateX(Math.PI / 2);
 
-/** Local frame of a flight: +z up the flight from its bottom riser, +y up, x across with its own lane at 0 and its outer side +x. */
+/** Local frame of a flight: +z up the flight from its bottom riser, +y up, +x to the climber's left. */
 function flightFrame(f: Flight): THREE.Matrix4 {
   return new THREE.Matrix4().makeTranslation(f.bottom.x, f.bottom.y, f.bottom.z)
-    .multiply(new THREE.Matrix4().makeRotationY(f.dir > 0 ? Math.PI : 0));
+    .multiply(new THREE.Matrix4().makeRotationY(f.yaw));
+}
+
+/** Local frame of a landing: its middle at its floor, +z the way the climber was going, +x to their left. */
+function landingFrame(L: Landing): THREE.Matrix4 {
+  return new THREE.Matrix4().makeTranslation(L.centre.x, L.centre.y, L.centre.z)
+    .multiply(new THREE.Matrix4().makeRotationY(L.yaw));
 }
 
 const at = (frame: THREE.Matrix4, x: number, y: number, z: number) => frame.clone().multiply(new THREE.Matrix4().makeTranslation(x, y, z));
 
 /** A newel post: a square post with a big round knob on it, standing at `floor` in the frame. */
 function newel(b: Build, frame: THREE.Matrix4, x: number, s: number, floor: number, mist: (p: THREE.Vector3) => number): void {
-  const top = floor + RAIL_HEIGHT + 0.1;
-  const bottom = floor - 0.25;
-  b.add(block(0.15, top - bottom, 0.15, 0.035), at(frame, x, (top + bottom) / 2, s), WOOD, undefined, mist);
-  b.add(KNOB, at(frame, x, top + 0.07, s), WOOD, undefined, mist);
+  const top = floor + RAIL_HEIGHT + 0.12;
+  const bottom = floor - 0.3;
+  b.add(block(NEWEL, top - bottom, NEWEL, 0.05), at(frame, x, (top + bottom) / 2, s), WOOD, undefined, mist);
+  b.add(block(NEWEL + 0.06, 0.07, NEWEL + 0.06, 0.03), at(frame, x, top - 0.02, s), WOOD, undefined, mist);
+  b.add(KNOB, at(frame, x, top + 0.14, s), WOOD, undefined, mist);
 }
 
 /** A rail from s0 to s1 in the frame at x, on a few fat balusters standing on `floor(s)`. */
@@ -184,77 +193,63 @@ function railing(b: Build, frame: THREE.Matrix4, x: number, s0: number, s1: numb
   b.add(RAIL, at(frame, x, rail(mid), mid).multiply(new THREE.Matrix4().makeRotationX(-tilt)).multiply(new THREE.Matrix4().makeScale(1, 1, len)), WOOD, undefined, mist);
 }
 
-/** One flight: a block for every step, the runner up them, a string each side and a rail up the outside. */
+/** One flight: a block for every step, the runner up them, and a string and a rail up either side. */
 function buildFlight(b: Build, f: Flight): void {
   const F = flightFrame(f);
   const inv = F.clone().invert();
   const { rise, going, risers, width } = STEP;
   const local = new THREE.Vector3();
   const nosing = (s: number) => rise + s * (rise / going);
-  // Anything well under the line of the nosings has gone to cloud.
+  // Only the very bottom of the stack of steps frays into the cloud under it.
   const mist = (p: THREE.Vector3) => {
     local.copy(p).applyMatrix4(inv);
-    return (nosing(local.z) - local.y - 0.3) / 0.45;
+    return (nosing(local.z) - local.y - 0.55) / 0.3;
   };
   for (let i = 1; i <= risers; i++) {
     const s0 = (i - 1) * going;
     const top = i * rise;
     const d = i < risers ? going + 0.03 : 0.12;
-    const h = rise + 0.2;
-    b.add(block(width, h, d, 0.05), at(F, 0, top - h / 2, s0 + d / 2 - 0.03), PAINT, undefined, mist);
+    b.add(block(width, STEP_BLOCK, d, 0.06), at(F, 0, top - STEP_BLOCK / 2, s0 + d / 2 - 0.03), PAINT, undefined, mist);
     b.add(block(0.98, 0.022, d - 0.02, 0.01), at(F, 0, top + 0.009, s0 + d / 2 - 0.03), RUNNER, undefined, mist);
     b.add(block(0.98, rise - 0.01, 0.022, 0.01), at(F, 0, top - rise / 2 + 0.004, s0 - 0.04), RUNNER, undefined, mist);
   }
   const run = FLIGHT_RUN;
-  const len = Math.hypot(run + going, FLIGHT_RISE) + 0.2;
+  const len = Math.hypot(run + going, FLIGHT_RISE) + 0.1;
   const mid = (run - going * 0.5) / 2;
-  // A smooth soffit under the blocks, so from below it is one sloping board going to cloud.
-  b.add(block(width + 0.02, 0.12, len - 0.1, 0.05), at(F, 0, nosing(mid) - BODY - 0.06, mid).multiply(new THREE.Matrix4().makeRotationX(-PITCH)), PAINT, undefined, mist);
   const centre = nosing(mid) + (STRING.above - STRING.below) / 2 - rise / 2;
-  for (const side of [-1, 1]) {
-    const x = side * (width / 2 + STRING.thick / 2 - 0.01);
-    b.add(block(STRING.thick, STRING.above + STRING.below, len, 0.05), at(F, x, centre, mid).multiply(new THREE.Matrix4().makeRotationX(-PITCH)), PAINT, undefined, mist);
-  }
-  const outer = width / 2 + STRING.thick / 2 - 0.01;
+  const side = width / 2 + STRING.thick / 2 - 0.01;
   const stringTop = (s: number) => nosing(s) + STRING.above - rise / 2 - 0.02;
-  railing(b, F, outer, -0.05, run, stringTop, (s) => nosing(s) + RAIL_HEIGHT, 3, mist);
-  newel(b, F, outer, -0.05, 0, mist);
+  for (const x of [-side, side]) {
+    b.add(block(STRING.thick, STRING.above + STRING.below, len, 0.06), at(F, x, centre, mid).multiply(new THREE.Matrix4().makeRotationX(-PITCH)), PAINT, undefined, mist);
+    railing(b, F, x, 0.05, run - 0.05, stringTop, (s) => nosing(s) + RAIL_HEIGHT - 0.1, 3, mist);
+    newel(b, F, x, -0.1, 0, mist);
+  }
 }
 
-/** The landing a flight arrives on, across both lanes, with a rail round its open sides. */
+/**
+ * The landing a flight arrives on, with a rail right round it but where a flight comes onto it or leaves it, and a
+ * newel at every corner that the flights' rails run into. The top landing is open on its left, to the sun.
+ */
 function buildLanding(b: Build, f: Flight): void {
   const L = landingOf(f.index);
-  const y = L.y;
   const top = f.index === FLIGHTS;
-  const mist = (p: THREE.Vector3) => (y - p.y - 0.05) / 0.5;
+  const F = landingFrame(L);
+  const y = L.centre.y;
+  const mist = (p: THREE.Vector3) => (y - p.y - 0.3) / 0.35;
   const w = L.x1 - L.x0, d = L.z1 - L.z0;
   const cx = (L.x0 + L.x1) / 2, cz = (L.z0 + L.z1) / 2;
-  const world = new THREE.Matrix4();
-  b.add(block(w, 0.26, d, 0.06), at(world, cx, y - 0.13, cz), PAINT, undefined, mist);
-  b.add(block(w - 0.5, 0.02, d - 0.5, 0.01), at(world, cx, y + 0.008, cz), RUNNER, undefined, mist);
-  const flat = () => y;
-  const rail = () => y + RAIL_HEIGHT + 0.04;
-  const inset = 0.07;
-  const north = f.dir > 0;
-  // The far edge: across the whole landing.
-  const farZ = north ? L.z0 + inset : L.z1 - inset;
-  const nearZ = north ? L.z1 : L.z0;
+  b.add(block(w, 0.34, d, 0.07), at(F, cx, -0.17, cz), PAINT, undefined, mist);
+  b.add(block(w - 0.5, 0.02, d - 0.5, 0.01), at(F, cx, 0.008, cz), RUNNER, undefined, mist);
+  const flat = () => 0;
+  const rail = () => RAIL_HEIGHT + 0.02;
+  const inset = NEWEL / 2 + 0.02;
+  const x0 = L.x0 + inset, x1 = L.x1 - inset, z0 = L.z0 + inset, z1 = L.z1 - inset;
   const across = new THREE.Matrix4().makeRotationY(Math.PI / 2);
-  railing(b, at(world, 0, 0, farZ).multiply(across), 0, -(L.x1 - inset), -(L.x0 + inset), flat, rail, top ? 5 : 3, mist);
-  // The outer sides, from the stair's edge to the far corner; the top landing is open to the west.
-  const sides = top ? [L.x1 - inset] : [L.x0 + inset, L.x1 - inset];
-  for (const x of sides) railing(b, world, x, Math.min(nearZ, farZ), Math.max(nearZ, farZ), flat, rail, 2, mist);
-  const corners = top ? [L.x1 - inset] : [L.x0 + inset, L.x1 - inset];
-  for (const x of corners) {
-    newel(b, world, x, farZ, y, mist);
-    newel(b, world, x, nearZ, y, mist);
-  }
-  if (top) {
-    // Over the drop where no flight goes on up.
-    const x0 = LANE.east - STEP.width / 2, x1 = L.x1 - inset;
-    railing(b, at(world, 0, 0, nearZ + (north ? -inset : inset)).multiply(across), 0, -x1, -x0, flat, rail, 2, mist);
-    newel(b, world, x0, nearZ + (north ? -inset : inset), y, mist);
-  }
+  // Along the far side, and down the side no flight leaves from; the top landing is open on its left.
+  railing(b, at(F, 0, 0, z1).multiply(across), 0, -x1, -x0, flat, rail, top ? 5 : 3, mist);
+  const sides = L.exit === 1 ? [x0] : L.exit === -1 ? [x1] : [x0];
+  for (const x of sides) railing(b, F, x, z0, z1, flat, rail, top ? 4 : 3, mist);
+  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) newel(b, F, x, z, 0, mist);
 }
 
 /** How much cloud a flight rests on: none on the grass, more the higher it hangs, and in the white it is half cloud. */
@@ -337,9 +332,10 @@ export class CloudStairs {
     under.name = 'stairs-cloud';
     under.frustumCulled = false;
     this.group.add(under);
-    const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z);
-    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.02, 0, -0.07)).multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2 + 0.14)));
-    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.03, 0, 0.08)).multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2 - 0.22)));
+    // Side by side at the open edge, toes to the drop and the sun.
+    const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
+    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.07, 0, -0.02)).multiply(new THREE.Matrix4().makeRotationY(0.14)));
+    slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.08, 0, 0.03)).multiply(new THREE.Matrix4().makeRotationY(-0.22)));
     const standing = new THREE.Mesh(fixed.result(), material);
     standing.name = 'stairs-standing';
     this.group.add(standing);
@@ -554,10 +550,11 @@ export class CloudStairs {
     const f = flight(index);
     const L = landingOf(index);
     const cz = (L.z0 + L.z1) / 2;
+    const a = onLanding(L, L.x0 + 0.12, cz), b = onLanding(L, L.x1 - 0.12, cz);
     return [
       { x0: f.bottom.x, z0: f.bottom.z, x1: f.top.x, z1: f.top.z, halfWidth: STEP.width / 2,
         height: f.bottom.y, height1: f.top.y },
-      { x0: L.x0 + 0.12, z0: cz, x1: L.x1 - 0.12, z1: cz, halfWidth: (L.z1 - L.z0) / 2 - 0.1, height: L.y },
+      { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: (L.z1 - L.z0) / 2 - 0.1, height: L.centre.y },
     ];
   }
 }

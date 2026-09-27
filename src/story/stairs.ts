@@ -8,8 +8,8 @@ import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
 import {
-  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FOG_FROM, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
-  STAIRS_FOOT, STAIRS_GROUND, STAIRS_Z, STEP, TOP, TOP_EDGE, flight, levelHeight,
+  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_FROM, FLIGHTS, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
+  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, along, flight, landingOf, levelHeight, onLanding,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
@@ -35,6 +35,15 @@ export interface CloudDeckState {
 /** The landing in the white where the stair goes round in a ring: up the next flight and back up the one below. */
 const RING_LEVEL = BELOW_CLOUD + 3;
 
+/**
+ * Where the child stands aside on the last landing under the white, in its far corner, clear of the way the bird
+ * goes past them and on up.
+ */
+const ASIDE = (() => {
+  const L = landingOf(BELOW_CLOUD);
+  return onLanding(L, -0.42 * L.exit, 0.38);
+})();
+
 /** How high the hull rides on the top of the cloud. */
 const RIDE = CLOUD.top + 0.45;
 
@@ -42,17 +51,16 @@ const RIDE = CLOUD.top + 0.45;
 interface Stop { x: number; z: number; level: number }
 
 /**
- * Every place the child turns on the way from the grass to the top landing: up each flight in its own lane,
- * along the half-landing, and across to the next.
+ * Every place on the way from the grass to the top landing: the top of each flight, and the middle of the landing
+ * it arrives on, where the walk turns for the next. From one landing's middle to the next is a straight line.
  */
 function route(): Stop[] {
   const stops: Stop[] = [{ x: STAIRS_FOOT.x, z: STAIRS_FOOT.z, level: 0 }];
   for (let i = 1; i <= FLIGHTS; i++) {
     const f = flight(i);
-    const other = f.lane === 'west' ? LANE.east : LANE.west;
-    stops.push({ x: f.top.x, z: f.top.z - f.dir * 0.3, level: i });
-    stops.push({ x: f.top.x, z: f.landing.z, level: i });
-    if (i < FLIGHTS) stops.push({ x: other, z: f.landing.z, level: i });
+    const onto = f.top.clone().addScaledVector(along(f.yaw), 0.35);
+    stops.push({ x: onto.x, z: onto.z, level: i });
+    stops.push({ x: f.landing.x, z: f.landing.z, level: i });
   }
   return stops;
 }
@@ -90,7 +98,6 @@ export class StairsChapter implements Chapter {
   private beatStart = 0;
   private leg = 0;
   private skeinSent = false;
-  private birdStarted = false;
   private birdLeg = 0;
   private birdStop = 0;
   /** The furthest stop the bird has got to in the cloud; the child never goes past it. */
@@ -133,7 +140,7 @@ export class StairsChapter implements Chapter {
     const world = cast.stairs;
     this.world = world;
     const { child, plane, cygnet, boat } = cast;
-    this.ringStop = this.stops.findIndex(p => p.level === RING_LEVEL && Math.abs(p.x - flight(RING_LEVEL + 1).bottom.x) < 0.01);
+    this.ringStop = this.stops.findIndex(p => p.level === RING_LEVEL && Math.abs(p.x - flight(RING_LEVEL).landing.x) < 0.01);
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
     cygnet.mayFly = false;
@@ -277,44 +284,50 @@ export class StairsChapter implements Chapter {
     this.sunPoint();
     switch (this.beat) {
       case 'wonder':
-        c.lookAt = this.look.set(STAIRS_FOOT.x, CLOUD.base - 3, STAIRS_FOOT.z - 3);
-        if (this.t > 1.2 && k.seat === 'satchel' && !carry.busy) carry.unstow();
-        if (this.t > 4.5 && !carry.busy && !c.busy) {
+        // Out of the satchel and down onto the grass: this room it climbs on its own feet. Then both of them look
+        // up the stair to where it goes into the cloud.
+        c.lookAt = this.look.set(STAIRS_FOOT.x, CLOUD.base - 3, STAIRS_FOOT.z - 12);
+        if (this.t > 0.8 && k.seat === 'satchel' && !carry.busy) carry.unstow(() => carry.setDown(() => {
+          k.stay = true;
+          this.beatStart = this.now;
+        }));
+        if (!k.carried && !carry.busy) k.watch(this.look);
+        if (this.t > 2.6 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
           c.lookAt = null;
+          k.watch(null);
+          k.stay = false;
           c.stroll = tuning.stairs.climb;
           this.to('climb');
         }
         break;
       case 'climb':
         this.walkOn();
+        this.birdBehind();
         break;
       case 'waiting': {
+        this.birdBehind();
         const piece = this.world.waiting;
         c.lookAt = piece ? this.world.pointOn(piece, this.tmp.lerpVectors(piece.flight.bottom, piece.flight.landing, 0.5), this.look) : null;
         this.world.ghostShown = 1;
         if (piece && piece.worked > 0.01) { this.lastPush = this.now; piece.worked = 0; }
         break;
       }
-      case 'hesitate':
-        // The white starts a few steps up. They stop, look up into it, and hold the bird closer.
-        c.lookAt = this.look.set(flight(BELOW_CLOUD + 1).bottom.x, CLOUD.base + 1.5, flight(BELOW_CLOUD + 1).top.z);
-        c.tighter = Math.min(1, c.tighter + dt * 1.2);
-        c.lean = -0.06;
-        if (this.t > 3.2 && !carry.busy) {
-          c.tighter = 0;
+      case 'hesitate': {
+        // The white starts a few steps up. They have stepped aside on the landing; they look up into it, and hang
+        // back. The bird comes up beside them and looks too.
+        const up = flight(BELOW_CLOUD + 1);
+        c.lookAt = this.look.copy(up.top).setY(CLOUD.base + 1.5);
+        if (!c.moving) c.lean = -0.06;
+        this.birdBehind();
+        k.watch(this.look);
+        if (this.t > 3.4 && !c.moving) {
           c.lean = 0;
-          this.birdStarted = false;
+          k.watch(null);
+          this.birdLeg = 0;
           this.to('birdFirst');
-          // Across the landing toward the flight that goes up, so the bird is set down on the boards.
-          const up = flight(BELOW_CLOUD + 1);
-          c.faceToward(up.bottom.x, c.position.z, 1);
-          carry.setDown(() => {
-            k.stay = false;
-            this.birdStarted = true;
-            this.beatStart = this.now;
-          }, Math.PI);
         }
         break;
+      }
       case 'birdFirst':
         this.birdGoesFirst();
         break;
@@ -326,6 +339,7 @@ export class StairsChapter implements Chapter {
         this.goRound();
         break;
       case 'together':
+        c.lookAt = null;
         this.walkOn();
         this.birdBehind();
         break;
@@ -409,7 +423,11 @@ export class StairsChapter implements Chapter {
     }
     if (this.stop >= this.limit) {
       if (this.world.waiting) { this.to('waiting'); return; }
-      if (this.beat === 'climb') { this.to('hesitate'); return; }
+      if (this.beat === 'climb') {
+        this.to('hesitate');
+        c.walkTo(ASIDE.x, ASIDE.z, false, undefined, 0.12);
+        return;
+      }
       if (this.beat === 'follow' || this.beat === 'together' || this.beat === 'emerge') { this.to('emerge'); return; }
       return;
     }
@@ -420,17 +438,16 @@ export class StairsChapter implements Chapter {
   }
 
   /**
-   * Set down on the landing, it looks up the flight into the white, hops up it a few treads into the cloud, and
+   * Past them on the landing, it looks up the flight into the white, hops up it a few treads into the cloud, and
    * turns round to wait: the one who has been carried everywhere goes first.
    */
   private birdGoesFirst(): void {
     const { cygnet: k, child: c } = this.cast;
-    if (!this.birdStarted || k.carried) return;
     const f = flight(BELOW_CLOUD + 1);
-    // Along the landing into the lane that goes up, then up it into the white.
-    const cross = this.stops[this.limit + 1];
-    const up = this.birdLeg === 0 ? this.birdAt.set(cross.x, 0, cross.z)
-      : this.birdAt.set(f.bottom.x, 0, f.bottom.z - f.dir * STEP.going * 7);
+    // Across the landing to where the walk turns up into the white, then up it.
+    const turn = this.stops[this.limit];
+    const up = this.birdLeg === 0 ? this.birdAt.set(turn.x, 0, turn.z)
+      : this.birdAt.copy(f.bottom).addScaledVector(along(f.yaw), STEP.going * 7).setY(0);
     c.lookAt = k.position;
     // It drops an errand within 0.45 of the spot, so arriving is measured just outside that.
     const there = Math.hypot(k.position.x - up.x, k.position.z - up.z) < 0.55;
@@ -450,7 +467,7 @@ export class StairsChapter implements Chapter {
     }
     if (this.t > 3) {
       this.birdLed = true;
-      this.birdStop = this.limit + 2;
+      this.birdStop = this.limit + 1;
       this.limit = this.reachable();
       this.to('follow');
     }
@@ -511,10 +528,10 @@ export class StairsChapter implements Chapter {
       case 'hidden': {
         k.stay = true;
         k.errand = null;
-        const from = this.ringAt.set(below.bottom.x, levelHeight(RING_LEVEL - 1), below.bottom.z + below.dir * 0.5);
+        const from = this.ringAt.copy(below.bottom).addScaledVector(along(below.yaw), 0.5).setY(levelHeight(RING_LEVEL - 1));
         if (dt > 0.9 && dt - this.lastDt <= 0.9) this.world.wisps.engulf(this.tmp.copy(from).setY(from.y + 0.3), 2.4);
         if (dt > 1.4) {
-          k.standAt(from.x, from.y, from.z, below.dir > 0 ? Math.PI : 0);
+          k.standAt(from.x, from.y, from.z, below.yaw);
           this.ring = 'back';
           this.ringLeg = 0;
           this.ringT = this.now;
@@ -560,10 +577,14 @@ export class StairsChapter implements Chapter {
     this.lastDt = dt;
   }
 
-  /** At the child's heel, one stop behind, all the way up. */
+  /** At the child's heel, one stop behind, all the way up; on the grass it just keeps close. */
   private birdBehind(): void {
-    const { cygnet: k, child: c } = this.cast;
-    c.lookAt = null;
+    const { cygnet: k } = this.cast;
+    if (this.stop < 1) {
+      k.errand = null;
+      k.stay = false;
+      return;
+    }
     this.birdStop = Math.max(this.birdStop, this.stop - 1);
     const want = this.stops[this.birdStop];
     const there = Math.hypot(k.position.x - want.x, k.position.z - want.z) < 0.55;
@@ -577,7 +598,7 @@ export class StairsChapter implements Chapter {
     k.decks = this.decks();
     k.errand = this.birdAt.set(SLIPPERS.x, 0, SLIPPERS.z - 0.05);
     k.stay = false;
-    c.walkTo(SIT.x + 0.3, SIT.z, false, () => {
+    c.walkTo(SIT.x - TOP_OUT.x * 0.3, SIT.z - TOP_OUT.z * 0.3, false, () => {
       c.walkTo(SIT.x, SIT.z, false, () => {
         c.faceToward(this.sun.x, this.sun.z, 1);
         c.sitDown();
@@ -607,7 +628,10 @@ export class StairsChapter implements Chapter {
     carry.gatherUp(() => {
       boat.mooring = CLOUD_BERTH;
       const beside = boat.boardingPoint(this.tmp);
-      c.walkTo(Math.max(beside.x, TOP_EDGE + 0.25), TOP.z + 0.1, false, () => {
+      const edge = this.tmp2.copy(TOP_EDGE).addScaledVector(TOP_OUT, -0.25);
+      const way = along(CLOUD_BERTH.yaw);
+      edge.addScaledVector(way, THREE.MathUtils.clamp((beside.x - edge.x) * way.x + (beside.z - edge.z) * way.z, -0.8, 0.8));
+      c.walkTo(edge.x, edge.z, false, () => {
         this.to('boarding');
         c.faceToward(boat.position.x, boat.position.z, 1);
         c.board(boat, () => {
@@ -638,7 +662,8 @@ export class StairsChapter implements Chapter {
     const { boat } = this.cast;
     this.berthed = true;
     // A little way off the landing to begin with, under the kite; it comes alongside when they are ready.
-    const wait = { x: CLOUD_BERTH.x - 4.5, z: CLOUD_BERTH.z - 5, yaw: CLOUD_BERTH.yaw };
+    const way = along(CLOUD_BERTH.yaw);
+    const wait = { x: CLOUD_BERTH.x + TOP_OUT.x * 4 + way.x * 3, z: CLOUD_BERTH.z + TOP_OUT.z * 4 + way.z * 3, yaw: CLOUD_BERTH.yaw };
     boat.position.set(wait.x, RIDE, wait.z);
     boat.yaw = wait.yaw;
     boat.altitude = RIDE;
@@ -812,10 +837,11 @@ export class StairsChapter implements Chapter {
     switch (this.beat) {
       case 'ashore':
       case 'wonder': {
-        // From the south, low: the child small on the grass, the stair going up into the cloud, the sun off to the left.
-        s.from = this.from.set(-0.22, 0, 1).normalize();
-        s.target.set(STAIRS_FOOT.x - 5, CLOUD.base - 5, STAIRS_FOOT.z - 2);
-        s.distance = 34;
+        // From the south, low: the child small on the grass, the stair going up and away from them into the cloud,
+        // the sun going down on the left.
+        s.from = this.from.set(0.206, 0, 0.979);
+        s.target.set(STAIRS_FOOT.x + 2, CLOUD.base - 7.5, STAIRS_FOOT.z - 17);
+        s.distance = 38.8;
         s.height = -7;
         this.pace = 0.3;
         return;
@@ -856,7 +882,7 @@ export class StairsChapter implements Chapter {
       case 'hesitate':
       case 'birdFirst': {
         // From outside the rail, a little ahead: their face turned up at where the stair goes into the white.
-        s.from = this.from.set(-0.86, 0, -0.5).normalize();
+        s.from = this.from.set(-0.3, 0, -1).normalize();
         s.target.copy(c).lerp(cygnet.position, 0.45);
         s.target.y = c.y + 1.5;
         s.distance = 4.6;
@@ -870,7 +896,7 @@ export class StairsChapter implements Chapter {
         // they came up by on the other, coming up out of it.
         const L = flight(RING_LEVEL).landing;
         s.from = this.from.set(0.45, 0, 1).normalize();
-        s.target.set(L.x + 0.4, L.y + 1.0, STAIRS_Z.south - 0.6);
+        s.target.set(L.x + 0.4, L.y + 1.0, L.z + 0.6);
         s.distance = 7.5;
         s.height = 2.4;
         s.clearance = 0.4;
@@ -894,13 +920,12 @@ export class StairsChapter implements Chapter {
           this.pace = 0.16;
           return;
         }
-        // In the cloud: side on from the west, the bird a few treads off and the rail between them and the white.
-        const onFlight = THREE.MathUtils.clamp(Math.ceil((c.y - STAIRS_GROUND) / FLIGHT_RISE), 1, FLIGHTS);
-        const west = onFlight % 2 === 1;
-        s.from = this.from.set(-1, 0, west ? -0.25 : 0.25).normalize();
+        // In the cloud: from below and behind, the way they came, so each flight goes up and away from the lens to
+        // one side or the other, the bird a few treads off and the rail between them and the white.
+        s.from = this.from.set(0.12, 0, 1).normalize();
         s.target.copy(c).lerp(cygnet.position, 0.4);
         s.target.y = Math.max(c.y, cygnet.position.y) + 1.0;
-        s.distance = west ? 4.4 : 5.4;
+        s.distance = 4.8;
         s.height = 0.5;
         s.clearance = 0.4;
         this.pace = 0.3;
