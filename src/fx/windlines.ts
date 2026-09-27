@@ -82,7 +82,7 @@ export class WindLines {
   blowFront(dt: number, f: GustFront): void {
     this.frontTimer -= dt;
     if (f.strength < 0.15 || this.frontTimer > 0) return;
-    this.frontTimer = 0.05 / f.strength;
+    this.frontTimer = 0.12 / f.strength;
     const spread = (Math.random() - 0.5) * 30;
     const x = f.at.x - f.dir.y * spread - f.dir.x * Math.random() * 2;
     const z = f.at.z + f.dir.x * spread - f.dir.y * Math.random() * 2;
