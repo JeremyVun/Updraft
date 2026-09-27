@@ -86,8 +86,10 @@ void main() {
   vec3 ahead = vWorld - cameraPosition;
   float dist = length(ahead);
   col = mix(col, skyColor(normalize(vec3(ahead.x, 0.01, ahead.z))), (1.0 - exp(-dist / 650.0)) * 0.75);
-  // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it.
-  gl_FragColor = vec4(applyFog(col, vec3(vWorld.x, max(vWorld.y, uSurface + 0.05), vWorld.z)), uCloudDeck.w);
+  // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it; seen from
+  // under it, from inside the cloud, the deck covers it like anything else in there.
+  vec3 fogAt = cameraPosition.y < vWorld.y ? vWorld : vec3(vWorld.x, max(vWorld.y, uSurface + 0.05), vWorld.z);
+  gl_FragColor = vec4(applyFog(col, fogAt), uCloudDeck.w);
 }`;
 
 /**
