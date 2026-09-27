@@ -908,14 +908,15 @@ interface StrapStation {
 
 /**
  * A shoulder strap, the way a backpack's runs: from the top of the bag's near face up over the shoulder, down the
- * front of the chest by the armpit, then back under the arm and across the gap to the bag's lower corner. Where it
- * lies on the coat it is authored on the coat's own surface, by angle and height; both ends sink into the leather.
+ * front of the chest by the armpit, then back under the arm and round to the lower corner of the bag's near face.
+ * Where it lies on the coat it is authored on the coat's own surface, by angle and height; both ends sink into the
+ * leather.
  */
 function strap(b: Builder, left: boolean): void {
   const mx = left ? 1 : -1;
   const path: [number, number][] = [
     [2.62, 1.5], [2.45, 1.55], [2.2, 1.585], [1.9, 1.6], [1.55, 1.605], [1.2, 1.588], [0.88, 1.54], [0.68, 1.46],
-    [0.61, 1.37], [0.64, 1.3], [0.82, 1.255], [1.15, 1.235], [1.55, 1.23], [1.9, 1.225], [2.12, 1.21],
+    [0.6, 1.36], [0.6, 1.28], [0.67, 1.21], [0.86, 1.18], [1.17, 1.17], [1.55, 1.17], [1.9, 1.165], [2.2, 1.15], [2.42, 1.14],
   ];
   const curve = new THREE.SplineCurve(path.map(([a, y]) => new THREE.Vector2(a, y)));
   const s = { p: V(), n: V(), fold: 0 };
@@ -934,23 +935,26 @@ function strap(b: Builder, left: boolean): void {
     n: V(0, 0.35, -1).normalize(),
     skin: [[BONE.bag, 0.5], [BONE.chest, 0.5]],
   };
-  const lowPhi = mx * 1.05;
-  const lowH = THREE.MathUtils.lerp(BAG_BOTTOM, bagLip(lowPhi), 0.3);
+  const lowPhi = mx * 0.72;
+  const lowH = THREE.MathUtils.lerp(BAG_BOTTOM, bagLip(lowPhi), 0.32);
   const low: StrapStation = { p: bagPoint(lowPhi, lowH).addScaledVector(bagOutward(lowPhi), -0.006), n: bagOutward(lowPhi), skin: bagSkin };
   const N = 44;
   const along: StrapStation[] = Array.from({ length: N + 1 }, (_, i) => onCoat(curve.getPointAt(i / N)));
-  /** Off the coat and across to the bag, turning to lie flat on its side as it arrives. */
-  const bridge = (from: StrapStation, to: StrapStation, steps: number): StrapStation[] =>
-    Array.from({ length: steps }, (_, i) => {
+  /** Off the coat and across to the bag in a curve that carries on the way the strap was going, turning to lie on the leather. */
+  const bridge = (from: StrapStation, to: StrapStation, heading: THREE.Vector3, steps: number): StrapStation[] => {
+    const via = from.p.clone().addScaledVector(heading, from.p.distanceTo(to.p) * 0.45);
+    return Array.from({ length: steps }, (_, i) => {
       const t = (i + 1) / (steps + 1);
       const k = smooth(0, 1, t);
       return {
-        p: from.p.clone().lerp(to.p, t),
+        p: from.p.clone().multiplyScalar((1 - t) ** 2).addScaledVector(via, 2 * t * (1 - t)).addScaledVector(to.p, t * t),
         n: from.n.clone().lerp(to.n, k).normalize(),
         skin: [...from.skin.map(([bone, w]) => [bone, w * (1 - k)] as [number, number]), ...to.skin.map(([bone, w]) => [bone, w * k] as [number, number])],
       };
     });
-  const stations = [top, ...bridge(top, along[0], 3), ...along, ...bridge(along[N], low, 6), low];
+  };
+  const leaving = along[N].p.clone().sub(along[N - 1].p).normalize();
+  const stations = [top, ...bridge(top, along[0], V(0, 1, 0), 3), ...along, ...bridge(along[N], low, leaving, 6), low];
   const rows: Point[][] = [];
   const W = 0.034;
   const T = 0.009;
