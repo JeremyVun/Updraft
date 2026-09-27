@@ -53,6 +53,12 @@ After checkpoint 1 (2026-09-27, verbatim):
 
 > Do not run perf benches unless i ask for it.
 
+Steer during the proportions round (2026-09-27, verbatim):
+
+> it's better than before, but the hood looks like it has maybe 10 to 20% more volume than the concept, the child's
+> chin looks like it's missing. the child's shoulders are too wide, causing the coat flare sillouhette to not stand out
+> like in the concept.
+
 Earlier attempts on the child's model are not a guide. Do not mine old transcripts or git history for them.
 
 ## The target
