@@ -116,7 +116,7 @@ export class StairsChapter implements Chapter {
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
   private readonly invitation = new THREE.Vector3();
   private lastPush = 0;
-  /** The stop on the loop's landing where the child waits while the bird goes round, and how the bird is getting on. */
+  /** The stop on the loop's near corner, where the bird sets off round it and comes back to; and how it is getting on. */
   private readonly loopStop: number;
   private looped = false;
   private lap = 0;
@@ -126,15 +126,16 @@ export class StairsChapter implements Chapter {
   private homeward = false;
   /** The line up the stair the bird keeps to, and where on it the stops are. */
   private readonly track: Track;
-  /** The bird's way round the loop: out to the top of its last flight, and home from the corner to the child. */
+  /** The bird's way round the loop: out to the top of its last flight, and home across the corner to where it set off. */
   private readonly roundOut: Track;
   private readonly roundHome: Track;
   private readonly sOnward: number;
   private readonly sBack: number;
-  /** Where it waits for the child on the loop's first flight, on its first tread. */
-  private readonly waitUp: THREE.Vector3;
-  private readonly sWaitUp: number;
-  private readonly waitAside: THREE.Vector3;
+  /** Where on the near corner the bird sets off from and comes back to, right over the child's head. */
+  private readonly cornerSpot: THREE.Vector3;
+  private readonly sCorner: number;
+  /** Where the child waits, a few treads down the flight up onto the corner, below the ring. */
+  private readonly waitBelow: THREE.Vector3;
   private loopFrom = 0;
   private readonly eyeFrom = new THREE.Vector3();
   private readonly lookFrom = new THREE.Vector3();
@@ -163,26 +164,23 @@ export class StairsChapter implements Chapter {
     const world = cast.stairs;
     this.world = world;
     const { child, plane, cygnet, boat } = cast;
-    this.loopStop = this.stops.findIndex(p => p.level === LOOP.wait && Math.abs(p.x - flight(LOOP.wait).landing.x) < 0.01);
+    this.loopStop = this.stops.findIndex(p => p.level === LOOP.corner && Math.abs(p.x - flight(LOOP.corner).landing.x) < 0.01);
     const on = (p: THREE.Vector3, yaw: number, d: number) => p.clone().addScaledVector(along(yaw), d);
-    const up = flight(LOOP.wait + 1), into = flight(LOOP.wait), far = LOOP_FAR.flight;
-    const wait = landingOf(LOOP.wait);
-    const onward = landingOf(LOOP.onward), corner = landingOf(LOOP.corner), farL = LOOP_FAR.landing;
+    const into = flight(LOOP.corner), up = flight(LOOP.wait), on2 = flight(LOOP.onward), far = LOOP_FAR.flight;
+    const corner = landingOf(LOOP.corner), wait = landingOf(LOOP.wait), onward = landingOf(LOOP.onward), farL = LOOP_FAR.landing;
     this.track = new Track(this.stops.map(p => new THREE.Vector3(p.x, levelHeight(p.level), p.z)));
-    this.waitUp = on(up.bottom, up.yaw, 0.3).setY(up.bottom.y + STEP.rise);
-    this.sWaitUp = this.track.project(this.waitUp);
+    this.cornerSpot = onLanding(corner, -0.1, -0.2);
+    this.sCorner = this.track.project(this.cornerSpot);
+    this.waitBelow = on(into.top, into.yaw, -1.55).setY(into.top.y - STEP.rise * 5);
     this.roundOut = new Track([
-      this.waitUp.clone(), on(up.top, up.yaw, 0.35), onward.centre.clone(), onLanding(onward, onward.x1 - 0.2, 0),
-      on(far.bottom, far.yaw, 0.2), on(far.top, far.yaw, 0.35), farL.centre.clone(), onLanding(farL, farL.x1 - 0.2, 0),
-      on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(LOOP_BACK.top.clone()), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 0.8)),
+      this.cornerSpot.clone(), on(up.bottom, up.yaw, 0.2), on(up.top, up.yaw, 0.35), wait.centre.clone(), onLanding(wait, wait.x1 - 0.25, 0),
+      on(on2.bottom, on2.yaw, 0.2), on(on2.top, on2.yaw, 0.35), onward.centre.clone(), onLanding(onward, onward.x1 - 0.25, 0),
+      on(far.bottom, far.yaw, 0.2), on(far.top, far.yaw, 0.35), farL.centre.clone(), onLanding(farL, farL.x1 - 0.25, 0),
+      on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(LOOP_BACK.top.clone()), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 0.5)),
     ]);
     this.sOnward = this.roundOut.project(onward.centre);
     this.sBack = this.roundOut.project(LOOP_BACK.bottom);
-    this.roundHome = new Track([
-      onLanding(corner, corner.x1 - 0.15, 0), corner.centre.clone(), on(into.bottom, into.yaw, 0.25),
-      on(into.top, into.yaw, 0.3), onLanding(wait, 0, -0.45),
-    ]);
-    this.waitAside = onLanding(wait, -0.42, 0.38);
+    this.roundHome = new Track([onLanding(corner, corner.x1 - 0.2, 0), onLanding(corner, 0.2, -0.05), this.cornerSpot.clone()]);
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
     cygnet.mayFly = false;
@@ -248,8 +246,8 @@ export class StairsChapter implements Chapter {
 
   /** A slow sweep drawn across the loose flight when the stair has been waiting on it a while. */
   get windInvitation(): THREE.Vector3 | null {
-    // Round the loop a second time and the cloud on its far corner is still there: a sweep across it.
-    if (this.beat === 'loop') return this.lap >= 2 && !this.world.bank.cleared ? this.world.bank.centre : null;
+    // Back where it started, and the cloud on the loop's far corner is still there: a sweep across it.
+    if (this.beat === 'loop') return (this.lap >= 1 || this.round === 'puzzled') && !this.world.bank.cleared ? this.world.bank.centre : null;
     if (this.beat !== 'waiting' || this.now - this.lastPush < 6) return null;
     const piece = this.world.waiting;
     if (!piece) return null;
@@ -459,7 +457,7 @@ export class StairsChapter implements Chapter {
    */
   private loopScenery(dt: number): void {
     const e = this.beat === 'loop' ? THREE.MathUtils.smoothstep(this.now - this.loopFrom, LOOP_SETTLE * 0.7, LOOP_SETTLE) : 0;
-    if (this.looped && this.beat !== 'loop' && this.stop > this.loopStop + 4) this.trickGone = Math.min(1, this.trickGone + dt / 2);
+    if (this.looped && this.beat !== 'loop' && this.stop > this.loopStop + 6) this.trickGone = Math.min(1, this.trickGone + dt / 2);
     this.world.trickShown = this.beat === 'loop' ? e : this.looped ? 1 - this.trickGone : 0;
     this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
   }
@@ -492,8 +490,8 @@ export class StairsChapter implements Chapter {
   private walkOn(): void {
     const { child: c } = this.cast;
     if (c.moving || c.busy) return;
-    // Onto the loop's landing, and straight across to its far corner, out of the bird's way.
-    if (this.beat === 'follow' && this.stop === this.loopStop - 1 && !this.looped) {
+    // Up the flight onto the loop's corner as far as a few treads short of it, below the ring, out of the bird's way.
+    if (this.beat === 'follow' && this.stop === this.loopStop - 2 && !this.looped) {
       this.goRoundFirst();
       return;
     }
@@ -557,7 +555,7 @@ export class StairsChapter implements Chapter {
     c.lookAt = k.position;
     if (this.birdStop < this.stop) this.birdStop = this.stop;
     const last = this.looped ? this.stops.length - 1 : this.loopStop;
-    const spot = (i: number) => (!this.looped && i === this.loopStop ? this.sWaitUp : this.track.to(i));
+    const spot = (i: number) => (!this.looped && i === this.loopStop ? this.sCorner : this.track.to(i));
     let left = this.track.lead(k.position, spot(this.birdStop), this.birdAt);
     const reached = left < 0.5;
     if (reached) this.birdReached = Math.max(this.birdReached, this.birdStop);
@@ -579,29 +577,29 @@ export class StairsChapter implements Chapter {
     this.eyeFrom.copy(this.world.eye);
     this.lookFrom.copy(this.world.looking);
     k.decks = [...this.decks(), ...CloudStairs.loopDecks()];
-    this.stop = this.loopStop;
-    c.walkTo(this.waitAside.x, this.waitAside.z, false, undefined, 0.12);
+    c.walkTo(this.waitBelow.x, this.waitBelow.z, false, undefined, 0.12);
     this.to('loop');
   }
 
   /**
    * Halfway up the white the stair goes round a square, and seen from the one place the lens rises to, it climbs for
-   * ever. The bird runs up it, round, up and up, and comes up the flight below behind the child, where it started.
-   * It looks up the way it went, and down the way it came, and asks. And again. A heap of cloud sits on the far
-   * corner; when the player's wind blows it off, there is a flight going on up from there that nobody could see, and
-   * the bird takes it next time round, and the lens comes down after them, and the square comes apart.
+   * ever. The child waits just below it; the bird runs up it, round, up and up and up, and comes up onto the corner
+   * it set off from, right over the child. It looks up the way it went, and back the way it came, and down at the
+   * child, and asks. And again. A heap of cloud sits on the far corner; when the player's wind blows it off, there is
+   * a flight going on up from there that nobody could see, and the bird takes it next time round, and the lens comes
+   * away after them, and the square comes apart.
    */
   private goRound(): void {
     const { cygnet: k, child: c } = this.cast;
     const bank = this.world.bank;
     const dt = this.now - this.roundT;
     c.lookAt = k.position;
-    bank.yielding = this.lap >= 1;
+    bank.yielding = this.lap >= 1 || this.round === 'puzzled';
     const way = this.homeward ? this.roundHome : this.roundOut;
     k.scale = this.round === 'round' && !this.homeward && way.project(k.position) > this.sBack ? sizeOnBack(k.position) : 1;
     switch (this.round) {
       case 'settle': {
-        const left = this.track.lead(k.position, this.sWaitUp, this.birdAt);
+        const left = this.track.lead(k.position, this.sCorner, this.birdAt);
         k.stay = left < 0.5;
         k.errand = k.stay ? null : this.birdAt;
         if (this.now - this.loopFrom > LOOP_SETTLE - 0.5) this.setOff();
@@ -622,21 +620,21 @@ export class StairsChapter implements Chapter {
           if (bank.cleared && there) {
             k.scale = 1;
             k.decks = this.decks();
-            this.birdStop = this.loopStop + 2;
+            this.birdStop = this.loopStop + 4;
             this.birdReached = this.birdStop;
             this.limit = this.reachable();
             this.to('follow');
             break;
           }
-          // Past the top of the drawn-in flight it is on the copy of the corner: it goes across at once onto the
-          // corner itself, which from here is the same place.
+          // Over the top of the drawn-in flight it steps onto the corner, which from here is the same place: it is
+          // put there at once, along its own sightline.
           if (upBack(k.position) > 1) {
             fromCopy(k.position, this.tmp);
             k.scale = 1;
             k.standAt(this.tmp.x, this.tmp.y, this.tmp.z, k.yaw);
             // Should it ever come down short of the corner, it is on the corner all the same.
             if (k.position.y < this.tmp.y - 0.3) {
-              onLanding(landingOf(LOOP.corner), 0.7, 0, this.tmp);
+              onLanding(landingOf(LOOP.corner), landingOf(LOOP.corner).x1 - 0.2, 0, this.tmp);
               k.standAt(this.tmp.x, this.tmp.y, this.tmp.z, k.yaw);
             }
             this.homeward = true;
@@ -654,13 +652,19 @@ export class StairsChapter implements Chapter {
         break;
       }
       case 'puzzled': {
-        // It came up behind them. It looks up the way it went, and down the way it came, and asks.
+        // It has come back onto the corner it set off from, right over the child. It looks up the way it went, and
+        // back the way it came, and down at the child, and asks.
         const again = this.lap > 0;
-        if (dt > 0.5 && this.lastDt <= 0.5) { cue('puzzled'); k.call(false); }
-        if (dt > 1.6 && this.lastDt <= 1.6) k.does('look-back', this.look.copy(flight(LOOP.wait + 1).top), 1.6);
-        if (again && dt > 2.2 && this.lastDt <= 2.2) { cue('puzzled'); k.call(false); }
-        if (again && dt > 3.0 && this.lastDt <= 3.0) k.does('shake', undefined, 0.9);
-        if (dt > (again ? 4.6 : 3.4)) {
+        if (dt > 2.1 && this.lastDt <= 2.1) k.does('look-back', this.look.copy(flight(LOOP.wait).top), 1.2);
+        if (dt > 3.3 && this.lastDt <= 3.3) k.does('look-back', this.look.copy(LOOP_BACK.top).lerp(LOOP_BACK.bottom, 0.5), 1.2);
+        if (dt > 4.5 && this.lastDt <= 4.5) {
+          cue('puzzled');
+          k.call(false);
+          k.does('look-back', this.look.copy(c.position).setY(c.position.y + 1), 1.4);
+        }
+        if (again && dt > 5.6 && this.lastDt <= 5.6) { cue('puzzled'); k.call(false); }
+        if (again && dt > 6.2 && this.lastDt <= 6.2) k.does('shake', undefined, 0.9);
+        if (dt > (again ? 7.4 : 6.2)) {
           this.lap++;
           this.setOff();
         }

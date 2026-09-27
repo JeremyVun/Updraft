@@ -20,7 +20,7 @@ export const LOOP_SHRINK = (EYE_DISTANCE - LOOP_GAP.length()) / EYE_DISTANCE;
 /** The copy's middle, which from the eye lies exactly in front of the corner's middle. */
 export const LOOP_COPY = corner.centre.clone().add(LOOP_GAP);
 /** The heap of cloud on the loop's far corner, over the foot of the way on. */
-export const LOOP_BANK = onLanding(landingOf(LOOP.onward), 0, 2.3).setY(landingOf(LOOP.onward).centre.y + 1.5);
+export const LOOP_BANK = onLanding(landingOf(LOOP.onward), 0, 1.0).setY(landingOf(LOOP.onward).centre.y + 0.9);
 /** Where the eye looks: the middle of the loop, drawn a little toward the heap so that it is in the frame too. */
 export const LOOP_LOOK = [corner.centre, landingOf(LOOP.wait).centre, landingOf(LOOP.onward).centre, LOOP_FAR.landing.centre]
   .reduce((sum, p) => sum.add(p), new THREE.Vector3()).multiplyScalar(0.25).lerp(LOOP_BANK, 0.22)

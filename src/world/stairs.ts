@@ -10,7 +10,7 @@ import { HAZE_SHADE_GLSL, hazeUnderFlight, hazeUnderLanding } from './stairs-haz
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
-import { LOOP_BANK, drawIn, toCopy } from './stairs-penrose';
+import { LOOP_BANK, LOOP_EYE, LOOP_SHRINK, alongBack, drawIn } from './stairs-penrose';
 import {
   BELOW_CLOUD, FLIGHTS, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Face, type Flight, type Landing,
 } from './stairs-layout';
@@ -34,6 +34,10 @@ out vec2 vUv;
 out vec3 vColor;
 out float vMist;
 flat out float vPart;
+#ifdef TRICK
+uniform vec3 uLoopEye;
+in float aDepth;
+#endif
 void main() {
   vUv = uv;
   vColor = color;
@@ -42,6 +46,11 @@ void main() {
   vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+#ifdef TRICK
+  // Drawn in toward the eye, but in front of and behind everything else as if it stood where it seems to.
+  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * aDepth, 1.0);
+  gl_Position.z = seems.z / seems.w * gl_Position.w;
+#endif
 }`;
 
 /**
@@ -202,11 +211,16 @@ function railing(b: Build, frame: THREE.Matrix4, x: number, s0: number, s1: numb
   b.add(RAIL, at(frame, x, rail(mid), mid).multiply(new THREE.Matrix4().makeRotationX(-tilt)).multiply(new THREE.Matrix4().makeScale(1, 1, len)), WOOD, undefined, mist);
 }
 
-/** One flight: a block for every step, the runner up them, and a string and a rail up either side. */
-function buildFlight(b: Build, f: Flight): void {
+/**
+ * One flight: a block for every step, the runner up them, and a string and a rail up either side. Round the loop
+ * (`ring`) the steps run out under the rail with no string, so both sides show their stepped ends, and there is a
+ * rail on the outside of the ring only, which stops at the corners' newels rather than running into them.
+ */
+function buildFlight(b: Build, f: Flight, ring = false): void {
   const F = flightFrame(f);
   const inv = F.clone().invert();
-  const { rise, going, width } = STEP;
+  const { rise, going } = STEP;
+  const width = ring ? STEP.width + 2 * STRING.thick - 0.02 : STEP.width;
   const risers = f.risers;
   const local = new THREE.Vector3();
   const nosing = (s: number) => rise + s * (rise / going);
@@ -227,9 +241,15 @@ function buildFlight(b: Build, f: Flight): void {
   const len = Math.hypot(run + going, risers * rise) + 0.1;
   const mid = (run - going * 0.5) / 2;
   const centre = nosing(mid) + (STRING.above - STRING.below) / 2 - rise / 2;
-  const side = width / 2 + STRING.thick / 2 - 0.01;
+  const side = STEP.width / 2 + STRING.thick / 2 - 0.01;
   const stringTop = (s: number) => nosing(s) + STRING.above - rise / 2 - 0.02;
+  const tread = (s: number) => rise * THREE.MathUtils.clamp(Math.floor(s / going + 0.1) + 1, 1, risers);
   const railTop = (s: number) => THREE.MathUtils.clamp(nosing(s), rise, risers * rise) + RAIL_HEIGHT - 0.1;
+  if (ring) {
+    const post = INSET - NEWEL / 2;
+    railing(b, F, -side, -post, run + post, tread, railTop, Math.max(1, risers >> 2), mist);
+    return;
+  }
   for (const x of [-side, side]) {
     b.add(block(STRING.thick, STRING.above + STRING.below, len, 0.06), at(F, x, centre, mid).multiply(new THREE.Matrix4().makeRotationX(-PITCH)), PAINT, undefined, mist);
     railing(b, F, x, -INSET, run + INSET, stringTop, railTop, Math.max(1, risers >> 2), mist);
@@ -308,9 +328,10 @@ function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THR
   return haze;
 }
 
-function stairMaterial(shown = { value: 1 }): THREE.ShaderMaterial {
+function stairMaterial(shown = { value: 1 }, trick = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, uShown: shown },
+    defines: trick ? { TRICK: 1 } : {},
+    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE } },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,
@@ -357,7 +378,7 @@ export class CloudStairs {
   readonly cloud = new StairsCloud();
   /** The cloud streaming past on the way up through the white. */
   readonly wisps = new CloudWisps();
-  /** The loop's last flight and the copy of its corner, drawn only while it is seen from the one place it works from. */
+  /** The loop's last flight as it is drawn in, shown only while it is seen from the one place it works from. */
   readonly trick: THREE.Mesh;
   /** The cloud sitting over the foot of the way on out of the loop. */
   readonly bank: CloudBank;
@@ -383,7 +404,7 @@ export class CloudStairs {
     for (let i = 1; i <= FLIGHTS; i++) {
       if ((LOOSE as readonly number[]).includes(i)) continue;
       const f = flight(i);
-      buildFlight(fixed, f);
+      buildFlight(fixed, f, i === LOOP.wait || i === LOOP.onward);
       buildLanding(fixed, landingOf(i));
       for (const haze of hazeUnder(f, cloudUnder(i))) this.group.add(haze);
     }
@@ -392,28 +413,30 @@ export class CloudStairs {
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(-0.07, 0, -0.02)).multiply(new THREE.Matrix4().makeRotationY(0.14)));
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.08, 0, 0.03)).multiply(new THREE.Matrix4().makeRotationY(-0.22)));
     // The loop's far side, which only the bird goes round.
-    buildFlight(fixed, LOOP_FAR.flight);
+    buildFlight(fixed, LOOP_FAR.flight, true);
     buildLanding(fixed, LOOP_FAR.landing);
     const standing = new THREE.Mesh(fixed.result(), material);
     standing.name = 'stairs-standing';
     this.group.add(standing);
 
-    // The loop's trick: its last flight drawn in to a small copy of the corner it seems to come back to.
+    // The loop's trick: its last flight drawn in until, seen from the one place, its top lies on the corner.
     const trick = new Build();
-    buildFlight(trick, LOOP_BACK);
+    buildFlight(trick, LOOP_BACK, true);
     const back = trick.result();
-    buildLanding(trick, landingOf(LOOP.corner));
-    const copy = trick.result();
     const v = new THREE.Vector3();
-    for (const [geo, move] of [[back, drawIn], [copy, (p: THREE.Vector3) => toCopy(p, p)]] as const) {
-      const pos = geo.getAttribute('position');
-      for (let i = 0; i < pos.count; i++) pos.setXYZ(i, ...move(v.fromBufferAttribute(pos, i)).toArray());
+    const pos = back.getAttribute('position');
+    const depth = new Float32Array(pos.count);
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      depth[i] = 1 / THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v));
+      pos.setXYZ(i, ...drawIn(v).toArray());
     }
-    this.trick = new THREE.Mesh(mergeGeometries([back, copy]), stairMaterial(this.trickUniform));
+    back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
+    this.trick = new THREE.Mesh(back, stairMaterial(this.trickUniform, true));
     this.trick.name = 'stairs-loop-trick';
     this.trick.visible = false;
     this.group.add(this.trick);
-    this.bank = new CloudBank(LOOP_BANK, 2.6, 46);
+    this.bank = new CloudBank(LOOP_BANK, 1.9, landingOf(LOOP.onward).centre.y);
     this.group.add(this.bank.mesh);
 
     const ghostMaterial = new THREE.ShaderMaterial({
@@ -603,7 +626,7 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     this.wisps.update(dt, time);
-    this.bank.update(dt, time);
+    this.bank.update(dt);
     this.cloud.update(dt, camera);
     if (this.hideTop) this.cloud.top.visible = false;
   }
@@ -625,15 +648,15 @@ export class CloudStairs {
     this.trick.visible = amount > 0.005;
   }
 
-  /** Where only the bird walks: the loop's far side, and its last flight drawn in toward the copy of the corner. */
+  /** Where only the bird walks: the loop's far side, and its last flight as it is drawn in. */
   static loopDecks(): Deck[] {
     const top = drawIn(LOOP_BACK.top.clone());
-    const onto = drawIn(LOOP_BACK.top.clone().addScaledVector(along(LOOP_BACK.yaw), 0.8));
+    const onto = drawIn(LOOP_BACK.top.clone().addScaledVector(along(LOOP_BACK.yaw), 0.5));
     return [
       ...CloudStairs.flightDecks(LOOP_FAR.flight, LOOP_FAR.landing),
       { x0: LOOP_BACK.bottom.x, z0: LOOP_BACK.bottom.z, x1: top.x, z1: top.z, halfWidth: STEP.width * 0.45,
         height: LOOP_BACK.bottom.y, height1: top.y },
-      // The edge of the copy of the corner, as far as it goes before it is on the corner itself.
+      // A step on past its top, where the bird is put onto the corner itself.
       { x0: top.x, z0: top.z, x1: onto.x, z1: onto.z, halfWidth: 0.5, height: top.y },
     ];
   }

@@ -59,10 +59,19 @@ export interface Flight {
  * just so much that from one place, and only from there, the top of the last flight lies exactly in front of the
  * foot of the first, so the square seems to climb for ever. That place is south of it, looking steeply down.
  */
-const LOOP_SHORT = 3;
-const LOOP_LONG = 9;
+const LOOP_SHORT = 4;
+const LOOP_LONG = 12;
+/**
+ * The loop's corners are no wider than a flight with its rails, which run straight on round them, so the loop reads
+ * as one ring of stairs rather than landings with steps between.
+ */
+export const CORNER = 1.87;
 
-interface Spec { yaw: number; risers: number; exit: 'left' | 'right' | 'ahead' | null; x1?: number; z1?: number; extra?: { face: Face; at: number }[]; bare?: Face[] }
+interface Spec {
+  yaw: number; risers: number; exit: 'left' | 'right' | 'ahead' | null; x1?: number; z1?: number; extra?: { face: Face; at: number }[]; bare?: Face[];
+  /** A square landing this wide rather than the usual. */
+  size?: number;
+}
 
 const TOP_DEPTH = 2.9;
 const TOP_WIDE = 1.35;
@@ -82,10 +91,10 @@ const SPECS: Spec[] = [
   { yaw: NE, risers: 11, exit: 'left' },
   { yaw: NW, risers: 11, exit: 'right' },
   // The loop's near corner, open on its left where the loop's last flight seems to come onto it.
-  { yaw: NE, risers: 11, exit: 'ahead', extra: [{ face: 'left', at: 0 }] },
-  { yaw: NE, risers: LOOP_SHORT, exit: 'left' },
+  { yaw: NE, risers: 11, exit: 'ahead', extra: [{ face: 'left', at: 0 }], size: CORNER },
+  { yaw: NE, risers: LOOP_SHORT, exit: 'left', size: CORNER },
   // The loop's far corner: the way on goes straight ahead from it, and the loop turns off to the left.
-  { yaw: NW, risers: LOOP_SHORT, exit: 'ahead', extra: [{ face: 'left', at: 0 }] },
+  { yaw: NW, risers: LOOP_SHORT, exit: 'ahead', extra: [{ face: 'left', at: 0 }], size: CORNER },
   { yaw: NW, risers: 11, exit: 'right' },
   { yaw: NE, risers: 11, exit: 'left' },
   { yaw: NW, risers: 11, exit: 'right' },
@@ -113,9 +122,10 @@ function point(L: Pick<Landing, 'centre' | 'yaw'>, x: number, z: number, out = n
 function lay(index: number, bottom: THREE.Vector3, s: Spec): { flight: Flight; landing: Landing } {
   const run = STEP.going * (s.risers - 1);
   const top = bottom.clone().addScaledVector(along(s.yaw), run).setY(bottom.y + s.risers * STEP.rise);
-  const centre = top.clone().addScaledVector(along(s.yaw), H);
+  const h = (s.size ?? STEP.landing) / 2;
+  const centre = top.clone().addScaledVector(along(s.yaw), h);
   const openings: Landing['openings'] = [{ face: 'back', at: 0 }, ...(s.extra ?? [])];
-  const L: Landing = { centre, yaw: s.yaw, x0: -H, x1: s.x1 ?? H, z0: -H, z1: s.z1 ?? H, openings, bare: s.bare ?? [] };
+  const L: Landing = { centre, yaw: s.yaw, x0: -h, x1: s.x1 ?? h, z0: -h, z1: s.z1 ?? h, openings, bare: s.bare ?? [] };
   if (s.exit) {
     const [x, z] = faceOf(L, s.exit);
     openings.push({ face: faceName(s.exit), at: s.exit === 'ahead' ? x : z });
@@ -139,7 +149,7 @@ const built = (() => {
   // The rest of the loop, which only the bird goes round: down the long far side from the corner the way on leaves
   // from, round the far corner, and back along the other long side toward the corner it seems to close on.
   const onward = landings[LOOP.onward - 1];
-  const far = lay(0, point(onward, onward.x1, 0), { yaw: SW, risers: LOOP_LONG, exit: 'left' });
+  const far = lay(0, point(onward, onward.x1, 0), { yaw: SW, risers: LOOP_LONG, exit: 'left', size: CORNER });
   const [cx, cz] = faceOf(far.landing, 'left');
   const bottom = point(far.landing, cx, cz);
   const top = bottom.clone().addScaledVector(along(SE), STEP.going * (LOOP_LONG - 1)).setY(bottom.y + LOOP_LONG * STEP.rise);

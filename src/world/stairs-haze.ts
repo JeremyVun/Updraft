@@ -422,3 +422,121 @@ export function hazeUnderLanding(frame: THREE.Matrix4, width: number, depth: num
     .multiply(new THREE.Matrix4().makeScale(x1 - x0, hang, z1 - z0));
   return hazeBox(frame, shape, new THREE.Vector4(x1 - x0, hang, z1 - z0, OVERLAP), amount, joins, 'stairs-haze-landing');
 }
+
+/** How many round lumps a heap of cloud is made of. */
+export const HEAP_LUMPS = 12;
+
+const HEAP_VERT = /* glsl */ `
+out vec3 vWorld;
+void main() {
+  vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+}`;
+
+/**
+ * A heap of cloud sitting on the stair: round lumps run together, their edges broken by the same vapour as the haze
+ * and lit the same way, gold where the low sun reaches and lilac in its own shade. Marched through the box round
+ * its lumps, which move, so the heap can be blown apart.
+ */
+const HEAP_FRAG = /* glsl */ `
+${ATMO_GLSL}
+${HAZE_SHADE_GLSL}
+uniform highp sampler3D uHazeNoise;
+uniform vec3 uBoxMin;
+uniform vec3 uBoxMax;
+uniform vec4 uLumps[${HEAP_LUMPS}];
+uniform float uWhole;
+uniform float uFloor;
+in vec3 vWorld;
+
+float heapBody(vec3 p) {
+  float d = 0.0;
+  for (int i = 0; i < ${HEAP_LUMPS}; i++) {
+    vec3 o = (p - uLumps[i].xyz) / uLumps[i].w;
+    // Lumps a little flatter than round, so the heap sits down on the stair rather than bobbing on it; each keeps
+    // its own round head rather than melting into the rest.
+    o.y *= 1.2;
+    d = max(d, 1.0 - length(o));
+  }
+  return d * smoothstep(uFloor - 0.6, uFloor + 0.1, p.y);
+}
+
+/** Rounded billows with a crisp edge, as cumulus has, broken at the edge by the vapour's finer cells. */
+float heapDensity(vec3 p) {
+  float body = heapBody(p);
+  if (body <= 0.0) return 0.0;
+  vec3 q = p + vec3(-0.06, 0.04, 0.05) * uTime;
+  float n = texture(uHazeNoise, q * 0.45).r;
+  float f = texture(uHazeNoise, q * 1.3 + 0.4).g;
+  return smoothstep(0.12, 0.3, body + (n - 0.5) * 0.3 + (f - 0.5) * 0.12) * uWhole;
+}
+
+float scatter(float c, float g) {
+  float g2 = g * g;
+  return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * c, 1.5);
+}
+
+void main() {
+  vec3 ro = cameraPosition;
+  vec3 rd = normalize(vWorld - ro);
+  vec3 inv = 1.0 / (rd + vec3(equal(rd, vec3(0.0))) * 1e-6);
+  vec3 a = (uBoxMin - ro) * inv, b = (uBoxMax - ro) * inv;
+  vec3 lo = min(a, b), hi = max(a, b);
+  float t0 = max(max(max(lo.x, lo.y), lo.z), 0.0), t1 = min(min(hi.x, hi.y), hi.z);
+  bool inside = all(greaterThan(ro, uBoxMin)) && all(lessThan(ro, uBoxMax));
+  if (gl_FrontFacing == inside || t1 <= t0) discard;
+  float dt = max(0.14, (t1 - t0) / 22.0);
+  float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  float c = dot(rd, uSunDir);
+  float phase = 0.3 * scatter(c, 0.6) + 0.7 * scatter(c, -0.15);
+  vec3 sun = uSunColor * phase * 0.55;
+  vec3 lilac = hazeShade();
+  float T = 1.0;
+  vec3 light = vec3(0.0);
+  float seen = 0.0, at = 0.0;
+  for (int i = 0; i < 22; i++) {
+    float t = t0 + dt * (float(i) + jitter);
+    if (t > t1 || T < 0.02) break;
+    vec3 p = ro + rd * t;
+    float d = heapDensity(p);
+    if (d <= 0.0) continue;
+    float s = 1.0 - exp(-3.5 * d * dt);
+    float shade = heapDensity(p + uSunDir * 0.35) + heapDensity(p + uSunDir * 0.9) + heapDensity(p + uSunDir * 1.8);
+    // Lit from above by the white round it as well: its crowns pale, its underside and folds lilac.
+    float over = heapDensity(p + vec3(0.0, 0.5, 0.0)) + heapDensity(p + vec3(0.0, 1.2, 0.0));
+    float up = clamp((p.y - uFloor) / 2.4, 0.0, 1.0);
+    vec3 col = lilac * (0.5 + 0.35 * up) * (1.0 - 0.3 * min(over, 1.0)) + uSkyZenith * 0.14 * (1.0 - 0.6 * min(over, 1.0))
+      + sun * exp(-1.4 * shade);
+    light += T * s * col;
+    seen += T * s;
+    at += T * s * t;
+    T *= 1.0 - s;
+  }
+  float alpha = 1.0 - T;
+  if (alpha < 0.003) discard;
+  vec4 fog = fogOf(ro + rd * (at / seen));
+  light = mix(light, fog.rgb * alpha, fog.a);
+  gl_FragColor = vec4(light, alpha);
+}`;
+
+/** The material for a heap of cloud; its lumps, box and floor are set each frame through its uniforms. */
+export function hazeHeapMaterial(floor: number): THREE.ShaderMaterial {
+  noise ??= bakeNoise();
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      ...atmo.uniforms,
+      uHazeNoise: { value: noise },
+      uBoxMin: { value: new THREE.Vector3() },
+      uBoxMax: { value: new THREE.Vector3() },
+      uLumps: { value: Array.from({ length: HEAP_LUMPS }, () => new THREE.Vector4()) },
+      uWhole: { value: 1 },
+      uFloor: { value: floor },
+    },
+    vertexShader: HEAP_VERT,
+    fragmentShader: HEAP_FRAG,
+    transparent: true,
+    premultipliedAlpha: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}

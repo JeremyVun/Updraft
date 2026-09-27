@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import type { PointerInput } from '../input/pointer';
 import { screenBrush } from '../creatures/motion';
-import { puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
+import { HEAP_LUMPS, hazeHeapMaterial } from './stairs-haze';
 
-interface Lump { home: THREE.Vector3; p: THREE.Vector3; v: THREE.Vector3; r: number; a: number }
+interface Lump { home: THREE.Vector3; p: THREE.Vector3; v: THREE.Vector3; r: number }
 
 /**
  * A heap of cloud sitting on one corner of the loop, over the foot of the way on, so that nobody can see there is
@@ -18,32 +18,32 @@ export class CloudBank {
   /** How much the player has worked at it, for the story to notice. */
   worked = 0;
   private gone = false;
+  private shown = 0;
   private readonly lumps: Lump[] = [];
-  private readonly shown = { value: 0 };
-  private readonly centres: THREE.BufferAttribute;
-  private readonly alphas: THREE.BufferAttribute;
+  private readonly material: THREE.ShaderMaterial;
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly lo = new THREE.Vector3();
+  private readonly hi = new THREE.Vector3();
 
-  constructor(readonly centre: THREE.Vector3, readonly radius: number, count = 22) {
+  /** `floor` is the height of the corner it sits on. */
+  constructor(readonly centre: THREE.Vector3, readonly radius: number, floor: number) {
     let seed = 11;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-    const puffs: Puff[] = [];
-    for (let i = 0; i < count; i++) {
-      const t = rnd() * Math.PI * 2, u = rnd() * 2 - 1, k = Math.cbrt(rnd());
-      const home = new THREE.Vector3(Math.cos(t) * Math.sqrt(1 - u * u), u * 0.6, Math.sin(t) * Math.sqrt(1 - u * u))
-        .multiplyScalar(radius * 0.6 * k).add(centre);
-      const lump = { home, p: home.clone(), v: new THREE.Vector3(), r: radius * (0.7 + 0.35 * rnd()), a: 1 };
-      this.lumps.push(lump);
-      puffs.push({ x: home.x, y: home.y, z: home.z, r: lump.r, a: lump.a });
+    // A big lump in the middle, a ring of smaller ones round its foot, and a few riding on top.
+    const ring = HEAP_LUMPS - 5;
+    for (let i = 0; i < HEAP_LUMPS; i++) {
+      const t = (i / ring) * Math.PI * 2 + rnd() * 0.6;
+      const home = i === 0 ? new THREE.Vector3(0, radius * 0.05, 0)
+        : i <= ring ? new THREE.Vector3(Math.cos(t) * radius * 0.72, -radius * 0.12 + rnd() * radius * 0.1, Math.sin(t) * radius * 0.72)
+          : new THREE.Vector3(Math.cos(t * 1.7) * radius * 0.35, radius * (0.42 + 0.1 * rnd()), Math.sin(t * 1.7) * radius * 0.35);
+      home.add(centre);
+      const r = radius * (i === 0 ? 0.8 : i <= ring ? 0.48 + 0.14 * rnd() : 0.42 + 0.1 * rnd());
+      this.lumps.push({ home, p: home.clone(), v: new THREE.Vector3(), r });
     }
-    const geo = puffGeometry(puffs);
-    this.centres = geo.getAttribute('aCentre') as THREE.BufferAttribute;
-    this.alphas = geo.getAttribute('aAlpha') as THREE.BufferAttribute;
-    this.centres.setUsage(THREE.DynamicDrawUsage);
-    this.alphas.setUsage(THREE.DynamicDrawUsage);
-    this.mesh = new THREE.Mesh(geo, puffMaterial(this.shown));
+    this.material = hazeHeapMaterial(floor);
+    this.mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.material);
     this.mesh.name = 'stairs-cloud-bank';
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 6;
@@ -52,7 +52,7 @@ export class CloudBank {
 
   /** 0 hides it, 1 shows it. */
   set amount(a: number) {
-    this.shown.value = a;
+    this.shown = a;
     this.mesh.visible = a > 0.01 && this.whole > 0.01;
   }
 
@@ -69,7 +69,8 @@ export class CloudBank {
     this.up.setFromMatrixColumn(camera.matrixWorld, 1);
     const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     for (const l of this.lumps) {
-      const hit = screenBrush(camera, l.p, input.prevNdc, input.ndc, 0.2);
+      const reach = THREE.MathUtils.clamp(l.r / (l.p.distanceTo(camera.position) * halfHeight), 0.08, 0.3);
+      const hit = screenBrush(camera, l.p, input.prevNdc, input.ndc, reach);
       if (hit <= 0) continue;
       const depth = l.p.distanceTo(camera.position) * halfHeight / dt;
       l.v.addScaledVector(this.right, sx * depth * hit * 0.35).addScaledVector(this.up, sy * depth * hit * 0.35);
@@ -77,27 +78,32 @@ export class CloudBank {
     }
   }
 
-  update(dt: number, time: number): void {
+  update(dt: number): void {
     if (!this.mesh.visible && !this.gone) return;
     let spread = 0;
+    this.lo.set(Infinity, Infinity, Infinity);
+    this.hi.set(-Infinity, -Infinity, -Infinity);
+    const u = this.material.uniforms;
     this.lumps.forEach((l, i) => {
       l.v.multiplyScalar(Math.exp(-dt * (this.gone ? 0.4 : 1.6)));
       // Until it may go, it draws itself back together; the wind only ruffles it.
       if (!this.yielding) l.v.addScaledVector(this.tmp.subVectors(l.home, l.p), dt * 2.2);
       l.p.addScaledVector(l.v, dt);
       spread += Math.min(1, l.p.distanceTo(l.home) / (this.radius * 1.3));
-      const breathe = this.gone ? 0 : 0.06 * Math.sin(time * 0.5 + i * 1.7);
-      for (let c = 0; c < 4; c++) this.centres.setXYZ(i * 4 + c, l.p.x, l.p.y + breathe, l.p.z);
+      // Blown away, a lump draws out thinner as it goes.
+      const r = l.r * (this.gone ? 0.6 + 0.4 * this.whole : 1);
+      u.uLumps.value[i].set(l.p.x, l.p.y, l.p.z, r);
+      this.lo.min(this.tmp.copy(l.p).subScalar(r));
+      this.hi.max(this.tmp.copy(l.p).addScalar(r));
     });
     const whole = 1 - spread / this.lumps.length;
     if (this.yielding && !this.gone && whole < 0.55) this.gone = true;
     this.whole = this.gone ? Math.max(0, this.whole - dt / 2.5) : whole;
-    this.lumps.forEach((l, i) => {
-      for (let c = 0; c < 4; c++) this.alphas.setX(i * 4 + c, l.a * (this.gone ? this.whole : 1));
-    });
-    this.centres.needsUpdate = true;
-    this.alphas.needsUpdate = true;
+    u.uBoxMin.value.copy(this.lo);
+    u.uBoxMax.value.copy(this.hi);
+    u.uWhole.value = this.shown * (this.gone ? this.whole : 1);
+    this.mesh.position.copy(this.lo).add(this.hi).multiplyScalar(0.5);
+    this.mesh.scale.subVectors(this.hi, this.lo);
     if (this.gone && this.whole <= 0.01) this.mesh.visible = false;
   }
-
 }

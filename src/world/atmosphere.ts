@@ -584,7 +584,11 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
       + 0.45 * deckSpan(inside, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w * 0.6));
   }
   float depth = uCloudDeckY.z * len - thin * cleared;
-  vec3 p = ro + rd * min(inside.x + 1.2 / uCloudDeckY.z, inside.y);
+  // In a hollow big enough to stand back in, the cloud's light is taken where a sightline leaves its clear heart, so
+  // the hollow is bright over the lens and deepens to lilac under whatever it looks down on.
+  float from = inside.x;
+  if (uCloudBubble.w > 10.0) from = max(from, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w * 0.6).y * smoothstep(10.0, 20.0, uCloudBubble.w));
+  vec3 p = ro + rd * min(from + 1.2 / uCloudDeckY.z, inside.y);
   // The far edge of the deck frays out rather than ending along a line.
   float edge = 1.0 - smoothstep(0.55, 1.0, length(p.xz - uCloudDeck.xy) / uCloudDeck.z);
   float cover = (1.0 - exp(-depth * edge)) * uCloudDeck.w;
