@@ -839,14 +839,17 @@ export class Traveller {
       const settle = smooth(a.t, 0.78, 1.1);
       const k = 1 - settle;
       const cock = wind * (1 - fling);
-      L.raise = lerp(L.raise, 2.75 * cock + 1.0 * fling, k);
-      L.out = lerp(L.out, 0.55 * cock + 0.3 * fling, k);
-      L.elbow = lerp(L.elbow, 1.35 * cock + 0.15 * fling, k);
-      L.twist = -0.35 * cock * k;
-      R.raise = lerp(R.raise, 0.85 * cock + 0.2 * fling, k);
-      R.elbow = lerp(R.elbow, 0.8 * cock + 0.3, k);
-      twist = (-0.42 * cock + 0.38 * fling) * k;
-      lean = (-0.12 * cock + 0.3 * fling) * k;
+      /** Cocked out beside the hood with the paper behind it, never across the face; then long and low through. */
+      L.raise = lerp(L.raise, 2.75 * cock + 1.15 * fling, k);
+      L.out = lerp(L.out, 0.95 * cock + 0.25 * fling, k);
+      L.elbow = lerp(L.elbow, 1.45 * cock + 0.12 * fling, k);
+      L.twist = (0.3 * cock + 0.1 * fling) * k;
+      L.wrist = 0.5 * cock * k;
+      R.raise = lerp(R.raise, 1.0 * cock + 0.35 * fling, k);
+      R.out = lerp(R.out, 0.35, k);
+      R.elbow = lerp(R.elbow, 0.7 * cock + 0.3, k);
+      twist = (-0.5 * cock + 0.45 * fling) * k;
+      lean = (-0.14 * cock + 0.32 * fling) * k;
       P.step[1] = -0.25 * cock * k + 0.15 * fling * k;
     } else if (a?.kind === 'pickup') {
       const down = Math.sin(Math.min(1, a.t / 0.9) * Math.PI);
@@ -859,10 +862,12 @@ export class Traveller {
     } else if (a?.kind === 'cheer') {
       const up = Math.sin(Math.min(1, a.t / 1.3) * Math.PI);
       const arms = Math.min(1, up * 1.8);
+      /** A wide V, up past the hood: the whole of them in it. */
       for (const m of [L, R]) {
-        m.raise = lerp(m.raise, 3.0, arms);
-        m.out = lerp(m.out, 0.62, up);
-        m.elbow = lerp(m.elbow, 0.22, arms);
+        m.raise = lerp(m.raise, 2.75, arms);
+        m.out = lerp(m.out, 1.0, up);
+        m.elbow = lerp(m.elbow, 0.18, arms);
+        m.wrist = -0.3 * arms;
       }
       rise = Math.max(0, Math.sin(a.t * 7.5)) * 0.46 * up;
       twist = Math.sin(a.t * 5.2) * 0.3 * up;
@@ -870,10 +875,12 @@ export class Traveller {
       P.step[0] = P.step[1] = 0.55 * smooth(rise, 0.02, 0.2);
     } else if (a?.kind === 'wave') {
       const up = Math.min(1, a.t * 4) * Math.min(1, (1.8 - a.t) * 4);
-      L.raise = lerp(L.raise, 2.7, up);
-      L.out = lerp(L.out, 0.45 + Math.sin(a.t * 11) * 0.3, up);
-      L.elbow = lerp(L.elbow, 0.55 + 0.25 * Math.sin(a.t * 11 + 0.8), up);
-      L.wrist = 0.35 * Math.sin(a.t * 11 - 0.6) * up;
+      /** Out to the side at the height of the hood, the forearm up and the mitten going. */
+      L.raise = lerp(L.raise, 1.55, up);
+      L.out = lerp(L.out, 1.2 + Math.sin(a.t * 10) * 0.12, up);
+      L.elbow = lerp(L.elbow, 1.15 + 0.35 * Math.sin(a.t * 10 + 0.8), up);
+      L.twist = 0.9 * up;
+      L.wrist = 0.4 * Math.sin(a.t * 10 - 0.6) * up;
       twist = 0.08 * up;
     } else if (a?.kind === 'reach') {
       /** Straight out and then slowly down: the arms give up a long time after the rest of them does. */

@@ -10,7 +10,7 @@ export const PALETTE = {
   /** The yellow of the jumper on the family's washing line (`world/lines.ts`), which is this child's. */
   coat: new THREE.Color('#d9a22c'),
   lining: new THREE.Color('#7d5a1e'),
-  scarf: new THREE.Color('#b0302a'),
+  scarf: new THREE.Color('#a22b25'),
   skin: new THREE.Color('#f2c7a3'),
   cheek: new THREE.Color('#ea8f7e'),
   hair: new THREE.Color('#5c3820'),

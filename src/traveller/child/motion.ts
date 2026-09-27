@@ -210,14 +210,10 @@ export class ChildMotion {
     this.b = rig.bones;
   }
 
-  /** Where each foot is set down: world positions for the planted walk. */
-  readonly feet = [new THREE.Vector3(), new THREE.Vector3()];
-
   update(pose: Pose, d: Drive): void {
     const b = this.b;
     const dt = Math.max(d.dt, 1e-4);
     for (const bone of b) bone.quaternion.identity();
-    for (let i = 0; i < HEM_BONES; i++) b[BONE.hem + i].quaternion.identity();
 
     const moving = Math.min(1, d.speed / WALK);
     const running = THREE.MathUtils.clamp((d.speed - WALK) / (RUN - WALK), 0, 1);
@@ -274,7 +270,7 @@ export class ChildMotion {
     const bodyRoll = spine.rotation.z + chest.rotation.z + hipRoll;
     const steady = 0.7 * plant;
     neck.rotation.set(pose.headPitch * 0.35 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
-    head.rotation.set(pose.headPitch * 0.65 - bodyPitch * steady * 0.3 + 0.03 * bounce * 20 * stride, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
+    head.rotation.set(pose.headPitch * 0.65 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
 
     // -- Arms, from the story's pose.
     this.arm(pose.arms[0], true);
@@ -298,7 +294,7 @@ export class ChildMotion {
     const clav = b[left ? BONE.clavL : BONE.clavR];
     /** Above the shoulder the collarbone comes up with the arm, so a raised arm does not break at the armpit. */
     const high = THREE.MathUtils.smoothstep(p.raise, 1.3, 2.9) + THREE.MathUtils.smoothstep(p.out, 0.9, 2.0);
-    clav.rotation.set(0, -s * 0.12 * THREE.MathUtils.smoothstep(p.raise, 0.6, 1.8), s * 0.3 * Math.min(1, high));
+    clav.rotation.set(0, -s * 0.12 * THREE.MathUtils.smoothstep(p.raise, 0.6, 1.8), s * 0.45 * Math.min(1, high));
     this.ea.set(-p.raise, s * p.twist, s * p.out, 'XYZ');
     upper.quaternion.setFromEuler(this.ea);
     fore.rotation.set(-p.elbow, 0, 0);
@@ -465,17 +461,19 @@ export class ChildMotion {
     for (let i = 0; i < HEM_BONES; i++) {
       const h = HEM[i];
       /** Swung by the body's own motion, blown out on the side the air leaves, pressed in on the side it meets. */
-      const hang = Math.atan2(g.dot(h.radial), -g.y) * 0.9;
+      /** Lying down, the bed holds the coat: nothing swings it and the ground is not under the hem. */
+      const up = 1 - pose.lie;
+      const hang = Math.atan2(g.dot(h.radial), -g.y) * 0.9 * up;
       const lee = flow.dot(h.radial);
       const blow = Math.min(0.55, airSpeed * (lee > 0 ? 0.055 * lee : 0.015 * lee));
       const flutter = flutterAmp * (0.04 + 0.1 * Math.max(0, lee)) * Math.sin(d.time * (7.5 + 3 * d.gust) + h.a * 2.3 + d.time * 0.8 * Math.sin(h.a * 3));
-      const target = THREE.MathUtils.clamp(hang + blow + flutter, -0.35, 0.9);
+      const target = THREE.MathUtils.clamp(hang + (blow + flutter) * up, -0.35, 0.9);
       let a = this.hemOut[i].step(target, dt);
       // Legs and the ground push it out.
       let floor = -Infinity;
       for (const p of legPts) floor = Math.max(floor, this.hemClear(i, p));
       const drop = pivotY - groundY - 0.035;
-      if (drop < h.length) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
+      if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
       if (a < floor) {
         a = floor;
         this.hemOut[i].x = floor;
@@ -486,7 +484,7 @@ export class ChildMotion {
     for (let i = 0; i < HEM_BONES; i++) {
       const h = HEM[i];
       const a = outs[i] * 0.7 + (outs[(i + 1) % HEM_BONES] + outs[(i + HEM_BONES - 1) % HEM_BONES]) * 0.15;
-      const sideTarget = THREE.MathUtils.clamp(Math.atan2(g.dot(h.tangent), -g.y) * 0.6 + airSpeed * 0.02 * flow.dot(h.tangent) - d.turn * 0.05, -0.4, 0.4);
+      const sideTarget = THREE.MathUtils.clamp((Math.atan2(g.dot(h.tangent), -g.y) * 0.6 + airSpeed * 0.02 * flow.dot(h.tangent) - d.turn * 0.05) * (1 - pose.lie), -0.4, 0.4);
       const side = this.hemSide[i].step(sideTarget, dt);
       const bone = b[BONE.hem + i];
       bone.quaternion.setFromAxisAngle(h.axis, a);
@@ -517,8 +515,9 @@ export class ChildMotion {
     cg.y = Math.min(cg.y, -GRAVITY * 0.4);
     const bag = b[BONE.bag];
     /** It can swing out from the back but not in through it. */
-    const bp = this.bagPitch.step(THREE.MathUtils.clamp(Math.atan2(-cg.z, -cg.y) * 0.4, -0.04, 0.2), dt);
-    const br = this.bagRoll.step(THREE.MathUtils.clamp(Math.atan2(cg.x, -cg.y) * 0.4, -0.16, 0.16), dt);
+    const still = 1 - pose.lie;
+    const bp = this.bagPitch.step(THREE.MathUtils.clamp(Math.atan2(-cg.z, -cg.y) * 0.4 * still, -0.04, 0.2), dt);
+    const br = this.bagRoll.step(THREE.MathUtils.clamp(Math.atan2(cg.x, -cg.y) * 0.4 * still, -0.16, 0.16), dt);
     bag.rotation.set(Math.max(bp, -0.04), 0, br);
   }
 

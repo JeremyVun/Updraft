@@ -458,7 +458,7 @@ export const FAMILY_FACE = new THREE.Vector3(0.12, 0, 1).normalize();
 export const family = new THREE.Vector2(0, 0);
 const FAMILY_PIECES = [
   { at: 0.2, width: 2.7, drop: 3.0, colour: '#477c9b', role: 0 },
-  { at: 0.5, width: 1.55, drop: 1.8, colour: '#f0bb35', role: 2 },
+  { at: 0.5, width: 1.55, drop: 1.8, colour: '#d9a22c', role: 2 },
   { at: 0.8, width: 2.65, drop: 3.1, colour: '#bd5340', role: 1 },
 ];
 
