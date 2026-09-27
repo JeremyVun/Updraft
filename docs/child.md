@@ -143,6 +143,15 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
   - **Hair** (`HAIR`, `hairline`, `LOCKS`): a fringe of broad locks tapering to soft points, parted on the child's
     left and swept right, with locks in front of the ears.
   - **Legs:** thicker trousers, hips at ±0.15 and the feet a touch wider still. Mittens are plumper, thumb forward.
+- Then from Jeremy's notes on the overlay (verbatim in the brief above is his first steer; these followed in chat):
+  buttons raised to the concept's, the hood brought forward over the fringe and flaring out at the ears, the palette
+  matched to the concept by sampling both (coat `#d29134`, scarf `#7c261b`, trousers `#2c2823`, hair `#3d2a1b`, boots
+  `#453427`; the family jumper follows the coat), the chest carried forward. The face read vertically short: the
+  parting now shows forehead on the child's left and the cheeks taper to the chin. The hood was cinched down onto the
+  head: it now stands off it, the brim arching out over the fringe.
+- Scarf ends (Opus agent, branch `child-scarf`, merged): a dream breeze always carries both ends out behind and round
+  to the knot's side, more with the child's speed; a player's gust takes them its own way. Knobs in `tuning.scarf`.
+  The long end streams well round to the side so it reads past the bag from the camera behind.
 - Face details still at **D** until Jeremy rules on the shape.
 - Capture harness for this round, in `/tmp/child3`:
   - `snap.sh <tag>` freezes the worktree as a build served at `:5377/<tag>/`, so edits don't disturb captures.
