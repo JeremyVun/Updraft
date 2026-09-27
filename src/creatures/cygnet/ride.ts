@@ -44,6 +44,8 @@ interface Move {
   from: Seat | null;
   fixed: Frame;
   via: THREE.Vector3[] | null;
+  /** Leaving a seat for the ground: it sets off straight up, out of the bag or the arms, before it goes anywhere. */
+  outOf: boolean;
 }
 
 /**
@@ -120,6 +122,7 @@ export class Ride {
       from: over ? leaving : null,
       fixed: { p: this.shown.p.clone(), q: this.shown.q.clone() },
       via: over ? (leaving === 'cradle' ? OVER_THE_SHOULDER : [...OVER_THE_SHOULDER].reverse()) : null,
+      outOf: kind === 'dash' && leaving !== null && next === null,
     };
     this.seat = next;
     this.held = to.held ?? false;
@@ -138,6 +141,7 @@ export class Ride {
         this.source.q.copy(m.fixed.q);
       }
       if (m.via && this.mount) this.along(m.via, k);
+      else if (m.outOf) this.leap(m.arc, k);
       else {
         this.shown.p.lerpVectors(this.source.p, this.target.p, k);
         this.shown.p.y += Math.sin(k * Math.PI) * m.arc;
@@ -210,6 +214,17 @@ export class Ride {
 
   tick(dt: number): void {
     this.lastDt = dt;
+  }
+
+  /** Out of a seat and down: a curve whose handle stands straight above the start, so it clears the bag's rim, peaking `arc` above it. */
+  private leap(arc: number, k: number): void {
+    const a = this.source.p;
+    const b = this.target.p;
+    const drop = b.y - a.y;
+    const handle = arc + Math.sqrt(Math.max(0, arc * arc - arc * drop));
+    const s = 1 - k;
+    this.shown.p.lerpVectors(a, b, k * k);
+    this.shown.p.y = a.y + 2 * k * s * handle + k * k * drop;
   }
 
   /** A smooth curve through the way over the child, from wherever it is leaving to wherever it is going, both read live. */
