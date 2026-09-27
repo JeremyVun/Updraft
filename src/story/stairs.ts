@@ -1014,7 +1014,8 @@ export class StairsChapter implements Chapter {
       d.bubble.set(mid.x, hull.y + 1.8, mid.z, 0.55 * this.framing.distance + 3);
       // The white streams past them in the bank itself; the rags of cloud from the climb have no place in it.
       wisps.amount = 0;
-      this.breeze = 0.35;
+      // On the sea the air and the swell rise to the village's as the white thins, so they are there when it has them.
+      this.breeze = sea ? THREE.MathUtils.lerp(0.35, 1, S(this.t, 1, tuning.stairs.fogLift)) : 0.35;
       return;
     }
     d.base = CLOUD.base;
