@@ -97,7 +97,7 @@ export class StairsChapter implements Chapter {
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
   private readonly invitation = new THREE.Vector3();
   private lastPush = 0;
-  private readonly air: StairsAir = { cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
+  private readonly air: StairsAir = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
   private readonly oldRadius: number;
 
   constructor(private readonly cast: Cast) {
@@ -332,6 +332,8 @@ export class StairsChapter implements Chapter {
     const out = afloat || (y > CLOUD.top - 0.4 && ['emerge', 'nest', 'skein', 'lean', 'gather', 'boarding'].includes(this.beat));
     a.open += ((out ? 1 - a.fog : 0) - a.open) * (1 - Math.exp(-dt * 0.8));
     a.speed = afloat ? boat.speed : 0;
+    a.phase = this.beat === 'down' ? 'down' : this.beat === 'descend' ? 'fog' : this.beat === 'sail' ? 'sail'
+      : out ? 'above' : a.cloud > 0.5 || (a.climb > 0 && ['follow', 'emerge'].includes(this.beat)) ? 'cloud' : 'under';
   }
 
   /** Up the stair, stop by stop, as far as it goes. */
