@@ -90,3 +90,12 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
 ## Status
 
 - 2026-09-27: worktree made from `d461f90`; the rejected incremental attempt's worktree and branch are deleted.
+- Built (branch `child-rebuild`): `src/traveller/child/` — `skeleton.ts` (29 bones: spine, neck, head, hood, clavicles,
+  arms to the wrist, legs to the ankle, bag, eight hem bones), `garments.ts` (every garment as one parametric surface),
+  `shader.ts` (per-material wool, knit, leather, rubber, hair and skin; the face painted), `motion.ts` (planted-foot walk
+  with leg IK on the terrain, arm IK, springs on hem, hood and bag). `traveller.ts` authors a `Pose` per frame.
+  The satchel is lower on the back (seat unchanged relative to the bag) so the cygnet's head rides beside the hood.
+- Checkpoint 1 shown to Jeremy: `/tmp/child2-shots/checkpoint1-model.png` (concept, main, rebuild) and
+  `checkpoint1-faces.png` (A eyes only, B + nose, C + nose + mouth, D + eye whites). Recommended C. Awaiting his pick.
+- Capture harness: `/tmp/child2-shots/cap2.sh <tag> <chapter>` (turnaround, story frozen), `faces.sh`, `walk.sh`.
+  Worktree dev server :5373; main's build for before shots in `/private/tmp/updraft-child2-base` on :5374.
