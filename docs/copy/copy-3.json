@@ -1,0 +1,8 @@
+{
+  "chapterSelect": {
+    "toggle": "chapters",
+    "dialogLabel": "Chapters",
+    "rooms": ["Still island", "Washing", "Little boats", "Meadow", "Birches", "Drowned village", "Dark wood", "Sleeping island", "Open sea", "Sky mirror", "Home"]
+  },
+  "notes": "Only shown to players who have finished. Jeremy asked for one or two words per still so players learn the rooms' names after completing them; 'The' is dropped to keep every name within two words. The lowercase toggle sits quieter than Begin/Continue."
+}

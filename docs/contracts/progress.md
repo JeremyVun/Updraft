@@ -68,6 +68,19 @@ Restore the musical phase with the story state. Sleeping's `morning` selects the
 earlier Sleeping progression retains wood. Completed piano restoration clears pending completion audio.
 Neither restore emits reward cues. See `audio.md` for gesture, source and cue contracts.
 
+## Chapter select
+
+Jeremy's decision (2026-09-27): once the game has been finished, the title screen offers a faint `chapters` under
+Begin/Continue. It opens a strip of small, soft-edged stills of the rooms, each with a one- or two-word name, and a
+pick begins that room. It must not cost new players anything, so `src/chapter-select/` (script, CSS and stills) is
+a separate chunk that only a finished player's title screen imports, and the stills download when `chapters` is
+reached for.
+
+Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; a completed save from before the flag sets it
+on the next visit. A pick is held per tab in `sessionStorage` (`updraft.chosen-chapter`) and reloads the page into
+that `?chapter=` start with saving on. Until the room's entry checkpoint is saved, the existing save is untouched
+but ignored, so closing the tab after picking loses nothing. `node tools/chapter-select-check.mjs` checks it.
+
 ## Hidden pages and sound
 
 `Soundscape` responds to `visibilitychange`, `pagehide` and `pageshow`. It suspends the existing AudioContext while hidden or muted, and resumes it on return only if sound was already started and enabled. It never creates audio on a visibility event. If the browser requires a fresh gesture to resume, the next pointer-down retries. A rejected resume does not break gameplay.

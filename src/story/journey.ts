@@ -22,7 +22,7 @@ import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
-import { readProgress, placeProgress, restoreLife, saveProgress } from './progress';
+import { chosenChapter, readProgress, placeProgress, restoreLife, saveProgress } from './progress';
 import { restoreWingCare } from './wing-care';
 
 export type ChapterName =
@@ -106,8 +106,8 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
 const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toBoats', 'boats', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toMirror', 'mirror', 'toHarbour', 'home'];
 
 /**
- * Runs the chapters in order and speaks for whichever is current. `?chapter=` starts later in the story for
- * testing, with everything before it treated as done.
+ * Runs the chapters in order and speaks for whichever is current. `?chapter=`, or a chapter picked on the title
+ * screen, starts later in the story with everything before it treated as done.
  */
 export class Journey {
   name: ChapterName = 'island';
@@ -135,7 +135,7 @@ export class Journey {
       this.savedPoint = saved.point;
       return;
     }
-    const start = params.chapter;
+    const start = params.chapter ?? (params.progress ? chosenChapter() : null);
     if (start === 'crossing' || start === 'lines') {
       this.sail(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
       this.begin('toLines');
