@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Rig } from '../body';
 import { ANKLE, BONE, FOREARM, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
-import { coatAt, hemY } from './garments';
+import { HOOD, coatAt, hemY } from './garments';
 
 /** One arm, as the story poses it. Left is the child's own left, +x. */
 export interface ArmPose {
@@ -561,7 +561,7 @@ export class ChildMotion {
   /** The direction the hood's opening faces, in the world. */
   hoodForward(out: THREE.Vector3): THREE.Vector3 {
     this.b[BONE.head].getWorldQuaternion(this.qa);
-    return out.set(0, -0.1, 1).normalize().applyQuaternion(this.qa);
+    return out.set(0, -Math.sin(HOOD.tilt), Math.cos(HOOD.tilt)).applyQuaternion(this.qa);
   }
 }
 
