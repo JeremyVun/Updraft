@@ -98,6 +98,17 @@ try {
     return { ends, spin, settling: piece.settling, turn: +piece.offset.y.toFixed(2), off: [+piece.offset.x.toFixed(2), +piece.offset.z.toFixed(2)] };
   }, [width, height]);
 
+  // Every change of beat, with the time, so a skipped or hurried beat shows up in the log.
+  await page.evaluate(() => {
+    window.__beats = [];
+    let last = '';
+    setInterval(() => {
+      const s = window.__game.story;
+      const now = `${s.name}:${s.current.beat}`;
+      if (now !== last) window.__beats.push(`${(performance.now() / 1000).toFixed(1)} ${now}`);
+      last = now;
+    }, 100);
+  });
   await page.waitForTimeout(2500);
   await shot('01-arrive');
   const first = Number(process.env.FROM ?? 0);
@@ -130,23 +141,23 @@ try {
     await page.waitForTimeout(900);
     await shot(`05-docked-${n + 1}`);
   }
-  s = await until((x) => x.beat === 'hesitate', 60000);
-  await page.waitForTimeout(2200);
+  s = await until((x) => x.beat === 'hesitate', 60000, 100);
+  await page.waitForTimeout(1800);
   await shot('06-hesitate');
-  s = await until((x) => x.beat === 'birdFirst', 20000);
-  await page.waitForTimeout(5000);
+  s = await until((x) => x.beat === 'birdFirst', 20000, 100);
+  await page.waitForTimeout(7000);
   await shot('07-bird-first');
-  s = await until((x) => x.beat === 'follow', 30000);
-  await page.waitForTimeout(6000);
+  s = await until((x) => x.beat === 'follow', 30000, 100);
+  await page.waitForTimeout(4500);
   await shot('08-in-cloud');
-  s = await until((x) => x.beat === 'emerge', 90000);
-  await page.waitForTimeout(3000);
+  s = await until((x) => x.beat === 'emerge', 90000, 100);
+  await page.waitForTimeout(1200);
   await shot('09-emerge');
-  s = await until((x) => x.beat === 'nest', 40000);
-  await page.waitForTimeout(4000);
+  s = await until((x) => x.beat === 'nest', 40000, 100);
+  await page.waitForTimeout(3500);
   await shot('10-nest');
-  s = await until((x) => x.beat === 'skein', 40000);
-  await page.waitForTimeout(4000);
+  s = await until((x) => x.beat === 'skein', 40000, 100);
+  await page.waitForTimeout(5000);
   await shot('11-skein');
   s = await until((x) => x.beat === 'sail', 60000);
   await page.waitForTimeout(2000);
@@ -174,6 +185,7 @@ try {
   await shot('15-village');
   await page.waitForTimeout(8000);
   await shot('16-village-clear');
+  log('beats:\n' + (await page.evaluate(() => window.__beats.join('\n'))));
 } finally {
   await browser.close();
   if (errors.length) log('errors:\n' + [...new Set(errors)].slice(0, 6).join('\n'));

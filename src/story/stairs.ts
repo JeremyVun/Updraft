@@ -3,6 +3,7 @@ import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
 import type { Deck } from '../world/decks';
+import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import {
   CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
@@ -400,7 +401,8 @@ export class StairsChapter implements Chapter {
     this.skeinSent = true;
     const toward = this.tmp.copy(this.sun).sub(TOP).setY(0).normalize();
     const x = TOP.x + toward.x * 170, z = TOP.z + toward.z * 170;
-    const bearing = Math.atan2(-toward.z, toward.x) + Math.PI * 0.5;
+    // Across the line of sight, and north: they are going on without it.
+    const bearing = Math.atan2(-toward.z, toward.x);
     this.cast.flock.pass(x, z, CLOUD.top + 34, bearing, 9, 140, false);
     const k = this.cast.cygnet;
     k.stay = true;
@@ -471,10 +473,11 @@ export class StairsChapter implements Chapter {
     }
   }
 
+  /** A point out toward the setting sun, level with the top landing, wherever the sky has put it. */
   private sunPoint(): void {
-    const s = this.tmp2.set(0, 0, 0);
-    s.copy(TOP).add(this.look.set(-0.79, 0, -0.62).multiplyScalar(60));
-    this.sun.set(s.x, TOP.y + 3, s.z);
+    const d = atmo.uniforms.uSunDir.value;
+    const len = Math.hypot(d.x, d.z) || 1;
+    this.sun.set(TOP.x + d.x / len * 60, TOP.y + 3, TOP.z + d.z / len * 60);
   }
 
   /** The deck as this beat needs it: its underside lowered to the sea for the way down, a pocket round whoever is in it. */
@@ -568,17 +571,18 @@ export class StairsChapter implements Chapter {
       case 'lean':
       case 'gather':
       case 'boarding': {
-        // Behind them, low, with the sun and all of the cloud in front: two small shapes on the edge of the top step.
+        // First their faces in the last of the sun, the cloud behind them; then, turned round, what they are watching.
         const back = this.tmp.copy(TOP).sub(this.sun).setY(0).normalize();
-        const skein = this.beat === 'skein';
-        // Three-quarters from behind, so the two of them are side by side against the light, not lost in it.
-        s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, skein ? 0.1 : 0.25);
+        // The lens comes round behind them while the swans are still on their way in.
+        const skein = this.beat === 'skein' || (this.beat === 'nest' && this.t > 3.5);
+        if (skein) s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.1);
+        else s.from = this.from.copy(back).negate().applyAxisAngle(THREE.Object3D.DEFAULT_UP, -0.45);
         s.target.copy(SIT).lerp(SLIPPERS, 0.5);
-        s.target.y = TOP.y + (skein ? 2.6 : 0.8);
-        s.distance = skein ? 10 : 6.5;
-        s.height = skein ? -0.3 : 0.9;
+        s.target.y = TOP.y + (skein ? 2.6 : 0.75);
+        s.distance = skein ? 10 : 5.2;
+        s.height = skein ? -0.3 : 0.5;
         this.focus.copy(SIT);
-        this.pace = 0.2;
+        this.pace = skein ? 0.32 : 0.2;
         return;
       }
       default: {
