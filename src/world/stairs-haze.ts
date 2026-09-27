@@ -6,6 +6,9 @@ import { ATMO_GLSL, atmo } from './atmosphere';
  * steps and trailing down into thinning wisps that drift and slowly sink. Each piece is a box round its haze,
  * drawn once: its fragments find where their sightline enters and leaves the box and march a few steps through the
  * vapour between. Nothing else of the stair lies inside a box, so no scene depth is needed.
+ *
+ * `hazeUnderFlight` and `hazeUnderLanding` make one piece each, for any flight or landing given its frame; pieces
+ * that meet fade across each other's edge (`HazeJoins`). `HAZE_SHADE_GLSL` is its colour, for what goes into it.
  */
 
 const NOISE = 32;
@@ -135,7 +138,7 @@ vec3 hazeShade() {
 
 /** How far toward the sun each step looks to see how much vapour shades it. */
 const LIGHT_REACH = 0.7;
-/** Within this far of the lens a point is outside the box enough for its near side to be drawn. */
+/** A lens nearer a box than this counts as inside it, since the near clipping plane may cut its near side away. */
 const LENS = 0.6;
 
 const VERT = /* glsl */ `
@@ -163,8 +166,10 @@ ${ATMO_GLSL}
 ${HAZE_SHADE_GLSL}
 uniform highp sampler3D uHazeNoise;
 uniform mat4 uHome;
+// The box in metres: across, from the ceiling to the foot, along; and how far it reaches over a joined side.
 uniform vec4 uSize;
 uniform float uAmount;
+// 1 for each side open to the air, 0 for each that meets the next piece: -x, +x, -z, +z.
 uniform vec4 uOpen;
 in vec3 vCube;
 in vec3 vWorld;
@@ -179,7 +184,6 @@ vec2 boxSpan(vec3 ro, vec3 rd) {
   return vec2(max(max(lo.x, lo.y), lo.z), min(min(hi.x, hi.y), hi.z));
 }
 
-/** 1 on the sides of the box that are open to the air, 0 on those that meet the next piece's haze. */
 vec2 openAt(vec3 c) {
   return vec2(c.x < 0.0 ? uOpen.x : uOpen.y, c.z < 0.0 ? uOpen.z : uOpen.w);
 }
@@ -303,6 +307,9 @@ void main() {
   float sigma = 1.6 * mix(0.6, 1.0, min(uAmount, 1.0));
   vec2 side = vec2(smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y),
     smoothstep(uCloudDeckY.y - 0.6, uCloudDeckY.y - 0.2, cameraPosition.y)) * uCloudDeck.w;
+  vec2 heights = cameraPosition.y + (vWorld.y - cameraPosition.y) * vec2(t0, t1);
+  if (side.x > 0.99 && min(heights.x, heights.y) > uCloudDeckY.x - 2.3) discard;
+  if (side.y > 0.99 && max(heights.x, heights.y) < uCloudDeckY.y - 0.2) discard;
   float T = 1.0;
   vec3 light = vec3(0.0);
   float seen = 0.0, at = 0.0;
