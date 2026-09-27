@@ -373,7 +373,7 @@ export const tuning = {
      * The dream's own breeze, always carrying the ends out behind the child (units per second), and how much it
      * swells and eases. It turns with the child, and a player's gust takes over from it.
      */
-    breeze: 2.4, breezeSwell: 0.3,
+    breeze: 3, breezeSwell: 0.3,
     /** How much of the child's own speed adds to the air carrying the ends out behind them. */
     carry: 1,
     /**
