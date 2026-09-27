@@ -99,8 +99,12 @@ light. Courage passes back and forth between them; the stairs are where it start
 
 ## Status (2026-09-27)
 
-- Built and playing end to end: arrival, three loose flights (automated strokes dock them in about 1, 3 and 7–11
-  strokes), the bird going first into the cloud and leading the climb, the top landing, the skein across the sun,
-  boarding, the sail over the cloud and the descent onto the village's water.
-- Still to do: the child and bird's nest-and-lean beat needs a proper look; a wooden knock for a docking flight;
-  music is the birches' closing phrase throughout; a first-person human play for feel; performance check.
+- Built and playing end to end on branch `stairs`: arrival under the deck, three loose flights (automated strokes
+  dock them in about 1, 2–3 and 7–15 strokes), the bird going first into the cloud and leading the climb stop by
+  stop, the top landing (faces in the sun, then the reverse shot as the skein crosses the sun going north), boarding,
+  the sail over the cloud and the descent through it onto the village's water, where the drowned chapter takes over.
+- Shown to Jeremy as stills: `/tmp/updraft-stairs-show/` (not kept).
+- Open: a knock for a docking flight; music is the birches' closing phrase throughout; a human play for feel; a
+  performance pass (capture runs report about 59 fps); the paper plane in the satchel is a bright triangle in
+  backlit silhouettes; merge with the child rebuild in progress on `main` (the stair walking touches
+  `traveller.ts`).
