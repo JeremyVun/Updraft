@@ -697,7 +697,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     ? 1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, tuning.skyMirror.duskTo) : 0;
   applyPalette(story.worldLife, dusk, shower, squall, homeLight);
   applySleepingPalette(sleeping.presence);
-  shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0, 1.2, dt);
+  // Leaving, the shade lifts over the crossing: lifted at the pace it follows the child, the whole night brightens at once.
+  shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0,
+    story.name === 'wood' ? tuning.wood.shadeFollow : tuning.wood.shadeLift, dt);
   stormWeather.update(dt, storm, boat.afloat ? boat.yaw : child.yaw,
     story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade, story.current.stormStrike);
   /**

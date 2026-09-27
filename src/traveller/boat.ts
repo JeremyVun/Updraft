@@ -405,7 +405,8 @@ export class Boat {
     this.boardingPush = false;
   }
 
-  private get pushingOff(): boolean {
+  /** Pushed off a beach and still being brought round by hand, before the sail takes it. */
+  get pushingOff(): boolean {
     return this.pushingFor >= 0;
   }
 

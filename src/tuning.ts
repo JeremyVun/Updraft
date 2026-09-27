@@ -682,6 +682,9 @@ export const tuning = {
     ambientScale: 0.28,
     moonScale: 0.85,
     skyScale: 0.4,
+    /** Per second: how fast the wood's shade follows the child in and out of the trees, and how slowly it lifts once they sail. */
+    shadeFollow: 1.2,
+    shadeLift: 0.22,
     grassDensity: 0.25,
     grassBaseCrop: 0.15,
     grassTuftCrop: 0.70,

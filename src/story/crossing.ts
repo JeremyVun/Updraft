@@ -189,7 +189,10 @@ export class CrossingChapter implements Chapter {
     this.departure.set(cast.boat.position.x, cast.boat.position.z);
     this.shot.carryAnchor = cast.boat.position;
     this.quarter = this.side = -cast.boat.sailSide || 1;
-    this.heading = cast.boat.yaw;
+    // A bow still turned into the beach it was pushed off is about to be brought round: the lens starts on the course
+    // out, or it sets off round the hull toward that bow and swings back as the boat comes about.
+    const out = Math.atan2(opts.route[0].x - cast.boat.position.x, opts.route[0].y - cast.boat.position.z);
+    this.heading = Math.cos(out - cast.boat.yaw) < 0 ? out : cast.boat.yaw;
     cast.boat.speedLimit = this.cruiseSpeed;
     this.music = opts.music ?? 'sea';
     this.homeward = opts.homeward ?? false;
@@ -451,7 +454,9 @@ export class CrossingChapter implements Chapter {
       if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
       this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * tuning.crossingCamera.sideResponse));
     }
-    this.heading += Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading))
+    const course = boat.pushingOff && boat.steerFor
+      ? Math.atan2(boat.steerFor.x - boat.position.x, boat.steerFor.y - boat.position.z) : boat.yaw;
+    this.heading += Math.atan2(Math.sin(course - this.heading), Math.cos(course - this.heading))
       * (1 - Math.exp(-dt * tuning.crossingCamera.headingResponse));
     this.frame(back);
   }
