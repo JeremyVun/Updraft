@@ -83,14 +83,14 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 
 | # | Issue | Status |
 | --- | --- | --- |
-| 1 | Cheer two-tone | open |
+| 1 | Cheer two-tone | done: the sound was the `delight` chime (three quick bell notes) cued with the child's cheer on the still island and the birches, and also on the birches' freed snags, the little boats' launch and the lines bird's arrival. The story no longer cues it anywhere (`docs/contracts/audio.md`) |
 | 2 | Cygnet seen through the child from behind | open |
-| 3 | Drowned sail gesture lands behind the sail | open |
-| 4 | Still island: gesture on the plane when held and when grounded | open |
+| 3 | Drowned sail gesture lands behind the sail | fixed: as Jeremy guessed, a stroke puts wind where the pointer's ray meets the water, which from the camera behind the boat is well beyond the sail, and the calm is read at the hull. A stroke that crosses the sail on screen (within `sail.brushReach` of its middle) now blows on the sail itself (`Boat.brushSail`, the little boats' fix). Four rounds of strokes across the sail filled 0.06 of the 22 needed before; now one round fills it and the boat moves on |
+| 4 | Still island: gesture on the plane when held and when grounded | done: `PlaneInvitation` draws the sail's gust across the paper while the child holds it before the first breeze, and whenever it has come to rest on the grass during catch (and on the way to the boat), half a second after it settles; it heads toward the plane's home and gives way while the player strokes across it (`planeInvitation` on the chapter, `opening.planeInvite*`) |
 | 5 | Grass stutters as the camera turns | open |
-| 6 | Birches: scarf drawn into the boat too fast | open |
+| 6 | Birches: scarf drawn into the boat too fast | slowed: measured against `a9fdd86` (just before the cloth rewrite), the draw-in was the same 8 s in both, the free end covering about 135 m, so the rewrite did not change its timing. It now takes 16 s (`birches.scarf.gatherSeconds`), the free end at up to 13 m/s rather than 25 |
 | 7 | Mirror: cygnet stuck paddling, even in the backpack | open |
-| 8 | Boat to jetty is a teleport | open |
+| 8 | Boat to jetty is a teleport | fixed: at home and at the sky mirror the child was placed straight onto the deck. `Traveller.alight` is the reverse of boarding: up off the thwart, a foot on the gunwale on the deck's side, down onto the boards (2.1 s, `boarding.alight*`), then the walk in. Placing the child (checkpoint restores) cancels it |
 | 9 | Birches landing: cygnet not put down until the swing | open |
 | 10 | Cygnet clips out of the backpack | open |
-| 11 | Little boats: drag −30%, max speed +10% | open |
+| 11 | Little boats: drag −30%, max speed +10% | done: `drag` 0.38 → 0.266, `speed` 3.1 → 3.41. The faster, freer toy then met the cygnet's swim limit already inside it and jolted (up to 9 u/s² in one frame, from under 2); a limit that drops under the sailing toy is now let in over its stopping room, back to 1.9 |
