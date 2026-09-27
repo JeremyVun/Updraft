@@ -7,7 +7,7 @@ import { KNIT_GLSL } from './child/shader';
 /** Across the strip, as a flattened loop: wide faces front and back, rounded edges. */
 const SECTION = 10;
 const WIDTH = 0.2;
-const THICK = 0.062;
+const THICK = 0.07;
 
 const VERT = /* glsl */ `
 in vec2 aSurf;
@@ -41,7 +41,8 @@ void main() {
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
   float ground = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
-  vec3 col = alb * (hemiLight(N) * 1.05 * ground + uSunColor * (wrap * wrap * 0.95 + through * 0.5) * sun);
+  float ao = ground * 0.85;
+  vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * (wrap * wrap * 0.9 * mix(0.6, 1.0, ao) + through * 0.4) * sun);
   col += uSunColor * alb * rim * 0.6 * sun;
   col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
@@ -79,6 +80,8 @@ export class Scarf {
   private readonly b = new THREE.Vector3();
   private readonly n = new THREE.Vector3();
   private readonly rootAt = new THREE.Vector3();
+  private readonly turn = new THREE.Quaternion();
+  private readonly face = new THREE.Vector3();
   private time = 0;
 
   constructor() {
@@ -216,35 +219,48 @@ export class Scarf {
     for (const e of this.ends) {
       const n = e.pts.length;
       const rings = n + 1;
+      /**
+       * The strip's broad face is carried down its length from the knot, turning only as much as the length turns,
+       * so it can never flip edge-on from one point to the next. At the knot it lies against the child.
+       */
+      this.dir.subVectors(e.pts[1], e.pts[0]).normalize();
+      this.out.set(e.pts[0].x - axis.x, 0, e.pts[0].z - axis.z);
+      if (this.out.lengthSq() < 1e-6) this.out.set(0, 0, 1);
+      this.out.addScaledVector(this.dir, -this.out.dot(this.dir)).normalize();
+      this.n.copy(this.out);
       for (let i = 0; i < rings; i++) {
         const k = Math.min(i, n - 1);
         const a = e.pts[Math.max(0, k - 1)];
         const b = e.pts[Math.min(n - 1, k + 1)];
-        this.dir.subVectors(b, a).normalize();
-        /** The broad face lies against the child: its width runs round them, not out from them. */
-        this.out.set(e.pts[k].x - axis.x, 0, e.pts[k].z - axis.z);
-        if (this.out.lengthSq() < 1e-6) this.out.set(0, 0, 1);
-        this.out.normalize();
-        const side = this.a.crossVectors(this.dir, this.out);
-        if (side.lengthSq() < 1e-6) side.copy(e.side[k]);
-        side.normalize();
-        if (side.dot(e.side[k]) < 0) side.negate();
-        side.lerp(e.side[k], 0.6).normalize();
+        this.tmp.subVectors(b, a).normalize();
+        this.turn.setFromUnitVectors(this.dir, this.tmp);
+        this.n.applyQuaternion(this.turn);
+        this.dir.copy(this.tmp);
+        this.n.addScaledVector(this.dir, -this.n.dot(this.dir)).normalize();
+        let side = this.a.crossVectors(this.dir, this.n).normalize();
+        if (i === 0 && side.dot(e.side[k]) < 0) {
+          this.n.negate();
+          side = this.a.crossVectors(this.dir, this.n).normalize();
+        }
+        side.lerp(e.side[k], 0.5).normalize();
         e.side[k].copy(side);
         const f = k / (n - 1);
         side.applyAxisAngle(this.dir, Math.sin(this.time * 1.7 + k * 0.3 + e.phase) * 0.14 * f);
-        const face = this.n.crossVectors(side, this.dir).normalize();
+        const face = this.face.crossVectors(side, this.dir).normalize();
         /** The last ring is pulled back along the strip to square off the end. */
         const centre = this.b.copy(e.pts[k]);
         if (i === rings - 1) centre.addScaledVector(this.dir, 0.02);
-        const w = WIDTH * 0.5 * (k === 0 ? 0.6 : 1);
+        /** Knitted wool stretches and gathers: the width breathes a little along it. */
+        const w = WIDTH * 0.5 * (k === 0 ? 0.6 : 1 + 0.07 * Math.sin(k * 1.3 + this.time * 1.9 + e.phase));
         for (let j = 0; j < SECTION; j++) {
           const ang = (j / SECTION) * Math.PI * 2;
           const c = Math.cos(ang);
           const s = Math.sin(ang);
           /** A flattened loop: nearly flat across the faces, rounded at the edges. */
-          const across = Math.sign(c) * Math.pow(Math.abs(c), 0.35) * w;
-          const through = s * THICK * 0.5;
+          const edge = Math.sign(c) * Math.pow(Math.abs(c), 0.35);
+          const across = edge * w;
+          /** A slight curl across it, edges turned toward the face, the way a knitted strip rolls. */
+          const through = s * THICK * 0.5 + edge * edge * 0.018;
           const o = (e.offset + i * SECTION + j) * 3;
           P[o] = centre.x + side.x * across + face.x * through;
           P[o + 1] = centre.y + side.y * across + face.y * through;

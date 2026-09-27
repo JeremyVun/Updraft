@@ -175,7 +175,7 @@ export class ChildMotion {
   private readonly vb = new THREE.Vector3();
   private readonly vc = new THREE.Vector3();
   private readonly m = new THREE.Matrix4();
-  private readonly hemOut = HEM.map(() => new Spring(1.35, 0.32));
+  private readonly hemOut = HEM.map(() => new Spring(1.75, 0.3));
   private readonly hemSide = HEM.map(() => new Spring(1.1, 0.35));
   private readonly hoodPitch = new Spring(2.2, 0.38);
   private readonly hoodYaw = new Spring(1.8, 0.4);
@@ -193,6 +193,9 @@ export class ChildMotion {
   private headYawVel = 0;
   private headPitchVel = 0;
   private fresh = true;
+  /** How hard the air is working the cloth, 0..1, and which way it leaves the child (in the hips' frame), for the shader's ripple. */
+  flutter = 0;
+  readonly flow = new THREE.Vector3();
   /** A slow shift of weight from foot to foot while standing. */
   private weight = 0;
   private weightGoal = 0;
@@ -229,7 +232,7 @@ export class ChildMotion {
     const reach = stance * step * stride;
     const accel = (d.speed - this.lastSpeed) / dt;
     this.lastSpeed = d.speed;
-    const leanTarget = (0.05 * moving + 0.17 * running) * plant + THREE.MathUtils.clamp(accel * 0.025, -0.12, 0.16) * plant;
+    const leanTarget = (0.06 * moving + 0.24 * running) * plant + THREE.MathUtils.clamp(accel * 0.03, -0.14, 0.18) * plant;
     const paceLean = this.leanSpring.step(leanTarget, dt);
 
     this.nextShift -= dt;
@@ -245,7 +248,8 @@ export class ChildMotion {
     /** Weight over the foot in stance: the hips ride side to side, turn with the stride and drop on the swinging side. */
     const sway = Math.sin(phase) * stride;
     hips.position.x += -0.022 * sway * (1 - running * 0.6) + 0.02 * this.weight * plant;
-    const bounce = stride * (moving * (0.022 * Math.cos(2 * phase) - 0.01) + running * (0.035 * Math.abs(Math.sin(phase)) - 0.03));
+    /** Walking, the body vaults over each planted foot; running, it drops into the stance and springs out of it. */
+    const bounce = stride * (moving * (1 - running) * (0.024 * Math.cos(2 * phase) - 0.01) + running * (0.07 * Math.abs(Math.sin(phase)) - 0.05));
     hips.position.y += bounce;
     hips.position.z += -0.05 * pose.bend;
     const hipYaw = 0.14 * sway * (1 - 0.3 * running);
@@ -352,7 +356,7 @@ export class ChildMotion {
         const u = (cyc - stance) / (1 - stance);
         const e = u * u * (3 - 2 * u);
         fz = THREE.MathUtils.lerp(-reach, reach, e);
-        lift = (0.07 + 0.13 * running) * Math.pow(Math.sin(u * Math.PI), 0.8) * stride;
+        lift = (0.08 + 0.18 * running) * Math.pow(Math.sin(u * Math.PI), 0.8) * stride;
         pitch = (0.55 * (1 - THREE.MathUtils.smoothstep(u, 0, 0.35)) - 0.25 * THREE.MathUtils.smoothstep(u, 0.6, 1)) * stride;
       }
       const lateral = hipAt.x + s * (0.01 + 0.01 * this.weight * s);
@@ -449,7 +453,9 @@ export class ChildMotion {
     const air = new THREE.Vector3(d.windX - d.velocity.x, 0, d.windZ - d.velocity.z).applyQuaternion(inv);
     const airSpeed = Math.hypot(air.x, air.z);
     const flow = air.clone().setY(0).normalize();
-    const flutterAmp = Math.min(1, airSpeed / 9) * (0.4 + 0.6 * d.gust);
+    const flutterAmp = Math.min(1, airSpeed / 6) * (0.6 + 0.4 * Math.min(1, d.gust * 4));
+    this.flutter = flutterAmp;
+    this.flow.copy(flow);
 
     // -- The hem: it hangs where gravity and the air put it, and nothing inside it gets through.
     const legPts = this.legPoints();
@@ -461,8 +467,8 @@ export class ChildMotion {
       /** Swung by the body's own motion, blown out on the side the air leaves, pressed in on the side it meets. */
       const hang = Math.atan2(g.dot(h.radial), -g.y) * 0.9;
       const lee = flow.dot(h.radial);
-      const blow = airSpeed * (lee > 0 ? 0.03 * lee : 0.012 * lee);
-      const flutter = flutterAmp * (0.05 + 0.07 * Math.max(0, lee)) * Math.sin(d.time * (7.5 + 3 * d.gust) + h.a * 2.3 + d.time * 0.8 * Math.sin(h.a * 3));
+      const blow = Math.min(0.55, airSpeed * (lee > 0 ? 0.055 * lee : 0.015 * lee));
+      const flutter = flutterAmp * (0.04 + 0.1 * Math.max(0, lee)) * Math.sin(d.time * (7.5 + 3 * d.gust) + h.a * 2.3 + d.time * 0.8 * Math.sin(h.a * 3));
       const target = THREE.MathUtils.clamp(hang + blow + flutter, -0.35, 0.9);
       let a = this.hemOut[i].step(target, dt);
       // Legs and the ground push it out.

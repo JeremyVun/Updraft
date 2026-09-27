@@ -333,7 +333,7 @@ export class Traveller {
     this.rig.root.updateMatrixWorld(true);
     this.rig.gripL.getWorldPosition(out);
     if (this.stowed < 0.001) return out;
-    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.78, -0.8));
+    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.62, -0.86));
     out.lerp(tucked, this.stowed);
     /** Carry it round the outside of the shoulder, clear of the hood and the bird. */
     this.tmp2.set(Math.sin(this.stowed * Math.PI) * tuning.paperCarry.transferArc, 0, 0);
@@ -819,7 +819,7 @@ export class Traveller {
     const lerp = THREE.MathUtils.lerp;
     const smooth = THREE.MathUtils.smoothstep;
     /** Arms swing against the legs, a beat behind them, bent and pumping when they run. */
-    const pace = 0.4 * moving + 0.35 * running;
+    const pace = 0.52 * moving + 0.4 * running;
     const armSwing = Math.cos(this.gait - 0.35);
     arm(L, -pace * armSwing + 0.04, 0.3 + 0.08 * running, 0, 0.3 + 0.9 * running + Math.max(0, -armSwing) * 0.45 * moving, 0.12);
     arm(R, pace * armSwing + 0.04, 0.3 + 0.08 * running, 0, 0.3 + 0.9 * running + Math.max(0, armSwing) * 0.45 * moving, 0.12);
@@ -983,8 +983,10 @@ export class Traveller {
       L.twist = 0;
     }
 
-    let wantYaw = Math.sin(t * 0.37) * 0.35;
-    let wantPitch = Math.sin(t * 0.23) * 0.08;
+    /** Idle, the gaze wanders; on the move it settles on the way ahead. */
+    const settle = 1 - 0.75 * moving;
+    let wantYaw = Math.sin(t * 0.37) * 0.35 * settle;
+    let wantPitch = Math.sin(t * 0.23) * 0.08 * settle + 0.06 * running;
     if (this.lookAt) {
       r.root.updateMatrixWorld(true);
       const head = r.face.getWorldPosition(this.tmp);
@@ -1038,6 +1040,8 @@ export class Traveller {
     this.turnRate = damp(this.turnRate, THREE.MathUtils.clamp(turn, -TURN_RATE, TURN_RATE), 8, h);
     d.turn = this.turnRate;
     this.motion.update(P, d);
+    r.material.uniforms.uFlutter.value = this.motion.flutter;
+    r.material.uniforms.uFlow.value.copy(this.motion.flow);
 
     // A hand covers the yawn once the bird is safely on the blanket. Contact IK still has the final say.
     if (!this.armsFull && abed < 0.2 && yawn > 0.01) {

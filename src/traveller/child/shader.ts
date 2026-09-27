@@ -43,6 +43,9 @@ const VERT = /* glsl */ `
 in vec4 aLook;
 in vec2 aSurf;
 uniform float uNose;
+uniform float uFlutter;
+uniform vec3 uFlow;
+uniform float uTime;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vRest;
@@ -51,7 +54,16 @@ out vec2 vSurf;
 void main() {
   vec3 transformed = position;
   vec3 objectNormal = normal;
-  if (int(aLook.x + 0.5) == ${MAT.skin}) transformed += normal * aLook.y * uNose * 0.034;
+  int mat = int(aLook.x + 0.5);
+  if (mat == ${MAT.skin}) transformed += normal * aLook.y * uNose * 0.034;
+  /** A fine ripple running round the hem in the wind, strongest where the air leaves the coat. */
+  if (mat == ${MAT.coat} && position.y < 1.05 && uFlutter > 0.0) {
+    float a = atan(position.x, position.z);
+    float lee = max(0.0, dot(normalize(vec3(position.x, 0.0, position.z)), uFlow));
+    float low = smoothstep(1.05, 0.56, position.y);
+    float wave = sin(uTime * 9.0 + a * 7.0 - position.y * 9.0) + 0.5 * sin(uTime * 13.0 - a * 11.0);
+    transformed += normal * wave * low * low * uFlutter * (0.006 + 0.016 * lee);
+  }
   #include <skinbase_vertex>
   #include <skinnormal_vertex>
   #include <skinning_vertex>
@@ -305,6 +317,8 @@ export function childMaterial(): THREE.ShaderMaterial {
       uWhites: { value: 0 },
       uNose: { value: 1 },
       uNoseTip: { value: 1 },
+      uFlutter: { value: 0 },
+      uFlow: { value: new THREE.Vector3() },
       uHoodForward: { value: new THREE.Vector3(0, 0, 1) },
     },
     side: THREE.DoubleSide,
