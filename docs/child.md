@@ -76,6 +76,22 @@ His ruling during that round (2026-09-27). Asked whether to turn the cygnet side
 show, so the bag can be a flatter backpack instead of as deep as the bird is long, he chose "Turn it sideways
 (Recommended)".
 
+After round 3 (2026-09-27, verbatim). His image was the side walk strip from `/tmp/child3/checkpoint2-old-vs-new.png`:
+
+> great, the model looks good. how do the animations look like?
+
+> do you see from the side, i think the coat drapes down a bit too much and we lose that sillouhette from the concept
+> images. do you understand what i mean?
+
+> and yea, please fix all the issues you see as well
+
+The issues he meant are the ones reported with checkpoint 2:
+- the run lacks energy;
+- the idle is static, with the arms held out;
+- the walk's arm swing reads small;
+- the scarf lies across the arm like a sash from the side, and whips over the head in the pick-up;
+- the quick actions need checking frame by frame.
+
 Earlier attempts on the child's model are not a guide. Do not mine old transcripts or git history for them.
 
 ## The target
