@@ -187,7 +187,9 @@ light. Courage passes back and forth between them; the stairs are where it start
   top, thicker over its floor, with the deck's pocket kept clear round the boat and the lens. At `bankSwap` metres
   in, the boat and the bank are moved down onto the sea by the same offset, so the white is unchanged; the deck is
   put under the water, and the village is shown from then on without its own arrival veil (`stairsDescent` in
-  `journey-rooms.ts`). On the sea the bank's back comes to meet the boat and it sails out of it.
+  `journey-rooms.ts`). On the sea the bank's back comes to meet the boat and it sails out of it. Under sail the
+  pointer lands about at the boom (`POINTER_OVER_HULL`), so strokes over the hull and across the sail both fill it;
+  while the lens is below the sail on their faces the kite draws them on (`kiteDraws`).
 - Over the cloud the boat rides at a fixed height (`RIDE`); `Chapter.kiteTow` ties the stairs' departure kite to the
   bow and flies it ahead; `Chapter.cameraCut` lets the story cut the camera where nothing can be seen (the swap to
   sea level in the fog).
