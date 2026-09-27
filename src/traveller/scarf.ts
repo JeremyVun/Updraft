@@ -225,7 +225,7 @@ export class Scarf {
     const catching = gx * gx + gz * gz > this.gust.x * this.gust.x + this.gust.z * this.gust.z;
     this.tmp.set(gx, 0, gz);
     this.gust.lerp(this.tmp, 1 - Math.exp(-span * (catching ? k.gustCatch : k.gustRelease)));
-    const gust = Math.hypot(this.gust.x, this.gust.z);
+    const gust = Math.hypot(this.gust.x, this.gust.z) * k.gustGain;
     const swell = 1 + k.breezeSwell * (0.6 * Math.sin(this.time * 0.63) + 0.4 * Math.sin(this.time * 1.37 + 2));
     const breeze = k.breeze * swell * (1 - still);
     const cos = Math.cos(facing);

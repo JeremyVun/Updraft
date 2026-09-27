@@ -377,10 +377,10 @@ export const tuning = {
     /** How much of the child's own speed adds to the air carrying the ends out behind them. */
     carry: 1,
     /**
-     * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second), and a gust of
-     * `gustTakeover` units per second or more blows the dream's breeze away entirely while it lasts.
+     * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
+     * times as hard as it blows, and one felt at `gustTakeover` units per second or more carries them its own way.
      */
-    gustCatch: 12, gustRelease: 1.3, gustTakeover: 5,
+    gustCatch: 5, gustRelease: 1.3, gustGain: 2, gustTakeover: 5,
     /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
     drag: 3.2,
     /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
