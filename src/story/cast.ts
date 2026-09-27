@@ -18,6 +18,7 @@ import type { PointerInput } from '../input/pointer';
 import type { Carry } from '../companion/carry';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
+import type { WindLines } from '../fx/windlines';
 import type { Coax } from '../fx/swirl';
 import type { GustFront } from '../fx/windlines';
 import type { SwanFlock } from '../creatures/flock';
@@ -39,6 +40,8 @@ export interface Cast {
   plane: Glider;
   boat: Boat;
   wind: WindField;
+  /** The white streaks that show the wind. */
+  lines: WindLines;
   input: PointerInput;
   life: LifeField;
   tree: Tree;
