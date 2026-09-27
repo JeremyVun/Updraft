@@ -590,7 +590,6 @@ export class MeadowChapter implements Chapter {
         k.ashore(this.dryBank.x, this.dryBank.z, Math.atan2(-this.axis.x, -this.axis.z));
         k.stay = true; k.pace = 1;
         k.bind(0.2);
-        completeObjective();
         this.finishPond();
       }
     }

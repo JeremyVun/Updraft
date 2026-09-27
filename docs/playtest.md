@@ -94,3 +94,16 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 | 9 | Birches landing: cygnet not put down until the swing | open |
 | 10 | Cygnet clips out of the backpack | open |
 | 11 | Little boats: drag −30%, max speed +10% | done: `drag` 0.38 → 0.266, `speed` 3.1 → 3.41. The faster, freer toy then met the cygnet's swim limit already inside it and jolted (up to 9 u/s² in one frame, from under 2); a limit that drops under the sailing toy is now let in over its stopping room, back to 1.9 |
+
+### Follow-up (2026-09-27, Jeremy verbatim)
+
+> - Remove the restored chime when the cygnet climbs out of the bank. and remove those five falling high notes when the swans are flying away.
+> - On the woods island, i want the embers to only respond to updrafts (change the indicative gesture appropriately)
+> - When getting off the jetty when entering the sky mirror island, because the jetty isn't really connected to anything, it looks a bit strange when they step off the jetty onto the sky mirror and set down the cygnet. I think we may need an "exit" ramp for the jetty that enters intot he sky mirror, and as well as an "entry" ramp for the jetty that leads out of the sky mirror. Also take a look at fixing the pathing for the child leaving the sky mirror (they kind of cross onto the jetty half way through.
+
+| # | Issue | Status |
+| --- | --- | --- |
+| 12 | No `restored` chime when the cygnet climbs out onto the meadow pond's bank | done: the pond no longer calls `completeObjective` (the piano's completion keeps its chime) |
+| 13 | No `skein` phrase when the swans fly away at home | done: the child still cheers as the family goes north, in silence; the skein's arrival over the summit keeps its phrase |
+| 14 | Dark wood: embers answer only updrafts, with the updraft gesture | open |
+| 15 | Sky mirror: ramps off the entry jetty and onto the departure jetty; the child's path out | open |

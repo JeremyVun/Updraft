@@ -621,7 +621,6 @@ export class HomeChapter implements Chapter {
     if (flock.wheeling && cygnet.position.distanceTo(flock.head) < JOIN_AT) {
       flock.goOn(NORTH, LEAVE_CLIMB, LEAVE_SPEED, cygnet.position);
       this.leftAt = this.now;
-      cue('skein');
       c.cheer();
     }
     c.lookAt = cygnet.visible ? cygnet.position : flock.head;
