@@ -31,19 +31,19 @@ function lookup(table: number[][], key: number, col: number): number {
 
 /** Height, half-width, half-depth and how far forward the middle of the coat is, from the collar to below the hem. */
 const COAT = [
-  [1.625, 0.125, 0.12, 0.0],
-  [1.6, 0.165, 0.15, 0.0],
-  [1.56, 0.225, 0.185, 0.0],
-  [1.51, 0.272, 0.208, 0.0],
-  [1.46, 0.296, 0.222, 0.002],
-  [1.4, 0.304, 0.232, 0.006],
-  [1.3, 0.303, 0.246, 0.012],
-  [1.18, 0.316, 0.263, 0.016],
-  [1.04, 0.345, 0.288, 0.012],
-  [0.88, 0.393, 0.326, 0.004],
-  [0.72, 0.448, 0.37, -0.006],
-  [0.58, 0.502, 0.412, -0.016],
-  [0.45, 0.545, 0.445, -0.024],
+  [1.625, 0.13, 0.125, 0.0],
+  [1.6, 0.175, 0.16, 0.0],
+  [1.56, 0.232, 0.197, 0.0],
+  [1.51, 0.268, 0.222, 0.002],
+  [1.46, 0.29, 0.238, 0.006],
+  [1.4, 0.303, 0.252, 0.012],
+  [1.3, 0.318, 0.272, 0.02],
+  [1.18, 0.338, 0.29, 0.024],
+  [1.04, 0.366, 0.306, 0.02],
+  [0.88, 0.404, 0.33, 0.01],
+  [0.72, 0.443, 0.358, 0.0],
+  [0.58, 0.48, 0.386, -0.01],
+  [0.45, 0.512, 0.41, -0.018],
 ];
 export const COAT_TOP = 1.625;
 
@@ -251,7 +251,8 @@ function sleeve(b: Builder, rest: THREE.Vector3[], left: boolean): void {
     }
     return blend(up, fore, smooth(0.2, 0.37, s));
   };
-  const st = (s: number, rx: number, ry = rx, k = 0, ao = 1): Station => ({ s, rx: rx * 1.1, ry: ry * 1.1, skin: skinAt(s), mat: MAT.coat, k, ao });
+  const full = (s: number) => 1.02 + 0.2 * smooth(0.0, 0.5, s);
+  const st = (s: number, rx: number, ry = rx, k = 0, ao = 1): Station => ({ s, rx: rx * full(s), ry: ry * full(s), skin: skinAt(s), mat: MAT.coat, k, ao });
   tube(b, S, dir, V(0, 0, 1), [
     st(-0.105, 0, 0, 0, 0.7),
     st(-0.098, 0.04, 0.04, 0, 0.75),
@@ -285,9 +286,9 @@ function mitten(b: Builder, bind: THREE.Matrix4[], left: boolean): void {
     [-0.1, 0.046, 0.06], [-0.13, 0.04, 0.052], [-0.152, 0.03, 0.038], [-0.166, 0.016, 0.02], [-0.171, 0, 0],
   ];
   for (const [y0, rx0, rz0] of prof) {
-    const y = y0 * 1.08;
-    const rx = rx0 * 1.18;
-    const rz = rz0 * 1.18;
+    const y = y0 * 1.2;
+    const rx = rx0 * 1.45;
+    const rz = rz0 * 1.42;
     if (rx === 0) {
       rows.push([{ p: V(0, y, 0.005).applyMatrix4(m), skin, mat: MAT.mitten }]);
       continue;
@@ -299,12 +300,12 @@ function mitten(b: Builder, bind: THREE.Matrix4[], left: boolean): void {
   }
   b.rows(rows, true, V(0, -0.06, 0.005).applyMatrix4(m));
   /** The thumb, on the inside edge and forward, which is what lets a mitten read as holding rather than touching. */
-  const base = V(-mx * 0.014, -0.034, 0.054);
+  const base = V(-mx * 0.02, -0.042, 0.075);
   const dir = V(-mx * 0.35, -0.62, 0.7).normalize();
   const rowsT: Point[][] = [];
   const side = V(mx, 0, 0).sub(dir.clone().multiplyScalar(dir.x * mx)).normalize();
   const other = V().crossVectors(dir, side);
-  const tprof: [number, number][] = [[0, 0.028], [0.034, 0.031], [0.062, 0.029], [0.078, 0.022], [0.087, 0.01], [0.09, 0]];
+  const tprof: [number, number][] = [[0, 0.037], [0.044, 0.041], [0.08, 0.039], [0.1, 0.03], [0.112, 0.014], [0.116, 0]];
   for (const [s, r] of tprof) {
     const c = base.clone().addScaledVector(dir, s);
     if (r === 0) {
@@ -331,28 +332,28 @@ function leg(b: Builder, rest: THREE.Vector3[], left: boolean): void {
   };
   const st = (y: number, r: number): Station => ({ s: hip.y + 0.14 - y, rx: r, ry: r, skin: skinY(y), mat: MAT.trousers });
   tube(b, V(hip.x, hip.y + 0.14, 0), V(0, -1, 0), V(1, 0, 0), [
-    st(hip.y + 0.14, 0), st(hip.y + 0.13, 0.06), st(hip.y + 0.1, 0.088), st(0.6, 0.086), st(0.48, 0.082), st(0.42, 0.081),
-    st(0.36, 0.08), st(0.3, 0.078), st(0.24, 0.074), st(0.22, 0),
+    st(hip.y + 0.14, 0), st(hip.y + 0.13, 0.075), st(hip.y + 0.1, 0.112), st(0.6, 0.112), st(0.48, 0.108), st(0.42, 0.106),
+    st(0.36, 0.104), st(0.3, 0.1), st(0.24, 0.096), st(0.22, 0),
   ], 18, V(hip.x, 0.5, 0));
   boot(b, V(hip.x, 0, 0), shin, foot);
 }
 
 /**
- * A round-toed wellington: the shaft, the bend of the ankle and the foot are one swept tube, so the heel and instep
- * come out of the same surface. The sole is pressed flat on the ground.
+ * A chunky round-toed wellington: the shaft, the bend of the ankle and the foot are one swept tube, so the heel and
+ * instep come out of the same surface. The shaft opens a little at the top; the sole is pressed flat on the ground.
  */
 function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
   const path = new THREE.CatmullRomCurve3([
-    V(0, 0.38, -0.004), V(0, 0.26, -0.006), V(0, 0.15, -0.004), V(0, 0.092, 0.035), V(0, 0.074, 0.11), V(0, 0.07, 0.175), V(0, 0.068, 0.215),
+    V(0, 0.39, -0.01), V(0, 0.27, -0.012), V(0, 0.16, -0.01), V(0, 0.098, 0.035), V(0, 0.08, 0.115), V(0, 0.076, 0.185), V(0, 0.074, 0.235),
   ], false, 'catmullrom', 0.5);
   const N = 30;
   const rows: Point[][] = [];
-  /** The top of the shaft: a rolled lip, and the dark inside going down round the trouser leg. */
-  const lipRows: [number, number, number][] = [[0.33, 0.084, 0.25], [0.372, 0.087, 0.4], [0.388, 0.094, 0.7], [0.392, 0.102, 0.95], [0.384, 0.107, 1]];
+  /** The top of the shaft: a thick cut edge, and the dark inside going down round the trouser leg. */
+  const lipRows: [number, number, number][] = [[0.33, 0.118, 0.25], [0.375, 0.124, 0.4], [0.392, 0.134, 0.7], [0.4, 0.143, 0.95], [0.396, 0.15, 1]];
   for (const [y, r, ao] of lipRows) {
     rows.push(Array.from({ length: 24 }, (_, j) => {
       const a = (j / 24) * TAU;
-      return { p: V(at.x + Math.cos(a) * r, y, Math.sin(a) * r - 0.004), skin: [[shin, 1]] as Skin, mat: MAT.boot, k: 0.5, ao };
+      return { p: V(at.x + Math.cos(a) * r, y, Math.sin(a) * r * 0.94 - 0.01), skin: [[shin, 1]] as Skin, mat: MAT.boot, k: 0.5, ao };
     }));
   }
   const tan = V();
@@ -362,10 +363,11 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
     path.getPointAt(u, pt);
     path.getTangentAt(u, tan);
     const along = u;
-    /** Width across the foot and height through it: round up the shaft, broad and low along the foot. */
+    /** Width across the foot and height through it: a wide shaft flaring to its top, broad and low along the foot. */
     const footness = smooth(0.42, 0.62, along);
-    const rx = THREE.MathUtils.lerp(0.098, 0.1, footness) * (1 - 0.7 * smooth(0.9, 1.0, along) ** 1.5) + 0.004 * smooth(0.3, 0.45, along) * (1 - footness);
-    const ry = THREE.MathUtils.lerp(0.098, 0.078, footness) * (1 - 0.75 * smooth(0.88, 1.0, along) ** 1.5);
+    const flare = 0.012 * smooth(0.18, 0.0, along);
+    const rx = (THREE.MathUtils.lerp(0.138, 0.14, footness) + flare) * (1 - 0.68 * smooth(0.9, 1.0, along) ** 1.5);
+    const ry = (THREE.MathUtils.lerp(0.13, 0.092, footness) + flare) * (1 - 0.72 * smooth(0.88, 1.0, along) ** 1.5);
     const side = V(1, 0, 0);
     const up = V().crossVectors(tan, side).normalize();
     const w = smooth(0.4, 0.58, along);
@@ -374,42 +376,37 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
       const a = (j / 24) * TAU;
       const p = pt.clone().addScaledVector(side, Math.cos(a) * rx).addScaledVector(up, Math.sin(a) * ry);
       /** A rounder, fuller toe box than heel. */
-      if (p.z > 0.12) p.x *= 1 + 0.04 * smooth(0.12, 0.2, p.z);
+      if (p.z > 0.13) p.x *= 1 + 0.05 * smooth(0.13, 0.22, p.z);
       p.y = Math.max(p.y, 0.006);
       p.x += at.x;
-      const sole = 1 - smooth(0.012, 0.03, p.y);
-      return { p, skin, mat: MAT.boot, k: sole, ao: 1 - 0.3 * sole };
+      const sole = 1 - smooth(0.014, 0.034, p.y);
+      return { p, skin, mat: MAT.boot, k: sole, ao: 1 - 0.3 * sole, uv: [along, a] as [number, number] };
     }));
   }
-  rows.push([{ p: V(at.x, 0.064, 0.232), skin: [[foot, 1]], mat: MAT.boot }]);
+  rows.push([{ p: V(at.x, 0.07, 0.254), skin: [[foot, 1]], mat: MAT.boot }]);
   b.rows(rows, true, V(at.x, 0.14, 0.02));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // The head
 
-/** The middle of the face, and its half-sizes across, up and through. */
-export const FACE = { c: V(0, 1.965, 0.085), rx: 0.25, ry: 0.275, rz: 0.235 };
+/**
+ * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
+ * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
+ */
+export const FACE = { c: V(0, 2.03, 0.07), rx: 0.262, rz: 0.25, up: 0.3, down: 0.262 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
   const ct = Math.cos(theta);
-  const st = Math.sin(theta);
-  let x = FACE.rx * st * Math.sin(phi);
-  const y = FACE.ry * ct;
-  let z = FACE.rz * st * Math.cos(phi);
-  /** A soft jaw and a small round chin: the lower face narrows toward it without going to a point. */
-  const low = smooth(0.0, -1.0, ct);
-  /** Round and full to the jaw, then a soft small chin: a U, never a V. */
-  const jaw = 1 - 0.2 * Math.pow(low, 2.6);
-  x *= jaw;
-  z *= 1 - 0.06 * Math.pow(low, 2);
-  /** The face is a little flatter than the back of the head, and the cheeks are full. */
-  if (z > 0) z *= 0.94;
-  const cheek = 0.018 * bump(ct + 0.25, 0.2) * bump(Math.abs(phi) - 0.8, 0.4);
-  const r = Math.hypot(x, y, z) || 1;
-  out.set(x, y, z).multiplyScalar(1 + cheek / r).add(FACE.c);
-  return out;
+  /** Below the eyes the face fills out and stays full to a round chin: a broad U, never a V. */
+  const ring = ct >= 0 ? Math.sin(theta) : Math.pow(1 - Math.pow(-ct, 2.2), 1 / 2.2);
+  const low = smooth(0.1, -0.55, ct);
+  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.1 * low);
+  const y = (ct >= 0 ? FACE.up : FACE.down) * ct;
+  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.06 * low * bump(Math.abs(phi) - 0.8, 0.7));
+  if (z > 0) z *= 0.93;
+  return out.set(x, y, z).add(FACE.c);
 }
 
 function face(b: Builder): void {
@@ -427,30 +424,30 @@ function face(b: Builder): void {
       const p = facePoint(theta, phi);
       const ct = Math.cos(theta);
       /** How much of a small button nose this vertex carries; the shader raises it. */
-      const nose = bump(ct + 0.25, 0.075) * bump(angleTo(phi, 0), 0.11);
+      const nose = bump(ct + 0.4, 0.075) * bump(angleTo(phi, 0), 0.11);
       const skin: Skin = ct < -0.75 ? [[BONE.head, 0.8], [BONE.neck, 0.2]] : [[BONE.head, 1]];
-      return { p, skin, mat: MAT.skin, k: nose, uv: [phi, ct] as [number, number] };
+      return { p, skin, mat: MAT.skin, k: nose, ao: 1 - 0.45 * smooth(-0.8, -0.98, ct), uv: [phi, ct] as [number, number] };
     }));
   }
   b.rows(rows, true, FACE.c);
   tube(b, V(0, 1.54, -0.005), V(0, 1, 0.12), V(1, 0, 0), [
-    { s: 0, rx: 0.088, ry: 0.085, skin: [[BONE.chest, 0.5], [BONE.neck, 0.5]], mat: MAT.skin, ao: 0.4 },
-    { s: 0.12, rx: 0.086, ry: 0.083, skin: [[BONE.neck, 1]], mat: MAT.skin, ao: 0.5 },
-    { s: 0.24, rx: 0.09, ry: 0.088, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, ao: 0.6 },
+    { s: 0, rx: 0.078, ry: 0.076, skin: [[BONE.chest, 0.5], [BONE.neck, 0.5]], mat: MAT.skin, ao: 0.2 },
+    { s: 0.12, rx: 0.076, ry: 0.074, skin: [[BONE.neck, 1]], mat: MAT.skin, ao: 0.25 },
+    { s: 0.24, rx: 0.08, ry: 0.078, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, ao: 0.35 },
   ], 16, V(0, 1.66, 0.01));
   for (const mx of [1, -1]) {
-    const c = V(mx * 0.243, 1.94, 0.03);
+    const c = V(mx * 0.258, 1.925, 0.022);
     const rows: Point[][] = [];
     for (let i = 0; i <= 6; i++) {
       const th = (i / 6) * Math.PI;
       if (i === 0 || i === 6) {
-        rows.push([{ p: c.clone().add(V(0, Math.cos(th) * 0.052, 0)), skin: [[BONE.head, 1]], mat: MAT.skin, ao: 0.8 }]);
+        rows.push([{ p: c.clone().add(V(0, Math.cos(th) * 0.058, 0)), skin: [[BONE.head, 1]], mat: MAT.skin, ao: 0.8 }]);
         continue;
       }
       rows.push(Array.from({ length: 12 }, (_, j) => {
         const a = (j / 12) * TAU;
         return {
-          p: c.clone().add(V(Math.cos(a) * 0.026 * Math.sin(th), Math.cos(th) * 0.052, Math.sin(a) * 0.04 * Math.sin(th))),
+          p: c.clone().add(V(Math.cos(a) * 0.03 * Math.sin(th), Math.cos(th) * 0.058, Math.sin(a) * 0.042 * Math.sin(th))),
           skin: [[BONE.head, 1]] as Skin,
           mat: MAT.skin,
           ao: 0.8,
@@ -464,40 +461,49 @@ function face(b: Builder): void {
 /** The hairline's height on the head relative to the face's middle, by angle from the front. */
 function hairline(phi: number): number {
   const c = Math.cos(phi);
-  return THREE.MathUtils.lerp(-0.2, 0.085, smooth(-0.95, 0.9, c)) - 0.1 * bump(Math.abs(angleTo(phi, 0)) - 1.45, 0.35);
+  return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35);
 }
 
-const HAIR = { c: FACE.c.clone().add(V(0, 0.035, -0.025)), rx: 0.264, ry: 0.286, rz: 0.26 };
+const HAIR = { c: FACE.c.clone().add(V(0, 0.015, -0.02)), rx: 0.282, ry: 0.296, rz: 0.282 };
+
+/**
+ * The fringe and the hair round the face, as locks: angle from the front and the cosine down from the crown where
+ * each starts and ends, its width, and how far it swings sideways along the way. Parted on the child's left, the
+ * fringe sweeps across to the right; shorter locks fall the other way from the parting, and a few come down in front
+ * of the ears.
+ */
+const LOCKS: [number, number, number, number, number, number][] = [
+  [0.36, 0.92, -0.12, 0.2, 0.15, 0.1],
+  [0.16, 0.9, -0.44, 0.27, 0.14, 0.08],
+  [-0.08, 0.86, -0.74, 0.2, 0.13, 0.06],
+  [-0.4, 0.8, -0.98, 0.06, 0.12, 0.05],
+  [0.5, 0.88, 0.22, 0.3, 0.12, -0.07],
+  [0.62, 0.82, 0.66, 0.34, 0.11, -0.09],
+  [0.76, 0.76, 0.98, 0.18, 0.11, -0.07],
+  [1.02, 0.66, 1.18, -0.28, 0.11, 0.06],
+  [-1.08, 0.64, -1.2, -0.34, 0.115, -0.06],
+  [1.3, 0.54, 1.36, -0.16, 0.1, 0.05],
+  [-1.32, 0.52, -1.4, -0.22, 0.1, -0.05],
+  [1.75, 0.45, 1.8, -0.32, 0.12, 0.04],
+  [-1.75, 0.45, -1.8, -0.3, 0.12, -0.04],
+];
 
 function hair(b: Builder): void {
   const AROUND = 48;
   const ROWS = 16;
   const rows: Point[][] = [[{ p: HAIR.c.clone().add(V(0, HAIR.ry, 0)), skin: [[BONE.head, 1]], mat: MAT.hair }]];
+  const lift = HAIR.c.y - FACE.c.y;
   for (let i = 1; i <= ROWS; i++) {
     rows.push(Array.from({ length: AROUND }, (_, j) => {
       const phi = (j / AROUND) * TAU;
-      const end = Math.acos(THREE.MathUtils.clamp((hairline(phi) - 0.035) / HAIR.ry, -1, 1));
+      const end = Math.acos(THREE.MathUtils.clamp((hairline(phi) - lift) / HAIR.ry, -1, 1));
       const th = (i / ROWS) * end;
       const p = HAIR.c.clone().add(V(HAIR.rx * Math.sin(th) * Math.sin(phi), HAIR.ry * Math.cos(th), HAIR.rz * Math.sin(th) * Math.cos(phi)));
       return { p, skin: [[BONE.head, 1]] as Skin, mat: MAT.hair, ao: i === ROWS ? 0.7 : 1, uv: [phi, th] as [number, number] };
     }));
   }
   b.rows(rows, true, HAIR.c);
-  /** The fringe: a few broad locks from under the hood onto the forehead, and a longer one at each temple. */
-  const LOCKS: [number, number, number, number, number][] = [
-    [0.05, 0.84, -0.1, 0.17, 0.11],
-    [0.34, 0.8, 0.2, 0.22, 0.105],
-    [-0.28, 0.8, -0.42, 0.19, 0.1],
-    [0.62, 0.74, 0.56, 0.15, 0.1],
-    [-0.6, 0.73, -0.72, 0.14, 0.095],
-    [0.9, 0.64, 0.99, -0.06, 0.09],
-    [-0.9, 0.64, -1.0, -0.09, 0.09],
-    [1.18, 0.56, 1.24, -0.28, 0.085],
-    [-1.18, 0.56, -1.26, -0.26, 0.085],
-    [1.48, 0.5, 1.52, -0.32, 0.085],
-    [-1.48, 0.5, -1.53, -0.34, 0.085],
-  ];
-  for (const [phi0, c0, phi1, c1, width] of LOCKS) lock(b, phi0, c0, phi1, c1, width);
+  for (const [phi0, c0, phi1, c1, width, swing] of LOCKS) lock(b, phi0, c0, phi1, c1, width, swing);
 }
 
 /** A point on the hair's shell, by angle from the front and the cosine of the angle down from the crown. */
@@ -508,27 +514,28 @@ function onHair(phi: number, ct: number, lift: number): { p: THREE.Vector3; n: T
   return { p, n };
 }
 
-function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, width: number): void {
-  const STEPS = 12;
+function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, width: number, swing: number): void {
+  const STEPS = 14;
   const rows: Point[][] = [];
   const skin: Skin = [[BONE.head, 1]];
+  /** The path over the shell, with a soft S across it so no lock runs straight. */
+  const at = (t: number): [number, number] => [THREE.MathUtils.lerp(phi0, phi1, t) + swing * Math.sin(t * Math.PI * 1.5), THREE.MathUtils.lerp(c0, c1, t)];
   let last = V();
   const root = onHair(phi0, c0 + 0.03, -0.004);
   rows.push([{ p: root.p, skin, mat: MAT.hair }]);
   for (let i = 0; i <= STEPS; i++) {
     const t = i / STEPS;
-    const phi = THREE.MathUtils.lerp(phi0, phi1, t);
-    const ct = THREE.MathUtils.lerp(c0, c1, t);
-    /** Full and soft along its length, lifting off the scalp a little, and ending in a broad rounded tip. */
-    const end = t < 0.62 ? 1 : Math.sqrt(Math.max(0, 1 - ((t - 0.62) / 0.4) ** 2));
-    const thick = 0.024 * (1 - 0.35 * t) * Math.max(end, 0.15);
-    const w = width * 0.5 * (0.82 + 0.26 * Math.sin(Math.min(1, t / 0.6) * (Math.PI / 2))) * end;
-    const { p, n } = onHair(phi, ct, 0.003 + thick * 0.85 + 0.012 * Math.sin(t * Math.PI));
-    const next = onHair(THREE.MathUtils.lerp(phi0, phi1, t + 0.01), THREE.MathUtils.lerp(c0, c1, t + 0.01), 0).p;
-    const along = next.sub(onHair(phi, ct, 0).p).normalize();
+    const [phi, ct] = at(t);
+    /** Full at the root, tapering to a soft point that lifts a little off the head, the way a wave of hair ends. */
+    const taper = t < 0.45 ? 1 : 1 - Math.pow((t - 0.45) / 0.55, 1.5);
+    const thick = 0.026 * (1 - 0.5 * t) * Math.max(taper, 0.2);
+    const w = width * 0.5 * (0.8 + 0.25 * Math.sin(Math.min(1, t / 0.4) * (Math.PI / 2))) * taper;
+    const { p, n } = onHair(phi, ct, 0.003 + thick * 0.85 + 0.012 * Math.sin(t * Math.PI) + 0.018 * smooth(0.7, 1, t));
+    const [phiN, ctN] = at(Math.min(1, t + 0.01));
+    const along = onHair(phiN, ctN, 0).p.sub(onHair(phi, ct, 0).p).normalize();
     const side = V().crossVectors(n, along).normalize();
     if (i === STEPS) {
-      rows.push([{ p: p.addScaledVector(along, 0.008), skin, mat: MAT.hair, uv: [t, 0] }]);
+      rows.push([{ p: p.addScaledVector(along, 0.006), skin, mat: MAT.hair, uv: [t, 0] }]);
       break;
     }
     rows.push(Array.from({ length: 12 }, (_, j) => {
@@ -538,6 +545,7 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
         skin,
         mat: MAT.hair,
         k: t,
+        ao: 0.7 + 0.3 * Math.max(0, Math.sin(a)),
         uv: [t, Math.cos(a)] as [number, number],
       };
     }));
@@ -550,21 +558,21 @@ function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, wi
 // The hood
 
 export const HOOD = {
-  c: V(0, 2.03, -0.05),
-  r: V(0.455, 0.468, 0.452),
-  /** The opening faces forward and a little down, so the brim overhangs the forehead. */
-  tilt: 0.2,
+  c: V(0, 2.065, -0.03),
+  r: V(0.4, 0.368, 0.372),
+  /** The opening faces forward and a touch down, so the brim just shades the fringe. */
+  tilt: 0.1,
 };
 
 /**
- * How far round from the front the opening is cut, by angle round it from the top: the brim comes well forward over
- * the forehead, the sides open back past the cheeks so the face is never hidden from three-quarters, and it
- * narrows again under the chin into the scarf.
+ * How far round from the front the opening is cut, by angle round it from the top: the brim sits back over the
+ * fringe, the sides open wide enough to show the ears and the hair beside them, and it narrows under the chin into
+ * the scarf.
  */
 function hoodOpen(lambda: number): number {
   const s = Math.sin(lambda);
   const c = Math.cos(lambda);
-  return 0.69 + 0.36 * s * s * (1 - 0.3 * Math.max(0, -c)) + 0.34 * Math.pow(Math.max(0, -c), 3);
+  return 0.8 + 0.3 * s * s * (1 - 0.55 * Math.max(0, -c)) + 0.08 * Math.pow(Math.max(0, -c), 2);
 }
 const hoodF = V(0, -Math.sin(HOOD.tilt), Math.cos(HOOD.tilt));
 const hoodUp = V(0, Math.cos(HOOD.tilt), Math.sin(HOOD.tilt));
@@ -579,46 +587,50 @@ function hoodDir(lambda: number, gamma: number, out = V()): THREE.Vector3 {
     .addScaledVector(hoodSide, Math.sin(gamma) * Math.sin(lambda));
 }
 
+/**
+ * A bell, not a ball: an egg over the crown with a soft peak along the seam, sides that fall almost straight to the
+ * shoulders, and a back that hangs down over the top of the bag. Under the chin it goes in behind the scarf.
+ */
 function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.Vector3; fold: number; d: THREE.Vector3 } {
   const d = hoodDir(lambda, gamma);
   const r = HOOD.r;
-  const n = V(d.x / r.x, d.y / r.y, d.z / r.z).normalize();
-  const p = V(d.x * r.x, d.y * r.y, d.z * r.z);
-  /**
-   * The back and sides hang lower than a dome would, down onto the shoulders and the top of the bag, the way a big
-   * hood lies when it is up. Under the chin it is gathered in behind the scarf.
-   */
-  const low = smooth(0.0, -1.0, d.y);
-  const back = smooth(0.35, -0.6, d.z);
-  p.y -= 0.06 * low * low * (0.35 + 0.65 * back);
-  const under = low * smooth(0.55, 0.0, Math.hypot(d.x, d.z) / Math.max(1e-3, Math.hypot(d.x, d.y, d.z)));
-  p.x *= 1 - 0.35 * under;
-  p.z *= 1 - 0.35 * under;
-  /** A soft rounded crown toward the back: full, never pointed. */
-  const crown = 0.035 * bump(d.dot(V(0, 0.72, -0.69).normalize()) - 1, 0.35);
+  const flat = Math.hypot(d.x, d.z);
+  const hx = flat > 1e-5 ? d.x / flat : 0;
+  const hz = flat > 1e-5 ? d.z / flat : 0;
+  const yN = THREE.MathUtils.clamp(d.y, -1, 1);
+  const ring = yN >= 0 ? Math.sqrt(1 - yN * yN) : Math.pow(1 - Math.pow(-yN, 3), 1 / 3);
+  const egg = smooth(0.3, 1.0, yN);
+  const skirt = smooth(-0.15, -0.9, yN);
+  const back = smooth(0.3, -0.6, hz);
+  const p = V(
+    r.x * ring * hx * (1 - 0.11 * egg) * (1 + 0.05 * skirt),
+    r.y * yN - 0.09 * skirt * skirt * (0.45 + 0.55 * back),
+    r.z * ring * hz * (1 - 0.05 * egg) * (1 + 0.05 * skirt * back),
+  );
+  p.y += 0.024 * smooth(0.5, 1.0, yN) * Math.exp(-(p.x * p.x) / 0.025);
+  const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
   const fromRim = smooth(hoodOpen(lambda), hoodOpen(lambda) + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
   let fold = 0;
   for (const s of [1, -1]) {
-    fold += -0.014 * bump(angleTo(lambda, s * 1.18), 0.16) * fromRim;
-    fold += 0.01 * bump(angleTo(lambda, s * 0.82), 0.2) * fromRim;
-    fold += 0.012 * bump(angleTo(lambda, s * 1.6), 0.22) * fromRim;
+    fold += -0.013 * bump(angleTo(lambda, s * 1.2), 0.16) * fromRim;
+    fold += 0.009 * bump(angleTo(lambda, s * 0.85), 0.2) * fromRim;
+    fold += 0.011 * bump(angleTo(lambda, s * 1.65), 0.22) * fromRim;
   }
-  const nape = smooth(-0.1, -0.6, d.y) * back;
-  fold += nape * (0.016 * Math.sin(lambda * 7 + 0.6));
+  const nape = smooth(-0.1, -0.6, yN) * back;
+  fold += nape * (0.014 * Math.sin(lambda * 7 + 0.6));
   /** The centre seam sits in a very slight valley. */
-  const seam = -0.004 * bump(p.x, 0.012) * smooth(-0.3, 0.2, d.y);
-  p.addScaledVector(n, crown + fold + seam);
-  /** Down at the jaw the hood is tucked in behind the scarf, never lying over it. */
+  const seam = -0.004 * bump(p.x, 0.012) * smooth(-0.3, 0.2, yN);
+  p.addScaledVector(n, fold + seam);
+  /** In front, below the chin, the hood goes in behind the scarf rather than lying over it. */
   const y = p.y + HOOD.c.y;
-  const front = smooth(-0.62, -0.12, d.z);
-  if (y < 1.86 && front > 0) {
-    const r = Math.hypot(p.x, p.z + HOOD.c.z);
-    const most = 0.245 + 1.6 * Math.max(0, y - 1.72);
-    /** A soft limit, so the taper into the scarf has no crease. */
+  const front = smooth(-0.05, 0.45, hz);
+  if (y < 1.84 && front > 0) {
+    const rr = Math.hypot(p.x, p.z + HOOD.c.z);
+    const most = 0.25 + 1.4 * Math.max(0, y - 1.72);
     const w = 0.07;
-    const soft = r < most - w ? r : most - w + w * Math.tanh((r - most + w) / w);
-    const k = THREE.MathUtils.lerp(1, soft / Math.max(r, 1e-4), front);
+    const soft = rr < most - w ? rr : most - w + w * Math.tanh((rr - most + w) / w);
+    const k = THREE.MathUtils.lerp(1, soft / Math.max(rr, 1e-4), front);
     p.x *= k;
     p.z = (p.z + HOOD.c.z) * k - HOOD.c.z;
   }
@@ -669,7 +681,7 @@ function hood(b: Builder): void {
     const out = V().crossVectors(tangent, inward).normalize();
     if (out.dot(edge.n) < 0) out.negate();
     const bottom = smooth(0.55, 0.95, -Math.cos(lambda));
-    const r = 0.052 * (1 - 0.75 * bottom) * (1 + 0.1 * Math.cos(lambda));
+    const r = 0.038 * (1 - 0.7 * bottom) * (1 + 0.1 * Math.cos(lambda));
     const centre = edge.p.clone().addScaledVector(inward, r * 0.35).addScaledVector(out, -r * 0.1);
     const skin = hoodSkin(edge.d, open);
     rim.push(Array.from({ length: 14 }, (_, j) => {
@@ -692,8 +704,8 @@ function hood(b: Builder): void {
 
 /** Where the scarf's wrap runs round the neck, by angle from the front: two turns, the lower one fuller. */
 const BANDS = [
-  { y: 1.607, x: 0.228, z: 0.207, sag: 0.03, ry: 0.078, rr: 0.07, phase: 0 },
-  { y: 1.668, x: 0.2, z: 0.186, sag: 0.02, ry: 0.066, rr: 0.064, phase: 2.2 },
+  { y: 1.6, x: 0.262, z: 0.232, sag: 0.03, ry: 0.086, rr: 0.078, phase: 0 },
+  { y: 1.672, x: 0.232, z: 0.212, sag: -0.012, ry: 0.078, rr: 0.07, phase: 2.2 },
 ];
 export function wrapPath(theta: number, out = V(), band = 0): THREE.Vector3 {
   const w = BANDS[band];
@@ -741,39 +753,63 @@ function wrapBand(b: Builder, band: number): void {
 }
 
 /** Low on the back, as in the concept: the bird rides at the shoulders with its head beside the hood, not in it. */
-export const BAG = { c: V(0, 1.23, -0.56), lip: 1.39 };
+export const BAG = { c: V(0, 1.23, -0.48), lip: 1.42 };
+const BAG_BOTTOM = -0.27;
+/** How square the box is round its sides: 2 would be an ellipse, higher a box with rounder and rounder corners. */
+const BAG_SQUARE = 4;
 
-/** How far up from the bottom to the lip (0..1), and the bag's radius there: fullest low down, where the weight is. */
-const BAG_PROFILE = [
-  [1, 0.255], [0.92, 0.268], [0.8, 0.285], [0.62, 0.302], [0.45, 0.308], [0.3, 0.293], [0.18, 0.254], [0.08, 0.183], [0.02, 0.1], [0, 0],
-];
-const BAG_MOUTH = 0.255;
-const BAG_BOTTOM = -0.268;
+/** Half-width and half-depth by how far up from the bottom (0..1): soft leather bellies out low down, under the weight. */
+function bagSize(f: number): [number, number] {
+  const belly = bump(f - 0.3, 0.38);
+  return [0.25 + 0.03 * belly, 0.165 + 0.035 * belly];
+}
 
-/** The bag's near (toward the child) side is higher: the mouth is tipped so the bird shows over the far rim. */
+/** The open top sags between the corners, and its near side, against the child, stands higher than the far. */
 function bagLip(phi: number): number {
-  return BAG.lip - BAG.c.y + 0.08 * Math.cos(phi) + 0.012 * Math.sin(3 * phi + 0.5);
+  const c = Math.cos(phi);
+  return BAG.lip - BAG.c.y + 0.04 * c - 0.022 * c * c + 0.008 * Math.sin(3 * phi + 0.5);
 }
 
-function bagPoint(phi: number, h: number, r: number, crease = 0): THREE.Vector3 {
-  const near = Math.cos(phi) > 0;
-  const depth = near ? 0.82 : 0.92;
-  /** Soft creases where the leather gives under the weight, down the sides and back. */
-  r *= 1 + crease * 0.035 * Math.sin(5 * phi + 1.3) * Math.max(0, -Math.cos(phi) + 0.3);
-  /** Its weight slumps it out behind and down. */
-  const slump = near ? 0 : 0.04 * smooth(0.1, -0.12, h) * Math.max(0, -Math.cos(phi));
-  return V(Math.sin(phi) * r, h - slump * 0.5, Math.cos(phi) * r * depth - slump).add(BAG.c);
+function bagPoint(phi: number, h: number, scale = 1, crease = 0): THREE.Vector3 {
+  const f = THREE.MathUtils.clamp((h - BAG_BOTTOM) / (bagLip(phi) - BAG_BOTTOM), 0, 1);
+  const [a, b] = bagSize(f);
+  const s = Math.sin(phi);
+  const c = Math.cos(phi);
+  const e = 2 / BAG_SQUARE;
+  /** Soft creases where the leather gives under the weight, down the far face and the sides. */
+  const give = 1 + crease * 0.03 * Math.sin(7 * phi + 1.3) * Math.max(0, -c + 0.4);
+  const x = a * scale * give * Math.sign(s) * Math.pow(Math.abs(s), e);
+  let z = b * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
+  /** Its weight slumps the far face out and down. */
+  if (c < 0) z -= 0.03 * smooth(0.4, 0.0, f) * -c;
+  return V(x, h, z).add(BAG.c);
 }
+
+/** Out from the box's side at a point, in the horizontal plane. */
+function bagOutward(phi: number): THREE.Vector3 {
+  const [a, b] = bagSize(1);
+  const s = Math.sin(phi);
+  const c = Math.cos(phi);
+  const e = 2 / BAG_SQUARE;
+  const gx = Math.pow(Math.abs(s), e * (BAG_SQUARE - 1)) / a;
+  const gz = Math.pow(Math.abs(c), e * (BAG_SQUARE - 1)) / b;
+  return V(Math.sign(s) * gx, 0, Math.sign(c) * gz).normalize();
+}
+
+/** Down the side from the lip (f 1) to the bottom (f 0), then in across the flat bottom (scale falling to 0). */
+const BAG_ROWS: [number, number][] = [
+  [1, 1], [0.9, 1], [0.76, 1], [0.62, 1], [0.48, 1], [0.34, 1], [0.21, 1], [0.1, 0.995], [0.045, 0.97], [0.014, 0.915], [0, 0.82], [0, 0.45], [0, 0],
+];
 
 function bag(b: Builder): void {
-  const AROUND = 40;
+  const AROUND = 48;
   const rows: Point[][] = [];
   const skinAt = (phi: number, h: number): Skin => {
     const top = smooth(0.0, 0.2, h) * smooth(0.2, 0.9, Math.cos(phi));
     return [[BONE.bag, 1 - 0.5 * top], [BONE.chest, 0.5 * top]];
   };
-  for (const [f, r] of BAG_PROFILE) {
-    if (r === 0) {
+  for (const [f, scale] of BAG_ROWS) {
+    if (scale === 0) {
       rows.push([{ p: bagPoint(0, BAG_BOTTOM, 0), skin: skinAt(0, BAG_BOTTOM), mat: MAT.leather, ao: 0.7 }]);
       continue;
     }
@@ -781,16 +817,17 @@ function bag(b: Builder): void {
       const phi = (j / AROUND) * TAU;
       const hh = THREE.MathUtils.lerp(BAG_BOTTOM, bagLip(phi), f);
       const crease = smooth(1, 0.7, f) * smooth(0, 0.35, f);
-      return { p: bagPoint(phi, hh, r, crease), skin: skinAt(phi, hh), mat: MAT.leather, ao: (1 - 0.3 * smooth(0.5, 0.05, f)) * (1 - 0.25 * crease * Math.max(0, -Math.sin(5 * phi + 1.3))), uv: [phi, hh] as [number, number] };
+      const ao = (1 - 0.3 * smooth(0.5, 0.05, f)) * (1 - 0.2 * crease * Math.max(0, -Math.sin(7 * phi + 1.3))) * (scale < 0.9 ? 0.75 : 1);
+      return { p: bagPoint(phi, hh, scale, crease), skin: skinAt(phi, hh), mat: MAT.leather, ao, uv: [phi, hh] as [number, number] };
     }));
   }
   /** The inside of the mouth: the leather turns in over the rim and goes down into the bag. */
   const inner: Point[][] = [];
-  for (const [dr, dh, ao] of [[-0.02, -0.015, 0.5], [-0.035, -0.08, 0.3]] as const) {
+  for (const [scale, dh, ao] of [[0.92, -0.015, 0.5], [0.86, -0.09, 0.3]] as const) {
     inner.push(Array.from({ length: AROUND }, (_, j) => {
       const phi = (j / AROUND) * TAU;
       const hh = bagLip(phi) + dh;
-      return { p: bagPoint(phi, hh, BAG_MOUTH + dr), skin: skinAt(phi, hh), mat: MAT.leather, k: 1, ao };
+      return { p: bagPoint(phi, hh, scale), skin: skinAt(phi, hh), mat: MAT.leather, k: 1, ao, uv: [phi, hh] as [number, number] };
     }));
   }
   b.rows([...inner.reverse(), ...rows], true, BAG.c);
@@ -799,11 +836,11 @@ function bag(b: Builder): void {
   for (let j = 0; j < AROUND; j++) {
     const phi = (j / AROUND) * TAU;
     const hh = bagLip(phi);
-    const c = bagPoint(phi, hh, BAG_MOUTH - 0.008);
-    const outward = V(Math.sin(phi), 0, Math.cos(phi) * (Math.cos(phi) > 0 ? 0.82 : 0.92)).normalize();
+    const out = bagOutward(phi);
+    const c = bagPoint(phi, hh, 0.975);
     rim.push(Array.from({ length: 10 }, (_, k) => {
       const a = (k / 10) * TAU;
-      return { p: c.clone().addScaledVector(outward, Math.cos(a) * 0.026).add(V(0, Math.sin(a) * 0.024, 0)), skin: skinAt(phi, hh), mat: MAT.strap, k: 0.4 };
+      return { p: c.clone().addScaledVector(out, Math.cos(a) * 0.022).add(V(0, Math.sin(a) * 0.02, 0)), skin: skinAt(phi, hh), mat: MAT.strap, k: 0.4 };
     }));
   }
   b.rows(rim, true, V(0, bagLip(0) + BAG.c.y, BAG.c.z), true);

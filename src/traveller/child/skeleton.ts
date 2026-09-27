@@ -46,7 +46,7 @@ export const ANKLE = 0.1;
 export const A_POSE = 0.3;
 
 /** Where the hem ring's bones hang from, and the coat's half-width and half-depth there. */
-export const WAIST = { y: 1.02, w: 0.345, d: 0.29 };
+export const WAIST = { y: 1.02, w: 0.37, d: 0.31 };
 
 export const hemAngle = (i: number) => (i / HEM_BONES) * Math.PI * 2;
 
@@ -60,17 +60,17 @@ const JOINTS: Joint[] = [
   [BONE.head, BONE.neck, [0, 0.14, 0.02]],
   [BONE.hood, BONE.head, [0, 0, 0]],
   [BONE.clavL, BONE.chest, [0.06, 0.25, 0.05]],
-  [BONE.upperL, BONE.clavL, [0.23, -0.02, 0.03]],
+  [BONE.upperL, BONE.clavL, [0.225, -0.02, 0.03]],
   [BONE.foreL, BONE.upperL, [0, -UPPER_ARM, 0]],
   [BONE.handL, BONE.foreL, [0, -WRIST, 0]],
   [BONE.clavR, BONE.chest, [-0.06, 0.25, 0.05]],
-  [BONE.upperR, BONE.clavR, [-0.23, -0.02, 0.03]],
+  [BONE.upperR, BONE.clavR, [-0.225, -0.02, 0.03]],
   [BONE.foreR, BONE.upperR, [0, -UPPER_ARM, 0]],
   [BONE.handR, BONE.foreR, [0, -WRIST, 0]],
-  [BONE.thighL, BONE.hips, [0.12, 0, 0]],
+  [BONE.thighL, BONE.hips, [0.15, 0, 0]],
   [BONE.shinL, BONE.thighL, [0, -THIGH, 0]],
   [BONE.footL, BONE.shinL, [0, -SHIN, 0]],
-  [BONE.thighR, BONE.hips, [-0.12, 0, 0]],
+  [BONE.thighR, BONE.hips, [-0.15, 0, 0]],
   [BONE.shinR, BONE.thighR, [0, -THIGH, 0]],
   [BONE.footR, BONE.shinR, [0, -SHIN, 0]],
   [BONE.bag, BONE.chest, [0, 0.24, -0.27]],

@@ -11,15 +11,15 @@ export const PALETTE = {
   coat: new THREE.Color('#d9a22c'),
   lining: new THREE.Color('#7d5a1e'),
   scarf: new THREE.Color('#a22b25'),
-  skin: new THREE.Color('#f2c7a3'),
+  skin: new THREE.Color('#f4c8ad'),
   cheek: new THREE.Color('#ea8f7e'),
-  hair: new THREE.Color('#5c3820'),
+  hair: new THREE.Color('#4b3628'),
   brow: new THREE.Color('#5a3521'),
   eye: new THREE.Color('#1b0f0a'),
   white: new THREE.Color('#f3eee6'),
   lip: new THREE.Color('#b5645a'),
   trousers: new THREE.Color('#3b3c42'),
-  boot: new THREE.Color('#5a3b26'),
+  boot: new THREE.Color('#4f3727'),
   leather: new THREE.Color('#8e6440'),
   strap: new THREE.Color('#6c4a2e'),
   button: new THREE.Color('#5a3e2b'),
@@ -141,35 +141,36 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   vec3 q = rest - ${v3(FACE.c)};
   if (q.z < 0.05) return alb;
   vec2 p = q.xy;
-  vec2 e = vec2(abs(p.x) - 0.098, p.y + 0.02);
+  vec2 e = vec2(abs(p.x) - 0.126, p.y + 0.027);
   float side = sign(p.x);
   /** Cheeks: warmth, not a painted disc. */
-  float cheek = exp(-dot(vec2(abs(p.x) - 0.14, p.y + 0.088), vec2(abs(p.x) - 0.14, p.y + 0.088)) / 0.0026);
-  alb = mix(alb, uCheek, cheek * 0.5);
+  vec2 c = vec2(abs(p.x) - 0.158, p.y + 0.108);
+  float cheek = exp(-dot(c, c) / 0.0034);
+  alb = mix(alb, uCheek, cheek * 0.55);
   /** A tiny warm tip where the nose would catch the light. */
-  alb = mix(alb, uCheek, (0.12 + 0.22 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.066), p - vec2(0.0, -0.066)) / 0.0006));
+  alb = mix(alb, uCheek, (0.12 + 0.22 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.1), p - vec2(0.0, -0.1)) / 0.0006));
   /** And the soft shade under it, which is what lets a small nose read from straight in front. */
-  alb *= 1.0 - 0.16 * uNoseTip * exp(-(p.x * p.x) / 0.0008 - (p.y + 0.092) * (p.y + 0.092) / 0.00012);
+  alb *= 1.0 - 0.16 * uNoseTip * exp(-(p.x * p.x) / 0.0008 - (p.y + 0.128) * (p.y + 0.128) / 0.00012);
   /** Brows: short soft strokes, the only thing that carries a mood. */
-  vec2 b = vec2(abs(p.x) - 0.1, p.y - 0.052 + 0.35 * (abs(p.x) - 0.1) * (abs(p.x) - 0.1) * 12.0);
-  float brow = fill(ellipse(b, vec2(0.03, 0.0075)));
+  vec2 b = vec2(abs(p.x) - 0.128, p.y - 0.08 + 4.5 * (abs(p.x) - 0.128) * (abs(p.x) - 0.128));
+  float brow = fill(ellipse(b, vec2(0.034, 0.0072)));
   alb = mix(alb, uBrow, brow * 0.85);
   float open = 1.0 - clamp(uBlink, 0.0, 1.0);
   if (uWhites > 0.5) {
     /** A sliver of white either side of a dark eye, never a ring round it. */
-    float white = fill(ellipse(e, vec2(0.037, 0.03 * open + 0.001)));
+    float white = fill(ellipse(e, vec2(0.042, 0.034 * open + 0.001)));
     alb = mix(alb, uWhite, white * 0.9);
   }
   /** The eye: a small upright oval; shut, it is a soft curved lash line. */
-  float eye = fill(ellipse(e, vec2(0.025, 0.033 * open + 0.001)));
-  float lid = fill(abs(e.y + 0.012 - 5.0 * e.x * e.x) - 0.0035) * step(abs(e.x), 0.028) * (1.0 - open);
+  float eye = fill(ellipse(e, vec2(0.029, 0.037 * open + 0.001)));
+  float lid = fill(abs(e.y + 0.014 - 5.0 * e.x * e.x) - 0.0038) * step(abs(e.x), 0.032) * (1.0 - open);
   alb = mix(alb, uEye, max(eye, lid));
   /** Glints, larger and upper-outer, a smaller one lower-inner: what makes a small dark eye alive. */
   vec2 g = vec2(e.x * side, e.y);
-  float glint = fill(length(g - vec2(0.009, 0.013)) - 0.0078) + 0.7 * fill(length(g - vec2(-0.008, -0.012)) - 0.0035);
+  float glint = fill(length(g - vec2(0.01, 0.015)) - 0.009) + 0.7 * fill(length(g - vec2(-0.009, -0.014)) - 0.004);
   alb = mix(alb, vec3(1.0), clamp(glint, 0.0, 1.0) * eye * open);
   /** The mouth: a small relaxed line; a yawn opens it into a soft dark oval. */
-  vec2 m = vec2(p.x, p.y + 0.152);
+  vec2 m = vec2(p.x, p.y + 0.172);
   float line = fill(abs(m.y - 2.2 * m.x * m.x) - 0.0032) * step(abs(m.x), 0.021) * uMouth;
   float yawn = fill(ellipse(m + vec2(0.0, 0.006), vec2(0.018 + 0.006 * uYawn, 0.004 + 0.03 * uYawn))) * step(0.02, uYawn);
   alb = mix(alb, uLip, line * 0.8);
@@ -208,22 +209,29 @@ void main() {
   } else if (m == ${MAT.skin}) {
     alb = uSkin * (0.97 + 0.05 * grain);
     alb = paintFace(alb, vRest, N, V, gloss);
+    /** The throat, down in the shadow between the chin and the scarf. */
+    alb *= 1.0 - 0.45 * smoothstep(${f(FACE.c.y - FACE.down + 0.01)}, ${f(FACE.c.y - FACE.down - 0.04)}, vRest.y);
     fuzz = 0.3;
   } else if (m == ${MAT.hair}) {
     alb = uHair * (0.85 + 0.25 * vnoise3(vec3(vSurf.y * 9.0, vRest.y * 60.0, vSurf.x * 3.0)));
     alb *= 1.0 + 0.15 * k;
     fuzz = 0.35;
-    sheen = 0.18;
+    sheen = 0.12;
   } else if (m == ${MAT.trousers}) {
     alb = uTrousers * (0.92 + 0.14 * grain);
     fuzz = 0.45;
   } else if (m == ${MAT.boot}) {
-    alb = uBoot * (0.9 + 0.12 * blotch) * mix(1.0, 0.55, k);
-    gloss = 0.35 * (1.0 - k);
-    fuzz = 0.08;
+    /** Worn matte leather: scuffed paler over the toe and heel and along the creases at the ankle, dark at the sole. */
+    float scuff = smoothstep(0.55, 0.85, vnoise3(vRest * 16.0)) * (0.5 + 0.5 * smoothstep(0.1, 0.02, vRest.y));
+    float crease = smoothstep(0.35, 0.5, vSurf.x) * smoothstep(0.62, 0.5, vSurf.x) * smoothstep(0.4, 0.8, vnoise3(vRest * vec3(40.0, 8.0, 40.0)));
+    alb = uBoot * (0.88 + 0.16 * blotch + 0.3 * scuff - 0.15 * crease) * mix(1.0, 0.5, k);
+    gloss = 0.04 * (1.0 - k);
+    fuzz = 0.3;
   } else if (m == ${MAT.leather}) {
     /** Worn soft leather, paler where it rubs, dark inside the mouth. */
     alb = uLeather * (0.85 + 0.22 * blotch + 0.05 * grain) * mix(1.0, 0.45, k);
+    /** Stitched seams down the box's four corners. */
+    alb *= 1.0 - 0.22 * smoothstep(0.975, 0.998, abs(sin(2.0 * vSurf.x))) * (1.0 - k);
     gloss = 0.14;
     fuzz = 0.12;
   } else if (m == ${MAT.strap}) {
@@ -256,13 +264,15 @@ void main() {
   }
   /** Light the hood's lining throws back onto the face: warm, and why a face in a yellow hood is never grey. */
   vec3 lining = vec3(0.0);
-  if (m == ${MAT.skin} || m == ${MAT.hair}) lining = uCoat * (hemiLight(vec3(0.0, 1.0, 0.0)) * 0.32 + uSunColor * groundAt(uGroundPos.xz).w * 0.1);
+  if (m == ${MAT.skin} || m == ${MAT.hair}) lining = uCoat * (hemiLight(vec3(0.0, 1.0, 0.0)) * 0.22 + uSunColor * groundAt(uGroundPos.xz).w * 0.07);
   float ground = mix(0.55, 1.0, smoothstep(0.0, 1.2, vWorld.y - uGroundPos.y));
   float ao = ground * mix(0.45, 1.0, bakedAo);
   float facing = clamp(dot(N, V), 0.0, 1.0);
   float back = max(dot(-V, uSunDir), 0.0);
   float rim = pow(1.0 - facing, 3.0) * (0.35 + 0.65 * back);
   vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95 * mix(0.6, 1.0, ao) + lining);
+  /** A face turning away from the eye darkens a little toward its edge, so it reads round in the hood's shade. */
+  if (m == ${MAT.skin}) col *= mix(0.78, 1.04, pow(facing, 0.6));
   /** Wool catches the low sun along its edge: the soft halo that makes the coat read as cloth. */
   col += uSunColor * alb * rim * (0.35 + 0.45 * fuzz) * sun * (1.0 - inside);
   if (gloss > 0.0) {

@@ -46,7 +46,7 @@ export interface Pose {
 }
 
 export function restArm(): ArmPose {
-  return { raise: 0, out: 0.12, twist: 0, elbow: 0.25, wrist: 0 };
+  return { raise: 0, out: 0.19, twist: 0, elbow: 0.25, wrist: 0 };
 }
 
 export function newPose(): Pose {
@@ -355,7 +355,7 @@ export class ChildMotion {
         lift = (0.08 + 0.18 * running) * Math.pow(Math.sin(u * Math.PI), 0.8) * stride;
         pitch = (0.55 * (1 - THREE.MathUtils.smoothstep(u, 0, 0.35)) - 0.25 * THREE.MathUtils.smoothstep(u, 0.6, 1)) * stride;
       }
-      const lateral = hipAt.x + s * (0.01 + 0.01 * this.weight * s);
+      const lateral = hipAt.x + s * (0.035 + 0.01 * this.weight * s);
       const standAnkle = this.vc.set(lateral, ANKLE + lift, fz);
       // The ground under that foot, as a height in the root's frame.
       const world = this.va.copy(standAnkle).setY(0).applyMatrix4(root.matrixWorld);
@@ -561,7 +561,7 @@ export class ChildMotion {
   /** The direction the hood's opening faces, in the world. */
   hoodForward(out: THREE.Vector3): THREE.Vector3 {
     this.b[BONE.head].getWorldQuaternion(this.qa);
-    return out.set(0, -0.2, 1).normalize().applyQuaternion(this.qa);
+    return out.set(0, -0.1, 1).normalize().applyQuaternion(this.qa);
   }
 }
 
