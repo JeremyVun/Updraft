@@ -127,6 +127,12 @@ function bakeNoise(): THREE.Data3DTexture {
   return tex;
 }
 
+/** The haze's colour in its own shade, lit through by the sky round it, for surfaces that go into it. After ATMO_GLSL. */
+export const HAZE_SHADE_GLSL = /* glsl */ `
+vec3 hazeShade() {
+  return (uSkyHorizon * 0.55 + uSkyZenith * 0.6 + uSkyAmbient * 0.8) * vec3(0.95, 0.9, 1.0);
+}`;
+
 /** How far toward the sun each step looks to see how much vapour shades it. */
 const LIGHT_REACH = 0.7;
 /** Within this far of the lens a point is outside the box enough for its near side to be drawn. */
@@ -154,10 +160,11 @@ void main() {
  */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${HAZE_SHADE_GLSL}
 uniform highp sampler3D uHazeNoise;
 uniform mat4 uHome;
 uniform vec4 uSize;
-uniform vec2 uHaze;
+uniform float uAmount;
 uniform vec4 uOpen;
 in vec3 vCube;
 in vec3 vWorld;
@@ -230,10 +237,25 @@ float densityAt(vec3 c, vec3 home) {
   return coverOf(body, bodyNoise(home, k) + (fray - 0.5) * (0.12 + 0.12 * k)) * joinsAt(c);
 }
 
+/** The vapour between a point and the sun, from its billows alone. */
 float shadeAt(vec3 c, vec3 home) {
   float body = bodyAt(c, home);
   if (body <= 0.004) return 0.0;
-  return coverOf(body, bodyNoise(home, 0.5 - c.y)) * joinsAt(c);
+  float billows = texture(uHazeNoise, (home + vec3(-0.07, 0.11, 0.04) * uTime) * vec3(0.3, 0.22, 0.3)).r;
+  return coverOf(body, billows) * joinsAt(c);
+}
+
+/**
+ * The haze parts along the sightline to whoever is climbing (the middle of the cloud deck's pocket round them), so
+ * a loose flight hanging over the child never veils them. What hangs under their own steps stays.
+ */
+float clearing(vec3 world) {
+  vec3 subject = uCloudBubble.xyz - vec3(0.0, 0.45, 0.0);
+  vec3 sight = subject - cameraPosition;
+  float along = clamp(dot(world - cameraPosition, sight) / dot(sight, sight), 0.0, 1.0);
+  float off = length(world - cameraPosition - sight * along);
+  float near = (1.0 - smoothstep(3.0, 6.0, distance(world, subject))) * smoothstep(-1.1, -0.8, world.y - subject.y);
+  return mix(1.0, smoothstep(0.5, 1.4, off), near);
 }
 
 float scatter(float c, float g) {
@@ -264,9 +286,8 @@ void main() {
   // Mostly forward: the thin edges catch fire looking into the low sun.
   float phase = 0.25 * scatter(c, 0.65) + 0.75 * scatter(c, -0.1);
   vec3 sun = uSunColor * cloudShadow(vWorld.xz) * phase * 0.45;
-  // Lit through and through by the sky round it, so that even its shade is a pale lilac.
-  vec3 lilac = (uSkyHorizon * 0.55 + uSkyZenith * 0.6 + uSkyAmbient * 0.8) * vec3(0.95, 0.9, 1.0);
-  float sigma = 1.6 * mix(0.6, 1.0, min(uHaze.x, 1.0));
+  vec3 lilac = hazeShade();
+  float sigma = 1.6 * mix(0.6, 1.0, min(uAmount, 1.0));
   float T = 1.0;
   vec3 light = vec3(0.0);
   float seen = 0.0, at = 0.0;
@@ -275,7 +296,8 @@ void main() {
     float t = t0 + dt * (float(i) + jitter);
     vec3 p = vEye + rd * t;
     vec3 home = homeFrom + homeRay * t;
-    float d = densityAt(p, home) * smoothstep(0.5, 2.5, t * reach);
+    vec3 world = cameraPosition + (vWorld - cameraPosition) * t;
+    float d = densityAt(p, home) * smoothstep(0.5, 2.5, t * reach) * clearing(world);
     if (d <= 0.0) continue;
     float a = 1.0 - exp(-sigma * d * dt * reach);
     float shade = shadeAt(p + vSunStep, home + sunHome);
@@ -286,11 +308,11 @@ void main() {
     at += T * a * t;
     T *= 1.0 - a;
   }
-  float alpha = (1.0 - T) * uHaze.y;
+  float alpha = 1.0 - T;
   if (alpha < 0.003) discard;
   vec4 fog = fogOf(cameraPosition + (vWorld - cameraPosition) * (at / seen));
   light = mix(light, fog.rgb * (1.0 - T), fog.a);
-  gl_FragColor = vec4(light * uHaze.y, alpha);
+  gl_FragColor = vec4(light, alpha);
 }`;
 
 const BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -319,7 +341,7 @@ function hazeBox(frame: THREE.Matrix4, shape: THREE.Matrix4, size: THREE.Vector4
       uHazeNoise: { value: noise },
       uHome: { value: placed.clone() },
       uSize: { value: size },
-      uHaze: { value: new THREE.Vector2(amount, 1) },
+      uAmount: { value: amount },
       uOpen: { value: new THREE.Vector4(open(joins.x0), open(joins.x1), open(joins.z0), open(joins.z1)) },
     },
     vertexShader: VERT,

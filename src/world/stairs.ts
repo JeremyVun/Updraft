@@ -6,7 +6,7 @@ import type { PointerInput } from '../input/pointer';
 import type { Deck } from './decks';
 import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
+import { HAZE_SHADE_GLSL, hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import {
@@ -48,6 +48,7 @@ void main() {
  */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${HAZE_SHADE_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vUv;
@@ -82,8 +83,9 @@ void main() {
   float toward = max(0.0, dot(-V, uSunDir)) * 0.6 + 0.4;
   float rim = pow(1.0 - max(0.0, dot(N, V)), 3.0) * toward;
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * wrap * wrap * sun * 0.95) + uSunColor * (gloss + rim * 0.3) * sun;
-  vec3 mist = uSkyAmbient * 0.85 + uSunColor * 0.1;
-  col = mix(col, mist, smoothstep(0.1, 0.8, vMist) * 0.55);
+  // The bottoms of the steps go into the haze they rest on, in its colour.
+  vec3 mist = hazeShade() * 0.85 + uSunColor * 0.12 * sun;
+  col = mix(col, mist, smoothstep(0.0, 0.3, vMist) * (0.4 + 0.4 * fray));
   gl_FragColor = vec4(applyFog(col, vWorld), keep);
 }`;
 
