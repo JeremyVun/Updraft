@@ -5,7 +5,7 @@ import { fieldAt, type FieldSample } from '../world/fields';
 import { heightAt } from '../world/island';
 import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
-import { buildChild, keepOffChild, type Rig, type SocketName } from './body';
+import { BONE, FOREARM, UPPER_ARM, buildChild, keepOffChild, type Rig, type SocketName } from './body';
 import { ChildMotion, newPose, stepLength, type ArmPose, type Drive } from './child/motion';
 import { Scarf } from './scarf';
 import type { Boat } from './boat';
@@ -65,6 +65,8 @@ function rampHeight(d: Deck, x: number, z: number): number | null {
   if (Math.abs((x - d.x0) * dz - (z - d.z0) * dx) / len > d.halfWidth) return null;
   return THREE.MathUtils.lerp(d.height, heightAt(x, z), beyond / d.rampLength);
 }
+/** Where the paper's grip sits when it is put away: against the bag's outer face, low enough that the bird shows above it. */
+export const PAPER_STOW = new THREE.Vector3(0.06, 0.48, -0.69);
 const WALK = 2.6;
 const RUN = 5.4;
 const TURN_RATE = 7;
@@ -168,6 +170,7 @@ export class Traveller {
   private glanceUntil = 0;
   private glanceYaw = 0;
   private glancePitch = 0;
+  private glances = 0;
   private nextGlance = 5;
   private readonly kneel = new Glide();
   private readonly abedGlide = new Glide();
@@ -195,6 +198,7 @@ export class Traveller {
   private readonly gaze = { yaw: 0, pitch: 0, w: 0 };
   private readonly straps = new Glide();
   private pickupT = Infinity;
+  private stooped = 0;
   private readonly pickupAt = new THREE.Vector3();
   private stillFor = 0;
   /** Where each mitten has been asked to be, in the world, and how far it has got there (0 the pose's own arm, 1 on the point). */
@@ -359,7 +363,7 @@ export class Traveller {
     this.rig.root.updateMatrixWorld(true);
     this.rig.gripL.getWorldPosition(out);
     if (this.stowed < 0.001) return out;
-    const tucked = this.rig.body.localToWorld(this.tmp2.set(0.06, 0.48, -0.69));
+    const tucked = this.rig.body.localToWorld(this.tmp2.copy(PAPER_STOW));
     out.lerp(tucked, this.stowed);
     /** Carry it round the outside of the shoulder, clear of the hood and the bird. */
     this.tmp2.set(Math.sin(this.stowed * Math.PI) * tuning.paperCarry.transferArc, 0, 0);
@@ -568,6 +572,9 @@ export class Traveller {
     const p = this.position;
     this.prev.copy(p);
     if (!this.riding) this.updateGoal(dt);
+    /** Stopping, the feet finish the step they are in and come together under them rather than sliding back. */
+    const past = ((this.gait - PASSING) % Math.PI + Math.PI) % Math.PI;
+    if (this.speed < 0.4 && past > 0.12) this.gait += Math.min(Math.PI - past, dt * 9);
     this.updateAction(dt);
 
     const w = this.wind.sample(p.x, p.z, this.sample);
@@ -1054,7 +1061,7 @@ export class Traveller {
     L.out = lerp(L.out, 0.22, rest);
     R.out = lerp(R.out, 0.22, rest);
     lean += -0.06 * sit + 0.1 * kneel;
-    bend += leanNow;
+    bend += leanNow + this.stoop(dt);
 
     if (this.swing > 0.01) {
       /** Hands on the ropes, and the legs going: the joy is in the body, because there is never a sound. */
@@ -1101,8 +1108,10 @@ export class Traveller {
     if (this.nextGlance <= 0) {
       this.glanceUntil = t + 1.4 + Math.random() * 0.8;
       this.nextGlance = 6 + Math.random() * 6;
-      this.glanceYaw = (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.45);
-      this.glancePitch = -0.3 + Math.random() * 0.36;
+      /** A different look each time without drawing on the shared random sequence. */
+      const k = ++this.glances;
+      this.glanceYaw = (k % 2 ? 1 : -1) * (0.55 + 0.45 * ((k * 0.618034) % 1));
+      this.glancePitch = -0.3 + 0.36 * ((k * 0.754878) % 1);
     }
     const idle = moving < 0.05 && !a && !this.sitting && this.presenting < 0.01;
     this.glance = damp(this.glance, idle && t < this.glanceUntil ? 1 : 0, 3.5, h);
@@ -1198,6 +1207,26 @@ export class Traveller {
     u.uYawn.value = yawn;
   }
 
+  /**
+   * A story's reach for something low in front of them that the arms cannot get to bends them further over toward
+   * it, only as far as it takes; once it is in reach they ease back up.
+   */
+  private stoop(dt: number): number {
+    const r = this.rig;
+    let over = -1;
+    for (const hand of [0, 1] as const) {
+      if (this.reachNow[hand] < 0.5 || this.reachInBody[hand]) continue;
+      const target = this.reachAt[hand];
+      const shoulder = r.bones[hand === 0 ? BONE.upperL : BONE.upperR].getWorldPosition(this.tmp2);
+      const ahead = (target.x - shoulder.x) * Math.sin(this.yaw) + (target.z - shoulder.z) * Math.cos(this.yaw);
+      if (target.y > shoulder.y || ahead <= 0) continue;
+      over = Math.max(over, target.distanceTo(shoulder) - ARM_REACH);
+    }
+    const push = over > 0 ? over * 4 : over < -0.05 ? -0.5 : 0;
+    this.stooped = THREE.MathUtils.clamp(this.stooped + push * dt, 0, 0.7);
+    return this.stooped;
+  }
+
   /** Sends a mitten along an action's path, `w` of the way from the pose's own arm. */
   private grip(hand: 0 | 1, keys: readonly Key[], t: number, w: number, elbow: THREE.Vector3): void {
     const g = this.grips[hand];
@@ -1287,9 +1316,15 @@ function arm(m: ArmPose, raise: number, out: number, twist: number, elbow: numbe
   m.wrist = wrist;
 }
 
+/** Where in the walk's phase the feet pass each other, both under the hips: the stance foot halfway through. */
+const PASSING = 0.54 * Math.PI;
+
 /** How long a pick-up takes, and when the mitten gets to the ground. */
 const PICKUP = 0.9;
 const PICKUP_GRAB = 0.46;
+
+/** From the shoulder to the middle of the mitten at full stretch, in the world, less a little. */
+const ARM_REACH = (UPPER_ARM + FOREARM) * 1.12 - 0.02;
 
 /** How far the root comes down when they sit (on the ground, a thwart, a stool) and when they kneel back on their heels. */
 const SIT_DROP = 0.67;
