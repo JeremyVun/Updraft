@@ -22,7 +22,7 @@ type Action =
     }
   | {
       kind: 'alight'; t: number; boat: Boat; to: THREE.Vector3; rail: THREE.Vector3;
-      fromYaw: number; toYaw: number; side: number; onDone: () => void;
+      fromYaw: number; toYaw: number; side: number; shoved: boolean; hop: number; onDone: () => void;
     };
 
 interface Goal {
@@ -485,14 +485,15 @@ export class Traveller {
   }
 
   /**
-   * Out of the boat onto a deck alongside: up off the thwart, a foot onto the gunwale on the deck's side and down
-   * onto the boards, then the story has the child back. The reverse of `board`, without the push.
+   * Out of the boat onto a deck alongside: up off the thwart and round to face it, a foot up onto the boards, the
+   * weight carried across over the gunwale as the other leg swings through, and a settle; then the story has the
+   * child back.
    */
   alight(boat: Boat, deck: Deck, onDone: () => void): void {
     const k = tuning.boarding;
     this.goal = null;
     boat.group.updateMatrixWorld(true);
-    const near = (side: number, out: THREE.Vector3) => out.set(side * k.railIn, k.railHeight, -0.08).applyMatrix4(boat.group.matrixWorld);
+    const near = (side: number, out: THREE.Vector3) => out.set(side * k.gunwaleIn, k.gunwaleHeight, -0.25).applyMatrix4(boat.group.matrixWorld);
     const dx = deck.x1 - deck.x0, dz = deck.z1 - deck.z0, len = Math.hypot(dx, dz);
     const offDeck = (p: THREE.Vector3) => {
       const t = THREE.MathUtils.clamp(((p.x - deck.x0) * dx + (p.z - deck.z0) * dz) / (len * len), 0, 1);
@@ -506,9 +507,12 @@ export class Traveller {
     const across = THREE.MathUtils.clamp(((rail.x - deck.x0) * dz - (rail.z - deck.z0) * dx) / len, -room, room);
     const to = new THREE.Vector3(deck.x0 + dx * along + dz / len * across, 0, deck.z0 + dz * along - dx / len * across);
     to.y = Math.max(deck.height, heightAt(to.x, to.z));
+    const stand = this.tmp.set(side * k.alightInside, k.alightFloor, -0.25).applyMatrix4(boat.group.matrixWorld);
     this.action = {
       kind: 'alight', t: 0, boat, to, rail, fromYaw: this.yaw,
-      toYaw: Math.atan2(to.x - rail.x, to.z - rail.z), side, onDone,
+      toYaw: Math.atan2(to.x - stand.x, to.z - stand.z), side, shoved: false,
+      hop: THREE.MathUtils.smoothstep(Math.hypot(to.x - stand.x, to.z - stand.z), k.alightStride, k.alightStride + k.alightHopOver),
+      onDone,
     };
   }
 
@@ -762,24 +766,28 @@ export class Traveller {
       const k = tuning.boarding;
       const boat = a.boat;
       boat.group.updateMatrixWorld(true);
-      const seat = this.tmp.set(0, 0.02, -0.25);
-      const inside = this.tmp2.set(a.side * k.insideIn, k.insideHeight, -0.25);
+      const stand = this.tmp2.set(a.side * k.alightInside, k.alightFloor, -0.25).applyMatrix4(boat.group.matrixWorld);
       if (a.t < k.alightStand) {
-        this.position.lerpVectors(seat, inside, THREE.MathUtils.smootherstep(a.t, 0, k.alightStand)).applyMatrix4(boat.group.matrixWorld);
-      } else if (a.t < k.alightRail) {
-        const u = THREE.MathUtils.smootherstep(a.t, k.alightStand, k.alightRail);
-        this.position.lerpVectors(inside, seat.set(a.side * k.railIn, k.railHeight, -0.08), u);
-        this.position.y += Math.sin(u * Math.PI) * k.stepArc * 0.55;
-        this.position.applyMatrix4(boat.group.matrixWorld);
-        a.rail.copy(this.position);
+        const u = THREE.MathUtils.smootherstep(a.t, 0, k.alightStand);
+        this.position.set(0, 0.02, -0.25).applyMatrix4(boat.group.matrixWorld).lerp(stand, u);
       } else {
-        const u = THREE.MathUtils.smootherstep(a.t, k.alightRail, k.alightAshore);
-        this.position.lerpVectors(a.rail, a.to, u);
-        this.position.y += Math.sin(u * Math.PI) * k.stepArc;
+        // The lead foot goes up onto the boards while the weight stays in the boat, then the body follows it over.
+        const lean = THREE.MathUtils.smootherstep(a.t, k.alightStand, k.alightLift) * k.alightLean;
+        const u = THREE.MathUtils.smootherstep(a.t, k.alightLift, k.alightAcross);
+        const along = lean + (1 - lean) * u;
+        this.position.lerpVectors(stand, a.to, along);
+        const rise = THREE.MathUtils.smoothstep(u, 0, 0.75);
+        const middle = THREE.MathUtils.lerp(stand.y, a.to.y, 0.5);
+        this.position.y = THREE.MathUtils.lerp(stand.y, a.to.y, rise)
+          + (Math.max(0, a.rail.y + k.alightClear - middle) + a.hop * k.alightHop) * Math.sin(u * Math.PI);
+        if (!a.shoved && a.t >= k.alightLift) {
+          a.shoved = true;
+          boat.nudge(-a.side, k.alightShove);
+        }
       }
       const turn = Math.atan2(Math.sin(a.toYaw - a.fromYaw), Math.cos(a.toYaw - a.fromYaw));
-      this.yaw = a.fromYaw + turn * THREE.MathUtils.smootherstep(a.t, 0, k.alightAshore);
-      this.riding = a.t < k.alightRail;
+      this.yaw = a.fromYaw + turn * THREE.MathUtils.smootherstep(a.t, 0, k.alightStand * 1.2);
+      this.riding = a.t < k.alightLift;
       this.sitting = false;
       this.rideRoll = this.riding ? boat.roll * 0.55 : 0;
       this.ridePitch = this.riding ? boat.pitch * 0.55 : 0;
@@ -815,6 +823,8 @@ export class Traveller {
     let crouch = 0;
     let boardingStep = 0;
     let boardingSide = 1;
+    let alightLead = 0;
+    let alightTrail = 0;
 
     const a = this.action;
     if (a?.kind === 'throw') {
@@ -872,15 +882,21 @@ export class Traveller {
       boardingSide = a.side;
     } else if (a?.kind === 'alight') {
       const k = tuning.boarding;
-      const step = Math.sin(THREE.MathUtils.smoothstep(a.t, k.alightStand * 0.6, k.alightAshore) * Math.PI);
-      bodyX = 0.18 * step;
-      bodyY = a.side * step * 0.2;
-      crouch = Math.sin(THREE.MathUtils.smoothstep(a.t, k.alightRail, k.alightSettle) * Math.PI) * 0.1;
-      armLX = armRX = -0.5 * step;
-      armLZ = -0.4 - 0.35 * step;
-      armRZ = 0.4 + 0.35 * step;
-      boardingStep = step;
-      boardingSide = a.side;
+      const up = THREE.MathUtils.smootherstep(a.t, k.alightStand * 0.7, k.alightLift);
+      const u = THREE.MathUtils.smootherstep(a.t, k.alightLift, k.alightAcross);
+      const settle = Math.sin(THREE.MathUtils.smoothstep(a.t, k.alightAcross - 0.1, k.alightSettle) * Math.PI);
+      const reach = THREE.MathUtils.smoothstep(a.t, k.alightStand * 0.4, k.alightLift) * (1 - THREE.MathUtils.smoothstep(a.t, k.alightAcross, k.alightSettle));
+      /** The lead leg lifts onto the boards and straightens under the weight; the other pushes off and swings through. */
+      alightLead = -k.alightStep * up * (1 - u);
+      alightTrail = 0.35 * Math.sin(Math.min(1, u * 2.2) * Math.PI * 0.5) * (1 - u) - 0.55 * Math.sin(u * Math.PI) * THREE.MathUtils.smoothstep(u, 0.25, 0.6);
+      /** Across a wider gap it is a little hop: both knees come up under the coat, and the landing gives more. */
+      alightLead -= a.hop * 0.35 * Math.sin(u * Math.PI);
+      alightTrail -= a.hop * 0.3 * Math.sin(u * Math.PI);
+      bodyX = 0.28 * up * (1 - u) + 0.12 * Math.sin(u * Math.PI);
+      crouch = 0.05 * up * (1 - u) + (0.09 + 0.06 * a.hop) * settle;
+      armLX = armRX = -0.75 * reach;
+      armLZ = -0.4 - 0.3 * reach;
+      armRZ = 0.4 + 0.3 * reach;
     }
 
     if (this.presenting > 0.01) {
@@ -926,6 +942,8 @@ export class Traveller {
       near.rotation.x -= boardingStep * 1.05;
       far.rotation.x += boardingStep * 0.28;
     }
+    r.legR.rotation.x += alightLead;
+    r.legL.rotation.x += alightTrail;
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
     r.armL.rotation.set(armLX * (1 - sit * armsFree) - sit * 0.3 * armsFree, 0, armLZ);
     r.armR.rotation.set(armRX * (1 - sit * armsFree) - sit * 0.5 * armsFree, 0, armRZ);

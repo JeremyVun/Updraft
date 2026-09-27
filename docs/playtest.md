@@ -125,4 +125,10 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 
 | # | Issue | Status |
 | --- | --- | --- |
-| 18 | Polish the child's step out of the boat onto a jetty (`Traveller.alight`) | open |
+| 18 | Polish the child's step out of the boat onto a jetty (`Traveller.alight`) | done: frame-stepped strips (`hold`) showed the child floating: the step aimed their feet 0.62 m above the gunwale, which sits almost level with the thwart (the home deck is only 0.29 above it), hung them there for 0.7 s with one leg kicked out, and turned them side-on as they went. Now it is four beats: up off the thwart onto the floorboards while turning to face the boards; the lead foot lifts onto the edge with a lean and reaching arms, weight still in the boat; the weight goes across, the body rising only with the boards and just clearing the gunwale while the lead leg straightens under it and the trailing leg pushes off and swings through; a small give on landing. The push-off rocks the hull. Where the gap is wide (the sky mirror's entry, about 1.7 m of travel) the crossing is a little hop with both knees up. Strips: `/tmp/updraft-alight-side0-sheet.png`, `side1`/`back1` before; `side2-zoom`, `back2-sheet`, `mirror3-zoom` after |
+
+> One more fix - the invitiational gestures at the start of the game when the child is holding the paper plane should be going from bottom right to top left. the player should blow the plane into the gross, not across the beach. But only this first one. make sure it looks good and intuitive.
+
+| # | Issue | Status |
+| --- | --- | --- |
+| 19 | Still island start: the plane's gust runs bottom right to top left, into the grass (only the first, held one) | open |
