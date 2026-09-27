@@ -704,6 +704,8 @@ export class StairsChapter implements Chapter {
     if (Math.hypot(boat.position.x - wp.x, boat.position.z - wp.y) < 9) boat.steerFor = DESCENT_END;
     if (this.t > tuning.stairs.fogRise + 1.2) {
       boat.altitude = null;
+      // Down on the water this very frame, so the camera cut lands behind the boat where it now is.
+      boat.position.y = 0.4;
       boat.group.remove(this.lantern.body);
       this.world.sailing(null, dt);
       this.cuts++;
