@@ -123,8 +123,28 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
   plus a shader ripple), livelier walk and springing run, scarf ends framed by parallel transport and smoothed, the
   paper's stow point on the lower bag, throw/cheer/wave reworked, springs rest while lying down, the family jumper in
   `world/lines.ts` takes the coat's `#d9a22c`, `docs/styles.md` describes the new child.
-- Next, from Jeremy's feedback: chubby proportions and face shape; the hood's size, shape and silhouette relative to
-  the outfit (the head reads too big); a more rectangular backpack; matte brown leather boots; wavy hair instead of a
-  bowl cut; the scarf billowing out behind the child.
-- Capture harness: `/tmp/child2-shots/cap2.sh <tag> <chapter>` (turnaround, story frozen), `faces.sh`, `walk.sh`.
-  Worktree dev server :5373; main's build for before shots in `/private/tmp/updraft-child2-base` on :5374.
+- Round 2, proportions (2026-09-27, `child-rebuild` from `a0a27b1`), measured against the concept by overlaying the
+  studio front view on the concept's at matched height, and adjusted after Jeremy's steer above. The knobs are all in
+  `garments.ts`:
+  - **Face** (`FACE`, `facePoint`): a round crown, and a lower half 10% wider that stays full to a round chin (a
+    broad U). The chin sits just over the scarf with the throat shaded. The ears are bigger and forward. The painted
+    features are placed to the concept in `paintFace`: eyes wider apart and a touch larger, nose and mouth low and
+    close, blush on the cheeks. Skin takes direct sun at 70%, so a bare forehead can't flare.
+  - **Hood** (`HOOD`, `hoodOpen`, `hoodPoint`): a bell, not a ball. It has an egg crown with a soft seam ridge,
+    sides falling nearly straight to the shoulders, and a back hanging over the bag. It is about 20% less volume than
+    before, per Jeremy. The opening is wide at the sides and closes in at the jaw, with the face forward in it.
+  - **Coat** (`COAT`): narrow sloped shoulders with a steady A-line flare to the hem (Jeremy: wide shoulders hid the
+    flare). The sleeves narrow at the shoulder and fill out toward the cuff.
+  - **Bag** (`BAG`, `bagSize`, `bagLip`, `BAG_SQUARE`): a soft leather box with seams down the corners. It bellies
+    low where the bird sits, and its open top sags between the corners. The near face is pressed to the back, and
+    its backward swing is halved (`motion.ts`), so it no longer hangs off the coat as they walk. The seat offset is
+    unchanged relative to `BAG.c`, which moved 0.08 toward the back.
+  - **Boots** (`boot`): wider shafts opening at the top, a foot that widens onto a welt, matte scuffed leather.
+  - **Hair** (`HAIR`, `hairline`, `LOCKS`): a fringe of broad locks tapering to soft points, parted on the child's
+    left and swept right, with locks in front of the ears.
+  - **Legs:** thicker trousers, hips at ±0.15 and the feet a touch wider still. Mittens are plumper, thumb forward.
+- Face details still at **D** until Jeremy rules on the shape.
+- Capture harness for this round, in `/tmp/child3`:
+  - `snap.sh <tag>` freezes the worktree as a build served at `:5377/<tag>/`, so edits don't disturb captures.
+  - `studio.sh <tag>` shoots the child alone on cream through a long lens (`URL=`, `BIRD=1`, `ONLY=1`).
+  - `overlay.py`, `compare.py`, `faces.py` and `checkpoint.py` build the comparisons with the concept.
