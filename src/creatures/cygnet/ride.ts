@@ -15,8 +15,8 @@ export interface Mount {
  */
 const SEATS: Record<Seat, { yaw: number; pitch: number }> = {
   cradle: { yaw: Math.PI / 2, pitch: -0.18 },
-  /** Turned a little into the bag's far corner so the tail stays in; the neck comes up beside the left of the hood. */
-  satchel: { yaw: 1.2, pitch: -0.15 },
+  /** Facing out past the child's left shoulder and a little back, so the head stands clear beside the hood, never in it. */
+  satchel: { yaw: 1.9, pitch: -0.15 },
   lap: { yaw: 0, pitch: -0.1 },
 };
 
