@@ -374,8 +374,11 @@ through a synthetic timeline and writes the mix, the music alone, a cue sheet an
   bursts). It is heard only while the hull is up on the cloud.
 - **The fog** thins the sail (`fog`), and the chapter asks for the village's music (`arrivalMusic = 'drowned'` while the
   phase is `fog` or `down`): the ordinary arrival pause, three seconds' fade, three of rest in the white, 2.5 in.
-  The stairs score takes part in the phrase-aware handoff and retires with the other scores. The sea comes back
-  as the hull comes down (`climb` is the hull's height while afloat) and clears as the fog thins.
+  The stairs score takes part in the phrase-aware handoff and retires with the other scores. Once `fog` has
+  peaked (0.9) the hull is taken to be down, and the sea comes back under it as the fog thins.
+- Once they are out on top, nothing but the fog brings the sea back or the wind down, and once the score has begun
+  it keeps its section until the village takes over, whatever a single frame's phase says (boarding once
+  reported `under`).
 - **Down** on the village water the drowned chapter owns everything. The room's own layers fade and disconnect five
   seconds after the chapter stops describing its air; outside the room every level multiplier is exactly 1.
 

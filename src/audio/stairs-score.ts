@@ -151,6 +151,10 @@ export class StairsScore {
     this.send = ctx.createGain(); this.send.gain.value = 0; this.send.connect(wet);
   }
 
+  get phase(): StairsScorePhase | undefined {
+    return this.current?.phase;
+  }
+
   chordAt(when: number): readonly number[] {
     const part = this.current, pattern = STAIRS_SECTIONS[part?.phase ?? 'above'];
     const time = part ? phrasePosition(pattern, part.epoch, when) : 0;

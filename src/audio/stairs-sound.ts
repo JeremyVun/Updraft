@@ -58,6 +58,7 @@ export class StairsSound {
   private swellTarget = 0;
   private nextSwell = 0;
   private emerged = false;
+  private fogPeaked = false;
   private absent = 0;
   private stopped = false;
   private readonly body: GainNode;
@@ -148,9 +149,18 @@ export class StairsSound {
     const inCloud = phase === 'cloud' || phase === 'under';
     // Heard from below as the bird goes first, then all round them in the white.
     const inside = air ? Math.max(air.cloud, phase === 'cloud' ? k.fromBelow : 0) * (inCloud ? 1 : 0) : 0;
+    if (air?.phase === 'above' && !this.emerged) {
+      this.emerged = true;
+      if (noise) this.lastGust(noise, now);
+    }
+    if (air && air.fog >= 0.9) this.fogPeaked = true;
+    // Once out on top they stay up there, whatever a frame of boarding says, until the fog takes the hull down;
+    // the water comes back under it as that fog thins.
+    const onTop = !!air && this.emerged && phase !== 'fog' && phase !== 'down';
+    const height = !air ? 0 : onTop ? 1 : phase === 'fog' ? (this.fogPeaked ? 1 - air.fog : 1) : smooth(0, 0.55, climb);
     this.inside = ease(this.inside, inside * (1 - (air?.open ?? 0)), dt, inside > this.inside ? 0.8 : 0.45);
-    this.up = ease(this.up, air ? smooth(0, 0.55, climb) : 0, dt, 1.2);
-    this.open = ease(this.open, air ? air.open : 0, dt, 0.6);
+    this.up = ease(this.up, height, dt, 1.2);
+    this.open = ease(this.open, onTop ? 1 : air?.open ?? 0, dt, 0.6);
     this.fog = ease(this.fog, air?.fog ?? 0, dt, 0.8);
 
     this.buffets(now, dt, climb, phase === 'fog');
@@ -173,11 +183,6 @@ export class StairsSound {
     this.swells(now, dt);
     this.set(this.hull.gain, k.hullLevel * v * this.up * (1 - 0.55 * this.fog) * (0.85 + 0.25 * this.swell), now, 0.25);
     this.hullFilter.frequency.setTargetAtTime((800 + 1300 * v) * (1 - 0.35 * this.fog), now, 0.3);
-
-    if (air?.phase === 'above' && !this.emerged) {
-      this.emerged = true;
-      if (noise) this.lastGust(noise, now);
-    }
 
     const toward = !air ? this.drainTarget : phase !== 'under' ? 1 : smooth(0.05, 0.6, air.cloud);
     this.drainTarget = Math.max(this.drainTarget, toward);

@@ -187,7 +187,7 @@ function cueSheet(report) {
     [T.fog, 'The fog closes in. The village music is asked for; the sail fades over three seconds.'],
     [stage('gap'), 'Musical rest in the white (three seconds): only the soft wash of the fog.'],
     [stage('incoming'), 'The drowned village\'s own music comes in (approved, unchanged) as the fog is at its thickest and starts to thin.'],
-    [T.fogPeak[0], 'The hull comes down onto the water in the whiteout; the sea comes back under it as the fog thins.'],
+    [T.fogPeak[1], 'The fog thins: the hull came down onto the water in the whiteout, and the sea comes back under it.'],
     [T.down, 'On the village water: the drowned chapter owns everything from here. The room\'s own sounds let go.'],
   ].filter(([t]) => t !== undefined).sort((a, b) => a[0] - b[0]);
   const table = (segments) => segments.map(s => `| ${clock(s.from)}–${clock(s.to)} | ${s.label} | ${s.lufs <= -70 ? 'silent' : s.lufs} | ${s.shortTermMaxLufs ?? '–'} | ${s.peakDbFS.toFixed(1)} |`).join('\n');

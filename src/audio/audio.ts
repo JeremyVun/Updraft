@@ -1054,7 +1054,8 @@ export class Soundscape {
     }
     // The stairs take over from the birches' phrase once it has drained away in the white.
     const stairsMusic = !!s.stairsAir && bg.music === 'birches';
-    const stairsPhase = stairsMusic ? stairsScorePhase(s.stairsAir!) : undefined;
+    // Once begun, the room's score never falls silent again before the village takes over.
+    const stairsPhase = stairsMusic ? stairsScorePhase(s.stairsAir!) ?? this.stairsScore?.phase : undefined;
     if (stairsPhase && !s.silence && !backgroundPaused) {
       this.stairsScore ??= new StairsScore(ctx, this.backgroundBus, this.backgroundWet);
       this.stairsScore.update(stairsPhase, tuning.audio.stairsScoreLevel * room.score * (1 - piano), arrival.handoffAt);
