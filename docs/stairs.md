@@ -23,6 +23,14 @@ opening is the greening moment that moves the game from winter to spring." (So n
 
 > "I feel like the stairs are too finely defined and don't quite fit the dream like nature of the game."
 
+Then (2026-09-27, verbatim):
+
+> "but, i think the bones of it are right. few things for the next session to work on,
+> 1) the design of the stairs
+> 2) the feeling of climbing up the stairs a bit longer through the clouds. The wind, audio, visual effects as they go through and emerge on top into that beautiful peaceful cloud duvet scene. It should feel expansive and airy (audio is probably a lever to tune here)
+> 3) flying / sailing ontop of the clouds should be refined a bit more. It should be a slightly longer, more beautiful journey. Maybe the sailboat can be modified tastefully just for this journey to look more like an air ship / air boat instead of just the same sail boat
+> 4) The transition to the drowning island needs a better look at it. Right now, it's very obvious to the player that they are being invisibly dropped (the downward motion is seen and felt) through the clouds instead of the dreamlike nature of sailing through clouds and fog and suddenly emerging into the drowning village."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
