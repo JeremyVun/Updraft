@@ -401,19 +401,19 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
  * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
  */
-export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278, fat: 0.12 };
+export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278, fat: 0.1 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
   const ct = Math.cos(theta);
   /** Full cheeks below the eyes, rounding in to a smaller chin: a soft U, never a V and never a box. */
   const ring = ct >= 0 ? Math.sin(theta) : Math.pow(1 - Math.pow(-ct, 2.3), 1 / 2.3);
-  /** Baby fat: the whole lower face a little fuller, widest about the mouth and softly forward under the eyes. */
-  const fat = FACE.fat * Math.exp(-((ct + 0.5) ** 2) / 0.18);
+  /** Baby fat: low in the cheeks, widest just below the mouth and softly forward there, above a small round chin. */
+  const fat = FACE.fat * Math.exp(-((ct + 0.7) ** 2) / 0.07);
   const cheek = bump(ct + 0.45, 0.32);
-  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.13 * cheek + fat);
+  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.07 * cheek + fat);
   const y = (ct >= 0 ? FACE.up : FACE.down) * ct;
-  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.1 * cheek * bump(Math.abs(phi) - 0.8, 0.6) + 0.6 * fat * bump(Math.abs(phi) - 0.9, 0.55));
+  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.05 * cheek * bump(Math.abs(phi) - 0.8, 0.6) + 0.6 * fat * bump(Math.abs(phi) - 0.9, 0.55));
   if (z > 0) z *= 0.93;
   return out.set(x, y, z).add(FACE.c);
 }
