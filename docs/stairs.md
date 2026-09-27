@@ -97,42 +97,38 @@ goes up into the white and the child stops, the cygnet gets down and goes up fir
 child returns it (goes into the dark first so the bird won't have to); on the sleeping island the bird brings the
 light. Courage passes back and forth between them; the stairs are where it starts.
 
-## The room, beat by beat (second pass)
+## The room, beat by beat (third pass)
 
 1. **Under the cloud.** A short blind hop from the birches runs the boat under a low cloud deck onto a small grassy
-   island. From the grass a staircase a child would dream about (soft toy flights: chunky rounded steps, a dusty-rose
-   runner, a fat honey rail on a few round balusters with big knobs, no house) climbs in doglegs toward a billowed
-   ceiling of cloud lit gold where the low sun slips in under its edge. Two flights stand on the grass; two more hang
-   down out of the cloud; between them three have come loose and hang in the air, turning slowly. Every flight's
-   underside frays into mist, more the higher it hangs.
-2. **The loose flights (the puzzle).** The child climbs to where the stair stops. A gold drawing of the missing
-   flight shows where it belongs. A stroke over a loose flight carries it with the stroke, read on the flight's own
-   level so it stays under the hand, as the sky mirror's bubbles do; it coasts on when the stroke ends, and turns
-   itself to fit as it nears its place. Only the flight the stair is waiting for follows; the others only stir. It
-   settles with a wooden knock and a puff. The shot looks down across the gap from one side and holds still.
-3. **Into the cloud.** On the last landing below the white the child stops and looks up. They set the cygnet down on
-   the boards; it hops up into the white first and waits. The climb through the cloud is six flights, about 45 s:
-   close, a bit frightening, no sight of anything but the rail and the carpet and the bird ahead, the wind rising
-   and rags of cloud streaming across, the pocket of clear air closing in as they climb.
-4. **The ring (Jeremy's Penrose stairs).** Halfway up, the bird runs on up the next flight into the white, the white
-   closes round it, and it comes back up the flight below, behind the child. It stops, looks up, looks down and asks
-   (a small questioning peep, the only sound it makes in this room). Twice. Then the child goes first and the bird
-   comes at their heel, and this time the stair goes on up.
-5. **Above the clouds.** The release: out of the wind into a vast calm, the camera rising behind them as the cloud
-   opens to the sun. On the top landing a pair of small slippers; the bird settles in one, the child sits beside it;
-   far off across the sun a skein goes north. The boat waits a little off the landing on the cloud, under the kite.
-6. **The sail over the cloud.** The boat comes alongside; they board; the slippers stay. The kite is tied to the bow
-   and draws them along, a lantern lit at the bow, the hull ploughing a furrow in the cloud tops with puffs curling
-   off it, down a calm valley between gold heaps. A slow loop of about 240 m: out, round past the stair far off, then
-   west into the sun.
-7. **Down to the village.** They sail into a cloud bank: the cloud swells up round the hull and over them until there
-   is only white, the child a shape at the stern and the lantern's halo ahead. In the white the hull is let down onto
-   the sea unseen, the white goes grey and blue, the lantern gutters out, and the fog lifts off dark water in front
-   of the drowned village. The drowned chapter takes over as it clears.
+   island. The child sets the cygnet down on the grass (in this room it goes on its own feet the whole way), and
+   they look up. A staircase a child would dream about (soft toy flights: chunky rounded steps with their blocks
+   showing underneath, a dusty-rose runner, fat honey rails both sides on a few round balusters, big knobbed newels,
+   no house) climbs up and onward away from them: each flight goes off to one side, turns on a railed landing, and
+   the next goes off to the other, zigzagging north toward a ceiling of cloud lit gold where the low sun slips in
+   under its edge. It never comes back toward you. Two flights stand on the grass; two more come down out of the
+   cloud; between them three have come loose and hang in the air, turning slowly.
+2. **The loose flights (the puzzle).** As the second pass: the child climbs to where the stair stops, a gold drawing
+   of the missing flight shows where it belongs, a stroke over the loose flight carries it with the stroke on its
+   own level, and it turns itself to fit as it nears its place. The bird waits on the landing behind the child.
+3. **Into the cloud.** On the last landing below the white the child steps aside into its far corner and hangs back,
+   looking up; the bird comes past them, looks up too, and goes up into the white first, and waits.
+4. **The loop (Jeremy's Penrose stairs).** Halfway up the white the stair comes up into a hollow of clear air, onto
+   the corner of a square of flights, two short and two long. The child waits on the next corner. The lens rises
+   out of the white behind them to the one place high over the square from which it climbs for ever, and holds there
+   dead still. The bird runs on up and round: up, and up, and up, and comes up the flight below, behind the child,
+   where it started. It looks up the way it went, down the way it came, and asks (a small questioning peep). Round
+   again. A heap of cloud sits on the far corner; after the first round a blow can scatter it, and after the second
+   a sweep is drawn across it. Blown off, it shows a flight going on up from that corner that nobody could see; next
+   time round the bird takes it, the child follows, and the lens comes down after them, and from anywhere else the
+   square comes apart (its last flight shrinks toward a small copy of the corner, floating in front of it).
+5. **Above the clouds.** As the second pass: out of the wind into a vast calm; the slippers; the bird settles in one,
+   the child sits beside it; a skein goes north across the sun; the boat waits on the cloud under the kite.
+6. **The sail over the cloud.** As the second pass.
+7. **Down to the village.** As the second pass.
 
 ## Principles this room keeps
 
-- Wordless. The cygnet never calls here (its one unanswered call belongs to the sleeping island); in the ring it
+- Wordless. The cygnet never calls here (its one unanswered call belongs to the sleeping island); in the loop it
   only asks, with a small questioning peep (`cue('puzzled')`).
 - No failure, no timer that solves anything, no maze; the ghost flight says where each piece goes.
 - The cygnet never flies here and is never lifted by the wind: flight belongs to the sleeping island and home.
@@ -140,11 +136,24 @@ light. Courage passes back and forth between them; the stairs are where it start
 
 ## Build notes
 
-- Layout constants: `src/world/stairs-layout.ts` (13 flights, `LOOSE` 3–5, `BELOW_CLOUD` 7, `CLOUD`, `landingOf`,
-  `CLOUD_ROUTE`, `FOG_FROM`). World: `src/world/stairs.ts` (the toy flights, loose flights and ghost, slippers, the
-  billowed ceiling `cloudBelly`, the cloud top `cloudTop` with its calm channel along the route and the hull's
-  furrow), `stairs-puffs.ts` (soft cloud cards: under the flights, and the material for the rest),
-  `stairs-wisps.ts` (the cloud streaming past in the white; `engulf` hides the bird in the ring),
+- Layout: `src/world/stairs-layout.ts`. The stair is a list of flight specs (`SPECS`: which way, how many risers,
+  which face of its landing the next leaves by); `flight(i)`, `landingOf(i)` (in the landing's own frame, with
+  `openings` where flights meet it and `bare` sides), `onLanding`. Fifteen walking flights: `LOOSE` 3–5,
+  `BELOW_CLOUD` 7, the loop `LOOP` (corner 9, the child waits on 10, the way on leaves 11). The loop's far side,
+  which only the bird walks, is `LOOP_FAR` and `LOOP_BACK`; `LOOP_GAP` runs from the near corner to where its last
+  flight really arrives, a whole round higher and toward the eye.
+- The loop's trick: `src/world/stairs-penrose.ts`. The eye (`LOOP_EYE`) stands on the line of `LOOP_GAP`, so the
+  top of the last flight lies exactly in front of the near corner; that flight is drawn in (`drawIn`) to a copy of
+  the corner shrunk about the eye (`toCopy`, `LOOP_SHRINK`), so from the eye it covers the corner exactly. It works
+  from nowhere else, so `CloudStairs.trick` is drawn only while the lens is there and until they are on past it.
+  The bird is drawn smaller up that flight (`Cygnet.scale`, `sizeOnBack`) and at its top is put on the corner itself
+  along the same sightline (`fromCopy`). The long sides are long in steps, not walkways, which is why it is seen from
+  about 62° up. The lens: `Shot.zoom` (a longer focal length, eased), `Shot.exact` for the hold. While the lens is up
+  there the story deepens the deck over and under it and opens the pocket round it; `CloudStairs.hideTop` keeps the
+  cloud's top surface out of sight. The heap on the far corner: `src/world/stairs-bank.ts`.
+- World: `src/world/stairs.ts` (the toy flights, landings, loose flights and ghost, slippers, the loop's trick),
+  `stairs-cloud.ts` (the deck's underside over the island and its top under the sunset, the hull's furrow),
+  `stairs-puffs.ts` (soft cloud cards), `stairs-wisps.ts` (the cloud streaming past in the white),
   `stairs-wake.ts` (spray off the hull), `stairs-lantern.ts`. Chapter: `src/story/stairs.ts`. Feel knobs:
   `tuning.stairs`.
 - Order: birches → `toStairs` (short hop east, the deck comes down over the sea; it carries the birches' closing
@@ -152,21 +161,31 @@ light. Courage passes back and forth between them; the stairs are where it start
   `DESCENT_END`.
 - The cloud deck is analytic, in the shared fog (`cloudDeck` in `atmosphere.ts`) and the sky: a slab whose fringe
   thickens with height (so its underside has no edge), clipped to a disc, with a pocket of thinner cloud round
-  whoever is inside (`bubble`, its thickness `clearing`). Under it the low sun is let in at about half strength.
-  The chapter asks for the deck each frame (`CloudDeckState`; `snap` takes its base at once).
+  whoever is inside (`bubble`, its thickness `clearing`; only the inner 0.6 of the pocket is fully clear). Under it
+  the low sun is let in at about half strength. The chapter asks for the deck each frame (`CloudDeckState`; `snap`
+  takes its base at once).
 - Loose flights: `CloudStairs.brush` reads the stroke on the flight's own level and eases the flight's velocity to
   it (only the waited-for flight; the others move at `stir`); `update` turns it to fit inside `alignFrom` and draws
   it in when close and recently worked.
 - Walking on stairs: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge (`offTheEdge`).
-  `Cygnet.standAt` puts the bird somewhere at once (the ring, in the white).
+  The bird is routed stop by stop (it cuts corners) and drops an errand within 0.45 m, so arrival is checked at
+  0.55 m. `Cygnet.standAt` puts it somewhere at once.
 - Over the cloud the boat rides at a fixed height (`RIDE`); `Chapter.kiteTow` ties the stairs' departure kite to the
   bow and flies it ahead; `Chapter.cameraCut` lets the story cut the camera where nothing can be seen (the swap to
   sea level in the fog).
 - Sound: `src/audio/stairs-sound.ts`, `stairs-score.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed);
   the render `tools/stairs-audio-proposal.mjs`; the contract in `docs/contracts/audio.md`.
-- `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server (`BASE=`) and captures
-  each beat, the ring and the fog; `FROM=n` starts with n flights home, `UNTIL=n` stops after n, `TRACE=1` logs
-  the flights. Capture from a separate worktree with its own server while editing (`/private/tmp/updraft-stairs-cap`).
+- `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server (`BASE=`), captures
+  each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n` starts with n flights
+  home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree with its own server
+  while editing (`/private/tmp/updraft-stairs-cap`).
+
+## Status (2026-09-27, third pass, in progress)
+
+- Done on `stairs`: the stair climbs up and onward; fat rails both sides, big newels, rails round every landing,
+  stepped undersides; the cygnet walks the whole way; the Penrose loop, playable.
+- In progress on their own branches: the cloud's look from above and below (`stairs-cloud`), a volumetric haze
+  under the flights to replace the puff cards (`stairs-haze`). The boat's look is another session's (`boat-look`).
 
 ## Status (2026-09-27, second pass)
 
