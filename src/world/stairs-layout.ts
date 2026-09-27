@@ -119,11 +119,11 @@ export const DESCENT_END = new THREE.Vector2(16, -1254);
 
 /**
  * Where each loose flight is hanging when the room begins, as an offset from where it belongs: across (x),
- * along (z) and turned (yaw). The first is just out beside its place; the second has drifted across and turned
- * round; the third has gone out behind the tower and has to be brought back round it.
+ * along (z) and turned (yaw). All three hang out on the side the puzzle is seen from: the first just out beside
+ * its place, the second off to the north and turned across, the third away south and turned right round.
  */
 export const LOOSE_START = [
   { x: 4.2, z: 1.4, yaw: 0.35 },
-  { x: -5.2, z: -1.2, yaw: 1.4 },
-  { x: 4.8, z: -8.2, yaw: -2.3 },
+  { x: 3.6, z: -6.5, yaw: 1.4 },
+  { x: 2.2, z: 8.5, yaw: -2.4 },
 ] as const;

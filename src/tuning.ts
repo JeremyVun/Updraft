@@ -237,22 +237,26 @@ export const tuning = {
   },
   /** The stairs in the clouds: the loose flights the player's gusts bring home, and the climb. */
   stairs: {
-    /** Screen radius a stroke has to pass within to push a part of a flight, and how hard it pushes. */
-    brushRadius: 0.16, push: 0.09, strokeCap: 30,
-    /** How strongly a push off the middle turns a flight, and how quickly moving and turning die away. */
-    turn: 0.13, drag: 1.1, spinDrag: 1.4,
+    /** How near a stroke must pass a loose flight to take it, in metres at the flight, and how fast it can be carried. */
+    grip: 1.3, dragSpeed: 9,
+    /** How much a stroke moves the flights the stair is not waiting for yet. */
+    stir: 0.12,
+    /** How quickly a flight takes up the stroke over it, and how quickly it stops once the stroke has gone. */
+    follow: 16, drag: 2.2,
+    /** How fast a flight left alone turns, radians a second. */
+    idleTurn: 0.05,
     /** A flight never drifts further than this from its place. */
-    reach: 11,
+    reach: 13,
     /** And never nearer the camera than this, across the ground. */
-    lensClear: 11,
+    lensClear: 5,
+    /** Inside alignFrom metres of its place a flight turns itself to fit, all the way by alignNear, at this rate. */
+    alignFrom: 7, alignNear: 2.5, align: 2.4,
     /** A flight whose bottom tread comes this near its place, turned no further than this, draws itself home. */
-    captureGap: 1.8, captureTurn: 0.6, settleSeconds: 1.1,
-    /** Inside this much misplacement (metres, with a radian of turn counting as two) a flight is drawn toward home. */
-    pullFrom: 6.5, pull: 1.6,
-    /** Turned further than this from its place, a flight has to be brought round before it will draw itself home. */
-    alignWithin: 1.2,
-    /** How long after a push that feeling for home lasts. */
-    handled: 2.5,
+    captureGap: 1.5, captureTurn: 0.3, settleSeconds: 1.1,
+    /** Inside this much misplacement (metres) a flight still being worked is drawn toward home. */
+    pullFrom: 4, pull: 2.4,
+    /** How long after a stroke that drawing lasts. */
+    handled: 1.5,
     /** The child's pace on the stairs, as a share of a walk. */
     climb: 0.52,
     /** Cloud thickness per metre inside the deck, and inside the pocket round the child. */

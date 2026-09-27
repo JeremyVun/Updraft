@@ -8,7 +8,7 @@ import { atmo } from '../world/atmosphere';
 import { CloudStairs } from '../world/stairs';
 import {
   BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FLIGHT_RISE, FLIGHTS, LANE, LOOSE, SIT, SLIPPERS, STAIRS_ARRIVAL,
-  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, flight,
+  STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, flight, levelHeight,
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
@@ -533,35 +533,42 @@ export class StairsChapter implements Chapter {
     s.carry = false;
     s.carryAnchor = undefined;
     s.clearance = undefined;
+    s.smoothFit = undefined;
     this.focus.copy(c);
     switch (this.beat) {
       case 'ashore':
       case 'wonder': {
-        s.from = this.from.set(-0.45, 0, 0.9).normalize();
-        s.target.set(STAIRS_FOOT.x - 2, CLOUD.base - 7, STAIRS_FOOT.z - 3);
-        s.distance = 34;
-        s.height = -4;
+        // From the south, low: the child small on the grass, the stair going up into the cloud, the sun off to the left.
+        s.from = this.from.set(-0.22, 0, 1).normalize();
+        s.target.set(STAIRS_FOOT.x - 5, CLOUD.base - 8, STAIRS_FOOT.z - 2);
+        s.distance = 30;
+        s.height = -3.5;
         this.pace = 0.3;
         return;
       }
       case 'climb':
       case 'waiting': {
-        const piece = this.world.waiting;
-        s.from = this.from.set(0.82, 0, 0.55).normalize();
+        // One side of the stair, a little above it, and the same way on through the puzzle: looking down across
+        // the gap, the loose flight and the gold drawing of where it goes, and holding still while it is moved.
+        s.from = this.from.set(0.92, 0, 0.4).normalize();
         this.subjects.primary.copy(c).y += 1.1;
+        const piece = this.world.waiting;
+        const high = c.y > levelHeight(BELOW_CLOUD - 1);
         if (piece && this.beat === 'waiting') {
-          this.world.pointOn(piece, this.tmp2.lerpVectors(piece.flight.bottom, piece.flight.landing, 0.5), this.subjects.secondary);
-          this.subjects.tertiary.lerpVectors(piece.flight.bottom, piece.flight.landing, 0.5);
+          const home = this.tmp2.lerpVectors(piece.flight.bottom, piece.flight.landing, 0.5);
+          this.world.pointOn(piece, home, this.subjects.secondary);
+          this.subjects.tertiary.copy(home);
           s.subjects = this.subjects;
-          s.from = this.from.set(0.5, 0, 0.87).normalize();
-          s.target.copy(c).lerp(this.subjects.secondary, 0.35).lerp(this.subjects.tertiary, 0.25);
-          s.target.y = c.y + 1.8;
-          s.distance = 21;
-          s.height = 2.5;
+          s.smoothFit = 1.5;
+          s.target.copy(c).lerp(home, 0.6);
+          s.target.y = THREE.MathUtils.lerp(c.y + 1, home.y, 0.5);
+          s.distance = 17;
+          // Up over the gap, but never into the cloud.
+          s.height = Math.min(7.5, CLOUD.base - 2.4 - s.target.y);
         } else {
           s.target.set(c.x, c.y + 1.4, c.z);
-          s.distance = 12;
-          s.height = 2.2;
+          s.distance = high ? 11 : 13;
+          s.height = Math.min(4.5, CLOUD.base - 2.4 - s.target.y);
         }
         this.pace = 0.4;
         return;

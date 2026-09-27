@@ -7,6 +7,7 @@ import type { Deck } from './decks';
 import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { flightPuffs, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
+import { CloudWisps } from './stairs-wisps';
 import {
   BELOW_CLOUD, CLOUD, FLIGHT_RISE, FLIGHT_RUN, FLIGHTS, LANE, LOOSE, LOOSE_START, SLIPPERS, STAIRS_ISLE, STEP, flight, landingOf, type Flight,
 } from './stairs-layout';
@@ -440,6 +441,8 @@ export class CloudStairs {
   readonly pieces: LoosePiece[] = [];
   readonly cloudTop: THREE.Mesh;
   readonly cloudBelly: THREE.Mesh;
+  /** The cloud streaming past on the way up through the white. */
+  readonly wisps = new CloudWisps();
   /** Called with a piece's flight number as it knocks home. */
   onDocked: (index: number) => void = () => {};
   /** 0 hides the ghost of the next missing flight; 1 draws it. */
@@ -449,8 +452,6 @@ export class CloudStairs {
   private readonly bellyUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number } };
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
-  private readonly forward = new THREE.Vector3();
-  private readonly right = new THREE.Vector3();
   private time = 0;
 
   constructor() {
@@ -567,6 +568,7 @@ export class CloudStairs {
     this.cloudBelly.renderOrder = -2;
     this.cloudBelly.visible = false;
     this.group.add(this.cloudBelly);
+    this.group.add(this.wisps.mesh);
     this.pose();
   }
 
@@ -597,40 +599,52 @@ export class CloudStairs {
     return out.add(piece.pivot).add(this.tmp2.set(piece.offset.x, 0, piece.offset.z));
   }
 
+  /** Where a screen point meets the level at height h, or null if its sightline never gets there near enough. */
+  private onLevel(ndc: THREE.Vector2, h: number, camera: THREE.Camera, out: THREE.Vector3): THREE.Vector3 | null {
+    out.set(ndc.x, ndc.y, 0.5).unproject(camera).sub(camera.position);
+    const t = (h - camera.position.y) / out.y;
+    if (!Number.isFinite(t) || t <= 0) return null;
+    out.multiplyScalar(t).add(camera.position);
+    return out.distanceTo(camera.position) < 90 ? out : null;
+  }
+
   /**
-   * The player's strokes push whatever part of a loose flight they cross, the way a gust pushes a toy boat: a
-   * push on its middle moves it, a push on one end turns it about the other. The flights hang in the air, so a
-   * stroke is read at the flight's own depth: across the screen is across the view, up the screen is away.
+   * A loose flight goes where the wind over it goes, the way the sky mirror's bubbles do: a stroke across it sets
+   * it moving with the stroke, read on the flight's own level so that on screen it stays under the hand, and it
+   * coasts on when the stroke ends. It turns itself round as it nears its place; the player never has to.
    */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, dt: number): void {
+    this.wisps.brush(camera, input, dt);
     if (!input.present || input.muted || dt <= 0) return;
-    const sx = (input.ndc.x - input.prevNdc.x) * camera.aspect, sy = input.ndc.y - input.prevNdc.y;
-    if (sx * sx + sy * sy < 1e-8) return;
+    if (input.ndc.distanceTo(input.prevNdc) < 5e-4) return;
     const k = tuning.stairs;
-    camera.getWorldDirection(this.forward).setY(0).normalize();
-    this.right.set(-this.forward.z, 0, this.forward.x);
     const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    const next = this.waiting;
     for (const piece of this.pieces) {
       if (piece.docked || piece.settling > 0) continue;
       const f = piece.flight;
-      for (const at of [0.04, 0.5, 0.96]) {
-        this.tmp.lerpVectors(f.bottom, f.landing, at).y += 0.6;
+      let hit = 0;
+      for (const along of [0.05, 0.35, 0.65, 0.95]) {
+        this.tmp.lerpVectors(f.bottom, f.landing, along).y += 0.4;
         const p = this.pointOn(piece, this.tmp, this.tmp);
-        const w = screenBrush(camera, p, input.prevNdc, input.ndc, k.brushRadius);
-        if (w <= 0) continue;
-        const depth = p.distanceTo(camera.position) * halfHeight;
-        const vx = (this.right.x * sx + this.forward.x * sy) * depth / dt;
-        const vz = (this.right.z * sx + this.forward.z * sy) * depth / dt;
-        const speed = Math.hypot(vx, vz);
-        const scale = speed > k.strokeCap ? k.strokeCap / speed : 1;
-        const fx = vx * scale * w * k.push, fz = vz * scale * w * k.push;
-        piece.velocity.x += fx;
-        piece.velocity.z += fz;
-        const rx = p.x - (piece.pivot.x + piece.offset.x), rz = p.z - (piece.pivot.z + piece.offset.z);
-        piece.velocity.y += (rz * fx - rx * fz) * k.turn;
-        piece.worked += w * dt;
-        piece.handled = tuning.stairs.handled;
+        const radius = THREE.MathUtils.clamp(k.grip / (p.distanceTo(camera.position) * halfHeight), 0.07, 0.3);
+        hit = Math.max(hit, screenBrush(camera, p, input.prevNdc, input.ndc, radius));
       }
+      if (hit <= 0) continue;
+      const level = piece.pivot.y;
+      const from = this.onLevel(input.prevNdc, level, camera, this.tmp);
+      const to = from && this.onLevel(input.ndc, level, camera, this.tmp2);
+      if (!from || !to) continue;
+      let vx = (to.x - from.x) / dt, vz = (to.z - from.z) / dt;
+      const speed = Math.hypot(vx, vz);
+      if (speed > k.dragSpeed) { vx *= k.dragSpeed / speed; vz *= k.dragSpeed / speed; }
+      // Following a reversal at once rather than adding up forces until they cancel. The flights the stair is not
+      // waiting for yet only stir.
+      const response = (1 - Math.exp(-dt * k.follow * Math.min(1, Math.sqrt(hit) * 2))) * (piece === next ? 1 : k.stir);
+      piece.velocity.x += (vx - piece.velocity.x) * response;
+      piece.velocity.z += (vz - piece.velocity.z) * response;
+      piece.worked += hit * dt;
+      piece.handled = k.handled;
     }
   }
 
@@ -657,14 +671,14 @@ export class CloudStairs {
       const drag = Math.exp(-dt * k.drag);
       v.x *= drag;
       v.z *= drag;
-      v.y *= Math.exp(-dt * k.spinDrag);
       o.x += v.x * dt;
       o.z += v.z * dt;
-      o.y += v.y * dt;
-      // Nothing drifts up to the lens, where a flight would fill the view and dissolve out of reach.
+      // Left alone it turns very slowly, like a leaf on a pond.
+      o.y += Math.sin(this.time * 0.13 + piece.pivot.y) * k.idleTurn * dt;
+      // Nothing is carried up to the lens, where a flight would fill the view and dissolve out of reach.
       const cx = piece.pivot.x + o.x - camera.position.x, cz = piece.pivot.z + o.z - camera.position.z;
       const near = Math.hypot(cx, cz);
-      if (near < k.lensClear && near > 1e-3) {
+      if (near < k.lensClear && near > 1e-3 && Math.hypot(v.x, v.z) > 0.05) {
         o.x += cx / near * (k.lensClear - near);
         o.z += cz / near * (k.lensClear - near);
         const into = (v.x * cx + v.z * cz) / near;
@@ -679,22 +693,20 @@ export class CloudStairs {
       }
       if (piece === next) {
         o.y = Math.atan2(Math.sin(o.y), Math.cos(o.y));
-        const turned = Math.abs(o.y);
         const bottom = this.pointOn(piece, piece.flight.bottom, this.tmp);
         const gap = Math.hypot(bottom.x - piece.flight.bottom.x, bottom.z - piece.flight.bottom.z);
-        // Near its place a flight feels where it belongs, and leans that way: a near miss slides home.
+        const off = Math.hypot(o.x, o.z);
+        // As it comes near its place it turns itself to fit, and once it is close and still being worked it
+        // draws itself in: a near miss slides home.
+        const nearing = 1 - THREE.MathUtils.smoothstep(off, k.alignNear, k.alignFrom);
+        o.y *= Math.exp(-dt * k.align * nearing);
         piece.handled = Math.max(0, piece.handled - dt);
-        const near = Math.min(1, piece.handled) * (1 - THREE.MathUtils.smoothstep(Math.hypot(o.x, o.z), k.pullFrom * 0.4, k.pullFrom));
-        if (near > 0) {
-          v.x -= o.x * k.pull * near * dt;
-          v.z -= o.z * k.pull * near * dt;
-          // It only turns itself the rest of the way once it is roughly the right way round.
-          v.y -= o.y * k.pull * 1.5 * near * (1 - THREE.MathUtils.smoothstep(turned, k.alignWithin * 0.6, k.alignWithin)) * dt;
+        const drawn = Math.min(1, piece.handled) * (1 - THREE.MathUtils.smoothstep(off, k.pullFrom * 0.4, k.pullFrom));
+        if (drawn > 0) {
+          v.x -= o.x * k.pull * drawn * dt;
+          v.z -= o.z * k.pull * drawn * dt;
         }
-        if (gap < k.captureGap && turned < k.captureTurn) {
-          piece.settling = 1e-3;
-          o.y = Math.atan2(Math.sin(o.y), Math.cos(o.y));
-        }
+        if (gap < k.captureGap && Math.abs(o.y) < k.captureTurn) piece.settling = 1e-3;
       }
     }
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
@@ -702,6 +714,7 @@ export class CloudStairs {
     const deck = atmo.uniforms.uCloudDeck.value;
     this.cloudTop.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
+    this.wisps.update(dt, time);
     this.cloudBelly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 0.3;
     this.bellyUniforms.uCentre.value.copy(this.topUniforms.uCentre.value);
   }
@@ -709,8 +722,8 @@ export class CloudStairs {
   private pose(): void {
     const next = this.waiting;
     this.pieces.forEach((piece, i) => {
-      const bob = piece.docked ? 0 : (1 - piece.settling) * Math.sin(this.time * 0.6 + i * 2.1) * 0.12;
-      const sway = piece.docked ? 0 : (1 - piece.settling) * Math.sin(this.time * 0.37 + i) * 0.035;
+      const bob = piece.docked ? 0 : (1 - piece.settling) * Math.sin(this.time * 0.6 + i * 2.1) * 0.08;
+      const sway = piece.docked ? 0 : (1 - piece.settling) * Math.sin(this.time * 0.37 + i) * 0.025;
       piece.group.position.set(piece.pivot.x + piece.offset.x, piece.pivot.y + bob, piece.pivot.z + piece.offset.z);
       piece.group.rotation.set(sway * 0.4, piece.offset.y, sway);
       piece.ghost.visible = piece === next && this.ghostUniform.value > 0.01;

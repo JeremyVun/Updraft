@@ -43,7 +43,7 @@ void main() {
     + 0.5 * vnoise(vec2(around * 4.3 - vCentre.y * 3.0, uTime * 0.2));
   // Soft all the way from the middle, so overlapping balls add up to mist rather than show as a bunch of balls.
   float body = 1.0 - smoothstep(0.0, 0.8 + 0.3 * lump, d);
-  float a = body * body * vAlpha * uPuffs;
+  float a = body * body * vAlpha * uPuffs * smoothstep(0.8, 3.0, distance(vCentre, cameraPosition));
   if (a <= 0.004) discard;
   float k = min(d, 1.0);
   vec3 nv = vec3(vCorner / max(d, 1.0), sqrt(max(0.0, 1.0 - k * k)));
@@ -57,11 +57,9 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), a);
 }`;
 
-export const puffUniform = { value: 1 };
-
-export function puffMaterial(): THREE.ShaderMaterial {
+export function puffMaterial(amount = { value: 1 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, uPuffs: puffUniform },
+    uniforms: { ...atmo.uniforms, uPuffs: amount },
     vertexShader: VERT,
     fragmentShader: FRAG,
     transparent: true,

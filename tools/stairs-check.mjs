@@ -72,30 +72,18 @@ try {
       await page.waitForTimeout(ms / n);
     }
   };
-  /**
-   * Where the waiting flight's two ends are on screen now, and how far each is from home in the view's own
-   * terms: across the screen, and away from the lens (up the screen), which is how a stroke pushes a flight.
-   */
+  /** Where the waiting flight is on screen now, and where its gold drawing is, both at the flight's own level. */
   const aim = () => page.evaluate(([w, h]) => {
     const g = window.__game;
     const piece = g.cloudStairs.waiting;
     if (!piece) return null;
     const cam = g.rig.camera;
-    const fwd = cam.getWorldDirection(g.child.position.clone()).setY(0).normalize();
     const scr = (v) => { const p = v.clone().project(cam); return [(p.x * 0.5 + 0.5) * w, (0.5 - p.y * 0.5) * h]; };
     const f = piece.flight;
-    const ends = [f.bottom, f.landing].map((home) => {
-      const now = g.cloudStairs.pointOn(piece, home.clone(), home.clone());
-      const ex = home.x - now.x, ez = home.z - now.z;
-      return { at: scr(now), across: ex * -fwd.z + ez * fwd.x, away: ex * fwd.x + ez * fwd.z, far: Math.hypot(ex, ez) };
-    });
-    // A push across the landing end turns the flight about its pivot; this is the way that undoes the turn.
-    const top = g.cloudStairs.pointOn(piece, f.landing.clone(), f.landing.clone());
-    const rx = top.x - (piece.pivot.x + piece.offset.x), rz = top.z - (piece.pivot.z + piece.offset.z);
-    const r = Math.hypot(rx, rz) || 1, sign = -Math.sign(piece.offset.y);
-    const tx = sign * rz / r, tz = sign * -rx / r;
-    const spin = { at: scr(top), across: tx * -fwd.z + tz * fwd.x, away: tx * fwd.x + tz * fwd.z, far: Math.abs(piece.offset.y) * 1.5 };
-    return { ends, spin, settling: piece.settling, turn: +piece.offset.y.toFixed(2), off: [+piece.offset.x.toFixed(2), +piece.offset.z.toFixed(2)] };
+    const home = f.bottom.clone().lerp(f.landing, 0.5);
+    const now = g.cloudStairs.pointOn(piece, home.clone(), home.clone());
+    return { at: scr(now), to: scr(home), far: +now.distanceTo(home).toFixed(2), settling: piece.settling,
+      turn: +piece.offset.y.toFixed(2), off: [+piece.offset.x.toFixed(2), +piece.offset.z.toFixed(2)] };
   }, [width, height]);
 
   // Every change of beat, with the time, so a skipped or hurried beat shows up in the log.
@@ -126,14 +114,12 @@ try {
       const a = await aim();
       if (!a || a.settling > 0) break;
       if (strokes % 5 === 0) log('  stroke', strokes, JSON.stringify({ off: a.off, turn: a.turn }));
-      // Push whichever end is further from home, the way it needs to go.
-      const end = Math.abs(a.turn) > 0.9 ? a.spin : a.ends[0].far >= a.ends[1].far ? a.ends[0] : a.ends[1];
-      const len = Math.hypot(end.across, end.away) || 1;
-      const d = [end.across / len, -end.away / len];
-      const reach = Math.min(200, 60 + end.far * 30);
-      await swipe([end.at[0] - d[0] * 50, end.at[1] - d[1] * 50], [end.at[0] + d[0] * reach, end.at[1] + d[1] * reach], 220 + Math.min(260, end.far * 40));
-      await page.waitForTimeout(650);
-      if (strokes === 4) await shot(`04-push-${n + 1}`);
+      // Take hold of it where it is and draw it over its gold drawing, the way you would by hand.
+      const dx = a.to[0] - a.at[0], dy = a.to[1] - a.at[1];
+      const len = Math.hypot(dx, dy) || 1;
+      await swipe([a.at[0] - dx / len * 30, a.at[1] - dy / len * 30], a.to, 500 + Math.min(900, len * 2.5));
+      await page.waitForTimeout(700);
+      if (strokes === 1) await shot(`04-push-${n + 1}`);
     }
     log('strokes', strokes);
     s = await until((x) => x.docked > n, 8000);
