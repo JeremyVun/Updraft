@@ -5,7 +5,7 @@ import { glsl, tuning } from '../tuning';
 import type { ChapterName } from '../story/journey';
 
 export const ROOMS = { island: { x: -6, z: -14, rx: 85, rz: 65 }, lines: ISLES.lines,
-  shore: DOOR_SHORE, boats: ISLES.boats, meadow: ISLES.meadow, birches: ISLES.birches,
+  shore: DOOR_SHORE, boats: ISLES.boats, meadow: ISLES.meadow, birches: ISLES.birches, stairs: ISLES.stairs,
   drowned: ISLES.drowned, wood: ISLES.wood, sleeping: ISLES.sleeping, mirror: SKY_MIRROR, home: ISLES.home };
 export type Room = keyof typeof ROOMS;
 const names = Object.keys(ROOMS) as Room[];
@@ -53,17 +53,20 @@ export class JourneyReveal {
 export const journeyReveal = new JourneyReveal();
 const passages: Partial<Record<ChapterName, Room[]>> = {
   toLines: ['island', 'lines'], lines: ['lines', 'shore'], toBoats: ['shore', 'boats'],
-  toMeadow: ['boats', 'meadow'], toBirches: ['meadow', 'birches'],
+  toMeadow: ['boats', 'meadow'], toBirches: ['meadow', 'birches'], toStairs: ['birches', 'stairs'],
   toWood: ['drowned', 'wood'], toSleeping: ['wood', 'sleeping'],
   toMirror: ['sleeping', 'mirror'], toHarbour: ['mirror', 'home'], toHome: ['sleeping', 'home'],
 };
 const STAGE: Room[] = ['meadow'];
 const DROWNED_FROM_BIRCHES: Room[] = ['birches', 'drowned'];
+const DROWNED_FROM_STAIRS: Room[] = ['stairs', 'drowned'];
 const DROWNED_TO_WOOD: Room[] = ['drowned', 'wood'];
 const alone = Object.fromEntries(names.map(room => [room, [room]])) as Record<Room, Room[]>;
+/** Saves from before the stairs still sail into the village from the birches' beach. */
+export const drownedEntry = { fromBirches: false };
 export function visibleRooms(chapter: ChapterName, z: number): readonly Room[] {
   if (chapter === 'stage') return STAGE;
-  if (chapter === 'drowned') return z > ISLES.drowned.z ? DROWNED_FROM_BIRCHES : DROWNED_TO_WOOD;
+  if (chapter === 'drowned') return z > ISLES.drowned.z ? drownedEntry.fromBirches ? DROWNED_FROM_BIRCHES : DROWNED_FROM_STAIRS : DROWNED_TO_WOOD;
   return passages[chapter] ?? alone[chapter as Room] ?? [chapter as Room];
 }
 export function setJourneyRooms(rooms: Room[]): void {

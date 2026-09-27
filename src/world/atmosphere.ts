@@ -154,6 +154,15 @@ export const atmo = {
     uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
     uLifeWave: { value: new THREE.Vector4(0, 0, -1, 1) },
+    /**
+     * The low cloud deck over the stairs: centre (x, z), how far out it lies, and how much of it there is.
+     * At amount 0 every other room pays one comparison for it.
+     */
+    uCloudDeck: { value: new THREE.Vector4(0, 0, 1, 0) },
+    /** Its base and top heights, how thick it is inside, and how thick it still is in the clear air round the child. */
+    uCloudDeckY: { value: new THREE.Vector4(0, 1, 0.5, 0.05) },
+    /** The pocket of thinner cloud the story keeps round whoever is climbing through it: centre and radius. */
+    uCloudBubble: { value: new THREE.Vector4(0, -1e4, 0, 0) },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
     uNoiseTile: noiseTileUniforms.uNoiseTile,
@@ -283,6 +292,9 @@ uniform vec2 uSleepMistAxis;
 uniform vec4 uTrodden;
 uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
+uniform vec4 uCloudDeck;
+uniform vec4 uCloudDeckY;
+uniform vec4 uCloudBubble;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -476,10 +488,86 @@ float cloudShadow(vec2 xz) {
   vec2 uv = (xz - uCloudDomain.xy) * uCloudDomain.zw;
   vec2 edge = min(uv, 1.0 - uv);
   /** Past the sheet the edge texel would streak out over the world as a hard wedge, so it opens to clear sky. */
-  return mix(1.0, texture(uCloudTex, clamp(uv, 0.0, 1.0)).r, smoothstep(0.0, 0.04, min(edge.x, edge.y)));
+  float lit = mix(1.0, texture(uCloudTex, clamp(uv, 0.0, 1.0)).r, smoothstep(0.0, 0.04, min(edge.x, edge.y)));
+  // Under the stairs' cloud deck the sun is gone. Seen from below, everything in view is below it too.
+  if (uCloudDeck.w > 0.0) {
+    float under = 1.0 - smoothstep(uCloudDeckY.x - 2.0, uCloudDeckY.y, cameraPosition.y);
+    lit *= 1.0 - 0.8 * uCloudDeck.w * under;
+  }
+  return lit;
 }
 
 ${SKY_RADIANCE_GLSL}
+
+
+/** The part of [0, far] along a ray that lies between two heights. */
+vec2 deckSlab(vec3 ro, vec3 rd, float base, float top, float far) {
+  if (abs(rd.y) < 1e-5) return ro.y > base && ro.y < top ? vec2(0.0, far) : vec2(1.0, 0.0);
+  float a = (base - ro.y) / rd.y;
+  float b = (top - ro.y) / rd.y;
+  return vec2(max(min(a, b), 0.0), min(max(a, b), far));
+}
+/** The part of a ray inside a vertical cylinder of radius r about (c.x, c.y). */
+vec2 deckColumn(vec3 ro, vec3 rd, vec2 c, float r) {
+  vec2 o = ro.xz - c;
+  float a = dot(rd.xz, rd.xz);
+  if (a < 1e-8) return dot(o, o) < r * r ? vec2(0.0, 1e9) : vec2(1.0, 0.0);
+  float b = dot(o, rd.xz);
+  float h = b * b - a * (dot(o, o) - r * r);
+  if (h < 0.0) return vec2(1.0, 0.0);
+  h = sqrt(h);
+  return vec2((-b - h) / a, (-b + h) / a);
+}
+vec2 deckSphere(vec3 ro, vec3 rd, vec3 c, float r) {
+  vec3 o = ro - c;
+  float b = dot(o, rd);
+  float h = b * b - dot(o, o) + r * r;
+  if (h < 0.0) return vec2(1.0, 0.0);
+  h = sqrt(h);
+  return vec2(-b - h, -b + h);
+}
+float deckSpan(vec2 a, vec2 b) {
+  return max(0.0, min(a.y, b.y) - max(a.x, b.x));
+}
+
+/**
+ * The stairs' cloud deck along a sightline of length far: rgb its light, a how much of the view it covers.
+ * Analytic, so it costs the same per vertex as per pixel: a slab, clipped to its disc, with the pocket round
+ * the child hollowed out of it. Its light comes from where a sightline first gets well into it: sunlit gold on
+ * top, lilac grey underneath, and lighter the higher up in it you are.
+ */
+vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
+  vec2 slab = deckSlab(ro, rd, uCloudDeckY.x, uCloudDeckY.y, far);
+  vec2 disc = deckColumn(ro, rd, uCloudDeck.xy, uCloudDeck.z);
+  vec2 inside = vec2(max(slab.x, disc.x), min(slab.y, disc.y));
+  float len = inside.y - inside.x;
+  if (len <= 0.0) return vec4(0.0);
+  float thin = uCloudDeckY.z - uCloudDeckY.w;
+  float cleared = 0.0;
+  if (uCloudBubble.w > 0.0) {
+    cleared = 0.55 * deckSpan(inside, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w))
+      + 0.45 * deckSpan(inside, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w * 0.6));
+  }
+  float depth = uCloudDeckY.z * len - thin * cleared;
+  vec3 p = ro + rd * min(inside.x + 1.2 / uCloudDeckY.z, inside.y);
+  // The far edge of the deck frays out rather than ending along a line.
+  float edge = 1.0 - smoothstep(0.55, 1.0, length(p.xz - uCloudDeck.xy) / uCloudDeck.z);
+  float cover = (1.0 - exp(-depth * edge)) * uCloudDeck.w;
+  float up = clamp((p.y - uCloudDeckY.x) / max(uCloudDeckY.y - uCloudDeckY.x, 1.0), 0.0, 1.0);
+  vec2 q = p.xz + uCloudShift * 0.5;
+  float cells = smoothstep(0.25, 0.75, vnoise(q * 0.075));
+  float billow = vnoise(q * 0.021) * 0.55 + vnoise(q * 0.06) * 0.25 + cells * 0.2;
+  float sunUp = clamp(uSunDir.y * 3.0 + 0.25, 0.0, 1.0);
+  // A low sun under the edge of the deck lights its underside from beneath, warmest toward the sun and far off.
+  vec2 away = p.xz - ro.xz;
+  float reach = length(away);
+  float sunward = reach > 1.0 ? pow(max(0.0, dot(away / reach, normalize(uSunDir.xz + 1e-5))), 3.0) : 0.0;
+  vec3 under = uSkyAmbient * 0.5 + uGroundBounce * 0.3 + uSunColor * (0.03 + 0.55 * sunward * smoothstep(30.0, 500.0, reach));
+  vec3 over = uSunColor * (0.55 + 0.35 * sunUp) + uSkyAmbient * 0.55;
+  vec3 light = mix(under, over, smoothstep(0.0, 1.0, pow(up, 1.4)));
+  light *= 0.66 + 0.55 * billow;
+  return vec4(light, clamp(cover, 0.0, 1.0));
+}
 
 /** How much of a sightline to wpos passes over a coast; sea behind a hill must have the same cover as the hill. */
 float coastCover(vec4 coast, vec3 wpos, float inner, float outer) {
@@ -518,6 +606,9 @@ vec4 fogOf(vec3 wpos, float landscape) {
     float homeDistance = distance(cameraPosition.xz, vec2(${glsl(HOME_JETTY.x)}, ${glsl(HOME_JETTY.endZ)})) + ${glsl(tuning.homeApproach.landDepth)};
     fogDistance = mix(dist, homeDistance, homeRegion * uHomeHaze);
   }
+  vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, rd, dist) : vec4(0.0);
+  // Haze lies between the eye and the cloud, not behind a deck that has already covered the view.
+  fogDistance = mix(fogDistance, min(fogDistance, 40.0), deck.a);
   float heightFactor = exp(-max(wpos.y, 0.0) * 0.06);
   float mist = uMist * exp(-max(min(wpos.y, cameraPosition.y), 0.0) * 0.22);
   float veil = max(0.0, fogDistance - uVeil.x) * uVeil.y;
@@ -559,6 +650,11 @@ vec4 fogOf(vec3 wpos, float landscape) {
       fogCol = mix(fogCol, skyRadiance(rd), hidden);
       amt = max(amt, hidden);
     }
+  }
+  if (deck.a > 0.0) {
+    float total = 1.0 - (1.0 - amt) * (1.0 - deck.a);
+    fogCol = (deck.rgb * deck.a * (1.0 - amt) + fogCol * amt) / max(total, 1e-4);
+    amt = total;
   }
   float arriving = journeyVeilAt(wpos);
   if (arriving > 0.0) {

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { WindField, WindSample } from '../wind/field';
 import { tuning } from '../tuning';
 import { fieldAt, type FieldSample } from '../world/fields';
-import { heightAt } from '../world/island';
+import { deckGround, type Deck } from '../world/decks';
 import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
 import { buildChild, FOREARM, keepOffChild, UPPER_ARM, type Rig, type SocketName } from './body';
@@ -35,17 +35,7 @@ interface Goal {
 
 const OBSTACLES = [...ROCKS, { x: TREE.x, z: TREE.z, radius: 1.3 }];
 
-/** A built surface over the water the child can walk on: a jetty's deck, a strip from one end to the other. */
-export interface Deck {
-  x0: number;
-  z0: number;
-  x1: number;
-  z1: number;
-  halfWidth: number;
-  height: number;
-  /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
-  stepOffDepth?: number;
-}
+export type { Deck } from '../world/decks';
 const WALK = 2.6;
 const RUN = 5.4;
 const SHADOW_FRAG = /* glsl */ `
@@ -338,17 +328,7 @@ export class Traveller {
 
   /** The terrain under a point, or a deck built over it. */
   private ground(x: number, z: number): number {
-    for (const d of this.decks) {
-      const dx = d.x1 - d.x0;
-      const dz = d.z1 - d.z0;
-      const len2 = dx * dx + dz * dz;
-      const t = ((x - d.x0) * dx + (z - d.z0) * dz) / len2;
-      if (t < 0 || t > 1) continue;
-      const px = d.x0 + dx * t;
-      const pz = d.z0 + dz * t;
-      if (Math.hypot(x - px, z - pz) <= d.halfWidth) return Math.max(d.height, heightAt(x, z));
-    }
-    return heightAt(x, z);
+    return deckGround(this.decks, x, z, this.position.y);
   }
 
   place(x: number, z: number, yaw: number): void {

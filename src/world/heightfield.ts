@@ -2,6 +2,7 @@ import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsOut, boatsLevel } from './little-boats-layout';
+import { STAIRS_GROUND, STAIRS_ISLE, STAIRS_TERRACE } from './stairs-layout';
 
 /**
  * The terrain height of the whole world, written twice: in TypeScript for gameplay and in GLSL for baking and
@@ -138,6 +139,8 @@ export const ISLES = {
   },
   boats: LITTLE_BOATS,
   birches: { x: 0, z: -1128, rx: 60, rz: 80 },
+  /** The knoll the stairs stand on, under the cloud off the birches' north-east beach. */
+  stairs: STAIRS_ISLE,
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
   wood: { x: -30, z: -1800, rx: 130, rz: 115 },
   /** The frosted island the bed stands on, out west on the long crossing's own detour. */
@@ -313,6 +316,19 @@ function sleepingHeight(x: number, z: number): number {
   return h - smoothstep(0, 36, d) * 8;
 }
 
+/** The knoll under the cloud: a grassy dome, levelled where the stair stands, shelving west to a beach. */
+function stairsHeight(x: number, z: number): number {
+  const c = ISLES.stairs;
+  const d = isleCoast(x, z, c, 0.12, 91);
+  const land = smoothstep(12, -20, d);
+  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  let h = land * 3.0 - 1.5;
+  h += land * land * (Math.max(0, 1 - r * r) * 3.6 + (gfbm(x * 0.035, z * 0.035, 3, 92) * 0.5 + 0.5) * 1.8);
+  const terrace = 1 - smoothstep(STAIRS_TERRACE.radius * 0.55, STAIRS_TERRACE.radius, Math.hypot(x - STAIRS_TERRACE.x, z - STAIRS_TERRACE.z));
+  h += (STAIRS_GROUND - h) * terrace * land;
+  return h - smoothstep(0, 36, d) * 8;
+}
+
 /** The top of the last hill, where the journey ends. */
 export const LAST_HILL = { x: -30 + HOME_SHIFT.x, z: -2060 + HOME_SHIFT.z } as const;
 
@@ -350,6 +366,7 @@ function rawHeight(x: number, z: number): number {
   h = Math.max(h, littleBoatsHeight(x, z));
   h = smax(h, meadowHeight(x, z), 6);
   h = smax(h, birchesHeight(x, z), 6);
+  h = smax(h, stairsHeight(x, z), 6);
   h = smax(h, drownedHeight(x, z), 6);
   h = smax(h, woodHeight(x, z), 6);
   h = smax(h, sleepingHeight(x, z), 6);
@@ -556,6 +573,18 @@ float hf_birches(vec2 p) {
   h-=4.5*smoothstep(1.65,3.8,across)*(1.0-smoothstep(2.2,5.5,abs(along)));
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
+float hf_stairs(vec2 p) {
+  vec2 c = vec2(${glsl(ISLES.stairs.x)}, ${glsl(ISLES.stairs.z)});
+  vec2 r = vec2(${glsl(ISLES.stairs.rx)}, ${glsl(ISLES.stairs.rz)});
+  float d = hf_isleCoast(p, c, r, 0.12, 91.0);
+  float land = (1.0 - smoothstep(-20.0, 12.0, d));
+  float rr = length((p - c) / r);
+  float h = land * 3.0 - 1.5;
+  h += land * land * (max(0.0, 1.0 - rr * rr) * 3.6 + (gfbm(p * 0.035, 3, 92.0) * 0.5 + 0.5) * 1.8);
+  float terrace = 1.0 - smoothstep(${glsl(STAIRS_TERRACE.radius * 0.55)}, ${glsl(STAIRS_TERRACE.radius)}, length(p - vec2(${glsl(STAIRS_TERRACE.x)}, ${glsl(STAIRS_TERRACE.z)})));
+  h += (${glsl(STAIRS_GROUND)} - h) * terrace * land;
+  return h - smoothstep(0.0, 36.0, d) * 8.0;
+}
 float hf_drowned(vec2 p) {
   vec2 c = vec2(${ISLES.drowned.x}.0, ${ISLES.drowned.z}.0);
   vec2 r = vec2(${ISLES.drowned.rx}.0, ${ISLES.drowned.rz}.0);
@@ -647,6 +676,7 @@ float worldHeight(vec2 p) {
   h = max(h, hf_littleBoats(p));
   h = hf_smax(h, hf_meadow(p), 6.0);
   h = hf_smax(h, hf_birches(p), 6.0);
+  h = hf_smax(h, hf_stairs(p), 6.0);
   h = hf_smax(h, hf_drowned(p), 6.0);
   h = hf_smax(h, hf_wood(p), 6.0);
   h = hf_smax(h, hf_sleeping(p), 6.0);

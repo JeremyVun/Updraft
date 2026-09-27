@@ -235,6 +235,23 @@ export const tuning = {
     cameraRevealExtra: 48, cameraRiseExtra: 35,
     cameraRiseDistance: 32, cameraPortraitRiseDistance: 40,
   },
+  /** The stairs in the clouds: the loose flights the player's gusts bring home, and the climb. */
+  stairs: {
+    /** Screen radius a stroke has to pass within to push a part of a flight, and how hard it pushes. */
+    brushRadius: 0.16, push: 0.018, gustCap: 26,
+    /** How strongly a push off the middle turns a flight, and how quickly moving and turning die away. */
+    turn: 0.055, drag: 1.1, spinDrag: 1.6,
+    /** A flight never drifts further than this from its place. */
+    reach: 11,
+    /** A flight whose bottom tread comes this near its place, turned no further than this, draws itself home. */
+    captureGap: 1.25, captureTurn: 0.42, settleSeconds: 1.1,
+    /** The child's pace on the stairs, as a share of a walk. */
+    climb: 0.52,
+    /** Cloud thickness per metre inside the deck, and inside the pocket round the child. */
+    density: 0.42, clearing: 0.055, bubble: 6.5,
+    /** How fast the hull goes down through the cloud onto the water, metres a second. */
+    sinkRate: 1.9,
+  },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
     windFrom: 0.012, windFull: 0.18, speed: 3.41,

@@ -235,7 +235,7 @@ export class Kite {
   constructor(
     private readonly wind: WindField,
     berth: { x: number; z: number },
-    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number } = {},
+    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number; tiedTo?: 'post' | 'rail' } = {},
   ) {
     /** The original Lines tie-off is the default; each shore can put its post on dry ground. */
     this.stringLength = options.stringLength ?? tuning.linesToys.stringLength;
@@ -244,12 +244,12 @@ export class Kite {
     const x = berth.x + dx;
     const z = berth.z + dz;
     const ground = options.ground ?? Math.max(heightAt(x, z), 0);
-    this.anchor.set(x, ground + 1.05, z);
+    this.anchor.set(x, ground + (options.tiedTo === 'rail' ? 0.95 : 1.05), z);
 
     const drift = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG });
     const post = new THREE.CylinderGeometry(0.075, 0.095, 1.3, 6).rotateZ(0.16).translate(x, ground + 0.52, z);
     const log = new THREE.CylinderGeometry(0.16, 0.13, 1.8, 6).rotateZ(Math.PI / 2).rotateY(0.6).translate(x + 0.8, ground + 0.12, z + 0.55);
-    this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
+    if (options.tiedTo !== 'rail') this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
 
     const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sailGeometry(), paper));

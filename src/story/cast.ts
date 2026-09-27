@@ -26,6 +26,8 @@ import type { Drawing } from '../traveller/drawing';
 import type { Traveller } from '../traveller/traveller';
 import type { WindField } from '../wind/field';
 import type { AutumnBirches } from '../world/birches';
+import type { CloudStairs } from '../world/stairs';
+import type { CloudDeckState } from './stairs';
 import type { SleepingIsland } from '../world/sleeping';
 import type { Cottage } from '../world/cottage';
 import type { LifeField } from '../world/life';
@@ -53,6 +55,8 @@ export interface Cast {
   embers: Embers;
   /** The island of gold birches, its leaves and the swing hanging on the crest. */
   birches: AutumnBirches;
+  /** The staircase up through the cloud, its loose flights, and the top of the cloud itself. */
+  stairs: CloudStairs;
   /** The bed in the hollow, the bedroom round it, and the fog the player's gusts carve lanes in. */
   sleeping: SleepingIsland;
   littleBoats: LittleBoats;
@@ -96,6 +100,8 @@ export interface Chapter {
   readonly caringWind?: boolean;
   /** False when the chapter schedules its own adult/cygnet conversation. */
   readonly flockChatter?: boolean;
+  /** The low cloud deck over the stairs, while this chapter wants it; eased out when a chapter leaves it unset. */
+  readonly cloudDeck?: CloudDeckState;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */

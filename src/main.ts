@@ -73,6 +73,8 @@ import { DrownedVillage } from './world/drowned';
 import { SleepingIsland } from './world/sleeping';
 import { DarkWood } from './world/wood';
 import { AutumnBirches } from './world/birches';
+import { CloudStairs } from './world/stairs';
+import { CLOUD, STAIRS_ISLE } from './world/stairs-layout';
 import { createTree } from './world/tree';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
@@ -217,6 +219,8 @@ const skyMirror = new SkyMirror();
 scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
 scene.add(littleBoats.group);
+const cloudStairs = new CloudStairs();
+scene.add(cloudStairs.group);
 const birches = new AutumnBirches(renderer, wind, false);
 await prepareInBatches(birches.scarf.settle());
 birches.objects.forEach((o) => scene.add(o));
@@ -323,7 +327,7 @@ const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
 /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
 story.update(0, 0);
 water.skyMirrorAppearance = story.name === 'toMirror' ? 0 : story.name === 'home' ? 0 : 1;
@@ -363,7 +367,7 @@ clipJourneyProps(hillCreatures.group);
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group], boats: [littleBoats.group],
-  meadow: [piano.group, ...pond.objects], birches: [...birches.objects], drowned: [...village.objects],
+  meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty],
 };
 for (const [name, marker] of Object.entries(departureKites.markers)) {
@@ -568,6 +572,32 @@ const creatureEnv: CreatureEnv = {
   life: (x, z) => life.at(x, z), breeze: 0, night: 0, audio: null,
 };
 
+/**
+ * The low cloud over the stairs. It comes down over the sea on the way there, lies over the room, and lifts off
+ * the water once the village has them: eased like the rest of the sky, so it never appears or goes at a cut.
+ */
+const deckShown = { amount: 0, base: CLOUD.base, top: CLOUD.top, bubble: 0 };
+function updateCloudDeck(dt: number): void {
+  const want = story.current.cloudDeck;
+  let amount = want?.amount ?? 0;
+  let base = want?.base ?? deckShown.base;
+  if (story.name === 'toStairs') {
+    const near = 1 - THREE.MathUtils.smoothstep(Math.hypot(boat.position.x - STAIRS_ISLE.x, boat.position.z - STAIRS_ISLE.z), 60, 150);
+    amount = near;
+    base = CLOUD.base + (1 - near) * 30;
+  }
+  deckShown.amount = ease(deckShown.amount, amount, story.name === 'drowned' ? 0.18 : 0.8, dt);
+  deckShown.base = want || story.name === 'toStairs' ? ease(deckShown.base, base, 1.5, dt) : deckShown.base;
+  if (deckShown.amount < 0.002 && amount === 0) deckShown.amount = 0;
+  const bubble = want?.bubble;
+  deckShown.bubble = ease(deckShown.bubble, bubble?.w ?? 0, 1.2, dt);
+  const u = atmo.uniforms;
+  u.uCloudDeck.value.set(STAIRS_ISLE.x, STAIRS_ISLE.z, 1400, deckShown.amount);
+  u.uCloudDeckY.value.set(deckShown.base, want?.top ?? deckShown.top, tuning.stairs.density, tuning.stairs.clearing);
+  if (bubble) u.uCloudBubble.value.set(bubble.x, bubble.y, bubble.z, deckShown.bubble);
+  else u.uCloudBubble.value.w = deckShown.bubble;
+}
+
 /** World mechanics receive at most 1/30 s; wind subdivides to 1/60 s; input follows the same slice of the screen stroke. */
 function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   time += dt;
@@ -581,6 +611,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind);
+  if (story.name === 'stairs') cloudStairs.brush(rig.camera, input, dt);
   if (story.name === 'birches') {
     birches.scarf.brush(rig.camera, input, wind, dt);
     birches.swing.brush(rig.camera, input, wind);
@@ -722,6 +753,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (shown.isleMist < 0.001) shown.isleMist = 0;
   atmo.uniforms.uIsleMist.value.set(isleMist.isle.x, isleMist.isle.z, isleMist.isle.rx, isleMist.isle.rz);
   atmo.uniforms.uIsleMistRange.value.set(isleMist.range.clear, isleMist.range.hidden, shown.isleMist, isleMist.range.edge);
+  updateCloudDeck(dt);
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(
     THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),
@@ -817,6 +849,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
   departureKites.update(dt, time, rig.camera, story);
+  cloudStairs.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
   door.update(dt);
   scarfInvitation.update(dt, rig.camera, story.name === 'birches' ? birches : null);
@@ -1058,7 +1091,7 @@ function frame(now: number): void {
 }
 
 if (params.shot) {
-  window.__game = { quality, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond };
+  window.__game = { quality, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
 /**
