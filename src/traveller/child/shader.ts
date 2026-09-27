@@ -60,7 +60,7 @@ void main() {
   if (mat == ${MAT.coat} && position.y < 1.05 && uFlutter > 0.0) {
     float a = atan(position.x, position.z);
     float lee = max(0.0, dot(normalize(vec3(position.x, 0.0, position.z)), uFlow));
-    float low = smoothstep(1.05, 0.56, position.y);
+    float low = smoothstep(1.07, 0.6, position.y);
     float wave = sin(uTime * 9.0 + a * 7.0 - position.y * 9.0) + 0.5 * sin(uTime * 13.0 - a * 11.0);
     transformed += normal * wave * low * low * uFlutter * (0.006 + 0.016 * lee);
   }
@@ -202,7 +202,7 @@ void main() {
       /** The placket's edge, the hood's centre seam and the hem's stitching. */
       float placket = fill(abs(vRest.x - 0.034) - 0.0022) * step(0.0, vRest.z) * step(vRest.y, 1.6) * step(0.5, vRest.y);
       float seam = fill(abs(vRest.x) - 0.0026) * step(1.74, vRest.y) * step(vRest.z, 0.3);
-      float stitch = fill(abs(fract(vSurf.x * 60.0) - 0.5) - 0.2) * fill(abs(vRest.y - 0.585) - 0.0018) * step(vRest.y, 0.62) * (1.0 - k);
+      float stitch = fill(abs(fract(vSurf.x * 60.0) - 0.5) - 0.2) * fill(abs(vRest.y - 0.625) - 0.0018) * step(vRest.y, 0.66) * (1.0 - k);
       alb *= 1.0 - 0.32 * max(placket, seam) - 0.12 * stitch;
     }
     fuzz = 0.75;

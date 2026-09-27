@@ -75,11 +75,10 @@ export function buildChild(): Rig {
     /** In against the chest, and near enough that both mittens can rest on it without the arms running out of reach. */
     cradle: socket(body, 0, 0.79, 0.5),
     /**
-     * Down inside the bag, not on it: its flanks and folded wings are in the pouch and the rim closes round them,
-     * with the breast against the child's back and the shoulders clear of the low far edge of the mouth. It hangs
-     * on the bag's own bone, so the bird sways with the bag.
+     * Down inside the bag, not on it: it lies across the pouch facing the child's left, its flanks and folded wings
+     * inside and the rim closing round them. It hangs on the bag's own bone, so the bird sways with the bag.
      */
-    satchel: socket(bagFrame, 0, BAG.c.y - BODY_ORIGIN.y + 0.115, BAG.c.z + 0.02),
+    satchel: socket(bagFrame, 0.01, BAG.c.y - BODY_ORIGIN.y + 0.115, BAG.c.z + 0.02),
     shoulder: socket(body, -0.3, 1.04, -0.02),
     lap: socket(seat, 0, 0.16, 0.52),
   };
@@ -110,7 +109,7 @@ export function buildChild(): Rig {
 const HOOD_AT = HOOD.c.clone().sub(BODY_ORIGIN);
 const HOOD_KEEP = HOOD.r.clone().addScalar(0.04);
 const BAG_AT = new THREE.Vector3(BAG.c.x, BAG.c.y - BODY_ORIGIN.y, BAG.c.z - 0.02);
-const BAG_KEEP = new THREE.Vector3(0.35, 0.36, 0.33);
+const BAG_KEEP = new THREE.Vector3(0.34, 0.33, 0.27);
 const sample = { p: new THREE.Vector3(), n: new THREE.Vector3(), fold: 0 };
 const away = new THREE.Vector3();
 

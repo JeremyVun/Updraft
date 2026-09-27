@@ -41,9 +41,9 @@ const COAT = [
   [1.18, 0.353, 0.304, 0.038],
   [1.04, 0.377, 0.314, 0.028],
   [0.88, 0.404, 0.33, 0.012],
-  [0.72, 0.434, 0.354, 0.0],
-  [0.58, 0.464, 0.378, -0.01],
-  [0.45, 0.49, 0.4, -0.018],
+  [0.72, 0.438, 0.356, 0.0],
+  [0.58, 0.47, 0.382, -0.01],
+  [0.45, 0.495, 0.404, -0.018],
 ];
 export const COAT_TOP = 1.625;
 
@@ -64,7 +64,7 @@ function foldAt(a: number, y: number): number {
   return amp * d;
 }
 
-export const hemY = (a: number) => 0.56 + 0.01 * Math.sin(3 * a + 0.4) + 0.005 * Math.sin(5 * a + 1.1) - 0.3 * foldAt(a, 0.56);
+export const hemY = (a: number) => 0.6 + 0.01 * Math.sin(3 * a + 0.4) + 0.005 * Math.sin(5 * a + 1.1) - 0.3 * foldAt(a, 0.6);
 
 export interface CoatSample {
   p: THREE.Vector3;
@@ -468,7 +468,7 @@ function hairline(phi: number): number {
   return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.12 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
 }
 
-const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.276, rz: 0.282 };
+const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.296, rz: 0.282 };
 
 /**
  * The fringe and the hair round the face, as locks: angle from the front and the cosine down from the crown where
@@ -569,14 +569,42 @@ export const HOOD = {
 };
 
 /**
- * How far round from the front the opening is cut, by angle round it from the top: the brim sits back over the
- * fringe, the sides open wide enough to show the ears and the hair beside them, and it narrows under the chin into
- * the scarf.
+ * The opening as the concept draws it from the front: an egg with its narrow end up. A tall arch over the fringe
+ * (before the brim's lift), widest by the ears, and sides that come in along the jaw into the scarf instead of
+ * closing under the chin. Heights of the top, the widest point and the bottom, the half-width there, and how the
+ * width falls away above and below it (1 is a cosine; lower stays wide for longer and then turns in).
  */
+const OPENING = { top: 2.3, widest: 1.99, bottom: 1.62, half: 0.375, arch: 0.68, jaw: 0.7 };
+
+/** Half the opening's width at a height; negative above or below it. */
+function openingHalf(y: number): number {
+  const o = OPENING;
+  if (y > o.top || y < o.bottom) return -Math.max(y - o.top, o.bottom - y);
+  const up = y >= o.widest;
+  const t = up ? (y - o.widest) / (o.top - o.widest) : (o.widest - y) / (o.widest - o.bottom);
+  return o.half * Math.pow(Math.cos((t * Math.PI) / 2), up ? o.arch : o.jaw);
+}
+
+/**
+ * How far back from the front the opening is cut, by angle round it from the top: out from the middle of the face
+ * until the hood's surface crosses the outline above. Solved once into a table.
+ */
+let openTable: number[] | null = null;
+const OPEN_STEPS = 360;
+
 function hoodOpen(lambda: number): number {
-  const s = Math.sin(lambda);
-  const c = Math.cos(lambda);
-  return 0.74 + 0.4 * s * s * (1 - 0.5 * Math.max(0, -c)) + 0.12 * Math.pow(Math.max(0, -c), 2);
+  openTable ??= Array.from({ length: OPEN_STEPS + 1 }, (_, i) => {
+    const l = (i / OPEN_STEPS) * TAU;
+    let gamma = 0.2;
+    for (; gamma < 1.75; gamma += 0.004) {
+      const p = hoodShape(l, gamma, null).p;
+      if (Math.abs(p.x) > openingHalf(p.y)) break;
+    }
+    return gamma;
+  });
+  const f = ((((lambda % TAU) + TAU) % TAU) / TAU) * OPEN_STEPS;
+  const i = Math.min(Math.floor(f), OPEN_STEPS - 1);
+  return THREE.MathUtils.lerp(openTable[i], openTable[i + 1], f - i);
 }
 const hoodF = V(0, -Math.sin(HOOD.tilt), Math.cos(HOOD.tilt));
 const hoodUp = V(0, Math.cos(HOOD.tilt), Math.sin(HOOD.tilt));
@@ -595,7 +623,19 @@ function hoodDir(lambda: number, gamma: number, out = V()): THREE.Vector3 {
  * A bell, not a ball: an egg over the crown with a soft peak along the seam, sides that fall almost straight to the
  * shoulders, and a back that hangs down over the top of the bag. Under the chin it goes in behind the scarf.
  */
-function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.Vector3; fold: number; d: THREE.Vector3 } {
+function hoodPoint(lambda: number, gamma: number): HoodSample {
+  return hoodShape(lambda, gamma, hoodOpen(lambda));
+}
+
+interface HoodSample {
+  p: THREE.Vector3;
+  n: THREE.Vector3;
+  fold: number;
+  d: THREE.Vector3;
+}
+
+/** The hood's surface; `open` is where the opening is cut at this angle, or null for the bare shape the cut is solved on. */
+function hoodShape(lambda: number, gamma: number, open: number | null): HoodSample {
   const d = hoodDir(lambda, gamma);
   const r = HOOD.r;
   const flat = Math.hypot(d.x, d.z);
@@ -616,7 +656,7 @@ function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.
   p.z -= 0.025 * smooth(0.2, 1.0, yN);
   const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
-  const fromRim = smooth(hoodOpen(lambda), hoodOpen(lambda) + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
+  const fromRim = open === null ? 0 : smooth(open, open + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
   let fold = 0;
   for (const s of [1, -1]) {
     fold += -0.013 * bump(angleTo(lambda, s * 1.2), 0.16) * fromRim;
@@ -628,9 +668,9 @@ function hoodPoint(lambda: number, gamma: number): { p: THREE.Vector3; n: THREE.
   /** The centre seam sits in a very slight valley. */
   const seam = -0.004 * bump(p.x, 0.012) * smooth(-0.3, 0.2, yN);
   /** Over the brow the edge stands off the head in an arch, so the hood sits roomy rather than pulled down tight. */
-  const brim = (1 - smooth(hoodOpen(lambda), hoodOpen(lambda) + 0.45, gamma)) * bump(angleTo(lambda, 0), 0.95);
-  p.addScaledVector(n, fold + seam + 0.024 * brim);
-  p.y += 0.014 * brim;
+  const brim = open === null ? 0 : (1 - smooth(open, open + 0.45, gamma)) * bump(angleTo(lambda, 0), 0.95);
+  p.addScaledVector(n, fold + seam + 0.018 * brim);
+  p.y += 0.01 * brim;
   /** In front, below the chin, the hood goes in behind the scarf rather than lying over it. */
   const y = p.y + HOOD.c.y;
   const front = smooth(-0.05, 0.45, hz);
@@ -689,9 +729,9 @@ function hood(b: Builder): void {
     const tangent = hoodPoint(lambda + 0.01, hoodOpen(lambda + 0.01)).p.sub(edge.p).normalize();
     const out = V().crossVectors(tangent, inward).normalize();
     if (out.dot(edge.n) < 0) out.negate();
-    const bottom = smooth(0.55, 0.95, -Math.cos(lambda));
-    const r = 0.038 * (1 - 0.7 * bottom) * (1 + 0.1 * Math.cos(lambda));
-    const centre = edge.p.clone().addScaledVector(inward, r * 0.35).addScaledVector(out, -r * 0.1);
+    const bottom = smooth(0.8, 0.98, -Math.cos(lambda));
+    const r = 0.05 * (1 - 0.6 * bottom) * (1 + 0.1 * Math.cos(lambda));
+    const centre = edge.p.clone().addScaledVector(inward, r * 0.35).addScaledVector(out, -r * 0.25);
     const skin = hoodSkin(edge.d, open);
     rim.push(Array.from({ length: 14 }, (_, j) => {
       const a = (j / 14) * TAU;
@@ -762,53 +802,57 @@ function wrapBand(b: Builder, band: number): void {
 }
 
 /** Low on the back, as in the concept: the bird rides at the shoulders with its head beside the hood, not in it. */
-export const BAG = { c: V(0, 1.23, -0.48), lip: 1.5 };
-const BAG_BOTTOM = -0.34;
-/** How square the box is round its sides: 2 would be an ellipse, higher a box with rounder and rounder corners. */
-const BAG_SQUARE = 4;
+export const BAG = { c: V(0, 1.23, -0.48), lip: 1.46 };
+const BAG_BOTTOM = -0.24;
+/** How square the pouch is round its sides: 2 would be an ellipse, higher a box with rounder and rounder corners. */
+const BAG_SQUARE = 3.2;
 
-/** Half-width and half-depth by how far up from the bottom (0..1): soft leather bellies out low down, under the weight. */
-function bagSize(f: number): [number, number] {
-  const belly = bump(f - 0.3, 0.38);
-  return [0.27 + 0.03 * belly, 0.172 + 0.035 * belly];
+/**
+ * Half-width, and half-depth toward the child and away, by how far up from the bottom (0..1): a soft satchel, wider
+ * than it is deep because the bird lies across it, full and sagging low under the weight before it rounds under.
+ */
+function bagSize(f: number): [number, number, number] {
+  const belly = bump(f - 0.5, 0.4);
+  return [0.292 + 0.026 * belly, 0.232, 0.19 + 0.03 * belly];
 }
 
 /** The open top sags between the corners, and its near side, against the child, stands higher than the far. */
 function bagLip(phi: number): number {
   const c = Math.cos(phi);
-  return BAG.lip - BAG.c.y + 0.04 * c - 0.022 * c * c + 0.008 * Math.sin(3 * phi + 0.5);
+  return BAG.lip - BAG.c.y + 0.03 * c - 0.015 * c * c - 0.012 * Math.cos(4 * phi) + 0.008 * Math.sin(3 * phi + 0.5);
 }
 
 function bagPoint(phi: number, h: number, scale = 1, crease = 0): THREE.Vector3 {
   const f = THREE.MathUtils.clamp((h - BAG_BOTTOM) / (bagLip(phi) - BAG_BOTTOM), 0, 1);
-  const [a, b] = bagSize(f);
+  const [a, near, far] = bagSize(f);
   const s = Math.sin(phi);
   const c = Math.cos(phi);
   const e = 2 / BAG_SQUARE;
   /** Soft creases where the leather gives under the weight, down the far face and the sides. */
   const give = 1 + crease * 0.03 * Math.sin(7 * phi + 1.3) * Math.max(0, -c + 0.4);
   const x = a * scale * give * Math.sign(s) * Math.pow(Math.abs(s), e);
-  /** Pressed against the child's back, the near face takes up the gap between them; the far half is deep enough for the bird. */
-  let z = b * (c > 0 ? 1.35 : 1.4) * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
+  /** The near face is pressed against the child's back; the far half holds the bird. */
+  let z = (c > 0 ? near : far) * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
   /** Its weight slumps the far face out and down. */
   if (c < 0) z -= 0.03 * smooth(0.4, 0.0, f) * -c;
   return V(x, h, z).add(BAG.c);
 }
 
-/** Out from the box's side at a point, in the horizontal plane. */
+/** Out from the pouch's side at a point, in the horizontal plane. */
 function bagOutward(phi: number): THREE.Vector3 {
-  const [a, b] = bagSize(1);
+  const [a, near, far] = bagSize(1);
   const s = Math.sin(phi);
   const c = Math.cos(phi);
   const e = 2 / BAG_SQUARE;
   const gx = Math.pow(Math.abs(s), e * (BAG_SQUARE - 1)) / a;
-  const gz = Math.pow(Math.abs(c), e * (BAG_SQUARE - 1)) / b;
+  const gz = Math.pow(Math.abs(c), e * (BAG_SQUARE - 1)) / (c > 0 ? near : far);
   return V(Math.sign(s) * gx, 0, Math.sign(c) * gz).normalize();
 }
 
-/** Down the side from the lip (f 1) to the bottom (f 0), then in across the flat bottom (scale falling to 0). */
+/** Down the side from the lip (f 1), then round under the bottom (scale falling to 0): no hard lower corners. */
 const BAG_ROWS: [number, number][] = [
-  [1, 1], [0.9, 1], [0.76, 1], [0.62, 1], [0.48, 1], [0.34, 1], [0.21, 1], [0.1, 0.995], [0.045, 0.97], [0.014, 0.915], [0, 0.82], [0, 0.45], [0, 0],
+  [1, 1], [0.93, 1], [0.84, 1], [0.72, 1], [0.6, 1], [0.48, 1], [0.37, 0.995], [0.27, 0.975], [0.18, 0.94], [0.11, 0.88],
+  [0.055, 0.78], [0.02, 0.64], [0.004, 0.46], [0, 0.26], [0, 0],
 ];
 
 function bag(b: Builder): void {
@@ -847,52 +891,84 @@ function bag(b: Builder): void {
     const phi = (j / AROUND) * TAU;
     const hh = bagLip(phi);
     const out = bagOutward(phi);
-    const c = bagPoint(phi, hh, 0.975);
+    const c = bagPoint(phi, hh, 0.985);
     rim.push(Array.from({ length: 10 }, (_, k) => {
       const a = (k / 10) * TAU;
-      return { p: c.clone().addScaledVector(out, Math.cos(a) * 0.022).add(V(0, Math.sin(a) * 0.02, 0)), skin: skinAt(phi, hh), mat: MAT.strap, k: 0.4 };
+      return { p: c.clone().addScaledVector(out, Math.cos(a) * 0.026).add(V(0, Math.sin(a) * 0.028, 0)), skin: skinAt(phi, hh), mat: MAT.strap, k: 0.4 };
     }));
   }
   b.rows(rim, true, V(0, bagLip(0) + BAG.c.y, BAG.c.z), true);
 }
 
-/** The shoulder straps lie on the coat: each is authored on the coat's own surface, by angle and height. */
+interface StrapStation {
+  p: THREE.Vector3;
+  n: THREE.Vector3;
+  skin: Skin;
+}
+
+/**
+ * A shoulder strap, the way a backpack's runs: from the top of the bag's near face up over the shoulder, down the
+ * front of the chest by the armpit, then back under the arm and across the gap to the bag's lower corner. Where it
+ * lies on the coat it is authored on the coat's own surface, by angle and height; both ends sink into the leather.
+ */
 function strap(b: Builder, left: boolean): void {
   const mx = left ? 1 : -1;
   const path: [number, number][] = [
-    [2.7, 1.3], [2.55, 1.42], [2.3, 1.52], [2.0, 1.575], [1.62, 1.597], [1.2, 1.585], [0.85, 1.54], [0.64, 1.46], [0.56, 1.36], [0.58, 1.25],
-    [0.7, 1.16], [0.95, 1.1],
+    [2.62, 1.5], [2.45, 1.55], [2.2, 1.585], [1.9, 1.6], [1.55, 1.605], [1.2, 1.588], [0.88, 1.54], [0.68, 1.46],
+    [0.61, 1.37], [0.64, 1.3], [0.82, 1.255], [1.15, 1.235], [1.55, 1.23], [1.9, 1.225], [2.12, 1.21],
   ];
   const curve = new THREE.SplineCurve(path.map(([a, y]) => new THREE.Vector2(a, y)));
-  const N = 40;
-  const rows: Point[][] = [];
   const s = { p: V(), n: V(), fold: 0 };
-  for (let i = 0; i <= N; i++) {
-    const q = curve.getPointAt(i / N);
+  const onCoat = (q: THREE.Vector2): StrapStation => {
     const a = mx * q.x;
     coatAt(a, q.y, s);
     const p0 = s.p.clone();
-    const na = coatAt(a + 0.01, q.y).p.sub(p0);
-    const ny = coatAt(a, q.y + 0.01).p.sub(p0);
-    const n = V().crossVectors(na, ny).normalize();
+    const n = V().crossVectors(coatAt(a + 0.01, q.y).p.sub(p0), coatAt(a, q.y + 0.01).p.sub(p0)).normalize();
     if (n.dot(V(p0.x, 0.3, p0.z)) < 0) n.negate();
-    const q2 = curve.getPointAt(Math.min(1, i / N + 0.01));
-    const along = coatAt(mx * q2.x, q2.y).p.sub(p0).normalize();
-    if (i === N) along.copy(p0).sub(coatAt(mx * curve.getPointAt(1 - 0.01).x, curve.getPointAt(1 - 0.01).y).p).normalize();
-    const across = V().crossVectors(n, along).normalize();
-    const centre = p0.addScaledVector(n, 0.014);
-    const skin = coatSkin(a, q.y, s.p.x);
-    const W = 0.034;
-    const T = 0.009;
-    const corners: [number, number][] = [[-1, -1], [-0.8, 0], [-1, 1], [0, 1.15], [1, 1], [0.8, 0], [1, -1], [0, -1.1]];
+    return { p: p0.addScaledVector(n, 0.014), n, skin: coatSkin(a, q.y, s.p.x) };
+  };
+  const bagSkin: Skin = [[BONE.bag, 1]];
+  const topPhi = mx * 0.5;
+  const top: StrapStation = {
+    p: bagPoint(topPhi, bagLip(topPhi) - 0.04).add(V(0, 0, 0.012)),
+    n: V(0, 0.35, -1).normalize(),
+    skin: [[BONE.bag, 0.5], [BONE.chest, 0.5]],
+  };
+  const lowPhi = mx * 1.05;
+  const lowH = THREE.MathUtils.lerp(BAG_BOTTOM, bagLip(lowPhi), 0.3);
+  const low: StrapStation = { p: bagPoint(lowPhi, lowH).addScaledVector(bagOutward(lowPhi), -0.006), n: bagOutward(lowPhi), skin: bagSkin };
+  const N = 44;
+  const along: StrapStation[] = Array.from({ length: N + 1 }, (_, i) => onCoat(curve.getPointAt(i / N)));
+  /** Off the coat and across to the bag, turning to lie flat on its side as it arrives. */
+  const bridge = (from: StrapStation, to: StrapStation, steps: number): StrapStation[] =>
+    Array.from({ length: steps }, (_, i) => {
+      const t = (i + 1) / (steps + 1);
+      const k = smooth(0, 1, t);
+      return {
+        p: from.p.clone().lerp(to.p, t),
+        n: from.n.clone().lerp(to.n, k).normalize(),
+        skin: [...from.skin.map(([bone, w]) => [bone, w * (1 - k)] as [number, number]), ...to.skin.map(([bone, w]) => [bone, w * k] as [number, number])],
+      };
+    });
+  const stations = [top, ...bridge(top, along[0], 3), ...along, ...bridge(along[N], low, 6), low];
+  const rows: Point[][] = [];
+  const W = 0.034;
+  const T = 0.009;
+  const corners: [number, number][] = [[-1, -1], [-0.8, 0], [-1, 1], [0, 1.15], [1, 1], [0.8, 0], [1, -1], [0, -1.1]];
+  stations.forEach((st, i) => {
+    const next = stations[Math.min(i + 1, stations.length - 1)].p;
+    const prev = stations[Math.max(i - 1, 0)].p;
+    const dir = next.clone().sub(prev).normalize();
+    const across = V().crossVectors(st.n, dir).normalize();
+    const n = V().crossVectors(dir, across).normalize();
     rows.push(corners.map(([u, v]) => ({
-      p: centre.clone().addScaledVector(across, u * W).addScaledVector(n, v * T),
-      skin,
+      p: st.p.clone().addScaledVector(across, u * W).addScaledVector(n, v * T),
+      skin: st.skin,
       mat: MAT.strap,
       ao: v < 0 ? 0.6 : 1,
-      uv: [i / N, u] as [number, number],
+      uv: [i / stations.length, u] as [number, number],
     })));
-  }
+  });
   b.rows(rows, true, coatAt(mx * 1.2, 1.4).p.multiplyScalar(0.5));
 }
 

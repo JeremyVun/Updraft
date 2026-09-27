@@ -10,13 +10,13 @@ export interface Mount {
 
 /**
  * How it sits in each seat: which way it faces relative to the child and how far it is tipped back. In the arms it
- * lies across the chest with its head to the child's left, the way anyone holds a duck; in the satchel and on the
- * lap it faces the way they are going.
+ * lies across the chest with its head to the child's left, the way anyone holds a duck; in the satchel it sits
+ * nearly the same way round, across the bag, as in the concept art; on the lap it faces the way they are going.
  */
 const SEATS: Record<Seat, { yaw: number; pitch: number }> = {
   cradle: { yaw: Math.PI / 2, pitch: -0.18 },
-  /** Settled forward into the bag so the breast is against the child's back; the neck carries the head clear. */
-  satchel: { yaw: 0, pitch: -0.15 },
+  /** Turned a little into the bag's far corner so the tail stays in; the neck comes up beside the left of the hood. */
+  satchel: { yaw: 1.2, pitch: -0.15 },
   lap: { yaw: 0, pitch: -0.1 },
 };
 
