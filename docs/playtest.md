@@ -117,4 +117,4 @@ Pre-release bugs from Jeremy's playtest. Read this first after any context loss.
 | # | Issue | Status |
 | --- | --- | --- |
 | 16 | Leaving the dark wood: the scene stutters / reloads | open |
-| 17 | Black lines under the sun (sea passage to the sky mirror) | open |
+| 17 | Black lines under the sun (sea passage to the sky mirror) | fixed: the line is the sea's far edge at the true horizon, directly under the sun. Since perf-bakes S4 the sea's fog is interpolated per vertex, and out there the grid's cells are hundreds of metres wide, so the fog comes out just short of opaque and the sun's grazing glint (very bright) leaks through as a white line with dark breaks. Where the interpolated fog is already over 0.9 it is now recomputed per pixel (`water.ts`), which makes it opaque and takes the early return; nearer water keeps S4's per-vertex fog. Reproduced toward the sun on the passage in: 60–77 band pixels before, 2 after. Not fixed here: a faint speckled patch on the water beyond the mirror's departure jetty in the same view (also in Jeremy's screenshot) |

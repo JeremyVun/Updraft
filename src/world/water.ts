@@ -254,7 +254,9 @@ void main() {
     gl_FragColor = vec4(glassColour(V, xz), 1.0);
     return;
   }
-  vec4 fog = vFog;
+  // Fog per vertex is close enough until the grid opens into cells hundreds of metres wide near the horizon, where
+  // a sliver just short of opaque lets the sun's grazing glint through as a line under it.
+  vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {
