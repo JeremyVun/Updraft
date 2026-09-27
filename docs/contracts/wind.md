@@ -95,10 +95,13 @@ These effects bypass the field on purpose. Keep them explicit when changing any 
 
 ## Invitations
 
-`fx/wind-gesture.ts` draws the shared travelling sweep for washing, sails, embers, toy boats, soap bubbles,
+`fx/wind-gesture.ts` draws the shared travelling sweep for washing, sails, the wood's caught paper, toy boats, soap bubbles,
 scarf lifts/pulls, the sleeping pillow and the swing. Each gust has a leading strand and two shorter, unequal wakes that curl
 apart. Direction changes with the useful gesture; the bow sends matching sweeps outward on both sides.
-The wrapped trunk uses `fx/swirl.ts`, like the cygnet: a leading turn followed by detached pieces of rising air.
+The wrapped trunk and the dark wood's waiting coal use `fx/swirl.ts`, like the cygnet: a leading turn followed by
+detached pieces of rising air. In the wood only an updraft lights a coal: `WoodChapter.updraftTarget` anchors the
+column at the waiting coal (`input.anchor`) and `Embers.updraft` turns the charge there into its breath; straight
+strokes build no charge, and burning coals flare from the field's lift rather than gust energy.
 
 Hints never write wind, heat or puzzle progress. Local useful input suppresses them; inactivity lets them
 return. Large targets place their demonstration on the near surface, where it stays visible.

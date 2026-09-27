@@ -554,7 +554,9 @@ the second is a smudge on the horizon and nothing more. Chapters set `haze`: abo
    scripted flash and clap to frighten the cygnet into a visible jump and run to a nearby rock shelter. The ember
    waits concealed inside the rock gap until the camera turns toward it. The child coaxes the bird outside
    before picking it up; the reunion has no completion jingle. See [wood.md](wood.md) for the staging,
-   “Care becomes courage” and validation.
+   “Care becomes courage” and validation. **September 27:** Jeremy asked for the embers to answer only updrafts:
+   a coal now lights only from the player's circling over it, and the waiting coal shows the updraft spiral
+   instead of the sweep ([wood.md](wood.md#updrafts-light-the-embers-september-27)).
 6. **The long crossing** (`story/crossing.ts` with `dolphins` and `duskTo`) — the intermission, and the only
    crossing that takes its time. They come out of the dark wood and stand a long way out into open water; the
    night ends somewhere along it, and the sea is alive: whales, a pod of dolphins running with the boat, fish,
