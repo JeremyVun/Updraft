@@ -14,6 +14,7 @@ import { Swirl } from './fx/swirl';
 import { ScarfInvitation } from './fx/scarf-invitation';
 import { WashingInvitation } from './fx/washing-invitation';
 import { SailInvitation } from './fx/sail-invitation';
+import { PlaneInvitation } from './fx/plane-invitation';
 import { WindLines } from './fx/windlines';
 import { Glider } from './glider/glider';
 import { PlaneIndicator } from './glider/indicator';
@@ -252,6 +253,8 @@ const washingInvitation = new WashingInvitation();
 scene.add(washingInvitation.batch.mesh);
 const sailInvitation = new SailInvitation();
 scene.add(sailInvitation.batch.mesh);
+const planeInvitation = new PlaneInvitation();
+scene.add(planeInvitation.batch.mesh);
 const glider = new Glider(wind, tree.canopy);
 const planeIndicator = new PlaneIndicator();
 glider.objects.forEach((o) => scene.add(o));
@@ -823,6 +826,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   scarfInvitation.update(dt, rig.camera, story.name === 'birches' ? birches : null);
   washingInvitation.update(dt, rig.camera, story.name === 'lines' ? washingPassage.active : null);
   sailInvitation.update(dt, rig.camera, boat, story.current.invitesSail ?? false, input);
+  planeInvitation.update(dt, rig.camera, glider, startScreen.started ? story.current.planeInvitation ?? null : null, input);
   birches.update(dt, rig.camera, child.visible ? child.position : null);
   /** Under the wood's canopy a sheltered population stays low despite the storm outside. */
   const inWood = story.name === 'wood';

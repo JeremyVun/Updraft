@@ -124,6 +124,13 @@ export class IslandChapter implements Chapter {
     return this.arrival.active || (this.beat !== 'still' && this.beat !== 'play' && this.beat !== 'leaving');
   }
 
+  /** In the child's hands before the first gust, or lying still on the grass during catch: blow it on, towards home. */
+  get planeInvitation(): THREE.Vector3 | null {
+    const p = this.cast.plane;
+    const catching = (this.beat === 'play' || this.beat === 'leaving') && !this.arrival.active;
+    return this.beat === 'still' || (catching && p.landed) ? p.home : null;
+  }
+
   get done(): boolean {
     return this.beat === 'aboard';
   }

@@ -144,6 +144,8 @@ export interface Chapter {
   readonly twirlGain?: number;
   /** Offer a sweep only while this chapter is waiting for wind in a fully slack sail. */
   readonly invitesSail?: boolean;
+  /** While the paper plane waits for wind: where a sweep across it should head. */
+  readonly planeInvitation?: THREE.Vector3 | null;
   /** A chapter target, such as a waiting ember or caught plane, that needs a deliberate sweep. */
   readonly windInvitation?: THREE.Vector3 | null;
   /** Screen-local wind work on chapter targets, including the paper snag. */

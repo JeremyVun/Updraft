@@ -288,6 +288,12 @@ export const tuning = {
     planeBloomStrength: 1.4,
     /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
     planeBloomFrom: 0.3,
+    /**
+     * A sweep across the paper while the child holds it at the start and whenever it lies still on the grass:
+     * seconds waiting before the first, its duration and the quiet between repeats; distances are world units.
+     */
+    planeInviteAfter: 0.5, planeInviteSweep: 1.8, planeInvitePause: 1.6,
+    planeInviteAlpha: 0.8, planeInviteWidth: 0.12, planeInviteSpan: 5.5, planeInviteStandOff: 0.6,
     /** A held view of the sea, then one clear recovery before the small bird loses the V. */
     outlook: 3.5,
     flight: 5,
