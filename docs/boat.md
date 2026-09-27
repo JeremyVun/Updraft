@@ -36,3 +36,13 @@ for the whole game.
 - Open: boarding and the jetty step-out over the higher gunwale (`tuning.boarding.gunwaleIn` and `gunwaleHeight`,
   and the child's step in `traveller.ts`, which the child rebuild owns). The stairs branch hangs its own bow lantern;
   when the branches meet, that chapter should light this one instead.
+- Merged into main (8158b36, 2026-09-28) on top of the rebuilt child. Typecheck, `boat-check`, `boat-ground-check`
+  and `boat-shores-check` (lowest 0.047 m, meadow departure) pass. Seen together: she sits in the boat cleanly, the
+  boarding clears the side (though the lead foot lifts about 0.6 m over it, more hop than step: `boarding.stepArc`,
+  `railHeight`), and the lantern glows at sunset.
+- Broken: the step-out onto the home jetty. The soles stay on the floorboards as they move out, jump 0.5 m in one
+  frame, then hang through the rail and topsides for about five frames before landing on the deck. Two causes:
+  `tuning.boarding.gunwaleHeight` is still 0.04 against a real gunwale of about 0.50 in the boat's frame, so
+  `alight()` in `traveller.ts` never lifts her over the side (better derived from `gunwale()` in `form.ts`); and once
+  `riding` ends at `alightLift` the feet's `floorAt()` knows only the ground, sea or deck, not the gunwale they are
+  crossing. Stills: `/tmp/updraft-boat-merge-qa-jetty34-*.png`.
