@@ -332,8 +332,8 @@ export const tuning = {
     /**
      * Getting out onto a deck, in seconds: up off the thwart and round to face it, the lead foot up onto the boards,
      * the weight carried across, settled. Then where they stand in the boat (its floorboards, in the boat's frame),
-     * the gunwale they step over, how far toward the boards they lean before the weight goes, the most the body is
-     * lifted to clear the gunwale, the lead leg's lift in radians, and the shove the push-off gives the hull.
+     * how far toward the boards they lean before the weight goes, the most the body is lifted to clear the gunwale
+     * (from its top, in `boat/form.ts`), the lead leg's lift in radians, and the shove the push-off gives the hull.
      */
     alightStand: 0.6,
     alightLift: 1.05,
@@ -341,10 +341,8 @@ export const tuning = {
     alightSettle: 2.0,
     alightInside: 0.32,
     alightFloor: -0.22,
-    gunwaleIn: 0.86,
-    gunwaleHeight: 0.04,
     alightLean: 0.18,
-    alightClear: -0.05,
+    alightClear: -0.22,
     alightStep: 0.8,
     alightShove: 0.35,
     /** A step longer than `alightStride` becomes a hop, fully one this much longer, rising this high at its top. */

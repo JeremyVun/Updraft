@@ -9,6 +9,7 @@ import { BONE, FOREARM, UPPER_ARM, buildChild, keepOffChild, type Rig, type Sock
 import { ChildMotion, newPose, stepLength, type ArmPose, type Drive } from './child/motion';
 import { Scarf } from './scarf';
 import type { Boat } from './boat';
+import { gunwale, gunwaleHalf, stationU } from './boat/form';
 
 type Action =
   | { kind: 'throw'; t: number; released: boolean; onRelease: () => void }
@@ -214,6 +215,7 @@ export class Traveller {
   private readonly prev = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
+  private readonly footLocal = new THREE.Vector3();
   private readonly shadowMat: THREE.ShaderMaterial;
   private time = 0;
   private readonly bodyInverse = new THREE.Matrix4();
@@ -538,7 +540,8 @@ export class Traveller {
     const k = tuning.boarding;
     this.goal = null;
     boat.group.updateMatrixWorld(true);
-    const near = (side: number, out: THREE.Vector3) => out.set(side * k.gunwaleIn, k.gunwaleHeight, -0.25).applyMatrix4(boat.group.matrixWorld);
+    const u = stationU(-0.25);
+    const near = (side: number, out: THREE.Vector3) => out.set(side * gunwaleHalf(u), gunwale(u), -0.25).applyMatrix4(boat.group.matrixWorld);
     const dx = deck.x1 - deck.x0, dz = deck.z1 - deck.z0, len = Math.hypot(dx, dz);
     const offDeck = (p: THREE.Vector3) => {
       const t = THREE.MathUtils.clamp(((p.x - deck.x0) * dx + (p.z - deck.z0) * dz) / (len * len), 0, 1);
@@ -826,10 +829,9 @@ export class Traveller {
         const u = THREE.MathUtils.smootherstep(a.t, k.alightLift, k.alightAcross);
         const along = lean + (1 - lean) * u;
         this.position.lerpVectors(stand, a.to, along);
-        const rise = THREE.MathUtils.smoothstep(u, 0, 0.75);
-        const middle = THREE.MathUtils.lerp(stand.y, a.to.y, 0.5);
-        this.position.y = THREE.MathUtils.lerp(stand.y, a.to.y, rise)
-          + (Math.max(0, a.rail.y + k.alightClear - middle) + a.hop * k.alightHop) * Math.sin(u * Math.PI);
+        const rise = THREE.MathUtils.lerp(stand.y, a.to.y, THREE.MathUtils.smoothstep(u, 0, 0.75));
+        const top = THREE.MathUtils.lerp(stand.y, a.to.y, THREE.MathUtils.smoothstep(0.5, 0, 0.75));
+        this.position.y = rise + (Math.max(0, a.rail.y + k.alightClear - top) + a.hop * k.alightHop) * Math.sin(u * Math.PI);
         if (!a.shoved && a.t >= k.alightLift) {
           a.shoved = true;
           boat.nudge(-a.side, k.alightShove);
@@ -849,11 +851,21 @@ export class Traveller {
     }
   }
 
-  /** The floor under a foot: the ground, a deck, or the boards of the boat they are riding in. */
+  /**
+   * The floor under a foot: the ground, a deck, or the boards of the boat they are riding in. Stepping out, the feet
+   * keep to the body's own level, which arcs over the gunwale, and a foot still inside the hull ignores a deck that
+   * reaches in under it.
+   */
   private floorAt(x: number, z: number): number {
     const ground = Math.max(this.ground(x, z), 0);
+    const level = this.position.y - 0.26 * this.sit;
+    const a = this.action;
+    if (a?.kind === 'alight') {
+      const local = a.boat.group.worldToLocal(this.footLocal.set(x, 0, z));
+      return Math.abs(local.x) < gunwaleHalf(stationU(local.z)) + 0.04 ? level : Math.max(ground, level);
+    }
     if (!this.riding) return ground;
-    return Math.max(this.ground(x, z), this.position.y - 0.26 * this.sit);
+    return Math.max(this.ground(x, z), level);
   }
 
   private pose(dt: number): void {
