@@ -209,15 +209,20 @@ export class Scarf {
     const k = tuning.scarf;
     const span = Math.min(Math.max(dt, 1e-4), 0.1);
     this.time += span;
-    this.tmp.set((anchor.x - this.lastAnchor.x) / span, 0, (anchor.z - this.lastAnchor.z) / span);
+    this.tmp.subVectors(anchor, this.lastAnchor).divideScalar(span);
     if (this.tmp.length() > MAX_CARRY) this.tmp.copy(this.carried);
     this.tmp.lerpVectors(this.carried, this.tmp, 1 - Math.exp(-span * 8));
-    /** Starting and stopping swing the ends back and forward, but only a share of what the child's own speed would. */
+    /**
+     * Starting and stopping swing the ends back and forward, and a squat or a hop bobs them, but only a share of what
+     * the child's own motion would: carried down into a squat, they are not left in the air to fling over the hood.
+     */
     const lurchX = ((this.carried.x - this.tmp.x) / span) * k.inertia;
+    const lurchY = ((this.carried.y - this.tmp.y) / span) * k.inertia;
     const lurchZ = ((this.carried.z - this.tmp.z) / span) * k.inertia;
     this.carried.copy(this.tmp);
     this.lastAnchor.copy(anchor);
     const moveX = this.carried.x;
+    const moveY = this.carried.y;
     const moveZ = this.carried.z;
 
     /**
@@ -302,11 +307,11 @@ export class Scarf {
            * behind rather than hanging across the arm; the very end dips a little.
            */
           const held = 0.82 + 0.18 * smooth(f, 0, 0.5) - 0.2 * smooth(f, 0.7, 1);
-          const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still);
+          const ay = -k.gravity * (1 - lift * held) - vy * k.drag + rise + wind.lift * k.updraft * (1 - still) + lurchY;
           /** It moves in the child's company: the chain keeps only its own motion from step to step, not theirs. */
-          this.tmp.set(p.x + moveX * h, p.y, p.z + moveZ * h);
+          this.tmp.set(p.x + moveX * h, p.y + moveY * h, p.z + moveZ * h);
           p.x += (p.x - q.x) * carry + ax * h * h + moveX * h;
-          p.y += (p.y - q.y) * carry + ay * h * h;
+          p.y += (p.y - q.y) * carry + ay * h * h + moveY * h;
           p.z += (p.z - q.z) * carry + az * h * h + moveZ * h;
           q.copy(this.tmp);
         }
