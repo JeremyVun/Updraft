@@ -772,7 +772,8 @@ export const tuning = {
       inviteCircleRadius: 1.65,
       swingOfferSeconds: 12,
       releaseSeconds: 2.6,
-      gatherSeconds: 8,
+      /** Seconds the whole freed scarf takes to be drawn in to the mast: about 135 m of wool, so the free end runs at up to 13 m/s. */
+      gatherSeconds: 16,
       /** The tied lengths' spring to the wind (rad/s) and its damping ratio, over the air of ±`windSpan` rows. */
       windResponse: 2.2,
       windDamping: 0.9,
