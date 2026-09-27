@@ -552,7 +552,7 @@ vec3 deckUnderside(vec2 xz, vec3 ro, float thin) {
   float reach = length(away);
   float toward = reach > 1.0 ? dot(away / reach, normalize(uSunDir.xz + 1e-5)) * 0.5 + 0.5 : 0.5;
   float far = smoothstep(25.0, 420.0, reach);
-  vec3 body = uSkyAmbient * vec3(1.1, 0.8, 0.95) + uGroundBounce * 0.4 + uSunColor * vec3(0.035, 0.02, 0.025);
+  vec3 body = uSkyAmbient * vec3(0.95, 0.72, 0.85) + uGroundBounce * 0.3 + uSunColor * vec3(0.02, 0.012, 0.016);
   vec3 rose = uSunColor * vec3(0.9, 0.7, 0.85);
   vec3 glow = rose * (0.03 + 0.06 * toward) + uSunColor * pow(toward, 4.0) * (0.12 + 0.55 * far);
   return body + glow * (0.5 + 0.9 * far) + uSunColor * thin * (0.1 + 0.3 * toward);
