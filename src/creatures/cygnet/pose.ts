@@ -418,12 +418,15 @@ export class Poser {
     /** The bill opens on each note of a call, with every hard breath after the fall, in a yawn, and to snap at what goes past. */
     n[JAW].rotation.x = d.call.env * d.call.note * 0.42 + d.puff * 0.08 * Math.max(0, Math.sin(d.breath)) + act('yawn') * 0.5 + snap * 0.35;
     n[TAIL].rotation.set(
-      p.beg * Math.sin(t * 15) * 0.25 + d.bond * 0.15 * (1 - p.hunch) - p.hunch * 0.3 - d.glide * 0.3 - p.sleep * 0.15 - stretch * 0.25,
+      p.beg * Math.sin(t * 15) * 0.25 + d.bond * 0.15 * (1 - p.hunch) - p.hunch * 0.3 - d.glide * 0.3 - p.sleep * 0.15 - stretch * 0.25 + p.stowed,
       Math.sin(t * 27) * 0.55 * act('wag') + shaking * 0.6,
       0,
     );
 
-    /** Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late. */
+    /**
+     * Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late.
+     * In the satchel the hands cross further over the rump and the tail is cocked up, so neither reaches past the rim.
+     */
     let power = p.spread * (1 - d.glide * 0.8) * (d.effort > 0.02 || d.flap > 0.3 || flying ? 1 : 0.35);
     let beatPhase = d.flapPhase;
     const flutter = Math.max(p.beg, p.climb, act('ask') * 0.8, act('bowled'));
@@ -439,6 +442,7 @@ export class Poser {
       lag: Math.sin(beatPhase - 0.75) * power,
       twist: -d.glide * 0.12 + d.effort * 0.1 * Math.max(0, Math.sin(d.flapPhase)),
       clamp: p.hunch,
+      tuck: p.stowed,
       raise: [d.actSide > 0 ? preenLift : 0, d.actSide < 0 ? preenLift : 0],
       shake: shaking + p.land * 1.5,
     });
