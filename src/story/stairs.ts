@@ -926,8 +926,9 @@ export class StairsChapter implements Chapter {
     d.bubble.set(c.position.x, c.position.y + 1.1, c.position.z, inCloud ? THREE.MathUtils.lerp(k.bubble, k.bubbleTop, climb) : 0);
     if (inCloud) d.clearing = THREE.MathUtils.lerp(k.clearing, k.clearingTop, climb);
     // Over the loop the clear air opens out into a hollow in the white big enough for the lens and the whole
-    // square; the cloud is made deep enough overhead that the lens, up there, is still in it.
-    if (this.beat === 'loop') {
+    // square; the cloud is made deep enough overhead that the lens, up there, is still in it. It stays open while
+    // the lens comes down after them, so the square is seen to come apart, and closes in once the lens is down.
+    if (this.beat === 'loop' || this.lofted) {
       // The pocket's clear heart reaches from the lens to just past the loop; beyond that it thickens to white, and
       // the cloud goes on down under the loop far enough that nothing shows through from below.
       const heart = LOOP_EYE.distanceTo(LOOP_LOOK) / 2 + 1.5;
