@@ -184,8 +184,9 @@ export class StairsChapter implements Chapter {
     return this.air;
   }
 
+  /** The village's music is asked for as the fog closes round the boat: the sail fades, rests in the white, and it comes in. */
   get arrivalMusic(): 'drowned' | undefined {
-    return this.beat === 'descend' ? 'drowned' : undefined;
+    return this.air.phase === 'fog' || this.air.phase === 'down' ? 'drowned' : undefined;
   }
 
   get checkpoint(): string | null {
