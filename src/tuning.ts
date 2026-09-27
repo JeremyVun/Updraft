@@ -114,6 +114,17 @@ export const tuning = {
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
     whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
+    /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
+    stairsAirLevel: 1,
+    stairsAir: {
+      /** The wind in the white, heard from the landing below while the bird goes up first. */
+      fromBelow: 0.35,
+      bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.05, hullLevel: 0.095, fogLevel: 0.3, lastGustLevel: 0.16,
+      /** Time constant of the birches' phrase draining away once they go up into the white: about 4 dB a second. */
+      drain: 2.2,
+    },
+    flightKnock: { level: 0.13, reverb: 0.25, pitch: 220, puff: 0.08 },
+    stairsScoreLevel: 6, stairsPhaseFade: 4,
   },
   cygnetMotion: {
     /** Running balance should not become wingbeats during a deliberately slow walk. */
