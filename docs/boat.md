@@ -40,9 +40,11 @@ for the whole game.
   and `boat-shores-check` (lowest 0.047 m, meadow departure) pass. Seen together: she sits in the boat cleanly, the
   boarding clears the side (though the lead foot lifts about 0.6 m over it, more hop than step: `boarding.stepArc`,
   `railHeight`), and the lantern glows at sunset.
-- Broken: the step-out onto the home jetty. The soles stay on the floorboards as they move out, jump 0.5 m in one
-  frame, then hang through the rail and topsides for about five frames before landing on the deck. Two causes:
-  `tuning.boarding.gunwaleHeight` is still 0.04 against a real gunwale of about 0.50 in the boat's frame, so
-  `alight()` in `traveller.ts` never lifts her over the side (better derived from `gunwale()` in `form.ts`); and once
-  `riding` ends at `alightLift` the feet's `floorAt()` knows only the ground, sea or deck, not the gunwale they are
-  crossing. Stills: `/tmp/updraft-boat-merge-qa-jetty34-*.png`.
+- The step-out onto the home jetty over the higher gunwale is fixed (fcc3e78). It was going through the rail: the
+  rail point came from stale knobs (now read from `gunwale()`/`gunwaleHalf()` in `form.ts`), the lift was sized for
+  the arc's midpoint rather than where the body is there, the feet dropped to the floor under them as soon as the
+  child stopped riding, and the jetty's footprint reaches in under the hull, so a foot still inside the boat stood on
+  it. Now the feet keep to the body's level through the step and ignore a deck under the hull; `alightClear` -0.22.
+  Traced per frame: no foot inside the side, both clear its top by 0.06 to 0.3 m. Checks: typecheck, `boat-check`,
+  `boat-mooring-check`, `sky-mirror-logic-check`, `flock-flight-check`. The boarding still lifts the lead foot about
+  0.6 m over the side, more hop than step (`boarding.stepArc`, `railHeight`); untouched.
