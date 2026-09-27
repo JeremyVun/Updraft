@@ -7,6 +7,8 @@ import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { FOAM, Marks } from '../fx/sealife/marks';
 import { heightAt } from '../world/island';
 import { type Swell, swellAt } from '../world/water/swell';
+import { screenBrush } from '../creatures/motion';
+import type { PointerInput } from '../input/pointer';
 
 const LENGTH = 4.8;
 const BEAM = 0.95;
@@ -315,6 +317,8 @@ export class Boat {
   private wakeIn = 0;
   private readonly boardA = new THREE.Vector3();
   private readonly boardB = new THREE.Vector3();
+  private readonly brushAt = new THREE.Vector3();
+  private readonly brushTop = new THREE.Vector3();
   private readonly sea: Swell = { height: 0, slopeX: 0, slopeZ: 0 };
   /** How the hull is lying, for whoever is riding it. */
   roll = 0;
@@ -418,6 +422,20 @@ export class Boat {
   sailPoint(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
     return out.set(0, 2.2, 0.55).applyMatrix4(this.group.matrixWorld);
+  }
+
+  /** Put a stroke that crosses the sail on screen onto the sail; from low behind the boat the pointer's ray meets water beyond it. */
+  brushSail(camera: THREE.Camera, input: PointerInput): void {
+    const k = tuning.sail;
+    if (input.muted || !input.present || input.gust < k.brushSpeed || input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
+    this.sailPoint(this.brushAt);
+    const top = this.brushTop.setFromMatrixColumn(camera.matrixWorld, 1).multiplyScalar(k.brushReach).add(this.brushAt).project(camera).y;
+    const radius = Math.abs(top - this.brushTop.copy(this.brushAt).project(camera).y);
+    if (screenBrush(camera, this.brushAt, input.prevNdc, input.ndc, radius) < 0.01) return;
+    this.wind.addSplat({ source: this,
+      ax: this.position.x, az: this.position.z, bx: this.position.x, bz: this.position.z,
+      vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
+      radius: k.brushWindRadius, energy: Math.min(0.65, input.gust / k.brushEnergyScale), lift: 0, swirl: 0 });
   }
 
   /** The visible hull's ends, so landmark framing keeps the whole boat within the screen. */

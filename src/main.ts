@@ -581,6 +581,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind);
+  if (story.current.invitesSail) boat.brushSail(rig.camera, input);
   if (story.name === 'birches') {
     birches.scarf.brush(rig.camera, input, wind, dt);
     birches.swing.brush(rig.camera, input, wind);

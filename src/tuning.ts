@@ -1225,6 +1225,8 @@ export const tuning = {
     inviteWidth: 0.12,
     inviteSpan: 5.4,
     inviteStandOff: 1.1,
+    /** A stroke this fast crossing within `brushReach` of the sail's middle on screen blows on the sail itself. */
+    brushSpeed: 1.5, brushReach: 1.9, brushWindRadius: 4, brushEnergyScale: 22,
     /** Wind speed at which the cloth is at its liveliest: the ripple and the leech's shake full out. */
     livelyAt: 10,
     /** With no wind: how far the leech falls in toward the mast, how far the cloth sags, and the folds it hangs in. */
