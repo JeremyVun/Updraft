@@ -118,6 +118,14 @@ returns `tuning.invitation.resumeAfter` seconds after that stops. The camera hol
 waits exactly as before. The caught paper is unchanged: strokes across it still free it (`windInvitation`,
 `brushDry`), with the same sweep invitation.
 
+Checked with real mouse gestures over the first coal at 1600×900: before the change straight passes lit it in
+3.82 s of game time; after it, 14 straight passes over 13 s leave it at wake 0, circling over it at about a loop a
+second lights it in 3.95 s, and the same circling 450 px to the side leaves it cold. `wood-check` reaches the boat
+with real circles and paper sweeps on desktop and portrait touch; `ember-check`, `wood-logic-check` and the wood
+scene of `wind-invitation-check` pass. `wood-scene-check` times out waiting for its SwiftShader fixture, the same on
+`aa1293f`. Stills: `/tmp/updraft-pt0927-embers-invite-first-*.png` (first coal) and
+`/tmp/updraft-pt0927-embers-hearth-lost-*.png` (the refuge, where the rock hides the back of each loop).
+
 ## Earlier progression defect
 
 The plane's wetness previously changed only its shader. At the plane ember, `reachPlane` waited for the real
@@ -143,7 +151,10 @@ Lighting does not contribute to ignition or the child's movement gate. Jeremy ap
 
 ## Verification
 
-- `tools/wood-logic-check.mjs`: actual child, cygnet, carry, camera and glider; full wind against the wet paper;
+- `tools/ember-check.mjs [portrait]`: real straight sweeps leave the first orb cold, then real circles over it grow
+  and light it; the spiral invitation's still.
+- `tools/wood-logic-check.mjs`: straight sweeps, weak circling and a distant updraft leave a coal cold while an
+  updraft over it lights it; actual child, cygnet, carry, camera and glider; full wind against the wet paper;
   full route and both checkpoint restores; ignition/idle gates at 30/60/120 fps; separation continuity;
   a fixed landing before running; exactly one close clap and feather scramble; hidden ember before the
   reveal and through ember-pool reuse; coaxing and pickup outside the rock; no restored cue during the reunion;
@@ -154,7 +165,8 @@ Lighting does not contribute to ignition or the child's movement gate. Jeremy ap
 - Add `plane` to the scene check for the tree interaction: actual screen-space brush hit testing, missed
   strokes, retained partial progress, fall and retrieval. Its material-owned atmosphere uniforms avoid stale
   lighting when Vite has versioned dependencies during another task's edits.
-- `VIDEO=1 node tools/wood-check.mjs [portrait]`: real pointer/touch strokes from landing through boarding;
+- `VIDEO=1 node tools/wood-check.mjs [portrait]`: real pointer/touch circles over the coals and strokes across the
+  paper from landing through boarding, after checking that straight sweeps leave the first coal cold;
   long-idle gates, captures of the fright, run, rescue and plane. Evidence stays under `/tmp/updraft-wood-*`.
   `NATURAL=1` skips synthetic clock jumps for a continuous playthrough; `BASE` pins a production preview,
   and `PREFIX` keeps before/after captures separate. Reports include render-loop camera positions and spikes.
