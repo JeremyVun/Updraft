@@ -886,7 +886,7 @@ export class StairsChapter implements Chapter {
 
   /**
    * In the white the hull is let down onto the sea where the drowned village begins, as far short of it as the
-   * white takes to thin, on the heading it had; the bank of mist, the streaming cloud and the camera go with it.
+   * white takes to thin, on the heading it had; the bank of mist, the spray off the hull and the camera go with it.
    */
   private downOntoTheSea(): void {
     const { boat } = this.cast;
@@ -895,10 +895,12 @@ export class StairsChapter implements Chapter {
     const x = DESCENT_END.x - Math.sin(boat.yaw) * short, z = DESCENT_END.y - Math.cos(boat.yaw) * short;
     const dx = x - boat.position.x, dy = SEA_RIDE - boat.position.y, dz = z - boat.position.z;
     boat.position.set(x, SEA_RIDE, z);
+    // The hull as drawn goes with it now, so the child is seated in it where it is this very frame.
+    boat.group.position.set(boat.group.position.x + dx, boat.group.position.y + dy, boat.group.position.z + dz);
+    boat.group.updateMatrixWorld(true);
     boat.altitude = null;
     fog.at.x += dx;
     fog.at.y += dz;
-    this.world.wisps.shift(dx, dy, dz);
     this.world.cloud.wake.shift(dx, dy, dz);
     this.world.sailing(null, 0);
     boat.steerFor = DESCENT_END;
@@ -957,7 +959,7 @@ export class StairsChapter implements Chapter {
       fog.amount = this.mist;
       const depth = fog.depthOf(boat.position.x, boat.position.z);
       this.white = S(depth, -6, k.bankSwap);
-      fog.clear = 0.85 - 0.35 * S(depth, k.bankSwap - 12, k.bankSwap);
+      fog.clear = 0.85 - 0.55 * S(depth, k.bankSwap - 12, k.bankSwap);
       return;
     }
     // On the sea: the same bank over the water, which the boat sails out of the back of as the white thins.
@@ -968,7 +970,7 @@ export class StairsChapter implements Chapter {
     // bank left standing behind them on the water and melting away.
     fog.deep = fog.depthOf(boat.position.x, boat.position.z) + THREE.MathUtils.lerp(300, -10, S(t, 3, lift * 0.8));
     fog.amount = 1 - S(t, lift * 0.7, lift);
-    fog.clear = 0.5 + 0.35 * S(t, 0, 2.5);
+    fog.clear = 0.3 + 0.55 * S(t, 0.3, 3);
     this.white = 1 - S(t, 5, lift * 0.8);
     // From the gold of the cloud to the grey and blue of the dusk over the sea, and the sun going out of it.
     const dusk = this.mistLight.copy(u.uSkyAmbient.value).multiplyScalar(1.4).add(this.tmpColor.copy(u.uSkyHorizon.value).multiplyScalar(0.35))
@@ -1010,10 +1012,8 @@ export class StairsChapter implements Chapter {
       const hull = boat.position;
       const mid = this.tmp2.copy(hull).lerp(this.eye, 0.45);
       d.bubble.set(mid.x, hull.y + 1.8, mid.z, 0.55 * this.framing.distance + 3);
-      // The white streams past them level, the way they are going.
-      wisps.amount = this.white;
-      wisps.centre.set(hull.x, hull.y + 1.5, hull.z);
-      wisps.wind.set(-Math.sin(boat.yaw), 0, -Math.cos(boat.yaw)).multiplyScalar(boat.speed + 2.5);
+      // The white streams past them in the bank itself; the rags of cloud from the climb have no place in it.
+      wisps.amount = 0;
       this.breeze = 0.35;
       return;
     }

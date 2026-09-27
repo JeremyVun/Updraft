@@ -658,23 +658,29 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
     depth = max(0.0, depth - uFogBankClear * thick * cleared);
   }
   float cover = 1.0 - exp(-depth);
-  vec3 near = ro + rd * min(span.x + 5.0, span.y), deeper = ro + rd * min(span.x + 13.0, span.y);
-  float billow = vnoise(near.xz * 0.11 + near.y * 0.07) * 0.5 + vnoise(deeper.xz * 0.05 + vec2(uTime * 0.02, 0.0)) * 0.5;
-  float up = clamp((near.y - fl) / max(top - fl, 1.0), 0.0, 1.0);
+  // Its texture is its own, across it and into it, so it is the same wherever the bank is put.
+  float near = min(span.x + 5.0, span.y), deeper = min(span.x + 13.0, span.y);
+  float up = clamp((ro.y + rd.y * near - fl) / max(top - fl, 1.0), 0.0, 1.0);
+  float billow = vnoise(vec2(v0 + dv * near, u0 + du * near) * 0.11 + (ro.y + rd.y * near - fl) * 0.07) * 0.5
+    + vnoise(vec2(v0 + dv * deeper + uTime * 0.6, u0 + du * deeper) * 0.05) * 0.5;
   float toward = max(0.0, dot(rd, uSunDir));
   // Seen from outside, its face is in its own shade, the low sun being beyond it, and lighter toward its top.
   vec3 face = uFogBankLight.rgb * vec3(0.5, 0.5, 0.6) * mix(0.82, 1.18, up) * (0.78 + 0.44 * billow)
     + uSunColor * uFogBankLight.a * pow(toward, 3.0) * 0.06;
-  // From inside it is white all round, and lighter toward the sun; the white streams past as the boat goes.
-  vec3 white = uFogBankLight.rgb * (0.9 + 0.2 * billow) * mix(0.8, 1.0, smoothstep(0.3, 1.0, toward));
+  // From inside it is white all round, and lighter toward the sun; long wisps of it stream past level as the boat
+  // goes, nearer ones faster than those further off.
+  vec2 wisp = vec2(u0, v0) + vec2(du, dv) * 8.0, further = vec2(u0, v0) + vec2(du, dv) * 20.0;
+  float streaming = smoothstep(0.3, 0.8, vnoise(vec2(wisp.x * 0.1, wisp.y * 0.55 + (ro.y + rd.y * 8.0) * 0.7)) * 0.55
+    + vnoise(vec2(further.x * 0.05, further.y * 0.25 + (ro.y + rd.y * 20.0) * 0.3) + 5.3) * 0.45);
+  vec3 white = uFogBankLight.rgb * (0.72 + 0.5 * streaming) * mix(0.8, 1.0, smoothstep(0.3, 1.0, toward));
   float inside = clamp(into0 / FRONT, 0.0, 1.0) * clamp((deep - into0) / BACK, 0.0, 1.0)
     * (1.0 - clamp((ro.y - top + SOFT) / SOFT, 0.0, 1.0)) * step(fl, ro.y);
   vec3 light = mix(face, white, inside);
-  // The sun glows through it, most where it is thin along its top, where it is lit right through and outshines
-  // the sky round the sun.
-  float halo = pow(toward, 8.0) * 0.08 + pow(toward, 48.0) * 0.35 + pow(toward, 400.0) * 1.5;
+  // The sun glows through it, softly from inside, and brightest where it is thin along its top, where it is lit
+  // right through and outshines the sky round the sun.
+  float halo = pow(toward, 8.0) * 0.08 + pow(toward, 48.0) * 0.35;
   float rim = 4.0 * cover * (1.0 - cover);
-  light += uSunColor * uFogBankLight.a * (halo * mix(0.3 * inside, 1.0, rim) + pow(toward, 12.0) * rim * 0.2);
+  light += uSunColor * uFogBankLight.a * (halo * mix(0.3 * inside, 1.0, rim) + (pow(toward, 400.0) * 1.5 + pow(toward, 12.0) * 0.2) * rim);
   // Far off it goes into the haze of the horizon, as the cloud does.
   light = mix(light, skyColor(normalize(vec3(rd.x, 0.01, rd.z))), (1.0 - exp(-span.x / 650.0)) * 0.7);
   return vec4(light, cover);

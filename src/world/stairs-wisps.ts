@@ -85,12 +85,6 @@ export class CloudWisps {
     }
   }
 
-  /** Moves the whole stream at once, with whatever it is streaming round. */
-  shift(dx: number, dy: number, dz: number): void {
-    for (const w of this.wisps) w.p.set(w.p.x + dx, w.p.y + dy, w.p.z + dz);
-    this.centre.set(this.centre.x + dx, this.centre.y + dy, this.centre.z + dz);
-  }
-
   /** A stroke across a wisp on screen carries it the way the stroke went. */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, dt: number): void {
     if (!this.mesh.visible || !input.present || input.muted || dt <= 0) return;
