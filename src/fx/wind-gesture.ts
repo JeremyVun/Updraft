@@ -34,8 +34,9 @@ export class WindGesture {
   constructor(name: string) { this.batch.mesh.name = name; this.hide(); }
   hide(): void { this.batch.mesh.visible = false; }
 
+  /** `tilt` turns an `across` sweep in the screen's plane, radians anticlockwise, so it can run up or down the frame. */
   draw(camera: THREE.Camera, at: THREE.Vector3, phase: number, span: number, alpha: number,
-    width: number, kind: SweepKind = 'across', direction = 1): void {
+    width: number, kind: SweepKind = 'across', direction = 1, tilt = 0): void {
     this.hide();
     const fade = THREE.MathUtils.smoothstep(phase, 0, 0.12)
       * (1 - THREE.MathUtils.smoothstep(phase, 0.82, 1.22));
@@ -74,8 +75,10 @@ export class WindGesture {
           + Math.sin(arc + tail * 3.8) * span * k.curl * peel;
         along += Math.cos(arc + tail * 3.8) * span * k.curl * peel;
         if (kind === 'outward') along = t * span * 0.55;
-        const x = kind === 'lift' ? across : along * side;
-        const y = kind === 'lift' ? along : across;
+        const sx = kind === 'lift' ? across : along * side;
+        const sy = kind === 'lift' ? along : across;
+        const x = sx * Math.cos(tilt) - sy * Math.sin(tilt);
+        const y = sx * Math.sin(tilt) + sy * Math.cos(tilt);
         r.points[i].copy(at).addScaledVector(this.right, x).addScaledVector(this.up, y)
           .addScaledVector(this.toward, 0.15 + Math.sin(t * Math.PI) * span * 0.035 + peel * span * 0.06);
       }

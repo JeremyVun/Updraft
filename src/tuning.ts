@@ -294,6 +294,8 @@ export const tuning = {
      */
     planeInviteAfter: 0.5, planeInviteSweep: 1.8, planeInvitePause: 1.6,
     planeInviteAlpha: 0.8, planeInviteWidth: 0.12, planeInviteSpan: 5.5, planeInviteStandOff: 0.6,
+    /** The first, held throw's gust: how steeply it climbs the frame (radians) and how far it runs. */
+    planeInviteRise: 0.6, planeInviteIntoSpan: 7,
     /** A held view of the sea, then one clear recovery before the small bird loses the V. */
     outlook: 3.5,
     flight: 5,
@@ -327,11 +329,26 @@ export const tuning = {
     insideIn: 0.28,
     insideHeight: 0.3,
     stepArc: 0.24,
-    /** Getting out onto a deck: standing up off the thwart, a foot on the gunwale, down on the boards, weight settled. */
-    alightStand: 0.55,
-    alightRail: 1.15,
-    alightAshore: 1.8,
-    alightSettle: 2.1,
+    /**
+     * Getting out onto a deck, in seconds: up off the thwart and round to face it, the lead foot up onto the boards,
+     * the weight carried across, settled. Then where they stand in the boat (its floorboards, in the boat's frame),
+     * the gunwale they step over, how far toward the boards they lean before the weight goes, the most the body is
+     * lifted to clear the gunwale, the lead leg's lift in radians, and the shove the push-off gives the hull.
+     */
+    alightStand: 0.6,
+    alightLift: 1.05,
+    alightAcross: 1.65,
+    alightSettle: 2.0,
+    alightInside: 0.32,
+    alightFloor: -0.22,
+    gunwaleIn: 0.86,
+    gunwaleHeight: 0.04,
+    alightLean: 0.18,
+    alightClear: -0.05,
+    alightStep: 0.8,
+    alightShove: 0.35,
+    /** A step longer than `alightStride` becomes a hop, fully one this much longer, rising this high at its top. */
+    alightStride: 1.1, alightHopOver: 0.5, alightHop: 0.16,
     /** Where the foot comes down: at least this far inside the deck's edge and back from either end of it. */
     alightEdge: 0.4,
     alightEnd: 0.6,

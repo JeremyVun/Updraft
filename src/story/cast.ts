@@ -146,6 +146,8 @@ export interface Chapter {
   readonly invitesSail?: boolean;
   /** While the paper plane waits for wind: where a sweep across it should head. */
   readonly planeInvitation?: THREE.Vector3 | null;
+  /** The plane's gust is the first one, into the island rather than across it. */
+  readonly planeInvitationInto?: boolean;
   /** A chapter target, such as a caught plane, that needs a deliberate sweep. */
   readonly windInvitation?: THREE.Vector3 | null;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */

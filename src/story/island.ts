@@ -131,6 +131,8 @@ export class IslandChapter implements Chapter {
     return this.beat === 'still' || (catching && p.landed) ? p.home : null;
   }
 
+  get planeInvitationInto(): boolean { return this.beat === 'still'; }
+
   get done(): boolean {
     return this.beat === 'aboard';
   }
