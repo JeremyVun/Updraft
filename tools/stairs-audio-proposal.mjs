@@ -134,7 +134,9 @@ async function render(page, musicOnly) {
         pcm[i * 2 + 1] = Math.round(Math.max(-1, Math.min(1, R[i])) * 32767);
       }
       window.__stairsPcm = new Uint8Array(pcm.buffer);
-      return { windows, clipped, finite, peakDbFS: 20 * Math.log10(peak), stages, cues, bytes: window.__stairsPcm.length };
+      // Twenty seconds after the room, nothing of it should still be running.
+      const leftover = { stairsSound: !!sound.stairsSound, stairsScore: !!sound.stairsScore, birchesScore: !!sound.birchesScore };
+      return { windows, clipped, finite, peakDbFS: 20 * Math.log10(peak), stages, cues, leftover, bytes: window.__stairsPcm.length };
     } finally { Math.random = originalRandom; }
   }, { T, RATE, musicOnly });
 }
@@ -165,6 +167,60 @@ function loudness(file, from, to) {
 
 const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+function cueSheet(report) {
+  const { arc, music } = report.renders;
+  const stage = name => music.stages.find(s => s.stage === name)?.t;
+  const rows = [
+    [0, 'Under the cloud. The birches\' closing phrase (approved) carries on; the player pushes the loose flights (gusts).'],
+    ...T.knocks.map((t, i) => [t, `Flight ${i + 1} knocks home: a soft wooden tok, a smaller tk as it settles, a puff of cloud.`]),
+    [T.third, 'Flight 3 knocks home, with the shared completion phrase (`restored`, unchanged).'],
+    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The phrase drains away (about 4 dB a second); the wind in the cloud is heard faintly from above.'],
+    [T.follow, 'The child follows into the white. No music: a close, muffled wind that buffets, and a moan that rises with the climb.'],
+    [(T.follow + T.emerge) / 2, 'Halfway up: the buffets come quicker and harder, the moan climbs, the sea has gone.'],
+    [T.emerge, 'Out on top. The last of the wind sweeps past and away, then almost nothing: a thin high air.'],
+    [T.emerge + 3, 'The bloom (proposal): D opening out, wide and high, from nothing.'],
+    [T.emerge + 6.5, 'The piano\'s question comes back high and slow, D–E–F♯, and opens one step further than it ever has, to C♯ (G with a sharpened fourth under it).'],
+    [T.skein[0], 'The skein crosses far off: the swans\' own calls (the cygnet stays silent).'],
+    [T.board, 'Boarding; the sail (proposal) takes over from the bloom: the bass walks up the scale from D to B under a plucked ripple.'],
+    [T.board + 2, 'The hull begins to hiss through the cloud tops as the sail fills; the hiss follows the boat\'s speed.'],
+    [T.board + 18, 'The sail\'s tune asks the whole question, D–E–F♯, and lands on a high B.'],
+    [T.fog, 'The fog closes in. The village music is asked for; the sail fades over three seconds.'],
+    [stage('gap'), 'Musical rest in the white (three seconds): only the soft wash of the fog.'],
+    [stage('incoming'), 'The drowned village\'s own music comes in (approved, unchanged) as the fog is at its thickest and starts to thin.'],
+    [T.fogPeak[0], 'The hull comes down onto the water in the whiteout; the sea comes back under it as the fog thins.'],
+    [T.down, 'On the village water: the drowned chapter owns everything from here. The room\'s own sounds let go.'],
+  ].filter(([t]) => t !== undefined).sort((a, b) => a[0] - b[0]);
+  const table = (segments) => segments.map(s => `| ${clock(s.from)}–${clock(s.to)} | ${s.label} | ${s.lufs <= -70 ? 'silent' : s.lufs} | ${s.shortTermMaxLufs ?? '–'} | ${s.peakDbFS.toFixed(1)} |`).join('\n');
+  return `# The stairs in the clouds: audio proposal
+
+\`stairs-arc.mp3\` is the whole mix, rendered offline through the production soundscape from a synthetic
+\`StairsAir\` timeline (\`tools/stairs-audio-proposal.mjs\`). \`stairs-music.mp3\` is the music alone, with its
+reverb. The phase timings are targets, not measurements of the chapter; the bird going first is treated as the start
+of \`cloud\` (see the report). Not a listening sign-off.
+
+## Cues
+
+${rows.map(([t, text]) => `- **${clock(t)}** ${text}`).join('\n')}
+
+## Measurements
+
+Whole mix: peak ${arc.peakDbFS.toFixed(1)} dBFS, ${arc.clipped} clipped samples.
+
+| Time | Phase | Integrated LUFS | Short-term max LUFS | Peak dBFS |
+| --- | --- | --- | --- | --- |
+${table(arc.segments)}
+
+Music alone: peak ${music.peakDbFS.toFixed(1)} dBFS.
+
+| Time | Phase | Integrated LUFS | Short-term max LUFS | Peak dBFS |
+| --- | --- | --- | --- | --- |
+${table(music.segments)}
+
+Silence of the music: below −70 dBFS in every second from ${clock(report.checks.cloudSilentFrom)} to ${clock(T.emerge)} (in the white),
+and through the rest before the village (${clock(report.checks.restFrom)}–${clock(report.checks.restTo)}).
+`;
+}
+
 const { browser, page } = await audioPage();
 const report = { rate: RATE, timeline: T, renders: {} };
 try {
@@ -183,7 +239,7 @@ try {
         loudestSecondRmsDbFS: Math.max(...w.map(x => x.rmsDbFS)) };
     });
     report.renders[name] = { file: mp3, peakDbFS: result.peakDbFS, clipped: result.clipped, finite: result.finite,
-      stages: result.stages, cues: result.cues, segments, windows: result.windows };
+      stages: result.stages, cues: result.cues, leftover: result.leftover, segments, windows: result.windows };
     console.log(`${name}: peak ${result.peakDbFS.toFixed(2)} dBFS, clipped ${result.clipped}`);
     for (const s of segments) console.log(`  ${clock(s.from)}–${clock(s.to)} ${s.lufs} LUFS, peak ${s.peakDbFS.toFixed(1)}, quietest ${s.quietestSecondRmsDbFS.toFixed(1)} dBFS  ${s.label}`);
   }
@@ -192,7 +248,7 @@ try {
   assert.equal(arc.clipped, 0, 'no clipping in the mix');
   // The music is silent in the white once the birches have drained, and through the rest before the village.
   const silent = (from, to) => music.windows.slice(from, to).every(w => w.rmsDbFS < -70);
-  const drained = T.follow + 4, climbEnd = T.emerge;
+  const drained = T.hesitate + 12, climbEnd = T.emerge;
   const gap = music.stages.find(s => s.stage === 'gap'), incoming = music.stages.find(s => s.stage === 'incoming');
   report.checks = {
     cloudSilentFrom: drained, cloudSilent: silent(drained, climbEnd),
@@ -201,7 +257,9 @@ try {
   };
   assert(report.checks.cloudSilent, 'the music is silent in the white');
   assert(report.checks.restSilent, 'the music rests before the village');
+  assert(!Object.values(arc.leftover).some(Boolean), `room released: ${JSON.stringify(arc.leftover)}`);
   delete arc.windows; delete music.windows;
   fs.writeFileSync(path.join(dir, 'report.json'), JSON.stringify(report, null, 2));
+  fs.writeFileSync(path.join(dir, 'cues.md'), cueSheet(report));
   console.log(JSON.stringify(report.checks));
 } finally { await browser.close(); }

@@ -123,8 +123,9 @@ export class StairsSound {
     const highpass = this.filter('highpass', 2600, 0.5), highTop = this.filter('lowpass', 7200, 0.4);
     const hullLow = this.filter('highpass', 260, 0.5), hullTop = this.filter('lowpass', 3800, 0.4);
     const rushBand = this.filter('bandpass', 1300, 0.8);
+    const rumble = this.filter('highpass', 45, 0.5);
     this.layers = {
-      body: layer(this.body, 0.93, [this.bodyFilter]),
+      body: layer(this.body, 0.93, [rumble, this.bodyFilter]),
       howl: layer(this.howl, 1.07, [this.howlFilter]),
       rush: layer(this.rush, 1, [rushBand, this.rushPan]),
       high: layer(this.high, 0.97, [highpass, highTop]),

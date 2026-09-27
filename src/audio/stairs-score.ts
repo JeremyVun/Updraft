@@ -66,7 +66,7 @@ const ABOVE_CHORDS: Chord[] = [
   { at: 19, deep: [47], haze: [54, 64, 69, 74] },
   { at: 27, deep: [40], haze: [55, 62, 66, 71] },
 ];
-const ABOVE_HARMONY = harmony(ABOVE_CHORDS, 35, 3.2, .0039, .0031, 5.5);
+const ABOVE_HARMONY = harmony(ABOVE_CHORDS, 35, 3.2, .0039, .0024, 5.5);
 const ABOVE_MELODY = line('light', [
   [6.5, 74, 3.8, .0094], [9.5, 76, 3.4, .009], [12.5, 78, 4.4, .0094], [16.5, 85, 6.4, .0081],
   [24, 83, 3.4, .0081], [27.5, 79, 3.6, .0077], [31, 78, 4.8, .0072],
@@ -91,7 +91,7 @@ const SAIL_RIPPLE = SAIL_CHORDS.flatMap((c, chord) => RIPPLES[chord].map((midi, 
   voice: 'harp', midi, at: c.at + RIPPLE_AT[i], duration: 2.8, level: RIPPLE_LEVEL[i],
   pan: (i % 2 ? .24 : -.24) * (chord % 2 ? -1 : 1), role: 'accompaniment',
 })));
-const SAIL_HARMONY = harmony(SAIL_CHORDS, 48, 2.6, .0042, .0044);
+const SAIL_HARMONY = harmony(SAIL_CHORDS, 48, 2.6, .0042, .0032);
 const SAIL_MELODY = line('song', [
   [6.75, 71, 2, .012], [8.75, 76, 3.2, .013],
   [12.75, 74, 2, .012], [14.75, 69, 3.2, .0115],
