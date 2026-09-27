@@ -198,9 +198,10 @@ float bodyAt(vec3 c, vec3 home) {
   float ends = smoothstep(0.0, 0.3, h) * (1.0 - smoothstep(0.6, 1.0, k));
   vec2 r = abs(c.xz) * 2.0 * openAt(c);
   r *= r;
-  // The edge wavers, round the sides and up and down them, so no side of the box ever shows.
+  // The edge wavers round the sides and up and down them, always inside the box, so no side of it ever shows.
   float waver = vnoise(vec2(home.x * 1.4 + home.y * 0.8, home.z * 1.4 - home.y * 0.6)) - 0.5;
-  float sides = 1.0 - smoothstep(0.35 - 0.2 * k, 0.9 - 0.35 * k, sqrt(sqrt(dot(r, r))) + waver * 0.45);
+  float edge = 0.78 - 0.3 * k + waver * 0.3;
+  float sides = 1.0 - smoothstep(edge - 0.5, edge, sqrt(sqrt(dot(r, r))));
   return hang * ends * sides;
 }
 
@@ -258,6 +259,17 @@ float clearing(vec3 world) {
   return mix(1.0, smoothstep(0.5, 1.4, off), near);
 }
 
+/**
+ * The cloud deck's underside and top are solid surfaces that cut through the boxes near them, and the haze beyond
+ * them would show through along the cut. Seen from under the deck the haze thins out before the bellies hanging from
+ * it; seen from over it, into its top. The side is how far the lens is under the deck and how far over it.
+ */
+float deckCut(float y, vec2 side) {
+  float under = 1.0 - smoothstep(uCloudDeckY.x - 3.8, uCloudDeckY.x - 2.3, y);
+  float over = smoothstep(uCloudDeckY.y - 0.2, uCloudDeckY.y + 0.6, y);
+  return mix(1.0, under, side.x) * mix(1.0, over, side.y);
+}
+
 float scatter(float c, float g) {
   float g2 = g * g;
   return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * c, 1.5);
@@ -274,9 +286,10 @@ void main() {
   if (t1 <= t0) discard;
   float reach = length(vWorld - cameraPosition);
   float far = t0 * reach;
-  float stride = mix(0.2, 0.55, smoothstep(12.0, 70.0, far));
-  float steps = clamp(ceil((t1 - t0) * reach / stride), 4.0, 18.0);
-  float dt = (t1 - t0) / steps;
+  // Steps a fixed length on from where the sightline enters, so that neighbouring pixels sample the same air and
+  // a step is only ever gained or lost at the far wall, where there is no vapour; a change in the count would band.
+  float stride = max(mix(0.2, 0.55, smoothstep(12.0, 70.0, far)), (t1 - t0) * reach / 18.0);
+  float dt = stride / reach;
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
   vec3 homeFrom = (uHome * vec4(vEye, 1.0)).xyz;
   vec3 homeRay = mat3(uHome) * rd;
@@ -288,16 +301,18 @@ void main() {
   vec3 sun = uSunColor * cloudShadow(vWorld.xz) * phase * 0.45;
   vec3 lilac = hazeShade();
   float sigma = 1.6 * mix(0.6, 1.0, min(uAmount, 1.0));
+  vec2 side = vec2(smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y),
+    smoothstep(uCloudDeckY.y - 0.6, uCloudDeckY.y - 0.2, cameraPosition.y)) * uCloudDeck.w;
   float T = 1.0;
   vec3 light = vec3(0.0);
   float seen = 0.0, at = 0.0;
   for (int i = 0; i < 18; i++) {
-    if (float(i) >= steps || T < 0.02) break;
     float t = t0 + dt * (float(i) + jitter);
+    if (t > t1 || T < 0.02) break;
     vec3 p = vEye + rd * t;
     vec3 home = homeFrom + homeRay * t;
     vec3 world = cameraPosition + (vWorld - cameraPosition) * t;
-    float d = densityAt(p, home) * smoothstep(0.5, 2.5, t * reach) * clearing(world);
+    float d = densityAt(p, home) * smoothstep(0.5, 2.5, t * reach) * clearing(world) * deckCut(world.y, side);
     if (d <= 0.0) continue;
     float a = 1.0 - exp(-sigma * d * dt * reach);
     float shade = shadeAt(p + vSunStep, home + sunHome);
