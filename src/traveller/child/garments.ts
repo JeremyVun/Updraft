@@ -399,9 +399,10 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
 
 /**
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
- * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
+ * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head, and a short
+ * lower face, its features set low and close together under a tall forehead.
  */
-export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278, fat: 0.13 };
+export const FACE = { c: V(0, 2.016, 0.09), rx: 0.238, rz: 0.25, up: 0.314, down: 0.264, fat: 0.13 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
@@ -482,13 +483,13 @@ function face(b: Builder): void {
   }
 }
 
-/** The hairline's height on the head relative to the face's middle, by angle from the front. */
+/** The hairline's height on the head relative to the hair's middle, by angle from the front. */
 function hairline(phi: number): number {
   const c = Math.cos(phi);
-  return THREE.MathUtils.lerp(-0.22, 0.13, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
+  return THREE.MathUtils.lerp(-0.228, 0.122, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
 }
 
-const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.296, rz: 0.282 };
+const HAIR = { c: V(0, 2.038, 0.07), rx: 0.282, ry: 0.296, rz: 0.282 };
 
 /**
  * A little girl's bangs, as locks: angle from the front and the cosine down from the crown where each starts and
@@ -524,11 +525,10 @@ function hair(b: Builder): void {
   const AROUND = 48;
   const ROWS = 16;
   const rows: Point[][] = [[{ p: HAIR.c.clone().add(V(0, HAIR.ry, 0)), skin: [[BONE.head, 1]], mat: MAT.hair }]];
-  const lift = HAIR.c.y - FACE.c.y;
   for (let i = 1; i <= ROWS; i++) {
     rows.push(Array.from({ length: AROUND }, (_, j) => {
       const phi = (j / AROUND) * TAU;
-      const end = Math.acos(THREE.MathUtils.clamp((hairline(phi) - lift) / HAIR.ry, -1, 1));
+      const end = Math.acos(THREE.MathUtils.clamp(hairline(phi) / HAIR.ry, -1, 1));
       const th = (i / ROWS) * end;
       const flare = hairFlare(phi, Math.cos(th));
       const p = HAIR.c.clone().add(V(HAIR.rx * flare * Math.sin(th) * Math.sin(phi), HAIR.ry * Math.cos(th), HAIR.rz * flare * Math.sin(th) * Math.cos(phi)));

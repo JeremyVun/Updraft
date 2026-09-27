@@ -358,5 +358,11 @@ then eyes 1.15×, 1.2× (with brows and mouth moved) and 1.3×, he asked for "C 
 - **Brows set 0.014 lower** (0.068 above the face's middle), close over the eyes. Floating high they read surprised and
   older.
 - Knobs in `shader.ts` (`paintFace`). Sheet: `/tmp/childyoung/c-brows.png` (now, C, C + brows, F).
-- Not changed, next if she still reads older: the lower face is long from nose to mouth to chin; a young child's is
-  short. That is the face's shape (`FACE.down`, `facePoint`), not its paint.
+- **A shorter lower face, 5%.** Jeremy asked to see it ("can you give me a comparison sheet so i can see what that
+  shorter face would look like?"), was shown 7%, 14% and 22%, and chose: "i think 14% is too much. lets go with 5%".
+  The chin stays on the scarf and the face's middle comes down 0.014 (`FACE.c.y` 2.016, `up` 0.314, `down` 0.264),
+  so the eyes, brows, nose and mouth sit lower and closer together under a taller forehead. Raising the chin instead
+  bared a dark strip of neck above the scarf. The hair no longer follows the face: `HAIR.c` is its own point, and
+  `hairline` is measured from it. The painted nose tip, its shade, the cheeks and the mouth are scaled with `down`.
+  Sheets: `/tmp/childyoung/lower-sheet.png` (the choices), `lower5.png` (the result: front, three-quarter, side,
+  sunset).
