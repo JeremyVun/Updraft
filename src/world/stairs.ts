@@ -134,13 +134,14 @@ uniform vec3 uCalmAt;
 uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform float uReach;
+uniform float uHole;
 in vec3 vWorld;
 in float vRing;
 BILLOW
 void main() {
   if (vRing > uReach) discard;
   vec2 xz = vWorld.xz;
-  if (uCloudBubble.w > 0.0) {
+  if (uCloudBubble.w > 0.0 && uHole > 0.5) {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
     if (hole < 0.0 && uCloudBubble.y < uCloudDeckY.y + 0.5) discard;
   }
@@ -207,7 +208,7 @@ float furrow(vec2 p) {
 }
 float billow(vec2 xz) {
   vec2 p = xz + uCloudShift * 0.6;
-  float calm = min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(12.0, 55.0, fromRoute(xz)));
+  float calm = min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(5.0, 28.0, fromRoute(xz)));
   float swell = (domes(p * 0.09) * 1.1 + domes(p * 0.23 + 3.1) * 0.35) * (0.4 + 0.6 * calm);
   float heaps = domes(p * 0.028 + 9.7) * 7.5 + domes(p * 0.07 + 5.3) * 2.2;
   return mix(swell, swell + heaps, calm) - furrow(xz) * 0.6;
@@ -485,7 +486,7 @@ export class CloudStairs {
   ghostShown = 0;
   private readonly ghostUniform = { value: 0 };
   private readonly topUniforms: { uCentre: { value: THREE.Vector2 }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uHole: { value: number } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
@@ -559,6 +560,7 @@ export class CloudStairs {
       uReach: { value: 1500 },
       uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone()), DESCENT_END.clone()] },
       uTrail: { value: this.trail },
+      uHole: { value: 1 },
     };
     this.wake = new CloudWake();
     this.group.add(this.wake.mesh);
@@ -792,6 +794,11 @@ export class CloudStairs {
       piece.group.rotation.set(sway * 0.4, piece.offset.y, sway);
       piece.ghost.visible = piece === next && this.ghostUniform.value > 0.01;
     });
+  }
+
+  /** Whether the pocket round a climber opens a hole in the top of the cloud; not while the cloud is swelling up round a hull. */
+  set cloudHole(open: boolean) {
+    this.topUniforms.uHole.value = open ? 1 : 0;
   }
 
   /** The walking strips for a flight and the landing it arrives on, for the child's feet. */

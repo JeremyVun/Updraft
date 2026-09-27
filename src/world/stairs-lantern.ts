@@ -32,12 +32,13 @@ void main() {
 /** A soft warm halo round the flame, reaching further through fog than the lantern itself can be seen. */
 const GLOW_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uLit;
 in vec2 vUv;
 in vec3 vWorld;
 void main() {
   float d = length(vUv - 0.5) * 2.0;
-  float a = pow(max(0.0, 1.0 - d), 2.2) * (0.5 + 0.06 * sin(uTime * 7.0));
-  a *= 1.0 - 0.5 * fogOf(vWorld).a;
+  float a = pow(max(0.0, 1.0 - d), 2.2) * (0.5 + 0.06 * sin(uTime * 7.0)) * uLit;
+  a *= 1.0 - 0.3 * fogOf(vWorld).a;
   gl_FragColor = vec4(vec3(1.0, 0.72, 0.38) * a, a);
 }`;
 
@@ -49,7 +50,7 @@ void main() {
   vec3 c = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  vWorld = c + (right * position.x + up * position.y) * 0.9;
+  vWorld = c + (right * position.x + up * position.y) * 2.2;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -65,35 +66,46 @@ function paint(geo: THREE.BufferGeometry, colour: THREE.Color): THREE.BufferGeom
 
 /**
  * The lantern hung at the bow for the way over the cloud: a little brass-bound box of warm glass on a crooked
- * post, the one warm light they carry into the fog.
+ * post, the one warm light they carry into the fog. Its halo is apart from it, so the flame can go on glowing a
+ * moment after the lantern itself is lost in the white, and go out.
  */
-export function bowLantern(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'bow-lantern';
-  const wood = new THREE.Color('#5a3b26');
-  const brass = new THREE.Color('#9c7a3e');
-  const glassColour = new THREE.Color(1, 0.8, 0.5);
-  const parts = [
-    paint(new THREE.CylinderGeometry(0.022, 0.03, 0.62, 6).translate(0, 0.31, 0), wood),
-    paint(new THREE.BoxGeometry(0.2, 0.02, 0.02).translate(0.09, 0.6, 0), wood),
-    paint(new THREE.BoxGeometry(0.13, 0.02, 0.13).translate(0.18, 0.5, 0), brass),
-    paint(new THREE.BoxGeometry(0.13, 0.02, 0.13).translate(0.18, 0.33, 0), brass),
-    paint(new THREE.ConeGeometry(0.09, 0.07, 4).rotateY(Math.PI / 4).translate(0.18, 0.545, 0), brass),
-    paint(new THREE.TorusGeometry(0.025, 0.006, 4, 10).translate(0.18, 0.6, 0), brass),
-    paint(new THREE.BoxGeometry(0.1, 0.16, 0.1).translate(0.18, 0.415, 0), glassColour),
-  ];
-  for (const x of [-1, 1]) for (const z of [-1, 1]) parts.push(paint(new THREE.BoxGeometry(0.014, 0.18, 0.014).translate(0.18 + x * 0.055, 0.415, z * 0.055), brass));
-  const body = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({
-    uniforms: atmo.uniforms, vertexShader: VERT, fragmentShader: FRAG, vertexColors: true,
-  }));
-  group.add(body);
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
-    uniforms: atmo.uniforms, vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  }));
-  glow.position.set(0.18, 0.415, 0);
-  glow.frustumCulled = false;
-  glow.renderOrder = 8;
-  group.add(glow);
-  return group;
+export class BowLantern {
+  readonly body: THREE.Mesh;
+  readonly glow: THREE.Mesh;
+  private readonly lit = { value: 1 };
+
+  constructor() {
+    const wood = new THREE.Color('#5a3b26');
+    const brass = new THREE.Color('#9c7a3e');
+    const glassColour = new THREE.Color(1, 0.8, 0.5);
+    const parts = [
+      paint(new THREE.CylinderGeometry(0.022, 0.03, 0.62, 6).translate(0, 0.31, 0), wood),
+      paint(new THREE.BoxGeometry(0.2, 0.02, 0.02).translate(0.09, 0.6, 0), wood),
+      paint(new THREE.BoxGeometry(0.13, 0.02, 0.13).translate(0.18, 0.5, 0), brass),
+      paint(new THREE.BoxGeometry(0.13, 0.02, 0.13).translate(0.18, 0.33, 0), brass),
+      paint(new THREE.ConeGeometry(0.09, 0.07, 4).rotateY(Math.PI / 4).translate(0.18, 0.545, 0), brass),
+      paint(new THREE.TorusGeometry(0.025, 0.006, 4, 10).translate(0.18, 0.6, 0), brass),
+      paint(new THREE.BoxGeometry(0.1, 0.16, 0.1).translate(0.18, 0.415, 0), glassColour),
+    ];
+    for (const x of [-1, 1]) for (const z of [-1, 1]) parts.push(paint(new THREE.BoxGeometry(0.014, 0.18, 0.014).translate(0.18 + x * 0.055, 0.415, z * 0.055), brass));
+    this.body = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({
+      uniforms: atmo.uniforms, vertexShader: VERT, fragmentShader: FRAG, vertexColors: true,
+    }));
+    this.body.name = 'bow-lantern';
+    this.glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, uLit: this.lit }, vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    this.glow.name = 'bow-lantern-glow';
+    this.glow.frustumCulled = false;
+    this.glow.renderOrder = 8;
+  }
+
+  /** Where the flame is, in the frame the body hangs in. */
+  static readonly FLAME = new THREE.Vector3(0.18, 0.415, 0);
+
+  set brightness(v: number) {
+    this.lit.value = v;
+    this.glow.visible = v > 0.005;
+  }
 }

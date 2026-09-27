@@ -279,7 +279,7 @@ export const tuning = {
     /** Top speed over the cloud, metres a second, and how long the cloud takes to swell up over them on the way down. */
     sailSpeed: 5, fogRise: 6,
     /** How long the fog takes to lift off the village's water before the village has them. */
-    fogLift: 7,
+    fogLift: 8.5,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */

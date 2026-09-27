@@ -543,7 +543,11 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   vec2 fringe = deckSlab(ro, rd, uCloudDeckY.x - 1.6, uCloudDeckY.x + 1.4, far);
   vec2 slab = vec2(min(body.x, fringe.x), max(body.y, fringe.y));
   vec2 inside = vec2(max(slab.x, disc.x), min(slab.y, disc.y));
-  float len = deckSpan(body, disc) + 0.28 * deckSpan(fringe, disc);
+  // The fringe thickens from nothing at its foot to nearly the body at its top, so there is no floor to the cloud
+  // to see edge-on: the density is linear in height, so its mean along the span is its value at the span's middle.
+  vec2 fr = vec2(max(fringe.x, disc.x), min(fringe.y, disc.y));
+  float thick = clamp((ro.y + rd.y * (fr.x + fr.y) * 0.5 - (uCloudDeckY.x - 1.6)) / 3.0, 0.0, 1.0);
+  float len = deckSpan(body, disc) + 0.85 * thick * max(0.0, fr.y - fr.x);
   if (inside.y - inside.x <= 0.0) return vec4(0.0);
   float thin = uCloudDeckY.z - uCloudDeckY.w;
   float cleared = 0.0;
