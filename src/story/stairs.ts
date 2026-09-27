@@ -51,8 +51,11 @@ const ASIDE = (() => {
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
 const SEA_RIDE = 0.4;
-/** How high the middle of the sail stands over the hull. */
-const SAIL_MIDDLE = 2.1;
+/**
+ * Under sail the pointer lands this high over the hull, about at the boom, so a stroke over the hull or across the
+ * sail puts its wind on the boat from any of the lens's framings that look down on it.
+ */
+const POINTER_OVER_HULL = 1;
 /** The white on the sea goes grey and blue with the dusk. */
 const DUSK_MIST = new THREE.Color(0.9, 0.96, 1.14);
 
@@ -280,10 +283,8 @@ export class StairsChapter implements Chapter {
 
   /** Above the cloud the pointer lands on its top, so a gust meant for the sail reaches the sail. */
   get pointerFloor(): number | null {
-    // Under sail the pointer lands at the height of the middle of the sail, so a stroke drawn across the sail puts
-    // its wind there, whichever side the lens is looking from, as long as it is looking down on the sail.
-    const sail = this.cast.boat.position.y + SAIL_MIDDLE;
-    if ((this.beat === 'sail' || this.beat === 'fog') && this.world.eye.y > sail + 0.4) return sail;
+    const hull = this.cast.boat.position.y + POINTER_OVER_HULL;
+    if ((this.beat === 'sail' || this.beat === 'fog') && this.world.eye.y > hull + 0.4) return hull;
     return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
   }
 
