@@ -81,6 +81,14 @@ Asked which layout answers "the stairs go forward, then back again", he chose **
 zigzag like concept C: every flight climbs away from you, zigzagging left and right toward the cloud and never
 coming back, more a path into the sky, walking out over the sea.
 
+After playtesting the third pass by hand (2026-09-28, verbatim):
+
+> "- The penrose stairs causes the cygnet to teleport down. Visually, it doesn't look like penrose stairs at all. Also, there's no invitational gesture that lets the player know they have to blow away some fog.
+>
+> - They sail around in circles in the clouds, and the camera is stuck in one close up position the whole time. It's completely fails to capture the beauty of this journey.
+>
+> - It's still very obvious that they are descending through the clouds instead of into some fog."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
@@ -179,6 +187,30 @@ light. Courage passes back and forth between them; the stairs are where it start
   each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n` starts with n flights
   home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree with its own server
   while editing (`/private/tmp/updraft-stairs-cap`).
+
+## Status (2026-09-28, fourth pass, in progress)
+
+- The loop, rebuilt so it reads as Penrose stairs:
+  - It is one ring of stairs, not four railed landings with stubs of steps between. The corners are no wider than
+    a flight with its rails (`CORNER`), and the sides are 4 and 12 steps.
+  - There are no strings, so every side shows its stepped ends, and there is a rail on the outside of the ring only.
+  - The child waits a few treads down the flight below the near corner (`waitBelow`), clear of the ring. The bird
+    sets off from that corner, runs round and comes back onto it, right over her: up the way it went, back the way it
+    came, at her, a questioning peep.
+  - The drawn-in last flight depth-tests as if it stood where it seems to (`TRICK`, `aDepth`), so the corner's newel
+    and the flight below stand in front of it. The copy of the corner is gone.
+  - The hollow deepens to lilac below the ring, because the cloud's light is taken where a sightline leaves the
+    pocket's clear heart.
+- Jeremy's "teleport": from the one place, the swap onto the corner never moves the bird on screen (checked frame
+  by frame). What read as a teleport was the loop not reading as a loop.
+- The heap on the far corner is volumetric cumulus (`hazeHeapMaterial`), lumps with their own round heads that a
+  stroke carries away. The sweep across it comes as soon as the bird is back where it started. It runs from the
+  clear air on one side across the heap and out the other, drawn over it, and child and bird both look across at
+  the heap before each new round.
+- The reveal: once the bird finds the way on, the lens holds, then comes round and down beside the loop. Meanwhile
+  the last flight lets go of the trick (`undraw`) and climbs on past the corner, ending in the air a storey too
+  high. The hollow closes once the lens is back in the white.
+- The sail and the way down into the fog are being redone on branch `stairs-sail`.
 
 ## Status (2026-09-27, third pass, in progress)
 
