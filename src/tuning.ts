@@ -1263,6 +1263,17 @@ export const tuning = {
    * the hull's speed follows the same reading, a few seconds behind it. Wind speeds are world units per second,
    * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
    */
+  lantern: {
+    /** How brightly the boat's lantern lights what is round it at full dark, and how the light falls away with distance. */
+    glow: 1.4,
+    falloff: 0.6,
+    /** The share the sail and pennant take: thin cloth a few metres off would otherwise glow like a shade. */
+    cloth: 0.45,
+    /** Metres from the flame beyond which it lights nothing. */
+    reach: 9,
+    /** How strongly the flame shows in the water beneath it, as a glint broken up by the ripples. */
+    water: 0.6,
+  },
   sail: {
     /** A controlled turn into the meadow bay keeps gusts from landing far along the beach. */
     meadowArrivalSpeed: 5,

@@ -496,14 +496,22 @@ function stem(): THREE.BufferGeometry[] {
   for (const c of centres) rake(c);
   const parts = [centreline(centres, (i) => [0.024, i === centres.length - 1 ? 0.026 : 0.03], WOOD.stem, KIND.wood)];
 
-  // The post runs straight up the raked stem from its foot and on a little past the gunwale.
+  const post = stemPost();
+  const thick = (i: number) => THREE.MathUtils.smoothstep(i / 14, 0, 0.4);
+  return [...parts, centreline(post, (i) => [0.035 + 0.045 * thick(i), 0.03 + 0.045 * thick(i)], WOOD.post, KIND.paint), ...lantern(post[14])];
+}
+
+/** The post runs straight up the raked stem from its foot and on a little past the gunwale. */
+function stemPost(): THREE.Vector3[] {
   const foot = rake(new THREE.Vector3(0, keel(1), BOW_Z));
   const along = rake(new THREE.Vector3(0, gunwale(1), BOW_Z)).sub(foot);
   const post: THREE.Vector3[] = [];
   for (let i = 0; i <= 14; i++) post.push(foot.clone().addScaledVector(along, THREE.MathUtils.lerp(0.08, 1.16, i / 14)));
-  const thick = (i: number) => THREE.MathUtils.smoothstep(i / 14, 0, 0.4);
-  return [...parts, centreline(post, (i) => [0.035 + 0.045 * thick(i), 0.03 + 0.045 * thick(i)], WOOD.post, KIND.paint), ...lantern(post[14])];
+  return post;
 }
+
+/** The middle of the lantern's glass, in the hull's own frame. */
+export const lanternFlame = (): THREE.Vector3 => stemPost()[14].add(new THREE.Vector3(0, 0.175, 0));
 
 /** A little painted pail and a coil of rope on the floorboards behind the thwart, where the camera sees them. */
 function gear(): THREE.BufferGeometry[] {

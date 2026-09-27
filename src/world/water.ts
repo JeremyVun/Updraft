@@ -325,7 +325,7 @@ void main() {
 
   /** The land's baked shade stops at the window; beyond it the edge texel would streak out as a hard wedge. */
   float sh = cloudShadow(xz) * mix(1.0, bedN.w, inside);
-  vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
+  vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;
   vec3 body = uDeep * scatterLight;
   if (depth < 9.0) {
     vec3 T = refract(-V, N, 0.75);
@@ -382,6 +382,16 @@ void main() {
   }
 
   vec3 col = mix(body, refl, F) + sun + starlight;
+  /** The lantern's glint: the ripples break it into a wavering column of light running toward the viewer. */
+  if (uLantern.w > 0.001) {
+    vec3 toLantern = uLantern.xyz - vWorld;
+    vec3 Ll = normalize(toLantern);
+    vec3 Hl = halfVector(Ll, V);
+    float nll = max(dot(N, Ll), 0.0);
+    float fl = 0.02 + 0.98 * pow(1.0 - clamp(dot(V, Hl), 0.0, 1.0), 5.0);
+    float glint = min(ggx(max(dot(N, Hl), 0.0), alpha2) * smithVis(nv, nll, alpha2) * nll * fl, 40.0);
+    col += lanternLight(vWorld, Ll) * glint * ${glsl(tuning.lantern.water)};
+  }
   // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
   col *= 1.0 - ${glsl(tuning.water.darken)} * stroke;
 

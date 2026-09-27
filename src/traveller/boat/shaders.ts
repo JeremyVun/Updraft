@@ -163,7 +163,7 @@ void main() {
   col += uSunColor * sheen * sun;
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0) * max(dot(-V, uSunDir), 0.0);
   col += uSunColor * rim * 0.12 * sun;
-  col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N));
+  col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N) * ao);
   if (kind > ${glsl(KIND.transom + 0.5)}) {
     /** The lantern's glass: dull amber by day, lit from within as the sun goes down and through the night. */
     float lit = max(uNight, 1.0 - smoothstep(0.04, 0.28, uSunDir.y));
@@ -352,7 +352,7 @@ void main() {
   /** Light comes through where the cloth is single; seams, hems and patches are doubled and hold it back. */
   float through = (max(-ndl, 0.0) * 0.45 + pow(max(dot(-V, uSunDir), 0.0), 3.0) * 0.25) * (1.0 - doubled * 0.45);
   float sun = cloudShadow(vWorld.xz);
-  vec3 col = cloth * (harbourLight(vWorld) + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
+  vec3 col = cloth * (harbourLight(vWorld) + lanternLight(vWorld, N) * ${glsl(tuning.lantern.cloth)} + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
   col += cloth * cloth * uSunColor * through * 0.35 * sun;
   col += cloth * emberLight(vWorld, N);
   gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 1.0, 3.5) * givesWay(vWorld));
@@ -411,7 +411,7 @@ void main() {
   float ndl = dot(N, uSunDir);
   float through = max(-ndl, 0.0) * 0.45 + pow(max(dot(-V, uSunDir), 0.0), 3.0) * 0.25;
   float sun = cloudShadow(vWorld.xz);
-  vec3 col = cloth * (harbourLight(vWorld) + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
+  vec3 col = cloth * (harbourLight(vWorld) + lanternLight(vWorld, N) * ${glsl(tuning.lantern.cloth)} + hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.6) * sun);
   col += cloth * cloth * uSunColor * through * 0.35 * sun;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;

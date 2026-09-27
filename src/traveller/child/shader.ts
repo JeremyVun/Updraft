@@ -297,7 +297,7 @@ void main() {
    * The lamp stands a stride from the pillow, so it is taken square on the side turned to it and nearly let go
    * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
    */
-  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N)) * mix(0.5, 1.0, ao);
+  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N)) * mix(0.5, 1.0, ao);
   if (uLamp.w > 0.0) {
     vec3 toLamp = uLamp.xyz - vWorld;
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);

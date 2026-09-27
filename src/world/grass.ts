@@ -473,6 +473,7 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   /** A rimed blade is shaded flat rather than rounded off like a stem, so a sward reads as one surface. */
   vSideDir *= 1.0 - 0.5 * rime;
   vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
+            + lanternLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
   vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)});
   vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)});

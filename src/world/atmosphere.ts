@@ -77,6 +77,8 @@ export const atmo = {
     uStormCover: { value: 0 },
     uHarbourLight: { value: new THREE.Vector4(0, 0, 0, 0) },
     uHarbourDirection: { value: new THREE.Vector3(0, 0, 1) },
+    /** The boat's lantern: where its flame is (xyz) and how brightly it burns (w), 0 by day. */
+    uLantern: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** Direction of sheet lightning in the clouds, and its current strength. */
     uLightning: { value: new THREE.Vector4(0, 0.32, -1, 0) },
     /** Mist lying in the low ground, 0 clear to 1: thick in the still world and after dark. */
@@ -225,6 +227,7 @@ uniform vec3 uSkyAmbient;
 uniform float uStormCover;
 uniform vec4 uHarbourLight;
 uniform vec3 uHarbourDirection;
+uniform vec4 uLantern;
 uniform vec4 uLightning;
 uniform vec3 uGroundBounce;
 uniform float uFogDensity;
@@ -453,6 +456,15 @@ vec3 harbourLight(vec3 world) {
   float cone = smoothstep(0.968, 0.994, dot(d / max(dist, 0.001), uHarbourDirection));
   float fall = 1.0 - smoothstep(35.0, 95.0, dist);
   return vec3(0.9, 0.78, 0.52) * cone * fall * uHarbourLight.w;
+}
+
+/** The boat's lantern after sundown: a small warm light, gone within a few boat lengths. */
+vec3 lanternLight(vec3 world, vec3 N) {
+  if (uLantern.w <= 0.001) return vec3(0.0);
+  vec3 d = uLantern.xyz - world;
+  float dist = length(d);
+  float fall = uLantern.w / (1.0 + dist * dist * ${glsl(tuning.lantern.falloff)}) * (1.0 - smoothstep(0.5, 1.0, dist / ${glsl(tuning.lantern.reach)}));
+  return vec3(1.0, 0.63, 0.29) * fall * clamp(dot(N, d / max(dist, 0.001)) * 0.7 + 0.3, 0.0, 1.0);
 }
 
 /** 0 within hide metres of the lens, 1 beyond show: a large prop passing the camera fades instead of filling the view. */

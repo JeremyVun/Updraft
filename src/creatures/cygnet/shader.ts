@@ -251,7 +251,7 @@ void main() {
    * bird, and a coat lit from one side only has to keep a warm edge on that side or it reads as a cut-out, so the
    * down catches the lamp along its rim as well as taking it flat.
    */
-  col += alb * dawnLight(vWorld, N);
+  col += alb * (dawnLight(vWorld, N) + lanternLight(vWorld, N) * 0.75);
   if (uLamp.w > 0.0) {
     vec3 toLamp = uLamp.xyz - vWorld;
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);

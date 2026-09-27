@@ -41,7 +41,7 @@ void main() {
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.1 + uSunColor * (max(ndl, 0.0) * 0.7 + through)) + uSunColor * rim * 0.22;
   /** Paper held against a child in bed: it takes the room's own light, and the lamp on the side turned to it. */
-  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N));
+  col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N));
   if (uLamp.w > 0.0) {
     vec3 toLamp = uLamp.xyz - vWorld;
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);

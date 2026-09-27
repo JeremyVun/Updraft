@@ -9,7 +9,7 @@ import { type Swell, swellAt } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
-import { boomGeometry, hullGeometry, pennantGeometry, sailGeometry } from './boat/parts';
+import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
 
 /**
@@ -77,6 +77,7 @@ export class Boat {
   private readonly clewAt = new THREE.Vector3();
   /** The world as the hull sees it, for the shade its own sides cast inside it. */
   private readonly hullFrame = new THREE.Matrix4();
+  private readonly flame = lanternFlame();
   private readonly pennantMat: THREE.ShaderMaterial;
   /** The air the pennant streams in, in the hull's own frame, and how far out it lifts. */
   private readonly pennantAir = new THREE.Vector2();
@@ -397,6 +398,7 @@ export class Boat {
     this.trimBoom(time);
     this.pose(dt);
     this.updateWake(dt, time);
+    this.light(time);
   }
 
   /** The pennant streams the way the air in the sail is going, lifting out as it freshens. */
@@ -485,6 +487,15 @@ export class Boat {
     this.sea.slopeX *= damp;
     this.sea.slopeZ *= damp;
     return this.sea.height;
+  }
+
+  /** The lantern lights what is round it from when its glass does: as the sun goes down and through the night. */
+  private light(time: number): void {
+    const u = atmo.uniforms;
+    const lit = this.group.visible ? Math.max(u.uNight.value, 1 - THREE.MathUtils.smoothstep(u.uSunDir.value.y, 0.04, 0.28)) : 0;
+    const flicker = 0.9 + 0.1 * Math.sin(time * 7) * Math.sin(time * 3.1);
+    const at = this.contact.copy(this.flame).applyMatrix4(this.group.matrixWorld);
+    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * flicker);
   }
 
   /** A short tail of foam behind the hull while it is under way; it spreads and fades. */

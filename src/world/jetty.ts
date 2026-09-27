@@ -89,7 +89,7 @@ void main() {
   float ndl = max(dot(n, uSunDir), 0.0);
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);
   float sun = cloudShadow(vWorld.xz);
-  vec3 col = alb * (hemiLight(n) + uSunColor * mix(ndl, wrap, 0.3) * sun);
+  vec3 col = alb * (hemiLight(n) + uSunColor * mix(ndl, wrap, 0.3) * sun + lanternLight(vWorld, n));
   /** Kept under the cottage windows: the light the child is walking toward is the one that should carry. */
   vec3 lamp = vec3(1.0, 0.62, 0.28) * mix(${glsl(tuning.homeApproach.lanternDay)}, ${glsl(tuning.homeApproach.lanternNight)}, uNight);
   col = mix(col, lamp, vGlow);
