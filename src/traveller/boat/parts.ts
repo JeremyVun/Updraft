@@ -10,7 +10,7 @@ import {
 export const KIND = { planks: 0, boards: 1, wood: 2, paint: 3, transom: 4 } as const;
 
 /** Clinker strakes a side, keel to gunwale. */
-export const STRAKES = 6;
+export const STRAKES = 8;
 
 const WOOD = {
   planks: new THREE.Color('#87583b'),

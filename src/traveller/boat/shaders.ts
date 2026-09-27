@@ -90,13 +90,15 @@ void main() {
     float fw = fwidth(g);
     float sharp = 1.0 - smoothstep(0.18, 0.45, fw);
     float edge = outside ? f : 1.0 - f;
-    float bevel = 1.0 - smoothstep(0.0, 0.07 + fw, edge);
-    float under = smoothstep(0.8 - fw, 0.99, edge);
-    vec3 T = normalize(vTan - N * dot(vTan, N));
-    N = normalize(N + T * (0.3 * (0.5 - edge) * sharp) * (outside ? 1.0 : -1.0));
+    float bevel = 1.0 - smoothstep(0.0, 0.06 + fw, edge);
+    float under = smoothstep(0.72 - fw, 0.99, edge);
+    float crevice = smoothstep(0.955 - fw, 0.985, edge);
+    vec3 upSide = vTan - N * dot(vTan, N);
+    vec3 T = dot(upSide, upSide) > 1e-8 ? normalize(upSide) : vec3(0.0);
+    N = normalize(N + T * (0.42 * (0.5 - edge) * sharp) * (outside ? 1.0 : -1.0));
     float side = vLocal.x > 0.0 ? 1.0 : 0.0;
     alb *= 1.0 + (hash12(vec2(k, side * 5.0 + 3.0)) - 0.5) * 0.16 * sharp;
-    alb *= mix(0.94, 1.0 - under * 0.6 + bevel * 0.16, sharp);
+    alb *= mix(0.92, (1.0 - under * 0.38) * (1.0 - crevice * 0.45) + bevel * 0.22, sharp);
     float grain = vnoise(vec2(along * 1.4 + k * 7.3, across * 24.0));
     alb *= 0.94 + 0.12 * mix(0.5, grain, 1.0 - smoothstep(0.1, 0.4, fwidth(across * 24.0)));
     /** Below the waterline the wood is darker, wet, and a little green. */
