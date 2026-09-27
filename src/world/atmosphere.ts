@@ -531,6 +531,34 @@ float deckSpan(vec2 a, vec2 b) {
 }
 
 /**
+ * How much of the stairs' deck hangs over a point as it is seen from below: whole over the stair, and further out
+ * breaking up into separate clouds with the sky between them. Whole while the deck is down on the sea as fog.
+ */
+float deckCover(vec2 xz) {
+  float open = smoothstep(58.0, 125.0, length(xz - uCloudDeck.xy)) * smoothstep(8.0, 16.0, uCloudDeckY.x);
+  if (open <= 0.0) return 1.0;
+  vec2 q = xz + uCloudShift * 0.5;
+  float n = vnoise(q * 0.014 + 4.1) * 0.6 + vnoise(q * 0.037 + 1.3) * 0.28 + vnoise(q * 0.1 + 8.2) * 0.12;
+  return smoothstep(0.0, 0.13, n - mix(-0.25, 0.55, open));
+}
+
+/**
+ * The underside of the deck at xz as seen from ro: lilac in the body of the cloud, and the low sun coming in under
+ * its far edge lighting it gold and rose, the more toward the sun and the further off. Its thin edges are lit
+ * through. thin is 0 in the body of a cloud and 1 at its edge.
+ */
+vec3 deckUnderside(vec2 xz, vec3 ro, float thin) {
+  vec2 away = xz - ro.xz;
+  float reach = length(away);
+  float toward = reach > 1.0 ? dot(away / reach, normalize(uSunDir.xz + 1e-5)) * 0.5 + 0.5 : 0.5;
+  float far = smoothstep(25.0, 420.0, reach);
+  vec3 body = uSkyAmbient * vec3(0.95, 0.72, 0.85) + uGroundBounce * 0.3 + uSunColor * vec3(0.02, 0.012, 0.016);
+  vec3 rose = uSunColor * vec3(0.9, 0.7, 0.85);
+  vec3 glow = rose * (0.03 + 0.06 * toward) + uSunColor * pow(toward, 4.0) * (0.12 + 0.55 * far);
+  return body + glow * (0.5 + 0.9 * far) + uSunColor * thin * (0.1 + 0.3 * toward);
+}
+
+/**
  * The stairs' cloud deck along a sightline of length far: rgb its light, a how much of the view it covers.
  * Analytic, so it costs the same per vertex as per pixel: a slab, clipped to its disc, with the pocket round
  * the child hollowed out of it. Its light comes from where a sightline first gets well into it: sunlit gold on
@@ -560,16 +588,27 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   // The far edge of the deck frays out rather than ending along a line.
   float edge = 1.0 - smoothstep(0.55, 1.0, length(p.xz - uCloudDeck.xy) / uCloudDeck.z);
   float cover = (1.0 - exp(-depth * edge)) * uCloudDeck.w;
+  // From below, away from the stair, the sky shows between separate clouds. A sightline up through a gap can still
+  // meet the side of a cloud beyond it: lit gold when the sun is behind the eye, a dark body with a bright edge
+  // when it is ahead.
+  float fromBelow = rd.y > 0.0 ? 1.0 - smoothstep(uCloudDeckY.x - 6.0, uCloudDeckY.x - 1.6, ro.y) : 0.0;
+  float gap = 0.0;
+  float wall = 0.0;
+  if (fromBelow > 0.0) {
+    float c0 = deckCover(ro.xz + rd.xz * ((uCloudDeckY.x - ro.y) / rd.y));
+    float c1 = deckCover(ro.xz + rd.xz * ((uCloudDeckY.x + 2.5 - ro.y) / rd.y)) * 0.8;
+    gap = (1.0 - c0) * fromBelow;
+    wall = max(0.0, c1 - c0) * fromBelow;
+    cover *= mix(1.0, max(c0, c1), fromBelow);
+  }
   float up = clamp((p.y - uCloudDeckY.x) / max(uCloudDeckY.y - uCloudDeckY.x, 1.0), 0.0, 1.0);
   vec2 q = p.xz + uCloudShift * 0.5;
   float cells = smoothstep(0.25, 0.75, vnoise(q * 0.075));
   float billow = vnoise(q * 0.021) * 0.55 + vnoise(q * 0.06) * 0.25 + cells * 0.2;
   float sunUp = clamp(uSunDir.y * 3.0 + 0.25, 0.0, 1.0);
-  // A low sun under the edge of the deck lights its underside from beneath, warmest toward the sun and far off.
-  vec2 away = p.xz - ro.xz;
-  float reach = length(away);
-  float sunward = reach > 1.0 ? pow(max(0.0, dot(away / reach, normalize(uSunDir.xz + 1e-5))), 3.0) : 0.0;
-  vec3 under = uSkyAmbient * 0.5 + uGroundBounce * 0.3 + uSunColor * (0.03 + 0.55 * sunward * smoothstep(30.0, 500.0, reach));
+  float behind = dot(rd.xz, rd.xz) > 1e-8 ? max(0.0, -dot(normalize(rd.xz), normalize(uSunDir.xz))) : 0.0;
+  vec3 under = deckUnderside(p.xz, ro, gap);
+  under = mix(under, under * 0.8 + uSunColor * (0.06 + 0.45 * behind), wall);
   vec3 over = uSunColor * (0.55 + 0.35 * sunUp) + uSkyAmbient * 0.55;
   vec3 light = mix(under, over, smoothstep(0.0, 1.0, pow(up, 1.4)));
   light *= 0.66 + 0.55 * billow;
