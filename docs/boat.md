@@ -22,16 +22,17 @@ for the whole game.
 
 ## Status
 
-- First pass (6 commits from 02e8887): clinker strakes in the shader, a pale gunwale rail, ribs, floorboards, seats,
-  foredeck, stem, rudder and tiller; tapered mast with hoops; the boom under the sail's clew; a masthead pennant; the
-  quilt sail stitched and hemmed; LENGTH, BEAM, DEPTH, DRAFT, the contact shell, physics and public API unchanged.
-- Pass 2, proportion study (in progress): `?hull=waist|tub|big` picks a study hull in `form.ts` (`first` is the first
-  pass). Only the drawn hull, the seat and the rig's height change; the contact shell, physics and berths do not. The
-  new hulls take the concept's finish: honey planking, a cream rubbing strake hung with rope, a stout dark mast, a
-  raked stem and transom. The switch is temporary: the chosen hull becomes the only form, then boarding, the jetty
-  step, grounding and berths are reconciled with it.
-- Jeremy chose a hull a little smaller than waist-deep: `?hull=cute`. It is 4.4 m long; the gunwale sits at the
-  seated child's belly. It is round everywhere: an elliptical bottom, sides that swell, a stern that lifts clear of
-  the water, and a stem and transom that curve out. It has six wide strakes. A thick white post stands at the stem
-  with a lantern on it, lit from sunset through the night. The stairs branch hangs its own bow lantern for that
-  chapter; when the branches meet, the chapter should light this one instead.
+- First pass (6 commits from 02e8887): clinker strakes in the shader, rail, ribs, floorboards, seats, stem, rudder
+  and tiller; tapered mast with hoops; the boom under the sail's clew; a masthead pennant; the quilt sail stitched and
+  hemmed.
+- Pass 2 (from 1572bce), after proportion studies Jeremy steered through: waist-deep hulls; then "a bit slightly
+  smaller than waist deep" with a rounder silhouette, wider planks and the white post and lamp; then flatter-bottomed
+  with the bow down; then a gentler sheer (the pram bow was tried and dropped: "it just looks weird"); a pail and a
+  coil of rope aboard; the top strake left natural wood. The hull is now the only form in `form.ts`: 4.4 m, six
+  strakes, the gunwale at the seated child's belly, a level keel just below the waterline. The contact shell is the
+  drawn bottom, so the physics and the look agree; the rudder and stem stay clear of it.
+- Gates on the final hull: typecheck, `boat-check`, `sail-flutter-check`, `boat-ground-check` (lowest 0.041 m, first
+  pass 0.031), `boat-mooring-check`, `boat-shores-check` (lowest 0.043 m, first pass 0.038).
+- Open: boarding and the jetty step-out over the higher gunwale (`tuning.boarding.gunwaleIn` and `gunwaleHeight`,
+  and the child's step in `traveller.ts`, which the child rebuild owns). The stairs branch hangs its own bow lantern;
+  when the branches meet, that chapter should light this one instead.
