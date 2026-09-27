@@ -29,8 +29,9 @@ export const SAIL_SHOTS: readonly Framing[] = [
   { at: 26, bearing: -0.55, distance: 14, height: 3.6, ahead: -5, up: 1.5, zoom: 1 },
   // Across the bow, in close: their faces in the lantern light and the last of the sun. The lens is below the sail
   // here, where a stroke across it cannot reach it, so the kite draws them on meanwhile (`FACES`).
-  { at: 52, bearing: 0.38, distance: 6.5, height: 1.2, ahead: 0, up: 1.1, zoom: 1.4 },
-  { at: 95, bearing: 0.42, distance: 6.6, height: 1.2, ahead: 0, up: 1.1, zoom: 1.4 },
+  // A little over them, so the mast stands clear of her face and the cygnet's head is against her cheek, not over it.
+  { at: 52, bearing: 0.6, distance: 6.5, height: 2.1, ahead: 0, up: 1, zoom: 1.4 },
+  { at: 95, bearing: 0.64, distance: 6.6, height: 2.1, ahead: 0, up: 1, zoom: 1.4 },
   // Up and away astern to port, still on them until it is well back: the boat small on the sea of cloud, the sun
   // low ahead over the bank of mist and the kite going before them.
   { at: 195, bearing: 2.3, distance: 48, height: 15, ahead: 36, up: 7.5, zoom: 1, lookLag: 0.4 },

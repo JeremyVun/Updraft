@@ -209,6 +209,13 @@ light. Courage passes back and forth between them; the stairs are where it start
   home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree with its own server
   while editing (`/private/tmp/updraft-stairs-cap`).
 
+## Status (2026-09-28, on main)
+
+- Merged to `main` with the sail rework (branch `stairs-sail`) on top of the child rebuild and the new boat; the
+  stairs' glow sits on the boat's own lantern. Not in the chapter select yet (it needs a still and an approved name).
+- Open for Jeremy from the sail rework: the starlings over the cloud, the drowned chapter's opening swing, and the
+  sail's sweep over open water.
+
 ## Status (2026-09-28, fourth pass, in progress)
 
 - The loop, rebuilt so it reads as Penrose stairs:
