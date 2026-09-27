@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
+import { tuning } from '../tuning';
 import { CloudWake } from './stairs-wake';
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, STAIRS_ISLE, TOWER_GATE, flight } from './stairs-layout';
 
@@ -390,7 +391,7 @@ export class FogBank {
     return (x - this.at.x) * this.into.x + (z - this.at.y) * this.into.y;
   }
 
-  update(dt: number): void {
+  update(dt: number, eye: THREE.Vector3): void {
     this.shown = this.asked ? this.amount : this.shown * Math.exp(-dt * 0.8);
     if (this.shown < 0.002 && !this.asked) this.shown = 0;
     this.asked = false;
@@ -398,7 +399,10 @@ export class FogBank {
     u.uFogBank.value.set(this.at.x, this.at.y, this.into.x, this.into.y);
     u.uFogBankShape.value.set(this.floor, this.top, this.deep, this.shown);
     u.uFogBankLight.value.set(this.light.r, this.light.g, this.light.b, this.glow);
-    u.uFogBankClear.value = this.clear;
+    // How far into the white the eye is: it goes along the way the boat goes, where the front is straight across it.
+    const into = this.depthOf(eye.x, eye.z);
+    const inside = THREE.MathUtils.clamp(into / tuning.stairs.bankFront, 0, 1) * THREE.MathUtils.clamp((this.deep - into) / tuning.stairs.bankBack, 0, 1);
+    u.uFogBankEye.value.set(this.clear, eye.y > this.floor && eye.y < this.top ? inside * this.shown : 0);
   }
 }
 
@@ -508,7 +512,7 @@ export class StairsCloud {
     this.top.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     this.topUniforms.uCentre.value.set(Math.round(camera.position.x / 8) * 8, Math.round(camera.position.z / 8) * 8);
     this.wake.update(dt);
-    this.fog.update(dt);
+    this.fog.update(dt, camera.position);
     this.belly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 1;
     this.bellyUniforms.uCentre.value.copy(this.topUniforms.uCentre.value);
   }

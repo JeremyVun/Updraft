@@ -172,8 +172,11 @@ export const atmo = {
     uFogBankShape: { value: new THREE.Vector4(0, 1, 1, 0) },
     /** The light of its white (rgb) and how brightly the low sun glows through it (a). */
     uFogBankLight: { value: new THREE.Vector4(1, 1, 1, 0) },
-    /** How clear the pocket round the boat is kept in it (the deck's pocket, `uCloudBubble`), 0 to 1. */
-    uFogBankClear: { value: 0 },
+    /**
+     * How clear the pocket round the boat is kept in it (the deck's pocket, `uCloudBubble`), 0 to 1 (x), and how far
+     * into its white the eye is, 0 to 1 (y).
+     */
+    uFogBankEye: { value: new THREE.Vector2() },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
     uNoiseTile: noiseTileUniforms.uNoiseTile,
@@ -309,7 +312,7 @@ uniform vec4 uCloudBubble;
 uniform vec4 uFogBank;
 uniform vec4 uFogBankShape;
 uniform vec4 uFogBankLight;
-uniform float uFogBankClear;
+uniform vec2 uFogBankEye;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -516,20 +519,6 @@ float bankTop(float v, float heave) {
   float tall = uFogBankShape.y - uFogBankShape.x;
   return uFogBankShape.x + (tall + heave) * (1.0 - smoothstep(150.0, 460.0, abs(v)));
 }
-/** How thick the bank is at a point, 0 to 1, without its thicker floor. */
-float bankAt(vec3 p) {
-  if (uFogBankShape.w <= 0.0) return 0.0;
-  vec2 o = p.xz - uFogBank.xy;
-  float u = dot(o, uFogBank.zw), v = dot(o, vec2(-uFogBank.w, uFogBank.z));
-  vec2 heave = bankHeave(v, u);
-  float into = u - heave.x;
-  float body = clamp(into / ${glsl(tuning.stairs.bankFront)}, 0.0, 1.0)
-    * clamp((uFogBankShape.z - into) / ${glsl(tuning.stairs.bankBack)}, 0.0, 1.0);
-  float top = bankTop(v, heave.y);
-  float under = 1.0 - clamp((p.y - top + ${glsl(tuning.stairs.bankSoft)}) / ${glsl(tuning.stairs.bankSoft)}, 0.0, 1.0);
-  return uFogBankShape.w * body * under * step(uFogBankShape.x, p.y);
-}
-
 /** Sun let through by the drifting clouds, baked each frame by world/clouds.ts. */
 float cloudShadow(vec2 xz) {
   vec2 uv = (xz - uCloudDomain.xy) * uCloudDomain.zw;
@@ -541,7 +530,7 @@ float cloudShadow(vec2 xz) {
     float under = 1.0 - smoothstep(uCloudDeckY.x - 2.0, uCloudDeckY.y, cameraPosition.y);
     lit *= 1.0 - 0.55 * uCloudDeck.w * under;
     // In the white of the bank of mist the sun comes through it softly, from all round.
-    lit *= 1.0 - 0.5 * bankAt(cameraPosition);
+    lit *= 1.0 - 0.5 * uFogBankEye.y;
   }
   return lit;
 }
@@ -652,10 +641,10 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float low = abs(rd.y) > 1e-3 ? LOW * (exp(-y0 / LOW) - exp(-y1 / LOW)) / rd.y : exp(-0.5 * (y0 + y1) / LOW) * len;
   float thick = ${glsl(tuning.stairs.bankDensity)} * uFogBankShape.w;
   float depth = along / len * (thick * high + ${glsl(tuning.stairs.bankFloor)} * uFogBankShape.w * low);
-  if (uCloudBubble.w > 0.0 && uFogBankClear > 0.0) {
+  if (uCloudBubble.w > 0.0 && uFogBankEye.x > 0.0) {
     float cleared = 0.55 * deckSpan(span, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w))
       + 0.45 * deckSpan(span, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w * 0.6));
-    depth = max(0.0, depth - uFogBankClear * thick * cleared);
+    depth = max(0.0, depth - uFogBankEye.x * thick * cleared);
   }
   float cover = 1.0 - exp(-depth);
   // Its texture is its own, across it and into it, so it is the same wherever the bank is put.
@@ -673,8 +662,7 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float streaming = smoothstep(0.3, 0.8, vnoise(vec2(wisp.x * 0.1, wisp.y * 0.55 + (ro.y + rd.y * 8.0) * 0.7)) * 0.55
     + vnoise(vec2(further.x * 0.05, further.y * 0.25 + (ro.y + rd.y * 20.0) * 0.3) + 5.3) * 0.45);
   vec3 white = uFogBankLight.rgb * (0.72 + 0.5 * streaming) * mix(0.8, 1.0, smoothstep(0.3, 1.0, toward));
-  float inside = clamp(into0 / FRONT, 0.0, 1.0) * clamp((deep - into0) / BACK, 0.0, 1.0)
-    * (1.0 - clamp((ro.y - top + SOFT) / SOFT, 0.0, 1.0)) * step(fl, ro.y);
+  float inside = uFogBankEye.y / max(uFogBankShape.w, 1e-3);
   vec3 light = mix(face, white, inside);
   // The sun glows through it, softly from inside, and brightest where it is thin along its top, where it is lit
   // right through and outshines the sky round the sun.
