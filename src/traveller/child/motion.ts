@@ -516,7 +516,7 @@ export class ChildMotion {
     const bag = b[BONE.bag];
     /** It can swing out from the back but not in through it. */
     const still = 1 - pose.lie;
-    const bp = this.bagPitch.step(THREE.MathUtils.clamp(Math.atan2(-cg.z, -cg.y) * 0.4 * still, -0.04, 0.2), dt);
+    const bp = this.bagPitch.step(THREE.MathUtils.clamp(Math.atan2(-cg.z, -cg.y) * 0.4 * still, -0.04, 0.1), dt);
     const br = this.bagRoll.step(THREE.MathUtils.clamp(Math.atan2(cg.x, -cg.y) * 0.4 * still, -0.16, 0.16), dt);
     bag.rotation.set(Math.max(bp, -0.04), 0, br);
   }

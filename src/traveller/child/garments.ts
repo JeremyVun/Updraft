@@ -779,7 +779,8 @@ function bagPoint(phi: number, h: number, scale = 1, crease = 0): THREE.Vector3 
   /** Soft creases where the leather gives under the weight, down the far face and the sides. */
   const give = 1 + crease * 0.03 * Math.sin(7 * phi + 1.3) * Math.max(0, -c + 0.4);
   const x = a * scale * give * Math.sign(s) * Math.pow(Math.abs(s), e);
-  let z = b * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
+  /** Pressed against the child's back, the near face takes up the gap between them. */
+  let z = b * (c > 0 ? 1.15 : 1) * scale * give * Math.sign(c) * Math.pow(Math.abs(c), e);
   /** Its weight slumps the far face out and down. */
   if (c < 0) z -= 0.03 * smooth(0.4, 0.0, f) * -c;
   return V(x, h, z).add(BAG.c);
