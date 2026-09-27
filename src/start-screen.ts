@@ -1,5 +1,5 @@
 import { params } from './params';
-import { readProgress } from './story/progress';
+import { chosenChapter, hasFinished, readProgress } from './story/progress';
 import { tuning } from './tuning';
 import { VeilWind } from './input/veil-wind';
 
@@ -31,7 +31,7 @@ class StartScreen {
     }
     const saved = params.progress ? readProgress() : null;
     this.button.firstElementChild!.textContent = saved ? 'Continue' : 'Begin';
-    const chapter = saved?.chapter ?? params.chapter;
+    const chapter = saved?.chapter ?? params.chapter ?? (params.progress ? chosenChapter() : null);
     this.veil.classList.toggle('night', (params.dusk ?? 0) > 1.3 || ['toWood', 'wood', 'dark', 'toSleeping', 'sleeping', 'home', 'summit'].includes(chapter ?? ''));
 
     const options = { signal: this.events.signal };
@@ -67,6 +67,10 @@ class StartScreen {
       this.start(); // AudioContext creation/resume must remain in this user gesture.
     }, options);
     window.addEventListener('resize', () => { this.pointer = null; }, options);
+    // New players never download chapter select.
+    if (params.progress && hasFinished()) {
+      void import('./chapter-select/chapter-select').then(m => { if (!this.disposed && !this.started) m.offerChapters(this.veil); }, () => {});
+    }
   }
 
   ready(start: (sound: boolean) => void): void {
@@ -96,6 +100,7 @@ class StartScreen {
   fail(permanent = false): void {
     if (this.disposed || this.failedPermanently) return;
     this.started = false;
+    this.veil.querySelector('.chapters-toggle')?.remove();
     if (permanent) {
       this.failedPermanently = true;
       this.veil.setAttribute('aria-busy', 'false');

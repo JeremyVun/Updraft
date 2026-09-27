@@ -318,6 +318,8 @@ export class LinesChapter implements Chapter {
       s.target.set(x, heightAt(x, z) + 2.8, z);
       s.distance = waiting ? k.curtainDistance : k.walkDistance;
       s.height = waiting ? k.curtainHeight : k.walkHeight;
+      // Behind the last sheet the ground rises two metres into tall grass; stand the camera above the blade tips.
+      s.clearance = 3.6;
       this.pace = waiting ? 1.1 : 0.75;
     } else if (this.beat === 'familyApproach' || this.beat === 'family') {
       s.target.copy(FAMILY_MID).setY(heightAt(11, -390) + 2.8);

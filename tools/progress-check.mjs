@@ -112,7 +112,7 @@ try {
 
   const lastComplete=report.checkpoints.find(p=>p.point==='complete').saved;
   await page.evaluate(({key,save})=>localStorage.setItem(key,JSON.stringify(save)),{key,save:lastComplete});
-  await open('shot&progress=1');await page.waitForTimeout(6200);
+  await open('shot&progress=1');await page.waitForSelector('#ending.replay-ready');
   await page.locator('#again').focus();
   await Promise.all([page.waitForEvent('framenavigated'),page.keyboard.press('Enter')]);await ready();
   assert.equal((await state()).chapter,'island');report.replay=true;
