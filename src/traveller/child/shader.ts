@@ -141,13 +141,13 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   vec2 p = q.xy;
   vec2 e = vec2(abs(p.x) - 0.122, p.y + 0.048);
   /** Cheeks: warmth, not a painted disc. */
-  vec2 c = vec2(abs(p.x) - 0.148, p.y + 0.122);
+  vec2 c = vec2(abs(p.x) - 0.148, p.y + 0.116);
   float cheek = exp(-dot(c, c) / 0.0034);
   alb = mix(alb, uCheek, cheek * 0.55);
   /** A tiny warm tip where the nose would catch the light. */
-  alb = mix(alb, uCheek, (0.2 + 0.32 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.104), p - vec2(0.0, -0.104)) / 0.0007));
+  alb = mix(alb, uCheek, (0.2 + 0.32 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.099), p - vec2(0.0, -0.099)) / 0.0007));
   /** And the soft shade under it, which is what lets a small nose read from straight in front. */
-  alb *= 1.0 - 0.2 * uNoseTip * exp(-(p.x * p.x) / 0.0009 - (p.y + 0.134) * (p.y + 0.134) / 0.00012);
+  alb *= 1.0 - 0.2 * uNoseTip * exp(-(p.x * p.x) / 0.0009 - (p.y + 0.127) * (p.y + 0.127) / 0.00012);
   /** Brows: short soft arcs close over the eyes, fuller toward the nose, the only thing that carries a mood. */
   vec2 b = vec2(abs(p.x) - 0.122, p.y - 0.068 + 7.0 * (abs(p.x) - 0.122) * (abs(p.x) - 0.122));
   float brow = fill(ellipse(b, vec2(0.031, 0.0105 - 0.1 * clamp(b.x, 0.0, 0.031))));
@@ -168,7 +168,7 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   vec2 g = vec2(e.x * sign(p.x), e.y);
   alb = mix(alb, vec3(1.0), 0.85 * fill(length(g - vec2(0.0161, 0.023)) - 0.0092) * eye * open);
   /** The mouth: a small relaxed line; a yawn opens it into a soft dark oval. */
-  vec2 m = vec2(p.x, p.y + 0.176);
+  vec2 m = vec2(p.x, p.y + 0.167);
   float line = fill(abs(m.y - 4.0 * m.x * m.x) - 0.0034 * (1.0 - 0.5 * abs(m.x) / 0.032)) * step(abs(m.x), 0.032) * uMouth;
   /** The soft fullness of the lower lip, only a warmth. */
   alb = mix(alb, uCheek, 0.3 * uMouth * exp(-(m.x * m.x) / 0.0005 - (m.y + 0.014) * (m.y + 0.014) / 0.00006));
