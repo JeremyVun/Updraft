@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { heightAt } from '../world/island';
+import { deckGround, offTheEdge, type Deck } from '../world/decks';
 import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
 import { LooseDown } from '../fx/loose-down';
@@ -13,6 +13,9 @@ import { Mind, type Act, type Senses } from './cygnet/mind';
 import { Poser, type Drives } from './cygnet/pose';
 import { applyLook, cygnetMaterial, downShells, newLook } from './cygnet/shader';
 import { Ride, type Mount, type Seat } from './cygnet/ride';
+
+/** Which ways it tries to step, off the way it faces, when the straight step would take it over an edge. */
+const STEP_ASIDE = [0, 0.5, -0.5, 1.1, -1.1] as const;
 
 const PREEN_NECK = [...NECK].reverse();
 const PREEN_JOINTS = [HEAD, ...PREEN_NECK];
@@ -82,11 +85,23 @@ export class Cygnet {
   state: CygnetState = 'flying';
   /** False where the story will not have it flown at all: in the dark wood it stays on the ground whatever the wind does. */
   mayFly = true;
+  /** Built surfaces it can stand on, such as the treads of a staircase; the one nearest its own height is underfoot. */
+  decks: Deck[] = [];
+  private readonly groundAt = (x: number, z: number): number => this.ground(x, z);
+  private ground(x: number, z: number): number {
+    return deckGround(this.decks, x, z, this.position.y);
+  }
   readonly wing = new WingBandage();
   /** It stands where it is, whatever it feels about the child: for the moments the story asks it to stop and look. */
   stay = false;
   /** How fast it walks, as a share of its usual. A bird following something floating in the air ambles after it. */
   pace = 1;
+  private readonly walkTo = new THREE.Vector2();
+  /**
+   * How big it is drawn, 1 as it is. Only for a trick of the eye: where a stair is built smaller so as to look
+   * further off than it is, whatever walks on it has to be smaller too.
+   */
+  scale = 1;
   /**
    * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
    * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
@@ -334,7 +349,7 @@ export class Cygnet {
   plummet(from: THREE.Vector3, to: THREE.Vector3, seconds: number, heading?: number, velocity?: THREE.Vector3, tumble = 0): void {
     this.fallFrom.copy(from);
     this.fallTo.copy(to);
-    this.fallTo.y = Math.max(heightAt(to.x, to.z), 0);
+    this.fallTo.y = Math.max(this.ground(to.x, to.z), 0);
     const line = heading ?? Math.atan2(to.x - from.x, to.z - from.z);
     const ahead = (to.x - from.x) * Math.sin(line) + (to.z - from.z) * Math.cos(line);
     /**
@@ -411,7 +426,7 @@ export class Cygnet {
     /** It picks the circuit up from wherever the player's wind left it, so nothing about the hand-over is a cut. */
     const f = tuning.fledge;
     this.fledgeArc = Math.atan2(this.position.x - child.x, (this.position.z - child.z - f.offset) / f.squash);
-    this.fledgeFrom = this.position.y - Math.max(heightAt(child.x, child.z), 0);
+    this.fledgeFrom = this.position.y - Math.max(this.ground(child.x, child.z), 0);
     this.fledgeFace = facing;
     this.hopT = 0;
     this.landing = 0;
@@ -521,13 +536,23 @@ export class Cygnet {
 
   /** Comes down out of the flock and lands in the grass, too tired to go on. */
   fall(x: number, z: number, yaw: number): void {
-    this.position.set(x, Math.max(heightAt(x, z), 0), z);
+    this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.seating.seat = null;
     this.seating.snap();
     this.state = 'fallen';
     this.settle = 1;
     this.visible = true;
+  }
+
+  /** On its feet at a spot at once, facing yaw: a move nobody sees, made while the cloud hides it. */
+  standAt(x: number, y: number, z: number, yaw: number): void {
+    this.position.set(x, y, z);
+    this.position.y = Math.max(this.ground(x, z), 0);
+    this.yaw = yaw;
+    this.seating.seat = null;
+    this.seating.snap();
+    this.state = 'following';
   }
 
   /** Who carries it. Set once; every seat is a place on their body. */
@@ -590,7 +615,7 @@ export class Cygnet {
 
   /** Off the hands and onto the grass at `spot`, with a hop: it gets down by itself, the way it got up. */
   release(spot: THREE.Vector3): void {
-    this.position.set(spot.x, Math.max(heightAt(spot.x, spot.z), 0), spot.z);
+    this.position.set(spot.x, Math.max(this.ground(spot.x, spot.z), 0), spot.z);
     this.yaw = this.seating.yaw;
     this.seating.go({ seat: null, held: false }, 'hop', 0.72, 0.1);
     this.state = 'following';
@@ -603,7 +628,7 @@ export class Cygnet {
     this.yaw = Math.atan2(spot.x - this.seating.shown.p.x, spot.z - this.seating.shown.p.z);
     this.nodes[BODY].getWorldPosition(this.tmp);
     this.looseDown.burst(this.tmp, this.yaw);
-    this.position.set(spot.x, Math.max(heightAt(spot.x, spot.z), 0), spot.z);
+    this.position.set(spot.x, Math.max(this.ground(spot.x, spot.z), 0), spot.z);
     this.seating.go({ seat: null, held: false }, 'dash', tuning.wood.frightJumpDuration, tuning.wood.frightJumpArc);
     this.state = 'following';
     this.hurry = 0;
@@ -639,7 +664,7 @@ export class Cygnet {
 
   /** Set down to walk at the child's heel. */
   follow(): void {
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
     if (this.carried) {
       this.seating.go({ seat: null }, 'hop', 0.55, 0.35);
       this.settle = 0.2;
@@ -714,7 +739,7 @@ export class Cygnet {
     this.swimPlay = 0;
     this.swimJoy = 0;
     this.swimCarry.set(0, 0);
-    this.position.set(x, Math.max(heightAt(x, z), 0), z);
+    this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.landedAt = this.time;
     this.landing = 0;
@@ -827,7 +852,7 @@ export class Cygnet {
       this.state === 'falling'
         ? clamp((this.seating.shown.p.y - this.fallTo.y) / 6, 0, 1)
         : this.state === 'flying' || this.state === 'gliding' || this.state === 'fledging' || this.state === 'leaving'
-          ? clamp((this.seating.shown.p.y - Math.max(heightAt(this.seating.shown.p.x, this.seating.shown.p.z), 0)) / 4, 0, 1)
+          ? clamp((this.seating.shown.p.y - Math.max(this.ground(this.seating.shown.p.x, this.seating.shown.p.z), 0)) / 4, 0, 1)
           : 0;
     this.windNow.x = wind.x;
     this.windNow.z = wind.z;
@@ -847,7 +872,7 @@ export class Cygnet {
   private fledging(dt: number, child: THREE.Vector3): void {
     this.fledgeT += dt;
     this.flap = ease(this.flap, 1, 6, dt);
-    const ground = Math.max(heightAt(child.x, child.z), 0);
+    const ground = Math.max(this.ground(child.x, child.z), 0);
     if (this.fledgeT < tuning.fledge.loopFor) this.circuit(dt, child, ground);
     else this.turnBack(dt, this.fledgeT - tuning.fledge.loopFor, child, ground);
   }
@@ -1008,7 +1033,7 @@ export class Cygnet {
      * Never nearer the hillside than a bird would fly it, except at the two ends: it leaves the ground it was
      * standing on rather than being lifted off it, and it comes down onto what it is aimed at.
      */
-    const clear = Math.max(heightAt(p.x, p.z), 0) + 1.5 * (1 - k * k) * THREE.MathUtils.smoothstep(k, 0, 0.14);
+    const clear = Math.max(this.ground(p.x, p.z), 0) + 1.5 * (1 - k * k) * THREE.MathUtils.smoothstep(k, 0, 0.14);
     if (p.y < clear) p.y = clear;
 
     const rise = dt > 0 ? (p.y - was) / dt : 0;
@@ -1057,7 +1082,7 @@ export class Cygnet {
   private soar(dt: number, wind: WindSample, child: THREE.Vector3): void {
     this.glideT += dt;
     const afloat = this.water && this.water.over(this.position.x, this.position.z) ? this.water.level : null;
-    const ground = afloat ?? Math.max(heightAt(this.position.x, this.position.z), 0);
+    const ground = afloat ?? Math.max(this.ground(this.position.x, this.position.z), 0);
     const room = 1 - THREE.MathUtils.smoothstep(this.position.y - ground, CEILING - 2, CEILING);
     const l = this.labour;
     /**
@@ -1149,7 +1174,7 @@ export class Cygnet {
       u * u * this.fallFrom.y + 2 * u * k * this.fallDrift.y + k * k * this.fallTo.y + burst * 0.07 * u * drop + lifted,
       u * u * this.fallFrom.z + 2 * u * k * this.fallDrift.z + k * k * this.fallTo.z,
     );
-    const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
+    const ground = Math.max(this.ground(this.position.x, this.position.z), 0);
     this.position.y = Math.max(this.position.y, ground);
 
     const losing = THREE.MathUtils.smoothstep(k, 0.86, 1);
@@ -1211,12 +1236,16 @@ export class Cygnet {
     /** The first push is what rights it; after that it is upright and simply cannot stay up. */
     this.flop = Math.max(0, Math.min(this.flop, 1 - s * 4));
     this.settle = 1 - rise;
-    const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
+    const ground = Math.max(this.ground(this.position.x, this.position.z), 0);
     this.position.y = ground + rise * rise * 0.1 * amp;
     if (rise > 0.3) {
       this.stride += dt * 9 * amp;
-      this.position.x += Math.sin(this.yaw) * dt * 0.35 * amp;
-      this.position.z += Math.cos(this.yaw) * dt * 0.35 * amp;
+      const nx = this.position.x + Math.sin(this.yaw) * dt * 0.35 * amp;
+      const nz = this.position.z + Math.cos(this.yaw) * dt * 0.35 * amp;
+      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+        this.position.x = nx;
+        this.position.z = nz;
+      }
     }
     this.roll = ease(this.roll, rise > 0.05 ? Math.sin(this.stride * 0.5) * 0.25 * amp : 0, 4, dt);
     if (rise < 0.05 && this.time > this.nextCall) {
@@ -1242,12 +1271,12 @@ export class Cygnet {
       this.call(false);
       this.nextCall = this.time + (this.fear > 0.6 ? 3.6 : 7) + Math.random() * 2;
     }
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
     this.begging(gap);
   }
 
   private walk(dt: number, child: THREE.Vector3): void {
-    const ground = Math.max(heightAt(this.position.x, this.position.z), 0);
+    const ground = Math.max(this.ground(this.position.x, this.position.z), 0);
     if (this.debug.stand) {
       this.position.y = ground;
       return;
@@ -1266,7 +1295,7 @@ export class Cygnet {
       this.flap = ease(this.flap, run, 5, dt);
       this.effort = ease(this.effort, 0, 6, dt);
       this.hurry = run;
-      this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+      this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
       /** Its first landings end on its breast; it gets better at them, and never good. */
       const clumsy = 1 / Math.max(1, this.flights);
       this.faceplant = clumsy * Math.sin(clamp(1 - this.landing / 0.75, 0, 1) * Math.PI) ** 0.7;
@@ -1296,8 +1325,29 @@ export class Cygnet {
     const speed = this.hurry * (1.5 + 2.9 * this.hurry) * this.pace;
     if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
-      this.position.x += Math.sin(this.yaw) * speed * dt;
-      this.position.z += Math.cos(this.yaw) * speed * dt;
+      // Up a staircase in the air it never walks off the edge; brought up against a rail it goes along it, whichever
+      // way along keeps it nearer where it is going, rather than standing stuck at it.
+      const want = Math.atan2(dx, dz);
+      let best = -Infinity;
+      for (const turn of STEP_ASIDE) {
+        const way = this.yaw + turn;
+        const nx = this.position.x + Math.sin(way) * speed * dt;
+        const nz = this.position.z + Math.cos(way) * speed * dt;
+        if (offTheEdge(this.decks, nx, nz, this.position.y)) continue;
+        if (turn === 0) {
+          this.walkTo.set(nx, nz);
+          best = Infinity;
+          break;
+        }
+        const toward = Math.cos(way - want) - Math.abs(turn) * 0.05;
+        if (toward <= Math.max(best, 0)) continue;
+        best = toward;
+        this.walkTo.set(nx, nz);
+      }
+      if (best > -Infinity) {
+        this.position.x = this.walkTo.x;
+        this.position.z = this.walkTo.y;
+      }
       this.stride += dt * (6 + speed * 2.8);
       this.settle = Math.max(0, this.settle - dt * 2.5);
     } else {
@@ -1317,11 +1367,15 @@ export class Cygnet {
       /** Knocked a step or two downwind, and no further. */
       const push = this.mind.actEnv * 1.3 * dt;
       const speedNow = Math.hypot(this.windNow.x, this.windNow.z) || 1;
-      this.position.x += (this.windNow.x / speedNow) * push;
-      this.position.z += (this.windNow.z / speedNow) * push;
+      const nx = this.position.x + (this.windNow.x / speedNow) * push;
+      const nz = this.position.z + (this.windNow.z / speedNow) * push;
+      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+        this.position.x = nx;
+        this.position.z = nz;
+      }
       this.stride += dt * 14 * this.mind.actEnv;
     }
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0);
+    this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
     this.begging(gap);
   }
 
@@ -1434,7 +1488,7 @@ export class Cygnet {
     this.position.x += Math.sin(this.yaw) * run * dt;
     this.position.z += Math.cos(this.yaw) * run * dt;
     this.hopLift = ease(this.hopLift, hop, 30, dt);
-    this.position.y = Math.max(heightAt(this.position.x, this.position.z), 0) + this.hopLift;
+    this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0) + this.hopLift;
     if (this.hopT <= 0) {
       this.landedAt = this.time;
       this.settle = 0;
@@ -1589,7 +1643,7 @@ export class Cygnet {
     d.gait.on = walking;
     if (walking) {
       const g = this.gait;
-      g.update(dt, this.position, this.yaw, heightAt);
+      g.update(dt, this.position, this.yaw, this.groundAt);
       for (let i = 0; i < g.footfalls; i++) this.heard.push({ kind: 'step', amount: 0.6 + g.pace * 0.6 });
       for (const [i, f] of g.feet.entries()) {
         const out = d.gait.feet[i];
@@ -1629,7 +1683,7 @@ export class Cygnet {
       this.nextRustle = this.time + 0.16 + Math.random() * 0.14;
     }
 
-    this.root.scale.setScalar(SIZE);
+    this.root.scale.setScalar(SIZE * this.scale);
     const posed = this.poser.update(n, d, dt);
     this.bodyLift = posed.bodyLift;
 
@@ -1709,7 +1763,7 @@ export class Cygnet {
     this.to.copy(m.gaze);
     /** Told to watch someone standing near it, it looks at their face, not their boots. */
     const near = Math.hypot(m.gaze.x - this.seating.shown.p.x, m.gaze.z - this.seating.shown.p.z) < 4;
-    if (g.firm && near && Math.abs(m.gaze.y - Math.max(heightAt(m.gaze.x, m.gaze.z), 0)) < 0.6) this.to.y += 1.9;
+    if (g.firm && near && Math.abs(m.gaze.y - Math.max(this.ground(m.gaze.x, m.gaze.z), 0)) < 0.6) this.to.y += 1.9;
     this.to.sub(this.eye(this.tmp2));
     g.yaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - yaw), -1.5, 1.5);
     g.pitch = -clamp(Math.atan2(this.to.y, Math.hypot(this.to.x, this.to.z)), -1.1, 0.9);

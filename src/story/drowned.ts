@@ -7,6 +7,7 @@ import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
 import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { atmo } from '../world/atmosphere';
+import { drownedEntry } from '../world/journey-rooms';
 import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
@@ -100,6 +101,7 @@ export class DrownedChapter implements Chapter {
     boat.speedLimit = tuning.storm.passageSpeed;
     boat.mooring = null;
     this.departure.set(boat.position.x, boat.position.z);
+    drownedEntry.fromBirches = boat.position.x < 8;
     this.shot.carryAnchor = boat.position;
     this.quarter = this.side = -boat.sailSide || 1;
     boat.steerFor = DROWNED_CHANNEL[0];

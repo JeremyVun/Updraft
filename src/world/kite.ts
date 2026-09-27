@@ -231,11 +231,14 @@ export class Kite {
   private shown = 0;
   private phase = 0;
   private asleep = true;
+  /** Tied to something that moves (the bow of a boat) instead of its post, and flying ahead of it on this heading. */
+  follow: THREE.Vector3 | null = null;
+  ahead: number | null = null;
 
   constructor(
     private readonly wind: WindField,
     berth: { x: number; z: number },
-    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number } = {},
+    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number; tiedTo?: 'post' | 'rail' } = {},
   ) {
     /** The original Lines tie-off is the default; each shore can put its post on dry ground. */
     this.stringLength = options.stringLength ?? tuning.linesToys.stringLength;
@@ -244,12 +247,12 @@ export class Kite {
     const x = berth.x + dx;
     const z = berth.z + dz;
     const ground = options.ground ?? Math.max(heightAt(x, z), 0);
-    this.anchor.set(x, ground + 1.05, z);
+    this.anchor.set(x, ground + (options.tiedTo === 'rail' ? 0.95 : 1.05), z);
 
     const drift = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG });
     const post = new THREE.CylinderGeometry(0.075, 0.095, 1.3, 6).rotateZ(0.16).translate(x, ground + 0.52, z);
     const log = new THREE.CylinderGeometry(0.16, 0.13, 1.8, 6).rotateZ(Math.PI / 2).rotateY(0.6).translate(x + 0.8, ground + 0.12, z + 0.55);
-    this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
+    if (options.tiedTo !== 'rail') this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
 
     const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sailGeometry(), paper));
@@ -294,6 +297,7 @@ export class Kite {
   get tieOff(): THREE.Vector3 { return this.anchor; }
 
   update(dt: number, time: number, camera: THREE.Camera, enabled = true): void {
+    if (this.follow) this.anchor.copy(this.follow);
     const away = Math.hypot(camera.position.x - this.anchor.x, camera.position.z - this.anchor.z);
     this.group.visible = enabled && away < 300;
     if (!this.group.visible) {
@@ -309,7 +313,10 @@ export class Kite {
     const speed = Math.hypot(air.x, air.z);
     const strength = THREE.MathUtils.smoothstep(speed, 0.5, 5);
 
-    if (speed > 0.25) {
+    if (this.ahead !== null) {
+      const turn = this.ahead - this.azimuth;
+      this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.8));
+    } else if (speed > 0.25) {
       const turn = Math.atan2(air.x, air.z) - this.azimuth;
       this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.55));
     }

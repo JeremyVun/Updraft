@@ -114,6 +114,17 @@ export const tuning = {
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
     whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
+    /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
+    stairsAirLevel: 1,
+    stairsAir: {
+      /** The wind in the white, heard from the landing below while the bird goes up first. */
+      fromBelow: 0.35,
+      bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.05, hullLevel: 0.095, fogLevel: 0.3, lastGustLevel: 0.16,
+      /** Time constant of the birches' phrase draining away once they go up into the white: about 4 dB a second. */
+      drain: 2.2,
+    },
+    flightKnock: { level: 0.13, reverb: 0.25, pitch: 220, puff: 0.08 },
+    stairsScoreLevel: 6, stairsPhaseFade: 4,
   },
   cygnetMotion: {
     /** Running balance should not become wingbeats during a deliberately slow walk. */
@@ -234,6 +245,41 @@ export const tuning = {
     cameraPortraitHeight: 10, cameraLiftFollow: 0.28, constellationReveal: 6,
     cameraRevealExtra: 48, cameraRiseExtra: 35,
     cameraRiseDistance: 32, cameraPortraitRiseDistance: 40,
+  },
+  /** The stairs in the clouds: the loose flights the player's gusts bring home, and the climb. */
+  stairs: {
+    /** How near a stroke must pass a loose flight to take it, in metres at the flight, and how fast it can be carried. */
+    grip: 1.3, dragSpeed: 9,
+    /** How much a stroke moves the flights the stair is not waiting for yet. */
+    stir: 0.12,
+    /** How quickly a flight takes up the stroke over it, and how quickly it stops once the stroke has gone. */
+    follow: 16, drag: 2.2,
+    /** How fast a flight left alone turns, radians a second. */
+    idleTurn: 0.05,
+    /** A flight never drifts further than this from its place. */
+    reach: 13,
+    /** And never nearer the camera than this, across the ground. */
+    lensClear: 5,
+    /** Inside alignFrom metres of its place a flight turns itself to fit, all the way by alignNear, at this rate. */
+    alignFrom: 7, alignNear: 2.5, align: 2.4,
+    /** A flight whose bottom tread comes this near its place, turned no further than this, draws itself home. */
+    captureGap: 1.5, captureTurn: 0.3, settleSeconds: 1.1,
+    /** Inside this much misplacement (metres) a flight still being worked is drawn toward home. */
+    pullFrom: 4, pull: 2.4,
+    /** How long after a stroke that drawing lasts. */
+    handled: 1.5,
+    /** The child's pace on the stairs, as a share of a walk. */
+    climb: 0.52,
+    /** Cloud thickness per metre inside the deck, and inside the pocket round the child, at the bottom of the white and at the top. */
+    density: 0.42, clearing: 0.055, clearingTop: 0.1,
+    /** How far the pocket of thinner cloud round the child reaches, at the bottom of the white and at the top. */
+    bubble: 6.5, bubbleTop: 4.4,
+    /** The wind through the white near its top, metres a second. */
+    windInCloud: 5.5,
+    /** Top speed over the cloud, metres a second, and how long the cloud takes to swell up over them on the way down. */
+    sailSpeed: 5, fogRise: 6,
+    /** How long the fog takes to lift off the village's water before the village has them. */
+    fogLift: 8.5,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */

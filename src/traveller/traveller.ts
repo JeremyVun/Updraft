@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { WindField, WindSample } from '../wind/field';
 import { tuning } from '../tuning';
 import { fieldAt, type FieldSample } from '../world/fields';
+import { deckGround, offTheEdge, rampHeight, type Deck } from '../world/decks';
 import { heightAt } from '../world/island';
 import { POND, POND_LEVEL, pondOut } from '../world/heightfield';
 import { ROCKS, TREE } from '../world/landmarks';
@@ -41,31 +42,7 @@ interface Goal {
 
 const OBSTACLES = [...ROCKS, { x: TREE.x, z: TREE.z, radius: 1.3 }];
 
-/** A built surface over the water the child can walk on: a jetty's deck, a strip from one end to the other. */
-export interface Deck {
-  x0: number;
-  z0: number;
-  x1: number;
-  z1: number;
-  halfWidth: number;
-  height: number;
-  /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
-  stepOffDepth?: number;
-  /** A ramp this long runs on from one end of the deck down to the ground. */
-  rampAt?: 'start' | 'end';
-  rampLength?: number;
-}
-
-/** The height of a deck's ramp under (x, z), or null off it. */
-function rampHeight(d: Deck, x: number, z: number): number | null {
-  if (!d.rampAt || !d.rampLength) return null;
-  const dx = d.x1 - d.x0, dz = d.z1 - d.z0, len = Math.hypot(dx, dz);
-  const along = ((x - d.x0) * dx + (z - d.z0) * dz) / len;
-  const beyond = d.rampAt === 'end' ? along - len : -along;
-  if (beyond < 0 || beyond > d.rampLength) return null;
-  if (Math.abs((x - d.x0) * dz - (z - d.z0) * dx) / len > d.halfWidth) return null;
-  return THREE.MathUtils.lerp(d.height, heightAt(x, z), beyond / d.rampLength);
-}
+export type { Deck } from '../world/decks';
 /** Where the paper's grip sits when it is put away: against the bag's outer face, low enough that the bird shows above it. */
 export const PAPER_STOW = new THREE.Vector3(0.06, 0.48, -0.69);
 const WALK = 2.6;
@@ -394,21 +371,7 @@ export class Traveller {
 
   /** The terrain under a point, or a deck built over it. */
   private ground(x: number, z: number): number {
-    for (const d of this.decks) {
-      const dx = d.x1 - d.x0;
-      const dz = d.z1 - d.z0;
-      const len2 = dx * dx + dz * dz;
-      const t = ((x - d.x0) * dx + (z - d.z0) * dz) / len2;
-      if (t < 0 || t > 1) continue;
-      const px = d.x0 + dx * t;
-      const pz = d.z0 + dz * t;
-      if (Math.hypot(x - px, z - pz) <= d.halfWidth) return Math.max(d.height, heightAt(x, z));
-    }
-    for (const d of this.decks) {
-      const ramp = rampHeight(d, x, z);
-      if (ramp !== null) return Math.max(ramp, heightAt(x, z));
-    }
-    return heightAt(x, z);
+    return deckGround(this.decks, x, z, this.position.y);
   }
 
   place(x: number, z: number, yaw: number): void {
@@ -670,6 +633,10 @@ export class Traveller {
         nx = r.x + (ox / od) * keep;
         nz = r.z + (oz / od) * keep;
       }
+    }
+    if (this.decks.some(d => d.height1 !== undefined) && offTheEdge(this.decks, nx, nz, p.y)) {
+      this.speed *= 0.5;
+      return;
     }
     const nextH = this.ground(nx, nz);
     /** The inland pond sits above sea level; its bed is ground, but is not somewhere to walk. */

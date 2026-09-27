@@ -7,6 +7,7 @@ import type { Mood } from '../audio/audio';
 import type { SeaScorePhase } from '../audio/sea-score';
 import type { LinesScorePhase } from '../audio/lines-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
+import type { BirchesScorePhase } from '../audio/birches-score';
 import type { ArrivalMusic } from '../audio/arrival-music';
 import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
@@ -42,6 +43,7 @@ export interface CrossingOpts {
   mirrorScore?: MirrorScorePhase;
   linesScore?: LinesScorePhase;
   meadowScore?: MeadowScorePhase;
+  birchesScore?: BirchesScorePhase;
   hush?: number;
   arrivalMusic?: ArrivalMusic;
   /** A different offshore composition, introduced after leaving the preceding island's music. */
@@ -105,6 +107,7 @@ export class CrossingChapter implements Chapter {
   readonly mirrorScore?: MirrorScorePhase;
   readonly linesScore?: LinesScorePhase;
   readonly meadowScore?: MeadowScorePhase;
+  readonly birchesScore?: BirchesScorePhase;
   readonly hush: number;
   private readonly destinationMusic?: ArrivalMusic;
   private readonly departureMusic?: ArrivalMusic;
@@ -200,6 +203,7 @@ export class CrossingChapter implements Chapter {
     this.mirrorScore = opts.mirrorScore;
     this.linesScore = opts.linesScore;
     this.meadowScore = opts.meadowScore;
+    this.birchesScore = opts.birchesScore;
     this.hush = opts.hush ?? 0;
     this.destinationMusic = opts.arrivalMusic;
     this.season = opts.season ?? 0.3;

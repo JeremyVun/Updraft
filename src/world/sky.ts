@@ -14,7 +14,13 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vDir;
 void main() {
-  gl_FragColor = vec4(skyRadiance(normalize(vDir)), 1.0);
+  vec3 d = normalize(vDir);
+  vec3 col = skyRadiance(d);
+  if (uCloudDeck.w > 0.0) {
+    vec4 deck = cloudDeck(cameraPosition, d, 4000.0);
+    col = mix(col, deck.rgb, deck.a);
+  }
+  gl_FragColor = vec4(col, 1.0);
 }`;
 
 export function createSky(): THREE.Mesh {

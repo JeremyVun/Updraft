@@ -11,6 +11,7 @@ export function restoreWingCare(k: Cygnet, chapter: string, point = 'entry'): vo
     || chapter === 'sleeping' && point === 'morning';
   const recovery = chapter === 'sleeping' || chapter === 'toSleeping' ? 1
     : ['wood', 'toWood', 'drowned'].includes(chapter) ? 0.8
+    : ['stairs', 'toStairs'].includes(chapter) ? 0.72
     : ['birches', 'toBirches'].includes(chapter) ? 0.65
     : ['meadow', 'toMeadow'].includes(chapter) ? 0.4
     : ['boats', 'toBoats'].includes(chapter) ? 0.22 : 0.08;

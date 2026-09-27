@@ -65,6 +65,8 @@ export class Boat {
   shelter = 0;
   /** How hard the sea is running under the hull, 0 calm to 1 the full squall; the boat rocks and drives on it. */
   swell = 0;
+  /** Afloat on something other than the sea, such as the top of a cloud: the height it floats at, or null. */
+  altitude: number | null = null;
   /**
    * The wind the sail has, smoothed, and the only reading the cloth and the hull are allowed: `blowing` is the
    * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
@@ -351,13 +353,14 @@ export class Boat {
      * boat rises over a crest and heels to the face of it instead of rocking to a rhythm of its own.
      */
     const t = this.time;
-    const lift = this.swellUnder(p.x, p.z, time);
+    if (this.altitude !== null) this.sea.height = this.sea.slopeX = this.sea.slopeZ = 0;
+    const lift = this.altitude === null ? this.swellUnder(p.x, p.z, time) : this.altitude;
     const bow = this.sea.slopeX * fx + this.sea.slopeZ * fz;
     const beam = this.sea.slopeX * fz - this.sea.slopeZ * fx;
     const settle = 1 - Math.exp(-dt * 3.5);
     const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam;
     const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
-    this.lieOnShore(settle, lift, waterRoll, waterPitch);
+    this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
     p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
@@ -502,7 +505,7 @@ export class Boat {
   private updateWake(dt: number, time: number): void {
     this.wake.update(time);
     this.wakeIn -= dt;
-    if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0) return;
+    if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0 || this.altitude !== null) return;
     this.wakeIn = 0.15;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const strength = Math.min(0.7, this.speed * 0.13);

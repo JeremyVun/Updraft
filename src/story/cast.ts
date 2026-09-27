@@ -9,6 +9,7 @@ import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
+import type { StairsAir } from '../audio/stairs-air';
 import type { LinesScorePhase } from '../audio/lines-score';
 import type { OpeningScorePhase } from '../audio/opening-score';
 import type { ArrivalMusic } from '../audio/arrival-music';
@@ -28,6 +29,8 @@ import type { Drawing } from '../traveller/drawing';
 import type { Traveller } from '../traveller/traveller';
 import type { WindField } from '../wind/field';
 import type { AutumnBirches } from '../world/birches';
+import type { CloudStairs } from '../world/stairs';
+import type { CloudDeckState } from './stairs';
 import type { SleepingIsland } from '../world/sleeping';
 import type { Cottage } from '../world/cottage';
 import type { LifeField } from '../world/life';
@@ -57,6 +60,8 @@ export interface Cast {
   embers: Embers;
   /** The island of gold birches, its leaves and the swing hanging on the crest. */
   birches: AutumnBirches;
+  /** The staircase up through the cloud, its loose flights, and the top of the cloud itself. */
+  stairs: CloudStairs;
   /** The bed in the hollow, the bedroom round it, and the fog the player's gusts carve lanes in. */
   sleeping: SleepingIsland;
   littleBoats: LittleBoats;
@@ -100,6 +105,14 @@ export interface Chapter {
   readonly caringWind?: boolean;
   /** False when the chapter schedules its own adult/cygnet conversation. */
   readonly flockChatter?: boolean;
+  /** The low cloud deck over the stairs, while this chapter wants it; eased out when a chapter leaves it unset. */
+  readonly cloudDeck?: CloudDeckState;
+  /** The departure kite tied to a moving boat's bow and flying ahead of it on a heading, while this chapter wants it. */
+  readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
+  /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */
+  readonly cameraCut?: number;
+  /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
+  readonly pointerFloor?: number | null;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
@@ -120,6 +133,8 @@ export interface Chapter {
   readonly meadowScore?: MeadowScorePhase;
   /** Birches follows the optional swing, scarf work and the walk to the far beach. */
   readonly birchesScore?: BirchesScorePhase;
+  /** The air round the travellers in the stairs in the clouds: in the white, out on top, the fog on the way down. */
+  readonly stairsAir?: StairsAir;
   /** Lines follows each curtain, the family clothes and the walk beyond the doorway. */
   readonly linesScore?: LinesScorePhase;
   readonly linesMelodyQuiet?: boolean;
@@ -156,6 +171,8 @@ export interface Chapter {
   readonly planeInvitationInto?: boolean;
   /** A chapter target, such as a caught plane, that needs a deliberate sweep. */
   readonly windInvitation?: THREE.Vector3 | null;
+  /** How big that target is, when it is big enough that the sweep has to go across it and out the other side. */
+  readonly invitationRadius?: number;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
   readonly updraftTarget?: THREE.Vector3 | null;
   /** Screen-local wind work on chapter targets, including the paper snag. */

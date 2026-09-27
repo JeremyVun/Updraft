@@ -17,11 +17,13 @@ import { FAR_SHORE, MeadowChapter } from './meadow';
 import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
 import { SleepingChapter } from './sleeping';
+import { StairsChapter } from './stairs';
+import { DESCENT_END, STAIRS_LANDING } from '../world/stairs-layout';
 import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
-import { BIRCHES_BERTH, BIRCHES_LANDING } from '../world/birches';
+import { BIRCHES_LANDING } from '../world/birches';
 import { chosenChapter, readProgress, placeProgress, restoreLife, saveProgress } from './progress';
 import { restoreWingCare } from './wing-care';
 
@@ -35,6 +37,8 @@ export type ChapterName =
   | 'meadow'
   | 'toBirches'
   | 'birches'
+  | 'toStairs'
+  | 'stairs'
   | 'drowned'
   | 'toWood'
   | 'wood'
@@ -64,6 +68,8 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   toMeadow: [new THREE.Vector2(125, -510), new THREE.Vector2(60, -535), MEADOW_APPROACH, LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
   toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
+  /** A short blind hop east off the birches' far beach, under the cloud coming down, onto the knoll the stairs stand on. */
+  toStairs: [new THREE.Vector2(14, -1214), new THREE.Vector2(44, -1224), new THREE.Vector2(STAIRS_LANDING.x - 8, STAIRS_LANDING.y), STAIRS_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /** A short hop west, round the wood's north shore: the frosted island is on them in a few minutes. */
@@ -103,7 +109,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
 };
 
-const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toBoats', 'boats', 'toMeadow', 'meadow', 'toBirches', 'birches', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toMirror', 'mirror', 'toHarbour', 'home'];
+const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toBoats', 'boats', 'toMeadow', 'meadow', 'toBirches', 'birches', 'toStairs', 'stairs', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toMirror', 'mirror', 'toHarbour', 'home'];
 
 /**
  * Runs the chapters in order and speaks for whichever is current. `?chapter=`, or a chapter picked on the title
@@ -156,9 +162,13 @@ export class Journey {
     } else if (start === 'birches' || start === 'autumn') {
       this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
       this.begin('birches');
+    } else if (start === 'stairs' || start === 'clouds') {
+      this.land(STAIRS_LANDING.x + 2, STAIRS_LANDING.y, STAIRS_LANDING.x + 4, STAIRS_LANDING.y - 1);
+      this.cast.boat.yaw = Math.PI * 0.5;
+      this.begin('stairs');
     } else if (start === 'drowned' || start === 'village') {
-      /** The drift into the village begins where the birches end: off their north beach, not the meadow's. */
-      this.sail(BIRCHES_BERTH.x, BIRCHES_BERTH.z - 6, Math.PI);
+      /** The drift into the village begins where the stairs let the boat down through the cloud onto the water. */
+      this.sail(DESCENT_END.x, DESCENT_END.y, -1.9);
       this.begin('drowned');
     } else if (start === 'wood' || start === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
@@ -332,6 +342,10 @@ export class Journey {
         return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'meadow', meadowScore: 'return', arrivalMusic: 'birches' });
       case 'birches':
         return new BirchesChapter(cast);
+      case 'toStairs':
+        return new CrossingChapter(cast, { route: ROUTES.toStairs, haze: 0.9, dusk: 0.62, season: 0.47, music: 'birches', birchesScore: 'return', hush: 0.3 });
+      case 'stairs':
+        return new StairsChapter(cast);
       case 'drowned':
         return new DrownedChapter(cast);
       case 'toWood':

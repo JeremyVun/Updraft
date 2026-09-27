@@ -4,6 +4,7 @@ import { Kite } from '../world/kite';
 import { tuning } from '../tuning';
 import { BOATS_BERTH } from '../world/little-boats-layout';
 import { BIRCHES_BERTH } from '../world/birches';
+import { CLOUD_BERTH, KITE_TIE, TOP } from '../world/stairs-layout';
 import { WOOD_BERTH } from '../world/wood';
 import { SLEEP_BERTH } from '../world/sleeping';
 import { MIRROR_BERTH, MIRROR_DECK } from '../world/sky-mirror-layout';
@@ -19,7 +20,7 @@ export class DepartureKites {
   private crossing?: string;
   private readonly crossings: Partial<Record<ChapterName, string>> = {
     toLines: 'island', toBoats: 'lines', toMeadow: 'boats', toBirches: 'meadow',
-    drowned: 'birches', toSleeping: 'wood', toMirror: 'sleeping', toHome: 'sleeping', toHarbour: 'mirror',
+    toStairs: 'birches', drowned: 'stairs', toSleeping: 'wood', toMirror: 'sleeping', toHome: 'sleeping', toHarbour: 'mirror',
   };
 
   constructor(wind: WindField) {
@@ -29,6 +30,8 @@ export class DepartureKites {
       boats: new Kite(wind, BOATS_BERTH, { offset: [-8, 5], stringLength: tuning.linesToys.shoreKiteStringLength }),
       meadow: new Kite(wind, FAR_SHORE, { offset: [-9, 0], stringLength: tuning.linesToys.shoreKiteStringLength }),
       birches: new Kite(wind, BIRCHES_BERTH, { offset: [-9, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
+      // Flies over the boat waiting on the cloud, tied off on the top landing's rail.
+      stairs: new Kite(wind, CLOUD_BERTH, { offset: [KITE_TIE.x - CLOUD_BERTH.x, KITE_TIE.z - CLOUD_BERTH.z], ground: TOP.y, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
       wood: new Kite(wind, WOOD_BERTH, { offset: [-8, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       sleeping: new Kite(wind, SLEEP_BERTH, { offset: [2, 4], stringLength: tuning.linesToys.shoreKiteStringLength }),
       // Tie off on the landing stage and start north of it in the near-still air, within the star-play views.
@@ -47,6 +50,10 @@ export class DepartureKites {
       }
       this.chapter = story.name;
     }
+    // Over the cloud the kite is tied to the bow and draws the boat along.
+    const tow = story.name === 'stairs' ? story.current.kiteTow ?? null : null;
+    this.markers.stairs.follow = tow?.at ?? null;
+    this.markers.stairs.ahead = tow?.heading ?? null;
     for (const [name, kite] of Object.entries(this.markers)) {
       const enabled = name === story.name ? story.current.departureKite !== false : name === this.crossing;
       kite.update(dt, time, camera, enabled);

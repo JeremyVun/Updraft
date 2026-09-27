@@ -10,6 +10,9 @@ import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
 import { SleepingScore, SLEEPING_SECTIONS, type SleepingScorePhase } from './sleeping-score';
 import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
 import { BirchesScore, BIRCHES_SECTIONS, type BirchesScorePhase } from './birches-score';
+import type { StairsAir } from './stairs-air';
+import { flightKnock, OUTSIDE_STAIRS, StairsSound, type StairsMix } from './stairs-sound';
+import { StairsScore, stairsScorePhase } from './stairs-score';
 import { LinesScore, LINES_SECTIONS, type LinesScorePhase } from './lines-score';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
@@ -92,6 +95,7 @@ export interface SoundState {
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
   meadowScore?: MeadowScorePhase;
   birchesScore?: BirchesScorePhase;
+  stairsAir?: StairsAir;
   linesScore?: LinesScorePhase;
   linesMelodyQuiet?: boolean;
   /** True while the story is playing a beat out on its own and the player's gestures are not driving anything. */
@@ -179,8 +183,12 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   home: [[62, 2], [66, 2], [69, 2], [74, 6]],
   /** Played by `finale`, not from here: the pad climbs under it and the chimes go up with it. */
   finale: [],
+  /** A flight of the stairs knocking home is a physical sound, not a phrase. */
+  flightHome: [],
+  /** The cygnet's own small question, not a phrase. */
+  puzzled: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
@@ -313,6 +321,8 @@ export class Soundscape {
   private sleepingScore: SleepingScore | null = null;
   private meadowScore: MeadowScore | null = null;
   private birchesScore: BirchesScore | null = null;
+  private stairsScore: StairsScore | null = null;
+  private stairsSound: StairsSound | null = null;
   private linesScore: LinesScore | null = null;
   private dreamScore: DreamScore | null = null;
   private summitScore: SummitScore | null = null;
@@ -729,7 +739,7 @@ export class Soundscape {
    * matter: a small bird calling for a family that is not coming back. Thin, high, and pitched to be heard over
    * nothing at all.
    */
-  private peep(loudness = 1, longing = false, source?: AudioEmitter): void {
+  private peep(loudness = 1, longing = false, source?: AudioEmitter, asking = false): void {
     const ctx = this.ctx!;
     const t0 = ctx.currentTime + 0.02;
     const out = ctx.createGain();
@@ -743,18 +753,24 @@ export class Soundscape {
     panner.connect(send).connect(this.reverb);
 
     /** Calling out to them is lower and longer than calling for help: less panic in it, and more hope. */
-    const calls = longing ? 2 : 2 + Math.floor(Math.random() * 2);
+    const calls = asking ? 1 : longing ? 2 : 2 + Math.floor(Math.random() * 2);
     let remaining = calls;
     let at = t0;
     for (let i = 0; i < calls; i++) {
-      const len = (longing ? 0.4 : 0.16) + Math.random() * 0.08;
+      const len = (longing ? 0.4 : asking ? 0.24 : 0.16) + Math.random() * 0.08;
       /** A cygnet's note is a thin whistle, well above where a crane chick's sat. */
-      const f = (longing ? 1480 : 2050) + Math.random() * 380 - i * 70;
+      const f = (longing ? 1480 : asking ? 1850 : 2050) + Math.random() * 380 - i * 70;
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(f * 0.72, at);
-      osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
-      osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);
+      if (asking) {
+        // A question: it dips and then goes up at the end.
+        osc.frequency.exponentialRampToValueAtTime(f * 0.66, at + len * 0.45);
+        osc.frequency.exponentialRampToValueAtTime(f * 1.3, at + len);
+      } else {
+        osc.frequency.exponentialRampToValueAtTime(f * 1.12, at + len * 0.3);
+        osc.frequency.exponentialRampToValueAtTime(f * 0.62, at + len);
+      }
       const waver = ctx.createOscillator();
       waver.frequency.value = 17 + Math.random() * 6;
       const depth = ctx.createGain();
@@ -948,6 +964,7 @@ export class Soundscape {
     if (s.music === 'drowned' || s.drownedScore) this.prepareFoghorn();
     const now = ctx.currentTime;
     const tc = 0.08;
+    const room = this.stairs(s, now, dt);
     const g = Math.min(s.gust / 26, 1);
     const winter = s.winterGust ?? 0;
     const weatherGust = winter * .76;
@@ -962,10 +979,10 @@ export class Soundscape {
     const air = 1 - piano * 0.82;
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
-    this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air, now, 0.5);
+    this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air * room.breeze, now, 0.5);
     this.fade(this.rainGain.gain, s.shower * 0.07, now, 1.2);
     this.fade(this.patterGain.gain, s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
-    this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze), now, 0.3);
+    this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze) * room.sea, now, 0.3);
     this.fade(this.gustGain.gain, gustLevel * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);
@@ -975,12 +992,12 @@ export class Soundscape {
     this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore;
+    const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
     const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
     if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
       // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
       const fade = arrival.stage === 'fade' ? (arrival.fadeOut ?? tuning.audio.arrivalFadeOut) : .08;
-      for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore]) score?.stop(fade);
+      for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
@@ -1037,11 +1054,21 @@ export class Soundscape {
     } else if (this.meadowScore) {
       this.meadowScore.stop(s.silence ? 0.12 : 1.8); this.meadowScore = null;
     }
-    if (bg.music === 'birches' && bg.birchesScore && !s.silence && !backgroundPaused) {
+    if (bg.music === 'birches' && bg.birchesScore && !room.birchesGone && !s.silence && !backgroundPaused) {
       this.birchesScore ??= new BirchesScore(ctx, this.backgroundBus);
-      this.birchesScore.update(bg.birchesScore, tuning.audio.birchesScoreLevel * roomTrim('birches') * (1 - piano), arrival.handoffAt);
+      this.birchesScore.update(bg.birchesScore, tuning.audio.birchesScoreLevel * roomTrim('birches') * (1 - piano) * room.birches, arrival.handoffAt);
     } else if (this.birchesScore) {
       this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
+    }
+    // The stairs take over from the birches' phrase once it has drained away in the white.
+    const stairsMusic = !!s.stairsAir && bg.music === 'birches';
+    // Once begun, the room's score never falls silent again before the village takes over.
+    const stairsPhase = stairsMusic ? stairsScorePhase(s.stairsAir!) ?? this.stairsScore?.phase : undefined;
+    if (stairsPhase && !s.silence && !backgroundPaused) {
+      this.stairsScore ??= new StairsScore(ctx, this.backgroundBus, this.backgroundWet);
+      this.stairsScore.update(stairsPhase, tuning.audio.stairsScoreLevel * room.score * (1 - piano), arrival.handoffAt);
+    } else if (this.stairsScore) {
+      this.stairsScore.stop(s.silence ? .12 : 1.8); this.stairsScore = null;
     }
     if (bg.music === 'lines' && bg.linesScore && !s.silence && !backgroundPaused) {
       this.linesScore ??= new LinesScore(ctx, this.backgroundBus);
@@ -1111,7 +1138,7 @@ export class Soundscape {
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
     this.fade(this.padGain.gain,
-      backgroundPaused || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      backgroundPaused || stairsMusic || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
@@ -1119,7 +1146,7 @@ export class Soundscape {
 
     const harmonyAt = (at: number): readonly number[] => {
       const composed = this.openingScore?.chordAt(at) ?? this.summitScore?.chordAt() ?? this.dreamScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
-        ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at);
+        ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at) ?? this.stairsScore?.chordAt(at);
       if (composed) return composed;
       // During the music-free arrival gap, use the opening harmony of the incoming composition.
       if (backgroundPaused) {
@@ -1150,10 +1177,13 @@ export class Soundscape {
 
     for (const name of cues) {
       if (name === 'foghorn') { this.foghorn(); }
+      else if (name === 'flightHome') flightKnock(ctx, this.master, this.reverb, this.noiseWork?.ready ? this.noise : null);
       else if (name === 'star') { this.dreamScore?.bloom(); }
       else if (name === 'kindled' || name === 'comfort') {
         this.flare();
         this.phrase(name);
+      } else if (name === 'puzzled') {
+        this.peep(0.6, false, s.cygnet, true);
       } else if (name === 'distress' || name === 'calling') {
         this.peep(name === 'distress' ? 1 : 0.95, name === 'calling', s.cygnet);
         this.flockQuietUntil = now + tuning.audio.callSpace;
@@ -1228,6 +1258,15 @@ export class Soundscape {
     }
 
     this.prevGliderLift = s.gliderLift;
+  }
+
+  /** The stairs in the clouds keep their own air, and say how much of the shared beds and the birches' phrase to keep. */
+  private stairs(s: SoundState, now: number, dt: number): Readonly<StairsMix> {
+    if (s.stairsAir && !this.stairsSound) this.stairsSound = new StairsSound(this.ctx!, this.master, this.reverb);
+    if (!this.stairsSound) return OUTSIDE_STAIRS;
+    const mix = this.stairsSound.update(s.stairsAir, this.noiseWork?.ready ? this.noise : null, now, dt);
+    if (this.stairsSound.finished) this.stairsSound = null;
+    return mix;
   }
 
   private holdCues(cues: readonly Cue[]): void {
