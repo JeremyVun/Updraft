@@ -401,7 +401,7 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
  * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
  */
-export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278, fat: 0.1 };
+export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278, fat: 0.13 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
@@ -492,18 +492,18 @@ const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.296, 
 
 /**
  * A little girl's bangs, as locks: angle from the front and the cosine down from the crown where each starts and
- * ends, its width, and how far it swings sideways along the way. They fall nearly straight to just over the brows,
- * parted a little on her left.
+ * ends, its width, and how far it swings sideways along the way. Parted a little off the middle, they sweep softly
+ * away from the parting at uneven lengths, and the outer ones run longer to the temples into the bob.
  */
 const BANGS: [number, number, number, number, number, number][] = [
-  [0.3, 0.76, 0.48, 0.355, 0.18, -0.02],
-  [0.1, 0.78, 0.2, 0.335, 0.18, 0.02],
-  [-0.1, 0.78, -0.1, 0.33, 0.18, -0.02],
-  [-0.3, 0.76, -0.36, 0.34, 0.18, 0.02],
-  [-0.5, 0.74, -0.62, 0.37, 0.17, -0.02],
-  [0.52, 0.74, 0.76, 0.38, 0.17, 0.02],
-  [-0.72, 0.72, -0.9, 0.36, 0.16, -0.02],
-  [0.74, 0.72, 0.96, 0.36, 0.16, 0.02],
+  [0.12, 0.8, -0.08, 0.35, 0.16, 0.02],
+  [-0.1, 0.8, -0.36, 0.38, 0.17, -0.02],
+  [-0.34, 0.78, -0.64, 0.33, 0.16, 0.02],
+  [-0.58, 0.76, -0.92, 0.24, 0.15, -0.02],
+  [0.34, 0.8, 0.54, 0.4, 0.15, -0.02],
+  [0.52, 0.78, 0.8, 0.33, 0.15, 0.02],
+  [0.74, 0.74, 1.02, 0.22, 0.14, -0.02],
+  [0.0, 0.8, 0.1, 0.44, 0.1, 0.03],
 ];
 
 /**
@@ -557,7 +557,7 @@ function onHair(phi: number, ct: number, lift: number): { p: THREE.Vector3; n: T
 function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, width: number, swing: number): void {
   /** The path over the shell, with a soft S across it so no lock runs straight. */
   const at = (t: number): [number, number] => [THREE.MathUtils.lerp(phi0, phi1, t) + swing * Math.sin(t * Math.PI * 1.5), THREE.MathUtils.lerp(c0, c1, t)];
-  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.022, 0.75);
+  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.022, 0.55);
 }
 
 /**
