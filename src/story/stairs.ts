@@ -16,7 +16,7 @@ import {
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
 import { completeObjective, cue } from './cues';
-import { OUT_OF_THE_WHITE, blend, frameVoyage, framingAt, type Framing } from './stairs-sail';
+import { FACES, OUT_OF_THE_WHITE, blend, frameVoyage, framingAt, type Framing } from './stairs-sail';
 import { Track } from './stairs-track';
 
 type Beat =
@@ -51,6 +51,8 @@ const ASIDE = (() => {
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
 const SEA_RIDE = 0.4;
+/** How high the middle of the sail stands over the hull. */
+const SAIL_MIDDLE = 2.1;
 /** The white on the sea goes grey and blue with the dusk. */
 const DUSK_MIST = new THREE.Color(0.9, 0.96, 1.14);
 
@@ -278,6 +280,10 @@ export class StairsChapter implements Chapter {
 
   /** Above the cloud the pointer lands on its top, so a gust meant for the sail reaches the sail. */
   get pointerFloor(): number | null {
+    // Under sail the pointer lands at the height of the middle of the sail, so a stroke drawn across the sail puts
+    // its wind there, whichever side the lens is looking from, as long as it is looking down on the sail.
+    const sail = this.cast.boat.position.y + SAIL_MIDDLE;
+    if ((this.beat === 'sail' || this.beat === 'fog') && this.world.eye.y > sail + 0.4) return sail;
     return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
   }
 
@@ -859,6 +865,10 @@ export class StairsChapter implements Chapter {
     boat.speedLimit = tuning.stairs.sailSpeed;
     if (boat.speed > 1.5) boat.becalmed = Math.max(0, boat.becalmed - 0.01);
     this.world.sailing(boat, dt);
+    // While the lens is in close on their faces the kite draws them on, so they are never left waiting there.
+    const S = THREE.MathUtils.smoothstep;
+    const drawn = S(this.sailed, FACES.from, FACES.from + 12) * (1 - S(this.sailed, FACES.to, FACES.to + 15));
+    boat.speed = Math.max(boat.speed, tuning.stairs.kiteDraws * drawn);
     this.sailed += boat.speed * dt;
     this.steer();
     if (this.world.cloud.fog.depthOf(boat.position.x, boat.position.z) > 0) this.to('fog');

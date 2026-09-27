@@ -27,7 +27,8 @@ export const SAIL_SHOTS: readonly Framing[] = [
   // Off the landing: ahead and to starboard, looking back past them at the stair standing out of the cloud.
   { at: 0, bearing: -0.55, distance: 10, height: 2.6, ahead: -3, up: 1.3, zoom: 1 },
   { at: 26, bearing: -0.55, distance: 14, height: 3.6, ahead: -5, up: 1.5, zoom: 1 },
-  // Across the bow, in close: their faces in the lantern light and the last of the sun.
+  // Across the bow, in close: their faces in the lantern light and the last of the sun. The lens is below the sail
+  // here, where a stroke across it cannot reach it, so the kite draws them on meanwhile (`FACES`).
   { at: 52, bearing: 0.38, distance: 6.5, height: 1.2, ahead: 0, up: 1.1, zoom: 1.4 },
   { at: 95, bearing: 0.42, distance: 6.6, height: 1.2, ahead: 0, up: 1.1, zoom: 1.4 },
   // Up and away astern to port, still on them until it is well back: the boat small on the sea of cloud, the sun
@@ -40,6 +41,9 @@ export const SAIL_SHOTS: readonly Framing[] = [
   // After them into the white, level.
   { at: 300, bearing: 2.88, distance: 12, height: 3.4, ahead: 8, up: 1.6, zoom: 1 },
 ];
+
+/** Where the lens is in close on their faces, from and to how far the boat has come. */
+export const FACES = { from: 40, to: 100 } as const;
 
 /** On the sea, as the white thins: back and up to where the drowned village's own lens takes them. */
 export const OUT_OF_THE_WHITE: Framing = { at: 0, bearing: Math.PI - 0.12, distance: 21.5, height: 6.2, ahead: 1.3, up: 0.9, zoom: 1 };
