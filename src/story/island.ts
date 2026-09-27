@@ -85,11 +85,12 @@ export class IslandChapter implements Chapter {
   private readonly climbView = new THREE.Vector3();
   private fallAt = 0;
   /** The gust that takes the cygnet out of the V: the wind the player woke on this island, blowing by itself. */
-  private readonly front: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(), speed: 0, strength: 0 };
+  private readonly front: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(), flow: new THREE.Vector2(), strength: 0 };
   private readonly station = new THREE.Vector3();
   private readonly pushEye = new THREE.Vector3();
   /** Where the gust will meet the back of the V, known before it sets off. */
   private readonly hitPoint = new THREE.Vector3();
+  private readonly tmp2 = new THREE.Vector2();
   private gustFrom = 0;
   private readonly eye = new THREE.Vector3();
   private watchUntil = 0;
@@ -521,7 +522,7 @@ export class IslandChapter implements Chapter {
     this.hitPoint.copy(this.left).addScaledVector(d, o.flockSpeed * o.gustAt);
     this.tmp.copy(this.hitPoint).sub(this.outlookEye);
     this.front.dir.set(-this.tmp.z, this.tmp.x).normalize();
-    this.front.speed = o.gustSpeed;
+    this.front.flow.copy(this.front.dir).multiplyScalar(o.gustSpeed).add(this.tmp2.set(d.x, d.z).multiplyScalar(o.flockSpeed));
     this.front.strength = 0;
     this.tmp.copy(this.left).addScaledVector(d, o.flockSpeed * (o.gustAt - o.gustRun));
     this.tmp.x -= this.front.dir.x * o.gustSpeed * o.gustRun;

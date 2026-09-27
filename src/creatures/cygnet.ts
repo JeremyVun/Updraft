@@ -341,7 +341,7 @@ export class Cygnet {
      * thing that tells the player it fell out of the V rather than choosing to come down.
      * When the landing is ahead, keep the tangent short enough that the curve never passes it and doubles back.
      */
-    if (velocity) this.fallDrift.copy(velocity).multiplyScalar(seconds / 2).add(from);
+    if (velocity) this.fallDrift.copy(velocity).multiplyScalar(seconds / 2).add(from).setY(from.y - (from.y - this.fallTo.y) * 0.1);
     else this.fallDrift
       .set(Math.sin(line), 0, Math.cos(line))
       .multiplyScalar(ahead > 0 ? Math.min(38, ahead * 0.7) : 38)

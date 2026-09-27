@@ -21,11 +21,14 @@ interface Line extends Ribbon {
   steer: number;
 }
 
-/** A wall of wind going across the world: where its middle is, the way and how fast it is going, how hard 0 to 1. */
+/**
+ * A wall of wind going across the world: where its middle is, the way it faces, how it is actually moving over the
+ * ground (a front can be carried along as well as blowing), and how hard, 0 to 1.
+ */
 export interface GustFront {
   at: THREE.Vector3;
   dir: THREE.Vector2;
-  speed: number;
+  flow: THREE.Vector2;
   strength: number;
 }
 
@@ -81,8 +84,8 @@ export class WindLines {
     if (f.strength < 0.15 || this.frontTimer > 0) return;
     this.frontTimer = 0.05 / f.strength;
     const spread = (Math.random() - 0.5) * 30;
-    const x = f.at.x - f.dir.y * spread - f.dir.x * Math.random() * 4;
-    const z = f.at.z + f.dir.x * spread - f.dir.y * Math.random() * 4;
+    const x = f.at.x - f.dir.y * spread - f.dir.x * Math.random() * 2;
+    const z = f.at.z + f.dir.x * spread - f.dir.y * Math.random() * 2;
     this.spawn(x, z, 0, 1.3 + Math.random() * 0.9, 0.3 + f.strength * 0.25);
     const l = this.lines[this.lines.length - 1];
     if (!l || l.age > 0) return;
@@ -90,9 +93,11 @@ export class WindLines {
     l.head.y = l.level;
     l.points[0].copy(l.head);
     l.climb = 1.5 + Math.random() * 2;
-    l.heading.copy(f.dir);
-    l.pace = f.speed * (0.7 + Math.random() * 0.2);
-    l.steer = 1.2;
+    /** Heads keep up with the front, so the streaks arrive with the gust rather than trailing after it. */
+    const speed = f.flow.length();
+    l.heading.copy(f.flow).divideScalar(speed || 1);
+    l.pace = speed * (0.97 + Math.random() * 0.1);
+    l.steer = 0.4;
   }
 
   update(dt: number, gustAt: THREE.Vector3 | null, gust: number, liftAt: THREE.Vector3 | null, charge: number): void {
