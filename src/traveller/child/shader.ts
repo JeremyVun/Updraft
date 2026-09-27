@@ -164,6 +164,12 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   /** Warm brown low in the eye, where the light comes through, so it is an eye and not a bead. */
   vec3 iris = mix(uEye, uBrow * 1.25, 0.8 * smoothstep(0.0, -0.046, e.y) * smoothstep(0.04, 0.02, length(e * vec2(1.0, 0.8))));
   alb = mix(alb, mix(uEye, iris, open), max(eye, lid));
+  /** Two short lashes flicking up off the outer corner. */
+  vec2 l1 = e - vec2(0.036, 0.03);
+  vec2 l2 = e - vec2(0.042, 0.014);
+  float lash = fill(length(l1 - vec2(0.8, 0.6) * clamp(dot(l1, vec2(0.8, 0.6)), 0.0, 0.017)) - 0.0042 + 0.12 * max(dot(l1, vec2(0.8, 0.6)), 0.0));
+  lash = max(lash, fill(length(l2 - vec2(0.95, 0.31) * clamp(dot(l2, vec2(0.95, 0.31)), 0.0, 0.013)) - 0.0038 + 0.12 * max(dot(l2, vec2(0.95, 0.31)), 0.0)));
+  alb = mix(alb, uEye, lash * open);
   /** One soft glint, high on the outer side, which is what keeps a big dark eye from reading as a hole. */
   vec2 g = vec2(e.x * sign(p.x), e.y);
   alb = mix(alb, vec3(1.0), 0.85 * fill(length(g - vec2(0.014, 0.02)) - 0.008) * eye * open);
@@ -209,8 +215,9 @@ void main() {
   } else if (m == ${MAT.skin}) {
     alb = uSkin * (0.97 + 0.05 * grain);
     alb = paintFace(alb, vRest, N, V, gloss);
-    /** The throat, down in the shadow between the chin and the scarf. */
-    alb *= 1.0 - 0.6 * smoothstep(${f(FACE.c.y - FACE.down + 0.035)}, ${f(FACE.c.y - FACE.down - 0.015)}, vRest.y);
+    /** The throat, down in the shadow between the chin and the scarf; the neck itself (k) all of it. */
+    alb *= 1.0 - 0.6 * k;
+    alb *= 1.0 - 0.72 * (1.0 - smoothstep(${f(FACE.c.y - FACE.down - 0.015)}, ${f(FACE.c.y - FACE.down + 0.035)}, vRest.y));
     fuzz = 0.3;
   } else if (m == ${MAT.hair}) {
     alb = uHair * (0.85 + 0.25 * vnoise3(vec3(vSurf.y * 9.0, vRest.y * 60.0, vSurf.x * 3.0)));

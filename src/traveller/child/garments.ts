@@ -401,24 +401,26 @@ function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
  * The middle of the head, its half-width and half-depth, and how far it reaches up to the crown and down to the chin.
  * A small child's face: as wide as it is long from the brow down, the eyes at the middle of the head.
  */
-export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278 };
+export const FACE = { c: V(0, 2.03, 0.09), rx: 0.238, rz: 0.25, up: 0.3, down: 0.278, fat: 0.12 };
 
 /** A point on the face's surface in the direction (theta from the top, phi from the front). */
 function facePoint(theta: number, phi: number, out = V()): THREE.Vector3 {
   const ct = Math.cos(theta);
   /** Full cheeks below the eyes, rounding in to a smaller chin: a soft U, never a V and never a box. */
   const ring = ct >= 0 ? Math.sin(theta) : Math.pow(1 - Math.pow(-ct, 2.3), 1 / 2.3);
+  /** Baby fat: the whole lower face a little fuller, widest about the mouth and softly forward under the eyes. */
+  const fat = FACE.fat * Math.exp(-((ct + 0.5) ** 2) / 0.18);
   const cheek = bump(ct + 0.45, 0.32);
-  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.13 * cheek);
+  const x = FACE.rx * ring * Math.sin(phi) * (1 + 0.13 * cheek + fat);
   const y = (ct >= 0 ? FACE.up : FACE.down) * ct;
-  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.1 * cheek * bump(Math.abs(phi) - 0.8, 0.6));
+  let z = FACE.rz * ring * Math.cos(phi) * (1 + 0.1 * cheek * bump(Math.abs(phi) - 0.8, 0.6) + 0.6 * fat * bump(Math.abs(phi) - 0.9, 0.55));
   if (z > 0) z *= 0.93;
   return out.set(x, y, z).add(FACE.c);
 }
 
 function face(b: Builder): void {
-  const ROWS = 40;
-  const AROUND = 56;
+  const ROWS = 56;
+  const AROUND = 80;
   const rows: Point[][] = [];
   for (let i = 0; i <= ROWS; i++) {
     const theta = (i / ROWS) * Math.PI;
@@ -437,9 +439,9 @@ function face(b: Builder): void {
   b.rows(rows, true, FACE.c);
   /** A short neck, tucked in behind the chin so the face sits down on the scarf. */
   tube(b, V(0, 1.54, -0.03), V(0, 1, 0.12), V(1, 0, 0), [
-    { s: 0, rx: 0.07, ry: 0.068, skin: [[BONE.chest, 0.5], [BONE.neck, 0.5]], mat: MAT.skin, ao: 0.2 },
-    { s: 0.12, rx: 0.068, ry: 0.066, skin: [[BONE.neck, 1]], mat: MAT.skin, ao: 0.25 },
-    { s: 0.24, rx: 0.072, ry: 0.07, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, ao: 0.35 },
+    { s: 0, rx: 0.07, ry: 0.068, skin: [[BONE.chest, 0.5], [BONE.neck, 0.5]], mat: MAT.skin, k: 1, ao: 0.2 },
+    { s: 0.12, rx: 0.068, ry: 0.066, skin: [[BONE.neck, 1]], mat: MAT.skin, k: 1, ao: 0.25 },
+    { s: 0.24, rx: 0.072, ry: 0.07, skin: [[BONE.neck, 0.3], [BONE.head, 0.7]], mat: MAT.skin, k: 1, ao: 0.35 },
   ], 16, V(0, 1.66, -0.015));
   /** A small round button nose, set into the face so only its front stands out. */
   const tip = facePoint(Math.acos(-0.38), 0);
@@ -489,25 +491,33 @@ function hairline(phi: number): number {
 const HAIR = { c: FACE.c.clone().add(V(0, 0.008, -0.02)), rx: 0.282, ry: 0.296, rz: 0.282 };
 
 /**
- * The fringe and the hair round the face, as locks: angle from the front and the cosine down from the crown where
- * each starts and ends, its width, and how far it swings sideways along the way. Parted on the child's left, the
- * fringe sweeps across to the right; shorter locks fall the other way from the parting, and a few come down in front
- * of the ears.
+ * A little girl's bangs, as locks: angle from the front and the cosine down from the crown where each starts and
+ * ends, its width, and how far it swings sideways along the way. They fall nearly straight to just over the brows,
+ * parted a little on her left.
  */
-const LOCKS: [number, number, number, number, number, number][] = [
-  [0.36, 0.75, -0.12, 0.2, 0.15, 0.1],
-  [0.16, 0.75, -0.44, 0.27, 0.14, 0.08],
-  [-0.08, 0.74, -0.74, 0.2, 0.13, 0.06],
-  [-0.4, 0.72, -0.98, 0.06, 0.12, 0.05],
-  [0.3, 0.75, 0.02, 0.3, 0.13, 0.06],
-  [0.6, 0.74, 1.05, 0.44, 0.12, -0.05],
-  [0.82, 0.72, 1.15, 0.2, 0.11, -0.05],
-  [1.02, 0.66, 1.14, 0.12, 0.11, 0.06],
-  [-1.08, 0.64, -1.16, 0.08, 0.115, -0.06],
-  [1.3, 0.54, 1.34, 0.18, 0.1, 0.05],
-  [-1.32, 0.52, -1.36, 0.16, 0.1, -0.05],
-  [1.75, 0.45, 1.8, -0.32, 0.12, 0.04],
-  [-1.75, 0.45, -1.8, -0.3, 0.12, -0.04],
+const BANGS: [number, number, number, number, number, number][] = [
+  [0.3, 0.76, 0.48, 0.355, 0.18, -0.02],
+  [0.1, 0.78, 0.2, 0.335, 0.18, 0.02],
+  [-0.1, 0.78, -0.1, 0.33, 0.18, -0.02],
+  [-0.3, 0.76, -0.36, 0.34, 0.18, 0.02],
+  [-0.5, 0.74, -0.62, 0.37, 0.17, -0.02],
+  [0.52, 0.74, 0.76, 0.38, 0.17, 0.02],
+  [-0.72, 0.72, -0.9, 0.36, 0.16, -0.02],
+  [0.74, 0.72, 0.96, 0.36, 0.16, 0.02],
+];
+
+/**
+ * The bob round her face, as locks down each side: angle from the front at the crown, and the height their ends
+ * reach. They come down over the ears, fall past the cheeks and turn under at the jaw.
+ */
+const BOB: [number, number, number][] = [
+  [1.12, 1.84, 0.17],
+  [1.32, 1.81, 0.19],
+  [1.5, 1.8, 0.2],
+  [1.66, 1.8, 0.2],
+  [1.9, 1.8, 0.2],
+  [2.2, 1.81, 0.2],
+  [2.5, 1.82, 0.2],
 ];
 
 function hair(b: Builder): void {
@@ -526,7 +536,8 @@ function hair(b: Builder): void {
     }));
   }
   b.rows(rows, true, HAIR.c);
-  for (const [phi0, c0, phi1, c1, width, swing] of LOCKS) lock(b, phi0, c0, phi1, c1, width, swing);
+  for (const [phi0, c0, phi1, c1, width, swing] of BANGS) lock(b, phi0, c0, phi1, c1, width, swing);
+  for (const mx of [1, -1]) for (const [phi, end, width] of BOB) bob(b, mx * phi, end, width);
 }
 
 /** Low at the sides the hair stands out over the full cheeks, so it ends in a hairline rather than cutting into them. */
@@ -544,24 +555,62 @@ function onHair(phi: number, ct: number, lift: number): { p: THREE.Vector3; n: T
 }
 
 function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, width: number, swing: number): void {
-  const STEPS = 14;
-  const rows: Point[][] = [];
-  const skin: Skin = [[BONE.head, 1]];
   /** The path over the shell, with a soft S across it so no lock runs straight. */
   const at = (t: number): [number, number] => [THREE.MathUtils.lerp(phi0, phi1, t) + swing * Math.sin(t * Math.PI * 1.5), THREE.MathUtils.lerp(c0, c1, t)];
+  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.022, 0.75);
+}
+
+/**
+ * A lock of the bob: over the shell from the crown to the ear, then falling free past the cheek, swelling out a
+ * little and turning under toward the neck at its end.
+ */
+function bob(b: Builder, phi: number, end: number, width: number): void {
+  const side = Math.sign(phi);
+  const top = onHair(phi, 0.62, 0);
+  const ear = onHair(phi + side * 0.05, -0.25, 0.01);
+  const drop = ear.p.y - end;
+  const out = V(ear.p.x - HAIR.c.x, 0, ear.p.z - HAIR.c.z);
+  const at = (f: number, dy: number) => HAIR.c.clone().addScaledVector(out, f).setY(ear.p.y - dy);
+  const curve = new THREE.CatmullRomCurve3([
+    onHair(phi, 0.9, 0).p,
+    top.p,
+    onHair(phi + side * 0.02, 0.2, 0.004).p,
+    ear.p,
+    at(1.04, drop * 0.45),
+    at(1.0, drop * 0.85),
+    at(0.9, drop),
+  ]);
+  const path = (t: number, lift: number) => {
+    const u = 0.08 + 0.92 * t;
+    const p = curve.getPointAt(u);
+    const n = V(p.x - HAIR.c.x, (p.y - HAIR.c.y) * smooth(ear.p.y - 0.05, top.p.y, p.y), p.z - HAIR.c.z).normalize();
+    return { p: p.addScaledVector(n, lift), n };
+  };
+  strand(b, path, width, 0.034, 0.5);
+}
+
+/**
+ * A lock of hair along a path given by where it is at a fraction of its length and how far it stands off the head.
+ * Full at the root, narrowing to a soft rounded end (`tip` is how much of its width it keeps there) that lifts a
+ * little off the head.
+ */
+function strand(b: Builder, path: (t: number, lift: number) => { p: THREE.Vector3; n: THREE.Vector3 }, width: number, depth: number, tip: number): void {
+  const STEPS = 18;
+  const rows: Point[][] = [];
+  const skin: Skin = [[BONE.head, 1]];
   let last = V();
-  const root = onHair(phi0, c0 + 0.03, -0.004);
-  rows.push([{ p: root.p, skin, mat: MAT.hair }]);
+  const start = path(0, -0.004);
+  const lead = path(0.01, 0).p.sub(path(0, 0).p).normalize();
+  rows.push([{ p: start.p.addScaledVector(lead, -0.01), skin, mat: MAT.hair }]);
   for (let i = 0; i <= STEPS; i++) {
     const t = i / STEPS;
-    const [phi, ct] = at(t);
-    /** Full at the root, tapering to a soft point that lifts a little off the head, the way a wave of hair ends. */
-    const taper = t < 0.4 ? 1 : 1 - Math.pow((t - 0.4) / 0.6, 1.25);
-    const thick = 0.026 * (1 - 0.5 * t) * Math.max(taper, 0.2);
+    const narrow = t < 0.4 ? 1 : 1 - (1 - tip) * Math.pow((t - 0.4) / 0.6, 1.25);
+    /** The end rounds off over its last few rows rather than stopping square. */
+    const taper = narrow * Math.sqrt(Math.max(0, 1 - Math.pow(Math.max(0, (t - 0.88) / 0.12), 2)));
+    const thick = depth * (1 - 0.5 * t) * Math.max(taper, 0.2);
     const w = width * 0.5 * (0.8 + 0.25 * Math.sin(Math.min(1, t / 0.4) * (Math.PI / 2))) * taper;
-    const { p, n } = onHair(phi, ct, 0.003 + thick * 0.85 + 0.012 * Math.sin(t * Math.PI) + 0.018 * smooth(0.7, 1, t));
-    const [phiN, ctN] = at(Math.min(1, t + 0.01));
-    const along = onHair(phiN, ctN, 0).p.sub(onHair(phi, ct, 0).p).normalize();
+    const { p, n } = path(t, 0.003 + thick * 0.85 + 0.012 * Math.sin(t * Math.PI) + 0.018 * smooth(0.7, 1, t));
+    const along = path(Math.min(1, t + 0.01), 0).p.sub(path(Math.min(1, t + 0.01) - 0.01, 0).p).normalize();
     const side = V().crossVectors(n, along).normalize();
     if (i === STEPS) {
       rows.push([{ p: p.addScaledVector(along, 0.006), skin, mat: MAT.hair, uv: [t, 0] }]);
