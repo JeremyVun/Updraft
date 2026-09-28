@@ -8,7 +8,7 @@ import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } f
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
 
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
-const SHAPE = { heap: 3.5, tower: 8, big: [5.5, 3.0], mid: [2.6, 1.0], fine: [1.0, 0.3] } as const;
+const SHAPE = { heap: 3.5, tower: 8, big: [3.0, 3.0], mid: [2.0, 1.2], fine: [1.3, 0.4] } as const;
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
@@ -108,6 +108,7 @@ void main() {
   // Measured against the bulk under here, so what the finer lobes add to this point does not count as air.
   float over = vWorld.y - uSurface - bulkAt(xz, vCalm, vStature);
   for (int i = 1; i <= 4; i++) {
+    if (uDebug < -0.5) break;
     vec3 q = vWorld + ray * (stride * float(i * i) * 0.6);
     through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm, vStature) + over - (q.y - uSurface));
   }
@@ -301,7 +302,7 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, o
   float even = 0.2 + 0.8 * calm.w;
   float aBig = (BIG.x * even + BIG.y * rise.x * stature);
   float aMid = (MID.x * even + MID.y * rise.x * stature);
-  float aFine = FINE.x * even + FINE.y * rise.x;
+  float aFine = FINE.x * (0.4 + 0.6 * calm.w) + FINE.y * rise.x;
   vec3 big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise.x, lobesLod(spacing, 17.0));
   vec3 mid = lobesT((p + uDrift * DRIFT.w) / 6.5 + 1.7, 0.5 + 0.3 * rise.x, lobesLod(spacing, 6.5));
   vec3 fine = lobesT((p + uDrift * 1.25) / 2.4 + 7.7, 0.6 + 0.4 * rise.x, lobesLod(spacing, 2.4));
@@ -523,7 +524,7 @@ class TopShape {
     const h = rise * SHAPE.heap * stature + tower * SHAPE.tower * stature * rise
       + (big - 0.25) * (SHAPE.big[0] * even + SHAPE.big[1] * rise * stature)
       + (mid - 0.25) * (SHAPE.mid[0] * even + SHAPE.mid[1] * rise * stature)
-      + (fine - 0.25) * (SHAPE.fine[0] * even + SHAPE.fine[1] * rise)
+      + (fine - 0.25) * (SHAPE.fine[0] * (0.4 + 0.6 * smooth(2.5, 14, way)) + SHAPE.fine[1] * rise)
       + 0.25 * (1 - smooth(2.5, 14, way));
     const below = h - 0.1;
     return 0.1 + 0.5 * (below + Math.sqrt(below * below + 0.02));
