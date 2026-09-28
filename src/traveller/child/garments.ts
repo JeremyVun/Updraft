@@ -640,6 +640,8 @@ export const HOOD = {
   r: V(0.4, 0.372, 0.42),
   /** The opening faces forward and down, so the brim comes out over the top of the fringe. */
   tilt: 0.17,
+  seam: 0.03,
+  corner: 0.05,
 };
 
 /**
@@ -728,6 +730,16 @@ function hoodShape(lambda: number, gamma: number, open: number | null): HoodSamp
   p.y += 0.024 * smooth(0.5, 1.0, yN) * Math.exp(-(p.x * p.x) / 0.025);
   /** The crown rides a little back over the head, the way a soft hood falls, rather than standing straight up. */
   p.z -= 0.025 * smooth(0.2, 1.0, yN);
+  /**
+   * A hood is two flat panels sewn down the middle, so from the side its outline runs up the seam to a soft corner
+   * at the back of the crown and falls from there, where a helmet follows the skull round.
+   */
+  const behind = smooth(-0.1, -0.8, hz);
+  const ridge = Math.exp(-(p.x * p.x) / 0.012);
+  p.y += HOOD.seam * ridge * behind * smooth(-0.2, 0.5, yN);
+  const corner = HOOD.corner * ridge * behind * Math.exp(-(((yN - 0.55) / 0.3) ** 2));
+  p.y += 0.6 * corner;
+  p.z -= 0.8 * corner;
   const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
   const fromRim = open === null ? 0 : smooth(open, open + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
@@ -792,7 +804,10 @@ function hood(b: Builder): void {
   }
   b.rows(rows, true, HOOD.c);
 
-  /** The thick rolled edge round the face: fullest over the brow, thinning where it goes down into the scarf. */
+  /**
+   * The thick rolled edge round the face: fullest over the brow, thinning where it goes down into the scarf. It is
+   * flattened against the hood, a turned-back hem rather than a helmet's padded trim standing off it.
+   */
   const ALONG = 72;
   const rim: Point[][] = [];
   for (let i = 0; i < ALONG; i++) {
@@ -804,13 +819,13 @@ function hood(b: Builder): void {
     const out = V().crossVectors(tangent, inward).normalize();
     if (out.dot(edge.n) < 0) out.negate();
     const bottom = smooth(0.8, 0.98, -Math.cos(lambda));
-    const r = 0.05 * (1 - 0.6 * bottom) * (1 + 0.1 * Math.cos(lambda));
+    const r = 0.05 * (1 - 0.6 * bottom) * (1 + 0.1 * Math.cos(lambda)) * (1 - 0.3 * smooth(0.2, 0.85, -Math.cos(lambda)));
     const centre = edge.p.clone().addScaledVector(inward, r * 0.35).addScaledVector(out, -r * 0.25);
     const skin = hoodSkin(edge.d, open);
     rim.push(Array.from({ length: 14 }, (_, j) => {
       const a = (j / 14) * TAU;
       return {
-        p: centre.clone().addScaledVector(out, Math.cos(a) * r).addScaledVector(inward.clone().negate(), Math.sin(a) * r * 1.05),
+        p: centre.clone().addScaledVector(out, Math.cos(a) * r * 0.65).addScaledVector(inward.clone().negate(), Math.sin(a) * r * 1.05),
         skin,
         mat: MAT.coat,
         k: 0.35,
