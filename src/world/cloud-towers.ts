@@ -108,6 +108,12 @@ float density(vec3 p) {
   return smoothstep(0.0, 0.12, d) * smoothstep(s - 1.0, s + uSize * 0.12, p.y);
 }
 
+/** The tower's density without its frayed edge, for the light reaching a point, which does not need the fraying. */
+float bulk(vec3 p) {
+  float s = skirt(p.xz);
+  return smoothstep(-0.1, 0.2, body(p)) * smoothstep(s - 1.0, s + uSize * 0.12, p.y);
+}
+
 float phase(float c, float g) {
   float g2 = g * g;
   return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * c, 1.5) * 0.0796;
@@ -156,9 +162,9 @@ void main() {
     if (d <= 0.0) continue;
     float s = 1.0 - exp(-sigma * d * dt);
     // How much of the tower lies between here and the sun, and over here: its shade, and its crowns open to the sky.
-    float sunT = exp(-2.2 * density(p + L * uSize * 0.2));
+    float sunT = exp(-2.2 * bulk(p + L * uSize * 0.2));
     // Each billow is open to the sky over its crown and goes lilac underneath, where the next sits over it.
-    float over = density(p + vec3(0.0, uSize * 0.09, 0.0));
+    float over = bulk(p + vec3(0.0, uSize * 0.09, 0.0));
     float up = clamp((p.y - uFloor) / (uSize * 1.4), 0.0, 1.0);
     vec3 shade = mix(violet, lilac, up * (1.0 - 0.6 * over) + 0.25 * (1.0 - over)) + uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * up);
     vec3 col = mix(shade, uSunColor * vec3(0.54, 0.39, 0.36) + shade * 0.35, sunT) + uSunColor * vec3(1.0, 0.85, 0.65) * sunT * ph * (0.12 + 0.6 * (1.0 - d));
@@ -212,7 +218,7 @@ export class CloudTowers {
     // Where the way runs between towers: two either side of it, close enough to stand behind the travellers.
     const gateDir = gate.to.clone().sub(gate.from).normalize();
     [0.15, 0.4, 0.65, 0.9].forEach((k, i) => {
-      const off = (40 + rnd() * 12) * (i % 2 ? 1 : -1);
+      const off = (46 + rnd() * 12) * (i % 2 ? 1 : -1);
       const p = gate.from.clone().lerp(gate.to, k);
       places.push({ x: p.x - gateDir.y * off, z: p.y + gateDir.x * off, size: 15 + rnd() * 6 });
     });

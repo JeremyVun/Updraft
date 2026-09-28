@@ -100,7 +100,7 @@ function texture(data: Float32Array): THREE.DataTexture {
   tex.magFilter = THREE.LinearFilter;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   // The cloud is mostly seen at a slant, where plain mipmaps would smooth its lobes away.
-  tex.anisotropy = 8;
+  tex.anisotropy = 4;
   tex.generateMipmaps = true;
   tex.needsUpdate = true;
   return tex;
