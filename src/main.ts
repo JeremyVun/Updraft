@@ -259,7 +259,10 @@ const sailInvitation = new SailInvitation();
 scene.add(sailInvitation.batch.mesh);
 const planeInvitation = new PlaneInvitation();
 scene.add(planeInvitation.batch.mesh);
-const glider = new Glider(wind, tree.canopy);
+const glider = new Glider(wind, [
+  ...tree.canopy,
+  ...ROCKS.map((r) => ({ centre: new THREE.Vector3(r.x, heightAt(r.x, r.z) + r.height * 0.25, r.z), radius: r.radius })),
+]);
 const planeIndicator = new PlaneIndicator();
 glider.objects.forEach((o) => scene.add(o));
 await yieldBoot();
