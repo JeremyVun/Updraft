@@ -138,7 +138,7 @@ void main() {
   if (stir > 0.01) {
     vec2 q = vec2(wake.along * 0.55 + wake.d * 0.35, wake.d * 1.3 - (1.0 - wake.fresh) * 2.5 + uTime * 0.25);
     vec3 eddy = vnoiseGrad(q) + 0.5 * vnoiseGrad(q * 2.1 + 3.7);
-    top.yz += (eddy.y * wake.off + eddy.z * vec2(-wake.off.y, wake.off.x)) * 0.35 * stir;
+    top.yz += (eddy.y * wake.off + eddy.z * vec2(-wake.off.y, wake.off.x)) * 0.7 * stir;
     lobe.z = mix(lobe.z, eddy.x * 0.7, stir);
   }
   vec3 V = normalize(cameraPosition - vWorld);
@@ -174,6 +174,8 @@ void main() {
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
   vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
   col = mix(col, haze, (1.0 - exp(-max(dist - 30.0, 0.0) / 220.0)) * low * 0.6);
+  // The tops the hull has just turned over are fresh and catch the light.
+  col = mix(col, vapourLight(vWorld, ray, 0.4), stir * 0.35);
   // Low wisps of vapour stream across the tops on the air: long thin streaks in a layer lying over them, thicker
   // the longer a sightline runs through it before it reaches the cloud.
   float veil = 0.0;
@@ -303,7 +305,7 @@ vec3 parting(Wake w) {
   if (w.fresh <= 0.0) return vec3(0.0);
   float width = 0.85 + 1.6 * (1.0 - w.fresh);
   float k = exp(-w.d * w.d / (2.0 * width * width));
-  float deep = 0.16 * w.fresh * w.fresh * k;
+  float deep = 0.28 * w.fresh * w.fresh * k;
   return vec3(deep, -deep * w.d / (width * width) * w.off);
 }
 /** How high a heap's dome stands, and the towers on it, far out; near the landing and the way they are lower. */

@@ -51,7 +51,7 @@ void main() {
   float streak = vnoise(q) * 0.6 + vnoise(q * vec2(2.3, 2.9) + 7.1) * 0.4;
   float soft = 1.0 - across * across;
   float body = soft * soft * smoothstep(0.2, 0.75, streak + 0.25 * (1.0 - abs(across)));
-  float a = body * vAlpha * uStrength * 0.45;
+  float a = body * vAlpha * uStrength * 0.8;
   if (a < 0.004) discard;
   vec3 col = vapourLight(vWorld, normalize(vWorld - cameraPosition), 0.5);
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
