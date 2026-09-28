@@ -3,6 +3,7 @@ import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { glsl, tuning } from '../tuning';
 import { CloudWake } from './stairs-wake';
 import { CloudStreamers } from './cloud-vapour';
+import { CloudTowers, TOWER_FOOT } from './cloud-towers';
 import { CloudLobes, LOBES_TEXTURE_GLSL } from './cloud-lobes';
 import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } from './cloud-grid';
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
@@ -13,6 +14,8 @@ const SHAPE = { heap: 6, tower: 12, big: [2.6, 3.0], mid: [2.0, 1.2], fine: [1.3
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
 const TRAIL_POINTS = 16;
+/** How many towers of cumulus the top of the cloud makes room for. */
+const FEET = 12;
 
 /** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
 const TOP_VERT = /* glsl */ `
@@ -35,6 +38,7 @@ out float vShade;
 out vec4 vFog;
 out vec4 vHaze;
 out float vThin;
+out vec3 vFoot;
 out vec3 vRise;
 out vec3 vTower;
 flat out float vLevel;
@@ -59,7 +63,9 @@ void main() {
   vRise = riseAt(xz, p + uDrift * DRIFT.x, vCalm, spacing);
   vTower = towers(p + uDrift * DRIFT.y, spacing);
   vec3 lobe;
-  float h = cloudTop(xz, vCalm, vStature, vRise, vTower, spacing, fold, lobe).x - parting(wakeAt(xz)).x;
+  float foot = footAt(xz);
+  vFoot = vec3(foot, footAt(xz + vec2(0.5, 0.0)) - foot, footAt(xz + vec2(0.0, 0.5)) - foot) * vec3(1.0, 2.0, 2.0);
+  float h = cloudTop(xz, vCalm, vStature, vRise, vTower, spacing, fold, lobe).x + foot - parting(wakeAt(xz)).x;
   vShade = heapShade(xz, h, spacing);
   vWorld = vec3(xz.x, uSurface + h, xz.y);
   // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it; seen from
@@ -104,6 +110,7 @@ in float vShade;
 in vec4 vFog;
 in vec4 vHaze;
 in float vThin;
+in vec3 vFoot;
 in vec3 vRise;
 in vec3 vTower;
 flat in float vLevel;
@@ -118,7 +125,7 @@ void main() {
   }
   vec2 fold;
   vec3 lobe;
-  vec3 top = cloudTop(xz, vCalm, vStature, vRise, vTower, 0.0, fold, lobe);
+  vec3 top = cloudTop(xz, vCalm, vStature, vRise, vTower, 0.0, fold, lobe) + vFoot;
   Wake wake = wakeAt(xz);
   top -= parting(wake);
   // Either side of the parting the tops curl over and stream off in soft eddies, which spread and settle as it fills.
@@ -207,6 +214,16 @@ vec3 lobes(vec2 p) {
  */
 const TOP_GLSL = /* glsl */ `
 uniform vec2 uDrift;
+uniform vec4 uFeet[${FEET}];
+/** How far the sea swells up round the foot of a tower of cumulus (as the tower's own shader has it), metres. */
+float footAt(vec2 xz) {
+  float f = 0.0;
+  for (int i = 0; i < ${FEET}; i++) {
+    float k = 1.0 - smoothstep(uFeet[i].z * ${glsl(TOWER_FOOT.in)}, uFeet[i].z * ${glsl(TOWER_FOOT.out)}, length(xz - uFeet[i].xy));
+    f = max(f, uFeet[i].w * uFeet[i].z * ${glsl(TOWER_FOOT.rise)} * k * k * (3.0 - 2.0 * k));
+  }
+  return f;
+}
 float toSegment(vec2 p, vec2 a, vec2 b) {
   vec2 ab = b - a;
   float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
@@ -354,7 +371,7 @@ float bulkAt(vec2 xz, vec4 calm, float stature) {
   float x = clamp((m - 0.22) / 0.4, 0.0, 1.0);
   float rise = x * x * (3.0 - 2.0 * x);
   float big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise, 0.0).x;
-  return rise * stature * (HEAP + TOWER * towers(p + uDrift * DRIFT.y, 0.0).x)
+  return footAt(xz) + rise * stature * (HEAP + TOWER * towers(p + uDrift * DRIFT.y, 0.0).x)
     + (big - 0.25) * (BIG.x * (0.2 + 0.8 * calm.w) + BIG.y * rise * stature) + 0.25;
 }
 /** How far the heaps between a point and the low sun keep the light off it: their long shadows across the cloud. */
@@ -499,8 +516,18 @@ class TopShape {
   private readonly route: THREE.Vector2[];
   private readonly l = new THREE.Vector3();
 
-  constructor(private readonly lobes: CloudLobes, route: THREE.Vector2[], private readonly gate: THREE.Vector4, private readonly calmAt: THREE.Vector3) {
+  constructor(private readonly lobes: CloudLobes, route: THREE.Vector2[], private readonly gate: THREE.Vector4, private readonly calmAt: THREE.Vector3,
+    private readonly feet: THREE.Vector4[]) {
     this.route = route;
+  }
+
+  private footAt(x: number, z: number): number {
+    let f = 0;
+    for (const t of this.feet) {
+      const k = 1 - smooth(t.z * TOWER_FOOT.in, t.z * TOWER_FOOT.out, Math.hypot(x - t.x, z - t.y));
+      f = Math.max(f, t.w * t.z * TOWER_FOOT.rise * k * k * (3 - 2 * k));
+    }
+    return f;
   }
 
   private fromRoute(x: number, z: number): number {
@@ -550,7 +577,7 @@ class TopShape {
       + (fine - 0.25) * (SHAPE.fine[0] * (0.4 + 0.6 * smooth(2.5, 14, way)) + SHAPE.fine[1] * rise)
       + 0.25 * (1 - smooth(2.5, 14, way));
     const below = h - 0.1;
-    return 0.1 + 0.5 * (below + Math.sqrt(below * below + 0.02));
+    return 0.1 + 0.5 * (below + Math.sqrt(below * below + 0.02)) + this.footAt(x, z);
   }
 }
 
@@ -617,12 +644,14 @@ export class StairsCloud {
   readonly wake = new CloudWake();
   /** Low wisps of vapour streaming across the tops; the story may set their `amount` (1 by default). */
   readonly streamers = new CloudStreamers();
+  /** Towers of cumulus standing out of the sea along the way. */
+  readonly towers = new CloudTowers(CLOUD_ROUTE, new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), CLOUD.top + 1);
   readonly fog = new FogBank();
   private readonly lobes = new CloudLobes();
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uSurface: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uSurface: { value: number } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
@@ -641,15 +670,18 @@ export class StairsCloud {
       uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone())] },
       uTrail: { value: this.trail },
       uTrailBounds: { value: new THREE.Vector4() },
+      uFeet: { value: Array.from({ length: FEET }, () => new THREE.Vector4()) },
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
       uDebug: { value: 0 },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
       uSurface: { value: CLOUD.top },
     };
-    this.shape = new TopShape(this.lobes, this.topUniforms.uRoute.value, this.topUniforms.uGate.value, this.topUniforms.uCalmAt.value);
+    this.shape = new TopShape(this.lobes, this.topUniforms.uRoute.value, this.topUniforms.uGate.value, this.topUniforms.uCalmAt.value, this.topUniforms.uFeet.value);
     this.group.add(this.wake.mesh);
     this.group.add(this.streamers.mesh);
+    this.group.add(this.towers.group);
+    this.towers.feet(this.topUniforms.uFeet.value);
     const ground = (x: number, z: number) => this.surfaceAt(x, z);
     this.wake.groundAt = ground;
     this.streamers.groundAt = ground;
@@ -729,6 +761,7 @@ export class StairsCloud {
     this.wake.setWind(airX * tuning.stairs.wispSpeed * 0.5, airZ * tuning.stairs.wispSpeed * 0.5);
     this.streamers.setWind(airX, airZ);
     this.streamers.update(dt, camera.position, this.top.visible && camera.position.y > CLOUD.top + 0.5);
+    this.towers.update(dt, this.top.visible && camera.position.y > CLOUD.top + 0.5);
     this.wake.update(dt);
     this.fog.update(dt, camera.position);
     this.belly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 1;

@@ -17,6 +17,7 @@ in vec3 aState;
 out vec3 vWorld;
 out vec2 vAt;
 out float vAlpha;
+out vec4 vFog;
 void main() {
   // aState: which side of the ribbon (-1 or 1), how old the knot is (0 to 1 of its life), and how far along the wake.
   float age = aState.y;
@@ -28,6 +29,7 @@ void main() {
   vAt = vec2(aState.z, aState.x);
   float near = smoothstep(1.2, 3.5, distance(aKnot, cameraPosition));
   vAlpha = smoothstep(0.0, 0.05, age) * pow(1.0 - age, 1.6) * near;
+  vFog = fogOf(vWorld);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -38,6 +40,7 @@ uniform float uStrength;
 in vec3 vWorld;
 in vec2 vAt;
 in float vAlpha;
+in vec4 vFog;
 void main() {
   // Streaks of vapour along the wake, soft across it, torn a little as they drift.
   float across = vAt.y;
@@ -47,7 +50,7 @@ void main() {
   float a = body * vAlpha * uStrength * 0.45;
   if (a < 0.004) discard;
   vec3 col = vapourLight(vWorld, normalize(vWorld - cameraPosition), 0.5);
-  gl_FragColor = vec4(applyFog(col, vWorld), a);
+  gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
 }`;
 
 /**

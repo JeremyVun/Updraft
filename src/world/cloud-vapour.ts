@@ -29,6 +29,7 @@ in vec2 aState;
 out vec3 vWorld;
 out vec3 vAt;
 out float vAlpha;
+out vec4 vFog;
 void main() {
   // aShape: which side (-1 or 1), how far along (-1 to 1), half its width; aState: how much of it there is, its seed.
   vec3 axis = vec3(uWispAxis.x, 0.0, uWispAxis.y);
@@ -40,6 +41,7 @@ void main() {
   vAt = vec3(aShape.x, aShape.y, aState.y);
   float near = smoothstep(4.0, 14.0, distance(aCentre, cameraPosition));
   vAlpha = aState.x * near;
+  vFog = fogOf(vWorld);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -50,6 +52,7 @@ uniform float uWispAmount;
 in vec3 vWorld;
 in vec3 vAt;
 in float vAlpha;
+in vec4 vFog;
 void main() {
   float across = vAt.x, along = vAt.y;
   // Long and thin along the air, streaked and torn, soft at both ends.
@@ -60,7 +63,7 @@ void main() {
   float a = body * vAlpha * uWispAmount;
   if (a < 0.003) discard;
   vec3 col = vapourLight(vWorld, normalize(vWorld - cameraPosition), 0.7);
-  gl_FragColor = vec4(applyFog(col, vWorld), a);
+  gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
 }`;
 
 /**
