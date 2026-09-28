@@ -144,7 +144,7 @@ light. Courage passes back and forth between them; the stairs are where it start
    follows, and the lens comes round and down beside the ring while its last flight lets go of the trick and is seen
    to climb on past the corner and stop in the air, a storey too high.
 5. **Above the clouds.** As the second pass: out of the wind into a vast calm; the slippers; the bird settles in one,
-   the child sits beside it; a skein goes north across the sun; the boat waits on the cloud under the kite.
+   the child sits beside it on the lip with her feet hanging over the cloud (Jeremy, 09-28: "the child should set on the lip with her feet dangling in the cloud, and the cygnet next to her"), the slippers on her right where the stowed paper does not hide the bird; a skein goes north across the sun; the boat waits on the cloud under the kite.
 6. **The sail over the cloud.** Off the landing in one slow turn to port, away from the stair, then a long straight
    run toward the low sun (about 300 m, a minute or more of sailing), the player's gusts filling the sail. Far ahead
    a bank of mist stands on the cloud sea, and the sun goes down into its top as they come. The lens goes once

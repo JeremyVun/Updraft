@@ -159,6 +159,8 @@ const scratch = (): Scratch => ({
 /** Where each hem bone hangs from, its outward axis and its radial direction, in the hips' frame. */
 /** How far the front of the hem swings up onto the lap when sitting, radians. */
 const LAP_DRAPE = 0.9;
+/** As much of it with the feet hanging over an edge: the coat rests on the thighs, less than a tray. */
+const HANG_DRAPE = 0.5;
 
 const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
   const a = hemAngle(i);
@@ -525,9 +527,9 @@ export class ChildMotion {
       if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
       /**
        * Sat down with the legs out in front, the front of the coat rides up over the thighs and lies on the lap instead
-       * of the knees going through it. Sat on an edge with the feet hanging, it hangs.
+       * of the knees going through it. Sat on an edge with the feet hanging, it only rests on them.
        */
-      floor = Math.max(floor, pose.lap * this.feetDown * LAP_DRAPE * Math.max(0, h.radial.z));
+      floor = Math.max(floor, pose.lap * THREE.MathUtils.lerp(HANG_DRAPE, LAP_DRAPE, this.feetDown) * Math.max(0, h.radial.z));
       if (a < floor) {
         a = floor;
         this.hemOut[i].x = floor;

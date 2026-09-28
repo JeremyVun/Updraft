@@ -222,8 +222,11 @@ export const TOP = TOP_LANDING.centre.clone();
 /** The open edge: its middle, and the way out over it. */
 export const TOP_EDGE = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.05, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2);
 export const TOP_OUT = leftOf(TOP_LANDING.yaw);
-export const SLIPPERS = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.3, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2 - 0.35);
-export const SIT = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.42, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2 + 0.3);
+/** How far in from the open edge she sits: on the lip, so her feet hang over the cloud. */
+const SIT_IN = 0.12;
+/** The slippers, and the bird in one, on her right: her left is the bag's outer face, where the stowed paper hides it. */
+export const SLIPPERS = onLanding(TOP_LANDING, TOP_LANDING.x1 - SIT_IN - 0.05, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2 + 0.3);
+export const SIT = onLanding(TOP_LANDING, TOP_LANDING.x1 - SIT_IN, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2 - 0.3);
 /** Where the boat lies alongside the open edge, bow toward the far end of the landing. */
 export const CLOUD_BERTH = (() => {
   const p = TOP_EDGE.clone().addScaledVector(TOP_OUT, 1.4);
