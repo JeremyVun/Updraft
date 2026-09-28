@@ -8,7 +8,7 @@ import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } f
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
 
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
-const SHAPE = { heap: 3.5, tower: 8, big: [3.0, 3.0], mid: [2.0, 1.2], fine: [1.3, 0.4] } as const;
+const SHAPE = { heap: 6, tower: 12, big: [2.6, 3.0], mid: [2.0, 1.2], fine: [1.3, 0.4] } as const;
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
@@ -161,7 +161,7 @@ void main() {
   // Down between the heaps far off the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
   vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
-  col = mix(col, haze, (1.0 - exp(-max(dist - 60.0, 0.0) / 380.0)) * low * 0.45);
+  col = mix(col, haze, (1.0 - exp(-max(dist - 30.0, 0.0) / 220.0)) * low * 0.6);
   col = mix(col, vHaze.rgb, vHaze.a);
   col = mix(col, vFog.rgb, vFog.a);
   float edge = mix(1.0, smoothstep(0.0, 0.75, 1.0 - thin + 0.25 * vnoise(xz * 0.9 + uTime * 0.2)), smoothstep(0.35, 0.9, thin));
@@ -299,7 +299,7 @@ vec3 riseAt(vec2 xz, vec2 p, vec4 calm, float spacing) {
   vec3 site = heapSite(p, spacing);
   float g = gateAt(xz);
   float m = site.x + 0.3 * g - 0.5 * (1.0 - calm.x);
-  float x = (m - 0.28) / 0.4;
+  float x = (m - 0.22) / 0.4;
   if (x <= 0.0) return vec3(0.0);
   if (x >= 1.0) return vec3(1.0, 0.0, 0.0);
   return vec3(x * x * (3.0 - 2.0 * x), 6.0 * x * (1.0 - x) / 0.4 * (site.yz + 0.5 * calm.yz));
@@ -351,7 +351,7 @@ float bulkAt(vec2 xz, vec4 calm, float stature) {
   vec2 p = xz + uCloudShift * 0.6;
   vec2 hp = p + uDrift * DRIFT.x;
   float m = lobesT(hp / 80.0 + 11.3, 0.0, 0.0).x * 0.65 + 0.175 + 0.3 * gateAt(xz) - 0.5 * (1.0 - calm.x);
-  float x = clamp((m - 0.28) / 0.4, 0.0, 1.0);
+  float x = clamp((m - 0.22) / 0.4, 0.0, 1.0);
   float rise = x * x * (3.0 - 2.0 * x);
   float big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise, 0.0).x;
   return rise * stature * (HEAP + TOWER * towers(p + uDrift * DRIFT.y, 0.0).x)
@@ -537,7 +537,7 @@ class TopShape {
     const px = x + shift.x * 0.6, pz = z + shift.y * 0.6;
     const hx = px + drift.x * 0.35, hz = pz + drift.y * 0.35;
     const site = this.lobe(hx / 80 + 11.3, hz / 80 + 11.3, 0) * 0.65 + vnoise(hx * 0.021 + 2.3, hz * 0.021 + 2.3) * 0.35;
-    const m = (site + 0.3 * g - 0.5 * (1 - calm) - 0.28) / 0.4;
+    const m = (site + 0.3 * g - 0.5 * (1 - calm) - 0.22) / 0.4;
     const rise = m <= 0 ? 0 : m >= 1 ? 1 : m * m * (3 - 2 * m);
     const tb = this.lobe((px + drift.x * 0.55) / 30 + 3.9, (pz + drift.y * 0.55) / 30 + 3.9, 0.8) + 0.2;
     const tower = 0.5 * (tb + Math.sqrt(tb * tb + 0.04));
