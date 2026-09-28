@@ -47,7 +47,7 @@ in vec4 vFog;
 void main() {
   // Streaks of vapour along the wake, soft across it, torn a little as they drift.
   float across = vAt.y;
-  vec2 q = vec2(vAt.x * 0.45 - uTime * 0.12, across * 1.6);
+  vec2 q = vec2(vAt.x * 0.8 - uTime * 0.12, across * 1.4);
   float streak = vnoise(q) * 0.6 + vnoise(q * vec2(2.3, 2.9) + 7.1) * 0.4;
   float soft = 1.0 - across * across;
   float body = soft * soft * smoothstep(0.2, 0.75, streak + 0.25 * (1.0 - abs(across)));
