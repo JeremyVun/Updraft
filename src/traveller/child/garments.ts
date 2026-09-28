@@ -483,37 +483,42 @@ function face(b: Builder): void {
   }
 }
 
-/** The hairline's height on the head relative to the hair's middle, by angle from the front: up under the brim in front, so a babyish forehead shows. */
+/** The hairline's height on the head relative to the hair's middle, by angle from the front. */
 function hairline(phi: number): number {
   const c = Math.cos(phi);
-  return THREE.MathUtils.lerp(-0.228, 0.122, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.09 * bump(angleTo(phi, 0), 0.6);
+  return THREE.MathUtils.lerp(-0.228, 0.122, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35);
 }
 
 const HAIR = { c: V(0, 2.038, 0.07), rx: 0.282, ry: 0.296, rz: 0.282 };
 
 /**
- * A few baby wisps peeking out from under the hood's brim, with her forehead clear between them: angle from the
- * front and the cosine down from the crown where each starts and ends, its width, and how far it bows sideways. From
- * the play camera, looking down under the brim, a full fringe reads as a bowl cut whatever its shape.
+ * A little girl's bangs, as soft clumps: angle from the front and the cosine down from the crown where each starts
+ * and ends, its width, and how far it bows sideways along the way. Cut in an arch, short in the middle and longer
+ * toward the temples, split a little off the middle with the clumps curving away from the split, each ending in its
+ * own point at its own length, so the edge is never one line following the brim.
  */
 const BANGS: [number, number, number, number, number, number][] = [
-  [0.05, 0.92, -0.1, 0.5, 0.1, -0.06],
-  [-0.28, 0.9, -0.42, 0.54, 0.09, 0.05],
-  [0.3, 0.9, 0.42, 0.53, 0.09, -0.05],
-  [-0.58, 0.88, -0.72, 0.5, 0.08, 0.03],
-  [0.58, 0.88, 0.72, 0.51, 0.08, -0.03],
+  [-0.04, 0.88, -0.3, 0.47, 0.2, -0.05],
+  [-0.14, 0.87, -0.56, 0.37, 0.22, -0.05],
+  [-0.34, 0.85, -0.82, 0.27, 0.22, -0.04],
+  [-0.6, 0.82, -1.02, 0.18, 0.2, -0.03],
+  [0.06, 0.88, 0.32, 0.48, 0.2, 0.05],
+  [0.16, 0.87, 0.58, 0.38, 0.22, 0.05],
+  [0.36, 0.85, 0.84, 0.28, 0.22, 0.04],
+  [0.62, 0.82, 1.04, 0.19, 0.2, 0.03],
 ];
 
 /**
- * The hair at the sides, drawn back behind the ears to the pigtails, as locks down each side: angle from the front at
- * the crown, the height their ends reach, width, and how far behind the ear they are taken. Her ears show, so no
- * hair frames her face down the sides of the hood.
+ * The hair at the sides, as locks: angle from the front at the crown, the height their ends reach, width, how far
+ * behind the ear they are taken, and how far their ends curl forward toward the chin. A short lock in front of each
+ * ear curves in round the cheek; the rest is drawn back behind the ear to the pigtail.
  */
-const DRAWN_BACK: [number, number, number, number][] = [
-  [1.45, 1.9, 0.18, 0.55],
-  [1.7, 1.9, 0.2, 0.4],
-  [2.0, 1.9, 0.2, 0.2],
-  [2.3, 1.9, 0.2, 0],
+const SIDES: [number, number, number, number, number][] = [
+  [1.1, 1.88, 0.11, 0.04, 0.5],
+  [1.36, 1.9, 0.18, 0.62, 0],
+  [1.6, 1.9, 0.2, 0.45, 0],
+  [1.92, 1.9, 0.2, 0.2, 0],
+  [2.3, 1.9, 0.2, 0, 0],
 ];
 
 function hair(b: Builder): void {
@@ -533,7 +538,7 @@ function hair(b: Builder): void {
   b.rows(rows, true, HAIR.c);
   for (const [phi0, c0, phi1, c1, width, swing] of BANGS) lock(b, phi0, c0, phi1, c1, width, swing);
   for (const mx of [1, -1]) {
-    for (const [phi, end, width, behind] of DRAWN_BACK) bob(b, mx * phi, end, width, behind);
+    for (const [phi, end, width, behind, curl] of SIDES) bob(b, mx * phi, end, width, behind, curl);
     pigtail(b, mx);
   }
 }
@@ -619,30 +624,30 @@ function onHair(phi: number, ct: number, lift: number): { p: THREE.Vector3; n: T
 }
 
 function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, width: number, swing: number): void {
-  /** The path over the shell, bowed sideways so no wisp runs straight. */
+  /** The path over the shell, bowed sideways so no clump runs straight. */
   const at = (t: number): [number, number] => [THREE.MathUtils.lerp(phi0, phi1, t) + swing * Math.sin(t * Math.PI), THREE.MathUtils.lerp(c0, c1, t)];
-  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.022, 0.35, 0.015, 0.012);
+  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.026, 0.4, 0.02, -0.014);
 }
 
 /**
- * A lock at the side: over the shell from the crown to behind the ear, then down and turning under toward the neck,
- * where the pigtail gathers it.
+ * A lock at the side: over the shell from the crown to the ear (or behind it), then down and turning under toward
+ * the neck, and forward toward the chin by `curl`.
  */
-function bob(b: Builder, phi: number, end: number, width: number, behind: number): void {
+function bob(b: Builder, phi: number, end: number, width: number, behind: number, curl: number): void {
   const side = Math.sign(phi);
   const top = onHair(phi, 0.62, 0);
   const ear = onHair(phi + side * (0.05 + behind), -0.25, 0.01);
   const drop = ear.p.y - end;
   const out = V(ear.p.x - HAIR.c.x, 0, ear.p.z - HAIR.c.z);
-  const at = (f: number, dy: number) => HAIR.c.clone().addScaledVector(out, f).setY(ear.p.y - dy);
+  const at = (f: number, dy: number, turn = 0) => HAIR.c.clone().addScaledVector(out.clone().applyAxisAngle(V(0, 1, 0), side * turn), f).setY(ear.p.y - dy);
   const curve = new THREE.CatmullRomCurve3([
     onHair(phi, 0.9, 0).p,
     top.p,
     onHair(phi + side * (0.02 + 0.6 * behind), 0.2, 0.004).p,
     ear.p,
     at(1.0, drop * 0.45),
-    at(0.94, drop * 0.85),
-    at(0.82, drop),
+    at(0.94, drop * 0.85, -0.4 * curl),
+    at(0.82, drop, -curl),
   ]);
   const path = (t: number, lift: number) => {
     const u = 0.08 + 0.92 * t;
