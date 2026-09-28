@@ -12,7 +12,7 @@ import { REFLECTION_LAYER } from './water/reflection';
 const T = tuning.skyMirror;
 const COUNT = 12;
 /** The ring stands up in front of the child's face, turned to them, ready to blow through. */
-const WAND_PITCH = 0.1;
+const WAND_PITCH = 0.3;
 const WAND_ROLL = -0.25;
 export const mirrorUniforms = {
   uMirrorRings: { value: Array.from({ length: COUNT }, () => new THREE.Vector4(0, 0, -100, 0)) },

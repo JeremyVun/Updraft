@@ -12,7 +12,7 @@ import { PlaneArrival } from './plane-arrival';
 type Beat = 'ashore' | 'setDown' | 'pickup' | 'play' | 'throw' | 'walk' | 'fetch' | 'reveal' | 'gather' | 'jetty' | 'boarding' | 'aboard';
 const T=tuning.skyMirror;
 /** Low and out in front, so the handle carries the ring up in front of the child's mouth, ready to blow through. */
-const GRIP=new THREE.Vector3(-0.1,0.5,0.5);
+const GRIP=new THREE.Vector3(-0.1,0.55,0.7);
 
 /** A child can mend the sky: skim soap bubbles over its fallen stars, then lift the lights home. */
 export class SkyMirrorChapter implements Chapter {
