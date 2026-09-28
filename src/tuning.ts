@@ -1195,15 +1195,20 @@ export const tuning = {
     breathSpread: 5.5,
     leapChance: 0.3,
     /**
-     * Slopes a throw leaves the water at, rise over run, and the most either is in units a second: a breath rolls the
-     * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
+     * The slope a porpoise leaves the water at, rise over run, and the most that is in units a second: its pace sets
+     * the speed, so a slow boat never stands them on end.
      */
-    breathSlope: 0.22,
     porpoiseSlope: 0.45,
-    breathMost: 1.3,
     porpoiseMost: 3.2,
-    /** Seconds a breath takes rolling through the surface: it is a swimmer's undulation, never a thrown arc. */
-    breathFor: 1.1,
+    /**
+     * A breath rolls through the surface on a hump of path this many body lengths long, the beak rising this far in
+     * units above where it lies level at the surface, taking no less and no more than these seconds: long and low
+     * enough that the body follows it through, back and fin out, belly and flukes under.
+     */
+    breathLength: 1.25,
+    breathRise: 0.2,
+    breathShortest: 1,
+    breathLongest: 2.2,
     /**
      * The spurt a porpoise runs on, in units a second over its lane, for how long, and how far out from the boat it
      * veers on it and how fast: the veer is what shows the arc from the side to a camera astern.
@@ -1214,16 +1219,27 @@ export const tuning = {
     porpoiseVeerRate: 4,
     /**
      * How a dolphin swims after its station: its fastest and slowest through the water, in units a second, how hard
-     * it accelerates, in units a second a second, its tightest turn, in radians a second, and how closely it chases the
-     * station, per second. Nothing in the pod ever moves faster than this, whatever the boat or its lane does.
+     * it accelerates, in units a second a second, its tightest turn as a radius in body lengths, how fast it eases
+     * into and out of a turn, in radians a second a second, how closely it chases the station, per second, and the
+     * most that chase adds to its speed, in units a second. Nothing in the pod ever moves faster than this, whatever
+     * the boat or its lane does.
      */
     swimMost: 7.5,
     swimLeast: 1.2,
     swimAccel: 5,
-    turnMost: 1.1,
+    turnRadius: 2,
+    turnAccel: 0.7,
+    /** The same two for one running hard at a set-piece, which is the one time it throws itself round. */
+    hurryTurnRadius: 1.1,
+    hurryTurnAccel: 1.6,
     chase: 1.3,
-    /** How fast the pod's frame comes round when the boat turns, in radians a second: no faster than they can swim it. */
+    chaseMost: 2,
+    /**
+     * How fast the pod's frame comes round when the boat turns, in radians a second, and how fast it eases into and
+     * out of that, in radians a second a second: no faster than they can swim it.
+     */
     headTurn: 0.4,
+    headAccel: 0.25,
     /** The least room they leave each other, and how close to the planking any of them may come. */
     spacing: 2.2,
     hullClear: 1.2,
@@ -1231,11 +1247,11 @@ export const tuning = {
     bankMost: 0.45,
     bankLean: 0.35,
     /**
-     * How much of the path's bend the spine takes, tail against beak, so a diving tail stays at the surface until the
-     * body has passed; the most it bends, in radians; and the hardest the water slows a landing, in units a second a second.
+     * The most the spine bends along its length, in radians; how much of the bend of its arc a body in the air lets go
+     * of, 1 flying rigid; and the hardest the water slows a landing, in units a second a second.
      */
-    archFollow: 0.85,
     archMost: 0.62,
+    flightStiff: 0.5,
     diveAccel: 5,
     /**
      * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
@@ -1283,6 +1299,10 @@ export const tuning = {
     /** The roll onto its side for the nudge, in radians, and the depth it holds it at: the flukes stay in the water. */
     nudgeRoll: 0.8,
     nudgeDepth: -0.22,
+    /** The depth it comes in at, upright, and how far from the planking, in units, it starts and finishes rising and rolling. */
+    nudgeApproachDepth: -0.7,
+    nudgeRollFrom: 3.5,
+    nudgeRollNear: 1,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,

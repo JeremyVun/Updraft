@@ -1055,6 +1055,21 @@ about 650 units). The veil hides everything either side of it, so it reads as op
     straight ahead as before. The body sweeps sideways through a turn as well as bending in the vertical. The nudge
     rolls the dolphin half onto its side, a little deeper, so the flukes stay in the water. All of it is in
     `fx/sealife/dolphin.ts` and `tuning.dolphins`; the passage's pacing and beat order are unchanged.
+    Jeremy, September 28: “They are sometimes "swimming in the air" too high up out of the water, and they also
+    "turn" really fast sometimes. Make the dolphins animate more naturally.” Measured over a whole passage, the
+    body was posed from the beak's slope alone, so when the beak tipped down after a breath the body see-sawed up
+    behind it: the middle and flukes rode 0.3 to 0.75 units clear of the water on a path that had been under it.
+    Breaths were humps shorter than the animal, so no body could follow them. The flukes beat at full stroke with
+    the tail just under, flicking up through the surface. The nudge swam its whole approach on its side on top of
+    the water. And turns snapped to the cap of 63° a second with the tail thrown 34° out, at every station change,
+    so at the route's turn the pod swung about 90° and back. Now the body is laid along the path the beak swam:
+    its middle and tail sit where the beak was half a body and a body back, as closely as the spine can bend.
+    In the air it flies near-stiff and follows through after it goes in, so the leap still clears the water as
+    before. A breath is a low hump a little longer than the body. Near the surface the stroke shallows to a
+    coast. The nudge comes in upright and deeper and rises and rolls only at the planking. Turns ease in and out
+    and are no tighter than two body lengths (1.1 for a set-piece's hard run), and a dolphin behind its station
+    swims harder rather than swerving at it. Belly clearance outside leaps and porpoises is now at most about 0.2
+    units, and turns faster than 0.6 rad/s fell from 63 a passage to about ten brief ones.
 12c. **The cygnet's arc: built.** The glide is `Cygnet.soar`, on wind sampled **at the cygnet's own position**, so the
     player has to hold the updraft over it. The meadow stages the discovery (`try` and `glide`): the cygnet is set
     down in the grass, tries by itself and fails, the child sits down to watch, and there is nothing else on
