@@ -1,248 +1,246 @@
 # The world
 
-How the ground, its life and the things living on it fit together. The wind's own contract is `wind.md`.
+How the ground, its life and what lives on it fit together, where the rooms are, and how each is hidden until it is
+reached. The wind's own contract is `wind.md`; how each room plays is `docs/chapters.md`.
 
 ## Height
 
-- One function, written twice: `worldHeight(x, z)` in TypeScript and `worldHeight(vec2)` in GLSL, both in `src/world/heightfield.ts`, on the same integer-hashed gradient noise so they agree everywhere (`src/world/parity.ts` measures the difference at load; it is about 0.006 units).
-- It covers the whole world: the island around the origin, open sea, and the mainland whose coast runs east to west at `mainlandCoastZ(x)` (about z = −700) with rolling hills inland and a flat pad under the cottage.
-- `heightAt(x, z)` (`src/world/island.ts`) reads the window's height bake when the point is inside it and falls back to `worldHeight`, so it is valid everywhere and consistent with what is drawn. Use it for anything that stands on the ground.
-- The terrain, grass and sea all read the same 512² height bake inside the window (`src/world/ground.ts`), so nothing floats or sinks.
-
-## The shore beyond the red door
-
-`DOOR_SHORE` in `heightfield.ts` is a separate small island at (240, −460), with the same CPU/GLSL height function.
-During the washing chapter each camera sees only its room's land; the rest is sea. The boat stays visible on the
-arrival beach until the family reveal, then moves to the destination before the red door at (11, −398) opens.
-Its render-room membership follows its position, including in the water reflection. The kite belongs only to
-the destination. It has one family clothesline and short grass from
-`door-shore.ts`; ordinary grass excludes this patch to avoid drawing two populations. The voyage to the meadow
-starts from this shore. Portal rendering and the threshold transfer are described in `docs/engine.md`.
-
-The meadow and birches also retain the arrival boat until the walk approaches their inland crest. Check landing
-continuity, boat visibility and departure placement with `node tools/landing-check.mjs`.
-
-## Boats on the shore
-
-`Boat` resolves its rotated hull vertices against terrain on placement and every frame, including while afloat
-or pushing off. Checking only the hull centre misses sand under the bow and sides. Near shore it eases its pitch
-and roll toward the beach slope; the floorboards rise inside the bow rather than extending below its shell.
-Clearance and maximum shore tilt are in `tuning.sail`. `tools/boat-ground-check.mjs` audits berths, launches and
-crossings on the CPU; `tools/boat-shores-check.mjs` checks the baked and rendered ground and captures each shore.
-
-## The sea surface and offshore view
-
-`world/water/swell.ts` owns the swell. CPU swimmers and dolphins use `swellLift`; foam, rings, slicks and submerged
-dolphin silhouettes use GLSL `seaSurfaceY`, which undoes horizontal wave displacement before finding surface
-height. Surface marks have enough vertices to bend over the swell. The boat emits these marks for its wake.
-
-The long crossing exposes `Chapter.openSea` (0–1). `main.ts` eases it into `uOpenSea`; distant fog converges fully
-to the same `skyRadiance` used by the backdrop, including clouds, so hidden islands cannot leave tinted outlines.
-It releases during the approach to home.
-
-The meadow also uses a coastal veil (`uIslandVeil`, `uIslandVeilAmount`). It leaves the island clear and blends
-land, props, sea and reflections into the sky outside its shoreline, hiding neighbouring islands from the piano
-through departure. `tuning.world.meadowVeilFrom/To` set its reach relative to `ISLES.meadow`; `main.ts` eases it
-away during the next crossing. Other chapters retain ordinary haze.
-
-The island ahead can also lie in its own mist (`uIsleMist`, `uIsleMistRange`), part of `journeyVeilAt` so
-emissive props obey it too. Any sightline over that coast dissolves into `skyRadiance` beyond a distance from the
-eye, so the near shore comes out of it first and nothing behind the island shows through. The drowned village
-keeps the wood in it past its farthest drawn trees (the bare hill was visible from the rooftops); the crossing to
-the sleeping island keeps all but the landing shore in it, so the summit window and its curtains are found
-ashore. `tuning.world.woodMist` / `sleepingMist` set the clear and hidden distances and how far the bank thins
-over the water; `main.ts` lifts it at `isleMistLift` once they land.
-
-## The sky mirror
-
-`world/sky-mirror-layout.ts` defines the submerged flat at (−455, −2310), four fallen lights, the outer
-boat channel and far pier. Returned stars form a slightly crooked kite above the departure jetty;
-its four edges join adjacent returned endpoints, including the last-to-first edge. The top-to-bottom and
-left-to-right internal lines fade in only after all four stars reach the sky, including after restoration.
-`mirrorBed` remains shared CPU/GPU terrain, 0.025 below sea level at its centre.
-The entry mooring is offshore at (−515.66, −2271.09); a 16-unit timber jetty reaches the western flat at (−501, −2278).
-Its deck permits the shallow step off only at the shore end, preserving the deep-water walking boundary.
-The bubble redesign changes no terrain or shared water height. The old causeway overlay is removed.
-
-`water.ts` flattens waves locally and projects the existing reflection, with ring slopes from
-`world/sky-mirror.ts`. Resolution rises locally to 0.75 (0.5 in lite mode). Travellers, soap props, bubbles,
-carried/restored lights and the pier appear in the same reflection pass. Fallen light marks sit on the
-surface itself. `mirror-soap.ts` supplies the transparent film and luminous points; there is no extra
-scene render or GPU readback per bubble.
-
-Home fades `Water.skyMirrorAppearance` to zero so the distant flat uses ordinary sea shading behind the
-cottage. Only the fragment colour override is gated: the water geometry, submerged terrain, ripple state,
-reflection pass and all earlier chapters retain their original behaviour. Direct home starts initialize it
-at zero; arrival from the harbour fades it out.
-
-The child registers a temporary walkable pier deck and paper landing-height callback, both removed on
-departure. The empty boat travels around the flat through deep water to meet them at the far pier.
-Returned lights and the pier stay visible behind the boat until hidden by distance.
+- One function, written twice: `worldHeight(x, z)` in TypeScript and `worldHeight(vec2)` in GLSL, both in
+  `src/world/heightfield.ts`, on the same integer-hashed gradient noise so they agree everywhere
+  (`src/world/parity.ts` measures the difference at load). Every island, the open sea and the submerged rooms are
+  in it. Anything carved for a room (the pond, the little boats' pools, the cottage terrace, the sleeping island's
+  ridge) is carved in both, and the parity check samples it.
+- `heightAt(x, z)` (`src/world/island.ts`) reads the window's height bake when the point is inside it and falls
+  back to `worldHeight`, so it is valid everywhere and matches what is drawn. Use it for anything that stands on
+  the ground.
+- The terrain, grass and sea all read the same 512² height bake inside the window (`src/world/ground.ts`), so
+  nothing floats or sinks.
 
 ## The window
 
-A 320 × 320 square that follows the camera; see `wind.md` for how it moves. Everything baked in window space is re-made when it moves: height, ground (normal and sun visibility), surface (open ground and flower patches), the shoreline distance for the surf, and the life field shifts with it.
+A 320 × 320 square that follows the camera (`src/world/window.ts`; see `wind.md` for how it moves). Everything
+baked in window space is re-made or shifted when it moves: height, ground (normal and sun visibility), surface
+(open ground and flower patches), the shoreline distance for the surf, the life field and the wind textures.
+
+## Where the rooms are
+
+One coordinate space; the camera looks roughly north (−z) and the journey runs south to north, then west. Centres
+and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
+
+| room | centre (x, z) | half-size | defined by |
+| --- | --- | --- | --- |
+| still island | (−6, −14) | its own coastline | `islandCoast` in `heightfield.ts` |
+| island of lines | (14, −368.4) | 70 × 64.4 | `ISLES.lines` |
+| the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
+| little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
+| meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
+| birches | (0, −1128) | 60 × 80 | `ISLES.birches` |
+| stairs | (100, −1236) | 30 × 26 | `STAIRS_ISLE` (`stairs-layout.ts`) |
+| drowned village | (−10, −1440) | 210 × 175, all under water | `ISLES.drowned` |
+| dark wood | (−30, −1800) | 130 × 115 | `ISLES.wood` |
+| sleeping island | (−175, −1922) | 42 × 46 | `ISLES.sleeping` |
+| sky mirror | (−345, −2090) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
+| home | (−100, −2370) | 190 × 165 | `ISLES.home` |
+
+`world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates
+saved coordinates on load. Moving a room means moving its terrain, props, walking
+targets, berths, routes and region masks together, bumping the geography version with a migration, and
+re-measuring both crossings that touch it. `node tools/geography-report.mjs` prints the centres, berths, routes and
+distances; `tools/geography-check.mjs` checks migrations, clearance and continuity.
+
+## Crossings
+
+Routes are `ROUTES` in `story/journey.ts`. At the ordinary 2.6-unit breeze the hull drives at 4.5 units/s, up to
+5.5 with a following wind; player gusts can push it to the 10 units/s ceiling (`tuning.sail`). Routes are sized for
+the ordinary breeze, never by per-crossing speed boosts (Jeremy ruled those out); turns, mooring, the storm and the
+cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
+
+| crossing | about | notes |
+| --- | --- | --- |
+| still island → lines | 95 s | the long first curve: farewell look back and the whale |
+| door shore → little boats | 30 s | |
+| little boats → meadow | 40 s | arrives lined up with the hill path |
+| meadow → birches | 20 s | a short blind hop |
+| birches → stairs | short | under the cloud deck |
+| drowned village to the wood | player-paced | the becalming waits for the player; the storm is about 40 s |
+| wood → sleeping | 40 s | a sheltered bend |
+| sleeping → sky mirror (the sea) | at most 100 s | includes the pod's leap, the swim and the nudge |
+| sky mirror → home | 40 s | curves offshore before turning in to the jetty |
+
+A crossing is never shortened by losing an encounter: the sea's departure waits for the swim and the nudge.
+`tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind
+bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pacing.
+
+## Hiding what is next
+
+The player never sees the next island before it is time.
+
+- **Only two rooms at a time.** `visibleRooms` (`world/journey-rooms.ts`) gives each chapter the rooms it may draw:
+  a crossing its departure and destination, a room itself. Terrain and grass discard the rest, water drops their
+  shallows and surf, and their props leave both the scene and the reflection. A room coming into view is covered
+  in fog first and cleared after (`JourneyReveal`, `tuning.world.arrivalFogCover`/`arrivalFogClear`). The door
+  shore is visible only from the washing and its outgoing crossing; the home jetty only from `toHarbour`.
+- **Haze.** Each chapter sets a `haze`; the veil (`uVeil`, `world/atmosphere.ts`) dissolves the world past it
+  whatever the height.
+- **Island mist.** The island ahead can lie in its own mist (`uIsleMist`, `uIsleMistRange`, part of
+  `journeyVeilAt` so emissive props obey it): sightlines over that coast dissolve into `skyRadiance` beyond a
+  distance, so the near shore comes out first and nothing behind shows through. The drowned village keeps the wood
+  in it beyond its drawn trees; the crossing to the sleeping island keeps all but the landing shore in it, so the
+  summit window is found ashore (`tuning.world.woodMist`, `sleepingMist`; lifted at `isleMistLift` on landing).
+- **The meadow's coastal veil** (`uIslandVeil`, `uIslandVeilAmount`, `tuning.world.meadowVeilFrom`/`To`) blends
+  everything outside the meadow's shore into the sky, from the piano to the departure.
+- **Open sea.** On the long crossing `Chapter.openSea` (eased into `uOpenSea` by `main.ts`) makes distant fog
+  converge fully on the sky backdrop, so hidden islands leave no tinted outline; it releases on the approach home.
+- **Nothing snaps into colour.** Everything north of `LIVING_BEYOND` (`atmosphere.ts`) is already alive before the
+  child reaches it; only the still island starts grey, and the meadow is held back by its waiting region.
+  `main.ts` eases time of day, haze, season and rain toward what each chapter asks, so a chapter change is never a
+  cut in the sky.
+
+## The sea surface
+
+`world/water/swell.ts` owns the swell. CPU floaters use `swellLift`/`swellAt`; foam, rings, slicks and submerged
+dolphin silhouettes use GLSL `seaSurfaceY`, which undoes horizontal wave displacement before finding the surface
+height. Surface marks have enough vertices to bend over the swell; the boat emits them for its wake.
+
+## Boats on the shore
+
+`Boat` resolves its rotated hull against the terrain on placement and every frame, afloat or pushing off, and
+eases its pitch and roll toward a beach's slope. Clearance and the most shore tilt are in `tuning.sail`.
+`tools/boat-ground-check.mjs` audits berths, launches and crossings on the CPU; `tools/boat-shores-check.mjs`
+checks the baked and rendered ground at each shore. Arrival rooms keep the boat on its beach until the walk
+reaches their inland crest (`tools/landing-check.mjs`).
 
 ## Life
 
-- `src/world/life.ts` keeps a 256² field over the window: 0 grey and still, 1 fully alive. Wind over land raises it, it spreads slowly, and it never falls.
-- Two regions extend it beyond the window: the island (a disc that fills in once the island is restored) and the wave (a growing radius, with a soft edge, from wherever the room's colour comes back from). On the meadow that is the piano: the wave starts as the one patch of colour the piano stands in and grows with the lullaby — 45, 85 and 125 units for the first three mirrored sweeps, and the whole island on the fourth, with the wind running ahead of it (`story/meadow.ts`, `WAKING`). The meadow front has a fixed, irregular shape and a soft edge (`world/music-growth.ts`), shared by CPU and shaders so advancing it never removes earned colour. Colour can also be planted on purpose (`LifeField.bloom`: a place, a radius and a rate, for this frame), which takes even inside the waiting island and then grows and spreads like life anywhere; player answers and the final lullaby plant colour where their traces run. Repeated quiet demonstrations do not restore the field.
-- The meadow is held asleep until then by `uWaiting`: inside that ellipse wind does not raise life at all, so the island wakes all of a piece and never in blotches under the cursor. The story clears it only after the final wave covers the waiting ellipse, and from then on the wind wakes ground the ordinary way.
-- `lifeAt(xz)` in GLSL and `life.at(x, z)` on the CPU (one or two readbacks behind) must agree in spirit: grass, terrain, walls, the tree, petals and creatures all fade between grey and living with it.
-- Creatures are absent where life has not come back and appear as it arrives (see below), so the grey world is empty and the restored world is busy.
+- `src/world/life.ts` keeps a 256² field over the window: 0 grey and still, 1 fully alive. Wind over land raises
+  it, it spreads slowly, and it never falls.
+- Regions extend it beyond the window (`life.regions`): the still island (a disc that fills once the island is
+  restored), the wave (a growing radius with a soft edge from wherever a room's colour comes back) and the waiting
+  island (the meadow, where wind raises no life at all until the piano's last wave has covered it, `uWaiting`).
+  The meadow's front has a fixed irregular shape shared by CPU and shaders (`world/music-growth.ts`), so advancing
+  it never removes earned colour.
+- `LifeField.bloom` plants colour on purpose (a place, a radius and a rate, for this frame), even inside the
+  waiting island; it then grows and spreads like any life. The still island's airborne plane and the piano's note
+  traces use it.
+- `lifeAt(xz)` in GLSL and `life.at(x, z)` on the CPU (one or two readbacks behind) must agree in spirit: grass,
+  terrain, the tree, petals and creatures all fade between grey and living with it.
 
-During catch on the starting island, airborne paper plants a soft patch of lasting colour beneath it through
-`LifeField.bloom`. Held or grounded paper does not paint. This contributes to the same restoration threshold
-as wind and stops once the island is restored; its radius and strength live in `tuning.opening`.
+## Fields
 
-## Fields and walls
-
-- The mainland is a warped Voronoi patchwork (`src/world/fields.ts`, `FIELD` = 56 units), written in TypeScript and GLSL. `fieldAt` gives the distance to the nearest boundary, a stable random `kind` for the field, whether that boundary carries a wall, and how strongly the patchwork is present (it fades out near the coast).
-- **Nothing long and straight lies across the walk without a way through on it.** `WAY` in `fields.ts` is the line the story walks, and no boundary within `GATE` of it carries a wall, so every wall that crosses the route has a gap exactly where the path goes — in the built walls, in the grass tufts and in the line the terrain paints, because all three ask `fieldAt`. The gap widens to a gateway in the first view over the bank above the landing.
-- Dry-stone walls (`src/world/walls.ts`) are built from the same function a few tiles per frame near the camera; beyond that the terrain paints them as thin lines. Anything that moves on the ground should respect them: the child hops over them, sheep stay in their field, and the grass grows tufts along them.
+The meadow is a warped Voronoi patchwork (`src/world/fields.ts`, `FIELD` = 56 units), written in TypeScript and
+GLSL. `fieldAt` gives the distance to the nearest boundary, a stable random `kind` for the field, whether the
+boundary carries a wall, and how strongly the patchwork is present (it fades out near the coast). Walls are painted
+by the terrain shader as dry-stone lines; the child clambers over one, sheep stay in their field and flowers keep
+clear of them. **Nothing long and straight lies across the walk without a way through on it:** `WAY` is the line
+the story walks, and no boundary within `GATE` of it carries a wall, widening to a gateway (`WIDE_GATE`) in the
+first view over the bank, so the gap is the same on the ground, in the grass and in the painted line.
 
 ## Creatures
 
-- `src/creatures/` holds one instanced draw call per species, posed in the vertex shader, and a `Habitat` (island or mainland) that tells them where they may live: ground height, grass height, meadow and foraging ground, flower patches and perches.
-- Every species reads the same `Stimuli` each frame: the wind field, the player's gust and updraft, the camera, the glider, the walking child, the life at a point, the breeze and the time of night. They are dormant beyond `DORMANT_RANGE` from the camera.
-- Waking follows the story: rabbits pop up out of the grass, butterflies rise from the flowers and finches fly in where life passes 0.6–0.75; gulls come in off the sea once the breeze returns. Finches only perch in the tree once it has leaves.
+- `src/creatures/` holds one instanced draw call per species, posed in the vertex shader, and a `Habitat` that
+  tells them where they may live: ground height, grass height, meadow and foraging ground, flower patches, perches.
+- Every species reads the same `Stimuli` each frame: the wind field, the player's gust and updraft, the camera,
+  the glider, the walking child, the life at a point, the breeze and the time of night. They are dormant beyond
+  `DORMANT_RANGE` from the camera.
+- Waking follows the story: rabbits pop up, butterflies rise from the flowers and finches fly in where life passes
+  0.6–0.75; gulls come in once the breeze returns. Finches perch in the tree only once it has leaves.
+
+## The shore through the red door
+
+`DOOR_SHORE` is a small island of its own with the same CPU/GLSL height function, grass from `door-shore.ts` (the
+ordinary grass skips it) and the washing's departure kite. During the washing each camera sees only its own room's
+land; the boat waits on the arrival beach until the family reveal, then moves to the shore before the door opens,
+and its room membership (in the reflection too) follows its position. The voyage to the little boats starts from
+here. The portal rendering and the threshold transfer are in `docs/engine.md`.
+
+## The little boats' water
+
+`little-boats-layout.ts` supplies the stream's centre, width and level to the heightfield, water, toy fleet and
+bank walkers; CPU and GLSL share the three pool shapes. The water stands above sea level and shelves down to the
+departure beach. The sea mesh itself rises into the channel (no separate pool plane); `boatsWaterHeight` gives
+toys and swimmers the same mean level and sheltered ripple, and the sea material fades its surf out in the pools
+and back at the outlet, where swell takes over from ripple as the water deepens. Grass keeps out of the wet bowls
+on CPU and GPU. `boatsCourse` carries the toy route on past the stream mouth into a turn out to sea.
+
+## The sky mirror
+
+`world/sky-mirror-layout.ts` holds the flat (`SKY_MIRROR`), the four fallen lights (`MIRROR_STARS`), the bowl, the
+constellation above the departure jetty, the deep outer channel the empty boat takes (`MIRROR_DRIFT`), the entry
+jetty (`MIRROR_ENTRY_DECK`, the mooring `MIRROR_LANDING`) and the departure jetty (`MIRROR_DECK`, `MIRROR_BERTH`).
+Each jetty runs down a plank ramp onto the flat at its island end (`rampAt`, `rampLength`); the child's ground lets
+her down a ramp and off its foot but not off its sides. `mirrorBed` is shared CPU/GPU terrain just below sea level
+at the centre.
+
+`water.ts` flattens the waves locally and reflects the travellers, soap props, bubbles, lights and jetties in the
+existing reflection pass, with ring slopes from `world/sky-mirror.ts`; `mirror-soap.ts` draws the film. There is no
+extra scene render or readback per bubble. Home fades `Water.skyMirrorAppearance` to zero so the distant flat
+shades as ordinary sea behind the cottage; only that colour override is gated.
 
 ## The sleeping island
 
-`src/world/sleeping.ts` (`SleepingIsland`), the room after the dark wood. Its ground is in `heightfield.ts`
-(`ISLES.sleeping` at (−175, −1922), `SLEEP_HOLLOW` and `SLEEP_HILL`), its short frosted grass in `grass.ts`
-(`sleepFloorAt`), and everything it colours the world with is in `atmosphere.ts`. The story that plays in it
-drives it entirely through the numbers below; the room itself owns how they look.
+`src/world/sleeping.ts` (`SleepingIsland`). Its ground is in `heightfield.ts` (`ISLES.sleeping`, `SLEEP_HOLLOW`,
+`SLEEP_HILL`: one continuous rounded ridge, steeper to the south), its frosted grass in `grass.ts`
+(`sleepFloorAt`), and everything it colours the world with in `atmosphere.ts`. The chapter drives it entirely
+through the values below; the room owns how they look.
 
-**Places.** `SLEEP_LANDING` (east shore, facing the wood: where the boat runs ashore), `SLEEP_BERTH` (west shore:
-where it is drawn up for the crossing home), `BED` with `BED_FACING` (the way its head end points), `PILLOW`,
-`HILLTOP` (the top of `SLEEP_HILL`, clear of fog), `SLEEP_ROUTE` (the shared grassy ascent), `SLEEP_APPROACH` (its penultimate bend), `SLEEP_LEDGE`
-(the safe launch footing), `CURTAIN_KNOT` and `CURTAIN_END` (beyond the exposed lip), `LAMP`, `WINDOW` with
-`WINDOW_INTO` (the way the light comes through it down toward the bed), and `bedside` (where the child stands).
+**Places.** `SLEEP_LANDING` (east shore), `SLEEP_BERTH` (west shore, for the crossing on), `BED` with `BED_FACING`,
+`PILLOW`, `HILLTOP`, `SLEEP_ROUTE` (the shared grassy ascent) and `SLEEP_APPROACH`, `SLEEP_LEDGE` (the launch
+footing), `CURTAIN_KNOT` and `CURTAIN_END` (beyond the lip), `LAMP`, `WINDOW` with `WINDOW_INTO`, and `bedside`.
+`sleeping-layout.ts` owns walking targets only; the heightfield never imports it, so no corridor is carved for
+the script. `sleeping-trail.ts` owns the sparse buried rocks, snow, seed heads and guiding wisps.
 
-**Driven values**, all 0..1, all eased inside the module (`tuning.sleeping.ease`) so a chapter setting one never
+**Driven values**, all 0..1 and eased inside the module (`tuning.sleeping.ease`) so a chapter setting one never
 pops. Defaults in brackets.
 
 | value | 0 | 1 |
 | --- | --- | --- |
-| `fog` [1] | no fog at all | the night's full pooling around the terrace |
-| `frost` [0] | bare grass | frost hard in from the rim right up to the bed |
-| `dawn` [0] | night | the first sun down the whole hill, the fog burnt back, the lamp overtaken |
-| `curtains` [0] | drawn | thrown open, gathered at the sides, with the light coming through |
-| `cold` [0] | warm bedside refuge, ticking clock | contracted lamp light, clock stopped |
-| `hint` [0] | no hint | a brief slit of window light touching the pillow |
-| `blanket` [0] | tucked in | folded back off the bed |
-| `sleeper` [0] | an empty bed | a child asleep under the blanket: it stands over them and rises and falls with their breathing |
+| `fog` [1] | no fog | the night's full pooling round the terrace |
+| `frost` [0] | bare grass | frost hard in from the rim to the bed |
+| `dawn` [0] | night | first sun down the whole hill, fog burnt back, lamp overtaken |
+| `curtains` [0] | drawn | thrown open, with the light coming through |
+| `cold` [0] | warm bedside, ticking clock | lamp contracted, clock stopped |
+| `hint` [0] | nothing | a brief slit of window light on the pillow |
+| `blanket` [0] | tucked in | folded back |
+| `sleeper` [0] | empty bed | a child asleep, rising and falling with her breathing |
 
-`fogTop` is not 0..1 but a height in world units (default `tuning.sleeping.fogTop`): how high the fog's top surface
-lies. The story raises it to `fogClimbs` as the night thickens, so a bird climbing the hill walks up into the fog
-and out of it again near the top, and the lanes the player carves are the only clear air in it. The pool thins
-with distance from the hollow long before the summit, so the hilltop stands out of the fog however high it is.
+`fogTop` is a height (default `tuning.sleeping.fogTop`), raised to `fogClimbs` as the night thickens, so a bird
+climbing the hill walks up into the fog and out near the top; the pool thins with distance from the hollow, so
+the hilltop always stands clear. `applySleepingPalette(presence)` blends in the island's own winter palette (slate
+night, lavender first light, golden morning under a pearl-blue sky), fading offshore; an explicit `dusk` override
+bypasses it. `morningAt` follows the opened lane and then spreads green over the island. The blanket lifts under
+gusts over the bed or the chapter's screen-space `bedWind`.
 
-The chapter still drives `dusk`. After `applyPalette`, `applySleepingPalette(sleeping.presence)` blends
-in the local winter palette using the module's eased `uDawn.x`: slate night, lavender first light,
-golden morning beneath a pearl-blue sky. `morningAt` follows the opened lane, then spreads green
-across the island; terrain and blade albedo read the same field. Presence fades offshore; an explicit `dusk` override bypasses this palette.
-The module also lifts the blanket under gusts over the bed or the chapter's screen-space `bedWind` (0..1), then settles it back. `bedWind` is refreshed while asleep and cleared on feather release.
-
-**What they drive.** `uHollow` (where the fog pools, how far it reaches, how thick) and `uHollowTop` feed
-`hollowDensity`, whose drifting, uneven height boundary `fogOf` samples along the eye ray, so the pooled fog is in every shader at no extra cost to
-any other room: at `fog` 0 with the camera 300 units away the whole of it is one comparison. `uFrost` is read by
-`frostAt` (the terrain, the grass blades, the bed and the rug). `uLamp` is read by `lampLight`.
-`dawnLight` uses `uDawnSource` (window xyz, eased curtain opening) and the advancing lane; broad fill
-arrives late in `uDawn.x`. Grass receives this as light, independently of the dim night ambient.
-Near-camera fog extinction eases in over `fogNear`–`fogFar`, preserving distant concealment.
-The lamp shade's emission follows the lamp as the cold deepens and dawn arrives. `uSleepHint` supplies the
-brief pillow illumination independently of the rescue's dawn lane. `uSleepMist` adds the local shoulder bank
-inside `hollowDensity`, so terrain, characters and scenery share continuous fog rather than intersecting cards.
+**In the shaders.** `uHollow`/`uHollowTop` feed `hollowDensity`, sampled along the eye ray by `fogOf`, so the
+pooled fog costs other rooms one comparison; `uSleepMist` adds the shoulder bank inside it. There are no fog
+planes. `uFrost` is read by `frostAt` (terrain, blades, bed, rug); `uLamp` by `lampLight`; `dawnLight` uses
+`uDawnSource` (the window and the eased curtain opening) and the advancing lane. `uSleepHint` lights the pillow
+independently of the dawn. Near-camera extinction eases in over `fogNear`–`fogFar`.
 
 **Calls.**
-- `carve(x, z, dirX, dirZ, strength)` stamps a lane of clear air into the fog; `strength` is how much fog one
-  call takes out (1 clears it), so a caller working per frame scales it by `dt`. The room already calls it every
-  frame from the player's own stroke (`input.world`, `input.gust`), so blowing across the hollow opens a lane
-  that closes again over `tuning.sleeping.carveCloses` seconds. It is a 128² field over the island
-  (`uCarveTex`/`uCarveDomain`) decayed back toward 1, read by the pooled eye-ray fog. There are no horizontal fog meshes.
-- `lane(from, to, halfWidth)` and `laneOpen` (0..1) set `uLane`/`uLaneOpen`: one widening lane down the hill,
-  clear of fog and of frost as far as it has opened, for the morning to come down.
-- `pillowPuff()` releases a few dozen pieces of down from the pillow, which hang and then go where the wind goes.
-- `feather` is the room's one long white feather (`src/fx/feather.ts`), which comes out of the pillow with that
-  down and is the whole of this room's control. `release(from, drift)` puts it in the air; it then takes the air's
-  own speed rather than being pushed along by it, hangs about `featherHangs` off the grass, and leans toward
-  `goal` so it can never be lost and never has to be fetched — the paper plane's idea, slower and floatier. A
-  stroke that crosses it on screen carries it directly (`brush`), as one that crosses the plane does.
-  While walking, `follow` references the cygnet position; `featherLead`/`featherCatch` softly limit the
-  guide's lead. `routeStart` and `goal` define the current walking corridor. During that guided walk,
-  screen strokes build `encouragement`; forward speed responds while lateral drift remains bounded.
-  World-projected swipes cannot reverse it down the hill. Final ground contact is sampled after movement.
-- `fogTopAt(x, z)` is the height of the fog's top surface, so a bird climbing the hill can be told when it is
-  out of it. It ignores what has been carved: it answers for the fog as a whole, not for the hole you just made.
+- `carve(x, z, dirX, dirZ, strength)` stamps a lane of clear air into a 128² field (`uCarveTex`, `uCarveDomain`)
+  that closes again over `tuning.sleeping.carveCloses`; the room carves from the player's own strokes every frame.
+- `lane(from, to, halfWidth)` and `laneOpen` (`uLane`, `uLaneOpen`): one widening lane down the hill, clear of fog
+  and frost as far as it has opened, for the morning to come down.
+- `pillowPuff()` releases the pillow's down. `feather` (`src/fx/feather.ts`) is the room's control:
+  `release(from, drift)` puts it in the air, where it takes the air's own speed, hangs about `featherHangs` off the
+  grass and leans toward `goal`, so it can never be lost. A stroke crossing it on screen carries it (`brush`).
+  While walking it keeps near the cygnet (`follow`, `featherLead`, `featherCatch`) inside the corridor from
+  `routeStart` to `goal`; strokes build `encouragement` forward and cannot send it back downhill.
+- `fogTopAt(x, z)` is the fog's top surface height, ignoring carved lanes.
 
-**Story and contact.** The child takes roughly 26 seconds to pause, place the bird, sit, drowse, recline,
-pull up the quilt and settle. `Traveller.sleepiness` and `yawn` default to zero; yawns are silent. Reclining
-interpolates supported hips, and `blanketEdge()` exposes the cloth crease for the mitten targets.
-`blanketPull` lifts that crease while the hands draw it up. The folded end is the head end of the bed. The quilt covers the flattened coat; legs settle along the
-mattress, and the scarf uses the posed body and mattress for collision. Scarf shading receives the lamp
-and dawn alongside the coat.
-
-`sleeping-layout.ts` owns walking targets only. The heightfield does not import it: a continuous rounded
-ridge has a steeper south face and a gentler back. The bird follows existing slopes on the eastern flank;
-no flattened corridor, summit subtraction or ring-shaped terrace is carved for the script. CPU checks
-cover actual footsteps and 0.6 m of footing either side of the guide. The window stands on the crest,
-with the loose ribbon hanging over the naturally steep face.
-`SleepingChapter` advances one waypoint at a time; snow and mist stops are named layout indices.
-`sleeping-trail.ts` owns sparse buried rocks, snow deposits, seed heads and guiding wind wisps.
-`trail.snow` and `trail.mist` retain earned progress. Snow clears into rounded banks, without cut walls.
-The drift's wind sculpting (`SNOW_SCULPT`) only reshapes depth over 0.2, so paths cleared below that are unchanged;
-`snowDepthAt` repeats it, so brushing and footing still test the surface that is drawn. Its patchy rim is alpha only.
-
-The pillow releases after the unanswered call, a view of the warm seam and real brushing. The side path
-ends at `SLEEP_LEDGE`, where the bird studies the unreachable ribbon and releases its healed wing.
-`twirlGain` only assists circles during `hilltop`; real lift starts `reachRibbon`, not the return glide.
-`Cygnet.billGrip`/`billGripWeight` solve contact at the posed bill tip. `flightPose` keeps the wings and feet
-in an airborne pose through the reach. The creature's grass depth offset fades to zero so the ribbon can correctly occlude the bill. `pullRibbon` advances only while contact is maintained. Pulling the loose
-end the full `ribbonPull` distance sets `ribbon.released`; only then may `curtains` open. `SleepingIsland`
-enforces closed curtains while the ribbon is tied. `sleeping-ribbon.ts` draws the shrinking knot and tail.
-
-The released knot starts one continued glide, counted as the same flight as takeoff. Light advances from
-`WINDOW` to `BED` through `laneOpen`. Wind adds support to the safe return; no crash/retry follows commitment.
-The camera retains the window for `windowRevealFor` before following the bird. Both `feather` and `morning`
-checkpoint names retain their schema; morning restoration also releases the ribbon. The exposed lip and
-bed terrace are mirrored in CPU/GLSL terrain and explicitly sampled by the height parity check.
-
-`tools/sleeping-logic-check.mjs` checks progression, idle gates, physical contact, terrace/drop and assisted
-versus idle feather travel. `tools/sleeping-check.mjs` checks real mouse/touch gestures, portrait/landscape
-framing, bedtime, beak grip, opening, dawn and boarding. `SUMMIT=1` isolates the ledge for visual iteration;
-`CLIMB=1` stages the feather checkpoint. Neither staged mode is a full playthrough. `tools/wing-care-check.mjs` retains the healing and one-flight gates.
-
-Winter grass uses a finer tile only within `swardDetailTo` of the camera on this island; the extra
-density fades between `swardDetailFrom` and `swardDetailTo`. The sparse phone tier reserves at most
-96 fine tiles. The table and direct blade paths use the same density function; other islands keep
-their existing density and tile selection.
+**Contact.** Reclining interpolates supported hips; `blanketEdge()` gives the crease the mittens take and
+`blanketPull` lifts it as they draw it up. The scarf collides with the posed body and mattress. At the summit
+`Cygnet.billGrip`/`billGripWeight` solve contact at the posed bill tip, `flightPose` keeps wings and feet airborne
+through the reach, and the bird's grass depth offset fades to zero so the ribbon can occlude the bill.
+`pullRibbon` advances only while contact holds; pulling the full `ribbonPull` sets `ribbon.released`, and only then
+may `curtains` open (`SleepingIsland` keeps them shut while it is tied). `sleeping-ribbon.ts` draws the knot and
+tail. The snow's wind sculpting (`SNOW_SCULPT`) reshapes only depths over 0.2, and `snowDepthAt` repeats it, so
+footing and brushing test the surface that is drawn. Winter grass uses a finer tile near the camera on this island
+only (`swardDetailFrom`/`To`).
 
 ## Adding something that lives in the world
 
-1. Stand it on `heightAt`, and if it is small, keep it out of walls (`fieldAt`) and off water.
+1. Stand it on `heightAt`; if it is small, keep it off walls (`fieldAt`) and out of water.
 2. Fade it with `lifeAt`/`life.at` so it belongs to the restored world, not the grey one.
 3. Read the wind from the field rather than inventing motion; note any deliberate exception in `wind.md`.
-4. Make it dormant when it is far from the camera, and check the frame rate at `ratio=2`.
-
-
-## The island of little boats
-
-`little-boats-layout.ts` supplies the stream centre, width and level to the heightfield, water, toy fleet and
-bank walkers. CPU and GLSL use the same three pool shapes. The water sits above sea level, then shelves down
-to the departure beach. The sea mesh itself rises into the channel; there is no overlapping pool plane.
-`boatsWaterHeight` supplies the mean level and matching sheltered ripples to toys and swimmers. The shared
-sea material uses that level for depth, fades out ocean surf in the pools and restores it at the outlet.
-Grass excludes the wet bowls on CPU
-and GPU and stays short on the banks. Height parity QA includes samples in the stream and on its margins.
-The arrival boat remains on its beach until the first pool is behind the camera, then waits at the far shore.
-
-The first toy stays on its bank clearing until picked up. During handling, `LittleBoats.afterChildPose`
-runs after the child and companion carry update and attaches the hull to the two actual mittens. Releasing
-stores that exact transform, then eases it onto the stream surface. Checkpoint restore clears handling.
-
-`boatsCourse` continues the toy route beyond the stream into a rightward ocean turn. The toy fleet retains
-its own departure update after the chapter ends, until every toy has left view. Chapter progress and camera
-focus stop at the mouth; they do not follow the departing toys offshore. Sea swell replaces sheltered
-ripples gradually as the water deepens.
+4. Make it dormant when far from the camera, and give it to the rooms that may draw it (`journey-rooms.ts`).
