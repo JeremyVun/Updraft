@@ -50,22 +50,20 @@ for(const fps of [30,60,120]) for(const bearing of [0,Math.PI/2,Math.PI,Math.PI*
   child.stop();child.place(DOOR_EXIT.x,DOOR_EXIT.z-4,Math.PI);
   cygnet.release(child.position.clone().add(new THREE.Vector3(1,0,-1)));cygnet.seating.snap();
   chapter.restoreCheckpoint('family',[8,1]);
-  let startedArrival=-1,largestStep=0;
+  let released=false;
   for(let i=0;i<fps*100&&!chapter.done;i++) {
     // One substantial gust, then the ordinary breeze. No steering toward the boat.
     const gust=f.time>2&&f.time<5;
     Object.assign(air,{x:Math.cos(bearing)*(gust?18:2.6),z:Math.sin(bearing)*(gust?18:2.6),energy:gust?0.7:0,lift:gust?0.4:0});
-    const before=plane.position.clone();f.step(chapter,1/fps);
-    if(chapter.arrival.active&&startedArrival<0)startedArrival=f.time;
-    if(chapter.arrival.active&&!plane.held)largestStep=Math.max(largestStep,before.distanceTo(plane.position));
+    f.step(chapter,1/fps);
+    if(!plane.held)released=true;
   }
   assert(chapter.done,`${fps}fps ${bearing}: shore stalled ${chapter.beat}/${chapter.play} child=${child.position.toArray()} paper=${plane.position.toArray()} landed=${plane.landed}`);
-  assert(plane.held,'paper must be retrieved before boarding');
-  assert(startedArrival<45,`shore needed its timeout: ${startedArrival}`);
-  assert(largestStep<1,'paper snapped while returning');
-  results.push({fps,bearing:+bearing.toFixed(2),arrival:+startedArrival.toFixed(1),aboard:+f.time.toFixed(1)});
+  assert(!released,'the child keeps the paper in hand from the door to the boat');
+  assert(f.time<45,`shore took ${f.time.toFixed(1)} s to board`);
+  results.push({fps,bearing:+bearing.toFixed(2),aboard:+f.time.toFixed(1)});
 }
-console.log('PASS: portal checkpoint to boarding, four wind bearings plus gust, 30/60/120fps.');
+console.log('PASS: portal checkpoint to boarding with the paper in hand, four wind bearings plus gust, 30/60/120fps.');
 console.log(JSON.stringify(results));
 
 // A restored shore must also finish when wind never settles: its fallback is independent of pickup.
@@ -76,17 +74,16 @@ console.log(JSON.stringify(results));
   cygnet.release(child.position.clone().add(new THREE.Vector3(1,0,-1)));cygnet.seating.snap();
   chapter.restoreCheckpoint('family',[8,1]);
   Object.assign(air,{x:26,z:0,energy:1,lift:1});
-  let committed=-1,maxRange=0;
+  let released=false;
   for(let i=0;i<60*100&&!chapter.done;i++) {
     f.step(chapter,1/60);
-    if(chapter.arrival.active&&committed<0)committed=f.time;
-    if(!plane.held&&!chapter.arrival.active)maxRange=Math.max(maxRange,Math.hypot(plane.position.x-plane.home.x,plane.position.z-plane.home.z));
+    if(!plane.held)released=true;
   }
   assert(chapter.done,`continuous wind stalled restored shore: ${chapter.beat}`);
-  assert(committed<47,'restored fallback clock never started');
-  assert(maxRange<35,`continuous wind escaped shore: ${maxRange}`);
+  assert(!released,'continuous wind cannot take the paper from the child on the shore');
+  assert(f.time<47,`restored shore took ${f.time.toFixed(1)} s to board`);
 }
-console.log('PASS: restored departure and bounded flight under continuous strong wind.');
+console.log('PASS: restored departure under continuous strong wind, paper kept in hand.');
 
 // Arrival must interrupt an active chase, survive continuous wind and collect the paper exactly once.
 for(const fps of [30,60,120]) for(const offset of [new THREE.Vector3(18,18,0),new THREE.Vector3(0,4,-30)]) {

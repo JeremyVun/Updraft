@@ -5,7 +5,8 @@ import { importBaseline, baselineRevision } from './lib/baseline.mjs';
 globalThis.location={search:'?shot'};
 const before=await importBaseline('src/story/progress.ts');
 const after=await import('../src/story/progress.ts');
-assert.deepEqual(after.CHECKPOINTS,before.CHECKPOINTS,'every current and legacy checkpoint keeps its exact arity');
+for(const [chapter,checkpoints] of Object.entries(before.CHECKPOINTS))for(const [point,count] of Object.entries(checkpoints))
+ assert.equal(after.CHECKPOINTS[chapter]?.[point],count,`${chapter}/${point} keeps its exact arity (checkpoints may be added, never changed or dropped)`);
 let stored=null;
 globalThis.localStorage={getItem:()=>stored,setItem:(_key,value)=>{stored=value},removeItem:()=>{stored=null}};
 let cases=0,points=0;

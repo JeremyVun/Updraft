@@ -69,7 +69,8 @@ try {
   const beforeGesture = await page.evaluate(() => meadowAudio.chimes);
   await page.mouse.move(300, 440); await page.mouse.down();
   await page.mouse.move(850, 380, { steps: 24 }); await page.mouse.up();
-  await page.waitForFunction(n => meadowAudio.chimes > n, beforeGesture);
+  await page.waitForTimeout(1500);
+  assert.equal(await page.evaluate(() => meadowAudio.chimes), beforeGesture, 'Gestures ring no cursor chimes in Meadow');
   await page.waitForFunction(() => __game.sound.meadowScore?.current.phase === 'pond', null, { timeout: 60000 });
   await page.waitForFunction(() => __game.sound.meadowScore?.current.phase === 'return', null, { timeout: 60000 });
   console.log('Real flock departure and paddle selected the quiet score, then its return phrase.');

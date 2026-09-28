@@ -79,9 +79,9 @@ try {
     while(angle<Math.PI*2){angle=Math.min(Math.PI*2,(Date.now()-began)/850*Math.PI*2);await page.mouse.move(p.x+Math.cos(angle)*radius,p.y-Math.sin(angle)*radius);await page.waitForTimeout(8);}
     await page.mouse.up();
   }
-  assert(await page.evaluate(n=>birchesAudio.updrafts>n && __game.birches.scarf.snags[1].target>0,initial), 'Real scarf circles create chimes and puzzle progress');
+  assert(await page.evaluate(n=>birchesAudio.updrafts===n && __game.birches.scarf.snags[1].target>0,initial), 'Real scarf circles make puzzle progress and ring no updraft chimes');
   assert.equal(await page.evaluate(()=>__game.sound.birchesScore.current.phase),'scarf');
-  console.log('Real circling keeps the scarf accompaniment quiet and produces harmonically matched updraft chimes.');
+  console.log('Real circling keeps the scarf accompaniment and rings no cursor chimes.');
 
   // Arrange the last bow at full gesture progress, then let the real release/gathering logic run.
   await page.evaluate(() => {
