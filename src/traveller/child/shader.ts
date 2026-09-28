@@ -216,6 +216,9 @@ void main() {
   } else if (m == ${MAT.hair}) {
     alb = uHair * (0.85 + 0.25 * vnoise3(vec3(vSurf.y * 9.0, vRest.y * 60.0, vSurf.x * 3.0)));
     alb *= 1.0 + 0.15 * k;
+    /** Along each lock (k is how far along it, 0 on the cap) a lighter run down its middle and a darker seam at its sides, so the locks and the way they sweep read rather than one dark cap. */
+    float lock = step(0.001, k);
+    alb *= 1.0 + lock * (0.3 * (1.0 - smoothstep(0.0, 0.55, abs(vSurf.y))) * sin(3.14159 * min(k * 1.4, 1.0)) - 0.3 * smoothstep(0.6, 0.97, abs(vSurf.y)));
     fuzz = 0.35;
     sheen = 0.12;
   } else if (m == ${MAT.trousers}) {

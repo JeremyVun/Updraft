@@ -123,6 +123,11 @@ export class Glider {
   landingGround: ((x: number, z: number) => number | null) | null = null;
   /** Inland water is also unreachable by the child, even when its bed is above sea level. */
   water: { level: number; over(x: number, z: number): boolean } | null = null;
+  /**
+   * A chapter may keep play on the side of a line the camera can follow: `back` points into play and the line lies
+   * `at` along it. Gusts lose their hold on the plane as it nears the line, and one that comes down beyond is lifted home.
+   */
+  playEdge: { back: THREE.Vector2; at: number } | null = null;
   /** False while it is down on the water, where the child cannot go and fetch it. */
   private aground = true;
   private readonly body: THREE.Mesh;
@@ -409,8 +414,20 @@ export class Glider {
       v.x -= ((p.x - this.home.x) / r) * pull;
       v.z -= ((p.z - this.home.z) / r) * pull;
     }
-    /** Nothing is ever lost: a plane down on the water is picked up again by a gust of its own and flies back. */
-    if (resting && !this.aground) {
+    const edge = this.departing ? null : this.playEdge;
+    const past = edge ? edge.at - (p.x * edge.back.x + p.z * edge.back.y) : -Infinity;
+    if (edge && !resting) {
+      const k = tuning.planeEdge;
+      const brake = THREE.MathUtils.smoothstep(past, -k.margin, 0);
+      const outward = -(v.x * edge.back.x + v.z * edge.back.y);
+      const limit = k.freeSpeed * (1 - brake) - k.returnSpeed * brake;
+      if (outward > limit) {
+        v.x += edge.back.x * (outward - limit);
+        v.z += edge.back.y * (outward - limit);
+      }
+    }
+    /** Nothing is ever lost: a plane down on the water or out of play is picked up again by a gust of its own and flies back. */
+    if (resting && (!this.aground || past > 0)) {
       if (this.restTime > 0.9) {
         this.thrust = Math.max(this.thrust, 5);
         this.restTime = 0;

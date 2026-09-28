@@ -214,6 +214,8 @@ export const tuning = {
     pickupAhead: 1.4,
     returnMargin: 12, returnSpeed: 5,
   },
+  /** Nearing a chapter's play edge, a gust's hold on the plane fades out over `margin` metres, then it drifts back. */
+  planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
   meadowPlane: {
     /** Lead the child toward each discovery, then wheel nearby until they catch up. */
     lead: 24, waitAt: 34, resumeAt: 24, brakeFrom: 28, reach: 42,
@@ -342,6 +344,8 @@ export const tuning = {
     planeBloomStrength: 1.4,
     /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
     planeBloomFrom: 0.3,
+    /** Catch stays south of this z: the far edge of the summit, beyond which the child drops out of the camera's sight. */
+    playEdge: -38,
     /**
      * A sweep across the paper while the child holds it at the start and whenever it lies still on the grass:
      * seconds waiting before the first, its duration and the quiet between repeats; distances are world units.
@@ -351,7 +355,7 @@ export const tuning = {
     /** The first, held throw's gust: how steeply it climbs the frame (radians) and how far it runs. */
     planeInviteRise: 0.6, planeInviteIntoSpan: 7,
     /**
-     * A held view of the sea, then the skein. The island's new wind rises off the slope and crosses the V (`gustRun`
+     * A held view of the sea, then the skein. A winter gust rises off the slope and crosses the V (`gustRun`
      * seconds from the grass to the birds); the adults ride it, and `gustAt` seconds in it reaches the smallest one,
      * lifts it (`gustLift` metres), rolls it over for `tumbleFor` seconds and carries it out of the V sideways at
      * `gustShove` metres a second, falling from that moment on for `fall` seconds.
