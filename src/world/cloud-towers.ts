@@ -194,6 +194,22 @@ export class CloudTowers {
   private shown = 0;
   private readonly drift = new THREE.Vector3();
 
+  /**
+   * Moves a lens that would be inside a tower out to its side, clear by `margin`: each tower is taken as a column
+   * about as wide as its foot, up to the top of its heads.
+   */
+  keepOut(eye: THREE.Vector3, margin: number): void {
+    for (const t of this.towers) {
+      if (eye.y > t.centre.y + t.size * 1.45 + margin) continue;
+      const dx = eye.x - t.centre.x, dz = eye.z - t.centre.z;
+      const clear = t.size * 1.25 + margin;
+      const d = Math.hypot(dx, dz);
+      if (d >= clear || d < 1e-3) continue;
+      eye.x = t.centre.x + dx / d * clear;
+      eye.z = t.centre.z + dz / d * clear;
+    }
+  }
+
   constructor(route: readonly THREE.Vector2[], gate: { from: THREE.Vector2; to: THREE.Vector2 }, berth: THREE.Vector2, floor: number) {
     this.group.name = 'cloud-towers';
     const noise = bakeNoise();

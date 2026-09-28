@@ -274,6 +274,8 @@ export const tuning = {
     density: 0.42, clearing: 0.055, clearingTop: 0.1,
     /** How far the pocket of thinner cloud round the child reaches, at the bottom of the white and at the top. */
     bubble: 6.5, bubbleTop: 4.4,
+    /** Coming out on top, how far over the cloud's top it thins away to clear air, metres. */
+    crown: 4.5,
     /** The wind through the white near its top, metres a second. */
     windInCloud: 5.5,
     /**

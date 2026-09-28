@@ -36,6 +36,8 @@ export interface CloudDeckState {
   clearing?: number;
   /** Take the base as it is, at once, rather than easing to it: for a move made where nothing can be seen. */
   snap?: boolean;
+  /** How far over its top the cloud thins away, metres, so coming up out of it is a slow clearing and not a ceiling. */
+  crown?: number;
 }
 
 
@@ -195,6 +197,8 @@ export class StairsChapter implements Chapter {
   private voyageYaw = RUN_YAW;
   /** Under way, how far they are turned to the side looking out, 0 to 1, and when the child last glanced at the bird. */
   private lookingOut = 0;
+  /** The height the hull rides at over the cloud, following its billows. */
+  private riding = RIDE;
   private perched = false;
   private readonly outThere = new THREE.Vector3();
   private readonly rail = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
@@ -505,7 +509,7 @@ export class StairsChapter implements Chapter {
         break;
     }
     this.keepOnTheStair();
-    this.cloud();
+    this.cloud(dt);
     this.mistBank(dt);
     this.loopScenery(dt);
     this.lanternGlow();
@@ -934,10 +938,24 @@ export class StairsChapter implements Chapter {
     }
   }
 
+  /**
+   * Over the cloud the hull rises and falls on the billows going under it, slowly, on the mean of the tops under its
+   * bow, its stern and either side, so it sits down in them by about as much as it always has.
+   */
+  private onTheBillows(dt: number): void {
+    const { boat } = this.cast;
+    const cloud = this.world.cloud;
+    const p = boat.position, fx = Math.sin(boat.yaw) * 1.8, fz = Math.cos(boat.yaw) * 1.8;
+    const under = (cloud.surfaceAt(p.x + fx, p.z + fz) + cloud.surfaceAt(p.x - fx, p.z - fz)
+      + cloud.surfaceAt(p.x + fz * 0.5, p.z - fx * 0.5) + cloud.surfaceAt(p.x - fz * 0.5, p.z + fx * 0.5)) / 4;
+    this.riding += (under - 0.35 - this.riding) * (1 - Math.exp(-dt * 1.2));
+    boat.altitude = this.riding;
+  }
+
   private sail(dt: number): void {
     const { boat } = this.cast;
     const k = tuning.stairs;
-    boat.altitude = RIDE;
+    this.onTheBillows(dt);
     boat.speedLimit = k.sailSpeed;
     boat.becalmed = 0;
     this.world.sailing(boat, dt);
@@ -1004,7 +1022,7 @@ export class StairsChapter implements Chapter {
     const { boat, child: c } = this.cast;
     const k = tuning.stairs;
     const depth = this.world.cloud.fog.depthOf(boat.position.x, boat.position.z);
-    boat.altitude = RIDE;
+    this.onTheBillows(dt);
     boat.speedLimit = THREE.MathUtils.lerp(k.sailSpeed, k.fogSpeed, THREE.MathUtils.smoothstep(depth, 0, 20));
     boat.becalmed = 0;
     // The white carries them on; nobody is left waiting in it.
@@ -1121,7 +1139,7 @@ export class StairsChapter implements Chapter {
    * The deck as this beat needs it: its underside lowered to the sea for the way down, and a pocket round whoever
    * is in it that closes in and thickens the higher they climb, with the cloud streaming through it on the wind.
    */
-  private cloud(): void {
+  private cloud(dt: number): void {
     const { child: c, boat } = this.cast;
     const d = this.cloudDeck;
     const k = tuning.stairs;
@@ -1131,6 +1149,9 @@ export class StairsChapter implements Chapter {
     d.clearing = undefined;
     // Down on the sea the deck is put out of the way under it at once, in the white, so no ceiling hangs over the village.
     d.snap = this.beat === 'thin' || this.beat === 'down';
+    // Soft over its top while they come up out of it, clearing away once they are sitting in the sun.
+    const rising = ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat);
+    d.crown = rising ? k.crown : Math.max(0, (d.crown ?? 0) - dt * k.crown / 7);
     const wisps = this.world.wisps;
     if (this.beat === 'fog' || this.beat === 'thin' || this.beat === 'down') {
       const sea = this.beat !== 'fog';
@@ -1386,6 +1407,12 @@ export class StairsChapter implements Chapter {
           : this.beat === 'thin' ? blend(this.framingFrom, OUT_OF_THE_WHITE, S(this.t, 1, 8), this.framing)
             : framingAt(this.sailed, this.framing);
         frameVoyage(s, f, boat.position, child.position, this.voyageYaw, this.eye);
+        if (this.beat === 'sail' || this.beat === 'fog') {
+          // Never into the cloud: over its tops, and round the side of a tower rather than through it.
+          const cloud = this.world.cloud;
+          this.eye.y = Math.max(this.eye.y, cloud.surfaceAt(this.eye.x, this.eye.z) + 1.2);
+          cloud.towers.keepOut(this.eye, 4);
+        }
         if ((this.beat === 'thin' && this.t > 6) || this.beat === 'down') {
           this.outSubjects.primary.copy(c).y += 1.2;
           boat.sailPoint(this.outSubjects.secondary);
