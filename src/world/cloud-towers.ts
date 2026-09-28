@@ -3,7 +3,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { tuning } from '../tuning';
 
 /** The swell of the deck round a tower's foot, in tower sizes: full inside FOOT_IN, gone beyond FOOT_OUT, this high. */
-export const TOWER_FOOT = { in: 0.5, out: 1.7, rise: 0.3 } as const;
+export const TOWER_FOOT = { in: 0.5, out: 1.6, rise: 0.2 } as const;
 const FOOT_IN = TOWER_FOOT.in.toFixed(3), FOOT_OUT = TOWER_FOOT.out.toFixed(3), FOOT_RISE = TOWER_FOOT.rise.toFixed(3);
 
 /** How many round lumps a tower is built of. */
@@ -157,8 +157,10 @@ void main() {
     float s = 1.0 - exp(-sigma * d * dt);
     // How much of the tower lies between here and the sun, and over here: its shade, and its crowns open to the sky.
     float sunT = exp(-2.2 * density(p + L * uSize * 0.2));
+    // Each billow is open to the sky over its crown and goes lilac underneath, where the next sits over it.
+    float over = density(p + vec3(0.0, uSize * 0.09, 0.0));
     float up = clamp((p.y - uFloor) / (uSize * 1.4), 0.0, 1.0);
-    vec3 shade = mix(violet, lilac, up) + uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * up);
+    vec3 shade = mix(violet, lilac, up * (1.0 - 0.6 * over) + 0.25 * (1.0 - over)) + uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * up);
     vec3 col = mix(shade, uSunColor * vec3(0.54, 0.39, 0.36) + shade * 0.35, sunT) + uSunColor * vec3(1.0, 0.85, 0.65) * sunT * ph * (0.12 + 0.6 * (1.0 - d));
     light += T * s * col;
     seen += T * s;
