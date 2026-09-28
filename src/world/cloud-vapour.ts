@@ -22,6 +22,7 @@ interface Streamer { x: number; z: number; length: number; width: number; lift: 
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
+uniform vec2 uWispAxis;
 in vec3 aCentre;
 in vec3 aShape;
 in vec2 aState;

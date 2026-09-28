@@ -26,12 +26,17 @@ uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform vec4 uGate;
 uniform float uSurface;
+uniform float uDebug;
 out vec3 vWorld;
 out float vRing;
 out vec4 vCalm;
 out float vStature;
 out float vShade;
 out vec4 vFog;
+out vec4 vHaze;
+out float vThin;
+out vec3 vRise;
+out vec3 vTower;
 flat out float vLevel;
 TOP
 void main() {
@@ -44,12 +49,37 @@ void main() {
   vCalm = vec4(c, slope, smoothstep(2.5, 14.0, way));
   vStature = statureAt(xz, way);
   vec2 fold;
-  float h = cloudTop(xz, vCalm, vStature, spacing, fold).x - parting(wakeAt(xz)).x;
+  if (uDebug < -2.5) {
+    vWorld = vec3(xz.x, uSurface, xz.y);
+    vFog = vec4(0.5);
+    gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+    return;
+  }
+  vec2 p = xz + uCloudShift * 0.6;
+  vRise = riseAt(xz, p + uDrift * DRIFT.x, vCalm, spacing);
+  vTower = towers(p + uDrift * DRIFT.y, spacing);
+  vec3 lobe;
+  float h = cloudTop(xz, vCalm, vStature, vRise, vTower, spacing, fold, lobe).x - parting(wakeAt(xz)).x;
   vShade = heapShade(xz, h, spacing);
   vWorld = vec3(xz.x, uSurface + h, xz.y);
   // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it; seen from
   // under it, from inside the cloud, the deck covers it like anything else in there.
   vFog = fogOf(cameraPosition.y < vWorld.y ? vWorld : vec3(vWorld.x, max(vWorld.y, uSurface + 0.05), vWorld.z));
+  // How much cloud the sightline goes on through past here: little at a crest's edge, where the light comes
+  // through and the edge frays; all of it on the open cloud, where the sightline goes on down into it. Measured
+  // against the bulk under here, so what the finer lobes add to this point does not count as air.
+  vec3 ray = normalize(vWorld - cameraPosition);
+  float stride = clamp(length(vWorld - cameraPosition) * 0.02, 0.5, 14.0);
+  float over = h - bulkAt(xz, vCalm, vStature);
+  float through = 0.0;
+  for (int i = 1; i <= 4; i++) {
+    vec3 q = vWorld + ray * (stride * float(i * i) * 0.6);
+    through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm, vStature) + over - (q.y - uSurface));
+  }
+  vThin = 1.0 - through * 0.25;
+  // Far off it goes into the haze of the horizon beyond it, gold toward the sun and rose away from it.
+  vec3 ahead = vWorld - cameraPosition;
+  vHaze = vec4(skyColor(normalize(vec3(ahead.x, 0.01, ahead.z))), (1.0 - exp(-length(ahead) / 700.0)) * 0.72);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -72,10 +102,15 @@ in vec4 vCalm;
 in float vStature;
 in float vShade;
 in vec4 vFog;
+in vec4 vHaze;
+in float vThin;
+in vec3 vRise;
+in vec3 vTower;
 flat in float vLevel;
 TOP
 void main() {
   if (vRing > uReach || gridHidden(vWorld.xz, vLevel)) discard;
+  if (uDebug < -1.5) { gl_FragColor = vec4(vFog.rgb, 1.0); return; }
   vec2 xz = vWorld.xz;
   if (uCloudBubble.w > 0.0 && uHole > 0.5) {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
@@ -83,7 +118,7 @@ void main() {
   }
   vec2 fold;
   vec3 lobe;
-  vec3 top = cloudTop(xz, vCalm, vStature, 0.0, fold, lobe);
+  vec3 top = cloudTop(xz, vCalm, vStature, vRise, vTower, 0.0, fold, lobe);
   Wake wake = wakeAt(xz);
   top -= parting(wake);
   // Either side of the parting the tops curl over and stream off in soft eddies, which spread and settle as it fills.
@@ -101,18 +136,7 @@ void main() {
   // The broad light goes round a lobe on a smoother normal: light soaks into cloud rather than lying on it.
   vec3 soft = normalize(vec3(-top.y * 0.5, 1.0, -top.z * 0.5));
   float dist = length(vWorld - cameraPosition);
-  // How much cloud the sightline goes on through past here: little at a crest's edge, where the light comes
-  // through and the edge frays; all of it on the open cloud, where the sightline goes on down into it.
-  float stride = clamp(dist * 0.02, 0.5, 14.0);
-  float through = 0.0;
-  // Measured against the bulk under here, so what the finer lobes add to this point does not count as air.
-  float over = vWorld.y - uSurface - bulkAt(xz, vCalm, vStature);
-  for (int i = 1; i <= 4; i++) {
-    if (uDebug < -0.5) break;
-    vec3 q = vWorld + ray * (stride * float(i * i) * 0.6);
-    through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm, vStature) + over - (q.y - uSurface));
-  }
-  float thin = 1.0 - through * 0.25;
+  float thin = vThin;
   // Each lobe is lit at its crown and goes lilac toward where it sits down among the others; so is each heap.
   float puff = mix(0.45, 1.0, lobe.x) * mix(0.6, 1.0, lobe.y) * mix(0.9, 1.0, lobe.z) * mix(0.7, 1.0, fold.y);
   // Lit from the side by the low sun, which the cloud scatters across its whole top: peach where the light lies
@@ -138,9 +162,7 @@ void main() {
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
   vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
   col = mix(col, haze, (1.0 - exp(-max(dist - 60.0, 0.0) / 380.0)) * low * 0.45);
-  // Far off it goes into the haze of the horizon beyond it, gold toward the sun and rose away from it.
-  vec3 ahead = vWorld - cameraPosition;
-  col = mix(col, skyColor(normalize(vec3(ahead.x, 0.01, ahead.z))), (1.0 - exp(-dist / 700.0)) * 0.72);
+  col = mix(col, vHaze.rgb, vHaze.a);
   col = mix(col, vFog.rgb, vFog.a);
   float edge = mix(1.0, smoothstep(0.0, 0.75, 1.0 - thin + 0.25 * vnoise(xz * 0.9 + uTime * 0.2)), smoothstep(0.35, 0.9, thin));
   // At the end of its reach it thins into the deck beyond, rather than stopping along a line.
@@ -296,10 +318,8 @@ vec3 towers(vec2 p, float spacing) {
  * lobe says how high up its own lobe the point is at each size (big, middle, fine), and fold.x how far down in a
  * crease between lobes, fold.y how far up its heap it stands.
  */
-vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, out vec3 lobe) {
+vec3 cloudTop(vec2 xz, vec4 calm, float stature, vec3 rise, vec3 tower, float spacing, out vec2 fold, out vec3 lobe) {
   vec2 p = xz + uCloudShift * 0.6;
-  vec3 rise = riseAt(xz, p + uDrift * DRIFT.x, calm, spacing);
-  vec3 tower = towers(p + uDrift * DRIFT.y, spacing);
   float heapH = HEAP * stature;
   float towerH = TOWER * stature * rise.x;
   // Lobes go down the steep flanks of a heap less than they stand on its top, or they hang down it in drapes.
@@ -326,14 +346,13 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, o
   h = vec3(0.1 + 0.5 * (below + soft), h.yz * 0.5 * (1.0 + below / soft));
   return h;
 }
-vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold) {
-  vec3 lobe;
-  return cloudTop(xz, calm, stature, spacing, fold, lobe);
-}
 /** The height of the heaps, towers and big lobes alone: what a sightline passes through. */
 float bulkAt(vec2 xz, vec4 calm, float stature) {
   vec2 p = xz + uCloudShift * 0.6;
-  float rise = riseAt(xz, p + uDrift * DRIFT.x, calm, 0.0).x;
+  vec2 hp = p + uDrift * DRIFT.x;
+  float m = lobesT(hp / 80.0 + 11.3, 0.0, 0.0).x * 0.65 + 0.175 + 0.3 * gateAt(xz) - 0.5 * (1.0 - calm.x);
+  float x = clamp((m - 0.28) / 0.4, 0.0, 1.0);
+  float rise = x * x * (3.0 - 2.0 * x);
   float big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise, 0.0).x;
   return rise * stature * (HEAP + TOWER * towers(p + uDrift * DRIFT.y, 0.0).x)
     + (big - 0.25) * (BIG.x * (0.2 + 0.8 * calm.w) + BIG.y * rise * stature) + 0.25;
