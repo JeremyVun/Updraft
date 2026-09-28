@@ -293,13 +293,14 @@ export class LittleBoatsChapter implements Chapter {
     }
     bird.stay = false;
     bird.pace = 1;
+    const behind = THREE.MathUtils.smoothstep(bird.position.z - this.cast.child.position.z, ...tuning.littleBoats.catchUp);
     if (!pool || (this.swim === 'bank' && room.progress < pool.enter)) return false;
     if (this.swim === 'bank') {
       this.swim = 'approach';
       this.swimEntry = Math.max(pool.enter, Math.min(pool.leave - 8, L.startZ - bird.position.z + 1));
     }
     if (this.swim === 'approach') {
-      bird.pace = 0.4;
+      bird.pace = THREE.MathUtils.lerp(0.4, 1, behind);
       // The low lip is less than one short hop from the water; never jump from the high bank.
       const s = this.swimEntry;
       this.birdBank.set(boatsX(s) + boatsWidth(s) * 1.05, 0, L.startZ - s);
@@ -320,7 +321,8 @@ export class LittleBoatsChapter implements Chapter {
     const s = L.startZ - bird.position.z;
     bird.swimLevel = boatsWaterHeight(bird.position.x, bird.position.z, time);
     if (this.swim === 'water') {
-      const ahead = Math.min(pool.leave - 2, s + 3, room.progress + 0.4);
+      const ahead = Math.min(pool.leave - 2, s + 3 + 3 * behind, room.progress + 0.4);
+      bird.swimHurry = behind;
       const joy = tuning.littleBoats.swimPlay * (0.45 + 0.55 * room.toys[0].fill);
       bird.swimPlay = joy;
       const weave =
