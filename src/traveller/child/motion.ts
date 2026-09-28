@@ -3,6 +3,9 @@ import type { Rig } from '../body';
 import { ANKLE, BONE, FOREARM, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
 import { HOOD, coatAt, hemY, type CoatSample } from './garments';
 
+/** Where the head turns when it looks up, from the head joint: ear height, a little behind the face's middle. */
+const EAR = { y: 0.2, z: 0.02 };
+
 /** One arm, as the story poses it. Left is the child's own left, +x. */
 export interface ArmPose {
   /** Swung forward and up from hanging, radians: π/2 is straight out in front, π straight up. */
@@ -290,8 +293,17 @@ export class ChildMotion {
     const steady = 0.7 * plant * (1 - 0.45 * running);
     /** The head goes into a turn ahead of the body. */
     const lead = THREE.MathUtils.clamp(d.turn * 0.07, -0.35, 0.35) * plant;
-    neck.rotation.set(pose.headPitch * 0.35 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6 + lead, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
-    head.rotation.set(pose.headPitch * 0.65 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
+    /**
+     * Looking up is a chin lift, not a crane: the neck takes little of it and the head turns about ear height rather
+     * than its base, which otherwise swings the big head back over the satchel and reads as a strained back.
+     */
+    const up = Math.max(0, -pose.headPitch);
+    const tipBack = -up * 0.85;
+    neck.rotation.set(pose.headPitch * 0.35 + up * 0.2 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6 + lead, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
+    head.rotation.set(pose.headPitch * 0.65 - up * 0.2 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
+    head.position.copy(rest[BONE.head]).sub(rest[BONE.neck]);
+    head.position.y += EAR.y * (1 - Math.cos(tipBack)) + EAR.z * Math.sin(tipBack);
+    head.position.z += EAR.z * (1 - Math.cos(tipBack)) - EAR.y * Math.sin(tipBack);
 
     // -- Arms, from the story's pose.
     this.arm(pose.arms[0], true);

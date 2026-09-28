@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { deckGround, offTheEdge, type Deck } from '../world/decks';
+import { beyondDecks, deckGround, offTheEdge, type Deck } from '../world/decks';
 import { ease, easeAngle, wrapAngle } from './motion';
 import { tuning } from '../tuning';
 import { LooseDown } from '../fx/loose-down';
@@ -102,6 +102,11 @@ export class Cygnet {
    * further off than it is, whatever walks on it has to be smaller too.
    */
   scale = 1;
+  /**
+   * How far toward the lens it is drawn, when the story sets it, in place of the usual pull that keeps it out of the
+   * grass seen from afar; beside a rail that pull draws it through the rail.
+   */
+  nudge: number | null = null;
   /**
    * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
    * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
@@ -1242,7 +1247,7 @@ export class Cygnet {
       this.stride += dt * 9 * amp;
       const nx = this.position.x + Math.sin(this.yaw) * dt * 0.35 * amp;
       const nz = this.position.z + Math.cos(this.yaw) * dt * 0.35 * amp;
-      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+      if (this.mayStep(nx, nz)) {
         this.position.x = nx;
         this.position.z = nz;
       }
@@ -1322,18 +1327,20 @@ export class Cygnet {
     const wants = this.errand ? clamp((gap - keep) / 1.0, 0, 1) : seeking ? clamp((gap - keep) / 1.2, 0, 1) : this.notice >= 0.45 || gap > keep + 4 ? clamp((gap - keep) / 5, 0, 1) : 0;
     const hurry = this.stay ? 0 : wants;
     this.hurry = ease(this.hurry, hurry, 4, dt);
+    const want = Math.atan2(dx, dz);
     const speed = this.hurry * (1.5 + 2.9 * this.hurry) * this.pace;
-    if (gap > 0.2 && speed > 0.05) this.turnTo(Math.atan2(dx, dz), 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
+    if (gap > 0.2 && speed > 0.05) this.turnTo(want, 4 + 3 * hurry, 1.7 + 1.0 * hurry, dt);
     if (speed > 0.02) {
+      // On a stair it comes round almost on the spot: at a run its turn is wider than a landing.
+      const pace = this.onStair() ? speed * (0.15 + 0.85 * THREE.MathUtils.smoothstep(Math.cos(wrapAngle(want - this.yaw)), -0.2, 0.8)) : speed;
       // Up a staircase in the air it never walks off the edge; brought up against a rail it goes along it, whichever
       // way along keeps it nearer where it is going, rather than standing stuck at it.
-      const want = Math.atan2(dx, dz);
       let best = -Infinity;
       for (const turn of STEP_ASIDE) {
         const way = this.yaw + turn;
-        const nx = this.position.x + Math.sin(way) * speed * dt;
-        const nz = this.position.z + Math.cos(way) * speed * dt;
-        if (offTheEdge(this.decks, nx, nz, this.position.y)) continue;
+        const nx = this.position.x + Math.sin(way) * pace * dt;
+        const nz = this.position.z + Math.cos(way) * pace * dt;
+        if (!this.mayStep(nx, nz)) continue;
         if (turn === 0) {
           this.walkTo.set(nx, nz);
           best = Infinity;
@@ -1348,7 +1355,7 @@ export class Cygnet {
         this.position.x = this.walkTo.x;
         this.position.z = this.walkTo.y;
       }
-      this.stride += dt * (6 + speed * 2.8);
+      this.stride += dt * (6 + pace * 2.8);
       this.settle = Math.max(0, this.settle - dt * 2.5);
     } else {
       /** Stands a while, then sits down where it is, and sooner the more it trusts them to come back. */
@@ -1369,7 +1376,7 @@ export class Cygnet {
       const speedNow = Math.hypot(this.windNow.x, this.windNow.z) || 1;
       const nx = this.position.x + (this.windNow.x / speedNow) * push;
       const nz = this.position.z + (this.windNow.z / speedNow) * push;
-      if (!offTheEdge(this.decks, nx, nz, this.position.y)) {
+      if (this.mayStep(nx, nz)) {
         this.position.x = nx;
         this.position.z = nz;
       }
@@ -1377,6 +1384,18 @@ export class Cygnet {
     }
     this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
     this.begging(gap);
+  }
+
+  private onStair(): boolean {
+    return this.decks.some(d => d.height1 !== undefined);
+  }
+
+  /** On a stair it may cross a seam between treads, but never step out past an edge where the rails are. */
+  private mayStep(x: number, z: number): boolean {
+    if (offTheEdge(this.decks, x, z, this.position.y)) return false;
+    if (!this.onStair()) return true;
+    const out = beyondDecks(this.decks, x, z, this.position.y);
+    return out < 0.12 || out < beyondDecks(this.decks, this.position.x, this.position.z, this.position.y);
   }
 
   /** Turns toward a bearing no faster than its feet can take it round: a body that spins over planted feet is sliding. */
@@ -1578,7 +1597,7 @@ export class Cygnet {
     // The grass visibility bias must ease away afloat, or submerged feet draw over the water, and on the child,
     // where pulling it toward a distant camera draws it through their coat and out through the satchel.
     const lifted = st === 'swimming' || st === 'gliding' || this.carried || this.seating.held || this.flightPose > 0 || this.billGrip;
-    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, lifted ? 0 : 2.4, 8, dt);
+    this.mat.uniforms.uNudge.value = this.nudge ?? ease(this.mat.uniforms.uNudge.value, lifted ? 0 : 2.4, 8, dt);
     const m = this.mind;
     if (this.debug.stand) this.settle = 0;
     d.time = this.time;

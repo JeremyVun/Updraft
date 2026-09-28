@@ -418,6 +418,12 @@ export class BirchesChapter implements Chapter {
       this.cast.carry.gatherUp(() => this.cast.carry.stow());
       return;
     }
+    // Already in her arms, it goes into the satchel all the same: that is where it rides to the stairs.
+    if (this.cast.cygnet.seat !== 'satchel') {
+      this.to('gathering');
+      this.cast.carry.stow();
+      return;
+    }
     this.cast.cygnet.mayFly = true;
     this.to('toBoat');
     c.lookAt = null;

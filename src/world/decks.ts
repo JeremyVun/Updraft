@@ -36,6 +36,24 @@ export function offTheEdge(decks: readonly Deck[], x: number, z: number, y: numb
 const STEP_UP = 0.5;
 
 /**
+ * How far (x, z) is outside the nearest strip a walker at height y could be standing on, without the slack
+ * `deckGround` gives a seam.
+ */
+export function beyondDecks(decks: readonly Deck[], x: number, z: number, y: number): number {
+  let near = Infinity;
+  for (const d of decks) {
+    const dx = d.x1 - d.x0, dz = d.z1 - d.z0, len = Math.max(Math.hypot(dx, dz), 1e-3);
+    const t = ((x - d.x0) * dx + (z - d.z0) * dz) / (len * len);
+    const u = Math.min(1, Math.max(0, t));
+    const h = d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * u;
+    if (h > y + STEP_UP || h < y - 0.8) continue;
+    const across = Math.abs((x - d.x0) * dz - (z - d.z0) * dx) / len - d.halfWidth;
+    near = Math.min(near, Math.hypot(Math.max(0, -t * len, (t - 1) * len), Math.max(0, across)));
+  }
+  return near;
+}
+
+/**
  * The ground under (x, z) with the decks laid over it. Where decks lie one above another, as the flights of a
  * staircase do, the walker is on the highest one they can step up onto from the height they are already at.
  */

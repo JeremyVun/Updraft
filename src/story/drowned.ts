@@ -83,6 +83,11 @@ export class DrownedChapter implements Chapter {
   private sheltered = false;
   private readonly departure = new THREE.Vector2();
   private villageBearing = 0;
+  /**
+   * The hull's heading as the lens rides it. Out in the open water of the storm it is smoothed, so a bow swinging round
+   * a waypoint does not swing the view; among the roofs it is the hull's own, so the lens stays in the channel behind.
+   */
+  private heading = 0;
   private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
     distance: tuning.drownedCamera.spireDistance,
     height: tuning.drownedCamera.spireHeight };
@@ -91,8 +96,6 @@ export class DrownedChapter implements Chapter {
     points: this.hullFrame, margin: 0.8, extra: 16 };
   private readonly churchSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
     tertiary: new THREE.Vector3(), points: this.hullFrame, margin: tuning.drownedCamera.spireFrameMargin, extra: 32 };
-  private readonly stormSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
-    tertiary: new THREE.Vector3(), points: this.hullFrame, margin: 0.8, extra: 64 };
 
   constructor(private readonly cast: Cast) {
     this.shot.obstacles = cast.village?.cameraObstacles;
@@ -104,6 +107,7 @@ export class DrownedChapter implements Chapter {
     drownedEntry.fromBirches = boat.position.x < 8;
     this.shot.carryAnchor = boat.position;
     this.quarter = this.side = -boat.sailSide || 1;
+    this.heading = boat.yaw;
     boat.steerFor = DROWNED_CHANNEL[0];
     boat.canGround = false;
     boat.grounded = false;
@@ -205,6 +209,9 @@ export class DrownedChapter implements Chapter {
     this.sideAgainst = -boat.sailSide !== this.side ? this.sideAgainst + dt : 0;
     if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
     this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * sideResponse));
+    const open = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
+    const follow = open && dt > 0 ? 1 - Math.exp(-dt * tuning.crossingCamera.headingResponse) : 1;
+    this.heading += Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading)) * follow;
     this.frame();
   }
 
@@ -249,7 +256,7 @@ export class DrownedChapter implements Chapter {
    */
   private becalm(): void {
     // Stay on the side from which the player was watching; crossing the boat would hide the invitation.
-    this.stillBearing = this.villageBearing - this.cast.boat.yaw;
+    this.stillBearing = this.villageBearing - this.heading;
     this.to('still');
     this.filled = 0;
     cue('becalmed');
@@ -350,14 +357,15 @@ export class DrownedChapter implements Chapter {
     boat.hullEnds(this.hullFrame[1], this.hullFrame[2]);
     this.subjects.secondary.copy(boat.sailPoint(this.tmp));
     s.subjects = this.subjects;
-    const fx = Math.sin(boat.yaw);
-    const fz = Math.cos(boat.yaw);
+    s.zoom = undefined;
+    const fx = Math.sin(this.heading);
+    const fz = Math.cos(this.heading);
     if (this.beat === 'snatch' || (this.beat === 'after' && this.t < tuning.storm.planeLookFor)) {
       /**
        * Astern and a little wider than the drift, so the frame holds the child with both arms out and the plane
        * going away up the channel in front of them. Chasing the plane itself would only show the player a dot.
        */
-      const bearing = boat.yaw + Math.PI + this.quarter * tuning.storm.cameraQuarter;
+      const bearing = this.heading + Math.PI + this.quarter * tuning.storm.cameraQuarter;
       s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
       const seat = this.cast.child.position;
       s.target.set(seat.x + fx * tuning.storm.planeAhead, seat.y + 1.7 + Math.min(tuning.storm.planeLookUp, Math.max(0, p.position.y - seat.y) * 0.1), seat.z + fz * tuning.storm.planeAhead);
@@ -369,7 +377,7 @@ export class DrownedChapter implements Chapter {
     }
     if (this.beat === 'still') {
       /** Low, with the slack sail filling the middle of the frame: the one thing there is to act on. */
-      const astern = boat.yaw + this.stillBearing;
+      const astern = this.heading + this.stillBearing;
       s.from = this.from.set(Math.sin(astern), 0, Math.cos(astern));
       s.target.copy(boat.sailPoint(this.tmp));
       s.distance = 15;
@@ -383,33 +391,44 @@ export class DrownedChapter implements Chapter {
       this.focus.copy(boat.position);
       return;
     }
-    const bearing = boat.yaw + Math.PI + this.quarter * tuning.storm.cameraQuarter;
+    const bearing = this.heading + Math.PI + this.quarter * tuning.storm.cameraQuarter;
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
-    if (this.beat === 'gather') {
-      const guide = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.lighthouseLookFrom)
-        * (1 - THREE.MathUtils.smoothstep(this.stormTime, tuning.storm.lighthouseLookRelease, tuning.storm.lighthouseLookUntil));
-      const towardLight = Math.atan2(LIGHTHOUSE.x - boat.position.x, LIGHTHOUSE.z - boat.position.z)
-        + Math.PI + tuning.storm.lighthouseLookOffset;
-      this.from.lerp(this.tmp.set(Math.sin(towardLight), 0, Math.cos(towardLight)), guide).normalize();
-      this.stormSubjects.primary.copy(this.subjects.primary);
-      this.stormSubjects.secondary.copy(this.subjects.secondary);
-      this.stormSubjects.tertiary.copy(LIGHTHOUSE).setY(LIGHTHOUSE_TOP_Y).lerp(this.subjects.secondary, 1 - guide);
-      s.subjects = this.stormSubjects;
-      s.smoothFit = 3;
-    }
     /** Low and close to the water, because the village only reads as drowned from a hand's breadth above it. */
     const seat = this.cast.child.position;
     s.target.set(seat.x + fx * tuning.storm.lookAhead, seat.y + 0.9, seat.z + fz * tuning.storm.lookAhead);
     s.distance = 16;
     s.height = 2.8;
-    if (this.beat === 'gather') {
-      const opening = THREE.MathUtils.smoothstep(this.stormTime, 0, 6);
-      s.distance = THREE.MathUtils.lerp(16, tuning.storm.lighthouseFrameDistance, opening);
-      s.height = THREE.MathUtils.lerp(2.8, tuning.storm.lighthouseFrameHeight, opening);
-      s.target.y = seat.y + THREE.MathUtils.lerp(0.9, tuning.storm.lighthouseFrameUp, opening);
-    }
-    this.pace = this.beat === 'gather' ? tuning.storm.lighthouseCameraPace : 0.4;
+    this.pace = 0.4;
+    if (this.beat === 'gather') this.lighthouseFrame(bearing);
     this.focus.copy(boat.position);
+  }
+
+  /**
+   * The lighthouse is the storm's one landmark, and the lens makes one move for it: out to a lower, wider view as the
+   * weather gathers, turned so the tower stands over the travellers and tilted up to hold its crown. The tower is
+   * glanced at from within an arc of the travelling view, never chased round the boat; as they come abeam of it the
+   * lens lets it slide past and settles in behind them before the wind takes the plane. Everything here follows from
+   * where the boat is, never from where the lens has got to, so there is nothing for it to hunt.
+   */
+  private lighthouseFrame(astern: number): void {
+    const k = tuning.storm.lighthouseCamera, s = this.shot, boat = this.cast.boat, seat = this.cast.child.position;
+    const opening = THREE.MathUtils.smootherstep(this.stormTime, 0, k.openFor);
+    const toward = Math.atan2(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z) + k.offset;
+    const passing = Math.atan2(Math.sin(toward - astern), Math.cos(toward - astern));
+    const glance = opening * (1 - THREE.MathUtils.smootherstep(Math.abs(passing), k.arc, k.arc + k.pass));
+    const bearing = astern + THREE.MathUtils.clamp(passing, -k.arc, k.arc) * glance;
+    s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
+    s.distance = THREE.MathUtils.lerp(16, k.distance, opening);
+    s.zoom = THREE.MathUtils.lerp(1, k.zoom, glance);
+    /** Tilt up from the travellers toward the crown, as far as the lens can while they keep the lower frame. */
+    const eyeX = s.target.x + s.from.x * s.distance, eyeZ = s.target.z + s.from.z * s.distance;
+    const eyeY = s.target.y + THREE.MathUtils.lerp(s.height, k.eyeRise, opening);
+    const below = Math.atan2(seat.y + 1.2 - eyeY, s.distance);
+    const crown = Math.atan2(LIGHTHOUSE_TOP_Y - eyeY, Math.hypot(LIGHTHOUSE.x - eyeX, LIGHTHOUSE.z - eyeZ));
+    const tilt = Math.min(k.tilt, (crown - below) / 2) * glance;
+    s.target.y = THREE.MathUtils.lerp(s.target.y, eyeY + Math.tan(below + tilt) * s.distance, opening);
+    s.height = eyeY - s.target.y;
+    this.pace = k.pace;
   }
 
   /** The camera notices the village with the child: rooftops at water level, then the church passing overhead. */
@@ -422,7 +441,7 @@ export class DrownedChapter implements Chapter {
     // pull us back out of the street just as the player has set the journey moving.
     const church = this.stirred ? 0 : THREE.MathUtils.smootherstep(past, -k.spireEnter, -k.spireFull)
       * (1 - THREE.MathUtils.smootherstep(past, -k.spireLeave, -k.spireGone));
-    const roofBearing = boat.yaw + Math.PI + this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs);
+    const roofBearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs);
     // The church draws the gaze, not the camera's travelling position out of the channel.
     this.villageBearing = roofBearing;
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));

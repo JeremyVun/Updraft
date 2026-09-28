@@ -89,6 +89,19 @@ After playtesting the third pass by hand (2026-09-28, verbatim):
 >
 > - It's still very obvious that they are descending through the clouds instead of into some fog."
 
+On the fourth pass as merged to `main` (2026-09-28, verbatim), before the room goes into the chapter select:
+
+> "- I think the starlings are ok i think.
+>
+> Before putting the stairs room in the chapter select, I need you to take a look at fixing the journey that the child takes through the clouds.
+>
+> - For most of it, the camera is up close and you never get to see the rolling cloudy expanse, and the journey seems a bit too much like a straight line. There's currently not much of a unique feel to "sailing ontop of the clouds".
+> - The audio and the trails left by the boat make the clouds feel more like snow than clouds
+> - Part of the feeling of it being snow instead of cloud is also probably because the "shape" of the clouds is a bit "flat" but im not sure what the performance implications of uplifting this area is. Might be worth exploring with a sub agent.
+> - As the camera breaks through the cloud cover, the boat and everything suddenly render in, which doesn't look good. Either have the boat arrive at the jetty from off camera, or have it not just suddenly load in. The boat is also a bit far from the jetty i think (there's a bit too much gap between the jetty and the boat)
+> - There's some kind of render bug (it looks like it's related to render distance), where parts of the cloud that are beyond a certain range that now come into that render range suddenly get drawn in a completely different position / state. This makes the experience very stuttery.
+> - I don't like that as you go through teh clouds, you can see them moving alot, but then as you emerge everything goes still and you have to create wind to drive the boat. I think the player shouldn't need to create wind to drive this part of the game, they should just be able to sit back and enjoy the beautiful experience. Maybe also have the child and the cygnet look like they are "enjoying" the experience too e.g. leaning on the side of the boat looking out or something."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
@@ -209,6 +222,29 @@ light. Courage passes back and forth between them; the stairs are where it start
   home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree with its own server
   while editing (`/private/tmp/updraft-stairs-cap`).
 
+## The loop tidied (2026-09-28)
+
+Jeremy, on a still of the loop (verbatim): "I need you to tidy up the penrose stairs in the stairs chapter. It doesn't
+look quite right. The bannister is missing, the clouds are on the corner ofthe penrose stairs insead of over the exit,
+and the cygnet is walking ontop of the clouds which looks a bit strange. The cygnet is also walking outside of the
+bounds of the stairs at the start of the penrose stairs loop, and when the cygnet rounds the third corner it is
+walking ontop of the bannister there." Then: "Also, when the camera moves down to reveal the penrose stairs, the
+penrose stairs model is sort of see through (it looks buggy)."
+
+- The heap sits on the first treads of the way on (`LOOP_BANK`), not on the corner the bird goes round.
+- The drawn-in flight's rail has rings all along it (`RING_RAIL`), so it bends with the flight rather than running
+  straight through its steps and out of sight.
+- The bird walks up the drawn-in flight on short strips that follow it (`loopDecks`), by a route up its middle.
+- Over the loop the bird is not pulled toward the lens (`Cygnet.nudge`, set by the story); that pull drew it over the
+  rails and newels it passed. On the drawn-in flight it is pushed back to where it seems to be.
+- The drawn-in flight's faked depth only holds from the one place, so it lets go as the lens leaves (`uTrueDepth`).
+  Before, the half-undrawn flight was sorted behind the stair during the reveal and read as see-through.
+- The bird setting off each lap swung out past the rail as it turned round; the general turn fix on stairs
+  (`mayStep`, 3e5f63d) cures it.
+- Jeremy asked whether the inner banisters were missing. Shown the loop with rails on the inside of the ring as well,
+  he chose none, and none of the posts at its inside corners either (`buildLanding`'s `ring`): a lone post with no
+  rail read as a banister never finished, and without them the inside is one unbroken run of steps round the hole.
+
 ## Status (2026-09-28, on main)
 
 - Merged to `main` with the sail rework (branch `stairs-sail`) on top of the child rebuild and the new boat; the
@@ -221,7 +257,8 @@ light. Courage passes back and forth between them; the stairs are where it start
 - The loop, rebuilt so it reads as Penrose stairs:
   - It is one ring of stairs, not four railed landings with stubs of steps between. The corners are no wider than
     a flight with its rails (`CORNER`), and the sides are 4 and 12 steps.
-  - There are no strings, so every side shows its stepped ends, and there is a rail on the outside of the ring only.
+  - There are no strings, so every side shows its stepped ends, and there is a rail on the outside of the ring only
+    (and no post at its inside corners).
   - The child waits a few treads down the flight below the near corner (`waitBelow`), clear of the ring. The bird
     sets off from that corner, runs round and comes back onto it, right over her: up the way it went, back the way it
     came, at her, a questioning peep.
