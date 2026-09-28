@@ -262,6 +262,7 @@ export class SleepingChapter implements Chapter {
     this.beat = beat;
     this.beatStart = this.now;
     if (beat === 'tuckIn') {
+      this.cast.sleeping.blanketAside = 0;
       this.bedEntry.copy(this.cast.child.position);
       this.entryYaw = this.cast.child.yaw;
     }
@@ -377,7 +378,8 @@ export class SleepingChapter implements Chapter {
      * that cannot be staged: it is not lost, nobody fetches it, and it is exactly where they left it.
      */
     p.visible = c.abed < 0.55 && this.beat !== 'tuckIn' && this.beat !== 'waking' && this.beat !== 'lap';
-    sleeping.sleeper = this.laid ? c.abed : 0;
+    /** Their legs are under it from swinging in until swinging out, sitting up or not. */
+    sleeping.sleeper = this.laid ? Math.min(1, c.abed / T.swingIn) : 0;
     if (sleeping.sleepFace) c.breathFrom(sleeping.sleepFace);
     sleeping.sleepMarks = this.laid ? c.eyesShut : 0;
     if (this.beat === 'tuckIn') sleeping.cold = 0;
@@ -933,6 +935,7 @@ export class SleepingChapter implements Chapter {
       c.lookAt = k.eye(this.look);
       sleeping.blanketHeld = true;
       sleeping.blanket = lerp(T.blanketTucked, T.blanketOpen, smooth(this.t, 3.9, 6.0));
+      sleeping.blanketAside = smooth(this.t, 3.6, 4.8);
     }
     if (this.t < 6.2) this.holdCovers(T.coversHeld, 1 - smooth(this.t, 3.6, 5.6));
     else {

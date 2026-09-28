@@ -1611,6 +1611,14 @@ export const tuning = {
     /** How far the blanket stands over the child under it, and how wide that shape is, in bed widths. */
     sleeperHigh: 0.78,
     sleeperWide: 0.65,
+    /**
+     * Getting out of bed, the blanket is pushed aside off them on the side they get out (`asideSide` across the bed):
+     * over `asideAlong` ± `asideHalf` of its length, turned back `asideBack` of the way to the middle.
+     */
+    asideSide: 1,
+    asideAlong: 0.55,
+    asideHalf: 0.4,
+    asideBack: 0.55,
 
     /**
      * The one long white feather. It is the paper plane made slower and floatier: it takes the air's own speed

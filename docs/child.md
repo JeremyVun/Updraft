@@ -145,8 +145,10 @@ In `traveller.ts` unless noted.
   in `world/sleeping.ts`; `turnReachAt`, `turnGripAt`, `turnDrawnAt`, `turnDrawn`, `turnLift` in `tuning.sleeping`),
   sits on the edge and yawns, swings round onto the mattress on her seat with her hands beside her hips
   (`swingIn`, `Pose.lieFold`), lies back as her hands come to her chest, and draws the quilt up to under her chin,
-  where her mittens rest on top of it while she sleeps (`blanketTucked`, `coversHeld`, `coversInset`). Waking
-  reverses it. `tools/sleeping-logic-check.mjs` checks the hands on the quilt; its hilltop preening gate depends on
+  where her mittens rest on top of it while she sleeps (`blanketTucked`, `coversHeld`, `coversInset`). Waking,
+  she sits up pushing the quilt aside off her side (`blanketAside`; `asideSide`, `asideAlong`, `asideHalf`,
+  `asideBack`) and swings out over it; the quilt keeps the shape of her legs until she does, and in bed the hem does
+  not swing up to clear her legs (`pose.lie` in `motion.ts`). `tools/sleeping-logic-check.mjs` checks the hands on the quilt; its hilltop preening gate depends on
   seeded randomness, so the bedtime's length (`bedPauseFor`) moves it.
 - **Boarding and alighting** are in `docs/boat.md`.
 

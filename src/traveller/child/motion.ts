@@ -524,7 +524,11 @@ export class ChildMotion {
       let a = this.hemOut[i].step(target, dt);
       // Legs and the ground push it out.
       let floor = -Infinity;
-      for (const p of legPts) floor = Math.max(floor, this.hemClear(i, p));
+      /** In bed the covers are over their legs, and a hem swung up to clear them would stand up through the quilt. */
+      for (const p of legPts) {
+        const clear = this.hemClear(i, p);
+        if (clear > -Infinity) floor = Math.max(floor, clear * (1 - pose.lie));
+      }
       const drop = pivotY - groundY - 0.035;
       if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
       /**

@@ -201,6 +201,8 @@ uniform float uPull;
 uniform float uLift;
 /** Who is under it: how much of them there is, how far up the bed they lie, and how they breathe. */
 uniform vec3 uSleeper;
+/** Pushed aside by someone getting out: which side, the middle of their legs up the bed, how long a stretch, how far. */
+uniform vec4 uAside;
 out vec3 vColor;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -217,7 +219,11 @@ vec3 clothAt(vec2 uvw) {
   float over = uvw.y >= fold ? 0.0 : sin(flap * 3.14159) * (0.1 + 0.26 * fold) + 0.05;
   over += uLift * (uvw.y >= fold ? exp(-pow(uvw.y * 14.0, 2.0)) : pow(flap, 1.5));
   float across = (uvw.x - 0.5) * 2.0;
-  float drape = smoothstep(0.8, 1.0, abs(across));
+  /** Turned up and back onto the bed off their lap and legs, so they come out over the side, not through it. */
+  float outward = across * uAside.x;
+  float aside = uAside.w * smoothstep(0.0, 0.5, outward) * (1.0 - smoothstep(uAside.z * 0.5, uAside.z, abs(back - uAside.y)));
+  across -= uAside.x * aside * ${glsl(tuning.sleeping.asideBack)} * smoothstep(0.0, 1.0, outward);
+  float drape = smoothstep(0.8, 1.0, abs(across)) * (1.0 - aside);
   vec2 side = vec2(-uBedAxis.y, uBedAxis.x);
   vec2 xz = uBed.xy + uBedAxis * ((back - 0.5) * uBed.z) + side * (across * uBed.w);
   float lift = uFold.y * (1.0 - smoothstep(0.1, 0.9, back)) * (0.35 + 0.5 * sin(back * 3.14159));
@@ -235,7 +241,7 @@ vec3 clothAt(vec2 uvw) {
   float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 * (1.0 - min(1.0, body * 1.2)) + lift + ripple + body * (1.0 + uSleeper.z)
     + uPull * exp(-pow((uvw.y - fold) * 12.0, 2.0));
   // Keep shallow cloth ripples above the mattress as the sleeper rises; the sides still drape.
-  y = max(y, ${glsl(BED_GROUND)} + 0.69 - drape * 0.34);
+  y = max(y, ${glsl(BED_GROUND)} + 0.69 - drape * 0.34) + aside * 0.12 * sin(smoothstep(0.0, 1.0, outward) * 3.14159);
   return vec3(xz.x, y, xz.y);
 }
 
@@ -595,6 +601,9 @@ export class SleepingIsland {
   private readonly lift = { value: 0 };
   /** In somebody's hands the blanket goes where it is drawn, not eased after it. */
   blanketHeld = false;
+  /** Pushed aside off whoever is getting out of bed on the near side, 0 in place to 1 turned back off their legs. */
+  blanketAside = 0;
+  private readonly aside = new THREE.Vector4();
   /** Wind brushed over the visible bed, independent of ground picking. */
   bedWind = 0;
   /** Somebody asleep under the blanket, 0 an empty bed to 1: the cloth stands over them and breathes with them. */
@@ -783,6 +792,7 @@ export class SleepingIsland {
           uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 2.85, BED_WIDTH * 0.56) },
           uBedAxis: { value: new THREE.Vector2(-BED_FACING.x, -BED_FACING.y) },
           uFold: { value: this.fold },
+          uAside: { value: this.aside },
           uPull: this.pull,
           uLift: this.lift,
           uSleeper: { value: this.under },
@@ -1111,6 +1121,7 @@ export class SleepingIsland {
     const speed = Math.hypot(w.x, w.z);
     const want = Math.min(1, (speed / t.blanketSpeed) * 0.7 + w.energy * 0.8 + this.bedWind) * t.blanketGust;
     this.puff += (want - this.puff) * (1 - Math.exp(-dt / (want > this.puff ? 0.25 : t.blanketSettles)));
+    this.aside.set(t.asideSide, t.asideAlong, t.asideHalf, this.aside.w + (this.blanketAside - this.aside.w) * (1 - Math.exp(-dt * 4)));
     this.fold.set(this.shown.blanket * t.blanketLift, this.puff, 0.01 + Math.min(0.06, speed * 0.004 + w.energy * 0.03));
     /** They are plainly only asleep, and this is how you can tell: the blanket over them rises and falls. */
     this.under.set(this.shown.sleeper * t.sleeperHigh, 1.15, Math.sin(time * 0.75) * 0.06 * this.shown.sleeper);
