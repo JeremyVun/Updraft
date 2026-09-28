@@ -195,10 +195,29 @@ visible change. Merge only after his OK.
   such taht the child is directly blocking the ember (the player can't see it)."
 - **Known:** she stops `tuning.wood.waitShort` (7 m) short of an unlit coal (`story/wood.ts`, around line 366), which
   was meant to stop exactly this (8135c02). The camera is the walking shot (`docs/engine.md`, Cinematography).
-- **To do:** find which stops (every coal on the chain, desktop and portrait), measure the ember's screen position
-  against the child's silhouette at each stop, and fix so the waiting ember is always clear of her in frame. Camera
-  moves must stay committed and never jerk (`docs/engine.md`). Visual verification by an allowed visual model;
-  stills for Jeremy.
+- **Confirmed (2026-09-29).** Measured in the real renderer (each stop drawn four ways, with and without the child
+  and cygnet and with and without the embers, to get how much of the waiting orb's light reaches the screen) and in
+  Node with the real chapter, child and `CameraRig` (the orb's centre against her projected, posed mesh). Of the nine
+  stops on the chain (the first coal, six on the path, the rescue hearth, the plane's light), three hide the ember:
+  the second path stop (leg 1) loses about 40% of the orb after five seconds of waiting, and both leg-2 stops lose
+  all of it for the whole wait, at 1600x900 and 390x844 alike. The other stops keep it fully in view.
+- **Cause, traced:** not where she stops. The walking camera stands `cameraBack` (13) behind her along `aim`, and
+  `aim` eases onto the direction from her to the waiting coal; she stops `waitShort` (7) short of it, facing it. So
+  lens, child and coal end up in one line, and before the rescue only a fixed 1.1 m shoulder separated them (about
+  1.7 degrees, less than her hood is wide). Where the path bends at leg 2 the aim is still turning when she stops,
+  cancelling even that. After the rescue the shoulder was 2.8 and those stops kept the ember in view. A longer
+  `waitShort` barely helps (the separation grows only slowly with distance) and moves her; a wider fixed shoulder
+  does not fix leg 2 (4 m still hides it for the first seconds of the wait).
+- **Fix:** the walking camera stands `tuning.wood.cameraSide` (2.8, the old after-rescue shoulder, now used
+  throughout) off her shoulder on the side of the path the waiting coal lies, easing across at the aim's own rate
+  when the next coal is laid on the other side. During the approach the bearing to the coal swings towards its own
+  side, so the lens's lag now widens the gap instead of closing it. `wood-logic-check` asserts, at every stop at
+  30/60/120 fps in both viewports, that the orb stays more than its heart (0.3 units) clear of her mesh from the
+  moment she stops until it catches.
+- **For Jeremy to judge:** the lens now moves from one shoulder to the other each time a coal catches (about 5.6 m
+  sideways at 13 m, eased over several seconds and overlapping the turn towards the new coal, which partly cancels
+  it). On the approach to the leg-2 corner the ember can still pass behind her for about a second while she walks
+  (under two seconds per walk against about three before); every stop is clear.
 
 ## 8. Two audio checks not yet looked into
 
