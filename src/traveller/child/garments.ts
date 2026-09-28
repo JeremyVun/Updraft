@@ -577,9 +577,9 @@ function bob(b: Builder, phi: number, end: number, width: number): void {
     top.p,
     onHair(phi + side * 0.02, 0.2, 0.004).p,
     ear.p,
-    at(1.04, drop * 0.45),
-    at(1.0, drop * 0.85),
-    at(0.9, drop),
+    at(1.0, drop * 0.45),
+    at(0.94, drop * 0.85),
+    at(0.82, drop),
   ]);
   const path = (t: number, lift: number) => {
     const u = 0.08 + 0.92 * t;
@@ -641,6 +641,10 @@ export const HOOD = {
   r: V(0.4, 0.372, 0.42),
   /** The opening faces forward and down, so the brim comes out over the top of the fringe. */
   tilt: 0.17,
+  seam: 0.025,
+  corner: 0.05,
+  /** How far forward the cloth comes at the temples so the edge runs down from the brow to the jaw without stepping back. */
+  reach: 0.07,
 };
 
 /**
@@ -729,6 +733,16 @@ function hoodShape(lambda: number, gamma: number, open: number | null): HoodSamp
   p.y += 0.024 * smooth(0.5, 1.0, yN) * Math.exp(-(p.x * p.x) / 0.025);
   /** The crown rides a little back over the head, the way a soft hood falls, rather than standing straight up. */
   p.z -= 0.025 * smooth(0.2, 1.0, yN);
+  /**
+   * A hood is two flat panels sewn down the middle, so from the side its outline runs up the seam to a soft corner
+   * at the back of the crown and falls from there, where a helmet follows the skull round.
+   */
+  const behind = smooth(-0.1, -0.8, hz);
+  const ridge = Math.exp(-(p.x * p.x) / 0.02);
+  p.y += HOOD.seam * ridge * behind * smooth(-0.2, 0.5, yN);
+  const corner = HOOD.corner * ridge * behind * Math.exp(-(((yN - 0.55) / 0.3) ** 2));
+  p.y += 0.6 * corner;
+  p.z -= 0.8 * corner;
   const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
   const fromRim = open === null ? 0 : smooth(open, open + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
@@ -746,6 +760,8 @@ function hoodShape(lambda: number, gamma: number, open: number | null): HoodSamp
   const brim = open === null ? 0 : (1 - smooth(open, open + 0.45, gamma)) * bump(angleTo(lambda, 0), 0.95);
   p.addScaledVector(n, fold + seam + 0.018 * brim);
   p.y += 0.01 * brim;
+  /** From the side the edge is one line from the brow to the jaw, where a helmet's cut-out steps back round the ear. */
+  if (open !== null) p.z += HOOD.reach * (1 - smooth(open, open + 0.8, gamma)) * Math.exp(-(((p.y + HOOD.c.y - 2.04) / 0.115) ** 2));
   /** In front, below the chin, the hood goes in behind the scarf rather than lying over it. */
   const y = p.y + HOOD.c.y;
   const front = smooth(-0.05, 0.45, hz);
