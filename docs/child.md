@@ -447,3 +447,33 @@ well".
   `motion.ts`), so everything painted on it keeps its modelled frame; the coat and scarf stay put and the chin sits
   further into the scarf. The hood's keep-out for the scarf ends and the cygnet (`HOOD_AT` in `body.ts`) moves with it.
 - Checked: every cygnet gate on a build; stills of carrying it in her arms, calling, and looking up (front and side).
+
+## Getting into bed (2026-09-28)
+
+Jeremy (verbatim): "ok judging from the bedh-sheet.png captures, the issue is pretty clear. the child has her hands
+straight infront of her, it looks very unnatural. I'd suggest getting an opus 5.5 sub agent to model it a bit better
+where the child pulls back the bed covers and gets in, then pulls it back up. simple animations"
+
+On the sleeping island (`story/sleeping.ts`, `tuckIn`) the quilt used to fold itself back as she arrived, and lying
+down swung her whole body back from the edge like a board with the seated arm pose still out in front of her. Now:
+
+- **Turning the bed down.** She walks to the bedside by the pillow (`TURN_DOWN`) and sets the bird down; it goes to
+  the foot of the bed and waits. Both mittens take the top of the quilt (`blanketEdge(…, top)`, which a turned-down
+  quilt carries back twice as far as the crease) and draw it back down the bed, lifting its edge (`blanketLift`,
+  `uLift` in the cloth shader) and turning with it; partway (`turnDrawn`) she lets go and it flops the rest of the
+  way. While a hand has it, the cloth goes exactly where it is drawn (`blanketHeld`), not eased after it.
+  Knobs: `turnReachAt`, `turnGripAt`, `turnDrawnAt`, `turnDrawn`, `turnLift` in `tuning.sleeping`. The pause it
+  fills (`bedPauseFor`) is the same length as before.
+- **Getting in** (`layDown` in `traveller.ts`) is two moves: round onto the mattress on her seat with both hands down
+  beside her hips and her legs brought up along the bed (`swingIn` of the way in; the legs stay out in front while
+  she sits up in it through `Pose.lieFold`), then back about the hips onto the pillow as her hands come in onto her
+  chest. The sit on the edge, the yawn behind a mitten and the nod are as they were.
+- **Drawing it up.** Her mittens take the crease at her waist and draw it up; it stays turned down under her chin
+  (`blanketTucked`) and they come to rest on top of it there (`coversHeld`, `coversInset`), which is where they stay
+  while she sleeps, turns over and is nudged. The turned-down flap now lies over her like the rest of the quilt
+  instead of inside the shape it makes.
+- **Waking** reverses it: she sits up pushing the quilt down into her lap, then swings round onto the edge.
+- `tools/sleeping-logic-check.mjs` passes. Its fixture now follows held cloth. Its preening gate on the hilltop is
+  sensitive to how long the bedtime takes (a longer pause moves the seeded randomness it depends on); 3.8 s passes.
+- Not fixed: the scarf's tail hangs off the side of the bed while she lies down; the far elbow can show through the
+  quilt while she sleeps.
