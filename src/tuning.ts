@@ -288,6 +288,8 @@ export const tuning = {
     bankSwap: 34,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
     fogLift: 11,
+    /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
+    cloudDrift: 0.6,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
