@@ -167,8 +167,8 @@ The Graphics selector offers Auto (default), High, Medium and Low; the choice pe
 | Auto | adapts over the ladder below | | | 60 fps |
 
 The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. Manual presets never react to frame
-timing. Jeremy's rulings: Medium keeps full grass density and Low drops only to 80%; Low accepts 30 fps; High stays at
-1.5× (a softer 1.25× High was rejected).
+timing. Jeremy's rulings: "keep high the same", with its grass reaching further than Auto's top rung (he asked for
+more grass distance on High); Medium keeps full grass density and Low drops only to 80%; Low accepts 30 fps.
 
 World detail (`WORLD_QUALITY`):
 
@@ -334,6 +334,3 @@ are not iPad frame rates or battery figures. Don't run benchmarks unless Jeremy 
   shader warm-up without chapter-entry stalls.
 - Graphics memory has no target-device budget: the grass tables (about 28 MiB), the static atlases (about 26 MiB) and
   the scene, MSAA, reflection and bloom targets on older iPads.
-- A physical iPad A/B (same route, brightness and volume, starting cool and unplugged) of battery drain, warmth and
-  sustained frame intervals on High and Auto has not been recorded; nor has Safari's native fullscreen-dismiss
-  swipe been reproduced on the device.

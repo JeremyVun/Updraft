@@ -70,7 +70,7 @@ someone smaller. And then letting go of what you loved and being glad.
 - **The dream is manifesting home.** Every island holds a piece of home, out of place and with nobody in it: washing on
   the line, a red door, toy boats, a piano in the grass, a swing, a staircase, a village under the water, a bed on a
   hill. That is where the nostalgia comes from, and why the real cottage at the end lands.
-- **Nowhere real.** No country is named or recognisable. Rolling green, yes; dry-stone walls and chalets, no.
+- **Nowhere real.** No country is named or recognisable. Rolling green, yes; chalets and paddock fences, no.
 - **Nothing long and straight lies across the route without a visible way through on the route.** A wall, fence or
   line across the path says "go round"; one along it says "this way". The worn path, the plane's lean and the gaps agree.
 - **The player never sees the next island.** A veil (`uVeil`, set by each chapter's `haze`) dissolves the world past a
@@ -88,18 +88,20 @@ It gives the player a wordless goal, the boat a reason to exist, and north a mea
 the drawing opens and it is a white cottage with a red door, in the valley below.
 
 Two lost children: one who can't find home, one who can't fly. Both fears are faced, and the player is the answer to
-both, because flight is the player's verb. The cygnet's wing heals over the early islands; it goes up the stairs into
-the cloud first; it is frightened out of hiding in the dark wood and found by the light the player makes; it swims
-beside the boat by itself; it glides back to the sleeping child on the player's updraft; and at the end, held up by the
-player's wind, it flies, and the flock comes down through the afternoon light for it.
+both, because flight is the player's verb. The cygnet's wing heals under its bandage over the early islands; it goes up
+the stairs into the cloud first; it is frightened into hiding in the dark wood and found by the light the player makes;
+it swims beside the boat by itself; the player's updraft lifts it to the ribbon on the sleeping island and it glides
+back to the sleeping child; and at the end, held up by the player's wind, it flies, and the flock comes down through
+the afternoon light for it.
 
 ## The year
 
 Winter is coming, not gone. That is why the swans are flying and why the journey has a clock without a timer. The
-season deepens island by island and never goes back: late autumn on the still island to the frozen night at home
-(each chapter names a `season`, eased between rooms like the sky). The grass keeps its loved green and ages toward
-gold and seed. Light can return without reversing the season: the sleeping island earns morning, the sky mirror
-suspends time, and home holds the afternoon until the child walks down to the door.
+season deepens island by island, from late autumn on the still island to winter on the sleeping island (each chapter
+names a `season`, eased between rooms like the sky). The grass keeps its loved green and ages toward gold and seed.
+The curtains opening on the sleeping island are the greening moment that turns winter to spring, so there is no snow
+play after it. Light returns with it: the sleeping island earns morning, the sky mirror suspends time, and home holds
+the afternoon until the child walks down to the door.
 
 ## The story
 
@@ -156,5 +158,6 @@ fear, faced once, caused by the player. The build: [cygnet.md](cygnet.md) and th
 - **Invitations**: the drawn gusts and spirals that show a stalled player the gesture ([contracts/wind.md](contracts/wind.md)).
 - **Departure kites**: the same paper kite flies beside the boat at every departure, so the player learns to look for
   it (`story/departure-kites.ts`).
-- **A mood per room**: every chapter names a `music` mood, and moods glide into each other so a room change is a
-  modulation, never a new track ([contracts/audio.md](contracts/audio.md)).
+- **A mood per room**: every chapter names a `music` mood. Between rooms the outgoing music fades, a few seconds of
+  silence clear the ear, and the next room's music comes in on the approach
+  ([contracts/audio.md](contracts/audio.md)).

@@ -24,15 +24,16 @@ On the recovering wing, approved with "beautiful! yes lets do this":
 
 ## Who it is
 
-The ugly duckling: a grey, clumsy thing that fell out of a line of white birds. Nobody says it; the ending says it
-back, when the family that comes for it is white and the first white is showing at its own wing edges. Cygnets
-ride on their parents' backs, so riding on the child is what the species does with the one it trusts. Swans need a
-long pattering run to take off, which gives every attempt a shape a player can read.
+The ugly duckling (Jeremy: "Ugly duckling is exactly the feel"): a grey, clumsy thing that fell out of a line of
+white birds. The family that comes for it at home is white, and by then the first white shows at its own wing edges
+(`grown`). Cygnets ride on their parents' backs; this one rides on the child. Swans need a long pattering run to
+take off, which gives every attempt a shape a player can read.
 
 **Voice.** It is silent except in distress and when it calls to its family: the fall, the pond, hiding in the dark
-wood, the one unanswered call on the sleeping island, a questioning peep on the stairs, and the call at home that
-is answered. Every call is echoed by three small cream strokes above it (`fx/call-marks.ts`,
-`tuning.cygnetCalls`). Adult swans are other animals and may be loud: bugling and the whistle of their wings.
+wood, the one unanswered call on the sleeping island, a questioning peep on the stairs, the call at home that is
+answered, and now and then when it is left standing on its own feet while the child is still. Every call is echoed
+by three small cream strokes above it (`fx/call-marks.ts`, `tuning.cygnetCalls`). Adult swans are other animals and
+may be loud: bugling and the whistle of their wings.
 
 ## Its arc
 
@@ -100,7 +101,7 @@ leaving.
 
 **The adults** (`creatures/flock.ts`, `SwanFlock`): white, necks straight out, black feet trailing, articulated
 wings with a slow deep beat. They rest on the meadow pond and leave in a staggered pattering take-off; at home they
-pass across the sun, wheel in a circuit (`tuning.swanArrival`) and go north in a V that the cygnet joins at the
+come over high and calling, wheel in a circuit (`tuning.swanArrival`) and go north in a V that the cygnet joins at the
 tail station (`goOn`, `tuning.swanDeparture`). The skein on the first island reserves the cygnet's own body in its
 last station.
 
@@ -124,12 +125,8 @@ the swans' bugle and wingbeat.
 `?chapter=stage` (`src/story/stage.ts`) stands it and the child on open ground with a free camera; from a
 `tools/play.mjs` eval step `__game.story.current.play('<name>')` plays any state, act (`act:<name>`) or shared
 moment, and `.look('<view>')` picks a view. `__game.probe.report()` (`companion/probe.ts`) gives the worst pop,
-turn, hand gap and foot slip since `probe.reset()`. `node tools/cygnet-gates.mjs` runs them all against limits:
-body jerk under 0.02 units/frame², turn under 0.07 rad/frame, mitten gap under 0.06, never below the ground. Every
+turn, hand gap and foot slip since `probe.reset()`. `node tools/cygnet-gates.mjs` runs them all against per-moment
+limits (`LIMITS`): body jerk under 0.02 units/frame² (0.012 idle, 0.1 for a try), turn under 0.07–0.08 rad/frame,
+mitten gap under 0.06 (0.08 unstowing), foot slip under 0.02, feet never more than 0.005 below the ground. Every
 pop found so far came from a pose weight that switched instead of easing: ease every new weight.
 `tools/wing-care-check.mjs` checks the wing's history and one-flight gates.
-
-## Open
-
-- `cygnet-gates` misses by a few thousandths from run to run (the gather's jerk and turn); nothing visible, not
-  yet traced.

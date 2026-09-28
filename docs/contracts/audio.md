@@ -21,12 +21,13 @@ and clears it on exit.
 
 ## Jeremy's standing rulings
 
-- New music is auditioned as a rendered listening study before it goes into the game. Rendered checks and
+- New music goes to Jeremy as a rendered listening study before it goes into the game; rendered checks and
   measurements are never a listening sign-off.
 - The game's style is the detuned drone. Keep it, but it must move harmonically: "it just can't be one single drone
   note the whole way through". Circle-of-fifths piano rewrites of the opening and summit were rejected.
-- Never fill a musical gap by holding a chord: a static held-chord stretch in Sleeping was "horrible". The held-chord
-  crossfade replacement for the shared pad's chord clock and glides was rejected; the pad's clock and glides stay.
+- Never fill a musical gap with one held sound: a stretch in Sleeping "playing the exact same note" was "horrible".
+  The held-chord crossfade replacement for the shared pad's chord clock and glides was rejected; the pad's clock and
+  glides stay.
 - The opening island keeps its approved music; an "evolution" study was rejected ("the original still sounds better").
 - The Lines score stays as shipped; a from-scratch rewrite was "a clear downgrade". Don't propose it again. No
   completion phrase when the door opens.
@@ -34,7 +35,8 @@ and clears it on exit.
   as if the Home music plays all the way through to the credits.
 - The story no longer cues `delight` (the chime with the child's cheer): it no longer fits the music.
 - The sailing boat has no hull-water foley: its bursts sounded like flapping. Toy boats keep theirs.
-- No child voice, no routine cygnet chatter, no marine vocal calls.
+- No child voice: "never any voicing from the two main characters". The cygnet's calls, which he later heard and
+  liked ("The cygnet sounds great"), are the one exception (`docs/cygnet.md`).
 
 ## Room levels
 
@@ -139,21 +141,20 @@ when a new context is installed.
 farewell. An unfinished swim outranks the approach, and a restored swim starts in return or arrival. Swim and arrival
 are accompaniment only. Ordinary crossings keep the departing island's music until the handoff.
 
-**Homeward and Home** (`summit-score.ts`). Leaving the Sky Mirror requests Home at once: the Mirror fades over 3 s,
-the background stays silent at least 5 s, and the drone fades in over 3 s once the boat has passed its first offshore
-turn and is `homewardClearDistance` from the berth; slow sailing lengthens the rest (`homeward*`, `homewardReady`).
-Offshore it plays Jeremy's whole three-minute drone (32 voicings at 80% tempo), repeating if needed; landing keeps the
-instance and clock. From the successful updraft `HomeChapter.homeEndingTime` drives a fixed, once-only ending: the
-music rises over 4 s from wherever the approach left it (no reward bells at the updraft), plays the flight, farewell
-and Home passages, gains two soft upper voices during the walk, climbs home by steps over a held D (B♭, C, D) that
-broaden (5.1, 5.5, 6 s), and resolves Dmaj9 to Dadd9 with only C♯ rising to D. The last chord rings about seven
-seconds, then the dry sound and its reverb send fade over 0.7 s from `HOME_ENDING.fadeFrom`; the reverb tail rings on,
-wind and wildlife remain, and credits start at `HOME_ENDING.creditsAt`, two seconds after the music ends.
-`src/story/home-ending.ts` shares these times between story and audio; restoring `reunion` or `drawing` enters at the
-matching score time; the paper release is automatic. `homeEndingSounds = false` disables the old `unfold`, `release`,
-`home` and `finale` cues and the paper and cottage-door foley (kept in code behind the switch);
-`homeMusicDucking = false` bypasses hush and cue ducking for Home. Render the ending with
-`node tools/ending-audition.mjs`.
+**Homeward and Home** (`summit-score.ts`). Leaving the Sky Mirror requests Home at once: the Mirror fades over 3 s, the
+background stays silent at least 5 s, and the drone fades in over 3 s once the boat has passed its first offshore turn
+and is `homewardClearDistance` from the berth; slow sailing lengthens the rest (`homeward*`, `homewardReady`). Offshore
+it plays the whole three-minute drone Jeremy approved (32 voicings at 80% tempo), repeating if needed; landing keeps the
+instance and clock. From the successful updraft `HomeChapter.homeEndingTime` drives a fixed, once-only ending: the music
+rises over 4 s from wherever the approach left it (no reward bells at the updraft), plays the flight, farewell and Home
+passages, gains two soft upper voices during the walk, climbs home by steps over a held D (B♭, C, D) that broaden (5.1,
+5.5, 6 s), and resolves Dmaj9 to Dadd9 with only C♯ rising to D. The last chord rings about seven seconds, then the dry
+sound and its reverb send fade over 0.7 s from `HOME_ENDING.fadeFrom`; the reverb tail rings on, wind and wildlife
+remain, and the closing line starts at `HOME_ENDING.creditsAt`, two seconds after the music ends. `src/story/home-ending.ts`
+shares these times between story and audio; restoring `reunion` or `drawing` enters at the matching score time; the
+paper release is automatic. `homeEndingSounds = false` disables the old `unfold`, `release`, `home` and `finale` cues
+and the paper and cottage-door foley (kept in code behind the switch); `homeMusicDucking = false` bypasses hush and cue
+ducking for Home. Render the ending with `node tools/ending-audition.mjs`.
 
 Every score repeats its sections to fit player pacing, releases voices over 1.8 s on phase changes and exit (0.12 s
 for permanent silence), disconnects finished voices and buses, and freezes with the shared audio clock when muted or
@@ -259,16 +260,17 @@ Levels: `stairsAir`, `stairsAirLevel`, `stairsScoreLevel`, `stairsPhaseFade`. Re
 
 ## Checks
 
-`npm run check:audio` runs every offline audio and score check through a headless dev server (no GPU); the list and
-the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs` covers
-start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's preparation and
-the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score sections.
+`npm run check:audio` runs the offline audio and score checks in headless Chrome against a running dev server (no GPU);
+the list and the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs`
+covers start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's
+preparation and the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score
+sections.
 
 ## Open
 
-- The stairs room's sound awaits Jeremy's audition. His note on the sail over the cloud: "The audio and the trails
-  left by the boat make the clouds feel more like snow than clouds", and the player should not need to make wind
-  there; the sail's sound needs revising with that pass.
+- The stairs: Jeremy's note on the sail over the cloud, "The audio and the trails left by the boat make the clouds
+  feel more like snow than clouds", and the player should not need to make wind there; the sail's sound is revised
+  with that pass.
 - Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
   attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
   chime feel right in context.

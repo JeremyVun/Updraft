@@ -53,10 +53,10 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 - Chubby cheeks are what read young: baby fat as a broad fullness low in the cheeks, widest just below the mouth,
   above a small round chin (`FACE.fat`). Round pads high under the eyes looked "like an alien"; too much or too high
   both fail.
-- Big dark upright eyes with a warm brown low in the iris, a sliver of white at the outer corner and one soft glint
-  (without it they read as holes). No lashes: they made her look made-up and older. The eyes are 1.15× the first
-  size; 1.3× reads as a doll.
-- Soft brows set low and close over the eyes; high brows read surprised and older.
+- Big dark upright eyes with a warm brown low in the iris, a sliver of white at the outer corner and one soft glint.
+  No lashes (Jeremy: "the lashes need to go"). The eyes are 1.15× the first size with the brows lowered: he chose
+  that over 1.2× and 1.3× eyes.
+- Soft brows set low and close over the eyes.
 - A small round button nose (its own mesh), a small smile, big ears.
 - The lower face is 5% shorter than first modelled, under a taller forehead; 14% was too much.
 - The face is narrow enough that the hood's inside never shows in front of the cheeks (that read as sideburns).
@@ -72,8 +72,8 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 - **Judge the hair from the play camera**, above her (elevation 20–35°, 5–6 m), not only face-on: from above the brim
   hides the fringe's top, and a level lower edge plus hair down both sides of the face makes a dark ring inside the
   hood that reads as a bowl cut whatever the fringe's shape.
-- Rejected: a straight fringe (bowl cut), hair framing the face like curtains, a side-swept fringe (older), a round
-  bob with no pigtails (a helmet), a bare forehead with a few wisps (she looked bald).
+- Rejected: a straight fringe (bowl cut), hair framing the face like curtains, a side-swept fringe, a round bob with
+  no pigtails, a bare forehead with a few wisps (she looked bald).
 
 **Hood** (`HOOD`, `OPENING`, `hoodOpen`, `hoodShape`, `hoodPoint`)
 - A bell, not a ball: an egg crown with a soft centre seam, sides falling nearly straight to the shoulders, the back
@@ -91,8 +91,9 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
   with it.
 - **Coat** (`COAT`, `HEM`, `hemY`): a warm mustard (the family jumper in `world/lines.ts` follows its colour), hung
   from narrow sloped shoulders with a steady A-line flare that stands out from the front, the side and behind; wide
-  shoulders hid it. The hem is short enough to read from the camera behind as an oversized coat, not a dress. A
-  placket and three brown buttons.
+  shoulders hid it. The hem is short enough to read from the camera behind as an oversized coat, not a dress, and
+  the lower half is not "frilly": a flat woollen hem edge over shallow folds, flaring a little less front to back
+  than side to side. It still swings when she walks. A placket and three brown buttons.
 - **Bag** (`BAG`, `bagSize`, `BAG_ROWS`, `BAG_SQUARE`, `strap()`): a soft brown leather satchel low on the back,
   wider than it is deep, bellying where the bird sits and sagging between its corners. The cygnet sits across it,
   facing out past her left shoulder, its head beside the hood where the camera behind sees it (`SEATS.satchel` in
@@ -162,5 +163,4 @@ Preview.
 ## Open
 
 - Not yet seen in a level from the play camera in motion: the pigtails, the hood's side line and the open flap.
-- Unchecked: a resumed save with the cygnet in the bag starting with the flap open; the lap pose in place at the
-  summit.
+- Unchecked: a resumed save with the cygnet in the bag starting with the flap open.
