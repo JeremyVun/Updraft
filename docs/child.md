@@ -489,5 +489,4 @@ He approved the result ("ok great this is approved"). This replaces the bangs an
   helmet); a bare forehead up to the brim with a few wisps (she looked bald).
 - Checked: stills on the stage, face-on, three-quarter and from above, before and after merging main (the hood from
   the side and the lower head); the pigtail bones' swing sampled walking and standing; a burst of walking frames; the
-  cygnet in her arms. Not yet checked in a level. Sheets in `/tmp/childhair`: `G3-above.png`, `G3-close.png`,
-  `M-close.png` (on merged main), `cygnet-sheet.png`.
+  cygnet in her arms; every cygnet gate (27). Not yet checked in a level. The sheets have been deleted.
