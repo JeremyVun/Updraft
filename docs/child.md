@@ -393,3 +393,15 @@ Then, asked whether the bag is closed until she first puts the cygnet in it: "le
 - The paper, stowed, lies over it; checked in the stage.
 - Stills in `/tmp/bagflap`: `sheet.png` (before, shut, open), `open-sheet.png` (open), `v8-first-stow.png` (shut, the
   first climb in, open after it climbs out). Not yet checked in a level from the play camera.
+
+## Sitting on the ground (2026-09-28)
+
+Jeremy (verbatim): "I need you to take a look at uplifting the child's pose at the start of the game, it's a bit weird
+looking. like they are a doll with their arms sticking out."
+
+The game opens with her sat on the shore holding the plane (`story/island.ts`). The seated rest put both forearms out
+level in front and the plane's carry held it out at the hip on its edge. Now, sat on the ground (not in the boat),
+the mittens come into the lap (`lap` in `traveller.ts`): round the paper, which lies flat on her lap nose ahead
+(`paperLap`), with her eyes on it; without it they rest on her knees. She leans in a little. It lets go as she stands
+or starts any action. The stairs' nest (paper stowed) and the summit (paper in hand) share it. Sheet:
+`/tmp/startpose/start-pose-before-after.png`. The summit is not yet checked in place.
