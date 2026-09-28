@@ -58,7 +58,7 @@ try {
     for (const count of [0,1,2,3,4]) {
       const restoredScarf = { restore(n) { this.completed = n; this.finished = n === 4; } };
       const restored = Object.assign(Object.create(BirchesChapter.prototype), { cast: {
-        birches: { scarf: restoredScarf }, boat: {}, child: { stop() {} },
+        birches: { scarf: restoredScarf }, boat: {}, child: { stop() {} }, cygnet: { carried: false },
       } });
       takeCues(); restored.restoreCheckpoint(`scarf4-${count}`, [2,1,.65,count]);
       check(restored.birchesScore === (count === 0 ? 'walk' : count === 4 ? 'return' : 'scarf') && !takeCues().length,
