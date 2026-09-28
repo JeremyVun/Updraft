@@ -9,7 +9,7 @@ import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } f
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
 
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
-const SHAPE = { heap: 4, tower: 6, big: [2.6, 2.4], mid: [2.0, 1.2], fine: [1.3, 0.4] } as const;
+const SHAPE = { heap: 4, tower: 6, big: [2.6, 2.4], mid: [2.0, 2.2], fine: [1.3, 0.8] } as const;
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;

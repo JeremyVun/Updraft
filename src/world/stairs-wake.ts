@@ -22,13 +22,16 @@ void main() {
   // aState: which side of the ribbon (-1 or 1), how old the knot is (0 to 1 of its life), and how far along the wake.
   float age = aState.y;
   vec3 view = normalize(aKnot - cameraPosition);
-  vec3 side = normalize(cross(aTangent, view) + vec3(0.0, 1e-4, 0.0));
+  // It lies along the top of the cloud, across the way the hull went.
+  vec3 side = normalize(vec3(-aTangent.z, 0.0, aTangent.x) + vec3(1e-4, 0.0, 0.0));
   // Laid thin off the stern, it spreads and lifts as it goes stale, and thins away.
   float width = 0.35 + 2.4 * sqrt(age);
   vWorld = aKnot + side * aState.x * width;
   vAt = vec2(aState.z, aState.x);
   float near = smoothstep(1.2, 3.5, distance(aKnot, cameraPosition));
-  vAlpha = smoothstep(0.0, 0.05, age) * pow(1.0 - age, 1.6) * near;
+  // Seen edge-on it would be a line; it fades there instead.
+  float broad = smoothstep(0.04, 0.25, abs(dot(normalize(cross(aTangent, side)), view)));
+  vAlpha = smoothstep(0.0, 0.05, age) * pow(1.0 - age, 1.6) * near * broad;
   vFog = fogOf(vWorld);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
