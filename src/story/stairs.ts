@@ -749,11 +749,10 @@ export class StairsChapter implements Chapter {
         if (dt > 2.1 && this.lastDt <= 2.1) k.does('look-back', this.look.copy(flight(LOOP.wait).top), 1.2);
         if (dt > 3.3 && this.lastDt <= 3.3) k.does('look-back', this.look.copy(LOOP_BACK.top).lerp(LOOP_BACK.bottom, 0.5), 1.2);
         if (dt > 4.5 && this.lastDt <= 4.5) {
-          cue('puzzled');
-          k.call(false);
+          k.call(false, 'puzzled');
           k.does('look-back', this.look.copy(c.position).setY(c.position.y + 1), 1.4);
         }
-        if (again && dt > 5.6 && this.lastDt <= 5.6) { cue('puzzled'); k.call(false); }
+        if (again && dt > 5.6 && this.lastDt <= 5.6) k.call(false, 'puzzled');
         if (again && dt > 6.2 && this.lastDt <= 6.2) k.does('shake', undefined, 0.9);
         // Then they both look across at the cloud on the far corner.
         if (dt > 5.2) c.lookAt = this.look2.copy(bank.centre);

@@ -147,7 +147,9 @@ hands its gust on (`nudge`); carried toys drop the wind once ahead of the child'
 Sails read only real local wind (droop, fill, luff, boom swing, heel); the stream gives heading, not steering.
 
 Rulings: the toys must move easily and glide: one relaxed stroke should carry a toy well (Jeremy set its drag and
-top speed). The orange toy must not lag the fleet. The boats are not held back for the swimming cygnet. The fleet
+top speed). The orange toy must not lag the fleet. The boats are not held back for the swimming cygnet; instead a
+cygnet fallen behind the child hurries, its full walk on the dry banks and a faster swim in the pools
+(`tuning.littleBoats.catchUp`, `swimCatchUp`), so it stays in the picture (Jeremy, 2026-09-29). The fleet
 leaves the stream mouth for the open sea.
 
 Rules: no race, score, text, direction test or penalty, and time alone never completes it. Keep the toy, the

@@ -323,6 +323,8 @@ export const tuning = {
     childHurry: 0.35,
     /** How fast the cygnet is already swimming as it hops into a pool, so it can make up ground on the toy sailing ahead. */
     swimLaunch: 2.3,
+    /** Fallen this far behind the child (from, to), the cygnet hurries: its full walk on the banks, up to `swimCatchUp` in the pools. */
+    catchUp: [2, 5] as const, swimCatchUp: 4.2,
     /** Nearby wind carries the fleet; each directly blown sail can move independently. */
     fleetCarry: 0.85, outletCurrent: 1.55, offshoreSpeed: 2.1, offshoreEnd: 210,
     /** Carried toys drop that wind between these distances ahead of the child's toy, so the fleet stays in its company. */

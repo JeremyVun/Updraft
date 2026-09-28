@@ -343,7 +343,7 @@ function leg(b: Builder, rest: THREE.Vector3[], left: boolean): void {
 }
 
 /**
- * A chunky round-toed wellington: the shaft, the bend of the ankle and the foot are one swept tube, so the heel and
+ * A chunky round-toed leather boot: the shaft, the bend of the ankle and the foot are one swept tube, so the heel and
  * instep come out of the same surface. The shaft opens a little at the top; the sole is pressed flat on the ground.
  */
 function boot(b: Builder, at: THREE.Vector3, shin: number, foot: number): void {
