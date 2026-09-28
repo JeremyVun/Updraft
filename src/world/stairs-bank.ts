@@ -7,16 +7,15 @@ interface Lump { home: THREE.Vector3; p: THREE.Vector3; v: THREE.Vector3; r: num
 
 /**
  * A heap of cloud sitting on one corner of the loop, over the foot of the way on, so that nobody can see there is
- * one. The player's wind blows it apart. Until the story lets it go it gathers itself back up again.
+ * one. The player's wind blows it apart, but only once the story is ready for the way on to be found (when the sweep
+ * is drawn across it); until then no wind moves it at all.
  */
 export class CloudBank {
   readonly mesh: THREE.Mesh;
-  /** Whether a blow can scatter it for good; until then it heaps itself up again. */
+  /** Whether the wind moves it: until then it sits there as still as the cloud round it. */
   yielding = false;
   /** 1 while it sits there whole, down to 0 once it has blown away. */
   whole = 1;
-  /** How much the player has worked at it, for the story to notice. */
-  worked = 0;
   private gone = false;
   private shown = 0;
   private readonly lumps: Lump[] = [];
@@ -64,7 +63,7 @@ export class CloudBank {
 
   /** A stroke across it carries the lumps it passes over the way the stroke went. */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, dt: number): void {
-    if (!this.mesh.visible || this.gone || !input.present || input.muted || dt <= 0) return;
+    if (!this.yielding || !this.mesh.visible || this.gone || !input.present || input.muted || dt <= 0) return;
     const sx = (input.ndc.x - input.prevNdc.x) * camera.aspect, sy = input.ndc.y - input.prevNdc.y;
     if (sx * sx + sy * sy < 1e-8) return;
     this.right.setFromMatrixColumn(camera.matrixWorld, 0);
@@ -76,7 +75,6 @@ export class CloudBank {
       if (hit <= 0) continue;
       const depth = l.p.distanceTo(camera.position) * halfHeight / dt;
       l.v.addScaledVector(this.right, sx * depth * hit * 0.35).addScaledVector(this.up, sy * depth * hit * 0.35);
-      this.worked += hit * dt;
     }
   }
 
@@ -88,8 +86,6 @@ export class CloudBank {
     const u = this.material.uniforms;
     this.lumps.forEach((l, i) => {
       l.v.multiplyScalar(Math.exp(-dt * (this.gone ? 0.4 : 1.6)));
-      // Until it may go, it draws itself back together; the wind only ruffles it.
-      if (!this.yielding) l.v.addScaledVector(this.tmp.subVectors(l.home, l.p), dt * 2.2);
       l.p.addScaledVector(l.v, dt);
       spread += Math.min(1, l.p.distanceTo(l.home) / (this.radius * 1.3));
       // Blown away, a lump draws out thinner as it goes.
@@ -99,7 +95,7 @@ export class CloudBank {
       this.hi.max(this.tmp.copy(l.p).addScalar(r));
     });
     const whole = 1 - spread / this.lumps.length;
-    if (this.yielding && !this.gone && whole < 0.55) this.gone = true;
+    if (!this.gone && whole < 0.55) this.gone = true;
     this.whole = this.gone ? Math.max(0, this.whole - dt / 2.5) : whole;
     u.uBoxMin.value.copy(this.lo);
     u.uBoxMax.value.copy(this.hi);
