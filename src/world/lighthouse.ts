@@ -9,7 +9,7 @@ export const LIGHTHOUSE_BASE_Y = 4.5;
 export const LIGHTHOUSE_LANTERN_Y = LIGHTHOUSE_BASE_Y + 13.85 * LIGHTHOUSE_SCALE.y;
 export const LIGHTHOUSE_TOP_Y = LIGHTHOUSE_BASE_Y + 16.6 * LIGHTHOUSE_SCALE.y;
 
-/** A turning light made visible by rain. Its last sweep dies before the paper plane is taken. */
+/** A turning light made visible by rain. Its last sweep falters out as the paper plane is taken. */
 export class LighthouseLight {
   readonly object = new THREE.Group();
   private elapsed = 0;

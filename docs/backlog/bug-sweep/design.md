@@ -73,6 +73,11 @@ visible change. Merge only after his OK.
   circle the player sees, not the 38 to 44 s window; the storm's length is whatever the straight run-in gives.
 - **Fix:** with the beach ahead inside `beachLook`, a boat that has passed its landing point (bearing to it more than
   90 degrees off the bow) holds its course and runs up the sand instead of turning back (`Boat.update`).
+- **Found underneath (2026-09-29):** with the storm passing, `boat-check` reached its lighthouse block, which
+  asserted the lamp is out 20 s into the storm and before the snatch (`lighthouseOutAt < gatherFor`). 2e915c6 moved
+  the lamp out to 23 s, so the plane (taken at 22 s) now goes while the lamp is still faltering. **Jeremy's ruling
+  (2026-09-29): "Overlap is fine".** The check asserts the lamp is out by `lighthouseOutAt` and no longer orders it
+  before the snatch.
 - **Check the other beaches too:** every beach arrival now goes through `beachApproach`. Measure each (lines, boats,
   meadow, birches, stairs island, wood, sleeping) for the same sideways crawl; `journey-pacing-check` passes on the
   crossings it covers, but compare arrival times with 85645e9^.
