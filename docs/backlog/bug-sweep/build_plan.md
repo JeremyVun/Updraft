@@ -127,4 +127,4 @@ pass; `camera-intent-report` shows no new jerks or in-and-out swings in the wood
 Run `npm run check:browser` (item 9) and triage anything new. Re-run `check:mechanics` and `check:audio`: all pass.
 Clear the fixed items from `docs/roadmap.md` (Known issues and Checks), then run the backlog close stage.
 **Gate:** every check group passes on `main`; roadmap current.
-**Status:** not started.
+**Status:** browser group run 2026-09-29: 7 of 8 pass; `start-check` fails for real (boot freeze 533 to 583 ms, from the stairs merge 60767a5), written up in design item 9, waiting on Jeremy's go-ahead to profile. `check:mechanics` and `check:audio` re-runs and the close stage wait until the open items are decided.

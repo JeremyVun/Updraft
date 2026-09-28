@@ -212,6 +212,19 @@ visible change. Merge only after his OK.
 `npm run check:browser` (8 checks, GPU, one at a time) was not run during the docs verification. Run it once the
 branch in item 0 is in, and triage anything that fails the same way.
 
+- **Run (2026-09-29, against `main` at d05f524):** 7 of 8 pass (`shader-browser`, `touch-viewport`,
+  `chapter-view-browser`, `context-loss`, `progress`, `frame-time-browser`, `journey-view`). **`start-check` fails:
+  "startup blocked the veil for 533 ms"** (limit `BOOT_MAX_MS` 500): the loading veil freezes for over half a second
+  while the game boots. Real, not the harness: 533 and 550 ms on the dev server, 550 to 583 ms on a production build
+  (`vite preview`), on a quiet machine.
+- **Bisected on production builds:** 250 to 300 ms up to the child rebuild (fea312e, 2026-09-28 00:07); **517 to 533
+  ms from the stairs merge (60767a5, 2026-09-28 02:58)**; 533 to 567 ms after. The stairs added a `CloudStairs` world
+  built at startup and about 150 lines of cloud-deck GLSL in `atmosphere.ts`, which every shader includes, so either
+  the boot build or the extra shader compile is the likely cost.
+- **For Jeremy:** finding which one needs a boot profile (`tools/boot-profile.mjs`), which is performance measuring,
+  so it waits for his go-ahead. The fix would then be to defer that work past the veil (build the stairs when the
+  journey nears them, or compile the cloud-deck variant only where it is drawn).
+
 ## 10. Stale comments
 
 `src/traveller/body.ts:47` ("coat to the knee ... wellingtons") and `src/traveller/child/garments.ts:345`
