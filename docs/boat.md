@@ -48,3 +48,13 @@ for the whole game.
   Traced per frame: no foot inside the side, both clear its top by 0.06 to 0.3 m. Checks: typecheck, `boat-check`,
   `boat-mooring-check`, `sky-mirror-logic-check`, `flock-flight-check`. The boarding still lifts the lead foot about
   0.6 m over the side, more hop than step (`boarding.stepArc`, `railHeight`); untouched.
+- Beach landings (2026-09-28). Jeremy: "everytime the boat hits land, it instantly stops and the child instantly
+  starts walking out of it. It doesn't look very polished." The hull went from about 4.5 m/s to rest in one frame,
+  and on that frame the island chapter dropped the child 0.46 m off the thwart and walked them out through the side.
+  Now the way comes off over the last metres (`sail.beachEase`, read up to `beachLook` ahead of the bow), the
+  forefoot touches at `beachTouch` and the keel slides on up the sand (`beachGrip`) before it rests, about 2.5 s in
+  all; only then is it `grounded`. Each beach chapter calls `Traveller.stepAshore`: the child sits a moment
+  (`boarding.ashorePause`), then takes the jetty's four-beat step out over the higher gunwale onto the sand beside the
+  bow, standing nearer the keel than at a jetty (`ashoreInside`) so a boot does not come through the round bilge. A
+  walk the chapter asks for waits until their feet are down. Chapter starts and restored saves, with the child
+  already ashore, are unchanged. `boat-ground-check` passes (its fixture gained the storm's `lines`).

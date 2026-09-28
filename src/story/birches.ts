@@ -74,7 +74,7 @@ export class BirchesChapter implements Chapter {
     plane.homeRadius = 28;
     /** It never flies over this island, whatever the player does with the air: everything here is on the ground. */
     cast.cygnet.mayFly = false;
-    child.dismount();
+    child.stepAshore(cast.boat);
     child.walkTo(BIRCHES_LANDING.x - 1, BIRCHES_LANDING.y - 9, false, () => this.to('wonder'), 0.9);
   }
 

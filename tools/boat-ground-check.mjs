@@ -29,7 +29,7 @@ function fixture(gust = 0) {
     handPosition(out) { return out.copy(this.position).add(new THREE.Vector3(0, 1, 0)); }, reach() {}, wave() {} };
   const plane = { held: true, position: new THREE.Vector3(), hold() {}, launch(p) { this.position.copy(p); this.held = false; }, depart() {} };
   return { wind, boat, child, plane, cygnet: { carried: true, mind: { perform() {}, startle() {} }, eye: out => out.copy(child.position) },
-    sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null } };
+    sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null }, lines: { gust() {} } };
 }
 // Read the rendered mesh, including triangle centres, independently of collision support points.
 const geo = fixture().boat.group.children[0].geometry.attributes.position;

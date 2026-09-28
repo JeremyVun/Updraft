@@ -417,6 +417,14 @@ export const tuning = {
     /** Where the foot comes down: at least this far inside the deck's edge and back from either end of it. */
     alightEdge: 0.4,
     alightEnd: 0.6,
+    /**
+     * Run up on a beach, they sit a moment before getting up, stand nearer the keel than at a jetty (the round bilge
+     * leaves less floor at the side), and step down this far out from the keel, this far forward.
+     */
+    ashorePause: 0.8,
+    ashoreInside: 0.16,
+    ashoreOut: 1.25,
+    ashoreAhead: 0.25,
   },
   cygnetCalls: {
     /** Three cream strokes accompany the cygnet's voice throughout the journey. */
@@ -1438,6 +1446,15 @@ export const tuning = {
     /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
     gathers: 0.5,
     carries: 0.45,
+    /**
+     * Running onto a beach: the way comes off over the last few metres (`beachEase` units per second squared, read up
+     * to `beachLook` ahead of the bow) so the forefoot touches at `beachTouch`, then the keel slides up the sand
+     * losing `beachGrip` a second until it rests.
+     */
+    beachLook: 9,
+    beachEase: 1.4,
+    beachTouch: 1.5,
+    beachGrip: 2.6,
   },
   /** Move the shared key light continuously from the sunset to the moon. */
   sky: {

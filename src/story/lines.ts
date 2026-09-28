@@ -47,7 +47,7 @@ export class LinesChapter implements Chapter {
     washingPassage.active = null;
     family.set(0, 0); door.open = 0;
     plane.homeRadius = 20;
-    child.dismount(); child.stroll = 1;
+    child.stepAshore(boat); child.stroll = 1;
     cygnet.mayFly = false;
     cygnet.stay = false;
     cygnet.errand = null;

@@ -69,7 +69,7 @@ export class LittleBoatsChapter implements Chapter {
     c.stowPlane(true, true);
     p.hold(c);
     p.visible = true;
-    c.dismount();
+    c.stepAshore(cast.boat);
     this.bankAt(3, this.bank);
     const arrive = () =>
       c.walkTo(
