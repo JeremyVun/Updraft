@@ -113,9 +113,10 @@ for (const fps of [30, 60, 120]) {
     f.cast.wind.push = 1;
     let minSpeed = Infinity, maxDeceleration = 0;
     for (let frame = 0; frame < fps * 180 && !f.chapter.done; frame++) {
-      const previousSpeed = f.room.toys[0].speed;
+      const previousSpeed = f.room.toys[0].speed, sailing = f.chapter.beat === 'sailing';
       f.step();
-      if (f.chapter.beat !== 'sailing' || f.room.progress < (restored ?? 3) + 3) continue;
+      // The toy reaching the outlet often ends sailing, so that frame counts too.
+      if (!sailing || f.room.progress < (restored ?? 3) + 3) continue;
       const speed = f.room.toys[0].speed;
       minSpeed = Math.min(minSpeed, speed);
       maxDeceleration = Math.max(maxDeceleration, (previousSpeed - speed) * fps);

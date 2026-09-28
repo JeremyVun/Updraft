@@ -118,6 +118,7 @@ const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { HomeChapter } = await import('../src/story/home.ts');
 const { LAST_HILL } = await import('../src/world/heightfield.ts');
+let reunionClosest = Infinity;
 for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (const arriving of [false, true]) {
   seed = startSeed;
   const air = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -168,6 +169,7 @@ for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (co
   assert(chapter.wentOn && joined, 'reunion failed');
   assert(peak < 15, 'cygnet surged');
   assert(minNorth > 0, 'cygnet turned back');
-  assert(closest > 1.8, 'adult crossed through the cygnet');
+  assert(closest > 1.8, `adult crossed through the cygnet: ${closest.toFixed(2)} m at ${fps} fps, seed ${startSeed}${arriving ? ', arriving' : ''}`);
+  reunionClosest = Math.min(reunionClosest, closest);
 }
-console.log('18 full reunion cases passed: the cygnet joins, adults leave room, and the child continues.');
+console.log(`18 full reunion cases passed: the cygnet joins, adults leave room (closest ${reunionClosest.toFixed(2)} m), and the child continues.`);

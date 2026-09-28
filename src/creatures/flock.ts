@@ -91,6 +91,7 @@ interface Bird {
 
 const tmp = new THREE.Vector3();
 const tmp2 = new THREE.Vector3();
+const miss = new THREE.Vector3();
 const tmp4 = new THREE.Vector4();
 
 /**
@@ -619,8 +620,14 @@ export class SwanFlock {
     const dx = to.x - b.at.x, dz = to.z - b.at.z;
     const along = dx * this.dir.x + dz * this.dir.z;
     const across = dx * this.dir.z - dz * this.dir.x;
+    let lift = 0, aside = 0;
+    if (this.companion) {
+      lift = this.roomTo(b, this.companion, this.companionVelocity.x, this.companionVelocity.z, true);
+      // Climbing is too slow to clear the small one while it too climbs into its place, so they bank away from it as well.
+      aside = (Math.abs(lift) / f.avoidRise) * f.companionAside * (miss.x * this.dir.z - miss.z * this.dir.x < 0 ? -1 : 1);
+    }
     const forward = THREE.MathUtils.clamp(this.speed + along * f.forwardGain, this.speed * f.slow, this.speed * f.catchUp);
-    const side = THREE.MathUtils.clamp(across * f.sideGain, -f.sideSpeed, f.sideSpeed);
+    const side = THREE.MathUtils.clamp(across * f.sideGain, -f.sideSpeed, f.sideSpeed) + aside;
     const yaw = Math.atan2(this.dir.x * forward + this.dir.z * side, this.dir.z * forward - this.dir.x * side);
     const turn = THREE.MathUtils.clamp(wrapAngle(yaw - b.yaw) * f.response, -f.turnRate, f.turnRate);
     const speed = Math.min(this.speed * f.catchUp, Math.hypot(forward, side));
@@ -630,8 +637,7 @@ export class SwanFlock {
       if (other === b || other.fade <= 0) continue;
       room += this.roomTo(b, other.at, Math.sin(other.yaw) * other.speed, Math.cos(other.yaw) * other.speed, b.seed > other.seed);
     }
-    if (this.companion) room += this.roomTo(b, this.companion, this.companionVelocity.x, this.companionVelocity.z, true);
-    const rise = THREE.MathUtils.clamp(this.climb + (to.y - b.at.y) * f.riseGain + room, -f.sinkSpeed, f.riseSpeed);
+    const rise = THREE.MathUtils.clamp(this.climb + (to.y - b.at.y) * f.riseGain + room + lift, -f.sinkSpeed, f.riseSpeed);
     b.rise += THREE.MathUtils.clamp((rise - b.rise) * f.response, -f.acceleration, f.acceleration) * dt;
     b.yaw += turn * dt;
     b.at.x += Math.sin(b.yaw) * b.speed * dt;
@@ -648,7 +654,7 @@ export class SwanFlock {
     vz = Math.cos(b.yaw) * b.speed - vz;
     const near = THREE.MathUtils.clamp(-(dx * vx + dz * vz) / Math.max(vx * vx + vz * vz, 1e-6), 0, f.avoidAhead);
     const dy = b.at.y - at.y;
-    const gap = Math.hypot(dx + vx * near, dy, dz + vz * near);
+    const gap = Math.hypot(miss.x = dx + vx * near, miss.y = dy, miss.z = dz + vz * near);
     return gap < f.avoidRadius ? (dy > 0 || (dy === 0 && above) ? 1 : -1) * (1 - gap / f.avoidRadius) * f.avoidRise : 0;
   }
 
