@@ -177,6 +177,7 @@ export class Traveller {
   private readonly gaze = { yaw: 0, pitch: 0, w: 0 };
   private readonly straps = new Glide();
   private readonly lap = new Glide();
+  private onGround = 1;
   /** How far the held paper lies in the lap instead of standing in the mitten. */
   private lapPaper = 0;
   private pickupT = Infinity;
@@ -1207,6 +1208,8 @@ export class Traveller {
     P.bend = bend;
     P.rise = rise;
     P.sit = sit;
+    this.onGround = damp(this.onGround, this.riding ? 0 : 1, 4, h);
+    P.lap = sit * this.onGround;
     P.kneel = kneel;
     P.swing = this.swing;
     P.kick = this.kick;
@@ -1323,6 +1326,7 @@ export class Traveller {
     const lerp = THREE.MathUtils.lerp;
     P.lie = w;
     P.sit *= 1 - w;
+    P.lap *= 1 - w;
     P.lean = lerp(P.lean, 0.06, w);
     P.bend *= 1 - w;
     P.twist *= 1 - w;
