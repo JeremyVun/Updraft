@@ -50,8 +50,8 @@ try {
     const opening = fixture({ gust: 26, charge: 1 });
     const later = fixture({ startingIsland: false, gust: 26, charge: 1 });
     for (const name of ['gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
-      check(Math.abs(20 * Math.log10(later.sound[name].gain.value / opening.sound[name].gain.value) + 3) < 1e-9,
-        `${name}: player wind is 3 dB softer after departure`);
+      check(later.sound[name].gain.value === opening.sound[name].gain.value,
+        `${name}: player wind is the same level after departure`);
     }
     for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain']) {
       check(later.sound[name].gain.value === opening.sound[name].gain.value, `${name}: ambient level is unchanged`);
