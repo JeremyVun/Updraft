@@ -176,6 +176,9 @@ export class Traveller {
   /** Where an action wants the head to look, in the body's frame, overriding the gaze by `w`. */
   private readonly gaze = { yaw: 0, pitch: 0, w: 0 };
   private readonly straps = new Glide();
+  private readonly lap = new Glide();
+  /** How far the held paper lies in the lap instead of standing in the mitten. */
+  private lapPaper = 0;
   private pickupT = Infinity;
   private stooped = 0;
   private readonly pickupAt = new THREE.Vector3();
@@ -343,6 +346,7 @@ export class Traveller {
   private readonly paperLocal = new THREE.Quaternion();
   private readonly paperStowed = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -0.18, 'ZYX'));
   private readonly paperHand = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0, -Math.PI / 2, 'YXZ'));
+  private readonly paperLap = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.14, -0.12, 0.1, 'YXZ'));
 
   /** The paper's grip, either in the mitten or against the outside of the bag. */
   handPosition(out: THREE.Vector3): THREE.Vector3 {
@@ -362,7 +366,7 @@ export class Traveller {
   planeQuaternion(out: THREE.Quaternion): THREE.Quaternion {
     this.rig.root.updateMatrixWorld(true);
     /** Keep the wing outside the hood through the wind-up; the glider levels only after release. */
-    this.paperLocal.copy(this.paperHand).slerp(this.paperStowed, this.stowed);
+    this.paperLocal.copy(this.paperHand).slerp(this.paperLap, this.lapPaper).slerp(this.paperStowed, this.stowed);
     return this.rig.body.getWorldQuaternion(out).multiply(this.paperLocal);
   }
 
@@ -1094,6 +1098,23 @@ export class Traveller {
       L.out = lerp(L.out, 0.58, carry);
       L.elbow = lerp(L.elbow, 0.45, carry);
       L.twist = lerp(L.twist, 0, carry);
+    }
+    /** Sat on the ground, the hands come in to the lap: round the paper if they have it, otherwise on the knees. */
+    const onGround = this.sitting && !this.riding && armsFree === 1 && this.swing < 0.01 && !this.armsFull
+      && this.reachWant[0] === 0 && this.reachWant[1] === 0;
+    const lap = this.lap.step(onGround ? 1 : 0, 0.6, dt);
+    this.lapPaper = lap * carry;
+    if (lap > 0.001) {
+      const [l, r] = this.grips;
+      l.w = r.w = lap;
+      l.world = r.world = false;
+      l.at.set(lerp(0.2, 0.07, carry), 0.24, lerp(0.42, 0.44, carry));
+      r.at.set(lerp(0.2, 0.2, carry), 0.25, lerp(0.42, 0.5, carry));
+      l.elbow.set(0.45, -1, -0.2);
+      r.elbow.set(0.45, -1, -0.2);
+      bend += 0.12 * lap;
+      headDown += 0.12 * lap;
+      if (this.gaze.w === 0 && !this.lookAt) this.gazeAt(0.1, 0.32, 0.9 * this.lapPaper);
     }
     /** Standing a while, whatever hand is free holds a strap of the bag at their chest. */
     const handsFree = !a && !this.sitting && this.presenting < 0.01 && this.swing < 0.01 && !this.armsFull

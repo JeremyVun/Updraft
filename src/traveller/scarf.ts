@@ -328,9 +328,12 @@ export class Scarf {
             this.dir.subVectors(b, a);
             const len = this.dir.length() || 1e-5;
             b.copy(a).addScaledVector(this.dir, e.segment / len);
-            /** Pushed aside by the child or the ground, it is moved, not thrown: the push takes its last position along. */
+            /**
+             * Pushed aside by the child or the ground, it is moved, not thrown: the push takes its last position along.
+             * Off the child only on the last pass, or the pull back between passes counts as a fling into the coat.
+             */
             this.pushed.copy(b);
-            if (i > 1) keepOut(b);
+            if (i > 1 && it === 1) keepOut(b);
             if (b.y < ground + 0.04) b.y = ground + 0.04;
             e.prev[i].add(this.pushed.subVectors(b, this.pushed));
           }
