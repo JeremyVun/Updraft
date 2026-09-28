@@ -216,7 +216,16 @@ light. Courage passes back and forth between them; the stairs are where it start
   `journey-rooms.ts`). On the sea the bank's back comes to meet the boat and it sails out of it. Under sail the
   pointer lands about at the boom (`POINTER_OVER_HULL`), so strokes over the hull and across the sail both fill it;
   while the lens is below the sail on their faces the kite draws them on (`kiteDraws`).
-- Over the cloud the boat rides at a fixed height (`RIDE`); `Chapter.kiteTow` ties the stairs' departure kite to the
+- The sea of cloud's top (`StairsCloud` in `stairs-cloud.ts`) is drawn on world-anchored nested grids
+  (`cloud-grid.ts`), so far heaps never jump as the lens moves; its lobes are baked into tiling textures at load
+  (`cloud-lobes.ts`) and drift on the air (`tuning.stairs.cloudDrift`), with a veil of wisps streaming over the tops.
+  The towers along the way are raymarched cumulus (`cloud-towers.ts`), placed off the route and the tower gate;
+  `CloudTowers.keepOut` keeps the lens out of them. The hull parts the tops in a trough that fills in behind, with a
+  breath of vapour off the stern (`stairs-wake.ts`, `cloud-vapour.ts`), never a furrow with lips. `surfaceAt(x, z)`
+  gives the top as drawn: the hull rides the billows on it and the lens keeps over it.
+- Coming out on top the deck thins away over `tuning.stairs.crown` metres above its top (`uCloudCrown`), clearing
+  over seven seconds once they are out, so the lens rises out of mist rather than through a ceiling.
+- Over the cloud the boat rides the billows; `Chapter.kiteTow` ties the stairs' departure kite to the
   bow and flies it ahead; `Chapter.cameraCut` lets the story cut the camera where nothing can be seen (the swap to
   sea level in the fog).
 - Sound: `src/audio/stairs-sound.ts`, `stairs-score.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed);
@@ -248,6 +257,14 @@ penrose stairs model is sort of see through (it looks buggy)."
 - Jeremy asked whether the inner banisters were missing. Shown the loop with rails on the inside of the ring as well,
   he chose none, and none of the posts at its inside corners either (`buildLanding`'s `ring`): a lone post with no
   rail read as a banister never finished, and without them the inside is one unbroken run of steps round the hole.
+
+## Status (2026-09-28, the sail over the cloud reworked, branch `cloud-sail`)
+
+- Jeremy's 09-28 list, all addressed: the kite draws them (no wind needed); the way wanders; the lens is mostly wide;
+  the pair look out from the gunwale; the cloud is soft cumulus with towers, drifting, with a vapour trail and a low
+  breath of air for its sound; no pop-in at range; the boat sails in to them out of the sun and lies alongside;
+  coming out on top clears slowly.
+- Awaiting Jeremy's playtest before it goes to `main`; then the room goes into the chapter select.
 
 ## Status (2026-09-28, on main)
 
