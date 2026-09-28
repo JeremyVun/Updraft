@@ -962,9 +962,10 @@ export class StairsChapter implements Chapter {
     // Shifted toward the starboard side on the thwart and turned to it.
     const seat = this.onRail(-0.25, 0, this.rail[2]).lerp(boat.seat(this.tmp), 1 - 0.32 * turned);
     c.ride(seat, boat.yaw - 0.55 * turned, boat.roll, boat.pitch);
-    // Out past the bow on the sunward side, a little above the tops: where the cloud goes on and the sun is going.
-    const look = boat.yaw - 0.4;
-    this.outThere.set(boat.position.x + Math.sin(look) * 40, boat.position.y + 4, boat.position.z + Math.cos(look) * 40);
+    // Toward the low sun, a little above the tops, wherever the wander has the bow: where it is all going.
+    const sun = atmo.uniforms.uSunDir.value;
+    const flat = Math.hypot(sun.x, sun.z) || 1;
+    this.outThere.set(boat.position.x + sun.x / flat * 40, boat.position.y + 4, boat.position.z + sun.z / flat * 40);
     c.lean = 0.14 * turned;
     if (this.perched) {
       k.perch(this.onRail(0.25, 0.08, this.tmp2), boat.yaw - 0.9);
