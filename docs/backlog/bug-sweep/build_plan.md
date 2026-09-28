@@ -21,6 +21,9 @@ The design is `design.md` in this folder; item numbers below are its sections. R
   For now, lets work in a worktree". So all work happens on the `bug-sweep` branch in `/private/tmp/updraft-bugsweep`;
   for each item, show Jeremy the evidence that the bug is real on current `main` and the exact proposed change, and
   merge nothing to `main` until he approves it. Open stills in Preview for him.
+- **Jeremy (2026-09-29), for the remaining items:** "ok proceed. Update the backlog item with the status of each once
+  done. I will review it later". Each remaining phase ends with its status, evidence and still paths written into its
+  **Status** line (and the design item), ready for his review; nothing merges until he has reviewed it.
 
 ## Phase 0: baseline
 
