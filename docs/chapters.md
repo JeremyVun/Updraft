@@ -488,7 +488,7 @@ Rulings:
 - The cottage faces the approach with a slight turn, echoing the drawing without looking arranged for it.
 - The camera stays at the crest for the goodbye: no following, dolly or crane.
 - No figure in the doorway. Children do not light fireplaces: the smoke starts after nightfall.
-- No reward bells at the summit and no phrase as the family flies away.
+- No bells at the summit: no phrase when the family arrives, no reward bells at the updraft, none as they fly away.
 - The closing screen is the one line and Play again: no border on the button, no credits roll.
 
 Knobs: `tuning.homeReveal`, `homeLight`, `homeApproach`, `homeWashing`, `homeGrass`, `summit`, `swanArrival`,

@@ -164,8 +164,6 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   comfort: [[62, 1], [69, 2]],
   delight: [[81, 1], [86, 1], [90, 2]],
   restored: [[62, 1], [66, 1], [69, 1], [74, 1], [78, 1], [81, 1], [86, 3]],
-  /** High and thin and going away from you, the way a skein sounds when you look up too late. */
-  skein: [[86, 2], [83, 2], [81, 3], [78, 2], [76, 4]],
   /** Keep descending into the lower register; the final low D belongs to contact with the ground. */
   fallen: [[81, 2], [76, 2], [71, 3], [66, 3], [57, 3]],
   landed: [[50, 1]],
@@ -188,7 +186,7 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   /** The cygnet's own small question, not a phrase. */
   puzzled: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, skein: 0.34, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
