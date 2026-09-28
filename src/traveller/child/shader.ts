@@ -31,7 +31,7 @@ float knit(vec2 s, float scale) {
   vec2 k = vec2(s.x * 90.0 * scale, s.y * 12.0);
   float column = abs(fract(k.y) - 0.5) * 2.0;
   float vee = fract(k.x + column * 0.9);
-  float st = smoothstep(0.0, 0.35, vee) * smoothstep(1.0, 0.65, vee);
+  float st = smoothstep(0.0, 0.35, vee) * (1.0 - smoothstep(0.65, 1.0, vee));
   float groove = smoothstep(0.75, 1.0, column);
   float detail = 1.0 - clamp(length(fwidth(k)) * 0.9 - 0.3, 0.0, 1.0);
   return mix(0.5, st * (1.0 - groove * 0.6), detail);
@@ -58,7 +58,7 @@ void main() {
   if (mat == ${MAT.coat} && position.y < 1.05 && uFlutter > 0.0) {
     float a = atan(position.x, position.z);
     float lee = max(0.0, dot(normalize(vec3(position.x, 0.0, position.z)), uFlow));
-    float low = smoothstep(1.07, 0.6, position.y);
+    float low = 1.0 - smoothstep(0.6, 1.07, position.y);
     float wave = sin(uTime * 9.0 + a * 7.0 - position.y * 9.0) + 0.5 * sin(uTime * 13.0 - a * 11.0);
     transformed += normal * wave * low * low * uFlutter * (0.006 + 0.016 * lee);
   }
@@ -162,7 +162,7 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   float eye = fill(ellipse(e, vec2(0.0495, 0.061 * open + 0.001))) * smoothstep(0.05, 0.3, open);
   float lid = fill(abs(e.y + 0.0207 - 3.04 * e.x * e.x) - 0.0052) * step(abs(e.x), 0.053) * (1.0 - open);
   /** Warm brown low in the eye, where the light comes through, so it is an eye and not a bead. */
-  vec3 iris = mix(uEye, uBrow * 1.25, 0.8 * smoothstep(0.0, -0.053, e.y) * smoothstep(0.046, 0.023, length(e * vec2(1.0, 0.8))));
+  vec3 iris = mix(uEye, uBrow * 1.25, 0.8 * (1.0 - smoothstep(-0.053, 0.0, e.y)) * (1.0 - smoothstep(0.023, 0.046, length(e * vec2(1.0, 0.8)))));
   alb = mix(alb, mix(uEye, iris, open), max(eye, lid));
   /** One soft glint, high on the outer side, which is what keeps a big dark eye from reading as a hole. */
   vec2 g = vec2(e.x * sign(p.x), e.y);
@@ -226,8 +226,8 @@ void main() {
     fuzz = 0.45;
   } else if (m == ${MAT.boot}) {
     /** Worn matte leather: scuffed paler over the toe and heel and along the creases at the ankle, dark at the sole. */
-    float scuff = smoothstep(0.55, 0.85, vnoise3(vRest * 16.0)) * (0.5 + 0.5 * smoothstep(0.1, 0.02, vRest.y));
-    float crease = smoothstep(0.35, 0.5, vSurf.x) * smoothstep(0.62, 0.5, vSurf.x) * smoothstep(0.4, 0.8, vnoise3(vRest * vec3(40.0, 8.0, 40.0)));
+    float scuff = smoothstep(0.55, 0.85, vnoise3(vRest * 16.0)) * (0.5 + 0.5 * (1.0 - smoothstep(0.02, 0.1, vRest.y)));
+    float crease = smoothstep(0.35, 0.5, vSurf.x) * (1.0 - smoothstep(0.5, 0.62, vSurf.x)) * smoothstep(0.4, 0.8, vnoise3(vRest * vec3(40.0, 8.0, 40.0)));
     alb = uBoot * (0.88 + 0.16 * blotch + 0.3 * scuff - 0.15 * crease) * mix(1.0, 0.5, k);
     gloss = 0.04 * (1.0 - k);
     fuzz = 0.3;

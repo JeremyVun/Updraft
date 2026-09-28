@@ -1,7 +1,7 @@
 // Load one historical module against unchanged local dependencies for a bounded refactor-parity check.
 import { execFileSync } from 'node:child_process';
 import { transformSync } from 'rolldown/utils';
-export const baselineRevision = process.env.BASELINE_REF ?? '188c9fa';
+export const baselineRevision = process.env.BASELINE_REF ?? '357177f';
 export async function importBaseline(path) {
   const url = new URL('../../' + path, import.meta.url);
   let source = execFileSync('git', ['show', `${baselineRevision}:${path}`], {encoding:'utf8'});

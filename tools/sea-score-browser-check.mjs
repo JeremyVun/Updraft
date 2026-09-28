@@ -41,7 +41,8 @@ try {
   assert(await page.evaluate(() => __game.sound.seaScore === beforeMute), 'Unmute preserves the same phrase');
   await page.mouse.move(300, 400); await page.mouse.down();
   await page.mouse.move(850, 330, { steps: 18 }); await page.mouse.up();
-  await page.waitForFunction(() => scoreLog.chimes > 0);
+  await page.waitForTimeout(1500);
+  assert.equal(await page.evaluate(() => scoreLog.chimes), 0, 'Gestures ring no cursor chimes on the crossing');
   await page.waitForFunction(() => __game.story.name === 'mirror' && !__game.sound.seaScore, null, { timeout: 240000 });
   await page.waitForFunction(() => lastSeaScore.parts.size === 0, null, { timeout: 10000 });
   const report = await page.evaluate(() => ({ ...scoreLog, stopped: lastSeaScore.stopped,

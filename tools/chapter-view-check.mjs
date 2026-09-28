@@ -18,7 +18,7 @@ for (const fps of [10, 30, 60, 120]) {
     focus: new THREE.Vector3(), pace: .5, done: false,
     update() { newUpdates++; this.shot.target.copy(nextAt); this.focus.copy(nextAt); } };
   const journey = Object.assign(Object.create(Journey.prototype), { name: 'toSleeping', chapter: old,
-    savedPoint: 'entry', cast: {}, make: () => next });
+    savedPoint: 'entry', cast: { child: { openBag() {} } }, make: () => next });
   const rig = new CameraRig(); rig.resize(1280, 800); rig.cut(old.shot);
   const before = rig.camera.position.clone();
   journey.update(1 / fps, 100);
