@@ -294,8 +294,8 @@ export const tuning = {
     partingFills: 8,
     /** How long the breath of vapour off the stern lasts, seconds. */
     wakeLife: 7,
-    /** How fast the low wisps stream across the tops, metres a second, and how far round the eye they go. */
-    wispSpeed: 1.6, wispReach: 170,
+    /** How fast the low wisps stream across the tops, metres a second. */
+    wispSpeed: 1.6,
     /**
      * How many towers of cumulus stand out of the sea of cloud along the way, besides the four either side of it
      * where it runs between them (at most 8), and how finely each is marched.

@@ -2,18 +2,20 @@ import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { glsl, tuning } from '../tuning';
 import { CloudWake } from './stairs-wake';
-import { CloudStreamers } from './cloud-vapour';
+import { VAPOUR_GLSL } from './cloud-vapour';
 import { CloudTowers, TOWER_FOOT } from './cloud-towers';
 import { CloudLobes, LOBES_TEXTURE_GLSL } from './cloud-lobes';
 import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } from './cloud-grid';
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
 
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
-const SHAPE = { heap: 6, tower: 12, big: [2.6, 3.0], mid: [2.0, 1.2], fine: [1.3, 0.4] } as const;
+const SHAPE = { heap: 4, tower: 6, big: [2.6, 2.4], mid: [2.0, 1.2], fine: [1.3, 0.4] } as const;
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
 const TRAIL_POINTS = 16;
+/** How deep the layer the low wisps stream in lies over the tops, metres. */
+const WISP_LAYER = 4;
 /** How many towers of cumulus the top of the cloud makes room for. */
 const FEET = 12;
 
@@ -92,6 +94,9 @@ void main() {
 const TOP_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${NOISE_GRAD_GLSL}
+${VAPOUR_GLSL}
+uniform float uWisps;
+uniform vec2 uWispAir;
 ${LOBES_TEXTURE_GLSL}
 ${CLOUD_GRID_FRAG}
 uniform vec3 uCalmAt;
@@ -169,6 +174,24 @@ void main() {
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
   vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
   col = mix(col, haze, (1.0 - exp(-max(dist - 30.0, 0.0) / 220.0)) * low * 0.6);
+  // Low wisps of vapour stream across the tops on the air: long thin streaks in a layer lying over them, thicker
+  // the longer a sightline runs through it before it reaches the cloud.
+  float veil = 0.0;
+  if (uWisps > 0.0 && vWorld.y < uSurface + ${glsl(WISP_LAYER)}) {
+    // The stretch of the sightline inside the layer, up to where it reaches the cloud here.
+    float above = cameraPosition.y - (uSurface + ${glsl(WISP_LAYER)});
+    float enter = above <= 0.0 ? 0.0 : ray.y < -1e-3 ? above / -ray.y : 1e6;
+    float path = clamp(dist - enter, 0.0, 160.0);
+    vec2 across = vec2(-uWispAir.y, uWispAir.x);
+    for (int i = 0; i < 3; i++) {
+      vec2 q = xz - ray.xz * path * (0.15 + 0.35 * float(i)) - uWispAir * uTime * ${glsl(tuning.stairs.wispSpeed)};
+      vec2 w = vec2(dot(q, uWispAir) / 70.0, dot(q, across) / 9.0);
+      float streak = lobesT(w + 3.1, 0.0, 0.0).x * 0.7 + lobesT(w * vec2(2.3, 1.7) + 8.7, 0.0, 0.0).x * 0.3;
+      veil += smoothstep(0.42, 0.78, streak);
+    }
+    veil = (1.0 - exp(-veil / 3.0 * path * 0.03)) * uWisps;
+  }
+  col = mix(col, vapourLight(vWorld, ray, 0.6), veil * 0.85);
   col = mix(col, vHaze.rgb, vHaze.a);
   col = mix(col, vFog.rgb, vFog.a);
   float edge = mix(1.0, smoothstep(0.0, 0.75, 1.0 - thin + 0.25 * vnoise(xz * 0.9 + uTime * 0.2)), smoothstep(0.35, 0.9, thin));
@@ -642,8 +665,8 @@ export class StairsCloud {
   readonly top: THREE.Mesh;
   readonly belly: THREE.Mesh;
   readonly wake = new CloudWake();
-  /** Low wisps of vapour streaming across the tops; the story may set their `amount` (1 by default). */
-  readonly streamers = new CloudStreamers();
+  /** How much of the low wisps streaming across the tops there is, 0 to 1. */
+  wisps = 1;
   /** Towers of cumulus standing out of the sea along the way. */
   readonly towers = new CloudTowers(CLOUD_ROUTE, TOWER_GATE, new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), CLOUD.top + 1);
   readonly fog = new FogBank();
@@ -651,7 +674,7 @@ export class StairsCloud {
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uSurface: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
@@ -674,18 +697,17 @@ export class StairsCloud {
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
       uDebug: { value: 0 },
+      uWisps: { value: 1 },
+      uWispAir: { value: new THREE.Vector2(1, 0) },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
       uSurface: { value: CLOUD.top },
     };
     this.shape = new TopShape(this.lobes, this.topUniforms.uRoute.value, this.topUniforms.uGate.value, this.topUniforms.uCalmAt.value, this.topUniforms.uFeet.value);
     this.group.add(this.wake.mesh);
-    this.group.add(this.streamers.mesh);
     this.group.add(this.towers.group);
     this.towers.feet(this.topUniforms.uFeet.value);
     const ground = (x: number, z: number) => this.surfaceAt(x, z);
     this.wake.groundAt = ground;
-    this.streamers.groundAt = ground;
-    this.streamers.amount = 1;
     const disc = this.grid.geometry;
     this.top = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.topUniforms },
@@ -759,8 +781,8 @@ export class StairsCloud {
     this.topUniforms.uDrift.value.x -= airX * drift;
     this.topUniforms.uDrift.value.y -= airZ * drift;
     this.wake.setWind(airX * tuning.stairs.wispSpeed * 0.5, airZ * tuning.stairs.wispSpeed * 0.5);
-    this.streamers.setWind(airX, airZ);
-    this.streamers.update(dt, camera.position, this.top.visible && camera.position.y > CLOUD.top + 0.5);
+    this.topUniforms.uWispAir.value.set(airX, airZ);
+    this.topUniforms.uWisps.value = this.wisps;
     this.towers.update(dt, this.top.visible && camera.position.y > CLOUD.top + 0.5);
     this.wake.update(dt);
     this.fog.update(dt, camera.position);
