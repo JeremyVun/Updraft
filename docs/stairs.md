@@ -2,8 +2,9 @@
 
 The room between the birches and the drowned village: a staircase a child would dream about, climbing from a grassy
 island up through a cloud deck into the last sun of the year, then a sail across the top of the cloud and down
-through the fog onto the village's water. It is on `main` and plays end to end (`?chapter=stairs`). It is not yet
-in the chapter select: it needs a still and a name.
+through the fog onto the village's water. It is on `main` and plays end to end (`?chapter=stairs`), and it is in
+the chapter select as "Cloud stairs" (the still: the stair from the grass with its loose flights hanging, captured by
+`tools/chapter-stills.mjs stairs`).
 
 ## Jeremy's words (verbatim)
 
@@ -241,7 +242,5 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 ## Open
 
-- The chapter select: a still and a name for the room, the name for Jeremy to approve; the room must save a
-  checkpoint on entry (today it saves only `flight-n` during the puzzle).
 - The sail's air over the cloud awaits Jeremy's listen in the game.
 - The paper plane in the satchel shows as a bright white triangle on her back.

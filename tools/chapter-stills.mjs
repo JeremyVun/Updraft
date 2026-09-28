@@ -23,6 +23,9 @@ const ROOMS = {
     const p = g.piano.group.position; return [[p.x + 7, h(p.x + 7, p.z + 9) + 2.6, p.z + 9], [p.x - 2, p.y + 0.4, p.z - 6]];` },
   birches: { query: 'chapter=birches', setup: `const { BIRCHES_LANDING: l } = await import('/src/world/birches.ts');
     return [[l.x, h(l.x, l.y - 8) + 4.5, l.y - 8], [l.x + 3, h(l.x + 3, l.y - 34) + 2, l.y - 34]];` },
+  stairs: { query: 'chapter=stairs', setup: `const L = await import('/src/world/stairs-layout.ts');
+    const f = L.STAIRS_LOOK_FROM, t = L.flight(7).landing;
+    return [[f.x + 2, L.STAIRS_GROUND + 1.2, f.z - 4], [t.x, t.y - 2, t.z]];` },
   drowned: { query: 'chapter=drowned' },
   wood: { query: 'chapter=wood', setup: `const p = c.ahead.p; g.embers.blow(c.ahead, 1);
     return [[p.x + 2.2, h(p.x + 2.2, p.z + 4.5) + 1.3, p.z + 4.5], [p.x, p.y + 0.5, p.z]];` },
