@@ -39,7 +39,8 @@ change protects against; merge only on his OK.
 `src/traveller/child/shader.ts`).
 **Gate:** `shader`, `progress-schema`, `chapter-view`, `kite-logic`, `plane-routing`, `journey-pacing`, `wood-logic`
 and the three score browser checks pass; Jeremy has seen the stills and approved.
-**Status:** not started.
+**Status:** done 2026-09-29. Stills identical on Metal and SwiftShader (insurance, not a visible fix); Jeremy: "makes
+  sense to merge this child shader rework". Merged to `main` as 061c2b3.
 
 ## Phase 2: the storm and beach landings (item 1)
 
