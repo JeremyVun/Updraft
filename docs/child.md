@@ -416,3 +416,16 @@ for the dark wedge showing through the side of the hood to go. He approved the r
 - **The rim stays as it was.** A flatter, tapered rim and a hood swelling up into it both read as the rim being
   removed. Neither was wanted.
 - Checked in stills on the stage only (lit from the side via `sun=0,35`, gaze held ahead), not in a level or in motion.
+
+## A lower head (2026-09-28)
+
+Jeremy (verbatim): "can ou also have a look at reducing the neck height / size a little bit as well then? I think it's
+also causing the child model to read a bit too old." Shown the head 0.035 and 0.06 lower: "0.04 lower makes sense as
+well".
+
+- Standing, no bare neck shows; what read as a long neck was the head standing high over the tall two-band scarf. A
+  small child's head sits down on the shoulders.
+- The head (face, hair, hood) is posed `HEAD_SINK` 0.04 below where it is modelled (`skeleton.ts`, applied in
+  `motion.ts`), so everything painted on it keeps its modelled frame; the coat and scarf stay put and the chin sits
+  further into the scarf. The hood's keep-out for the scarf ends and the cygnet (`HOOD_AT` in `body.ts`) moves with it.
+- Checked: every cygnet gate on a build; stills of carrying it in her arms, calling, and looking up (front and side).

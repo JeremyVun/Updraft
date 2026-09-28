@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Rig } from '../body';
-import { ANKLE, BONE, FOREARM, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
+import { ANKLE, BONE, FOREARM, HEAD_SINK, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
 import { HOOD, coatAt, hemY, type CoatSample } from './garments';
 
 /** Where the head turns when it looks up, from the head joint: ear height, a little behind the face's middle. */
@@ -302,6 +302,7 @@ export class ChildMotion {
     neck.rotation.set(pose.headPitch * 0.35 + up * 0.2 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6 + lead, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
     head.rotation.set(pose.headPitch * 0.65 - up * 0.2 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
     head.position.copy(rest[BONE.head]).sub(rest[BONE.neck]);
+    head.position.y -= HEAD_SINK;
     head.position.y += EAR.y * (1 - Math.cos(tipBack)) + EAR.z * Math.sin(tipBack);
     head.position.z += EAR.z * (1 - Math.cos(tipBack)) - EAR.y * Math.sin(tipBack);
 
