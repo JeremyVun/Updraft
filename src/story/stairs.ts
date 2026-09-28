@@ -513,6 +513,7 @@ export class StairsChapter implements Chapter {
     this.mistBank(dt);
     this.loopScenery(dt);
     this.lanternGlow();
+    this.world.cloud.holdOut(this.berthed && this.beat !== 'thin' && this.beat !== 'down' ? this.cast.boat : null);
     this.measureAir(dt);
     this.frame();
   }
