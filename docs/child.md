@@ -430,6 +430,11 @@ the mittens come into the lap (`lap` in `traveller.ts`): round the paper, which 
 or starts any action. The stairs' nest (paper stowed) and the summit (paper in hand) share it. Sheet:
 `/tmp/startpose/start-pose-before-after.png`. The summit is not yet checked in place.
 
+Since the coat was shortened (hem 0.67), sitting on the ground put her thighs through its front. Asked whether that
+was an issue, Jeremy said to fix it. Sat on the ground, the front hem bones now swing up over the thighs (`LAP_DRAPE`
+0.9 in `motion.ts`, weighted by `Pose.lap`). In the boat she sits on a thwart with the shins down and the coat hangs as
+before; lifted there, it jutted out like a tray. Sheet: `/tmp/startpose/seated-hem-before-after.png`.
+
 ## A lower head (2026-09-28)
 
 Jeremy (verbatim): "can ou also have a look at reducing the neck height / size a little bit as well then? I think it's

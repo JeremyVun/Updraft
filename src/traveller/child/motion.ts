@@ -36,6 +36,8 @@ export interface Pose {
   arms: [ArmPose, ArmPose];
   /** 0..1 weights of the leg poses other than standing and walking. */
   sit: number;
+  /** Of `sit`, how much is on the ground with the legs out in front, where the coat has to ride up over the thighs. */
+  lap: number;
   kneel: number;
   swing: number;
   /** On a swing: -1 tucked at the back of the arc to 1 legs out at the front. */
@@ -55,7 +57,7 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
   };
 }
 
@@ -155,6 +157,9 @@ const scratch = (): Scratch => ({
 });
 
 /** Where each hem bone hangs from, its outward axis and its radial direction, in the hips' frame. */
+/** How far the front of the hem swings up onto the lap when sitting, radians. */
+const LAP_DRAPE = 0.9;
+
 const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
   const a = hemAngle(i);
   const radial = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
@@ -508,6 +513,8 @@ export class ChildMotion {
       for (const p of legPts) floor = Math.max(floor, this.hemClear(i, p));
       const drop = pivotY - groundY - 0.035;
       if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
+      /** Sat down, the front of the coat rides up over the thighs and lies on the lap instead of the knees going through it. */
+      floor = Math.max(floor, pose.lap * LAP_DRAPE * Math.max(0, h.radial.z));
       if (a < floor) {
         a = floor;
         this.hemOut[i].x = floor;
