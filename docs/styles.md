@@ -1,120 +1,147 @@
 # Visual language
 
-"Painted golden hour": a small island, a crossing and endless green hills in warm late-afternoon light that sinks to sunset and night, drawn with soft painterly shading, where the wind is the most visible thing on screen.
+"Painted golden hour": small islands, crossings and a warm late-afternoon light that deepens through the journey,
+drawn with soft painterly shading, where the wind is the most visible thing on screen. A dream: shape, colour and
+feel over detail. How each room plays is in `docs/chapters.md`.
 
-- **Light**: a low sun (13°) sits behind and to the left of the island, so the meadow is backlit. Grass tips glow with light passing through them, petals catch warm light, and the far sea glitters toward the sun. Shadows are cool blue-teal, never black. The hills and the tree cast long soft shadows baked from the fixed sun (`src/world/ground.ts`).
-- **Wind is visible everywhere**: grass bends in travelling waves, and flattened grass turns paler and shinier, so gusts read as bright streaks across the field. Petals lift in bursts. The sea ruffles into darker cat's paws under gusts, drawn out along the wind, and the weather runs it: a squall gets the sea up and breaks it into whitecaps (`Chapter.storm`). Cloud shadows drift across the island with the breeze.
-- **Weather grades the world**: a squall takes the warmth out of the light and the daylight with it, so the sunset pinks of the drowned village go to slate on the way to the dark wood, while a night keeps its blue moonlight (`bruise`, `src/world/palette.ts`). The child's yellow coat is then the only warm thing left in frame. The boat rolls, pitches and drives harder on a running sea.
-- **Grass**: dense and slightly chunkier than real, so it reads at game distance. Deep green at the root, warm yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into short, lighter tufts rather than ending in a hedge.
-- **The tree**: one broad tree on the ridge is the landmark. Its canopy is made of small leaf cards shaded as soft spheres, dark inside and warm on the sunlit side, and it sways with the live wind.
+- **Light**: a low sun behind and to the left of the still island, so the meadow is backlit. Grass tips glow with
+  light passing through them, petals catch warm light, the far sea glitters toward the sun. Shadows are cool
+  blue-teal, never black. Hills and trees cast long soft shadows baked from the fixed sun (`src/world/ground.ts`).
+- **Wind is visible everywhere**: grass bends in travelling waves, and flattened grass turns paler and shinier, so
+  gusts read as bright streaks. Petals lift in bursts. The sea ruffles into darker cat's paws under gusts, drawn
+  out along the wind; the weather runs the sea, and a squall breaks it into whitecaps (`Chapter.storm`). Cloud
+  shadows drift across the land with the breeze.
+- **Weather grades the world**: a squall takes the warmth out of the light, so the drowned village's sunset pinks
+  go to slate on the way to the dark wood, while a night keeps its blue moonlight (`bruise`,
+  `src/world/palette.ts`). The child's mustard coat is then the only warm thing in frame. The boat rolls, pitches
+  and drives harder on a running sea.
+- **The turn of the year**: the season only deepens, island by island (`season` per chapter, `uSeason`): the grass
+  keeps its loved green but goes over to seed and colder. Light can return without the season reversing: the
+  sleeping island earns its morning, the sky mirror suspends time, and home holds an afternoon until the door.
+- **Grass**: dense and slightly chunkier than real, so it reads at game distance. Deep green at the root, warm
+  yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
+  short, lighter tufts rather than ending in a hedge.
+- **The tree**: one broad tree on the still island's ridge is the landmark. Its canopy is small leaf cards shaded
+  as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind.
 - **Rocks**: rounded, mossy on top, a few clusters near the shore and on the hills.
-- **Petals**: small pastel pink, cream, yellow and a little lilac, with a few glowing pollen specks. They lie hidden in flower patches in the grass and glint as they tumble.
-- **Wind lines**: thin white tapered ribbons that follow the actual flow, fade in and out, and curl as they die, in the spirit of *The Wind Waker*. They appear along the player's gestures, spiral around an updraft, and occasionally trace a strong natural gust.
-- **The swirl**: circling the cursor lays a leading turn into the air, with detached, fading pieces rising above it. It stretches and disperses rather than stacking complete hoops. The cygnet and the wrapped scarf trunk use the same invitation, giving way to the player's real updraft.
-- **Wind invitations**: one ivory gust crosses the object that needs wind, with unequal trailing strands curling apart. The same effect sweeps sideways, lifts a scarf loop or pulls a bow outward. A soft cool edge preserves contrast on pale cloth, and a minimum light level keeps air visible in the dark wood. Local gestures suppress the demonstration; it returns after inactivity. Invitations never advance a puzzle.
-- **Sea**: turquoise over a sandy seabed glimpsed through the shallows, deep blue further out. Broken waves roll in as lines of lacy foam, run up the beach as a thin sheet and slide back, leaving wet sand that dries. Sun glitter twinkles toward the sun; the land, the boat and the child are mirrored, blurred by ripples. In the still world it lies glassy and grey.
-- **Haze and the archipelago**: distance fades toward a sky colour that is warm toward the sun and cooler away from it. The other islands of the archipelago are grey, lifeless silhouettes in that haze.
-- **First crossing**: preserve the original clear light while rounding the still island and looking back. As the farewell camera releases and the boat closes from 330 to 270 metres of the Lines berth, ease into Birches' continuous distance haze. Washing and grass resolve on the final approach. `tuning.world.linesCrossingHaze` sets its strength; `linesHazeFrom/To` place the transition.
-- **Meadow approach**: slightly stronger shared distance haze softens the bare far bank while nearby grass and the arrival beach remain readable. `tuning.world.meadowCrossingHaze` controls the crossing; the meadow's existing haze eases in after landing.
-- **Coming home**: the boat curves offshore before turning into the jetty, with a low seaward camera arc toward the waiting lantern. The entire home landscape shares an approach haze depth, so a camera-centred fog sphere cannot cut an oval into the hillside. Distant terrain carries grass colour and fine tuft shading beyond the blade tiles. Haze thins from 150 to 45 metres before the berth, then clears over the jetty walk; the boat and child retain ordinary foreground fog. Controls live in `tuning.homeApproach`; the cottage stays hidden beyond the crest.
-- **Departure kite**: the same ruled-paper diamond, faded red foot and bow tail marks every boat departure. One kite belongs to the current room; arrival beaches and home have none. It answers the wind without requiring interaction. Preserve the door reveal on Lines, the final bend among the little boats, the opening beyond the wood and the departure after the sleeping island reunion. The mirror keeps its landing-stage kite visible during star play; the completed constellation still controls the boat’s final approach.
-- **The boat**: a little clinker-built rowboat a child would dream of, after the concept boat: deep enough that the seated child rides in it with the gunwale at their belly, round and flat-bottomed, sitting flat in the sea, its sheer lifting only a little toward the ends. Six wide strakes of warm varnished wood under a cream rubbing strake hung with three heavy rope swags a side; a thick white post at the stem carrying a brass lantern, dull by day and lit from sunset through the night; a stout dark mast and boom, turned knobs on the transom, a cream rudder and tiller, and a painted pail and a coil of rope on the boards. The laps are drawn by the shader and give way to their average tone when too fine to draw. Inside, the sides shade the low sun, warmed by light off the far planking. The sail is stitched quilt panels with doubled hems and corner patches and soft folds that ease as it fills; the scarf's wool is wound across it in knitted courses, a little sun-faded. `src/traveller/boat/`.
-- **Glider**: warm off-white notebook paper with faint ruled lines and a red margin, glowing when backlit, leaving a faint ribbon from each wingtip.
-- **Creatures**: small, round and slightly oversized so they read from the default camera. Warm brown rabbits (one white) whose long ears glow pink against the sun, plump finches with buff, rosy or yellow breasts, white gulls with grey wings and dark tips, and white, pale yellow and blue butterflies. Soft wrapped light, cool shadows and a warm rim of fur or feathers when backlit. They move in springy, eased arcs (hops squash and stretch, ears lag and flop) and all of them answer the wind: rabbits flatten their ears or bolt, finches burst up as a flock, gulls circle up an updraft, butterflies tumble away and drift back to the flowers. Sheep graze the walled pastures in loose flocks: plump clouds of creamy fleece with black faces and legs, some carrying a farmer's blue or red raddle mark, lambs springing into the air beside their mothers; they bunch with their rumps to a strong wind, trot away from a gust, and lie down together at night.
-- **The still world**: before the first gust everything is grey, dim and quiet: colourless grass, a bare tree, a glassy sea, no animals. Colour returns only where the wind has been.
-- **The hills**: endless rolling pasture in a patchwork of fields, each its own green, gold hay or dark rushes, bounded by grey dry-stone walls with finches on them. Short grazed grass, scattered wildflower heads (buttercup, daisy, clover, violet). One white cottage with a thatched roof and a red door stands below the last hill.
-- **Time and weather**: the walk inland sinks from golden afternoon to a deep orange sunset, then dusk and a cool moonlit night with stars, fireflies and glowing windows. A sun shower may pass: thin streaks catching the low sun, a bright grey veil, wet sheen on the grass. Halfway through the meadow's shower the sun breaks out and a rainbow stands in the rain over the sea ahead of the walk. It is placed there rather than opposite the sun, which at the meadow is behind the walk. At sunset a murmuration of starlings turns over the far hills beside the sun.
-- **Home light**: hold a soft, clear afternoon through the cygnet farewell and unfolding: warm sunlight, cool shadows, restrained gold haze. Frame the low sun above and left of the real cottage, matching the drawing. Hold the flatter paper within the hands' reach, seen over a slightly higher shoulder; its drawn sun and house must both read. The cottage faces the approach with a slight turn: its door and two windows echo the drawing, while a little side remains visible. Begin sunset while the child watches the released plane; darkness and floating fireflies are established by the time the door opens.
-- **The family at home**: one modest washing line behind the cottage's left side repeats the island of lines' blue and red adult garments, with the smaller yellow jumper between them. Reuse their silhouettes and colours at a household scale, with a gentle flutter and fixed pegs. Angle the line slightly away, below the roof and away from the doorway; it belongs in the background, without another staged sleeve-reaching gesture.
-- **The child and the drawing**: the child follows the concept sheet (`assets/art-direction/child-front-concept-v1.png`), remembered rather than detailed: a big soft mustard hood with a rolled rim and a centre seam, the face low inside it under a fringe of a few broad brown locks; a mustard A-line coat to the knee hanging from narrow shoulders in a few soft folds, three brown buttons on a placket; mittens to match; charcoal trousers and round-toed brown wellingtons; a chunky brick-red knitted scarf wrapped twice with two unequal ends; a brown leather bag low on the back that sags round the cygnet. The clothes answer the wind and the child's own movement on springs, not a cloth simulation: the hem swings, flares and ripples on the side the air leaves, the hood lags the head, the bag bumps with each step, the scarf's ends stream. See `docs/child.md`. The paper plane unfolds into a child's crayon drawing on ruled notebook paper: sun, green hills, a dashed wall, the white cottage with a red door and lit windows, a yellow figure with a red scarf, the plane itself.
-- **Sea life**: on the crossing a humpback rolls up out of the open sea in one long slow arc — dark blue-grey back, white water where it breaks the surface, a spout that glows gold against the low sun and drifts away on the wind, and pale flukes streaming water as it dives — while small silver fish leap near the boat and flash in the sun.
-- **The last goodbye**: stay at the hill crest while the child walks down to the cottage. Only pan the gaze toward the house, then onward to the moon and sea for the credits; the camera does not follow the child or crane upward.
-- **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette, faint lens fringe at the corners, fine grain. The page opens through a dim pastel veil, with ivory wind ribbons and a single serif invitation; see the start screen below.
-- **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an updraft charges. A small speaker button in the corner breathes when muted. Graphics quality uses three ascending bars in a matching round button beside sound and fullscreen: one filled bar for Low, two for Medium, three for High. The bars track the rendered world-detail tier as Auto adapts; Auto remains selected in the menu and the tooltip includes its current tier. During loading, bars stay unfilled until the initial automatic level is known. Its custom blue-green menu has compact ivory sans-serif labels and a quiet gold check for Auto, High, Medium or Low; touch devices retain 44px menu rows. The current choice stays in the tooltip and accessible label, without a persistent text label. These shared controls are available on the loading veil and throughout play. The menu supports arrows, first-letter navigation, Enter/Space, Escape and Tab; outside dismissal never starts play or blows wind.
+- **Petals**: small pastel pink, cream, yellow and a little lilac, with a few glowing pollen specks, hidden in
+  flower patches until they tumble.
+- **Wind lines**: thin white tapered ribbons that follow the actual flow, fade in and out, and curl as they die, in
+  the spirit of *The Wind Waker*. They appear along the player's gestures, spiral round an updraft, and sometimes
+  trace a strong natural gust.
+- **The swirl**: circling lays a leading turn into the air, with detached, fading pieces rising above it. It
+  stretches and disperses rather than stacking hoops. The cygnet, the wrapped scarf trunk and the wood's waiting
+  coal use the same invitation, giving way to the player's real updraft.
+- **Wind invitations**: one ivory gust crosses the thing that needs wind, with unequal trailing strands curling
+  apart. The same effect sweeps sideways, lifts a scarf loop or pulls a bow outward. A soft cool edge keeps contrast
+  on pale cloth and a minimum light level keeps it visible in the dark wood.
+- **Sea**: turquoise over a sandy seabed glimpsed through the shallows, deep blue further out. Broken waves roll in
+  as lines of lacy foam, run up the beach as a thin sheet and slide back, leaving wet sand that dries. Sun glitter
+  twinkles toward the sun; the land, the boat and the child are mirrored, blurred by ripples. In the still world it
+  lies glassy and grey.
+- **Haze**: distance fades toward a sky colour that is warm toward the sun and cooler away from it. The next
+  island is never more than a smudge in it.
+- **The departure kite**: a ruled-paper diamond with a faded red foot and a bow tail, one per room, flying beside
+  the boat at every departure; none at arrivals or at home.
+- **The boat**: a little clinker-built boat a child would dream of, after the concept boat
+  (`assets/art-direction/boat-concept-kite-drawn*.png`): deep enough that the seated child rides with the gunwale
+  at her belly, round and flat-bottomed, sitting flat in the sea, its sheer lifting only a little toward the ends. Six wide
+  strakes of warm varnished wood under a cream rubbing strake hung with heavy rope swags; a thick white post at the
+  stem carrying a brass lantern, dull by day and lit from sunset through the night; a stout dark mast and boom,
+  turned knobs on the transom, a cream rudder and tiller, a painted pail and a coil of rope on the boards. The laps
+  are drawn by the shader and fade to their average tone when too fine to draw. The sail is stitched quilt panels
+  with doubled hems, corner patches and soft folds that ease as it fills; after the birches it is the red scarf's
+  wool, knitted courses across it, a little sun-faded. See `docs/boat.md`.
+- **Glider**: warm off-white notebook paper with faint ruled lines and a red margin, glowing when backlit, leaving
+  a faint ribbon from each wingtip. It stays plain paper until it opens into the drawing at the end.
+- **The child**: a little girl, from the concept sheet (`assets/art-direction/child-front-concept-v1.png`),
+  remembered rather than detailed. A big soft mustard hood with a rolled rim and a centre seam, her round face low
+  inside it with chubby cheeks, big dark eyes, a button nose and a small smile; a fringe parted in the middle and
+  swept out to her temples, and low pigtails with knitted bobbles; a mustard A-line coat to the knee from narrow
+  shoulders with three brown buttons; mittens to match; charcoal trousers and round-toed brown wellingtons; a
+  chunky brick-red knitted scarf with two unequal ends; a brown leather satchel low on her back. The clothes answer
+  the wind and her movement on springs, not a cloth simulation. See `docs/child.md`.
+- **The drawing**: the paper plane unfolds into a child's crayon drawing on ruled paper: sun, green hills, a dashed
+  wall, the white cottage with a red door and lit windows, a yellow figure with a red scarf, the plane itself.
+- **Creatures**: small, round and slightly oversized so they read from the default camera. Warm brown rabbits (one
+  white) whose long ears glow pink against the sun, plump finches with buff, rosy or yellow breasts, white gulls
+  with grey wings and dark tips, white, pale yellow and blue butterflies, and sheep in loose flocks (creamy fleece,
+  black faces and legs, some with a blue or red raddle mark, lambs springing beside their mothers). Soft wrapped
+  light, cool shadows and a warm rim when backlit. They move in springy, eased arcs and all answer the wind:
+  rabbits flatten their ears or bolt, finches burst up as a flock, gulls circle up an updraft, butterflies tumble
+  away and drift back, sheep bunch rumps to a strong wind.
+- **The swans and the cygnet**: the adults white above and pearl-grey below so they read on a pale sky, necks
+  straight out, black feet trailing, a slow deep beat in a V. The cygnet is a warm pale taupe-grey down that stays
+  pale in shade and at distance, not slate; white shows at its wing edges by the last island. See
+  `docs/cygnet.md`.
+- **The still world**: before the first gust the still island is grey, dim and quiet: colourless grass, a bare
+  tree, a glassy sea, no animals. Colour returns only where the wind has been, and the whole frame warms at once
+  when the island is whole.
+- **The meadow**: rolling pasture in a patchwork of fields, each its own green, gold hay or dark rushes, bounded by
+  painted grey dry-stone lines; short grazed grass and scattered wildflower heads. Asleep and grey until the
+  piano's music wakes it. A sun shower may pass: thin streaks catching the low sun, a bright grey veil, wet sheen
+  on the grass, and a rainbow standing in the rain over the sea ahead. At sunset a murmuration of starlings turns
+  near the sun.
+- **Sea life**: a humpback rolls up out of the open sea in one long slow arc, its spout glowing gold against the
+  low sun; dolphins run with the boat; small silver fish leap and flash.
+- **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette,
+  faint lens fringe at the corners, fine grain.
+- **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an
+  updraft charges. Small round buttons in the corner: a speaker that breathes when muted, fullscreen, and graphics
+  quality as three ascending bars (one filled for Low, two for Medium, three for High) tracking the rendered tier
+  while Auto adapts; bars stay unfilled until the first automatic level is known. Its blue-green menu has compact
+  ivory sans-serif labels and a quiet gold check; touch rows stay 44 px. The controls work on the loading veil and
+  throughout play; the menu takes arrows, first letters, Enter/Space, Escape and Tab, and dismissing it never
+  starts play or blows wind.
 
+## Start screen
 
-## Start screen (2026-09-19)
+Set the mood and invite one click; discovering the wind belongs in the game.
 
-Jeremy approved simplifying the opening after experimenting with cursor gusts and local mist: set the mood
-and invite one click; discovering the wind belongs in the game.
+- Muted sage through the centre, sea blue-teal toward the edges and diffuse straw-gold light above and to the
+  left, with a still vignette and slowly drifting haze; night checkpoints deepen these toward slate and dark
+  green. Pointer movement gently nudges the whole colour field and it settles when the hand stops. No cursor
+  trails, local spotlight or mist following the pointer.
+- A browser-drawn copy of the game's hollow cursor stays responsive during graphics setup. Two or three sparse
+  ambient wind ribbons borrow the game's taper.
+- One centred invitation: "Begin", or "Continue" with a valid checkpoint, in warm ivory italic serif (Iowan /
+  Palatino / Georgia), with a small mouse outline for a fine pointer and a delicate rounded outline on touch. Its
+  opacity breathes gently without disappearing, scaling or bouncing; reduced motion stills it.
+- The word appears after graphics preparation. Click, tap, Enter or Space starts sound and the story, and the veil
+  dissolves over the first real scene; the entering gesture never reaches the wind field. A failed boot offers
+  "Try again". The veil needs no downloaded font, image, audio or graphics context, stays silent, and is removed
+  after the fade.
+- `tools/start-check.mjs` checks entry, audio gating, centring, ambient motion, checkpoint restoration and retry.
 
-- Muted sage through the centre, sea blue-teal toward the edges and diffuse straw-gold light above
-  and to the left, with a stationary vignette and slowly drifting haze. Night checkpoints deepen these
-  colours toward slate and dark green. Pointer movement gently nudges the whole colour field, which settles
-  when the hand stops. No cursor trails, local spotlight or mist following the pointer.
-- A browser-owned SVG version of the game's hollow 26px cursor stays responsive during graphics setup.
-  Two or three sparse ambient wind ribbons borrow the game's taper.
-- One centred invitation: “Begin”, or “Continue” with a valid checkpoint. Warm ivory italic Iowan /
-  Palatino / Georgia serif, with a small mouse outline and filled left button for a fine pointer with
-  hover. Touch uses a delicate rounded button outline instead. Label opacity breathes from .95 to .82
-  over 5.6 seconds, without disappearing, scaling or bouncing. Reduced motion disables the pulse and
-  drift, leaving a still wind motif.
-- Reveal the word after graphics preparation. Click, tap, Enter or Space starts sound and the story, then
-  dissolves the veil over the first real scene. Touch dragging shifts the backdrop without entering.
-  Keep the entering gesture out of the game's wind field, and retain the visible keyboard focus outline.
-- No downloaded font, image, audio or graphics context is needed for the start screen itself. A failed
-  module or graphics boot offers “Try again”. Remove the veil and its animation loop after the fade.
-- Mute, fullscreen and quality work while loading through the lightweight `controls.ts` module. The
-  veil stays silent even when sound is enabled; Begin honours the selected mute state. Control clicks
-  cannot enter the game. Quality changes during graphics preparation queue until warm-up completes.
+## Rooms
 
-`tools/start-check.mjs` checks desktop and phone entry, audio gating, centring, ambient motion, backdrop
-response without cursor trails, reduced motion, checkpoint restoration and boot retry.
-
-The dark wood's embers are abstract light, following Jeremy's approved
-[orb study](../assets/art-direction/wood-ember.png): honey and apricot veils curling around a warm heart,
-softly breathing and yielding to wind. Their small warm motes remain distinct from the cooler fireflies.
-No literal campfire, solid sphere or scattered glowing chips. The heart is in `src/fx/ember-orb.ts`; seven independently moving surfaces in `src/fx/ember-veils.ts` form the wisps.
-
-The forest remains dark, with faint cold moonlight on wet trunks, uneven ground and the travellers' outlines.
-Jeremy's September 20 correction: the earlier near-black floor erased the forest and left no sliver of moonlight.
-Retain enough scattered fill and blue-grey distance to place the characters in the wood between embers.
-Fanning progressively reveals a warmer, fuller patch of the way ahead. Moonlight never supplies the story's
-ember gate. Keep the storm's subdued lightning and the contrast between cold surroundings and warm care.
-
-
-## Sky mirror (2026-09-20)
-
-An uninterrupted skin of water doubles the sunset and clouds beneath the travellers. Keep the room open:
-no ground fog, moon prop or revealed sand road. A little wooden stool, enamel soap bowl and brass hoop
-bring one fragment of childhood into the emptiness. Bubbles have nearly clear centres, shifting rose,
-pearl and blue rims, soft highlights and a slight wobble. They reflect in the same glass as the child.
-
-Fallen lights are small gold starbursts on the surface; captured lights glow inside transparent bubbles;
-returned lights recede into the sky and gain their ordinary reflection below. Their ascent must be visible
-from the child's position. The paper stays visible in hand, on the satchel or flying between discoveries.
-A lamp and distant landing stage give the walk an ending without interrupting the reflected horizon.
-The playable view looks across the bubble's travel, keeping its reflection and the fallen light apart.
-Returned stars gather above the far jetty; thin connecting light and broken ripples across the offshore
-channel make their connection to the boat visible. The completed constellation joins the ripples into
-its approach, shown in a brief wider view before the travellers leave.
-
-## Sleeping island (2026-09-20)
-
-Slate-blue night surrounds a small warm bed. Keep lavender-grey distance and pale moonlit edges;
-nearby mist must leave the cygnet readable. Rounded bedding supports the child, including the seated
-embrace. The paper stays tucked away until the child leaves the bed.
-
-The bed stands on an open grassy terrace. The window holds a cream seam above a steep shoulder, with an
-broad coral ribbon tied at its centre and a loose end beyond the lip. Frame the bird, unreachable end and drop
-together on phone and desktop; retain the opening window before following the glide. The beak contact
-must be visible, including removal of the bird's grass visibility offset while airborne. Its light travels down the
-grass and mist before the wider sky brightens. Morning is golden light and fresh green turf beneath a pearl-blue sky, with cool shadows
-keeping the warmth distinct. The cold island visibly wakes with the child: green follows the light
-down the hill, then spreads beyond the lane across the whole island. Use the local winter palette, not the game's orange sunset played backwards.
-The bedside lamp's light and emissive shade contract as frost reaches the rug; the bedside clock stops.
-A narrow slit of window light briefly reaches the pillow before the bird leaves. The cliff is natural,
-with continuous convex slopes, sparse buried exposures and snow pockets. Never flatten a strip under
-the walking route or cut an inset shelf below the window. The summit curtain remains clear against the sky.
-The route is suggested by short moving wind wisps and the feather's lean. A snowdrift fills a natural notch between rock and the drop; wind exposes the grassy footing.
-The drift reads as snow, not a laid sheet: the wind has scooped and ridged its thick middle, its thin rim breaks into
-patches with turf showing through, faces turned from the moon go blue rather than grey, a few single crystals glint as
-the eye moves, gathered where the crust is polished, and faint spindrift crosses it on the gusts.
-Each stroke of wind lifts powder off the part of the channel it clears, in grains and soft swelling clouds that drift
-downhill and settle when the wind stops; about two strokes open a passage only as wide as the path, between rounded banks.
-Bedroom details cluster around the bed and summit window, leaving the hillside natural. The chapter reaches full winter before its morning transformation.
-
-Short, curved winter blades retain the meadow's wind response. A bounded patch of extra stems near
-the phone camera avoids isolated spikes; lighter roots and quiet, broad ground variation tie the turf
-together. Frost gathers toward tips. Mist has an uneven, continuous boundary, never stacked planes.
-Keep the bedside pair together and follow the child throughout the departure to the boat.
+- **Island of lines**: washing hung so dense the child is small beneath it; ordinary laundry pale linen, the
+  family's garments rich blue, warm red and the child's yellow.
+- **Dark wood**: dark, with faint cold moonlight on wet trunks, uneven ground and the travellers' outlines; never so
+  dark that the forest disappears. The embers are abstract light after the approved study
+  (`assets/art-direction/wood-ember.png`): honey and apricot veils curling round a warm heart, breathing and
+  yielding to wind, with small warm motes distinct from the cooler fireflies (`src/fx/ember-orb.ts` for the heart,
+  `src/fx/ember-veils.ts` for seven independently moving veils). No literal campfire, flame, solid sphere or
+  scattered glowing chips. Waking a coal reveals a warmer patch of the way ahead. Lightning is subdued over land.
+  The floor is sparse fine tufts over mottled leaf mould and moss.
+- **Sky mirror**: an uninterrupted skin of water doubling the sunset and clouds. No ground fog, moon prop or
+  revealed sand road. A little wooden stool, an enamel soap bowl and a brass hoop are the one fragment of
+  childhood. Bubbles have nearly clear centres, shifting rose, pearl and blue rims, soft highlights and a slight
+  wobble, reflected in the same glass as the child. Fallen lights are small gold starbursts on the surface; caught
+  lights glow in their bubbles; returned lights rise into the sky and reflect below. The camera looks across a
+  bubble's travel, keeping bubble, reflection and target apart.
+- **Sleeping island**: slate-blue night round a small warm bed on an open grassy terrace; lavender-grey distance
+  and pale moonlit edges; mist that leaves the cygnet readable and has an uneven, continuous boundary, never stacked
+  planes. The window on the crest holds a cream seam, tied with a broad coral ribbon whose loose end hangs beyond
+  the lip. The hill is natural, with continuous convex slopes and sparse buried rock; never a flattened strip or an
+  inset shelf. Snow reads as snow, not a laid sheet: wind-scooped and ridged in the middle, breaking into patches at
+  the rim, blue on faces turned from the moon, a few glinting crystals, spindrift on gusts; strokes lift powder off
+  in grains and soft clouds. Short curved winter blades keep the meadow's wind response; frost gathers toward
+  tips; bare birches and snowdrops. Morning is golden light and fresh green turf under a pearl-blue sky, the green
+  following the light down the hill, in the island's own winter palette rather than the sunset reversed.
+- **Home**: a soft clear afternoon through the farewell and the drawing, with the low sun above and left of the
+  real cottage as in the drawing; the cottage faces the approach with a slight turn, its door and two windows
+  echoing the drawing. A modest washing line behind its left corner repeats the island of lines' blue, red and
+  yellow at household scale, fluttering gently. Sunset begins as the child watches the plane go; night and
+  floating fireflies are there when the door opens. The last view pans from the crest to the moon and the sea, the
+  horizon on the lower third and stars glinting in the water.

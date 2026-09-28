@@ -1,398 +1,274 @@
 # Audio
 
-`src/audio/audio.ts` owns wind, environment, score, gesture chimes and authored calls. `little-boats-score.ts`
-plays the approved Little Boats composition on its own chapter clock. `sea-score.ts`, `sleeping-score.ts`, `meadow-score.ts`, `birches-score.ts` and `lines-score.ts`
-adapt their approved compositions to story phases. `dream-score.ts` plays the approved Sky Mirror and Drowned Village arrangements from `dream-score-data.ts`. `foley.ts` synthesizes
-physical sounds; `world-foley.ts` maps object motion to them. `environment.ts` derives local habitat and coast
-weights. Feel and distance settings live in `tuning.audio`.
+Everything is synthesised in Web Audio; there are no sample files. `src/audio/audio.ts` (`Soundscape`) owns wind,
+environment, the shared pad, gesture chimes, authored cues and calls, and runs one pass per rendered frame after the
+camera update. Each room with its own composition has a score module that follows story phases, not timers:
+`opening-score.ts`, `lines-score.ts`, `little-boats-score.ts`, `meadow-score.ts`, `birches-score.ts`,
+`stairs-score.ts`, `dream-score.ts` (Drowned Village and Sky Mirror, notes in `dream-score-data.ts`),
+`sleeping-score.ts`, `sea-score.ts` and `summit-score.ts` (the homeward crossing and the Home ending).
+`phrasing.ts` shares scheduling, lookahead, stale-attack skipping and introductory rests among them;
+`arrival-music.ts` owns handoffs between pieces; `gesture-harmony.ts` the chord tones gestures may use.
+`foley.ts` synthesises physical sounds and `world-foley.ts` / `birches-foley.ts` map object motion to them;
+`environment.ts` derives habitat and coast weights; `foghorn.ts` is the Drowned lighthouse horn; `stairs-sound.ts`
+and `stairs-air.ts` are the stairs room's air; `sliced.ts` paces start-up synthesis. The piano's tone is
+`PianoStrings` in `audio.ts`. Feel, level and timing knobs live in `tuning.audio` (plus `tuning.piano` and
+`tuning.storm` where noted).
 
-Approved September 24 Home ending: `tuning.audio.homeEndingSounds = false` disables the ending's `unfold`,
-`release`, `home` and `finale` cues plus paper handling and cottage door sounds. Their implementations remain
-available behind the switch. The accepted Home composition carries the entire ending on a fixed clock. This supersedes the earlier requirement to play the recognition and finale cues.
-`homeMusicDucking = false` also bypasses chapter hush and authored-cue ducking for the Home score, including
-its offshore approach. Its composed dynamics, night shading and arrival fades remain.
+Story code raises cues through `cue()` / `completeObjective()` in `src/story/cues.ts`; `takeCues()` drains the queue
+once per rendered frame. Chapters expose optional score state (`linesScore`, `meadowScore`, `birchesScore`,
+`sleepingScore`, `seaScore`, `stairsAir`, `arrivalMusic`, and so on); `main.ts` copies it into `SoundState` every frame
+and clears it on exit.
 
-The still island's fall (September 26): the island chapter's `openingScore` phase holds the opening on its first
-chord (D) while the skein passes, so the D-major `fallen` phrase always sits in its harmony; the skein itself has no phrase, only the swans' calls. The pad
-then fades to silence over the fall and stays silent through the rescue, leaving the calls, wind and sea. When the child
-carries the bird away, the piece begins again from its first chord (`tuning.audio.openingReturn`). Render the sequence
-with `node tools/opening-fall-render.mjs <out.wav>`.
+## Jeremy's standing rulings
 
-Sleeping's September 23 approved revision continues the bedside melody over changing harmony until frost starts;
-the earlier static held-chord filler was rejected. Its darker journey
-variation adds a low piano pulse and recalls the bedside melody. Climb and summit share one phrase clock
-and voice set; reaching the summit no longer cuts the music. Frost remains silent, and the existing flight
-cue and morning answer retain their timing. See `audio-review.md` for Jeremy's brief and approvals.
+- New music is auditioned as a rendered listening study before it goes into the game. Rendered checks and
+  measurements are never a listening sign-off.
+- The game's style is the detuned drone. Keep it, but it must move harmonically: "it just can't be one single drone
+  note the whole way through". Circle-of-fifths piano rewrites of the opening and summit were rejected.
+- Never fill a musical gap by holding a chord: a static held-chord stretch in Sleeping was "horrible". The held-chord
+  crossfade replacement for the shared pad's chord clock and glides was rejected; the pad's clock and glides stay.
+- The opening island keeps its approved music; an "evolution" study was rejected ("the original still sounds better").
+- The Lines score stays as shipped; a from-scratch rewrite was "a clear downgrade". Don't propose it again. No
+  completion phrase when the door opens.
+- The piano-lullaby reprise at Home was rejected. Home's ending is scripted from the successful updraft and must feel
+  as if the Home music plays all the way through to the credits.
+- The story no longer cues `delight` (the chime with the child's cheer): it no longer fits the music.
+- The sailing boat has no hull-water foley: its bursts sounded like flapping. Toy boats keep theirs.
+- No child voice, no routine cygnet chatter, no marine vocal calls.
 
 ## Room levels
 
-Every piece sits near one reference, about −29 LUFS in its main section (September 25 audit and Jeremy's approval):
-`tuning.audio.roomTrimDb` trims Home −6, the Sky Mirror +6, the drowned village and Sleeping +2.5 and the birches
-−2.5 dB over their approved levels, and the opening grows about 5 dB with life instead of 12 (`openingPadRise`),
-keeping its quiet start. The grey meadow, the wood and the Sleeping climb stay quiet by design. The level constants
-below remain the approved study matches; add new rooms at the reference rather than by ear against the old pad.
+Every piece sits near one reference, about −29 LUFS in its main section. `roomTrimDb` trims Home −6, the Sky Mirror
++6, the drowned village and Sleeping +2.5 and the birches −2.5 dB over each piece's approved study level
+(`*ScoreLevel`), and the opening grows about 5 dB with life (`openingPadRise`), keeping its quiet start. The grey
+meadow, the wood and the Sleeping climb stay quiet by design. Add new rooms at the reference.
 
 ## Player feedback
 
-Cursor chimes accompany the starting island, forest and the feather-guided climb on Sleeping.
-`SoundState.startingIsland` follows `story.name === 'island'`; `forestWind` follows `story.name === 'wood'`.
-These chapter gates are independent of departing music and Sleeping's wood mood.
-Gusts, held updrafts and glider-lift answers stop scheduling chimes outside these scenes; existing gesture tails fade
-out over 300 ms. Opening and forest chimes are both +6 dB above the previous 0.7 gain trim, preserving the rescue voice’s
-relative softness. Player gust, whistle, ground rustle and updraft noise are the same level in every room and ease off
-as a stroke strengthens (`tuning.audio.playerWindEase`): about −1 dB at half strength, −6 dB at full. Ambient breeze, sea, rain and
-the winter weather floor keep their existing levels. Cursor filter sweeps are 20% smaller
-(`playerWindFilterRange`): maximum gust cutoff 1140 Hz, whistle 1620 Hz and updraft 1420 Hz, down from
-1360/1800/1720 Hz. Weather filter response and wind mechanics are unchanged.
+**Cursor chimes play only on the opening island, in the forest and on Sleeping's feather-guided climb.**
+`SoundState.startingIsland` follows `story.name === 'island'`, `forestWind` follows `story.name === 'wood'` and
+`sleepingWind` is true only in the Sleeping chapter's `climb` score phase (climb, snow, mist, catching the feather).
+These gates are independent of whatever music is still playing from a departed island. Outside them gusts, held
+updrafts and glider-lift answers schedule no chimes, and sounding tails fade over `gestureTailRelease` (300 ms).
+`scripted`, `silence` and an engaged piano (`pianoActive`) also suppress them. Checkpoint restoration derives the same
+gates.
 
-Audio and `PointerInput` share `pointer.minGust` and `pointer.minLift`; first input after audio starts can
-schedule a note. All gesture attacks share the 96-BPM grid and a minimum gap: two pulses (0.625 seconds)
-on the opening island, four (1.25 seconds) in the forest and Sleeping climb. Both notes of a glider answer
-obey the same gap and reserve that time against gusts and updrafts.
-Opening notes follow the background chord, with the original bell partials and 6 ms attack.
-Ordinary forest strokes use the original low minor palette (MIDI 50–72); updrafts use D3–A3–D4–A4.
-These minor colours ring over the forest drone without harmonic tail filtering. The rescue keeps its softer voice.
-Elsewhere lift stays in MIDI 62–81 and strokes/glider answers stop at 86; incompatible held notes fade over
-300 ms at harmonic changes. `hush` attenuates the background score only.
+- Audio and `PointerInput` share `pointer.minGust` and `pointer.minLift`, so the first gentle stroke after audio
+  starts can sound.
+- Attacks sit on a 96-BPM grid with a minimum gap: `gesturePulses` (two pulses, 0.625 s) on the opening island,
+  `forestChimePulses` / `sleepingChimePulses` (four, 1.25 s) in the forest and on the climb. Both notes of a glider
+  answer obey the gap and reserve it against gusts and updrafts.
+- Opening notes follow the background chord, with the original bell partials and 6 ms attack (`gestureAttack`).
+- **Forest chimes use the original low minor palette: the whole wood scale (MIDI 50–72), not filtered to the current
+  chord.** Forest updrafts use D3–A3–D4–A4. These ring over the forest drone without tail filtering. Searching at
+  the rescue ember uses the softer caring voice (`careChime*`).
+- Sleeping climb notes follow its score, with the soft attack at `sleepingChimeLevel` (about 3 dB under the others).
+  The stowed glider cannot trigger notes; summit, waking and departure have none.
+- Where a gesture follows harmony, lift stays in MIDI 62–81 and strokes and glider answers stop at 86; notes query
+  the harmony at their scheduled onset, including across chord and loop boundaries, and incompatible held notes fade
+  over 300 ms at chord changes.
+- Player gust, whistle, ground rustle and updraft noise are the same level in every room and ease off as a stroke
+  strengthens (`playerWindEase`: about −1 dB at half strength, −6 dB at full); their filter sweeps are scaled by
+  `playerWindFilterRange`. Ambient breeze, sea and rain are separate.
+- `hush` attenuates only the background score, never the player's feedback.
 
-The piano retains its own musical response. Authored cues, including the wood's rescue `comfort` and ordinary
-`kindled`, retain their existing sound and level. `breeze` and `restored` use their original authored
-pitches, bell voice and level; they are independent of cursor harmony, gain and tail gating. The story no longer
-cues `delight`, the chime that went with the child's cheer: on September 27 Jeremy had it taken out because it no
-longer fits the music.
-Accompaniment ducks to 0.32 with a 0.45-second response and
-returns over 1.3 seconds. The finale and chosen home recognition melody are unchanged. `scripted`,
-`pianoActive` and the permanent ending `silence` still suppress gesture chimes.
+Authored cues keep their own sound: `restored` (the shared completion phrase), `breeze`, `kindled`, `comfort` (the
+rescue hearth's two notes), `feather`, `lifted`, `star` and the rest use fixed pitches and the bright bell voice,
+independent of cursor harmony. An important cue ducks the accompaniment to `authoredCueDuck` (0.32) over 0.45 s and
+returns over 1.3 s. The piano keeps its own musical response.
 
-Sleeping's `sleepingWind` is true only in the actual Sleeping chapter's `climb` score phase (climb, snow,
-mist and catching the feather). Notes follow that score, use the soft attack and 0.7 relative level (about 3 dB below opening/forest chimes), and
-answer at most every four pulses (1.25 seconds). The stowed glider cannot trigger extra notes. The summit,
-waking and departure remain free of cursor chimes; the 300 ms tail release applies when the climb ends.
-Checkpoint restoration derives the same gate. `tuning.audio.sleepingChime*` owns level and spacing.
+## Scores, room by room
 
-These scene-specific rules supersede earlier all-room gesture descriptions in the score implementation history below.
+**Opening.** `opening-score.ts` conducts the original four detuned pad voices through the approved 33 voicings,
+5.3125 s apart (80% of the endorsed tempo), with a held D/F♯ resolution at 1:25; the 185.3125 s form repeats for
+player pacing. It plays on the first island and its crossing (`openingScore`), follows a local audio clock, and the
+Lines arrival retires it without letting it return. During the fall the `openingScore` phase holds the first chord
+(D) while the skein passes, so the D-major `fallen` phrase always fits; the skein has no phrase, only the swans' own
+calls. The pad then fades to silence with the fall and stays silent through the rescue, leaving calls, wind and sea;
+when the child carries the bird away the piece begins again from its first chord (`openingReturn`). Render it with
+`node tools/opening-fall-render.mjs <out.wav>`.
 
-## Musical continuity
+**Lines.** `LinesChapter.linesScore` follows the three curtains, the family approach, the open doorway and the far
+shore. The first section starts on the approach crossing; the shore section carries on through boarding and the
+crossing to Little Boats. `linesMelodyQuiet` withdraws the reed while the bird leads; `restored` clears it for
+`linesCueSpace`. The quiet verse rests whole reply figures rather than dropping notes inside them, each curtain section
+answers its figure over its second chord, and cue space lets a sounding figure finish and starts no new one.
+`linesMelodyDb` trims the reed alone.
 
-`opening-score.ts` conducts the original four detuned pad voices for the approved 185.3125-second opening.
-All 33 voicings and the held D/F♯ resolution at 1:25 follow a local audio clock; changes are 5.3125 seconds
-apart, with the audition's longer final hold. Common pitches stay continuous; changed voices glide at the
-approved rate. The complete form repeats for player pacing. Main enables `openingScore` only on the first
-island and its crossing; the conductor and clock persist on departure, independently of opening gesture
-chimes, which end at the island. The existing pad filter, life response, restrained activity gain, chapter
-hush and cue ducking remain. Wind notes query the new harmony at their scheduled onset, including across
-chord/loop boundaries. Lines' arrival gate freezes and retires the conductor without allocating another
-pad or letting its notes return under the next composition. Mute and hidden-page suspension freeze audio time.
+**Little Boats.** The approved 36 s plucked phrase on its own chapter clock (`boats` mood); the shared pad fades out.
+The Lines shore section plays until the Boats handoff, and Boats carries on across the crossing to Meadow.
 
-`phrasing.ts` shares scheduling, lookahead, stalled-frame skipping and introductory-rest handling across all eight scores. Sustained harmony bridges loop-end holes, including Sleeping shelter/climb. Repeating bodies alternate the main melody, a quieter sparse verse and the original melody. Lines' sparse verse rests its reply figure whole instead of dropping alternate notes, which read as missing notes inside its three-note figures; each curtain section answers its figure over its second chord, and cue space lets a sounding figure finish, then starts no new one. Historical `*_AUDITION_NOTES` exports preserve the reference studies; runtime sections contain the approved polish.
+**Meadow and the piano.** A grey bed plays on arrival. The background stays while the child walks to and looks at the
+piano, then fades once over `tuning.piano.fadeOut` from sitting, overlapping the first key and clear before the
+demonstration; `pianoMix` carries that fade and Meadow's `hush` holds only its other quiet, so nothing is attenuated
+twice. Departure from the stool returns the background over `fadeIn`. `PianoStop.finish()` schedules the whole
+lullaby, the colour front starts `finaleWaveAfter` in, and `onComplete` fires once after the phrase plus
+`completionRest`, which is when the meadow calls `completeObjective()`; `restoreDone()` cancels a pending completion.
+Only after the duet is done does `MeadowChapter.meadowScore` start: `walk` before the crest, accompaniment-only
+`flock` and `pond`, then `return` (harmony at 4 s and plucks at 5.5 s, after the completion cue), which continues
+through boarding and the crossing to Birches. The arrangement contains its own dynamics; don't apply `hush` on top.
 
-The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the full plucked shape in Boats, the existing Meadow melody, B–F♯–E–D in Birches, and a stretched recollection at sea. Sleeping's climb remembers D–E–F natural, then the bedside A–E–D–A. Instrument voices, local harmony and story timing remain distinct.
+**Birches.** `BirchesChapter.birchesScore` runs from the approach crossing: `walk` for the first loop, `swing` if the
+optional swing is accepted, `scarf` (no lead melody) for the later tangles, and `return` once the sail is finished.
+`return` carries on through boarding and into the stairs room. Checkpoints derive the phase from saved tangles.
 
-## Story timing
+**Drowned Village and Sky Mirror** (`dream-score.ts`). Drowned follows rooftops, becalming, resumed drift, the 22 s
+gathering storm, plane loss and the approach to the wood; its composed levels already include the withdrawal, so
+chapter hush is not applied again, and the `becalmed` cue still ducks it. The Mirror follows approach, first play,
+one to three returned lights, the full constellation and departure; completed-star count, not order, picks the
+section, the third star reuses the middle verse and only the fourth gets the final bloom. `star` is emitted once per
+real return, never on entry, loops or restore. The departure section carries on over the harbour crossing.
 
-Jeremy rejected the earlier held-chord proposal. On September 21 he first requested a four-second arrival rest, then approved the audio-director priorities after the Meadow–Birches render exposed a perceived seven-second hole. Ordinary arrivals now use a short breath; Sleeping and ending retain their dramatic rests. The shared pad's pitch glides/global chord clock remain intact.
+**Wood.** The original low forest drone. Ordinary embers cue `kindled`; lighting the rescue hearth cues `comfort`.
 
-Jeremy's September 22 transition review supersedes the short breath: [every handoff](../audio-transition-review.md).
-`Chapter.arrivalMusic` anticipates the destination using remaining sailing distance and its shore speed cap,
-after at least 35% of the crossing. The handoff can wait up to 4.5 seconds for a nearby melodic ending.
-The outgoing background fades for three seconds, rests for three, then the destination fades in over 2.5.
-Sleeping rests for 3.5 seconds and Mirror four. `arrivalReady` also requires the final approach and, on the
-first crossing, release of the farewell camera. Its phrase continues across grounding/disembarkation;
-a very fast landing never abbreviates the rest. `arrival-music.ts` owns the audio-clock
-state; mute/hidden-page suspension freezes it. There is one reverb, shared by every sound. The background music
-reaches it through its own gate and duck, a pair matching the gates on its dry sound, so the arrival pause
-leaves water, wind, physical sounds, calls, cues and playable gestures untouched. Nothing from the background
-enters the reverb during the rest; the echo already in it rings out over the rest rather than being cut. Score scheduling stops at the handoff boundary and voices retire during the outgoing fade, so old sources cannot reappear when the gate reopens. A stalled frame still gets the full rest.
+**Sleeping.** `SleepingChapter.sleepingScore`: `shelter` (the bedside melody over changing harmony) until the first
+frost; `cold`, silent however long the player takes, through the unanswered call and the feather's departure; `climb`
+through snow and mist (D minor, B♭, G minor and suspended A, a low piano pulse, the D–E–F winter fragment and the
+bedside A–E–D–A); `summit` continues the climb's phrase clock and voices from unbinding through the ribbon tug;
+`morning` from release through departure. Morning plays a 48 s first pass, then its 43 s body; it leaves 5 s for
+`lifted` alone and 19 s before its piano answer, and keeps its authored chord lengths (holding the last chord to the
+repeat sounded like a stuck note). The pillow feather cues the two-note `feather` hint; the full `lifted` phrase
+belongs to the bird's flight, and landing adds no completion phrase. The generic pad is silent throughout Sleeping and
+`hush` does not apply. Restoring `feather` selects climb and the wood register; `morning` the warm arrangement and sea
+register; neither cues anything. `PianoStrings.note` optionally takes an audio-clock time and returns its sources so
+the score can release them; its ten voice reservations belong to the AudioContext, survive mute and are cleared only
+when a new context is installed.
 
-The opening waits for its current drone voicing to settle before fading. Little Boats exposes ends of its
-short figures despite overlapping tails. Re-entering an already-playing piece does not create a second
-pause. Sleeping morning now hands off explicitly to `sea` on departure; the sea → Mirror request waits
-for the dolphins' actual farewell. Changes of section within one approved piece retain their existing
-continuity and authored rests.
+**The long sea crossing.** `CrossingChapter.seaScore` exists only on the dolphin passage: `open` before the swim,
+`swim` from restlessness through drying, `return` once the bird is back in the arms, `arrival` past the pod's
+farewell. An unfinished swim outranks the approach, and a restored swim starts in return or arrival. Swim and arrival
+are accompaniment only. Ordinary crossings keep the departing island's music until the handoff.
 
-Every gain release/fade explicitly anchors its current value at the start time before the linear ramp.
-`cancelAndHoldAtTime` alone can leave the last constant event in the past: this caused the arrival fade-in to
-jump to about 75%, and Sleeping releases to drop about 83% immediately. Both now use the intended full fades.
-The still-island pad continues into its crossing; Wood also retains its .55 hush on departure.
-Strong wind adds at most about 2 dB to the fully alive daytime pad (previously about 8 dB), independently of
-its gesture notes. Ambient pink-noise loops blend their seam over 40 ms and retain randomized starting offsets.
-Finished chime, wildlife, call and ember nodes disconnect after their release.
+**Homeward and Home** (`summit-score.ts`). Leaving the Sky Mirror requests Home at once: the Mirror fades over 3 s,
+the background stays silent at least 5 s, and the drone fades in over 3 s once the boat has passed its first offshore
+turn and is `homewardClearDistance` from the berth; slow sailing lengthens the rest (`homeward*`, `homewardReady`).
+Offshore it plays Jeremy's whole three-minute drone (32 voicings at 80% tempo), repeating if needed; landing keeps the
+instance and clock. From the successful updraft `HomeChapter.homeEndingTime` drives a fixed, once-only ending: the
+music rises over 4 s from wherever the approach left it (no reward bells at the updraft), plays the flight, farewell
+and Home passages, gains two soft upper voices during the walk, climbs home by steps over a held D (B♭, C, D) that
+broaden (5.1, 5.5, 6 s), and resolves Dmaj9 to Dadd9 with only C♯ rising to D. The last chord rings about seven
+seconds, then the dry sound and its reverb send fade over 0.7 s from `HOME_ENDING.fadeFrom`; the reverb tail rings on,
+wind and wildlife remain, and credits start at `HOME_ENDING.creditsAt`, two seconds after the music ends.
+`src/story/home-ending.ts` shares these times between story and audio; restoring `reunion` or `drawing` enters at the
+matching score time; the paper release is automatic. `homeEndingSounds = false` disables the old `unfold`, `release`,
+`home` and `finale` cues and the paper and cottage-door foley (kept in code behind the switch);
+`homeMusicDucking = false` bypasses hush and cue ducking for Home. Render the ending with
+`node tools/ending-audition.mjs`.
 
-The final crossing is a deliberate exception to the short arrival breath. On departure from Sky Mirror,
-`homeward` requests Home immediately. Mirror fades for three seconds, its background gates remain
-closed for at least five, then Summit fades in over three once the boat clears the first offshore turn
-and 30 units from departure. Slow sailing extends the rest; once entered, sailing back cannot close it.
-Wind, water, foley and authored calls remain outside this musical silence. `homewardReady` and
-`tuning.audio.homeward*` own the spatial gate and timing. A restored home chapter can enter directly.
+Every score repeats its sections to fit player pacing, releases voices over 1.8 s on phase changes and exit (0.12 s
+for permanent silence), disconnects finished voices and buses, and freezes with the shared audio clock when muted or
+hidden. Missed frames skip stale attacks rather than bursting.
 
-`summit-score.ts` plays Jeremy's approved drone: all 32 voicings at 80% tempo, continuous detuned
-triangle/sine voices, shared pitches held and moving voices independently gliding. Offshore `approach`
-plays the whole 180-second form, repeating for a slow crossing; landing retains its instance and clock.
-`HomeChapter.homeEndingTime` starts at the successful updraft. From then on `SummitScore` plays the
-accepted flight/farewell/Home sequence once, preserving the live voices at entry. Two soft upper voices
-join during the walk; the final Dmaj9 becomes Dadd9 with only C-sharp rising to D. It holds its height
-and level until the final fade. Checkpoint restoration selects the matching reunion/drawing score time.
-The paper release is automatic. `home-ending.ts` shares the end times between story and audio; scene
-phase changes cannot restart the composition. The old phase arrangements remain available when no
-ending clock is supplied. Recognition/release/door/finale cues remain disabled behind their switch.
+The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the plucked shape in Boats, the
+Meadow melody itself, B–F♯–E–D in Birches, a stretched recollection at sea, and D–E–F on the Sleeping climb.
 
-Drowned starts its handoff in the stairs' fog (see the stairs in the clouds, below), then requests Wood only after the lost-plane scene.
-The long sea passage retains its swim/reunion music until the pod's farewell. Meadow arrival uses its grey
-pre-piano bed; the approved post-piano composition still waits for the duet. `tuning.audio.arrival*` owns the
-distance allowances and fade/rest durations.
+## Handoffs between pieces
 
-`LinesChapter.linesScore` follows the three curtains, the family approach, open doorway and far shore.
-The first section begins on the approach crossing and continues ashore; the shore section continues through
-boarding and the crossing to Little Boats, retaining the same score instance and phrase clock.
-`linesMelodyQuiet` withdraws the reed while the bird leads and the child follows; a `restored` cue also clears it for four seconds. The door opens without the shared completion phrase: on September 25 Jeremy asked for the piano phrase to be taken off the door. Gesture feedback stays
-active whenever input is playable. Masked melody attacks expire, with no delayed burst after a cue.
-The original audition's +17.6 dB backing gain excludes preview normalization; `linesMelodyDb` trims only
-the reed (currently −1.5 dB). Sections repeat for player pacing and checkpoint restores emit no reward.
-All gesture harmony follows the score while the original shared chord clock/glides continue independently.
-Phase/exit releases last 1.8 seconds, permanent silence 0.12; finished voices and buses disconnect.
+- `Chapter.arrivalMusic` names the destination piece. On a crossing it is requested from the remaining distance and
+  the shore speed cap, never before 35% of the route is behind the boat (`arrivalMusicRouteShare`, `arrivalMusicLead`).
+- The outgoing piece may wait up to `arrivalPhraseWait` (4.5 s) for a nearby melodic ending; the opening lets its
+  current voicing settle first. It fades over `arrivalFadeOut` (3 s), rests `arrivalQuiet` (3 s; Sleeping 3.5, Mirror
+  4), then the destination fades in over `arrivalFadeIn` (2.5 s). `arrivalReady` also requires the final approach
+  and, on the first crossing, the farewell camera's release. A fast landing never shortens the rest, and the incoming
+  phrase continues across landing.
+- There is one reverb for every sound. The background reaches it through its own gate and duck, matching the gates on
+  its dry sound, so the pause silences only the music: water, wind, foley, calls, cues and gestures carry on. The echo
+  already in the reverb rings out rather than being cut. Score scheduling stops at the handoff and voices retire
+  during the fade, so nothing reappears when the gate reopens.
+- Re-entering a piece that is already playing makes no second pause. Section changes inside one piece keep their own
+  continuity.
+- Special cases: Sleeping morning hands off explicitly to `sea` on departure; sea → Mirror waits for the dolphins'
+  actual farewell; Birches → Drowned starts in the stairs' fog; Drowned requests Wood only after the lost-plane scene,
+  as a **four-second overlap** (`forestMusicBlend`) with the gates open, the forest pad tuned before it is audible and
+  entering on shared D/A; Mirror → Home is the homeward rest above.
 
-Little Boats uses the `boats` mood and its approved 36-second plucked phrase; the shared pad fades out.
-Gesture notes follow its current chord. Entry starts at the beginning of the phrase, suspension
-preserves audio time, missed frames skip stale attacks, and its arrival handoff retires all score voices.
-The restoration cue temporarily ducks this background. The approach crossing retains the Lines shore section
-until its arrival handoff starts Boats. Boats then continues on the crossing to Meadow, at its island level,
-until the Meadow arrival handoff.
+Every gain fade explicitly anchors its current value at the start time before the linear ramp:
+`cancelAndHoldAtTime` alone can leave the last event in the past and make a fade jump.
 
-`sea-score.ts` plays the approved revised sea background only when `SoundState.seaScore` is present with
-`music='sea'`. `CrossingChapter` supplies it only for dolphin passages: `open` before the swim, `swim` from
-restlessness through drying, `return` once settled in the arms, and `arrival` past the pod's farewell route
-fraction. An unfinished swim takes priority over the approach. These states, not elapsed chapter time,
-select the music. Main copies the optional state every frame, clearing it after departure.
+## Cues
 
-The sections retain the auditioned notes/timbres and repeat to fit player pacing. Swim and arrival have
-only sustained accompaniment. Phase changes crossfade over 1.8 seconds, with no pitch glides; updraft chord
-tones follow the current harmony. The shared pad withdraws while this arrangement plays. Ordinary crossings
-retain the departing island's music until the destination handoff. A restored swim starts in return/arrival
-without replaying the opening.
-Audio suspension preserves the phrase clock; missed frames skip stale attacks. Chapter exit and
-permanent music silence stop scheduling, fade and disconnect the score's voices and buses.
-
-`takeCues()` drains the simulation's cue queue once per rendered frame. One-way story events must use explicit
-guards, not narrow time windows. The home finale is once-only and cannot replay after completed restoration.
-Recognition still starts from the visible reveal; releasing the plane early does not overlap another melody.
-
-Drowned's lighthouse passage emits one environmental `foghorn` cue at storm time eight seconds, guarded
-by `hornPassed`. A call over 0.25 seconds late is discarded rather than overlapping thunder or the plane loss.
-`foghorn.ts` generates the accepted D3 horn and stereo diffuse field; `tuning.audio.foghorn` preserves its
-approved balance without the export listening gain. Its source lasts 4.6 seconds and the diffuse field
-drains over a further 4.4 seconds. The audio-clock cleanup marker releases every local node afterward.
-Its seeded buffers and diffuse convolver are prepared across frames once Drowned's music begins (about two
-seconds), so the cue's frame only connects nodes; the prepared field serves one call, and a call before
-preparation finishes builds its parts on the spot. The cue bypasses musical phrases and accompaniment ducking.
-Muted/not-started audio consumes the cue without replaying it later; an interrupted context holds it only within
-the same 0.25-second allowance; hidden-page suspension preserves active audio timing. Restoring the earlier
-village sailing checkpoint can replay the passage, but does not itself emit a horn. Timing knobs live in
-`tuning.storm.foghornAt` and `foghornLateAllowance`.
-
-`PianoStop.finish()` schedules the complete lullaby and records its actual phrase end. The final colour front
-starts at `finaleWaveAfter`. `onComplete` fires once after the phrase end plus `completionRest`, and the meadow
-uses that callback for `completeObjective()`. `restoreDone()` cancels pending completion.
-
-`MeadowChapter.meadowScore` starts the approved post-piano score only after the duet is `done`: `walk` before
-the crest; accompaniment-only `flock` for crest/down and `pond` for the paddle; `return` while gathering and
-walking onward. Return starts harmony at four seconds and plucks at 5.5, after the existing completion cue.
-Walk repeats at 24 seconds, flock/pond at 18. Return plays its four-second entrance once, then repeats its 20-second body. The arrangement already contains its quiet scene dynamics;
-do not apply chapter `hush` a second time. `pianoMix` still controls its post-duet fade-in. Main copies/clears the
-optional score state every frame; Soundscape also requires the Meadow mood.
-
-The original pad is suppressed during the arrangement, while its global chord clock and frequency automation
-continue unchanged; gesture pitches follow the arrangement. `toBoat`/`push`/`aboard` retain the return section,
-which continues on the crossing to Birches until its arrival handoff. The grey approach and piano itself never
-start the new score. Restored piano
-and pond checkpoints select walk and return respectively without reward replay. Score phase changes and
-departure release/disconnect all voices; the shared audio clock preserves musical position while muted/hidden.
-
-`BirchesChapter.birchesScore` continues the approved revision from its approach crossing through `ashore` and `wonder`.
-The first loop keeps `walk`; accepting the optional swing selects `swing`. Later scarf work and unravelling
-use `scarf`, without a lead melody. Once the sail is finished, `return` continues through gathering the bird
-and walking to the boat. `push`/`aboard` retain the return section until Drowned begins its outgoing fade.
-Walk/swing loop after 22 seconds, scarf after 40, return after 18; checkpoints derive the phase from saved
-tangles and cannot emit rewards. Its +20.3 dB level excludes the audition playback boost.
-
-The shared pad clock/glides continue unchanged beneath Birches. All gesture chord tones follow the
-active arrangement independently of that clock; ordinary strokes retain their contour and register.
-Gesture rhythm, timbre, levels and ownership rules are unchanged. Score phase changes release voices over
-1.8 seconds; permanent silence uses 0.12 seconds. All source nodes/buses disconnect after release, and
-mute/hidden-page suspension freezes the phrase.
-
-The piano takes gesture ownership on approach, but keeps the background during walking and looking.
-Its score/environment fade starts with sitting and takes `tuning.piano.fadeOut` (2.2 seconds): the first key
-overlaps the end, and the demonstration starts after it. `pianoMix` carries this one fade; Meadow's `hush`
-contains only its other story quiet, so the piano is not attenuated twice. Departure returns the background
-over `fadeIn` (3.2 seconds); restoring completion clears the piano mix immediately.
-
-`SleepingChapter.sleepingScore` supplies shelter until the first frost; cold through the unanswered call and
-feather departure; climb through snow/mist; summit from unbinding through the ribbon tug; morning from release
-through departure. Main copies the optional state every frame and clears it on exit. Cold schedules
-no accompaniment, however long the player takes. Summit continues the climb without resetting its phrase.
-Other section changes release existing voices over 1.8 seconds, including their reverb sends.
-The generic pad is suppressed throughout Sleeping. Its authored dynamics replace `hush` attenuation for this
-arrangement; gesture chimes and physical sounds remain available under their usual rules.
-
-Shelter/climb phrases repeat after 32 seconds. Morning has a 48-second first pass, then repeats its 43-second body without the initial rest. Morning keeps its authored chord lengths: its last chord ends with the melody rather than being held until the repeat, which sounded like a stuck note. Morning leaves five seconds for `lifted`
-alone and nineteen before its piano answer. The pillow feather emits the two-note `feather` hint. Landing
-does not emit the shared completion phrase: Jeremy approved retaining only the flight reward here. Restoring
-`morning` selects the warm arrangement and sea gesture register without emitting a cue; the feather checkpoint
-selects climb and the wood register. Gesture pitches follow the selected arrangement in both cases. The dry score and its reverb sends share lifecycle gates; departure stops
-and releases all piano/pad sources. `PianoStrings.note` optionally accepts an audio-clock time and returns its
-scheduled sources so the score can release them; ordinary piano calls keep their immediate timing and sound.
-`PianoStrings` voice reservations belong to its AudioContext: muting suspends that context with its notes still
-scheduled, so the ten reservations survive mute and are cleared only when a new context is installed.
-
-Only Home's ending gets a 0.7-second fade, from 113.8 to 114.5 seconds after the successful updraft.
-It acts on the background's dry sound and its send into the reverb, so the reverb's tail rings on after the music;
-wind and wildlife remain. Credits start at 116.5 seconds, two seconds after the music ends. Their
-initial position is inside the bottom reveal band and opacity enters over 0.3 seconds, so the first
-line is visible at the intended time rather than travelling up from beneath the screen. Other chapter
-fades are unchanged. The old `unfold` melody is retained in code, with its ending cue disabled.
+- One-way story events use explicit guards, never narrow time windows. Completions and rewards are not replayed on
+  checkpoint restore.
+- The Drowned lighthouse raises one `foghorn` at storm time `tuning.storm.foghornAt`, guarded by `hornPassed`. A call
+  later than `foghornLateAllowance` (0.25 s) is dropped, so it never overlaps the thunder or the plane loss. The horn
+  (D3, a diffuse stereo field, settings in `tuning.audio.foghorn`) bypasses phrases and ducking. Its buffers and
+  convolver are prepared across frames once Drowned's music begins, so the cue's frame only connects nodes.
+- Muted, hidden or not-started audio consumes cues. A call or Siri interrupting a visible, unmuted context holds cues
+  for `heldCueLife` (3 s) and plays them in order when audio resumes (see `progress.md`).
 
 ## Space and habitat
 
-Each rendered frame derives `land`, `sea` and `meadow` from the story focus and current chapter. Shoreline
-sampling is a cached CPU height query around that point, never distance from the original meadow coast.
-`overLand` still describes the pointer for wind rustle; it must not decide the story's habitat.
+Each frame derives `land`, `sea` and `meadow` from the story focus and chapter. Shoreline distance is a cached CPU
+height query around that point. `overLand` describes only the pointer, for wind rustle. Night wildlife needs land,
+warmth and little rain; skylarks need meadow, daylight and little rain; Sleeping's cold withdraws with dawn; Home keeps
+its crickets and owls.
 
-Night wildlife needs land, warmth and little rain. The final home's requested crickets/owls remain. Skylarks
-need meadow habitat, daylight and little rain. Sleeping cold is withdrawn with dawn.
-
-Cygnet and flock emitters use the rendered camera's `screenPan` and source distance. The hidden cygnet remains
-audible: concealment must not mute its rescue call. Story and incidental adults use the same swan synthesis.
-An authored cygnet or adult call holds incidental flock chatter for `callSpace` seconds. Meadow and home set
-`flockChatter=false`: their authored conversations own all the pauses. Adult calls fade with distance and
-stop beyond `flockDistance`, so a flock on another part of the island cannot sound close to the player.
+Cygnet and flock sounds use the rendered camera's `screenPan` and source distance; the hidden cygnet stays audible.
+Story and incidental adult swans share one synthesis. An authored call holds incidental flock chatter for `callSpace`;
+Meadow and Home set `flockChatter = false`. Adult calls fade with distance and stop beyond `flockDistance`.
 
 ## Physical sounds
 
-Birches leaf scuffs follow the child's walking contacts on authored leaf-covered ground and the cygnet's
-actual heap kicks. Both share a 1.4-second room-wide limit; skipped events expire. Leaf particles and wind
-never trigger individual sounds. Coverage uses the initial litter map, not GPU readbacks; it is an acoustic
-mask rather than a measurement of each displaced leaf. Swing creaks require substantial physical travel
-and a direction reversal, at least 2.4 seconds apart. Tiny idle sway is silent; the empty swing is quieter.
-Both sounds attenuate from 20 to 65 units and pan from their source. Entry/resume establishes silent
-walking/swing baselines. `tools/birches-foley-check.mjs` verifies rate limits, gates and production voices.
+Motion sounds come from changes in physical state, never from completion cues: curtains, the family's sleeves, scarf
+working, releasing and gathering, paper and doors. New sources, inactive sources and the first frame after resume
+establish a silent baseline, so completed actions are never replayed. Every source has distance attenuation, screen
+pan and bounded scheduling; finished nodes disconnect.
 
-Flock wingbeats follow the flight/take-off state, with the existing 3.4 rad/s cadence. Resting rafts are quiet.
-Distant or muted beats expire on their original clock; approaching or unmuting cannot replay a backlog.
-`tools/flock-audio-check.mjs` checks these gates and timing at 10–144 Hz.
+- Birches: leaf scuffs follow the child's footfalls on authored leaf-covered ground (the initial litter map, not
+  readbacks) and the cygnet's heap kicks, sharing one `leafScuffEvery` budget; particles and wind never trigger them.
+  Swing creaks need real travel and a reversal, `swingCreakEvery` apart. Both attenuate over `birchesFoleyNear/Far`.
+- Sail: one quiet canvas fold at full droop (`sailSettleAt`), re-armed only after a refill below `sailSettleRearm`;
+  flutter sounds only on fresh rises, `sailEvery` apart. Toy-boat flutter is silent.
+- Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices.
+- Dolphins and whales: sounds fire from the same events as the visible splash, spray, breaths, fluke drainage and
+  dive (`WhaleWake`, the shared `SeaLife` callback), with soft attacks and level trims (`dolphin*`, `whale*`). Pod
+  emergence and re-entry have separate budgets. Muted or hidden events are dropped.
+- Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
+  return.
+- The Lines pinwheels share one flutter voice; out of reach it fades, stops and disconnects, and a new one is made if
+  the row comes back.
 
-Motion sounds use differences in physical state: curtains opening, the family sleeves, scarf working/releasing
-and gathering, paper unfolding/folding and doors swinging/shutting. New sources, inactive sources and the
-first frame after resume establish a silent baseline. Do not synthesize these from completion cues.
+## Start-up and lifecycle
 
-The sailing boat has no hull-water foley: its repeating bursts sounded like persistent flapping and Jeremy
-requested their removal. Toy-boat water sounds remain. A quiet canvas fold sounds once at full droop (0.995),
-re-arming only after the sail refills below 0.8 droop, with a 2.4-second minimum interval. Entry/resume is silent
-and muted, distant or cooldown arrivals expire. Sail flutter sound follows fresh rises in flutter, with a 2.4-second
-minimum interval and a quieter level; sustained luffing never retriggers it. Entry/resume establishes a silent
-baseline and inaudible/cooldown events expire. Tiny toy-boat flutter stays silent. Nearby laundry uses local wind with the
-cloth's spring and flutter thresholds, limited to three sources. Dolphin re-entry uses the same crossing of
-the water surface as its visible splash; emergence adds a lighter wash at its spray event. Their independent
-pod-wide limits keep emergence from swallowing a landing (0.6 seconds between rises, 0.4 between landings). Dolphin sounds use a 0.65 level trim, 65 ms primary attacks and filtered spray instead of high-frequency hiss. Whale wash, both breaths, fluke drainage and dive
-fire directly from `WhaleWake`'s visible events. The shared `SeaLife` callback covers the opening-to-Lines whale,
-the long crossing and the QA whale. Its broader distance range keeps the breath audible ahead of the boat. Whale events use a 0.65 level trim, 200 ms main attacks and lower filtered breath/water layers; the drain drops also have softened attacks.
-Marine callbacks are discarded while sound is muted/hidden and cannot replay on resume; no vocal calls are added.
+The Begin gesture creates and resumes the AudioContext and builds its graph, nothing more. The loop noise and reverb
+impulse are then synthesised in slices over about a second (`sliced.ts`), each long convolver gets a frame to itself,
+ambient beds join with a short fade and the reverb starts from silence, so nothing clicks. Arrivals only move gates and
+build no convolver. `Soundscape.output` returns one cached graph object while running. Hidden-page and mute handling:
+`progress.md`.
 
-All new material sounds use distance attenuation, screen panning
-and bounded per-source scheduling; dolphin scheduling is also bounded globally. Finished noise/tone nodes
-disconnect. No child voice or routine cygnet vocal chatter is added.
+## The stairs in the clouds (proposal, not approved)
 
-The Lines pinwheel flutter is one voice for the whole row. Once the row is out of reach (camera beyond 220
-units) the voice fades with its 0.2-second time constant, then its sources stop after 1.5 seconds and every node
-disconnects. A new voice, reusing the context's paper noise, is made if the row comes back into reach.
+The room's sound follows `SoundState.stairsAir` (`StairsAir` in `stairs-air.ts`: a phase from `under` through
+`cloud`, `above`, `sail` and `fog` to `down`, and the measures `cloud`, `climb`, `open`, `fog` and `speed`), which the
+chapter sets each frame; no clock decides a phase.
+`stairs-sound.ts` owns the air and the knock, `stairs-score.ts` the bloom and sail music.
 
-Audio state is prepared once per rendered frame after the camera update. `Soundscape.output` returns one cached
-graph object while running and null otherwise. Existing hidden-page/mute lifecycle is unchanged, and interrupted
-audio keeps recent story cues; see `progress.md`. Tests: `tools/audio-check.mjs`, `tools/audio-browser-check.mjs` and the existing
-ending/checkpoint checks. `tools/marine-audio-check.mjs` checks actual surfacing events at 10–144 Hz, stereo,
-distance, scheduling and voice cleanup, and renders an isolated sample to `/tmp/updraft-marine-audio.wav`.
-Rendered previews and numerical checks do not replace listening through the game.
+- Under the cloud the birches' `return` phrase carries on through the puzzle. Each flight that docks raises
+  `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight also plays the
+  completion phrase. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
+- In the white the birches' phrase drains away (`stairsAir.drain`) and never returns in this room; the wind is close
+  and muffled and climbs with `climb`, while breeze and sea fall away.
+- Out on top the wind drops and the room is nearly silent, then the score's bloom starts from nothing; the sail
+  crossfades from it, with a continuous hull hiss following `speed` while the hull rides the cloud.
+- The fog thins the sail and asks for the village's music (`arrivalMusic = 'drowned'` during `fog` and `down`) through
+  the ordinary handoff. Once out on top, only the fog brings the sea back; a started score keeps its section whatever
+  one frame's phase reports. Outside the room every level multiplier is exactly 1.
 
-`tools/audio-continuity-check.mjs` renders seven departure/arrival paths from production chapter definitions,
-checks retained score instances/clocks, gate ramps, every score's release, sail triggers at 10–144 Hz,
-noise-loop seams, background gain response and finished-voice cleanup. It writes evidence to
-`/tmp/updraft-audio-continuity.json` and a Meadow-to-Birches sample to
-`/tmp/updraft-meadow-birches-continuity.wav`. Numerical checks are not a listening sign-off.
+Levels: `stairsAir`, `stairsAirLevel`, `stairsScoreLevel`, `stairsPhaseFade`. Render the arc offline with
+`node tools/stairs-audio-proposal.mjs [outDir]` against a dev server.
 
-`tools/audio-direction-check.mjs` checks introductory rests versus repeat bodies, loop coverage, phrase-aware handoff, shared motifs, combined-input density, charge register, reward harmony, incompatible-tail release and unchanged home notes. It renders Lines loops, Birches rewards, the sea theme and a phrase-aware departure under `/tmp/updraft-*.wav`.
+## Checks
 
-Sky Mirror investigations use planted walking, with no swimming state, paddle or plunge events. The earlier fast exploration pace triggered running/pattering and balance wingbeats. `mirrorCompanion.explorePace` slows investigation; walking wing balance follows actual speed, including pace multipliers. Following the moving child retains its existing travel pace.
+`npm run check:audio` runs every offline audio and score check through a headless dev server (no GPU); the list and
+the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs` covers
+start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's preparation and
+the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score sections.
 
+## Open
 
-## Sky Mirror, Drowned Village and the forest handoff — September 21
-
-Jeremy approved both revised studies. Runtime preserves their note data, voice envelopes, harmonic partials,
-stereo reflections and relative levels. `dream-score.ts` divides them into story-led sections; repeated
-sections alternate a sparser melody and retain sustained harmony across joins. Per-phase buses retire both
-voices and echoes. Audio-clock cleanup survives suspended playback; departure and the ending cut release all parts.
-
-Mirror follows approach, first play, one/two/three returned lights, the completed constellation and departure.
-The working room now has four stars: the third uses another verse of the approved middle arrangement, and
-only the fourth receives the final constellation bloom. The chapter emits `star` once on an actual return;
-phase entry, loops and checkpoint restoration never emit it. Completed-star count determines the section,
-independent of collection order. The departure section continues on the harbour crossing until Home's handoff.
-
-Drowned follows rooftops, becalming, resumed drift, gathering weather, plane loss and the quiet approach to
-the wood. The 22-second gathering uses the approved descending harmony and overlapping low swells. Composed
-levels already include the withdrawal, so chapter hush is not applied a second time; the authored becalming
-cue still ducks the background. Wind feedback follows each score's current chord.
-
-**Drowned → Wood is a four-second overlap**, replacing the ordinary arrival pause for this boundary only.
-The background gates stay open. The retiring village score fades while
-the forest pad enters on D/A; the previously inaudible pad is tuned before it becomes audible. After the
-blend, the existing forest chord clock resumes with its slow pitch glide into the unsettled voicing.
-Other arrivals retain the 1.5-second fade, 0.4-second breath and 1.5-second fade-in. No new forest melody,
-weather sound or protagonist voice is added.
-
-## The stairs in the clouds — September 27 proposal
-
-Awaiting Jeremy's audition; nothing here is approved. The room's sound follows `SoundState.stairsAir`
-(`src/audio/stairs-air.ts`), which the chapter measures every frame; no clock decides a phase. `stairs-sound.ts`
-owns the air and the knock, `stairs-score.ts` the new music. Render the whole arc with
-`node tools/stairs-audio-proposal.mjs [outDir]` against a dev server (`BASE`): it drives the production soundscape
-through a synthetic timeline and writes the mix, the music alone, a cue sheet and measurements.
-
-- **Under the cloud** the birches' approved closing phrase (`birchesScore = 'return'`) carries on through the puzzle.
-  Each flight that docks raises `flightHome`: a soft wooden tok, a smaller tk as it settles and a puff of cloud,
-  a physical sound outside the cue ducking (`tuning.audio.flightKnock`). The third flight keeps the shared
-  completion phrase.
-- **In the white** the music goes out completely. Once the phase is `cloud` (or `cloud` rises under the deck) the
-  birches' phrase drains at about 4 dB a second and is let go below −46 dB; it never comes back in this room. The
-  shared pad stays silent throughout the room. The wind is close and muffled: low noise that buffets every few
-  seconds low down and every second or two near the top, a moan that climbs with `climb`, and a rush on the strongest
-  buffets. It is heard faintly from below while the bird goes first. The breeze bed and the sea fall away as they
-  climb (`climb`), so the island is gone by halfway.
-- **Out on top** the wind drops with `cloud` and `open`, the last of it sweeping past to one side, and the room is
-  nearly silent: a thin high air, the breeze bed at a fifth. Three seconds later the bloom starts from nothing. The
-  skein is only the flock's own calls; the cygnet is silent throughout the room.
-- **The sail** crossfades from the bloom over four seconds. The hull's soft hiss through the cloud tops follows
-  `speed` and wanders slowly; it is continuous, never a repeated burst (Jeremy removed the sea hull's flapping
-  bursts). It is heard only while the hull is up on the cloud.
-- **The fog** thins the sail (`fog`), and the chapter asks for the village's music (`arrivalMusic = 'drowned'` while the
-  phase is `fog` or `down`): the ordinary arrival pause, three seconds' fade, three of rest in the white, 2.5 in.
-  The stairs score takes part in the phrase-aware handoff and retires with the other scores. Once `fog` has
-  peaked (0.9) the hull is taken to be down, and the sea comes back under it as the fog thins.
-- Once they are out on top, nothing but the fog brings the sea back or the wind down, and once the score has begun
-  it keeps its section until the village takes over, whatever a single frame's phase says (boarding once
-  reported `under`).
-- **Down** on the village water the drowned chapter owns everything. The room's own layers fade and disconnect five
-  seconds after the chapter stops describing its air; outside the room every level multiplier is exactly 1.
-
-The score sits at the room reference: about −30 LUFS in the bloom and the sail, beside −32 for the birches' phrase and
-−30 for the drowned village's in the same render. The wind at the top of the climb is about −27 LUFS and the calm
-after it about −41. `tuning.audio.stairsAir`, `stairsAirLevel`, `stairsScoreLevel` and `stairsPhaseFade` own these.
-
-## Start-up and preparation
-
-The Begin gesture creates and resumes the AudioContext and builds its graph, nothing more. The six-second loop
-noise and the 4.5-second reverb impulse are synthesised afterwards in 4096-sample slices at 240 slices per second
-of story time (about 16k samples in a 60 Hz frame; both ready about a second after Begin), with unchanged
-formulas. Each long convolver analyses its impulse on the main thread (10–30 ms on a desktop), so each gets a
-frame to itself: the reverb and, in Drowned, the foghorn's diffuse field. Ambient beds join with a 0.25-second
-fade and the reverb starts from silence, so nothing clicks; thunder or an ember needed sooner finishes the noise
-at once. Arrivals only move gates, so they make and analyse no convolver. `src/audio/sliced.ts` paces this work. `tools/audio-interruption-check.mjs` checks the pacing, entries,
-the prepared horn, piano reservations across mute, the cached output graph, interruptions and the pinwheel voice.
+- The stairs room's sound awaits Jeremy's audition. His note on the sail over the cloud: "The audio and the trails
+  left by the boat make the clouds feel more like snow than clouds", and the player should not need to make wind
+  there; the sail's sound needs revising with that pass.
+- Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
+  attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
+  chime feel right in context.
