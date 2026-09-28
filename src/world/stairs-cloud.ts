@@ -164,7 +164,7 @@ void main() {
   // Down between the heaps far off the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
   vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
-  col = mix(col, haze, (1.0 - exp(-max(dist - 30.0, 0.0) / 220.0)) * low * 0.6);
+  col = mix(col, haze, (1.0 - exp(-max(dist - 40.0, 0.0) / 300.0)) * low * 0.4);
   // The tops the hull has just turned over are fresh and catch the light.
   col = mix(col, vapourLight(vWorld, ray, 0.4), stir * 0.35);
   // Low wisps of vapour stream across the tops on the air: long thin streaks in a layer lying over them, thicker
@@ -184,7 +184,7 @@ void main() {
     }
     veil = (1.0 - exp(-veil / 3.0 * path * 0.03)) * uWisps;
   }
-  col = mix(col, vapourLight(vWorld, ray, 0.6), veil * 0.85);
+  col = mix(col, vapourLight(vWorld, ray, 0.6), veil * 0.65);
   col = mix(col, vHaze.rgb, vHaze.a);
   col = mix(col, vFog.rgb, vFog.a);
   float edge = mix(1.0, smoothstep(0.0, 0.75, 1.0 - thin + 0.25 * vnoise(xz * 0.9 + uTime * 0.2)), smoothstep(0.35, 0.9, thin));
