@@ -80,6 +80,8 @@ export class Boat {
   /** The world as the hull sees it, for the shade its own sides cast inside it. */
   private readonly hullFrame = new THREE.Matrix4();
   private readonly flame = lanternFlame();
+  /** How bright the lantern's glass is this moment, 1 at full. */
+  private readonly glass = { value: 1 };
   private readonly pennantMat: THREE.ShaderMaterial;
   /** The air the pennant streams in, in the hull's own frame, and how far out it lifts. */
   private readonly pennantAir = new THREE.Vector2();
@@ -128,7 +130,7 @@ export class Boat {
     const hullMat = new THREE.ShaderMaterial({
       vertexShader: HULL_VERT,
       fragmentShader: HULL_FRAG,
-      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame } },
+      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame }, uGlass: this.glass },
       side: THREE.DoubleSide,
     });
     this.hullContacts = contactShell().getAttribute('position') as THREE.BufferAttribute;
@@ -496,9 +498,11 @@ export class Boat {
   private light(time: number): void {
     const u = atmo.uniforms;
     const lit = this.group.visible ? Math.max(u.uNight.value, 1 - THREE.MathUtils.smoothstep(u.uSunDir.value.y, 0.04, 0.28)) : 0;
-    const flicker = 0.9 + 0.1 * Math.sin(time * 7) * Math.sin(time * 3.1);
+    // Incommensurate slow waves wander without a beat, so the flame breathes rather than blinks.
+    const gutter = 0.5 + 0.25 * Math.sin(time * 2.3) + 0.15 * Math.sin(time * 5.1 + 1.7) + 0.1 * Math.sin(time * 8.7 + 0.4);
+    this.glass.value = 1 - tuning.lantern.glassFlicker * gutter;
     const at = this.contact.copy(this.flame).applyMatrix4(this.group.matrixWorld);
-    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * flicker);
+    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - tuning.lantern.flicker * gutter));
   }
 
   /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
