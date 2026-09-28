@@ -226,7 +226,7 @@ export const SLIPPERS = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.3, (TOP_LANDIN
 export const SIT = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.42, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2 + 0.3);
 /** Where the boat lies alongside the open edge, bow toward the far end of the landing. */
 export const CLOUD_BERTH = (() => {
-  const p = TOP_EDGE.clone().addScaledVector(TOP_OUT, 1.4);
+  const p = TOP_EDGE.clone().addScaledVector(TOP_OUT, 1.2);
   return { x: p.x, z: p.z, yaw: TOP_LANDING.yaw } as const;
 })();
 /** Where the kite is tied off: the top landing's rail at the far corner of the open edge. */

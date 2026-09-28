@@ -180,6 +180,10 @@ export class StairsChapter implements Chapter {
   private readonly stern = new THREE.Vector3();
   private readonly tow = { at: new THREE.Vector3(), heading: 0 };
   private berthed = false;
+  /** The way the boat comes in to lie alongside the top landing, and how far along it it is. */
+  private approach: THREE.Vector2[] = [];
+  private approachLeg = 0;
+  private comingFor = 0;
   private cuts = 0;
   /** How far the boat has come over the cloud, metres. */
   private sailed = 0;
@@ -457,6 +461,7 @@ export class StairsChapter implements Chapter {
         if (c.position.y > CLOUD.top + 0.6 && !c.moving) this.nest();
         break;
       case 'nest':
+        if (this.t > 1.5) this.comeAlongside(dt);
         c.lookAt = this.sun;
         if (c.sitting) c.faceToward(this.sun.x, this.sun.z, 1 - Math.exp(-dt * 3));
         if (!k.stay && Math.hypot(k.position.x - this.birdAt.x, k.position.z - this.birdAt.z) < 0.35) {
@@ -467,6 +472,7 @@ export class StairsChapter implements Chapter {
         if (this.skeinSent && this.t > 4) this.to('skein');
         break;
       case 'skein':
+        this.comeAlongside(dt);
         if (c.sitting) c.faceToward(this.sun.x, this.sun.z, 1 - Math.exp(-dt * 3));
         c.lookAt = this.cast.flock.active ? this.cast.flock.head : this.sun;
         k.watch(this.cast.flock.active ? this.cast.flock.head : null);
@@ -476,8 +482,9 @@ export class StairsChapter implements Chapter {
         }
         break;
       case 'lean':
+        this.comeAlongside(dt);
         c.lookAt = k.position;
-        if (this.t > 2.5 && !carry.busy) this.gather();
+        if (this.t > 2.5 && !carry.busy && this.cast.boat.grounded) this.gather();
         break;
       case 'gather':
         break;
@@ -823,7 +830,6 @@ export class StairsChapter implements Chapter {
     k.stay = false;
     k.watch(null);
     carry.gatherUp(() => {
-      boat.mooring = CLOUD_BERTH;
       const beside = boat.boardingPoint(this.tmp);
       const edge = this.tmp2.copy(TOP_EDGE).addScaledVector(TOP_OUT, -0.25);
       const way = along(CLOUD_BERTH.yaw);
@@ -851,24 +857,49 @@ export class StairsChapter implements Chapter {
   }
 
   /**
-   * The boat has been waiting on the cloud all along, under the kite: it is made fast there while nobody can see,
-   * so it is simply there when they come out on top. The lantern is already lit.
+   * The boat has been out on the cloud all along, under the kite, far off toward the sun: it is put there while
+   * nobody can see, so when they come out on top the kite is already flying over it. The lantern is already lit.
    */
   private berthOnCloud(): void {
     const { boat } = this.cast;
     this.berthed = true;
-    // A little way off the landing to begin with, under the kite; it comes alongside when they are ready.
     const way = along(CLOUD_BERTH.yaw);
-    const wait = { x: CLOUD_BERTH.x + TOP_OUT.x * 4 + way.x * 3, z: CLOUD_BERTH.z + TOP_OUT.z * 4 + way.z * 3, yaw: CLOUD_BERTH.yaw };
-    boat.position.set(wait.x, RIDE, wait.z);
-    boat.yaw = wait.yaw;
+    const toSun = this.tmp.copy(this.sun).sub(TOP).setY(0).normalize();
+    // Out of the sun, the way they are looking, coming round onto the line of the landing's open edge a few
+    // lengths short of it.
+    const short = new THREE.Vector2(CLOUD_BERTH.x - way.x * 12, CLOUD_BERTH.z - way.z * 12);
+    const far = new THREE.Vector2(CLOUD_BERTH.x + toSun.x * 80, CLOUD_BERTH.z + toSun.z * 80);
+    this.approach = [short, new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z)];
+    boat.position.set(far.x, RIDE, far.y);
+    boat.yaw = Math.atan2(short.x - far.x, short.y - far.y);
     boat.altitude = RIDE;
     boat.afloat = true;
     boat.grounded = false;
+    boat.canGround = false;
     boat.speed = 0;
-    boat.mooring = wait;
+    boat.steerFor = null;
+    boat.mooring = null;
     this.world.group.add(this.lantern.glow);
     this.lantern.brightness = 1;
+  }
+
+  /**
+   * While they sit in the last of the sun, the kite brings the boat in across the cloud to them: it comes round
+   * onto the line of the landing's edge and slows, and lies alongside, close enough to step into.
+   */
+  private comeAlongside(dt: number): void {
+    const { boat } = this.cast;
+    if (!this.approach.length || boat.grounded) return;
+    const to = this.approach[this.approachLeg];
+    const last = this.approachLeg === this.approach.length - 1;
+    if (!last && Math.hypot(to.x - boat.position.x, to.y - boat.position.z) < 5) this.approachLeg++;
+    boat.steerFor = this.approach[this.approachLeg];
+    const berth = this.approach[this.approach.length - 1];
+    const left = Math.hypot(berth.x - boat.position.x, berth.y - boat.position.z);
+    boat.mooring = CLOUD_BERTH;
+    boat.becalmed = 1;
+    boat.speed = Math.max(boat.speed, THREE.MathUtils.lerp(0.5, 3.2, THREE.MathUtils.smoothstep(left, 3, 26)) * THREE.MathUtils.smoothstep(this.comingFor += dt, 0, 3));
+    this.world.sailing(boat, dt);
   }
 
   /** The halo sits on the flame of the lantern on the boat's stem post. */
