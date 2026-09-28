@@ -45,6 +45,8 @@ const ON_BLANKET = new THREE.Vector3(
 );
 /** Where the child lies: the foot end of the mattress, at the height their body rides in it. */
 const LIE_AT = new THREE.Vector3(BED.x - BED_FACING.x * 1.0, BED.y + T.lieHigh, BED.z - BED_FACING.y * 1.0);
+/** Where they stand to turn the bed down: close in at its side by the pillow, so they draw it back toward the foot. */
+const TURN_DOWN = new THREE.Vector2(BED.x + BESIDE.x * 1.35 + BED_FACING.x * 0.7, BED.z + BESIDE.y * 1.35 + BED_FACING.y * 0.7);
 /** Where they sit on the edge of it when they wake, before they put their boots on the frost. */
 const SIT_AT = new THREE.Vector3(BED.x + BESIDE.x * 0.65, BED.y + T.sitHigh, BED.z + BESIDE.y * 0.65);
 /** The way up: everything in this room happens along the line from the bed to the top of the hill. */
@@ -107,6 +109,7 @@ export class SleepingChapter implements Chapter {
   private readonly bedEntry = new THREE.Vector3();
   private readonly birdEntry = new THREE.Vector3();
   private birdPlaced = false;
+  private birdDown = false;
   private birdWalkIndex = 0;
   private departureIndex = 0;
   private entryYaw = 0;
@@ -217,7 +220,7 @@ export class SleepingChapter implements Chapter {
       this.hush = 0.8;
       this.laid = true; this.called = true;
       c.lieOn(LIE_AT, BED_FACING); c.position.copy(LIE_AT); c.abed = c.eyesShut = 1;
-      sleeping.sleeper = 1; sleeping.frost = T.frostAsleep;
+      sleeping.sleeper = 1; sleeping.frost = T.frostAsleep; sleeping.blanket = T.blanketTucked;
       // Resume once the bird has left the bed, so its low camera starts clear of the sleeping child.
       sleeping.feather.release(this.spot.copy(k.position).setY(k.position.y + 1.4), this.side.set(UPHILL.x * 0.4, 0.2, UPHILL.y * 0.4));
       k.release(EDGE); k.seating.snap(); k.stay = false;
@@ -296,7 +299,7 @@ export class SleepingChapter implements Chapter {
         c.yawn = smooth(this.t, 2, 3.2) * (1 - smooth(this.t, 5, 6.5));
         c.sleepiness = 0.2 + 0.65 * (smooth(this.t, 8, 9.4) * (1 - smooth(this.t, 9.8, 10.5)));
         c.eyesShut = c.sleepiness * 0.65;
-        if (!c.busy && !c.moving) c.walkTo(BED.x + BESIDE.x * 1.65, BED.z + BESIDE.y * 1.65, false, () => this.to('tuckIn'), 0.15);
+        if (!c.busy && !c.moving) c.walkTo(TURN_DOWN.x, TURN_DOWN.y, false, () => this.to('tuckIn'), 0.15);
         break;
       case 'tuckIn':
         this.tuckIn(dt);
@@ -366,6 +369,7 @@ export class SleepingChapter implements Chapter {
     this.haze += ((this.warmed > 0 ? 0.6 : 0.82) - this.haze) * (1 - Math.exp(-dt * 0.2));
     this.tighten = Math.max(0, this.tighten - dt * 0.55);
     c.tighter = this.tighten;
+    if (this.laid && this.beat !== 'tuckIn' && this.beat !== 'waking') this.holdCovers(T.coversHeld - 0.1 * this.tighten);
     if (p.held) p.hold(c);
     /**
      * The plane stays tucked away through the embrace and returns to the satchel as they leave the bed. It is as
@@ -395,7 +399,7 @@ export class SleepingChapter implements Chapter {
     this.frame();
   }
 
-  /** A child trying to stay awake: pause, make room for the bird, sit, nod, recline, then draw the quilt up. */
+  /** A child trying to stay awake: turn the bed down, make room for the bird, sit, nod, get in, then draw the quilt up. */
   private tuckIn(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
     const birdAt = T.bedPauseFor;
@@ -409,15 +413,14 @@ export class SleepingChapter implements Chapter {
     c.lookAt = k.eye(this.look);
     c.sleepiness = 0.3;
     c.eyesShut = 0.12;
-    sleeping.blanket = T.blanketOpen * (1 - smooth(this.t, tuckAt + 0.3, settleAt - 0.3));
     if (this.t < birdAt) {
-      c.faceToward(BED.x, BED.z, 1 - Math.exp(-dt * 1.6));
-      c.yawn = smooth(this.t, 0.4, 1.4) * (1 - smooth(this.t, 2.3, 3.6));
+      this.turnDown(dt);
       return;
     }
+    sleeping.blanketHeld = false;
+    sleeping.blanketLift = 0;
     if (!this.birdPlaced) {
       this.entryYaw = c.yaw; this.birdPlaced = true;
-      k.release(this.spot.copy(BED).addScaledVector(new THREE.Vector3(BESIDE.x,0,BESIDE.y),1.6));
       k.stay = false; k.pace = T.bedBirdPace;
     }
     // Feet take the long way around the footboard; no perched interpolation through the mattress.
@@ -468,21 +471,56 @@ export class SleepingChapter implements Chapter {
     c.lookAt = null;
     c.abed = smooth(this.t, lieAt, tuckAt);
     c.lean = 0.12 * (1 - c.abed);
+    const up = smooth(this.t, tuckAt - 0.2, settleAt - 0.3);
+    sleeping.blanketHeld = true;
+    sleeping.blanket = lerp(T.blanketOpen, T.blanketTucked, up);
     const pull = smooth(this.t, tuckAt - 0.9, tuckAt + 0.2) * (1 - smooth(this.t, settleAt - 0.5, settleAt + 0.7));
     sleeping.blanketPull = T.blanketHandLift * pull;
-    for (const hand of [0, 1] as const) {
-      if (pull > 0.02) c.reachFor(hand, sleeping.blanketEdge(hand === 0 ? -0.42 : 0.42, this.blanketHand[hand]));
-      else c.reachFor(hand, null);
-    }
+    if (this.t > tuckAt - 1.2) this.holdCovers(lerp(0.42, T.coversHeld, up));
     // One last blink at the bird, then a long exhale into the pillow.
     c.eyesShut = 0.35 * smooth(this.t, tuckAt, settleAt) + 0.65 * smooth(this.t, settleAt + 0.5, end - 0.5);
     if (this.t >= end) {
       c.position.copy(LIE_AT); c.sitting = false; c.abed = c.eyesShut = 1;
       c.lean = 0; c.sleepiness = c.yawn = 0;
-      c.reachFor(0, null); c.reachFor(1, null);
-      sleeping.blanket = sleeping.blanketPull = 0;
+      sleeping.blanket = T.blanketTucked;
+      sleeping.blanketPull = 0;
+      sleeping.blanketHeld = false;
       k.bind(0.03);
       this.to('asleep');
+    }
+  }
+
+  /**
+   * The bird is set down out of the way first. Standing at the side of the bed, both mittens go to the top of the blanket by the pillow and draw it back down
+   * the bed; it is let go of partway and flops the rest of the way over by itself.
+   */
+  private turnDown(dt: number): void {
+    const { child: c, cygnet: k, sleeping } = this.cast;
+    if (!this.birdDown) {
+      this.birdDown = true;
+      k.release(this.spot.set(BED.x + BESIDE.x * 1.6 - BED_FACING.x * 0.5, 0, BED.z + BESIDE.y * 1.6 - BED_FACING.y * 0.5));
+    }
+    const draw = smooth(this.t, T.turnGripAt, T.turnDrawnAt);
+    const letGo = this.t > T.turnDrawnAt;
+    sleeping.blanketHeld = !letGo;
+    sleeping.blanket = letGo ? T.blanketOpen : T.turnDrawn * draw;
+    sleeping.blanketLift = letGo ? 0 : T.turnLift * Math.sin(Math.min(1, draw * 1.3) * Math.PI * 0.5) * (1 - 0.6 * smooth(draw, 0.7, 1));
+    const near = sleeping.blanketEdge(-0.88, this.blanketHand[1], true);
+    const far = sleeping.blanketEdge(-0.5, this.blanketHand[0], true);
+    this.look.lerpVectors(near, far, 0.5);
+    c.faceToward(this.look.x, this.look.z, 1 - Math.exp(-dt * (this.t < T.turnGripAt ? 2.5 : 4)));
+    c.lookAt = this.look;
+    const reaching = this.t > T.turnReachAt && !letGo;
+    c.reachFor(1, reaching ? near : null);
+    c.reachFor(0, reaching ? far : null);
+  }
+
+  /** Both mittens on the turned-down edge of the quilt, `across` of the way out from the middle of the bed. */
+  private holdCovers(across: number): void {
+    const { child: c, sleeping } = this.cast;
+    for (const hand of [0, 1] as const) {
+      sleeping.blanketEdge(hand === 0 ? -across : across, this.blanketHand[hand], false, T.coversInset).y += 0.05;
+      c.reachFor(hand, this.blanketHand[hand]);
     }
   }
 
@@ -878,13 +916,22 @@ export class SleepingChapter implements Chapter {
       c.eyesShut = 0;
       k.watch(c.face(this.told));
     }
-    /** They sit up in it, and the bird is what they see. */
+    /** They sit up in it, pushing the quilt down into their lap, and the bird is what they see; then out over the edge. */
     if (this.t > 3.6) {
       c.position.copy(SIT_AT);
       c.sitting = true;
       c.yaw = Math.atan2(BESIDE.x, BESIDE.y);
-      c.abed = Math.max(0, 1 - (this.t - 3.6) / 2.2);
+      const rise = smooth(this.t, 3.6, 5.6);
+      const out = smooth(this.t, 6.4, 8.2);
+      c.abed = 1 - (1 - T.swingIn) * rise - T.swingIn * out;
       c.lookAt = k.eye(this.look);
+      sleeping.blanketHeld = true;
+      sleeping.blanket = lerp(T.blanketTucked, T.blanketOpen, smooth(this.t, 3.9, 6.0));
+    }
+    if (this.t < 6.2) this.holdCovers(lerp(T.coversHeld, 0.42, smooth(this.t, 3.6, 5.6)));
+    else {
+      c.reachFor(0, null);
+      c.reachFor(1, null);
     }
     if (this.t > T.wakeFor) {
       /** Into their arms, which puts the plane back in the satchel and their hands back on the bird. */
@@ -901,7 +948,7 @@ export class SleepingChapter implements Chapter {
     const { child: c, cygnet: k, sleeping } = this.cast;
     c.lookAt = k.eye(this.look);
     k.watch(c.face(this.told));
-    sleeping.blanket = Math.min(0.5, sleeping.blanket + dt * 0.25);
+    sleeping.blanketHeld = false;
     sleeping.fog = 0;
     sleeping.frost = 0;
     sleeping.dawn = 1;

@@ -1642,7 +1642,16 @@ export const tuning = {
      */
     /** Bedside choreography: a pause, the bird stepping off, sitting, resisting sleep, reclining and tucking. */
     tiredStroll: 0.68,
-    bedPauseFor: 3.8,
+    bedPauseFor: 4.0,
+    /**
+     * Turning the bed down, in seconds from arriving at its side: the mittens go out, take the top of the blanket, and
+     * have drawn it back `turnDrawn` of the way when they let it go; they lift its edge `turnLift` as they draw it.
+     */
+    turnReachAt: 0.5,
+    turnGripAt: 1.3,
+    turnDrawnAt: 3.2,
+    turnDrawn: 0.45,
+    turnLift: 0.3,
     bedBirdFor: 2.4,
     bedBirdPace: .8,
     bedHopFor: .85,
@@ -1654,6 +1663,14 @@ export const tuning = {
     bedTuckFor: 3.2,
     bedSettleFor: 3.8,
     blanketHandLift: 0.45,
+    /**
+     * Drawn up, the quilt is still turned down this far (as `blanket`), so its edge lies under the chin rather than
+     * over the face, and the mittens hold it there this share of the way out to its side.
+     */
+    blanketTucked: 0.28,
+    coversHeld: 0.3,
+    /** How far below the crease the mittens rest on the quilt, as a share of its length, so they lie on top of it. */
+    coversInset: 0.05,
     /** Seconds asleep before the bird starts trying, and between its three tries. */
     triesFrom: 1.2,
     triesEvery: 3.2,
@@ -1715,6 +1732,12 @@ export const tuning = {
     lieSquash: 0.72,
     lieDeep: 0.68,
     lieSide: 0.48,
+    /**
+     * Getting in is two moves: round onto the mattress on the seat, legs brought up along the bed (this share of the
+     * way in), then back onto the pillow; `lieFold` is how far the hips are folded, radians, when sat up in it.
+     */
+    swingIn: 0.45,
+    lieFold: 1.45,
   },
 };
 

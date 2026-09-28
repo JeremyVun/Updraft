@@ -197,6 +197,8 @@ uniform vec4 uBed;
 uniform vec2 uBedAxis;
 uniform vec3 uFold;
 uniform float uPull;
+/** How high hands hold its top edge while turning it down. */
+uniform float uLift;
 /** Who is under it: how much of them there is, how far up the bed they lie, and how they breathe. */
 uniform vec3 uSleeper;
 out vec3 vColor;
@@ -211,7 +213,9 @@ out vec2 vUv;
 vec3 clothAt(vec2 uvw) {
   float fold = uFold.x;
   float back = uvw.y >= fold ? uvw.y : 2.0 * fold - uvw.y;
-  float over = uvw.y >= fold ? 0.0 : sin(clamp((fold - uvw.y) / max(fold, 1e-3), 0.0, 1.0) * 3.14159) * (0.1 + 0.26 * fold) + 0.05;
+  float flap = clamp((fold - uvw.y) / max(fold, 1e-3), 0.0, 1.0);
+  float over = uvw.y >= fold ? 0.0 : sin(flap * 3.14159) * (0.1 + 0.26 * fold) + 0.05;
+  over += uLift * (uvw.y >= fold ? exp(-pow(uvw.y * 14.0, 2.0)) : pow(flap, 1.5));
   float across = (uvw.x - 0.5) * 2.0;
   float drape = smoothstep(0.8, 1.0, abs(across));
   vec2 side = vec2(-uBedAxis.y, uBedAxis.x);
@@ -585,6 +589,11 @@ export class SleepingIsland {
   /** How far the child lifts the fold while drawing it up, in world units. */
   blanketPull = 0;
   private readonly pull = { value: 0 };
+  /** How far the child lifts the top edge while turning it down, in world units. */
+  blanketLift = 0;
+  private readonly lift = { value: 0 };
+  /** In somebody's hands the blanket goes where it is drawn, not eased after it. */
+  blanketHeld = false;
   /** Wind brushed over the visible bed, independent of ground picking. */
   bedWind = 0;
   /** Somebody asleep under the blanket, 0 an empty bed to 1: the cloth stands over them and breathes with them. */
@@ -774,6 +783,7 @@ export class SleepingIsland {
           uBedAxis: { value: new THREE.Vector2(-BED_FACING.x, -BED_FACING.y) },
           uFold: { value: this.fold },
           uPull: this.pull,
+          uLift: this.lift,
           uSleeper: { value: this.under },
         },
         side: THREE.DoubleSide,
@@ -987,7 +997,7 @@ export class SleepingIsland {
     this.shown.fog += (this.fog - this.shown.fog) * k;
     this.shown.frost += (this.frost - this.shown.frost) * k;
     this.shown.dawn += (this.dawn - this.shown.dawn) * k;
-    this.shown.blanket += (this.blanket - this.shown.blanket) * k;
+    this.shown.blanket += (this.blanket - this.shown.blanket) * (this.blanketHeld ? 1 : k);
     this.shown.sleeper += (this.sleeper - this.shown.sleeper) * k;
     this.shown.top += (this.fogTop - this.shown.top) * k;
     // A gust can billow tied cloth, but only the beak pulling the ribbon free releases it.
@@ -1069,9 +1079,14 @@ export class SleepingIsland {
     this.pending = 0;
   }
 
-  /** The fold crease in the same coordinates as clothAt: the mittens follow the cloth, not a guessed pose. */
-  blanketEdge(across: number, out: THREE.Vector3): THREE.Vector3 {
-    const back = this.fold.x;
+  /**
+   * The fold crease in the same coordinates as clothAt, or with `top` the blanket's own top edge, which a turned-down
+   * blanket carries back twice as far, or `inset` down the bed from the crease onto the cloth over whoever is under
+   * it: the mittens follow the cloth, not a guessed pose.
+   */
+  blanketEdge(across: number, out: THREE.Vector3, top = false, inset = 0): THREE.Vector3 {
+    const fold = this.fold.x;
+    const back = top ? fold * 2 : fold + inset;
     const along = (back - 0.5) * 2.85;
     const width = BED_WIDTH * 0.56;
     out.set(BED.x - BED_FACING.x * (along + 0.25), BED.y, BED.z - BED_FACING.y * (along + 0.25));
@@ -1080,14 +1095,17 @@ export class SleepingIsland {
     const wide = Math.min(1, Math.abs(across) / tuning.sleeping.sleeperWide);
     const body = this.under.x * Math.sqrt(1 - wide * wide) * (0.65 + 0.35 * Math.sin(back * Math.PI))
       * (1 - THREE.MathUtils.smoothstep(back, this.under.y - 0.3, this.under.y + 0.25))
-      * THREE.MathUtils.smoothstep(back, back - 0.08, back + 0.12);
-    out.y = Math.max(BED_GROUND + 0.69, BED_GROUND + 0.655 + body * (1 + this.under.z) + this.pull.value);
+      * THREE.MathUtils.smoothstep(back, fold - 0.08, fold + 0.12);
+    out.y = top
+      ? BED_GROUND + 0.655 + (back > 0 ? 0.05 : 0) + this.lift.value
+      : Math.max(BED_GROUND + 0.69, BED_GROUND + 0.655 + body * (1 + this.under.z) + this.pull.value);
     return out;
   }
 
   private cloth(dt: number, time: number): void {
     const t = tuning.sleeping;
     this.pull.value += (this.blanketPull - this.pull.value) * (1 - Math.exp(-dt * 8));
+    this.lift.value += (this.blanketLift - this.lift.value) * (1 - Math.exp(-dt * 8));
     const w = this.wind.sample(BED.x, BED.z, this.air);
     const speed = Math.hypot(w.x, w.z);
     const want = Math.min(1, (speed / t.blanketSpeed) * 0.7 + w.energy * 0.8 + this.bedWind) * t.blanketGust;

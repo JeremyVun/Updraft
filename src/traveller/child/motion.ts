@@ -44,6 +44,8 @@ export interface Pose {
   kick: number;
   /** Lying down, 0..1: the legs lie along the bed. */
   lie: number;
+  /** Of `lie`, how far the hips are folded, radians: sat up in bed the legs still lie along it. */
+  lieFold: number;
   /** A knee lifted for a step up: over a gunwale, onto a deck; per leg, radians of thigh raise. */
   step: [number, number];
   /** Breath, 0..1 of a slow cycle's depth. */
@@ -57,7 +59,7 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, lie: 0, lieFold: 0, step: [0, 0], breath: 0,
   };
 }
 
@@ -439,7 +441,7 @@ export class ChildMotion {
         const ts = swing / fk;
         const tl = lie / fk;
         const k = pose.kick;
-        const thighX = tk * -1.02 + ts * (-1.45 - 0.35 * k) + tl * -0.15;
+        const thighX = tk * -1.02 + ts * (-1.45 - 0.35 * k) + tl * (-0.15 - pose.lieFold);
         const kneeX = tk * 2.6 + ts * (1.35 - 1.1 * Math.max(0, k) + 0.35 * Math.max(0, -k)) + tl * 0.25;
         this.qc.setFromEuler(this.ea.set(thighX, 0, s * (tk * 0.06 + tl * 0.05)));
         this.qa.slerp(this.qc, Math.min(1, fk));
