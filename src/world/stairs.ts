@@ -173,6 +173,10 @@ const NEWEL = 0.24;
 const INSET = NEWEL / 2 + 0.02;
 const OPENING = STEP.landing / 2 - INSET;
 
+/** The middle of the loop's ring, on the ground plan. */
+const RING_MIDDLE = [landingOf(LOOP.corner), landingOf(LOOP.wait), landingOf(LOOP.onward), LOOP_FAR.landing]
+  .reduce((sum, L) => sum.add(L.centre), new THREE.Vector3()).multiplyScalar(0.25).setY(0);
+
 const block = (w: number, h: number, d: number, r = 0.045) => new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2));
 /** A fat turned baluster one unit tall: a round foot, a belly and a collar under the rail. */
 const BALUSTER = new THREE.LatheGeometry([
@@ -273,7 +277,7 @@ function buildFlight(b: Build, f: Flight, ring = false): void {
  * A landing, with a rail right round it but where a flight comes onto it or leaves it, and a newel at every corner
  * and wherever a rail stops, which the flights' own rails run into. The top landing is bare on its left, to the sun.
  */
-function buildLanding(b: Build, L: Landing): void {
+function buildLanding(b: Build, L: Landing, ring = false): void {
   const F = landingFrame(L);
   const mist = (p: THREE.Vector3) => (L.centre.y - p.y - 0.3) / 0.35;
   const w = L.x1 - L.x0, d = L.z1 - L.z0;
@@ -310,7 +314,10 @@ function buildLanding(b: Build, L: Landing): void {
       railing(b, frame, crosswise ? 0 : f.line, a, c, flat, rail, Math.max(1, Math.round((c - a) / 0.5)), mist);
     }
   }
-  for (const [x, z] of posts) newel(b, F, x, z, 0, mist);
+  // Round the loop the inside of the ring is left open, so its corner there has no post either.
+  const fromMiddle = ([x, z]: [number, number]) => onLanding(L, x, z).setY(0).distanceTo(RING_MIDDLE);
+  const inside = ring ? posts.reduce((a, c) => (fromMiddle(c) < fromMiddle(a) ? c : a)) : null;
+  for (const post of posts) if (post !== inside) newel(b, F, post[0], post[1], 0, mist);
 }
 
 /** How much cloud a flight rests on: none on the grass, more the higher it hangs, and in the white it is half cloud. */
@@ -420,7 +427,7 @@ export class CloudStairs {
       if ((LOOSE as readonly number[]).includes(i)) continue;
       const f = flight(i);
       buildFlight(fixed, f, i === LOOP.wait || i === LOOP.onward);
-      buildLanding(fixed, landingOf(i));
+      buildLanding(fixed, landingOf(i), i >= LOOP.corner && i <= LOOP.onward);
       for (const haze of hazeUnder(f, cloudUnder(i))) {
         this.group.add(haze);
         this.hazes.push(haze);
@@ -432,7 +439,7 @@ export class CloudStairs {
     slipper(fixed, s.clone().multiply(new THREE.Matrix4().makeTranslation(0.08, 0, 0.03)).multiply(new THREE.Matrix4().makeRotationY(-0.22)));
     // The loop's far side, which only the bird goes round.
     buildFlight(fixed, LOOP_FAR.flight, true);
-    buildLanding(fixed, LOOP_FAR.landing);
+    buildLanding(fixed, LOOP_FAR.landing, true);
     const standing = new THREE.Mesh(fixed.result(), material);
     standing.name = 'stairs-standing';
     this.group.add(standing);
