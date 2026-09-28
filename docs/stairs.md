@@ -241,6 +241,9 @@ penrose stairs model is sort of see through (it looks buggy)."
   Before, the half-undrawn flight was sorted behind the stair during the reveal and read as see-through.
 - The bird setting off each lap swung out past the rail as it turned round; the general turn fix on stairs
   (`mayStep`, 3e5f63d) cures it.
+- Jeremy asked whether the inner banisters were missing. Shown the loop with rails on the inside of the ring as well,
+  he chose none, and none of the posts at its inside corners either (`buildLanding`'s `ring`): a lone post with no
+  rail read as a banister never finished, and without them the inside is one unbroken run of steps round the hole.
 
 ## Status (2026-09-28, on main)
 
@@ -254,7 +257,8 @@ penrose stairs model is sort of see through (it looks buggy)."
 - The loop, rebuilt so it reads as Penrose stairs:
   - It is one ring of stairs, not four railed landings with stubs of steps between. The corners are no wider than
     a flight with its rails (`CORNER`), and the sides are 4 and 12 steps.
-  - There are no strings, so every side shows its stepped ends, and there is a rail on the outside of the ring only.
+  - There are no strings, so every side shows its stepped ends, and there is a rail on the outside of the ring only
+    (and no post at its inside corners).
   - The child waits a few treads down the flight below the near corner (`waitBelow`), clear of the ring. The bird
     sets off from that corner, runs round and comes back onto it, right over her: up the way it went, back the way it
     came, at her, a questioning peep.
