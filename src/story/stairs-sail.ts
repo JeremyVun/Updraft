@@ -30,8 +30,8 @@ export const SAIL_SHOTS: readonly Framing[] = [
   { at: 0, bearing: -0.55, distance: 10, height: 2.6, ahead: -3, up: 1.3, zoom: 1 },
   { at: 30, bearing: -0.6, distance: 15, height: 4, ahead: -5, up: 1.5, zoom: 1 },
   // Up and away on the sunward side: the boat small on the cloud going on to the horizon, lit by the low sun.
-  { at: 90, bearing: -1.0, distance: 42, height: 14, ahead: 22, up: 6, zoom: 1, lookLag: 0.3 },
-  { at: 130, bearing: -1.2, distance: 45, height: 13, ahead: 22, up: 6, zoom: 1 },
+  { at: 90, bearing: -1.0, distance: 40, height: 13, ahead: 7, up: 4.5, zoom: 1, lookLag: 0.3 },
+  { at: 130, bearing: -1.2, distance: 43, height: 12, ahead: 7, up: 4.5, zoom: 1 },
   // Down beside them, low over the tops on the starboard beam: the child leaning on the side, the bird on the
   // gunwale, both looking out at it all, the cloud going by between them and the lens.
   { at: 180, bearing: -1.75, distance: 10.5, height: 1.6, ahead: 0.6, up: 0.75, zoom: 1.15 },
