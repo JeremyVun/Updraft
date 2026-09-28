@@ -33,6 +33,8 @@ and clears it on exit.
   completion phrase when the door opens.
 - The piano-lullaby reprise at Home was rejected. Home's ending is scripted from the successful updraft and must feel
   as if the Home music plays all the way through to the credits.
+- No bell phrases over the swans at Home: not when the family arrives over the summit, not as they fly away. The
+  wingbeats and the Home drone carry it.
 - The story no longer cues `delight` (the chime with the child's cheer): it no longer fits the music.
 - The sailing boat has no hull-water foley: its bursts sounded like flapping. Toy boats keep theirs.
 - No child voice: "never any voicing from the two main characters". The cygnet's calls, which he later heard and
@@ -250,7 +252,9 @@ chapter sets each frame; no clock decides a phase.
 - In the white the birches' phrase drains away (`stairsAir.drain`) and never returns in this room; the wind is close
   and muffled and climbs with `climb`, while breeze and sea fall away.
 - Out on top the wind drops and the room is nearly silent, then the score's bloom starts from nothing; the sail
-  crossfades from it, with a continuous hull hiss following `speed` while the hull rides the cloud.
+  crossfades from it. Under it, while the hull rides the cloud, a low breath of air past the hull (lowpassed under
+  about 600 Hz) follows `speed` and swells over several seconds, and the kite's line sings faintly while it draws
+  them. Never a hiss: a band of hiss through the tops made the cloud sound like snow (Jeremy, 2026-09-28).
 - The fog thins the sail and asks for the village's music (`arrivalMusic = 'drowned'` during `fog` and `down`) through
   the ordinary handoff. Once out on top, only the fog brings the sea back; a started score keeps its section whatever
   one frame's phase reports. Outside the room every level multiplier is exactly 1.
@@ -268,9 +272,7 @@ sections.
 
 ## Open
 
-- The stairs: Jeremy's note on the sail over the cloud, "The audio and the trails left by the boat make the clouds
-  feel more like snow than clouds", and the player should not need to make wind there; the sail's sound is revised
-  with that pass.
+- The stairs: the sail's air over the cloud awaits Jeremy's listen in the game.
 - Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
   attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
   chime feel right in context.

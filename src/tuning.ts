@@ -119,7 +119,7 @@ export const tuning = {
     stairsAir: {
       /** The wind in the white, heard from the landing below while the bird goes up first. */
       fromBelow: 0.35,
-      bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.05, hullLevel: 0.095, fogLevel: 0.3, lastGustLevel: 0.16,
+      bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.035, hullLevel: 0.16, lineLevel: 0.6, fogLevel: 0.3, lastGustLevel: 0.16,
       /** Time constant of the birches' phrase draining away once they go up into the white: about 4 dB a second. */
       drain: 2.2,
     },
@@ -168,11 +168,11 @@ export const tuning = {
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
     recogniseFor: 8,
-    lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.16,
+    lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.04,
     /** After refolding, offer the plane briefly before the wind takes it. */
     releaseFor: 2,
-    /** Hold the near edge within reach; the higher shoulder view keeps the drawn sun clear. */
-    paperHeight: 2.15, paperForward: 1.7, paperSide: 0, paperTilt: 32,
+    /** In both mittens, the near edge below the shoulders and a little to her right, so the hood leaves the drawn sun clear. */
+    paperHeight: 2.1, paperForward: 1.1, paperSide: 0.22, paperTilt: 42,
     /** A little larger when open so the crayon landmarks read clearly. */
     paperScale: 1.1,
     /** One shoulder composition holds both the paper and the distant house. */
@@ -181,7 +181,7 @@ export const tuning = {
     /** Let the move develop through the hands coming up and the first folds opening. */
     approachFor: 4.4,
     /** A restrained drift keeps the child, drawing and real house together throughout recognition. */
-    readingRise: 0, readingForward: 0.35, readingArc: 0, portraitReadingArc: 0,
+    readingRise: 0, readingForward: 0.1, readingArc: 0, portraitReadingArc: 0,
     readingFrom: 1.5, readingUntil: 7, readingPaperWeight: 0.65,
     portraitBack: 9.5, narrowPortraitBack: 9.5, paperWeight: 0.65, portraitPaperWeight: 0.6,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
@@ -278,10 +278,15 @@ export const tuning = {
     density: 0.42, clearing: 0.055, clearingTop: 0.1,
     /** How far the pocket of thinner cloud round the child reaches, at the bottom of the white and at the top. */
     bubble: 6.5, bubbleTop: 4.4,
+    /** Coming out on top, how far over the cloud's top it thins away to clear air, metres. */
+    crown: 4.5,
     /** The wind through the white near its top, metres a second. */
     windInCloud: 5.5,
-    /** Top speed over the cloud, and in the mist, metres a second; and how fast the kite draws them on by itself. */
-    sailSpeed: 5, fogSpeed: 4, kiteDraws: 2.4,
+    /**
+     * How fast the kite draws them over the cloud by itself, metres a second (nobody needs to blow), the most a gust
+     * can add to that, and their top speed in the mist.
+     */
+    kiteDraws: 3.4, sailSpeed: 4.2, fogSpeed: 4,
     /**
      * The bank of mist across the way: how high it stands over the cloud, how thick it is per metre, and how much
      * thicker over its floor (per metre, falling away over bankLow metres); how far its front, its back and its top
@@ -292,6 +297,19 @@ export const tuning = {
     bankSwap: 34,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
     fogLift: 11,
+    /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
+    cloudDrift: 0.6,
+    /** How long the tops the hull parts take to fill in again behind it, seconds. */
+    partingFills: 8,
+    /** How long the breath of vapour off the stern lasts, seconds. */
+    wakeLife: 7,
+    /** How fast the low wisps stream across the tops, metres a second. */
+    wispSpeed: 1.6,
+    /**
+     * How many towers of cumulus stand out of the sea of cloud along the way, besides the four either side of it
+     * where it runs between them (at most 12), and how finely each is marched.
+     */
+    towers: 11, towerSteps: 12,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
@@ -1615,6 +1633,14 @@ export const tuning = {
     /** How far the blanket stands over the child under it, and how wide that shape is, in bed widths. */
     sleeperHigh: 0.78,
     sleeperWide: 0.65,
+    /**
+     * Getting out of bed, the blanket is pushed aside off them on the side they get out (`asideSide` across the bed):
+     * over `asideAlong` ± `asideHalf` of its length, turned back `asideBack` of the way to the middle.
+     */
+    asideSide: 1,
+    asideAlong: 0.55,
+    asideHalf: 0.4,
+    asideBack: 0.55,
 
     /**
      * The one long white feather. It is the paper plane made slower and floatier: it takes the air's own speed
@@ -1651,6 +1677,15 @@ export const tuning = {
     /** Bedside choreography: a pause, the bird stepping off, sitting, resisting sleep, reclining and tucking. */
     tiredStroll: 0.68,
     bedPauseFor: 3.8,
+    /**
+     * Turning the bed down, in seconds from arriving at its side: the mittens go out, take the top of the blanket, and
+     * have drawn it back `turnDrawn` of the way when they let it go; they lift its edge `turnLift` as they draw it.
+     */
+    turnReachAt: 0.5,
+    turnGripAt: 1.3,
+    turnDrawnAt: 3.2,
+    turnDrawn: 0.45,
+    turnLift: 0.3,
     bedBirdFor: 2.4,
     bedBirdPace: .8,
     bedHopFor: .85,
@@ -1661,7 +1696,15 @@ export const tuning = {
     climbsIn: 4.8,
     bedTuckFor: 3.2,
     bedSettleFor: 3.8,
-    blanketHandLift: 0.45,
+    blanketHandLift: 0.25,
+    /**
+     * Drawn up, the quilt is still turned down this far (as `blanket`), so its edge lies under the chin rather than
+     * over the face, and the mittens hold it there this share of the way out to its side.
+     */
+    blanketTucked: 0.28,
+    coversHeld: 0.3,
+    /** How far below the crease the mittens rest on the quilt, as a share of its length, so they lie on top of it. */
+    coversInset: 0.05,
     /** Seconds asleep before the bird starts trying, and between its three tries. */
     triesFrom: 1.2,
     triesEvery: 3.2,
@@ -1723,6 +1766,12 @@ export const tuning = {
     lieSquash: 0.72,
     lieDeep: 0.68,
     lieSide: 0.48,
+    /**
+     * Getting in is two moves: round onto the mattress on the seat, legs brought up along the bed (this share of the
+     * way in), then back onto the pillow; `lieFold` is how far the hips are folded, radians, when sat up in it.
+     */
+    swingIn: 0.45,
+    lieFold: 1.45,
   },
 };
 

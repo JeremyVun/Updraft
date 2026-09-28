@@ -163,6 +163,8 @@ export const atmo = {
     uCloudDeck: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Its base and top heights, how thick it is inside, and how thick it still is in the clear air round the child. */
     uCloudDeckY: { value: new THREE.Vector4(0, 1, 0.5, 0.05) },
+    /** How far over the deck's top it thins away, metres; 0 is a clean top. */
+    uCloudCrown: { value: 0 },
     /** The pocket of thinner cloud the story keeps round whoever is climbing through it: centre and radius. */
     uCloudBubble: { value: new THREE.Vector4(0, -1e4, 0, 0) },
     /**
@@ -311,6 +313,7 @@ uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
 uniform vec4 uCloudDeck;
 uniform vec4 uCloudDeckY;
+uniform float uCloudCrown;
 uniform vec4 uCloudBubble;
 uniform vec4 uFogBank;
 uniform vec4 uFogBankShape;
@@ -692,12 +695,20 @@ vec4 deckLayer(vec3 ro, vec3 rd, float far) {
   vec2 body = deckSlab(ro, rd, uCloudDeckY.x + 1.4, uCloudDeckY.y, far);
   vec2 fringe = deckSlab(ro, rd, uCloudDeckY.x - 1.6, uCloudDeckY.x + 1.4, far);
   vec2 slab = vec2(min(body.x, fringe.x), max(body.y, fringe.y));
+  // Coming out on top, the cloud thins away over a few metres above its top rather than stopping at a ceiling.
+  vec2 crown = uCloudCrown > 0.0 ? deckSlab(ro, rd, uCloudDeckY.y, uCloudDeckY.y + uCloudCrown, far) : vec2(1.0, 0.0);
+  if (crown.y > crown.x) slab = vec2(min(slab.x, crown.x), max(slab.y, crown.y));
   vec2 inside = vec2(max(slab.x, disc.x), min(slab.y, disc.y));
   // The fringe thickens from nothing at its foot to nearly the body at its top, so there is no floor to the cloud
   // to see edge-on: the density is linear in height, so its mean along the span is its value at the span's middle.
   vec2 fr = vec2(max(fringe.x, disc.x), min(fringe.y, disc.y));
   float thick = clamp((ro.y + rd.y * (fr.x + fr.y) * 0.5 - (uCloudDeckY.x - 1.6)) / 3.0, 0.0, 1.0);
   float len = deckSpan(body, disc) + 0.85 * thick * max(0.0, fr.y - fr.x);
+  if (crown.y > crown.x) {
+    vec2 cr = vec2(max(crown.x, disc.x), min(crown.y, disc.y));
+    float crest = clamp(1.0 - (ro.y + rd.y * (cr.x + cr.y) * 0.5 - uCloudDeckY.y) / uCloudCrown, 0.0, 1.0);
+    len += 0.85 * crest * max(0.0, cr.y - cr.x);
+  }
   if (inside.y - inside.x <= 0.0) return vec4(0.0);
   float thin = uCloudDeckY.z - uCloudDeckY.w;
   float cleared = 0.0;

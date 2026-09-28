@@ -8,6 +8,7 @@ const ROOMS: [start: string, name: string, still: URL][] = [
   ['boats', 'Little boats', new URL('./stills/boats.webp', import.meta.url)],
   ['meadow', 'Meadow', new URL('./stills/meadow.webp', import.meta.url)],
   ['birches', 'Birches', new URL('./stills/birches.webp', import.meta.url)],
+  ['stairs', 'Cloud stairs', new URL('./stills/stairs.webp', import.meta.url)],
   ['drowned', 'Drowned village', new URL('./stills/drowned.webp', import.meta.url)],
   ['wood', 'Dark wood', new URL('./stills/wood.webp', import.meta.url)],
   ['sleeping', 'Sleeping island', new URL('./stills/sleeping.webp', import.meta.url)],

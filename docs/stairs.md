@@ -2,9 +2,9 @@
 
 The room between the birches and the drowned village: a staircase a child would dream about, climbing from a grassy
 island up through a cloud deck into the last sun of the year, then a sail across the top of the cloud and down
-through the fog onto the village's water. It is on `main` and plays end to end (`?chapter=stairs`); the sail over
-the cloud is being reworked. It is not yet in the chapter select: Jeremy wants the journey over the cloud fixed first,
-and it needs a still and a name.
+through the fog onto the village's water. It is on `main` and plays end to end (`?chapter=stairs`), and it is in
+the chapter select as "Cloud stairs" (the still: the stair from the grass with its loose flights hanging, captured by
+`tools/chapter-stills.mjs stairs`).
 
 ## Jeremy's words (verbatim)
 
@@ -99,6 +99,14 @@ On the room as it is on `main` (2026-09-28), before it goes into the chapter sel
 > - There's some kind of render bug (it looks like it's related to render distance), where parts of the cloud that are beyond a certain range that now come into that render range suddenly get drawn in a completely different position / state. This makes the experience very stuttery.
 > - I don't like that as you go through teh clouds, you can see them moving alot, but then as you emerge everything goes still and you have to create wind to drive the boat. I think the player shouldn't need to create wind to drive this part of the game, they should just be able to sit back and enjoy the beautiful experience. Maybe also have the child and the cygnet look like they are "enjoying" the experience too e.g. leaning on the side of the boat looking out or something."
 
+On the heap on the loop, which blew away and heaped itself back up (2026-09-28):
+
+> "It's really strange how the cloud heaps come back when you brush them away. why not just don't let that happen to begin with? i.e. player cannot generate wind and brush them away until it's safe to do so??"
+
+On the reworked sail (2026-09-29):
+
+> "It's beautiful. I only noticed one consistent issue is that the cloud seems to clip into the boat and fill teh bottom of it. It's especially noticeable when the boat is sailing into the nest."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn, the afternoon going. The birches took the last of the year off
@@ -133,19 +141,26 @@ brings the light. Courage passes back and forth between them, and the stairs are
    out of the white to the one place from which the ring climbs for ever, and holds dead still. The bird runs up
    and round and comes back onto the corner it left, right over the child; it looks up the way it went, back the
    way it came, and down at her, and asks with a small questioning peep. They both look across at a heap of cloud
-   sitting on the first treads of the way on; a sweep is drawn across it. Blown away, the heap shows a flight going
+   sitting on the first treads of the way on; a sweep is drawn across it. Until then no wind moves the heap. Blown away, the heap shows a flight going
    on up that nobody could see; next time round the bird takes it, the child follows, and the lens comes round and
    down beside the ring while its last flight lets go of the trick and is seen to climb on past the corner and stop
    in the air a storey too high. The hollow closes once the lens is back in the white.
-5. **Above the clouds.** Out of the wind into a vast calm; a pair of slippers; the bird settles in one and the child
+5. **Above the clouds.** Up out of the white through mist that thins as they rise (the deck's crown), out of the
+   wind into a vast calm, the cloud still drifting on a soft air; a pair of slippers; the bird settles in one and the child
    sits beside it on the lip with her feet hanging over the cloud (Jeremy: "the child should set on the lip with her
    feet dangling in the cloud, and the cygnet next to her"). The slippers are on her right, where the stowed paper
-   does not hide the bird, and a bird's width clear of her coat. A skein of swans goes across the sun; the boat
-   waits on the cloud under the kite.
-6. **The sail over the cloud.** Off the landing in one slow turn, then a long run toward the low sun past towers of
-   cloud, the kite drawing them on. The lens goes once round the boat and never back: ahead of them looking back at
-   the stair, in close to their faces in the lantern light, up and away until the boat is small on the cloud under
-   the sun, then down behind them as a bank of mist looms.
+   does not hide the bird, and a bird's width clear of her coat. A skein of swans goes across the sun. Far off toward
+   the sun the kite is flying, and under it the boat comes in to them across the cloud out of the sunset, slows, and
+   lies right alongside the landing's edge.
+6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow (a gust still adds a
+   little). Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
+   out to port among the heaps, back across to starboard between towers of cumulus, and straight on into a bank of
+   mist standing on the cloud (about 350 m, two minutes). The hull rides the billows, down in the tops, parting them.
+   Under way the bird hops up onto the gunwale on the sunward side and the child turns to that side, arms on the
+   rail, both looking out toward the sun; now and then she looks at the bird. The lens is mostly far off, so the
+   cloud is seen going on for ever round a small boat: ahead of them looking back at the stair; up and away on the
+   sunward side; down beside them, low over the tops; up and round astern while they sail between the towers; and
+   down behind them as the bank looms. As it does, the bird comes back into her arms.
 7. **Into the mist and out onto the village's water.** They sail into the bank level until there is nothing but
    white. Unseen, the boat is put down on the sea where the village begins (the one camera cut); the gold of the
    cloud turns to the grey and blue of dusk, water shows under the hull, and they sail out of the back of the bank
@@ -183,7 +198,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
   keeps the deck's top surface out of sight while the lens is up there. No rails or posts on the ring's inside
   (`buildLanding`'s `ring`).
 - **World**: `src/world/stairs.ts` (flights, landings, loose flights and ghost, slippers, the trick),
-  `stairs-cloud.ts` (the deck's underside and top, the hull's furrow, `FogBank`), `stairs-haze.ts` (volumetric
+  `stairs-cloud.ts` (the deck's underside and top, the parting behind the hull, `FogBank`), `stairs-haze.ts` (volumetric
   haze), `stairs-puffs.ts`, `stairs-wisps.ts` (cloud streaming past in the white), `stairs-wake.ts`,
   `stairs-lantern.ts` (the glow on the boat's own lantern). Chapter: `src/story/stairs.ts`, the sail's lens
   `src/story/stairs-sail.ts` (`SAIL_SHOTS`), the bird's line up the stair `src/story/stairs-track.ts`. Knobs:
@@ -201,14 +216,24 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Walking on stairs**: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge
   (`offTheEdge`), and the bird turns almost on the spot there (`mayStep`). It is routed stop by stop and drops an
   errand within 0.45 m, so arrival is checked at 0.5 m. `Cygnet.standAt` puts it somewhere at once.
-- **The sail**: the route is `CLOUD_ROUTE` (the turn, then `RUN_YAW`), the bank's front `FOG_BANK`, the towers
-  `TOWER_GATE`. The boat rides the cloud at a fixed height (`RIDE`); `Chapter.kiteTow` ties the stairs' departure
-  kite to the bow. The bank is an analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At
-  `bankSwap` metres in, the boat and the bank are moved down onto the sea by the same offset, so the white is
-  unchanged (`Chapter.cameraCut` lets the story cut where nothing can be seen); the deck goes under the water and
-  the village shows from then on without its arrival veil (`stairsDescent` in `world/journey-rooms.ts`). Under sail
-  the pointer lands at about the boom (`POINTER_OVER_HULL`); while the lens is below the sail on their faces the
-  kite draws them on (`kiteDraws`).
+- **The sea of cloud**: its top (`StairsCloud`) is drawn on world-anchored nested grids (`cloud-grid.ts`), so far
+  heaps never jump as the lens moves; its lobes are baked into tiling textures at load (`cloud-lobes.ts`) and drift
+  on the air (`tuning.stairs.cloudDrift`) under a veil of wisps. The towers are raymarched cumulus
+  (`cloud-towers.ts`) placed off the route and either side of `TOWER_GATE`; `CloudTowers.keepOut` keeps the lens out
+  of them. The hull parts the tops in a trough that fills in behind, with a breath of vapour off the stern
+  (`stairs-wake.ts`, `cloud-vapour.ts`); the top is never drawn inside the hull (`StairsCloud.holdOut`, the boat's
+  own planform). `surfaceAt(x, z)` gives the top as drawn: the hull rides the billows on it and the lens keeps over
+  it. Coming out on top the deck thins away over `tuning.stairs.crown` metres above its top (`uCloudCrown`) and
+  clears over seven seconds, so the lens rises out of mist rather than through a ceiling.
+- **The sail**: the route is `CLOUD_ROUTE` (the turn off the landing, then a Catmull-Rom wander through `MEANDER`),
+  the bank's front `FOG_BANK`. The boat is out on the cloud under the kite from the moment they come out on top and
+  sails in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
+  draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
+  round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). The bank is an
+  analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At `bankSwap` metres in, the boat and the
+  bank are moved down onto the sea by the same offset, so the white is unchanged (`Chapter.cameraCut` lets the story
+  cut where nothing can be seen); the deck goes under the water and the village shows from then on without its
+  arrival veil (`stairsDescent` in `world/journey-rooms.ts`).
 - **Sound**: `src/audio/stairs-sound.ts` and `stairs-score.ts` behind `StairsAir` (phase, cloud, climb, open, fog,
   speed), rendered with `tools/stairs-audio-proposal.mjs`; the contract is in `docs/contracts/audio.md`.
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
@@ -218,14 +243,5 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 ## Open
 
-Jeremy's notes on the sail over the cloud, above (2026-09-28), are the work in progress:
-- a view that shows the rolling cloud expanse, and a course less like a straight line: a feel unique to sailing on
-  cloud;
-- clouds that read as cloud, not snow: the wake trails, the sound, and the flat shape of the cloud top (a bigger
-  change whose cost is to be explored);
-- no pop-in as the lens breaks through the cloud: the boat arrives from off camera or never appears suddenly, and
-  it lies closer to the jetty;
-- no cloud jumping into a different state as it comes into range;
-- no wind needed from the player over the cloud: they sit back, and the child and cygnet visibly enjoy it (leaning
-  on the side looking out);
-- then a still and a name for the chapter select.
+- The sail's air over the cloud awaits Jeremy's listen in the game.
+- The paper plane in the satchel shows as a bright white triangle on her back.

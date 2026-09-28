@@ -432,7 +432,6 @@ export class HomeChapter implements Chapter {
       this.passed = true;
       /** Meet the west edge on its northbound tangent, while the whole approach is still in front of the camera. */
       flock.pass(c.position.x + 2 - f.wheelRadius, c.position.z - f.wheelAhead, c.position.y + f.wheelHeight, NORTH, 13, 60, false);
-      cue('skein');
       cygnet.watch(flock.head);
     }
     c.lookAt = this.passed && flock.active ? flock.head : this.sky;

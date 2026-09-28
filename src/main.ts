@@ -606,6 +606,7 @@ function updateCloudDeck(dt: number): void {
   u.uCloudDeck.value.set(STAIRS_ISLE.x, STAIRS_ISLE.z, 1400, deckShown.amount);
   deckShown.clearing = ease(deckShown.clearing, want?.clearing ?? tuning.stairs.clearing, 1.2, dt);
   u.uCloudDeckY.value.set(deckShown.base, want?.top ?? deckShown.top, tuning.stairs.density, deckShown.clearing);
+  u.uCloudCrown.value = want?.crown ?? 0;
   if (bubble) u.uCloudBubble.value.set(bubble.x, bubble.y, bubble.z, deckShown.bubble);
   else u.uCloudBubble.value.w = deckShown.bubble;
 }

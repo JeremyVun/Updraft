@@ -2,8 +2,9 @@
 
 Every check runs locally from `tools/`; there is no CI. Browser tools default to the dev server on
 `http://127.0.0.1:5230/` and take `BASE` for another server (use a `vite preview` build, or a worktree with its own
-server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). GPU tools
-share one capture lock (`tools/lib/browser.mjs`); run GPU checks one at a time. Evidence goes under
+server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). GPU checks
+share one capture lock (`tools/lib/browser.mjs`), so timings are not skewed by another browser; `play.mjs`
+captures take no lock and can run side by side. Evidence goes under
 `/tmp`. Node mechanics checks load TypeScript through `tools/lib/typescript.mjs` and need no browser.
 
 ## Groups

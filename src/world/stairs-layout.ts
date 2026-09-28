@@ -232,44 +232,57 @@ export const SLIPPERS = onLanding(TOP_LANDING, TOP_LANDING.x1 - SIT_IN - 0.05, (
 export const SIT = onLanding(TOP_LANDING, TOP_LANDING.x1 - SIT_IN, (TOP_LANDING.z0 + TOP_LANDING.z1) / 2 - 0.4);
 /** Where the boat lies alongside the open edge, bow toward the far end of the landing. */
 export const CLOUD_BERTH = (() => {
-  const p = TOP_EDGE.clone().addScaledVector(TOP_OUT, 1.4);
+  const p = TOP_EDGE.clone().addScaledVector(TOP_OUT, 1.2);
   return { x: p.x, z: p.z, yaw: TOP_LANDING.yaw } as const;
 })();
 /** Where the kite is tied off: the top landing's rail at the far corner of the open edge. */
 export const KITE_TIE = onLanding(TOP_LANDING, TOP_LANDING.x1 - 0.05, TOP_LANDING.z1 - 0.05);
 
-/** The long run over the cloud goes this way: toward the low sun, which stands a little to starboard of it. */
+/** The run over the cloud goes this way on the whole: toward the low sun, which stands a little to starboard of it. */
 export const RUN_YAW = -2.2;
-/** How far the boat comes round off the landing, and how long the run is to where the bank of mist stands across it. */
+/** How far the boat comes round off the landing, and how far on the bank of mist stands across the way. */
 const TURN_RADIUS = 22;
-const RUN_TO_BANK = 237;
+const RUN_TO_BANK = 300;
+/**
+ * The way wanders across the open cloud, [how far on, how far to starboard] from where the turn off the landing
+ * ends: out to port among the heaps, back across to starboard past the towers, and straight on into the bank.
+ */
+const MEANDER: readonly [number, number][] = [[0, 0], [30, -10], [75, -24], [125, -18], [170, 6], [215, 22], [255, 12], [285, 0], [RUN_TO_BANK + 90, 0]];
 
+/** A point [how far on, how far to starboard] of where the run starts. */
+function onRun(from: THREE.Vector3, on: number, starboard: number): THREE.Vector3 {
+  return from.clone().addScaledVector(along(RUN_YAW), on).addScaledVector(leftOf(RUN_YAW), -starboard);
+}
+
+const TURN_CENTRE = new THREE.Vector3(CLOUD_BERTH.x, 0, CLOUD_BERTH.z).addScaledVector(leftOf(CLOUD_BERTH.yaw), TURN_RADIUS);
+const roundTheTurn = (yaw: number) => TURN_CENTRE.clone().addScaledVector(leftOf(yaw), -TURN_RADIUS);
+/** Where the turn off the landing ends and the run begins. */
+const RUN_FROM = roundTheTurn(RUN_YAW);
 /**
  * The way over the cloud: off the top landing in one slow turn to port, away from the stair and round toward the
- * low sun, then a long run straight on across the open cloud into the bank of mist standing on it far off.
+ * low sun, then a long wander across the open cloud, one smooth curve through the meander, into the bank of mist.
  */
 export const CLOUD_ROUTE = (() => {
-  const centre = new THREE.Vector3(CLOUD_BERTH.x, 0, CLOUD_BERTH.z).addScaledVector(leftOf(CLOUD_BERTH.yaw), TURN_RADIUS);
-  const round = (yaw: number) => centre.clone().addScaledVector(leftOf(yaw), -TURN_RADIUS);
   const turn = RUN_YAW + Math.PI * 2 - CLOUD_BERTH.yaw;
-  const points = [0.3, 0.55, 0.8, 1].map(k => round(CLOUD_BERTH.yaw + turn * k));
-  const out = points[points.length - 1];
-  points.push(out.clone().addScaledVector(along(RUN_YAW), RUN_TO_BANK + 90));
+  const points = [0.3, 0.55, 0.8].map(k => roundTheTurn(CLOUD_BERTH.yaw + turn * k));
+  const curve = new THREE.CatmullRomCurve3(MEANDER.map(([on, side]) => onRun(RUN_FROM, on, side)), false, 'centripetal');
+  const length = curve.getLength();
+  for (let d = 0; d < length - 90; d += 16) points.push(curve.getPointAt(d / length));
+  points.push(onRun(RUN_FROM, RUN_TO_BANK + 90, 0));
   return points.map(p => new THREE.Vector2(p.x, p.z));
 })();
 /** The bank of mist across the way: a point on its front, and the way into it. */
 export const FOG_BANK = (() => {
-  const out = CLOUD_ROUTE[CLOUD_ROUTE.length - 2];
-  const into = along(RUN_YAW);
-  return { x: out.x + into.x * RUN_TO_BANK, z: out.y + into.z * RUN_TO_BANK, yaw: RUN_YAW } as const;
+  const front = onRun(RUN_FROM, RUN_TO_BANK, 0);
+  return { x: front.x, z: front.z, yaw: RUN_YAW } as const;
 })();
 /**
- * The stretch of the run where the heaped towers crowd in close either side and the boat sails between them, lit
- * gold behind the child and the bird as the lens looks back at their faces.
+ * The stretch of the wander where the heaped towers crowd in close either side and the boat sails between them,
+ * crossing back to starboard, while the lens rises astern to show how small the boat is among them.
  */
 export const TOWER_GATE = (() => {
-  const out = CLOUD_ROUTE[CLOUD_ROUTE.length - 2], way = CLOUD_ROUTE[CLOUD_ROUTE.length - 1].clone().sub(out).normalize();
-  return { from: out.clone().addScaledVector(way, 4), to: out.clone().addScaledVector(way, 84) } as const;
+  const from = onRun(RUN_FROM, 150, -6), to = onRun(RUN_FROM, 240, 18);
+  return { from: new THREE.Vector2(from.x, from.z), to: new THREE.Vector2(to.x, to.z) } as const;
 })();
 /** Where the hull is sailing on the sea when the drowned village takes over. */
 export const DESCENT_END = new THREE.Vector2(16, -1254);
