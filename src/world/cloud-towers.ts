@@ -222,6 +222,15 @@ export class CloudTowers {
       const p = gate.from.clone().lerp(gate.to, k);
       places.push({ x: p.x - gateDir.y * off, z: p.y + gateDir.x * off, size: 15 + rnd() * 6 });
     });
+    const fromRoute = (x: number, z: number) => {
+      let d = Infinity;
+      for (let i = 1; i < route.length; i++) {
+        const a = route[i - 1], b = route[i], abx = b.x - a.x, abz = b.y - a.y;
+        const t = THREE.MathUtils.clamp(((x - a.x) * abx + (z - a.y) * abz) / Math.max(abx * abx + abz * abz, 1e-6), 0, 1);
+        d = Math.min(d, Math.hypot(x - a.x - abx * t, z - a.y - abz * t));
+      }
+      return d;
+    };
     const spots = tuning.stairs.towers;
     for (let k = 0; k < spots; k++) {
       const s = length * (0.12 + 0.7 * (k + rnd() * 0.5) / spots);
@@ -229,8 +238,10 @@ export class CloudTowers {
       const far = k % 3 === 2;
       const off = (far ? 220 + rnd() * 200 : 70 + rnd() * 60) * (k % 2 ? 1 : -1);
       const x = p.x + side.x * off, z = p.y + side.y * off;
-      if (Math.hypot(x - berth.x, z - berth.y) < 90) continue;
-      places.push({ x, z, size: far ? 30 + rnd() * 14 : 17 + rnd() * 9 });
+      const size = far ? 30 + rnd() * 14 : 17 + rnd() * 9;
+      // Never on the way, wherever else it bends, nor over the top landing.
+      if (Math.hypot(x - berth.x, z - berth.y) < 90 || fromRoute(x, z) < 40 + size) continue;
+      places.push({ x, z, size });
     }
     for (const place of places) {
       const size = place.size;
