@@ -99,6 +99,15 @@ visible change. Merge only after his OK.
   handoff), or is the check measuring something the change made meaningless? Trace the frame. If it is a jolt, fix
   it; if the check is stale, update it and say why.
 
+- **Traced (2026-09-29):** not the child's limit. `LittleBoats.update` clipped the toy's step at the outlet
+  (`Math.min(L.length, limit)`) even when nothing held it, so on the frame it crossed s = 101 its speed fell from 3.3 to
+  0.6 and the sail needed a second to bring it back. Older than 1e0d470; the leash had hidden it from the check. Fixed by
+  easing only while the toy waits; the check now counts the frame that ends sailing.
+- **Found underneath:** the check's safe-frame assertion: since 1e0d470 the cygnet falls far behind in the last pool
+  (s 73 against the toy's 101 at the outlet) and is out of frame about 12 s of 45 in landscape, about 19 s in portrait.
+  **Jeremy's ruling (2026-09-29): the cygnet catches up.** When it has fallen well behind it swims faster until it is
+  back near the child; the boats stay unleashed.
+
 ## 3. Home: a departing swan passes close to the cygnet
 
 - **Observed:** `node tools/flock-flight-check.mjs` fails: "adult crossed through the cygnet", closest 1.735 m against
