@@ -89,6 +89,19 @@ After playtesting the third pass by hand (2026-09-28, verbatim):
 >
 > - It's still very obvious that they are descending through the clouds instead of into some fog."
 
+On the fourth pass as merged to `main` (2026-09-28, verbatim), before the room goes into the chapter select:
+
+> "- I think the starlings are ok i think.
+>
+> Before putting the stairs room in the chapter select, I need you to take a look at fixing the journey that the child takes through the clouds.
+>
+> - For most of it, the camera is up close and you never get to see the rolling cloudy expanse, and the journey seems a bit too much like a straight line. There's currently not much of a unique feel to "sailing ontop of the clouds".
+> - The audio and the trails left by the boat make the clouds feel more like snow than clouds
+> - Part of the feeling of it being snow instead of cloud is also probably because the "shape" of the clouds is a bit "flat" but im not sure what the performance implications of uplifting this area is. Might be worth exploring with a sub agent.
+> - As the camera breaks through the cloud cover, the boat and everything suddenly render in, which doesn't look good. Either have the boat arrive at the jetty from off camera, or have it not just suddenly load in. The boat is also a bit far from the jetty i think (there's a bit too much gap between the jetty and the boat)
+> - There's some kind of render bug (it looks like it's related to render distance), where parts of the cloud that are beyond a certain range that now come into that render range suddenly get drawn in a completely different position / state. This makes the experience very stuttery.
+> - I don't like that as you go through teh clouds, you can see them moving alot, but then as you emerge everything goes still and you have to create wind to drive the boat. I think the player shouldn't need to create wind to drive this part of the game, they should just be able to sit back and enjoy the beautiful experience. Maybe also have the child and the cygnet look like they are "enjoying" the experience too e.g. leaning on the side of the boat looking out or something."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn; the afternoon going. The birches took the last of the year off the
