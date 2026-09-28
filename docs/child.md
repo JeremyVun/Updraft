@@ -429,3 +429,16 @@ the mittens come into the lap (`lap` in `traveller.ts`): round the paper, which 
 (`paperLap`), with her eyes on it; without it they rest on her knees. She leans in a little. It lets go as she stands
 or starts any action. The stairs' nest (paper stowed) and the summit (paper in hand) share it. Sheet:
 `/tmp/startpose/start-pose-before-after.png`. The summit is not yet checked in place.
+
+## A lower head (2026-09-28)
+
+Jeremy (verbatim): "can ou also have a look at reducing the neck height / size a little bit as well then? I think it's
+also causing the child model to read a bit too old." Shown the head 0.035 and 0.06 lower: "0.04 lower makes sense as
+well".
+
+- Standing, no bare neck shows; what read as a long neck was the head standing high over the tall two-band scarf. A
+  small child's head sits down on the shoulders.
+- The head (face, hair, hood) is posed `HEAD_SINK` 0.04 below where it is modelled (`skeleton.ts`, applied in
+  `motion.ts`), so everything painted on it keeps its modelled frame; the coat and scarf stay put and the chin sits
+  further into the scarf. The hood's keep-out for the scarf ends and the cygnet (`HOOD_AT` in `body.ts`) moves with it.
+- Checked: every cygnet gate on a build; stills of carrying it in her arms, calling, and looking up (front and side).

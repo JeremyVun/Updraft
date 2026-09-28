@@ -89,6 +89,12 @@ for (let i = 0; i < HEM_BONES; i++) {
 
 export const HIPS_AT = new THREE.Vector3(0, 0.74, 0);
 
+/**
+ * How far the head (face, hair and hood) is posed below where it is modelled, so it sits down on the shoulders the way
+ * a small child's does. Applied when posing, so everything painted on the head keeps its modelled frame.
+ */
+export const HEAD_SINK = 0.04;
+
 /** The bones as a hierarchy under the hips, in the pose the mesh is bound in: arms out a little from the sides. */
 export function buildBones(): THREE.Bone[] {
   const bones: THREE.Bone[] = [];
