@@ -1,91 +1,171 @@
 import * as THREE from 'three';
-import { puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
+import { ATMO_GLSL, atmo } from './atmosphere';
+import { VAPOUR_GLSL } from './cloud-vapour';
+import { tuning } from '../tuning';
 
-interface Spray { p: THREE.Vector3; v: THREE.Vector3; r: number; grow: number; age: number; life: number }
+/** How many knots of the wisp behind the hull are kept, and how far apart they are laid, metres. */
+const KNOTS = 40;
+const SPACING = 0.9;
 
-const POOL = 56;
+interface Knot { p: THREE.Vector3; v: THREE.Vector3; age: number; life: number; strength: number }
 
-/** The cloud the hull throws up as it goes: puffs off the bow and the quarters that roll outward, rise a little and thin away. */
+const VERT = /* glsl */ `
+${ATMO_GLSL}
+in vec3 aKnot;
+in vec3 aTangent;
+in vec3 aState;
+out vec3 vWorld;
+out vec2 vAt;
+out float vAlpha;
+out vec4 vFog;
+void main() {
+  // aState: which side of the ribbon (-1 or 1), how old the knot is (0 to 1 of its life), and how far along the wake.
+  float age = aState.y;
+  vec3 view = normalize(aKnot - cameraPosition);
+  // It lies along the top of the cloud, across the way the hull went.
+  vec3 side = normalize(vec3(-aTangent.z, 0.0, aTangent.x) + vec3(1e-4, 0.0, 0.0));
+  // Laid thin off the stern, it spreads and lifts as it goes stale, and thins away.
+  float width = 0.35 + 2.4 * sqrt(age);
+  vWorld = aKnot + side * aState.x * width;
+  vAt = vec2(aState.z, aState.x);
+  float near = smoothstep(1.2, 3.5, distance(aKnot, cameraPosition));
+  // Seen edge-on it would be a line; it fades there instead.
+  float broad = smoothstep(0.04, 0.25, abs(dot(normalize(cross(aTangent, side)), view)));
+  vAlpha = smoothstep(0.0, 0.05, age) * pow(1.0 - age, 1.6) * near * broad;
+  vFog = fogOf(vWorld);
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+}`;
+
+const FRAG = /* glsl */ `
+${ATMO_GLSL}
+${VAPOUR_GLSL}
+uniform float uStrength;
+in vec3 vWorld;
+in vec2 vAt;
+in float vAlpha;
+in vec4 vFog;
+void main() {
+  // Streaks of vapour along the wake, soft across it, torn a little as they drift.
+  float across = vAt.y;
+  vec2 q = vec2(vAt.x * 0.8 - uTime * 0.12, across * 1.4);
+  float streak = vnoise(q) * 0.6 + vnoise(q * vec2(2.3, 2.9) + 7.1) * 0.4;
+  float soft = 1.0 - across * across;
+  float body = soft * soft * smoothstep(0.2, 0.75, streak + 0.25 * (1.0 - abs(across)));
+  float a = body * vAlpha * uStrength * 0.8;
+  if (a < 0.004) discard;
+  vec3 col = vapourLight(vWorld, normalize(vWorld - cameraPosition), 0.5);
+  gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
+}`;
+
+/**
+ * The vapour the hull lifts off the top of the cloud: a soft wisp laid off the stern that spreads, lifts a little
+ * and drifts off on the air as it thins away. Nothing is thrown up; the cloud only parts, and a breath of it follows.
+ */
 export class CloudWake {
   readonly mesh: THREE.Mesh;
-  private readonly spray: Spray[] = [];
-  private readonly centres: THREE.BufferAttribute;
-  private readonly alphas: THREE.BufferAttribute;
-  private readonly radii: THREE.BufferAttribute;
-  private next = 0;
-  private owed = 0;
-  private seed = 7;
+  /** The height of the cloud's top under a point, so the wisp lies just over it. */
+  groundAt: (x: number, z: number) => number = () => 0;
+  private readonly knots: Knot[] = [];
+  private readonly knot: THREE.BufferAttribute;
+  private readonly tangent: THREE.BufferAttribute;
+  private readonly state: THREE.BufferAttribute;
+  private readonly strength = { value: 1 };
+  private head = 0;
+  private readonly laid = new THREE.Vector2(1e5, 1e5);
+  private along = 0;
+  private readonly wind = new THREE.Vector2();
 
   constructor() {
-    const puffs: Puff[] = [];
-    for (let i = 0; i < POOL; i++) {
-      this.spray.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), r: 0.3, grow: 0, age: 1, life: 1 });
-      puffs.push({ x: 0, y: -1e4, z: 0, r: 0.3, a: 0 });
+    for (let i = 0; i < KNOTS; i++) this.knots.push({ p: new THREE.Vector3(0, -1e4, 0), v: new THREE.Vector3(), age: 1, life: 1, strength: 0 });
+    const geometry = new THREE.BufferGeometry();
+    this.knot = new THREE.Float32BufferAttribute(new Float32Array(KNOTS * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage);
+    this.tangent = new THREE.Float32BufferAttribute(new Float32Array(KNOTS * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage);
+    this.state = new THREE.Float32BufferAttribute(new Float32Array(KNOTS * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(KNOTS * 2 * 3), 3));
+    geometry.setAttribute('aKnot', this.knot);
+    geometry.setAttribute('aTangent', this.tangent);
+    geometry.setAttribute('aState', this.state);
+    const index: number[] = [];
+    for (let i = 0; i < KNOTS - 1; i++) {
+      const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+      index.push(a, c, b, b, c, d);
     }
-    const geo = puffGeometry(puffs);
-    this.centres = geo.getAttribute('aCentre') as THREE.BufferAttribute;
-    this.alphas = geo.getAttribute('aAlpha') as THREE.BufferAttribute;
-    this.radii = geo.getAttribute('aRadius') as THREE.BufferAttribute;
-    for (const a of [this.centres, this.alphas, this.radii]) a.setUsage(THREE.DynamicDrawUsage);
-    this.mesh = new THREE.Mesh(geo, puffMaterial());
+    geometry.setIndex(index);
+    this.mesh = new THREE.Mesh(geometry, new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, uStrength: this.strength },
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }));
     this.mesh.name = 'cloud-wake';
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 6;
     this.mesh.visible = false;
   }
 
-  private random(): number {
-    this.seed = (this.seed * 16807) % 2147483647;
-    return (this.seed - 1) / 2147483646;
-  }
-
+  /** Lays a knot off the stern each time the hull has gone a little further. */
   emit(hull: { position: THREE.Vector3; yaw: number; speed: number } | null, dt: number): void {
-    if (!hull || hull.speed < 0.3) return;
-    this.owed += dt * hull.speed * 3.2;
+    if (!hull || dt <= 0) return;
     const fx = Math.sin(hull.yaw), fz = Math.cos(hull.yaw);
-    while (this.owed >= 1) {
-      this.owed -= 1;
-      const s = this.spray[this.next];
-      this.next = (this.next + 1) % POOL;
-      const r = () => this.random();
-      const side = r() < 0.5 ? -1 : 1;
-      // Mostly off the quarters, some from the bow as it shoulders the cloud aside.
-      const bow = r() < 0.3;
-      const along = bow ? 2.1 : -1.6 - r() * 0.8;
-      const out = 0.45 + r() * 0.2;
-      s.p.set(hull.position.x + fx * along + fz * side * out, hull.position.y + 0.05 + r() * 0.15, hull.position.z + fz * along - fx * side * out);
-      const spread = (bow ? 1.1 : 0.7) + r() * 0.5;
-      s.v.set(fz * side * spread - fx * hull.speed * 0.25, 0.18 + r() * 0.2, -fx * side * spread - fz * hull.speed * 0.25);
-      s.r = 0.35 + r() * 0.2;
-      s.grow = 0.35 + r() * 0.25;
-      s.age = 0;
-      s.life = 2.2 + r() * 1.4;
-    }
+    const x = hull.position.x - fx * 1.7, z = hull.position.z - fz * 1.7;
+    const moved = Math.hypot(x - this.laid.x, z - this.laid.y);
+    if (moved < SPACING) return;
+    this.along += Math.min(moved, SPACING * 2);
+    this.laid.set(x, z);
+    const k = this.knots[this.head];
+    this.head = (this.head + 1) % KNOTS;
+    k.p.set(x, this.groundAt(x, z) + 0.2, z);
+    // It keeps a little of the hull's way, then the air has it.
+    k.v.set(fx * hull.speed * 0.15, 0.1, fz * hull.speed * 0.15);
+    k.age = 0;
+    k.life = tuning.stairs.wakeLife * (0.85 + 0.3 * ((this.head * 0.618) % 1));
+    k.strength = Math.min(1, hull.speed / 2.5);
   }
 
-  /** Moves everything the hull has thrown up at once, with the hull. */
+  /** Moves everything the hull has left at once, with the hull. */
   shift(dx: number, dy: number, dz: number): void {
-    for (const s of this.spray) s.p.set(s.p.x + dx, s.p.y + dy, s.p.z + dz);
+    for (const k of this.knots) k.p.set(k.p.x + dx, k.p.y + dy, k.p.z + dz);
+    this.laid.set(this.laid.x + dx, this.laid.y + dz);
+  }
+
+  /** The air the wake drifts off on, metres a second. */
+  setWind(x: number, z: number): void {
+    this.wind.set(x, z);
   }
 
   update(dt: number): void {
     let alive = false;
-    this.spray.forEach((s, i) => {
-      s.age += dt;
-      const k = s.age / s.life;
-      const a = k >= 1 ? 0 : Math.min(1, s.age / 0.25) * Math.pow(1 - k, 1.3) * 0.6;
-      if (a > 0) {
-        alive = true;
-        s.v.multiplyScalar(Math.exp(-dt * 1.2));
-        s.p.addScaledVector(s.v, dt);
-      }
-      for (let c = 0; c < 4; c++) {
-        this.centres.setXYZ(i * 4 + c, s.p.x, s.p.y, s.p.z);
-        this.alphas.setX(i * 4 + c, a);
-        this.radii.setX(i * 4 + c, s.r + s.grow * s.age);
-      }
-    });
+    for (const k of this.knots) {
+      k.age = Math.min(k.life, k.age + dt);
+      if (k.age >= k.life) continue;
+      alive = true;
+      k.v.x += (this.wind.x - k.v.x) * (1 - Math.exp(-dt * 0.6));
+      k.v.z += (this.wind.y - k.v.z) * (1 - Math.exp(-dt * 0.6));
+      k.v.y *= Math.exp(-dt * 0.35);
+      k.p.addScaledVector(k.v, dt);
+    }
     this.mesh.visible = alive;
-    this.centres.needsUpdate = this.alphas.needsUpdate = this.radii.needsUpdate = true;
+    if (!alive) return;
+    // Oldest first along the strip, so each knot's neighbours are the ones laid just before and after it.
+    for (let n = 0; n < KNOTS; n++) {
+      const k = this.knots[(this.head + n) % KNOTS];
+      const a = this.knots[(this.head + Math.max(0, n - 1)) % KNOTS], b = this.knots[(this.head + Math.min(KNOTS - 1, n + 1)) % KNOTS];
+      let tx = b.p.x - a.p.x, ty = b.p.y - a.p.y, tz = b.p.z - a.p.z;
+      const len = Math.hypot(tx, ty, tz) || 1;
+      tx /= len; ty /= len; tz /= len;
+      // Spent knots, and the ends of the strip, are drawn as spent, so the strip has no cut-off edge.
+      const spent = k.age >= k.life || k.strength <= 0;
+      const end = Math.min(1, n / 3, (KNOTS - 1 - n) / 1.5);
+      const age = spent ? 1 : 1 - (1 - k.age / k.life) * end;
+      for (let s = 0; s < 2; s++) {
+        const v = n * 2 + s;
+        this.knot.setXYZ(v, k.p.x, k.p.y, k.p.z);
+        this.tangent.setXYZ(v, tx, ty, tz);
+        this.state.setXYZ(v, s ? 1 : -1, age, this.along - (KNOTS - 1 - n) * SPACING);
+      }
+    }
+    this.knot.needsUpdate = this.tangent.needsUpdate = this.state.needsUpdate = true;
   }
 }

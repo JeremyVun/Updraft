@@ -291,6 +291,19 @@ export const tuning = {
     bankSwap: 34,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
     fogLift: 11,
+    /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
+    cloudDrift: 0.6,
+    /** How long the tops the hull parts take to fill in again behind it, seconds. */
+    partingFills: 8,
+    /** How long the breath of vapour off the stern lasts, seconds. */
+    wakeLife: 7,
+    /** How fast the low wisps stream across the tops, metres a second. */
+    wispSpeed: 1.6,
+    /**
+     * How many towers of cumulus stand out of the sea of cloud along the way, besides the four either side of it
+     * where it runs between them (at most 12), and how finely each is marched.
+     */
+    towers: 11, towerSteps: 12,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
