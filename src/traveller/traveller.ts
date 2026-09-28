@@ -1069,8 +1069,12 @@ export class Traveller {
     const leanNow = this.leanNow.step(this.lean, 0.4, dt);
     const tiltNow = this.tiltNow.step(this.tilt, 0.4, dt);
     const armsFree = a || this.presenting > 0.01 ? 0 : 1;
-    /** Seated, idle hands come to rest on the lap. */
-    const rest = sit * armsFree;
+    /** Sat on the ground, the hands come in to the lap: round the paper if they have it, otherwise on the knees. */
+    const onGround = this.sitting && !this.riding && armsFree === 1 && this.swing < 0.01 && !this.armsFull
+      && this.reachWant[0] === 0 && this.reachWant[1] === 0;
+    const lap = this.lap.step(onGround ? 1 : 0, 0.35, dt) * (1 - this.abedGlide.value);
+    /** Seated anywhere else, idle hands come to rest on the lap. */
+    const rest = sit * armsFree * (1 - lap);
     L.raise = lerp(L.raise, 0.55, rest);
     R.raise = lerp(R.raise, 0.5, rest);
     L.elbow = lerp(L.elbow, 0.85, rest);
@@ -1100,14 +1104,12 @@ export class Traveller {
       L.elbow = lerp(L.elbow, 0.45, carry);
       L.twist = lerp(L.twist, 0, carry);
     }
-    /** Sat on the ground, the hands come in to the lap: round the paper if they have it, otherwise on the knees. */
-    const onGround = this.sitting && !this.riding && armsFree === 1 && this.swing < 0.01 && !this.armsFull
-      && this.reachWant[0] === 0 && this.reachWant[1] === 0 && this.abed < 0.01 && this.yawn < 0.01;
-    const lap = this.lap.step(onGround ? 1 : 0, 0.6, dt);
     this.lapPaper = lap * carry;
     if (lap > 0.001) {
       const [l, r] = this.grips;
-      l.w = r.w = lap;
+      /** The left mitten leaves the lap to cover a yawn. */
+      l.w = lap * (1 - this.yawnGlide.value);
+      r.w = lap;
       l.world = r.world = false;
       l.at.set(lerp(0.2, 0.07, carry), 0.24, lerp(0.42, 0.44, carry));
       r.at.set(lerp(0.2, 0.2, carry), 0.25, lerp(0.42, 0.5, carry));
