@@ -1340,6 +1340,11 @@ export const tuning = {
     reach: 9,
     /** How strongly the flame shows in the water beneath it, as a glint broken up by the ripples. */
     water: 0.6,
+    /**
+     * How far the flame's wavering dims what it lights, and the glass itself. The glass must stay above the bloom
+     * threshold at its dimmest, or its halo snaps on and off.
+     */
+    flicker: 0.15, glassFlicker: 0.05,
   },
   sail: {
     /** A controlled turn into the meadow bay keeps gusts from landing far along the beach. */

@@ -56,6 +56,7 @@ export const HULL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${FORM_GLSL}
 uniform mat4 uHullFrame;
+uniform float uGlass;
 in vec3 vColor;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -167,7 +168,7 @@ void main() {
   if (kind > ${glsl(KIND.transom + 0.5)}) {
     /** The lantern's glass: dull amber by day, lit from within as the sun goes down and through the night. */
     float lit = max(uNight, 1.0 - smoothstep(0.04, 0.28, uSunDir.y));
-    vec3 flame = vec3(1.9, 1.2, 0.55) * (0.9 + 0.1 * sin(uTime * 7.0) * sin(uTime * 3.1));
+    vec3 flame = vec3(1.9, 1.2, 0.55) * uGlass;
     col = mix(col * 0.8 + uSunColor * sheen * 2.0, flame, lit);
   }
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
