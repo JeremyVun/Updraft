@@ -25,6 +25,7 @@ uniform float uSurface;
 out vec3 vWorld;
 out float vRing;
 out vec4 vCalm;
+out float vStature;
 out float vShade;
 out vec4 vFog;
 flat out float vLevel;
@@ -35,9 +36,11 @@ void main() {
   vRing = length(xz - cameraPosition.xz);
   float c = calmAt(xz);
   vec2 slope = vec2(calmAt(xz + vec2(1.5, 0.0)) - c, calmAt(xz + vec2(0.0, 1.5)) - c) / 1.5;
-  vCalm = vec4(c, slope, smoothstep(2.5, 10.0, fromRoute(xz)));
+  float way = fromRoute(xz);
+  vCalm = vec4(c, slope, smoothstep(2.5, 10.0, way));
+  vStature = statureAt(xz, way);
   vec2 fold;
-  float h = cloudTop(xz, vCalm, spacing, fold).x;
+  float h = cloudTop(xz, vCalm, vStature, spacing, fold).x;
   vShade = heapShade(xz, h, spacing);
   vWorld = vec3(xz.x, uSurface + h, xz.y);
   // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it; seen from
@@ -62,6 +65,7 @@ uniform float uDebug;
 in vec3 vWorld;
 in float vRing;
 in vec4 vCalm;
+in float vStature;
 in float vShade;
 in vec4 vFog;
 flat in float vLevel;
@@ -75,7 +79,7 @@ void main() {
   }
   vec2 fold;
   vec3 lobe;
-  vec3 top = cloudTop(xz, vCalm, 0.0, fold, lobe);
+  vec3 top = cloudTop(xz, vCalm, vStature, 0.0, fold, lobe);
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 ray = -V;
   vec3 L = normalize(uSunDir);
@@ -88,10 +92,10 @@ void main() {
   float stride = clamp(dist * 0.02, 0.5, 14.0);
   float through = 0.0;
   // Measured against the bulk under here, so what the finer lobes add to this point does not count as air.
-  float over = vWorld.y - uSurface - bulkAt(xz, vCalm);
+  float over = vWorld.y - uSurface - bulkAt(xz, vCalm, vStature);
   for (int i = 1; i <= 4; i++) {
     vec3 q = vWorld + ray * (stride * float(i * i) * 0.6);
-    through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm) + over - (q.y - uSurface));
+    through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm, vStature) + over - (q.y - uSurface));
   }
   float thin = 1.0 - through * 0.25;
   // Each lobe is lit at its crown and goes lilac toward where it sits down among the others; so is each heap.
@@ -223,6 +227,13 @@ const vec4 DRIFT = vec4(0.35, 0.55, 0.75, 1.0);
 float farOut(vec2 xz) {
   return max(smoothstep(60.0, 260.0, length(xz - uCalmAt.xy)), 0.75 * gateAt(xz));
 }
+/**
+ * How tall the heaps stand here, as a share of how tall they stand far out: lower near the top landing, and lower
+ * within a few tens of metres of the way, so a lens standing off the boat stays in the clear air over them.
+ */
+float statureAt(vec2 xz, float way) {
+  return (0.5 + 0.5 * farOut(xz)) * mix(0.6, 1.0, smoothstep(25.0, 90.0, way));
+}
 /** Where the heaps gather, before the calm takes them down: x, and its slope. */
 vec3 heapSite(vec2 p, float spacing) {
   vec3 site = lobesT(p / 80.0 + 11.3, 0.0, lobesLod(spacing, 80.0));
@@ -255,11 +266,9 @@ vec3 towers(vec2 p, float spacing) {
  * lobe says how high up its own lobe the point is at each size (big, middle, fine), and fold.x how far down in a
  * crease between lobes, fold.y how far up its heap it stands.
  */
-vec3 cloudTop(vec2 xz, vec4 calm, float spacing, out vec2 fold, out vec3 lobe) {
+vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, out vec3 lobe) {
   vec2 p = xz + uCloudShift * 0.6;
   vec3 rise = riseAt(xz, p + uDrift * DRIFT.x, calm, spacing);
-  float far = farOut(xz);
-  float stature = 0.5 + 0.5 * far;
   vec3 tower = towers(p + uDrift * DRIFT.y, spacing);
   float heapH = HEAP * stature;
   float towerH = TOWER * stature * rise.x;
@@ -287,15 +296,14 @@ vec3 cloudTop(vec2 xz, vec4 calm, float spacing, out vec2 fold, out vec3 lobe) {
   h = vec3(0.1 + 0.5 * (below + soft), h.yz * 0.5 * (1.0 + below / soft));
   return h - furrow(xz) * 0.6;
 }
-vec3 cloudTop(vec2 xz, vec4 calm, float spacing, out vec2 fold) {
+vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold) {
   vec3 lobe;
-  return cloudTop(xz, calm, spacing, fold, lobe);
+  return cloudTop(xz, calm, stature, spacing, fold, lobe);
 }
 /** The height of the heaps, towers and big lobes alone: what a sightline passes through. */
-float bulkAt(vec2 xz, vec4 calm) {
+float bulkAt(vec2 xz, vec4 calm, float stature) {
   vec2 p = xz + uCloudShift * 0.6;
   float rise = riseAt(xz, p + uDrift * DRIFT.x, calm, 0.0).x;
-  float stature = 0.5 + 0.5 * farOut(xz);
   float big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise, 0.0).x;
   return rise * stature * (HEAP + TOWER * towers(p + uDrift * DRIFT.y, 0.0).x)
     + big * (BIG.x * (0.35 + 0.65 * calm.w) + BIG.y * rise * stature) + 0.25;
@@ -311,7 +319,7 @@ float heapShade(vec2 xz, float h, float spacing) {
     vec2 q = xz + toSun * t;
     float c = calmAt(q);
     float rise = riseAt(q, q + drift + uDrift * DRIFT.x, vec4(c, 0.0, 0.0, 1.0), spacing).x;
-    float stature = 0.5 + 0.5 * farOut(q);
+    float stature = statureAt(q, fromRoute(q));
     float stands = rise * stature * (HEAP + TOWER * towers(q + drift + uDrift * DRIFT.y, spacing).x) + (BIG.x + BIG.y * rise) * 0.45;
     float over = stands - h - t * climb;
     shade = max(shade, smoothstep(0.0, 1.5 + t * 0.04, over));
