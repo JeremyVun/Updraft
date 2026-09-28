@@ -158,14 +158,13 @@ for (let dusk = 1.5; dusk <= 2; dusk += 0.001) {
   assert(previousSun.angleTo(atmo.uniforms.uSunDir.value) < 0.006, 'abrupt key-light turn');
   previousSun = atmo.uniforms.uSunDir.value.clone();
 }
-// The lamp dies before the plane leaves; its light cannot turn itself back on in the forest.
+// The lamp goes out as the storm takes the plane; its light cannot turn itself back on in the forest.
 const { LighthouseLight } = await import('../src/world/lighthouse.ts');
 const lighthouse = new LighthouseLight(new THREE.Vector3(65,0,-1580));
 lighthouse.update(0,0);
 assert(atmo.uniforms.uHarbourLight.value.w > 0.9);
-for(let i=0;i<20*60;i++) lighthouse.update(1/60,1);
+for(let i=0;i<Math.ceil(tuning.storm.lighthouseOutAt*60);i++) lighthouse.update(1/60,1);
 assert.equal(atmo.uniforms.uHarbourLight.value.w,0);
 assert.equal(lighthouse.beam.visible,false);
-assert(tuning.storm.lighthouseOutAt < tuning.storm.gatherFor);
 console.log(JSON.stringify({storm:report,crossings,weather:{flashes,thunder}}, null, 2));
 console.log('Boat steering and storm pacing passed.');

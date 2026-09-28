@@ -318,6 +318,9 @@ export class Boat {
          * A small boat sails on any point of wind, so what drives it is how much wind the sail is holding, with
          * a little more for a following one. Nobody is ever left stuck head to wind waiting for a shift.
          */
+        const ashore = this.canGround ? this.beachApproach(fx, fz) : Infinity;
+        // Past its landing point with the beach still ahead, it runs on up the sand rather than coming round for it.
+        if (ashore < Infinity && Math.abs(dy) > Math.PI / 2) dy = 0;
         const distance = this.steerFor ? Math.hypot(this.steerFor.x - p.x, this.steerFor.y - p.z) : Infinity;
         // Ease the sheet before a tight turn. A fixed turning circle can orbit a point forever.
         const aligned = THREE.MathUtils.smoothstep(Math.cos(dy), 0, tuning.sail.turnAligned);
@@ -336,7 +339,7 @@ export class Boat {
         const gathering = drive > this.speed ? tuning.sail.gathers : tuning.sail.carries;
         this.speed += (drive - this.speed) * (1 - Math.exp(-dt * gathering));
         this.speed = Math.min(tuning.sail.topSpeed, this.speed + Math.abs(kick) * tuning.dolphins.shoveSurge * dt);
-        if (this.canGround) this.speed = Math.min(this.speed, this.beachApproach(fx, fz));
+        this.speed = Math.min(this.speed, ashore);
         this.yaw += kick * tuning.dolphins.shoveYaw * dt;
         const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
         this.yaw += THREE.MathUtils.clamp(dy, -dt * turn, dt * turn);
