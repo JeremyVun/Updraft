@@ -440,7 +440,7 @@ export const tuning = {
      */
     breeze: 0.8, breezeSwell: 0.3,
     /** How much of the child's own speed adds to the air carrying the ends out behind them. */
-    carry: 1.8,
+    carry: 0.8,
     /**
      * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
      * times as hard as it blows, and one felt at `gustTakeover` units per second or more carries them its own way.
