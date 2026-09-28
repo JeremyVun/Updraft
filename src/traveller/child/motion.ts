@@ -205,6 +205,9 @@ export class ChildMotion {
   private readonly bagRoll = new Spring(1.7, 0.32);
   private readonly flapOpen = new Spring(1.3, 0.5);
   private readonly flapSwing = new Spring(1.5, 0.28);
+  /** Each pigtail's swing forward and back, then out and in: light and springy, so they bounce with each step. */
+  private readonly pigSwing = [0, 1].map(() => [new Spring(2.6, 0.16), new Spring(2.4, 0.16)]);
+  private readonly headGravity = new THREE.Vector3();
   private readonly lastHips = new THREE.Vector3();
   private readonly hipsVel = new THREE.Vector3();
   private readonly hipsAcc = new THREE.Vector3();
@@ -548,6 +551,18 @@ export class ChildMotion {
     const yaw = this.hoodYaw.step(THREE.MathUtils.clamp(-this.headYawVel * 0.06 + headAir.x * 0.004, -0.14, 0.14), dt);
     const roll = this.hoodRoll.step(THREE.MathUtils.clamp(-headAir.x * 0.004 + Math.sin(d.time * 9 + 1) * 0.012 * flutterAmp, -0.1, 0.1), dt);
     hood.rotation.set(pitch, yaw, roll);
+
+    // -- The pigtails bounce with each step, lag the head as it turns and stream a little in the wind.
+    const hg = this.headGravity.set(0, -GRAVITY, 0).sub(this.chestAcc).applyQuaternion(this.qb);
+    const load = -hg.y / GRAVITY - 1;
+    for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? 1 : -1;
+      const [fore, out] = this.pigSwing[i];
+      const flick = flutterAmp * 0.08 * Math.sin(d.time * (8 + i) + i * 1.7);
+      const f = fore.step(THREE.MathUtils.clamp(Math.atan2(-hg.z, -hg.y) * 0.8 - headAir.z * 0.02 + this.headYawVel * 0.04 * side + flick, -0.5, 0.5), dt);
+      const o = out.step(THREE.MathUtils.clamp(Math.atan2(hg.x, -hg.y) * 0.8 + headAir.x * 0.02 - load * 0.3 * side - this.headYawVel * 0.03 + flick, -0.5, 0.5), dt);
+      b[i === 0 ? BONE.pigL : BONE.pigR].rotation.set(f, 0, o);
+    }
 
     // -- The bag swings from its straps and bumps with every step.
     chest.getWorldQuaternion(this.qa);

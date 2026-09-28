@@ -326,7 +326,7 @@ Jeremy, verbatim, in order:
 
 He approved the result ("looks good"). The child is a little girl; the concept sheet's gender-neutral note no longer
 holds, and hair and face may stray from it to show her. Built on branch `child-face`, merged. The knobs are in
-`garments.ts` (`FACE`, `facePoint`, `BANGS`, `BOB`, `bob`, `strand`) and `shader.ts` (`paintFace`).
+`garments.ts` (`FACE`, `facePoint`, `BANGS`, `SIDES`, `bob`, `strand`) and `shader.ts` (`paintFace`).
 
 - **Eyes:** big dark upright ovals (half 0.043 × 0.053), a warm brown low in the iris, a sliver of white at the outer
   corner, one soft glint (without it they read as holes), two lash flicks at the outer corner. Set a little lower
@@ -447,3 +447,47 @@ well".
   `motion.ts`), so everything painted on it keeps its modelled frame; the coat and scarf stay put and the chin sits
   further into the scarf. The hood's keep-out for the scarf ends and the cygnet (`HOOD_AT` in `body.ts`) moves with it.
 - Checked: every cygnet gate on a build; stills of carrying it in her arms, calling, and looking up (front and side).
+
+## Pigtails and a parted fringe (2026-09-28)
+
+Jeremy, verbatim, in order:
+
+> I think the childs bangs look too much like a bowl cut at most camera angles that the player see shte child at. Also
+> the side hair could be tidied up to look a bit nice as well i think. Right now it's giving vibes of a "curtain
+> frame"
+
+> hrm.. we can do better no? the child should look like a stereotypical cute child
+
+> agree with the pigtails and a small bounce and sway would look good. I think the problem though is still that from
+> typical camera angles, the bang looks like a bowl cut - can you check from a more typical camera angle from above
+> the child? It's also ok if there's a big of clipping with the cygnet, let me judge if it's severe enough we need to
+> fix it.
+
+> ok no. F is the wrong direction, she looks bald. Go back to UB and just give some shape to the bangs and push the
+> sides a tiny tiny bit back.
+
+He approved the result ("ok great this is approved"). This replaces the bangs and bob of the face round above.
+
+- **Why it read as a bowl.** From the play camera, above her, the brim hides the top of the fringe and only its lower
+  edge shows. If that edge runs level, following the brim, and hair runs down both sides of the face as well, it
+  makes a dark ring inside the hood whatever the fringe's shape. Judge the hair from above (elevation 20-35°, 5-6 m),
+  not only face-on.
+- **Bangs** (`BANGS` in `garments.ts`): parted in the middle, each half swept out to its temple, short at the parting
+  and longer outward, so the edge is an arch with a little forehead in the middle. Clumps bow away from the parting
+  and end in soft points at their own lengths (`lock()`; `strand()` takes a `bulge` and a `flick`, negative here to
+  turn the tips in). More puff than 0.02 pokes a lock through the top of the hood.
+- **Sides** (`SIDES`, `bob()`): a short lock in front of each ear curls in round the cheek; the rest is drawn back
+  behind the ear to the pigtail.
+- **Pigtails** (`pigtail()`, `PIGTAIL_TIE` in `skeleton.ts`): a low plump bunch below each ear, tied with a knitted
+  bobble like the scarf, coming out of the hood at the jaw and sticking out over the scarf with its tip turned up.
+  Each hangs on its own bone off the head (`BONE.pigL`, `pigR`) on a light, underdamped spring (`pigSwing` in
+  `motion.ts`): it bounces and droops with each step, lags the head as it turns, leans into the wind and flutters a
+  little in a strong one. Walking swings them about 10-17°; standing they settle to a drift of about 2°.
+- **Locks shaded** (`shader.ts`): lighter down each lock's middle and darker at its sides, so the locks read in
+  daylight rather than one dark cap.
+- **Rejected:** a side-swept fringe parted on her left (it read older); a round bob with no pigtails (still a
+  helmet); a bare forehead up to the brim with a few wisps (she looked bald).
+- Checked: stills on the stage, face-on, three-quarter and from above, before and after merging main (the hood from
+  the side and the lower head); the pigtail bones' swing sampled walking and standing; a burst of walking frames; the
+  cygnet in her arms. Not yet checked in a level. Sheets in `/tmp/childhair`: `G3-above.png`, `G3-close.png`,
+  `M-close.png` (on merged main), `cygnet-sheet.png`.

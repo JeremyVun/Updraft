@@ -31,11 +31,17 @@ export const BONE = {
   flap: 29,
   flapRoll: 30,
   flapTip: 31,
+  /** The pigtails, each hung from its tie below the ear. */
+  pigL: 32,
+  pigR: 33,
 } as const;
 
 /** The coat's hem hangs off a ring of bones round the waist, one every eighth of a turn from the front. */
 export const HEM_BONES = 8;
-export const BONES = BONE.flapTip + 1;
+export const BONES = BONE.pigR + 1;
+
+/** Where the left pigtail is tied (the right mirrors it): below the ear, just inside the hood's opening. */
+export const PIGTAIL_TIE: [number, number, number] = [0.26, 1.8, 0.19];
 
 export const UPPER_ARM = 0.29;
 /** Elbow to wrist, and wrist to the middle of the mitten: a reach is measured to the mitten, as one straight forearm. */
@@ -81,6 +87,8 @@ const JOINTS: Joint[] = [
   [BONE.flap, BONE.bag, [0, -0.03, -0.425]],
   [BONE.flapRoll, BONE.flap, [0, 0.012, 0.03]],
   [BONE.flapTip, BONE.flapRoll, [0, 0.02, 0.19]],
+  [BONE.pigL, BONE.head, [PIGTAIL_TIE[0], PIGTAIL_TIE[1] - 1.7, PIGTAIL_TIE[2] - 0.02]],
+  [BONE.pigR, BONE.head, [-PIGTAIL_TIE[0], PIGTAIL_TIE[1] - 1.7, PIGTAIL_TIE[2] - 0.02]],
 ];
 for (let i = 0; i < HEM_BONES; i++) {
   const a = hemAngle(i);
