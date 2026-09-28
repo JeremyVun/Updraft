@@ -642,6 +642,8 @@ export const HOOD = {
   tilt: 0.17,
   seam: 0.025,
   corner: 0.05,
+  /** How far forward the cloth comes at the temples so the edge runs down from the brow to the jaw without stepping back. */
+  reach: 0.07,
 };
 
 /**
@@ -757,6 +759,8 @@ function hoodShape(lambda: number, gamma: number, open: number | null): HoodSamp
   const brim = open === null ? 0 : (1 - smooth(open, open + 0.45, gamma)) * bump(angleTo(lambda, 0), 0.95);
   p.addScaledVector(n, fold + seam + 0.018 * brim);
   p.y += 0.01 * brim;
+  /** From the side the edge is one line from the brow to the jaw, where a helmet's cut-out steps back round the ear. */
+  if (open !== null) p.z += HOOD.reach * (1 - smooth(open, open + 0.8, gamma)) * Math.exp(-(((p.y + HOOD.c.y - 2.04) / 0.115) ** 2));
   /** In front, below the chin, the hood goes in behind the scarf rather than lying over it. */
   const y = p.y + HOOD.c.y;
   const front = smooth(-0.05, 0.45, hz);
