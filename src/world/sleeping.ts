@@ -226,11 +226,12 @@ vec3 clothAt(vec2 uvw) {
   /**
    * A child asleep under it: the cloth stands over a long shape lying up the bed, highest at the shoulders and
    * falling away down the legs, and it rises and falls with their breathing. Where the blanket has been thrown
-   * back off them there is nothing left to stand over, so the shape goes with the fold.
+   * back off them there is nothing left to stand over, so the shape goes with the fold; the turned-down flap lies
+   * on top of them like the rest.
    */
   float along = 1.0 - smoothstep(uSleeper.y - 0.3, uSleeper.y + 0.25, back);
   float wide = clamp(abs(across) / ${glsl(tuning.sleeping.sleeperWide)}, 0.0, 1.0);
-  float body = uSleeper.x * sqrt(1.0 - wide * wide) * (0.65 + 0.35 * sin(back * 3.14159)) * along * smoothstep(fold - 0.08, fold + 0.12, uvw.y);
+  float body = uSleeper.x * sqrt(1.0 - wide * wide) * (0.65 + 0.35 * sin(back * 3.14159)) * along * smoothstep(fold - 0.1, fold + 0.1, back);
   float y = ${glsl(BED_GROUND)} + 0.655 + over - drape * 0.34 * (1.0 - min(1.0, body * 1.2)) + lift + ripple + body * (1.0 + uSleeper.z)
     + uPull * exp(-pow((uvw.y - fold) * 12.0, 2.0));
   // Keep shallow cloth ripples above the mattress as the sleeper rises; the sides still drape.
@@ -1095,7 +1096,7 @@ export class SleepingIsland {
     const wide = Math.min(1, Math.abs(across) / tuning.sleeping.sleeperWide);
     const body = this.under.x * Math.sqrt(1 - wide * wide) * (0.65 + 0.35 * Math.sin(back * Math.PI))
       * (1 - THREE.MathUtils.smoothstep(back, this.under.y - 0.3, this.under.y + 0.25))
-      * THREE.MathUtils.smoothstep(back, fold - 0.08, fold + 0.12);
+      * THREE.MathUtils.smoothstep(back, fold - 0.1, fold + 0.1);
     out.y = top
       ? BED_GROUND + 0.655 + (back > 0 ? 0.05 : 0) + this.lift.value
       : Math.max(BED_GROUND + 0.69, BED_GROUND + 0.655 + body * (1 + this.under.z) + this.pull.value);

@@ -1662,7 +1662,7 @@ export const tuning = {
     climbsIn: 4.8,
     bedTuckFor: 3.2,
     bedSettleFor: 3.8,
-    blanketHandLift: 0.45,
+    blanketHandLift: 0.25,
     /**
      * Drawn up, the quilt is still turned down this far (as `blanket`), so its edge lies under the chin rather than
      * over the face, and the mittens hold it there this share of the way out to its side.
