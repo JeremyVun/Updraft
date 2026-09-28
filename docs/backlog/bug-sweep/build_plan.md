@@ -120,7 +120,15 @@ jerks.
 an assertion that the waiting ember is not behind the child on screen).
 **Gate:** the new assertion passes at every stop at 30/60/120 fps and in portrait; `wood-check` and `ember-check`
 pass; `camera-intent-report` shows no new jerks or in-and-out swings in the wood; Jeremy has seen stills of each stop.
-**Status:** not started.
+**Status:** built 2026-09-29 on branch `bug-sweep-wood`, not merged; waiting for Jeremy's review of the stills.
+Confirmed: three of nine stops hid the ember (the second path stop partly, both leg-2 stops fully, desktop and
+portrait); the waiting coal now keeps its whole orb in view at every stop. Gates: the new stop assertion in
+`wood-logic-check` passes at 30/60/120 fps at 1600x900 (at least 16 px beyond the orb) and 390x844 (at least 10 px)
+and fails on the unchanged code (stop 2, -19 px); `wood-logic-check`, `wood-check` (desktop and portrait),
+`ember-check` and `typecheck` pass. `camera-intent-report` on a traced wood replay, unchanged against fixed back to
+back: no new dolly or pan reversals (one in-then-out in `found`, identical in both); jerk flags 38 against 39 at the
+same moments, the extra one with the lens drifting under 0.4 units/s while she stands. Stills (before/after from the
+same moment, seeded): `/tmp/updraft-bugsweep-wood-stills/`, contact sheet `contact-sheet.png`.
 
 ## Phase 10: browser group and close
 
