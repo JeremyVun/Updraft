@@ -58,6 +58,7 @@ uniform vec4 uGate;
 uniform float uReach;
 uniform float uHole;
 uniform float uSurface;
+uniform float uDebug;
 in vec3 vWorld;
 in float vRing;
 in vec4 vCalm;
@@ -94,22 +95,26 @@ void main() {
   }
   float thin = 1.0 - through * 0.25;
   // Each lobe is lit at its crown and goes lilac toward where it sits down among the others; so is each heap.
-  float puff = mix(0.5, 1.0, lobe.x) * mix(0.66, 1.0, lobe.y) * mix(0.93, 1.0, lobe.z) * mix(0.72, 1.0, fold.y);
-  // Each lobe lit on the side it turns to the low sun, the terminator soft as light goes into cloud.
-  float sunLit = smoothstep(-0.25, 0.65, dot(N, L) + 0.2 * (puff - 0.7)) * (1.0 - 0.85 * vShade);
-  float glint = pow(clamp(dot(soft, L) + 0.1, 0.0, 1.0), 2.0) * (1.0 - vShade);
+  float puff = mix(0.45, 1.0, lobe.x) * mix(0.6, 1.0, lobe.y) * mix(0.9, 1.0, lobe.z) * mix(0.7, 1.0, fold.y);
+  // Lit from the side by the low sun, which the cloud scatters across its whole top: peach where the light lies
+  // across it, gold on the lobes turned full to it, lilac and violet where they sit down among the others and on
+  // the sides turned away.
+  float facing = dot(N, L);
+  float crown = smoothstep(0.5, 1.0, puff);
+  float sunLit = clamp(facing * 1.5 + 0.25 + 0.4 * (puff - 0.75), 0.0, 1.0) * (1.0 - 0.85 * vShade);
+  float full = smoothstep(0.2, 0.85, facing) * (1.0 - vShade) * crown;
   float toward = pow(max(0.0, dot(ray, L)), 3.0);
-  vec3 lilac = uSkyAmbient * vec3(1.3, 1.0, 1.2) + uGroundBounce * 0.25;
-  vec3 violet = uSkyAmbient * vec3(0.72, 0.56, 1.02);
-  vec3 col = mix(violet, lilac, smoothstep(0.35, 0.95, puff));
-  col += uSunColor * vec3(0.62, 0.46, 0.36) * sunLit * mix(0.5, 1.0, puff);
-  col += uSunColor * vec3(0.5, 0.4, 0.28) * glint * puff * 0.45;
+  vec3 lilac = uSkyAmbient * vec3(1.25, 0.95, 1.15) + uGroundBounce * 0.3;
+  vec3 violet = uSkyAmbient * vec3(0.66, 0.5, 0.98);
+  vec3 shade = mix(violet, lilac, smoothstep(0.3, 0.95, puff));
+  vec3 col = mix(shade, uSunColor * vec3(0.52, 0.37, 0.36) + shade * 0.3, sunLit * mix(0.5, 1.0, crown));
+  col += uSunColor * vec3(1.0, 0.85, 0.62) * full * 0.22;
   // Against the low sun the thin edges and the crests glow: the silver lining.
-  col += uSunColor * vec3(1.0, 0.88, 0.72) * toward * (1.0 - 0.6 * vShade) * (0.05 + 0.85 * thin * thin);
-  // Down between the heaps the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
-  float low = 1.0 - smoothstep(0.0, 5.0, top.x);
-  vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.05, 0.9, 1.2), 0.5);
-  col = mix(col, haze, (1.0 - exp(-dist / 240.0)) * low * 0.5);
+  col += uSunColor * vec3(1.0, 0.88, 0.72) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
+  // Down between the heaps far off the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
+  float low = 1.0 - smoothstep(0.0, 6.0, top.x);
+  vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
+  col = mix(col, haze, (1.0 - exp(-max(dist - 60.0, 0.0) / 380.0)) * low * 0.45);
   // Far off it goes into the haze of the horizon beyond it, gold toward the sun and rose away from it.
   vec3 ahead = vWorld - cameraPosition;
   col = mix(col, skyColor(normalize(vec3(ahead.x, 0.01, ahead.z))), (1.0 - exp(-dist / 700.0)) * 0.72);
@@ -118,6 +123,9 @@ void main() {
   // At the end of its reach it thins into the deck beyond, rather than stopping along a line.
   edge *= 1.0 - smoothstep(uReach * 0.7, uReach, vRing);
   gl_FragColor = vec4(col, uCloudDeck.w * edge);
+  if (uDebug > 0.5) gl_FragColor = vec4(col, 1.0);
+  if (uDebug > 1.5) gl_FragColor = vec4(vec3(edge), 1.0);
+  if (uDebug > 2.5) gl_FragColor = vec4(vec3(puff, sunLit, full), 1.0);
 }`;
 
 /**
@@ -472,7 +480,7 @@ export class StairsCloud {
   private readonly lobes = new CloudLobes();
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uSurface: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uSurface: { value: number } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
@@ -491,6 +499,7 @@ export class StairsCloud {
       uTrail: { value: this.trail },
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
+      uDebug: { value: 0 },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
       uSurface: { value: CLOUD.top },
     };
