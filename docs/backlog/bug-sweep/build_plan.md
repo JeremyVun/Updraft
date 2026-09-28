@@ -16,8 +16,11 @@ The design is `design.md` in this folder; item numbers below are its sections. R
   limit without writing down why the old one was wrong.
 - Update the affected docs (`chapters.md`, `stairs.md`, `cygnet.md`, `journey.md`, `styles.md`, `roadmap.md` Known
   issues and Checks) in the same change as the fix.
-- Merge to `main` yourself after the gate passes; visual phases merge only after Jeremy has seen the stills and said
-  yes. Open stills in Preview for him.
+- **Jeremy's ruling (2026-09-29):** "before any change gets onto main, I need you to confirm the issue and if it
+  survives, very clearly present the proposed change to me to prove that it's an actual bug that needed to be fixed.
+  For now, lets work in a worktree". So all work happens on the `bug-sweep` branch in `/private/tmp/updraft-bugsweep`;
+  for each item, show Jeremy the evidence that the bug is real on current `main` and the exact proposed change, and
+  merge nothing to `main` until he approves it. Open stills in Preview for him.
 
 ## Phase 0: baseline
 
