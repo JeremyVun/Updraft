@@ -11,9 +11,9 @@ import { REFLECTION_LAYER } from './water/reflection';
 
 const T = tuning.skyMirror;
 const COUNT = 12;
-/** The handle leans forward and out from the hand, carrying the ring clear of the child's head. */
-const WAND_PITCH = 0.6;
-const WAND_ROLL = 0.45;
+/** The ring stands up in front of the child's face, turned to them, ready to blow through. */
+const WAND_PITCH = 0.1;
+const WAND_ROLL = -0.25;
 export const mirrorUniforms = {
   uMirrorRings: { value: Array.from({ length: COUNT }, () => new THREE.Vector4(0, 0, -100, 0)) },
 };
@@ -64,6 +64,8 @@ interface FallenStar {
 export class SkyMirror {
   readonly group = new THREE.Group();
   readonly wand = new THREE.Vector3();
+  /** The way a bubble leaves the hoop: out of the ring's face, away from the child blowing through it. */
+  private readonly blown = new THREE.Vector3();
   readonly bubbles: MirrorBubble[] = [];
   readonly stars: FallenStar[] = [];
   active = false;
@@ -261,9 +263,11 @@ export class SkyMirror {
     }
     this.hoop.updateMatrixWorld(true);
     this.wand.set(0,WAND_REACH,0).applyMatrix4(this.hoop.matrixWorld);
-    this.film.position.copy(this.wand);
+    this.blown.set(0,0,1).applyQuaternion(this.hoop.quaternion);
+    const depth=0.035+this.forming*0.8;
+    this.film.position.copy(this.wand).addScaledVector(this.blown,depth*0.75);
     this.film.quaternion.copy(this.hoop.quaternion);
-    this.film.scale.set(T.wandRadius,T.wandRadius,0.035+this.forming*0.8);
+    this.film.scale.set(T.wandRadius,T.wandRadius,depth);
     this.film.visible=this.active && this.ready;
   }
 
@@ -374,7 +378,7 @@ export class SkyMirror {
     mesh.layers.enable(REFLECTION_LAYER); this.group.add(mesh);
     const position=mesh.position.copy(this.wand), at=this.stars[this.focusStar].origin;
     const dir=new THREE.Vector3(at.x-position.x,0,at.z-position.z).normalize();
-    position.addScaledVector(dir,0.8); position.y=Math.max(T.bubbleRadius,position.y);
+    position.addScaledVector(this.blown,T.bubbleRadius); position.y=Math.max(T.bubbleRadius,position.y);
     this.bubbles.push({mesh,position,velocity:dir.multiplyScalar(1.2),radius:T.bubbleRadius,age:0,star:-1,pop:0,
       liftArmed:false,liftTurn:0,liftHeading:null});
   }

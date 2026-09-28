@@ -37,8 +37,9 @@ On the proposal to skim bubbles over fallen star reflections and lift their ligh
 Keep the uninterrupted mirror and its ordinary reflections. A stool, an enamel bowl of soap and a brass
 hoop are the small domestic fragment. The child sets down the cygnet near the landing. The paper leads both
 across the flat to the bowl, about ten seconds farther inland than the first version. They pick up the hoop and make bubbles
-with the player's wind. The paper remains visible on the backpack while the mitten holds the wand, the arm out
-in front at chest height and the handle leaning forward and out, so the hoop is held away from the face.
+with the player's wind. The paper remains visible on the backpack while the mitten holds the wand low and out in
+front, the ring standing up before the child's face and turned to them, ready to blow through; the film swells out of
+its far side and the bubble leaves from there, clear of the child.
 
 Four lights lie on the surface. Sweeps make and steer bubbles; a low bubble touching a light catches it,
 and that patch of mirror goes dark. Circles lift a filled bubble. Once high enough it bursts gently and the
