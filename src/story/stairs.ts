@@ -59,6 +59,11 @@ const ASIDE = (() => {
   return onLanding(L, L.openings.some(o => o.face === 'left') ? -0.42 : 0.42, 0.38);
 })();
 
+/** Where the kite flies from the bow while the boat waits: out over the open cloud and forward, clear of the landing and the hull. */
+const KITE_WAITS = (() => {
+  const way = along(CLOUD_BERTH.yaw);
+  return Math.atan2(TOP_OUT.x + way.x, TOP_OUT.z + way.z);
+})();
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
 const SEA_RIDE = 0.4;
@@ -326,7 +331,8 @@ export class StairsChapter implements Chapter {
     if (!this.berthed || this.beat === 'thin' || this.beat === 'down') return null;
     this.cast.boat.hullEnds(this.bow, this.stern);
     this.tow.at.copy(this.bow).y += 0.3;
-    this.tow.heading = this.cast.boat.yaw;
+    // Until they sail, the kite stands out over the open cloud beyond the landing, so its line never runs across it.
+    this.tow.heading = this.beat === 'sail' || this.beat === 'fog' ? this.cast.boat.yaw : KITE_WAITS;
     return this.tow;
   }
 
