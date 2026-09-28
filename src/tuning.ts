@@ -168,11 +168,11 @@ export const tuning = {
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
     recogniseFor: 8,
-    lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.16,
+    lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.04,
     /** After refolding, offer the plane briefly before the wind takes it. */
     releaseFor: 2,
-    /** Hold the near edge within reach; the higher shoulder view keeps the drawn sun clear. */
-    paperHeight: 2.15, paperForward: 1.7, paperSide: 0, paperTilt: 32,
+    /** In both mittens, the near edge below the shoulders and a little to her right, so the hood leaves the drawn sun clear. */
+    paperHeight: 2.1, paperForward: 1.1, paperSide: 0.22, paperTilt: 42,
     /** A little larger when open so the crayon landmarks read clearly. */
     paperScale: 1.1,
     /** One shoulder composition holds both the paper and the distant house. */
@@ -181,7 +181,7 @@ export const tuning = {
     /** Let the move develop through the hands coming up and the first folds opening. */
     approachFor: 4.4,
     /** A restrained drift keeps the child, drawing and real house together throughout recognition. */
-    readingRise: 0, readingForward: 0.35, readingArc: 0, portraitReadingArc: 0,
+    readingRise: 0, readingForward: 0.1, readingArc: 0, portraitReadingArc: 0,
     readingFrom: 1.5, readingUntil: 7, readingPaperWeight: 0.65,
     portraitBack: 9.5, narrowPortraitBack: 9.5, paperWeight: 0.65, portraitPaperWeight: 0.6,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,

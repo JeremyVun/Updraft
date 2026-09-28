@@ -483,10 +483,12 @@ Rulings:
 - The paper is plain white until it opens: no drawing visible before, and no visible swap.
 - House first, then the drawing; the motif plays when the house is found, the paper is open and it shows the house.
 - The drawn sun and house both read; the sheet stays within the hands' reach, not floating away.
+- The unfolded drawing reading well comes first, then a natural hold: the sheet in both mittens, its near edge below her
+  shoulders. The camera stays close behind her shoulder; swinging it out to the side makes the scene feel unnatural.
 - The cottage faces the approach with a slight turn, echoing the drawing without looking arranged for it.
 - The camera stays at the crest for the goodbye: no following, dolly or crane.
 - No figure in the doorway. Children do not light fireplaces: the smoke starts after nightfall.
-- No reward bells at the summit and no phrase as the family flies away.
+- No bells at the summit: no phrase when the family arrives, no reward bells at the updraft, none as they fly away.
 - The closing screen is the one line and Play again: no border on the button, no credits roll.
 
 Knobs: `tuning.homeReveal`, `homeLight`, `homeApproach`, `homeWashing`, `homeGrass`, `summit`, `swanArrival`,

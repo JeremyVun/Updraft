@@ -33,6 +33,8 @@ and clears it on exit.
   completion phrase when the door opens.
 - The piano-lullaby reprise at Home was rejected. Home's ending is scripted from the successful updraft and must feel
   as if the Home music plays all the way through to the credits.
+- No bell phrases over the swans at Home: not when the family arrives over the summit, not as they fly away. The
+  wingbeats and the Home drone carry it.
 - The story no longer cues `delight` (the chime with the child's cheer): it no longer fits the music.
 - The sailing boat has no hull-water foley: its bursts sounded like flapping. Toy boats keep theirs.
 - No child voice: "never any voicing from the two main characters". The cygnet's calls, which he later heard and
