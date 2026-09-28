@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Rig } from '../body';
-import { ANKLE, BONE, FOREARM, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
+import { ANKLE, BONE, FOREARM, HEAD_SINK, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
 import { HOOD, coatAt, hemY, type CoatSample } from './garments';
 
 /** Where the head turns when it looks up, from the head joint: ear height, a little behind the face's middle. */
@@ -36,6 +36,8 @@ export interface Pose {
   arms: [ArmPose, ArmPose];
   /** 0..1 weights of the leg poses other than standing and walking. */
   sit: number;
+  /** Of `sit`, how much is on the ground with the legs out in front, where the coat has to ride up over the thighs. */
+  lap: number;
   kneel: number;
   swing: number;
   /** On a swing: -1 tucked at the back of the arc to 1 legs out at the front. */
@@ -55,7 +57,7 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
   };
 }
 
@@ -155,6 +157,9 @@ const scratch = (): Scratch => ({
 });
 
 /** Where each hem bone hangs from, its outward axis and its radial direction, in the hips' frame. */
+/** How far the front of the hem swings up onto the lap when sitting, radians. */
+const LAP_DRAPE = 0.9;
+
 const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
   const a = hemAngle(i);
   const radial = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
@@ -305,6 +310,7 @@ export class ChildMotion {
     neck.rotation.set(pose.headPitch * 0.35 + up * 0.2 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6 + lead, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
     head.rotation.set(pose.headPitch * 0.65 - up * 0.2 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
     head.position.copy(rest[BONE.head]).sub(rest[BONE.neck]);
+    head.position.y -= HEAD_SINK;
     head.position.y += EAR.y * (1 - Math.cos(tipBack)) + EAR.z * Math.sin(tipBack);
     head.position.z += EAR.z * (1 - Math.cos(tipBack)) - EAR.y * Math.sin(tipBack);
 
@@ -510,6 +516,8 @@ export class ChildMotion {
       for (const p of legPts) floor = Math.max(floor, this.hemClear(i, p));
       const drop = pivotY - groundY - 0.035;
       if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
+      /** Sat down, the front of the coat rides up over the thighs and lies on the lap instead of the knees going through it. */
+      floor = Math.max(floor, pose.lap * LAP_DRAPE * Math.max(0, h.radial.z));
       if (a < floor) {
         a = floor;
         this.hemOut[i].x = floor;

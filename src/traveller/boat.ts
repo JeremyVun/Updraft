@@ -18,6 +18,8 @@ import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT 
  * to be pointing the right way before it is sailed, and the longest it is ever held like that.
  */
 const PUSH_OFF_SPEED = 1.4;
+/** How far ahead of the hull's centre the forefoot finds the bottom. */
+const FOREFOOT = 2.2;
 const PUSH_OFF_TURN = 0.55;
 const PUSH_OFF_UNTIL = 0.7;
 const PUSH_OFF_LONGEST = 8;
@@ -80,6 +82,8 @@ export class Boat {
   /** The world as the hull sees it, for the shade its own sides cast inside it. */
   private readonly hullFrame = new THREE.Matrix4();
   private readonly flame = lanternFlame();
+  /** How bright the lantern's glass is this moment, 1 at full. */
+  private readonly glass = { value: 1 };
   private readonly pennantMat: THREE.ShaderMaterial;
   /** The air the pennant streams in, in the hull's own frame, and how far out it lifts. */
   private readonly pennantAir = new THREE.Vector2();
@@ -121,6 +125,8 @@ export class Boat {
   /** Which way the beach lets it go while it is being pushed off, and how long that has been going on. */
   private readonly pushDir = new THREE.Vector2();
   private pushingFor = -1;
+  /** The forefoot has touched a beach and the keel is sliding up it. */
+  private beaching = false;
   /** While a foot is still crossing the gunwale, the hull may drift from the shove but the sail may not take it. */
   private boardingPush = false;
 
@@ -128,7 +134,7 @@ export class Boat {
     const hullMat = new THREE.ShaderMaterial({
       vertexShader: HULL_VERT,
       fragmentShader: HULL_FRAG,
-      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame } },
+      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame }, uGlass: this.glass },
       side: THREE.DoubleSide,
     });
     this.hullContacts = contactShell().getAttribute('position') as THREE.BufferAttribute;
@@ -173,6 +179,7 @@ export class Boat {
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
     this.yaw = yaw;
     this.afloat = false;
+    this.beaching = false;
     this.speed = 0;
     this.lieOnShore(1, 0);
     this.pose(0);
@@ -181,6 +188,7 @@ export class Boat {
   launch(holdForBoarding = false): void {
     this.afloat = true;
     this.grounded = false;
+    this.beaching = false;
     this.speed = 0;
     this.pushingFor = 0;
     this.boardingPush = holdForBoarding;
@@ -297,6 +305,14 @@ export class Boat {
         if (!this.boardingPush && ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST)) {
           this.pushingFor = -1;
         }
+      } else if (this.beaching) {
+        this.speed = Math.max(0, this.speed - tuning.sail.beachGrip * dt);
+        p.x += fx * this.speed * dt;
+        p.z += fz * this.speed * dt;
+        if (this.speed === 0) {
+          this.beaching = false;
+          this.grounded = true;
+        }
       } else {
         /**
          * A small boat sails on any point of wind, so what drives it is how much wind the sail is holding, with
@@ -320,6 +336,7 @@ export class Boat {
         const gathering = drive > this.speed ? tuning.sail.gathers : tuning.sail.carries;
         this.speed += (drive - this.speed) * (1 - Math.exp(-dt * gathering));
         this.speed = Math.min(tuning.sail.topSpeed, this.speed + Math.abs(kick) * tuning.dolphins.shoveSurge * dt);
+        if (this.canGround) this.speed = Math.min(this.speed, this.beachApproach(fx, fz));
         this.yaw += kick * tuning.dolphins.shoveYaw * dt;
         const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
         this.yaw += THREE.MathUtils.clamp(dy, -dt * turn, dt * turn);
@@ -329,10 +346,9 @@ export class Boat {
         p.x += (fx * this.speed + w.x * drift) * dt;
         p.z += (fz * this.speed + w.z * drift) * dt;
       }
-      const ahead = heightAt(p.x + fx * 2.2, p.z + fz * 2.2);
-      if (this.canGround && ahead > -0.25) {
-        this.grounded = true;
-        this.speed = 0;
+      if (this.canGround && !this.beaching && this.touchesBottom(p.x, p.z, fx, fz, 0)) {
+        this.beaching = true;
+        this.speed = Math.min(this.speed, tuning.sail.beachTouch);
       }
       if (this.mooring && Math.hypot(this.mooring.x - p.x, this.mooring.z - p.z) < 2.6) {
         this.grounded = true;
@@ -496,9 +512,11 @@ export class Boat {
   private light(time: number): void {
     const u = atmo.uniforms;
     const lit = this.group.visible ? Math.max(u.uNight.value, 1 - THREE.MathUtils.smoothstep(u.uSunDir.value.y, 0.04, 0.28)) : 0;
-    const flicker = 0.9 + 0.1 * Math.sin(time * 7) * Math.sin(time * 3.1);
+    // Incommensurate slow waves wander without a beat, so the flame breathes rather than blinks.
+    const gutter = 0.5 + 0.25 * Math.sin(time * 2.3) + 0.15 * Math.sin(time * 5.1 + 1.7) + 0.1 * Math.sin(time * 8.7 + 0.4);
+    this.glass.value = 1 - tuning.lantern.glassFlicker * gutter;
     const at = this.contact.copy(this.flame).applyMatrix4(this.group.matrixWorld);
-    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * flicker);
+    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - tuning.lantern.flicker * gutter));
   }
 
   /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
@@ -571,6 +589,24 @@ export class Boat {
     this.ceiling.x = x;
     this.ceiling.z = z;
     this.ceiling.height = top + slope + CEILING_MARGIN;
+  }
+
+  /** The forefoot, `run` further along the heading, is in water shallow enough to touch. */
+  private touchesBottom(x: number, z: number, fx: number, fz: number, run: number): boolean {
+    return heightAt(x + fx * (FOREFOOT + run), z + fz * (FOREFOOT + run)) > -0.25;
+  }
+
+  /** The most way the hull may carry with the beach this close ahead, so it touches at `beachTouch`. */
+  private beachApproach(fx: number, fz: number): number {
+    const k = tuning.sail, p = this.position;
+    if (!this.touchesBottom(p.x, p.z, fx, fz, k.beachLook)) return Infinity;
+    let near = 0, far = k.beachLook;
+    for (let i = 0; i < 6; i++) {
+      const mid = (near + far) / 2;
+      if (this.touchesBottom(p.x, p.z, fx, fz, mid)) far = mid;
+      else near = mid;
+    }
+    return Math.sqrt(k.beachTouch * k.beachTouch + 2 * k.beachEase * far);
   }
 
   /** Rest along a sloping beach instead of holding a level hull on its highest corner. */

@@ -184,7 +184,13 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
   head: it now stands off it, the brim arching out over the fringe.
 - Scarf ends (Opus agent, branch `child-scarf`, merged): a dream breeze always carries both ends out behind and round
   to the knot's side, more with the child's speed; a player's gust takes them its own way. Knobs in `tuning.scarf`.
-  The long end streams well round to the side so it reads past the bag from the camera behind.
+  The long end streams well round to the side so it reads past the bag from the camera behind. 09-28, after Jeremy
+  found the ends blowing about with no wind and the scarf odd always sticking out: the thrashing was the coat push
+  (`keepOut`), applied in both constraint passes and so carried into the ends' last positions twice, flinging them
+  back into the coat every step (tip 1.4 m/s standing still, 0.2 after). It now pushes once, on the last pass. The
+  dream breeze is 0.8 (was 3), so standing in still air the ends droop with a lean behind; `carry` 0.8 (was 1): Jeremy
+  found them sticking out too much just from walking, so at a walk they trail back and down (tip 0.5 m below the
+  knot, where it was level), lifting further at a run or in a gust.
 - Face details still at **D** until Jeremy rules on the shape.
 - Capture harness for this round, in `/tmp/child3`:
   - `snap.sh <tag>` freezes the worktree as a build served at `:5377/<tag>/`, so edits don't disturb captures.
@@ -393,3 +399,51 @@ Then, asked whether the bag is closed until she first puts the cygnet in it: "le
 - The paper, stowed, lies over it; checked in the stage.
 - Stills in `/tmp/bagflap`: `sheet.png` (before, shut, open), `open-sheet.png` (open), `v8-first-stow.png` (shut, the
   first climb in, open after it climbs out). Not yet checked in a level from the play camera.
+
+## The hood from the side (2026-09-28)
+
+Jeremy (verbatim): "From the side the hood reads like a bicycle helmet instead of a cloth hood. It doesn't look nice."
+Then, tracing the face edge on a side still: "It's the fucking bend that makes it look like a helmet." He also asked
+for the dark wedge showing through the side of the hood to go. He approved the result ("ok this is good").
+
+- **The bend.** The opening is cut to the concept's front outline, widest at the ears, so at the temples the cut went
+  far back into the hood. From the side the edge came forward over the brow, stepped back at the temple and ran
+  straight down to the jaw: a helmet's face cut-out. The cloth near the edge now comes forward at the temples
+  (`HOOD.reach`, in `hoodShape`), so the edge runs down in one line. Only depth moves; the front outline is the same.
+- **Seam.** A centre-seam ridge up the back of the hood to a soft corner at the back of the crown (`HOOD.seam`,
+  `HOOD.corner`): a gentle peak from behind, where players see her most.
+- **Dark wedge.** The bob's ends showed through the side of the hood under the jaw; they tuck in a little more
+  (`bob()`), and look the same from the front.
+- **The rim stays as it was.** A flatter, tapered rim and a hood swelling up into it both read as the rim being
+  removed. Neither was wanted.
+- Checked in stills on the stage only (lit from the side via `sun=0,35`, gaze held ahead), not in a level or in motion.
+
+## Sitting on the ground (2026-09-28)
+
+Jeremy (verbatim): "I need you to take a look at uplifting the child's pose at the start of the game, it's a bit weird
+looking. like they are a doll with their arms sticking out."
+
+The game opens with her sat on the shore holding the plane (`story/island.ts`). The seated rest put both forearms out
+level in front and the plane's carry held it out at the hip on its edge. Now, sat on the ground (not in the boat),
+the mittens come into the lap (`lap` in `traveller.ts`): round the paper, which lies flat on her lap nose ahead
+(`paperLap`), with her eyes on it; without it they rest on her knees. She leans in a little. It lets go as she stands
+or starts any action. The stairs' nest (paper stowed) and the summit (paper in hand) share it. Sheet:
+`/tmp/startpose/start-pose-before-after.png`. The summit is not yet checked in place.
+
+Since the coat was shortened (hem 0.67), sitting on the ground put her thighs through its front. Asked whether that
+was an issue, Jeremy said to fix it. Sat on the ground, the front hem bones now swing up over the thighs (`LAP_DRAPE`
+0.9 in `motion.ts`, weighted by `Pose.lap`). In the boat she sits on a thwart with the shins down and the coat hangs as
+before; lifted there, it jutted out like a tray. Sheet: `/tmp/startpose/seated-hem-before-after.png`.
+
+## A lower head (2026-09-28)
+
+Jeremy (verbatim): "can ou also have a look at reducing the neck height / size a little bit as well then? I think it's
+also causing the child model to read a bit too old." Shown the head 0.035 and 0.06 lower: "0.04 lower makes sense as
+well".
+
+- Standing, no bare neck shows; what read as a long neck was the head standing high over the tall two-band scarf. A
+  small child's head sits down on the shoulders.
+- The head (face, hair, hood) is posed `HEAD_SINK` 0.04 below where it is modelled (`skeleton.ts`, applied in
+  `motion.ts`), so everything painted on it keeps its modelled frame; the coat and scarf stay put and the chin sits
+  further into the scarf. The hood's keep-out for the scarf ends and the cygnet (`HOOD_AT` in `body.ts`) moves with it.
+- Checked: every cygnet gate on a build; stills of carrying it in her arms, calling, and looking up (front and side).

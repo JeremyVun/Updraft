@@ -196,7 +196,7 @@ export class MeadowChapter implements Chapter {
     cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.water = cygnet.water;
     plane.homeRadius = tuning.meadowPlane.reach;
-    child.dismount();
+    child.stepAshore(cast.boat);
     child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
   }
 

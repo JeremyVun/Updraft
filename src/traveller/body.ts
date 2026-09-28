@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BAG, COAT_TOP, FACE, HOOD, KNOT_THETA, buildGarments, coatAt, hemY, wrapPath } from './child/garments';
 import { childMaterial, PALETTE } from './child/shader';
-import { BONE, buildBones, restPositions, UPPER_ARM, FOREARM, PALM } from './child/skeleton';
+import { BONE, HEAD_SINK, buildBones, restPositions, UPPER_ARM, FOREARM, PALM } from './child/skeleton';
 
 export { PALETTE, UPPER_ARM, FOREARM, BONE };
 
@@ -106,7 +106,7 @@ export function buildChild(): Rig {
   return rig;
 }
 
-const HOOD_AT = HOOD.c.clone().sub(BODY_ORIGIN);
+const HOOD_AT = HOOD.c.clone().sub(BODY_ORIGIN).sub(new THREE.Vector3(0, HEAD_SINK, 0));
 const HOOD_KEEP = HOOD.r.clone().addScalar(0.04);
 const BAG_AT = new THREE.Vector3(BAG.c.x, BAG.c.y - BODY_ORIGIN.y, BAG.c.z - 0.02);
 const BAG_KEEP = new THREE.Vector3(0.34, 0.33, 0.27);

@@ -417,6 +417,14 @@ export const tuning = {
     /** Where the foot comes down: at least this far inside the deck's edge and back from either end of it. */
     alightEdge: 0.4,
     alightEnd: 0.6,
+    /**
+     * Run up on a beach, they sit a moment before getting up, stand nearer the keel than at a jetty (the round bilge
+     * leaves less floor at the side), and step down this far out from the keel, this far forward.
+     */
+    ashorePause: 0.8,
+    ashoreInside: 0.16,
+    ashoreOut: 1.25,
+    ashoreAhead: 0.25,
   },
   cygnetCalls: {
     /** Three cream strokes accompany the cygnet's voice throughout the journey. */
@@ -435,12 +443,12 @@ export const tuning = {
   },
   scarf: {
     /**
-     * The dream's own breeze, always carrying the ends out behind the child (units per second), and how much it
-     * swells and eases. It turns with the child, and a player's gust takes over from it.
+     * The dream's own breeze round the ends (units per second), and how much it swells and eases: faint, so standing in
+     * still air they droop with only a lean behind. It turns with the child, and a player's gust takes over from it.
      */
-    breeze: 3, breezeSwell: 0.3,
+    breeze: 0.8, breezeSwell: 0.3,
     /** How much of the child's own speed adds to the air carrying the ends out behind them. */
-    carry: 1,
+    carry: 0.8,
     /**
      * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
      * times as hard as it blows, and one felt at `gustTakeover` units per second or more carries them its own way.
@@ -1195,15 +1203,20 @@ export const tuning = {
     breathSpread: 5.5,
     leapChance: 0.3,
     /**
-     * Slopes a throw leaves the water at, rise over run, and the most either is in units a second: a breath rolls the
-     * back out low, a porpoise clears the water. Their pace sets the speed, so a slow boat never stands them on end.
+     * The slope a porpoise leaves the water at, rise over run, and the most that is in units a second: its pace sets
+     * the speed, so a slow boat never stands them on end.
      */
-    breathSlope: 0.22,
     porpoiseSlope: 0.45,
-    breathMost: 1.3,
     porpoiseMost: 3.2,
-    /** Seconds a breath takes rolling through the surface: it is a swimmer's undulation, never a thrown arc. */
-    breathFor: 1.1,
+    /**
+     * A breath rolls through the surface on a hump of path this many body lengths long, the beak rising this far in
+     * units above where it lies level at the surface, taking no less and no more than these seconds: long and low
+     * enough that the body follows it through, back and fin out, belly and flukes under.
+     */
+    breathLength: 1.25,
+    breathRise: 0.2,
+    breathShortest: 1,
+    breathLongest: 2.2,
     /**
      * The spurt a porpoise runs on, in units a second over its lane, for how long, and how far out from the boat it
      * veers on it and how fast: the veer is what shows the arc from the side to a camera astern.
@@ -1214,16 +1227,27 @@ export const tuning = {
     porpoiseVeerRate: 4,
     /**
      * How a dolphin swims after its station: its fastest and slowest through the water, in units a second, how hard
-     * it accelerates, in units a second a second, its tightest turn, in radians a second, and how closely it chases the
-     * station, per second. Nothing in the pod ever moves faster than this, whatever the boat or its lane does.
+     * it accelerates, in units a second a second, its tightest turn as a radius in body lengths, how fast it eases
+     * into and out of a turn, in radians a second a second, how closely it chases the station, per second, and the
+     * most that chase adds to its speed, in units a second. Nothing in the pod ever moves faster than this, whatever
+     * the boat or its lane does.
      */
     swimMost: 7.5,
     swimLeast: 1.2,
     swimAccel: 5,
-    turnMost: 1.1,
+    turnRadius: 2,
+    turnAccel: 0.7,
+    /** The same two for one running hard at a set-piece, which is the one time it throws itself round. */
+    hurryTurnRadius: 1.1,
+    hurryTurnAccel: 1.6,
     chase: 1.3,
-    /** How fast the pod's frame comes round when the boat turns, in radians a second: no faster than they can swim it. */
+    chaseMost: 2,
+    /**
+     * How fast the pod's frame comes round when the boat turns, in radians a second, and how fast it eases into and
+     * out of that, in radians a second a second: no faster than they can swim it.
+     */
     headTurn: 0.4,
+    headAccel: 0.25,
     /** The least room they leave each other, and how close to the planking any of them may come. */
     spacing: 2.2,
     hullClear: 1.2,
@@ -1231,11 +1255,11 @@ export const tuning = {
     bankMost: 0.45,
     bankLean: 0.35,
     /**
-     * How much of the path's bend the spine takes, tail against beak, so a diving tail stays at the surface until the
-     * body has passed; the most it bends, in radians; and the hardest the water slows a landing, in units a second a second.
+     * The most the spine bends along its length, in radians; how much of the bend of its arc a body in the air lets go
+     * of, 1 flying rigid; and the hardest the water slows a landing, in units a second a second.
      */
-    archFollow: 0.85,
     archMost: 0.62,
+    flightStiff: 0.5,
     diveAccel: 5,
     /**
      * The slowest they are ever shaped as swimming, and the least headway their facing allows for, in units a second:
@@ -1283,6 +1307,10 @@ export const tuning = {
     /** The roll onto its side for the nudge, in radians, and the depth it holds it at: the flukes stay in the water. */
     nudgeRoll: 0.8,
     nudgeDepth: -0.22,
+    /** The depth it comes in at, upright, and how far from the planking, in units, it starts and finishes rising and rolling. */
+    nudgeApproachDepth: -0.7,
+    nudgeRollFrom: 3.5,
+    nudgeRollNear: 1,
     /** The wait before either comes round again, and how much of that is chance. */
     restLeast: 40,
     restSpread: 25,
@@ -1340,6 +1368,11 @@ export const tuning = {
     reach: 9,
     /** How strongly the flame shows in the water beneath it, as a glint broken up by the ripples. */
     water: 0.6,
+    /**
+     * How far the flame's wavering dims what it lights, and the glass itself. The glass must stay above the bloom
+     * threshold at its dimmest, or its halo snaps on and off.
+     */
+    flicker: 0.15, glassFlicker: 0.05,
   },
   sail: {
     /** A controlled turn into the meadow bay keeps gusts from landing far along the beach. */
@@ -1413,6 +1446,15 @@ export const tuning = {
     /** How fast the hull gathers way, and how slowly it carries it once the wind is out, per second. */
     gathers: 0.5,
     carries: 0.45,
+    /**
+     * Running onto a beach: the way comes off over the last few metres (`beachEase` units per second squared, read up
+     * to `beachLook` ahead of the bow) so the forefoot touches at `beachTouch`, then the keel slides up the sand
+     * losing `beachGrip` a second until it rests.
+     */
+    beachLook: 9,
+    beachEase: 1.4,
+    beachTouch: 1.5,
+    beachGrip: 2.6,
   },
   /** Move the shared key light continuously from the sunset to the moon. */
   sky: {

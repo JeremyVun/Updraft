@@ -235,7 +235,7 @@ export class StairsChapter implements Chapter {
     plane.visible = true;
     this.oldRadius = plane.homeRadius;
     boat.altitude = null;
-    child.dismount();
+    child.stepAshore(boat);
     this.limit = this.reachable();
     child.walkTo(STAIRS_ARRIVAL.x, STAIRS_ARRIVAL.y, false, () => this.to('wonder'), 0.8);
   }
