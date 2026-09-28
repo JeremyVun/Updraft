@@ -1102,7 +1102,7 @@ export class Traveller {
     }
     /** Sat on the ground, the hands come in to the lap: round the paper if they have it, otherwise on the knees. */
     const onGround = this.sitting && !this.riding && armsFree === 1 && this.swing < 0.01 && !this.armsFull
-      && this.reachWant[0] === 0 && this.reachWant[1] === 0;
+      && this.reachWant[0] === 0 && this.reachWant[1] === 0 && this.abed < 0.01 && this.yawn < 0.01;
     const lap = this.lap.step(onGround ? 1 : 0, 0.6, dt);
     this.lapPaper = lap * carry;
     if (lap > 0.001) {
