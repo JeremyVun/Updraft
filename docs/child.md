@@ -417,3 +417,15 @@ for the dark wedge showing through the side of the hood to go. He approved the r
 - **The rim stays as it was.** A flatter, tapered rim and a hood swelling up into it both read as the rim being
   removed. Neither was wanted.
 - Checked in stills on the stage only (lit from the side via `sun=0,35`, gaze held ahead), not in a level or in motion.
+
+## Sitting on the ground (2026-09-28)
+
+Jeremy (verbatim): "I need you to take a look at uplifting the child's pose at the start of the game, it's a bit weird
+looking. like they are a doll with their arms sticking out."
+
+The game opens with her sat on the shore holding the plane (`story/island.ts`). The seated rest put both forearms out
+level in front and the plane's carry held it out at the hip on its edge. Now, sat on the ground (not in the boat),
+the mittens come into the lap (`lap` in `traveller.ts`): round the paper, which lies flat on her lap nose ahead
+(`paperLap`), with her eyes on it; without it they rest on her knees. She leans in a little. It lets go as she stands
+or starts any action. The stairs' nest (paper stowed) and the summit (paper in hand) share it. Sheet:
+`/tmp/startpose/start-pose-before-after.png`. The summit is not yet checked in place.
