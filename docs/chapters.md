@@ -54,9 +54,8 @@ The plane then leads the child up beside the tree for the fall:
 1. The camera rounds the eastern side during the climb and holds an outlook across the slope for 3.5 s.
 2. Eight adult swans and the cygnet cross toward the north, setting the direction the boat will follow. The cygnet
    holds the last station of the V, beating faster than the adults just to keep it. Music pulls back.
-3. **What brings it down is the player's own wind**, blowing by itself: white streaks like the player's rise off
-   the slope, lift a plume of petals and sweep through the V left to right, heard as the player's wind. The adults
-   heel and ride it; it lifts the smallest, rolls it over and carries it out of the V, and that is the fall. Its
+3. **What brings it down is a winter gust**: white streaks rise off the slope, lift a plume of petals and sweep
+   through the V left to right. The adults heel and ride it; it lifts the smallest, rolls it over and carries it out of the V, and that is the fall. Its
    left wing is bent back in the tumble (the wing the child bandages). It fights all the way down to a landing
    ahead along the flock's bearing (`tuning.opening.gustAt`, `gustRun`, `gustLift`, `gustShove`, `gustSpeed`,
    `gustPush`, `tumbleFor`).
@@ -69,8 +68,8 @@ The plane then leads the child up beside the tree for the fall:
    travelling gust brushes the cove as she pushes off, and the shelter releases once afloat
    (`tuning.opening.departureRate`).
 
-Rulings: the fall has a cause and it is the player's wind, which the ending repays when the wind holds the cygnet
-up. Half lost in the grass is how a fledgling that cannot fly should look; where the child goes and stops is the
+Rulings: the fall has a visible cause, a gust that tumbles the cygnet, and the tumble is the start of the fall (it
+does not fly on and then drop). Half lost in the grass is how a fledgling that cannot fly should look; where the child goes and stops is the
 signal, not the bird's silhouette. Knobs: `tuning.opening`. Checks: `tools/opening-check.mjs`,
 `opening-sail-check.mjs`, `wing-care-check.mjs`.
 

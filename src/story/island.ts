@@ -84,7 +84,7 @@ export class IslandChapter implements Chapter {
   private readonly careView = new THREE.Vector3(-1, 0, 0.6).normalize();
   private readonly climbView = new THREE.Vector3();
   private fallAt = 0;
-  /** The gust that takes the cygnet out of the V: the wind the player woke on this island, blowing by itself. */
+  /** The winter gust that takes the cygnet out of the V. */
   private readonly front: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(), flow: new THREE.Vector2(), strength: 0 };
   private readonly station = new THREE.Vector3();
   private readonly pushEye = new THREE.Vector3();

@@ -82,8 +82,8 @@ someone smaller. And then letting go of what you loved and being glad.
 **The child isn't travelling home. The child is taking a lost fledgling to its family, and only at the very end does
 the player find out they were walking home the whole time.**
 
-When the still island comes back to life, a skein of white swans crosses toward the north, and a gust of the wind the
-player woke knocks the smallest out of the V. The child picks it up, wraps its wing, looks at the boat, and pushes off.
+When the still island comes back to life, a skein of white swans crosses toward the north, and a winter gust tumbles the
+smallest out of the V. The child picks it up, wraps its wing, looks at the boat, and pushes off.
 It gives the player a wordless goal, the boat a reason to exist, and north a meaning, and it makes the ending a reveal:
 the drawing opens and it is a white cottage with a red door, in the valley below.
 
@@ -91,7 +91,7 @@ Two lost children: one who can't find home, one who can't fly. Both fears are fa
 both, because flight is the player's verb. The cygnet's wing heals over the early islands; it goes up the stairs into
 the cloud first; it is frightened out of hiding in the dark wood and found by the light the player makes; it swims
 beside the boat by itself; it glides back to the sleeping child on the player's updraft; and at the end, held up by the
-wind that knocked it down, it flies, and the flock comes down through the afternoon light for it.
+player's wind, it flies, and the flock comes down through the afternoon light for it.
 
 ## The year
 
@@ -139,7 +139,7 @@ bond only rises and shows in behaviour, never a meter: distance kept, how often 
 rides or walks, whether it comes when the child stops. It rises from things the player causes or witnesses: being
 carried and set down safely, sheltered, lifted by the wind, frightened with the child staying, lost and found.
 
-It has a second bond, with the wind, which is the player: afraid of it (a gust put it out of the sky), then curious,
+It has a second bond, with the wind, which is the player: afraid of it, then curious,
 then asking for it, and at the end trusting it to hold it up. Later companions get one arc of the same shape: one
 fear, faced once, caused by the player. The build: [cygnet.md](cygnet.md) and the child in [child.md](child.md).
 

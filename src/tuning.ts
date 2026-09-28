@@ -355,7 +355,7 @@ export const tuning = {
     /** The first, held throw's gust: how steeply it climbs the frame (radians) and how far it runs. */
     planeInviteRise: 0.6, planeInviteIntoSpan: 7,
     /**
-     * A held view of the sea, then the skein. The island's new wind rises off the slope and crosses the V (`gustRun`
+     * A held view of the sea, then the skein. A winter gust rises off the slope and crosses the V (`gustRun`
      * seconds from the grass to the birds); the adults ride it, and `gustAt` seconds in it reaches the smallest one,
      * lifts it (`gustLift` metres), rolls it over for `tumbleFor` seconds and carries it out of the V sideways at
      * `gustShove` metres a second, falling from that moment on for `fall` seconds.

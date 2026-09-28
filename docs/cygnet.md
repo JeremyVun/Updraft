@@ -36,7 +36,7 @@ is answered. Every call is echoed by three small cream strokes above it (`fx/cal
 
 ## Its arc
 
-- **The wing.** The wind the player woke puts it out of the sky with its left wing bent back. The child gathers it
+- **The wing.** A winter gust tumbles it out of the V with its left wing bent back. The child gathers it
   and winds a linen wrap round that wing (`creatures/cygnet/bandage.ts`: one continuous strip fitted to the wing's
   geometry and joint weights, wound by `Carry.gatherUp(..., true)`). It favours the wing early, and its ordinary
   stretches reach further island by island. At the sleeping island's summit it takes the loose end in its bill and
