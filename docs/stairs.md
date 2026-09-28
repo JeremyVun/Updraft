@@ -143,15 +143,19 @@ light. Courage passes back and forth between them; the stairs are where it start
    a flight going on up from that corner that nobody could see; next time round the bird takes it, the child
    follows, and the lens comes round and down beside the ring while its last flight lets go of the trick and is seen
    to climb on past the corner and stop in the air, a storey too high.
-5. **Above the clouds.** As the second pass: out of the wind into a vast calm; the slippers; the bird settles in one,
-   the child sits beside it; a skein goes north across the sun; the boat waits on the cloud under the kite.
-6. **The sail over the cloud.** Off the landing in one slow turn to port, away from the stair, then a long straight
-   run toward the low sun (about 300 m, a minute or more of sailing), the player's gusts filling the sail. Far ahead
-   a bank of mist stands on the cloud sea, and the sun goes down into its top as they come. The lens goes once
-   round the boat and never back: ahead of them looking back at the stair standing out of the cloud; across the bow
-   in close to their faces in the lantern light and the sun, with heaped towers crowding the way behind them; up
-   and away astern until the boat is small on the cloud under the sun, the bank on the horizon; and down behind
-   them as the bank looms.
+5. **Above the clouds.** Out of the wind into a vast calm, the cloud still drifting on a soft air; the slippers;
+   the bird settles in one, the child sits beside it; a skein goes north across the sun. Far off toward the sun the
+   kite is flying, and under it the boat comes in to them across the cloud out of the sunset, slows, and lies right
+   alongside the landing's edge.
+6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow (a gust still adds a
+   little). Off the landing in one slow turn to port, away from the stair, then a long wander across the open cloud
+   toward the low sun: out to port among the heaps, back across to starboard between towers of cloud, and straight
+   on into a bank of mist standing on the cloud (about 350 m, two minutes). Once under way the bird hops up onto the
+   gunwale on the sunward side and the child turns to that side, arms on the rail, both looking out; now and then
+   she looks at it. The lens is mostly far off, so the cloud is seen going on for ever round a small boat: ahead of
+   them looking back at the stair; up and away on the sunward side; down beside them, low over the tops, the two of
+   them looking out; up and round astern while they sail between the towers; and down behind them as the bank
+   looms. As it does, the bird comes back into her arms.
 7. **Into the mist and out onto the village's water.** They sail into the bank level: the bow and the lantern go
    into the white first, then the child, until there is nothing but white. There, unseen, the boat is put down on
    the sea where the village begins (the one camera cut), in the same white. It turns from the gold of the cloud to
