@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * The round lobes cumulus heaps up from, baked into two small tiling textures: height and its slope, soft mounds in
- * one and heads fuller at the top with tight creases in the other. One sample stands in for nine cells of hashes,
+ * one and round balls run together with tight creases in the other. One sample stands in for nine cells of hashes,
  * and the mipmaps give each octave already smoothed to however finely it is sampled, so far off the mesh carries
  * only what it can hold and nothing jumps as it is sampled afresh.
  */
@@ -49,10 +49,45 @@ function lobes(px: number, py: number, full: number, out: Float32Array, at: numb
   out[at + 3] = 1;
 }
 
+/**
+ * Balls of cloud on a jittered grid that repeats every PERIOD cells: round caps, steep at their edges, some sitting
+ * higher than their neighbours, run together where they meet with a tight crease. Height only.
+ */
+function balls(px: number, py: number): number {
+  const ix = Math.floor(px), iy = Math.floor(py);
+  const fx = px - ix, fy = py - iy;
+  let sum = 0;
+  for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
+    const cx = (((ix + x) % PERIOD) + PERIOD) % PERIOD, cy = (((iy + y) % PERIOD) + PERIOD) % PERIOD;
+    const ox = x + hash12(cx + 3.1, cy + 3.1) * 0.8 + 0.1 - fx;
+    const oy = y + hash12(cx + 23.7, cy + 23.7) * 0.8 + 0.1 - fy;
+    const r = 0.5 + 0.4 * hash12(cx + 51.3, cy + 51.3);
+    const d = Math.sqrt(ox * ox + oy * oy) / r;
+    const lift = 0.3 * hash12(cx + 71.9, cy + 71.9);
+    const v = lift + (d < 1 ? r * Math.sqrt(1 - d * d) : -(d - 1) * r * 0.8);
+    sum += Math.exp(14 * v);
+  }
+  return Math.log(sum) / 14 - 0.35;
+}
+
 function bake(full: number): Float32Array {
   const data = new Float32Array(SIZE * SIZE * 4);
+  if (full === 0) {
+    for (let j = 0; j < SIZE; j++) {
+      for (let i = 0; i < SIZE; i++) lobes((i + 0.5) / TEXELS, (j + 0.5) / TEXELS, 0, data, (j * SIZE + i) * 4);
+    }
+    return data;
+  }
+  for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) data[(j * SIZE + i) * 4] = balls((i + 0.5) / TEXELS, (j + 0.5) / TEXELS);
+  // Slopes from the heights either side, per cell.
+  const at = (i: number, j: number) => data[((((j % SIZE) + SIZE) % SIZE) * SIZE + (((i % SIZE) + SIZE) % SIZE)) * 4];
   for (let j = 0; j < SIZE; j++) {
-    for (let i = 0; i < SIZE; i++) lobes((i + 0.5) / TEXELS, (j + 0.5) / TEXELS, full, data, (j * SIZE + i) * 4);
+    for (let i = 0; i < SIZE; i++) {
+      const k = (j * SIZE + i) * 4;
+      data[k + 1] = (at(i + 1, j) - at(i - 1, j)) * TEXELS * 0.5;
+      data[k + 2] = (at(i, j + 1) - at(i, j - 1)) * TEXELS * 0.5;
+      data[k + 3] = 1;
+    }
   }
   return data;
 }
@@ -69,7 +104,7 @@ function texture(data: Float32Array): THREE.DataTexture {
   return tex;
 }
 
-/** The two bakes, soft (full 0) and full (full 1), on the CPU too, so a hull can ride on the same cloud. */
+/** The two bakes, soft mounds (full 0) and balls (full 1), on the CPU too, so a hull can ride on the same cloud. */
 export class CloudLobes {
   readonly soft: Float32Array;
   readonly full: Float32Array;
@@ -101,8 +136,8 @@ export class CloudLobes {
 }
 
 /**
- * lobesT(p, full, lod): x height, yz slope (per cell) of the lobes at p (in cells), full 0 soft mounds to 1 full
- * heads. In the vertex stage `lod` picks how smoothed they are; in the fragment stage the screen footprint does.
+ * lobesT(p, full, lod): x height, yz slope (per cell) of the lobes at p (in cells), full 0 soft mounds to 1 round
+ * balls. In the vertex stage `lod` picks how smoothed they are; in the fragment stage the screen footprint does.
  */
 export const LOBES_TEXTURE_GLSL = /* glsl */ `
 uniform sampler2D uLobesSoft;
@@ -110,7 +145,7 @@ uniform sampler2D uLobesFull;
 #ifdef LOBES_VERTEX
 #define LOBES_SAMPLE(t, uv, lod) textureLod(t, uv, lod)
 #else
-#define LOBES_SAMPLE(t, uv, lod) texture(t, uv)
+#define LOBES_SAMPLE(t, uv, lod) texture(t, uv, -1.0)
 #endif
 vec3 lobesT(vec2 p, float full, float lod) {
   vec2 uv = p * ${(1 / PERIOD).toFixed(8)};

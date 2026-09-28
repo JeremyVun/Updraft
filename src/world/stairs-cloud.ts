@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
-import { tuning } from '../tuning';
+import { glsl, tuning } from '../tuning';
 import { CloudWake } from './stairs-wake';
+import { CloudStreamers } from './cloud-vapour';
 import { CloudLobes, LOBES_TEXTURE_GLSL } from './cloud-lobes';
 import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } from './cloud-grid';
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
+
+/** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
+const SHAPE = { heap: 3.5, tower: 8, big: [5.5, 3.0], mid: [2.6, 1.0], fine: [1.0, 0.3] } as const;
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
@@ -37,10 +41,10 @@ void main() {
   float c = calmAt(xz);
   vec2 slope = vec2(calmAt(xz + vec2(1.5, 0.0)) - c, calmAt(xz + vec2(0.0, 1.5)) - c) / 1.5;
   float way = fromRoute(xz);
-  vCalm = vec4(c, slope, smoothstep(2.5, 10.0, way));
+  vCalm = vec4(c, slope, smoothstep(2.5, 14.0, way));
   vStature = statureAt(xz, way);
   vec2 fold;
-  float h = cloudTop(xz, vCalm, vStature, spacing, fold).x;
+  float h = cloudTop(xz, vCalm, vStature, spacing, fold).x - parting(wakeAt(xz)).x;
   vShade = heapShade(xz, h, spacing);
   vWorld = vec3(xz.x, uSurface + h, xz.y);
   // Its own surface is not hidden by the deck it is the top of, only when the deck swells up over it; seen from
@@ -80,6 +84,16 @@ void main() {
   vec2 fold;
   vec3 lobe;
   vec3 top = cloudTop(xz, vCalm, vStature, 0.0, fold, lobe);
+  Wake wake = wakeAt(xz);
+  top -= parting(wake);
+  // Either side of the parting the tops curl over and stream off in soft eddies, which spread and settle as it fills.
+  float stir = wake.fresh * exp(-wake.d * wake.d / (5.0 + 8.0 * (1.0 - wake.fresh)));
+  if (stir > 0.01) {
+    vec2 q = vec2(wake.along * 0.55 + wake.d * 0.35, wake.d * 1.3 - (1.0 - wake.fresh) * 2.5 + uTime * 0.25);
+    vec3 eddy = vnoiseGrad(q) + 0.5 * vnoiseGrad(q * 2.1 + 3.7);
+    top.yz += (eddy.y * wake.off + eddy.z * vec2(-wake.off.y, wake.off.x)) * 0.35 * stir;
+    lobe.z = mix(lobe.z, eddy.x * 0.7, stir);
+  }
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 ray = -V;
   vec3 L = normalize(uSunDir);
@@ -189,11 +203,13 @@ float calmAt(vec2 xz) {
   float wander = (vnoise(xz * 0.03 + 4.1) - 0.5) * 16.0;
   return min(smoothstep(uCalmAt.z * 0.35, uCalmAt.z, length(xz - uCalmAt.xy)), smoothstep(4.0 - g, 30.0 - 14.0 * g, fromRoute(xz) + wander * (1.0 - g)));
 }
-/** x how deep the furrow is (its lip is negative), yz its slope: from the nearest point of the hull's fresh way. */
-vec3 furrow(vec2 p) {
-  float near = 1e5;
-  vec2 off = vec2(0.0);
-  float fresh = 0.0;
+uniform vec4 uTrailBounds;
+/** Where a point is from the hull's fresh way: how far off it (d), how far along it, how fresh, and which way off it. */
+struct Wake { float d; float along; float fresh; vec2 off; };
+Wake wakeAt(vec2 p) {
+  Wake w = Wake(1e5, 0.0, 0.0, vec2(0.0, 1.0));
+  if (uTrailBounds.w <= 0.0 || length(p - uTrailBounds.xy) > uTrailBounds.z) return w;
+  float near = 1e10;
   for (int i = 0; i < ${TRAIL_POINTS - 1}; i++) {
     vec4 a = uTrail[i];
     vec4 b = uTrail[i + 1];
@@ -203,24 +219,33 @@ vec3 furrow(vec2 p) {
     float f = mix(a.z, b.z, t);
     if (f > 0.0 && dot(o, o) < near) {
       near = dot(o, o);
-      off = o;
-      fresh = f;
+      w.off = o;
+      w.fresh = f;
+      w.along = mix(a.w, b.w, t);
     }
   }
-  float d = max(sqrt(near), 1e-3);
-  float dig = exp(-d * d / 1.1);
-  float rim = d - 1.9;
-  float lip = 0.3 * exp(-rim * rim / 0.4);
-  float slope = -2.0 * d / 1.1 * dig + 2.0 * rim / 0.4 * lip;
-  return fresh * vec3(dig - lip, slope * off / d);
+  w.d = sqrt(near);
+  w.off /= max(w.d, 1e-3);
+  return w;
+}
+/**
+ * Where the hull has parted the tops: a soft trough, no lip, which spreads and fills in behind it as it grows
+ * stale. x how deep, yz its slope.
+ */
+vec3 parting(Wake w) {
+  if (w.fresh <= 0.0) return vec3(0.0);
+  float width = 0.85 + 1.6 * (1.0 - w.fresh);
+  float k = exp(-w.d * w.d / (2.0 * width * width));
+  float deep = 0.32 * w.fresh * w.fresh * k;
+  return vec3(deep, -deep * w.d / (width * width) * w.off);
 }
 /** How high a heap's dome stands, and the towers on it, far out; near the landing and the way they are lower. */
-const float HEAP = 3.5;
-const float TOWER = 8.0;
+const float HEAP = ${glsl(SHAPE.heap)};
+const float TOWER = ${glsl(SHAPE.tower)};
 /** The big, middle and fine lobes: how high on the open cloud (x) and how much higher on a heap (y). */
-const vec2 BIG = vec2(1.6, 3.5);
-const vec2 MID = vec2(1.0, 1.3);
-const vec2 FINE = vec2(0.18, 0.22);
+const vec2 BIG = vec2(${glsl(SHAPE.big[0])}, ${glsl(SHAPE.big[1])});
+const vec2 MID = vec2(${glsl(SHAPE.mid[0])}, ${glsl(SHAPE.mid[1])});
+const vec2 FINE = vec2(${glsl(SHAPE.fine[0])}, ${glsl(SHAPE.fine[1])});
 /** How fast each size of lobe drifts, as a share of uDrift: the small ones slide over the big, so the tops seem to roll. */
 const vec4 DRIFT = vec4(0.35, 0.55, 0.75, 1.0);
 /** 0 round the top landing and the way the boat goes, 1 far out, where the heaps tower up. */
@@ -273,7 +298,7 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, o
   float heapH = HEAP * stature;
   float towerH = TOWER * stature * rise.x;
   // Lobes go down the steep flanks of a heap less than they stand on its top, or they hang down it in drapes.
-  float even = 0.35 + 0.65 * calm.w;
+  float even = 0.2 + 0.8 * calm.w;
   float aBig = (BIG.x * even + BIG.y * rise.x * stature);
   float aMid = (MID.x * even + MID.y * rise.x * stature);
   float aFine = FINE.x * even + FINE.y * rise.x;
@@ -282,11 +307,11 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, o
   vec3 fine = lobesT((p + uDrift * 1.25) / 2.4 + 7.7, 0.6 + 0.4 * rise.x, lobesLod(spacing, 2.4));
   vec3 h = vec3(rise.x * heapH, rise.yz * heapH)
     + vec3(tower.x * towerH, tower.yz * towerH + tower.x * TOWER * stature * rise.yz)
-    + vec3(big.x * aBig, big.yz / 17.0 * aBig + big.x * BIG.y * stature * rise.yz)
-    + vec3(mid.x * aMid, mid.yz / 6.5 * aMid + mid.x * MID.y * stature * rise.yz)
-    + vec3(fine.x * aFine, fine.yz / 2.4 * aFine)
+    + vec3((big.x - 0.25) * aBig, big.yz / 17.0 * aBig + (big.x - 0.25) * BIG.y * stature * rise.yz)
+    + vec3((mid.x - 0.25) * aMid, mid.yz / 6.5 * aMid + (mid.x - 0.25) * MID.y * stature * rise.yz)
+    + vec3((fine.x - 0.25) * aFine, fine.yz / 2.4 * aFine)
     + vec3(0.25 * (1.0 - calm.w), 0.0, 0.0);
-  lobe = vec3(smoothstep(-0.2, 0.7, big.x), smoothstep(-0.1, 0.75, mid.x), smoothstep(-0.1, 0.8, fine.x));
+  lobe = vec3(smoothstep(-0.15, 0.6, big.x), smoothstep(-0.1, 0.6, mid.x), smoothstep(-0.1, 0.6, fine.x));
   float crease = (1.0 - lobe.x) * (0.35 + 0.4 * rise.x) + (1.0 - lobe.y) * 0.45 + (1.0 - lobe.z) * 0.2
     + (1.0 - smoothstep(0.1, 0.6, tower.x)) * rise.x * 0.5;
   fold = vec2(clamp(crease, 0.0, 1.0), mix(1.0, clamp(h.x / max(heapH + towerH + aBig, 0.5), 0.0, 1.0), rise.x));
@@ -294,7 +319,7 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold, o
   float below = h.x - 0.1;
   float soft = sqrt(below * below + 0.02);
   h = vec3(0.1 + 0.5 * (below + soft), h.yz * 0.5 * (1.0 + below / soft));
-  return h - furrow(xz) * 0.6;
+  return h;
 }
 vec3 cloudTop(vec2 xz, vec4 calm, float stature, float spacing, out vec2 fold) {
   vec3 lobe;
@@ -306,7 +331,7 @@ float bulkAt(vec2 xz, vec4 calm, float stature) {
   float rise = riseAt(xz, p + uDrift * DRIFT.x, calm, 0.0).x;
   float big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise, 0.0).x;
   return rise * stature * (HEAP + TOWER * towers(p + uDrift * DRIFT.y, 0.0).x)
-    + big * (BIG.x * (0.35 + 0.65 * calm.w) + BIG.y * rise * stature) + 0.25;
+    + (big - 0.25) * (BIG.x * (0.2 + 0.8 * calm.w) + BIG.y * rise * stature) + 0.25;
 }
 /** How far the heaps between a point and the low sun keep the light off it: their long shadows across the cloud. */
 float heapShade(vec2 xz, float h, float spacing) {
@@ -423,6 +448,88 @@ float bellyThick(vec2 xz, float fine) {
   return smoothstep(0.12, 0.5, cells);
 }`;
 
+function fract(x: number): number {
+  return x - Math.floor(x);
+}
+function hash12(x: number, y: number): number {
+  let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
+  const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
+  a += d;
+  b += d;
+  c += d;
+  return fract((a + b) * c);
+}
+function vnoise(x: number, y: number): number {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash12(ix, iy), b = hash12(ix + 1, iy), c = hash12(ix, iy + 1), d = hash12(ix + 1, iy + 1);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+const smooth = (a: number, b: number, x: number) => {
+  const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
+/** The height of the cloud's top as the shader finds it at its finest, for whatever floats on it. */
+class TopShape {
+  private readonly route: THREE.Vector2[];
+  private readonly l = new THREE.Vector3();
+
+  constructor(private readonly lobes: CloudLobes, route: THREE.Vector2[], private readonly gate: THREE.Vector4, private readonly calmAt: THREE.Vector3) {
+    this.route = route;
+  }
+
+  private fromRoute(x: number, z: number): number {
+    let d = 1e5;
+    for (let i = 0; i < this.route.length - 1; i++) {
+      const a = this.route[i], b = this.route[i + 1];
+      const abx = b.x - a.x, abz = b.y - a.y;
+      const t = THREE.MathUtils.clamp(((x - a.x) * abx + (z - a.y) * abz) / Math.max(abx * abx + abz * abz, 1e-4), 0, 1);
+      d = Math.min(d, Math.hypot(x - a.x - abx * t, z - a.y - abz * t));
+    }
+    return d;
+  }
+
+  private gateAt(x: number, z: number): number {
+    const g = this.gate, abx = g.z - g.x, abz = g.w - g.y;
+    const t = THREE.MathUtils.clamp(((x - g.x) * abx + (z - g.y) * abz) / (abx * abx + abz * abz), 0, 1);
+    return (1 - smooth(20, 60, Math.hypot(x - g.x - abx * t, z - g.y - abz * t))) * smooth(0, 0.25, t) * (1 - smooth(0.75, 1, t));
+  }
+
+  private lobe(px: number, pz: number, full: number): number {
+    return this.lobes.at(px, pz, full, this.l).x;
+  }
+
+  /** Height over the surface at (x, z), with the tops drifted by `drift` and shifted by the sky's `shift`. */
+  heightAt(x: number, z: number, drift: THREE.Vector2, shift: THREE.Vector2): number {
+    const g = this.gateAt(x, z);
+    const way = this.fromRoute(x, z);
+    const wander = (vnoise(x * 0.03 + 4.1, z * 0.03 + 4.1) - 0.5) * 16;
+    const c = this.calmAt;
+    const calm = Math.min(smooth(c.z * 0.35, c.z, Math.hypot(x - c.x, z - c.y)), smooth(4 - g, 30 - 14 * g, way + wander * (1 - g)));
+    const even = 0.2 + 0.8 * smooth(2.5, 14, way);
+    const far = Math.max(smooth(60, 260, Math.hypot(x - c.x, z - c.y)), 0.75 * g);
+    const stature = (0.5 + 0.5 * far) * THREE.MathUtils.lerp(0.6, 1, smooth(25, 90, way));
+    const px = x + shift.x * 0.6, pz = z + shift.y * 0.6;
+    const hx = px + drift.x * 0.35, hz = pz + drift.y * 0.35;
+    const site = this.lobe(hx / 80 + 11.3, hz / 80 + 11.3, 0) * 0.65 + vnoise(hx * 0.021 + 2.3, hz * 0.021 + 2.3) * 0.35;
+    const m = (site + 0.3 * g - 0.5 * (1 - calm) - 0.28) / 0.4;
+    const rise = m <= 0 ? 0 : m >= 1 ? 1 : m * m * (3 - 2 * m);
+    const tb = this.lobe((px + drift.x * 0.55) / 30 + 3.9, (pz + drift.y * 0.55) / 30 + 3.9, 0.8) + 0.2;
+    const tower = 0.5 * (tb + Math.sqrt(tb * tb + 0.04));
+    const big = this.lobe((px + drift.x * 0.75) / 17 + 5.3, (pz + drift.y * 0.75) / 17 + 5.3, 0.3 + 0.4 * rise);
+    const mid = this.lobe((px + drift.x) / 6.5 + 1.7, (pz + drift.y) / 6.5 + 1.7, 0.5 + 0.3 * rise);
+    const fine = this.lobe((px + drift.x * 1.25) / 2.4 + 7.7, (pz + drift.y * 1.25) / 2.4 + 7.7, 0.6 + 0.4 * rise);
+    const h = rise * SHAPE.heap * stature + tower * SHAPE.tower * stature * rise
+      + (big - 0.25) * (SHAPE.big[0] * even + SHAPE.big[1] * rise * stature)
+      + (mid - 0.25) * (SHAPE.mid[0] * even + SHAPE.mid[1] * rise * stature)
+      + (fine - 0.25) * (SHAPE.fine[0] * even + SHAPE.fine[1] * rise)
+      + 0.25 * (1 - smooth(2.5, 14, way));
+    const below = h - 0.1;
+    return 0.1 + 0.5 * (below + Math.sqrt(below * below + 0.02));
+  }
+}
+
 /**
  * The bank of mist the boat sails into at the end of the way over the cloud, and which is still round it on the
  * sea until it sails out of the back of it. The story asks for it every frame it wants it; left alone it thins away.
@@ -484,15 +591,19 @@ export class StairsCloud {
   readonly top: THREE.Mesh;
   readonly belly: THREE.Mesh;
   readonly wake = new CloudWake();
+  /** Low wisps of vapour streaming across the tops; the story may set their `amount` (1 by default). */
+  readonly streamers = new CloudStreamers();
   readonly fog = new FogBank();
   private readonly lobes = new CloudLobes();
+  private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uSurface: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uSurface: { value: number } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
   /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
+  private trailAlong = 0;
 
   constructor() {
     this.group.name = 'stairs-cloud';
@@ -505,13 +616,20 @@ export class StairsCloud {
       uReach: { value: 1500 },
       uRoute: { value: [new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), ...CLOUD_ROUTE.map(p => p.clone())] },
       uTrail: { value: this.trail },
+      uTrailBounds: { value: new THREE.Vector4() },
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
       uDebug: { value: 0 },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
       uSurface: { value: CLOUD.top },
     };
+    this.shape = new TopShape(this.lobes, this.topUniforms.uRoute.value, this.topUniforms.uGate.value, this.topUniforms.uCalmAt.value);
     this.group.add(this.wake.mesh);
+    this.group.add(this.streamers.mesh);
+    const ground = (x: number, z: number) => this.surfaceAt(x, z);
+    this.wake.groundAt = ground;
+    this.streamers.groundAt = ground;
+    this.streamers.amount = 1;
     const disc = this.grid.geometry;
     this.top = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.topUniforms },
@@ -551,15 +669,28 @@ export class StairsCloud {
    * at the bow and off the quarters that curl away and thin out. `hull` is null when it is not on the cloud.
    */
   sailing(hull: { position: THREE.Vector3; yaw: number; speed: number } | null, dt: number): void {
-    for (const t of this.trail) t.z = Math.max(0, t.z - dt / 14);
+    for (const t of this.trail) t.z = Math.max(0, t.z - dt / tuning.stairs.partingFills);
     this.wake.emit(hull, dt);
-    if (!hull) return;
-    const p = hull.position;
-    if (Math.hypot(p.x - this.trailFrom.x, p.z - this.trailFrom.y) > 1.3) {
-      for (let i = TRAIL_POINTS - 1; i > 0; i--) this.trail[i].copy(this.trail[i - 1]);
-      this.trailFrom.set(p.x, p.z);
+    if (hull) {
+      // The parting runs back from the bow, where the hull first shoulders the tops aside.
+      const x = hull.position.x + Math.sin(hull.yaw) * 1.8, z = hull.position.z + Math.cos(hull.yaw) * 1.8;
+      const moved = Math.hypot(x - this.trail[0].x, z - this.trail[0].y);
+      this.trailAlong += Math.min(moved, 5);
+      if (Math.hypot(x - this.trailFrom.x, z - this.trailFrom.y) > 2.5) {
+        for (let i = TRAIL_POINTS - 1; i > 0; i--) this.trail[i].copy(this.trail[i - 1]);
+        this.trailFrom.set(x, z);
+      }
+      this.trail[0].set(x, z, Math.min(1, hull.speed / 2.5), this.trailAlong);
     }
-    this.trail[0].set(p.x, p.z, Math.min(1, hull.speed / 2.5), 0);
+    const bounds = this.topUniforms.uTrailBounds.value.set(0, 0, 0, 0);
+    let n = 0;
+    for (const t of this.trail) if (t.z > 0) { bounds.x += t.x; bounds.y += t.y; n++; }
+    if (n === 0) return;
+    bounds.x /= n;
+    bounds.y /= n;
+    for (const t of this.trail) if (t.z > 0) bounds.z = Math.max(bounds.z, Math.hypot(t.x - bounds.x, t.y - bounds.y));
+    bounds.z += 9;
+    bounds.w = 1;
   }
 
   update(dt: number, camera: THREE.Camera): void {
@@ -567,12 +698,24 @@ export class StairsCloud {
     this.top.visible = deck.w > 0.01 && camera.position.y > CLOUD.top - 0.4;
     placeCloudGrid(this.grid.levels, camera.position);
     // The air over the cloud goes the way the boat does, a little across it, and carries the tops with it.
+    const airX = Math.sin(RUN_YAW + 0.5), airZ = Math.cos(RUN_YAW + 0.5);
     const drift = tuning.stairs.cloudDrift * dt;
-    this.topUniforms.uDrift.value.x -= Math.sin(RUN_YAW + 0.5) * drift;
-    this.topUniforms.uDrift.value.y -= Math.cos(RUN_YAW + 0.5) * drift;
+    this.topUniforms.uDrift.value.x -= airX * drift;
+    this.topUniforms.uDrift.value.y -= airZ * drift;
+    this.wake.setWind(airX * tuning.stairs.wispSpeed * 0.5, airZ * tuning.stairs.wispSpeed * 0.5);
+    this.streamers.setWind(airX, airZ);
+    this.streamers.update(dt, camera.position, this.top.visible && camera.position.y > CLOUD.top + 0.5);
     this.wake.update(dt);
     this.fog.update(dt, camera.position);
     this.belly.visible = deck.w > 0.01 && camera.position.y < atmo.uniforms.uCloudDeckY.value.x - 1;
+  }
+
+  /**
+   * The height of the top of the cloud at (x, z) in the world, as it is drawn now (less the parting behind a hull):
+   * low and gentle along the way, rising and falling on its lobes as they drift under a hull.
+   */
+  surfaceAt(x: number, z: number): number {
+    return CLOUD.top + this.shape.heightAt(x, z, this.topUniforms.uDrift.value, atmo.uniforms.uCloudShift.value);
   }
 
   /** Whether the pocket round a climber opens a hole in the top of the cloud; not while the cloud is swelling up round a hull. */

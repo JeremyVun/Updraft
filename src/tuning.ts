@@ -290,6 +290,12 @@ export const tuning = {
     fogLift: 11,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
     cloudDrift: 0.6,
+    /** How long the tops the hull parts take to fill in again behind it, seconds. */
+    partingFills: 8,
+    /** How long the breath of vapour off the stern lasts, seconds. */
+    wakeLife: 7,
+    /** How fast the low wisps stream across the tops, metres a second, and how far round the eye they go. */
+    wispSpeed: 1.6, wispReach: 170,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
