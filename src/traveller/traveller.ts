@@ -25,7 +25,7 @@ type Action =
     }
   | {
       kind: 'alight'; t: number; boat: Boat; to: THREE.Vector3; rail: THREE.Vector3;
-      fromYaw: number; toYaw: number; side: number; shoved: boolean; hop: number; onDone: () => void;
+      fromYaw: number; toYaw: number; side: number; inside: number; shoved: boolean; hop: number; onDone: () => void;
     };
 
 interface Goal {
@@ -524,10 +524,36 @@ export class Traveller {
     const across = THREE.MathUtils.clamp(((rail.x - deck.x0) * dz - (rail.z - deck.z0) * dx) / len, -room, room);
     const to = new THREE.Vector3(deck.x0 + dx * along + dz / len * across, 0, deck.z0 + dz * along - dx / len * across);
     to.y = Math.max(deck.height, heightAt(to.x, to.z));
-    const stand = this.tmp.set(side * k.alightInside, k.alightFloor, -0.25).applyMatrix4(boat.group.matrixWorld);
+    this.stepOut(boat, side, rail, to, k.alightInside, 0, onDone);
+  }
+
+  /**
+   * Out of a boat run up on a beach: a moment sitting in the stopped hull, then the same step out over the gunwale
+   * on its higher side, down onto the sand beside the bow. A walk asked for meanwhile waits for their feet.
+   */
+  stepAshore(boat: Boat, onDone = () => {}): void {
+    if (!this.riding) {
+      this.dismount();
+      onDone();
+      return;
+    }
+    const k = tuning.boarding;
+    boat.group.updateMatrixWorld(true);
+    const side = boat.group.worldToLocal(boat.boardingPoint(this.tmp)).x < 0 ? -1 : 1;
+    const u = stationU(-0.25);
+    const rail = new THREE.Vector3(side * gunwaleHalf(u), gunwale(u), -0.25).applyMatrix4(boat.group.matrixWorld);
+    const to = new THREE.Vector3(side * k.ashoreOut, 0, k.ashoreAhead).applyMatrix4(boat.group.matrixWorld);
+    to.y = Math.max(this.ground(to.x, to.z), 0);
+    this.stepOut(boat, side, rail, to, k.ashoreInside, k.ashorePause, onDone);
+  }
+
+  private stepOut(boat: Boat, side: number, rail: THREE.Vector3, to: THREE.Vector3, inside: number, pause: number,
+    onDone: () => void): void {
+    const k = tuning.boarding;
+    const stand = this.tmp.set(side * inside, k.alightFloor, -0.25).applyMatrix4(boat.group.matrixWorld);
     this.action = {
-      kind: 'alight', t: 0, boat, to, rail, fromYaw: this.yaw,
-      toYaw: Math.atan2(to.x - stand.x, to.z - stand.z), side, shoved: false,
+      kind: 'alight', t: -pause, boat, to, rail, fromYaw: this.yaw,
+      toYaw: Math.atan2(to.x - stand.x, to.z - stand.z), side, inside, shoved: false,
       hop: THREE.MathUtils.smoothstep(Math.hypot(to.x - stand.x, to.z - stand.z), k.alightStride, k.alightStride + k.alightHopOver),
       onDone,
     };
@@ -544,7 +570,7 @@ export class Traveller {
     this.time += dt;
     const p = this.position;
     this.prev.copy(p);
-    if (!this.riding) this.updateGoal(dt);
+    if (!this.riding && this.action?.kind !== 'alight') this.updateGoal(dt);
     /** Stopping, the feet finish the step they are in and come together under them rather than sliding back. */
     const past = ((this.gait - PASSING) % Math.PI + Math.PI) % Math.PI;
     if (this.speed < 0.4 && past > 0.12) this.gait += Math.min(Math.PI - past, dt * 9);
@@ -792,7 +818,7 @@ export class Traveller {
       const k = tuning.boarding;
       const boat = a.boat;
       boat.group.updateMatrixWorld(true);
-      const stand = this.tmp2.set(a.side * k.alightInside, k.alightFloor, -0.25).applyMatrix4(boat.group.matrixWorld);
+      const stand = this.tmp2.set(a.side * a.inside, k.alightFloor, -0.25).applyMatrix4(boat.group.matrixWorld);
       if (a.t < k.alightStand) {
         const u = THREE.MathUtils.smootherstep(a.t, 0, k.alightStand);
         this.position.set(0, 0.02, -0.25).applyMatrix4(boat.group.matrixWorld).lerp(stand, u);
@@ -813,7 +839,7 @@ export class Traveller {
       const turn = Math.atan2(Math.sin(a.toYaw - a.fromYaw), Math.cos(a.toYaw - a.fromYaw));
       this.yaw = a.fromYaw + turn * THREE.MathUtils.smootherstep(a.t, 0, k.alightStand * 1.2);
       this.riding = a.t < k.alightLift;
-      this.sitting = false;
+      this.sitting = a.t < 0;
       this.rideRoll = this.riding ? boat.roll * 0.55 : 0;
       this.ridePitch = this.riding ? boat.pitch * 0.55 : 0;
       if (a.t >= k.alightSettle) {
