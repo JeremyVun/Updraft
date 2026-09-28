@@ -115,6 +115,9 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 - **Seated on the ground** she holds the paper flat in her lap, or rests her mittens on her knees, and leans in a
   little (`lap`, `paperLap` in `traveller.ts`), never a doll with its arms out; the front hem drapes over her thighs
   (`LAP_DRAPE`). In the boat she sits on the thwart and the coat hangs.
+- **Going to bed** she turns the covers back herself, gets in and pulls them up (Jeremy: "the child has her hands
+  straight infront of her, it looks very unnatural"); her arms never hold straight out. Nothing of her shows through
+  the quilt. The scarf's tail hanging off the side of the bed is fine.
 - No perf benches unless Jeremy asks.
 
 ## How she moves
@@ -138,6 +141,16 @@ In `traveller.ts` unless noted.
 - **Springs**: the hem swings with each stride, trails when running and ripples on the side the air leaves (plus a
   shader ripple); the hood lags head turns and lifts at the brim in gusts; the bag sways with the bird's weight;
   the springs rest while she lies down.
+- **Bedtime** (`tuckIn` in `story/sleeping.ts`, `layDown` in `traveller.ts`): she sets the bird down, takes the top
+  of the quilt in both mittens and draws it back down the bed (`blanketEdge(…, top)`, `blanketLift`, `blanketHeld`
+  in `world/sleeping.ts`; `turnReachAt`, `turnGripAt`, `turnDrawnAt`, `turnDrawn`, `turnLift` in `tuning.sleeping`),
+  sits on the edge and yawns, swings round onto the mattress on her seat with her hands beside her hips
+  (`swingIn`, `Pose.lieFold`), lies back as her hands come to her chest, and draws the quilt up to under her chin,
+  where her mittens rest on top of it while she sleeps (`blanketTucked`, `coversHeld`, `coversInset`). Waking,
+  she sits up pushing the quilt aside off her side (`blanketAside`; `asideSide`, `asideAlong`, `asideHalf`,
+  `asideBack`) and swings out over it; the quilt keeps the shape of her legs until she does, and in bed the hem does
+  not swing up to clear her legs (`pose.lie` in `motion.ts`). `tools/sleeping-logic-check.mjs` checks the hands on the quilt; its hilltop preening gate depends on
+  seeded randomness, so the bedtime's length (`bedPauseFor`) moves it.
 - **Boarding and alighting** are in `docs/boat.md`.
 
 ## What the rest of the game relies on

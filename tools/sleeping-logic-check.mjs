@@ -38,7 +38,7 @@ function fixture(fps=60) {
   const carry=new Carry(child,cygnet);
   const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
-    sleeping:{hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
+    sleeping:{hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},lift:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
   };
   let time=0;
   const rig=new CameraRig();rig.resize(Number(process.env.W??1600),Number(process.env.H??900));
@@ -59,10 +59,11 @@ function fixture(fps=60) {
     s.trail.update(dt,time,s.dawn,camera,s.cold||0);
     s.shown.curtains+=(s.curtains-s.shown.curtains)*(1-Math.exp(-dt/t.ease));
     s.ribbon.update(dt,time,s.shown.curtains);
-    s.shown.blanket+=(s.blanket-s.shown.blanket)*(1-Math.exp(-dt/t.ease));
+    s.shown.blanket+=(s.blanket-s.shown.blanket)*(s.blanketHeld?1:1-Math.exp(-dt/t.ease));
     s.fold.x=s.shown.blanket*t.blanketLift;
     s.under.set((s.sleeper||0)*t.sleeperHigh,1.15,Math.sin(time*.75)*.06*(s.sleeper||0));
     s.pull.value+=((s.blanketPull||0)-s.pull.value)*(1-Math.exp(-dt*8));
+    s.lift.value+=((s.blanketLift||0)-s.lift.value)*(1-Math.exp(-dt*8));
     cygnet.heard.length=0;
   }};
 }

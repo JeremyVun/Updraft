@@ -162,6 +162,7 @@ export class Traveller {
   private readonly bedAt = new THREE.Vector3();
   private bedYaw = 0;
   private readonly lie = new THREE.Quaternion();
+  private readonly upright = new THREE.Quaternion();
   private readonly spin = new THREE.Quaternion();
   private readonly axisX = new THREE.Vector3(1, 0, 0);
   private readonly axisY = new THREE.Vector3(0, 1, 0);
@@ -1216,6 +1217,7 @@ export class Traveller {
     P.swing = this.swing;
     P.kick = this.kick;
     P.lie = 0;
+    P.lieFold = 0;
 
     r.root.position.copy(this.position);
     r.root.position.y += rise - crouch - sit * SIT_DROP - kneel * KNEEL_DROP + this.hop;
@@ -1308,40 +1310,62 @@ export class Traveller {
   }
 
   /**
-   * Asleep: the whole child is tipped onto their back, rolled onto one side and propped so the head lands on the
-   * pillow, reclining around the hips so the seat stays supported. The arms stay round what they are holding.
+   * Getting into bed, in two moves: round onto the mattress about the seat with the hands down beside the hips and
+   * the legs brought up along the bed, then back about the hips until the head is on the pillow, the whole child
+   * tipped onto their back and rolled a little onto one side. The hands come in onto the chest under the chin.
    */
   private layDown(w: number): void {
     const r = this.rig;
     const P = this.look;
     const s = tuning.sleeping;
+    const lerp = THREE.MathUtils.lerp;
+    const smooth = THREE.MathUtils.smoothstep;
     const side = this.sideGlide.step(this.abedSide, 0.9, this.drive.dt || 1 / 60);
+    const round = smooth(w, 0, s.swingIn);
+    const back = smooth(w, s.swingIn * 0.8, 1);
+    this.upright.setFromAxisAngle(this.axisY, this.bedYaw);
     this.lie
-      .setFromAxisAngle(this.axisY, this.bedYaw)
+      .copy(this.upright)
       .multiply(this.spin.setFromAxisAngle(this.axisX, -Math.PI / 2 + s.lieTip))
       .multiply(this.spin.setFromAxisAngle(this.axisY, (0.8 + side * 0.2) * s.lieSide));
     this.hipFrom.copy(this.hipPivot).applyQuaternion(r.root.quaternion).add(r.root.position);
     this.hipTo.copy(this.hipPivot).applyQuaternion(this.lie).add(this.bedAt);
-    r.root.quaternion.slerp(this.lie, w);
-    r.root.position.lerpVectors(this.hipFrom, this.hipTo, w)
+    r.root.quaternion.slerp(this.upright, round).slerp(this.lie, back);
+    /** Sat up in it, the seat is as low on the mattress as it was on the edge; lying, the coat's bell lifts it. */
+    this.tmp2.set(this.hipTo.x, this.hipFrom.y, this.hipTo.z);
+    r.root.position.lerpVectors(this.hipFrom, this.tmp2, round).lerp(this.hipTo, back)
       .sub(this.tmp.copy(this.hipPivot).applyQuaternion(r.root.quaternion));
-    const lerp = THREE.MathUtils.lerp;
-    P.lie = w;
-    P.sit *= 1 - w;
-    P.lap *= 1 - w;
-    P.lean = lerp(P.lean, 0.06, w);
-    P.bend *= 1 - w;
-    P.twist *= 1 - w;
-    /** Both arms round what they are holding, drawn in under the chin, and tighter every time they are woken. */
+    P.lie = round;
+    P.lieFold = s.lieFold * (1 - back);
+    P.sit *= 1 - round;
+    P.lap *= 1 - round;
+    P.lean = lerp(P.lean, 0.06, back);
+    P.bend *= 1 - round;
+    P.twist *= 1 - round;
     for (const m of P.arms) {
       m.raise = lerp(m.raise, 0.7, w);
       m.out = lerp(m.out, -0.1, w);
-      m.elbow = lerp(m.elbow, 2.2 + this.tighter * 0.15, w);
+      m.elbow = lerp(m.elbow, 2.2, w);
       m.twist = lerp(m.twist, 0.3, w);
     }
-    /** Chin down toward what they are holding, the way a child actually sleeps. */
-    P.headPitch = lerp(P.headPitch, 0.3, w);
-    P.headYaw = lerp(P.headYaw, -0.2 * side, w);
+    const plant = smooth(w, 0, s.swingIn * 0.3) * (1 - smooth(w, s.swingIn * 0.8, s.swingIn * 1.3));
+    const fold = smooth(w, s.swingIn * 0.8, s.swingIn * 1.4);
+    for (const hand of [0, 1] as const) {
+      const g = this.grips[hand];
+      const was = g.world ? 0 : g.w * (1 - smooth(w, 0, s.swingIn * 0.3));
+      const sum = was + plant + fold;
+      if (sum < 1e-4) continue;
+      g.at.multiplyScalar(was)
+        .addScaledVector(this.tmp.set(0.42, 0.06, 0.02), plant)
+        .addScaledVector(this.tmp2.set(0.13, 0.72 + 0.03 * this.tighter, 0.4 - 0.06 * this.tighter), fold)
+        .divideScalar(sum);
+      g.elbow.multiplyScalar(was).addScaledVector(this.tmp.set(0.5, 0.3, -1), plant).addScaledVector(this.tmp2.set(1, -0.8, -0.2), fold);
+      g.w = Math.min(1, sum);
+      g.world = false;
+    }
+    /** Chin down toward their hands, the way a child actually sleeps. */
+    P.headPitch = lerp(P.headPitch, 0.3, back);
+    P.headYaw = lerp(P.headYaw, -0.2 * side, back);
   }
 }
 
