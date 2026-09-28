@@ -159,6 +159,8 @@ const scratch = (): Scratch => ({
 /** Where each hem bone hangs from, its outward axis and its radial direction, in the hips' frame. */
 /** How far the front of the hem swings up onto the lap when sitting, radians. */
 const LAP_DRAPE = 0.9;
+/** As much of it with the feet hanging over an edge: the coat rests on the thighs, less than a tray. */
+const HANG_DRAPE = 0.5;
 
 const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
   const a = hemAngle(i);
@@ -195,6 +197,8 @@ export class ChildMotion {
   private readonly chestGravity = new THREE.Vector3();
   private readonly air = new THREE.Vector3();
   private readonly outs = new Array<number>(HEM_BONES).fill(0);
+  /** Sat down, 1 with the feet resting on something in front, 0 with them hanging over an edge. */
+  private feetDown = 1;
   private readonly m = new THREE.Matrix4();
   private readonly hemOut = HEM.map(() => new Spring(1.75, 0.3));
   private readonly hemSide = HEM.map(() => new Spring(1.1, 0.35));
@@ -372,6 +376,7 @@ export class ChildMotion {
     const root = this.rig.root;
     const hips = b[BONE.hips];
     const rest = this.rig.rest;
+    let feetDown = 1;
     for (const left of SIDES) {
       const s = left ? 1 : -1;
       const thigh = b[left ? BONE.thighL : BONE.thighR];
@@ -411,7 +416,10 @@ export class ChildMotion {
       // Sitting: feet out in front on whatever is under them.
       const sitAnkle = this.vb.set(hipAt.x + s * 0.03, ANKLE, 0.44);
       const sitWorld = this.va.copy(sitAnkle).setY(0).applyMatrix4(root.matrixWorld);
-      sitAnkle.y = Math.max(ANKLE + (d.ground(sitWorld.x, sitWorld.z) - root.position.y) / SCALE, rest[BONE.hips].y - 0.6 - pose.sit * 0.0);
+      const floorAnkle = ANKLE + (d.ground(sitWorld.x, sitWorld.z) - root.position.y) / SCALE;
+      const hangAnkle = rest[BONE.hips].y - 0.6;
+      sitAnkle.y = Math.max(floorAnkle, hangAnkle);
+      feetDown = Math.min(feetDown, 1 - THREE.MathUtils.smoothstep(hangAnkle - floorAnkle, 0, 0.12));
 
       // Blend: the planted walk, the sit, and a lifted knee for a step up.
       const standW = 1 - pose.sit;
@@ -458,6 +466,7 @@ export class ChildMotion {
       this.qb.multiply(this.qc);
       foot.quaternion.copy(this.qa.invert().multiply(this.qb));
     }
+    this.feetDown = feetDown;
   }
 
   private secondary(pose: Pose, d: Drive, dt: number): void {
@@ -516,8 +525,11 @@ export class ChildMotion {
       for (const p of legPts) floor = Math.max(floor, this.hemClear(i, p));
       const drop = pivotY - groundY - 0.035;
       if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
-      /** Sat down, the front of the coat rides up over the thighs and lies on the lap instead of the knees going through it. */
-      floor = Math.max(floor, pose.lap * LAP_DRAPE * Math.max(0, h.radial.z));
+      /**
+       * Sat down with the legs out in front, the front of the coat rides up over the thighs and lies on the lap instead
+       * of the knees going through it. Sat on an edge with the feet hanging, it only rests on them.
+       */
+      floor = Math.max(floor, pose.lap * THREE.MathUtils.lerp(HANG_DRAPE, LAP_DRAPE, this.feetDown) * Math.max(0, h.radial.z));
       if (a < floor) {
         a = floor;
         this.hemOut[i].x = floor;

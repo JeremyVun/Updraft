@@ -136,7 +136,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
    down beside the ring while its last flight lets go of the trick and is seen to climb on past the corner and stop
    in the air a storey too high. The hollow closes once the lens is back in the white.
 5. **Above the clouds.** Out of the wind into a vast calm; a pair of slippers; the bird settles in one and the child
-   sits beside it; a skein of swans goes across the sun; the boat waits on the cloud under the kite.
+   sits beside it on the lip with her feet hanging over the cloud (Jeremy: "the child should set on the lip with her
+   feet dangling in the cloud, and the cygnet next to her"). The slippers are on her right, where the stowed paper
+   does not hide the bird, and a bird's width clear of her coat. A skein of swans goes across the sun; the boat
+   waits on the cloud under the kite.
 6. **The sail over the cloud.** Off the landing in one slow turn, then a long run toward the low sun past towers of
    cloud, the kite drawing them on. The lens goes once round the boat and never back: ahead of them looking back at
    the stair, in close to their faces in the lantern light, up and away until the boat is small on the cloud under

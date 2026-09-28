@@ -809,7 +809,7 @@ export class StairsChapter implements Chapter {
     k.stay = false;
     c.walkTo(SIT.x - TOP_OUT.x * 0.3, SIT.z - TOP_OUT.z * 0.3, false, () => {
       c.walkTo(SIT.x, SIT.z, false, () => {
-        c.faceToward(this.sun.x, this.sun.z, 1);
+        c.faceToward(SIT.x + TOP_OUT.x, SIT.z + TOP_OUT.z, 1);
         c.sitDown();
       }, 0.12);
     }, 0.2);
