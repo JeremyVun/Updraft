@@ -476,7 +476,7 @@ export class SleepingChapter implements Chapter {
     sleeping.blanket = lerp(T.blanketOpen, T.blanketTucked, up);
     const pull = smooth(this.t, tuckAt - 0.9, tuckAt + 0.2) * (1 - smooth(this.t, settleAt - 0.5, settleAt + 0.7));
     sleeping.blanketPull = T.blanketHandLift * pull;
-    if (this.t > tuckAt - 1.2) this.holdCovers(lerp(0.42, T.coversHeld, up));
+    if (this.t > tuckAt - 1.2) this.holdCovers(lerp(0.42, T.coversHeld, up), up);
     // One last blink at the bird, then a long exhale into the pillow.
     c.eyesShut = 0.35 * smooth(this.t, tuckAt, settleAt) + 0.65 * smooth(this.t, settleAt + 0.5, end - 0.5);
     if (this.t >= end) {
@@ -498,7 +498,10 @@ export class SleepingChapter implements Chapter {
     const { child: c, cygnet: k, sleeping } = this.cast;
     if (!this.birdDown) {
       this.birdDown = true;
-      k.release(this.spot.set(BED.x + BESIDE.x * 1.6 - BED_FACING.x * 0.5, 0, BED.z + BESIDE.y * 1.6 - BED_FACING.y * 0.5));
+      k.release(this.spot.set(BED.x + BESIDE.x * 2.0 - BED_FACING.x * 0.6, 0, BED.z + BESIDE.y * 2.0 - BED_FACING.y * 0.6));
+      this.spot.set(BED.x + BESIDE.x * 1.6 - BED_FACING.x * 2.75, 0, BED.z + BESIDE.y * 1.6 - BED_FACING.y * 2.75);
+      this.spot.y = heightAt(this.spot.x, this.spot.z);
+      k.errand = this.spot; k.stay = false; k.pace = T.bedBirdPace * 0.6;
     }
     const draw = smooth(this.t, T.turnGripAt, T.turnDrawnAt);
     const letGo = this.t > T.turnDrawnAt;
@@ -515,11 +518,14 @@ export class SleepingChapter implements Chapter {
     c.reachFor(0, reaching ? far : null);
   }
 
-  /** Both mittens on the turned-down edge of the quilt, `across` of the way out from the middle of the bed. */
-  private holdCovers(across: number): void {
+  /**
+   * Both mittens on the turned-down edge of the quilt, `across` of the way out from the middle of the bed; `onTop` of
+   * it they rest on the cloth over the chest, otherwise they have hold of the crease.
+   */
+  private holdCovers(across: number, onTop = 1): void {
     const { child: c, sleeping } = this.cast;
     for (const hand of [0, 1] as const) {
-      sleeping.blanketEdge(hand === 0 ? -across : across, this.blanketHand[hand], false, T.coversInset).y += 0.05;
+      sleeping.blanketEdge(hand === 0 ? -across : across, this.blanketHand[hand], false, T.coversInset * onTop).y += 0.05 * onTop;
       c.reachFor(hand, this.blanketHand[hand]);
     }
   }
@@ -928,7 +934,7 @@ export class SleepingChapter implements Chapter {
       sleeping.blanketHeld = true;
       sleeping.blanket = lerp(T.blanketTucked, T.blanketOpen, smooth(this.t, 3.9, 6.0));
     }
-    if (this.t < 6.2) this.holdCovers(lerp(T.coversHeld, 0.42, smooth(this.t, 3.6, 5.6)));
+    if (this.t < 6.2) this.holdCovers(T.coversHeld, 1 - smooth(this.t, 3.6, 5.6));
     else {
       c.reachFor(0, null);
       c.reachFor(1, null);

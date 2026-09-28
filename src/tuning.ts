@@ -1642,7 +1642,7 @@ export const tuning = {
      */
     /** Bedside choreography: a pause, the bird stepping off, sitting, resisting sleep, reclining and tucking. */
     tiredStroll: 0.68,
-    bedPauseFor: 4.0,
+    bedPauseFor: 3.8,
     /**
      * Turning the bed down, in seconds from arriving at its side: the mittens go out, take the top of the blanket, and
      * have drawn it back `turnDrawn` of the way when they let it go; they lift its edge `turnLift` as they draw it.
