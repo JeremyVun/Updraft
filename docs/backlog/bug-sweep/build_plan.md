@@ -27,7 +27,7 @@ The design is `design.md` in this folder; item numbers below are its sections. R
 Run `npm run check:mechanics` and, against your own dev server, `npm run check:audio` on current `main`. Record which
 checks fail and compare with design items 0 to 8. Owns nothing.
 **Gate:** a list of current failures, each mapped to a design item or added as a new one.
-**Status:** not started.
+**Status:** done 2026-09-29. check:mechanics on main: 11 failures, every one mapped to items 0 to 3; no new ones.
 
 ## Phase 1: the `checks-fix` branch (item 0)
 
@@ -50,7 +50,7 @@ beach. Measure every beach arrival against 85645e9^ as well as the wood.
 **Gate:** `boat-check` (storm 38 to 44 s at every case), `drowned-camera-check`, `boat-ground-check`,
 `boat-shores-check`, `journey-pacing-check` pass; no beach arrival slower than at 85645e9^ by more than the easing's
 own few seconds.
-**Status:** not started.
+**Status:** done 2026-09-29. Not a sideways crawl: the boat circled back for a landing point it had passed (design item 1). Merged 11fd0b4 after Jeremy saw the circle in play; the stairs crossing and every other beach unchanged.
 
 ## Phase 3: the little boats (item 2)
 
@@ -60,7 +60,7 @@ change.
 `tools/little-boats-logic-check.mjs`.
 **Gate:** `little-boats-logic-check` passes at 30/60/120 fps from arrival and both restores; `little-boats-check`
 passes; the reason is written in the commit.
-**Status:** not started.
+**Status:** done 2026-09-29. A real stall at the stream's end, plus the cygnet catching up (Jeremy's ruling). Merged 10955b2.
 
 ## Phase 4: the swans at home (item 3)
 
@@ -79,7 +79,7 @@ if they belong to the peep). Correct the boot and coat comments.
 `src/traveller/body.ts`, `src/traveller/child/garments.ts` (comments only).
 **Gate:** typecheck; `stairs-check` if it covers the loop; `docs/stairs.md` Principles and `docs/cygnet.md` voice
 list updated.
-**Status:** not started.
+**Status:** done 2026-09-29. Merged 10955b2.
 
 ## Phase 6: the audio checks (item 8)
 
@@ -87,7 +87,7 @@ Triage `audio-check` ("player wind is 3 dB softer after departure") and `birches
 cygnet): stale check or real change.
 **Owns:** `tools/audio-check.mjs`, `tools/birches-score-check.mjs`; `src/audio/` only if the game is wrong.
 **Gate:** `npm run check:audio` passes in full.
-**Status:** not started.
+**Status:** done 2026-09-29. Both checks stale (4b72eee, 511cf11). Merged 10955b2.
 
 ## Phase 7: the season toward spring (item 4, visual)
 
