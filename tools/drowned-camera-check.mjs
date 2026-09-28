@@ -27,7 +27,7 @@ for(const [fps,portrait,gust] of [[30,false,0],[60,true,0],[30,true,8]]) {
   const plane={held:true,position:new THREE.Vector3(),hold(){},launch(p){this.position.copy(p);this.held=false;},depart(){}};
   const cygnet={mind:{perform(){},startle(){}},eye(out){return out.copy(child.position);}};
   const village=new DrownedVillage(wind);
-  const c=new DrownedChapter({boat,child,plane,cygnet,wind,village}),rig=new CameraRig();
+  const c=new DrownedChapter({boat,child,plane,cygnet,wind,village,lines:{gust(){}}}),rig=new CameraRig();
   rig.resize(portrait?390:1600,portrait?844:900);c.update(0,0);rig.cut(c.shot);
   let lighthouseAt=null;let churchAt=null;let worstAt=null;let worstChild=0,churchEdge=0,churchFrames=0,sailEdge=0,lighthouseEdge=0,minArc=Infinity,maxArc=-Infinity;
   let obscured=0,streak=0,worstStreak=0,blockedAt,maxTurn=0,turnAt,worstHull=0;
@@ -68,7 +68,8 @@ for(const [fps,portrait,gust] of [[30,false,0],[60,true,0],[30,true,8]]) {
       if(c.shot.attention?.strength>.9&&c.t>2){const e=edge(SPIRE);if(e>churchEdge){churchEdge=e;churchAt={t,beatTime:c.t,stirred:c.stirred,eye:rig.camera.position.toArray(),boat:boat.position.toArray(),screen:SPIRE.clone().project(rig.camera).toArray()};}churchFrames++;}
     }
     if(c.beat==='still'&&c.t>4)sailEdge=Math.max(sailEdge,edge(boat.sailPoint(new THREE.Vector3())));
-    if(c.beat==='gather'&&c.stormTime>6&&c.stormTime<19.5){const e=edge(LIGHTHOUSE.clone().setY(LIGHTHOUSE_TOP_Y));if(e>lighthouseEdge){lighthouseEdge=e;lighthouseAt={time:c.stormTime,portrait,eye:rig.camera.position.toArray()};}}
+    // The crown is held while the tower is ahead; abeam of it the lens lets it pass rather than backing off to keep it.
+    if(c.beat==='gather'&&c.stormTime>6&&Math.hypot(boat.position.x-LIGHTHOUSE.x,boat.position.z-LIGHTHOUSE.z)>45){const e=edge(LIGHTHOUSE.clone().setY(LIGHTHOUSE_TOP_Y));if(e>lighthouseEdge){lighthouseEdge=e;lighthouseAt={time:c.stormTime,portrait,eye:rig.camera.position.toArray()};}}
     if(c.done)break;
   }
   assert(c.done,'village and storm complete');assert(worstChild<1,`child: ${worstChild}, ${JSON.stringify(worstAt)}, portrait ${portrait}`);
