@@ -165,6 +165,7 @@ export class Journey {
     } else if (start === 'stairs' || start === 'clouds') {
       this.land(STAIRS_LANDING.x + 2, STAIRS_LANDING.y, STAIRS_LANDING.x + 4, STAIRS_LANDING.y - 1);
       this.cast.boat.yaw = Math.PI * 0.5;
+      this.cast.cygnet.rideIn('satchel');
       this.begin('stairs');
     } else if (start === 'drowned' || start === 'village') {
       /** The drift into the village begins where the stairs let the boat down through the cloud onto the water. */
