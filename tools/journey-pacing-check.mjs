@@ -52,7 +52,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
   const rig=name==='toMirror'?new CameraRig():null;
   rig?.resize(1600,900);
   const sealife=rig?new SeaLife(wind,rig.camera):{dolphinsWith(){},fishNear(){},swimmerNear(){},surfaceWhale(){},whale:null,dolphinShow:null};
-  const cast={boat,child,cygnet,carry,wind,plane,skyMirror:{progress:3,stars:[0,1,2]},sealife};
+  const cast={boat,child,cygnet,carry,wind,plane,lines:{gust(){}},skyMirror:{progress:3,stars:[0,1,2]},sealife};
   const chapter=Journey.prototype.make.call({cast},name);
   let shallowAt=[];const air={};let swimFrames=0,shallow=-Infinity,turn=0,yaw=boat.yaw,lastLeg=0,worstTurn=0,peak=0,sailed=0;
   const prev=boat.position.clone(),beats=[],dolphinActs=[],events={};let lastBeat='',stillFor=0,lastAct='';

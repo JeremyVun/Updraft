@@ -85,12 +85,12 @@ for (const fps of [30, 60, 120]) {
   input.charge = 1; input.updraftAt.set(coal.p.x + tuning.wood.updraftReach * 1.2, coal.p.y, coal.p.z);
   for (let i = 0; i < fps * 10; i++) frame();
   assert.equal(coal.lit, false); assert.equal(coal.wake, 0, 'only an updraft over the coal feeds it');
-  // An updraft over the coal lights it in about the old fanning's time.
+  // An updraft over the coal lights it in about two seconds of circling (`tuning.wood.updraftCatch`).
   input.updraftAt.copy(coal.p);
   let frames = 0;
   while (!coal.lit && frames < fps * 10) { input.charge = Math.min(1, frames / fps); frame(); frames++; }
   assert(coal.lit, 'an updraft over the coal must light it');
-  assert(frames / fps > 2.5 && frames / fps < 5, `${fps}fps took ${frames / fps}s`);
+  assert(frames / fps > 1.5 && frames / fps < 3, `${fps}fps took ${frames / fps}s`);
   console.log(`${fps}fps: straight sweeps, weak circling and a distant updraft stay unlit; an updraft over it lights in ${(frames / fps).toFixed(2)}s`);
 }
 

@@ -20,7 +20,7 @@ for (const [name, kite] of Object.entries(markers.markers)) {
   kite.group.traverse(part => { if (part.isMesh) assert(part.layers.isEnabled(REFLECTION_LAYER), 'the kite and its tail reflect in water'); });
   const ground = heightAt(kite.tieOff.x, kite.tieOff.z);
   console.log(`${name} tie-off ground: ${ground.toFixed(2)}`);
-  if (name !== 'mirror' && ground < 0) wet.push(name);
+  if (name !== 'mirror' && name !== 'stairs' && ground < 0) wet.push(name);
   camera.position.copy(kite.tieOff).add(new THREE.Vector3(0, 10, 35));
   camera.lookAt(kite.tieOff); camera.updateMatrixWorld();
   markers.update(1 / 60, 0, camera, { name, current: {} });
@@ -28,7 +28,7 @@ for (const [name, kite] of Object.entries(markers.markers)) {
   markers.update(1 / 60, 0, camera, { name, current: { departureKite: false } });
   assert(Object.values(markers.markers).every(k => !k.group.visible));
 }
-assert.deepEqual(wet, [], 'posts must stand on dry ground');
+assert.deepEqual(wet, [], 'posts must stand on dry ground (the mirror and stairs kites are tied on their decks)');
 const mirrorPost = markers.markers.mirror.tieOff;
 assert(mirrorPost.x >= MIRROR_DECK.x0 && mirrorPost.x <= MIRROR_DECK.x1
   && Math.abs(mirrorPost.z - MIRROR_DECK.z0) < MIRROR_DECK.halfWidth,
@@ -36,7 +36,7 @@ assert(mirrorPost.x >= MIRROR_DECK.x0 && mirrorPost.x <= MIRROR_DECK.x1
 // Each sailing chapter keeps the kite on the shore just left, never at the destination.
 for (const [chapter, shore] of Object.entries({
   toLines: 'island', toBoats: 'lines', toMeadow: 'boats', toBirches: 'meadow',
-  drowned: 'birches', toSleeping: 'wood', toMirror: 'sleeping', toHome: 'sleeping', toHarbour: 'mirror',
+  toStairs: 'birches', drowned: 'stairs', toSleeping: 'wood', toMirror: 'sleeping', toHome: 'sleeping', toHarbour: 'mirror',
 })) {
   markers.update(1 / 60, 0, camera, { name: 'home', current: {} });
   camera.position.copy(markers.markers[shore].tieOff);
