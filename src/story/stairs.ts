@@ -622,11 +622,14 @@ export class StairsChapter implements Chapter {
     if (this.birdStop < this.stop) this.birdStop = this.stop;
     const last = this.looped ? this.stops.length - 1 : this.loopStop;
     const spot = (i: number) => (!this.looped && i === this.loopStop ? this.sCorner : this.track.to(i));
-    let left = this.track.lead(k.position, spot(this.birdStop), this.birdAt);
-    const reached = left < 0.5;
+    // A stop it is already up past counts as reached: it is never sent back down the stair to it.
+    const s = this.track.project(k.position);
+    const past = (i: number) => s > spot(i) - 0.5;
+    while (past(this.birdStop) && this.birdStop < Math.min(this.stop + 2, last)) this.birdReached = Math.max(this.birdReached, this.birdStop++);
+    const reached = past(this.birdStop);
     if (reached) this.birdReached = Math.max(this.birdReached, this.birdStop);
-    if (reached && this.birdStop < Math.min(this.stop + 2, last)) left = this.track.lead(k.position, spot(++this.birdStop), this.birdAt);
-    const waiting = left < 0.5 && (this.birdStop >= this.stop + 2 || this.birdStop === last);
+    const waiting = reached && (this.birdStop >= this.stop + 2 || this.birdStop === last);
+    if (!waiting) this.track.lead(k.position, spot(this.birdStop), this.birdAt);
     k.stay = waiting;
     k.errand = waiting ? null : this.birdAt;
   }
