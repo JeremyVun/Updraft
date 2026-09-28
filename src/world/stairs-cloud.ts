@@ -280,7 +280,7 @@ vec3 parting(Wake w) {
   if (w.fresh <= 0.0) return vec3(0.0);
   float width = 0.85 + 1.6 * (1.0 - w.fresh);
   float k = exp(-w.d * w.d / (2.0 * width * width));
-  float deep = 0.32 * w.fresh * w.fresh * k;
+  float deep = 0.16 * w.fresh * w.fresh * k;
   return vec3(deep, -deep * w.d / (width * width) * w.off);
 }
 /** How high a heap's dome stands, and the towers on it, far out; near the landing and the way they are lower. */
@@ -315,7 +315,7 @@ vec3 heapSite(vec2 p, float spacing) {
 vec3 riseAt(vec2 xz, vec2 p, vec4 calm, float spacing) {
   vec3 site = heapSite(p, spacing);
   float g = gateAt(xz);
-  float m = site.x + 0.3 * g - 0.5 * (1.0 - calm.x);
+  float m = site.x + 0.1 * g - 0.5 * (1.0 - calm.x);
   float x = (m - 0.22) / 0.4;
   if (x <= 0.0) return vec3(0.0);
   if (x >= 1.0) return vec3(1.0, 0.0, 0.0);
@@ -352,7 +352,7 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, vec3 rise, vec3 tower, float sp
     + vec3((big.x - 0.25) * aBig, big.yz / 17.0 * aBig + (big.x - 0.25) * BIG.y * stature * rise.yz)
     + vec3((mid.x - 0.25) * aMid, mid.yz / 6.5 * aMid + (mid.x - 0.25) * MID.y * stature * rise.yz)
     + vec3((fine.x - 0.25) * aFine, fine.yz / 2.4 * aFine)
-    + vec3(0.25 * (1.0 - calm.w), 0.0, 0.0);
+    + vec3(0.45 * (1.0 - calm.w), 0.0, 0.0);
   lobe = vec3(smoothstep(-0.15, 0.6, big.x), smoothstep(-0.1, 0.6, mid.x), smoothstep(-0.1, 0.6, fine.x));
   float crease = (1.0 - lobe.x) * (0.35 + 0.4 * rise.x) + (1.0 - lobe.y) * 0.45 + (1.0 - lobe.z) * 0.2
     + (1.0 - smoothstep(0.1, 0.6, tower.x)) * rise.x * 0.5;
@@ -367,7 +367,7 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, vec3 rise, vec3 tower, float sp
 float bulkAt(vec2 xz, vec4 calm, float stature) {
   vec2 p = xz + uCloudShift * 0.6;
   vec2 hp = p + uDrift * DRIFT.x;
-  float m = lobesT(hp / 80.0 + 11.3, 0.0, 0.0).x * 0.65 + 0.175 + 0.3 * gateAt(xz) - 0.5 * (1.0 - calm.x);
+  float m = lobesT(hp / 80.0 + 11.3, 0.0, 0.0).x * 0.65 + 0.175 + 0.1 * gateAt(xz) - 0.5 * (1.0 - calm.x);
   float x = clamp((m - 0.22) / 0.4, 0.0, 1.0);
   float rise = x * x * (3.0 - 2.0 * x);
   float big = lobesT((p + uDrift * DRIFT.z) / 17.0 + 5.3, 0.3 + 0.4 * rise, 0.0).x;
@@ -564,7 +564,7 @@ class TopShape {
     const px = x + shift.x * 0.6, pz = z + shift.y * 0.6;
     const hx = px + drift.x * 0.35, hz = pz + drift.y * 0.35;
     const site = this.lobe(hx / 80 + 11.3, hz / 80 + 11.3, 0) * 0.65 + vnoise(hx * 0.021 + 2.3, hz * 0.021 + 2.3) * 0.35;
-    const m = (site + 0.3 * g - 0.5 * (1 - calm) - 0.22) / 0.4;
+    const m = (site + 0.1 * g - 0.5 * (1 - calm) - 0.22) / 0.4;
     const rise = m <= 0 ? 0 : m >= 1 ? 1 : m * m * (3 - 2 * m);
     const tb = this.lobe((px + drift.x * 0.55) / 30 + 3.9, (pz + drift.y * 0.55) / 30 + 3.9, 0.8) + 0.2;
     const tower = 0.5 * (tb + Math.sqrt(tb * tb + 0.04));
@@ -575,7 +575,7 @@ class TopShape {
       + (big - 0.25) * (SHAPE.big[0] * even + SHAPE.big[1] * rise * stature)
       + (mid - 0.25) * (SHAPE.mid[0] * even + SHAPE.mid[1] * rise * stature)
       + (fine - 0.25) * (SHAPE.fine[0] * (0.4 + 0.6 * smooth(2.5, 14, way)) + SHAPE.fine[1] * rise)
-      + 0.25 * (1 - smooth(2.5, 14, way));
+      + 0.45 * (1 - smooth(2.5, 14, way));
     const below = h - 0.1;
     return 0.1 + 0.5 * (below + Math.sqrt(below * below + 0.02)) + this.footAt(x, z);
   }
@@ -645,7 +645,7 @@ export class StairsCloud {
   /** Low wisps of vapour streaming across the tops; the story may set their `amount` (1 by default). */
   readonly streamers = new CloudStreamers();
   /** Towers of cumulus standing out of the sea along the way. */
-  readonly towers = new CloudTowers(CLOUD_ROUTE, new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), CLOUD.top + 1);
+  readonly towers = new CloudTowers(CLOUD_ROUTE, TOWER_GATE, new THREE.Vector2(CLOUD_BERTH.x, CLOUD_BERTH.z), CLOUD.top + 1);
   readonly fog = new FogBank();
   private readonly lobes = new CloudLobes();
   private readonly shape: TopShape;

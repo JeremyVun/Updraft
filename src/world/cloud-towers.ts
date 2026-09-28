@@ -98,7 +98,7 @@ float body(vec3 p) {
 
 float density(vec3 p) {
   float b = body(p);
-  if (b < -0.3) return 0.0;
+  if (b < -0.35) return 0.0;
   vec3 q = (p + uDriftAt) / uSize;
   float n = texture(uTowerNoise, q * 0.8).r;
   float f = texture(uTowerNoise, q * 2.4 + 0.37).g;
@@ -126,7 +126,7 @@ void main() {
   float s0 = 1e9, s1 = -1e9;
   for (int i = 0; i < ${LUMPS}; i++) {
     vec3 o = ro - uLumps[i].xyz;
-    float r = uLumps[i].w * 1.25;
+    float r = uLumps[i].w * 1.4;
     float b = dot(o, rd), h = b * b - dot(o, o) + r * r;
     if (h <= 0.0) continue;
     h = sqrt(h);
@@ -186,7 +186,7 @@ export class CloudTowers {
   private shown = 0;
   private readonly drift = new THREE.Vector3();
 
-  constructor(route: readonly THREE.Vector2[], berth: THREE.Vector2, floor: number) {
+  constructor(route: readonly THREE.Vector2[], gate: { from: THREE.Vector2; to: THREE.Vector2 }, berth: THREE.Vector2, floor: number) {
     this.group.name = 'cloud-towers';
     const noise = bakeNoise();
     let seed = 5;
@@ -207,6 +207,13 @@ export class CloudTowers {
       }
       return { p: route[route.length - 1].clone(), side: new THREE.Vector2(1, 0) };
     };
+    // Where the way runs between towers: two either side of it, close enough to stand behind the travellers.
+    const gateDir = gate.to.clone().sub(gate.from).normalize();
+    [0.15, 0.4, 0.65, 0.9].forEach((k, i) => {
+      const off = (40 + rnd() * 12) * (i % 2 ? 1 : -1);
+      const p = gate.from.clone().lerp(gate.to, k);
+      places.push({ x: p.x - gateDir.y * off, z: p.y + gateDir.x * off, size: 15 + rnd() * 6 });
+    });
     const spots = tuning.stairs.towers;
     for (let k = 0; k < spots; k++) {
       const s = length * (0.12 + 0.7 * (k + rnd() * 0.5) / spots);
@@ -243,8 +250,8 @@ export class CloudTowers {
       while (lumps.length < LUMPS) lumps.push(lumps[0].clone());
       const lo = new THREE.Vector3(Infinity, floor - 1, Infinity), hi = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
       for (const l of lumps) {
-        lo.set(Math.min(lo.x, l.x - l.w * 1.25), lo.y, Math.min(lo.z, l.z - l.w * 1.25));
-        hi.set(Math.max(hi.x, l.x + l.w * 1.25), Math.max(hi.y, l.y + l.w * 1.25), Math.max(hi.z, l.z + l.w * 1.25));
+        lo.set(Math.min(lo.x, l.x - l.w * 1.4), lo.y, Math.min(lo.z, l.z - l.w * 1.4));
+        hi.set(Math.max(hi.x, l.x + l.w * 1.4), Math.max(hi.y, l.y + l.w * 1.4), Math.max(hi.z, l.z + l.w * 1.4));
       }
       const uniforms: Record<string, THREE.IUniform> = {
         ...atmo.uniforms,

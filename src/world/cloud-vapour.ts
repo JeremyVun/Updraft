@@ -59,7 +59,8 @@ void main() {
   vec2 q = vec2(along * 2.2 + vAt.z * 13.1 - uTime * 0.03, across * 1.7 + vAt.z * 5.3);
   float streak = vnoise(q * vec2(1.0, 1.0)) * 0.55 + vnoise(q * vec2(2.7, 3.3) + 3.1) * 0.3 + vnoise(q * vec2(6.1, 7.7)) * 0.15;
   float ends = pow(max(0.0, 1.0 - along * along), 1.5);
-  float body = exp(-across * across * 2.2) * ends * smoothstep(0.3, 0.8, streak);
+  float soft = 1.0 - across * across;
+  float body = soft * soft * ends * smoothstep(0.3, 0.8, streak);
   float a = body * vAlpha * uWispAmount;
   if (a < 0.003) discard;
   vec3 col = vapourLight(vWorld, normalize(vWorld - cameraPosition), 0.7);
