@@ -64,6 +64,15 @@ visible change. Merge only after his OK.
   and the steering carry the hull sideways along the shore (x from -21 to -30 and back to -23) for about 15 s before
   the forefoot finds `heightAt > -0.25` and `beaching` starts. Before 85645e9 the boat ran in at full speed and
   stopped dead, so the passage took 41.4 s.
+- **Traced (2026-09-29):** not a sideways crawl. The wood's landing point (`WOOD_LANDING`, the passage's last
+  waypoint) lies in the water just short of the sand. The eased hull reaches it at about 2.3 units/s before the
+  forefoot touches, the waypoint is then behind it, and the steering comes round for it: at about 1 unit/s the boat
+  circles in front of the beach for about 13 s (its heading turns through more than a full circle) until the forefoot
+  happens onto the sand. Before 85645e9 it was still at full speed past the waypoint and touched at once.
+- **Jeremy's ruling (2026-09-29):** "if there's circling, that needs to be fixed". The reason for the fix is the
+  circle the player sees, not the 38 to 44 s window; the storm's length is whatever the straight run-in gives.
+- **Fix:** with the beach ahead inside `beachLook`, a boat that has passed its landing point (bearing to it more than
+  90 degrees off the bow) holds its course and runs up the sand instead of turning back (`Boat.update`).
 - **Check the other beaches too:** every beach arrival now goes through `beachApproach`. Measure each (lines, boats,
   meadow, birches, stairs island, wood, sleeping) for the same sideways crawl; `journey-pacing-check` passes on the
   crossings it covers, but compare arrival times with 85645e9^.
