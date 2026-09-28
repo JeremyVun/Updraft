@@ -393,3 +393,21 @@ Then, asked whether the bag is closed until she first puts the cygnet in it: "le
 - The paper, stowed, lies over it; checked in the stage.
 - Stills in `/tmp/bagflap`: `sheet.png` (before, shut, open), `open-sheet.png` (open), `v8-first-stow.png` (shut, the
   first climb in, open after it climbs out). Not yet checked in a level from the play camera.
+
+## The hood from the side (2026-09-28)
+
+Jeremy (verbatim): "From the side the hood reads like a bicycle helmet instead of a cloth hood. It doesn't look nice."
+Then, tracing the face edge on a side still: "It's the fucking bend that makes it look like a helmet." He also asked
+for the dark wedge showing through the side of the hood to go. He approved the result ("ok this is good").
+
+- **The bend.** The opening is cut to the concept's front outline, widest at the ears, so at the temples the cut went
+  far back into the hood. From the side the edge came forward over the brow, stepped back at the temple and ran
+  straight down to the jaw: a helmet's face cut-out. The cloth near the edge now comes forward at the temples
+  (`HOOD.reach`, in `hoodShape`), so the edge runs down in one line. Only depth moves; the front outline is the same.
+- **Seam.** A centre-seam ridge up the back of the hood to a soft corner at the back of the crown (`HOOD.seam`,
+  `HOOD.corner`): a gentle peak from behind, where players see her most.
+- **Dark wedge.** The bob's ends showed through the side of the hood under the jaw; they tuck in a little more
+  (`bob()`), and look the same from the front.
+- **The rim stays as it was.** A flatter, tapered rim and a hood swelling up into it both read as the rim being
+  removed. Neither was wanted.
+- Checked in stills on the stage only (lit from the side via `sun=0,35`, gaze held ahead), not in a level or in motion.
