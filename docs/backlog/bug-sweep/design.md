@@ -143,6 +143,19 @@ visible change. Merge only after his OK.
   connection. Find out whether the sequence still reads as startled in play (the timing and the camera may carry
   it), capture it, and show Jeremy before changing it.
 
+- **Found (2026-09-29): not a regression; a deliberate change that undid Jeremy's earlier ask.** Jeremy, 2026-09-19:
+  "The swans get "scared" and fly away as the child approached, not after the child approaches and stops"; 2026-09-20
+  06:17: "the camera never properly shows the swans getting skittish and flying away". At 07:01 the same day a Codex
+  review proposed "Keep the swan family's behaviour emotionally legible" and Jeremy answered "i agree. could this be
+  communicated better during that sequence?". Codex then made the migration begin "while the child is still standing
+  back ... a missed connection rather than rejection" (88a3a5f, 2026-09-20 22:42): `goDown` lifts the raft from its
+  far end as she starts down off the rise, with no `startledBy`, and `docs/chapters.md` records it ("starting from the
+  far end of the raft rather than startled by her"). `Flock.lift`'s startled path is kept but unused.
+- **For Jeremy to decide (no code changed):** (a) keep the missed connection as it plays now; (b) restore the startle,
+  the nearest birds going first as she comes down toward them (`flock.lift(..., c.position)` at her approach);
+  (c) both: already stirring to leave, her approach sets the nearest ones off. Stills of the sequence as it plays now,
+  one a second from the crest, desktop and portrait: see Phase 8's status.
+
 ## 6. The stairs loop: the peep only
 
 - **Observed:** in `story/stairs.ts`, the `puzzled` beat calls `cue('puzzled')` and `k.call(false)` together;
