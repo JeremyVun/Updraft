@@ -9,6 +9,7 @@ import { stairsDescent } from '../world/journey-rooms';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
 import { lanternFlame } from '../traveller/boat/parts';
+import { gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
 import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
 import {
   BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_BANK, FLIGHTS, LOOSE, RUN_YAW, SIT, SLIPPERS, STAIRS_ARRIVAL, STAIRS_LOOK_FROM,
@@ -18,7 +19,7 @@ import {
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
 import { completeObjective, cue } from './cues';
-import { FACES, OUT_OF_THE_WHITE, blend, frameVoyage, framingAt, type Framing } from './stairs-sail';
+import { OUT_OF_THE_WHITE, blend, frameVoyage, framingAt, type Framing } from './stairs-sail';
 import { Track } from './stairs-track';
 
 type Beat =
@@ -188,6 +189,11 @@ export class StairsChapter implements Chapter {
   private white = 0;
   /** The way the lens reckons as ahead: the run's over the cloud, the hull's on the sea. */
   private voyageYaw = RUN_YAW;
+  /** Under way, how far they are turned to the side looking out, 0 to 1, and when the child last glanced at the bird. */
+  private lookingOut = 0;
+  private perched = false;
+  private readonly outThere = new THREE.Vector3();
+  private readonly rail = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly framing: Framing = { ...OUT_OF_THE_WHITE };
   private readonly framingFrom: Framing = { ...OUT_OF_THE_WHITE };
   private readonly eye = new THREE.Vector3();
@@ -278,10 +284,6 @@ export class StairsChapter implements Chapter {
 
   get departureKite(): boolean {
     return ['emerge', 'nest', 'skein', 'lean', 'gather', 'boarding', 'sail', 'fog'].includes(this.beat);
-  }
-
-  get invitesSail(): boolean {
-    return this.beat === 'sail' && this.cast.boat.speed < 0.6;
   }
 
   /** A slow sweep drawn across the loose flight when the stair has been waiting on it a while. */
@@ -839,7 +841,6 @@ export class StairsChapter implements Chapter {
           boat.mooring = null;
           boat.grounded = false;
           boat.canGround = false;
-          boat.becalmed = 0.85;
           boat.speedLimit = tuning.sail.topSpeed * 0.7;
           this.leg = 0;
           boat.steerFor = CLOUD_ROUTE[0];
@@ -889,19 +890,64 @@ export class StairsChapter implements Chapter {
   }
 
   private sail(dt: number): void {
-    const { boat, child: c } = this.cast;
-    c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
+    const { boat } = this.cast;
+    const k = tuning.stairs;
     boat.altitude = RIDE;
-    boat.speedLimit = tuning.stairs.sailSpeed;
-    if (boat.speed > 1.5) boat.becalmed = Math.max(0, boat.becalmed - 0.01);
+    boat.speedLimit = k.sailSpeed;
+    boat.becalmed = 0;
     this.world.sailing(boat, dt);
-    // While the lens is in close on their faces the kite draws them on, so they are never left waiting there.
-    const S = THREE.MathUtils.smoothstep;
-    const drawn = S(this.sailed, FACES.from, FACES.from + 12) * (1 - S(this.sailed, FACES.to, FACES.to + 15));
-    boat.speed = Math.max(boat.speed, tuning.stairs.kiteDraws * drawn);
+    // The kite draws them the whole way, so nobody has to blow; it takes up the tow gently off the landing.
+    boat.speed = Math.max(boat.speed, k.kiteDraws * THREE.MathUtils.smoothstep(this.t, 0, 7));
     this.sailed += boat.speed * dt;
     this.steer();
+    this.lookOut(dt);
     if (this.world.cloud.fog.depthOf(boat.position.x, boat.position.z) > 0) this.to('fog');
+  }
+
+  /** A point on the starboard gunwale, `z` along the hull from amidships, a little inboard of the rail. */
+  private onRail(z: number, inboard: number, out: THREE.Vector3): THREE.Vector3 {
+    const u = stationU(z);
+    return this.cast.boat.group.localToWorld(out.set(-(gunwaleHalf(u) - inboard), gunwale(u), z));
+  }
+
+  /**
+   * Under way they look out. The bird hops up onto the gunwale on the sunward side, just forward of her, and the
+   * child turns on the thwart toward it, arms folded on the rail, both of them watching the cloud go by; now and then
+   * she looks at the bird. As the bank of mist comes up it goes back into her arms and she sits round again.
+   */
+  private lookOut(dt: number): void {
+    const { boat, child: c, cygnet: k, carry } = this.cast;
+    const ahead = this.world.cloud.fog.depthOf(boat.position.x, boat.position.z);
+    const out = this.sailed > 22 && ahead < -45;
+    if (out && !this.perched && k.seat === 'cradle' && !carry.busy) this.perched = true;
+    if (!out && this.perched) {
+      this.perched = false;
+      k.watch(null);
+      k.rideIn('cradle');
+    }
+    this.lookingOut = THREE.MathUtils.clamp(this.lookingOut + (this.perched ? dt : -dt) / 2.2, 0, 1);
+    const turned = THREE.MathUtils.smootherstep(this.lookingOut, 0, 1);
+    boat.group.updateMatrixWorld(true);
+    // Shifted toward the starboard side on the thwart and turned to it.
+    const seat = this.onRail(-0.25, 0, this.rail[2]).lerp(boat.seat(this.tmp), 1 - 0.32 * turned);
+    c.ride(seat, boat.yaw - 0.55 * turned, boat.roll, boat.pitch);
+    // Out past the bow on the sunward side, a little above the tops: where the cloud goes on and the sun is going.
+    const look = boat.yaw - 0.4;
+    this.outThere.set(boat.position.x + Math.sin(look) * 40, boat.position.y + 4, boat.position.z + Math.cos(look) * 40);
+    c.lean = 0.14 * turned;
+    if (this.perched) {
+      k.perch(this.onRail(0.25, 0.08, this.tmp2), boat.yaw - 0.9);
+      k.watch(this.outThere);
+    }
+    if (turned > 0.35) {
+      c.reachFor(0, this.onRail(0.05, 0.05, this.rail[0]));
+      c.reachFor(1, this.onRail(-0.2, 0.04, this.rail[1]));
+    } else {
+      c.reachFor(0, null);
+      c.reachFor(1, null);
+    }
+    const glance = this.perched && this.t % 11 > 8.5;
+    c.lookAt = turned < 0.05 ? null : glance ? k.eye(this.tmp) : this.outThere;
   }
 
   /**
@@ -1087,9 +1133,11 @@ export class StairsChapter implements Chapter {
     wisps.centre.set(c.position.x, c.position.y + 1, c.position.z);
     // Across both the side view up the stair and the view along it on the ring's landing.
     wisps.wind.set(0.7, 0.12, -0.7).normalize().multiplyScalar(k.windInCloud * (0.45 + 0.55 * climb));
-    // The wind in the white rises as they climb; on top it has gone.
+    // The wind in the white rises as they climb; on top it falls to a soft air that keeps the cloud moving, and
+    // freshens a little behind them once they are under way.
     const out = this.air.open;
-    this.breeze = white ? THREE.MathUtils.lerp(0.35, 1.3, climb) * (1 - out) + 0.12 * out : this.air.open > 0.5 ? 0.12 : 0.35;
+    const aloft = this.beat === 'sail' ? THREE.MathUtils.lerp(0.25, 0.5, S(this.t, 0, 12)) : 0.25;
+    this.breeze = white ? THREE.MathUtils.lerp(0.35, 1.3, climb) * (1 - out) + aloft * out : out > 0.5 ? aloft : 0.35;
   }
 
   /**

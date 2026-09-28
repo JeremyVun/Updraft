@@ -276,8 +276,11 @@ export const tuning = {
     bubble: 6.5, bubbleTop: 4.4,
     /** The wind through the white near its top, metres a second. */
     windInCloud: 5.5,
-    /** Top speed over the cloud, and in the mist, metres a second; and how fast the kite draws them on by itself. */
-    sailSpeed: 5, fogSpeed: 4, kiteDraws: 2.4,
+    /**
+     * How fast the kite draws them over the cloud by itself, metres a second (nobody needs to blow), the most a gust
+     * can add to that, and their top speed in the mist.
+     */
+    kiteDraws: 3.4, sailSpeed: 4.2, fogSpeed: 4,
     /**
      * The bank of mist across the way: how high it stands over the cloud, how thick it is per metre, and how much
      * thicker over its floor (per metre, falling away over bankLow metres); how far its front, its back and its top
