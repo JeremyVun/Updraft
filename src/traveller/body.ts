@@ -44,7 +44,7 @@ function on(bone: THREE.Bone, rest: THREE.Vector3, at: THREE.Vector3): THREE.Obj
 }
 
 /**
- * The child, about 2.8 units tall: a mustard hooded coat to the knee, a chunky red scarf, mittens, wellingtons and a
+ * The child, about 2.8 units tall: a short mustard hooded coat, a chunky red scarf, mittens, brown leather boots and a
  * leather bag on the back for the cygnet. One skinned mesh; the story poses it through `bones`.
  */
 export function buildChild(): Rig {
