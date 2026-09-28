@@ -369,9 +369,11 @@ through a synthetic timeline and writes the mix, the music alone, a cue sheet an
 - **Out on top** the wind drops with `cloud` and `open`, the last of it sweeping past to one side, and the room is
   nearly silent: a thin high air, the breeze bed at a fifth. Three seconds later the bloom starts from nothing. The
   skein is only the flock's own calls; the cygnet is silent throughout the room.
-- **The sail** crossfades from the bloom over four seconds. The hull's soft hiss through the cloud tops follows
-  `speed` and wanders slowly; it is continuous, never a repeated burst (Jeremy removed the sea hull's flapping
-  bursts). It is heard only while the hull is up on the cloud.
+- **The sail** crossfades from the bloom over four seconds. Under it a low breath of air past the hull (lowpassed
+  under about 600 Hz) follows `speed` and swells over several seconds; it is continuous, never a repeated burst
+  (Jeremy removed the sea hull's flapping bursts). It is never a hiss: a band of hiss through the tops made the cloud
+  sound like snow (Jeremy, 2026-09-28). The kite's line sings faintly overhead while it draws them. Both are heard
+  only while the hull is up on the cloud.
 - **The fog** thins the sail (`fog`), and the chapter asks for the village's music (`arrivalMusic = 'drowned'` while the
   phase is `fog` or `down`): the ordinary arrival pause, three seconds' fade, three of rest in the white, 2.5 in.
   The stairs score takes part in the phrase-aware handoff and retires with the other scores. Once `fog` has
