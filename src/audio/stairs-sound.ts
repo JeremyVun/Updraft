@@ -30,18 +30,20 @@ interface Layer { source: AudioBufferSourceNode; nodes: AudioNode[]; gain: GainN
 
 /**
  * The air of the stairs in the clouds. In the white a close, muffled wind that buffets and moans more the higher
- * they climb; out on top almost nothing, a thin high air; over the cloud the hull's soft hiss through its tops;
+ * they climb; out on top almost nothing, a thin high air; over the cloud a low breath of air past the hull, never a hiss (a hiss
+ * through the tops reads as snow), and the kite's line singing faintly overhead;
  * the fog a soft wash. It also tells the shared beds how much of the breeze and the sea to keep, and drains the
  * birches' phrase as the travellers go up into the white.
  */
 export class StairsSound {
   private readonly out: GainNode;
   private readonly wet: GainNode;
-  private layers: Record<'body' | 'howl' | 'rush' | 'high' | 'hull', Layer> | null = null;
+  private layers: Record<'body' | 'howl' | 'rush' | 'high' | 'hull' | 'line', Layer> | null = null;
   private readonly howlFilter: BiquadFilterNode;
   private readonly bodyFilter: BiquadFilterNode;
   private readonly rushPan: StereoPannerNode;
   private readonly hullFilter: BiquadFilterNode;
+  private readonly lineFilter: BiquadFilterNode;
   private readonly mix: StairsMix = { ...OUTSIDE_STAIRS };
   private drainTarget = 0;
   private drain = 0;
@@ -66,6 +68,7 @@ export class StairsSound {
   private readonly rush: GainNode;
   private readonly high: GainNode;
   private readonly hull: GainNode;
+  private readonly line: GainNode;
 
   constructor(private readonly ctx: AudioContext, master: AudioNode, reverb: AudioNode) {
     this.out = ctx.createGain();
@@ -81,7 +84,9 @@ export class StairsSound {
     this.rushPan = ctx.createStereoPanner();
     this.high = this.gain(0.7);
     this.hull = this.gain(0.22);
-    this.hullFilter = this.filter('bandpass', 1100, 0.55);
+    this.hullFilter = this.filter('lowpass', 420, 0.4);
+    this.line = this.gain(0.6);
+    this.lineFilter = this.filter('bandpass', 560, 22);
   }
 
   get finished(): boolean {
@@ -122,7 +127,7 @@ export class StairsSound {
       return { source, nodes: chain, gain };
     };
     const highpass = this.filter('highpass', 2600, 0.5), highTop = this.filter('lowpass', 7200, 0.4);
-    const hullLow = this.filter('highpass', 260, 0.5), hullTop = this.filter('lowpass', 3800, 0.4);
+    const hullLow = this.filter('highpass', 70, 0.5), hullTop = this.filter('lowpass', 900, 0.3);
     const rushBand = this.filter('bandpass', 1300, 0.8);
     const rumble = this.filter('highpass', 45, 0.5);
     this.layers = {
@@ -130,7 +135,8 @@ export class StairsSound {
       howl: layer(this.howl, 1.07, [this.howlFilter]),
       rush: layer(this.rush, 1, [rushBand, this.rushPan]),
       high: layer(this.high, 0.97, [highpass, highTop]),
-      hull: layer(this.hull, 1.04, [hullLow, this.hullFilter, hullTop]),
+      hull: layer(this.hull, 0.9, [hullLow, this.hullFilter, hullTop]),
+      line: layer(this.line, 1.11, [this.lineFilter]),
     };
   }
 
@@ -181,8 +187,11 @@ export class StairsSound {
 
     const speed = air?.speed ?? 0, v = smooth(0.4, 5.5, speed);
     this.swells(now, dt);
-    this.set(this.hull.gain, k.hullLevel * v * this.up * (1 - 0.55 * this.fog) * (0.85 + 0.25 * this.swell), now, 0.25);
-    this.hullFilter.frequency.setTargetAtTime((800 + 1300 * v) * (1 - 0.35 * this.fog), now, 0.3);
+    this.set(this.hull.gain, k.hullLevel * v * this.up * (1 - 0.55 * this.fog) * (0.8 + 0.3 * this.swell), now, 0.8);
+    this.hullFilter.frequency.setTargetAtTime((300 + 260 * v + 90 * this.swell) * (1 - 0.3 * this.fog), now, 0.9);
+    // The line sings only as the kite draws on it, and wanders a little in pitch as the air along it changes.
+    this.set(this.line.gain, k.lineLevel * v * this.open * this.up * (1 - this.fog) * (0.6 + 0.4 * breath), now, 1.2);
+    this.lineFilter.frequency.setTargetAtTime(560 * (1 + 0.03 * Math.sin(now * 0.17) + 0.02 * this.swell), now, 1.5);
 
     const toward = !air ? this.drainTarget : phase !== 'under' ? 1 : smooth(0.05, 0.6, air.cloud);
     this.drainTarget = Math.max(this.drainTarget, toward);
@@ -208,13 +217,13 @@ export class StairsSound {
     this.buffet = ease(this.buffet, target, dt, target > this.buffet ? 0.28 : 0.9);
   }
 
-  /** The hull meets the billows unevenly: a slow wander, never a beat. */
+  /** The air past the hull comes and goes unevenly: a slow wander, never a beat. */
   private swells(now: number, dt: number): void {
     if (now >= this.nextSwell) {
       this.swellTarget = Math.random() * 2 - 1;
-      this.nextSwell = now + 1.4 + Math.random() * 2.8;
+      this.nextSwell = now + 3.5 + Math.random() * 4;
     }
-    this.swell = ease(this.swell, this.swellTarget, dt, 1.1);
+    this.swell = ease(this.swell, this.swellTarget, dt, 2.4);
   }
 
   private set(param: AudioParam, value: number, now: number, tc: number): void {
@@ -256,7 +265,7 @@ export class StairsSound {
     if (this.stopped) return;
     this.stopped = true;
     const now = this.ctx.currentTime;
-    for (const gain of [this.body, this.howl, this.rush, this.high, this.hull]) {
+    for (const gain of [this.body, this.howl, this.rush, this.high, this.hull, this.line]) {
       gain.gain.cancelScheduledValues(now);
       gain.gain.setValueAtTime(gain.gain.value, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.3);
@@ -273,7 +282,7 @@ export class StairsSound {
         layer.source.disconnect();
         for (const node of layer.nodes) node.disconnect();
         if (--remaining === 0) {
-          for (const gain of [this.body, this.howl, this.rush, this.high, this.hull]) gain.disconnect();
+          for (const gain of [this.body, this.howl, this.rush, this.high, this.hull, this.line]) gain.disconnect();
           this.out.disconnect();
           this.wet.disconnect();
         }
