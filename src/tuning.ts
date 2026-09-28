@@ -298,9 +298,9 @@ export const tuning = {
     wispSpeed: 1.6,
     /**
      * How many towers of cumulus stand out of the sea of cloud along the way, besides the four either side of it
-     * where it runs between them (at most 8), and how finely each is marched.
+     * where it runs between them (at most 12), and how finely each is marched.
      */
-    towers: 8, towerSteps: 16,
+    towers: 11, towerSteps: 16,
   },
   littleBoats: {
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */

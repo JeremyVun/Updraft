@@ -9,7 +9,7 @@ import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } f
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
 
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
-const SHAPE = { heap: 4, tower: 6, big: [2.6, 2.4], mid: [2.0, 2.2], fine: [1.3, 0.8] } as const;
+const SHAPE = { heap: 2.5, tower: 3.5, big: [2.6, 2.0], mid: [2.0, 1.8], fine: [1.3, 0.8] } as const;
 
 /** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
@@ -17,7 +17,7 @@ const TRAIL_POINTS = 16;
 /** How deep the layer the low wisps stream in lies over the tops, metres. */
 const WISP_LAYER = 4;
 /** How many towers of cumulus the top of the cloud makes room for. */
-const FEET = 12;
+const FEET = 16;
 
 /** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
 const TOP_VERT = /* glsl */ `
@@ -375,7 +375,7 @@ vec3 cloudTop(vec2 xz, vec4 calm, float stature, vec3 rise, vec3 tower, float sp
     + vec3((big.x - 0.25) * aBig, big.yz / 17.0 * aBig + (big.x - 0.25) * BIG.y * stature * rise.yz)
     + vec3((mid.x - 0.25) * aMid, mid.yz / 6.5 * aMid + (mid.x - 0.25) * MID.y * stature * rise.yz)
     + vec3((fine.x - 0.25) * aFine, fine.yz / 2.4 * aFine)
-    + vec3(0.45 * (1.0 - calm.w), 0.0, 0.0);
+    + vec3(0.8 * (1.0 - calm.w), 0.0, 0.0);
   lobe = vec3(smoothstep(-0.15, 0.6, big.x), smoothstep(-0.1, 0.6, mid.x), smoothstep(-0.1, 0.6, fine.x));
   float crease = (1.0 - lobe.x) * (0.35 + 0.4 * rise.x) + (1.0 - lobe.y) * 0.45 + (1.0 - lobe.z) * 0.2
     + (1.0 - smoothstep(0.1, 0.6, tower.x)) * rise.x * 0.5;
@@ -598,7 +598,7 @@ class TopShape {
       + (big - 0.25) * (SHAPE.big[0] * even + SHAPE.big[1] * rise * stature)
       + (mid - 0.25) * (SHAPE.mid[0] * even + SHAPE.mid[1] * rise * stature)
       + (fine - 0.25) * (SHAPE.fine[0] * (0.4 + 0.6 * smooth(2.5, 14, way)) + SHAPE.fine[1] * rise)
-      + 0.45 * (1 - smooth(2.5, 14, way));
+      + 0.8 * (1 - smooth(2.5, 14, way));
     const below = h - 0.1;
     return 0.1 + 0.5 * (below + Math.sqrt(below * below + 0.02)) + this.footAt(x, z);
   }
