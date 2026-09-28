@@ -466,12 +466,11 @@ export class LittleBoats {
       }
       // Use the boats' actual order on the water, including independently sailed toys.
       this.fleet.sort((a, b) => a.s - b.s);
-      let heroEnd = this.progress < L.length ? Math.max(hero.s, Math.min(L.length, limit)) : k.offshoreEnd;
       // Ease toward the walkers/swimmer instead of losing all momentum at each
       // pool handoff. Contact from a following hull must obey the same easing.
       // Leave the outlet free so the toy can cross it and start departing.
       const waiting = this.progress < L.length && limit < L.length;
-      if (waiting) heroEnd = Math.min(heroEnd, hero.s + Math.max(0, limit - hero.s) * dt / k.followEase);
+      const heroEnd = waiting ? hero.s + Math.max(0, limit - hero.s) * dt / k.followEase : k.offshoreEnd;
       for (const [i, t] of this.toys.entries()) {
         // Waiting toys join when the fleet reaches them, not only the child's toy.
         if (!t.joined && this.toys.some((o) => o.joined && o.s > t.s - 5)) t.joined = true;
