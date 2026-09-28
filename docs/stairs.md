@@ -154,7 +154,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 ## Principles
 
 - Wordless. The cygnet's voice is heard only in the loop, where it asks with a small questioning peep
-  (`cue('puzzled')`), sounded together with its distress call (`Cygnet.call`).
+  (`Cygnet.call(false, 'puzzled')`: the bill opens and the call marks show, but only the peep is heard; it is
+  puzzled, not frightened).
 - No failure, no timer that solves anything, no maze; the ghost flight says where each piece goes.
 - The cygnet never flies here and is never lifted by the wind: flight belongs to the sleeping island and home.
 - Every gesture is answered: gusts move the flights, tear cloud wisps, fill the sail.
