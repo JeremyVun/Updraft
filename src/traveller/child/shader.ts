@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { MAT } from './mesh';
-import { FACE } from './garments';
+import { FACE, HEM } from './garments';
 
 const f = (x: number) => x.toFixed(4);
 const v3 = (v: THREE.Vector3) => `vec3(${f(v.x)}, ${f(v.y)}, ${f(v.z)})`;
@@ -202,7 +202,7 @@ void main() {
       /** The placket's edge, the hood's centre seam and the hem's stitching. */
       float placket = fill(abs(vRest.x - 0.034) - 0.0022) * step(0.0, vRest.z) * step(vRest.y, 1.6) * step(0.5, vRest.y);
       float seam = fill(abs(vRest.x) - 0.0026) * step(1.74, vRest.y) * step(vRest.z, 0.3);
-      float stitch = fill(abs(fract(vSurf.x * 60.0) - 0.5) - 0.2) * fill(abs(vRest.y - 0.625) - 0.0018) * step(vRest.y, 0.66) * (1.0 - k);
+      float stitch = fill(abs(fract(vSurf.x * 60.0) - 0.5) - 0.2) * fill(abs(vRest.y - ${f(HEM + 0.025)}) - 0.0018) * step(vRest.y, ${f(HEM + 0.06)}) * (1.0 - k);
       alb *= 1.0 - 0.32 * max(placket, seam) - 0.12 * stitch;
     }
     fuzz = 0.75;
@@ -216,6 +216,9 @@ void main() {
   } else if (m == ${MAT.hair}) {
     alb = uHair * (0.85 + 0.25 * vnoise3(vec3(vSurf.y * 9.0, vRest.y * 60.0, vSurf.x * 3.0)));
     alb *= 1.0 + 0.15 * k;
+    /** Along each lock (k is how far along it, 0 on the cap) a lighter run down its middle and a darker seam at its sides, so the locks and the way they sweep read rather than one dark cap. */
+    float lock = step(0.001, k);
+    alb *= 1.0 + lock * (0.3 * (1.0 - smoothstep(0.0, 0.55, abs(vSurf.y))) * sin(3.14159 * min(k * 1.4, 1.0)) - 0.3 * smoothstep(0.6, 0.97, abs(vSurf.y)));
     fuzz = 0.35;
     sheen = 0.12;
   } else if (m == ${MAT.trousers}) {

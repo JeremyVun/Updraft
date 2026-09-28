@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BONE, HEM_BONES } from './skeleton';
+import { BONE, HEM_BONES, PIGTAIL_TIE } from './skeleton';
 import { Builder, MAT, angleTo, bump, smooth, type Point, type Skin } from './mesh';
 
 /**
@@ -31,7 +31,7 @@ function lookup(table: number[][], key: number, col: number): number {
 
 /**
  * Height, half-width, half-depth and how far forward the middle of the coat is, from the collar to below the hem. Below
- * the bag it flares as much front to back as side to side, so it keeps the concept's A-line from every angle.
+ * the bag it flares a little less front to back than side to side, so it keeps the concept's A-line without belling.
  */
 const COAT = [
   [1.625, 0.13, 0.125, 0.0],
@@ -43,12 +43,13 @@ const COAT = [
   [1.3, 0.332, 0.29, 0.04],
   [1.18, 0.353, 0.306, 0.04],
   [1.04, 0.377, 0.322, 0.036],
-  [0.88, 0.404, 0.372, 0.032],
-  [0.72, 0.438, 0.432, 0.028],
-  [0.58, 0.47, 0.49, 0.022],
-  [0.45, 0.495, 0.535, 0.016],
+  [0.88, 0.408, 0.366, 0.032],
+  [0.72, 0.446, 0.418, 0.028],
+  [0.58, 0.48, 0.47, 0.022],
+  [0.45, 0.507, 0.51, 0.016],
 ];
 export const COAT_TOP = 1.625;
+export const HEM = 0.67;
 
 /** Broad folds that fan out from the chest toward the hem: angle from the front, width, and ridge (+) or valley (-). */
 const FOLDS: [number, number, number][] = [
@@ -56,7 +57,7 @@ const FOLDS: [number, number, number][] = [
 ];
 
 function foldAt(a: number, y: number): number {
-  const amp = 0.034 * smooth(1.38, 0.62, y);
+  const amp = 0.027 * smooth(1.38, 0.62, y);
   if (amp <= 0) return 0;
   const fan = (1.3 - y) * 0.12;
   let d = 0.7 * bump(angleTo(a, Math.PI), 0.2);
@@ -67,7 +68,7 @@ function foldAt(a: number, y: number): number {
   return amp * d;
 }
 
-export const hemY = (a: number) => 0.6 + 0.01 * Math.sin(3 * a + 0.4) + 0.005 * Math.sin(5 * a + 1.1) - 0.3 * foldAt(a, 0.6);
+export const hemY = (a: number) => HEM + 0.006 * Math.sin(3 * a + 0.4) + 0.003 * Math.sin(5 * a + 1.1) - 0.15 * foldAt(a, HEM);
 
 export interface CoatSample {
   p: THREE.Vector3;
@@ -486,39 +487,39 @@ function face(b: Builder): void {
 /** The hairline's height on the head relative to the hair's middle, by angle from the front. */
 function hairline(phi: number): number {
   const c = Math.cos(phi);
-  return THREE.MathUtils.lerp(-0.228, 0.122, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35) + 0.1 * bump(angleTo(phi, 0.5), 0.32);
+  return THREE.MathUtils.lerp(-0.228, 0.122, smooth(-0.95, 0.9, c)) - 0.04 * bump(Math.abs(angleTo(phi, 0)) - 1.4, 0.35);
 }
 
 const HAIR = { c: V(0, 2.038, 0.07), rx: 0.282, ry: 0.296, rz: 0.282 };
 
 /**
- * A little girl's bangs, as locks: angle from the front and the cosine down from the crown where each starts and
- * ends, its width, and how far it swings sideways along the way. Parted a little off the middle, they sweep softly
- * away from the parting at uneven lengths, and the outer ones run longer to the temples into the bob.
+ * A little girl's bangs, as soft clumps: angle from the front and the cosine down from the crown where each starts
+ * and ends, its width, and how far it bows sideways along the way. Cut in an arch, short in the middle and longer
+ * toward the temples, split a little off the middle with the clumps curving away from the split, each ending in its
+ * own point at its own length, so the edge is never one line following the brim.
  */
 const BANGS: [number, number, number, number, number, number][] = [
-  [0.12, 0.8, -0.08, 0.35, 0.16, 0.02],
-  [-0.1, 0.8, -0.36, 0.38, 0.17, -0.02],
-  [-0.34, 0.78, -0.64, 0.33, 0.16, 0.02],
-  [-0.58, 0.76, -0.92, 0.24, 0.15, -0.02],
-  [0.34, 0.8, 0.54, 0.4, 0.15, -0.02],
-  [0.52, 0.78, 0.8, 0.33, 0.15, 0.02],
-  [0.74, 0.74, 1.02, 0.22, 0.14, -0.02],
-  [0.0, 0.8, 0.1, 0.44, 0.1, 0.03],
+  [-0.04, 0.88, -0.3, 0.47, 0.2, -0.05],
+  [-0.14, 0.87, -0.56, 0.37, 0.22, -0.05],
+  [-0.34, 0.85, -0.82, 0.27, 0.22, -0.04],
+  [-0.6, 0.82, -1.02, 0.18, 0.2, -0.03],
+  [0.06, 0.88, 0.32, 0.48, 0.2, 0.05],
+  [0.16, 0.87, 0.58, 0.38, 0.22, 0.05],
+  [0.36, 0.85, 0.84, 0.28, 0.22, 0.04],
+  [0.62, 0.82, 1.04, 0.19, 0.2, 0.03],
 ];
 
 /**
- * The bob round her face, as locks down each side: angle from the front at the crown, and the height their ends
- * reach. They come down over the ears, fall past the cheeks and turn under at the jaw.
+ * The hair at the sides, as locks: angle from the front at the crown, the height their ends reach, width, how far
+ * behind the ear they are taken, and how far their ends curl forward toward the chin. A short lock in front of each
+ * ear curves in round the cheek; the rest is drawn back behind the ear to the pigtail.
  */
-const BOB: [number, number, number][] = [
-  [1.12, 1.84, 0.17],
-  [1.32, 1.81, 0.19],
-  [1.5, 1.8, 0.2],
-  [1.66, 1.8, 0.2],
-  [1.9, 1.8, 0.2],
-  [2.2, 1.81, 0.2],
-  [2.5, 1.82, 0.2],
+const SIDES: [number, number, number, number, number][] = [
+  [1.1, 1.88, 0.11, 0.04, 0.5],
+  [1.36, 1.9, 0.18, 0.62, 0],
+  [1.6, 1.9, 0.2, 0.45, 0],
+  [1.92, 1.9, 0.2, 0.2, 0],
+  [2.3, 1.9, 0.2, 0, 0],
 ];
 
 function hair(b: Builder): void {
@@ -537,7 +538,76 @@ function hair(b: Builder): void {
   }
   b.rows(rows, true, HAIR.c);
   for (const [phi0, c0, phi1, c1, width, swing] of BANGS) lock(b, phi0, c0, phi1, c1, width, swing);
-  for (const mx of [1, -1]) for (const [phi, end, width] of BOB) bob(b, mx * phi, end, width);
+  for (const mx of [1, -1]) {
+    for (const [phi, end, width, behind, curl] of SIDES) bob(b, mx * phi, end, width, behind, curl);
+    pigtail(b, mx);
+  }
+}
+
+/**
+ * A low bunch below each ear, tied with a knitted bobble like the scarf, coming out of the hood at the jaw and
+ * sticking out over the scarf: plump just past the tie and rounding off to a soft point that turns up.
+ */
+function pigtail(b: Builder, side: number): void {
+  const tie = V(side * PIGTAIL_TIE[0], PIGTAIL_TIE[1], PIGTAIL_TIE[2]);
+  const bone = side > 0 ? BONE.pigL : BONE.pigR;
+  const curve = new THREE.CatmullRomCurve3([
+    tie.clone(),
+    V(side * 0.32, 1.765, 0.22),
+    V(side * 0.375, 1.72, 0.22),
+    V(side * 0.42, 1.69, 0.205),
+    V(side * 0.465, 1.685, 0.185),
+  ]);
+  const STEPS = 20;
+  const rows: Point[][] = [];
+  const ref = V(0, 0, 1);
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS;
+    const p = curve.getPointAt(t);
+    const w = smooth(0, 0.2, t);
+    const skin: Skin = [[BONE.head, 1 - w], [bone, w]];
+    if (i === STEPS) {
+      rows.push([{ p, skin, mat: MAT.hair, k: 1, uv: [1, 0] }]);
+      break;
+    }
+    const along = curve.getTangentAt(t);
+    const u = V().crossVectors(along, ref).normalize();
+    const v = V().crossVectors(u, along).normalize();
+    const r = 0.06 * (0.5 + 0.5 * Math.sin(Math.min(1, t / 0.3) * (Math.PI / 2))) * Math.pow(Math.max(0, 1 - t), 0.6);
+    rows.push(Array.from({ length: 16 }, (_, j) => {
+      const a = (j / 16) * TAU;
+      /** Three soft locks round the bunch. */
+      const lobe = 1 + 0.08 * Math.cos(3 * a) * smooth(0.1, 0.4, t);
+      return {
+        p: p.clone().addScaledVector(u, Math.cos(a) * r * lobe).addScaledVector(v, Math.sin(a) * r * 0.85 * lobe),
+        skin,
+        mat: MAT.hair,
+        k: Math.max(t, 0.01),
+        ao: 0.75 + 0.25 * Math.max(0, Math.sin(a)),
+        uv: [t, Math.cos(3 * a)] as [number, number],
+      };
+    }));
+  }
+  b.rows(rows, true, curve.getPointAt(0.3));
+  ball(b, tie.clone().addScaledVector(curve.getTangentAt(0), -0.01), 0.04);
+}
+
+/** A small knitted ball: the bobble a pigtail is tied with. */
+function ball(b: Builder, c: THREE.Vector3, r: number): void {
+  const rows: Point[][] = [];
+  for (let i = 0; i <= 8; i++) {
+    const th = (i / 8) * Math.PI;
+    rows.push(Array.from({ length: i === 0 || i === 8 ? 1 : 14 }, (_, j) => {
+      const a = (j / 14) * TAU;
+      return {
+        p: c.clone().add(V(Math.cos(a) * r * Math.sin(th), Math.cos(th) * r, Math.sin(a) * r * Math.sin(th))),
+        skin: [[BONE.head, 1]] as Skin,
+        mat: MAT.knit,
+        uv: [a / TAU, th / Math.PI] as [number, number],
+      };
+    }));
+  }
+  b.rows(rows, true, c);
 }
 
 /** Low at the sides the hair stands out over the full cheeks, so it ends in a hairline rather than cutting into them. */
@@ -555,30 +625,30 @@ function onHair(phi: number, ct: number, lift: number): { p: THREE.Vector3; n: T
 }
 
 function lock(b: Builder, phi0: number, c0: number, phi1: number, c1: number, width: number, swing: number): void {
-  /** The path over the shell, with a soft S across it so no lock runs straight. */
-  const at = (t: number): [number, number] => [THREE.MathUtils.lerp(phi0, phi1, t) + swing * Math.sin(t * Math.PI * 1.5), THREE.MathUtils.lerp(c0, c1, t)];
-  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.022, 0.55);
+  /** The path over the shell, bowed sideways so no clump runs straight. */
+  const at = (t: number): [number, number] => [THREE.MathUtils.lerp(phi0, phi1, t) + swing * Math.sin(t * Math.PI), THREE.MathUtils.lerp(c0, c1, t)];
+  strand(b, (t, lift) => onHair(...at(t), lift), width, 0.026, 0.4, 0.02, -0.014);
 }
 
 /**
- * A lock of the bob: over the shell from the crown to the ear, then falling free past the cheek, swelling out a
- * little and turning under toward the neck at its end.
+ * A lock at the side: over the shell from the crown to the ear (or behind it), then down and turning under toward
+ * the neck, and forward toward the chin by `curl`.
  */
-function bob(b: Builder, phi: number, end: number, width: number): void {
+function bob(b: Builder, phi: number, end: number, width: number, behind: number, curl: number): void {
   const side = Math.sign(phi);
   const top = onHair(phi, 0.62, 0);
-  const ear = onHair(phi + side * 0.05, -0.25, 0.01);
+  const ear = onHair(phi + side * (0.05 + behind), -0.25, 0.01);
   const drop = ear.p.y - end;
   const out = V(ear.p.x - HAIR.c.x, 0, ear.p.z - HAIR.c.z);
-  const at = (f: number, dy: number) => HAIR.c.clone().addScaledVector(out, f).setY(ear.p.y - dy);
+  const at = (f: number, dy: number, turn = 0) => HAIR.c.clone().addScaledVector(out.clone().applyAxisAngle(V(0, 1, 0), side * turn), f).setY(ear.p.y - dy);
   const curve = new THREE.CatmullRomCurve3([
     onHair(phi, 0.9, 0).p,
     top.p,
-    onHair(phi + side * 0.02, 0.2, 0.004).p,
+    onHair(phi + side * (0.02 + 0.6 * behind), 0.2, 0.004).p,
     ear.p,
-    at(1.04, drop * 0.45),
-    at(1.0, drop * 0.85),
-    at(0.9, drop),
+    at(1.0, drop * 0.45),
+    at(0.94, drop * 0.85, -0.4 * curl),
+    at(0.82, drop, -curl),
   ]);
   const path = (t: number, lift: number) => {
     const u = 0.08 + 0.92 * t;
@@ -591,10 +661,10 @@ function bob(b: Builder, phi: number, end: number, width: number): void {
 
 /**
  * A lock of hair along a path given by where it is at a fraction of its length and how far it stands off the head.
- * Full at the root, narrowing to a soft rounded end (`tip` is how much of its width it keeps there) that lifts a
- * little off the head.
+ * Full at the root, narrowing to a soft rounded end (`tip` is how much of its width it keeps there). It stands off
+ * the head by `bulge` along its middle, and its end lifts off by `flick` (or turns back in, if negative).
  */
-function strand(b: Builder, path: (t: number, lift: number) => { p: THREE.Vector3; n: THREE.Vector3 }, width: number, depth: number, tip: number): void {
+function strand(b: Builder, path: (t: number, lift: number) => { p: THREE.Vector3; n: THREE.Vector3 }, width: number, depth: number, tip: number, bulge = 0.012, flick = 0.018): void {
   const STEPS = 18;
   const rows: Point[][] = [];
   const skin: Skin = [[BONE.head, 1]];
@@ -609,7 +679,7 @@ function strand(b: Builder, path: (t: number, lift: number) => { p: THREE.Vector
     const taper = narrow * Math.sqrt(Math.max(0, 1 - Math.pow(Math.max(0, (t - 0.88) / 0.12), 2)));
     const thick = depth * (1 - 0.5 * t) * Math.max(taper, 0.2);
     const w = width * 0.5 * (0.8 + 0.25 * Math.sin(Math.min(1, t / 0.4) * (Math.PI / 2))) * taper;
-    const { p, n } = path(t, 0.003 + thick * 0.85 + 0.012 * Math.sin(t * Math.PI) + 0.018 * smooth(0.7, 1, t));
+    const { p, n } = path(t, 0.003 + thick * 0.85 + bulge * Math.sin(t * Math.PI) + flick * smooth(0.7, 1, t));
     const along = path(Math.min(1, t + 0.01), 0).p.sub(path(Math.min(1, t + 0.01) - 0.01, 0).p).normalize();
     const side = V().crossVectors(n, along).normalize();
     if (i === STEPS) {
@@ -640,6 +710,10 @@ export const HOOD = {
   r: V(0.4, 0.372, 0.42),
   /** The opening faces forward and down, so the brim comes out over the top of the fringe. */
   tilt: 0.17,
+  seam: 0.025,
+  corner: 0.05,
+  /** How far forward the cloth comes at the temples so the edge runs down from the brow to the jaw without stepping back. */
+  reach: 0.07,
 };
 
 /**
@@ -728,6 +802,16 @@ function hoodShape(lambda: number, gamma: number, open: number | null): HoodSamp
   p.y += 0.024 * smooth(0.5, 1.0, yN) * Math.exp(-(p.x * p.x) / 0.025);
   /** The crown rides a little back over the head, the way a soft hood falls, rather than standing straight up. */
   p.z -= 0.025 * smooth(0.2, 1.0, yN);
+  /**
+   * A hood is two flat panels sewn down the middle, so from the side its outline runs up the seam to a soft corner
+   * at the back of the crown and falls from there, where a helmet follows the skull round.
+   */
+  const behind = smooth(-0.1, -0.8, hz);
+  const ridge = Math.exp(-(p.x * p.x) / 0.02);
+  p.y += HOOD.seam * ridge * behind * smooth(-0.2, 0.5, yN);
+  const corner = HOOD.corner * ridge * behind * Math.exp(-(((yN - 0.55) / 0.3) ** 2));
+  p.y += 0.6 * corner;
+  p.z -= 0.8 * corner;
   const n = V(p.x / (r.x * r.x), p.y / (r.y * r.y), p.z / (r.z * r.z)).normalize();
   /** A few broad folds: a crease down each side from the temple, and cloth gathered at the nape. */
   const fromRim = open === null ? 0 : smooth(open, open + 0.6, gamma) * (1 - smooth(2.3, 2.9, gamma));
@@ -745,6 +829,8 @@ function hoodShape(lambda: number, gamma: number, open: number | null): HoodSamp
   const brim = open === null ? 0 : (1 - smooth(open, open + 0.45, gamma)) * bump(angleTo(lambda, 0), 0.95);
   p.addScaledVector(n, fold + seam + 0.018 * brim);
   p.y += 0.01 * brim;
+  /** From the side the edge is one line from the brow to the jaw, where a helmet's cut-out steps back round the ear. */
+  if (open !== null) p.z += HOOD.reach * (1 - smooth(open, open + 0.8, gamma)) * Math.exp(-(((p.y + HOOD.c.y - 2.04) / 0.115) ** 2));
   /** In front, below the chin, the hood goes in behind the scarf rather than lying over it. */
   const y = p.y + HOOD.c.y;
   const front = smooth(-0.05, 0.45, hz);

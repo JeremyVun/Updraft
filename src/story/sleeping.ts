@@ -164,7 +164,7 @@ export class SleepingChapter implements Chapter {
 
   constructor(private readonly cast: Cast) {
     const { child, cygnet, sleeping } = cast;
-    child.dismount();
+    child.stepAshore(cast.boat);
     cygnet.mayFly = false;
     cygnet.pace = 1;
     cygnet.stay = false;

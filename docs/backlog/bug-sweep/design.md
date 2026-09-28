@@ -1,0 +1,163 @@
+# Bug sweep: regressions and stale checks found while verifying the docs
+
+On 2026-09-28/29 the docs were checked claim by claim against the code, and the automatic checks were run. That
+turned up real bugs, some checks that had fallen behind the game, and one bug Jeremy added from his own playtest.
+This item is for a fresh session to investigate and fix them. Jeremy's brief (2026-09-29): "Create a /backlog-item
+for the bugs for another session to investigate", and on the dark wood: "in the dark forest, at some of the points
+where the child stops, the camera position is such taht the child is directly blocking the ember (the player can't
+see it)."
+
+Every bug below says what was observed, how to reproduce it, what is already known about the cause, and what "fixed"
+means. Where a fix depends on what Jeremy wants, his ruling is quoted with its date. Nothing here is fixed yet.
+
+## Ground rules for this item
+
+- Investigate first: confirm each bug on current `main` before changing anything, because peers merge often. Some
+  may already be fixed by the time this runs.
+- A check that fails because it tests behaviour Jeremy deliberately changed is stale: update the check. A check that
+  fails because the game got worse is a bug: fix the game, not the limit. Never widen a limit to make a check pass
+  without saying why the old limit was wrong.
+- Visual changes and visual verification (stills, look of the season, camera framing) go to an allowed visual model
+  (Opus or Astra with Jeremy's authorisation), per the model-routing rules. Show Jeremy stills of every visual
+  change, opened in Preview.
+- Record in `docs/` (chapters, contracts, roadmap) any behaviour that changes, in the same change.
+
+## 0. The `checks-fix` branch (merge only after Jeremy sees stills)
+
+Branch `checks-fix` (one commit on top of 8cd3d5b, not merged) updates the checks that fell behind deliberate
+changes, so that afterwards every failing check points at a real bug:
+
+- `meadow-`, `birches-` and `sea-score-browser-check`: those rooms have no cursor chimes (see
+  `docs/contracts/audio.md`), so the checks now assert silence after a gesture instead of waiting for a chime.
+- `progress-schema-check`: its parity baseline (`tools/lib/baseline.mjs`) moves from 188c9fa to 357177f, the last
+  commit that changed `src/story/progress.ts`; old checkpoints must keep their arity, new ones may be added.
+- `chapter-view-check`: the fixture's cast gains a `child` with `openBag()` (the journey now opens the bag).
+- `kite-logic-check`: the stairs kite is tied on its deck (like the mirror's), and the crossings `toStairs` and
+  `drowned` expect the birches' and the stairs' kites.
+- `plane-routing-check`: the Lines shore no longer throws the paper (the child keeps it from the door to the boat),
+  so the two Lines blocks assert she keeps it and boards in time.
+- `journey-pacing-check`: the fixture's cast gains `lines: { gust() {} }` (the storm's snatch draws wind lines).
+- `wood-logic-check`: embers now light in about two seconds of circling (8135c02, `tuning.wood.updraftCatch`), so
+  the window is 1.5 to 3 s instead of 2.5 to 5 s.
+- **One game-code change**, `src/traveller/child/shader.ts`: six `smoothstep(high, low, x)` calls (lines 34, 61, 165
+  twice, 229, 230) rewritten as `1.0 - smoothstep(low, high, x)`. GLSL leaves `smoothstep` undefined when the first
+  edge is not below the second; most GPUs happen to draw it as intended, some drivers may not. An earlier hardening
+  pass removed every such call and `tools/shader-check.mjs` enforces it; the child rebuild brought six back. The
+  rewrite is mathematically identical.
+
+**Jeremy's ruling (2026-09-29): "yes, but I want stills showing what rendering issues were fixed first before
+anything from that branch touches main".** So before merging: capture the child close up (the stage,
+`?chapter=stage`, face, hood, coat hem and boots) before and after the shader change, on Chrome/Metal and on
+software Vulkan (SwiftShader, as `tools/shader-browser-check.mjs` launches it), and show Jeremy the pairs. If the two
+builds look identical on both, say so plainly: the fix is then insurance against drivers that draw it wrong, not a
+visible change. Merge only after his OK.
+
+## 1. The storm reaches the dark wood about 15 s late
+
+- **Observed:** `node tools/boat-check.mjs` fails: `storm duration 55.6` against 38 to 44 s (Jeremy, 2026-09-19: "I'd be looking to increase the journey
+  through the storm by 10-15 seconds"; it was then built at about 41 s).
+  `node tools/drowned-camera-check.mjs` fails on the same passage: "sailing camera looks steeply down at the child:
+  25.2 degrees" at t 132.5, beat `after`.
+- **Cause, as far as known:** bisected to 85645e9 (beach landings). A per-second trace of the boat from the weather's
+  start: full speed (5.8) to about 39 s, then `Boat.beachApproach` caps the speed once the wood's shelving shore is
+  within `tuning.sail.beachLook` (9) of the bow; at about 1 unit/s the breeze drift (`w * drift` in `Boat.update`)
+  and the steering carry the hull sideways along the shore (x from -21 to -30 and back to -23) for about 15 s before
+  the forefoot finds `heightAt > -0.25` and `beaching` starts. Before 85645e9 the boat ran in at full speed and
+  stopped dead, so the passage took 41.4 s.
+- **Check the other beaches too:** every beach arrival now goes through `beachApproach`. Measure each (lines, boats,
+  meadow, birches, stairs island, wood, sleeping) for the same sideways crawl; `journey-pacing-check` passes on the
+  crossings it covers, but compare arrival times with 85645e9^.
+- **Fixed means:** the boat still eases up the sand (Jeremy asked for that on 2026-09-28: "everytime the boat hits
+  land, it instantly stops ... It doesn't look very polished"), but it keeps heading for the beach while it slows, so
+  the storm is back to about 41 s and `boat-check` and `drowned-camera-check` pass unchanged.
+
+## 2. The little boats: the orange toy stops abruptly
+
+- **Observed:** `node tools/little-boats-logic-check.mjs` fails: "30fps from arrival: orange boat lost momentum
+  abruptly: 80.7" (limit 3 units/s²).
+- **Known:** the momentum failure started at 1e0d470 ("update", Jeremy, 2026-09-28), which removed the limit that
+  held the child's toy near the swimming cygnet (`swimLead`) and gave the cygnet a launch speed into each pool
+  (`swimLaunch`). That change is deliberate (Jeremy, 2026-09-27: "give the cygnet a moving start so it's better able to
+  catch up or something. the boats shouldn't be affected by a leash i think (it doesn't feel good for the player)"). The
+  remaining limit is the child's lead (`Math.max(3, childS + tuning.littleBoats.childLead)` in
+  `story/little-boats.ts`).
+- **To settle:** is the 80 units/s² drop a real jolt the player would see (the toy hitting the child's limit, or a
+  handoff), or is the check measuring something the change made meaningless? Trace the frame. If it is a jolt, fix
+  it; if the check is stale, update it and say why.
+
+## 3. Home: a departing swan passes close to the cygnet
+
+- **Observed:** `node tools/flock-flight-check.mjs` fails: "adult crossed through the cygnet", closest 1.735 m against
+  1.8 m, in the first reunion case.
+- **Known:** bisected to 1009b91 (the child's pigtails), which cannot touch the flock directly; most likely it moved
+  where the cygnet starts (the child's pose or hands), and the V's spacing near the tail is only just above the
+  limit. `tuning.swanDeparture.avoid*` is the avoidance.
+- **To settle:** why the start moved, and whether the avoidance is robust or just lucky. Fix the avoidance so the
+  closest pass has a real margin at every frame rate; do not lower the limit.
+
+## 4. The season after the sleeping island should ease toward spring
+
+- **Observed:** `season` is 1 on the sleeping island, then 0.92 (`toMirror`), 0.96 (mirror), 0.98 (`toHarbour`),
+  0.92 (`toHome`) and 1 (home), set in `story/journey.ts` and the chapters (`sky-mirror.ts`, `home.ts`). The grass
+  reads `uSeason` (`world/grass.ts`), so home's grass stays at its most aged and cold.
+- **Jeremy's words:** "the curtain opening is the greening moment that moves the game from winter to spring"
+  (2026-09-27); of home's grass, "it should still feel lush and green and beautiful" (2026-09-18).
+- **Jeremy's ruling (2026-09-29): ease toward spring.** After the curtains open, the season eases back through the sea
+  and the mirror so home's grass is green and lush.
+- **To do:** propose the values (and whether the sleeping island's own morning should already move it), capture home,
+  the mirror and the sea at the current and proposed values, and show Jeremy stills before merging. Visual work:
+  allowed visual model only. Update `docs/journey.md` ("The year") and `docs/styles.md`.
+
+## 5. The meadow swans may no longer be startled by the child
+
+- **Observed:** in `story/meadow.ts` the family's take-off is `flock.lift(Math.PI, tuning.crest.leaves,
+  tuning.crest.leaveClimb)` with no `startledBy`, so it starts from the far end of the raft by itself.
+  `Flock.lift`'s startled path (nearest birds first, `tuning.crest.startlePaddle`) is unused.
+- **Jeremy (2026-09-29):** "the last time i playtested this, the swans get startled correctly. this will need
+  investigation to confirm if there was some kind of regression". His earlier note (2026-09-20): "the camera never
+  properly shows the swans getting skittish and flying away".
+- **Lead:** the `c.position` argument was dropped in 88a3a5f (2026-09-20 22:42), when the pond became a missed
+  connection. Find out whether the sequence still reads as startled in play (the timing and the camera may carry
+  it), capture it, and show Jeremy before changing it.
+
+## 6. The stairs loop: the peep only
+
+- **Observed:** in `story/stairs.ts`, the `puzzled` beat calls `cue('puzzled')` and `k.call(false)` together;
+  `Cygnet.call(false)` cues `distress`. So each time round, the questioning peep plays with a distress call.
+- **Jeremy's ruling (2026-09-29): peep only.** It is puzzled, not frightened. Remove the distress call there (keep the
+  call marks if the peep should show them; check `fx/call-marks.ts`), and update `docs/stairs.md` (Principles) and
+  `docs/cygnet.md` (voice list).
+
+## 7. The dark wood: the child hides the ember at some stops
+
+- **Jeremy (2026-09-29):** "in the dark forest, at some of the points where the child stops, the camera position is
+  such taht the child is directly blocking the ember (the player can't see it)."
+- **Known:** she stops `tuning.wood.waitShort` (7 m) short of an unlit coal (`story/wood.ts`, around line 366), which
+  was meant to stop exactly this (8135c02). The camera is the walking shot (`docs/engine.md`, Cinematography).
+- **To do:** find which stops (every coal on the chain, desktop and portrait), measure the ember's screen position
+  against the child's silhouette at each stop, and fix so the waiting ember is always clear of her in frame. Camera
+  moves must stay committed and never jerk (`docs/engine.md`). Visual verification by an allowed visual model;
+  stills for Jeremy.
+
+## 8. Two audio checks not yet looked into
+
+- `audio-check` fails: "gustGain: player wind is 3 dB softer after departure". Decide whether the game or the check
+  is out of date (`tuning.audio.playerWindEase` and the island departure).
+- `birches-score-check` fails: "Cannot read properties of undefined (reading 'carried')": the fixture likely lacks a
+  cygnet. Probably stale.
+
+## 9. The browser group has not been run
+
+`npm run check:browser` (8 checks, GPU, one at a time) was not run during the docs verification. Run it once the
+branch in item 0 is in, and triage anything that fails the same way.
+
+## 10. Stale comments
+
+`src/traveller/body.ts:47` ("coat to the knee ... wellingtons") and `src/traveller/child/garments.ts:345`
+("wellington"): the coat is short and the boots are matte brown leather (Jeremy, 2026-09-27: "the brown leather in
+the concept art").
+
+## Out of scope
+
+The other known issues in `docs/roadmap.md` (the sky mirror's speckled patch, the boarding hop, the bag flap on a
+resumed save) stay there unless Jeremy adds them.

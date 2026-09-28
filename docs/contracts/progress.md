@@ -1,110 +1,115 @@
 # Progress and page lifecycle
 
-Jeremy's decision (2026-09-19): reload returns the player to a checkpoint at an island's entry or exit, or after a point of interest such as the piano. Hide/suspend audio when the page is hidden.
+Jeremy's rule: a reload returns the player to a checkpoint at an island's entry or exit, or just after a point of
+interest such as the piano. Sound is suspended while the page is hidden.
 
 ## Saving
 
-`src/story/progress.ts` stores one versioned JSON record in `localStorage` under `updraft.progress.v1`. It belongs to this browser and origin, with no account or server dependency. `Journey` writes on chapter changes and completed interaction exits, never every frame. A crossing's entry is the preceding island's exit. The saved location is the checkpoint location, not wherever the player happened to reload later.
+`src/story/progress.ts` stores one versioned JSON record in `localStorage` under `updraft.progress.v1`, belonging to
+this browser and origin (no account or server). `Journey` writes on chapter changes and completed interaction exits,
+never every frame. The saved location is the checkpoint's, not wherever the player was when they reloaded. A
+crossing's entry is the previous island's exit.
 
-Every chapter has an entry checkpoint. Additional exits:
+`Chapter.checkpoint` names the current safe point, `saveCheckpoint()` supplies its numeric payload and
+`restoreCheckpoint()` rebuilds the continuation. `src/story/checkpoint-data.ts` declares every permitted
+chapter/point pair and its positional fields (`CHECKPOINT_FIELDS`, from which `CHECKPOINTS` derives payload lengths),
+including legacy layouts. The pure `decodeProgress(unknown)` validator is shared with `readProgress()`; chapters own
+semantic clamping and migration. An incompatible schema change needs a version change or a migration. Restore clamps
+route indices; malformed or unknown saves and unavailable storage never prevent play.
 
-- Still island: the tree/fall/gather sequence, companion now in the arms.
-- Washing: past curtains one and two (`curtain-1`, `curtain-2`, two-number payloads), then through the family’s door (`family`, its existing two-number payload). Completed curtains stay open after restore. `family` resumes on the separate shore with the doorway crossed; older family saves on the washing island migrate to that shore, including the departure boat. A reload during the camera crossing returns to the previous curtain checkpoint.
-- Little boats: `pool-1` and `pool-2`, each with one number for fleet progress. Restore the travellers on
-  the dry bank between swims and rebuild the gathered toys at rest. Pre-Little-Boats `toMeadow` entry saves
-  from the washing shore resume at the current Little Boats departure berth.
-- Meadow: leaving the piano, then leaving the pond encounter.
-- Birches: each freed scarf tangle and leaving the one-time optional swing. `scarf4-1` through `scarf4-4`,
-  plus their `-swing` variants and `scarf4-0-swing`, store route leg, swing-used count, dusk and freed-tangle
-  count. The final checkpoint restores the red sail. Legacy `scarf-3` saves map to all four knots freed;
-  `scarf4-3` leaves the final bow intact. Older three-number swing/leaf saves resume their saved
-  walk position with one/two tangles already freed. Independent cygnet play creates no separate checkpoint.
-- Drowned village: wind has filled the sail and the boat is moving again.
-- Dark wood: companion found and gathered; recovered plane dried. The two-number payload remains leg/path
-  distance. Restore rebuilds earned light beside the child and leaves the next ember unlit at its saved distance.
-- Sleeping island: feather leaves the bed; morning together is over and they walk to the boat. The
-  feather checkpoint resumes the assisted climb with the summit curtains closed; the morning checkpoint
-  restores them open. Neither changes the payload or replays the bedside gesture.
-- Long crossing: companion's swim is over. The two-number payload remains leg/time; restore finds the nearest
-  waypoint to the saved boat position so checkpoints from the shorter coastal route continue toward home.
-- Sky mirror: `stars4-<mask>` (0–15) stores the completed-star bitmask and current destination. Restore rebuilds the
-  pair with the wand and held paper, preserves lights already overhead, and discards transient bubbles.
-  A partial constellation restores the boat offshore; only all four stars open its final approach.
-  Older `stars`/`stars-<mask>` saves retain partial progress; mask 7 restores all four to preserve completion.
-  New `stars4-7` saves leave the fourth light playable.
-  Legacy `moon`/`tide`/`lantern` map to 0/1/2 restored stars; `reflection`/`window` restart with none.
-  Voyages use `toMirror` (entry/swim) and `toHarbour` (entry); old `toHome` saves continue through `toMirror`,
-  so players from before the sky mirror still reach it (a `swim` save resumes in open water on the new route).
-- Home: reunion is over (resume the walk toward the house); house/drawing recognition is complete (resume
-  with the sheet open at the brow, without replaying the motif); completed ending. Existing checkpoint names
-  `reunion`, `drawing` and `complete` remain valid.
+Every chapter has an entry checkpoint. The additional points:
 
-`Chapter.checkpoint` names a safe exit; `saveCheckpoint()` supplies its numeric story state and `restoreCheckpoint()` rebuilds its continuation. `CHECKPOINTS` declares permitted chapter/point pairs and payload lengths. Changing this schema incompatibly requires a version change or migration. Restore clamps route indices. Malformed/unknown saves and unavailable storage must not prevent playing.
+- Still island: `companion`, after the tree, the fall and the gather, the bird in the child's arms.
+- Washing (`lines`): `curtain-1` and `curtain-2` (opened curtains stay open), then `family`, which resumes on the far
+  shore with the doorway crossed. A reload during the camera crossing returns to the previous curtain.
+- Little Boats: `pool-1` and `pool-2` with fleet progress; the travellers restore on the dry bank between swims and
+  the gathered toys at rest.
+- Meadow: `piano` (leaving the piano) and `pond` (leaving the pond encounter).
+- Birches: `scarf4-1` to `scarf4-4` for each freed tangle, plus `-swing` variants (and `scarf4-0-swing`) after the
+  one-time optional swing; the payload holds route leg, swing count, dusk and freed tangles. The last restores the red
+  sail. Independent cygnet play makes no checkpoint.
+- Stairs in the clouds: `flight-1` to `flight-3`, the number of flights docked; restore rebuilds the docked stairs and
+  stands the pair at the matching landing.
+- Drowned village: `sail`, once the wind has filled the sail and the boat moves again.
+- Dark wood: `found` (companion found and gathered) and `dry` (plane recovered and dried), with leg and path distance;
+  restore rebuilds the earned light and leaves the next ember unlit.
+- Sleeping island: `feather` (the feather leaves the bed; resumes the assisted climb with the summit curtains closed)
+  and `morning` (the walk to the boat, curtains open). Neither replays the bedside gesture.
+- Long crossing (`toMirror`): `swim`, once the companion's swim is over, with leg and time; restore finds the nearest
+  waypoint to the saved boat.
+- Sky mirror: `stars4-<mask>` (0–15), the completed-star bitmask and current destination. Restore rebuilds the pair
+  with the wand and paper and the lights already overhead, and drops transient bubbles. A partial constellation
+  restores the boat offshore; only all four stars open the final approach.
+- Home: `reunion` (resume the walk to the house), `drawing` (the sheet open at the brow, without replaying the motif)
+  and `complete`, which returns to the thank-you screen until replay is chosen.
 
-`story/checkpoint-data.ts` names the positional fields in `CHECKPOINT_FIELDS`, derives `CHECKPOINTS` lengths
-and supplies numeric tuple types to the current chapter writers. Legacy layouts remain explicit. The pure
-`decodeProgress(unknown)` validator is shared with `readProgress()`; chapter-specific restoration still
-owns semantic clamping and migration. `tools/progress-schema-check.mjs` compares all 69 layouts and valid/
-malformed records against the pre-refactor decoder. This consolidation does not change the v1 wire format.
+Legacy saves stay playable: older point names and payloads (`scarf-*`, `swing` and `leaves` on the birches; `stars`,
+`stars-<mask>`, `moon`, `tide`, `lantern`, `reflection` and `window` on the mirror; `toHome` routed through
+`toMirror`) map onto the current ones in each chapter's restore. Saves from earlier island layouts carry a geography
+revision: `src/story/geography-progress.ts` translates travellers, boat and local life regions to the current
+`GEOGRAPHY_VERSION` once, before chapter restoration.
 
-Wing care is reconstructed from chapter and checkpoint by `story/wing-care.ts`: bare before the fall, wrapped from
-the companion checkpoint through sleeping/feather, and free from sleeping/morning onward. The same rule migrates
-older saves and applies to chapter shortcuts. No checkpoint falls inside treatment or unwrapping, so there is no
-new serialized animation state. A reload before the sleeping glide repeats the hilltop release; later saves never
-put the bandage back on.
+Wing care is reconstructed from chapter and checkpoint by `src/story/wing-care.ts`: bare before the fall, wrapped from
+`companion` through Sleeping's `feather`, free from `morning` on. No checkpoint falls inside the treatment or the
+unwrapping, so no animation state is serialised.
 
-The record keeps the travellers' checkpoint positions, boat state, companion bond/flight count/seat, plane condition, life regions and chapter-specific progression. A completed piano is not replayed or re-scored; its wave and waiting region are retained. Transient wind, individual leaves, particle fields and animations are rebuilt, not serialized. Checkpoints wait until the current child/carry action is complete; restore starts from a stable pose with new callbacks and relative timers.
+The record holds the travellers' checkpoint positions, boat state, companion bond, flight count and seat, plane
+condition, life regions and chapter progression. A completed piano is not replayed or re-scored. Transient wind,
+leaves, particles and animations are rebuilt, not saved. Checkpoints wait until the current child or carry action is
+complete; restore starts from a stable pose with fresh callbacks and relative timers. Restore also sets the musical
+phase (for example Sleeping's `morning` selects the sea mood) and never emits reward cues; see `audio.md`.
 
-Geography revision 4 places Little Boats west of the door shore for the shorter crossings. Original and
-revision 1/2/3 saves translate
-the travellers, boat and local life regions together at `boats` and `toMeadow` checkpoints, preserving pool
-progress. Revision 3 saves receive only the adjustment from the longer offshore layout. Revision 2/3 saves
-retain their existing mirror/home coordinates and swim progress; the earlier sea
-relocation applies only to older revisions. Migration runs once, before chapter restoration.
-
-Startup restores before the initial camera cut, terrain bake and warm render. `Play again` clears the record before reloading. The completed-ending checkpoint returns to the thank-you screen until replay is chosen. `?shot` and `?chapter=` neither read nor write normal progress; use `?progress=1` explicitly for persistence QA, or `?progress=0` to disable it.
-
-Restore the musical phase with the story state. Sleeping's `morning` selects the sea mood and `hush=0.1`;
-earlier Sleeping progression retains wood. Completed piano restoration clears pending completion audio.
-Neither restore emits reward cues. See `audio.md` for gesture, source and cue contracts.
+Startup restores before the first camera cut, terrain bake and warm render. `Play again` clears the record before
+reloading. `?shot` and `?chapter=` neither read nor write progress unless `?progress=1` is given; `?progress=0`
+disables it.
 
 ## Chapter select
 
-Jeremy's decision (2026-09-27): once the game has been finished, the title screen offers a faint `chapters` under
-Begin/Continue. It opens a strip of small, soft-edged stills of the rooms, each with a one- or two-word name, and a
-pick begins that room. It must not cost new players anything, so `src/chapter-select/` (script, CSS and stills) is
-a separate chunk that only a finished player's title screen imports, and the stills download when `chapters` is
-reached for.
+Once the game has been finished, the title screen offers a faint `chapters` under Begin/Continue: a strip of small,
+soft-edged stills of the rooms, each with a one- or two-word name; a pick begins that room. It must cost new players
+nothing, so `src/chapter-select/` (script, CSS and stills) is a separate chunk that only a finished player's title
+screen imports, and the stills download only when `chapters` is opened (`tools/chapter-stills.mjs` captures them).
 
-Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; a completed save from before the flag sets it
-on the next visit. A pick is held per tab in `sessionStorage` (`updraft.chosen-chapter`) and reloads the page into
-that `?chapter=` start with saving on. Until the room's entry checkpoint is saved, the existing save is untouched
-but ignored, so closing the tab after picking loses nothing. `node tools/chapter-select-check.mjs` checks it.
+Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; an old completed save sets it on the next
+visit. A pick is held per tab in `sessionStorage` (`updraft.chosen-chapter`) and reloads the page, which starts that
+room as `?chapter=` would, with saving on. Until the room's entry checkpoint is saved, the existing save is ignored
+but untouched, so closing the tab after picking loses nothing.
 
 ## Hidden pages and sound
 
-`Soundscape` responds to `visibilitychange`, `pagehide` and `pageshow`. It suspends the existing AudioContext while hidden or muted, and resumes it on return only if sound was already started and enabled. It never creates audio on a visibility event. If the browser requires a fresh gesture to resume, the next pointer-down retries. A rejected resume does not break gameplay.
+`Soundscape` responds to `visibilitychange`, `pagehide` and `pageshow`. It suspends the AudioContext while hidden or
+muted and resumes it on return only if sound was started and enabled; it never creates audio on a visibility event.
+If the browser wants a fresh gesture, the next pointer-down retries, and a rejected resume never breaks play.
 
-A call, Siri or another app can stop a visible, unmuted context (iOS reports `interrupted`, or it is left
-`suspended`). `Soundscape` then retries `resume()` on `statechange`, `pageshow`, window `focus` and any pointer
-press or release (a touch grants activation on release). Story cues raised meanwhile are held on the frame clock
-and play, in order and before that frame's own, once audio runs again, if they are younger than
-`tuning.audio.heldCueLife` (3 seconds); a held foghorn keeps its 0.25-second lateness allowance. Muted, hidden
-and not-started audio still consume cues, and muting or hiding drops any held ones. Score state already follows
-the story. `node tools/audio-interruption-check.mjs` checks this against a dev server (`BASE`).
+A call, Siri or another app can stop a visible, unmuted context (iOS reports `interrupted`, or leaves it
+`suspended`). `Soundscape` then retries `resume()` on `statechange`, `pageshow`, window `focus` and any pointer press
+or release. Story cues raised meanwhile are held on the frame clock and play, in order and before that frame's own,
+once audio runs again, if younger than `tuning.audio.heldCueLife` (3 s); a held foghorn keeps its 0.25 s allowance.
+Muted, hidden and not-started audio still consume cues, and muting or hiding drops held ones.
 
-The frame loop skips simulation and rendering while hidden, and resets its time baseline on visibility changes. Story time therefore waits with audio; a long absence does not advance a scripted beat or appear to the quality governor as a slow frame.
+The frame loop skips simulation and rendering while hidden and resets its time baseline on visibility changes, so
+story time waits with audio and a long absence is neither a scripted jump nor a slow frame to the quality governor.
 
-Verification: `node tools/progress-check.mjs` against a dev server; `BASE` selects another server. It uses an isolated browser profile and does not touch a player's saves. Logs and screenshots go to `/tmp`.
+The sound on/off choice persists in `updraft.sound.v1` (`src/sound-preference.ts`) and the graphics choice in
+`updraft.quality.v1` (`src/gl/quality-preference.ts`); both fall back gracefully when storage is unavailable. Only a
+deliberate toggle writes them; `?shot` stays muted.
 
 ## Lost graphics context
 
-`src/gl/context-recovery.ts` listens before WebGL boot. A real context loss pauses the frame loop, mutes audio
-and makes the game controls inert. The recovery dialog reloads the page from its last valid checkpoint (or
-restarts when no save exists). Browser context restoration alone does not resume play: wind simulation textures
-and raw readback fences cannot be reconstructed by Three.js's ordinary resource restoration. No save is written
-by recovery, so an interrupted action returns to the preceding stable checkpoint.
+`src/gl/context-recovery.ts` listens before WebGL boots. A real context loss pauses the frame loop, mutes audio and
+makes the controls inert; an uncaught exception inside a frame takes the same path. The recovery dialog reloads the
+page from its last valid checkpoint (or restarts when there is none). Browser context restoration alone does not
+resume play, because the wind simulation textures and readback fences cannot be rebuilt by Three.js's ordinary
+restoration. Recovery writes no save, so an interrupted action returns to the preceding checkpoint.
 
-`node tools/context-loss-check.mjs` uses `WEBGL_lose_context` in local Chrome, restores the context, verifies
-that the broken simulation remains paused, then reloads through the UI and checks that wind readbacks advance.
-It covers both saved and unsaved play. A phone is not needed for this fault-injection check.
+## Checks
+
+- `node tools/progress-check.mjs`: checkpoint writes and restores, replay, storage failures and hidden-page audio,
+  in an isolated browser profile against a dev server (`BASE`); it never touches a player's saves.
+- `node tools/progress-schema-check.mjs`: every current and legacy layout, and valid and malformed records, against
+  the pre-refactor decoder read from Git (`BASELINE_REF`, default in `tools/lib/baseline.mjs`).
+- `node tools/chapter-select-check.mjs`: hidden and never downloaded for new players, offered after finishing, picks
+  and save handling.
+- `node tools/audio-interruption-check.mjs`: held cues through an interruption and the resume retries.
+- `node tools/context-loss-check.mjs`: real `WEBGL_lose_context` during boot and play, with and without a save; the
+  simulation stays paused, and the reload restores working wind readbacks.

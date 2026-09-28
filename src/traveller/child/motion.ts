@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Rig } from '../body';
-import { ANKLE, BONE, FOREARM, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
+import { ANKLE, BONE, FOREARM, HEAD_SINK, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
 import { HOOD, coatAt, hemY, type CoatSample } from './garments';
 
 /** Where the head turns when it looks up, from the head joint: ear height, a little behind the face's middle. */
@@ -36,6 +36,8 @@ export interface Pose {
   arms: [ArmPose, ArmPose];
   /** 0..1 weights of the leg poses other than standing and walking. */
   sit: number;
+  /** Of `sit`, how much is on the ground with the legs out in front, where the coat has to ride up over the thighs. */
+  lap: number;
   kneel: number;
   swing: number;
   /** On a swing: -1 tucked at the back of the arc to 1 legs out at the front. */
@@ -55,7 +57,7 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, lie: 0, step: [0, 0], breath: 0,
   };
 }
 
@@ -155,6 +157,11 @@ const scratch = (): Scratch => ({
 });
 
 /** Where each hem bone hangs from, its outward axis and its radial direction, in the hips' frame. */
+/** How far the front of the hem swings up onto the lap when sitting, radians. */
+const LAP_DRAPE = 0.9;
+/** As much of it with the feet hanging over an edge: the coat rests on the thighs, less than a tray. */
+const HANG_DRAPE = 0.5;
+
 const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
   const a = hemAngle(i);
   const radial = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
@@ -190,6 +197,8 @@ export class ChildMotion {
   private readonly chestGravity = new THREE.Vector3();
   private readonly air = new THREE.Vector3();
   private readonly outs = new Array<number>(HEM_BONES).fill(0);
+  /** Sat down, 1 with the feet resting on something in front, 0 with them hanging over an edge. */
+  private feetDown = 1;
   private readonly m = new THREE.Matrix4();
   private readonly hemOut = HEM.map(() => new Spring(1.75, 0.3));
   private readonly hemSide = HEM.map(() => new Spring(1.1, 0.35));
@@ -200,6 +209,9 @@ export class ChildMotion {
   private readonly bagRoll = new Spring(1.7, 0.32);
   private readonly flapOpen = new Spring(1.3, 0.5);
   private readonly flapSwing = new Spring(1.5, 0.28);
+  /** Each pigtail's swing forward and back, then out and in: light and springy, so they bounce with each step. */
+  private readonly pigSwing = [0, 1].map(() => [new Spring(2.6, 0.16), new Spring(2.4, 0.16)]);
+  private readonly headGravity = new THREE.Vector3();
   private readonly lastHips = new THREE.Vector3();
   private readonly hipsVel = new THREE.Vector3();
   private readonly hipsAcc = new THREE.Vector3();
@@ -302,6 +314,7 @@ export class ChildMotion {
     neck.rotation.set(pose.headPitch * 0.35 + up * 0.2 - bodyPitch * steady * 0.5, pose.headYaw * 0.4 - bodyYaw * steady * 0.6 + lead, pose.headRoll * 0.3 - bodyRoll * steady * 0.6);
     head.rotation.set(pose.headPitch * 0.65 - up * 0.2 - bodyPitch * steady * 0.3 + 0.6 * bounce, pose.headYaw * 0.6 - bodyYaw * steady * 0.3, pose.headRoll * 0.7 - bodyRoll * steady * 0.3);
     head.position.copy(rest[BONE.head]).sub(rest[BONE.neck]);
+    head.position.y -= HEAD_SINK;
     head.position.y += EAR.y * (1 - Math.cos(tipBack)) + EAR.z * Math.sin(tipBack);
     head.position.z += EAR.z * (1 - Math.cos(tipBack)) - EAR.y * Math.sin(tipBack);
 
@@ -363,6 +376,7 @@ export class ChildMotion {
     const root = this.rig.root;
     const hips = b[BONE.hips];
     const rest = this.rig.rest;
+    let feetDown = 1;
     for (const left of SIDES) {
       const s = left ? 1 : -1;
       const thigh = b[left ? BONE.thighL : BONE.thighR];
@@ -402,7 +416,10 @@ export class ChildMotion {
       // Sitting: feet out in front on whatever is under them.
       const sitAnkle = this.vb.set(hipAt.x + s * 0.03, ANKLE, 0.44);
       const sitWorld = this.va.copy(sitAnkle).setY(0).applyMatrix4(root.matrixWorld);
-      sitAnkle.y = Math.max(ANKLE + (d.ground(sitWorld.x, sitWorld.z) - root.position.y) / SCALE, rest[BONE.hips].y - 0.6 - pose.sit * 0.0);
+      const floorAnkle = ANKLE + (d.ground(sitWorld.x, sitWorld.z) - root.position.y) / SCALE;
+      const hangAnkle = rest[BONE.hips].y - 0.6;
+      sitAnkle.y = Math.max(floorAnkle, hangAnkle);
+      feetDown = Math.min(feetDown, 1 - THREE.MathUtils.smoothstep(hangAnkle - floorAnkle, 0, 0.12));
 
       // Blend: the planted walk, the sit, and a lifted knee for a step up.
       const standW = 1 - pose.sit;
@@ -449,6 +466,7 @@ export class ChildMotion {
       this.qb.multiply(this.qc);
       foot.quaternion.copy(this.qa.invert().multiply(this.qb));
     }
+    this.feetDown = feetDown;
   }
 
   private secondary(pose: Pose, d: Drive, dt: number): void {
@@ -507,6 +525,11 @@ export class ChildMotion {
       for (const p of legPts) floor = Math.max(floor, this.hemClear(i, p));
       const drop = pivotY - groundY - 0.035;
       if (drop < h.length && up > 0.5) floor = Math.max(floor, Math.acos(THREE.MathUtils.clamp(drop / h.length, -1, 1)));
+      /**
+       * Sat down with the legs out in front, the front of the coat rides up over the thighs and lies on the lap instead
+       * of the knees going through it. Sat on an edge with the feet hanging, it only rests on them.
+       */
+      floor = Math.max(floor, pose.lap * THREE.MathUtils.lerp(HANG_DRAPE, LAP_DRAPE, this.feetDown) * Math.max(0, h.radial.z));
       if (a < floor) {
         a = floor;
         this.hemOut[i].x = floor;
@@ -540,6 +563,18 @@ export class ChildMotion {
     const yaw = this.hoodYaw.step(THREE.MathUtils.clamp(-this.headYawVel * 0.06 + headAir.x * 0.004, -0.14, 0.14), dt);
     const roll = this.hoodRoll.step(THREE.MathUtils.clamp(-headAir.x * 0.004 + Math.sin(d.time * 9 + 1) * 0.012 * flutterAmp, -0.1, 0.1), dt);
     hood.rotation.set(pitch, yaw, roll);
+
+    // -- The pigtails bounce with each step, lag the head as it turns and stream a little in the wind.
+    const hg = this.headGravity.set(0, -GRAVITY, 0).sub(this.chestAcc).applyQuaternion(this.qb);
+    const load = -hg.y / GRAVITY - 1;
+    for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? 1 : -1;
+      const [fore, out] = this.pigSwing[i];
+      const flick = flutterAmp * 0.08 * Math.sin(d.time * (8 + i) + i * 1.7);
+      const f = fore.step(THREE.MathUtils.clamp(Math.atan2(-hg.z, -hg.y) * 0.8 - headAir.z * 0.02 + this.headYawVel * 0.04 * side + flick, -0.5, 0.5), dt);
+      const o = out.step(THREE.MathUtils.clamp(Math.atan2(hg.x, -hg.y) * 0.8 + headAir.x * 0.02 - load * 0.3 * side - this.headYawVel * 0.03 + flick, -0.5, 0.5), dt);
+      b[i === 0 ? BONE.pigL : BONE.pigR].rotation.set(f, 0, o);
+    }
 
     // -- The bag swings from its straps and bumps with every step.
     chest.getWorldQuaternion(this.qa);

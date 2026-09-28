@@ -78,14 +78,16 @@ export function starLight(floor = false): THREE.Mesh<THREE.PlaneGeometry, THREE.
   return mesh;
 }
 
+/** How far the film's centre sits above the mitten, which holds the wand at the end of its handle. */
+export const WAND_REACH = 0.95;
+
 export function soapWand(): THREE.Group {
   const group = new THREE.Group();
   const brass = mirrorMaterial('#dfbc80');
-  // Origin is the mitten's grip. The film's centre is 0.95 above it.
   const loop = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.038, 8, 48), brass);
-  loop.position.y = 0.95; group.add(loop);
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 0.6, 8), brass);
-  handle.position.y = 0.1; group.add(handle);
+  loop.position.y = WAND_REACH; group.add(loop);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.44, 8), brass);
+  handle.position.y = 0.14; group.add(handle);
   group.traverse(o => o.layers.enable(REFLECTION_LAYER));
   return group;
 }

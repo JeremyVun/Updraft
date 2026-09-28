@@ -249,7 +249,7 @@ export class StairsChapter implements Chapter {
     plane.visible = true;
     this.oldRadius = plane.homeRadius;
     boat.altitude = null;
-    child.dismount();
+    child.stepAshore(boat);
     this.limit = this.reachable();
     child.walkTo(STAIRS_ARRIVAL.x, STAIRS_ARRIVAL.y, false, () => this.to('wonder'), 0.8);
   }
@@ -823,7 +823,7 @@ export class StairsChapter implements Chapter {
     k.stay = false;
     c.walkTo(SIT.x - TOP_OUT.x * 0.3, SIT.z - TOP_OUT.z * 0.3, false, () => {
       c.walkTo(SIT.x, SIT.z, false, () => {
-        c.faceToward(this.sun.x, this.sun.z, 1);
+        c.faceToward(SIT.x + TOP_OUT.x, SIT.z + TOP_OUT.z, 1);
         c.sitDown();
       }, 0.12);
     }, 0.2);

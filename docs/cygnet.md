@@ -1,408 +1,132 @@
 # The cygnet
 
-## The recovering wing (Jeremy's approved direction, September 20)
+The child's companion and the game's co-star: a swan cygnet that fell out of its family's V on the first island.
+How it appears in each room is in `docs/chapters.md`.
+
+## Jeremy's words (verbatim)
+
+On the companion becoming a swan cygnet:
+
+> "yea i think a swan cygnet will work a lot better. Ugly duckling is exactly the feel i think this should go. As
+> the child's companion, the swan cygnet is a co star in this game so all it's animations, sounds, behaviour, poses,
+> how it flaps, falls/tumbles from the sky at the start, how it climbs ontop of the child, is carried by the child
+> need to be super high quality, seamless and beyond reproach. It should feel like another real character with
+> it's own emotions, thoughts, and liveliness. Especially with teh way it interacts with the child, it should look
+> completely seamless and cohesive. This is a big piece of work that requires extreme attention to deail"
+
+> "I'm also thinking that there could be a nice moment in the game where the little swan cygnet has their brave
+> moment to swim by themselves next to the child, maybe a bit later in the game where it makes sense. Have a think
+> as well about whether the swan cygnet should react to the players 'wind'"
+
+On the recovering wing, approved with "beautiful! yes lets do this":
 
 > "what if we give the cygnette a bandaged wing from it's fall in the starting island. And then later on during the sleeping scene, it's only then that the cygnette confronts its fears and somehow manages to have the bandage come off so that it can do it's flight later on? Instead of the flight practice happening in the meadows, it can be swim practice or something?"
 
-Approved: “beautiful! yes lets do this”. This supersedes the meadow's flight practice below.
+## Who it is
 
-The child gathers the fallen cygnet, supports it against their coat and winds a small linen wrap around its left
-wing. It favours that wing early; the increasing range of its ordinary stretches shows recovery across the islands.
-Jeremy’s follow-up asks for recognisable bandage layers: three overlapping, slightly uneven gauze turns, visible seams and a tucked end. The bandage has no icon, instructions or removal puzzle. The wing heals before the bird finds the courage to fly.
-The wrap follows the actual wing surface and its joint weights: broad at the shoulder, narrowing toward the wrist,
-with a thin cloth allowance. Its edges and tucked end stay against that shape when the wing moves.
+The ugly duckling (Jeremy: "Ugly duckling is exactly the feel"): a grey, clumsy thing that fell out of a line of
+white birds. The family that comes for it at home is white, and by then the first white shows at its own wing edges
+(`grown`). Cygnets ride on their parents' backs; this one rides on the child. Swans need a long pattering run to
+take off, which gives every attempt a shape a player can read.
 
-At the pond, the adults begin their migration while the child is still standing on the rise. The view
-holds the whole family; northmost birds lead the staggered takeoff. Only then does the child approach and
-the cygnet call after them. This is a missed connection, not the child startling the family away or parents
-hearing their injured young and rejecting it. The child offers the water. The cygnet paddles a little way
-after the family, watches where they went, then returns to the child's waiting hands. This is attachment,
-not another swimming tutorial after the little boats.
+**Voice.** It is silent except in distress and when it calls to its family: the fall, the pond, hiding in the dark
+wood, the one unanswered call on the sleeping island, a questioning peep on the stairs, the call at home that is
+answered, and now and then when it is left standing on its own feet while the child is still. Every call is echoed
+by three small cream strokes above it (`fx/call-marks.ts`, `tuning.cygnetCalls`). Adult swans are other animals and
+may be loud: bugling and the whistle of their wings.
 
-At the sleeping hilltop it looks back toward the child, slowly opens both healed wings, and the loose cloth unwinds
-into the wind. Only then does the updraft invitation begin. Its first glide brings morning back to its friend;
-its later flight at home is the farewell. The sleeping island now waits for player wind at feather release and takeoff; the walk remains assisted.
+## Its arc
 
-Implementation: `creatures/cygnet/bandage.ts` is one continuous linen strip, fitted to the shared arm geometry, wound by
-`Carry.gatherUp(..., true)` and released by `SleepingChapter`. `WingBandage.flightReady` independently prevents
-early wind flight and practice hops. `story/wing-care.ts` reconstructs care and recovery from chapter/checkpoint,
-including old saves and direct chapter starts; no save schema change. Knobs: `tuning.wingCare` and `tuning.crest`.
-Verification: `node tools/wing-care-check.mjs` checks the real actors and chapters at 30/60/120 fps, with no input
-and strong wind, treatment completion, the pond's exit, release-before-flight and checkpoint history. GPU captures
-of care, pond and hilltop supplement those logic checks.
+- **The wing.** A winter gust tumbles it out of the V with its left wing bent back. The child gathers it
+  and winds a linen wrap round that wing (`creatures/cygnet/bandage.ts`: one continuous strip fitted to the wing's
+  geometry and joint weights, wound by `Carry.gatherUp(..., true)`). It favours the wing early, and its ordinary
+  stretches reach further island by island. At the sleeping island's summit it takes the loose end in its bill and
+  unwinds it; only then can it fly. `WingBandage.flightReady` gates flight and practice hops independently;
+  `story/wing-care.ts` reconstructs care and healing from the chapter and checkpoint, so direct starts and old
+  saves agree (`tuning.wingCare`).
+- **Flight.** It cannot fly on the early islands. Its first flight is the sleeping island's glide back to the child
+  on the player's wind; its last is at home, where the player's updraft lifts it to its family. Flight is the
+  player's verb: a gust only makes it hope and open its wings (`tuning.colt.gustLift`); an updraft held under it
+  lifts it (see `docs/contracts/wind.md`).
+- **The wind.** The child never acknowledges the player; the cygnet does. It looks into the wind, up to where a
+  gust came from, as if someone were there. Afraid of it first (a gust flattens it and it patters to the child's
+  feet), then curious, then asking for it, and at home trusting it to hold it up. The down ruffles along the real
+  wind, a hard gust makes it brace, a harder one bowls it over a step. Never a torment: fear from the player's wind
+  is capped and spent once per gust and always ends at the child; a player who keeps blowing on it gets a bird that
+  hides, not one that suffers.
+- **Water.** It paddles three sheltered stretches beside the little boats, swims after its family on the meadow
+  pond and comes back to the child's hands, and makes its brave swim on the open sea, going over the side while the
+  child does nothing but stay, and swimming in the wave along the hull (`CrossingOpts.swimAt`, `story/crossing.ts`).
 
+## Where it rides
 
-The companion becomes a swan cygnet and is rebuilt as the game's co-star. Jeremy's brief is verbatim in
-`journey.md` ("On the companion becoming a swan cygnet"). It is **on `main`** (merged 2026-09-18, `eb1d7c6`); the
-parcels still open are under Status. When it ships, the lasting parts of this file fold into `journey.md` and this file
-is deleted.
+- **In the satchel on the child's back** on the walks: the camera behind her always sees it, and it can look back
+  at the wind. It sits across the bag, facing out past her left shoulder, its head beside the hood.
+- **Across her chest in both arms** for the tender moments and in the boat; **in her lap** sitting down.
+- **On its own feet** wherever a room gives it play: the birches' leaves, the stairs (it goes up first), the sky
+  mirror, the ends of the little boats' pools.
+- It gets into her hands by itself: she kneels and holds them out low and still, and it hops up. Nothing is done to
+  it. It is never teleported between places; every move is a shared moment.
 
-## Who does the work
+## How it is built
 
-Jeremy's global model routing sends visual work to Astra or Opus, and says why: to keep the expensive grind of
-iterating on a look off Fable, while a Fable lead still looks at results, accepts or rejects them and writes what it
-saw into the next brief. Asked whether that binds this feature, Jeremy left the decision to the owning session (his
-words are in `journey.md`). Decision:
+**Contact is one system.** Sockets on the child's rig (`cradle`, `satchel`, `shoulder`, `lap`) carry every lean,
+breath, crouch and jolt of hers to the bird, with a jostle spring on top as the passenger's lag. The child has
+elbows and two-bone arm IK (`reachFor`, `reachLocal`), so a mitten goes on a point of the bird. Shared moments
+(`companion/carry.ts` on the shared timeline in `companion/duet.ts`) drive both characters from one clock with
+anticipation and settle: `gatherUp`, `setDown(onDone, facing)`, `stow`, `unstow`; the fear of the fall and of the
+dark wood turn up the gather's hesitation. `cygnet/ride.ts` places it: on the ground, in a seat, in the hands, or on
+the surface path over her shoulder, all read live.
 
-- **The owning Fable session** holds the design and this document, builds the systems (the child's arm IK and
-  sockets, the duet timeline, attention, feelings and the behaviour scheduler, locomotion and flight mechanics, the
-  wind relationship, sound, the stage and the numeric gates), wires the story, looks at a handful of captures at
-  each checkpoint, and decides what is accepted.
-- **Opus agents** do the visual production: the model, the down shader and palette, the adult swans, and the
-  pose and timing passes that are judged by eye. Each gets one complete bounded parcel, its own worktree forked
-  from `cygnet` under `/private/tmp`, its own dev-server port and `/tmp` prefix, and is never sent a follow-up; a
-  further pass is a new agent with a new brief that carries the findings forward.
-- The seams between the two are small files with a stated contract: `cygnet/body.ts` (skeleton, rest space,
-  `HOLDS`), `cygnet/shader.ts` (`Look`, `cygnetMaterial`, `applyLook`), `cygnet/wings.ts` (`WingPose`, `poseWings`).
-- Jeremy gives the final verdict. Product copy is not involved.
+**A mind** (`cygnet/mind.ts`): each frame a few things compete for its eye (the child's face, her hands coming
+toward it, the plane, the nearest creature, a gust, the flock, the light in the wood), and the winner gets a real
+look, eyes and head first, body last. After anything new or frightening it looks at the child's face, and what she
+is doing decides how it settles: the bond made visible. Continuous feelings (fear, curiosity, contentment,
+tiredness, cold, longing) set posture, tempo and which acts are allowed, and a scheduler picks one act at a time
+(preening, nibbling, stretching, yawning, shaking and wagging, chasing, investigating, delving into leaves).
+`cygnet/pose.ts` turns drives into bones.
 
-## What the story gains
+**A body to be looked at closely** (`cygnet/body.ts`, `parts.ts`, `shader.ts`, `wings.ts`): pear-shaped, low to the
+ground, a soft neck long enough for an S, a round head with a long flat dark bill, bare lores and big dark eyes,
+short legs set well back, outsized dark webbed feet, downy arm-wings with no quills folded into one soft teardrop,
+a stub tail that wags. Four neck bones, spread webs, a tail spring, a breast bone for breath. Down is a soft shell
+that fluffs with cold and contentment, lies sleek with fear (`sleek`), goes soaked in water (`wet`), and ruffles in
+a gust; `grown` brings white to the wing edges late in the journey.
 
-The ugly duckling: a grey, clumsy thing that fell out of a line of white birds. Nobody says it, but the ending
-says it back: the family that comes down out of the night is white, and the first white feathers are showing
-through its down by then. Cygnets ride on their parents' backs, so riding on the child is what the species does
-with the one it trusts. Swans need a long pattering run to take off, which gives every flight attempt a shape a
-player can read: run, slap, lift, or run, slap, tumble.
+**Locomotion by distance, not time** (`cygnet/gait.ts`): feet plant and stay planted, the body rolls over the
+standing foot and the tail counters (the waddle); the head holds steady between steps; hurrying is a patter with
+wings out; it turns almost on the spot. `cygnet.ts` holds the states and mechanics: the fall, the run-up and
+face-plant, the glide, clumsy landings, perching, swimming (`swimTo`, `ashore`, `swimLevel`, `swimPlay`) and
+leaving.
 
-What changes in the story text: "cranes" become swans; the skein is white; the meadow-crest "wheeling up a
-thermal" becomes the family **resting on the water of the far bay**, white on dark water, heads up, before they
-go on (swans do not thermal); the reunion keeps its low circle over the hill, which is how swans come round to
-land. The voice rule is unchanged: the cygnet is silent except in distress and when it calls to its family.
-Adult swans are other animals and may be loud: bugling, and the whistle of their wings.
+**The adults** (`creatures/flock.ts`, `SwanFlock`): white, necks straight out, black feet trailing, articulated
+wings with a slow deep beat. They rest on the meadow pond and leave in a staggered pattering take-off; at home they
+come over high and calling, wheel in a circuit (`tuning.swanArrival`) and go north in a V that the cygnet joins at the
+tail station (`goOn`, `tuning.swanDeparture`). The skein on the first island reserves the cygnet's own body in its
+last station.
 
-## Why the colt fell short, from the code
+**Sound** (`audio/foley.ts`, driven by `cygnet.heard` events from `main.ts`): feet on sand, grass and planks, wing
+flutter, the whole-body shake, the thump and skid of a bad landing, down against the coat, the plunge and paddle;
+the swans' bugle and wingbeat.
 
-- The bird and the child never touch. `Traveller.pickUp` is a 0.9 s bow with straight arms; the colt then lerps
-  through the air for 0.5 s to a fixed offset (`ARMS` in `crane.ts`). Neither knows where the other's body is.
-- The ride points (`armsPoint`, `hoodPoint`) are computed from the child's position and yaw, not from the rig, so
-  the bird does not inherit the child's lean, crouch, sit, breath or bob; the bob is re-added by hand.
-- The child has no elbows, so it cannot hold anything in its arms; `cradle` clamps one straight arm.
-- The climb into the hood is a bezier through a shoulder point. The child does not react to being climbed.
-- Behaviour is a set of independent timers (blink, glance, preen, peck). Nothing connects noticing to reacting,
-  so it reads as idling, not as thinking.
-- Locomotion advances a stride phase by time, so feet slide; a waddle needs the body to roll over a planted foot.
+## Rulings
 
-## The design
+- Pale, not slate: a warm taupe-grey down that stays pale in shade and at distance (the shell rim, not the palette,
+  is what reads it pale). "Too pale" is also wrong.
+- Snug in the satchel: it looks comfy and snuggled in, and nothing of it pokes out through the bag or shows
+  through the child from the camera behind (its grass depth bias `uNudge` is off whenever it is carried).
+- Half lost in the grass is fine for a fledgling that cannot fly; where the child goes is the signal.
+- When the player is asked to help it fly, it must actually fly for the circling they do; it never wanders off
+  instead.
+- It never flies before the sleeping island, and never on the stairs.
 
-### 1. Contact is one system, not two animations
+## Checking it
 
-- **Sockets on the child's rig**, parented to the bones they belong to: `cradle` (crook of both arms on the
-  chest), `shoulder`, `hood`, `lap` (sitting, and in the boat), `palms` (midpoint of the two mittens). The cygnet
-  rides a socket's world matrix, so every lean, breath, crouch and jolt of the child reaches it for free. The
-  existing jostle spring stays on top of that as the passenger's own lag.
-- **Elbows and two-bone arm IK for the child**, so a mitten can be put on a world point: under the cygnet's
-  belly, on its back to steady it, over it in the rain.
-- **Contact markers on the cygnet**: belly-left, belly-right, back, breast. Hands aim at markers; while it is in
-  the hands, the cygnet's root is driven by `palms`. One side always leads and the other is solved from it, so
-  they cannot drift apart.
-- **Duets**: a shared timeline that drives both characters from one clock. Each is authored as beats with
-  anticipation and settle, and each has a bond-dependent variant where it matters.
-  - *Gather up* (first time): child kneels, offers both hands low, waits. The cygnet looks at the hands, at the
-    face, shuffles back, then lets itself be scooped. Feet paddle the air on the way up. It is held out a moment,
-    they look at each other, then it is brought in to the chest and the arms close.
-  - *Pick up* (later): the cygnet sees the kneel coming, runs the last steps and climbs onto the mittens itself.
-  - *Set down*: crouch, hands to the grass, it steps off, shakes, looks back up.
-  - *Up into the hood*: it scrabbles up the chest to the shoulder, wings out for balance; the child drops that
-    shoulder, tilts the head away and brings the far hand up under its rump to boost; it tips head-first into
-    the hood, turns round inside it, and its head comes up beside the child's ear.
-  - *Down from the hood*: backs out onto the shoulder, the hand comes up, it steps onto the mitten, is lowered.
-  - *Small ones while riding*: nuzzles under the chin and the child's head tilts to it; child's free hand strokes
-    its back when it shivers; the coat flap comes over it in the shower; it falls asleep and the child slows and
-    looks down; it startles and burrows into the collar; it cranes round the hood to watch what the child watches.
-  - *The fall's aftermath* and *finding it in the dark* reuse gather-up with the fear turned up: it flinches from
-    the first reach, and lets the second one land.
-
-### 2. A mind: attention, feeling, then action
-
-- **Attention.** Each frame a few things compete for its eye: the child's face, the child's hands when they move
-  toward it, the paper plane, the nearest creature (`cast.nearby`), a gust crossing it, the flock, the light in
-  the wood. Saliency is novelty × nearness × feeling. The winner gets a look with a real saccade: eyes and head
-  lead, neck follows, body last.
-- **Social referencing.** After anything new or frightening it looks at the child's face, and what the child is
-  doing decides how it settles. This is the cheapest and strongest cue that it has thoughts, and it is the bond
-  made visible.
-- **Feelings** are a small continuous state: fear, curiosity, contentment, tiredness, cold, longing. They set
-  posture (neck height and curve, down fluffed or sleeked, wing droop, tail), tempo (blink rate, breath, how
-  quick its head moves) and which behaviours are allowed. Bond shifts all of them toward trust.
-- **Behaviours** are chosen by a scheduler from what the feelings allow, one at a time, each with anticipation
-  and follow-through: preen (breast, wing, back), nibble grass, dabble at wet sand, stretch a leg and wing
-  together, yawn, tail-wag after every shake, sit and tuck, chase the plane a few steps and lose interest,
-  investigate a butterfly and flinch when it moves, flatten to a gust then lean into it with wings half open.
-- Per room: it patters through the washing on the island of lines and is startled by a sheet; it rides high and
-  watches the meadow go by; it goes quiet and low over the drowned village; it hides in the wood; it sleeps on
-  the long crossing; it cannot keep still at home.
-
-### 2b. The wind is somebody, and the cygnet is the only one who knows
-
-Yes, it reacts to the player's wind, and the way it reacts is its arc. The child never acknowledges the player.
-The cygnet does: it looks **into** the wind, up to where a gust came from, as if someone were there. It has two
-bonds, one with the child and one with the wind, and the second is what the ending spends: at home it opens its
-wings and waits for the player, because by then it trusts them to hold it up.
-
-- *Afraid of it* (first island, the lines): a gust flattens it, it flinches and patters to the child's feet, and
-  the child shields it. A sheet snapping beside it sends it under the coat.
-- *Curious* (the meadow): it snaps at wind lines and petals going past, leans into a steady wind with its eyes
-  shut and its down streaming, and half-opens its wings to feel the lift. Its first glide happens here.
-- *Playing* (after the wood): it asks for it. A look up, wings out, a little run, a look up again.
-- *Trust* (home): it stands in the pressed grass, opens its wings, and waits.
-- Always: the down ruffles along the real wind; a hard gust makes it brace, and a harder one bowls it over a step,
-  after which it shakes and looks indignant. Riding, it squints and tucks into the collar.
-- Never a torment: fear from the player's wind is capped and spent once per gust, it always ends at the child,
-  and a sheltered cygnet only ruffles. A player who keeps blowing on it gets a bird that hides, not one that suffers.
-
-### 2c. The brave swim
-
-It has never been in the water: it fell before it ever came down on any. On the first crossings it watches the
-sea from the child's arms, stretches down toward its own reflection over the gunwale and pulls back. In the
-drowned village it will not look at the black water at all.
-
-The swim belongs on **the long crossing**, the exhale after the dark wood, at dawn. The child went into the dark
-first so that it would not have to; now it does something brave with the child watching. Dolphins come alongside.
-It climbs onto the gunwale, looks at the water, looks at the child, and the child does nothing except stay. It
-goes in badly, bobs up like a cork, shakes its head, and paddles. Then it is swimming beside the boat, in the
-boat's lee, neck up, and the child hangs an arm over the side near it. The player is the wind in the sail, so how
-hard they blow sets the pace: too hard and the boat draws ahead, it paddles flat out with its wings half up, and
-the child looks back; ease off and it draws level again. Nothing fails. When it tires it comes to the side and is
-lifted in, soaked and proud, and is dried under the scarf. At home it swims the last stretch to the beach beside
-the boat, which is the first time the player sees it go somewhere on its own and the quiet promise of the ending.
-
-### 3. A body built to be looked at closely
-
-- Cygnet proportions drawn the way a child would: pear-shaped body low to the ground, a soft neck long enough to
-  make an S, a rounded head with a flat dark bill and big dark eyes, short legs set well back, outsized dark
-  webbed feet, downy arm-wings with no quills, a stub tail that wags. Pale grey down, lighter on breast, cheeks
-  and belly. No crest: the cowlick is what read as a comb. By the last island, white shows at the wing edges.
-- More bones where the character lives: four in the neck, spread on the webs, a tail spring, a breast bone for
-  breath and squash. Down is a shader effect: a soft rim shell that fluffs with cold and contentment, sleeks
-  with fear and rain, and ruffles in a gust.
-- **Locomotion driven by distance, not time**: feet plant and stay planted; the body rolls over the standing
-  foot and the tail counter-swings, which is the waddle; the head is held steady in the world between steps.
-  Running is a patter with wings out. It trips on rough ground sometimes, when nothing else is happening.
-- **Flight vocabulary**: the fall (holding the line, sinking, bursts that pitch it up, a dropped wing, a last
-  tumble, a chest-first skid through the grass, stillness, then the first breath); trying (run-up, slapping feet,
-  a hop, a face-plant, a shake, a look at the child); gliding on the player's wind (rigid, amazed, wobbling,
-  looking down); landing (feet forward, skid, tumble, sit, look back); leaving (the run becomes flight).
-- The adults (`flock.ts`): white, neck straight out, black feet trailing, articulated wings with a slow deep
-  beat, in a V; on the water at the meadow's far bay; circling low at the end.
-
-### 4. Sound
-
-Foley everywhere, voice almost nowhere. Feet on sand, grass and boat planks; wing flutter; the whole-body shake;
-the thump and skid of a bad landing; down against the coat when it climbs. The two existing cries are re-voiced
-as a cygnet's thin whistle. Three tiny cream strokes accompany its calls in every chapter, following its
-shown position even while carried or airborne and fading back to nothing between calls. These belong to the
-voice, not footsteps or wing sounds (`fx/call-marks.ts`, `tuning.cygnetCalls`). Adults: distant bugling and wing whistle as the skein passes and at the reunion.
-
-### 5. Proving it
-
-- **A stage**: `?stage=cygnet` stands the child and cygnet on bare ground under the game's light with a close
-  camera, and plays any state, behaviour or duet by name at any speed. `tools/stage.mjs` captures contact sheets
-  and slow-motion clips from front, side and the game camera's distance.
-- **Numeric gates**, run headless over every state and every transition between states:
-  planted-foot slip under 1 cm; mitten-to-marker distance under 2 cm during contact; no cygnet vertex inside the
-  child's coat profile beyond 1 cm; no bone angle or root position jump above a threshold between frames
-  (no pops, ever); never below the ground; never out of frame in a glide.
-- **Visual verdicts** at real camera distance and close up, per the model-routing rules, then Jeremy's.
-
-## Status (update as it moves)
-
-**On `main` since 2026-09-18** (`eb1d7c6`), merged on top of the rooms (birches, kite and pinwheels, piano). The
-session that built it died; a new session took over from this file. What the merge decided:
-- **The crest is the close scene, with swans.** `main` had since rebuilt the crest as one unmissable scene for the
-  cranes (heard first, the family wheeling up right in front of the rise, stringing out north, the set-down
-  straight after in the same place: `tuning.crest`). This branch had the family resting on the far bay (Jeremy's
-  pick, because swans do not ride thermals), which from the real crest was a few white pixels. Merged: the close
-  scene, played by the swans (`SwanFlock.circle(..., climb)` and a new `SwanFlock.goOn`, which hands each bird a V
-  slot and lets it ease across). **Settled 2026-09-18** (Jeremy: "I do agree that the raft of swans on a pond is
-  better"): the wheel is gone from the crest and the family rests on a pond dug in the hollow beyond the rise.
-  `circle`/`goOn` stay in the flock for the reunion at home.
-- Gusts count as lift under the cygnet (`tuning.colt.gustLift`), as they did for the colt: cursor movement is the
-  only verb. The home summit's `coax` swirl follows the cygnet.
-- The birches: it is set down on the beach where they land (`carry.setDown`, after a step aside so the camera behind sees it) and walks the gold with them; the leaves draw it off to play (2026-09-27, it used to ride in the satchel until a pile tempted it out).
-- Gates on `main` after the merge: the same marginal misses as before (gather jerk 0.0211, gap 0.0649; down jerk
-  0.0241, gap 0.0678; walk turn 0.1018). The crest scene runs end to end at 60 fps with no console errors.
-
-Landed on `main` 2026-09-18 from Opus 5 parcels, each accepted on a look at its screenshots:
-- **Swans polish and the crest** (`7c90cb2`): white above and pearl-grey below so they read on a pale sky; the wheel
-  is a flown, banked low circuit (`tuning.crest`); `goOn` lets each bird break out of the circle in turn into a
-  narrow deep V going due north and climbing (`leaveClimb`); wakes ride the swell; the take-off run has legs down
-  and hard shallow beats; a `flock` view on the stage. Still short: heads should hold steady in the world while the
-  body bobs (cheap, biggest gain); the raft has no ripple ring or reflection; the wash lingers 0.6 s under a bird
-  that has lifted; 22 birds is loose at the crest, 14-16 would read as one family. The agent's view on Jeremy's
-  pick: a resting-then-lifting family would read if staged on a pond or wet hollow 50-70 units ahead of the crest.
-- **Look pass two** (`59a6cf6`): neck half again as long and tapered, longer flatter bill, bare lores, the folded
-  wing as one downy teardrop, paler and warmer in every light with a sky fill and a far-distance skin fix, a real
-  lay for `sleek`, a soaked `wet`, `grown` readable from the game camera, an open-topped satchel it sits in, puffed
-  sleeves, thumbs. Gates unchanged. Still short: the bag is boxy; wet shows faint diagonal lines on the crown; from
-  behind it sits deep and shows mostly its grey back (handed to the pose pass).
-
-- **Pose and timing** (`12ebf3a`): a lean is now mostly a translation with a squash, so the kneel no longer planks
-  the coat; anticipation, arcs and a rest beat in gather-up and set-down; the plane no longer crosses the child's
-  face on its way to the satchel; the satchel seat is higher and upright with its own S-neck, leans into turns and
-  looks about; acts have an in, a hold and an out; a weightier waddle; the try is crouch, patter, bound, face-plant,
-  lie there, up, shake, look at the child. Gates: all 27 green for the agent and on the lead's first run; on a
-  second run one intermittent miss (gather turn 0.1025 against 0.07 while carried), not yet traced. Still short:
-  in the regard the cygnet's head still sits over the child's face from dead front (the cross-body reach runs out;
-  needs the shoulder pivots forward, which is geometry); stow and unstow are one smooth beat each with nothing
-  authored inside; swim, plunge and glide were not worked; from 15 units behind it still reads deep in the bag
-  (the bag's front rim is the limit).
-- **Lead's finding across all three:** at 5-20 units the cygnet still reads dark slate, not pale silver-fawn. Close
-  up it is pale; past the distance where the down shells fade it is not. This is the first thing for the next look
-  parcel, with the boxy bag, its front rim and the shoulder pivots.
-
-Playthrough (2026-09-18): clean from the first island to the end of the meadow walk, 60 fps; the script ends there
-and does not drive the later rooms.
-
-From Jeremy's playtest of 2026-09-18 (his words in `journey.md`), landed on `main`:
-- Flying (`217e240`): a try's run becomes the take-off when there is wind under it; it feels for wind in a ring
-  (`tuning.colt.reach`); runs come back to `trodden`; plain gusts count as lift only where the chapter's
-  `invitesFlight` is true; `mayFly` false in the wood; the twirl winds up sooner.
-- Pale cygnet and the pouch (`14e474d`): the palette was 8-10x darker than every other creature (DOVE 0.06 linear
-  against the swans' 0.72); rescaled, hacks unwound, the crate replaced by a soft pouch it nestles into, the
-  shoulder pivots forward so the regard clears the face. Then, Jeremy: "too pale now"; duskier (`a39e0df`): warm
-  taupe, DOVE 0.23 / MILK 0.33 / SNOW 0.55, the shell rim `fuzz` 0.20→0.09 (the rim term, not the palette, is what
-  makes it read white), a warm sky fill at dusk.
-- Birches (`6ddc6b3`): a litter field the wind transports (swept bare behind a gust, drift where it dies), leaves
-  that skitter, lift and settle elsewhere, four heaps with an angle of repose, the cygnet's dive into the hollow's
-  heap (`delve` act, `cygnet.errand`), the island 60×80 with a rise and a hollow, haze 0.97. Short: the leaf devil
-  does not isolate in a wood already full of gold; heaps read flatter from the walking camera.
-- The piano (`48b7422`, `184992f`): a struck-string tone (unheard by anyone yet), and the approved call-and-response
-  duet; still to do by eye: the cygnet on the keys, the island answering each phrase (the piano is the key that
-  wakes the grey meadow: see `journey.md`), the child sitting AT it.
-
-- The pond crest (`a25656f`): a pond in a hollow 51 units past the crest (`world/pond.ts`, carved in the heightfield),
-  the family resting on it from the chapter's first frame, bugling heard before the crest, the beat crest → down →
-  try, the family's pattering run and V north, the set-down at the edge, runs along the shore, the try camera
-  looking out over the water, the coax sooner; 8 of 8 test circles flew it; splash-down and paddle back. Swan heads
-  steady, ripple rings, the wash no longer lingers. Short: the far bank reads as a dark smear from the crest (grass
-  lit only by sky); water reflects sky only; the crest measured 47 fps once while two agents' Chromes were busy,
-  unconfirmed.
-- The wood (`32b2462`): coals the player's gusts catch, flare and burn down; one first coal in the first view; a
-  chain laid one at a time at the edge of the last light; cinders stirred by any gust; firelight on the floor; the
-  bolt runs across frame and the bird's coal is the one thing to blow on; the camera behind the way they are going;
-  the exits kept. Short: foreground branches during the search; the finding can come within ~10 s.
-
-- The meadow's opening (`1158c8a`): the piano is the key. Haze 0.9 on the crossing; a bank over a shallow bay with
-  beats beach → climb → brow; the whole island asleep (the `waiting` region covers it and the wind raises no life
-  in it); the piano moved onto the route at `meadowPoint(-18, -740)` in a 27-unit patch of colour, scaled 1.42 with
-  the child seated at the stool; `PianoStop.onWake` rolls colour out by phrase (hollow, crest and pond, the island
-  on the finale) and the piano finishes the tune itself when nobody answers; the cygnet walks the keys in the
-  finale; `WAY` in `fields.ts` is the one route line and no wall stands within 8 units of it (24 near the brow);
-  `?chapter=piano`. Short: the wind front only reads in motion; the pond's rim grass is green while the island
-  sleeps.
-- The water (`4588766`): the player's gust used to feed the sea's roughness (blurred mirror, wide glitter, lost
-  Fresnel) and drag the ripple texture at cursor speed: a slick. Lighting now comes from the weather only; the
-  stroke adds fine ripple, a uniform darkening and a short chop; the sail luffs on an arriving gust
-  (`tuning.water`). Deliberate: whitecaps now need the squall.
-
-- The sleeping island (September 20 polish approved by Jeremy): the bird's three attempts and unanswered
-  call lead to a player brush across the pillow. The feather stays within sight during the assisted climb;
-  the shiver still resumes by itself. The healed wing unwraps at the summit, where gentle circles raise
-  the first flight and open the summit window. Waiting alone completes neither gesture. Its light
-  follows the glide back to the bed. Jeremy moved the window uphill so the climb has a visible purpose.
-- The bed now supports the reclining child with rounded mattress and pillow geometry, a fitted blanket,
-  smaller side rolls and hands against the chest. The sleeping coat scale resets when the child stands.
-  The summit shot includes the window beside the bird on portrait screens; it holds the curtain reveal
-  before following the glide. The bedside shot keeps both travellers together.
-- Fog uses the shared continuous eye-ray density; the four visible horizontal sheets are removed. Winter
-  stems have shallow roots, finer bent silhouettes and less root occlusion; textured ground carries the
-  surface between them. The bedside lamp has a soft reflected contribution on both characters.
-- Verification: `tools/sleeping-logic-check.mjs` covers both idle gates, modest input, the complete rescue
-  and coat restoration; `tools/sleeping-check.mjs` drives actual mouse/touch gestures through the chapter.
-  `tools/wing-care-check.mjs` retains the wing-history and checkpoint checks. No new save version is needed.
-
-Everything in the 2026-09-18 playtest is built. Open: Jeremy's visual verdict on the latest sleeping polish; the crest's
-frame rate under measurement; fireflies in the wood (a one-number idea, unasked). A peer session is polishing the
-ending (dolphins, summit, fledging, credits).
-
-The rest of this section is the record from the branch.
-
-Done on `cygnet`:
-- Names; the QA stage (`?chapter=stage`, `story/stage.ts`: `play(name)` including `act:<name>`, `shore`, `swim`;
-  `look(view)`; a free close camera).
-- One smooth skin on a 21-bone skeleton (`cygnet/body.ts`), authored in one rest space, two-bone skinning.
-- The child: elbows, two-bone arm IK (`reachFor`, `reachLocal`), kneel, lean, head tilt, sockets, the plane tucked
-  in the satchel while the arms are full (`traveller/body.ts`, `traveller.ts`).
-- Placement (`cygnet/ride.ts`): ground, seat, in the hands, the surface path over the shoulder, all read live.
-- Shared moments (`companion/carry.ts` on `companion/duet.ts`): `gatherUp`, `setDown(onDone, facing)`, `stow`,
-  `unstow`; every chapter now uses them instead of a bow and a teleport.
-- The brain/body split: `cygnet/mind.ts` (attention, feelings, acts, the bond with the wind), `cygnet/pose.ts`
-  (`Drives` in, bones out; the file a pose pass owns), `cygnet/gait.ts` (planted feet at a walk, a patter when it
-  hurries, steps when it turns), `cygnet.ts` (states and mechanics: fall, run-up and face-plant, glide, clumsy
-  landings, perch, swim, leave).
-- Sound: `audio/foley.ts` (steps by surface, flaps, flutter, shake, tumble, rustle, plunge, paddle; swans' bugle
-  and wingbeat), driven by `cygnet.heard` events from `main.ts`. The two cries are unchanged so far.
-- Story: the brave swim on the long crossing (`CrossingOpts.swimAt`, `crossing.ts`).
-- The probe (`companion/probe.ts`, `__game.probe.report()` / `.trace`): body jerk, turn rate, mitten gap, foot
-  slip, ground.
-
-Merged from Opus 5 agents: `cygnet-look` (down shells, fan-closing wing, grey palette, `SIZE` 1.42, complete, with
-a report) and `cygnet-swans` (white swans: skein, wheel, raft on the water, take-off; cut off by the session limit
-on 2026-09-18 before its final polish and report; its uncommitted work was committed as WIP and merged; it
-typechecks and builds). The crest now calls `flock.rest()` on the far bay and `flock.lift()` north.
-
-Interrupted by the same limit before they had changed anything: `cygnet-look2` and `cygnet-pose` (worktrees exist,
-no commits). Their briefs are the next two parcels and are summarised here so they can be relaunched:
-- **Look pass two** (owns `cygnet/body.ts`, `parts.ts`, `shader.ts`, the child's geometry in `traveller/body.ts`):
-  more swan in it (longer slender neck, longer flatter bill, lores that read at 3-5 units); the folded wing's
-  coverts read as hard plates and should be one soft downy teardrop; it goes charcoal in shade and should stay pale
-  silver-fawn in every light; `sleek` needs a directional lay, `wet` reads soapy; `grown` must read at game
-  distance; an open-topped satchel the cygnet sits IN; puffy sleeves, soft elbow, mittens with thumbs.
-- **Pose and timing pass** (owns `cygnet/pose.ts`, `wings.ts`, `gait.ts`, numbers in `mind.ts`, `ride.ts`,
-  `carry.ts`, the child's kneel/lean/arm feel in `traveller.ts`, sockets in `traveller/body.ts`, the look of the
-  mechanics in `cygnet.ts`): every pose and act is an engineer's sketch; the kneel tips the coat like a rigid bell;
-  the held-out "regard" covers the child's face from the front.
-- **Swans follow-up**: from the real crest (20 up, 370 units from the bay) the raft is a few white pixels. It needs
-  a size it can be given for that shot, or to be staged nearer; then its own final polish.
-
-Gates on the merged branch (2026-09-18): 21 of 27 pass. Misses, all marginal and all from refitting to the bigger
-bird: gather jerk 0.021 and gap 0.065, a 0.098 turn while it waits, set-down jerk 0.024 and gap 0.082, walk turn
-0.10. The pose pass retunes these; none is a visible pop.
-
-Still to do: the three parcels above; re-listen to the re-voiced cries and the foley (nobody has heard them yet);
-per-room behaviour; a full playthrough; an independent visual verdict; fold this file into `journey.md`; merge to
-`main` (which has moved on: `src/tuning.ts` and petals work from other sessions touch `main.ts`).
-
-Found on the way, and decided:
-- **The satchel is its seat on the walks, not the hood.** The hood is worn up, and anything held in front of a bell
-  coat is invisible from the game camera, which lives behind the child. In the open satchel on the child's back it
-  is in every frame, facing the way they go, able to look back at the player's wind, and it is what cygnets do:
-  ride on a back. In the arms (across the chest, head to the child's left) is for tender moments and the boat.
-- **It gets into the hands by itself.** A kneeling child's hands stop about half a unit above the grass; bending the
-  rigid coat further tips it over like a plank. So the hands are offered low and held still, and the cygnet hops up
-  into them. Nothing is done to it. After the fall this is its fourth try at getting up, and the one that works,
-  because someone is there.
-- The child's arms now show: shoulders moved out to the coat's surface, arms resting on it, red mittens. This
-  changes the child's silhouette a little and needs Jeremy's eye.
-- Probe numbers to hold (worst over gather, stow, unstow, set-down): body jerk under 0.02 units/frame², turn under
-  0.07 rad/frame, mitten gap under 0.06, never below ground. Pops found so far all came from a pose weight that
-  switched instead of easing; every new weight must be eased.
-
-In flight: Opus 5 agents on `cygnet-look` (model, wing fold, down shader) and `cygnet-swans` (adult swans, the raft
-on the water, take-off), each in `/private/tmp/updraft-cygnet-{look,swans}`.
-
-## Build order
-
-1. Rename and re-seat: `Crane` → `Cygnet`, `CraneFlock` → `SwanFlock`, `colt/` → `cygnet/`, `cast.cygnet`; story
-   and docs text; no behaviour change. Stage and gates scaffold.
-2. Child rig: elbows, arm IK, kneel, sockets. Cygnet rides sockets. Gates for contact and penetration.
-3. Cygnet body, down shader, palette; adult swans.
-4. Locomotion, swimming and flight vocabulary.
-5. Mind: attention, feelings, scheduler, social referencing, the bond with the wind.
-6. Duets, in story order: gather up, set down, hood, the small ones.
-7. Sound.
-8. Story changes: the family resting on the far bay at the crest (Jeremy's pick), white skein, reunion, the brave
-   swim on the long crossing and the swim ashore at home; per-room behaviour.
-9. Full playthrough, visual verdicts, fold this into `journey.md`, merge.
-
-## Sheltered paddling (2026-09-19)
-
-Jeremy requested swimming alongside the little boats. Between washing and meadow, the cygnet now chooses
-three short swims in shallow pools, steps down from the bank, paddles beside the toys, and scrambles out
-with a shake before each narrow channel. The fleet waits for it. These use the existing `swimTo` / `ashore`
-transitions and `swimLevel`; the room owns its elevated water surface and wake. The later open-sea swim
-remains the larger, more exposed act of confidence. No new voice cues.
-
-The little-boats polish adds `swimPlay`: alternating fast kicks and glides, closer weaving, wing flicks,
-and small spray timed to `paddlePhase`. It resets ashore. While swimming, the grass depth bias (`uNudge`)
-eases to zero so submerged parts are covered by the water; it returns when the cygnet climbs out.
+`?chapter=stage` (`src/story/stage.ts`) stands it and the child on open ground with a free camera; from a
+`tools/play.mjs` eval step `__game.story.current.play('<name>')` plays any state, act (`act:<name>`) or shared
+moment, and `.look('<view>')` picks a view. `__game.probe.report()` (`companion/probe.ts`) gives the worst pop,
+turn, hand gap and foot slip since `probe.reset()`. `node tools/cygnet-gates.mjs` runs them all against per-moment
+limits (`LIMITS`): body jerk under 0.02 units/frame² (0.012 idle, 0.1 for a try), turn under 0.07–0.08 rad/frame,
+mitten gap under 0.06 (0.08 unstowing), foot slip under 0.02, feet never more than 0.005 below the ground. Every
+pop found so far came from a pose weight that switched instead of easing: ease every new weight.
+`tools/wing-care-check.mjs` checks the wing's history and one-flight gates.

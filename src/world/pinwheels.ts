@@ -246,6 +246,7 @@ export class Pinwheels {
     const tints: number[] = [];
     const sticks: THREE.BufferGeometry[] = [];
     const tint = new THREE.Color();
+    const pin = new THREE.Vector3();
 
     for (const row of ROWS) {
       pointAt(path, row.t, on, dir);
@@ -266,11 +267,11 @@ export class Pinwheels {
         /** Long enough to stand the wheel clear of grass this deep, and all of them a little out of true. */
         const top = 1.8 + rand() * 0.4;
         this.wheels.push({ x, z, sway: new Sway(), ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });
-        positions.push(x, ground + top, z);
         states.push(0, 0, 0, 0.38 + rand() * 0.09);
         tint.set(SAIL_TINTS[Math.floor(rand() * SAIL_TINTS.length)]);
         tints.push(tint.r, tint.g, tint.b);
-        sticks.push(stickGeometry(x, z, ground, top, rand));
+        sticks.push(stickGeometry(x, z, ground, top, rand, pin));
+        positions.push(pin.x, pin.y, pin.z);
       }
     }
 
@@ -347,15 +348,16 @@ export class Pinwheels {
   }
 }
 
-/** A stick shoved into the ground, leaning however it was left, with the pin's bead on top. */
-function stickGeometry(x: number, z: number, ground: number, top: number, rand: () => number): THREE.BufferGeometry {
+/** A stick shoved into the ground, leaning however it was left, with the pin's bead on top; `pin` is where the bead ends up. */
+function stickGeometry(x: number, z: number, ground: number, top: number, rand: () => number, pin: THREE.Vector3): THREE.BufferGeometry {
   const lean = 0.05 + rand() * 0.14;
   const spin = rand() * 6.28;
   const stick = new THREE.CylinderGeometry(0.018, 0.026, top + 0.3, 5).translate(0, (top + 0.3) / 2 - 0.3, 0);
   const bead = new THREE.SphereGeometry(0.038, 6, 4).translate(0, top, 0);
   const g = mergeGeometries([stick, bead]);
-  g.rotateZ(lean * Math.cos(spin));
-  g.rotateX(lean * Math.sin(spin));
+  const tilt = new THREE.Matrix4().makeRotationX(lean * Math.sin(spin)).multiply(new THREE.Matrix4().makeRotationZ(lean * Math.cos(spin)));
+  g.applyMatrix4(tilt);
+  pin.set(0, top, 0).applyMatrix4(tilt).add(new THREE.Vector3(x, ground, z));
   return g.translate(x, ground, z);
 }
 

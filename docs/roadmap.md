@@ -1,51 +1,70 @@
 # Roadmap
 
-## M1: core feel (built, awaiting a play test)
+## Where it stands
 
-One island at golden hour. Passes when a new player grins within 30 seconds without instructions.
+The whole journey is built and plays end to end, from the still island to the red door and the closing line, and it is
+live at https://updraft.jeremyvun.com. The work now is polish before a wider release: Jeremy playtests, lists what
+he finds, and each item is fixed and surgically verified. Sharing plans and the proposed Steam release are in
+`docs/launch.md` (local only).
 
-- Live wind simulation driven by the pointer: gusts along swipes, updrafts on press-and-hold.
-- A dense grass meadow that bends, overshoots and settles like real grass.
-- Petals and pollen that lie in the grass and lift into swirls when a gust passes.
-- Wind lines that trace the flow, in the spirit of *The Wind Waker*.
-- A paper glider that rides the wind, skims the grass and never gets lost.
-- Sea, sky, cloud shadows, haze, a landmark tree and the distant archipelago.
-- Wind and music generated from the player's gestures.
-- 60 fps on an Apple Silicon Mac at native resolution. Measured at 60 fps on an M4 Pro at pixel ratio 2 in headless Chrome.
+## In progress
 
-Jeremy played it (2026-09-16): sound is good and touch works beautifully.
+- **The stairs in the clouds** ([stairs.md](stairs.md)): the sail over the cloud and the way down into the mist are
+  being redone to Jeremy's 09-28 notes (a view of the whole cloud sea and a less straight course, clouds that don't
+  read as snow, no boat popping in as the camera breaks through, the boat nearer the jetty, no cloud changing state
+  as it comes into range, no player wind needed while the pair enjoy the ride). Then the room needs a still and a
+  name for the chapter select.
+- **Performance** ([backlog/perf-bakes](backlog/perf-bakes/)): every phase is built and merged, including phase 6
+  (the sleeping island's baked noise tile), the sea round (S1, S3, S4) and one reverb (X3). What remains is the
+  backlog's close stage (phase 7).
 
-## M2: the journey (built, local, not yet deployed)
+## Open
 
-Jeremy's brief for this milestone and the story as built are in `journey.md`: a wordless story from a grey, still island across the sea to endless green hills and a cottage at night. The restoration is simpler than first planned: wind itself brings life back (no seeds, rain or fire elements), which keeps the one verb.
+For Jeremy's eye, ear or hands:
+- A listening pass through the whole journey on headphones and a phone speaker ([contracts/audio.md](contracts/audio.md)).
+- The whale shot on the first crossing: a glance from behind the boat, small in frame.
+- The child's pigtails, the hood's side line and the open bag flap, seen in a level from the play camera in motion
+  ([child.md](child.md)).
 
-- The traveller (a child with a paper plane), the grey still world and life returning where the wind goes.
-- The crossing by boat: farewell to the still island, gulls, a whale and fish (whale and fish on a subagent branch).
-- The mainland: streamed terrain, grass, field patchwork, dry-stone walls, wildflowers; the green wave; a sun shower; a murmuration at sunset.
-- Creatures: rabbits, finches, gulls, butterflies (sheep on a subagent branch).
-- Time of day from golden afternoon to night; the drawing, the release, the cottage, the moon.
-- A new sea: surf and swash, seabed, glitter, mirror.
-- Music that follows the story.
+Known issues (the first seven, plus the dark wood's hidden ember, are the backlog item
+[backlog/bug-sweep](backlog/bug-sweep/)):
+- The storm reaches the dark wood about 15 s late (56 s from the weather's start, against 38 to 44): since the
+  beach landings, the boat sheds its way about 10 m out from the wood's shelving shore and drifts sideways in the
+  breeze before its forefoot finds the bottom. `boat-check` and `drowned-camera-check` fail on it.
+- The little boats: the orange toy loses its way abruptly at a pool handoff (`little-boats-logic-check`, 30 fps from
+  arrival), since commit 1e0d470.
+- Home: a departing adult swan passes 1.73 m from the cygnet against the check's 1.8 m (`flock-flight-check`), since
+  the pigtails commit shifted the start.
+- The season stays at 0.92 to 1 after the sleeping island, so home's grass is still aged, although the curtains
+  opening is meant to turn winter to spring.
+- The meadow swans lift off by themselves from the far end of the raft while the child is on the rise. Jeremy's note
+  asked for the camera to show them "getting skittish and flying away"; worth a look that it still reads that way
+  (`Flock.lift` has an unused `startledBy`).
+- The stairs loop sounds the questioning peep and a distress call together each time round.
+- The sky mirror: a faint speckled patch on the water beyond the departure jetty, looking toward the sun on the way
+  in. Not traced.
+- The boat: boarding lifts the lead foot about 0.6 m over the side, more hop than step (`boarding.stepArc`,
+  `railHeight`; [boat.md](boat.md)).
+- The child: unchecked that a resumed save with the cygnet in the bag starts with the flap open.
 
-## M3: the dream (the journey plays end to end)
+Checks ([testing.md](testing.md)). On `main`, 11 of the 49 mechanics checks fail and 2 of the 17 audio checks; the
+browser group has not been run. Branch `checks-fix` (not merged) brings the stale ones up to date: `shader`
+(the child shader's six descending `smoothstep`s, rewritten as exact equivalents), `progress-schema` (baseline moved
+to the last save change), `chapter-view`, `kite-logic` and `plane-routing` (the stairs and the Lines shore),
+`journey-pacing` and `wood-logic` (embers light in about two seconds), and the meadow, birches and sea
+`*-score-browser-check`s (those rooms have no cursor chimes). Still failing for real: `boat`, `drowned-camera`,
+`little-boats-logic` and `flock-flight` (above). Not yet looked into: `audio-check` ("player wind is 3 dB softer
+after departure") and `birches-score-check` (its fixture has no cygnet). `cygnet-gates` passes three runs in three.
 
-The journey rebuilt as a chain of islands with a companion, per `journey.md`, which is the anchor for all of it.
-Every room below is built and playable; what is left is polish, pacing and the turn of the year.
+Engineering, not scheduled:
+- Startup builds and warms the whole archipelago before Begin, and the main chunk carries a bundle-size warning.
+- No graphics-memory budget for older iPads (grass tables about 28 MiB, static atlases about 26 MiB).
+- Startup and audio wiring could move out of `main.ts` in small steps.
 
-- **The still island.** Made legible: the boat in frame from the first second, play kept south of the ridge, the
-  throws leaning toward whatever is still grey so catch finds the rest of the island, the restoration held back
-  and released all at once. The skein, the fall, and the child carrying the colt from there. **Done.**
-- **The island of lines.** A small green whaleback strung with washing, hung around the walk so the open ground
-  is always the way on; shirts, gowns and trousers among the sheets; a red door on the crest; baskets on the
-  sand. **Done.**
-- **The meadow.** The green wave, the long walk, the sun shower, the crest where the family is seen wheeling, and
-  the colt's first glide on an updraft the player holds. **Done.**
-- **The drowned village.** The dusk drift between rooftops, the becalming where the player is the wind in the
-  sail, and the storm taking the paper plane. **Done.**
-- **The dark wood.** Wind that fans light instead of grass, the colt frightened out of the hood and found by
-  putting light on it, the plane found sodden and dried. Nobody can be stranded there. **Done.**
-- **The long crossing.** The exhale: whales, dolphins, fish, and the night ending somewhere along it. **Done.**
-- **Home.** The last hill, the reunion staged in four beats, the drawing, the release and the red door. **Done.**
-- **The companion.** A crane colt rebuilt as a round downy chick that rides under the arm and on the shoulder,
-  climbs into the hood, tries and fails, glides, hides and flies. **Done.**
-- **Music.** A mood per room, gliding between them.
+## Later
+
+- A second companion: Jeremy would "eventually like to add another animal later one and make this a much more
+  involved and immersive experience." The companion system is general for this reason
+  ([journey.md](journey.md#the-companion)).
+- The turn of the year could reach further: the season ages the grass, but not yet the trees, flowers, sky palette
+  or light.

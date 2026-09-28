@@ -84,7 +84,7 @@ export class IslandChapter implements Chapter {
   private readonly careView = new THREE.Vector3(-1, 0, 0.6).normalize();
   private readonly climbView = new THREE.Vector3();
   private fallAt = 0;
-  /** The gust that takes the cygnet out of the V: the wind the player woke on this island, blowing by itself. */
+  /** The winter gust that takes the cygnet out of the V. */
   private readonly front: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(), flow: new THREE.Vector2(), strength: 0 };
   private readonly station = new THREE.Vector3();
   private readonly pushEye = new THREE.Vector3();
@@ -97,6 +97,7 @@ export class IslandChapter implements Chapter {
   private nextLook = 0;
   private readonly watched = new THREE.Vector3();
   private readonly flat = new THREE.Vector3(TREE.x, 10, TREE.z);
+  private readonly edge = { back: new THREE.Vector2(0, 1), at: tuning.opening.playEdge };
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
@@ -175,6 +176,7 @@ export class IslandChapter implements Chapter {
     const { child: c, plane: p } = this.cast;
 
     p.guided = this.beat === 'leaving' || this.beat === 'toTree';
+    p.playEdge = this.beat === 'play' || this.beat === 'leaving' ? this.edge : null;
 
     if (this.beat === 'still') {
       if (this.cast.input.gust > 5 && this.breezeTarget === 0) {
@@ -362,8 +364,8 @@ export class IslandChapter implements Chapter {
     for (let i = 0; i < tries; i++) {
       let a = toAim + (Math.random() - 0.5) * spread;
       const r = 18 + Math.random() * 16;
-      /** Past the ridge the camera loses them, so anything aimed over it is reflected back down the island. */
-      if (c.position.z + Math.cos(a) * r < PLAY_LIMIT) a = Math.PI - a;
+      /** Past the ridge the camera loses them, so anything aimed over it is turned back down the island. */
+      if (c.position.z + Math.cos(a) * r < PLAY_LIMIT && Math.cos(a) < 0) a = Math.PI - a;
       const score =
         tries === 1 ? 0 : 1 - this.cast.life.at(c.position.x + Math.sin(a) * r, c.position.z + Math.cos(a) * r) + Math.random() * 0.2;
       if (score > best) {

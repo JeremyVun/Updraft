@@ -126,7 +126,7 @@ export class WoodChapter implements Chapter {
     plane.homeRadius = 1e9;
     plane.visible = false;
     plane.soggy.value = 1;
-    child.dismount();
+    child.stepAshore(cast.boat);
     if (cygnet.seat === 'cradle') cast.carry.stow();
     else cygnet.rideIn('satchel');
     child.walkTo(WOOD_LANDING.x, WOOD_LANDING.y - 14, false, () => this.to('first'), 1.4);
