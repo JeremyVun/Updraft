@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Traveller } from '../traveller/traveller';
 import { screenBrush } from '../creatures/motion';
-import { mirrorMaterial, soapMaterial, soapWand, starLight } from './mirror-soap';
+import { mirrorMaterial, soapMaterial, soapWand, starLight, WAND_REACH } from './mirror-soap';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -12,7 +12,7 @@ import { REFLECTION_LAYER } from './water/reflection';
 const T = tuning.skyMirror;
 const COUNT = 12;
 /** The handle leans forward and out from the hand, carrying the ring clear of the child's head. */
-const WAND_PITCH = 0.35;
+const WAND_PITCH = 0.6;
 const WAND_ROLL = 0.45;
 export const mirrorUniforms = {
   uMirrorRings: { value: Array.from({ length: COUNT }, () => new THREE.Vector4(0, 0, -100, 0)) },
@@ -260,7 +260,7 @@ export class SkyMirror {
       this.hoop.rotation.set(WAND_PITCH,child.yaw,WAND_ROLL,'YXZ');
     }
     this.hoop.updateMatrixWorld(true);
-    this.wand.set(0,0.95,0).applyMatrix4(this.hoop.matrixWorld);
+    this.wand.set(0,WAND_REACH,0).applyMatrix4(this.hoop.matrixWorld);
     this.film.position.copy(this.wand);
     this.film.quaternion.copy(this.hoop.quaternion);
     this.film.scale.set(T.wandRadius,T.wandRadius,0.035+this.forming*0.8);
