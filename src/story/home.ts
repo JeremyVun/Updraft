@@ -184,7 +184,7 @@ export class HomeChapter implements Chapter {
     if (['release','home','inside','credits'].includes(this.beat)) return 'home';
     return 'approach';
   }
-  readonly season = 1;
+  readonly season = 0.04;
   readonly focus = new THREE.Vector3();
   private beatStart = 0;
   private duskTarget = tuning.homeLight.daylight;

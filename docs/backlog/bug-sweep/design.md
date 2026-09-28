@@ -118,6 +118,16 @@ visible change. Merge only after his OK.
 - **To settle:** why the start moved, and whether the avoidance is robust or just lucky. Fix the avoidance so the
   closest pass has a real margin at every frame rate; do not lower the limit.
 
+- **Traced (2026-09-29):** the V is not moved by the pigtails; they add 8 `Math.random` draws when the child is built,
+  which reshuffles the check's seeded sequence. The real weakness: adults dodge the cygnet only by climbing, which is
+  too slow while it too climbs into its tail place. In the check's simulation 10 of 240 reunions pass under 1.8 m.
+- **But in the real game (browser, 9 seeds) the closest pass was 4.35 to 6.71 m**, never near 1.8 m. The near-miss is
+  produced by the check's simulation and has not been seen in play.
+- **Prepared, not merged (3bdade1 on `bug-sweep`):** adults also bank sideways away from the cygnet when a near-miss is
+  predicted (`tuning.swanDeparture.companionAside: 10`); the check's closest becomes 2.72 m (240-case sweep: 2.60 m,
+  none under 2.5 m); in the real game it moved the closest pass from 4.35 to 4.7 m. **For Jeremy:** (a) merge it as a
+  guard (not a visible fix); or (b) leave the game as it is and make the check's simulation match what the game does.
+
 ## 4. The season after the sleeping island should ease toward spring
 
 - **Observed:** `season` is 1 on the sleeping island, then 0.92 (`toMirror`), 0.96 (mirror), 0.98 (`toHarbour`),
@@ -130,6 +140,17 @@ visible change. Merge only after his OK.
 - **To do:** propose the values (and whether the sleeping island's own morning should already move it), capture home,
   the mirror and the sea at the current and proposed values, and show Jeremy stills before merging. Visual work:
   allowed visual model only. Update `docs/journey.md` ("The year") and `docs/styles.md`.
+
+- **Proposed, not merged (on `bug-sweep`):** the sleeping island's `season` becomes `1 - 0.4 * curtains` (1 before
+  the curtains open, 0.6 once they have); `toMirror` 0.45, the mirror 0.3, `toHarbour` and `toHome` 0.18, home 0.04 (the
+  first island is 0.08). Only the grass reads `uSeason`.
+- **Stills (current left or top, proposed right or bottom):** `/tmp/updraft-bugsweep-season-sheet.png` (home, mirror,
+  sea, leaving the sleeping island); `/tmp/updraft-bugsweep-season-home-crop.png` (home's grass close);
+  `/tmp/updraft-bugsweep-season-island-pair.png` (the sleeping island's grass in the morning, from above the bed).
+  The visible change is at home: a colder, darker green becomes a brighter, warmer one. The mirror and the sea show no
+  grass, and the sleeping island's morning grass is already green (its frost and light carry it), so there the
+  change barely shows.
+- Docs to update when merged: `docs/journey.md` "The year" and `docs/styles.md` "The turn of the year".
 
 ## 5. The meadow swans may no longer be startled by the child
 
@@ -154,7 +175,11 @@ visible change. Merge only after his OK.
 - **For Jeremy to decide (no code changed):** (a) keep the missed connection as it plays now; (b) restore the startle,
   the nearest birds going first as she comes down toward them (`flock.lift(..., c.position)` at her approach);
   (c) both: already stirring to leave, her approach sets the nearest ones off. Stills of the sequence as it plays now,
-  one a second from the crest, desktop and portrait: see Phase 8's status.
+  one a second from the crest, desktop and portrait: `/tmp/updraft-bugsweep-pond-sheet-1600x900.png` and
+  `/tmp/updraft-bugsweep-pond-sheet-390x844.png`. What they show: the raft starts to lift about 6 s after the crest
+  while she is still well up the slope; the birds are small in frame, and from about 10 s the veil thickens until the
+  flock is lost in the haze by 13 to 14 s. So his 2026-09-20 note ("the camera never properly shows the swans getting
+  skittish and flying away") still stands whichever take-off he chooses: the departure is hard to see.
 
 ## 6. The stairs loop: the peep only
 

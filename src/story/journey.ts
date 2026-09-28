@@ -365,7 +365,7 @@ export class Journey {
           arrivalMusic: 'mirror',
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
           whaleAt: 27, whaleEvery: 0, dolphins: true,
-          swimAt: tuning.seaPassage.swimAt, season: 0.92,
+          swimAt: tuning.seaPassage.swimAt, season: 0.45,
           moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
         });
       case 'mirror': return new SkyMirrorChapter(cast);
@@ -376,7 +376,7 @@ export class Journey {
           route: cast.boat.position.x < MIRROR_BERTH.x - 30
             ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_BERTH.x + 40, MIRROR_BERTH.z + 4), ...ROUTES.toHarbour] : ROUTES.toHarbour,
           haze: tuning.homeApproach.haze, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
-          season: 0.98, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
+          season: 0.18, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
         });
       case 'toHome':
         /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */
@@ -390,7 +390,7 @@ export class Journey {
           whaleEvery: 0,
           dolphins: true,
           swimAt: tuning.seaPassage.swimAt,
-          season: 0.92,
+          season: 0.18,
           moor: HOME_MOORING,
         });
       case 'home':

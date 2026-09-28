@@ -72,7 +72,7 @@ real margin.
 **Owns:** `src/creatures/flock.ts`, `tuning.swanDeparture`.
 **Gate:** `flock-flight-check` passes with the closest pass well clear of 1.8 m at every frame rate;
 `summit-arrival-check` and `ending-check` pass.
-**Status:** not started.
+**Status:** ready for review 2026-09-29, not merged. Real in the check, not seen in the real game (closest 4.35 to 6.71 m over 9 seeds). The guard is 3bdade1 on `bug-sweep`; Jeremy chooses (a) merge as a guard or (b) match the check to the game. Design item 3.
 
 ## Phase 5: small fixes (items 6 and 10)
 
@@ -100,7 +100,7 @@ island's morning, the sea, the mirror and home at current and proposed values; s
 `src/story/sleeping.ts` (and `world/grass.ts` only if the curve itself needs it).
 **Gate:** Jeremy approves the stills; `render-parity-check` differs only in those rooms; `docs/journey.md` "The year"
 and `docs/styles.md` updated.
-**Status:** not started.
+**Status:** ready for review 2026-09-29, not merged. Values and stills in design item 4; the visible change is home's grass.
 
 ## Phase 8: the meadow swans (item 5, visual)
 
@@ -109,7 +109,7 @@ startled them. Show Jeremy; restore the startled take-off only if he says it reg
 **Owns:** `src/story/meadow.ts` (the pond beats), `tuning.crest`.
 **Gate:** Jeremy's verdict on the stills or clip; if changed, `pond-view-check` and `meadow-route-check` pass and
 `docs/chapters.md` (meadow) is updated.
-**Status:** not started.
+**Status:** ready for review 2026-09-29, no code changed. Not a regression: 88a3a5f deliberately made it a missed connection after Jeremy agreed to "emotionally legible". Options and stills in design item 5; the departure is also hard to see through the veil.
 
 ## Phase 9: the dark wood's hidden ember (item 7, visual and camera)
 
