@@ -15,7 +15,8 @@ share one capture lock (`tools/lib/browser.mjs`); run GPU checks one at a time. 
 - `npm run check:mechanics`: the quick group plus chapter, camera, gesture and story mechanics (about five minutes).
 - `npm run check:browser`: shader backends, touch and viewport, chapter transitions, context loss, the start screen,
   saves, frame scheduling and chapter views. Needs a running server.
-- `npm run check:audio`: every offline audio and score check through a headless dev server, no GPU.
+- `npm run check:audio`: the offline audio and score checks, in headless Chrome against a running dev server, no GPU
+  (`audio-interruption-check` and `music-transition-audit` run separately).
 - `npm run check:release`: mechanics, browser and audio, then the full playthrough. Allow at least an hour.
 
 ## Before a release
@@ -32,7 +33,7 @@ edit.
 
 ## The whole journey
 
-- `node tools/playthrough.mjs <prefix>`: Begin through every chapter to credits, reload the completed save, then
+- `node tools/playthrough.mjs <prefix>`: Begin through every chapter to the closing line, reload the completed save, then
   Play again, with real pointer gestures and natural transitions in a fresh browser profile. Fails on exceptions,
   wrong chapter order, a stalled chapter or a missing ending. `REVIEW=1` records video and one-second frames (review
   them in order, not just chapter entries); `TRACE=1` records the camera for `tools/camera-intent-report.mjs`;
@@ -51,7 +52,8 @@ edit.
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
 - `render-parity-check`: seeded frozen scene comparisons against an unchanged build. Run with
-  `COMPARE_BASE=<frozen build> BASE=<frozen build> node tools/render-parity-check.mjs /tmp/<dir>`.
+  `COMPARE_BASE=<unchanged build> BASE=<changed build> node tools/render-parity-check.mjs /tmp/<dir>`; both frozen
+  builds must expose `?shot`.
 - `render-cost-check <chapter>`, `grass-quality-check`, `grass-unclipped-check`, `swan-shading-check`,
   `water-texture-check`, `terrain-check`, `terrain-fields-check`, `terrain-colour-check`, `terrain-heights-check`
   (after any island's shape or position change), `fields-border-check`, `height-bake-check`.
@@ -111,6 +113,5 @@ sign-off.
 
 ## Open
 
-- `meadow-score-browser-check`, `birches-score-browser-check` and `sea-score-browser-check` still wait for a cursor
-  chime after a real gesture in rooms that no longer have cursor chimes, so they time out. Update them to the current
-  gates (the offline score checks already are).
+- Several checks fail on `main`: some are stale, some catch real regressions. Which is which, and the unmerged
+  branch that updates the stale ones, is in [roadmap.md](roadmap.md) under Checks.

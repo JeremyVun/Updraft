@@ -3,7 +3,8 @@
 The room between the birches and the drowned village: a staircase a child would dream about, climbing from a grassy
 island up through a cloud deck into the last sun of the year, then a sail across the top of the cloud and down
 through the fog onto the village's water. It is on `main` and plays end to end (`?chapter=stairs`); the sail over
-the cloud is being reworked. It is not yet in the chapter select, which needs a still and an approved name.
+the cloud is being reworked. It is not yet in the chapter select: Jeremy wants the journey over the cloud fixed first,
+and it needs a still and a name.
 
 ## Jeremy's words (verbatim)
 
@@ -46,7 +47,8 @@ On the air boat, after animating each concept himself:
 
 > "question, do you reckon you could throw in a fun little penrose stairs sequence in there for fun? I'm envisioning the cygnet running around and getting confused / making noises"
 
-Offered an opener on the grass, inside the cloud, or on top in the calm, he chose **inside the cloud**.
+Asked where the Penrose stairs should go (an opener on the grass, inside the cloud, or on top in the calm), he chose
+**inside the cloud**.
 
 > "next session to continue working on the stairs chapter. I'd like to get it looking more like the concept art `/tmp/updraft-stairs-concepts/stairs-c.png`"
 
@@ -68,7 +70,7 @@ on up; then the camera eases round and the loop comes apart. Asked which layout 
 then back again", he chose **"Up and onward"**: every flight climbs away from you, zigzagging left and right toward
 the cloud and never coming back, a path into the sky out over the sea.
 
-After playtesting by hand (2026-09-28):
+After playtesting by hand (2026-09-27):
 
 > "- The penrose stairs causes the cygnet to teleport down. Visually, it doesn't look like penrose stairs at all. Also, there's no invitational gesture that lets the player know they have to blow away some fog.
 >
@@ -118,8 +120,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
    soft toy staircase (chunky rounded steps with their blocks showing underneath, a dusty-rose runner, fat honey
    rails both sides on round balusters, big knobbed newels, rails round every landing, no house) climbs up and
    onward: each flight goes off to one side, turns on a landing, and the next goes off to the other, zigzagging
-   toward a ceiling of cloud lit gold where the low sun slips under its edge. Two flights stand on the grass, two
-   come down out of the cloud, and between them three have come loose and hang turning in the air.
+   toward a ceiling of cloud lit gold where the low sun slips under its edge. Three flights climb from the grass,
+   two come down out of the cloud, and between them three have come loose and hang turning in the air.
 2. **The loose flights (the puzzle).** The child climbs to where the stair stops; a gold drawing of the missing
    flight shows where it belongs; a stroke over the loose flight carries it on its own level, and it turns itself
    to fit as it nears its place. The bird waits on the landing behind. The last one placed plays the reward phrase.
@@ -148,8 +150,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 ## Principles
 
-- Wordless. The cygnet never calls here (its one unanswered call belongs to the sleeping island); in the loop it
-  only asks, with a small questioning peep (`cue('puzzled')`).
+- Wordless. The cygnet's voice is heard only in the loop, where it asks with a small questioning peep
+  (`cue('puzzled')`), sounded together with its distress call (`Cygnet.call`).
 - No failure, no timer that solves anything, no maze; the ghost flight says where each piece goes.
 - The cygnet never flies here and is never lifted by the wind: flight belongs to the sleeping island and home.
 - Every gesture is answered: gusts move the flights, tear cloud wisps, fill the sail.
@@ -194,7 +196,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
   when close and recently worked.
 - **Walking on stairs**: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge
   (`offTheEdge`), and the bird turns almost on the spot there (`mayStep`). It is routed stop by stop and drops an
-  errand within 0.45 m, so arrival is checked at 0.55 m. `Cygnet.standAt` puts it somewhere at once.
+  errand within 0.45 m, so arrival is checked at 0.5 m. `Cygnet.standAt` puts it somewhere at once.
 - **The sail**: the route is `CLOUD_ROUTE` (the turn, then `RUN_YAW`), the bank's front `FOG_BANK`, the towers
   `TOWER_GATE`. The boat rides the cloud at a fixed height (`RIDE`); `Chapter.kiteTow` ties the stairs' departure
   kite to the bow. The bank is an analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At
@@ -222,4 +224,4 @@ Jeremy's notes on the sail over the cloud, above (2026-09-28), are the work in p
 - no cloud jumping into a different state as it comes into range;
 - no wind needed from the player over the cloud: they sit back, and the child and cygnet visibly enjoy it (leaning
   on the side looking out);
-- then a still and an approved name for the chapter select.
+- then a still and a name for the chapter select.

@@ -71,9 +71,9 @@ nothing, so `src/chapter-select/` (script, CSS and stills) is a separate chunk t
 screen imports, and the stills download only when `chapters` is opened (`tools/chapter-stills.mjs` captures them).
 
 Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; an old completed save sets it on the next
-visit. A pick is held per tab in `sessionStorage` (`updraft.chosen-chapter`) and reloads into that `?chapter=` start
-with saving on. Until the room's entry checkpoint is saved, the existing save is ignored but untouched, so closing the
-tab after picking loses nothing.
+visit. A pick is held per tab in `sessionStorage` (`updraft.chosen-chapter`) and reloads the page, which starts that
+room as `?chapter=` would, with saving on. Until the room's entry checkpoint is saved, the existing save is ignored
+but untouched, so closing the tab after picking loses nothing.
 
 ## Hidden pages and sound
 

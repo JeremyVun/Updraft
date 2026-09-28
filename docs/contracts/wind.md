@@ -11,8 +11,8 @@ Numbers below are the defaults in `tuning.wind`.
   every window texture shifts by whole texels. Listeners registered with `onWindowMove` shift or re-bake their
   window-space data (the wind and grass-lean textures, life, the height, ground and surface bakes). On a move the
   field rebinds `uWindTex`, `uBendTex` and `uSwayTex`, so no shader reads a shifted texture against the old window.
-- GPU grid 256 × 256 (1.25 world units per cell). UV maps as `uv = (xz - WINDOW.min) / WINDOW.size` (`domainUv`
-  in GLSL, `atmo.uniforms.uDomain`); texture v is world z.
+- GPU grid 256 × 256 (1.25 world units per cell; 128 with 12 pressure iterations under `?lite`). UV maps as
+  `uv = (xz - WINDOW.min) / WINDOW.size` (`domainUv` in GLSL, `atmo.uniforms.uDomain`); texture v is world z.
 - Cells entering the window start at the ambient breeze (`uOutside` in the shift pass). Shaders check `insideUv`
   before reading window textures, `wind.sample` clamps to the window's edge, and `heightAt` falls back to the
   analytic `worldHeight`, so heights are valid everywhere.
@@ -117,8 +117,9 @@ frame (default 1). The glider's wake also writes when it skims low.
 
 ## The cygnet and lift
 
-The cygnet reads `lift` at its own position (plus `tuning.colt.reach` around it) and takes off above
-`Cygnet.liftToFly` once held there for `liftFor` seconds (`Cygnet.needs`; `tuning.summit` at the end). Gust energy
+The cygnet reads `lift` at its own position (plus `tuning.colt.reach` around it) and takes off once the lift under
+it exceeds `liftToFly`, if the chapter lets it fly (`mayFly`) and its wing is ready. A chapter sets that threshold
+and how it climbs on the column with `Cygnet.needs(lift, labour)` (`tuning.summit` at the end). Gust energy
 under it counts as lift only at `tuning.colt.gustLift`: enough to make it hope and open its wings, never to lift it.
 The updraft is the spiral the invitation shows (`Coax`, drawn by `fx/swirl.ts`) and the player draws it.
 

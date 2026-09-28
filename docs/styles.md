@@ -15,9 +15,10 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   go to slate on the way to the dark wood, while a night keeps its blue moonlight (`bruise`,
   `src/world/palette.ts`). The child's mustard coat is then the only warm thing in frame. The boat rolls, pitches
   and drives harder on a running sea.
-- **The turn of the year**: the season only deepens, island by island (`season` per chapter, `uSeason`): the grass
-  keeps its loved green but goes over to seed and colder. Light can return without the season reversing: the
-  sleeping island earns its morning, the sky mirror suspends time, and home holds an afternoon until the door.
+- **The turn of the year**: the season deepens island by island to full winter on the sleeping island, easing back
+  only a little on the sea after it (`season` per chapter, `uSeason`): the grass keeps its green but goes over to
+  seed and colder. Light can return while the season stays late: the sleeping island has its morning, the sky
+  mirror its sunset, and home holds an afternoon until the door.
 - **Grass**: dense and slightly chunkier than real, so it reads at game distance. Deep green at the root, warm
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
   short, lighter tufts rather than ending in a hedge.
@@ -41,8 +42,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   lies glassy and grey.
 - **Haze**: distance fades toward a sky colour that is warm toward the sun and cooler away from it. The next
   island is never more than a smudge in it.
-- **The departure kite**: a ruled-paper diamond with a faded red foot and a bow tail, one per room, flying beside
-  the boat at every departure; none at arrivals or at home.
+- **The departure kite**: a ruled-paper diamond with a faded red foot and a bow tail, one per room, flying over the
+  berth where the boat waits at every departure (`story/departure-kites.ts`); none at arrivals or at home.
 - **The boat**: a little clinker-built boat a child would dream of, after the concept boat
   (`assets/art-direction/boat-concept-kite-drawn*.png`): deep enough that the seated child rides with the gunwale
   at her belly, round and flat-bottomed, sitting flat in the sea, its sheer lifting only a little toward the ends. Six wide
@@ -57,8 +58,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
 - **The child**: a little girl, from the concept sheet (`assets/art-direction/child-front-concept-v1.png`),
   remembered rather than detailed. A big soft mustard hood with a rolled rim and a centre seam, her round face low
   inside it with chubby cheeks, big dark eyes, a button nose and a small smile; a fringe parted in the middle and
-  swept out to her temples, and low pigtails with knitted bobbles; a mustard A-line coat to the knee from narrow
-  shoulders with three brown buttons; mittens to match; charcoal trousers and round-toed brown wellingtons; a
+  swept out to her temples, and low pigtails with knitted bobbles; a short mustard A-line coat from narrow
+  shoulders with three brown buttons; mittens to match; charcoal trousers and round-toed matte brown leather boots; a
   chunky brick-red knitted scarf with two unequal ends; a brown leather satchel low on her back. The clothes answer
   the wind and her movement on springs, not a cloth simulation. See `docs/child.md`.
 - **The drawing**: the paper plane unfolds into a child's crayon drawing on ruled paper: sun, green hills, a dashed

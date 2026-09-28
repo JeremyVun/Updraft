@@ -32,11 +32,11 @@ The vision and story: [journey.md](journey.md). Each room: [chapters.md](chapter
 - No failure states, no timers that solve a beat, nothing that can be lost for good.
 - Sound starts from Begin or Continue after a click, tap or key. The speaker button and M toggle it, and the choice
   persists. All sound is generated with Web Audio; there are no sound files.
-- Player-facing text is drafted by Astra and approved by Jeremy ([copy/](copy/)). Gameplay has no instructional text;
-  the start screen, controls, recovery dialog and credits do.
+- Player-facing text drafts and Jeremy's choices on them are in [copy/](copy/). Gameplay has no instructional text;
+  the start screen, chapter select, controls, recovery dialog and closing line do.
 - Out of scope, by Jeremy's ruling: keyboard-only play, a privacy notice and reduced-motion settings.
 - Accepted as they are, by Jeremy's ruling: the long crossing's quick turn from midday to sunset, the darker circle of
-  grass around the cottage, the dark wood's brightness, the repeated Opus credit, and the cottage's position.
+  grass around the cottage and the dark wood's brightness.
 
 ## Shape
 

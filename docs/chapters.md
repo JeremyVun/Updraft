@@ -1,7 +1,7 @@
 # The chapters
 
-One section per room, in journey order: how it plays, why, Jeremy's standing rulings for it, where its code and
-knobs live, and what is still open. The vision and the story of the whole journey are in `docs/journey.md`; where
+One section per room, in journey order: how it plays, why, Jeremy's standing rulings for it ("Rulings", each traced to
+his words), the design rules it keeps ("Rules"), where its code and knobs live, and what is still open. The vision and the story of the whole journey are in `docs/journey.md`; where
 the islands are and how long the crossings take is in `docs/contracts/world.md`; wind behaviour per room is in
 `docs/contracts/wind.md`; the look is in `docs/styles.md`.
 
@@ -33,8 +33,9 @@ Rules every room keeps:
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
 - **The reward phrase** (`completeObjective()` in `story/cues.ts`, the still island's restoration phrase) plays
-  only at major conclusions: the still island restored, the little boats' reveal, the last loose stair flight
-  placed, the drowned village's sail refilled. Smaller steps keep their own small responses.
+  only at major conclusions: the still island restored, the little boats' reveal, the piano's lullaby answered (just
+  after it finishes), the last loose stair flight placed, the drowned village's sail refilled. Smaller steps keep
+  their own small responses.
 
 ## The still island
 
@@ -100,18 +101,21 @@ until both are through. The last sheet opens on a clearing: one low line with a 
 the small yellow jumper between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
-pass through, the camera follows, the washing is gone, and the child throws the plane and the voyage resumes.
-Checkpoints follow the first and second curtains and the threshold.
+pass through, the camera follows, the washing is gone, and the child walks straight to the boat with the paper still
+in hand (no throw), gathers the bird up and boards. Checkpoints follow the first and second curtains and the
+threshold.
 
 Rulings:
-- Colour identifies the family: rich blue, warm red and the child's yellow belong only to these three; the rest of
-  the laundry is pale linen, the passage sheets share a red sewn hem, and the pinwheels stay outside the clearing.
+- Colour marks the family's line out from all the other washing, so it is not a needle in a haystack.
 - The sleeves reach softly: fullness and small cuff movements, pegs holding; no pointed arms or inflated torso
   (a reaching gesture read as creepy).
 - No automatic opening: an invitation, not a timeout.
 - The door is the only way onward; beyond it only open grass, the kite and the boat.
 - Lines may cross each other but never run near-parallel close together (`lineField` rejects them).
-- Daylight stays over the whole island; pinwheels belong to this island only.
+
+Rules: rich blue, warm red and the child's yellow belong only to the family; the rest of the laundry is pale linen,
+the passage sheets share a red sewn hem, and the pinwheels stay outside the clearing. Daylight stays over the whole
+island; pinwheels belong to this island only.
 
 Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`. Checks: `tools/lines-check.mjs`,
 `lines-view-check.mjs`.
@@ -131,7 +135,7 @@ rides the real mittens, `LittleBoats.afterChildPose`), carries it to the lip and
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
-for either traveller. Round the final bend their own boat waits among the toys (the reveal), with the departure
+for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
 kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
 right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout. The
 first time the cygnet rides in the satchel here, the bag's flap is thrown open for the rest of the game.
@@ -142,10 +146,13 @@ centre lane, the others side lanes (`sideLane`, `outletLane`), so it can pass. A
 hands its gust on (`nudge`); carried toys drop the wind once ahead of the child's (`carryAhead`, `fleetLead`).
 Sails read only real local wind (droop, fill, luff, boom swing, heel); the stream gives heading, not steering.
 
-Rulings: no race, score, text, direction test or penalty, and time alone never completes it. The toys must move
-easily and glide: one relaxed stroke should carry a toy well (Jeremy set its drag and top speed). The orange
-toy must not lag the fleet. Keep the toy, the travellers and the next stretch of water in frame together, in
-landscape and portrait. The stream is the same water as the sea and merges into it.
+Rulings: the toys must move easily and glide: one relaxed stroke should carry a toy well (Jeremy set its drag and
+top speed). The orange toy must not lag the fleet. The boats are not held back for the swimming cygnet. The fleet
+leaves the stream mouth for the open sea.
+
+Rules: no race, score, text, direction test or penalty, and time alone never completes it. Keep the toy, the
+travellers and the next stretch of water in frame together, in landscape and portrait. The stream is the same water
+as the sea and merges into it.
 
 Knobs: `tuning.littleBoats`. Checks: `tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`),
 `ONLY=boats node tools/progress-check.mjs`.
@@ -178,18 +185,20 @@ sounds and chimes are hushed during the duet. A completed piano checkpoint resum
 The walk goes on over the west rise and through a pass along `WAY` (`world/fields.ts`), the plane kept within
 reach of the child (`tuning.meadowPlane`). Over the brow the ground falls to **the pond** (`POND`) on the open
 north slope, with the cygnet's family resting on it, white on dark water, from the chapter's first frame; their
-bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). As the child nears the
-bank the nearest birds notice and the family begins a staggered take-off north while she is still on the rise;
-the camera holds her and the whole flock through the climb, then turns to the shore. She sets the bandaged cygnet
-down at the water; it paddles after them, calls, watches them go, and swims back to her waiting hands. Walking on,
+bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
+first and the child stops on the rise to look; while she is still up there the family begins a staggered take-off
+north, starting from the far end of the raft rather than startled by her. The camera holds her and the whole flock
+through the climb, then turns to the shore. The cygnet calls after them from the satchel as she goes down to the
+water, where she sets it down; it paddles after them, watches them go, and swims back to her waiting hands. Walking on,
 a sun shower passes, and halfway through it the sun breaks out and a rainbow stands in the rain over the sea
 ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`).
 
 Rulings:
 - The greening must be seen from where the player is: the camera is placed for it, and it never jerks in and out
   per answer ("I just want to make sure we don't make it nauseating").
-- The family leaves while the child is still on the rise: a missed connection, not the child frightening them
-  away or the parents rejecting their young. No flight practice here; the wing heals later.
+- The family's departure reads as a painful missed connection, never as parents rejecting their young. No flight
+  practice here: the wing is bandaged, the pond is a short swim back to the child's hands, and the first flight
+  belongs to the sleeping island.
 - The pond is far from the piano and the family leaves over falling ground and open water, never through a hill.
 - The pond's encounter plays no reward chime.
 - Walls: field boundaries are painted as dry-stone lines, and every one that crosses the route has a gateway
@@ -224,7 +233,8 @@ cloth (`ScarfCloth`). Freed, the scarf draws along its length into the boat (`tu
 and becomes the red sail for the rest of the voyage.
 
 **The swing** on the rise is optional and rideable once: brushing the empty seat invites the child on and pushes
-it; she rides while the player keeps gusting, and 2.6 s of quiet air brakes it and she steps off.
+it; she rides while the player keeps gusting, and 4 s of quiet air (7 s if nobody pushes once she is on,
+`quietToLeaveSwing`, `firstPushWait`) brakes it and she steps off.
 
 Rulings: the leaves must not behave like grass; the room should be fun, and the cygnet's play is its own, not a
 scripted beat. The scarf reads as tangled wool, not a ribbon; every support is physical (no knot floating in the
@@ -237,7 +247,8 @@ Knobs: `tuning.birches`. Checks: `tools/scarf-check.mjs` (`PHYSICS=1`, `NATURAL=
 
 Between the birches and the drowned village: `toStairs` is a short hop east under a low cloud deck to a small
 grassy island (`STAIRS_ISLE`). Everything about the room, including Jeremy's brief and the open work, is in
-`docs/stairs.md`. `?chapter=stairs`. Not yet in the chapter select: it needs a still and an approved name.
+`docs/stairs.md`. `?chapter=stairs`. Not yet in the chapter select: Jeremy wants the sail over the cloud fixed
+first, and it needs a still and a name.
 
 ## The drowned village
 
@@ -290,7 +301,7 @@ shows the updraft spiral wound from the litter under it. The child walks for as 
 (`tuning.wood.chainStep` between coals) and stops when it runs out; lit coals stay lit where they were earned.
 
 **The fright.** In a cleared glade the camera settles, then one close lightning flash and clap. The cygnet
-recoils, jumps out of the child's arms with a scramble of feathers, lands clear and runs into a shelter of
+recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
 boulders under a tilted slab. Ambient lightning is suppressed for the whole chapter, so the fright has one cause,
 and it cannot repeat. The camera turns to the entrance; only then is the ember inside it seen. The player winds an
 updraft on it, revealing the frightened bird; the child crosses to a spot outside the rock, kneels and holds out a
@@ -347,21 +358,24 @@ its summit window until they land (`tuning.world.sleepingMist`).
    bandage's loose end in its bill and unwinds it. The player's circles build air under it (softened by
    `twirlGain` only here); below the threshold it settles back. With enough lift it hops out, grips the ribbon in
    its beak and tugs the end through the knot, holding on until the curtains are visibly opening.
-6. **Morning.** Having left the ledge, it has nothing under it and glides home on the player's wind: a dip as the
-   wing takes the load, then steadier; letting go is safe. The camera holds the opening window, then follows.
+6. **Morning.** Having left the ledge, it glides home to the bed by itself, a few flaps on the way and buoyed a
+   little by any lift the player gives it: a dip as the wing takes the load, then steadier; letting go is safe. The camera holds the opening window, then follows.
    Light runs down the hill to the bed, frost recedes, green follows the light and spreads over the island, the
    birches leaf, the clock rocks. The child wakes, and after a breath sits up and draws the bird into her lap.
    Then the kite appears and they leave into the sunrise the bird brought.
 
 Rulings:
 - The bed is not in a pit; the hillside is natural: no stamped route, golden path, rock rows, kerbs or inset
-  shelf. The window stays above the skyline in the bedside view with a clear path for its light to the pillow.
-- Release is the completed physical tug, never starting flight or waiting; wind alone cannot open the curtains.
-- No image of strangulation or helpless dangling; no crash or retry after the bird commits.
-- No voiced yawns or narration, nothing implying the child has died.
+  shelf.
+- The bird opens the curtains itself: release is the completed physical tug, never starting flight or waiting;
+  wind alone cannot open the curtains.
+- No voiced yawns or narration.
 - Callbacks reuse familiar mechanics in this island's own setting (the snow notch recalls the scarf).
 - No snow play after this island: the curtains opening is the greening moment that turns winter to spring.
-- Morning uses the island's own winter palette, not the sunset played backwards.
+
+Rules: the window stays above the skyline in the bedside view with a clear path for its light to the pillow. No
+image of strangulation or helpless dangling; no crash or retry after the bird commits; nothing implying the child
+has died. Morning uses the island's own winter palette, not the sunset played backwards.
 
 Knobs: `tuning.sleeping`. Checks: `tools/sleeping-logic-check.mjs`, `sleeping-check.mjs` (`ADVERSARIAL=1`,
 `TOUCH=1`; `SUMMIT=1` and `CLIMB=1` stage the ledge and the feather), `wing-care-check.mjs`. Checkpoints `feather`
@@ -375,15 +389,17 @@ and `morning`.
 The exhale after the worst of the journey: the one crossing that takes its time, and nothing is asked of the
 player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
 pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
-so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into one even pace that fits
-the pod's play and is never braked. Then the cygnet's brave swim: it grows restless, climbs onto the side, makes
+so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
+play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. Then the cygnet's
+brave swim: it grows restless, climbs onto the side, makes
 up its mind, goes in and swims in the wave along the hull while the boat sails on, and is lifted back in to dry. A
 dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
 Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
 
 Rulings: the passage takes at most 100 s. Dolphins are big, never swim in the air, and never turn faster than a
-body allows; the pod follows its own stations rather than being swung with the boat. The boat never crawls for the
-swim.
+body allows. The boat never crawls for the swim.
+
+Rules: the pod follows its own stations rather than being swung with the boat.
 
 Knobs: `tuning.seaPassage`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
 `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
@@ -411,10 +427,12 @@ and the empty boat comes round the deep outer channel (never over the flat) to t
 widens. The child gathers the cygnet, walks up that jetty's ramp and boards. The departure kite flies over the far
 jetty throughout.
 
-Rulings: no timers, hidden percentages, constellation matching, raised causeway or passive solution. No ground
-fog, moon prop or sand road: keep the whole surface an open mirror. The paper stays visible throughout. Four
-stars (three ended the room too soon), and the constellation is a crooked kite echoing the departure kite. The
-hoop is held well out from the child's face.
+Rulings: no passive solution (the answer never appears while the player does nothing). No clouds on the ground or
+moon prop: keep the whole surface an open mirror. The paper stays visible throughout. Four stars (three ended the
+room too soon), and the constellation is a crooked kite echoing the departure kite. The hoop is held well out from
+the child's face, as if she is about to blow through it.
+
+Rules: no timers, hidden percentages, constellation matching, raised causeway or sand road.
 
 Knobs: `tuning.skyMirror`, `tuning.mirrorCompanion`. Checks: `tools/sky-mirror-logic-check.mjs`,
 `sky-mirror-check.mjs`, `sky-mirror-pointer-check.mjs`, `sky-mirror-visibility-check.mjs`. Saves: `stars4-<mask>`
@@ -436,7 +454,8 @@ one arrival in the game with somewhere built for it; the child steps up onto the
 tangent and wheels over the hilltop (`tuning.swanArrival`), calling. The cygnet watches and cries after them and is
 set down. It tries twice by itself and drops. Then the player's updraft: a column of `tuning.summit.liftToFly`
 gets it off the grass, it climbs only as fast as the player keeps winding and sinks when they stop, and six to
-eight turns of the cursor get it high enough (`liftTo`). **This is the one sequence that never times out.** The
+eight turns of the cursor get it high enough (`liftTo`). **It never times out: it needs the player.** From here to
+the closing line the ending is scripted to the music (`HOME_ENDING`). The
 family comes down for it; it flies by itself, a wobbly widening circuit over the child that steadies as it goes,
 always in frame (`tuning.fledge`); turns to her, calls (the call that is answered: the family bugles back), and
 goes north, taking the empty tail station of the V (`tuning.swanDeparture`). She cheers after them in silence.
@@ -446,9 +465,8 @@ the grass below (`tuning.homeReveal.stopAfter`). House first: a moment looking a
 then the physical unfold. The paper is the glider, plain white ruled paper, until it opens; the crayon drawing
 arrives as it flattens (hills and wall, house, sun, the little plane), and the recognition motif starts when
 sheet and real house are both in frame (`Chapter.afterCamera` checks the rendered view). The drawing is held
-(`recogniseFor`), she looks up at the house and her hands settle, then she refolds it and offers it to the wind:
-the player's stroke carries it into the sunset, or the island's own breeze takes it shortly after
-(`releaseFor`). The camera looks over her shoulder at the sheet and the house, with the real low sun above and left
+(`recogniseFor`), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
+`releaseFor` the island's own breeze takes it into the sunset. The camera looks over her shoulder at the sheet and the house, with the real low sun above and left
 of the cottage as in the drawing.
 
 **Home.** Daylight holds through the farewell and the drawing; sunset begins while she watches the plane go, and
