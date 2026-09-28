@@ -11,7 +11,7 @@ import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flig
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
 const SHAPE = { heap: 2.5, tower: 3.5, big: [2.6, 2.0], mid: [2.0, 1.8], fine: [1.3, 0.8] } as const;
 
-/** How many points of the boat's way over the cloud, and of its fresh furrow, the cloud's top is told about. */
+/** How many points of the boat's way over the cloud, and of the fresh parting behind the hull, the cloud's top is told about. */
 const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
 const TRAIL_POINTS = 16;
 /** How deep the layer the low wisps stream in lies over the tops, metres. */
@@ -31,7 +31,6 @@ uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform vec4 uGate;
 uniform float uSurface;
-uniform float uDebug;
 out vec3 vWorld;
 out float vRing;
 out vec4 vCalm;
@@ -55,12 +54,6 @@ void main() {
   vCalm = vec4(c, slope, smoothstep(2.5, 14.0, way));
   vStature = statureAt(xz, way);
   vec2 fold;
-  if (uDebug < -2.5) {
-    vWorld = vec3(xz.x, uSurface, xz.y);
-    vFog = vec4(0.5);
-    gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
-    return;
-  }
   vec2 p = xz + uCloudShift * 0.6;
   vRise = riseAt(xz, p + uDrift * DRIFT.x, vCalm, spacing);
   vTower = towers(p + uDrift * DRIFT.y, spacing);
@@ -106,7 +99,6 @@ uniform vec4 uGate;
 uniform float uReach;
 uniform float uHole;
 uniform float uSurface;
-uniform float uDebug;
 in vec3 vWorld;
 in float vRing;
 in vec4 vCalm;
@@ -122,7 +114,6 @@ flat in float vLevel;
 TOP
 void main() {
   if (vRing > uReach || gridHidden(vWorld.xz, vLevel)) discard;
-  if (uDebug < -1.5) { gl_FragColor = vec4(vFog.rgb, 1.0); return; }
   vec2 xz = vWorld.xz;
   if (uCloudBubble.w > 0.0 && uHole > 0.5) {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
@@ -200,9 +191,6 @@ void main() {
   // At the end of its reach it thins into the deck beyond, rather than stopping along a line.
   edge *= 1.0 - smoothstep(uReach * 0.7, uReach, vRing);
   gl_FragColor = vec4(col, uCloudDeck.w * edge);
-  if (uDebug > 0.5) gl_FragColor = vec4(col, 1.0);
-  if (uDebug > 1.5) gl_FragColor = vec4(vec3(edge), 1.0);
-  if (uDebug > 2.5) gl_FragColor = vec4(vec3(puff, sunLit, full), 1.0);
 }`;
 
 /**
@@ -232,10 +220,10 @@ vec3 lobes(vec2 p) {
 }`;
 
 /**
- * The top of the cloud: heaped cumulus in the open, big round lobes run together into heaps and smaller ones on
- * those, with soft creases where they meet. Low and gentle round the top landing and all along the way the boat
- * goes, so it sails down a valley between the heaps; and where the hull has just been, a furrow that closes up
- * again behind it, with a soft lip either side.
+ * The top of the cloud: a sea of round puffs of three sizes on low rolling heaps, with soft creases where they meet,
+ * each size drifting at its own pace so the tops seem to roll. Low and gentle round the top landing and all along
+ * the way the boat goes; swelling up round the feet of the towers; and where the hull has just been, a soft parting
+ * that fills in again behind it.
  */
 const TOP_GLSL = /* glsl */ `
 uniform vec2 uDrift;
@@ -659,8 +647,9 @@ export class FogBank {
 
 /**
  * The cloud deck as the stairs room sees it from outside: its underside hanging over the island, heavy and lit by
- * the low sun, and its top lying to the horizon under the sunset with a furrow where the hull has been. Inside it,
- * the shared analytic deck in the fog takes over.
+ * the low sun, and its top lying to the horizon under the sunset, drifting and rolling, with towers of cumulus
+ * standing out of it along the way and wisps streaming across it. Inside it, the shared analytic deck in the fog
+ * takes over. Both surfaces lie on one world-anchored mesh (`cloud-grid.ts`) over baked lobes (`cloud-lobes.ts`).
  */
 export class StairsCloud {
   readonly group = new THREE.Group();
@@ -676,9 +665,9 @@ export class StairsCloud {
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uDebug: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
-  /** The furrow behind the hull: where it has been, newest first, and how fresh each point is. */
+  /** The parting behind the hull: where its bow has been, newest first, how fresh each point is, and how far along. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
   private trailAlong = 0;
@@ -698,7 +687,6 @@ export class StairsCloud {
       uFeet: { value: Array.from({ length: FEET }, () => new THREE.Vector4()) },
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
-      uDebug: { value: 0 },
       uWisps: { value: 1 },
       uWispAir: { value: new THREE.Vector2(1, 0) },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
@@ -745,8 +733,8 @@ export class StairsCloud {
   }
 
   /**
-   * The hull going through the top of the cloud: it leaves a furrow that closes up behind it, and throws up puffs
-   * at the bow and off the quarters that curl away and thin out. `hull` is null when it is not on the cloud.
+   * The hull going through the top of the cloud: it parts the tops, which curl off either side and fill in again
+   * behind it, and a breath of vapour lifts off the stern. `hull` is null when it is not on the cloud.
    */
   sailing(hull: { position: THREE.Vector3; yaw: number; speed: number } | null, dt: number): void {
     for (const t of this.trail) t.z = Math.max(0, t.z - dt / tuning.stairs.partingFills);
