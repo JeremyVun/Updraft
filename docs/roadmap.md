@@ -26,7 +26,8 @@ For Jeremy's eye, ear or hands:
 - The child's pigtails, the hood's side line and the open bag flap, seen in a level from the play camera in motion
   ([child.md](child.md)).
 
-Known issues:
+Known issues (the first seven, plus the dark wood's hidden ember, are the backlog item
+[backlog/bug-sweep](backlog/bug-sweep/)):
 - The storm reaches the dark wood about 15 s late (56 s from the weather's start, against 38 to 44): since the
   beach landings, the boat sheds its way about 10 m out from the wood's shelving shore and drifts sideways in the
   breeze before its forefoot finds the bottom. `boat-check` and `drowned-camera-check` fail on it.
