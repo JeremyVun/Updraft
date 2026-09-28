@@ -54,7 +54,8 @@ export class CloudBank {
   /** 0 hides it, 1 shows it. */
   set amount(a: number) {
     this.shown = a;
-    this.mesh.visible = a > 0.01 && this.whole > 0.01;
+    // Until it has gone for good it is always there to be blown at, however far a stroke has flung its lumps.
+    this.mesh.visible = a > 0.01 && (!this.gone || this.whole > 0.01);
   }
 
   get cleared(): boolean {
@@ -80,7 +81,7 @@ export class CloudBank {
   }
 
   update(dt: number): void {
-    if (!this.mesh.visible && !this.gone) return;
+    if (this.shown <= 0.01 && !this.gone) return;
     let spread = 0;
     this.lo.set(Infinity, Infinity, Infinity);
     this.hi.set(-Infinity, -Infinity, -Infinity);

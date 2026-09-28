@@ -28,7 +28,7 @@ function fixture(gust = 0) {
   const plane = { held: true, position: new THREE.Vector3(), hold() {},
     launch(p) { this.position.copy(p); this.held = false; }, depart() {} };
   return { wind, boat, child, plane, cygnet: { carried: true, mind: { perform() {}, startle() {} }, eye: out => out.copy(child.position) },
-    sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null } };
+    lines: { gust() {} }, sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null } };
 }
 const report = [];
 for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {

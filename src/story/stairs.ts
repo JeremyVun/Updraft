@@ -225,7 +225,9 @@ export class StairsChapter implements Chapter {
       this.cornerSpot.clone(), on(up.bottom, up.yaw, 0.2), on(up.top, up.yaw, 0.35), wait.centre.clone(), onLanding(wait, wait.x1 - 0.25, 0),
       on(on2.bottom, on2.yaw, 0.2), on(on2.top, on2.yaw, 0.35), onward.centre.clone(), onLanding(onward, onward.x1 - 0.25, 0),
       on(far.bottom, far.yaw, 0.2), on(far.top, far.yaw, 0.35), farL.centre.clone(), onLanding(farL, farL.x1 - 0.25, 0),
-      on(LOOP_BACK.bottom, LOOP_BACK.yaw, 0.2), drawIn(LOOP_BACK.top.clone()), drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 0.5)),
+      // Up the middle of the drawn-in flight, which bows and narrows toward its top.
+      ...[0.08, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map(t => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, t))),
+      drawIn(on(LOOP_BACK.top, LOOP_BACK.yaw, 0.5)),
     ]);
     this.sOnward = this.roundOut.project(onward.centre);
     this.sBack = this.roundOut.project(LOOP_BACK.bottom);
@@ -521,6 +523,18 @@ export class StairsChapter implements Chapter {
     this.world.trickShown = this.beat === 'loop' ? e : this.looped ? 1 - this.trickGone : 0;
     this.world.undraw = this.revealFrom < 0 ? 0 : THREE.MathUtils.smoothstep(this.now - this.revealFrom, REVEAL_HOLD + 0.4, REVEAL - 1);
     this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
+    this.cast.cygnet.nudge = this.beat === 'loop' || this.lofted ? this.drawnDepth() : null;
+  }
+
+  /**
+   * Seen from far above the loop the bird is drawn where it is, not pulled toward the lens, so the rails it walks
+   * beside stand in front of it. Up the drawn-in flight, drawn smaller, it is pushed back to where it seems to be.
+   */
+  private drawnDepth(): number {
+    const k = this.cast.cygnet;
+    if (k.scale >= 1) return 0;
+    const d = k.position.distanceTo(this.world.eye);
+    return d * (1 - 1 / k.scale) / Math.max(0.2, THREE.MathUtils.smoothstep(d, 9, 34));
   }
 
   private measureAir(dt: number): void {
