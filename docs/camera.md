@@ -9,6 +9,13 @@ Jeremy's brief, 2026-09-25, in his words:
 > cinematic and incredibly polished in terms of the camera direction the whole way through the game. Please
 > identify all areas of teh game like this that need to be fixed and fix them
 
+Jeremy, 2026-09-28, on the storm before the forest island:
+
+> The camera is very stuttery and jittery during the storm part of the journey before the forest island when it's
+> focusing on hte lighthouse. I need you to fix the camera - it needs to follow this project's principles when it
+> comes to intentional, cinematic camera dollying. We must not break the dreamlike trance that we are trying to keep
+> the player in.
+
 Earlier direction still stands: "make sure we don't make it nauseating with the camera jerking in and out all the
 time" (piano, September 19) and "it'd need to feel really nice and seamless throughout the entire game. Almost like
 there wasn't an authored system in place" (September 21). How the rig works: [engine.md](engine.md#cinematography-srccamerats-srccamera-directionts).
@@ -54,6 +61,7 @@ composition offset) and any beat, chapter or staging handover inside it.
 | Every landing | Lens speed 4.5 to 0.8 in one frame | Carry stopped when the hull stopped on the sand | Carried motion brakes at `carryBrake` |
 | Piano puzzle | Three out-and-back pumps (19 to 34/46/58 and back to the keys) | Per-answer response framing returned to the keys | Ratchet: 24, 29, 34 back and it stays (`piano.rest*`) |
 | Sleeping island climb | Pan reversals of 55 to 70° at route markers | Camera side taken straight from the current route segment | The climb direction is eased like the other headings |
+| Storm lighthouse (2026-09-28, Jeremy: "very stuttery and jittery") | Lens 16, 75, 40, 86 then 14 units from the boat within 40 s; an 80° orbit round the boat and a pan reversal as the tower came abeam; the eye scraping the water and the crag 85 units back, kinking frame to frame (0.26 units); a roof hid the child for 0.4 s | The crown was a fit subject with 64 units of room, and holding it abeam of a 40-unit tower 25 units off needs a retreat of that size; the bearing chased the tower round the boat and rode the raw hull yaw | One move out to 23 units and held, low, widened a little and tilted up toward the crown; the tower is glanced at within `storm.lighthouseCamera.arc` of astern and let slide past as they come abeam; the storm rides a smoothed hull heading. Frame kinks 20x smaller; `node tools/storm-camera-trace.mjs` |
 
 Left as authored, because each is one deliberate move rather than indecision: the doorway's continuous threshold
 path, the little-boats close-up while the child handles a toy, the birches' close-up for the circling snag, the

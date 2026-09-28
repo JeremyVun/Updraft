@@ -373,7 +373,7 @@ passages, 30/60 fps, varied wind bearings, storm pacing and dolphin/swimmer came
 
 September 21: Jeremy asked for a bigger, more imposing lighthouse, as a child might imagine it in a dream.
 It now stands 35.7 units tall (2.6 times its former height), with a base 1.85 times wider, on a turf-capped rock crag 4.5 units above the flood (09-28).
-The low boat view holds its crown and the travellers together; the raised lantern sweeps down toward the water.
+The low boat view holds its crown and the travellers together while it is ahead of them, then lets it slide past as they come under it rather than backing away to keep it (09-28, [camera.md](camera.md)); the raised lantern sweeps down toward the water.
 
 Jeremy first requested 25–30 seconds from storm to forest. After playing that version, he revised the direction:
 

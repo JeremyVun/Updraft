@@ -1439,16 +1439,15 @@ export const tuning = {
     /** One distant ship call, with its tail clear before the first thunder. */
     foghornAt: 8, foghornLateAllowance: 0.25,
     weatherGatherFor: 14,
-    lighthouseLookUntil: 21.5,
-    lighthouseLookFrom: 3,
-    lighthouseLookRelease: 19.5,
-    lighthouseFrameDistance: 23,
-    lighthouseFrameHeight: -5,
-    lighthouseFrameUp: 10,
+    /**
+     * The lens's one move for the lighthouse: out over `openFor` seconds to `distance`, down to `eyeRise` over the
+     * drift's aim and the lens widened to `zoom`, tilted up to `tilt` radians toward the crown. The tower is watched from
+     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it.
+     */
+    lighthouseCamera: { openFor: 6, distance: 24, eyeRise: 1.7, zoom: 0.82, tilt: 0.21, arc: 0.7, pass: 0.9,
+      offset: 0.24, pace: 0.8 },
     lighthouseComfortFor: 2.6,
     lighthouseStartle: 0.18,
-    lighthouseLookOffset: 0.12,
-    lighthouseCameraPace: 1.1,
     darkBy: 33,
     lighthouseOutAt: 23,
     lighthouseFadeFor: 2.5,
