@@ -184,7 +184,12 @@ Earlier attempts on the child's model are not a guide. Do not mine old transcrip
   head: it now stands off it, the brim arching out over the fringe.
 - Scarf ends (Opus agent, branch `child-scarf`, merged): a dream breeze always carries both ends out behind and round
   to the knot's side, more with the child's speed; a player's gust takes them its own way. Knobs in `tuning.scarf`.
-  The long end streams well round to the side so it reads past the bag from the camera behind.
+  The long end streams well round to the side so it reads past the bag from the camera behind. 09-28, after Jeremy
+  found the ends blowing about with no wind and the scarf odd always sticking out: the thrashing was the coat push
+  (`keepOut`), applied in both constraint passes and so carried into the ends' last positions twice, flinging them
+  back into the coat every step (tip 1.4 m/s standing still, 0.2 after). It now pushes once, on the last pass. The
+  dream breeze is 0.8 (was 3), so standing in still air the ends droop with a lean behind; `carry` 1.8 (was 1) keeps
+  the walking stream as it was.
 - Face details still at **D** until Jeremy rules on the shape.
 - Capture harness for this round, in `/tmp/child3`:
   - `snap.sh <tag>` freezes the worktree as a build served at `:5377/<tag>/`, so edits don't disturb captures.

@@ -435,12 +435,12 @@ export const tuning = {
   },
   scarf: {
     /**
-     * The dream's own breeze, always carrying the ends out behind the child (units per second), and how much it
-     * swells and eases. It turns with the child, and a player's gust takes over from it.
+     * The dream's own breeze round the ends (units per second), and how much it swells and eases: faint, so standing in
+     * still air they droop with only a lean behind. It turns with the child, and a player's gust takes over from it.
      */
-    breeze: 3, breezeSwell: 0.3,
+    breeze: 0.8, breezeSwell: 0.3,
     /** How much of the child's own speed adds to the air carrying the ends out behind them. */
-    carry: 1,
+    carry: 1.8,
     /**
      * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
      * times as hard as it blows, and one felt at `gustTakeover` units per second or more carries them its own way.

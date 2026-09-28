@@ -31,7 +31,7 @@ function lookup(table: number[][], key: number, col: number): number {
 
 /**
  * Height, half-width, half-depth and how far forward the middle of the coat is, from the collar to below the hem. Below
- * the bag it flares as much front to back as side to side, so it keeps the concept's A-line from every angle.
+ * the bag it flares a little less front to back than side to side, so it keeps the concept's A-line without belling.
  */
 const COAT = [
   [1.625, 0.13, 0.125, 0.0],
@@ -43,12 +43,13 @@ const COAT = [
   [1.3, 0.332, 0.29, 0.04],
   [1.18, 0.353, 0.306, 0.04],
   [1.04, 0.377, 0.322, 0.036],
-  [0.88, 0.404, 0.372, 0.032],
-  [0.72, 0.438, 0.432, 0.028],
-  [0.58, 0.47, 0.49, 0.022],
-  [0.45, 0.495, 0.535, 0.016],
+  [0.88, 0.408, 0.366, 0.032],
+  [0.72, 0.446, 0.418, 0.028],
+  [0.58, 0.48, 0.47, 0.022],
+  [0.45, 0.507, 0.51, 0.016],
 ];
 export const COAT_TOP = 1.625;
+export const HEM = 0.67;
 
 /** Broad folds that fan out from the chest toward the hem: angle from the front, width, and ridge (+) or valley (-). */
 const FOLDS: [number, number, number][] = [
@@ -56,7 +57,7 @@ const FOLDS: [number, number, number][] = [
 ];
 
 function foldAt(a: number, y: number): number {
-  const amp = 0.034 * smooth(1.38, 0.62, y);
+  const amp = 0.027 * smooth(1.38, 0.62, y);
   if (amp <= 0) return 0;
   const fan = (1.3 - y) * 0.12;
   let d = 0.7 * bump(angleTo(a, Math.PI), 0.2);
@@ -67,7 +68,7 @@ function foldAt(a: number, y: number): number {
   return amp * d;
 }
 
-export const hemY = (a: number) => 0.6 + 0.01 * Math.sin(3 * a + 0.4) + 0.005 * Math.sin(5 * a + 1.1) - 0.3 * foldAt(a, 0.6);
+export const hemY = (a: number) => HEM + 0.006 * Math.sin(3 * a + 0.4) + 0.003 * Math.sin(5 * a + 1.1) - 0.15 * foldAt(a, HEM);
 
 export interface CoatSample {
   p: THREE.Vector3;
