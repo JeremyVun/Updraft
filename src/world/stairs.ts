@@ -37,6 +37,7 @@ flat out float vPart;
 #ifdef TRICK
 uniform vec3 uLoopEye;
 uniform float uUndraw;
+uniform float uTrueDepth;
 in float aDepth;
 in vec3 aBuilt;
 #endif
@@ -54,8 +55,9 @@ void main() {
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 #ifdef TRICK
-  // Drawn in, it is in front of and behind everything else as if it stood where it seems to.
-  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * mix(aDepth, 1.0, uUndraw), 1.0);
+  // Drawn in, it is in front of and behind everything else as if it stood where it seems to. That only holds from
+  // the one place, so once the lens leaves it the flight is sorted where it really is.
+  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * mix(aDepth, 1.0, uTrueDepth), 1.0);
   gl_Position.z = seems.z / seems.w * gl_Position.w;
 #endif
 }`;
@@ -179,6 +181,8 @@ const BALUSTER = new THREE.LatheGeometry([
 ].map(([r, y]) => new THREE.Vector2(r, y)), 16);
 const KNOB = new THREE.SphereGeometry(0.155, 20, 14);
 const RAIL = new THREE.CylinderGeometry(0.072, 0.072, 1, 16, 1).rotateX(Math.PI / 2);
+/** Round the loop a rail bends with the drawn-in flight, so it needs rings all along it. */
+const RING_RAIL = new THREE.CylinderGeometry(0.072, 0.072, 1, 16, 24).rotateX(Math.PI / 2);
 
 /** Local frame of a flight: +z up the flight from its bottom riser, +y up, +x to the climber's left. */
 function flightFrame(f: Flight): THREE.Matrix4 {
@@ -205,7 +209,7 @@ function newel(b: Build, frame: THREE.Matrix4, x: number, s: number, floor: numb
 
 /** A rail from s0 to s1 in the frame at x, on a few fat balusters standing on `floor(s)`. */
 function railing(b: Build, frame: THREE.Matrix4, x: number, s0: number, s1: number, floor: (s: number) => number,
-  rail: (s: number) => number, balusters: number, mist: (p: THREE.Vector3) => number): void {
+  rail: (s: number) => number, balusters: number, mist: (p: THREE.Vector3) => number, geometry = RAIL): void {
   for (let i = 0; i < balusters; i++) {
     const s = s0 + (i + 1) * (s1 - s0) / (balusters + 1);
     const y0 = floor(s);
@@ -215,7 +219,7 @@ function railing(b: Build, frame: THREE.Matrix4, x: number, s0: number, s1: numb
   const len = Math.hypot(s1 - s0, rail(s1) - rail(s0));
   const mid = (s0 + s1) / 2;
   const tilt = Math.atan2(rail(s1) - rail(s0), s1 - s0);
-  b.add(RAIL, at(frame, x, rail(mid), mid).multiply(new THREE.Matrix4().makeRotationX(-tilt)).multiply(new THREE.Matrix4().makeScale(1, 1, len)), WOOD, undefined, mist);
+  b.add(geometry, at(frame, x, rail(mid), mid).multiply(new THREE.Matrix4().makeRotationX(-tilt)).multiply(new THREE.Matrix4().makeScale(1, 1, len)), WOOD, undefined, mist);
 }
 
 /**
@@ -254,7 +258,7 @@ function buildFlight(b: Build, f: Flight, ring = false): void {
   const railTop = (s: number) => THREE.MathUtils.clamp(nosing(s), rise, risers * rise) + RAIL_HEIGHT - 0.1;
   if (ring) {
     const post = INSET - NEWEL / 2;
-    railing(b, F, -side, -post, run + post, tread, railTop, Math.max(1, risers >> 2), mist);
+    railing(b, F, -side, -post, run + post, tread, railTop, Math.max(1, risers >> 2), mist, RING_RAIL);
     return;
   }
   for (const x of [-side, side]) {
@@ -335,10 +339,10 @@ function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THR
   return haze;
 }
 
-function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }): THREE.ShaderMaterial {
+function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }, trueDepth = { value: 0 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     defines: trick ? { TRICK: 1 } : {},
-    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uUndraw: undraw },
+    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uUndraw: undraw, uTrueDepth: trueDepth },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,
@@ -398,6 +402,7 @@ export class CloudStairs {
   /** Every piece of haze under the flights, so those the white hides whole need not be drawn. */
   private readonly hazes: THREE.Mesh[] = [];
   private readonly undrawUniform = { value: 0 };
+  private readonly trueDepthUniform = { value: 0 };
   /** Called with a piece's flight number as it knocks home. */
   onDocked: (index: number) => void = () => {};
   /** 0 hides the ghost of the next missing flight; 1 draws it. */
@@ -446,7 +451,7 @@ export class CloudStairs {
       pos.setXYZ(i, ...drawIn(v).toArray());
     }
     back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
-    this.trick = new THREE.Mesh(back, stairMaterial(this.trickUniform, true, this.undrawUniform));
+    this.trick = new THREE.Mesh(back, stairMaterial(this.trickUniform, true, this.undrawUniform, this.trueDepthUniform));
     this.trick.name = 'stairs-loop-trick';
     this.trick.visible = false;
     this.group.add(this.trick);
@@ -580,6 +585,7 @@ export class CloudStairs {
     this.time = time;
     this.eye.copy(camera.position);
     this.looking.copy(camera.position).addScaledVector(camera.getWorldDirection(this.tmp), 12);
+    this.trueDepthUniform.value = Math.max(this.undrawUniform.value, THREE.MathUtils.smoothstep(camera.position.distanceTo(LOOP_EYE), 0.05, 0.8));
     const k = tuning.stairs;
     const next = this.waiting;
     for (const piece of this.pieces) {
@@ -689,14 +695,21 @@ export class CloudStairs {
 
   /** Where only the bird walks: the loop's far side, and its last flight as it is drawn in. */
   static loopDecks(): Deck[] {
-    const top = drawIn(LOOP_BACK.top.clone());
+    // The drawn-in flight curves and shrinks toward its top, so it is walked in short straight pieces that follow it.
+    const pieces = 16;
+    const up = (t: number) => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, t));
+    const back: Deck[] = Array.from({ length: pieces }, (_, i) => {
+      const a = up(i / pieces), b = up((i + 1) / pieces);
+      return { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: STEP.width * 0.4 * THREE.MathUtils.lerp(1, LOOP_SHRINK, (i + 0.5) / pieces),
+        height: a.y, height1: b.y };
+    });
+    const top = up(1);
     const onto = drawIn(LOOP_BACK.top.clone().addScaledVector(along(LOOP_BACK.yaw), 0.5));
     return [
       ...CloudStairs.flightDecks(LOOP_FAR.flight, LOOP_FAR.landing),
-      { x0: LOOP_BACK.bottom.x, z0: LOOP_BACK.bottom.z, x1: top.x, z1: top.z, halfWidth: STEP.width * 0.45,
-        height: LOOP_BACK.bottom.y, height1: top.y },
+      ...back,
       // A step on past its top, where the bird is put onto the corner itself.
-      { x0: top.x, z0: top.z, x1: onto.x, z1: onto.z, halfWidth: 0.5, height: top.y },
+      { x0: top.x, z0: top.z, x1: onto.x, z1: onto.z, halfWidth: 0.5 * LOOP_SHRINK, height: top.y },
     ];
   }
 

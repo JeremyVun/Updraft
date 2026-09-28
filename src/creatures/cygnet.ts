@@ -103,6 +103,11 @@ export class Cygnet {
    */
   scale = 1;
   /**
+   * How far toward the lens it is drawn, when the story sets it, in place of the usual pull that keeps it out of the
+   * grass seen from afar; beside a rail that pull draws it through the rail.
+   */
+  nudge: number | null = null;
+  /**
    * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
    * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
    */
@@ -1578,7 +1583,7 @@ export class Cygnet {
     // The grass visibility bias must ease away afloat, or submerged feet draw over the water, and on the child,
     // where pulling it toward a distant camera draws it through their coat and out through the satchel.
     const lifted = st === 'swimming' || st === 'gliding' || this.carried || this.seating.held || this.flightPose > 0 || this.billGrip;
-    this.mat.uniforms.uNudge.value = ease(this.mat.uniforms.uNudge.value, lifted ? 0 : 2.4, 8, dt);
+    this.mat.uniforms.uNudge.value = this.nudge ?? ease(this.mat.uniforms.uNudge.value, lifted ? 0 : 2.4, 8, dt);
     const m = this.mind;
     if (this.debug.stand) this.settle = 0;
     d.time = this.time;
