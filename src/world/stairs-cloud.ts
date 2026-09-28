@@ -120,14 +120,18 @@ void main() {
   // the sides turned away.
   float facing = dot(N, L);
   float crown = smoothstep(0.5, 1.0, puff);
-  float sunLit = clamp(facing * 1.5 + 0.25 + 0.4 * (puff - 0.75), 0.0, 1.0) * (1.0 - 0.85 * vShade);
+  // Light goes into cloud and comes out round the side: a wide, soft terminator.
+  float wrapped = smoothstep(0.0, 1.0, (facing + 0.5 + 0.3 * (puff - 0.75)) / 1.3);
+  float sunLit = wrapped * (1.0 - 0.8 * vShade);
   float full = smoothstep(0.2, 0.85, facing) * (1.0 - vShade) * crown;
   float toward = pow(max(0.0, dot(ray, L)), 3.0);
-  vec3 lilac = uSkyAmbient * vec3(1.25, 0.95, 1.15) + uGroundBounce * 0.3;
-  vec3 violet = uSkyAmbient * vec3(0.66, 0.5, 0.98);
+  vec3 lilac = uSkyAmbient * vec3(1.3, 1.02, 1.2) + uGroundBounce * 0.3;
+  vec3 violet = uSkyAmbient * vec3(0.84, 0.7, 1.04);
   vec3 shade = mix(violet, lilac, smoothstep(0.3, 0.95, puff));
-  vec3 col = mix(shade, uSunColor * vec3(0.52, 0.37, 0.36) + shade * 0.3, sunLit * mix(0.5, 1.0, crown));
-  col += uSunColor * vec3(1.0, 0.85, 0.62) * full * 0.22;
+  // The light scattered on through the cloud warms its shade, most near its crowns.
+  shade += uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * puff) * (1.0 - 0.5 * vShade);
+  vec3 col = mix(shade, uSunColor * vec3(0.54, 0.39, 0.36) + shade * 0.35, sunLit * mix(0.55, 1.0, crown));
+  col += uSunColor * vec3(1.0, 0.85, 0.62) * full * 0.2;
   // Against the low sun the thin edges and the crests glow: the silver lining.
   col += uSunColor * vec3(1.0, 0.88, 0.72) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
   // Down between the heaps far off the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
