@@ -849,7 +849,7 @@ function limb(a: THREE.Vector3, b: THREE.Vector3, lift: number, r0: number, r1: 
   for (let i = 0; i < segments; i++) {
     for (let k = 0; k < radial; k++) {
       const q = i * (radial + 1) + k;
-      idx.push(q, q + radial + 1, q + 1, q + radial + 1, q + radial + 2, q + 1);
+      idx.push(q, q + 1, q + radial + 1, q + radial + 1, q + 1, q + radial + 2);
     }
   }
   const geo = new THREE.BufferGeometry();
