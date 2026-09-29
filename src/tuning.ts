@@ -720,6 +720,9 @@ export const tuning = {
     rise: 0.9,
     liftTo: 5.5,
     callEvery: 9,
+    /** While it is up, the invitation keeps winding round it at least this insistently, and this much of it shows under the player's own trace. */
+    coaxAloft: 0.7,
+    coaxKeep: 0.6,
   },
   piano: {
     initialRadius: 15, initialSoft: 4,

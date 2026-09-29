@@ -460,7 +460,8 @@ one arrival in the game with somewhere built for it; the child steps up onto the
 tangent and wheels over the hilltop (`tuning.swanArrival`), calling. The cygnet watches and cries after them and is
 set down. It tries twice by itself and drops. Then the player's updraft: a column of `tuning.summit.liftToFly`
 gets it off the grass, it climbs only as fast as the player keeps winding and sinks when they stop, and six to
-eight turns of the cursor get it high enough (`liftTo`). **It never times out: it needs the player.** From here to
+eight turns of the cursor get it high enough (`liftTo`). The shown spiral keeps turning round it while it is up,
+fainter under the player's own, until the family answers. **It never times out: it needs the player.** From here to
 the closing line the ending is scripted to the music (`HOME_ENDING`). The
 family comes down for it; it flies by itself, a wobbly widening circuit over the child that steadies as it goes,
 always in frame (`tuning.fledge`); turns to her, calls (the call that is answered: the family bugles back), and

@@ -12,6 +12,8 @@ export interface Coax {
   at: THREE.Vector3;
   urgency: number;
   radius?: number;
+  /** How much of the invitation keeps winding under the player's own trace, 0 giving way to it entirely. */
+  keep?: number;
 }
 
 /** Lengths of ribbon in one column, and the radians of turn drawn before the next length is laid down. */
@@ -232,13 +234,14 @@ export class Swirl {
   private invite(dt: number, camera: THREE.PerspectiveCamera, coax: Coax | null, urgency: number): void {
     let winding = false;
     let want = 0;
+    const yielded = this.handover * (1 - (coax?.keep ?? 0));
     if (coax && urgency > 0.001) {
       const period = T.coaxWind + T.coaxGap * (1 - 0.65 * urgency);
       this.cycle += dt;
       if (this.cycle > period) this.cycle = 0;
       winding = this.cycle < T.coaxWind;
       this.slow += dt * T.coaxLoops * (1 + 0.6 * urgency) * Math.PI * 2;
-      if (winding && this.handover < 0.4) {
+      if (winding && yielded < 0.4) {
         const rad = (coax.radius ?? T.coaxRadius) * (0.9 + 0.2 * urgency);
         /** Stood almost clear of the ground, so the whole loop can be seen going round whatever stands there. */
         while (this.slow - this.slowLaid >= LAY_TURN) {
@@ -256,6 +259,6 @@ export class Swirl {
     /** Eased rather than taken, so that a chapter dropping the invitation mid-loop lets go of it instead of cutting. */
     this.glow += (want - this.glow) * (1 - Math.exp(-dt * (want > this.glow ? 6 : 3)));
     this.ghost.drift(dt, T.coaxHeight / T.coaxWind, winding ? 0.92 : 1.3, T.coaxWind);
-    this.ghost.build(this.glow * (1 - this.handover), this.ghostPen);
+    this.ghost.build(this.glow * (1 - yielded), this.ghostPen);
   }
 }
