@@ -202,8 +202,6 @@ export const tuning = {
     riseGain: 0.6, riseSpeed: 3, sinkSpeed: 2,
     /** Leave vertical room when two turning paths are about to cross. */
     avoidAhead: 1.25, avoidRadius: 5, avoidRise: 5,
-    /** How fast across its path an adult banks away from the small one it is about to pass (m/s where their paths would meet). */
-    companionAside: 10,
     /** Lay out the V around where their turns will finish, with room for the front birds to ease back. */
     turnAhead: 3, setback: 7,
     /** The small one takes its tail station while the adults are still gathering. */
