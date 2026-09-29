@@ -119,7 +119,9 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
   not stick out or blow about with no wind. Knit is shading only.
 - **Seated on the ground** she holds the paper flat in her lap, or rests her mittens on her knees, and leans in a
   little (`lap`, `paperLap` in `traveller.ts`), never a doll with its arms out; the front hem drapes over her thighs
-  (`LAP_DRAPE`). In the boat she sits on the thwart and the coat hangs.
+  (`LAP_DRAPE`). In the boat she sits on the thwart and the coat hangs. Sat on an edge her feet hang, and swing in
+  turn from the knee while `dangle` is up; a sit meant to be watched is lowered into over a second or so
+  (`sitDown(over)`) instead of dropped.
 - **Going to bed** she turns the covers back herself, gets in and pulls them up (Jeremy: "the child has her hands
   straight infront of her, it looks very unnatural"); her arms never hold straight out. Nothing of her shows through
   the quilt. The scarf's tail hanging off the side of the bed is fine.

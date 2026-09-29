@@ -105,6 +105,8 @@ export class Traveller {
   lean = 0;
   /** The head tipped toward a shoulder, radians, positive toward their own right. */
   tilt = 0;
+  /** Sat on an edge, how much the hanging feet swing, 0 to 1. */
+  dangle = 0;
   /**
    * Asleep in a bed, 0 to 1, and which side they are lying on, 1 to -1. Whoever puts them there says where with
    * `lieOn`; going in and coming out of it is one eased weight, so climbing in is the same move played slowly.
@@ -139,6 +141,11 @@ export class Traveller {
   private speed = 0;
   private gait = 0;
   private sit = 1;
+  /** A sit meant to be watched is lowered into over this many seconds, eased; 0 drops into it. */
+  private sitOver = 0;
+  private sitRamp = 1;
+  private dangleT = 0;
+  private dangling = 0;
   private brace = 0;
   private blink = 0;
   private nextBlink = 2;
@@ -439,13 +446,16 @@ export class Traveller {
     this.goal = null;
   }
 
-  sitDown(): void {
+  sitDown(over = 0): void {
     this.goal = null;
     this.sitting = true;
+    this.sitOver = over;
+    this.sitRamp = this.sit;
   }
 
   standUp(): void {
     this.sitting = false;
+    this.sitOver = 0;
   }
 
   throwToward(x: number, z: number, onRelease: () => void): void {
@@ -878,7 +888,13 @@ export class Traveller {
     const t = this.time;
     const P = this.look;
     const h = dt || 1;
-    this.sit = damp(this.sit, this.sitting ? 1 : 0, 4, h);
+    if (this.sitOver > 0) {
+      this.sitRamp = THREE.MathUtils.clamp(this.sitRamp + (this.sitting ? h : -h) / this.sitOver, 0, 1);
+      this.sit = THREE.MathUtils.smootherstep(this.sitRamp, 0, 1);
+    } else this.sit = damp(this.sit, this.sitting ? 1 : 0, 4, h);
+    /** Swinging feet come and go in little runs, never a metronome. */
+    this.dangling = damp(this.dangling, this.dangle * this.sit, 2, h);
+    this.dangleT += h * (5.2 + 1.3 * Math.sin(this.time * 0.37));
     const moving = Math.min(1, this.speed / WALK);
     const running = THREE.MathUtils.clamp((this.speed - WALK) / (RUN - WALK), 0, 1);
     const [L, R] = P.arms;
@@ -1216,6 +1232,8 @@ export class Traveller {
     P.kneel = kneel;
     P.swing = this.swing;
     P.kick = this.kick;
+    P.dangle = this.dangling * (0.55 + 0.45 * Math.sin(this.time * 0.61 + 1.3));
+    P.dangleAt = this.dangleT;
     P.lie = 0;
     P.lieFold = 0;
 
