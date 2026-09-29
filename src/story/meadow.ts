@@ -859,7 +859,7 @@ export class MeadowChapter implements Chapter {
     const s = this.shot;
     s.from = undefined;
     s.attention = undefined;
-    // The low pond view follows the open water beside the bank; preserve that staged approach.
+    // From the rise to the water the camera is placed and travels with her; keep that staging.
     s.composition = ['down', 'crest', 'pond', 'gather'].includes(this.beat) ? 'hold' : undefined;
     s.eye = undefined;
     s.carry = false;
