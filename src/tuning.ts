@@ -647,7 +647,8 @@ export const tuning = {
      * One camera from the rise to the water: behind her, `viewSide` off her line to the pond, `viewBack` and `viewUp`
      * from her and looking `viewToward` of the way to the raft. As she walks down it eases round to her shoulder
      * (`edgeSide`) and closes to `edgeBack` and `edgeUp`, so her hands and the swimmer are not hidden behind her. A
-     * phone stacks her under the pond (`viewPortraitSide`, `edgePortraitSide`), `viewPortraitScale` as far off. When the family goes it only turns its gaze after them (`gaze` of it,
+     * phone stacks her under the pond (`viewPortraitSide`, `edgePortraitSide`), `viewPortraitScale` as far off until
+     * the water. At the water it looks `edgeOut` past the pair, over the water the little one swims out on. When the family goes it only turns its gaze after them (`gaze` of it,
      * for `gazeFor` seconds), turning no further than keeps her within `gazeAcross` of the frame's half-width and
      * her waist `gazeKeep` of the way down it, and lets the V leave the top of it.
      */
@@ -661,6 +662,7 @@ export const tuning = {
     edgePortraitSide: 0.6,
     edgeBack: 8.5,
     edgeUp: 4.5,
+    edgeOut: 1.5,
     gaze: 0.9,
     gazeFor: 9,
     gazeKeep: 0.8,

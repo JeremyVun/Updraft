@@ -949,14 +949,15 @@ export class MeadowChapter implements Chapter {
     s.carryAnchor = c;
     this.cameraChild.copy(c).y += this.cast.child.kneeling > 0.5 ? 0.85 : 1.2;
     if (water) {
-      s.target.set((k.x + c.x) * 0.5, (k.y + ground) * 0.5 + 0.55, (k.z + c.z) * 0.5);
+      s.target.set((k.x + c.x) * 0.5, (k.y + ground) * 0.5 + 0.55, (k.z + c.z) * 0.5)
+        .addScaledVector(this.axis, view.edgeOut);
       this.pondFraming.secondary.copy(k).y += 0.35;
     } else {
       const toward = view.viewToward * (1 - walked * 0.8);
       s.target.set(c.x + (RAFT_AT.x - c.x) * toward, THREE.MathUtils.lerp(ground + 1, RAFT_AT.y, toward),
         c.z + (RAFT_AT.z - c.z) * toward);
     }
-    const scale = portrait ? view.viewPortraitScale : 1;
+    const scale = portrait ? THREE.MathUtils.lerp(view.viewPortraitScale, 1, walked) : 1;
     const back = THREE.MathUtils.lerp(view.viewBack, view.edgeBack, walked) * scale;
     const up = THREE.MathUtils.lerp(view.viewUp, view.edgeUp, walked) * scale;
     s.eye = this.eyeAt.set(c.x + this.side.x * back, ground + up, c.z + this.side.z * back);
