@@ -364,6 +364,10 @@ export const tuning = {
     planeBloomStrength: 1.4,
     /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
     planeBloomFrom: 0.3,
+    /** How often the child throws along the greyest line of grass around her; the rest of her throws are free. */
+    throwGreyChance: 0.8,
+    /** Radians of wobble either side of that line, so catch never looks aimed. */
+    throwGreyWobble: 0.25,
     /** Catch stays south of this z: the far edge of the summit, beyond which the child drops out of the camera's sight. */
     playEdge: -38,
     /**
