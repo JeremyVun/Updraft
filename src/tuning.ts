@@ -649,7 +649,8 @@ export const tuning = {
      * `edgeUp`, and over her last `edgeFrom` to the water eases round to her shoulder (`edgeSide`), so her hands and
      * the swimmer are not hidden behind her. A
      * phone stacks her under the pond (`viewPortraitSide`, `edgePortraitSide`), `viewPortraitScale` as far back until
-     * the water. At the water it looks `edgeOut` past the pair, over the water the little one swims out on. When the family goes it only turns its gaze after them (`gaze` of it,
+     * the water. At the water it looks `edgeOut` past the pair and `edgeLook` above them, over the water the little one
+     * swims out on to the far bank. When the family goes it only turns its gaze after them (`gaze` of it,
      * for `gazeFor` seconds), turning no further than keeps her within `gazeAcross` of the frame's half-width (`gazePortraitAcross` on a
      * phone's narrow frame) and
      * her waist `gazeKeep` of the way down it, and lets the V leave the top of it.
@@ -666,6 +667,7 @@ export const tuning = {
     edgeBack: 8.5,
     edgeUp: 5.2,
     edgeOut: 0.6,
+    edgeLook: 1.6,
     gaze: 0.9,
     gazeFor: 9,
     gazeKeep: 0.8,

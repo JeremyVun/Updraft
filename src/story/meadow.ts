@@ -952,7 +952,7 @@ export class MeadowChapter implements Chapter {
     s.carryAnchor = c;
     this.cameraChild.copy(c).y += this.cast.child.kneeling > 0.5 ? 0.85 : 1.2;
     if (water) {
-      s.target.set((k.x + c.x) * 0.5, (k.y + ground) * 0.5 + 0.55, (k.z + c.z) * 0.5)
+      s.target.set((k.x + c.x) * 0.5, (k.y + ground) * 0.5 + view.edgeLook, (k.z + c.z) * 0.5)
         .addScaledVector(this.axis, view.edgeOut);
       this.pondFraming.secondary.copy(k).y += 0.35;
     } else {
@@ -963,7 +963,8 @@ export class MeadowChapter implements Chapter {
     const scale = portrait ? THREE.MathUtils.lerp(view.viewPortraitScale, 1, walked) : 1;
     const back = THREE.MathUtils.lerp(view.viewBack, view.edgeBack, walked) * scale;
     const up = THREE.MathUtils.lerp(view.viewUp, view.edgeUp, walked);
-    // Walking downhill the ground behind her is higher; stand as far above it, so the grass on the slope stays below the lens.
+    // Walking downhill, and at the bottom of the hollow, the ground behind her is higher: stand as far above that,
+    // so the grass on the slope and the lip of the bank stay below the lens.
     const x = c.x + this.side.x * back, z = c.z + this.side.z * back;
     s.eye = this.eyeAt.set(x, Math.max(ground, heightAt(x, z)) + up, z);
     s.clearance = 2;
