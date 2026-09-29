@@ -2,6 +2,7 @@
 // the cloud, the top landing, boarding and the sail over the cloud into the bank of mist, until the boat has sailed
 // out of it onto the drowned village's water. Captures stills at each beat.
 // Usage: node tools/stairs-check.mjs <out-prefix>   env: BASE (default http://127.0.0.1:5230/), W/H, QUERY
+// NOSHOTS=1 skips the stills (a timed run); each beat is logged with wall and game seconds.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 
@@ -48,7 +49,7 @@ try {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(`${base}?shot=1&chapter=stairs${process.env.QUERY ? '&' + process.env.QUERY : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
-  const shot = async (name) => { await page.screenshot({ path: `${prefix}-${name}.png` }); log(`${prefix}-${name}.png`); };
+  const shot = async (name) => { if (process.env.NOSHOTS === '1') return; await page.screenshot({ path: `${prefix}-${name}.png` }); log(`${prefix}-${name}.png`); };
   const state = () => page.evaluate(() => {
     const g = window.__game;
     const s = g.story.current;
@@ -93,7 +94,7 @@ try {
     setInterval(() => {
       const s = window.__game.story;
       const now = `${s.name}:${s.current.beat}`;
-      if (now !== last) window.__beats.push(`${(performance.now() / 1000).toFixed(1)} ${now}`);
+      if (now !== last) window.__beats.push(`${(performance.now() / 1000).toFixed(1)} game ${(window.__stats?.time ?? 0).toFixed(1)} ${now}`);
       last = now;
     }, 100);
   });

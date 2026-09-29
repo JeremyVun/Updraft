@@ -50,6 +50,11 @@
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
 // PATH_ABLATIONS=e5-off,... limits the path to those ablations.
+// The stairs: stairs:waiting|climb|loop|cloud|top|sail|fog play the chapter to that moment with real gestures (stairsFixture).
+// Their parts: stairs (the whole room), stairsCloud (deck top and underside, towers, wake), stairsCloudTop,
+// stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
+// stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
+// shader that includes ATMO_GLSL (exact outside the stairs). DETAIL=0|1 applies that world detail after the fixture.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -116,6 +121,11 @@ window.__audit = {
     birchesCanopy: birches.objects.filter(o => o.material?.uniforms?.uCanopyMotion),
     birchesLitter: [birches.litterMesh], birchesScarf: [birches.scarf.mesh], birchesLeaves: [birches.leaves.mesh],
     grassLod0: [grass.group.children[0]], grassLod1: [grass.group.children[1]], grassLod2: [grass.group.children[2]],
+    stairs: [cloudStairs.group], stairsCloud: [cloudStairs.cloud.group],
+    stairsCloudTop: [cloudStairs.cloud.top], stairsCloudBelly: [cloudStairs.cloud.belly], stairsTowers: [cloudStairs.cloud.towers.group],
+    stairsWake: [cloudStairs.cloud.wake.mesh], stairsWisps: [cloudStairs.wisps.mesh], stairsBank: [cloudStairs.bank.mesh],
+    stairsHaze: [...cloudStairs.hazes],
+    stairsSteps: [cloudStairs.group.getObjectByName('stairs-standing'), cloudStairs.trick, ...cloudStairs.pieces.flatMap(p=>[p.group.children[0],p.ghost])],
   },
   // Ablations that change a height source: both sides of each of their pairs re-run the window-move bakes.
   heightSources: ['rebake','heights-const','heights-direct'],
@@ -149,6 +159,7 @@ window.__audit = {
       ['wood-update',wood,'update'], ['sleeping-update',sleeping,'update'], ['audio',sound,'update'],
       ['mirror-ripples',skyMirror,'update'], ['bloom',post.bloom,'render'],
       ['water-waves',water,'step'], ['ground-readback',bakes,'tick'],
+      ['stairs-update',cloudStairs,'update'], ['stairs-cloud',cloudStairs.cloud,'update'], ['story',story,'update'],
     ]) wrap(obj,method,name);
     const render = renderer.render.bind(renderer);
     renderer.render = (s,c) => {
@@ -234,7 +245,8 @@ window.__audit = {
     }
     if(variants.includes('sky-flat')) {
       const m=sky.material;
-      m.fragmentShader=this.diagnosticMaterials[1][1].replace('skyRadiance(normalize(vDir))','vec3(0.5,0.6,0.7)');m.needsUpdate=true;
+      const sky0=this.diagnosticMaterials[1][1];if(!sky0.includes('vec3 col = skyRadiance(d);'))throw Error('Missing patch site: sky radiance');
+      m.fragmentShader=sky0.replace('vec3 col = skyRadiance(d);','vec3 col = vec3(0.5,0.6,0.7);');m.needsUpdate=true;
     }
     if(variants.includes('grade')) {
       const m=post.gradeMat,original=this.diagnosticMaterials[2][1];
@@ -248,6 +260,7 @@ window.__audit = {
     this.patchShaders(variants);
     this.noiseTerms(variants);
     this.bareTiles(variants.includes('grass-bare-tiles'));
+    this.deckOut(variants.includes('deck-out'));
     if(this.pairRebake)this.rebake();
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
@@ -382,6 +395,30 @@ window.__audit = {
     for(const v of variants)(terms[v]||[]).forEach((_,i)=>{if(!hits.has(v+':'+i))throw Error('Missing noise term: '+v+':'+i);});
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
   },
+  // deck-out compiles the stairs' cloud deck out of every shader that includes ATMO_GLSL: each test of its amount
+  // becomes a constant false, so the deck, the bank of mist and their helpers are dead code. Outside the stairs the
+  // deck's amount is 0, so no pixel may change there; any saving is what its presence costs (registers, code size).
+  // The blades' fragment programs are left alone (their fog comes from the vertex).
+  deckOut(on) {
+    const A='uCloudDeck.w > 0.0',B='false/*deck-out*/';
+    const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
+    const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,...grass.lods.map(l=>l.tableMat),bakes.groundMat]);
+    scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    let hits=0,tables=false;
+    for(const m of mats)for(const key of ['vertexShader','fragmentShader']){
+      if(key==='fragmentShader'&&blades.has(m))continue;
+      const cur=m[key];if(typeof cur!=='string')continue;
+      const next=on?cur.split(A).join(B):cur.split(B).join(A);
+      if(on&&cur.includes(A))hits++;
+      if(next!==cur){m[key]=next;m.needsUpdate=true;tables||=grass.lods.some(l=>l.tableMat===m);}
+    }
+    if(on&&!hits)throw Error('Missing patch site: '+A);
+    if(tables){grass.tablesDirty=true;grass.bake(renderer);}
+    this.deckHits=hits;
+  },
+  // DETAIL=0|1 sets the world detail a quality level would (grass density and reach, terrain split, reflection cadence
+  // and the sky mirror's scale) at the locked render scale and multisampling, as the Low preset or Auto's rungs do.
+  detail(level) { applyWorldQuality({ratio:pixelRatio,samples:post.samples,detail:level},true); return {detail:level,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -458,6 +495,11 @@ window.__audit = {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);
     } else draw();
   },
+  // While a stairs fixture is played to its moment, the page renders at a low scale so the story gets there sooner.
+  fast(on) {
+    if(on){this.fastRatio??=pixelRatio;pixelRatio=0.5;resize();}
+    else if(this.fastRatio){pixelRatio=this.fastRatio;this.fastRatio=null;resize();}
+  },
   // STATE forces a condition for every ablation after the census; it runs in this module's scope.
   state(code) { return eval(code); },
   // PATH moves the camera for step k (0..PATH_STEPS-1); the window then follows it and the frame is prepared as the loop does.
@@ -491,6 +533,50 @@ window.__audit = {
 `;
 
 const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
+// The stairs in the clouds, played to a moment with real pointer gestures (as tools/stairs-check.mjs plays them):
+// waiting (the first loose flight, from the grass), climb (the last flight below the cloud), loop (the Penrose loop in
+// its clearing), cloud (following the bird on up through the white after the loop), top (the swans over the cloud sea, before boarding), sail
+// (140 m out over the cloud) and fog (in the bank of mist at the end of the sail). Later moments restore the
+// checkpoint with every flight home and climb from there.
+async function stairsFixture(page, fixture) {
+  const state=()=>page.evaluate(()=>{const g=__game,s=g.story.current;return {chapter:g.story.name,beat:s.beat,t:+(s.now-s.beatStart).toFixed(1),sailed:Math.round(s.sailed??0)};});
+  const until=async(test,ms,act)=>{const end=Date.now()+ms;for(;;){const s=await state();if(test(s))return s;
+    if(Date.now()>end)throw Error('Stairs fixture '+fixture+' stuck at '+JSON.stringify(s));if(act)await act(s);else await page.waitForTimeout(250);}};
+  const swipe=async(from,to,ms)=>{const n=Math.max(2,Math.round(ms/8));await page.mouse.move(from[0],from[1]);
+    for(let i=1;i<=n;i++){await page.mouse.move(from[0]+(to[0]-from[0])*i/n,from[1]+(to[1]-from[1])*i/n);await page.waitForTimeout(ms/n);}};
+  await page.evaluate(()=>__audit.fast(true));
+  try {
+    if(fixture==='waiting'){await until(s=>s.beat==='waiting'&&s.t>2,90000);return;}
+    await page.evaluate(()=>__game.story.current.restoreCheckpoint('flight-3',[3]));
+    if(fixture==='climb'){await until(s=>s.beat==='climb'&&s.t>2.5||s.beat==='hesitate',60000);return;}
+    await until(s=>s.beat==='loop',180000);
+    if(fixture==='loop'){await until(s=>s.beat==='loop'&&s.t>8,60000);return;}
+    // Round the loop until the sweep is drawn over the cloud on its far corner, then blow it off.
+    await until(s=>s.beat!=='loop',180000,async()=>{
+      await page.waitForTimeout(1500);
+      const bank=await page.evaluate(()=>{const g=__game,hint=g.story.current.windInvitation;if(!hint)return null;
+        const p=hint.clone().project(g.rig.camera);return [(p.x*0.5+0.5)*innerWidth,(0.5-p.y*0.5)*innerHeight];});
+      if(bank)await swipe([bank[0]-160,bank[1]+40],[bank[0]+180,bank[1]-30],450);
+    });
+    if(fixture==='cloud'){await until(s=>s.beat==='follow'&&s.t>6,120000);return;}
+    if(fixture==='top'){await until(s=>s.beat==='skein'&&s.t>10,180000);return;}
+    await until(s=>s.beat==='sail',240000);
+    // Over the cloud: sweeps through the hull the way it is going keep it sailing.
+    const sweep=async()=>{
+      const at=await page.evaluate(()=>{const g=__game,b=g.boat,cam=g.rig.camera,w=innerWidth,h=innerHeight;
+        const scr=v=>{const q=v.clone().project(cam);return [(q.x*0.5+0.5)*w,(0.5-q.y*0.5)*h];};
+        const f={x:Math.sin(b.yaw),y:0,z:Math.cos(b.yaw)},p=b.position.clone();p.y+=0.3;
+        return {at:scr(p),back:scr(p.clone().addScaledVector(f,-3)),fore:scr(p.clone().addScaledVector(f,4)),w,h};});
+      let a=at.back,z=at.fore;
+      if(Math.hypot(z[0]-a[0],z[1]-a[1])<120){a=[at.at[0]-180,at.at[1]+30];z=[at.at[0]+180,at.at[1]-30];}
+      const inside=q=>[Math.min(Math.max(q[0],20),at.w-20),Math.min(Math.max(q[1],20),at.h-20)];
+      await swipe(inside(a),inside(z),380);await page.waitForTimeout(250);
+    };
+    if(fixture==='sail'){await until(s=>s.sailed>=140||s.beat!=='sail',300000,sweep);return;}
+    if(fixture==='fog'){await until(s=>s.beat==='fog'&&s.t>3||s.chapter!=='stairs'||s.beat==='thin',400000,sweep);return;}
+    throw Error('Unknown stairs fixture '+fixture);
+  } finally {await page.evaluate(()=>__audit.fast(false));}
+}
 const { browser, close } = await openBrowser();
 const report=[],inexact=[];
 try {
@@ -518,7 +604,8 @@ try {
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
     await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
     await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
-    if(fixture) await page.evaluate(fixture=>{
+    if(entry==='stairs'&&fixture){await stairsFixture(page,fixture);console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
+    else if(fixture) await page.evaluate(fixture=>{
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
       else {
@@ -528,7 +615,9 @@ try {
         if(fixture==='pond'){g.child.place(c.edge.x,c.edge.z,Math.PI);c.setDown();}
       }
     },fixture);
-    await page.waitForTimeout(1500);
+    const detail=process.env.DETAIL?await page.evaluate(d=>__audit.detail(d),Number(process.env.DETAIL)):undefined;
+    if(detail)console.log(JSON.stringify({chapter,detail}));
+    await page.waitForTimeout(detail?2500:1500);
     const cdp=await page.context().newCDPSession(page);
     await cdp.send('Profiler.enable');await cdp.send('Profiler.setSamplingInterval',{interval:500});
     await page.evaluate(()=>{__audit.frames=[];});await cdp.send('Profiler.start');
@@ -644,7 +733,7 @@ try {
     if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
+    const row={chapter,gate,detail,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
