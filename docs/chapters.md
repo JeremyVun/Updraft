@@ -46,8 +46,9 @@ frame. Before the first breeze, a gust invitation is drawn across the held plane
 the natural stroke blows it inland into the grass (`PlaneInvitation`, `tuning.opening.planeInvite*`,
 `planeInviteRise`); whenever the plane comes to rest on the grass during catch, a level sweep is drawn across it
 toward where it should go. Colour returns wherever the wind goes, and the plane plants lasting colour under it for
-as long as it travels (`tuning.opening.planeBloomFrom`, `LifeField.bloom`). Throws stay in the southern half and
-are turned back before the ridge, so play never goes out of sight. When 65% of the island is alive it is restored:
+as long as it travels (`tuning.opening.planeBloomFrom`, `LifeField.bloom`). Most of the child's throws go along the
+greyest line of grass around her, with a little wobble (`throwGreyChance`, `throwGreyWobble`); throws stay in the
+southern half and are turned back before the ridge, so play never goes out of sight. When 65% of the island is alive it is restored:
 the rest follows and the held-back warmth of the whole frame is released at once.
 
 The plane then leads the child up beside the tree for the fall:
