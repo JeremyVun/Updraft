@@ -1,4 +1,4 @@
-// The moored hull's ground ceiling (perf-bakes E2): records the boat's pose every frame at the home mooring (the jetty
+// The moored hull's ground ceiling: records the boat's pose every frame at the home mooring (the jetty
 // walk, a nudge that makes it settle back and re-measure, and the summit), and on every frame where the contacts were
 // skipped checks that testing them would have left the hull where it is: the pose each frame is then exactly what the
 // previous code computes from the same state, so the run is too. With OLD set, the same runs on the previous build and a

@@ -68,7 +68,11 @@ edit.
 - `pointer-contact-check`, `pointer-pick-check`, `touch-viewport-check` (Chrome, not a Safari substitute).
 - `start-check` (Begin, audio unlock, Continue, retry; worst boot gap under `BOOT_MAX_MS`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check`, `context-loss-check`.
-- `nearby-check`, `bandage-cost-check`, `scarf-normals-check`, `drowned-gating-check`.
+- `nearby-check`, `bandage-cost-check`, `scarf-normals-check`, `drowned-gating-check`, `boat-mooring-check` (every
+  frame the moored hull skips its contact tests, testing them would not have moved it).
+- Against another build, for changes meant to be exact: `scarf-exact-check` (`BASELINE=<checkout>`: the scarf's mesh
+  and cloth byte-identical in lockstep, no browser) and `audio-silence-check` (`OLD=<previous build's server>`: offline
+  renders below −100 dBFS apart).
 
 **Camera**
 
@@ -89,6 +93,8 @@ edit.
   `sky-mirror-logic-check`, `sky-mirror-pointer-check` (`TOUCH=1`), `sleeping-logic-check`, `wood-logic-check`,
   `wing-care-check`, `flock-flight-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
+- The scarf's feel: `scarf-feel-probe` (Node: bounce, settling, creep, stretch and jitter) and `scarf-video` (true
+  60 fps clips of each release and the gathering, `SUFFIX=before|after`).
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,
@@ -112,7 +118,7 @@ edit.
 
 **Performance** (only when Jeremy asks; see `docs/engine.md`, Measuring): `perf.mjs`, `frame-profile.mjs`,
 `boot-profile.mjs`, `storm-profile.mjs`, `window-hitch.mjs`, `power-profile.mjs`, `quality-budget-profile.mjs`,
-`audio-cost.mjs`.
+`audio-cost.mjs`, `wind-cost.mjs` (the wind step's GPU cost pass by pass).
 
 Rendered checks, screenshots and numeric audio checks are evidence for review, not pixel baselines or a listening
 sign-off.

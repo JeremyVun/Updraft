@@ -1,4 +1,4 @@
-// Is the Birches room visible anywhere in the Drowned drift (perf-bakes E7)? Drives the drift from its start and, every
+// Is the Birches room visible anywhere in the Drowned drift? Drives the drift from its start and, every
 // few frames while the room is drawn, redraws the same frozen state with and without the room's objects and compares
 // the pixels (a redraw without any change is the control). Every frame also records whether the room's update runs its
 // full simulation (camera within the floor range). The sea's reflection is redrawn with each variant.

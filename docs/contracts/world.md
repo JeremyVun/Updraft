@@ -105,7 +105,10 @@ height. Surface marks have enough vertices to bend over the swell; the boat emit
 ## Boats on the shore
 
 `Boat` resolves its rotated hull against the terrain on placement and every frame, afloat or pushing off, and
-eases its pitch and roll toward a beach's slope. Clearance and the most shore tilt are in `tuning.sail`.
+eases its pitch and roll toward a beach's slope. Clearance and the most shore tilt are in `tuning.sail`. Made fast
+at a berth, it measures once the highest ground its hull could reach (kept until it drifts 1 m) and skips the contact
+tests on frames where even that leaves the hull clear, since outside the height window each test is the procedural
+terrain (`tools/boat-mooring-check.mjs` proves every skipped frame could not have moved it).
 `tools/boat-ground-check.mjs` audits berths, launches and crossings on the CPU; `tools/boat-shores-check.mjs`
 checks the baked and rendered ground at each shore. Arrival rooms keep the boat on its beach until the walk
 reaches their inland crest (`tools/landing-check.mjs`).

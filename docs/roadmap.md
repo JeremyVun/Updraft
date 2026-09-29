@@ -14,9 +14,6 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
   read as snow, no boat popping in as the camera breaks through, the boat nearer the jetty, no cloud changing state
   as it comes into range, no player wind needed while the pair enjoy the ride). Then the room needs a still and a
   name for the chapter select.
-- **Performance** ([backlog/perf-bakes](backlog/perf-bakes/)): every phase is built and merged, including phase 6
-  (the sleeping island's baked noise tile), the sea round (S1, S3, S4) and one reverb (X3). What remains is the
-  backlog's close stage (phase 7).
 - **Performance, final pass** ([backlog/perf-final](backlog/perf-final/)): a fresh profile of the whole journey and
   savings wherever they can be found, so the game plays on more devices. In design; profiling comes first.
 - **Startup** ([backlog/boot-veil](backlog/boot-veil/)): since the stairs, the loading veil freezes for over half a

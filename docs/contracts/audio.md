@@ -188,6 +188,13 @@ Meadow melody itself, B–F♯–E–D in Birches, a stretched recollection at s
 Every gain fade explicitly anchors its current value at the start time before the linear ramp:
 `cancelAndHoldAtTime` alone can leave the last event in the past and make a fade jump.
 
+Silent layers are held, never re-targeted or disconnected (`Soundscape.fade`). A gain that `setTargetAtTime`
+re-targets every frame counts as live automation even at 0, and keeps every convolver it feeds running; once it is
+within −120 dB of a zero target (by its own schedule and by the engine's reported value) it is set to exactly 0 once
+and left, so the reverb idles after its tail. Disconnecting a looping source instead would stop its playhead in
+Chrome, and the noise would come back at a different place. `tools/audio-silence-check.mjs` renders scripted
+sequences through this graph and a previous build's to prove a change like this inaudible.
+
 ## Cues
 
 - One-way story events use explicit guards, never narrow time windows. Completions and rewards are not replayed on

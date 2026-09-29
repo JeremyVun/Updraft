@@ -1,4 +1,4 @@
-// Proves the choice of the grass program without discards (perf-bakes E5). The blade shader discards within 48 m of
+// Proves the choice of the grass program without discards. The blade shader discards within 48 m of
 // the door shore, outside uRoom's circle when uRoom.z > 0, and wherever journeyHides hides a room. Grass.tilesUnclipped
 // picks the program that cannot discard only when every submitted tile passes tileUnclipped. No renderer.
 // 1. Source: the clipped blade shader's two discards are the ones modelled here, and the unclipped one has none.

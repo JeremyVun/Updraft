@@ -1,4 +1,4 @@
-// Where the wind step's GPU cost comes from (perf-bakes design F). Loads a chapter like frame-profile.mjs, pauses
+// Where the wind step's GPU cost comes from. Loads a chapter like frame-profile.mjs, pauses
 // the loop, then:
 //   census    counts what one synthetic step submits (ticks, passes, framebuffer binds, clears, readbacks), what the
 //             scene submits, and what `wind.step` submits in each of five frames of the real loop.

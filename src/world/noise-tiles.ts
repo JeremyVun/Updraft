@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /**
- * The ground's four-octave noise as a small tiling texture (perf-bakes item E): one sample in place of four octaves of
+ * The ground's four-octave noise as a small tiling texture: one sample in place of four octaves of
  * hashes. The pattern is like the procedural `fbm`, not the same one, and the mipmaps filter it where the procedural
  * noise would alias. Single octaves stay procedural: a sample costs about as much as one `vnoise`.
  */

@@ -5,8 +5,8 @@
 // Ablations disconnect a group's outputs, so nothing pulls it: pad (8 pad oscillators), noise (the 8 looping noise-layer
 // sources), reverb (the 4.5 s convolver's output), silent (pad voices and noise layers whose gain is under 1e-4).
 // PAIRS=unheld,tworeverb adds paired windows for every chapter against the current graph: `unheld` re-targets silent
-// gains every frame as before perf-bakes E1; `tworeverb` gives the background its own convolver again, after its gate,
-// as before perf-bakes X3. STIR=1 circles the pointer through every window, so the player's wind layers sound as they
+// gains every frame, as the graph did before silent gains were held; `tworeverb` gives the background its own convolver again, after its gate,
+// as before there was one reverb. STIR=1 circles the pointer through every window, so the player's wind layers sound as they
 // do in play. QUERY adds URL parameters.
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';

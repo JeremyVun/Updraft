@@ -15,14 +15,14 @@
 // STATE='<js>' runs in main.ts's scope after the census, before the ablations, to force a state for both sides.
 // FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables measures the cost of rebuilding all three tables each draw.
 // heights-direct turns the distant-height atlas off (uTerrainHeightsReady 0): every lookup beyond the window calls
-// worldHeight again, as before phase 3. heights-const is the upper bound on the distant-height atlas: every height read beyond the window (terrain
+// worldHeight again, as before the atlas. heights-const is the upper bound on the distant-height atlas: every height read beyond the window (terrain
 // vertices, main and mirror, and the light bake's march) returns the open-sea floor instead of calling worldHeight.
 // Ablations named in heightSources re-run the window-move bakes (ground, light, shore, grass tables) in configure
 // on both sides of every pair, outside timed draws. ABLATIONS=rebake is the baseline re-baked; it must match exactly.
 // The wind ablation waits for the GPU after every draw, as a frame boundary does, and also times 60 steps alone
 // (stepMs). Back to back, the scene's read of what the step just wrote stops one draw overlapping the next, which
 // inflated the saving several-fold; under another process's GPU load each of the step's 21 dependent passes waits
-// its turn and a step alone takes 3-5 ms (tools/wind-cost.mjs, perf-bakes design F).
+// its turn and a step alone takes 3-5 ms (tools/wind-cost.mjs).
 // Any ablation suffixed @drain (bloom@drain) waits for the GPU after every draw the same way; bloom and other chains of
 // small passes the frame reads back lose overlap with the next draw when drawn back to back.
 // QUIET=600 waits up to 600 s before each chapter until no other non-system process is above 50% CPU; rows record it.
@@ -31,22 +31,22 @@
 // RATIO and MSAA override the page's ratio=1.5&msaa=2. DRAIN=1 waits for the GPU after every draw in every ablation.
 // Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half; none pairs the baseline with itself.
 // msaa-nodepth swaps in a scene target built to neither resolve nor store its multisampled depth. On Chrome/ANGLE Metal
-// it renders without antialiasing (pixels match msaa-0) and is no faster (perf-bakes round 2), so it is not an exact skip.
+// it renders without antialiasing (pixels match msaa-0) and is no faster, so it is not an exact skip.
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
 // WATER_PASS=s3-off,none,... the sea alone against each listed variant (WATER_ROUNDS, POST_REPS).
-// Phase X2's exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
-// Phase 6 (item E) noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
+// Exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
+// Fine noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
 // ripples), n-moss (Wood floor moss and flecks), n-tuft (Sleeping floor tuft and fibre), n-frost (frostAt's pattern),
 // n-frostline (the terrain's frost-edge pattern), n-woodtint (the Wood tint), n-bed (the shallow seabed), n-surfphase
 // (the surf's static phase). Combine with +. noise-live computes every term the noise tile replaced procedurally again, as
-// before phase 6; live-tuft, live-frost and live-frostline each do so for one term.
-// Phase S: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-fine restores
-// the sea's fog per pixel (S4 made it per vertex). Draws alternate the reflection, so time S1 with DRAWS even. water-caustics
+// before the tile; live-tuft, live-frost and live-frostline each do so for one term.
+// The sea: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-fine restores
+// the sea's fog per pixel. Draws alternate the reflection, so time s1-off with DRAWS even. water-caustics
 // and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
-// grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most E3 could save.
+// grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most skipping empty tiles could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
 // PATH_ABLATIONS=e5-off,... limits the path to those ablations.
@@ -59,7 +59,7 @@ import { openBrowser } from './lib/browser.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
-// Other processes' load, recorded with every row: it inflates GPU numbers (perf-bakes design F).
+// Other processes' load, recorded with every row: it inflates GPU numbers.
 // This tool's own browser is flagged own:true so another Chrome stands out.
 const busy = () => {
   const rows=execFileSync('ps',['-Ao','pid=,ppid=,pcpu=,comm='],{encoding:'utf8'}).split('\n').map(l=>l.trim().match(/^(\d+)\s+(\d+)\s+([\d.]+)\s+(.*)$/))
@@ -272,7 +272,7 @@ window.__audit = {
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
     if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
   },
-  // grass-bare-tiles: the upper bound on E3, tiles in which no blade can stand (every blade's keep is 0 in its table)
+  // grass-bare-tiles: the upper bound on skipping empty tiles, tiles in which no blade can stand (every blade's keep is 0 in its table)
   // left out of the draw. Reads the tables back once; the tiles are restored for every other variant.
   bareTiles(on) {
     if(on===!!this.bare)return;
@@ -293,7 +293,7 @@ window.__audit = {
     for(const l of grass.lods){l.tiles.clearUpdateRanges();l.tiles.addUpdateRange(0,Math.max(1,l.count)*2);l.tiles.needsUpdate=true;l.tileTex.needsUpdate=true;l.dirty=true;l.previousCount=l.count;l.geo.instanceCount=l.count*l.spec.cols*l.spec.rows;}
     grass.tileVersion++;grass.bake(renderer);
   },
-  // Diagnostic shader edits for the grass, water and terrain breakdowns (perf-bakes round 2). Each names what it removes.
+  // Diagnostic shader edits for the grass, water and terrain breakdowns. Each names what it removes.
   patchShaders(variants) {
     const main=(source,body)=>source.slice(0,source.lastIndexOf('void main() {'))+body;
     const sub=(source,from,to)=>{if(typeof from==='string'?!source.includes(from):!from.test(source))throw Error('Missing patch site: '+from);return source.replace(from,to);};
@@ -301,7 +301,7 @@ window.__audit = {
     this.patchOriginals??=new Map([...grassMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
     const patches={
       'grass-frag-flat':[grassMats,'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vTint * 0.5 + vRoot * 0.1 + vFlower.rgb * vFlower.a * 0.01 + vec3(vT, vFlat, vSun) * 0.01 + vec3(vAo, 0.0) * 0.01 + vLocalLight * 0.01 + (vNormal + vSideDir + vGroundN) * 0.001 + vWorld * 1e-6 + vFog.rgb * vFog.a * 0.01, 1.0); }')],
-      // The unclipped blade program (E5) has no discards to remove.
+      // The unclipped blade program has no discards to remove.
       'grass-nodiscard':[grassMats,'fragmentShader',s=>s.replace(/discard;/g,'{}')],
       'grass-fog':[grassMats,'vertexShader',s=>sub(s,'vFog = fogOf(world, 1.0);','vFog = vec4(0.0);')],
       'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
@@ -317,20 +317,20 @@ window.__audit = {
       'water-mirror':[[waterMat],'fragmentShader',s=>sub(s,'vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool));','vec3 refl = sky;')],
       'water-wind':[[waterMat],'fragmentShader',s=>sub(sub(s,'slope += windWaveSlope(xz, footprint);',''),'float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);','float stroke = 0.0;')],
       'water-paw':[[waterMat],'fragmentShader',s=>sub(s,'float paw = catsPaw(xz, along);','float paw = 1.0;')],
-      'water-fog':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog;','vec4 fog = vec4(0.0);')],
+      'water-fog':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;','vec4 fog = vec4(0.0);')],
       'water-sky':[[waterMat],'fragmentShader',s=>sub(s,'vec3 sky = skyColor(R);','vec3 sky = vec3(0.4, 0.5, 0.6);')],
       'water-cloud':[[waterMat],'fragmentShader',s=>sub(s,'float sh = cloudShadow(xz) *','float sh = 1.0 *')],
       // Water under land the terrain will cover: returns before any shading where the baked ground is a metre above the sea.
       'water-landskip':[[waterMat],'fragmentShader',s=>sub(s,'void main() {\\n  vec3 toCam','void main() {\\n  { vec2 u0 = domainUv(vWorld.xz); if (insideUv(u0) && texture(uHeightTex, u0).r > 1.0 && !roomHides(vWorld.xz)) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; } }\\n  vec3 toCam')],
       'terrain-nodiscard':[[terrain.mesh.material],'fragmentShader',s=>sub(s,/discard;/g,'{}')],
-      // Phase X2's exact skip, restoring the old path: E6 the glints outside the glitter lobe.
+      // Restores the old path: the glints worked out outside the glitter lobe too.
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
-      // Phase S, restoring the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
+      // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
-      // S4, restoring the old path: the sea's fog worked out per pixel.
-      'seafog-fine':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog;','vec4 fog = fogOf(vWorld);')],
+      // Restores the old path: the sea's fog worked out per pixel.
+      'seafog-fine':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;','vec4 fog = fogOf(vWorld);')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
     };
     if(variants.includes('s3-off'))variants=[...variants,'s3-off-vert'];
@@ -340,15 +340,15 @@ window.__audit = {
     for(const v of variants)if(patches[v]){const [mats,key,edit]=patches[v];for(const m of mats){const k=m.uuid+'|'+key;const cur=wanted.get(k)?.[2]??m[key];wanted.set(k,[m,key,edit(cur)]);}}
     for(const [,[m,key,source]] of wanted)if(m[key]!==source){m[key]=source;m.needsUpdate=true;}
     water.mesh.renderOrder=variants.includes('water-last')?1:0;
-    // E5: the blades always drawn with the program that discards, as before.
+    // The blades always drawn with the program that discards, as before.
     grass.unclipped=!variants.includes('e5-off');
-    // S1: the ordinary sea's reflection every frame, as before.
+    // The ordinary sea's reflection every frame, as before.
     water.seaMirrorEvery=variants.includes('s1-off')?1:2;
   },
-  // Phase 6 (item E): each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
-  // fragment programs are left alone (E5 swaps them by string, and none of them calls these terms).
+  // Each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
+  // fragment programs are left alone (the unclipped swap replaces them by string, and none of them calls these terms).
   noiseTerms(variants) {
-    // Each substitution lists the procedural call, then the tile's (phase 6) where it has one.
+    // Each substitution lists the procedural call, then the noise tile's where it has one.
     const F=(p,d)=>'tiledFbm('+p+', fp.dx * '+d+', fp.dy * '+d+')';
     const terms={
       'n-grain':[[['vnoise(xz * 1.7) * 0.5 + vnoise(xz * 6.0) * 0.5'],'0.5'],[['vnoise(xz * 0.3) * 6.0'],'3.0']],
@@ -360,7 +360,7 @@ window.__audit = {
       'n-bed':[[['vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5'],'0.5'],[['vnoise(bedXZ * 0.3) * 6.0'],'3.0'],
         [['vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25'],'0.5']],
       'n-surfphase':[[['vnoise(xz * 0.016) * 1.8 + vnoise(xz * 0.057 + 7.3) * 0.3'],'0.5']],
-      // One tiled term computed procedurally again, as before phase 6: the pair is that term's own net saving.
+      // One tiled term computed procedurally again, as before the tile: the pair is that term's own net saving.
       'live-tuft':[[[F('xz * 0.17 + 13.0','0.17')],'fbm(xz * 0.17 + 13.0)']],
       'live-frost':[[['tiledFbmFixed(xz * 0.12)'],'fbm(xz * 0.12)']],
       'live-frostline':[[[F('xz * 0.35','0.35')],'fbm(xz * 0.35)']],

@@ -260,12 +260,20 @@ Bakes that follow the world:
 
 Rules:
 
-- In the terrain and grass shaders, skip terms whose weight is exactly zero (unused regional colour noise, the
-  distant-field colour where `far` is 0, frost noise where there is no frost). A mipmapped sampler moved inside such
-  a branch must use explicit derivatives or `textureLod`.
+- In the terrain, grass and sea shaders, skip terms whose weight is exactly zero (unused regional colour noise, the
+  distant-field colour where `far` is 0, frost noise where there is no frost, sun glints outside the glitter lobe).
+  A mipmapped sampler moved inside such a branch must use explicit derivatives or `textureLod`.
 - Terrain computes fog first and skips surface shading only where fog opacity is exactly 1; fully reflective
   sky-mirror water skips ordinary sea shading. `node tools/render-cost-check.mjs <chapter>` compares these against
   full work in the same frozen GPU frame.
+- The sea's fog is computed per vertex and interpolated (Jeremy could not tell it from per pixel); the fragment
+  recomputes it only where the interpolated fog is nearly opaque, because near the horizon the grid's cells are so
+  wide that a sliver short of opaque lets a glint line through.
+- An exact skip is proven by frame difference against the old path in the same page, static and along a moving
+  camera. On ANGLE/Metal: an early return cannot come before implicit derivatives a quad neighbour needs, and
+  explicit gradients (`textureGrad`) are not bit-identical to implicit ones; an edit nearby can move a result by an
+  ulp (≤1/255); toggling `resolveDepthBuffer` on the multisampled scene target silently drops antialiasing. Drawing
+  the sea after the land is slower, not faster: the land discards, so the tiler cannot cull the water beneath it.
 - GLSL descending ramps use `1.0 - smoothstep(low, high, x)` with distinct, ascending edges; reversed or equal edges
   are undefined on some GPUs even if the local driver draws the expected curve. `tools/shader-check.mjs` rejects
   literal violations; expression bounds need range reasoning. CPU reversible helpers are separate.
@@ -306,9 +314,10 @@ further eight sources), the life, cloud and petal passes, and bloom.
 
 ## Before/after flags
 
-Optimisations that could change the picture keep their old path behind a query flag or a `tools/frame-profile.mjs`
-ablation, so the same frame can be diffed: `blades=direct`, `grasslod=0|1`, `mirrorlod=full`, `mirror=1|2|0`,
-`heights=direct`, `lite=1`. Add `hold=<frame>` and capture with `tools/play.mjs` after an `eval` step that waits for
+Jeremy wants no switches in the deployed game, so a new optimisation adds no query flag: its old path lives as a
+`tools/frame-profile.mjs` ablation that patches the page, or on the pre-change commit, and once approved the change
+is the only code path. Older optimisations still have flags so the same frame can be diffed: `blades=direct`,
+`grasslod=0|1`, `mirrorlod=full`, `mirror=1|2|0`, `heights=direct`, `lite=1`. Add `hold=<frame>` and capture with `tools/play.mjs` after an `eval` step that waits for
 `__stats.frame`: the world freezes at that frame, and runs of the same variant are pixel-identical. Creatures and the
 scarf read the CPU wind copy and can still differ when readbacks land on different frames.
 
@@ -321,7 +330,17 @@ pops, freeze the world (`hold=150` with a fixed `cam=`), creep the camera a few 
 step that also calls `grass.update` and `grass.bake`, and lower the thresholds (`BLOCK=2 WHOLE=0.3`). `?ratio=2` makes
 the GPU the bottleneck on purpose; `EXT_disjoint_timer_query` is meaningless on ANGLE's Metal backend.
 `tools/frame-profile.mjs` gives CPU profiles, a per-pass and per-object draw census and paired frozen ablations;
-`tools/window-hitch.mjs` compares window-move gaps between two builds.
+`tools/window-hitch.mjs` compares window-move gaps between two builds; `tools/audio-cost.mjs` measures the audio
+graph's CPU, sound on against muted.
+
+- **Energy is cost × minutes.** Heat and battery over a playthrough follow each room's cost per frame times the time
+  spent there, plus CPU script and the audio graph, which cost CPU on the scale of the script itself. A saving in a
+  long room or crossing outweighs the same saving in a short one.
+- **Read the noise floor.** Ablations are interleaved pairs; `none` pairs the baseline with itself. Chains of small
+  dependent passes (the wind step, bloom, bakes) inflate several-fold under another process's GPU load and when
+  drawn back to back, so time them with `DRAIN=1` and `GPU_QUIET=1`, and drop rows whose pair baselines straddle.
+- **Frozen draws do not re-bake.** An ablation that changes a height source must re-run the window-move bakes
+  (ground, light, shore, grass tables) on both sides of every pair; list it in the tool's `heightSources`.
 
 Every number is inflated by anything else using the GPU. Check `ps` for busy Chrome first, measure from a worktree
 with its own server, and compare builds back to back, never against remembered numbers. Desktop throughput deltas

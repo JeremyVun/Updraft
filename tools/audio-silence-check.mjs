@@ -1,5 +1,5 @@
-// Held silent gains (perf-bakes E1) against the previous graph: the same scripted sequences rendered offline through both
-// soundscapes with the same seed must match to below −100 dBFS, and each sequence must hold and release layers.
+// An audio change meant to be inaudible, against the previous graph: the same scripted sequences rendered offline through
+// both soundscapes with the same seed must match to below −100 dBFS, and each sequence must hold and release silent layers.
 // BASE=<this checkout's Vite> OLD=<a Vite serving the previous commit> node tools/audio-silence-check.mjs
 // REPS=n repeats each pair to time the renders (offline render time is the audio thread's CPU, without the realtime clock).
 import assert from 'node:assert/strict';
