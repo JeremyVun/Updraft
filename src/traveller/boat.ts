@@ -5,12 +5,13 @@ import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { atmo } from '../world/atmosphere';
 import { FOAM, Marks } from '../fx/sealife/marks';
 import { heightAt } from '../world/island';
-import { type Swell, swellAt } from '../world/water/swell';
+import { type Swell, swellAt, swellUniforms } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
 import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
+import { waterlineUniforms } from './boat/waterline';
 
 /**
  * Pushed off a beach, a boat goes out the way the sand slopes, whichever way its bow is pointing, and is brought
@@ -134,7 +135,7 @@ export class Boat {
     const hullMat = new THREE.ShaderMaterial({
       vertexShader: HULL_VERT,
       fragmentShader: HULL_FRAG,
-      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame }, uGlass: this.glass },
+      uniforms: { ...atmo.uniforms, ...swellUniforms, ...waterlineUniforms, uHullFrame: { value: this.hullFrame }, uGlass: this.glass },
       side: THREE.DoubleSide,
     });
     this.hullContacts = contactShell().getAttribute('position') as THREE.BufferAttribute;
@@ -523,8 +524,13 @@ export class Boat {
     u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - tuning.lantern.flicker * gutter));
   }
 
-  /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
+  /** The sea breaking against the hull, and a short tail of foam behind it while it is under way that spreads and fades. */
   private updateWake(dt: number, time: number): void {
+    const bySea = this.altitude === null && this.group.visible ? 1 : 0;
+    const wet = waterlineUniforms.uHullWet.value;
+    const ease = 1 - Math.exp(-dt * 2);
+    wet.set(wet.x + ((this.afloat ? bySea : 0) - wet.x) * ease, Math.abs(this.speed), wet.z + (bySea - wet.z) * ease);
+    waterlineUniforms.uHullAt.value.set(this.position.x, this.position.z, Math.sin(this.yaw), Math.cos(this.yaw));
     this.wake.update(time);
     this.wakeIn -= dt;
     if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0 || this.altitude !== null) return;

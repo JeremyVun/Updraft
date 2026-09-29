@@ -13,6 +13,7 @@ import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { rippleTexture } from './water/textures';
 import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
+import { WATERLINE_GLSL, waterlineUniforms } from '../traveller/boat/waterline';
 
 /** Vertex spacing of the sea near the camera, and how far that even spacing reaches before the mesh opens out. */
 const STEP = 1.9;
@@ -91,6 +92,7 @@ void main() {
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SURF_GLSL}
+${WATERLINE_GLSL}
 ${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
@@ -401,6 +403,15 @@ void main() {
     float face = 0.4 + 0.75 * smoothstep(0.02, 0.22, -dot(slope, along));
     foam = max(foam, foamLace(whitecaps(xz, flow, storm * 0.9) * face, xz * 3.5, Footprint(fp.dx * 3.5, fp.dy * 3.5)));
   }
+  if (uHullWet.x > 0.0) {
+    /** The sea breaks white against the hull all round, and further out from the bow the faster it goes. */
+    vec2 hull = hullWaterline(xz);
+    float way = clamp(uHullWet.y / 5.0, 0.0, 1.0);
+    float reach = 0.14 + way * (0.06 + 0.3 * smoothstep(0.55, 1.0, hull.y));
+    float spread = 1.0 - smoothstep(0.0, reach, hull.x);
+    float collar = max(1.0 - smoothstep(0.0, 0.035, hull.x), spread * spread * 0.62) * smoothstep(-0.25, -0.05, hull.x) * uHullWet.x;
+    foam = max(foam, foamLace(collar, xz * 7.0 + vec2(0.0, uTime * 0.3), Footprint(fp.dx * 7.0, fp.dy * 7.0)));
+  }
   col = mix(col, foamColor(V, sh), clamp(foam, 0.0, 1.0));
 
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
@@ -444,6 +455,7 @@ export class Water {
         ...surfUniforms,
         ...swellUniforms,
         ...mirrorUniforms,
+        ...waterlineUniforms,
         uWaterWind: this.windWaves.uniform,
         uSkyMirrorAppearance: { value: 1 },
         uRipple: { value: rippleTexture() },

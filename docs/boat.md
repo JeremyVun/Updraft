@@ -20,8 +20,10 @@ to the stairs chapter only.
 
 `form.ts` holds the one hull: about 4.2 m (`LENGTH`), six wide clinker strakes (`STRAKES`), round and
 flat-bottomed, a level keel just below the waterline sweeping up round the forefoot into a raked stem, the gunwale
-at the seated child's belly (`SEAT_Y`, `gunwale()`, `gunwaleHalf()`). Floorboards sit above the waterline so the
-sea is never seen inside (`FLOOR_Y`, `DRAFT`). The contact shell is the drawn bottom, so physics and look agree;
+at the seated child's belly (`SEAT_Y`, `gunwale()`, `gunwaleHalf()`). It floats with the waterline up round the bilge,
+where the bottom is most of its full width, and the floorboards still above it so the sea is never seen inside
+(`FLOOR_Y`, `DRAFT`). Where hull and sea meet (`boat/waterline.ts`) the water breaks white round the hull, further
+out from a moving bow, and the planks carry a thin lip of foam with dark wet wood above it. The contact shell is the drawn bottom, so physics and look agree;
 the rudder and stem stay clear of it. `parts.ts` builds the planking, transom, rails, cream rubbing strake with rope
 swags, frames, floorboards, thwarts, foredeck, the white stem post and its brass lantern, mast, boom, rudder and
 tiller, a pail and a coil of rope. The laps are drawn in the shader and fade to their average tone when too fine.
