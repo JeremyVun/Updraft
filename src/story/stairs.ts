@@ -1123,10 +1123,10 @@ export class StairsChapter implements Chapter {
     fog.top = fog.floor + k.bankHeight;
     // Its back comes to meet them unseen, then goes by slowly over the last tens of metres, where the white can be seen
     // to thin, so they drift out of it, with the bank left lying behind them on the water and melting away.
-    const out = THREE.MathUtils.clamp((t - 3) / (lift * 0.8 - 3), 0, 1);
-    const ahead = THREE.MathUtils.lerp(300, 24, S(t, 1, 3)) - 36 * out;
+    const out = THREE.MathUtils.clamp((t - 7) / (lift * 0.85 - 7), 0, 1);
+    const ahead = THREE.MathUtils.lerp(300, 30, S(t, 2, 7)) - 42 * out;
     fog.deep = fog.depthOf(boat.position.x, boat.position.z) + ahead;
-    fog.amount = 1 - S(t, lift * 0.6, lift);
+    fog.amount = 1 - S(t, lift * 0.65, lift);
     fog.clear = 0.3 + 0.55 * S(t, 0.3, 3);
     this.white = 1 - S(t, 5, lift * 0.8);
     // From the gold of the cloud to the grey and blue of the dusk over the sea, and the sun going out of it.
