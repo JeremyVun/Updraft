@@ -57,6 +57,7 @@
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
 // cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
+// water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
 // DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
 // SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
@@ -369,6 +370,8 @@ window.__audit = {
       // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
       'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),' + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
+      // Candidate exact skip: the lantern's glint only within its reach (tuning.lantern.reach, 9 m), where lanternLight is not 0.
+      'water-lantern-reach':[[waterMat],'fragmentShader',s=>sub(s,'if (uLantern.w > 0.001) {','if (uLantern.w > 0.001 && dot(uLantern.xyz - vWorld, uLantern.xyz - vWorld) < 81.0) {')],
       'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
