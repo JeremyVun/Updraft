@@ -204,7 +204,7 @@ visible change. Merge only after his OK.
   when she is within `startleFrom` 22 m of the water's edge (or `startleLatest` 6 s after she starts down)
   `Flock.lift(..., c.position)` sets the nearest off first. The lens then turns its gaze after them (`Shot.attention`,
   the last birds off the water first), capped so she stays in frame, and the V climbs out of the top; it never backs
-  off (camera 8.4 to 10.6 m from her from the end of the push-in to the end of the swim, against 30 to 90 m before).
+  off (at most 10.6 m from her once the push-in on the rise has landed, against 30 to 90 m before).
   The veil needed no change: the family is 40 to 60 m from the lens when it goes. `pond-view-check` asserted the old
   intent (every departing swan inside the frame for 8.5 s, so the camera had to back away) and now asserts the new
   one: the waiting raft in frame, every bird seen running and lifting, the V then out of frame or into the veil, and

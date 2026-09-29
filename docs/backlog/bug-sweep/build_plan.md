@@ -109,7 +109,16 @@ startled them. Show Jeremy; restore the startled take-off only if he says it reg
 **Owns:** `src/story/meadow.ts` (the pond beats), `tuning.crest`.
 **Gate:** Jeremy's verdict on the stills or clip; if changed, `pond-view-check` and `meadow-route-check` pass and
 `docs/chapters.md` (meadow) is updated.
-**Status:** ready for review 2026-09-29, no code changed. Not a regression: 88a3a5f deliberately made it a missed connection after Jeremy agreed to "emotionally legible". Options and stills in design item 5; the departure is also hard to see through the veil.
+**Status:** built, ready for Jeremy's review, not merged (branch `bug-sweep-meadow`, worktree
+`/private/tmp/updraft-bugsweep-meadow`). Jeremy's ruling and what changed: design item 5 (**Built**). Gates: typecheck,
+`pond-view-check` (updated to the new intent, 12 cases), `meadow-route-check`, `wing-care-check`, `meadow-plane-check`,
+`camera-direction-check`, `flock-flight-check`, `meadow-score-check` and `journey-view-check` pass.
+`camera-intent-report` over the crest-to-walk-on sequence: no dolly or pan reversals (portrait before had an
+out-then-in and an in-then-out), 7 jerk flags against 9 (desktop) and 8 (portrait) before, the gather-to-walk handoff
+down from 46 and 78 to 4.5 and 1.8. Stills, one a second from `skipToCrest`: before
+`/tmp/updraft-meadowcam-before-sheet-1600x900.png`, `/tmp/updraft-meadowcam-before-sheet-390x844.png`; after
+`/tmp/updraft-meadowcam-after-sheet-1600x900.png`, `/tmp/updraft-meadowcam-after-sheet-390x844.png`; every half
+second through the take-off and the walk down `/tmp/updraft-meadowcam-dense-sheet-1600x900.png` and `-390x844.png`.
 
 ## Phase 9: the dark wood's hidden ember (item 7, visual and camera)
 
