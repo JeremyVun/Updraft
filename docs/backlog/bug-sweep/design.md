@@ -156,7 +156,8 @@ visible change. Merge only after his OK.
   The visible change is at home: a colder, darker green becomes a brighter, warmer one. The mirror and the sea show no
   grass, and the sleeping island's morning grass is already green (its frost and light carry it), so there the
   change barely shows.
-- Docs to update when merged: `docs/journey.md` "The year" and `docs/styles.md` "The turn of the year".
+- **Jeremy (2026-09-29): approved to merge** ("approved home grass, dark wood camera, and swan check to merge into
+  main"). `docs/journey.md` "The year" and `docs/styles.md` "The turn of the year" updated.
 
 ## 5. The meadow swans may no longer be startled by the child
 
@@ -246,6 +247,7 @@ visible change. Merge only after his OK.
   than before (e.g. 16 against 35 degrees at the second crossing). No lens reversal; camera-intent-report 33 jerk
   flags against 34 before, at the same moments (her starts, stops and corners). Contact sheets (after over before):
   `/tmp/updraft-woodswing-sheet-e{0,1,2,6}-{desk,port}.png`.
+- **Jeremy (2026-09-29): approved to merge.**
 
 ## 8. Two audio checks not yet looked into
 
