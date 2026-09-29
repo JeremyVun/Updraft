@@ -6,10 +6,13 @@ export const BEAM = 1.0;
 export const STRAKES = 6;
 /** How round the bottom is across: a flattish floor turning up round the bilge (1 would be an ellipse). */
 export const SECTION = 0.62;
-/** Floorboards, laid across the ribs. They sit above the waterline, so the sea is never seen inside the hull. */
+/** Floorboards, laid across the ribs. */
 export const FLOOR_Y = -0.24;
-/** How deep the hull floats: local y 0 rides this far above the sea, putting the waterline below the floorboards. */
-export const DRAFT = 0.42;
+/**
+ * How deep the hull floats: local y 0 rides this far above the sea, the waterline up past the turn of the bilge
+ * and over the floorboards. The sea is kept out of the hull by its lid (`waterline.ts`), not by floating high.
+ */
+export const DRAFT = 0.2;
 /** Where the child sits: the thwart's height, with the gunwale about at their belly. */
 export const SEAT_Y = 0.02;
 export const STERN_Z = -0.45 * LENGTH;
@@ -126,11 +129,16 @@ export function contactShell(): THREE.BufferGeometry {
   return geo;
 }
 
+/** The bottom's half-width at station `u` and height `y`, from nothing at the keel to full at the turn of the bilge. */
+export function sectionHalf(u: number, y: number): number {
+  const drop = (bilge(u) - y) / keelDrop(u);
+  const sin = Math.min(1, Math.max(0, drop)) ** (1 / SECTION);
+  return halfWidth(u) * Math.sqrt(Math.max(0, 1 - sin * sin));
+}
+
 /** Where the floorboards meet the inside of the hull at station `u`: their height and half-width there. */
 export function floorAt(u: number): { y: number; half: number } {
   // At the narrow bow the hull rises above the main floor level. Follow it inside.
   const y = Math.max(FLOOR_Y, keel(u) + 0.02);
-  const drop = (bilge(u) - y) / keelDrop(u);
-  const sin = Math.min(1, Math.max(0, drop)) ** (1 / SECTION);
-  return { y, half: halfWidth(u) * Math.sqrt(Math.max(0, 1 - sin * sin)) };
+  return { y, half: sectionHalf(u, y) };
 }
