@@ -166,20 +166,22 @@ brings the light. Courage passes back and forth between them, and the stairs are
    in the air a storey too high. The hollow closes once the lens is back in the white.
 5. **Above the clouds.** Up out of the white through mist that thins as they rise (the deck's crown), out of the
    wind into a vast calm, the cloud still drifting on a soft air. One thing at a time, each given room:
-   - *Her face* (about 7 s). Near the top, while nothing can be seen in the white, the lens comes round in front of
-     her, so she comes up out of it into the gold light toward it. A step from the edge she stops and looks slowly
-     right across it all, then at the bird beside her.
+   - *Her face* (about 7 s). The climb's lens brings her up out of the white as it always has. Up on top the lens
+     goes once round her, one way only (`roundHer`): as she turns to the edge it turns with her, round her left side
+     onto her face in the gold light. A step from the edge she stops and looks slowly right across it all, then at
+     the bird beside her.
    - *Sitting* (about 5 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
      (over 1.4 s, not a drop), facing the lens, her feet hanging over the cloud and swinging in little runs (Jeremy:
      "the child should set on the lip with her feet dangling in the cloud, and the cygnet next to her"). The slippers
      are on her right, where the stowed paper does not hide the bird, and a bird's width clear of her coat.
-   - *The world.* Then the lens opens out once, from her face to what she is looking at: up, back and round behind
-     them to the cloud going on for ever under the sun, the two of them small on the lip. It settles and holds there
+   - *The world.* Then the lens goes on round the same way, past the front of her and the bird's side, rising and
+     drawing back to what she is looking at: the cloud going on for ever under the sun, the two of them small on the
+     lip, the sky the swans will cross in the frame. It settles and holds there
      (Jeremy: "we should really be going the other way. from somewhat close up on the child and it's face to showing
      the wider world"; every camera move is intentional, never in and back out).
-   - *The swans*, as they always were (Jeremy: "the original sequence for the swans was really good"): a skein comes
-     in from the left edge of the frame and across the sun, and the lens comes round a little and down, looking up
-     with them. The bird sees them first; she follows its look and her feet go still.
+   - *The swans*, as they always were (Jeremy: "the original sequence for the swans was really good"): the lens
+     rests where the original's did when they were sent, so the skein comes in at the left of the frame and across
+     the sun, and the lens pans on round a little and down, looking up with them. The bird sees them first; she follows its look and her feet go still.
    - *The boat.* Halfway through their pass, where they go over a tower of cumulus to the right of the sun, the boat
      comes out of the foot of that tower (it has waited inside it, hidden, since they came up) and sails in toward
      them under the sun, the kite with it. As the swans go on out of sight she turns to the bird, still looking
