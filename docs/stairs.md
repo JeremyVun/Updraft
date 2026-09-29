@@ -107,6 +107,18 @@ On the reworked sail (2026-09-29):
 
 > "It's beautiful. I only noticed one consistent issue is that the cloud seems to clip into the boat and fill teh bottom of it. It's especially noticeable when the boat is sailing into the nest."
 
+On the top landing (2026-09-29):
+
+> "On the stairs chapter, there are two things going on at the cloud nest.
+> 1. the boat sails towards the player
+> 2. the swan flying v flies from left to right.
+>
+> What this means is that the player's attention is drawn to the boat with the red sail moving towards them, and they completely miss the visual and emotional impact of the callback of the swans flying across from left to right. I need you to have a think about how to space these two things out so that they aren't competing for the player's attention. My feeling is that we should have the swans fly across first with the existing subtle camera dolly to draw the players attention. And then halfway through their flight the boat comes out of the clouds sailing towards them. However, if you feel there's a better way to direct this scene feel free to explore.
+>
+> Also, i noticed that once the child reaches the nest, they instantly sit down and we lose the opportunity to have an otherwise nice moment for the child to enjoy the clouds and sit down. It's so fast that to the player, it doesn't even read as the child sitting down and hanging their legs off the jetty playfully.
+>
+> The player should be allowed a moment to feel awe and take in the cloud top scene, and then enjoy both of the events after that. Not too slow, not too quick. We need just the right pacing here."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn, the afternoon going. The birches took the last of the year off
@@ -146,12 +158,23 @@ brings the light. Courage passes back and forth between them, and the stairs are
    down beside the ring while its last flight lets go of the trick and is seen to climb on past the corner and stop
    in the air a storey too high. The hollow closes once the lens is back in the white.
 5. **Above the clouds.** Up out of the white through mist that thins as they rise (the deck's crown), out of the
-   wind into a vast calm, the cloud still drifting on a soft air; a pair of slippers; the bird settles in one and the child
-   sits beside it on the lip with her feet hanging over the cloud (Jeremy: "the child should set on the lip with her
-   feet dangling in the cloud, and the cygnet next to her"). The slippers are on her right, where the stowed paper
-   does not hide the bird, and a bird's width clear of her coat. A skein of swans goes across the sun. Far off toward
-   the sun the kite is flying, and under it the boat comes in to them across the cloud out of the sunset, slows, and
-   lies right alongside the landing's edge.
+   wind into a vast calm, the cloud still drifting on a soft air. One thing at a time, each given room:
+   - *Awe* (about 7 s). A step from the edge she stops and looks slowly right across it, from off to the left round
+     past the sun, then at the bird beside her; the lens draws back and down behind them to look out with her.
+   - *Sitting* (about 6 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
+     (over 1.4 s, not a drop) with her feet hanging over the cloud, swinging them in little runs (Jeremy: "the child
+     should set on the lip with her feet dangling in the cloud, and the cygnet next to her"). The lens comes down and
+     round to her left, out past the lip, so her face and her feet over the edge are seen and the bird on her other
+     side is not in the way. The slippers are on her right, where the stowed paper does not hide the bird, and a
+     bird's width clear of her coat.
+   - *The swans.* The lens goes back round behind them and settles looking out at the sun before a skein of swans
+     comes across it from the left. The bird sees them first; she follows its look and her feet go still. Nothing
+     else moves in the picture until they are past the sun.
+   - *The boat.* Halfway through their pass, where they go over a tower of cumulus to the right of the sun, the boat
+     comes out of the foot of that tower (it has waited inside it, hidden, since they came up) and sails in toward
+     them under the sun, the kite with it. As the swans go on out of sight she turns to the bird, still looking
+     where they went, then to the boat; her feet swing again. The lens comes round to their faces as it slows and lies
+     right alongside the landing's edge.
 6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow (a gust still adds a
    little). Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
    out to port among the heaps, back across to starboard between towers of cumulus, and straight on into a bank of
@@ -226,8 +249,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
   it. Coming out on top the deck thins away over `tuning.stairs.crown` metres above its top (`uCloudCrown`) and
   clears over seven seconds, so the lens rises out of mist rather than through a ceiling.
 - **The sail**: the route is `CLOUD_ROUTE` (the turn off the landing, then a Catmull-Rom wander through `MEANDER`),
-  the bank's front `FOG_BANK`. The boat is out on the cloud under the kite from the moment they come out on top and
-  sails in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
+  the bank's front `FOG_BANK`. The boat waits hidden in the foot of the nearest tower a little right of the sun
+  (`harbour`) from the moment they come out on top, and once the swans are across the sun (`BOAT_SETS_OFF`) sails
+  out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
   draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
   round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). The bank is an
   analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At `bankSwap` metres in, the boat and the

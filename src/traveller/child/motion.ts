@@ -42,6 +42,9 @@ export interface Pose {
   swing: number;
   /** On a swing: -1 tucked at the back of the arc to 1 legs out at the front. */
   kick: number;
+  /** Sat on an edge, how far the hanging feet swing, 0..1, and where in the swing they are, radians. */
+  dangle: number;
+  dangleAt: number;
   /** Lying down, 0..1: the legs lie along the bed. */
   lie: number;
   /** Of `lie`, how far the hips are folded, radians: sat up in bed the legs still lie along it. */
@@ -59,7 +62,7 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, lie: 0, lieFold: 0, step: [0, 0], breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, dangle: 0, dangleAt: 0, lie: 0, lieFold: 0, step: [0, 0], breath: 0,
   };
 }
 
@@ -421,7 +424,12 @@ export class ChildMotion {
       const floorAnkle = ANKLE + (d.ground(sitWorld.x, sitWorld.z) - root.position.y) / SCALE;
       const hangAnkle = rest[BONE.hips].y - 0.6;
       sitAnkle.y = Math.max(floorAnkle, hangAnkle);
-      feetDown = Math.min(feetDown, 1 - THREE.MathUtils.smoothstep(hangAnkle - floorAnkle, 0, 0.12));
+      const hanging = THREE.MathUtils.smoothstep(hangAnkle - floorAnkle, 0, 0.12);
+      feetDown = Math.min(feetDown, 1 - hanging);
+      // Hanging feet swing in turn from the knee: out and up in front, back under the edge.
+      const kick = Math.sin(pose.dangleAt + (left ? 0 : Math.PI)) * pose.dangle * hanging;
+      sitAnkle.z += kick * (kick > 0 ? 0.16 : 0.1);
+      sitAnkle.y += Math.max(0, kick) * 0.1;
 
       // Blend: the planted walk, the sit, and a lifted knee for a step up.
       const standW = 1 - pose.sit;
