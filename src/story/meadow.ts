@@ -937,14 +937,16 @@ export class MeadowChapter implements Chapter {
     const s = this.shot;
     const view = tuning.crest;
     const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
-    const bearing = this.viewBearing + (portrait ? view.viewPortraitSide : view.viewSide);
-    s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
-    s.carry = true;
-    s.carryAnchor = c;
     const ground = Math.max(heightAt(c.x, c.z), 0);
     const water = this.beat === 'pond' || this.beat === 'gather';
     const walked = water ? 1 : this.beat === 'down' && this.atEdge !== -1
       ? 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - this.edge.x, c.z - this.edge.z), 2, 30) : 0;
+    const bearing = this.viewBearing + (portrait
+      ? THREE.MathUtils.lerp(view.viewPortraitSide, view.edgePortraitSide, walked)
+      : THREE.MathUtils.lerp(view.viewSide, view.edgeSide, walked));
+    s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+    s.carry = true;
+    s.carryAnchor = c;
     this.cameraChild.copy(c).y += this.cast.child.kneeling > 0.5 ? 0.85 : 1.2;
     if (water) {
       s.target.set((k.x + c.x) * 0.5, (k.y + ground) * 0.5 + 0.55, (k.z + c.z) * 0.5);
@@ -954,13 +956,14 @@ export class MeadowChapter implements Chapter {
       s.target.set(c.x + (RAFT_AT.x - c.x) * toward, THREE.MathUtils.lerp(ground + 1, RAFT_AT.y, toward),
         c.z + (RAFT_AT.z - c.z) * toward);
     }
-    const back = THREE.MathUtils.lerp(view.viewBack, view.edgeBack, walked);
-    const up = THREE.MathUtils.lerp(view.viewUp, view.edgeUp, walked);
+    const scale = portrait ? view.viewPortraitScale : 1;
+    const back = THREE.MathUtils.lerp(view.viewBack, view.edgeBack, walked) * scale;
+    const up = THREE.MathUtils.lerp(view.viewUp, view.edgeUp, walked) * scale;
     s.eye = this.eyeAt.set(c.x + this.side.x * back, ground + up, c.z + this.side.z * back);
     s.clearance = 2;
     s.subjects = water ? this.pondFraming : this.descentFraming;
     this.gazeAfterFlock(portrait);
-    this.pace = this.beat === 'crest' ? 0.6 : 0.9;
+    this.pace = this.beat === 'crest' ? 1 : 0.9;
     this.focus.copy(c);
   }
 
@@ -972,22 +975,24 @@ export class MeadowChapter implements Chapter {
     const flock = this.cast.flock;
     const a = this.flockGaze;
     const since = this.leftAt < 0 ? -1 : this.now - this.leftAt;
-    const { gazeFor, gazeKeep } = tuning.crest;
+    const { gazeFor, gazeKeep, gazeAcross } = tuning.crest;
     a.strength = !flock.active || since < 0 ? 0
       : THREE.MathUtils.smoothstep(since, 1.5, 4.5) * (1 - THREE.MathUtils.smoothstep(since, gazeFor, gazeFor + 3));
     if (a.strength <= 0) return;
     const eye = this.eyeAt;
+    const c = this.cast.child.position;
     const reach = eye.distanceTo(this.shot.target);
     const to = flock.bounds(this.flockBounds).getCenter(this.flockAt).sub(eye);
-    const level = Math.hypot(to.x, to.z) || 1;
     const aspect = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 16 / 9;
     const half = THREE.MathUtils.degToRad(verticalFov(aspect)) / 2;
-    const c = this.cast.child.position;
-    const feet = Math.atan2(c.y - eye.y, Math.hypot(c.x - eye.x, c.z - eye.z));
-    const top = feet + Math.atan(gazeKeep * Math.tan(half));
-    const rise = Math.min(Math.atan2(to.y, level), top);
-    a.point.set(eye.x + to.x / level * Math.cos(rise) * reach, eye.y + Math.sin(rise) * reach,
-      eye.z + to.z / level * Math.cos(rise) * reach);
+    const across = Math.atan(gazeAcross * Math.tan(half) * aspect);
+    const waist = Math.atan2(c.y + 0.6 - eye.y, Math.hypot(c.x - eye.x, c.z - eye.z));
+    const toChild = Math.atan2(c.x - eye.x, c.z - eye.z);
+    const turn = THREE.MathUtils.clamp(Math.atan2(Math.sin(Math.atan2(to.x, to.z) - toChild),
+      Math.cos(Math.atan2(to.x, to.z) - toChild)), -across, across);
+    const rise = Math.min(Math.atan2(to.y, Math.hypot(to.x, to.z)), waist + Math.atan(gazeKeep * Math.tan(half)));
+    a.point.set(eye.x + Math.sin(toChild + turn) * Math.cos(rise) * reach, eye.y + Math.sin(rise) * reach,
+      eye.z + Math.cos(toChild + turn) * Math.cos(rise) * reach);
     this.shot.attention = a;
   }
 
