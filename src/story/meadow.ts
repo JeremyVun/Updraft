@@ -991,7 +991,7 @@ export class MeadowChapter implements Chapter {
     const reach = eye.distanceTo(this.shot.target);
     // The last of them off the water first, then the V they make.
     const water = flock.onWater(this.flockWater);
-    const to = flock.bounds(this.flockBounds).getCenter(this.flockAt).lerp(this.flockWater, water).sub(eye);
+    const to = flock.bounds(this.flockBounds).getCenter(this.flockAt).lerp(this.flockWater, Math.min(1, water * 4)).sub(eye);
     const aspect = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 16 / 9;
     const half = THREE.MathUtils.degToRad(verticalFov(aspect)) / 2;
     const across = Math.atan((portrait ? tuning.crest.gazePortraitAcross : tuning.crest.gazeAcross) * Math.tan(half) * aspect);
