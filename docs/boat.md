@@ -38,7 +38,7 @@ natural wood.
 
 - **Beaching.** The way comes off over the last metres (`tuning.sail.beachEase`, read up to `beachLook` ahead of
   the bow), the forefoot touches at `beachTouch` and the keel slides on up the sand (`beachGrip`) before it rests;
-  only then is it `grounded`. Eased past its landing point with the beach still ahead, it holds its course onto the
+  only then is it `grounded`. A hull being pushed off never starts beaching on the sand it is leaving. Eased past its landing point with the beach still ahead, it holds its course onto the
   sand rather than coming round for the point. Jeremy: the boat instantly stopping and the child instantly walking out "doesn't look
   very polished". Each beach chapter calls `Traveller.stepAshore`: the child sits a moment (`boarding.ashorePause`),
   then steps out over the gunwale onto the sand beside the bow, standing nearer the keel than at a jetty
