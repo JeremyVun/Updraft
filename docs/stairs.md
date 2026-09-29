@@ -126,6 +126,23 @@ Playing the first pass of that:
 
 > "yea on point 2, the original sequence for the swans was really good."
 
+On the second pass, which turned onto her face as she came out of the white:
+
+> "sigh... up top, it's a bit better, but not only did you mess up the camera when the child is moving up the stairs, but the swans don't come in from the left of the screen like originally"
+
+> "The swans appear out of thin air, and we lose the look out over the cloud when the child comes out of the gold white out."
+
+Asked how to have both main's look out over the cloud and her face and feet on the lip (which only show from in
+front):
+
+> "why not try look out, then side on sit, but instead of the camera drifting around her left, let it drift around her right? then the swans can naturally come in no?"
+
+On that, with the swans coming in from behind the landing and flying on into the sun:
+
+> "ok better, but the swans need to be flying in the same direction the boat is going... that was the idea of the swans flying in more of a left to right direction. The feeling is that the swans are going somewhere and you are going there too."
+
+Then, asked how: "ok nevermind, this is good merge into main".
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn, the afternoon going. The birches took the last of the year off
@@ -166,27 +183,25 @@ brings the light. Courage passes back and forth between them, and the stairs are
    in the air a storey too high. The hollow closes once the lens is back in the white.
 5. **Above the clouds.** Up out of the white through mist that thins as they rise (the deck's crown), out of the
    wind into a vast calm, the cloud still drifting on a soft air. One thing at a time, each given room:
-   - *Her face* (about 7 s). The climb's lens brings her up out of the white as it always has. Up on top the lens
-     goes once round her, one way only (`roundHer`): as she turns to the edge it turns with her, round her left side
-     onto her face in the gold light. A step from the edge she stops and looks slowly right across it all, then at
-     the bird beside her.
-   - *Sitting* (about 5 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
-     (over 1.4 s, not a drop), facing the lens, her feet hanging over the cloud and swinging in little runs (Jeremy:
-     "the child should set on the lip with her feet dangling in the cloud, and the cygnet next to her"). The slippers
-     are on her right, where the stowed paper does not hide the bird, and a bird's width clear of her coat.
-   - *The world.* Then the lens goes on round the same way, past the front of her and the bird's side, rising and
-     drawing back to what she is looking at: the cloud going on for ever under the sun, the two of them small on the
-     lip, the sky the swans will cross in the frame. It settles and holds there
-     (Jeremy: "we should really be going the other way. from somewhat close up on the child and it's face to showing
-     the wider world"; every camera move is intentional, never in and back out).
-   - *The swans*, as they always were (Jeremy: "the original sequence for the swans was really good"): the lens
-     rests where the original's did when they were sent, so the skein comes in at the left of the frame and across
-     the sun, and the lens pans on round a little and down, looking up with them. The bird sees them first; she follows its look and her feet go still.
-   - *The boat.* Halfway through their pass, where they go over a tower of cumulus to the right of the sun, the boat
-     comes out of the foot of that tower (it has waited inside it, hidden, since they came up) and sails in toward
-     them under the sun, the kite with it. As the swans go on out of sight she turns to the bird, still looking
-     where they went, then to the boat; her feet swing again. The lens comes round to their faces as it slows and lies
-     right alongside the landing's edge.
+   - *The look out* (about 7 s). The lens rises out of the mist behind her and draws back as the cloud opens out
+     to the sun, and settles low behind her with the sun in the frame. A step from the edge she stops and looks
+     slowly right across it all, then at the bird beside her.
+   - *Sitting* (about 11 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
+     (over 1.4 s, not a drop), her feet hanging over the cloud and swinging in little runs (Jeremy: "the child should
+     set on the lip with her feet dangling in the cloud, and the cygnet next to her"). As she sits the lens drifts
+     round her right, away from the sun (`toHerSide`), keeping its height until it is past the rail and then coming
+     down a little in front of her side: her face, her feet over the lip, the bird beside her. The slippers are on
+     her right, where the stowed paper does not hide the bird, and a bird's width clear of her coat.
+   - *The swans.* A skein comes from behind the landing, low over the cloud off to her left, and flies on toward the
+     sun, where the boat will take them. It comes in at the top left of her side view; once it is well into the
+     frame the lens goes with it (`withTheSwans`), panning up and across and back round behind her as far as the
+     swans have come round toward the sun, turning and tilting only as far as keeps them in the frame, until it is
+     looking up past her at the sky they are going into. The bird sees them first; she follows its look and her
+     feet go still.
+   - *The boat.* As the swans go on toward the sun, the boat comes out of the foot of a tower of cumulus to the
+     right of it (it has waited inside, hidden, since they came up) and sails in toward them, the kite with it. As
+     the swans go out of sight she turns to the bird, still looking where they went, then to the boat; her feet
+     swing again. The lens comes round to their faces as it slows and lies right alongside the landing's edge.
 6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow (a gust still adds a
    little). Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
    out to port among the heaps, back across to starboard between towers of cumulus, and straight on into a bank of
@@ -262,7 +277,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
   clears over seven seconds, so the lens rises out of mist rather than through a ceiling.
 - **The sail**: the route is `CLOUD_ROUTE` (the turn off the landing, then a Catmull-Rom wander through `MEANDER`),
   the bank's front `FOG_BANK`. The boat waits hidden in the foot of the nearest tower a little right of the sun
-  (`harbour`) from the moment they come out on top, and once the swans are across the sun (`BOAT_SETS_OFF`) sails
+  (`harbour`) from the moment they come out on top, and once the swans are on their way into the sun (`BOAT_SETS_OFF`) sails
   out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
   draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
   round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). The bank is an

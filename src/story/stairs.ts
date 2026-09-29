@@ -67,30 +67,41 @@ const KITE_WAITS = (() => {
 /** Where she stands to take it all in, a step in from the lip, and the bird beside her. */
 const TAKE_IN = SIT.clone().addScaledVector(TOP_OUT, -0.45);
 const BIRD_TAKES_IN = SLIPPERS.clone().addScaledVector(TOP_OUT, -0.4);
-/** How far into the skein's pass the boat sets off out of the cloud, seconds: they are across the sun by the time it shows. */
-const BOAT_SETS_OFF = 6.5;
+/**
+ * How far into the skein's pass the boat sets off out of the cloud, and how long they watch the swans before they
+ * turn to each other; seconds.
+ */
+const BOAT_SETS_OFF = 17;
+const SKEIN_WATCHED = 20;
 /** How far into its tower the boat waits, as a share of the tower's size from its middle toward the landing. */
 const HIDE_IN = 0.45;
 /** How much faster the kite brings the boat on while it is still far out, metres a second. */
-const FAR_OUT_SPEED = 5;
+const FAR_OUT_SPEED = 7;
+/** How long the lens takes to drift round her right to her side as she sits, and when the swans are sent; seconds into the sit. */
+const TO_HER_SIDE = 7;
+const SWANS_AT = 7;
+/** Her side: turned from straight out ahead of her round toward her right, how far off, how high, and how high it looks. */
+const SIDE_TURN = -1.13;
+const SIDE_REACH = 6;
+const SIDE_HEIGHT = 1.7;
+const SIDE_LOOK = 0.3;
 /**
- * How long the lens takes to come round onto her face as she comes up and turns to the edge; how long she sits
- * swinging her feet before it opens out to the world, how long that takes, and how long it holds there before the
- * swans are sent; seconds.
+ * The swans' way: they come from behind the landing, over the cloud off to her left and on out toward the sun.
+ * Where they start, from where she sits (turned from straight behind her toward her left, how far off), which way
+ * they fly (turned from the sun toward the right), and how high over the cloud.
  */
-const TURN_WITH_HER = 6;
-const SAT_A_WHILE = 4;
-const OPEN_OUT = 13;
-const SWANS_AFTER = OPEN_OUT + 1.5;
-/** Where the lens is on her face: turned this far round from behind her, out over the cloud on her left. */
-const FACE_TURN = -2.05;
-/** The world it opens out to (the view the swans come across): turned from behind her, how far back, how high. */
-const WORLD_TURN = 0.3;
-const WORLD_REACH = 11;
-const WORLD_HEIGHT = 1.2;
-const WORLD_LOOK_UP = 2.3;
+const SKEIN_FROM_TURN = 0.4;
+const SKEIN_FROM = 220;
+const SKEIN_HEADING = 0;
+const SKEIN_HIGH = 16;
+/** How far short of the sun they are, seen from where she sits, when the lens has come back round behind her; radians. */
+const SKEIN_SETTLES = 0.52;
+/** How far from the middle of the frame the swans may go while the lens comes round with them, as shares of its half-width and half-height. */
+const KEEP_THEM_IN = 0.6;
+const KEEP_THEM_UNDER = 0.45;
 /** How long she stands taking it in before she turns to the bird, seconds. */
 const AWE_TURNS = 5.2;
+const ease = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * THREE.MathUtils.clamp(x, 0, 1));
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
 const SEA_RIDE = 0.4;
@@ -220,14 +231,17 @@ export class StairsChapter implements Chapter {
   private comingFor = 0;
   /** Once the swans are over, the boat comes out of the cloud where it has been waiting. */
   private boatComing = false;
-  /** The lens's way round her on top: when it set off, from where, and how far she has sat down. */
-  private roundFrom = -1;
-  private lensAt = 0;
-  private bearingFrom = 0;
-  private reachFrom = 0;
-  private seated = 0;
-  private readonly roundEye = new THREE.Vector3();
-  private readonly faceAt = new THREE.Vector3();
+  /** The lens's authored moves on top: when the current one set off, from where round her, and how far it has come. */
+  private arcFor: Beat | null = null;
+  private arcAt = 0;
+  private arcBearing = 0;
+  private arcReach = 0;
+  private skeinBearing = 0;
+  private withThem = 0;
+  private keepTurn = 0;
+  private keepTilt = 0;
+  private readonly arcEye = new THREE.Vector3();
+  private readonly theirWay = new THREE.Vector3();
   private readonly waiting = new THREE.Vector2();
   private cuts = 0;
   /** How far the boat has come over the cloud, metres. */
@@ -527,20 +541,21 @@ export class StairsChapter implements Chapter {
         c.lookAt = this.outOver(0.1, 4, this.look);
         this.settle(dt);
         this.comeAlongside(dt);
-        // The lens has opened out to the world and settled on it before the swans come.
-        if (this.t > SAT_A_WHILE + SWANS_AFTER && !this.skeinSent) this.sendSkein();
+        // The lens has come round to her side and she has swung her feet a while before the swans come.
+        if (this.t > SWANS_AT && !this.skeinSent) this.sendSkein();
         break;
       case 'skein': {
         // The bird sees them first and she follows its look; her feet go still while they watch them over. Then she
         // turns to the bird, which is still looking where they went, and the boat is coming.
         const flock = this.cast.flock;
         this.settle(dt);
-        const over = !flock.active || this.t > 14;
+        const over = !flock.active || this.t > SKEIN_WATCHED;
         if (!over) this.look2.copy(flock.head);
-        k.watch(this.t < 16 ? this.look2 : this.cast.boat.position);
+        k.watch(this.t < SKEIN_WATCHED + 2 ? this.look2 : this.cast.boat.position);
         c.lookAt = this.t < 1.1 ? this.outOver(0.1, 4, this.look) : !over ? flock.head
-          : this.t < 17.5 ? k.position : this.cast.boat.position;
-        c.dangle = over ? THREE.MathUtils.smoothstep(this.t, 16, 18) : 1 - THREE.MathUtils.smoothstep(this.t, 1.2, 3);
+          : this.t < SKEIN_WATCHED + 3.5 ? k.position : this.cast.boat.position;
+        c.dangle = over ? THREE.MathUtils.smoothstep(this.t, SKEIN_WATCHED + 2, SKEIN_WATCHED + 4)
+          : 1 - THREE.MathUtils.smoothstep(this.t, 1.2, 3);
         if (this.t > BOAT_SETS_OFF) this.boatComing = true;
         this.comeAlongside(dt);
         if (this.approachLeg === this.approach.length - 1) {
@@ -577,7 +592,7 @@ export class StairsChapter implements Chapter {
     this.lanternGlow();
     this.world.cloud.holdOut(this.berthed && this.beat !== 'thin' && this.beat !== 'down' ? this.cast.boat : null);
     this.measureAir(dt);
-    this.frame();
+    this.frame(dt);
   }
 
   /**
@@ -916,14 +931,18 @@ export class StairsChapter implements Chapter {
     return out.multiplyScalar(60).add(TOP).setY(TOP.y + up);
   }
 
-  /** Far off, across the sun, a skein of swans goes north over the cloud. */
+  /**
+   * A skein of swans comes from behind the landing, high over the cloud off to her left, and goes on out toward the
+   * sun without them.
+   */
   private sendSkein(): void {
     this.skeinSent = true;
-    const toward = this.tmp.copy(this.sun).sub(TOP).setY(0).normalize();
-    const x = TOP.x + toward.x * 170, z = TOP.z + toward.z * 170;
-    // Across the line of sight, and north: they are going on without it.
-    const bearing = Math.atan2(-toward.z, toward.x);
-    this.cast.flock.pass(x, z, CLOUD.top + 34, bearing, 9, 140, false);
+    const behind = Math.atan2(-TOP_OUT.x, -TOP_OUT.z) - SKEIN_FROM_TURN;
+    const heading = Math.atan2(this.sun.x - SIT.x, this.sun.z - SIT.z) - SKEIN_HEADING;
+    const run = 140;
+    const x = SIT.x + Math.sin(behind) * SKEIN_FROM + Math.sin(heading) * run;
+    const z = SIT.z + Math.cos(behind) * SKEIN_FROM + Math.cos(heading) * run;
+    this.cast.flock.pass(x, z, CLOUD.top + SKEIN_HIGH, heading, 9, run, false);
     this.to('skein');
   }
 
@@ -1361,53 +1380,100 @@ export class StairsChapter implements Chapter {
   }
 
   /**
-   * Up on top the lens goes once round her, one way only, never back: out of the white it turns with her as she
-   * turns to the edge and comes round her left side onto her face, in the sun; it stays on her while she takes it all
-   * in and sits; then it goes on round, rising and drawing back past the bird, to the world she is looking at behind
-   * them, arriving on the view the swans come across.
+   * As she sits, the lens drifts round her right, away from the sun, to her side out over the cloud: her feet hanging
+   * over the lip and swinging, and the bird beside her in its slipper.
    */
-  private roundHer(): void {
+  private toHerSide(): void {
     const s = this.shot;
-    const c = this.cast.child;
-    const S = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * THREE.MathUtils.clamp(x, 0, 1));
-    const bearing = (x: number, z: number) => Math.atan2(x, z);
-    const back = bearing(TOP.x - this.sun.x, TOP.z - this.sun.z);
-    if (this.roundFrom < 0) {
-      this.roundFrom = this.now;
-      this.lensAt = this.now;
-      this.eyeFrom.copy(this.world.eye);
-      this.lookFrom.copy(this.world.looking);
-      this.bearingFrom = bearing(this.eyeFrom.x - c.position.x, this.eyeFrom.z - c.position.z);
-      this.reachFrom = Math.hypot(this.eyeFrom.x - c.position.x, this.eyeFrom.z - c.position.z);
-    }
-    this.seated += ((c.sitting ? 1 : 0) - this.seated) * (1 - Math.exp(-(this.now - this.lensAt) * 2));
-    this.lensAt = this.now;
-    // Her face, standing or sat on the lip with her feet over the cloud.
-    const faceReach = THREE.MathUtils.lerp(5, 4.8, this.seated);
-    const faceLook = this.faceAt.copy(c.position).setY(c.position.y + THREE.MathUtils.lerp(1, 0.45, this.seated));
-    const faceUp = faceLook.y + 0.3;
-    // Always the same way round: toward her left from behind her, on past her face, round by the bird to behind.
-    const face = this.bearingFrom - THREE.MathUtils.euclideanModulo(this.bearingFrom - (back + FACE_TURN), Math.PI * 2);
-    const world = face - THREE.MathUtils.euclideanModulo(face - (back + WORLD_TURN), Math.PI * 2);
-    const turning = S((this.now - this.roundFrom) / TURN_WITH_HER);
-    const out = this.beat === 'nest' ? S((this.t - SAT_A_WHILE) / OPEN_OUT) : 0;
-    const centre = this.tmp.copy(c.position).lerp(this.worldAt(this.tmp2), out);
-    const b = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.bearingFrom, face, turning), world, out);
-    const reach = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.reachFrom, faceReach, turning), WORLD_REACH, out);
-    const worldTarget = this.worldAt(this.tmp2);
-    const up = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.eyeFrom.y, faceUp, turning), worldTarget.y + WORLD_HEIGHT, out);
-    s.eye = this.roundEye.set(centre.x + Math.sin(b) * reach, up, centre.z + Math.cos(b) * reach);
-    s.target.lerpVectors(this.lookFrom, faceLook, turning).lerp(worldTarget, out);
+    if (this.arcFor !== this.beat) this.lensSetsOff(SIT);
+    const u = ease((this.now - this.arcAt) / TO_HER_SIDE);
+    const side = Math.atan2(TOP_OUT.x, TOP_OUT.z) + SIDE_TURN;
+    const b = THREE.MathUtils.lerp(this.arcBearing, this.arcBearing + THREE.MathUtils.euclideanModulo(side - this.arcBearing, Math.PI * 2), u);
+    const reach = THREE.MathUtils.lerp(this.arcReach, SIDE_REACH, u);
+    // It keeps its height until it is past the rail on her right, then comes down beside her.
+    const down = ease(((this.now - this.arcAt) / TO_HER_SIDE - 0.35) / 0.65);
+    s.eye = this.arcEye.set(SIT.x + Math.sin(b) * reach, THREE.MathUtils.lerp(this.eyeFrom.y, TOP.y + SIDE_HEIGHT, down), SIT.z + Math.cos(b) * reach);
+    s.target.copy(SIT).setY(TOP.y + SIDE_LOOK).lerp(this.lookFrom, 1 - u);
     s.exact = true;
-    this.focus.copy(c.position);
+    this.focus.copy(SIT);
   }
 
-  /** What the world view looks at: over the lip between her and the bird, up enough that the sky the swans cross is in it. */
-  private worldAt(out: THREE.Vector3): THREE.Vector3 {
-    return out.copy(SIT).lerp(SLIPPERS, 0.5).setY(TOP.y + WORLD_LOOK_UP);
+  /**
+   * The swans come in at the left of that and the lens goes with them, back round her and up, as far as they have
+   * come round toward the sun, until it is behind the two of them looking up at the sky they are crossing.
+   */
+  private withTheSwans(dt: number): boolean {
+    const s = this.shot;
+    const flock = this.cast.flock;
+    const bearing = flock.active ? Math.atan2(flock.head.x - SIT.x, flock.head.z - SIT.z) : this.skeinBearing;
+    const wide = THREE.MathUtils.degToRad(32), high = THREE.MathUtils.degToRad(19);
+    if (this.arcFor !== this.beat) {
+      this.lensSetsOff(SIT);
+      // It waits for them to come well into the frame before it goes with them.
+      this.skeinBearing = this.arcBearing + Math.PI + wide * KEEP_THEM_IN;
+      this.withThem = this.keepTurn = this.keepTilt = 0;
+    }
+    const sun = Math.atan2(this.sun.x - SIT.x, this.sun.z - SIT.z);
+    const settles = sun + SKEIN_SETTLES;
+    const way = THREE.MathUtils.euclideanModulo(this.skeinBearing - settles + Math.PI, Math.PI * 2) - Math.PI;
+    const come = THREE.MathUtils.euclideanModulo(this.skeinBearing - bearing + Math.PI, Math.PI * 2) - Math.PI;
+    const goal = flock.active ? THREE.MathUtils.clamp(come / way, 0, 1) : 1;
+    this.withThem += (Math.max(goal, this.withThem) - this.withThem) * (1 - Math.exp(-dt * 1.5));
+    const u = this.withThem > 0.995 ? 1 : this.withThem;
+    // Where it arrives is where the loop's framing for the skein holds it.
+    const behind = Math.atan2(TOP.x - this.sun.x, TOP.z - this.sun.z) + 0.1;
+    const b = THREE.MathUtils.lerp(this.arcBearing, this.arcBearing - THREE.MathUtils.euclideanModulo(this.arcBearing - behind, Math.PI * 2), u);
+    const reach = THREE.MathUtils.lerp(this.arcReach, 10, u);
+    const centre = this.tmp.copy(SIT).lerp(SLIPPERS, 0.5 * u);
+    const at = this.tmp2.copy(SIT).lerp(SLIPPERS, 0.5).setY(TOP.y + 2.6);
+    s.eye = this.arcEye.set(centre.x + Math.sin(b) * reach, THREE.MathUtils.lerp(this.eyeFrom.y, at.y - 0.3, u), centre.z + Math.cos(b) * reach);
+    s.target.lerpVectors(this.lookFrom, at, u);
+    // It turns and tilts only as far as it takes to keep them in the frame.
+    const look = this.theirWay.copy(s.target).sub(s.eye);
+    const range = look.length();
+    const yaw = Math.atan2(look.x, look.z), pitch = Math.asin(look.y / range);
+    let turn = 0, tilt = 0;
+    if (flock.active) {
+      const to = this.tmp.copy(flock.head).sub(s.eye);
+      const off = THREE.MathUtils.euclideanModulo(Math.atan2(to.x, to.z) - yaw + Math.PI, Math.PI * 2) - Math.PI;
+      const seen = 1 - THREE.MathUtils.smoothstep(Math.abs(off), wide * 0.85, wide * 1.1);
+      turn = (off - THREE.MathUtils.clamp(off, -wide * KEEP_THEM_IN, wide * KEEP_THEM_IN)) * seen;
+      tilt = Math.max(0, Math.asin(to.y / to.length()) - pitch - high * KEEP_THEM_UNDER) * seen;
+    }
+    this.keepTurn += (turn - this.keepTurn) * (1 - Math.exp(-dt * 2));
+    this.keepTilt += (tilt - this.keepTilt) * (1 - Math.exp(-dt * 2));
+    const y = yaw + this.keepTurn, p = pitch + this.keepTilt;
+    s.target.set(Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p)).multiplyScalar(range).add(s.eye);
+    s.exact = true;
+    this.focus.copy(SIT);
+    return u < 1 || Math.abs(this.keepTurn) + this.keepTilt > 0.01;
   }
 
-  private frame(): void {
+  /** Out of the white and on while she takes it in: from behind her, risen and drawn back as the cloud opens out to the sun. */
+  private overTheCloud(open: number): void {
+    const s = this.shot;
+    const c = this.cast.child.position;
+    const back = this.tmp.copy(TOP).sub(this.sun).setY(0).normalize();
+    s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.25 * (1 - open));
+    s.target.copy(c).addScaledVector(back, -2.5 * open);
+    s.target.y = TOP.y + 1.3 + open * 0.8;
+    s.distance = THREE.MathUtils.lerp(4, 12, open);
+    s.height = THREE.MathUtils.lerp(0.5, 3.6, open);
+    s.clearance = 0.4;
+    this.pace = 0.16;
+  }
+
+  /** Starts an authored move from wherever the lens is, measured round `about`. */
+  private lensSetsOff(about: THREE.Vector3): void {
+    this.arcFor = this.beat;
+    this.arcAt = this.now;
+    this.eyeFrom.copy(this.world.eye);
+    this.lookFrom.copy(this.world.looking);
+    this.arcBearing = Math.atan2(this.eyeFrom.x - about.x, this.eyeFrom.z - about.z);
+    this.arcReach = Math.hypot(this.eyeFrom.x - about.x, this.eyeFrom.z - about.z);
+  }
+
+  private frame(dt: number): void {
     const s = this.shot;
     const { child, boat, cygnet } = this.cast;
     const c = child.position;
@@ -1510,7 +1576,7 @@ export class StairsChapter implements Chapter {
           return;
         }
         if (this.beat === 'emerge' && c.y - CLOUD.top > -0.6) {
-          this.roundHer();
+          this.overTheCloud(THREE.MathUtils.smoothstep(this.t, 0.5, 8));
           return;
         }
         // In the cloud: from below and behind, the way they came, so each flight goes up and away from the lens to
@@ -1525,8 +1591,6 @@ export class StairsChapter implements Chapter {
         return;
       }
       case 'awe':
-        this.roundHer();
-        return;
       case 'nest':
       case 'skein':
       case 'lean':
@@ -1535,20 +1599,26 @@ export class StairsChapter implements Chapter {
         const back = this.tmp.copy(TOP).sub(this.sun).setY(0).normalize();
         s.target.copy(SIT).lerp(SLIPPERS, 0.5);
         this.focus.copy(SIT);
-        if (this.beat === 'nest' && this.t < SAT_A_WHILE + OPEN_OUT) {
-          this.roundHer();
+        if (this.beat === 'nest') {
+          this.toHerSide();
           return;
         }
-        const skein = this.beat === 'skein';
-        if (this.beat === 'nest' || skein) {
-          this.worldAt(s.target);
-          // Then out once to the world she is looking at: up, back and round behind them, the cloud going on for ever
-          // to the sun and the two of them small on the lip. Held there, and as the swans come in from the left the
-          // lens comes round a little and down, looking up with them as they go over the sun.
-          s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, skein ? 0.1 : WORLD_TURN);
-          if (skein) s.target.y = TOP.y + 2.6;
-          s.distance = skein ? 10 : WORLD_REACH;
-          s.height = skein ? -0.3 : WORLD_HEIGHT;
+        if (this.beat === 'skein' && this.withTheSwans(dt)) return;
+        if (this.beat === 'awe') {
+          // Settled out behind her, low enough that the sun stays in the frame while she takes it all in.
+          s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.3);
+          s.target.y = TOP.y + 1.8;
+          s.distance = 11;
+          s.height = 1.4;
+          this.pace = 0.2;
+          return;
+        }
+        if (this.beat === 'skein') {
+          // Behind them, looking up at the sky the swans are crossing, as the boat comes out.
+          s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.1);
+          s.target.y = TOP.y + 2.6;
+          s.distance = 10;
+          s.height = -0.3;
           this.pace = 0.32;
           return;
         }
