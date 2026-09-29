@@ -151,6 +151,7 @@ export class Journey {
       this.begin('lines');
     } else if (start === 'boats') {
       this.land(BOATS_LANDING.x, BOATS_LANDING.z, BOATS_LANDING.x - 1, BOATS_LANDING.z - 4);
+      this.cast.cygnet.rideIn('satchel');
       this.begin('boats');
     } else if (start === 'meadow' || start === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
@@ -161,6 +162,7 @@ export class Journey {
       (this.chapter as MeadowChapter).skipToPiano();
     } else if (start === 'birches' || start === 'autumn') {
       this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
+      this.cast.cygnet.rideIn('satchel');
       this.begin('birches');
     } else if (start === 'stairs' || start === 'clouds') {
       this.land(STAIRS_LANDING.x + 2, STAIRS_LANDING.y, STAIRS_LANDING.x + 4, STAIRS_LANDING.y - 1);
@@ -228,7 +230,7 @@ export class Journey {
     this.withCygnet();
   }
 
-  /** Everywhere past the first island the child is carrying the cygnet, so every test start has to start that way. */
+  /** Everywhere past the first island the child is carrying the cygnet; starts off a backpack crossing move it there. */
   private withCygnet(): void {
     const { cast } = this;
     cast.cygnet.visible = true;
@@ -304,8 +306,8 @@ export class Journey {
   private begin(name: ChapterName): void {
     this.transitionView = this.transitionView ?? this.chapter;
     this.name = name;
-    /** The cygnet first rides in the bag on the little boats' island; from then on its flap is left open. */
-    if (ORDER.indexOf(name) > ORDER.indexOf('boats')) this.cast.child.openBag(true);
+    /** The cygnet first rides in the bag leaving the washing lines; from then on its flap is left open. */
+    if (ORDER.indexOf(name) > ORDER.indexOf('lines')) this.cast.child.openBag(true);
     this.chapter = this.make(name);
     this.savedPoint = '';
   }
@@ -365,7 +367,7 @@ export class Journey {
           arrivalMusic: 'mirror',
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
           whaleAt: 27, whaleEvery: 0, dolphins: true,
-          swimAt: tuning.seaPassage.swimAt, season: 0.92,
+          swimAt: tuning.seaPassage.swimAt, season: 0.45,
           moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
         });
       case 'mirror': return new SkyMirrorChapter(cast);
@@ -376,7 +378,7 @@ export class Journey {
           route: cast.boat.position.x < MIRROR_BERTH.x - 30
             ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_BERTH.x + 40, MIRROR_BERTH.z + 4), ...ROUTES.toHarbour] : ROUTES.toHarbour,
           haze: tuning.homeApproach.haze, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
-          season: 0.98, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
+          season: 0.18, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
         });
       case 'toHome':
         /** It leaves in the sunrise the bird brought off the hill, and goes on into the day from there. */
@@ -390,7 +392,7 @@ export class Journey {
           whaleEvery: 0,
           dolphins: true,
           swimAt: tuning.seaPassage.swimAt,
-          season: 0.92,
+          season: 0.18,
           moor: HOME_MOORING,
         });
       case 'home':

@@ -348,32 +348,22 @@ export class IslandChapter implements Chapter {
   }
 
   /**
-   * Throws lean toward whatever is still grey, so a player who has not worked out that the wind brings the
-   * island back to life is carried around the rest of it by the game they are already playing. The lean is
-   * gentle and randomised: catch has to stay a game of catch, not a tour.
+   * Most throws go along the greyest line of grass around the child, so a player who has not worked out that
+   * the wind brings the island back to life is carried around the rest of it by the game they are already
+   * playing. The rest are free and every throw wobbles: catch has to stay a game of catch, not a tour.
    */
   private throwNext(time: number): void {
     const c = this.cast.child;
+    const o = tuning.opening;
     const aim = this.beat === 'leaving' ? this.cast.boat.position : ISLAND;
     const spread = this.beat === 'leaving' ? 0.7 : 1.8;
-    const toAim = Math.atan2(aim.x - c.position.x, aim.z - c.position.z);
-    const tries = this.beat === 'play' && !this.restored ? 6 : 1;
-    let angle = toAim;
-    let reach = 26;
-    let best = -Infinity;
-    for (let i = 0; i < tries; i++) {
-      let a = toAim + (Math.random() - 0.5) * spread;
-      const r = 18 + Math.random() * 16;
-      /** Past the ridge the camera loses them, so anything aimed over it is turned back down the island. */
-      if (c.position.z + Math.cos(a) * r < PLAY_LIMIT && Math.cos(a) < 0) a = Math.PI - a;
-      const score =
-        tries === 1 ? 0 : 1 - this.cast.life.at(c.position.x + Math.sin(a) * r, c.position.z + Math.cos(a) * r) + Math.random() * 0.2;
-      if (score > best) {
-        best = score;
-        angle = a;
-        reach = r;
-      }
+    let angle = Math.atan2(aim.x - c.position.x, aim.z - c.position.z) + (Math.random() - 0.5) * spread;
+    if (this.beat === 'play' && !this.restored && Math.random() < o.throwGreyChance) {
+      angle = this.greyestLine() + (Math.random() * 2 - 1) * o.throwGreyWobble;
     }
+    const reach = 18 + Math.random() * 16;
+    /** Past the ridge the camera loses them, so anything aimed over it is turned back down the island. */
+    if (c.position.z + Math.cos(angle) * reach < PLAY_LIMIT && Math.cos(angle) < 0) angle = Math.PI - angle;
     c.throwToward(c.position.x + Math.sin(angle) * reach, c.position.z + Math.cos(angle) * reach, () => {
       const dir = this.tmp.set(Math.sin(angle), 0, Math.cos(angle));
       this.cast.plane.launch(c.handPosition(this.hand), dir.multiplyScalar(7.5).setY(4.8));
@@ -382,6 +372,29 @@ export class IslandChapter implements Chapter {
       this.flightStart = time;
       c.lookAt = this.cast.plane.position;
     });
+  }
+
+  /** The direction whose flight from the child would pass over the most grey land, short of the ridge. */
+  private greyestLine(): number {
+    const { child: c, life } = this.cast;
+    const island = life.regions.island;
+    let best = 0;
+    let bestGrey = -Infinity;
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      let grey = Math.random() * 0.5;
+      for (let r = 4; r <= 34; r += 3) {
+        const x = c.position.x + Math.sin(a) * r;
+        const z = c.position.z + Math.cos(a) * r;
+        if (z < PLAY_LIMIT) break;
+        if (heightAt(x, z) > 0.4 && Math.hypot(x - island.x, z - island.y) < island.z) grey += 1 - life.at(x, z);
+      }
+      if (grey > bestGrey) {
+        bestGrey = grey;
+        best = a;
+      }
+    }
+    return best;
   }
 
   /** The island is whole: up the hill to the tree, a long look at the hills, then down to the boat. */

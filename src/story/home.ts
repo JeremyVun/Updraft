@@ -184,7 +184,7 @@ export class HomeChapter implements Chapter {
     if (['release','home','inside','credits'].includes(this.beat)) return 'home';
     return 'approach';
   }
-  readonly season = 1;
+  readonly season = 0.04;
   readonly focus = new THREE.Vector3();
   private beatStart = 0;
   private duskTarget = tuning.homeLight.daylight;
@@ -267,7 +267,7 @@ export class HomeChapter implements Chapter {
   private readonly gathering = new THREE.Vector3();
   /** When the wind starts showing the player the gesture the colt is waiting for, and the shape it draws there. */
   private coaxFrom = 0;
-  private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
+  private readonly coaxing: Coax = { at: new THREE.Vector3(), urgency: 0 };
 
   constructor(private readonly cast: Cast) {
     cast.cygnet.mayFly = true;
@@ -545,9 +545,12 @@ export class HomeChapter implements Chapter {
   get coax(): Coax | null {
     const { cygnet } = this.cast;
     const trying = this.beat === 'tries' || this.beat === 'flying';
-    if (!trying || this.coaxFrom === 0 || cygnet.flying || cygnet.gone) return null;
+    if (!trying || this.coaxFrom === 0 || cygnet.gone) return null;
     this.coaxing.at.copy(cygnet.position);
     this.coaxing.urgency = THREE.MathUtils.smoothstep(this.now, this.coaxFrom, this.coaxFrom + tuning.swirl.coaxRamp);
+    /** Up on their wind it keeps turning round the bird until the family answers, so they know to keep winding. */
+    if (cygnet.flying) this.coaxing.urgency = Math.max(this.coaxing.urgency, tuning.summit.coaxAloft);
+    this.coaxing.keep = cygnet.flying ? tuning.summit.coaxKeep : 0;
     return this.coaxing.urgency > 0 ? this.coaxing : null;
   }
 

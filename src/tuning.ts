@@ -294,7 +294,7 @@ export const tuning = {
     /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
     bankSwap: 34,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
-    fogLift: 11,
+    fogLift: 15,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
     cloudDrift: 0.6,
     /** How long the tops the hull parts take to fill in again behind it, seconds. */
@@ -364,6 +364,10 @@ export const tuning = {
     planeBloomStrength: 1.4,
     /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
     planeBloomFrom: 0.3,
+    /** How often the child throws along the greyest line of grass around her; the rest of her throws are free. */
+    throwGreyChance: 0.8,
+    /** Radians of wobble either side of that line, so catch never looks aimed. */
+    throwGreyWobble: 0.25,
     /** Catch stays south of this z: the far edge of the summit, beyond which the child drops out of the camera's sight. */
     playEdge: -38,
     /**
@@ -627,26 +631,50 @@ export const tuning = {
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
     looks: 5,
-    /** The family starts its journey while the child is still standing on the rise. */
+    /** The family starts getting ready to go while the child is still standing on the rise. */
     migrationLeadFor: 2.8,
-    /** How far back from the waterline the child stops; the flock reacts this far before they reach that spot. */
+    /** Getting ready: how fast they edge toward the far shore, and how many try their wings at a time. */
+    stirDrift: 0.35,
+    stirStretch: 0.3,
+    /** How far back from the waterline the child stops, and how far from it she is when the nearest birds take fright. */
     standOff: 1.6,
-    startleFrom: 10,
+    startleFrom: 22,
+    /** The family goes this long after she starts down even if she is nowhere near them. */
+    startleLatest: 6,
     /** Short grass at the water's edge gives the child's hands and the little swimmer a readable shore. */
     bankGrass: 0.18,
     bankCropFrom: 1.18,
     bankCropTo: 1.55,
-    /** Come round onto the water after the flock leaves, then keep both companions inside the frame. */
-    pondView: 2.15,
-    pondPortraitView: 2.7,
-    pondCameraBack: 9,
-    pondCameraUp: 5.5,
-    /** Hold the child and the whole departing family, allowing more room for the V on a phone. */
-    departureToward: 0.55,
-    departureCameraBack: 20,
-    departureCameraReach: 0.35,
-    departureCameraUp: 14,
-    departureCameraExtra: 80,
+    /**
+     * One camera from the rise to the water: behind her, `viewSide` off her line to the pond, `viewBack` and `viewUp`
+     * from her and looking `viewToward` of the way to the raft. As she walks down it closes to `edgeBack` and
+     * `edgeUp`, and over her last `edgeFrom` to the water eases round to her shoulder (`edgeSide`), so her hands and
+     * the swimmer are not hidden behind her. A
+     * phone stacks her under the pond (`viewPortraitSide`, `edgePortraitSide`), `viewPortraitScale` as far back until
+     * the water. At the water it looks `edgeOut` past the pair and `edgeLook` above them, over the water the little one
+     * swims out on to the far bank. When the family goes it only turns its gaze after them (`gaze` of it,
+     * for `gazeFor` seconds), turning no further than keeps her within `gazeAcross` of the frame's half-width (`gazePortraitAcross` on a
+     * phone's narrow frame) and
+     * her waist `gazeKeep` of the way down it, and lets the V leave the top of it.
+     */
+    viewSide: -0.32,
+    viewPortraitSide: -0.06,
+    viewPortraitScale: 0.75,
+    viewBack: 10.5,
+    viewUp: 5.6,
+    viewToward: 0.36,
+    edgeSide: -0.8,
+    edgeFrom: 10,
+    edgePortraitSide: -0.7,
+    edgeBack: 8.5,
+    edgeUp: 5.2,
+    edgeOut: 0.6,
+    edgeLook: 1.6,
+    gaze: 0.9,
+    gazeFor: 6,
+    gazeKeep: 0.8,
+    gazeAcross: 0.45,
+    gazePortraitAcross: 0.7,
     /** The nearest birds raise their heads and paddle away before running; the reaction spreads through the raft. */
     startlePause: 0.7,
     startleStagger: 0.24,
@@ -654,9 +682,8 @@ export const tuning = {
     /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
     leaves: 12,
     leaveClimb: 3.4,
-    /** Watch the startle, staggered runs and climb before turning back to the child's hands. */
-    setsDown: 8.5,
-    pondReturn: 3.5,
+    /** Seconds after the startle before she sets the cygnet down on the water to paddle after them. */
+    setsDown: 11,
     /** Seconds it keeps its eyes on the sky they left by, after which they are out of sight for good. */
     watches: 7,
   },
@@ -716,6 +743,9 @@ export const tuning = {
     rise: 0.9,
     liftTo: 5.5,
     callEvery: 9,
+    /** While it is up, the invitation keeps winding round it at least this insistently, and this much of it shows under the player's own trace. */
+    coaxAloft: 0.7,
+    coaxKeep: 0.6,
   },
   piano: {
     initialRadius: 15, initialSoft: 4,
@@ -884,9 +914,10 @@ export const tuning = {
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 20.25,
     chainOffset: 2.6,
-    /** Bring the next light closer after pickup and keep it beside the child's silhouette. */
+    /** Bring the next light closer after pickup. */
     rescueChainStep: 12,
-    afterRescueCameraSide: 2.8,
+    /** How far off her shoulder the walking camera stands, on the waiting coal's side, so the coal is beside her in frame. */
+    cameraSide: 2.8,
     cameraBack: 13,
     cameraUp: 2.8,
     cameraLead: 0.36,

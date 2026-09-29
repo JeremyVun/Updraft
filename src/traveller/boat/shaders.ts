@@ -1,10 +1,12 @@
 import { glsl, tuning } from '../../tuning';
 import { ATMO_GLSL } from '../../world/atmosphere';
+import { SWELL_GLSL } from '../../world/water/swell';
 import {
-  BOW_Z, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z, STRAKES,
+  BOW_Z, DRAFT, FLOOR_Y, LENGTH, MAST_TOP, MAST_Z, SAIL_HOIST, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SAIL_TAPER, STERN_Z, STRAKES,
   gunwale, gunwaleHalf,
 } from './form';
 import { KIND } from './parts';
+import { WATERLINE_GLSL } from './waterline';
 
 export const HULL_VERT = /* glsl */ `
 uniform mat4 uHullFrame;
@@ -54,6 +56,8 @@ float stationOf(float z) { return clamp(z / ${glsl(LENGTH)} + 0.45, 0.0, 1.0); }
  */
 export const HULL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${SWELL_GLSL}
+${WATERLINE_GLSL}
 ${FORM_GLSL}
 uniform mat4 uHullFrame;
 uniform float uGlass;
@@ -116,7 +120,7 @@ void main() {
     float grain = vnoise(vec2(along * 1.4 + k * 7.3, across * 24.0));
     alb *= 0.94 + 0.12 * mix(0.5, grain, 1.0 - smoothstep(0.1, 0.4, fwidth(across * 24.0)));
     /** Below the waterline the wood is darker, wet, and a little green. */
-    float wet = outside ? 1.0 - smoothstep(-0.45, -0.33, vLocal.y) : 0.0;
+    float wet = outside ? 1.0 - smoothstep(${glsl(-DRAFT - 0.03)}, ${glsl(-DRAFT + 0.09)}, vLocal.y) : 0.0;
     alb *= mix(vec3(1.0), vec3(0.7, 0.73, 0.66), wet);
   } else if (kind < ${glsl(KIND.boards + 0.5)}) {
     float b = across / 0.135 + 0.5;
@@ -152,6 +156,15 @@ void main() {
   float shade = within ? overTheSide(vLocal, L) : 1.0;
   float deep = clamp((top - vLocal.y) / (top - ${glsl(FLOOR_Y)}), 0.0, 1.0);
   float ao = within ? mix(1.0, 0.64, deep) * mix(0.82, 1.0, smoothstep(0.0, 0.16, room)) : mix(0.8, 1.0, smoothstep(-0.5, 0.05, vLocal.y));
+  if (outside && !within && uHullWet.z > 0.0) {
+    /** Where the sea meets the hull: a lip of foam at the water and dark wet wood above it, riding up a moving bow. */
+    float above = vWorld.y - seaSurfaceY(vWorld.xz);
+    float splash = clamp(uHullWet.y / 5.0, 0.0, 1.0) * smoothstep(0.8, ${glsl(BOW_Z)}, vLocal.z) * 0.035 + (vnoise(vec2(vLocal.z * 4.0 + uTime * 0.7, uTime * 0.4)) - 0.5) * 0.025;
+    float fw = fwidth(above);
+    float lip = 1.0 - smoothstep(0.008 + splash, 0.022 + splash + fw, above);
+    float damp = 1.0 - smoothstep(0.03 + splash, 0.13 + splash * 2.0, above);
+    alb = mix(alb * mix(1.0, 0.7, damp * uHullWet.z), vec3(0.9, 0.9, 0.86), lip * uHullWet.z);
+  }
 
   float ndl = dot(N, uSunDir);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);

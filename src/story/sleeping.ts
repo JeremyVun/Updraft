@@ -83,7 +83,10 @@ export class SleepingChapter implements Chapter {
   pace = 0.4;
   haze = 0.82;
   dusk = 1.9;
-  readonly season = 1;
+  /** The curtains opening are the greening moment: the year turns back from winter toward spring. */
+  get season(): number {
+    return 1 - 0.4 * this.cast.sleeping.curtains;
+  }
   music: 'wood' | 'sea' = 'wood';
   /** Follow the bird's decisions, including pauses that can last as long as the player needs. */
   get sleepingScore(): SleepingScorePhase {

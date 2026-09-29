@@ -15,10 +15,11 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   go to slate on the way to the dark wood, while a night keeps its blue moonlight (`bruise`,
   `src/world/palette.ts`). The child's mustard coat is then the only warm thing in frame. The boat rolls, pitches
   and drives harder on a running sea.
-- **The turn of the year**: the season deepens island by island to full winter on the sleeping island, easing back
-  only a little on the sea after it (`season` per chapter, `uSeason`): the grass keeps its green but goes over to
-  seed and colder. Light can return while the season stays late: the sleeping island has its morning, the sky
-  mirror its sunset, and home holds an afternoon until the door.
+- **The turn of the year**: the season deepens island by island to full winter on the sleeping island (`season` per
+  chapter, `uSeason`): the grass keeps its green but goes over to seed and colder. When the curtains open it turns
+  toward spring and eases back through the sea and the mirror, so home's grass is as fresh as the first island's,
+  brighter and warmer green. The sleeping island has its morning, the sky mirror its sunset, and home holds an
+  afternoon until the door.
 - **Grass**: dense and slightly chunkier than real, so it reads at game distance. Deep green at the root, warm
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
   short, lighter tufts rather than ending in a hedge.

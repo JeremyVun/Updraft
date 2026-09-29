@@ -1,4 +1,5 @@
-// Real pond sequence and camera: framing plus terrain/grass sight lines, in both viewport shapes.
+// Real pond sequence and camera: framing plus terrain/grass sight lines, in both viewport shapes. The family's startle,
+// runs and lift are seen whole; the camera then lets the V fly out of the frame rather than backing away to hold it.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -35,8 +36,8 @@ for(const fps of [30,60,120]) for(const [width,height] of [[1600,800],[390,844]]
   chapter.leg=3;chapter.piano.restoreDone();chapter.reveal();
   chapter.frame();rig.cut(chapter.shot);
   const ray=new THREE.Vector3(),points=[new THREE.Vector3(),new THREE.Vector3()];
-  let returned=false,worstEdge=0,worstCover=-Infinity,checked=0,flockChecked=0,airborne=false;
-  const phases=new Set();
+  let returned=false,worstEdge=0,worstCover=-Infinity,checked=0,flockChecked=0,airborne=false,gone=false,widest=0;
+  const phases=new Set(),ran=new Set(),lifted=new Set();
   for(let frame=0;frame<fps*110;frame++) {
     const time=frame/fps,dt=1/fps;
     chapter.update(dt,time);child.update(dt);carry.update(dt);flock.update(dt,time);
@@ -48,20 +49,32 @@ for(const fps of [30,60,120]) for(const [width,height] of [[1600,800],[390,844]]
     if(chapter.beat==='gather')returned=true;
     if(returned&&chapter.beat==='walk')break;
     if(frame%Math.round(fps/10)!==0||time<4)continue;
-    if(chapter.beat==='down'&&chapter.leftAt>=0&&time-chapter.leftAt<tuning.crest.setsDown) {
-      for(const bird of flock.birds) {
+    if(chapter.beat==='crest'&&chapter.t>4||chapter.beat==='down')
+      widest=Math.max(widest,Math.hypot(rig.camera.position.x-child.position.x,rig.camera.position.z-child.position.z));
+    if((chapter.beat==='down'||chapter.beat==='pond')&&flock.active&&chapter.leftAt>=0) {
+      // Gone: out of the frame, or so far off that the crest's veil (main.ts: 900 - 780 x haze) is taking them.
+      if(flock.birds.every(b=>{const s=b.at.clone().project(rig.camera);
+        return Math.max(Math.abs(s.x),Math.abs(s.y))>1||b.at.distanceTo(rig.camera.position)>900-780*tuning.crest.haze;}))gone=true;
+    }
+    if(chapter.beat==='down'&&chapter.leftAt>=0) {
+      // The raft is held in frame from the startle; every bird is seen running and lifting, then they may leave it.
+      for(const bird of flock.birds.filter(b=>b.run<flock.runFor+.5)) {
         const p=bird.at.clone().add(new THREE.Vector3(0,.6,0)),screen=p.clone().project(rig.camera);
-        assert(Math.max(Math.abs(screen.x),Math.abs(screen.y))<.9&&screen.z<1,
-          `${width}x${height}: departing swan left frame at ${(time-chapter.leftAt).toFixed(1)}s: ${screen.toArray()}`);
+        const edge=Math.max(Math.abs(screen.x),Math.abs(screen.y)),inFrame=edge<1&&screen.z<1;
+        assert(edge<.9&&screen.z<1||bird.run>0,
+          `${width}x${height}: waiting swan out of frame at ${(time-chapter.leftAt).toFixed(1)}s: ${screen.toArray()}`);
+        if(!inFrame)continue;
         for(let j=1;j<32;j++) {
           ray.copy(rig.camera.position).lerp(p,j/32);
           assert(heightAt(ray.x,ray.z)+grassHeightAt(ray.x,ray.z)*1.3-ray.y<.25,
             `${width}x${height}: bank hides departing swan at ${time.toFixed(2)}, lift ${(time-chapter.leftAt).toFixed(2)}, ray ${ray.toArray()}, camera ${rig.camera.position.toArray()}`);
         }
         phases.add(bird.run===0?'alert':bird.run<flock.runFor?'run':'flight');
+        if(bird.run>0&&bird.run<flock.runFor)ran.add(bird);
+        if(bird.run>=flock.runFor)lifted.add(bird);
         flockChecked++;
       }
-      if(flock.birds.every(b=>b.run>flock.runFor))airborne=true;
+      if(lifted.size===flock.birds.length&&ran.size===flock.birds.length)airborne=true;
     }
     const close=chapter.beat==='pond'||chapter.beat==='gather'||chapter.beat==='down';
     if(!close)continue;
@@ -71,10 +84,13 @@ for(const fps of [30,60,120]) for(const [width,height] of [[1600,800],[390,844]]
       const screen=p.clone().project(rig.camera),edge=Math.max(Math.abs(screen.x),Math.abs(screen.y));
       worstEdge=Math.max(worstEdge,edge);
       assert(edge<.9&&screen.z<1,`${width}x${height} ${chapter.beat}: companion left frame (${edge})`);
-      // Check the approach to the torso/head, including the near bank the old target-only test missed.
+      // Check the approach to the torso/head, including the near bank the old target-only test missed. The last metre
+      // and a half is the meadow she is wading through: its modelled blades (1.3 x up to 1.4 m) stand taller than she
+      // does, which would call her hidden from any follow lower than a crane shot, so only ground counts there.
+      const reach=rig.camera.position.distanceTo(p);
       for(let j=1;j<32;j++) {
         ray.copy(rig.camera.position).lerp(p,j/32);
-        const cover=heightAt(ray.x,ray.z)+grassHeightAt(ray.x,ray.z)*1.3-ray.y;
+        const cover=heightAt(ray.x,ray.z)+((1-j/32)*reach>1.5?grassHeightAt(ray.x,ray.z)*1.3:0)-ray.y;
         worstCover=Math.max(worstCover,cover);
         assert(cover<.25,`${width}x${height} ${chapter.beat} t=${time.toFixed(1)}, gap=${child.position.distanceTo(chapter.edge).toFixed(1)}: bank hides companion by ${cover.toFixed(2)}`);
       }
@@ -84,6 +100,8 @@ for(const fps of [30,60,120]) for(const [width,height] of [[1600,800],[390,844]]
   assert(returned&&chapter.beat==='walk','pond did not finish');
   assert(checked>100,'missed pond camera coverage');
   assert(flockChecked>100,'missed flock departure');
-  assert(airborne&&phases.size===3,'camera did not cover alert, run and whole family airborne');
-  console.log(`${fps}fps ${width}x${height}, x=${startX}: ${flockChecked} swan and ${checked} companion sight lines, edge ${worstEdge.toFixed(2)}, cover ${worstCover.toFixed(2)}; returned and resumed.`);
+  assert(airborne&&phases.size===3,`camera did not see every bird run and lift (${ran.size} ran, ${lifted.size} lifted)`);
+  assert(gone,'the V never left the frame or went into the veil: the camera held the flock');
+  assert(widest<tuning.crest.viewBack*1.2,`the camera backed away from her to ${widest.toFixed(1)} for the departure`);
+  console.log(`${fps}fps ${width}x${height}, x=${startX}: ${lifted.size}/${flock.birds.length} seen lifting, ${flockChecked} swan and ${checked} companion sight lines, edge ${worstEdge.toFixed(2)}, cover ${worstCover.toFixed(2)}; returned and resumed.`);
 }

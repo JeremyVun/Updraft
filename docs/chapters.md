@@ -46,8 +46,9 @@ frame. Before the first breeze, a gust invitation is drawn across the held plane
 the natural stroke blows it inland into the grass (`PlaneInvitation`, `tuning.opening.planeInvite*`,
 `planeInviteRise`); whenever the plane comes to rest on the grass during catch, a level sweep is drawn across it
 toward where it should go. Colour returns wherever the wind goes, and the plane plants lasting colour under it for
-as long as it travels (`tuning.opening.planeBloomFrom`, `LifeField.bloom`). Throws stay in the southern half and
-are turned back before the ridge, so play never goes out of sight. When 65% of the island is alive it is restored:
+as long as it travels (`tuning.opening.planeBloomFrom`, `LifeField.bloom`). Most of the child's throws go along the
+greyest line of grass around her, with a little wobble (`throwGreyChance`, `throwGreyWobble`); throws stay in the
+southern half and are turned back before the ridge, so play never goes out of sight. When 65% of the island is alive it is restored:
 the rest follows and the held-back warmth of the whole frame is released at once.
 
 The plane then leads the child up beside the tree for the fall:
@@ -102,7 +103,8 @@ the small yellow jumper between them, and the red door. The released breeze brin
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
 pass through, the camera follows, the washing is gone, and the child walks straight to the boat with the paper still
-in hand (no throw), gathers the bird up and boards. Checkpoints follow the first and second curtains and the
+in hand (no throw), gathers the bird up and lets it climb into the satchel to board: the first time it rides there,
+and the bag's flap is thrown open for the rest of the game. Checkpoints follow the first and second curtains and the
 threshold.
 
 Rulings:
@@ -130,15 +132,14 @@ Early, affectionate play, and the introduction to putting wind into a sail befor
 Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
 from the haze, and an oversized enamel bathtub stands on the far bank (scenery only).
 
-The child sets the cygnet down, notices a toy on a bare patch of bank, kneels, lifts it in both mittens (the hull
+The child takes the cygnet out of the satchel and sets it down, notices a toy on a bare patch of bank, kneels, lifts it in both mittens (the hull
 rides the real mittens, `LittleBoats.afterChildPose`), carries it to the lip and lowers it onto the water. The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
 kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
-right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout. The
-first time the cygnet rides in the satchel here, the bag's flap is thrown open for the rest of the game.
+right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the
@@ -188,17 +189,26 @@ The walk goes on over the west rise and through a pass along `WAY` (`world/field
 reach of the child (`tuning.meadowPlane`). Over the brow the ground falls to **the pond** (`POND`) on the open
 north slope, with the cygnet's family resting on it, white on dark water, from the chapter's first frame; their
 bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
-first and the child stops on the rise to look; while she is still up there the family begins a staggered take-off
-north, starting from the far end of the raft rather than startled by her. The camera holds her and the whole flock
-through the climb, then turns to the shore. The cygnet calls after them from the satchel as she goes down to the
-water, where she sets it down; it paddles after them, watches them go, and swims back to her waiting hands. Walking on,
+first and the child stops on the rise to look. While she is still up there the family gets ready to go north on its
+own: heads come up, wings are tried, and the raft turns and edges toward the far shore (`Flock.stir`). As she starts
+down the slope toward them the nearest birds take fright (`tuning.crest.startleFrom`, `Flock.lift`'s startled path):
+they paddle off, run across the water one after another, and climb away in a V. The camera is one committed shot from
+the rise to the water (`tuning.crest.view*`, `edge*`): up behind her on the sunlit side, travelling with her, her
+large in the foreground and the pond and the family below. When they go it turns its gaze up after them from where it
+stands, no further than keeps her in frame, and lets the V fly out of the top of it (`gaze*`); it never backs away to
+hold them and never goes round the pond. Over her last few metres to the water it eases round to her shoulder, so
+that at the water her hands and the swimmer are beside her, not behind her. The cygnet calls after them from the
+satchel as she goes down, and at the water she sets it down; it paddles after them, watches them go, and swims back
+to her waiting hands. Walking on,
 a sun shower passes, and halfway through it the sun breaks out and a rainbow stands in the rain over the sea
 ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`).
 
 Rulings:
 - The greening must be seen from where the player is: the camera is placed for it, and it never jerks in and out
   per answer ("I just want to make sure we don't make it nauseating").
-- The family's departure reads as a painful missed connection, never as parents rejecting their young. No flight
+- The family's departure reads as a painful missed connection, never as parents rejecting their young: they were
+  already leaving, and her coming only sets the nearest off first (Jeremy, 2026-09-29). The camera never zooms out
+  and pans round and back in for it ("it feels slightly unnatural"). No flight
   practice here: the wing is bandaged, the pond is a short swim back to the child's hands, and the first flight
   belongs to the sleeping island.
 - The pond is far from the piano and the family leaves over falling ground and open water, never through a hill.
@@ -301,6 +311,9 @@ strokes build none. Light grows while it wakes (`Embers.illumination`), but only
 Burning coals flare with rising air; loose cinders answer any wind. After a few idle seconds the waiting coal
 shows the updraft spiral wound from the litter under it. The child walks for as long as there is light
 (`tuning.wood.chainStep` between coals) and stops when it runs out; lit coals stay lit where they were earned.
+She waits `tuning.wood.waitShort` short of an unlit coal. The walking camera stands behind her,
+`tuning.wood.cameraSide` off her shoulder on whichever side of the path the waiting coal lies, easing across as
+each new coal is laid, so the coal she waits for is always beside her in frame and never hidden behind her.
 
 **The fright.** In a cleared glade the camera settles, then one close lightning flash and clap. The cygnet
 recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
@@ -456,7 +469,8 @@ one arrival in the game with somewhere built for it; the child steps up onto the
 tangent and wheels over the hilltop (`tuning.swanArrival`), calling. The cygnet watches and cries after them and is
 set down. It tries twice by itself and drops. Then the player's updraft: a column of `tuning.summit.liftToFly`
 gets it off the grass, it climbs only as fast as the player keeps winding and sinks when they stop, and six to
-eight turns of the cursor get it high enough (`liftTo`). **It never times out: it needs the player.** From here to
+eight turns of the cursor get it high enough (`liftTo`). The shown spiral keeps turning round it while it is up,
+fainter under the player's own, until the family answers. **It never times out: it needs the player.** From here to
 the closing line the ending is scripted to the music (`HOME_ENDING`). The
 family comes down for it; it flies by itself, a wobbly widening circuit over the child that steadies as it goes,
 always in frame (`tuning.fledge`); turns to her, calls (the call that is answered: the family bugles back), and

@@ -125,6 +125,8 @@ export class SwanFlock {
   private bearing = 0;
   /** Counts up from the moment a raft is told to go, and is negative while it is still a raft. */
   private launched = -1;
+  /** A raft that means to leave: heads up, wings tried, turning toward `bearing` before anyone runs. */
+  private stirring = false;
   private lost = false;
   private companionSlot = false;
   private speed = CRUISE;
@@ -193,6 +195,21 @@ export class SwanFlock {
     for (const bird of this.birds) if (bird.fade > 0) out.expandByPoint(bird.at);
     if (out.isEmpty()) out.expandByPoint(this.lead);
     return out.expandByScalar(2); // Unfolded wings and raised necks, beyond the body positions.
+  }
+
+  /** The middle of the ones still on the water or only just off it, and how many of the family that is (0 to 1). */
+  onWater(out: THREE.Vector3): number {
+    let n = 0, all = 0;
+    out.set(0, 0, 0);
+    for (const b of this.birds) {
+      if (b.fade <= 0) continue;
+      all++;
+      if (this.launched >= 0 && b.run >= this.runFor + 0.5) continue;
+      out.add(b.at);
+      n++;
+    }
+    if (n) out.divideScalar(n);
+    return all ? n / all : 0;
   }
 
   /** Where the bird at the back of the V is: the one that will fall out. */
@@ -419,8 +436,17 @@ export class SwanFlock {
     this.pool = { x, z, r: radius, base: level };
     this.bearing = bearing;
     this.launched = -1;
+    this.stirring = false;
     this.lead.set(x, level + FLOAT, z);
     this.start('raft');
+  }
+
+  /** The raft gets ready to go north on its own: heads come up, wings are tried, and they turn and edge that way. */
+  stir(bearing: number): void {
+    if (this.mode !== 'raft' || this.launched >= 0 || this.stirring) return;
+    this.stirring = true;
+    this.bearing = bearing;
+    for (const b of this.birds) b.until = Math.min(b.until, Math.random() * 1.5);
   }
 
   /**
@@ -459,6 +485,7 @@ export class SwanFlock {
   /** Stops whatever the flock is doing and puts it away. */
   clear(): void {
     this.mode = 'idle';
+    this.stirring = false;
     this.departing = false;
     this.companion = null;
     this.companionSlot = false;
@@ -744,6 +771,10 @@ export class SwanFlock {
       b.turn = ease(b.turn, Math.sin(time * 0.11 + b.seed) * 0.16, 0.5, dt);
       const home = Math.atan2(t.x - b.at.x, t.z - b.at.z);
       const out = Math.hypot(b.at.x - t.x, b.at.z - t.z) / Math.max(t.r, 1);
+      if (this.stirring) {
+        b.turn = ease(b.turn, wrapAngle(this.bearing - b.yaw) * 0.8, 1.5, dt);
+        b.speed = ease(b.speed, tuning.crest.stirDrift, 0.8, dt);
+      }
       b.yaw += (b.turn + wrapAngle(home - b.yaw) * Math.max(0, out - 0.9) * 0.6) * dt;
       const push = b.speed * (1 + rear * 3.5);
       b.at.x += Math.sin(b.yaw) * push * dt;
@@ -765,6 +796,11 @@ export class SwanFlock {
 
   private choose(b: Bird): void {
     const r = Math.random();
+    if (this.stirring) {
+      b.pose = r < tuning.crest.stirStretch ? 'stretch' : 'alert';
+      b.until = b.pose === 'stretch' ? 2.8 : range(Math.random, 1.5, 4);
+      return;
+    }
     if (b.pose === 'tuck') {
       b.pose = r < 0.6 ? 'curve' : 'alert';
       b.until = range(Math.random, 5, 12);

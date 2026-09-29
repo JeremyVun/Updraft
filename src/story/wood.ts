@@ -63,6 +63,27 @@ function pathAlong(x: number, z: number): number {
   return at;
 }
 
+/** Which side of the walk a point lies, 1 right of the way up and -1 left of it; 0 on the line itself. */
+function pathSide(x: number, z: number): number {
+  let best = 1e9;
+  let side = 0;
+  for (let i = 1; i < WAY.length; i++) {
+    const a = WAY[i - 1];
+    const b = WAY[i];
+    const dx = b.x - a.x;
+    const dz = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
+    const ox = x - a.x - dx * t;
+    const oz = z - a.y - dz * t;
+    const d = Math.hypot(ox, oz);
+    if (d < best) {
+      best = d;
+      side = d < 0.5 ? 0 : Math.sign(oz * dx - ox * dz);
+    }
+  }
+  return side;
+}
+
 const APPROACH_ALONG = pathAlong(WOOD_APPROACH_LIGHT.x, WOOD_APPROACH_LIGHT.y);
 const PLANE_ALONG = pathAlong(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y);
 
@@ -110,6 +131,11 @@ export class WoodChapter implements Chapter {
   private readonly refugeSubject = new THREE.Vector3();
   /** The way they are going, eased, so the shot swings round with the path instead of snapping to every turn. */
   private readonly aim = new THREE.Vector3(0, 0, -1);
+  /**
+   * How far the walking camera stands off her right shoulder (negative: her left). It crosses to whichever side of the
+   * path the waiting coal is on: from behind her, looking where she looks, a coal straight ahead of her is hidden by her.
+   */
+  private shoulder: number = tuning.wood.cameraSide;
   /** The one unlit coal ahead of them: there is never a second, so there is never a choice to get wrong. */
   private ahead: Coal | null = null;
   private chainAt = 0;
@@ -138,6 +164,12 @@ export class WoodChapter implements Chapter {
     cast.embers.clearCoals();
     this.chainAt = 21;
     this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
+    this.placeShoulder();
+  }
+
+  /** Stand on the waiting coal's side at once, where there is no earlier shot to move from. */
+  private placeShoulder(): void {
+    if (this.ahead) this.shoulder = (pathSide(this.ahead.p.x, this.ahead.p.z) || 1) * tuning.wood.cameraSide;
   }
 
   /** A coal's place on the walk, as the pair `lay` wants. */
@@ -219,6 +251,7 @@ export class WoodChapter implements Chapter {
       : this.chainAt >= PLANE_ALONG
       ? (this.planeCoal = this.cast.embers.lay(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y))
       : this.cast.embers.lay(...this.at(this.chainAt, this.chainSide * tuning.wood.chainOffset));
+    this.placeShoulder();
   }
 
   private to(beat: Beat): void {
@@ -744,8 +777,10 @@ export class WoodChapter implements Chapter {
     const toward = ahead ? next : this.tmp.set(t.x, 0, t.y);
     this.side.set(toward.x - c.x, 0, toward.z - c.z);
     if (this.side.lengthSq() < 1) return;
-    this.aim.lerp(this.side.normalize(), 1 - Math.exp(-dt * 0.5));
+    const ease = 1 - Math.exp(-dt * 0.5);
+    this.aim.lerp(this.side.normalize(), ease);
     if (this.aim.lengthSq() > 0.01) this.aim.normalize();
+    if (next) this.shoulder += ((pathSide(next.x, next.z) || Math.sign(this.shoulder)) * tuning.wood.cameraSide - this.shoulder) * ease;
   }
 
   /** The storm blows itself out over the second half of the wood, and the night starts to go grey at the edges. */
@@ -825,9 +860,8 @@ export class WoodChapter implements Chapter {
      */
     /** And it stands behind the way they are going, not behind north: the wood's path doubles back on itself, and
      * a camera that always looked up the island left the next coal out at the side of the frame on half the legs. */
-    const shoulder = this.bolted ? tuning.wood.afterRescueCameraSide : 1.1;
-    const ex = c.x - this.aim.x * tuning.wood.cameraBack - this.aim.z * shoulder;
-    const ez = c.z - this.aim.z * tuning.wood.cameraBack + this.aim.x * shoulder;
+    const ex = c.x - this.aim.x * tuning.wood.cameraBack - this.aim.z * this.shoulder;
+    const ez = c.z - this.aim.z * tuning.wood.cameraBack + this.aim.x * this.shoulder;
     s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + tuning.wood.cameraUp, ez);
     if (this.ahead?.live && !this.ahead.lit) {
       this.childSubject.copy(c).y += 1.5;

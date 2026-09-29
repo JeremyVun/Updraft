@@ -41,7 +41,7 @@ export const HEM_BONES = 8;
 export const BONES = BONE.pigR + 1;
 
 /** Where the left pigtail is tied (the right mirrors it): below the ear, just inside the hood's opening. */
-export const PIGTAIL_TIE: [number, number, number] = [0.26, 1.8, 0.19];
+export const PIGTAIL_TIE: [number, number, number] = [0.265, 1.81, 0.15];
 
 export const UPPER_ARM = 0.29;
 /** Elbow to wrist, and wrist to the middle of the mitten: a reach is measured to the mitten, as one straight forearm. */
