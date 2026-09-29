@@ -72,7 +72,8 @@ edit.
   stable composition choices, interaction holds, exact paths and portrait resize.
 - `crossing-camera-check`, `drowned-camera-check`, `storm-camera-trace`, `chapter-view-check`, `ending-view-check`
   (fails any staged view whose turn rate changes by 2.5°/s or more within a quarter second), `piano-frame-check`,
-  `pond-view-check`.
+  `pond-view-check` (the meadow family seen stirring, running and lifting, then let out of the frame without the
+  camera backing away from the child; both companions clear of the bank at the water).
 - Browser: `camera-chapters-browser-check` (every chapter entrance, landscape and portrait),
   `crossing-camera-browser-check` (`CASE=crossing|sea`), `drowned-camera-browser-check` (`PORTRAIT=1`, `REVIEW=1`),
   `chapter-view-browser-check`, `journey-view-check`.

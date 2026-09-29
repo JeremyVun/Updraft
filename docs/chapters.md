@@ -188,17 +188,26 @@ The walk goes on over the west rise and through a pass along `WAY` (`world/field
 reach of the child (`tuning.meadowPlane`). Over the brow the ground falls to **the pond** (`POND`) on the open
 north slope, with the cygnet's family resting on it, white on dark water, from the chapter's first frame; their
 bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
-first and the child stops on the rise to look; while she is still up there the family begins a staggered take-off
-north, starting from the far end of the raft rather than startled by her. The camera holds her and the whole flock
-through the climb, then turns to the shore. The cygnet calls after them from the satchel as she goes down to the
-water, where she sets it down; it paddles after them, watches them go, and swims back to her waiting hands. Walking on,
+first and the child stops on the rise to look. While she is still up there the family gets ready to go north on its
+own: heads come up, wings are tried, and the raft turns and edges toward the far shore (`Flock.stir`). As she starts
+down the slope toward them the nearest birds take fright (`tuning.crest.startleFrom`, `Flock.lift`'s startled path):
+they paddle off, run across the water one after another, and climb away in a V. The camera is one committed shot from
+the rise to the water (`tuning.crest.view*`, `edge*`): up behind her on the sunlit side, travelling with her, her
+large in the foreground and the pond and the family below. When they go it turns its gaze up after them from where it
+stands, no further than keeps her in frame, and lets the V fly out of the top of it (`gaze*`); it never backs away to
+hold them and never goes round the pond. Over her last few metres to the water it eases round to her shoulder, so
+that at the water her hands and the swimmer are beside her, not behind her. The cygnet calls after them from the
+satchel as she goes down, and at the water she sets it down; it paddles after them, watches them go, and swims back
+to her waiting hands. Walking on,
 a sun shower passes, and halfway through it the sun breaks out and a rainbow stands in the rain over the sea
 ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`).
 
 Rulings:
 - The greening must be seen from where the player is: the camera is placed for it, and it never jerks in and out
   per answer ("I just want to make sure we don't make it nauseating").
-- The family's departure reads as a painful missed connection, never as parents rejecting their young. No flight
+- The family's departure reads as a painful missed connection, never as parents rejecting their young: they were
+  already leaving, and her coming only sets the nearest off first (Jeremy, 2026-09-29). The camera never zooms out
+  and pans round and back in for it ("it feels slightly unnatural"). No flight
   practice here: the wing is bandaged, the pond is a short swim back to the child's hands, and the first flight
   belongs to the sleeping island.
 - The pond is far from the piano and the family leaves over falling ground and open water, never through a hill.
