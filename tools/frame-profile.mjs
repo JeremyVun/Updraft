@@ -55,6 +55,8 @@
 // stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
 // stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
 // shader that includes ATMO_GLSL (exact outside the stairs). DETAIL=0|1 applies that world detail after the fixture.
+// SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
+// full grass-table rebuild (SIM_REPS each, drained).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -471,6 +473,18 @@ window.__audit = {
     } finally {this.configure(null);for(const o of shown)o.visible=true;renderer.setRenderTarget(null);}
     return out;
   },
+  // SIM_PASSES=1: each per-frame simulation pass alone, many times over, then drained (median of 5 rounds), with an empty
+  // stage for the floor. These run whatever the render scale: the costs a small screen does not shrink.
+  async simPasses(reps, complete) {
+    const stages={empty:()=>{},wind:()=>this.stepWind(),life:()=>life.update(1/60),clouds:()=>clouds.update(),
+      petals:()=>petals.update(1/60,null,0),waves:()=>water.step(1/60),'light-bake':()=>bakes.bakeLight(bakeInputs),
+      'grass-tables':()=>{grass.tablesDirty=true;grass.bake(renderer);}};
+    const out={};
+    for(const [name,stage] of Object.entries(stages)){const samples=[];
+      for(let round=0;round<5;round++){stage();await complete();const start=performance.now();for(let i=0;i<reps;i++)stage();await complete();samples.push((performance.now()-start)/reps);}
+      samples.sort((x,y)=>x-y);out[name]={ms:samples[2],min:samples[0],max:samples[4]};}
+    return out;
+  },
   stepWind() {
     wind.step(1/60,time,false);
     // The ping-pong targets swap every step, so rebind them as the real loop does.
@@ -731,9 +745,16 @@ try {
       return __audit.waterPass(variants,reps,rounds,complete);
     },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
     if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
+    const simPasses=process.env.SIM_PASSES==='1'?await page.evaluate(async reps=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      __audit.configure(null);return __audit.simPasses(reps,complete);
+    },Number(process.env.SIM_REPS??30)):undefined;
+    if(simPasses)console.log(JSON.stringify({chapter,simPasses}));
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,detail,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
+    const row={chapter,gate,detail,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,simPasses,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
