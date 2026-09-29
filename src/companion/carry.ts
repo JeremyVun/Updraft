@@ -16,6 +16,21 @@ const PALM = 0.06;
 const STANDOFF = 1.0;
 /** Where a kneeling child's hands stop when they are held out low: as far down as the arms go without falling over. */
 const OFFER = new THREE.Vector3(0, 0.53, 0.41);
+/** Where it is brought off the chest to before it is lowered: out to their left, so its neck is clear of their face. */
+const OFF_CHEST = new THREE.Vector3(0.2, 0.66, 0.54);
+/**
+ * Where it looks climbing down their chest, then at the ground ahead, then round in their arms past their left
+ * shoulder, so its head crosses their front low. The ground is far off: told to watch the ground near it, it looks up
+ * at whoever stands there.
+ */
+const CLIMB_DOWN_TO = new THREE.Vector3(-5, 0, 1.5);
+const GROUND_AHEAD = new THREE.Vector3(0, 0, 5);
+const PAST_LEFT = new THREE.Vector3(2, 1.1, 0.6);
+/**
+ * Where it is set down from, turned to face the way it will walk off: to their left, so they can see past it, and a
+ * hand's height short of the grass, so they need not bow into their hood to get it there. It hops the rest.
+ */
+const SET_DOWN = new THREE.Vector3(0.18, 0.57, 0.46);
 
 const lerp = THREE.MathUtils.lerp;
 
@@ -218,38 +233,58 @@ export class Carry {
 
   /**
    * Down on the knees, it is lowered to the grass in both hands, steps off, and the hands come away. `facing` is the
-   * way it should be standing when it is left there, if that matters.
+   * way it should be standing when it is left there; otherwise it faces the way the child does, and walks off ahead.
    */
   setDown(onDone?: () => void, facing?: number): void {
     const { child: c, cygnet: k } = this;
     const spot = new THREE.Vector3();
+    const ahead = new THREE.Vector3();
     const leanFrom = { value: 0 };
+    const out = () => (facing === undefined ? 0 : facing - c.yaw);
     this.play('set-down', [
       {
+        /**
+         * Off the chest as the knees go, still lying across them with its head to their left. Both look where it will
+         * walk: it, rather than up into their face; they, rather than at the top of its head under their chin.
+         */
         name: 'kneel',
         dur: 0.9,
         enter: () => {
           c.stop();
           c.kneeling = 1;
-        },
-        exit: () => {
           k.takeUp();
           this.lead(k.seating.yaw - c.yaw);
-          spot.set(c.position.x + Math.sin(c.yaw) * STANDOFF, 0, c.position.z + Math.cos(c.yaw) * STANDOFF);
+          /**
+           * Straight on from where it is held, off to their left: a look across their middle bends its neck in front of
+           * their face. Far enough off that it looks at the ground there, not up at whoever might be standing on it.
+           */
+          c.fromBody(spot.set(SET_DOWN.x, 0, STANDOFF), spot).setY(0);
+          c.fromBody(ahead.set(SET_DOWN.x, 0, 4.5), ahead).setY(c.position.y);
+          c.lookAt = ahead;
+          k.watch(ahead);
+        },
+        update: (kk) => {
+          const e = THREE.MathUtils.smootherstep(kk, 0, 1);
+          this.centre.lerpVectors(this.centreFrom, OFF_CHEST, e);
+          this.pitch = -0.18 * (1 - e);
         },
       },
       {
         name: 'lower',
-        dur: 1.2,
+        dur: 1.4,
+        enter: () => this.lead(this.relYaw),
         update: (kk) => {
-          c.lean = 0.42 * kk;
-          this.centre.lerpVectors(this.centreFrom, OFFER, kk);
-          this.pitch = lerp(-0.18, 0, kk);
-          if (facing !== undefined) this.relYaw = lerpAngle(this.relYawFrom, facing - c.yaw, kk);
+          /**
+           * It turns to face the way it will walk only once it is below their chin, and they bend over it only as it gets
+           * low: turned early its neck stands in front of their face, and bowing early hides their face in the hood.
+           */
+          c.lean = 0.24 * kk * kk;
+          this.centre.lerpVectors(this.centreFrom, SET_DOWN, kk);
+          this.relYaw = lerpAngle(this.relYawFrom, out(), THREE.MathUtils.smoothstep(kk, 0.1, 1));
         },
       },
-      /** The hands rest on the grass a moment before anything else happens, which is what makes it a choice it makes. */
-      { name: 'rest', dur: 0.45, update: () => this.regard() },
+      /** The hands rest low a moment before anything else happens, which is what makes it a choice it makes. */
+      { name: 'rest', dur: 0.45 },
       {
         name: 'step-off',
         dur: 0.7,
@@ -266,7 +301,6 @@ export class Carry {
           leanFrom.value = c.lean;
           c.reachFor(0, null);
           c.reachFor(1, null);
-          k.watch(c.face(new THREE.Vector3()));
         },
         update: (kk) => {
           c.lean = leanFrom.value * (1 - kk);
@@ -298,12 +332,19 @@ export class Carry {
   /** Out of the satchel and round into the arms, which come up to meet it. */
   unstow(onDone?: () => void): void {
     const { child: c, cygnet: k } = this;
+    const outward = new THREE.Vector3();
     this.play('unstow', [
       {
         name: 'climb',
         dur: 1.75,
         enter: () => k.rideIn('cradle'),
         update: (kk) => {
+          this.onBodyWant = kk > 0.5 ? 1 : 0;
+          /** Turned to them, or sweeping round at the height it holds its head, its head would be in their face. */
+          const t = THREE.MathUtils.smootherstep(kk, 0.45, 1);
+          outward.lerpVectors(CLIMB_DOWN_TO, GROUND_AHEAD, t).lerp(this.c.lerpVectors(GROUND_AHEAD, PAST_LEFT, t), t);
+          const above = outward.y;
+          k.watch(c.fromBody(outward.setY(0), outward).setY(c.position.y + above));
           c.tilt = -0.24 * Math.sin(kk * Math.PI);
           c.lookAt = kk > 0.45 ? k.eye(this.a) : null;
         },
