@@ -55,6 +55,7 @@
 // stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
 // stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
+// cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
 // DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
@@ -253,6 +254,20 @@ window.__audit = {
       const m=sky.material;
       const sky0=this.diagnosticMaterials[1][1];if(!sky0.includes('vec3 col = skyRadiance(d);'))throw Error('Missing patch site: sky radiance');
       m.fragmentShader=sky0.replace('vec3 col = skyRadiance(d);','vec3 col = vec3(0.5,0.6,0.7);');m.needsUpdate=true;
+    }
+    // The cloud deck's top: cloudtop-frag-flat keeps its discards and fog but not its shading; cloudtop-veil drops the
+    // low wisps streaming over it; wisps-early discards a puff card's pixels outside the largest ball its noise can make
+    // before working the noise out (a candidate exact skip).
+    {
+      const top=cloudStairs.cloud.top.material,puff=cloudStairs.wisps.mesh.material;
+      this.topFrag??=top.fragmentShader;this.puffFrag??=puff.fragmentShader;
+      let t=this.topFrag,f=this.puffFrag;
+      const need=(src,from)=>{if(!src.includes(from))throw Error('Missing patch site: '+from);return src;};
+      if(variants.includes('cloudtop-veil'))t=need(t,'if (uWisps > 0.0 && vWorld.y').replace('if (uWisps > 0.0 && vWorld.y','if (false && vWorld.y');
+      if(variants.includes('cloudtop-frag-flat'))t=t.slice(0,t.lastIndexOf('void main() {'))+'void main() { if (vRing > uReach || gridHidden(vWorld.xz, vLevel)) discard; gl_FragColor = vec4(mix(vec3(0.8, 0.7, 0.75) + vHaze.rgb * 0.01 + vec3(vThin, vShade, vStature) * 0.01 + vCalm.xyz * 0.001 + (vFoot + vRise + vTower) * 0.001, vFog.rgb, vFog.a), uCloudDeck.w); }';
+      if(variants.includes('wisps-early'))f=need(f,'  float d = length(vCorner);\\n').replace('  float d = length(vCorner);\\n','  float d = length(vCorner);\\n  if (d >= 1.25) discard;\\n');
+      if(top.fragmentShader!==t){top.fragmentShader=t;top.needsUpdate=true;}
+      if(puff.fragmentShader!==f){puff.fragmentShader=f;puff.needsUpdate=true;}
     }
     // sky-deckfirst: the candidate exact skip, the deck worked out first and the sky's radiance only where it shows through.
     if(variants.includes('sky-deckfirst')) {
