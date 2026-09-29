@@ -512,10 +512,10 @@ const BANGS: [number, number, number, number, number, number][] = [
 /**
  * The hair at the sides, as locks: angle from the front at the crown, the height their ends reach, width, how far
  * behind the ear they are taken, and how far their ends curl forward toward the chin. A short lock in front of each
- * ear curves in round the cheek; the rest is drawn back behind the ear to the pigtail.
+ * ear ends above the cheek, since one reaching round it reads as a sideburn; the rest is drawn back to the pigtail.
  */
 const SIDES: [number, number, number, number, number][] = [
-  [1.1, 1.88, 0.11, 0.04, 0.5],
+  [1.1, 1.97, 0.11, 0.04, 0],
   [1.36, 1.9, 0.18, 0.62, 0],
   [1.6, 1.9, 0.2, 0.45, 0],
   [1.92, 1.9, 0.2, 0.2, 0],
@@ -545,18 +545,19 @@ function hair(b: Builder): void {
 }
 
 /**
- * A low bunch below each ear, tied with a knitted bobble like the scarf, coming out of the hood at the jaw and
- * sticking out over the scarf: plump just past the tie and rounding off to a soft point that turns up.
+ * A low bunch below each ear, tied with a knitted bobble like the scarf, coming out of the hood behind the jaw and
+ * falling out over the scarf, plump just past the tie and rounding off to a soft point that turns out. Held out level
+ * beside the chin they read as a moustache.
  */
 function pigtail(b: Builder, side: number): void {
   const tie = V(side * PIGTAIL_TIE[0], PIGTAIL_TIE[1], PIGTAIL_TIE[2]);
   const bone = side > 0 ? BONE.pigL : BONE.pigR;
   const curve = new THREE.CatmullRomCurve3([
     tie.clone(),
-    V(side * 0.32, 1.765, 0.22),
-    V(side * 0.375, 1.72, 0.22),
-    V(side * 0.42, 1.69, 0.205),
-    V(side * 0.465, 1.685, 0.185),
+    V(side * 0.335, 1.71, 0.205),
+    V(side * 0.38, 1.645, 0.2),
+    V(side * 0.42, 1.6, 0.185),
+    V(side * 0.46, 1.595, 0.165),
   ]);
   const STEPS = 20;
   const rows: Point[][] = [];
@@ -573,7 +574,7 @@ function pigtail(b: Builder, side: number): void {
     const along = curve.getTangentAt(t);
     const u = V().crossVectors(along, ref).normalize();
     const v = V().crossVectors(u, along).normalize();
-    const r = 0.06 * (0.5 + 0.5 * Math.sin(Math.min(1, t / 0.3) * (Math.PI / 2))) * Math.pow(Math.max(0, 1 - t), 0.6);
+    const r = 0.066 * (0.5 + 0.5 * Math.sin(Math.min(1, t / 0.3) * (Math.PI / 2))) * Math.pow(Math.max(0, 1 - t), 0.6);
     rows.push(Array.from({ length: 16 }, (_, j) => {
       const a = (j / 16) * TAU;
       /** Three soft locks round the bunch. */
