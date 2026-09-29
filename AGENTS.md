@@ -9,7 +9,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - The characters: the child `docs/child.md`, the cygnet `docs/cygnet.md`, the boat `docs/boat.md`.
 - Contracts: the wind field every system reads `docs/contracts/wind.md`; the ground, its life, the islands and what lives on them `docs/contracts/world.md`; sound `docs/contracts/audio.md`; checkpoint saves, chapter select and hidden-page audio `docs/contracts/progress.md`; analytics `docs/contracts/analytics.md`.
 - How a frame is produced and kept smooth (boot, frame order, camera direction, readbacks, quality, post): `docs/engine.md`. Local release checks: `docs/testing.md`.
-- The performance pass that bakes or skips static work: `docs/backlog/perf-bakes/`. The bug sweep (regressions and stale checks, to investigate and fix): `docs/backlog/bug-sweep/`.
+- The performance pass that bakes or skips static work: `docs/backlog/perf-bakes/`. The bug sweep (regressions and stale checks, to investigate and fix): `docs/backlog/bug-sweep/`. The loading veil's freeze since the stairs, and whether the veil has outgrown itself: `docs/backlog/boot-veil/`. The final performance profile and optimisation pass over the whole game: `docs/backlog/perf-final/`.
 
 ## Commands
 

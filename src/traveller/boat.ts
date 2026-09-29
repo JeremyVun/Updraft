@@ -5,12 +5,13 @@ import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { atmo } from '../world/atmosphere';
 import { FOAM, Marks } from '../fx/sealife/marks';
 import { heightAt } from '../world/island';
-import { type Swell, swellAt } from '../world/water/swell';
+import { type Swell, swellAt, swellUniforms } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
 import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
+import { hullLid, waterlineUniforms } from './boat/waterline';
 
 /**
  * Pushed off a beach, a boat goes out the way the sand slopes, whichever way its bow is pointing, and is brought
@@ -34,6 +35,8 @@ const TURN_FAST = 0.25;
 const CEILING_STEP = 0.5;
 const CEILING_SLACK = 1;
 const CEILING_MARGIN = 0.25;
+/** On a cloud the hull rides higher than on the sea, its bottom just in the top of the cloud. */
+const CLOUD_DRAFT = 0.42;
 /** The way the boom's mesh lies before it is turned to the clew. */
 const BOOM_REST = new THREE.Vector3(-1, 0, 0);
 
@@ -134,14 +137,14 @@ export class Boat {
     const hullMat = new THREE.ShaderMaterial({
       vertexShader: HULL_VERT,
       fragmentShader: HULL_FRAG,
-      uniforms: { ...atmo.uniforms, uHullFrame: { value: this.hullFrame }, uGlass: this.glass },
+      uniforms: { ...atmo.uniforms, ...swellUniforms, ...waterlineUniforms, uHullFrame: { value: this.hullFrame }, uGlass: this.glass },
       side: THREE.DoubleSide,
     });
     this.hullContacts = contactShell().getAttribute('position') as THREE.BufferAttribute;
     let reach = 0;
     for (let i = 0; i < this.hullContacts.count; i++) reach = Math.max(reach, this.contact.fromBufferAttribute(this.hullContacts, i).length());
     this.reach = reach;
-    this.group.add(new THREE.Mesh(hullGeometry(), hullMat));
+    this.group.add(new THREE.Mesh(hullGeometry(), hullMat), hullLid());
 
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
@@ -382,7 +385,7 @@ export class Boat {
     const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
     this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
-    p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
+    p.y = this.afloat ? bob + lift + (this.altitude === null ? DRAFT : CLOUD_DRAFT) : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const sail = this.sailMat.uniforms;
     sail.uScarf.value = this.scarfSail;
@@ -523,8 +526,13 @@ export class Boat {
     u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - tuning.lantern.flicker * gutter));
   }
 
-  /** A short tail of foam behind the hull while it is under way; it spreads and fades. */
+  /** The sea breaking against the hull, and a short tail of foam behind it while it is under way that spreads and fades. */
   private updateWake(dt: number, time: number): void {
+    const bySea = this.altitude === null && this.group.visible ? 1 : 0;
+    const wet = waterlineUniforms.uHullWet.value;
+    const ease = 1 - Math.exp(-dt * 2);
+    wet.set(wet.x + ((this.afloat ? bySea : 0) - wet.x) * ease, Math.abs(this.speed), wet.z + (bySea - wet.z) * ease);
+    waterlineUniforms.uHullAt.value.set(this.position.x, this.position.z, Math.sin(this.yaw), Math.cos(this.yaw));
     this.wake.update(time);
     this.wakeIn -= dt;
     if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0 || this.altitude !== null) return;

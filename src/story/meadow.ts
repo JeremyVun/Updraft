@@ -840,16 +840,18 @@ export class MeadowChapter implements Chapter {
 
   /** The far shore: the child walks down to the boat that is somehow here, and pushes off again. */
   private board(): void {
-    const { child: c, boat } = this.cast;
+    const { child: c, boat, cygnet, carry } = this.cast;
     this.to('toBoat');
     c.lookAt = null;
     const beside = boat.boardingPoint(this.tmp);
+    const push = () => {
+      this.to('push');
+      c.faceToward(boat.position.x, boat.position.z, 1);
+      c.board(boat, () => this.to('aboard'));
+    };
     c.walkTo(beside.x, beside.z, false, () => {
-      this.gatherUp(() => {
-        this.to('push');
-        c.faceToward(boat.position.x, boat.position.z, 1);
-        c.board(boat, () => this.to('aboard'));
-      });
+      if (cygnet.seat === 'satchel') push();
+      else this.gatherUp(() => carry.stow(push));
     }, 0.5);
   }
 

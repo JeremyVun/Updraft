@@ -60,9 +60,11 @@ may be loud: bugling and the whistle of their wings.
 
 ## Where it rides
 
-- **In the satchel on the child's back** on the walks: the camera behind her always sees it, and it can look back
-  at the wind. It sits across the bag, facing out past her left shoulder, its head beside the hood.
-- **Across her chest in both arms** for the tender moments and in the boat; **in her lap** sitting down.
+- **In the satchel on the child's back** on the walks and most crossings: the camera behind her always sees it, and
+  it can look back at the wind. It sits across the bag, facing out past her left shoulder, its head beside the hood.
+- **Across her chest in both arms** for the tender moments, and in the boat on three crossings only: leaving the
+  first island, off the stairs into the drowned village, and the open sea where it swims (Jeremy, 2026-09-29);
+  **in her lap** sitting down.
 - **On its own feet** wherever a room gives it play: the birches' leaves, the stairs (it goes up first), the sky
   mirror, the ends of the little boats' pools.
 - It gets into her hands by itself: she kneels and holds them out low and still, and it hops up. Nothing is done to

@@ -202,8 +202,6 @@ export const tuning = {
     riseGain: 0.6, riseSpeed: 3, sinkSpeed: 2,
     /** Leave vertical room when two turning paths are about to cross. */
     avoidAhead: 1.25, avoidRadius: 5, avoidRise: 5,
-    /** How fast across its path an adult banks away from the small one it is about to pass (m/s where their paths would meet). */
-    companionAside: 10,
     /** Lay out the V around where their turns will finish, with room for the front birds to ease back. */
     turnAhead: 3, setback: 7,
     /** The small one takes its tail station while the adults are still gathering. */
@@ -296,7 +294,7 @@ export const tuning = {
     /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
     bankSwap: 34,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
-    fogLift: 11,
+    fogLift: 15,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
     cloudDrift: 0.6,
     /** How long the tops the hull parts take to fill in again behind it, seconds. */
@@ -366,6 +364,10 @@ export const tuning = {
     planeBloomStrength: 1.4,
     /** Ground speed below which the paper has all but stopped and no longer greens what it passes over. */
     planeBloomFrom: 0.3,
+    /** How often the child throws along the greyest line of grass around her; the rest of her throws are free. */
+    throwGreyChance: 0.8,
+    /** Radians of wobble either side of that line, so catch never looks aimed. */
+    throwGreyWobble: 0.25,
     /** Catch stays south of this z: the far edge of the summit, beyond which the child drops out of the camera's sight. */
     playEdge: -38,
     /**
@@ -741,6 +743,9 @@ export const tuning = {
     rise: 0.9,
     liftTo: 5.5,
     callEvery: 9,
+    /** While it is up, the invitation keeps winding round it at least this insistently, and this much of it shows under the player's own trace. */
+    coaxAloft: 0.7,
+    coaxKeep: 0.6,
   },
   piano: {
     initialRadius: 15, initialSoft: 4,

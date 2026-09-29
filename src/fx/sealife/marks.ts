@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
 import { SURF_GLSL, surfUniforms } from '../../world/water/surf';
+import { outsideHull } from '../../traveller/boat/waterline';
 
 const MAX = 600;
 export const FOAM = 0;
@@ -125,6 +126,7 @@ export class Marks {
         polygonOffsetUnits: -4,
       }),
     );
+    outsideHull(this.mesh.material as THREE.Material);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2;
   }

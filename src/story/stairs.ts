@@ -9,7 +9,7 @@ import { stairsDescent } from '../world/journey-rooms';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
 import { lanternFlame } from '../traveller/boat/parts';
-import { gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
+import { DRAFT, gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
 import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
 import {
   BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_BANK, FLIGHTS, LOOSE, RUN_YAW, SIT, SLIPPERS, STAIRS_ARRIVAL, STAIRS_LOOK_FROM,
@@ -66,7 +66,7 @@ const KITE_WAITS = (() => {
 })();
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
-const SEA_RIDE = 0.4;
+const SEA_RIDE = DRAFT;
 /**
  * Under sail the pointer lands this high over the hull, about at the boom, so a stroke over the hull or across the
  * sail puts its wind on the boat from any of the lens's framings that look down on it.
@@ -1124,10 +1124,12 @@ export class StairsChapter implements Chapter {
     const t = this.t, lift = k.fogLift;
     fog.floor = SEA_RIDE - (RIDE - CLOUD.top + 0.3);
     fog.top = fog.floor + k.bankHeight;
-    // Its back comes to meet them and goes by: the white ahead thins, and all at once they are out of it, with the
-    // bank left standing behind them on the water and melting away.
-    fog.deep = fog.depthOf(boat.position.x, boat.position.z) + THREE.MathUtils.lerp(300, -10, S(t, 3, lift * 0.8));
-    fog.amount = 1 - S(t, lift * 0.7, lift);
+    // Its back comes to meet them unseen, then goes by slowly over the last tens of metres, where the white can be seen
+    // to thin, so they drift out of it, with the bank left lying behind them on the water and melting away.
+    const out = THREE.MathUtils.clamp((t - 7) / (lift * 0.85 - 7), 0, 1);
+    const ahead = THREE.MathUtils.lerp(300, 30, S(t, 2, 7)) - 42 * out;
+    fog.deep = fog.depthOf(boat.position.x, boat.position.z) + ahead;
+    fog.amount = 1 - S(t, lift * 0.65, lift);
     fog.clear = 0.3 + 0.55 * S(t, 0.3, 3);
     this.white = 1 - S(t, 5, lift * 0.8);
     // From the gold of the cloud to the grey and blue of the dusk over the sea, and the sun going out of it.

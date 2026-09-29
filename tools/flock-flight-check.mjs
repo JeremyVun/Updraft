@@ -118,7 +118,6 @@ const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { HomeChapter } = await import('../src/story/home.ts');
 const { LAST_HILL } = await import('../src/world/heightfield.ts');
-let reunionClosest = Infinity;
 for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (const arriving of [false, true]) {
   seed = startSeed;
   const air = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -139,6 +138,8 @@ for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (co
   from.y += 8;
   cygnet.visible = false;
   cygnet.flyWith(from, 0, 0);
+  // Building the cast draws random numbers too; reseed so the flock's draws do not shift with the child's.
+  seed = startSeed;
   if (arriving) {
     const f=tuning.summit, c=child.position;
     flock.pass(c.x+2-f.wheelRadius,c.z-f.wheelAhead,c.y+f.wheelHeight,Math.PI,13,60,false);
@@ -147,11 +148,15 @@ for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (co
     for(let i=0;i<20*fps;i++) flock.update(1/fps,3.5+i/fps);
   }
   chapter.answered();
-  cygnet.fledge(child.position, 1.15);
-  chapter.to('fledge');
+  // As in play, the family wheels in for the answered beat while the player holds the cygnet up, then it fledges.
+  let answeredFor = 0;
+  for (; chapter.beat === 'answered'; answeredFor += 1 / fps) {
+    chapter.update(1 / fps, answeredFor);
+    flock.update(1 / fps, answeredFor);
+  }
   let peak = 0, minNorth = Infinity, closest = Infinity, joined = false;
   for (let frame = 0; frame < 60 * fps; frame++) {
-    const dt = 1 / fps, time = frame * dt, before = cygnet.position.clone();
+    const dt = 1 / fps, time = answeredFor + frame * dt, before = cygnet.position.clone();
     chapter.update(dt, time);
     if (chapter.wentOn) break;
     child.update(dt);
@@ -169,7 +174,6 @@ for (const fps of [30, 60, 120]) for (const startSeed of [7, 147, 2026]) for (co
   assert(chapter.wentOn && joined, 'reunion failed');
   assert(peak < 15, 'cygnet surged');
   assert(minNorth > 0, 'cygnet turned back');
-  assert(closest > 1.8, `adult crossed through the cygnet: ${closest.toFixed(2)} m at ${fps} fps, seed ${startSeed}${arriving ? ', arriving' : ''}`);
-  reunionClosest = Math.min(reunionClosest, closest);
+  assert(closest > 1.8, 'adult crossed through the cygnet');
 }
-console.log(`18 full reunion cases passed: the cygnet joins, adults leave room (closest ${reunionClosest.toFixed(2)} m), and the child continues.`);
+console.log('18 full reunion cases passed: the cygnet joins, adults leave room, and the child continues.');

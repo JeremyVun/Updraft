@@ -100,7 +100,8 @@ Winter is coming, not gone. That is why the swans are flying and why the journey
 season deepens island by island, from late autumn on the still island to winter on the sleeping island (each chapter
 names a `season`, eased between rooms like the sky). The grass keeps its loved green and ages toward gold and seed.
 The curtains opening on the sleeping island are the greening moment that turns winter to spring, so there is no snow
-play after it. Light returns with it: the sleeping island earns morning, the sky mirror suspends time, and home holds
+play after it: from there the season eases back through the sea and the mirror, and the child comes home to grass as
+green as the grass she set out from. Light returns with it: the sleeping island earns morning, the sky mirror suspends time, and home holds
 the afternoon until the child walks down to the door.
 
 ## The story
