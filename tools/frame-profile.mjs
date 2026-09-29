@@ -55,6 +55,7 @@
 // stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
 // stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
+// sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
 // DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
 // SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
@@ -252,6 +253,13 @@ window.__audit = {
       const m=sky.material;
       const sky0=this.diagnosticMaterials[1][1];if(!sky0.includes('vec3 col = skyRadiance(d);'))throw Error('Missing patch site: sky radiance');
       m.fragmentShader=sky0.replace('vec3 col = skyRadiance(d);','vec3 col = vec3(0.5,0.6,0.7);');m.needsUpdate=true;
+    }
+    // sky-deckfirst: the candidate exact skip, the deck worked out first and the sky's radiance only where it shows through.
+    if(variants.includes('sky-deckfirst')) {
+      const m=sky.material,sky0=this.diagnosticMaterials[1][1];
+      const from='vec3 col = skyRadiance(d);\\n  if (uCloudDeck.w > 0.0) {\\n    vec4 deck = cloudDeck(cameraPosition, d, 4000.0);\\n    col = mix(col, deck.rgb, deck.a);\\n  }';
+      if(!sky0.includes(from))throw Error('Missing patch site: sky deck');
+      m.fragmentShader=sky0.replace(from,'vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, d, 4000.0) : vec4(0.0);\\n  vec3 col = deck.a < 1.0 ? skyRadiance(d) : vec3(0.0);\\n  if (uCloudDeck.w > 0.0) col = mix(col, deck.rgb, deck.a);');m.needsUpdate=true;
     }
     if(variants.includes('grade')) {
       const m=post.gradeMat,original=this.diagnosticMaterials[2][1];
