@@ -119,6 +119,13 @@ On the top landing (2026-09-29):
 >
 > The player should be allowed a moment to feel awe and take in the cloud top scene, and then enjoy both of the events after that. Not too slow, not too quick. We need just the right pacing here."
 
+Playing the first pass of that:
+
+> "1) The camera does a pan / zoom into the child child's face before instantly backing out the same way. The golden rule of this game is that every camera movement must be intentional. This should not happen. Also, consider that we should really be going the other way. from somewhat close up on the child and it's face to showing the wider world. Do you understand what i mean?
+> 2) Previously, the flying v swans would appear literally from the left side of the screen and teh camera would slowly pan up and across with them. I want that. It still currently feels a bit too rushed. give it a bit more space and pacing."
+
+> "yea on point 2, the original sequence for the swans was really good."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn, the afternoon going. The birches took the last of the year off
@@ -159,17 +166,20 @@ brings the light. Courage passes back and forth between them, and the stairs are
    in the air a storey too high. The hollow closes once the lens is back in the white.
 5. **Above the clouds.** Up out of the white through mist that thins as they rise (the deck's crown), out of the
    wind into a vast calm, the cloud still drifting on a soft air. One thing at a time, each given room:
-   - *Awe* (about 7 s). A step from the edge she stops and looks slowly right across it, from off to the left round
-     past the sun, then at the bird beside her; the lens draws back and down behind them to look out with her.
-   - *Sitting* (about 6 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
-     (over 1.4 s, not a drop) with her feet hanging over the cloud, swinging them in little runs (Jeremy: "the child
-     should set on the lip with her feet dangling in the cloud, and the cygnet next to her"). The lens comes down and
-     round to her left, out past the lip, so her face and her feet over the edge are seen and the bird on her other
-     side is not in the way. The slippers are on her right, where the stowed paper does not hide the bird, and a
-     bird's width clear of her coat.
-   - *The swans.* The lens goes back round behind them and settles looking out at the sun before a skein of swans
-     comes across it from the left. The bird sees them first; she follows its look and her feet go still. Nothing
-     else moves in the picture until they are past the sun.
+   - *Her face* (about 7 s). Near the top, while nothing can be seen in the white, the lens comes round in front of
+     her, so she comes up out of it into the gold light toward it. A step from the edge she stops and looks slowly
+     right across it all, then at the bird beside her.
+   - *Sitting* (about 5 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
+     (over 1.4 s, not a drop), facing the lens, her feet hanging over the cloud and swinging in little runs (Jeremy:
+     "the child should set on the lip with her feet dangling in the cloud, and the cygnet next to her"). The slippers
+     are on her right, where the stowed paper does not hide the bird, and a bird's width clear of her coat.
+   - *The world.* Then the lens opens out once, from her face to what she is looking at: up, back and round behind
+     them to the cloud going on for ever under the sun, the two of them small on the lip. It settles and holds there
+     (Jeremy: "we should really be going the other way. from somewhat close up on the child and it's face to showing
+     the wider world"; every camera move is intentional, never in and back out).
+   - *The swans*, as they always were (Jeremy: "the original sequence for the swans was really good"): a skein comes
+     in from the left edge of the frame and across the sun, and the lens comes round a little and down, looking up
+     with them. The bird sees them first; she follows its look and her feet go still.
    - *The boat.* Halfway through their pass, where they go over a tower of cumulus to the right of the sun, the boat
      comes out of the foot of that tower (it has waited inside it, hidden, since they came up) and sails in toward
      them under the sun, the kite with it. As the swans go on out of sight she turns to the bird, still looking
