@@ -103,7 +103,8 @@ the small yellow jumper between them, and the red door. The released breeze brin
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
 pass through, the camera follows, the washing is gone, and the child walks straight to the boat with the paper still
-in hand (no throw), gathers the bird up and boards. Checkpoints follow the first and second curtains and the
+in hand (no throw), gathers the bird up and lets it climb into the satchel to board: the first time it rides there,
+and the bag's flap is thrown open for the rest of the game. Checkpoints follow the first and second curtains and the
 threshold.
 
 Rulings:
@@ -131,15 +132,14 @@ Early, affectionate play, and the introduction to putting wind into a sail befor
 Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
 from the haze, and an oversized enamel bathtub stands on the far bank (scenery only).
 
-The child sets the cygnet down, notices a toy on a bare patch of bank, kneels, lifts it in both mittens (the hull
+The child takes the cygnet out of the satchel and sets it down, notices a toy on a bare patch of bank, kneels, lifts it in both mittens (the hull
 rides the real mittens, `LittleBoats.afterChildPose`), carries it to the lip and lowers it onto the water. The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
 kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
-right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout. The
-first time the cygnet rides in the satchel here, the bag's flap is thrown open for the rest of the game.
+right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the
