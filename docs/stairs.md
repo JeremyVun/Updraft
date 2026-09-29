@@ -196,8 +196,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
      sun, where the boat will take them. It comes in at the top left of her side view; once it is well into the
      frame the lens goes with it (`withTheSwans`), panning up and across and back round behind her as far as the
      swans have come round toward the sun, turning and tilting only as far as keeps them in the frame, until it is
-     looking up past her at the sky they are going into. The bird sees them first and calls to them as they come
-     into sight (Jeremy: "when the swans fly in, lets have the cygnet make a call"); she follows its look and her
+     looking up past her at the sky they are going into. The bird sees them first and calls to them as the lens
+     starts to go with them (Jeremy: "when the swans fly in, lets have the cygnet make a call"); she follows its look and her
      feet go still.
    - *The boat.* As the swans go on toward the sun, the boat comes out of the foot of a tower of cumulus to the
      right of it (it has waited inside, hidden, since they came up) and sails in toward them, the kite with it. As
@@ -221,7 +221,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 - Wordless. The cygnet's voice is heard twice: in the loop, where it asks with a small questioning peep
   (`Cygnet.call(false, 'puzzled')`: the bill opens and the call marks show, but only the peep is heard; it is
-  puzzled, not frightened), and on top, calling to the swans as they come into sight (`call(true)`).
+  puzzled, not frightened), and on top, calling to the swans as the lens starts to go with them (`call(true)`).
 - No failure, no timer that solves anything, no maze; the ghost flight says where each piece goes.
 - The cygnet never flies here and is never lifted by the wind: flight belongs to the sleeping island and home.
 - Every gesture is answered: gusts move the flights, tear cloud wisps, fill the sail.
