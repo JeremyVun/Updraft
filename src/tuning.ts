@@ -629,26 +629,37 @@ export const tuning = {
     /** Seconds in: the cygnet answers them; seconds on the rise looking down before the child goes on to the water. */
     answers: 1.3,
     looks: 5,
-    /** The family starts its journey while the child is still standing on the rise. */
+    /** The family starts getting ready to go while the child is still standing on the rise. */
     migrationLeadFor: 2.8,
-    /** How far back from the waterline the child stops; the flock reacts this far before they reach that spot. */
+    /** Getting ready: how fast they edge toward the far shore, and how many try their wings at a time. */
+    stirDrift: 0.35,
+    stirStretch: 0.3,
+    /** How far back from the waterline the child stops, and how far from it she is when the nearest birds take fright. */
     standOff: 1.6,
-    startleFrom: 10,
+    startleFrom: 26,
+    /** The family goes this long after she starts down even if she is nowhere near them. */
+    startleLatest: 6,
     /** Short grass at the water's edge gives the child's hands and the little swimmer a readable shore. */
     bankGrass: 0.18,
     bankCropFrom: 1.18,
     bankCropTo: 1.55,
-    /** Come round onto the water after the flock leaves, then keep both companions inside the frame. */
-    pondView: 2.15,
-    pondPortraitView: 2.7,
-    pondCameraBack: 9,
-    pondCameraUp: 5.5,
-    /** Hold the child and the whole departing family, allowing more room for the V on a phone. */
-    departureToward: 0.55,
-    departureCameraBack: 20,
-    departureCameraReach: 0.35,
-    departureCameraUp: 14,
-    departureCameraExtra: 80,
+    /**
+     * One camera from the rise to the water: behind her, `viewSide` off her line to the pond (`viewPortraitSide` on a
+     * phone), `viewBack` and `viewUp` from her and looking `viewToward` of the way to the raft, closing to `edgeBack`
+     * and `edgeUp` as she reaches the water. When the family goes it only turns its gaze after them (`gaze` of it,
+     * for `gazeFor` seconds), tipping up no further than keeps her feet `gazeKeep` of the way down the frame, and lets
+     * the V leave the top of it.
+     */
+    viewSide: 0.32,
+    viewPortraitSide: 0.14,
+    viewBack: 10.5,
+    viewUp: 4.4,
+    viewToward: 0.42,
+    edgeBack: 8.5,
+    edgeUp: 4,
+    gaze: 0.9,
+    gazeFor: 9,
+    gazeKeep: 0.8,
     /** The nearest birds raise their heads and paddle away before running; the reaction spreads through the raft. */
     startlePause: 0.7,
     startleStagger: 0.24,
@@ -656,9 +667,8 @@ export const tuning = {
     /** How fast the family goes once it is up, and how hard it climbs out: the going has to be seen. */
     leaves: 12,
     leaveClimb: 3.4,
-    /** Watch the startle, staggered runs and climb before turning back to the child's hands. */
-    setsDown: 8.5,
-    pondReturn: 3.5,
+    /** Seconds after the startle before she sets the cygnet down on the water to paddle after them. */
+    setsDown: 11,
     /** Seconds it keeps its eyes on the sky they left by, after which they are out of sight for good. */
     watches: 7,
   },
