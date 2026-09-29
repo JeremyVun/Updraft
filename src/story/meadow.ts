@@ -940,11 +940,13 @@ export class MeadowChapter implements Chapter {
     const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
     const ground = Math.max(heightAt(c.x, c.z), 0);
     const water = this.beat === 'pond' || this.beat === 'gather';
-    const walked = water ? 1 : this.beat === 'down' && this.atEdge !== -1
-      ? 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - this.edge.x, c.z - this.edge.z), 2, 30) : 0;
+    const toEdge = Math.hypot(c.x - this.edge.x, c.z - this.edge.z);
+    const walked = water ? 1 : this.beat === 'down' && this.atEdge !== -1 ? 1 - THREE.MathUtils.smoothstep(toEdge, 2, 30) : 0;
+    // Round to her shoulder only on the last stretch, once the family is up and away.
+    const round = water ? 1 : this.beat === 'down' && this.atEdge !== -1 ? 1 - THREE.MathUtils.smoothstep(toEdge, 2, view.edgeFrom) : 0;
     const bearing = this.viewBearing + (portrait
-      ? THREE.MathUtils.lerp(view.viewPortraitSide, view.edgePortraitSide, walked)
-      : THREE.MathUtils.lerp(view.viewSide, view.edgeSide, walked));
+      ? THREE.MathUtils.lerp(view.viewPortraitSide, view.edgePortraitSide, round)
+      : THREE.MathUtils.lerp(view.viewSide, view.edgeSide, round));
     s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
     s.carry = true;
     s.carryAnchor = c;
@@ -979,7 +981,7 @@ export class MeadowChapter implements Chapter {
     const flock = this.cast.flock;
     const a = this.flockGaze;
     const since = this.leftAt < 0 ? -1 : this.now - this.leftAt;
-    const { gazeFor, gazeKeep, gazeAcross } = tuning.crest;
+    const { gazeFor, gazeKeep } = tuning.crest;
     a.strength = !flock.active || since < 0 ? 0
       : THREE.MathUtils.smoothstep(since, 0.5, 3.5) * (1 - THREE.MathUtils.smoothstep(since, gazeFor, gazeFor + 3));
     if (a.strength <= 0) return;
@@ -991,7 +993,7 @@ export class MeadowChapter implements Chapter {
     const to = flock.bounds(this.flockBounds).getCenter(this.flockAt).lerp(this.flockWater, water).sub(eye);
     const aspect = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 16 / 9;
     const half = THREE.MathUtils.degToRad(verticalFov(aspect)) / 2;
-    const across = Math.atan(gazeAcross * Math.tan(half) * aspect);
+    const across = Math.atan((portrait ? tuning.crest.gazePortraitAcross : tuning.crest.gazeAcross) * Math.tan(half) * aspect);
     const waist = Math.atan2(c.y + 0.6 - eye.y, Math.hypot(c.x - eye.x, c.z - eye.z));
     const toChild = Math.atan2(c.x - eye.x, c.z - eye.z);
     const turn = THREE.MathUtils.clamp(Math.atan2(Math.sin(Math.atan2(to.x, to.z) - toChild),

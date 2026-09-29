@@ -645,11 +645,13 @@ export const tuning = {
     bankCropTo: 1.55,
     /**
      * One camera from the rise to the water: behind her, `viewSide` off her line to the pond, `viewBack` and `viewUp`
-     * from her and looking `viewToward` of the way to the raft. As she walks down it eases round to her shoulder
-     * (`edgeSide`) and closes to `edgeBack` and `edgeUp`, so her hands and the swimmer are not hidden behind her. A
+     * from her and looking `viewToward` of the way to the raft. As she walks down it closes to `edgeBack` and
+     * `edgeUp`, and over her last `edgeFrom` to the water eases round to her shoulder (`edgeSide`), so her hands and
+     * the swimmer are not hidden behind her. A
      * phone stacks her under the pond (`viewPortraitSide`, `edgePortraitSide`), `viewPortraitScale` as far back until
      * the water. At the water it looks `edgeOut` past the pair, over the water the little one swims out on. When the family goes it only turns its gaze after them (`gaze` of it,
-     * for `gazeFor` seconds), turning no further than keeps her within `gazeAcross` of the frame's half-width and
+     * for `gazeFor` seconds), turning no further than keeps her within `gazeAcross` of the frame's half-width (`gazePortraitAcross` on a
+     * phone's narrow frame) and
      * her waist `gazeKeep` of the way down it, and lets the V leave the top of it.
      */
     viewSide: 0.32,
@@ -659,14 +661,16 @@ export const tuning = {
     viewUp: 5.6,
     viewToward: 0.36,
     edgeSide: 0.8,
-    edgePortraitSide: 0.5,
-    edgeBack: 8,
-    edgeUp: 6,
-    edgeOut: 1.5,
+    edgeFrom: 16,
+    edgePortraitSide: 0.7,
+    edgeBack: 8.5,
+    edgeUp: 5.2,
+    edgeOut: 0.6,
     gaze: 0.9,
     gazeFor: 9,
     gazeKeep: 0.8,
-    gazeAcross: 0.7,
+    gazeAcross: 0.45,
+    gazePortraitAcross: 0.7,
     /** The nearest birds raise their heads and paddle away before running; the reaction spreads through the raft. */
     startlePause: 0.7,
     startleStagger: 0.24,
