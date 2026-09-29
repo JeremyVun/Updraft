@@ -127,6 +127,12 @@ visible change. Merge only after his OK.
   predicted (`tuning.swanDeparture.companionAside: 10`); the check's closest becomes 2.72 m (240-case sweep: 2.60 m,
   none under 2.5 m); in the real game it moved the closest pass from 4.35 to 4.7 m. **For Jeremy:** (a) merge it as a
   guard (not a visible fix); or (b) leave the game as it is and make the check's simulation match what the game does.
+- **Jeremy's ruling (2026-09-29): (b)**, "if the test drifted, then get the test to match the game again". 3bdade1 is
+  reverted. **Done on `bug-sweep` (2454813):** the check skipped the three-second `answered` beat, in which the family
+  wheels in to the gathering point before the cygnet fledges, so its V left from a half-formed wheel. It now runs that
+  beat through the chapter, and reseeds after building the cast so the child's random draws cannot shift the flock.
+  Over 240 reunions (40 seeds, 30/60/120 fps, arriving or not) the closest pass is 2.41 m (the old setup 1.87 m, with
+  67 under 2.5 m against 6); `flock-flight-check` passes with its 1.8 m limit unchanged.
 
 ## 4. The season after the sleeping island should ease toward spring
 
@@ -233,6 +239,13 @@ visible change. Merge only after his OK.
   sideways at 13 m, eased over several seconds and overlapping the turn towards the new coal, which partly cancels
   it). On the approach to the leg-2 corner the ember can still pass behind her for about a second while she walks
   (under two seconds per walk against about three before); every stop is clear.
+- **Jeremy (2026-09-29):** "when the camera swings, it's not jerky is it? does the camera feel natural? this is my
+  only concern before merging it". **Checked (Opus, 2026-09-29):** not jerky and it reads as natural. Each of the four
+  crossings starts on the frame she sets off for the new coal, so it reads as following her; it builds and settles
+  over about 5 to 6 s, 97% done before she stops. It runs against the aim's own turn, so the view turns 25 to 55% less
+  than before (e.g. 16 against 35 degrees at the second crossing). No lens reversal; camera-intent-report 33 jerk
+  flags against 34 before, at the same moments (her starts, stops and corners). Contact sheets (after over before):
+  `/tmp/updraft-woodswing-sheet-e{0,1,2,6}-{desk,port}.png`.
 
 ## 8. Two audio checks not yet looked into
 
@@ -255,12 +268,8 @@ branch in item 0 is in, and triage anything that fails the same way.
   ms from the stairs merge (60767a5, 2026-09-28 02:58)**; 533 to 567 ms after. The stairs added a `CloudStairs` world
   built at startup and about 150 lines of cloud-deck GLSL in `atmosphere.ts`, which every shader includes, so either
   the boot build or the extra shader compile is the likely cost.
-- **For Jeremy:** finding which one needs a boot profile (`tools/boot-profile.mjs`), which is performance measuring,
-  so it waits for his go-ahead. The fix would then be to defer that work past the veil (build the stairs when the
-  journey nears them, or compile the cloud-deck variant only where it is drawn).
-
-- **Jeremy (2026-09-29):** "yea after we added the stairs level, i need another pass to find performance
-  optimisation opportunities. I'm wondering if we've outlived the short and sweet loading veil as well".
+- **Moved to its own backlog item, `docs/backlog/boot-veil/`** (Jeremy, 2026-09-29: "create a separate backlog item
+  for the veil issue"), with his constraint that setting up the stairs later must not freeze play instead.
 
 ## 10. Stale comments
 
