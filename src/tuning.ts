@@ -294,7 +294,7 @@ export const tuning = {
     /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
     bankSwap: 34,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
-    fogLift: 11,
+    fogLift: 15,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
     cloudDrift: 0.6,
     /** How long the tops the hull parts take to fill in again behind it, seconds. */
