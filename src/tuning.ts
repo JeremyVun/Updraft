@@ -888,9 +888,10 @@ export const tuning = {
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 20.25,
     chainOffset: 2.6,
-    /** Bring the next light closer after pickup and keep it beside the child's silhouette. */
+    /** Bring the next light closer after pickup. */
     rescueChainStep: 12,
-    afterRescueCameraSide: 2.8,
+    /** How far off her shoulder the walking camera stands, on the waiting coal's side, so the coal is beside her in frame. */
+    cameraSide: 2.8,
     cameraBack: 13,
     cameraUp: 2.8,
     cameraLead: 0.36,

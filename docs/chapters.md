@@ -302,6 +302,9 @@ strokes build none. Light grows while it wakes (`Embers.illumination`), but only
 Burning coals flare with rising air; loose cinders answer any wind. After a few idle seconds the waiting coal
 shows the updraft spiral wound from the litter under it. The child walks for as long as there is light
 (`tuning.wood.chainStep` between coals) and stops when it runs out; lit coals stay lit where they were earned.
+She waits `tuning.wood.waitShort` short of an unlit coal. The walking camera stands behind her,
+`tuning.wood.cameraSide` off her shoulder on whichever side of the path the waiting coal lies, easing across as
+each new coal is laid, so the coal she waits for is always beside her in frame and never hidden behind her.
 
 **The fright.** In a cleared glade the camera settles, then one close lightning flash and clap. The cygnet
 recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of

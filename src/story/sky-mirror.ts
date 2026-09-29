@@ -20,7 +20,7 @@ export class SkyMirrorChapter implements Chapter {
   target=0;
   readonly worldLife=1;
   readonly breeze=0.025;
-  readonly season=0.96;
+  readonly season=0.3;
   readonly haze=0.9;
   readonly openSea=1;
   readonly music='mirror' as const;

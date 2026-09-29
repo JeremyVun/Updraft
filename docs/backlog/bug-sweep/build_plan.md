@@ -16,15 +16,21 @@ The design is `design.md` in this folder; item numbers below are its sections. R
   limit without writing down why the old one was wrong.
 - Update the affected docs (`chapters.md`, `stairs.md`, `cygnet.md`, `journey.md`, `styles.md`, `roadmap.md` Known
   issues and Checks) in the same change as the fix.
-- Merge to `main` yourself after the gate passes; visual phases merge only after Jeremy has seen the stills and said
-  yes. Open stills in Preview for him.
+- **Jeremy's ruling (2026-09-29):** "before any change gets onto main, I need you to confirm the issue and if it
+  survives, very clearly present the proposed change to me to prove that it's an actual bug that needed to be fixed.
+  For now, lets work in a worktree". So all work happens on the `bug-sweep` branch in `/private/tmp/updraft-bugsweep`;
+  for each item, show Jeremy the evidence that the bug is real on current `main` and the exact proposed change, and
+  merge nothing to `main` until he approves it. Open stills in Preview for him.
+- **Jeremy (2026-09-29), for the remaining items:** "ok proceed. Update the backlog item with the status of each once
+  done. I will review it later". Each remaining phase ends with its status, evidence and still paths written into its
+  **Status** line (and the design item), ready for his review; nothing merges until he has reviewed it.
 
 ## Phase 0: baseline
 
 Run `npm run check:mechanics` and, against your own dev server, `npm run check:audio` on current `main`. Record which
 checks fail and compare with design items 0 to 8. Owns nothing.
 **Gate:** a list of current failures, each mapped to a design item or added as a new one.
-**Status:** not started.
+**Status:** done 2026-09-29. check:mechanics on main: 11 failures, every one mapped to items 0 to 3; no new ones.
 
 ## Phase 1: the `checks-fix` branch (item 0)
 
@@ -36,7 +42,8 @@ change protects against; merge only on his OK.
 `src/traveller/child/shader.ts`).
 **Gate:** `shader`, `progress-schema`, `chapter-view`, `kite-logic`, `plane-routing`, `journey-pacing`, `wood-logic`
 and the three score browser checks pass; Jeremy has seen the stills and approved.
-**Status:** not started.
+**Status:** done 2026-09-29. Stills identical on Metal and SwiftShader (insurance, not a visible fix); Jeremy: "makes
+  sense to merge this child shader rework". Merged to `main` as 061c2b3.
 
 ## Phase 2: the storm and beach landings (item 1)
 
@@ -46,7 +53,7 @@ beach. Measure every beach arrival against 85645e9^ as well as the wood.
 **Gate:** `boat-check` (storm 38 to 44 s at every case), `drowned-camera-check`, `boat-ground-check`,
 `boat-shores-check`, `journey-pacing-check` pass; no beach arrival slower than at 85645e9^ by more than the easing's
 own few seconds.
-**Status:** not started.
+**Status:** done 2026-09-29. Not a sideways crawl: the boat circled back for a landing point it had passed (design item 1). Merged 11fd0b4 after Jeremy saw the circle in play; the stairs crossing and every other beach unchanged.
 
 ## Phase 3: the little boats (item 2)
 
@@ -56,7 +63,7 @@ change.
 `tools/little-boats-logic-check.mjs`.
 **Gate:** `little-boats-logic-check` passes at 30/60/120 fps from arrival and both restores; `little-boats-check`
 passes; the reason is written in the commit.
-**Status:** not started.
+**Status:** done 2026-09-29. A real stall at the stream's end, plus the cygnet catching up (Jeremy's ruling). Merged 10955b2.
 
 ## Phase 4: the swans at home (item 3)
 
@@ -65,7 +72,7 @@ real margin.
 **Owns:** `src/creatures/flock.ts`, `tuning.swanDeparture`.
 **Gate:** `flock-flight-check` passes with the closest pass well clear of 1.8 m at every frame rate;
 `summit-arrival-check` and `ending-check` pass.
-**Status:** not started.
+**Status:** done 2026-09-29, merged with Jeremy's approval: Jeremy chose (b); 3bdade1 reverted, the check runs the game's answered beat and reseeds after the cast (2454813). Design item 3.
 
 ## Phase 5: small fixes (items 6 and 10)
 
@@ -75,7 +82,7 @@ if they belong to the peep). Correct the boot and coat comments.
 `src/traveller/body.ts`, `src/traveller/child/garments.ts` (comments only).
 **Gate:** typecheck; `stairs-check` if it covers the loop; `docs/stairs.md` Principles and `docs/cygnet.md` voice
 list updated.
-**Status:** not started.
+**Status:** done 2026-09-29. Merged 10955b2.
 
 ## Phase 6: the audio checks (item 8)
 
@@ -83,7 +90,7 @@ Triage `audio-check` ("player wind is 3 dB softer after departure") and `birches
 cygnet): stale check or real change.
 **Owns:** `tools/audio-check.mjs`, `tools/birches-score-check.mjs`; `src/audio/` only if the game is wrong.
 **Gate:** `npm run check:audio` passes in full.
-**Status:** not started.
+**Status:** done 2026-09-29. Both checks stale (4b72eee, 511cf11). Merged 10955b2.
 
 ## Phase 7: the season toward spring (item 4, visual)
 
@@ -93,7 +100,7 @@ island's morning, the sea, the mirror and home at current and proposed values; s
 `src/story/sleeping.ts` (and `world/grass.ts` only if the curve itself needs it).
 **Gate:** Jeremy approves the stills; `render-parity-check` differs only in those rooms; `docs/journey.md` "The year"
 and `docs/styles.md` updated.
-**Status:** not started.
+**Status:** done 2026-09-29, merged with Jeremy's approval. Values in design item 4; the visible change is home's grass.
 
 ## Phase 8: the meadow swans (item 5, visual)
 
@@ -102,7 +109,7 @@ startled them. Show Jeremy; restore the startled take-off only if he says it reg
 **Owns:** `src/story/meadow.ts` (the pond beats), `tuning.crest`.
 **Gate:** Jeremy's verdict on the stills or clip; if changed, `pond-view-check` and `meadow-route-check` pass and
 `docs/chapters.md` (meadow) is updated.
-**Status:** not started.
+**Status:** ready for review 2026-09-29, no code changed. Not a regression: 88a3a5f deliberately made it a missed connection after Jeremy agreed to "emotionally legible". Options and stills in design item 5; the departure is also hard to see through the veil.
 
 ## Phase 9: the dark wood's hidden ember (item 7, visual and camera)
 
@@ -113,11 +120,11 @@ jerks.
 an assertion that the waiting ember is not behind the child on screen).
 **Gate:** the new assertion passes at every stop at 30/60/120 fps and in portrait; `wood-check` and `ember-check`
 pass; `camera-intent-report` shows no new jerks or in-and-out swings in the wood; Jeremy has seen stills of each stop.
-**Status:** not started.
+**Status:** done 2026-09-29, merged with Jeremy's approval: the walking camera stands on the waiting coal's side (4e62c83), with the stop assertion in `wood-logic-check` (35c7283); the swing checked not jerky. Design item 7.
 
 ## Phase 10: browser group and close
 
 Run `npm run check:browser` (item 9) and triage anything new. Re-run `check:mechanics` and `check:audio`: all pass.
 Clear the fixed items from `docs/roadmap.md` (Known issues and Checks), then run the backlog close stage.
 **Gate:** every check group passes on `main`; roadmap current.
-**Status:** not started.
+**Status:** `start-check` moved to `docs/backlog/boot-veil/`. Browser group run 2026-09-29: 7 of 8 pass; `start-check` fails for real (boot freeze 533 to 583 ms, from the stairs merge 60767a5), written up in design item 9, waiting on Jeremy's go-ahead to profile. `check:mechanics` and `check:audio` re-runs and the close stage wait until the open items are decided.

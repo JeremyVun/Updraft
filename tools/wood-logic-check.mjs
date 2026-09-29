@@ -260,6 +260,75 @@ for (const portrait of [false, true]) {
   console.log(`${portrait ? 'portrait' : 'desktop'} full route, continuous separation (${worstBirdStep.toFixed(3)} max step), wet plane in full wind, boarding and framing passed`);
 }
 
+// Wherever she stops for an unlit coal, the coal stays beside her on screen, never behind her: the centre of its orb
+// keeps more than the orb's heart (0.3 units) clear of her posed mesh, projected through the real camera rig, from the
+// moment she stops until it catches. The player here takes eight seconds to circle it, so the shot has fully settled.
+const heart = 0.3, vertex = new THREE.Vector3(), probe = new THREE.Vector3();
+function clearOfChild(meshes, camera, w, h, px, py) {
+  let best = Infinity;
+  const inside = (ax, ay, bx, by, cx, cy) => {
+    const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by), d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy);
+    const d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay);
+    return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
+  };
+  const edge = (x0, y0, x1, y1) => {
+    const dx = x1 - x0, dy = y1 - y0, t = Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / (dx * dx + dy * dy || 1)));
+    return Math.hypot(px - x0 - dx * t, py - y0 - dy * t);
+  };
+  for (const mesh of meshes) {
+    const n = mesh.geometry.attributes.position.count, sx = new Float32Array(n), sy = new Float32Array(n), index = mesh.geometry.index;
+    for (let i = 0; i < n; i++) {
+      mesh.getVertexPosition(i, vertex).applyMatrix4(mesh.matrixWorld).project(camera);
+      sx[i] = (vertex.x + 1) * w / 2; sy[i] = (1 - vertex.y) * h / 2;
+    }
+    for (let i = 0; i < (index ? index.count : n); i += 3) {
+      const a = index ? index.getX(i) : i, b = index ? index.getX(i + 1) : i + 1, c = index ? index.getX(i + 2) : i + 2;
+      if (px < Math.min(sx[a], sx[b], sx[c]) - best || px > Math.max(sx[a], sx[b], sx[c]) + best
+        || py < Math.min(sy[a], sy[b], sy[c]) - best || py > Math.max(sy[a], sy[b], sy[c]) + best) continue;
+      if (inside(sx[a], sy[a], sx[b], sy[b], sx[c], sy[c])) return 0;
+      best = Math.min(best, edge(sx[a], sy[a], sx[b], sy[b]), edge(sx[b], sy[b], sx[c], sy[c]), edge(sx[c], sy[c], sx[a], sy[a]));
+    }
+  }
+  return best;
+}
+for (const [w, h] of [[1600, 900], [390, 844]]) for (const fps of [30, 60, 120]) {
+  const child = new Traveller(calm), cygnet = new Cygnet(), boat = new Boat(calm), embers = new Embers(calm);
+  const carry = new Carry(child, cygnet), rig = new CameraRig();
+  rig.resize(w, h);
+  child.place(-26, -1688, Math.PI); cygnet.mount = child; cygnet.rideIn('satchel');
+  const plane = new Glider(planeWind, []);
+  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, wind: calm, input: { gust: 0 } });
+  c.update(0, 0); rig.cut(c.shot);
+  const meshes = [];
+  for (const o of child.objects) if (o !== child.shadow) o.traverse(m => { if (m.isMesh) meshes.push(m); });
+  const dt = 1 / fps, every = Math.max(1, Math.round(fps / 10)), stops = [];
+  let still = 0, stop = null;
+  for (let frame = 1; frame <= fps * 300 && c.beat !== 'snag'; frame++) {
+    const time = frame * dt, waiting = c.updraftTarget;
+    still = waiting && !child.moving ? still + dt : 0;
+    for (const coal of embers.coals) coal.breath = coal.p === waiting && (still > 8 || c.beat === 'lost' && c.t > 6) ? 1 : 0;
+    c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
+    cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
+    embers.update(dt, child.position, c.embers);
+    rig.update(dt, time, c.shot, c.pace, !!(c.scripted || c.windInvitation || c.updraftTarget)); c.afterCamera(rig.camera);
+    const coal = c.updraftTarget;
+    if (!coal || child.moving || still === 0) continue;
+    if (stop?.coal !== coal || stop.at !== coal.x + coal.z) stops.push(stop = { coal, at: coal.x + coal.z, beat: c.beat, time, worst: Infinity });
+    if (frame % every) continue;
+    rig.camera.updateMatrixWorld();
+    for (const o of child.objects) o.updateMatrixWorld(true);
+    const p = probe.copy(coal).project(rig.camera), px = (p.x + 1) * w / 2, py = (1 - p.y) * h / 2;
+    const rim = vertex.copy(coal).addScaledVector(probe.setFromMatrixColumn(rig.camera.matrixWorld, 1), heart).project(rig.camera);
+    const core = Math.hypot((rim.x + 1) * w / 2 - px, (1 - rim.y) * h / 2 - py);
+    const margin = clearOfChild(meshes, rig.camera, w, h, px, py) - core;
+    if (margin < stop.worst) Object.assign(stop, { worst: margin, still, screen: [Math.round(px), Math.round(py)] });
+  }
+  assert(stops.length >= 8, `${w}x${h} ${fps}fps: the chain must stop her at every coal, saw ${stops.length}`);
+  for (const [i, s] of stops.entries())
+    assert(s.worst > 0, `${w}x${h} ${fps}fps: stop ${i} (${s.beat}, ${s.time.toFixed(1)}s) hides the waiting ember behind the child: ${s.worst.toFixed(1)} px at ${s.still.toFixed(1)}s ${JSON.stringify(s.screen)}`);
+  console.log(`${w}x${h} ${fps}fps: the waiting ember stays clear of the child at all ${stops.length} stops, by at least ${Math.min(...stops.map(s => s.worst)).toFixed(1)} px beyond its orb`);
+}
+
 // The authored clap fires once, close behind the flash, even during a long idle in the rescue.
 const { StormWeather } = await import('../src/fx/storm.ts');
 const { atmo } = await import('../src/world/atmosphere.ts');
