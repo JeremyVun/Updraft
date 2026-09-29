@@ -23,8 +23,8 @@ try {
     await gate;
     const response = await route.fetch(), body = await response.text();
     // Expose probes without enabling shot mode's hidden controls/fixed clock.
-    assert.equal((body.match(/if \(params.shot\) \{/g) ?? []).length, 2);
-    await route.fulfill({response,body:body.replaceAll('if (params.shot) {','if (true) {')});
+    assert.equal((body.match(/if \(QA && params.shot\) \{/g) ?? []).length, 2);
+    await route.fulfill({response,body:body.replaceAll('if (QA && params.shot) {','if (true) {')});
   });
   await page.goto(base+'?analytics=0&progress=0');
   await page.waitForFunction(() => document.querySelector('#sound').dataset.on === 'true');

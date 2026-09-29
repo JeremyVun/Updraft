@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { params } from './params';
+import { QA } from './qa';
 import { heightAt } from './world/island';
 import { CameraDirection, type CameraAttention } from './camera-direction';
 import { tuning } from './tuning';
@@ -145,8 +146,8 @@ export class CameraRig {
   private readonly fitOrigin = new THREE.Vector3();
 
   constructor() {
-    this.fixed = params.cam !== null;
-    if (params.cam) {
+    this.fixed = QA && params.cam !== null;
+    if (QA && params.cam) {
       const [x, y, z, tx, ty, tz] = params.cam;
       this.camera.position.set(x, y, z);
       this.camera.lookAt(tx ?? 0, ty ?? 0, tz ?? 0);

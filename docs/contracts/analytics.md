@@ -31,8 +31,9 @@ The service currently accepts this project's events without a key, but it switch
 once any ingest key is configured, so keeping this static site anonymous beside keyed server clients would need a
 per-project public-ingest allowlist on the service. Read/operator credentials never go in the browser client.
 
-Development, `?shot` and `?chapter=` disable delivery unless `?analytics=1` is given; those events are labelled `qa`.
-`?analytics=0` or Do Not Track disables delivery even with that override.
+Development and explicit QA builds disable delivery unless `?analytics=1` is given; those events are labelled `qa`.
+Production ignores game query switches, including `shot` and `chapter`, so they do not suppress or relabel analytics.
+`?analytics=0` or Do Not Track disables delivery in every build, including with the QA opt-in.
 
 ## Checks
 

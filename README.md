@@ -49,6 +49,16 @@ npm run preview
 
 The build writes to `dist/`. The preview command prints its local address.
 
+Production excludes the game’s QA URL switches and debugging tools. For local captures and checks that use
+`?shot`, `?chapter=`, or other overrides, use the dev server or an optimised QA build:
+
+```sh
+npm run build:qa
+npm run preview:qa
+```
+
+The QA build writes to `dist-qa/`; deployment always builds and uploads the production `dist/`.
+
 ## License
 
 [MIT](LICENSE) © 2026 Jeremy Vun.

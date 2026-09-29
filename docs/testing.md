@@ -1,7 +1,7 @@
 # Local checks
 
 Every check runs locally from `tools/`; there is no CI. Browser tools default to the dev server on
-`http://127.0.0.1:5230/` and take `BASE` for another server (use a `vite preview` build, or a worktree with its own
+`http://127.0.0.1:5230/` and take `BASE` for another server (use `npm run build:qa` then `npm run preview:qa`, or a worktree with its own
 server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). GPU checks
 share one capture lock (`tools/lib/browser.mjs`), so timings are not skewed by another browser; `play.mjs`
 captures take no lock and can run side by side. Evidence goes under
@@ -23,7 +23,9 @@ captures take no lock and can run side by side. Evidence goes under
 ## Before a release
 
 1. `npm run typecheck` and `npm run build`.
-2. Start a `vite preview` of the build and run `BASE=<preview> npm run check:release`.
+2. Run `node tools/production-build-check.mjs` to verify production ignores game query overrides and excludes QA
+   modules. For the instrumented browser checks, run `npm run build:qa`, start `npm run preview:qa`, and run
+   `BASE=<preview> npm run check:release`. QA assets live in `dist-qa/`; `dist/` remains the production build.
 3. Jeremy owns the parts no local tool covers: a listening pass through the whole journey (see
    `docs/contracts/audio.md`, Open) and physical-device checks on his iPad (touch robustness, Safari fullscreen,
    performance, warmth and battery).

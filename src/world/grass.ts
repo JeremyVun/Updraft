@@ -3,6 +3,7 @@ import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
 import { params } from '../params';
+import { QA } from '../qa';
 import { HIGH_GRASS_REACH } from '../gl/quality';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -948,7 +949,7 @@ export class Grass {
         depthWrite: false,
       });
       const mat = new THREE.ShaderMaterial({
-        vertexShader: this.direct ? VERT_DIRECT : VERT,
+        vertexShader: QA && this.direct ? VERT_DIRECT : VERT,
         fragmentShader: FRAG,
         uniforms: {
           ...atmo.uniforms,

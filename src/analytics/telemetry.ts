@@ -1,21 +1,21 @@
 import { Analytics } from './client';
 import { publicConfig } from '../public-config';
+import { QA } from '../qa';
 
 declare const __BUILD_ID__: string;
 type Dims = Record<string, string>;
 const q = new URLSearchParams(location.search);
-const qa = import.meta.env.DEV || q.has('shot') || q.has('chapter');
 const optedOut = q.get('analytics') === '0' || navigator.doNotTrack === '1';
 const endpoint = import.meta.env.VITE_ANALYTICS_URL ?? publicConfig.analyticsUrl;
 /** No persistent identity, session ID, presence heartbeat, URLs, messages or gesture coordinates. */
 const client = new Analytics({
-  endpoint: !optedOut && (!qa || q.get('analytics') === '1') ? endpoint : '',
+  endpoint: !optedOut && (!QA || q.get('analytics') === '1') ? endpoint : '',
   project: publicConfig.analyticsProject,
   ingestKey: import.meta.env.VITE_ANALYTICS_KEY,
   beatIntervalMs: 0,
 });
 const build = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'development';
-const environment = qa ? 'qa' : 'production';
+const environment = QA ? 'qa' : 'production';
 const chapters = new Set(['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','toHome','home','stage']);
 let chapter = 'loading', detail = 'unknown', started = false, completed = false;
 let frames = 0, elapsed = 0, hitches = 0;

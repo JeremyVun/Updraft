@@ -54,9 +54,12 @@ function deploymentHeaders(): Plugin {
   };
 }
 
-export default defineConfig({
-  define: { __BUILD_ID__: JSON.stringify(revision + (dirty ? '-dirty' : '')) },
+export default defineConfig(({ command, mode }) => ({
+  define: {
+    __BUILD_ID__: JSON.stringify(revision + (dirty ? '-dirty' : '')),
+    __QA__: command === 'serve' || mode === 'qa',
+  },
   server: { host: '127.0.0.1', port: 5230, strictPort: true },
-  build: { chunkSizeWarningLimit: 900 },
+  build: { chunkSizeWarningLimit: 900, outDir: mode === 'qa' ? 'dist-qa' : 'dist' },
   plugins: [deploymentHeaders()],
-});
+}));

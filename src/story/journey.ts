@@ -7,6 +7,7 @@ import { tuning } from '../tuning';
 import type { Mood } from '../audio/audio';
 import type { Shot } from '../camera';
 import { params } from '../params';
+import { QA } from '../qa';
 import { mainlandCoastZ } from '../world/heightfield';
 import type { Cast, Chapter } from './cast';
 import { CrossingChapter, FIRST_ISLAND, LANDING, MEADOW_APPROACH } from './crossing';
@@ -398,7 +399,7 @@ export class Journey {
       case 'home':
         return new HomeChapter(cast);
       case 'stage':
-        return new StageChapter(cast);
+        return QA ? new StageChapter(cast) : new IslandChapter(cast);
       default:
         return new IslandChapter(cast);
     }

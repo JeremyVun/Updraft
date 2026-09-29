@@ -15,8 +15,8 @@ async function prepare(context) {
   await page.route('**/@vite/client', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
   await page.route('**/src/main.ts*', async route => {
     const response = await route.fetch(), source = await response.text();
-    assert.equal((source.match(/if \(params.shot\) \{/g) ?? []).length, 2);
-    await route.fulfill({ response, body: source.replaceAll('if (params.shot) {', 'if (true) {') });
+    assert.equal((source.match(/if \(QA && params.shot\) \{/g) ?? []).length, 2);
+    await route.fulfill({ response, body: source.replaceAll('if (QA && params.shot) {', 'if (true) {') });
   });
   return page;
 }

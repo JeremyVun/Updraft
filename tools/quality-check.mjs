@@ -104,11 +104,12 @@ globalThis.localStorage = { getItem: () => { throw Error('blocked'); }, setItem:
 assert.equal(readQualityMode(), 'auto');
 assert.doesNotThrow(() => saveQualityMode('low'));
 // Touch no longer enables the simulation/graphics lite preset behind the governor.
-const paramsSource = transformSync('params.ts', fs.readFileSync(new URL('../src/params.ts', import.meta.url), 'utf8')).code;
+const paramsSource = transformSync('params-qa.ts', fs.readFileSync(new URL('../src/params-qa.ts', import.meta.url), 'utf8')).code;
+const { readQaParams } = await import('data:text/javascript;base64,' + Buffer.from(paramsSource).toString('base64'));
 for (const [search, lite] of [['', false], ['?lite=0', false], ['?lite=1', true]]) {
   globalThis.location.search = search;
   globalThis.window = { matchMedia: () => ({ matches: true }) };
-  const { params } = await import('data:text/javascript;base64,' + Buffer.from(paramsSource + '// ' + search).toString('base64'));
+  const params = readQaParams();
   assert.equal(params.lite, lite);
   assert.equal(params.mirror, null, 'no implicit reflection cadence override');
 }

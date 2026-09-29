@@ -1,14 +1,19 @@
 import { params } from './params';
+import { QA } from './qa';
 import { chosenChapter, hasFinished, readProgress } from './story/progress';
 import { tuning } from './tuning';
 import { VeilWind } from './input/veil-wind';
+
+declare const __QA__: boolean;
+// Vite must drop this import before extracting CSS assets.
+if (typeof __QA__ === 'undefined' || __QA__) void import('./styles-qa.css');
 
 const T = tuning.veil;
 interface Point { x: number; y: number }
 
 /** The opening uses only DOM/SVG, so it can be drawn before the game and its graphics context exist. */
 class StartScreen {
-  readonly enabled = !params.shot || new URLSearchParams(location.search).get('start') === '1';
+  readonly enabled = !QA || !params.shot || new URLSearchParams(location.search).get('start') === '1';
   started = !this.enabled;
   private readonly veil = document.getElementById('veil')!;
   private readonly button = document.getElementById('begin') as HTMLButtonElement;

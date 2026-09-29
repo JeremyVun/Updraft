@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { QA } from '../qa';
 
 interface Pending<T> {
   buffer: WebGLBuffer;
@@ -7,7 +8,7 @@ interface Pending<T> {
 }
 
 const all: Readback<unknown>[] = [];
-const query = new URLSearchParams(location.search);
+const query = QA ? new URLSearchParams(location.search) : null;
 /** Fences of the last frames, oldest first. */
 const frameSyncs: WebGLSync[] = [];
 const MAX_DEPTH = 3;
@@ -16,12 +17,12 @@ const MAX_DEPTH = 3;
  * is a synchronous round trip that waits until the GPU process has worked through everything submitted before
  * it, so each further frame allowed in flight is a further frame the map can wait behind.
  */
-const DEPTH = Math.min(MAX_DEPTH, Math.max(1, Number(query.get('depth') ?? 2)));
+const DEPTH = QA ? Math.min(MAX_DEPTH, Math.max(1, Number(query!.get('depth') ?? 2))) : 2;
 /**
  * When nothing has been delivered for this long the gate relaxes to the frame before that, the deepest the
  * display pipeline normally runs. It never goes further: nothing is ever mapped while the GPU is further behind.
  */
-const STALE_MS = Number(query.get('stale') ?? 100);
+const STALE_MS = QA ? Number(query!.get('stale') ?? 100) : 100;
 let frameGl: WebGL2RenderingContext | null = null;
 let lastDelivery = 0;
 
@@ -78,7 +79,7 @@ export class Readback<T> {
       this.free.push(buffer);
     }
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-    readbackStats.work[name] = 0;
+    if (QA) readbackStats.work[name] = 0;
     all.push(this as Readback<unknown>);
   }
 
@@ -117,24 +118,26 @@ export class Readback<T> {
         const status = gl.clientWaitSync(next.sync, 0, 0);
         if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) break;
       }
-      const started = performance.now();
+      const started = QA ? performance.now() : 0;
       const count = Math.min(this.slice, this.data.length - this.copied);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, next.buffer);
       gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, this.copied * 4, this.data, this.copied, count);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
       this.copied += count;
       const mapped = performance.now();
-      readbackStats.waitMs += mapped - started;
-      readbackStats.waitWorstMs = Math.max(readbackStats.waitWorstMs, mapped - started);
+      if (QA) {
+        readbackStats.waitMs += mapped - started;
+        readbackStats.waitWorstMs = Math.max(readbackStats.waitWorstMs, mapped - started);
+      }
       if (this.copied < this.data.length) return;
       this.copied = 0;
       this.pending.shift();
       gl.deleteSync(next.sync);
       this.free.push(next.buffer);
-      readbackStats.delivered++;
+      if (QA) readbackStats.delivered++;
       lastDelivery = mapped;
       this.onData(this.data, next.tag);
-      readbackStats.work[this.name] = Math.max(readbackStats.work[this.name], performance.now() - mapped);
+      if (QA) readbackStats.work[this.name] = Math.max(readbackStats.work[this.name], performance.now() - mapped);
     }
   }
 }
@@ -201,7 +204,7 @@ export function holdForReadbacks(): boolean {
     return false;
   }
   held++;
-  readbackStats.held++;
+  if (QA) readbackStats.held++;
   return true;
 }
 
@@ -221,11 +224,11 @@ export function pollReadbacks(): void {
   const open = !gl || frameSyncs.length < MAX_DEPTH || finished(gl, DEPTH)
     || (started - lastDelivery >= STALE_MS && finished(gl, MAX_DEPTH));
   if (!open && !forceNext) {
-    readbackStats.skipped++;
+    if (QA) readbackStats.skipped++;
     return;
   }
-  if (!open) readbackStats.forced++;
+  if (QA && !open) readbackStats.forced++;
   forceNext = false;
   for (const r of all) r.poll();
-  readbackStats.worstMs = Math.max(readbackStats.worstMs, performance.now() - started);
+  if (QA) readbackStats.worstMs = Math.max(readbackStats.worstMs, performance.now() - started);
 }

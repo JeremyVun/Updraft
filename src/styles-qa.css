@@ -1,0 +1,9 @@
+body.shot #veil,
+body.shot #quality-control,
+body.shot #sound,
+body.shot #fullscreen,
+body.shot #cursor {
+  display: none;
+}
+
+body.shot.starting #veil { display: block; }

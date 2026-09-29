@@ -208,8 +208,10 @@ Grass grows and shrinks in place over one second while its distance rings move c
 for every level at boot (about 28 MiB for the four attachments), so quality changes never allocate or recompile.
 Wind resolution, solver cadence and water mesh topology never change during play.
 
-`?ratio=` or `?msaa=` locks the governor at exact values with full detail and hides the selector, as does `shot`.
-`params.ts` clamps `ratio` to (0, 4], `msaa` to [0, 16] and `grass` to [0, 4]; `main.ts` clamps `msaa` again to the
+Only the dev server and explicit QA builds accept game query overrides; the production build removes their parser
+and QA tools. Use `npm run build:qa` and `npm run preview:qa` for instrumented checks against an optimised build.
+In those builds, `?ratio=` or `?msaa=` locks the governor at exact values with full detail and hides the selector, as does `shot`.
+`params-qa.ts` clamps `ratio` to (0, 4], `msaa` to [0, 16] and `grass` to [0, 4]; `main.ts` clamps `msaa` again to the
 device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflection cadence.
 
 ## Post chain (`src/post/post.ts`)

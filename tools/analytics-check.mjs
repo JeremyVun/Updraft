@@ -28,7 +28,9 @@ Object.defineProperty(globalThis,'navigator',{value:{doNotTrack:'0'},configurabl
 const source=fs.readFileSync('src/analytics/telemetry.ts','utf8')
   .replace("import { Analytics } from './client';","const Analytics = globalThis.TestAnalytics;")
   .replace("import { publicConfig } from '../public-config';","const publicConfig = {analyticsUrl:'https://analytics.invalid',analyticsProject:'updraft'};")
+  .replace("import { QA } from '../qa';", 'const QA = globalThis.testQa;')
   .replaceAll('import.meta.env','({DEV:false})').replace('declare const __BUILD_ID__: string;',"const __BUILD_ID__ = 'test-build';");
+globalThis.testQa=false;
 const {telemetry:t}=await load('telemetry.ts',source);
 t.loadingFinished(2300,933);t.start('island',false);t.start('island',false);t.chapter('island');t.chapter('lines');
 t.quality(1,2,2);for(let i=0;i<3601;i++)t.frame(1000/60);
@@ -45,8 +47,21 @@ assert.equal(recorded.find(e=>e.t==='performance_sampled').d['detail.fps'],'full
 assert(!JSON.stringify(recorded).includes('secret'));assert(!JSON.stringify(recorded).includes('@'));
 const expected=new Set(['build','environment','chapter','duration','stall','mode','detail','scale','samples','direction','fps','hitches','chapter.detail','chapter.fps','detail.fps','phase','kind']);
 for(const event of recorded) {assert(Object.keys(event.d).every(k=>expected.has(k)));assert(Object.values(event.d).every(v=>v.length<=64));}
+for (const search of ['?shot&chapter=stage', '?shot&chapter=stage&analytics=1', '?analytics=0']) {
+  location.search=search;
+  const {telemetry:production}=await load('telemetry-production.ts',source+'\n// '+search);
+  assert.equal(production.enabled(), !search.endsWith('analytics=0'));
+}
+globalThis.testQa=true;
 location.search='?shot';const before=recorded.length;
 const {telemetry:qa}=await load('telemetry-qa.ts',source+'\n// qa');qa.start('island',false);assert.equal(recorded.length,before);
 location.search='?shot&analytics=1';const {telemetry:finished}=await load('telemetry-complete.ts',source+'\n// complete');
 finished.start('home',true,true);finished.complete();assert.equal(recorded.filter(e=>e.t==='game_completed').length,1);
+assert.equal(recorded.at(-1).d.environment,'qa');
+for (const testQa of [false,true]) {
+  globalThis.testQa=testQa;
+  navigator.doNotTrack='1';location.search='?analytics=1';
+  const {telemetry:privatePlay}=await load('telemetry-private.ts',source+'\n// '+testQa);
+  assert.equal(privatePlay.enabled(),false);
+}
 console.log('Analytics transport failures, anonymous bounded payloads, event dedup, completed resumes and QA isolation passed.');

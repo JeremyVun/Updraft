@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { params } from '../params';
+import { QA } from '../qa';
 import { atmo } from './atmosphere';
 
 interface Palette {
@@ -155,7 +156,7 @@ export const MOON = { az: -38, el: 12 } as const;
 
 /** Where the light comes from for a time of day: the sun sinks into the north-west, then the moon takes over. */
 function lightAngles(dusk: number, home: number): [number, number] {
-  if (params.sun) return [params.sun[0], params.sun[1]];
+  if (QA && params.sun) return [params.sun[0], params.sun[1]];
   const homeElevation = THREE.MathUtils.lerp(tuning.homeLight.sunElevation, -2.5,
     THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, 1.5));
   const sunsetAzimuth = THREE.MathUtils.lerp(32, tuning.homeLight.sunAzimuth, home);
@@ -236,7 +237,7 @@ const morningDirection = sunDirection(2, 24);
 
 /** Applied after the ordinary palette. Presence fades on the crossing, leaving other chapters untouched. */
 export function applySleepingPalette(presence: number): void {
-  if (presence <= 0 || params.dusk !== null) return;
+  if (presence <= 0 || (QA && params.dusk !== null)) return;
   const u = atmo.uniforms;
   // The illuminated lane arrives first; the wider sky follows as the bird reaches the hollow.
   const dawn = THREE.MathUtils.smoothstep(u.uDawn.value.x, 0.16, 1);
@@ -255,5 +256,5 @@ export function applySleepingPalette(presence: number): void {
   u.uFogDensity.value = THREE.MathUtils.lerp(u.uFogDensity.value, p.fog, presence);
   u.uNight.value = THREE.MathUtils.lerp(u.uNight.value, 1 - THREE.MathUtils.smoothstep(dawn, 0.08, 0.8), presence);
   u.uStarlight.value *= 1 - dawn * presence;
-  if (!params.sun) u.uSunDir.value.lerp(morningDirection, dawn * presence).normalize();
+  if (!QA || !params.sun) u.uSunDir.value.lerp(morningDirection, dawn * presence).normalize();
 }

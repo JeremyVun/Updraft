@@ -196,12 +196,6 @@ body.starting #sound, body.starting #fullscreen { z-index: 11; }
   opacity: 0;
 }
 
-body.shot #veil {
-  display: none;
-}
-
-body.shot.starting #veil { display: block; }
-
 #cursor {
   --charge: 0;
   position: fixed;
@@ -289,7 +283,7 @@ body.shot.starting #veil { display: block; }
 #quality[data-quality='medium'] .quality-bar-1,
 #quality[data-quality='medium'] .quality-bar-2,
 #quality[data-quality='high'] .quality-bar { opacity: 1; fill: currentColor; }
-#quality-control[hidden], body.shot #quality-control { display: none; }
+#quality-control[hidden] { display: none; }
 #quality-dismiss { position: fixed; inset: 0; z-index: -1; }
 #quality-menu {
   position: absolute;
@@ -443,12 +437,6 @@ body.shot.starting #veil { display: block; }
 @media (prefers-reduced-motion: reduce) {
   #ending p, .ending-actions { transition: none; }
   #ending.replay-ready #again span { animation: none; }
-}
-
-body.shot #sound,
-body.shot #fullscreen,
-body.shot #cursor {
-  display: none;
 }
 
 /* Context loss stops the GPU loop; recovery is ordinary HTML and survives it. */

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:qa": "tsc --noEmit && vite build --mode qa",
     "preview": "vite preview",
+    "preview:qa": "vite preview --mode qa",
     "typecheck": "tsc --noEmit",
     "check": "node tools/check.mjs quick",
     "check:mechanics": "node tools/check.mjs mechanics",

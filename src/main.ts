@@ -35,6 +35,7 @@ import { Traveller } from './traveller/traveller';
 import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
+import { QA } from './qa';
 import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
 import { HIGH_GRASS_REACH, Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
@@ -325,7 +326,7 @@ sealife.onDolphinSurface = (x, y, z, strength) => {
 sealife.onWhaleSound = (kind, x, y, z) => {
   if (sound.running) worldFoley.whale(kind, splashAt.set(x, y, z));
 };
-const probe = params.shot ? new Probe(child, cygnet, carry) : null;
+const probe = QA && params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 flock.objects.forEach((o) => scene.add(o));
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -338,7 +339,7 @@ const story = new Journey({ child, plane: glider, boat, wind, lines, input, life
 story.update(0, 0);
 water.skyMirrorAppearance = story.name === 'toMirror' ? 0 : story.name === 'home' ? 0 : 1;
 rig.cut(story.shot);
-const windDebug = params.debug === 'wind' || params.debug === 'sway' ? createWindDebug(params.debug === 'sway') : null;
+const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
 await yieldBoot();
 const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
@@ -561,7 +562,7 @@ let sinceLightBake = 0;
 let stormShadowCovered = false;
 let frameIndex = 0;
 let qaWhaleAt = 8;
-const readout = params.stats ? createReadout() : null;
+const readout = QA && params.stats ? createReadout() : null;
 const intervals: number[] = [];
 const cpuTimes: number[] = [];
 let bootMs = 0;
@@ -912,7 +913,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const joining = glider.departing && glider.position.distanceTo(child.position) < 200 ? glider.position : null;
   /** Starlings turn over the hills at sunset, not in a squall. */
   starlings.update(dt, storm > 0.3 ? 0 : (params.dusk ?? story.dusk), joining);
-  if (params.whale) whaleForQa();
+  if (QA && params.whale) whaleForQa();
   sealife.update(dt, time);
   skyMirror.update(dt, time, child.position, cygnet.position, !cygnet.carried);
   water.step(dt);
@@ -1008,7 +1009,7 @@ function frameInner(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
-  if (params.hold !== null && frameIndex >= params.hold) {
+  if (QA && params.hold !== null && frameIndex >= params.hold) {
     post.render(time);
     endFrame(renderer);
     requestAnimationFrame(frame);
@@ -1029,7 +1030,7 @@ function frameInner(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
-  const cpuStart = performance.now();
+  const cpuStart = QA ? performance.now() : 0;
   const realDt = (now - last) / 1000;
   telemetry.frame(now - last);
   quality.frame(now, params.shot ? now - last : pacer.intervalMs);
@@ -1038,7 +1039,7 @@ function frameInner(now: number): void {
   const dt = timing.dt;
 
   renderer.info.reset();
-  frameIndex++;
+  if (QA) frameIndex++;
   pollReadbacks();
   input.beginFrame();
   for (let step = 0; step < timing.steps; step++) {
@@ -1061,8 +1062,8 @@ function frameInner(now: number): void {
   endFrame(renderer);
   if (quality.probing) timeLastFrame(quality.probeDeadline(now, performance.now()), reportGpu);
 
-  frames++;
-  if (readout) {
+  if (QA) frames++;
+  if (QA && readout) {
     intervals.push(realDt * 1000);
     cpuTimes.push(performance.now() - cpuStart);
     if (intervals.length > 120) {
@@ -1070,11 +1071,11 @@ function frameInner(now: number): void {
       cpuTimes.shift();
     }
   }
-  if (now - fpsWindowStart > 1500) {
+  if (QA && now - fpsWindowStart > 1500) {
     fps = (frames * 1000) / (now - fpsWindowStart);
     frames = 0;
     fpsWindowStart = now;
-    if (readout) {
+    if (QA && readout) {
       const size = renderer.getDrawingBufferSize(new THREE.Vector2());
       readout([
         `fps ${fps.toFixed(0)}  frame p50 ${percentile(intervals, 0.5).toFixed(0)} p90 ${percentile(intervals, 0.9).toFixed(0)} max ${Math.max(...intervals).toFixed(0)} ms`,
@@ -1088,7 +1089,7 @@ function frameInner(now: number): void {
     }
   }
   if (time > 0.4) startScreen.reveal();
-  if (params.shot) {
+  if (QA && params.shot) {
     window.__stats = {
       frame: frameIndex,
       time,
@@ -1133,7 +1134,7 @@ function frame(now: number): void {
   }
 }
 
-if (params.shot) {
+if (QA && params.shot) {
   window.__game = { quality, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
@@ -1154,7 +1155,7 @@ async function boot(): Promise<void> {
   followWindow(...windowAim(), true);
   grass.update(rig.camera);
   grass.bake(renderer);
-  if (params.shot) heightParity = measureHeightParity(renderer);
+  if (QA && params.shot) heightParity = measureHeightParity(renderer);
   await gpuIdle(renderer);
   await yieldBoot();
   await warmRender(renderer, scene, rig.camera, post.sceneTarget);
