@@ -105,7 +105,7 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
   `creatures/cygnet/ride.ts`), because a bag as deep as the bird is long looked like a bin. The straps leave the top
   of the near face, go over the shoulders, down the chest and back under the arms into the bag's lower corners.
 - **Flap** (`flap()`, `FLAP_OPEN`, `BONE.flap`, `flapRoll`, `flapTip`): a leather lid on three bones. It lies shut over
-  the mouth until the cygnet first rides in the bag (in the little boats), then is thrown back (`child.openBag()`)
+  the mouth until the cygnet first rides in the bag (boarding off the washing lines), then is thrown back (`child.openBag()`)
   and hangs open down the outer face for the rest of the game, swinging a little with the bag and the wind but
   never flopping with each step. Jeremy: the bag should be open most of the game, but not look like a bucket. A
   story or save that starts after the little boats starts with it open.

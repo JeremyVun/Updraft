@@ -278,14 +278,14 @@ export class LinesChapter implements Chapter {
     const beside = boat.boardingPoint(this.tmp);
     c.walkTo(beside.x, beside.z, false, () => {
       this.to('toBoat');
-      this.cast.carry.gatherUp(() => {
+      this.cast.carry.gatherUp(() => this.cast.carry.stow(() => {
         c.lookAt = null; this.to('push');
         c.faceToward(boat.position.x, boat.position.z, 1);
         c.board(boat, () => {
           this.cast.cygnet.mayFly = true;
           this.to('aboard');
         });
-      });
+      }));
     }, 0.5);
   }
 

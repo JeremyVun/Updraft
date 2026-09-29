@@ -79,13 +79,15 @@ export class LittleBoatsChapter implements Chapter {
         () => {
           this.to('setDown');
           c.faceToward(c.position.x, c.position.z - 3, 1);
-          cast.carry.setDown(() => {
+          const down = () => cast.carry.setDown(() => {
             this.to('notice');
             c.engaged = true;
             k.stay = true;
             k.watch(room.focus);
             c.faceToward(room.stranded.x, room.stranded.z, 1);
           });
+          if (k.seat === 'satchel') cast.carry.unstow(down);
+          else down();
         },
         0.35,
       );
