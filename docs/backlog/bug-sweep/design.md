@@ -189,6 +189,12 @@ visible change. Merge only after his OK.
   gets (a few pixels by 5 s). Then from `setsDown` (8.5 s) over `pondReturn` (3.5 s) the bearing swings from
   `REVEAL.swing` round to the pond view (`pondView` 2.15 rad off her line to the water), the distance falls to about
   10 and the height to 5.5: a wide orbit and dive in one move.
+- **Jeremy's ruling (2026-09-29): "ok sounds good, please get an opus agent to build it"**, on this proposal: one
+  committed shot from up behind her on the rise, her large in the foreground and the pond and swans below; as they
+  lift, the camera turns up to follow them from where it stands and lets the V leave the frame rather than backing
+  out to hold it; as she walks down, the camera follows from behind her to the water's edge instead of orbiting round
+  the pond. The take-off is option (c): the family is already stirring to leave, and her approach sets the nearest
+  birds off first (`Flock.lift`'s startled path). Stills before anything merges.
 
 ## 6. The stairs loop: the peep only
 
