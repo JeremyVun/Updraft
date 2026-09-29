@@ -140,6 +140,7 @@ export class MeadowChapter implements Chapter {
   private readonly flockGaze: CameraAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.crest.gaze };
   private readonly flockBounds = new THREE.Box3();
   private readonly flockAt = new THREE.Vector3();
+  private readonly flockWater = new THREE.Vector3();
   /** On the way down only she has to stay in frame; the family is let go out of the top of it. */
   private readonly descentFraming = { primary: this.cameraChild, secondary: this.cameraChild, margin: 0.88, extra: 3 };
   /** The side the pond is watched from, chosen once on the rise and kept down to the water and through the swim. */
@@ -959,8 +960,10 @@ export class MeadowChapter implements Chapter {
     }
     const scale = portrait ? THREE.MathUtils.lerp(view.viewPortraitScale, 1, walked) : 1;
     const back = THREE.MathUtils.lerp(view.viewBack, view.edgeBack, walked) * scale;
-    const up = THREE.MathUtils.lerp(view.viewUp, view.edgeUp, walked) * scale;
-    s.eye = this.eyeAt.set(c.x + this.side.x * back, ground + up, c.z + this.side.z * back);
+    const up = THREE.MathUtils.lerp(view.viewUp, view.edgeUp, walked);
+    // Walking downhill the ground behind her is higher; stand as far above it, so the grass on the slope stays below the lens.
+    const x = c.x + this.side.x * back, z = c.z + this.side.z * back;
+    s.eye = this.eyeAt.set(x, Math.max(ground, heightAt(x, z)) + up, z);
     s.clearance = 2;
     s.subjects = water ? this.pondFraming : this.descentFraming;
     this.gazeAfterFlock(portrait);
@@ -978,12 +981,14 @@ export class MeadowChapter implements Chapter {
     const since = this.leftAt < 0 ? -1 : this.now - this.leftAt;
     const { gazeFor, gazeKeep, gazeAcross } = tuning.crest;
     a.strength = !flock.active || since < 0 ? 0
-      : THREE.MathUtils.smoothstep(since, 1.5, 4.5) * (1 - THREE.MathUtils.smoothstep(since, gazeFor, gazeFor + 3));
+      : THREE.MathUtils.smoothstep(since, 0.5, 3.5) * (1 - THREE.MathUtils.smoothstep(since, gazeFor, gazeFor + 3));
     if (a.strength <= 0) return;
     const eye = this.eyeAt;
     const c = this.cast.child.position;
     const reach = eye.distanceTo(this.shot.target);
-    const to = flock.bounds(this.flockBounds).getCenter(this.flockAt).sub(eye);
+    // The last of them off the water first, then the V they make.
+    const water = flock.onWater(this.flockWater);
+    const to = flock.bounds(this.flockBounds).getCenter(this.flockAt).lerp(this.flockWater, water).sub(eye);
     const aspect = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 16 / 9;
     const half = THREE.MathUtils.degToRad(verticalFov(aspect)) / 2;
     const across = Math.atan(gazeAcross * Math.tan(half) * aspect);

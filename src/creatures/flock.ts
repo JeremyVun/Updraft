@@ -198,6 +198,21 @@ export class SwanFlock {
     return out.expandByScalar(2); // Unfolded wings and raised necks, beyond the body positions.
   }
 
+  /** The middle of the ones still on the water or only just off it, and how many of the family that is (0 to 1). */
+  onWater(out: THREE.Vector3): number {
+    let n = 0, all = 0;
+    out.set(0, 0, 0);
+    for (const b of this.birds) {
+      if (b.fade <= 0) continue;
+      all++;
+      if (this.launched >= 0 && b.run >= this.runFor + 0.5) continue;
+      out.add(b.at);
+      n++;
+    }
+    if (n) out.divideScalar(n);
+    return all ? n / all : 0;
+  }
+
   /** Where the bird at the back of the V is: the one that will fall out. */
   tail(out: THREE.Vector3): THREE.Vector3 {
     const last = this.birds[this.birds.length - 1];
