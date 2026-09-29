@@ -76,8 +76,10 @@ Tried and not worth it (don't repeat without a new reason):
   the time spent in each so costs are weighted by minutes.
 - GPU per pass and per object, CPU per frame (story, creatures, cloth, wind), the audio graph, readbacks, and
   graphics memory (`docs/engine.md` "Open": no target-device budget yet).
-- The stairs in the clouds in particular: the cloud deck GLSL is in `ATMO_GLSL`, which every shader includes, so it
-  may cost in every room, not only the stairs.
+- The stairs in the clouds in particular. The cloud deck GLSL is in `ATMO_GLSL`, which every shader includes, but it
+  runs only behind `uCloudDeck.w > 0.0` (`atmosphere.ts` `cloudDeck` call, the sun dimming, `sky.ts`), so outside the
+  stairs it is a skipped branch. What it may still cost elsewhere is register pressure and shader size; an ablation
+  that compiles the deck out settles it.
 - **Not in scope:** the boot freeze and the loading veil, which are `docs/backlog/boot-veil/`. Anything learned here
   about startup is handed to that item.
 
@@ -92,11 +94,13 @@ Tried and not worth it (don't repeat without a new reason):
 
 ## Next (design, not yet ready to build)
 
-1. Check that `tools/frame-profile.mjs`'s ablations still patch today's shaders: they are string replacements
-   written against the code as it stood at `69af219`, and a patch that no longer matches measures nothing.
-2. Profile: a traced playthrough with per-chapter GPU census (`tools/frame-profile.mjs`), CPU profiles, the audio
-   cost (`tools/audio-cost.mjs`), power where the tools allow (`tools/power-profile.mjs`), minutes per room; compare
-   with the last pass's per-chapter numbers where they exist, re-measured back to back at `69af219`.
+1. Run each `tools/frame-profile.mjs` ablation once before trusting it: they patch shader source by string, written
+   against `69af219`. At the close their `sub` sites and noise terms were all still in the source (the two sea-fog
+   sites were updated), but a patch can still match and no longer remove what its name says.
+2. Profile, on the settings and minutes Jeremy chose below: per-chapter GPU census (`tools/frame-profile.mjs`), CPU
+   profiles, the audio cost (`tools/audio-cost.mjs`), power where the tools allow (`tools/power-profile.mjs`) and a
+   graphics-memory census; compare with the last pass's per-chapter numbers where they exist, re-measured back to
+   back at `69af219`.
 3. Bring Jeremy the ranked list of costs and candidate savings (exact and look-changing), then write `build_plan.md`.
 
 ## Jeremy's answers (2026-09-29)
@@ -115,3 +119,11 @@ Tried and not worth it (don't repeat without a new reason):
   (it only judges against 30 when the device itself caps, as in iOS Low Power Mode). Whether Auto should end on a
   30 fps rung that keeps more detail, instead of its last rung (25% grass, 70% reach), is a candidate for this pass:
   it trades smoothness of the wind under the pointer for looks, so it goes to Jeremy with evidence.
+- **Settings profiled (chosen 2026-09-29):** High (1.5×, MSAA 2), comparable with the last pass, plus a weak-device
+  pass at Low-like settings (about 0.85×, MSAA 2, world detail 0). At low resolution the costs that do not shrink with
+  the screen stand out (wind simulation, script, audio, small GPU passes), and those decide whether weaker devices
+  keep up.
+- **Minutes per room (chosen 2026-09-29):** the last pass's estimates, plus one short timed run of the stairs. No full
+  traced playthrough (an hour, and it holds the browser lock for every session).
+- **Graphics memory (chosen 2026-09-29):** measure what every texture, render target and table holds, and cut only
+  what goes without changing the picture (for example targets kept alive while unused). No target-device budget.
