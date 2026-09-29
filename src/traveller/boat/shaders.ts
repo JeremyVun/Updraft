@@ -284,8 +284,12 @@ float givesWay(vec3 world) {
   vec3 dir = toSubject / max(reach, 0.001);
   vec3 toHere = world - cameraPosition;
   float along = dot(toHere, dir);
-  if (along <= 0.4 || along >= reach - 0.6) return 1.0;
-  return mix(0.3, 1.0, smoothstep(0.9, 2.2, length(toHere - dir * along)));
+  if (along <= 0.0) return 1.0;
+  float behind = smoothstep(reach - 0.3, reach + 0.1, along);
+  /** Where this line of sight passes her, against her whole height from boots to hood. */
+  vec3 past = toHere * (reach / along) - toSubject;
+  float off = length(past - vec3(0.0, clamp(past.y, -0.75, 0.3), 0.0));
+  return max(behind, mix(0.3, 1.0, smoothstep(0.45, 1.25, off)));
 }
 in vec2 vUv;
 in vec2 vCut;
