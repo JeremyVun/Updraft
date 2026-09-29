@@ -9,7 +9,7 @@ import { stairsDescent } from '../world/journey-rooms';
 import { CloudStairs } from '../world/stairs';
 import { BowLantern } from '../world/stairs-lantern';
 import { lanternFlame } from '../traveller/boat/parts';
-import { gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
+import { DRAFT, gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
 import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
 import {
   BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_BANK, FLIGHTS, LOOSE, RUN_YAW, SIT, SLIPPERS, STAIRS_ARRIVAL, STAIRS_LOOK_FROM,
@@ -66,7 +66,7 @@ const KITE_WAITS = (() => {
 })();
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
-const SEA_RIDE = 0.4;
+const SEA_RIDE = DRAFT;
 /**
  * Under sail the pointer lands this high over the hull, about at the boom, so a stroke over the hull or across the
  * sail puts its wind on the boat from any of the lens's framings that look down on it.

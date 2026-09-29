@@ -11,7 +11,7 @@ import type { PointerInput } from '../input/pointer';
 import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
 import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
-import { waterlineUniforms } from './boat/waterline';
+import { hullLid, waterlineUniforms } from './boat/waterline';
 
 /**
  * Pushed off a beach, a boat goes out the way the sand slopes, whichever way its bow is pointing, and is brought
@@ -35,6 +35,8 @@ const TURN_FAST = 0.25;
 const CEILING_STEP = 0.5;
 const CEILING_SLACK = 1;
 const CEILING_MARGIN = 0.25;
+/** On a cloud the hull rides higher than on the sea, its bottom just in the top of the cloud. */
+const CLOUD_DRAFT = 0.42;
 /** The way the boom's mesh lies before it is turned to the clew. */
 const BOOM_REST = new THREE.Vector3(-1, 0, 0);
 
@@ -142,7 +144,7 @@ export class Boat {
     let reach = 0;
     for (let i = 0; i < this.hullContacts.count; i++) reach = Math.max(reach, this.contact.fromBufferAttribute(this.hullContacts, i).length());
     this.reach = reach;
-    this.group.add(new THREE.Mesh(hullGeometry(), hullMat));
+    this.group.add(new THREE.Mesh(hullGeometry(), hullMat), hullLid());
 
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
@@ -383,7 +385,7 @@ export class Boat {
     const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
     this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
-    p.y = this.afloat ? bob + lift + DRAFT : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
+    p.y = this.afloat ? bob + lift + (this.altitude === null ? DRAFT : CLOUD_DRAFT) : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const sail = this.sailMat.uniforms;
     sail.uScarf.value = this.scarfSail;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { glsl } from '../../tuning';
-import { DRAFT, rake, sectionHalf, stationZ } from './form';
+import { DRAFT, gunwale, gunwaleHalf, rake, sectionHalf, stationZ } from './form';
 
 /** Stations along the waterline, stern to stem, for the sea to find the hull's edge by. */
 const STATIONS = 32;
@@ -57,3 +57,47 @@ vec2 hullWaterline(vec2 xz) {
   return vec2(end > 0.0 ? length(vec2(max(side, 0.0), end)) : max(side, end), t);
 }
 `;
+
+/** The stencil bit the hull's opening marks, so the sea and what floats on it are not drawn inside the boat. */
+const INSIDE_HULL = 1;
+
+/**
+ * A lid over the hull's opening, drawn only into the stencil before the sea: any line of sight through it goes
+ * down into the hull, so the sea is never seen there however deep the boat floats.
+ */
+export function hullLid(): THREE.Mesh {
+  const U = 40;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const p = new THREE.Vector3();
+  for (let i = 0; i <= U; i++) {
+    const u = i / U;
+    for (const side of [-1, 1]) {
+      rake(p.set(side * gunwaleHalf(u), gunwale(u), stationZ(u)));
+      pos.push(p.x, p.y, p.z);
+    }
+    if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  const lid = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    side: THREE.DoubleSide,
+    colorWrite: false,
+    depthWrite: false,
+    stencilWrite: true,
+    stencilRef: INSIDE_HULL,
+    stencilFunc: THREE.AlwaysStencilFunc,
+    stencilZPass: THREE.ReplaceStencilOp,
+  }));
+  lid.renderOrder = -1;
+  return lid;
+}
+
+/** Keeps a material off the pixels where the hull's lid showed. */
+export function outsideHull(material: THREE.Material): void {
+  material.stencilWrite = true;
+  material.stencilWriteMask = 0;
+  material.stencilRef = INSIDE_HULL;
+  material.stencilFunc = THREE.NotEqualStencilFunc;
+}

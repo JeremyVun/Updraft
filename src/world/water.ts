@@ -13,7 +13,7 @@ import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { rippleTexture } from './water/textures';
 import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
-import { WATERLINE_GLSL, waterlineUniforms } from '../traveller/boat/waterline';
+import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boat/waterline';
 
 /** Vertex spacing of the sea near the camera, and how far that even spacing reaches before the mesh opens out. */
 const STEP = 1.9;
@@ -470,6 +470,7 @@ export class Water {
         uWetSand: { value: new THREE.Color('#a48c66') },
       },
     });
+    outsideHull(mat);
     this.mesh = new THREE.Mesh(seaGrid(params.lite ? 128 : 192), mat);
     this.mesh.frustumCulled = false;
   }

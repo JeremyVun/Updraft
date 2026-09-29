@@ -6,13 +6,13 @@ export const BEAM = 1.0;
 export const STRAKES = 6;
 /** How round the bottom is across: a flattish floor turning up round the bilge (1 would be an ellipse). */
 export const SECTION = 0.62;
-/** Floorboards, laid across the ribs. They sit above the waterline, so the sea is never seen inside the hull. */
+/** Floorboards, laid across the ribs. */
 export const FLOOR_Y = -0.24;
 /**
- * How deep the hull floats: local y 0 rides this far above the sea, the waterline up round the bilge where the
- * bottom is most of its full width, and still below the floorboards.
+ * How deep the hull floats: local y 0 rides this far above the sea, the waterline up past the turn of the bilge
+ * and over the floorboards. The sea is kept out of the hull by its lid (`waterline.ts`), not by floating high.
  */
-export const DRAFT = 0.34;
+export const DRAFT = 0.2;
 /** Where the child sits: the thwart's height, with the gunwale about at their belly. */
 export const SEAT_Y = 0.02;
 export const STERN_Z = -0.45 * LENGTH;
