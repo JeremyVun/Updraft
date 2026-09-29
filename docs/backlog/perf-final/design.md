@@ -54,16 +54,25 @@ rulings carry over unless Jeremy changes them:
 
 1. Close `perf-bakes` first (its phase 7: durable rules and numbers into `docs/engine.md`, new checks into
    `docs/testing.md`, delete the folder), so this pass starts from one record.
-2. Settle with Jeremy what "done" means (open questions below).
-3. Profile: a traced playthrough with per-chapter GPU census (`tools/frame-profile.mjs`), CPU profiles, the audio
+2. Profile: a traced playthrough with per-chapter GPU census (`tools/frame-profile.mjs`), CPU profiles, the audio
    cost (`tools/audio-cost.mjs`), power where the tools allow (`tools/power-profile.mjs`), minutes per room; compare
    with the last pass's per-chapter numbers where they exist, re-measured back to back at the base the last pass
    ended on.
-4. Bring Jeremy the ranked list of costs and candidate savings (exact and look-changing), then write `build_plan.md`.
+3. Bring Jeremy the ranked list of costs and candidate savings (exact and look-changing), then write `build_plan.md`.
 
-## Open questions for Jeremy
+## Jeremy's answers (2026-09-29)
 
-- **Goal:** is the target still battery and heat on the M5 iPad at High, or also smoothness on weaker devices
-  (older iPads, phones), which would bring Medium and Low and graphics memory in?
-- **Evidence from the iPad:** the last pass could only estimate the iPad from the Mac. A battery figure for a full
-  playthrough now, and the `?stats` readout on the iPad in the stairs, would anchor this pass.
+> any kind of performance improvement we can get is good so we can get this playable on more devices. I think we can
+> profile on this mac and just get performance up?
+
+- **Goal:** less work per frame everywhere, CPU and GPU, so the game runs on more devices. Battery and heat on the
+  M5 iPad follow from that; weaker devices (older iPads, phones) are in scope, so Medium, Low, Auto's lower rungs and
+  graphics memory count too.
+- **Measured on this Mac.** Its Apple GPU is the same family as the iPad's, so where the time goes and the relative
+  size of a saving carry over; absolute milliseconds do not. `?ratio=2` makes the GPU the bottleneck on purpose so
+  GPU savings show. No iPad readings needed to start.
+- **Asked, 2026-09-29:** "Do we already cap fps to 30 to keep visual quality higher?" Only the Low preset presents at
+  30 fps; High, Medium and Auto aim for 60, and Auto lowers resolution, antialiasing and world detail to hold it
+  (it only judges against 30 when the device itself caps, as in iOS Low Power Mode). Whether Auto should end on a
+  30 fps rung that keeps more detail, instead of its last rung (25% grass, 70% reach), is a candidate for this pass:
+  it trades smoothness of the wind under the pointer for looks, so it goes to Jeremy with evidence.
