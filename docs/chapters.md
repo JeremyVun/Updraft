@@ -279,8 +279,8 @@ under way. After `STILL_LIMIT` (90 s) the air returns by itself, because nobody 
 
 Then **the storm**: the weather gathers among the last roofs (`tuning.storm.startsFromShore`); the channel bows
 toward a tall lighthouse on a crag, the lens holding its crown and the travellers together and letting it slide
-past as they come under it. Its beam sweeps the rain and water, falters and goes out (`lighthouseOutAt`). A gust
-drawn as wind lines past the child's hand takes the paper plane; the storm carries it off fast and low over the
+past as they come under it. Its beam sweeps the rain and water, falters and goes out (`lighthouseOutAt`); the gust
+drawn as wind lines past the child's hand may take the paper plane while it is still faltering; the storm carries it off fast and low over the
 wood (`planeAway`), and it is put away only once out of frame or deep in the rain. By the beach the last colour is
 gone: black trees, cold rain, clouded moonlight, lightning only once rain and darkness are established. The
 cygnet shakes in the rain, flinches at thunder and nuzzles under the child's chin when the light goes out. Hull

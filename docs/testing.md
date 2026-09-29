@@ -29,6 +29,10 @@ captures take no lock and can run side by side. Evidence goes under
    performance, warmth and battery).
 4. Deploy with `tools/deploy.sh` from a clean `main` (every deploy goes to production).
 
+A failing check is fixed in the game unless it asserts behaviour Jeremy deliberately changed; then the check is
+updated to the new intent, with the reason in the commit. Never widen a limit without writing down why the old one was
+wrong.
+
 Choose the focused checks relevant to a change; the playthrough is a release check, not something to run after every
 edit.
 
@@ -115,5 +119,5 @@ sign-off.
 
 ## Open
 
-- Several checks fail on `main`: some are stale, some catch real regressions. Which is which, and the unmerged
-  branch that updates the stale ones, is in [roadmap.md](roadmap.md) under Checks.
+- `start-check` fails on `main`: the veil freezes for over half a second while the game boots
+  ([backlog/boot-veil](backlog/boot-veil/)).

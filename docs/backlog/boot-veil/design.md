@@ -8,8 +8,6 @@
 > what i want to avoid though it having the gameplay itself freeze setting up the stairs. and yea, create a separate
 > backlog item for the veil issue
 
-Found by the bug sweep (`docs/backlog/bug-sweep/`, item 9), which hands this over whole.
-
 ## What is wrong
 
 `node tools/start-check.mjs` fails: the worst gap between painted frames of the veil while the game boots is 533 to

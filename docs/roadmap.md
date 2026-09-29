@@ -17,6 +17,10 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
 - **Performance** ([backlog/perf-bakes](backlog/perf-bakes/)): every phase is built and merged, including phase 6
   (the sleeping island's baked noise tile), the sea round (S1, S3, S4) and one reverb (X3). What remains is the
   backlog's close stage (phase 7).
+- **Performance, final pass** ([backlog/perf-final](backlog/perf-final/)): a fresh profile of the whole journey and
+  savings wherever they can be found, so the game plays on more devices. In design; profiling comes first.
+- **Startup** ([backlog/boot-veil](backlog/boot-veil/)): since the stairs, the loading veil freezes for over half a
+  second while the game boots (`start-check` fails); and whether the veil has outgrown itself. In design.
 
 ## Open
 
@@ -26,38 +30,19 @@ For Jeremy's eye, ear or hands:
 - The child's pigtails, the hood's side line and the open bag flap, seen in a level from the play camera in motion
   ([child.md](child.md)).
 
-Known issues (the first seven, plus the dark wood's hidden ember, are the backlog item
-[backlog/bug-sweep](backlog/bug-sweep/)):
-- The storm reaches the dark wood about 15 s late (56 s from the weather's start, against 38 to 44): since the
-  beach landings, the boat sheds its way about 10 m out from the wood's shelving shore and drifts sideways in the
-  breeze before its forefoot finds the bottom. `boat-check` and `drowned-camera-check` fail on it.
-- The little boats: the orange toy loses its way abruptly at a pool handoff (`little-boats-logic-check`, 30 fps from
-  arrival), since commit 1e0d470.
-- Home: a departing adult swan passes 1.73 m from the cygnet against the check's 1.8 m (`flock-flight-check`), since
-  the pigtails commit shifted the start.
-- The season stays at 0.92 to 1 after the sleeping island, so home's grass is still aged, although the curtains
-  opening is meant to turn winter to spring.
-- The meadow swans lift off by themselves from the far end of the raft while the child is on the rise. Jeremy's note
-  asked for the camera to show them "getting skittish and flying away"; worth a look that it still reads that way
-  (`Flock.lift` has an unused `startledBy`).
-- The stairs loop sounds the questioning peep and a distress call together each time round.
+Known issues:
 - The sky mirror: a faint speckled patch on the water beyond the departure jetty, looking toward the sun on the way
   in. Not traced.
 - The boat: boarding lifts the lead foot about 0.6 m over the side, more hop than step (`boarding.stepArc`,
   `railHeight`; [boat.md](boat.md)).
 - The child: unchecked that a resumed save with the cygnet in the bag starts with the flap open.
 
-Checks ([testing.md](testing.md)). On `main`, 11 of the 49 mechanics checks fail and 2 of the 17 audio checks; the
-browser group has not been run. Branch `checks-fix` (not merged) brings the stale ones up to date: `shader`
-(the child shader's six descending `smoothstep`s, rewritten as exact equivalents), `progress-schema` (baseline moved
-to the last save change), `chapter-view`, `kite-logic` and `plane-routing` (the stairs and the Lines shore),
-`journey-pacing` and `wood-logic` (embers light in about two seconds), and the meadow, birches and sea
-`*-score-browser-check`s (those rooms have no cursor chimes). Still failing for real: `boat`, `drowned-camera`,
-`little-boats-logic` and `flock-flight` (above). Not yet looked into: `audio-check` ("player wind is 3 dB softer
-after departure") and `birches-score-check` (its fixture has no cygnet). `cygnet-gates` passes three runs in three.
+Checks ([testing.md](testing.md)). On `main` every mechanics (49) and audio (17) check passes, and 7 of the 8 browser
+checks; `start-check` fails on the veil's boot freeze ([backlog/boot-veil](backlog/boot-veil/)). `cygnet-gates`
+passes three runs in three.
 
 Engineering, not scheduled:
-- Startup builds and warms the whole archipelago before Begin, and the main chunk carries a bundle-size warning.
+- The main chunk carries a bundle-size warning.
 - No graphics-memory budget for older iPads (grass tables about 28 MiB, static atlases about 26 MiB).
 - Startup and audio wiring could move out of `main.ts` in small steps.
 
