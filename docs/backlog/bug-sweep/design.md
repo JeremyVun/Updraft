@@ -181,6 +181,15 @@ visible change. Merge only after his OK.
   flock is lost in the haze by 13 to 14 s. So his 2026-09-20 note ("the camera never properly shows the swans getting
   skittish and flying away") still stands whichever take-off he chooses: the departure is hard to see.
 
+- **Jeremy (2026-09-29), on the stills:** "I tthink the only concern i have with this whole sequence with the meadow
+  swans is that the camera is really zoomed out and pans around and then in. it feels slightly unnatural".
+- **Why it does that (`MeadowChapter.frame`, beats `crest` and `down`):** the departure shot frames the flock's
+  bounding box (`departureFraming`, `departureCameraExtra` 80) from `departureCameraBack` 20 plus 0.35 of the distance
+  to the flock and `departureCameraUp` 14 above her, so the further the V flies the wider the shot and the smaller she
+  gets (a few pixels by 5 s). Then from `setsDown` (8.5 s) over `pondReturn` (3.5 s) the bearing swings from
+  `REVEAL.swing` round to the pond view (`pondView` 2.15 rad off her line to the water), the distance falls to about
+  10 and the height to 5.5: a wide orbit and dive in one move.
+
 ## 6. The stairs loop: the peep only
 
 - **Observed:** in `story/stairs.ts`, the `puzzled` beat calls `cue('puzzled')` and `k.call(false)` together;
@@ -243,6 +252,9 @@ branch in item 0 is in, and triage anything that fails the same way.
 - **For Jeremy:** finding which one needs a boot profile (`tools/boot-profile.mjs`), which is performance measuring,
   so it waits for his go-ahead. The fix would then be to defer that work past the veil (build the stairs when the
   journey nears them, or compile the cloud-deck variant only where it is drawn).
+
+- **Jeremy (2026-09-29):** "yea after we added the stairs level, i need another pass to find performance
+  optimisation opportunities. I'm wondering if we've outlived the short and sweet loading veil as well".
 
 ## 10. Stale comments
 
