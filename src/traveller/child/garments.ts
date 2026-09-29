@@ -545,19 +545,19 @@ function hair(b: Builder): void {
 }
 
 /**
- * A low bunch below each ear, tied with a knitted bobble like the scarf, coming out of the hood behind the jaw and
- * falling out over the scarf, plump just past the tie and rounding off to a soft point that turns out. Held out level
- * beside the chin they read as a moustache.
+ * A low bunch below each ear, tied with a knitted bobble like the scarf in the hair beside the jaw, falling down and
+ * out over the scarf, plump just past the tie and rounding off to a soft point that turns out. Held out level beside
+ * the chin they read as a moustache.
  */
 function pigtail(b: Builder, side: number): void {
   const tie = V(side * PIGTAIL_TIE[0], PIGTAIL_TIE[1], PIGTAIL_TIE[2]);
   const bone = side > 0 ? BONE.pigL : BONE.pigR;
   const curve = new THREE.CatmullRomCurve3([
     tie.clone(),
-    V(side * 0.335, 1.71, 0.205),
-    V(side * 0.38, 1.645, 0.2),
-    V(side * 0.42, 1.6, 0.185),
-    V(side * 0.46, 1.595, 0.165),
+    V(side * 0.32, 1.755, 0.2),
+    V(side * 0.365, 1.68, 0.205),
+    V(side * 0.405, 1.625, 0.19),
+    V(side * 0.45, 1.605, 0.17),
   ]);
   const STEPS = 20;
   const rows: Point[][] = [];
@@ -590,7 +590,41 @@ function pigtail(b: Builder, side: number): void {
     }));
   }
   b.rows(rows, true, curve.getPointAt(0.3));
+  gathered(b, side, tie);
   ball(b, tie.clone().addScaledVector(curve.getTangentAt(0), -0.01), 0.04);
+}
+
+/** The hair drawn back behind the ear and down behind the jaw into the tie, so the bunch grows from the head. */
+function gathered(b: Builder, side: number, tie: THREE.Vector3): void {
+  const curve = new THREE.CatmullRomCurve3([
+    V(side * 0.235, 1.97, -0.04),
+    V(side * 0.255, 1.9, 0.0),
+    V(side * 0.26, 1.85, 0.06),
+    tie.clone(),
+  ]);
+  const STEPS = 10;
+  const rows: Point[][] = [];
+  const ref = V(0, 0, 1);
+  const skin: Skin = [[BONE.head, 1]];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS;
+    const p = curve.getPointAt(t);
+    const along = curve.getTangentAt(t);
+    const u = V().crossVectors(along, ref).normalize();
+    const v = V().crossVectors(u, along).normalize();
+    const r = THREE.MathUtils.lerp(0.05, 0.03, t);
+    rows.push(Array.from({ length: 12 }, (_, j) => {
+      const a = (j / 12) * TAU;
+      return {
+        p: p.clone().addScaledVector(u, Math.cos(a) * r).addScaledVector(v, Math.sin(a) * r * 0.8),
+        skin,
+        mat: MAT.hair,
+        ao: 0.75 + 0.25 * Math.max(0, Math.sin(a)),
+        uv: [t, Math.cos(2 * a)] as [number, number],
+      };
+    }));
+  }
+  b.rows(rows, true, curve.getPointAt(0.5));
 }
 
 /** A small knitted ball: the bobble a pigtail is tied with. */

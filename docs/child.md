@@ -61,13 +61,14 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 - The lower face is 5% shorter than first modelled, under a taller forehead; 14% was too much.
 - The face is narrow enough that the hood's inside never shows in front of the cheeks (that read as sideburns).
 
-**Hair** (`BANGS`, `SIDES`, `bob()`, `pigtail()`, `strand()`, `lock()` in `garments.ts`; `PIGTAIL_TIE`, `BONE.pigL`,
+**Hair** (`BANGS`, `SIDES`, `bob()`, `pigtail()`, `gathered()`, `strand()`, `lock()` in `garments.ts`; `PIGTAIL_TIE`, `BONE.pigL`,
 `pigR` in `skeleton.ts`; `pigSwing` in `motion.ts`)
 - A fringe parted in the middle, each half swept out to its temple, short at the parting and longer outward, so its
   edge is an arch with a little forehead in the middle; clumps bow away from the parting and end in soft points.
 - A short lock in front of each ear, ending above the cheek; the rest is drawn back to low plump pigtails tied with
-  knitted bobbles like the scarf, coming out of the hood behind the jaw and falling down and out over the scarf, the
-  tips turned out. They bounce and droop with each step, lag the head, lean into the wind and flutter a little in a
+  knitted bobbles like the scarf. The hair is gathered from behind each ear down behind the jaw into the bobble, in
+  the gap between cheek and hood, and the bunch falls down and out over the scarf with the tip turned out; a bobble
+  tied out on the hood's rim looked pinned on. They bounce and droop with each step, lag the head, lean into the wind and flutter a little in a
   strong one.
 - Nothing dark runs along the jaw or points onto the cheek (Jeremy: the pigtails "can read a little bit like facial
   hair"): pigtails held out level beside the chin read as a moustache, and a lock curling round the cheek toward the
