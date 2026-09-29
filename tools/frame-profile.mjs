@@ -54,7 +54,9 @@
 // Their parts: stairs (the whole room), stairsCloud (deck top and underside, towers, wake), stairsCloudTop,
 // stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
 // stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
-// shader that includes ATMO_GLSL (exact outside the stairs). DETAIL=0|1 applies that world detail after the fixture.
+// shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
+// water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
+// DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
 // SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
 // full grass-table rebuild (SIM_REPS each, drained).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
@@ -63,6 +65,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
+import { stairsFixture } from './lib/stairs-fixture.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
@@ -262,7 +265,7 @@ window.__audit = {
     this.patchShaders(variants);
     this.noiseTerms(variants);
     this.bareTiles(variants.includes('grass-bare-tiles'));
-    this.deckOut(variants.includes('deck-out'));
+    this.deckOut(variants.includes('deck-out')?'all':(variants.find(v=>v.startsWith('deck-out-'))||'').slice(9)||null);
     if(this.pairRebake)this.rebake();
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
@@ -342,6 +345,8 @@ window.__audit = {
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
       // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
+      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),' + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
+      'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
       // Restores the old path: the sea's fog worked out per pixel.
@@ -401,14 +406,17 @@ window.__audit = {
   // becomes a constant false, so the deck, the bank of mist and their helpers are dead code. Outside the stairs the
   // deck's amount is 0, so no pixel may change there; any saving is what its presence costs (registers, code size).
   // The blades' fragment programs are left alone (their fog comes from the vertex).
-  deckOut(on) {
-    const A='uCloudDeck.w > 0.0',B='false/*deck-out*/';
+  // deck-out-water|terrain|grass|sky|rest limit it to one family of materials.
+  deckOut(which) {
+    const on=!!which,A='uCloudDeck.w > 0.0',B='false/*deck-out*/';
     const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
     const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,...grass.lods.map(l=>l.tableMat),bakes.groundMat]);
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    const family=m=>m===water.mesh.material?'water':m===terrain.mesh.material?'terrain':blades.has(m)||grass.lods.some(l=>l.tableMat===m)?'grass':m===sky.material?'sky':'rest';
     let hits=0,tables=false;
     for(const m of mats)for(const key of ['vertexShader','fragmentShader']){
       if(key==='fragmentShader'&&blades.has(m))continue;
+      if(on&&which!=='all'&&family(m)!==which){const cur=m[key];if(typeof cur==='string'&&cur.includes(B)){m[key]=cur.split(B).join(A);m.needsUpdate=true;}continue;}
       const cur=m[key];if(typeof cur!=='string')continue;
       const next=on?cur.split(A).join(B):cur.split(B).join(A);
       if(on&&cur.includes(A))hits++;
@@ -420,7 +428,7 @@ window.__audit = {
   },
   // DETAIL=0|1 sets the world detail a quality level would (grass density and reach, terrain split, reflection cadence
   // and the sky mirror's scale) at the locked render scale and multisampling, as the Low preset or Auto's rungs do.
-  detail(level) { applyWorldQuality({ratio:pixelRatio,samples:post.samples,detail:level},true); return {detail:level,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
+  detail(level,grassDensity,grassReach) { applyWorldQuality({ratio:pixelRatio,samples:post.samples,detail:level,...grassDensity!=null&&{grassDensity},...grassReach!=null&&{grassReach}},true); return {detail:level,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -547,50 +555,6 @@ window.__audit = {
 `;
 
 const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
-// The stairs in the clouds, played to a moment with real pointer gestures (as tools/stairs-check.mjs plays them):
-// waiting (the first loose flight, from the grass), climb (the last flight below the cloud), loop (the Penrose loop in
-// its clearing), cloud (following the bird on up through the white after the loop), top (the swans over the cloud sea, before boarding), sail
-// (140 m out over the cloud) and fog (in the bank of mist at the end of the sail). Later moments restore the
-// checkpoint with every flight home and climb from there.
-async function stairsFixture(page, fixture) {
-  const state=()=>page.evaluate(()=>{const g=__game,s=g.story.current;return {chapter:g.story.name,beat:s.beat,t:+(s.now-s.beatStart).toFixed(1),sailed:Math.round(s.sailed??0)};});
-  const until=async(test,ms,act)=>{const end=Date.now()+ms;for(;;){const s=await state();if(test(s))return s;
-    if(Date.now()>end)throw Error('Stairs fixture '+fixture+' stuck at '+JSON.stringify(s));if(act)await act(s);else await page.waitForTimeout(250);}};
-  const swipe=async(from,to,ms)=>{const n=Math.max(2,Math.round(ms/8));await page.mouse.move(from[0],from[1]);
-    for(let i=1;i<=n;i++){await page.mouse.move(from[0]+(to[0]-from[0])*i/n,from[1]+(to[1]-from[1])*i/n);await page.waitForTimeout(ms/n);}};
-  await page.evaluate(()=>__audit.fast(true));
-  try {
-    if(fixture==='waiting'){await until(s=>s.beat==='waiting'&&s.t>2,90000);return;}
-    await page.evaluate(()=>__game.story.current.restoreCheckpoint('flight-3',[3]));
-    if(fixture==='climb'){await until(s=>s.beat==='climb'&&s.t>2.5||s.beat==='hesitate',60000);return;}
-    await until(s=>s.beat==='loop',180000);
-    if(fixture==='loop'){await until(s=>s.beat==='loop'&&s.t>8,60000);return;}
-    // Round the loop until the sweep is drawn over the cloud on its far corner, then blow it off.
-    await until(s=>s.beat!=='loop',180000,async()=>{
-      await page.waitForTimeout(1500);
-      const bank=await page.evaluate(()=>{const g=__game,hint=g.story.current.windInvitation;if(!hint)return null;
-        const p=hint.clone().project(g.rig.camera);return [(p.x*0.5+0.5)*innerWidth,(0.5-p.y*0.5)*innerHeight];});
-      if(bank)await swipe([bank[0]-160,bank[1]+40],[bank[0]+180,bank[1]-30],450);
-    });
-    if(fixture==='cloud'){await until(s=>s.beat==='follow'&&s.t>6,120000);return;}
-    if(fixture==='top'){await until(s=>s.beat==='skein'&&s.t>10,180000);return;}
-    await until(s=>s.beat==='sail',240000);
-    // Over the cloud: sweeps through the hull the way it is going keep it sailing.
-    const sweep=async()=>{
-      const at=await page.evaluate(()=>{const g=__game,b=g.boat,cam=g.rig.camera,w=innerWidth,h=innerHeight;
-        const scr=v=>{const q=v.clone().project(cam);return [(q.x*0.5+0.5)*w,(0.5-q.y*0.5)*h];};
-        const f={x:Math.sin(b.yaw),y:0,z:Math.cos(b.yaw)},p=b.position.clone();p.y+=0.3;
-        return {at:scr(p),back:scr(p.clone().addScaledVector(f,-3)),fore:scr(p.clone().addScaledVector(f,4)),w,h};});
-      let a=at.back,z=at.fore;
-      if(Math.hypot(z[0]-a[0],z[1]-a[1])<120){a=[at.at[0]-180,at.at[1]+30];z=[at.at[0]+180,at.at[1]-30];}
-      const inside=q=>[Math.min(Math.max(q[0],20),at.w-20),Math.min(Math.max(q[1],20),at.h-20)];
-      await swipe(inside(a),inside(z),380);await page.waitForTimeout(250);
-    };
-    if(fixture==='sail'){await until(s=>s.sailed>=140||s.beat!=='sail',300000,sweep);return;}
-    if(fixture==='fog'){await until(s=>s.beat==='fog'&&s.t>3||s.chapter!=='stairs'||s.beat==='thin',400000,sweep);return;}
-    throw Error('Unknown stairs fixture '+fixture);
-  } finally {await page.evaluate(()=>__audit.fast(false));}
-}
 const { browser, close } = await openBrowser();
 const report=[],inexact=[];
 try {
@@ -618,7 +582,7 @@ try {
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
     await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
     await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
-    if(entry==='stairs'&&fixture){await stairsFixture(page,fixture);console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
+    if(entry==='stairs'&&fixture){await stairsFixture(page,fixture,on=>page.evaluate(on=>__audit.fast(on),on));console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
     else if(fixture) await page.evaluate(fixture=>{
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
@@ -629,7 +593,7 @@ try {
         if(fixture==='pond'){g.child.place(c.edge.x,c.edge.z,Math.PI);c.setDown();}
       }
     },fixture);
-    const detail=process.env.DETAIL?await page.evaluate(d=>__audit.detail(d),Number(process.env.DETAIL)):undefined;
+    const detail=process.env.DETAIL?await page.evaluate(([d,g,r])=>__audit.detail(d,g,r),[Number(process.env.DETAIL),process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
     if(detail)console.log(JSON.stringify({chapter,detail}));
     await page.waitForTimeout(detail?2500:1500);
     const cdp=await page.context().newCDPSession(page);
