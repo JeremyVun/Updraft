@@ -164,6 +164,7 @@ export class StairsChapter implements Chapter {
   private beatStart = 0;
   private leg = 0;
   private skeinSent = false;
+  private calledToThem = false;
   private birdStop = 0;
   /** The furthest stop the bird has got to in the cloud; the child never goes past it. */
   private birdReached = 0;
@@ -545,10 +546,15 @@ export class StairsChapter implements Chapter {
         if (this.t > SWANS_AT && !this.skeinSent) this.sendSkein();
         break;
       case 'skein': {
-        // The bird sees them first and she follows its look; her feet go still while they watch them over. Then she
-        // turns to the bird, which is still looking where they went, and the boat is coming.
+        // The bird sees them first and calls to them as they come into sight, and she follows its look; her feet go
+        // still while they watch them over. Then she turns to the bird, which is still looking where they went, and
+        // the boat is coming.
         const flock = this.cast.flock;
         this.settle(dt);
+        if (!this.calledToThem && flock.active && this.inSideView(flock.head)) {
+          this.calledToThem = true;
+          k.call(true);
+        }
         const over = !flock.active || this.t > SKEIN_WATCHED;
         if (!over) this.look2.copy(flock.head);
         k.watch(this.t < SKEIN_WATCHED + 2 ? this.look2 : this.cast.boat.position);
@@ -1466,6 +1472,13 @@ export class StairsChapter implements Chapter {
     s.height = THREE.MathUtils.lerp(0.5, 3.6, open);
     s.clearance = 0.4;
     this.pace = 0.16;
+  }
+
+  /** Whether something far off has come into the view from her side, from its left. */
+  private inSideView(p: THREE.Vector3): boolean {
+    const ahead = Math.atan2(TOP_OUT.x, TOP_OUT.z) + SIDE_TURN + Math.PI;
+    const off = THREE.MathUtils.euclideanModulo(Math.atan2(p.x - SIT.x, p.z - SIT.z) - ahead + Math.PI, Math.PI * 2) - Math.PI;
+    return off < THREE.MathUtils.degToRad(24);
   }
 
   /** Starts an authored move from wherever the lens is, measured round `about`. */
