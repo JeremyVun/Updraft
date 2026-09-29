@@ -22,9 +22,10 @@ const SEATS: Record<Seat, { yaw: number; pitch: number }> = {
 
 /**
  * The way over the child between two seats, in the frame of the child's body: up the chest, over the right shoulder
- * beside the hood, and down the back. It is a path on their surface, so a climb never passes through them.
+ * beside the hood, and down the back. It is a path on their surface, so a climb never passes through them. On the
+ * chest it keeps low and to their right: any higher or nearer the middle and its neck crosses their face.
  */
-const OVER_THE_SHOULDER = [new THREE.Vector3(-0.2, 1.0, 0.4), new THREE.Vector3(-0.4, 1.16, 0.04), new THREE.Vector3(-0.27, 1.08, -0.38)];
+const OVER_THE_SHOULDER = [new THREE.Vector3(-0.42, 0.76, 0.42), new THREE.Vector3(-0.4, 1.16, 0.04), new THREE.Vector3(-0.27, 1.08, -0.38)];
 
 export interface Frame {
   p: THREE.Vector3;
