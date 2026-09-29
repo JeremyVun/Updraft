@@ -1397,8 +1397,11 @@ export class Cygnet {
   private mayStep(x: number, z: number): boolean {
     if (offTheEdge(this.decks, x, z, this.position.y)) return false;
     if (!this.onStair()) return true;
+    const here = beyondDecks(this.decks, this.position.x, this.position.z, this.position.y);
+    // On the grass below the first tread no stair is within a step, and it walks as on open ground.
+    if (here === Infinity) return true;
     const out = beyondDecks(this.decks, x, z, this.position.y);
-    return out < 0.12 || out < beyondDecks(this.decks, this.position.x, this.position.z, this.position.y);
+    return out < 0.12 || out < here;
   }
 
   /** Turns toward a bearing no faster than its feet can take it round: a body that spins over planted feet is sliding. */
