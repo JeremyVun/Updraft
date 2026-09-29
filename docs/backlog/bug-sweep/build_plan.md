@@ -109,7 +109,7 @@ startled them. Show Jeremy; restore the startled take-off only if he says it reg
 **Owns:** `src/story/meadow.ts` (the pond beats), `tuning.crest`.
 **Gate:** Jeremy's verdict on the stills or clip; if changed, `pond-view-check` and `meadow-route-check` pass and
 `docs/chapters.md` (meadow) is updated.
-**Status:** built, ready for Jeremy's review, not merged (branch `bug-sweep-meadow`, worktree
+**Status:** done 2026-09-29, merged (Jeremy, after playing it: "aproved, merge to main") (branch `bug-sweep-meadow`, worktree
 `/private/tmp/updraft-bugsweep-meadow`). Jeremy's ruling and what changed: design item 5 (**Built**). Gates: typecheck,
 `pond-view-check` (updated to the new intent, 12 cases), `meadow-route-check`, `wing-care-check`, `meadow-plane-check`,
 `camera-direction-check`, `flock-flight-check`, `meadow-score-check` and `journey-view-check` pass.

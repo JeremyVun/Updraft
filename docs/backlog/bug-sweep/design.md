@@ -211,6 +211,7 @@ visible change. Merge only after his OK.
   the camera never further than 1.2 x `viewBack` from her; its grass term ignores the last 1.5 m to the child,
   which is the meadow she is wading through (modelled 1.3 x up to 1.4 m, taller than she is) and not anything between
   the lens and her. Gates and stills: see phase 8 in `build_plan.md`.
+- **Jeremy (2026-09-29), after playing it: "aproved, merge to main".**
 
 ## 6. The stairs loop: the peep only
 
