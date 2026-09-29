@@ -68,11 +68,13 @@ const KITE_WAITS = (() => {
 const TAKE_IN = SIT.clone().addScaledVector(TOP_OUT, -0.45);
 const BIRD_TAKES_IN = SLIPPERS.clone().addScaledVector(TOP_OUT, -0.4);
 /**
- * How far into the skein's pass the boat sets off out of the cloud, and how long they watch the swans before they
- * turn to each other; seconds.
+ * How long the lens rests over her shoulder into the sun, once it has come round with the swans, before the boat sets
+ * off out of the cloud; how long after that they watch where the swans went before they turn to each other; and the
+ * longest the boat waits whatever the lens is doing. Seconds.
  */
-const BOAT_SETS_OFF = 17;
-const SKEIN_WATCHED = 20;
+const HELD_INTO_THE_SUN = 5;
+const WATCHED_ON = 3;
+const BOAT_SETS_OFF_BY = 40;
 /** How far into its tower the boat waits, as a share of the tower's size from its middle toward the landing. */
 const HIDE_IN = 0.45;
 /** How much faster the kite brings the boat on while it is still far out, metres a second. */
@@ -232,6 +234,9 @@ export class StairsChapter implements Chapter {
   private comingFor = 0;
   /** Once the swans are over, the boat comes out of the cloud where it has been waiting. */
   private boatComing = false;
+  /** Whether the lens is still going round with the swans, and how long it has rested since, seconds. */
+  private lensWithSwans = true;
+  private heldIntoTheSun = 0;
   /** The lens's authored moves on top: when the current one set off, from where round her, and how far it has come. */
   private arcFor: Beat | null = null;
   private arcAt = 0;
@@ -555,14 +560,15 @@ export class StairsChapter implements Chapter {
           this.calledToThem = true;
           k.call(true);
         }
-        const over = !flock.active || this.t > SKEIN_WATCHED;
-        if (!over) this.look2.copy(flock.head);
-        k.watch(this.t < SKEIN_WATCHED + 2 ? this.look2 : this.cast.boat.position);
-        c.lookAt = this.t < 1.1 ? this.outOver(0.1, 4, this.look) : !over ? flock.head
-          : this.t < SKEIN_WATCHED + 3.5 ? k.position : this.cast.boat.position;
-        c.dangle = over ? THREE.MathUtils.smoothstep(this.t, SKEIN_WATCHED + 2, SKEIN_WATCHED + 4)
+        const over = this.comingFor > WATCHED_ON;
+        if (flock.active) this.look2.copy(flock.head);
+        k.watch(this.comingFor < WATCHED_ON + 2 ? this.look2 : this.cast.boat.position);
+        c.lookAt = this.t < 1.1 ? this.outOver(0.1, 4, this.look) : !over ? this.look2
+          : this.comingFor < WATCHED_ON + 3.5 ? k.position : this.cast.boat.position;
+        c.dangle = over ? THREE.MathUtils.smoothstep(this.comingFor, WATCHED_ON + 2, WATCHED_ON + 4)
           : 1 - THREE.MathUtils.smoothstep(this.t, 1.2, 3);
-        if (this.t > BOAT_SETS_OFF) this.boatComing = true;
+        if (!this.lensWithSwans) this.heldIntoTheSun += dt;
+        if (this.heldIntoTheSun > HELD_INTO_THE_SUN || this.t > BOAT_SETS_OFF_BY) this.boatComing = true;
         this.comeAlongside(dt);
         if (this.approachLeg === this.approach.length - 1) {
           k.watch(null);
@@ -1614,7 +1620,10 @@ export class StairsChapter implements Chapter {
           this.toHerSide();
           return;
         }
-        if (this.beat === 'skein' && this.withTheSwans(dt)) return;
+        if (this.beat === 'skein') {
+          this.lensWithSwans = this.withTheSwans(dt);
+          if (this.lensWithSwans) return;
+        }
         if (this.beat === 'awe') {
           // Settled out behind her, low enough that the sun stays in the frame while she takes it all in.
           s.from = this.from.copy(back).applyAxisAngle(THREE.Object3D.DEFAULT_UP, 0.3);

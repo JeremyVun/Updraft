@@ -353,7 +353,7 @@ export class Boat {
         p.z += (fz * this.speed + w.z * drift) * dt;
       }
       // Pushed off a beach bow first, the forefoot is still on the sand it is leaving.
-      if (this.canGround && !this.beaching && !this.pushingOff && this.touchesBottom(p.x, p.z, fx, fz, 0)) {
+      if (this.canGround && !this.grounded && !this.beaching && !this.pushingOff && this.touchesBottom(p.x, p.z, fx, fz, 0)) {
         this.beaching = true;
         this.speed = Math.min(this.speed, tuning.sail.beachTouch);
       }
