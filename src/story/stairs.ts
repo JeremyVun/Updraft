@@ -796,9 +796,10 @@ export class StairsChapter implements Chapter {
    * behind the child inside a wisp of cloud, rather than left on the grass or the sea far below them.
    */
   private keepOnTheStair(): void {
-    const { child: c, cygnet: k } = this.cast;
+    const k = this.cast.cygnet;
     if (k.carried || this.stop < 2 || !['climb', 'waiting', 'hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat)) return;
-    if (k.position.y > c.position.y - 3) return;
+    // It trails her by a whole flight, and from the grass below the first tread by nearly 3 m.
+    if (k.position.y > this.cast.child.position.y - 3.5) return;
     const back = this.stops[Math.max(0, this.stop - 1)];
     k.standAt(back.x, levelHeight(back.level), back.z, k.yaw);
     this.world.wisps.engulf(this.tmp.copy(k.position).setY(k.position.y + 0.3), 1.2);
@@ -814,7 +815,9 @@ export class StairsChapter implements Chapter {
       return;
     }
     this.birdStop = Math.max(this.birdStop, this.stop - 1);
-    const there = this.track.lead(k.position, this.track.to(this.birdStop), this.birdAt) < 0.5;
+    // Off the start of the line it would count itself at the foot of the stair from anywhere on the grass.
+    const there = this.track.lead(k.position, this.track.to(this.birdStop), this.birdAt) < 0.5
+      && Math.hypot(this.birdAt.x - k.position.x, this.birdAt.z - k.position.z) < 0.6;
     k.stay = there;
     k.errand = there ? null : this.birdAt;
   }
