@@ -195,6 +195,22 @@ visible change. Merge only after his OK.
   out to hold it; as she walks down, the camera follows from behind her to the water's edge instead of orbiting round
   the pond. The take-off is option (c): the family is already stirring to leave, and her approach sets the nearest
   birds off first (`Flock.lift`'s startled path). Stills before anything merges.
+- **Built (2026-09-29), on branch `bug-sweep-meadow`, not merged:** `MeadowChapter.frameWater` is one placed camera
+  from the reveal to the end of the swim (`tuning.crest.view*`, `edge*`, `gaze*`): about 10.5 m behind her and 5.6 m
+  up (over the higher of her ground and the slope behind), on her line to the pond and a little to the sunlit west
+  side, travelling with her (`carryAnchor`), closing to 8.5 m at the water and easing round to her shoulder over the
+  last 10 m so her hands and the swimmer are beside her. The departure framing, `REVEAL` and the over-the-water pond
+  view are gone. At `goDown` the raft stirs on its own (`Flock.stir`: heads up, wings tried, turning and edging north);
+  when she is within `startleFrom` 22 m of the water's edge (or `startleLatest` 6 s after she starts down)
+  `Flock.lift(..., c.position)` sets the nearest off first. The lens then turns its gaze after them (`Shot.attention`,
+  the last birds off the water first), capped so she stays in frame, and the V climbs out of the top; it never backs
+  off (camera 8.4 to 10.6 m from her from the end of the push-in to the end of the swim, against 30 to 90 m before).
+  The veil needed no change: the family is 40 to 60 m from the lens when it goes. `pond-view-check` asserted the old
+  intent (every departing swan inside the frame for 8.5 s, so the camera had to back away) and now asserts the new
+  one: the waiting raft in frame, every bird seen running and lifting, the V then out of frame or into the veil, and
+  the camera never further than 1.2 x `viewBack` from her; its grass term ignores the last 1.5 m to the child,
+  which is the meadow she is wading through (modelled 1.3 x up to 1.4 m, taller than she is) and not anything between
+  the lens and her. Gates and stills: see phase 8 in `build_plan.md`.
 
 ## 6. The stairs loop: the peep only
 

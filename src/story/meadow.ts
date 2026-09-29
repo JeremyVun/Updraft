@@ -135,7 +135,7 @@ export class MeadowChapter implements Chapter {
   private readonly boardingView = new THREE.Vector3(0.75, 0, -1).normalize();
   private readonly framing = { primary: this.cameraChild, secondary: new THREE.Vector3(),
     margin: tuning.meadowPlane.cameraMargin, extra: tuning.meadowPlane.cameraExtra };
-  private readonly pondFraming = { primary: this.cameraChild, secondary: new THREE.Vector3(), margin: 0.7, extra: 6 };
+  private readonly pondFraming = { primary: this.cameraChild, secondary: new THREE.Vector3(), margin: 0.8, extra: 6 };
   /** The lens turns up after the family as it goes, from wherever it is standing. */
   private readonly flockGaze: CameraAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.crest.gaze };
   private readonly flockBounds = new THREE.Box3();
