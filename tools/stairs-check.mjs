@@ -3,6 +3,7 @@
 // out of it onto the drowned village's water. Captures stills at each beat.
 // Usage: node tools/stairs-check.mjs <out-prefix>   env: BASE (default http://127.0.0.1:5230/), W/H, QUERY
 // NOSHOTS=1 skips the stills (a timed run); each beat is logged with wall and game seconds.
+// Exits 1 if a beat is never reached or the page reports an error.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 
@@ -41,6 +42,7 @@ const browser = await chromium.launch({
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
 });
 const errors = [];
+const misses = [];
 const log = (...a) => console.log(...a);
 try {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
@@ -61,7 +63,7 @@ try {
     for (;;) {
       const s = await state();
       if (test(s)) return s;
-      if (Date.now() > end) return s;
+      if (Date.now() > end) { misses.push(`${test} after ${ms / 1000} s at ${JSON.stringify(s)}`); return s; }
       await page.waitForTimeout(every);
     }
   };
@@ -237,4 +239,7 @@ try {
 } finally {
   await browser.close();
   if (errors.length) log('errors:\n' + [...new Set(errors)].slice(0, 6).join('\n'));
+  if (misses.length) log('never reached:\n' + misses.join('\n'));
 }
+if (errors.length || misses.length) process.exit(1);
+log('stairs-check passed');
