@@ -9,11 +9,14 @@ owns the game's events. There is no separate backend or database.
 | `loading_finished` | World compilation and warm-up finish | duration and worst frame-stall buckets |
 | `game_started` | Begin or Continue | new/continued |
 | `chapter_entered` | Start or chapter change | none |
-| `quality_changed` | Initial level or governor change | detail, scale bucket, samples, initial/changed |
-| `performance_sampled` | Each minute of visible play; shorter windows at chapter/quality changes or exit if at least ten seconds | FPS bucket, count of frames over 50 ms, detail, composite chapter.detail, chapter.fps and detail.fps |
+| `quality_changed` | Initial level or governor change | `level`, scale bucket, samples, initial/changed |
+| `performance_sampled` | Each minute of visible play; shorter windows at chapter/quality changes or exit if at least ten seconds | FPS bucket, count of frames over 50 ms, `level`, composite `chapter.level`, `chapter.fps` and `level.fps` |
 | `game_completed` | First completion in this playthrough | none; reopening the completed ending does not count again |
 | `game_failed` | Startup rejection, uncaught error or rejection, a frame-loop exception, a failed audio start, WebGL loss | phase (`boot`, `runtime`, `promise`, `graphics`, `audio`) and coarse error kind, once per pair per page |
 | `recovery_requested` | Graphics recovery button | none |
+
+`level` is the name of the quality level in use: `ultra`, `high`, `medium`, `low` or `last` (the step below Low that
+only Auto reaches); it says what is rendered, not whether the player chose it or Auto did.
 
 Every event carries build revision, environment (`production` or `qa`) and chapter. Dimensions are bounded
 categories. FPS is the average over the sample window, not a percentile; windows reset on hide, chapter and quality

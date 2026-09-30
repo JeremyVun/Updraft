@@ -1,47 +1,73 @@
-// Governor wiring on an emulated coarse pointer, with deterministic frame intervals.
+// Every level applied to the real world on an emulated coarse pointer, and Auto's ladder with deterministic frame intervals.
 import { spawnSync } from 'node:child_process';
 function check() {
-  const { quality, grass, water, terrain, wind, rig } = __game;
+  const { quality, grass, water, terrain, wind, rig, renderer } = __game;
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
+  // The table in docs/backlog/perf-final/design.md section 3, at this display's device pixel ratio of 1.
+  const LEVELS = {
+    ultra: { ratio: 1, frameRate: 60, density: 1, reach: 1.15, split: 1.6, mirrorEvery: 1, mirrorScale: .75 },
+    high: { ratio: 1, frameRate: 60, density: 1, reach: 1.15, split: 1.6, mirrorEvery: 1, mirrorScale: .75 },
+    medium: { ratio: 1, frameRate: 60, density: 1, reach: 1, split: 1.35, mirrorEvery: 1, mirrorScale: .625 },
+    low: { ratio: .85, frameRate: 30, density: 1, reach: 1, split: 1.1, mirrorEvery: 2, mirrorScale: .5 },
+    last: { ratio: .72, frameRate: 30, density: .5, reach: 1, split: 1.1, mirrorEvery: 2, mirrorScale: .5 },
+  };
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const applied = name => {
+    grass.update(rig.camera, 1); grass.bake(renderer); terrain.update(rig.camera);
+    const want = LEVELS[name];
+    const got = { name: quality.level.name, ratio: renderer.getPixelRatio(), frameRate: quality.frameRate, density: grass.quality.density,
+      reach: grass.quality.reach, split: terrain.detail, mirrorEvery: water.mirrorEvery, mirrorScale: water.mirrorScale,
+      indicator: document.getElementById('quality').title };
+    assert(got.name === name && Object.keys(want).every(key => near(got[key], want[key])), `${name} is not applied as the table has it: ${JSON.stringify(got)}`);
+    assert(got.indicator.includes(name === 'last' ? 'Low' : name[0].toUpperCase() + name.slice(1)), `The indicator does not name the level: ${got.indicator}`);
+    return got;
+  };
+  const drive = (from, to, interval) => {
+    const seen = [];
+    for (let now = from; now < to; now += interval()) {
+      quality.frame(now, interval());
+      if (seen[seen.length - 1] !== quality.level.name) seen.push(quality.level.name);
+    }
+    return seen.join(' ');
+  };
   assert(matchMedia('(pointer: coarse)').matches, 'Touch emulation missing');
   assert(wind.res === 256, 'Touch must not force the cheaper solver');
-  assert(quality.level.detail === 2 && quality.level.ratio <= 1.25, 'Touch Auto should open at its ceiling with full detail');
+  const report = { opening: applied('ultra') };
   quality.reset(0);
-  for (let now = 0; now < 90000; now += 1000 / 60) quality.frame(now, 1000 / 60);
-  grass.update(rig.camera, 1); grass.bake(__game.renderer);
-  terrain.update(rig.camera);
-  const full = { level: { ...quality.level }, grass: grass.quality, leaves: terrain.leaves };
-  assert(full.level.detail === 2 && full.grass.density === 1 && full.grass.reach === 1, 'Touch failed to reach full grass');
+  drive(0, 90000, () => 1000 / 60);
+  applied('ultra');
+  for (const mode of ['high', 'medium', 'low', 'ultra']) {
+    quality.setMode(mode, 95000);
+    report[mode] = applied(mode);
+  }
+  quality.setMode('auto', 99000);
   quality.reset(100000);
-  for (let now = 100000; now < 115000; now += 33.3) quality.frame(now, 33.3);
-  grass.update(rig.camera, 1); grass.bake(__game.renderer); terrain.update(rig.camera);
-  const low = { level: { ...quality.level }, grass: grass.quality, leaves: terrain.leaves };
-  assert(low.level.detail === 0 && low.grass.density === .25 && low.grass.reach === .7, 'Overload failed to lower world detail');
-  assert(terrain.detail === 1.1 && water.mirrorEvery === 2 && water.mirrorScale === .5, 'Terrain/reflection budget did not follow');
+  report.descent = drive(100000, 130000, () => quality.frameRate === 30 ? 40 : 20);
+  assert(report.descent === 'ultra medium low last', `Auto did not step down through its levels: ${report.descent}`);
+  report.last = applied('last');
   const render = water.reflection.render, camera = rig.camera.clone();
   camera.position.set(0, 8, 80);
   let renders = 0;
-  water.reflection.render = () => { renders++; };
+  water.reflection.render = (...args) => { renders++; render.apply(water.reflection, args); };
   try {
-    for (let i = 0; i < 4; i++) water.update(camera);
-    assert(renders === 2, 'Low reflection cadence must halve render work');
-    renders = 0; water.mirrorEvery = 1;
-    for (let i = 0; i < 4; i++) water.update(camera);
-    assert(renders === 4, 'Full reflection cadence must recover');
+    water.update(camera);
+    renders = 0;
+    for (let i = 0; i < 8; i++) water.update(camera);
+    assert(renders === 4, `Reflections must be redrawn on alternate frames at the last step: ${renders} of 8`);
   } finally { water.reflection.render = render; }
-  quality.reset(120000);
-  for (let now = 120000; now < 310000; now += 1000 / 60) quality.frame(now, 1000 / 60);
-  grass.update(rig.camera, 1); grass.bake(__game.renderer); terrain.update(rig.camera); water.update(rig.camera);
-  assert(quality.level.detail === 2 && grass.quality.density === 1, 'World detail did not recover');
-  assert(terrain.detail === 1.6 && water.mirrorEvery === 1 && water.mirrorScale === .75, 'Other world settings did not recover');
-  return { full, low, recovered: { ...quality.level } };
+  quality.reset(140000);
+  report.climb = drive(140000, 330000, () => 1000 / quality.frameRate);
+  assert(report.climb === 'last low medium ultra', `Auto did not climb back through its levels: ${report.climb}`);
+  water.update(rig.camera);
+  applied('ultra');
+  return report;
 }
 const steps = [
   { eval: 'new Promise(resolve => { const check = () => __stats.frame >= 120 ? resolve() : requestAnimationFrame(check); check(); })' },
   { eval: `(${check.toString()})()` },
   { shot: 'full' },
 ];
-const run = spawnSync(process.execPath, ['tools/play.mjs', '/tmp/updraft-quality-touch', JSON.stringify(steps)], {
+const run = spawnSync(process.execPath, ['tools/play.mjs', process.env.OUT ?? '/tmp/updraft-quality-touch', JSON.stringify(steps)], {
   env: { ...process.env, TOUCH: '1', W: '1376', H: '1032', QUERY: 'chapter=meadow&hold=120' }, stdio: 'inherit',
 });
 process.exit(run.status ?? 1);

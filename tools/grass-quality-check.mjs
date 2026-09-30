@@ -1,4 +1,4 @@
-// Frozen GPU checks for reversible grass quality changes and stable allocations.
+// Frozen GPU checks for the grass moving between the quality levels: reversible, without a pop, from the tables reserved at boot.
 // Uses play.mjs's shared GPU lock. Usage: node tools/grass-quality-check.mjs [chapter]
 import { spawnSync } from 'node:child_process';
 
@@ -26,11 +26,13 @@ async function check() {
     return { mean: total / a.length, max, changed };
   };
   try {
-    grass.setQuality(1, 1, true);
+    // Ultra and High, then Medium and Low, the last step, and back.
+    grass.setQuality(1, 1.15, true);
     const full = read(), fullBlades = grass.bladesDrawn;
     const tables = grass.lods.map(l => l.table);
+    const programs = renderer.info.programs.length;
     const results = [];
-    for (const [density, reach] of [[1, 0.95], [0.8, 0.85], [0.25, 0.7], [0.8, 0.85], [1, 0.95], [1, 1]]) {
+    for (const [density, reach] of [[1, 1], [0.5, 1], [1, 1], [1, 1.15], [0.5, 1], [1, 1.15]]) {
       const before = read();
       grass.setQuality(density, reach);
       const start = diff(before, read());
@@ -46,28 +48,31 @@ async function check() {
       }
       if (Math.abs(grass.quality.density - density) > 1e-6 || Math.abs(grass.quality.reach - reach) > 1e-6) throw new Error('Quality did not settle');
       if (grass.lods.some((l, i) => l.table !== tables[i] || l.count >= l.spec.maxTiles)) throw new Error('Grass pool replaced or exhausted');
+      if (renderer.info.programs.length !== programs) throw new Error('A grass quality change compiled a program');
       // Keep frozen transitions below 0.8/255 average HDR change per frame.
       if (worst > 0.003) throw new Error(`Grass transition spike: ${density}, ${worst}, endpoint ${endpointJump}`);
-      results.push({ density, reach, blades: grass.bladesDrawn, worst, endpointJump, start });
+      results.push({ density, reach, blades: grass.bladesDrawn, tiles: grass.lods.map(l => `${l.count}/${l.spec.maxTiles}`).join(' '), worst, endpointJump, start, fromFull: diff(full, read()).mean });
     }
     const restored = diff(full, read());
     if (restored.changed) throw new Error(`Restoring full grass changed pixels: ${JSON.stringify(restored)}`);
-    if (!results.some(r => r.blades < fullBlades * 0.7)) throw new Error('Low quality did not reduce submitted blade work');
+    const at = (density, reach) => results.find(r => r.density === density && r.reach === reach);
+    if (at(1, 1).blades > fullBlades * 0.9) throw new Error(`Reach 100% did not submit fewer blades than 115%: ${at(1, 1).blades} of ${fullBlades}`);
+    if (at(0.5, 1).fromFull < at(1, 1).fromFull * 1.5) throw new Error('Half density drew no less grass than full');
     return { fullBlades, results, restored };
   } finally {
-    grass.setQuality(1, 1, true); grass.update(rig.camera); grass.bake(renderer);
+    grass.setQuality(1, 1.15, true); grass.update(rig.camera); grass.bake(renderer);
     renderer.setRenderTarget(null); target.dispose();
   }
 }
 const chapter = process.argv[2] ?? 'meadow';
-const prefix = `/tmp/updraft-grass-quality-${chapter}`;
+const prefix = `${process.env.OUT ?? '/tmp/updraft-grass-quality'}-${chapter}`;
 const steps = [
   { eval: 'new Promise(resolve => { const check = () => __stats.frame >= 120 ? resolve() : requestAnimationFrame(check); check(); })' },
   { shot: 'full' },
   { eval: `(${check.toString()})()` },
-  { eval: '__game.grass.setQuality(.25,.7,true); __game.grass.update(__game.rig.camera); __game.grass.bake(__game.renderer)' },
-  { shot: 'low' },
-  { eval: '__game.grass.setQuality(1,1,true); __game.grass.update(__game.rig.camera); __game.grass.bake(__game.renderer)' },
+  { eval: '__game.grass.setQuality(.5,1,true); __game.grass.update(__game.rig.camera); __game.grass.bake(__game.renderer)' },
+  { shot: 'last' },
+  { eval: '__game.grass.setQuality(1,1.15,true); __game.grass.update(__game.rig.camera); __game.grass.bake(__game.renderer)' },
   { shot: 'restored' },
 ];
 const run = spawnSync(process.execPath, ['tools/play.mjs', prefix, JSON.stringify(steps)], {
