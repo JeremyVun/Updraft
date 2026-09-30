@@ -1,102 +1,155 @@
-// Frozen, same-camera throughput comparisons. Includes wind ticks and reflections,
-// excludes story/CPU updates; these are completed-work costs, NOT measured gameplay fps.
-// Interleaved A/B/B/A batches bracket changing background load. GPU completion waits
-// avoid unreliable Metal timer queries. Report delta spread; contention can still swamp small effects.
-// Usage: node tools/quality-budget-profile.mjs [island|meadow|mirror ...]
+// Auto on a throttled GPU, in the real game with real frame pacing: the descent through every level as the load
+// grows, holding where a level fits, and the climb back once the load lifts.
+// The throttle is real GPU work drawn before each frame's fence (a fragment loop over a target the size of the
+// canvas), so it scales with the level's pixels as a weak GPU's frame does. It does not model a weak device's script.
+// Needs the dev server (it patches main.ts) and a GPU nobody else is using.
+// Usage: node tools/quality-budget-profile.mjs [chapter]   env: BASE, OUT (default /tmp/updraft-quality-budget)
+import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import {openBrowser} from './lib/browser.mjs';
-const {browser,close}=await openBrowser();
-const results=[];
-const variants=[
-  {name:'full',density:1,reach:1,ratio:1,detail:2,mirror:1},
-  {name:'no-grass',density:1,reach:1,ratio:1,detail:2,mirror:1,hideGrass:true},
-  {name:'no-bloom',density:1,reach:1,ratio:1,detail:2,mirror:1,noBloom:true},
-  {name:'old-medium',density:.55,reach:.85,ratio:1,detail:1,mirror:1},
-  {name:'medium-candidate',density:.8,reach:.95,ratio:1,detail:1,mirror:1},
-  {name:'old-low',density:.25,reach:.7,ratio:.72,detail:0,mirror:2},
-  {name:'low-candidate',density:.55,reach:.85,ratio:.85,detail:0,mirror:2},
-  {name:'full-retina',density:1,reach:1,ratio:2,detail:2,mirror:1},
-];
+import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
+
+const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
+const out = process.env.OUT ?? '/tmp/updraft-quality-budget';
+const chapter = process.argv[2] ?? 'island';
+const ORDER = ['ultra', 'high', 'medium', 'low', 'last'];
+const LOAD = `
+const loadMaterial = new THREE.ShaderMaterial({
+  uniforms: { uLoad: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: 'uniform int uLoad; varying vec2 vUv; void main() { vec3 c = vec3(vUv, 0.5); for (int i = 0; i < 200000; i++) { if (i >= uLoad) break; c = fract(sin(c.yzx * 12.9898 + float(i)) * 43758.5453); } gl_FragColor = vec4(c, 1.0); }',
+});
+const loadScene = new THREE.Scene();
+const loadQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), loadMaterial);
+loadQuad.frustumCulled = false;
+loadScene.add(loadQuad);
+const loadCamera = new THREE.Camera();
+const loadTarget = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false });
+const loadSize = new THREE.Vector2();
+const loadGpu = quality.gpu.bind(quality);
+quality.gpu = early => { window.__load.fence[early === null ? 'untimed' : early ? 'early' : 'late']++; loadGpu(early); };
+window.__load = {
+  n: 0, fence: { early: 0, late: 0, untimed: 0 }, frames: 0,
+  take() { const taken = { ...this.fence, frames: this.frames }; this.fence = { early: 0, late: 0, untimed: 0 }; this.frames = 0; return taken; },
+  draw() {
+    this.frames++;
+    const n = Math.round(this.n);
+    if (n <= 0) return;
+    renderer.getDrawingBufferSize(loadSize);
+    if (loadTarget.width !== loadSize.x || loadTarget.height !== loadSize.y) loadTarget.setSize(loadSize.x, loadSize.y);
+    loadMaterial.uniforms.uLoad.value = n;
+    const previous = renderer.getRenderTarget();
+    renderer.setRenderTarget(loadTarget);
+    renderer.render(loadScene, loadCamera);
+    renderer.setRenderTarget(previous);
+  },
+};`;
+
+const rows = [], changes = [], failedAt = {};
+const { browser, close } = await openBrowser();
 try {
- for(const chapter of process.argv.slice(2).length?process.argv.slice(2):['island','meadow','mirror']) {
-  const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:2});
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/@vite/client',r=>r.fulfill({contentType:'application/javascript',body:''}));
-  await page.route('**/src/main.ts*',async route=>{
-   const response=await route.fetch();let source=await response.text();
-   const hold='if (params.hold !== null && frameIndex >= params.hold) {';
-   if(!source.includes(hold))throw Error('Missing hold hook');
-   source=source.replace(hold,hold+' if (window.__qualityProbe?.paused) { requestAnimationFrame(frame); return; }');
-   source+=`\nwindow.__qualityProbe={paused:false, configure(v){
-    this.variant=v; pixelRatio=v.ratio; post.samples=2; resize();
-    grass.group.visible=!v.hideGrass; grass.setQuality(v.density,v.reach,true);
-    terrain.detail=[1.1,1.35,1.6][v.detail]; terrain.update(rig.camera);
-    water.mirrorEvery=v.mirror; water.mirrorScale=[.5,.625,.75][v.detail];
-    grass.update(rig.camera);grass.bake(renderer);
-   }, draw(){
-    renderer.info.reset();wind.step(1/60,time,false);
-    if(this.variant.mirror)water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
-    const bloom=post.bloom.render;
-    if(this.variant.noBloom)post.bloom.render=()=>{};
-    post.render(time);post.bloom.render=bloom;
-   }};`;
-   await route.fulfill({response,body:source});
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await withoutHotReload(page);
+  await page.route('**/src/main.ts*', async route => {
+    const response = await route.fetch();
+    let source = await response.text();
+    const shot = 'if (QA && params.shot) {', fence = /endFrame\(renderer\);(\s+if \(quality\.probing\))/;
+    assert(source.includes(shot) && fence.test(source), 'Missing hook');
+    source = source.replaceAll(shot, 'if (true) {').replace(fence, 'window.__load.draw(); endFrame(renderer);$1');
+    await route.fulfill({ response, body: source + LOAD });
   });
-  await page.goto('http://127.0.0.1:5230/?shot&hold=120&ratio=1&msaa=2&analytics=0&progress=0'+(chapter==='island'?'':'&chapter='+chapter));
-  await page.waitForFunction(()=>window.__stats?.frame>=120,null,{timeout:120000});
-  await page.evaluate(()=>{__qualityProbe.paused=true});
-  const pairs=[
-   {name:'density 55 to 80',a:{name:'a',density:.55,reach:.95,ratio:1,detail:1,mirror:1},b:{name:'b',density:.8,reach:.95,ratio:1,detail:1,mirror:1}},
-   {name:'density 25 to 55',a:{name:'a',density:.25,reach:.85,ratio:.85,detail:0,mirror:2},b:{name:'b',density:.55,reach:.85,ratio:.85,detail:0,mirror:2}},
-   {name:'reach 85 to 95',a:{name:'a',density:.8,reach:.85,ratio:1,detail:1,mirror:1},b:{name:'b',density:.8,reach:.95,ratio:1,detail:1,mirror:1}},
-   {name:'scale 72 to 85',a:{name:'a',density:.55,reach:.85,ratio:.72,detail:0,mirror:2},b:{name:'b',density:.55,reach:.85,ratio:.85,detail:0,mirror:2}},
-   {name:'reflection every second frame',a:variants[0],b:{...variants[0],mirror:2}},
-   {name:'bloom off',a:variants[0],b:variants.find(v=>v.name==='no-bloom')},
-   {name:'grass hidden',a:variants[0],b:variants.find(v=>v.name==='no-grass')},
-   {name:'scale 1 to 2',a:variants[0],b:variants.find(v=>v.name==='full-retina')},
-   {name:'Medium old to new',a:variants.find(v=>v.name==='old-medium'),b:variants.find(v=>v.name==='medium-candidate')},
-   {name:'Low old to new',a:variants.find(v=>v.name==='old-low'),b:variants.find(v=>v.name==='low-candidate')},
-  ];
-  for(const pair of pairs){
-   const runs=await page.evaluate(async pair=>{
-    const gl=__game.renderer.getContext();
-    async function complete(){
-     const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
-     const until=performance.now()+15000;
-     try{for(;;){const status=gl.clientWaitSync(fence,0,0);
-      if(status===gl.ALREADY_SIGNALED||status===gl.CONDITION_SATISFIED)return;
-      if(status===gl.WAIT_FAILED||performance.now()>until)throw Error('GPU fence did not complete');
-      await new Promise(r=>setTimeout(r,0));
-     }}finally{gl.deleteSync(fence)}
+  await page.goto(`${base}?analytics=0&progress=0${chapter === 'island' ? '' : '&chapter=' + chapter}`);
+  await page.waitForSelector('#veil.ready', { timeout: 120000 });
+  await page.locator('#begin').click();
+  await page.waitForSelector('#veil', { state: 'detached' });
+  assert.equal(await page.evaluate(() => __game.quality.mode), 'auto');
+  // Compile the throttle's program before anything is judged.
+  await page.evaluate(() => new Promise(resolve => { __load.n = 1; setTimeout(() => { __load.n = 0; resolve(); }, 500); }));
+  await page.waitForTimeout(4000);
+
+  const state = () => page.evaluate(() => ({ now: performance.now(), name: __game.quality.level.name, n: __load.n, ...__load.take() }));
+  const setLoad = n => page.evaluate(n => { __load.n = n; }, n);
+  let last = (await state()).name, phase = 'open';
+  const started = (await state()).now;
+  // One sample every 250 ms: the level in use, frames presented and how their fences were timed, and each change with the load that caused it.
+  const sample = async () => {
+    const s = await state();
+    s.changed = s.name !== last;
+    if (s.changed) {
+      changes.push({ phase, at: Math.round(s.now - started), from: last, to: s.name, load: Math.round(s.n) });
+      console.log(`${phase.padEnd(8)} ${String(Math.round((s.now - started) / 100) / 10).padStart(6)} s  ${last} -> ${s.name}  (load ${Math.round(s.n)})`);
+      last = s.name;
     }
-    async function measure(v){
-     __qualityProbe.configure(v);
-     for(let i=0;i<2;i++)__qualityProbe.draw();await complete();
-     const start=performance.now();for(let i=0;i<8;i++)__qualityProbe.draw();await complete();
-     return (performance.now()-start)/8;
+    rows.push({ phase, at: Math.round(s.now - started), name: s.name, load: Math.round(s.n), frames: s.frames, early: s.early, late: s.late, untimed: s.untimed });
+    return s;
+  };
+  const watch = async (ms, each) => {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      const s = await sample();
+      if (each && await each(s) === false) return;
+      await page.waitForTimeout(250);
     }
-    const runs=[];
-    for(let round=0;round<5;round++){
-     const order=round%2?['b','a','a','b']:['a','b','b','a'];
-     const samples={a:[],b:[]};
-     for(const key of order)samples[key].push(await measure(pair[key]));
-     const a=(samples.a[0]+samples.a[1])/2,b=(samples.b[0]+samples.b[1])/2;
-     runs.push({a,b,delta:b-a,percent:(b/a-1)*100});
+  };
+  const during = name => changes.filter(change => change.phase === name);
+  const path = name => [during(name)[0]?.from, ...during(name).map(change => change.to)].join(' ');
+
+  assert.equal(last, 'ultra', 'Auto opens at Ultra on this display');
+  await watch(6000);
+  assert.equal(changes.length, 0, 'unloaded, Auto holds Ultra');
+
+  // Descent: the load grows slowly, and rests for a while after each step so the new level is judged on its own.
+  phase = 'descent';
+  let load = 16, restUntil = 0;
+  await watch(240000, async s => {
+    if (s.changed) {
+      failedAt[changes.at(-1).from] ??= load;
+      restUntil = Date.now() + 4000;
     }
-    return runs;
-   },pair);
-   const median=values=>[...values].sort((a,b)=>a-b)[Math.floor(values.length/2)];
-   const round=n=>Math.round(n*100)/100;
-   const row={chapter,pair:pair.name,deltaMs:round(median(runs.map(r=>r.delta))),percent:round(median(runs.map(r=>r.percent))),
-    rangeMs:[round(Math.min(...runs.map(r=>r.delta))),round(Math.max(...runs.map(r=>r.delta)))],runs};
-   results.push(row);console.log(JSON.stringify({...row,runs:undefined}));
-  }
-  for(const name of ['full','old-medium','medium-candidate','old-low','low-candidate']){
-   await page.evaluate(v=>{__qualityProbe.configure(v);__qualityProbe.draw()},variants.find(v=>v.name===name));
-   await page.screenshot({path:`/tmp/updraft-budget-${chapter}-${name}.png`});
-  }
-  if(errors.length)throw Error(errors.join('\n'));
-  await page.close();
- }
- await fs.writeFile('/tmp/updraft-quality-budget-paired.json',JSON.stringify(results,null,2));
-}finally{await close()}
+    if (s.name === 'last') return false;
+    if (Date.now() > restUntil) { load *= 1.03; await setLoad(load); }
+  });
+  assert.equal(path('descent'), ORDER.join(' '), 'under a growing load Auto steps down through every level in order');
+
+  // The load that pushed Low over stays: the last step holds it, with at most one failed look back at Low.
+  phase = 'hold';
+  await watch(25000);
+  assert(during('hold').length <= 2, `the last step holds under the load that needed it: ${path('hold')}`);
+
+  // The load lifts: Auto climbs back through every level and stays at the top.
+  phase = 'climb';
+  await setLoad(0);
+  const liftedAt = (await state()).now - started;
+  let topAt = 0;
+  await watch(120000, s => { if (s.name === 'ultra') { topAt = s.now - started; return false; } });
+  assert(topAt, `Auto did not return to Ultra within two minutes: ${path('climb')}`);
+  const climbed = during('climb');
+  assert(climbed.every(change => ORDER.indexOf(change.to) === ORDER.indexOf(change.from) - 1), `the climb goes up one level at a time and never back down: ${path('climb')}`);
+  phase = 'top';
+  await watch(15000);
+  assert.equal(during('top').length, 0, 'back at Ultra, Auto stays there');
+
+  // A load Medium cannot carry at 60 fps but Low can at 30: Auto settles at Low and does not swing between them.
+  phase = 'boundary';
+  await setLoad(failedAt.medium * 1.15);
+  await watch(75000);
+  const boundary = during('boundary');
+  const settled = boundary.findIndex(change => change.to === 'low');
+  assert(settled >= 0, `Auto did not settle at Low: ${path('boundary')}`);
+  const after = boundary.slice(settled + 1);
+  assert(after.every(change => change.to === 'low' || change.to === 'medium'), `a failed climb out of 30 fps returns to Low, never below: ${path('boundary')}`);
+  assert(after.filter(change => change.to === 'medium').length <= 2, `failed climbs into 60 fps back off: ${path('boundary')}`);
+  assert.equal(last, 'low', `Auto rests at the level that holds: ${path('boundary')}`);
+
+  assert.deepEqual(errors, []);
+  console.log(JSON.stringify({ chapter, failedAt: Object.fromEntries(Object.entries(failedAt).map(([k, v]) => [k, Math.round(v)])),
+    descent: path('descent'), hold: path('hold') || 'last', climb: path('climb'), climbSeconds: Math.round((topAt - liftedAt) / 100) / 10,
+    boundary: path('boundary'), trace: `${out}-auto.json` }));
+  console.log('Auto under a throttled GPU: Ultra, High, Medium, Low and the last step in order, holding under load, climbing back one level at a time, and resting at Low where Medium cannot hold 60 fps.');
+} finally {
+  await fs.writeFile(`${out}-auto.json`, JSON.stringify({ chapter, changes, failedAt, rows: rows.map(row => JSON.stringify(row)) }, null, 1));
+  await close();
+}

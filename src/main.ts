@@ -37,7 +37,7 @@ import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { QA } from './qa';
 import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
-import { HIGH_GRASS_REACH, Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
+import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
 import { endFrame, holdForReadbacks, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
 import { createReadout, percentile } from './gl/readout';
@@ -385,7 +385,7 @@ await yieldBoot();
 const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
 // Keep full scene detail while avoiding Retina's disproportionate pixel/bandwidth cost.
 const maxPixelRatio = params.ratio ?? Math.min(nativePixelRatio, 1.5);
-/** Touch Auto keeps a smaller sustained resolution budget than High. */
+/** Touch Auto opens at High: its ceiling is High's render scale. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 const post = new Post(renderer, scene, rig.camera, Math.min(params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4), Math.max(0, graphicsCapability.maxSamples)));
 const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
@@ -401,17 +401,17 @@ const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, wind
   pixelRatio = level.ratio;
   post.samples = level.samples;
   applyWorldQuality(level);
-  telemetry.quality(level.ratio, level.samples, level.detail);
+  telemetry.quality(level.name, level.ratio, level.samples);
   if (resizeTargets) resize();
 }, controls.qualityMode, coarsePointer ? 1.25 : maxPixelRatio);
 function applyWorldQuality(level: QualityLevel, immediate = false): void {
-  const detail = WORLD_QUALITY[params.lite ? 0 : level.detail];
-  const reach = !params.lite && quality.mode === 'high' ? HIGH_GRASS_REACH : detail.grassReach;
-  grass.setQuality(level.grassDensity ?? detail.grassDensity, level.grassReach ?? reach, immediate);
-  terrain.detail = detail.terrainSplit;
-  water.mirrorEvery = detail.mirrorEvery;
-  water.mirrorScale = detail.mirrorScale;
-  controls.setQualityDetail(params.lite ? 0 : level.detail);
+  const name = params.lite ? 'low' : level.name;
+  const world = WORLD_QUALITY[name];
+  grass.setQuality(world.grassDensity, world.grassReach, immediate);
+  terrain.detail = world.terrainSplit;
+  water.mirrorEvery = world.mirrorEvery;
+  water.mirrorScale = world.mirrorScale;
+  controls.setQualityLevel(name);
 }
 applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;
@@ -1081,7 +1081,7 @@ function frameInner(now: number): void {
         `fps ${fps.toFixed(0)}  frame p50 ${percentile(intervals, 0.5).toFixed(0)} p90 ${percentile(intervals, 0.9).toFixed(0)} max ${Math.max(...intervals).toFixed(0)} ms`,
         `cpu (js in frame) p50 ${percentile(cpuTimes, 0.5).toFixed(1)} p90 ${percentile(cpuTimes, 0.9).toFixed(1)} ms${params.lite ? '  LITE' : ''}`,
         `${quality.mode}  scale ${pixelRatio} of ${maxPixelRatio} (dpr ${window.devicePixelRatio})  msaa ${post.samples}  ${size.x}x${size.y}`,
-        `grass ${(grass.quality.density * 100).toFixed(0)}%  reach ${(grass.quality.reach * 100).toFixed(0)}%  detail ${quality.level.detail}`,
+        `grass ${(grass.quality.density * 100).toFixed(0)}%  reach ${(grass.quality.reach * 100).toFixed(0)}%  level ${quality.level.name}`,
         `readbacks ok ${readbackStats.delivered} skipped ${readbackStats.skipped} held ${readbackStats.held} forced ${readbackStats.forced} worst ${readbackStats.worstMs.toFixed(0)} ms (wait ${readbackStats.waitWorstMs.toFixed(0)})`,
         `draws ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  blades ${grass.bladesDrawn}  leaves ${terrain.leaves}`,
         `boot ${bootMs.toFixed(0)} ms  ${story.name}`,
@@ -1104,7 +1104,6 @@ function frameInner(now: number): void {
       leaves: terrain.leaves,
       ratio: pixelRatio,
       samples: post.samples,
-      worldDetail: quality.level.detail,
       grassDensity: grass.quality.density,
       grassReach: grass.quality.reach,
       readbacksSkipped: readbackStats.skipped,
@@ -1168,7 +1167,7 @@ async function boot(): Promise<void> {
   quality.setMode(controls.qualityMode, performance.now());
   startScreen.ready(withSound => {
     telemetry.start(story.name, resumedAtLoad, !!story.current.finished);
-    telemetry.quality(quality.level.ratio, quality.level.samples, quality.level.detail);
+    telemetry.quality(quality.level.name, quality.level.ratio, quality.level.samples);
     if (withSound) {
       soundChosen = true;
       setSound(controls.soundOn);

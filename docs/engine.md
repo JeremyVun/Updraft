@@ -157,52 +157,57 @@ mid-frame stalls for the whole frame's rendering, and a GPU-bound frame becomes 
 
 ## Quality governor (`src/gl/quality.ts`)
 
-The Graphics selector offers Auto (default), High, Medium and Low; the choice persists in `updraft.quality.v1`.
+The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the choice persists in
+`updraft.quality.v2`. A choice saved under `updraft.quality.v1` is read until a new one is made, its `high` as Ultra.
 
-| Preset | Render scale | MSAA | Grass density / reach | Presentation |
-| --- | --- | --- | --- | --- |
-| High | device pixel ratio, capped at 1.5 | scene default | 100% / 115% (`HIGH_GRASS_REACH`) | 60 fps |
-| Medium | at most 1× | up to 2 | 100% / 95% | 60 fps |
-| Low | 0.85 × min(DPR, 1) | up to 2 | 80% / 85% | 30 fps |
-| Auto | adapts over the ladder below | | | 60 fps |
-
-The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. Manual presets never react to frame
-timing. Jeremy's rulings: "keep high the same", with its grass reaching further than Auto's top rung (he asked for
-more grass distance on High); Medium keeps full grass density and Low drops only to 80%; Low accepts 30 fps.
-
-World detail (`WORLD_QUALITY`):
-
-| Detail | Grass density | Grass reach | Terrain split | Reflection cadence | Sky-mirror scale |
+| | Ultra | High | Medium | Low | Last step (Auto only) |
 | --- | --- | --- | --- | --- | --- |
-| 2 (full) | 100% | 100% | 1.6 | every frame | 0.75 |
-| 1 | 100% | 95% | 1.35 | every frame | 0.625 |
-| 0 | 80% | 85% | 1.1 | alternate frames | 0.5 |
-| Auto fallback | 25% | 70% | 1.1 | alternate frames | 0.5 |
+| Render scale | min(DPR, 1.5) | min(DPR, 1.25) | min(DPR, 1) | 0.85 × min(DPR, 1) | 0.72 × min(DPR, 1) |
+| MSAA | scene default | scene default | up to 2 | up to 2 | up to 2 |
+| Presentation | 60 fps | 60 fps | 60 fps | 30 fps | 30 fps |
+| Grass density / reach | 100% / 115% | 100% / 115% | 100% / 100% | 100% / 100% | 50% / 100% |
+| Terrain split | 1.6 | 1.6 | 1.35 | 1.1 | 1.1 |
+| Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 | 0.5 |
+| Sky mirror's reflection | every frame | every frame | every frame | alternate frames | alternate frames |
 
-The ordinary sea's reflection is redrawn at most every other frame in any case (unless the view has cut or the
-rooms changed); the sky mirror uses the detail's cadence.
+The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. The ordinary sea's
+reflection is redrawn at most every other frame at every level (unless the view has cut or the rooms changed).
+Jeremy's rulings: "ultra, high, medium, low. dont overcomplicate this"; Medium and Low keep full grass, with Low
+capped to 30 fps; no level thins the grass below 50%.
 
-**Auto's ladder** lowers render scale from its ceiling to 1× in 0.25 steps, then multisampling to 2, then world
-detail, then subpixel scales of 0.85× and 0.72×, and finally the Auto-only fallback. Full grass recovers before extra
-antialiasing. Auto's ceiling is the largest scale within a sustained budget of 2.4 million pixels, and 1.25× on
-touch; viewports too large for the fixed ladder get one more Auto-only rung at the budget ratio, never below 0.5×.
-The canvas and every render target share one scale, kept within `MAX_TEXTURE_SIZE`, `MAX_RENDERBUFFER_SIZE` and
+A level is a `QualityLevel`: its `name` (`ultra`, `high`, `medium`, `low`, `last`), render scale, samples and
+`frameRate`. Its world settings are `WORLD_QUALITY[name]`. `applyWorldQuality(level)` in `main.ts` is the one place a
+level's settings and effects are applied to the world; the frame pacer takes its rate from `quality.frameRate` each
+frame. A manual level never reacts to frame timing or to the viewport.
+
+**Auto moves only between these levels** and renders as one of them at all times. It opens at Ultra, or at High
+where Ultra's scale is above its ceiling (1.25× on touch). Its one difference from a manual level: on a viewport
+where the level's scale would exceed a sustained budget of 2.4 million pixels, Auto lowers that level's render scale
+to the budget, never below 0.5×, and refits on resize. A level that would render exactly as the one above it (High on
+a display at DPR 1.25 or less, or where the budget fits both to one scale) is left out of Auto's ladder. The canvas
+and every render target share one scale, kept within `MAX_TEXTURE_SIZE`, `MAX_RENDERBUFFER_SIZE` and
 `MAX_VIEWPORT_DIMS`.
 
-**Auto's decisions.** It opens at its ceiling with full detail. Every 1.5 s it reviews up to 90 frame intervals,
-discarding the slowest 5%. A trimmed mean above 17.6 ms steps down (two rungs above 26.4 ms); a new level settles for
-2.5 s after a reduction, 1 s after an increase. Below its ceiling it climbs on evidence: `main.ts` polls each frame's
-fence 10 ms after submission (`timeLastFrame`, one timer, never a wait). A review with p90 under 17.2 ms in which at
-least 90% of 30 or more timed frames finished by then climbs one rung at once; the next rung costs at most 1.56× the
-pixels, so 10 ms stays inside one refresh. Fewer than a quarter on time rules a climb out; between the two, or where
-frames can't be timed, 12 s of p90 under 17.2 ms earns one rung. A failed climb doubles the next wait, up to two
-minutes. A steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps (iOS Low
-Power Mode): while intervals are that long, each frame's fence is timed against one 60 Hz refresh, and if at least 80%
-of eight or more finish early the cap is proven and Auto judges against 30 fps until intervals under 25 ms show it
-has lifted. A timer that fires late counts as not early. A single hitch, time behind Begin or in a hidden tab never
-changes quality; Begin and visibility changes reset its timing. Pacing reports the longest display callback interval
-since the last presentation, floored at 16.67 ms, so deliberately skipped 120/144 Hz callbacks don't look like
-overload.
+**Auto's decisions.** Every 1.5 s it reviews up to 90 frame intervals, discarding the slowest 5%. A level's budget
+is its presentation: 16.7 ms at the 60 fps levels, 33.3 ms at Low and the last step, where every limit below
+doubles. A trimmed mean above 17.6 ms steps down one level, or two when it is also above 1.5× the limit of the level
+in between (26.4 ms where that level presents at 60 fps; 52.8 ms from Medium, since a Medium missing every other
+refresh is already what Low presents). A new level settles for 2.5 s after a reduction, 1 s after an increase. Below
+its ceiling Auto climbs on evidence: `main.ts` polls each frame's fence 10 ms after submission (`timeLastFrame`, one
+timer, never a wait), or 20 ms where the level above also presents at 30 fps (the last step to Low). Low to Medium
+asks for the full 10 ms. A review with p90 under 17.2 ms in which at least 90% of 30 or more timed frames finished by
+then climbs one level at once; the next level costs at most 1.56× the pixels (Medium to High), so 10 ms stays inside
+one refresh. Fewer than a quarter on time rules a climb out; between the two, or where frames can't be timed, 12 s of
+p90 under the smooth limit earns one level. A failed climb returns exactly one level and doubles the next wait, up
+to two minutes, so a device that holds Low at 30 fps but not Medium at 60 tries Medium ever less often.
+
+At a 60 fps level a steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps
+(iOS Low Power Mode): while intervals are that long, each frame's fence is timed against one 60 Hz refresh, and if at
+least 80% of eight or more finish early the cap is proven and Auto judges every level against 30 fps until intervals
+under 25 ms show it has lifted. A timer that fires late counts as not early. A single hitch, time behind Begin or in
+a hidden tab never changes quality; Begin and visibility changes reset its timing. Pacing reports the longest display
+callback interval since the last presentation, floored at the level's frame time, so deliberately skipped callbacks
+(120/144 Hz displays, every other refresh at Low) don't look like overload.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
 for every level at boot (about 28 MiB for the four attachments), so quality changes never allocate or recompile.
@@ -210,7 +215,8 @@ Wind resolution, solver cadence and water mesh topology never change during play
 
 Only the dev server and explicit QA builds accept game query overrides; the production build removes their parser
 and QA tools. Use `npm run build:qa` and `npm run preview:qa` for instrumented checks against an optimised build.
-In those builds, `?ratio=` or `?msaa=` locks the governor at exact values with full detail and hides the selector, as does `shot`.
+In those builds, `?ratio=` or `?msaa=` locks the governor at exact values with Ultra's world settings and hides the
+selector; `shot` hides the selector and leaves Auto running.
 `params-qa.ts` clamps `ratio` to (0, 4], `msaa` to [0, 16] and `grass` to [0, 4]; `main.ts` clamps `msaa` again to the
 device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflection cadence.
 
