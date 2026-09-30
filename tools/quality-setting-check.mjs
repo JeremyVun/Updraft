@@ -1,6 +1,7 @@
 // Player controls against the real game; read-only probes expose state without enabling shot timing.
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const { browser, close } = await openBrowser();
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const out = process.env.OUT ?? '/tmp/updraft-quality-setting';
@@ -12,8 +13,7 @@ const errors = [];
 async function prepare(context) {
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(e.message));
-  // Other local tasks may edit files during the check; don't let HMR restart it.
-  await page.route('**/@vite/client', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
+  await withoutHotReload(page);
   await page.route('**/src/main.ts*', async route => {
     const response = await route.fetch(), source = await response.text();
     assert.equal((source.match(/if \(QA && params.shot\) \{/g) ?? []).length, 2);
@@ -28,7 +28,7 @@ async function start(page) {
   await page.waitForSelector('#veil', { state: 'detached' });
 }
 const applied = page => page.evaluate(() => ({ mode: __game.quality.mode, name: __game.quality.level.name, ratio: __game.renderer.getPixelRatio(),
-  frameRate: __game.quality.frameRate, reach: __game.grass.quality.reach, density: __game.grass.quality.density, split: __game.terrain.detail }));
+  frameRate: __game.quality.frameRate, reach: Math.round(__game.grass.quality.reach * 1e6) / 1e6, density: __game.grass.quality.density, split: __game.terrain.detail }));
 // At a device pixel ratio of 2: the table in docs/backlog/perf-final/design.md section 3.
 const LEVELS = {
   ultra: { ratio: 1.5, frameRate: 60, reach: 1.15, density: 1, split: 1.6 },
@@ -39,8 +39,8 @@ const LEVELS = {
 async function select(page, mode) {
   await choose(page, mode);
   const want = { mode, name: mode, ...LEVELS[mode] };
-  await page.waitForFunction(({want}) => __game.quality.mode === want.mode && Math.abs(__game.grass.quality.reach - want.reach) < .001
-    && Math.abs(__game.renderer.getPixelRatio() - want.ratio) < .001, {want}, {timeout:30000}).catch(() => {});
+  await page.waitForFunction(({want}) => __game.quality.mode === want.mode && Math.abs(__game.grass.quality.reach - want.reach) < 1e-9
+    && Math.abs(__game.renderer.getPixelRatio() - want.ratio) < 1e-9, {want}, {timeout:30000}).catch(() => {});
   assert.deepEqual(await applied(page), want);
   assert.equal(await page.evaluate(() => __game.input.down), false, 'selection must not blow wind');
   assert.equal(await page.evaluate(() => localStorage.getItem('updraft.quality.v2')), mode);

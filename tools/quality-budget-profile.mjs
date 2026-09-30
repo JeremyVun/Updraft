@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const out = process.env.OUT ?? '/tmp/updraft-quality-budget';
@@ -46,7 +47,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.route('**/@vite/client', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
+  await withoutHotReload(page);
   await page.route('**/src/main.ts*', async route => {
     const response = await route.fetch();
     let source = await response.text();

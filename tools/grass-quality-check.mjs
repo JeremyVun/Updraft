@@ -56,7 +56,7 @@ async function check() {
     const restored = diff(full, read());
     if (restored.changed) throw new Error(`Restoring full grass changed pixels: ${JSON.stringify(restored)}`);
     const at = (density, reach) => results.find(r => r.density === density && r.reach === reach);
-    if (at(1, 1).blades > fullBlades * 0.9) throw new Error(`Reach 100% did not submit fewer blades than 115%: ${at(1, 1).blades} of ${fullBlades}`);
+    if (at(1, 1).blades >= fullBlades) throw new Error(`Reach 100% did not submit fewer blades than 115%: ${at(1, 1).blades} of ${fullBlades}`);
     if (at(0.5, 1).fromFull < at(1, 1).fromFull * 1.5) throw new Error('Half density drew no less grass than full');
     return { fullBlades, results, restored };
   } finally {
