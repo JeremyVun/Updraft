@@ -50,12 +50,25 @@
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
 // PATH_ABLATIONS=e5-off,... limits the path to those ablations.
+// The stairs: stairs:waiting|climb|loop|cloud|top|sail|fog play the chapter to that moment with real gestures (stairsFixture).
+// Their parts: stairs (the whole room), stairsCloud (deck top and underside, towers, wake), stairsCloudTop,
+// stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
+// stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
+// shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
+// cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
+// sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
+// water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
+// water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
+// DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
+// SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
+// full grass-table rebuild (SIM_REPS each, drained).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
+import { stairsFixture } from './lib/stairs-fixture.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
@@ -116,6 +129,11 @@ window.__audit = {
     birchesCanopy: birches.objects.filter(o => o.material?.uniforms?.uCanopyMotion),
     birchesLitter: [birches.litterMesh], birchesScarf: [birches.scarf.mesh], birchesLeaves: [birches.leaves.mesh],
     grassLod0: [grass.group.children[0]], grassLod1: [grass.group.children[1]], grassLod2: [grass.group.children[2]],
+    stairs: [cloudStairs.group], stairsCloud: [cloudStairs.cloud.group],
+    stairsCloudTop: [cloudStairs.cloud.top], stairsCloudBelly: [cloudStairs.cloud.belly], stairsTowers: [cloudStairs.cloud.towers.group],
+    stairsWake: [cloudStairs.cloud.wake.mesh], stairsWisps: [cloudStairs.wisps.mesh], stairsBank: [cloudStairs.bank.mesh],
+    stairsHaze: [...cloudStairs.hazes],
+    stairsSteps: [cloudStairs.group.getObjectByName('stairs-standing'), cloudStairs.trick, ...cloudStairs.pieces.flatMap(p=>[p.group.children[0],p.ghost])],
   },
   // Ablations that change a height source: both sides of each of their pairs re-run the window-move bakes.
   heightSources: ['rebake','heights-const','heights-direct'],
@@ -149,6 +167,7 @@ window.__audit = {
       ['wood-update',wood,'update'], ['sleeping-update',sleeping,'update'], ['audio',sound,'update'],
       ['mirror-ripples',skyMirror,'update'], ['bloom',post.bloom,'render'],
       ['water-waves',water,'step'], ['ground-readback',bakes,'tick'],
+      ['stairs-update',cloudStairs,'update'], ['stairs-cloud',cloudStairs.cloud,'update'], ['story',story,'update'],
     ]) wrap(obj,method,name);
     const render = renderer.render.bind(renderer);
     renderer.render = (s,c) => {
@@ -234,7 +253,29 @@ window.__audit = {
     }
     if(variants.includes('sky-flat')) {
       const m=sky.material;
-      m.fragmentShader=this.diagnosticMaterials[1][1].replace('skyRadiance(normalize(vDir))','vec3(0.5,0.6,0.7)');m.needsUpdate=true;
+      const sky0=this.diagnosticMaterials[1][1];if(!sky0.includes('vec3 col = skyRadiance(d);'))throw Error('Missing patch site: sky radiance');
+      m.fragmentShader=sky0.replace('vec3 col = skyRadiance(d);','vec3 col = vec3(0.5,0.6,0.7);');m.needsUpdate=true;
+    }
+    // The cloud deck's top: cloudtop-frag-flat keeps its discards and fog but not its shading; cloudtop-veil drops the
+    // low wisps streaming over it; wisps-early discards a puff card's pixels outside the largest ball its noise can make
+    // before working the noise out (a candidate exact skip).
+    {
+      const top=cloudStairs.cloud.top.material,puff=cloudStairs.wisps.mesh.material;
+      this.topFrag??=top.fragmentShader;this.puffFrag??=puff.fragmentShader;
+      let t=this.topFrag,f=this.puffFrag;
+      const need=(src,from)=>{if(!src.includes(from))throw Error('Missing patch site: '+from);return src;};
+      if(variants.includes('cloudtop-veil'))t=need(t,'if (uWisps > 0.0 && vWorld.y').replace('if (uWisps > 0.0 && vWorld.y','if (false && vWorld.y');
+      if(variants.includes('cloudtop-frag-flat'))t=t.slice(0,t.lastIndexOf('void main() {'))+'void main() { if (vRing > uReach || gridHidden(vWorld.xz, vLevel)) discard; gl_FragColor = vec4(mix(vec3(0.8, 0.7, 0.75) + vHaze.rgb * 0.01 + vec3(vThin, vShade, vStature) * 0.01 + vCalm.xyz * 0.001 + (vFoot + vRise + vTower) * 0.001, vFog.rgb, vFog.a), uCloudDeck.w); }';
+      if(variants.includes('wisps-early'))f=need(f,'  float d = length(vCorner);\\n').replace('  float d = length(vCorner);\\n','  float d = length(vCorner);\\n  if (d >= 1.25) discard;\\n');
+      if(top.fragmentShader!==t){top.fragmentShader=t;top.needsUpdate=true;}
+      if(puff.fragmentShader!==f){puff.fragmentShader=f;puff.needsUpdate=true;}
+    }
+    // sky-deckfirst: the candidate exact skip, the deck worked out first and the sky's radiance only where it shows through.
+    if(variants.includes('sky-deckfirst')) {
+      const m=sky.material,sky0=this.diagnosticMaterials[1][1];
+      const from='vec3 col = skyRadiance(d);\\n  if (uCloudDeck.w > 0.0) {\\n    vec4 deck = cloudDeck(cameraPosition, d, 4000.0);\\n    col = mix(col, deck.rgb, deck.a);\\n  }';
+      if(!sky0.includes(from))throw Error('Missing patch site: sky deck');
+      m.fragmentShader=sky0.replace(from,'vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, d, 4000.0) : vec4(0.0);\\n  vec3 col = deck.a < 1.0 ? skyRadiance(d) : vec3(0.0);\\n  if (uCloudDeck.w > 0.0) col = mix(col, deck.rgb, deck.a);');m.needsUpdate=true;
     }
     if(variants.includes('grade')) {
       const m=post.gradeMat,original=this.diagnosticMaterials[2][1];
@@ -248,6 +289,7 @@ window.__audit = {
     this.patchShaders(variants);
     this.noiseTerms(variants);
     this.bareTiles(variants.includes('grass-bare-tiles'));
+    this.deckOut(variants.includes('deck-out')?'all':(variants.find(v=>v.startsWith('deck-out-'))||'').slice(9)||null);
     if(this.pairRebake)this.rebake();
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
@@ -327,6 +369,10 @@ window.__audit = {
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
       // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
+      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),' + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
+      // Candidate exact skip: the lantern's glint only within its reach (tuning.lantern.reach, 9 m), where lanternLight is not 0.
+      'water-lantern-reach':[[waterMat],'fragmentShader',s=>sub(s,'if (uLantern.w > 0.001) {','if (uLantern.w > 0.001 && dot(uLantern.xyz - vWorld, uLantern.xyz - vWorld) < 81.0) {')],
+      'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
       // Restores the old path: the sea's fog worked out per pixel.
@@ -382,6 +428,33 @@ window.__audit = {
     for(const v of variants)(terms[v]||[]).forEach((_,i)=>{if(!hits.has(v+':'+i))throw Error('Missing noise term: '+v+':'+i);});
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
   },
+  // deck-out compiles the stairs' cloud deck out of every shader that includes ATMO_GLSL: each test of its amount
+  // becomes a constant false, so the deck, the bank of mist and their helpers are dead code. Outside the stairs the
+  // deck's amount is 0, so no pixel may change there; any saving is what its presence costs (registers, code size).
+  // The blades' fragment programs are left alone (their fog comes from the vertex).
+  // deck-out-water|terrain|grass|sky|rest limit it to one family of materials.
+  deckOut(which) {
+    const on=!!which,A='uCloudDeck.w > 0.0',B='false/*deck-out*/';
+    const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
+    const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,...grass.lods.map(l=>l.tableMat),bakes.groundMat]);
+    scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    const family=m=>m===water.mesh.material?'water':m===terrain.mesh.material?'terrain':blades.has(m)||grass.lods.some(l=>l.tableMat===m)?'grass':m===sky.material?'sky':'rest';
+    let hits=0,tables=false;
+    for(const m of mats)for(const key of ['vertexShader','fragmentShader']){
+      if(key==='fragmentShader'&&blades.has(m))continue;
+      if(on&&which!=='all'&&family(m)!==which){const cur=m[key];if(typeof cur==='string'&&cur.includes(B)){m[key]=cur.split(B).join(A);m.needsUpdate=true;}continue;}
+      const cur=m[key];if(typeof cur!=='string')continue;
+      const next=on?cur.split(A).join(B):cur.split(B).join(A);
+      if(on&&cur.includes(A))hits++;
+      if(next!==cur){m[key]=next;m.needsUpdate=true;tables||=grass.lods.some(l=>l.tableMat===m);}
+    }
+    if(on&&!hits)throw Error('Missing patch site: '+A);
+    if(tables){grass.tablesDirty=true;grass.bake(renderer);}
+    this.deckHits=hits;
+  },
+  // DETAIL=0|1 sets the world detail a quality level would (grass density and reach, terrain split, reflection cadence
+  // and the sky mirror's scale) at the locked render scale and multisampling, as the Low preset or Auto's rungs do.
+  detail(level,grassDensity,grassReach) { applyWorldQuality({ratio:pixelRatio,samples:post.samples,detail:level,...grassDensity!=null&&{grassDensity},...grassReach!=null&&{grassReach}},true); return {detail:level,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -434,6 +507,18 @@ window.__audit = {
     } finally {this.configure(null);for(const o of shown)o.visible=true;renderer.setRenderTarget(null);}
     return out;
   },
+  // SIM_PASSES=1: each per-frame simulation pass alone, many times over, then drained (median of 5 rounds), with an empty
+  // stage for the floor. These run whatever the render scale: the costs a small screen does not shrink.
+  async simPasses(reps, complete) {
+    const stages={empty:()=>{},wind:()=>this.stepWind(),life:()=>life.update(1/60),clouds:()=>clouds.update(),
+      petals:()=>petals.update(1/60,null,0),waves:()=>water.step(1/60),'light-bake':()=>bakes.bakeLight(bakeInputs),
+      'grass-tables':()=>{grass.tablesDirty=true;grass.bake(renderer);}};
+    const out={};
+    for(const [name,stage] of Object.entries(stages)){const samples=[];
+      for(let round=0;round<5;round++){stage();await complete();const start=performance.now();for(let i=0;i<reps;i++)stage();await complete();samples.push((performance.now()-start)/reps);}
+      samples.sort((x,y)=>x-y);out[name]={ms:samples[2],min:samples[0],max:samples[4]};}
+    return out;
+  },
   stepWind() {
     wind.step(1/60,time,false);
     // The ping-pong targets swap every step, so rebind them as the real loop does.
@@ -457,6 +542,11 @@ window.__audit = {
     if(typeof drawJourneyRooms==='function') {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);
     } else draw();
+  },
+  // While a stairs fixture is played to its moment, the page renders at a low scale so the story gets there sooner.
+  fast(on) {
+    if(on){this.fastRatio??=pixelRatio;pixelRatio=0.5;resize();}
+    else if(this.fastRatio){pixelRatio=this.fastRatio;this.fastRatio=null;resize();}
   },
   // STATE forces a condition for every ablation after the census; it runs in this module's scope.
   state(code) { return eval(code); },
@@ -518,7 +608,8 @@ try {
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
     await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
     await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
-    if(fixture) await page.evaluate(fixture=>{
+    if(entry==='stairs'&&fixture){await stairsFixture(page,fixture,on=>page.evaluate(on=>__audit.fast(on),on));console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
+    else if(fixture) await page.evaluate(fixture=>{
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
       else {
@@ -528,7 +619,9 @@ try {
         if(fixture==='pond'){g.child.place(c.edge.x,c.edge.z,Math.PI);c.setDown();}
       }
     },fixture);
-    await page.waitForTimeout(1500);
+    const detail=process.env.DETAIL?await page.evaluate(([d,g,r])=>__audit.detail(d,g,r),[Number(process.env.DETAIL),process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
+    if(detail)console.log(JSON.stringify({chapter,detail}));
+    await page.waitForTimeout(detail?2500:1500);
     const cdp=await page.context().newCDPSession(page);
     await cdp.send('Profiler.enable');await cdp.send('Profiler.setSamplingInterval',{interval:500});
     await page.evaluate(()=>{__audit.frames=[];});await cdp.send('Profiler.start');
@@ -642,9 +735,16 @@ try {
       return __audit.waterPass(variants,reps,rounds,complete);
     },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
     if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
+    const simPasses=process.env.SIM_PASSES==='1'?await page.evaluate(async reps=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      __audit.configure(null);return __audit.simPasses(reps,complete);
+    },Number(process.env.SIM_REPS??30)):undefined;
+    if(simPasses)console.log(JSON.stringify({chapter,simPasses}));
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
+    const row={chapter,gate,detail,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,simPasses,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
