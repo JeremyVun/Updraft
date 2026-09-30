@@ -13,6 +13,7 @@
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
 import { stairsFixture } from './lib/stairs-fixture.mjs';
+import { stubViteClient } from './lib/vite-client-stub.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-memory-census';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -220,7 +221,7 @@ try {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.addInitScript(hooks);
-    await page.route('**/@vite/client', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
+    await stubViteClient(page);
     await page.route('**/src/main.ts*', async route => {
       const response = await route.fetch(), source = await response.text(), names = new Set();
       for (const m of source.matchAll(/^(?:export\s+)?(?:const|let|var|class|function|async function)\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);

@@ -69,6 +69,7 @@ import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
 import { stairsFixture } from './lib/stairs-fixture.mjs';
+import { stubViteClient } from './lib/vite-client-stub.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
@@ -543,6 +544,24 @@ window.__audit = {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);
     } else draw();
   },
+  // What an ablation changed against the baseline: programs patched, objects hidden (and how many of those were
+  // showing), other switches. One that changes nothing is a typo or a patch site that moved, so it throws.
+  bite(omit) {
+    const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,post.gradeMat,bakes.groundMat,...grass.lods.map(l=>l.tableMat)]);
+    scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    const drawn=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
+    const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
+      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
+      terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
+      this.culling.length,!!this.bare])});
+    this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
+    this.configure(omit);const b=snap();
+    const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
+      showing:this.hidden.filter(([o])=>showing.has(o)).length,settings:a.settings!==b.settings,
+      draw:['wind','reflection','bloom','post'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
+    if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
+    return bite;
+  },
   // While a stairs fixture is played to its moment, the page renders at a low scale so the story gets there sooner.
   fast(on) {
     if(on){this.fastRatio??=pixelRatio;pixelRatio=0.5;resize();}
@@ -590,7 +609,7 @@ try {
     const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
     const errors=[]; page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
-    await page.route('**/@vite/client',r=>r.fulfill({contentType:'application/javascript',body:''}));
+    await stubViteClient(page);
     if(process.env.LEGACY_NORMALS==='1') await page.route('**/src/world/birch-scarf.ts*',async route=>{
       const response=await route.fetch(),source=await response.text();
       const body=source.replace('indexedNormals(this.positions, this.normals, this.geometry.index.array);','this.geometry.computeVertexNormals();');
@@ -660,6 +679,7 @@ try {
           finally{gl.deleteSync(fence);}}
         const read=v=>{probe.configure(v);probe.draw(false);const data=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);
           gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,data);return data;};
+        const bite=probe.bite(omit);
         const a=read(null),b=read(omit);let changed=0,max=0,total=0;
         for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d)changed++;max=Math.max(max,d);total+=d;}
         const pixels={changed,max,mean:total/a.length};
@@ -680,7 +700,8 @@ try {
           for(const v of order)values[v?'omitted':'baseline'].push(await measure(v));
           const baseline=(values.baseline[0]+values.baseline[1])/2,omitted=(values.omitted[0]+values.omitted[1])/2;
           runs.push({baseline,omitted,saved:baseline-omitted,percent:(1-omitted/baseline)*100});}
-        const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
+        // Two draws: the ordinary sea's reflection is drawn on alternate frames, so one draw of each side would differ by it.
+        const counts=v=>{probe.configure(v);const sum={calls:0,triangles:0};for(let i=0;i<2;i++){probe.draw(false);sum.calls+=__game.renderer.info.render.calls;sum.triangles+=__game.renderer.info.render.triangles;}return {calls:sum.calls/2,triangles:sum.triangles/2};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
         const stepMs=omit==='wind'?await stepAlone():undefined;
         // Moving-camera exactness: the same pair of frames at every step of PATH, worst pixel over the path.
@@ -690,12 +711,12 @@ try {
             for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;if(d>max)max=d;}}
             path.changed+=changed;if(changed)path.stepsChanged++;if(max>path.max){path.max=max;path.worst=k;if(capture)path.images={baseline:encode(a),variant:encode(b)};}}}
           finally{probe.configure(null);probe.pathRestore(saved);}}
-        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain,path};
+        probe.configure(null);probe.pairRebake=false;bite.calls=submitted.omitted.calls-submitted.baseline.calls;bite.triangles=submitted.omitted.triangles-submitted.baseline.triangles;return {bite,pixels,runs,submitted,images,stepMs,drained:drain,path};
       },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL,pathCode:(process.env.PATH_ABLATIONS??omit).split(',').includes(omit)?process.env.PATH_JS:undefined,pathSteps:Number(process.env.PATH_STEPS??40)});
       if(result.path?.images){for(const [name,data]of Object.entries(result.path.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-path-'+name+'.png',Buffer.from(data,'base64'));delete result.path.images;}
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
-      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,path:result.path,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
+      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,bite:result.bite,pixels:result.pixels,path:result.path,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
@@ -710,7 +731,7 @@ try {
       }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
-      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs,pixels:row.pixels,path:row.path}));
+      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs,bite:row.bite,pixels:row.pixels,path:row.path}));
       if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
