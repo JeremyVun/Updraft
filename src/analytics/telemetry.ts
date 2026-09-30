@@ -1,6 +1,7 @@
 import { Analytics } from './client';
 import { publicConfig } from '../public-config';
 import { QA } from '../qa';
+import type { QualityLevelName } from '../gl/quality';
 
 declare const __BUILD_ID__: string;
 type Dims = Record<string, string>;
@@ -17,7 +18,7 @@ const client = new Analytics({
 const build = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'development';
 const environment = QA ? 'qa' : 'production';
 const chapters = new Set(['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','toHome','home','stage']);
-let chapter = 'loading', detail = 'unknown', started = false, completed = false;
+let chapter = 'loading', level = 'unknown', started = false, completed = false;
 let frames = 0, elapsed = 0, hitches = 0;
 const failures = new Set<string>();
 const band = (value: number, bounds: number[], names: string[]) => names[bounds.findIndex(b => value < b)] ?? names[names.length - 1];
@@ -42,12 +43,11 @@ export const telemetry = {
     chapter = name;
     count('chapter_entered');
   },
-  quality(ratio: number, samples: number, world: number): void {
-    const next = ['low','medium','full'][world] ?? 'unknown';
-    const direction = detail === 'unknown' ? 'initial' : 'changed';
+  quality(name: QualityLevelName, ratio: number, samples: number): void {
+    const direction = level === 'unknown' ? 'initial' : 'changed';
     this.performance();
-    detail = next;
-    count('quality_changed', { detail, scale: band(ratio,[.8,1,1.3,1.8],['under_0_8','0_8_1','1_1_3','1_3_1_8','1_8_plus']), samples: String(samples), direction });
+    level = name;
+    count('quality_changed', { level, scale: band(ratio,[.8,1,1.3,1.8],['under_0_8','0_8_1','1_1_3','1_3_1_8','1_8_plus']), samples: String(samples), direction });
   },
   frame(intervalMs: number): void {
     if (!started || !client.enabled() || document.hidden || !Number.isFinite(intervalMs) || intervalMs <= 0) return;
@@ -58,8 +58,8 @@ export const telemetry = {
     if (elapsed >= 10000 && frames) {
       const fps = band(frames * 1000 / elapsed,[25,40,55],['under_25','25_39','40_54','55_plus']);
       count('performance_sampled', {
-        fps, hitches: band(hitches,[1,6],['0','1_5','6_plus']), detail,
-        'chapter.detail': `${chapter}.${detail}`, 'chapter.fps': `${chapter}.${fps}`, 'detail.fps': `${detail}.${fps}`,
+        fps, hitches: band(hitches,[1,6],['0','1_5','6_plus']), level,
+        'chapter.level': `${chapter}.${level}`, 'chapter.fps': `${chapter}.${fps}`, 'level.fps': `${level}.${fps}`,
       });
     }
     elapsed = frames = hitches = 0;

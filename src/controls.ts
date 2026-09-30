@@ -1,5 +1,5 @@
 import { params } from './params';
-import type { QualityMode } from './gl/quality';
+import type { QualityLevelName, QualityMode } from './gl/quality';
 import { readQualityMode, saveQualityMode } from './gl/quality-preference';
 import { readSoundPreference, saveSoundPreference } from './sound-preference';
 
@@ -83,16 +83,16 @@ class Controls {
     document.addEventListener('fullscreenchange', syncFullscreen);
   }
 
-  /** The three bars follow world detail, including automatic governor changes. */
-  setQualityDetail(detail: 0 | 1 | 2): void {
-    this.renderedQuality = (['low', 'medium', 'high'] as const)[detail];
+  /** The indicator follows the level in use, including automatic governor changes. */
+  setQualityLevel(name: QualityLevelName): void {
+    this.renderedQuality = name === 'last' ? 'low' : name;
     this.syncQualityIndicator();
   }
 
   private syncQualityIndicator(): void {
-    const names = { auto: 'Auto', low: 'Low', medium: 'Medium', high: 'High' };
+    const names = { auto: 'Auto', low: 'Low', medium: 'Medium', high: 'High', ultra: 'Ultra' };
     const current = this.renderedQuality ?? (this.qualityMode === 'auto' ? null : this.qualityMode);
-    this.quality.dataset.quality = current ?? 'pending';
+    this.quality.dataset.quality = current === 'ultra' ? 'high' : current ?? 'pending';
     const label = names[this.qualityMode];
     this.quality.title = `Graphics quality: ${label}${this.qualityMode === 'auto' && current ? ` (${names[current]})` : ''}`;
     this.quality.setAttribute('aria-label', this.quality.title);
