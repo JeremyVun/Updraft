@@ -239,6 +239,7 @@ try {
     await page.goto(base + '?shot&start=1&ratio=' + (process.env.RATIO ?? '1.5') + '&msaa=' + (process.env.MSAA ?? '2') + '&analytics=0&progress=0' + (entry === 'island' ? '' : '&chapter=' + entry));
     await page.waitForSelector('#veil.ready', { timeout: 300000 }); await page.locator('#begin').click();
     await page.waitForFunction(() => window.__ready, null, { timeout: 300000 });
+    if (!await page.evaluate(() => !!window.__memAudit)) throw Error(base + ' is not a dev server: this tool patches src/main.ts, which a built bundle does not serve');
     if (entry === 'stairs' && fixture) await stairsFixture(page, fixture, on => page.evaluate(on => __memAudit.fast(on), on));
     else if (fixture) await page.evaluate(fixture => { const c = __game.story.current; c.skipToCrest(); if (fixture !== 'walk') c.reveal(); }, fixture);
     const detail = process.env.DETAIL ? await page.evaluate(d => __memAudit.detail(d), Number(process.env.DETAIL)) : undefined;

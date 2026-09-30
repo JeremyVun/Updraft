@@ -42,3 +42,56 @@ export async function stairsFixture(page, fixture, fast) {
     throw Error('Unknown stairs fixture '+fixture);
   } finally {await fast(false);}
 }
+
+// The same moments reached the same way every run, for comparing two builds' frames: the gestures are dispatched to
+// the canvas from inside the page, one pointer position a frame, and onMoment() is called in the page on the frame
+// the moment arrives (the caller stops the loop there). Needs ?shot, whose frames are fixed 1/60 s steps.
+export function stairsFixtureOnFrames(page, fixture, at, onMoment) {
+  return page.evaluate(([fixture,at,onMoment])=>new Promise((done,fail)=>{
+    const g=__game,canvas=g.renderer.domElement,arrive=new Function(onMoment),w=innerWidth,h=innerHeight;
+    const screen=v=>{const p=v.clone().project(g.rig.camera);return [(p.x*0.5+0.5)*w,(0.5-p.y*0.5)*h];};
+    const inside=q=>[Math.min(Math.max(q[0],20),w-20),Math.min(Math.max(q[1],20),h-20)];
+    let restored=fixture==='waiting',looped=false,stroke=null,rest=0;
+    const swipe=(from,to,frames,after)=>{stroke={from,to,frames,k:-1};rest=after;};
+    const gesture=s=>{
+      if(s.beat==='loop'){
+        const hint=g.story.current.windInvitation;
+        if(!hint){rest=90;return;}
+        const bank=screen(hint);swipe([bank[0]-160,bank[1]+40],[bank[0]+180,bank[1]-30],27,90);
+      } else if(s.beat==='sail'||s.beat==='fog'){
+        const b=g.boat,f={x:Math.sin(b.yaw),y:0,z:Math.cos(b.yaw)},p=b.position.clone();p.y+=0.3;
+        const here=screen(p);let a=screen(p.clone().addScaledVector(f,-3)),z=screen(p.clone().addScaledVector(f,4));
+        if(Math.hypot(z[0]-a[0],z[1]-a[1])<120){a=[here[0]-180,here[1]+30];z=[here[0]+180,here[1]-30];}
+        swipe(inside(a),inside(z),23,30);
+      }
+    };
+    const moment={
+      waiting:s=>s.beat==='waiting'&&s.t>2,
+      climb:s=>s.beat==='climb'&&s.t>2.5||s.beat==='hesitate',
+      loop:s=>s.beat==='loop'&&s.t>8,
+      cloud:s=>looped&&s.beat==='follow'&&s.t>6,
+      top:s=>s.beat==='skein'&&s.t>10,
+      sail:s=>s.beat==='sail'&&s.sailed>=140,
+      fog:s=>s.beat==='fog'&&s.t>3,
+    }[fixture];
+    if(!moment){fail(Error('Unknown stairs fixture '+fixture));return;}
+    const end=at+40000;
+    const tick=()=>{
+      const frame=__stats.frame,c=g.story.current,s={chapter:g.story.name,beat:c.beat,t:c.now-c.beatStart,sailed:c.sailed??0};
+      if(frame<at){requestAnimationFrame(tick);return;}
+      if(!restored){c.restoreCheckpoint('flight-3',[3]);restored=true;requestAnimationFrame(tick);return;}
+      if(s.chapter!=='stairs'||frame>end){fail(Error('Stairs fixture '+fixture+' missed its moment at '+JSON.stringify(s)));return;}
+      if(s.beat==='loop')looped=true;
+      if(moment(s)){arrive();done({frame,beat:s.beat});return;}
+      if(stroke){
+        const k=++stroke.k/stroke.frames;
+        canvas.dispatchEvent(new PointerEvent('pointermove',{clientX:stroke.from[0]+(stroke.to[0]-stroke.from[0])*k,clientY:stroke.from[1]+(stroke.to[1]-stroke.from[1])*k,
+          pointerType:'mouse',pointerId:1,isPrimary:true,bubbles:true}));
+        if(stroke.k>=stroke.frames)stroke=null;
+      } else if(rest>0)rest--;
+      else if(looped||s.beat==='loop')gesture(s);
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }),[fixture,at,onMoment]);
+}

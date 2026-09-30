@@ -68,11 +68,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
-import { stairsFixture } from './lib/stairs-fixture.mjs';
+import { stairsFixture, stairsFixtureOnFrames } from './lib/stairs-fixture.mjs';
 import { stubViteClient } from './lib/vite-client-stub.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
+const BASE=process.env.BASE??'http://127.0.0.1:5230/',COMPARE_BASE=process.env.COMPARE_BASE,FRAME=Number(process.env.FRAME??0);
+assert(!FRAME||FRAME>=120,'FRAME must leave room for the fixture: 120 or more');
+assert(!COMPARE_BASE||FRAME,'COMPARE_BASE needs FRAME: two builds draw the same picture only when both stop on the same frame');
+// Fixtures are applied on this frame when FRAME is set, so the same story follows in every run.
+const FIXTURE_FRAME=90;
 // Other processes' load, recorded with every row: it inflates GPU numbers.
 // This tool's own browser is flagged own:true so another Chrome stands out.
 const busy = () => {
@@ -114,7 +119,7 @@ function cpuSummary(profile, frames) {
 
 const injection = `
 window.__audit = {
-  paused: false, census: false, frames: [], passes: {}, objects: {}, cpu: {}, stack: [], skyOrder:sky.renderOrder,
+  paused: false, stopAt: 0, census: false, frames: [], passes: {}, objects: {}, cpu: {}, stack: [], skyOrder:sky.renderOrder,
   groups: {
     sky: [sky], water: [water.mesh], terrain: [terrain.mesh], grass: [grass.group], tree: [tree.group],
     pond: pond.objects, washing: [washing.group, washingBaskets, pinwheels.group, door.group],
@@ -562,6 +567,22 @@ window.__audit = {
     if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
     return bite;
   },
+  png(data) {
+    const gl=renderer.getContext(),w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),im=ctx.createImageData(w,h);
+    for(let y=0;y<h;y++)im.data.set(data.subarray(y*w*4,(y+1)*w*4),(h-y-1)*w*4);
+    ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
+  },
+  // The frozen frame as drawn with nothing omitted, for comparing against another build stopped on the same frame.
+  frozenFrame(capture) {
+    const gl=renderer.getContext(),data=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);
+    this.configure(null);this.draw(false);gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,data);
+    let binary='';for(let i=0;i<data.length;i+=32768)binary+=String.fromCharCode.apply(null,data.subarray(i,i+32768));
+    const at=v=>v.toArray().map(x=>+x.toFixed(4));
+    const state={time,story:story.name,beat:story.current.beat,camera:[...at(rig.camera.position),...at(rig.camera.quaternion)],boat:at(boat.position),
+      child:at(child.position),cygnet:at(cygnet.position),randoms:window.__randoms,readbacks:readbackStats.delivered};
+    return {width:gl.drawingBufferWidth,height:gl.drawingBufferHeight,frame:frameIndex,state,data:btoa(binary),png:capture?this.png(data):undefined};
+  },
   // While a stairs fixture is played to its moment, the page renders at a low scale so the story gets there sooner.
   fast(on) {
     if(on){this.fastRatio??=pixelRatio;pixelRatio=0.5;resize();}
@@ -599,36 +620,48 @@ window.__audit = {
 };
 `;
 
-const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
 const { browser, close } = await openBrowser();
-const report=[],inexact=[];
-try {
-  for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
-    const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
-    const [entry,fixture]=chapter.split(':'),busyAtStart=busy();
-    const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
-    const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-    page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
-    await stubViteClient(page);
-    if(process.env.LEGACY_NORMALS==='1') await page.route('**/src/world/birch-scarf.ts*',async route=>{
-      const response=await route.fetch(),source=await response.text();
-      const body=source.replace('indexedNormals(this.positions, this.normals, this.geometry.index.array);','this.geometry.computeVertexNormals();');
-      assert.notEqual(body,source,'Missing legacy normals hook');
-      await route.fulfill({response,body});
-    });
-    await page.route('**/src/main.ts*',async route=>{
-      const response=await route.fetch();let source=await response.text();
-      source=source.replace('function frame(now) {','function frame(now) { if (window.__audit?.paused) { requestAnimationFrame(frame); return; }');
-      assert(source.includes('window.__audit?.paused'),'Missing pause hook');
-      assert.equal(source.split('frames++;').length, 2, 'Missing or ambiguous frame hook');
-      source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
-      await route.fulfill({response,body:source+injection});
-    });
-    await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
-    await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
-    await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
-    if(entry==='stairs'&&fixture){await stairsFixture(page,fixture,on=>page.evaluate(on=>__audit.fast(on),on));console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
-    else if(fixture) await page.evaluate(fixture=>{
+async function open(base,chapter) {
+  const [entry,fixture]=chapter.split(':');
+  const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
+  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
+  await stubViteClient(page);
+  if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
+  // Readbacks land when the GPU gets to them; mapping each without waiting on its fence delivers it on the frame after its request.
+  if(FRAME)await page.route('**/src/gl/readback.ts*',async route=>{
+    const response=await route.fetch(),source=await response.text();
+    const body=source.replace('export function pollReadbacks() {','export function pollReadbacks() { for (const r of all) r.poll(); return;')
+      .replace('const status = gl.clientWaitSync(next.sync, 0, 0);','const status = gl.ALREADY_SIGNALED;');
+    assert(body.includes('r.poll(); return;')&&body.includes('const status = gl.ALREADY_SIGNALED;'),'Missing readback hook');
+    await route.fulfill({response,body});
+  });
+  if(process.env.LEGACY_NORMALS==='1') await page.route('**/src/world/birch-scarf.ts*',async route=>{
+    const response=await route.fetch(),source=await response.text();
+    const body=source.replace('indexedNormals(this.positions, this.normals, this.geometry.index.array);','this.geometry.computeVertexNormals();');
+    assert.notEqual(body,source,'Missing legacy normals hook');
+    await route.fulfill({response,body});
+  });
+  await page.route('**/src/main.ts*',async route=>{
+    const response=await route.fetch();let source=await response.text();
+    source=source.replace('function frame(now) {','function frame(now) { if (window.__audit?.paused || window.__audit?.stopAt && frameIndex >= window.__audit.stopAt) { requestAnimationFrame(frame); return; }');
+    assert(source.includes('window.__audit?.paused'),'Missing pause hook');
+    assert.equal(source.split('frames++;').length, 2, 'Missing or ambiguous frame hook');
+    source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
+    await route.fulfill({response,body:source+injection});
+  });
+  await page.goto(base+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
+  await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
+  await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
+  assert(await page.evaluate(()=>!!window.__audit),base+' is not a dev server: this tool patches src/main.ts, which a built bundle does not serve');
+  if(FRAME)await page.evaluate(stop=>{__audit.stopAt=stop;},entry==='stairs'&&fixture?1e9:FRAME);
+  if(entry==='stairs'&&fixture){
+    if(FRAME)await stairsFixtureOnFrames(page,fixture,FIXTURE_FRAME,'__audit.stopAt=__stats.frame;');
+    else await stairsFixture(page,fixture,on=>page.evaluate(on=>__audit.fast(on),on));
+    console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,frame:__stats.frame,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
+  else if(fixture) await page.evaluate(([fixture,at])=>new Promise(done=>{
+    const apply=()=>{
+      if(__stats.frame<at){requestAnimationFrame(apply);return;}
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
       else {
@@ -637,31 +670,70 @@ try {
         if(fixture==='flock'||fixture==='pond') c.goDown();
         if(fixture==='pond'){g.child.place(c.edge.x,c.edge.z,Math.PI);c.setDown();}
       }
-    },fixture);
-    const detail=process.env.DETAIL?await page.evaluate(([d,g,r])=>__audit.detail(d,g,r),[Number(process.env.DETAIL),process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
-    if(detail)console.log(JSON.stringify({chapter,detail}));
-    await page.waitForTimeout(detail?2500:1500);
-    const cdp=await page.context().newCDPSession(page);
-    await cdp.send('Profiler.enable');await cdp.send('Profiler.setSamplingInterval',{interval:500});
-    await page.evaluate(()=>{__audit.frames=[];});await cdp.send('Profiler.start');
-    await page.waitForTimeout(Number(process.env.CPU_MS??6000));
-    const {profile}=await cdp.send('Profiler.stop');
-    const frames=await page.evaluate(()=>__audit.frames);
-    assert(frames.length > 0, 'No frame timings recorded');
-    await fs.writeFile(out+'-'+chapter+'.cpuprofile',JSON.stringify(profile));
-    const cpu=cpuSummary(profile,frames.length);
-    const frameTimes={frames:frames.length,cpuMedian:median(frames.map(f=>f.cpuMs)),cpuP90:[...frames.map(f=>f.cpuMs)].sort((a,b)=>a-b)[Math.floor(frames.length*.9)],intervalMedian:median(frames.map(f=>f.intervalMs))};
-    await page.evaluate(()=>{__audit.frames=[];__audit.install();__audit.census=true;});
-    await page.waitForTimeout(Number(process.env.CENSUS_MS??2000));
-    const census=await page.evaluate(()=>{
-      __audit.census=false;__audit.paused=true;
-      return {frames:__audit.frames.length,passes:__audit.passes,objects:__audit.objects,cpu:__audit.cpu,scene:__audit.inspect()};
-    });
-    assert(census.frames > 0, 'No census frames recorded');
+      done();
+    };
+    apply();
+  }),[fixture,FRAME?FIXTURE_FRAME:0]);
+  const detail=process.env.DETAIL?await page.evaluate(([d,g,r])=>__audit.detail(d,g,r),[Number(process.env.DETAIL),process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
+  if(detail)console.log(JSON.stringify({chapter,detail}));
+  if(FRAME){await page.waitForFunction(()=>__stats.frame>=__audit.stopAt,null,{timeout:900000});await page.evaluate(()=>{__audit.paused=true;});}
+  else await page.waitForTimeout(detail?2500:1500);
+  return {page,errors,detail};
+}
+
+const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
+const report=[],inexact=[],differing=[];
+try {
+  for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
+    const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
+    const busyAtStart=busy();
+    let against;
+    if(COMPARE_BASE){
+      const other=await open(COMPARE_BASE,chapter);
+      if(process.env.STATE)await other.page.evaluate(code=>__audit.state(code),process.env.STATE);
+      against=await other.page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
+      assert.deepEqual(other.errors,[],'Browser errors on COMPARE_BASE');await other.page.close();
+    }
+    const {page,errors,detail}=await open(BASE,chapter);
+    let cpu,frameTimes,census;
+    // A run stopped on a frame is for comparing pictures: its loop is already still, and its readbacks are not the game's.
+    if(FRAME)census={frames:0,passes:{},objects:{},cpu:{},scene:await page.evaluate(()=>{__audit.install();return __audit.inspect();})};
+    else {
+      const cdp=await page.context().newCDPSession(page);
+      await cdp.send('Profiler.enable');await cdp.send('Profiler.setSamplingInterval',{interval:500});
+      await page.evaluate(()=>{__audit.frames=[];});await cdp.send('Profiler.start');
+      await page.waitForTimeout(Number(process.env.CPU_MS??6000));
+      const {profile}=await cdp.send('Profiler.stop');
+      const frames=await page.evaluate(()=>__audit.frames);
+      assert(frames.length > 0, 'No frame timings recorded');
+      await fs.writeFile(out+'-'+chapter+'.cpuprofile',JSON.stringify(profile));
+      cpu=cpuSummary(profile,frames.length);
+      frameTimes={frames:frames.length,cpuMedian:median(frames.map(f=>f.cpuMs)),cpuP90:[...frames.map(f=>f.cpuMs)].sort((a,b)=>a-b)[Math.floor(frames.length*.9)],intervalMedian:median(frames.map(f=>f.intervalMs))};
+      await page.evaluate(()=>{__audit.frames=[];__audit.install();__audit.census=true;});
+      await page.waitForTimeout(Number(process.env.CENSUS_MS??2000));
+      census=await page.evaluate(()=>{
+        __audit.census=false;__audit.paused=true;
+        return {frames:__audit.frames.length,passes:__audit.passes,objects:__audit.objects,cpu:__audit.cpu,scene:__audit.inspect()};
+      });
+      assert(census.frames > 0, 'No census frames recorded');
+    }
     assert.deepEqual(errors, [], 'Browser errors invalidate the profile');
     if(process.env.FORCE_GRASS_BAKES==='1') await page.evaluate(()=>{__audit.forceGrassBakes=true;});
     const state=process.env.STATE?await page.evaluate(code=>__audit.state(code),process.env.STATE):undefined;
     if(state!==undefined)console.log(JSON.stringify({chapter,state}));
+    if(against){
+      const here=await page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
+      assert.deepEqual([here.width,here.height,here.frame],[against.width,against.height,against.frame],'The two builds stopped on different frames or sizes');
+      const a=Buffer.from(here.data,'base64'),b=Buffer.from(against.data,'base64');let changed=0,over1=0,max=0,total=0;
+      const box=[Infinity,Infinity,-1,-1];
+      for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;total+=d;if(d>1)over1++;if(d>max)max=d;
+        const x=(i>>2)%here.width,y=here.height-1-Math.floor((i>>2)/here.width);box[0]=Math.min(box[0],x);box[1]=Math.min(box[1],y);box[2]=Math.max(box[2],x);box[3]=Math.max(box[3],y);}}
+      for(const [name,frame]of [['here',here],['against',against]])if(frame.png)await fs.writeFile(out+'-'+chapter+'-frame-'+name+'.png',Buffer.from(frame.png,'base64'));
+      const drift=Object.keys(here.state).filter(k=>JSON.stringify(here.state[k])!==JSON.stringify(against.state[k])).map(k=>[k,here.state[k],against.state[k]]);
+      against={base:COMPARE_BASE,frame:here.frame,changed,over1,max,mean:total/a.length,box:changed?box:undefined,drift:drift.length?drift:undefined};
+      console.log(JSON.stringify({chapter,against}));
+      if(max>Number(process.env.COMPARE_MAX??Infinity))differing.push({chapter,...against});
+    }
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
       // With GPU_QUIET, each ablation also waits (up to GATE_S, default 20 s) for other GPU users to go quiet, not just each chapter.
@@ -683,12 +755,7 @@ try {
         const a=read(null),b=read(omit);let changed=0,max=0,total=0;
         for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d)changed++;max=Math.max(max,d);total+=d;}
         const pixels={changed,max,mean:total/a.length};
-        const encode=data=>{
-          const w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,canvas=document.createElement('canvas');
-          canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),im=ctx.createImageData(w,h);
-          for(let y=0;y<h;y++)im.data.set(data.subarray(y*w*4,(y+1)*w*4),(h-y-1)*w*4);
-          ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
-        };
+        const encode=data=>probe.png(data);
         const images=capture?{baseline:encode(a),variant:encode(b)}:undefined;
         const drain=omit==='wind'||mode==='drain'||drainAll;
         async function measure(v){probe.configure(v);for(let i=0;i<3;i++)probe.draw();await complete();
@@ -765,10 +832,11 @@ try {
     if(simPasses)console.log(JSON.stringify({chapter,simPasses}));
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,detail,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,simPasses,waterPass,cullingViews,errors};report.push(row);
+    const row={chapter,gate,detail,against,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,simPasses,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
   }
   assert.deepEqual(inexact,[],'exact skips changed visible pixels');
+  assert.deepEqual(differing,[],'frames differ from COMPARE_BASE by more than COMPARE_MAX');
 } finally { await close(); }
