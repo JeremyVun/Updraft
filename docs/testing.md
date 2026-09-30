@@ -120,7 +120,26 @@ edit.
 
 **Performance** (only when Jeremy asks; see `docs/engine.md`, Measuring): `perf.mjs`, `frame-profile.mjs`,
 `boot-profile.mjs`, `storm-profile.mjs`, `window-hitch.mjs`, `power-profile.mjs`, `quality-budget-profile.mjs`,
-`audio-cost.mjs`, `wind-cost.mjs` (the wind step's GPU cost pass by pass).
+`audio-cost.mjs`, `wind-cost.mjs` (the wind step's GPU cost pass by pass), `memory-census.mjs`.
+
+- `frame-profile.mjs <fixtures>`: paired ablations at a fixture, each reporting its bite (programs patched, objects
+  hidden, draws, pixels changed) and throwing if it changes nothing. `ROUNDS=0` compares frames without timing.
+  Among its ablations: `deck-out` and `deck-out-water|terrain|grass|sky|rest` (the cloud deck compiled
+  out), the stairs' parts (`stairs`, `stairsCloud`, `stairsCloudTop`, `stairsCloudBelly`, `stairsTowers`,
+  `stairsWake`, `stairsWisps`, `stairsBank`, `stairsHaze`, `stairsSteps`), `cloudtop-frag-flat`, `cloudtop-veil`,
+  `water-lantern`, `water-hull`, `water-frag-flat`, `sky-flat`, and the candidate exact skips `sky-deckfirst`,
+  `wisps-early`, `water-lantern-reach`. `SIM_PASSES=1` times each simulation pass alone; `DETAIL=0|1` applies a
+  level's world detail. The header lists the rest.
+- Against another build: `FRAME=600 COMPARE_BASE=<its dev server>` stops both on the same frame and reports the
+  difference between them (`COMPARE_MAX=1` fails above 1/255, `CAPTURE=1` saves both frames); a build against itself
+  reads 0.
+- Stairs fixtures (`tools/lib/stairs-fixture.mjs`), for `frame-profile`, `memory-census` and `audio-cost`:
+  `stairs:waiting|climb|loop|cloud|top|sail|fog` play the chapter to that moment, with real gestures, or on frames
+  under `FRAME` so every run is the same.
+- `memory-census.mjs <fixtures>`: every texture, render target and buffer the game holds, by owner, with what the
+  watched frames used (`RATIO`, `MSAA`, `DETAIL`).
+- `frame-profile` and `memory-census` patch `src/main.ts`, so they need a dev server (a worktree's own); `audio-cost`
+  and `stairs-check` also run against `npm run preview:qa`.
 
 Rendered checks, screenshots and numeric audio checks are evidence for review, not pixel baselines or a listening
 sign-off.

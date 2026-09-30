@@ -3,6 +3,7 @@
 // that owns it, and whether anything used it over the frames watched at each chapter.
 // node tools/memory-census.mjs [island meadow:walk stairs:sail sea ...]
 // RATIO=1.5 MSAA=2 DETAIL=0|1|2 FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
+// BASE must be a dev server: the tool patches src/main.ts, which a built bundle does not serve.
 // How: WebGL2 calls are wrapped before the page loads, so every allocation is sized from the call that stores it
 // (texImage*, texStorage*, renderbufferStorage*, bufferData); deleted objects drop out. Owners come from a
 // breadth-first walk of main.ts's module scope (its declarations and imports), matched to GL objects through

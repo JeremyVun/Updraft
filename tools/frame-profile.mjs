@@ -62,6 +62,15 @@
 // DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
 // SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
 // full grass-table rebuild (SIM_REPS each, drained).
+// Every ablation reports its bite: programs patched, objects hidden (and how many were showing), draw calls and
+// triangles against the baseline; one that changes nothing throws. No pixels changed with a bite is an exact skip here.
+// BASE must be a dev server (npm run dev, or a worktree's): the tool patches src/main.ts, which a built bundle does not serve.
+// FRAME=600 stops the run on that frame with a seeded Math.random and every readback delivered the frame after its
+// request, so two loads draw the same picture; a stairs fixture is then played on frames (stairsFixtureOnFrames) and
+// stops on the frame its moment arrives. It skips the CPU profile and census. COMPARE_BASE=<another dev server> loads
+// the same fixture there first and reports the difference between the two frozen frames (changed channels, those over
+// 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
+// run above that; CAPTURE=1 saves both frames. A build against itself must read 0.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
