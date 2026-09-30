@@ -385,7 +385,7 @@ await yieldBoot();
 const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
 // Keep full scene detail while avoiding Retina's disproportionate pixel/bandwidth cost.
 const maxPixelRatio = params.ratio ?? Math.min(nativePixelRatio, 1.5);
-/** Touch Auto keeps a smaller sustained resolution budget than High. */
+/** Touch Auto opens at High: its ceiling is High's render scale. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 const post = new Post(renderer, scene, rig.camera, Math.min(params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4), Math.max(0, graphicsCapability.maxSamples)));
 const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
