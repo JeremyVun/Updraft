@@ -61,7 +61,7 @@ const CAP_EARLY = 0.8;
  */
 const HEADROOM_MS = 10;
 /**
- * Timed frames needed in one review, and the share of them that must meet the deadline, to climb at once. The fence
+ * Timed frames needed in one review at 60 fps, and the share of them that must meet the deadline, to climb at once. The fence
  * is seen 2–4 ms after it finishes (Chrome), time that doesn't grow with pixels, so a frame just over still fits.
  */
 const HEADROOM_PROBES = 30;
@@ -238,14 +238,15 @@ export class Quality {
     if (this.capped && p10 < UNCAPPED_MS) this.capped = false;
     else if (this.probingCap && p10 > CAPPED_MS * 0.9 && p90 < CAPPED_MS * 1.1
       && this.probes >= CAP_PROBES && this.early >= this.probes * CAP_EARLY) this.capped = true;
+    const scale = this.refreshes(this.current);
     let climbMs = this.climbMs;
-    if (this.timed >= HEADROOM_PROBES) {
+    // A review holds half as many frames at 30 fps.
+    if (this.timed >= HEADROOM_PROBES / scale) {
       // Fence evidence skips the smooth window's first wait, not the doubling a failed climb adds to it.
       if (this.early >= this.timed * HEADROOM_EARLY) climbMs -= CLIMB_MS;
       else if (this.early < this.timed * HEADROOM_NONE) climbMs = Infinity;
     }
     this.probes = this.early = this.timed = 0;
-    const scale = this.refreshes(this.current);
     const lowest = this.ladder.length - 1;
     if (mean > SLOW_MS * scale) {
       this.smoothSince = now;

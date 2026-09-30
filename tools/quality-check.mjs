@@ -208,10 +208,14 @@ assert.notEqual(jitter.quality.level.name, 'ultra', 'alternating 16.7/33 ms inte
   assert.equal(changes.length, 0, 'Low at a steady 30 fps holds, and frames that are not early never climb');
   assert(q.probing);
   assert.equal(q.probeDeadline(0, 5), 15, 'the climb from Low to Medium asks for frames within 10 ms of submission');
-  run(q, 30000, 36000, 50, false);
+  // A busy main thread leaves some frames untimed; a 1.5 s review at 30 fps has 45 to begin with.
+  for (let now = 30000, i = 0; now < 60000; now += 1000 / 30, i++) { q.frame(now, 1000 / 30); q.gpu(i % 5 < 2 ? null : false); }
+  assert.equal(changes.length, 0, 'the late frames that were timed still rule the climb out');
+  run(q, 60000, 90000, 1000 / 30, false);
+  run(q, 90000, 96000, 50, false);
   assert.equal(q.level.name, 'last');
   assert.equal(q.probeDeadline(0, 5), 25, 'the climb from the last step to Low stays at 30 fps');
-  run(q, 36000, 40000, 1000 / 30, true);
+  run(q, 96000, 100000, 1000 / 30, true);
   assert.equal(q.level.name, 'low', 'frames with room climb off the last step within seconds');
   assert.equal(q.probeDeadline(0, 5), 15);
 }

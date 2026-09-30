@@ -26,9 +26,13 @@ loadScene.add(loadQuad);
 const loadCamera = new THREE.Camera();
 const loadTarget = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false });
 const loadSize = new THREE.Vector2();
+const loadGpu = quality.gpu.bind(quality);
+quality.gpu = early => { window.__load.fence[early === null ? 'untimed' : early ? 'early' : 'late']++; loadGpu(early); };
 window.__load = {
-  n: 0,
+  n: 0, fence: { early: 0, late: 0, untimed: 0 }, frames: 0,
+  take() { const taken = { ...this.fence, frames: this.frames }; this.fence = { early: 0, late: 0, untimed: 0 }; this.frames = 0; return taken; },
   draw() {
+    this.frames++;
     const n = Math.round(this.n);
     if (n <= 0) return;
     renderer.getDrawingBufferSize(loadSize);
@@ -41,6 +45,7 @@ window.__load = {
   },
 };`;
 
+const rows = [], changes = [], failedAt = {};
 const { browser, close } = await openBrowser();
 try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
@@ -51,10 +56,9 @@ try {
   await page.route('**/src/main.ts*', async route => {
     const response = await route.fetch();
     let source = await response.text();
-    for (const [a, b] of [
-      ['if (QA && params.shot) {', 'if (true) {'],
-      ['  endFrame(renderer);\n  if (quality.probing)', '  window.__load.draw();\n  endFrame(renderer);\n  if (quality.probing)'],
-    ]) { assert(source.includes(a), `Missing hook: ${a}`); source = source.replaceAll(a, b); }
+    const shot = 'if (QA && params.shot) {', fence = /endFrame\(renderer\);(\s+if \(quality\.probing\))/;
+    assert(source.includes(shot) && fence.test(source), 'Missing hook');
+    source = source.replaceAll(shot, 'if (true) {').replace(fence, 'window.__load.draw(); endFrame(renderer);$1');
     await route.fulfill({ response, body: source + LOAD });
   });
   await page.goto(`${base}?analytics=0&progress=0${chapter === 'island' ? '' : '&chapter=' + chapter}`);
@@ -66,13 +70,11 @@ try {
   await page.evaluate(() => new Promise(resolve => { __load.n = 1; setTimeout(() => { __load.n = 0; resolve(); }, 500); }));
   await page.waitForTimeout(4000);
 
-  const state = () => page.evaluate(() => ({ now: performance.now(), name: __game.quality.level.name, n: __load.n }));
+  const state = () => page.evaluate(() => ({ now: performance.now(), name: __game.quality.level.name, n: __load.n, ...__load.take() }));
   const setLoad = n => page.evaluate(n => { __load.n = n; }, n);
-  const rows = [];
-  const changes = [];
   let last = (await state()).name, phase = 'open';
   const started = (await state()).now;
-  // One sample every 250 ms: the level in use, and each change with the load that caused it.
+  // One sample every 250 ms: the level in use, frames presented and how their fences were timed, and each change with the load that caused it.
   const sample = async () => {
     const s = await state();
     s.changed = s.name !== last;
@@ -81,7 +83,7 @@ try {
       console.log(`${phase.padEnd(8)} ${String(Math.round((s.now - started) / 100) / 10).padStart(6)} s  ${last} -> ${s.name}  (load ${Math.round(s.n)})`);
       last = s.name;
     }
-    rows.push({ phase, at: s.now - started, name: s.name, load: s.n });
+    rows.push({ phase, at: Math.round(s.now - started), name: s.name, load: Math.round(s.n), frames: s.frames, early: s.early, late: s.late, untimed: s.untimed });
     return s;
   };
   const watch = async (ms, each) => {
@@ -102,7 +104,6 @@ try {
   // Descent: the load grows slowly, and rests for a while after each step so the new level is judged on its own.
   phase = 'descent';
   let load = 16, restUntil = 0;
-  const failedAt = {};
   await watch(240000, async s => {
     if (s.changed) {
       failedAt[changes.at(-1).from] ??= load;
@@ -144,9 +145,11 @@ try {
   assert.equal(last, 'low', `Auto rests at the level that holds: ${path('boundary')}`);
 
   assert.deepEqual(errors, []);
-  await fs.writeFile(`${out}-auto.json`, JSON.stringify({ chapter, changes, failedAt, rows }, null, 1));
   console.log(JSON.stringify({ chapter, failedAt: Object.fromEntries(Object.entries(failedAt).map(([k, v]) => [k, Math.round(v)])),
     descent: path('descent'), hold: path('hold') || 'last', climb: path('climb'), climbSeconds: Math.round((topAt - liftedAt) / 100) / 10,
     boundary: path('boundary'), trace: `${out}-auto.json` }));
   console.log('Auto under a throttled GPU: Ultra, High, Medium, Low and the last step in order, holding under load, climbing back one level at a time, and resting at Low where Medium cannot hold 60 fps.');
-} finally { await close(); }
+} finally {
+  await fs.writeFile(`${out}-auto.json`, JSON.stringify({ chapter, changes, failedAt, rows: rows.map(row => JSON.stringify(row)) }, null, 1));
+  await close();
+}
