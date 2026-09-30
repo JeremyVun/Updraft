@@ -124,14 +124,34 @@ Seams shared by phases:
   (1.25×) applies. Over the 2.4 million pixel budget Auto lowers the render scale of its current level to fit, never
   below 0.5×. `frameRate` comes from the level, so Auto at Low presents at 30 fps and is judged against 33.3 ms there
   (the existing `capped` scaling), including the climb probe. A two-level drop still happens above 1.5× the budget. A
-  stored `high` under `updraft.quality.v1` reads as `ultra`; choices are saved under `updraft.quality.v2`. `?ratio=`,
-  `?msaa=` and `shot` still lock the governor at exact values with Ultra's world settings. `controls.ts` keeps
+  stored `high` under `updraft.quality.v1` reads as `ultra`; choices are saved under `updraft.quality.v2`. `?ratio=`
+  and `?msaa=` lock the governor at exact values with Ultra's world settings; `shot` hides the selector and leaves
+  Auto running (the quality and power browser checks drive the governor in shot mode). `controls.ts` keeps
   compiling against the new type with a minimal change (phase 6 owns its look).
 - **Arithmetic:** pixels Ultra/High 1.44×, High/Medium 1.56×, Medium/Low 1.38× (about 1.55× with phase 5's effects);
   a 10 ms fence at the lower level is at most 15.6 ms one level up, inside 16.7 ms.
 - **Gate:** the owned checks updated and passing; `quality-budget-profile` shows Auto stepping Ultra → High → Medium →
   Low → last under a throttled GPU and climbing back without oscillating; `tools/analytics-check.mjs`.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at 1ce61c4 (2026-09-30).
+- **As built** (`src/gl/quality.ts`):
+  - `QualityLevel { name, ratio, samples, frameRate }`; `WORLD_QUALITY[name]` holds grass density and reach, terrain
+    split, `mirrorEvery` (the sky mirror's cadence) and mirror scale. `WORLD_QUALITY.ultra` and `.high` are the same
+    object, and the ladder relies on that. `applyWorldQuality(level, immediate)` in `main.ts` keys on a local `name`
+    (`lite` folds to `low`); treat `last` as Low for effects. `controls.setQualityLevel(name)` replaces
+    `setQualityDetail`. Telemetry's dimension is `level` (`chapter.level`, `level.fps`).
+  - A level that would render exactly like the one above it (High at DPR ≤ 1.25, or where the budget fits both to one
+    scale) is left out of Auto's ladder.
+  - A two-level drop is judged against the budget of the level in between (52.8 ms from Medium, so a Medium missing
+    alternate refreshes goes to Low, not the last step). A failed climb returns exactly one level. The climb probe's
+    deadline follows the level being climbed into (10 ms into a 60 fps level, 20 ms into a 30 fps one). Device-cap
+    detection runs only at 60 fps levels. Reviews need 30 timed frames at 60 fps and 15 at 30 fps.
+  - `tools/quality-budget-profile.mjs` now runs the real game under a GPU throttle and asserts descent, hold, climb
+    and the 30/60 boundary (about 3.7 minutes, dev server only, holds the browser lock).
+  - Tools that assert no page errors use `tools/lib/vite-client-stub.mjs` (`withoutHotReload(page)`).
+- **For later phases:** locked and shot captures now use Ultra's world settings (grass reach 115%, was 100%), so a
+  frame comparison must have both sides on the same side of 1ce61c4. `tools/quality-menu-check.mjs` and
+  `tools/veil-controls-check.mjs` fail until phase 6 updates them (`updraft.quality.v2`, Ultra first in the menu,
+  `setQualityLevel`). `index.html` already has a plain Ultra entry.
 
 ## Phase 5: effects by level (visual)
 

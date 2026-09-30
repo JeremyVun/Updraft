@@ -91,7 +91,7 @@ The frame loop skips simulation and rendering while hidden and resets its time b
 story time waits with audio and a long absence is neither a scripted jump nor a slow frame to the quality governor.
 
 The sound on/off choice persists in `updraft.sound.v1` (`src/sound-preference.ts`) and the graphics choice in
-`updraft.quality.v1` (`src/gl/quality-preference.ts`); both fall back gracefully when storage is unavailable. Only a
+`updraft.quality.v2` (`src/gl/quality-preference.ts`); both fall back gracefully when storage is unavailable. Only a
 deliberate toggle writes them; `?shot` stays muted.
 
 ## Lost graphics context

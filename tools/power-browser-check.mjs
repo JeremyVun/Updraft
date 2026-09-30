@@ -41,7 +41,7 @@ try {
       wrap(g.water, 'update', () => renders++);
       wrap(g.sound, 'update', () => audio++);
       wrap(g.story, 'update', () => updates++);
-      for (const mode of ['high', 'low']) for (const hz of [120, 144, 60, 30]) {
+      for (const mode of ['ultra', 'low']) for (const hz of [120, 144, 60, 30]) {
         g.quality.setMode(mode, __clock);
         // Settle a rate change before establishing the one-second measurement window.
         __drive(1000 / hz); __drive(1000 / g.quality.frameRate);
@@ -72,7 +72,7 @@ try {
       if (row.hz) {
         assert.equal(row.renders, Math.min(row.hz, row.mode === 'low' ? 30 : 60), JSON.stringify(row));
         assert.equal(row.audio, row.renders); assert(Math.abs(row.windTicks - 60) <= 1, JSON.stringify(row));
-        assert.equal(row.ratio, row.mode === 'high' ? 1.5 : .85);
+        assert.equal(row.ratio, row.mode === 'ultra' ? 1.5 : .85);
         assert(Math.abs(row.elapsed - 1) < 1e-8, JSON.stringify(row)); assert(row.finite);
       } else { assert(row.paused && row.skipped); assert(Math.abs(row.resumed - 1 / 60) < 1e-8); }
     }
