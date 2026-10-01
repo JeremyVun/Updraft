@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { fixInPlace } from '../gl/fixed';
+import { CLOUD_DECK, register } from '../gl/variants';
 import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, RIME_GLSL, grassUniforms } from './grass';
@@ -304,6 +305,7 @@ export class Terrain {
       side: THREE.DoubleSide,
       defines: heightFilterable ? { HEIGHT_FILTERABLE: '' } : {},
     });
+    register(mat, CLOUD_DECK);
     this.mesh = new THREE.Mesh(this.main.geo, mat);
     this.mesh.frustumCulled = false;
     this.mesh.layers.enable(REFLECTION_LAYER);

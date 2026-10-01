@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { REFLECTION_LAYER } from './water/reflection';
+import { CLOUD_DECK, register } from '../gl/variants';
 
 const VERT = /* glsl */ `
 out vec3 vDir;
@@ -15,10 +16,14 @@ ${ATMO_GLSL}
 in vec3 vDir;
 void main() {
   vec3 d = normalize(vDir);
+#if CLOUD_DECK
   vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, d, 4000.0) : vec4(0.0);
   // Where the deck covers the sky whole, the radiance would be mixed away.
   vec3 col = deck.a < 1.0 ? skyRadiance(d) : vec3(0.0);
   if (uCloudDeck.w > 0.0) col = mix(col, deck.rgb, deck.a);
+#else
+  vec3 col = skyRadiance(d);
+#endif
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -30,6 +35,7 @@ export function createSky(): THREE.Mesh {
     side: THREE.BackSide,
     depthWrite: false,
   });
+  register(mat, CLOUD_DECK);
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;

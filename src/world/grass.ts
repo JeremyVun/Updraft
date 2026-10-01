@@ -1,5 +1,6 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
+import { CLOUD_DECK, register } from '../gl/variants';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -968,6 +969,7 @@ export class Grass {
         },
         side: THREE.DoubleSide,
       });
+      register(mat, CLOUD_DECK);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.frustumCulled = false;
       // Rooms and the doorway set their uniforms around each draw, after the render list holds this material.

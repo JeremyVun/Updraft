@@ -12,13 +12,15 @@ Nothing heavy may happen in the first frames of play. Before the loop starts, be
    half-float target: a program's cache key depends on the target's colour space, so compiling against the screen
    would compile everything twice.
 2. Every simulation and bake material compiles the same way (`precompileSim`; `simMaterial` registers them). Grass
-   table materials compile separately against their four-attachment targets (`grass.precompile`).
+   table materials compile separately against their four-attachment targets (`grass.precompile`). Then the scene
+   and the grass compile again for each program variant (see Program variants).
 3. The static atlases bake once: the field and ground-colour caches and the distant-height atlas (see Bakes).
 4. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), and the visible grass
    tables bake.
 5. `warmRender` draws the scene into the offscreen target in batches of 64 objects, yielding for input and paint
    between them, then the post chain runs; visibility and layer masks are restored even on failure. Textures upload,
-   buffers land on the GPU and render targets are allocated.
+   buffers land on the GPU and render targets are allocated. The objects with program variants are drawn again with
+   each variant.
 6. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
    Begin / Continue. Only that gesture starts audio and `requestAnimationFrame(frame)`; the story and the quality
    governor do not run while waiting.
@@ -60,7 +62,8 @@ Failure paths:
    snapshotted and interpolated across the world updates; each brush sees only its own segment.
 3. Each world update advances input, story, actors, wind, life and particles, camera and world mechanics, in that
    order. The last one follows the world window and requests the wind readback after its final tick.
-4. The final view is prepared once: lighting bakes, cloud shadows, terrain selection, grass tables and audio.
+4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables
+   and audio.
 5. The doorway view renders when open, then the sea reflection, the scene and the post chain; `endFrame()` fences it.
 
 Hidden tabs advance nothing, and visibility changes reset the timestamp. `shot` advances exactly 1/60 s per frame.
@@ -225,6 +228,30 @@ One multisampled half-float scene target; one resolve pass that also clamps NaN,
 would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
 toning, vignette, grain) straight to the screen. Only the scene target is multisampled. The canvas has no depth buffer
 (`depth: false`): nothing drawn to the screen may rely on depth.
+
+## Program variants (`src/gl/variants.ts`)
+
+On these GPUs code compiled into a program costs even where a uniform switches it off (register pressure), so an
+effect that is off is compiled out, not branched round. Each such effect is a switch: a define of the same name, 1 or
+0, tested with `#if`. Shared GLSL defaults a switch to on, so materials without variants keep the effect.
+
+- `register(material, ...axes)` lists the alternatives of each axis; a variant takes one alternative from every
+  axis, so several independent switches multiply (deck × land × three effect sets is three axes, twelve programs).
+- `select(material, choice)` and `selectAll(choice)` change the defines in place. three keeps every program a
+  material has built, keyed by its defines, so switching rebinds a program built before Begin, for every mesh, view
+  and pass that draws the material, and never compiles. A choice that is not a registered variant throws.
+- Behind the veil, `otherVariants()` steps every registered material through its other variants: each step compiles
+  the scene and the grass's programs again and warms the registered objects (`warmRender`'s `only`); the selection is
+  restored after.
+- A twin material per variant was rejected: three sorts opaque draws by `material.id`, so a twin made later draws in
+  another order; each twin's UUID draws from `Math.random`, which shifts seeded frame comparisons; and state set on
+  the original afterwards (the grass's per-draw program pick, uniforms replaced, visibility) would miss the twin.
+
+The cloud deck (`CLOUD_DECK`): its GLSL in `ATMO_GLSL` (the deck, the bank of mist, their helpers, the sun dimming in
+`cloudShadow`, the deck in `fogOf`) and the sky's use of it are compiled only where it is 1. The sea, the terrain
+(main view and the sea's mirror), the grass blades (with and without discard) and the sky have both programs, and
+`prepareFrame` selects the deck while `uCloudDeck.w > 0`, before the doorway view, the reflection and the scene are
+drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck.
 
 ## Bakes and caches
 

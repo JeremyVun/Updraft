@@ -4,6 +4,7 @@ import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
 import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL } from './little-boats-layout';
 import { params } from '../params';
+import { CLOUD_DECK, register } from '../gl/variants';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mainlandCoastZ } from './heightfield';
@@ -471,6 +472,7 @@ export class Water {
       },
     });
     outsideHull(mat);
+    register(mat, CLOUD_DECK);
     this.mesh = new THREE.Mesh(seaGrid(params.lite ? 128 : 192), mat);
     this.mesh.frustumCulled = false;
   }
