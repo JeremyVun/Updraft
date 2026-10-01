@@ -60,7 +60,17 @@ atmosphere (`journey.md`). The stairs' landing-mist intersection is covered by t
 The continuous replay also exposed a camera reversal at the piano's final answer: the third response's wide
 view reset to the close playing view before widening again. The handoff now starts at the already earned view;
 `piano-frame-check` covers the fourth answer and the start of the final reveal, not just subjects staying in frame.
-Visual replay of that fix is pending while the full-journey capture continues.
+The corrected desktop replay passed four real sweeps, idle non-completion, colour rewards and departure;
+chronological frames confirm that the finale widens from the third response without pulling inward first.
+The focused camera regression also passes in landscape and portrait; typecheck and the production build pass.
+
+The desktop review followed real pointer gestures through every chapter, with video, chronological frames and
+camera traces. The first recording's browser closed during the drowned village; Continue resumed its saved
+checkpoint and completed the remaining journey, the closing screen, completed-save reload and Play again with
+no reported game errors. All three movable stair flights docked and all four mirror stars returned. This is
+coverage across two runs, not one uninterrupted pass. The driver knows puzzle targets, so it does not establish
+first-time discoverability; this pass also does not cover listening or performance on other devices.
+Evidence is in `/private/tmp/updraft-motion-review-Sww9sA/` (`journey` and `continued`).
 
 ## Later
 
