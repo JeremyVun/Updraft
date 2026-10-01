@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
+import { STEP } from './stairs-layout';
 
 /**
  * The haze a staircase rests on: soft, lit vapour hanging under its flights and landings, densest just under the
@@ -417,7 +418,9 @@ export function hazeUnderLanding(frame: THREE.Matrix4, width: number, depth: num
   joins: HazeJoins = {}, slab = 0.3): THREE.Mesh {
   const hang = hangs(amount);
   const x0 = -width / 2 - reach(joins.x0, amount), x1 = width / 2 + reach(joins.x1, amount);
-  const z0 = -depth / 2 - reach(joins.z0, amount), z1 = depth / 2 + reach(joins.z1, amount);
+  // Stop inside the last tread: reaching the next one puts the mist box through its visible surface.
+  const back = joins.z0 ? Math.min(OVERLAP, STEP.going / 2) : spills(amount);
+  const z0 = -depth / 2 - back, z1 = depth / 2 + reach(joins.z1, amount);
   const shape = new THREE.Matrix4().makeTranslation((x0 + x1) / 2, -slab - hang / 2, (z0 + z1) / 2)
     .multiply(new THREE.Matrix4().makeScale(x1 - x0, hang, z1 - z0));
   return hazeBox(frame, shape, new THREE.Vector4(x1 - x0, hang, z1 - z0, OVERLAP), amount, joins, 'stairs-haze-landing');

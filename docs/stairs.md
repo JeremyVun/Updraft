@@ -230,6 +230,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 ## How it is built
 
+- **Landing mist** (`src/world/stairs-haze.ts`): the back overlap stops within half a tread. Its former 0.35 m
+  reach crossed the second riser's exposed face and the tread below, drawing bright patches over the paint as
+  a loose flight turned. `tools/stairs-haze-check.mjs` checks visible surfaces across all 15 flights.
 - **Layout** (`src/world/stairs-layout.ts`): the stair is a list of flight specs (`SPECS`: which way, how many
   risers, which face of its landing the next leaves by); `flight(i)`, `landingOf(i)` (in the landing's own frame,
   with `openings` where flights meet it and `bare` sides), `onLanding`. `LOOSE` are the loose flights, `BELOW_CLOUD`

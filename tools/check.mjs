@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const quick = [
   'shader', 'water-texture', 'progress-schema', 'nearby', 'pointer-contact',
   'chapter-view', 'flock-audio', 'frame-time', 'wind-clock', 'wind-gesture-logic', 'quality',
-  'boot-cloth', 'analytics',
+  'boot-cloth', 'analytics', 'stairs-haze',
 ];
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'journey-pacing', 'kite-logic',

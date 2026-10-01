@@ -72,6 +72,7 @@ edit.
   `loading-check`, `boot-cloth-check`, `failure-paths-check`, `context-loss-check`.
 - `nearby-check`, `bandage-cost-check`, `scarf-normals-check`, `drowned-gating-check`, `boat-mooring-check` (every
   frame the moored hull skips its contact tests, testing them would not have moved it).
+- `stairs-haze-check`: landing mist volumes stay below the incoming flights' exposed treads and risers.
 - Against another build, for changes meant to be exact: `scarf-exact-check` (`BASELINE=<checkout>`: the scarf's mesh
   and cloth byte-identical in lockstep, no browser) and `audio-silence-check` (`OLD=<previous build's server>`: offline
   renders below −100 dBFS apart).

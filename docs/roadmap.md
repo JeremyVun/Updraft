@@ -43,6 +43,25 @@ Engineering, not scheduled:
 - No graphics-memory budget for older iPads (grass tables about 28 MiB, static atlases about 26 MiB).
 - Startup and audio wiring could move out of `main.ts` in small steps.
 
+## Visual polish review — 2026-10-01
+
+Jeremy's brief:
+
+> "have a look at the game and see if you can see anything we can make better. For one, i noticed that on the stairs chapter, the secont step from the top for the flights that the player moves has some kind of z level collision, causing flashing of the textures"
+
+He clarified: "Vertical front of the step".
+
+The review samples the stairs and the meadow, birches, wood, sleeping island, mirror and home entrances at
+1600 × 900; it is not a full playthrough or a listening pass. Keep the journey's emphasis on readable companions
+and uninterrupted atmosphere (`journey.md`). The immediate fix is the stairs' landing mist intersecting an upper
+riser (`stairs.md`). Next candidates, not approved visual changes:
+
+- Stow the paper plane more convincingly. It presents a large bright triangle across the child's back in the
+  sleeping island, meadow and home views, obscuring the satchel and competing with the child's silhouette.
+- Preserve the companions' silhouettes in dense grass. At the meadow entrance the child's legs disappear into
+  the blades, and grass masks the cygnet's lower body at the stair foot. Review local grass clearance around them
+  before changing the wider grass or camera.
+
 ## Later
 
 - A second companion: Jeremy would "eventually like to add another animal later one and make this a much more
