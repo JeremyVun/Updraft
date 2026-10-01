@@ -75,8 +75,9 @@ edit.
   frame the moored hull skips its contact tests, testing them would not have moved it).
 - `stairs-haze-check`: landing mist volumes stay below the incoming flights' exposed treads and risers.
 - Against another build, for changes meant to be exact: `scarf-exact-check` (`BASELINE=<checkout>`: the scarf's mesh
-  and cloth byte-identical in lockstep, no browser) and `audio-silence-check` (`OLD=<previous build's server>`: offline
-  renders below −100 dBFS apart).
+  and cloth byte-identical in lockstep, no browser), `audio-silence-check` (`OLD=<previous build's server>`: offline
+  renders below −100 dBFS apart) and `wind-exact-check` (`COMPARE_BASE=<its server>`: the wind field and what the life
+  pass reads of it bit for bit after 600 scripted ticks, `TICKS` for more).
 
 **Camera**
 
