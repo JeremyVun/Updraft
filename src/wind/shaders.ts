@@ -89,14 +89,27 @@ void main() {
 }`;
 
 /**
- * Several passes fused into one, bit for bit: a value an earlier pass would have stored in a half-float target is
- * rounded to half here, and neighbours are taken at grid positions clamped one step at a time, as sampling each
- * intermediate texture would have clamped them. Each pass on a tiled GPU costs a fixed load and store on top of its
- * pixels.
+ * Passes fused bit for bit: neighbours are clamped one step at a time as each stored texture's sampling clamped them,
+ * and a value a pass would have stored in a half-float target is cut to half as the store cuts it, toward zero
+ * (`storeHalf`). Both roundings are bit operations a compiler cannot drop. On a tiled GPU every pass costs a load and
+ * store of its target.
  */
 const HALF = /* glsl */ `
-float half1(float v) { return unpackHalf2x16(packHalf2x16(vec2(v, 0.0))).x; }
-vec4 half4(vec4 v) { return vec4(unpackHalf2x16(packHalf2x16(v.xy)), unpackHalf2x16(packHalf2x16(v.zw))); }
+float storeHalf(float v) {
+  float a = abs(v);
+  if (a < 6.103515625e-05) return trunc(v * 16777216.0) * 5.9604644775390625e-08;
+  if (a >= 65536.0) return sign(v) * 65504.0;
+  return uintBitsToFloat(floatBitsToUint(v) & 0xFFFFE000u);
+}
+vec4 storeHalf4(vec4 v) { return vec4(storeHalf(v.x), storeHalf(v.y), storeHalf(v.z), storeHalf(v.w)); }
+float nearHalf(float v) {
+  if (abs(v) < 6.103515625e-05) return roundEven(v * 16777216.0) * 5.9604644775390625e-08;
+  uint b = floatBitsToUint(v);
+  uint rest = b & 0x1FFFu;
+  b &= 0xFFFFE000u;
+  if (rest > 0x1000u || (rest == 0x1000u && (b & 0x2000u) != 0u)) b += 0x2000u;
+  return uintBitsToFloat(b);
+}
 `;
 
 type Cell = [number, number];
@@ -106,10 +119,7 @@ const diamond = (r: number): Cell[] => {
   return cells;
 };
 const tag = (a: number, b: number) => `${a < 0 ? 'm' + -a : a}_${b < 0 ? 'm' + -b : b}`;
-/**
- * A cell computed from its neighbours is wrong where it lies outside the grid: there it takes the value of the cell
- * it clamps to, the nearest one inward, which (working outward) is already right.
- */
+/** Outside the grid a cell takes the value of the one it clamps to, the nearest inward, already right. */
 const clampCells = (name: string, cells: Cell[]): string => {
   const lines: string[] = [];
   const order = [...cells].sort((p, q) => Math.abs(p[0]) - Math.abs(q[0]));
@@ -125,7 +135,7 @@ const clampCells = (name: string, cells: Cell[]): string => {
 };
 const fetchAt = (sampler: string, a: number, b: number) => `texelFetch(${sampler}, clamp(at + ivec2(${a}, ${b}), ivec2(0), last), 0)`;
 
-/** The curl pass folded into the vorticity pass: CURL_FRAG at the centre and its four neighbours, as stored. */
+/** Vorticity confinement, with the curl it reads worked out here at the centre and its four neighbours, as stored. */
 export const CURL_VORTICITY_FRAG = /* glsl */ `
 uniform sampler2D uVel;
 uniform float uStrength;
@@ -136,7 +146,7 @@ void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
   ivec2 last = textureSize(uVel, 0) - 1;
   ${diamond(2).map(([a, b]) => `vec2 v${tag(a, b)} = ${fetchAt('uVel', a, b)}.xy;`).join('\n  ')}
-  ${diamond(1).map(([a, b]) => `float c${tag(a, b)} = half1(0.5 * (v${tag(a + 1, b)}.y - v${tag(a - 1, b)}.y - v${tag(a, b + 1)}.x + v${tag(a, b - 1)}.x));`).join('\n  ')}
+  ${diamond(1).map(([a, b]) => `float c${tag(a, b)} = storeHalf(0.5 * (v${tag(a + 1, b)}.y - v${tag(a - 1, b)}.y - v${tag(a, b + 1)}.x + v${tag(a, b - 1)}.x));`).join('\n  ')}
   ${clampCells('c', diamond(1))}
   float L = c${tag(-1, 0)};
   float R = c${tag(1, 0)};
@@ -165,32 +175,41 @@ void main() {
 }`;
 
 /**
- * `depth` Jacobi relaxations of PRESSURE in one pass (two passes of it once read `(L + R + B + T - div) * 0.25`);
- * `scaled` folds in the pass that carries the last solve over at `uScale` as the first guess.
+ * `pairs` pairs of Jacobi relaxations of the pressure in one pass, each pair the arithmetic its own pass compiled to
+ * on Chrome's Metal backend, which the field has always run: the four relaxations summed left to right, only the left
+ * one rounded to half (to nearest), then the pair's sum taking the divergence before the top neighbour. The order is
+ * pinned through `uZero`, which fast math cannot see through. `scaled` carries the last solve over at `uScale` first.
  */
-export function pressureFrag(depth: number, scaled: boolean): string {
-  const levels: string[] = [];
+export function pressureFrag(pairs: number, scaled: boolean): string {
+  const depth = pairs * 2;
+  const body: string[] = [];
   for (let k = 1; k <= depth; k++) {
-    const cells = diamond(depth - k);
+    const inner = k % 2 === 1;
     const p = (a: number, b: number) => `p${k - 1}_${tag(a, b)}`;
-    levels.push(cells.map(([a, b]) => {
-      const sum = `(${p(a - 1, b)} + ${p(a + 1, b)} + ${p(a, b - 1)} + ${p(a, b + 1)} - d${tag(a, b)}) * 0.25`;
-      return `float p${k}_${tag(a, b)} = ${k < depth ? `half1(${sum})` : sum};`;
+    const cells = diamond(depth - k);
+    body.push(cells.map(([a, b]) => {
+      const d = `d${tag(a, b)}`;
+      const sum = inner
+        ? `pin(pin(pin(pin(${p(a - 1, b)} + ${p(a + 1, b)}) + ${p(a, b - 1)}) + ${p(a, b + 1)}) - ${d}) * 0.25`
+        : `pin(pin(pin(pin(nearHalf(${p(a - 1, b)}) + ${p(a + 1, b)}) + ${p(a, b - 1)}) - ${d}) + ${p(a, b + 1)}) * 0.25`;
+      return `float p${k}_${tag(a, b)} = ${!inner && k < depth ? `storeHalf(${sum})` : sum};`;
     }).join('\n  '));
-    if (k < depth) levels.push(clampCells(`p${k}_`, cells));
+    if (k < depth) body.push(clampCells(`p${k}_`, cells));
   }
   const read = (a: number, b: number) => `${fetchAt('uPressure', a, b)}.x`;
   return /* glsl */ `
 uniform sampler2D uPressure;
 uniform sampler2D uDivergence;
 uniform float uScale;
+uniform uint uZero;
 ${HALF}
+float pin(float v) { return uintBitsToFloat(floatBitsToUint(v) ^ uZero); }
 void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
   ivec2 last = textureSize(uPressure, 0) - 1;
-  ${diamond(depth).map(([a, b]) => `float p0_${tag(a, b)} = ${scaled ? `half1(${read(a, b)} * uScale)` : read(a, b)};`).join('\n  ')}
+  ${diamond(depth).map(([a, b]) => `float p0_${tag(a, b)} = ${scaled ? `storeHalf(${read(a, b)} * uScale)` : read(a, b)};`).join('\n  ')}
   ${diamond(depth - 1).map(([a, b]) => `float d${tag(a, b)} = ${fetchAt('uDivergence', a, b)}.x;`).join('\n  ')}
-  ${levels.join('\n  ')}
+  ${body.join('\n  ')}
   gl_FragColor = vec4(p${depth}_${tag(0, 0)}, 0.0, 0.0, 1.0);
 }`;
 }
@@ -236,10 +255,8 @@ void main() {
 }`;
 
 /**
- * Advection, then the grass lean and the sway driven by the advected wind as it is stored. Channels: the wind xy
- * velocity, z gust energy, w updraft; the lean xy (radians, world XZ) and its velocity zw, a damped spring so gusts
- * overshoot and settle; the sway xy, the wind hanging things feel on a softer spring (world units per second), and
- * its rate of change zw, so cloth and leaves take the gust late, overshoot and swing back.
+ * Advection, then from the advected wind as stored: the grass lean (xy radians, zw its velocity), a damped spring so
+ * gusts overshoot and settle, and the sway hanging things feel (xy, zw its rate), a softer one so they take it late.
  */
 export const ADVECT_FRAG = /* glsl */ `
 uniform sampler2D uVel;
@@ -267,7 +284,7 @@ void main() {
   s.z *= exp(-uDt * uEnergyDecay);
   s.w *= exp(-uDt * uLiftDecay);
   gl_FragColor = s;
-  vec4 w = half4(s);
+  vec4 w = storeHalf4(s);
 
   vec4 b = texture(uBend, vUv);
   float sp = length(w.xy);

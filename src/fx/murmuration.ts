@@ -8,11 +8,7 @@ const HOME = new THREE.Vector3(-165, 88, -1735);
 /** Where the flock comes from, far to the west. */
 const ARRIVE_FROM = new THREE.Vector3(-900, 130, -1500);
 const SIZE = 14;
-/**
- * Every bird stays within this of the centre, so the flock is skipped only when none of it can be on screen: the
- * body's shape reaches at most 7.8 sizes out (`flock`, its wobble and the roost's fold), and a bird's span, which
- * grows with distance, stays under 40 m out to 15 km, past anything the 7 km far plane can show.
- */
+/** No bird strays further from the centre: its place is at most 7.8 sizes out, its span under 40 m within 15 km. */
 const REACH = 7.8 * SIZE + 40;
 
 const VERT = /* glsl */ `

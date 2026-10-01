@@ -72,6 +72,12 @@
 // the same fixture there first and reports the difference between the two frozen frames (changed channels, those over
 // 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
 // run above that; CAPTURE=1 saves both frames. A build against itself must read 0.
+// Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
+// keeps the game's random stream (read the randoms drift field if a comparison still drifts).
+// mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material (a candidate exact
+// merge, for a build before the merge); mirror-dark leaves its unlit guide and opacity-0 lines undrawn;
+// mirror-ordinary renders its reflection at the ordinary sea's size and cadence (a look change, costed only).
+// boatsBath hides the little boats' static bath and plug: the most merging them could save (not exact).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -135,7 +141,8 @@ window.__audit = {
     pond: pond.objects, washing: [washing.group, washingBaskets, pinwheels.group, door.group],
     village: village.objects, wood: wood.objects, sleeping: sleeping.objects, birches: birches.objects,
     cottage: cottage.objects, jetty: [homeJetty], piano: [piano.group], mirror: [skyMirror.group],
-    littleBoats: [littleBoats.group], islandCreatures: [creatures.group], meadowCreatures: [hillCreatures.group],
+    littleBoats: [littleBoats.group], boatsBath: ['dream-bathtub','bath-plug'].map(n=>littleBoats.group.getObjectByName(n)),
+    islandCreatures: [creatures.group], meadowCreatures: [hillCreatures.group],
     child: child.objects, cygnet: cygnet.objects, glider: glider.objects, boat: boat.objects,
     flock: flock.objects, rocks: [islandRocks], shoreGrass: [shoreGrass], petals: [petals.mesh], windLines: [lines.batch.mesh],
     rain: [rain.mesh], fireflies: [fireflies.mesh],
@@ -373,6 +380,9 @@ window.__audit = {
       post.sceneTarget=noDepth?this.alt:o;post.resolveMat.uniforms.tDiffuse.value=post.sceneTarget.texture;this.altOn=noDepth;
     }
     if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
+    // mirror-ordinary: the sky mirror's reflection at the ordinary sea's size and cadence (a look change, costed only).
+    this.mirrorCadence??=[water.mirrorScale,water.mirrorEvery];
+    [water.mirrorScale,water.mirrorEvery]=variants.includes('mirror-ordinary')?[0.25,2]:this.mirrorCadence;
     const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
     if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
@@ -613,7 +623,7 @@ window.__audit = {
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
     const drawn=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
-      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
+      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});

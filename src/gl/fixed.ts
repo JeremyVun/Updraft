@@ -19,9 +19,8 @@ export function fixTreeInPlace(root: THREE.Object3D): void {
 }
 
 /**
- * One geometry for pieces placed by translation alone, so they draw in one call. Each vertex is the float32 sum of
- * its position and its piece's offset, which is what `modelMatrix * position` gave on the GPU, so the pieces land
- * exactly where they were drawn before. Normals and the other attributes are copied untouched.
+ * One geometry for pieces placed by translation alone. Each vertex is the float32 sum `modelMatrix * position` gave
+ * on the GPU, so merged they draw exactly as they did apart.
  */
 export function mergeTranslated(pieces: readonly { geometry: THREE.BufferGeometry; x: number; y: number; z: number }[]): THREE.BufferGeometry {
   const names = Object.keys(pieces[0].geometry.attributes);

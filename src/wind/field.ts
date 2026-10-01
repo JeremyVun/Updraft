@@ -17,8 +17,8 @@ import {
   pressureFrag,
 } from './shaders';
 
-/** Pressure relaxations per pass: fewer passes, each reading a wider neighbourhood. */
-const PRESSURE_DEPTH = 4;
+/** Pairs of pressure relaxations per pass: fewer passes, each reading a wider neighbourhood. */
+const PAIRS_PER_PASS = 2;
 
 /** A push of air along a segment, in world units. See docs/contracts/wind.md. */
 export interface Splat {
@@ -100,7 +100,7 @@ const STEP = WIND_STEP;
 export interface WindOptions {
   /** Grid resolution; 256 by default. */
   res?: number;
-  /** Jacobi pressure iterations per substep; 24 by default. */
+  /** Jacobi pressure iterations per substep, an even number; 24 by default. */
   iterations?: number;
 }
 
@@ -169,11 +169,13 @@ export class WindField {
       uDt: dt,
     });
     this.divergenceMat = simMaterial(DIVERGENCE_FRAG, { uVel: { value: null }, uTexel: texel });
-    for (let done = 0; done < iterations; done += PRESSURE_DEPTH) {
-      this.pressurePasses.push(simMaterial(pressureFrag(Math.min(PRESSURE_DEPTH, iterations - done), done === 0), {
+    if (iterations % 2) throw new Error('The pressure relaxes in pairs: give an even number of iterations');
+    for (let done = 0; done < iterations / 2; done += PAIRS_PER_PASS) {
+      this.pressurePasses.push(simMaterial(pressureFrag(Math.min(PAIRS_PER_PASS, iterations / 2 - done), done === 0), {
         uPressure: { value: null },
         uDivergence: { value: this.divergence.texture },
         uScale: { value: 0.8 },
+        uZero: { value: 0 },
       }));
     }
     this.gradientMat = simMaterial(GRADIENT_FRAG, { uPressure: { value: null }, uVel: { value: null }, uTexel: texel });
