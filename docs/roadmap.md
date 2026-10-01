@@ -51,16 +51,11 @@ Jeremy's brief:
 
 He clarified: "Vertical front of the step".
 
-The review samples the stairs and the meadow, birches, wood, sleeping island, mirror and home entrances at
-1600 × 900; it is not a full playthrough or a listening pass. Keep the journey's emphasis on readable companions
-and uninterrupted atmosphere (`journey.md`). The immediate fix is the stairs' landing mist intersecting an upper
-riser (`stairs.md`). Next candidates, not approved visual changes:
-
-- Stow the paper plane more convincingly. It presents a large bright triangle across the child's back in the
-  sleeping island, meadow and home views, obscuring the satchel and competing with the child's silhouette.
-- Preserve the companions' silhouettes in dense grass. At the meadow entrance the child's legs disappear into
-  the blades, and grass masks the cygnet's lower body at the stair foot. Review local grass clearance around them
-  before changing the wider grass or camera.
+The first pass sampled chapter entrances rather than reviewing complete interactions. Jeremy rejected the
+paper-plane and grass criticisms: "do you see them as being an issue? I don't...?" Leave both as they are;
+neither still demonstrated a problem. The review now follows actual play in motion and requires reproducible
+evidence before calling something a defect. Preserve the journey's readable companions and uninterrupted
+atmosphere (`journey.md`). The stairs' landing-mist intersection is covered by the focused fix (`stairs.md`).
 
 ## Later
 
