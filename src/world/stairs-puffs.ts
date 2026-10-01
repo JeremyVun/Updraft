@@ -53,6 +53,8 @@ in float vSun;
 in float vNear;
 void main() {
   float d = length(vCorner);
+  // The lumps reach at most 1.25 out; beyond that the ball has no body, so skip its noise.
+  if (d >= 1.25) discard;
   float around = atan(vCorner.y, vCorner.x);
   float lump = vnoise(vec2(around * 1.9 + vCentre.x * 4.0, vCentre.z * 4.0 + uTime * 0.12))
     + 0.5 * vnoise(vec2(around * 4.3 - vCentre.y * 3.0, uTime * 0.2));

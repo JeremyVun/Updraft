@@ -268,8 +268,9 @@ window.__audit = {
     }
     if(variants.includes('sky-flat')) {
       const m=sky.material;
-      const sky0=this.diagnosticMaterials[1][1];if(!sky0.includes('vec3 col = skyRadiance(d);'))throw Error('Missing patch site: sky radiance');
-      m.fragmentShader=sky0.replace('vec3 col = skyRadiance(d);','vec3 col = vec3(0.5,0.6,0.7);');m.needsUpdate=true;
+      const sky0=this.diagnosticMaterials[1][1],site=['vec3 col = skyRadiance(d);','? skyRadiance(d) :'].find(s=>sky0.includes(s));
+      if(!site)throw Error('Missing patch site: sky radiance');
+      m.fragmentShader=sky0.replace(site,site.replace('skyRadiance(d)','vec3(0.5,0.6,0.7)'));m.needsUpdate=true;
     }
     // The cloud deck's top: cloudtop-frag-flat keeps its discards and fog but not its shading; cloudtop-veil drops the
     // low wisps streaming over it; wisps-early discards a puff card's pixels outside the largest ball its noise can make
