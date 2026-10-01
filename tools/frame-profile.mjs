@@ -46,6 +46,9 @@
 // The sea: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-fine restores
 // the sea's fog per pixel. Draws alternate the reflection, so time s1-off with DRAWS even. water-caustics
 // and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
+// sea-weed-off works the weed out at every depth again (the old path). landskip-off and landskip-on draw the sea
+// without or with its return under land (LAND_SKIP) whatever prepareFrame chose; water-far-ub returns everywhere
+// beyond the window's inner part, the upper bound for a return under land there (not exact).
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most skipping empty tiles could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
