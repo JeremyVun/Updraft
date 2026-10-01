@@ -1,5 +1,6 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
+import { CLOUD_DECK, register } from '../gl/variants';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -968,6 +969,7 @@ export class Grass {
         },
         side: THREE.DoubleSide,
       });
+      register(mat, CLOUD_DECK);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.frustumCulled = false;
       // Rooms and the doorway set their uniforms around each draw, after the render list holds this material.
@@ -1076,7 +1078,6 @@ export class Grass {
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     scene.add(mesh);
-    const blades = this.group.children.map((o) => (o as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material);
     try {
       if (!this.direct) {
         for (const lod of this.lods) {
@@ -1085,6 +1086,18 @@ export class Grass {
           await renderer.compileAsync(scene, camera);
         }
       }
+      await this.precompileUnclipped(renderer, camera);
+    } finally {
+      renderer.setRenderTarget(previous);
+      geometry.dispose();
+    }
+  }
+
+  /** Creates no three objects, whose UUIDs draw on `Math.random`, so it can run again for each program variant. */
+  async precompileUnclipped(renderer: THREE.WebGLRenderer, camera: THREE.Camera): Promise<void> {
+    const previous = renderer.getRenderTarget();
+    const blades = this.group.children.map((o) => (o as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material);
+    try {
       // Any offscreen target builds the same program as the scene's.
       renderer.setRenderTarget(this.lods[0].table);
       for (const m of blades) { m.fragmentShader = FRAG_UNCLIPPED; m.needsUpdate = true; }
@@ -1092,7 +1105,6 @@ export class Grass {
     } finally {
       for (const m of blades) { m.fragmentShader = FRAG; m.needsUpdate = true; }
       renderer.setRenderTarget(previous);
-      geometry.dispose();
     }
   }
 

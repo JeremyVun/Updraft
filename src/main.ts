@@ -37,6 +37,7 @@ import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { QA } from './qa';
 import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
+import { hasVariants, otherVariants, selectAll } from './gl/variants';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
 import { endFrame, holdForReadbacks, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
@@ -963,6 +964,7 @@ function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vect
 /** Expensive view preparation and audio scheduling run once per rendered frame. */
 function prepareFrame(dt: number): void {
   const u = atmo.uniforms;
+  selectAll({ CLOUD_DECK: u.uCloudDeck.value.w > 0 });
   sinceLightBake++;
   const shadowCovered = atmo.uniforms.uStormCover.value >= tuning.storm.shadowCovered;
   // The shared shader fades terrain shadows out under opaque storm cloud. Re-bake on clearing, even if
@@ -1155,6 +1157,10 @@ async function boot(): Promise<void> {
   terrain.colour.bake(renderer);
   if (params.heights !== 'direct') await terrainHeights.bake(renderer, () => gpuIdle(renderer));
   await grass.precompile(renderer);
+  for (const _ of otherVariants()) {
+    await precompile(renderer, scene, rig.camera, post.sceneTarget);
+    await grass.precompileUnclipped(renderer, rig.camera);
+  }
   await yieldBoot();
   followWindow(...windowAim(), true);
   grass.update(rig.camera);
@@ -1163,6 +1169,7 @@ async function boot(): Promise<void> {
   await gpuIdle(renderer);
   await yieldBoot();
   await warmRender(renderer, scene, rig.camera, post.sceneTarget);
+  for (const _ of otherVariants()) await warmRender(renderer, scene, rig.camera, post.sceneTarget, hasVariants);
   await yieldBoot();
   post.render(0);
   await gpuIdle(renderer);
