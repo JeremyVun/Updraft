@@ -140,7 +140,8 @@ class Build {
 
   /** `mist` says, for a point in world space, how far it has gone to cloud: 0 solid, 1 gone. */
   add(geo: THREE.BufferGeometry, matrix: THREE.Matrix4, part: number, colour = COLOURS[part], mist?: (p: THREE.Vector3) => number): void {
-    const g = geo.index ? geo.clone() : shareCorners(geo);
+    const g = geo.clone();
+    if (!g.index) shareCorners(g);
     g.applyMatrix4(matrix);
     const pos = g.getAttribute('position');
     const n = pos.count;
@@ -165,8 +166,8 @@ class Build {
   }
 }
 
-/** Indexes a triangle list, sharing only corners identical to the bit in every attribute: the same triangles in the same order. */
-function shareCorners(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+/** Indexes a triangle list in place, sharing only corners identical to the bit in every attribute: the same triangles in the same order. */
+function shareCorners(geo: THREE.BufferGeometry): void {
   const sources = Object.keys(geo.attributes).map(name => {
     const { array, itemSize } = geo.getAttribute(name) as THREE.BufferAttribute;
     if (!(array instanceof Float32Array)) throw new Error(`Stairs attribute ${name} is not float`);
@@ -212,16 +213,14 @@ function shareCorners(geo: THREE.BufferGeometry): THREE.BufferGeometry {
       }
     }
   }
-  const out = new THREE.BufferGeometry();
   offset = 0;
   for (const { name, size } of sources) {
     const shared = new Uint32Array(count * size);
     for (let k = 0; k < count; k++) for (let c = 0; c < size; c++) shared[k * size + c] = keys[first[k] * width + offset + c];
-    out.setAttribute(name, new THREE.BufferAttribute(new Float32Array(shared.buffer), size));
+    geo.setAttribute(name, new THREE.BufferAttribute(new Float32Array(shared.buffer), size));
     offset += size;
   }
-  out.setIndex(new THREE.BufferAttribute(count < 65536 ? Uint16Array.from(index) : index, 1));
-  return out;
+  geo.setIndex(new THREE.BufferAttribute(count < 65536 ? Uint16Array.from(index) : index, 1));
 }
 
 const RAIL_HEIGHT = 0.86;

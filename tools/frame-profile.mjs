@@ -55,6 +55,7 @@
 // stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
 // stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
+// stairs-unindexed draws the flights and landings unindexed, as before they were indexed.
 // cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
@@ -285,6 +286,16 @@ window.__audit = {
       if(variants.includes('wisps-early'))f=need(f,'  float d = length(vCorner);\\n').replace('  float d = length(vCorner);\\n','  float d = length(vCorner);\\n  if (d >= 1.25) discard;\\n');
       if(top.fragmentShader!==t){top.fragmentShader=t;top.needsUpdate=true;}
       if(puff.fragmentShader!==f){puff.fragmentShader=f;puff.needsUpdate=true;}
+    }
+    // stairs-unindexed: the flights and landings as the triangle list they were before indexing, the same triangles.
+    {
+      const meshes=[cloudStairs.group.getObjectByName('stairs-standing'),cloudStairs.trick,...cloudStairs.pieces.map(p=>p.group.children[0])];
+      this.stairsIndexed??=new Map(meshes.map(m=>[m,m.geometry]));this.stairsSoup??=new Map();
+      this.stairsUnindexed=variants.includes('stairs-unindexed');
+      for(const m of meshes){const indexed=this.stairsIndexed.get(m);
+        if(this.stairsUnindexed&&!indexed.index)throw Error('Missing patch site: the stairs mesh is not indexed');
+        const g=this.stairsUnindexed?this.stairsSoup.get(m)??this.stairsSoup.set(m,indexed.toNonIndexed()).get(m):indexed;
+        if(m.geometry!==g)m.geometry=g;}
     }
     // sky-deckfirst: the candidate exact skip, the deck worked out first and the sky's radiance only where it shows through.
     if(variants.includes('sky-deckfirst')) {
@@ -568,7 +579,7 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
