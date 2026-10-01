@@ -111,7 +111,8 @@ declare global {
 
 const resumedAtLoad = params.progress && readProgress() !== null;
 const canvas = document.getElementById('view') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+// Only the grade quad draws to the screen, so the canvas needs no depth buffer.
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, depth: false, powerPreference: 'high-performance' });
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.info.autoReset = false;
 if (params.shot) document.body.classList.add('shot');

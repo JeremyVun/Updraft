@@ -223,7 +223,8 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 
 One multisampled half-float scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
 would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
-toning, vignette, grain) straight to the screen. Only the scene target is multisampled.
+toning, vignette, grain) straight to the screen. Only the scene target is multisampled. The canvas has no depth buffer
+(`depth: false`): nothing drawn to the screen may rely on depth.
 
 ## Bakes and caches
 
