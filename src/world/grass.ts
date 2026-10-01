@@ -1,4 +1,5 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
+import { fixTreeInPlace } from '../gl/fixed';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -974,6 +975,7 @@ export class Grass {
       this.group.add(mesh);
       this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
+    fixTreeInPlace(this.group);
     this.setQuality(density, params.lite ? 0.7 : 1, true);
     // Height and surface bakes can change even on a forced move to the same domain.
     onWindowMove(() => { this.tablesDirty = true; });

@@ -99,6 +99,7 @@ import { telemetry } from './analytics/telemetry';
 import { frameTiming } from './gl/frame-time';
 import { FramePacer } from './gl/frame-pacer';
 import { saveSoundPreference } from './sound-preference';
+import { fixInPlace } from './gl/fixed';
 
 declare global {
   interface Window {
@@ -124,6 +125,7 @@ if (!graphicsCapability.supported) {
 }
 
 const scene = new THREE.Scene();
+fixInPlace(scene);
 const rig = new CameraRig();
 const aimDir = new THREE.Vector3();
 /** Where the window should be centred: well ahead of the camera, on the ground it is looking at. */
@@ -1143,6 +1145,8 @@ if (QA && params.shot) {
  */
 async function boot(): Promise<void> {
   const started = performance.now();
+  // Fixed scenery takes its world matrix once, under the parents it is drawn with.
+  scene.updateMatrixWorld(true);
   await yieldBoot();
   await precompile(renderer, scene, rig.camera, post.sceneTarget);
   await precompileSim(renderer, bakes.ground);

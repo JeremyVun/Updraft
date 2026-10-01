@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
@@ -168,6 +169,7 @@ export class Embers {
     this.mesh.add(this.veils.mesh);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
+    fixInPlace(this.mesh, this.veils.mesh);
   }
 
   /** Lays an unlit coal in the litter, taking the oldest slot back if they are all in use. */

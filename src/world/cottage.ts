@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -238,6 +239,7 @@ export class Cottage {
     // Echo the drawn front, with a little side still showing from the child's approach.
     this.group.rotation.y = Math.atan2(LAST_HILL.x - COTTAGE.x, LAST_HILL.z - COTTAGE.z)
       + tuning.homeReveal.cottageTurn;
+    fixInPlace(this.group, ...this.group.children.filter((o) => o !== this.door), ...this.door.children);
     this.group.updateMatrixWorld(true);
     this.doorstep.set(0, 0, front + 2.2).applyMatrix4(this.group.matrixWorld);
     this.chimney.set(LENGTH / 2 - 0.55, RIDGE + 1.4, 0).applyMatrix4(this.group.matrixWorld);
@@ -273,6 +275,7 @@ export class Cottage {
       }),
     );
     smokeMesh.frustumCulled = false;
+    fixInPlace(smokeMesh);
     this.smokeMesh = smokeMesh;
     for (let i = 0; i < PUFFS; i++) this.puffs.push({ p: this.chimney.clone(), age: -i / PUFFS, life: 7 + (i % 5) });
   }

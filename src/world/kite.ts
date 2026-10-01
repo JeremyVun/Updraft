@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import { tuning } from '../tuning';
@@ -289,6 +290,7 @@ export class Kite {
     this.bows.frustumCulled = false;
     this.group.add(this.bows);
     this.group.traverse(part => part.layers.enable(REFLECTION_LAYER));
+    fixInPlace(this.group, ...this.group.children.filter((o) => o !== this.sail), ...this.sail.children);
     this.position.copy(this.anchor).add(this.a.set(0, 14, -6));
     this.group.visible = false;
   }

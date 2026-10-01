@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixTreeInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { AudioOut } from '../creatures/voices';
 import { glsl, tuning } from '../tuning';
@@ -299,6 +300,7 @@ export class Pinwheels {
     this.group.add(
       new THREE.Mesh(mergeGeometries(sticks), new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: STICK_VERT, fragmentShader: STICK_FRAG })),
     );
+    fixTreeInPlace(this.group);
     let cx = 0;
     let cz = 0;
     for (const w of this.wheels) {

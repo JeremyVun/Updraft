@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
@@ -80,5 +81,6 @@ export function createRocks(): THREE.Mesh {
   });
   const mesh = new THREE.Mesh(mergeGeometries(parts), mat);
   mesh.layers.enable(REFLECTION_LAYER);
+  fixInPlace(mesh);
   return mesh;
 }

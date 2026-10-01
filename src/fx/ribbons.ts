@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 
 export interface Ribbon {
@@ -80,6 +81,7 @@ export class RibbonBatch {
     this.mesh = new THREE.Mesh(this.geo, mat);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;
+    fixInPlace(this.mesh);
   }
 
   update(ribbons: Iterable<Ribbon>): void {

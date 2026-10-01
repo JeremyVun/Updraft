@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 
 const COUNT = 12000;
@@ -114,6 +115,7 @@ export class Murmuration {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;
     this.mesh.visible = false;
+    fixInPlace(this.mesh);
   }
 
   /** Follows the time of day (`dusk`, 0 afternoon .. 2 night); `lure` draws the flock toward the plane once it is let go. */

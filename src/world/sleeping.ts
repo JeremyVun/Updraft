@@ -1,4 +1,5 @@
 import { LANE_GLSL } from './lane';
+import { fixInPlace, fixTreeInPlace } from '../gl/fixed';
 import * as THREE from 'three';
 import { SleepingWeather } from './sleeping-weather';
 import { SleepingHearth } from './sleeping-hearth';
@@ -911,6 +912,10 @@ export class SleepingIsland {
 
     /** The story's one long white feather, beside the down it comes out of the pillow with. */
     this.objects.push(...this.feather.objects, ...this.weather.objects);
+    fixInPlace(this.ribbon.mesh, still, clock, ...clock.children.filter((o) => o !== this.clockBody),
+      ...this.clockBody.children.filter((o) => o !== this.clockHand), rug, blanket, morning, hintRay, curtains, this.shaft, feathers,
+      ...this.weather.objects);
+    for (const o of this.trail.objects) fixTreeInPlace(o);
 
     for (const o of this.objects) o.visible = false;
   }

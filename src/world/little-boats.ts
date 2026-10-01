@@ -1,4 +1,5 @@
 import { littleBoatsBath } from './little-boats-bath';
+import { fixInPlace, fixTreeInPlace } from '../gl/fixed';
 import { PaddleSpray } from './little-boats-spray';
 import type { Traveller } from '../traveller/traveller';
 import type { PointerInput } from '../input/pointer';
@@ -260,6 +261,7 @@ export class LittleBoats {
         new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 6).rotateZ(Math.PI / 2).translate(-0.45, 0.34, 0), wood),
       );
       g.add(pivot);
+      fixInPlace(...g.children.filter((o) => o !== pivot), ...pivot.children);
       const wake = new THREE.Mesh(
         new THREE.PlaneGeometry(1.7, 3.4).rotateX(-Math.PI / 2),
         new THREE.ShaderMaterial({
@@ -335,7 +337,8 @@ export class LittleBoats {
       g.translate(plug.position.x + 0.4 + Math.sin(i * 0.036) * 1.5, y, plug.position.z + Math.sin(i * 0.018) * 0.8);
       links.push(g);
     }
-    this.group.add(new THREE.Mesh(mergeGeometries(links), brass));
+    const chain = new THREE.Mesh(mergeGeometries(links), brass);
+    this.group.add(chain);
     const bath = littleBoatsBath();
     const bathS = 54,
       bathX = boatsX(bathS) - boatsWidth(bathS) - 3.1,
@@ -343,6 +346,9 @@ export class LittleBoats {
     bath.position.set(bathX, heightAt(bathX, bathZ) + 0.8, bathZ);
     bath.rotation.set(0.035, -0.22, -0.07);
     this.group.add(bath);
+    fixInPlace(this.group, this.spray.points, chain);
+    fixTreeInPlace(plug);
+    fixTreeInPlace(bath);
     const strandedX = boatsX(3) + boatsWidth(3) + 0.45;
     this.stranded.set(strandedX, heightAt(strandedX, L.startZ - 3) + 0.12, L.startZ - 3);
     this.pose(0);

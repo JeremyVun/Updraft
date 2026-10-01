@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { atmo, ATMO_GLSL } from './atmosphere';
 import { heightAt } from './island';
 import { DOOR_SHORE } from './heightfield';
@@ -45,5 +46,6 @@ export function createDoorShoreGrass(): THREE.Mesh {
       void main() { gl_FragColor = vec4(applyFog(vColour, vWorld), 1.0); }`,
   });
   const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
+  fixInPlace(mesh);
   return mesh;
 }
