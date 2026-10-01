@@ -38,7 +38,27 @@ export function heightAt(x: number, z: number): number {
       return a + (b - a) * tz;
     }
   }
-  return worldHeight(x, z);
+  return exactHeight(x, z);
+}
+
+const MEMO_SIZE = 4096;
+const memoX = new Float64Array(MEMO_SIZE).fill(NaN);
+const memoZ = new Float64Array(MEMO_SIZE);
+const memoH = new Float64Array(MEMO_SIZE);
+
+/**
+ * `worldHeight` remembered by exact position: creatures beyond the window ask again for the spot they stood on or
+ * reached last frame, and each ask costs every island's noise. Zero skips the memo, where `===` would equate -0.
+ */
+function exactHeight(x: number, z: number): number {
+  if (x === 0 || z === 0) return worldHeight(x, z);
+  const slot = (Math.imul((x * 4096) | 0, 0x9e3779b1) ^ Math.imul((z * 4096) | 0, 0x85ebca77)) >>> 20;
+  if (memoX[slot] === x && memoZ[slot] === z) return memoH[slot];
+  const h = worldHeight(x, z);
+  memoX[slot] = x;
+  memoZ[slot] = z;
+  memoH[slot] = h;
+  return h;
 }
 
 export function slopeAt(x: number, z: number): number {
