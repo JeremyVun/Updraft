@@ -186,7 +186,29 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   (`tools/wind-rate-check.mjs`, `tools/wind-clock-check.mjs` and a texel comparison of the field after 600 ticks of a
   scripted stroke); `tools/render-cost-check.mjs` extended to the new skips. Report what was dropped and why.
 - **Gate:** the above, plus `tools/sea-check.mjs`, `tools/sky-mirror-check.mjs`, `tools/little-boats-check.mjs`.
-- **Done:** [ ]
+- **Done:** 3b-ii [x] merged to `main` at 5340862 (2026-10-02); 3b-i [ ].
+- **3b-ii as built:**
+  - `LAND_SKIP` (a sea axis; the sea has 4 programs): the sea returns before the ripple reads where the baked ground
+    is a metre above the water at the corners of the 3×3 pixel block and no waterline is within it, so every pixel
+    of the quad is under land. Selected by `water.landSkip(camera)`: an island's height patch overlaps the window and
+    the camera is above the ground there (a camera inside a hill showed black). Not "child ashore" (lead's call,
+    2026-10-02): the window rule also wins in the crossings and at the jetty, about 8 minutes against the 0.8%
+    (0.07 ms) it costs on the open sea and 4 minutes of sea and drowned village; `!child.riding` is the one-line
+    alternative. Saving (frame pairs): wood 3.7–5.2%, jetty 2.2–3.1%, sleeping 2.2–3.2%, lines 1.9–2.6%, island
+    1.2–1.6%, washing about 1%; Meadow, birches and boats in noise (the Meadow's no-discard grass already lets the
+    GPU cull the sea); summit 0 (its sea under land is beyond the window).
+  - Weed term only for bed depths 0.9 to 4 m: drowned 3.3%.
+  - Frames 0 against 2ba17d1 at ten fixtures, boat orbits and shoreline paths (Sleeping's at most 1/255) and through
+    the washing doorway.
+  - Dropped: the caustics skip (under 1% once `LAND_SKIP` is in) and the three folds (`waterWindAt`, `backlit`,
+    `fogOf`'s `skyRadiance`: the compiler already shares them).
+  - Judge sea items by frame pairs: the sea pass alone overstates savings where discard-free grass covers land.
+  - **For phase 3 and anything that hides terrain:** `LAND_SKIP` relies on the terrain drawing in the same pass as
+    the sea, on terrain tiles following the camera, and on the camera above the ground. Hiding the terrain where the
+    sea draws in the same view shows black under land. Tools that move the camera must call `terrain.update`.
+  - `frame-profile` now steps both builds' cameras along a path under `COMPARE_BASE` (`PATH_JS`/`PATH_STEPS`).
+  - Not built, for Jeremy if wanted: the sea under land beyond the window (summit up to 5.2%, 0.39 ms), which needs
+    the distant atlas and a waterline guarantee that does not exist there.
 
 ## Phase 4: four levels and Auto between them (logic)
 
