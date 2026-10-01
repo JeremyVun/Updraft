@@ -12,7 +12,7 @@ const prefix=process.argv[2]??'/tmp/updraft-playthrough';
 const base=process.env.BASE??'http://127.0.0.1:5230/';
 const review=process.env.REVIEW==='1';
 const trace=process.env.TRACE==='1';
-const expected=['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','home'];
+const expected=['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','toStairs','stairs','drowned','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','home'];
 const until=process.env.UNTIL;
 if(until)assert(expected.includes(until),'UNTIL must be a journey chapter');
 const saved=process.env.SAVE_FILE?JSON.parse(fs.readFileSync(process.env.SAVE_FILE,'utf8')):null;
@@ -34,6 +34,8 @@ const snapshot=()=>page.evaluate(()=>{
   const g=__game,c=g.story.current, project=p=>{if(!p)return null;const q=p.clone().project(g.rig.camera);return {x:(q.x+1)*innerWidth/2,y:(1-q.y)*innerHeight/2,z:q.z}};
   const snag=g.birches.scarf.snags.findIndex(s=>!s.freed);
   const bubble=g.skyMirror.carried??g.skyMirror.bubbles.find(b=>!b.pop);
+  const piece=g.story.name==='stairs'?g.cloudStairs.waiting:null;
+  const home=piece?.flight.bottom.clone().lerp(piece.flight.landing,.5);
   let direction=null;
   if(bubble && !g.skyMirror.carried && g.skyMirror.stars[c.target]) {
     const a=project(bubble.position),b=project(g.skyMirror.stars[c.target].origin.clone().setY(bubble.position.y));direction={x:b.x-a.x,y:b.y-a.y};
@@ -45,6 +47,7 @@ const snapshot=()=>page.evaluate(()=>{
     fleet:project(g.littleBoats.invitation),feather:project(g.sleeping.feather.position),
     snag,scarf:snag>=0?project(g.birches.scarf.snags[snag].center):null,
     bubble:project(bubble?.position),carried:!!g.skyMirror.carried,wand:project(g.skyMirror.wand),direction,
+    flight:piece?{at:project(g.cloudStairs.pointOn(piece,home.clone(),home.clone())),to:project(home),settling:piece.settling}:null,
     piano:g.piano.expect && c.piano?.at==='seated' ? {expect:g.piano.expect,path:[0,1].map(t=>project(g.piano.guideAlong(t,g.piano.keys.clone())))} : null,
     sail:project(g.boat.sailPoint(g.boat.position.clone())),stats:__stats};
 });
@@ -132,6 +135,11 @@ try {
       strokes++;acted=true;await page.waitForTimeout(900);
     }
     else if(s.chapter==='birches'&&s.beat==='scarf'&&s.snag>=0)acted=s.snag===1?await circle(s.scarf,height*.078):await sweep(s.scarf,s.snag===0?0:s.snag===3&&strokes%2?-1:1,s.snag===0?-1:0,150,400,s.snag===3);
+    else if(s.chapter==='stairs'&&s.beat==='waiting'&&s.flight&&!s.flight.settling){
+      const {at,to}=s.flight,dx=to.x-at.x,dy=to.y-at.y,length=Math.hypot(dx,dy);
+      if(visible(to))acted=await sweep(at,dx,dy,length,500+Math.min(900,length*2.5),true);
+    }
+    else if(s.chapter==='stairs'&&s.beat==='loop')acted=await sweep(s.wind,1,-.2,340,450);
     else if(s.chapter==='drowned'&&s.beat==='still')acted=await sweep(s.sail,0,-1,240,500);
     else if(s.chapter==='wood'&&visible(s.wind))acted=await sweep(s.wind,strokes%2?-1:1,0,height*.15,950);
     else if(s.chapter==='sleeping'){

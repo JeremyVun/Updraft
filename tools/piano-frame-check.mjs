@@ -11,6 +11,7 @@ const {PianoStop}=await import('../src/story/piano.ts');
 const {piano}=await import('../src/world/piano.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {heightAt}=await import('../src/world/island.ts');
+const {tuning}=await import('../src/tuning.ts');
 // The actual approach hands camera ownership to the piano while the child is still on its slope.
 // Keep both in frame through that handoff, including a player approaching from either side.
 for(const [w,h] of [[1280,800],[390,844]])for(const bearing of [-1.1,0,1.1]){
@@ -42,3 +43,27 @@ for(const [w,h] of [[1600,900],[2048,1023],[390,844]])for(let stage=1;stage<=4;s
  }
  console.log({viewport:[w,h],stage,worst});
 }
+for(const [w,h] of [[1280,800],[390,844]]){
+ const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='seated';
+ const shot={target:new THREE.Vector3(),distance:19,height:4};
+ stop.heardTo=3;stop.responseAt=1;stop.now=10;stop.frame(shot);rig.cut(shot);
+ const before={distance:shot.distance,height:shot.height,target:shot.target.clone()};
+ stop.heardTo=4;stop.responseAt=stop.now;stop.answered=true;stop.frame(shot);
+ assert.equal(shot.distance,before.distance,'Final answer pulls the camera inward');
+ assert.equal(shot.height,before.height,'Final answer lowers the camera');
+ assert(shot.target.distanceTo(before.target)<1e-6,'Final answer resets the gaze');
+ stop.now+=tuning.piano.finaleWaveAfter;stop.roseFrom=stop.now;stop.frame(shot);
+ assert.equal(shot.distance,before.distance,'Final reveal restarts from the close playing view');
+ assert.equal(shot.height,before.height,'Final reveal resets camera height');
+ assert(shot.target.distanceTo(before.target)<1e-6,'Final reveal resets the gaze');
+ const child=piano.seat.clone().add(new THREE.Vector3(0,1.2,0));
+ const initialGap=rig.camera.position.distanceTo(child);
+ let previous=shot.distance;
+ for(let f=1;f<=tuning.piano.riseFor*60;f++){
+  stop.now=stop.roseFrom+f/60;
+  const pace=stop.frame(shot);rig.update(1/60,stop.now,shot,pace);
+  assert(shot.distance>=previous,'Final reveal reverses its widening');previous=shot.distance;
+  assert(rig.camera.position.distanceTo(child)>=initialGap-.2,'Final reveal visibly pulls toward the child');
+ }
+}
+console.log('The final piano response continues outward from the settled third response in landscape and portrait.');

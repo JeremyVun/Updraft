@@ -190,6 +190,7 @@ export class PianoStop {
     let bearing = piano.yaw + t.frameTurn;
     let distance = t.frameBack + t.frameWide * (1 - settled);
     let height = t.frameUp + t.frameHigh * (1 - settled);
+    let on = t.frameOn;
     this.mid.set(piano.keys.x, piano.keys.y + t.frameLook, piano.keys.z - t.frameOn);
     shot.fitWidth = true;
     shot.subjects = undefined;
@@ -201,13 +202,14 @@ export class PianoStop {
       distance += gap * t.approachBack;
       shot.subjects = this.approachFrame;
     }
-    if (this.heardTo > 0 && this.roseFrom === 0) {
+    if (this.heardTo > 0) {
       // Each answer steps the view back and up to take in the colour it sent, and the view stays there: the
       // field grows with the music, and the lens never pumps out and back to the keys between answers.
       const step = Math.min(t.restBack.length, this.heardTo);
-      const ease = THREE.MathUtils.smoothstep(this.now - this.responseAt, 0, t.restEase);
+      const ease = this.heardTo > t.restBack.length ? 1
+        : THREE.MathUtils.smoothstep((this.roseFrom || this.now) - this.responseAt, 0, t.restEase);
       const rest = (list: readonly number[], base: number, n: number): number => n > 0 ? list[n - 1] : base;
-      const on = THREE.MathUtils.lerp(rest(t.restOn, t.frameOn, step - 1), rest(t.restOn, t.frameOn, step), ease);
+      on = THREE.MathUtils.lerp(rest(t.restOn, t.frameOn, step - 1), rest(t.restOn, t.frameOn, step), ease);
       distance = THREE.MathUtils.lerp(rest(t.restBack, distance, step - 1), rest(t.restBack, distance, step), ease);
       height = THREE.MathUtils.lerp(rest(t.restUp, height, step - 1), rest(t.restUp, height, step), ease);
       this.mid.z -= on - t.frameOn;
@@ -219,7 +221,7 @@ export class PianoStop {
       bearing += (t.riseTo - bearing) * k;
       distance += (t.riseBack * far - distance) * k;
       height += (t.riseUp * far - height) * k;
-      this.mid.z -= (t.riseOn * far - t.frameOn) * k;
+      this.mid.z -= (t.riseOn * far - on) * k;
     }
     shot.target.copy(this.mid);
     shot.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));

@@ -57,6 +57,11 @@ neither still demonstrated a problem. The review now follows actual play in moti
 evidence before calling something a defect. Preserve the journey's readable companions and uninterrupted
 atmosphere (`journey.md`). The stairs' landing-mist intersection is covered by the focused fix (`stairs.md`).
 
+The continuous replay also exposed a camera reversal at the piano's final answer: the third response's wide
+view reset to the close playing view before widening again. The handoff now starts at the already earned view;
+`piano-frame-check` covers the fourth answer and the start of the final reveal, not just subjects staying in frame.
+Visual replay of that fix is pending while the full-journey capture continues.
+
 ## Later
 
 - A second companion: Jeremy would "eventually like to add another animal later one and make this a much more
