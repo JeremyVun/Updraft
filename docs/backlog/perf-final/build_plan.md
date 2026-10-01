@@ -61,6 +61,9 @@ Seams shared by phases:
 
 ## Phase 1: small free wins
 
+Built as two parallel parcels from 36c52e1, compared against a baseline worktree at that commit: 1a the table items
+(branch `perf-final-p1a`), 1b the script leads (`perf-final-p1b`, which leaves 1a's files alone).
+
 - **Owns:** `src/traveller/child/motion.ts` (coat folds), `src/world/stairs.ts` (`Build.result()` indexed),
   `src/main.ts` (the renderer's `depth: false` only), `src/world/stairs-puffs.ts` (early discard),
   `src/world/sky.ts` (deck first), `src/world/drowned.ts` (rest during the stairs).
