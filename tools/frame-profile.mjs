@@ -35,7 +35,7 @@
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
-// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
+// water-fog, water-sky, water-cloud, water-landskip (returns at its top over land, not exact), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
 // WATER_PASS=s3-off,none,... the sea alone against each listed variant (WATER_ROUNDS, POST_REPS).
 // Exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // Fine noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
@@ -402,6 +402,13 @@ window.__audit = {
       'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
+      // Restore the old paths: sea-weed-off the seabed's weed worked out at every depth, sea-caustics-off the caustics
+      // at every depth and distance. landskip-off and landskip-on pick the sea's program without or with the return
+      // under land, whatever prepareFrame chose.
+      'sea-weed-off':[[waterMat],'fragmentShader',s=>sub(s,'    if (bedDepth > 0.9 && bedDepth < 4.0) {\\n','    {\\n')],
+      'sea-caustics-off':[[waterMat],'fragmentShader',s=>sub(s,'    if (bedDepth > 0.1 && dist < 220.0) {\\n','    {\\n')],
+      // Upper bound for a return under land beyond the window: every sea pixel outside the window's inner part returns.
+      'water-far-ub':[[waterMat],'fragmentShader',s=>sub(s,'  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;\\n','  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;\\n  if (inside < 1.0 && !hides) {\\n    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\\n    return;\\n  }\\n')],
       // Restores the old path: the sea's fog worked out per pixel.
       'seafog-fine':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;','vec4 fog = fogOf(vWorld);')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
@@ -417,6 +424,8 @@ window.__audit = {
     grass.unclipped=!variants.includes('e5-off');
     // The ordinary sea's reflection every frame, as before.
     water.seaMirrorEvery=variants.includes('s1-off')?1:2;
+    // A build before LAND_SKIP has no landInWindow; it is the comparison page under COMPARE_BASE.
+    if(water.landInWindow)selectAll({LAND_SKIP:variants.includes('landskip-off')?false:variants.includes('landskip-on')?true:water.landInWindow()});
   },
   // Each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
   // fragment programs are left alone (the unclipped swap replaces them by string, and none of them calls these terms).
@@ -579,7 +588,7 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare,!!this.stairsUnindexed])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed,water.mesh.material.defines.LAND_SKIP])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
