@@ -293,9 +293,8 @@ Rules:
 - The wind step fuses passes bit for bit (`wind/shaders.ts`); `tools/wind-exact-check.mjs` compares the field texel
   for texel against another build. On Chrome/Metal a half-float target stores toward zero (`packHalf2x16` rounds to
   nearest) and fast math regroups float sums, so a fused pass cuts and orders with bit operations (`storeHalf`, `pin`).
-- Pieces placed by translation alone share one draw through `mergeTranslated` (`gl/fixed.ts`), which puts each vertex
-  at the float32 position the GPU computed; pieces under a rotated or scaled parent, or whose shader reads local
-  positions, stay separate. A blended piece that adds nothing (opacity exactly 0) is hidden, not drawn.
+- Touching pieces of one material are not merged into one draw: three sorts separate meshes front to back every
+  frame, and that order decides exact depth ties along where they meet (`mirror-merge` in `tools/frame-profile.mjs`).
 - An effect placed in its vertex shader is frustum culled only against a bound every vertex provably stays inside (the
   starlings' `REACH`); `tools/render-cost-check.mjs` sweeps the view across its edge.
 - Scenery nothing moves, turns or reparents is fixed with `fixInPlace` (`gl/fixed.ts`) where it is built, so renders

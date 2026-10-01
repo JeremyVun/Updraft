@@ -106,19 +106,6 @@ async function compare() {
         rig.camera.position.copy(eye); rig.camera.quaternion.copy(saved.quaternion); rig.camera.updateMatrixWorld();
       }
     }
-    // The sky mirror leaves its constellation lines at opacity 0 and its unlit guide undrawn: drawn, they add nothing.
-    const mirror = __game.skyMirror;
-    if (mirror?.group.visible) {
-      const dark = [];
-      mirror.group.traverse(o => {
-        if (o.isMesh && !o.visible && (o.material.opacity === 0 || o.material.uniforms?.uLit?.value.toArray().every(v => v === 0))) dark.push(o);
-      });
-      if (!dark.length) throw new Error('sky mirror: nothing dark is left undrawn here');
-      const optimized = read(rig.camera);
-      for (const o of dark) o.visible = true;
-      try { results.push({ ...diff(optimized, read(rig.camera), 'sky mirror dark pieces'), pieces: dark.length }); }
-      finally { for (const o of dark) o.visible = false; }
-    }
     const material = terrain.mesh.material, fragment = material.fragmentShader;
     for (const mirror of [false, true]) {
       const camera = mirror ? __game.water.reflection.mirrorCamera : rig.camera;

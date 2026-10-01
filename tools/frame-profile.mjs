@@ -74,8 +74,9 @@
 // run above that; CAPTURE=1 saves both frames. A build against itself must read 0.
 // Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
 // keeps the game's random stream (read the randoms drift field if a comparison still drifts).
-// mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material (a candidate exact
-// merge, for a build before the merge); mirror-dark leaves its unlit guide and opacity-0 lines undrawn;
+// mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material at the float32
+// positions the GPU computed: not exact, touching pieces lose their front-to-back order and so exact depth ties along
+// where they meet; mirror-dark leaves its unlit guide and opacity-0 lines undrawn (exact, about nothing saved);
 // mirror-ordinary renders its reflection at the ordinary sea's size and cadence (a look change, costed only).
 // boatsBath hides the little boats' static bath and plug: the most merging them could save (not exact).
 // starlings-uncull draws the flock whatever the view, as before it had a bound.
