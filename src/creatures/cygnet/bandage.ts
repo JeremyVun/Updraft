@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { atmo, ATMO_GLSL } from '../../world/atmosphere';
+import { indexedNormals } from '../../gl/indexed-normals';
 import { tuning } from '../../tuning';
 import type { WindSample } from '../../wind/field';
 import { CREATURE_GLSL } from '../shading';
@@ -48,6 +49,7 @@ export class WingBandage {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array((ROWS + 1) * COLS * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array((ROWS + 1) * COLS * 3), 3));
     const uv: number[] = [], indices: number[] = [];
     for (let i = 0; i <= ROWS; i++) {
       for (let j = 0; j < COLS; j++) uv.push(i / ROWS, j / (COLS - 1));
@@ -219,7 +221,9 @@ export class WingBandage {
       position.setXYZ(i * COLS + j, this.p.x, this.p.y, this.p.z);
     }
     position.needsUpdate = true;
-    this.mesh.geometry.computeVertexNormals();
+    const normal = this.mesh.geometry.attributes.normal as THREE.BufferAttribute;
+    indexedNormals(position.array as Float32Array, normal.array as Float32Array, this.mesh.geometry.index!.array);
+    normal.needsUpdate = true;
     this.mesh.material.uniforms.uReveal.value = this.dressing;
     this.mesh.material.uniforms.uFade.value = 1 - smooth(this.driftTime, 4, 7);
     this.mesh.material.uniforms.uNudge.value = nudge * (1 - smooth(unroll, 0, 1));

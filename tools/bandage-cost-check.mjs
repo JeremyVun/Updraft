@@ -24,7 +24,8 @@ const wing = new THREE.Matrix4().makeTranslation(2, 3, 4);
 const wind = { x: 2, z: -1, energy: .2, lift: .3 };
 const rotation = new THREE.Quaternion(), at = new THREE.Vector3(), scale = new THREE.Vector3();
 optimized.restore('wrapped', .8); original.restore('wrapped', .8);
-let worst = 0;
+let worst = 0, normalsChecked = 0;
+const reference = optimized.mesh.geometry.clone();
 for (let frame = 0; frame < 620; frame++) {
   const t = frame / 60;
   bones.forEach((bone, i) => bone.compose(at.set(2+i*.01, 3+Math.sin(t+i)*.02, 4),
@@ -37,9 +38,17 @@ for (let frame = 0; frame < 620; frame++) {
     const a = optimized.mesh.geometry.attributes[name].array, b = original.mesh.geometry.attributes[name].array;
     for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i]-b[i]));
   }
+  if (optimized.mesh.visible) {
+    // The linen's normals must match three's own, bit for bit.
+    reference.attributes.position.array.set(optimized.mesh.geometry.attributes.position.array);
+    reference.computeVertexNormals();
+    assert.deepEqual(optimized.mesh.geometry.attributes.normal.array, reference.attributes.normal.array, `normals changed on frame ${frame}`);
+    normalsChecked++;
+  }
   assert(optimized.tip(new THREE.Vector3()).distanceTo(original.tip(new THREE.Vector3())) < 1e-10, 'fingertips keep their contact');
 }
 assert(worst < 1e-5, `geometry changed by ${worst}`);
+assert(normalsChecked > 500, 'too few visible frames to compare normals');
 const ms = b => {
   b.restore('wrapped');
   const start = performance.now();
@@ -48,4 +57,4 @@ const ms = b => {
 };
 ms(original); ms(optimized);
 const runs = Array.from({length:3}, () => ({ original: ms(original), optimized: ms(optimized) }));
-console.log(JSON.stringify({worstGeometryDelta: worst, millisecondsPer1000Updates: runs}));
+console.log(JSON.stringify({worstGeometryDelta: worst, normalsChecked, millisecondsPer1000Updates: runs}));
