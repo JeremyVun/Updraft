@@ -426,8 +426,8 @@ window.__audit = {
     grass.unclipped=!variants.includes('e5-off');
     // The ordinary sea's reflection every frame, as before.
     water.seaMirrorEvery=variants.includes('s1-off')?1:2;
-    // A build before LAND_SKIP has no landInWindow; it is the comparison page under COMPARE_BASE.
-    if(water.landInWindow)selectAll({LAND_SKIP:variants.includes('landskip-off')?false:variants.includes('landskip-on')?true:water.landInWindow()});
+    // A build before LAND_SKIP has no landSkip; it is the comparison page under COMPARE_BASE.
+    if(water.landSkip)selectAll({LAND_SKIP:variants.includes('landskip-off')?false:variants.includes('landskip-on')?true:water.landSkip(rig.camera)});
   },
   // Each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
   // fragment programs are left alone (the unclipped swap replaces them by string, and none of them calls these terms).

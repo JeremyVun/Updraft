@@ -9,6 +9,7 @@ import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mainlandCoastZ } from './heightfield';
 import { HEIGHT_TEXEL, TERRAIN_HEIGHT_PATCHES } from './terrain-heights';
+import { heightAt } from './island';
 import { WINDOW } from './window';
 import { PlanarReflection } from './water/reflection';
 import { ShoreBake } from './water/shore';
@@ -509,11 +510,15 @@ export class Water {
     this.mesh.frustumCulled = false;
   }
 
-  /** Whether any island's ground lies in the window, so the sea can be under land there and `LAND_SKIP` pays. */
-  landInWindow(): boolean {
+  /**
+   * Whether to draw with `LAND_SKIP`: there is island ground in the window for the sea to lie under, and the camera
+   * is above the ground, so land over the sea is always between it and the eye.
+   */
+  landSkip(camera: THREE.Camera): boolean {
     const x1 = WINDOW.minX + WINDOW.size, z1 = WINDOW.minZ + WINDOW.size;
-    return TERRAIN_HEIGHT_PATCHES.some((p) => p.minX < x1 && p.minZ < z1
+    const land = TERRAIN_HEIGHT_PATCHES.some((p) => p.minX < x1 && p.minZ < z1
       && p.minX + p.width * HEIGHT_TEXEL > WINDOW.minX && p.minZ + p.height * HEIGHT_TEXEL > WINDOW.minZ);
+    return land && camera.position.y > heightAt(camera.position.x, camera.position.z);
   }
 
   /** Advance the water independently of the air, once per simulation frame. */
