@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 const { browser, close } = await openBrowser();
 const report = [];
@@ -12,7 +13,7 @@ try {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
-    await page.route('**/@vite/client', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
+    await withoutHotReload(page);
     await page.route('**/src/main.ts*', async route => {
       const response = await route.fetch(); let body = await response.text();
       for (const [a, b] of [

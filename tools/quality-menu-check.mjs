@@ -1,11 +1,12 @@
 // DOM-only custom menu checks; no WebGL load or shared GPU lock needed.
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--disable-gpu']});
 try {
   for(const [name,viewport] of [['desktop',{width:1280,height:800}],['phone',{width:390,height:844}]]) {
     const page=await browser.newPage({viewport,...(name==='phone'?{hasTouch:true,isMobile:true,deviceScaleFactor:2}:{})});
-    await page.route('**/@vite/client',r=>r.fulfill({contentType:'application/javascript',body:''}));
+    await withoutHotReload(page);
     await page.route('**/src/main.ts*',r=>r.fulfill({contentType:'application/javascript',body:'await new Promise(()=>{});'}));
     await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?analytics=0&progress=0');
     await page.evaluate(async()=>{

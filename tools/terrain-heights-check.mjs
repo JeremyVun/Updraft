@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import { registerHooks } from 'node:module';
 import { transformSync } from 'rolldown/utils';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 // The shared TypeScript hook would also rewrite playwright's own extensionless requires; keep it to the game source.
 registerHooks({
@@ -80,7 +81,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1376, height: 1032 } });
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
-  await page.route('**/@vite/client', (r) => r.fulfill({ contentType: 'application/javascript', body: '' }));
+  await withoutHotReload(page);
   await page.route('**/src/main.ts*', async (route) => {
     const response = await route.fetch();
     let source = await response.text();

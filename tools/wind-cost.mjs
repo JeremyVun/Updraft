@@ -40,6 +40,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 const env = process.env;
 const out = env.OUT ?? '/tmp/updraft-wind-cost';
@@ -194,7 +195,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1376, height: 1032 }, deviceScaleFactor: 2 });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
-    await page.route('**/@vite/client', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
+    await withoutHotReload(page);
     await page.route('**/src/main.ts*', async route => {
       const response = await route.fetch(); let source = await response.text();
       source = source.replace('function frame(now) {', 'function frame(now) { if (window.__paused) { requestAnimationFrame(frame); return; }');

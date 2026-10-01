@@ -1,6 +1,7 @@
 // Shared controls must work before the game module loads, without starting play or audio.
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const { browser, close } = await openBrowser();
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 async function choose(page, mode) {
@@ -16,7 +17,7 @@ try {
     window.__audio = [];
     window.AudioContext = class extends Native { constructor(...args) { super(...args); window.__audio.push(this); } };
   });
-  await page.route('**/@vite/client', r => r.fulfill({contentType:'application/javascript',body:''}));
+  await withoutHotReload(page);
   let release;
   const gate = new Promise(resolve => { release = resolve; });
   await page.route('**/src/main.ts*', async route => {
@@ -60,7 +61,7 @@ try {
   await page.waitForFunction(() => __audio.length===1 && __audio[0].state==='running');
   await page.close();
   const phone=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
-  await phone.route('**/@vite/client',r=>r.fulfill({contentType:'application/javascript',body:''}));
+  await withoutHotReload(phone);
   await phone.route('**/src/main.ts*',r=>r.fulfill({contentType:'application/javascript',body:'await new Promise(() => {});'}));
   await phone.goto(base+'?analytics=0&progress=0');
   await phone.waitForFunction(() => document.querySelector('#sound').dataset.on==='true');

@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const legacyTint = 'vec3 legacyGrassTint(vec2 xz) {\n  float pasture = pastureAt(xz);\n  float dry = smoothstep(0.58, 0.76, fbm(xz * 0.022 + vec2(3.1, 7.7)));\n  float cool = 0.0;\n  // Region weights are exactly zero/one away from their borders. Skip noise\n  // whose colour would be multiplied by zero; keep both sides at every blend.\n  if (pasture < 1.0) cool = smoothstep(0.5, 0.68, fbm(xz * 0.041 - vec2(5.3, 1.9))) * (1.0 - dry);\n  /** The year turning: more of the hillside goes over to seed, and the green that is left goes colder. */\n  dry = clamp(dry + uSeason * 0.3, 0.0, 1.0);\n  vec3 meadow = mix(mix(uTipLush, uTipDry, dry * 0.85), uTipCool, cool * 0.5);\n  vec3 emerald = vec3(0.0);\n  if (pasture > 0.0) {\n    emerald = mix(vec3(0.16, 0.36, 0.07), vec3(0.3, 0.46, 0.09), fbm(xz * 0.03 + 11.0));\n    emerald = mix(emerald, uTipDry * 0.9, dry * 0.35);\n  }\n  vec3 tint = mix(meadow, emerald, pasture);\n  tint = mix(tint, vec3(0.44, 0.31, 0.11), birchFloorAt(xz) * 0.72);\n  float wood = woodFloorAt(xz);\n  if (wood > 0.0) tint = mix(tint, mix(vec3(0.14, 0.19, 0.085), vec3(0.29, 0.27, 0.12), fbm(xz * 0.32)), wood * 0.9);\n  return mix(tint, mix(tint, vec3(0.4, 0.41, 0.31), 0.28) * 0.93, uSeason);\n}';
 const { browser, close } = await openBrowser();
 const errors=[];
@@ -10,7 +11,7 @@ try {
   const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
-  await page.route('**/@vite/client',r=>r.fulfill({contentType:'application/javascript',body:''}));
+  await withoutHotReload(page);
   await page.route('**/src/main.ts*',async route=>{
     const response=await route.fetch();let source=await response.text();
     const hook='function frame(now) {';assert(source.includes(hook));
