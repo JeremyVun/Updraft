@@ -1078,7 +1078,6 @@ export class Grass {
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     scene.add(mesh);
-    const blades = this.group.children.map((o) => (o as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material);
     try {
       if (!this.direct) {
         for (const lod of this.lods) {
@@ -1087,6 +1086,18 @@ export class Grass {
           await renderer.compileAsync(scene, camera);
         }
       }
+      await this.precompileUnclipped(renderer, camera);
+    } finally {
+      renderer.setRenderTarget(previous);
+      geometry.dispose();
+    }
+  }
+
+  /** Creates no three objects, whose UUIDs draw on `Math.random`, so it can run again for each program variant. */
+  async precompileUnclipped(renderer: THREE.WebGLRenderer, camera: THREE.Camera): Promise<void> {
+    const previous = renderer.getRenderTarget();
+    const blades = this.group.children.map((o) => (o as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material);
+    try {
       // Any offscreen target builds the same program as the scene's.
       renderer.setRenderTarget(this.lods[0].table);
       for (const m of blades) { m.fragmentShader = FRAG_UNCLIPPED; m.needsUpdate = true; }
@@ -1094,7 +1105,6 @@ export class Grass {
     } finally {
       for (const m of blades) { m.fragmentShader = FRAG; m.needsUpdate = true; }
       renderer.setRenderTarget(previous);
-      geometry.dispose();
     }
   }
 

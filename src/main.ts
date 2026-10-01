@@ -1159,7 +1159,7 @@ async function boot(): Promise<void> {
   await grass.precompile(renderer);
   for (const _ of otherVariants()) {
     await precompile(renderer, scene, rig.camera, post.sceneTarget);
-    await grass.precompile(renderer);
+    await grass.precompileUnclipped(renderer, rig.camera);
   }
   await yieldBoot();
   followWindow(...windowAim(), true);

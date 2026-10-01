@@ -12,6 +12,7 @@ type Axis = readonly Choice[];
 
 /** The stairs' cloud deck and bank of mist (`ATMO_GLSL`), drawn only while `uCloudDeck.w` is above 0. */
 export const CLOUD_DECK: Axis = [{ CLOUD_DECK: true }, { CLOUD_DECK: false }];
+
 const registered = new Map<THREE.ShaderMaterial, Axis[]>();
 
 const define = (on: boolean | undefined): number => (on ? 1 : 0);
@@ -29,8 +30,10 @@ function matches(defines: Record<string, unknown>, choice: Choice): boolean {
 export function register(material: THREE.ShaderMaterial, ...axes: Axis[]): void {
   const known = registered.get(material) ?? [];
   for (const axis of axes) {
-    const switches = Object.keys(axis[0]);
-    if (axis.some((choice) => Object.keys(choice).sort().join() !== [...switches].sort().join())) throw new Error(`Every alternative must set ${switches.join(', ')}`);
+    const switches = Object.keys(axis[0]).sort();
+    if (axis.some((choice) => Object.keys(choice).sort().join() !== switches.join())) {
+      throw new Error(`Every alternative must set ${switches.join(', ')}`);
+    }
     if (known.some((other) => switches.some((name) => name in other[0]))) throw new Error(`${switches.join(', ')} already registered`);
     known.push(axis);
     for (const name of switches) material.defines[name] = define(axis[0][name as Switch]);
@@ -64,9 +67,9 @@ export function selectAll(choice: Choice): void {
   for (const [material, axes] of registered) {
     let mine: Choice | null = null;
     for (const name in choice) {
-      if (!axes.some((axis) => name in axis[0])) continue;
-      mine ??= {};
-      mine[name as Switch] = choice[name as Switch];
+      const on = choice[name as Switch];
+      if (material.defines[name] === define(on) || !axes.some((axis) => name in axis[0])) continue;
+      (mine ??= {})[name as Switch] = on;
     }
     if (mine) select(material, mine);
   }
