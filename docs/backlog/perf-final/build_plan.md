@@ -80,7 +80,35 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
   `island`, `stairs:waiting|climb|cloud|top|sail`, `drowned`; `tools/stairs-check.mjs`, `tools/drowned-gating-check.mjs`,
   `node tools/cygnet-gates.mjs`; `memory-census` before and after (expect about −30 MiB from the stairs mesh and −12 MiB
   from the canvas at 1.5×); the child's `motion.update` in a CPU profile before and after.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at c05467d (2026-10-01). Frames 0 changed against 36c52e1 at `island`, `washing`,
+  `sea`, `meadow:walk`, `drowned` and every stairs fixture but `loop` and `fog`.
+- **Kept, all exact:**
+  - Coat folds: `motion.update` 0.17 → 0.07 ms a frame.
+  - Indexed stairs mesh: 787k → 179k vertices, −36 MiB; unindexed was 2.8% slower at `stairs:climb`.
+  - Canvas `depth: false`: −12 MiB.
+  - Wisps early-out: 6.4% at `stairs:climb`, 5.8% at `stairs:cloud`.
+  - Sky deck first: 5.6% at climb, 3.9% at cloud.
+  - Ground height: a memo of `worldHeight` plus each island's constant floor beyond a proven bound (`heightfield.ts`
+    `isleFar`). Washing heights 0.25 → 0.03 ms, creatures 0.30 → 0.10 ms.
+  - Static matrices (`gl/fixed.ts`, 330 of 524 nodes): one `updateMatrixWorld` 33 → 19 µs.
+  - Bandage normals through `indexedNormals` and an incremental ring search: the cygnet 0.20–0.27 → 0.13–0.17 ms.
+- **Dropped:**
+  - The village resting during the stairs: its cost is the leaf drift, which has no catch-up; resting it moves leaves
+    by up to 24 m and changes heron roosts.
+  - The cloud's normals: misattributed, they were the bandage's.
+  - The wind readback at sea: not reproduced (0.14–0.41 ms, like other rooms); the old sample was contention.
+- **Not exact, not taken:** creatures reading the baked height copy (0.02–0.06 ms, moves them by centimetres); a leaf
+  catch-up for the village.
+- **Left for the stairs owner (phase 3):** 53 of the stairs group's 56 nodes never move and can be fixed; the drowned
+  village's 7 and the sky likewise.
+- **Instrument traps:**
+  - Seeded `FRAME` comparisons need the same number of `Math.random` draws during construction; three's UUIDs draw
+    from it, so creating more or fewer three objects at boot shifts everything. Read the `randoms` drift field first.
+  - A dev server whose origin has served other tools (`cygnet-gates` on the stage) can differ from a fresh one of the
+    same commit. Before trusting a red, compare the baseline against itself on a second fresh port.
+  - `cygnet-gates` fails intermittently on 36c52e1 itself (a turn spike near 0.10 against limits 0.06–0.08, in idle,
+    gather and unstow): treat a single failure as noise unless it repeats more on the changed build.
+  - `terrain-heights-check` fails on 36c52e1 (`worst 0.167 at [194,-1750]`), unrelated to this item.
 
 ## Phase 2: program variants and the deck-free programs
 
@@ -109,7 +137,7 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
 
 - **Owns:** `src/world/stairs-cloud.ts`, `src/world/stairs-haze.ts`, and the stairs' visibility in `src/main.ts` /
   `src/story/stairs*.ts`. Starts after phase 2 has merged (both touch the sea, terrain and grass draw).
-- **Do:** find what is drawn and never seen on the stairs' camera paths: the cloud top's grid outside the view, the
+- **Do:** fix the stairs group's static nodes (53 of 56 never move; `fixInPlace`, `tools/fixed-matrices-check.mjs`). Find what is drawn and never seen on the stairs' camera paths: the cloud top's grid outside the view, the
   towers when off screen, and in the white the sea, terrain and grass beyond the pocket. Skip each only behind a gate
   that holds on every frame of the chapter, not only at the fixtures.
 - **Contract:** frames within 1/255 along the whole chapter, sampled every tenth frame against the pre-change commit,
@@ -123,6 +151,10 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
 - **Done:** [ ]
 
 ## Phase 3b: exact leads across the frame
+
+Built in two parcels: **3b-i** beside phase 2 (the wind step's fusion, the sky mirror's pass gate, the bloom gate,
+the visibility of the starlings, petals, sleeping island and stairs steps, draw merging for the mirror and little
+boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND_SKIP`).
 
 - **Owns:** `src/world/water.ts` fragment shader internals (after phase 2 has merged; phase 5 follows),
   `src/wind/` pass fusion, the sky mirror's pass gate, `src/post/post.ts` (a bloom gate, only if provable), visibility
