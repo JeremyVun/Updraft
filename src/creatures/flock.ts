@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { tuning } from '../tuning';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { ease, range, wrapAngle } from './motion';
@@ -159,6 +160,7 @@ export class SwanFlock {
     this.wake.visible = false;
     this.wake.renderOrder = 3;
     this.objects = [this.mesh, this.wake];
+    fixInPlace(...this.objects);
   }
 
   get active(): boolean {

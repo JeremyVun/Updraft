@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
@@ -80,6 +81,7 @@ export class Fireflies {
     );
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 6;
+    fixInPlace(this.mesh);
     for (let i = 0; i < COUNT; i++) {
       this.flies.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), phase: Math.random() * 10, period: 1.8 + Math.random() * 3, seed: Math.random() });
     }

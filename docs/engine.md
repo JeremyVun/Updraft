@@ -223,7 +223,8 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 
 One multisampled half-float scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
 would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
-toning, vignette, grain) straight to the screen. Only the scene target is multisampled.
+toning, vignette, grain) straight to the screen. Only the scene target is multisampled. The canvas has no depth buffer
+(`depth: false`): nothing drawn to the screen may rely on depth.
 
 ## Bakes and caches
 
@@ -290,6 +291,8 @@ Rules:
   herons rest beyond 320 m and live through the last 10 s at 1/30 s steps as it nears;
   `tools/drowned-gating-check.mjs`). Never apply a blanket off-screen pause to flock, cloth or story mechanics.
 - The wind's pressure solve runs two Jacobi relaxations per pass, bit for bit what two passes produce.
+- Scenery nothing moves, turns or reparents is fixed with `fixInPlace` (`gl/fixed.ts`) where it is built, so renders
+  skip its matrices; anything that moves stays automatic. `tools/fixed-matrices-check.mjs` fails if a fixed object moves.
 
 ## The washing island's doorway (`world/doorway.ts`)
 

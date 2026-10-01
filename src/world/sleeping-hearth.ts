@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
@@ -79,6 +80,7 @@ export class SleepingHearth {
           gl_PointSize=clamp((uFlame>.1?50.0:12.0)/max(-view.z,1.0),1.0,9.0);vAlpha=sin(age*3.14159)*uAsh*.45;}`,
       fragmentShader:`${ATMO_GLSL} in vec3 vWorld;in float vAlpha;void main(){float a=1.0-smoothstep(.1,.5,length(gl_PointCoord-.5));gl_FragColor=vec4(applyFog(vec3(.42,.40,.36),vWorld),a*vAlpha);}` }));
     ash.frustumCulled=false;this.group.add(ash);this.group.position.copy(HEARTH);this.group.rotation.y=.78;
+    fixInPlace(this.group,...this.group.children.filter(o=>!this.tongues.includes(o as THREE.Mesh)));
   }
 
   extinguish():void { this.coldest=1;this.flame.value=this.embers.value=0; }

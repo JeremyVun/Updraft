@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -726,6 +727,7 @@ export class AutumnBirches {
     this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants), this.wade);
     this.objects.push(this.leaves.mesh);
     for (const o of this.objects) o.visible = false;
+    fixInPlace(...this.objects.filter((o) => o !== this.swing.group), ...this.swing.group.children);
   }
 
   /** The birch that came down, lying along the slope with the first heap of the walk banked against its lee side. */

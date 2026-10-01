@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixTreeInPlace } from '../gl/fixed';
 import type { WindField } from '../wind/field';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { Dolphins } from './sealife/dolphin';
@@ -30,6 +31,7 @@ export class SeaLife {
     this.foam.mesh.renderOrder = 3;
     this.objects = [this.body.mesh, this.body.ghost, this.fish.mesh, this.slicks.mesh, this.foam.mesh, this.spray.mesh, ...this.pod.objects];
     for (const o of [this.body.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
+    for (const o of this.objects) fixTreeInPlace(o);
   }
 
   /** Starts one whale surfacing: it rises at `at` travelling along `heading` (yaw, radians; 0 = +z). */

@@ -169,6 +169,7 @@ const HANG_DRAPE = 0.5;
 
 const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
   const a = hemAngle(i);
+  const y = hemY(a);
   const radial = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
   return {
     a,
@@ -177,7 +178,8 @@ const HEM = Array.from({ length: HEM_BONES }, (_, i) => {
     /** Rotating about this swings the hem outward. */
     axis: new THREE.Vector3().crossVectors(radial, Y).normalize(),
     pivot: new THREE.Vector3(Math.sin(a) * WAIST.w, WAIST.y, Math.cos(a) * WAIST.d),
-    length: WAIST.y - hemY(a),
+    y,
+    length: WAIST.y - y,
   };
 });
 
@@ -644,12 +646,12 @@ export class ChildMotion {
   private hemClear(i: number, p: THREE.Vector3): number {
     const h = HEM[i];
     const y = p.y + this.rig.rest[BONE.hips].y;
-    if (y > WAIST.y - 0.02 || y < hemY(h.a) - 0.12) return -Infinity;
+    if (y > WAIST.y - 0.02 || y < h.y - 0.12) return -Infinity;
     const across = p.x * h.tangent.x + p.z * h.tangent.z;
     if (Math.abs(across) > 0.26) return -Infinity;
     const out = p.x * h.radial.x + p.z * h.radial.z + 0.1 * (1 - Math.abs(across) / 0.26) + 0.02;
     const below = Math.max(0.05, WAIST.y - y);
-    const surface = coatAt(h.a, Math.max(y, hemY(h.a)), coatSample);
+    const surface = coatAt(h.a, Math.max(y, h.y), coatSample);
     const r = surface.p.x * h.radial.x + surface.p.z * h.radial.z;
     if (out <= r) return -Infinity;
     return Math.asin(THREE.MathUtils.clamp((out - r) / below, -1, 1));

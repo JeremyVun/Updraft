@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace, fixTreeInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32, smoothstep } from './noise';
@@ -402,6 +403,7 @@ export function baskets(x: number, z: number): THREE.Mesh {
   });
   const mesh = new THREE.Mesh(mergeGeometries(parts), painted('#b89a5e'));
   mesh.material.side = THREE.DoubleSide;
+  fixInPlace(mesh);
   return mesh;
 }
 
@@ -430,6 +432,7 @@ export class RedDoor {
     this.group.add(this.panel);
     this.group.position.set(x, foot - 0.1, z);
     this.group.rotation.y = yaw;
+    fixInPlace(...this.group.children.filter((o) => o !== this.panel), ...this.panel.children);
   }
 
   get opened(): boolean {
@@ -447,6 +450,7 @@ export class RedDoor {
 /** Beyond the last curtain: a quiet patch of sky behind three recognisable garments. */
 export const door = new RedDoor(11, -398, 0);
 door.group.scale.set(1.5, 1.08, 1);
+fixInPlace(door.group);
 export const FAMILY_LINE: LineSpec = (() => {
   const a = new THREE.Vector3(5.8, 0, -390);
   const b = new THREE.Vector3(16.2, 0, -390);
@@ -623,6 +627,7 @@ export class WashingLines {
     this.group.add(new THREE.Mesh(mergeGeometries(posts), woodMat));
     this.group.add(new THREE.Mesh(mergeGeometries(ropes), woodMat));
     this.group.add(new THREE.Mesh(cloth, this.clothMat));
+    fixTreeInPlace(this.group);
     this.count = cloth.instanceCount;
   }
 

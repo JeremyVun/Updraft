@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Traveller } from '../traveller/traveller';
 import { screenBrush } from '../creatures/motion';
@@ -108,13 +109,14 @@ export class SkyMirror {
     seat.position.set(MIRROR_BOWL.x, 0.95, MIRROR_BOWL.z); this.group.add(seat);
     for (const [x,z] of [[-0.5,-0.4],[0.5,-0.4],[0,0.55]]) {
       const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.1,0.9,8), wood);
-      leg.position.set(MIRROR_BOWL.x+x,0.45,MIRROR_BOWL.z+z); this.group.add(leg);
+      leg.position.set(MIRROR_BOWL.x+x,0.45,MIRROR_BOWL.z+z); this.group.add(leg); fixInPlace(leg);
     }
     const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.64,32,16,0,Math.PI*2,Math.PI/2,Math.PI/2),
       mirrorMaterial('#b3c7ca'));
     bowl.scale.y=0.5; bowl.position.set(MIRROR_BOWL.x,1.3,MIRROR_BOWL.z); this.group.add(bowl);
     const soap = new THREE.Mesh(new THREE.CircleGeometry(0.61,32),soapMaterial());
     soap.rotation.x=-Math.PI/2; soap.position.set(MIRROR_BOWL.x,1.24,MIRROR_BOWL.z); this.group.add(soap);
+    fixInPlace(this.group, seat, bowl, soap);
     this.group.traverse(o=>o.layers.enable(REFLECTION_LAYER));
     for (const [i,at] of MIRROR_STARS.entries()) {
       const floor=starLight(true), light=starLight();
@@ -123,12 +125,12 @@ export class SkyMirror {
       const sky=MIRROR_CONSTELLATION[i];
       this.stars.push({floor,light,origin,sky:new THREE.Vector3(sky.x,T.starHeight+sky.rise,sky.z),
         from:new THREE.Vector3(),state:'fallen',flight:0});
-      this.group.add(floor,light);
+      this.group.add(floor,light); fixInPlace(floor);
     }
     const constellationLine=(a:number,b:number)=>{
       const line=new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(this.stars[a].sky,this.stars[b].sky),1,0.035,4,false),
         new THREE.MeshBasicMaterial({color:'#ffdc9c',transparent:true,opacity:0,depthWrite:false}));
-      line.layers.enable(REFLECTION_LAYER); this.group.add(line);
+      line.layers.enable(REFLECTION_LAYER); this.group.add(line); fixInPlace(line);
       return line;
     };
     for(let i=0;i<this.stars.length;i++)this.constellationLines.push(constellationLine(i,(i+1)%this.stars.length));
@@ -152,7 +154,7 @@ export class SkyMirror {
           gl_FragColor=vec4(vec3(1.0,0.81,0.5),on*gaps*edge*ends*(0.06+ripple*0.62));}`,
     }));
     guide.position.set((offshore.x+MIRROR_BERTH.x)/2,0.055,(offshore.z+MIRROR_BERTH.z)/2);
-    guide.rotation.set(-Math.PI/2,0,Math.atan2(-dz,dx)); this.group.add(guide);
+    guide.rotation.set(-Math.PI/2,0,Math.atan2(-dz,dx)); this.group.add(guide); fixInPlace(guide);
     const timber = new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms }, vertexShader: VERT,
       fragmentShader: `${ATMO_GLSL}
       varying vec3 vWorld; varying vec3 vNormal;
@@ -164,7 +166,7 @@ export class SkyMirror {
         gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
       }` });
     const add = (g: THREE.BufferGeometry, x: number, y: number, z: number, m: THREE.Material = timber) => {
-      const mesh = new THREE.Mesh(g, m); mesh.position.set(x, y, z); mesh.layers.enable(REFLECTION_LAYER); this.group.add(mesh); return mesh;
+      const mesh = new THREE.Mesh(g, m); mesh.position.set(x, y, z); mesh.layers.enable(REFLECTION_LAYER); this.group.add(mesh); fixInPlace(mesh); return mesh;
     };
     for (let i = 0; i < 31; i++) add(new THREE.BoxGeometry(0.49, 0.14, 2.2), MIRROR_DECK.x0 + 0.2 + i * 0.51, 0.15, MIRROR_DECK.z0);
     for (let i = 0; i < 5; i++) for (const side of [-1, 1]) add(new THREE.CylinderGeometry(0.09, 0.12, 3, 7), MIRROR_DECK.x0 + 1 + i * 3.6, -1, MIRROR_DECK.z0 + side);

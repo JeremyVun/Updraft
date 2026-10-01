@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixTreeInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HOME_JETTY } from './home-layout';
 import { glsl, tuning } from '../tuning';
@@ -342,5 +343,6 @@ export function createJetty(): THREE.Object3D {
   const group = new THREE.Group();
   group.name = 'home-jetty';
   group.add(mesh, shadow());
+  fixTreeInPlace(group);
   return group;
 }

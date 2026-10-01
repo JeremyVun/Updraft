@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixTreeInPlace } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
@@ -280,5 +281,6 @@ export function createTree(): Tree {
   const group = new THREE.Group();
   group.add(bark, foliage);
   group.traverse((o) => o.layers.enable(REFLECTION_LAYER));
+  fixTreeInPlace(group);
   return { group, canopy, life: shared.uTreeLife };
 }

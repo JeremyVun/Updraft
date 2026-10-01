@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixTreeInPlace } from '../gl/fixed';
 import type { PointerInput } from '../input/pointer';
 import type { WindField } from '../wind/field';
 import { mulberry32 } from '../world/noise';
@@ -60,6 +61,7 @@ export class Creatures {
     this.butterflies = new Butterflies(habitat);
     this.sheep = new Sheep(habitat);
     this.group.add(this.rabbits.mesh, this.songbirds.mesh, this.gulls.mesh, this.butterflies.mesh, this.sheep.mesh);
+    fixTreeInPlace(this.group);
     this.stimuli = {
       wind,
       sample: { x: 0, z: 0, energy: 0, lift: 0 },

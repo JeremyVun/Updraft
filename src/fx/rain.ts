@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { tuning } from '../tuning';
 
@@ -90,6 +91,7 @@ export class Rain {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 7;
     this.mesh.visible = false;
+    fixInPlace(this.mesh);
   }
 
   /** `amount` 0 dry .. 1 a steady shower; `breeze` is the air's drift, which the drops lean and travel with. */

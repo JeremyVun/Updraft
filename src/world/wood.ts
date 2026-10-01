@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -783,6 +784,7 @@ export class DarkWood {
     this.objects.push(this.debris);
 
     for (const o of this.objects) o.visible = false;
+    fixInPlace(...this.objects);
   }
 
   /** Thick everywhere but the corridor, thinning to wind-stunted scrub along the shore. */

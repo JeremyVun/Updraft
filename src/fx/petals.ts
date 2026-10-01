@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
@@ -257,6 +258,7 @@ export class Petals {
     });
     this.mesh = new THREE.Mesh(geo, this.renderMat);
     this.mesh.frustumCulled = false;
+    fixInPlace(this.mesh);
   }
 
   /** `at` is the updraft centre while the player holds; the funnel fades out over a second or two after release. */

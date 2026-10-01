@@ -15,11 +15,10 @@ ${ATMO_GLSL}
 in vec3 vDir;
 void main() {
   vec3 d = normalize(vDir);
-  vec3 col = skyRadiance(d);
-  if (uCloudDeck.w > 0.0) {
-    vec4 deck = cloudDeck(cameraPosition, d, 4000.0);
-    col = mix(col, deck.rgb, deck.a);
-  }
+  vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, d, 4000.0) : vec4(0.0);
+  // Where the deck covers the sky whole, the radiance would be mixed away.
+  vec3 col = deck.a < 1.0 ? skyRadiance(d) : vec3(0.0);
+  if (uCloudDeck.w > 0.0) col = mix(col, deck.rgb, deck.a);
   gl_FragColor = vec4(col, 1.0);
 }`;
 

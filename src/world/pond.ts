@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { HEIGHTFIELD_GLSL, POND, POND_LEVEL, pondOut, worldHeight } from './heightfield';
 
@@ -211,5 +212,6 @@ export class Pond {
       }),
     );
     this.objects = [water, bed];
+    fixInPlace(water, bed);
   }
 }

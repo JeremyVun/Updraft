@@ -130,14 +130,18 @@ void main() {
   gl_FragColor = vec4(vec3(1.0, 0.82, 0.5), a * 0.32);
 }`;
 
-/** Gathers blocks, rails and posts into one geometry with a colour, a material id and a mist amount on every vertex. */
+/**
+ * Gathers blocks, rails and posts into one indexed geometry with a colour, a material id and a mist amount on every
+ * vertex.
+ */
 class Build {
   private readonly parts: THREE.BufferGeometry[] = [];
   private readonly p = new THREE.Vector3();
 
   /** `mist` says, for a point in world space, how far it has gone to cloud: 0 solid, 1 gone. */
   add(geo: THREE.BufferGeometry, matrix: THREE.Matrix4, part: number, colour = COLOURS[part], mist?: (p: THREE.Vector3) => number): void {
-    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    const g = geo.clone();
+    if (!g.index) shareCorners(g);
     g.applyMatrix4(matrix);
     const pos = g.getAttribute('position');
     const n = pos.count;
@@ -160,6 +164,63 @@ class Build {
     this.parts.length = 0;
     return merged;
   }
+}
+
+/** Indexes a triangle list in place, sharing only corners identical to the bit in every attribute: the same triangles in the same order. */
+function shareCorners(geo: THREE.BufferGeometry): void {
+  const sources = Object.keys(geo.attributes).map(name => {
+    const { array, itemSize } = geo.getAttribute(name) as THREE.BufferAttribute;
+    if (!(array instanceof Float32Array)) throw new Error(`Stairs attribute ${name} is not float`);
+    return { name, size: itemSize, bits: new Uint32Array(array.buffer, array.byteOffset, array.length) };
+  });
+  const n = geo.getAttribute('position').count;
+  const width = sources.reduce((sum, a) => sum + a.size, 0);
+  const keys = new Uint32Array(n * width);
+  let offset = 0;
+  for (const { size, bits } of sources) {
+    for (let i = 0; i < n; i++) for (let c = 0; c < size; c++) keys[i * width + offset + c] = bits[i * size + c];
+    offset += size;
+  }
+  let slots = 1;
+  while (slots < n * 2) slots *= 2;
+  const table = new Int32Array(slots).fill(-1);
+  const first = new Int32Array(n);
+  const index = new Uint32Array(n);
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    const at = i * width;
+    let h = 0;
+    for (let c = 0; c < width; c++) {
+      h = Math.imul(h ^ keys[at + c], 0x9e3779b1);
+      h = (h << 13) | (h >>> 19);
+    }
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+    h ^= h >>> 13;
+    for (let s = h & (slots - 1); ; s = (s + 1) & (slots - 1)) {
+      const k = table[s];
+      if (k < 0) {
+        table[s] = count;
+        first[count] = i;
+        index[i] = count++;
+        break;
+      }
+      const other = first[k] * width;
+      let c = 0;
+      while (c < width && keys[other + c] === keys[at + c]) c++;
+      if (c === width) {
+        index[i] = k;
+        break;
+      }
+    }
+  }
+  offset = 0;
+  for (const { name, size } of sources) {
+    const shared = new Uint32Array(count * size);
+    for (let k = 0; k < count; k++) for (let c = 0; c < size; c++) shared[k * size + c] = keys[first[k] * width + offset + c];
+    geo.setAttribute(name, new THREE.BufferAttribute(new Float32Array(shared.buffer), size));
+    offset += size;
+  }
+  geo.setIndex(new THREE.BufferAttribute(count < 65536 ? Uint16Array.from(index) : index, 1));
 }
 
 const RAIL_HEIGHT = 0.86;

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fixInPlace } from '../gl/fixed';
 import { tuning } from '../tuning';
 import { atmo } from './atmosphere';
 import { heightAt } from './island';
@@ -52,6 +53,7 @@ export class DoorwayView {
     this.surface = new THREE.Mesh(new THREE.PlaneGeometry(1.17 * 1.5, 2.98 * 1.08), mat);
     this.surface.position.copy(door.group.position).add(new THREE.Vector3(0, 1.49 * 1.08, -0.065));
     this.surface.frustumCulled = false;
+    fixInPlace(this.surface);
     scene.add(this.surface); source.add(this.surface);
     // Split every part of a character at the threshold, including the scarf and paper. Offset in clip
     // space also handles meshes whose vertices are already world-space (scarf, shadows and call marks).
