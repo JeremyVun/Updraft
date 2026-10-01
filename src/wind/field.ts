@@ -17,8 +17,8 @@ import {
   pressureFrag,
 } from './shaders';
 
-/** Pairs of pressure relaxations per pass: fewer passes, each reading a wider neighbourhood. */
-const PAIRS_PER_PASS = 2;
+/** Pressure relaxation pairs per pass: two to a pass read and round so much more per pixel that they cost more. */
+const PAIRS_PER_PASS = 1;
 
 /** A push of air along a segment, in world units. See docs/contracts/wind.md. */
 export interface Splat {

@@ -83,7 +83,8 @@ window.__wind = {
     this.copyMat=new THREE.ShaderMaterial({vertexShader:wind.forceMat.vertexShader,fragmentShader:'uniform sampler2D uSrc; in vec2 vUv; void main(){ gl_FragColor=texture(uSrc,vUv); }',
       uniforms:{uSrc:{value:null}},depthTest:false,depthWrite:false});
     this.scratch=Array.from({length:21},()=>this.target(THREE.NearestFilter));
-    this.sequence=[wind.forceMat,wind.vorticityMat,wind.divergenceMat,...wind.pressurePasses,wind.gradientMat,wind.advectMat];
+    this.sequence=wind.pressurePasses?[wind.forceMat,wind.vorticityMat,wind.divergenceMat,...wind.pressurePasses,wind.gradientMat,wind.advectMat]
+      :[wind.forceMat,wind.curlMat,wind.vorticityMat,wind.divergenceMat,wind.scaleMat,...Array(12).fill(wind.pressure2Mat),wind.gradientMat,wind.advectMat,wind.bendMat,wind.swayMat];
     this.calibMat=new THREE.ShaderMaterial({vertexShader:wind.forceMat.vertexShader,depthTest:false,depthWrite:false,
       fragmentShader:'in vec2 vUv; void main(){ vec2 p=vUv; for(int i=0;i<400;i++){ p=fract(p*1.37+vec2(sin(p.y*7.1),cos(p.x*5.3))); } gl_FragColor=vec4(p,0.0,1.0); }'});
     this.calibTarget=new THREE.WebGLRenderTarget(1024,1024,{depthBuffer:false});
@@ -91,7 +92,7 @@ window.__wind = {
   scene() {
     const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,drawRooms);
   },
-  step(passes) { const all=wind.pressurePasses.slice();if(passes!=null)wind.pressurePasses.length=passes;try{wind.step(1/60,time,false);}finally{wind.pressurePasses.splice(0,Infinity,...all);} },
+  step(passes) { if(passes==null)return wind.step(1/60,time,false);const all=wind.pressurePasses.slice();wind.pressurePasses.length=passes;try{wind.step(1/60,time,false);}finally{wind.pressurePasses.splice(0,Infinity,...all);} },
   copy(alternate) {
     const set=alternate&&(this.flip^=1)?this.snaps2:this.snaps;
     [wind.texture,wind.bendTexture,wind.swayTexture].forEach((t,i)=>{this.copyMat.uniforms.uSrc.value=t;wind.gpu.run(this.copyMat,set[i]);});
@@ -100,7 +101,7 @@ window.__wind = {
   detached(separate) {
     const saved=[];const snap=this.snaps[0].texture;
     for(const m of new Set(this.sequence))for(const [k,u] of Object.entries(m.uniforms))
-      if(['uVel','uPressure','uDivergence','uBend','uSway','uSrc'].includes(k)){saved.push([u,u.value]);u.value=snap;}
+      if(['uVel','uCurl','uPressure','uDivergence','uBend','uSway','uSrc'].includes(k)){saved.push([u,u.value]);u.value=snap;}
     try {
       const prev=renderer.getRenderTarget();
       if(!separate){renderer.setRenderTarget(this.scratch[0]);for(const m of this.sequence){wind.gpu.quad.material=m;wind.gpu.quad.render(renderer);}}

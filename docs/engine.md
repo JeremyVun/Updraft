@@ -326,7 +326,7 @@ passage without capture overhead: stalls, blocking GL calls, light-direction jum
 boot time) for devices without a debugger. `?lite=1` is an explicit QA preset only: 128² wind with fewer pressure
 iterations on the same 60 Hz clock, low world detail, sparser grass and the reflection on alternate frames. Normal
 play on every device uses the full simulation and adapts visual quality instead. The costs that do not shrink with
-resolution matter most on a phone: the wind simulation (11 passes of 256² per tick, plus a force pass for each
+resolution matter most on a phone: the wind simulation (17 passes of 256² per tick, plus a force pass for each
 further eight sources), the life, cloud and petal passes, and bloom.
 
 ## Before/after flags

@@ -78,6 +78,7 @@
 // merge, for a build before the merge); mirror-dark leaves its unlit guide and opacity-0 lines undrawn;
 // mirror-ordinary renders its reflection at the ordinary sea's size and cadence (a look change, costed only).
 // boatsBath hides the little boats' static bath and plug: the most merging them could save (not exact).
+// starlings-uncull draws the flock whatever the view, as before it had a bound.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -319,6 +320,9 @@ window.__audit = {
     for (const key of variants.includes('actors')?actors:variants)for(const object of this.groups[key]||[]) {
       this.hidden.push([object,object.visible]);object.visible=false;
     }
+    // starlings-uncull: the flock drawn whatever the view, as before its bound (the old path, on a build that culls it).
+    this.starlingsCulled??=starlings.mesh.frustumCulled;
+    starlings.mesh.frustumCulled=variants.includes('starlings-uncull')?false:this.starlingsCulled;
     this.mirrorMerge(variants.includes('mirror-merge'));
     this.mirrorDark(variants.includes('mirror-dark'));
     this.levers(variants);
@@ -623,7 +627,7 @@ window.__audit = {
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
     const drawn=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
-      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
+      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,starlings.mesh.frustumCulled,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
