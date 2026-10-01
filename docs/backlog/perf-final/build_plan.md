@@ -206,7 +206,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   - **For phase 3 and anything that hides terrain:** `LAND_SKIP` relies on the terrain drawing in the same pass as
     the sea, on terrain tiles following the camera, and on the camera above the ground. Hiding the terrain where the
     sea draws in the same view shows black under land. Tools that move the camera must call `terrain.update`.
-  - `frame-profile` now steps both builds' cameras along a path under `COMPARE_BASE` (`PATH_JS`/`PATH_STEPS`).
+  - `frame-profile` now steps both builds' cameras along a path under `COMPARE_BASE` (`PATH_JS`/`PATH_STEPS`); camera paths (`shore.js`, `orbit.js`, `door.js`) and a veil-gap script (`veil.mjs`) are in `/private/tmp/updraft-pf-p3bii-scripts/`.
   - Not built, for Jeremy if wanted: the sea under land beyond the window (summit up to 5.2%, 0.39 ms), which needs
     the distant atlas and a waterline guarantee that does not exist there.
 
