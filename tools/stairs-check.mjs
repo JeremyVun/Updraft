@@ -2,6 +2,8 @@
 // the cloud, the top landing, boarding and the sail over the cloud into the bank of mist, until the boat has sailed
 // out of it onto the drowned village's water. Captures stills at each beat.
 // Usage: node tools/stairs-check.mjs <out-prefix>   env: BASE (default http://127.0.0.1:5230/), W/H, QUERY
+// NOSHOTS=1 skips the stills (a timed run); each beat is logged with wall and game seconds.
+// Exits 1 if a beat is never reached or the page reports an error.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 
@@ -40,6 +42,7 @@ const browser = await chromium.launch({
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
 });
 const errors = [];
+const misses = [];
 const log = (...a) => console.log(...a);
 try {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
@@ -48,7 +51,7 @@ try {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(`${base}?shot=1&chapter=stairs${process.env.QUERY ? '&' + process.env.QUERY : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
-  const shot = async (name) => { await page.screenshot({ path: `${prefix}-${name}.png` }); log(`${prefix}-${name}.png`); };
+  const shot = async (name) => { if (process.env.NOSHOTS === '1') return; await page.screenshot({ path: `${prefix}-${name}.png` }); log(`${prefix}-${name}.png`); };
   const state = () => page.evaluate(() => {
     const g = window.__game;
     const s = g.story.current;
@@ -60,7 +63,7 @@ try {
     for (;;) {
       const s = await state();
       if (test(s)) return s;
-      if (Date.now() > end) return s;
+      if (Date.now() > end) { misses.push(`${test} after ${ms / 1000} s at ${JSON.stringify(s)}`); return s; }
       await page.waitForTimeout(every);
     }
   };
@@ -93,7 +96,7 @@ try {
     setInterval(() => {
       const s = window.__game.story;
       const now = `${s.name}:${s.current.beat}`;
-      if (now !== last) window.__beats.push(`${(performance.now() / 1000).toFixed(1)} ${now}`);
+      if (now !== last) window.__beats.push(`${(performance.now() / 1000).toFixed(1)} game ${(window.__stats?.time ?? 0).toFixed(1)} ${now}`);
       last = now;
     }, 100);
   });
@@ -236,4 +239,7 @@ try {
 } finally {
   await browser.close();
   if (errors.length) log('errors:\n' + [...new Set(errors)].slice(0, 6).join('\n'));
+  if (misses.length) log('never reached:\n' + misses.join('\n'));
 }
+if (errors.length || misses.length) process.exit(1);
+log('stairs-check passed');

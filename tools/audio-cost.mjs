@@ -6,10 +6,12 @@
 // sources), reverb (the 4.5 s convolver's output), silent (pad voices and noise layers whose gain is under 1e-4).
 // PAIRS=unheld,tworeverb adds paired windows for every chapter against the current graph: `unheld` re-targets silent
 // gains every frame, as the graph did before silent gains were held; `tworeverb` gives the background its own convolver again, after its gate,
-// as before there was one reverb. STIR=1 circles the pointer through every window, so the player's wind layers sound as they
+// as before there was one reverb; `stairsheld` holds the stairs' own air layers at exactly 0 while silent, as the shared
+// layers are (StairsSound re-targets all six every frame). stairs:<moment> plays the stairs to that moment first. STIR=1 circles the pointer through every window, so the player's wind layers sound as they
 // do in play. QUERY adds URL parameters.
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
+import { stairsFixture } from './lib/stairs-fixture.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-audio-cost';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -46,7 +48,8 @@ try {
     await page.goto(base + '?shot&start=1&ratio=1.5&msaa=2&analytics=0&progress=0' + query + (entry === 'island' ? '' : '&chapter=' + entry));
     await page.waitForSelector('#veil.ready', { timeout: 120000 }); await page.locator('#begin').click();
     await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
-    if (fixture) await page.evaluate(() => __game.story.current.skipToCrest());
+    if (entry === 'stairs' && fixture) await stairsFixture(page, fixture, async () => {});
+    else if (fixture) await page.evaluate(() => __game.story.current.skipToCrest());
     await page.evaluate(() => { __game.sound.setMuted(false); __game.sound.start(); });
     let stirring = true;
     const circling = stir && (async () => {
@@ -120,6 +123,11 @@ try {
     const paired = {
       unheld: [() => page.evaluate(() => { const s = __game.sound; s.fade = (param, target, now, tc) => param.setTargetAtTime(target, now, tc); }),
         () => page.evaluate(() => { const s = __game.sound; delete s.fade; s.fades.clear(); })],
+      stairsheld: [() => page.evaluate(() => {
+        const s = __game.sound, air = s.stairsSound; if (!air) return;
+        const fade = Object.getPrototypeOf(s).fade;
+        air.set = (param, value, now, tc) => fade.call(s, param, value, now, tc);
+      }), () => page.evaluate(() => { const air = __game.sound.stairsSound; if (air) delete air.set; })],
       tworeverb: [() => page.evaluate(() => {
         const s = __game.sound, own = s.twoReverb = s.ctx.createConvolver();
         own.buffer = s.reverbConvolver.buffer; s.backgroundWet.disconnect(s.wetGate); s.backgroundWet.connect(own).connect(s.backgroundGate);

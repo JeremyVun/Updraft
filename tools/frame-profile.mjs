@@ -50,15 +50,43 @@
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
 // PATH_ABLATIONS=e5-off,... limits the path to those ablations.
+// The stairs: stairs:waiting|climb|loop|cloud|top|sail|fog play the chapter to that moment with real gestures (stairsFixture).
+// Their parts: stairs (the whole room), stairsCloud (deck top and underside, towers, wake), stairsCloudTop,
+// stairsCloudBelly, stairsTowers, stairsWake, stairsWisps, stairsBank, stairsHaze (the mist under the flights),
+// stairsSteps (the flights, landings, the loop's trick and the gold ghosts). deck-out compiles the cloud deck out of every
+// shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
+// cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
+// sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
+// water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
+// water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
+// DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
+// SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
+// full grass-table rebuild (SIM_REPS each, drained).
+// Every ablation reports its bite: programs patched, objects hidden (and how many were showing), draw calls and
+// triangles against the baseline; one that changes nothing throws. No pixels changed with a bite is an exact skip here.
+// BASE must be a dev server (npm run dev, or a worktree's): the tool patches src/main.ts, which a built bundle does not serve.
+// FRAME=600 stops the run on that frame with a seeded Math.random and every readback delivered the frame after its
+// request, so two loads draw the same picture; a stairs fixture is then played on frames (stairsFixtureOnFrames) and
+// stops on the frame its moment arrives. It skips the CPU profile and census. COMPARE_BASE=<another dev server> loads
+// the same fixture there first and reports the difference between the two frozen frames (changed channels, those over
+// 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
+// run above that; CAPTURE=1 saves both frames. A build against itself must read 0.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { openBrowser } from './lib/browser.mjs';
+import { stairsFixture, stairsFixtureOnFrames } from './lib/stairs-fixture.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
+const BASE=process.env.BASE??'http://127.0.0.1:5230/',COMPARE_BASE=process.env.COMPARE_BASE,FRAME=Number(process.env.FRAME??0);
+assert(!FRAME||FRAME>=120,'FRAME must leave room for the fixture: 120 or more');
+assert(!COMPARE_BASE||FRAME,'COMPARE_BASE needs FRAME: two builds draw the same picture only when both stop on the same frame');
+// Fixtures are applied on this frame when FRAME is set, so the same story follows in every run.
+const FIXTURE_FRAME=90;
 // Other processes' load, recorded with every row: it inflates GPU numbers.
 // This tool's own browser is flagged own:true so another Chrome stands out.
 const busy = () => {
@@ -100,7 +128,7 @@ function cpuSummary(profile, frames) {
 
 const injection = `
 window.__audit = {
-  paused: false, census: false, frames: [], passes: {}, objects: {}, cpu: {}, stack: [], skyOrder:sky.renderOrder,
+  paused: false, stopAt: 0, census: false, frames: [], passes: {}, objects: {}, cpu: {}, stack: [], skyOrder:sky.renderOrder,
   groups: {
     sky: [sky], water: [water.mesh], terrain: [terrain.mesh], grass: [grass.group], tree: [tree.group],
     pond: pond.objects, washing: [washing.group, washingBaskets, pinwheels.group, door.group],
@@ -116,6 +144,11 @@ window.__audit = {
     birchesCanopy: birches.objects.filter(o => o.material?.uniforms?.uCanopyMotion),
     birchesLitter: [birches.litterMesh], birchesScarf: [birches.scarf.mesh], birchesLeaves: [birches.leaves.mesh],
     grassLod0: [grass.group.children[0]], grassLod1: [grass.group.children[1]], grassLod2: [grass.group.children[2]],
+    stairs: [cloudStairs.group], stairsCloud: [cloudStairs.cloud.group],
+    stairsCloudTop: [cloudStairs.cloud.top], stairsCloudBelly: [cloudStairs.cloud.belly], stairsTowers: [cloudStairs.cloud.towers.group],
+    stairsWake: [cloudStairs.cloud.wake.mesh], stairsWisps: [cloudStairs.wisps.mesh], stairsBank: [cloudStairs.bank.mesh],
+    stairsHaze: [...cloudStairs.hazes],
+    stairsSteps: [cloudStairs.group.getObjectByName('stairs-standing'), cloudStairs.trick, ...cloudStairs.pieces.flatMap(p=>[p.group.children[0],p.ghost])],
   },
   // Ablations that change a height source: both sides of each of their pairs re-run the window-move bakes.
   heightSources: ['rebake','heights-const','heights-direct'],
@@ -149,6 +182,7 @@ window.__audit = {
       ['wood-update',wood,'update'], ['sleeping-update',sleeping,'update'], ['audio',sound,'update'],
       ['mirror-ripples',skyMirror,'update'], ['bloom',post.bloom,'render'],
       ['water-waves',water,'step'], ['ground-readback',bakes,'tick'],
+      ['stairs-update',cloudStairs,'update'], ['stairs-cloud',cloudStairs.cloud,'update'], ['story',story,'update'],
     ]) wrap(obj,method,name);
     const render = renderer.render.bind(renderer);
     renderer.render = (s,c) => {
@@ -234,7 +268,29 @@ window.__audit = {
     }
     if(variants.includes('sky-flat')) {
       const m=sky.material;
-      m.fragmentShader=this.diagnosticMaterials[1][1].replace('skyRadiance(normalize(vDir))','vec3(0.5,0.6,0.7)');m.needsUpdate=true;
+      const sky0=this.diagnosticMaterials[1][1];if(!sky0.includes('vec3 col = skyRadiance(d);'))throw Error('Missing patch site: sky radiance');
+      m.fragmentShader=sky0.replace('vec3 col = skyRadiance(d);','vec3 col = vec3(0.5,0.6,0.7);');m.needsUpdate=true;
+    }
+    // The cloud deck's top: cloudtop-frag-flat keeps its discards and fog but not its shading; cloudtop-veil drops the
+    // low wisps streaming over it; wisps-early discards a puff card's pixels outside the largest ball its noise can make
+    // before working the noise out (a candidate exact skip).
+    {
+      const top=cloudStairs.cloud.top.material,puff=cloudStairs.wisps.mesh.material;
+      this.topFrag??=top.fragmentShader;this.puffFrag??=puff.fragmentShader;
+      let t=this.topFrag,f=this.puffFrag;
+      const need=(src,from)=>{if(!src.includes(from))throw Error('Missing patch site: '+from);return src;};
+      if(variants.includes('cloudtop-veil'))t=need(t,'if (uWisps > 0.0 && vWorld.y').replace('if (uWisps > 0.0 && vWorld.y','if (false && vWorld.y');
+      if(variants.includes('cloudtop-frag-flat'))t=t.slice(0,t.lastIndexOf('void main() {'))+'void main() { if (vRing > uReach || gridHidden(vWorld.xz, vLevel)) discard; gl_FragColor = vec4(mix(vec3(0.8, 0.7, 0.75) + vHaze.rgb * 0.01 + vec3(vThin, vShade, vStature) * 0.01 + vCalm.xyz * 0.001 + (vFoot + vRise + vTower) * 0.001, vFog.rgb, vFog.a), uCloudDeck.w); }';
+      if(variants.includes('wisps-early'))f=need(f,'  float d = length(vCorner);\\n').replace('  float d = length(vCorner);\\n','  float d = length(vCorner);\\n  if (d >= 1.25) discard;\\n');
+      if(top.fragmentShader!==t){top.fragmentShader=t;top.needsUpdate=true;}
+      if(puff.fragmentShader!==f){puff.fragmentShader=f;puff.needsUpdate=true;}
+    }
+    // sky-deckfirst: the candidate exact skip, the deck worked out first and the sky's radiance only where it shows through.
+    if(variants.includes('sky-deckfirst')) {
+      const m=sky.material,sky0=this.diagnosticMaterials[1][1];
+      const from='vec3 col = skyRadiance(d);\\n  if (uCloudDeck.w > 0.0) {\\n    vec4 deck = cloudDeck(cameraPosition, d, 4000.0);\\n    col = mix(col, deck.rgb, deck.a);\\n  }';
+      if(!sky0.includes(from))throw Error('Missing patch site: sky deck');
+      m.fragmentShader=sky0.replace(from,'vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, d, 4000.0) : vec4(0.0);\\n  vec3 col = deck.a < 1.0 ? skyRadiance(d) : vec3(0.0);\\n  if (uCloudDeck.w > 0.0) col = mix(col, deck.rgb, deck.a);');m.needsUpdate=true;
     }
     if(variants.includes('grade')) {
       const m=post.gradeMat,original=this.diagnosticMaterials[2][1];
@@ -248,6 +304,7 @@ window.__audit = {
     this.patchShaders(variants);
     this.noiseTerms(variants);
     this.bareTiles(variants.includes('grass-bare-tiles'));
+    this.deckOut(variants.includes('deck-out')?'all':(variants.find(v=>v.startsWith('deck-out-'))||'').slice(9)||null);
     if(this.pairRebake)this.rebake();
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
@@ -327,6 +384,10 @@ window.__audit = {
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
       // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
+      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),' + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
+      // Candidate exact skip: the lantern's glint only within its reach (tuning.lantern.reach, 9 m), where lanternLight is not 0.
+      'water-lantern-reach':[[waterMat],'fragmentShader',s=>sub(s,'if (uLantern.w > 0.001) {','if (uLantern.w > 0.001 && dot(uLantern.xyz - vWorld, uLantern.xyz - vWorld) < 81.0) {')],
+      'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
       // Restores the old path: the sea's fog worked out per pixel.
@@ -382,6 +443,33 @@ window.__audit = {
     for(const v of variants)(terms[v]||[]).forEach((_,i)=>{if(!hits.has(v+':'+i))throw Error('Missing noise term: '+v+':'+i);});
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
   },
+  // deck-out compiles the stairs' cloud deck out of every shader that includes ATMO_GLSL: each test of its amount
+  // becomes a constant false, so the deck, the bank of mist and their helpers are dead code. Outside the stairs the
+  // deck's amount is 0, so no pixel may change there; any saving is what its presence costs (registers, code size).
+  // The blades' fragment programs are left alone (their fog comes from the vertex).
+  // deck-out-water|terrain|grass|sky|rest limit it to one family of materials.
+  deckOut(which) {
+    const on=!!which,A='uCloudDeck.w > 0.0',B='false/*deck-out*/';
+    const blades=new Set(grass.group.children.filter(o=>o.isMesh).map(o=>o.material));
+    const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,...grass.lods.map(l=>l.tableMat),bakes.groundMat]);
+    scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    const family=m=>m===water.mesh.material?'water':m===terrain.mesh.material?'terrain':blades.has(m)||grass.lods.some(l=>l.tableMat===m)?'grass':m===sky.material?'sky':'rest';
+    let hits=0,tables=false;
+    for(const m of mats)for(const key of ['vertexShader','fragmentShader']){
+      if(key==='fragmentShader'&&blades.has(m))continue;
+      if(on&&which!=='all'&&family(m)!==which){const cur=m[key];if(typeof cur==='string'&&cur.includes(B)){m[key]=cur.split(B).join(A);m.needsUpdate=true;}continue;}
+      const cur=m[key];if(typeof cur!=='string')continue;
+      const next=on?cur.split(A).join(B):cur.split(B).join(A);
+      if(on&&cur.includes(A))hits++;
+      if(next!==cur){m[key]=next;m.needsUpdate=true;tables||=grass.lods.some(l=>l.tableMat===m);}
+    }
+    if(on&&!hits)throw Error('Missing patch site: '+A);
+    if(tables){grass.tablesDirty=true;grass.bake(renderer);}
+    this.deckHits=hits;
+  },
+  // DETAIL=0|1 sets the world detail a quality level would (grass density and reach, terrain split, reflection cadence
+  // and the sky mirror's scale) at the locked render scale and multisampling, as the Low preset or Auto's rungs do.
+  detail(level,grassDensity,grassReach) { applyWorldQuality({ratio:pixelRatio,samples:post.samples,detail:level,...grassDensity!=null&&{grassDensity},...grassReach!=null&&{grassReach}},true); return {detail:level,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -434,6 +522,18 @@ window.__audit = {
     } finally {this.configure(null);for(const o of shown)o.visible=true;renderer.setRenderTarget(null);}
     return out;
   },
+  // SIM_PASSES=1: each per-frame simulation pass alone, many times over, then drained (median of 5 rounds), with an empty
+  // stage for the floor. These run whatever the render scale: the costs a small screen does not shrink.
+  async simPasses(reps, complete) {
+    const stages={empty:()=>{},wind:()=>this.stepWind(),life:()=>life.update(1/60),clouds:()=>clouds.update(),
+      petals:()=>petals.update(1/60,null,0),waves:()=>water.step(1/60),'light-bake':()=>bakes.bakeLight(bakeInputs),
+      'grass-tables':()=>{grass.tablesDirty=true;grass.bake(renderer);}};
+    const out={};
+    for(const [name,stage] of Object.entries(stages)){const samples=[];
+      for(let round=0;round<5;round++){stage();await complete();const start=performance.now();for(let i=0;i<reps;i++)stage();await complete();samples.push((performance.now()-start)/reps);}
+      samples.sort((x,y)=>x-y);out[name]={ms:samples[2],min:samples[0],max:samples[4]};}
+    return out;
+  },
   stepWind() {
     wind.step(1/60,time,false);
     // The ping-pong targets swap every step, so rebind them as the real loop does.
@@ -457,6 +557,45 @@ window.__audit = {
     if(typeof drawJourneyRooms==='function') {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);
     } else draw();
+  },
+  // What an ablation changed against the baseline: programs patched, objects hidden (and how many of those were
+  // showing), other switches. One that changes nothing is a typo or a patch site that moved, so it throws.
+  bite(omit) {
+    const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,post.gradeMat,bakes.groundMat,...grass.lods.map(l=>l.tableMat)]);
+    scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    const drawn=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
+    const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
+      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
+      terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
+      this.culling.length,!!this.bare])});
+    this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
+    this.configure(omit);const b=snap();
+    const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
+      showing:this.hidden.filter(([o])=>showing.has(o)).length,settings:a.settings!==b.settings,
+      draw:['wind','reflection','bloom','post'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
+    if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
+    return bite;
+  },
+  png(data) {
+    const gl=renderer.getContext(),w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),im=ctx.createImageData(w,h);
+    for(let y=0;y<h;y++)im.data.set(data.subarray(y*w*4,(y+1)*w*4),(h-y-1)*w*4);
+    ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
+  },
+  // The frozen frame as drawn with nothing omitted, for comparing against another build stopped on the same frame.
+  frozenFrame(capture) {
+    const gl=renderer.getContext(),data=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);
+    this.configure(null);this.draw(false);gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,data);
+    let binary='';for(let i=0;i<data.length;i+=32768)binary+=String.fromCharCode.apply(null,data.subarray(i,i+32768));
+    const at=v=>v.toArray().map(x=>+x.toFixed(4));
+    const state={time,story:story.name,beat:story.current.beat,camera:[...at(rig.camera.position),...at(rig.camera.quaternion)],boat:at(boat.position),
+      child:at(child.position),cygnet:at(cygnet.position),randoms:window.__randoms,readbacks:readbackStats.delivered};
+    return {width:gl.drawingBufferWidth,height:gl.drawingBufferHeight,frame:frameIndex,state,data:btoa(binary),png:capture?this.png(data):undefined};
+  },
+  // While a stairs fixture is played to its moment, the page renders at a low scale so the story gets there sooner.
+  fast(on) {
+    if(on){this.fastRatio??=pixelRatio;pixelRatio=0.5;resize();}
+    else if(this.fastRatio){pixelRatio=this.fastRatio;this.fastRatio=null;resize();}
   },
   // STATE forces a condition for every ablation after the census; it runs in this module's scope.
   state(code) { return eval(code); },
@@ -490,35 +629,48 @@ window.__audit = {
 };
 `;
 
-const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
 const { browser, close } = await openBrowser();
-const report=[],inexact=[];
-try {
-  for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
-    const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
-    const [entry,fixture]=chapter.split(':'),busyAtStart=busy();
-    const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
-    const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-    page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
-    await page.route('**/@vite/client',r=>r.fulfill({contentType:'application/javascript',body:''}));
-    if(process.env.LEGACY_NORMALS==='1') await page.route('**/src/world/birch-scarf.ts*',async route=>{
-      const response=await route.fetch(),source=await response.text();
-      const body=source.replace('indexedNormals(this.positions, this.normals, this.geometry.index.array);','this.geometry.computeVertexNormals();');
-      assert.notEqual(body,source,'Missing legacy normals hook');
-      await route.fulfill({response,body});
-    });
-    await page.route('**/src/main.ts*',async route=>{
-      const response=await route.fetch();let source=await response.text();
-      source=source.replace('function frame(now) {','function frame(now) { if (window.__audit?.paused) { requestAnimationFrame(frame); return; }');
-      assert(source.includes('window.__audit?.paused'),'Missing pause hook');
-      assert.equal(source.split('frames++;').length, 2, 'Missing or ambiguous frame hook');
-      source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
-      await route.fulfill({response,body:source+injection});
-    });
-    await page.goto((process.env.BASE??'http://127.0.0.1:5230/')+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
-    await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
-    await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
-    if(fixture) await page.evaluate(fixture=>{
+async function open(base,chapter) {
+  const [entry,fixture]=chapter.split(':');
+  const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
+  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
+  await withoutHotReload(page);
+  if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
+  // Readbacks land when the GPU gets to them; mapping each without waiting on its fence delivers it on the frame after its request.
+  if(FRAME)await page.route('**/src/gl/readback.ts*',async route=>{
+    const response=await route.fetch(),source=await response.text();
+    const body=source.replace('export function pollReadbacks() {','export function pollReadbacks() { for (const r of all) r.poll(); return;')
+      .replace('const status = gl.clientWaitSync(next.sync, 0, 0);','const status = gl.ALREADY_SIGNALED;');
+    assert(body.includes('r.poll(); return;')&&body.includes('const status = gl.ALREADY_SIGNALED;'),'Missing readback hook');
+    await route.fulfill({response,body});
+  });
+  if(process.env.LEGACY_NORMALS==='1') await page.route('**/src/world/birch-scarf.ts*',async route=>{
+    const response=await route.fetch(),source=await response.text();
+    const body=source.replace('indexedNormals(this.positions, this.normals, this.geometry.index.array);','this.geometry.computeVertexNormals();');
+    assert.notEqual(body,source,'Missing legacy normals hook');
+    await route.fulfill({response,body});
+  });
+  await page.route('**/src/main.ts*',async route=>{
+    const response=await route.fetch();let source=await response.text();
+    source=source.replace('function frame(now) {','function frame(now) { if (window.__audit?.paused || window.__audit?.stopAt && frameIndex >= window.__audit.stopAt) { requestAnimationFrame(frame); return; }');
+    assert(source.includes('window.__audit?.paused'),'Missing pause hook');
+    assert.equal(source.split('frames++;').length, 2, 'Missing or ambiguous frame hook');
+    source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
+    await route.fulfill({response,body:source+injection});
+  });
+  await page.goto(base+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
+  await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
+  await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
+  assert(await page.evaluate(()=>!!window.__audit),base+' is not a dev server: this tool patches src/main.ts, which a built bundle does not serve');
+  if(FRAME)await page.evaluate(stop=>{__audit.stopAt=stop;},entry==='stairs'&&fixture?1e9:FRAME);
+  if(entry==='stairs'&&fixture){
+    if(FRAME)await stairsFixtureOnFrames(page,fixture,FIXTURE_FRAME,'__audit.stopAt=__stats.frame;');
+    else await stairsFixture(page,fixture,on=>page.evaluate(on=>__audit.fast(on),on));
+    console.log(JSON.stringify({chapter,fixture:await page.evaluate(()=>({beat:__game.story.current.beat,frame:__stats.frame,camera:__game.rig.camera.position.toArray().map(v=>+v.toFixed(1))}))}));}
+  else if(fixture) await page.evaluate(([fixture,at])=>new Promise(done=>{
+    const apply=()=>{
+      if(__stats.frame<at){requestAnimationFrame(apply);return;}
       const g=__game,c=g.story.current;
       if(fixture==='piano') c.skipToPiano();
       else {
@@ -527,29 +679,70 @@ try {
         if(fixture==='flock'||fixture==='pond') c.goDown();
         if(fixture==='pond'){g.child.place(c.edge.x,c.edge.z,Math.PI);c.setDown();}
       }
-    },fixture);
-    await page.waitForTimeout(1500);
-    const cdp=await page.context().newCDPSession(page);
-    await cdp.send('Profiler.enable');await cdp.send('Profiler.setSamplingInterval',{interval:500});
-    await page.evaluate(()=>{__audit.frames=[];});await cdp.send('Profiler.start');
-    await page.waitForTimeout(Number(process.env.CPU_MS??6000));
-    const {profile}=await cdp.send('Profiler.stop');
-    const frames=await page.evaluate(()=>__audit.frames);
-    assert(frames.length > 0, 'No frame timings recorded');
-    await fs.writeFile(out+'-'+chapter+'.cpuprofile',JSON.stringify(profile));
-    const cpu=cpuSummary(profile,frames.length);
-    const frameTimes={frames:frames.length,cpuMedian:median(frames.map(f=>f.cpuMs)),cpuP90:[...frames.map(f=>f.cpuMs)].sort((a,b)=>a-b)[Math.floor(frames.length*.9)],intervalMedian:median(frames.map(f=>f.intervalMs))};
-    await page.evaluate(()=>{__audit.frames=[];__audit.install();__audit.census=true;});
-    await page.waitForTimeout(Number(process.env.CENSUS_MS??2000));
-    const census=await page.evaluate(()=>{
-      __audit.census=false;__audit.paused=true;
-      return {frames:__audit.frames.length,passes:__audit.passes,objects:__audit.objects,cpu:__audit.cpu,scene:__audit.inspect()};
-    });
-    assert(census.frames > 0, 'No census frames recorded');
+      done();
+    };
+    apply();
+  }),[fixture,FRAME?FIXTURE_FRAME:0]);
+  const detail=process.env.DETAIL?await page.evaluate(([d,g,r])=>__audit.detail(d,g,r),[Number(process.env.DETAIL),process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
+  if(detail)console.log(JSON.stringify({chapter,detail}));
+  if(FRAME){await page.waitForFunction(()=>__stats.frame>=__audit.stopAt,null,{timeout:900000});await page.evaluate(()=>{__audit.paused=true;});}
+  else await page.waitForTimeout(detail?2500:1500);
+  return {page,errors,detail};
+}
+
+const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
+const report=[],inexact=[],differing=[];
+try {
+  for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
+    const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
+    const busyAtStart=busy();
+    let against;
+    if(COMPARE_BASE){
+      const other=await open(COMPARE_BASE,chapter);
+      if(process.env.STATE)await other.page.evaluate(code=>__audit.state(code),process.env.STATE);
+      against=await other.page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
+      assert.deepEqual(other.errors,[],'Browser errors on COMPARE_BASE');await other.page.close();
+    }
+    const {page,errors,detail}=await open(BASE,chapter);
+    let cpu,frameTimes,census;
+    // A run stopped on a frame is for comparing pictures: its loop is already still, and its readbacks are not the game's.
+    if(FRAME)census={frames:0,passes:{},objects:{},cpu:{},scene:await page.evaluate(()=>{__audit.install();return __audit.inspect();})};
+    else {
+      const cdp=await page.context().newCDPSession(page);
+      await cdp.send('Profiler.enable');await cdp.send('Profiler.setSamplingInterval',{interval:500});
+      await page.evaluate(()=>{__audit.frames=[];});await cdp.send('Profiler.start');
+      await page.waitForTimeout(Number(process.env.CPU_MS??6000));
+      const {profile}=await cdp.send('Profiler.stop');
+      const frames=await page.evaluate(()=>__audit.frames);
+      assert(frames.length > 0, 'No frame timings recorded');
+      await fs.writeFile(out+'-'+chapter+'.cpuprofile',JSON.stringify(profile));
+      cpu=cpuSummary(profile,frames.length);
+      frameTimes={frames:frames.length,cpuMedian:median(frames.map(f=>f.cpuMs)),cpuP90:[...frames.map(f=>f.cpuMs)].sort((a,b)=>a-b)[Math.floor(frames.length*.9)],intervalMedian:median(frames.map(f=>f.intervalMs))};
+      await page.evaluate(()=>{__audit.frames=[];__audit.install();__audit.census=true;});
+      await page.waitForTimeout(Number(process.env.CENSUS_MS??2000));
+      census=await page.evaluate(()=>{
+        __audit.census=false;__audit.paused=true;
+        return {frames:__audit.frames.length,passes:__audit.passes,objects:__audit.objects,cpu:__audit.cpu,scene:__audit.inspect()};
+      });
+      assert(census.frames > 0, 'No census frames recorded');
+    }
     assert.deepEqual(errors, [], 'Browser errors invalidate the profile');
     if(process.env.FORCE_GRASS_BAKES==='1') await page.evaluate(()=>{__audit.forceGrassBakes=true;});
     const state=process.env.STATE?await page.evaluate(code=>__audit.state(code),process.env.STATE):undefined;
     if(state!==undefined)console.log(JSON.stringify({chapter,state}));
+    if(against){
+      const here=await page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
+      assert.deepEqual([here.width,here.height,here.frame],[against.width,against.height,against.frame],'The two builds stopped on different frames or sizes');
+      const a=Buffer.from(here.data,'base64'),b=Buffer.from(against.data,'base64');let changed=0,over1=0,max=0,total=0;
+      const box=[Infinity,Infinity,-1,-1];
+      for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;total+=d;if(d>1)over1++;if(d>max)max=d;
+        const x=(i>>2)%here.width,y=here.height-1-Math.floor((i>>2)/here.width);box[0]=Math.min(box[0],x);box[1]=Math.min(box[1],y);box[2]=Math.max(box[2],x);box[3]=Math.max(box[3],y);}}
+      for(const [name,frame]of [['here',here],['against',against]])if(frame.png)await fs.writeFile(out+'-'+chapter+'-frame-'+name+'.png',Buffer.from(frame.png,'base64'));
+      const drift=Object.keys(here.state).filter(k=>JSON.stringify(here.state[k])!==JSON.stringify(against.state[k])).map(k=>[k,here.state[k],against.state[k]]);
+      against={base:COMPARE_BASE,frame:here.frame,changed,over1,max,mean:total/a.length,box:changed?box:undefined,drift:drift.length?drift:undefined};
+      console.log(JSON.stringify({chapter,against}));
+      if(max>Number(process.env.COMPARE_MAX??Infinity))differing.push({chapter,...against});
+    }
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {
       // With GPU_QUIET, each ablation also waits (up to GATE_S, default 20 s) for other GPU users to go quiet, not just each chapter.
@@ -567,15 +760,11 @@ try {
           finally{gl.deleteSync(fence);}}
         const read=v=>{probe.configure(v);probe.draw(false);const data=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);
           gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,data);return data;};
+        const bite=probe.bite(omit);
         const a=read(null),b=read(omit);let changed=0,max=0,total=0;
         for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d)changed++;max=Math.max(max,d);total+=d;}
         const pixels={changed,max,mean:total/a.length};
-        const encode=data=>{
-          const w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,canvas=document.createElement('canvas');
-          canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),im=ctx.createImageData(w,h);
-          for(let y=0;y<h;y++)im.data.set(data.subarray(y*w*4,(y+1)*w*4),(h-y-1)*w*4);
-          ctx.putImageData(im,0,0);return canvas.toDataURL('image/png').split(',')[1];
-        };
+        const encode=data=>probe.png(data);
         const images=capture?{baseline:encode(a),variant:encode(b)}:undefined;
         const drain=omit==='wind'||mode==='drain'||drainAll;
         async function measure(v){probe.configure(v);for(let i=0;i<3;i++)probe.draw();await complete();
@@ -587,7 +776,8 @@ try {
           for(const v of order)values[v?'omitted':'baseline'].push(await measure(v));
           const baseline=(values.baseline[0]+values.baseline[1])/2,omitted=(values.omitted[0]+values.omitted[1])/2;
           runs.push({baseline,omitted,saved:baseline-omitted,percent:(1-omitted/baseline)*100});}
-        const counts=v=>{probe.configure(v);probe.draw(false);return {...__game.renderer.info.render};};
+        // Two draws: the ordinary sea's reflection is drawn on alternate frames, so one draw of each side would differ by it.
+        const counts=v=>{probe.configure(v);const sum={calls:0,triangles:0};for(let i=0;i<2;i++){probe.draw(false);sum.calls+=__game.renderer.info.render.calls;sum.triangles+=__game.renderer.info.render.triangles;}return {calls:sum.calls/2,triangles:sum.triangles/2};};
         const submitted={baseline:counts(null),omitted:counts(omit)};
         const stepMs=omit==='wind'?await stepAlone():undefined;
         // Moving-camera exactness: the same pair of frames at every step of PATH, worst pixel over the path.
@@ -597,12 +787,12 @@ try {
             for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;if(d>max)max=d;}}
             path.changed+=changed;if(changed)path.stepsChanged++;if(max>path.max){path.max=max;path.worst=k;if(capture)path.images={baseline:encode(a),variant:encode(b)};}}}
           finally{probe.configure(null);probe.pathRestore(saved);}}
-        probe.configure(null);probe.pairRebake=false;return {pixels,runs,submitted,images,stepMs,drained:drain,path};
+        probe.configure(null);probe.pairRebake=false;bite.calls=submitted.omitted.calls-submitted.baseline.calls;bite.triangles=submitted.omitted.triangles-submitted.baseline.triangles;return {bite,pixels,runs,submitted,images,stepMs,drained:drain,path};
       },{name:omit,drainAll:process.env.DRAIN==='1',rounds:Number(process.env.ROUNDS??4),draws:Number(process.env.DRAWS??10),capture:process.env.CAPTURE==='1',poll:process.env.POLL,pathCode:(process.env.PATH_ABLATIONS??omit).split(',').includes(omit)?process.env.PATH_JS:undefined,pathSteps:Number(process.env.PATH_STEPS??40)});
       if(result.path?.images){for(const [name,data]of Object.entries(result.path.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-path-'+name+'.png',Buffer.from(data,'base64'));delete result.path.images;}
       if(result.images)for(const [name,data]of Object.entries(result.images))await fs.writeFile(out+'-'+chapter+'-'+omit+'-'+name+'.png',Buffer.from(data,'base64'));
       const baselines=result.runs.map(r=>r.baseline),straddle=Math.max(...baselines)/Math.min(...baselines)>STRADDLE;
-      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,pixels:result.pixels,path:result.path,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
+      const row={omit,busy:busyBefore,drained:result.drained,stepMs:result.stepMs,bite:result.bite,pixels:result.pixels,path:result.path,submitted:result.submitted,savedMs:median(result.runs.map(r=>r.saved)),percent:median(result.runs.map(r=>r.percent)),rangeMs:[Math.min(...result.runs.map(r=>r.saved)),Math.max(...result.runs.map(r=>r.saved))],baselines,straddle,runs:result.runs};
       if (omit === 'rebake') assert.equal(result.pixels.max, 0, 'Re-baking the window changed pixels');
       if (['culling-off','sky-last','full-tint'].includes(omit)) assert(result.pixels.max <= 1, omit+' changed visible pixels');
       // Exact skips are checked after every chapter has been measured, so one failure keeps the other rows.
@@ -617,7 +807,7 @@ try {
       }
       if (omit === 'fields-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .005, JSON.stringify(result.pixels));
       if (omit === 'colour-direct') assert(result.pixels.max <= 3 && result.pixels.mean < .01, JSON.stringify(result.pixels));
-      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs,pixels:row.pixels,path:row.path}));
+      ablations.push(row);console.log(JSON.stringify({chapter,omit,savedMs:row.savedMs,percent:row.percent,rangeMs:row.rangeMs,baselines,straddle,stepMs:row.stepMs,bite:row.bite,pixels:row.pixels,path:row.path}));
       if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
@@ -642,12 +832,20 @@ try {
       return __audit.waterPass(variants,reps,rounds,complete);
     },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
     if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
+    const simPasses=process.env.SIM_PASSES==='1'?await page.evaluate(async reps=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      __audit.configure(null);return __audit.simPasses(reps,complete);
+    },Number(process.env.SIM_REPS??30)):undefined;
+    if(simPasses)console.log(JSON.stringify({chapter,simPasses}));
     const cullingViews=process.env.CULLING_VIEWS==='1'?await page.evaluate(()=>__audit.cullingViews()):[];
     assert(cullingViews.every(v=>v.max<=1),'Culling changed pixels at a view edge');
-    const row={chapter,gate,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,waterPass,cullingViews,errors};report.push(row);
+    const row={chapter,gate,detail,against,busy:busyAtStart,frameTimes,cpu,census,ablations,postPasses,reflectionPass,simPasses,waterPass,cullingViews,errors};report.push(row);
     await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
     console.log(JSON.stringify({chapter,frameTimes,frames:census.frames,passes:census.passes,objects:census.objects,ablations:ablations.map(({runs,...r})=>r),errors}));
     assert.deepEqual(errors,[]);await page.close();
   }
   assert.deepEqual(inexact,[],'exact skips changed visible pixels');
+  assert.deepEqual(differing,[],'frames differ from COMPARE_BASE by more than COMPARE_MAX');
 } finally { await close(); }
