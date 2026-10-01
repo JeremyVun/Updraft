@@ -295,8 +295,6 @@ Rules:
   nearest) and fast math regroups float sums, so a fused pass cuts and orders with bit operations (`storeHalf`, `pin`).
 - Touching pieces of one material are not merged into one draw: three sorts separate meshes front to back every
   frame, and that order decides exact depth ties along where they meet (`mirror-merge` in `tools/frame-profile.mjs`).
-- An effect placed in its vertex shader is frustum culled only against a bound every vertex provably stays inside (the
-  starlings' `REACH`); `tools/render-cost-check.mjs` sweeps the view across its edge.
 - Scenery nothing moves, turns or reparents is fixed with `fixInPlace` (`gl/fixed.ts`) where it is built, so renders
   skip its matrices; anything that moves stays automatic. `tools/fixed-matrices-check.mjs` fails if a fixed object moves.
 

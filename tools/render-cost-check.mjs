@@ -64,48 +64,13 @@ async function compare() {
       const calls = renderer.info.render.calls;
       grass.bake(renderer);
       const tableDraws = renderer.info.render.calls - calls;
-      // Where no blade grows (the sky mirror) there is no table to rebuild.
-      if (grass.lods.some(l => l.count) && (change === 'unchanged') !== (tableDraws === 0)) throw new Error(`Wrong grass invalidation: ${change}, draws ${tableDraws}`);
+      if ((change === 'unchanged') !== (tableDraws === 0)) throw new Error(`Wrong grass invalidation: ${change}, draws ${tableDraws}`);
       const optimized = read(rig.camera);
       for (const l of grass.lods) l.dirty = true;
       grass.bake(renderer);
       results.push({ ...diff(optimized, read(rig.camera), `grass ${change}`), tableDraws });
     }
     uniforms.uSeason.value = season; uniforms.uTrodden.value.copy(trodden); uniforms.uTipLush.value.copy(tint); grass.bake(renderer);
-    // The starlings are skipped only where their bounding sphere is out of view: sweep the view across the flock at
-    // full presence, in the air and at the roost, and draw it unculled for comparison.
-    const { starlings } = __game;
-    if (starlings) {
-      const mesh = starlings.mesh, u = mesh.material.uniforms, sphere = mesh.geometry.boundingSphere;
-      const saved = { visible: mesh.visible, presence: u.uPresence.value, roost: u.uRoost.value, quaternion: rig.camera.quaternion.clone() };
-      const frustum = new THREE.Frustum();
-      let culled = 0, drawn = 0;
-      try {
-        mesh.visible = true; u.uPresence.value = 1;
-        for (const roost of [0, 0.6, 1]) {
-          u.uRoost.value = roost;
-          for (let yaw = -70; yaw <= 70; yaw += 2.5) for (const pitch of [-24, 0, 24]) {
-            rig.camera.position.copy(eye);
-            rig.camera.lookAt(sphere.center);
-            rig.camera.rotateY(THREE.MathUtils.degToRad(yaw)); rig.camera.rotateX(THREE.MathUtils.degToRad(pitch));
-            rig.camera.updateMatrixWorld();
-            frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(rig.camera.projectionMatrix, rig.camera.matrixWorldInverse));
-            if (frustum.intersectsSphere(sphere)) { drawn++; continue; }
-            culled++;
-            const optimized = read(rig.camera);
-            mesh.frustumCulled = false;
-            const full = read(rig.camera);
-            mesh.frustumCulled = true;
-            diff(optimized, full, `starlings yaw ${yaw} pitch ${pitch} roost ${roost}`);
-          }
-        }
-        if (!culled || !drawn) throw new Error(`starlings: the sweep never crossed the edge of the view (culled ${culled}, drawn ${drawn})`);
-        results.push({ label: 'starlings out of view', culled, drawn });
-      } finally {
-        mesh.frustumCulled = true; mesh.visible = saved.visible; u.uPresence.value = saved.presence; u.uRoost.value = saved.roost;
-        rig.camera.position.copy(eye); rig.camera.quaternion.copy(saved.quaternion); rig.camera.updateMatrixWorld();
-      }
-    }
     const material = terrain.mesh.material, fragment = material.fragmentShader;
     for (const mirror of [false, true]) {
       const camera = mirror ? __game.water.reflection.mirrorCamera : rig.camera;

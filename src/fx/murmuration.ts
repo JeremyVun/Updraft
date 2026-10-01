@@ -7,9 +7,6 @@ const COUNT = 12000;
 const HOME = new THREE.Vector3(-165, 88, -1735);
 /** Where the flock comes from, far to the west. */
 const ARRIVE_FROM = new THREE.Vector3(-900, 130, -1500);
-const SIZE = 14;
-/** No bird strays further from the centre: its place is at most 7.8 sizes out, its span under 40 m within 15 km. */
-const REACH = 7.8 * SIZE + 40;
 
 const VERT = /* glsl */ `
 uniform float uTime;
@@ -107,7 +104,7 @@ export class Murmuration {
     this.uniforms = {
       ...atmo.uniforms,
       uCentre: { value: this.centre },
-      uSize: { value: SIZE },
+      uSize: { value: 14 },
       uPresence: { value: 0 },
       uRoost: { value: 0 },
     };
@@ -115,7 +112,7 @@ export class Murmuration {
       geo,
       new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: this.uniforms, transparent: true, depthWrite: false }),
     );
-    geo.boundingSphere = new THREE.Sphere(this.centre, REACH);
+    this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;
     this.mesh.visible = false;
     fixInPlace(this.mesh);
