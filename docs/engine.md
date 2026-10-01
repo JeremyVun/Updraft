@@ -255,6 +255,10 @@ drawn. Every other material keeps the deck; the grass's blade table includes `AT
 That is five programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
 the deck is away.
 
+`LAND_SKIP`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
+waterline inside, so no seen pixel shares its quad; it needs the terrain drawn over the sea with tiles following a
+camera above the ground, and is selected while island ground lies in the window.
+
 ## Bakes and caches
 
 Static, baked once before Begin (runtime GPU allocations, not downloads):
@@ -298,7 +302,8 @@ Bakes that follow the world:
 Rules:
 
 - In the terrain, grass and sea shaders, skip terms whose weight is exactly zero (unused regional colour noise, the
-  distant-field colour where `far` is 0, frost noise where there is no frost, sun glints outside the glitter lobe).
+  distant-field colour where `far` is 0, frost noise where there is no frost, sun glints outside the glitter lobe,
+  the seabed's weed and caustics outside their depths and reach).
   A mipmapped sampler moved inside such a branch must use explicit derivatives or `textureLod`.
 - Terrain computes fog first and skips surface shading only where fog opacity is exactly 1; fully reflective
   sky-mirror water skips ordinary sea shading. `node tools/render-cost-check.mjs <chapter>` compares these against
