@@ -7,49 +7,18 @@ import { tuning } from '../tuning';
 import { WindClock, WIND_STEP, type TimedSplat } from './clock';
 import {
   ADVECT_FRAG,
-  BEND_FRAG,
-  CURL_FRAG,
+  CURL_VORTICITY_FRAG,
   DIVERGENCE_FRAG,
   FORCE_FRAG,
   GRADIENT_FRAG,
   MAX_SPLATS,
-  PRESSURE_FRAG,
   SCALE_FRAG,
   SHIFT_FRAG,
-  SWAY_FRAG,
-  VORTICITY_FRAG,
+  pressureFrag,
 } from './shaders';
 
-/**
- * Two Jacobi relaxations in one pass, bit for bit what two passes of PRESSURE_FRAG produce: each neighbour's
- * relaxed pressure is rebuilt from the same texels (neighbour positions clamped to the grid first, as sampling
- * clamps them) and rounded to half float as the intermediate target would have rounded it. Half the passes,
- * and each pass on a tiled GPU costs a fixed load and store on top of its pixels.
- */
-const PRESSURE2_FRAG = /* glsl */ `
-uniform sampler2D uPressure;
-uniform sampler2D uDivergence;
-uniform vec2 uTexel;
-in vec2 vUv;
-float relaxed(vec2 uv) {
-  float L = texture(uPressure, uv - vec2(uTexel.x, 0.0)).x;
-  float R = texture(uPressure, uv + vec2(uTexel.x, 0.0)).x;
-  float B = texture(uPressure, uv - vec2(0.0, uTexel.y)).x;
-  float T = texture(uPressure, uv + vec2(0.0, uTexel.y)).x;
-  float div = texture(uDivergence, uv).x;
-  float p = (L + R + B + T - div) * 0.25;
-  return unpackHalf2x16(packHalf2x16(vec2(p, 0.0))).x;
-}
-void main() {
-  vec2 lo = 0.5 * uTexel;
-  vec2 hi = 1.0 - lo;
-  float L = relaxed(clamp(vUv - vec2(uTexel.x, 0.0), lo, hi));
-  float R = relaxed(clamp(vUv + vec2(uTexel.x, 0.0), lo, hi));
-  float B = relaxed(clamp(vUv - vec2(0.0, uTexel.y), lo, hi));
-  float T = relaxed(clamp(vUv + vec2(0.0, uTexel.y), lo, hi));
-  float div = texture(uDivergence, vUv).x;
-  gl_FragColor = vec4((L + R + B + T - div) * 0.25, 0.0, 0.0, 1.0);
-}`;
+/** Pressure relaxations per pass: fewer passes, each reading a wider neighbourhood. */
+const PRESSURE_DEPTH = 4;
 
 /** A push of air along a segment, in world units. See docs/contracts/wind.md. */
 export interface Splat {
@@ -139,11 +108,11 @@ export class WindField {
   readonly res: number;
   readonly breeze = new THREE.Vector2();
   private readonly gpu: GpuRunner;
+  /** The wind, the grass lean and the sway at the end of a tick, written together. */
+  private readonly state: PingPong;
+  /** The wind between the passes of a tick. */
   private readonly vel: PingPong;
-  private readonly bend: PingPong;
-  private readonly sway: PingPong;
   private readonly pressure: PingPong;
-  private readonly curl: THREE.WebGLRenderTarget;
   private readonly divergence: THREE.WebGLRenderTarget;
   private readonly readTarget: THREE.WebGLRenderTarget;
   private readonly readback: Readback<{ minX: number; minZ: number; size: number }>;
@@ -152,31 +121,24 @@ export class WindField {
   private readonly runTick = (time: number, inputs: TimedSplat[]): void => this.substep(time, inputs);
 
   private readonly forceMat: THREE.ShaderMaterial;
-  private readonly curlMat: THREE.ShaderMaterial;
   private readonly vorticityMat: THREE.ShaderMaterial;
   private readonly divergenceMat: THREE.ShaderMaterial;
-  private readonly pressureMat: THREE.ShaderMaterial;
-  private readonly pressure2Mat: THREE.ShaderMaterial;
+  /** The relaxation passes of one tick, the first carrying the last solve over. */
+  private readonly pressurePasses: THREE.ShaderMaterial[] = [];
   private readonly gradientMat: THREE.ShaderMaterial;
   private readonly advectMat: THREE.ShaderMaterial;
-  private readonly bendMat: THREE.ShaderMaterial;
-  private readonly swayMat: THREE.ShaderMaterial;
   private readonly scaleMat: THREE.ShaderMaterial;
   private readonly shiftMat: THREE.ShaderMaterial;
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
-  private readonly iterations: number;
   private readonly clock = new WindClock();
   private steppedSinceReadback = false;
 
   constructor(renderer: THREE.WebGLRenderer, { res = 256, iterations = 24 }: WindOptions = {}) {
     this.res = res;
-    this.iterations = iterations;
     this.gpu = new GpuRunner(renderer);
+    this.state = new PingPong(res, res, THREE.HalfFloatType, THREE.LinearFilter, 3);
     this.vel = new PingPong(res, res);
-    this.bend = new PingPong(res, res);
-    this.sway = new PingPong(res, res);
     this.pressure = new PingPong(res, res, THREE.HalfFloatType, THREE.NearestFilter);
-    this.curl = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.divergence = simTarget(res, res, THREE.HalfFloatType, THREE.NearestFilter);
     this.readTarget = simTarget(READ_RES, READ_RES, THREE.FloatType, THREE.NearestFilter);
     this.readback = new Readback(renderer, 'wind', READ_RES, READ_RES, (data, window) => {
@@ -201,72 +163,60 @@ export class WindField {
       uSplatVel: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
       uSplatMix: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
     });
-    this.curlMat = simMaterial(CURL_FRAG, { uVel: { value: null }, uTexel: texel });
-    this.vorticityMat = simMaterial(VORTICITY_FRAG, {
+    this.vorticityMat = simMaterial(CURL_VORTICITY_FRAG, {
       uVel: { value: null },
-      uCurl: { value: this.curl.texture },
       uStrength: { value: tuning.wind.swirliness },
       uDt: dt,
-      uTexel: texel,
     });
     this.divergenceMat = simMaterial(DIVERGENCE_FRAG, { uVel: { value: null }, uTexel: texel });
-    this.pressureMat = simMaterial(PRESSURE_FRAG, {
-      uPressure: { value: null },
-      uDivergence: { value: this.divergence.texture },
-      uTexel: texel,
-    });
-    this.pressure2Mat = simMaterial(PRESSURE2_FRAG, {
-      uPressure: { value: null },
-      uDivergence: { value: this.divergence.texture },
-      uTexel: texel,
-    });
+    for (let done = 0; done < iterations; done += PRESSURE_DEPTH) {
+      this.pressurePasses.push(simMaterial(pressureFrag(Math.min(PRESSURE_DEPTH, iterations - done), done === 0), {
+        uPressure: { value: null },
+        uDivergence: { value: this.divergence.texture },
+        uScale: { value: 0.8 },
+      }));
+    }
     this.gradientMat = simMaterial(GRADIENT_FRAG, { uPressure: { value: null }, uVel: { value: null }, uTexel: texel });
     this.advectMat = simMaterial(ADVECT_FRAG, {
       uVel: { value: null },
+      uBend: { value: null },
+      uSway: { value: null },
       uDt: dt,
       uDomain: domain,
       uVelDissipation: { value: tuning.wind.dissipation },
       uEnergyDecay: { value: tuning.wind.energyDecay },
       uLiftDecay: { value: tuning.wind.liftDecay },
-    });
-    this.bendMat = simMaterial(BEND_FRAG, {
-      uBend: { value: null },
-      uVel: { value: null },
-      uDt: dt,
-      uStiffness: { value: tuning.wind.grassStiffness },
-      uDamping: { value: tuning.wind.grassDamping },
-    });
-    this.swayMat = simMaterial(SWAY_FRAG, {
-      uSway: { value: null },
-      uVel: { value: null },
-      uDt: dt,
-      uStiffness: { value: tuning.wind.swayStiffness },
-      uDamping: { value: tuning.wind.swayDamping },
+      uBendStiffness: { value: tuning.wind.grassStiffness },
+      uBendDamping: { value: tuning.wind.grassDamping },
+      uSwayStiffness: { value: tuning.wind.swayStiffness },
+      uSwayDamping: { value: tuning.wind.swayDamping },
       uCalm: { value: 0 },
     });
     this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } });
     this.shiftMat = simMaterial(SHIFT_FRAG, {
-      uSrc: { value: null },
+      uVel: { value: null },
+      uBend: { value: null },
+      uSway: { value: null },
       uOffset: { value: new THREE.Vector2() },
       uOutside: { value: new THREE.Vector4() },
     });
     onWindowMove((dx, dz) => this.shift(dx, dz));
 
-    for (const rt of [this.vel.read, this.vel.write, this.bend.read, this.bend.write, this.sway.read, this.sway.write, this.pressure.read, this.pressure.write]) {
+    for (const rt of [this.state.read, this.state.write, this.vel.read, this.vel.write, this.pressure.read, this.pressure.write]) {
       this.gpu.clear(rt);
     }
   }
 
   get texture(): THREE.Texture {
-    return this.vel.texture;
+    return this.state.read.textures[0];
   }
 
   get bendTexture(): THREE.Texture {
-    return this.bend.texture;
+    return this.state.read.textures[1];
   }
 
   get swayTexture(): THREE.Texture {
-    return this.sway.texture;
+    return this.state.read.textures[2];
   }
 
   /** How hard air with no gust in it can be felt: it goes with the prevailing breeze, and dead air is dead. */
@@ -295,7 +245,7 @@ export class WindField {
     // Eight uniforms per pass, not eight accepted strokes. Busy scenes with more sources
     // may need another force pass; pressure, advection and springs still run only once per tick.
     for (let offset = 0; offset < Math.max(1, inputs.length); offset += MAX_SPLATS) {
-      fu.uVel.value = this.vel.texture;
+      fu.uVel.value = offset === 0 ? this.texture : this.vel.texture;
       fu.uAmbient.value = offset === 0 ? 1 : 0;
       const count = Math.min(MAX_SPLATS, inputs.length - offset);
       fu.uSplatCount.value = count;
@@ -309,9 +259,6 @@ export class WindField {
       this.vel.swap();
     }
 
-    this.curlMat.uniforms.uVel.value = this.vel.texture;
-    this.gpu.run(this.curlMat, this.curl);
-
     this.vorticityMat.uniforms.uVel.value = this.vel.texture;
     this.gpu.run(this.vorticityMat, this.vel.write);
     this.vel.swap();
@@ -319,15 +266,9 @@ export class WindField {
     this.divergenceMat.uniforms.uVel.value = this.vel.texture;
     this.gpu.run(this.divergenceMat, this.divergence);
 
-    this.scaleMat.uniforms.uSrc.value = this.pressure.texture;
-    this.scaleMat.uniforms.uScale.value = 0.8;
-    this.gpu.run(this.scaleMat, this.pressure.write);
-    this.pressure.swap();
-    const fused = Math.floor(this.iterations / 2);
-    for (let i = 0; i < this.iterations - fused; i++) {
-      const mat = i < fused ? this.pressure2Mat : this.pressureMat;
-      mat.uniforms.uPressure.value = this.pressure.texture;
-      this.gpu.run(mat, this.pressure.write);
+    for (const pass of this.pressurePasses) {
+      pass.uniforms.uPressure.value = this.pressure.texture;
+      this.gpu.run(pass, this.pressure.write);
       this.pressure.swap();
     }
 
@@ -336,47 +277,36 @@ export class WindField {
     this.gpu.run(this.gradientMat, this.vel.write);
     this.vel.swap();
 
-    this.advectMat.uniforms.uVel.value = this.vel.texture;
-    this.gpu.run(this.advectMat, this.vel.write);
-    this.vel.swap();
-
-    this.bendMat.uniforms.uBend.value = this.bend.texture;
-    this.bendMat.uniforms.uVel.value = this.vel.texture;
-    this.gpu.run(this.bendMat, this.bend.write);
-    this.bend.swap();
-
-    this.swayMat.uniforms.uSway.value = this.sway.texture;
-    this.swayMat.uniforms.uVel.value = this.vel.texture;
-    this.swayMat.uniforms.uCalm.value = this.calm;
-    this.gpu.run(this.swayMat, this.sway.write);
-    this.sway.swap();
+    const au = this.advectMat.uniforms;
+    au.uVel.value = this.vel.texture;
+    au.uBend.value = this.bendTexture;
+    au.uSway.value = this.swayTexture;
+    au.uCalm.value = this.calm;
+    this.gpu.run(this.advectMat, this.state.write);
+    this.state.swap();
   }
 
   /** Keeps the air where it is in the world when the window moves by (dx, dz) world units. */
   private shift(dx: number, dz: number): void {
     const su = this.shiftMat.uniforms;
     su.uOffset.value.set(dx / WINDOW.size, dz / WINDOW.size);
-    for (const [pp, outside] of [
-      [this.vel, new THREE.Vector4(this.breeze.x, this.breeze.y, 0, 0)],
-      [this.bend, new THREE.Vector4(0, 0, 0, 0)],
-      [this.sway, new THREE.Vector4(0, 0, 0, 0)],
-    ] as const) {
-      su.uSrc.value = pp.texture;
-      su.uOutside.value.copy(outside);
-      this.gpu.run(this.shiftMat, pp.write);
-      pp.swap();
-    }
+    su.uOutside.value.set(this.breeze.x, this.breeze.y, 0, 0);
+    su.uVel.value = this.texture;
+    su.uBend.value = this.bendTexture;
+    su.uSway.value = this.swayTexture;
+    this.gpu.run(this.shiftMat, this.state.write);
+    this.state.swap();
     this.gpu.clear(this.pressure.read);
     // The shaders still hold this frame's unshifted textures, which they would read against the moved window.
     const u = atmo.uniforms;
-    u.uWindTex.value = this.vel.texture;
-    u.uBendTex.value = this.bend.texture;
-    u.uSwayTex.value = this.sway.texture;
+    u.uWindTex.value = this.texture;
+    u.uBendTex.value = this.bendTexture;
+    u.uSwayTex.value = this.swayTexture;
   }
 
   private readBack(): void {
     if (!this.readback.ready) return;
-    this.scaleMat.uniforms.uSrc.value = this.vel.texture;
+    this.scaleMat.uniforms.uSrc.value = this.texture;
     this.scaleMat.uniforms.uScale.value = 1;
     this.gpu.run(this.scaleMat, this.readTarget);
     this.readback.request(this.readTarget, { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size });

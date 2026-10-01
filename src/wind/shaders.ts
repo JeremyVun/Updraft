@@ -88,29 +88,61 @@ void main() {
   gl_FragColor = vec4(v, min(s.z, 1.6), min(s.w, 2.5));
 }`;
 
-export const CURL_FRAG = /* glsl */ `
-uniform sampler2D uVel;
-${NEIGHBOURS}
-void main() {
-  float L = texture(uVel, uvL()).y;
-  float R = texture(uVel, uvR()).y;
-  float B = texture(uVel, uvB()).x;
-  float T = texture(uVel, uvT()).x;
-  gl_FragColor = vec4(0.5 * (R - L - T + B), 0.0, 0.0, 1.0);
-}`;
+/**
+ * Several passes fused into one, bit for bit: a value an earlier pass would have stored in a half-float target is
+ * rounded to half here, and neighbours are taken at grid positions clamped one step at a time, as sampling each
+ * intermediate texture would have clamped them. Each pass on a tiled GPU costs a fixed load and store on top of its
+ * pixels.
+ */
+const HALF = /* glsl */ `
+float half1(float v) { return unpackHalf2x16(packHalf2x16(vec2(v, 0.0))).x; }
+vec4 half4(vec4 v) { return vec4(unpackHalf2x16(packHalf2x16(v.xy)), unpackHalf2x16(packHalf2x16(v.zw))); }
+`;
 
-export const VORTICITY_FRAG = /* glsl */ `
+type Cell = [number, number];
+const diamond = (r: number): Cell[] => {
+  const cells: Cell[] = [];
+  for (let b = -r; b <= r; b++) for (let a = -r; a <= r; a++) if (Math.abs(a) + Math.abs(b) <= r) cells.push([a, b]);
+  return cells;
+};
+const tag = (a: number, b: number) => `${a < 0 ? 'm' + -a : a}_${b < 0 ? 'm' + -b : b}`;
+/**
+ * A cell computed from its neighbours is wrong where it lies outside the grid: there it takes the value of the cell
+ * it clamps to, the nearest one inward, which (working outward) is already right.
+ */
+const clampCells = (name: string, cells: Cell[]): string => {
+  const lines: string[] = [];
+  const order = [...cells].sort((p, q) => Math.abs(p[0]) - Math.abs(q[0]));
+  for (const [a, b] of order) {
+    if (a < 0) lines.push(`if (at.x + ${a} < 0) ${name}${tag(a, b)} = ${name}${tag(a + 1, b)};`);
+    if (a > 0) lines.push(`if (at.x + ${a} > last.x) ${name}${tag(a, b)} = ${name}${tag(a - 1, b)};`);
+  }
+  for (const [a, b] of [...cells].sort((p, q) => Math.abs(p[1]) - Math.abs(q[1]))) {
+    if (b < 0) lines.push(`if (at.y + ${b} < 0) ${name}${tag(a, b)} = ${name}${tag(a, b + 1)};`);
+    if (b > 0) lines.push(`if (at.y + ${b} > last.y) ${name}${tag(a, b)} = ${name}${tag(a, b - 1)};`);
+  }
+  return lines.join('\n  ');
+};
+const fetchAt = (sampler: string, a: number, b: number) => `texelFetch(${sampler}, clamp(at + ivec2(${a}, ${b}), ivec2(0), last), 0)`;
+
+/** The curl pass folded into the vorticity pass: CURL_FRAG at the centre and its four neighbours, as stored. */
+export const CURL_VORTICITY_FRAG = /* glsl */ `
 uniform sampler2D uVel;
-uniform sampler2D uCurl;
 uniform float uStrength;
 uniform float uDt;
-${NEIGHBOURS}
+in vec2 vUv;
+${HALF}
 void main() {
-  float L = texture(uCurl, uvL()).x;
-  float R = texture(uCurl, uvR()).x;
-  float B = texture(uCurl, uvB()).x;
-  float T = texture(uCurl, uvT()).x;
-  float C = texture(uCurl, vUv).x;
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  ivec2 last = textureSize(uVel, 0) - 1;
+  ${diamond(2).map(([a, b]) => `vec2 v${tag(a, b)} = ${fetchAt('uVel', a, b)}.xy;`).join('\n  ')}
+  ${diamond(1).map(([a, b]) => `float c${tag(a, b)} = half1(0.5 * (v${tag(a + 1, b)}.y - v${tag(a - 1, b)}.y - v${tag(a, b + 1)}.x + v${tag(a, b - 1)}.x));`).join('\n  ')}
+  ${clampCells('c', diamond(1))}
+  float L = c${tag(-1, 0)};
+  float R = c${tag(1, 0)};
+  float B = c${tag(0, -1)};
+  float T = c${tag(0, 1)};
+  float C = c${tag(0, 0)};
   vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
   force /= length(force) + 1e-4;
   force *= uStrength * C;
@@ -132,18 +164,36 @@ void main() {
   gl_FragColor = vec4(0.5 * (R - L + T - B), 0.0, 0.0, 1.0);
 }`;
 
-export const PRESSURE_FRAG = /* glsl */ `
+/**
+ * `depth` Jacobi relaxations of PRESSURE in one pass (two passes of it once read `(L + R + B + T - div) * 0.25`);
+ * `scaled` folds in the pass that carries the last solve over at `uScale` as the first guess.
+ */
+export function pressureFrag(depth: number, scaled: boolean): string {
+  const levels: string[] = [];
+  for (let k = 1; k <= depth; k++) {
+    const cells = diamond(depth - k);
+    const p = (a: number, b: number) => `p${k - 1}_${tag(a, b)}`;
+    levels.push(cells.map(([a, b]) => {
+      const sum = `(${p(a - 1, b)} + ${p(a + 1, b)} + ${p(a, b - 1)} + ${p(a, b + 1)} - d${tag(a, b)}) * 0.25`;
+      return `float p${k}_${tag(a, b)} = ${k < depth ? `half1(${sum})` : sum};`;
+    }).join('\n  '));
+    if (k < depth) levels.push(clampCells(`p${k}_`, cells));
+  }
+  const read = (a: number, b: number) => `${fetchAt('uPressure', a, b)}.x`;
+  return /* glsl */ `
 uniform sampler2D uPressure;
 uniform sampler2D uDivergence;
-${NEIGHBOURS}
+uniform float uScale;
+${HALF}
 void main() {
-  float L = texture(uPressure, uvL()).x;
-  float R = texture(uPressure, uvR()).x;
-  float B = texture(uPressure, uvB()).x;
-  float T = texture(uPressure, uvT()).x;
-  float div = texture(uDivergence, vUv).x;
-  gl_FragColor = vec4((L + R + B + T - div) * 0.25, 0.0, 0.0, 1.0);
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  ivec2 last = textureSize(uPressure, 0) - 1;
+  ${diamond(depth).map(([a, b]) => `float p0_${tag(a, b)} = ${scaled ? `half1(${read(a, b)} * uScale)` : read(a, b)};`).join('\n  ')}
+  ${diamond(depth - 1).map(([a, b]) => `float d${tag(a, b)} = ${fetchAt('uDivergence', a, b)}.x;`).join('\n  ')}
+  ${levels.join('\n  ')}
+  gl_FragColor = vec4(p${depth}_${tag(0, 0)}, 0.0, 0.0, 1.0);
 }`;
+}
 
 export const GRADIENT_FRAG = /* glsl */ `
 uniform sampler2D uPressure;
@@ -159,15 +209,22 @@ void main() {
   gl_FragColor = s;
 }`;
 
+/** Moves the wind, the grass lean and the sway together; outside the old window each takes its own still value. */
 export const SHIFT_FRAG = /* glsl */ `
-uniform sampler2D uSrc;
+uniform sampler2D uVel;
+uniform sampler2D uBend;
+uniform sampler2D uSway;
 uniform vec2 uOffset;
 uniform vec4 uOutside;
 in vec2 vUv;
+layout(location = 1) out highp vec4 fragBend;
+layout(location = 2) out highp vec4 fragSway;
 void main() {
   vec2 uv = vUv + uOffset;
   bool inside = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
-  gl_FragColor = inside ? texture(uSrc, uv) : uOutside;
+  gl_FragColor = inside ? texture(uVel, uv) : uOutside;
+  fragBend = inside ? texture(uBend, uv) : vec4(0.0);
+  fragSway = inside ? texture(uSway, uv) : vec4(0.0);
 }`;
 
 export const SCALE_FRAG = /* glsl */ `
@@ -178,14 +235,31 @@ void main() {
   gl_FragColor = texture(uSrc, vUv) * uScale;
 }`;
 
+/**
+ * Advection, then the grass lean and the sway driven by the advected wind as it is stored. Channels: the wind xy
+ * velocity, z gust energy, w updraft; the lean xy (radians, world XZ) and its velocity zw, a damped spring so gusts
+ * overshoot and settle; the sway xy, the wind hanging things feel on a softer spring (world units per second), and
+ * its rate of change zw, so cloth and leaves take the gust late, overshoot and swing back.
+ */
 export const ADVECT_FRAG = /* glsl */ `
 uniform sampler2D uVel;
+uniform sampler2D uBend;
+uniform sampler2D uSway;
 uniform float uDt;
 uniform vec4 uDomain;
 uniform float uVelDissipation;
 uniform float uEnergyDecay;
 uniform float uLiftDecay;
+uniform float uBendStiffness;
+uniform float uBendDamping;
+uniform float uSwayStiffness;
+uniform float uSwayDamping;
+uniform float uCalm;
 in vec2 vUv;
+layout(location = 1) out highp vec4 fragBend;
+layout(location = 2) out highp vec4 fragSway;
+${HALF}
+${FELT_GLSL}
 void main() {
   vec2 coord = vUv - uDt * texture(uVel, vUv).xy * uDomain.zw;
   vec4 s = texture(uVel, coord);
@@ -193,50 +267,22 @@ void main() {
   s.z *= exp(-uDt * uEnergyDecay);
   s.w *= exp(-uDt * uLiftDecay);
   gl_FragColor = s;
-}`;
+  vec4 w = half4(s);
 
-/**
- * Grass lean as a damped spring field driven by the wind, so gusts overshoot and settle.
- * Channels: xy lean vector (radians, world XZ), zw lean velocity.
- */
-export const BEND_FRAG = /* glsl */ `
-uniform sampler2D uBend;
-uniform sampler2D uVel;
-uniform float uDt;
-uniform float uStiffness;
-uniform float uDamping;
-in vec2 vUv;
-void main() {
   vec4 b = texture(uBend, vUv);
-  vec4 w = texture(uVel, vUv);
   float sp = length(w.xy);
   vec2 dir = sp > 1e-4 ? w.xy / sp : vec2(0.0);
   float amount = (1.0 - exp(-sp / 8.0)) * 1.3;
   vec2 target = dir * amount;
-  vec2 acc = uStiffness * (target - b.xy) - uDamping * b.zw;
+  vec2 acc = uBendStiffness * (target - b.xy) - uBendDamping * b.zw;
   b.zw += acc * uDt;
   b.xy += b.zw * uDt;
-  gl_FragColor = b;
-}`;
+  fragBend = b;
 
-/**
- * The wind hanging things feel, on a soft spring, so cloth and leaves take the gust late, overshoot and swing back.
- * Channels: xy the sprung wind (world units per second), zw its rate of change.
- */
-export const SWAY_FRAG = /* glsl */ `
-uniform sampler2D uSway;
-uniform sampler2D uVel;
-uniform float uDt;
-uniform float uStiffness;
-uniform float uDamping;
-uniform float uCalm;
-in vec2 vUv;
-${FELT_GLSL}
-void main() {
-  vec4 s = texture(uSway, vUv);
-  vec2 target = feltWind(texture(uVel, vUv), uCalm);
-  vec2 acc = uStiffness * (target - s.xy) - uDamping * s.zw;
-  s.zw += acc * uDt;
-  s.xy += s.zw * uDt;
-  gl_FragColor = s;
+  vec4 h = texture(uSway, vUv);
+  vec2 felt = feltWind(w, uCalm);
+  vec2 pull = uSwayStiffness * (felt - h.xy) - uSwayDamping * h.zw;
+  h.zw += pull * uDt;
+  h.xy += h.zw * uDt;
+  fragSway = h;
 }`;

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { fixInPlace } from '../gl/fixed';
+import { fixInPlace, mergeTranslated } from '../gl/fixed';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Traveller } from '../traveller/traveller';
 import { screenBrush } from '../creatures/motion';
@@ -100,17 +100,14 @@ export class SkyMirror {
   private readonly constellationLines: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
 
   private readonly constellationCrossbars: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
+  private readonly guide: THREE.Mesh;
 
   constructor() {
     this.group.add(this.hoop, this.film);
     this.film.layers.enable(REFLECTION_LAYER);
-    const wood = mirrorMaterial('#927b68');
-    const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.86, 0.15, 24), wood);
-    seat.position.set(MIRROR_BOWL.x, 0.95, MIRROR_BOWL.z); this.group.add(seat);
-    for (const [x,z] of [[-0.5,-0.4],[0.5,-0.4],[0,0.55]]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.1,0.9,8), wood);
-      leg.position.set(MIRROR_BOWL.x+x,0.45,MIRROR_BOWL.z+z); this.group.add(leg); fixInPlace(leg);
-    }
+    const stand = [{ geometry: new THREE.CylinderGeometry(0.8, 0.86, 0.15, 24), x: MIRROR_BOWL.x, y: 0.95, z: MIRROR_BOWL.z },
+      ...[[-0.5,-0.4],[0.5,-0.4],[0,0.55]].map(([x,z]) => ({ geometry: new THREE.CylinderGeometry(0.075,0.1,0.9,8), x: MIRROR_BOWL.x+x, y: 0.45, z: MIRROR_BOWL.z+z }))];
+    const seat = new THREE.Mesh(mergeTranslated(stand), mirrorMaterial('#927b68')); this.group.add(seat);
     const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.64,32,16,0,Math.PI*2,Math.PI/2,Math.PI/2),
       mirrorMaterial('#b3c7ca'));
     bowl.scale.y=0.5; bowl.position.set(MIRROR_BOWL.x,1.3,MIRROR_BOWL.z); this.group.add(bowl);
@@ -130,7 +127,7 @@ export class SkyMirror {
     const constellationLine=(a:number,b:number)=>{
       const line=new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(this.stars[a].sky,this.stars[b].sky),1,0.035,4,false),
         new THREE.MeshBasicMaterial({color:'#ffdc9c',transparent:true,opacity:0,depthWrite:false}));
-      line.layers.enable(REFLECTION_LAYER); this.group.add(line); fixInPlace(line);
+      line.layers.enable(REFLECTION_LAYER); line.visible=false; this.group.add(line); fixInPlace(line);
       return line;
     };
     for(let i=0;i<this.stars.length;i++)this.constellationLines.push(constellationLine(i,(i+1)%this.stars.length));
@@ -140,7 +137,7 @@ export class SkyMirror {
     // constellation is whole, so the boat's last approach has a visible cause.
     const offshore=MIRROR_DRIFT[MIRROR_DRIFT.length-2];
     const dx=MIRROR_BERTH.x-offshore.x,dz=MIRROR_BERTH.z-offshore.z;
-    const guide=new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(dx,dz),5),new THREE.ShaderMaterial({
+    const guide=this.guide=new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(dx,dz),5),new THREE.ShaderMaterial({
       uniforms:{...atmo.uniforms,uLit:{value:this.guideLights}},transparent:true,depthWrite:false,
       blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
       vertexShader:`varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
@@ -154,7 +151,7 @@ export class SkyMirror {
           gl_FragColor=vec4(vec3(1.0,0.81,0.5),on*gaps*edge*ends*(0.06+ripple*0.62));}`,
     }));
     guide.position.set((offshore.x+MIRROR_BERTH.x)/2,0.055,(offshore.z+MIRROR_BERTH.z)/2);
-    guide.rotation.set(-Math.PI/2,0,Math.atan2(-dz,dx)); this.group.add(guide); fixInPlace(guide);
+    guide.rotation.set(-Math.PI/2,0,Math.atan2(-dz,dx)); guide.visible=false; this.group.add(guide); fixInPlace(guide);
     const timber = new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms }, vertexShader: VERT,
       fragmentShader: `${ATMO_GLSL}
       varying vec3 vWorld; varying vec3 vNormal;
@@ -165,9 +162,8 @@ export class SkyMirror {
         col *= hemiLight(n) + uSunColor * max(dot(n, uSunDir), 0.0);
         gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
       }` });
-    const add = (g: THREE.BufferGeometry, x: number, y: number, z: number, m: THREE.Material = timber) => {
-      const mesh = new THREE.Mesh(g, m); mesh.position.set(x, y, z); mesh.layers.enable(REFLECTION_LAYER); this.group.add(mesh); fixInPlace(mesh); return mesh;
-    };
+    const timberParts: { geometry: THREE.BufferGeometry; x: number; y: number; z: number }[] = [];
+    const add = (geometry: THREE.BufferGeometry, x: number, y: number, z: number) => timberParts.push({ geometry, x, y, z });
     for (let i = 0; i < 31; i++) add(new THREE.BoxGeometry(0.49, 0.14, 2.2), MIRROR_DECK.x0 + 0.2 + i * 0.51, 0.15, MIRROR_DECK.z0);
     for (let i = 0; i < 5; i++) for (const side of [-1, 1]) add(new THREE.CylinderGeometry(0.09, 0.12, 3, 7), MIRROR_DECK.x0 + 1 + i * 3.6, -1, MIRROR_DECK.z0 + side);
     // The entry has its own landing stage: a hull in deep water, planks above it, then the bare mirror.
@@ -203,9 +199,11 @@ export class SkyMirror {
     add(new THREE.CylinderGeometry(0.075, 0.11, 5, 9), MIRROR_BERTH.x - 4, 2.2, MIRROR_BERTH.z - 1.05);
     add(new THREE.BoxGeometry(0.76, 0.12, 0.62), MIRROR_BERTH.x - 4, 4.85, MIRROR_BERTH.z - 1.05);
     add(new THREE.BoxGeometry(0.66, 0.10, 0.56), MIRROR_BERTH.x - 4, 4.12, MIRROR_BERTH.z - 1.05);
-    const lamp = new THREE.MeshBasicMaterial({ color: '#ffcb79' });
-    add(new THREE.BoxGeometry(0.42, 0.59, 0.35), MIRROR_BERTH.x - 4, 4.46, MIRROR_BERTH.z - 1.05, lamp);
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.59, 0.35), new THREE.MeshBasicMaterial({ color: '#ffcb79' }));
+    lamp.position.set(MIRROR_BERTH.x - 4, 4.46, MIRROR_BERTH.z - 1.05); lamp.layers.enable(REFLECTION_LAYER); this.group.add(lamp); fixInPlace(lamp);
     for (const x of [-0.25, 0.25]) for (const z of [-0.2, 0.2]) add(new THREE.BoxGeometry(0.035, 0.7, 0.035), MIRROR_BERTH.x - 4 + x, 4.48, MIRROR_BERTH.z - 1.05 + z);
+    const timberMesh = new THREE.Mesh(mergeTranslated(timberParts), timber);
+    timberMesh.layers.enable(REFLECTION_LAYER); this.group.add(timberMesh); fixInPlace(timberMesh);
     this.reset(); this.group.visible=false;
   }
 
@@ -223,8 +221,8 @@ export class SkyMirror {
     this.bubbles.length=0; this.completedMask=0; this.lastReturned=-1;
     this.ready=this.holdingWand=this.hasPlayed=false; this.requestedStar=-1; this.focusStar=0;
     this.forming=this.cooldown=this.lastCharge=0; this.footstepsReady=false;
-    this.guideLights.set(0,0,0,0); this.constellationLines.forEach(line=>line.material.opacity=0);
-    this.constellationCrossbars.forEach(line=>line.material.opacity=0);
+    this.guideLights.set(0,0,0,0); this.guide.visible=false;
+    for (const line of [...this.constellationLines, ...this.constellationCrossbars]) { line.material.opacity=0; line.visible=false; }
     this.hoop.position.set(MIRROR_BOWL.x+0.2,1.2,MIRROR_BOWL.z); this.hoop.rotation.set(-0.35,0,0.4);
     this.hoop.visible=true; this.film.visible=false;
     for (const s of this.stars) { s.state='fallen'; s.flight=0; s.floor.visible=true; s.light.visible=false; }
@@ -247,13 +245,17 @@ export class SkyMirror {
     const k=1-Math.exp(-dt*1.3);
     this.stars.forEach((s,i)=>this.guideLights.setComponent(i,
       THREE.MathUtils.lerp(this.guideLights.getComponent(i),s.state==='sky'?1:0,k)));
+    // Unlit, the guide and the lines blend in nothing, so they are not drawn.
+    this.guide.visible=this.guideLights.x>0 || this.guideLights.y>0 || this.guideLights.z>0 || this.guideLights.w>0;
     this.constellationLines.forEach((line,i)=>{
       const lit=this.stars[i].state==='sky' && this.stars[(i+1)%this.stars.length].state==='sky';
       line.material.opacity=THREE.MathUtils.lerp(line.material.opacity,lit?0.38:0,k);
+      line.visible=line.material.opacity>0;
     });
     const complete=this.progress===this.stars.length;
     this.constellationCrossbars.forEach(line=>{
       line.material.opacity=THREE.MathUtils.lerp(line.material.opacity,complete?0.38:0,k);
+      line.visible=line.material.opacity>0;
     });
   }
 
