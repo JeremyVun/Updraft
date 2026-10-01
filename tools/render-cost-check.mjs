@@ -83,6 +83,32 @@ async function compare() {
       material.uniforms.uMirrorPass.value = 0;
       if (mirror) terrain.endMirror();
     }
+    // The sea's skips against full work: the return under land (LAND_SKIP), and the weed and caustics where their
+    // weight is 0. Each is compared from the eye and from points round it, high and low.
+    const water = __game.water.mesh.material, waterFragment = water.fragmentShader, landSkip = water.defines.LAND_SKIP;
+    const skips = [['sea weed', 'if (bedDepth > 0.9 && bedDepth < 4.0) {'], ['sea caustics', 'if (bedDepth > 0.1 && dist < 220.0) {']];
+    for (const [label, from] of skips) if (!waterFragment.includes(from)) throw new Error('Missing skip: ' + label);
+    const look = rig.camera.quaternion.clone();
+    try {
+      for (const [dx, dy, dz] of [[0, 0, 0], [40, 30, 0], [-30, 40, 30], [0, 60, -40]]) {
+        rig.camera.position.copy(eye).add(new THREE.Vector3(dx, dy, dz)); rig.camera.quaternion.copy(look);
+        if (dx || dy || dz) rig.camera.lookAt(eye.x, 0, eye.z);
+        // The terrain's tiles follow the eye, as prepareFrame has them do before every draw.
+        rig.camera.updateMatrixWorld(); terrain.update(rig.camera);
+        const sea = (label, full) => {
+          water.defines.LAND_SKIP = 1; water.needsUpdate = true;
+          const optimized = read(rig.camera);
+          full(); water.needsUpdate = true;
+          results.push(diff(optimized, read(rig.camera), `${label} eye ${dx},${dy},${dz}`));
+          water.fragmentShader = waterFragment; water.needsUpdate = true;
+        };
+        sea('sea land skip', () => { water.defines.LAND_SKIP = 0; });
+        for (const [label, from] of skips) sea(label, () => { water.fragmentShader = waterFragment.replace(from, '{'); });
+      }
+    } finally {
+      water.fragmentShader = waterFragment; water.defines.LAND_SKIP = landSkip; water.needsUpdate = true;
+      rig.camera.quaternion.copy(look); rig.camera.position.copy(eye); rig.camera.updateMatrixWorld(); terrain.update(rig.camera);
+    }
     return results;
   } finally {
     renderer.setRenderTarget = setTarget;
