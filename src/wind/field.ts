@@ -132,6 +132,7 @@ export class WindField {
   private cpuWindow = { minX: WINDOW.minX, minZ: WINDOW.minZ, size: WINDOW.size };
   private readonly clock = new WindClock();
   private steppedSinceReadback = false;
+  private beforeAdvection = false;
 
   constructor(renderer: THREE.WebGLRenderer, { res = 256, iterations = 24 }: WindOptions = {}) {
     this.res = res;
@@ -167,6 +168,7 @@ export class WindField {
       uVel: { value: null },
       uStrength: { value: tuning.wind.swirliness },
       uDt: dt,
+      uZero: { value: 0 },
     });
     this.divergenceMat = simMaterial(DIVERGENCE_FRAG, { uVel: { value: null }, uTexel: texel });
     if (iterations % 2) throw new Error('The pressure relaxes in pairs: give an even number of iterations');
@@ -193,6 +195,7 @@ export class WindField {
       uSwayStiffness: { value: tuning.wind.swayStiffness },
       uSwayDamping: { value: tuning.wind.swayDamping },
       uCalm: { value: 0 },
+      uZero: { value: 0 },
     });
     this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } });
     this.shiftMat = simMaterial(SHIFT_FRAG, {
@@ -221,6 +224,15 @@ export class WindField {
     return this.state.read.textures[2];
   }
 
+  /**
+   * The wind the life pass reads after a step: the texture bound before it, one of two the wind's passes used to take
+   * turns in. That held the finished field when those passes were even in number, and the field before advection when
+   * a tick's second force pass (nine to sixteen sources) made them odd. Kept so life runs as it always has.
+   */
+  get lifeTexture(): THREE.Texture {
+    return this.beforeAdvection ? this.vel.texture : this.texture;
+  }
+
   /** How hard air with no gust in it can be felt: it goes with the prevailing breeze, and dead air is dead. */
   get calm(): number {
     return tuning.wind.calm * this.breeze.length();
@@ -232,6 +244,7 @@ export class WindField {
 
   /** A fixed simulation clock, independent of display refresh and the graphics preset. */
   step(dt: number, time: number, requestReadback = true): void {
+    this.beforeAdvection = false;
     const steps = this.clock.advance(dt, time, this.splats, this.runTick);
     this.splats.length = 0;
     this.steppedSinceReadback ||= steps > 0;
@@ -259,7 +272,9 @@ export class WindField {
       }
       this.gpu.run(this.forceMat, this.vel.write);
       this.vel.swap();
+      this.beforeAdvection = !this.beforeAdvection;
     }
+    this.beforeAdvection = !this.beforeAdvection;
 
     this.vorticityMat.uniforms.uVel.value = this.vel.texture;
     this.gpu.run(this.vorticityMat, this.vel.write);

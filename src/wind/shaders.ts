@@ -90,9 +90,10 @@ void main() {
 
 /**
  * Passes fused bit for bit: neighbours are clamped one step at a time as each stored texture's sampling clamped them,
- * and a value a pass would have stored in a half-float target is cut to half as the store cuts it, toward zero
- * (`storeHalf`). Both roundings are bit operations a compiler cannot drop. On a tiled GPU every pass costs a load and
- * store of its target.
+ * a value a pass would have stored in a half-float target is cut to half as the store cuts it, toward zero
+ * (`storeHalf`), and sums keep the order their own pass computed them in through `pin`, a zero (`uZero`) fast math
+ * cannot see through: in a bigger shader it regroups them. On a tiled GPU every pass costs a load and store of its
+ * target.
  */
 const HALF = /* glsl */ `
 float storeHalf(float v) {
@@ -102,6 +103,8 @@ float storeHalf(float v) {
   return uintBitsToFloat(floatBitsToUint(v) & 0xFFFFE000u);
 }
 vec4 storeHalf4(vec4 v) { return vec4(storeHalf(v.x), storeHalf(v.y), storeHalf(v.z), storeHalf(v.w)); }
+uniform uint uZero;
+float pin(float v) { return uintBitsToFloat(floatBitsToUint(v) ^ uZero); }
 float nearHalf(float v) {
   if (abs(v) < 6.103515625e-05) return roundEven(v * 16777216.0) * 5.9604644775390625e-08;
   uint b = floatBitsToUint(v);
@@ -135,7 +138,10 @@ const clampCells = (name: string, cells: Cell[]): string => {
 };
 const fetchAt = (sampler: string, a: number, b: number) => `texelFetch(${sampler}, clamp(at + ivec2(${a}, ${b}), ivec2(0), last), 0)`;
 
-/** Vorticity confinement, with the curl it reads worked out here at the centre and its four neighbours, as stored. */
+/**
+ * Vorticity confinement, with the curl it reads worked out here at the centre and its four neighbours, as stored and
+ * in the order its own pass compiled to: right less left, plus bottom, less top.
+ */
 export const CURL_VORTICITY_FRAG = /* glsl */ `
 uniform sampler2D uVel;
 uniform float uStrength;
@@ -146,7 +152,7 @@ void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
   ivec2 last = textureSize(uVel, 0) - 1;
   ${diamond(2).map(([a, b]) => `vec2 v${tag(a, b)} = ${fetchAt('uVel', a, b)}.xy;`).join('\n  ')}
-  ${diamond(1).map(([a, b]) => `float c${tag(a, b)} = storeHalf(0.5 * (v${tag(a + 1, b)}.y - v${tag(a - 1, b)}.y - v${tag(a, b + 1)}.x + v${tag(a, b - 1)}.x));`).join('\n  ')}
+  ${diamond(1).map(([a, b]) => `float c${tag(a, b)} = storeHalf(0.5 * pin(pin(pin(v${tag(a + 1, b)}.y - v${tag(a - 1, b)}.y) + v${tag(a, b - 1)}.x) - v${tag(a, b + 1)}.x));`).join('\n  ')}
   ${clampCells('c', diamond(1))}
   float L = c${tag(-1, 0)};
   float R = c${tag(1, 0)};
@@ -177,8 +183,8 @@ void main() {
 /**
  * `pairs` pairs of Jacobi relaxations of the pressure in one pass, each pair the arithmetic its own pass compiled to
  * on Chrome's Metal backend, which the field has always run: the four relaxations summed left to right, only the left
- * one rounded to half (to nearest), then the pair's sum taking the divergence before the top neighbour. The order is
- * pinned through `uZero`, which fast math cannot see through. `scaled` carries the last solve over at `uScale` first.
+ * one rounded to half (to nearest), then the pair's sum taking the divergence before the top neighbour. `scaled`
+ * carries the last solve over at `uScale` first.
  */
 export function pressureFrag(pairs: number, scaled: boolean): string {
   const depth = pairs * 2;
@@ -201,9 +207,7 @@ export function pressureFrag(pairs: number, scaled: boolean): string {
 uniform sampler2D uPressure;
 uniform sampler2D uDivergence;
 uniform float uScale;
-uniform uint uZero;
 ${HALF}
-float pin(float v) { return uintBitsToFloat(floatBitsToUint(v) ^ uZero); }
 void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
   ivec2 last = textureSize(uPressure, 0) - 1;

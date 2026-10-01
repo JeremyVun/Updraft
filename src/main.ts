@@ -714,6 +714,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   probe?.update(time);
   wind.step(dt, time, finalStep);
+  atmo.uniforms.uWindTex.value = wind.lifeTexture;
   life.update(dt);
   tree.life.value += (Math.min(1, life.at(TREE.x, TREE.z) * 1.15) - tree.life.value) * (1 - Math.exp(-dt * 0.8));
   /**
