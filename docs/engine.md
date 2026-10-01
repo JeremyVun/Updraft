@@ -252,6 +252,8 @@ The cloud deck (`CLOUD_DECK`): its GLSL in `ATMO_GLSL` (the deck, the bank of mi
 (main view and the sea's mirror), the grass blades (with and without discard) and the sky have both programs, and
 `prepareFrame` selects the deck while `uCloudDeck.w > 0`, before the doorway view, the reflection and the scene are
 drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck.
+That is five programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
+the deck is away.
 
 ## Bakes and caches
 
