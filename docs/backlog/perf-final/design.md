@@ -209,7 +209,8 @@ switched-off effect must be compiled out, not branched round.
   exactly where they do today). On viewports over the 2.4 million pixel budget Auto lowers the render scale of the
   level it is on to fit (never below 0.5×); that is the only thing Auto does that a manual level does not.
 - Stepping down and climbing use the governor's existing evidence (trimmed mean of frame intervals to step down, the
-  10 ms fence probe or 12 s of smooth frames to climb, a failed climb doubling the wait). At Low and the last step the
+  10 ms fence probe or 12 s of smooth frames to climb, a failed climb doubling the wait). Auto steps down one level
+  at a time, never two. At Low and the last step the
   budget is 33.3 ms, as it already is under a device's own 30 fps cap. A climb from Low to Medium asks for frames
   finishing within 10 ms of submission: Medium renders 1.38× Low's pixels plus half bloom, the glint, the reflection
   and the seabed, about 1.55× in all, so 10 ms becomes about 15.5 ms, inside one 16.7 ms refresh. Ultra is 1.44×
@@ -298,3 +299,7 @@ The profile is `profile.md`. His answers, verbatim where quoted:
   this." Ultra is today's High; High is the step between (1.25×); Auto moves between the four and has no states of
   its own, apart from one last step below Low.
 - **Grass reach (2026-09-30):** Medium and Low at 100% density and 100% reach approved ("yea this is approved").
+- **Auto at the top (2026-10-01):** Auto on Ultra or High reaches 115% like the manual levels, so an iPad on Auto draws
+  about 14% more blades than before this item (chosen: "Keep 115%").
+- **One level at a time (2026-10-01):** Auto never drops two levels at once; with five coarse levels a double drop
+  from High overshot to Low's 30 fps where Medium would have held (chosen: "One level at a time").

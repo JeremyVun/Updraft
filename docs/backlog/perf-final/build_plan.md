@@ -123,7 +123,7 @@ Seams shared by phases:
   the last step; Auto's ladder is those five and nothing else. Auto opens at Ultra, or at High where the touch ceiling
   (1.25×) applies. Over the 2.4 million pixel budget Auto lowers the render scale of its current level to fit, never
   below 0.5×. `frameRate` comes from the level, so Auto at Low presents at 30 fps and is judged against 33.3 ms there
-  (the existing `capped` scaling), including the climb probe. A two-level drop still happens above 1.5× the budget. A
+  (the existing `capped` scaling), including the climb probe. A
   stored `high` under `updraft.quality.v1` reads as `ultra`; choices are saved under `updraft.quality.v2`. `?ratio=`
   and `?msaa=` lock the governor at exact values with Ultra's world settings; `shot` hides the selector and leaves
   Auto running (the quality and power browser checks drive the governor in shot mode). `controls.ts` keeps
