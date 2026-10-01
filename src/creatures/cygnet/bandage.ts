@@ -37,6 +37,7 @@ export class WingBandage {
   private readonly skinnedNormal = new Float64Array(this.skinnedPosition.length);
   private readonly skinFresh = new Uint8Array(this.surface.attributes.position.count);
   private readonly ringX: number[] = [];
+  private ring = 0;
   private bones: readonly THREE.Matrix4[] = [];
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
 
@@ -143,8 +144,11 @@ export class WingBandage {
 
   /** Sample the actual arm's triangles, with the same joint weights as its skin. */
   private fitted(x: number, angle: number, padding: number, out: THREE.Vector3): void {
-    let ring = 0;
+    // Searched from the last ring found; the rings' x rises strictly along the arm, so the ring is the same.
+    let ring = this.ring;
+    while (ring > 0 && !(this.ringX[ring] < x)) ring--;
     while (ring < this.ringX.length - 2 && this.ringX[ring + 1] < x) ring++;
+    this.ring = ring;
     const v = THREE.MathUtils.clamp((x - this.ringX[ring]) / (this.ringX[ring + 1] - this.ringX[ring]), 0, 1);
     const around = THREE.MathUtils.euclideanModulo(angle / (Math.PI * 2), 1) * AROUND;
     const j = Math.floor(around), u = around - j;
@@ -164,9 +168,10 @@ export class WingBandage {
 
   private surfacePoint(index: number, padding: number, weight: number, out: THREE.Vector3): void {
     if (!this.skinFresh[index]) this.skinVertex(index);
-    const p = this.skinPoint.fromArray(this.skinnedPosition, index * 3);
-    p.addScaledVector(this.skinOther.fromArray(this.skinnedNormal, index * 3), padding);
-    out.addScaledVector(p, weight);
+    const p = this.skinnedPosition, n = this.skinnedNormal, k = index * 3;
+    out.x += (p[k] + n[k] * padding) * weight;
+    out.y += (p[k + 1] + n[k + 1] * padding) * weight;
+    out.z += (p[k + 2] + n[k + 2] * padding) * weight;
   }
 
   private point(s: number, width: number, time: number, unroll: number, out: THREE.Vector3): THREE.Vector3 {

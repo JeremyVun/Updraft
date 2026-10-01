@@ -16,6 +16,8 @@ original.surfacePoint = function (index, padding, weight, out) {
   p.applyMatrix4(this.bones[aSkin.getX(index)]).lerp(this.skinOther, aSkin.getZ(index));
   out.addScaledVector(p, weight);
 };
+// The ring search starts from the last ring found, which is exact only while the rings rise strictly along the arm.
+assert(optimized.ringX.every((x, i) => i === 0 || x > optimized.ringX[i - 1]), 'the arm\'s rings no longer rise strictly along it');
 const skin = optimized.surface.attributes.aSkin;
 let count = 0;
 for (let i = 0; i < skin.count; i++) count = Math.max(count, skin.getX(i)+1, skin.getY(i)+1);
