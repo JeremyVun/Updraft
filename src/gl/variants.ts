@@ -5,13 +5,16 @@ import type * as THREE from 'three';
  * tests with `#if`: on these GPUs code a uniform switches off still costs registers, so an effect that is off is
  * compiled out rather than branched round.
  */
-export type Switch = 'CLOUD_DECK';
+export type Switch = 'CLOUD_DECK' | 'LAND_SKIP';
 export type Choice = Partial<Record<Switch, boolean>>;
 
 type Axis = readonly Choice[];
 
 /** The stairs' cloud deck and bank of mist (`ATMO_GLSL`), drawn only while `uCloudDeck.w` is above 0. */
 export const CLOUD_DECK: Axis = [{ CLOUD_DECK: true }, { CLOUD_DECK: false }];
+
+/** The sea returning early where land covers it, drawn only while there is land in the window to cover it. */
+export const LAND_SKIP: Axis = [{ LAND_SKIP: false }, { LAND_SKIP: true }];
 
 const registered = new Map<THREE.ShaderMaterial, Axis[]>();
 

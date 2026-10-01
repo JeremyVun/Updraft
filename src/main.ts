@@ -964,7 +964,7 @@ function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vect
 /** Expensive view preparation and audio scheduling run once per rendered frame. */
 function prepareFrame(dt: number): void {
   const u = atmo.uniforms;
-  selectAll({ CLOUD_DECK: u.uCloudDeck.value.w > 0 });
+  selectAll({ CLOUD_DECK: u.uCloudDeck.value.w > 0, LAND_SKIP: water.landSkip(rig.camera) });
   sinceLightBake++;
   const shadowCovered = atmo.uniforms.uStormCover.value >= tuning.storm.shadowCovered;
   // The shared shader fades terrain shadows out under opaque storm cloud. Re-bake on clearing, even if

@@ -35,7 +35,7 @@
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
-// water-fog, water-sky, water-cloud, water-landskip (returns early under land), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
+// water-fog, water-sky, water-cloud, water-landskip (returns at its top over land, not exact), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
 // WATER_PASS=s3-off,none,... the sea alone against each listed variant (WATER_ROUNDS, POST_REPS).
 // Exact skips, each restoring the old path: e5-off (grass always drawn with its discards), e6-off (glints everywhere).
 // Fine noise terms, each replaced with a constant everywhere it is compiled: n-grain (terrain grain and sand
@@ -46,6 +46,9 @@
 // The sea: s1-off (the ordinary sea's reflection every frame), s3-off (roomHides at each use); seafog-fine restores
 // the sea's fog per pixel. Draws alternate the reflection, so time s1-off with DRAWS even. water-caustics
 // and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
+// sea-weed-off works the weed out at every depth again (the old path). landskip-off and landskip-on draw the sea
+// without or with its return under land (LAND_SKIP) whatever prepareFrame chose; water-far-ub returns everywhere
+// beyond the window's inner part, the upper bound for a return under land there (not exact).
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most skipping empty tiles could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
 // the step in k and places rig.camera; the window follows and prepareFrame runs as in the loop. ROUNDS=0 skips the timing.
@@ -71,7 +74,8 @@
 // stops on the frame its moment arrives. It skips the CPU profile and census. COMPARE_BASE=<another dev server> loads
 // the same fixture there first and reports the difference between the two frozen frames (changed channels, those over
 // 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
-// run above that; CAPTURE=1 saves both frames. A build against itself must read 0.
+// run above that; CAPTURE=1 saves both frames. A build against itself must read 0. With PATH_JS, both builds then step
+// their cameras along the path (PATH_STEPS) and every step is compared the same way.
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -84,6 +88,7 @@ import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
 const BASE=process.env.BASE??'http://127.0.0.1:5230/',COMPARE_BASE=process.env.COMPARE_BASE,FRAME=Number(process.env.FRAME??0);
+const PATH_JS=process.env.PATH_JS,PATH_STEPS=Number(process.env.PATH_STEPS??40);
 assert(!FRAME||FRAME>=120,'FRAME must leave room for the fixture: 120 or more');
 assert(!COMPARE_BASE||FRAME,'COMPARE_BASE needs FRAME: two builds draw the same picture only when both stop on the same frame');
 // Fixtures are applied on this frame when FRAME is set, so the same story follows in every run.
@@ -402,6 +407,11 @@ window.__audit = {
       'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
+      // Restore the old paths: sea-weed-off the seabed's weed worked out at every depth. landskip-off and landskip-on
+      // pick the sea's program without or with the return under land, whatever prepareFrame chose.
+      'sea-weed-off':[[waterMat],'fragmentShader',s=>sub(s,'    if (bedDepth > 0.9 && bedDepth < 4.0) {\\n','    {\\n')],
+      // Upper bound for a return under land beyond the window: every sea pixel outside the window's inner part returns.
+      'water-far-ub':[[waterMat],'fragmentShader',s=>sub(s,'  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;\\n','  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;\\n  if (inside < 1.0 && !hides) {\\n    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\\n    return;\\n  }\\n')],
       // Restores the old path: the sea's fog worked out per pixel.
       'seafog-fine':[[waterMat],'fragmentShader',s=>sub(s,'vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;','vec4 fog = fogOf(vWorld);')],
       's3-off-vert':[[waterMat],'vertexShader',s=>sub(sub(s,'(hides ? 0.0 : boatsWaterBase(p)','(roomHides(p) ? 0.0 : boatsWaterBase(p)'),'(1.0 - (hides ? 0.0 : mirrorWater(p)))','(1.0 - (roomHides(p) ? 0.0 : mirrorWater(p)))')],
@@ -417,6 +427,8 @@ window.__audit = {
     grass.unclipped=!variants.includes('e5-off');
     // The ordinary sea's reflection every frame, as before.
     water.seaMirrorEvery=variants.includes('s1-off')?1:2;
+    // A build before LAND_SKIP has no landSkip; it is the comparison page under COMPARE_BASE.
+    if(water.landSkip)selectAll({LAND_SKIP:variants.includes('landskip-off')?false:variants.includes('landskip-on')?true:water.landSkip(rig.camera)});
   },
   // Each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
   // fragment programs are left alone (the unclipped swap replaces them by string, and none of them calls these terms).
@@ -579,7 +591,7 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare,!!this.stairsUnindexed])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed,water.mesh.material.defines.LAND_SKIP])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
@@ -708,12 +720,13 @@ try {
   for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
     const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
     const busyAtStart=busy();
-    let against;
+    let against,comparePage;
     if(COMPARE_BASE){
       const other=await open(COMPARE_BASE,chapter);
       if(process.env.STATE)await other.page.evaluate(code=>__audit.state(code),process.env.STATE);
       against=await other.page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
-      assert.deepEqual(other.errors,[],'Browser errors on COMPARE_BASE');await other.page.close();
+      assert.deepEqual(other.errors,[],'Browser errors on COMPARE_BASE');
+      if(PATH_JS)comparePage=other.page;else await other.page.close();
     }
     const {page,errors,detail}=await open(BASE,chapter);
     let cpu,frameTimes,census;
@@ -743,17 +756,34 @@ try {
     const state=process.env.STATE?await page.evaluate(code=>__audit.state(code),process.env.STATE):undefined;
     if(state!==undefined)console.log(JSON.stringify({chapter,state}));
     if(against){
-      const here=await page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
-      assert.deepEqual([here.width,here.height,here.frame],[against.width,against.height,against.frame],'The two builds stopped on different frames or sizes');
-      const a=Buffer.from(here.data,'base64'),b=Buffer.from(against.data,'base64');let changed=0,over1=0,max=0,total=0;
-      const box=[Infinity,Infinity,-1,-1];
-      for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;total+=d;if(d>1)over1++;if(d>max)max=d;
-        const x=(i>>2)%here.width,y=here.height-1-Math.floor((i>>2)/here.width);box[0]=Math.min(box[0],x);box[1]=Math.min(box[1],y);box[2]=Math.max(box[2],x);box[3]=Math.max(box[3],y);}}
-      for(const [name,frame]of [['here',here],['against',against]])if(frame.png)await fs.writeFile(out+'-'+chapter+'-frame-'+name+'.png',Buffer.from(frame.png,'base64'));
-      const drift=Object.keys(here.state).filter(k=>JSON.stringify(here.state[k])!==JSON.stringify(against.state[k])).map(k=>[k,here.state[k],against.state[k]]);
-      against={base:COMPARE_BASE,frame:here.frame,changed,over1,max,mean:total/a.length,box:changed?box:undefined,drift:drift.length?drift:undefined};
+      const compare=async(other,name)=>{
+        const here=await page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
+        assert.deepEqual([here.width,here.height,here.frame],[other.width,other.height,other.frame],'The two builds stopped on different frames or sizes');
+        const a=Buffer.from(here.data,'base64'),b=Buffer.from(other.data,'base64');let changed=0,over1=0,max=0,total=0;
+        const box=[Infinity,Infinity,-1,-1];
+        for(let i=0;i<a.length;i++){const d=Math.abs(a[i]-b[i]);if(d){changed++;total+=d;if(d>1)over1++;if(d>max)max=d;
+          const x=(i>>2)%here.width,y=here.height-1-Math.floor((i>>2)/here.width);box[0]=Math.min(box[0],x);box[1]=Math.min(box[1],y);box[2]=Math.max(box[2],x);box[3]=Math.max(box[3],y);}}
+        for(const [side,frame]of [['here',here],['against',other]])if(frame.png)await fs.writeFile(out+'-'+chapter+'-'+name+'-'+side+'.png',Buffer.from(frame.png,'base64'));
+        const drift=Object.keys(here.state).filter(k=>JSON.stringify(here.state[k])!==JSON.stringify(other.state[k])).map(k=>[k,here.state[k],other.state[k]]);
+        return {base:COMPARE_BASE,frame:here.frame,changed,over1,max,mean:total/a.length,box:changed?box:undefined,drift:drift.length?drift:undefined};
+      };
+      against=await compare(against,'frame');
       console.log(JSON.stringify({chapter,against}));
-      if(max>Number(process.env.COMPARE_MAX??Infinity))differing.push({chapter,...against});
+      if(against.max>Number(process.env.COMPARE_MAX??Infinity))differing.push({chapter,...against});
+      // PATH_JS under COMPARE_BASE steps both builds' cameras the same way and compares the frames at every step.
+      if(comparePage){
+        const steps=[];
+        for(let k=0;k<PATH_STEPS;k++){
+          const other=await comparePage.evaluate(([code,k,capture])=>{__audit.pathStep(code,k);return __audit.frozenFrame(capture);},[PATH_JS,k,process.env.CAPTURE==='1']);
+          await page.evaluate(([code,k])=>__audit.pathStep(code,k),[PATH_JS,k]);
+          const step=await compare(other,'path'+k);steps.push(step);
+          console.log(JSON.stringify({chapter,path:k,changed:step.changed,over1:step.over1,max:step.max,box:step.box,drift:step.drift}));
+          if(step.max>Number(process.env.COMPARE_MAX??Infinity))differing.push({chapter,path:k,...step});
+        }
+        against.path={steps:PATH_STEPS,max:Math.max(...steps.map(s=>s.max)),stepsChanged:steps.filter(s=>s.changed).length};
+        console.log(JSON.stringify({chapter,againstPath:against.path}));
+        await comparePage.close();
+      }
     }
     const ablations=[];
     for(const omit of (process.env.ABLATIONS??'wind,reflection,grass,water,bloom,village,tree,pond').split(',').filter(Boolean)) {

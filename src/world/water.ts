@@ -4,10 +4,13 @@ import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
 import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL } from './little-boats-layout';
 import { params } from '../params';
-import { CLOUD_DECK, register } from '../gl/variants';
+import { CLOUD_DECK, LAND_SKIP, register } from '../gl/variants';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mainlandCoastZ } from './heightfield';
+import { HEIGHT_TEXEL, TERRAIN_HEIGHT_PATCHES } from './terrain-heights';
+import { heightAt } from './island';
+import { WINDOW } from './window';
 import { PlanarReflection } from './water/reflection';
 import { ShoreBake } from './water/shore';
 import { SURF_GLSL, surfUniforms } from './water/surf';
@@ -225,6 +228,24 @@ vec3 glassColour(vec3 V, vec2 xz) {
   return reflected * 0.96 + vec3(0.003, 0.006, 0.012);
 }
 
+#if LAND_SKIP
+float groundUnder(vec2 xz) {
+  return texture(uHeightTex, clamp(domainUv(xz), 0.0, 1.0)).r;
+}
+
+/**
+ * Whether the land covers this pixel and the eight round it: the baked ground stands \`above\` at the corners of
+ * that 3x3 block and no waterline comes within it (\`inland\`, the distance to one). Then every pixel of its quad is
+ * hidden too, so nothing that reads this pixel's derivatives is seen.
+ */
+bool underLand(vec2 xz, Footprint fp, float above, float inland) {
+  vec2 a = 1.5 * (fp.dx + fp.dy);
+  vec2 b = 1.5 * (fp.dx - fp.dy);
+  if (inland <= max(length(a), length(b)) + 1.0) return false;
+  return min(min(groundUnder(xz + a), groundUnder(xz - a)), min(groundUnder(xz + b), groundUnder(xz - b))) > above;
+}
+#endif
+
 void main() {
   vec3 toCam = cameraPosition - vWorld;
   float dist = length(toCam);
@@ -247,6 +268,13 @@ void main() {
     offshore = mix(offshore, bankDistance, pool);
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
+#if LAND_SKIP
+  // The terrain draws over this water (they sort by material, not depth), so its shading would be thrown away.
+  if (inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0, -offshore)) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+#endif
   float glass = hides ? 0.0 : mirrorWater(xz) * uSkyMirrorAppearance;
   // Ordinary sea beyond the flat would show as a dark band under the horizon.
   float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
@@ -341,8 +369,10 @@ void main() {
     float ripples = sin(dot(bedXZ, vec2(0.9, 0.45)) * 2.2 + vnoise(bedXZ * 0.3) * 6.0) * 0.5 + 0.5;
     vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
     vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
-    float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
-    bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
+    if (bedDepth > 0.9 && bedDepth < 4.0) {
+      float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
+      bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
+    }
 
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
     float sunDown = max(-sunIn.y, 0.2);
@@ -472,9 +502,20 @@ export class Water {
       },
     });
     outsideHull(mat);
-    register(mat, CLOUD_DECK);
+    register(mat, CLOUD_DECK, LAND_SKIP);
     this.mesh = new THREE.Mesh(seaGrid(params.lite ? 128 : 192), mat);
     this.mesh.frustumCulled = false;
+  }
+
+  /**
+   * Whether to draw with `LAND_SKIP`: there is island ground in the window for the sea to lie under, and the camera
+   * is above the ground, so land over the sea is always between it and the eye.
+   */
+  landSkip(camera: THREE.Camera): boolean {
+    const x1 = WINDOW.minX + WINDOW.size, z1 = WINDOW.minZ + WINDOW.size;
+    const land = TERRAIN_HEIGHT_PATCHES.some((p) => p.minX < x1 && p.minZ < z1
+      && p.minX + p.width * HEIGHT_TEXEL > WINDOW.minX && p.minZ + p.height * HEIGHT_TEXEL > WINDOW.minZ);
+    return land && camera.position.y > heightAt(camera.position.x, camera.position.z);
   }
 
   /** Advance the water independently of the air, once per simulation frame. */
