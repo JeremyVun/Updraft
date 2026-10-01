@@ -20,10 +20,18 @@ Rules for every phase:
 
 Seams shared by phases:
 
-- **Variants (phase 2 → 5).** `src/gl/variants.ts` owns the variant sets. A material is registered with the defines
-  it supports; `variant(material, defines)` returns the twin sharing its uniform objects; `select(mesh, defines)`
-  assigns it. Phase 2 adds `CLOUD_DECK`; phase 5 adds `HULL_COLLAR`, `LANTERN_GLINT`, `SEABED_DETAIL` through the same
-  calls. Every registered variant joins the boot precompile and warm render. Nothing compiles after Begin.
+- **Variants (phase 2 → 3b-ii, 5), as built.** `src/gl/variants.ts`. A variant is a define set on the existing
+  material, switched in place; three keeps every program a material has built, so a switch rebinds a program built
+  before Begin (no twin materials: they would change the opaque draw order by `material.id`, draw UUIDs from
+  `Math.random`, and miss state set on the original). `register(material, ...axes)` takes axes of alternatives
+  (`CLOUD_DECK = [{CLOUD_DECK:true},{CLOUD_DECK:false}]`; every alternative in an axis sets the same switches; a
+  switch belongs to one axis; calling again adds axes). `select(material, choice)` sets all of an axis's switches at
+  once and throws on an unregistered combination; `selectAll(choice)` applies to every material with those
+  switches. Shaders test `#if NAME` (defines are `1`/`0`); `ATMO_GLSL` defaults `CLOUD_DECK` to 1 for unregistered
+  materials. Add new switches to the `Switch` union. Boot compiles and warms every variant (`otherVariants()` steps)
+  without creating three objects. Variant state is per material, so one frame's choice holds in every view; a
+  per-view variant is not supported. Each added axis multiplies boot's variant steps (about 15 ms each plus compile):
+  re-measure the veil gap and load time.
 - **Level (phase 4 → 5, 6).** `QualityLevel` gains `name: 'ultra' | 'high' | 'medium' | 'low' | 'last'` and
   `frameRate: 30 | 60`. `applyWorldQuality(level)` in `main.ts` is the one place a level's effects are applied; phase
   5 adds its effects there and nowhere else. The deck choice is per frame and independent of the level.
@@ -131,7 +139,17 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
   - The veil: `node tools/boot-profile.mjs` and `node tools/start-check.mjs` before and after; the worst gap between
     painted veil frames must not grow. Record the added loading time in `docs/backlog/boot-veil/design.md`.
   - `tools/shader-check.mjs`, `tools/stairs-check.mjs`, `tools/context-loss-check.mjs`.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at 8929eec (2026-10-02). Registered: the sea, terrain (the mirror's terrain is the
+  same material), the three grass blade materials and the sky; selection is the first line of `prepareFrame`.
+  - Frames against 9557d73: 0 at `island`, `wood` and every stairs fixture; at most 1/255 at `sea` (321 channels),
+    `jetty` (739), `meadow:walk` (73), `sleeping` (4); a 16-step camera path at island, sea and jetty at most 1/255
+    at every step. No glint specks.
+  - Saving (pairs, two passes): island 7.3%, sea 5.4–6.1%, meadow:walk 7.3–9.0%, wood 6.2–6.6%.
+  - No hitch at either swap (crossing into the stairs, fog into the village): max 16.8 ms on both builds;
+    `renderer.info.programs` constant after Begin. `tools/perf.mjs` cannot play those transitions; a scratch
+    rAF-interval run in shot mode did.
+  - Veil: about +80 ms to ready; worst gap unchanged within noise (recorded in `docs/backlog/boot-veil/design.md`).
+  - Five programs added (219 → 224 at the island).
 
 ## Phase 3: stairs work that cannot be seen
 
