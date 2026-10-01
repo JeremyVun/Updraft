@@ -70,6 +70,7 @@ edit.
 - `pointer-contact-check`, `pointer-pick-check`, `touch-viewport-check` (Chrome, not a Safari substitute).
 - `start-check` (Begin, audio unlock, Continue, retry; worst boot gap under `BOOT_MAX_MS`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check`, `context-loss-check`.
+- `fixed-matrices-check` (every chapter: no object fixed in place moves or keeps a stale world matrix).
 - `nearby-check`, `bandage-cost-check`, `scarf-normals-check`, `drowned-gating-check`, `boat-mooring-check` (every
   frame the moored hull skips its contact tests, testing them would not have moved it).
 - Against another build, for changes meant to be exact: `scarf-exact-check` (`BASELINE=<checkout>`: the scarf's mesh
