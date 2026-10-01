@@ -190,9 +190,8 @@ and every render target share one scale, kept within `MAX_TEXTURE_SIZE`, `MAX_RE
 
 **Auto's decisions.** Every 1.5 s it reviews up to 90 frame intervals, discarding the slowest 5%. A level's budget
 is its presentation: 16.7 ms at the 60 fps levels, 33.3 ms at Low and the last step, where every limit below
-doubles. A trimmed mean above 17.6 ms steps down one level, or two when it is also above 1.5× the limit of the level
-in between (26.4 ms where that level presents at 60 fps; 52.8 ms from Medium, since a Medium missing every other
-refresh is already what Low presents). A new level settles for 2.5 s after a reduction, 1 s after an increase. Below
+doubles. A trimmed mean above 17.6 ms steps down one level, never two: with five coarse levels a double drop from
+High would overshoot to Low's 30 fps where Medium would hold. A new level settles for 2.5 s after a reduction, 1 s after an increase. Below
 its ceiling Auto climbs on evidence: `main.ts` polls each frame's fence 10 ms after submission (`timeLastFrame`, one
 timer, never a wait), or 20 ms where the level above also presents at 30 fps (the last step to Low). Low to Medium
 asks for the full 10 ms. A review with p90 under 17.2 ms in which at least 90% of 30 or more timed frames finished by

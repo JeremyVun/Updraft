@@ -251,9 +251,7 @@ export class Quality {
     if (mean > SLOW_MS * scale) {
       this.smoothSince = now;
       if (this.rung === lowest) return;
-      // A failed climb goes back one level; otherwise two at once when one level down would still be far over budget.
-      const far = !this.lastStepUp && mean > SLOW_MS * 1.5 * this.refreshes(this.ladder[this.rung + 1]);
-      this.change(now, Math.min(lowest, this.rung + (far ? 2 : 1)));
+      this.change(now, this.rung + 1);
     } else if (p90 > SMOOTH_MS * scale) {
       this.smoothSince = now;
     } else if (now - this.smoothSince > climbMs && this.rung > 0) {

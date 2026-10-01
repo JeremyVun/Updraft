@@ -36,7 +36,28 @@ Seams shared by phases:
   against a QA build or the dev server as `main` now requires.
 - **Gate:** `node tools/frame-profile.mjs island stairs:top` with `ROUNDS=0` reports each ablation biting;
   `node tools/memory-census.mjs` runs at the island; `node tools/stairs-check.mjs` passes.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at c105e8f (2026-10-01).
+- **Commands for later phases.** `frame-profile` and `memory-census` patch `src/main.ts` as served, so they need a dev
+  server (not a QA build); `stairs-check` and `audio-cost` run on either. A cross-build gate needs a second worktree
+  at the pre-change commit with its own dev server on port `<Q>`.
+  - Frame difference against another build: `BASE=http://127.0.0.1:<P>/ COMPARE_BASE=http://127.0.0.1:<Q>/
+    FRAME=600 COMPARE_MAX=1 ROUNDS=0 ABLATIONS=none OUT=/tmp/<prefix> node tools/frame-profile.mjs <fixtures>`; read
+    the `against` lines (`changed`, `over1`, `max`, `box`, `drift`); `CAPTURE=1` saves both PNGs. `FRAME` seeds
+    `Math.random`, pins readbacks to fixed frames and plays stairs fixtures one pointer move per frame
+    (`stairsFixtureOnFrames`). Trust a fixture only where the build reads 0 against itself (verified: `island`,
+    `sea`, `meadow:walk`, `drowned`, `stairs:climb`, `stairs:cloud`, `stairs:top`). The comparison page runs the
+    current tool's injection, so the old commit must still have every object it names.
+  - In-page ablation difference: `ROUNDS=0 CPU_MS=1500 CENSUS_MS=800 ABLATIONS=<a,b> node tools/frame-profile.mjs
+    <fixtures>`; each row's `bite` says what it touched, and an ablation that changes nothing throws.
+  - Paired saving: `RATIO=1.5 MSAA=2 DRAIN=1 GPU_QUIET=1 QUIET=120 ROUNDS=6 DRAWS=10 ABLATIONS=none,<a>` (weak device
+    `RATIO=0.85 MSAA=2 DETAIL=0`; `POST_PASSES=1`, `SIM_PASSES=1` as needed); never with `FRAME`, never `ROUNDS=1`.
+    Against the pre-change commit, run the same back to back on both servers per fixture.
+  - Memory: `RATIO=1.5 MSAA=2 node tools/memory-census.mjs island <fixtures>` (341.2 MiB at the island on c105e8f's
+    parent tools).
+  - `stairs-check`: `NOSHOTS=1 node tools/stairs-check.mjs /tmp/<prefix>`, about 6 minutes, exits 1 on a missed beat.
+  - Frames at which the stairs moments arrive under `FRAME`: climb 241, loop 1676, waiting 1935, cloud 3006, top
+    5125, sail 10446, fog 13653 (`stairs:sail` loads take about 3 minutes, `stairs:fog` 4, doubled under
+    `COMPARE_BASE`). Start a background dev server with a long timeout: one was killed at 30 minutes mid-run.
 
 ## Phase 1: small free wins
 
@@ -88,8 +109,11 @@ Seams shared by phases:
 - **Do:** find what is drawn and never seen on the stairs' camera paths: the cloud top's grid outside the view, the
   towers when off screen, and in the white the sea, terrain and grass beyond the pocket. Skip each only behind a gate
   that holds on every frame of the chapter, not only at the fixtures.
-- **Contract:** frames within 1/255 along the whole chapter as `tools/stairs-check.mjs` plays it (sample every tenth
-  frame against the pre-change commit), including the transitions in and out of the white. Anything that cannot be
+- **Contract:** frames within 1/255 along the whole chapter, sampled every tenth frame against the pre-change commit,
+  including the transitions in and out of the white. `stairs-check` plays by wall clock, so two runs never show the
+  same frame: extend `stairsFixtureOnFrames` (`tools/lib/stairs-fixture.mjs`, one pointer move per frame) to capture
+  along the way on both builds under `frame-profile`'s `FRAME`/`COMPARE_BASE` machinery, and first prove the build
+  reads 0 against itself along that path. Anything that cannot be
   gated exactly is dropped, not approximated.
 - **Gate:** the frame difference above; saving at `stairs:cloud`, `stairs:top`, `stairs:sail`; `tools/perf.mjs frames`
   through the chapter shows no new hitch.
@@ -141,8 +165,7 @@ Seams shared by phases:
     `setQualityDetail`. Telemetry's dimension is `level` (`chapter.level`, `level.fps`).
   - A level that would render exactly like the one above it (High at DPR ≤ 1.25, or where the budget fits both to one
     scale) is left out of Auto's ladder.
-  - A two-level drop is judged against the budget of the level in between (52.8 ms from Medium, so a Medium missing
-    alternate refreshes goes to Low, not the last step). A failed climb returns exactly one level. The climb probe's
+  - Auto steps down one level at a time (Jeremy, 2026-10-01). A failed climb returns exactly one level. The climb probe's
     deadline follows the level being climbed into (10 ms into a 60 fps level, 20 ms into a 30 fps one). Device-cap
     detection runs only at 60 fps levels. Reviews need 30 timed frames at 60 fps and 15 at 30 fps.
   - `tools/quality-budget-profile.mjs` now runs the real game under a GPU throttle and asserts descent, hold, climb
@@ -158,6 +181,9 @@ Seams shared by phases:
 - **Owns:** `src/post/post.ts` (bloom full, half, off), `src/world/water.ts` (`HULL_COLLAR`, `LANTERN_GLINT`,
   `SEABED_DETAIL` variants; the ordinary reflection off), `src/world/stairs-puffs.ts`, `src/world/stairs-haze.ts`
   (fewer wisps and haze steps), the effects in `applyWorldQuality`. After phases 2, 3, 3b and 4.
+- **Also (nonvisual):** the last step's 50% grass submits the same blades as 100% and thins them in the shader, so it
+  saves no vertex work; draw it from the sparser level the way sparse density already starts tiles at the coarsest
+  level that holds every blade it can show, with frames identical to today's 50% (`src/world/grass.ts`).
 - **Contract:** the effects rows of the table in design section 3. Ultra and High render exactly as before this phase
   (frames within 1/255). Bloom off skips its passes and releases its targets; half resolution halves the chain's
   first target. The sky mirror's reflection is never turned off. Turning an effect off at a level is a variant or a

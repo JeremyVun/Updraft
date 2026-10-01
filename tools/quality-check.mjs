@@ -152,25 +152,25 @@ const pixels = (level, width, height) => level.ratio * level.ratio * width * hei
   assert.equal(quality.level.name, 'medium');
 }
 {
-  // Far over budget drops two levels, judged against the budget of the level in between.
+  // However far over budget, Auto steps down one level at a time.
   const far = create(1.5, 1280, 800);
   far.quality.reset(0);
   steady(far.quality, 0, 4500, 2 * REFRESH);
-  assert.equal(names(far.changes), 'medium', 'a 60 fps level missing every other refresh skips a level');
-  steady(far.quality, 4500, 9000, 2 * REFRESH);
-  assert.equal(names(far.changes), 'medium low', 'but 33 ms at Medium is what Low presents anyway');
-  run(far.quality, 9000, 30000, 2 * REFRESH, false);
-  assert.equal(names(far.changes), 'medium low', 'and Low holds at 30 fps');
+  assert.equal(names(far.changes), 'high', 'a 60 fps level missing every other refresh drops one level');
+  steady(far.quality, 4500, 13500, 2 * REFRESH);
+  assert.equal(names(far.changes), 'high medium low', '33 ms at Medium is what Low presents anyway');
+  run(far.quality, 13500, 34000, 2 * REFRESH, false);
+  assert.equal(names(far.changes), 'high medium low', 'and Low holds at 30 fps');
   assert.equal(far.quality.frameRate, 30);
-  run(far.quality, 30000, 36000, 50, false);
-  assert.equal(names(far.changes), 'medium low last', 'Low running long takes the last step');
-  run(far.quality, 36000, 60000, 100, false);
-  assert.equal(names(far.changes), 'medium low last', 'there is nothing below it');
+  run(far.quality, 34000, 40000, 50, false);
+  assert.equal(names(far.changes), 'high medium low last', 'Low running long takes the last step');
+  run(far.quality, 40000, 64000, 100, false);
+  assert.equal(names(far.changes), 'high medium low last', 'there is nothing below it');
   const deep = create(1.5, 1280, 800);
   deep.quality.setMode('medium', 0); deep.quality.setMode('auto', 1);
   deep.changes.length = 0;
   steady(deep.quality, 1, 5000, 60);
-  assert.equal(names(deep.changes), 'last', 'Medium skips Low only when 30 fps would not hold either');
+  assert.equal(names(deep.changes), 'low', 'even far over budget, Medium steps only to Low');
 }
 
 // A 30 fps presentation cap (iOS Low Power Mode) is judged against 30 fps once the GPU proves it had time to spare.
