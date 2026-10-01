@@ -44,10 +44,12 @@ try {
   release();
   await page.waitForSelector('#veil.ready',{timeout:90000});
   assert.equal(await page.evaluate(() => __game.quality.mode),'high');
-  assert.equal(await page.evaluate(() => __game.quality.level.detail),2);
+  assert.equal(await page.evaluate(() => __game.quality.level.name),'high');
+  assert.equal(await page.locator('#quality').getAttribute('data-quality'),'high');
   assert.equal(await page.evaluate(() => __audio.length),0);
   await choose(page, 'medium');
-  assert.equal(await page.evaluate(() => __game.quality.level.detail),1);
+  assert.equal(await page.evaluate(() => __game.quality.level.name),'medium');
+  assert.equal(await page.locator('#quality').getAttribute('data-quality'),'medium');
   await page.locator('#sound').click(); await page.locator('#sound').click();
   assert.equal(await page.evaluate(() => __audio.length),0,'ready veil must remain silent');
   assert.equal(await page.locator('#veil').evaluate(e=>e.classList.contains('departing')),false);
