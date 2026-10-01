@@ -377,11 +377,8 @@ void main() {
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
     float sunDown = max(-sunIn.y, 0.2);
     float sunVis = cloudShadow(bedXZ) * groundAt(bedXZ).w;
-    float light = 0.0;
-    if (bedDepth > 0.1 && dist < 220.0) {
-      light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
-      light *= (1.0 - smoothstep(60.0, 220.0, dist));
-    }
+    float light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
+    light *= (1.0 - smoothstep(60.0, 220.0, dist));
     vec3 sunBed = uSunColor * max(uSunDir.y, 0.0) * 0.8 * exp(-uAbsorb * bedDepth / sunDown) * sunVis * (0.6 + 4.0 * light);
     vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
     vec3 seen = bed * (sunBed + skyBed) * exp(-uAbsorb * path);

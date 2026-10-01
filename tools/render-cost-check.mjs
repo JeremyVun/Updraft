@@ -83,10 +83,10 @@ async function compare() {
       material.uniforms.uMirrorPass.value = 0;
       if (mirror) terrain.endMirror();
     }
-    // The sea's skips against full work: the return under land (LAND_SKIP), and the weed and caustics where their
-    // weight is 0. Each is compared from the eye and from points round it, high and low.
+    // The sea's skips against full work: the return under land (LAND_SKIP), and the weed where its weight is 0.
+    // Each is compared from the eye and from points round it, high and low.
     const water = __game.water.mesh.material, waterFragment = water.fragmentShader, landSkip = water.defines.LAND_SKIP;
-    const skips = [['sea weed', 'if (bedDepth > 0.9 && bedDepth < 4.0) {'], ['sea caustics', 'if (bedDepth > 0.1 && dist < 220.0) {']];
+    const skips = [['sea weed', 'if (bedDepth > 0.9 && bedDepth < 4.0) {']];
     for (const [label, from] of skips) if (!waterFragment.includes(from)) throw new Error('Missing skip: ' + label);
     const look = rig.camera.quaternion.clone();
     try {

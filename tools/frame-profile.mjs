@@ -404,11 +404,9 @@ window.__audit = {
       'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
       'water-caustics':[[waterMat],'fragmentShader',s=>sub(s,'caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp)','0.0')],
       'water-weed':[[waterMat],'fragmentShader',s=>sub(s,/float weed = [^;]*;/,'float weed = 0.0;')],
-      // Restore the old paths: sea-weed-off the seabed's weed worked out at every depth, sea-caustics-off the caustics
-      // at every depth and distance. landskip-off and landskip-on pick the sea's program without or with the return
-      // under land, whatever prepareFrame chose.
+      // Restore the old paths: sea-weed-off the seabed's weed worked out at every depth. landskip-off and landskip-on
+      // pick the sea's program without or with the return under land, whatever prepareFrame chose.
       'sea-weed-off':[[waterMat],'fragmentShader',s=>sub(s,'    if (bedDepth > 0.9 && bedDepth < 4.0) {\\n','    {\\n')],
-      'sea-caustics-off':[[waterMat],'fragmentShader',s=>sub(s,'    if (bedDepth > 0.1 && dist < 220.0) {\\n','    {\\n')],
       // Upper bound for a return under land beyond the window: every sea pixel outside the window's inner part returns.
       'water-far-ub':[[waterMat],'fragmentShader',s=>sub(s,'  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;\\n','  float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;\\n  if (inside < 1.0 && !hides) {\\n    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\\n    return;\\n  }\\n')],
       // Restores the old path: the sea's fog worked out per pixel.

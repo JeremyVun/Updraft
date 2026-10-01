@@ -303,7 +303,7 @@ Rules:
 
 - In the terrain, grass and sea shaders, skip terms whose weight is exactly zero (unused regional colour noise, the
   distant-field colour where `far` is 0, frost noise where there is no frost, sun glints outside the glitter lobe,
-  the seabed's weed and caustics outside their depths and reach).
+  the seabed's weed outside its depths).
   A mipmapped sampler moved inside such a branch must use explicit derivatives or `textureLod`.
 - Terrain computes fog first and skips surface shading only where fog opacity is exactly 1; fully reflective
   sky-mirror water skips ordinary sea shading. `node tools/render-cost-check.mjs <chapter>` compares these against
