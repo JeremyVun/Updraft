@@ -67,6 +67,17 @@ export function gfbm(x: number, y: number, octaves: number, seed: number): numbe
   return sum / norm;
 }
 
+/** `gnoise` and `gfbm` never exceed this in size: each corner's dot is at most 2, and blending and octaves average. */
+const NOISE_REACH = 2.8;
+
+/**
+ * Whether a point lies so far outside an island's ellipse that `isleCoast` is beyond `reach` whatever its noise:
+ * there every coastal term has run out and the island is its own constant floor, which is returned unchanged.
+ */
+function isleFar(x: number, z: number, c: { x: number; z: number; rx: number; rz: number }, wobble: number, reach: number): boolean {
+  return Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz) > 1 + NOISE_REACH * wobble + reach / (Math.min(c.rx, c.rz) * 0.8) + 1e-6;
+}
+
 function smoothstep(e0: number, e1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);
@@ -97,6 +108,9 @@ function islandCoast(x: number, z: number): number {
 }
 
 function islandHeight(x: number, z: number): number {
+  // The coast is at least the ellipse's or the islet's distance less 1.25 (the soft unions take no more).
+  if (Math.hypot((x + 6) / 60, (z + 14) / 44) > 1 + NOISE_REACH * 0.22 + 56.25 / 48 + 1e-6
+    && Math.hypot(x - 62, (z - 30) * 1.2) > 8 + NOISE_REACH * 5 + 56.25 + 1e-6) return -1.5 - 7.5;
   const d = islandCoast(x, z);
   const land = smoothstep(10, -14, d);
   let h = land * 2.7 - 1.5;
@@ -189,7 +203,7 @@ function littleBoatsHeight(x: number, z: number): number {
   const c = LITTLE_BOATS;
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = 3.5 - smoothstep(0.58, 1.08, r) * 5.1 - smoothstep(1, 1.5, r) * 8;
-  h += Math.max(0, 1 - r) * gnoise((x - BOATS_SHIFT.x) * 0.07, (z - BOATS_SHIFT.z) * 0.07) * 0.55;
+  if (r < 1) h += Math.max(0, 1 - r) * gnoise((x - BOATS_SHIFT.x) * 0.07, (z - BOATS_SHIFT.z) * 0.07) * 0.55;
   const d = boatsOut(x, z);
   if (d > 1.65) return h;
   const level = boatsLevel(c.startZ - z);
@@ -204,6 +218,7 @@ function littleBoatsHeight(x: number, z: number): number {
 /** The island of lines: a low green whaleback, small enough that the washing on it is the whole room. */
 function linesHeight(x: number, z: number): number {
   const c = ISLES.lines;
+  if (isleFar(x, z, c, 0.16, 40)) return -1.4 - 8;
   const d = isleCoast(x, z, c, 0.16, 21);
   const land = smoothstep(10, -30, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
@@ -233,6 +248,7 @@ function landingBank(wx: number, wz: number): number {
 /** The meadow: the broad rolling pasture, now bounded by its own coast on every side. */
 function meadowHeight(wx: number, wz: number): number {
   const { x, z } = meadowSculpted(wx, wz);
+  if (isleFar(x, z, MEADOW_SCULPTED, 0.08, 70)) return -1.6 - 8;
   const inland = -isleCoast(x, z, MEADOW_SCULPTED, 0.08, 11);
   const land = smoothstep(-12, 16, inland);
   let h = land * 4.8 - 1.6;
@@ -251,6 +267,11 @@ function meadowHeight(wx: number, wz: number): number {
 /** The autumn birches: a small low island between the meadow and the village, domed and shelving to bare beaches. */
 function birchesHeight(x: number, z: number): number {
   const c = ISLES.birches;
+  // A wind-scoured notch: rock face on the inside, a steep fall beyond the outer footing.
+  const across=((x+164.56)*2+(z+1925.88))/Math.sqrt(5);
+  const along=((x+164.56)-2*(z+1925.88))/Math.sqrt(5);
+  const notch=4.5*smoothstep(1.65,3.8,across)*(1-smoothstep(2.2,5.5,Math.abs(along)));
+  if (isleFar(x, z, c, 0.13, 36)) return -1.6 - notch - 8;
   const d = isleCoast(x, z, c, 0.13, 61);
   /** A long shallow ramp out of the water on both ends: a beach a boat runs up and a slope a camera can see down. */
   const land = smoothstep(18, -38, d);
@@ -259,10 +280,7 @@ function birchesHeight(x: number, z: number): number {
   h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (gfbm(x * 0.028, z * 0.028, 3, 62) * 0.5 + 0.5) * 3.2);
   h += land * land * lump(x, z, BIRCH_RISE) * BIRCH_RISE.h;
   h -= land * lump(x, z, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
-  // A wind-scoured notch: rock face on the inside, a steep fall beyond the outer footing.
-  const across=((x+164.56)*2+(z+1925.88))/Math.sqrt(5);
-  const along=((x+164.56)-2*(z+1925.88))/Math.sqrt(5);
-  h -= 4.5*smoothstep(1.65,3.8,across)*(1-smoothstep(2.2,5.5,Math.abs(along)));
+  h -= notch;
   return h - smoothstep(0, 36, d) * 8;
 }
 
@@ -272,6 +290,7 @@ function birchesHeight(x: number, z: number): number {
  * reads as a holiday. The banks only come near enough the surface to ghost the water paler in a few places.
  */
 function drownedHeight(x: number, z: number): number {
+  if (isleFar(x, z, ISLES.drowned, 0.14, 80)) return -6.5 - 2;
   const d = isleCoast(x, z, ISLES.drowned, 0.14, 31);
   const land = smoothstep(20, -30, d);
   const lumps = gfbm(x * 0.013, z * 0.013, 3, 32);
@@ -284,6 +303,7 @@ function drownedHeight(x: number, z: number): number {
  */
 function woodHeight(x: number, z: number): number {
   const c = ISLES.wood;
+  if (isleFar(x, z, c, 0.2, 60)) return -1.5 - 7;
   const d = isleCoast(x, z, c, 0.2, 41);
   const land = smoothstep(16, -38, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
@@ -301,6 +321,11 @@ export const SLEEP_HILL = { x: -180, z: -1940, rx: 22, rz: 18, h: 13 };
 
 function sleepingHeight(x: number, z: number): number {
   const c = ISLES.sleeping;
+  const terrace = 1 - smoothstep(6, 13, Math.hypot(x + 176.5, z + 1911));
+  if (isleFar(x, z, c, 0.14, 36)) {
+    const h = -1.5;
+    return h + (6.3 + (x + 176.5) * 0.018 - (z + 1911) * 0.025 - h) * terrace - 8;
+  }
   const d = isleCoast(x, z, c, 0.14, 81);
   const land = smoothstep(10, -16, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
@@ -311,7 +336,6 @@ function sleepingHeight(x: number, z: number): number {
   const dz=z-(SLEEP_HILL.z+dx*dx*.012);
   const depth=dz>0?4.8:SLEEP_HILL.rz;
   h+=land*land*SLEEP_HILL.h*Math.exp(-.7*((dx/SLEEP_HILL.rx)**2+(dz/depth)**2));
-  const terrace = 1 - smoothstep(6, 13, Math.hypot(x + 176.5, z + 1911));
   h += (6.3 + (x + 176.5) * 0.018 - (z + 1911) * 0.025 - h) * terrace;
   return h - smoothstep(0, 36, d) * 8;
 }
@@ -319,6 +343,7 @@ function sleepingHeight(x: number, z: number): number {
 /** The knoll under the cloud: a grassy dome, levelled where the stair stands, shelving west to a beach. */
 function stairsHeight(x: number, z: number): number {
   const c = ISLES.stairs;
+  if (isleFar(x, z, c, 0.12, 36)) return -1.5 - 8;
   const d = isleCoast(x, z, c, 0.12, 91);
   const land = smoothstep(12, -20, d);
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
@@ -333,8 +358,11 @@ function stairsHeight(x: number, z: number): number {
 export const LAST_HILL = { x: -30 + HOME_SHIFT.x, z: -2060 + HOME_SHIFT.z } as const;
 
 /** Home: one long hill to come over, with the cottage in the valley beyond it. */
+const HOME_ISLE = { ...ISLES.home, x: -45, z: -2120 };
+
 function homeHeight(x: number, z: number): number {
-  const d = isleCoast(x - HOME_SHIFT.x, z - HOME_SHIFT.z, { ...ISLES.home, x: -45, z: -2120 }, 0.1, 51);
+  if (isleFar(x - HOME_SHIFT.x, z - HOME_SHIFT.z, HOME_ISLE, 0.1, 70)) return -1.6 - 8;
+  const d = isleCoast(x - HOME_SHIFT.x, z - HOME_SHIFT.z, HOME_ISLE, 0.1, 51);
   const land = smoothstep(10, -22, d);
   /** The shore shelves up onto the island over a long way: a beach the boat runs up and a slope off it, not a cliff. */
   const inland = smoothstep(4, -110, d);
@@ -403,6 +431,7 @@ export function pondOut(x: number, z: number): number {
  * crater sitting on the hillside rather than a tarn lying in it.
  */
 function pondHeight(h: number, x: number, z: number): number {
+  if (Math.hypot((x - POND.x) / POND.rx, (z - POND.z) / POND.rz) * (1 - 0.16 * NOISE_REACH) > 1.5 + 1e-6) return h;
   const d = pondOut(x, z);
   if (d > 1.5) return h;
   const bed = POND_LEVEL - POND_BED * (1 - d * d);
