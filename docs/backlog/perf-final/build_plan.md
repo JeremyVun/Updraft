@@ -31,7 +31,10 @@ Seams shared by phases:
   materials. Add new switches to the `Switch` union. Boot compiles and warms every variant (`otherVariants()` steps)
   without creating three objects. Variant state is per material, so one frame's choice holds in every view; a
   per-view variant is not supported. Each added axis multiplies boot's variant steps (about 15 ms each plus compile):
-  re-measure the veil gap and load time.
+  re-measure the veil gap and load time. On Apple hardware every program's first draw costs about 0.2 s of a first
+  visit (`docs/backlog/boot-veil/design.md`), so weigh each new variant's saving against that; warming at boot keeps
+  the cost out of play. boot-veil is reworking the precompile and warm-up into groups in `gl/boot.ts` and `main.ts`
+  `boot()`: check its state before touching them.
 - **Level (phase 4 → 5, 6).** `QualityLevel` gains `name: 'ultra' | 'high' | 'medium' | 'low' | 'last'` and
   `frameRate: 30 | 60`. `applyWorldQuality(level)` in `main.ts` is the one place a level's effects are applied; phase
   5 adds its effects there and nowhere else. The deck choice is per frame and independent of the level.
@@ -166,7 +169,24 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
   gated exactly is dropped, not approximated.
 - **Gate:** the frame difference above; saving at `stairs:cloud`, `stairs:top`, `stairs:sail`; `tools/perf.mjs frames`
   through the chapter shows no new hitch.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at 890359a (2026-10-02). Along the whole chapter (`ALONG=10 … stairs:drowned`, 1508
+  samples from the climb to 300 frames into the village) 0 changed against 0be9dc5; `stairs:waiting` 0; island, sea
+  and drowned 0.
+  - Kept: 30 more stairs nodes, the drowned village's meshes, the lighthouse and the sky fixed in place (367 of 524).
+    The cloud top and underside skip grid points whose ±2-cell box (heights bounded by `uRise` and the underside's
+    worked bounds) lies past one of five view planes (`cloud-grid.ts` `gridUnseen`): sail 2.8–3.7%, cloud about 3.7%,
+    waiting about 3.6%, top none measurable (its cost is rasterising small visible triangles).
+  - Testing the sixth (far) plane, or writing the box another way, recompiled the visible points an ulp differently
+    (cloud crests up to 113/255): any edit to the cloud top's or underside's vertex stage re-runs `ALONG` against
+    the commit before.
+  - Dropped: the towers (already culled; a box test drops 12-triangle boxes with no pixels), the haze at the top (its
+    density cannot be proven zero), and the sea, terrain and grass in the white (the ordinary haze is never zero, so
+    the deck never covers fully: up to 47/255).
+  - `frame-profile` `ALONG=<n>` compares every nth frame of two builds playing the stairs on frames; the fixture acts
+    once per game frame and adds `stairs:drowned` (frame 15163).
+- **Look change found, for phase 7's list:** hiding the sea (and terrain) above the cloud during the top and the sail:
+  top −10.8 to −18.7% (1.4 to 2.4 ms), sail −13.8% (2.0 ms), at most 3/255 on a few thousand channels (the sea faintly
+  through the deck's frayed edge); nothing proves it hidden, so it needs a check along the whole sail.
 
 ## Phase 3b: exact leads across the frame
 
@@ -279,9 +299,6 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   (fewer wisps and haze steps), the effects in `applyWorldQuality`. After phases 2, 3, 3b and 4.
 - Built in two parcels: **5a** beside phase 3 (bloom, the sea's three effect switches, the ordinary reflection, the
   50% grass), **5b** after phase 3 merges (the stairs' wisps and haze steps, which share files with phase 3).
-- **Also (nonvisual):** the last step's 50% grass submits the same blades as 100% and thins them in the shader, so it
-  saves no vertex work; draw it from the sparser level the way sparse density already starts tiles at the coarsest
-  level that holds every blade it can show, with frames identical to today's 50% (`src/world/grass.ts`).
 - **Contract:** the effects rows of the table in design section 3. Ultra and High render exactly as before this phase
   (frames within 1/255). Bloom off skips its passes and releases its targets; half resolution halves the chain's
   first target. The sky mirror's reflection is never turned off. Turning an effect off at a level is a variant or a
@@ -294,7 +311,43 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 - **Gate:** Ultra/High frame difference; saving per effect at Medium and Low settings (`DETAIL`-style profile of each
   level, `LEVEL=<name>`); `tools/perf.mjs frames` across each level change; `tools/sky-mirror-check.mjs`, `tools/sea-check.mjs`,
   `tools/stairs-check.mjs`; the veil gap as in phase 2. **Jeremy's verdict on the stills before merging.**
-- **Done:** [ ]
+- **Done:** 5a [x] merged to `main` at 7933da5 (2026-10-02, Jeremy: "Merge"); 5b [x] at 149cdd1 (2026-10-03, Jeremy: "Merge"); 5c (the sun glow) [x] at e959c48 (2026-10-03, Jeremy: "Merge").
+- **5a as built:** `WORLD_QUALITY` gains `bloom` (`full|half|off`) and `sea` (`all|noCollar|plain`); Ultra and High
+  stay one shared object (`sameLevel` relies on it). `applyWorldQuality` sets `water.effects` and
+  `post.setBloom(level, immediate)`.
+  - The sea's effects are one three-way axis `SEA_EFFECTS` (`HULL_COLLAR`, `LANTERN_GLINT`, `SEABED_DETAIL`,
+    `SEA_REFLECTION`): the sea has 12 programs, boot 11 variant steps (time to ready about +0.3 s; the worst veil gap
+    unchanged). A new sea switch joins this axis rather than adding one.
+  - Low turns off the ordinary sea's reflection pass and compiles out its sample (the sky mirror keeps its own).
+  - Seabed detail off keeps the bed's averages (grain and ripple factors as constants, weed mean 0.21 as a tint in its
+    band, caustics mean 0.11), so the shallows keep their colour; only the caustic web goes.
+  - Bloom half resizes the chain to half; off skips the passes and, once faded (strength eases over 1 s), releases
+    the bright and blur targets (−7.2 MiB at Low). Boot draws bloom once at any level so its programs exist.
+  - Costs (drained, isolated): collar 0.08–0.19 ms, glint 0.03–0.09 ms, seabed 0.20–0.26 ms (18–23% of the sea pass),
+    ordinary reflection 0.31–0.84 ms, bloom off 0.29–0.31 ms (about 6% of a Low frame); half bloom saves little at
+    Medium's scale on the Mac (per-pass overhead). Whole-frame pairs were in the noise while peers ran.
+  - Ultra 0 changed at twelve fixtures; High 0 at `sea`.
+  - Level changes: two of four runs on the branch showed one 50–83 ms frame, not reproduced switching bloom or the sea
+    alone; re-check on a quiet machine in phase 8.
+  - Not built, and stays so (Jeremy, 2026-10-02, design rulings): the last step's 50% grass from the sparser table. The sparser level holds 25% (the lowest-ranked blade
+    of each 2×2 block); the other blades shown at 50% vary per block, so no fixed slot grid holds them.
+  - `frame-profile` levers `bloom-full|half|off`, `sea-collar|glint|seabed|reflection`; `sea` is the lantern lit at
+    night, `'sea&dusk=0'` by day; the `wood` fixture has no lit ember (use `play.mjs` and `embers.blow`).
+- **5b as built:** `stairs.ts` `DETAIL` by level and `CloudStairs.setLevel(name, immediate)`, the last line of
+  `applyWorldQuality`. Wisps: Ultra/High 56, Medium 36, Low and last 24, the kept rags thickened by
+  (56/kept)^0.5 (`MAKE_UP`); dropped rags fade over about a second and leave the draw range, all 56 still simulate.
+  Haze: a shared `uStride` multiplies the march step, 1 / 1.25 / 1.5 (fewer steps run; 1.75 and up visibly dims the
+  band under the steps). Saving at Low: climb 8–15%, cloud 3–4.5%; Medium climb about 4%; elsewhere in the noise.
+  Ultra and High 0 changed at every stairs fixture; level changes mid-climb no worse than 16.8 ms. `frame-profile`
+  `stairs-full` restores full detail at any `LEVEL`.
+- **5c, the sun glow (Jeremy, 2026-10-02):** with bloom off at Low and the last step, the sky draws a soft halo around
+  the sun so it is not a hard white disc. Ultra, High and Medium unchanged.
+  - As built: the post chain's colour pass adds four soft rings around the sun before tone mapping, strength from 13
+    samples of the disc's on-screen brightness over bloom's 1.1 threshold (so clouds, hills, the deck and sails hide
+    or wash it as they would bloom; the moon glows too). A `SUN_GLOW` variant on that pass (230 programs), eased by
+    `1 - bloomShown`; look numbers `SUN_RADIUS`, `GLOW_SPREAD`, `GLOW_SHARE` beside `BLOOM_STRENGTH`. About 0.01 ms.
+    A sun at the frame's edge glows a little less than Ultra's; the sun's reflection on the sea gets none. Its
+    warm-up is `post.render(0, true)` in `boot()`, with bloom's.
 
 ## Phase 6: the menu (visual)
 
@@ -313,7 +366,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 
 - **Owns:** `tools/` only; appends its findings to `profile.md`.
 - **Do:** at Medium and Low settings, cost the candidates in design section 4 with ablations, weighted by minutes.
-  Include the look changes phases 1 and 3b found (3b-i's mirror reflection cadence and mirror merge; 3b-ii's sea
+  Include the look changes phases 1, 3 and 3b found (phase 3's sea above the cloud; 3b-i's mirror reflection cadence and mirror merge; 3b-ii's sea
   under land beyond the window; 1b's creatures on the baked height copy), at the levels where each would apply.
   For each worth more than about 1% of a Low frame, a visual model makes one before/after still.
 - **Deliverable:** a ranked list for Jeremy (effect, level it would leave at, saving, still). His rulings go into

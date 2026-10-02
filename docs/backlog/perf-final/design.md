@@ -217,7 +217,10 @@ switched-off effect must be compiled out, not branched round.
   High's pixels and High 1.56× Medium's, as today.
 - The last step is reached only when Low at 30 fps still runs long. There is no 25% grass anywhere.
 - The "fewer" wisps and haze steps and what "seabed detail" covers (caustics, weed and the bed's noise, never the
-  shallows' colour) are chosen in the build by a visual model and shown to Jeremy as stills.
+  shallows' colour) are chosen in the build by a visual model and shown to Jeremy as stills. Approved 2026-10-03:
+  Medium keeps 36 of 56 wisps and 1.25× haze steps, Low and the last step 24 and 1.5×; seabed detail off drops the
+  sand grain, ripple noise, weed patches and caustic web for their averages. Low and the last step paint a soft sun
+  glow in place of bloom.
 - The menu offers Auto, Ultra, High, Medium, Low; its indicator and title name the level in use. `quality_changed`
   and `performance_sampled` carry the level's name.
 
@@ -301,5 +304,12 @@ The profile is `profile.md`. His answers, verbatim where quoted:
 - **Grass reach (2026-09-30):** Medium and Low at 100% density and 100% reach approved ("yea this is approved").
 - **Auto at the top (2026-10-01):** Auto on Ultra or High reaches 115% like the manual levels, so an iPad on Auto draws
   about 14% more blades than before this item (chosen: "Keep 115%").
+- **Phase 5a's stills (2026-10-02):** merged as shown ("Merge"). With bloom off at Low and the last step the sun
+  became a hard white disc; Jeremy chose "Paint a soft sun glow": bloom stays off, and the sky draws a soft halo
+  around the sun at those levels. The glow, drawn in the post chain from the sun's on-screen brightness, was merged
+  on its stills (2026-10-03, "Merge").
+- **The last step's 50% grass (2026-10-02):** stays as it is, every blade submitted and half thinned in the shader
+  ("ok fine option 1"). Drawing it from a sparser table would need a different set of blades and pop the meadow on
+  entering or leaving the last step.
 - **One level at a time (2026-10-01):** Auto never drops two levels at once; with five coarse levels a double drop
   from High overshot to Low's 30 fps where Medium would have held (chosen: "One level at a time").

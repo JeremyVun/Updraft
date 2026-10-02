@@ -259,6 +259,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
   `stairs-lantern.ts` (the glow on the boat's own lantern). Chapter: `src/story/stairs.ts`, the sail's lens
   `src/story/stairs-sail.ts` (`SAIL_SHOTS`), the bird's line up the stair `src/story/stairs-track.ts`. Knobs:
   `tuning.stairs`.
+- **By quality level** (`CloudStairs.setLevel`, from `applyWorldQuality`): Ultra and High stream 56 wisps and march
+  the haze at full step; Medium keeps 36 wisps and 1.25× longer haze steps, Low and the last step 24 wisps and 1.5×;
+  the rags left thicken a little, and a change eases over about a second.
 - **Order**: birches → `toStairs` (short hop east; the deck comes down over the sea; it carries the birches' closing
   phrase) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
   `DESCENT_END`.
@@ -296,7 +299,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
   (`BASE=`), captures each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n`
   starts with n flights home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree
-  with its own server while editing.
+  with its own server while editing. The cloud's top and underside skip grid points round which nothing is in view
+  (`gridUnseen`); any edit to their vertex shaders can move the seen points by an ulp, so it must read 0 against the
+  commit before along the whole chapter (`ALONG=10 FRAME=600 COMPARE_BASE=… tools/frame-profile.mjs stairs:drowned`).
 
 ## Open
 

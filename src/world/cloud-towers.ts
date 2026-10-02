@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { tuning } from '../tuning';
+import { fixInPlace } from '../gl/fixed';
 
 /** The swell of the deck round a tower's foot, in tower sizes: full inside FOOT_IN, gone beyond FOOT_OUT, this high. */
 export const TOWER_FOOT = { in: 0.5, out: 1.6, rise: 0.2 } as const;
@@ -212,6 +213,7 @@ export class CloudTowers {
 
   constructor(route: readonly THREE.Vector2[], gate: { from: THREE.Vector2; to: THREE.Vector2 }, berth: THREE.Vector2, floor: number) {
     this.group.name = 'cloud-towers';
+    fixInPlace(this.group);
     const noise = bakeNoise();
     let seed = 5;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
@@ -316,6 +318,7 @@ export class CloudTowers {
       mesh.renderOrder = 3;
       mesh.visible = false;
       this.group.add(mesh);
+      fixInPlace(mesh);
       this.towers.push({ mesh, uniforms, centre, size });
     }
   }

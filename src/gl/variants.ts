@@ -5,7 +5,7 @@ import type * as THREE from 'three';
  * tests with `#if`: on these GPUs code a uniform switches off still costs registers, so an effect that is off is
  * compiled out rather than branched round.
  */
-export type Switch = 'CLOUD_DECK' | 'LAND_SKIP';
+export type Switch = 'CLOUD_DECK' | 'LAND_SKIP' | 'HULL_COLLAR' | 'LANTERN_GLINT' | 'SEABED_DETAIL' | 'SEA_REFLECTION' | 'SUN_GLOW';
 export type Choice = Partial<Record<Switch, boolean>>;
 
 type Axis = readonly Choice[];
@@ -15,6 +15,9 @@ export const CLOUD_DECK: Axis = [{ CLOUD_DECK: true }, { CLOUD_DECK: false }];
 
 /** The sea returning early where land covers it, drawn only while there is land in the window to cover it. */
 export const LAND_SKIP: Axis = [{ LAND_SKIP: false }, { LAND_SKIP: true }];
+
+/** The grade's glow round the sun, standing in for bloom while bloom is off. */
+export const SUN_GLOW: Axis = [{ SUN_GLOW: false }, { SUN_GLOW: true }];
 
 const registered = new Map<THREE.ShaderMaterial, Axis[]>();
 

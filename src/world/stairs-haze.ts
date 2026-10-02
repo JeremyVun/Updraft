@@ -170,6 +170,7 @@ uniform mat4 uHome;
 // The box in metres: across, from the ceiling to the foot, along; and how far it reaches over a joined side.
 uniform vec4 uSize;
 uniform float uAmount;
+uniform float uStride;
 // 1 for each side open to the air, 0 for each that meets the next piece: -x, +x, -z, +z.
 uniform vec4 uOpen;
 in vec3 vCube;
@@ -293,7 +294,7 @@ void main() {
   float far = t0 * reach;
   // Steps a fixed length on from where the sightline enters, so that neighbouring pixels sample the same air and
   // a step is only ever gained or lost at the far wall, where there is no vapour; a change in the count would band.
-  float stride = max(mix(0.24, 0.6, smoothstep(12.0, 70.0, far)), (t1 - t0) * reach / 12.0);
+  float stride = max(mix(0.24, 0.6, smoothstep(12.0, 70.0, far)), (t1 - t0) * reach / 12.0) * uStride;
   float dt = stride / reach;
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
   vec3 homeFrom = (uHome * vec4(vEye, 1.0)).xyz;
@@ -346,6 +347,9 @@ const OVERLAP = 0.35;
 
 let noise: THREE.Data3DTexture | null = null;
 
+/** How much longer each step through the haze is than at full detail: fewer steps for the same vapour. */
+export const hazeStride = { value: 1 };
+
 /** Which sides of a piece meet the next piece's haze: across (x0, x1) and along (z0, z1). The rest are open air. */
 export interface HazeJoins { x0?: boolean; x1?: boolean; z0?: boolean; z1?: boolean }
 
@@ -367,6 +371,7 @@ function hazeBox(frame: THREE.Matrix4, shape: THREE.Matrix4, size: THREE.Vector4
       uHome: { value: placed.clone() },
       uSize: { value: size },
       uAmount: { value: amount },
+      uStride: hazeStride,
       uOpen: { value: new THREE.Vector4(open(joins.x0), open(joins.x1), open(joins.z0), open(joins.z1)) },
     },
     vertexShader: VERT,
