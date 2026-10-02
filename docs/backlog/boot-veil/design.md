@@ -22,6 +22,14 @@ startup (`src/main.ts`, `new CloudStairs()`, between two `yieldBoot()` calls) an
 `CloudStairs` in one unbroken step; compiling the larger shaders (every program grew, not only the stairs'); or the
 first draw of the stairs in `warmRender`. Not yet known which.
 
+**perf-final's effect (2026-10-02, dev server, 12 fresh loads each).** At 9557d73 (perf-final phase 1: the indexed
+stairs mesh, 787k → 179k vertices) `start-check`'s worst gap read 383 to 400 ms and passed; the worst gap is a world
+construction long task about 0.42 s after navigation, before `boot()`. Phase 2 (8929eec, deck-free shader variants)
+adds about 75 to 80 ms to the time to ready (2413 → 2487 ms mean) and leaves the worst gap at 393 to 404 ms (mean
+394.5 → 399, not significant); its variant compiles add no long task. Phase 3b-ii (5340862, the sea's `LAND_SKIP`
+variant) adds about 97 ms more (2476 → 2572 ms) with the worst gap unchanged (404 ms mean on both). Phase 5 will
+take the sea from 4 to 12 programs. Re-measure on a production build before treating the freeze as gone.
+
 ## Constraints
 
 - **Play never freezes to set up the stairs (Jeremy, 2026-09-29).** Anything moved out of boot must not cost a

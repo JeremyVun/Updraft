@@ -40,15 +40,18 @@ export async function precompileSim(renderer: THREE.WebGLRenderer, target: THREE
 /**
  * Draws the scene in batches, with every object shown, into `target` (never presented): textures upload,
  * buffers land on the GPU and render targets are allocated, so the first real frame is an ordinary one.
+ * `only` limits the draws to some objects, such as those whose program variants are still undrawn.
  */
-export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget): Promise<void> {
+export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget, only: (object: THREE.Object3D) => boolean = () => true): Promise<void> {
   const hidden: THREE.Object3D[] = [];
   const drawables: { object: THREE.Object3D; mask: number }[] = [];
+  const masked: { object: THREE.Object3D; mask: number }[] = [];
   const previousTarget = renderer.getRenderTarget();
   scene.traverse(o => {
     if (!o.visible) { hidden.push(o); o.visible = true; }
     if ('material' in o) {
-      drawables.push({ object: o, mask: o.layers.mask });
+      masked.push({ object: o, mask: o.layers.mask });
+      if (only(o)) drawables.push({ object: o, mask: o.layers.mask });
       // Layers suppress this draw without hiding any children.
       o.layers.mask = 0;
     }
@@ -66,7 +69,7 @@ export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Sce
     }
   } finally {
     renderer.setRenderTarget(previousTarget);
-    for (const { object, mask } of drawables) object.layers.mask = mask;
+    for (const { object, mask } of masked) object.layers.mask = mask;
     for (const o of hidden) o.visible = false;
   }
 }

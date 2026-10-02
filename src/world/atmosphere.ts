@@ -242,6 +242,10 @@ vec3 vnoiseGrad(vec2 p) {
 
 /** Declares the shared uniforms and the sky, fog, lighting and wind helpers. Include once per shader stage. */
 export const ATMO_GLSL = /* glsl */ `
+// Materials with variants (gl/variants.ts) set this to 0 while the deck is away; every other material keeps it.
+#ifndef CLOUD_DECK
+#define CLOUD_DECK 1
+#endif
 uniform float uTime;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
@@ -516,6 +520,7 @@ vec3 hemiLight(vec3 n) {
   return mix(uGroundBounce, uSkyAmbient, n.y * 0.5 + 0.5);
 }
 
+#if CLOUD_DECK
 /**
  * How the bank of mist heaves at a point across it (v) and into it (u): x how far its front stands out from its
  * line, y how far its top heaves above or below its height. It rolls slowly sideways.
@@ -534,12 +539,14 @@ float bankTop(float v, float heave) {
   float tall = uFogBankShape.y - uFogBankShape.x;
   return uFogBankShape.x + (tall + heave) * (1.0 - smoothstep(150.0, 460.0, abs(v)));
 }
+#endif
 /** Sun let through by the drifting clouds, baked each frame by world/clouds.ts. */
 float cloudShadow(vec2 xz) {
   vec2 uv = (xz - uCloudDomain.xy) * uCloudDomain.zw;
   vec2 edge = min(uv, 1.0 - uv);
   /** Past the sheet the edge texel would streak out over the world as a hard wedge, so it opens to clear sky. */
   float lit = mix(1.0, texture(uCloudTex, clamp(uv, 0.0, 1.0)).r, smoothstep(0.0, 0.04, min(edge.x, edge.y)));
+#if CLOUD_DECK
   // Under the stairs' cloud deck most of the sun is gone; what is left is the low sun slipping in under its far edge.
   if (uCloudDeck.w > 0.0) {
     float under = 1.0 - smoothstep(uCloudDeckY.x - 2.0, uCloudDeckY.y, cameraPosition.y);
@@ -547,12 +554,13 @@ float cloudShadow(vec2 xz) {
     // In the white of the bank of mist the sun comes through it softly, from all round.
     lit *= 1.0 - 0.5 * uFogBankEye.y;
   }
+#endif
   return lit;
 }
 
 ${SKY_RADIANCE_GLSL}
 
-
+#if CLOUD_DECK
 /** The part of [0, far] along a ray that lies between two heights. */
 vec2 deckSlab(vec3 ro, vec3 rd, float base, float top, float far) {
   if (abs(rd.y) < 1e-5) return ro.y > base && ro.y < top ? vec2(0.0, far) : vec2(1.0, 0.0);
@@ -765,6 +773,7 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   float a = 1.0 - (1.0 - bank.a) * (1.0 - deck.a);
   return vec4((bank.rgb * bank.a + deck.rgb * deck.a * (1.0 - bank.a)) / max(a, 1e-4), a);
 }
+#endif
 
 /** How much of a sightline to wpos passes over a coast; sea behind a hill must have the same cover as the hill. */
 float coastCover(vec4 coast, vec3 wpos, float inner, float outer) {
@@ -803,9 +812,11 @@ vec4 fogOf(vec3 wpos, float landscape) {
     float homeDistance = distance(cameraPosition.xz, vec2(${glsl(HOME_JETTY.x)}, ${glsl(HOME_JETTY.endZ)})) + ${glsl(tuning.homeApproach.landDepth)};
     fogDistance = mix(dist, homeDistance, homeRegion * uHomeHaze);
   }
+#if CLOUD_DECK
   vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, rd, dist) : vec4(0.0);
   // Haze lies between the eye and the cloud, not behind a deck that has already covered the view.
   fogDistance = mix(fogDistance, min(fogDistance, 40.0), deck.a);
+#endif
   float heightFactor = exp(-max(wpos.y, 0.0) * 0.06);
   float mist = uMist * exp(-max(min(wpos.y, cameraPosition.y), 0.0) * 0.22);
   float veil = max(0.0, fogDistance - uVeil.x) * uVeil.y;
@@ -848,11 +859,13 @@ vec4 fogOf(vec3 wpos, float landscape) {
       amt = max(amt, hidden);
     }
   }
+#if CLOUD_DECK
   if (deck.a > 0.0) {
     float total = 1.0 - (1.0 - amt) * (1.0 - deck.a);
     fogCol = (deck.rgb * deck.a * (1.0 - amt) + fogCol * amt) / max(total, 1e-4);
     amt = total;
   }
+#endif
   float arriving = journeyVeilAt(wpos);
   if (arriving > 0.0) {
     fogCol = mix(fogCol, skyRadiance(rd), arriving);

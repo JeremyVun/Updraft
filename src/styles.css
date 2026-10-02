@@ -280,9 +280,9 @@ body.starting #sound, body.starting #fullscreen { z-index: 11; }
 #quality:focus-visible { outline: 1px solid #fff7eab8; outline-offset: 3px; }
 #quality .quality-bar { opacity: .25; stroke-width: 1.2; }
 #quality[data-quality='low'] .quality-bar-1,
-#quality[data-quality='medium'] .quality-bar-1,
-#quality[data-quality='medium'] .quality-bar-2,
-#quality[data-quality='high'] .quality-bar { opacity: 1; fill: currentColor; }
+#quality[data-quality='medium'] :is(.quality-bar-1, .quality-bar-2),
+#quality[data-quality='high'] .quality-bar:not(.quality-bar-4),
+#quality[data-quality='ultra'] .quality-bar { opacity: 1; fill: currentColor; }
 #quality-control[hidden] { display: none; }
 #quality-dismiss { position: fixed; inset: 0; z-index: -1; }
 #quality-menu {

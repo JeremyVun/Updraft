@@ -27,10 +27,18 @@ try {
     await page.screenshot({path:`/tmp/updraft-quality-menu-${name}.png`});
     const box=await page.locator('#quality-menu').boundingBox();
     assert(box.x>=0&&box.x+box.width<=viewport.width&&box.y>=0);
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.mode),'ultra');
     await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
     assert.equal(await page.locator('#quality').getAttribute('aria-expanded'),'false');
-    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v1')),'high');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v2')),'high');
     assert.deepEqual(await page.evaluate(()=>__choices),['high']);
+    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'high');
+    assert.equal(await page.locator('#quality').getAttribute('title'),'Graphics quality: High');
+    await open();await page.keyboard.press('u');await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v2')),'ultra');
+    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'ultra');
+    assert.equal(await page.locator('#quality').getAttribute('title'),'Graphics quality: Ultra');
     await open();await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(()=>document.activeElement.id),'quality');
     await open();
@@ -39,14 +47,16 @@ try {
     await open();const sound=await page.locator('#sound').getAttribute('data-on');
     await page.keyboard.press('m');await page.keyboard.press('Enter');
     assert.equal(await page.locator('#sound').getAttribute('data-on'),sound);
-    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v1')),'medium');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v2')),'medium');
+    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'medium');
     await open();await page.keyboard.press('Tab');
     assert.equal(await page.locator('#quality-menu').isVisible(),false);
     assert.equal(await page.evaluate(()=>document.activeElement.id),'sound');
     await open();
     if(name==='phone')await page.locator('[data-mode="low"]').tap();
     else await page.locator('[data-mode="low"]').click();
-    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v1')),'low');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('updraft.quality.v2')),'low');
+    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'low');
     assert.equal(await page.locator('[data-mode="low"]').getAttribute('aria-checked'),'true');
     assert.equal(await page.evaluate(()=>__begins),0);
     await open();await page.locator('[data-mode="auto"]').click();
@@ -54,26 +64,34 @@ try {
       const url = performance.getEntriesByType('resource').find(r=>new URL(r.name).pathname==='/src/controls.ts').name;
       const {controls}=await import(url);
       const {Quality}=await import('/src/gl/quality.ts');
-      const governor=new Quality(1,2,800,600,false,level=>controls.setQualityDetail(level.detail));
-      controls.setQualityDetail(governor.level.detail);
+      const quality=document.getElementById('quality');
+      window.__shown=[];
+      const show=name=>{controls.setQualityLevel(name);__shown.push(`${name} ${quality.dataset.quality} ${quality.title}`);};
+      const governor=new Quality(1.5,2,800,600,false,level=>show(level.name));
+      show(governor.level.name);
       window.__governor=governor;
     });
-    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'high');
+    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'ultra');
     await page.evaluate(()=>{
       __governor.reset(0);
-      for(let t=0;t<16000;t+=40)__governor.frame(t,40);
+      for(let t=0;t<30000;t+=40)__governor.frame(t,40);
     });
-    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'low');
-    assert.equal(await page.locator('#quality').getAttribute('title'),'Graphics quality: Auto (Low)');
+    assert.deepEqual(await page.evaluate(()=>__shown),[
+      'ultra ultra Graphics quality: Auto (Ultra)',
+      'high high Graphics quality: Auto (High)',
+      'medium medium Graphics quality: Auto (Medium)',
+      'low low Graphics quality: Auto (Low)',
+      'last low Graphics quality: Auto (Low)',
+    ]);
     assert.equal(await page.locator('[data-mode="auto"]').getAttribute('aria-checked'),'true');
     await page.evaluate(()=>{
-      for(let t=16000;t<120000;t+=1000/60)__governor.frame(t,1000/60);
+      for(let t=30000;t<300000;t+=1000/60)__governor.frame(t,1000/60);
     });
-    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'high');
-    assert.equal(await page.locator('#quality').getAttribute('title'),'Graphics quality: Auto (High)');
+    assert.equal(await page.locator('#quality').getAttribute('data-quality'),'ultra');
+    assert.equal(await page.locator('#quality').getAttribute('title'),'Graphics quality: Auto (Ultra)');
     await open();
     await page.screenshot({path:`/tmp/updraft-quality-menu-${name}.png`});
     await page.close();
   }
-  console.log('Custom quality menu passed: desktop/phone layout, selection callbacks and persistence, arrows/type-ahead, Escape/Tab, touch and safe outside dismissal.');
+  console.log('Custom quality menu passed: desktop/phone layout, selection callbacks and persistence, indicator and title at every level, arrows/type-ahead including u for Ultra, Escape/Tab, touch and safe outside dismissal.');
 } finally {await browser.close()}

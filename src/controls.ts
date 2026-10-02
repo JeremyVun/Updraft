@@ -64,7 +64,7 @@ class Controls {
       if (event.key === 'ArrowUp') next = (index + options.length - 1) % options.length;
       if (event.key === 'Home') next = 0;
       if (event.key === 'End') next = options.length - 1;
-      if (/^[ahml]$/i.test(event.key)) next = options.findIndex(option => option.textContent!.toLowerCase().startsWith(event.key.toLowerCase()));
+      if (/^[auhml]$/i.test(event.key)) next = options.findIndex(option => option.textContent!.toLowerCase().startsWith(event.key.toLowerCase()));
       if (next >= 0) { event.preventDefault(); options[next].focus(); }
     });
     const fullscreen = document.getElementById('fullscreen') as HTMLButtonElement;
@@ -92,7 +92,7 @@ class Controls {
   private syncQualityIndicator(): void {
     const names = { auto: 'Auto', low: 'Low', medium: 'Medium', high: 'High', ultra: 'Ultra' };
     const current = this.renderedQuality ?? (this.qualityMode === 'auto' ? null : this.qualityMode);
-    this.quality.dataset.quality = current === 'ultra' ? 'high' : current ?? 'pending';
+    this.quality.dataset.quality = current ?? 'pending';
     const label = names[this.qualityMode];
     this.quality.title = `Graphics quality: ${label}${this.qualityMode === 'auto' && current ? ` (${names[current]})` : ''}`;
     this.quality.setAttribute('aria-label', this.quality.title);

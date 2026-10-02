@@ -20,10 +20,18 @@ Rules for every phase:
 
 Seams shared by phases:
 
-- **Variants (phase 2 → 5).** `src/gl/variants.ts` owns the variant sets. A material is registered with the defines
-  it supports; `variant(material, defines)` returns the twin sharing its uniform objects; `select(mesh, defines)`
-  assigns it. Phase 2 adds `CLOUD_DECK`; phase 5 adds `HULL_COLLAR`, `LANTERN_GLINT`, `SEABED_DETAIL` through the same
-  calls. Every registered variant joins the boot precompile and warm render. Nothing compiles after Begin.
+- **Variants (phase 2 → 3b-ii, 5), as built.** `src/gl/variants.ts`. A variant is a define set on the existing
+  material, switched in place; three keeps every program a material has built, so a switch rebinds a program built
+  before Begin (no twin materials: they would change the opaque draw order by `material.id`, draw UUIDs from
+  `Math.random`, and miss state set on the original). `register(material, ...axes)` takes axes of alternatives
+  (`CLOUD_DECK = [{CLOUD_DECK:true},{CLOUD_DECK:false}]`; every alternative in an axis sets the same switches; a
+  switch belongs to one axis; calling again adds axes). `select(material, choice)` sets all of an axis's switches at
+  once and throws on an unregistered combination; `selectAll(choice)` applies to every material with those
+  switches. Shaders test `#if NAME` (defines are `1`/`0`); `ATMO_GLSL` defaults `CLOUD_DECK` to 1 for unregistered
+  materials. Add new switches to the `Switch` union. Boot compiles and warms every variant (`otherVariants()` steps)
+  without creating three objects. Variant state is per material, so one frame's choice holds in every view; a
+  per-view variant is not supported. Each added axis multiplies boot's variant steps (about 15 ms each plus compile):
+  re-measure the veil gap and load time.
 - **Level (phase 4 → 5, 6).** `QualityLevel` gains `name: 'ultra' | 'high' | 'medium' | 'low' | 'last'` and
   `frameRate: 30 | 60`. `applyWorldQuality(level)` in `main.ts` is the one place a level's effects are applied; phase
   5 adds its effects there and nowhere else. The deck choice is per frame and independent of the level.
@@ -131,7 +139,17 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
   - The veil: `node tools/boot-profile.mjs` and `node tools/start-check.mjs` before and after; the worst gap between
     painted veil frames must not grow. Record the added loading time in `docs/backlog/boot-veil/design.md`.
   - `tools/shader-check.mjs`, `tools/stairs-check.mjs`, `tools/context-loss-check.mjs`.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at 8929eec (2026-10-02). Registered: the sea, terrain (the mirror's terrain is the
+  same material), the three grass blade materials and the sky; selection is the first line of `prepareFrame`.
+  - Frames against 9557d73: 0 at `island`, `wood` and every stairs fixture; at most 1/255 at `sea` (321 channels),
+    `jetty` (739), `meadow:walk` (73), `sleeping` (4); a 16-step camera path at island, sea and jetty at most 1/255
+    at every step. No glint specks.
+  - Saving (pairs, two passes): island 7.3%, sea 5.4–6.1%, meadow:walk 7.3–9.0%, wood 6.2–6.6%.
+  - No hitch at either swap (crossing into the stairs, fog into the village): max 16.8 ms on both builds;
+    `renderer.info.programs` constant after Begin. `tools/perf.mjs` cannot play those transitions; a scratch
+    rAF-interval run in shot mode did.
+  - Veil: about +80 ms to ready; worst gap unchanged within noise (recorded in `docs/backlog/boot-veil/design.md`).
+  - Five programs added (219 → 224 at the island).
 
 ## Phase 3: stairs work that cannot be seen
 
@@ -168,7 +186,29 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   (`tools/wind-rate-check.mjs`, `tools/wind-clock-check.mjs` and a texel comparison of the field after 600 ticks of a
   scripted stroke); `tools/render-cost-check.mjs` extended to the new skips. Report what was dropped and why.
 - **Gate:** the above, plus `tools/sea-check.mjs`, `tools/sky-mirror-check.mjs`, `tools/little-boats-check.mjs`.
-- **Done:** [ ]
+- **Done:** 3b-ii [x] merged to `main` at 5340862 (2026-10-02); 3b-i [ ].
+- **3b-ii as built:**
+  - `LAND_SKIP` (a sea axis; the sea has 4 programs): the sea returns before the ripple reads where the baked ground
+    is a metre above the water at the corners of the 3×3 pixel block and no waterline is within it, so every pixel
+    of the quad is under land. Selected by `water.landSkip(camera)`: an island's height patch overlaps the window and
+    the camera is above the ground there (a camera inside a hill showed black). Not "child ashore" (lead's call,
+    2026-10-02): the window rule also wins in the crossings and at the jetty, about 8 minutes against the 0.8%
+    (0.07 ms) it costs on the open sea and 4 minutes of sea and drowned village; `!child.riding` is the one-line
+    alternative. Saving (frame pairs): wood 3.7–5.2%, jetty 2.2–3.1%, sleeping 2.2–3.2%, lines 1.9–2.6%, island
+    1.2–1.6%, washing about 1%; Meadow, birches and boats in noise (the Meadow's no-discard grass already lets the
+    GPU cull the sea); summit 0 (its sea under land is beyond the window).
+  - Weed term only for bed depths 0.9 to 4 m: drowned 3.3%.
+  - Frames 0 against 2ba17d1 at ten fixtures, boat orbits and shoreline paths (Sleeping's at most 1/255) and through
+    the washing doorway.
+  - Dropped: the caustics skip (under 1% once `LAND_SKIP` is in) and the three folds (`waterWindAt`, `backlit`,
+    `fogOf`'s `skyRadiance`: the compiler already shares them).
+  - Judge sea items by frame pairs: the sea pass alone overstates savings where discard-free grass covers land.
+  - **For phase 3 and anything that hides terrain:** `LAND_SKIP` relies on the terrain drawing in the same pass as
+    the sea, on terrain tiles following the camera, and on the camera above the ground. Hiding the terrain where the
+    sea draws in the same view shows black under land. Tools that move the camera must call `terrain.update`.
+  - `frame-profile` now steps both builds' cameras along a path under `COMPARE_BASE` (`PATH_JS`/`PATH_STEPS`); camera paths (`shore.js`, `orbit.js`, `door.js`) and a veil-gap script (`veil.mjs`) are in `/private/tmp/updraft-pf-p3bii-scripts/`.
+  - Not built, for Jeremy if wanted: the sea under land beyond the window (summit up to 5.2%, 0.39 ms), which needs
+    the distant atlas and a waterline guarantee that does not exist there.
 
 ## Phase 4: four levels and Auto between them (logic)
 
