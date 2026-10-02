@@ -48,9 +48,9 @@ out vec3 vTower;
 flat out float vLevel;
 TOP
 void main() {
-  vec3 unseen;
-  if (gridUnseen(uSurface - 0.5, uSurface + uRise, unseen)) {
-    gl_Position = projectionMatrix * viewMatrix * vec4(unseen, 1.0);
+  int unseen = gridUnseen(uSurface - 0.5, uSurface + uRise);
+  if (unseen >= 0) {
+    gl_Position = OUTSIDE[unseen];
     return;
   }
   float spacing;
@@ -442,9 +442,9 @@ out float vBefore;
 flat out float vLevel;
 BELLY
 void main() {
-  vec3 unseen;
-  if (gridUnseen(uCloudDeckY.x - 11.0, uCloudDeckY.x + 28.0, unseen)) {
-    gl_Position = projectionMatrix * viewMatrix * vec4(unseen, 1.0);
+  int unseen = gridUnseen(uCloudDeckY.x - 11.0, uCloudDeckY.x + 28.0);
+  if (unseen >= 0) {
+    gl_Position = OUTSIDE[unseen];
     return;
   }
   float spacing;

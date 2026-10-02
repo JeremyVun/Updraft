@@ -81,17 +81,19 @@ vec2 gridPlace(out float spacing, out float level) {
   return xz;
 }
 uniform vec4 uView[6];
+/** Past each side of the view in clip space, in the order of three's frustum planes. */
+const vec4 OUTSIDE[6] = vec4[6](vec4(2.0, 0.0, 0.0, 1.0), vec4(-2.0, 0.0, 0.0, 1.0), vec4(0.0, -2.0, 0.0, 1.0),
+  vec4(0.0, 2.0, 0.0, 1.0), vec4(0.0, 0.0, 2.0, 1.0), vec4(0.0, 0.0, -2.0, 1.0));
 /**
- * Whether every triangle round this point lies wholly outside one side of the view, for a surface whose heights here
- * lie between lo and hi; if so, at is a point outside that side, where the point may be put without being worked out.
+ * The side of the view that every triangle round this point lies wholly outside of, for a surface whose heights here
+ * lie between lo and hi, or -1. Such a point need not be worked out: put at OUTSIDE of that side, it is clipped too.
  */
-bool gridUnseen(float lo, float hi, out vec3 at) {
+int gridUnseen(float lo, float hi) {
   vec4 g = uGrid[int(position.y + 0.5)];
   vec2 xz = g.xy + position.xz * g.z;
   vec3 c = vec3(xz.x, 0.5 * (lo + hi), xz.y), e = vec3(2.0 * g.z, 0.5 * (hi - lo), 2.0 * g.z);
-  at = vec3(xz.x, lo, xz.y);
-  for (int i = 0; i < 6; i++) if (dot(uView[i].xyz, c) + uView[i].w < -dot(abs(uView[i].xyz), e) - 1.0) return true;
-  return false;
+  for (int i = 0; i < 6; i++) if (dot(uView[i].xyz, c) + uView[i].w < -dot(abs(uView[i].xyz), e) - 1.0) return i;
+  return -1;
 }`;
 
 /** gridHidden(xz, level): whether a finer grid covers this point. */

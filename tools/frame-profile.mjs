@@ -60,6 +60,7 @@
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
 // stairs-unindexed draws the flights and landings unindexed, as before they were indexed.
 // cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
+// grid-cull-off works out every point of the cloud's top and underside again, those round which nothing is in view too.
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
@@ -77,6 +78,9 @@
 // 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
 // run above that; CAPTURE=1 saves both frames. A build against itself must read 0. With PATH_JS, both builds then step
 // their cameras along the path (PATH_STEPS) and every step is compared the same way.
+// ALONG=10 under COMPARE_BASE plays both builds together from the fixture frame to the moment, held on every tenth frame
+// until both have been read as their loops drew it; frames whose hashes differ are compared (CAPTURE=1 saves those over
+// COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village.
 // Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
 // keeps the game's random stream (read the randoms drift field if a comparison still drifts).
 // mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material at the float32
@@ -286,6 +290,8 @@ window.__audit = {
     const glass=water.mesh.material;this.glassFragment??=glass.fragmentShader;
     const glassFragment=skips.includes('glass-sky-always')?restore(this.glassFragment,'if (on < 1.0) reflected','if (true) reflected'):this.glassFragment;
     if(glass.fragmentShader!==glassFragment){glass.fragmentShader=glassFragment;glass.needsUpdate=true;}
+    this.gridCull ??= [cloudStairs.cloud.top,cloudStairs.cloud.belly].map(o=>[o,o.onBeforeRender]);
+    for(const [o,before] of this.gridCull) o.onBeforeRender=skips.includes('grid-cull-off')?()=>{for(const p of o.material.uniforms.uView.value)p.set(0,0,0,1);}:before;
     this.culling=[];
     if (omit==='culling-off') {
       const roots=[...this.groups.tree,...this.groups.pond];
@@ -663,7 +669,7 @@ window.__audit = {
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
       showing:this.hidden.filter(([o])=>showing.has(o)).length,settings:a.settings!==b.settings,
-      draw:['wind','reflection','bloom','post'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
+      draw:['wind','reflection','bloom','post','grid-cull-off'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
     if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
     return bite;
   },
