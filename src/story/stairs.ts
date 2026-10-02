@@ -384,6 +384,11 @@ export class StairsChapter implements Chapter {
     return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
   }
 
+  /** From looking out on top until the boat is let down onto the sea. */
+  get onTheCloud(): boolean {
+    return ['awe', 'nest', 'skein', 'lean', 'gather', 'boarding', 'sail', 'fog'].includes(this.beat);
+  }
+
   /** From the moment they are out on top, the kite is tied to the bow of the boat waiting on the cloud. */
   get kiteTow(): { at: THREE.Vector3; heading: number } | null {
     if (!this.berthed || this.beat === 'thin' || this.beat === 'down') return null;

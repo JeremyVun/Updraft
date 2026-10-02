@@ -988,9 +988,18 @@ function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vect
   emitter.active = active;
 }
 
+const underTheCloud = [water.mesh, terrain.mesh, grass.group];
+let cloudCovers = false;
+
 /** Expensive view preparation and audio scheduling run once per rendered frame. */
 function prepareFrame(dt: number): void {
   const u = atmo.uniforms;
+  // Hidden together: the sea's LAND_SKIP needs the terrain drawn in the same pass.
+  const covers = story.current.onTheCloud === true && rig.camera.position.y > CLOUD.top;
+  if (covers !== cloudCovers) {
+    cloudCovers = covers;
+    for (const o of underTheCloud) o.visible = !covers;
+  }
   selectAll({
     CLOUD_DECK: u.uCloudDeck.value.w > 0,
     LAND_SKIP: water.landSkip(rig.camera),

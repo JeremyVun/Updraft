@@ -113,6 +113,8 @@ export interface Chapter {
   readonly cameraCut?: number;
   /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
   readonly pointerFloor?: number | null;
+  /** Out on top of the stairs' cloud: from a camera above its top, the deck hides the sea and the ground under it. */
+  readonly onTheCloud?: boolean;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
