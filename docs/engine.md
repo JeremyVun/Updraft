@@ -297,9 +297,14 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 
 ## Post chain (`src/post/post.ts`)
 
-One multisampled half-float scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
+One multisampled scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
 would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
-toning, vignette, grain) straight to the screen. Bloom follows the level: full, half resolution (its chain starts at a
+toning, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
+the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
+the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
+negative colour (a shader that writes one shows black there, not the bright speck the grade's ACES made of it) and
+Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
+a few levels. Bloom follows the level: full, half resolution (its chain starts at a
 quarter of the frame instead of half) or off, when its passes are skipped and its targets released. Turning it on or
 off eases its strength over one second, as the grass changes; boot draws it once whatever the level, so its programs
 exist before Begin. Only the scene target is multisampled. The canvas has no depth buffer
@@ -330,6 +335,10 @@ The cloud deck (`CLOUD_DECK`): its GLSL in `ATMO_GLSL` (the deck, the bank of mi
 drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck.
 That is five programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
 the deck is away.
+
+`STORM_BANK`: the sky's storm bank (one `fbm` per sky pixel in `skyRadiance`) is compiled out of the sky while
+`uStormCover` and the lightning are 0, its value replaced by 0 (two more sky programs). Branching round it instead
+changed a few sky pixels by 1/255; the define does not. Other materials that read `skyRadiance` keep the bank.
 
 `LAND_SKIP`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
 waterline inside, so no seen pixel shares its quad; it needs the terrain drawn over the sea with tiles following a
