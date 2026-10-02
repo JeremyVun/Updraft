@@ -612,6 +612,8 @@ window.__audit = {
     stages['bloom-composite']=()=>quad(b.compositeMaterial,b.renderTargetsHorizontal[0],true);
     stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
     stages.grade=()=>{post.quad.material=post.gradeMat;r.setRenderTarget(null);post.quad.render(r);};
+    // grade-plain: the grade without the sun's glow, beside a grade that draws it (at a level without bloom).
+    if(post.gradeMat.defines.SUN_GLOW===1)stages['grade-plain']=()=>{const m=post.gradeMat;m.defines.SUN_GLOW=0;m.needsUpdate=true;stages.grade();m.defines.SUN_GLOW=1;m.needsUpdate=true;};
     try {
       for(const [name,stage] of Object.entries(stages)){
         const n=name==='scene'?Math.max(4,reps>>3):reps,samples=[];

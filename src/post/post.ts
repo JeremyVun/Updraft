@@ -217,7 +217,6 @@ export class Post {
     this.gradeMat.uniforms.uSaturation.value = value;
   }
 
-  /** Where the sun is in the frame and how its glow spreads, `strength` of it while bloom is faded out. */
   private aimGlow(strength: number): void {
     const u = this.gradeMat.uniforms;
     const projection = this.camera.projectionMatrix;
