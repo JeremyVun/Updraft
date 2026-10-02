@@ -311,7 +311,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 - **Gate:** Ultra/High frame difference; saving per effect at Medium and Low settings (`DETAIL`-style profile of each
   level, `LEVEL=<name>`); `tools/perf.mjs frames` across each level change; `tools/sky-mirror-check.mjs`, `tools/sea-check.mjs`,
   `tools/stairs-check.mjs`; the veil gap as in phase 2. **Jeremy's verdict on the stills before merging.**
-- **Done:** 5a [x] merged to `main` at 7933da5 (2026-10-02, Jeremy: "Merge"); 5b [ ]; 5c (the sun glow) [ ].
+- **Done:** 5a [x] merged to `main` at 7933da5 (2026-10-02, Jeremy: "Merge"); 5b [ ]; 5c (the sun glow) [x] at e959c48 (2026-10-03, Jeremy: "Merge").
 - **5a as built:** `WORLD_QUALITY` gains `bloom` (`full|half|off`) and `sea` (`all|noCollar|plain`); Ultra and High
   stay one shared object (`sameLevel` relies on it). `applyWorldQuality` sets `water.effects` and
   `post.setBloom(level, immediate)`.
@@ -335,6 +335,12 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
     night, `'sea&dusk=0'` by day; the `wood` fixture has no lit ember (use `play.mjs` and `embers.blow`).
 - **5c, the sun glow (Jeremy, 2026-10-02):** with bloom off at Low and the last step, the sky draws a soft halo around
   the sun so it is not a hard white disc. Ultra, High and Medium unchanged.
+  - As built: the post chain's colour pass adds four soft rings around the sun before tone mapping, strength from 13
+    samples of the disc's on-screen brightness over bloom's 1.1 threshold (so clouds, hills, the deck and sails hide
+    or wash it as they would bloom; the moon glows too). A `SUN_GLOW` variant on that pass (230 programs), eased by
+    `1 - bloomShown`; look numbers `SUN_RADIUS`, `GLOW_SPREAD`, `GLOW_SHARE` beside `BLOOM_STRENGTH`. About 0.01 ms.
+    A sun at the frame's edge glows a little less than Ultra's; the sun's reflection on the sea gets none. Its
+    warm-up is `post.render(0, true)` in `boot()`, with bloom's.
 
 ## Phase 6: the menu (visual)
 
