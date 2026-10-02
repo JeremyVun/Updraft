@@ -80,7 +80,7 @@
 // their cameras along the path (PATH_STEPS) and every step is compared the same way.
 // ALONG=10 under COMPARE_BASE plays both builds together from the fixture frame to the moment, held on every tenth frame
 // until both have been read as their loops drew it; frames whose hashes differ are compared (CAPTURE=1 saves those over
-// COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village.
+// COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village. STATE runs on BASE's page alone.
 // Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
 // keeps the game's random stream (read the randoms drift field if a comparison still drifts).
 // mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material at the float32
@@ -799,6 +799,7 @@ async function open(base,chapter) {
 // Both builds play together, each held on every ALONGth frame until both are read; a frame whose hash differs is compared.
 async function along(chapter) {
   const sides=[await open(COMPARE_BASE,chapter),await open(BASE,chapter)];
+  if(process.env.STATE)await sides[1].page.evaluate(code=>__audit.state(code),process.env.STATE);
   const failed=Promise.all(sides.map(s=>s.playing)).then(()=>null,e=>e);
   const result={every:ALONG,samples:0,changed:0,over1:0,max:0,worst:null,first:null,last:null};
   for(;;){
