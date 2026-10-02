@@ -1169,7 +1169,7 @@ async function boot(): Promise<void> {
     ...grass.tableJobs(),
     grass.unclippedJob(rig.camera),
     ...post.compileJobs(),
-    ...variantSteps().flatMap((apply) => [{ ...sceneJob, objects: varied, apply }, grass.unclippedJob(rig.camera, apply)]),
+    ...variantSteps().flatMap((apply) => [{ ...sceneJob, objects: varied, apply }, grass.unclippedJob(rig.camera, apply), ...post.compileJobs().map((job) => ({ ...job, apply }))]),
   ]);
   runBootPasses();
   terrain.fields.bake(renderer);
