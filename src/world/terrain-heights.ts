@@ -164,7 +164,7 @@ export class TerrainHeights {
   };
   private readonly patch = { value: new THREE.Vector4() };
   private readonly size = { value: new THREE.Vector2() };
-  private readonly material = simMaterial(BAKE, { uHeightBakePatch: this.patch, uHeightBakeSize: this.size });
+  private readonly material = simMaterial(BAKE, { uHeightBakePatch: this.patch, uHeightBakeSize: this.size }, this.target);
 
   /** About 75 ms of GPU on an M4 Pro, so `between` can let each patch finish before the next is queued. */
   async bake(renderer: THREE.WebGLRenderer, between?: () => Promise<void>): Promise<void> {

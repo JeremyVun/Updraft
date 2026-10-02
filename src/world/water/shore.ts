@@ -80,9 +80,9 @@ export class ShoreBake {
 
   constructor(renderer: THREE.WebGLRenderer, height: THREE.Texture) {
     this.gpu = new GpuRunner(renderer);
-    this.seedMat = simMaterial(SEED_FRAG, { uHeight: { value: height } });
-    this.floodMat = simMaterial(FLOOD_FRAG, { uSeeds: { value: null }, uStep: { value: 1 } });
-    this.resolveMat = simMaterial(RESOLVE_FRAG, { uSeeds: { value: null }, uHeight: { value: height }, uCell: { value: 1 } });
+    this.seedMat = simMaterial(SEED_FRAG, { uHeight: { value: height } }, this.seeds[0]);
+    this.floodMat = simMaterial(FLOOD_FRAG, { uSeeds: { value: null }, uStep: { value: 1 } }, this.seeds[0]);
+    this.resolveMat = simMaterial(RESOLVE_FRAG, { uSeeds: { value: null }, uHeight: { value: height }, uCell: { value: 1 } }, this.target);
   }
 
   bake(windowSize: number): void {

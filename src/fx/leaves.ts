@@ -444,7 +444,7 @@ export class LitterField {
     // that the GPU cannot filter reads as empty, so without the extension `litterDepth` blends texels itself.
     const filtered = renderer.extensions.has('OES_texture_float_linear');
     this.field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, filtered ? THREE.LinearFilter : THREE.NearestFilter);
-    const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, { uSrc: { value: null } });
+    const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, { uSrc: { value: null } }, this.field);
     const tex = dataTexture(seed, LITTER_RES, LITTER_RES);
     atBoot(() => {
       copy.uniforms.uSrc.value = tex;
@@ -462,7 +462,7 @@ export class LitterField {
       uDomain: atmo.uniforms.uDomain,
       uDt: { value: 1 / 60 },
       uWade: { value: wade },
-    });
+    }, this.field);
   }
 
   update(dt: number): void {
@@ -500,7 +500,7 @@ export class FallenLeaves {
     for (let i = 0; i < LEAF_COUNT; i++) vel[i * 4 + 3] = rand();
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {
       uSrc: { value: null },
-    });
+    }, this.pos);
     const seeds = ([[this.pos, state], [this.vel, vel]] as const).map(([target, data]) => [target, dataTexture(data, W, H)] as const);
     atBoot(() => {
       for (const [target, tex] of seeds) {
@@ -520,8 +520,8 @@ export class FallenLeaves {
       uDt: { value: 1 / 60 },
       uShake: { value: this.shake },
     };
-    this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uWade: { value: wade } });
-    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uFocus: { value: this.focus } });
+    this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uWade: { value: wade } }, this.vel);
+    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uFocus: { value: this.focus } }, this.pos);
 
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.InstancedBufferGeometry();

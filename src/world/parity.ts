@@ -56,6 +56,7 @@ export async function measureHeightParity(renderer: THREE.WebGLRenderer): Promis
       gl_FragColor = vec4(worldHeight(uPoints[i]), 0.0, 0.0, 1.0);
     }`,
     { uPoints: { value: points } },
+    target,
   );
   await settlePrograms(renderer, [passJob([mat], target)]);
   new GpuRunner(renderer).run(mat, target);

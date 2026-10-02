@@ -690,8 +690,8 @@ export class SleepingIsland {
       uStamps: { value: 0 },
       uLane: atmo.uniforms.uLane,
       uLaneOpen: atmo.uniforms.uLaneOpen,
-    });
-    const fill = simMaterial(FILL_FRAG, {});
+    }, this.carveField);
+    const fill = simMaterial(FILL_FRAG, {}, this.carveField);
     atBoot(() => {
       this.gpu.run(fill, this.carveField.read);
       this.gpu.run(fill, this.carveField.write);

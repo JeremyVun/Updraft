@@ -110,9 +110,9 @@ export class LifeField {
       uWaiting: atmo.uniforms.uWaiting,
       uBlooms: { value: this.blooms },
       uBloomCount: { value: 0 },
-    });
-    this.shiftMat = simMaterial(SHIFT_FRAG, { uSrc: { value: null }, uOffset: { value: new THREE.Vector2() } });
-    this.copyMat = simMaterial(COPY_FRAG, { uSrc: { value: null } });
+    }, this.life);
+    this.shiftMat = simMaterial(SHIFT_FRAG, { uSrc: { value: null }, uOffset: { value: new THREE.Vector2() } }, this.life);
+    this.copyMat = simMaterial(COPY_FRAG, { uSrc: { value: null } }, this.readTarget);
     this.gpu.clear(this.life.read);
     this.gpu.clear(this.life.write);
     atmo.uniforms.uLifeTex.value = this.life.texture;

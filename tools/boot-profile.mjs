@@ -3,7 +3,8 @@
 // GPU shader disk cache is cold), without the CPU profiler. THROTTLE=<rate> slows the CPU (CDP
 // Emulation.setCPUThrottlingRate). WARM=1 loads once in the same browser before measuring, for a warm-cache
 // comparison. QUERY adds query params (no leading ?). Each run prints the worst veil frame gap, the worst long task,
-// the worst long task after world construction (the `boot` mark), and the time to #veil.ready from navigation.
+// the worst long task after world construction (the `boot` mark), and the time to #veil.ready from navigation, with
+// the time in each boot stage (marks), the longest construction steps and the veil's percent sequence.
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
 const prefix=process.argv[2]??'/tmp/updraft-boot';
@@ -20,13 +21,20 @@ async function load(context,profile) {
   }
   let last=0;const tick=now=>{if(last)__boot.frames.push({at:now,gap:now-last});last=now;if(document.querySelector('#veil.ready'))__boot.ready||=performance.now();else requestAnimationFrame(tick)};requestAnimationFrame(tick);
   new MutationObserver(()=>{if(document.querySelector('#veil.ready'))__boot.ready||=performance.now()}).observe(document,{subtree:true,attributes:true,attributeFilter:['class']});
+  __boot.percents=[];
+  new MutationObserver(()=>{
+   const p=document.querySelector('.progress-percent')?.textContent, s=document.querySelector('.progress-stage')?.textContent, ready=!!document.querySelector('#veil.ready'), last=__boot.percents.at(-1);
+   if(p&&(!last||last.p!==p||last.s!==s||last.ready!==ready))__boot.percents.push({at:Math.round(performance.now()),p,s,ready});
+  }).observe(document,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
  });
  if(throttle!==1)await cdp.send('Emulation.setCPUThrottlingRate',{rate:throttle});
  if(profile){await cdp.send('Profiler.enable');await cdp.send('Profiler.start')}
  await page.goto(url);
  await page.waitForSelector('#veil.ready',{timeout:90000*throttle});
  const cpu=profile?(await cdp.send('Profiler.stop')).profile:null;
- const timings=await page.evaluate(()=>({...window.__boot,boot:performance.getEntriesByName('boot')[0]?.startTime??null}));
+ const timings=await page.evaluate(()=>({...window.__boot,boot:performance.getEntriesByName('boot')[0]?.startTime??null,
+  marks:Object.fromEntries(performance.getEntriesByType('mark').map(m=>[m.name,Math.round(m.startTime)])),
+  steps:performance.getEntriesByType('measure').filter(m=>m.name.startsWith('build step')).map(m=>({name:m.name,duration:Math.round(m.duration)}))}));
  await page.close();
  return {cpu,timings};
 }
@@ -43,8 +51,12 @@ for(let run=0;run<runs;run++) {
   const long=longest(timings.long), after=timings.boot===null?null:longest(timings.long.filter(t=>t.start>=timings.boot));
   const summary={gap:round(worst.gap),gapAt:round(worst.at),long:round(long.duration),longAt:round(long.start),afterConstruction:after&&round(after.duration),afterAt:after&&round(after.start),construction:timings.boot&&round(timings.boot),ready:round(timings.ready)};
   results.push(summary);
+  const m=timings.marks, stages=m.main&&m.boot&&m.ready?{A:m.main,B:m.boot-m.main,settle:m.settled-m.boot,warm:m.warmed-m.settled,D:m.ready-m.warmed}:null;
+  const steps=[...timings.steps].sort((a,b)=>b.duration-a.duration).slice(0,3);
   console.log(`run ${run+1}: gap ${summary.gap} ms at ${summary.gapAt}; long task ${summary.long} ms at ${summary.longAt}; after construction (${summary.construction} ms) ${summary.afterConstruction} ms at ${summary.afterAt}; ready ${summary.ready} ms`);
-  const report={...summary,worstFrame:worst.gap,long:timings.long,gl:timings.gl};
+  if(stages)console.log(`  stages ms ${JSON.stringify(stages)}; longest construction steps ${steps.map(t=>`${t.name.slice(11)}: ${t.duration}`).join(', ')}`);
+  if(timings.percents.length)console.log(`  percent ${timings.percents.map(p=>`${p.p}${p.ready?' ready':''}`).join(' ')}`);
+  const report={...summary,stages,steps:timings.steps,percents:timings.percents,worstFrame:worst.gap,long:timings.long,gl:timings.gl};
   if(cpu) {
    const totals=new Map(), nodes=new Map(cpu.nodes.map(n=>[n.id,n]));
    for(let i=0;i<cpu.samples.length;i++){const f=nodes.get(cpu.samples[i]).callFrame,key=`${f.functionName} ${f.url}:${f.lineNumber+1}`;totals.set(key,(totals.get(key)??0)+cpu.timeDeltas[i]/1000)}

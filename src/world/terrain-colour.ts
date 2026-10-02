@@ -71,7 +71,7 @@ export class TerrainColour {
     uTerrainColourReady: { value: 0 },
   };
   private readonly domain = { value: new THREE.Vector4() };
-  private readonly material = simMaterial(BAKE, { uColourBakeDomain: this.domain });
+  private readonly material = simMaterial(BAKE, { uColourBakeDomain: this.domain }, this.target);
 
   /** One startup bake across all islands; no camera moves or season changes can invalidate it. */
   bake(renderer: THREE.WebGLRenderer): void {

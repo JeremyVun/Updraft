@@ -52,7 +52,7 @@ export class BirchCanopyMotion {
         target.xz += vec2(sin(uTime * 2.1 + seed * 41.0), cos(uTime * 1.7 + seed * 31.0)) * 0.65;
         v = mix(v, target, 1.0 - exp(-drag * uDt));
         gl_FragColor = vec4(v, 0.0);
-      }`, shared);
+      }`, shared, this.vel);
     this.position = simMaterial(`
       ${ATMO_GLSL}
       ${trees}
@@ -75,7 +75,7 @@ export class BirchCanopyMotion {
           p.w += uDt;
         }
         gl_FragColor = p;
-      }`, shared);
+      }`, shared, this.pos);
   }
 
   update(dt: number): void {
