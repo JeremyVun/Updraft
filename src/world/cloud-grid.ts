@@ -44,6 +44,16 @@ export function cloudGridGeometry(finest: number): { geometry: THREE.BufferGeome
   return { geometry, levels };
 }
 
+const frustum = new THREE.Frustum();
+const viewProjection = new THREE.Matrix4();
+
+/** The six planes of what `camera` sees and its view-projection, for gridUnseen. */
+export function placeView(planes: THREE.Vector4[], matrix: THREE.Matrix4, camera: THREE.Camera): void {
+  frustum.setFromProjectionMatrix(viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+  frustum.planes.forEach((p, i) => planes[i].set(p.normal.x, p.normal.y, p.normal.z, p.constant));
+  matrix.copy(viewProjection);
+}
+
 /** Moves each grid to the eye, in steps of two of its own squares. */
 export function placeCloudGrid(levels: THREE.Vector4[], eye: THREE.Vector3): void {
   for (const l of levels) {
@@ -70,6 +80,29 @@ vec2 gridPlace(out float spacing, out float level) {
   xz -= mod(position.xz, 2.0) * g.z * fold;
   spacing = max(uGrid[0].z, far * ${(4 / N).toFixed(6)});
   return xz;
+}
+uniform vec4 uView[6];
+uniform mat4 uViewProjection;
+/**
+ * Whether every triangle round this point lies wholly outside one side of the view, for a surface whose heights here
+ * lie between lo and hi. Such a point need not be worked out: it goes to unseen(), on the grid at lo, where the
+ * points of every triangle round any point lie past that same side. Its own matrix, and xz worked out another way,
+ * leave the compiler nothing to share with the seen points' arithmetic, which must stay as it was to the last bit.
+ */
+bool pastSide(int i, vec3 c, vec3 e) {
+  return dot(uView[i].xyz, c) + uView[i].w < -dot(abs(uView[i].xyz), e) - 1.0;
+}
+bool gridUnseen(float lo, float hi) {
+  vec4 g = uGrid[int(position.y + 0.5)];
+  vec2 xz = (position.xz + g.xy / g.z) * g.z;
+  vec3 c = vec3(xz.x, 0.5 * (lo + hi), xz.y), e = vec3(2.0 * g.z, 0.5 * (hi - lo), 2.0 * g.z);
+  // Not the far side, which the grid never reaches: testing it too changed the top's compiled arithmetic.
+  return pastSide(0, c, e) || pastSide(1, c, e) || pastSide(2, c, e) || pastSide(3, c, e) || pastSide(5, c, e);
+}
+vec4 unseen(float lo) {
+  vec4 g = uGrid[int(position.y + 0.5)];
+  vec2 xz = (position.xz + g.xy / g.z) * g.z;
+  return uViewProjection * vec4(xz.x, lo, xz.y, 1.0);
 }`;
 
 /** gridHidden(xz, level): whether a finer grid covers this point. */

@@ -9,6 +9,7 @@ import { mulberry32 } from './noise';
 import { swellLift } from './water/swell';
 import { LighthouseLight, LIGHTHOUSE_BASE_Y, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
+import { fixInPlace } from '../gl/fixed';
 
 /**
  * The way the boat drifts through the flooded village, south to north. The whole island lies under the water, so
@@ -1230,6 +1231,7 @@ export class DrownedVillage {
       ),
     );
 
+    fixInPlace(...this.objects.filter(o => o !== this.lighthouse.object));
     for (const o of this.objects) {
       o.frustumCulled = false;
       o.layers.enable(REFLECTION_LAYER);

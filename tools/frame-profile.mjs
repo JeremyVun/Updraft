@@ -60,6 +60,7 @@
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
 // stairs-unindexed draws the flights and landings unindexed, as before they were indexed.
 // cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
+// grid-cull-off works out every point of the cloud's top and underside again, those round which nothing is in view too.
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
@@ -77,6 +78,9 @@
 // 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
 // run above that; CAPTURE=1 saves both frames. A build against itself must read 0. With PATH_JS, both builds then step
 // their cameras along the path (PATH_STEPS) and every step is compared the same way.
+// ALONG=10 under COMPARE_BASE plays both builds together from the fixture frame to the moment, held on every tenth frame
+// until both have been read as their loops drew it; frames whose hashes differ are compared (CAPTURE=1 saves those over
+// COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village. STATE runs on BASE's page alone.
 // Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
 // keeps the game's random stream (read the randoms drift field if a comparison still drifts).
 // mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material at the float32
@@ -97,6 +101,8 @@ const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
 const BASE=process.env.BASE??'http://127.0.0.1:5230/',COMPARE_BASE=process.env.COMPARE_BASE,FRAME=Number(process.env.FRAME??0);
 const PATH_JS=process.env.PATH_JS,PATH_STEPS=Number(process.env.PATH_STEPS??40);
+const ALONG=Number(process.env.ALONG??0);
+assert(!ALONG||COMPARE_BASE,'ALONG compares against COMPARE_BASE');
 assert(!FRAME||FRAME>=120,'FRAME must leave room for the fixture: 120 or more');
 assert(!COMPARE_BASE||FRAME,'COMPARE_BASE needs FRAME: two builds draw the same picture only when both stop on the same frame');
 // Fixtures are applied on this frame when FRAME is set, so the same story follows in every run.
@@ -173,6 +179,25 @@ window.__audit = {
     grass.tablesDirty=true;grass.bake(renderer);
   },
   record(cpuStart, realDt) { if (!this.paused) this.frames.push({ cpuMs: performance.now()-cpuStart, intervalMs: realDt*1000 }); },
+  // ALONG: every Nth frame from the fixture frame on is read as the loop drew it, and the loop holds there until released.
+  sample() {
+    const along=window.__along;
+    if (!along || frameIndex < along.from || frameIndex % along.every) return;
+    const gl=renderer.getContext(),w=gl.drawingBufferWidth,h=gl.drawingBufferHeight;
+    if (this.pixels?.length !== w*h*4) this.pixels=new Uint8Array(w*h*4);
+    renderer.setRenderTarget(null);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,this.pixels);
+    const words=new Uint32Array(this.pixels.buffer);let a=0x811c9dc5,b=0x9e3779b9;
+    for(let i=0;i<words.length;i++){a=Math.imul(a^words[i],16777619);b=Math.imul(b+words[i]|0,0x85ebca6b)^(b>>>13);}
+    const at=v=>v.toArray().map(x=>+x.toFixed(4));
+    this.sampled={frame:frameIndex,width:w,height:h,hash:[a>>>0,b>>>0],state:{story:story.name,beat:story.current.beat,
+      camera:[...at(rig.camera.position),...at(rig.camera.quaternion)],boat:at(boat.position),child:at(child.position),cygnet:at(cygnet.position),
+      randoms:window.__randoms}};
+    this.paused=true;
+  },
+  sampleData(capture) {
+    let binary='';for(let i=0;i<this.pixels.length;i+=32768)binary+=String.fromCharCode.apply(null,this.pixels.subarray(i,i+32768));
+    return {data:btoa(binary),png:capture?this.png(this.pixels):undefined};
+  },
   install() {
     const split=['birchesTrunks','birchesCanopy','birchesLitter','birchesScarf','birchesLeaves'].flatMap(k=>this.groups[k]);
     this.groups.birchesOther=birches.objects.filter(o=>!split.includes(o));
@@ -265,6 +290,8 @@ window.__audit = {
     const glass=water.mesh.material;this.glassFragment??=glass.fragmentShader;
     const glassFragment=skips.includes('glass-sky-always')?restore(this.glassFragment,'if (on < 1.0) reflected','if (true) reflected'):this.glassFragment;
     if(glass.fragmentShader!==glassFragment){glass.fragmentShader=glassFragment;glass.needsUpdate=true;}
+    this.gridCull ??= [cloudStairs.cloud.top,cloudStairs.cloud.belly].map(o=>[o,o.onBeforeRender]);
+    for(const [o,before] of this.gridCull) o.onBeforeRender=skips.includes('grid-cull-off')?()=>{for(const p of o.material.uniforms.uView.value)p.set(0,0,0,1);}:before;
     this.culling=[];
     if (omit==='culling-off') {
       const roots=[...this.groups.tree,...this.groups.pond];
@@ -642,7 +669,7 @@ window.__audit = {
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
       showing:this.hidden.filter(([o])=>showing.has(o)).length,settings:a.settings!==b.settings,
-      draw:['wind','reflection','bloom','post'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
+      draw:['wind','reflection','bloom','post','grid-cull-off'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
     if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
     return bite;
   },
@@ -706,6 +733,7 @@ async function open(base,chapter) {
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
   await withoutHotReload(page);
+  if(ALONG)await page.addInitScript(along=>{window.__along=along;},{every:ALONG,from:FIXTURE_FRAME});
   if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
     let uuid=7654321;window.__uuidRandom=()=>{uuid=uuid+0x6D2B79F5|0;let t=Math.imul(uuid^uuid>>>15,1|uuid);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
   // three's UUIDs draw from their own stream, so a build that creates more or fewer objects keeps the game's random stream.
@@ -733,7 +761,7 @@ async function open(base,chapter) {
     source=source.replace('function frame(now) {','function frame(now) { if (window.__audit?.paused || window.__audit?.stopAt && frameIndex >= window.__audit.stopAt) { requestAnimationFrame(frame); return; }');
     assert(source.includes('window.__audit?.paused'),'Missing pause hook');
     assert.equal(source.split('frames++;').length, 2, 'Missing or ambiguous frame hook');
-    source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); frames++;');
+    source=source.replace('frames++;','window.__audit?.record(cpuStart,realDt); window.__audit?.sample(); frames++;');
     await route.fulfill({response,body:source+injection});
   });
   await page.goto(base+'?shot&start=1&ratio='+(process.env.RATIO??'1.5')+'&msaa='+(process.env.MSAA??'2')+'&analytics=0&progress=0'+(entry==='island'?'':'&chapter='+entry));
@@ -741,6 +769,7 @@ async function open(base,chapter) {
   await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
   assert(await page.evaluate(()=>!!window.__audit),base+' is not a dev server: this tool patches src/main.ts, which a built bundle does not serve');
   if(FRAME)await page.evaluate(stop=>{__audit.stopAt=stop;},entry==='stairs'&&fixture?1e9:FRAME);
+  if(ALONG)return {page,errors,playing:entry==='stairs'&&fixture?stairsFixtureOnFrames(page,fixture,FIXTURE_FRAME,'__audit.stopAt=__stats.frame;'):null};
   if(entry==='stairs'&&fixture){
     if(FRAME)await stairsFixtureOnFrames(page,fixture,FIXTURE_FRAME,'__audit.stopAt=__stats.frame;');
     else await stairsFixture(page,fixture,on=>page.evaluate(on=>__audit.fast(on),on));
@@ -767,12 +796,50 @@ async function open(base,chapter) {
   return {page,errors,detail};
 }
 
+// Both builds play together, each held on every ALONGth frame until both are read; a frame whose hash differs is compared.
+async function along(chapter) {
+  const sides=[await open(COMPARE_BASE,chapter),await open(BASE,chapter)];
+  if(process.env.STATE)await sides[1].page.evaluate(code=>__audit.state(code),process.env.STATE);
+  const failed=Promise.all(sides.map(s=>s.playing)).then(()=>null,e=>e);
+  const result={every:ALONG,samples:0,changed:0,over1:0,max:0,worst:null,first:null,last:null};
+  for(;;){
+    const reads=await Promise.race([failed.then(e=>{if(e)throw e;return new Promise(()=>{});}),
+      Promise.all(sides.map(s=>s.page.waitForFunction(()=>__audit.sampled||__stats.frame>=__audit.stopAt,null,{timeout:1800000,polling:20})
+        .then(()=>s.page.evaluate(()=>({sampled:__audit.sampled,done:__stats.frame>=__audit.stopAt,frame:__stats.frame})))))]);
+    const [a,b]=reads.map(r=>r.sampled);
+    if(!a&&!b&&reads.every(r=>r.done))break;
+    assert(a&&b&&a.frame===b.frame&&a.width===b.width&&a.height===b.height,'The builds fell out of step: '+JSON.stringify(reads.map(r=>[r.frame,r.sampled?.frame,r.done])));
+    result.samples++;result.first??=a.frame;result.last=a.frame;
+    if(a.hash[0]!==b.hash[0]||a.hash[1]!==b.hash[1]){
+      const capture=process.env.CAPTURE==='1';
+      const [x,y]=await Promise.all(sides.map(s=>s.page.evaluate(capture=>__audit.sampleData(capture),capture)));
+      const p=Buffer.from(x.data,'base64'),q=Buffer.from(y.data,'base64');let changed=0,over1=0,max=0;const box=[Infinity,Infinity,-1,-1];
+      for(let i=0;i<p.length;i++){const d=Math.abs(p[i]-q[i]);if(d){changed++;if(d>1)over1++;if(d>max)max=d;
+        const px=(i>>2)%a.width,py=a.height-1-Math.floor((i>>2)/a.width);box[0]=Math.min(box[0],px);box[1]=Math.min(box[1],py);box[2]=Math.max(box[2],px);box[3]=Math.max(box[3],py);}}
+      const drift=Object.keys(a.state).filter(k=>JSON.stringify(a.state[k])!==JSON.stringify(b.state[k])).map(k=>[k,b.state[k],a.state[k]]);
+      const row={frame:a.frame,beat:a.state.beat,changed,over1,max,box:changed?box:undefined,drift:drift.length?drift:undefined};
+      console.log(JSON.stringify({chapter,along:row}));
+      if(capture&&max>Number(process.env.COMPARE_MAX??0))for(const [side,frame] of [['against',x],['here',y]])await fs.writeFile(out+'-'+chapter+'-f'+a.frame+'-'+side+'.png',Buffer.from(frame.png,'base64'));
+      result.changed++;if(over1)result.over1++;if(max>result.max){result.max=max;result.worst=row;}
+    }
+    if(result.samples%100===0)console.log(JSON.stringify({chapter,progress:{frame:a.frame,story:a.state.story,beat:a.state.beat,samples:result.samples,changed:result.changed,max:result.max}}));
+    await Promise.all(sides.map(s=>s.page.evaluate(()=>{__audit.sampled=null;__audit.paused=false;})));
+  }
+  const error=await failed;
+  for(const s of sides){assert.deepEqual(s.errors,[],'Browser errors');await s.page.close();}
+  if(error)throw error;
+  console.log(JSON.stringify({chapter,along:result}));
+  if(result.max>Number(process.env.COMPARE_MAX??Infinity))differing.push({chapter,along:result});
+  report.push({chapter,along:result});
+}
+
 const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
 const report=[],inexact=[],differing=[];
 try {
   for(const chapter of process.argv.slice(2).length ? process.argv.slice(2) : ['island','washing','meadow:walk','birches','drowned','wood','sleeping','sea','mirror','boats','jetty']) {
     const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
     const busyAtStart=busy();
+    if(ALONG){await along(chapter);continue;}
     let against,comparePage;
     if(COMPARE_BASE){
       const other=await open(COMPARE_BASE,chapter);

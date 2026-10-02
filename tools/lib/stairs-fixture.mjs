@@ -46,12 +46,14 @@ export async function stairsFixture(page, fixture, fast) {
 // The same moments reached the same way every run, for comparing two builds' frames: the gestures are dispatched to
 // the canvas from inside the page, one pointer position a frame, and onMoment() is called in the page on the frame
 // the moment arrives (the caller stops the loop there). Needs ?shot, whose frames are fixed 1/60 s steps.
+// It acts once per game frame, so a caller may hold the loop on any frame without changing what follows. drowned plays
+// on out of the fog until the village has had the boat for 300 frames.
 export function stairsFixtureOnFrames(page, fixture, at, onMoment) {
   return page.evaluate(([fixture,at,onMoment])=>new Promise((done,fail)=>{
     const g=__game,canvas=g.renderer.domElement,arrive=new Function(onMoment),w=innerWidth,h=innerHeight;
     const screen=v=>{const p=v.clone().project(g.rig.camera);return [(p.x*0.5+0.5)*w,(0.5-p.y*0.5)*h];};
     const inside=q=>[Math.min(Math.max(q[0],20),w-20),Math.min(Math.max(q[1],20),h-20)];
-    let restored=fixture==='waiting',looped=false,stroke=null,rest=0;
+    let restored=fixture==='waiting',looped=false,stroke=null,rest=0,seen=-1,left=0;
     const swipe=(from,to,frames,after)=>{stroke={from,to,frames,k:-1};rest=after;};
     const gesture=s=>{
       if(s.beat==='loop'){
@@ -73,14 +75,18 @@ export function stairsFixtureOnFrames(page, fixture, at, onMoment) {
       top:s=>s.beat==='skein'&&s.t>10,
       sail:s=>s.beat==='sail'&&s.sailed>=140,
       fog:s=>s.beat==='fog'&&s.t>3,
+      drowned:s=>!!left&&__stats.frame-left>=300,
     }[fixture];
     if(!moment){fail(Error('Unknown stairs fixture '+fixture));return;}
     const end=at+40000;
     const tick=()=>{
       const frame=__stats.frame,c=g.story.current,s={chapter:g.story.name,beat:c.beat,t:c.now-c.beatStart,sailed:c.sailed??0};
+      if(frame===seen){requestAnimationFrame(tick);return;}
+      seen=frame;
       if(frame<at){requestAnimationFrame(tick);return;}
       if(!restored){c.restoreCheckpoint('flight-3',[3]);restored=true;requestAnimationFrame(tick);return;}
-      if(s.chapter!=='stairs'||frame>end){fail(Error('Stairs fixture '+fixture+' missed its moment at '+JSON.stringify(s)));return;}
+      if(fixture==='drowned'&&s.chapter==='drowned'&&!left)left=frame;
+      if(s.chapter!=='stairs'&&!left||frame>end){fail(Error('Stairs fixture '+fixture+' missed its moment at '+JSON.stringify(s)));return;}
       if(s.beat==='loop')looped=true;
       if(moment(s)){arrive();done({frame,beat:s.beat});return;}
       if(stroke){
@@ -89,7 +95,7 @@ export function stairsFixtureOnFrames(page, fixture, at, onMoment) {
           pointerType:'mouse',pointerId:1,isPrimary:true,bubbles:true}));
         if(stroke.k>=stroke.frames)stroke=null;
       } else if(rest>0)rest--;
-      else if(looped||s.beat==='loop')gesture(s);
+      else if(s.chapter==='stairs'&&(looped||s.beat==='loop'))gesture(s);
       requestAnimationFrame(tick);
     };
     tick();

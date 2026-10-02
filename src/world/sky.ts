@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { REFLECTION_LAYER } from './water/reflection';
 import { CLOUD_DECK, register } from '../gl/variants';
+import { fixInPlace } from '../gl/fixed';
 
 const VERT = /* glsl */ `
 out vec3 vDir;
@@ -40,5 +41,6 @@ export function createSky(): THREE.Mesh {
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;
   mesh.layers.enable(REFLECTION_LAYER);
+  fixInPlace(mesh);
   return mesh;
 }

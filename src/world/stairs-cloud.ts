@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { glsl, tuning } from '../tuning';
+import { fixInPlace } from '../gl/fixed';
 import { CloudWake } from './stairs-wake';
 import { BEAM, LENGTH } from '../traveller/boat/form';
 import { VAPOUR_GLSL } from './cloud-vapour';
 import { CloudTowers, TOWER_FOOT } from './cloud-towers';
 import { CloudLobes, LOBES_TEXTURE_GLSL } from './cloud-lobes';
-import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid } from './cloud-grid';
+import { CLOUD_GRID_FRAG, CLOUD_GRID_VERT, cloudGridGeometry, placeCloudGrid, placeView } from './cloud-grid';
 import { BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, RUN_YAW, TOWER_GATE, flight } from './stairs-layout';
 
 /** The heaps' dome and towers far out, and the big, middle and fine lobes on the open cloud and on a heap, in metres. */
@@ -32,6 +33,7 @@ uniform vec2 uRoute[${ROUTE_POINTS}];
 uniform vec4 uTrail[${TRAIL_POINTS}];
 uniform vec4 uGate;
 uniform float uSurface;
+uniform float uRise;
 out vec3 vWorld;
 out float vRing;
 out vec4 vCalm;
@@ -46,6 +48,10 @@ out vec3 vTower;
 flat out float vLevel;
 TOP
 void main() {
+  if (gridUnseen(uSurface - 0.5, uSurface + uRise)) {
+    gl_Position = unseen(uSurface - 0.5);
+    return;
+  }
   float spacing;
   vec2 xz = gridPlace(spacing, vLevel);
   vRing = length(xz - cameraPosition.xz);
@@ -435,6 +441,10 @@ out float vBefore;
 flat out float vLevel;
 BELLY
 void main() {
+  if (gridUnseen(uCloudDeckY.x - 11.0, uCloudDeckY.x + 28.0)) {
+    gl_Position = unseen(uCloudDeckY.x - 11.0);
+    return;
+  }
   float spacing;
   vec2 xz = gridPlace(spacing, vLevel);
   vRing = length(xz - cameraPosition.xz);
@@ -663,6 +673,20 @@ export class FogBank {
  * standing out of it along the way and wisps streaming across it. Inside it, the shared analytic deck in the fog
  * takes over. Both surfaces lie on one world-anchored mesh (`cloud-grid.ts`) over baked lobes (`cloud-lobes.ts`).
  */
+/**
+ * How high over its surface the top of the cloud can stand: every term of cloudTop at its greatest, with the lobes at
+ * the most their bakes hold, and the swell round the tallest tower's foot.
+ */
+function topRise(lobes: CloudLobes, feet: THREE.Vector4[]): number {
+  let most = -Infinity;
+  for (const bake of [lobes.soft, lobes.full]) for (let i = 0; i < bake.length; i += 4) most = Math.max(most, bake[i]);
+  most += 0.01;
+  const lobe = Math.max(0, most - 0.25), s = SHAPE;
+  const tallest = Math.max(...feet.map(f => f.w * f.z));
+  return s.heap + s.tower * (Math.max(0, most + 0.2) + 0.1) + lobe * (s.big[0] + s.big[1] + s.mid[0] + s.mid[1] + s.fine[0] + s.fine[1])
+    + 0.9 + tallest * TOWER_FOOT.rise;
+}
+
 export class StairsCloud {
   readonly group = new THREE.Group();
   readonly top: THREE.Mesh;
@@ -677,11 +701,13 @@ export class StairsCloud {
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Vector4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number } };
-  private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Vector4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
+  private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
   /** The parting behind the hull: where its bow has been, newest first, how fresh each point is, and how far along. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
+  private readonly view = { value: Array.from({ length: 6 }, () => new THREE.Vector4()) };
+  private readonly viewProjection = { value: new THREE.Matrix4() };
   private trailAlong = 0;
 
   constructor() {
@@ -705,11 +731,15 @@ export class StairsCloud {
       uWispAir: { value: new THREE.Vector2(1, 0) },
       // The surface stays where the cloud's top is, even while the deck swells above it into fog.
       uSurface: { value: CLOUD.top },
+      uRise: { value: 0 },
+      uView: this.view,
+      uViewProjection: this.viewProjection,
     };
     this.shape = new TopShape(this.lobes, this.topUniforms.uRoute.value, this.topUniforms.uGate.value, this.topUniforms.uCalmAt.value, this.topUniforms.uFeet.value);
     this.group.add(this.wake.mesh);
     this.group.add(this.towers.group);
     this.towers.feet(this.topUniforms.uFeet.value);
+    this.topUniforms.uRise.value = topRise(this.lobes, this.topUniforms.uFeet.value);
     const ground = (x: number, z: number) => this.surfaceAt(x, z);
     this.wake.groundAt = ground;
     const disc = this.grid.geometry;
@@ -731,6 +761,8 @@ export class StairsCloud {
       uCalmAt: { value: new THREE.Vector3(flight(BELOW_CLOUD).bottom.x, flight(BELOW_CLOUD).bottom.z + 8, 55) },
       uReach: { value: 1500 },
       uStairAt: { value: new THREE.Vector2(flight(BELOW_CLOUD + 1).landing.x, flight(BELOW_CLOUD + 1).landing.z) },
+      uView: this.view,
+      uViewProjection: this.viewProjection,
     };
     this.belly = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.bellyUniforms },
@@ -744,6 +776,9 @@ export class StairsCloud {
     this.belly.renderOrder = -2;
     this.belly.visible = false;
     this.group.add(this.belly);
+    fixInPlace(this.group, this.wake.mesh, this.top, this.belly);
+    // Only the points of the grid round which something may be in view are worked out, in each view that draws it.
+    this.top.onBeforeRender = this.belly.onBeforeRender = (_r, _s, camera) => placeView(this.view.value, this.viewProjection.value, camera);
   }
 
   /**
