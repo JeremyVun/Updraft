@@ -24,7 +24,7 @@ foreground, and report once at the end.
 - Progress shares: start from the iPad's A 0–3%, B 3–9%, C 9–94%, D 94–100%; phase 2 averages them with a 4×-throttled
   Chrome load's measured stage times (design.md, Progress).
 
-## Phase 1: programs compile in groups, settle, and warm one new program at a time
+## Phase 1: programs compile in a window of 8, settle, and warm one new program at a time
 
 Owns: `src/gl/boot.ts` (the helper and `warmRender`), `boot()` in `src/main.ts` and the construction-time bakes it has to move, `src/params.ts`
 (`coldshaders`), the grass compile paths (`src/world/grass.ts` `precompile`, `precompileUnclipped`), the post chain's
@@ -63,7 +63,7 @@ one `tools/play.mjs` still of the opening at `?shot`, compared against the same 
 
 Done marker: `Phase 1: done <commit>` here, with the measured numbers.
 
-Phase 1: done fdf970b. Measured 2026-10-02 on QA previews of this build and of c7d6c15, back to back with
+Phase 1: done fdf970b, merged to `main` at d15afd3 (2026-10-03) with the grade's other `SUN_GLOW` program added to the variant steps. Measured 2026-10-02 on QA previews of this build and of c7d6c15, back to back with
 `tools/boot-profile.mjs` (fresh browser profile per run), while other sessions kept the machine busy:
 
 | Chrome, this Mac | c7d6c15 | fdf970b |
@@ -86,8 +86,8 @@ and no stray first uses. Group size stays 8.
 ## Phase 2: world construction in short steps, and progress reported
 
 Owns: the top-level construction in `src/main.ts`, `src/world/stairs.ts` (`CloudStairs` construction only), any
-constructor split it needs, `progress()` in `src/start-screen.ts` (DOM writes only, no styling), and
-`tools/start-check.mjs` (the `BUILD_STEPS` assertion).
+constructor split it needs, `progress()` in `src/start-screen.ts` (DOM writes only, no styling), `warmRender` in
+`src/gl/boot.ts` (culled objects and sim passes, step 5), and `tools/start-check.mjs` (the `BUILD_STEPS` assertion).
 
 Build:
 
@@ -104,6 +104,12 @@ Build:
    `#start-status` gets the stage line on each stage change only.
 4. `BUILD_STEPS`: count the construction steps in a real boot into `__stats.bootSteps`; `start-check` asserts they
    equal the constant.
+5. Every program first drawn behind the veil (design.md, "Every program is first drawn behind the veil"): the warm
+   draws objects that frustum culling skips today, and each sim material draws once into a scratch target of the
+   format it really writes. Prove it with a QA probe in the style of `bootStrayPrograms`: count programs first drawn
+   after Begin (by program, from three's `renderer.info.programs` or a `useProgram` hook) through the opening minute of
+   play and a `?chapter=stairs` load, and report the names. The simulation's state and the bakes stay bit for bit.
+   Each of these first draws joins stage C's warm count.
 
 Verify (phase 2 gate): typecheck and build; `start-check` on the QA preview; `boot-cloth-check.mjs` (the scarf's
 settle is untouched); five cold Chrome loads at 1× (worst gap under 150 ms, Begin at 2.8 s or less) and three at 4×

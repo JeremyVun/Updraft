@@ -83,28 +83,43 @@ splits into. The cygnet keeps paddling smoothly everywhere.
 
 ## Mechanism
 
-### Programs: compile in small groups, settle, then warm one new program at a time
+### Programs: compile in a window of 8, settle, then warm one new program at a time
 
 Every program the game uses is created and settled behind the veil by one helper in `src/gl/boot.ts`, and first drawn
-by `warmRender` with at most one new program per task.
+by `warmRender` with at most one new program per batch.
 
-- **Compile in groups.** Collect the materials to compile: scene materials, once per program variant
-  (`otherVariants()`), sim and bake materials (`simMaterials`), the grass table materials, and the post chain's
-  materials. Compile them in groups of at most 8 materials with `renderer.compileAsync(group, camera, targetScene)`.
-  A group of 8 keeps Chrome's first status query short: one query waits behind every compile issued before it, and
-  138 programs at once made it wait 0.4 s.
-- **Settle each program.** After a group's `compileAsync` resolves, call `getUniforms()` once on each new program in
-  `renderer.info.programs` (three's first use, `onFirstUse`: the info log, link status and uniform queries). Yield
-  (`yieldBoot`) whenever 12 ms have passed since the last paint.
-- **Warm one new program per task.** `warmRender` builds its batches so that each holds at most one object whose
-  program has not been drawn yet, plus up to 64 objects whose programs have. It yields between batches as now. The
-  same holds for the variant passes. On a driver where a first draw is expensive (Safari, slow mobile GPUs) each pause
-  is then one program.
+- **Compile in a window of 8.** `settlePrograms` takes compile jobs: scene materials, once per program variant
+  (`variantSteps()`), sim and bake materials (`simMaterials`), the grass table and unclipped materials, and the post
+  chain's materials (`post.compileJobs()`, also once per variant step, for the grade's `SUN_GLOW`). Each object is
+  compiled on its own (`renderer.compile` on a root that visits only that object), and at most 8 programs are compiling
+  at once: when 8 are in flight it settles the finished ones until 4 or fewer remain. Eight keeps Chrome's status
+  queries short: one query waits behind every compile issued before it, and 138 programs at once made it wait 0.4 s.
+  Waiting out each group of 8 before the next cost about 0.86 s in all, because the GPU process sat idle between
+  groups (built 2026-10-02).
+- **Settle each program.** Once its compile finishes, `getUniforms()` is called once on each new program (three's
+  first use, `onFirstUse`: the info log, link status and uniform queries). Yield (`yieldBoot`) whenever 12 ms have
+  passed since the last paint.
+- **Warm one new program per batch.** `warmRender` builds its batches so that each holds at most one object whose
+  program has not been drawn yet, plus up to 64 objects whose programs have. It yields on the same 12 ms budget, not
+  after every batch: about 145 batches each waiting for a paint would add about 2.4 s. On a driver where a first draw
+  is expensive (Safari, slow mobile GPUs) every batch then yields, and each pause is one program. The same holds for
+  the variant passes.
+- **At most 4 first draws queued on the GPU.** After each batch that first draws a program, `warmRender` sets a
+  fence and waits until no more than 4 such batches are unfinished. With `?coldshaders`, Chrome on Metal builds each
+  pipeline at its first draw; queuing them all made later buffer uploads block the main thread for 3.7 to 5.8 s.
+  Waiting for every first draw cost 0.8 s on an ordinary load; a depth of 4 costs about 0.1 s.
 - **Draw nothing unsettled.** The bakes (`terrain.fields`, `terrain.colour`, `terrainHeights`, `grass.bake`),
-  `warmRender` and the first `post.render` draw only with settled programs. Constructors that bake during world
-  construction (the ones that render a texture in their constructor, such as `GroundBakes`, `Water`, `LifeField`,
-  `CloudShadows`) either settle their materials through the helper first or move the bake into `boot()` after the
-  programs settle.
+  `warmRender` and the first `post.render` draw only with settled programs. Draws that constructors made during
+  world construction (the seed copies of `Petals`, `LitterField` and `FallenLeaves`, and `SleepingIsland`'s carve
+  field) wait for boot through `atBoot()` and run in `runBootPasses()` after the programs settle; their outputs are bit
+  for bit unchanged. Every `atBoot` pass must be constructed before `boot()` runs.
+- **Every program is first drawn behind the veil.** Settling is not the whole cost: a first draw also builds the
+  driver's pipeline (about 200 ms on Apple hardware, slow on mobile GPUs). Two kinds of program still had their first
+  draw in play after phase 1: objects outside the warm camera's view (three's frustum culling skips them in
+  `warmRender`) and the full-screen sim passes (wind, life, petals), first drawn in the first frame after Begin. The
+  warm draws culled objects too, and draws each sim material once into a scratch target with the same format as the
+  target it really writes, so the simulation's state is untouched (added 2026-10-03, under the 2026-09-29
+  constraint that play never freezes).
 - **QA probe for stray compiles.** In QA builds, boot wraps the context's `getProgramInfoLog` (three calls it only
   inside first use, with `debug.checkShaderErrors` on, as it is by default) and counts calls made outside the
   settle helper. `window.__stats.bootStrayPrograms` holds the count and the first few programs' material names.
