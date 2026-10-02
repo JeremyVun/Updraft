@@ -288,7 +288,7 @@ displays don't look like overload.
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
 for every level at boot (about 28 MiB for the four attachments, and 5.5 MiB for the blades' fog), so quality changes
 never allocate or recompile. The near level's geometry holds its blade twice, with six segments and with five; at
-Low and the last step the sixth segment closes over a second, and the five-segment form, the same blade fully closed,
+Low the sixth segment closes over a second, and the five-segment form, the same blade fully closed,
 is drawn only once it has shut (`grass.setNearSegments`).
 Wind resolution, solver cadence and water mesh topology never change during play.
 
