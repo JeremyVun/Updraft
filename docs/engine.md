@@ -20,8 +20,9 @@ Nothing heavy may happen in the first frames of play. Before the loop starts, be
 3. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), and the visible grass
    tables bake.
 4. `warmRender` draws the scene into the offscreen target in batches of up to 64 objects, at most one of them with
-   a program not drawn before (a slow driver pays for a first draw in the task that issues it), yielding whenever
-   12 ms have passed since the last frame, then the post chain runs; visibility and layer masks are restored even on
+   a program not drawn before (a slow driver pays for a first draw in the task that issues it), with at most four
+   first draws queued on the GPU (a cold driver builds the pipeline there, and uploads behind it would block the main
+   thread), yielding whenever 12 ms have passed since the last frame, then the post chain runs; visibility and layer masks are restored even on
    failure. Textures upload, buffers land on the GPU and render targets are allocated. The objects with program
    variants are drawn again with each variant.
 5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
