@@ -181,6 +181,34 @@ function culled(object: Drawable): boolean {
   return (object as Partial<THREE.Sprite>).isSprite ? !frustum.intersectsSprite(object as THREE.Sprite) : !frustum.intersectsObject(object);
 }
 
+/** First draws the GPU may still be working through when the next is issued. */
+const FIRST_DRAWS_QUEUED = 4;
+
+/** Fences after the warm batches that first drew a program, oldest first. */
+const firstDraws = {
+  fences: [] as WebGLSync[],
+  fence(gl: WebGL2RenderingContext): void {
+    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (sync) this.fences.push(sync);
+    gl.flush();
+  },
+  /** Waits, without blocking, until fewer than `queued` first draws are still on the GPU. */
+  async catchUp(gl: WebGL2RenderingContext, queued: number): Promise<void> {
+    for (;;) {
+      const oldest = this.fences[0];
+      if (!oldest) return;
+      if (gl.isContextLost() || gl.clientWaitSync(oldest, 0, 0) !== gl.TIMEOUT_EXPIRED) {
+        gl.deleteSync(oldest);
+        this.fences.shift();
+      } else if (this.fences.length < queued) {
+        return;
+      } else {
+        await idle(2);
+      }
+    }
+  },
+};
+
 /**
  * Draws the scene in batches, with every object shown, into `target` (never presented): textures upload,
  * buffers land on the GPU and render targets are allocated, so the first real frame is an ordinary one. A batch
@@ -193,6 +221,7 @@ export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Sce
   const masked: { object: THREE.Object3D; mask: number }[] = [];
   const candidates: { object: Drawable; mask: number }[] = [];
   const previousTarget = renderer.getRenderTarget();
+  const gl = renderer.getContext() as WebGL2RenderingContext;
   scene.traverse(o => {
     if (!o.visible) { hidden.push(o); o.visible = true; }
     if ('material' in o) {
@@ -208,10 +237,14 @@ export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Sce
     renderer.setRenderTarget(target);
     let batch: typeof candidates = [];
     let fresh = false;
-    const draw = (): void => {
+    const draw = async (): Promise<void> => {
+      // A cold driver builds a program's GPU pipeline at its first draw, and while the GPU is busy with those,
+      // uploads in later draws block the main thread.
+      if (fresh) await firstDraws.catchUp(gl, FIRST_DRAWS_QUEUED);
       for (const { object, mask } of batch) object.layers.mask = mask;
       renderer.render(scene, camera);
       for (const { object } of batch) object.layers.mask = 0;
+      if (fresh) firstDraws.fence(gl);
       batch = [];
       fresh = false;
     };
@@ -219,14 +252,15 @@ export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Sce
       if (!(entry.mask & camera.layers.mask) || culled(entry.object)) continue;
       const undrawn = programsOf(renderer, entry.object, camera, scene).filter(p => !drawn.has(p));
       if (batch.length >= WARM_BATCH || (undrawn.length > 0 && fresh)) {
-        draw();
+        await draw();
         await keepPainting();
       }
       batch.push(entry);
       for (const p of undrawn) drawn.add(p);
       fresh ||= undrawn.length > 0;
     }
-    if (batch.length) draw();
+    if (batch.length) await draw();
+    await firstDraws.catchUp(gl, 0);
   } finally {
     renderer.setRenderTarget(previousTarget);
     for (const { object, mask } of masked) object.layers.mask = mask;
