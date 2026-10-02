@@ -96,7 +96,7 @@ import { WINDOW, followWindow, onWindowMove, windowCentre } from './world/window
 import { tuning } from './tuning';
 import { startScreen } from './start-screen';
 import { contextRecovery } from './gl/context-recovery';
-import { checkGraphicsCapability } from './gl/graphics-capability';
+import { checkGraphicsCapability, compactFrameFormat } from './gl/graphics-capability';
 import { telemetry } from './analytics/telemetry';
 import { frameTiming } from './gl/frame-time';
 import { FramePacer } from './gl/frame-pacer';
@@ -414,7 +414,7 @@ const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
 const maxPixelRatio = params.ratio ?? Math.min(nativePixelRatio, 1.5);
 /** Touch Auto opens at High: its ceiling is High's render scale. */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-const post = new Post(renderer, scene, rig.camera, Math.min(params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4), Math.max(0, graphicsCapability.maxSamples)), atmo.uniforms.uSunDir.value);
+const post = new Post(renderer, scene, rig.camera, Math.min(params.msaa ?? ((params.ratio ?? nativePixelRatio) >= 1.75 ? 2 : 4), Math.max(0, graphicsCapability.maxSamples)), atmo.uniforms.uSunDir.value, compactFrameFormat(renderer));
 const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
 const doorwayShared = [sky, terrain.mesh, water.mesh, ...doorwayActors];
 const doorwaySource = new Set([...doorwayShared, grass.group, washing.group, washingBaskets, pinwheels.group, door.group, lines.batch.mesh, swirl.batch.mesh, washingInvitation.batch.mesh]);

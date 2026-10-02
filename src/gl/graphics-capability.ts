@@ -30,3 +30,16 @@ export function checkGraphicsCapability(renderer: THREE.WebGLRenderer): Graphics
   }
   return { supported: true, maxSamples, reason: '' };
 }
+
+/**
+ * Whether the frame's colour targets (the scene, its resolve, the clean copy and bloom), which never hold alpha, can be
+ * R11F_G11F_B10F: half the memory and bandwidth of half-float RGBA, where it renders with as much multisampling.
+ */
+export function compactFrameFormat(renderer: THREE.WebGLRenderer): boolean {
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  const most = (format: number): number => {
+    const counts = gl.getInternalformatParameter(gl.RENDERBUFFER, format, gl.SAMPLES) as Int32Array | null;
+    return counts ? Math.max(0, ...counts) : -1;
+  };
+  return most(gl.R11F_G11F_B10F) >= Math.max(0, most(gl.RGBA16F));
+}
