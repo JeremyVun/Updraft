@@ -595,8 +595,6 @@ export class Water {
     if (!mirrored) return;
     const unchanged = sky || (this.renderedRooms.equals(rooms) && this.renderedRoom.equals(room) && this.reflection.holds(camera));
     if (this.frame++ % mirrorEvery && !first && unchanged) return;
-    // Nothing samples the reflection while the sea is hidden.
-    if (!this.mesh.visible) return;
     this.renderedRooms.copy(rooms);
     this.renderedRoom.copy(room);
     atmo.uniforms.uMirrorPass.value = 1;

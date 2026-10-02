@@ -95,8 +95,7 @@
 // blades' fog at their root: the look of fog once per blade, not its saving; grass-fog is that saving's upper bound),
 // grass-near-<f> (the near grass level's reach times f), grass-near-5seg (near blades with five segments), rt-r11 (the
 // scene, resolve, post.clean and bloom targets as R11F_G11F_B10F). Phase 7b's old paths: rt-half (those targets as
-// half-float RGBA again), sky-bank-on (the sky's storm bank compiled in with no storm), cloud-ground-shown (the sea,
-// terrain and grass drawn above the stairs' cloud).
+// half-float RGBA again), sky-bank-on (the sky's storm bank compiled in with no storm).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -483,9 +482,6 @@ window.__audit = {
       for(const t of [post.sceneTarget,post.clean,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
         t.texture.internalFormat=rt;t.texture.format=rt?THREE.RGBFormat:THREE.RGBAFormat;t.dispose();}
     }
-    // cloud-ground-shown: the sea, terrain and grass drawn above the stairs' cloud, as before 7b.
-    for(const [o,v] of this.groundShown??[])o.visible=v;this.groundShown=[];
-    if(variants.includes('cloud-ground-shown'))for(const o of underTheCloud){this.groundShown.push([o,o.visible]);o.visible=true;}
     // sky-bank-on: the sky's storm bank compiled in whatever the weather, as before 7b.
     this.bankBuilt??=sky.material.defines.STORM_BANK;
     const bank=variants.includes('sky-bank-on')?1:this.bankBuilt;
