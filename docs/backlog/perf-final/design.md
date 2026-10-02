@@ -308,7 +308,7 @@ The profile is `profile.md`. His answers, verbatim where quoted:
   around the sun at those levels. The glow, drawn in the post chain from the sun's on-screen brightness, was merged
   on its stills (2026-10-03, "Merge").
 - **Phase 7's survey (2026-10-03),** `profile.md` last section, stills in `/tmp/updraft-pf-p7-shots/`. Chosen:
-  - Grass fog once per blade at its root: "Every level" (about 4.5% weighted, 10–11% at Sleeping and the summit,
+  - Grass fog once per blade (built a quarter of the way up the blade, which is closer to today than the root): "Every level" (about 4.5% weighted, 10–11% at Sleeping and the summit,
     at most 4/255).
   - The frame's internal buffers as `R11F_G11F_B10F` (scene, resolve, `post.clean`, bloom chain): "Every level"
     (3–5% weighted, up to 10% in the drowned village; about −60 MiB at Ultra; at most 3–5/255, no banding seen).

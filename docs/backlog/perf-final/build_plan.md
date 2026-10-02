@@ -399,7 +399,17 @@ stairs' visibility in `src/main.ts` / `src/story/stairs*.ts`):
 - Sea and terrain not drawn above the stairs' cloud on top and during the sail, every level: a gate from the story's
   beat and the camera above the deck; `ALONG` against the pre-change commit along the whole top and sail must stay at
   most 3/255 everywhere, otherwise dropped. Never hide terrain while the sea draws (`LAND_SKIP`).
-- **Done:** 7b-grass [ ]; 7b-frame [ ]
+- **Done:** 7b-grass [x] at 5af509a (2026-10-03); 7b-frame [ ]
+- **7b-grass as built:** a per-frame pass (`FOG_FRAG`, `grass.shadeFog` in `grass.bake`, one program, about 5.5 MiB of
+  half-float targets) works out each blade's fog once, a quarter of the way up the blade (lead's call: fog at the
+  root read 6/255 at `island`, a quarter up is the closest to today everywhere measured); the blade's vertices read it
+  with one `texelFetch`. Ultra against 2a1eefb: meadow:walk 4/255, island one pixel at 7 (64k channels at 2–3),
+  sleeping 2, summit and wood 1; isolated larger pixels on camera paths are the old per-vertex fog extrapolating on
+  MSAA slivers. Saving with the wind step in the timing (`FRAME_SIM=1`): Ultra 3–6%, Low 5.5–11%.
+  Near blades: the geometry holds a 6- and a 5-segment blade; at Low `uFewer` closes the sixth segment over a second
+  and the draw range swaps once it has shut (no program, no allocation). Saving at Low 3–6%.
+  Tools that redraw frozen frames call `grass.shadeFog(renderer)` after moving the camera; time any pass the scene's
+  vertices read with `FRAME_SIM=1`.
 
 ## Phase 8: whole-game verification
 
