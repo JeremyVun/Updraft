@@ -389,7 +389,7 @@ export class CrossingChapter implements Chapter {
       this.seaTurn += (-this.quarter * k.childTurn * near - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
       seatYaw += this.seaTurn;
     }
-    child.ride(boat.seat(this.seat), seatYaw, boat.roll, boat.pitch);
+    child.ride(boat.seat(this.seat), seatYaw, boat);
     plane.hold(child);
 
     if (farewell && back) {

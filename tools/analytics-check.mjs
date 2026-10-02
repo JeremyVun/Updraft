@@ -33,7 +33,7 @@ const source=fs.readFileSync('src/analytics/telemetry.ts','utf8')
 globalThis.testQa=false;
 const {telemetry:t}=await load('telemetry.ts',source);
 t.loadingFinished(2300,933);t.start('island',false);t.start('island',false);t.chapter('island');t.chapter('lines');
-t.quality('high',1.25,2);for(let i=0;i<3601;i++)t.frame(1000/60);t.quality('last',.72,2);
+t.quality('high',1.25,2);for(let i=0;i<3601;i++)t.frame(1000/60);t.quality('low',.72,2);
 t.failure('runtime',new TypeError('secret email user@example.invalid'));t.failure('runtime',new TypeError('another error'));
 t.complete();t.complete();t.flush();
 assert.equal(recorded.filter(e=>e.t==='game_started').length,1);
@@ -46,7 +46,7 @@ assert.equal(recorded.find(e=>e.t==='performance_sampled').d['chapter.fps'],'lin
 assert.equal(recorded.find(e=>e.t==='performance_sampled').d.level,'high');
 assert.equal(recorded.find(e=>e.t==='performance_sampled').d['chapter.level'],'lines.high');
 assert.equal(recorded.find(e=>e.t==='performance_sampled').d['level.fps'],'high.55_plus');
-assert.deepEqual(recorded.filter(e=>e.t==='quality_changed').map(e=>[e.d.level,e.d.scale,e.d.samples,e.d.direction]),[['high','1_1_3','2','initial'],['last','under_0_8','2','changed']]);
+assert.deepEqual(recorded.filter(e=>e.t==='quality_changed').map(e=>[e.d.level,e.d.scale,e.d.samples,e.d.direction]),[['high','1_1_3','2','initial'],['low','under_0_8','2','changed']]);
 assert(!JSON.stringify(recorded).includes('secret'));assert(!JSON.stringify(recorded).includes('@'));
 const expected=new Set(['build','environment','chapter','duration','stall','mode','level','scale','samples','direction','fps','hitches','chapter.level','chapter.fps','level.fps','phase','kind']);
 for(const event of recorded) {assert(Object.keys(event.d).every(k=>expected.has(k)));assert(Object.values(event.d).every(v=>v.length<=64));}

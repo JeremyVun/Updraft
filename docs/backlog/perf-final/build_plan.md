@@ -35,8 +35,8 @@ Seams shared by phases:
   visit (`docs/backlog/boot-veil/design.md`), so weigh each new variant's saving against that; warming at boot keeps
   the cost out of play. boot-veil is reworking the precompile and warm-up into groups in `gl/boot.ts` and `main.ts`
   `boot()`: check its state before touching them.
-- **Level (phase 4 → 5, 6).** `QualityLevel` gains `name: 'ultra' | 'high' | 'medium' | 'low' | 'last'` and
-  `frameRate: 30 | 60`. `applyWorldQuality(level)` in `main.ts` is the one place a level's effects are applied; phase
+- **Level (phase 4 → 5, 6).** `QualityLevel` gains `name: 'ultra' | 'high' | 'medium' | 'low'`.
+  `applyWorldQuality(level)` in `main.ts` is the one place a level's effects are applied; phase
   5 adds its effects there and nowhere else. The deck choice is per frame and independent of the level.
 
 ## Phase 0: the profiling tools on main
@@ -259,11 +259,10 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   `tools/quality-budget-profile.mjs`, `tools/grass-quality-check.mjs`, `tools/frame-pacer-check.mjs`,
   `docs/engine.md` "Quality governor", `docs/contracts/analytics.md`.
 - **Contract:** the table in design section 3, columns render scale to terrain split only (the effects rows are
-  phase 5). `QualityMode` is `auto | ultra | high | medium | low`. The levels are exactly Ultra, High, Medium, Low and
-  the last step; Auto's ladder is those five and nothing else. Auto opens at Ultra, or at High where the touch ceiling
-  (1.25×) applies. Over the 2.4 million pixel budget Auto lowers the render scale of its current level to fit, never
-  below 0.5×. `frameRate` comes from the level, so Auto at Low presents at 30 fps and is judged against 33.3 ms there
-  (the existing `capped` scaling), including the climb probe. A
+  phase 5). `QualityMode` is `auto | ultra | high | medium | low`. The levels are exactly Ultra, High, Medium and Low;
+  Auto's ladder is those four and nothing else (the last step below Low was removed, Jeremy, 2026-10-03). Auto
+  opens at Ultra, or at High where the touch ceiling (1.25×) applies. Over the 2.4 million pixel budget Auto lowers the render scale of its current level to fit, never
+  below 0.5×. Every level presents at up to 60 fps (Jeremy, 2026-10-03). A
   stored `high` under `updraft.quality.v1` reads as `ultra`; choices are saved under `updraft.quality.v2`. `?ratio=`
   and `?msaa=` lock the governor at exact values with Ultra's world settings; `shot` hides the selector and leaves
   Auto running (the quality and power browser checks drive the governor in shot mode). `controls.ts` keeps
@@ -274,7 +273,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   Low → last under a throttled GPU and climbing back without oscillating; `tools/analytics-check.mjs`.
 - **Done:** [x] merged to `main` at 1ce61c4 (2026-09-30).
 - **As built** (`src/gl/quality.ts`):
-  - `QualityLevel { name, ratio, samples, frameRate }`; `WORLD_QUALITY[name]` holds grass density and reach, terrain
+  - `QualityLevel { name, ratio, samples }`; `WORLD_QUALITY[name]` holds grass density and reach, terrain
     split, `mirrorEvery` (the sky mirror's cadence) and mirror scale. `WORLD_QUALITY.ultra` and `.high` are the same
     object, and the ladder relies on that. `applyWorldQuality(level, immediate)` in `main.ts` keys on a local `name`
     (`lite` folds to `low`); treat `last` as Low for effects. `controls.setQualityLevel(name)` replaces
@@ -282,10 +281,10 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   - A level that would render exactly like the one above it (High at DPR ≤ 1.25, or where the budget fits both to one
     scale) is left out of Auto's ladder.
   - Auto steps down one level at a time (Jeremy, 2026-10-01). A failed climb returns exactly one level. The climb probe's
-    deadline follows the level being climbed into (10 ms into a 60 fps level, 20 ms into a 30 fps one). Device-cap
-    detection runs only at 60 fps levels. Reviews need 30 timed frames at 60 fps and 15 at 30 fps.
+    deadline is 10 ms (20 ms under a device's 30 fps cap). Low presented at 30 fps, and a last step below it
+    existed, until Jeremy's rulings of 2026-10-03 (design, "Low at 60 fps"); levels now carry no frame rate.
   - `tools/quality-budget-profile.mjs` now runs the real game under a GPU throttle and asserts descent, hold, climb
-    and the 30/60 boundary (about 3.7 minutes, dev server only, holds the browser lock).
+    and the Low/Medium boundary (about 3.7 minutes, dev server only, holds the browser lock).
   - Tools that assert no page errors use `tools/lib/vite-client-stub.mjs` (`withoutHotReload(page)`).
 - **For later phases:** locked and shot captures now use Ultra's world settings (grass reach 115%, was 100%), so a
   frame comparison must have both sides on the same side of 1ce61c4. `tools/quality-menu-check.mjs` and
@@ -329,8 +328,6 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   - Ultra 0 changed at twelve fixtures; High 0 at `sea`.
   - Level changes: two of four runs on the branch showed one 50–83 ms frame, not reproduced switching bloom or the sea
     alone; re-check on a quiet machine in phase 8.
-  - Not built, and stays so (Jeremy, 2026-10-02, design rulings): the last step's 50% grass from the sparser table. The sparser level holds 25% (the lowest-ranked blade
-    of each 2×2 block); the other blades shown at 50% vary per block, so no fixed slot grid holds them.
   - `frame-profile` levers `bloom-full|half|off`, `sea-collar|glint|seabed|reflection`; `sea` is the lantern lit at
     night, `'sea&dusk=0'` by day; the `wood` fixture has no lit ember (use `play.mjs` and `embers.blow`).
 - **5b as built:** `stairs.ts` `DETAIL` by level and `CloudStairs.setLevel(name, immediate)`, the last line of
@@ -340,7 +337,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   band under the steps). Saving at Low: climb 8–15%, cloud 3–4.5%; Medium climb about 4%; elsewhere in the noise.
   Ultra and High 0 changed at every stairs fixture; level changes mid-climb no worse than 16.8 ms. `frame-profile`
   `stairs-full` restores full detail at any `LEVEL`.
-- **5c, the sun glow (Jeremy, 2026-10-02):** with bloom off at Low and the last step, the sky draws a soft halo around
+- **5c, the sun glow (Jeremy, 2026-10-02):** with bloom off at Low, the sky draws a soft halo around
   the sun so it is not a hard white disc. Ultra, High and Medium unchanged.
   - As built: the post chain's colour pass adds four soft rings around the sun before tone mapping, strength from 13
     samples of the disc's on-screen brightness over bloom's 1.1 threshold (so clouds, hills, the deck and sails hide
@@ -354,12 +351,12 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 - **Owns:** `src/controls.ts`, the quality control in `index.html` and its styles, `tools/quality-menu-check.mjs`,
   `tools/veil-controls-check.mjs`. After phase 4; may run beside phase 5.
 - **Contract:** the menu offers Auto, Ultra, High, Medium, Low; the indicator and its title show the level in use,
-  including the one Auto is on (the last step shows as Low). Keyboard access as today, with `u` for Ultra. Labels
+  including the one Auto is on. Keyboard access as today, with `u` for Ultra. Labels
   follow the `user-facing-copy` skill.
 - **Gate:** the owned checks; a screenshot of the open menu and of the indicator at each level for Jeremy.
 - **Done:** [x] merged to `main` at bb7abab (2026-10-02), Jeremy approved the stills ("Merge as shown"). Four
   ascending bars (Low 1, Medium 2, High 3, Ultra 4 filled); `data-quality` is the level in use
-  (`ultra|high|medium|low|pending`, the last step shows as `low`); titles "Graphics quality: High", "Graphics quality:
+  (`ultra|high|medium|low|pending`); titles "Graphics quality: High", "Graphics quality:
   Auto (High)"; `u` selects Ultra.
 
 ## Phase 7: more effects to switch off (survey, stops for Jeremy)
@@ -387,7 +384,7 @@ Two parcels from the same `main`.
   per blade; the blade's vertices read it. Frames within 4/255 of the pre-change commit at `meadow:walk`, `island`,
   `sleeping`, `summit`, `wood` (static and a camera path), no worse than the survey's still; the saving with
   `FRAME_PASS`.
-- Near blades with 5 segments instead of 6 at Low and the last step: both geometries exist from boot, a level change
+- Near blades with 5 segments instead of 6 at Low: both geometries exist from boot, a level change
   swaps without allocating or compiling and without a visible pop (the grass's one-second easing), Ultra/High/Medium
   frames unchanged by this item. The saving at Low.
 

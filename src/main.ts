@@ -1054,7 +1054,7 @@ function frameInner(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
-  if (!params.shot && !pacer.due(now, quality.frameRate)) {
+  if (!params.shot && !pacer.due(now)) {
     requestAnimationFrame(frame);
     return;
   }

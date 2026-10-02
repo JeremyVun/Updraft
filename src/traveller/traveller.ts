@@ -93,6 +93,10 @@ export class Traveller {
   riding = false;
   private rideRoll = 0;
   private ridePitch = 0;
+  /** The hull the child was last seated in, with that seat and facing in its frame. */
+  private hull: Boat | null = null;
+  private readonly hullSeat = new THREE.Vector3();
+  private hullTurn = 0;
   /** 0..1: both hands holding the drawing up in front. */
   presenting = 0;
   /** Walking speed as a share of the usual: slowed for a walk nothing hurries. */
@@ -410,18 +414,38 @@ export class Traveller {
     this.bedYaw = Math.atan2(-headTo.x, -headTo.y);
   }
 
-  ride(at: THREE.Vector3, yaw: number, roll = 0, pitch = 0): void {
+  /**
+   * Seated at `at`, facing `yaw`. In a boat, the seat is kept in the hull's frame: the story seats the child before
+   * the boat moves, and an uneven frame would otherwise leave her a varying step behind her seat.
+   */
+  ride(at: THREE.Vector3, yaw: number, boat?: Boat): void {
     this.riding = true;
     this.sitting = true;
     this.goal = null;
     this.position.copy(at);
     this.yaw = yaw;
+    this.rideRoll = this.ridePitch = 0;
+    this.hull = boat ?? null;
+    if (!boat) return;
+    boat.group.updateMatrixWorld(true);
+    boat.group.worldToLocal(this.hullSeat.copy(at));
+    this.hullTurn = yaw - boat.yaw;
+    this.keepSeat();
+  }
+
+  private keepSeat(): void {
+    const boat = this.hull;
+    if (!boat || !this.riding) return;
+    boat.group.updateMatrixWorld(true);
+    this.position.copy(this.hullSeat).applyMatrix4(boat.group.matrixWorld);
+    this.yaw = boat.yaw + this.hullTurn;
     /** A rider takes only some of what the hull does: they ride it out nearer upright than the boat lies. */
-    this.rideRoll = roll * 0.55;
-    this.ridePitch = pitch * 0.55;
+    this.rideRoll = boat.roll * 0.55;
+    this.ridePitch = boat.pitch * 0.55;
   }
 
   dismount(): void {
+    this.hull = null;
     this.riding = false;
     this.sitting = false;
     this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
@@ -585,6 +609,8 @@ export class Traveller {
   update(dt: number): void {
     this.time += dt;
     const p = this.position;
+    this.keepSeat();
+    this.hull = null;
     this.prev.copy(p);
     if (!this.riding && this.action?.kind !== 'alight') this.updateGoal(dt);
     /** Stopping, the feet finish the step they are in and come together under them rather than sliding back. */
@@ -827,7 +853,7 @@ export class Traveller {
       if (a.t >= k.settle) {
         this.action = null;
         boat.finishBoarding();
-        this.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
+        this.ride(boat.seat(this.tmp), boat.yaw, boat);
         a.onDone();
       }
     } else if (a.kind === 'alight') {
