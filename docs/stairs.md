@@ -296,7 +296,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
   (`BASE=`), captures each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n`
   starts with n flights home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree
-  with its own server while editing.
+  with its own server while editing. The cloud's top and underside skip grid points round which nothing is in view
+  (`gridUnseen`); any edit to their vertex shaders can move the seen points by an ulp, so it must read 0 against the
+  commit before along the whole chapter (`ALONG=10 FRAME=600 COMPARE_BASE=… tools/frame-profile.mjs stairs:drowned`).
 
 ## Open
 
