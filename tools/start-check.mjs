@@ -114,7 +114,7 @@ try {
  await failure.goto(base);await failure.waitForSelector('#veil.ready',{timeout:20000});
  assert(blockedMain>0,'the fixture actually blocked the game module');
  assert.equal(await failure.locator('#begin').innerText(),'Try again');
- await failure.screenshot({path:'/tmp/updraft-start-retry.png'});
+ await failure.waitForTimeout(1000);await failure.screenshot({path:'/tmp/updraft-start-retry.png'});
  await failure.unrouteAll();await failure.locator('#begin').click();await failure.waitForSelector('#veil.ready',{timeout:60000});
  assert.equal(await failure.locator('#begin').innerText(),'Begin');
  report.checks.push('game bundle failure offers retry and retry recovers');await fault.close();
