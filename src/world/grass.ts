@@ -367,8 +367,8 @@ vec3 bladeRoot(vec2 root2, float groundH) {
 `;
 
 /**
- * Each blade's fog, worked out once a frame at its root rather than at every vertex of the blade. Blades the blade
- * shader collapses are skipped, with a margin so that every blade it draws has its fog.
+ * Each blade's fog, worked out once a frame rather than at every vertex of the blade. Blades the blade shader
+ * collapses are skipped, with a margin so that every blade it draws has its fog.
  */
 const FOG_FRAG = /* glsl */ `
 uniform vec3 uFogEye;
@@ -384,11 +384,13 @@ void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
   vec4 root = texelFetch(uRootTex, at, 0);
   float dist = length(root.xy - uGrassEye);
-  if (root.w >= densityAt(dist) * bladeDensity(root.xy, dist) * texelFetch(uShapeTex, at, 0).x + 1e-3) {
+  vec4 shape = texelFetch(uShapeTex, at, 0);
+  if (root.w >= densityAt(dist) * bladeDensity(root.xy, dist) * shape.x + 1e-3) {
     gl_FragColor = vec4(0.0);
     return;
   }
-  gl_FragColor = fogOf(bladeRoot(root.xy, root.z), 1.0);
+  // A quarter of the way up is where one fog for the whole blade comes closest to the fog along it.
+  gl_FragColor = fogOf(bladeRoot(root.xy, root.z) + vec3(0.0, shape.y * 0.25, 0.0), 1.0);
 }`;
 
 /**
@@ -695,6 +697,7 @@ void main() {
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
+  float fogRise = h * 0.25;
   float stand = qualityStanding(rank, share, dist, root2);
   h *= mix(0.72, 1.0, life) * stand;
   float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * widthAt(dist) * stand;
@@ -745,7 +748,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(rootPos, 1.0);
+  vFog = fogOf(rootPos + vec3(0.0, fogRise, 0.0), 1.0);
   vWorld = world;
   vT = t;
   vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
