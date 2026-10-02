@@ -415,6 +415,8 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   terrain.detail = world.terrainSplit;
   water.mirrorEvery = world.mirrorEvery;
   water.mirrorScale = world.mirrorScale;
+  water.effects = world.sea;
+  post.setBloom(world.bloom, immediate);
   controls.setQualityLevel(name);
 }
 applyWorldQuality(quality.level, true);
@@ -1140,7 +1142,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { quality, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
 /**
@@ -1172,7 +1174,7 @@ async function boot(): Promise<void> {
   await warmRender(renderer, scene, rig.camera, post.sceneTarget);
   for (const _ of otherVariants()) await warmRender(renderer, scene, rig.camera, post.sceneTarget, hasVariants);
   await yieldBoot();
-  post.render(0);
+  post.render(0, true);
   await gpuIdle(renderer);
   bootMs = performance.now() - started;
   if (contextRecovery.lost) return;

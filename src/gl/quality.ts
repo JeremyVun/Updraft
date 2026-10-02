@@ -18,18 +18,24 @@ export interface WorldQuality {
   /** The sky mirror is redrawn every this many frames. */
   mirrorEvery: 1 | 2;
   mirrorScale: number;
+  bloom: BloomLevel;
+  sea: SeaEffects;
 }
+
+export type BloomLevel = 'full' | 'half' | 'off';
+/** The sea's effects: all of them, all but the hull's wet collar, or the plain sea (see `water.ts`). */
+export type SeaEffects = 'all' | 'noCollar' | 'plain';
 
 export const HIGH_GRASS_REACH = 1.15;
 
-const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75 };
+const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75, bloom: 'full', sea: 'all' };
 
 export const WORLD_QUALITY: Record<QualityLevelName, WorldQuality> = {
   ultra: FULL,
   high: FULL,
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625 },
-  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
-  last: { grassDensity: 0.5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5 },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'half', sea: 'noCollar' },
+  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain' },
+  last: { grassDensity: 0.5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain' },
 };
 
 const NAMES: QualityLevelName[] = ['ultra', 'high', 'medium', 'low', 'last'];

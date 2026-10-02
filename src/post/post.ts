@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import type { BloomLevel } from '../gl/quality';
+
+const BLOOM_STRENGTH = 0.28;
+/** Bloom fades in and out over the second the grass takes to change with the level. */
+const BLOOM_FADE = 1;
 
 const QUAD_VERT = /* glsl */ `
 varying vec2 vUv;
@@ -81,6 +86,12 @@ export class Post {
   private readonly quad = new FullScreenQuad();
   private readonly resolveMat: THREE.ShaderMaterial;
   private readonly gradeMat: THREE.ShaderMaterial;
+  private readonly size = new THREE.Vector2();
+  private bloomLevel: BloomLevel = 'full';
+  /** How much of the bloom is drawn, easing toward 0 while it is off and 1 while it is on. */
+  private bloomShown = 1;
+  private bloomReleased = false;
+  private lastTime = NaN;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
@@ -88,10 +99,10 @@ export class Post {
     private readonly camera: THREE.Camera,
     samples: number,
   ) {
-    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const size = renderer.getDrawingBufferSize(this.size);
     this.sceneTarget = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples, depthBuffer: true, stencilBuffer: true });
     this.clean = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, depthBuffer: false });
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.28, 0.45, 1.1);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), BLOOM_STRENGTH, 0.45, 1.1);
     this.resolveMat = quadMaterial(RESOLVE_FRAG, { tDiffuse: { value: this.sceneTarget.texture } });
     this.gradeMat = quadMaterial(GRADE_FRAG, {
       tDiffuse: { value: this.clean.texture },
@@ -116,10 +127,35 @@ export class Post {
   setSize(width: number, height: number, pixelRatio: number): void {
     const w = Math.round(width * pixelRatio);
     const h = Math.round(height * pixelRatio);
+    this.size.set(w, h);
     this.sceneTarget.setSize(w, h);
     this.clean.setSize(w, h);
-    this.bloom.setSize(w, h);
+    this.sizeBloom();
     this.gradeMat.uniforms.uResolution.value.set(w, h);
+  }
+
+  /** The bloom's resolution while it is drawn: the frame's, or half of it on half. */
+  get bloomScale(): number {
+    return this.bloomLevel === 'half' ? 0.5 : 1;
+  }
+
+  /** Full, half resolution, or off: its passes skipped and its targets released once it has faded out. */
+  setBloom(level: BloomLevel, immediate = false): void {
+    this.bloomLevel = level;
+    if (immediate) this.bloomShown = level === 'off' ? 0 : 1;
+    this.sizeBloom();
+  }
+
+  private sizeBloom(): void {
+    // A fading bloom keeps the resolution it is fading from.
+    if (this.bloomLevel === 'off') return;
+    this.bloom.setSize(Math.round(this.size.x * this.bloomScale), Math.round(this.size.y * this.bloomScale));
+  }
+
+  private releaseBloom(): void {
+    const b = this.bloom;
+    for (const target of [b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) target.dispose();
+    this.bloomReleased = true;
   }
 
   /** 0 is the grey still world, 1 full colour. */
@@ -127,8 +163,13 @@ export class Post {
     this.gradeMat.uniforms.uSaturation.value = value;
   }
 
-  render(time: number): void {
+  /** `warm` draws the bloom even while it is off, so its programs are built before Begin whatever the level. */
+  render(time: number, warm = false): void {
     const r = this.renderer;
+    const dt = Math.min(Math.max(time - this.lastTime, 0), 0.1) || 0;
+    this.lastTime = time;
+    const target = this.bloomLevel === 'off' ? 0 : 1;
+    this.bloomShown = target > this.bloomShown ? Math.min(target, this.bloomShown + dt / BLOOM_FADE) : Math.max(target, this.bloomShown - dt / BLOOM_FADE);
     r.setRenderTarget(this.sceneTarget);
     r.render(this.scene, this.camera);
 
@@ -136,7 +177,12 @@ export class Post {
     r.setRenderTarget(this.clean);
     this.quad.render(r);
 
-    this.bloom.render(r, this.clean, this.clean, 0, false);
+    if (this.bloomShown > 0 || warm) {
+      this.bloom.strength = BLOOM_STRENGTH * this.bloomShown;
+      this.bloom.render(r, this.clean, this.clean, 0, false);
+      this.bloomReleased = false;
+    }
+    if (this.bloomShown === 0 && !this.bloomReleased) this.releaseBloom();
 
     this.gradeMat.uniforms.uTime.value = time;
     this.quad.material = this.gradeMat;
