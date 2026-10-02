@@ -63,7 +63,8 @@
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
-// DETAIL=0|1 applies that world detail after the fixture; GRASS_DENSITY and GRASS_REACH override it as Auto's last rung does.
+// LEVEL=ultra|high|medium|low|last applies that level's world settings after the fixture (render scale and
+// multisampling stay as RATIO and MSAA lock them); GRASS_DENSITY and GRASS_REACH then override the grass.
 // SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
 // full grass-table rebuild (SIM_REPS each, drained).
 // Every ablation reports its bite: programs patched, objects hidden (and how many were showing), draw calls and
@@ -538,9 +539,7 @@ window.__audit = {
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
     this.deckHits=hits;
   },
-  // DETAIL=0|1 sets the world detail a quality level would (grass density and reach, terrain split, reflection cadence
-  // and the sky mirror's scale) at the locked render scale and multisampling, as the Low preset or Auto's rungs do.
-  detail(level,grassDensity,grassReach) { applyWorldQuality({ratio:pixelRatio,samples:post.samples,detail:level,...grassDensity!=null&&{grassDensity},...grassReach!=null&&{grassReach}},true); return {detail:level,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
+  level(name,grassDensity,grassReach) { applyWorldQuality({...quality.level,name},true); if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -761,7 +760,7 @@ async function open(base,chapter) {
     };
     apply();
   }),[fixture,FRAME?FIXTURE_FRAME:0]);
-  const detail=process.env.DETAIL?await page.evaluate(([d,g,r])=>__audit.detail(d,g,r),[Number(process.env.DETAIL),process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
+  const detail=process.env.LEVEL?await page.evaluate(([d,g,r])=>__audit.level(d,g,r),[process.env.LEVEL,process.env.GRASS_DENSITY?Number(process.env.GRASS_DENSITY):null,process.env.GRASS_REACH?Number(process.env.GRASS_REACH):null]):undefined;
   if(detail)console.log(JSON.stringify({chapter,detail}));
   if(FRAME){await page.waitForFunction(()=>__stats.frame>=__audit.stopAt,null,{timeout:900000});await page.evaluate(()=>{__audit.paused=true;});}
   else await page.waitForTimeout(detail?2500:1500);

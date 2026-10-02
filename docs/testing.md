@@ -131,8 +131,8 @@ edit.
   out), the stairs' parts (`stairs`, `stairsCloud`, `stairsCloudTop`, `stairsCloudBelly`, `stairsTowers`,
   `stairsWake`, `stairsWisps`, `stairsBank`, `stairsHaze`, `stairsSteps`), `cloudtop-frag-flat`, `cloudtop-veil`,
   `water-lantern`, `water-hull`, `water-frag-flat`, `sky-flat`, and the candidate exact skips `sky-deckfirst`,
-  `wisps-early`, `water-lantern-reach`. `SIM_PASSES=1` times each simulation pass alone; `DETAIL=0|1` applies a
-  level's world detail. The header lists the rest.
+  `wisps-early`, `water-lantern-reach`. `SIM_PASSES=1` times each simulation pass alone; `LEVEL=<name>` applies a
+  level's world settings. The header lists the rest.
 - Against another build: `FRAME=600 COMPARE_BASE=<its dev server>` stops both on the same frame and reports the
   difference between them (`COMPARE_MAX=1` fails above 1/255, `CAPTURE=1` saves both frames); a build against itself
   reads 0.

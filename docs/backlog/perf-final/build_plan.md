@@ -58,7 +58,7 @@ Seams shared by phases:
   - In-page ablation difference: `ROUNDS=0 CPU_MS=1500 CENSUS_MS=800 ABLATIONS=<a,b> node tools/frame-profile.mjs
     <fixtures>`; each row's `bite` says what it touched, and an ablation that changes nothing throws.
   - Paired saving: `RATIO=1.5 MSAA=2 DRAIN=1 GPU_QUIET=1 QUIET=120 ROUNDS=6 DRAWS=10 ABLATIONS=none,<a>` (weak device
-    `RATIO=0.85 MSAA=2 DETAIL=0`; `POST_PASSES=1`, `SIM_PASSES=1` as needed); never with `FRAME`, never `ROUNDS=1`.
+    `RATIO=0.85 MSAA=2 LEVEL=low`; `POST_PASSES=1`, `SIM_PASSES=1` as needed); never with `FRAME`, never `ROUNDS=1`.
     Against the pre-change commit, run the same back to back on both servers per fixture.
   - Memory: `RATIO=1.5 MSAA=2 node tools/memory-census.mjs island <fixtures>` (341.2 MiB at the island on c105e8f's
     parent tools).
@@ -186,7 +186,28 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   (`tools/wind-rate-check.mjs`, `tools/wind-clock-check.mjs` and a texel comparison of the field after 600 ticks of a
   scripted stroke); `tools/render-cost-check.mjs` extended to the new skips. Report what was dropped and why.
 - **Gate:** the above, plus `tools/sea-check.mjs`, `tools/sky-mirror-check.mjs`, `tools/little-boats-check.mjs`.
-- **Done:** 3b-ii [x] merged to `main` at 5340862 (2026-10-02); 3b-i [ ].
+- **Done:** [x] 3b-ii merged to `main` at 5340862 (2026-10-02); 3b-i at 5a987d9 (2026-10-02).
+- **3b-i as built:** the wind step is 17 passes a tick, not 21 (curl folded into vorticity, the pressure carry-over
+  into the first pressure pass, advection with lean and sway, and the window shift, each one pass with several
+  outputs): `sleeping` 0.40 → 0.32 ms, `summit` 0.46 → 0.41 ms, +512 KiB. Bit for bit on Chrome/Metal
+  (`tools/wind-exact-check.mjs`, 600 and 2,400 ticks at both resolutions, and frames 0 at ten fixtures, re-run after
+  merging onto 5340862). The fused shaders reproduce the old passes' compiled arithmetic: half-float targets store
+  toward zero, so `storeHalf`/`nearHalf` and sums pinned through `uZero` (`pin`). `wind.lifeTexture` keeps the life
+  pass reading what it read before (the field before advection after a tick with 9–16 sources).
+- **3b-i dropped:**
+  - The sky mirror's pass: every sea pixel samples it while the mirror is in the rooms, so it is never unseen.
+  - The bloom gate: nothing can prove in advance that no pixel crosses 1.1.
+  - Starlings: exact, but 0.007 ms. Petals: GPU-placed, 0.07 ms. The sleeping island from the open sea: 0.20 ms with
+    no provable bound, for the crossing's first 30–40 s.
+  - The stairs' steps in the white: visible there.
+  - Merging the mirror's pieces: not exact; one merged draw loses three's front-to-back order at depth ties.
+  - Merging the little boats: not exact; matrix rounding differs and the bath reads local height.
+- **Look changes found, for phase 7's list:** the sky mirror's reflection at the ordinary sea's size and cadence until
+  near the flat (1.0 ms, 10.8% of the 2.5-minute crossing to the mirror, up to 27/255 on sea pixels; ablation
+  `mirror-ordinary`); the mirror merge (0.37 ms, 4%; single pixels up to 7/255 where posts pierce planks;
+  `mirror-merge`). Also not exact: the life pass always reading the finished wind (changes life only in ticks with
+  9–16 sources).
+- `frame-profile` and `memory-census` take `LEVEL=ultra|high|medium|low|last` for a level's world settings.
 - **3b-ii as built:**
   - `LAND_SKIP` (a sea axis; the sea has 4 programs): the sea returns before the ripple reads where the baked ground
     is a metre above the water at the corners of the 3×3 pixel block and no waterline is within it, so every pixel
@@ -256,6 +277,8 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 - **Owns:** `src/post/post.ts` (bloom full, half, off), `src/world/water.ts` (`HULL_COLLAR`, `LANTERN_GLINT`,
   `SEABED_DETAIL` variants; the ordinary reflection off), `src/world/stairs-puffs.ts`, `src/world/stairs-haze.ts`
   (fewer wisps and haze steps), the effects in `applyWorldQuality`. After phases 2, 3, 3b and 4.
+- Built in two parcels: **5a** beside phase 3 (bloom, the sea's three effect switches, the ordinary reflection, the
+  50% grass), **5b** after phase 3 merges (the stairs' wisps and haze steps, which share files with phase 3).
 - **Also (nonvisual):** the last step's 50% grass submits the same blades as 100% and thins them in the shader, so it
   saves no vertex work; draw it from the sparser level the way sparse density already starts tiles at the coarsest
   level that holds every blade it can show, with frames identical to today's 50% (`src/world/grass.ts`).
@@ -269,7 +292,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   by day and with the lantern lit, the jetty at dusk, the shallows off the first island, the mirror, the Wood's
   embers (bloom), the stairs climb and in the white. Open them in Preview for Jeremy.
 - **Gate:** Ultra/High frame difference; saving per effect at Medium and Low settings (`DETAIL`-style profile of each
-  level); `tools/perf.mjs frames` across each level change; `tools/sky-mirror-check.mjs`, `tools/sea-check.mjs`,
+  level, `LEVEL=<name>`); `tools/perf.mjs frames` across each level change; `tools/sky-mirror-check.mjs`, `tools/sea-check.mjs`,
   `tools/stairs-check.mjs`; the veil gap as in phase 2. **Jeremy's verdict on the stills before merging.**
 - **Done:** [ ]
 
@@ -281,12 +304,17 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   including the one Auto is on (the last step shows as Low). Keyboard access as today, with `u` for Ultra. Labels
   follow the `user-facing-copy` skill.
 - **Gate:** the owned checks; a screenshot of the open menu and of the indicator at each level for Jeremy.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at bb7abab (2026-10-02), Jeremy approved the stills ("Merge as shown"). Four
+  ascending bars (Low 1, Medium 2, High 3, Ultra 4 filled); `data-quality` is the level in use
+  (`ultra|high|medium|low|pending`, the last step shows as `low`); titles "Graphics quality: High", "Graphics quality:
+  Auto (High)"; `u` selects Ultra.
 
 ## Phase 7: more effects to switch off (survey, stops for Jeremy)
 
 - **Owns:** `tools/` only; appends its findings to `profile.md`.
 - **Do:** at Medium and Low settings, cost the candidates in design section 4 with ablations, weighted by minutes.
+  Include the look changes phases 1 and 3b found (3b-i's mirror reflection cadence and mirror merge; 3b-ii's sea
+  under land beyond the window; 1b's creatures on the baked height copy), at the levels where each would apply.
   For each worth more than about 1% of a Low frame, a visual model makes one before/after still.
 - **Deliverable:** a ranked list for Jeremy (effect, level it would leave at, saving, still). His rulings go into
   design section 3's table and a new phase here; nothing is built in this phase.

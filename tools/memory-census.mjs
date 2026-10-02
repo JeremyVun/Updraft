@@ -2,7 +2,7 @@
 // texture and GPU buffer the running game holds, with dimensions, format and estimated bytes, named by the object
 // that owns it, and whether anything used it over the frames watched at each chapter.
 // node tools/memory-census.mjs [island meadow:walk stairs:sail sea ...]
-// RATIO=1.5 MSAA=2 DETAIL=0|1|2 FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
+// RATIO=1.5 MSAA=2 LEVEL=ultra|high|medium|low|last FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
 // BASE must be a dev server: the tool patches src/main.ts, which a built bundle does not serve.
 // How: WebGL2 calls are wrapped before the page loads, so every allocation is sized from the call that stores it
 // (texImage*, texStorage*, renderbufferStorage*, bufferData); deleted objects drop out. Owners come from a
@@ -108,7 +108,7 @@ window.__memScope = {${names.map(n => `${JSON.stringify(n)}: (() => { try { retu
 window.__memAudit = {
   fastRatio: null,
   fast(on) { if (on) { this.fastRatio ??= pixelRatio; pixelRatio = 0.5; resize(); } else if (this.fastRatio) { pixelRatio = this.fastRatio; this.fastRatio = null; resize(); } },
-  detail(level) { applyWorldQuality({ ratio: pixelRatio, samples: post.samples, detail: level }, true); return { detail: level, grass: { ...grass.quality }, mirrorScale: water.mirrorScale, mirrorEvery: water.mirrorEvery }; },
+  level(name) { applyWorldQuality({ ...quality.level, name }, true); return { level: name, grass: { ...grass.quality }, mirrorScale: water.mirrorScale, mirrorEvery: water.mirrorEvery }; },
   used: null,
   start() { this.used = { textures: new Set(), targets: new Set(), geometries: new Set(), arrays: new Set() }; },
   stop() { const u = this.used; this.used = null; return u; },
@@ -243,7 +243,7 @@ try {
     if (!await page.evaluate(() => !!window.__memAudit)) throw Error(base + ' is not a dev server: this tool patches src/main.ts, which a built bundle does not serve');
     if (entry === 'stairs' && fixture) await stairsFixture(page, fixture, on => page.evaluate(on => __memAudit.fast(on), on));
     else if (fixture) await page.evaluate(fixture => { const c = __game.story.current; c.skipToCrest(); if (fixture !== 'walk') c.reveal(); }, fixture);
-    const detail = process.env.DETAIL ? await page.evaluate(d => __memAudit.detail(d), Number(process.env.DETAIL)) : undefined;
+    const detail = process.env.LEVEL ? await page.evaluate(d => __memAudit.level(d), process.env.LEVEL) : undefined;
     await page.waitForTimeout(2500);
     const census = await page.evaluate(survey);
     await page.evaluate(() => __memAudit.start());
