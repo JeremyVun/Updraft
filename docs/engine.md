@@ -173,6 +173,7 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 | Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 | 0.5 |
 | Sky mirror's reflection | every frame | every frame | every frame | alternate frames | alternate frames |
 | Bloom | full | full | half resolution | off | off |
+| Sun's glow painted by the grade in bloom's place (`SUN_GLOW`, eased with bloom) | no | no | no | yes | yes |
 | Hull's wet collar on the sea | yes | yes | off | off | off |
 | Lantern's glint and light on the sea | yes | yes | yes | off | off |
 | Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off | off |
