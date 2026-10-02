@@ -114,12 +114,22 @@ by `warmRender` with at most one new program per batch.
   field) wait for boot through `atBoot()` and run in `runBootPasses()` after the programs settle; their outputs are bit
   for bit unchanged. Every `atBoot` pass must be constructed before `boot()` runs.
 - **Every program is first drawn behind the veil.** Settling is not the whole cost: a first draw also builds the
-  driver's pipeline (about 200 ms on Apple hardware, slow on mobile GPUs). Two kinds of program still had their first
-  draw in play after phase 1: objects outside the warm camera's view (three's frustum culling skips them in
-  `warmRender`) and the full-screen sim passes (wind, life, petals), first drawn in the first frame after Begin. The
-  warm draws culled objects too, and draws each sim material once into a scratch target with the same format as the
-  target it really writes, so the simulation's state is untouched (added 2026-10-03, under the 2026-09-29
+  driver's pipeline (about 200 ms on Apple hardware, slow on mobile GPUs), once per program and target format. Phase 1
+  left first draws in play: objects outside the warm camera's view (three's frustum culling), objects that drew
+  nothing at warm time (no instances yet, an empty draw range), the grass blades' other fragment shader, the reflected
+  world in the sea mirror's format, and the full-screen sim passes (wind, life, petals, leaves, canopy, sea waves,
+  carve field, cloud shadows). The warm now turns culling off, gives an empty object one instance or its whole draw
+  range for the draw, draws the reflection-layer objects again into a scratch target of the mirror's format (with
+  their variants), draws the blades with each fragment shader (`grass.fragmentSteps()`, with their variants), and
+  draws each sim material once into a 4×4 scratch target of the format it writes (`simMaterial(fragment, uniforms,
+  target)` names it; `warmSimulations`). A first draw is tracked per program and target format, so each batch still
+  holds at most one. The simulation's state and every bake stay bit for bit (built 2026-10-03, under the 2026-09-29
   constraint that play never freezes).
+- **QA probe for first draws in play.** `__stats.playFirstDraws` counts programs, and programs with a target format,
+  first drawn after Begin (draws that issue no vertices or instances do not count), with their names. Through the
+  opening minute of play and a `?chapter=stairs` load both are 0 (they were 20 and 22 programs before). One known
+  exception: when the quality governor changes the MSAA sample count, every scene program draws into the new sample
+  count for the first time; that is a quality change, not a first visit, and it is not warmed ahead.
 - **QA probe for stray compiles.** In QA builds, boot wraps the context's `getProgramInfoLog` (three calls it only
   inside first use, with `debug.checkShaderErrors` on, as it is by default) and counts calls made outside the
   settle helper. `window.__stats.bootStrayPrograms` holds the count and the first few programs' material names.
@@ -131,28 +141,36 @@ by `warmRender` with at most one new program per batch.
 
 ### World construction: no step longer than one paint budget
 
-Yield between all major systems, as now. Additionally:
+World construction runs in counted steps (`BUILD_STEPS` in `main.ts`), each ending with a yield once 12 ms have passed
+since the last paint, so short steps run on without waiting for a frame:
 
-- `CloudStairs` (≈280 ms on this Mac) builds through a generator, flight by flight, run with `prepareInBatches`.
-  `AutumnBirches` (≈100 ms) gets its own step after it. Keep `birches.scarf.settle()` in batches as now.
-- Any constructor above 50 ms on this Mac in Chrome gets its own step. Measured: `Traveller` 78 ms,
-  `SleepingIsland` 48, `DrownedVillage` 38, `lineField` 34.
+- `CloudStairs.build()` is a generator, flight by flight, run with `prepareInBatches`; the geometry, object ids and
+  material order are identical to the old constructor's. `AutumnBirches` (about 105 ms on this Mac, the longest step
+  left) has its own step, with `birches.scarf.settle()` in batches after it. The washing lines' layout (`lineField`)
+  is its own step before `WashingLines`. `Traveller` (about 70 ms) already had its own step.
+- Generators yield the share they have done, so the number moves through the stairs and the scarf's settle.
+
+### Boot order
+
+Programs settle, then every first draw happens (stage C), then the bakes, window, grass tables and the first post
+chain run (stage D). Before phase 2 the bakes ran between settling and the warm; the warm does not need them (a blade
+with no instances yet is given one for the draw), and every bake and simulation output is bit for bit as before.
 
 ### Progress: stage and fraction, reported from the boot path
 
 The start screen (`src/start-screen.ts`, in the entry chunk) owns the indicator and exposes `progress(stage,
-fraction)`. Four stages with fixed shares of the number. A laptop finishes in 2.5 s, where no weighting shows; the
-shares matter on a slow device. The table's shares are a first iPad visit's. Phase 2 measures the stage times of a
-cold Chrome load at 4× CPU throttling and sets each share to the mean of the two, rounded to whole percent, because
-the playtester was on a Samsung tablet and the iPad's shares alone would leave the number near 5% through a long
-construction stage:
+fraction)`. Four stages with fixed shares of the number. A laptop finishes in about 2.8 s, where no weighting shows;
+the shares matter on a slow device. Each share is the mean of a first iPad visit's (A 3, B 6, C 85, D 6) and a cold
+Chrome load's at 4× CPU throttling (A 4.0, B 69.0, C 23.0, D 4.0, measured 2026-10-03), rounded to whole percent,
+because the playtester was on a Samsung tablet and the iPad's shares alone would leave the number near 5% through a
+long construction stage. Within C, settling takes 60% and first draws 40% (Chrome at 4×: 0.94 s and 0.68 s):
 
 | Stage | Line (approved 2026-10-02) | Covers | Share | Fraction within the stage |
 | --- | --- | --- | --- | --- |
 | A | Downloading the game | `index.html` until `main.ts` starts evaluating | 0–3% | none: the line is static HTML with no number; `main.ts` starting shows 3% |
-| B | Building the world | World construction in `main.ts` | 3–9% | completed construction steps / `BUILD_STEPS` |
-| C | Preparing the graphics | Compiling, settling and first-drawing programs (`warmRender` included) | 9–94% | settled materials, then warmed batches, over both counts collected up front |
-| D | Laying out the ground and grass | Bakes, window, grass tables, post, `gpuIdle` | 94–100% | completed steps / steps counted before starting |
+| B | Building the world | World construction in `main.ts` | 3–41% | completed construction steps / `BUILD_STEPS`, plus the share a generator yields within its step |
+| C | Preparing the graphics | Compiling, settling and first-drawing programs (`warmRender`, `warmSimulations`) | 41–95% | settled materials (60%), then objects and passes first drawn over their count collected up front (40%) |
+| D | Laying out the ground and grass | Bakes, window, grass tables, post, `gpuIdle` | 95–100% | completed steps / steps counted before starting |
 
 The displayed percentage is an integer and never falls. The D line reads up to 100% and nothing else shows at 100%:
 Begin replaces the line as `ready()` fades it with the cygnet, as "Loading" fades today. `BUILD_STEPS` is a constant;
@@ -160,8 +178,10 @@ Begin replaces the line as `ready()` fades it with the cygnet, as "Loading" fade
 it.
 
 Stage A's words are written into `index.html`, because they show before any game code has downloaded. `progress`
-writes the stage line and the number with one `textContent` each per change. The line is `aria-hidden`; the existing
-`#start-status` live region announces stage changes only, never percentages.
+writes the stage line and the number with one `textContent` each per change, into `.progress-stage` and
+`.progress-percent` inside the veil; until phase 3 puts them in the markup, `progress` creates them inside
+`.loading-text` in place of "Loading…". The line is `aria-hidden`; the existing `#start-status` live region announces
+stage changes only, never percentages, and `ready()` clears it unless it holds a failure message.
 
 ### The indicator's look: D1, "In place" (Jeremy, 2026-10-02)
 

@@ -16,21 +16,28 @@ Nothing heavy may happen in the first frames of play. Before the loop starts, be
    compiled, and boot yields whenever 12 ms have passed since the last frame. Construction never draws: passes it
    needs (seeding the petals, leaves, litter and carve field) wait for boot (`atBoot`, `runBootPasses`). In QA builds
    `__stats.bootStrayPrograms` counts programs first used anywhere else; `start-check` requires 0.
-2. The static atlases bake once: the field and ground-colour caches and the distant-height atlas (see Bakes).
-3. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), and the visible grass
-   tables bake.
-4. `warmRender` draws the scene into the offscreen target in batches of up to 64 objects, at most one of them with
-   a program not drawn before (a slow driver pays for a first draw in the task that issues it), with at most four
-   first draws queued on the GPU (a cold driver builds the pipeline there, and uploads behind it would block the main
-   thread), yielding whenever 12 ms have passed since the last frame, then the post chain runs; visibility and layer masks are restored even on
-   failure. Textures upload, buffers land on the GPU and render targets are allocated. The objects with program
-   variants are drawn again with each variant.
+2. `warmRender` draws the scene into the offscreen target in batches of up to 64 objects, at most one of them with
+   a program not drawn before into a target of that format (a slow driver pays for a first draw in the task that
+   issues it, and builds a pipeline per program and target format), with at most four first draws queued on the GPU
+   (a cold driver builds the pipeline there, and uploads behind it would block the main thread), yielding whenever
+   12 ms have passed since the last frame; visibility, layer masks and culling are restored even on failure. Every
+   object is drawn, culled or not, and one that would draw nothing (no instances, an empty draw range) is given one
+   instance or its whole range for the draw. Textures upload, buffers land on the GPU and render targets are
+   allocated. The objects with program variants are drawn again with each variant, the reflected world again into
+   the sea mirror's format, the grass blades with each of their fragment shaders, and each simulation and bake
+   material once into a small scratch target with the format it writes (`simMaterial` names its target), so nothing
+   it really writes changes. In QA builds `__stats.playFirstDraws` counts programs, and programs with a target format,
+   first drawn after Begin.
+3. The static atlases bake once: the field and ground-colour caches and the distant-height atlas (see Bakes).
+4. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), the visible grass
+   tables bake, and the post chain runs.
 5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
    Begin / Continue. Only that gesture starts audio and `requestAnimationFrame(frame)`; the story and the quality
    governor do not run while waiting.
 
-World construction yields between major systems, and long preparation such as the birches scarf settling runs in
-short batches (`prepareInBatches`), so the veil keeps painting. Anything that appears later in the story is already
+World construction runs in counted steps (`BUILD_STEPS`, checked by `start-check`), yielding once a paint is due, and
+long preparation such as the stairs and the birches scarf settling runs in short batches (`prepareInBatches`), so the
+veil keeps painting. The veil shows the stage and a percentage (`startScreen.progress`, see the boot-veil design). Anything that appears later in the story is already
 compiled and uploaded; showing it costs nothing. `node tools/start-check.mjs` fails if the worst boot frame gap
 exceeds 500 ms (`BOOT_MAX_MS`); `node tools/boot-profile.mjs` records cold-load long tasks, blocking GL calls and a
 CPU profile.
