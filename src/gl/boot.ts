@@ -18,7 +18,8 @@ export function yieldBoot(): Promise<void> {
   return new Promise(resolve => requestAnimationFrame(() => { stamp(); setTimeout(resolve, 0); }));
 }
 
-async function keepPainting(): Promise<void> {
+/** Yields for a paint once a paint budget has passed since the last one. */
+export async function keepPainting(): Promise<void> {
   if (performance.now() - lastFrame >= PAINT_BUDGET_MS) await yieldBoot();
 }
 

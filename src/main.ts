@@ -36,7 +36,7 @@ import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { QA } from './qa';
-import { coldShaders, drawables, gpuIdle, passJob, prepareInBatches, settlePrograms, warmCount, warmRender, warmSimulations, watchFirstDraws, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
+import { coldShaders, drawables, gpuIdle, keepPainting, passJob, prepareInBatches, settlePrograms, warmCount, warmRender, warmSimulations, watchFirstDraws, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
 import { runBootPasses, simMaterials, simWrites } from './gl/gpu';
 import { hasVariants, selectAll, variantSteps } from './gl/variants';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
@@ -113,7 +113,7 @@ declare global {
 
 performance.mark('main');
 startScreen.progress('build', 0);
-/** Construction steps, each ending in a paint; `start-check` fails if a real boot counts a different number. */
+/** Construction steps, each ending where the veil may paint; `start-check` fails if a real boot counts a different number. */
 const BUILD_STEPS = 25;
 /** Stage C's share for compiling and settling programs, the rest for first draws (Chrome, 4x CPU slowdown). */
 const SETTLE_SHARE = 0.6;
@@ -122,7 +122,7 @@ let stepStarted = performance.now();
 async function built(): Promise<void> {
   if (QA) performance.measure(`build step ${builtSteps + 1}`, { start: stepStarted });
   startScreen.progress('build', ++builtSteps / BUILD_STEPS);
-  await yieldBoot();
+  await keepPainting();
   stepStarted = performance.now();
 }
 
