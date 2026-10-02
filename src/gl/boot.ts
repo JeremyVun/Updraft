@@ -27,10 +27,12 @@ function idle(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/** Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps. */
-export async function prepareInBatches(steps: Iterable<unknown>, budgetMs = 8): Promise<void> {
+/** Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps; resolves to what the steps return. */
+export async function prepareInBatches<T>(steps: Iterator<unknown, T>, budgetMs = 8): Promise<T> {
   let started = performance.now();
-  for (const _ of steps) {
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
     if (performance.now() - started >= budgetMs) { await yieldBoot(); started = performance.now(); }
   }
 }

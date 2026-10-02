@@ -228,7 +228,7 @@ const skyMirror = new SkyMirror();
 scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
 scene.add(littleBoats.group);
-const cloudStairs = new CloudStairs();
+const cloudStairs = await prepareInBatches(CloudStairs.build());
 scene.add(cloudStairs.group);
 const birches = new AutumnBirches(renderer, wind, false);
 await prepareInBatches(birches.scarf.settle());
