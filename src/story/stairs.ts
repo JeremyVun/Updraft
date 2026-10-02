@@ -1136,7 +1136,7 @@ export class StairsChapter implements Chapter {
     boat.group.updateMatrixWorld(true);
     // Shifted toward the starboard side on the thwart and turned to it.
     const seat = this.onRail(-0.25, 0, this.rail[2]).lerp(boat.seat(this.tmp), 1 - 0.32 * turned);
-    c.ride(seat, boat.yaw - 0.55 * turned, boat.roll, boat.pitch);
+    c.ride(seat, boat.yaw - 0.55 * turned, boat);
     // Toward the low sun, a little above the tops, wherever the wander has the bow: where it is all going.
     const sun = atmo.uniforms.uSunDir.value;
     const flat = Math.hypot(sun.x, sun.z) || 1;
@@ -1174,7 +1174,7 @@ export class StairsChapter implements Chapter {
     this.sailed += boat.speed * dt;
     this.steer();
     if (depth > k.bankSwap) this.downOntoTheSea();
-    c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
+    c.ride(boat.seat(this.tmp), boat.yaw, boat);
   }
 
   /**
@@ -1210,7 +1210,7 @@ export class StairsChapter implements Chapter {
    */
   private thin(dt: number): void {
     const { boat, child: c } = this.cast;
-    c.ride(boat.seat(this.tmp), boat.yaw, boat.roll, boat.pitch);
+    c.ride(boat.seat(this.tmp), boat.yaw, boat);
     boat.speedLimit = 3.4;
     boat.speed = Math.max(boat.speed, 2.6);
     this.dusk = THREE.MathUtils.lerp(0.62, 0.75, THREE.MathUtils.smoothstep(this.t, 0, tuning.stairs.fogLift));

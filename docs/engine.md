@@ -124,7 +124,10 @@ his iPad. `node tools/start-check.mjs` also fails if the worst boot frame gap ex
 2. Completed readbacks are polled once, before this frame submits any GPU work. The pointer's screen segment is
    snapshotted and interpolated across the world updates; each brush sees only its own segment.
 3. Each world update advances input, story, actors, wind, life and particles, camera and world mechanics, in that
-   order. The last one follows the world window and requests the wind readback after its final tick.
+   order. The last one follows the world window and requests the wind readback after its final tick. The story
+   runs before the boat moves, so a chapter seats the child with `ride(at, yaw, boat)` and she keeps that seat in the
+   hull's frame: anything placed from the boat's last position trails it by a step, which uneven frames turn into a
+   shudder (`shot`'s even steps hide it).
 4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables
    and audio.
 5. The doorway view renders when open, then the sea reflection, the scene and the post chain; `endFrame()` fences it.
