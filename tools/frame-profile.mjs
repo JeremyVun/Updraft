@@ -390,9 +390,26 @@ window.__audit = {
     // mirror-ordinary: the sky mirror's reflection at the ordinary sea's size and cadence (a look change, costed only).
     this.mirrorCadence??=[water.mirrorScale,water.mirrorEvery];
     [water.mirrorScale,water.mirrorEvery]=variants.includes('mirror-ordinary')?[0.25,2]:this.mirrorCadence;
-    const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
-    const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
-    if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
+    const w=post.sceneTarget.width,h=post.sceneTarget.height;
+    if(post.setBloom){
+      // bloom-full, bloom-half, bloom-off: the bloom at that level whatever the level chose.
+      this.bloomLevel??=post.bloomLevel;
+      const level=variants.find(v=>['bloom-full','bloom-half','bloom-off'].includes(v))?.slice(6)??this.bloomLevel;
+      if(post.bloomLevel!==level)post.setBloom(level,true);
+      this.bloomSize=[post.bloomLevel,w,h];
+    } else {
+      const half=variants.includes('bloom-half'),want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
+      if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
+    }
+    // sea-collar, sea-glint, sea-seabed, sea-reflection flip that switch of the sea from what the level chose.
+    const sea=water.mesh.material,flips={'sea-collar':'HULL_COLLAR','sea-glint':'LANTERN_GLINT','sea-seabed':'SEABED_DETAIL','sea-reflection':'SEA_REFLECTION'};
+    for(const [v,name] of Object.entries(flips)){
+      if(!(name in sea.defines))continue;
+      this.seaLevel??={};this.seaLevel[name]??=sea.defines[name];
+      const want=variants.includes(v)?1-this.seaLevel[name]:this.seaLevel[name];
+      if(sea.defines[name]!==want){sea.defines[name]=want;sea.needsUpdate=true;}
+      if(name==='SEA_REFLECTION')water.seaReflection=!!want;
+    }
   },
   // grass-bare-tiles: the upper bound on skipping empty tiles, tiles in which no blade can stand (every blade's keep is 0 in its table)
   // left out of the draw. Reads the tables back once; the tiles are restored for every other variant.
@@ -449,7 +466,7 @@ window.__audit = {
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
       // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
-      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),' + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
+      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),'scatterLight += lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
       // Candidate exact skip: the lantern's glint only within its reach (tuning.lantern.reach, 9 m), where lanternLight is not 0.
       'water-lantern-reach':[[waterMat],'fragmentShader',s=>sub(s,'if (uLantern.w > 0.001) {','if (uLantern.w > 0.001 && dot(uLantern.xyz - vWorld, uLantern.xyz - vWorld) < 81.0) {')],
       'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
@@ -637,7 +654,7 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare,!!this.stairsUnindexed,water.mesh.material.defines.LAND_SKIP])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines)])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,

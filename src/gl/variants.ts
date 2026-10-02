@@ -5,7 +5,7 @@ import type * as THREE from 'three';
  * tests with `#if`: on these GPUs code a uniform switches off still costs registers, so an effect that is off is
  * compiled out rather than branched round.
  */
-export type Switch = 'CLOUD_DECK' | 'LAND_SKIP';
+export type Switch = 'CLOUD_DECK' | 'LAND_SKIP' | 'HULL_COLLAR' | 'LANTERN_GLINT' | 'SEABED_DETAIL' | 'SEA_REFLECTION';
 export type Choice = Partial<Record<Switch, boolean>>;
 
 type Axis = readonly Choice[];

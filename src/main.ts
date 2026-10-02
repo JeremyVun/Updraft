@@ -415,6 +415,8 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   terrain.detail = world.terrainSplit;
   water.mirrorEvery = world.mirrorEvery;
   water.mirrorScale = world.mirrorScale;
+  water.effects = world.sea;
+  post.setBloom(world.bloom, immediate);
   controls.setQualityLevel(name);
 }
 applyWorldQuality(quality.level, true);
@@ -1172,7 +1174,7 @@ async function boot(): Promise<void> {
   await warmRender(renderer, scene, rig.camera, post.sceneTarget);
   for (const _ of otherVariants()) await warmRender(renderer, scene, rig.camera, post.sceneTarget, hasVariants);
   await yieldBoot();
-  post.render(0);
+  post.render(0, true);
   await gpuIdle(renderer);
   bootMs = performance.now() - started;
   if (contextRecovery.lost) return;
