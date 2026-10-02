@@ -169,7 +169,24 @@ Built as two parallel parcels from 36c52e1, compared against a baseline worktree
   gated exactly is dropped, not approximated.
 - **Gate:** the frame difference above; saving at `stairs:cloud`, `stairs:top`, `stairs:sail`; `tools/perf.mjs frames`
   through the chapter shows no new hitch.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at 890359a (2026-10-02). Along the whole chapter (`ALONG=10 … stairs:drowned`, 1508
+  samples from the climb to 300 frames into the village) 0 changed against 0be9dc5; `stairs:waiting` 0; island, sea
+  and drowned 0.
+  - Kept: 30 more stairs nodes, the drowned village's meshes, the lighthouse and the sky fixed in place (367 of 524).
+    The cloud top and underside skip grid points whose ±2-cell box (heights bounded by `uRise` and the underside's
+    worked bounds) lies past one of five view planes (`cloud-grid.ts` `gridUnseen`): sail 2.8–3.7%, cloud about 3.7%,
+    waiting about 3.6%, top none measurable (its cost is rasterising small visible triangles).
+  - Testing the sixth (far) plane, or writing the box another way, recompiled the visible points an ulp differently
+    (cloud crests up to 113/255): any edit to the cloud top's or underside's vertex stage re-runs `ALONG` against
+    the commit before.
+  - Dropped: the towers (already culled; a box test drops 12-triangle boxes with no pixels), the haze at the top (its
+    density cannot be proven zero), and the sea, terrain and grass in the white (the ordinary haze is never zero, so
+    the deck never covers fully: up to 47/255).
+  - `frame-profile` `ALONG=<n>` compares every nth frame of two builds playing the stairs on frames; the fixture acts
+    once per game frame and adds `stairs:drowned` (frame 15163).
+- **Look change found, for phase 7's list:** hiding the sea (and terrain) above the cloud during the top and the sail:
+  top −10.8 to −18.7% (1.4 to 2.4 ms), sail −13.8% (2.0 ms), at most 3/255 on a few thousand channels (the sea faintly
+  through the deck's frayed edge); nothing proves it hidden, so it needs a check along the whole sail.
 
 ## Phase 3b: exact leads across the frame
 
@@ -316,7 +333,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 
 - **Owns:** `tools/` only; appends its findings to `profile.md`.
 - **Do:** at Medium and Low settings, cost the candidates in design section 4 with ablations, weighted by minutes.
-  Include the look changes phases 1 and 3b found (3b-i's mirror reflection cadence and mirror merge; 3b-ii's sea
+  Include the look changes phases 1, 3 and 3b found (phase 3's sea above the cloud; 3b-i's mirror reflection cadence and mirror merge; 3b-ii's sea
   under land beyond the window; 1b's creatures on the baked height copy), at the levels where each would apply.
   For each worth more than about 1% of a Low frame, a visual model makes one before/after still.
 - **Deliverable:** a ranked list for Jeremy (effect, level it would leave at, saving, still). His rulings go into
