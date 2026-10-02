@@ -491,17 +491,12 @@ body.graphics-lost #veil { visibility: hidden; }
   letter-spacing: .045em;
   white-space: nowrap;
   color: #fff2db;
-  opacity: .62;
-  text-shadow: 0 0 9px #ffe8cc30;
+  opacity: .9;
+  /* The day veil's centre is too pale for ivory alone. */
+  text-shadow: 0 0 2px #182a3659, 0 1px 12px #182a3699;
 }
-.loading-text span { display: inline-block; animation: loading-dot 1.4s ease-in-out infinite; }
-.loading-text span:nth-child(2) { animation-delay: .2s; }
-.loading-text span:nth-child(3) { animation-delay: .4s; }
-.loading-text .progress-stage, .loading-text .progress-percent { animation: none; }
-@keyframes loading-dot {
-  0%, 100% { opacity: .15; }
-  40% { opacity: 1; }
-}
+.progress-percent { margin-left: .6em; font-variant-numeric: tabular-nums; }
+.progress-percent:empty { display: none; }
 @keyframes cygnet-paddle-bob {
   0%, 100% { transform: translateY(0) rotate(-1deg); }
   50% { transform: translateY(1.34%) rotate(1deg); }
