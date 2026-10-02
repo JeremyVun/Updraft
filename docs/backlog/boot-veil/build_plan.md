@@ -171,6 +171,18 @@ the exemplar's 3.2:1 within 0.2.
 
 Done marker: `Phase 3: done <commit>` here, with the stills' paths.
 
+Phase 3: done 16973bc (branch `boot-veil-p3`), 2026-10-03. Stills from `tools/veil-stills.mjs` on the QA preview, at
+device scale 2, in `/tmp/updraft-bv-p3-stills/`: `veil-<desktop|ipad|phone>-<day|night>-<a|c|long>.png` (desktop
+1440x900, iPad 1180x820, phone 390x844; `a` the static stage A line, `c` "Preparing the graphics 37%", `long` "Laying
+out the ground and grass 96%"), and beside the exemplar in the comps' framing: `compare-ipad-day-c.png`,
+`compare-ipad-night-c.png`, `compare-desktop-day-a.png`, `compare-phone-day-long.png`. The line's size, position, gap
+and shadow match the exemplar pixel for pixel; `comps/d1.css` is ported unchanged. The phone's longest line is one
+row, 248 px wide. Contrast on the iPad day frame at 37% (rendered glyph colour against the backdrop under the
+shadow, the same method on both): 3.29:1, the exemplar 3.40:1; night 6.41:1, the exemplar 6.67:1 (its JPEG brightens
+the glyph cores). Failure stills: `failure-retry-1280.png` (start-check), `failure-watchdog-ipad.png`,
+`failure-permanent-ipad.png`. Checks: typecheck, build, `production-build-check`, `start-check` and `loading-check` on
+the QA preview; `failure-paths-check` on a dev server (its entry-chunk block matches only the dev module name).
+
 ## Phase 4: verification and docs
 
 Owns: `docs/engine.md` (Boot), `docs/testing.md`.
