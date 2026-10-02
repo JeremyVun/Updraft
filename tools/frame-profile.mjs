@@ -556,7 +556,7 @@ window.__audit = {
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
     this.deckHits=hits;
   },
-  level(name,grassDensity,grassReach) { applyWorldQuality({...quality.level,name},true); if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
+  level(name,grassDensity,grassReach) { applyWorldQuality({...quality.level,name},true); this.bloomLevel=this.seaLevel=undefined; if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
