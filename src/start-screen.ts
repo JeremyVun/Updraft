@@ -13,9 +13,9 @@ interface Point { x: number; y: number }
 
 /** What the veil says the game is doing, and the share of the number each stage covers (design: boot-veil, Progress). */
 const STAGES = {
-  build: { line: 'Building the world', from: 3, to: 9 },
-  graphics: { line: 'Preparing the graphics', from: 9, to: 94 },
-  ground: { line: 'Laying out the ground and grass', from: 94, to: 100 },
+  build: { line: 'Building the world', from: 3, to: 41 },
+  graphics: { line: 'Preparing the graphics', from: 41, to: 95 },
+  ground: { line: 'Laying out the ground and grass', from: 95, to: 100 },
 } as const;
 export type LoadingStage = keyof typeof STAGES;
 

@@ -115,8 +115,8 @@ performance.mark('main');
 startScreen.progress('build', 0);
 /** Construction steps, each ending in a paint; `start-check` fails if a real boot counts a different number. */
 const BUILD_STEPS = 25;
-/** Stage C's share for compiling and settling programs; the rest is their first draws. */
-const SETTLE_SHARE = 0.5;
+/** Stage C's share for compiling and settling programs, the rest for first draws (Chrome, 4x CPU slowdown). */
+const SETTLE_SHARE = 0.6;
 let builtSteps = 0;
 let stepStarted = performance.now();
 async function built(): Promise<void> {
