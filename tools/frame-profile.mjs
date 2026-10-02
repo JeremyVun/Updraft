@@ -95,6 +95,8 @@
 // blades' fog at their root: the look of fog once per blade, not its saving; grass-fog is that saving's upper bound),
 // grass-near-<f> (the near grass level's reach times f), grass-near-5seg (near blades with five segments), rt-r11 (the
 // scene, resolve, post.clean and bloom targets as R11F_G11F_B10F).
+// Phase 7b: grass-fog-vertex works the blades' fog out at every vertex again without the per-blade fog pass (the
+// old path; every draw here runs that pass, as prepareFrame does).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -409,6 +411,7 @@ window.__audit = {
       'sky-bank':[bankSkip],
       'sky-detail':[bankSkip,['float thick = smoothstep(0.52, 0.8, fbm((p + toSun) * vec2(0.55, 1.1)) * 0.7 + 0.15);','float thick = cloudDensity(p + toSun);']],
       'grass-fog-root':[['vFog = fogOf(rootPos, 1.0);','vFog = fogOf(world, 1.0);']],
+      'grass-fog-vertex':[['vFog = fogOf(world, 1.0);','vFog = texelFetch(uFogTex, at, 0);']],
     };
     const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,bakes.groundMat,...grass.lods.map(l=>l.tableMat)]);
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
@@ -777,6 +780,7 @@ window.__audit = {
     for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
+    if (this.omit !== 'grass-fog-vertex') grass.shadeFog?.(renderer);
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
       const bloom=post.bloom.render;

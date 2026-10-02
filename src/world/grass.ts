@@ -2,6 +2,7 @@ import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
 import { CLOUD_DECK, register } from '../gl/variants';
 import { passJob, type CompileJob } from '../gl/boot';
+import { simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -358,6 +359,38 @@ float qualityStanding(float rank, float share, float dist, vec2 root) {
 }
 `;
 
+/** Where a blade stands: on frozen sward it is set deeper, so its short stem rises out of the rime. */
+const BLADE_ROOT_GLSL = /* glsl */ `
+vec3 bladeRoot(vec2 root2, float groundH) {
+  return vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
+}
+`;
+
+/**
+ * Each blade's fog, worked out once a frame at its root rather than at every vertex of the blade. Blades the blade
+ * shader collapses are skipped, with a margin so that every blade it draws has its fog.
+ */
+const FOG_FRAG = /* glsl */ `
+uniform vec3 uFogEye;
+// Drawn as a full-screen pass, whose camera is not the eye.
+#define cameraPosition uFogEye
+${ATMO_GLSL}
+${BLADE_THIN_GLSL}
+${BLADE_ROOT_GLSL}
+uniform sampler2D uRootTex;
+uniform sampler2D uShapeTex;
+
+void main() {
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  vec4 root = texelFetch(uRootTex, at, 0);
+  float dist = length(root.xy - uGrassEye);
+  if (root.w >= densityAt(dist) * bladeDensity(root.xy, dist) * texelFetch(uShapeTex, at, 0).x + 1e-3) {
+    gl_FragColor = vec4(0.0);
+    return;
+  }
+  gl_FragColor = fogOf(bladeRoot(root.xy, root.z), 1.0);
+}`;
+
 /**
  * The blade table: everything about a blade that does not change from vertex to vertex or frame to frame is
  * computed once per blade here, into four texels, instead of once per vertex in the blade shader (thirteen
@@ -494,7 +527,9 @@ uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
 uniform sampler2D uTintTex;
 uniform sampler2D uFlowerTex;
+uniform sampler2D uFogTex;
 ${BLADE_THIN_GLSL}
+${BLADE_ROOT_GLSL}
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vSideDir;
@@ -540,7 +575,7 @@ void main() {
   float flower = fl.y * step(0.5, life);
   float petalClass = fl.z;
   h *= 1.0 + flower * fl.w;
-  vec3 rootPos = vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
+  vec3 rootPos = bladeRoot(root2, groundH);
 
   vec2 uv = domainUv(root2);
   vec4 ground = groundAt(root2);
@@ -580,7 +615,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(world, 1.0);
+  vFog = texelFetch(uFogTex, at, 0);
   vWorld = world;
   vT = t;
   vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
@@ -598,6 +633,7 @@ ${RIME_GLSL}
 ${BLADE_RAND_GLSL}
 ${BLADE_LOD_GLSL}
 ${BLADE_THIN_GLSL}
+${BLADE_ROOT_GLSL}
 in vec2 aTile;
 uniform float uTileSize;
 out vec3 vWorld;
@@ -667,7 +703,7 @@ void main() {
   float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2))) * step(0.5, life);
   float petal = gr_rand(s);
   h *= 1.0 + flower * (0.2 + 0.5 * pasture);
-  vec3 rootPos = vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
+  vec3 rootPos = bladeRoot(root2, groundH);
 
   vec4 ground = groundAt(root2);
   vec4 bend = texture(uBendTex, uv);
@@ -709,7 +745,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(world, 1.0);
+  vFog = fogOf(rootPos, 1.0);
   vWorld = world;
   vT = t;
   vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
@@ -841,6 +877,8 @@ interface Lod {
   tileTex: THREE.DataTexture;
   table: THREE.WebGLRenderTarget;
   tableMat: THREE.ShaderMaterial;
+  fog: THREE.WebGLRenderTarget;
+  fogMat: THREE.ShaderMaterial;
   count: number;
   previousCount: number;
   tilesChanged: boolean;
@@ -870,6 +908,8 @@ export class Grass {
   private readonly tableState = new Float64Array(17).fill(NaN);
   /** Where thinning is measured from: the camera `update` picked tiles for, on the ground plane. */
   private readonly eye = { value: new THREE.Vector2() };
+  private readonly fogEye = { value: new THREE.Vector3() };
+  private camera: THREE.Camera | null = null;
   /** On a meadow sown sparsely (`uDensity`, the lite tier) the finer levels hold nothing but blades that never show, so tiles start at the first level that holds them all. */
   private finest = 0;
   /** `?blades=direct`: the per-vertex blade shader, for before/after comparison with the table. */
@@ -936,6 +976,14 @@ export class Grass {
       });
       // Root and shape stay full float (a half-float angle would turn blades by a visible fraction of a degree).
       for (let i = 2; i < 4; i++) table.textures[i].type = THREE.HalfFloatType;
+      const fog = simTarget(TABLE_WIDTH, rows, THREE.HalfFloatType, THREE.NearestFilter);
+      const fogMat = simMaterial(FOG_FRAG, {
+        ...atmo.uniforms,
+        ...thinning,
+        uFogEye: this.fogEye,
+        uRootTex: { value: table.textures[0] },
+        uShapeTex: { value: table.textures[1] },
+      }, fog);
       const tableMat = new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
         vertexShader: TABLE_VERT,
@@ -962,6 +1010,7 @@ export class Grass {
           uShapeTex: { value: table.textures[1] },
           uTintTex: { value: table.textures[2] },
           uFlowerTex: { value: table.textures[3] },
+          uFogTex: { value: fog.texture },
           ...thinning,
           uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
           uQualityClose: { value: new THREE.Vector2(...(level === 0 ? [0.25, 0.55] as const : level === 1 ? [0.125, 0.25] as const : [0, 0] as const)) },
@@ -977,7 +1026,7 @@ export class Grass {
       // Rooms and the doorway set their uniforms around each draw, after the render list holds this material.
       mesh.onBeforeRender = () => this.pickProgram(mat);
       this.group.add(mesh);
-      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
+      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, fog, fogMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
     fixTreeInPlace(this.group);
     this.setQuality(density, params.lite ? 0.7 : 1, true);
@@ -1139,6 +1188,7 @@ export class Grass {
     const cx = camera.position.x;
     const cz = camera.position.z;
     this.eye.value.set(cx, cz);
+    this.camera = camera;
     const reach = this.lods[this.lods.length - 1].spec.reach;
     for (const l of this.lods) { l.count = 0; l.tilesChanged = false; }
     const x0 = Math.floor((Math.max(cx - reach, WINDOW.minX)) / TILE);
@@ -1227,7 +1277,24 @@ export class Grass {
       this.quad.render(renderer);
       l.dirty = false;
     }
-    renderer.setRenderTarget(prev);
     this.tablesDirty = false;
+    this.shadeFog(renderer);
+    renderer.setRenderTarget(prev);
+  }
+
+  /** Works out every drawn blade's fog for this frame's eye, after the tables it reads. */
+  shadeFog(renderer: THREE.WebGLRenderer): void {
+    if (this.direct || !this.camera) return;
+    this.camera.getWorldPosition(this.fogEye.value);
+    const prev = renderer.getRenderTarget();
+    for (const l of this.lods) {
+      if (!l.count) continue;
+      l.fog.scissor.set(0, 0, TABLE_WIDTH, Math.ceil(l.count * l.spec.cols * l.spec.rows / TABLE_WIDTH));
+      l.fog.scissorTest = true;
+      this.quad.material = l.fogMat;
+      renderer.setRenderTarget(l.fog);
+      this.quad.render(renderer);
+    }
+    renderer.setRenderTarget(prev);
   }
 }
