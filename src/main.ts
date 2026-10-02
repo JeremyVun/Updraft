@@ -418,6 +418,7 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   water.effects = world.sea;
   post.setBloom(world.bloom, immediate);
   controls.setQualityLevel(name);
+  cloudStairs.setLevel(name, immediate);
 }
 applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;
