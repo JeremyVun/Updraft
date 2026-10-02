@@ -70,7 +70,7 @@ try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await context.newPage();
     let blocked = 0;
-    await page.route(url => /\/(src\/)?entry(-[^/]+)?\.(ts|js)$/.test(url.pathname), route => { blocked++; return route.abort(); });
+    await page.route(url => /\/(src\/entry\.ts|assets\/index-[^/]+\.js)$/.test(url.pathname), route => { blocked++; return route.abort(); });
     await page.goto(base);
     await page.waitForFunction(() => {
       const begin = document.getElementById('begin');
