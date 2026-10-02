@@ -29,7 +29,8 @@
 // POLL=timeout polls fences with setTimeout(0), the pre-9b69229 behaviour, for A/B checks of the poll.
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // RATIO and MSAA override the page's ratio=1.5&msaa=2. DRAIN=1 waits for the GPU after every draw in every ablation.
-// Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half; none pairs the baseline with itself.
+// Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half, sun-glow-off (at a level without bloom);
+// none pairs the baseline with itself.
 // msaa-nodepth swaps in a scene target built to neither resolve nor store its multisampled depth. On Chrome/ANGLE Metal
 // it renders without antialiasing (pixels match msaa-0) and is no faster, so it is not an exact skip.
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
@@ -419,9 +420,34 @@ window.__audit = {
     // mirror-ordinary: the sky mirror's reflection at the ordinary sea's size and cadence (a look change, costed only).
     this.mirrorCadence??=[water.mirrorScale,water.mirrorEvery];
     [water.mirrorScale,water.mirrorEvery]=variants.includes('mirror-ordinary')?[0.25,2]:this.mirrorCadence;
-    const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
-    const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
-    if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
+    const w=post.sceneTarget.width,h=post.sceneTarget.height;
+    if(post.setBloom){
+      // bloom-full, bloom-half, bloom-off: the bloom at that level whatever the level chose.
+      this.bloomLevel??=post.bloomLevel;
+      const level=variants.find(v=>['bloom-full','bloom-half','bloom-off'].includes(v))?.slice(6)??this.bloomLevel;
+      if(post.bloomLevel!==level)post.setBloom(level,true);
+      this.bloomSize=[post.bloomLevel,w,h];
+    } else {
+      const half=variants.includes('bloom-half'),want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
+      if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
+    }
+    // sun-glow-off: the grade without the glow it paints round the sun while bloom is off. Both sides rebind the grade's
+    // program every draw, so the pair differs only by the glow.
+    if(!this.gradeHooked&&'SUN_GLOW' in post.gradeMat.defines){
+      const q=post.quad,render=q.render.bind(q),m=post.gradeMat;
+      q.render=r=>{if(q.material===m){if(this.glowOff)m.defines.SUN_GLOW=0;m.needsUpdate=true;}render(r);};
+      this.gradeHooked=true;
+    }
+    this.glowOff=variants.includes('sun-glow-off');
+    // sea-collar, sea-glint, sea-seabed, sea-reflection flip that switch of the sea from what the level chose.
+    const sea=water.mesh.material,flips={'sea-collar':'HULL_COLLAR','sea-glint':'LANTERN_GLINT','sea-seabed':'SEABED_DETAIL','sea-reflection':'SEA_REFLECTION'};
+    for(const [v,name] of Object.entries(flips)){
+      if(!(name in sea.defines))continue;
+      this.seaLevel??={};this.seaLevel[name]??=sea.defines[name];
+      const want=variants.includes(v)?1-this.seaLevel[name]:this.seaLevel[name];
+      if(sea.defines[name]!==want){sea.defines[name]=want;sea.needsUpdate=true;}
+      if(name==='SEA_REFLECTION')water.seaReflection=!!want;
+    }
   },
   // grass-bare-tiles: the upper bound on skipping empty tiles, tiles in which no blade can stand (every blade's keep is 0 in its table)
   // left out of the draw. Reads the tables back once; the tiles are restored for every other variant.
@@ -478,7 +504,7 @@ window.__audit = {
       'e6-off':[[waterMat],'fragmentShader',s=>sub(s,'if (glitter > 1e-9) sparkle','if (true) sparkle')],
       // Restores the old path: s3-off roomHides evaluated at each use (three times per pixel, twice per surface sample).
       's3-off':[[waterMat],'fragmentShader',s=>sub(sub(sub(s,'if (hides) inside','if (roomHides(xz)) inside'),'float poolLevel = hides ?','float poolLevel = roomHides(xz) ?'),'float glass = hides ? 0.0 : mirrorWater(xz)','float glass = roomHides(vWorld.xz) ? 0.0 : mirrorWater(vWorld.xz)')],
-      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),' + lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
+      'water-lantern':[[waterMat],'fragmentShader',s=>sub(sub(s,'if (uLantern.w > 0.001) {','if (false) {'),'scatterLight += lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;',';')],
       // Candidate exact skip: the lantern's glint only within its reach (tuning.lantern.reach, 9 m), where lanternLight is not 0.
       'water-lantern-reach':[[waterMat],'fragmentShader',s=>sub(s,'if (uLantern.w > 0.001) {','if (uLantern.w > 0.001 && dot(uLantern.xyz - vWorld, uLantern.xyz - vWorld) < 81.0) {')],
       'water-hull':[[waterMat],'fragmentShader',s=>sub(s,'if (uHullWet.x > 0.0) {','if (false) {')],
@@ -568,7 +594,7 @@ window.__audit = {
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
     this.deckHits=hits;
   },
-  level(name,grassDensity,grassReach) { this.levelName=name;applyWorldQuality({...quality.level,name},true); if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
+  level(name,grassDensity,grassReach) { this.levelName=name;applyWorldQuality({...quality.level,name},true); this.bloomLevel=this.seaLevel=undefined; if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -588,6 +614,8 @@ window.__audit = {
     stages['bloom-composite']=()=>quad(b.compositeMaterial,b.renderTargetsHorizontal[0],true);
     stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
     stages.grade=()=>{post.quad.material=post.gradeMat;r.setRenderTarget(null);post.quad.render(r);};
+    // grade-plain: the grade without the sun's glow, beside a grade that draws it (at a level without bloom).
+    if(post.gradeMat.defines.SUN_GLOW===1)stages['grade-plain']=()=>{const m=post.gradeMat;m.defines.SUN_GLOW=0;m.needsUpdate=true;stages.grade();m.defines.SUN_GLOW=1;m.needsUpdate=true;};
     try {
       for(const [name,stage] of Object.entries(stages)){
         const n=name==='scene'?Math.max(4,reps>>3):reps,samples=[];
@@ -666,7 +694,7 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare,!!this.stairsUnindexed,water.mesh.material.defines.LAND_SKIP])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,

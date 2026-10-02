@@ -299,9 +299,6 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   (fewer wisps and haze steps), the effects in `applyWorldQuality`. After phases 2, 3, 3b and 4.
 - Built in two parcels: **5a** beside phase 3 (bloom, the sea's three effect switches, the ordinary reflection, the
   50% grass), **5b** after phase 3 merges (the stairs' wisps and haze steps, which share files with phase 3).
-- **Also (nonvisual):** the last step's 50% grass submits the same blades as 100% and thins them in the shader, so it
-  saves no vertex work; draw it from the sparser level the way sparse density already starts tiles at the coarsest
-  level that holds every blade it can show, with frames identical to today's 50% (`src/world/grass.ts`).
 - **Contract:** the effects rows of the table in design section 3. Ultra and High render exactly as before this phase
   (frames within 1/255). Bloom off skips its passes and releases its targets; half resolution halves the chain's
   first target. The sky mirror's reflection is never turned off. Turning an effect off at a level is a variant or a
@@ -314,7 +311,36 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
 - **Gate:** Ultra/High frame difference; saving per effect at Medium and Low settings (`DETAIL`-style profile of each
   level, `LEVEL=<name>`); `tools/perf.mjs frames` across each level change; `tools/sky-mirror-check.mjs`, `tools/sea-check.mjs`,
   `tools/stairs-check.mjs`; the veil gap as in phase 2. **Jeremy's verdict on the stills before merging.**
-- **Done:** [ ]
+- **Done:** 5a [x] merged to `main` at 7933da5 (2026-10-02, Jeremy: "Merge"); 5b [ ]; 5c (the sun glow) [x] at e959c48 (2026-10-03, Jeremy: "Merge").
+- **5a as built:** `WORLD_QUALITY` gains `bloom` (`full|half|off`) and `sea` (`all|noCollar|plain`); Ultra and High
+  stay one shared object (`sameLevel` relies on it). `applyWorldQuality` sets `water.effects` and
+  `post.setBloom(level, immediate)`.
+  - The sea's effects are one three-way axis `SEA_EFFECTS` (`HULL_COLLAR`, `LANTERN_GLINT`, `SEABED_DETAIL`,
+    `SEA_REFLECTION`): the sea has 12 programs, boot 11 variant steps (time to ready about +0.3 s; the worst veil gap
+    unchanged). A new sea switch joins this axis rather than adding one.
+  - Low turns off the ordinary sea's reflection pass and compiles out its sample (the sky mirror keeps its own).
+  - Seabed detail off keeps the bed's averages (grain and ripple factors as constants, weed mean 0.21 as a tint in its
+    band, caustics mean 0.11), so the shallows keep their colour; only the caustic web goes.
+  - Bloom half resizes the chain to half; off skips the passes and, once faded (strength eases over 1 s), releases
+    the bright and blur targets (−7.2 MiB at Low). Boot draws bloom once at any level so its programs exist.
+  - Costs (drained, isolated): collar 0.08–0.19 ms, glint 0.03–0.09 ms, seabed 0.20–0.26 ms (18–23% of the sea pass),
+    ordinary reflection 0.31–0.84 ms, bloom off 0.29–0.31 ms (about 6% of a Low frame); half bloom saves little at
+    Medium's scale on the Mac (per-pass overhead). Whole-frame pairs were in the noise while peers ran.
+  - Ultra 0 changed at twelve fixtures; High 0 at `sea`.
+  - Level changes: two of four runs on the branch showed one 50–83 ms frame, not reproduced switching bloom or the sea
+    alone; re-check on a quiet machine in phase 8.
+  - Not built, and stays so (Jeremy, 2026-10-02, design rulings): the last step's 50% grass from the sparser table. The sparser level holds 25% (the lowest-ranked blade
+    of each 2×2 block); the other blades shown at 50% vary per block, so no fixed slot grid holds them.
+  - `frame-profile` levers `bloom-full|half|off`, `sea-collar|glint|seabed|reflection`; `sea` is the lantern lit at
+    night, `'sea&dusk=0'` by day; the `wood` fixture has no lit ember (use `play.mjs` and `embers.blow`).
+- **5c, the sun glow (Jeremy, 2026-10-02):** with bloom off at Low and the last step, the sky draws a soft halo around
+  the sun so it is not a hard white disc. Ultra, High and Medium unchanged.
+  - As built: the post chain's colour pass adds four soft rings around the sun before tone mapping, strength from 13
+    samples of the disc's on-screen brightness over bloom's 1.1 threshold (so clouds, hills, the deck and sails hide
+    or wash it as they would bloom; the moon glows too). A `SUN_GLOW` variant on that pass (230 programs), eased by
+    `1 - bloomShown`; look numbers `SUN_RADIUS`, `GLOW_SPREAD`, `GLOW_SHARE` beside `BLOOM_STRENGTH`. About 0.01 ms.
+    A sun at the frame's edge glows a little less than Ultra's; the sun's reflection on the sea gets none. Its
+    warm-up is `post.render(0, true)` in `boot()`, with bloom's.
 
 ## Phase 6: the menu (visual)
 

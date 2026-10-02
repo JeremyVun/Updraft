@@ -172,9 +172,19 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 | Terrain split | 1.6 | 1.6 | 1.35 | 1.1 | 1.1 |
 | Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 | 0.5 |
 | Sky mirror's reflection | every frame | every frame | every frame | alternate frames | alternate frames |
+| Bloom | full | full | half resolution | off | off |
+| Sun's glow painted by the grade in bloom's place (`SUN_GLOW`, eased with bloom) | no | no | no | yes | yes |
+| Hull's wet collar on the sea | yes | yes | off | off | off |
+| Lantern's glint and light on the sea | yes | yes | yes | off | off |
+| Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off | off |
+| Seabed detail in the shallows | yes | yes | yes | off | off |
 
 The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. The ordinary sea's
-reflection is redrawn at most every other frame at every level (unless the view has cut or the rooms changed).
+reflection is redrawn at most every other frame (unless the view has cut or the rooms changed); at Low and the last
+step it is not drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
+level. The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
+the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
+the collar, none), selected only by `applyWorldQuality`.
 Jeremy's rulings: "ultra, high, medium, low. dont overcomplicate this"; Medium and Low keep full grass, with Low
 capped to 30 fps; no level thins the grass below 50%.
 
@@ -226,7 +236,10 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 
 One multisampled half-float scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
 would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
-toning, vignette, grain) straight to the screen. Only the scene target is multisampled. The canvas has no depth buffer
+toning, vignette, grain) straight to the screen. Bloom follows the level: full, half resolution (its chain starts at a
+quarter of the frame instead of half) or off, when its passes are skipped and its targets released. Turning it on or
+off eases its strength over one second, as the grass changes; boot draws it once whatever the level, so its programs
+exist before Begin. Only the scene target is multisampled. The canvas has no depth buffer
 (`depth: false`): nothing drawn to the screen may rely on depth.
 
 ## Program variants (`src/gl/variants.ts`)

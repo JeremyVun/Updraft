@@ -301,5 +301,12 @@ The profile is `profile.md`. His answers, verbatim where quoted:
 - **Grass reach (2026-09-30):** Medium and Low at 100% density and 100% reach approved ("yea this is approved").
 - **Auto at the top (2026-10-01):** Auto on Ultra or High reaches 115% like the manual levels, so an iPad on Auto draws
   about 14% more blades than before this item (chosen: "Keep 115%").
+- **Phase 5a's stills (2026-10-02):** merged as shown ("Merge"). With bloom off at Low and the last step the sun
+  became a hard white disc; Jeremy chose "Paint a soft sun glow": bloom stays off, and the sky draws a soft halo
+  around the sun at those levels. The glow, drawn in the post chain from the sun's on-screen brightness, was merged
+  on its stills (2026-10-03, "Merge").
+- **The last step's 50% grass (2026-10-02):** stays as it is, every blade submitted and half thinned in the shader
+  ("ok fine option 1"). Drawing it from a sparser table would need a different set of blades and pop the meadow on
+  entering or leaving the last step.
 - **One level at a time (2026-10-01):** Auto never drops two levels at once; with five coarse levels a double drop
   from High overshot to Low's 30 fps where Medium would have held (chosen: "One level at a time").
