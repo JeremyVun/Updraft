@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { REFLECTION_LAYER } from './water/reflection';
-import { CLOUD_DECK, register } from '../gl/variants';
+import { CLOUD_DECK, STORM_BANK, register } from '../gl/variants';
 import { fixInPlace } from '../gl/fixed';
 
 const VERT = /* glsl */ `
@@ -36,7 +36,7 @@ export function createSky(): THREE.Mesh {
     side: THREE.BackSide,
     depthWrite: false,
   });
-  register(mat, CLOUD_DECK);
+  register(mat, CLOUD_DECK, STORM_BANK);
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;

@@ -1,5 +1,9 @@
 /** Shared sky radiance: the open-sea veil must dissolve into the same clouds, light and stars as the backdrop. */
 export const SKY_RADIANCE_GLSL = /* glsl */ `
+// The sky sets this to 0 while there is no storm and no lightning (gl/variants.ts); every other material keeps it.
+#ifndef STORM_BANK
+#define STORM_BANK 1
+#endif
 uniform float uRainbow;
 uniform vec3 uRainbowAxis;
 
@@ -38,7 +42,11 @@ vec3 skyRadiance(vec3 d) {
   if (d.y > 0.0) {
     vec2 p = d.xz / (d.y + 0.06) * 1.2 + uCloudShift * 0.003;
     float c = cloudDensity(p);
+#if STORM_BANK
     float bank = smoothstep(0.32, 0.75, fbm(p * 0.65 + vec2(4.0, uTime * 0.006)));
+#else
+    float bank = 0.0;
+#endif
     vec2 toSun = normalize(uSunDir.xz) * 0.25;
     float thick = cloudDensity(p + toSun);
     float band = smoothstep(0.015, 0.07, d.y) * (1.0 - smoothstep(0.3, 0.6, d.y));
