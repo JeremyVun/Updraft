@@ -20,6 +20,8 @@ export interface WorldQuality {
   mirrorScale: number;
   bloom: BloomLevel;
   sea: SeaEffects;
+  /** Segments of the near grass's blades. */
+  nearSegments: 6 | 5;
 }
 
 export type BloomLevel = 'full' | 'half' | 'off';
@@ -28,14 +30,14 @@ export type SeaEffects = 'all' | 'noCollar' | 'plain';
 
 export const HIGH_GRASS_REACH = 1.15;
 
-const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75, bloom: 'full', sea: 'all' };
+const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75, bloom: 'full', sea: 'all', nearSegments: 6 };
 
 export const WORLD_QUALITY: Record<QualityLevelName, WorldQuality> = {
   ultra: FULL,
   high: FULL,
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'half', sea: 'noCollar' },
-  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain' },
-  last: { grassDensity: 0.5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain' },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'half', sea: 'noCollar', nearSegments: 6 },
+  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain', nearSegments: 5 },
+  last: { grassDensity: 0.5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain', nearSegments: 5 },
 };
 
 const NAMES: QualityLevelName[] = ['ultra', 'high', 'medium', 'low', 'last'];

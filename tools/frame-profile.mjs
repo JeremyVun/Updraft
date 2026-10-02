@@ -97,7 +97,9 @@
 // scene, resolve, post.clean and bloom targets as R11F_G11F_B10F).
 // Phase 7b: grass-fog-vertex works the blades' fog out at every vertex again without the per-blade fog pass (the
 // old path; every draw here runs that pass, as prepareFrame does); grass-fog-pass-off times the frame without that
-// pass (FRAME_PASS only: the blades then read the fog it last wrote).
+// pass (FRAME_PASS only: the blades then read the fog it last wrote); grass-near-6seg draws the near blades with six
+// segments at any level (Low's old path). grass-near-5seg replaces the near template and only works at levels that
+// draw its six-segment form (Ultra to Medium).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -451,6 +453,10 @@ window.__audit = {
     }
     const want=five?this.fiveSeg:this.sixSeg;
     if(g.index!==want.index){g.setIndex(want.index);g.setAttribute('position',want.position);}
+    // grass-near-6seg: the near blades with all six segments whatever the level chose (the old path at Low).
+    const six=variants.includes('grass-near-6seg');
+    if(six&&!this.fewerWas){this.fewerWas=[grass.fewer.value,grass.fewerTarget];grass.fewer.value=0;grass.fewerTarget=0;grass.pickNearForm();}
+    else if(!six&&this.fewerWas){[grass.fewer.value,grass.fewerTarget]=this.fewerWas;this.fewerWas=null;grass.pickNearForm();}
     // deckless-<group>: that group's materials with the cloud deck compiled out (exact outside the stairs);
     // fragflat-<group>: their fragment shading replaced by a flat colour, to split vertex from pixel cost.
     this.surveyMats??=new Map();
@@ -809,7 +815,7 @@ window.__audit = {
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1,
-      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
+      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,grass.lods[0].geo.drawRange.start,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,

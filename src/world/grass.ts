@@ -318,6 +318,7 @@ uniform float uShrinkBand;
 uniform float uDensity;
 uniform float uDensityPrevious;
 uniform float uQualityBlend;
+uniform float uFewer;
 float densityAt(float dist) {
   return mix(mix(1.0, uLevelDensity.x, smoothstep(uRings.x, uRings.y, dist)), uLevelDensity.y, smoothstep(uRings.z, uRings.w, dist));
 }
@@ -337,7 +338,7 @@ float qualityCloseFor(vec2 root, float dist, float density) {
 float bladeClose(vec2 root, float dist) {
   // Close the extra segment before changing populations; the coarser blade is then identical.
   float detail = mix(qualityCloseFor(root, dist, uDensityPrevious), qualityCloseFor(root, dist, uDensity), uQualityBlend);
-  return max(smoothstep(uClose.x, uClose.y, dist), detail);
+  return max(max(smoothstep(uClose.x, uClose.y, dist), detail), uFewer);
 }
 float widthAt(float dist) {
   return mix(mix(1.0, uLevelWidth.x, smoothstep(uRings.x, uRings.y, dist)), uLevelWidth.y, smoothstep(uRings.z, uRings.w, dist));
@@ -850,23 +851,27 @@ export function tileUnclipped(x: number, z: number, margin: number, rooms: THREE
 
 /**
  * x is the side, y the height along the blade. z is the height the vertex slides to as the blade nears the next
- * level: the lowest segment closes up, leaving the next level's blade exactly (one segment fewer).
+ * level: the lowest segment closes up, leaving the next level's blade exactly (one segment fewer). Each form of the
+ * blade takes its own index range, in order.
  */
-function bladeTemplate(segments: number, closes: boolean): THREE.BufferGeometry {
+function bladeTemplate(...forms: [segments: number, closes: boolean][]): THREE.BufferGeometry {
   const pos: number[] = [];
-  for (let i = 0; i < segments; i++) {
-    const t = i / segments;
-    const closed = closes ? Math.max(i - 1, 0) / (segments - 1) : t;
-    pos.push(-1, t, closed, 1, t, closed);
-  }
-  pos.push(0, 1, 1);
   const index: number[] = [];
-  for (let i = 0; i < segments - 1; i++) {
-    const a = i * 2;
-    index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  for (const [segments, closes] of forms) {
+    const first = pos.length / 3;
+    for (let i = 0; i < segments; i++) {
+      const t = i / segments;
+      const closed = closes ? Math.max(i - 1, 0) / (segments - 1) : t;
+      pos.push(-1, t, closed, 1, t, closed);
+    }
+    pos.push(0, 1, 1);
+    for (let i = 0; i < segments - 1; i++) {
+      const a = first + i * 2;
+      index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    const last = first + (segments - 1) * 2;
+    index.push(last, last + 1, last + 2);
   }
-  const last = (segments - 1) * 2;
-  index.push(last, last + 1, last + 2);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setIndex(index);
@@ -933,6 +938,9 @@ export class Grass {
   private reachScale = 1;
   private reachFrom = 1;
   private reachTarget = 1;
+  /** How far the near blades' extra segment has closed: at 1 they are drawn with one segment fewer. */
+  private readonly fewer = { value: 0 };
+  private fewerTarget = 0;
 
   constructor() {
     const density = Math.max(0, Math.min(1, params.grass ?? (params.lite ? 0.25 : 1)));
@@ -955,7 +963,10 @@ export class Grass {
       // Reserve all quality levels once. Sparse tiers may cover the inner rings too;
       // promotion must never allocate a new MRT or drop tiles because the lite pool was smaller.
       spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach * HIGH_GRASS_REACH, 0));
-      const template = bladeTemplate(spec.segments, level < specs.length - 1);
+      // The near level also holds its blade with one segment fewer, for the lower settings (setNearSegments).
+      const template = level === 0
+        ? bladeTemplate([spec.segments, true], [spec.segments - 1, false])
+        : bladeTemplate([spec.segments, level < specs.length - 1]);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
       geo.setAttribute('position', template.attributes.position);
@@ -1017,6 +1028,7 @@ export class Grass {
           ...thinning,
           uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
           uQualityClose: { value: new THREE.Vector2(...(level === 0 ? [0.25, 0.55] as const : level === 1 ? [0.125, 0.25] as const : [0, 0] as const)) },
+          uFewer: level === 0 ? this.fewer : { value: 0 },
           uTileSize: { value: TILE },
           uGrid: { value: new THREE.Vector2(spec.cols, spec.rows) },
           uLevel: { value: level },
@@ -1032,6 +1044,7 @@ export class Grass {
       this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, fog, fogMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
     fixTreeInPlace(this.group);
+    this.pickNearForm();
     this.setQuality(density, params.lite ? 0.7 : 1, true);
     // Height and surface bakes can change even on a forced move to the same domain.
     onWindowMove(() => { this.tablesDirty = true; });
@@ -1049,6 +1062,29 @@ export class Grass {
     this.reachTarget = reach;
     u.uQualityBlend.value = immediate ? 1 : 0;
     this.updateQuality(0, true);
+  }
+
+  /**
+   * The near blades with six segments or five. The extra segment closes or opens over a second; the five-segment
+   * form is the six-segment one fully closed, so it is swapped in only then and nothing on screen changes.
+   */
+  setNearSegments(segments: 6 | 5, immediate = false): void {
+    this.fewerTarget = segments === 5 ? 1 : 0;
+    if (immediate) this.fewer.value = this.fewerTarget;
+    this.pickNearForm();
+  }
+
+  private easeNearForm(dt: number): void {
+    if (this.fewer.value === this.fewerTarget) return;
+    const step = Math.max(0, dt);
+    this.fewer.value = this.fewerTarget > this.fewer.value ? Math.min(this.fewerTarget, this.fewer.value + step) : Math.max(this.fewerTarget, this.fewer.value - step);
+    this.pickNearForm();
+  }
+
+  private pickNearForm(): void {
+    const full = 6 * (LODS[0].segments - 1) + 3;
+    if (this.fewer.value === 1) this.lods[0].geo.setDrawRange(full, full - 6);
+    else this.lods[0].geo.setDrawRange(0, full);
   }
 
   /** One-second transitions preserve world-anchored roots and require no shader recompilation. */
@@ -1186,6 +1222,7 @@ export class Grass {
   /** Picks the tiles to draw for this camera; call `bake` afterwards, before the scene is drawn. */
   update(camera: THREE.Camera, dt = 0): void {
     this.updateQuality(dt);
+    this.easeNearForm(dt);
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
     const cx = camera.position.x;

@@ -23,11 +23,11 @@ const run = (q, from, to, interval, early) => {
 
 // The table in docs/backlog/perf-final/design.md section 3.
 assert.deepEqual(WORLD_QUALITY, {
-  ultra: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all' },
-  high: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all' },
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'half', sea: 'noCollar' },
-  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain' },
-  last: { grassDensity: .5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain' },
+  ultra: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
+  high: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'half', sea: 'noCollar', nearSegments: 6 },
+  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain', nearSegments: 5 },
+  last: { grassDensity: .5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain', nearSegments: 5 },
 });
 const PRESETS = {
   1.5: { ultra: [1.5, 4, 60], high: [1.25, 4, 60], medium: [1, 2, 60], low: [.85, 2, 30] },

@@ -435,6 +435,7 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   const name = params.lite ? 'low' : level.name;
   const world = WORLD_QUALITY[name];
   grass.setQuality(world.grassDensity, world.grassReach, immediate);
+  grass.setNearSegments(world.nearSegments, immediate);
   terrain.detail = world.terrainSplit;
   water.mirrorEvery = world.mirrorEvery;
   water.mirrorScale = world.mirrorScale;
