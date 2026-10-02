@@ -86,19 +86,19 @@ uniform mat4 uViewProjection;
 /**
  * Whether every triangle round this point lies wholly outside one side of the view, for a surface whose heights here
  * lie between lo and hi. Such a point need not be worked out: it goes to unseen(), on the grid at lo, where the
- * points of every triangle round any point lie past that same side. Its own matrix leaves the seen points'
- * arithmetic as it was.
+ * points of every triangle round any point lie past that same side. Its own matrix, and xz worked out another way,
+ * leave the compiler nothing to share with the seen points' arithmetic, which must stay as it was to the last bit.
  */
 bool gridUnseen(float lo, float hi) {
   vec4 g = uGrid[int(position.y + 0.5)];
-  vec2 xz = g.xy + position.xz * g.z;
+  vec2 xz = (position.xz + g.xy / g.z) * g.z;
   vec3 c = vec3(xz.x, 0.5 * (lo + hi), xz.y), e = vec3(2.0 * g.z, 0.5 * (hi - lo), 2.0 * g.z);
   for (int i = 0; i < 6; i++) if (dot(uView[i].xyz, c) + uView[i].w < -dot(abs(uView[i].xyz), e) - 1.0) return true;
   return false;
 }
 vec4 unseen(float lo) {
   vec4 g = uGrid[int(position.y + 0.5)];
-  vec2 xz = g.xy + position.xz * g.z;
+  vec2 xz = (position.xz + g.xy / g.z) * g.z;
   return uViewProjection * vec4(xz.x, lo, xz.y, 1.0);
 }`;
 
