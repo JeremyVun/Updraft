@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-/** New programs compiled together before their status is queried: the first query waits behind all of them. */
+/** Programs compiling at once: a status query waits behind every compile issued before it. */
 const GROUP = 8;
 /** The longest stretch of boot work between paint opportunities, unless one driver call alone takes longer. */
 const PAINT_BUDGET_MS = 12;
@@ -100,43 +100,42 @@ function compileAlone(renderer: THREE.WebGLRenderer, object: THREE.Object3D, cam
 const settled = new WeakSet<THREE.WebGLProgram>();
 let settling = false;
 
-/** First use (three's `onFirstUse`: link status, info logs, uniform and attribute queries) of every program built so far. */
-async function settle(renderer: THREE.WebGLRenderer): Promise<void> {
+/**
+ * Gives every built program whose compile has finished its first use (three's `onFirstUse`: link status, info logs,
+ * uniform and attribute queries), waiting until at most `compiling` are still compiling.
+ */
+async function settle(renderer: THREE.WebGLRenderer, compiling = 0): Promise<void> {
   const gl = renderer.getContext();
-  const fresh = (renderer.info.programs ?? []).filter(p => !settled.has(p)) as Program[];
-  while (!fresh.every(p => p.isReady())) {
-    if (gl.isContextLost()) return;
-    await idle(4);
-  }
-  for (const program of fresh) {
-    settling = true;
-    try {
-      program.getUniforms();
-    } finally {
-      settling = false;
+  for (;;) {
+    let waiting = 0;
+    for (const program of (renderer.info.programs ?? []) as Program[]) {
+      if (settled.has(program)) continue;
+      if (!program.isReady()) { waiting++; continue; }
+      settling = true;
+      try {
+        program.getUniforms();
+      } finally {
+        settling = false;
+      }
+      settled.add(program);
+      await keepPainting();
     }
-    settled.add(program);
-    await keepPainting();
+    if (waiting <= compiling || gl.isContextLost()) return;
+    await idle(4);
   }
 }
 
 /**
- * Builds every program the jobs' materials are drawn with, at most `GROUP` new ones at a time, and gives each its
- * first use once the driver reports it compiled, so no draw or bake waits on a compile. Yields whenever a paint
- * budget has passed. `onProgress` gets the share of the jobs' materials settled, which only rises and ends at 1.
- * The render target is restored, and each job's state undone, even on failure.
+ * Builds every program the jobs' materials are drawn with and gives each its first use once the driver reports it
+ * compiled, so no draw or bake waits on a compile. At most `GROUP` programs compile at once. Yields whenever a paint
+ * budget has passed. `onProgress` gets the share of the jobs' materials compiled, which only rises and ends at 1
+ * once all are settled. The render target is restored, and each job's state undone, even on failure.
  */
 export async function settlePrograms(renderer: THREE.WebGLRenderer, jobs: readonly CompileJob[], onProgress: (fraction: number) => void = () => {}): Promise<void> {
   const total = jobs.reduce((n, job) => n + new Set(job.objects.flatMap(o => isDrawable(o) ? materialsOf(o) : [])).size, 0);
   const previousTarget = renderer.getRenderTarget();
-  const built = (): number => renderer.info.programs?.length ?? 0;
+  const compiling = (): number => (renderer.info.programs ?? []).filter(p => !settled.has(p)).length;
   let compiled = 0;
-  let settledAt = built();
-  const report = async (): Promise<void> => {
-    await settle(renderer);
-    settledAt = built();
-    onProgress(total ? compiled / total : 1);
-  };
   try {
     for (const job of jobs) {
       const undo = job.apply?.();
@@ -147,17 +146,21 @@ export async function settlePrograms(renderer: THREE.WebGLRenderer, jobs: readon
           if (!isDrawable(object)) continue;
           compileAlone(renderer, object, job.camera, job.scene);
           for (const m of materialsOf(object)) if (!seen.has(m)) { seen.add(m); compiled++; }
-          if (built() - settledAt >= GROUP) await report();
+          if (compiling() >= GROUP) {
+            await settle(renderer, GROUP / 2);
+            onProgress(compiled / total);
+          }
           await keepPainting();
         }
       } finally {
         undo?.();
       }
     }
-    await report();
+    await settle(renderer);
   } finally {
     renderer.setRenderTarget(previousTarget);
   }
+  onProgress(1);
 }
 
 const drawn = new WeakSet<THREE.WebGLProgram>();

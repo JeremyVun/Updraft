@@ -68,7 +68,8 @@ edit.
   `wind-rate-check`, `wind-gesture-logic-check`, `quality-check`, `quality-browser-check`, `quality-setting-check`,
   `quality-menu-check`, `veil-controls-check`.
 - `pointer-contact-check`, `pointer-pick-check`, `touch-viewport-check` (Chrome, not a Safari substitute).
-- `start-check` (Begin, audio unlock, Continue, retry; worst boot gap under `BOOT_MAX_MS`), `startup-check`,
+- `start-check` (Begin, audio unlock, Continue, retry; worst boot gap under `BOOT_MAX_MS`; no program first used
+  outside boot's settle step, `__stats.bootStrayPrograms`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check`, `context-loss-check`.
 - `fixed-matrices-check` (every chapter: no object fixed in place moves or keeps a stale world matrix).
 - `nearby-check`, `bandage-cost-check`, `scarf-normals-check`, `drowned-gating-check`, `boat-mooring-check` (every
@@ -122,7 +123,7 @@ edit.
 - Renders for listening: `opening-fall-render`, `ending-audition`, `stairs-audio-proposal`, `foghorn-preview`.
 
 **Performance** (only when Jeremy asks; see `docs/engine.md`, Measuring): `perf.mjs`, `frame-profile.mjs`,
-`boot-profile.mjs`, `storm-profile.mjs`, `window-hitch.mjs`, `power-profile.mjs`, `quality-budget-profile.mjs`,
+`boot-profile.mjs` (cold-load veil gaps and long tasks: `RUNS=<n>` fresh-profile loads, `THROTTLE=<rate>` CPU slowdown, `WARM=1` a second load in the same profile, `QUERY` such as `coldshaders`), `storm-profile.mjs`, `window-hitch.mjs`, `power-profile.mjs`, `quality-budget-profile.mjs`,
 `audio-cost.mjs`, `wind-cost.mjs` (the wind step's GPU cost pass by pass), `memory-census.mjs`.
 
 - `frame-profile.mjs <fixtures>`: paired ablations at a fixture, each reporting its bite (programs patched, objects

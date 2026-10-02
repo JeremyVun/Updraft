@@ -13,7 +13,7 @@ const entry = path.join(output, 'params.mjs');
 fs.writeFileSync(entry, `import { params } from ${JSON.stringify(path.join(root, 'src/params.ts'))}; globalThis.result = params;`);
 const overrides = '?shot&chapter=stage&progress=0&debug=wind&ratio=3&cam=1,2,3,4,5,6&sun=90,30'
   + '&grass=0&msaa=0&dusk=2&shower=1&storm=1&lite&mirror=0&mirrorlod=full&blades=direct'
-  + '&heights=direct&grasslod=0&hold=1&stats&whale&lines&depth=1&stale=0&start=0';
+  + '&heights=direct&grasslod=0&hold=1&stats&whale&lines&coldshaders&depth=1&stale=0&start=0';
 const variants = {};
 for (const qa of [false, true]) {
   const fixture = await build({
@@ -42,6 +42,7 @@ for (const qa of [false, true]) {
     assert.equal(changed.hold, 1);
     assert.equal(changed.blades, 'direct');
     assert.equal(changed.stats, true);
+    assert.equal(changed.coldshaders, true);
   } else {
     assert.deepEqual(changed, defaults);
     assert.equal(defaults.chapter, null);
