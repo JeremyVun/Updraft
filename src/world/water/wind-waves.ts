@@ -91,7 +91,7 @@ export class WindWaves {
       uHeight: atmo.uniforms.uHeightTex,
       uDomain: atmo.uniforms.uDomain,
       uDt: { value: 0 },
-    });
+    }, this.state);
     this.shift = simMaterial(`
       uniform sampler2D uState;
       uniform vec2 uShift;
@@ -99,7 +99,7 @@ export class WindWaves {
       void main() {
         vec2 uv = vUv + uShift;
         gl_FragColor = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0))) ? texture(uState, uv) : vec4(0.0);
-      }`, { uState: this.uniform, uShift: { value: new THREE.Vector2() } });
+      }`, { uState: this.uniform, uShift: { value: new THREE.Vector2() } }, this.state);
     onWindowMove((dx, dz) => {
       this.shift.uniforms.uShift.value.set(dx / WINDOW.size, dz / WINDOW.size);
       this.gpu.run(this.shift, this.state.write);

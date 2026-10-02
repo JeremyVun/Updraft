@@ -10,6 +10,13 @@ void main() {
 
 /** Every simulation and bake material made so far, so they can all be compiled up front (see gl/boot.ts). */
 export const simMaterials: THREE.ShaderMaterial[] = [];
+const writes = new WeakMap<THREE.Material, THREE.WebGLRenderTarget | PingPong>();
+
+/** A target with the format a simulation or bake material draws into, so boot can first draw it alike (gl/boot.ts). */
+export function simWrites(material: THREE.Material): THREE.WebGLRenderTarget | null {
+  const target = writes.get(material);
+  return target instanceof PingPong ? target.write : target ?? null;
+}
 
 const bootPasses: (() => void)[] = [];
 
@@ -22,7 +29,8 @@ export function runBootPasses(): void {
   for (const pass of bootPasses.splice(0)) pass();
 }
 
-export function simMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
+/** `target` is what it draws into, or one with the same format. */
+export function simMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>, target: THREE.WebGLRenderTarget | PingPong): THREE.ShaderMaterial {
   const material = new THREE.ShaderMaterial({
     vertexShader: QUAD_VERT,
     fragmentShader,
@@ -31,6 +39,7 @@ export function simMaterial(fragmentShader: string, uniforms: Record<string, THR
     depthWrite: false,
   });
   simMaterials.push(material);
+  writes.set(material, target);
   return material;
 }
 

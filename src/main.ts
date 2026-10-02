@@ -36,9 +36,9 @@ import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { QA } from './qa';
-import { coldShaders, drawables, gpuIdle, passJob, prepareInBatches, settlePrograms, warmRender, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
-import { runBootPasses, simMaterials } from './gl/gpu';
-import { hasVariants, otherVariants, selectAll, variantSteps } from './gl/variants';
+import { coldShaders, drawables, gpuIdle, keepPainting, passJob, prepareInBatches, settlePrograms, warmCount, warmRender, warmSimulations, watchFirstDraws, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
+import { runBootPasses, simMaterials, simWrites } from './gl/gpu';
+import { hasVariants, selectAll, variantSteps } from './gl/variants';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
 import { endFrame, holdForReadbacks, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
@@ -111,6 +111,25 @@ declare global {
   }
 }
 
+performance.mark('main');
+startScreen.progress('build', 0);
+/** Construction steps, each ending where the veil may paint; `start-check` fails if a real boot counts a different number. */
+const BUILD_STEPS = 25;
+/** Stage C's share for compiling and settling programs, the rest for first draws (Chrome, 4x CPU slowdown). */
+const SETTLE_SHARE = 0.6;
+let builtSteps = 0;
+let stepStarted = performance.now();
+/** Reports how far into the current construction step it is. */
+function building(fraction: number): void {
+  startScreen.progress('build', (builtSteps + fraction) / BUILD_STEPS);
+}
+async function built(): Promise<void> {
+  if (QA) performance.measure(`build step ${builtSteps + 1}`, { start: stepStarted });
+  startScreen.progress('build', ++builtSteps / BUILD_STEPS);
+  await keepPainting();
+  stepStarted = performance.now();
+}
+
 const resumedAtLoad = params.progress && readProgress() !== null;
 const canvas = document.getElementById('view') as HTMLCanvasElement;
 // Only the grade quad draws to the screen, so the canvas needs no depth buffer.
@@ -118,6 +137,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, depth: fals
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.info.autoReset = false;
 const strayPrograms = QA ? watchStrayPrograms(renderer) : null;
+const playDraws = QA ? watchFirstDraws(renderer) : null;
 if (QA && params.coldshaders) coldShaders(renderer);
 if (params.shot) document.body.classList.add('shot');
 
@@ -142,12 +162,12 @@ function windowAim(): [number, number] {
   aimDir.normalize();
   return [rig.camera.position.x + aimDir.x * 100, rig.camera.position.z + aimDir.z * 100];
 }
-await yieldBoot();
+await built();
 const wind = new WindField(renderer, params.lite ? { res: 128, iterations: 12 } : {});
 const input = new PointerInput(canvas);
 const cursor = new Cursor(canvas);
 
-await yieldBoot();
+await built();
 bakeNoiseTiles();
 const tree = createTree();
 const hillFlowers = wildflowersAlong(ROUTE);
@@ -163,7 +183,7 @@ const bakeInputs: BakeInputs = {
   ],
   flowers: [...FLOWER_PATCHES, ...hillFlowers],
 };
-await yieldBoot();
+await built();
 const water = new Water(renderer, scene, wind.breeze, bakes.height.texture);
 const bakedSun = atmo.uniforms.uSunDir.value.clone();
 onWindowMove(() => {
@@ -171,7 +191,7 @@ onWindowMove(() => {
   bakes.bake(bakeInputs);
   water.bakeShore(WINDOW.size);
 });
-await yieldBoot();
+await built();
 const life = new LifeField(renderer);
 const clouds = new CloudShadows(renderer);
 const sky = createSky();
@@ -184,7 +204,7 @@ pond.objects.forEach((o) => scene.add(o));
 const islandRocks = createRocks();
 scene.add(islandRocks);
 scene.add(tree.group);
-await yieldBoot();
+await built();
 const grass = new Grass();
 scene.add(grass.group);
 /** Left on the sand where the boat comes in, so the first thing the island says is that somebody was here. */
@@ -198,15 +218,13 @@ scene.add(door.group);
 scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
-await yieldBoot();
-const washing = new WashingLines(
-  [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()],
-  91,
-  FAMILY_LINE,
-);
+await built();
+const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()];
+await built();
+const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
 scene.add(washing.group);
 /** The same kite marks every departure. Lines keeps its kite inside the doorway reveal. */
-await yieldBoot();
+await built();
 const departureKites = new DepartureKites(wind);
 const kite = departureKites.markers.lines;
 for (const marker of Object.values(departureKites.markers)) scene.add(marker.group);
@@ -214,32 +232,34 @@ const shoreGrass = createDoorShoreGrass();
 scene.add(shoreGrass);
 const pinwheels = new Pinwheels(wind, LINES_WALK);
 scene.add(pinwheels.group);
-await yieldBoot();
+await built();
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const wood = new DarkWood(wind);
 wood.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const sleeping = new SleepingIsland(renderer, wind, input);
 sleeping.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const skyMirror = new SkyMirror();
 scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
 scene.add(littleBoats.group);
-const cloudStairs = new CloudStairs();
+await built();
+const cloudStairs = await prepareInBatches(CloudStairs.build(), building);
 scene.add(cloudStairs.group);
+await built();
 const birches = new AutumnBirches(renderer, wind, false);
-await prepareInBatches(birches.scarf.settle());
+await prepareInBatches(birches.scarf.settle(), building);
 birches.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 /** And out from the beach below it, the one landing in the journey that was built rather than run up onto. */
 const homeJetty = createJetty();
 scene.add(homeJetty);
-await yieldBoot();
+await built();
 const petals = new Petals(renderer, tuning.petals.stillIslandShare);
 scene.add(petals.mesh);
 const allFlowers = [...FLOWER_PATCHES, ...hillFlowers];
@@ -253,7 +273,7 @@ function homePetals(): void {
   petals.rehome(near, cz < -600 ? tuning.petals.pastureShare : cz > -200 ? tuning.petals.stillIslandShare : 1);
 }
 homePetals();
-await yieldBoot();
+await built();
 const lines = new WindLines(wind);
 scene.add(lines.batch.mesh);
 /** The wind the player draws by circling the cursor, and the same loops offered where the story wants them. */
@@ -273,10 +293,10 @@ const glider = new Glider(wind, [
 ]);
 const planeIndicator = new PlaneIndicator();
 glider.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const child = new Traveller(wind);
 child.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const boat = new Boat(wind);
 boat.objects.forEach((o) => scene.add(o));
 for (const o of [...glider.objects, ...boat.objects, ...child.objects]) if (o !== child.shadow) o.traverse((c) => c.layers.enable(REFLECTION_LAYER));
@@ -291,7 +311,7 @@ scene.add(embers.mesh);
 const emberInvitation = new EmberInvitation();
 scene.add(emberInvitation.batch.mesh);
 
-await yieldBoot();
+await built();
 const rain = new Rain();
 const stormWeather = new StormWeather((strength, pan, close) => {
   sound.thunder(strength, pan, close);
@@ -307,10 +327,10 @@ scene.add(starlings.mesh);
 function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3): boolean {
   return nearestCreature(nearbyPopulations, x, z, radius, out);
 }
-await yieldBoot();
+await built();
 const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
-await yieldBoot();
+await built();
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
 cygnet.mount = child;
@@ -348,7 +368,7 @@ water.skyMirrorAppearance = story.name === 'toMirror' ? 0 : story.name === 'home
 rig.cut(story.shot);
 const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
-await yieldBoot();
+await built();
 const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
 creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
 creatures.spawn({ x: 0, z: 0, radius: 30, songbirds: 11, seed: 3 });
@@ -358,7 +378,7 @@ const homesInHills = [
   ...ROUTE.map((p: THREE.Vector2, i: number) => ({ x: p.x + (i % 2 ? 14 : -14), z: p.y })),
   { x: COTTAGE.x + 6, z: COTTAGE.z + 26 },
 ];
-await yieldBoot();
+await built();
 const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera);
 hillCreatures.spawn({ ...meadowPoint(10, -680), radius: 70, gulls: 4, seed: 21 });
 homesInHills.forEach((h, i) => {
@@ -388,7 +408,7 @@ for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
 }
 
-await yieldBoot();
+await built();
 const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
 // Keep full scene detail while avoiding Retina's disproportionate pixel/bandwidth cost.
 const maxPixelRatio = params.ratio ?? Math.min(nativePixelRatio, 1.5);
@@ -1104,6 +1124,8 @@ function frameInner(now: number): void {
   if (QA && params.shot) {
     window.__stats = {
       bootStrayPrograms: strayPrograms,
+      bootSteps: { counted: builtSteps, expected: BUILD_STEPS },
+      playFirstDraws: playDraws?.report(),
       frame: frameIndex,
       time,
       simulationSteps: timing.steps,
@@ -1158,41 +1180,84 @@ if (QA && params.shot) {
 async function boot(): Promise<void> {
   performance.mark('boot');
   const started = performance.now();
+  startScreen.progress('graphics', 0);
   // Fixed scenery takes its world matrix once, under the parents it is drawn with.
   scene.updateMatrixWorld(true);
   await yieldBoot();
   const sceneJob: CompileJob = { objects: drawables(scene), camera: rig.camera, scene, target: post.sceneTarget };
   const varied = sceneJob.objects.filter(hasVariants);
+  const variants = variantSteps();
+  const simulations = simMaterials.flatMap((material) => { const writes = simWrites(material); return writes ? [{ material, writes }] : []; });
+  // The reflected world is drawn into a target of its own format, which a driver builds its own pipelines for.
+  const mirror = { camera: rig.camera.clone(), target: water.reflectionTarget.clone() };
+  mirror.camera.layers.set(REFLECTION_LAYER);
+  const blade = (o: THREE.Object3D): boolean => o.parent === grass.group;
+  const both = (a: () => () => void, b: () => () => void) => () => { const undoA = a(), undoB = b(); return () => { undoB(); undoA(); }; };
+  const warmPasses: { camera: THREE.Camera; target: THREE.WebGLRenderTarget; only?: (o: THREE.Object3D) => boolean; apply?: () => () => void }[] = [
+    ...[{ camera: rig.camera, target: post.sceneTarget }, mirror].flatMap((view) => [view, ...variants.map((apply) => ({ ...view, only: hasVariants, apply }))]),
+    // The blades pick their fragment shader as they draw, so each is drawn whichever this view would pick.
+    ...grass.fragmentSteps().flatMap((fragment) => [
+      { camera: rig.camera, target: post.sceneTarget, only: blade, apply: fragment },
+      ...variants.map((apply) => ({ camera: rig.camera, target: post.sceneTarget, only: (o: THREE.Object3D) => blade(o) && hasVariants(o), apply: both(fragment, apply) })),
+    ]),
+  ];
+  const warmTotal = warmPasses.reduce((n, pass) => n + warmCount(scene, pass.camera, pass.only), simulations.length);
+  let warmed = 0;
+  /** Stage C: the settled share of the materials, then the share of the objects and passes first drawn. */
+  const warming = (count: number) => {
+    const before = warmed;
+    warmed += count;
+    return (fraction: number) => startScreen.progress('graphics', SETTLE_SHARE + (1 - SETTLE_SHARE) * (before + count * fraction) / warmTotal);
+  };
   await settlePrograms(renderer, [
     sceneJob,
     passJob(simMaterials, bakes.ground),
     ...grass.tableJobs(),
     grass.unclippedJob(rig.camera),
     ...post.compileJobs(),
-    ...variantSteps().flatMap((apply) => [{ ...sceneJob, objects: varied, apply }, grass.unclippedJob(rig.camera, apply), ...post.compileJobs().map((job) => ({ ...job, apply }))]),
-  ]);
+    ...variants.flatMap((apply) => [{ ...sceneJob, objects: varied, apply }, grass.unclippedJob(rig.camera, apply), ...post.compileJobs().map((job) => ({ ...job, apply }))]),
+  ], (fraction) => startScreen.progress('graphics', SETTLE_SHARE * fraction));
+  performance.mark('settled');
   runBootPasses();
-  terrain.fields.bake(renderer);
-  terrain.colour.bake(renderer);
-  if (params.heights !== 'direct') await terrainHeights.bake(renderer, () => gpuIdle(renderer));
-  await yieldBoot();
-  followWindow(...windowAim(), true);
-  grass.update(rig.camera);
-  grass.bake(renderer);
-  if (QA && params.shot) heightParity = await measureHeightParity(renderer);
-  await gpuIdle(renderer);
-  await yieldBoot();
-  await warmRender(renderer, scene, rig.camera, post.sceneTarget);
-  for (const _ of otherVariants()) await warmRender(renderer, scene, rig.camera, post.sceneTarget, hasVariants);
-  await yieldBoot();
-  post.render(0, true);
-  await gpuIdle(renderer);
+  for (const { camera, target, only, apply } of warmPasses) {
+    const undo = apply?.();
+    if (camera === mirror.camera) terrain.beginMirror(camera);
+    try {
+      await warmRender(renderer, scene, camera, target, only, warming(warmCount(scene, camera, only)));
+    } finally {
+      if (camera === mirror.camera) terrain.endMirror();
+      undo?.();
+    }
+  }
+  mirror.target.dispose();
+  await warmSimulations(renderer, simulations, warming(simulations.length));
+  performance.mark('warmed');
+  const ground: (() => unknown)[] = [
+    () => terrain.fields.bake(renderer),
+    () => terrain.colour.bake(renderer),
+    async () => { if (params.heights !== 'direct') await terrainHeights.bake(renderer, () => gpuIdle(renderer)); },
+    yieldBoot,
+    () => followWindow(...windowAim(), true),
+    () => { grass.update(rig.camera); grass.bake(renderer); },
+    async () => { if (QA && params.shot) heightParity = await measureHeightParity(renderer); },
+    () => gpuIdle(renderer),
+    yieldBoot,
+    () => post.render(0, true),
+    () => gpuIdle(renderer),
+  ];
+  for (const [done, step] of ground.entries()) {
+    startScreen.progress('ground', done / ground.length);
+    await step();
+  }
+  performance.mark('ready');
   bootMs = performance.now() - started;
-  if (QA) window.__stats = { ...window.__stats, bootStrayPrograms: strayPrograms };
+  if (QA) window.__stats = { ...window.__stats, bootStrayPrograms: strayPrograms, bootSteps: { counted: builtSteps, expected: BUILD_STEPS } };
   if (contextRecovery.lost) return;
   graphicsReady = true;
   quality.setMode(controls.qualityMode, performance.now());
+  startScreen.progress('ground', 1);
   startScreen.ready(withSound => {
+    playDraws?.begin();
     telemetry.start(story.name, resumedAtLoad, !!story.current.finished);
     telemetry.quality(quality.level.name, quality.level.ratio, quality.level.samples);
     if (withSound) {

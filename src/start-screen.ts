@@ -11,6 +11,14 @@ if (typeof __QA__ === 'undefined' || __QA__) void import('./styles-qa.css');
 const T = tuning.veil;
 interface Point { x: number; y: number }
 
+/** What the veil says the game is doing, and the share of the number each stage covers (design: boot-veil, Progress). */
+const STAGES = {
+  build: { line: 'Building the world', from: 3, to: 41 },
+  graphics: { line: 'Preparing the graphics', from: 41, to: 95 },
+  ground: { line: 'Laying out the ground and grass', from: 95, to: 100 },
+} as const;
+export type LoadingStage = keyof typeof STAGES;
+
 /** The opening uses only DOM/SVG, so it can be drawn before the game and its graphics context exist. */
 class StartScreen {
   readonly enabled = !QA || !params.shot || new URLSearchParams(location.search).get('start') === '1';
@@ -27,6 +35,9 @@ class StartScreen {
   private cleanupTimer = 0;
   private disposed = false;
   private failedPermanently = false;
+  private stage: LoadingStage | null = null;
+  private percent = -1;
+  private line: { stage: HTMLElement; percent: HTMLElement } | null = null;
 
   constructor() {
     if (params.shot) document.body.classList.add('shot');
@@ -78,11 +89,40 @@ class StartScreen {
     }
   }
 
+  /** Shows the stage and a whole percentage that never falls; the live region hears only the stage changes. */
+  progress(stage: LoadingStage, fraction: number): void {
+    if (!this.enabled || this.disposed) return;
+    const { line, from, to } = STAGES[stage];
+    const percent = Math.max(this.percent, Math.floor(from + (to - from) * Math.min(1, Math.max(0, fraction))));
+    this.line ??= this.findLine();
+    if (stage !== this.stage) {
+      this.stage = stage;
+      this.line.stage.textContent = line;
+      document.getElementById('start-status')!.textContent = line;
+    }
+    if (percent !== this.percent) {
+      this.percent = percent;
+      this.line.percent.textContent = `${percent}%`;
+    }
+  }
+
+  private findLine(): { stage: HTMLElement; percent: HTMLElement } {
+    const stage = this.veil.querySelector<HTMLElement>('.progress-stage');
+    const percent = this.veil.querySelector<HTMLElement>('.progress-percent');
+    if (stage && percent) return { stage, percent };
+    const made = { stage: document.createElement('span'), percent: document.createElement('span') };
+    made.stage.className = 'progress-stage';
+    made.percent.className = 'progress-percent';
+    this.veil.querySelector('.loading-text')!.replaceChildren(made.stage, ' ', made.percent);
+    return made;
+  }
+
   ready(start: (sound: boolean) => void): void {
     if (!this.enabled) { start(false); return; }
     this.start = () => start(true);
     this.veil.setAttribute('aria-busy', 'false');
-    if (document.getElementById('start-status')!.textContent === 'Loading') document.getElementById('start-status')!.textContent = '';
+    const status = document.getElementById('start-status')!;
+    if (status.textContent === 'Loading' || (this.stage && status.textContent === STAGES[this.stage].line)) status.textContent = '';
     this.button.disabled = false;
     this.veil.classList.add('ready');
   }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 /** Programs compiling at once: a status query waits behind every compile issued before it. */
 const GROUP = 8;
@@ -17,7 +18,8 @@ export function yieldBoot(): Promise<void> {
   return new Promise(resolve => requestAnimationFrame(() => { stamp(); setTimeout(resolve, 0); }));
 }
 
-async function keepPainting(): Promise<void> {
+/** Yields for a paint once a paint budget has passed since the last one. */
+export async function keepPainting(): Promise<void> {
   if (performance.now() - lastFrame >= PAINT_BUDGET_MS) await yieldBoot();
 }
 
@@ -27,10 +29,16 @@ function idle(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/** Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps. */
-export async function prepareInBatches(steps: Iterable<unknown>, budgetMs = 8): Promise<void> {
+/**
+ * Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps; resolves to what
+ * the steps return. Steps that yield the share done pass it to `onProgress`.
+ */
+export async function prepareInBatches<T>(steps: Iterator<number | void, T>, onProgress: (fraction: number) => void = () => {}, budgetMs = 8): Promise<T> {
   let started = performance.now();
-  for (const _ of steps) {
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+    if (typeof step.value === 'number') onProgress(step.value);
     if (performance.now() - started >= budgetMs) { await yieldBoot(); started = performance.now(); }
   }
 }
@@ -163,9 +171,6 @@ export async function settlePrograms(renderer: THREE.WebGLRenderer, jobs: readon
   onProgress(1);
 }
 
-const drawn = new WeakSet<THREE.WebGLProgram>();
-const frustum = new THREE.Frustum();
-const viewProjection = new THREE.Matrix4();
 
 /** The programs three will draw this object with in the current state, found by compiling it (nothing new is built). */
 function programsOf(renderer: THREE.WebGLRenderer, object: Drawable, camera: THREE.Camera, scene: THREE.Scene): THREE.WebGLProgram[] {
@@ -176,9 +181,44 @@ function programsOf(renderer: THREE.WebGLRenderer, object: Drawable, camera: THR
     .filter((p): p is THREE.WebGLProgram => !!p);
 }
 
-function culled(object: Drawable): boolean {
-  if (!object.frustumCulled) return false;
-  return (object as Partial<THREE.Sprite>).isSprite ? !frustum.intersectsSprite(object as THREE.Sprite) : !frustum.intersectsObject(object);
+/**
+ * Gives an object that would draw nothing yet (no instances, an empty draw range) something to draw for the warm
+ * draw, which three would otherwise skip; returns the undo.
+ */
+function somethingToDraw(object: Drawable): (() => void) | null {
+  const mesh = object as Partial<THREE.InstancedMesh>;
+  if (mesh.isInstancedMesh && mesh.count === 0 && mesh.instanceMatrix!.count > 0) {
+    mesh.count = 1;
+    return () => { mesh.count = 0; };
+  }
+  const geometry = (object as Partial<THREE.Mesh>).geometry as Partial<THREE.InstancedBufferGeometry> | undefined;
+  if (!geometry) return null;
+  if (geometry.isInstancedBufferGeometry && geometry.instanceCount === 0) {
+    geometry.instanceCount = 1;
+    return () => { geometry.instanceCount = 0; };
+  }
+  if (geometry.drawRange?.count === 0) {
+    geometry.drawRange.count = Infinity;
+    return () => { geometry.drawRange!.count = 0; };
+  }
+  return null;
+}
+
+/** What a driver builds a pipeline for besides the program: the formats of the target drawn into. */
+function formatOf(target: THREE.WebGLRenderTarget): string {
+  const texture = target.textures[0] as THREE.Texture;
+  return `${texture.type} ${texture.format} ${texture.colorSpace} ${target.textures.length} ${target.samples} ${target.depthBuffer} ${target.stencilBuffer}`;
+}
+
+const drawnInto = new WeakMap<THREE.WebGLProgram, Set<string>>();
+
+/** Notes a program's first draw into targets of this format; false if it had one. */
+function firstDrawn(program: THREE.WebGLProgram, format: string): boolean {
+  const formats = drawnInto.get(program) ?? new Set<string>();
+  drawnInto.set(program, formats);
+  if (formats.has(format)) return false;
+  formats.add(format);
+  return true;
 }
 
 /** First draws the GPU may still be working through when the next is issued. */
@@ -210,62 +250,126 @@ const firstDraws = {
 };
 
 /**
- * Draws the scene in batches, with every object shown, into `target` (never presented): textures upload,
- * buffers land on the GPU and render targets are allocated, so the first real frame is an ordinary one. A batch
- * holds at most one object whose program has not been drawn yet, because a slow driver pays for a program's first
- * draw in the task that issues it. `only` limits the draws to some objects, such as those whose program variants are
- * still undrawn.
+ * Draws the scene in batches, with every object shown and none culled, into `target` (never presented): textures
+ * upload, buffers land on the GPU, render targets are allocated and every program has its first draw, so the first
+ * real frame, and the first view of every room, is an ordinary one. A batch holds at most one object whose program
+ * has not been drawn yet, because a slow driver pays for a program's first draw in the task that issues it. `only`
+ * limits the draws to some objects, such as those whose program variants are still undrawn. `onProgress` gets the
+ * share of the objects drawn. Up to `FIRST_DRAWS_QUEUED` first draws may still be on the GPU when it resolves; the
+ * next warm waits for them (`warmSimulations` waits for all).
  */
-export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget, only: (object: THREE.Object3D) => boolean = () => true): Promise<void> {
+export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget,
+  only: (object: THREE.Object3D) => boolean = () => true, onProgress: (fraction: number) => void = () => {}): Promise<void> {
   const hidden: THREE.Object3D[] = [];
-  const masked: { object: THREE.Object3D; mask: number }[] = [];
+  const masked: { object: THREE.Object3D; mask: number; culled: boolean }[] = [];
   const candidates: { object: Drawable; mask: number }[] = [];
   const previousTarget = renderer.getRenderTarget();
   const gl = renderer.getContext() as WebGL2RenderingContext;
   scene.traverse(o => {
     if (!o.visible) { hidden.push(o); o.visible = true; }
     if ('material' in o) {
-      masked.push({ object: o, mask: o.layers.mask });
-      if (isDrawable(o) && only(o)) candidates.push({ object: o, mask: o.layers.mask });
+      masked.push({ object: o, mask: o.layers.mask, culled: o.frustumCulled });
+      if (isDrawable(o) && only(o) && o.layers.mask & camera.layers.mask) candidates.push({ object: o, mask: o.layers.mask });
       // Layers suppress this draw without hiding any children.
       o.layers.mask = 0;
+      o.frustumCulled = false;
     }
   });
   try {
     camera.updateMatrixWorld();
-    frustum.setFromProjectionMatrix(viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     renderer.setRenderTarget(target);
+    const format = formatOf(target);
     let batch: typeof candidates = [];
     let fresh = false;
+    let done = 0;
     const draw = async (): Promise<void> => {
       // A cold driver builds a program's GPU pipeline at its first draw, and while the GPU is busy with those,
       // uploads in later draws block the main thread.
       if (fresh) await firstDraws.catchUp(gl, FIRST_DRAWS_QUEUED);
-      for (const { object, mask } of batch) object.layers.mask = mask;
+      const undo: (() => void)[] = [];
+      for (const { object, mask } of batch) {
+        object.layers.mask = mask;
+        const restore = somethingToDraw(object);
+        if (restore) undo.push(restore);
+      }
       renderer.render(scene, camera);
+      for (const restore of undo) restore();
       for (const { object } of batch) object.layers.mask = 0;
       if (fresh) firstDraws.fence(gl);
+      done += batch.length;
+      onProgress(done / candidates.length);
       batch = [];
       fresh = false;
     };
     for (const entry of candidates) {
-      if (!(entry.mask & camera.layers.mask) || culled(entry.object)) continue;
-      const undrawn = programsOf(renderer, entry.object, camera, scene).filter(p => !drawn.has(p));
-      if (batch.length >= WARM_BATCH || (undrawn.length > 0 && fresh)) {
+      const programs = programsOf(renderer, entry.object, camera, scene);
+      const undrawn = programs.some(p => !drawnInto.get(p)?.has(format));
+      if (batch.length >= WARM_BATCH || (undrawn && fresh)) {
         await draw();
         await keepPainting();
       }
       batch.push(entry);
-      for (const p of undrawn) drawn.add(p);
-      fresh ||= undrawn.length > 0;
+      for (const p of programs) firstDrawn(p, format);
+      fresh ||= undrawn;
     }
     if (batch.length) await draw();
+  } finally {
+    renderer.setRenderTarget(previousTarget);
+    for (const { object, mask, culled } of masked) {
+      object.layers.mask = mask;
+      object.frustumCulled = culled;
+    }
+    for (const o of hidden) o.visible = false;
+  }
+  onProgress(1);
+}
+
+/** The objects `warmRender` will draw, so progress can count them before it starts. */
+export function warmCount(scene: THREE.Scene, camera: THREE.Camera, only: (object: THREE.Object3D) => boolean = () => true): number {
+  let count = 0;
+  scene.traverse(o => { if (isDrawable(o) && only(o) && o.layers.mask & camera.layers.mask) count++; });
+  return count;
+}
+
+/**
+ * Draws each full-screen pass once into a small scratch target with the format of the one it really writes (a
+ * driver builds a pipeline per program and target format), so its first draw in play is an ordinary one and nothing
+ * it really writes changes. Passes whose material has been disposed are skipped.
+ */
+export async function warmSimulations(renderer: THREE.WebGLRenderer, passes: readonly { material: THREE.Material; writes: THREE.WebGLRenderTarget }[],
+  onProgress: (fraction: number) => void = () => {}): Promise<void> {
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  const quad = new FullScreenQuad();
+  const scratch = new Map<string, THREE.WebGLRenderTarget>();
+  const previousTarget = renderer.getRenderTarget();
+  let done = 0;
+  try {
+    for (const { material, writes } of passes) {
+      const program = renderer.properties.has(material) ? (renderer.properties.get(material) as { currentProgram?: THREE.WebGLProgram }).currentProgram : undefined;
+      const format = formatOf(writes);
+      if (program && firstDrawn(program, format)) {
+        let target = scratch.get(format);
+        if (!target) {
+          const texture = writes.textures[0] as THREE.Texture;
+          target = new THREE.WebGLRenderTarget(4, 4, { count: writes.textures.length, type: texture.type, format: texture.format as THREE.PixelFormat, colorSpace: texture.colorSpace as THREE.ColorSpace,
+            samples: writes.samples, depthBuffer: writes.depthBuffer, stencilBuffer: writes.stencilBuffer, generateMipmaps: false });
+          scratch.set(format, target);
+        }
+        await firstDraws.catchUp(gl, FIRST_DRAWS_QUEUED);
+        renderer.setRenderTarget(target);
+        quad.material = material;
+        quad.render(renderer);
+        firstDraws.fence(gl);
+        await keepPainting();
+      }
+      onProgress(++done / passes.length);
+    }
     await firstDraws.catchUp(gl, 0);
   } finally {
     renderer.setRenderTarget(previousTarget);
-    for (const { object, mask } of masked) object.layers.mask = mask;
-    for (const o of hidden) o.visible = false;
+    for (const target of scratch.values()) target.dispose();
   }
+  onProgress(1);
 }
 
 /** Resolves once the GPU has finished everything issued so far, polling without blocking the main thread. */
@@ -321,5 +425,55 @@ export function coldShaders(renderer: THREE.WebGLRenderer): void {
   };
   gl.shaderSource = (shader: WebGLShader, text: string): void => {
     source(shader, fragments.has(shader) ? text.replace(/void\s+main\s*\(\s*(?:void)?\s*\)\s*\{/, `$&${line}`) : text);
+  };
+}
+
+/**
+ * QA: programs, and programs with the target format they draw into, first drawn after `begin()` (Begin), naming the
+ * first few. A draw that issues nothing (no vertices or instances) does not count, because nothing was built for it.
+ */
+export function watchFirstDraws(renderer: THREE.WebGLRenderer): { begin(): void; report(): { programs: number; names: string[]; pairs: number; pairNames: string[] } } {
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  const programs = new Set<WebGLProgram>();
+  const pairs = new Set<string>();
+  const ids = new Map<WebGLProgram, number>();
+  const after = { programs: [] as string[], pairs: [] as string[] };
+  let current: WebGLProgram | null = null;
+  let format = 'screen';
+  let begun = false;
+  const nameOf = (program: WebGLProgram): string => {
+    const three = renderer.info.programs?.find(p => p.program === program) as (THREE.WebGLProgram & { type?: string }) | undefined;
+    return `${three?.name || three?.type || 'program'} #${three?.id ?? '?'}`;
+  };
+  const drawn = (count: number, instances = 1): void => {
+    if (!current || count <= 0 || instances <= 0) return;
+    if (!ids.has(current)) ids.set(current, ids.size);
+    const pair = `${ids.get(current)} ${format}`;
+    if (!programs.has(current)) {
+      programs.add(current);
+      if (begun) after.programs.push(nameOf(current));
+    }
+    if (!pairs.has(pair)) {
+      pairs.add(pair);
+      if (begun) after.pairs.push(`${nameOf(current)} into ${format}`);
+    }
+  };
+  const use = gl.useProgram.bind(gl);
+  gl.useProgram = (program: WebGLProgram | null): void => { current = program; use(program); };
+  const setTarget = renderer.setRenderTarget.bind(renderer);
+  renderer.setRenderTarget = (target, face, level): void => {
+    const texture = target ? target.textures[0] as THREE.Texture : null;
+    format = target && texture ? `${texture.type}x${target.textures.length}${target.samples ? ` msaa${target.samples}` : ''}${target.depthBuffer ? ' depth' : ''}${texture.colorSpace === THREE.SRGBColorSpace ? ' srgb' : ''}` : 'screen';
+    setTarget(target, face, level);
+  };
+  const arrays = gl.drawArrays.bind(gl), elements = gl.drawElements.bind(gl);
+  const arraysInstanced = gl.drawArraysInstanced.bind(gl), elementsInstanced = gl.drawElementsInstanced.bind(gl);
+  gl.drawArrays = (mode, first, count) => { drawn(count); arrays(mode, first, count); };
+  gl.drawElements = (mode, count, type, offset) => { drawn(count); elements(mode, count, type, offset); };
+  gl.drawArraysInstanced = (mode, first, count, instances) => { drawn(count, instances); arraysInstanced(mode, first, count, instances); };
+  gl.drawElementsInstanced = (mode, count, type, offset, instances) => { drawn(count, instances); elementsInstanced(mode, count, type, offset, instances); };
+  return {
+    begin() { begun = true; },
+    report: () => ({ programs: after.programs.length, names: after.programs.slice(0, 40), pairs: after.pairs.length, pairNames: after.pairs.slice(0, 60) }),
   };
 }

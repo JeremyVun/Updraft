@@ -163,14 +163,14 @@ export class WindField {
       uSplatSeg: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
       uSplatVel: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
       uSplatMix: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) },
-    });
+    }, this.vel);
     this.vorticityMat = simMaterial(CURL_VORTICITY_FRAG, {
       uVel: { value: null },
       uStrength: { value: tuning.wind.swirliness },
       uDt: dt,
       uZero: { value: 0 },
-    });
-    this.divergenceMat = simMaterial(DIVERGENCE_FRAG, { uVel: { value: null }, uTexel: texel });
+    }, this.vel);
+    this.divergenceMat = simMaterial(DIVERGENCE_FRAG, { uVel: { value: null }, uTexel: texel }, this.divergence);
     if (iterations % 2) throw new Error('The pressure relaxes in pairs: give an even number of iterations');
     for (let done = 0; done < iterations / 2; done += PAIRS_PER_PASS) {
       this.pressurePasses.push(simMaterial(pressureFrag(Math.min(PAIRS_PER_PASS, iterations / 2 - done), done === 0), {
@@ -178,9 +178,9 @@ export class WindField {
         uDivergence: { value: this.divergence.texture },
         uScale: { value: 0.8 },
         uZero: { value: 0 },
-      }));
+      }, this.pressure));
     }
-    this.gradientMat = simMaterial(GRADIENT_FRAG, { uPressure: { value: null }, uVel: { value: null }, uTexel: texel });
+    this.gradientMat = simMaterial(GRADIENT_FRAG, { uPressure: { value: null }, uVel: { value: null }, uTexel: texel }, this.vel);
     this.advectMat = simMaterial(ADVECT_FRAG, {
       uVel: { value: null },
       uBend: { value: null },
@@ -196,15 +196,15 @@ export class WindField {
       uSwayDamping: { value: tuning.wind.swayDamping },
       uCalm: { value: 0 },
       uZero: { value: 0 },
-    });
-    this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } });
+    }, this.state);
+    this.scaleMat = simMaterial(SCALE_FRAG, { uSrc: { value: null }, uScale: { value: 1 } }, this.readTarget);
     this.shiftMat = simMaterial(SHIFT_FRAG, {
       uVel: { value: null },
       uBend: { value: null },
       uSway: { value: null },
       uOffset: { value: new THREE.Vector2() },
       uOutside: { value: new THREE.Vector4() },
-    });
+    }, this.state);
     onWindowMove((dx, dz) => this.shift(dx, dz));
 
     for (const rt of [this.state.read, this.state.write, this.vel.read, this.vel.write, this.pressure.read, this.pressure.write]) {

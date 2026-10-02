@@ -220,7 +220,7 @@ export class Petals {
     this.home = home;
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {
       uSrc: { value: null },
-    });
+    }, this.pos);
     const seeds = ([[this.pos, pos], [this.vel, vel]] as const).map(([target, data]) => [target, dataTexture(data)] as const);
     atBoot(() => {
       for (const [target, tex] of seeds) {
@@ -238,8 +238,8 @@ export class Petals {
       uTime: atmo.uniforms.uTime,
       uDt: { value: 1 / 60 },
     };
-    this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uUpdraft: { value: this.updraft } });
-    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uHome: { value: home } });
+    this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uUpdraft: { value: this.updraft } }, this.vel);
+    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uHome: { value: home } }, this.pos);
 
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.InstancedBufferGeometry();

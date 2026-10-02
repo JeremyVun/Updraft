@@ -178,8 +178,8 @@ export class GroundBakes {
       this.gridInUse = 1 - this.gridInUse;
       setHeightGrid({ data: grid, ...window, res: RES, stride: 4 });
     }, 2, 4);
-    this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain });
-    this.normalMat = simMaterial(NORMAL_FRAG, { uHeights: { value: this.heights.texture }, uDomain: atmo.uniforms.uDomain });
+    this.heightMat = simMaterial(HEIGHT_FRAG, { uDomain: atmo.uniforms.uDomain }, this.heights);
+    this.normalMat = simMaterial(NORMAL_FRAG, { uHeights: { value: this.heights.texture }, uDomain: atmo.uniforms.uDomain }, this.height);
     this.groundMat = simMaterial(GROUND_FRAG, {
       ...heights.uniforms,
       uHeightTex: { value: this.height.texture },
@@ -188,14 +188,14 @@ export class GroundBakes {
       uDomain: atmo.uniforms.uDomain,
       uOccluderCount: { value: 0 },
       uOccluders: { value: Array.from({ length: MAX_OCCLUDERS }, () => new THREE.Vector4()) },
-    });
+    }, this.ground);
     this.surfaceMat = simMaterial(SURFACE_FRAG, {
       uDomain: atmo.uniforms.uDomain,
       uClearCount: { value: 0 },
       uClear: { value: Array.from({ length: MAX_SHAPES }, () => new THREE.Vector4()) },
       uFlowerCount: { value: 0 },
       uFlowers: { value: Array.from({ length: MAX_SHAPES }, () => new THREE.Vector4()) },
-    });
+    }, this.surface);
     atmo.uniforms.uHeightTex.value = this.height.texture;
     atmo.uniforms.uGroundTex.value = this.ground.texture;
     atmo.uniforms.uSurfaceTex.value = this.surface.texture;

@@ -47,7 +47,7 @@ export class TerrainFields {
     uTerrainFieldDomain: { value: new THREE.Vector4(FIELD_ATLAS.minX, FIELD_ATLAS.minZ, 1 / SPAN, 1 / SPAN) },
     uTerrainFieldsReady: { value: 0 },
   };
-  private readonly material = simMaterial(BAKE, this.uniforms);
+  private readonly material = simMaterial(BAKE, this.uniforms, this.target);
 
   /** Compiled with the other simulation materials, then baked once behind the start screen. */
   bake(renderer: THREE.WebGLRenderer): void {

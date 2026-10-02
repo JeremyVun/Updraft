@@ -437,6 +437,24 @@ function slipper(b: Build, frame: THREE.Matrix4): void {
   b.add(new THREE.TorusGeometry(0.05, 0.014, 6, 16), frame.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.036, -0.042)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2)).multiply(new THREE.Matrix4().makeScale(1, 1.35, 1)), SOLE, cream);
 }
 
+/** The loop's last flight drawn in until, seen from the one place, its top lies on the corner. */
+function drawnInFlight(): THREE.BufferGeometry {
+  const trick = new Build();
+  buildFlight(trick, LOOP_BACK, true);
+  const back = trick.result();
+  const v = new THREE.Vector3();
+  const pos = back.getAttribute('position');
+  const depth = new Float32Array(pos.count);
+  back.setAttribute('aBuilt', new THREE.BufferAttribute(Float32Array.from(pos.array as Float32Array), 3));
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    depth[i] = 1 / THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v));
+    pos.setXYZ(i, ...drawIn(v).toArray());
+  }
+  back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
+  return back;
+}
+
 export interface LoosePiece {
   readonly flight: Flight;
   readonly group: THREE.Group;
@@ -460,10 +478,10 @@ export interface LoosePiece {
  * the cloud deck itself, which lies to the horizon under the sunset.
  */
 export class CloudStairs {
-  readonly group = new THREE.Group();
+  readonly group: THREE.Group;
   readonly pieces: LoosePiece[] = [];
   /** The deck's underside over the island and its top under the sunset. */
-  readonly cloud = new StairsCloud();
+  readonly cloud: StairsCloud;
   /** The cloud streaming past on the way up through the white. */
   readonly wisps = new CloudWisps();
   /** The loop's last flight as it is drawn in, shown only while it is seen from the one place it works from. */
@@ -490,19 +508,19 @@ export class CloudStairs {
   private time = 0;
   private stride = 1;
 
-  constructor() {
-    this.group.name = 'stairs-in-the-clouds';
-    const material = stairMaterial();
+  /** Builds the staircase a flight at a time, yielding the share built between them, for `prepareInBatches`. */
+  static *build(): Generator<number, CloudStairs> {
+    const steps = FLIGHTS + 4;
+    let done = 0;
+    const group = new THREE.Group();
+    const cloud = new StairsCloud();
+    yield ++done / steps;
     const fixed = new Build();
     for (let i = 1; i <= FLIGHTS; i++) {
       if ((LOOSE as readonly number[]).includes(i)) continue;
-      const f = flight(i);
-      buildFlight(fixed, f, i === LOOP.wait || i === LOOP.onward);
+      buildFlight(fixed, flight(i), i === LOOP.wait || i === LOOP.onward);
       buildLanding(fixed, landingOf(i), i >= LOOP.corner && i <= LOOP.onward);
-      for (const haze of hazeUnder(f, cloudUnder(i))) {
-        this.group.add(haze);
-        this.hazes.push(haze);
-      }
+      yield ++done / steps;
     }
     // Side by side at the open edge, toes to the drop and the sun.
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
@@ -511,25 +529,39 @@ export class CloudStairs {
     // The loop's far side, which only the bird goes round.
     buildFlight(fixed, LOOP_FAR.flight, true);
     buildLanding(fixed, LOOP_FAR.landing, true);
-    const standing = new THREE.Mesh(fixed.result(), material);
+    yield ++done / steps;
+    const standing = fixed.result();
+    yield ++done / steps;
+    const drawnIn = drawnInFlight();
+    yield ++done / steps;
+    const loose: THREE.BufferGeometry[] = [];
+    for (const index of LOOSE) {
+      const b = new Build();
+      buildFlight(b, flight(index));
+      buildLanding(b, landingOf(index));
+      loose.push(b.result());
+      yield ++done / steps;
+    }
+    return new CloudStairs(group, cloud, standing, drawnIn, loose);
+  }
+
+  private constructor(group: THREE.Group, cloud: StairsCloud, standingGeometry: THREE.BufferGeometry, drawnIn: THREE.BufferGeometry, looseGeometry: THREE.BufferGeometry[]) {
+    this.group = group;
+    this.cloud = cloud;
+    this.group.name = 'stairs-in-the-clouds';
+    const material = stairMaterial();
+    for (let i = 1; i <= FLIGHTS; i++) {
+      if ((LOOSE as readonly number[]).includes(i)) continue;
+      for (const haze of hazeUnder(flight(i), cloudUnder(i))) {
+        this.group.add(haze);
+        this.hazes.push(haze);
+      }
+    }
+    const standing = new THREE.Mesh(standingGeometry, material);
     standing.name = 'stairs-standing';
     this.group.add(standing);
 
-    // The loop's trick: its last flight drawn in until, seen from the one place, its top lies on the corner.
-    const trick = new Build();
-    buildFlight(trick, LOOP_BACK, true);
-    const back = trick.result();
-    const v = new THREE.Vector3();
-    const pos = back.getAttribute('position');
-    const depth = new Float32Array(pos.count);
-    back.setAttribute('aBuilt', new THREE.BufferAttribute(Float32Array.from(pos.array as Float32Array), 3));
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-      depth[i] = 1 / THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v));
-      pos.setXYZ(i, ...drawIn(v).toArray());
-    }
-    back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
-    this.trick = new THREE.Mesh(back, stairMaterial(this.trickUniform, true, this.undrawUniform, this.trueDepthUniform));
+    this.trick = new THREE.Mesh(drawnIn, stairMaterial(this.trickUniform, true, this.undrawUniform, this.trueDepthUniform));
     this.trick.name = 'stairs-loop-trick';
     this.trick.visible = false;
     this.group.add(this.trick);
@@ -548,10 +580,7 @@ export class CloudStairs {
     });
     LOOSE.forEach((index, i) => {
       const f = flight(index);
-      const b = new Build();
-      buildFlight(b, f);
-      buildLanding(b, landingOf(index));
-      const geo = b.result();
+      const geo = looseGeometry[i];
       const pivot = new THREE.Vector3().lerpVectors(f.bottom, f.landing, 0.55);
       geo.translate(-pivot.x, -pivot.y, -pivot.z);
       const group = new THREE.Group();

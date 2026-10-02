@@ -497,6 +497,7 @@ body.graphics-lost #veil { visibility: hidden; }
 .loading-text span { display: inline-block; animation: loading-dot 1.4s ease-in-out infinite; }
 .loading-text span:nth-child(2) { animation-delay: .2s; }
 .loading-text span:nth-child(3) { animation-delay: .4s; }
+.loading-text .progress-stage, .loading-text .progress-percent { animation: none; }
 @keyframes loading-dot {
   0%, 100% { opacity: .15; }
   40% { opacity: 1; }

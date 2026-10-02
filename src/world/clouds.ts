@@ -20,7 +20,7 @@ export class CloudShadows {
   private readonly mat = simMaterial(FRAG, {
     uCloudShift: atmo.uniforms.uCloudShift,
     uCloudDomain: atmo.uniforms.uCloudDomain,
-  });
+  }, this.target);
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.gpu = new GpuRunner(renderer);

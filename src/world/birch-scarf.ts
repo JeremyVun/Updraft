@@ -297,10 +297,10 @@ export class BirchScarf {
     if (settle) for (const _ of this.settle()) { /* Synchronous callers keep their original preparation. */ }
   }
 
-  /** Same fixed cloth steps, exposed so startup can give the veil a paint between batches. */
-  *settle(): Generator<void> {
+  /** Same fixed cloth steps, yielding the share done, so startup can give the veil a paint between batches. */
+  *settle(): Generator<number> {
     this.firstCloth.gripping = false;
-    for (let i = 0; i < 180; i++) { this.firstCloth.update(1 / 60); yield; }
+    for (let i = 1; i <= 180; i++) { this.firstCloth.update(1 / 60); yield i / 180; }
     this.firstCloth.gripping = true;
   }
 

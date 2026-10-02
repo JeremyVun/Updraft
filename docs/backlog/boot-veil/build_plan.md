@@ -118,6 +118,35 @@ reaches 100 exactly when `#veil.ready` appears.
 
 Done marker: `Phase 2: done <commit>` here, with the measured numbers.
 
+Phase 2: done 0a98c6f (branch `boot-veil-p2`, main merged in at 0a90e86), 2026-10-03. Measured on QA previews of
+this build and of 4bfadd7 (both with the first-draw probe), alternating run by run with `tools/boot-profile.mjs`
+(fresh browser profile per run), while other sessions kept the machine busy (Xcode's sourcekit near 100% CPU in the
+last batch, a Godot game build in earlier ones):
+
+| Chrome, this Mac | 4bfadd7 | 0a98c6f |
+| --- | --- | --- |
+| 5 cold loads, 1×: worst veil gap | 400–433 ms | 100–133 ms |
+| 5 cold loads, 1×: time to `#veil.ready` | 2756–3056 ms (median 2973) | 2806–3333 ms (median 2901) |
+| 3 cold loads, 4× CPU: worst veil gap | 1617–1650 ms | 400–433 ms |
+| 3 cold loads, 4× CPU: time to `#veil.ready` | 6892–7009 ms | 6899–7001 ms |
+| Programs first drawn after Begin, opening minute (pairs with target format) | 20 (39) | 0 (0) |
+| Programs first drawn after Begin, `?chapter=stairs` minute | 22 (22) | 0 (0) |
+| `start-check`: stray first uses; construction steps | 0; none counted | 0; 25 of `BUILD_STEPS` 25 |
+
+Begin's 2.8 s limit is not readable on this machine today: the unchanged build takes 2.76–3.06 s; back to back this
+build is as fast (an earlier, quieter batch: 2792–2877 ms against 2836–3082 ms). The longest construction task left
+is `AutumnBirches` (about 105 ms at 1×, 410–434 ms at 4×); `Traveller` is about 70 ms. Percent sequence of one 1× load
+(ready at 2750 ms): 4 6 7 9 10 12 … 39 41 (Preparing the graphics) 41 42 … 63 72 … 94 95 (Laying out the ground and
+grass) 95 96 97 98 99 100, only rising, with 100% written in the same task as `#veil.ready`. A seeded load hashes
+identically to 4bfadd7 (every scene geometry, matrix and visibility, and all 29 render targets the scene samples,
+bakes and simulation state included), the stairs' arrays match the old constructor's, and the `play.mjs` still of the
+opening is byte-identical.
+
+Shares, stage times in ms (mean of 3 cold Chrome loads at 4×): A 276, B 4803, C 1551 (settle 896, first draws 655),
+D 260 (total 6890); repeated after the last change: A 279, B 4849, C 1572, D 250. As shares: A 4.0, B 69.0, C 23.0,
+D 4.0; the iPad's: A 3, B 6, C 85, D 6; mean, rounded to sum to 100: A 0–3, B 3–41, C 41–95, D 95–100. Within C,
+settling 60%.
+
 ## Phase 3: the D1 line (visual work: Opus or Astra only)
 
 Owns: `index.html` (the veil's loading line), `src/styles.css` (`.loading-text` replaced), the markup hooks

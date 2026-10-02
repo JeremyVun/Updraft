@@ -507,6 +507,11 @@ export class Water {
   private readonly renderedRoom = new THREE.Vector3();
   private readonly windWaves: WindWaves;
 
+  /** What the sea's reflection is drawn into, for boot to first draw the reflected world into its format. */
+  get reflectionTarget(): THREE.WebGLRenderTarget {
+    return this.reflection.target;
+  }
+
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, breeze: THREE.Vector2, height: THREE.Texture) {
     this.windWaves = new WindWaves(renderer);
     this.reflection = new PlanarReflection(renderer, scene, 0.25);

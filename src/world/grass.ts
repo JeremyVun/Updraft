@@ -877,6 +877,7 @@ export class Grass {
   private readonly coarsest = Math.min(params.grasslod ?? LODS.length - 1, LODS.length - 1);
   /** Draw with the program that cannot discard wherever nothing in reach would be discarded; off restores the old path. */
   unclipped = true;
+  private forced: string | null = null;
   private readonly clipState = new Float64Array(6).fill(NaN);
   private clipFree = false;
   /** Bumped whenever \`update\` changes a level's tiles. */
@@ -1042,7 +1043,7 @@ export class Grass {
       state.set([this.tileVersion, rooms.x, rooms.y, room.x, room.y, room.z]);
       this.clipFree = this.tilesUnclipped(rooms, room);
     }
-    const fragment = this.unclipped && this.clipFree ? FRAG_UNCLIPPED : FRAG;
+    const fragment = this.forced ?? (this.unclipped && this.clipFree ? FRAG_UNCLIPPED : FRAG);
     if (mat.fragmentShader === fragment) return;
     mat.fragmentShader = fragment;
     mat.needsUpdate = true;
@@ -1069,6 +1070,14 @@ export class Grass {
       }
     }
     return true;
+  }
+
+  /** Steps that make the blades draw with each of their fragment shaders, whatever a draw would pick, and return the undo. */
+  fragmentSteps(): (() => () => void)[] {
+    return [FRAG, FRAG_UNCLIPPED].map((fragment) => () => {
+      this.forced = fragment;
+      return () => { this.forced = null; };
+    });
   }
 
   /** The blade tables' passes, which are not scene materials or ordinary single-target simulations. */
