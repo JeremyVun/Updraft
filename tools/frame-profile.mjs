@@ -60,6 +60,7 @@
 // shader that includes ATMO_GLSL (exact outside the stairs); deck-out-water|terrain|grass|sky|rest only from one family.
 // stairs-unindexed draws the flights and landings unindexed, as before they were indexed.
 // cloudtop-frag-flat, cloudtop-veil: the deck top's shading and its streaming wisps; wisps-early: candidate exact skip.
+// stairs-full draws the stairs' wisps and haze steps at full detail whatever LEVEL chose.
 // grid-cull-off works out every point of the cloud's top and underside again, those round which nothing is in view too.
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
@@ -292,6 +293,7 @@ window.__audit = {
     if(glass.fragmentShader!==glassFragment){glass.fragmentShader=glassFragment;glass.needsUpdate=true;}
     this.gridCull ??= [cloudStairs.cloud.top,cloudStairs.cloud.belly].map(o=>[o,o.onBeforeRender]);
     for(const [o,before] of this.gridCull) o.onBeforeRender=skips.includes('grid-cull-off')?()=>{for(const p of o.material.uniforms.uView.value)p.set(0,0,0,1);}:before;
+    if(skips.includes('stairs-full')||this.stairsFull){this.stairsFull=skips.includes('stairs-full');cloudStairs.setLevel(this.stairsFull?'ultra':this.levelName??'ultra',true);}
     this.culling=[];
     if (omit==='culling-off') {
       const roots=[...this.groups.tree,...this.groups.pond];
@@ -566,7 +568,7 @@ window.__audit = {
     if(tables){grass.tablesDirty=true;grass.bake(renderer);}
     this.deckHits=hits;
   },
-  level(name,grassDensity,grassReach) { applyWorldQuality({...quality.level,name},true); if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
+  level(name,grassDensity,grassReach) { this.levelName=name;applyWorldQuality({...quality.level,name},true); if(grassDensity!=null||grassReach!=null)grass.setQuality(grassDensity??grass.quality.density,grassReach??grass.quality.reach,true); return {level:name,grass:{...grass.quality},terrain:terrain.detail,mirrorEvery:water.mirrorEvery,mirrorScale:water.mirrorScale}; },
   // Each post stage drawn alone, many times over, then drained: its share of the chain, not a frame-boundary cost.
   async postPasses(reps, complete) {
     const b=post.bloom,q=b._fsQuad,r=renderer,out={};
@@ -669,7 +671,7 @@ window.__audit = {
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
       showing:this.hidden.filter(([o])=>showing.has(o)).length,settings:a.settings!==b.settings,
-      draw:['wind','reflection','bloom','post','grid-cull-off'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
+      draw:['wind','reflection','bloom','post','grid-cull-off','stairs-full'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
     if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
     return bite;
   },
