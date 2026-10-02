@@ -63,6 +63,26 @@ one `tools/play.mjs` still of the opening at `?shot`, compared against the same 
 
 Done marker: `Phase 1: done <commit>` here, with the measured numbers.
 
+Phase 1: done fdf970b. Measured 2026-10-02 on QA previews of this build and of c7d6c15, back to back with
+`tools/boot-profile.mjs` (fresh browser profile per run), while other sessions kept the machine busy:
+
+| Chrome, this Mac | c7d6c15 | fdf970b |
+| --- | --- | --- |
+| 5 cold loads, 1×: worst long task after construction | 166 ms (median 77) | none over 50 ms |
+| 5 cold loads, 1×: worst veil gap (the construction task, phase 2) | 533 ms | 483 ms |
+| 5 cold loads, 1×: time to `#veil.ready` | 2618–4761 ms (median 3129) | 2790–3334 ms (median 3169) |
+| 3 repeat loads in one profile (`WARM=1`): long task after construction | 573–655 ms | 0–67 ms |
+| 3 cold loads, 4× CPU: long task after construction | 145–177 ms | none over 50 ms |
+| 3 cold loads, 4× CPU: construction task; ready | 1750–1861 ms; 6886–7148 ms | 1625–1734 ms; 6654–7313 ms |
+| 3 loads with `?coldshaders`: long task after construction; ready | (no `?coldshaders`) | 92–105 ms; 19.4–21.3 s |
+
+The 0.4 s compile stall shows on a repeat load in one profile (Chrome's program cache); a first load in a fresh
+profile on this Mac waits about 150 ms. Boot after construction takes the same time as before (median 1.34 s both);
+in an earlier, quieter batch this build reached `#veil.ready` in 2552–2801 ms against 2740–2893 ms. Programs: c7d6c15
+built 211 by Begin and 14 more in the first two seconds of play (36 of them full-screen variants with normals that
+nothing drew, and the seed-copy pass three times); this build builds 193 by Begin, none in play, no exact duplicates,
+and no stray first uses. Group size stays 8.
+
 ## Phase 2: world construction in short steps, and progress reported
 
 Owns: the top-level construction in `src/main.ts`, `src/world/stairs.ts` (`CloudStairs` construction only), any
