@@ -215,11 +215,9 @@ scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
-const washing = new WashingLines(
-  [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()],
-  91,
-  FAMILY_LINE,
-);
+const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()];
+await built();
+const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
 scene.add(washing.group);
 /** The same kite marks every departure. Lines keeps its kite inside the doorway reveal. */
 await built();
@@ -244,6 +242,7 @@ const skyMirror = new SkyMirror();
 scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
 scene.add(littleBoats.group);
+await built();
 const cloudStairs = await prepareInBatches(CloudStairs.build());
 scene.add(cloudStairs.group);
 await built();
@@ -1121,6 +1120,7 @@ function frameInner(now: number): void {
   if (QA && params.shot) {
     window.__stats = {
       bootStrayPrograms: strayPrograms,
+      bootSteps: { counted: builtSteps, expected: BUILD_STEPS },
       playFirstDraws: playDraws?.report(),
       frame: frameIndex,
       time,
@@ -1247,7 +1247,7 @@ async function boot(): Promise<void> {
   }
   performance.mark('ready');
   bootMs = performance.now() - started;
-  if (QA) window.__stats = { ...window.__stats, bootStrayPrograms: strayPrograms };
+  if (QA) window.__stats = { ...window.__stats, bootStrayPrograms: strayPrograms, bootSteps: { counted: builtSteps, expected: BUILD_STEPS } };
   if (contextRecovery.lost) return;
   graphicsReady = true;
   quality.setMode(controls.qualityMode, performance.now());

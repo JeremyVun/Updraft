@@ -250,7 +250,8 @@ const firstDraws = {
  * real frame, and the first view of every room, is an ordinary one. A batch holds at most one object whose program
  * has not been drawn yet, because a slow driver pays for a program's first draw in the task that issues it. `only`
  * limits the draws to some objects, such as those whose program variants are still undrawn. `onProgress` gets the
- * share of the objects drawn.
+ * share of the objects drawn. Up to `FIRST_DRAWS_QUEUED` first draws may still be on the GPU when it resolves; the
+ * next warm waits for them (`warmSimulations` waits for all).
  */
 export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget,
   only: (object: THREE.Object3D) => boolean = () => true, onProgress: (fraction: number) => void = () => {}): Promise<void> {
@@ -307,7 +308,6 @@ export async function warmRender(renderer: THREE.WebGLRenderer, scene: THREE.Sce
       fresh ||= undrawn;
     }
     if (batch.length) await draw();
-    await firstDraws.catchUp(gl, 0);
   } finally {
     renderer.setRenderTarget(previousTarget);
     for (const { object, mask, culled } of masked) {
