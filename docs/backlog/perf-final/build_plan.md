@@ -31,7 +31,10 @@ Seams shared by phases:
   materials. Add new switches to the `Switch` union. Boot compiles and warms every variant (`otherVariants()` steps)
   without creating three objects. Variant state is per material, so one frame's choice holds in every view; a
   per-view variant is not supported. Each added axis multiplies boot's variant steps (about 15 ms each plus compile):
-  re-measure the veil gap and load time.
+  re-measure the veil gap and load time. On Apple hardware every program's first draw costs about 0.2 s of a first
+  visit (`docs/backlog/boot-veil/design.md`), so weigh each new variant's saving against that; warming at boot keeps
+  the cost out of play. boot-veil is reworking the precompile and warm-up into groups in `gl/boot.ts` and `main.ts`
+  `boot()`: check its state before touching them.
 - **Level (phase 4 → 5, 6).** `QualityLevel` gains `name: 'ultra' | 'high' | 'medium' | 'low' | 'last'` and
   `frameRate: 30 | 60`. `applyWorldQuality(level)` in `main.ts` is the one place a level's effects are applied; phase
   5 adds its effects there and nowhere else. The deck choice is per frame and independent of the level.
