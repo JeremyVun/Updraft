@@ -125,8 +125,8 @@ his iPad. `node tools/start-check.mjs` also fails if the worst boot frame gap ex
    snapshotted and interpolated across the world updates; each brush sees only its own segment.
 3. Each world update advances input, story, actors, wind, life and particles, camera and world mechanics, in that
    order. The last one follows the world window and requests the wind readback after its final tick.
-4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables
-   and audio.
+4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables,
+   the blades' fog and audio.
 5. The doorway view renders when open, then the sea reflection, the scene and the post chain; `endFrame()` fences it.
 
 Hidden tabs advance nothing, and visibility changes reset the timestamp. `shot` advances exactly 1/60 s per frame.
@@ -232,6 +232,7 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 | MSAA | scene default | scene default | up to 2 | up to 2 | up to 2 |
 | Presentation | 60 fps | 60 fps | 60 fps | 30 fps | 30 fps |
 | Grass density / reach | 100% / 115% | 100% / 115% | 100% / 100% | 100% / 100% | 50% / 100% |
+| Segments of the near grass's blades | 6 | 6 | 6 | 5 | 5 |
 | Terrain split | 1.6 | 1.6 | 1.35 | 1.1 | 1.1 |
 | Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 | 0.5 |
 | Sky mirror's reflection | every frame | every frame | every frame | alternate frames | alternate frames |
@@ -285,7 +286,10 @@ callback interval since the last presentation, floored at the level's frame time
 (120/144 Hz displays, every other refresh at Low) don't look like overload.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
-for every level at boot (about 28 MiB for the four attachments), so quality changes never allocate or recompile.
+for every level at boot (about 28 MiB for the four attachments, and 5.5 MiB for the blades' fog), so quality changes
+never allocate or recompile. The near level's geometry holds its blade twice, with six segments and with five; at
+Low and the last step the sixth segment closes over a second, and the five-segment form, the same blade fully closed,
+is drawn only once it has shut (`grass.setNearSegments`).
 Wind resolution, solver cadence and water mesh topology never change during play.
 
 Only the dev server and explicit QA builds accept game query overrides; the production build removes their parser
@@ -364,7 +368,9 @@ Bakes that follow the world:
   at the sea surface with local ring distortion.
 - Grass (`world/grass.ts`): per-blade constants (root, height, width, facing, curve, tint, flower) are computed once
   into a blade table (`TABLE_FRAG`, four texels a blade) when fixed inputs or the tile list change; per-blade shading
-  runs once per vertex (`BLADE_SHADE_GLSL`). A level's table is reused while its tiles and fixed traits are
+  runs once per vertex (`BLADE_SHADE_GLSL`). Fog is worked out once a frame per blade (`FOG_FRAG`, a quarter of the
+  way up the blade, where one fog comes closest to the fog along it) into a texel the blade shader reads; blades
+  thinning collapses are skipped, and the pass draws over its rows without a clear, which would cost more than it. A level's table is reused while its tiles and fixed traits are
   unchanged; season, palette, flattened patches and ground rebakes invalidate it, while wind, life and lighting stay
   live in the blade shader. Clears and draws are scissored to occupied rows. The three detail levels draw one
   population: each coarser level holds the lowest-ranked blades of the finer one, and thinning depends only on
@@ -463,6 +469,9 @@ graph's CPU, sound on against muted.
 - **Read the noise floor.** Ablations are interleaved pairs; `none` pairs the baseline with itself. Chains of small
   dependent passes (the wind step, bloom, bakes) inflate several-fold under another process's GPU load and when
   drawn back to back, so time them with `DRAIN=1` and `GPU_QUIET=1`, and drop rows whose pair baselines straddle.
+- **Time a pass the scene reads with the wind step.** `FRAME_PASS` leaves the wind step out, so a per-frame pass
+  whose output the scene's vertices read (the blades' fog) becomes the one thing the scene waits on and reads several
+  times its cost; `FRAME_SIM=1` steps the wind before each draw, as the loop does.
 - **Frozen draws do not re-bake.** An ablation that changes a height source must re-run the window-move bakes
   (ground, light, shore, grass tables) on both sides of every pair; list it in the tool's `heightSources`.
 
