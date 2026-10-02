@@ -89,6 +89,11 @@
 // where they meet; mirror-dark leaves its unlit guide and opacity-0 lines undrawn (exact, about nothing saved);
 // mirror-ordinary renders its reflection at the ordinary sea's size and cadence (a look change, costed only).
 // boatsBath hides the little boats' static bath and plug: the most merging them could save (not exact).
+// Phase 7 survey (look changes, costed only): cloud-shadow-off (full sun everywhere), sky-bank (exact: the storm bank
+// skipped while there is no storm), sky-detail (sky-bank plus the clouds' shading from one octave), grass-fog-root (the
+// blades' fog at their root: the look of fog once per blade, not its saving; grass-fog is that saving's upper bound),
+// grass-near-<f> (the near grass level's reach times f), grass-near-5seg (near blades with five segments), rt-r11 (the
+// scene, resolve, post.clean and bloom targets as R11F_G11F_B10F).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -361,6 +366,8 @@ window.__audit = {
     this.noiseTerms(variants);
     this.bareTiles(variants.includes('grass-bare-tiles'));
     this.deckOut(variants.includes('deck-out')?'all':(variants.find(v=>v.startsWith('deck-out-'))||'').slice(9)||null);
+    this.surveyTerms(variants);
+    this.surveyLevers(variants);
     if(this.pairRebake)this.rebake();
   },
   // mirror-merge: the sky mirror's pieces placed by translation alone drawn as one mesh per material, each vertex the
@@ -387,6 +394,63 @@ window.__audit = {
       if(!this.mirrorMerged.length)throw Error('Missing patch site: nothing in the sky mirror to merge');
     }
     for(const {merged,meshes} of this.mirrorMerged){for(const m of meshes){this.hidden.push([m,m.visible]);m.visible=false;}this.hidden.push([merged,false]);merged.visible=true;}
+  },
+  // Phase 7's look-change candidates that edit shared GLSL wherever it is compiled, each edit tagged so the next
+  // configure can undo it whatever else has rewritten the source since. sky-bank is exact (the storm bank is dead
+  // while uStormCover and the lightning are 0); sky-detail also shades the clouds from a one-octave sample.
+  surveyTerms(variants) {
+    const bank='float bank = smoothstep(0.32, 0.75, fbm(p * 0.65 + vec2(4.0, uTime * 0.006)));';
+    const bankSkip=['float bank = (uStormCover > 0.0 || uLightning.w > 0.0) ? smoothstep(0.32, 0.75, fbm(p * 0.65 + vec2(4.0, uTime * 0.006))) : 0.0;',bank];
+    const terms={
+      'cloud-shadow-off':[['float cloudShadow(vec2 xz) { return 1.0;','float cloudShadow(vec2 xz) {']],
+      'sky-bank':[bankSkip],
+      'sky-detail':[bankSkip,['float thick = smoothstep(0.52, 0.8, fbm((p + toSun) * vec2(0.55, 1.1)) * 0.7 + 0.15);','float thick = cloudDensity(p + toSun);']],
+      'grass-fog-root':[['vFog = fogOf(rootPos, 1.0);','vFog = fogOf(world, 1.0);']],
+    };
+    const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,bakes.groundMat,...grass.lods.map(l=>l.tableMat)]);
+    scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+    const tag=(v,i)=>'/*p7:'+v+':'+i+'*/';
+    const hits=new Set();
+    for(const m of mats)for(const key of ['vertexShader','fragmentShader']){
+      let source=m[key];if(typeof source!=='string')continue;
+      for(const [v,subs] of Object.entries(terms))subs.forEach(([to,from],i)=>{source=source.split(to+tag(v,i)).join(from);});
+      for(const v of variants)(terms[v]||[]).forEach(([to,from],i)=>{if(source.includes(from)){hits.add(v+':'+i);source=source.split(from).join(to+tag(v,i));}});
+      if(m[key]!==source){m[key]=source;m.needsUpdate=true;}
+    }
+    for(const v of variants)(terms[v]||[]).forEach((_,i)=>{if(!hits.has(v+':'+i))throw Error('Missing patch site: '+v+':'+i);});
+  },
+  // Phase 7's look-change levers. grass-near-<f>: the near grass level's reach times f (the middle level takes over
+  // sooner); grass-near-5seg: the near level's blades with five segments, as the middle level's; rt-r11: the scene,
+  // its resolve, post.clean and the bloom chain as R11F_G11F_B10F instead of half-float RGBA.
+  surveyLevers(variants) {
+    const near=grass.lods[0],nearMesh=grass.group.children[0],u=grass.thinning;
+    this.nearReach??=near.spec.reach;
+    const f=Number((variants.find(v=>/^grass-near-[\\d.]+$/.test(v))||'grass-near-1').slice(11));
+    if(near.spec.reach!==this.nearReach*f){
+      near.spec.reach=this.nearReach*f;
+      nearMesh.material.uniforms.uClose.value.set(near.spec.reach*near.spec.thinFrom,near.spec.reach);
+      u.uRings.value.x=near.spec.reach*near.spec.thinFrom;u.uRings.value.y=near.spec.reach;
+      grass.update(rig.camera);grass.bake(renderer);
+    }
+    const five=variants.includes('grass-near-5seg'),g=near.geo;
+    this.sixSeg??={index:g.index,position:g.attributes.position};
+    if(five&&!this.fiveSeg){
+      const segments=5,pos=[],index=[];
+      for(let i=0;i<segments;i++){const t=i/segments;pos.push(-1,t,t,1,t,t);}
+      pos.push(0,1,1);
+      for(let i=0;i<segments-1;i++){const a=i*2;index.push(a,a+1,a+2,a+1,a+3,a+2);}
+      const last=(segments-1)*2;index.push(last,last+1,last+2);
+      this.fiveSeg={index:new THREE.Uint16BufferAttribute(index,1),position:new THREE.Float32BufferAttribute(pos,3)};
+    }
+    const want=five?this.fiveSeg:this.sixSeg;
+    if(g.index!==want.index){g.setIndex(want.index);g.setAttribute('position',want.position);}
+    const r11=variants.includes('rt-r11');
+    if(r11!==!!this.r11On){
+      const b=post.bloom;
+      for(const t of [post.sceneTarget,post.clean,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
+        t.texture.internalFormat=r11?'R11F_G11F_B10F':null;t.texture.format=r11?THREE.RGBFormat:THREE.RGBAFormat;t.dispose();}
+      this.r11On=r11;
+    }
   },
   // mirror-dark: the constellation's lines at opacity 0 and the approach's guide with no light in it left undrawn.
   mirrorDark(on) {
@@ -692,7 +756,8 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1,
+      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
@@ -1001,20 +1066,26 @@ try {
       if(row.stepMs>1)console.warn(`WARNING ${chapter} wind: one step alone took ${row.stepMs.toFixed(2)} ms (0.3-0.6 uncontended on the M4 Pro); another process is using the GPU and the saving is inflated; repeat it`);
       if(straddle)console.warn(`WARNING ${chapter} ${omit}: pair baselines straddle GPU states (${baselines.map(b=>b.toFixed(1)).join(', ')} ms); repeat it`);
     }
-    const postPasses=process.env.POST_PASSES==='1'?await page.evaluate(async reps=>{
+    // PASS_VARIANTS=rt-r11,... times the post stages and the reflection pass under each listed ablation too, alternating
+    // with the baseline twice over.
+    const passVariants=process.env.PASS_VARIANTS?['',...process.env.PASS_VARIANTS.split(',')]:[''],passOrder=passVariants.length>1?[...passVariants,...passVariants]:passVariants;
+    let postPasses,reflectionPass;
+    for(const variant of passOrder){
+    postPasses=process.env.POST_PASSES==='1'?await page.evaluate(async ([reps,variant])=>{
       const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
       async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
         try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
-      __audit.configure(null);return __audit.postPasses(reps,complete);
-    },Number(process.env.POST_REPS??40)):undefined;
-    if(postPasses)console.log(JSON.stringify({chapter,postPasses}));
-    const reflectionPass=process.env.REFLECTION_PASS==='1'?await page.evaluate(async reps=>{
+      __audit.configure(variant||null);for(let i=0;i<3;i++)__audit.draw(false);try{return await __audit.postPasses(reps,complete);}finally{__audit.configure(null);}
+    },[Number(process.env.POST_REPS??40),variant]):undefined;
+    if(postPasses)console.log(JSON.stringify({chapter,postPasses,variant}));
+    reflectionPass=process.env.REFLECTION_PASS==='1'?await page.evaluate(async ([reps,variant])=>{
       const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
       async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
         try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
-      __audit.configure(null);return __audit.reflectionPass(reps,complete);
-    },Number(process.env.POST_REPS??40)):undefined;
-    if(reflectionPass)console.log(JSON.stringify({chapter,reflectionPass}));
+      __audit.configure(variant||null);for(let i=0;i<3;i++)__audit.draw(false);try{return await __audit.reflectionPass(reps,complete);}finally{__audit.configure(null);}
+    },[Number(process.env.POST_REPS??40),variant]):undefined;
+    if(reflectionPass)console.log(JSON.stringify({chapter,reflectionPass,variant}));
+    }
     const waterPass=process.env.WATER_PASS?await page.evaluate(async ({variants,reps,rounds})=>{
       const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
       async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
