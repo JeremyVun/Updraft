@@ -173,14 +173,15 @@ long construction stage. Within C, settling takes 60% and first draws 40% (Chrom
 | D | Laying out the ground and grass | Bakes, window, grass tables, post, `gpuIdle` | 95–100% | completed steps / steps counted before starting |
 
 The displayed percentage is an integer and never falls. The D line reads up to 100% and nothing else shows at 100%:
-Begin replaces the line as `ready()` fades it with the cygnet, as "Loading" fades today. `BUILD_STEPS` is a constant;
+Begin replaces the line as `ready()` fades it with the cygnet. `BUILD_STEPS` is a constant;
 `start-check` fails if the steps counted in a real boot differ from it, so adding a construction step means updating
 it.
 
 Stage A's words are written into `index.html`, because they show before any game code has downloaded. `progress`
 writes the stage line and the number with one `textContent` each per change, into `.progress-stage` and
-`.progress-percent` inside the veil; until phase 3 puts them in the markup, `progress` creates them inside
-`.loading-text` in place of "Loading…". The line is `aria-hidden`; the existing `#start-status` live region announces
+`.progress-percent`, the two spans of `.loading-text` in `index.html` (the percent span starts empty and takes no
+space). A failure that retrying cannot fix puts "The game couldn't start." in the line and empties the number; the
+Try again failure fades the line with the cygnet as Begin would. The line is `aria-hidden`; the existing `#start-status` live region announces
 stage changes only, never percentages, and `ready()` clears it unless it holds a failure message.
 
 ### The indicator's look: D1, "In place" (Jeremy, 2026-10-02)
@@ -199,8 +200,8 @@ hero, with night, phone longest-line and desktop stage-A frames beside it), and 
 - Contrast measured on the iPad frame at 37%: 3.2:1 on the day veil, 6.3:1 at night (the old "Loading" was 1.9:1
   and 3.35:1). The day veil's centre is too pale for 4.5:1 with ivory text; Jeremy accepted D1 knowing that only
   the corner direction reached it.
-- For finished players, the Chapters link fades in where this line sits; the line must be gone first, which fading
-  with the cygnet already ensures.
+- For finished players, the Chapters link fades in where this line sits; the line must be gone first, so the link's
+  fade waits 0.35 s for the line's (`chapter-select.css`). Fading together, the two would cross.
 - The night veil uses the same line and colour.
 
 ### Rejected
