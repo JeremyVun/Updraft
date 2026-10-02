@@ -119,6 +119,10 @@ const BUILD_STEPS = 25;
 const SETTLE_SHARE = 0.6;
 let builtSteps = 0;
 let stepStarted = performance.now();
+/** Reports how far into the current construction step it is. */
+function building(fraction: number): void {
+  startScreen.progress('build', (builtSteps + fraction) / BUILD_STEPS);
+}
 async function built(): Promise<void> {
   if (QA) performance.measure(`build step ${builtSteps + 1}`, { start: stepStarted });
   startScreen.progress('build', ++builtSteps / BUILD_STEPS);
@@ -243,11 +247,11 @@ scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
 scene.add(littleBoats.group);
 await built();
-const cloudStairs = await prepareInBatches(CloudStairs.build());
+const cloudStairs = await prepareInBatches(CloudStairs.build(), building);
 scene.add(cloudStairs.group);
 await built();
 const birches = new AutumnBirches(renderer, wind, false);
-await prepareInBatches(birches.scarf.settle());
+await prepareInBatches(birches.scarf.settle(), building);
 birches.objects.forEach((o) => scene.add(o));
 await built();
 const cottage = new Cottage(wind);

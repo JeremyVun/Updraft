@@ -29,12 +29,16 @@ function idle(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/** Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps; resolves to what the steps return. */
-export async function prepareInBatches<T>(steps: Iterator<unknown, T>, budgetMs = 8): Promise<T> {
+/**
+ * Keep expensive CPU preparation below a short batch, without skipping or changing its fixed steps; resolves to what
+ * the steps return. Steps that yield the share done pass it to `onProgress`.
+ */
+export async function prepareInBatches<T>(steps: Iterator<number | void, T>, onProgress: (fraction: number) => void = () => {}, budgetMs = 8): Promise<T> {
   let started = performance.now();
   for (;;) {
     const step = steps.next();
     if (step.done) return step.value;
+    if (typeof step.value === 'number') onProgress(step.value);
     if (performance.now() - started >= budgetMs) { await yieldBoot(); started = performance.now(); }
   }
 }

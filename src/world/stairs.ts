@@ -508,17 +508,19 @@ export class CloudStairs {
   private time = 0;
   private stride = 1;
 
-  /** Builds the staircase a flight at a time, yielding between them, for `prepareInBatches`. */
-  static *build(): Generator<void, CloudStairs> {
+  /** Builds the staircase a flight at a time, yielding the share built between them, for `prepareInBatches`. */
+  static *build(): Generator<number, CloudStairs> {
+    const steps = FLIGHTS + 4;
+    let done = 0;
     const group = new THREE.Group();
     const cloud = new StairsCloud();
-    yield;
+    yield ++done / steps;
     const fixed = new Build();
     for (let i = 1; i <= FLIGHTS; i++) {
       if ((LOOSE as readonly number[]).includes(i)) continue;
       buildFlight(fixed, flight(i), i === LOOP.wait || i === LOOP.onward);
       buildLanding(fixed, landingOf(i), i >= LOOP.corner && i <= LOOP.onward);
-      yield;
+      yield ++done / steps;
     }
     // Side by side at the open edge, toes to the drop and the sun.
     const s = new THREE.Matrix4().makeTranslation(SLIPPERS.x, SLIPPERS.y + 0.01, SLIPPERS.z).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(TOP_OUT.x, TOP_OUT.z)));
@@ -527,18 +529,18 @@ export class CloudStairs {
     // The loop's far side, which only the bird goes round.
     buildFlight(fixed, LOOP_FAR.flight, true);
     buildLanding(fixed, LOOP_FAR.landing, true);
-    yield;
+    yield ++done / steps;
     const standing = fixed.result();
-    yield;
+    yield ++done / steps;
     const drawnIn = drawnInFlight();
-    yield;
+    yield ++done / steps;
     const loose: THREE.BufferGeometry[] = [];
     for (const index of LOOSE) {
       const b = new Build();
       buildFlight(b, flight(index));
       buildLanding(b, landingOf(index));
       loose.push(b.result());
-      yield;
+      yield ++done / steps;
     }
     return new CloudStairs(group, cloud, standing, drawnIn, loose);
   }
