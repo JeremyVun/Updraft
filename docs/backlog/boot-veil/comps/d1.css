@@ -1,0 +1,18 @@
+/* D1 In place: the stage line takes the place of "Loading" under the cygnet, in the same italic. */
+.veil-progress {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 14px;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  font-size: 15px;
+  font-style: italic;
+  letter-spacing: .045em;
+  white-space: nowrap;
+  color: #fff2db;
+  opacity: .9;
+  /* The ending's dark under-shadow, softened: the day veil's centre is too pale for ivory alone. */
+  text-shadow: 0 0 2px #182a3659, 0 1px 12px #182a3699;
+}
+.progress-percent { margin-left: .6em; font-variant-numeric: tabular-nums; }
