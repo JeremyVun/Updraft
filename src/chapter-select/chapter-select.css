@@ -26,8 +26,10 @@
   opacity: 0;
   transition: opacity .8s ease;
 }
-#veil.ready .chapters-toggle { visibility: visible; opacity: .5; }
+/* It takes the loading line's place, so it waits for the line's .35s fade. */
+#veil.ready .chapters-toggle { visibility: visible; opacity: .5; transition-delay: .35s; }
 #veil.ready .chapters-toggle:hover { opacity: .85; }
+#veil.ready .chapters-toggle:hover, #veil.ready .chapters-toggle:focus-visible { transition-delay: 0s; }
 .chapters-toggle:focus-visible,
 .chapter:focus-visible { outline: none; }
 .chapters-toggle:focus-visible { opacity: .85 !important; text-decoration: underline; text-underline-offset: 6px; }

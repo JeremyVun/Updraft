@@ -37,7 +37,8 @@ class StartScreen {
   private failedPermanently = false;
   private stage: LoadingStage | null = null;
   private percent = -1;
-  private line: { stage: HTMLElement; percent: HTMLElement } | null = null;
+  private readonly stageText = this.veil.querySelector<HTMLElement>('.progress-stage')!;
+  private readonly percentText = this.veil.querySelector<HTMLElement>('.progress-percent')!;
 
   constructor() {
     if (params.shot) document.body.classList.add('shot');
@@ -91,30 +92,18 @@ class StartScreen {
 
   /** Shows the stage and a whole percentage that never falls; the live region hears only the stage changes. */
   progress(stage: LoadingStage, fraction: number): void {
-    if (!this.enabled || this.disposed) return;
+    if (!this.enabled || this.disposed || this.failedPermanently) return;
     const { line, from, to } = STAGES[stage];
     const percent = Math.max(this.percent, Math.floor(from + (to - from) * Math.min(1, Math.max(0, fraction))));
-    this.line ??= this.findLine();
     if (stage !== this.stage) {
       this.stage = stage;
-      this.line.stage.textContent = line;
+      this.stageText.textContent = line;
       document.getElementById('start-status')!.textContent = line;
     }
     if (percent !== this.percent) {
       this.percent = percent;
-      this.line.percent.textContent = `${percent}%`;
+      this.percentText.textContent = `${percent}%`;
     }
-  }
-
-  private findLine(): { stage: HTMLElement; percent: HTMLElement } {
-    const stage = this.veil.querySelector<HTMLElement>('.progress-stage');
-    const percent = this.veil.querySelector<HTMLElement>('.progress-percent');
-    if (stage && percent) return { stage, percent };
-    const made = { stage: document.createElement('span'), percent: document.createElement('span') };
-    made.stage.className = 'progress-stage';
-    made.percent.className = 'progress-percent';
-    this.veil.querySelector('.loading-text')!.replaceChildren(made.stage, ' ', made.percent);
-    return made;
   }
 
   ready(start: (sound: boolean) => void): void {
@@ -150,6 +139,8 @@ class StartScreen {
       this.failedPermanently = true;
       this.veil.setAttribute('aria-busy', 'false');
       document.getElementById('start-status')!.textContent = "The game couldn't start.";
+      this.stageText.textContent = "The game couldn't start.";
+      this.percentText.textContent = '';
       this.button.hidden = true;
       return;
     }
