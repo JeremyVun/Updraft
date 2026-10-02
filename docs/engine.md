@@ -6,41 +6,32 @@ in `src/main.ts`.
 
 ## Boot (`src/gl/boot.ts`, `boot()` in `main.ts`)
 
-Nothing heavy may happen in the first frames of play. Before the loop starts, behind the veil:
+Nothing heavy may happen in the first frames of play, and the veil must keep painting while the game prepares. World
+construction runs first (stage B below), then, before the loop starts, behind the veil:
 
 1. `settlePrograms` builds every program before anything draws with it: the scene's materials against the scene's
    half-float target (a program's cache key depends on whether it draws to the screen), the simulation and bake
    materials (`simMaterial` registers them) and the grass tables as full-screen passes, the unclipped blades, the post
-   chain, and the scene and grass again for each program variant (`variantSteps`, see Program variants). At most 8
-   compile at once; each is given its first use (three's link and uniform queries) once the driver reports it
-   compiled, and boot yields whenever 12 ms have passed since the last frame. Construction never draws: passes it
-   needs (seeding the petals, leaves, litter and carve field) wait for boot (`atBoot`, `runBootPasses`). In QA builds
-   `__stats.bootStrayPrograms` counts programs first used anywhere else; `start-check` requires 0.
-2. `warmRender` draws the scene into the offscreen target in batches of up to 64 objects, at most one of them with
-   a program not drawn before into a target of that format (a slow driver pays for a first draw in the task that
-   issues it, and builds a pipeline per program and target format), with at most four first draws queued on the GPU
-   (a cold driver builds the pipeline there, and uploads behind it would block the main thread), yielding whenever
-   12 ms have passed since the last frame; visibility, layer masks and culling are restored even on failure. Every
-   object is drawn, culled or not, and one that would draw nothing (no instances, an empty draw range) is given one
+   chain, and the objects with variants, the unclipped blades and the post chain again for each program variant
+   (`variantSteps`, see Program variants). Each object compiles on its own, and each program is given its first use
+   (three's link and uniform queries) once the driver reports it compiled.
+2. `runBootPasses` runs the draws construction deferred with `atBoot` (seeding the petals, leaves and litter, the
+   carve field).
+3. `warmRender` draws the scene into the offscreen target in batches, culling off: the main view and the reflected
+   world in the sea mirror's format, each with every variant, and the grass blades with each of their fragment
+   shaders (`grass.fragmentSteps`). An object that would draw nothing (no instances, an empty draw range) is given one
    instance or its whole range for the draw. Textures upload, buffers land on the GPU and render targets are
-   allocated. The objects with program variants are drawn again with each variant, the reflected world again into
-   the sea mirror's format, the grass blades with each of their fragment shaders, and each simulation and bake
-   material once into a small scratch target with the format it writes (`simMaterial` names its target), so nothing
-   it really writes changes. In QA builds `__stats.playFirstDraws` counts programs, and programs with a target format,
-   first drawn after Begin.
-3. The static atlases bake once: the field and ground-colour caches and the distant-height atlas (see Bakes).
-4. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), the visible grass
-   tables bake, and the post chain runs.
+   allocated. `warmSimulations` then draws each simulation and bake material once into a 4×4 scratch target of the
+   format it really writes (`simMaterial(fragment, uniforms, target)` names it), so nothing it writes changes.
+   Visibility, layer masks, culling, draw counts and the render target are restored even on failure.
+4. The static atlases bake once (the field and ground-colour caches and the distant-height atlas, see Bakes), the
+   window is placed for the camera the story chose and baked (`followWindow(..., true)`), the visible grass tables
+   bake, and the post chain runs.
 5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
    Begin / Continue. Only that gesture starts audio and `requestAnimationFrame(frame)`; the story and the quality
    governor do not run while waiting.
 
-World construction runs in counted steps (`BUILD_STEPS`, checked by `start-check`), yielding once a paint is due, and
-long preparation such as the stairs and the birches scarf settling runs in short batches (`prepareInBatches`), so the
-veil keeps painting. The veil shows the stage and a percentage (`startScreen.progress`, see the boot-veil design). Anything that appears later in the story is already
-compiled and uploaded; showing it costs nothing. `node tools/start-check.mjs` fails if the worst boot frame gap
-exceeds 500 ms (`BOOT_MAX_MS`); `node tools/boot-profile.mjs` records cold-load long tasks, blocking GL calls and a
-CPU profile.
+Anything that appears later in the story is already compiled, first drawn and uploaded; showing it costs nothing.
 
 `src/entry.ts` paints the DOM/SVG start screen before dynamically importing the game; its hollow ring is a
 browser-owned SVG cursor, so it moves even while JavaScript is busy with WebGL setup. `controls.ts` loads before the
@@ -60,6 +51,67 @@ Failure paths:
   and recovery dialog as a lost WebGL context (`docs/contracts/progress.md`).
 
 `node tools/failure-paths-check.mjs` fault-injects all four.
+
+### Rules a change must keep
+
+- **Nothing is first used outside `settlePrograms`, and every program is first drawn behind the veil.** A first use
+  waits for the compile; a first draw builds the driver's pipeline, once per program and target format. Both are
+  long on a cold driver, so neither may happen in a draw, a bake or play. A new material must exist by `boot()`, in
+  the scene or through `simMaterial` with the target it writes; objects culled or empty at boot and passes that only
+  run in later rooms are still warmed. A constructor that has to draw registers the pass with `atBoot` instead of
+  drawing, before `boot()` runs. In QA builds `__stats.bootStrayPrograms` counts programs first used anywhere else
+  and `__stats.playFirstDraws` counts programs, and programs with a target format, first drawn after Begin; both
+  must be 0, at boot and through the opening minute or any `?chapter=` load (`start-check` checks the first seconds
+  of play). The one accepted exception: a quality step to a new MSAA sample count first draws the
+  scene's programs into that sample count.
+- **At most 8 programs compile at once (`GROUP`).** A status query waits behind every compile issued before it: in
+  Chrome, 138 programs issued together made the first query wait 0.4 s. When 8 are compiling, boot settles the
+  finished ones until 4 or fewer remain and refills; waiting out each group before the next left the GPU process
+  idle and cost about 0.86 s more. Changing the window needs the gates below measured again.
+- **Each warm batch holds at most one program not yet drawn into that target format, beside up to 64 drawn ones
+  (`WARM_BATCH`), and at most 4 first draws are queued on the GPU (`FIRST_DRAWS_QUEUED`).** A slow driver pays for a
+  first draw in the task that issues it, so this is the smallest piece the work splits into. Chrome on Metal under
+  `?coldshaders` builds each pipeline at its first draw; with all of them queued, later uploads blocked the main
+  thread for 3.7–5.8 s, while waiting for every one cost 0.8 s on an ordinary load.
+- **Boot yields whenever 12 ms have passed since the last paint (`keepPainting`, `yieldBoot`).** Yielding after every
+  batch instead would add seconds.
+- **World construction runs in `BUILD_STEPS` counted steps (`built()` in `main.ts`), none above about 120 ms at 1×
+  on this Mac** (500 ms at 4× CPU slowdown). Longer work, such as the stairs flight by flight and the birches scarf's
+  settle, is a generator run by `prepareInBatches` that yields the share it has done. Adding or removing a step
+  changes `BUILD_STEPS`; `start-check` fails if a real boot counts another number.
+- **Every program costs a first visit time.** A program's first draw takes about 0.2 s on Apple hardware (Safari
+  compiles in the background, but the first draw blocks the thread that issues it), so every new program or variant
+  adds about 0.2 s to a first visit on an iPad (about 25 s for about 200 programs). Weigh a new variant
+  against that; duplicates (the same vertex and fragment source built twice) are a bug.
+
+### Progress on the veil
+
+`startScreen.progress(stage, fraction)` writes the stage line and a whole percentage that never falls; the line is
+static HTML until `main.ts` runs. Each stage has a fixed share (`STAGES` in `src/start-screen.ts`):
+
+| Stage | Line | Covers | Share |
+| --- | --- | --- | --- |
+| A | Downloading the game | `index.html` until `main.ts` starts evaluating | 0–3% |
+| B | Building the world | World construction: completed steps of `BUILD_STEPS`, plus a generator's share | 3–41% |
+| C | Preparing the graphics | Settling (`SETTLE_SHARE`, 60%), then the objects and passes first drawn | 41–95% |
+| D | Laying out the ground and grass | Bakes, window, grass tables, post, `gpuIdle` | 95–100% |
+
+Each share is the mean of a first iPad visit's (A 3, B 6, C 85, D 6) and a cold Chrome load's at 4× CPU slowdown,
+so the number moves on a slow tablet as well as on an iPad. To measure them again, run
+`RUNS=3 THROTTLE=4 BASE=<QA preview> node tools/boot-profile.mjs /tmp/<prefix>`: each run prints the stage times
+(`A`, `B`, `settle`, `warm`, `D`, from the `main`, `boot`, `settled`, `warmed` and `ready` marks). C is settle plus
+warm, and settle over C is `SETTLE_SHARE`.
+
+### Measuring boot
+
+On a QA preview, never a dev server, with nothing else busy on the GPU (check `ps`), compared back to back with the
+unchanged build: `RUNS=5 node tools/boot-profile.mjs` (fresh profile per load: worst veil gap under 150 ms, Begin at
+2.8 s or less on this Mac), `RUNS=3 THROTTLE=4` (worst gap under 500 ms), `WARM=1` (a second load in the same
+profile, from Chrome's program cache). `?coldshaders` (QA only) adds a never-taken
+`if (gl_FragCoord.x < -<random>) discard;` to every fragment shader, unique to the load, so no browser or driver
+cache holds a program and every load compiles as a first visit does; a comment would not do, because WebKit caches
+translated code without comments. Give Jeremy a LAN QA preview with `?coldshaders&start=1` to check a first visit on
+his iPad. `node tools/start-check.mjs` also fails if the worst boot frame gap exceeds 500 ms (`BOOT_MAX_MS`).
 
 ## Frame order (`frame()` in `main.ts`)
 
