@@ -2,6 +2,7 @@ import { HOME_SHIFT } from './geography';
 import { SKY_MIRROR } from './sky-mirror-layout';
 import * as THREE from 'three';
 import { GpuRunner, simMaterial, simTarget } from '../gl/gpu';
+import { passJob, settlePrograms } from '../gl/boot';
 import { COTTAGE, HEIGHTFIELD_GLSL, LAST_HILL, SLEEP_HILL, worldHeight } from './heightfield';
 
 import { SLEEP_PATH } from './sleeping-layout';
@@ -11,7 +12,7 @@ import { LITTLE_BOATS, boatsX, boatsWidth } from './little-boats-layout';
 const SAMPLES = 138 + 9 + (SLEEP_PATH.length - 1) * 9 + 9 + 21;
 
 /** Largest gap between the GPU and CPU height functions over scattered points (QA only; stalls the GPU once). */
-export function measureHeightParity(renderer: THREE.WebGLRenderer): number {
+export async function measureHeightParity(renderer: THREE.WebGLRenderer): Promise<number> {
   const points: THREE.Vector2[] = [];
   // The narrow homeward channel clears the hull in both the rendered and navigated seabed.
   for (const x of [-168, -150, -132]) for (const z of [-1986, -1974, -1962]) points.push(new THREE.Vector2(x + HOME_SHIFT.x,z + HOME_SHIFT.z));
@@ -56,6 +57,7 @@ export function measureHeightParity(renderer: THREE.WebGLRenderer): number {
     }`,
     { uPoints: { value: points } },
   );
+  await settlePrograms(renderer, [passJob([mat], target)]);
   new GpuRunner(renderer).run(mat, target);
   const out = new Float32Array(SAMPLES * 4);
   renderer.readRenderTargetPixels(target, 0, 0, SAMPLES, 1, out);

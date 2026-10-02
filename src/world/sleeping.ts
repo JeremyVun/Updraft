@@ -8,7 +8,7 @@ import { Feather } from '../fx/feather';
 import { CurtainRibbon } from './sleeping-ribbon';
 import { SLEEP_PATH } from './sleeping-layout';
 import { SleepingTrail } from './sleeping-trail';
-import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
+import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
@@ -692,8 +692,10 @@ export class SleepingIsland {
       uLaneOpen: atmo.uniforms.uLaneOpen,
     });
     const fill = simMaterial(FILL_FRAG, {});
-    this.gpu.run(fill, this.carveField.read);
-    this.gpu.run(fill, this.carveField.write);
+    atBoot(() => {
+      this.gpu.run(fill, this.carveField.read);
+      this.gpu.run(fill, this.carveField.write);
+    });
     atmo.uniforms.uCarveTex.value = this.carveField.texture;
     atmo.uniforms.uCarveDomain.value.set(CARVE_MIN.x, CARVE_MIN.y, 1 / CARVE_SPAN, 1 / CARVE_SPAN);
     atmo.uniforms.uHollow.value.set(SLEEP_HOLLOW.x, SLEEP_HOLLOW.z, tuning.sleeping.fogReach, 0);

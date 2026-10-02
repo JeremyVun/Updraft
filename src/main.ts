@@ -36,8 +36,9 @@ import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { QA } from './qa';
-import { gpuIdle, precompile, precompileSim, prepareInBatches, warmRender, yieldBoot } from './gl/boot';
-import { hasVariants, otherVariants, selectAll } from './gl/variants';
+import { coldShaders, drawables, gpuIdle, passJob, prepareInBatches, settlePrograms, warmRender, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
+import { runBootPasses, simMaterials } from './gl/gpu';
+import { hasVariants, otherVariants, selectAll, variantSteps } from './gl/variants';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
 import { controls } from './controls';
 import { endFrame, holdForReadbacks, pollReadbacks, readbackStats, timeLastFrame } from './gl/readback';
@@ -105,7 +106,7 @@ import { fixInPlace } from './gl/fixed';
 declare global {
   interface Window {
     __ready?: boolean;
-    __stats?: Record<string, number>;
+    __stats?: Record<string, unknown>;
     __game?: Record<string, unknown>;
   }
 }
@@ -116,6 +117,8 @@ const canvas = document.getElementById('view') as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, depth: false, powerPreference: 'high-performance' });
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.info.autoReset = false;
+const strayPrograms = QA ? watchStrayPrograms(renderer) : null;
+if (QA && params.coldshaders) coldShaders(renderer);
 if (params.shot) document.body.classList.add('shot');
 
 /** A missing float render-target format or an unusably small GL limit cannot be fixed by retrying. */
@@ -1097,6 +1100,7 @@ function frameInner(now: number): void {
   if (time > 0.4) startScreen.reveal();
   if (QA && params.shot) {
     window.__stats = {
+      bootStrayPrograms: strayPrograms,
       frame: frameIndex,
       time,
       simulationSteps: timing.steps,
@@ -1144,29 +1148,35 @@ if (QA && params.shot) {
 }
 
 /**
- * Everything the first frame would otherwise pay for happens here, behind the veil: every shader compiles in
- * parallel, the window bakes, warm batches upload the world, and the loop starts only once the GPU is idle.
+ * Everything the first frame would otherwise pay for happens here, behind the veil: every program compiles and
+ * settles in small groups, the window bakes, warm batches upload the world, and the loop starts only once the GPU is
+ * idle.
  */
 async function boot(): Promise<void> {
+  performance.mark('boot');
   const started = performance.now();
   // Fixed scenery takes its world matrix once, under the parents it is drawn with.
   scene.updateMatrixWorld(true);
   await yieldBoot();
-  await precompile(renderer, scene, rig.camera, post.sceneTarget);
-  await precompileSim(renderer, bakes.ground);
+  const sceneJob: CompileJob = { objects: drawables(scene), camera: rig.camera, scene, target: post.sceneTarget };
+  const varied = sceneJob.objects.filter(hasVariants);
+  await settlePrograms(renderer, [
+    sceneJob,
+    passJob(simMaterials, bakes.ground),
+    ...grass.tableJobs(),
+    grass.unclippedJob(rig.camera),
+    ...post.compileJobs(),
+    ...variantSteps().flatMap((apply) => [{ ...sceneJob, objects: varied, apply }, grass.unclippedJob(rig.camera, apply)]),
+  ]);
+  runBootPasses();
   terrain.fields.bake(renderer);
   terrain.colour.bake(renderer);
   if (params.heights !== 'direct') await terrainHeights.bake(renderer, () => gpuIdle(renderer));
-  await grass.precompile(renderer);
-  for (const _ of otherVariants()) {
-    await precompile(renderer, scene, rig.camera, post.sceneTarget);
-    await grass.precompileUnclipped(renderer, rig.camera);
-  }
   await yieldBoot();
   followWindow(...windowAim(), true);
   grass.update(rig.camera);
   grass.bake(renderer);
-  if (QA && params.shot) heightParity = measureHeightParity(renderer);
+  if (QA && params.shot) heightParity = await measureHeightParity(renderer);
   await gpuIdle(renderer);
   await yieldBoot();
   await warmRender(renderer, scene, rig.camera, post.sceneTarget);
@@ -1175,6 +1185,7 @@ async function boot(): Promise<void> {
   post.render(0);
   await gpuIdle(renderer);
   bootMs = performance.now() - started;
+  if (QA) window.__stats = { ...window.__stats, bootStrayPrograms: strayPrograms };
   if (contextRecovery.lost) return;
   graphicsReady = true;
   quality.setMode(controls.qualityMode, performance.now());

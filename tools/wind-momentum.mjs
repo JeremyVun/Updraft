@@ -13,6 +13,7 @@ async function checkMomentum() {
   const { WindWaves } = await import('/src/world/water/wind-waves.ts');
   const { BirchCanopyMotion } = await import('/src/fx/birch-canopy.ts');
   const { LitterField, LITTER_SIDE, LITTER_BOX } = await import('/src/fx/leaves.ts');
+  const { runBootPasses } = await import('/src/gl/gpu.ts');
   const { WINDOW, followWindow, windowCentre } = await import('/src/world/window.ts');
   const renderer = window.__game.renderer;
   const assert = (condition, message) => { if (!condition) throw new Error(message); };
@@ -122,6 +123,7 @@ async function checkMomentum() {
     seed[(y * LITTER_SIDE + x) * 4] = Math.exp(-((x - 128) ** 2 + (y - 128) ** 2) / 500);
   }
   const litter = new LitterField(renderer, seed, new THREE.Vector4(1e6, 1e6, 0, 0));
+  runBootPasses();
   const mass = totals(read(litter.field.read))[0];
   wind.image.data.set([12, 0, 1, 0]);
   wind.needsUpdate = true;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { passJob, type CompileJob } from '../gl/boot';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const QUAD_VERT = /* glsl */ `
@@ -74,7 +75,7 @@ function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUn
  * a plain target, bloom added there, and the grade straight to the screen. Only the scene target is multisampled.
  */
 export class Post {
-  /** Where the scene is drawn; also the target to precompile scene materials against. */
+  /** Where the scene is drawn; also the target its programs are compiled against. */
   readonly sceneTarget: THREE.WebGLRenderTarget;
   private readonly clean: THREE.WebGLRenderTarget;
   private readonly bloom: UnrealBloomPass;
@@ -100,6 +101,15 @@ export class Post {
       uSaturation: { value: 1.0 },
       uResolution: { value: new THREE.Vector2(size.x, size.y) },
     });
+  }
+
+  /** The chain's passes: into offscreen targets, but the grade, which draws to the screen. */
+  compileJobs(): CompileJob[] {
+    const b = this.bloom;
+    return [
+      passJob([this.resolveMat, b.materialHighPassFilter, ...b.separableBlurMaterials, b.compositeMaterial, b.blendMaterial], this.clean),
+      passJob([this.gradeMat], null),
+    ];
   }
 
   get samples(): number {

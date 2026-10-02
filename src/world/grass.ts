@@ -1,6 +1,7 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
 import { CLOUD_DECK, register } from '../gl/variants';
+import { passJob, type CompileJob } from '../gl/boot';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -1031,7 +1032,7 @@ export class Grass {
     return this.lods.reduce((n, l) => n + l.count * l.spec.cols * l.spec.rows, 0);
   }
 
-  /** Picks the blade program for this draw; a program swap finds the one already built by \`precompile\`. */
+  /** Picks the blade program for this draw; a program swap finds the one boot already built (`unclippedJob`). */
   private pickProgram(mat: THREE.ShaderMaterial): void {
     if (mat.fragmentShader !== FRAG && mat.fragmentShader !== FRAG_UNCLIPPED) return;
     const rooms = atmo.uniforms.uJourneyRooms.value;
@@ -1070,42 +1071,28 @@ export class Grass {
     return true;
   }
 
-  /** These MRT shaders are not scene materials or ordinary single-target simulations; nor are the unclipped blades. */
-  async precompile(renderer: THREE.WebGLRenderer): Promise<void> {
-    const previous = renderer.getRenderTarget();
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const mesh = new THREE.Mesh(geometry, this.lods[0].tableMat);
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    scene.add(mesh);
-    try {
-      if (!this.direct) {
-        for (const lod of this.lods) {
-          mesh.material = lod.tableMat;
-          renderer.setRenderTarget(lod.table);
-          await renderer.compileAsync(scene, camera);
-        }
-      }
-      await this.precompileUnclipped(renderer, camera);
-    } finally {
-      renderer.setRenderTarget(previous);
-      geometry.dispose();
-    }
+  /** The blade tables' passes, which are not scene materials or ordinary single-target simulations. */
+  tableJobs(): CompileJob[] {
+    return this.direct ? [] : [passJob(this.lods.map((l) => l.tableMat), this.lods[0].table)];
   }
 
-  /** Creates no three objects, whose UUIDs draw on `Math.random`, so it can run again for each program variant. */
-  async precompileUnclipped(renderer: THREE.WebGLRenderer, camera: THREE.Camera): Promise<void> {
-    const previous = renderer.getRenderTarget();
+  /** The blades with their unclipped fragment shader, in `variant` if given; any offscreen target builds the scene's programs. */
+  unclippedJob(camera: THREE.Camera, variant?: () => () => void): CompileJob {
     const blades = this.group.children.map((o) => (o as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material);
-    try {
-      // Any offscreen target builds the same program as the scene's.
-      renderer.setRenderTarget(this.lods[0].table);
-      for (const m of blades) { m.fragmentShader = FRAG_UNCLIPPED; m.needsUpdate = true; }
-      await renderer.compileAsync(this.group, camera, this.group.parent instanceof THREE.Scene ? this.group.parent : null);
-    } finally {
-      for (const m of blades) { m.fragmentShader = FRAG; m.needsUpdate = true; }
-      renderer.setRenderTarget(previous);
-    }
+    return {
+      objects: this.group.children,
+      camera,
+      scene: this.group.parent instanceof THREE.Scene ? this.group.parent : null,
+      target: this.lods[0].table,
+      apply: () => {
+        const undo = variant?.();
+        for (const m of blades) { m.fragmentShader = FRAG_UNCLIPPED; m.needsUpdate = true; }
+        return () => {
+          for (const m of blades) { m.fragmentShader = FRAG; m.needsUpdate = true; }
+          undo?.();
+        };
+      },
+    };
   }
 
   /** The sphere holding every blade a tile could grow, or null where it has no land. Sized from the ground under the whole tile: on a cliff the corners stand metres above and below the middle. */

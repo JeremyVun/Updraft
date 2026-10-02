@@ -24,4 +24,5 @@ export const params: ReturnType<typeof readQaParams> = QA ? readQaParams() : {
   stats: false,
   whale: false,
   lines: false,
+  coldshaders: false,
 };

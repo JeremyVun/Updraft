@@ -71,5 +71,7 @@ export function readQaParams() {
     whale: q.has('whale'),
     /** Prototype: hangs the island of lines' washing over the still island. */
     lines: q.has('lines'),
+    /** QA: every fragment shader gets a never-taken line unique to this load, so no browser or driver cache holds its programs. */
+    coldshaders: q.has('coldshaders'),
   };
 }
