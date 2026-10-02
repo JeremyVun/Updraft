@@ -311,5 +311,20 @@ The profile is `profile.md`. His answers, verbatim where quoted:
 - **The last step's 50% grass (2026-10-02):** stays as it is, every blade submitted and half thinned in the shader
   ("ok fine option 1"). Drawing it from a sparser table would need a different set of blades and pop the meadow on
   entering or leaving the last step.
+- **Phase 7's survey (2026-10-03),** `profile.md` last section, stills in `/tmp/updraft-pf-p7-shots/`. Chosen:
+  - Grass fog once per blade at its root: "Every level" (about 4.5% weighted, 10–11% at Sleeping and the summit,
+    at most 4/255).
+  - The frame's internal buffers as `R11F_G11F_B10F` (scene, resolve, `post.clean`, bloom chain): "Every level"
+    (3–5% weighted, up to 10% in the drowned village; about −60 MiB at Ultra; at most 3–5/255, no banding seen).
+  - Sea and terrain not drawn above the stairs' cloud on top and during the sail: "Build it", every level, dropped if
+    any moment along the top or the sail shows more than a faint 2–3/255 (top 13–20%, sail 19–28%).
+  - Near blades with 5 segments instead of 6: "Low only" (Low and the last step; about 3% of a Low frame).
+  - Taken as a free win (exact): the sky's storm bank skipped while there is no storm or lightning.
+  - Not taken (recommended against): the near grass level ending sooner (the grass thinning already ruled out), the
+    sea's ripples, one-octave sky clouds, cloud shadows, glints, the child's mesh when small, readbacks every other
+    frame, creatures on the baked heights, petals, the mirror merge, the sea under land beyond the window.
+  - Open: the child's bone texture uploaded before the frame's passes (exact; +2 to +4% weighted but −8 to −12% on
+    the stairs' top and sail on the Mac; needs the iPad); the sky mirror's reflection at the ordinary size and cadence
+    until near the flat (needs a still from a running capture).
 - **One level at a time (2026-10-01):** Auto never drops two levels at once; with five coarse levels a double drop
   from High overshot to Low's 30 fps where Medium would have held (chosen: "One level at a time").

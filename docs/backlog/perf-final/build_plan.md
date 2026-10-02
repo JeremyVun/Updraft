@@ -371,7 +371,38 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   For each worth more than about 1% of a Low frame, a visual model makes one before/after still.
 - **Deliverable:** a ranked list for Jeremy (effect, level it would leave at, saving, still). His rulings go into
   design section 3's table and a new phase here; nothing is built in this phase.
-- **Done:** [ ]
+- **Done:** [x] merged to `main` at 310cda4 (2026-10-03); rulings in design.md ("Phase 7's survey").
+- Measuring under peer GPU load: `FRAME_PASS` (the frame minus the wind step drawn 30 times, ABBA over 40+ rounds,
+  median paired difference); drained pairs straddled. `tools/upload-census.mjs` lists texture writes made mid-pass.
+- The child is 5–16% of every Low frame on 800–9,000 pixels: her bone texture upload (the only mid-pass texture
+  write) 3–8%, her fragment program 2–7% unexplained by its arithmetic. The cloud top alone is 44% of a Low frame on
+  top of the stairs.
+
+## Phase 7b: what Jeremy chose from the survey
+
+Two parcels from the same `main`.
+
+**7b-grass** (`src/world/grass.ts` and its shaders):
+- Grass fog once per blade at its root, every level: a per-frame pass (or the blade shading pass) works the fog out
+  per blade; the blade's vertices read it. Frames within 4/255 of the pre-change commit at `meadow:walk`, `island`,
+  `sleeping`, `summit`, `wood` (static and a camera path), no worse than the survey's still; the saving with
+  `FRAME_PASS`.
+- Near blades with 5 segments instead of 6 at Low and the last step: both geometries exist from boot, a level change
+  swaps without allocating or compiling and without a visible pop (the grass's one-second easing), Ultra/High/Medium
+  frames unchanged by this item. The saving at Low.
+
+**7b-frame** (`src/post/post.ts` and the scene target, `src/world/sky.ts` / `atmosphere.ts` for the storm bank, the
+stairs' visibility in `src/main.ts` / `src/story/stairs*.ts`):
+- `R11F_G11F_B10F` for the scene target, its resolve, `post.clean` and the bloom chain at every level (check that
+  nothing reads their alpha; the doorway target and others stay as they are unless the same holds). Frames within
+  5/255 at the profile's fixtures and no banding in a still of the night sea, the Wood and the stairs' top; memory
+  census before and after; `context-loss-check`, `shader-browser-check` for format support (fall back to today's
+  format where `EXT_color_buffer_float` lacks it).
+- The sky's storm bank compiled or skipped while there is no storm and no lightning: exact (0 changed).
+- Sea and terrain not drawn above the stairs' cloud on top and during the sail, every level: a gate from the story's
+  beat and the camera above the deck; `ALONG` against the pre-change commit along the whole top and sail must stay at
+  most 3/255 everywhere, otherwise dropped. Never hide terrain while the sea draws (`LAND_SKIP`).
+- **Done:** 7b-grass [ ]; 7b-frame [ ]
 
 ## Phase 8: whole-game verification
 
