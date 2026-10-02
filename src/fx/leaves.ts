@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GpuRunner, PingPong, simMaterial } from '../gl/gpu';
+import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { ISLES } from '../world/heightfield';
 import { mulberry32 } from '../world/noise';
@@ -446,11 +446,13 @@ export class LitterField {
     this.field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, filtered ? THREE.LinearFilter : THREE.NearestFilter);
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, { uSrc: { value: null } });
     const tex = dataTexture(seed, LITTER_RES, LITTER_RES);
-    copy.uniforms.uSrc.value = tex;
-    this.gpu.run(copy, this.field.read);
-    this.gpu.run(copy, this.field.write);
-    tex.dispose();
-    copy.dispose();
+    atBoot(() => {
+      copy.uniforms.uSrc.value = tex;
+      this.gpu.run(copy, this.field.read);
+      this.gpu.run(copy, this.field.write);
+      tex.dispose();
+      copy.dispose();
+    });
     this.uniforms = { uLitterTex: { value: this.field.texture }, uLitterFiltered: { value: filtered } };
     this.mat = simMaterial(LITTER_SIM_FRAG, {
       uField: { value: null },
@@ -499,13 +501,15 @@ export class FallenLeaves {
     const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {
       uSrc: { value: null },
     });
-    for (const [target, data] of [[this.pos, state], [this.vel, vel]] as const) {
-      const tex = dataTexture(data, W, H);
-      copy.uniforms.uSrc.value = tex;
-      this.gpu.run(copy, target.read);
-      tex.dispose();
-    }
-    copy.dispose();
+    const seeds = ([[this.pos, state], [this.vel, vel]] as const).map(([target, data]) => [target, dataTexture(data, W, H)] as const);
+    atBoot(() => {
+      for (const [target, tex] of seeds) {
+        copy.uniforms.uSrc.value = tex;
+        this.gpu.run(copy, target.read);
+        tex.dispose();
+      }
+      copy.dispose();
+    });
 
     const shared = {
       uWindTex: atmo.uniforms.uWindTex,

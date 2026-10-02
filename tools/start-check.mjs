@@ -32,6 +32,8 @@ try {
  await page.goto(base+shot);await ready();
  report.bootWorstFrameMs = await page.evaluate(() => Math.max(0, ...window.__bootFrames));
  assert(report.bootWorstFrameMs < Number(process.env.BOOT_MAX_MS ?? 500), `startup blocked the veil for ${report.bootWorstFrameMs} ms`);
+ report.bootStrayPrograms = await page.evaluate(() => window.__stats?.bootStrayPrograms);
+ assert.equal(report.bootStrayPrograms?.count, 0, `programs first used outside boot's settle step: ${report.bootStrayPrograms?.names.join(', ')}`);
  assert.equal(await page.locator('#begin').innerText(),'Begin');
  const box=await page.locator('#begin').boundingBox();
  assert(Math.abs(box.x+box.width/2-720)<1 && Math.abs(box.y+box.height/2-450)<1, 'invitation centred');

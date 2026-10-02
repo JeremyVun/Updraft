@@ -11,6 +11,17 @@ void main() {
 /** Every simulation and bake material made so far, so they can all be compiled up front (see gl/boot.ts). */
 export const simMaterials: THREE.ShaderMaterial[] = [];
 
+const bootPasses: (() => void)[] = [];
+
+/** Defers a construction-time pass until boot has compiled and settled its program (see gl/boot.ts). */
+export function atBoot(pass: () => void): void {
+  bootPasses.push(pass);
+}
+
+export function runBootPasses(): void {
+  for (const pass of bootPasses.splice(0)) pass();
+}
+
 export function simMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
   const material = new THREE.ShaderMaterial({
     vertexShader: QUAD_VERT,

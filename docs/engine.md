@@ -8,20 +8,24 @@ in `src/main.ts`.
 
 Nothing heavy may happen in the first frames of play. Before the loop starts, behind the veil:
 
-1. Every scene material compiles in parallel (`precompile`, `KHR_parallel_shader_compile`) against the scene's
-   half-float target: a program's cache key depends on the target's colour space, so compiling against the screen
-   would compile everything twice.
-2. Every simulation and bake material compiles the same way (`precompileSim`; `simMaterial` registers them). Grass
-   table materials compile separately against their four-attachment targets (`grass.precompile`). Then the scene
-   and the grass compile again for each program variant (see Program variants).
-3. The static atlases bake once: the field and ground-colour caches and the distant-height atlas (see Bakes).
-4. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), and the visible grass
+1. `settlePrograms` builds every program before anything draws with it: the scene's materials against the scene's
+   half-float target (a program's cache key depends on whether it draws to the screen), the simulation and bake
+   materials (`simMaterial` registers them) and the grass tables as full-screen passes, the unclipped blades, the post
+   chain, and the scene and grass again for each program variant (`variantSteps`, see Program variants). At most 8
+   compile at once; each is given its first use (three's link and uniform queries) once the driver reports it
+   compiled, and boot yields whenever 12 ms have passed since the last frame. Construction never draws: passes it
+   needs (seeding the petals, leaves, litter and carve field) wait for boot (`atBoot`, `runBootPasses`). In QA builds
+   `__stats.bootStrayPrograms` counts programs first used anywhere else; `start-check` requires 0.
+2. The static atlases bake once: the field and ground-colour caches and the distant-height atlas (see Bakes).
+3. The window is placed for the camera the story chose and baked (`followWindow(..., true)`), and the visible grass
    tables bake.
-5. `warmRender` draws the scene into the offscreen target in batches of 64 objects, yielding for input and paint
-   between them, then the post chain runs; visibility and layer masks are restored even on failure. Textures upload,
-   buffers land on the GPU and render targets are allocated. The objects with program variants are drawn again with
-   each variant.
-6. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
+4. `warmRender` draws the scene into the offscreen target in batches of up to 64 objects, at most one of them with
+   a program not drawn before (a slow driver pays for a first draw in the task that issues it), with at most four
+   first draws queued on the GPU (a cold driver builds the pipeline there, and uploads behind it would block the main
+   thread), yielding whenever 12 ms have passed since the last frame, then the post chain runs; visibility and layer masks are restored even on
+   failure. Textures upload, buffers land on the GPU and render targets are allocated. The objects with program
+   variants are drawn again with each variant.
+5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
    Begin / Continue. Only that gesture starts audio and `requestAnimationFrame(frame)`; the story and the quality
    governor do not run while waiting.
 
@@ -253,7 +257,7 @@ effect that is off is compiled out, not branched round. Each such effect is a sw
 - `select(material, choice)` and `selectAll(choice)` change the defines in place. three keeps every program a
   material has built, keyed by its defines, so switching rebinds a program built before Begin, for every mesh, view
   and pass that draws the material, and never compiles. A choice that is not a registered variant throws.
-- Behind the veil, `otherVariants()` steps every registered material through its other variants: each step compiles
+- Behind the veil, `variantSteps()` steps every registered material through its other variants: each step compiles
   the scene and the grass's programs again and warms the registered objects (`warmRender`'s `only`); the selection is
   restored after.
 - A twin material per variant was rejected: three sorts opaque draws by `material.id`, so a twin made later draws in

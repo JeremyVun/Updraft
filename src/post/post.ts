@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { passJob, type CompileJob } from '../gl/boot';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import type { BloomLevel } from '../gl/quality';
 import { register, select, SUN_GLOW } from '../gl/variants';
@@ -126,7 +127,7 @@ function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUn
  * While bloom is off the grade paints a glow round the sun in its place, so the sun is not a hard white disc.
  */
 export class Post {
-  /** Where the scene is drawn; also the target to precompile scene materials against. */
+  /** Where the scene is drawn; also the target its programs are compiled against. */
   readonly sceneTarget: THREE.WebGLRenderTarget;
   private readonly clean: THREE.WebGLRenderTarget;
   private readonly bloom: UnrealBloomPass;
@@ -165,6 +166,15 @@ export class Post {
       uGlowShare: { value: new THREE.Vector4() },
     }, GRADE_VERT);
     register(this.gradeMat, SUN_GLOW);
+  }
+
+  /** The chain's passes: into offscreen targets, but the grade, which draws to the screen. */
+  compileJobs(): CompileJob[] {
+    const b = this.bloom;
+    return [
+      passJob([this.resolveMat, b.materialHighPassFilter, ...b.separableBlurMaterials, b.compositeMaterial, b.blendMaterial], this.clean),
+      passJob([this.gradeMat], null),
+    ];
   }
 
   get samples(): number {

@@ -88,23 +88,31 @@ export function hasVariants(object: THREE.Object3D): boolean {
 }
 
 /**
- * Steps every registered material through its other variants, for compiling and warming them behind the veil: at
- * step k a material takes the variant k after its current one, wrapping round, so the steps cover every variant of
- * the material with the most. The selection is restored afterwards.
+ * Every registered material's other variants as steps, for compiling and warming them behind the veil: at step k a
+ * material takes the variant k after its current one, wrapping round, so the steps cover every variant of the
+ * material with the most. Each step selects its variants and returns the undo, which restores the selection.
  */
-export function* otherVariants(): Generator<number> {
+export function variantSteps(): (() => () => void)[] {
   const plans = [...registered].map(([material, axes]) => {
     const variants = axes.reduce<Choice[]>((all, axis) => all.flatMap((c) => axis.map((a) => ({ ...c, ...a }))), [{}]);
     const current = variants.findIndex((v) => matches(material.defines, v));
     return { material, variants, current, restore: variants[current] };
   });
   const steps = Math.max(0, ...plans.map((p) => p.variants.length));
-  try {
-    for (let k = 1; k < steps; k++) {
-      for (const p of plans) select(p.material, p.variants[(p.current + k) % p.variants.length]);
-      yield k;
+  return Array.from({ length: Math.max(0, steps - 1) }, (_, i) => () => {
+    for (const p of plans) select(p.material, p.variants[(p.current + i + 1) % p.variants.length]);
+    return () => { for (const p of plans) select(p.material, p.restore); };
+  });
+}
+
+/** Steps through `variantSteps`, restoring the selection after each. */
+export function* otherVariants(): Generator<number> {
+  for (const [i, step] of variantSteps().entries()) {
+    const undo = step();
+    try {
+      yield i + 1;
+    } finally {
+      undo();
     }
-  } finally {
-    for (const p of plans) select(p.material, p.restore);
   }
 }
