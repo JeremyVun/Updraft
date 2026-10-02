@@ -444,6 +444,27 @@ window.__audit = {
     }
     const want=five?this.fiveSeg:this.sixSeg;
     if(g.index!==want.index){g.setIndex(want.index);g.setAttribute('position',want.position);}
+    // deckless-<group>: that group's materials with the cloud deck compiled out (exact outside the stairs);
+    // fragflat-<group>: their fragment shading replaced by a flat colour, to split vertex from pixel cost.
+    this.surveyMats??=new Map();
+    for(const name of ['child','cygnet','boat']){
+      const mats=new Set();for(const root of this.groups[name]||[])root?.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
+      for(const m of mats){
+        const saved=this.surveyMats.get(m)??this.surveyMats.set(m,{fragment:m.fragmentShader,deck:m.defines?.CLOUD_DECK}).get(m);
+        const flat=variants.includes('fragflat-'+name),deckless=variants.includes('deckless-'+name);
+        const fragment=flat?saved.fragment.slice(0,saved.fragment.lastIndexOf('void main() {'))+'void main() { gl_FragColor = vec4(0.5, 0.4, 0.3, 1.0); }':saved.fragment;
+        if(m.fragmentShader!==fragment){m.fragmentShader=fragment;m.needsUpdate=true;}
+        m.defines??={};const deck=deckless?0:saved.deck;
+        if(m.defines.CLOUD_DECK!==deck){if(deck===undefined)delete m.defines.CLOUD_DECK;else m.defines.CLOUD_DECK=deck;m.needsUpdate=true;}
+      }
+    }
+    // bones-frozen-<group>: that group's skeletons stop re-uploading their bone textures (unchanged in a frozen frame).
+    this.skeletons??=new Map();
+    for(const name of ['child','cygnet']){
+      const frozen=variants.includes('bones-frozen-'+name);
+      for(const root of this.groups[name]||[])root?.traverse(o=>{if(!o.isSkinnedMesh)return;const s=o.skeleton;
+        if(!this.skeletons.has(s))this.skeletons.set(s,s.update);s.update=frozen?()=>{}:this.skeletons.get(s);});
+    }
     const r11=variants.includes('rt-r11');
     if(r11!==!!this.r11On){
       const b=post.bloom;
@@ -697,6 +718,19 @@ window.__audit = {
     samples.sort((x,y)=>x-y);
     return {ms:samples[3],min:samples[0],max:samples[6],scale:refl.scale,size:[refl.target.width,refl.target.height],mirrored:water.mesh.material.uniforms.uMirrorOn.value};
   },
+  // FRAME_PASS=a,b: the whole frame but the wind step (reflection, scene, post) drawn back to back many times, then
+  // drained, for the baseline and each variant in ABBA order over the rounds. Each round pairs every variant with the
+  // baseline drawn seconds apart, so other processes' GPU load, which swings frame pairs by 10%, mostly cancels.
+  async framePass(variants, reps, rounds, complete) {
+    const out=Object.fromEntries(variants.map(v=>[v,[]]));
+    try {
+      for(let round=0;round<rounds;round++)for(const v of round%2?[...variants].reverse():variants){
+        this.configure(v==='new'?null:v);this.draw(false);this.draw(false);await complete();
+        const start=performance.now();for(let i=0;i<reps;i++)this.draw(false);await complete();out[v].push((performance.now()-start)/reps);
+      }
+    } finally {this.configure(null);}
+    return out;
+  },
   // WATER_PASS=1: the sea alone drawn into the scene target many times over, then drained, for each variant in turn
   // (ABBA order over the rounds): the shader's own cost with the rest of the frame out of the way.
   async waterPass(variants, reps, rounds, complete) {
@@ -757,7 +791,7 @@ window.__audit = {
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1,
-      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On])});
+      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join()])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
@@ -1093,6 +1127,19 @@ try {
       return __audit.waterPass(variants,reps,rounds,complete);
     },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
     if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
+    const framePass=process.env.FRAME_PASS?await page.evaluate(async ({variants,reps,rounds})=>{
+      const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+      async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+        try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+      return __audit.framePass(variants,reps,rounds,complete);
+    },{variants:['new',...process.env.FRAME_PASS.split(',')],reps:Number(process.env.FRAME_REPS??20),rounds:Number(process.env.FRAME_ROUNDS??16)}):undefined;
+    if(framePass){
+      const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1],q=(a,f)=>[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)*f)],base=framePass.new;
+      for(const [v,times] of Object.entries(framePass)){
+        const saved=times.map((t,r)=>base[r]-t),percent=times.map((t,r)=>(1-t/base[r])*100);
+        console.log(JSON.stringify({chapter,framePass:v,baseMs:med(base),ms:med(times),savedMs:med(saved),percent:med(percent),iqr:[q(percent,0.25),q(percent,0.75)]}));
+      }
+    }
     const simPasses=process.env.SIM_PASSES==='1'?await page.evaluate(async reps=>{
       const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
       async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
