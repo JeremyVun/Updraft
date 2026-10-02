@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { glsl, tuning } from '../tuning';
+import { fixInPlace } from '../gl/fixed';
 import { CloudWake } from './stairs-wake';
 import { BEAM, LENGTH } from '../traveller/boat/form';
 import { VAPOUR_GLSL } from './cloud-vapour';
@@ -744,6 +745,7 @@ export class StairsCloud {
     this.belly.renderOrder = -2;
     this.belly.visible = false;
     this.group.add(this.belly);
+    fixInPlace(this.group, this.wake.mesh, this.top, this.belly);
   }
 
   /**

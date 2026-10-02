@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../tuning';
+import { fixInPlace } from '../gl/fixed';
 import { atmo, ATMO_GLSL } from './atmosphere';
 
 /** A child's remembered lighthouse: broad at the water, impossibly tall above it. */
@@ -48,7 +49,9 @@ export class LighthouseLight {
       transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
     }));
     this.beam.rotation.order = 'YXZ';
-    this.object.add(this.beam, new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 8), this.lamp));
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 8), this.lamp);
+    this.object.add(this.beam, lamp);
+    fixInPlace(this.object, lamp);
   }
 
   update(dt: number, storm: number): void {

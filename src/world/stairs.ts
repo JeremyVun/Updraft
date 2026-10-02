@@ -5,6 +5,7 @@ import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import type { Deck } from './decks';
 import { tuning } from '../tuning';
+import { fixInPlace } from '../gl/fixed';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { HAZE_SHADE_GLSL, hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
 import { CloudWisps } from './stairs-wisps';
@@ -546,7 +547,8 @@ export class CloudStairs {
       geo.translate(-pivot.x, -pivot.y, -pivot.z);
       const group = new THREE.Group();
       group.name = `stairs-loose-${index}`;
-      group.add(new THREE.Mesh(geo, material));
+      const body = new THREE.Mesh(geo, material);
+      group.add(body);
       const haze = hazeUnder(f, cloudUnder(index), pivot);
       group.add(...haze);
       this.hazes.push(...haze);
@@ -555,6 +557,7 @@ export class CloudStairs {
       ghost.visible = false;
       ghost.renderOrder = 6;
       this.group.add(group, ghost);
+      fixInPlace(body, ghost);
       const start = LOOSE_START[i];
       this.pieces.push({ flight: f, group, ghost, offset: new THREE.Vector3(start.x, start.yaw, start.z),
         velocity: new THREE.Vector3(), docked: false, settling: 0, pivot, worked: 0, handled: 0 });
@@ -562,6 +565,7 @@ export class CloudStairs {
 
     this.group.add(this.cloud.group);
     this.group.add(this.wisps.mesh);
+    fixInPlace(this.group, standing, this.trick, this.wisps.mesh);
     this.pose();
   }
 
