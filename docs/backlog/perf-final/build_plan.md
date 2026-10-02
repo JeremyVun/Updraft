@@ -299,9 +299,6 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   (fewer wisps and haze steps), the effects in `applyWorldQuality`. After phases 2, 3, 3b and 4.
 - Built in two parcels: **5a** beside phase 3 (bloom, the sea's three effect switches, the ordinary reflection, the
   50% grass), **5b** after phase 3 merges (the stairs' wisps and haze steps, which share files with phase 3).
-- **Also (nonvisual):** the last step's 50% grass submits the same blades as 100% and thins them in the shader, so it
-  saves no vertex work; draw it from the sparser level the way sparse density already starts tiles at the coarsest
-  level that holds every blade it can show, with frames identical to today's 50% (`src/world/grass.ts`).
 - **Contract:** the effects rows of the table in design section 3. Ultra and High render exactly as before this phase
   (frames within 1/255). Bloom off skips its passes and releases its targets; half resolution halves the chain's
   first target. The sky mirror's reflection is never turned off. Turning an effect off at a level is a variant or a
@@ -332,7 +329,7 @@ boats), and **3b-ii** after phase 2 merges (the sea shader's internals and `LAND
   - Ultra 0 changed at twelve fixtures; High 0 at `sea`.
   - Level changes: two of four runs on the branch showed one 50–83 ms frame, not reproduced switching bloom or the sea
     alone; re-check on a quiet machine in phase 8.
-  - Not built: the last step's 50% grass from the sparser table. The sparser level holds 25% (the lowest-ranked blade
+  - Not built, and stays so (Jeremy, 2026-10-02, design rulings): the last step's 50% grass from the sparser table. The sparser level holds 25% (the lowest-ranked blade
     of each 2×2 block); the other blades shown at 50% vary per block, so no fixed slot grid holds them.
   - `frame-profile` levers `bloom-full|half|off`, `sea-collar|glint|seabed|reflection`; `sea` is the lantern lit at
     night, `'sea&dusk=0'` by day; the `wood` fixture has no lit ember (use `play.mjs` and `embers.blow`).
