@@ -198,3 +198,30 @@ Owns: `docs/engine.md` (Boot), `docs/testing.md`.
    query-param list in `AGENTS.md` gets `coldshaders` (phase 1 adds it).
 
 Done marker: `Phase 4: done <commit>` here, with the gate numbers and Jeremy's iPad verdict.
+
+Phase 4 gates measured 2026-10-03 on QA previews of 558fff2 (phase 3 merged) and of a783f6a (`main` before phase 1),
+alternating run by run with `tools/boot-profile.mjs` (fresh browser profile per run). No quiet window came in 20
+minutes of waiting: a Godot game (`Bayview Nights`) held 75–78% CPU through every batch, with `secd` and, before the
+first batch, an iOS simulator and `xcodebuild` also busy.
+
+| Chrome, this Mac | a783f6a | 558fff2 | Gate |
+| --- | --- | --- | --- |
+| 5 cold loads, 1×: worst veil gap (two batches) | 400–417 ms; 417–450 ms | 100–117 ms; 100–117 ms | under 150 ms: met |
+| 5 cold loads, 1×: time to `#veil.ready` (two batches) | 2887–3237 ms (median 3024); 2989–3066 ms (median 3047) | 2725–3167 ms (median 2875); 2778–2898 ms (median 2833) | 2.8 s or less: not confirmed on this loaded machine |
+| 3 cold loads, 4× CPU: worst veil gap | 1600 ms (all three) | 417–433 ms | under 500 ms: met |
+| 3 cold loads, 4× CPU: time to `#veil.ready` | 6740–6874 ms | 6813–6866 ms | |
+| Stray first uses (`__stats.bootStrayPrograms`, `start-check`) | every program: 182 first used by Begin, no settle step | 0 | 0: met |
+| Programs at Begin | 220 created, 182 used | 202, all settled and first drawn | |
+| Programs first drawn after Begin, opening minute (with target format) | 15 (14 of them created in play) | 0 (0) | |
+| Programs first drawn after Begin, `?chapter=stairs` minute | 22 (19 created in play) | 0 (0) | |
+
+Begin is 150–210 ms sooner than the unchanged build in both batches, but the unchanged build itself reads about
+3.0 s here against the 2.5 s it took when the gates were set, so the absolute 2.8 s limit is unreadable under this
+load. Stage times at 4× (ms): A 269–294, B 4737–4755, settle 940–1017, first draws 578–601, D 244–265. The first
+draws in play were counted with an outside hook on `useProgram` and the draw calls (the a783f6a build has no probe)
+and, on 558fff2, also with `__stats.playFirstDraws`.
+
+Release checks on the 558fff2 QA preview: `start-check` (worst boot gap 100 ms, stray 0, construction steps 25 of 25,
+no program first drawn in the first seconds of play), `context-loss-check`, `boot-cloth-check`, `loading-check`,
+`chapter-select-check`, `production-build-check` and `failure-paths-check` (its blocked-entry case now matches the
+built `assets/index-*.js` as well as `src/entry.ts`) all pass. The iPad row is pending Jeremy's verdict.

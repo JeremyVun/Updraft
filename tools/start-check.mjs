@@ -72,6 +72,10 @@ try {
  assert.equal(await page.locator('#sound').getAttribute('data-on'),'true');
  await page.screenshot({path:'/tmp/updraft-start-revealed.png'});
  report.checks.push('keyboard begins once with native audio running; veil removed and canvas enabled');
+ await page.waitForTimeout(3000);
+ report.playFirstDraws = await page.evaluate(() => window.__stats?.playFirstDraws);
+ // A quality step to a new MSAA sample count first draws existing programs into it, so only new programs fail.
+ assert.equal(report.playFirstDraws?.programs, 0, `programs first drawn in play: ${report.playFirstDraws?.names.join(', ')}`);
  await page.reload();await ready();assert.equal(await page.locator('#begin').innerText(),'Continue');
  await page.mouse.click(100,120);await page.waitForSelector('#veil',{state:'detached'});
  assert.equal(await page.evaluate(()=>__audio.length),1);

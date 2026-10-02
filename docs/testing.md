@@ -69,8 +69,15 @@ edit.
   `quality-menu-check`, `veil-controls-check`.
 - `pointer-contact-check`, `pointer-pick-check`, `touch-viewport-check` (Chrome, not a Safari substitute).
 - `start-check` (Begin, audio unlock, Continue, retry; worst boot gap under `BOOT_MAX_MS`; no program first used
-  outside boot's settle step, `__stats.bootStrayPrograms`), `startup-check`,
+  outside boot's settle step, `__stats.bootStrayPrograms`; the construction steps a real boot counts equal
+  `BUILD_STEPS`; no program first drawn in the first seconds of play, `__stats.playFirstDraws`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check`, `context-loss-check`.
+- After a change to world construction, boot or the programs (a new material or variant): on a QA preview, with
+  nothing else busy on the GPU and back to back with the unchanged build, `RUNS=5 node tools/boot-profile.mjs` (worst
+  veil gap under 150 ms, Begin at 2.8 s or less) and `RUNS=3 THROTTLE=4` (Chrome with the CPU slowed 4×, a stand-in
+  for an older tablet: worst gap under 500 ms). See `docs/engine.md`, Boot.
+- `veil-stills.mjs [prefix]`: stills of the veil's loading line held at known text, desktop, iPad and phone, day and
+  night, for comparing its look against the boot-veil comps.
 - `fixed-matrices-check` (every chapter: no object fixed in place moves or keeps a stale world matrix).
 - `nearby-check`, `bandage-cost-check`, `scarf-normals-check`, `drowned-gating-check`, `boat-mooring-check` (every
   frame the moored hull skips its contact tests, testing them would not have moved it).
@@ -147,8 +154,3 @@ edit.
 
 Rendered checks, screenshots and numeric audio checks are evidence for review, not pixel baselines or a listening
 sign-off.
-
-## Open
-
-- `start-check` fails on `main`: the veil freezes for over half a second while the game boots
-  ([backlog/boot-veil](backlog/boot-veil/)).
