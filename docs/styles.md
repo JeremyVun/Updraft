@@ -90,8 +90,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   faint lens fringe at the corners, fine grain.
 - **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an
   updraft charges. Small round buttons in the corner: a speaker that breathes when muted, fullscreen, and graphics
-  quality as three ascending bars (one filled for Low, two for Medium, three for High) tracking the rendered tier
-  while Auto adapts; bars stay unfilled until the first automatic level is known. Its blue-green menu has compact
+  quality as four ascending bars (one filled for Low, two for Medium, three for High, four for Ultra) tracking the
+  level in use while Auto adapts; bars stay unfilled until the first automatic level is known. Its blue-green menu has compact
   ivory sans-serif labels and a quiet gold check; touch rows stay 44 px. The controls work on the loading veil and
   throughout play; the menu takes arrows, first letters, Enter/Space, Escape and Tab, and dismissing it never
   starts play or blows wind.
