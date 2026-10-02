@@ -2,15 +2,51 @@ import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import type { BloomLevel } from '../gl/quality';
+import { register, select, SUN_GLOW } from '../gl/variants';
 
 const BLOOM_STRENGTH = 0.28;
 /** Bloom fades in and out over the second the grass takes to change with the level. */
 const BLOOM_FADE = 1;
+/** The angular radius of the sky's sun disc, halfway through its edge (`skyRadiance`). */
+const SUN_RADIUS = Math.acos(0.99965);
+/**
+ * The glow painted round the sun while bloom is off, matched to how bloom spreads it at Ultra: each layer's spread as a
+ * fraction of the frame's height, and its share of the sun's light.
+ */
+const GLOW_SPREAD = [0.0129, 0.0366, 0.0782, 0.17];
+const GLOW_SHARE = [0.21, 0.86, 0.65, 0.57];
 
 const QUAD_VERT = /* glsl */ `
 varying vec2 vUv;
 void main() {
   vUv = uv;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}`;
+
+/** With the glow, the sun's light is read once for the frame: what of its disc is seen and bright enough to bloom. */
+const GRADE_VERT = /* glsl */ `
+varying vec2 vUv;
+#if SUN_GLOW
+uniform sampler2D tDiffuse;
+uniform vec2 uResolution;
+uniform vec4 uSun;
+flat varying vec3 vSunLight;
+#endif
+void main() {
+  vUv = uv;
+#if SUN_GLOW
+  vec3 sum = vec3(0.0);
+  float taps = 0.0;
+  for (int i = -2; i <= 2; i++) for (int j = -2; j <= 2; j++) {
+    vec2 o = vec2(i, j) * 0.5;
+    if (dot(o, o) > 1.0) continue;
+    taps += 1.0;
+    // Clamped to the frame's edge, as bloom's blur reads past it, so a sun half out of frame still glows.
+    vec3 c = textureLod(tDiffuse, clamp(uSun.xy + o * uSun.z / uResolution, 0.0, 1.0), 0.0).rgb;
+    sum += c * smoothstep(1.1, 1.11, dot(c, vec3(0.2126, 0.7152, 0.0722)));
+  }
+  vSunLight = sum / taps * uSun.w;
+#endif
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
@@ -21,6 +57,12 @@ uniform float uExposure;
 uniform float uSaturation;
 uniform vec2 uResolution;
 varying vec2 vUv;
+#if SUN_GLOW
+uniform vec4 uSun;
+uniform vec4 uGlowFalloff;
+uniform vec4 uGlowShare;
+flat varying vec3 vSunLight;
+#endif
 
 vec3 aces(vec3 x) {
   const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -43,6 +85,10 @@ void main() {
   hdr.r = texture2D(tDiffuse, vUv + shift).r;
   hdr.g = texture2D(tDiffuse, vUv).g;
   hdr.b = texture2D(tDiffuse, vUv - shift).b;
+#if SUN_GLOW
+  vec2 px = (vUv - uSun.xy) * uResolution;
+  hdr += vSunLight * dot(uGlowShare, exp2(-dot(px, px) * uGlowFalloff));
+#endif
   hdr *= uExposure;
 
   float lum = dot(hdr, vec3(0.2126, 0.7152, 0.0722));
@@ -70,13 +116,14 @@ void main() {
   gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(40.0));
 }`;
 
-function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({ vertexShader: QUAD_VERT, fragmentShader, uniforms, depthTest: false, depthWrite: false });
+function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>, vertexShader = QUAD_VERT): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms, depthTest: false, depthWrite: false });
 }
 
 /**
  * The frame's image chain: the scene into one multisampled half-float target, one resolve-and-clamp pass into
  * a plain target, bloom added there, and the grade straight to the screen. Only the scene target is multisampled.
+ * While bloom is off the grade paints a glow round the sun in its place, so the sun is not a hard white disc.
  */
 export class Post {
   /** Where the scene is drawn; also the target to precompile scene materials against. */
@@ -92,12 +139,15 @@ export class Post {
   private bloomShown = 1;
   private bloomReleased = false;
   private lastTime = NaN;
+  private readonly sunAt = new THREE.Vector4();
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
     private readonly scene: THREE.Scene,
     private readonly camera: THREE.Camera,
     samples: number,
+    /** The direction of the sun (or the moon) in the sky. */
+    private readonly sun: THREE.Vector3,
   ) {
     const size = renderer.getDrawingBufferSize(this.size);
     this.sceneTarget = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples, depthBuffer: true, stencilBuffer: true });
@@ -110,7 +160,11 @@ export class Post {
       uExposure: { value: 1.0 },
       uSaturation: { value: 1.0 },
       uResolution: { value: new THREE.Vector2(size.x, size.y) },
-    });
+      uSun: { value: new THREE.Vector4() },
+      uGlowFalloff: { value: new THREE.Vector4() },
+      uGlowShare: { value: new THREE.Vector4() },
+    }, GRADE_VERT);
+    register(this.gradeMat, SUN_GLOW);
   }
 
   get samples(): number {
@@ -163,7 +217,26 @@ export class Post {
     this.gradeMat.uniforms.uSaturation.value = value;
   }
 
-  /** `warm` draws the bloom even while it is off, so its programs are built before Begin whatever the level. */
+  /** Where the sun is in the frame and how its glow spreads, `strength` of it while bloom is faded out. */
+  private aimGlow(strength: number): void {
+    const u = this.gradeMat.uniforms;
+    const projection = this.camera.projectionMatrix;
+    const at = this.sunAt.set(this.sun.x, this.sun.y, this.sun.z, 0).applyMatrix4(this.camera.matrixWorldInverse).applyMatrix4(projection);
+    const height = this.size.y;
+    const radius = Math.tan(SUN_RADIUS) * projection.elements[5] * height * 0.5;
+    const ahead = at.w > 1e-4;
+    u.uSun.value.set(ahead ? at.x / at.w * 0.5 + 0.5 : -1, ahead ? at.y / at.w * 0.5 + 0.5 : -1, radius, ahead ? strength * Math.PI * radius * radius : 0);
+    const falloff = u.uGlowFalloff.value as THREE.Vector4;
+    const share = u.uGlowShare.value as THREE.Vector4;
+    for (let i = 0; i < 4; i++) {
+      // The disc spreads like a point blurred by a quarter of its radius squared more.
+      const spread = (GLOW_SPREAD[i] * height) ** 2 + radius * radius * 0.25;
+      falloff.setComponent(i, Math.LOG2E / (2 * spread));
+      share.setComponent(i, GLOW_SHARE[i] / (2 * Math.PI * spread));
+    }
+  }
+
+  /** `warm` draws the bloom and the sun's glow even while they are off, so their programs are built before Begin whatever the level. */
   render(time: number, warm = false): void {
     const r = this.renderer;
     const dt = Math.min(Math.max(time - this.lastTime, 0), 0.1) || 0;
@@ -184,9 +257,16 @@ export class Post {
     }
     if (this.bloomShown === 0 && !this.bloomReleased) this.releaseBloom();
 
+    const glow = 1 - this.bloomShown;
+    if (glow > 0 || warm) this.aimGlow(glow);
     this.gradeMat.uniforms.uTime.value = time;
     this.quad.material = this.gradeMat;
     r.setRenderTarget(null);
+    if (warm) {
+      select(this.gradeMat, { SUN_GLOW: glow === 0 });
+      this.quad.render(r);
+    }
+    select(this.gradeMat, { SUN_GLOW: glow > 0 });
     this.quad.render(r);
   }
 }

@@ -29,7 +29,8 @@
 // POLL=timeout polls fences with setTimeout(0), the pre-9b69229 behaviour, for A/B checks of the poll.
 // grade replaces the final grade with a plain copy, keeping the resolve and bloom.
 // RATIO and MSAA override the page's ratio=1.5&msaa=2. DRAIN=1 waits for the GPU after every draw in every ablation.
-// Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half; none pairs the baseline with itself.
+// Levers (look-changing, costed only): scale-<ratio>, msaa-<samples>, bloom-half, sun-glow-off (at a level without bloom);
+// none pairs the baseline with itself.
 // msaa-nodepth swaps in a scene target built to neither resolve nor store its multisampled depth. On Chrome/ANGLE Metal
 // it renders without antialiasing (pixels match msaa-0) and is no faster, so it is not an exact skip.
 // Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
@@ -428,6 +429,14 @@ window.__audit = {
       const half=variants.includes('bloom-half'),want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
       if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
     }
+    // sun-glow-off: the grade without the glow it paints round the sun while bloom is off. Both sides rebind the grade's
+    // program every draw, so the pair differs only by the glow.
+    if(!this.gradeHooked&&'SUN_GLOW' in post.gradeMat.defines){
+      const q=post.quad,render=q.render.bind(q),m=post.gradeMat;
+      q.render=r=>{if(q.material===m){if(this.glowOff)m.defines.SUN_GLOW=0;m.needsUpdate=true;}render(r);};
+      this.gradeHooked=true;
+    }
+    this.glowOff=variants.includes('sun-glow-off');
     // sea-collar, sea-glint, sea-seabed, sea-reflection flip that switch of the sea from what the level chose.
     const sea=water.mesh.material,flips={'sea-collar':'HULL_COLLAR','sea-glint':'LANTERN_GLINT','sea-seabed':'SEABED_DETAIL','sea-reflection':'SEA_REFLECTION'};
     for(const [v,name] of Object.entries(flips)){
@@ -681,7 +690,7 @@ window.__audit = {
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
-      this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines)])});
+      this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
