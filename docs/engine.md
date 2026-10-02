@@ -124,9 +124,12 @@ his iPad. `node tools/start-check.mjs` also fails if the worst boot frame gap ex
 2. Completed readbacks are polled once, before this frame submits any GPU work. The pointer's screen segment is
    snapshotted and interpolated across the world updates; each brush sees only its own segment.
 3. Each world update advances input, story, actors, wind, life and particles, camera and world mechanics, in that
-   order. The last one follows the world window and requests the wind readback after its final tick.
-4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables
-   and audio.
+   order. The last one follows the world window and requests the wind readback after its final tick. The story
+   runs before the boat moves, so a chapter seats the child with `ride(at, yaw, boat)` and she keeps that seat in the
+   hull's frame: anything placed from the boat's last position trails it by a step, which uneven frames turn into a
+   shudder (`shot`'s even steps hide it).
+4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables,
+   the blades' fog and audio.
 5. The doorway view renders when open, then the sea reflection, the scene and the post chain; `endFrame()` fences it.
 
 Hidden tabs advance nothing, and visibility changes reset the timestamp. `shot` advances exactly 1/60 s per frame.
@@ -226,35 +229,35 @@ mid-frame stalls for the whole frame's rendering, and a GPU-bound frame becomes 
 The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the choice persists in
 `updraft.quality.v2`. A choice saved under `updraft.quality.v1` is read until a new one is made, its `high` as Ultra.
 
-| | Ultra | High | Medium | Low | Last step (Auto only) |
-| --- | --- | --- | --- | --- | --- |
-| Render scale | min(DPR, 1.5) | min(DPR, 1.25) | min(DPR, 1) | 0.85 × min(DPR, 1) | 0.72 × min(DPR, 1) |
-| MSAA | scene default | scene default | up to 2 | up to 2 | up to 2 |
-| Presentation | 60 fps | 60 fps | 60 fps | 30 fps | 30 fps |
-| Grass density / reach | 100% / 115% | 100% / 115% | 100% / 100% | 100% / 100% | 50% / 100% |
-| Terrain split | 1.6 | 1.6 | 1.35 | 1.1 | 1.1 |
-| Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 | 0.5 |
-| Sky mirror's reflection | every frame | every frame | every frame | alternate frames | alternate frames |
-| Bloom | full | full | half resolution | off | off |
-| Sun's glow painted by the grade in bloom's place (`SUN_GLOW`, eased with bloom) | no | no | no | yes | yes |
-| Hull's wet collar on the sea | yes | yes | off | off | off |
-| Lantern's glint and light on the sea | yes | yes | yes | off | off |
-| Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off | off |
-| Seabed detail in the shallows | yes | yes | yes | off | off |
+| | Ultra | High | Medium | Low |
+| --- | --- | --- | --- | --- |
+| Render scale | min(DPR, 1.5) | min(DPR, 1.25) | min(DPR, 1) | 0.85 × min(DPR, 1) |
+| MSAA | scene default | scene default | up to 2 | up to 2 |
+| Grass reach | 115% | 115% | 100% | 100% |
+| Segments of the near grass's blades | 6 | 6 | 6 | 5 |
+| Terrain split | 1.6 | 1.6 | 1.35 | 1.1 |
+| Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 |
+| Sky mirror's reflection | every frame | every frame | every frame | alternate frames |
+| Bloom | full | full | half resolution | off |
+| Sun's glow painted by the grade in bloom's place (`SUN_GLOW`, eased with bloom) | no | no | no | yes |
+| Hull's wet collar on the sea | yes | yes | off | off |
+| Lantern's glint and light on the sea | yes | yes | yes | off |
+| Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off |
+| Seabed detail in the shallows | yes | yes | yes | off |
 
 The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. The ordinary sea's
-reflection is redrawn at most every other frame (unless the view has cut or the rooms changed); at Low and the last
-step it is not drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
+reflection is redrawn at most every other frame (unless the view has cut or the rooms changed); at Low it is not
+drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
 level. The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
 the collar, none), selected only by `applyWorldQuality`.
-Jeremy's rulings: "ultra, high, medium, low. dont overcomplicate this"; Medium and Low keep full grass, with Low
-capped to 30 fps; no level thins the grass below 50%.
+Every level presents at up to 60 fps. Jeremy's rulings: "ultra, high, medium, low. dont overcomplicate this"; Medium
+and Low keep full grass; Low is not capped to 30 fps ("just let it target 60 fps", 2026-10-03), and there is no
+step below Low (2026-10-03).
 
-A level is a `QualityLevel`: its `name` (`ultra`, `high`, `medium`, `low`, `last`), render scale, samples and
-`frameRate`. Its world settings are `WORLD_QUALITY[name]`. `applyWorldQuality(level)` in `main.ts` is the one place a
-level's settings and effects are applied to the world; the frame pacer takes its rate from `quality.frameRate` each
-frame. A manual level never reacts to frame timing or to the viewport.
+A level is a `QualityLevel`: its `name` (`ultra`, `high`, `medium`, `low`), render scale and samples. Its
+world settings are `WORLD_QUALITY[name]`. `applyWorldQuality(level)` in `main.ts` is the one place a level's settings
+and effects are applied to the world. A manual level never reacts to frame timing or to the viewport.
 
 **Auto moves only between these levels** and renders as one of them at all times. It opens at Ultra, or at High
 where Ultra's scale is above its ceiling (1.25× on touch). Its one difference from a manual level: on a viewport
@@ -264,28 +267,29 @@ a display at DPR 1.25 or less, or where the budget fits both to one scale) is le
 and every render target share one scale, kept within `MAX_TEXTURE_SIZE`, `MAX_RENDERBUFFER_SIZE` and
 `MAX_VIEWPORT_DIMS`.
 
-**Auto's decisions.** Every 1.5 s it reviews up to 90 frame intervals, discarding the slowest 5%. A level's budget
-is its presentation: 16.7 ms at the 60 fps levels, 33.3 ms at Low and the last step, where every limit below
-doubles. A trimmed mean above 17.6 ms steps down one level, never two: with five coarse levels a double drop from
-High would overshoot to Low's 30 fps where Medium would hold. A new level settles for 2.5 s after a reduction, 1 s after an increase. Below
-its ceiling Auto climbs on evidence: `main.ts` polls each frame's fence 10 ms after submission (`timeLastFrame`, one
-timer, never a wait), or 20 ms where the level above also presents at 30 fps (the last step to Low). Low to Medium
-asks for the full 10 ms. A review with p90 under 17.2 ms in which at least 90% of 30 or more timed frames finished by
+**Auto's decisions.** Every 1.5 s it reviews up to 90 frame intervals, discarding the slowest 5%, against a budget
+of 16.7 ms (33.3 ms under a device's own 30 fps cap, where every limit below doubles). A trimmed mean above 17.6 ms
+steps down one level, never two: with four coarse levels a double drop overshoots where the level between would hold.
+A new level settles for 2.5 s after a reduction, 1 s after an increase. Below its ceiling Auto climbs on evidence:
+`main.ts` polls each frame's fence 10 ms after submission (`timeLastFrame`, one timer, never a wait). A review with p90 under 17.2 ms in which at least 90% of 30 or more timed frames finished by
 then climbs one level at once; the next level costs at most 1.56× the pixels (Medium to High), so 10 ms stays inside
 one refresh. Fewer than a quarter on time rules a climb out; between the two, or where frames can't be timed, 12 s of
 p90 under the smooth limit earns one level. A failed climb returns exactly one level and doubles the next wait, up
-to two minutes, so a device that holds Low at 30 fps but not Medium at 60 tries Medium ever less often.
+to two minutes, so a device that holds Low but not Medium tries Medium ever less often.
 
-At a 60 fps level a steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps
+A steady 33 ms cadence is either a GPU missing every other refresh or a display capped at 30 fps
 (iOS Low Power Mode): while intervals are that long, each frame's fence is timed against one 60 Hz refresh, and if at
 least 80% of eight or more finish early the cap is proven and Auto judges every level against 30 fps until intervals
 under 25 ms show it has lifted. A timer that fires late counts as not early. A single hitch, time behind Begin or in
 a hidden tab never changes quality; Begin and visibility changes reset its timing. Pacing reports the longest display
-callback interval since the last presentation, floored at the level's frame time, so deliberately skipped callbacks
-(120/144 Hz displays, every other refresh at Low) don't look like overload.
+callback interval since the last presentation, floored at 16.7 ms, so deliberately skipped callbacks on 120/144 Hz
+displays don't look like overload.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
-for every level at boot (about 28 MiB for the four attachments), so quality changes never allocate or recompile.
+for every level at boot (about 28 MiB for the four attachments, and 5.5 MiB for the blades' fog), so quality changes
+never allocate or recompile. The near level's geometry holds its blade twice, with six segments and with five; at
+Low the sixth segment closes over a second, and the five-segment form, the same blade fully closed,
+is drawn only once it has shut (`grass.setNearSegments`).
 Wind resolution, solver cadence and water mesh topology never change during play.
 
 Only the dev server and explicit QA builds accept game query overrides; the production build removes their parser
@@ -373,7 +377,9 @@ Bakes that follow the world:
   at the sea surface with local ring distortion.
 - Grass (`world/grass.ts`): per-blade constants (root, height, width, facing, curve, tint, flower) are computed once
   into a blade table (`TABLE_FRAG`, four texels a blade) when fixed inputs or the tile list change; per-blade shading
-  runs once per vertex (`BLADE_SHADE_GLSL`). A level's table is reused while its tiles and fixed traits are
+  runs once per vertex (`BLADE_SHADE_GLSL`). Fog is worked out once a frame per blade (`FOG_FRAG`, a quarter of the
+  way up the blade, where one fog comes closest to the fog along it) into a texel the blade shader reads; blades
+  thinning collapses are skipped, and the pass draws over its rows without a clear, which would cost more than it. A level's table is reused while its tiles and fixed traits are
   unchanged; season, palette, flattened patches and ground rebakes invalidate it, while wind, life and lighting stay
   live in the blade shader. Clears and draws are scissored to occupied rows. The three detail levels draw one
   population: each coarser level holds the lowest-ranked blades of the finer one, and thinning depends only on
@@ -472,6 +478,9 @@ graph's CPU, sound on against muted.
 - **Read the noise floor.** Ablations are interleaved pairs; `none` pairs the baseline with itself. Chains of small
   dependent passes (the wind step, bloom, bakes) inflate several-fold under another process's GPU load and when
   drawn back to back, so time them with `DRAIN=1` and `GPU_QUIET=1`, and drop rows whose pair baselines straddle.
+- **Time a pass the scene reads with the wind step.** `FRAME_PASS` leaves the wind step out, so a per-frame pass
+  whose output the scene's vertices read (the blades' fog) becomes the one thing the scene waits on and reads several
+  times its cost; `FRAME_SIM=1` steps the wind before each draw, as the loop does.
 - **Frozen draws do not re-bake.** An ablation that changes a height source must re-run the window-move bakes
   (ground, light, shore, grass tables) on both sides of every pair; list it in the tool's `heightSources`.
 

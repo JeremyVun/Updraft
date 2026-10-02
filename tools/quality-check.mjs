@@ -23,25 +23,23 @@ const run = (q, from, to, interval, early) => {
 
 // The table in docs/backlog/perf-final/design.md section 3.
 assert.deepEqual(WORLD_QUALITY, {
-  ultra: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all' },
-  high: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all' },
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'half', sea: 'noCollar' },
-  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain' },
-  last: { grassDensity: .5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain' },
+  ultra: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
+  high: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'half', sea: 'noCollar', nearSegments: 6 },
+  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain', nearSegments: 5 },
 });
 const PRESETS = {
-  1.5: { ultra: [1.5, 4, 60], high: [1.25, 4, 60], medium: [1, 2, 60], low: [.85, 2, 30] },
-  1.1: { ultra: [1.1, 4, 60], high: [1.1, 4, 60], medium: [1, 2, 60], low: [.85, 2, 30] },
-  .8: { ultra: [.8, 4, 60], high: [.8, 4, 60], medium: [.8, 2, 60], low: [.8 * .85, 2, 30] },
+  1.5: { ultra: [1.5, 4], high: [1.25, 4], medium: [1, 2], low: [.85, 2] },
+  1.1: { ultra: [1.1, 4], high: [1.1, 4], medium: [1, 2], low: [.85, 2] },
+  .8: { ultra: [.8, 4], high: [.8, 4], medium: [.8, 2], low: [.8 * .85, 2] },
 };
 for (const [ratio, presets] of Object.entries(PRESETS)) {
   // A 4K viewport: manual levels never fit themselves to Auto's pixel budget, and never react to frame timing.
   const manual = create(Number(ratio), 3840, 2160);
-  for (const [mode, [scale, samples, frameRate]] of Object.entries(presets)) {
-    const expected = { name: mode, ratio: scale, samples, frameRate };
+  for (const [mode, [scale, samples]] of Object.entries(presets)) {
+    const expected = { name: mode, ratio: scale, samples };
     manual.quality.setMode(mode, 0);
     assert.equal(manual.quality.mode, mode);
-    assert.equal(manual.quality.frameRate, frameRate);
     assert.deepEqual(manual.quality.level, expected);
     steady(manual.quality, 0, 20000, 60);
     steady(manual.quality, 20000, 45000, 1000 / 120);
@@ -51,25 +49,25 @@ for (const [ratio, presets] of Object.entries(PRESETS)) {
     assert.deepEqual(create(Number(ratio), 1376, 1032, { mode, autoRatio: 1.25 }).quality.level, expected, `a saved ${mode} overrides Auto's opening`);
   }
 }
-assert.deepEqual(create(1.5, 1280, 800, { samples: 2 }).quality.level, { name: 'ultra', ratio: 1.5, samples: 2, frameRate: 60 }, 'the scene default MSAA is kept at the top');
+assert.deepEqual(create(1.5, 1280, 800, { samples: 2 }).quality.level, { name: 'ultra', ratio: 1.5, samples: 2 }, 'the scene default MSAA is kept at the top');
 
 // QA locks are exact, with Ultra's world settings.
 for (const ratio of [0.5, 0.85, 1, 1.5, 2]) {
   const { quality, changes } = create(ratio, 3840, 2160, { locked: true });
-  assert.deepEqual(quality.level, { name: 'ultra', ratio, samples: 4, frameRate: 60 });
+  assert.deepEqual(quality.level, { name: 'ultra', ratio, samples: 4 });
   steady(quality, 0, 20000, 40);
   quality.setMode('low', 20000);
   quality.resize(7680, 4320, 20001);
-  assert.deepEqual(quality.level, { name: 'ultra', ratio, samples: 4, frameRate: 60 }, 'locked levels must stay exact');
+  assert.deepEqual(quality.level, { name: 'ultra', ratio, samples: 4 }, 'locked levels must stay exact');
   assert.equal(changes.length, 0);
   assert(!quality.probing);
 }
 
 // Auto opens at Ultra, or at High under the touch ceiling, and smooth vsync never takes it past its opening.
 const desktop = create(1.5, 1280, 800);
-assert.deepEqual(desktop.quality.level, { name: 'ultra', ratio: 1.5, samples: 4, frameRate: 60 });
+assert.deepEqual(desktop.quality.level, { name: 'ultra', ratio: 1.5, samples: 4 });
 const touch = create(1.5, 1376, 1032, { autoRatio: 1.25 });
-assert.deepEqual(touch.quality.level, { name: 'high', ratio: 1.25, samples: 4, frameRate: 60 });
+assert.deepEqual(touch.quality.level, { name: 'high', ratio: 1.25, samples: 4 });
 touch.quality.reset(0);
 steady(touch.quality, 0, 85000, REFRESH);
 assert.equal(touch.changes.length, 0, 'touch Auto holds High while frames are smooth');
@@ -77,7 +75,7 @@ assert(!touch.quality.probing, 'and is not timed at its ceiling');
 touch.quality.setMode('ultra', 90000);
 assert.equal(touch.quality.level.ratio, 1.5, 'Ultra uses the caller-provided maximum');
 touch.quality.setMode('auto', 90001);
-assert.deepEqual(touch.quality.level, { name: 'high', ratio: 1.25, samples: 4, frameRate: 60 }, 'Auto immediately returns under its ceiling');
+assert.deepEqual(touch.quality.level, { name: 'high', ratio: 1.25, samples: 4 }, 'Auto immediately returns under its ceiling');
 const phone = create(1.5, 390, 844, { autoRatio: 1.25 });
 steady(phone.quality, 0, 100000, REFRESH);
 assert.equal(phone.quality.level.name, 'high', 'small touch screens keep the touch ceiling');
@@ -88,9 +86,9 @@ assert.equal(create(.8, 1600, 900).quality.level.ratio, .8, 'browser zoom below 
 {
   const { quality } = create(1.5, 1280, 800);
   quality.setMode('low', 0); quality.setMode('auto', 1);
-  steady(quality, 1, 11000, 2 * REFRESH);
+  steady(quality, 1, 11000, REFRESH);
   quality.reset(60000);
-  steady(quality, 60000, 61400, 2 * REFRESH);
+  steady(quality, 60000, 61400, REFRESH);
   assert.equal(quality.level.name, 'low', 'a reset restarts the evidence');
 }
 
@@ -101,51 +99,50 @@ const pixels = (level, width, height) => level.ratio * level.ratio * width * hei
   assert.equal(wide.level.name, 'ultra');
   assert(Math.abs(pixels(wide.level, 1600, 900) - 2.4e6) < 1, `Ultra is fitted to the budget: ${wide.level.ratio}`);
   wide.resize(1280, 720, 0);
-  assert.deepEqual(wide.level, { name: 'ultra', ratio: 1.5, samples: 4, frameRate: 60 }, 'a smaller viewport returns the level to its own scale at once');
+  assert.deepEqual(wide.level, { name: 'ultra', ratio: 1.5, samples: 4 }, 'a smaller viewport returns the level to its own scale at once');
   wide.resize(1920, 1200, 1);
   assert(Math.abs(pixels(wide.level, 1920, 1200) - 2.4e6) < 1, 'fullscreen must respect the pixel budget');
   assert.equal(names(changes), 'ultra ultra');
   const uhd = create(1, 3840, 2160);
   const budget = Math.sqrt(2.4e6 / (3840 * 2160));
-  assert.deepEqual(uhd.quality.level, { name: 'ultra', ratio: budget, samples: 4, frameRate: 60 }, '4K at DPR 1 opens at Ultra on the pixel budget');
+  assert.deepEqual(uhd.quality.level, { name: 'ultra', ratio: budget, samples: 4 }, '4K at DPR 1 opens at Ultra on the pixel budget');
   uhd.quality.reset(0);
   steady(uhd.quality, 0, 30000, REFRESH);
   assert.equal(uhd.changes.length, 0, 'smooth frames cannot climb past the budget');
   steady(uhd.quality, 30000, 60000, 80);
-  assert.deepEqual(uhd.quality.level, { name: 'last', ratio: budget, samples: 2, frameRate: 30 }, 'every level below keeps the fitted scale');
+  assert.deepEqual(uhd.quality.level, { name: 'low', ratio: budget, samples: 2 }, 'every level below keeps the fitted scale');
   // Ultra, High and Medium all fit to the same scale here; High would render as Ultra does, so it is no step.
   assert(!uhd.changes.some(level => level.name === 'high'), `a level that renders as the one above is skipped: ${names(uhd.changes)}`);
   uhd.quality.resize(7680, 4320, 60000);
   assert.equal(uhd.quality.level.ratio, .5, 'the fit has a deliberate minimum');
   uhd.quality.resize(1920, 1080, 60001);
-  assert.deepEqual(uhd.quality.level, { name: 'last', ratio: .72, samples: 2, frameRate: 30 }, 'within the budget the level has its own scale');
+  assert.deepEqual(uhd.quality.level, { name: 'low', ratio: .85, samples: 2 }, 'within the budget the level has its own scale');
   const tiny = create(.5, 7680, 4320).quality;
   tiny.setMode('low', 0); tiny.setMode('auto', 1);
   assert.equal(tiny.level.ratio, .5 * .85, 'the minimum never raises a level above its own scale');
 }
 
-// Auto's ladder is the five levels in order, one at a time while frames are only a little long.
+// Auto's ladder is the four levels in order, one at a time while frames are only a little long.
 {
   const { quality, changes } = create(1.5, 1280, 800);
   quality.reset(0);
   let now = 0;
-  for (; now < 60000; now += 20) quality.frame(now, quality.frameRate === 30 ? 40 : 20);
+  for (; now < 60000; now += 20) quality.frame(now, 20);
   assert.deepEqual(changes, [
-    { name: 'high', ratio: 1.25, samples: 4, frameRate: 60 },
-    { name: 'medium', ratio: 1, samples: 2, frameRate: 60 },
-    { name: 'low', ratio: .85, samples: 2, frameRate: 30 },
-    { name: 'last', ratio: .72, samples: 2, frameRate: 30 },
+    { name: 'high', ratio: 1.25, samples: 4 },
+    { name: 'medium', ratio: 1, samples: 2 },
+    { name: 'low', ratio: .85, samples: 2 },
   ], 'the descent visits every level');
   changes.length = 0;
-  for (; now < 400000; now += REFRESH) quality.frame(now, quality.frameRate === 30 ? 2 * REFRESH : REFRESH);
-  assert.equal(names(changes), 'low medium high ultra', 'and the climb returns through every level');
+  for (; now < 400000; now += REFRESH) quality.frame(now, REFRESH);
+  assert.equal(names(changes), 'medium high ultra', 'and the climb returns through every level');
 }
 {
-  // On a display at DPR 1 High is Ultra, so Auto has four steps.
+  // On a display at DPR 1 High is Ultra, so Auto has three levels.
   const { quality, changes } = create(1, 1280, 800);
   quality.reset(0);
-  for (let now = 0; now < 60000; now += 20) quality.frame(now, quality.frameRate === 30 ? 40 : 20);
-  assert.equal(names(changes), 'medium low last');
+  for (let now = 0; now < 60000; now += 20) quality.frame(now, 20);
+  assert.equal(names(changes), 'medium low');
   quality.setMode('high', 60000); quality.setMode('auto', 60001);
   assert.equal(quality.level.name, 'ultra', 'from a manual High that is Ultra, Auto stands at Ultra');
   steady(quality, 60001, 64000, 20);
@@ -158,14 +155,9 @@ const pixels = (level, width, height) => level.ratio * level.ratio * width * hei
   steady(far.quality, 0, 4500, 2 * REFRESH);
   assert.equal(names(far.changes), 'high', 'a 60 fps level missing every other refresh drops one level');
   steady(far.quality, 4500, 13500, 2 * REFRESH);
-  assert.equal(names(far.changes), 'high medium low', '33 ms at Medium is what Low presents anyway');
-  run(far.quality, 13500, 34000, 2 * REFRESH, false);
-  assert.equal(names(far.changes), 'high medium low', 'and Low holds at 30 fps');
-  assert.equal(far.quality.frameRate, 30);
-  run(far.quality, 34000, 40000, 50, false);
-  assert.equal(names(far.changes), 'high medium low last', 'Low running long takes the last step');
-  run(far.quality, 40000, 64000, 100, false);
-  assert.equal(names(far.changes), 'high medium low last', 'there is nothing below it');
+  assert.equal(names(far.changes), 'high medium low', 'and on through every level to Low');
+  run(far.quality, 13500, 40000, 100, false);
+  assert.equal(names(far.changes), 'high medium low', 'there is nothing below it');
   const deep = create(1.5, 1280, 800);
   deep.quality.setMode('medium', 0); deep.quality.setMode('auto', 1);
   deep.changes.length = 0;
@@ -174,7 +166,7 @@ const pixels = (level, width, height) => level.ratio * level.ratio * width * hei
 }
 
 // A 30 fps presentation cap (iOS Low Power Mode) is judged against 30 fps once the GPU proves it had time to spare.
-const top = { name: 'ultra', ratio: 1.5, samples: 4, frameRate: 60 };
+const top = { name: 'ultra', ratio: 1.5, samples: 4 };
 const capped = create(1.5, 1280, 800);
 capped.quality.reset(0);
 run(capped.quality, 0, 30000, 1000 / 30, true);
@@ -199,25 +191,21 @@ jitter.quality.reset(0);
 for (let now = 0, i = 0; now < 6000; i++) { const interval = i % 2 ? REFRESH : 1000 / 30; now += interval; jitter.quality.frame(now, interval); if (jitter.quality.probing) jitter.quality.gpu(true); }
 assert.notEqual(jitter.quality.level.name, 'ultra', 'alternating 16.7/33 ms intervals are overload, not a cap');
 {
-  // At a 30 fps level every interval is 33 ms by design: that is neither overload nor a device cap, and the fence
-  // there is timed for the climb (10 ms into 60 fps, 20 ms where the level above also presents at 30).
+  // Below the ceiling every frame is timed for the climb.
   const { quality: q, changes } = create(1.5, 1280, 800);
   q.setMode('low', 0); q.setMode('auto', 1);
   changes.length = 0;
-  run(q, 1, 30000, 1000 / 30, false);
-  assert.equal(changes.length, 0, 'Low at a steady 30 fps holds, and frames that are not early never climb');
+  run(q, 1, 30000, REFRESH, false);
+  assert.equal(changes.length, 0, 'Low at a steady 60 fps holds, and frames that are not early never climb');
   assert(q.probing);
   assert.equal(q.probeDeadline(0, 5), 15, 'the climb from Low to Medium asks for frames within 10 ms of submission');
-  // A busy main thread leaves some frames untimed; a 1.5 s review at 30 fps has 45 to begin with.
-  for (let now = 30000, i = 0; now < 60000; now += 1000 / 30, i++) { q.frame(now, 1000 / 30); q.gpu(i % 5 < 2 ? null : false); }
+  // A busy main thread leaves some frames untimed.
+  for (let now = 30000, i = 0; now < 60000; now += REFRESH, i++) { q.frame(now, REFRESH); q.gpu(i % 5 < 2 ? null : false); }
   assert.equal(changes.length, 0, 'the late frames that were timed still rule the climb out');
-  run(q, 60000, 90000, 1000 / 30, false);
-  run(q, 90000, 96000, 50, false);
-  assert.equal(q.level.name, 'last');
-  assert.equal(q.probeDeadline(0, 5), 25, 'the climb from the last step to Low stays at 30 fps');
-  run(q, 96000, 100000, 1000 / 30, true);
-  assert.equal(q.level.name, 'low', 'frames with room climb off the last step within seconds');
-  assert.equal(q.probeDeadline(0, 5), 15);
+  run(q, 60000, 66000, 2 * REFRESH, false);
+  assert.equal(changes.length, 0, 'Low missing every other refresh has nowhere lower to go');
+  run(q, 66000, 70000, REFRESH, true);
+  assert.equal(changes[0]?.name, 'medium', `frames with room climb off Low within seconds, one level at a time: ${names(changes)}`);
 }
 
 // Through the real pacer: display callbacks at a capped 30 Hz, and at 60/120/144 Hz, which must never be timed.
@@ -229,7 +217,7 @@ for (const hz of [30, 60, 120, 144]) {
   let timed = 0;
   for (let i = 1; i <= hz * 40; i++) {
     const now = i * 1000 / hz;
-    if (!pacer.due(now, q.frameRate)) continue;
+    if (!pacer.due(now)) continue;
     q.frame(now, pacer.intervalMs);
     if (q.probing) { timed++; q.gpu(true); }
   }
@@ -238,38 +226,35 @@ for (const hz of [30, 60, 120, 144]) {
   assert.equal(timed > 0, hz === 30, `${hz} Hz timing requests`);
 }
 for (const hz of [60, 120, 144]) {
-  // Auto at Low: the pacer takes its 30 fps from the level, its deliberate waits are not overload, and the climb
-  // into Medium returns the pacer to 60.
+  // Auto at Low: the pacer's deliberate waits on a fast display are not overload, and the climb comes on fence evidence.
   const { quality: q, changes: seen } = create(1.5, 1280, 800);
   q.setMode('low', 0); q.setMode('auto', 1);
   seen.length = 0;
   const pacer = new FramePacer();
   q.reset(1); pacer.reset(1);
-  const presented = { 30: 0, 60: 0 };
-  let climbedAt = 0;
+  let presented = 0, climbedAt = 0;
   for (let i = 1; i <= hz * 30; i++) {
     const now = 1 + i * 1000 / hz;
-    if (!pacer.due(now, q.frameRate)) continue;
-    const rate = q.frameRate;
+    if (!pacer.due(now)) continue;
+    const at = q.level.name;
     q.frame(now, pacer.intervalMs);
     // Frames are late until 8 s, then early: nothing before that may climb.
     if (q.probing) q.gpu(now > 8000);
-    if (rate === 30 && q.frameRate === 60) climbedAt = now;
-    presented[rate]++;
+    if (at === 'low' && q.level.name === 'medium') climbedAt = now;
+    presented++;
   }
   assert(climbedAt > 8000 && climbedAt < 12000, `${hz} Hz: Auto at Low holds, then climbs on fence evidence: ${climbedAt}`);
-  assert(Math.abs(presented[30] - climbedAt * 30 / 1000) <= 2, `${hz} Hz: Auto at Low presents at 30 fps: ${presented[30]}`);
-  assert(Math.abs(presented[60] - (30000 - climbedAt) * 60 / 1000) <= 2, `${hz} Hz: and at 60 fps above it: ${presented[60]}`);
+  assert(Math.abs(presented - 30 * 60) <= 2, `${hz} Hz: every level presents at 60 fps: ${presented}`);
   assert.equal(names(seen), 'medium high ultra');
 }
-console.log('Levels, QA locks, Auto opening and ceiling, budget fit, ladder order, 30 fps levels, presentation caps and pacing passed.');
+console.log('Levels, QA locks, Auto opening and ceiling, budget fit, ladder order, presentation caps and pacing passed.');
 
 // A GPU-bound device: frame work scales with pixels and eases with the world settings, and a frame that misses a
 // refresh waits for the next one (`cap` 2 for a 30 fps display). Work is timed from submission; the model's script
 // takes no time. `fence` false stands for frames that can't be timed; `lie` for headroom timings that claim room the
 // next level doesn't have.
-const WORLD_COST = { ultra: 1, high: 1, medium: .9, low: .8, last: .65 };
-const ORDER = ['last', 'low', 'medium', 'high', 'ultra'];
+const WORLD_COST = { ultra: 1, high: 1, medium: .9, low: .8 };
+const ORDER = ['low', 'medium', 'high', 'ultra'];
 const play = (q, from, to, ms, { fence = true, lie = false, cap = 1, late = 0 } = {}) => {
   const seen = [];
   let interval = REFRESH * cap, frame = 0;
@@ -279,7 +264,7 @@ const play = (q, from, to, ms, { fence = true, lie = false, cap = 1, late = 0 } 
     // `late` is the share of frames that finish after the deadline whatever the level, as heavier alternate frames do.
     const reportedLate = frame++ % 10 < late * 10;
     if (q.probing && fence) { const deadline = q.probeDeadline(0, 0); q.gpu(!reportedLate && work <= deadline || lie && deadline < REFRESH); }
-    interval = Math.max(cap, 60 / q.frameRate, Math.ceil(work / REFRESH - 1e-6)) * REFRESH;
+    interval = Math.max(cap, Math.ceil(work / REFRESH - 1e-6)) * REFRESH;
     seen.push({ now, name: q.level.name });
   }
   return seen;
@@ -300,7 +285,7 @@ const touchDevice = () => create(1.5, 1376, 1032, { autoRatio: 1.25, samples: 2 
   assert(!seen.some(row => row.now > firstDrop && row.name === 'high'), 'truthful timings never climb back into overload');
   assert.equal(q.level.name, 'medium', 'but it recovers the level that fits');
   assert(q.probing && q.probeDeadline(0, 0) === 10, 'below the ceiling it keeps timing frames against the headroom deadline');
-  assert(visits(seen, 'last').length === 0 && visits(seen, 'low').length <= 1, 'without wandering below');
+  assert(visits(seen, 'low').length <= 1, 'without wandering below');
 }
 {
   // Timings that lie: every climb back fails, the waits between them double, and each failure returns one level.
@@ -312,12 +297,12 @@ const touchDevice = () => create(1.5, 1376, 1032, { autoRatio: 1.25, samples: 2 
   assert(seen.slice(settled).every(row => row.name === 'medium' || row.name === 'high'), 'a failed climb returns to the level that held, no lower');
 }
 {
-  // The 30 to 60 fps boundary: Low holds 30 fps with ease (12 ms) but Medium needs 18.9 ms. Where frames can't be
+  // Low holds 60 fps (12 ms) but Medium needs 18.9 ms. Where frames can't be
   // timed the smooth window tries Medium, fails, and tries ever less often; truthful timings never try.
   const weak = () => { const made = create(1.5, 1280, 800); made.quality.setMode('low', 0); made.quality.setMode('auto', 1); made.quality.reset(1); return made.quality; };
   const untimed = play(weak(), 1, 300000, () => 21, { fence: false });
-  backOff(visits(untimed, 'medium'), 'failed climbs out of 30 fps back off');
-  assert(untimed.every(row => row.name === 'low' || row.name === 'medium'), 'and fall back to Low, never to the last step');
+  backOff(visits(untimed, 'medium'), 'failed climbs out of Low back off');
+  assert(untimed.every(row => row.name === 'low' || row.name === 'medium'), 'and fall back to Low');
   assert(untimed.filter(row => row.name === 'medium').length < untimed.length * .05, 'so nearly all the time is spent at the level that holds');
   const timed = play(weak(), 1, 300000, () => 21);
   assert(timed.every(row => row.name === 'low'), 'frames that finish after 10 ms rule the climb out');
@@ -352,7 +337,7 @@ const touchDevice = () => create(1.5, 1376, 1032, { autoRatio: 1.25, samples: 2 
   assert(!q.probing, 'back at the ceiling, frames are no longer timed');
   assert(seen.find(row => row.name === 'high').now - 70000 <= 8000, 'and climbs back within seconds once load lifts');
 }
-console.log('Auto under load: stepping down without looping back, failed climbs backing off (also out of 30 fps), climbing on GPU headroom within seconds, and 30 fps caps passed.');
+console.log('Auto under load: stepping down without looping back, failed climbs backing off (also out of Low), climbing on GPU headroom within seconds, and 30 fps caps passed.');
 
 const { readQualityMode, saveQualityMode } = await load('gl/quality-preference.ts');
 const store = {};

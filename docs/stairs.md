@@ -260,7 +260,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
   `src/story/stairs-sail.ts` (`SAIL_SHOTS`), the bird's line up the stair `src/story/stairs-track.ts`. Knobs:
   `tuning.stairs`.
 - **By quality level** (`CloudStairs.setLevel`, from `applyWorldQuality`): Ultra and High stream 56 wisps and march
-  the haze at full step; Medium keeps 36 wisps and 1.25× longer haze steps, Low and the last step 24 wisps and 1.5×;
+  the haze at full step; Medium keeps 36 wisps and 1.25× longer haze steps, Low 24 wisps and 1.5×;
   the rags left thicken a little, and a change eases over about a second.
 - **Order**: birches → `toStairs` (short hop east; the deck comes down over the sea; it carries the birches' closing
   phrase) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at

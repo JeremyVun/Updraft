@@ -187,20 +187,19 @@ switched-off effect must be compiled out, not branched round.
 
 ### 3. Four levels, and Auto between them
 
-| | Ultra | High | Medium | Low | Last step (Auto only) |
-|---|---|---|---|---|---|
-| Render scale | min(DPR, 1.5) | min(DPR, 1.25) | min(DPR, 1) | 0.85 × min(DPR, 1) | 0.72 × min(DPR, 1) |
-| MSAA | scene default | scene default | up to 2 | up to 2 | up to 2 |
-| Presentation | 60 fps | 60 fps | 60 fps | 30 fps | 30 fps |
-| Grass density / reach | 100% / 115% | 100% / 115% | 100% / 100% | 100% / 100% | 50% / 100% |
-| Terrain split, mirror scale | 1.6, 0.75 | 1.6, 0.75 | 1.35, 0.625 | 1.1, 0.5 | 1.1, 0.5 |
-| Bloom | full | full | half resolution | off | off |
-| Hull wet collar | yes | yes | off | off | off |
-| Lantern glint and light on the sea | yes | yes | yes | off | off |
-| Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off | off |
-| Sky mirror's reflection | every frame | every frame | every frame | alternate frames | alternate frames |
-| Seabed detail in the shallows | yes | yes | yes | off | off |
-| Stairs wisps and haze steps | full | full | fewer | fewer | fewer |
+| | Ultra | High | Medium | Low |
+|---|---|---|---|---|
+| Render scale | min(DPR, 1.5) | min(DPR, 1.25) | min(DPR, 1) | 0.85 × min(DPR, 1) |
+| MSAA | scene default | scene default | up to 2 | up to 2 |
+| Grass reach | 115% | 115% | 100% | 100% |
+| Terrain split, mirror scale | 1.6, 0.75 | 1.6, 0.75 | 1.35, 0.625 | 1.1, 0.5 |
+| Bloom | full | full | half resolution | off |
+| Hull wet collar | yes | yes | off | off |
+| Lantern glint and light on the sea | yes | yes | yes | off |
+| Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off |
+| Sky mirror's reflection | every frame | every frame | every frame | alternate frames |
+| Seabed detail in the shallows | yes | yes | yes | off |
+| Stairs wisps and haze steps | full | full | fewer | fewer |
 
 - Ultra is what High was; a saved `high` in `updraft.quality.v1` becomes `ultra` (new key `updraft.quality.v2`), so
   nobody's picture changes. High is new: Ultra at 1.25× and nothing else different.
@@ -210,17 +209,17 @@ switched-off effect must be compiled out, not branched round.
   level it is on to fit (never below 0.5×); that is the only thing Auto does that a manual level does not.
 - Stepping down and climbing use the governor's existing evidence (trimmed mean of frame intervals to step down, the
   10 ms fence probe or 12 s of smooth frames to climb, a failed climb doubling the wait). Auto steps down one level
-  at a time, never two. At Low and the last step the
-  budget is 33.3 ms, as it already is under a device's own 30 fps cap. A climb from Low to Medium asks for frames
+  at a time, never two. Every level presents at up to 60 fps and is judged against 16.7 ms (33.3 ms only under a
+  device's own 30 fps cap). A climb from Low to Medium asks for frames
   finishing within 10 ms of submission: Medium renders 1.38× Low's pixels plus half bloom, the glint, the reflection
   and the seabed, about 1.55× in all, so 10 ms becomes about 15.5 ms, inside one 16.7 ms refresh. Ultra is 1.44×
   High's pixels and High 1.56× Medium's, as today.
-- The last step is reached only when Low at 30 fps still runs long. There is no 25% grass anywhere.
+- Low is the floor: there is no step below it, and no level thins the grass.
 - The "fewer" wisps and haze steps and what "seabed detail" covers (caustics, weed and the bed's noise, never the
   shallows' colour) are chosen in the build by a visual model and shown to Jeremy as stills. Approved 2026-10-03:
-  Medium keeps 36 of 56 wisps and 1.25× haze steps, Low and the last step 24 and 1.5×; seabed detail off drops the
-  sand grain, ripple noise, weed patches and caustic web for their averages. Low and the last step paint a soft sun
-  glow in place of bloom.
+  Medium keeps 36 of 56 wisps and 1.25× haze steps, Low 24 and 1.5×; seabed detail off drops the
+  sand grain, ripple noise, weed patches and caustic web for their averages. Low paints a soft sun glow in place of
+  bloom.
 - The menu offers Auto, Ultra, High, Medium, Low; its indicator and title name the level in use. `quality_changed`
   and `performance_sampled` carry the level's name.
 
@@ -284,7 +283,7 @@ The profile is `profile.md`. His answers, verbatim where quoted:
 - **Effects come off by quality level.** "lantern glint and wet collar seem to me like things we can remove using the
   governor? e.g. medium keeps lantern glint but loses wet collar. - low loses both?" and "im sure there are many other
   things in the game like this that make sense to turn off appropriately at medium and low".
-- **Grass.** "lets raise medium and low to full grass with low capped to 30 fps. I think auto's 25% grass step is
+- **Grass.** "lets raise medium and low to full grass with low capped to 30 fps" (the cap since lifted, below). I think auto's 25% grass step is
   horrible looking. I'd rather try to turn off other things than reduce grass to 25%. can we raise that to 50%
   atleast".
 - **Bloom:** half resolution on Medium, off on Low. "approved on bloom suggestions".
@@ -300,25 +299,22 @@ The profile is `profile.md`. His answers, verbatim where quoted:
 - **A step between High and Medium:** "sure, we can add another setting between high and medium."
 - **Four settings (2026-09-30):** "then just add the fourth setting. ultra, high, medium, low. dont overcomplicate
   this." Ultra is today's High; High is the step between (1.25×); Auto moves between the four and has no states of
-  its own, apart from one last step below Low.
+  its own.
 - **Grass reach (2026-09-30):** Medium and Low at 100% density and 100% reach approved ("yea this is approved").
 - **Auto at the top (2026-10-01):** Auto on Ultra or High reaches 115% like the manual levels, so an iPad on Auto draws
   about 14% more blades than before this item (chosen: "Keep 115%").
-- **Phase 5a's stills (2026-10-02):** merged as shown ("Merge"). With bloom off at Low and the last step the sun
+- **Phase 5a's stills (2026-10-02):** merged as shown ("Merge"). With bloom off at Low the sun
   became a hard white disc; Jeremy chose "Paint a soft sun glow": bloom stays off, and the sky draws a soft halo
   around the sun at those levels. The glow, drawn in the post chain from the sun's on-screen brightness, was merged
   on its stills (2026-10-03, "Merge").
-- **The last step's 50% grass (2026-10-02):** stays as it is, every blade submitted and half thinned in the shader
-  ("ok fine option 1"). Drawing it from a sparser table would need a different set of blades and pop the meadow on
-  entering or leaving the last step.
 - **Phase 7's survey (2026-10-03),** `profile.md` last section, stills in `/tmp/updraft-pf-p7-shots/`. Chosen:
-  - Grass fog once per blade at its root: "Every level" (about 4.5% weighted, 10–11% at Sleeping and the summit,
+  - Grass fog once per blade (built a quarter of the way up the blade, which is closer to today than the root): "Every level" (about 4.5% weighted, 10–11% at Sleeping and the summit,
     at most 4/255).
   - The frame's internal buffers as `R11F_G11F_B10F` (scene, resolve, `post.clean`, bloom chain): "Every level"
     (3–5% weighted, up to 10% in the drowned village; about −60 MiB at Ultra; at most 3–5/255, no banding seen).
   - Sea and terrain not drawn above the stairs' cloud on top and during the sail: "Build it", every level, dropped if
     any moment along the top or the sail shows more than a faint 2–3/255 (top 13–20%, sail 19–28%).
-  - Near blades with 5 segments instead of 6: "Low only" (Low and the last step; about 3% of a Low frame).
+  - Near blades with 5 segments instead of 6: "Low only" (about 3% of a Low frame).
   - Taken as a free win (exact): the sky's storm bank skipped while there is no storm or lightning.
   - Not taken (recommended against): the near grass level ending sooner (the grass thinning already ruled out), the
     sea's ripples, one-octave sky clouds, cloud shadows, glints, the child's mesh when small, readbacks every other
@@ -326,5 +322,18 @@ The profile is `profile.md`. His answers, verbatim where quoted:
   - Open: the child's bone texture uploaded before the frame's passes (exact; +2 to +4% weighted but −8 to −12% on
     the stairs' top and sail on the Mac; needs the iPad); the sky mirror's reflection at the ordinary size and cadence
     until near the flat (needs a still from a running capture).
-- **One level at a time (2026-10-01):** Auto never drops two levels at once; with five coarse levels a double drop
-  from High overshot to Low's 30 fps where Medium would have held (chosen: "One level at a time").
+- **One level at a time (2026-10-01):** Auto never drops two levels at once; with coarse levels a double drop
+  from High overshot to Low where Medium would have held (chosen: "One level at a time").
+
+## Low at 60 fps (2026-10-03)
+
+Jeremy: "I think capping low quality to 30 fps might have been too much. I should just let low quality settle at the
+best fps the players device can handle no?" Offered a Low that drops between 60 and a steady 30, he chose the simple
+form: "im not sure if we should overcomplicate it. just let it target 60 fps?" Every level now presents at up to 60 fps;
+levels carry no frame rate, and the only 30 fps judgement left is a device's own cap.
+
+Shown what the last step was (Low at 0.72× scale with half the grass), Jeremy: "i think we shouldn't have a hidden
+last step." Low is Auto's floor. He also asked for Low without MSAA; told that the fading scenery (trees and washing
+appearing, the stairs' edges, the wood's clearing, the sleeping floor, the kite near the lens) fades by alpha to
+coverage, which needs multisampling, and that a pixel dither breaks into coloured grain under the grade's lens fringe,
+he chose to keep 2× MSAA at Low.

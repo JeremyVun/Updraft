@@ -1,4 +1,4 @@
-export type QualityLevelName = 'ultra' | 'high' | 'medium' | 'low' | 'last';
+export type QualityLevelName = 'ultra' | 'high' | 'medium' | 'low';
 
 export interface QualityLevel {
   name: QualityLevelName;
@@ -6,10 +6,9 @@ export interface QualityLevel {
   ratio: number;
   /** Multisampling of the scene target. */
   samples: number;
-  frameRate: 30 | 60;
 }
 
-export type QualityMode = 'auto' | Exclude<QualityLevelName, 'last'>;
+export type QualityMode = 'auto' | QualityLevelName;
 
 export interface WorldQuality {
   grassDensity: number;
@@ -20,6 +19,8 @@ export interface WorldQuality {
   mirrorScale: number;
   bloom: BloomLevel;
   sea: SeaEffects;
+  /** Segments of the near grass's blades. */
+  nearSegments: 6 | 5;
 }
 
 export type BloomLevel = 'full' | 'half' | 'off';
@@ -28,20 +29,18 @@ export type SeaEffects = 'all' | 'noCollar' | 'plain';
 
 export const HIGH_GRASS_REACH = 1.15;
 
-const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75, bloom: 'full', sea: 'all' };
+const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: 0.75, bloom: 'full', sea: 'all', nearSegments: 6 };
 
 export const WORLD_QUALITY: Record<QualityLevelName, WorldQuality> = {
   ultra: FULL,
   high: FULL,
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'half', sea: 'noCollar' },
-  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain' },
-  last: { grassDensity: 0.5, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain' },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'half', sea: 'noCollar', nearSegments: 6 },
+  low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain', nearSegments: 5 },
 };
 
-const NAMES: QualityLevelName[] = ['ultra', 'high', 'medium', 'low', 'last'];
+const NAMES: QualityLevelName[] = ['ultra', 'high', 'medium', 'low'];
 const HIGH_RATIO = 1.25;
 const LOW_SCALE = 0.85;
-const LAST_SCALE = 0.72;
 const RECENT = 90;
 /** Sustained Auto budget. Smooth vsync alone is not evidence of spare power. */
 const AUTO_PIXELS = 2.4e6;
@@ -61,7 +60,7 @@ const CAP_EARLY = 0.8;
 /**
  * Below its ceiling, Auto climbs as soon as frames prove headroom: the GPU finishes a frame within this long of its
  * submission. The next level up renders at most 1.56× the pixels (Medium → High), so 10 ms becomes at most about
- * 15.6 ms, inside one 16.7 ms refresh; a climb that stays at 30 fps gets twice as long. Timed from submission because
+ * 15.6 ms, inside one 16.7 ms refresh; under a device's 30 fps cap it gets twice as long. Timed from submission because
  * the frame's script doesn't grow with pixels; the 2–4 ms a browser takes to report a finished fence still counts
  * against it, so this errs safe.
  */
@@ -117,15 +116,14 @@ export class Quality {
 
   constructor(maxRatio: number, samples: number, width: number, height: number, private readonly locked: boolean, private readonly apply: (level: QualityLevel) => void, mode: QualityMode = 'auto', private readonly autoMaxRatio = maxRatio) {
     this.selectedMode = locked ? 'auto' : mode;
-    const top: QualityLevel = { name: 'ultra', ratio: maxRatio, samples, frameRate: 60 };
+    const top: QualityLevel = { name: 'ultra', ratio: maxRatio, samples };
     const base = Math.min(1, maxRatio), few = Math.min(samples, 2);
     // QA overrides are exact, including subpixel scales: no budget fit and no ladder.
     this.levels = locked ? [top] : [
       top,
-      { name: 'high', ratio: Math.min(maxRatio, HIGH_RATIO), samples, frameRate: 60 },
-      { name: 'medium', ratio: base, samples: few, frameRate: 60 },
-      { name: 'low', ratio: base * LOW_SCALE, samples: few, frameRate: 30 },
-      { name: 'last', ratio: base * LAST_SCALE, samples: few, frameRate: 30 },
+      { name: 'high', ratio: Math.min(maxRatio, HIGH_RATIO), samples },
+      { name: 'medium', ratio: base, samples: few },
+      { name: 'low', ratio: base * LOW_SCALE, samples: few },
     ];
     this.current = top;
     if (locked) return;
@@ -136,7 +134,6 @@ export class Quality {
 
   get mode(): QualityMode { return this.selectedMode; }
   get level(): QualityLevel { return this.current; }
-  get frameRate(): 30 | 60 { return this.current.frameRate; }
 
   /** Whether the caller should time the frame just submitted and report it through `gpu`. */
   get probing(): boolean {
@@ -148,18 +145,18 @@ export class Quality {
   }
 
   private get probingCap(): boolean {
-    return this.adapting && !this.capped && this.current.frameRate === 60 && this.lastInterval >= CAPPED_MS * 0.9;
+    return this.adapting && !this.capped && this.lastInterval >= CAPPED_MS * 0.9;
   }
 
-  /** How many 60 Hz refreshes a frame at `level` may take. */
-  private refreshes(level: QualityLevel): number {
-    return this.capped || level.frameRate === 30 ? CAPPED_MS / REFRESH_MS : 1;
+  /** How many 60 Hz refreshes a frame may take. */
+  private get refreshes(): number {
+    return this.capped ? CAPPED_MS / REFRESH_MS : 1;
   }
 
   /** By when the frame that began at `start` and was submitted at `submitted` must have finished to count as early. */
   probeDeadline(start: number, submitted: number): number {
     if (this.probingCap) return start + REFRESH_MS;
-    return submitted + HEADROOM_MS * this.refreshes(this.ladder[Math.max(0, this.rung - 1)]);
+    return submitted + HEADROOM_MS * this.refreshes;
   }
 
   /** One frame's GPU timing: whether it had finished by `probeDeadline`, or null when the timer fired too late to tell. */
@@ -244,7 +241,7 @@ export class Quality {
     if (this.capped && p10 < UNCAPPED_MS) this.capped = false;
     else if (this.probingCap && p10 > CAPPED_MS * 0.9 && p90 < CAPPED_MS * 1.1
       && this.probes >= CAP_PROBES && this.early >= this.probes * CAP_EARLY) this.capped = true;
-    const scale = this.refreshes(this.current);
+    const scale = this.refreshes;
     let climbMs = this.climbMs;
     // A review holds half as many frames at 30 fps.
     if (this.timed >= HEADROOM_PROBES / scale) {
@@ -281,5 +278,5 @@ export class Quality {
 }
 
 function rendersAlike(a: QualityLevel, b: QualityLevel): boolean {
-  return a.ratio === b.ratio && a.samples === b.samples && a.frameRate === b.frameRate && WORLD_QUALITY[a.name] === WORLD_QUALITY[b.name];
+  return a.ratio === b.ratio && a.samples === b.samples && WORLD_QUALITY[a.name] === WORLD_QUALITY[b.name];
 }

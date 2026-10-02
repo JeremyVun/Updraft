@@ -28,13 +28,13 @@ async function start(page) {
   await page.waitForSelector('#veil', { state: 'detached' });
 }
 const applied = page => page.evaluate(() => ({ mode: __game.quality.mode, name: __game.quality.level.name, ratio: __game.renderer.getPixelRatio(),
-  frameRate: __game.quality.frameRate, reach: Math.round(__game.grass.quality.reach * 1e6) / 1e6, density: __game.grass.quality.density, split: __game.terrain.detail }));
+  reach: Math.round(__game.grass.quality.reach * 1e6) / 1e6, density: __game.grass.quality.density, split: __game.terrain.detail }));
 // At a device pixel ratio of 2: the table in docs/backlog/perf-final/design.md section 3.
 const LEVELS = {
-  ultra: { ratio: 1.5, frameRate: 60, reach: 1.15, density: 1, split: 1.6 },
-  high: { ratio: 1.25, frameRate: 60, reach: 1.15, density: 1, split: 1.6 },
-  medium: { ratio: 1, frameRate: 60, reach: 1, density: 1, split: 1.35 },
-  low: { ratio: .85, frameRate: 30, reach: 1, density: 1, split: 1.1 },
+  ultra: { ratio: 1.5, reach: 1.15, density: 1, split: 1.6 },
+  high: { ratio: 1.25, reach: 1.15, density: 1, split: 1.6 },
+  medium: { ratio: 1, reach: 1, density: 1, split: 1.35 },
+  low: { ratio: .85, reach: 1, density: 1, split: 1.1 },
 };
 async function select(page, mode) {
   await choose(page, mode);
@@ -57,7 +57,7 @@ try {
   assert.equal((await applied(page)).name, 'ultra', 'Auto opens at Ultra');
   await select(page, 'low');
   const low = await presented(page);
-  assert(low > 26 && low < 33, `Low presents at 30 fps: ${low.toFixed(1)}`);
+  assert(low > 50, `Low presents at 60 fps: ${low.toFixed(1)}`);
   await select(page, 'high');
   await select(page, 'ultra');
   const ultra = await presented(page);
@@ -88,7 +88,7 @@ try {
   await page.goto(base+'?shot&ratio=.6&analytics=0');
   await page.waitForFunction(() => window.__ready, null, {timeout:90000});
   assert.equal(await page.locator('#quality-control').isVisible(), false);
-  assert.deepEqual(await page.evaluate(() => ({ ...__game.quality.level })), { name: 'ultra', ratio: .6, samples: 4, frameRate: 60 }, 'a saved choice cannot change a QA override');
+  assert.deepEqual(await page.evaluate(() => ({ ...__game.quality.level })), { name: 'ultra', ratio: .6, samples: 4 }, 'a saved choice cannot change a QA override');
   await context.close();
   // A choice saved before the four levels: the old High was what Ultra is.
   const returning = await browser.newContext({viewport:{width:1100,height:700},deviceScaleFactor:2});
@@ -112,5 +112,5 @@ try {
   await phone.locator('#quality').blur();
   await phone.screenshot({path:`${out}-phone.png`});
   assert.deepEqual(errors,[]);
-  console.log('Quality controls: the four levels live, 30 and 60 fps presentation, overload lock, persistence, the old saved High as Ultra, Auto resume, keyboard selection, QA isolation and phone layout passed.');
+  console.log('Quality controls: the four levels live at 60 fps, overload lock, persistence, the old saved High as Ultra, Auto resume, keyboard selection, QA isolation and phone layout passed.');
 } finally { await close(); }

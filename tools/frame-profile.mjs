@@ -96,6 +96,11 @@
 // grass-near-<f> (the near grass level's reach times f), grass-near-5seg (near blades with five segments), rt-r11 (the
 // scene, resolve, post.clean and bloom targets as R11F_G11F_B10F). Phase 7b's old paths: rt-half (those targets as
 // half-float RGBA again), sky-bank-on (the sky's storm bank compiled in with no storm).
+// Phase 7b: grass-fog-vertex works the blades' fog out at every vertex again without the per-blade fog pass (the
+// old path; every draw here runs that pass, as prepareFrame does); grass-fog-pass-off times the frame without that
+// pass (FRAME_PASS only: the blades then read the fog it last wrote); grass-near-6seg draws the near blades with six
+// segments at any level (Low's old path). grass-near-5seg replaces the near template and only works at levels that
+// draw its six-segment form (Ultra to Medium).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -410,6 +415,7 @@ window.__audit = {
       'sky-bank':[bankSkip],
       'sky-detail':[bankSkip,['float thick = smoothstep(0.52, 0.8, fbm((p + toSun) * vec2(0.55, 1.1)) * 0.7 + 0.15);','float thick = cloudDensity(p + toSun);']],
       'grass-fog-root':[['vFog = fogOf(rootPos, 1.0);','vFog = fogOf(world, 1.0);']],
+      'grass-fog-vertex':[['vFog = fogOf(world, 1.0);','vFog = texelFetch(uFogTex, at, 0);']],
     };
     const mats=new Set([terrain.mesh.material,water.mesh.material,sky.material,bakes.groundMat,...grass.lods.map(l=>l.tableMat)]);
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
@@ -448,6 +454,10 @@ window.__audit = {
     }
     const want=five?this.fiveSeg:this.sixSeg;
     if(g.index!==want.index){g.setIndex(want.index);g.setAttribute('position',want.position);}
+    // grass-near-6seg: the near blades with all six segments whatever the level chose (the old path at Low).
+    const six=variants.includes('grass-near-6seg');
+    if(six&&!this.fewerWas){this.fewerWas=[grass.fewer.value,grass.fewerTarget];grass.fewer.value=0;grass.fewerTarget=0;grass.pickNearForm();}
+    else if(!six&&this.fewerWas){[grass.fewer.value,grass.fewerTarget]=this.fewerWas;this.fewerWas=null;grass.pickNearForm();}
     // deckless-<group>: that group's materials with the cloud deck compiled out (exact outside the stairs);
     // fragflat-<group>: their fragment shading replaced by a flat colour, to split vertex from pixel cost.
     this.surveyMats??=new Map();
@@ -735,12 +745,14 @@ window.__audit = {
   // FRAME_PASS=a,b: the whole frame but the wind step (reflection, scene, post) drawn back to back many times, then
   // drained, for the baseline and each variant in ABBA order over the rounds. Each round pairs every variant with the
   // baseline drawn seconds apart, so other processes' GPU load, which swings frame pairs by 10%, mostly cancels.
-  async framePass(variants, reps, rounds, complete) {
+  // FRAME_SIM=1 steps the wind before each draw, as the loop does: a pass whose output the scene reads waits on
+  // what came before it, and without the wind step nothing else in the frame is waited on.
+  async framePass(variants, reps, rounds, complete, sim=false) {
     const out=Object.fromEntries(variants.map(v=>[v,[]]));
     try {
       for(let round=0;round<rounds;round++)for(const v of round%2?[...variants].reverse():variants){
-        this.configure(v==='new'?null:v);this.draw(false);this.draw(false);await complete();
-        const start=performance.now();for(let i=0;i<reps;i++)this.draw(false);await complete();out[v].push((performance.now()-start)/reps);
+        this.configure(v==='new'?null:v);this.draw(sim);this.draw(sim);await complete();
+        const start=performance.now();for(let i=0;i<reps;i++)this.draw(sim);await complete();out[v].push((performance.now()-start)/reps);
       }
     } finally {this.configure(null);}
     return out;
@@ -782,6 +794,7 @@ window.__audit = {
     for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
+    if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') grass.shadeFog?.(renderer);
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
       const bloom=post.bloom.render;
@@ -807,7 +820,7 @@ window.__audit = {
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1,
-      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
+      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,grass.lods[0].geo.drawRange.start,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
@@ -1143,12 +1156,12 @@ try {
       return __audit.waterPass(variants,reps,rounds,complete);
     },{variants:['new',...process.env.WATER_PASS.split(',')],reps:Number(process.env.POST_REPS??40),rounds:Number(process.env.WATER_ROUNDS??12)}):undefined;
     if(waterPass){const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1];console.log(JSON.stringify({chapter,waterPass:Object.fromEntries(Object.entries(waterPass).map(([k,v])=>[k,{median:med(v),min:Math.min(...v),max:Math.max(...v)}]))}));}
-    const framePass=process.env.FRAME_PASS?await page.evaluate(async ({variants,reps,rounds})=>{
+    const framePass=process.env.FRAME_PASS?await page.evaluate(async ({variants,reps,rounds,sim})=>{
       const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
       async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
         try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
-      return __audit.framePass(variants,reps,rounds,complete);
-    },{variants:['new',...process.env.FRAME_PASS.split(',')],reps:Number(process.env.FRAME_REPS??20),rounds:Number(process.env.FRAME_ROUNDS??16)}):undefined;
+      return __audit.framePass(variants,reps,rounds,complete,sim);
+    },{variants:['new',...process.env.FRAME_PASS.split(',')],reps:Number(process.env.FRAME_REPS??20),rounds:Number(process.env.FRAME_ROUNDS??16),sim:process.env.FRAME_SIM==='1'}):undefined;
     if(framePass){
       const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1],q=(a,f)=>[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)*f)],base=framePass.new;
       for(const [v,times] of Object.entries(framePass)){
