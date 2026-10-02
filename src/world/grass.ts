@@ -1290,6 +1290,9 @@ export class Grass {
     if (this.direct || !this.camera) return;
     this.camera.getWorldPosition(this.fogEye.value);
     const prev = renderer.getRenderTarget();
+    const autoClear = renderer.autoClear;
+    // Every texel in the rows drawn is written, and a scissored clear costs more than the pass itself.
+    renderer.autoClear = false;
     for (const l of this.lods) {
       if (!l.count) continue;
       l.fog.scissor.set(0, 0, TABLE_WIDTH, Math.ceil(l.count * l.spec.cols * l.spec.rows / TABLE_WIDTH));
@@ -1298,6 +1301,7 @@ export class Grass {
       renderer.setRenderTarget(l.fog);
       this.quad.render(renderer);
     }
+    renderer.autoClear = autoClear;
     renderer.setRenderTarget(prev);
   }
 }
