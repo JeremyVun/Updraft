@@ -54,13 +54,20 @@ function check() {
     water.update(camera);
     renders = 0;
     for (let i = 0; i < 8; i++) water.update(camera);
-    assert(renders === 4, `Reflections must be redrawn on alternate frames at the last step: ${renders} of 8`);
+    assert(renders === 0, `The ordinary sea's reflection must not be drawn at the last step: ${renders} of 8`);
   } finally { water.reflection.render = render; }
   quality.reset(140000);
   report.climb = drive(140000, 330000, () => 1000 / quality.frameRate);
   assert(report.climb === 'last low medium ultra', `Auto did not climb back through its levels: ${report.climb}`);
   water.update(rig.camera);
   applied('ultra');
+  water.reflection.render = (...args) => { renders++; render.apply(water.reflection, args); };
+  try {
+    water.update(camera);
+    renders = 0;
+    for (let i = 0; i < 8; i++) water.update(camera);
+    assert(renders === 4, `The ordinary sea's reflection must be redrawn on alternate frames at Ultra: ${renders} of 8`);
+  } finally { water.reflection.render = render; }
   return report;
 }
 const steps = [
