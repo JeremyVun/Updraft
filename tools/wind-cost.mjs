@@ -9,15 +9,15 @@
 //             snap       the step, then the scene reading snapshot copies: no read of what the step just wrote,
 //                        and no overwrite of what the previous scene read
 //             scene-snap the scene alone, reading the snapshots
-//             switch21   the step's 21 materials, each into its own scratch target, reading only snapshots
+//             switch21   the step's materials, each into its own scratch target, reading only snapshots
 //                        (same render passes, no chain), then scene-snap
-//             flat21     the same 21 draws into one scratch target (one render pass), then scene-snap
+//             flat21     the same draws into one scratch target (one render pass), then scene-snap
 //             copy3      no step: copy the live textures into the snapshots (3 passes), then the scene reads those,
 //                        so one short dependency each way stands in for the step's chain
 //             copy3-alt  the same, alternating two snapshot sets: the copy never overwrites what the last scene read
 //             raw        the step, copied into alternating snapshot sets that the scene reads: the scene still waits
 //                        for the step, but the step never overwrites what the last scene read
-//             full-itN   full, with N pressure iterations instead of 24 (N/2 fused passes): a shorter chain of the same
+//             full-itN   full, with only the first N of its pressure passes: a shorter chain of the same
 //                        kind, to see whether the cost follows the chain's length. snap-itN and step-itN likewise.
 //             calib      a fixed ALU-bound pass: its time tracks the GPU's clock and contention, not the scene
 //   proc      long batches of each variant: wall time to completion per draw, and the CPU time per draw of this
@@ -83,8 +83,8 @@ window.__wind = {
     this.copyMat=new THREE.ShaderMaterial({vertexShader:wind.forceMat.vertexShader,fragmentShader:'uniform sampler2D uSrc; in vec2 vUv; void main(){ gl_FragColor=texture(uSrc,vUv); }',
       uniforms:{uSrc:{value:null}},depthTest:false,depthWrite:false});
     this.scratch=Array.from({length:21},()=>this.target(THREE.NearestFilter));
-    this.sequence=[wind.forceMat,wind.curlMat,wind.vorticityMat,wind.divergenceMat,wind.scaleMat,
-      ...Array(12).fill(wind.pressure2Mat),wind.gradientMat,wind.advectMat,wind.bendMat,wind.swayMat];
+    this.sequence=wind.pressurePasses?[wind.forceMat,wind.vorticityMat,wind.divergenceMat,...wind.pressurePasses,wind.gradientMat,wind.advectMat]
+      :[wind.forceMat,wind.curlMat,wind.vorticityMat,wind.divergenceMat,wind.scaleMat,...Array(12).fill(wind.pressure2Mat),wind.gradientMat,wind.advectMat,wind.bendMat,wind.swayMat];
     this.calibMat=new THREE.ShaderMaterial({vertexShader:wind.forceMat.vertexShader,depthTest:false,depthWrite:false,
       fragmentShader:'in vec2 vUv; void main(){ vec2 p=vUv; for(int i=0;i<400;i++){ p=fract(p*1.37+vec2(sin(p.y*7.1),cos(p.x*5.3))); } gl_FragColor=vec4(p,0.0,1.0); }'});
     this.calibTarget=new THREE.WebGLRenderTarget(1024,1024,{depthBuffer:false});
@@ -92,7 +92,7 @@ window.__wind = {
   scene() {
     const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,drawRooms);
   },
-  step(iterations=wind.iterations) { const it=wind.iterations;wind.iterations=iterations;try{wind.step(1/60,time,false);}finally{wind.iterations=it;} },
+  step(passes) { if(passes==null)return wind.step(1/60,time,false);const all=wind.pressurePasses.slice();wind.pressurePasses.length=passes;try{wind.step(1/60,time,false);}finally{wind.pressurePasses.splice(0,Infinity,...all);} },
   copy(alternate) {
     const set=alternate&&(this.flip^=1)?this.snaps2:this.snaps;
     [wind.texture,wind.bendTexture,wind.swayTexture].forEach((t,i)=>{this.copyMat.uniforms.uSrc.value=t;wind.gpu.run(this.copyMat,set[i]);});

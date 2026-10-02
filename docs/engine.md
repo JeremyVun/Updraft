@@ -324,7 +324,11 @@ Rules:
 - A distant room may rest while the boat is far off only with an explicit catch-up (the drowned village's vane and
   herons rest beyond 320 m and live through the last 10 s at 1/30 s steps as it nears;
   `tools/drowned-gating-check.mjs`). Never apply a blanket off-screen pause to flock, cloth or story mechanics.
-- The wind's pressure solve runs two Jacobi relaxations per pass, bit for bit what two passes produce.
+- The wind step fuses passes bit for bit (`wind/shaders.ts`); `tools/wind-exact-check.mjs` compares the field texel
+  for texel against another build. On Chrome/Metal a half-float target stores toward zero (`packHalf2x16` rounds to
+  nearest) and fast math regroups float sums, so a fused pass cuts and orders with bit operations (`storeHalf`, `pin`).
+- Touching pieces of one material are not merged into one draw: three sorts separate meshes front to back every
+  frame, and that order decides exact depth ties along where they meet (`mirror-merge` in `tools/frame-profile.mjs`).
 - Scenery nothing moves, turns or reparents is fixed with `fixInPlace` (`gl/fixed.ts`) where it is built, so renders
   skip its matrices; anything that moves stays automatic. `tools/fixed-matrices-check.mjs` fails if a fixed object moves.
 
@@ -353,7 +357,7 @@ passage without capture overhead: stalls, blocking GL calls, light-direction jum
 boot time) for devices without a debugger. `?lite=1` is an explicit QA preset only: 128² wind with fewer pressure
 iterations on the same 60 Hz clock, low world detail, sparser grass and the reflection on alternate frames. Normal
 play on every device uses the full simulation and adapts visual quality instead. The costs that do not shrink with
-resolution matter most on a phone: the wind simulation (22 passes of 256² per tick, plus a force pass for each
+resolution matter most on a phone: the wind simulation (17 passes of 256² per tick, plus a force pass for each
 further eight sources), the life, cloud and petal passes, and bloom.
 
 ## Before/after flags

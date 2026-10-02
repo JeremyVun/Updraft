@@ -28,8 +28,10 @@ export function simTarget(
   height: number,
   type: THREE.TextureDataType = THREE.HalfFloatType,
   filter: THREE.MinificationTextureFilter & THREE.MagnificationTextureFilter = THREE.LinearFilter,
+  count = 1,
 ): THREE.WebGLRenderTarget {
   return new THREE.WebGLRenderTarget(width, height, {
+    count,
     type,
     format: THREE.RGBAFormat,
     minFilter: filter,
@@ -46,9 +48,10 @@ export class PingPong {
   read: THREE.WebGLRenderTarget;
   write: THREE.WebGLRenderTarget;
 
-  constructor(width: number, height: number, type?: THREE.TextureDataType, filter?: THREE.MinificationTextureFilter & THREE.MagnificationTextureFilter) {
-    this.read = simTarget(width, height, type, filter);
-    this.write = simTarget(width, height, type, filter);
+  /** `count` textures in each target, written together by one pass. */
+  constructor(width: number, height: number, type?: THREE.TextureDataType, filter?: THREE.MinificationTextureFilter & THREE.MagnificationTextureFilter, count = 1) {
+    this.read = simTarget(width, height, type, filter, count);
+    this.write = simTarget(width, height, type, filter, count);
   }
 
   get texture(): THREE.Texture {

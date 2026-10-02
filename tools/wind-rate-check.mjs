@@ -30,7 +30,7 @@ try {
    for(const scenario of ['breeze','held','stroke','circle','impulse','crowded']) {
     let reference, referenceNorm;
     for(const fps of [60,20,30,90,120,144]) {
-     for(const pp of [wind.vel,wind.pressure,wind.bend,wind.sway]){wind.gpu.clear(pp.read);wind.gpu.clear(pp.write)}
+     for(const pp of [wind.state,wind.vel,wind.pressure]){wind.gpu.clear(pp.read);wind.gpu.clear(pp.write)}
      wind.clock=new WindClock();wind.breeze.set(2,.8);
      let ticks=0;const original=wind.substep.bind(wind);wind.substep=(...args)=>{ticks++;original(...args)};
      for(let f=0;f<fps*2;f++) {

@@ -76,6 +76,13 @@
 // 1/255, the worst, its bounding box, and any drift in camera, boat, child, cygnet or counts); COMPARE_MAX=1 fails the
 // run above that; CAPTURE=1 saves both frames. A build against itself must read 0. With PATH_JS, both builds then step
 // their cameras along the path (PATH_STEPS) and every step is compared the same way.
+// Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
+// keeps the game's random stream (read the randoms drift field if a comparison still drifts).
+// mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material at the float32
+// positions the GPU computed: not exact, touching pieces lose their front-to-back order and so exact depth ties along
+// where they meet; mirror-dark leaves its unlit guide and opacity-0 lines undrawn (exact, about nothing saved);
+// mirror-ordinary renders its reflection at the ordinary sea's size and cadence (a look change, costed only).
+// boatsBath hides the little boats' static bath and plug: the most merging them could save (not exact).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
 // it is flagged straddle:true with a warning; repeat it.
 import assert from 'node:assert/strict';
@@ -140,7 +147,8 @@ window.__audit = {
     pond: pond.objects, washing: [washing.group, washingBaskets, pinwheels.group, door.group],
     village: village.objects, wood: wood.objects, sleeping: sleeping.objects, birches: birches.objects,
     cottage: cottage.objects, jetty: [homeJetty], piano: [piano.group], mirror: [skyMirror.group],
-    littleBoats: [littleBoats.group], islandCreatures: [creatures.group], meadowCreatures: [hillCreatures.group],
+    littleBoats: [littleBoats.group], boatsBath: ['dream-bathtub','bath-plug'].map(n=>littleBoats.group.getObjectByName(n)),
+    islandCreatures: [creatures.group], meadowCreatures: [hillCreatures.group],
     child: child.objects, cygnet: cygnet.objects, glider: glider.objects, boat: boat.objects,
     flock: flock.objects, rocks: [islandRocks], shoreGrass: [shoreGrass], petals: [petals.mesh], windLines: [lines.batch.mesh],
     rain: [rain.mesh], fireflies: [fireflies.mesh],
@@ -317,12 +325,48 @@ window.__audit = {
     for (const key of variants.includes('actors')?actors:variants)for(const object of this.groups[key]||[]) {
       this.hidden.push([object,object.visible]);object.visible=false;
     }
+    this.mirrorMerge(variants.includes('mirror-merge'));
+    this.mirrorDark(variants.includes('mirror-dark'));
     this.levers(variants);
     this.patchShaders(variants);
     this.noiseTerms(variants);
     this.bareTiles(variants.includes('grass-bare-tiles'));
     this.deckOut(variants.includes('deck-out')?'all':(variants.find(v=>v.startsWith('deck-out-'))||'').slice(9)||null);
     if(this.pairRebake)this.rebake();
+  },
+  // mirror-merge: the sky mirror's pieces placed by translation alone drawn as one mesh per material, each vertex the
+  // float32 sum the GPU would have made of it (a candidate exact merge; on a build that already merges them it throws).
+  mirrorMerge(on) {
+    if(!on)return;
+    if(!this.mirrorMerged){
+      const byMaterial=new Map();
+      for(const o of skyMirror.group.children)if(o.isMesh&&!o.matrixAutoUpdate&&!o.material.transparent&&o.quaternion.equals(new THREE.Quaternion())&&o.scale.equals(new THREE.Vector3(1,1,1))&&o.geometry.index)
+        (byMaterial.get(o.material)??byMaterial.set(o.material,[]).get(o.material)).push(o);
+      this.mirrorMerged=[];
+      for(const [material,meshes] of byMaterial){
+        if(meshes.length<2)continue;
+        const names=Object.keys(meshes[0].geometry.attributes),count=meshes.reduce((n,m)=>n+m.geometry.attributes.position.count,0);
+        const arrays=Object.fromEntries(names.map(n=>[n,new Float32Array(count*meshes[0].geometry.attributes[n].itemSize)]));
+        const index=[];let base=0;
+        for(const m of meshes){const g=m.geometry,t=[m.position.x,m.position.y,m.position.z].map(Math.fround);
+          for(const n of names){const a=g.attributes[n],out=arrays[n];for(let i=0;i<a.count;i++)for(let c=0;c<a.itemSize;c++){const v=a.array[i*a.itemSize+c];out[(base+i)*a.itemSize+c]=n==='position'?Math.fround(v+t[c]):v;}}
+          for(const i of g.index.array)index.push(base+i);base+=g.attributes.position.count;}
+        const geometry=new THREE.BufferGeometry();for(const n of names)geometry.setAttribute(n,new THREE.BufferAttribute(arrays[n],meshes[0].geometry.attributes[n].itemSize));
+        geometry.setIndex(index);const merged=new THREE.Mesh(geometry,material);merged.layers.mask=meshes[0].layers.mask;merged.visible=false;
+        skyMirror.group.add(merged);this.mirrorMerged.push({merged,meshes});
+      }
+      if(!this.mirrorMerged.length)throw Error('Missing patch site: nothing in the sky mirror to merge');
+    }
+    for(const {merged,meshes} of this.mirrorMerged){for(const m of meshes){this.hidden.push([m,m.visible]);m.visible=false;}this.hidden.push([merged,false]);merged.visible=true;}
+  },
+  // mirror-dark: the constellation's lines at opacity 0 and the approach's guide with no light in it left undrawn.
+  mirrorDark(on) {
+    if(!on)return;
+    const dark=[];
+    skyMirror.group.traverse(o=>{if(o.isMesh&&o.material.isMeshBasicMaterial&&o.material.transparent&&o.material.opacity===0)dark.push(o);
+      if(o.isMesh&&o.material.uniforms?.uLit&&o.material.uniforms.uLit.value.toArray().every(v=>v===0))dark.push(o);});
+    if(!dark.some(o=>o.visible))throw Error('Missing patch site: nothing dark in the sky mirror is drawn');
+    for(const o of dark){this.hidden.push([o,o.visible]);o.visible=false;}
   },
   // Look-changing levers, costed only: render scale, MSAA samples, bloom resolution. scale-1.25, msaa-0, bloom-half.
   levers(variants) {
@@ -342,6 +386,9 @@ window.__audit = {
       post.sceneTarget=noDepth?this.alt:o;post.resolveMat.uniforms.tDiffuse.value=post.sceneTarget.texture;this.altOn=noDepth;
     }
     if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
+    // mirror-ordinary: the sky mirror's reflection at the ordinary sea's size and cadence (a look change, costed only).
+    this.mirrorCadence??=[water.mirrorScale,water.mirrorEvery];
+    [water.mirrorScale,water.mirrorEvery]=variants.includes('mirror-ordinary')?[0.25,2]:this.mirrorCadence;
     const w=post.sceneTarget.width,h=post.sceneTarget.height,half=variants.includes('bloom-half');
     const want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];
     if(this.bloomSize?.[0]!==want[0]||this.bloomSize?.[1]!==want[1]){post.bloom.setSize(want[0],want[1]);this.bloomSize=want;}
@@ -589,7 +636,7 @@ window.__audit = {
     scene.traverse(o=>{for(const m of [o.material].flat())if(m?.fragmentShader)mats.add(m);});
     const drawn=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
     const snap=()=>({sources:[...mats].map(m=>[m.vertexShader,m.fragmentShader]),settings:JSON.stringify([pixelRatio,post.samples,post.sceneTarget.uuid,this.bloomSize,
-      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
+      sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed,water.mesh.material.defines.LAND_SKIP])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
@@ -660,7 +707,14 @@ async function open(base,chapter) {
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
   await withoutHotReload(page);
-  if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
+  if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+    let uuid=7654321;window.__uuidRandom=()=>{uuid=uuid+0x6D2B79F5|0;let t=Math.imul(uuid^uuid>>>15,1|uuid);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
+  // three's UUIDs draw from their own stream, so a build that creates more or fewer objects keeps the game's random stream.
+  if(FRAME)await page.route(/\/node_modules\/\.vite\/deps\/three\.module-[^/]*\.js/,async route=>{
+    const response=await route.fetch(),source=await response.text(),from='Math.random() * 4294967295 | 0';
+    assert.equal(source.split(from).length,5,'Missing or ambiguous UUID hook in three');
+    await route.fulfill({response,body:source.split(from).join('window.__uuidRandom() * 4294967295 | 0')});
+  });
   // Readbacks land when the GPU gets to them; mapping each without waiting on its fence delivers it on the frame after its request.
   if(FRAME)await page.route('**/src/gl/readback.ts*',async route=>{
     const response=await route.fetch(),source=await response.text();
