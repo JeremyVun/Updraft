@@ -47,10 +47,11 @@ export function cloudGridGeometry(finest: number): { geometry: THREE.BufferGeome
 const frustum = new THREE.Frustum();
 const viewProjection = new THREE.Matrix4();
 
-/** The six planes of what `camera` sees, for gridUnseen. */
-export function placeView(planes: THREE.Vector4[], camera: THREE.Camera): void {
+/** The six planes of what `camera` sees and its view-projection, for gridUnseen. */
+export function placeView(planes: THREE.Vector4[], matrix: THREE.Matrix4, camera: THREE.Camera): void {
   frustum.setFromProjectionMatrix(viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
   frustum.planes.forEach((p, i) => planes[i].set(p.normal.x, p.normal.y, p.normal.z, p.constant));
+  matrix.copy(viewProjection);
 }
 
 /** Moves each grid to the eye, in steps of two of its own squares. */
@@ -81,19 +82,24 @@ vec2 gridPlace(out float spacing, out float level) {
   return xz;
 }
 uniform vec4 uView[6];
-/** Past each side of the view in clip space, in the order of three's frustum planes. */
-const vec4 OUTSIDE[6] = vec4[6](vec4(2.0, 0.0, 0.0, 1.0), vec4(-2.0, 0.0, 0.0, 1.0), vec4(0.0, -2.0, 0.0, 1.0),
-  vec4(0.0, 2.0, 0.0, 1.0), vec4(0.0, 0.0, 2.0, 1.0), vec4(0.0, 0.0, -2.0, 1.0));
+uniform mat4 uViewProjection;
 /**
- * The side of the view that every triangle round this point lies wholly outside of, for a surface whose heights here
- * lie between lo and hi, or -1. Such a point need not be worked out: put at OUTSIDE of that side, it is clipped too.
+ * Whether every triangle round this point lies wholly outside one side of the view, for a surface whose heights here
+ * lie between lo and hi. Such a point need not be worked out: it goes to unseen(), on the grid at lo, where the
+ * points of every triangle round any point lie past that same side. Its own matrix leaves the seen points'
+ * arithmetic as it was.
  */
-int gridUnseen(float lo, float hi) {
+bool gridUnseen(float lo, float hi) {
   vec4 g = uGrid[int(position.y + 0.5)];
   vec2 xz = g.xy + position.xz * g.z;
   vec3 c = vec3(xz.x, 0.5 * (lo + hi), xz.y), e = vec3(2.0 * g.z, 0.5 * (hi - lo), 2.0 * g.z);
-  for (int i = 0; i < 6; i++) if (dot(uView[i].xyz, c) + uView[i].w < -dot(abs(uView[i].xyz), e) - 1.0) return i;
-  return -1;
+  for (int i = 0; i < 6; i++) if (dot(uView[i].xyz, c) + uView[i].w < -dot(abs(uView[i].xyz), e) - 1.0) return true;
+  return false;
+}
+vec4 unseen(float lo) {
+  vec4 g = uGrid[int(position.y + 0.5)];
+  vec2 xz = g.xy + position.xz * g.z;
+  return uViewProjection * vec4(xz.x, lo, xz.y, 1.0);
 }`;
 
 /** gridHidden(xz, level): whether a finer grid covers this point. */

@@ -48,9 +48,8 @@ out vec3 vTower;
 flat out float vLevel;
 TOP
 void main() {
-  int unseen = gridUnseen(uSurface - 0.5, uSurface + uRise);
-  if (unseen >= 0) {
-    gl_Position = OUTSIDE[unseen];
+  if (gridUnseen(uSurface - 0.5, uSurface + uRise)) {
+    gl_Position = unseen(uSurface - 0.5);
     return;
   }
   float spacing;
@@ -442,9 +441,8 @@ out float vBefore;
 flat out float vLevel;
 BELLY
 void main() {
-  int unseen = gridUnseen(uCloudDeckY.x - 11.0, uCloudDeckY.x + 28.0);
-  if (unseen >= 0) {
-    gl_Position = OUTSIDE[unseen];
+  if (gridUnseen(uCloudDeckY.x - 11.0, uCloudDeckY.x + 28.0)) {
+    gl_Position = unseen(uCloudDeckY.x - 11.0);
     return;
   }
   float spacing;
@@ -703,12 +701,13 @@ export class StairsCloud {
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Vector4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] } };
-  private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 }; uView: { value: THREE.Vector4[] } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Vector4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
+  private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
   /** The parting behind the hull: where its bow has been, newest first, how fresh each point is, and how far along. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
   private trailFrom = new THREE.Vector2(1e5, 1e5);
   private readonly view = { value: Array.from({ length: 6 }, () => new THREE.Vector4()) };
+  private readonly viewProjection = { value: new THREE.Matrix4() };
   private trailAlong = 0;
 
   constructor() {
@@ -734,6 +733,7 @@ export class StairsCloud {
       uSurface: { value: CLOUD.top },
       uRise: { value: 0 },
       uView: this.view,
+      uViewProjection: this.viewProjection,
     };
     this.shape = new TopShape(this.lobes, this.topUniforms.uRoute.value, this.topUniforms.uGate.value, this.topUniforms.uCalmAt.value, this.topUniforms.uFeet.value);
     this.group.add(this.wake.mesh);
@@ -762,6 +762,7 @@ export class StairsCloud {
       uReach: { value: 1500 },
       uStairAt: { value: new THREE.Vector2(flight(BELOW_CLOUD + 1).landing.x, flight(BELOW_CLOUD + 1).landing.z) },
       uView: this.view,
+      uViewProjection: this.viewProjection,
     };
     this.belly = new THREE.Mesh(disc, new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, ...this.bellyUniforms },
@@ -777,7 +778,7 @@ export class StairsCloud {
     this.group.add(this.belly);
     fixInPlace(this.group, this.wake.mesh, this.top, this.belly);
     // Only the points of the grid round which something may be in view are worked out, in each view that draws it.
-    this.top.onBeforeRender = this.belly.onBeforeRender = (_r, _s, camera) => placeView(this.view.value, camera);
+    this.top.onBeforeRender = this.belly.onBeforeRender = (_r, _s, camera) => placeView(this.view.value, this.viewProjection.value, camera);
   }
 
   /**
