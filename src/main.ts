@@ -416,6 +416,7 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   water.mirrorEvery = world.mirrorEvery;
   water.mirrorScale = world.mirrorScale;
   controls.setQualityLevel(name);
+  cloudStairs.setLevel(name, immediate);
 }
 applyWorldQuality(quality.level, true);
 let pixelRatio = quality.level.ratio;

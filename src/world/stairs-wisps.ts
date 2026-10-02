@@ -7,6 +7,8 @@ interface Wisp { p: THREE.Vector3; v: THREE.Vector3; r: number; a: number; age: 
 
 /** How far round the child the streaming cloud reaches: across, below and above. */
 const BOX = { half: 7, below: 2.5, above: 5 } as const;
+/** How much the rags left at a lower detail thicken to make up for those left out: 0 not at all, 1 to the same total. */
+const MAKE_UP = 0.5;
 
 /**
  * The cloud streaming past on the way up through the white: soft rags of it blown across the stair on a gusting
@@ -23,6 +25,11 @@ export class CloudWisps {
   private readonly shown = { value: 0 };
   private readonly centres: THREE.BufferAttribute;
   private readonly alphas: THREE.BufferAttribute;
+  /** How far each rag is drawn, easing to 0 for those a lower detail leaves out. */
+  private readonly keep: number[] = [];
+  private kept: number;
+  private drawn: number;
+  private lift = 1;
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private seed = 1;
@@ -34,6 +41,7 @@ export class CloudWisps {
       const w: Wisp = { p: new THREE.Vector3(), v: new THREE.Vector3(), r: 1, a: 0, age: 0, hold: 0 };
       this.spawn(w, false);
       this.wisps.push(w);
+      this.keep.push(1);
       puffs.push({ x: 0, y: 0, z: 0, r: w.r, a: 0 });
     }
     const geo = puffGeometry(puffs);
@@ -46,6 +54,41 @@ export class CloudWisps {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 7;
     this.mesh.visible = false;
+    this.kept = this.drawn = count;
+  }
+
+  /** Draws only the first `count` rags, easing the rest out, or at once if `immediate`. */
+  setKept(count: number, immediate = false): void {
+    this.kept = Math.max(1, Math.min(this.wisps.length, count));
+    if (!immediate) return;
+    this.thin(Infinity);
+    for (let i = 0; i < this.wisps.length; i++) this.writeAlpha(i);
+    this.alphas.needsUpdate = true;
+  }
+
+  private thin(dt: number): void {
+    const k = 1 - Math.exp(-dt * 2.5);
+    let sum = 0, drawn = 0;
+    for (let i = 0; i < this.wisps.length; i++) {
+      // A rag still hiding something keeps its place.
+      const want = i < this.kept || this.wisps[i].hold > 0 ? 1 : 0;
+      let v = k === 1 ? want : this.keep[i] + (want - this.keep[i]) * k;
+      if (want === 0 && v < 0.01) v = 0;
+      this.keep[i] = v;
+      sum += v;
+      if (v > 0) drawn = i + 1;
+    }
+    this.lift = (this.wisps.length / sum) ** MAKE_UP;
+    if (drawn !== this.drawn) {
+      this.drawn = drawn;
+      this.mesh.geometry.setDrawRange(0, drawn * 6);
+    }
+  }
+
+  private writeAlpha(i: number): void {
+    const w = this.wisps[i];
+    const a = w.a * Math.min(1, w.age / 1.2) * this.keep[i] * this.lift;
+    for (let c = 0; c < 4; c++) this.alphas.setX(i * 4 + c, a);
   }
 
   private random(): number {
@@ -73,8 +116,8 @@ export class CloudWisps {
   /** Draws a few of the rags together round a point for a while, thick enough to hide what is in it. */
   engulf(at: THREE.Vector3, seconds: number): void {
     for (let i = 0; i < 6; i++) {
-      const w = this.wisps[this.next];
-      this.next = (this.next + 1) % this.wisps.length;
+      const w = this.wisps[this.next % this.kept];
+      this.next = (this.next + 1) % this.kept;
       const t = (i / 6) * Math.PI * 2;
       w.p.set(at.x + Math.cos(t) * 0.35, at.y + 0.2 + (i % 2) * 0.35, at.z + Math.sin(t) * 0.35);
       w.v.set(0, 0, 0);
@@ -104,6 +147,7 @@ export class CloudWisps {
   update(dt: number, time: number): void {
     this.shown.value += (this.amount - this.shown.value) * (1 - Math.exp(-dt * 1.5));
     this.mesh.visible = this.shown.value > 0.01;
+    this.thin(this.mesh.visible ? dt : Infinity);
     if (!this.mesh.visible) return;
     const len = Math.hypot(this.wind.x, this.wind.z) || 1;
     this.wisps.forEach((w, i) => {
@@ -120,11 +164,8 @@ export class CloudWisps {
       if (w.hold <= 0 && (downwind > BOX.half || Math.abs(dx) > BOX.half * 1.4 || Math.abs(dz) > BOX.half * 1.4 || dy < -BOX.below - 1 || dy > BOX.above + 1)) {
         this.spawn(w, true);
       }
-      const fade = Math.min(1, w.age / 1.2);
-      for (let c = 0; c < 4; c++) {
-        this.centres.setXYZ(i * 4 + c, w.p.x, w.p.y, w.p.z);
-        this.alphas.setX(i * 4 + c, w.a * fade);
-      }
+      for (let c = 0; c < 4; c++) this.centres.setXYZ(i * 4 + c, w.p.x, w.p.y, w.p.z);
+      this.writeAlpha(i);
     });
     this.centres.needsUpdate = true;
     this.alphas.needsUpdate = true;

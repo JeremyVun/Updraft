@@ -6,8 +6,9 @@ import type { PointerInput } from '../input/pointer';
 import type { Deck } from './decks';
 import { tuning } from '../tuning';
 import { fixInPlace } from '../gl/fixed';
+import type { QualityLevelName } from '../gl/quality';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { HAZE_SHADE_GLSL, hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
+import { HAZE_SHADE_GLSL, hazeStride, hazeUnderFlight, hazeUnderLanding } from './stairs-haze';
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
@@ -408,6 +409,13 @@ function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THR
   return haze;
 }
 
+/** Rags of cloud streaming through the white, and how much longer each step through the haze is, at each level. */
+const FULL_DETAIL = { wisps: 56, stride: 1 };
+const LOW_DETAIL = { wisps: 24, stride: 2 };
+const DETAIL: Record<QualityLevelName, { wisps: number; stride: number }> = {
+  ultra: FULL_DETAIL, high: FULL_DETAIL, medium: { wisps: 36, stride: 1.4 }, low: LOW_DETAIL, last: LOW_DETAIL,
+};
+
 function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }, trueDepth = { value: 0 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     defines: trick ? { TRICK: 1 } : {},
@@ -480,6 +488,7 @@ export class CloudStairs {
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private time = 0;
+  private stride = 1;
 
   constructor() {
     this.group.name = 'stairs-in-the-clouds';
@@ -567,6 +576,14 @@ export class CloudStairs {
     this.group.add(this.wisps.mesh);
     fixInPlace(this.group, standing, this.trick, this.wisps.mesh);
     this.pose();
+  }
+
+  /** Fewer rags in the white and fewer steps through the haze below Ultra and High, eased in unless `immediate`. */
+  setLevel(name: QualityLevelName, immediate = false): void {
+    const detail = DETAIL[name];
+    this.wisps.setKept(detail.wisps, immediate);
+    this.stride = detail.stride;
+    if (immediate) hazeStride.value = this.stride;
   }
 
   /** The next flight the stair is waiting for, or null once all of them are home. */
@@ -720,6 +737,8 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     this.wisps.update(dt, time);
+    hazeStride.value += (this.stride - hazeStride.value) * (1 - Math.exp(-dt * 2.5));
+    if (Math.abs(this.stride - hazeStride.value) < 1e-3) hazeStride.value = this.stride;
     this.bank.update(dt);
     this.cloud.update(dt, camera);
     this.hideHazeInTheWhite(camera);
