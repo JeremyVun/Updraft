@@ -220,3 +220,97 @@ with `depth: true`, but only the grade quad draws to the screen).
 About 150 MiB does not change with settings (grass tables, atlases, bakes, sims, room geometry). Geometry uploads on
 first draw, so the stairs' 49 MiB of buffers are resident from the stairs on (and on the island, because warm-up draws
 them). The scene target now has a stencil (the boat's waterline): Depth32Float_Stencil8 on Apple GPUs.
+
+## Phase 7: more effects to switch off (2026-10-03, `main` at 13f8b13)
+
+A survey for Jeremy; nothing here is built. Tools: `tools/frame-profile.mjs` (branch `perf-final-p7`) gains the
+candidates as ablations and levers (`cloud-shadow-off`, `sky-bank`, `sky-detail`, `grass-fog-root`, `grass-near-<f>`,
+`grass-near-5seg`, `rt-r11`, `deckless-`, `fragflat-` and `bones-frozen-`/`bones-early-<child|cygnet>`, `uploads-mid`),
+`FRAME_PASS` and `PASS_VARIANTS`; `tools/upload-census.mjs` is new.
+
+### Method
+
+- Low: `RATIO=0.85 MSAA=2 LEVEL=low`; Medium: `RATIO=1 MSAA=2 LEVEL=medium`; `GPU_QUIET=1`. 1376×1032 page at device
+  scale 2.
+- **Whole-frame pairs were unusable this time.** Other projects ran GPU work throughout (an Android emulator, two
+  builds of a game, Brave, Metal's shader compiler): drained pairs read `none` at 1.1% and 11.3% at the island and
+  straddled at every fixture. So every candidate is timed with `FRAME_PASS`: the whole frame but the wind step
+  (reflection, scene, post) drawn back to back 30 times and drained, the baseline and each candidate in ABBA order
+  over 30 to 60 rounds, the saving the median of each round's paired difference. `none` read −1.5% to +1.9% per
+  fixture (0.3% weighted) with interquartile ranges of ±1 to ±4% (±10% in one sleeping run): treat under about 1%
+  weighted, or 3% in one room, as noise.
+- A throughput frame has no completion overhead and no wind step, so its milliseconds are smaller than the drained
+  frames above (weighted Low frame 5.1 ms here against 7.4 ms drained in the census) and inflated by whatever else
+  ran. Percentages are the robust figure; milliseconds are each percentage times the quietest frame seen at that
+  fixture.
+- Isolated passes where they apply (`POST_PASSES`, `REFLECTION_PASS`, `WATER_PASS` with `PASS_VARIANTS`).
+- Weighted by the minutes above (39.5): crossings are the mean of `lines` and `sea`; `stairs:waiting` stands for all
+  2.5 minutes of the stairs below the cloud (waiting, last flight, loop, in the white, fog), `stairs:top` and
+  `stairs:sail` for theirs. Room-specific candidates count only where they apply (the mirror's reflection on the
+  crossing to it, the mirror merge in its room, the sea above the stairs' cloud at the top and the sail, the sea
+  under land beyond the window at home).
+- Stills at Low (the level where each would first apply), the frozen frame drawn with and without the candidate;
+  `/tmp/updraft-pf-p7-shots/`.
+
+### Ranked list for Jeremy
+
+Ranked by the saving weighted by minutes at Low (the weakest level), with Medium beside it. ms are on this Mac
+(throughput frame, about 5.1 ms weighted at either level under the other load), so read the percentages. "Every
+level" means it would change Ultra and High too. Stills: before | after, in `/tmp/updraft-pf-p7-shots/`.
+
+| # | Candidate | Level | Low, weighted | Medium, weighted | Largest room | On screen | Still | Verdict |
+|---|---|---|---:|---:|---|---|---|---|
+| 1 | Grass fog worked out once per blade (at its root) instead of at every vertex | Medium and Low; every level if wanted | 4.5% (0.28 ms), upper bound | 4.4% (0.24 ms) | Sleeping 10.5% (Low), summit 11.1% (Medium) | Nothing visible: at most 4/255 on 9 pixels | `grass-fog-blade-meadow.png` | **Recommend.** The real saving is a little under the bound: a small per-frame pass works the fog out per blade (1 blade per 9 to 13 vertices) |
+| 2 | The child's bone texture uploaded before the frame's passes instead of in the middle of the scene pass (exact) | Every level | +4.0% (0.18 ms), but −11.7% on top of the stairs and −7.6% on the sail | +2.0% (0.09 ms), −1 to −2% in five rooms | Summit 10.5% (Low), mirror 13.1% (Medium) | Nothing (pixel for pixel) | none needed | **Not yet.** Real but its sign depends on the room (see below); measure on the iPad before building |
+| 3 | The near grass level ends 25% sooner (the quarter-density middle level takes over at 39 m, not 52 m) | Medium and Low | 4.0% (0.23 ms) | 3.7% (0.20 ms) | Washing 12.5% / 11.3% | The middle distance of every meadow visibly thinner and softer | `grass-near-reach-meadow.png`, `grass-near-reach-washing.png` | **Do not recommend:** it is the grass thinning Jeremy has ruled against |
+| 4 | Near blades drawn with 5 segments instead of 6 | Low | 3.2% (0.19 ms) | 1.7% (0.10 ms), in noise | Summit 7.1% / 6.7% | The same meadow at a glance; at 2× single blades bend a little differently (no blade lost) | `grass-near-5seg-meadow.png` (2× crop) | **Maybe, Low only:** Jeremy's eye on the still decides |
+| 5 | Scene, resolve, `post.clean` and bloom targets as `R11F_G11F_B10F` instead of half-float RGBA | Every level (look identical) | 2.9% (0.12 ms); MSAA clear+resolve alone 0.25–0.28 → 0.11–0.13 ms | 4.8% (0.25 ms) | Mirror 5.3% (Low), drowned 10.6% (Medium) | Nothing visible: at most 3–5/255, no banding in the night sea, the Wood or the stairs (the grade's grain hides the steps); about −16 MiB at Low, about −60 MiB at Ultra | `rt-r11-night-sea.png`, `rt-r11-night-sea-crop.png`, `rt-r11-wood.png`, `rt-r11-stairs-top.png` | **Recommend**, at every level (Medium and Low at least) |
+| 6 | The sea without its ripples | Medium and Low | 2.7% (0.11 ms); sea pass alone −0.18 to −0.20 ms | 4.0% (0.20 ms) | Open sea 7.9%, stairs below the cloud 8.8% | The sea goes glassy: the sun's track turns into a smooth streak | `sea-ripples-off.png`, `sea-ripples-off-crop.png` | **Do not recommend:** a large visible loss |
+| 7 | Sky clouds shaded from one noise octave (includes #9) | Medium and Low | 2.1% (0.09 ms); the look part alone 0.9% | 3.4% (0.17 ms); look part 0.9% | Mirror 6.7% (Low), open sea 5.7% (Medium) | Clouds lose their lit/shaded modelling and shift shape | `sky-detail-summit.png`, `sky-detail-sea.png` | **Do not recommend:** take #9, which is most of it |
+| 8 | No cloud shadows (full sun everywhere) | Medium and Low | 1.2% (0.06 ms) | 1.7% (0.09 ms) | Washing 3.5% (Low), stairs below the cloud 5.6% (Medium) | Land brighter and flatter; the drifting shadows go | `cloud-shadows-off-washing.png` | **Do not recommend:** visible for a small saving |
+| 9 | The sky's storm bank skipped while there is no storm and no lightning (exact) | Every level | 1.2% (0.06 ms) | 2.6% (0.13 ms) | Summit 4.4% (Low), jetty 4.7% (Medium) | Nothing (0 pixels at the island, 1/255 on 3 channels at the crossing) | none needed | **Recommend** as a free win (one `fbm` per sky and fog ray skipped behind `uStormCover`/`uLightning.w`) |
+| 10 | Sea and terrain not drawn above the stairs' cloud during the top and the sail | Every level | 1.1% (0.055 ms): top 13.3%, sail 19.3% | 1.7% (0.10 ms): top 20.4%, sail 28.2% | Sail | Nothing visible at either fixture (at most 2/255) | `stairs-top-no-sea.png`, `stairs-sail-no-sea.png` | **Recommend, behind a check along the whole top and sail** (phase 3: nothing yet proves it hidden; its worst was 3/255 at the deck's frayed edge). Fits "no loss of visual quality" |
+| 11 | The sky mirror's reflection at the ordinary sea's size and cadence until near the flat | Every level | 0.2% (sea 3.1%); the pass alone 0.57–0.60 → 0.40 ms each time it is drawn (alternate frames at Low) | 0.9% (sea 13.6%) | Crossing to the mirror | Phase 3b-i: up to 27/255 on sea pixels | none: a frozen-frame capture reuses the last reflection, so both sides matched | **Maybe, Medium and Low:** worth it only on that 2.5-minute crossing; needs a still from a running capture |
+| 12 | The sea returning early under land beyond the window | Every level | 0.3%, upper bound (jetty 4.0%, summit 3.7%) | 0.7% (summit 10.0%) | Home | Not exact (would need the distant atlas and a waterline guarantee) | none: the bound paints the far sea black | **Do not recommend now:** a build for under 1% weighted |
+| 13 | Sea glints off | Medium and Low | 0.7% | — | Summit 2.0% | — | — | **Do not recommend** (under 1%) |
+| 14 | Child's mesh simplified when small on screen | Every level | Under 0.9% in any room (her whole cost minus the bone upload and her shading) | — | — | — | — | **Do not recommend:** her triangles are not what costs (see below) |
+| 15 | Wind and life readbacks every other frame | Every level | CPU 0.09–0.11 ms a frame (readbacks are 0.18–0.23 ms, `getBufferSubData` 0.12–0.19) | same | — | A feel change: wind under the pointer reaches the piano, curtains and embers a frame later (33 ms at Low) | none (feel) | **Do not recommend** |
+| 16 | Creatures reading the baked height copy | Every level | CPU 0.02–0.06 ms (phase 1b) | same | Washing, Meadow | Animals move by centimetres | none | **Do not recommend** (too small) |
+| 17 | Petals and small flying effects (petals, wind lines, starlings, flock, fireflies) hidden | Medium and Low | −0.02% (nothing) | — | — | — | — | **Do not recommend** |
+| 18 | The sky mirror's pieces merged | Every level | 0.15% | −0.04% | — | Phase 3b-i: single pixels up to 7/255 | — | **Do not recommend** at these levels |
+
+Upper bounds costed but not proposed, because nothing cheaper is defined: the boat hidden 1.4% (Low) / 1.9% (Medium),
+open sea 5–6.6%, and a flat-coloured boat saves as much, so its cost is its shading of the player's own boat; the
+cygnet hidden 2.9% / 1.7%, her shading under 2%. Deck-free programs for the child, cygnet and boat (exact) read
+0.3% weighted, in noise: not worth a variant axis (each costs boot time).
+
+### What the census showed
+
+- **The child costs 5–16% of every Low frame** (island 6.9%, crossings 11%, open sea 14.5%, mirror 16.4%, summit
+  14.3%) though she covers 800 to 9,000 pixels. Split at four fixtures (50 rounds, a quiet run): her bone texture's
+  upload 3–8%, her fragment program 2–7%, her mesh 0.7–0.9%.
+- **The bone upload:** `tools/upload-census.mjs` finds one texture write in the middle of a pass in every room: three
+  re-uploads the child's bone texture (her `SkinnedMesh`, 26,478 vertices) at her first draw in the scene pass, and
+  again in the reflection pass. Buffer writes mid-pass (the scarf, kites, the plane) cost nothing measurable
+  (`uploads-mid` 0.4–1.2%). Uploading the bones before the frame (`bones-early-child`) is pixel for pixel and saves
+  2–9% in most rooms, but costs 12% on top of the stairs and 8% on the sail at Low (Medium: −1 to −2% in five rooms):
+  with the stairs' cloud top hidden, frozen bones save again (+1%), so the mid-pass upload's split of the pass is what
+  relieves the cloud top (most likely the tiler's parameter buffer overflowing on its 116k-vertex grid). On the Mac
+  this is net +4.0% at Low, +2.0% at Medium. Its sign may differ on the iPad's GPU; measure there first. It also
+  shows the cloud top alone is 44% of a Low frame on top of the stairs (`stairsCloudTop`).
+- **Her fragment program:** a flat colour in its place saves 2–7% though she is small on screen; per-pixel arithmetic
+  cannot explain that (likely the program's size and latency). A lead for a closer look, not a look change.
+
+### Not measured
+
+- A still for #11 (see the row); stills for #2 and #9 (exact) and #14–18 (not proposed or no picture).
+- `stairs:climb`, `loop`, `cloud` and `fog`: their 1.6 minutes are weighted with `stairs:waiting`'s numbers.
+- iPad numbers; frame-time spikes; energy.
+
+### What phase 5b could move
+
+5b thins the wisps and haze at Medium and Low. Below the cloud (`stairs:waiting`, standing for 2.5 minutes) the haze
+and wisps were 13–37% of the frame in the census, so 5b shrinks that frame and raises every candidate's percentage
+there: ripples (8.0% Low, 8.8% Medium), cloud shadows (2.6%, 5.6%), the R11F targets (3.7%, 4.9%), the near grass
+(#3, #4) and the child's bones (2.4%, −2.1%). On top of the stairs and the sail the wisps and haze were 0–3%, so #10
+(13.3–28.2%) barely moves (it would rise slightly).
