@@ -85,7 +85,7 @@ class Controls {
 
   /** The indicator follows the level in use, including automatic governor changes. */
   setQualityLevel(name: QualityLevelName): void {
-    this.renderedQuality = name === 'last' ? 'low' : name;
+    this.renderedQuality = name;
     this.syncQualityIndicator();
   }
 

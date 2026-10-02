@@ -12,7 +12,7 @@ import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const out = process.env.OUT ?? '/tmp/updraft-quality-budget';
 const chapter = process.argv[2] ?? 'island';
-const ORDER = ['ultra', 'high', 'medium', 'low', 'last'];
+const ORDER = ['ultra', 'high', 'medium', 'low'];
 const LOAD = `
 const loadMaterial = new THREE.ShaderMaterial({
   uniforms: { uLoad: { value: 0 } },
@@ -109,15 +109,15 @@ try {
       failedAt[changes.at(-1).from] ??= load;
       restUntil = Date.now() + 4000;
     }
-    if (s.name === 'last') return false;
+    if (s.name === 'low') return false;
     if (Date.now() > restUntil) { load *= 1.03; await setLoad(load); }
   });
   assert.equal(path('descent'), ORDER.join(' '), 'under a growing load Auto steps down through every level in order');
 
-  // The load that pushed Low over stays: the last step holds it, with at most one failed look back at Low.
+  // The load that pushed Medium over stays: Low holds it, with at most one failed look back at Medium.
   phase = 'hold';
   await watch(25000);
-  assert(during('hold').length <= 2, `the last step holds under the load that needed it: ${path('hold')}`);
+  assert(during('hold').length <= 2, `Low holds under the load that needed it: ${path('hold')}`);
 
   // The load lifts: Auto climbs back through every level and stays at the top.
   phase = 'climb';
@@ -132,7 +132,7 @@ try {
   await watch(15000);
   assert.equal(during('top').length, 0, 'back at Ultra, Auto stays there');
 
-  // A load Medium cannot carry at 60 fps but Low can at 30: Auto settles at Low and does not swing between them.
+  // A load Medium cannot carry but Low can: Auto settles at Low and does not swing between them.
   phase = 'boundary';
   await setLoad(failedAt.medium * 1.15);
   await watch(75000);
@@ -140,15 +140,15 @@ try {
   const settled = boundary.findIndex(change => change.to === 'low');
   assert(settled >= 0, `Auto did not settle at Low: ${path('boundary')}`);
   const after = boundary.slice(settled + 1);
-  assert(after.every(change => change.to === 'low' || change.to === 'medium'), `a failed climb out of 30 fps returns to Low, never below: ${path('boundary')}`);
-  assert(after.filter(change => change.to === 'medium').length <= 2, `failed climbs into 60 fps back off: ${path('boundary')}`);
+  assert(after.every(change => change.to === 'low' || change.to === 'medium'), `a failed climb out of Low returns to Low, never below: ${path('boundary')}`);
+  assert(after.filter(change => change.to === 'medium').length <= 2, `failed climbs into Medium back off: ${path('boundary')}`);
   assert.equal(last, 'low', `Auto rests at the level that holds: ${path('boundary')}`);
 
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ chapter, failedAt: Object.fromEntries(Object.entries(failedAt).map(([k, v]) => [k, Math.round(v)])),
-    descent: path('descent'), hold: path('hold') || 'last', climb: path('climb'), climbSeconds: Math.round((topAt - liftedAt) / 100) / 10,
+    descent: path('descent'), hold: path('hold') || 'low', climb: path('climb'), climbSeconds: Math.round((topAt - liftedAt) / 100) / 10,
     boundary: path('boundary'), trace: `${out}-auto.json` }));
-  console.log('Auto under a throttled GPU: Ultra, High, Medium, Low and the last step in order, holding under load, climbing back one level at a time, and resting at Low where Medium cannot hold 60 fps.');
+  console.log('Auto under a throttled GPU: Ultra, High, Medium and Low in order, holding under load, climbing back one level at a time, and resting at Low where Medium cannot hold.');
 } finally {
   await fs.writeFile(`${out}-auto.json`, JSON.stringify({ chapter, changes, failedAt, rows: rows.map(row => JSON.stringify(row)) }, null, 1));
   await close();

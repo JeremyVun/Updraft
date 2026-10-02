@@ -18,7 +18,7 @@ try {
       const response = await route.fetch(); let body = await response.text();
       for (const [a, b] of [
         ['frameTiming(params.shot ? 1 / 60 : realDt)', 'frameTiming(realDt)'],
-        ['!params.shot && !pacer.due(now, quality.frameRate)', '!pacer.due(now, quality.frameRate)'],
+        ['!params.shot && !pacer.due(now)', '!pacer.due(now)'],
         ['params.shot ? now - last : pacer.intervalMs', 'pacer.intervalMs'],
       ]) { assert(body.includes(a), `Missing production hook: ${a}`); body = body.replace(a, b); }
       body += '\nwindow.__resetPacer = now => { last = now; pacer.reset(now); quality.reset(now); };';
@@ -44,8 +44,7 @@ try {
       wrap(g.story, 'update', () => updates++);
       for (const mode of ['ultra', 'low']) for (const hz of [120, 144, 60, 30]) {
         g.quality.setMode(mode, __clock);
-        // Settle a rate change before establishing the one-second measurement window.
-        __drive(1000 / hz); __drive(1000 / g.quality.frameRate);
+        __drive(1000 / hz); __drive(1000 / 60);
         __resetPacer(__clock);
         const startTime = __stats.time;
         windTicks = renders = audio = updates = 0;
@@ -71,7 +70,7 @@ try {
     });
     for (const row of rows) {
       if (row.hz) {
-        assert.equal(row.renders, Math.min(row.hz, row.mode === 'low' ? 30 : 60), JSON.stringify(row));
+        assert.equal(row.renders, Math.min(row.hz, 60), JSON.stringify(row));
         assert.equal(row.audio, row.renders); assert(Math.abs(row.windTicks - 60) <= 1, JSON.stringify(row));
         assert.equal(row.ratio, row.mode === 'ultra' ? 1.5 : .85);
         assert(Math.abs(row.elapsed - 1) < 1e-8, JSON.stringify(row)); assert(row.finite);

@@ -411,9 +411,8 @@ function hazeUnder(f: Flight, amount: number, origin = new THREE.Vector3()): THR
 
 /** Rags of cloud streaming through the white, and how much longer each step through the haze is, at each level. */
 const FULL_DETAIL = { wisps: 56, stride: 1 };
-const LOW_DETAIL = { wisps: 24, stride: 1.5 };
 const DETAIL: Record<QualityLevelName, { wisps: number; stride: number }> = {
-  ultra: FULL_DETAIL, high: FULL_DETAIL, medium: { wisps: 36, stride: 1.25 }, low: LOW_DETAIL, last: LOW_DETAIL,
+  ultra: FULL_DETAIL, high: FULL_DETAIL, medium: { wisps: 36, stride: 1.25 }, low: { wisps: 24, stride: 1.5 },
 };
 
 function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }, trueDepth = { value: 0 }): THREE.ShaderMaterial {

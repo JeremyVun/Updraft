@@ -81,7 +81,6 @@ try {
       'high high Graphics quality: Auto (High)',
       'medium medium Graphics quality: Auto (Medium)',
       'low low Graphics quality: Auto (Low)',
-      'last low Graphics quality: Auto (Low)',
     ]);
     assert.equal(await page.locator('[data-mode="auto"]').getAttribute('aria-checked'),'true');
     await page.evaluate(()=>{

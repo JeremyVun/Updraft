@@ -15,8 +15,8 @@ owns the game's events. There is no separate backend or database.
 | `game_failed` | Startup rejection, uncaught error or rejection, a frame-loop exception, a failed audio start, WebGL loss | phase (`boot`, `runtime`, `promise`, `graphics`, `audio`) and coarse error kind, once per pair per page |
 | `recovery_requested` | Graphics recovery button | none |
 
-`level` is the name of the quality level in use: `ultra`, `high`, `medium`, `low` or `last` (the step below Low that
-only Auto reaches); it says what is rendered, not whether the player chose it or Auto did.
+`level` is the name of the quality level in use: `ultra`, `high`, `medium` or `low`; it says what is rendered, not
+whether the player chose it or Auto did.
 
 Every event carries build revision, environment (`production` or `qa`) and chapter. Dimensions are bounded
 categories. FPS is the average over the sample window, not a percentile; windows reset on hide, chapter and quality
