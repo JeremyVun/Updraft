@@ -205,6 +205,7 @@ window.__audit = {
     return {data:btoa(binary),png:capture?this.png(this.pixels):undefined};
   },
   install() {
+    this.versions=new Map();scene.traverse(o=>{for(const a of Object.values(o.geometry?.attributes??{}))this.versions.set(a,a.version);});
     const split=['birchesTrunks','birchesCanopy','birchesLitter','birchesScarf','birchesLeaves'].flatMap(k=>this.groups[k]);
     this.groups.birchesOther=birches.objects.filter(o=>!split.includes(o));
     const owners = new Map();
@@ -459,9 +460,15 @@ window.__audit = {
       }
     }
     // bones-frozen-<group>: that group's skeletons stop re-uploading their bone textures (unchanged in a frozen frame).
-    this.skeletons??=new Map();
+    // uploads-mid: every vertex attribute the running game rewrote during the census is uploaded again on each draw, as
+    // the game does (the draw sees it on first use, mid-pass); the baseline uploads none.
+    this.uploadsMid=variants.includes('uploads-mid')?[...this.versions??[]].filter(([a,v])=>a.version!==v).map(([a])=>a):null;
+    if(this.uploadsMid&&!this.uploadsMid.length)throw Error('Missing patch site: no attribute changed during the census');
+    // bones-early-<group>: the fix's cost, the bones worked out and uploaded before each frame's first pass, not mid-pass.
+    this.skeletons??=new Map();this.bonesEarly=[];
     for(const name of ['child','cygnet']){
-      const frozen=variants.includes('bones-frozen-'+name);
+      const early=variants.includes('bones-early-'+name),frozen=early||variants.includes('bones-frozen-'+name);
+      if(early)for(const root of this.groups[name]||[])root?.traverse(o=>{if(o.isSkinnedMesh&&!this.bonesEarly.includes(o.skeleton))this.bonesEarly.push(o.skeleton);});
       for(const root of this.groups[name]||[])root?.traverse(o=>{if(!o.isSkinnedMesh)return;const s=o.skeleton;
         if(!this.skeletons.has(s))this.skeletons.set(s,s.update);s.update=frozen?()=>{}:this.skeletons.get(s);});
     }
@@ -764,6 +771,8 @@ window.__audit = {
   },
   draw(sim=true) {
     renderer.info.reset();
+    for(const s of this.bonesEarly||[]){this.skeletons.get(s).call(s);renderer.initTexture(s.boneTexture);}
+    for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
@@ -791,7 +800,7 @@ window.__audit = {
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1,
-      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join()])});
+      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
