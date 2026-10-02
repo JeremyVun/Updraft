@@ -53,6 +53,33 @@ async function check() {
       if (worst > 0.003) throw new Error(`Grass transition spike: ${density}, ${worst}, endpoint ${endpointJump}`);
       results.push({ density, reach, blades: grass.bladesDrawn, tiles: grass.lods.map(l => `${l.count}/${l.spec.maxTiles}`).join(' '), worst, endpointJump, start, fromFull: diff(full, read()).mean });
     }
+    // The near blades' extra segment closing for Low and opening again; the swap to the five-segment form shows nothing.
+    for (const segments of [5, 6]) {
+      const before = read();
+      grass.setNearSegments(segments);
+      const start = diff(before, read());
+      if (start.mean > 0.00002) throw new Error(`Segment change popped at start: ${JSON.stringify(start)}`);
+      let previous = read(), worst = 0;
+      for (let i = 0; i < 61; i++) {
+        grass.update(rig.camera, 1 / 60); grass.bake(renderer);
+        const current = read();
+        worst = Math.max(worst, diff(previous, current).mean);
+        previous = current;
+      }
+      if (renderer.info.programs.length !== programs) throw new Error('A segment change compiled a program');
+      if (worst > 0.003) throw new Error(`Segment transition spike: ${segments}, ${worst}`);
+      let swap;
+      if (segments === 5) {
+        const geo = grass.lods[0].geo, { start: from, count } = geo.drawRange;
+        if (!from) throw new Error('Five segments not swapped in');
+        const five = read();
+        geo.setDrawRange(0, from);
+        swap = diff(five, read());
+        geo.setDrawRange(from, count);
+        if (swap.mean > 0.00002) throw new Error(`Swapping in five segments changed the meadow: ${JSON.stringify(swap)}`);
+      }
+      results.push({ segments, worst, start, swap, fromFull: diff(full, read()).mean });
+    }
     const restored = diff(full, read());
     if (restored.changed) throw new Error(`Restoring full grass changed pixels: ${JSON.stringify(restored)}`);
     const at = (density, reach) => results.find(r => r.density === density && r.reach === reach);
@@ -60,7 +87,7 @@ async function check() {
     if (at(0.5, 1).fromFull < at(1, 1).fromFull * 1.5) throw new Error('Half density drew no less grass than full');
     return { fullBlades, results, restored };
   } finally {
-    grass.setQuality(1, 1.15, true); grass.update(rig.camera); grass.bake(renderer);
+    grass.setQuality(1, 1.15, true); grass.setNearSegments(6, true); grass.update(rig.camera); grass.bake(renderer);
     renderer.setRenderTarget(null); target.dispose();
   }
 }

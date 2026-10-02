@@ -2,6 +2,7 @@ import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
 import { CLOUD_DECK, register } from '../gl/variants';
 import { passJob, type CompileJob } from '../gl/boot';
+import { simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -317,6 +318,7 @@ uniform float uShrinkBand;
 uniform float uDensity;
 uniform float uDensityPrevious;
 uniform float uQualityBlend;
+uniform float uFewer;
 float densityAt(float dist) {
   return mix(mix(1.0, uLevelDensity.x, smoothstep(uRings.x, uRings.y, dist)), uLevelDensity.y, smoothstep(uRings.z, uRings.w, dist));
 }
@@ -336,7 +338,7 @@ float qualityCloseFor(vec2 root, float dist, float density) {
 float bladeClose(vec2 root, float dist) {
   // Close the extra segment before changing populations; the coarser blade is then identical.
   float detail = mix(qualityCloseFor(root, dist, uDensityPrevious), qualityCloseFor(root, dist, uDensity), uQualityBlend);
-  return max(smoothstep(uClose.x, uClose.y, dist), detail);
+  return max(max(smoothstep(uClose.x, uClose.y, dist), detail), uFewer);
 }
 float widthAt(float dist) {
   return mix(mix(1.0, uLevelWidth.x, smoothstep(uRings.x, uRings.y, dist)), uLevelWidth.y, smoothstep(uRings.z, uRings.w, dist));
@@ -357,6 +359,40 @@ float qualityStanding(float rank, float share, float dist, vec2 root) {
   return mix(standing(rank, before, dist), standing(rank, after, dist), uQualityBlend);
 }
 `;
+
+/** Where a blade stands: on frozen sward it is set deeper, so its short stem rises out of the rime. */
+const BLADE_ROOT_GLSL = /* glsl */ `
+vec3 bladeRoot(vec2 root2, float groundH) {
+  return vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
+}
+`;
+
+/**
+ * Each blade's fog, worked out once a frame rather than at every vertex of the blade. Blades the blade shader
+ * collapses are skipped, with a margin so that every blade it draws has its fog.
+ */
+const FOG_FRAG = /* glsl */ `
+uniform vec3 uFogEye;
+// Drawn as a full-screen pass, whose camera is not the eye.
+#define cameraPosition uFogEye
+${ATMO_GLSL}
+${BLADE_THIN_GLSL}
+${BLADE_ROOT_GLSL}
+uniform sampler2D uRootTex;
+uniform sampler2D uShapeTex;
+
+void main() {
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  vec4 root = texelFetch(uRootTex, at, 0);
+  float dist = length(root.xy - uGrassEye);
+  vec4 shape = texelFetch(uShapeTex, at, 0);
+  if (root.w >= densityAt(dist) * bladeDensity(root.xy, dist) * shape.x + 1e-3) {
+    gl_FragColor = vec4(0.0);
+    return;
+  }
+  // A quarter of the way up is where one fog for the whole blade comes closest to the fog along it.
+  gl_FragColor = fogOf(bladeRoot(root.xy, root.z) + vec3(0.0, shape.y * 0.25, 0.0), 1.0);
+}`;
 
 /**
  * The blade table: everything about a blade that does not change from vertex to vertex or frame to frame is
@@ -494,7 +530,9 @@ uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
 uniform sampler2D uTintTex;
 uniform sampler2D uFlowerTex;
+uniform sampler2D uFogTex;
 ${BLADE_THIN_GLSL}
+${BLADE_ROOT_GLSL}
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vSideDir;
@@ -540,7 +578,7 @@ void main() {
   float flower = fl.y * step(0.5, life);
   float petalClass = fl.z;
   h *= 1.0 + flower * fl.w;
-  vec3 rootPos = vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
+  vec3 rootPos = bladeRoot(root2, groundH);
 
   vec2 uv = domainUv(root2);
   vec4 ground = groundAt(root2);
@@ -580,7 +618,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(world, 1.0);
+  vFog = texelFetch(uFogTex, at, 0);
   vWorld = world;
   vT = t;
   vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
@@ -598,6 +636,7 @@ ${RIME_GLSL}
 ${BLADE_RAND_GLSL}
 ${BLADE_LOD_GLSL}
 ${BLADE_THIN_GLSL}
+${BLADE_ROOT_GLSL}
 in vec2 aTile;
 uniform float uTileSize;
 out vec3 vWorld;
@@ -659,6 +698,7 @@ void main() {
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
+  float fogRise = h * 0.25;
   float stand = qualityStanding(rank, share, dist, root2);
   h *= mix(0.72, 1.0, life) * stand;
   float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * widthAt(dist) * stand;
@@ -667,7 +707,7 @@ void main() {
   float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2))) * step(0.5, life);
   float petal = gr_rand(s);
   h *= 1.0 + flower * (0.2 + 0.5 * pasture);
-  vec3 rootPos = vec3(root2.x, groundH - mix(0.12, ${glsl(SLEEP.rootDepth)}, 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})))), root2.y);
+  vec3 rootPos = bladeRoot(root2, groundH);
 
   vec4 ground = groundAt(root2);
   vec4 bend = texture(uBendTex, uv);
@@ -709,7 +749,7 @@ void main() {
   vTint = tint;
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = fogOf(world, 1.0);
+  vFog = fogOf(rootPos + vec3(0.0, fogRise, 0.0), 1.0);
   vWorld = world;
   vT = t;
   vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
@@ -811,23 +851,27 @@ export function tileUnclipped(x: number, z: number, margin: number, rooms: THREE
 
 /**
  * x is the side, y the height along the blade. z is the height the vertex slides to as the blade nears the next
- * level: the lowest segment closes up, leaving the next level's blade exactly (one segment fewer).
+ * level: the lowest segment closes up, leaving the next level's blade exactly (one segment fewer). Each form of the
+ * blade takes its own index range, in order.
  */
-function bladeTemplate(segments: number, closes: boolean): THREE.BufferGeometry {
+function bladeTemplate(...forms: [segments: number, closes: boolean][]): THREE.BufferGeometry {
   const pos: number[] = [];
-  for (let i = 0; i < segments; i++) {
-    const t = i / segments;
-    const closed = closes ? Math.max(i - 1, 0) / (segments - 1) : t;
-    pos.push(-1, t, closed, 1, t, closed);
-  }
-  pos.push(0, 1, 1);
   const index: number[] = [];
-  for (let i = 0; i < segments - 1; i++) {
-    const a = i * 2;
-    index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  for (const [segments, closes] of forms) {
+    const first = pos.length / 3;
+    for (let i = 0; i < segments; i++) {
+      const t = i / segments;
+      const closed = closes ? Math.max(i - 1, 0) / (segments - 1) : t;
+      pos.push(-1, t, closed, 1, t, closed);
+    }
+    pos.push(0, 1, 1);
+    for (let i = 0; i < segments - 1; i++) {
+      const a = first + i * 2;
+      index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    const last = first + (segments - 1) * 2;
+    index.push(last, last + 1, last + 2);
   }
-  const last = (segments - 1) * 2;
-  index.push(last, last + 1, last + 2);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setIndex(index);
@@ -841,6 +885,8 @@ interface Lod {
   tileTex: THREE.DataTexture;
   table: THREE.WebGLRenderTarget;
   tableMat: THREE.ShaderMaterial;
+  fog: THREE.WebGLRenderTarget;
+  fogMat: THREE.ShaderMaterial;
   count: number;
   previousCount: number;
   tilesChanged: boolean;
@@ -870,6 +916,8 @@ export class Grass {
   private readonly tableState = new Float64Array(17).fill(NaN);
   /** Where thinning is measured from: the camera `update` picked tiles for, on the ground plane. */
   private readonly eye = { value: new THREE.Vector2() };
+  private readonly fogEye = { value: new THREE.Vector3() };
+  private camera: THREE.Camera | null = null;
   /** On a meadow sown sparsely (`uDensity`, the lite tier) the finer levels hold nothing but blades that never show, so tiles start at the first level that holds them all. */
   private finest = 0;
   /** `?blades=direct`: the per-vertex blade shader, for before/after comparison with the table. */
@@ -890,6 +938,9 @@ export class Grass {
   private reachScale = 1;
   private reachFrom = 1;
   private reachTarget = 1;
+  /** How far the near blades' extra segment has closed: at 1 they are drawn with one segment fewer. */
+  private readonly fewer = { value: 0 };
+  private fewerTarget = 0;
 
   constructor() {
     const density = Math.max(0, Math.min(1, params.grass ?? (params.lite ? 0.25 : 1)));
@@ -912,7 +963,10 @@ export class Grass {
       // Reserve all quality levels once. Sparse tiers may cover the inner rings too;
       // promotion must never allocate a new MRT or drop tiles because the lite pool was smaller.
       spec.maxTiles = Math.min(spec.maxTiles, tileCapacity(level === this.coarsest ? last.reach : spec.reach * HIGH_GRASS_REACH, 0));
-      const template = bladeTemplate(spec.segments, level < specs.length - 1);
+      // The near level also holds its blade with one segment fewer, for the lower settings (setNearSegments).
+      const template = level === 0
+        ? bladeTemplate([spec.segments, true], [spec.segments - 1, false])
+        : bladeTemplate([spec.segments, level < specs.length - 1]);
       const geo = new THREE.InstancedBufferGeometry();
       geo.index = template.index;
       geo.setAttribute('position', template.attributes.position);
@@ -936,6 +990,14 @@ export class Grass {
       });
       // Root and shape stay full float (a half-float angle would turn blades by a visible fraction of a degree).
       for (let i = 2; i < 4; i++) table.textures[i].type = THREE.HalfFloatType;
+      const fog = simTarget(TABLE_WIDTH, rows, THREE.HalfFloatType, THREE.NearestFilter);
+      const fogMat = simMaterial(FOG_FRAG, {
+        ...atmo.uniforms,
+        ...thinning,
+        uFogEye: this.fogEye,
+        uRootTex: { value: table.textures[0] },
+        uShapeTex: { value: table.textures[1] },
+      }, fog);
       const tableMat = new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
         vertexShader: TABLE_VERT,
@@ -962,9 +1024,11 @@ export class Grass {
           uShapeTex: { value: table.textures[1] },
           uTintTex: { value: table.textures[2] },
           uFlowerTex: { value: table.textures[3] },
+          uFogTex: { value: fog.texture },
           ...thinning,
           uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
           uQualityClose: { value: new THREE.Vector2(...(level === 0 ? [0.25, 0.55] as const : level === 1 ? [0.125, 0.25] as const : [0, 0] as const)) },
+          uFewer: level === 0 ? this.fewer : { value: 0 },
           uTileSize: { value: TILE },
           uGrid: { value: new THREE.Vector2(spec.cols, spec.rows) },
           uLevel: { value: level },
@@ -977,9 +1041,10 @@ export class Grass {
       // Rooms and the doorway set their uniforms around each draw, after the render list holds this material.
       mesh.onBeforeRender = () => this.pickProgram(mat);
       this.group.add(mesh);
-      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
+      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, fog, fogMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
     fixTreeInPlace(this.group);
+    this.pickNearForm();
     this.setQuality(density, params.lite ? 0.7 : 1, true);
     // Height and surface bakes can change even on a forced move to the same domain.
     onWindowMove(() => { this.tablesDirty = true; });
@@ -997,6 +1062,29 @@ export class Grass {
     this.reachTarget = reach;
     u.uQualityBlend.value = immediate ? 1 : 0;
     this.updateQuality(0, true);
+  }
+
+  /**
+   * The near blades with six segments or five. The extra segment closes or opens over a second; the five-segment
+   * form is the six-segment one fully closed, so it is swapped in only then and nothing on screen changes.
+   */
+  setNearSegments(segments: 6 | 5, immediate = false): void {
+    this.fewerTarget = segments === 5 ? 1 : 0;
+    if (immediate) this.fewer.value = this.fewerTarget;
+    this.pickNearForm();
+  }
+
+  private easeNearForm(dt: number): void {
+    if (this.fewer.value === this.fewerTarget) return;
+    const step = Math.max(0, dt);
+    this.fewer.value = this.fewerTarget > this.fewer.value ? Math.min(this.fewerTarget, this.fewer.value + step) : Math.max(this.fewerTarget, this.fewer.value - step);
+    this.pickNearForm();
+  }
+
+  private pickNearForm(): void {
+    const full = 6 * (LODS[0].segments - 1) + 3;
+    if (this.fewer.value === 1) this.lods[0].geo.setDrawRange(full, full - 6);
+    else this.lods[0].geo.setDrawRange(0, full);
   }
 
   /** One-second transitions preserve world-anchored roots and require no shader recompilation. */
@@ -1134,11 +1222,13 @@ export class Grass {
   /** Picks the tiles to draw for this camera; call `bake` afterwards, before the scene is drawn. */
   update(camera: THREE.Camera, dt = 0): void {
     this.updateQuality(dt);
+    this.easeNearForm(dt);
     this.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.matrix);
     const cx = camera.position.x;
     const cz = camera.position.z;
     this.eye.value.set(cx, cz);
+    this.camera = camera;
     const reach = this.lods[this.lods.length - 1].spec.reach;
     for (const l of this.lods) { l.count = 0; l.tilesChanged = false; }
     const x0 = Math.floor((Math.max(cx - reach, WINDOW.minX)) / TILE);
@@ -1227,7 +1317,28 @@ export class Grass {
       this.quad.render(renderer);
       l.dirty = false;
     }
-    renderer.setRenderTarget(prev);
     this.tablesDirty = false;
+    this.shadeFog(renderer);
+    renderer.setRenderTarget(prev);
+  }
+
+  /** Works out every drawn blade's fog for this frame's eye, after the tables it reads. */
+  shadeFog(renderer: THREE.WebGLRenderer): void {
+    if (this.direct || !this.camera) return;
+    this.camera.getWorldPosition(this.fogEye.value);
+    const prev = renderer.getRenderTarget();
+    const autoClear = renderer.autoClear;
+    // Every texel in the rows drawn is written, and a scissored clear costs more than the pass itself.
+    renderer.autoClear = false;
+    for (const l of this.lods) {
+      if (!l.count) continue;
+      l.fog.scissor.set(0, 0, TABLE_WIDTH, Math.ceil(l.count * l.spec.cols * l.spec.rows / TABLE_WIDTH));
+      l.fog.scissorTest = true;
+      this.quad.material = l.fogMat;
+      renderer.setRenderTarget(l.fog);
+      this.quad.render(renderer);
+    }
+    renderer.autoClear = autoClear;
+    renderer.setRenderTarget(prev);
   }
 }
