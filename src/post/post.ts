@@ -14,7 +14,7 @@ const SUN_RADIUS = Math.acos(0.99965);
  * fraction of the frame's height, and its share of the sun's light.
  */
 const GLOW_SPREAD = [0.0129, 0.0366, 0.0782, 0.17];
-const GLOW_SHARE = [0.21, 0.86, 0.65, 0.57];
+const GLOW_SHARE = [0.32, 0.86, 0.65, 0.57];
 
 const QUAD_VERT = /* glsl */ `
 varying vec2 vUv;
