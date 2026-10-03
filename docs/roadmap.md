@@ -18,6 +18,8 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
   savings wherever they can be found, so the game plays on more devices. In design; profiling comes first.
 - **Startup** ([backlog/boot-veil](backlog/boot-veil/)): since the stairs, the loading veil freezes for over half a
   second while the game boots (`start-check` fails); and whether the veil has outgrown itself. In design.
+- **Chapter select without a reload** ([backlog/chapter-select-in-place](backlog/chapter-select-in-place/)): a pick
+  starts the room at once, with sound, instead of reloading to the veil. Designed; ready to build.
 
 ## Open
 
