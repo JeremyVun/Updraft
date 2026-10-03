@@ -116,8 +116,11 @@ gravity from what is left, or lying where it fell.
 - The second, two panels, loses its pegs from the middle outward: each half drops to hang from its own post end and
   the way opens down the middle.
 - The last loses both corners, so it sags from its middle pegs, and the final sweep pops those and tears it off
-  the line. The breeze carries it, billowing and turning over, onto the next line downwind (`SNAG_LINE`, which keeps
-  a bare stretch for it), where it hangs draped at rest, off the walk and out of the family's view.
+  the line. The breeze lifts it, swings it face on so it fills, and carries it up and over the next line
+  (`SNAG_LINE`, which keeps a bare stretch for it) and down onto it; the line takes it wherever it has come down
+  across it, and it hangs folded over the line, off the walk and out of the family's view. The view glances toward
+  that line as it goes. Nothing pulls it along a set path: the breeze carries the whole sheet, and only its middle is
+  drawn softly to where it will lie.
 
 Pegs and fallen sheets stay as they are for the rest of the visit, and a checkpoint loads them already down. The
 cygnet goes first and looks back for the child, through the way the fallen cloth has left (`WashingCurtain.way`,

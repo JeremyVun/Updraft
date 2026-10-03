@@ -55,16 +55,16 @@ export class Cloth {
     const pairs: number[] = [];
     const stiff: number[] = [];
     const squash: number[] = [];
-    // Cloth resists stretching but gives under compression, so it folds instead of standing like a board; the long
-    // links push back as hard as they pull, which is what keeps a fold from closing to a crease.
+    // Cloth resists stretching but gives under compression, so it folds instead of standing like a board, and a
+    // fold, once made, does not spring back open.
     const link = (a: number, b: number, k: number, give: number) => { pairs.push(a, b); stiff.push(k); squash.push(give); };
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const i = r * cols + c;
       if (c + 1 < cols) link(i, i + 1, 1, 0.25);
       if (r + 1 < rows) link(i, i + cols, 1, 0.25);
       if (c + 1 < cols && r + 1 < rows) { link(i, i + cols + 1, 0.5, 0.25); link(i + 1, i + cols, 0.5, 0.25); }
-      if (c + 2 < cols) link(i, i + 2, bend, 1);
-      if (r + 2 < rows) link(i, i + cols * 2, bend, 1);
+      if (c + 2 < cols) link(i, i + 2, bend, 0.25);
+      if (r + 2 < rows) link(i, i + cols * 2, bend, 0.25);
     }
     this.cons = new Uint16Array(pairs);
     this.stiff = new Float32Array(stiff);

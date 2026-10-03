@@ -1104,7 +1104,7 @@ export const tuning = {
      * never streams flat; once its pegs are off it feels at most `restAir` m/s of breeze, so a gust never throws
      * it back into the way.
      */
-    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 6, liveAir: 5.5, restAir: 2.2,
+    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 1, iterations: 6, liveAir: 5.5, restAir: 2.2,
     /** How hard the cloth resists folding, so it falls in broad folds rather than crumpling. */
     bend: 0.3,
     /** A worked peg gives once the billow has fallen below `popBillow`, or after `popWait` s of gusting. */
@@ -1114,7 +1114,7 @@ export const tuning = {
     /** A popped peg leaps `pegHop` m/s up and `pegFling` m/s out along the line, and tumbles to the grass. */
     pegHop: 3.2, pegFling: 1.6,
     /** Cloth let go springs back toward the pegs still holding it at `recoil` m/s for every metre away it was. */
-    recoil: 0.8,
+    recoil: 0.5,
     /**
      * The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line, over it by
      * `flightOver` of the way and then down onto it. The breeze
@@ -1125,7 +1125,7 @@ export const tuning = {
      * `flightGrip` rad/s, firming to `catchGrip` as it comes down to lie along the line, gathered to `catchGather`.
      * The line takes it wherever it has come down within `catchReach` m of it, and it settles there over `catchSettle` s.
      */
-    flightSeconds: 2, flightRise: 2, flightAhead: 1.5, flightFollow: 4, flightLift: 1.05, flightAim: 3,
+    flightSeconds: 2, flightRise: 1.3, flightAhead: 1.5, flightFollow: 4, flightLift: 1.05, flightAim: 3,
     flightTurn: 0.35, flightOver: 0.8,
     flightGrip: 6, catchGrip: 10,
     catchRow: 0.42, catchMargin: 0.18, catchGather: 0.85, catchReach: 0.6, catchSettle: 0.3,
