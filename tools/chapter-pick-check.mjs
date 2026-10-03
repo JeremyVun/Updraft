@@ -75,7 +75,13 @@ async function compare(start, name, from, saves) {
   assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).chapter, key), saves[from].chapter, "the page loaded the other room's save");
   await page.locator('.chapters-toggle').click();
   await page.locator('.chapter', { hasText: name }).click();
-  entry.atClick = await page.evaluate(() => __game.story.name);
+  entry.atClick = await page.evaluate(() => __game.story.name).catch(e => e.message);
+  if (navigations) {
+    entry.differs = [`${navigations} navigations`];
+    console.log(`${start.padEnd(9)} DIFFERS: the pick navigated`);
+    await picked.close();
+    return entry;
+  }
   await held(page);
   entry.pick = await page.evaluate(state);
   entry.navigations = navigations;

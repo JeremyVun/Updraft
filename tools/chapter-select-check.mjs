@@ -95,7 +95,9 @@ try {
   const before = navigations;
   await page.evaluate(() => { window.__saves.length = 0; });
   await page.locator('.chapter', { hasText: 'Dark wood' }).click();
-  assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the pick starts the room at the click');
+  const atClick = await page.evaluate(() => __game.story.name).catch(e => e.message);
+  assert.equal(navigations - before, 0, 'a pick does not navigate');
+  assert.equal(atClick, 'wood', 'the pick starts the room at the click');
   await page.waitForFunction(() => window.__audioRunningAt !== null, null, { timeout: 5000 });
   report.audioMs = await page.evaluate(() => Math.round(window.__audioRunningAt - window.__pickAt));
   assert(report.audioMs < 1000, `audio running ${report.audioMs} ms after the pick`);
