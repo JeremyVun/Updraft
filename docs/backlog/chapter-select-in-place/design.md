@@ -179,8 +179,9 @@ script are `comps/concept-f.css` and `comps/concept-f.js`; the build starts from
 ### What the player sees
 
 The title veil loads exactly as today. When the game is ready, a painting of the room the player will start in fills
-the veil behind everything and fades up over 1.6 s, with a gradient in the veil's own deepest teal rising from the
-bottom (`linear-gradient(to top, #0b202d8c 0%, #0b202d59 24%, #0b202d00 50%)`). Continue (or Begin), `chapters` and
+the veil behind everything and fades up over 1.6 s, with a neutral near-black gradient (#121418, the paintings' own
+lower shade without its blue) rising from the bottom: alpha .5 to 20% of the height, easing to 0 at 40% (`.veil-shade`
+in `src/styles.css`, tuned so Continue at its faintest breath stays at least 4.5:1 on every painting). Continue (or Begin), `chapters` and
 `start over` sit low and centred in the painting's quiet band: Continue's centre at `calc(100% - max(200px, 28vh))`,
 `chapters` 50 px below it, `start over` 50 px below Continue, or 94 px for a finished player (below `chapters`). On a
 390x844 phone that leaves the last line 40 px clear of the corner buttons. Type, breathing and opacities are the house
@@ -199,16 +200,19 @@ ones (Continue .95 to .82; `chapters` and `start over` .5, the armed confirmatio
   visit keeps today's plain veil with Continue centred and `start over` 50 px under it, and a late painting is never
   shown, so nothing moves once on screen.
 - **Leaving.** On Begin, Continue, a pick or start over, the painting and gradient fade with Continue (.8 s); then
-  the veil dissolves into the game as today, so a painting never cross-fades into the game's own view.
+  the veil dissolves into the game as today, so a painting never cross-fades into the game's own view. The veil's
+  dissolve waits until .8 s after the press when a painting shows, up to .3 s later than without one.
 - **Chapters.** Chapter select's tiles are the same paintings cut to 400x250, replacing the captures, so a room has one
   picture everywhere. While the list is open the painting fades back to the plain veil (.6 s), because the tiles and
-  names do not read over a painting. A pick's panel fades out over its .45 s as designed; today the `chapters-in`
-  animation's fill overrides that transition so the panel vanishes in one frame, and that is fixed here.
+  names do not read over a painting. A pick's panel fades out over .45 s with a `chapters-out` animation (a
+  transition cannot start there under the `chapters-in` animation's fill, which made the panel vanish in one frame).
 - **Start over.** Drawn like `chapters`; shown for any valid save, a completed one included; never for Begin. The
   first press turns it in place into `start over and lose your progress?` (Jeremy's words); a press on that starts the
   first island through the one start path (`begin('island')`, the same as picking Still island), whose entry save
   replaces the old save. The confirmation goes back to `start over` after 6 s, on Escape, or when focus leaves it.
-  Its presses stay its own, like `chapters`; a press anywhere else on the veil still continues the save.
+  Its presses stay its own, like `chapters`; a press anywhere else on the veil still continues the save. The first
+  press focuses it (Safari does not focus clicked buttons), so blur and Escape behave the same everywhere. Start over
+  keeps the finished flag, so chapter select stays open to a finished player.
 - **Reduced motion:** no fades.
 
 ### The paintings

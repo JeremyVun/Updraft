@@ -90,4 +90,8 @@ the audio gesture are phase 1's and do not change.
 Verify: typecheck, build, the Gates in design.md "Phase 3" (stills of all 12 rooms at desktop and phone with the
 named states, judged against `comps/` by the agent), and the WebKit check.
 
-Done: [ ]
+Done: [x] 2026-10-03 (8a9f8cc to 836cc9a), on round 3's stand-in paintings. Every Phase 3 gate passes (start-check,
+chapter-select-check with the panel fade sampled per frame, the new start-over-check, chapter-pick-check, the
+blocked-painting failure path, WebKit arrival and departure). Installing phase 3's set includes the final gradient
+retune: rerun the contrast measure (`/tmp/csip-p4-shots/tools/`) and adjust only the alpha stops in `.veil-shade`;
+the Still island limits it.
