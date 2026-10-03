@@ -36,6 +36,8 @@ void main() {
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);
   float ao = mix(0.55, 1.0, smoothstep(0.0, 1.5, vWorld.y - texture(uHeightTex, domainUv(vWorld.xz)).r));
   vec3 col = alb * (hemiLight(n) * ao + uSunColor * mix(ndl, wrap, 0.25) * sun);
+  // The face turned from the sun takes the sky's blue, so a backlit boulder reads cool rather than as a hole.
+  col += alb * uSkyAmbient * vec3(0.8, 0.95, 1.2) * (1.0 - ndl) * 0.55 * ao;
   float rim = pow(1.0 - clamp(dot(n, normalize(cameraPosition - vWorld)), 0.0, 1.0), 4.0);
   col += uSunColor * rim * 0.12 * sun * max(dot(-normalize(cameraPosition - vWorld), uSunDir), 0.0);
   col = applyFog(col, vWorld);
