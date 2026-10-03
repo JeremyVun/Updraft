@@ -1106,7 +1106,9 @@ export const tuning = {
      * never streams flat; once its pegs are off it feels at most `restAir` m/s of breeze, so a gust never throws
      * it back into the way.
      */
-    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 6, liveAir: 5.5, restAir: 2.2,
+    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 1, iterations: 6, liveAir: 5.5, restAir: 2.2,
+    /** How hard the cloth resists folding, so it falls in broad folds rather than crumpling. */
+    bend: 0.3,
     /** A worked peg gives once the billow has fallen below `popBillow`, or after `popWait` s of gusting. */
     popBillow: 0.2, popWait: 1.5,
     /** The travellers go through once the last of the sheet has been down this long. */
@@ -1114,9 +1116,23 @@ export const tuning = {
     /** A popped peg leaps `pegHop` m/s up and `pegFling` m/s out along the line, and tumbles to the grass. */
     pegHop: 3.2, pegFling: 1.6,
     /** Cloth let go springs back toward the pegs still holding it at `recoil` m/s for every metre away it was. */
-    recoil: 0.8,
-    /** The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line. */
-    flightSeconds: 2.4, flightRise: 2.6, flightGrip: 9,
+    recoil: 0.5,
+    /**
+     * The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line, over it by
+     * `flightOver` of the way and then down onto it. The breeze
+     * carries it, running `flightAhead` times its speed so it fills, bringing it to its own speed at `flightFollow` a
+     * second, bearing `flightLift` of its weight and drifting it back toward its way at `flightAim` m/s a metre, and
+     * turning it face on within the first `flightTurn` of the flight;
+     * across its middle (`catchRow` of the way down, all but `catchMargin` at each side) it is steered at
+     * `flightGrip` rad/s, firming to `catchGrip` as it comes down to lie along the line, gathered to `catchGather`.
+     * The line takes it wherever it has come down within `catchReach` m of it, and it settles there over `catchSettle` s.
+     */
+    flightSeconds: 2, flightRise: 1.3, flightAhead: 1.5, flightFollow: 4, flightLift: 1.05, flightAim: 3,
+    flightTurn: 0.35, flightOver: 0.8,
+    flightGrip: 6, catchGrip: 10,
+    catchRow: 0.42, catchMargin: 0.18, catchGather: 0.85, catchReach: 0.6, catchSettle: 0.3,
+    /** The share of the view that glances toward the line the torn sheet comes down on. */
+    snagGlance: 0.3,
     /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */
     settleSeconds: 6,
     /** Cloth further than this from the child holds still; nobody is near enough to see it sway. */

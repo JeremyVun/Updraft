@@ -21,10 +21,6 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
 
 ## Open
 
-In progress:
-- The island of lines: the last curtain's tear, flight and snag on the neighbouring line needs polish (Jeremy,
-  2026-10-03; the rest of the pegged curtains is approved). See "The island of lines" in [chapters.md](chapters.md).
-
 For Jeremy's eye, ear or hands:
 - A listening pass through the whole journey on headphones and a phone speaker ([contracts/audio.md](contracts/audio.md)).
 - The whale shot on the first crossing: a glance from behind the boat, small in frame.

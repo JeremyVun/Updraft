@@ -38,6 +38,8 @@ export class LinesChapter implements Chapter {
   private noticed = false;
   private doorElapsed = 0;
   private readonly thresholdEye = new THREE.Vector3();
+  /** The view glances toward the line the torn sheet comes down on. */
+  private readonly snagAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.linesPassage.snagGlance };
   private readonly thresholdLook = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
@@ -298,7 +300,7 @@ export class LinesChapter implements Chapter {
     const c = this.cast.child.position;
     const s = this.shot;
     const k = tuning.linesPassage;
-    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined;
+    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined;
     if (this.beat === 'throughDoor' || this.beat === 'shore') {
       const base = door.group.position;
       const total = k.doorApproach + k.doorCross;
@@ -325,6 +327,11 @@ export class LinesChapter implements Chapter {
       s.height = waiting ? k.curtainHeight : k.walkHeight;
       // Behind the last sheet the ground rises two metres into tall grass; stand the camera above the blade tips.
       s.clearance = 3.6;
+      if (g.tornFor >= 0) {
+        this.snagAttention.point.copy(g.snagPoint);
+        this.snagAttention.strength = THREE.MathUtils.smoothstep(g.tornFor, 0, tuning.linesPassage.flightSeconds);
+        s.attention = this.snagAttention;
+      }
       this.pace = waiting ? 1.1 : 0.75;
     } else if (this.beat === 'familyApproach' || this.beat === 'family') {
       s.target.copy(FAMILY_MID).setY(heightAt(11, -390) + 2.8);
