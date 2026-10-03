@@ -524,3 +524,12 @@ The grid lower and a little smaller, now the only layout. Frames and measurement
 - **Measured** (same method as round 1): every name keeps at least 5.9:1 (`Open sea` at 1903 over the Dark wood with
   a wind stroke crossing behind it; otherwise 9.0:1 or more) and `back` at least 5.3:1. The nearest item is 145 px or
   more from the corner controls on desktop and 68 px on the phone.
+
+### Hover response, 2026-10-04
+
+> I feel like the hover is slightly laggy. can it be made a bit more responsive? did you purposefully put a delay?
+
+The 120 ms dwell goes: a hovered tile moves the painting at once. The crossfade is .3 s ease-out instead of .7 s, and
+a tile brightens and grows in .25 s. With a hovering pointer, opening the list fetches every room's painting at low
+priority (about 3 MB of landscapes, only for finished players who open the list), so the first hover never waits on
+the network; on touch the painting never moves, so nothing more is fetched. This replaces round 1's fetch on first look.

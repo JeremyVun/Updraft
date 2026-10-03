@@ -3,8 +3,8 @@
 // place: no navigation, the story already in the room at the click, audio running within a second of it, and the
 // room's entry save replacing the old save on the first frame, with the panel fading out over its .45 s rather than
 // vanishing. The tiles are the room paintings cut to 400x250. The list opens over the title's own painting, which
-// stays; looking at a tile crossfades that room's painting in without the stack ever dropping below full cover, and
-// each room's painting is fetched only when it is first looked at. `back`, Escape and a press on empty space close the
+// stays; with a hovering pointer, opening fetches every room's painting once, and looking at a tile crossfades that
+// room's painting in without the stack ever dropping below full cover. `back`, Escape and a press on empty space close the
 // list without starting, `back` returning focus to `chapters`, and a double click on `chapters` leaves it open. On a
 // phone the list fits without scrolling. Continue then resumes the picked room.
 // Usage: node tools/chapter-select-check.mjs (BASE defaults to http://127.0.0.1:5230/). Screenshots go to /tmp.
@@ -88,10 +88,11 @@ try {
   assert.equal(await page.locator('.chapters-backdrop').evaluate(e => getComputedStyle(e).opacity), '1', 'the muted painting is up');
   const shown = () => page.evaluate(() => [...document.querySelectorAll('.chapters-painting.shown')].map(e => e.dataset.room));
   assert.deepEqual(await shown(), [titleRoom], "the list opens over the title's own painting");
-  assert(paintings.every(room => room === titleRoom), `opening fetches no other painting: ${paintings}`);
+  await page.waitForFunction(() => document.querySelectorAll('.chapters-painting[data-ready]').length === 12, null, { timeout: 30000 })
+    .catch(() => assert.fail(`opening fetches every painting: ${paintings}`));
   await page.screenshot({ path: `${out}-open.png` });
 
-  // Looking at a room fetches its painting once and crossfades it in over the last, which stays whole until covered.
+  // Looking at a room crossfades its painting in over the last, which stays whole until covered.
   // Settled once the room's painting alone is shown, the one under it covered.
   const look = async (name, room) => {
     const box = await page.locator('.chapter', { hasText: name }).boundingBox();
@@ -123,9 +124,9 @@ try {
   await page.waitForTimeout(800);
   const cover = await page.evaluate(() => { window.__sampling = false; return window.__cover; });
   report.crossfade = { frames: cover.length, minCover: +Math.min(...cover).toFixed(4) };
-  assert(cover.length > 120 && report.crossfade.minCover > 0.999, `the crossfade never dips below full cover: ${JSON.stringify(report.crossfade)}`);
+  assert(cover.length > 60 && report.crossfade.minCover > 0.999, `the crossfade never dips below full cover: ${JSON.stringify(report.crossfade)}`);
   report.paintings = [...paintings];
-  assert.deepEqual(paintings.filter(room => room !== titleRoom), ['meadow', 'mirror'], `each painting fetched once, on its first look: ${paintings}`);
+  assert.equal(paintings.length, new Set(paintings).size, `each painting fetched once: ${paintings}`);
 
   await page.keyboard.press('Escape');
   assert(await page.locator('.chapters').isHidden(), 'Escape closes the list');
@@ -223,6 +224,7 @@ try {
   });
   const { scroll, span } = report.phone;
   assert(scroll[0] <= scroll[1] && span[0] >= 0 && span[1] <= span[2], `the list fits a phone without scrolling: ${JSON.stringify(report.phone)}`);
+  assert(await small.evaluate(() => document.querySelectorAll('.chapters-painting').length <= 1), 'on touch no other painting is fetched');
   await small.screenshot({ path: `${out}-phone.png` });
 
   assert.deepEqual(errors, []);

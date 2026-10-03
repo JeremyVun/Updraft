@@ -16,9 +16,6 @@ const ROOMS: [start: string, name: string, still: URL][] = [
   ['jetty', 'Home', new URL('./stills/home.webp', import.meta.url)],
 ];
 
-/** A pointer that only passes over a tile does not fetch its painting. */
-const DWELL = 120;
-
 const paintingOf = (start: string): string => start === 'jetty' ? 'home' : start;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = ''): HTMLElementTagNameMap[K] {
@@ -29,14 +26,14 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
 }
 
 /**
- * The full painting behind the list follows the room the player looks at. Each is fetched on the first look; the
- * new one fades in over the old, which stays whole underneath until covered, so a crossfade never dips.
+ * The full painting behind the list follows the room the player looks at. The new one fades in over the old, which stays whole underneath until covered, so a crossfade never dips.
  */
 class Backdrop {
   readonly root = el('div', 'chapters-backdrop');
   room = '';
   private readonly images = new Map<string, HTMLImageElement>();
   private top = 0;
+  private now = false;
   private current: HTMLImageElement | null = null;
 
   constructor() {
@@ -45,22 +42,27 @@ class Backdrop {
 
   look(room: string, now = false): void {
     this.room = room;
+    this.now = now;
+    const img = this.load(room);
+    if (img.dataset.ready !== undefined) this.reveal(img, now);
+  }
+
+  load(room: string): HTMLImageElement {
     const known = this.images.get(room);
-    if (known) {
-      if (known.dataset.ready !== undefined) this.reveal(known, now);
-      return;
-    }
+    if (known) return known;
     const img = el('img', 'chapters-painting');
     img.alt = '';
     img.decoding = 'async';
+    img.fetchPriority = 'low';
     img.dataset.room = room;
     img.src = new URL(`../paintings/${room}-${innerWidth / innerHeight < 3 / 4 ? 'port' : 'land'}.webp`, import.meta.url).href;
     this.images.set(room, img);
     this.root.prepend(img);
     img.decode().then(() => {
       img.dataset.ready = '';
-      if (this.room === room) this.reveal(img, now);
+      if (this.room === room) this.reveal(img, this.now);
     }, () => {});
+    return img;
   }
 
   private reveal(img: HTMLImageElement, now: boolean): void {
@@ -148,13 +150,9 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
       button.append(img, el('span', 'chapter-name', name));
       button.addEventListener('click', () => pick(start));
       // A touch starts the room at once, so only a hovering pointer or the keyboard moves the painting.
-      let dwell = 0;
       button.addEventListener('pointerenter', e => {
-        if (e.pointerType === 'touch') return;
-        clearTimeout(dwell);
-        dwell = window.setTimeout(() => show(start), DWELL);
+        if (e.pointerType !== 'touch') show(start);
       });
-      button.addEventListener('pointerleave', () => clearTimeout(dwell));
       button.addEventListener('focus', () => {
         if (!button.matches(':focus-visible')) return;
         show(start);
@@ -174,6 +172,8 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
     const start = ROOMS.find(r => paintingOf(r[0]) === room)?.[0];
     fold();
     if (start) show(start, true);
+    // Every painting is fetched up front so a hover never waits on the network; on touch the painting never moves.
+    if (matchMedia('(hover: hover)').matches) for (const [room] of ROOMS) backdrop.load(paintingOf(room));
     const first = list.querySelector<HTMLElement>(start ? `[data-start="${start}"]` : '.chapter');
     first?.focus({ preventScroll: true });
   };

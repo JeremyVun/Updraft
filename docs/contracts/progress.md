@@ -75,12 +75,12 @@ so `src/chapter-select/` (script, CSS and tiles) is a separate chunk that only a
 imports, and the tiles download only when `chapters` is opened.
 
 The painting stays while the list is open, printed down under the tiles and opening out above them (`docs/styles.md`).
-The list opens on the room already behind the title, its tile lit as the current one. Hovering a tile for 120 ms, or
-reaching it with the keyboard, crossfades that room's full painting in over .7 s: the new painting fades in over the
+The list opens on the room already behind the title, its tile lit as the current one. Hovering a tile, or
+reaching it with the keyboard, crossfades that room's full painting in over .3 s: the new painting fades in over the
 old, which stays whole underneath until the new one is whole, so the stack never drops below full cover. The painting
-stays on the last room looked at. A touch never moves it, because a tap starts the room at once. Each room's full
-painting (`src/paintings/<room>-land.webp`, or `-port`) is fetched the first time that room is looked at; opening
-fetches none, reusing the title's. `back`, drawn like `chapters`, stands where `chapters` was and closes the list
+stays on the last room looked at. A touch never moves it, because a tap starts the room at once. With a hovering pointer,
+opening the list fetches every room's full painting (`src/paintings/<room>-land.webp`, or `-port`) at low priority, so
+a hover never waits on the network; on touch none is fetched. `back`, drawn like `chapters`, stands where `chapters` was and closes the list
 without starting, returning focus to `chapters`; the second click of a double click on `chapters` is ignored, so the
 list stays open. Escape and a press on empty space close it too. A pick's panel fades out over .45 s as the veil
 departs, and the painting leaves with the veil's over .8 s (`tools/chapter-select-check.mjs`).

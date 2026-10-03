@@ -121,8 +121,8 @@ edit.
   `kite-check`, `geography-browser-check`, `boats-offshore-browser-check`.
 
 **Saves and lifecycle**: `progress-check`, `progress-schema-check`, `chapter-select-check` (who is offered chapters;
-the twelve 400x250 tiles; the list over the title's painting, a looked-at room's painting crossfading in without the
-stack dropping below full cover and fetched only on its first look; `back`, Escape and a press on empty space closing
+the twelve 400x250 tiles; the list over the title's painting, opening fetching every painting once; a looked-at room's
+painting crossfading in without the stack dropping below full cover; `back`, Escape and a press on empty space closing
 without starting, `back` returning focus to `chapters`, a double click on `chapters` leaving the list open; the
 phone list fitting without scrolling; a pick starts its room in place, with sound and the room's entry save, without
 navigating, and the panel fades over its .45 s), `start-over-check` (no start over

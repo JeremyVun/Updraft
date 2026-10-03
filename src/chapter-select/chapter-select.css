@@ -63,7 +63,7 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity .7s ease;
+  transition: opacity .3s ease-out;
 }
 .chapters-painting[data-room="stairs"] { object-position: 50% 65%; }
 .chapters-painting.shown { opacity: 1; }
@@ -148,7 +148,7 @@
   -webkit-mask-composite: source-in;
   mask-image: var(--feather);
   mask-composite: intersect;
-  transition: opacity .6s ease, transform .6s ease, filter .6s ease;
+  transition: opacity .6s ease, transform .25s ease-out, filter .25s ease-out;
 }
 .chapter-still.loaded { opacity: 1; }
 
@@ -159,7 +159,7 @@
   white-space: nowrap;
   opacity: .86;
   text-shadow: 0 0 10px rgb(10 12 16 / .75), 0 1px 2px rgb(10 12 16 / .55);
-  transition: opacity .6s ease;
+  transition: opacity .25s ease-out;
 }
 
 .chapter.current .chapter-still.loaded { filter: none; }
