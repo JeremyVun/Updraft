@@ -135,7 +135,8 @@ void main() {
   float ao = mix(mix(0.6, 1.0, smoothstep(0.05, 0.3, vRest)), 1.0, vAir);
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, vAir);
   if (mat == ${EYE_MAT}) col += uSunColor * catchlight(N, vWorld) * 0.8;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
 function birdGeometry(): THREE.BufferGeometry {

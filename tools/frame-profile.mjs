@@ -826,7 +826,7 @@ window.__audit = {
       sky.renderOrder,water.mesh.renderOrder,grass.unclipped,water.seaMirrorEvery,water.mirrorScale,water.mirrorEvery,terrain.fields?.uniforms.uTerrainFieldsReady.value,
       terrain.heights?.uniforms.uTerrainHeightsReady.value,terrain.colour?.uniforms.uTerrainColourReady.value,sleeping.weather.fogMaterial.visible,
       this.culling.length,!!this.bare,!!this.stairsUnindexed,JSON.stringify(water.mesh.material.defines),!!this.glowOff&&post.bloomShown<1,
-      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,grass.lods[0].geo.drawRange.start,!!this.r11On,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
+      grass.lods[0].spec.reach,grass.lods[0].geo.index.count,grass.lods[0].geo.drawRange.start,post.sceneTarget.texture.internalFormat,[...this.surveyMats?.keys()??[]].map(m=>m.defines?.CLOUD_DECK).join(),this.bonesEarly?.length,[...this.skeletons?.entries()??[]].filter(([s,u])=>s.update!==u).length])});
     this.configure(null);const a=snap(),showing=new Set();scene.traverse(o=>{if(drawn(o))showing.add(o);});
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,

@@ -276,8 +276,9 @@ void main() {
   }
   /** In the dark the eyes are all there is of it: two catchlights out of nothing, the moment light reaches it. */
   if (m == ${EYE}) col += (uSunColor * 0.9 + vec3(2.4, 1.3, 0.55) * min(1.0, uEmberLight.w)) * pow(catchlight(N, vWorld), 2.4) * (1.0 - clamp(uBlink, 0.0, 1.0));
+  // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
   /** Never greyed with the land: it arrives after the island is whole, and the sea it crosses has no life field. */
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
 /** Everything about the surface that changes from frame to frame. The cygnet writes it; only this file knows how it is drawn. */

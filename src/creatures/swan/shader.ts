@@ -198,7 +198,8 @@ void main() {
   if (mat == ${VANE} || mat == ${PLUME}) alb = mix(alb, alb * SHADED, under);
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, 1.0);
   if (mat == ${EYE}) col += uSunColor * 0.8 * catchlight(N, vWorld);
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
 const WAKE_VERT = /* glsl */ `

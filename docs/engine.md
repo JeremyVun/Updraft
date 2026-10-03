@@ -307,8 +307,10 @@ would smear one bad pixel across the screen); bloom added in place on that plain
 toning, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
 the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
-negative colour (a shader that writes one shows black there, not the bright speck the grade's ACES made of it) and
-Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
+negative colour; half-float keeps it, and the grade's ACES makes a bright speck of it. Multisampling shades an edge
+sample at the pixel centre even when that lies outside the triangle, so blends passed from the vertices extrapolate
+there: a shader that mixes colours by them clamps its output at zero (the rabbits, reeds, swans, songbirds and
+cygnet do), which is what the compact format stores anyway. Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
 a few levels. Bloom follows the level: full, or off at Low, when its passes are skipped and its targets released.
 Half-resolution bloom spread wider and veiled the frame near the sun while saving almost nothing. Turning it on or
 off eases its strength over one second, as the grass changes; boot draws it once whatever the level, so its programs
