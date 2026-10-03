@@ -1,0 +1,66 @@
+/* F, round 3: the saved room's picture fills the veil; the invitation moves down into the picture's quiet band. */
+.cf-art,
+.cf-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+.cf-art { object-fit: cover; object-position: 50% 50%; }
+/* The veil's own deepest teal, so the words sit in the picture's shade rather than on a panel. */
+.cf-shade { background: linear-gradient(to top, #0b202d8c 0%, #0b202d59 24%, #0b202d00 50%); }
+#veil.ready.cf-art-on .cf-art { opacity: 1; }
+#veil.ready.cf-art-on .cf-shade { opacity: var(--cf-shade, 1); }
+
+#veil.cf-art-on { --cf-low: max(200px, 28vh); }
+#veil.cf-art-on.cf-at-bottom #begin { top: calc(100% - var(--cf-low)); }
+#veil.cf-art-on:is(.cf-at-bottom, .cf-at-left) .chapters-toggle { top: calc(100% - var(--cf-low) + 50px); }
+#veil.cf-art-on.cf-at-left #begin { top: calc(100% - var(--cf-low)); left: max(56px, 6vw); transform: translate(0, -50%); padding-left: 0; }
+#veil.cf-art-on.cf-at-left .chapters-toggle,
+#veil.cf-art-on.cf-at-left .cf-restart { left: max(56px, 6vw); transform: none; padding-left: 0; }
+
+.cf-restart {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 0;
+  background: none;
+  color: #fff2db;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  position: absolute;
+  top: calc(50% + 50px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 16px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  text-shadow: 0 0 9px #ffe8cc30;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .8s ease;
+}
+.cf-finished .cf-restart { top: calc(50% + 94px); }
+#veil.cf-art-on:is(.cf-at-bottom, .cf-at-left) .cf-restart { top: calc(100% - var(--cf-low) + 50px); }
+#veil.cf-art-on:is(.cf-at-bottom, .cf-at-left).cf-finished .cf-restart { top: calc(100% - var(--cf-low) + 94px); }
+#veil.ready .cf-restart { visibility: visible; opacity: var(--cf-quiet, .5); transition-delay: .35s; }
+#veil.cf-art-on.ready .chapters-toggle { opacity: var(--cf-quiet, .5); }
+#veil.ready .cf-restart:hover, #veil.cf-armed .cf-restart { opacity: .85; transition-delay: 0s; }
+.cf-restart:focus-visible { outline: none; opacity: .85 !important; text-decoration: underline; text-underline-offset: 6px; }
+
+/* Chapter select stands on the plain veil: its names would not read over a picture. */
+#veil.ready.cf-art-on.choosing .cf-art, #veil.ready.cf-art-on.choosing .cf-shade { opacity: 0; transition-duration: .6s; }
+#veil.choosing .cf-restart { visibility: hidden; opacity: 0; }
+/* The picture leaves with Continue, so the veil never dissolves a painting into the game's own view. */
+#veil.ready.cf-art-on.departing :is(.cf-art, .cf-shade), #veil.departing .cf-restart { opacity: 0; pointer-events: none; transition: opacity .8s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-art, .cf-shade, .cf-restart { transition: none; }
+}

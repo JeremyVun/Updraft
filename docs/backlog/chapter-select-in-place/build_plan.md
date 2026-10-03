@@ -51,3 +51,43 @@ and a pick, playthrough to credits. `chapter-pick-check` replays a differing roo
 for wind readbacks and a late one can move a floating boat by a few millimetres. Found, pre-existing: the panel's
 `chapters-in` animation overrides the `chapter-chosen` fade, so the panel vanishes in one frame instead of fading
 (phase 3 fixes it).
+
+## Phase 3: the paintings
+
+Owns: `assets/art-direction/continue/` (prompts, the one-room regenerate script, a README of how a painting is made)
+and the encoded set delivered to `/tmp/csip-art/out/` (`<room>-land.webp`, `<room>-port.webp`, `<room>.webp` tiles at
+400x250, room names as chapter select's stills: island, washing, boats, meadow, birches, stairs, drowned, wood,
+sleeping, sea, mirror, home). Runs beside phase 4, in its own worktree; the orchestrator installs the set.
+
+Build: start from round 3's `/tmp/updraft-continue-comps-3/` (`gen/`, `prompts/`, `refs/`, `logs/`, OPTIONS.md §6 and
+§10). Regenerate the rooms design.md "The paintings" names, through Astra (`codex exec -m gpt-6-astra`), with the old
+image attached and the fix named; look at every result against the game capture and the layout's quiet band and
+corner, rerolling until right. Encode all 24 plus the tiles. Write the regenerate script so one room can be redone
+from a fresh capture (`tools/chapter-stills.mjs` without `ENCODE`).
+
+Verify: a review grid of all 24 beside their captures, judged by the agent (an allowed visual model), and the byte
+table.
+
+Done: [ ]
+
+## Phase 4: the veil
+
+Owns: `src/start-screen.ts`, `index.html` (veil markup), the veil CSS (`src/styles.css` veil rules),
+`src/chapter-select/` (tiles, panel fade), `src/paintings/` (new; the 24 paintings), `tools/chapter-stills.mjs` (no
+longer encodes the tiles: the paintings are the tiles; captures feed the regenerate script), `tools/start-check.mjs`,
+`tools/chapter-select-check.mjs`, a start-over check, `docs/styles.md` (Start screen), `docs/contracts/progress.md`
+(Chapter select, start over), `docs/testing.md`.
+
+Build design.md "Phase 3: the room picture and start over" from `comps/concept-f.css` and `comps/concept-f.js`,
+installing round 3's encoded paintings (`/tmp/updraft-continue-comps-3/stills/full/`, tiles from `stills/tile/`) as
+stand-ins that phase 3's set replaces file for file. Start over calls the start screen's `begin('island')` (phase 1's
+one start path). Fix the panel fade. Update the docs so they are true of what ships.
+
+Seams: the painting decision is made once, at `ready`, from `img.complete && img.naturalWidth` after `decode()`; a
+painting that decodes later is never shown. Start over's presses stop at its button. The start path, its order and
+the audio gesture are phase 1's and do not change.
+
+Verify: typecheck, build, the Gates in design.md "Phase 3" (stills of all 12 rooms at desktop and phone with the
+named states, judged against `comps/` by the agent), and the WebKit check.
+
+Done: [ ]
