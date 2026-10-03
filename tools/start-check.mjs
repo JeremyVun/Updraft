@@ -8,6 +8,19 @@ const report={checks:[],errors:[]};
 const base=process.env.BASE ?? 'http://127.0.0.1:5230/';
 const key='updraft.progress.v1';
 const shot='?shot&start=1&progress=1';
+const painting=/\/(src\/paintings|assets)\/[a-z]+-(land|port)(-[^/]+)?\.webp$/;
+// With the room's painting Continue sits low in its quiet band; without it, centred.
+const invitation=async(page,painted)=>{
+ const {width:W,height:H}=page.viewportSize();
+ assert.equal(await page.locator('#veil').evaluate(e=>e.classList.contains('painted')),painted,painted?'the painting shows':'no painting');
+ const box=await page.locator('#begin').boundingBox();
+ const y=painted?H-Math.max(200,.28*H):H/2;
+ assert(Math.abs(box.x+box.width/2-W/2)<1 && Math.abs(box.y+box.height/2-y)<1, `invitation centre ${box.y+box.height/2}, expected ${y}`);
+ if(await page.locator('.start-over').count()){
+  const over=await page.locator('.start-over').boundingBox();
+  assert(Math.abs(over.y-(box.y+box.height/2+50))<1, `start over top ${over.y}, expected 50 px under the invitation's centre`);
+ }
+};
 try {
  const context=await browser.newContext({viewport:{width:1440,height:900}});
  await context.addInitScript(()=>{const Native=window.AudioContext;window.__audio=[];window.AudioContext=class extends Native{constructor(...a){super(...a);window.__audio.push(this)}};});
@@ -37,8 +50,9 @@ try {
  report.bootSteps = await page.evaluate(() => window.__stats?.bootSteps);
  assert.equal(report.bootSteps?.counted, report.bootSteps?.expected, `world construction took ${report.bootSteps?.counted} steps; update BUILD_STEPS in src/main.ts`);
  assert.equal(await page.locator('#begin').innerText(),'Begin');
- const box=await page.locator('#begin').boundingBox();
- assert(Math.abs(box.x+box.width/2-720)<1 && Math.abs(box.y+box.height/2-450)<1, 'invitation centred');
+ assert.match(await page.locator('.veil-painting').evaluate(e=>e.currentSrc),/island-land/,'Begin shows the Still island');
+ await invitation(page,true);
+ assert.equal(await page.locator('.start-over').count(),0,'Begin offers no start over');
  const before=await page.evaluate(()=>({pos:__game.child.position.toArray(),frame:window.__stats?.frame,audio:__audio.length,save:localStorage.getItem('updraft.progress.v1')}));
  await page.keyboard.press('m');await page.waitForTimeout(1500);
  assert.deepEqual(await page.evaluate(()=>({pos:__game.child.position.toArray(),frame:window.__stats?.frame,audio:__audio.length,save:localStorage.getItem('updraft.progress.v1')})),before);
@@ -57,7 +71,7 @@ try {
  await page.screenshot({path:'/tmp/updraft-start-wind.png'});
  await page.waitForTimeout(900);await page.screenshot({path:'/tmp/updraft-start-curl.png'});
  await page.waitForTimeout(2800);assert.equal(await page.locator('.veil-wind [data-source=pointer]').count(),0);
- report.checks.push('ready screen stays paused and silent; strokes only shift the backdrop');
+ report.checks.push('ready screen stays paused and silent; strokes only shift the backdrop; Begin low in the Still island painting');
  await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'begin');
  await page.keyboard.press('Enter');
  try { await page.waitForFunction(()=>__audio.length===1&&__audio[0].state==='running'); }
@@ -77,6 +91,15 @@ try {
  // A quality step to a new MSAA sample count first draws existing programs into it, so only new programs fail.
  assert.equal(report.playFirstDraws?.programs, 0, `programs first drawn in play: ${report.playFirstDraws?.names.join(', ')}`);
  await page.reload();await ready();assert.equal(await page.locator('#begin').innerText(),'Continue');
+ await invitation(page,true);
+ await page.route(painting,route=>route.abort());
+ await page.reload();await ready();
+ await invitation(page,false);
+ assert.equal(await page.locator('.veil-painting').count(),0,'a painting that never decoded is never shown');
+ await page.screenshot({path:'/tmp/updraft-start-unpainted.png'});
+ await page.unroute(painting);
+ report.checks.push('Continue low in the painting; centred, with start over under it, when the painting is blocked');
+ await page.reload();await ready();
  await page.mouse.click(100,120);await page.waitForSelector('#veil',{state:'detached'});
  assert.equal(await page.evaluate(()=>__audio.length),1);
  const settled=async (label)=>{
@@ -113,7 +136,13 @@ try {
  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
  await mobile.addInitScript(()=>{const Native=window.AudioContext;window.__audio=[];window.AudioContext=class extends Native{constructor(...a){super(...a);window.__audio.push(this)}};});
  const phone=await mobile.newPage();phone.on('pageerror',e=>report.errors.push(e.message));
+ await phone.route(painting,route=>route.abort());
+ await phone.goto(base+'?start=1&progress=0');await phone.waitForSelector('#veil.ready',{timeout:60000});
+ await invitation(phone,false);
+ await phone.unroute(painting);
  await phone.goto(base+'?start=1&progress=0');await phone.waitForSelector('#veil.ready',{timeout:60000});await phone.waitForTimeout(1000);
+ await invitation(phone,true);
+ assert.match(await phone.locator('.veil-painting').evaluate(e=>e.currentSrc),/island-port/,'a phone gets the portrait painting');
  assert.equal(await phone.evaluate(()=>document.documentElement.scrollWidth),390);
  await phone.screenshot({path:'/tmp/updraft-start-phone.png'});
  assert.equal(await phone.locator('#veil-cursor').count(),0);
@@ -124,7 +153,7 @@ try {
  assert(await phone.locator('#veil').count());assert.equal(await phone.evaluate(()=>__audio.length),0);
  await phone.touchscreen.tap(180,510);await phone.waitForSelector('#veil',{state:'detached'});
  assert.equal(await phone.evaluate(()=>__audio[0].state),'running');
- report.checks.push('390px phone: touch drag stirs without starting, tap starts with sound');
+ report.checks.push('390px phone: Begin low in the portrait painting, centred when it is blocked; touch drag stirs without starting, tap starts with sound');
  await mobile.close();
  const fault=await browser.newContext();const failure=await fault.newPage();
  let blockedMain=0;
