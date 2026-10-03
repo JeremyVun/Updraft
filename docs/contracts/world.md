@@ -117,7 +117,7 @@ reaches their inland crest (`tools/landing-check.mjs`).
 
 - **Footprints** (`world/footprints.ts`): the child's heel strikes (`ChildMotion.strikes`, filtered to the ground
   itself by `Traveller.footfalls`) and the cygnet's footfalls (`Gait.landed`) press prints into bare sand above the
-  sea. Two ring buffers (64 boots, 32 webbed feet) go to the terrain shader in chunks of eight, each with its own
+  sea. Two ring buffers (48 boots, 24 webbed feet) go to the terrain shader in chunks of eight, each with its own
   bounds, so a sand fragment tests a few boxes and shades only the prints whose chunk holds it; with no live print
   the shader skips them entirely. A print softens with age, fades over `tuning.footprints.fadeFrom`–`fadeTo`, fades
   as its ring fills, and is gone wherever a swash has run over it since it was made (worked out from the same

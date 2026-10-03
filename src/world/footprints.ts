@@ -3,8 +3,8 @@ import { glsl, tuning } from '../tuning';
 import { GRASS_LINE, heightAt } from './island';
 
 /** Two rings, the child's boots and the cygnet's webbed feet, each cut into chunks with their own bounds. */
-const CHILD = 64;
-const BIRD = 32;
+const CHILD = 48;
+const BIRD = 24;
 const PRINTS = CHILD + BIRD;
 const CHUNK = 8;
 const CHUNKS = PRINTS / CHUNK;
