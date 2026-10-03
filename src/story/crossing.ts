@@ -193,6 +193,17 @@ export class CrossingChapter implements Chapter {
   private readonly water = new THREE.Vector3();
   private readonly playmate = new THREE.Vector3();
   private readonly toward = new THREE.Vector3();
+  private readonly aim = new THREE.Vector3();
+  private readonly toyFrom = new THREE.Vector3();
+  private readonly toyTo = new THREE.Vector3();
+  private toysOut = false;
+  /** Out in the water: making for the toys, among them, or back to the boat; and the way round the child's own it has come. */
+  private out: 'to' | 'among' | 'back' = 'to';
+  private outT = 0;
+  private friend = 0;
+  private easing = false;
+  /** The boat's way, still on the cygnet as it goes in. */
+  private way = 0;
   /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
   private limit: number;
   private swimCap = 0;
@@ -255,6 +266,7 @@ export class CrossingChapter implements Chapter {
     this.swimAt = opts.swimAt ?? null;
     this.arrivalView = opts.arrivalView;
     if (this.wantsDolphins) cast.sealife.onDolphinShove = (side, strength) => cast.boat.nudge(side, strength);
+    if (this.swimAt !== null) cast.sealife.toys.clear();
     cast.boat.becalmed = 0;
     cast.boat.steerFor = this.route[0];
     cast.boat.mooring = opts.moor ?? null;
@@ -469,7 +481,7 @@ export class CrossingChapter implements Chapter {
     } else if (this.wantsDolphins && !swimming) this.cast.cygnet.watch(null);
 
     if (this.swimAt !== null) this.braveSwim(dt);
-    if (this.wantsDolphins) this.paceSea(dt, swimming);
+    if (this.wantsDolphins) this.paceSea(dt, this.easing);
 
     this.swimFrame += ((swimming ? 1 : 0) - this.swimFrame) * (1 - Math.exp(-dt * 0.65));
     if (!this.wantsDolphins) {
@@ -490,12 +502,23 @@ export class CrossingChapter implements Chapter {
 
   /**
    * The cygnet's own brave thing. The child went into the dark first so that it would not have to; out here in the
-   * morning, with the child watching and doing nothing but staying, it goes into the water by itself. The player is
-   * the wind in the sail, so how hard they blow is how hard it has to swim, and the boat will always wait.
+   * morning, with the child watching and doing nothing but staying, it goes into the water by itself, after the
+   * little boats' toys they come up on, sailing their own way. The boat sails on and will always wait for it.
    */
   private braveSwim(dt: number): void {
     const { child, boat, cygnet, carry } = this.cast;
+    const s = tuning.seaToys;
     this.swimT += dt;
+    const toys = this.cast.sealife.toys;
+    if (this.swim === 'before' && !this.toysOut) {
+      /** Already out there in the night, sailing a course of their own that runs near this one. */
+      this.toysOut = true;
+      this.swimSide = this.quarter > 0 ? -1 : 1;
+      const heading = this.along(s.meetAt, this.toyTo) + s.across * this.swimSide;
+      const sailed = s.ownSpeed * (s.cruise + s.driven * s.breezeFill) * s.meetIn;
+      this.toyFrom.set(this.toyTo.x - Math.sin(heading) * sailed, 0, this.toyTo.z - Math.cos(heading) * sailed);
+      toys.sail(this.toyFrom, heading, this.swimSide);
+    }
     const left = this.from.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
     const seat = boat.seat(this.seat);
     /** Where it stands on the side of the boat, and the water beside that: on the side the camera is on. */
@@ -505,60 +528,106 @@ export class CrossingChapter implements Chapter {
       this.swim = next;
       this.swimT = 0;
     };
-    const toys = this.cast.sealife.toys;
-    toys.follow(boat.position, boat.yaw, boat.speed);
-    const playmate = toys.playmate(this.playmate);
+    /** The toy it has eyes for: whichever is nearest the water it would go into, and once in, the one it swims to. */
+    if (this.swim !== 'in' && !toys.idle) this.friend = toys.nearest(this.water, s.preferOwn);
+    const playmate = toys.at(this.friend, this.playmate);
+    /** How far ahead of the child that toy is, and how far from her: nothing, once they are gone. */
+    const ahead = (playmate.x - seat.x) * Math.sin(boat.yaw) + (playmate.z - seat.z) * Math.cos(boat.yaw);
+    const near = toys.idle ? Infinity : Math.hypot(playmate.x - seat.x, playmate.z - seat.z);
+    const passed = near === Infinity || ahead < -s.turnBackAstern;
+    /** The boat eases once the toys are close and the cygnet means to go, and while it is in the water. */
+    this.easing = this.swim === 'in' || (this.swim === 'side' || this.swim === 'restless') && near < s.easeWithin;
     if (this.swim === 'before') {
-      /** The little boats' toys come sailing out of the morning, and those are what it cannot stop watching. */
       const k = tuning.seaPassage;
-      if (toys.idle && this.cast.sealife.dolphinLeapComplete && this.time >= k.swimNotBefore - tuning.seaToys.comeLead
-        && this.progress() > this.swimAt!) {
-        this.swimSide = this.quarter > 0 ? -1 : 1;
-        toys.come(this.swimSide, boat.position, boat.yaw, boat.speed);
-      }
-      if (toys.near > 0.3) cygnet.watch(playmate);
-      if (toys.near >= tuning.seaToys.noticeAt && this.time >= k.swimNotBefore && cygnet.seat === 'cradle' && !carry.busy) {
-        to('restless');
-      }
+      if (near < s.sightedAt && !this.cast.sealife.dolphinShow) cygnet.watch(playmate);
+      const free = this.cast.sealife.dolphinLeapComplete && this.time >= k.swimNotBefore && this.progress() > this.swimAt!
+        && cygnet.seat === 'cradle' && !carry.busy;
+      if (free && (near < s.noticeAt || passed)) to('restless');
     } else if (this.swim === 'restless') {
       /** It has been looking over the side since the first crossing. This time it does not look away. */
-      cygnet.watch(playmate);
+      cygnet.watch(passed ? this.water : playmate);
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > tuning.seaPassage.swimAnticipation) to('side');
     } else if (this.swim === 'side') {
       cygnet.perch(this.beside, boat.yaw + (this.swimSide * Math.PI) / 2);
       /** The water, then the child, then the water. The child does nothing at all, which is the right thing. */
-      cygnet.watch(this.swimT % 3.2 < 1.9 ? playmate : child.face(this.look));
+      cygnet.watch(this.swimT % 3.2 < 1.9 ? passed ? this.water : playmate : child.face(this.look));
       child.lookAt = cygnet.eye(this.ahead);
-      if (this.swimT > ON_THE_SIDE) {
+      if (this.swimT > ON_THE_SIDE && (ahead < s.goInAhead || passed || this.swimT > s.waitFor)) {
         cygnet.watch(null);
+        this.out = passed ? 'back' : 'to';
+        this.outT = 0;
         to('in');
       }
     } else if (this.swim === 'in') {
       cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, this.worldTime)
         * (1 - mirrorWater(cygnet.position.x, cygnet.position.z));
-      /** In among the toys: it keeps to the wave along the hull but edges out toward the child's own. */
-      this.toward.subVectors(playmate, this.water).setY(0);
-      const gap = this.toward.length();
-      this.water.addScaledVector(this.toward, THREE.MathUtils.clamp(gap - tuning.seaToys.swimClear, 0, tuning.seaToys.swimToward) / Math.max(gap, 1e-3));
-      cygnet.swimTo(this.water);
-      /** The boat sails on; the wave along its side carries the cygnet, which paddles only to keep its place in it. */
-      const carry = boat.speed * tuning.seaPassage.swimCarry;
-      cygnet.swimCarry.set(Math.sin(boat.yaw) * carry, Math.cos(boat.yaw) * carry);
+      this.outT += dt;
+      this.toward.subVectors(cygnet.position, playmate).setY(0);
+      if (this.out === 'to' && this.outT > 0.5 && cygnet.astern < s.alongside) {
+        this.out = 'among';
+        this.outT = 0;
+      }
+      if (this.out !== 'back' && (passed || (this.out === 'among' && this.outT > s.playFor))) {
+        this.out = 'back';
+        this.outT = 0;
+      }
+      if (this.out === 'back') {
+        /**
+         * Home to the side of the boat as hard as it can paddle, which is harder than the boat is sailing. It makes
+         * for a little ahead of its place there, where its place will be by the time it arrives.
+         */
+        const lead = boat.speed / tuning.seaToys.swimTrack;
+        this.aim.copy(this.water).add(this.spot.set(Math.sin(boat.yaw) * lead, 0, Math.cos(boat.yaw) * lead));
+        cygnet.swimPlay = 0;
+        cygnet.swimHurry = 1;
+      } else {
+        /**
+         * Out to the toy, then to and fro along its near side, bow to stern, in among the others: the play of their
+         * own room. It never cuts across in front of a hull.
+         */
+        const round = this.out === 'among'
+          ? Math.atan2(-left.x * this.swimSide, -left.z * this.swimSide) + Math.sin(this.outT * s.roundRate) * s.roundSweep
+          : Math.atan2(this.toward.x, this.toward.z);
+        this.aim.set(playmate.x + Math.sin(round) * s.swimClear, 0, playmate.z + Math.cos(round) * s.swimClear);
+        /** Making for where that will be by the time it gets there, as it does for the boat. */
+        this.aim.addScaledVector(toys.velocity(this.friend, this.spot), 1 / s.swimTrack);
+        /** And never across another toy's way, nor into one: they do not move for it. */
+        for (let i = 0; i < 3; i++) {
+          toys.at(i, this.spot).addScaledVector(toys.velocity(i, this.toward), s.giveWay).sub(this.aim).setY(0);
+          const gap = this.spot.length(), clear = i === this.friend ? s.swimClear : s.swimClear * 1.4;
+          if (gap < clear) this.aim.addScaledVector(this.spot, -(clear - gap) / Math.max(gap, 1e-3));
+        }
+        /** Never further out from the boat than it dares, whatever the toys are doing. */
+        const out = (this.aim.x - seat.x) * left.x + (this.aim.z - seat.z) * left.z;
+        const over = out * this.swimSide - s.reach;
+        if (over > 0) this.aim.addScaledVector(left, -over * this.swimSide);
+        cygnet.swimPlay = this.out === 'among' ? tuning.littleBoats.swimPlay : s.swimOutPlay;
+        cygnet.swimHurry = this.out === 'among' ? 0 : s.swimOutHurry;
+      }
+      /** In beside the boat, with the boat's way still on it for a moment, and from then on its own swimmer. */
+      if (cygnet.state !== 'swimming') {
+        cygnet.swimTo(this.water);
+        this.way = boat.speed;
+      } else cygnet.swimTo(this.aim);
+      this.way *= Math.exp(-dt / s.wayFor);
+      cygnet.swimCarry.set(Math.sin(boat.yaw) * this.way, Math.cos(boat.yaw) * this.way);
       this.cast.sealife.swimmerNear(cygnet.position, this.worldTime);
       child.lookAt = cygnet.position;
-      /** If it ever falls behind anyway, the boat spills its wind and waits. Nothing is ever left behind. */
-      const behind = cygnet.astern;
+      /** Only coming back and still falling behind does the boat spill its wind and wait. Nothing is ever left behind. */
+      const behind = this.out === 'back' ? cygnet.position.distanceTo(this.look.copy(this.water).setY(cygnet.position.y)) : 0;
       boat.becalmed += ((behind > WAIT_FOR_IT ? 0.9 : behind > 3.5 ? 0.45 : 0) - boat.becalmed) * (1 - Math.exp(-dt * 0.8));
       /** An arm hung over the side near it, whenever it is near enough for that to mean anything. */
       const hand = this.swimSide > 0 ? 0 : 1;
-      if (behind < 1.6) child.reachFor(hand, this.look.copy(cygnet.position).setY(0.35).lerp(this.beside, 0.55));
+      const home = cygnet.position.distanceTo(this.look.copy(this.water).setY(cygnet.position.y));
+      if (home < 1.6) child.reachFor(hand, this.look.copy(cygnet.position).setY(0.35).lerp(this.beside, 0.55));
       else child.reachFor(hand, null);
-      if (this.swimT > SWIM_FOR && (behind < 2.3 || this.progress() > SWIM_ENDS_BY)) {
+      if (this.out === 'back' && ((this.swimT > SWIM_FOR && home < 1.4) || this.progress() > SWIM_ENDS_BY)) {
         child.reachFor(hand, null);
+        cygnet.swimPlay = 0;
+        cygnet.swimHurry = 0;
         cygnet.bind(0.25);
         cygnet.mind.trust(0.7);
-        toys.leave();
         to('drying');
       }
     } else if (this.swim === 'drying') {
@@ -576,9 +645,32 @@ export class CrossingChapter implements Chapter {
   }
 
   /**
+   * The point `distance` further on along the route from the boat, out to the swimming side of it by the toys' lane,
+   * into `out`; returns the route's heading there.
+   */
+  private along(distance: number, out: THREE.Vector3): number {
+    const boat = this.cast.boat.position;
+    let x = boat.x, z = boat.z, left = distance;
+    for (let i = this.leg; i < this.route.length; i++) {
+      const next = this.route[i], span = Math.hypot(next.x - x, next.y - z);
+      const heading = Math.atan2(next.x - x, next.y - z);
+      if (span >= left || i === this.route.length - 1) {
+        const lane = tuning.seaToys.lane * this.swimSide;
+        out.set(x + Math.sin(heading) * left + Math.cos(heading) * lane, 0,
+          z + Math.cos(heading) * left - Math.sin(heading) * lane);
+        return heading;
+      }
+      left -= span;
+      x = next.x;
+      z = next.y;
+    }
+    return 0;
+  }
+
+  /**
    * How fast the sea passage lets the boat sail. The pod's play takes about as long every time and the water it
    * has is fixed, so the boat settles, by degrees over the open stretch, into the pace that fits one to the other,
-   * and keeps it; the swim trims only a strong gust; and only a pod still playing when the coast comes near holds
+   * and keeps it; it eases while the cygnet is in the water; and only a pod still playing when the coast comes near holds
    * the boat back. The cap eases, so the boat is never braked.
    */
   private paceSea(dt: number, swimming: boolean): void {
@@ -726,7 +818,7 @@ export class CrossingChapter implements Chapter {
         // Hold the boat and the near water together, leaving breathing room around whole animals.
         this.shot.target.set(boat.position.x - fz * this.quarter * 1.5 + fx,
           boat.position.y + 0.9, boat.position.z + fx * this.quarter * 1.5 + fz);
-        this.framing.copy(this.cast.cygnet.position).lerp(this.cast.child.position, 0.55);
+        this.framing.copy(this.cast.cygnet.position).lerp(this.cast.child.position, tuning.seaPassage.swimCameraChild);
         this.shot.target.lerp(this.framing, this.swimFrame * 0.8);
         this.shot.distance = THREE.MathUtils.lerp(tuning.seaPassage.cameraDistance, tuning.seaPassage.swimCameraDistance, this.swimFrame);
         this.shot.height = THREE.MathUtils.lerp(tuning.seaPassage.cameraHeight, tuning.seaPassage.swimCameraHeight, this.swimFrame);
