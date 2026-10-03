@@ -619,6 +619,8 @@ export const tuning = {
     /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
     birchesCrest: 5.2,
   },
+  /** Prints in the sand: how dark the hollow is, how strongly the sun models its walls, and the seconds they fade over. */
+  footprints: { depth: 0.16, relief: 0.4, fadeFrom: 14, fadeTo: 40 },
   crest: {
     /** The family resting on the pond beyond the crest: how many of them, and how wide the raft is spread. */
     family: 15,

@@ -24,8 +24,15 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
   short, lighter tufts rather than ending in a hedge.
 - **The tree**: one broad tree on the still island's ridge is the landmark. Its canopy is small leaf cards shaded
-  as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind.
+  as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind. The same tree grows again,
+  two-thirds the size and alone, on the slope above the home jetty (`HOME_TREE`).
 - **Rocks**: rounded, mossy on top, a few clusters near the shore and on the hills.
+- **Footprints**: the child's round-toed boots and the cygnet's three-toed webbed feet leave small soft dents in
+  bare sand, a little darker and cooler inside, their walls modelled by the sun; they crumble softer as they age,
+  fade within the minute and are wiped wherever the swash runs over them. Never on grass or snow.
+- **Dream echoes**: a small thing from the room before lies washed up on the next arrival beach, half in the sand on
+  a damp patch above the tide line: a pegged pillowcase, a stranded toy boat, a run of piano keys a little larger
+  than the piano's, the swing's seat with gold leaves. Static, off the walk, never at home.
 - **Petals**: small pastel pink, cream, yellow and a little lilac, with a few glowing pollen specks, hidden in
   flower patches until they tumble.
 - **Wind lines**: thin white tapered ribbons that follow the actual flow, fade in and out, and curl as they die, in

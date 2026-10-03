@@ -113,6 +113,21 @@ terrain (`tools/boat-mooring-check.mjs` proves every skipped frame could not hav
 checks the baked and rendered ground at each shore. Arrival rooms keep the boat on its beach until the walk
 reaches their inland crest (`tools/landing-check.mjs`).
 
+## Prints and echoes on the beaches
+
+- **Footprints** (`world/footprints.ts`): the child's heel strikes (`ChildMotion.strikes`, filtered to the ground
+  itself by `Traveller.footfalls`) and the cygnet's footfalls (`Gait.landed`) press prints into bare sand above the
+  sea. Two ring buffers (48 boots, 24 webbed feet) go to the terrain shader in chunks of eight, each with its own
+  bounds, so a sand fragment tests a few boxes and shades only the prints whose chunk holds it; with no live print
+  the shader skips them entirely. A print softens with age, fades over `tuning.footprints.fadeFrom`–`fadeTo`, fades
+  as its ring fills, and is gone wherever a swash has run over it since it was made (worked out from the same
+  `surfCycle`/`surfReach` the waves use, so it is wiped exactly where the water went).
+- **Dream echoes** (`world/echoes.ts`): one static thing from the room before on four arrival beaches, each in its
+  own room's objects: a pegged pillowcase on the little boats' beach, a stranded toy boat on the meadow's, a run of
+  piano keys on the birches', the swing's seat and gold leaves on the stairs'. Each is placed above the tide line
+  and off the walk, buried to `bury` below its lowest point, gritty and darker where it meets the sand, and fades
+  with `lifeAt` like everything else. The terrain darkens a damp patch under each (`echoDamp`).
+
 ## Life
 
 - `src/world/life.ts` keeps a 256² field over the window: 0 grey and still, 1 fully alive. Wind over land raises

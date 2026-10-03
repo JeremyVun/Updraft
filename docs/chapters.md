@@ -30,6 +30,9 @@ Rules every room keeps:
 - **Invitations show a gesture and never perform it.** A waiting interaction shows its wind invitation after a
   few idle seconds; nothing is solved by a timer or by the ambient breeze. The one exception is a safety valve
   where a child could otherwise be stranded (the drowned village's becalming lifts after 90 s).
+- **Dream echoes.** One thing from the room before has washed up on the arrival beaches of the little boats, the
+  meadow, the birches and the stairs (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
+  camera never turns to it, and home has none. It is "things recur in the wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
 - **The reward phrase** (`completeObjective()` in `story/cues.ts`, the still island's restoration phrase) plays
@@ -463,7 +466,10 @@ holds the returned stars and the current destination.
 jetty, with a low seaward camera arc toward the lantern. The whole home landscape shares one haze depth, so the
 hillside emerges together, clearing between 150 and 45 m from the berth and over the first stretch of the jetty
 walk (`tuning.homeApproach`). The home jetty is never seen before this crossing. The boat moors alongside it, the
-one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill.
+one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. A lone
+tree, the still island's tree again at two-thirds size, stands on the slope above the beach to the west of the jetty
+(`HOME_TREE`): in the approach it breaks the long slope right of the sun, and it is out of frame for the climb,
+the summit, the drawing and the pan to the moon.
 
 **The fledging.** Sitting in the last of the sun, the family passes low across the sun, reaches a wide circuit on a
 tangent and wheels over the hilltop (`tuning.swanArrival`), calling. The cygnet watches and cries after them and is

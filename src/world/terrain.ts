@@ -5,6 +5,8 @@ import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, RIME_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
+import { ECHO_GLSL, echoUniforms } from './echoes';
+import { FOOTPRINT_GLSL, footprintUniforms } from './footprints';
 import { DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 import { REFLECTION_LAYER } from './water/reflection';
 import { SURF_GLSL, surfUniforms } from './water/surf';
@@ -76,6 +78,8 @@ ${GRASS_GLSL}
 ${TERRAIN_COLOUR_GLSL}
 ${RIME_GLSL}
 ${SURF_GLSL}
+${FOOTPRINT_GLSL}
+${ECHO_GLSL}
 uniform vec3 uSand;
 uniform vec3 uWetSand;
 uniform vec3 uGround;
@@ -120,11 +124,12 @@ void main() {
   float ripples = mix(0.5, sin(dot(xz, vec2(0.9, 0.45)) * 2.2 + vnoise(xz * 0.3) * 6.0) * 0.5 + 0.5, detail);
   vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
   float grassy = smoothstep(${GRASS_LINE.toFixed(2)} + 0.1, ${GRASS_LINE.toFixed(2)} + 1.4, h + (grain - 0.5) * 0.5);
+  float sandy = 1.0 - grassy;
   float shore = h < 2.5 ? shoreDistance(xz) : 1e3;
   bool beach = shore < 6.0 && grassy < 1.0;
   vec4 swash = beach ? beachSwash(xz, shore, -normalize(n.xz + 1e-5), fp) * (1.0 - grassy) : vec4(0.0);
   float wet = max(swash.z, (1.0 - smoothstep(0.0, 5.0, shore)) * 0.5) * (1.0 - grassy);
-  vec3 alb = mix(sand, uWetSand, wet * 0.85);
+  vec3 alb = mix(sand, uWetSand, max(wet * 0.85, echoDamp(xz) * 0.6));
   float slope = 1.0 - n.y;
 
   vec4 surf = surfaceAt(xz);
@@ -215,6 +220,7 @@ void main() {
       + uSunColor * tint * back * 0.28 * sun;
     col = mix(col, pasture, homePasture);
   }
+  if (uPrintsLive > 0.0 && sandy > 0.0 && dist < 70.0) col = mix(col, pressPrints(col, xz, shore, length(fp.dx) + length(fp.dy), sun), sandy);
   if (beach) col = shadeSwash(col, swash, vWorld, sun);
   col = mix(col, fog.rgb, fog.a);
   gl_FragColor = vec4(col, 1.0);
@@ -297,6 +303,8 @@ export class Terrain {
         ...this.fields.uniforms,
         ...this.colour.uniforms,
         ...heights.uniforms,
+        ...footprintUniforms,
+        ...echoUniforms,
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
         uGround: { value: new THREE.Color('#2e3f22') },

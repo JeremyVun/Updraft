@@ -47,15 +47,18 @@ ${ATMO_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
 uniform vec3 uBase;
+uniform float uTreeScale;
 void main() {
   vec3 n = normalize(vNormal);
   float around = atan(n.z, n.x);
-  float fissures = smoothstep(0.35, 0.75, vnoise(vec2(around * 5.0, vWorld.y * 0.6)) * 0.7 + vnoise(vec2(around * 14.0, vWorld.y * 2.5)) * 0.3);
+  float up = (vWorld.y - uBase.y) / uTreeScale;
+  float y = uBase.y + up;
+  float fissures = smoothstep(0.35, 0.75, vnoise(vec2(around * 5.0, y * 0.6)) * 0.7 + vnoise(vec2(around * 14.0, y * 2.5)) * 0.3);
   vec3 alb = mix(vec3(0.05, 0.035, 0.028), vec3(0.17, 0.13, 0.1), fissures);
   float ndl = max(dot(n, uSunDir), 0.0);
   float sun = cloudShadow(vWorld.xz);
-  float canopyShade = smoothstep(uBase.y + 3.0, uBase.y + 9.0, vWorld.y) * 0.6 + 0.4;
-  float ao = smoothstep(uBase.y - 0.8, uBase.y + 2.0, vWorld.y) * 0.6 + 0.4;
+  float canopyShade = smoothstep(3.0, 9.0, up) * 0.6 + 0.4;
+  float ao = smoothstep(-0.8, 2.0, up) * 0.6 + 0.4;
   vec3 V = normalize(cameraPosition - vWorld);
   float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 6.0) * max(dot(-V, uSunDir), 0.0);
   vec3 col = alb * (hemiLight(n) * 0.8 * ao + uSunColor * ndl * sun * canopyShade) + uSunColor * rim * 0.06 * sun;
@@ -68,6 +71,7 @@ ${ATMO_GLSL}
 ${SWAY_GLSL}
 uniform vec3 uCrown;
 uniform float uTreeLife;
+uniform float uTreeScale;
 in vec4 aLeaf;
 in vec4 aShade;
 out vec2 vUv;
@@ -86,13 +90,13 @@ void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
   float bloom = smoothstep(0.35 + fract(seed * 5.3) * 0.45, 0.45 + fract(seed * 5.3) * 0.45, uTreeLife);
-  float size = (0.7 + fract(seed * 7.1) * 0.45) * bloom;
+  float size = (0.7 + fract(seed * 7.1) * 0.45) * bloom * uTreeScale;
   if (bloom <= 0.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   vec3 world = centre + (right * corner.x + up * corner.y) * size;
   vUv = position.xy;
   vWorld = world;
   vNormal = aShade.xyz;
-  vDepth = clamp(length(aLeaf.xyz - uCrown) / 11.0, 0.0, 1.0);
+  vDepth = clamp(length(aLeaf.xyz - uCrown) / (11.0 * uTreeScale), 0.0, 1.0);
   vSeed = seed;
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
@@ -169,7 +173,7 @@ function limbTo(start: THREE.Vector3, dir: THREE.Vector3, length: number, droop:
   return { curve: new THREE.QuadraticBezierCurve3(start.clone(), mid, end), r0, r1 };
 }
 
-function grow(base: THREE.Vector3): { limbs: Limb[]; canopy: Canopy[] } {
+function grow(base: THREE.Vector3, scale: number): { limbs: Limb[]; canopy: Canopy[] } {
   const rand = mulberry32(99);
   const limbs: Limb[] = [];
   const canopy: Canopy[] = [];
@@ -202,6 +206,16 @@ function grow(base: THREE.Vector3): { limbs: Limb[]; canopy: Canopy[] } {
   }
   canopy.push({ centre: top.clone().add(new THREE.Vector3(0, 3.2, 0)), radius: 4.4 });
   canopy.push({ centre: top.clone().add(new THREE.Vector3(-1.5, 1.5, 1.5)), radius: 3.8 });
+  const sized = (p: THREE.Vector3) => p.sub(base).multiplyScalar(scale).add(base);
+  for (const l of limbs) {
+    [l.curve.v0, l.curve.v1, l.curve.v2].forEach(sized);
+    l.r0 *= scale;
+    l.r1 *= scale;
+  }
+  for (const c of canopy) {
+    sized(c.centre);
+    c.radius *= scale;
+  }
   return { limbs, canopy };
 }
 
@@ -222,11 +236,12 @@ function swayBounds(points: THREE.BufferAttribute, base: THREE.Vector3, leafSize
   return bounds.expandByScalar(Math.hypot(lean, lean * lean * 0.02) * k + leafSize).getBoundingSphere(new THREE.Sphere());
 }
 
-export function createTree(): Tree {
-  const base = new THREE.Vector3(TREE.x, heightAt(TREE.x, TREE.z), TREE.z);
-  const { limbs, canopy } = grow(base);
+/** The still island's broad tree, or the same tree grown again elsewhere at another size. */
+export function createTree(at: { x: number; z: number } = TREE, scale = 1): Tree {
+  const base = new THREE.Vector3(at.x, heightAt(at.x, at.z), at.z);
+  const { limbs, canopy } = grow(base, scale);
   const crown = canopy.reduce((acc, c) => acc.add(c.centre), new THREE.Vector3()).divideScalar(canopy.length);
-  const shared = { ...atmo.uniforms, uBase: { value: base }, uCrown: { value: crown }, uTreeLife: { value: 0 } };
+  const shared = { ...atmo.uniforms, uBase: { value: base }, uCrown: { value: crown }, uTreeLife: { value: 0 }, uTreeScale: { value: scale } };
 
   const barkGeo = limbs.map((l, i) => tube(l, i === 0 ? 12 : 7, i === 0 ? 14 : 8));
   const bark = new THREE.Mesh(
@@ -268,7 +283,7 @@ export function createTree(): Tree {
   leafGeo.setAttribute('aLeaf', new THREE.InstancedBufferAttribute(new Float32Array(leaves), 4));
   leafGeo.setAttribute('aShade', new THREE.InstancedBufferAttribute(new Float32Array(shades), 4));
   leafGeo.instanceCount = leaves.length / 4;
-  leafGeo.boundingSphere = swayBounds(leafGeo.getAttribute('aLeaf') as THREE.BufferAttribute, base, Math.SQRT2 * 1.15);
+  leafGeo.boundingSphere = swayBounds(leafGeo.getAttribute('aLeaf') as THREE.BufferAttribute, base, Math.SQRT2 * 1.15 * scale);
   const leafMat = new THREE.ShaderMaterial({
     vertexShader: LEAF_VERT,
     fragmentShader: LEAF_FRAG,
