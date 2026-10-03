@@ -1,0 +1,23 @@
+You are making title-screen key art for Updraft, a small, dreamy, meditative browser game in which you play the wind. The attached image(s) are real captures from the game. Treat the FIRST attached image as the shot to repaint: the same room, the same objects with the same shapes, the same palette and the same light, at a much higher finish, as if this exact 3D scene were rendered by a film-quality stylised renderer for the game's poster. It must read instantly as this game, not as a generic fantasy painting. The game's look: "painted golden hour", soft painterly shading, simplified toy-like objects, dense chunky stylised grass blades with deep green roots and warm yellow-green glowing tips, a low sun behind and to the left so things are backlit, shadows cool blue-teal and never black, warm haze in the distance, gentle bloom, soft vignette, fine grain. Shape, colour and feel over detail.
+
+Hard rules for every image:
+- Empty of characters: no people, no child, no birds, no animals, no figures.
+- Do not invent things the capture does not have: no houses, castles, mountains, hills, fantasy glows, magic particles, fireflies, extra props or text. You may add only atmosphere (light, haze, a little drifting air).
+- No text, letters, logos, UI, borders or frames.
+- The image is the full-screen background of the game's start screen. Words and buttons are laid over it later, in warm ivory italic serif type, so leave room for them exactly as described below.
+
+Focus and the lower band (this matters most):
+- The whole frame is in normal focus, as the game renders it. No strong depth of field, no tilt-shift, no blurred foreground wall. At most a very slight softening in the last few percent at the very bottom edge, so slight that nobody would notice it as blur.
+- The lower part of the frame is quiet because of what is there, not because the camera is out of focus: the nearest ground is something calm and plain in the room's own colours (short lawn in soft shade, still water, a smooth carpet of leaf litter in shadow, the top of a cloud), with little detail and no bright highlights, objects or hard lines in it. The open sea in the game's Home and Sky mirror rooms is the model: smooth, calm water that simply gets a little deeper and darker toward the bottom.
+- Light falls off smoothly toward the bottom: a gentle, even darkening, never a dark horizontal band, stripe, smear or seam, and no visible line where the shade or softening begins.
+- Keep the room's own hue in that band (green grass stays green, gold leaves stay warm russet, grey sand stays grey); never a blue or teal colour cast laid over it. Its value is a mid-dark shade of the room's colours, roughly a third of full brightness: dark enough that light ivory words read on it, never near black (except in rooms that are night throughout).
+
+Composition for the LANDSCAPE image (16:10 desktop screen):
+- The quiet band is the lower quarter of the frame (from about 70% of the height down). Everything above it is the room in full focus and full light.
+- The bottom-right corner (the last 15% of the width, the last 12% of the height) is plain and empty: three small round buttons sit there.
+- The focal subject sits in the middle third horizontally, between 15% and 62% of the height from the top, so it is never cut by a centre crop to a slightly wider or narrower screen.
+Composition for the PORTRAIT image (a 390x844 phone held upright, about 9:19.5; make it as tall as your sizes allow and the phone frame will be a centre crop of it):
+- Recompose the same scene for the tall frame, do not just crop the landscape: the focal subject in the central 60% of the width, between 20% and 55% of the height.
+- The quiet band is the lower 30%, made the same way (calm, in focus, the room's own colours, a smooth falloff), and the bottom-right corner is empty.
+
+Generate at the largest resolution your image tool offers for each aspect (landscape as close to 16:10 as it allows, portrait as tall as it allows). Use the image generation tool; do not draw, upscale or edit the images with code.
