@@ -111,14 +111,14 @@ in float vSeed;
 in float vUp;
 in float vLife;
 void main() {
-  // Clamped: an MSAA edge sample shaded outside the thin blade extrapolates vUp below 0, into negative colour.
-  vec3 col = mix(uReedRoot, uReedTip, clamp(vUp, 0.0, 1.0) * (0.6 + 0.6 * fract(vSeed)));
+  vec3 col = mix(uReedRoot, uReedTip, vUp * (0.6 + 0.6 * fract(vSeed)));
   /** Backlit: the low sun comes through a rush rather than off it, which is what makes a reed bed glow. */
   vec3 V = normalize(cameraPosition - vWorld);
   float through = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   col *= uSkyAmbient * 1.2 + uSunColor * (0.55 + 0.9 * through) * cloudShadow(vWorld.xz);
   col = mix(stillGrey(col) * 1.05, col, (0.35 + 0.65 * uWorldLife) * vLife);
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
 /** One reed: a tapered strip of a few segments, standing on the origin. */

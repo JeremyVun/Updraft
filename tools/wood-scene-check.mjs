@@ -20,6 +20,7 @@ import {DarkWood,WOOD_APPROACH_LIGHT} from '/src/world/wood.ts';
 import {Terrain} from '/src/world/terrain.ts';
 import {CameraRig} from '/src/camera.ts';
 import {Post} from '/src/post/post.ts';
+import {compactFrameFormat} from '/src/gl/graphics-capability.ts';
 import {Embers} from '/src/fx/embers.ts';
 import {EmberInvitation} from '/src/fx/ember-invitation.ts';
 import {applyPalette} from '/src/world/palette.ts';
@@ -46,7 +47,7 @@ const data=new Float32Array(128*128*4);for(let z=0;z<128;z++)for(let x=0;x<128;x
 const ht=new THREE.DataTexture(data,128,128,THREE.RGBAFormat,THREE.FloatType);ht.needsUpdate=true;
 atmo.uniforms.uHeightTex.value=ht;atmo.uniforms.uDomain.value.set(-70,originZ,1/128,1/128);
 atmo.uniforms.uVeil.value.set(55,0.9);atmo.uniforms.uSeason.value=.84;
-const post=new Post(renderer,scene,camera,0),light=new THREE.Vector3();
+const post=new Post(renderer,scene,camera,0,atmo.uniforms.uSunDir.value,compactFrameFormat(renderer)),light=new THREE.Vector3();
 const earned=embers.lay(WOOD_APPROACH_LIGHT.x,WOOD_APPROACH_LIGHT.y);embers.blow(earned,.8);embers.takeCaught();
 let time=0,ready=false;const audioEvents=[];const weather=new StormWeather((strength,pan,close)=>audioEvents.push({kind:'thunder',time,strength,close}));
 function state(){return {beat:chapter.beat,t:chapter.t,child:child.position.toArray(),bird:bird.seating.shown.p.toArray(),reveal:chapter.hearth?.reveal,carry:carry.playing,coaxing:chapter.coaxing,comingOut:chapter.comingOut,gathering:chapter.gathering,frame:camera.position.toArray(),plane:plane.position.toArray(),work:chapter.planeWork,landed:plane.landed,light:atmo.uniforms.uEmberLight.value.toArray()}}

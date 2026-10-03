@@ -109,14 +109,12 @@ void main() {
   vec3 N = normalize(vNormal);
   int mat = int(vMat.x + 0.5);
   float fur = vnoise(vWorld.xz * 23.0 + vWorld.y * 17.0) * 0.14 + 0.93;
-  // An MSAA edge sample is shaded at the pixel centre outside the triangle, where the blend extrapolates to negative colour.
-  float blend = clamp(vMat.y, 0.0, 1.0);
-  vec3 alb = mix(vFur, uCream, blend) * fur;
+  vec3 alb = mix(vFur, uCream, vMat.y) * fur;
   float fuzz = 1.0;
   float thin = 0.0;
   if (mat == ${EAR}) {
-    alb = mix(vFur * fur, uPink, blend);
-    thin = 0.5 + 0.9 * blend;
+    alb = mix(vFur * fur, uPink, vMat.y);
+    thin = 0.5 + 0.9 * vMat.y;
   } else if (mat == ${EYE_MAT}) {
     alb = uEye;
     fuzz = 0.0;
@@ -129,7 +127,8 @@ void main() {
   float ao = mix(0.5, 1.0, smoothstep(0.0, 0.42, vRest));
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, 0.0);
   if (mat == ${EYE_MAT}) col += uSunColor * catchlight(N, vWorld) * 0.9;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
 function rabbitGeometry(): THREE.BufferGeometry {
