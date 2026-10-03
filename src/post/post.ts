@@ -208,12 +208,7 @@ export class Post {
     this.gradeMat.uniforms.uResolution.value.set(w, h);
   }
 
-  /** The bloom's resolution while it is drawn: the frame's, or half of it on half. */
-  get bloomScale(): number {
-    return this.bloomLevel === 'half' ? 0.5 : 1;
-  }
-
-  /** Full, half resolution, or off: its passes skipped and its targets released once it has faded out. */
+  /** Full, or off: its passes skipped and its targets released once it has faded out. */
   setBloom(level: BloomLevel, immediate = false): void {
     this.bloomLevel = level;
     if (immediate) this.bloomShown = level === 'off' ? 0 : 1;
@@ -221,9 +216,8 @@ export class Post {
   }
 
   private sizeBloom(): void {
-    // A fading bloom keeps the resolution it is fading from.
     if (this.bloomLevel === 'off') return;
-    this.bloom.setSize(Math.round(this.size.x * this.bloomScale), Math.round(this.size.y * this.bloomScale));
+    this.bloom.setSize(this.size.x, this.size.y);
   }
 
   private releaseBloom(): void {

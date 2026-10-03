@@ -529,10 +529,12 @@ window.__audit = {
     [water.mirrorScale,water.mirrorEvery]=variants.includes('mirror-ordinary')?[0.25,2]:this.mirrorCadence;
     const w=post.sceneTarget.width,h=post.sceneTarget.height;
     if(post.setBloom){
-      // bloom-full, bloom-half, bloom-off: the bloom at that level whatever the level chose.
+      // bloom-full, bloom-off: the bloom at that level whatever the level chose; bloom-half also halves its chain.
       this.bloomLevel??=post.bloomLevel;
-      const level=variants.find(v=>['bloom-full','bloom-half','bloom-off'].includes(v))?.slice(6)??this.bloomLevel;
+      const level=variants.includes('bloom-off')?'off':variants.some(v=>v==='bloom-full'||v==='bloom-half')?'full':this.bloomLevel;
       if(post.bloomLevel!==level)post.setBloom(level,true);
+      const half=variants.includes('bloom-half');
+      if(level!=='off')post.bloom.setSize(half?Math.round(w/2):w,half?Math.round(h/2):h);
       this.bloomSize=[post.bloomLevel,w,h];
     } else {
       const half=variants.includes('bloom-half'),want=half?[Math.round(w/2),Math.round(h/2)]:[w,h];

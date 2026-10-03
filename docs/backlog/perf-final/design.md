@@ -321,8 +321,13 @@ The profile is `profile.md`. His answers, verbatim where quoted:
     sea's ripples, one-octave sky clouds, cloud shadows, glints, the child's mesh when small, readbacks every other
     frame, creatures on the baked heights, petals, the mirror merge, the sea under land beyond the window.
   - Open: the child's bone texture uploaded before the frame's passes (exact; +2 to +4% weighted but −8 to −12% on
-    the stairs' top and sail on the Mac; needs the iPad); the sky mirror's reflection at the ordinary size and cadence
-    until near the flat (needs a still from a running capture).
+    the stairs' top and sail on the Mac; needs the iPad).
+- **Phase 8's visual pass (2026-10-03):** Medium's half-resolution bloom spread wider and laid a milky veil near the
+  sun while saving almost nothing; Jeremy chose "Full bloom at Medium" (the half-resolution path is removed). The
+  hard straight edge a stairs wisp draws across a riser in the white at Ultra and High (older than this item): "Fix
+  it now".
+  The sky mirror's reflection kept at the ordinary sea's size until the water goes still: dropped ("a marginal /
+  negligible saving"; about 1 ms for the first 30 s of the crossing, and it shows on the still water).
 - **One level at a time (2026-10-01):** Auto never drops two levels at once; with coarse levels a double drop
   from High overshot to Low where Medium would have held (chosen: "One level at a time").
 

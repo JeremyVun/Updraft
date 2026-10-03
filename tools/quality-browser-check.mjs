@@ -7,7 +7,7 @@ function check() {
   const LEVELS = {
     ultra: { ratio: 1, density: 1, reach: 1.15, split: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: '1111' },
     high: { ratio: 1, density: 1, reach: 1.15, split: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: '1111' },
-    medium: { ratio: 1, density: 1, reach: 1, split: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'half', sea: '0111' },
+    medium: { ratio: 1, density: 1, reach: 1, split: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'full', sea: '0111' },
     low: { ratio: .85, density: 1, reach: 1, split: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: '0000' },
   };
   const near = (a, b) => typeof a === 'string' ? a === b : Math.abs(a - b) < 1e-6;
