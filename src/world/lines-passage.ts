@@ -18,10 +18,14 @@ export const LINES_WALK = [
   new THREE.Vector2(11, -398), new THREE.Vector2(14, -422),
 ];
 
-/** Physical opening of each curtain, shared with its cloth shader. */
+/** How far each curtain is wound round its own line, and how far live air is lifting its free hem. */
+export const curtainWound = new THREE.Vector3();
 export const curtainLift = new THREE.Vector3();
 
-/** A sheet across the walk. Air arriving here lifts it; completed passages remain safely overhead. */
+/**
+ * A sheet across the walk. Air arriving here lifts its hem, and every sweep winds it further round its own line,
+ * the way wind wraps washing round a line; it stays wound, so completed passages remain safely overhead.
+ */
 export class WashingCurtain {
   readonly center: THREE.Vector3;
   readonly a: THREE.Vector3;
@@ -34,7 +38,9 @@ export class WashingCurtain {
   readonly drop: number;
   readonly sway = new Sway();
   charge = 0;
+  /** How much of the sheet is wound round the line. It never unwinds. */
   opening = 0;
+  lift = 0;
   cleared = false;
   private touched = false;
   /** Time since a real cursor/touch sweep reached this sheet; invitation traces never affect it. */
@@ -60,9 +66,11 @@ export class WashingCurtain {
   reset(cleared = false): void {
     this.charge = cleared ? 1 : 0;
     this.opening = cleared ? 1 : 0;
+    this.lift = 0;
     this.cleared = cleared;
     this.touched = false; this.brushAge = Infinity;
-    curtainLift.setComponent(this.curtain, this.opening);
+    curtainWound.setComponent(this.curtain, this.opening);
+    curtainLift.setComponent(this.curtain, 0);
   }
 
   update(dt: number, wind: WindField, listening: boolean): void {
@@ -81,10 +89,12 @@ export class WashingCurtain {
       // Only air from the player's gesture can complete a passage. Waiting never supplies a breeze.
       this.charge = Math.min(1, this.charge + strongest * dt / k.fillSeconds);
     }
-    const billow = THREE.MathUtils.clamp(Math.hypot(this.sway.x, this.sway.z) / k.billowSpeed, 0, 1);
-    const want = this.cleared ? 1 : Math.max(this.charge * 0.75, billow * 0.8);
-    this.opening += (want - this.opening) * (1 - Math.exp(-dt * (want > this.opening ? k.rise : k.settle)));
-    curtainLift.setComponent(this.curtain, this.opening);
+    const billow = THREE.MathUtils.clamp(Math.hypot(this.sway.x, this.sway.z) / k.billowSpeed, 0, 1) * 0.8;
+    this.lift += (billow - this.lift) * (1 - Math.exp(-dt * (billow > this.lift ? k.rise : k.settle)));
+    const wound = this.cleared ? 1 : this.charge * 0.75;
+    if (wound > this.opening) this.opening += (wound - this.opening) * (1 - Math.exp(-dt * k.windUp));
+    curtainWound.setComponent(this.curtain, this.opening);
+    curtainLift.setComponent(this.curtain, this.lift);
   }
 
   /**

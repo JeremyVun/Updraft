@@ -964,7 +964,7 @@ function prepareWorldAudio(dt: number): void {
   materialAt.copy(FAMILY_LINE.a).lerp(FAMILY_LINE.b, 0.5);
   worldFoley.motion(family, 'cloth', materialAt, family.x + family.y, dt, heard && story.name === 'lines');
   for (const curtain of CURTAINS) {
-    worldFoley.motion(curtain, 'cloth', curtain.center, curtain.opening, dt, heard && story.name === 'lines');
+    worldFoley.motion(curtain, 'cloth', curtain.center, curtain.opening + curtain.lift, dt, heard && story.name === 'lines');
   }
   for (const snag of birches.scarf.snags) {
     worldFoley.motion(snag, 'wool', snag.center, snag.work + snag.release, dt, heard && story.name === 'birches');
