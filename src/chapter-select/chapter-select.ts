@@ -82,7 +82,8 @@ class Backdrop {
       return;
     }
     img.classList.add('shown');
-    img.addEventListener('transitionend', covered, { once: true });
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) covered();
+    else img.addEventListener('transitionend', covered, { once: true });
   }
 }
 
