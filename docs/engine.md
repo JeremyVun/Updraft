@@ -316,7 +316,7 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 
 One multisampled scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
 would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
-toning, vibrance and a gentle contrast curve after tone mapping, blue-tinted shadows that leave black alone, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
+toning, vibrance (pinks and magentas held back, so sunlit cloud stays gold and white) and a gentle contrast curve on brightness after tone mapping, blue-tinted shadows that leave black alone, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
 the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
 negative colour; half-float keeps it, and the grade's ACES makes a bright speck of it. Multisampling shades an edge
