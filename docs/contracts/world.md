@@ -123,10 +123,10 @@ reaches their inland crest (`tools/landing-check.mjs`).
   as its ring fills, and is gone wherever a swash has run over it since it was made (worked out from the same
   `surfCycle`/`surfReach` the waves use, so it is wiped exactly where the water went).
 - **Dream echoes** (`world/echoes.ts`): one static thing from the room before on four arrival beaches, each in its
-  own room's objects: a pegged pillowcase on the little boats' beach, a stranded toy boat on the meadow's, a run of
+  own room's objects: a pegged pillowcase on the little boats' beach, the bath's rubber duck tipped on its side on the meadow's, a run of
   piano keys on the birches', the swing's seat and gold leaves on the stairs'. Each is placed above the tide line
   and off the walk, buried to `bury` below its lowest point, gritty and darker where it meets the sand, and fades
-  with `lifeAt` like everything else. The terrain darkens a damp patch under each (`echoDamp`).
+  with `lifeAt` like everything else, so the duck stays grey with the meadow until the piano wakes it. The terrain darkens a damp patch under each (`echoDamp`).
 
 ## Life
 

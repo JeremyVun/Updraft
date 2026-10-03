@@ -30,8 +30,9 @@ Rules every room keeps:
 - **Invitations show a gesture and never perform it.** A waiting interaction shows its wind invitation after a
   few idle seconds; nothing is solved by a timer or by the ambient breeze. The one exception is a safety valve
   where a child could otherwise be stranded (the drowned village's becalming lifts after 90 s).
-- **Dream echoes.** One thing from the room before has washed up on the arrival beaches of the little boats, the
-  birches and the stairs (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
+- **Dream echoes.** One thing from the room before has washed up on the arrival beaches of the little boats (a
+  pegged pillowcase), the meadow (the bath's rubber duck, grey until the piano wakes it), the birches (a run of piano
+  keys) and the stairs (the swing's seat) (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
   camera never turns to it, and home has none. It is "things recur in the wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.

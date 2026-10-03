@@ -8,7 +8,7 @@ import { mulberry32 } from './noise';
 
 /**
  * Something from the room before, washed up on the next arrival beach: a pegged pillowcase from the washing, a
- * broken-off run of piano keys, the swing's seat with a few gold leaves. Nobody remarks on it
+ * rubber duck from the bath, a broken-off run of piano keys, the swing's seat with a few gold leaves. Nobody remarks on it
  * and nothing can be done with it. Each lies half in the sand above the tide line, off the walk, on a damp patch.
  */
 interface Echo {
@@ -125,6 +125,25 @@ function pillowcase(): THREE.BufferGeometry[] {
   return [linen, onHem, lost];
 }
 
+/** The bath's rubber duck, far too big, as things are that come back in a dream: yellow, an orange bill, tail up. */
+function rubberDuck(): THREE.BufferGeometry[] {
+  const yellow = '#f3c12e';
+  const body = new THREE.SphereGeometry(0.42, 24, 16).scale(1.3, 0.78, 1);
+  const p = body.getAttribute('position');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i);
+    // A flat bottom, and the back drawn up into a little pointed tail.
+    if (y < -0.2) p.setY(i, -0.2 + (y + 0.2) * 0.35);
+    const tail = Math.max(0, -x - 0.25) / 0.3;
+    p.setY(i, p.getY(i) + tail * tail * 0.22 * Math.max(0, y + 0.1));
+  }
+  body.computeVertexNormals();
+  const head = new THREE.SphereGeometry(0.27, 20, 14).translate(0.3, 0.42, 0);
+  const bill = new THREE.SphereGeometry(0.15, 14, 8).scale(1.25, 0.38, 1).translate(0.58, 0.36, 0);
+  const eyes = [-1, 1].map((side) => coloured(new THREE.SphereGeometry(0.035, 8, 6).translate(0.48, 0.5, side * 0.15), '#1c1815'));
+  return [coloured(body, yellow), coloured(head, yellow), coloured(bill, '#ec7a24'), ...eyes];
+}
+
 /** A run of the piano's keys broken off whole, ivories and ebonies on their wooden bed. */
 function pianoKeys(): THREE.BufferGeometry[] {
   const parts: THREE.BufferGeometry[] = [];
@@ -168,6 +187,7 @@ function swingSeat(): THREE.BufferGeometry[] {
 
 const ECHOES: Echo[] = [
   { room: 'boats', x: 155.5, z: -376, yaw: 0.6, bury: 0.04, roll: 0.05, pitch: 0.06, damp: 1.5, parts: pillowcase },
+  { room: 'meadow', x: 24.5, z: -585.2, yaw: -0.5, bury: 0.12, roll: 0.15, pitch: -1.2, damp: 1.4, parts: rubberDuck },
   { room: 'birches', x: -9, z: -1063.5, yaw: 0.35, bury: 0.15, roll: 0.08, pitch: -0.14, damp: 1.9, parts: pianoKeys },
   { room: 'stairs', x: 78.3, z: -1239.5, yaw: 1.1, bury: 0.05, roll: 0.08, pitch: 0.05, damp: 1.8, parts: swingSeat },
 ];
