@@ -42,6 +42,7 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SURF_GLSL}
 uniform vec3 uDeep;
+uniform float uFoam;
 in vec2 vQ;
 in vec3 vWorld;
 in float vFade;
@@ -60,7 +61,7 @@ void main() {
   if (vKind < 0.5) {
     float edge = 1.0 - smoothstep(0.25, 1.0, r + (vnoise(vQ * 2.5 + vSeed * 40.0) - 0.5) * 0.5);
     float density = edge * vStrength * pow(1.0 - vFade, 1.4) * smoothstep(0.0, 0.05, vFade + 0.02);
-    a = foamLace(density, vWorld.xz * 1.6 + vSeed * 57.0, Footprint(fp.dx * 1.6, fp.dy * 1.6));
+    a = foamLace(density, vWorld.xz * 1.6 + vSeed * 57.0, Footprint(fp.dx * 1.6, fp.dy * 1.6)) * uFoam;
     col = foamColor(V, sun);
   } else if (vKind < 1.5) {
     float body = 1.0 - smoothstep(0.35, 1.0, r + (vnoise(vQ * 1.7 + vSeed * 23.0) - 0.5) * 0.35);
@@ -94,7 +95,8 @@ export class Marks {
   private readonly b: THREE.InstancedBufferAttribute;
   private readonly c: THREE.InstancedBufferAttribute;
 
-  constructor() {
+  /** `foam` is how opaque its white water is: a dinghy's wake is thinner than a whale's. */
+  constructor(foam = 1) {
     const quad = new THREE.PlaneGeometry(2, 2, 3, 3);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = quad.index;
@@ -114,7 +116,7 @@ export class Marks {
       new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...atmo.uniforms, ...surfUniforms, ...swellUniforms, uDeep: { value: new THREE.Color('#0d4a66') } },
+        uniforms: { ...atmo.uniforms, ...surfUniforms, ...swellUniforms, uDeep: { value: new THREE.Color('#0d4a66') }, uFoam: { value: foam } },
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,

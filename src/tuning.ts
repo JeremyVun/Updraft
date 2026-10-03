@@ -1571,6 +1571,8 @@ export const tuning = {
     topSpeed: 10,
     /** How fast each arm of the wake opens sideways, per unit of boat speed (0.14 opens the V about 8° a side). */
     wakeSpread: 0.14,
+    /** How opaque the wake's foam is: a small boat leaves a thin, see-through lace, not a motorboat's white water. */
+    wakeFoam: 0.6,
     /** Spill wind in a tight turn; the turning radius must shrink as a missed waypoint gets closer. */
     turnBrake: 0.65,
     turnAligned: 0.85,
