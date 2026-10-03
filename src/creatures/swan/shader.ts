@@ -163,8 +163,8 @@ void main() {
   vec3 N = normalize(vNormal);
   if (!gl_FrontFacing) N = -N;
   int mat = int(vMat.x + 0.5);
-  float k = vMat.y;
-  // MSAA can extrapolate beyond thin wing triangles; keep underside shading in its physical range.
+  // MSAA can extrapolate beyond thin wing triangles; keep the blends in range, or a backlit vane writes negative colour.
+  float k = clamp(vMat.y, 0.0, 1.0);
   float under = clamp(vUnder, 0.0, 1.0);
   vec3 alb = PLUME;
   float fuzz = 0.5;

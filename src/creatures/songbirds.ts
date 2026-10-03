@@ -117,7 +117,8 @@ void main() {
   vec3 N = normalize(vNormal);
   if (!gl_FrontFacing) N = -N;
   int mat = int(vMat.x + 0.5);
-  float t = vMat.y;
+  // An MSAA edge sample is shaded outside the triangle, where the blend extrapolates to negative colour.
+  float t = clamp(vMat.y, 0.0, 1.0);
   vec3 alb = mix(vBack, vBreast.rgb, t);
   float thin = 0.0;
   float fuzz = 0.9;

@@ -109,12 +109,14 @@ void main() {
   vec3 N = normalize(vNormal);
   int mat = int(vMat.x + 0.5);
   float fur = vnoise(vWorld.xz * 23.0 + vWorld.y * 17.0) * 0.14 + 0.93;
-  vec3 alb = mix(vFur, uCream, vMat.y) * fur;
+  // An MSAA edge sample is shaded at the pixel centre outside the triangle, where the blend extrapolates to negative colour.
+  float blend = clamp(vMat.y, 0.0, 1.0);
+  vec3 alb = mix(vFur, uCream, blend) * fur;
   float fuzz = 1.0;
   float thin = 0.0;
   if (mat == ${EAR}) {
-    alb = mix(vFur * fur, uPink, vMat.y);
-    thin = 0.5 + 0.9 * vMat.y;
+    alb = mix(vFur * fur, uPink, blend);
+    thin = 0.5 + 0.9 * blend;
   } else if (mat == ${EYE_MAT}) {
     alb = uEye;
     fuzz = 0.0;

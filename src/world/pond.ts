@@ -111,7 +111,8 @@ in float vSeed;
 in float vUp;
 in float vLife;
 void main() {
-  vec3 col = mix(uReedRoot, uReedTip, vUp * (0.6 + 0.6 * fract(vSeed)));
+  // Clamped: an MSAA edge sample shaded outside the thin blade extrapolates vUp below 0, into negative colour.
+  vec3 col = mix(uReedRoot, uReedTip, clamp(vUp, 0.0, 1.0) * (0.6 + 0.6 * fract(vSeed)));
   /** Backlit: the low sun comes through a rush rather than off it, which is what makes a reed bed glow. */
   vec3 V = normalize(cameraPosition - vWorld);
   float through = pow(max(dot(-V, uSunDir), 0.0), 3.0);
