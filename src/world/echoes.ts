@@ -163,6 +163,8 @@ function pianoKeys(): THREE.BufferGeometry[] {
   return parts.map((g) => g.scale(1.7, 1.4, 1.7));
 }
 
+const LEAF = new THREE.Shape().moveTo(-0.17, 0).quadraticCurveTo(0, 0.13, 0.19, 0).quadraticCurveTo(0, -0.13, -0.17, 0);
+
 /** The swing's seat, its two cords cut short and trailing, with a few of the birches' gold leaves blown round it. */
 function swingSeat(): THREE.BufferGeometry[] {
   const rand = mulberry32(53);
@@ -179,17 +181,17 @@ function swingSeat(): THREE.BufferGeometry[] {
   for (let i = 0; i < 12; i++) {
     const a = rand() * Math.PI * 2;
     const r = 0.6 + rand() * 0.9;
-    const leaf = new THREE.CircleGeometry(0.16, 7).scale(1, 0.6, 1).rotateX(-Math.PI / 2 + (rand() - 0.5) * 0.5).rotateY(rand() * 6.28);
+    const leaf = new THREE.ShapeGeometry(LEAF, 3).rotateX(-Math.PI / 2 + (rand() - 0.5) * 0.5).rotateY(rand() * 6.28);
     parts.push(coloured(leaf.translate(Math.cos(a) * r, 0.04 + (i === 2 ? 0.08 : 0), Math.sin(a) * r * 0.7), golds[i % golds.length]));
   }
   return parts;
 }
 
 const ECHOES: Echo[] = [
-  { room: 'boats', x: 155.5, z: -376, yaw: 0.6, bury: 0.04, roll: 0.05, pitch: 0.06, damp: 1.1, parts: pillowcase },
-  { room: 'meadow', x: 24.5, z: -585.2, yaw: 1.75, bury: 0.22, roll: -0.55, pitch: 0.16, damp: 1.4, parts: strandedToy },
-  { room: 'birches', x: -9, z: -1063.5, yaw: 0.35, bury: 0.08, roll: 0.08, pitch: -0.14, damp: 1.5, parts: pianoKeys },
-  { room: 'stairs', x: 78.3, z: -1239.5, yaw: 1.1, bury: 0.05, roll: 0.08, pitch: 0.05, damp: 1.2, parts: swingSeat },
+  { room: 'boats', x: 155.5, z: -376, yaw: 0.6, bury: 0.04, roll: 0.05, pitch: 0.06, damp: 1.5, parts: pillowcase },
+  { room: 'meadow', x: 24.5, z: -585.2, yaw: 1.75, bury: 0.22, roll: -0.55, pitch: 0.16, damp: 1.8, parts: strandedToy },
+  { room: 'birches', x: -9, z: -1063.5, yaw: 0.35, bury: 0.15, roll: 0.08, pitch: -0.14, damp: 1.9, parts: pianoKeys },
+  { room: 'stairs', x: 78.3, z: -1239.5, yaw: 1.1, bury: 0.05, roll: 0.08, pitch: 0.05, damp: 1.8, parts: swingSeat },
 ];
 
 /** The echoes, one mesh per room that has one. */
