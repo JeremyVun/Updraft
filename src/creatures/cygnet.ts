@@ -114,7 +114,7 @@ export class Cygnet {
   water: { level: number; over(x: number, z: number): boolean } | null = null;
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: Heard[] = [];
-  /** Feet put down on the ground this frame; whoever reads them empties the list. */
+  /** Feet put down on the ground this frame. */
   readonly footfalls: { x: number; z: number; heading: number }[] = [];
   private readonly looseDown = new LooseDown();
 
@@ -798,6 +798,7 @@ export class Cygnet {
 
   update(dt: number, time: number, child: THREE.Vector3, wind: WindSample): void {
     this.time = time;
+    this.footfalls.length = 0;
     this.mesh.visible = this.visible;
     this.wasVisible = this.visible;
     if (!this.visible) {

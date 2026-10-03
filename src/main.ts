@@ -729,7 +729,6 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   cygnet.update(dt, time, child.position, cygnetAir);
   const birdOnGround = cygnet.position.y < heightAt(cygnet.position.x, cygnet.position.z) + 0.1;
   for (const f of cygnet.footfalls) if (birdOnGround) footprints.press(f.x, f.z, f.heading, 1, time);
-  cygnet.footfalls.length = 0;
   footprints.update(time);
   carry.after();
   foley.setOutput(sound.output);
