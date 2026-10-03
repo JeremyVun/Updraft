@@ -692,6 +692,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (cygnet.seat === 'satchel') child.openBag();
   child.update(dt);
   for (const f of child.footfalls) footprints.press(f.x, f.z, f.heading, 0, time);
+  if (skyMirror.active) for (const f of child.glassSteps) skyMirror.step(f.x, f.z, time, tuning.skyMirror.childStep);
   skyMirror.pose(child);
   glider.update(dt, time);
   flock.update(dt, time);
@@ -729,6 +730,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   cygnet.update(dt, time, child.position, cygnetAir);
   const birdOnGround = cygnet.position.y < heightAt(cygnet.position.x, cygnet.position.z) + 0.1;
   for (const f of cygnet.footfalls) if (birdOnGround) footprints.press(f.x, f.z, f.heading, 1, time);
+  if (skyMirror.active && !cygnet.carried) for (const f of cygnet.footfalls) skyMirror.step(f.x, f.z, time, tuning.skyMirror.birdStep);
   footprints.update(time);
   carry.after();
   foley.setOutput(sound.output);
@@ -962,7 +964,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   starlings.update(dt, storm > 0.3 ? 0 : (params.dusk ?? story.dusk), joining);
   if (QA && params.whale) whaleForQa();
   sealife.update(dt, time);
-  skyMirror.update(dt, time, child.position, cygnet.position, !cygnet.carried);
+  skyMirror.update(dt, time, child.position);
   water.step(dt);
 }
 

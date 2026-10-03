@@ -226,7 +226,8 @@ float smithVis(float nv, float nl, float a2) {
 }
 
 vec3 glassColour(vec3 V, vec2 xz) {
-  vec2 ringSlope = mirrorSlope(xz);
+  vec2 stepSlope;
+  vec2 ringSlope = mirrorSlope(xz, stepSlope);
   vec3 mirrorNormal = normalize(vec3(-ringSlope.x, 1.0, -ringSlope.y));
   vec3 ray = reflect(-V, mirrorNormal);
   vec4 projected = uMirrorMatrix * vec4(vWorld, 1.0);
@@ -237,6 +238,9 @@ vec3 glassColour(vec3 V, vec2 xz) {
   vec3 reflected = reflectedScene;
   if (on < 1.0) reflected = mix(skyRadiance(normalize(vec3(ray.x, abs(ray.y), ray.z))), reflectedScene, on);
   // A trace of cool water keeps the horizon legible without hiding the doubled clouds.
+  // Footstep rings catch the sky on the side facing the light, so they show even over a plain stretch of glass.
+  float catchLight = dot(stepSlope, normalize(uSunDir.xz + vec2(1e-4))) * ${glsl(tuning.skyMirror.stepGlint)};
+  reflected *= 1.0 + clamp(catchLight, -0.35, 0.6);
   return reflected * 0.96 + vec3(0.003, 0.006, 0.012);
 }
 

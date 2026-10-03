@@ -237,6 +237,10 @@ export const tuning = {
     horizonOnFlat: 160, horizonOffFlat: 320,
     arrivalBlendFor: 10,
     rippleSpeed: 3.6, rippleStrength: 0.06, settleRate: 0.55,
+    /** A footstep's rings on the glass: how fast they run out (m/s), how long they last, and how deep the child's and cygnet's are. */
+    stepSpeed: 0.75, stepLife: 3, childStep: 0.05, birdStep: 0.025,
+    /** How brightly a footstep's rings catch the light, so they read where the reflection is plain. */
+    stepGlint: 9,
     bubbleRadius: 1.55, bubbleGrow: 1.25, bubbleSpeed: 6.5, bubbleResponse: 28, bubbleStrokeSpeed: 0.4,
     bubbleDrag: 1.4, bubbleFilledDrag: 2.6, bubbleVerticalDrag: 2.6,
     bubbleLift: 4.5, bubbleRelease: 8.5, bubbleReach: 19,

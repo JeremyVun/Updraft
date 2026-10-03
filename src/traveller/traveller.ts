@@ -345,6 +345,13 @@ export class Traveller {
     return strikes.filter((s) => this.ground(s.x, s.z) < heightAt(s.x, s.z) + 0.05);
   }
 
+  /** Heels that came down at the water's level, on the sky mirror's glass rather than its jetty. */
+  get glassSteps(): readonly { x: number; z: number; heading: number }[] {
+    const strikes = this.motion.strikes;
+    if (strikes.length === 0 || this.riding) return [];
+    return strikes.filter((s) => this.ground(s.x, s.z) < 0.2);
+  }
+
   /** Both hands belong to the cygnet; the plane's keel goes under the satchel's outer flap. */
   armsFull = false;
 
