@@ -13,11 +13,11 @@ const url=(process.env.BASE??'http://127.0.0.1:5230/')+'?start=1&analytics=0'+(p
 async function load(context,profile) {
  const page=await context.newPage(), cdp=await context.newCDPSession(page);
  await page.addInitScript(()=>{
-  window.__boot={long:[],gl:[],frames:[],ready:0};
+  window.__boot={long:[],gl:[],frames:[],ready:0,linked:0};
   new PerformanceObserver(list=>{for(const e of list.getEntries())__boot.long.push({start:e.startTime,duration:e.duration})}).observe({type:'longtask',buffered:true});
   for(const name of ['getUniformLocation','getAttribLocation','getProgramParameter','getShaderParameter','getProgramInfoLog','getParameter','bufferData','texImage2D','texStorage2D','drawElements','drawArrays','linkProgram','compileShader','clientWaitSync','readPixels']) {
    const original=WebGL2RenderingContext.prototype[name];
-   WebGL2RenderingContext.prototype[name]=function(...args){const t=performance.now();try{return original.apply(this,args)}finally{const duration=performance.now()-t;if(duration>10)__boot.gl.push({name,start:t,duration})}};
+   WebGL2RenderingContext.prototype[name]=function(...args){if(name==='linkProgram')__boot.linked++;const t=performance.now();try{return original.apply(this,args)}finally{const duration=performance.now()-t;if(duration>10)__boot.gl.push({name,start:t,duration})}};
   }
   let last=0;const tick=now=>{if(last)__boot.frames.push({at:now,gap:now-last});last=now;if(document.querySelector('#veil.ready'))__boot.ready||=performance.now();else requestAnimationFrame(tick)};requestAnimationFrame(tick);
   new MutationObserver(()=>{if(document.querySelector('#veil.ready'))__boot.ready||=performance.now()}).observe(document,{subtree:true,attributes:true,attributeFilter:['class']});
@@ -49,11 +49,11 @@ for(let run=0;run<runs;run++) {
   const worst=timings.frames.reduce((a,f)=>f.gap>a.gap?f:a,{gap:0,at:0});
   const longest=list=>list.reduce((a,t)=>t.duration>a.duration?t:a,{duration:0,start:0});
   const long=longest(timings.long), after=timings.boot===null?null:longest(timings.long.filter(t=>t.start>=timings.boot));
-  const summary={gap:round(worst.gap),gapAt:round(worst.at),long:round(long.duration),longAt:round(long.start),afterConstruction:after&&round(after.duration),afterAt:after&&round(after.start),construction:timings.boot&&round(timings.boot),ready:round(timings.ready)};
+  const summary={gap:round(worst.gap),gapAt:round(worst.at),long:round(long.duration),longAt:round(long.start),afterConstruction:after&&round(after.duration),afterAt:after&&round(after.start),construction:timings.boot&&round(timings.boot),ready:round(timings.ready),programs:timings.linked};
   results.push(summary);
   const m=timings.marks, stages=m.main&&m.boot&&m.ready?{A:m.main,B:m.boot-m.main,settle:m.settled-m.boot,warm:m.warmed-m.settled,D:m.ready-m.warmed}:null;
   const steps=[...timings.steps].sort((a,b)=>b.duration-a.duration).slice(0,3);
-  console.log(`run ${run+1}: gap ${summary.gap} ms at ${summary.gapAt}; long task ${summary.long} ms at ${summary.longAt}; after construction (${summary.construction} ms) ${summary.afterConstruction} ms at ${summary.afterAt}; ready ${summary.ready} ms`);
+  console.log(`run ${run+1}: gap ${summary.gap} ms at ${summary.gapAt}; long task ${summary.long} ms at ${summary.longAt}; after construction (${summary.construction} ms) ${summary.afterConstruction} ms at ${summary.afterAt}; ready ${summary.ready} ms; ${summary.programs} programs linked`);
   if(stages)console.log(`  stages ms ${JSON.stringify(stages)}; longest construction steps ${steps.map(t=>`${t.name.slice(11)}: ${t.duration}`).join(', ')}`);
   if(timings.percents.length)console.log(`  percent ${timings.percents.map(p=>`${p.p}${p.ready?' ready':''}`).join(' ')}`);
   const report={...summary,stages,steps:timings.steps,percents:timings.percents,worstFrame:worst.gap,long:timings.long,gl:timings.gl};
@@ -69,5 +69,5 @@ for(let run=0;run<runs;run++) {
 }
 if(runs>1) {
  const worst=key=>Math.max(...results.map(r=>r[key]??0)), median=key=>results.map(r=>r[key]??0).sort((a,b)=>a-b)[results.length>>1];
- console.log(`summary of ${runs} at ${throttle}x: worst gap ${worst('gap')} ms (median ${median('gap')}); worst long task ${worst('long')} ms; worst after construction ${worst('afterConstruction')} ms (median ${median('afterConstruction')}); ready worst ${worst('ready')} ms (median ${median('ready')})`);
+ console.log(`summary of ${runs} at ${throttle}x: worst gap ${worst('gap')} ms (median ${median('gap')}); worst long task ${worst('long')} ms; worst after construction ${worst('afterConstruction')} ms (median ${median('afterConstruction')}); ready worst ${worst('ready')} ms (median ${median('ready')}); programs linked ${median('programs')}`);
 }
