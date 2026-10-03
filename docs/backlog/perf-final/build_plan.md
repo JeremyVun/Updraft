@@ -16,7 +16,9 @@ Rules for every phase:
 - Visual work (choosing how an effect looks at a level, the menu, judging stills) goes to an allowed visual model.
   Everything else is nonvisual.
 - Light testing: typecheck, build, the phase's gate. No full playthrough, no full-game video.
-- A look change waits on its own branch for Jeremy's verdict on the stills; exact changes merge when their gate passes.
+- Nothing merges to `main` until Jeremy has been told what it changes and approved (2026-10-03: "dont just straight
+  merge to main, let me know what it changed and let me approve first"). A look change also needs his verdict on the
+  stills.
 
 Seams shared by phases:
 
