@@ -757,7 +757,7 @@ export class CloudStairs {
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
     this.wisps.seeTrick(this.trick.visible, this.undrawUniform.value, this.trueDepthUniform.value);
-    this.wisps.update(dt, time);
+    this.wisps.update(dt, time, camera);
     hazeStride.value += (this.stride - hazeStride.value) * (1 - Math.exp(-dt * 2.5));
     if (Math.abs(this.stride - hazeStride.value) < 1e-3) hazeStride.value = this.stride;
     this.bank.update(dt);

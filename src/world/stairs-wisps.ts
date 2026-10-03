@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { PointerInput } from '../input/pointer';
 import { screenBrush } from '../creatures/motion';
-import { SOLID_FADE, SOLIDS_PER_PUFF, figureSolid, flightSolid, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
+import { FRONT, SOLID_FADE, SOLIDS_PER_PUFF, figureSolid, flightSolid, puffGeometry, puffMaterial, type Puff } from './stairs-puffs';
 import { FLIGHTS, LOOP_BACK, LOOP_FAR, STEP, flight, landingOf } from './stairs-layout';
 import { LOOP_EYE, LOOP_SHRINK, alongBack, drawIn } from './stairs-penrose';
 
@@ -17,7 +17,7 @@ const SOLIDS = [...Array.from({ length: FLIGHTS }, (_, i) => [flight(i + 1), lan
   .map(([f, L]) => {
     const run = STEP.going * (f.risers - 1);
     const frame = new THREE.Matrix4().makeTranslation(f.bottom.x, f.bottom.y, f.bottom.z).multiply(new THREE.Matrix4().makeRotationY(f.yaw));
-    const bounds = new THREE.Box3(new THREE.Vector3(Math.min(L.x0, -1.05), -0.6, -0.4),
+    const bounds = new THREE.Box3(new THREE.Vector3(Math.min(L.x0, -1.05), -0.7, -0.4),
       new THREE.Vector3(Math.max(L.x1, 1.05), f.risers * STEP.rise + 1.35, run + L.z1 - L.z0)).applyMatrix4(frame);
     return { packed: flightSolid(f, L), bounds };
   });
@@ -28,7 +28,7 @@ const TRICK = (() => {
   const frame = new THREE.Matrix4().makeTranslation(LOOP_BACK.bottom.x, LOOP_BACK.bottom.y, LOOP_BACK.bottom.z).multiply(new THREE.Matrix4().makeRotationY(LOOP_BACK.yaw));
   const bounds = new THREE.Box3();
   for (let i = 0; i < 8; i++) {
-    const v = new THREE.Vector3(i & 1 ? 1.05 : -1.05, i & 2 ? LOOP_BACK.risers * STEP.rise + 1.35 : -0.6, i & 4 ? run + 0.35 : -0.4).applyMatrix4(frame);
+    const v = new THREE.Vector3(i & 1 ? 1.05 : -1.05, i & 2 ? LOOP_BACK.risers * STEP.rise + 1.35 : -0.7, i & 4 ? run + 0.35 : -0.4).applyMatrix4(frame);
     const drawn = drawIn(v.clone());
     const seems = drawn.clone().sub(LOOP_EYE).divideScalar(THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v))).add(LOOP_EYE);
     bounds.expandByPoint(v).expandByPoint(drawn).expandByPoint(seems);
@@ -63,6 +63,7 @@ export class CloudWisps {
   private readonly softs: THREE.BufferAttribute;
   private readonly nearest: number[] = Array(SOLIDS_PER_PUFF).fill(-1);
   private readonly gaps: number[] = Array(SOLIDS_PER_PUFF).fill(Infinity);
+  private readonly cardAt = new THREE.Vector3();
   /** How far each rag is drawn, easing to 0 for those a lower detail leaves out. */
   private readonly keep: number[] = [];
   private kept: number;
@@ -141,15 +142,19 @@ export class CloudWisps {
     for (let c = 0; c < 4; c++) this.alphas.setX(i * 4 + c, a);
   }
 
-  /** The pieces of the stair a rag's card can reach, nearest first. */
-  private writeSolids(i: number): void {
+  /** What a rag's card can reach as it is drawn, nearest first. */
+  private writeSolids(i: number, camera: THREE.Camera): void {
     const w = this.wisps[i];
-    // The card's lumps reach 1.25 of its breathing radius, and it stands a radius in front of the middle.
-    const reach = w.r * 1.7 + SOLID_FADE;
+    // As the shader draws it: drawn in toward the lens, its lumps reaching 1.25 of its breathing radius.
+    const depth = -this.cardAt.copy(w.p).applyMatrix4(camera.matrixWorldInverse).z;
+    const r = w.r * 1.07;
+    const shrink = depth > 0 ? Math.max(depth - r * FRONT, Math.min(depth, 0.6)) / depth : 1;
+    this.cardAt.copy(w.p).sub(camera.position).multiplyScalar(shrink).add(camera.position);
+    const reach = r * 1.25 * shrink + SOLID_FADE + 0.2;
     const ids = this.nearest.fill(-1), gaps = this.gaps.fill(Infinity);
     for (let s = 0; s < this.solidsNear.length; s++) {
       if (this.solidsNear[s] === TRICK && !this.trickShown) continue;
-      let gap = this.solidsNear[s].bounds.distanceToPoint(w.p);
+      let gap = this.solidsNear[s].bounds.distanceToPoint(this.cardAt);
       if (gap >= reach || gap >= gaps[SOLIDS_PER_PUFF - 1]) continue;
       let id = s;
       for (let k = 0; k < SOLIDS_PER_PUFF; k++) {
@@ -231,7 +236,7 @@ export class CloudWisps {
     }
   }
 
-  update(dt: number, time: number): void {
+  update(dt: number, time: number, camera: THREE.Camera): void {
     this.shown.value += (this.amount - this.shown.value) * (1 - Math.exp(-dt * 1.5));
     this.mesh.visible = this.shown.value > 0.01;
     this.thin(this.mesh.visible ? dt : Infinity);
@@ -256,7 +261,7 @@ export class CloudWisps {
       if (w.hold <= 0) w.soft += (1 - w.soft) * (1 - Math.exp(-dt * 1.5));
       for (let c = 0; c < 4; c++) this.centres.setXYZ(i * 4 + c, w.p.x, w.p.y, w.p.z);
       this.writeAlpha(i);
-      this.writeSolids(i);
+      this.writeSolids(i, camera);
     });
     this.centres.needsUpdate = true;
     this.alphas.needsUpdate = true;

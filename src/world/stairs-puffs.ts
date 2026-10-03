@@ -12,7 +12,7 @@ export const SOLID_FADE = 0.55;
 export const SOLIDS_PER_PUFF = 8;
 
 /** How far toward the lens a puff's card stands, in its radius: halfway keeps the veil over the stair as it was on the whole. */
-const FRONT = 0.5;
+export const FRONT = 0.5;
 const SLOPE = STEP.rise / STEP.going;
 const ACROSS_SLOPE = STEP.going / Math.hypot(STEP.going, STEP.rise);
 const SIDE = STEP.width / 2 + STRING.thick / 2 - 0.01;
@@ -76,6 +76,9 @@ float solidDistance(vec3 p, int i) {
   }
   vec3 d = p - a.xyz;
   vec3 l = vec3(dot(d.xz, vec2(b.x, -b.y)), d.y, dot(d.xz, b.yx));
+  // Most of a puff is well clear of a flight it can reach somewhere; the box round all of it says so cheaply.
+  float bound = boxDistance(l, vec3(min(c.x, -1.05), -0.7, -0.4), vec3(max(c.y, 1.05), b.w + 1.35, c.w)) * scale;
+  if (bound > ${f(SOLID_FADE)}) return bound;
   float flight = flightDistance(l, b.z, b.w) * scale;
   if (a.w > 1.5) return flight;
   return min(flight, landingDistance(l - vec3(0.0, b.w, 0.0), c));
@@ -91,7 +94,7 @@ export function flightSolid(fl: Flight, L: Landing | null): THREE.Vector4[] {
   const run = STEP.going * (fl.risers - 1);
   return [new THREE.Vector4(fl.bottom.x, fl.bottom.y, fl.bottom.z, L ? 0 : 2),
     new THREE.Vector4(Math.cos(fl.yaw), Math.sin(fl.yaw), run, fl.risers * STEP.rise),
-    L ? new THREE.Vector4(L.x0, L.x1, run, run + L.z1 - L.z0) : new THREE.Vector4()];
+    L ? new THREE.Vector4(L.x0, L.x1, run, run + L.z1 - L.z0) : new THREE.Vector4(-1.05, 1.05, run, run + 0.35)];
 }
 
 const VERT = /* glsl */ `
