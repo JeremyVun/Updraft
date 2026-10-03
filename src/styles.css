@@ -169,7 +169,6 @@ body.starting #plane-guide { visibility: hidden; }
 }
 .begin-mouse .begin-mouse-button { fill: currentColor; fill-opacity: .45; stroke: none; }
 @media (hover: hover) and (pointer: fine) {
-  #begin { display: grid; grid-template-columns: 18px auto 18px; }
   .begin-mouse { display: block; }
 }
 #veil.ready #begin { visibility: visible; opacity: 1; }
