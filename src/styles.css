@@ -193,8 +193,14 @@ body.starting #plane-guide { visibility: hidden; }
   transition: opacity 1.6s ease;
 }
 .veil-painting { object-fit: cover; }
-/* The veil's own deepest teal, so the words sit in the painting's shade rather than on a panel. */
-.veil-shade { background: linear-gradient(to top, #0b202d8c 0%, #0b202d59 24%, #0b202d00 50%); }
+/* A neutral near-black from the paintings' own shade, eased out by 40% up; the one place to retune it. Continue keeps
+   4.5:1 at its faintest on the palest rooms (Still island, Cloud stairs). */
+.veil-shade {
+  --shade: 18 20 24;
+  background: linear-gradient(to top, rgb(var(--shade) / .5) 20%, rgb(var(--shade) / .48) 22.5%, rgb(var(--shade) / .42) 25%,
+    rgb(var(--shade) / .34) 27.5%, rgb(var(--shade) / .25) 30%, rgb(var(--shade) / .16) 32.5%, rgb(var(--shade) / .08) 35%,
+    rgb(var(--shade) / .02) 37.5%, rgb(var(--shade) / 0) 40%);
+}
 #veil.painted :is(.veil-painting, .veil-shade) { opacity: 1; }
 #veil.painted { --low: max(200px, 28vh); }
 #veil.painted #begin { top: calc(100% - var(--low)); }
