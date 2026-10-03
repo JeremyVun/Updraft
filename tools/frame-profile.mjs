@@ -66,7 +66,7 @@
 // sky-deckfirst skips the sky's radiance where the deck covers it whole (a candidate exact skip).
 // water-lantern-reach works the lantern's glint out only within its 9 m reach (candidate exact skip).
 // water-lantern and water-hull remove the lantern's light and glint and the hull's wet collar from the sea (uniform-gated).
-// LEVEL=ultra|high|medium|low|last applies that level's world settings after the fixture (render scale and
+// LEVEL=ultra|high|medium|low applies that level's world settings after the fixture (render scale and
 // multisampling stay as RATIO and MSAA lock them); GRASS_DENSITY and GRASS_REACH then override the grass.
 // SIM_PASSES=1 times each per-frame simulation pass alone (wind, life, clouds, petals, waves) plus the light bake and a
 // full grass-table rebuild (SIM_REPS each, drained).

@@ -447,7 +447,9 @@ stairs' visibility in `src/main.ts` / `src/story/stairs*.ts`):
   `main`.
 - **Deliverable:** the before/after tables appended to `profile.md` and a short summary for Jeremy.
 - **Jeremy's part:** a playthrough on the iPad (Safari, heat, battery), which nothing on the Mac can stand in for.
-- **Done:** [ ]
+- **Done:** [x] 8a (measurement) merged to `main` at d543aec (2026-10-03, Jeremy approved); 8b's visual pass is
+  above. Results in `profile.md`, last section: Ultra −19.8% and Low −25.2% per frame weighted, memory at Ultra 285–341
+  → 241–252 MiB, script −10%; the playthrough passed. Jeremy's iPad playthrough is still his to do.
 
 ## Order
 

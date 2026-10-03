@@ -26,6 +26,10 @@ captures take no lock and can run side by side. Evidence goes under
 2. Run `node tools/production-build-check.mjs` to verify production ignores game query overrides and excludes QA
    modules. For the instrumented browser checks, run `npm run build:qa`, start `npm run preview:qa`, and run
    `BASE=<preview> npm run check:release`. QA assets live in `dist-qa/`; `dist/` remains the production build.
+   Twenty of its checks fail on a preview without saying anything about the game: the audio group, `shader-browser`
+   and `progress` import modules from `src/`, which a built bundle does not serve, and `frame-time-browser` finds the
+   frame loop by a name minification removes. Run those against a dev server in a worktree nobody is editing:
+   `BASE=<dev server> npm run check:audio`, then `node tools/<name>-check.mjs` with the same `BASE` for the three.
 3. Jeremy owns the parts no local tool covers: a listening pass through the whole journey (see
    `docs/contracts/audio.md`, Open) and physical-device checks on his iPad (touch robustness, Safari fullscreen,
    performance, warmth and battery).

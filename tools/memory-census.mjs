@@ -2,7 +2,7 @@
 // texture and GPU buffer the running game holds, with dimensions, format and estimated bytes, named by the object
 // that owns it, and whether anything used it over the frames watched at each chapter.
 // node tools/memory-census.mjs [island meadow:walk stairs:sail sea ...]
-// RATIO=1.5 MSAA=2 LEVEL=ultra|high|medium|low|last FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
+// RATIO=1.5 MSAA=2 LEVEL=ultra|high|medium|low FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
 // STATE='<js>' runs in main.ts's scope after the fixture (an older build's settings, which LEVEL cannot name).
 // BASE must be a dev server: the tool patches src/main.ts, which a built bundle does not serve.
 // How: WebGL2 calls are wrapped before the page loads, so every allocation is sized from the call that stores it
