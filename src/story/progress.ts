@@ -10,8 +10,6 @@ import { restoreWingCare } from './wing-care';
 export const PROGRESS_KEY = 'updraft.progress.v1';
 /** Kept apart from the save, so Play again still leaves chapter select open. */
 export const FINISHED_KEY = 'updraft.finished.v1';
-/** Per tab: a chapter picked on the title screen stands in for the save until its own entry is saved. */
-const CHOSEN_KEY = 'updraft.chosen-chapter';
 /** Versioned story checkpoints, not a dump of animations, callbacks or GPU textures. */
 export interface Progress {
   version: 1;
@@ -46,7 +44,6 @@ export function decodeProgress(value: unknown): Progress | null {
 }
 
 export function readProgress(): Progress | null {
-  if (chosenChapter()) return null;
   try {
     const p = decodeProgress(JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? 'null'));
     return p && migrateGeography(p);
@@ -70,7 +67,6 @@ export function saveProgress(chapter: ChapterName, point: string, data: number[]
   try {
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
     if (point === 'complete') localStorage.setItem(FINISHED_KEY, '1');
-    sessionStorage.removeItem(CHOSEN_KEY);
   } catch { /* Saving must never interrupt play. */ }
 }
 
@@ -84,15 +80,6 @@ export function hasFinished(): boolean {
   } catch {
     return false;
   }
-}
-
-/** A `?chapter=` start name, picked on the title screen. */
-export function chosenChapter(): string | null {
-  try { return sessionStorage.getItem(CHOSEN_KEY); } catch { return null; }
-}
-
-export function chooseChapter(start: string): void {
-  try { sessionStorage.setItem(CHOSEN_KEY, start); } catch { /* Without storage the pick simply begins again. */ }
 }
 
 export function clearProgress(): void {

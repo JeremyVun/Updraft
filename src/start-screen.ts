@@ -1,6 +1,6 @@
 import { params } from './params';
 import { QA } from './qa';
-import { chosenChapter, hasFinished, readProgress } from './story/progress';
+import { hasFinished, readProgress } from './story/progress';
 import { tuning } from './tuning';
 import { VeilWind } from './input/veil-wind';
 
@@ -28,7 +28,7 @@ class StartScreen {
   private air: VeilWind | null = null;
   private readonly reduced = matchMedia('(prefers-reduced-motion: reduce)');
   private readonly events = new AbortController();
-  private start: (() => void) | null = null;
+  private start: ((pick?: string) => void) | null = null;
   private pointer: Point | null = null;
   private pressed = false;
   private travel = 0;
@@ -48,7 +48,7 @@ class StartScreen {
     }
     const saved = params.progress ? readProgress() : null;
     this.button.firstElementChild!.textContent = saved ? 'Continue' : 'Begin';
-    const chapter = saved?.chapter ?? params.chapter ?? (params.progress ? chosenChapter() : null);
+    const chapter = saved?.chapter ?? params.chapter;
     this.veil.classList.toggle('night', (params.dusk ?? 0) > 1.3 || ['toWood', 'wood', 'dark', 'toSleeping', 'sleeping', 'home', 'summit'].includes(chapter ?? ''));
 
     const options = { signal: this.events.signal };
@@ -76,17 +76,13 @@ class StartScreen {
     }, options);
     this.veil.addEventListener('click', e => {
       // A touch stroke may explore the wind without entering. Keyboard activation has detail === 0.
-      if (!this.start || this.started || (e.detail !== 0 && this.travel > T.tapTravel)) return;
-      this.started = true;
-      this.button.disabled = true;
-      this.veil.classList.add('departing');
-      this.air?.finish();
-      this.start(); // AudioContext creation/resume must remain in this user gesture.
+      if (e.detail !== 0 && this.travel > T.tapTravel) return;
+      this.begin();
     }, options);
     window.addEventListener('resize', () => { this.pointer = null; }, options);
     // New players never download chapter select.
     if (params.progress && hasFinished()) {
-      void import('./chapter-select/chapter-select').then(m => { if (!this.disposed && !this.started) m.offerChapters(this.veil); }, () => {});
+      void import('./chapter-select/chapter-select').then(m => { if (!this.disposed && !this.started) m.offerChapters(this.veil, pick => this.begin(pick)); }, () => {});
     }
   }
 
@@ -106,9 +102,10 @@ class StartScreen {
     }
   }
 
-  ready(start: (sound: boolean) => void): void {
+  /** `start` gets the room a chapter pick chose; without one the game starts from the save or `?chapter=`. */
+  ready(start: (sound: boolean, pick?: string) => void): void {
     if (!this.enabled) { start(false); return; }
-    this.start = () => start(true);
+    this.start = pick => start(true, pick);
     this.veil.setAttribute('aria-busy', 'false');
     const status = document.getElementById('start-status')!;
     if (status.textContent === 'Loading' || (this.stage && status.textContent === STAGES[this.stage].line)) status.textContent = '';
@@ -147,6 +144,15 @@ class StartScreen {
     this.button.firstElementChild!.textContent = 'Try again';
     document.getElementById('start-status')!.textContent = "The game couldn't start. Try again.";
     this.ready(() => location.reload());
+  }
+
+  private begin(pick?: string): void {
+    if (!this.start || this.started) return;
+    this.started = true;
+    this.button.disabled = true;
+    this.veil.classList.add('departing');
+    this.air?.finish();
+    this.start(pick); // AudioContext creation/resume must remain in this user gesture.
   }
 
   private move(e: PointerEvent): void {

@@ -130,7 +130,6 @@ async function built(): Promise<void> {
   stepStarted = performance.now();
 }
 
-const resumedAtLoad = params.progress && readProgress() !== null;
 const canvas = document.getElementById('view') as HTMLCanvasElement;
 // Only the grade quad draws to the screen, so the canvas needs no depth buffer.
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, depth: false, powerPreference: 'high-performance' });
@@ -362,9 +361,7 @@ const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
 const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
-/** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
-story.update(0, 0);
-water.skyMirrorAppearance = story.name === 'toMirror' ? 0 : story.name === 'home' ? 0 : 1;
+// Boot only needs somewhere to stand; the start cuts to the chosen room.
 rig.cut(story.shot);
 const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? createWindDebug(params.debug === 'sway') : null;
 if (windDebug) scene.add(windDebug);
@@ -1261,19 +1258,44 @@ async function boot(): Promise<void> {
   graphicsReady = true;
   quality.setMode(controls.qualityMode, performance.now());
   startScreen.progress('ground', 1);
-  startScreen.ready(withSound => {
-    playDraws?.begin();
-    telemetry.start(story.name, resumedAtLoad, !!story.current.finished);
-    telemetry.quality(quality.level.name, quality.level.ratio, quality.level.samples);
-    if (withSound) {
-      soundChosen = true;
-      setSound(controls.soundOn);
+  startScreen.ready((withSound, pick) => {
+    try {
+      playDraws?.begin();
+      if (withSound) {
+        soundChosen = true;
+        setSound(controls.soundOn);
+      }
+      const choice = pick ?? (params.progress ? readProgress() : null) ?? params.chapter;
+      story.start(choice);
+      /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
+      story.update(0, 0);
+      water.skyMirrorAppearance = story.name === 'toMirror' ? 0 : story.name === 'home' ? 0 : 1;
+      rig.cut(story.shot);
+      void play(choice !== null && typeof choice === 'object');
+    } catch (error) {
+      contextRecovery.trigger('runtime', error);
     }
+  });
+}
+
+/** Boot laid the ground out round the first island; the chosen room's is laid out before its first frame. */
+async function play(resumed: boolean): Promise<void> {
+  try {
+    followWindow(...windowAim(), true);
+    grass.update(rig.camera);
+    grass.bake(renderer);
+    post.render(0, true);
+    await gpuIdle(renderer);
+    if (contextRecovery.lost) return;
+    telemetry.start(story.name, resumed, !!story.current.finished);
+    telemetry.quality(quality.level.name, quality.level.ratio, quality.level.samples);
     last = performance.now();
     pacer.reset(last);
     quality.reset(last);
     fpsWindowStart = last;
     requestAnimationFrame(frame);
-  });
+  } catch (error) {
+    contextRecovery.trigger('runtime', error);
+  }
 }
 export const bootReady = boot();

@@ -25,7 +25,7 @@ import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_LANDING } from '../world/birches';
-import { chosenChapter, readProgress, placeProgress, restoreLife, saveProgress } from './progress';
+import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
 
 export type ChapterName =
@@ -113,8 +113,9 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
 const ORDER: ChapterName[] = ['island', 'toLines', 'lines', 'toBoats', 'boats', 'toMeadow', 'meadow', 'toBirches', 'birches', 'toStairs', 'stairs', 'drowned', 'wood', 'toSleeping', 'sleeping', 'toMirror', 'mirror', 'toHarbour', 'home'];
 
 /**
- * Runs the chapters in order and speaks for whichever is current. `?chapter=`, or a chapter picked on the title
- * screen, starts later in the story with everything before it treated as done.
+ * Runs the chapters in order and speaks for whichever is current. Until `start` it holds the first island as boot
+ * left it; `start` restores the save, or begins later in the story (`?chapter=`, or a chapter picked on the title
+ * screen) with everything before it treated as done.
  */
 export class Journey {
   name: ChapterName = 'island';
@@ -125,8 +126,13 @@ export class Journey {
 
   constructor(private readonly cast: Cast) {
     this.chapter = new IslandChapter(cast);
-    const saved = params.progress ? readProgress() : null;
-    if (saved) {
+  }
+
+  /** Applies the save or a named start: once per page, before the first update. */
+  start(choice: Progress | string | null): void {
+    const { cast } = this;
+    if (choice !== null && typeof choice === 'object') {
+      const saved = choice;
       if (saved.chapter !== 'island' || saved.point !== 'entry') {
         placeProgress(saved, cast);
         if (saved.chapter === 'home') cast.boat.mooring = HOME_MOORING;
@@ -143,56 +149,55 @@ export class Journey {
       this.savedPoint = saved.point;
       return;
     }
-    const start = params.chapter ?? (params.progress ? chosenChapter() : null);
-    if (start === 'crossing' || start === 'lines') {
+    if (choice === 'crossing' || choice === 'lines') {
       this.sail(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
       this.begin('toLines');
-    } else if (start === 'washing') {
+    } else if (choice === 'washing') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');
-    } else if (start === 'boats') {
+    } else if (choice === 'boats') {
       this.land(BOATS_LANDING.x, BOATS_LANDING.z, BOATS_LANDING.x - 1, BOATS_LANDING.z - 4);
       this.cast.cygnet.rideIn('satchel');
       this.begin('boats');
-    } else if (start === 'meadow' || start === 'hills') {
+    } else if (choice === 'meadow' || choice === 'hills') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
-    } else if (start === 'piano') {
+    } else if (choice === 'piano') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x, mainlandCoastZ(LANDING.x) - 3);
       this.begin('meadow');
       (this.chapter as MeadowChapter).skipToPiano();
-    } else if (start === 'birches' || start === 'autumn') {
+    } else if (choice === 'birches' || choice === 'autumn') {
       this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
       this.cast.cygnet.rideIn('satchel');
       this.begin('birches');
-    } else if (start === 'stairs' || start === 'clouds') {
+    } else if (choice === 'stairs' || choice === 'clouds') {
       this.land(STAIRS_LANDING.x + 2, STAIRS_LANDING.y, STAIRS_LANDING.x + 4, STAIRS_LANDING.y - 1);
       this.cast.boat.yaw = Math.PI * 0.5;
       this.cast.cygnet.rideIn('satchel');
       this.begin('stairs');
-    } else if (start === 'drowned' || start === 'village') {
+    } else if (choice === 'drowned' || choice === 'village') {
       /** The drift into the village begins where the stairs let the boat down through the cloud onto the water. */
       this.sail(DESCENT_END.x, DESCENT_END.y, -1.9);
       this.begin('drowned');
-    } else if (start === 'wood' || start === 'dark') {
+    } else if (choice === 'wood' || choice === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
       this.begin('wood');
-    } else if (start === 'sleeping') {
+    } else if (choice === 'sleeping') {
       this.land(SLEEP_LANDING.x, SLEEP_LANDING.y, SLEEP_LANDING.x - 5, SLEEP_LANDING.y);
       this.begin('sleeping');
-    } else if (start === 'sea' || start === 'dolphins') {
+    } else if (choice === 'sea' || choice === 'dolphins') {
       this.sail(SLEEP_BERTH.x - 5, SLEEP_BERTH.z - 2, -1.76);
       this.begin('toMirror');
-    } else if (start === 'mirror') {
+    } else if (choice === 'mirror') {
       this.land(MIRROR_LANDING.x, MIRROR_LANDING.z, MIRROR_LANDING.x + 2, MIRROR_LANDING.z - 3);
       this.begin('mirror');
-    } else if (start === 'stage') {
+    } else if (choice === 'stage') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
       this.begin('stage');
-    } else if (start === 'jetty') {
+    } else if (choice === 'jetty') {
       this.moor();
       this.begin('home');
-    } else if (start === 'summit' || start === 'home') {
+    } else if (choice === 'summit' || choice === 'home') {
       this.moor();
       this.begin('home');
       (this.chapter as HomeChapter).skipToSummit();

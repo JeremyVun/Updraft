@@ -1,5 +1,4 @@
 import './chapter-select.css';
-import { chooseChapter } from '../story/progress';
 
 /** Each room's `?chapter=` start, its name and its still, in the order of the journey. */
 const ROOMS: [start: string, name: string, still: URL][] = [
@@ -28,8 +27,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
  * Only for players who have finished. Everything lives inside the veil and keeps its presses to itself,
  * because a click anywhere else on the veil begins the game.
  */
-export function offerChapters(veil: HTMLElement): void {
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+export function offerChapters(veil: HTMLElement, begin: (start: string) => void): void {
   const toggle = el('button', 'chapters-toggle', 'chapters');
   toggle.type = 'button';
   toggle.setAttribute('aria-expanded', 'false');
@@ -78,8 +76,7 @@ export function offerChapters(veil: HTMLElement): void {
   const pick = (start: string): void => {
     veil.classList.add('chapter-chosen');
     for (const button of list.querySelectorAll('button')) button.disabled = true;
-    chooseChapter(start);
-    setTimeout(() => location.reload(), reduced.matches ? 0 : 500);
+    begin(start);
   };
 
   toggle.addEventListener('pointerenter', fill, { once: true });
