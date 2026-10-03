@@ -136,7 +136,8 @@ Set the mood and invite one click; discovering the wind belongs in the game.
 - **Sky mirror**: an uninterrupted skin of water doubling the sunset and clouds. No ground fog, moon prop or
   revealed sand road. A little wooden stool, an enamel soap bowl and a brass hoop are the one fragment of
   childhood. Bubbles have nearly clear centres, shifting rose, pearl and blue rims, soft highlights and a slight
-  wobble, reflected in the same glass as the child. Fallen lights are small gold starbursts on the surface; caught
+  wobble, reflected in the same glass as the child. Each footstep, hers and the cygnet's, sets a few fine rings running
+  out over the glass that catch the light and break up the reflection at their feet. Fallen lights are small gold starbursts on the surface; caught
   lights glow in their bubbles; returned lights rise into the sky and reflect below. The camera looks across a
   bubble's travel, keeping bubble, reflection and target apart.
 - **Sleeping island**: slate-blue night round a small warm bed on an open grassy terrace; lavender-grey distance
