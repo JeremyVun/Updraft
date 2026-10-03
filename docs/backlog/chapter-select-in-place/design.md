@@ -498,3 +498,12 @@ plain veil" and the Phase 3 "Chapters" paragraph above, plus `docs/contracts/pro
 A, the 2 x 6 grid, is chosen and the single row is dropped. The grid moves lower so more of the hovered room's
 painting shows above it; the tiles keep their round 1 size. The painting stays on the last room looked at, and `back`
 stays where `chapters` was (recommended, not contested).
+
+### Verdict, 2026-10-04
+
+> ok lets go with (A). I'm happy to let you try moving them lower and a little smaller, but i may ask you to make them larger again to the same size they currently are if it doesn't work out
+
+A (2 x 6) is chosen; B (single row) and the `chapterlayout` switch go. Round 2 lowers the grid and makes the tiles a
+little smaller so the hovered painting's subject shows above them; round 1's tile sizes (166 px at 1440, 184 at 1600,
+200 at 1903) stay the fallback if Jeremy asks for them back. The painting stays on the last room looked at, and `back`
+stays where `chapters` was (recommended to Jeremy, not objected to).
