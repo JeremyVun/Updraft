@@ -1204,6 +1204,17 @@ export const tuning = {
     /** The whale is watched from within this arc of the travelling view, and let go over `whalePass` beyond it. */
     whaleArc: 0.8, whalePass: 0.6,
     whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
+    /**
+     * Arrivals watched from somewhere else than behind and above (`ArrivalView`), easing in between `from` and `full`
+     * units of sailing from the end of the route and ending where the room's own first view stands: low beside the
+     * hull as the meadow's bank rises over it, high and wide over the little boats' pools, low on the quarter under
+     * the cloud onto the stairs' knoll.
+     */
+    arrivals: {
+      meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
+      boats: { from: 80, full: 30, bearing: 0.45, distance: 31, height: 15, lead: 9 },
+      stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
+    },
   },
   seaPassage: {
     speed: 10,
