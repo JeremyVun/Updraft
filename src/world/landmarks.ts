@@ -14,6 +14,8 @@ export interface Rock {
 }
 
 export const TREE = { x: -15, z: -31 } as const;
+/** The same broad tree again, smaller and alone on the slope above the home jetty, off to the side of the climb. */
+export const HOME_TREE = { x: -124, z: -2217, scale: 0.65 } as const;
 export const TREE_CLEARING = 3.2;
 
 function scatter(cx: number, cz: number, count: number, spread: number, size: number, seed: number): Rock[] {

@@ -56,7 +56,7 @@ import { GroundBakes, type BakeInputs } from './world/ground';
 import { LifeField } from './world/life';
 import { applyPalette, applySleepingPalette } from './world/palette';
 import { heightAt } from './world/island';
-import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
+import { FLOWER_PATCHES, HOME_TREE, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
 import { Foley, type Surface } from './audio/foley';
@@ -171,14 +171,17 @@ const cursor = new Cursor(canvas);
 await built();
 bakeNoiseTiles();
 const tree = createTree();
+const homeTree = createTree(HOME_TREE, HOME_TREE.scale);
+homeTree.life.value = 1;
 const hillFlowers = wildflowersAlong(ROUTE);
 const terrainHeights = new TerrainHeights();
 const bakes = new GroundBakes(renderer, terrainHeights);
 const bakeInputs: BakeInputs = {
-  occluders: tree.canopy,
+  occluders: [...tree.canopy, ...homeTree.canopy],
   clearings: [
     ...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })),
     { x: TREE.x, z: TREE.z, radius: 1.6 },
+    { x: HOME_TREE.x, z: HOME_TREE.z, radius: 1.6 * HOME_TREE.scale },
     { x: COTTAGE.x, z: COTTAGE.z, radius: 6.5 },
     piano.clearing,
   ],
@@ -206,6 +209,7 @@ pond.objects.forEach((o) => scene.add(o));
 const islandRocks = createRocks();
 scene.add(islandRocks);
 scene.add(tree.group);
+scene.add(homeTree.group);
 await built();
 const grass = new Grass();
 scene.add(grass.group);
@@ -291,6 +295,7 @@ const planeInvitation = new PlaneInvitation();
 scene.add(planeInvitation.batch.mesh);
 const glider = new Glider(wind, [
   ...tree.canopy,
+  ...homeTree.canopy,
   ...ROCKS.map((r) => ({ centre: new THREE.Vector3(r.x, heightAt(r.x, r.z) + r.height * 0.25, r.z), radius: r.radius })),
 ]);
 const planeIndicator = new PlaneIndicator();
@@ -404,7 +409,7 @@ const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group], boats: [littleBoats.group],
   meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
-  wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty],
+  wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
@@ -1181,7 +1186,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
 /**
