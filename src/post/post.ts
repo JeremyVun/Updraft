@@ -99,9 +99,16 @@ void main() {
   hdr *= mix(shadowTint, highTint, k);
   hdr = mix(vec3(lum) * mix(vec3(0.96, 0.98, 1.03), vec3(1.0), uSaturation), hdr, 1.1 * uSaturation);
 
-  vec3 col = aces(hdr);
-  col *= 1.0 - smoothstep(0.18, 0.75, r2) * 0.4;
-  col = toSRGB(col);
+  vec3 col = toSRGB(aces(hdr));
+  float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  float chroma = max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b));
+  // Muted colours gain most, so what is already vivid does not clip; the grey still world (0.62) gains none.
+  col = mix(vec3(l), col, 1.0 + 0.4 * smoothstep(0.62, 1.0, uSaturation) * (1.0 - chroma));
+  col = mix(col, col * col * (3.0 - 2.0 * col), 0.2);
+  // Shadows go blue rather than black, leaving true black alone so the dark wood stays dark.
+  float low = smoothstep(0.0, 0.12, l) * (1.0 - smoothstep(0.12, 0.5, l));
+  col *= 1.0 + vec3(-0.07, -0.01, 0.12) * low + vec3(0.012, 0.0, -0.02) * smoothstep(0.45, 1.0, l);
+  col *= 1.0 - smoothstep(0.18, 0.75, r2) * 0.15;
   float n = hash(vUv * uResolution + fract(uTime * 7.13) * 100.0) - 0.5;
   col += n * 0.028;
   gl_FragColor = vec4(col, 1.0);

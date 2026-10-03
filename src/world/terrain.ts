@@ -160,6 +160,9 @@ void main() {
     tint = mix(stillGrey(tint), tint, life);
   }
   vec3 under = uGround * (0.85 + 0.3 * grain);
+  // Looked down on, the soil between blades reads as bare black ground, so it is shaded as the grass's own depth.
+  float overhead = smoothstep(0.2, 0.6, normalize(cameraPosition - vWorld).y);
+  under = mix(under, mix(uGrassRoot, uTipLush, 0.5) * (0.85 + 0.3 * grain), overhead);
   under = mix(stillGrey(under), under, life);
   alb = mix(stillGrey(alb) * 1.04, alb, 0.45 + 0.55 * life);
   alb = mix(alb, mix(under, field, far), grassy);

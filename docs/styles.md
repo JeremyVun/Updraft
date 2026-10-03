@@ -22,7 +22,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   afternoon until the door.
 - **Grass**: dense and slightly chunkier than real, so it reads at game distance. Deep green at the root, warm
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
-  short, lighter tufts rather than ending in a hedge.
+  short, lighter tufts rather than ending in a hedge. Looked down on, the ground between blades is the grass's own
+  shaded green, never bare dark soil.
 - **The tree**: one broad tree on the still island's ridge is the landmark. Its canopy is small leaf cards shaded
   as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind. The same tree grows again,
   two-thirds the size and alone, on the slope above the home jetty (`HOME_TREE`).
@@ -94,7 +95,7 @@ feel over detail. How each room plays is in `docs/chapters.md`.
 - **Sea life**: a humpback rolls up out of the open sea in one long slow arc, its spout glowing gold against the
   low sun; dolphins run with the boat; small silver fish leap and flash. On the open sea three of the little boats'
   toys are come across sailing their own way, smaller than in their own room, trailing little foam.
-- **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette,
+- **Final image**: HDR lighting, gentle bloom, ACES tone mapping with vibrance and a gentle contrast curve after it, cool shadows and warm highlights, a light vignette,
   faint lens fringe at the corners, fine grain.
 - **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an
   updraft charges. Small round buttons in the corner: a speaker that breathes when muted, fullscreen, and graphics
