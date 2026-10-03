@@ -101,6 +101,11 @@ On the curtains, after a parting-curtains attempt: "nope, i dont think it should
 completely wrong. The theme of this island isa bout washing on a clothes line being blown about, that is how it should
 feel like." The sheet stays pegged; held open, it streams, flaps and billows in a breeze that keeps blowing through.
 
+A sheet streaming toward the camera was still "randomly hanging in mid air towards the player". Two physical ways
+a sheet stays open at rest were offered (pegs pop and it drops to hang from one end; it is torn off the line and snags
+nearby), and Jeremy: "why not add variation and have both? We have three checkpoints". Curtain 1: pegs pop, it hangs
+from one end; curtain 2: middle pegs pop, each half hangs from its own post; curtain 3: torn off, tumbles and snags.
+
 Open, on branch `polish/round2` (`/private/tmp/updraft-polish2`), each shown to Jeremy as before/after stills before
 `main`: backlit rocks that keep a shadow but not a black one; the boat wake's V (it sometimes vanishes); a clearer
 way for the curtains to stay open; a rubber duck on the meadow's beach; the toy fleet sailing by on the open sea,
