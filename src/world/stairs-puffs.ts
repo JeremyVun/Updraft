@@ -14,7 +14,7 @@ export const SOLIDS_PER_PUFF = 8;
 /** How far toward the lens a puff's card stands, in its radius: halfway keeps the veil over the stair as it was on the whole. */
 export const FRONT = 0.5;
 /** How many cells each card is cut into across, so the distance to a solid is found at its corners and blended between. */
-const GRID = 6;
+const GRID = 4;
 /** Blending the distance across a cell overstates it near a solid's edges by up to this much, so the thinning starts this far out. */
 const BLEND = 0.1;
 const SLOPE = STEP.rise / STEP.going;
