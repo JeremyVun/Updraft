@@ -24,6 +24,20 @@ Rulings, 2026-10-03: this is phase 3 of this item, not its own item ("Phase 3 of
 replaces the save ("Two-step confirm": a quiet start-over under Continue; the first press turns it in place into a
 short confirmation, a second press starts the first island).
 
+Comps round 1, 2026-10-03 (`/tmp/updraft-continue-comps-1/`, four directions: A tile above Continue, B still
+blurred into light behind it, C Continue set into a larger still, D the still as the whole veil's field). Jeremy:
+
+> I like C in that the still is larger, but yea depending on the still, it is hard to see the continue / begin button
+> inside it. So maybe let's do (A), without the chapter name label, make the still much larger
+
+> start over / start over and lost your progress
+
+So: A's tile above Continue, with no room name, and the still much larger than chapter select's tile. Continue never
+sits on the picture. The label is `start over` and its confirmation is `start over and lose your progress?` (his
+"lost" read as a typo for "lose"). Carried from round 1: `start over` is drawn like `chapters` and sits below it for
+a finished player; "restart" is avoided because the recovery dialog's `Restart game` means something else; the veil
+reads complete if the still never loads.
+
 ## What changes for the player
 
 Today a pick in `chapters` saves the choice in `sessionStorage`, reloads the page, loads the whole game again and
