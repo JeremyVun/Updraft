@@ -1,18 +1,19 @@
 # Updraft
 
-[![Updraft: a child in a yellow raincoat sits on a grassy cliff with a young swan in her satchel, watching a paper plane fly out over a sea of small islands.](docs/images/updraft-header.jpg)](https://updraft.jeremyvun.com)
+![Updraft: a child in a yellow raincoat sits on a grassy cliff with a young swan in her satchel, watching a paper plane fly out over a sea of small islands.](docs/images/updraft-header.jpg)
 
-A quiet browser game where you play the wind.
+A little girl finds herself on an island far from home, with winter on the way. Together with a young swan, she sets
+out to find the way home.
 
-**[Play Updraft](https://updraft.jeremyvun.com)**
+You are the wind. Lift her paper plane and she will follow it across the sea, through autumn woods and up into the
+clouds. The swan trusts her, and the days are getting shorter. When the way goes dark, she will have to be brave for
+both of them.
 
-A little girl and a young swan are trying to get home before winter. You can't steer them. You can only move the air:
-a gust lifts her paper plane and she follows it, fills the sail of her boat, and brings colour back to a sleeping
-land. From island to island they cross rolling meadows, an autumn birch wood, a staircase in the clouds, a village
-half under the sea and a wood in the dark.
+A wordless journey home, played with nothing but the movement of your hand.
 
-There are no words and no way to fail. Grass bends, washing billows and music answers what you do. Linger and play
-with the wind, or help the travellers on their way.
+Play it in your browser at [updraft.jeremyvun.com](https://updraft.jeremyvun.com).
+
+![Twelve painted rooms from the journey, from a grey winter shore to a jetty at home.](docs/images/updraft-chapters.jpg)
 
 <p>
   <img width="49%" src="docs/images/updraft-washing.jpg" alt="The child walks through tall grass towards a long line of white sheets drying in the wind.">
@@ -30,8 +31,6 @@ with the wind, or help the travellers on their way.
   <img width="49%" src="docs/images/updraft-sleeping-island.jpg" alt="Under a starry sky, the child walks towards a glowing fireplace, lamp and chairs standing in a field.">
   <img width="49%" src="docs/images/updraft-sky-mirror.jpg" alt="The child walks across still water that mirrors pink sunset clouds, with a lantern and a kite ahead.">
 </p>
-
-[![Twelve painted rooms from the journey, from a grey winter shore to a jetty at home.](docs/images/updraft-chapters.jpg)](https://updraft.jeremyvun.com)
 
 ## How to play
 
