@@ -1212,7 +1212,7 @@ export const tuning = {
      */
     arrivals: {
       meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
-      boats: { from: 80, full: 30, bearing: 0.45, distance: 31, height: 15, lead: 9 },
+      boats: { from: 80, full: 30, bearing: 0.8, distance: 28, height: 13, lead: 8, side: -1 },
       stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
     },
   },
