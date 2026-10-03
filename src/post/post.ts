@@ -77,6 +77,13 @@ float hash(vec2 p) {
 vec3 toSRGB(vec3 c) {
   return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
 }
+/** Hue in degrees. */
+float hueOf(vec3 c, float chroma) {
+  float mx = max(c.r, max(c.g, c.b));
+  float d = max(chroma, 1e-4);
+  float h = mx == c.r ? mod((c.g - c.b) / d, 6.0) : mx == c.g ? (c.b - c.r) / d + 2.0 : (c.r - c.g) / d + 4.0;
+  return h * 60.0;
+}
 
 void main() {
   vec2 fromCentre = vUv - 0.5;
@@ -102,11 +109,18 @@ void main() {
   vec3 col = toSRGB(aces(hdr));
   float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
   float chroma = max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b));
-  // Muted colours gain most, so what is already vivid does not clip; the grey still world (0.62) gains none.
-  col = mix(vec3(l), col, 1.0 + 0.4 * smoothstep(0.62, 1.0, uSaturation) * (1.0 - chroma));
-  col = mix(col, col * col * (3.0 - 2.0 * col), 0.2);
-  // Shadows go blue rather than black, leaving true black alone so the dark wood stays dark.
-  float low = smoothstep(0.0, 0.12, l) * (1.0 - smoothstep(0.12, 0.5, l));
+  float h = hueOf(col, chroma);
+  /**
+   * Muted colours gain most, so what is already vivid does not clip; the grey still world (0.62) gains none. Pinks
+   * and magentas gain little, the bright ones nothing, and the brightest go whiter, so cloud lit by a low sun stays
+   * gold and white instead of turning purple.
+   */
+  float pink = max(smoothstep(288.0, 305.0, h), 1.0 - smoothstep(12.0, 30.0, h));
+  float held = pink * (0.5 + 0.5 * smoothstep(0.5, 0.68, l));
+  col = mix(vec3(l), col, 1.0 + 0.4 * smoothstep(0.62, 1.0, uSaturation) * (1.0 - chroma) * (1.0 - held) - 0.35 * pink * smoothstep(0.6, 0.9, l));
+  col *= mix(l, l * l * (3.0 - 2.0 * l), 0.2) / max(l, 1e-4);
+  // Shadows go blue rather than black, leaving true black and pinks alone so the dark wood stays dark.
+  float low = smoothstep(0.0, 0.12, l) * (1.0 - smoothstep(0.12, 0.5, l)) * (1.0 - pink);
   col *= 1.0 + vec3(-0.07, -0.01, 0.12) * low + vec3(0.012, 0.0, -0.02) * smoothstep(0.45, 1.0, l);
   col *= 1.0 - smoothstep(0.18, 0.75, r2) * 0.15;
   float n = hash(vUv * uResolution + fract(uTime * 7.13) * 100.0) - 0.5;
