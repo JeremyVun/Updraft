@@ -17,7 +17,8 @@ function observe() {
       const p = g.cygnet.position.clone().project(g.rig.camera);
       log.swimFrames++;
       if (Math.abs(p.x) > 0.82 || Math.abs(p.y) > 0.82 || p.z > 1) log.clipped++;
-      log.maxGap = Math.max(log.maxGap, g.cygnet.astern);
+      // Out among the toys and back, never further from its place beside the hull than it dares.
+      log.maxGap = Math.max(log.maxGap, g.cygnet.position.distanceTo(c.water.clone().setY(g.cygnet.position.y)));
     }
   };
 }
@@ -41,7 +42,7 @@ const steps = [
   wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"), { shot: 'alongside' },
   wait("['drying','done'].includes(__game.story.current.swim)"), { shot: 'return' },
   wait("__game.story.current.swim==='done'"), { shot: 'together' },
-  { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>3.5)throw Error(JSON.stringify(s));return s;})()` },
+  { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>11.5)throw Error(JSON.stringify(s));return s;})()` },
   wait("__game.story.current.time>105 || __game.story.name==='mirror'"), { shot: 'farewell' },
   wait("__game.story.name==='mirror'", 110), { shot: 'mirror-arrival' },
   { eval: 'window.seaLog' },

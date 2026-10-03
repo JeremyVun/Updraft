@@ -416,17 +416,27 @@ The exhale after the worst of the journey: the one crossing that takes its time,
 player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
 pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
 so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
-play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. After the leap,
-three of the little boats' toys (the child's orange one, the teal and the yellow) come sailing in from off the side
-of the frame, small, their sails kept drawing by the breeze and filled hard by the player's gusts. They are the
-cygnet's brave swim: it watches them, grows restless, climbs onto the side, makes up its mind, goes in and swims in
-the wave along the hull among them, edging out toward the child's own toy, while the boat sails on; then it is
-lifted back in to dry and the toys bear away out to the side and sail on out of sight. A
-dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
+play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell.
+
+Three of the little boats' toys (the child's orange one, the teal and the yellow) are already out there when the
+passage leaves, unseen in the night (`ToyFleet.sail`, placed from the route ahead by `seaToys.meetAt`/`meetIn`):
+a loose flotilla on a course of its own that crosses the route well ahead and runs on out to the swimming side,
+at a toy's pace, slower than the boat. Nothing about the boat changes what they do; their sails are the wind's,
+drawing in the breeze, heeling, luffing and driven harder by the player's gusts. They come out of the dark as the
+light comes (far off in the night they are unlit), the boat comes up on them, and as the nearest comes close
+after the leap, the cygnet notices: it watches them, grows restless, climbs onto the side and makes up its mind,
+and goes in when they are near. It swims out to the toy nearest it, to and fro along its near side among the
+others (`swimPlay`, as in their own room), never across a hull's bow and never further out than `seaToys.reach`,
+then turns back as they fall astern and paddles hard for the boat, which eases (`seaPassage.swimSpeed`, never a
+crawl) from the moment the toys are near until it is lifted back in to dry. The toys sail on their own way, out
+of the frame astern, and are gone once nobody could see them. While it swims the lens opens out beside the boat,
+low and close, looking across the cygnet and the toys to the child. A dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
 Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
 
 Rulings: the passage takes at most 100 s. Dolphins are big, never swim in the air, and never turn faster than a
-body allows. The boat never crawls for the swim.
+body allows. The boat never crawls for the swim. The toys are a discovery, not a scripted event: they never steer
+for the boat, match its speed or keep station by it. Jeremy (2026-10-03): "the little boats should be doing their
+own thing and we simply "intercept" or "come across" them briefly".
 
 Rules: the pod follows its own stations rather than being swung with the boat.
 

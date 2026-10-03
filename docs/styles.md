@@ -93,7 +93,7 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   near the sun.
 - **Sea life**: a humpback rolls up out of the open sea in one long slow arc, its spout glowing gold against the
   low sun; dolphins run with the boat; small silver fish leap and flash. On the open sea three of the little boats'
-  toys sail by, smaller than in their own room, trailing little foam.
+  toys are come across sailing their own way, smaller than in their own room, trailing little foam.
 - **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette,
   faint lens fringe at the corners, fine grain.
 - **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an
