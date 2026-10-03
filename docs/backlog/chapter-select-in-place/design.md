@@ -229,7 +229,9 @@ row; the gradient is smooth), a dark smear of out-of-focus blades where Astra's 
 teal gradient reaching halfway up plus the paintings' "cool shade" band starting near the middle, when Continue sits at
 72%. So every painting is regenerated with a shallower quiet band (the lower quarter, in the room's own colours, in
 shade rather than heavily defocused, no dark horizontal bands), and the gradient becomes lower, lighter and neutral
-rather than teal, tuned so Continue stays at least 4.5:1 on every room. The prompts and a one-room regenerate script live in
+rather than teal, tuned so Continue stays at least 4.5:1 on every room. He clarified "blue" meant blur: "e.g.
+f-meadow-d, f-birches-d - the blur is a bit too much / too obvious". The band is quiet because the room is calm and in
+shade there, with at most a subtle focus falloff, never a visible blur effect. The prompts and a one-room regenerate script live in
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
