@@ -51,8 +51,8 @@ function lineAt(line: { a: THREE.Vector3; b: THREE.Vector3; sag: number }, t: nu
  * loses both ends and is then torn off altogether.
  */
 const PEGGING: { pegs: number[][]; order: [number, number][][]; gap: number; spread: number; torn?: boolean }[] = [
-  { pegs: [[0.02, 0.26, 0.5, 0.74, 0.98]], order: [[[0, 4]], [[0, 3]], [[0, 2]]], gap: 1.5, spread: 1.2 },
-  { pegs: [[0.03, 0.32, 0.66, 0.97], [0.03, 0.34, 0.68, 0.97]], order: [[[0, 3]], [[1, 0]], [[0, 2]], [[1, 1]]], gap: 0.6, spread: 0.5 },
+  { pegs: [[0.02, 0.26, 0.5, 0.74, 0.98]], order: [[[0, 4]], [[0, 3]], [[0, 2]]], gap: 3.5, spread: 0.2 },
+  { pegs: [[0.03, 0.24, 0.62, 0.97], [0.03, 0.38, 0.76, 0.97]], order: [[[0, 3]], [[1, 0]], [[0, 2]], [[1, 1]]], gap: 0.3, spread: 0.6 },
   { pegs: [[0.02, 0.34, 0.66, 0.98]], order: [[[0, 0]], [[0, 3]], [[0, 1], [0, 2]]], gap: 0, spread: 1.2, torn: true },
 ];
 
@@ -121,6 +121,8 @@ export class WashingCurtain {
   readonly before: THREE.Vector3;
   readonly birdBefore: THREE.Vector3;
   readonly after: THREE.Vector3;
+  /** Just short of the line where the bird goes through. */
+  readonly way: THREE.Vector3;
   /** Where the child crosses under the line. */
   crossX: number;
   readonly sag = 0.22;
@@ -173,9 +175,10 @@ export class WashingCurtain {
     this.b = new THREE.Vector3(x + width / 2 + 0.35, top + 0.08, z);
     // They wait and cross where the sheet will not hang once it is down.
     const gap = x + this.plan.gap;
-    this.before = this.ground(gap - 1.6, z + 4.7);
+    this.before = this.ground(gap - this.plan.spread - 0.4, z + 4.7);
     this.birdBefore = this.ground(gap + this.plan.spread, z + 1.7);
     this.after = this.ground(gap + this.plan.spread, z - 4.5);
+    this.way = this.ground(gap + this.plan.spread, z + 1);
     this.crossX = gap - this.plan.spread;
     for (const end of this.plan.torn ? [this.a, this.b, SNAG_LINE.a, SNAG_LINE.b] : [this.a, this.b]) {
       this.posts.push(end.x, end.z, 0.2, end.y + 0.1);
@@ -334,15 +337,18 @@ export class WashingCurtain {
       if (Math.abs(z - this.center.z) < 5.5 && y < heightAt(x, z) + 1.8) low.push(x);
     }
     const planned = this.center.x + this.plan.gap;
-    let best = planned, room = -Infinity;
+    // A thin post is easier to pass close by than a heap of cloth.
+    const room = (x: number) => Math.min(x - this.a.x + 1, this.b.x - x + 1, ...low.map(p => Math.abs(p - x)));
+    let best = planned, score = -Infinity;
     for (let x = this.a.x + 0.9; x <= this.b.x - 0.9; x += 0.1) {
-      const clear = Math.min(x - this.a.x, this.b.x - x, ...low.map(p => Math.abs(p - x)));
-      const score = Math.min(clear, 2.2) - Math.abs(x - planned) * 0.05;
-      if (score > room) { room = score; best = x; }
+      const clear = room(x);
+      const here = Math.min(clear, 2.2) - Math.abs(x - planned) * 0.05;
+      if (here > score) { score = here; best = x; }
     }
-    const clear = Math.min(best - this.a.x, this.b.x - best, ...low.map(p => Math.abs(p - best)));
+    const clear = room(best);
     const spread = THREE.MathUtils.clamp(clear - 1, 0, this.plan.spread);
     this.after.set(best + spread, heightAt(best + spread, this.after.z), this.after.z);
+    this.way.set(best + spread, heightAt(best + spread, this.way.z), this.way.z);
     this.crossX = best - spread;
   }
 
@@ -371,10 +377,20 @@ export class WashingCurtain {
     }
     if (stage === this.stages - 1 && this.plan.torn) this.tear();
     this.repin();
-    // The cloth springs a little as it lets go.
-    for (const s of this.sheets) {
-      for (let c = 0; c < s.cloth.cols; c++) if (s.cloth.free[c]) s.cloth.kick(c, 0, 0.6, 0, STEP);
-    }
+    // Held taut between its pegs, the cloth springs back toward those still holding it as it lets go.
+    if (this.plan.torn && stage === this.stages - 1) return;
+    this.sheets.forEach((s, j) => {
+      const on = this.pegs.filter(p => p.sheet === j && !p.off).map(p => p.u);
+      if (!on.length) return;
+      const lo = Math.min(...on), hi = Math.max(...on), { cloth } = s;
+      for (let i = 0; i < cloth.count; i++) {
+        const u = (i % cloth.cols) / (cloth.cols - 1);
+        const back = (u < lo ? lo - u : u > hi ? hi - u : 0) * cloth.width * k.recoil;
+        // It never falls quite flat: a ripple across it starts the folds.
+        const across = back ? 0.6 * Math.sin(u * 17 + Math.floor(i / cloth.cols) * 0.9 + this.popped) : 0;
+        if (cloth.free[i]) cloth.kick(i, lineDir.x * back, i < cloth.cols ? 0.6 : 0, lineDir.z * back + across, STEP);
+      }
+    });
   }
 
   /** The last pegs go and the breeze takes the whole sheet. */

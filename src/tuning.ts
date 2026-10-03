@@ -1106,11 +1106,13 @@ export const tuning = {
      */
     pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 8, liveAir: 5.5, restAir: 2.2,
     /** A worked peg gives once the billow has fallen below `popBillow`, or after `popWait` s of gusting. */
-    popBillow: 0.3, popWait: 1.5,
+    popBillow: 0.2, popWait: 1.5,
     /** The travellers go through once the last of the sheet has been down this long. */
-    passAfter: 1.2,
+    passAfter: 2,
     /** A popped peg leaps `pegHop` m/s up and `pegFling` m/s out along the line, and tumbles to the grass. */
     pegHop: 3.2, pegFling: 1.6,
+    /** Cloth let go springs back toward the pegs still holding it at `recoil` m/s for every metre away it was. */
+    recoil: 0.8,
     /** The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line. */
     flightSeconds: 2.4, flightRise: 2.6, flightGrip: 9,
     /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */

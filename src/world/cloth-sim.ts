@@ -47,7 +47,7 @@ export class Cloth {
       const i = r * cols + c;
       if (c + 1 < cols) link(i, i + 1, 1);
       if (r + 1 < rows) link(i, i + cols, 1);
-      if (c + 1 < cols && r + 1 < rows) { link(i, i + cols + 1, 0.7); link(i + 1, i + cols, 0.7); }
+      if (c + 1 < cols && r + 1 < rows) { link(i, i + cols + 1, 0.5); link(i + 1, i + cols, 0.5); }
       if (c + 2 < cols) link(i, i + 2, 0.06);
       if (r + 2 < rows) link(i, i + cols * 2, 0.06);
     }
@@ -152,7 +152,8 @@ export class Cloth {
         const ka = a * 3, kb = b * 3;
         const dx = pos[kb] - pos[ka], dy = pos[kb + 1] - pos[ka + 1], dz = pos[kb + 2] - pos[ka + 2];
         const d = Math.hypot(dx, dy, dz) || 1e-6;
-        const s = (d - rest[c]) / d * stiff[c] / w;
+        // Cloth resists stretching but gives under compression, so it folds instead of standing like a board.
+        const s = (d - rest[c]) / d * stiff[c] * (d < rest[c] ? 0.25 : 1) / w;
         pos[ka] += dx * s * wa; pos[ka + 1] += dy * s * wa; pos[ka + 2] += dz * s * wa;
         pos[kb] -= dx * s * wb; pos[kb + 1] -= dy * s * wb; pos[kb + 2] -= dz * s * wb;
       }
@@ -180,9 +181,9 @@ export class Cloth {
       const floor = ground(pos[k], pos[k + 2]);
       if (pos[k + 1] < floor) {
         pos[k + 1] = floor;
-        // Grass holds the cloth that lies on it, though what hangs above can still drag it.
-        prev[k] += (pos[k] - prev[k]) * 0.15;
-        prev[k + 2] += (pos[k + 2] - prev[k + 2]) * 0.15;
+        // Grass slows the cloth that lies on it, though what hangs above can still drag it along.
+        prev[k] += (pos[k] - prev[k]) * 0.02;
+        prev[k + 2] += (pos[k + 2] - prev[k + 2]) * 0.02;
         if (prev[k + 1] < floor) prev[k + 1] = floor;
       }
     }

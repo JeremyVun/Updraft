@@ -132,7 +132,8 @@ export class LinesChapter implements Chapter {
         if (g.passable && this.t > tuning.linesPassage.birdLead && this.noticed) {
           g.cleared = true;
           cygnet.bind(0.035);
-          cygnet.stay = false; cygnet.errand = g.after;
+          // Into the way the fallen cloth has left, then through.
+          cygnet.stay = false; cygnet.errand = g.way;
           cygnet.watch(g.after); cygnet.pace = 0.8;
           cygnet.does('nibble', g.after, 1.6);
           this.birdArrived = -1;
@@ -143,6 +144,7 @@ export class LinesChapter implements Chapter {
       case 'birdThrough': {
         c.lookAt = cygnet.position;
         const g = active!;
+        if (cygnet.errand === g.way && cygnet.position.distanceTo(g.way) < 0.7) cygnet.errand = g.after;
         if (cygnet.position.distanceTo(g.after) < 1.2) {
           cygnet.stay = true;
           cygnet.watch(this.watching.copy(c.position).setY(c.position.y + 1.5));
@@ -152,7 +154,9 @@ export class LinesChapter implements Chapter {
           }
           if (time - this.birdArrived > tuning.linesPassage.lookBack) {
             this.to('childThrough');
-            c.walkTo(g.crossX, g.after.z - 0.8, false, () => this.passed(), 0.6);
+            const through = () => c.walkTo(g.crossX, g.after.z - 0.8, false, () => this.passed(), 0.6);
+            if (Math.abs(c.position.x - g.crossX) > 0.4) c.walkTo(g.crossX, g.way.z + 0.6, false, through, 0.6);
+            else through();
           }
         }
         break;
