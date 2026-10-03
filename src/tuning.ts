@@ -1104,7 +1104,7 @@ export const tuning = {
      * never streams flat; once its pegs are off it feels at most `restAir` m/s of breeze, so a gust never throws
      * it back into the way.
      */
-    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 8, liveAir: 5.5, restAir: 2.2,
+    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 6, liveAir: 5.5, restAir: 2.2,
     /** A worked peg gives once the billow has fallen below `popBillow`, or after `popWait` s of gusting. */
     popBillow: 0.2, popWait: 1.5,
     /** The travellers go through once the last of the sheet has been down this long. */
@@ -1116,12 +1116,14 @@ export const tuning = {
     /** The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line. */
     flightSeconds: 2.4, flightRise: 2.6, flightGrip: 9,
     /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */
-    settleSeconds: 7,
+    settleSeconds: 6,
+    /** Cloth further than this from the child holds still; nobody is near enough to see it sway. */
+    simulateWithin: 45,
     brushFrom: 0.8, brushRadius: 0.27,
     /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
     inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,
     inviteWidth: 0.11, inviteAlpha: 0.85, inviteSpan: 0.66,
-    /** Let the little bird try first, then the child follows beneath the raised hem. */
+    /** Let the little bird try first, then the child follows through the way the fallen sheet has left. */
     birdLead: 1.4, lookBack: 1.5,
     revealFill: 2.8, revealHold: 4.5,
     doorApproach: 5.5, doorCross: 7, shorePause: 4,

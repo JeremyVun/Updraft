@@ -110,7 +110,8 @@ export class LinesChapter implements Chapter {
     const { child: c, plane: p, cygnet, wind } = this.cast;
     const active = this.gate < CURTAINS.length ? CURTAINS[this.gate] : null;
     washingPassage.active = this.beat === 'curtain' ? active : null;
-    CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active));
+    CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active,
+      g.center.distanceToSquared(this.cast.child.position) < tuning.linesPassage.simulateWithin ** 2));
     if (active) {
       p.home.copy(active.before); p.homeRadius = 12;
     }

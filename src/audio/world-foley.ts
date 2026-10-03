@@ -120,6 +120,12 @@ export class WorldFoley {
     state.next = this.time + (kind === 'water' ? tuning.audio.waterEvery : tuning.audio.materialEvery);
   }
 
+  /** One-off knocks that are their own event: a peg off the line. */
+  knock(kind: MaterialSound, at: THREE.Vector3, strength: number): void {
+    const level = this.heard(at) * strength;
+    if (level > 0.015) this.foley.material(kind, level, screenPan(this.camera, at));
+  }
+
   splash(at: THREE.Vector3, strength: number, surfacing = false): void {
     const level = this.heard(at) * strength;
     const last = surfacing ? this.lastSurface : this.lastSplash;

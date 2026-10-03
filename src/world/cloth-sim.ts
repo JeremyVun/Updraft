@@ -61,7 +61,7 @@ export class Cloth {
   flatDistance(a: number, b: number): number {
     const du = ((a % this.cols) - (b % this.cols)) / (this.cols - 1) * this.width;
     const dv = (Math.floor(a / this.cols) - Math.floor(b / this.cols)) / (this.rows - 1) * this.drop;
-    return Math.hypot(du, dv);
+    return Math.sqrt(du * du + dv * dv);
   }
 
   place(i: number, x: number, y: number, z: number): void {
@@ -88,9 +88,11 @@ export class Cloth {
     for (let i = 0; i < this.count; i++) if (!this.free[i]) held.push(i);
     const pairs: number[] = [];
     const rest: number[] = [];
+    // The nearest few holds are enough to stop it stretching, and far cheaper than all of them.
     for (let i = 0; i < this.count; i++) {
       if (!this.free[i]) continue;
-      for (const j of held) { pairs.push(i, j); rest.push(this.flatDistance(i, j)); }
+      const near = held.map(j => [j, this.flatDistance(i, j)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
+      for (const [j, d] of near) { pairs.push(i, j); rest.push(d); }
     }
     this.tethers = new Int32Array(pairs);
     this.tetherRest = new Float32Array(rest);
@@ -102,7 +104,7 @@ export class Cloth {
     for (let i = 0; i < this.count; i++) {
       if (!this.free[i]) continue;
       const k = i * 3;
-      sum += Math.hypot(this.pos[k] - this.prev[k], this.pos[k + 1] - this.prev[k + 1], this.pos[k + 2] - this.prev[k + 2]);
+      sum += Math.sqrt((this.pos[k] - this.prev[k]) ** 2 + (this.pos[k + 1] - this.prev[k + 1]) ** 2 + (this.pos[k + 2] - this.prev[k + 2]) ** 2);
       n++;
     }
     return n ? sum / n / h : 0;
@@ -129,7 +131,7 @@ export class Cloth {
       // Pressure on the face goes with the square of the air through it; a little skin friction along it.
       const push = drag * across * Math.abs(across);
       let ax = nx * push + rx * drag * 0.08, ay = ny * push + ry * drag * 0.08 - 9.8, az = nz * push + rz * drag * 0.08;
-      const a = Math.hypot(ax, ay, az);
+      const a = Math.sqrt(ax * ax + ay * ay + az * az);
       if (a > 60) { ax *= 60 / a; ay *= 60 / a; az *= 60 / a; }
       const x = pos[k], y = pos[k + 1], z = pos[k + 2];
       pos[k] += (x - prev[k]) * keep + ax * h * h;
@@ -151,7 +153,7 @@ export class Cloth {
         if (w === 0) continue;
         const ka = a * 3, kb = b * 3;
         const dx = pos[kb] - pos[ka], dy = pos[kb + 1] - pos[ka + 1], dz = pos[kb + 2] - pos[ka + 2];
-        const d = Math.hypot(dx, dy, dz) || 1e-6;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
         // Cloth resists stretching but gives under compression, so it folds instead of standing like a board.
         const s = (d - rest[c]) / d * stiff[c] * (d < rest[c] ? 0.25 : 1) / w;
         pos[ka] += dx * s * wa; pos[ka + 1] += dy * s * wa; pos[ka + 2] += dz * s * wa;
@@ -162,8 +164,9 @@ export class Cloth {
     for (let t = 0; t < tetherRest.length; t++) {
       const ka = tethers[t * 2] * 3, kb = tethers[t * 2 + 1] * 3;
       const dx = pos[ka] - pos[kb], dy = pos[ka + 1] - pos[kb + 1], dz = pos[ka + 2] - pos[kb + 2];
-      const d = Math.hypot(dx, dy, dz);
-      if (d <= tetherRest[t]) continue;
+      const dd = dx * dx + dy * dy + dz * dz;
+      if (dd <= tetherRest[t] * tetherRest[t]) continue;
+      const d = Math.sqrt(dd);
       const s = tetherRest[t] / d;
       pos[ka] = pos[kb] + dx * s; pos[ka + 1] = pos[kb + 1] + dy * s; pos[ka + 2] = pos[kb + 2] + dz * s;
     }
@@ -173,8 +176,9 @@ export class Cloth {
       for (let p = 0; p < posts.length; p += 4) {
         if (pos[k + 1] > posts[p + 3]) continue;
         const dx = pos[k] - posts[p], dz = pos[k + 2] - posts[p + 1];
-        const d = Math.hypot(dx, dz);
-        if (d >= posts[p + 2] || d < 1e-6) continue;
+        const dd = dx * dx + dz * dz;
+        if (dd >= posts[p + 2] * posts[p + 2] || dd < 1e-12) continue;
+        const d = Math.sqrt(dd);
         pos[k] = posts[p] + dx / d * posts[p + 2];
         pos[k + 2] = posts[p + 1] + dz / d * posts[p + 2];
       }
@@ -198,7 +202,7 @@ export class Cloth {
       const ax = pos[rr] - pos[l], ay = pos[rr + 1] - pos[l + 1], az = pos[rr + 2] - pos[l + 2];
       const bx = pos[d] - pos[u], by = pos[d + 1] - pos[u + 1], bz = pos[d + 2] - pos[u + 2];
       let nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
-      const len = Math.hypot(nx, ny, nz) || 1;
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
       nx /= len; ny /= len; nz /= len;
       normal[i * 3] = nx; normal[i * 3 + 1] = ny; normal[i * 3 + 2] = nz;
     }

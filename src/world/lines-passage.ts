@@ -57,7 +57,7 @@ const PEGGING: { pegs: number[][]; order: [number, number][][]; gap: number; spr
 ];
 
 const SPACING = 0.42;
-const STEP = 1 / 120;
+const STEP = 1 / 60;
 
 export interface CurtainPeg {
   readonly sheet: number;
@@ -280,7 +280,8 @@ export class WashingCurtain {
     return new Floor(this.center.x - reach / 2 + (this.plan.torn ? 6 : 0), this.center.z - reach / 2, reach, Math.round(reach * 2));
   }
 
-  update(dt: number, wind: WindField, listening: boolean): void {
+  /** `near` is false while the travellers are too far off to see it move; the cloth then holds still. */
+  update(dt: number, wind: WindField, listening: boolean, near = true): void {
     const k = tuning.linesPassage;
     this.brushAge += dt;
     this.floor ??= this.makeFloor();
@@ -310,7 +311,7 @@ export class WashingCurtain {
     this.billow += (gusting - this.billow) * (1 - Math.exp(-dt * (gusting > this.billow ? k.rise : k.settle)));
     this.opening += (this.popped / this.stages + this.billow * 0.25 - this.opening) * (1 - Math.exp(-dt * 3));
 
-    this.pending = Math.min(this.pending + dt, STEP * 4);
+    this.pending = near ? Math.min(this.pending + dt, STEP * 3) : 0;
     while (this.pending >= STEP) { this.pending -= STEP; this.simulate(STEP, false); this.version++; }
     const next = this.plan.order[this.popped] ?? [];
     const working = this.charge * this.stages - this.popped;

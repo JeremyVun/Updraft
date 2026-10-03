@@ -345,6 +345,7 @@ cygnet.mount = child;
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
+const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);
 const materialAt = new THREE.Vector3();
 const splashAt = new THREE.Vector3();
@@ -983,6 +984,11 @@ function prepareWorldAudio(dt: number): void {
   worldFoley.motion(family, 'cloth', materialAt, family.x + family.y, dt, heard && story.name === 'lines');
   for (const curtain of CURTAINS) {
     worldFoley.motion(curtain, 'cloth', curtain.center, curtain.opening, dt, heard && story.name === 'lines');
+    const popped = curtainPops.get(curtain) ?? curtain.pops;
+    if (curtain.pops > popped && heard && story.name === 'lines') {
+      for (const peg of curtain.pegs.filter(p => p.off && !p.resting).slice(0, curtain.pops - popped)) worldFoley.knock('peg', peg.on, 1);
+    }
+    curtainPops.set(curtain, curtain.pops);
   }
   for (const snag of birches.scarf.snags) {
     worldFoley.motion(snag, 'wool', snag.center, snag.work + snag.release, dt, heard && story.name === 'birches');

@@ -3,7 +3,7 @@ import type { AudioOut } from '../creatures/voices';
 import type { WhaleSound } from '../fx/sealife/wake';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
-export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash'
+export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | WhaleSound;
 
 /**
@@ -48,6 +48,11 @@ export class Foley {
         q: 0.55, attack: 0.025, wet: 0.08 });
       if (!wool) this.puff({ at: at + 0.045, len: 0.07, level: level * 0.035, pan,
         type: 'lowpass', from: sail ? 380 : 650, attack: 0.012 });
+    } else if (kind === 'peg') {
+      // A wooden peg springing off the line: a dry snap, then the knock of its two legs clapping shut.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.puff({ at, len: 0.035, level: level * 0.07, pan, type: 'bandpass', from: 2600 * colour, q: 1.2, attack: 0.002 });
+      this.blip(at + 0.012, 1250 * colour, 900 * colour, 0.05, level * 0.02, pan, 'triangle', 0.04);
     } else if (kind === 'leaf-scuff') {
       // A few dry folds under a foot, never a continuous bed of crackle.
       const colour = 0.9 + Math.random() * 0.2;

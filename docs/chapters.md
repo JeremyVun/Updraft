@@ -102,15 +102,29 @@ The first impossible fragment of home: somebody's washing with nobody there, and
 washing along a winding alley, the camera beneath it near the child's height, washing dissolving wherever it
 stands between the camera and the child.
 
-The plane stays in the child's hand. Three curtains of washing hang across the path. Broad sweeps lift a hem and
-small sweeps add up, in any direction, and progress is never lost; only the waiting curtain takes the stroke
-aimed at it on screen (`WashingCurtain.brush`). The first shows sideways invitation traces
-(`fx/washing-invitation.ts`). The wind lifts a sheet out toward the waiting pair from its pegs, higher and flapping
-harder with each sweep. Opened, it is washing in a gale: the breeze through the gap keeps it streaming high over
-them, never still, ripples running to a whipping hem, a corner at a time kicking up, its height rising and falling
-with the gusts. The cygnet goes under first and looks back for the child, both waiting beyond the hem's reach; once
-they are through a gust tosses the sheet higher, clear of the camera following them. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
-the small yellow jumper between them, and the red door. The released breeze brings the sleeves together (blue
+The plane stays in the child's hand. Three curtains of washing hang across the path, giant sheets held by giant
+pegs. Broad sweeps billow a sheet away through the gap, lifting its hem, which falls back when the air dies; small
+sweeps add up, in any direction, and progress is never lost; only the waiting curtain takes the stroke aimed at it
+on screen (`WashingCurtain.brush`). The first shows sideways invitation traces (`fx/washing-invitation.ts`). Every
+strong sweep works a peg loose: it shivers on the line, then gives as the cloth falls back, pops off with a snap and
+tumbles to the grass, where it stays. The cloth it held drops. The passage sheets are real cloth stepped on the CPU
+(`world/cloth-sim.ts`): nothing holds them up but pegs and lines, so a sheet is always either pegged, hanging under
+gravity from what is left, or lying where it fell.
+
+- The first sheet loses the pegs at its right end one at a time and drops, hanging from its two left pegs in one
+  long fold with its foot slumped on the grass; the way through is beside it on the right.
+- The second, two panels, loses its pegs from the middle outward: each half drops to hang from its own post end and
+  the way opens down the middle.
+- The last loses both corners, so it sags from its middle pegs, and the final sweep pops those and tears it off
+  the line. The breeze carries it, billowing and turning over, onto the next line downwind (`SNAG_LINE`, which keeps
+  a bare stretch for it), where it hangs draped at rest, off the walk and out of the family's view.
+
+Pegs and fallen sheets stay as they are for the rest of the visit, and a checkpoint loads them already down. The
+cygnet goes first and looks back for the child, through the way the fallen cloth has left (`WashingCurtain.way`,
+chosen once the sheet has been down `passAfter`), and the child follows.
+
+The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
+between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
 pass through, the camera follows, the washing is gone, and the child walks straight to the boat with the paper still
@@ -123,6 +137,9 @@ Rulings:
 - The sleeves reach softly: fullness and small cuff movements, pegs holding; no pointed arms or inflated torso
   (a reaching gesture read as creepy).
 - No automatic opening: an invitation, not a timeout.
+- A sheet pegged by its top edge never stays up without something holding it: no sheet curled, streaming or
+  flapping in mid air once the player's air is gone. Each passage opens a different physical way (Jeremy:
+  "why not add variation and have both? We have three checkpoints").
 - The door is the only way onward; beyond it only open grass, the kite and the boat.
 - Lines may cross each other but never run near-parallel close together (`lineField` rejects them).
 
