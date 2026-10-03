@@ -1,0 +1,6 @@
+{
+  "veil": {
+    "homeScreenNote": "Safari leaves full screen when you swipe down. To play full screen, tap Share, then Add to Home Screen."
+  },
+  "notes": "Draft, awaiting Jeremy. Shown on the veil above the full-screen button, only in iPad Safari outside a Home Screen launch. Safari's full screen exits on any downward swipe and no page can stop it; a Home Screen launch fills the screen without that gesture. The full-screen button itself is unchanged."
+}
