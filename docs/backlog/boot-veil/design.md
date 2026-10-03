@@ -65,7 +65,7 @@ limit), which is why it passes.
   push to shorten the cold load. The audit found 2 of the 213 programs are exact duplicates (one program is built
   three times; median fragment shader 40 KB, largest 78 KB, so size rather than duplication drives the cost). Remove
   the duplicates and record in `docs/engine.md` that every program's first draw costs about 0.2 s of a first visit on
-  Apple hardware, so perf-final weighs new variants against it.
+  Apple hardware, so each new variant is weighed against it.
 - **Chrome on a slow tablet is the target; no further Safari work (Jeremy, 2026-10-02).** The fixes are general
   (short construction steps, compiles in groups, at most one new program per warm-up draw), and they end Safari's
   multi-second freezes as a side effect. Not pursued: a warm-up worker with its own WebGL context, moving the

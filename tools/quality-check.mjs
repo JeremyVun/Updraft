@@ -21,7 +21,7 @@ const run = (q, from, to, interval, early) => {
   }
 };
 
-// The table in docs/backlog/perf-final/design.md section 3.
+// The table in docs/engine.md, Quality governor.
 assert.deepEqual(WORLD_QUALITY, {
   ultra: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
   high: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },

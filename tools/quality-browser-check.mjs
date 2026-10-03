@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 function check() {
   const { quality, grass, water, terrain, wind, rig, renderer, post } = __game;
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
-  // The table in docs/backlog/perf-final/design.md section 3, at this display's device pixel ratio of 1.
+  // The table in docs/engine.md, Quality governor, at this display's device pixel ratio of 1.
   const LEVELS = {
     ultra: { ratio: 1, density: 1, reach: 1.15, split: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: '1111' },
     high: { ratio: 1, density: 1, reach: 1.15, split: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: '1111' },
