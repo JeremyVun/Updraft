@@ -11,7 +11,11 @@ the islands are and how long the crossings take is in `docs/contracts/world.md`;
 island → toLines → lines → toBoats → boats → toMeadow → meadow → toBirches → birches → toStairs → stairs → drowned →
 wood → toSleeping → sleeping → toMirror → mirror → toHarbour → home. Every `to*` chapter is a `CrossingChapter`
 (`story/crossing.ts`) given a route (`ROUTES`), a haze, the time of day and season it eases to, its music, and
-optionally a look back, a whale, dolphins and the cygnet's swim. The drowned village is its own crossing: it
+optionally a look back, a whale, dolphins and the cygnet's swim. Most arrivals are watched from behind and above the
+boat; a few have their own view (`ArrivalView`, `tuning.crossingCamera.arrivals`), easing in over the last stretch
+of the route and ending where the room's own first view stands: low beside the hull along the waterline as the
+meadow's bank rises over it, high and wide over the little boats' pools and spit, low on the quarter under the cloud
+onto the stairs' knoll. The drowned village is its own crossing: it
 carries the boat from the stairs through the storm to the wood's beach. `toWood` and `toHome` exist only to
 resume old saves.
 
@@ -145,7 +149,7 @@ leading toy along the bank, hurrying while it sails away from her; the cygnet sw
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
 kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
-right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout.
+right into the sea, where the toys sail on until out of view; three of them are met again on the open sea. The paper stays on the backpack throughout.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the
@@ -404,16 +408,20 @@ and `morning`.
 
 ## The open sea
 
-`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`.
+`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`,
+`fx/sealife/toys.ts`.
 `?chapter=sea`.
 
 The exhale after the worst of the journey: the one crossing that takes its time, and nothing is asked of the
 player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
 pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
 so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
-play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. Then the cygnet's
-brave swim: it grows restless, climbs onto the side, makes
-up its mind, goes in and swims in the wave along the hull while the boat sails on, and is lifted back in to dry. A
+play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. After the leap,
+three of the little boats' toys (the child's orange one, the teal and the yellow) come sailing in from off the side
+of the frame, small, their sails kept drawing by the breeze and filled hard by the player's gusts. They are the
+cygnet's brave swim: it watches them, grows restless, climbs onto the side, makes up its mind, goes in and swims in
+the wave along the hull among them, edging out toward the child's own toy, while the boat sails on; then it is
+lifted back in to dry and the toys bear away out to the side and sail on out of sight. A
 dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
 Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
 
@@ -422,7 +430,7 @@ body allows. The boat never crawls for the swim.
 
 Rules: the pod follows its own stations rather than being swung with the boat.
 
-Knobs: `tuning.seaPassage`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
+Knobs: `tuning.seaPassage`, `tuning.seaToys`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
 `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
 
 ## The sky mirror

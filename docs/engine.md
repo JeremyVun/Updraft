@@ -161,6 +161,9 @@ like there wasn't an authored system in place". What intention means:
 - **A look toward something is a glance, not a chase.** The whale is watched within `crossingCamera.whaleArc` of the
   travelling view, the storm's lighthouse within `storm.lighthouseCamera.arc` of astern; the lens never circles the
   boat to keep them.
+- **An arrival can have its own view.** A crossing may name an `ArrivalView` (`crossingCamera.arrivals`): angle off
+  astern, distance, height, look-ahead and optionally a committed side, eased in over sailed distance from the end of
+  the route and ending where the room's first view stands, so landing is not followed by a swing round.
 - **Reveals ratchet.** Each piano answer steps the view back and up and it stays (`piano.restBack`, `restUp`).
 - Deliberate single moves are allowed: the doorway's threshold path, the little-boats close-up while the child handles
   a toy, the birches' close-up for the circling snag, the Sleeping bedroom's glance to the window, the summit push-in.

@@ -55,8 +55,9 @@ may be loud: bugling and the whistle of their wings.
   is capped and spent once per gust and always ends at the child; a player who keeps blowing on it gets a bird that
   hides, not one that suffers.
 - **Water.** It paddles three sheltered stretches beside the little boats, swims after its family on the meadow
-  pond and comes back to the child's hands, and makes its brave swim on the open sea, going over the side while the
-  child does nothing but stay, and swimming in the wave along the hull (`CrossingOpts.swimAt`, `story/crossing.ts`).
+  pond and comes back to the child's hands, and makes its brave swim on the open sea: the little boats' toys come
+  sailing by, and it goes over the side after them while the child does nothing but stay, swimming in the wave along
+  the hull among them (`CrossingOpts.swimAt`, `story/crossing.ts`, `fx/sealife/toys.ts`).
 
 ## Where it rides
 
