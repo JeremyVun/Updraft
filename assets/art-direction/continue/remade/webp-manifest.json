@@ -1,0 +1,170 @@
+[
+  {
+    "file": "src/paintings/island-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 50158,
+    "after": 190752
+  },
+  {
+    "file": "src/paintings/island-port.webp",
+    "width": 853,
+    "height": 1844,
+    "before": 46372,
+    "after": 186182
+  },
+  {
+    "file": "src/paintings/washing-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 87826,
+    "after": 289312
+  },
+  {
+    "file": "src/paintings/washing-port.webp",
+    "width": 852,
+    "height": 1846,
+    "before": 76642,
+    "after": 276410
+  },
+  {
+    "file": "src/paintings/boats-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 95324,
+    "after": 333636
+  },
+  {
+    "file": "src/paintings/boats-port.webp",
+    "width": 853,
+    "height": 1844,
+    "before": 84852,
+    "after": 286900
+  },
+  {
+    "file": "src/paintings/meadow-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 70172,
+    "after": 233920
+  },
+  {
+    "file": "src/paintings/meadow-port.webp",
+    "width": 852,
+    "height": 1847,
+    "before": 67986,
+    "after": 241010
+  },
+  {
+    "file": "src/paintings/birches-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 193870,
+    "after": 480396
+  },
+  {
+    "file": "src/paintings/birches-port.webp",
+    "width": 853,
+    "height": 1844,
+    "before": 169392,
+    "after": 467516
+  },
+  {
+    "file": "src/paintings/stairs-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 65572,
+    "after": 203972
+  },
+  {
+    "file": "src/paintings/stairs-port.webp",
+    "width": 851,
+    "height": 1848,
+    "before": 70132,
+    "after": 214404
+  },
+  {
+    "file": "src/paintings/drowned-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 89290,
+    "after": 273060
+  },
+  {
+    "file": "src/paintings/drowned-port.webp",
+    "width": 852,
+    "height": 1846,
+    "before": 72954,
+    "after": 239354
+  },
+  {
+    "file": "src/paintings/wood-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 43338,
+    "after": 134160
+  },
+  {
+    "file": "src/paintings/wood-port.webp",
+    "width": 852,
+    "height": 1846,
+    "before": 33160,
+    "after": 141916
+  },
+  {
+    "file": "src/paintings/sleeping-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 42502,
+    "after": 207960
+  },
+  {
+    "file": "src/paintings/sleeping-port.webp",
+    "width": 851,
+    "height": 1847,
+    "before": 39222,
+    "after": 200970
+  },
+  {
+    "file": "src/paintings/sea-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 61104,
+    "after": 225472
+  },
+  {
+    "file": "src/paintings/sea-port.webp",
+    "width": 851,
+    "height": 1847,
+    "before": 58222,
+    "after": 217748
+  },
+  {
+    "file": "src/paintings/mirror-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 49752,
+    "after": 189398
+  },
+  {
+    "file": "src/paintings/mirror-port.webp",
+    "width": 852,
+    "height": 1846,
+    "before": 52766,
+    "after": 213184
+  },
+  {
+    "file": "src/paintings/home-land.webp",
+    "width": 1672,
+    "height": 941,
+    "before": 100804,
+    "after": 324968
+  },
+  {
+    "file": "src/paintings/home-port.webp",
+    "width": 852,
+    "height": 1846,
+    "before": 76428,
+    "after": 279666
+  }
+]

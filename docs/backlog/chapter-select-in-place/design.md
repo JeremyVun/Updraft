@@ -182,9 +182,10 @@ The title veil loads exactly as today. When the game is ready, a painting of the
 the veil behind everything and fades up over 1.6 s, with a neutral near-black gradient (#121418, the paintings' own
 lower shade without its blue) rising from the bottom: alpha .5 to 20% of the height, easing to 0 at 40% (`.veil-shade`
 in `src/styles.css`, tuned so Continue at its faintest breath stays at least 4.5:1 on every painting). Continue (or Begin), `chapters` and
-`start over` sit low and centred in the painting's quiet band: Continue's centre at `calc(100% - max(200px, 28vh))`,
+`start over` sit low and centred in the painting's quiet band: Continue's centre at `calc(100% - max(160px, 22vh))`,
 `chapters` 50 px below it, `start over` 50 px below Continue, or 94 px for a finished player (below `chapters`). On a
-390x844 phone that leaves the last line 40 px clear of the corner buttons. Type, breathing and opacities are the house
+finished-save veil the bottom reserve is at least 220 px, keeping the extra action clear of corner controls on a
+390x844 phone. Type, breathing and opacities are the house
 ones (Continue .95 to .82; `chapters` and `start over` .5, the armed confirmation .85).
 
 - **Which painting.** A first visit (Begin) shows the Still island. A save shows its room, mapped from the saved
@@ -252,6 +253,113 @@ per-room prompts are also in `assets/art-direction/continue/`); the build takes 
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
+### Veil art review, 2026-10-03
+
+Jeremy's current brief (verbatim):
+
+> I am trying to do an uplift to the game's static "veil" screens. This involves displaying images on  the veil for each chapter.
+>
+> Here are the existing prompts `/tmp/updraft-prompts/`
+>
+> Here's my thoughts,
+>
+> - While the artistic style of the images is nice, they are slightly too blurry and what i can only describe as feeling a bit low res. why?
+> - Some of the images have too much blur in the bottom half e.g. meadow, boats, and the "begin" text isn't lined up well (see attached). I like how the bottom half blur is done a bit more subtly in some of the other chapters though. Do you understand what i mean? Have a look at each of the chapter images. In the meadow one for example, the piano looks pixellated...
+> - the sky mirror image composition isn't good.
+> - when i do `?chapter=still` - the still island image doesn't appear? but it does appear on a fresh game?
+> - there's something wrong with the drowning village image. Not the image scene, but the way it's been generated. It doesn't look natural to the human eye. Like there's some kind of invisible, very regular pattern to the brush strokes
+
+Follow-up (verbatim): "i should note that it looks pixellated when im looking at them on my 4k monitor at 2k res. see attached example".
+Jeremy requested a direct review in this chat instead of delegation. This review changes no paintings or veil styling.
+
+Verified against the shipped files and their original PNGs:
+
+- Every landscape is 1586x992, except Home at 1585x992. The supplied Meadow screenshot is 3802x1736 and Dark wood
+  is 3806x1752: roughly 2.4x enlargement along each axis. The piano itself occupies only about 350 source pixels
+  across. A higher-quality WebP cannot recover absent source detail. The portrait Meadow is also an outlier at
+  948x1660, so a 390x844 phone crops its sides; the others are about 850x1845.
+- The veil loads the full painting, not the 400x250 chapter tile. It uses `object-fit: cover`, with no blur filter.
+  The lower blur is painted into the original; the CSS shade additionally darkens it. The prompt archive's
+  `round3/` asks for a defocused lower 30% (portrait 35%). `latest/` is the rejected in-focus direction, not the
+  prompt set behind most currently installed images. Meadow's shipped WebP is an exact q78 re-encode of
+  `/tmp/updraft-continue-comps-3/gen/meadow-land-v1.png`; Drowned village is an exact q78 re-encode of
+  `/tmp/csip-art/gen/drowned-land-v6.png`.
+- Begin centres the mouse icon and label as a group; the word alone is slightly right of screen centre. Its height
+  is screen-relative (`100% - max(200px, 28vh)`), while a wide screen centre-crops the image and moves its painted
+  quiet area relative to that position. Both effects should be reviewed before changing the invitation's position.
+- The Drowned village's unusually even small marks in the sky and water are already in its original PNG. WebP
+  loses additional fine detail, but it did not originate the repeated texture. The precise generation mechanism
+  is not established from the pixels.
+- `still` was missing as an alias: the story fell back to its initial island, but the painting lookup found no
+  room. `params-qa.ts` now normalizes `still` to `island` for both consumers. Typecheck and seven focused query
+  cases pass, including save isolation and unchanged existing chapter names.
+
+Review of all twelve landscape/portrait pairs:
+
+| Room | Finding |
+| --- | --- |
+| Still island | The quiet shoreline and water make the fade feel natural; retain this relationship. |
+| Washing | Strong image above a conspicuous soft grass band; ease the transition without removing the fade. |
+| Little boats | Foreground blur takes too much of the image and makes the pools feel miniature. |
+| Meadow | Broad blur wall, limited piano detail, and an unusually wide portrait source. |
+| Birches | Strong focal scarf; near leaves turn abruptly into soft coloured patches. |
+| Cloud stairs | Softness belongs to the clouds and feels more coherent; preserve the cloud volume. |
+| Drowned village | Keep the chosen view behind the boat; replace the mechanically regular surface texture. |
+| Dark wood | Dark foreground fits the scene; thin branches expose the resolution limit. |
+| Sleeping island | The grass-to-blur boundary reads as a band, though night disguises it more than Meadow. |
+| Open sea | Water keeps its broad structure through the fade; a useful softness reference. |
+| Sky mirror | High, downward-looking view compresses actual sky and stacks jetty, sail and distant props; the boat/jetty mass dominates the mirror. |
+| Home | Water stays recognisable through gentle softening; the clearest reference for the desired lower treatment. |
+
+Jeremy authorized regeneration on 2026-10-03: "ok, yea i need you to use [$imagegen](/Users/jeremy/.codex/skills/.system/imagegen/SKILL.md)  to generate these images again better."
+Use the built-in imagegen path, with Astra doing art generation and review. Jeremy clarified that the lead is
+Astra and should generate directly; the mistakenly delegated proof was interrupted before it produced files.
+First validate a Meadow landscape's
+actual output dimensions and finish before running the full twelve-room landscape/portrait set. Keep candidates
+separate from the installed assets until checked. Worktree: `/private/tmp/updraft-veil-art-vSr0NL/worktree`,
+branch `codex/veil-paintings`, based on `3ea16f7` with this chat's review and `still` alias patch carried over.
+The first built-in proof, requested at 3840x2160, returned a native 1672x941 PNG. It is saved with its exact prompt
+under `assets/art-direction/continue/remade/meadow-proof/` on the main checkout, not installed as a game asset.
+The foreground fade is more gradual and the piano has its correct raised lid, but this file does not solve the
+4K source-resolution problem on its own. Jeremy chose "Continue with built-in resolution" and clarified:
+"you understand waht i mean right? as long as the dimensions are ok,  and we are at the highest quality you can generate at, i can upscale them in post processing manually".
+Proceed with all twelve landscape/portrait pairs at the built-in tool's best native finish and suitable aspect
+ratios; native 4K is not a gate. Jeremy handles post-processing upscale. Preserve lossless native PNG masters and
+exact prompts in the project. Never pass off interpolated pixels as native detail or switch to the API path.
+
+Jeremy's correction during this pass: "ok i actually need you to redo the sleeping ones - the background is ok, but the bed itself looks out of proportion".
+Both Sleeping candidates were edited to give the bed believable longer, narrower single-bed proportions while
+preserving their backgrounds and lighting. The selected revisions are `sleeping-land-v2.png` and
+`sleeping-port-v2.png`; the squat first versions are not deliverable masters.
+
+The authorized art pass preserves painterly light and a gradual foreground fade;
+keep focal geometry and small edges clearly resolved; avoid a prescribed broad empty blur band. Judge masters at
+Jeremy's actual display size before encoding, and assess the full composition with the real Begin overlay at wide,
+16:10 and phone aspects. Recompose Sky mirror with more actual sky and a less crowded, off-centre boat/jetty, while
+keeping the chapter's objects. Regenerate Drowned village from the scene reference with varied, form-following marks
+rather than using the textured painting as the rendering-style reference. Raising WebP quality is a secondary check,
+not the resolution fix. Preserve the existing images while evaluating candidates.
+
+Jeremy then authorized installation: "yea, keep the png masters and create the webp images and add those webp's to the game. let me see how it looks first."
+All 24 selected PNGs and their exact final prompts are in `assets/art-direction/continue/remade/masters/`.
+Landscape masters are 1672x941; portrait dimensions vary slightly around 852x1846. `manifest.json` records exact
+sizes and hashes. The game uses quality-94 WebP encodes at those native dimensions, with matching quality-90 chapter
+tiles. Sky mirror uses its second landscape revision; Sleeping uses the corrected bed in both orientations.
+
+Jeremy's final framing and marketing directions:
+
+> - the new landscape stairs image you created has the stairs too zoomed out. It's no longer a showcase of the scene image. instead of zooming out, you could have just moved the perspective down a tiny bit.
+> - next, i need you to create a collage using the portrait images that have just been generated (like the image i've attached). This is for marketing purposes. However, it shouldn't have "continue" "startover", or the control buttons as this is a marketing image. Put this in the assets/promo folder.
+
+> you could also have just moved the "Begin" / "continue" button down a bit as well (i think we may have to do this anyway so it looks nice on most of the other images)
+
+Keep the close original Cloud stairs landscape and lower the shared invitation from 72% toward 78% height.
+Finished saves retain at least 220 px below the invitation for their additional action, avoiding phone overlap.
+The mouse icon now has an equal reserved column on the right, so the word itself is centred. Prefer adjusting the
+overlay's space before shrinking a chapter's showcase subject. The collage uses the selected portrait masters in
+story order, six columns by two rows, with no overlays: `assets/promo/updraft-chapter-collage.png` (5106x3688) and
+`updraft-chapter-collage-share.jpg` (2340x1688). Its HTML layout sits beside them; the source paintings are unchanged.
+
 ### Decisions
 
 - Full-screen paintings, not the window (Jeremy, 2026-10-03, after rounds 1-3). Begin shows the Still island painting.
@@ -274,7 +382,7 @@ every tweak.
 
 ### Gates
 
-- `start-check` passes with the new layout: Continue's centre at `100% - max(200px, 28vh)` when the painting shows,
+- `start-check` passes with the new layout: Continue's centre at `100% - max(160px, 22vh)` when the painting shows,
   centred when it does not (forced with a blocked image), on desktop and phone; no new program first drawn after any
   start.
 - `chapter-select-check` and `chapter-pick-check` pass; a new check covers start over: first press arms without
@@ -286,4 +394,3 @@ every tweak.
   the not-decoded fallback, checked by an allowed visual model (Opus or Astra) against the exemplars; probes report
   nothing past an edge, no text spill, touch targets at least 44 px.
 - One check of the painting arrival and departure in real Safari (WebKit) on this Mac.
-

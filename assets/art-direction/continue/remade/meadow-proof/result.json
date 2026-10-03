@@ -1,0 +1,17 @@
+{
+  "room": "meadow",
+  "variant": "landscape proof",
+  "tool_mode": "built-in image_gen",
+  "requested_dimensions": [3840, 2160],
+  "actual_dimensions": [1672, 941],
+  "file": "meadow-land-v1.png",
+  "prompt": "prompt.txt",
+  "installed": false,
+  "resampled": false,
+  "original": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-1018fd1b-b31e-4614-ae3b-ba813945f960.png",
+  "references": [
+    "/tmp/updraft-continue-comps-3/gen/meadow-land-v1.png",
+    "/tmp/updraft-prompts/refs/meadow-capture.png"
+  ],
+  "assessment": "More gradual foreground softening and correct raised piano lid. Native output is too small to resolve the reported 4K display detail problem. Preserve as an art-direction proof, not a 4K replacement."
+}

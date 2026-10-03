@@ -14,7 +14,8 @@ const invitation=async(page,painted)=>{
  const {width:W,height:H}=page.viewportSize();
  assert.equal(await page.locator('#veil').evaluate(e=>e.classList.contains('painted')),painted,painted?'the painting shows':'no painting');
  const box=await page.locator('#begin').boundingBox();
- const y=painted?H-Math.max(200,.28*H):H/2;
+ const finished=await page.locator('#veil').evaluate(e=>e.classList.contains('finished'));
+ const y=painted?H-Math.max(finished?220:160,.22*H):H/2;
  assert(Math.abs(box.x+box.width/2-W/2)<1 && Math.abs(box.y+box.height/2-y)<1, `invitation centre ${box.y+box.height/2}, expected ${y}`);
  if(await page.locator('.start-over').count()){
   const over=await page.locator('.start-over').boundingBox();

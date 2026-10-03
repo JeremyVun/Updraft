@@ -1,0 +1,265 @@
+[
+  {
+    "room": "island",
+    "aspect": "land",
+    "name": "island-land",
+    "file": "island-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-2ac80969-7186-4038-9c30-85a5d5dc594a.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/island-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/island-land.webp"
+    ]
+  },
+  {
+    "room": "island",
+    "aspect": "port",
+    "name": "island-port",
+    "file": "island-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-65368704-6b78-4a51-a502-f8bb67eeaf31.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/island-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/island-land.png"
+    ]
+  },
+  {
+    "room": "washing",
+    "aspect": "land",
+    "name": "washing-land",
+    "file": "washing-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-cc9608d3-8647-4e73-ba7b-bb775b84ee73.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/washing-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/washing-land.webp"
+    ]
+  },
+  {
+    "room": "washing",
+    "aspect": "port",
+    "name": "washing-port",
+    "file": "washing-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-40646cb9-67fa-433d-b785-f76adfa9ee3d.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/washing-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/washing-land.png"
+    ]
+  },
+  {
+    "room": "boats",
+    "aspect": "land",
+    "name": "boats-land",
+    "file": "boats-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6c7e6e22-b91e-47bc-9363-3a5927822d10.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/boats-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/boats-land.webp"
+    ]
+  },
+  {
+    "room": "boats",
+    "aspect": "port",
+    "name": "boats-port",
+    "file": "boats-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-b2c5cf6d-f011-4c21-a6c3-91c1aeb27cd0.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/boats-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/boats-land.png"
+    ]
+  },
+  {
+    "room": "meadow",
+    "aspect": "land",
+    "name": "meadow-land",
+    "file": "meadow-proof/meadow-land-v1.png"
+  },
+  {
+    "room": "meadow",
+    "aspect": "port",
+    "name": "meadow-port",
+    "file": "meadow-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a5d119ca-24ab-4d28-b5fa-08ea95b75be9.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/meadow-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/meadow-proof/meadow-land-v1.png"
+    ]
+  },
+  {
+    "room": "birches",
+    "aspect": "land",
+    "name": "birches-land",
+    "file": "birches-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-f8401453-44b7-4c6c-8d11-2cf41bcf0c5d.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/birches-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/birches-land.webp"
+    ]
+  },
+  {
+    "room": "birches",
+    "aspect": "port",
+    "name": "birches-port",
+    "file": "birches-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-48043a09-776d-49d0-9e8a-10760e9717e0.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/birches-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/birches-land.png"
+    ]
+  },
+  {
+    "room": "stairs",
+    "aspect": "land",
+    "name": "stairs-land",
+    "file": "stairs-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-f028d2fb-6ae8-4835-945a-9433a1b3bb20.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/stairs-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/stairs-land.webp"
+    ]
+  },
+  {
+    "room": "stairs",
+    "aspect": "port",
+    "name": "stairs-port",
+    "file": "stairs-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6b5261c3-9c30-4da3-8f0c-ce79bb2cf3a4.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/stairs-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/stairs-land.png"
+    ]
+  },
+  {
+    "room": "drowned",
+    "aspect": "land",
+    "name": "drowned-land",
+    "file": "drowned-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-5ccc82bd-fc90-445e-913c-2a28e62392f0.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/drowned-shipped.png",
+      "/Users/jeremy/projects/updraft/src/paintings/drowned-land.webp",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  },
+  {
+    "room": "drowned",
+    "aspect": "port",
+    "name": "drowned-port",
+    "file": "drowned-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-14096384-7ea0-434f-9706-ec306ac4373b.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/drowned-shipped.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/drowned-land.png",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  },
+  {
+    "room": "wood",
+    "aspect": "land",
+    "name": "wood-land",
+    "file": "wood-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-fc6482ec-8861-424e-955c-ab0913c603ab.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/wood-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/wood-land.webp"
+    ]
+  },
+  {
+    "room": "wood",
+    "aspect": "port",
+    "name": "wood-port",
+    "file": "wood-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6df45d4d-54cd-438c-bd0a-11a6728256ff.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/wood-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/wood-land.png"
+    ]
+  },
+  {
+    "room": "sleeping",
+    "aspect": "land",
+    "name": "sleeping-land",
+    "file": "sleeping-land-v2.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-ed29e8fd-89b1-4b5d-b31b-30b30917e2ba.png",
+    "references": [
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sleeping-land.png"
+    ]
+  },
+  {
+    "room": "sleeping",
+    "aspect": "port",
+    "name": "sleeping-port",
+    "file": "sleeping-port-v2.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6b65bfcf-8011-4dba-ad68-988dec1ff7c6.png",
+    "references": [
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sleeping-port.png"
+    ]
+  },
+  {
+    "room": "sea",
+    "aspect": "land",
+    "name": "sea-land",
+    "file": "sea-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-d51d44bf-dcdb-468f-bef5-c8f60970e5f9.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/sea-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/sea-land.webp",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  },
+  {
+    "room": "sea",
+    "aspect": "port",
+    "name": "sea-port",
+    "file": "sea-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-b168f911-0a24-43dc-8182-2995b1e63f98.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/sea-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sea-land.png",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  },
+  {
+    "room": "mirror",
+    "aspect": "land",
+    "name": "mirror-land",
+    "file": "mirror-land-v2.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-50d55397-848a-4f31-ac30-42bc2976e562.png",
+    "references": [
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/mirror-land.png"
+    ]
+  },
+  {
+    "room": "mirror",
+    "aspect": "port",
+    "name": "mirror-port",
+    "file": "mirror-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a54d46b9-9adc-4511-9cae-a229a6761edf.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/mirror-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/mirror-land-v2.png",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  },
+  {
+    "room": "home",
+    "aspect": "land",
+    "name": "home-land",
+    "file": "home-land.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a4c638c0-ba52-4105-8cfa-4570279c7bc0.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/home-capture.png",
+      "/Users/jeremy/projects/updraft/src/paintings/home-land.webp",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  },
+  {
+    "room": "home",
+    "aspect": "port",
+    "name": "home-port",
+    "file": "home-port.png",
+    "generatorSource": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-f1544c66-7c27-4732-96e7-98d778e54d3b.png",
+    "references": [
+      "/tmp/updraft-prompts/refs/home-capture.png",
+      "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/home-land.png",
+      "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+    ]
+  }
+]
