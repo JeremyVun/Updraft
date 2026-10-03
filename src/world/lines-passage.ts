@@ -52,7 +52,7 @@ function lineAt(line: { a: THREE.Vector3; b: THREE.Vector3; sag: number }, t: nu
  */
 const PEGGING: { pegs: number[][]; order: [number, number][][]; gap: number; spread: number; torn?: boolean }[] = [
   { pegs: [[0.02, 0.26, 0.5, 0.74, 0.98]], order: [[[0, 4]], [[0, 3]], [[0, 2]]], gap: 3.5, spread: 0.2 },
-  { pegs: [[0.03, 0.24, 0.62, 0.97], [0.03, 0.38, 0.76, 0.97]], order: [[[0, 3]], [[1, 0]], [[0, 2]], [[1, 1]]], gap: 0.3, spread: 0.6 },
+  { pegs: [[0.03, 0.24, 0.62, 0.97], [0.03, 0.38, 0.76, 0.97]], order: [[[0, 3]], [[1, 0]], [[0, 2]], [[1, 1]]], gap: 0.1, spread: 0.4 },
   { pegs: [[0.02, 0.34, 0.66, 0.98]], order: [[[0, 0]], [[0, 3]], [[0, 1], [0, 2]]], gap: 0, spread: 1.2, torn: true },
 ];
 
