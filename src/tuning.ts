@@ -1244,12 +1244,14 @@ export const tuning = {
     sightedAt: 26, noticeAt: 22,
     /** It goes in once the child's own toy is this far ahead of the cygnet or nearer, or after `waitFor` on the side regardless. */
     goInAhead: 6.5, waitFor: 7,
+    /** The boat eases for the swim once the toy it is watching is this near. */
+    easeWithin: 11,
     /** Swimming out, how close beside the child's own it swims round it, and for how long among them before it turns back. */
     swimClear: 1.1, playFor: 4,
     /** As near as it gets to the place it is making for beside a toy sailing on: it is among them. */
     alongside: 1.4,
-    /** How eagerly it swims out to them, and how fast it goes round the child's own once there (radians a second). */
-    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 0.9,
+    /** How eagerly it swims out to them; and once there, how fast (radians a second) and how far (radians) it swings to and fro along the toy's near side. */
+    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 1.3, roundSweep: 1.2,
     /** Its paddling speed per unit it is short of where it is making for (as `cygnet.paddling` has it). */
     swimTrack: 1.1,
     /** Seconds the boat's way stays on it after it goes in, falling away. */

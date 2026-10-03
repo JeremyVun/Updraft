@@ -102,6 +102,12 @@ export class ToyFleet {
     return out.copy(this.toys[which].group.position);
   }
 
+  /** How toy `which` is moving over the water, in units a second. */
+  velocity(which: number, out: THREE.Vector3): THREE.Vector3 {
+    const toy = this.toys[which];
+    return out.set(Math.sin(toy.yaw) * toy.speed, 0, Math.cos(toy.yaw) * toy.speed);
+  }
+
   /** The one nearest `to`, preferring the child's own unless another is `nearer` closer. */
   nearest(to: THREE.Vector3, nearer: number): number {
     let best = 0, gap = this.toys[0].group.position.distanceTo(to) - nearer;

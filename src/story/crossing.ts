@@ -200,8 +200,8 @@ export class CrossingChapter implements Chapter {
   /** Out in the water: making for the toys, among them, or back to the boat; and the way round the child's own it has come. */
   private out: 'to' | 'among' | 'back' = 'to';
   private outT = 0;
-  private round = 0;
   private friend = 0;
+  private easing = false;
   /** The boat's way, still on the cygnet as it goes in. */
   private way = 0;
   /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
@@ -481,7 +481,7 @@ export class CrossingChapter implements Chapter {
     } else if (this.wantsDolphins && !swimming) this.cast.cygnet.watch(null);
 
     if (this.swimAt !== null) this.braveSwim(dt);
-    if (this.wantsDolphins) this.paceSea(dt, swimming && this.swim !== 'drying');
+    if (this.wantsDolphins) this.paceSea(dt, this.easing);
 
     this.swimFrame += ((swimming ? 1 : 0) - this.swimFrame) * (1 - Math.exp(-dt * 0.65));
     if (!this.wantsDolphins) {
@@ -535,6 +535,8 @@ export class CrossingChapter implements Chapter {
     const ahead = (playmate.x - seat.x) * Math.sin(boat.yaw) + (playmate.z - seat.z) * Math.cos(boat.yaw);
     const near = toys.idle ? Infinity : Math.hypot(playmate.x - seat.x, playmate.z - seat.z);
     const passed = near === Infinity || ahead < -s.turnBackAstern;
+    /** The boat eases once the toys are close and the cygnet means to go, and while it is in the water. */
+    this.easing = this.swim === 'in' || (this.swim === 'side' || this.swim === 'restless') && near < s.easeWithin;
     if (this.swim === 'before') {
       const k = tuning.seaPassage;
       if (near < s.sightedAt && !this.cast.sealife.dolphinShow) cygnet.watch(playmate);
@@ -565,7 +567,6 @@ export class CrossingChapter implements Chapter {
       if (this.out === 'to' && this.outT > 0.5 && cygnet.astern < s.alongside) {
         this.out = 'among';
         this.outT = 0;
-        this.round = Math.atan2(this.toward.x, this.toward.z);
       }
       if (this.out !== 'back' && (passed || (this.out === 'among' && this.outT > s.playFor))) {
         this.out = 'back';
@@ -581,10 +582,21 @@ export class CrossingChapter implements Chapter {
         cygnet.swimPlay = 0;
         cygnet.swimHurry = 1;
       } else {
-        /** Out to the child's own toy, then round and round it, in among the others: the play of their own room. */
-        if (this.out === 'among') this.round += dt * s.roundRate * this.swimSide;
-        else this.round = Math.atan2(this.toward.x, this.toward.z);
-        this.aim.set(playmate.x + Math.sin(this.round) * s.swimClear, 0, playmate.z + Math.cos(this.round) * s.swimClear);
+        /**
+         * Out to the toy, then to and fro along its near side, bow to stern, in among the others: the play of their
+         * own room. It never cuts across in front of a hull.
+         */
+        const round = this.out === 'among'
+          ? Math.atan2(-left.x * this.swimSide, -left.z * this.swimSide) + Math.sin(this.outT * s.roundRate) * s.roundSweep
+          : Math.atan2(this.toward.x, this.toward.z);
+        this.aim.set(playmate.x + Math.sin(round) * s.swimClear, 0, playmate.z + Math.cos(round) * s.swimClear);
+        /** Making for where that will be by the time it gets there, as it does for the boat. */
+        this.aim.addScaledVector(toys.velocity(this.friend, this.spot), 1 / s.swimTrack);
+        for (let i = 0; i < 3; i++) {
+          toys.at(i, this.spot).sub(this.aim).setY(0);
+          const gap = this.spot.length();
+          if (gap < s.swimClear) this.aim.addScaledVector(this.spot, -(s.swimClear - gap) / Math.max(gap, 1e-3));
+        }
         /** Never further out from the boat than it dares, whatever the toys are doing. */
         const out = (this.aim.x - seat.x) * left.x + (this.aim.z - seat.z) * left.z;
         const over = out * this.swimSide - s.reach;
