@@ -130,9 +130,9 @@ void main() {
   float gust = 0.0;
   if (aCurtain > -0.5) {
     /**
-     * The breeze the player lets through the gap keeps the sheet streaming out from its pegs toward the waiting pair,
-     * high over them, where nothing else hangs; once they are through it is tossed higher, so the camera following
-     * them passes beneath. Its height rises and falls with the gusts and it is never still while it is held up.
+     * The breeze the player lets through the gap keeps the sheet streaming out from its pegs toward the waiting
+     * pair, high over them, where nothing else hangs; once they are through it is tossed higher, so the camera
+     * following them passes beneath. Its height rises and falls with the gusts and it is never still while held up.
      */
     stream = uCurtains[int(aCurtain)];
     float t = uTime + aShape.w * 3.0;
