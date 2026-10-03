@@ -25,11 +25,20 @@ construction runs first (stage B below), then, before the loop starts, behind th
    format it really writes (`simMaterial(fragment, uniforms, target)` names it), so nothing it writes changes.
    Visibility, layer masks, culling, draw counts and the render target are restored even on failure.
 4. The static atlases bake once (the field and ground-colour caches and the distant-height atlas, see Bakes), the
-   window is placed for the camera the story chose and baked (`followWindow(..., true)`), the visible grass tables
-   bake, and the post chain runs.
+   window is placed for the boot camera and baked (`followWindow(..., true)`), the visible grass tables bake, and
+   the post chain runs. Boot does not know which room will be played: `Journey` holds the first island unstarted, and
+   the boot camera stands on that island's opening shot.
 5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
-   Begin / Continue. Only that gesture starts audio and `requestAnimationFrame(frame)`; the story and the quality
-   governor do not run while waiting.
+   Begin / Continue (and, for a finished player, `chapters`); the story and the quality governor do not run while
+   waiting.
+
+The gesture that chooses (Begin, Continue or a chapter pick; `?shot` without `start=1` goes straight on with no pick)
+starts the game through the one callback of `startScreen.ready`. Inside the gesture it starts audio, then
+`story.start(choice)` applies the save, the `?chapter=` start or the pick (`progress.md`), one `story.update(0, 0)`
+gives the room its opening shot and the camera cuts to it. Then, behind the departing veil, the window moves to that
+camera and bakes, the visible grass tables bake, the post chain runs and `gpuIdle` waits, as at boot, so the first
+frame of play pays for none of them; then `requestAnimationFrame(frame)`. These steps reuse programs boot has already
+built and first drawn. Nothing calls `story.update` before `story.start`, and `start` runs once per page.
 
 Anything that appears later in the story is already compiled, first drawn and uploaded; showing it costs nothing.
 

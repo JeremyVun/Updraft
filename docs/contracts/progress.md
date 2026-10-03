@@ -59,8 +59,9 @@ leaves, particles and animations are rebuilt, not saved. Checkpoints wait until 
 complete; restore starts from a stable pose with fresh callbacks and relative timers. Restore also sets the musical
 phase (for example Sleeping's `morning` selects the sea mood) and never emits reward cues; see `audio.md`.
 
-Startup restores before the first camera cut, terrain bake and warm render. `Play again` clears the record before
-reloading. `?shot` and `?chapter=` neither read nor write progress unless `?progress=1` is given; `?progress=0`
+The save is read and restored at the gesture that starts play (Continue, or `?shot` without `start=1`), before
+the room's first update and camera cut; boot itself warms and bakes round the unstarted first island (`engine.md`,
+Boot). `Play again` clears the record before reloading. `?shot` and `?chapter=` neither read nor write progress unless `?progress=1` is given; `?progress=0`
 disables it.
 
 ## Chapter select
@@ -71,9 +72,10 @@ nothing, so `src/chapter-select/` (script, CSS and stills) is a separate chunk t
 screen imports, and the stills download only when `chapters` is opened (`tools/chapter-stills.mjs` captures them).
 
 Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; an old completed save sets it on the next
-visit. A pick is held per tab in `sessionStorage` (`updraft.chosen-chapter`) and reloads the page, which starts that
-room as `?chapter=` would, with saving on. Until the room's entry checkpoint is saved, the existing save is ignored
-but untouched, so closing the tab after picking loses nothing.
+visit. A pick starts that room at once, on the page already loaded and with sound, exactly as Begin or Continue
+starts theirs: the veil departs and `story.start` begins the room as `?chapter=` would, with saving on. The pick
+overrides the save without touching it; the room's first played frames save its `entry` checkpoint, which then
+replaces it.
 
 ## Hidden pages and sound
 
