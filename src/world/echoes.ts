@@ -141,7 +141,7 @@ function rubberDuck(): THREE.BufferGeometry[] {
   const head = new THREE.SphereGeometry(0.27, 20, 14).translate(0.3, 0.42, 0);
   const bill = new THREE.SphereGeometry(0.15, 14, 8).scale(1.25, 0.38, 1).translate(0.58, 0.36, 0);
   const eyes = [-1, 1].map((side) => coloured(new THREE.SphereGeometry(0.035, 8, 6).translate(0.48, 0.5, side * 0.15), '#1c1815'));
-  return [coloured(body, yellow), coloured(head, yellow), coloured(bill, '#ec7a24'), ...eyes];
+  return [coloured(body, yellow), coloured(head, yellow), coloured(bill, '#ec7a24'), ...eyes].map((g) => g.scale(0.55, 0.55, 0.55));
 }
 
 /** A run of the piano's keys broken off whole, ivories and ebonies on their wooden bed. */
@@ -187,7 +187,7 @@ function swingSeat(): THREE.BufferGeometry[] {
 
 const ECHOES: Echo[] = [
   { room: 'boats', x: 155.5, z: -376, yaw: 0.6, bury: 0.04, roll: 0.05, pitch: 0.06, damp: 1.5, parts: pillowcase },
-  { room: 'meadow', x: 24.5, z: -585.2, yaw: -0.5, bury: 0.12, roll: 0.15, pitch: -1.2, damp: 1.4, parts: rubberDuck },
+  { room: 'meadow', x: 24.5, z: -585.2, yaw: -0.5, bury: 0.07, roll: 0.15, pitch: -1.2, damp: 0.9, parts: rubberDuck },
   { room: 'birches', x: -9, z: -1063.5, yaw: 0.35, bury: 0.15, roll: 0.08, pitch: -0.14, damp: 1.9, parts: pianoKeys },
   { room: 'stairs', x: 78.3, z: -1239.5, yaw: 1.1, bury: 0.05, roll: 0.08, pitch: 0.05, damp: 1.8, parts: swingSeat },
 ];
