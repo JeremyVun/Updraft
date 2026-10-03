@@ -201,6 +201,7 @@ export class CrossingChapter implements Chapter {
   private out: 'to' | 'among' | 'back' = 'to';
   private outT = 0;
   private round = 0;
+  private friend = 0;
   /** The boat's way, still on the cygnet as it goes in. */
   private way = 0;
   /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
@@ -480,7 +481,7 @@ export class CrossingChapter implements Chapter {
     } else if (this.wantsDolphins && !swimming) this.cast.cygnet.watch(null);
 
     if (this.swimAt !== null) this.braveSwim(dt);
-    if (this.wantsDolphins) this.paceSea(dt, this.swim === 'side' || this.swim === 'in');
+    if (this.wantsDolphins) this.paceSea(dt, swimming && this.swim !== 'drying');
 
     this.swimFrame += ((swimming ? 1 : 0) - this.swimFrame) * (1 - Math.exp(-dt * 0.65));
     if (!this.wantsDolphins) {
@@ -513,9 +514,10 @@ export class CrossingChapter implements Chapter {
       /** Already out there in the night, sailing a course of their own that runs near this one. */
       this.toysOut = true;
       this.swimSide = this.quarter > 0 ? -1 : 1;
-      this.along(s.ahead, this.toyFrom);
-      this.along(s.ahead + s.courseFor, this.toyTo);
-      toys.sail(this.toyFrom, Math.atan2(this.toyTo.x - this.toyFrom.x, this.toyTo.z - this.toyFrom.z), this.swimSide);
+      const heading = this.along(s.meetAt, this.toyTo) + s.across * this.swimSide;
+      const sailed = s.ownSpeed * (s.cruise + s.driven * s.breezeFill) * s.meetIn;
+      this.toyFrom.set(this.toyTo.x - Math.sin(heading) * sailed, 0, this.toyTo.z - Math.cos(heading) * sailed);
+      toys.sail(this.toyFrom, heading, this.swimSide);
     }
     const left = this.from.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
     const seat = boat.seat(this.seat);
@@ -526,8 +528,10 @@ export class CrossingChapter implements Chapter {
       this.swim = next;
       this.swimT = 0;
     };
-    const playmate = toys.playmate(this.playmate);
-    /** How far ahead of the child the child's own toy is, and how far from her: nothing, once they are gone. */
+    /** The toy it has eyes for: whichever is nearest the water it would go into, and once in, the one it swims to. */
+    if (this.swim !== 'in' && !toys.idle) this.friend = toys.nearest(this.water, s.preferOwn);
+    const playmate = toys.at(this.friend, this.playmate);
+    /** How far ahead of the child that toy is, and how far from her: nothing, once they are gone. */
     const ahead = (playmate.x - seat.x) * Math.sin(boat.yaw) + (playmate.z - seat.z) * Math.cos(boat.yaw);
     const near = toys.idle ? Infinity : Math.hypot(playmate.x - seat.x, playmate.z - seat.z);
     const passed = near === Infinity || ahead < -s.turnBackAstern;
@@ -581,6 +585,10 @@ export class CrossingChapter implements Chapter {
         if (this.out === 'among') this.round += dt * s.roundRate * this.swimSide;
         else this.round = Math.atan2(this.toward.x, this.toward.z);
         this.aim.set(playmate.x + Math.sin(this.round) * s.swimClear, 0, playmate.z + Math.cos(this.round) * s.swimClear);
+        /** Never further out from the boat than it dares, whatever the toys are doing. */
+        const out = (this.aim.x - seat.x) * left.x + (this.aim.z - seat.z) * left.z;
+        const over = out * this.swimSide - s.reach;
+        if (over > 0) this.aim.addScaledVector(left, -over * this.swimSide);
         cygnet.swimPlay = this.out === 'among' ? tuning.littleBoats.swimPlay : s.swimOutPlay;
         cygnet.swimHurry = this.out === 'among' ? 0 : s.swimOutHurry;
       }
@@ -623,8 +631,11 @@ export class CrossingChapter implements Chapter {
     }
   }
 
-  /** The point `distance` further on along the route from the boat, out to the swimming side of it by the toys' lane. */
-  private along(distance: number, out: THREE.Vector3): THREE.Vector3 {
+  /**
+   * The point `distance` further on along the route from the boat, out to the swimming side of it by the toys' lane,
+   * into `out`; returns the route's heading there.
+   */
+  private along(distance: number, out: THREE.Vector3): number {
     const boat = this.cast.boat.position;
     let x = boat.x, z = boat.z, left = distance;
     for (let i = this.leg; i < this.route.length; i++) {
@@ -632,14 +643,15 @@ export class CrossingChapter implements Chapter {
       const heading = Math.atan2(next.x - x, next.y - z);
       if (span >= left || i === this.route.length - 1) {
         const lane = tuning.seaToys.lane * this.swimSide;
-        return out.set(x + Math.sin(heading) * left + Math.cos(heading) * lane, 0,
+        out.set(x + Math.sin(heading) * left + Math.cos(heading) * lane, 0,
           z + Math.cos(heading) * left - Math.sin(heading) * lane);
+        return heading;
       }
       left -= span;
       x = next.x;
       z = next.y;
     }
-    return out.set(x, 0, z);
+    return 0;
   }
 
   /**

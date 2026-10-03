@@ -1225,12 +1225,13 @@ export const tuning = {
     /** Smaller than in their own room beside the boat they are now so much smaller than. */
     scale: 0.65,
     /**
-     * Where they are already sailing when the passage leaves, unseen in the last of the night: this far ahead along
-     * the route and this far out to the swimming side of it, on a course that runs on near the route for `courseFor`.
+     * Where they are already sailing when the passage leaves, unseen in the last of the night: on a course that
+     * crosses the route ahead at `across` (radians, out toward the swimming side) and passes `lane` out from it
+     * `meetAt` further along the route, where they will be about `meetIn` seconds later.
      */
-    ahead: 93, lane: 4.5, courseFor: 60,
+    meetAt: 138, meetIn: 40, lane: 5, across: 0.18,
     /** Their own speed in units a second: a share of `ownSpeed` with the breeze alone, the rest as the sail fills. */
-    ownSpeed: 1.5, cruise: 0.62, driven: 0.38,
+    ownSpeed: 1.95, cruise: 0.62, driven: 0.38,
     /** The open-sea breeze keeps a sail this full; a gust fills it the rest of the way. */
     breezeFill: 0.55,
     /** How far a hull wanders off its course, how far a gust knocks its head round, and how fast it may turn (radians, a second). */
@@ -1251,6 +1252,10 @@ export const tuning = {
     swimTrack: 1.1,
     /** Seconds the boat's way stays on it after it goes in, falling away. */
     wayFor: 1.2,
+    /** The furthest out from the boat it swims, toys or no toys. */
+    reach: 7.5,
+    /** It makes for the child's own toy unless another is this much nearer. */
+    preferOwn: 2.5,
     /** It turns back early if the toys have fallen this far astern of the child in the boat. */
     turnBackAstern: 6,
   },
@@ -1261,7 +1266,7 @@ export const tuning = {
     swimSpeed: 2.4,
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
     swimCarry: 0.75,
-    swimEase: 0.5,
+    swimEase: 1,
     swimFor: 12,
     swimAnticipation: 2,
     swimDecision: 3,
@@ -1291,11 +1296,11 @@ export const tuning = {
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
-    swimCameraDistance: 16,
-    swimCameraHeight: 4.6,
+    swimCameraDistance: 15,
+    swimCameraHeight: 3.4,
     cameraBearing: 0.16,
     /** Open a little beside the boat only while the cygnet is swimming. */
-    swimCameraBearing: 0.65,
+    swimCameraBearing: 1.05,
     childTurn: 0.7,
     haze: 0.94,
   },

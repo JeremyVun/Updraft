@@ -8,11 +8,11 @@ import { swellAt, type Swell } from '../../world/water/swell';
 
 /** Which of the little boats' toys come back: the child's own, the teal and the yellow. */
 const FLEET = [0, 1, 2];
-/** Where each sails in the loose flotilla: behind the child's own along their course, and out to one side of it. */
-const LOOSE = [[0, 0], [-2.4, 1.5], [-1.4, -1.2]];
+/** Where each sails in the loose flotilla: behind the child's own along their course, and further out than it. */
+const LOOSE = [[0, 0], [-2.2, 1.7], [-1, 1]];
 /** Each hull's own pace and its own small difference of course, so the flotilla is never quite in step. */
-const PACE = [1, 0.96, 0.92];
-const STRAY = [0, 0.04, -0.035];
+const PACE = [1, 0.97, 0.95];
+const STRAY = [0, 0.02, 0.012];
 
 interface SeaToy {
   group: THREE.Group;
@@ -92,9 +92,19 @@ export class ToyFleet {
   /** Not out on the water: not yet set sailing, or sailed on out of sight. */
   get idle(): boolean { return this.phase !== 'sailing'; }
 
-  /** The child's own toy, the one the cygnet goes to. */
-  playmate(out: THREE.Vector3): THREE.Vector3 {
-    return out.copy(this.toys[0].group.position);
+  /** Where toy `which` is (0 is the child's own). */
+  at(which: number, out: THREE.Vector3): THREE.Vector3 {
+    return out.copy(this.toys[which].group.position);
+  }
+
+  /** The one nearest `to`, preferring the child's own unless another is `nearer` closer. */
+  nearest(to: THREE.Vector3, nearer: number): number {
+    let best = 0, gap = this.toys[0].group.position.distanceTo(to) - nearer;
+    this.toys.forEach((toy, i) => {
+      const d = toy.group.position.distanceTo(to);
+      if (d < gap) { best = i; gap = d; }
+    });
+    return best;
   }
 
   /**
