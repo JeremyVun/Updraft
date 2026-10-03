@@ -1493,6 +1493,8 @@ export const tuning = {
     drive: 4.5 / 2.6,
     following: 1 / 2.6,
     topSpeed: 10,
+    /** How fast each arm of the wake opens sideways, per unit of boat speed (0.28 opens the V about 16° a side). */
+    wakeSpread: 0.28,
     /** Spill wind in a tight turn; the turning radius must shrink as a missed waypoint gets closer. */
     turnBrake: 0.65,
     turnAligned: 0.85,
