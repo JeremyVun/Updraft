@@ -389,7 +389,7 @@ the child. Winter arrives, and with it the fear that the child might not wake. T
 unease, loneliness, hesitation, commitment, relief, tenderness. Island mist on the crossing hides the island and
 its summit window until they land (`tuning.world.sleepingMist`).
 
-1. **Bedtime.** A bed on an open grassy terrace, with a rug, floorboard fragments, a lamp, a small stone hearth,
+1. **Bedtime.** A bed on an open grassy terrace, with a rug, floorboard fragments, a lamp, a small painted fireplace,
    an alarm clock, slippers, a book and a writing table. Fatigue shows on the walk (slow steps, a silent yawn,
    drooping lids). She warms her mittens at the hearth while the bird walks round the bed, then takes supported
    actions: set the bird down, turn, sit, nod awake once, legs up, head to the pillow, hands to the quilt and draw
@@ -397,9 +397,9 @@ its summit window until they land (`tuning.world.sleepingMist`).
 2. **Cold.** Shortly after sleep, frost creeps in, breath shows, snow thickens with a crosswind, the hearth dies to
    embers and ash, the lamp contracts and the clock stops. The bird tries three times to wake her and calls once;
    nothing answers. A slit of window light touches the pillow, she stirs, and the cloth closes again.
-3. **The feather.** A loose feather lies at the pillow's edge; a stroke across the pillow frees it. Broad strokes
-   send it ahead along the route, faster than it goes by itself, never back downhill, and it stays near the bird.
-   Short wind wisps hint the way up a natural hillside.
+3. **The feather.** A loose feather lies across the quilt over her, rising and falling as she breathes; a stroke
+   across it frees it. Broad strokes send it ahead along the route, faster than it goes by itself, never back
+   downhill, and it stays near the bird. Short wind wisps hint the way up a natural hillside.
 4. **Snow and mist.** A snow-choked notch between rock and drop: the bird tries the powder and backs out; broad
    sweeps carry it away into a grassy channel between rounded banks. Then a bank of mist over the shoulder: the
    bird looks back and shivers until the player parts it. Progress persists. In the upper fog the bird takes the

@@ -24,8 +24,12 @@ export const SLEEP_BERTH = new THREE.Vector3(-214.5, 0, -1926);
 
 /** The way the bed's head end points: toward the hill, and toward the window the morning comes through. */
 export const BED_FACING = new THREE.Vector2(-0.35, -0.94).normalize();
-const BED_LENGTH = 3.45;
-const BED_WIDTH = 1.95;
+const BED_LENGTH = 3.0;
+const BED_WIDTH = 1.75;
+/** Where the mattress ends at the foot, inside the footboard: the blanket past it is tucked down out of sight. */
+const BED_TUCK = BED_LENGTH / 2 - 0.08;
+/** How far toward the foot the blanket's middle lies from the bed's. */
+const BLANKET_DOWN = 0.25;
 
 function groundAround(x: number, z: number, radius: number): number {
   let top = heightAt(x, z);
@@ -53,7 +57,11 @@ HILLTOP.y = heightAt(HILLTOP.x, HILLTOP.z);
 const BESIDE_BED = new THREE.Vector2(-BED_FACING.y, BED_FACING.x);
 
 /** The bedside lamp's bulb: the one warm light in the blue. */
-export const LAMP = new THREE.Vector3(PILLOW.x + BESIDE_BED.x * 1.15, 0, PILLOW.z + BESIDE_BED.y * 1.15);
+export const LAMP = new THREE.Vector3(
+  BED.x + BED_FACING.x * (BED_LENGTH / 2 - 0.05) + BESIDE_BED.x * 1.15,
+  0,
+  BED.z + BED_FACING.y * (BED_LENGTH / 2 - 0.05) + BESIDE_BED.y * 1.15,
+);
 const LAMP_GROUND = groundAround(LAMP.x, LAMP.z, 0.4);
 LAMP.y = LAMP_GROUND + 1.3;
 
@@ -243,6 +251,9 @@ vec3 clothAt(vec2 uvw) {
     + uPull * exp(-pow((uvw.y - fold) * 12.0, 2.0));
   // Keep shallow cloth ripples above the mattress as the sleeper rises; the sides still drape.
   y = max(y, ${glsl(BED_GROUND)} + 0.69 - drape * 0.34) + aside * 0.12 * sin(smoothstep(0.0, 1.0, outward) * 3.14159);
+  float tucked = max(0.0, ${glsl(BLANKET_DOWN)} + (back - 0.5) * uBed.z - ${glsl(BED_TUCK)});
+  xz -= uBedAxis * tucked;
+  y -= min(tucked * 1.4, 0.2);
   return vec3(xz.x, y, xz.y);
 }
 
@@ -435,37 +446,66 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number): 
   return new THREE.BoxGeometry(w, h, d).translate(x, y, z);
 }
 
-/** The bed: four posts, boards at each end, a mattress and a pillow. The blanket on it is cloth and is its own. */
-function cushion(w: number, h: number, d: number, x: number, y: number, z: number): THREE.BufferGeometry {
+function cushion(w: number, h: number, d: number, x: number, y: number, z: number, round = 0.48): THREE.BufferGeometry {
   const g = new THREE.SphereGeometry(1, 28, 16);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
-    const round = (v: number) => Math.sign(v) * Math.pow(Math.abs(v), 0.48);
-    p.setXYZ(i, round(p.getX(i)) * w / 2 + x, round(p.getY(i)) * h / 2 + y, round(p.getZ(i)) * d / 2 + z);
+    const shape = (v: number) => Math.sign(v) * Math.pow(Math.abs(v), round);
+    p.setXYZ(i, shape(p.getX(i)) * w / 2 + x, shape(p.getY(i)) * h / 2 + y, shape(p.getZ(i)) * d / 2 + z);
   }
   g.computeVertexNormals();
   return g;
 }
 
+/** A bed end: a board between two turned posts, its top rising to a soft crown. */
+function bedEnd(w: number, z: number, post: number, top: number, crown: number): Part[] {
+  const board = new THREE.Shape();
+  board.moveTo(-w / 2, 0.3);
+  board.lineTo(w / 2, 0.3);
+  board.lineTo(w / 2, top);
+  board.quadraticCurveTo(0, top + crown * 2, -w / 2, top);
+  board.closePath();
+  const parts = [prop(new THREE.ExtrudeGeometry(board, {
+    depth: 0.05, curveSegments: 16, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2,
+  }).translate(0, 0, z - 0.025), PAINT)];
+  for (const sx of [-1, 1]) {
+    parts.push(prop(new THREE.CylinderGeometry(0.05, 0.058, post, 12).translate(sx * w / 2, post / 2, z), PAINT));
+    parts.push(prop(new THREE.SphereGeometry(0.078, 14, 10).translate(sx * w / 2, post + 0.045, z), PAINT));
+  }
+  return parts;
+}
+
+/**
+ * The bed: a child's bed with a tall end at the head and a low one at the foot, a mattress and a pillow. The blanket
+ * on it is cloth and is its own.
+ */
 function bedParts(): Part[] {
   const L = BED_LENGTH;
   const W = BED_WIDTH;
-  const parts: Part[] = [];
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const tall = sz < 0 ? 0.86 : 0.58;
-      parts.push(prop(box(0.09, tall, 0.09, sx * (W / 2 - 0.04), tall / 2, sz * (L / 2 - 0.04)), PAINT));
-      parts.push(prop(new THREE.SphereGeometry(0.058, 8, 6).translate(sx * (W / 2 - 0.04), tall + 0.02, sz * (L / 2 - 0.04)), PAINT));
+  const pillow = cushion(1.02, 0.24, 0.6, 0, 0, 0).rotateX(0.07).translate(0, 0.68, -(L / 2 - 0.45));
+  return [
+    ...bedEnd(W - 0.1, -(L / 2 - 0.05), 1.22, 1.0, 0.16),
+    ...bedEnd(W - 0.1, L / 2 - 0.05, 0.92, 0.8, 0.07),
+    ...[-1, 1].map((sx) => prop(box(0.05, 0.16, L - 0.14, sx * (W / 2 - 0.05), 0.36, 0), PAINT)),
+    prop(cushion(W - 0.14, 0.25, L - 0.16, 0, 0.54, 0, 0.28), LINEN),
+    prop(pillow, LINEN),
+  ];
+}
+
+/** The same surface seen from inside: an open shade has an inside as well as an outside. */
+function insideOut(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  const inner = g.toNonIndexed();
+  const p = inner.attributes.position;
+  const n = inner.attributes.normal;
+  for (let i = 0; i < p.count; i += 3) {
+    for (const a of [p, n]) {
+      const x = a.getX(i + 1), y = a.getY(i + 1), z = a.getZ(i + 1);
+      a.setXYZ(i + 1, a.getX(i + 2), a.getY(i + 2), a.getZ(i + 2));
+      a.setXYZ(i + 2, x, y, z);
     }
   }
-  parts.push(prop(box(W - 0.1, 0.34, 0.06, 0, 0.62, -(L / 2 - 0.04)), PAINT));
-  parts.push(prop(box(W - 0.1, 0.2, 0.06, 0, 0.42, L / 2 - 0.04), PAINT));
-  for (const sx of [-1, 1]) parts.push(prop(box(0.06, 0.13, L - 0.18, sx * (W / 2 - 0.04), 0.36, 0), PAINT));
-  parts.push(prop(cushion(W - 0.1, 0.25, L - 0.16, 0, 0.54, 0), LINEN));
-  const pillow = cushion(1.12, 0.22, 0.72, 0, 0.75, -(L / 2 - 0.52));
-  pillow.rotateX(-0.07);
-  parts.push(prop(pillow, LINEN));
-  return parts;
+  for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i));
+  return inner;
 }
 
 /** A lamp standing on the grass where a bedside table would be, if there were one. */
@@ -474,6 +514,7 @@ function lampParts(): Part[] {
     prop(new THREE.CylinderGeometry(0.15, 0.19, 0.05, 10).translate(0, 0.025, 0), BRASS),
     prop(new THREE.CylinderGeometry(0.03, 0.035, 1.03, 8).translate(0, 0.535, 0), BRASS),
     prop(new THREE.CylinderGeometry(0.17, 0.25, 0.28, 12, 1, true).translate(0, 1.2, 0), SHADE, 0.5),
+    prop(insideOut(new THREE.CylinderGeometry(0.165, 0.245, 0.28, 12, 1, true).translate(0, 1.2, 0)), SHADE, 1),
     prop(new THREE.SphereGeometry(0.075, 8, 6).translate(0, 1.14, 0), SHADE, 1),
   ];
 }
@@ -527,6 +568,7 @@ function flexParts(): Part[] {
   return [
     prop(new THREE.TubeGeometry(curve, 16, 0.022, 5, false), TIMBER),
     prop(new THREE.CylinderGeometry(0.26, 0.15, 0.3, 12, 1, true).translate(0.02, 2.36, 0.02), SHADE),
+    prop(insideOut(new THREE.CylinderGeometry(0.255, 0.145, 0.3, 12, 1, true).translate(0.02, 2.36, 0.02)), SHADE),
     prop(new THREE.SphereGeometry(0.07, 8, 6).translate(0.02, 2.44, 0.02), SHADE),
   ];
 }
@@ -727,8 +769,8 @@ export class SleepingIsland {
 
     // A little alarm clock belongs to the room. Its second hand stalls as the refuge goes cold.
     const clock = new THREE.Group();
-    clock.position.copy(PILLOW).addScaledVector(new THREE.Vector3(BESIDE_BED.x,0,BESIDE_BED.y),2.2)
-      .addScaledVector(new THREE.Vector3(BED_FACING.x,0,BED_FACING.y),.6);
+    clock.position.copy(BED).addScaledVector(new THREE.Vector3(BESIDE_BED.x,0,BESIDE_BED.y),2.2)
+      .addScaledVector(new THREE.Vector3(BED_FACING.x,0,BED_FACING.y),BED_LENGTH/2+.55);
     clock.position.y=heightAt(clock.position.x,clock.position.z);
     clock.rotation.y=0.75;
     const tableParts:Part[]=[prop(box(.7,.08,.55,0,.65,0),BOARD)];
@@ -792,7 +834,7 @@ export class SleepingIsland {
         uniforms: {
           ...atmo.uniforms,
           uCloth: { value: BLANKET_RED },
-          uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * 0.25, BED.z - BED_FACING.y * 0.25, 2.85, BED_WIDTH * 0.56) },
+          uBed: { value: new THREE.Vector4(BED.x - BED_FACING.x * BLANKET_DOWN, BED.z - BED_FACING.y * BLANKET_DOWN, 2.85, BED_WIDTH * 0.56) },
           uBedAxis: { value: new THREE.Vector2(-BED_FACING.x, -BED_FACING.y) },
           uFold: { value: this.fold },
           uAside: { value: this.aside },
@@ -1107,7 +1149,7 @@ export class SleepingIsland {
     const back = top ? fold * 2 : fold + inset;
     const along = (back - 0.5) * 2.85;
     const width = BED_WIDTH * 0.56;
-    out.set(BED.x - BED_FACING.x * (along + 0.25), BED.y, BED.z - BED_FACING.y * (along + 0.25));
+    out.set(BED.x - BED_FACING.x * (along + BLANKET_DOWN), BED.y, BED.z - BED_FACING.y * (along + BLANKET_DOWN));
     out.x += BED_FACING.y * across * width;
     out.z -= BED_FACING.x * across * width;
     const wide = Math.min(1, Math.abs(across) / tuning.sleeping.sleeperWide);
@@ -1117,6 +1159,16 @@ export class SleepingIsland {
     out.y = top
       ? BED_GROUND + 0.655 + (back > 0 ? 0.05 : 0) + this.lift.value
       : Math.max(BED_GROUND + 0.69, BED_GROUND + 0.655 + body * (1 + this.under.z) + this.pull.value);
+    return out;
+  }
+
+  /** On top of the covers, the turned-down flap and any lift included: where something resting on the quilt lies. */
+  onCovers(across: number, inset: number, out: THREE.Vector3): THREE.Vector3 {
+    this.blanketEdge(across, out, false, inset);
+    const fold = this.fold.x;
+    const back = fold + inset;
+    if (inset < fold) out.y += Math.sin((inset / fold) * Math.PI) * (0.1 + 0.26 * fold) + 0.05;
+    out.y += this.fold.y * (1 - THREE.MathUtils.smoothstep(back, 0.1, 0.9)) * (0.35 + 0.5 * Math.sin(back * Math.PI));
     return out;
   }
 
