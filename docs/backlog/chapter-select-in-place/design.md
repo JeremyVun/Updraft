@@ -221,7 +221,8 @@ when a 2x desktop screen upscales it 1.8x; no upscaler is available here, the ar
 taken as the plain option. Before shipping, the rooms whose painting differs from the game are regenerated from the
 same prompt with the old image attached and the fix named: the sails are knitted wool, not plain red cloth (Home,
 Open sea, Drowned village, Sky mirror); the Dark wood as dark as the game; no added hill on the Sleeping island; the
-Still island's boat lying as the game has it. The prompts and a one-room regenerate script live in
+Still island's boat lying as the game has it. Jeremy, 2026-10-03, on the round 3 set: "looks great, i think i'd only
+look to see if we can generate better images for drowned village and sleeping", so those two get further attempts. The prompts and a one-room regenerate script live in
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
