@@ -36,6 +36,8 @@ void main() {
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);
   float ao = mix(0.55, 1.0, smoothstep(0.0, 1.5, vWorld.y - texture(uHeightTex, domainUv(vWorld.xz)).r));
   vec3 col = alb * (hemiLight(n) * ao + uSunColor * mix(ndl, wrap, 0.25) * sun);
+  // Shade keeps its depth but turns cool, as styles.md asks of every shadow.
+  col *= mix(vec3(1.0), vec3(0.86, 0.97, 1.22), (1.0 - ndl * sun) * 0.75);
   float rim = pow(1.0 - clamp(dot(n, normalize(cameraPosition - vWorld)), 0.0, 1.0), 4.0);
   col += uSunColor * rim * 0.12 * sun * max(dot(-normalize(cameraPosition - vWorld), uSunDir), 0.0);
   col = applyFog(col, vWorld);
