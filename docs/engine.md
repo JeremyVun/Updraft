@@ -238,7 +238,7 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 | Terrain split | 1.6 | 1.6 | 1.35 | 1.1 |
 | Sky-mirror scale | 0.75 | 0.75 | 0.625 | 0.5 |
 | Sky mirror's reflection | every frame | every frame | every frame | alternate frames |
-| Bloom | full | full | half resolution | off |
+| Bloom | full | full | full | off |
 | Sun's glow painted by the grade in bloom's place (`SUN_GLOW`, eased with bloom) | no | no | no | yes |
 | Hull's wet collar on the sea | yes | yes | off | off |
 | Lantern's glint and light on the sea | yes | yes | yes | off |
@@ -308,8 +308,8 @@ the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and b
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
 negative colour (a shader that writes one shows black there, not the bright speck the grade's ACES made of it) and
 Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
-a few levels. Bloom follows the level: full, half resolution (its chain starts at a
-quarter of the frame instead of half) or off, when its passes are skipped and its targets released. Turning it on or
+a few levels. Bloom follows the level: full, or off at Low, when its passes are skipped and its targets released.
+Half-resolution bloom spread wider and veiled the frame near the sun while saving almost nothing. Turning it on or
 off eases its strength over one second, as the grass changes; boot draws it once whatever the level, so its programs
 exist before Begin. Only the scene target is multisampled. The canvas has no depth buffer
 (`depth: false`): nothing drawn to the screen may rely on depth.

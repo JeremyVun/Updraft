@@ -323,6 +323,10 @@ The profile is `profile.md`. His answers, verbatim where quoted:
   - Open: the child's bone texture uploaded before the frame's passes (exact; +2 to +4% weighted but −8 to −12% on
     the stairs' top and sail on the Mac; needs the iPad); the sky mirror's reflection at the ordinary size and cadence
     until near the flat (needs a still from a running capture).
+- **Phase 8's visual pass (2026-10-03):** Medium's half-resolution bloom spread wider and laid a milky veil near the
+  sun while saving almost nothing; Jeremy chose "Full bloom at Medium" (the half-resolution path is removed). The
+  hard straight edge a stairs wisp draws across a riser in the white at Ultra and High (older than this item): "Fix
+  it now".
 - **One level at a time (2026-10-01):** Auto never drops two levels at once; with coarse levels a double drop
   from High overshot to Low where Medium would have held (chosen: "One level at a time").
 

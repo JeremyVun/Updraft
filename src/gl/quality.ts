@@ -23,7 +23,7 @@ export interface WorldQuality {
   nearSegments: 6 | 5;
 }
 
-export type BloomLevel = 'full' | 'half' | 'off';
+export type BloomLevel = 'full' | 'off';
 /** The sea's effects: all of them, all but the hull's wet collar, or the plain sea (see `water.ts`). */
 export type SeaEffects = 'all' | 'noCollar' | 'plain';
 
@@ -34,7 +34,7 @@ const FULL: WorldQuality = { grassDensity: 1, grassReach: HIGH_GRASS_REACH, terr
 export const WORLD_QUALITY: Record<QualityLevelName, WorldQuality> = {
   ultra: FULL,
   high: FULL,
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'half', sea: 'noCollar', nearSegments: 6 },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: 0.625, bloom: 'full', sea: 'noCollar', nearSegments: 6 },
   low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: 0.5, bloom: 'off', sea: 'plain', nearSegments: 5 },
 };
 

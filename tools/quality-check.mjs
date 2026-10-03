@@ -25,7 +25,7 @@ const run = (q, from, to, interval, early) => {
 assert.deepEqual(WORLD_QUALITY, {
   ultra: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
   high: { grassDensity: 1, grassReach: 1.15, terrainSplit: 1.6, mirrorEvery: 1, mirrorScale: .75, bloom: 'full', sea: 'all', nearSegments: 6 },
-  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'half', sea: 'noCollar', nearSegments: 6 },
+  medium: { grassDensity: 1, grassReach: 1, terrainSplit: 1.35, mirrorEvery: 1, mirrorScale: .625, bloom: 'full', sea: 'noCollar', nearSegments: 6 },
   low: { grassDensity: 1, grassReach: 1, terrainSplit: 1.1, mirrorEvery: 2, mirrorScale: .5, bloom: 'off', sea: 'plain', nearSegments: 5 },
 });
 const PRESETS = {
