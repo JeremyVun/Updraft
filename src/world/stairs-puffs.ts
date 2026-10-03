@@ -14,7 +14,7 @@ export const SOLIDS_PER_PUFF = 8;
 /** How far toward the lens a puff's card stands, in its radius: halfway keeps the veil over the stair as it was on the whole. */
 export const FRONT = 0.5;
 /** How many cells each card is cut into across, so the distance to a solid is found at its corners and blended between. */
-const GRID = 16;
+const GRID = 12;
 /** Blending the distance across a cell overstates it near a solid's edges by up to this much, so the thinning starts this far out. */
 const BLEND = 0.1;
 const SLOPE = STEP.rise / STEP.going;
@@ -218,8 +218,12 @@ export function puffGeometry(puffs: readonly Puff[]): THREE.InstancedBufferGeome
   for (let y = 0; y < side; y++) {
     for (let x = 0; x < side; x++) corner.set([x / GRID * 2 - 1, y / GRID * 2 - 1], (y * side + x) * 2);
   }
+  const reach = 1.25 / 1.3;
   for (let y = 0; y < GRID; y++) {
     for (let x = 0; x < GRID; x++) {
+      // Cells wholly beyond the ball's lumps would draw nothing.
+      const nearest = (k: number) => Math.max(0, Math.abs((k + 0.5) / GRID * 2 - 1) - 1 / GRID);
+      if (Math.hypot(nearest(x), nearest(y)) >= reach) continue;
       const i = y * side + x;
       index.push(i, i + 1, i + side + 1, i, i + side + 1, i + side);
     }
