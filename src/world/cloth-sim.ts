@@ -145,9 +145,11 @@ export class Cloth {
    * on the cloth across its face, and `gust(i)` lets each particle feel it a little differently. `ground(x, z)` is
    * the height the cloth comes to rest on; `posts` are upright poles it cannot pass through, as x, z, radius, top.
    * `follow` is how quickly, every second, the air brings the cloth to its own speed whichever way the cloth faces.
+   * `rails` are lines it cannot pass through, as straight runs ax, ay, az, bx, by, bz, radius.
    */
   step(h: number, air: ClothAir, drag: number, damping: number, iterations: number,
-    gust: (i: number) => number, ground: (x: number, z: number) => number, posts: readonly number[], follow = 0): void {
+    gust: (i: number) => number, ground: (x: number, z: number) => number, posts: readonly number[], follow = 0,
+    rails: readonly number[] = []): void {
     const { pos, prev, free, pin } = this;
     const normal = this.face;
     this.last.set(pos);
@@ -216,6 +218,7 @@ export class Cloth {
         pos[k] = posts[p] + dx / d * posts[p + 2];
         pos[k + 2] = posts[p + 1] + dz / d * posts[p + 2];
       }
+      for (let r = 0; r < rails.length; r += 7) this.rail(k, rails, r);
       const floor = ground(pos[k], pos[k + 2]);
       if (pos[k + 1] < floor) {
         pos[k + 1] = floor;
@@ -225,6 +228,28 @@ export class Cloth {
         if (prev[k + 1] < floor) prev[k + 1] = floor;
       }
     }
+  }
+
+  /**
+   * Keep a particle out of a line, on the side it came from: a line is thinner than the gap between particles, so it
+   * is thickened to half that gap, and the cloth catches on it instead of passing through between them.
+   */
+  private rail(k: number, rails: readonly number[], r: number): void {
+    const { pos, prev } = this;
+    const ax = rails[r], ay = rails[r + 1], az = rails[r + 2];
+    const ex = rails[r + 3] - ax, ey = rails[r + 4] - ay, ez = rails[r + 5] - az, radius = rails[r + 6];
+    const run = ex * ex + ey * ey + ez * ez;
+    const t = Math.min(1, Math.max(0, ((pos[k] - ax) * ex + (pos[k + 1] - ay) * ey + (pos[k + 2] - az) * ez) / run));
+    const cx = ax + ex * t, cy = ay + ey * t, cz = az + ez * t;
+    const dx = pos[k] - cx, dy = pos[k + 1] - cy, dz = pos[k + 2] - cz;
+    if (dx * dx + dy * dy + dz * dz >= radius * radius) return;
+    // Out the way it came in, square to the line.
+    let ox = prev[k] - cx, oy = prev[k + 1] - cy, oz = prev[k + 2] - cz;
+    const along = (ox * ex + oy * ey + oz * ez) / run;
+    ox -= ex * along; oy -= ey * along; oz -= ez * along;
+    const d = Math.sqrt(ox * ox + oy * oy + oz * oz);
+    if (d < 1e-6) return;
+    pos[k] = cx + ox / d * radius; pos[k + 1] = cy + oy / d * radius; pos[k + 2] = cz + oz / d * radius;
   }
 
   normals(pos: Float32Array, normal: Float32Array): void {

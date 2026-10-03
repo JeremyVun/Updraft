@@ -57,6 +57,7 @@ const PEGGING: { pegs: number[][]; order: [number, number][][]; gap: number; spr
 ];
 
 const SPACING = 0.42;
+const RAIL_RUNS = 8;
 const STEP = 1 / 60;
 
 export interface CurtainPeg {
@@ -171,6 +172,8 @@ export class WashingCurtain {
   private pending = 0;
   private floor: Floor | null = null;
   private readonly posts: number[] = [];
+  /** The snag line, in straight runs the torn sheet cannot pass through. */
+  private readonly rails: number[] = [];
   private readonly air: ClothAir = { x: 0, y: 0, z: 0, spin: 0, cx: 0, cz: 0 };
   /** How far the torn sheet turns about the upright on its way to lie along the snag line. */
   private yaw = 0;
@@ -199,6 +202,13 @@ export class WashingCurtain {
     this.crossX = gap - this.plan.spread;
     for (const end of this.plan.torn ? [this.a, this.b, SNAG_LINE.a, SNAG_LINE.b] : [this.a, this.b]) {
       this.posts.push(end.x, end.z, 0.2, end.y + 0.1);
+    }
+    if (this.plan.torn) {
+      const from = new THREE.Vector3(), to = new THREE.Vector3();
+      for (let n = 0; n < RAIL_RUNS; n++) {
+        lineAt(SNAG_LINE, n / RAIL_RUNS, from); lineAt(SNAG_LINE, (n + 1) / RAIL_RUNS, to);
+        this.rails.push(from.x, from.y, from.z, to.x, to.y, to.z, SPACING * 0.55);
+      }
     }
 
     const span = this.a.distanceTo(this.b);
@@ -569,7 +579,7 @@ export class WashingCurtain {
     this.sheets.forEach((s, j) => {
       const phase = this.phase[j];
       const gust = (i: number) => 1 + 0.3 * Math.sin(t * 2.3 - phase[i]) + 0.15 * Math.sin(t * 5.3 - phase[i] * 1.7);
-      s.cloth.step(h, this.air, k.drag, k.damping, k.iterations, gust, floor.at, this.posts, flying ? k.flightFollow : 0);
+      s.cloth.step(h, this.air, k.drag, k.damping, k.iterations, gust, floor.at, this.posts, flying ? k.flightFollow : 0, this.rails);
     });
   }
 
