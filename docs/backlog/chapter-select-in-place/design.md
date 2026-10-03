@@ -239,7 +239,11 @@ shade there, with at most a subtle focus falloff, never a visible blur effect. T
 artificially blurred"). He also found the paintings "a bit... low resolution": a 1586x992 painting is upscaled 1.8x on
 a 2x desktop, Jeremy will handle the upscale himself ("dont worry
 about local AI upscale, i will figure that out myself"); the build ships the native-size set, file for file
-replaceable. The prompts and a one-room regenerate script live in
+replaceable.
+On the regenerated set Jeremy chose the Drowned village's low view behind the boat (A), and on the Sleeping island:
+"the problem was the bed dimensions, you didn't fix that". The game's bed is 3.45 m by 1.95 m (`src/world/sleeping.ts`);
+the paintings drew a long, low double bed. Every painting keeps the game's object proportions, checked against the
+capture. The prompts and a one-room regenerate script live in
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
