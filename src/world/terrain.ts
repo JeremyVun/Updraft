@@ -5,6 +5,7 @@ import { params } from '../params';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, RIME_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
+import { ECHO_GLSL, echoUniforms } from './echoes';
 import { FOOTPRINT_GLSL, footprintUniforms } from './footprints';
 import { DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 import { REFLECTION_LAYER } from './water/reflection';
@@ -78,6 +79,7 @@ ${TERRAIN_COLOUR_GLSL}
 ${RIME_GLSL}
 ${SURF_GLSL}
 ${FOOTPRINT_GLSL}
+${ECHO_GLSL}
 uniform vec3 uSand;
 uniform vec3 uWetSand;
 uniform vec3 uGround;
@@ -127,7 +129,7 @@ void main() {
   bool beach = shore < 6.0 && grassy < 1.0;
   vec4 swash = beach ? beachSwash(xz, shore, -normalize(n.xz + 1e-5), fp) * (1.0 - grassy) : vec4(0.0);
   float wet = max(swash.z, (1.0 - smoothstep(0.0, 5.0, shore)) * 0.5) * (1.0 - grassy);
-  vec3 alb = mix(sand, uWetSand, wet * 0.85);
+  vec3 alb = mix(sand, uWetSand, max(wet * 0.85, echoDamp(xz) * 0.6));
   float slope = 1.0 - n.y;
 
   vec4 surf = surfaceAt(xz);
@@ -301,6 +303,7 @@ export class Terrain {
         ...this.colour.uniforms,
         ...heights.uniforms,
         ...footprintUniforms,
+        ...echoUniforms,
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
         uGround: { value: new THREE.Color('#2e3f22') },

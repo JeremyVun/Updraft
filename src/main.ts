@@ -81,6 +81,7 @@ import { CloudStairs } from './world/stairs';
 import { CLOUD, STAIRS_ISLE } from './world/stairs-layout';
 import { createTree } from './world/tree';
 import { Footprints } from './world/footprints';
+import { dreamEchoes } from './world/echoes';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { TerrainHeights } from './world/terrain-heights';
@@ -405,12 +406,15 @@ const sheepFolds = [
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
 scene.add(hillCreatures.group);
 clipJourneyProps(hillCreatures.group);
+const echoes = dreamEchoes();
+Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group], boats: [littleBoats.group],
   meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
+for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
 for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
 }

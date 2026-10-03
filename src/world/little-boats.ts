@@ -120,7 +120,7 @@ function material(colour: string): THREE.ShaderMaterial {
 }
 
 /** Carved solid hull: rounded sides, pointed bow, broad stern and a thin contrasting gunwale. */
-function hull(): THREE.BufferGeometry {
+export function hull(): THREE.BufferGeometry {
   const outline = new THREE.Shape();
   outline.moveTo(0, 0.86);
   outline.bezierCurveTo(0.42, 0.45, 0.39, -0.43, 0.26, -0.67);
@@ -139,7 +139,7 @@ function hull(): THREE.BufferGeometry {
   g.translate(0, 0.16, 0);
   return g;
 }
-function sail(): THREE.BufferGeometry {
+export function sail(): THREE.BufferGeometry {
   const g = new THREE.PlaneGeometry(1, 1, 12, 14);
   const p = g.getAttribute('position');
   const uv = g.getAttribute('uv');
