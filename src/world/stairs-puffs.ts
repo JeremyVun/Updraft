@@ -129,7 +129,7 @@ void main() {
     gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
     return;
   }
-  // The haze and the light change little across one ball, so they are found once for the whole of it.
+  // The haze and the light change little across one ball, so they are taken at its middle.
   vFog = fogOf(c);
   vSun = cloudShadow(c.xz);
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
@@ -212,12 +212,8 @@ export function puffGeometry(puffs: readonly Puff[]): THREE.InstancedBufferGeome
   for (let y = 0; y < side; y++) {
     for (let x = 0; x < side; x++) corner.set([x / GRID * 2 - 1, y / GRID * 2 - 1], (y * side + x) * 2);
   }
-  const reach = 1.25 / 1.3;
   for (let y = 0; y < GRID; y++) {
     for (let x = 0; x < GRID; x++) {
-      // Cells wholly beyond the ball's lumps would draw nothing.
-      const nearest = (k: number) => Math.max(0, Math.abs((k + 0.5) / GRID * 2 - 1) - 1 / GRID);
-      if (Math.hypot(nearest(x), nearest(y)) >= reach) continue;
       const i = y * side + x;
       index.push(i, i + 1, i + side + 1, i, i + side + 1, i + side);
     }
