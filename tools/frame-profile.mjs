@@ -83,6 +83,10 @@
 // ALONG=10 under COMPARE_BASE plays both builds together from the fixture frame to the moment, held on every tenth frame
 // until both have been read as their loops drew it; frames whose hashes differ are compared (CAPTURE=1 saves those over
 // COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village. STATE runs on BASE's page alone.
+// PAIR_BASE=<another dev server> with FRAME times the frame on both builds at once (FRAME_PASS's frame, ABBA between
+// the two pages over PAIR_ROUNDS, with each page's none floor); SETUP and PAIR_SETUP run code in each page's main.ts
+// scope right after Begin (a level's settings; SETUP works without PAIR_BASE too); PAIR_PARTS=a,b also times those
+// ablations in each page (PART_ROUNDS).
 // Under FRAME three's UUIDs draw from a stream of their own, so a build that creates more or fewer objects at boot
 // keeps the game's random stream (read the randoms drift field if a comparison still drifts).
 // mirror-merge draws the sky mirror's pieces placed by translation alone as one mesh per material at the float32
@@ -114,7 +118,7 @@ const out = process.env.OUT ?? '/tmp/updraft-frame-profile';
 const STRADDLE = 1.4;
 const BASE=process.env.BASE??'http://127.0.0.1:5230/',COMPARE_BASE=process.env.COMPARE_BASE,FRAME=Number(process.env.FRAME??0);
 const PATH_JS=process.env.PATH_JS,PATH_STEPS=Number(process.env.PATH_STEPS??40);
-const ALONG=Number(process.env.ALONG??0);
+const ALONG=Number(process.env.ALONG??0),PAIR_BASE=process.env.PAIR_BASE;
 assert(!ALONG||COMPARE_BASE,'ALONG compares against COMPARE_BASE');
 assert(!FRAME||FRAME>=120,'FRAME must leave room for the fixture: 120 or more');
 assert(!COMPARE_BASE||FRAME,'COMPARE_BASE needs FRAME: two builds draw the same picture only when both stop on the same frame');
@@ -883,7 +887,7 @@ window.__audit = {
 `;
 
 const { browser, close } = await openBrowser();
-async function open(base,chapter) {
+async function open(base,chapter,setup) {
   const [entry,fixture]=chapter.split(':');
   const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
@@ -924,6 +928,7 @@ async function open(base,chapter) {
   await page.waitForSelector('#veil.ready',{timeout:300000});await page.locator('#begin').click();
   await page.waitForFunction(()=>window.__ready,null,{timeout:300000});
   assert(await page.evaluate(()=>!!window.__audit),base+' is not a dev server: this tool patches src/main.ts, which a built bundle does not serve');
+  if(setup)console.log(JSON.stringify({chapter,base,setup:await page.evaluate(code=>__audit.state(code),setup)}));
   if(FRAME)await page.evaluate(stop=>{__audit.stopAt=stop;},entry==='stairs'&&fixture?1e9:FRAME);
   if(ALONG)return {page,errors,playing:entry==='stairs'&&fixture?stairsFixtureOnFrames(page,fixture,FIXTURE_FRAME,'__audit.stopAt=__stats.frame;'):null};
   if(entry==='stairs'&&fixture){
@@ -989,6 +994,45 @@ async function along(chapter) {
   report.push({chapter,along:result});
 }
 
+// PAIR_BASE: the frame on two builds at once, each frozen at the fixture in its own page, timed in ABBA order between
+// the pages round by round, so another process's GPU load lands on both sides of every pair.
+async function pair(chapter) {
+  const sides=await Promise.all([open(PAIR_BASE,chapter,process.env.PAIR_SETUP),open(BASE,chapter,process.env.SETUP)]);
+  const sim=process.env.FRAME_SIM==='1',reps=Number(process.env.FRAME_REPS??20),parts=(process.env.PAIR_PARTS??'').split(',').filter(Boolean);
+  const run=(page,variants,reps)=>page.evaluate(async ({variants,reps,sim})=>{
+    const gl=__game.renderer.getContext(),channel=new MessageChannel();let wake=null;channel.port1.onmessage=()=>wake?.();
+    async function complete(){const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();
+      try{for(;;){const s=gl.clientWaitSync(fence,0,0);if(s===gl.ALREADY_SIGNALED||s===gl.CONDITION_SATISFIED)return;await new Promise(r=>{wake=r;channel.port2.postMessage(0);});}}finally{gl.deleteSync(fence);}}
+    return __audit.framePass(variants,reps,1,complete,sim);
+  },{variants,reps,sim});
+  const state=await Promise.all(sides.map(s=>s.page.evaluate(()=>{
+    __audit.configure(null);const r=__game.renderer.info.render;let calls=0,triangles=0;
+    for(let i=0;i<2;i++){__audit.draw(false);calls+=r.calls;triangles+=r.triangles;}
+    const g=__game;return {story:g.story.name,beat:g.story.current.beat,frame:__stats.frame,camera:g.rig.camera.position.toArray().map(v=>+v.toFixed(1)),
+      calls:calls/2,triangles:Math.round(triangles/2),programs:g.renderer.info.programs.length};
+  })));
+  const med=a=>[...a].sort((x,y)=>x-y)[a.length>>1],q=(a,f)=>[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)*f)];
+  const times=[{},{}],push=(side,out)=>{for(const [v,t] of Object.entries(out))(times[side][v]??=[]).push(...t);};
+  // One discarded round each: the first draws after a configure compile and upload.
+  for(const s of sides)await run(s.page,['new','none',...parts],reps);
+  for(let round=0;round<Number(process.env.PAIR_ROUNDS??48);round++)for(const side of round%2?[1,0]:[0,1])
+    push(side,await run(sides[side].page,round%2?['none','new']:['new','none'],reps));
+  const floor=t=>med(t.none.map((v,r)=>(1-v/t.new[r])*100));
+  const percent=times[1].new.map((v,r)=>(1-v/times[0].new[r])*100);
+  const result={against:{ms:med(times[0].new),none:floor(times[0]),...state[0]},here:{ms:med(times[1].new),none:floor(times[1]),...state[1]},
+    rounds:percent.length,percent:med(percent),iqr:[q(percent,0.25),q(percent,0.75)],savedMs:med(times[1].new.map((v,r)=>times[0].new[r]-v))};
+  if(parts.length){
+    const partTimes=[{},{}],pushPart=(side,out)=>{for(const [v,t] of Object.entries(out))(partTimes[side][v]??=[]).push(...t);};
+    for(let round=0;round<Number(process.env.PART_ROUNDS??24);round++)for(const side of round%2?[1,0]:[0,1]){
+      const variants=['new',...parts];pushPart(side,await run(sides[side].page,round%2?variants.reverse():variants,Number(process.env.PART_REPS??10)));}
+    const share=t=>Object.fromEntries(parts.map(p=>[p,{percent:med(t[p].map((v,r)=>(1-v/t.new[r])*100)),savedMs:med(t[p].map((v,r)=>t.new[r]-v))}]));
+    result.against.parts=share(partTimes[0]);result.here.parts=share(partTimes[1]);
+  }
+  for(const s of sides){assert.deepEqual(s.errors,[],'Browser errors');await s.page.close();}
+  console.log(JSON.stringify({chapter,pair:result}));report.push({chapter,pair:result});
+  await fs.writeFile(out+'.json',JSON.stringify(report,null,2));
+}
+
 const specks = omit => omit === 'glass-sky-always' || omit === 'e6-off';
 const report=[],inexact=[],differing=[];
 try {
@@ -996,6 +1040,7 @@ try {
     const gate=QUIET_S?await quiet():undefined;if(gate)console.log(JSON.stringify({chapter,gate:{waitedS:gate.waitedS,contended:gate.contended,hot:gate.hot}}));
     const busyAtStart=busy();
     if(ALONG){await along(chapter);continue;}
+    if(PAIR_BASE){await pair(chapter);continue;}
     let against,comparePage;
     if(COMPARE_BASE){
       const other=await open(COMPARE_BASE,chapter);
@@ -1004,7 +1049,7 @@ try {
       assert.deepEqual(other.errors,[],'Browser errors on COMPARE_BASE');
       if(PATH_JS)comparePage=other.page;else await other.page.close();
     }
-    const {page,errors,detail}=await open(BASE,chapter);
+    const {page,errors,detail}=await open(BASE,chapter,process.env.SETUP);
     let cpu,frameTimes,census;
     // A run stopped on a frame is for comparing pictures: its loop is already still, and its readbacks are not the game's.
     if(FRAME)census={frames:0,passes:{},objects:{},cpu:{},scene:await page.evaluate(()=>{__audit.install();return __audit.inspect();})};
