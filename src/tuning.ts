@@ -1097,15 +1097,24 @@ export const tuning = {
     /** Local gusts count in any direction, and several small sweeps add up. */
     energyFrom: 0.025, energyFull: 0.22,
     speedFrom: 0.4, speedFull: 3,
-    fillSeconds: 1.8,
-    billowSpeed: 6, rise: 3.5, settle: 1.2,
+    billowSpeed: 6, rise: 3.5, settle: 2,
     /**
-     * Held open, a sheet streams out from its pegs in the breeze through the gap: `streamAngle` radians from
-     * hanging at its hem, rising and falling `streamGust` with the gusts, a corner at a time lifting `twist` more.
-     * Waves of up to `flap` metres run down it to the hem, which whips by `whip` more. Once both travellers are
-     * through a gust tosses it up to `overAngle` over `tossSeconds`, clear of the camera following them.
+     * Seconds of full sweep it takes to work one peg free. A pegged sheet billows away through the gap in the
+     * player's air, pushed `pushSpeed` m/s more against `drag`, and feels at most `liveAir` m/s, so it lifts but
+     * never streams flat; once its pegs are off it feels at most `restAir` m/s of breeze, so a gust never throws
+     * it back into the way.
      */
-    streamAngle: 1.75, overAngle: 2.6, tossSeconds: 2.5, streamGust: 0.2, twist: 0.6, flap: 0.4, whip: 0.45,
+    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 8, liveAir: 5.5, restAir: 2.2,
+    /** A worked peg gives once the billow has fallen below `popBillow`, or after `popWait` s of gusting. */
+    popBillow: 0.3, popWait: 1.5,
+    /** The travellers go through once the last of the sheet has been down this long. */
+    passAfter: 1.2,
+    /** A popped peg leaps `pegHop` m/s up and `pegFling` m/s out along the line, and tumbles to the grass. */
+    pegHop: 3.2, pegFling: 1.6,
+    /** The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line. */
+    flightSeconds: 2.4, flightRise: 2.6, flightGrip: 9,
+    /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */
+    settleSeconds: 7,
     brushFrom: 0.8, brushRadius: 0.27,
     /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
     inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,

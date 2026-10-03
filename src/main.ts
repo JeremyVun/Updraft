@@ -65,7 +65,7 @@ import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
-import { CURTAINS, washingPassage } from './world/lines-passage';
+import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
 import { FAMILY_LINE, WashingLines, baskets, door, family, lineField, seaLines } from './world/lines';
@@ -226,7 +226,7 @@ scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
-const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()];
+const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]), SNAG_LINE, ...CURTAINS, ...seaLines()];
 await built();
 const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
 scene.add(washing.group);
@@ -845,6 +845,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
+  if (story.name === 'lines') washing.update();
   /** And so do the birches and the sail, for the same reason. */
   birches.subject.copy(washing.subject);
   boat.subject.copy(washing.subject);

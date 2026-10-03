@@ -129,7 +129,7 @@ export class LinesChapter implements Chapter {
             cygnet.does(this.gate === 0 ? 'peer' : 'look-back', c.position, 2.5);
           }
         }
-        if (g.charge >= 1 && this.t > tuning.linesPassage.birdLead && this.noticed) {
+        if (g.passable && this.t > tuning.linesPassage.birdLead && this.noticed) {
           g.cleared = true;
           cygnet.bind(0.035);
           cygnet.stay = false; cygnet.errand = g.after;
@@ -152,7 +152,7 @@ export class LinesChapter implements Chapter {
           }
           if (time - this.birdArrived > tuning.linesPassage.lookBack) {
             this.to('childThrough');
-            c.walkTo(g.center.x - 1.1, g.after.z - 0.8, false, () => this.passed(), 0.6);
+            c.walkTo(g.crossX, g.after.z - 0.8, false, () => this.passed(), 0.6);
           }
         }
         break;
@@ -219,7 +219,6 @@ export class LinesChapter implements Chapter {
     const { child: c, cygnet } = this.cast;
     c.lean = 0;
     cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1;
-    CURTAINS[this.gate].through = true;
     this.gate++;
     if (this.gate < CURTAINS.length) this.approach();
     else {
