@@ -6,13 +6,18 @@ These are lossless copies of the generator output, not upscaled files.
 
 Landscape: 1672 x 941 (approximately 16:9).
 Portrait: approximately 852 x 1846 (approximately 9:19.5).
-manifest.json records each file's exact dimensions, checksum and selected source revision.
-prompts/ contains the exact final prompt for every selected image; earlier generations and their
-prompts remain in the parent directory where a final prompt was a targeted revision.
+manifest.json records each file's exact dimensions, checksum, installed derivatives and generation provenance.
+Its file and prompt paths are relative to this directory; installed derivative paths are repository-relative.
+prompts/ contains the exact final prompt for every selected image. Only these final masters are retained.
+Historical input paths and source revision names in the manifest document generation history; drafts and
+duplicate copies have been removed. Original scene descriptions remain in ../../rooms/.
 
-Sleeping uses the corrected, narrower single bed. Sky mirror uses the wider low viewpoint.
-Cloud stairs retains the original close showcase composition; the game's invitation is lowered
-instead of shrinking the scene to make room for it.
+Sleeping uses the corrected, narrower single bed; its landscape camera is lower with the furniture
+framed a little higher. Sky mirror uses the wider low viewpoint. Cloud stairs uses a slightly lower,
+upward-looking landscape view with gently softened foreground clouds beneath the close staircase.
+The game's landscape stairs invitation sits lower on those clouds.
+Stairs is a fresh generation (stairs-land-fresh-v4), using the original prompt and scene/style references.
+For further camera corrections, start from those original inputs: repeated edits introduced visible artifacts.
 
 Installed derivatives: src/paintings/<chapter>-land.webp and <chapter>-port.webp,
 encoded at WebP quality 94 with sharp YUV conversion and unchanged native dimensions.
@@ -21,5 +26,5 @@ Matching chapter-select tiles are 400 x 250 WebP at quality 90.
 Jeremy will handle any subsequent upscale manually. After upscaling, encode the larger files
 under the same src/paintings filenames; preserve these original native masters.
 
-The 12-portrait marketing collage is in assets/promo/updraft-chapter-collage.png,
-with a smaller share JPEG and an editable HTML layout beside it. It contains no game UI.
+The shareable 12-portrait marketing collage is assets/promo/updraft-chapter-collage-share.jpg.
+It contains no game UI.

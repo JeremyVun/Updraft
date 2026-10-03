@@ -169,7 +169,6 @@ body.starting #plane-guide { visibility: hidden; }
 }
 .begin-mouse .begin-mouse-button { fill: currentColor; fill-opacity: .45; stroke: none; }
 @media (hover: hover) and (pointer: fine) {
-  #begin { display: grid; grid-template-columns: 18px auto 18px; }
   .begin-mouse { display: block; }
 }
 #veil.ready #begin { visibility: visible; opacity: 1; }
@@ -204,9 +203,16 @@ body.starting #plane-guide { visibility: hidden; }
     rgb(var(--shade) / .02) 37.5%, rgb(var(--shade) / 0) 40%);
 }
 #veil.painted :is(.veil-painting, .veil-shade) { opacity: 1; }
-#veil.painted { --low: max(160px, 22vh); }
+#veil.painted { --low: max(160px, 18vh); }
 #veil.painted.finished { --low: max(220px, 22vh); }
 #veil.painted #begin { top: calc(100% - var(--low)); }
+@media (orientation: portrait) {
+  #veil.painted { --low: max(160px, 26vh); }
+  #veil.painted.finished { --low: max(220px, 26vh); }
+}
+@media (min-aspect-ratio: 4/3) {
+  #veil.painted:not(.finished):has(.veil-painting[data-room="stairs"]) { --low: max(120px, 14vh); }
+}
 
 .start-over {
   appearance: none;

@@ -125,12 +125,14 @@ Set the mood and invite one click; discovering the wind belongs in the game.
   Still island for Begin) fills the veil behind everything and fades up over 1.6 s, with a neutral near-black shade
   taken from the paintings' own shadows rising from the bottom and eased out by 40% up (`.veil-shade`, the one place
   to retune it; Continue keeps 4.5:1 at its faintest on the palest rooms, the Still island and Cloud stairs). The
-  invitation then sits low and centred in the painting's quiet band: its centre at `100% - max(160px, 22vh)`.
+  invitation then sits low and centred in the painting's quiet band: its centre at `100% - max(160px, 18vh)` in
+  landscape, and higher at `100% - max(160px, 26vh)` in portrait.
   A finished save reserves at least 220 px below the invitation for its two secondary actions and corner controls;
   `chapters` 50 px below it, `start over` 50 px below, or 94 px under `chapters`. A painting that has not decoded
   when the veil turns ready is never shown that visit: the plain veil keeps the invitation centred, so nothing moves
   once on screen. One WebP per visit (`src/paintings/<room>-land.webp`, or `-port` under 3:4), requested at low
-  priority. Cloud stairs anchors at 50% 65% when cropped, giving the close stairs room above the invitation.
+  priority. Cloud stairs anchors at 50% 65% when cropped; at 4:3 or wider its ordinary invitation sits at
+  `100% - max(120px, 14vh)`, on the gently softened foreground clouds beneath the close stairs.
   Leaving, the painting fades with the invitation (.8 s) before the veil dissolves, so it never cross-fades
   into the game's own view; while chapters are open it fades back to the plain veil (.6 s). Reduced motion: no fades.
 - `start over` is drawn like `chapters` (16 px italic at .5) and shows for any valid save. Its first press turns it

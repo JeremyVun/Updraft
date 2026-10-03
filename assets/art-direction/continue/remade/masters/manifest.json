@@ -7,7 +7,29 @@
     "width": 1672,
     "height": 941,
     "bytes": 1656587,
-    "sha256": "04765e3e2944bce95d3aa2d8a9b4d3a402bec07f79a7924977c5c1674fe74fff"
+    "sha256": "04765e3e2944bce95d3aa2d8a9b4d3a402bec07f79a7924977c5c1674fe74fff",
+    "sourceRevision": "island-land.png",
+    "prompt": "prompts/island-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-2ac80969-7186-4038-9c30-85a5d5dc594a.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/island-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/island-land.webp"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/island-land.webp",
+      "bytes": 190752,
+      "sha256": "d2bb30e3d736a80ede8297c2ea994efd0617f2280253fc4b352409b126ab8793",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/island.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 15222,
+      "quality": 90
+    }
   },
   {
     "room": "island",
@@ -17,7 +39,22 @@
     "width": 853,
     "height": 1844,
     "bytes": 1615281,
-    "sha256": "c47c91d44c7d953124e476a8ddde5617209a5510b9b44a0bd228382bc55cc33d"
+    "sha256": "c47c91d44c7d953124e476a8ddde5617209a5510b9b44a0bd228382bc55cc33d",
+    "sourceRevision": "island-port.png",
+    "prompt": "prompts/island-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-65368704-6b78-4a51-a502-f8bb67eeaf31.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/island-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/island-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/island-port.webp",
+      "bytes": 186182,
+      "sha256": "66b7694f3634b68b9c9e42472ee5a091566949213ffedf6eb80162cb3ddc3943",
+      "quality": 94
+    }
   },
   {
     "room": "washing",
@@ -27,7 +64,29 @@
     "width": 1672,
     "height": 941,
     "bytes": 1814625,
-    "sha256": "3957acd5a817b1f6a8252337245fbf34121c3c7df007adf2bc1d18cc55f0f9da"
+    "sha256": "3957acd5a817b1f6a8252337245fbf34121c3c7df007adf2bc1d18cc55f0f9da",
+    "sourceRevision": "washing-land.png",
+    "prompt": "prompts/washing-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-cc9608d3-8647-4e73-ba7b-bb775b84ee73.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/washing-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/washing-land.webp"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/washing-land.webp",
+      "bytes": 289312,
+      "sha256": "8bca8c6a78103ce20f81705fbfe21a98590e803a36c0765678a0249fcd8fe0e0",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/washing.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 27694,
+      "quality": 90
+    }
   },
   {
     "room": "washing",
@@ -37,7 +96,22 @@
     "width": 852,
     "height": 1846,
     "bytes": 1776119,
-    "sha256": "06ec6841b3760bbe94c70c72b66a66be9f38e2d66e857dd0b7c77b67ba275237"
+    "sha256": "06ec6841b3760bbe94c70c72b66a66be9f38e2d66e857dd0b7c77b67ba275237",
+    "sourceRevision": "washing-port.png",
+    "prompt": "prompts/washing-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-40646cb9-67fa-433d-b785-f76adfa9ee3d.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/washing-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/washing-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/washing-port.webp",
+      "bytes": 276410,
+      "sha256": "b9bfa54c97e3bf3b12ef05596d9e4f4a2c1a2a498e8224e5b744d3ced7d2ffe6",
+      "quality": 94
+    }
   },
   {
     "room": "boats",
@@ -47,7 +121,29 @@
     "width": 1672,
     "height": 941,
     "bytes": 1942362,
-    "sha256": "2e9f695190d91cd8b484d3dcde18c5928a909f62f1c5fca2ee8a2de2665af812"
+    "sha256": "2e9f695190d91cd8b484d3dcde18c5928a909f62f1c5fca2ee8a2de2665af812",
+    "sourceRevision": "boats-land.png",
+    "prompt": "prompts/boats-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6c7e6e22-b91e-47bc-9363-3a5927822d10.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/boats-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/boats-land.webp"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/boats-land.webp",
+      "bytes": 333636,
+      "sha256": "16c4a3a8b115eca5a108855f72e6427ef52154a66b7b6d7b26f0001a53bb471d",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/boats.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 27644,
+      "quality": 90
+    }
   },
   {
     "room": "boats",
@@ -57,17 +153,54 @@
     "width": 853,
     "height": 1844,
     "bytes": 1843869,
-    "sha256": "0ce731e9042fbb7ffbfba134815035327fc6da4d93cab818a07414d2f0f1a7d1"
+    "sha256": "0ce731e9042fbb7ffbfba134815035327fc6da4d93cab818a07414d2f0f1a7d1",
+    "sourceRevision": "boats-port.png",
+    "prompt": "prompts/boats-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-b2c5cf6d-f011-4c21-a6c3-91c1aeb27cd0.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/boats-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/boats-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/boats-port.webp",
+      "bytes": 286900,
+      "sha256": "b0aa38218ba1a7905836b3c5778dcfc9b851531f53560f4678abbd1f2cc82555",
+      "quality": 94
+    }
   },
   {
     "room": "meadow",
     "aspect": "land",
     "name": "meadow-land",
-    "file": "meadow-proof/meadow-land-v1.png",
+    "file": "meadow-land.png",
     "width": 1672,
     "height": 941,
     "bytes": 1767622,
-    "sha256": "1c9ee1934d8dfa9fd0913174d2c5a53f3681f9c2a6b354427749d19dcedcb6e0"
+    "sha256": "1c9ee1934d8dfa9fd0913174d2c5a53f3681f9c2a6b354427749d19dcedcb6e0",
+    "sourceRevision": "meadow-proof/meadow-land-v1.png",
+    "prompt": "prompts/meadow-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-1018fd1b-b31e-4614-ae3b-ba813945f960.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-continue-comps-3/gen/meadow-land-v1.png",
+        "/tmp/updraft-prompts/refs/meadow-capture.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/meadow-land.webp",
+      "bytes": 233920,
+      "sha256": "190c9d1a72df092bff78ae54d635abd83ef03042403f21e5b13f80254cdc72b3",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/meadow.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 23744,
+      "quality": 90
+    }
   },
   {
     "room": "meadow",
@@ -77,7 +210,22 @@
     "width": 852,
     "height": 1847,
     "bytes": 1773628,
-    "sha256": "cd231547b72e956b2db02359dec664499c75d5404c1159e4f2f48e324c48502b"
+    "sha256": "cd231547b72e956b2db02359dec664499c75d5404c1159e4f2f48e324c48502b",
+    "sourceRevision": "meadow-port.png",
+    "prompt": "prompts/meadow-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a5d119ca-24ab-4d28-b5fa-08ea95b75be9.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/meadow-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/meadow-proof/meadow-land-v1.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/meadow-port.webp",
+      "bytes": 241010,
+      "sha256": "800ae0b3fa534c79c38f84a315121c36af0e0949b9df1f6c33e336e189396d5e",
+      "quality": 94
+    }
   },
   {
     "room": "birches",
@@ -87,7 +235,29 @@
     "width": 1672,
     "height": 941,
     "bytes": 2438259,
-    "sha256": "58b801ffdb5a83d099174be664d3334f43c4649f5e64a6b893450a4307f1266c"
+    "sha256": "58b801ffdb5a83d099174be664d3334f43c4649f5e64a6b893450a4307f1266c",
+    "sourceRevision": "birches-land.png",
+    "prompt": "prompts/birches-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-f8401453-44b7-4c6c-8d11-2cf41bcf0c5d.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/birches-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/birches-land.webp"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/birches-land.webp",
+      "bytes": 480396,
+      "sha256": "dbe4fc59cee34f0f1cf763c1002d1931b17d5c8de6aeb6e3d1a60033467dc27f",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/birches.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 43772,
+      "quality": 90
+    }
   },
   {
     "room": "birches",
@@ -97,7 +267,22 @@
     "width": 853,
     "height": 1844,
     "bytes": 2419326,
-    "sha256": "b68cb2cca29aeb892c20a5f50c44aa175e79059c4d1c4cd652fe1d8bc53fda98"
+    "sha256": "b68cb2cca29aeb892c20a5f50c44aa175e79059c4d1c4cd652fe1d8bc53fda98",
+    "sourceRevision": "birches-port.png",
+    "prompt": "prompts/birches-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-48043a09-776d-49d0-9e8a-10760e9717e0.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/birches-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/birches-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/birches-port.webp",
+      "bytes": 467516,
+      "sha256": "07941702e5e1d8ba2443c86f37437ced4f637593744edc9ed2b0ca02a682a9dc",
+      "quality": 94
+    }
   },
   {
     "room": "stairs",
@@ -106,8 +291,32 @@
     "file": "stairs-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1697334,
-    "sha256": "13a5c93fce31fba96b4a82e79284b15be83cdf76aa193507fff2da83e514a48e"
+    "bytes": 1696455,
+    "sha256": "bb24e408ae16207c76dc423ed429807334cb646fae134feb09f0c628b561a1c0",
+    "sourceRevision": "stairs-land-fresh-v4.png",
+    "prompt": "prompts/stairs-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-0e1c115a-797b-43b4-8ed2-e9f913b76f58.png",
+      "historicalInputPaths": [
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/references/stairs-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/references/stairs-original.webp"
+      ],
+      "method": "Fresh built-in generation from original prompt and references; no recent edited painting supplied",
+      "originalPaintingCommit": "341197d"
+    },
+    "webp": {
+      "file": "src/paintings/stairs-land.webp",
+      "bytes": 209368,
+      "sha256": "f40ec6933ed0368342332e608d940982c9f3b6dfe63c54a30e6d9a9e1975b796",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/stairs.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 23086,
+      "quality": 90
+    }
   },
   {
     "room": "stairs",
@@ -117,7 +326,22 @@
     "width": 851,
     "height": 1848,
     "bytes": 1769511,
-    "sha256": "f51aa6348960ead509cc56983199afdf7008db03abf2f3c6a6ef64906b48f2af"
+    "sha256": "f51aa6348960ead509cc56983199afdf7008db03abf2f3c6a6ef64906b48f2af",
+    "sourceRevision": "stairs-port.png",
+    "prompt": "prompts/stairs-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6b5261c3-9c30-4da3-8f0c-ce79bb2cf3a4.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/stairs-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/stairs-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/stairs-port.webp",
+      "bytes": 214404,
+      "sha256": "8439aec0748c0824bc1155be48eba085692ae9012e896e7124832170f4b8b43b",
+      "quality": 94
+    }
   },
   {
     "room": "drowned",
@@ -127,7 +351,30 @@
     "width": 1672,
     "height": 941,
     "bytes": 1803530,
-    "sha256": "fc5aaccef9d9e90fc89840a7998ee70b059a4d24ebebed96dfa9c2f217651ab6"
+    "sha256": "fc5aaccef9d9e90fc89840a7998ee70b059a4d24ebebed96dfa9c2f217651ab6",
+    "sourceRevision": "drowned-land.png",
+    "prompt": "prompts/drowned-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-5ccc82bd-fc90-445e-913c-2a28e62392f0.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/drowned-shipped.png",
+        "/Users/jeremy/projects/updraft/src/paintings/drowned-land.webp",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/drowned-land.webp",
+      "bytes": 273060,
+      "sha256": "5b6f366616ce2eaec93c36af1c0a43dd158428a6089c1bb6d3922c26ff20a09d",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/drowned.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 25258,
+      "quality": 90
+    }
   },
   {
     "room": "drowned",
@@ -137,7 +384,23 @@
     "width": 852,
     "height": 1846,
     "bytes": 1710136,
-    "sha256": "9b3ccbe7eb4f4f682d076d373e7fb5f571af29126a0208545f68f29da9488ed5"
+    "sha256": "9b3ccbe7eb4f4f682d076d373e7fb5f571af29126a0208545f68f29da9488ed5",
+    "sourceRevision": "drowned-port.png",
+    "prompt": "prompts/drowned-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-14096384-7ea0-434f-9706-ec306ac4373b.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/drowned-shipped.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/drowned-land.png",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/drowned-port.webp",
+      "bytes": 239354,
+      "sha256": "9453fe6514933d1178c961ed45c35efe64c8e7b5aead4209707a9bdbe26eaac7",
+      "quality": 94
+    }
   },
   {
     "room": "wood",
@@ -147,7 +410,29 @@
     "width": 1672,
     "height": 941,
     "bytes": 1448805,
-    "sha256": "d707139c05656227548ac1f493a1f3e1c8e1845ea1ca87514ed74f92e644fe93"
+    "sha256": "d707139c05656227548ac1f493a1f3e1c8e1845ea1ca87514ed74f92e644fe93",
+    "sourceRevision": "wood-land.png",
+    "prompt": "prompts/wood-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-fc6482ec-8861-424e-955c-ab0913c603ab.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/wood-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/wood-land.webp"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/wood-land.webp",
+      "bytes": 134160,
+      "sha256": "4c269a94edb7c42ba6ca969f5c99aafe7a9af188690d8430198d569509b16001",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/wood.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 12050,
+      "quality": 90
+    }
   },
   {
     "room": "wood",
@@ -157,27 +442,77 @@
     "width": 852,
     "height": 1846,
     "bytes": 1474590,
-    "sha256": "d444a87bbd2d58bb4497142f7264790edc8813bd4a95debdd5abe32f956eb1fd"
+    "sha256": "d444a87bbd2d58bb4497142f7264790edc8813bd4a95debdd5abe32f956eb1fd",
+    "sourceRevision": "wood-port.png",
+    "prompt": "prompts/wood-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6df45d4d-54cd-438c-bd0a-11a6728256ff.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/wood-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/wood-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/wood-port.webp",
+      "bytes": 141916,
+      "sha256": "4dc6d4c75755f6ef2f5932a09ea587c7895085e753e763ee3e3997f460503dfc",
+      "quality": 94
+    }
   },
   {
     "room": "sleeping",
     "aspect": "land",
     "name": "sleeping-land",
-    "file": "sleeping-land-v2.png",
+    "file": "sleeping-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1699796,
-    "sha256": "80c191ce24682c7ed2b515c3fae914eb11c3da1a0841c23e08b488531f1dfcf3"
+    "bytes": 1802865,
+    "sha256": "32c1d31f20582dc475f11de844e1b9a450974ed7a0c4f61eb233cb3ac383a9ac",
+    "sourceRevision": "sleeping-land-v4.png",
+    "prompt": "prompts/sleeping-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-e462c786-2300-4947-8707-7249c20a9e86.png",
+      "historicalInputPaths": [
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sleeping-land-v3.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/sleeping-land.webp",
+      "bytes": 258448,
+      "sha256": "79cec244b37aeb2b8cc672654f56e24c222d467d31871825c4515189a3e3dad3",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/sleeping.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 22346,
+      "quality": 90
+    }
   },
   {
     "room": "sleeping",
     "aspect": "port",
     "name": "sleeping-port",
-    "file": "sleeping-port-v2.png",
+    "file": "sleeping-port.png",
     "width": 851,
     "height": 1847,
     "bytes": 1615301,
-    "sha256": "84e26b666477d67d50fbdad9162c28f59373164b4ac11e4adb689458f882df8c"
+    "sha256": "84e26b666477d67d50fbdad9162c28f59373164b4ac11e4adb689458f882df8c",
+    "sourceRevision": "sleeping-port-v2.png",
+    "prompt": "prompts/sleeping-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-6b65bfcf-8011-4dba-ad68-988dec1ff7c6.png",
+      "historicalInputPaths": [
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sleeping-port.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/sleeping-port.webp",
+      "bytes": 200970,
+      "sha256": "e4ebef469837eeda5bc66b70c912045ac87a1f18044ce5e65c34a8bc304d22f6",
+      "quality": 94
+    }
   },
   {
     "room": "sea",
@@ -187,7 +522,30 @@
     "width": 1672,
     "height": 941,
     "bytes": 1657175,
-    "sha256": "114f6bbbf26d16c271218cc861a3d5c6a6e69006563d65c71606d7a77ed8ff3d"
+    "sha256": "114f6bbbf26d16c271218cc861a3d5c6a6e69006563d65c71606d7a77ed8ff3d",
+    "sourceRevision": "sea-land.png",
+    "prompt": "prompts/sea-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-d51d44bf-dcdb-468f-bef5-c8f60970e5f9.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/sea-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/sea-land.webp",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/sea-land.webp",
+      "bytes": 225472,
+      "sha256": "c8b2b0d5c57013f1a19242a51c136ff7fa98d028475899a53162e5c1fecc542f",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/sea.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 19170,
+      "quality": 90
+    }
   },
   {
     "room": "sea",
@@ -197,17 +555,54 @@
     "width": 851,
     "height": 1847,
     "bytes": 1724669,
-    "sha256": "ea55c40201f3a3d3d8087e80d83a7f7001b664a40269be1d803ab431fc904738"
+    "sha256": "ea55c40201f3a3d3d8087e80d83a7f7001b664a40269be1d803ab431fc904738",
+    "sourceRevision": "sea-port.png",
+    "prompt": "prompts/sea-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-b168f911-0a24-43dc-8182-2995b1e63f98.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/sea-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sea-land.png",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/sea-port.webp",
+      "bytes": 217748,
+      "sha256": "bdcb1ea0c84294f8d97b03e58d87780724a182de6488337620570ae63b401e74",
+      "quality": 94
+    }
   },
   {
     "room": "mirror",
     "aspect": "land",
     "name": "mirror-land",
-    "file": "mirror-land-v2.png",
+    "file": "mirror-land.png",
     "width": 1672,
     "height": 941,
     "bytes": 1682607,
-    "sha256": "9902316c5ab3909fa2b065100f67feba0fb512017edcee51812e3be92507b03a"
+    "sha256": "9902316c5ab3909fa2b065100f67feba0fb512017edcee51812e3be92507b03a",
+    "sourceRevision": "mirror-land-v2.png",
+    "prompt": "prompts/mirror-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-50d55397-848a-4f31-ac30-42bc2976e562.png",
+      "historicalInputPaths": [
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/mirror-land.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/mirror-land.webp",
+      "bytes": 189398,
+      "sha256": "a4eae08523a59a33622e9ff3016da8819e3de7cc37d66e725015d2c4a8e77aef",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/mirror.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 19674,
+      "quality": 90
+    }
   },
   {
     "room": "mirror",
@@ -217,7 +612,23 @@
     "width": 852,
     "height": 1846,
     "bytes": 1718323,
-    "sha256": "975a8efe7815dceabbdb6a5643107df3f9a703e9c94665d79922b60f3b3320fc"
+    "sha256": "975a8efe7815dceabbdb6a5643107df3f9a703e9c94665d79922b60f3b3320fc",
+    "sourceRevision": "mirror-port.png",
+    "prompt": "prompts/mirror-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a54d46b9-9adc-4511-9cae-a229a6761edf.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/mirror-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/mirror-land-v2.png",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/mirror-port.webp",
+      "bytes": 213184,
+      "sha256": "23389f91025e6f0c99410483d2497c81381ba3471db4bd09871ad4d2ef3bd207",
+      "quality": 94
+    }
   },
   {
     "room": "home",
@@ -227,7 +638,30 @@
     "width": 1672,
     "height": 941,
     "bytes": 1929487,
-    "sha256": "5316904d33d4c0ab48cc9d7035f5294fd7fa117de1c7ee3ee911f0d8887f8f15"
+    "sha256": "5316904d33d4c0ab48cc9d7035f5294fd7fa117de1c7ee3ee911f0d8887f8f15",
+    "sourceRevision": "home-land.png",
+    "prompt": "prompts/home-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a4c638c0-ba52-4105-8cfa-4570279c7bc0.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/home-capture.png",
+        "/Users/jeremy/projects/updraft/src/paintings/home-land.webp",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/home-land.webp",
+      "bytes": 324968,
+      "sha256": "5cdb5f58b5868ead36c80eb9cb7a33639145e94d123cb3691dadf9dd996b3cb0",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/home.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 28630,
+      "quality": 90
+    }
   },
   {
     "room": "home",
@@ -237,6 +671,22 @@
     "width": 852,
     "height": 1846,
     "bytes": 1834528,
-    "sha256": "f71f19d8ac97d3883456c1cb7c40d733f4844998b9cc1e656bb57ed80e59018b"
+    "sha256": "f71f19d8ac97d3883456c1cb7c40d733f4844998b9cc1e656bb57ed80e59018b",
+    "sourceRevision": "home-port.png",
+    "prompt": "prompts/home-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-f1544c66-7c27-4732-96e7-98d778e54d3b.png",
+      "historicalInputPaths": [
+        "/tmp/updraft-prompts/refs/home-capture.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/home-land.png",
+        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/home-port.webp",
+      "bytes": 279666,
+      "sha256": "8b7083d5cb8adc95f2a4f9f4d97348d666b56a78f22c8003983466b2a1a48be5",
+      "quality": 94
+    }
   }
 ]

@@ -318,8 +318,8 @@ First validate a Meadow landscape's
 actual output dimensions and finish before running the full twelve-room landscape/portrait set. Keep candidates
 separate from the installed assets until checked. Worktree: `/private/tmp/updraft-veil-art-vSr0NL/worktree`,
 branch `codex/veil-paintings`, based on `3ea16f7` with this chat's review and `still` alias patch carried over.
-The first built-in proof, requested at 3840x2160, returned a native 1672x941 PNG. It is saved with its exact prompt
-under `assets/art-direction/continue/remade/meadow-proof/` on the main checkout, not installed as a game asset.
+The first built-in proof, requested at 3840x2160, returned a native 1672x941 PNG. It was initially kept separately
+for review, then selected as `assets/art-direction/continue/remade/masters/meadow-land.png` with its exact prompt.
 The foreground fade is more gradual and the piano has its correct raised lid, but this file does not solve the
 4K source-resolution problem on its own. Jeremy chose "Continue with built-in resolution" and clarified:
 "you understand waht i mean right? as long as the dimensions are ok,  and we are at the highest quality you can generate at, i can upscale them in post processing manually".
@@ -353,14 +353,50 @@ Jeremy's final framing and marketing directions:
 
 > you could also have just moved the "Begin" / "continue" button down a bit as well (i think we may have to do this anyway so it looks nice on most of the other images)
 
-Keep the close original Cloud stairs landscape and lower the shared invitation from 72% toward 78% height.
+The first remedy kept the close original Cloud stairs landscape and lowered the shared invitation from 72% toward 78% height.
 On wide screens, the stairs painting uses `object-position: 50% 65%` to show a little more foreground without
 shrinking the stairs or modifying the PNG. Portrait and 16:10 framing keep the same image scale.
 Finished saves retain at least 220 px below the invitation for their additional action, avoiding phone overlap.
-The mouse icon now has an equal reserved column on the right, so the word itself is centred. Prefer adjusting the
-overlay's space before shrinking a chapter's showcase subject. The collage uses the selected portrait masters in
+Prefer adjusting the overlay's space before shrinking a chapter's showcase subject. The collage uses the selected portrait masters in
 story order, six columns by two rows, with no overlays: `assets/promo/updraft-chapter-collage.png` (5106x3688) and
 `updraft-chapter-collage-share.jpg` (2340x1688). Its HTML layout sits beside them; the source paintings are unchanged.
+
+Jeremy's camera correction, 2026-10-04:
+
+> And yea, the stairs does have a slightly problem. I'd look to regenerate it by moving the camera down a tiny bit and angle it up a bit as well to compensate if that makes sense.
+
+He then supplied the Sleeping landscape and added: "Same issue with the sleeping one".
+Regenerate both landscape views with a subtly lower camera and gentle upward aim, preserving the close subject
+scale, the established light and the corrected single-bed proportions. Check the actual wide-screen veil crop
+and invitation together; a perspective correction must not become a zoom-out.
+
+> For the stairs, what im expecting is this - the "clouds" at the bottom should be slightly "blurred" (but minimally and tastefully), so that the "begin" can sit there nicely. understand what i mean?
+
+> the clouds in the foreground there are too bright.
+
+> ok listen, i think the stairs image has started to become super pixellated and artifacts. Go back to generating from the original prompt for the stairs, but with surgical prompts to bring the camera down a bit, point it up. make sense?
+
+The installed Stairs landscape is `masters/stairs-land.png` (selected revision `stairs-land-fresh-v4`): a fresh built-in imagegen run from the original
+generation prompt plus the small camera direction, with the original game capture and original pre-uplift painting
+as references. None of the repeatedly edited candidates was supplied. The native 1672x941 PNG and exact prompt
+are preserved in `masters/`; the installed quality-94 WebP is 209368 bytes. On landscape screens at least 4:3,
+the ordinary Stairs invitation sits at `100% - max(120px, 14vh)` over the softly shaded foreground cloud bank.
+Finished saves retain the existing extra space for their actions. Sleeping uses `masters/sleeping-land.png` (selected revision `sleeping-land-v4`), with its
+lower viewpoint and furniture framed slightly higher; its corrected single-bed proportions are retained.
+Both updated landscapes were inspected with the real veil UI at 1903x876 and 1440x900 using the DOM harness in
+`/private/tmp/updraft-veil-camera-vRtN4T/`. The harness does not boot the 3D world.
+
+Jeremy then approved ("proceed") lowering the standard Begin/Continue position from about 78% to 82% down the
+screen, moving start over with it, and keeping the landscape Stairs position at 86%. The standard painted veil
+now uses `100% - max(160px, 18vh)`: the 160 px minimum keeps secondary actions clear of phone corner controls.
+The finished-save stack retains its existing 220 px minimum and 22vh reserve for the extra action.
+Jeremy's portrait correction: "on mobile / portrait, it's way too far down now". Portrait initially restored the previous
+`100% - max(160px, 22vh)` placement for Begin/Continue and start over; the lower 82% treatment applies to landscape.
+He then clarified: "shouldn't they be a bit higher than 78% for portrait?" The final portrait placement is about
+74% down: `100% - max(160px, 26vh)`, or a 220 px minimum for finished saves. All secondary actions move with it.
+The production build and eight focused veil layout cases pass, including Continue on 390x844 and 375x667 phones
+and the finished-save stack at 390x844; action boxes clear the corner controls. Latest captures are in
+`/private/tmp/updraft-veil-portrait-74-nxvf4v1o/`.
 
 Validation for this art pass: the production build (including TypeScript) passes on the updated main checkout.
 The 24 installed images decode at their native dimensions. A browser harness mounts the real `StartScreen` and
@@ -368,6 +404,17 @@ its styles without the 3D world, checking every painting at 1903x876, 1440x900 a
 label centring and the finished-save phone stack. Evidence is in `/private/tmp/updraft-veil-final-review-7HqpOm/`.
 The full `start-check` was interrupted when the requested layout changed; its earlier successful checks do not
 constitute a complete end-to-end run of the final version. The focused layout harness covers this pass's changes.
+
+Jeremy's cleanup and release instruction, 2026-10-04:
+
+> ok great, in art-direction we now have a ton of versions. i need you to clena it up so that we are only keeping the latest version, then commit, push, deploy
+
+The chapter art now retains only the 24 selected native PNGs and their exact prompts in `remade/masters/`.
+Drafts, duplicate selected copies and obsolete selection reports were removed. `masters/manifest.json` consolidates
+checksums, derivative paths and historical provenance; the gallery reads these canonical master filenames.
+The original shared brief, room descriptions and sail reference remain as generation source material.
+Jeremy subsequently authorized including the completed favicon and Begin-centering changes, then changed the release
+instruction to: "wait, dont deploy yet, just commit and push everything". Deployment is on hold.
 
 ### Decisions
 
