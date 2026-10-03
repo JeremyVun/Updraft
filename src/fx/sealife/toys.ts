@@ -8,16 +8,20 @@ import { swellAt, type Swell } from '../../world/water/swell';
 
 /** Which of the little boats' toys come back: the child's own, the teal and the yellow. */
 const FLEET = [0, 1, 2];
-/** Where each sails in the loose flotilla: behind the child's own along their course, and further out than it. */
-const LOOSE = [[0, 0], [-2.2, 1.7], [-1, 1]];
+/** Where each sails in the loose flotilla: behind the child's own along their course, and out to either side of it. */
+const LOOSE = [[0, 0], [-2.8, 0.8], [-1.4, -0.9]];
 /** Each hull's own pace and its own small difference of course, so the flotilla is never quite in step. */
-const PACE = [1, 0.97, 0.95];
-const STRAY = [0, 0.02, 0.012];
+const PACE = [1, 0.98, 0.985];
+const STRAY = [0, 0.012, 0];
+
+const WOOD = '#76503a', RIM = '#d4ad73';
 
 interface SeaToy {
   group: THREE.Group;
   pivot: THREE.Group;
   sail: THREE.ShaderMaterial;
+  /** Each material with its own colour, to be dimmed while it is far off in the dark. */
+  lit: [THREE.ShaderMaterial, string][];
   course: number;
   speed: number;
   yaw: number;
@@ -53,14 +57,14 @@ export class ToyFleet {
   constructor(private readonly wind: WindField, private readonly camera: THREE.Camera) {
     this.group.name = 'sea-toys';
     this.group.visible = false;
-    const wood = material('#76503a'), rim = material('#d4ad73');
     const shell = hull(), cloth = sail();
     const spar = new THREE.CylinderGeometry(0.025, 0.035, 1.75, 7).translate(0, 0.85, 0.21);
     const boom = new THREE.CylinderGeometry(0.022, 0.022, 1, 6).rotateZ(Math.PI / 2).translate(-0.45, 0.34, 0);
     for (const i of FLEET) {
       const g = new THREE.Group();
       g.scale.setScalar(tuning.seaToys.scale);
-      g.add(new THREE.Mesh(shell, material(TOY_PAINTS[i])));
+      const wood = material(WOOD), rim = material(RIM), paint = material(TOY_PAINTS[i]);
+      g.add(new THREE.Mesh(shell, paint));
       const deck = new THREE.Mesh(shell, rim);
       deck.scale.set(0.89, 0.24, 0.91);
       deck.position.y = 0.13;
@@ -84,7 +88,8 @@ export class ToyFleet {
       g.add(pivot);
       fixInPlace(...g.children.filter((o) => o !== pivot), ...pivot.children);
       this.group.add(g);
-      this.toys.push({ group: g, pivot, sail: m, course: 0, speed: 0, yaw: 0, fill: 0, gust: 0, luff: 0, across: 0,
+      this.toys.push({ group: g, pivot, sail: m, lit: [[paint, TOY_PAINTS[i]], [rim, RIM], [wood, WOOD], [m, TOY_LINENS[i]]],
+        course: 0, speed: 0, yaw: 0, fill: 0, gust: 0, luff: 0, across: 0,
         boom: 0, roll: 0, rollV: 0, seed: i * 1.7, nextMark: 0 });
     }
   }
@@ -171,6 +176,9 @@ export class ToyFleet {
         yaw + toy.boom * 0.09,
         toy.roll + this.swell.slopeX * Math.cos(yaw) - this.swell.slopeZ * Math.sin(yaw) + Math.sin(time * 1.9 + toy.seed) * 0.05,
       );
+      // Far off in the night nothing lights them; they come out of the dark as they come near.
+      const unlit = THREE.MathUtils.smoothstep(p.distanceTo(this.camera.position), s.litWithin, s.darkBeyond) * atmo.uniforms.uNight.value;
+      for (const [m, colour] of toy.lit) m.uniforms.uColour.value.set(colour).multiplyScalar(1 - unlit);
       if (time > toy.nextMark) {
         toy.nextMark = time + 0.35;
         this.onWake(p.x - Math.sin(yaw) * 0.8 * s.scale, p.z - Math.cos(yaw) * 0.8 * s.scale, time);

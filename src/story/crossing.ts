@@ -805,7 +805,7 @@ export class CrossingChapter implements Chapter {
         // Hold the boat and the near water together, leaving breathing room around whole animals.
         this.shot.target.set(boat.position.x - fz * this.quarter * 1.5 + fx,
           boat.position.y + 0.9, boat.position.z + fx * this.quarter * 1.5 + fz);
-        this.framing.copy(this.cast.cygnet.position).lerp(this.cast.child.position, 0.55);
+        this.framing.copy(this.cast.cygnet.position).lerp(this.cast.child.position, tuning.seaPassage.swimCameraChild);
         this.shot.target.lerp(this.framing, this.swimFrame * 0.8);
         this.shot.distance = THREE.MathUtils.lerp(tuning.seaPassage.cameraDistance, tuning.seaPassage.swimCameraDistance, this.swimFrame);
         this.shot.height = THREE.MathUtils.lerp(tuning.seaPassage.cameraHeight, tuning.seaPassage.swimCameraHeight, this.swimFrame);

@@ -1236,6 +1236,8 @@ export const tuning = {
     breezeFill: 0.55,
     /** How far a hull wanders off its course, how far a gust knocks its head round, and how fast it may turn (radians, a second). */
     wander: 0.05, knock: 0.25, turn: 0.6,
+    /** In the night they are lit within this of the eye and dark beyond `darkBeyond`. */
+    litWithin: 55, darkBeyond: 85,
     /** Gone once every one of them is out of the frame and this far off, or this far off at all. */
     unseenAt: 30, lostAt: 320,
     /** Within this of the boat the cygnet stops watching the pod and watches them; within `noticeAt` it is restless to go. */
@@ -1296,8 +1298,10 @@ export const tuning = {
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
-    swimCameraDistance: 15,
-    swimCameraHeight: 3.4,
+    swimCameraDistance: 11,
+    swimCameraHeight: 2.4,
+    /** How far toward the child, from the swimming cygnet, the lens looks while it swims. */
+    swimCameraChild: 0.35,
     cameraBearing: 0.16,
     /** Open a little beside the boat only while the cygnet is swimming. */
     swimCameraBearing: 1.05,
