@@ -403,3 +403,22 @@ constitute a complete end-to-end run of the final version. The focused layout ha
   the not-decoded fallback, checked by an allowed visual model (Opus or Astra) against the exemplars; probes report
   nothing past an edge, no text spill, touch targets at least 44 px.
 - One check of the painting arrival and departure in real Safari (WebKit) on this Mac.
+
+## Chapters over the paintings, 2026-10-04
+
+Jeremy's brief (verbatim):
+
+> the chapters screen itself has no back button, and since the actual chapter scenes have been uplifted, I need you to have a rethink about how we can make the chapters screen itself look better too. Should the "chapters buttons" appear ontop of the actual chapter image underneath (muted), instead of as it's own screen?
+
+> ok feel free to have a go with it as one single row, but i do think it looks better as 2 x 6 - do this in a worktree so as not to disturb main
+
+Spec for the comps, from his words:
+
+1. The chapters list gets a way back to the title screen.
+2. The list sits on top of the chapter paintings (muted) instead of on its own plain screen. This reverses Phase 3's
+   fade to the plain veil, which was chosen because the tiles and names did not read over a painting; the comps must
+   make them read.
+3. Two layouts are compared: the tiles as one single row, and as 2 x 6 (his preference).
+
+Round 1 is built as a live prototype in the real title screen on branch `chapters-over-paintings`
+(`/private/tmp/updraft-chapters-wt`), with both layouts behind a comp-only switch that goes before any merge.
