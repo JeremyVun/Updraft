@@ -1,6 +1,6 @@
 # Updraft
 
-This is the canonical project instruction file. `CLAUDE.md` is a symlink here. Local setup and the repository overview are in [README.md](README.md).
+This is the canonical project instruction file. `CLAUDE.md` is a symlink here.
 
 Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `docs/journey.md` first: the vision, Jeremy's brief in his words, the story and the principles.** Then `docs/roadmap.md` for what is open.
 

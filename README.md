@@ -40,39 +40,6 @@ Play it in your browser at [updraft.jeremyvun.com](https://updraft.jeremyvun.com
 Play with sound on: the music responds to the wind. Progress saves at checkpoints in your browser, so choose
 **Continue** when you come back.
 
-## Run locally
-
-You need Node.js 24 or newer, npm and Git.
-
-```sh
-git clone https://github.com/JeremyVun/Updraft.git
-cd Updraft
-npm ci
-npm run dev
-```
-
-Open [127.0.0.1:5230](http://127.0.0.1:5230/) and choose **Begin**.
-
-To check types, build the game and preview the production build:
-
-```sh
-npm run typecheck
-npm run build
-npm run preview
-```
-
-The build goes to `dist/`, and the preview command prints its local address.
-
-Production builds ignore the QA URL switches (`?shot`, `?chapter=` and the others) and leave out the debugging tools.
-To use them, run the dev server or an optimised QA build:
-
-```sh
-npm run build:qa
-npm run preview:qa
-```
-
-The QA build goes to `dist-qa/`. Deployment always builds and uploads the production `dist/`.
-
 ## License
 
 [MIT](LICENSE) © 2026 Jeremy Vun.
