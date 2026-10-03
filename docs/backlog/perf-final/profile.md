@@ -350,31 +350,31 @@ to 58f6467 also carries boot-veil (phases 1–4) and a few small fixes, so the v
 
 | Chapter | Min | Fixture | Ultra 4140eb6 | Ultra now | Ultra change | Low 4140eb6 | Low now | Low change |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| Island | 1.9 | island | 15.28 | 12.08 | -23% | 6.72 | 5.05 | -25% |
-| Crossing to Washing | 1.6 | lines | 18.60 | 14.51 | -24% | 6.78 | 4.53 | -34% |
-| Washing | 1.8 | washing | 13.32 | 10.44 | -21% | 7.14 | 5.54 | -23% |
-| Crossing to Boats | 0.5 | lines+sea | 17.49 | 13.94 | -22% | 5.82 | 3.99 | -32% |
-| Boats | 1.6 | boats | 14.74 | 11.39 | -23% | 6.52 | 4.72 | -28% |
-| Crossing to Meadow | 0.7 | lines+sea | 17.49 | 13.94 | -22% | 5.82 | 3.99 | -32% |
-| Meadow | 5.1 | meadow+meadow:walk | 15.10 | 11.46 | -23% | 8.12 | 6.05 | -26% |
-| Crossing to Birches | 0.3 | lines+sea | 17.49 | 13.94 | -22% | 5.82 | 3.99 | -32% |
-| Birches | 2.0 | birches | 14.24 | 11.49 | -19% | 8.56 | 6.56 | -19% |
-| Crossing to Stairs | 0.4 | lines+sea | 17.49 | 13.94 | -22% | 5.82 | 3.99 | -32% |
-| Stairs: grass and puzzle | 0.9 | stairs:waiting | 17.74 | 16.27 | -8% | 8.06 | 6.52 | -19% |
-| Stairs: last flight | 0.38 | stairs:climb | 16.34 | 14.82 | -10% | 7.93 | 6.58 | -17% |
-| Stairs: loop | 0.4 | stairs:loop | 34.68 | 29.69 | -15% | 6.33 | 4.76 | -24% |
-| Stairs: in the white | 0.45 | stairs:cloud | 25.23 | 22.51 | -13% | 6.01 | 4.51 | -24% |
-| Stairs: on top | 1.25 | stairs:top | 33.83 | 30.79 | -12% | 8.90 | 7.93 | -11% |
-| Stairs: sail | 1.47 | stairs:sail | 24.31 | 21.66 | -12% | 7.44 | 6.47 | -13% |
-| Stairs: fog | 0.39 | stairs:fog | 14.35 | 11.73 | -20% | 7.78 | 6.53 | -16% |
-| Drowned (drift) | 1.8 | drowned | 11.93 | 8.98 | -22% | 10.92 | 7.45 | -34% |
-| Wood | 2.5 | wood | 13.15 | 9.70 | -26% | 6.66 | 4.98 | -25% |
-| Crossing to Sleeping | 0.6 | lines+sea | 17.49 | 13.94 | -22% | 5.82 | 3.99 | -32% |
-| Sleeping | 3.3 | sleeping | 21.47 | 16.73 | -24% | 7.66 | 5.39 | -30% |
-| Open sea to Mirror | 2.5 | sea | 16.38 | 13.37 | -20% | 4.85 | 3.45 | -30% |
-| Mirror | 2.2 | mirror | 8.18 | 6.86 | -17% | 2.87 | 2.41 | -15% |
-| Crossing home | 2.0 | lines+sea | 17.49 | 13.94 | -22% | 5.82 | 3.99 | -32% |
-| Home | 3.5 | jetty+summit | 14.36 | 10.81 | -25% | 6.66 | 5.10 | -23% |
+| Island | 1.9 | island | 15.28 | 12.08 | −23% | 6.72 | 5.05 | −25% |
+| Crossing to Washing | 1.6 | lines | 18.60 | 14.51 | −24% | 6.78 | 4.53 | −34% |
+| Washing | 1.8 | washing | 13.32 | 10.44 | −21% | 7.14 | 5.54 | −23% |
+| Crossing to Boats | 0.5 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Boats | 1.6 | boats | 14.74 | 11.39 | −23% | 6.52 | 4.72 | −28% |
+| Crossing to Meadow | 0.7 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Meadow | 5.1 | meadow+meadow:walk | 15.10 | 11.46 | −23% | 8.12 | 6.05 | −26% |
+| Crossing to Birches | 0.3 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Birches | 2.0 | birches | 14.24 | 11.49 | −19% | 8.56 | 6.56 | −19% |
+| Crossing to Stairs | 0.4 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Stairs: grass and puzzle | 0.9 | stairs:waiting | 17.74 | 16.27 | −8% | 8.06 | 6.52 | −19% |
+| Stairs: last flight | 0.38 | stairs:climb | 16.34 | 14.82 | −10% | 7.93 | 6.58 | −17% |
+| Stairs: loop | 0.4 | stairs:loop | 34.68 | 29.69 | −15% | 6.33 | 4.76 | −24% |
+| Stairs: in the white | 0.45 | stairs:cloud | 25.23 | 22.51 | −13% | 6.01 | 4.51 | −24% |
+| Stairs: on top | 1.25 | stairs:top | 33.83 | 30.79 | −12% | 8.90 | 7.93 | −11% |
+| Stairs: sail | 1.47 | stairs:sail | 24.31 | 21.66 | −12% | 7.44 | 6.47 | −13% |
+| Stairs: fog | 0.39 | stairs:fog | 14.35 | 11.73 | −20% | 7.78 | 6.53 | −16% |
+| Drowned (drift) | 1.8 | drowned | 11.93 | 8.98 | −22% | 10.92 | 7.45 | −34% |
+| Wood | 2.5 | wood | 13.15 | 9.70 | −26% | 6.66 | 4.98 | −25% |
+| Crossing to Sleeping | 0.6 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Sleeping | 3.3 | sleeping | 21.47 | 16.73 | −24% | 7.66 | 5.39 | −30% |
+| Open sea to Mirror | 2.5 | sea | 16.38 | 13.37 | −20% | 4.85 | 3.45 | −30% |
+| Mirror | 2.2 | mirror | 8.18 | 6.86 | −17% | 2.87 | 2.41 | −15% |
+| Crossing home | 2.0 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Home | 3.5 | jetty+summit | 14.36 | 10.81 | −25% | 6.66 | 5.10 | −23% |
 
 Weighted: **Ultra 16.6 → 13.3 ms, −19.8%** (the milliseconds inflated by the day's load: the census of 2026-09-30
 read 10.0 ms here); **Low 6.97 → 5.21 ms, −25.2%**. Every room is lighter at both levels. The stairs gain least at
@@ -456,12 +456,13 @@ by room on the new build (33.2 constant on the old): what sits under `grass.lods
 ### Frame-time spikes (frame intervals; >25 ms counted)
 
 - **Through the stairs** (`tools/frame-spikes.mjs stairs`, new: the chapter played on frames from the last flights
-  to 300 frames into the village, about 15,100 frames, Ultra settings): 3 runs now, 2 at 4140eb6. Over 25 ms: now 75,
-  80 and 289 frames, 4140eb6 598 and 381; worst now 33, 100 and 50 ms, 4140eb6 133 and 34 ms. The over-25 frames are
-  GPU-bound frames under the day's load (33 ms, one missed refresh), concentrated where the stairs are heaviest
-  (hesitate, birdFirst, skein, gather): the new build misses far fewer. The 100 ms (fog, frame 13948, with 50–67 ms
-  frames in the next 4 s into `thin`) appeared in one run of three and the 133 ms (`emerge`) in one of two: not
-  reproduced, read as outside load. One program is first linked during the chapter on both builds (`programsAdded` 1).
+  to 300 frames into the village, about 15,100 frames, Ultra settings): 4 runs now, 3 at 4140eb6, alternated. Over
+  25 ms: now 75, 80, 289 and 410 frames, 4140eb6 598, 381 and 339; worst now 33, 100, 50 and 67 ms, 4140eb6 133, 34 and
+  100 ms. The over-25 frames are GPU-bound frames under the day's load (33 ms, one missed refresh), concentrated where
+  the stairs are heaviest (hesitate, birdFirst, skein, gather); in the two runs taken back to back with the old build's
+  first two the new build missed 5–8× fewer. The single long frames (50–100 ms) fall at different moments in every
+  run on both builds (fog, `thin`, sail, `follow`, `emerge`): none repeats, read as outside load. One program is first
+  linked during the chapter on both builds (`programsAdded` 1).
 - **Meadow walk and a crossing** (`tools/window-hitch.mjs meadow|boats 90`, Ultra settings, 2 runs each): at window
   moves the worst gap was 16.8 ms in every new run (7, 7, 11 and 9 moves); 4140eb6 16.8 ms in three runs and 50 ms in
   one boats run. Elsewhere the worst was 16.8 / 16.8 / 16.8 / 83.4 ms now and 33.3 / 16.8 / 33.4 / 66.7 ms before
@@ -491,3 +492,15 @@ by room on the new build (33.2 constant on the old): what sits under `grass.lods
 
 Most of this is boot-veil's (merged between the two commits). With this item's variants the veil is no longer and has
 no freeze; programs are counted from `linkProgram` calls before ready.
+
+### Release checks (`docs/testing.md`, on the worktree at 58f6467 plus these tools)
+
+`npm run typecheck` and `npm run build` pass; `node tools/production-build-check.mjs` passes ("Production ignores
+all game overrides; QA retains them"). `BASE=<QA preview> npm run check:release`: 56 of 76 pass, **the full playthrough
+passes** (Begin through every chapter, completed-save reload and Play again, 41 minutes). The 20 failures are the
+preview, not the game: the 17 audio and score checks and `shader-browser` and `progress` import `/src/...` modules,
+which a built preview does not serve ("Failed to fetch dynamically imported module"), and `frame-time-browser` hooks
+the loop by its function name `frame`, which minification renames (a 90 s timeout). Against the worktree's dev server all 20 pass (the audio group 17 of 17,
+`shader-browser`, `progress`, `frame-time-browser`), so nothing fails for the game and none was re-run at 4140eb6.
+`testing.md`'s release recipe (`BASE=<preview> npm run check:release`) cannot pass as written: those checks need
+`BASE` on a dev server.
