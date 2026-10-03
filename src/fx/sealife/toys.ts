@@ -171,8 +171,7 @@ export class ToyFleet {
         this.want.sub(this.station).multiplyScalar(10).add(this.ahead);
         this.want.addScaledVector(this.station.sub(p).setY(0), s.closing);
         toy.velocity.lerp(this.want, 1 - Math.exp(-dt * 2));
-      }
-      else {
+      } else {
         this.want.set(Math.sin(toy.yaw), 0, Math.cos(toy.yaw)).multiplyScalar(s.ownSpeed * (0.6 + 0.6 * toy.fill));
         toy.velocity.lerp(this.want, 1 - Math.exp(-dt * 0.4));
       }
@@ -207,7 +206,7 @@ export class ToyFleet {
       );
       if (speed > 0.6 && time > toy.nextMark) {
         toy.nextMark = time + 0.35;
-        this.onWake(p.x - Math.sin(yaw) * 0.8, p.z - Math.cos(yaw) * 0.8, time);
+        this.onWake(p.x - Math.sin(yaw) * 0.8 * s.scale, p.z - Math.cos(yaw) * 0.8 * s.scale, time);
       }
     });
     const far = this.toys.every((toy) => toy.group.position.distanceTo(this.boat) > s.goneAt);
