@@ -350,6 +350,13 @@ export const tuning = {
     sailSag: 0.48, sailFold: 0.1, sailFlutter: 0.045, sailShake: 0.13,
     heel: 0.13, rollSpring: 13, rollDamping: 3.8, drift: 0.5,
     swimSpeed: 3.15, swimWeave: 0.15, swimPlay: 0.8,
+    /**
+     * Reeds in clumps (where bank noise passes `clumpFrom`) along the stream's lip: up to `share` of the blades,
+     * reaching `far` metres (plus a share of the stream's width) up the far bank and `near` up the camera's own,
+     * `farHeight`/`nearHeight` metres tall at `width` of a grass blade's width, bending `stiff` as far,
+     * `heads` of them in seed.
+     */
+    reeds: { share: 0.8, clumpFrom: 0.48, far: 1.7, near: 0.9, farHeight: 1.45, nearHeight: 0.75, width: 0.6, stiff: 0.6, heads: 0.14 },
   },
   veil: {
     /** Sparse ambient ribbons; pointer strokes only nudge the broad colour field. */

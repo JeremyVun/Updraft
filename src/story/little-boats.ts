@@ -3,15 +3,9 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
+import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, BOATS_POOLS as POOLS, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
 import type { Cast, Chapter } from './cast';
 import { completeObjective } from './cues';
-
-const POOLS = [
-  { enter: 4, leave: 30 },
-  { enter: 34, leave: 65 },
-  { enter: 69, leave: 94 },
-];
 
 type Beat =
   | 'arrival'
