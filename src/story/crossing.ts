@@ -191,6 +191,8 @@ export class CrossingChapter implements Chapter {
   private swimSide = 1;
   private readonly beside = new THREE.Vector3();
   private readonly water = new THREE.Vector3();
+  private readonly playmate = new THREE.Vector3();
+  private readonly toward = new THREE.Vector3();
   /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
   private limit: number;
   private swimCap = 0;
@@ -503,20 +505,30 @@ export class CrossingChapter implements Chapter {
       this.swim = next;
       this.swimT = 0;
     };
+    const toys = this.cast.sealife.toys;
+    toys.follow(boat.position, boat.yaw, boat.speed);
+    const playmate = toys.playmate(this.playmate);
     if (this.swim === 'before') {
-      if (this.cast.sealife.dolphinLeapComplete && this.time >= tuning.seaPassage.swimNotBefore && this.progress() > this.swimAt! && cygnet.seat === 'cradle' && !carry.busy) {
+      /** The little boats' toys come sailing out of the morning, and those are what it cannot stop watching. */
+      const k = tuning.seaPassage;
+      if (toys.idle && this.cast.sealife.dolphinLeapComplete && this.time >= k.swimNotBefore - tuning.seaToys.comeLead
+        && this.progress() > this.swimAt!) {
         this.swimSide = this.quarter > 0 ? -1 : 1;
+        toys.come(this.swimSide, boat.position, boat.yaw, boat.speed);
+      }
+      if (toys.near > 0.3) cygnet.watch(playmate);
+      if (toys.near >= tuning.seaToys.noticeAt && this.time >= k.swimNotBefore && cygnet.seat === 'cradle' && !carry.busy) {
         to('restless');
       }
     } else if (this.swim === 'restless') {
       /** It has been looking over the side since the first crossing. This time it does not look away. */
-      cygnet.watch(this.water);
+      cygnet.watch(playmate);
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > tuning.seaPassage.swimAnticipation) to('side');
     } else if (this.swim === 'side') {
       cygnet.perch(this.beside, boat.yaw + (this.swimSide * Math.PI) / 2);
       /** The water, then the child, then the water. The child does nothing at all, which is the right thing. */
-      cygnet.watch(this.swimT % 3.2 < 1.9 ? this.water : child.face(this.look));
+      cygnet.watch(this.swimT % 3.2 < 1.9 ? playmate : child.face(this.look));
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > ON_THE_SIDE) {
         cygnet.watch(null);
@@ -525,6 +537,9 @@ export class CrossingChapter implements Chapter {
     } else if (this.swim === 'in') {
       cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, this.worldTime)
         * (1 - mirrorWater(cygnet.position.x, cygnet.position.z));
+      /** In among the toys: it keeps to the wave along the hull but edges out toward the child's own. */
+      this.toward.subVectors(playmate, this.water).setY(0);
+      this.water.addScaledVector(this.toward, Math.min(1, tuning.seaToys.swimToward / Math.max(1, this.toward.length())));
       cygnet.swimTo(this.water);
       /** The boat sails on; the wave along its side carries the cygnet, which paddles only to keep its place in it. */
       const carry = boat.speed * tuning.seaPassage.swimCarry;
@@ -542,6 +557,7 @@ export class CrossingChapter implements Chapter {
         child.reachFor(hand, null);
         cygnet.bind(0.25);
         cygnet.mind.trust(0.7);
+        toys.leave();
         to('drying');
       }
     } else if (this.swim === 'drying') {

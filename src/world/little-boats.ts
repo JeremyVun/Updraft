@@ -38,7 +38,7 @@ void main() {
   vec3 col = alb * (hemiLight(N) + uSunColor * max(0.0, dot(N, uSunDir) * 0.6 + 0.4) * sun);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
-const SAIL_VERT = /* glsl */ `
+export const SAIL_VERT = /* glsl */ `
 uniform float uFill;
 uniform float uDroop;
 uniform float uLuff;
@@ -71,7 +71,7 @@ void main() {
   vNormal = normalize(mat3(modelMatrix) * normalize(cross(pv-p, pu-p)));
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
-const SAIL_FRAG = /* glsl */ `
+export const SAIL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uColour;
 in vec3 vWorld;
@@ -110,7 +110,7 @@ void main() {
   float alpha = line * sin(y*3.14159) * uFill * 0.12;
   gl_FragColor = vec4(applyFog(vec3(0.85,0.88,0.75),vWorld),alpha);
 }`;
-function material(colour: string): THREE.ShaderMaterial {
+export function material(colour: string): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: { ...atmo.uniforms, uColour: { value: new THREE.Color(colour) } },
     vertexShader: VERT,
@@ -120,7 +120,7 @@ function material(colour: string): THREE.ShaderMaterial {
 }
 
 /** Carved solid hull: rounded sides, pointed bow, broad stern and a thin contrasting gunwale. */
-function hull(): THREE.BufferGeometry {
+export function hull(): THREE.BufferGeometry {
   const outline = new THREE.Shape();
   outline.moveTo(0, 0.86);
   outline.bezierCurveTo(0.42, 0.45, 0.39, -0.43, 0.26, -0.67);
@@ -139,7 +139,7 @@ function hull(): THREE.BufferGeometry {
   g.translate(0, 0.16, 0);
   return g;
 }
-function sail(): THREE.BufferGeometry {
+export function sail(): THREE.BufferGeometry {
   const g = new THREE.PlaneGeometry(1, 1, 12, 14);
   const p = g.getAttribute('position');
   const uv = g.getAttribute('uv');
@@ -151,6 +151,10 @@ function sail(): THREE.BufferGeometry {
   g.computeVertexNormals();
   return g;
 }
+/** Each toy's hull and sail; the first is the child's own. */
+export const TOY_PAINTS = ['#b96547', '#4e878c', '#d4b35d', '#72865b', '#8e727c', '#4f7a96', '#af794d'];
+export const TOY_LINENS = ['#efe1bb', '#d5dfd3', '#eee2b7', '#e5c6b0', '#d8d6c4', '#e9d9c1', '#c8d7d6'];
+
 interface Toy {
   group: THREE.Group;
   sail: THREE.ShaderMaterial;
@@ -223,15 +227,13 @@ export class LittleBoats {
     this.group.add(this.swimWake, this.spray.points);
     const wood = material('#76503a'),
       rim = material('#d4ad73');
-    const paints = ['#b96547', '#4e878c', '#d4b35d', '#72865b', '#8e727c', '#4f7a96', '#af794d'];
-    const linens = ['#efe1bb', '#d5dfd3', '#eee2b7', '#e5c6b0', '#d8d6c4', '#e9d9c1', '#c8d7d6'];
     const shell = hull(),
       cloth = sail();
     const spar = mergeGeometries([new THREE.CylinderGeometry(0.025, 0.035, 1.75, 7).translate(0, 0.85, 0.21)]);
     for (let i = 0; i < 7; i++) {
       const g = new THREE.Group();
       g.name = `toy-boat-${i}`;
-      g.add(new THREE.Mesh(shell, material(paints[i])));
+      g.add(new THREE.Mesh(shell, material(TOY_PAINTS[i])));
       const deck = new THREE.Mesh(shell, rim);
       deck.scale.set(0.89, 0.24, 0.91);
       deck.position.y = 0.13;
@@ -248,7 +250,7 @@ export class LittleBoats {
           uLuff: { value: 0 },
           uPhase: { value: i * 1.7 },
           uSeed: { value: i * 2.4 },
-          uColour: { value: new THREE.Color(linens[i]) },
+          uColour: { value: new THREE.Color(TOY_LINENS[i]) },
         },
         vertexShader: SAIL_VERT,
         fragmentShader: SAIL_FRAG,
