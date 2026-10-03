@@ -38,6 +38,15 @@ sits on the picture. The label is `start over` and its confirmation is `start ov
 a finished player; "restart" is avoided because the recovery dialog's `Restart game` means something else; the veil
 reads complete if the still never loads.
 
+Comps round 2, 2026-10-03 (`/tmp/updraft-continue-comps-2/`, A without the name at a size ladder, sharp against
+upscaled stills, edges for the night stills). Jeremy chose 440 px on desktop and 350 px on the phone, as one rule
+`min(440px, 100vw - 40px, 49vh)`, and "Ember only" for the Dark wood: its nearly black still is blended so the black
+drops out and only the ember and its sparks show on the night veil (to be shown to him before the build). The
+orchestrator's calls, following his take-the-simple-option rule: one set of stills recaptured at 1600x1000 and
+encoded 880x550 (`cwebp -q 78 -sharp_yuv`) serves both the Continue tile and chapter select; the Drowned village is
+recaptured to its shipped framing first, because the round 2 capture lost the village; the confirmation goes back to
+`start over` after 6 s, on Escape or when focus leaves it; any valid save shows `start over`, a completed one included.
+
 ## What changes for the player
 
 Today a pick in `chapters` saves the choice in `sessionStorage`, reloads the page, loads the whole game again and
