@@ -317,6 +317,10 @@ export const tuning = {
     /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
     drive: 1.4, drag: 0.266,
     fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
+    /** The stranded toy waits this far back from the water's edge, on the flat top of the bank. */
+    toyBank: 3.2,
+    /** How far up from the beach toward the toy the child lets the cygnet down to walk with her. */
+    setDownAt: 0.4,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
     /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */

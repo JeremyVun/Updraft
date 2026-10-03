@@ -11,7 +11,7 @@ import { swellAt } from './water/swell';
 import { glsl, tuning } from '../tuning';
 import type { WindField } from '../wind/field';
 import { atmo, ATMO_GLSL } from './atmosphere';
-import { LITTLE_BOATS as L, boatsX, boatsWidth, boatsWaterHeight, boatsCourse } from './little-boats-layout';
+import { LITTLE_BOATS as L, boatsX, boatsWidth, boatsWaterHeight, boatsCourse, BOATS_TOY } from './little-boats-layout';
 
 const VERT = /* glsl */ `
 out vec3 vWorld;
@@ -349,8 +349,7 @@ export class LittleBoats {
     fixInPlace(this.group, this.spray.points, chain);
     fixTreeInPlace(plug);
     fixTreeInPlace(bath);
-    const strandedX = boatsX(3) + boatsWidth(3) + 0.45;
-    this.stranded.set(strandedX, heightAt(strandedX, L.startZ - 3) + 0.12, L.startZ - 3);
+    this.stranded.set(BOATS_TOY.x, heightAt(BOATS_TOY.x, BOATS_TOY.z) + 0.12, BOATS_TOY.z);
     this.pose(0);
   }
 
