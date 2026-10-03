@@ -5,7 +5,7 @@ This is the canonical project instruction file. `CLAUDE.md` is a symlink here.
 Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `docs/journey.md` first: the vision, Jeremy's brief in his words, the story and the principles.** Then `docs/roadmap.md` for what is open.
 
 - Overview and standing decisions: `docs/project.md`. Look: `docs/styles.md`.
-- Favicon artwork and Jeremy's brief: `docs/favicon.md`.
+- Favicon artwork and Jeremy's brief: `docs/favicon.md`. Bringing the look toward the room paintings (work in progress, Jeremy's brief verbatim): `docs/painted-look.md`.
 - Every room, how it plays and Jeremy's rulings for it: `docs/chapters.md`. The stairs in the clouds (work in progress, Jeremy's brief verbatim): `docs/stairs.md`.
 - The characters: the child `docs/child.md`, the cygnet `docs/cygnet.md`, the boat `docs/boat.md`.
 - Contracts: the wind field every system reads `docs/contracts/wind.md`; the ground, its life, the islands and what lives on them `docs/contracts/world.md`; sound `docs/contracts/audio.md`; checkpoint saves, chapter select and hidden-page audio `docs/contracts/progress.md`; analytics `docs/contracts/analytics.md`.

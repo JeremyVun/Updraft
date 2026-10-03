@@ -139,9 +139,13 @@ float birchFloorAt(vec2 xz) {
 float pondBankAt(vec2 xz) {
   return 1.0 - smoothstep(${glsl(tuning.crest.bankCropFrom)}, ${glsl(tuning.crest.bankCropTo)}, pondOut(xz));
 }
+/** 1 on the little boats' grazed turf. */
+float boatsTurfAt(vec2 xz) {
+  return abs(xz.x - ${glsl(LITTLE_BOATS.x)}) < 55.0 && abs(xz.y - ${glsl(LITTLE_BOATS.z)}) < 78.0 ? 1.0 : 0.0;
+}
 /** How much of its height a blade keeps on the cropped islands and the pond's bank. */
 float croppedAt(vec2 xz) {
-  if (abs(xz.x - ${glsl(LITTLE_BOATS.x)}) < 55.0 && abs(xz.y - ${glsl(LITTLE_BOATS.z)}) < 78.0) return 0.22;
+  if (boatsTurfAt(xz) > 0.0) return 0.22;
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   float bank = pondBankAt(xz);
   return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * linesGrassCrop(xz) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
@@ -512,7 +516,7 @@ void main() {
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
-  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2));
+  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * mix(1.0, ${glsl(tuning.littleBoats.turfWidth)}, boatsTurfAt(root2) * (1.0 - reed.is));
   float angle = gr_rand(s) * 6.2831853;
   float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardCurve)}, sward);
   float flowerRand = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2)));
@@ -765,7 +769,7 @@ void main() {
   float fogRise = h * 0.25;
   float stand = qualityStanding(rank, share, dist, root2);
   h *= mix(0.72, 1.0, life) * stand;
-  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * widthAt(dist) * stand;
+  float width = (0.15 + 0.1 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardWidth)}, sward) * mix(1.0, 0.4, woodFloorAt(root2)) * mix(1.0, 0.4, pondBankAt(root2)) * mix(1.0, ${glsl(tuning.littleBoats.turfWidth)}, boatsTurfAt(root2) * (1.0 - reed.is)) * widthAt(dist) * stand;
   float angle = gr_rand(s) * 6.2831853;
   float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardCurve)}, sward);
   float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2))) * step(0.5, life);

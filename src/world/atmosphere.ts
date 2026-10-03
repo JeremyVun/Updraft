@@ -480,7 +480,7 @@ vec3 skyColor(vec3 d) {
   // Straight up or down has no compass bearing; normalizing it would be undefined.
   float toward = dot(d.xz, d.xz) > 1e-8 ? pow(max(dot(normalize(d.xz), normalize(uSunDir.xz)), 0.0), 2.5) : 0.0;
   col = mix(col, uSkyHorizonSun, toward * pow(1.0 - h, 3.0) * 0.95);
-  col += uSunColor * (0.025 * pow(sd, 5.0) + 0.1 * pow(sd, 40.0) + 0.45 * pow(sd, 500.0));
+  col += uSunColor * (0.025 * pow(sd, 5.0) + 0.04 * pow(sd, 16.0) + 0.1 * pow(sd, 40.0) + 0.45 * pow(sd, 500.0));
   if (y < 0.0) col = mix(col, mix(uSkyHorizon, uSkyHorizonSun, toward * 0.6) * 0.92, clamp(-y * 8.0, 0.0, 1.0));
   return col;
 }

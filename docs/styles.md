@@ -5,7 +5,8 @@ drawn with soft painterly shading, where the wind is the most visible thing on s
 feel over detail. How each room plays is in `docs/chapters.md`.
 
 - **Light**: a low sun behind and to the left of the still island, so the meadow is backlit. Grass tips glow with
-  light passing through them, petals catch warm light, the far sea glitters toward the sun. Shadows are cool
+  light passing through them, petals catch warm light, the far sea glitters toward the sun, and a broad warm glow
+  stands round the sun itself. Shadows are cool
   blue-teal, never black. Hills and trees cast long soft shadows baked from the fixed sun (`src/world/ground.ts`).
 - **Wind is visible everywhere**: grass bends in travelling waves, and flattened grass turns paler and shinier, so
   gusts read as bright streaks. Petals lift in bursts. The sea ruffles into darker cat's paws under gusts, drawn
@@ -23,7 +24,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
 - **Grass**: dense and slightly chunkier than real, so it reads at game distance. Deep green at the root, warm
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
   short, lighter tufts rather than ending in a hedge. Looked down on, the ground between blades is the grass's own
-  shaded green, never bare dark soil.
+  shaded green, never bare dark soil. The little boats' cropped turf is broader-bladed so it closes over the ground
+  (`tuning.littleBoats.turfWidth`).
 - **The tree**: one broad tree on the still island's ridge is the landmark. Its canopy is small leaf cards shaded
   as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind. The same tree grows again,
   two-thirds the size and alone, on the slope above the home jetty (`HOME_TREE`).

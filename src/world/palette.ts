@@ -31,7 +31,7 @@ const STILL: Palette = {
 const ALIVE: Palette = {
   sun: hdr('#ffd2a0', 2.7),
   zenith: hdr('#3f75b8', 1.0),
-  horizon: hdr('#d8c8c4', 0.95),
+  horizon: hdr('#e0c4b4', 0.95),
   horizonSun: hdr('#ffb46a', 1.25),
   ambient: hdr('#8fb2dc', 0.5),
   bounce: hdr('#a4895c', 0.22),
