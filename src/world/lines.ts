@@ -657,9 +657,13 @@ export class WashingLines {
       geometry.setAttribute('normal', new THREE.BufferAttribute(cloth.normal, 3).setUsage(THREE.DynamicDrawUsage));
       geometry.setAttribute('uv', new THREE.BufferAttribute(cloth.uv, 2));
       geometry.setIndex(new THREE.BufferAttribute(cloth.index, 1));
-      const material = this.clothMat.clone();
-      material.vertexShader = CURTAIN_VERT;
-      material.uniforms = { ...this.clothMat.uniforms, uColor: { value: CLOTH_COLOURS[sheet.colour] } };
+      const material = new THREE.ShaderMaterial({
+        uniforms: { ...this.clothMat.uniforms, uColor: { value: CLOTH_COLOURS[sheet.colour] } },
+        vertexShader: CURTAIN_VERT,
+        fragmentShader: CLOTH_FRAG,
+        side: THREE.DoubleSide,
+        alphaToCoverage: true,
+      });
       const mesh = new THREE.Mesh(geometry, material);
       // It goes wherever the wind takes it.
       mesh.frustumCulled = false;

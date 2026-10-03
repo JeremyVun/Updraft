@@ -21,6 +21,10 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
 
 ## Open
 
+In progress:
+- The island of lines: the last curtain's tear, flight and snag on the neighbouring line needs polish (Jeremy,
+  2026-10-03; the rest of the pegged curtains is approved). See "The island of lines" in [chapters.md](chapters.md).
+
 For Jeremy's eye, ear or hands:
 - A listening pass through the whole journey on headphones and a phone speaker ([contracts/audio.md](contracts/audio.md)).
 - The whale shot on the first crossing: a glance from behind the boat, small in frame.
@@ -76,43 +80,6 @@ no reported game errors. All three movable stair flights docked and all four mir
 coverage across two runs, not one uninterrupted pass. The driver knows puzzle targets, so it does not establish
 first-time discoverability; this pass also does not cover listening or performance on other devices.
 Evidence is in `/private/tmp/updraft-motion-review-Sww9sA/` (`journey` and `continued`).
-
-## Polish pass — 2026-10-03
-
-Jeremy's first brief, after a look-review proposed five cheap visual wins and some level ideas:
-
-> "work in a worktree so that i can approve any change before it gets into main
->
-> - yea lets try all 5 free visual wins. I'm not sure about (4), but willing to try and see
-> - One other issue i found on the island of lines is that when you blow the washing up on each of the three blocking puzzles, it kind of just hangs in mid air, which looks a bit strange.
-> - nice idea for adding dream echoes
-> - hapy to add a lone tree on the home island to see how that looks. I'm not sure if "rolling irish hill" is right anymore though, so im more wary of changing the terrain itself.
-> - on the little boats island, i also noticed that the boat that the child picks up looks like it's already basically on the water already, and the child also lets the cygnet down onto the ground near the stream instead of earlier on
->
-> If you come up with any other ideas let me know."
-
-In: the still meadow's far fields, footprints in sand, the snowdrift, the toy up on the bank and the earlier set-down,
-three dream echoes (boats, birches, stairs) and the home tree. His second round, on what was not approved:
-
-> "- I'm not sure about number 3 with the rocks, the rocks look washed out now instead of having some kind of shadow
-> - the washing curtains winding up doesn't look good - it's not very visually clear to the player that something is happening, not like before. can you think of and try another way of doing it?
-> - i think it's too soon to have a little sail boat as a dream echo on the meadows island. They player sees them sail off. I think it's better to have a callback and have the player see them sailing by later on in the game while they are at sea. Maybe during the open sea chapter, which is what causes the cygnet to jump in and play / swim with them a bit. if we want to have a dream echo on the meadows island, i'd think something like a rubber ducky on the shore (something related to the bath theme).
-> - the v can disappear sometimes which is strange.
-> - ok, have a go adding reeds and varying the camera angle for a few beach arrivals"
-
-On the curtains, after a parting-curtains attempt: "nope, i dont think it should brush aside like curtains. that is
-completely wrong. The theme of this island isa bout washing on a clothes line being blown about, that is how it should
-feel like." The sheet stays pegged; held open, it streams, flaps and billows in a breeze that keeps blowing through.
-
-A sheet streaming toward the camera was still "randomly hanging in mid air towards the player". Two physical ways
-a sheet stays open at rest were offered (pegs pop and it drops to hang from one end; it is torn off the line and snags
-nearby), and Jeremy: "why not add variation and have both? We have three checkpoints". Curtain 1: pegs pop, it hangs
-from one end; curtain 2: middle pegs pop, each half hangs from its own post; curtain 3: torn off, tumbles and snags.
-
-Open, on branch `polish/round2` (`/private/tmp/updraft-polish2`), each shown to Jeremy as before/after stills before
-`main`: backlit rocks that keep a shadow but not a black one; the boat wake's V (it sometimes vanishes); a clearer
-way for the curtains to stay open; a rubber duck on the meadow's beach; the toy fleet sailing by on the open sea,
-drawing the cygnet in to swim with them; reeds on the little boats' banks; a few beach arrivals from other angles.
 
 ## Later
 
