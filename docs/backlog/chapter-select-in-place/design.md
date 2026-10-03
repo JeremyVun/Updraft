@@ -204,8 +204,8 @@ ones (Continue .95 to .82; `chapters` and `start over` .5, the armed confirmatio
   the veil dissolves into the game as today, so a painting never cross-fades into the game's own view. The veil's
   dissolve waits until .8 s after the press when a painting shows, up to .3 s later than without one.
 - **Chapters.** Chapter select's tiles are the same paintings cut to 400x250, replacing the captures, so a room has one
-  picture everywhere. While the list is open the painting fades back to the plain veil (.6 s), because the tiles and
-  names do not read over a painting. A pick's panel fades out over .45 s with a `chapters-out` animation (a
+  picture everywhere. While the list is open the painting stays behind it, printed down under the tiles, and follows
+  the room looked at ("Chapters over the paintings" below). A pick's panel fades out over .45 s with a `chapters-out` animation (a
   transition cannot start there under the `chapters-in` animation's fill, which made the panel vanish in one frame).
 - **Start over.** Drawn like `chapters`; shown for any valid save, a completed one included; never for Begin. The
   first press turns it in place into `start over and lose your progress?` (Jeremy's words); a press on that starts the
@@ -450,3 +450,133 @@ instruction to: "wait, dont deploy yet, just commit and push everything". Deploy
   the not-decoded fallback, checked by an allowed visual model (Opus or Astra) against the exemplars; probes report
   nothing past an edge, no text spill, touch targets at least 44 px.
 - One check of the painting arrival and departure in real Safari (WebKit) on this Mac.
+
+## Chapters over the paintings, 2026-10-04
+
+Jeremy's brief (verbatim):
+
+> the chapters screen itself has no back button, and since the actual chapter scenes have been uplifted, I need you to have a rethink about how we can make the chapters screen itself look better too. Should the "chapters buttons" appear ontop of the actual chapter image underneath (muted), instead of as it's own screen?
+
+> ok feel free to have a go with it as one single row, but i do think it looks better as 2 x 6 - do this in a worktree so as not to disturb main
+
+Spec for the comps, from his words:
+
+1. The chapters list gets a way back to the title screen.
+2. The list sits on top of the chapter paintings (muted) instead of on its own plain screen. This reverses Phase 3's
+   fade to the plain veil, which was chosen because the tiles and names did not read over a painting; the comps must
+   make them read.
+3. Two layouts are compared: the tiles as one single row, and as 2 x 6 (his preference).
+
+Round 1 is built as a live prototype in the real title screen on branch `chapters-over-paintings`
+(`/private/tmp/updraft-chapters-wt`), with both layouts behind a comp-only switch that goes before any merge.
+
+### Round 1, 2026-10-04
+
+Live in the title screen on this branch; `?chapterlayout=row` switches to B (QA builds only, removed after the
+verdict). Frames and measurements: `/tmp/updraft-chapters-comp-9UZq/index.html`.
+
+**Shared by both layouts.**
+
+- **The painting stays.** Opening `chapters` no longer fades to the plain veil: the title's painting stays, printed
+  down by a gradient that fades in with the list (.6 s). Hovering a tile for 120 ms, or reaching it with the keyboard,
+  crossfades the full painting of that room in over .7 s. The new painting fades in on top while the old stays whole
+  underneath until it is covered, so a change never dips through to the veil (measured every frame: the stack never
+  drops below full cover). The painting stays on the last room looked at when the pointer leaves the tiles. A touch
+  never moves it, because a tap starts the room at once. Each full painting is fetched the first time its room is
+  looked at; the title's own painting is reused from the cache. The list opens with focus on the tile of the room
+  already behind it, so nothing changes until the player looks at another room. That tile is lit as the current one.
+- **Legibility, as a photograph.** There is no box or blur. One neutral near-black gradient (#0e1014) is tied to
+  the list's top edge, which the script measures on open and on resize. Below that edge the painting is printed down
+  hard (.84 to .88 for A; .78 to .86 for B). Above it the gradient opens out to about a quarter (A) or a tenth (B), so
+  the room's sky and subject read. Names rest at .86 (current and hovered 1.0) with a soft dark halo. Tiles rest at
+  brightness .74; the current, hovered or focused tile goes to full brightness and grows 4%. Keyboard focus also
+  underlines the name. If the title's painting was late, the veil stays plain and nothing is darkened until a hovered
+  room's painting arrives.
+- **Back.** A `back` link, drawn like `chapters` (16 px italic at .55, .9 on hover or focus), stands exactly where
+  `chapters` was. A second press there toggles the list closed. The second click of a double click is ignored so
+  that a double click leaves the list open. Escape and a click on empty space still close it. Closing returns focus
+  to `chapters` and the darkened painting fades back to the title's.
+- **Pick** is unchanged: a tile starts its room at once, and the panel fades out over its .45 s. The darkened
+  painting leaves with the veil's painting over .8 s.
+
+**A: 2 x 6.** Two rows of six stand on `back`: tiles are `clamp(100px, 11.5vw, 200px)` wide (166 px at 1440, 184
+at 1600, 200 at 1903, where the 400 px tiles are sharp at 2x), with names under them in 14 px italic. On a phone they
+become four rows of three (109 px), which fit 390x844 without scrolling. The grid covers the painting's middle, so
+the room shows mainly above it.
+
+**B: one row.** Twelve tiles in one row sit just above `back`, near where Continue sits. Tiles are
+`clamp(88px, (100vw - 206px) / 12, 136px)` wide: 103 px at 1440, 116 at 1600 and 136 at 1903. The looked-at room's
+name stands above the row in Continue's type (24 to 30 px). With a hovering pointer the tiles carry no names of
+their own. On touch, where there is no hover, each tile keeps its name and the big name is hidden. On a phone the
+row scrolls sideways with snap and soft edges (124 px tiles), opening scrolled to the current room. Because the list
+is only a strip, the upper two thirds of the screen show the room almost at full strength.
+
+**Measured** (1440x900, 1600x900, 1903x876, 390x844; contrast of white text at its resting opacity against the
+brightest 5% of the painting behind each word, ignoring the halo): every name, caption and `back` keeps at least
+4.5:1 on every room tried (Home, Meadow, Sky mirror, Dark wood, Still island, Birches); the lowest is 4.9:1 (A's
+`Open sea` over the Still island's pale water). The exception is the plain-veil fallback before any painting arrives,
+where `back` is 3.1:1, the same as `chapters` on that veil. The nearest item is 128 px or more from the corner
+controls on desktop and 68 px on the phone. `start over` is hidden while the list is open, so nothing can collide
+with it.
+
+**Recommendation: A.** It reads as a chapter list at a glance, names every room at once without hover (so phone
+and desktop work the same way) and fits a phone without scrolling. B is the more beautiful screen, because the room
+fills two thirds of it, but it names one room at a time, its tiles are small (103 px at 1440) and on a phone it
+scrolls. If Jeremy wants more of B's picture in A, the next step is a smaller, lower grid, not a different layout.
+
+**Open questions for Jeremy.**
+
+1. A or B. If A, should A's grid sit a little lower and smaller, giving more of the painting? Today the grid's top
+   is at 46% of the height at 1440x900.
+2. Is `back` in place of `chapters` right, or should it sit at the top left like a conventional back link?
+3. The muting strength: is the room above the list too strong or too faint?
+4. Should the painting follow the last room looked at (as built), or return to the title's room when the pointer
+   leaves the tiles?
+
+Before merge: remove the comp switch and the losing layout, and update `chapter-select-check` (it still asserts
+that the painting leaves while the list is open). Add checks for `back` and the double-click guard, and for the
+crossfade's cover and the on-demand fetch. Rewrite `docs/styles.md`'s "while chapters are open it fades back to the
+plain veil" and the Phase 3 "Chapters" paragraph above, plus `docs/contracts/progress.md` "Chapter select".
+
+### Verdict, 2026-10-04
+
+> ok lets go with (A). I'm happy to let you try moving them lower and a little smaller, but i may ask you to make them larger again to the same size they currently are if it doesn't work out
+
+A (2 x 6) is chosen; B (single row) and the `chapterlayout` switch go. Round 2 lowers the grid and makes the tiles a
+little smaller so the hovered painting's subject shows above them; round 1's tile sizes (166 px at 1440, 184 at 1600,
+200 at 1903) stay the fallback if Jeremy asks for them back. The painting stays on the last room looked at, and `back`
+stays where `chapters` was (recommended to Jeremy, not objected to).
+
+### Round 2, 2026-10-04
+
+The grid lower and a little smaller, now the only layout. Frames and measurements:
+`/tmp/updraft-chapters-r2-XqGt/index.html` (round 1 left, round 2 right).
+
+- **Tiles** are one value, `--still` on `.chapters`: `clamp(88px, 10vw, 176px)`, 144 px at 1440, 160 at 1600 and 176
+  at 1903 (12 to 13% smaller). If Jeremy asks for the larger tiles, round 1's `clamp(100px, 11.5vw, 200px)` (166, 184,
+  200) goes back in the same place. The phone's tiles are 98 px instead of 109.
+- **Lower.** The grid stands 4 px above `back`'s box instead of 18, with tighter rows (`clamp(12px, 2vh, 20px)`).
+  `back` stays where `chapters` was, so it sets how low the grid can go. The grid's top moves from 46.8% to 52.0% of
+  the height at 1440x900, from 44.2% to 49.8% at 1600x900, from 40.5% to 46.1% at 1903x876, and from 27.1% to 33.3% on
+  a 390x844 phone.
+- **Muting.** The painting is printed down hard (.84) only from 6vh below the tiles' top edge, where the top row's
+  names sit; it eases to .7 at the edge, .34 at 8vh above it, .14 at 20vh and .1 at the top (round 1: .84 at the edge,
+  then .56, .32 and .24).
+- **Subjects.** At 1440 the Meadow's piano now shows whole above the grid, keys included; only its bench stays behind
+  the tiles. Sky mirror's sail and lantern read, with its hull at the grid's top edge. The Still island's kite and
+  sail read, with the hull behind the top row. The Dark wood's swirl sits at 60 to 75% of the painting's height and
+  stays mostly behind the grid, with its glow showing between the top tiles. On a phone the subjects sit mid-height in
+  the portrait paintings and stay behind the four rows; there the gain is the sky and the tops (Home's tree, the
+  island's kite).
+- **Measured** (same method as round 1): every name keeps at least 5.9:1 (`Open sea` at 1903 over the Dark wood with
+  a wind stroke crossing behind it; otherwise 9.0:1 or more) and `back` at least 5.3:1. The nearest item is 145 px or
+  more from the corner controls on desktop and 68 px on the phone.
+
+### Hover response, 2026-10-04
+
+> I feel like the hover is slightly laggy. can it be made a bit more responsive? did you purposefully put a delay?
+
+The 120 ms dwell goes: a hovered tile moves the painting at once. The crossfade is .45 s ease-out instead of .7 s, and
+a tile brightens and grows in .3 s (Jeremy: "maybe try 0.45s fade and 0.3s for brighten and grow"). With a hovering pointer, opening the list fetches every room's painting at low
+priority (about 3 MB of landscapes, only for finished players who open the list), so the first hover never waits on
+the network; on touch the painting never moves, so nothing more is fetched. This replaces round 1's fetch on first look.
