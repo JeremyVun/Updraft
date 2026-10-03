@@ -233,8 +233,9 @@ rather than teal, tuned so Continue stays at least 4.5:1 on every room. He clari
 f-meadow-d, f-birches-d - the blur is a bit too much / too obvious". The band is quiet because the room is calm and in
 shade there, with at most a subtle focus falloff, never a visible blur effect. The standard for the band is Home and Sky mirror ("the bottom half looks quieter and less
 artificially blurred"). He also found the paintings "a bit... low resolution": a 1586x992 painting is upscaled 1.8x on
-a 2x desktop, so a local AI upscale to 2x (Real-ESRGAN or similar, nothing uploaded) is tried, and kept if it is
-clearly sharper without invented texture. The prompts and a one-room regenerate script live in
+a 2x desktop, Jeremy will handle the upscale himself ("dont worry
+about local AI upscale, i will figure that out myself"); the build ships the native-size set, file for file
+replaceable. The prompts and a one-room regenerate script live in
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
