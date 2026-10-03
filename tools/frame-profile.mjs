@@ -94,7 +94,8 @@
 // skipped while there is no storm), sky-detail (sky-bank plus the clouds' shading from one octave), grass-fog-root (the
 // blades' fog at their root: the look of fog once per blade, not its saving; grass-fog is that saving's upper bound),
 // grass-near-<f> (the near grass level's reach times f), grass-near-5seg (near blades with five segments), rt-r11 (the
-// scene, resolve, post.clean and bloom targets as R11F_G11F_B10F).
+// scene, resolve, post.clean and bloom targets as R11F_G11F_B10F). Phase 7b's old paths: rt-half (those targets as
+// half-float RGBA again), sky-bank-on (the sky's storm bank compiled in with no storm).
 // Phase 7b: grass-fog-vertex works the blades' fog out at every vertex again without the per-blade fog pass (the
 // old path; every draw here runs that pass, as prepareFrame does); grass-fog-pass-off times the frame without that
 // pass (FRAME_PASS only: the blades then read the fog it last wrote); grass-near-6seg draws the near blades with six
@@ -484,13 +485,17 @@ window.__audit = {
       for(const root of this.groups[name]||[])root?.traverse(o=>{if(!o.isSkinnedMesh)return;const s=o.skeleton;
         if(!this.skeletons.has(s))this.skeletons.set(s,s.update);s.update=frozen?()=>{}:this.skeletons.get(s);});
     }
-    const r11=variants.includes('rt-r11');
-    if(r11!==!!this.r11On){
+    this.rtBuilt??=post.sceneTarget.texture.internalFormat;
+    const rt=variants.includes('rt-r11')?'R11F_G11F_B10F':variants.includes('rt-half')?null:this.rtBuilt;
+    if(post.sceneTarget.texture.internalFormat!==rt){
       const b=post.bloom;
       for(const t of [post.sceneTarget,post.clean,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
-        t.texture.internalFormat=r11?'R11F_G11F_B10F':null;t.texture.format=r11?THREE.RGBFormat:THREE.RGBAFormat;t.dispose();}
-      this.r11On=r11;
+        t.texture.internalFormat=rt;t.texture.format=rt?THREE.RGBFormat:THREE.RGBAFormat;t.dispose();}
     }
+    // sky-bank-on: the sky's storm bank compiled in whatever the weather, as before 7b.
+    this.bankBuilt??=sky.material.defines.STORM_BANK;
+    const bank=variants.includes('sky-bank-on')?1:this.bankBuilt;
+    if(sky.material.defines.STORM_BANK!==bank){sky.material.defines.STORM_BANK=bank;sky.material.needsUpdate=true;}
   },
   // mirror-dark: the constellation's lines at opacity 0 and the approach's guide with no light in it left undrawn.
   mirrorDark(on) {

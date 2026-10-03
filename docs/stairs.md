@@ -284,6 +284,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
   own planform). `surfaceAt(x, z)` gives the top as drawn: the hull rides the billows on it and the lens keeps over
   it. Coming out on top the deck thins away over `tuning.stairs.crown` metres above its top (`uCloudCrown`) and
   clears over seven seconds, so the lens rises out of mist rather than through a ceiling.
+- **What shows through the top**: the deck's top is blended (`transparent`), so the sea and the terrain far below
+  show through its lobes' edges and the hole under the hull (hiding them changes frames by up to 209/255); they are
+  drawn on top and during the sail, and nothing under the deck can be skipped there.
 - **The sail**: the route is `CLOUD_ROUTE` (the turn off the landing, then a Catmull-Rom wander through `MEANDER`),
   the bank's front `FOG_BANK`. The boat waits hidden in the foot of the nearest tower a little right of the sun
   (`harbour`) from the moment they come out on top, and once the swans are on their way into the sun (`BOAT_SETS_OFF`) sails

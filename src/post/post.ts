@@ -122,8 +122,9 @@ function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUn
 }
 
 /**
- * The frame's image chain: the scene into one multisampled half-float target, one resolve-and-clamp pass into
- * a plain target, bloom added there, and the grade straight to the screen. Only the scene target is multisampled.
+ * The frame's image chain: the scene into one multisampled float target, one resolve-and-clamp pass into a plain
+ * target, bloom added there, and the grade straight to the screen. Only the scene target is multisampled. Nothing in
+ * the chain reads alpha, so its targets drop it (and negative colour) where the device allows.
  * While bloom is off the grade paints a glow round the sun in its place, so the sun is not a hard white disc.
  */
 export class Post {
@@ -149,11 +150,20 @@ export class Post {
     samples: number,
     /** The direction of the sun (or the moon) in the sky. */
     private readonly sun: THREE.Vector3,
+    /** The chain's targets as R11F_G11F_B10F rather than half-float RGBA (`compactFrameFormat`). */
+    compact: boolean,
   ) {
     const size = renderer.getDrawingBufferSize(this.size);
     this.sceneTarget = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples, depthBuffer: true, stencilBuffer: true });
     this.clean = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, depthBuffer: false });
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), BLOOM_STRENGTH, 0.45, 1.1);
+    const b = this.bloom;
+    if (compact) {
+      for (const target of [this.sceneTarget, this.clean, b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) {
+        target.texture.format = THREE.RGBFormat;
+        target.texture.internalFormat = 'R11F_G11F_B10F';
+      }
+    }
     this.resolveMat = quadMaterial(RESOLVE_FRAG, { tDiffuse: { value: this.sceneTarget.texture } });
     this.gradeMat = quadMaterial(GRADE_FRAG, {
       tDiffuse: { value: this.clean.texture },
