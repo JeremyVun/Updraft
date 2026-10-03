@@ -491,14 +491,6 @@ that the painting leaves while the list is open). Add checks for `back` and the 
 crossfade's cover and the on-demand fetch. Rewrite `docs/styles.md`'s "while chapters are open it fades back to the
 plain veil" and the Phase 3 "Chapters" paragraph above, plus `docs/contracts/progress.md` "Chapter select".
 
-### Verdict on round 1, 2026-10-04
-
-> ok lets go with (A). moved lower might work, but i dont think i'd make them smaller though
-
-A, the 2 x 6 grid, is chosen and the single row is dropped. The grid moves lower so more of the hovered room's
-painting shows above it; the tiles keep their round 1 size. The painting stays on the last room looked at, and `back`
-stays where `chapters` was (recommended, not contested).
-
 ### Verdict, 2026-10-04
 
 > ok lets go with (A). I'm happy to let you try moving them lower and a little smaller, but i may ask you to make them larger again to the same size they currently are if it doesn't work out
