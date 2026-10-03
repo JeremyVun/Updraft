@@ -26,6 +26,7 @@
   opacity: 0;
   transition: opacity .8s ease;
 }
+#veil.painted .chapters-toggle { top: calc(100% - var(--low) + 50px); }
 /* It takes the loading line's place, so it waits for the line's .35s fade. */
 #veil.ready .chapters-toggle { visibility: visible; opacity: .5; transition-delay: .35s; }
 #veil.ready .chapters-toggle:hover { opacity: .85; }
@@ -49,7 +50,8 @@
   animation: chapters-in .7s ease both;
 }
 .chapters[hidden] { display: none; }
-#veil.chapter-chosen .chapters { opacity: 0; transition: opacity .45s ease; }
+/* The entrance must not hold the panel's opacity, or the fade out is skipped. */
+#veil.chapter-chosen .chapters { animation: none; opacity: 0; transition: opacity .45s ease; }
 @keyframes chapters-in {
   from { opacity: 0; }
 }

@@ -1,14 +1,13 @@
-// Capture the title screen's chapter stills: each room with nobody in it, in one browser session.
-// Usage: node tools/chapter-stills.mjs [room ...] (BASE defaults to http://127.0.0.1:5230/).
-// Writes 1600x1000 PNGs to OUT (default /tmp/updraft-chapter-stills) and, with ENCODE=1, the 400x250 WebPs
-// in src/chapter-select/stills/. Run against a dev server whose source nobody else is editing.
+// Capture each room with nobody in it, in one browser session: the references the title screen's room paintings are
+// made from (the regenerate script in assets/art-direction/continue/ takes one of these and writes the painting and its
+// chapter-select tile). Usage: node tools/chapter-stills.mjs [room ...] (BASE defaults to http://127.0.0.1:5230/).
+// Writes 1600x1000 PNGs to OUT (default /tmp/updraft-chapter-stills). Run against a dev server whose source nobody
+// else is editing.
 import { openBrowser } from './lib/browser.mjs';
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const out = process.env.OUT ?? '/tmp/updraft-chapter-stills';
-const stills = new URL('../src/chapter-select/stills/', import.meta.url).pathname;
 
 /**
  * `setup` runs with `g` (`__game`), `c` (the current chapter) and `h` (ground height at x, z) once the room is
@@ -66,10 +65,6 @@ try {
     const png = `${out}/${name}.png`;
     await page.screenshot({ path: png });
     console.log(png);
-    if (process.env.ENCODE === '1') {
-      fs.mkdirSync(stills, { recursive: true });
-      execFileSync('cwebp', ['-quiet', '-q', '78', '-sharp_yuv', '-resize', '400', '250', png, '-o', `${stills}${name}.webp`]);
-    }
   }
 } finally {
   await close();

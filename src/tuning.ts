@@ -357,6 +357,8 @@ export const tuning = {
     ambientEvery: 3.2,
     colourTravel: 16,
     tapTravel: 12,
+    /** Seconds that start over's question waits for its second press. */
+    startOverAsks: 6,
   },
   opening: {
     /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */

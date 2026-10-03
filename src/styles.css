@@ -180,6 +180,62 @@ body.starting #plane-guide { visibility: hidden; }
 #begin:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 7px; }
 #veil.departing #begin, #veil.departing .veil-wind, #veil.departing .veil-rest { opacity: 0; pointer-events: none; }
 #veil.departing #begin span { animation: none; }
+
+/* The room the player will start in, added only once it has decoded; Continue moves down into its quiet band. */
+.veil-painting,
+.veil-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+.veil-painting { object-fit: cover; }
+/* The veil's own deepest teal, so the words sit in the painting's shade rather than on a panel. */
+.veil-shade { background: linear-gradient(to top, #0b202d8c 0%, #0b202d59 24%, #0b202d00 50%); }
+#veil.painted :is(.veil-painting, .veil-shade) { opacity: 1; }
+#veil.painted { --low: max(200px, 28vh); }
+#veil.painted #begin { top: calc(100% - var(--low)); }
+
+.start-over {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 0;
+  background: none;
+  color: #fff2db;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  position: absolute;
+  top: calc(50% + 50px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 16px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  text-shadow: 0 0 9px #ffe8cc30;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .8s ease;
+}
+#veil.finished .start-over { top: calc(50% + 94px); }
+#veil.painted .start-over { top: calc(100% - var(--low) + 50px); }
+#veil.painted.finished .start-over { top: calc(100% - var(--low) + 94px); }
+/* It takes the loading line's place, so it waits for the line's .35s fade. */
+#veil.ready .start-over { visibility: visible; opacity: .5; transition-delay: .35s; }
+#veil.ready:not(.departing) .start-over:is(:hover, :focus-visible), #veil.asking:not(.departing) .start-over { opacity: .85; transition-delay: 0s; }
+.start-over:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 6px; }
+
+/* Chapter select stands on the plain veil: its names would not read over a painting. */
+#veil.painted.choosing :is(.veil-painting, .veil-shade) { opacity: 0; transition-duration: .6s; }
+#veil.choosing .start-over { visibility: hidden; opacity: 0; }
+#veil.departing :is(.veil-painting, .veil-shade, .start-over) { opacity: 0; pointer-events: none; transition-duration: .8s; transition-delay: 0s; }
 body.starting #cursor, body.starting #again { visibility: hidden; }
 /* Shared controls sit above the veil; as siblings, their clicks cannot start the game. */
 body.starting #sound, body.starting #fullscreen { z-index: 11; }
@@ -190,6 +246,7 @@ body.starting #sound, body.starting #fullscreen { z-index: 11; }
   .veil-haze, #veil.ready #begin span { animation: none; }
   .veil-rest { display: block; }
   .veil-wind { display: none; }
+  .veil-painting, .veil-shade, .start-over { transition: none; }
 }
 
 #veil.lifted {
