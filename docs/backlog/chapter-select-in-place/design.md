@@ -222,7 +222,14 @@ taken as the plain option. Before shipping, the rooms whose painting differs fro
 same prompt with the old image attached and the fix named: the sails are knitted wool, not plain red cloth (Home,
 Open sea, Drowned village, Sky mirror); the Dark wood as dark as the game; no added hill on the Sleeping island; the
 Still island's boat lying as the game has it. Jeremy, 2026-10-03, on the round 3 set: "looks great, i think i'd only
-look to see if we can generate better images for drowned village and sleeping", so those two get further attempts. The prompts and a one-room regenerate script live in
+look to see if we can generate better images for drowned village and sleeping", so those two get further attempts.
+Then: "on some of them, the blue is a bit too much / bit too high ... I'm also seeing some kind of dark "banding"
+across the grass" (`f-washing-d`). Measured: the banding is in the painting (the raw PNG and the WebP match row for
+row; the gradient is smooth), a dark smear of out-of-focus blades where Astra's defocused band begins. The blue is the
+teal gradient reaching halfway up plus the paintings' "cool shade" band starting near the middle, when Continue sits at
+72%. So every painting is regenerated with a shallower quiet band (the lower quarter, in the room's own colours, in
+shade rather than heavily defocused, no dark horizontal bands), and the gradient becomes lower, lighter and neutral
+rather than teal, tuned so Continue stays at least 4.5:1 on every room. The prompts and a one-room regenerate script live in
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
