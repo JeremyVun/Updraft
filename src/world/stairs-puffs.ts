@@ -114,14 +114,12 @@ in vec4 aMoreSolids;
 in float aSoft;
 out vec2 vCorner;
 out vec3 vWorld;
-out vec3 vDrawn;
 out vec3 vCentre;
 out float vAlpha;
 out vec4 vFog;
 out float vSun;
 out float vNear;
 out float vClear;
-out float vSoft;
 ${SOLID_GLSL}
 void main() {
   vec3 c = (modelMatrix * vec4(aCentre, 1.0)).xyz;
@@ -143,18 +141,18 @@ void main() {
   vWorld = c + (right * vCorner.x + up * vCorner.y) * r;
   vCentre = c;
   vAlpha = aAlpha;
-  vSoft = aSoft;
   // Through its middle the card would cut whatever stands in the ball, veiled behind and bare in front; drawn
   // nearer, the same on screen, what is in the ball is behind it, and where something reaches the card it thins away.
   float depth = -(viewMatrix * vec4(c, 1.0)).z;
-  vDrawn = cameraPosition + (vWorld - cameraPosition) * max(depth - r * ${f(FRONT)}, min(depth, 0.6)) / depth;
-  gl_Position = projectionMatrix * viewMatrix * vec4(vDrawn, 1.0);
+  vec3 drawn = cameraPosition + (vWorld - cameraPosition) * max(depth - r * ${f(FRONT)}, min(depth, 0.6)) / depth;
+  gl_Position = projectionMatrix * viewMatrix * vec4(drawn, 1.0);
   vClear = ${f(BLEND + SOLID_FADE)};
   for (int k = 0; k < ${SOLIDS_PER_PUFF}; k++) {
     float id = k < 4 ? aSolids[k] : aMoreSolids[k - 4];
     if (id < 0.0) break;
-    vClear = min(vClear, solidDistance(vDrawn, int(id)));
+    vClear = min(vClear, solidDistance(drawn, int(id)));
   }
+  vClear = mix(${f(BLEND + SOLID_FADE)}, vClear, aSoft);
 }`;
 
 /** Lit like the top of the cloud deck: gold where the low sun reaches it, glowing at the rim against the light, lilac underneath. */
@@ -163,14 +161,12 @@ ${ATMO_GLSL}
 uniform float uPuffs;
 in vec2 vCorner;
 in vec3 vWorld;
-in vec3 vDrawn;
 in vec3 vCentre;
 in float vAlpha;
 in vec4 vFog;
 in float vSun;
 in float vNear;
 in float vClear;
-in float vSoft;
 void main() {
   float d = length(vCorner);
   // The lumps reach at most 1.25 out; beyond that the ball has no body, so skip its noise.
@@ -181,7 +177,7 @@ void main() {
   // Soft all the way from the middle, so overlapping balls add up to mist rather than show as a bunch of balls.
   float body = 1.0 - smoothstep(0.0, 0.8 + 0.3 * lump, d);
   float a = body * body * vAlpha * uPuffs * vNear;
-  a *= mix(1.0, smoothstep(${f(BLEND)}, ${f(BLEND + SOLID_FADE)}, vClear), vSoft);
+  a *= smoothstep(${f(BLEND)}, ${f(BLEND + SOLID_FADE)}, vClear);
   if (a <= 0.004) discard;
   float k = min(d, 1.0);
   vec3 nv = vec3(vCorner / max(d, 1.0), sqrt(max(0.0, 1.0 - k * k)));
