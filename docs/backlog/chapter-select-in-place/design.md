@@ -243,7 +243,12 @@ replaceable.
 On the regenerated set Jeremy chose the Drowned village's low view behind the boat (A), and on the Sleeping island:
 "the problem was the bed dimensions, you didn't fix that". The game's bed is 3.45 m by 1.95 m (`src/world/sleeping.ts`);
 the paintings drew a long, low double bed. Every painting keeps the game's object proportions, checked against the
-capture. The prompts and a one-room regenerate script live in
+capture.
+On the second-round set and the build served live, Jeremy, 2026-10-03: "I'm very disappointed with this second round.
+why is the blur / fade completely gone? The banding / artifacting is extremely obvious e.g. for the lines chapter
+image, the meadow image ... Give me the image prompts and i will run them myself." The fade was meant to be reduced,
+not removed. Jeremy now makes the paintings himself from the prompts (`/tmp/updraft-prompts/`; the shared rules and
+per-room prompts are also in `assets/art-direction/continue/`); the build takes his files under the same names. The prompts and a one-room regenerate script live in
 `assets/art-direction/continue/`. The paintings are release art: refreshed when a room's look changes for good, not on
 every tweak.
 
