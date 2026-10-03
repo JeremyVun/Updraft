@@ -97,8 +97,9 @@ stands between the camera and the child.
 The plane stays in the child's hand. Three curtains of washing hang across the path. Broad sweeps lift a hem and
 small sweeps add up, in any direction, and progress is never lost; only the waiting curtain takes the stroke
 aimed at it on screen (`WashingCurtain.brush`). The first shows sideways invitation traces
-(`fx/washing-invitation.ts`). The cygnet goes under first and looks back for the child; a lifted sheet stays up
-until both are through. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
+(`fx/washing-invitation.ts`). Live air lifts a sheet's hem and lets it fall as the air dies; every sweep also
+winds the sheet further round its own line, the way wind wraps washing round a line, so it never unwinds and hangs
+shorter from a lumpy roll with its red hem below. Wound, it clears the path and stays that way. The cygnet goes under first and looks back for the child. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
 the small yellow jumper between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
@@ -132,8 +133,10 @@ Early, affectionate play, and the introduction to putting wind into a sail befor
 Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
 from the haze, and an oversized enamel bathtub stands on the far bank (scenery only).
 
-The child takes the cygnet out of the satchel and sets it down, notices a toy on a bare patch of bank, kneels, lifts it in both mittens (the hull
-rides the real mittens, `LittleBoats.afterChildPose`), carries it to the lip and lowers it onto the water. The
+On the grass above the beach the child takes the cygnet out of the satchel and sets it down, and it walks up with
+her. She notices a toy on a bare patch of the flat bank, back from the water (`toyBank`), kneels, lifts it in both
+mittens (the hull rides the real mittens, `LittleBoats.afterChildPose`), carries it down to the lip and lowers it
+onto the water. The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
