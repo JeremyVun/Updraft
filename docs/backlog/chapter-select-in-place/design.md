@@ -47,6 +47,19 @@ encoded 880x550 (`cwebp -q 78 -sharp_yuv`) serves both the Continue tile and cha
 recaptured to its shipped framing first, because the round 2 capture lost the village; the confirmation goes back to
 `start over` after 6 s, on Escape or when focus leaves it; any valid save shows `start over`, a completed one included.
 
+Ember only shown 2026-10-03 and refused: "now the ember only is not at all the same standard window picture as the
+others. Do not do ember only dont overcomplicate it." The Dark wood takes the same soft-edged window as every room.
+
+Then, same day:
+
+> The only lat thing i want you to try is ask astra via codex exec to use imagegen to produce full screen chapter still
+> shots. I want to see if we should stick with the window style or move towards something even more high quality.
+> Obviusly, the full screen chapter shots must be mindful about leaving space for controls (continue, begin, audio,
+> quality, full screen) etc. it might mean that the continue, begin, chapters buttons go to the bottom of screen
+> instead of the middle. Figure it out
+
+Round 3 (`/tmp/updraft-continue-comps-3/`) compares the round 2 window with full-screen generated stills.
+
 ## What changes for the player
 
 Today a pick in `chapters` saves the choice in `sessionStorage`, reloads the page, loads the whole game again and
