@@ -1,3 +1,6 @@
+/** Air through the cloth in metres a second, turning at `spin` radians a second about the upright through `cx`, `cz`. */
+export interface ClothAir { x: number; y: number; z: number; spin: number; cx: number; cz: number }
+
 /**
  * A sheet of cloth as a grid of particles held together by distance constraints, stepped on the CPU (position
  * based, after Jakobsen). It is for the few pieces of washing that must really fall, swing, lie on the grass and
@@ -6,6 +9,8 @@
 export class Cloth {
   readonly count: number;
   readonly pos: Float32Array;
+  /** Where the cloth is drawn: between the last two steps, at the frame's moment, with its normals. */
+  readonly view: Float32Array;
   readonly normal: Float32Array;
   readonly uv: Float32Array;
   readonly index: Uint16Array;
@@ -13,19 +18,26 @@ export class Cloth {
   readonly free: Float32Array;
   readonly pin: Float32Array;
   private readonly prev: Float32Array;
+  private readonly last: Float32Array;
+  private readonly face: Float32Array;
   private readonly cons: Uint16Array;
   private readonly rest: Float32Array;
   private readonly stiff: Float32Array;
+  private readonly squash: Float32Array;
   /** Long-range tethers: no particle may be further from a pinned one than the cloth between them allows. */
   private tethers: Int32Array = new Int32Array(0);
   private tetherRest: Float32Array = new Float32Array(0);
 
-  constructor(readonly cols: number, readonly rows: number, readonly width: number, readonly drop: number) {
+  /** `bend` is how hard the cloth resists folding over two particles' span, so it folds broadly, not at every one. */
+  constructor(readonly cols: number, readonly rows: number, readonly width: number, readonly drop: number, bend = 0.06) {
     const n = cols * rows;
     this.count = n;
     this.pos = new Float32Array(n * 3);
     this.prev = new Float32Array(n * 3);
+    this.last = new Float32Array(n * 3);
+    this.view = new Float32Array(n * 3);
     this.normal = new Float32Array(n * 3);
+    this.face = new Float32Array(n * 3);
     this.uv = new Float32Array(n * 2);
     this.free = new Float32Array(n).fill(1);
     this.pin = new Float32Array(n * 3);
@@ -42,17 +54,21 @@ export class Cloth {
     this.index = new Uint16Array(index);
     const pairs: number[] = [];
     const stiff: number[] = [];
-    const link = (a: number, b: number, k: number) => { pairs.push(a, b); stiff.push(k); };
+    const squash: number[] = [];
+    // Cloth resists stretching but gives under compression, so it folds instead of standing like a board; the long
+    // links push back as hard as they pull, which is what keeps a fold from closing to a crease.
+    const link = (a: number, b: number, k: number, give: number) => { pairs.push(a, b); stiff.push(k); squash.push(give); };
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const i = r * cols + c;
-      if (c + 1 < cols) link(i, i + 1, 1);
-      if (r + 1 < rows) link(i, i + cols, 1);
-      if (c + 1 < cols && r + 1 < rows) { link(i, i + cols + 1, 0.5); link(i + 1, i + cols, 0.5); }
-      if (c + 2 < cols) link(i, i + 2, 0.06);
-      if (r + 2 < rows) link(i, i + cols * 2, 0.06);
+      if (c + 1 < cols) link(i, i + 1, 1, 0.25);
+      if (r + 1 < rows) link(i, i + cols, 1, 0.25);
+      if (c + 1 < cols && r + 1 < rows) { link(i, i + cols + 1, 0.5, 0.25); link(i + 1, i + cols, 0.5, 0.25); }
+      if (c + 2 < cols) link(i, i + 2, bend, 1);
+      if (r + 2 < rows) link(i, i + cols * 2, bend, 1);
     }
     this.cons = new Uint16Array(pairs);
     this.stiff = new Float32Array(stiff);
+    this.squash = new Float32Array(squash);
     this.rest = new Float32Array(stiff.length);
     for (let k = 0; k < stiff.length; k++) this.rest[k] = this.flatDistance(pairs[k * 2], pairs[k * 2 + 1]);
   }
@@ -65,9 +81,23 @@ export class Cloth {
   }
 
   place(i: number, x: number, y: number, z: number): void {
-    this.pos[i * 3] = this.prev[i * 3] = x;
-    this.pos[i * 3 + 1] = this.prev[i * 3 + 1] = y;
-    this.pos[i * 3 + 2] = this.prev[i * 3 + 2] = z;
+    this.pos[i * 3] = this.prev[i * 3] = this.last[i * 3] = x;
+    this.pos[i * 3 + 1] = this.prev[i * 3 + 1] = this.last[i * 3 + 1] = y;
+    this.pos[i * 3 + 2] = this.prev[i * 3 + 2] = this.last[i * 3 + 2] = z;
+  }
+
+  /** Velocity of a particle over the last step, in metres a second. */
+  velocity(i: number, h: number, out: { x: number; y: number; z: number }): void {
+    out.x = (this.pos[i * 3] - this.prev[i * 3]) / h;
+    out.y = (this.pos[i * 3 + 1] - this.prev[i * 3 + 1]) / h;
+    out.z = (this.pos[i * 3 + 2] - this.prev[i * 3 + 2]) / h;
+  }
+
+  /** Draw it `alpha` of the way from the step before the last to the last, so it moves as smoothly as the frames. */
+  blend(alpha: number): void {
+    const { pos, last, view } = this;
+    for (let k = 0; k < view.length; k++) view[k] = last[k] + (pos[k] - last[k]) * alpha;
+    this.normals(view, this.normal);
   }
 
   /** Nudge a particle's velocity, in metres a second, for the next step `h` long. */
@@ -114,23 +144,28 @@ export class Cloth {
    * One step `h` long. `air` is the wind through the cloth (x, y, z in metres a second), `drag` how hard it pushes
    * on the cloth across its face, and `gust(i)` lets each particle feel it a little differently. `ground(x, z)` is
    * the height the cloth comes to rest on; `posts` are upright poles it cannot pass through, as x, z, radius, top.
+   * `follow` is how quickly, every second, the air brings the cloth to its own speed whichever way the cloth faces.
    */
-  step(h: number, air: { x: number; y: number; z: number }, drag: number, damping: number, iterations: number,
-    gust: (i: number) => number, ground: (x: number, z: number) => number, posts: readonly number[]): void {
-    const { pos, prev, normal, free, pin } = this;
-    this.normals();
+  step(h: number, air: ClothAir, drag: number, damping: number, iterations: number,
+    gust: (i: number) => number, ground: (x: number, z: number) => number, posts: readonly number[], follow = 0): void {
+    const { pos, prev, free, pin } = this;
+    const normal = this.face;
+    this.last.set(pos);
+    this.normals(pos, normal);
     const keep = Math.exp(-damping * h);
+    const along = drag * 0.08 + follow;
     for (let i = 0; i < this.count; i++) {
       const k = i * 3;
       if (!free[i]) continue;
       const vx = (pos[k] - prev[k]) / h, vy = (pos[k + 1] - prev[k + 1]) / h, vz = (pos[k + 2] - prev[k + 2]) / h;
       const g = gust(i);
-      const rx = air.x * g - vx, ry = air.y * g - vy, rz = air.z * g - vz;
+      const rx = (air.x + air.spin * (pos[k + 2] - air.cz)) * g - vx, ry = air.y * g - vy;
+      const rz = (air.z - air.spin * (pos[k] - air.cx)) * g - vz;
       const nx = normal[k], ny = normal[k + 1], nz = normal[k + 2];
       const across = nx * rx + ny * ry + nz * rz;
       // Pressure on the face goes with the square of the air through it; a little skin friction along it.
       const push = drag * across * Math.abs(across);
-      let ax = nx * push + rx * drag * 0.08, ay = ny * push + ry * drag * 0.08 - 9.8, az = nz * push + rz * drag * 0.08;
+      let ax = nx * push + rx * along, ay = ny * push + ry * along - 9.8, az = nz * push + rz * along;
       const a = Math.sqrt(ax * ax + ay * ay + az * az);
       if (a > 60) { ax *= 60 / a; ay *= 60 / a; az *= 60 / a; }
       const x = pos[k], y = pos[k + 1], z = pos[k + 2];
@@ -144,7 +179,7 @@ export class Cloth {
       prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2];
       pos[k] = pin[k]; pos[k + 1] = pin[k + 1]; pos[k + 2] = pin[k + 2];
     }
-    const { cons, rest, stiff } = this;
+    const { cons, rest, stiff, squash } = this;
     for (let it = 0; it < iterations; it++) {
       for (let c = 0; c < stiff.length; c++) {
         const a = cons[c * 2], b = cons[c * 2 + 1];
@@ -154,8 +189,7 @@ export class Cloth {
         const ka = a * 3, kb = b * 3;
         const dx = pos[kb] - pos[ka], dy = pos[kb + 1] - pos[ka + 1], dz = pos[kb + 2] - pos[ka + 2];
         const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
-        // Cloth resists stretching but gives under compression, so it folds instead of standing like a board.
-        const s = (d - rest[c]) / d * stiff[c] * (d < rest[c] ? 0.25 : 1) / w;
+        const s = (d - rest[c]) / d * stiff[c] * (d < rest[c] ? squash[c] : 1) / w;
         pos[ka] += dx * s * wa; pos[ka + 1] += dy * s * wa; pos[ka + 2] += dz * s * wa;
         pos[kb] -= dx * s * wb; pos[kb + 1] -= dy * s * wb; pos[kb + 2] -= dz * s * wb;
       }
@@ -193,8 +227,8 @@ export class Cloth {
     }
   }
 
-  normals(): void {
-    const { pos, normal, cols, rows } = this;
+  normals(pos: Float32Array, normal: Float32Array): void {
+    const { cols, rows } = this;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const i = r * cols + c;
       const l = (c > 0 ? i - 1 : i) * 3, rr = (c < cols - 1 ? i + 1 : i) * 3;

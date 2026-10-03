@@ -653,7 +653,7 @@ export class WashingLines {
     for (const curtain of curtains) for (const sheet of curtain.sheets) {
       const { cloth } = sheet;
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(cloth.pos, 3).setUsage(THREE.DynamicDrawUsage));
+      geometry.setAttribute('position', new THREE.BufferAttribute(cloth.view, 3).setUsage(THREE.DynamicDrawUsage));
       geometry.setAttribute('normal', new THREE.BufferAttribute(cloth.normal, 3).setUsage(THREE.DynamicDrawUsage));
       geometry.setAttribute('uv', new THREE.BufferAttribute(cloth.uv, 2));
       geometry.setIndex(new THREE.BufferAttribute(cloth.index, 1));
@@ -687,7 +687,7 @@ export class WashingLines {
   update(): void {
     for (const m of this.curtainMeshes) {
       if (m.seen === m.curtain.version) continue;
-      m.cloth.normals();
+      m.cloth.blend(m.curtain.alpha);
       m.geometry.attributes.position.needsUpdate = true;
       m.geometry.attributes.normal.needsUpdate = true;
       m.seen = m.curtain.version;

@@ -8,7 +8,7 @@ import { tuning } from '../tuning';
 import { heightAt } from './island';
 import { grassHeightAt } from './grass';
 import { mulberry32 } from './noise';
-import { Cloth } from './cloth-sim';
+import { Cloth, type ClothAir } from './cloth-sim';
 
 /** The southern beach stays put; the extra fifteen percent of island is north of it. */
 export const LINES_LANDING = new THREE.Vector2(14, -308);
@@ -149,14 +149,31 @@ export class WashingCurtain {
   private touched = false;
   /** Seconds since the last sheet was torn free, or below zero while it is still pegged. */
   private flight = -1;
-  private readonly flightFrom = [new THREE.Vector3(), new THREE.Vector3()];
-  private readonly snagAt = [new THREE.Vector3(), new THREE.Vector3()];
-  private handles = [0, 0];
+  /** The torn sheet has come down on the snag line and hangs there. */
+  private snagged = false;
+  /**
+   * The particles the line took, where each was as it did and where on the line it lies; each settles from there
+   * onto the line over `catchSettle`.
+   */
+  private hung: number[] = [];
+  private hungFrom: THREE.Vector3[] = [];
+  private hungAt: THREE.Vector3[] = [];
+  private settled = 0;
+  /** The torn sheet's particles across its middle that the snag line catches, and where on it each comes to lie. */
+  private caught: number[] = [];
+  private catchAt: THREE.Vector3[] = [];
+  /** Each caught particle's place relative to the middle of them as the sheet tore free. */
+  private tornShape: THREE.Vector3[] = [];
+  private readonly flightFrom = new THREE.Vector3();
+  private readonly catchMid = new THREE.Vector3();
+  private readonly velocity = { x: 0, y: 0, z: 0 };
   private time = 0;
   private pending = 0;
   private floor: Floor | null = null;
   private readonly posts: number[] = [];
-  private readonly air = { x: 0, y: 0, z: 0 };
+  private readonly air: ClothAir = { x: 0, y: 0, z: 0, spin: 0, cx: 0, cz: 0 };
+  /** How far the torn sheet turns about the upright on its way to lie along the snag line. */
+  private yaw = 0;
   private readonly phase: Float32Array[] = [];
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly point = new THREE.Vector3();
@@ -190,7 +207,7 @@ export class WashingCurtain {
       const sheetWidth = width / panels + (panels > 1 ? 0.35 : 0);
       const drop = this.drop - j * 0.15;
       const cols = Math.round(sheetWidth / SPACING) + 1, rows = Math.round(drop / SPACING) + 1;
-      const cloth = new Cloth(cols, rows, sheetWidth, drop);
+      const cloth = new Cloth(cols, rows, sheetWidth, drop, tuning.linesPassage.bend);
       const t = new Float32Array(cols);
       const middle = (j + 0.5) / panels;
       for (let c = 0; c < cols; c++) t[c] = middle + (c / (cols - 1) - 0.5) * sheetWidth / span;
@@ -210,6 +227,13 @@ export class WashingCurtain {
   private ground(x: number, z: number): THREE.Vector3 { return new THREE.Vector3(x, heightAt(x, z), z); }
 
   private get stages(): number { return this.plan.order.length; }
+
+  /** Seconds since the last sheet was torn free, below zero while it is pegged; it comes down at `snagPoint`. */
+  get tornFor(): number { return this.flight; }
+  get snagPoint(): THREE.Vector3 { return this.catchMid; }
+
+  /** How far the frame is between the cloth's last two steps. */
+  get alpha(): number { return this.pending / STEP; }
 
   /** Down long enough that the way beside it is clear to walk. */
   get passable(): boolean { return this.downFor > tuning.linesPassage.passAfter; }
@@ -236,7 +260,6 @@ export class WashingCurtain {
 
   /** Hold each sheet's top edge on the line between the outermost of its pegs still on. */
   private repin(): void {
-    const k = tuning.linesPassage;
     this.sheets.forEach((s, j) => {
       const { cloth } = s;
       cloth.free.fill(1);
@@ -250,14 +273,14 @@ export class WashingCurtain {
           cloth.hold(c, this.point.x, this.point.y - 0.03, this.point.z);
         }
       }
-      if (this.flight >= k.flightSeconds) this.handles.forEach((i, n) => cloth.hold(i, this.snagAt[n].x, this.snagAt[n].y, this.snagAt[n].z));
+      if (this.snagged && j === 0) this.lay(0);
       cloth.retether();
     });
   }
 
   reset(cleared = false): void {
     this.touched = false; this.brushAge = Infinity;
-    this.flight = -1; this.popped = 0; this.billow = 0; this.pending = 0; this.loose = 0;
+    this.flight = -1; this.snagged = false; this.settled = 0; this.popped = 0; this.billow = 0; this.pending = 0; this.loose = 0;
     this.hang();
     this.downFor = 0;
     this.charge = cleared ? 1 : 0;
@@ -312,7 +335,8 @@ export class WashingCurtain {
     this.opening += (this.popped / this.stages + this.billow * 0.25 - this.opening) * (1 - Math.exp(-dt * 3));
 
     this.pending = near ? Math.min(this.pending + dt, STEP * 3) : 0;
-    while (this.pending >= STEP) { this.pending -= STEP; this.simulate(STEP, false); this.version++; }
+    while (this.pending >= STEP) { this.pending -= STEP; this.simulate(STEP, false); }
+    if (near) this.version++;
     const next = this.plan.order[this.popped] ?? [];
     const working = this.charge * this.stages - this.popped;
     for (const peg of this.pegs) {
@@ -394,29 +418,132 @@ export class WashingCurtain {
     });
   }
 
-  /** The last pegs go and the breeze takes the whole sheet. */
+  /**
+   * The last pegs go and the breeze takes the whole sheet. It comes down across its middle over the snag line, the
+   * end of it nearer the line's start going to that end, so it turns the short way as it flies.
+   */
   private tear(): void {
+    const k = tuning.linesPassage;
     const { cloth } = this.sheets[0];
-    const row = Math.round((cloth.rows - 1) * 0.22);
-    this.handles = [row * cloth.cols + Math.round((cloth.cols - 1) * 0.36), (row + 1) * cloth.cols + Math.round((cloth.cols - 1) * 0.64)];
-    this.handles.forEach((i, n) => {
-      this.flightFrom[n].fromArray(cloth.pos, i * 3);
-      lineAt(SNAG_LINE, n ? 0.6 : 0.43, this.snagAt[n]).y += 0.05;
+    const row = Math.round((cloth.rows - 1) * k.catchRow);
+    const c0 = Math.round((cloth.cols - 1) * k.catchMargin), c1 = cloth.cols - 1 - c0;
+    this.caught = [];
+    for (let c = c0; c <= c1; c++) this.caught.push(row * cloth.cols + c);
+    const first = this.caught[0] * 3, last = this.caught[this.caught.length - 1] * 3;
+    const flip = (cloth.pos[last] - cloth.pos[first]) * (SNAG_LINE.b.x - SNAG_LINE.a.x) +
+      (cloth.pos[last + 2] - cloth.pos[first + 2]) * (SNAG_LINE.b.z - SNAG_LINE.a.z) < 0;
+    const reach = (c1 - c0) / (cloth.cols - 1) * cloth.width * k.catchGather / SNAG_LINE.a.distanceTo(SNAG_LINE.b);
+    const mid = (SNAG_LINE.bare[0] + SNAG_LINE.bare[1]) / 2;
+    this.catchAt = this.caught.map((_, n) => {
+      const f = n / (this.caught.length - 1) - 0.5;
+      const on = lineAt(SNAG_LINE, mid + (flip ? -f : f) * reach, new THREE.Vector3());
+      on.y += 0.04;
+      return on;
     });
+    this.catchMid.set(0, 0, 0);
+    for (const p of this.catchAt) this.catchMid.addScaledVector(p, 1 / this.catchAt.length);
+    this.flightFrom.set(0, 0, 0);
+    for (const i of this.caught) this.flightFrom.addScaledVector(tmp.fromArray(cloth.pos, i * 3), 1 / this.caught.length);
+    this.tornShape = this.caught.map(i => new THREE.Vector3().fromArray(cloth.pos, i * 3).sub(this.flightFrom));
+    const from = Math.atan2(-(cloth.pos[last + 2] - cloth.pos[first + 2]), cloth.pos[last] - cloth.pos[first]);
+    const start = this.catchAt[0], end = this.catchAt[this.catchAt.length - 1];
+    const to = Math.atan2(start.z - end.z, end.x - start.x);
+    this.yaw = Math.atan2(Math.sin(to - from), Math.cos(to - from));
     this.flight = 0;
   }
 
-  /** Where a handle of the torn sheet is carried at time t of its flight. */
-  private carried(n: number, t: number, out: THREE.Vector3): THREE.Vector3 {
+  /**
+   * Where the middle of the caught particles is carried at time t of the flight: up on the gust and over the line by
+   * `flightOver` of the way, then down onto it.
+   */
+  private carried(t: number, out: THREE.Vector3): THREE.Vector3 {
     const k = tuning.linesPassage;
-    const s = THREE.MathUtils.smootherstep(t / k.flightSeconds, 0, 1);
-    out.lerpVectors(this.flightFrom[n], this.snagAt[n], s);
-    // Up and over on the air, turning over once as it goes.
-    out.y += Math.sin(Math.min(1, s * 1.15) * Math.PI) * k.flightRise;
-    const roll = Math.sin(s * Math.PI) * (n ? 1 : -1) * 1.2;
-    out.y += roll * Math.sin(s * Math.PI * 2);
-    out.z += roll * 0.6;
+    const s = Math.min(1, t / k.flightSeconds);
+    out.lerpVectors(this.flightFrom, this.catchMid, THREE.MathUtils.smootherstep(s, 0, k.flightOver));
+    out.y = THREE.MathUtils.lerp(this.flightFrom.y, this.catchMid.y, THREE.MathUtils.smoothstep(s, 0, 1)) +
+      Math.sin(s * Math.PI) * k.flightRise;
     return out;
+  }
+
+  /**
+   * The breeze carries the torn sheet toward the line and turns it, and its middle is drawn softly into place: each
+   * particle across it toward its place in a row that turns from how it tore to how it will lie.
+   */
+  private steer(h: number): void {
+    const k = tuning.linesPassage;
+    const { cloth } = this.sheets[0];
+    const s = this.flight / k.flightSeconds;
+    this.carried(this.flight, this.path);
+    this.carried(this.flight + 0.05, this.pathNext);
+    const vx = (this.pathNext.x - this.path.x) / 0.05, vy = (this.pathNext.y - this.path.y) / 0.05;
+    const vz = (this.pathNext.z - this.path.z) / 0.05;
+    // The air carries the whole sheet, and drifts it back toward its way; the pull on its middle only shapes it.
+    this.point.set(0, 0, 0);
+    for (const i of this.caught) this.point.addScaledVector(tmp.fromArray(cloth.pos, i * 3), 1 / this.caught.length);
+    this.point.subVectors(this.path, this.point).multiplyScalar(k.flightAim);
+    this.air.x += vx * k.flightAhead + this.point.x;
+    this.air.y += vy + 9.8 / k.flightFollow * k.flightLift + this.point.y;
+    this.air.z += vz * k.flightAhead + this.point.z;
+    // Loose in a sideways gust it swings face on at once, so it sails with the breeze filling it rather than sliding
+    // edgeways; the breeze turns it rather than anything twisting it round.
+    const turn = THREE.MathUtils.smoothstep(s, 0, k.flightTurn);
+    this.air.spin = this.yaw * (THREE.MathUtils.smoothstep(s + 0.01, 0, k.flightTurn) - turn) / (0.01 * k.flightSeconds);
+    this.air.cx = this.path.x; this.air.cz = this.path.z;
+    const lie = THREE.MathUtils.smoothstep(s, 0.5, 1);
+    const w = THREE.MathUtils.lerp(k.flightGrip, k.catchGrip, lie) * THREE.MathUtils.smoothstep(s, 0, 0.15);
+    this.caught.forEach((i, n) => {
+      this.point.subVectors(this.catchAt[n], this.catchMid);
+      tmp.copy(this.tornShape[n]).applyAxisAngle(UP, this.yaw * turn).lerp(this.point, lie).add(this.path);
+      cloth.velocity(i, h, this.velocity);
+      let ax = w * w * (tmp.x - cloth.pos[i * 3]) + 2 * w * (vx - this.velocity.x);
+      let ay = w * w * (tmp.y - cloth.pos[i * 3 + 1]) + 2 * w * (vy - this.velocity.y);
+      let az = w * w * (tmp.z - cloth.pos[i * 3 + 2]) + 2 * w * (vz - this.velocity.z);
+      const a = Math.hypot(ax, ay, az);
+      if (a > 40) { ax *= 40 / a; ay *= 40 / a; az *= 40 / a; }
+      cloth.kick(i, ax * h, ay * h, az * h, h);
+    });
+    if (s >= 1) this.snag();
+  }
+
+  /**
+   * The line takes the sheet where it has come down across it: in each column the particle nearest the line, if it
+   * is within `catchReach`, is held where it touches. Should it have come down badly, the middle is held instead,
+   * so it is never left hovering.
+   */
+  private snag(): void {
+    const k = tuning.linesPassage;
+    const { cloth } = this.sheets[0];
+    const { a, b, bare } = SNAG_LINE;
+    const ex = b.x - a.x, ez = b.z - a.z, run = ex * ex + ez * ez;
+    this.hung = []; this.hungAt = [];
+    for (let c = 0; c < cloth.cols; c++) {
+      let best = -1, near = k.catchReach;
+      const at = new THREE.Vector3();
+      for (let r = 0; r < cloth.rows; r++) {
+        const i = (r * cloth.cols + c) * 3;
+        const t = ((cloth.pos[i] - a.x) * ex + (cloth.pos[i + 2] - a.z) * ez) / run;
+        if (t < bare[0] || t > bare[1]) continue;
+        lineAt(SNAG_LINE, t, this.point);
+        const d = this.point.distanceTo(tmp.fromArray(cloth.pos, i));
+        if (d < near) { near = d; best = i / 3; at.copy(this.point); }
+      }
+      if (best >= 0) { this.hung.push(best); this.hungAt.push(at.setY(at.y + 0.04)); }
+    }
+    if (this.hung.length < 4) { this.hung = this.caught; this.hungAt = this.catchAt; }
+    this.hungFrom = this.hung.map(i => new THREE.Vector3().fromArray(cloth.pos, i * 3));
+    this.snagged = true;
+    this.repin();
+  }
+
+  /** The caught particles settle `h` further onto the line from where it took them. */
+  private lay(h: number): void {
+    const { cloth } = this.sheets[0];
+    this.settled = Math.min(1, this.settled + h / tuning.linesPassage.catchSettle);
+    const f = THREE.MathUtils.smootherstep(this.settled, 0, 1);
+    this.hung.forEach((i, n) => {
+      tmp.lerpVectors(this.hungFrom[n], this.hungAt[n], f);
+      cloth.hold(i, tmp.x, tmp.y, tmp.z);
+    });
   }
 
   private simulate(h: number, settling: boolean): void {
@@ -431,31 +558,18 @@ export class WashingCurtain {
     const most = down ? k.restAir : k.liveAir;
     ax = THREE.MathUtils.clamp(ax, -most, most);
     az = THREE.MathUtils.clamp(az, -most, most);
-    this.air.x = ax; this.air.y = 0; this.air.z = az;
-    if (this.flight >= 0 && this.flight < k.flightSeconds) {
-      const { cloth } = this.sheets[0];
+    this.air.x = ax; this.air.y = 0; this.air.z = az; this.air.spin = 0;
+    const flying = this.flight >= 0 && !this.snagged;
+    if (flying) {
+      this.steer(h);
       this.flight += h;
-      // The air carrying it runs a little faster than it travels, so the cloth billows out ahead.
-      this.carried(0, this.flight, this.path);
-      this.carried(0, Math.min(k.flightSeconds, this.flight + 0.05), this.pathNext);
-      this.air.x = (this.pathNext.x - this.path.x) / 0.05 * 1.25 + ax;
-      this.air.y = (this.pathNext.y - this.path.y) / 0.05 * 1.25 + 1.5;
-      this.air.z = (this.pathNext.z - this.path.z) / 0.05 * 1.25 + az;
-      const grip = Math.min(1, h * k.flightGrip);
-      this.handles.forEach((i, n) => {
-        this.carried(n, this.flight, tmp);
-        cloth.pos[i * 3] += (tmp.x - cloth.pos[i * 3]) * grip;
-        cloth.pos[i * 3 + 1] += (tmp.y - cloth.pos[i * 3 + 1]) * grip;
-        cloth.pos[i * 3 + 2] += (tmp.z - cloth.pos[i * 3 + 2]) * grip;
-      });
-      if (this.flight >= k.flightSeconds) this.repin();
-    }
+    } else if (this.snagged && this.settled < 1) this.lay(h);
     const t = this.time;
     const floor = this.floor!;
     this.sheets.forEach((s, j) => {
       const phase = this.phase[j];
       const gust = (i: number) => 1 + 0.3 * Math.sin(t * 2.3 - phase[i]) + 0.15 * Math.sin(t * 5.3 - phase[i] * 1.7);
-      s.cloth.step(h, this.air, k.drag, k.damping, k.iterations, gust, floor.at, this.posts);
+      s.cloth.step(h, this.air, k.drag, k.damping, k.iterations, gust, floor.at, this.posts, flying ? k.flightFollow : 0);
     });
   }
 
