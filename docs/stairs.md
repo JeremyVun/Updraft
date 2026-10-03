@@ -259,6 +259,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
   `stairs-lantern.ts` (the glow on the boat's own lantern). Chapter: `src/story/stairs.ts`, the sail's lens
   `src/story/stairs-sail.ts` (`SAIL_SHOTS`), the bird's line up the stair `src/story/stairs-track.ts`. Knobs:
   `tuning.stairs`.
+- **Wisps meeting solids**: each rag's card stands halfway to the front of its ball and thins away within
+  `SOLID_FADE` of the flights and landings, the loop's drawn-in flight and capsules round the child and the bird
+  (analytic distances in `stairs-puffs.ts`, the nearest eight per rag), so no card cuts a hard line through them.
+  Anything solid added in the white needs its shape there too.
 - **By quality level** (`CloudStairs.setLevel`, from `applyWorldQuality`): Ultra and High stream 56 wisps and march
   the haze at full step; Medium keeps 36 wisps and 1.25× longer haze steps, Low 24 wisps and 1.5×;
   the rags left thicken a little, and a change eases over about a second.
