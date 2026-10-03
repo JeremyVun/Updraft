@@ -50,10 +50,13 @@
   animation: chapters-in .7s ease both;
 }
 .chapters[hidden] { display: none; }
-/* The entrance must not hold the panel's opacity, or the fade out is skipped. */
-#veil.chapter-chosen .chapters { animation: none; opacity: 0; transition: opacity .45s ease; }
+/* An animation, not a transition: the entrance's fill holds the panel's opacity, and no transition would start. */
+#veil.chapter-chosen .chapters { animation: chapters-out .45s ease forwards; }
 @keyframes chapters-in {
   from { opacity: 0; }
+}
+@keyframes chapters-out {
+  to { opacity: 0; }
 }
 
 .chapters-list {
@@ -111,8 +114,8 @@
 @media (prefers-reduced-motion: reduce) {
   .chapters { animation: none; }
   .chapter-still,
-  .chapter-name,
-  #veil.chapter-chosen .chapters { transition: none; }
+  .chapter-name { transition: none; }
+  #veil.chapter-chosen .chapters { animation: none; opacity: 0; }
   .chapter:hover .chapter-still.loaded,
   .chapter:focus-visible .chapter-still.loaded { transform: none; }
 }

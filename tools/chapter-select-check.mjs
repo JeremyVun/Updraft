@@ -1,7 +1,9 @@
 // Check title-screen chapter select: hidden and never downloaded for new players, offered after finishing
 // (including saves finished before the flag existed), closing without starting, and a pick starting that room in
 // place: no navigation, the story already in the room at the click, audio running within a second of it, and the
-// room's entry save replacing the old save on the first frame. Continue then resumes the picked room.
+// room's entry save replacing the old save on the first frame, with the panel fading out over its .45 s rather than
+// vanishing. The tiles are the room paintings cut to 400x250, and the painting behind the veil fades away while the list
+// is open. Continue then resumes the picked room.
 // Usage: node tools/chapter-select-check.mjs (BASE defaults to http://127.0.0.1:5230/). Screenshots go to /tmp.
 // A pick matching a fresh `?chapter=` load in every room is tools/chapter-pick-check.mjs.
 import { openBrowser } from './lib/browser.mjs';
@@ -68,9 +70,14 @@ try {
   await page.waitForTimeout(900);
   await page.screenshot({ path: `${out}-title.png` });
 
+  assert(await page.locator('#veil').evaluate(e => e.classList.contains('painted')), 'the room painting shows behind the title');
   await page.locator('.chapters-toggle').click();
   await stills();
+  report.tiles = await page.evaluate(() => [...document.querySelectorAll('.chapter-still')].map(i => `${new URL(i.currentSrc).pathname.split('/').pop().split(/[-.]/)[0]} ${i.naturalWidth}x${i.naturalHeight}`));
+  assert.equal(report.tiles.length, 12, 'twelve tiles');
+  for (const tile of report.tiles) assert.match(tile, / 400x250$/, `tile ${tile}`);
   await page.waitForTimeout(900);
+  assert.equal(await page.locator('.veil-painting').evaluate(e => getComputedStyle(e).opacity), '0', 'the painting leaves while the list is open');
   await page.screenshot({ path: `${out}-open.png` });
   await page.keyboard.press('Escape');
   assert(await page.locator('.chapters').isHidden(), 'Escape closes the list');
@@ -93,7 +100,17 @@ try {
   await page.locator('.chapters-toggle').click();
   await stills();
   const before = navigations;
-  await page.evaluate(() => { window.__saves.length = 0; });
+  await page.evaluate(() => {
+    window.__saves.length = 0;
+    window.__panel = [];
+    const panel = document.querySelector('.chapters');
+    const sample = now => {
+      if (window.__pickAt === null) { requestAnimationFrame(sample); return; }
+      window.__panel.push([Math.round(now - window.__pickAt), +getComputedStyle(panel).opacity]);
+      if (now - window.__pickAt < 700) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
   await page.locator('.chapter', { hasText: 'Dark wood' }).click();
   const atClick = await page.evaluate(() => __game.story.name).catch(e => e.message);
   assert.equal(navigations - before, 0, 'a pick does not navigate');
@@ -102,6 +119,11 @@ try {
   report.audioMs = await page.evaluate(() => Math.round(window.__audioRunningAt - window.__pickAt));
   assert(report.audioMs < 1000, `audio running ${report.audioMs} ms after the pick`);
   assert.equal(await page.evaluate(() => __audio.length), 1, 'one AudioContext');
+  await page.waitForFunction(() => window.__panel.at(-1)?.[0] >= 700, null, { timeout: 5000 });
+  report.panel = await page.evaluate(() => window.__panel.map(([t, o]) => `${t}:${o.toFixed(2)}`).join(' '));
+  const fading = await page.evaluate(() => window.__panel.filter(([t, o]) => o > 0.05 && o < 0.95).length);
+  assert(fading >= 2, `the panel fades rather than vanishing: ${report.panel}`);
+  assert.equal(await page.evaluate(() => window.__panel.at(-1)[1]), 0, 'the panel has gone by the end of its fade');
   await page.waitForSelector('#veil', { state: 'detached', timeout: 30000 });
   await page.waitForFunction(() => __stats.frame > 30);
   report.navigations = navigations - before;
