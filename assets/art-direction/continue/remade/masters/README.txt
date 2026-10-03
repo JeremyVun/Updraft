@@ -20,7 +20,7 @@ Stairs is a fresh generation (stairs-land-fresh-v4), using the original prompt a
 For further camera corrections, start from those original inputs: repeated edits introduced visible artifacts.
 
 Installed derivatives: src/paintings/<chapter>-land.webp and <chapter>-port.webp,
-encoded at WebP quality 94 with sharp YUV conversion and unchanged native dimensions.
+encoded at WebP quality 85 (cwebp -m 6) with sharp YUV conversion and unchanged native dimensions.
 Matching chapter-select tiles are 400 x 250 WebP at quality 90.
 
 Jeremy will handle any subsequent upscale manually. After upscaling, encode the larger files

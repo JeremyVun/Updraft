@@ -16,11 +16,85 @@ const ROOMS: [start: string, name: string, still: URL][] = [
   ['jetty', 'Home', new URL('./stills/home.webp', import.meta.url)],
 ];
 
+const paintingOf = (start: string): string => start === 'jetty' ? 'home' : start;
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   node.className = className;
   node.textContent = text;
   return node;
+}
+
+/**
+ * The full painting behind the list follows the room the player looks at. The new one fades in over the old, which stays whole underneath until covered, so a crossfade never dips.
+ */
+class Backdrop {
+  readonly root = el('div', 'chapters-backdrop');
+  room = '';
+  private readonly images = new Map<string, HTMLImageElement>();
+  private top = 0;
+  private now = false;
+  private current: HTMLImageElement | null = null;
+
+  constructor() {
+    this.root.append(el('div', 'chapters-mute'));
+  }
+
+  look(room: string, now = false): void {
+    this.room = room;
+    this.now = now;
+    const img = this.load(room);
+    if (img.dataset.ready !== undefined) this.reveal(img, now);
+  }
+
+  load(room: string): HTMLImageElement {
+    const known = this.images.get(room);
+    if (known) return known;
+    const img = el('img', 'chapters-painting');
+    img.alt = '';
+    img.decoding = 'async';
+    img.fetchPriority = 'low';
+    img.dataset.room = room;
+    img.src = new URL(`../paintings/${room}-${innerWidth / innerHeight < 3 / 4 ? 'port' : 'land'}.webp`, import.meta.url).href;
+    this.images.set(room, img);
+    this.root.prepend(img);
+    img.decode().then(() => {
+      img.dataset.ready = '';
+      if (this.room === room) this.reveal(img, this.now);
+    }, () => {});
+    return img;
+  }
+
+  private reveal(img: HTMLImageElement, now: boolean): void {
+    if (img === this.current) return;
+    this.current = img;
+    this.root.classList.add('lit');
+    // Looked back at before the next painting covered it, it is still whole underneath: the ones over it fade away.
+    if (!now && img.classList.contains('shown') && getComputedStyle(img).opacity === '1') {
+      for (const other of this.images.values()) if (other !== img) other.classList.remove('shown');
+      return;
+    }
+    img.style.zIndex = String(++this.top);
+    const covered = (): void => {
+      if (!img.classList.contains('shown')) return;
+      for (const other of this.images.values()) if (+other.style.zIndex < +img.style.zIndex) other.classList.remove('shown');
+    };
+    if (now) {
+      img.classList.add('now', 'shown');
+      void img.offsetWidth;
+      img.classList.remove('now');
+      covered();
+      return;
+    }
+    // A painting that decoded before its first style pass would otherwise appear without its fade.
+    void getComputedStyle(img).opacity;
+    img.classList.add('shown');
+    const whole = (): void => {
+      if (getComputedStyle(img).opacity === '1') covered();
+      else if (img.classList.contains('shown')) requestAnimationFrame(whole);
+    };
+    whole();
+  }
 }
 
 /**
@@ -36,11 +110,30 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   panel.setAttribute('aria-label', 'Chapters');
   panel.hidden = true;
   const list = el('ul', 'chapters-list');
-  panel.append(list);
+  const back = el('button', 'chapters-back', 'back');
+  back.type = 'button';
+  panel.append(list, back);
   for (const node of [toggle, panel]) {
     node.addEventListener('pointerdown', e => e.stopPropagation());
     node.addEventListener('click', e => e.stopPropagation());
   }
+  const backdrop = new Backdrop();
+  veil.insertBefore(backdrop.root, veil.querySelector('.veil-wind'));
+  const titleRoom = (): string | undefined =>
+    veil.classList.contains('painted') ? veil.querySelector<HTMLElement>('.veil-painting')?.dataset.room : undefined;
+
+  // Where the list begins, so the painting is darkest under the tiles and opens out above them.
+  const fold = (): void => {
+    if (panel.hidden) return;
+    const top = list.querySelector('.chapter')?.getBoundingClientRect().top ?? 0;
+    backdrop.root.style.setProperty('--fold', `${Math.round(veil.clientHeight - Math.max(0, top))}px`);
+  };
+  window.addEventListener('resize', fold);
+
+  const show = (start: string, now = false): void => {
+    backdrop.look(paintingOf(start), now);
+    for (const button of list.querySelectorAll<HTMLElement>('.chapter')) button.classList.toggle('current', button.dataset.start === start);
+  };
 
   // The stills are fetched only once the player reaches for the list.
   const fill = (): void => {
@@ -48,6 +141,7 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
     for (const [start, name, still] of ROOMS) {
       const button = el('button', 'chapter');
       button.type = 'button';
+      button.dataset.start = start;
       const img = el('img', 'chapter-still');
       img.alt = '';
       img.decoding = 'async';
@@ -55,6 +149,14 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
       img.src = still.href;
       button.append(img, el('span', 'chapter-name', name));
       button.addEventListener('click', () => pick(start));
+      // A touch starts the room at once, so only a hovering pointer or the keyboard moves the painting.
+      button.addEventListener('pointerenter', e => {
+        if (e.pointerType !== 'touch') show(start);
+      });
+      button.addEventListener('focus', () => {
+        if (!button.matches(':focus-visible')) return;
+        show(start);
+      });
       const item = el('li', '');
       item.append(button);
       list.append(item);
@@ -65,7 +167,15 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
     panel.hidden = false;
     veil.classList.add('choosing');
     toggle.setAttribute('aria-expanded', 'true');
-    list.querySelector('button')?.focus({ preventScroll: true });
+    // The list opens on the painting already behind the title, so nothing changes until the player looks elsewhere.
+    const room = titleRoom();
+    const start = ROOMS.find(r => paintingOf(r[0]) === room)?.[0];
+    fold();
+    if (start) show(start, true);
+    // Every painting is fetched up front so a hover never waits on the network; on touch the painting never moves.
+    if (matchMedia('(hover: hover)').matches) for (const [room] of ROOMS) backdrop.load(paintingOf(room));
+    const first = list.querySelector<HTMLElement>(start ? `[data-start="${start}"]` : '.chapter');
+    first?.focus({ preventScroll: true });
   };
   const close = (): void => {
     veil.classList.remove('choosing');
@@ -75,13 +185,15 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   };
   const pick = (start: string): void => {
     veil.classList.add('chapter-chosen');
-    for (const button of list.querySelectorAll('button')) button.disabled = true;
+    for (const button of panel.querySelectorAll('button')) button.disabled = true;
     begin(start);
   };
 
   toggle.addEventListener('pointerenter', fill, { once: true });
   toggle.addEventListener('focus', fill, { once: true });
   toggle.addEventListener('click', open);
+  // `back` stands where `chapters` was, so the second press of a double click must not close the list again.
+  back.addEventListener('click', e => { if (e.detail < 2) close(); });
   panel.addEventListener('click', e => {
     if (e.target === panel || e.target === list) close();
   });

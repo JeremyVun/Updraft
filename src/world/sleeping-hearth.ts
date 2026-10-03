@@ -28,18 +28,33 @@ export class SleepingHearth {
     const stone=(g:THREE.BufferGeometry,c:THREE.Color)=>{
       const colours=new Float32Array(g.attributes.position.count*3);
       for(let i=0;i<colours.length;i+=3)colours.set(c.toArray(),i);
-      g.setAttribute('color',new THREE.BufferAttribute(colours,3));parts.push(g);
+      g.setAttribute('color',new THREE.BufferAttribute(colours,3));parts.push(g.index?g.toNonIndexed():g);
     };
-    // Broad worn hearthstone, two jambs and an open arch. There is no floating wall or chimney.
-    stone(new THREE.CylinderGeometry(.91,1,.14,10).scale(1,1,.64).translate(0,.05,0),new THREE.Color('#6d6258'));
-    for(const side of [-1,1])for(let j=0;j<3;j++){
-      const block=new THREE.BoxGeometry(.3,.24,.48,1,1,1).rotateY((rand()-.5)*.08).rotateZ((rand()-.5)*.07);
-      block.translate(side*.64,.22+j*.23,0);stone(block,new THREE.Color().setRGB(.30+rand()*.06,.27+rand()*.05,.23+rand()*.04));
+    const block=(w:number,h:number,d:number,x:number,y:number,z:number,c:THREE.Color)=>stone(new THREE.BoxGeometry(w,h,d).translate(x,y,z),c);
+    const paint=new THREE.Color('#dfd8c8'),soot=new THREE.Color('#1b1715'),brass=new THREE.Color('#b5915a');
+    const arch=<T extends THREE.Path>(path:T,w:number,spring:number,crown:number):T=>{
+      path.moveTo(-w/2,0);path.lineTo(w/2,0);path.lineTo(w/2,spring);path.quadraticCurveTo(0,spring+crown*2,-w/2,spring);path.closePath();
+      return path;
+    };
+    // A bedroom fireplace standing on its own in the grass like the rest of the room: a painted surround with an
+    // arched opening and a mantel, a sooty firebox, a tiled hearth and a little brass fender. No wall or chimney.
+    const front=new THREE.Shape();front.moveTo(-.73,0);front.lineTo(.73,0);front.lineTo(.73,1.02);front.lineTo(-.73,1.02);front.closePath();
+    front.holes.push(arch(new THREE.Path(),.9,.6,.11));
+    stone(new THREE.ExtrudeGeometry(front,{depth:.08,curveSegments:16,bevelThickness:.02,bevelSize:.02,bevelSegments:2}).translate(0,0,-.04),paint);
+    block(1.36,.98,.06,0,.49,-.34,paint);
+    block(1.36,.26,.27,0,.85,-.175,paint);
+    for(const side of [-1,1]){
+      block(.22,.74,.27,side*.57,.37,-.175,paint);
+      block(.02,.62,.27,side*.45,.31,-.175,soot);
     }
-    for(let i=0;i<9;i++){
-      const a=i/8*Math.PI;
-      stone(new THREE.BoxGeometry(.27,.27,.49).rotateZ(a-Math.PI/2).translate(Math.cos(a)*.64,.70+Math.sin(a)*.45,0),new THREE.Color('#82766a'));
-    }
+    stone(new THREE.ExtrudeGeometry(arch(new THREE.Shape(),.9,.6,.11),{depth:.02,bevelEnabled:false,curveSegments:16}).translate(0,0,-.31),soot);
+    block(.9,.02,.27,0,.75,-.175,soot);
+    block(1.74,.06,.5,0,1.1,-.12,paint);
+    block(1.58,.04,.42,0,1.055,-.12,paint);
+    for(let row=0;row<2;row++)for(let i=0;i<6;i++)
+      block(.255,.045,.29,(i-2.5)*.265,.0225,.2+row*.3-.15,new THREE.Color('#5c4f49').multiplyScalar(.92+((i+row)%2)*.12));
+    for(const side of [-1,1])block(.03,.12,.03,side*.62,.06,.38,brass);
+    stone(new THREE.CylinderGeometry(.012,.012,1.24,8).rotateZ(Math.PI/2).translate(0,.12,.38),brass);
     for(let i=0;i<3;i++){
       const log=new THREE.CylinderGeometry(.075,.085,.75,8).rotateZ(Math.PI/2).rotateY(i*.8-.8).translate((i-1)*.08,.19+i*.055,.08);
       stone(log,new THREE.Color('#32271f'));
@@ -60,7 +75,7 @@ export class SleepingHearth {
           float a=shape*smoothstep(0.0,.13,y)*(1.0-smoothstep(.78,1.0,y))*uFlame;
           vec3 col=mix(vec3(1.2,.19,.025),vec3(2.0,1.15,.24),pow(1.0-y,1.5));gl_FragColor=vec4(applyFog(col,vWorld),a*.85);}`});
     for(let i=0;i<5;i++){
-      const h=.5+rand()*.32,geo=new THREE.PlaneGeometry(.37,h,1,8).translate(0,h/2,0);
+      const h=.38+rand()*.2,geo=new THREE.PlaneGeometry(.37,h,1,8).translate(0,h/2,0);
       geo.setAttribute('aSeed',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count).fill(rand()),1));
       const flame=new THREE.Mesh(geo,fire);
       flame.position.set((i-2)*.105,.23,(rand()-.5)*.18);this.group.add(flame);this.tongues.push(flame);

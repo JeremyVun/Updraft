@@ -66,13 +66,24 @@ disables it.
 
 ## Chapter select
 
-Once the game has been finished, the title screen offers a faint `chapters` under Begin/Continue: a strip of small,
-soft-edged tiles of the rooms, each with a one- or two-word name; a pick begins that room. The tiles are the title
-screen's room paintings cut to 400x250 (`src/chapter-select/stills/<room>.webp`), so a room has one picture
-everywhere; `tools/chapter-stills.mjs` captures the rooms the paintings are made from (`assets/art-direction/continue/`).
-It must cost new players nothing, so `src/chapter-select/` (script, CSS and tiles) is a separate chunk that only a
-finished player's title screen imports, and the tiles download only when `chapters` is opened. A pick's panel fades
-out over .45 s as the veil departs.
+Once the game has been finished, the title screen offers a faint `chapters` under Begin/Continue. It opens the rooms
+as two rows of six small, soft-edged tiles (four rows of three on a phone), each with a one- or two-word name, laid
+over the title's own painting; a pick begins that room. The tiles are the title screen's room paintings cut to
+400x250 (`src/chapter-select/stills/<room>.webp`), so a room has one picture everywhere; `tools/chapter-stills.mjs`
+captures the rooms the paintings are made from (`assets/art-direction/continue/`). It must cost new players nothing,
+so `src/chapter-select/` (script, CSS and tiles) is a separate chunk that only a finished player's title screen
+imports, and the tiles download only when `chapters` is opened.
+
+The painting stays while the list is open, printed down under the tiles and opening out above them (`docs/styles.md`).
+The list opens on the room already behind the title, its tile lit as the current one. Hovering a tile, or
+reaching it with the keyboard, crossfades that room's full painting in over .45 s: the new painting fades in over the
+old, which stays whole underneath until the new one is whole, so the stack never drops below full cover. The painting
+stays on the last room looked at. A touch never moves it, because a tap starts the room at once. With a hovering pointer,
+opening the list fetches every room's full painting (`src/paintings/<room>-land.webp`, or `-port`) at low priority, so
+a hover never waits on the network; on touch none is fetched. `back`, drawn like `chapters`, stands where `chapters` was and closes the list
+without starting, returning focus to `chapters`; the second click of a double click on `chapters` is ignored, so the
+list stays open. Escape and a press on empty space close it too. A pick's panel fades out over .45 s as the veil
+departs, and the painting leaves with the veil's over .8 s (`tools/chapter-select-check.mjs`).
 
 Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; an old completed save sets it on the next
 visit. A pick starts that room at once, on the page already loaded and with sound, exactly as Begin or Continue

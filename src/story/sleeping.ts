@@ -9,6 +9,7 @@ import { SLEEP_SNOW_STOP, SLEEP_MIST_STOP } from '../world/sleeping-layout';
 import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
+import { FEATHER_LENGTH } from '../fx/feather';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 
 type Beat =
@@ -37,7 +38,6 @@ const T = tuning.sleeping;
 /** Across the bed, at right angles to the way its head end points. */
 const BESIDE = new THREE.Vector2(-BED_FACING.y, BED_FACING.x);
 /** Where the cygnet sits on the blanket: beside the child's knees, clear of their face in the bedside shot. */
-const PILLOW_FEATHER = new THREE.Vector3(PILLOW.x-BESIDE.x*.88,PILLOW.y+.32,PILLOW.z-BESIDE.y*.88);
 const ON_BLANKET = new THREE.Vector3(
   BED.x - BESIDE.x * 0.6 - BED_FACING.x * 0.65,
   BED.y + 0.94,
@@ -150,6 +150,9 @@ export class SleepingChapter implements Chapter {
   private readonly aim = new THREE.Vector3(-1, 0, 0);
   private readonly side = new THREE.Vector3();
   private readonly spot = new THREE.Vector3();
+  /** The loose feather on the covers, and where its tip comes to rest. */
+  private readonly featherRest = PILLOW.clone();
+  private readonly featherTip = new THREE.Vector3();
   /**
    * Anything handed to somebody else is handed to them by reference and read by them every frame after: where the
    * child is looking, where the bird is looking, what it is walking to, the flattened grass and the camera's eye.
@@ -247,7 +250,7 @@ export class SleepingChapter implements Chapter {
   get windInvitation(): THREE.Vector3 | null {
     if (this.beat === 'snow') return this.cast.sleeping.trail.snowTarget;
     if (this.beat === 'mist') return this.cast.sleeping.trail.mistTarget;
-    return this.beat === 'asleep' && this.called && this.t > this.callAt + 11 ? PILLOW_FEATHER : null;
+    return this.beat === 'asleep' && this.called && this.t > this.callAt + 11 ? this.featherRest : null;
   }
 
   /** The existing screen-space sweep reaches the pillow even when the ground lies behind it. */
@@ -593,9 +596,17 @@ export class SleepingChapter implements Chapter {
     }
     // A few quiet strokes suffice; time and ambient breeze never release the feather.
     if (this.windInvitation) {
-      sleeping.feather.preview = PILLOW_FEATHER;
+      // Worked loose from the pillow, it lies across the quilt over her pointing toward the lamp, draped over the
+      // rise of her so its ends stand just clear, and it rises and falls as she breathes.
+      const f = sleeping.feather;
+      sleeping.onCovers(0.12, 0.5, this.featherRest);
+      sleeping.onCovers(-0.45, 0.36, this.featherTip);
+      const rise = sleeping.onCovers(-0.16, 0.43, this.spot).y - (this.featherRest.y + this.featherTip.y) / 2;
+      f.previewAim.subVectors(this.featherTip, this.featherRest).normalize();
+      this.featherRest.addScaledVector(f.previewAim, FEATHER_LENGTH * 0.42).y += Math.max(0, rise) + 0.02;
+      f.preview = this.featherRest;
       sleeping.feather.previewLift = Math.min(1,this.pillowStroke/T.featherStroke);
-      k.watch(PILLOW_FEATHER);
+      k.watch(this.featherRest);
       this.pillowStroke += Math.max(0, this.bedBreath) * dt;
     }
     if (this.pillowStroke >= T.featherStroke) this.toFeather();
@@ -609,7 +620,7 @@ export class SleepingChapter implements Chapter {
     this.to('feather');
     sleeping.pillowPuff();
     sleeping.feather.release(
-      this.spot.copy(PILLOW_FEATHER).add(this.side.set(0,.38,0)),
+      this.spot.copy(this.featherRest).add(this.side.set(0,.3,0)),
       this.side.set(UPHILL.x * 0.4, 0.2, UPHILL.y * 0.4),
     );
     sleeping.feather.goal.copy(EDGE).setY(EDGE.y + 1.4);

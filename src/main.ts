@@ -733,7 +733,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   carry.after();
   foley.setOutput(sound.output);
   foley.frost(story.name==='sleeping' ? sleeping.cold*(1-sleeping.dawn) : 0);
-  if(story.name==='sleeping')foley.hearth(sleeping.hearth.flame.value,1-THREE.MathUtils.smoothstep(rig.camera.position.distanceTo(HEARTH),10,35),screenPan(rig.camera,HEARTH));
+  foley.hearth(story.name==='sleeping' ? sleeping.hearth.flame.value : 0,1-THREE.MathUtils.smoothstep(rig.camera.position.distanceTo(HEARTH),10,35),screenPan(rig.camera,HEARTH));
   const heardPan = screenPan(rig.camera, cygnet.position);
   for (const h of cygnet.heard) {
     if (h.kind === 'step') {
