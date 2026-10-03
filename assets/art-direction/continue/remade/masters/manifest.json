@@ -19,9 +19,9 @@
     },
     "webp": {
       "file": "src/paintings/island-land.webp",
-      "bytes": 190752,
-      "sha256": "d2bb30e3d736a80ede8297c2ea994efd0617f2280253fc4b352409b126ab8793",
-      "quality": 94
+      "bytes": 91316,
+      "sha256": "bbc7de7a1027c11d8087722788b6fd19030ac7285b92e31d732c5769d86cc0e6",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/island.webp",
@@ -51,9 +51,9 @@
     },
     "webp": {
       "file": "src/paintings/island-port.webp",
-      "bytes": 186182,
-      "sha256": "66b7694f3634b68b9c9e42472ee5a091566949213ffedf6eb80162cb3ddc3943",
-      "quality": 94
+      "bytes": 82268,
+      "sha256": "124c99b1efae893fab17c875c93b6d2dd74e49f24956652b0f963ffa38efb66f",
+      "quality": 85
     }
   },
   {
@@ -76,9 +76,9 @@
     },
     "webp": {
       "file": "src/paintings/washing-land.webp",
-      "bytes": 289312,
-      "sha256": "8bca8c6a78103ce20f81705fbfe21a98590e803a36c0765678a0249fcd8fe0e0",
-      "quality": 94
+      "bytes": 174062,
+      "sha256": "dcb24cdcb8e95d683bb830b234920927d75bd05527dba045384c070a2bcf2857",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/washing.webp",
@@ -108,9 +108,9 @@
     },
     "webp": {
       "file": "src/paintings/washing-port.webp",
-      "bytes": 276410,
-      "sha256": "b9bfa54c97e3bf3b12ef05596d9e4f4a2c1a2a498e8224e5b744d3ced7d2ffe6",
-      "quality": 94
+      "bytes": 167390,
+      "sha256": "8320ca7fbc4952698d3d85e6afec08ef9d6dc4f572e19dd1a5d0154e6625d60a",
+      "quality": 85
     }
   },
   {
@@ -133,9 +133,9 @@
     },
     "webp": {
       "file": "src/paintings/boats-land.webp",
-      "bytes": 333636,
-      "sha256": "16c4a3a8b115eca5a108855f72e6427ef52154a66b7b6d7b26f0001a53bb471d",
-      "quality": 94
+      "bytes": 197074,
+      "sha256": "f8d56ca113a22205f42e04737d12a4fcd80b6f3283ad763e08b4a67693414e81",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/boats.webp",
@@ -165,9 +165,9 @@
     },
     "webp": {
       "file": "src/paintings/boats-port.webp",
-      "bytes": 286900,
-      "sha256": "b0aa38218ba1a7905836b3c5778dcfc9b851531f53560f4678abbd1f2cc82555",
-      "quality": 94
+      "bytes": 165516,
+      "sha256": "6cbef67ffbac56ef4e3c8c53b8cce7fd0161c871a9d5a40477321ee191ad8c33",
+      "quality": 85
     }
   },
   {
@@ -190,9 +190,9 @@
     },
     "webp": {
       "file": "src/paintings/meadow-land.webp",
-      "bytes": 233920,
-      "sha256": "190c9d1a72df092bff78ae54d635abd83ef03042403f21e5b13f80254cdc72b3",
-      "quality": 94
+      "bytes": 135066,
+      "sha256": "f0ce70df9f9ce897a4d7de0c97d4e78ab1321208e057f58b7c36a6453bdb3cd4",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/meadow.webp",
@@ -222,9 +222,9 @@
     },
     "webp": {
       "file": "src/paintings/meadow-port.webp",
-      "bytes": 241010,
-      "sha256": "800ae0b3fa534c79c38f84a315121c36af0e0949b9df1f6c33e336e189396d5e",
-      "quality": 94
+      "bytes": 140334,
+      "sha256": "1edd95141d555ccec0fa47082d49bfa7a5df2f22aac47f92fd8f0bfa0d070456",
+      "quality": 85
     }
   },
   {
@@ -247,9 +247,9 @@
     },
     "webp": {
       "file": "src/paintings/birches-land.webp",
-      "bytes": 480396,
-      "sha256": "dbe4fc59cee34f0f1cf763c1002d1931b17d5c8de6aeb6e3d1a60033467dc27f",
-      "quality": 94
+      "bytes": 305422,
+      "sha256": "6d17382597b3d8b013b26b534e01b50dd6645173fc70e93da33d9349f9baa060",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/birches.webp",
@@ -279,9 +279,9 @@
     },
     "webp": {
       "file": "src/paintings/birches-port.webp",
-      "bytes": 467516,
-      "sha256": "07941702e5e1d8ba2443c86f37437ced4f637593744edc9ed2b0ca02a682a9dc",
-      "quality": 94
+      "bytes": 294324,
+      "sha256": "abdae9d43ff92ec7aadaef126cec75cb89a8625449ecf76584840fc2c90c3a9e",
+      "quality": 85
     }
   },
   {
@@ -306,9 +306,9 @@
     },
     "webp": {
       "file": "src/paintings/stairs-land.webp",
-      "bytes": 209368,
-      "sha256": "f40ec6933ed0368342332e608d940982c9f3b6dfe63c54a30e6d9a9e1975b796",
-      "quality": 94
+      "bytes": 114492,
+      "sha256": "62715a0800a2a5bf40b57788707536944c64343ca8f6979358e0cf04a648604e",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/stairs.webp",
@@ -338,9 +338,9 @@
     },
     "webp": {
       "file": "src/paintings/stairs-port.webp",
-      "bytes": 214404,
-      "sha256": "8439aec0748c0824bc1155be48eba085692ae9012e896e7124832170f4b8b43b",
-      "quality": 94
+      "bytes": 117840,
+      "sha256": "c9afdfb1f810e6d0a364657ea087c6ae8c6db847823c731bc9e5e6e7ec8063b9",
+      "quality": 85
     }
   },
   {
@@ -364,9 +364,9 @@
     },
     "webp": {
       "file": "src/paintings/drowned-land.webp",
-      "bytes": 273060,
-      "sha256": "5b6f366616ce2eaec93c36af1c0a43dd158428a6089c1bb6d3922c26ff20a09d",
-      "quality": 94
+      "bytes": 150672,
+      "sha256": "a161eb26de1f5882c31c7659fb7f597559c02bdbe725afc74498033701187f3b",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/drowned.webp",
@@ -397,9 +397,9 @@
     },
     "webp": {
       "file": "src/paintings/drowned-port.webp",
-      "bytes": 239354,
-      "sha256": "9453fe6514933d1178c961ed45c35efe64c8e7b5aead4209707a9bdbe26eaac7",
-      "quality": 94
+      "bytes": 131522,
+      "sha256": "7e6a3eeb51cf04de1be9599a347583d8204c200bb5377e9d2f1e2881e6e2fc77",
+      "quality": 85
     }
   },
   {
@@ -422,9 +422,9 @@
     },
     "webp": {
       "file": "src/paintings/wood-land.webp",
-      "bytes": 134160,
-      "sha256": "4c269a94edb7c42ba6ca969f5c99aafe7a9af188690d8430198d569509b16001",
-      "quality": 94
+      "bytes": 67234,
+      "sha256": "d2a3f5faf032e8e0dfc6ae12e2448ad9163e9b1b5a577a1fac990da01890e2bb",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/wood.webp",
@@ -454,9 +454,9 @@
     },
     "webp": {
       "file": "src/paintings/wood-port.webp",
-      "bytes": 141916,
-      "sha256": "4dc6d4c75755f6ef2f5932a09ea587c7895085e753e763ee3e3997f460503dfc",
-      "quality": 94
+      "bytes": 70066,
+      "sha256": "88f5d8bf2cc035008968796ba97e047a81eb8289d231b86774f7e61666f26cb4",
+      "quality": 85
     }
   },
   {
@@ -478,9 +478,9 @@
     },
     "webp": {
       "file": "src/paintings/sleeping-land.webp",
-      "bytes": 258448,
-      "sha256": "79cec244b37aeb2b8cc672654f56e24c222d467d31871825c4515189a3e3dad3",
-      "quality": 94
+      "bytes": 133930,
+      "sha256": "a3ad09305d8624e5813c14856cb3ec8603af116865a9b880fc53ecacf96035be",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/sleeping.webp",
@@ -509,9 +509,9 @@
     },
     "webp": {
       "file": "src/paintings/sleeping-port.webp",
-      "bytes": 200970,
-      "sha256": "e4ebef469837eeda5bc66b70c912045ac87a1f18044ce5e65c34a8bc304d22f6",
-      "quality": 94
+      "bytes": 90222,
+      "sha256": "86d4120e7cebc66138355d6d4e2d50dbc28febb5115ff0da6dfedd6e2579b12a",
+      "quality": 85
     }
   },
   {
@@ -535,9 +535,9 @@
     },
     "webp": {
       "file": "src/paintings/sea-land.webp",
-      "bytes": 225472,
-      "sha256": "c8b2b0d5c57013f1a19242a51c136ff7fa98d028475899a53162e5c1fecc542f",
-      "quality": 94
+      "bytes": 116960,
+      "sha256": "8560ae54db00f5644bcd417bbae67095609213ba5805ed3092079a007a1fd3ee",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/sea.webp",
@@ -568,9 +568,9 @@
     },
     "webp": {
       "file": "src/paintings/sea-port.webp",
-      "bytes": 217748,
-      "sha256": "bdcb1ea0c84294f8d97b03e58d87780724a182de6488337620570ae63b401e74",
-      "quality": 94
+      "bytes": 113416,
+      "sha256": "0411d57427043cb5e65a492b2c74bf6634ac7e37a710df76d0f9d949e5e087b1",
+      "quality": 85
     }
   },
   {
@@ -592,9 +592,9 @@
     },
     "webp": {
       "file": "src/paintings/mirror-land.webp",
-      "bytes": 189398,
-      "sha256": "a4eae08523a59a33622e9ff3016da8819e3de7cc37d66e725015d2c4a8e77aef",
-      "quality": 94
+      "bytes": 103528,
+      "sha256": "82ce2b42649ac5aef52ea905737f1fbca9e3b7fc2588ade763bd2825349a06ca",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/mirror.webp",
@@ -625,9 +625,9 @@
     },
     "webp": {
       "file": "src/paintings/mirror-port.webp",
-      "bytes": 213184,
-      "sha256": "23389f91025e6f0c99410483d2497c81381ba3471db4bd09871ad4d2ef3bd207",
-      "quality": 94
+      "bytes": 109556,
+      "sha256": "f1deec8bb1945f729c1f9076816d0cfe340b3131aa0b53d711e38f25f535d6b5",
+      "quality": 85
     }
   },
   {
@@ -651,9 +651,9 @@
     },
     "webp": {
       "file": "src/paintings/home-land.webp",
-      "bytes": 324968,
-      "sha256": "5cdb5f58b5868ead36c80eb9cb7a33639145e94d123cb3691dadf9dd996b3cb0",
-      "quality": 94
+      "bytes": 188002,
+      "sha256": "382ead03ae5f595121bb649fdf81707277d4fe8d28d3fb0eb9c5c0c8a00b447f",
+      "quality": 85
     },
     "tile": {
       "file": "src/chapter-select/stills/home.webp",
@@ -684,9 +684,9 @@
     },
     "webp": {
       "file": "src/paintings/home-port.webp",
-      "bytes": 279666,
-      "sha256": "8b7083d5cb8adc95f2a4f9f4d97348d666b56a78f22c8003983466b2a1a48be5",
-      "quality": 94
+      "bytes": 162874,
+      "sha256": "eafcd1d9a95761ed5212bbc51d426ae9d28ee9f248c956fc1e4ebe56feaa4ce2",
+      "quality": 85
     }
   }
 ]
