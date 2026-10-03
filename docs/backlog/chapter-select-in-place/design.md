@@ -529,7 +529,7 @@ The grid lower and a little smaller, now the only layout. Frames and measurement
 
 > I feel like the hover is slightly laggy. can it be made a bit more responsive? did you purposefully put a delay?
 
-The 120 ms dwell goes: a hovered tile moves the painting at once. The crossfade is .3 s ease-out instead of .7 s, and
-a tile brightens and grows in .25 s. With a hovering pointer, opening the list fetches every room's painting at low
+The 120 ms dwell goes: a hovered tile moves the painting at once. The crossfade is .45 s ease-out instead of .7 s, and
+a tile brightens and grows in .3 s (Jeremy: "maybe try 0.45s fade and 0.3s for brighten and grow"). With a hovering pointer, opening the list fetches every room's painting at low
 priority (about 3 MB of landscapes, only for finished players who open the list), so the first hover never waits on
 the network; on touch the painting never moves, so nothing more is fetched. This replaces round 1's fetch on first look.

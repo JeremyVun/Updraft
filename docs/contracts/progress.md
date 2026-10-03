@@ -76,7 +76,7 @@ imports, and the tiles download only when `chapters` is opened.
 
 The painting stays while the list is open, printed down under the tiles and opening out above them (`docs/styles.md`).
 The list opens on the room already behind the title, its tile lit as the current one. Hovering a tile, or
-reaching it with the keyboard, crossfades that room's full painting in over .3 s: the new painting fades in over the
+reaching it with the keyboard, crossfades that room's full painting in over .45 s: the new painting fades in over the
 old, which stays whole underneath until the new one is whole, so the stack never drops below full cover. The painting
 stays on the last room looked at. A touch never moves it, because a tap starts the room at once. With a hovering pointer,
 opening the list fetches every room's full painting (`src/paintings/<room>-land.webp`, or `-port`) at low priority, so
