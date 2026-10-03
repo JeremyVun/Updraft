@@ -70,6 +70,7 @@ class Backdrop {
     if (img.classList.contains('shown') && +img.style.zIndex === this.top) return;
     const z = ++this.top;
     img.style.zIndex = String(z);
+    this.root.classList.add('lit');
     const covered = (): void => {
       for (const other of this.images.values()) if (+other.style.zIndex < z) other.classList.remove('shown');
     };

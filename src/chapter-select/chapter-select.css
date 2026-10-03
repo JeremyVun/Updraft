@@ -73,13 +73,17 @@
   position: absolute;
   inset: 0;
   z-index: 100000;
+  opacity: 0;
+  transition: opacity .7s ease;
 }
+/* On a plain veil (its painting was late) nothing is printed down until a painting arrives. */
+.chapters-backdrop.lit .chapters-mute { opacity: 1; }
 .chapters-backdrop { --fold: 55%; }
 /* `--fold` is the height of the list's top edge above the bottom: below it the painting is printed down hard,
    above it the room opens out into its sky. */
 .chapters-backdrop-grid .chapters-mute {
-  background: linear-gradient(to top, rgb(var(--shade) / .86), rgb(var(--shade) / .8) var(--fold),
-    rgb(var(--shade) / .55) calc(var(--fold) + 9vh), rgb(var(--shade) / .32) calc(var(--fold) + 22vh), rgb(var(--shade) / .24));
+  background: linear-gradient(to top, rgb(var(--shade) / .88), rgb(var(--shade) / .84) var(--fold),
+    rgb(var(--shade) / .56) calc(var(--fold) + 9vh), rgb(var(--shade) / .32) calc(var(--fold) + 22vh), rgb(var(--shade) / .24));
 }
 .chapters-backdrop-row .chapters-mute {
   background: linear-gradient(to top, rgb(var(--shade) / .86), rgb(var(--shade) / .78) var(--fold),
@@ -159,7 +163,7 @@
   .chapter:hover .chapter-name { opacity: 1; }
 }
 .chapter:focus-visible .chapter-still.loaded { filter: none; transform: scale(1.04); }
-.chapter:focus-visible .chapter-name { opacity: 1; }
+.chapter:focus-visible .chapter-name { opacity: 1; text-decoration: underline; text-underline-offset: 5px; }
 
 /* A: two rows of six, standing on `back`. */
 .chapters-grid { --still: clamp(100px, 11.5vw, 200px); }
@@ -184,7 +188,7 @@
 .chapters-grid .chapters-caption { display: none; }
 
 /* B: one row of twelve where the invitation stood, the looked-at room named above it. */
-.chapters-row { --still: clamp(88px, calc((100vw - 96px - 110px) / 12), 150px); }
+.chapters-row { --still: clamp(88px, calc((100vw - 96px - 110px) / 12), 136px); }
 .chapters-row .chapters-list {
   bottom: calc(100% - var(--back-top) + 6px);
   grid-auto-flow: column;
@@ -200,7 +204,15 @@
 }
 .chapters-row .chapters-list::-webkit-scrollbar { display: none; }
 .chapters-row .chapters-list li { scroll-snap-align: center; }
-.chapters-row .chapter-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+/* A hovering pointer names the room it is over; a touch has no hover, so each tile keeps its own name there. */
+@media (hover: hover) {
+  .chapters-row .chapter-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+@media (hover: none) {
+  .chapters-row .chapters-caption { display: none; }
+  .chapters-row .chapter-name { font-size: 13px; }
+}
+.chapters-row:has(.chapter:focus-visible) .chapters-caption { text-decoration: underline; text-underline-offset: 8px; text-decoration-thickness: 1px; }
 .chapters-row .chapter:hover .chapter-still.loaded,
 .chapters-row .chapter:focus-visible .chapter-still.loaded { transform: scale(1.06); }
 .chapters-caption {
@@ -231,6 +243,7 @@
   .chapters { animation: none; }
   .chapters-backdrop,
   .chapters-painting,
+  .chapters-mute,
   .chapter-still,
   .chapter-name { transition: none; }
   #veil.chapter-chosen .chapters { animation: none; opacity: 0; }
