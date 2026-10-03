@@ -118,15 +118,14 @@ out vec3 vCentre;
 out float vAlpha;
 out vec4 vFog;
 out float vSun;
-out float vNear;
 out float vClear;
 ${SOLID_GLSL}
 void main() {
   vec3 c = (modelMatrix * vec4(aCentre, 1.0)).xyz;
   // Right at the lens a card would fill the screen for nothing, it has faded out by then: it is not drawn at all.
   float near = distance(c, cameraPosition);
-  vNear = smoothstep(1.2, 3.4, near);
-  if (vNear <= 0.0) {
+  float fade = smoothstep(1.2, 3.4, near);
+  if (fade <= 0.0) {
     gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
     return;
   }
@@ -140,7 +139,7 @@ void main() {
   vCorner = aCorner * 1.3;
   vWorld = c + (right * vCorner.x + up * vCorner.y) * r;
   vCentre = c;
-  vAlpha = aAlpha;
+  vAlpha = aAlpha * fade;
   // Through its middle the card would cut whatever stands in the ball, veiled behind and bare in front; drawn
   // nearer, the same on screen, what is in the ball is behind it, and where something reaches the card it thins away.
   float depth = -(viewMatrix * vec4(c, 1.0)).z;
@@ -165,7 +164,6 @@ in vec3 vCentre;
 in float vAlpha;
 in vec4 vFog;
 in float vSun;
-in float vNear;
 in float vClear;
 void main() {
   float d = length(vCorner);
@@ -176,7 +174,7 @@ void main() {
     + 0.5 * vnoise(vec2(around * 4.3 - vCentre.y * 3.0, uTime * 0.2));
   // Soft all the way from the middle, so overlapping balls add up to mist rather than show as a bunch of balls.
   float body = 1.0 - smoothstep(0.0, 0.8 + 0.3 * lump, d);
-  float a = body * body * vAlpha * uPuffs * vNear;
+  float a = body * body * vAlpha * uPuffs;
   a *= smoothstep(${f(BLEND)}, ${f(BLEND + SOLID_FADE)}, vClear);
   if (a <= 0.004) discard;
   float k = min(d, 1.0);
