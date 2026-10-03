@@ -31,7 +31,8 @@ click that chose. Nothing first-draws a program after boot (the ground re-bake r
 Verify: `npm run typecheck`, `npm run build`, then by hand on a QA preview with `start=1&progress=1`: Begin, Continue
 from a mid-room save, and a pick each start the right room with sound and no navigation.
 
-Done: [ ]
+Done: [x] 2026-10-03 (5eba223, 47a2d8b). `IslandChapter` frames its shot in its constructor, so boot needed no
+fixed fallback shot.
 
 ## Phase 2: gates
 

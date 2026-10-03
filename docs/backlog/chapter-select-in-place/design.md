@@ -64,6 +64,8 @@ player chooses.
    2. then, not necessarily inside the click: `followWindow(...windowAim(), true)`, `grass.update(rig.camera)`,
       `grass.bake(renderer)`, `post.render(0, true)` and `await gpuIdle(renderer)`, the same steps boot's ground
       stage runs, so the first frame of play pays for nothing;
+   Both halves hand a throw to `contextRecovery.trigger('runtime', …)`, as the frame loop does: a restore error now
+   happens at the click, where it would otherwise freeze the game behind the departing veil.
    3. telemetry, `pacer`/`quality`/`fpsWindowStart` resets and `requestAnimationFrame(frame)` as today.
    The veil is already departing and stays opaque until `startScreen.reveal()` after the first real frames, so these
    bakes are hidden. Continue and Begin pay them too (the window moves from the island to the save); that is the
