@@ -64,6 +64,8 @@ export class CloudWisps {
   private readonly nearest: number[] = Array(SOLIDS_PER_PUFF).fill(-1);
   private readonly gaps: number[] = Array(SOLIDS_PER_PUFF).fill(Infinity);
   private readonly cardAt = new THREE.Vector3();
+  /** Each card keeps the size it was made with, whatever its rag is respawned as. */
+  private readonly radii: number[] = [];
   /** How far each rag is drawn, easing to 0 for those a lower detail leaves out. */
   private readonly keep: number[] = [];
   private kept: number;
@@ -82,6 +84,7 @@ export class CloudWisps {
       this.wisps.push(w);
       this.keep.push(1);
       puffs.push({ x: 0, y: 0, z: 0, r: w.r, a: 0 });
+      this.radii.push(w.r);
     }
     const geo = puffGeometry(puffs);
     this.centres = geo.getAttribute('aCentre') as THREE.BufferAttribute;
@@ -132,14 +135,14 @@ export class CloudWisps {
     this.lift = (this.wisps.length / sum) ** MAKE_UP;
     if (drawn !== this.drawn) {
       this.drawn = drawn;
-      this.mesh.geometry.setDrawRange(0, drawn * 6);
+      (this.mesh.geometry as THREE.InstancedBufferGeometry).instanceCount = drawn;
     }
   }
 
   private writeAlpha(i: number): void {
     const w = this.wisps[i];
     const a = w.a * Math.min(1, w.age / 1.2) * this.keep[i] * this.lift;
-    for (let c = 0; c < 4; c++) this.alphas.setX(i * 4 + c, a);
+    this.alphas.setX(i, a);
   }
 
   /** What a rag's card can reach as it is drawn, nearest first. */
@@ -147,7 +150,7 @@ export class CloudWisps {
     const w = this.wisps[i];
     // As the shader draws it: drawn in toward the lens, its lumps reaching 1.25 of its breathing radius.
     const depth = -this.cardAt.copy(w.p).applyMatrix4(camera.matrixWorldInverse).z;
-    const r = w.r * 1.07;
+    const r = this.radii[i] * 1.07;
     const shrink = depth > 0 ? Math.max(depth - r * FRONT, Math.min(depth, 0.6)) / depth : 1;
     this.cardAt.copy(w.p).sub(camera.position).multiplyScalar(shrink).add(camera.position);
     const reach = r * 1.25 * shrink + SOLID_FADE + 0.2;
@@ -166,11 +169,9 @@ export class CloudWisps {
         id = d;
       }
     }
-    for (let c = 0; c < 4; c++) {
-      this.solids.setXYZW(i * 4 + c, ids[0], ids[1], ids[2], ids[3]);
-      this.moreSolids.setXYZW(i * 4 + c, ids[4], ids[5], ids[6], ids[7]);
-      this.softs.setX(i * 4 + c, w.soft);
-    }
+    this.solids.setXYZW(i, ids[0], ids[1], ids[2], ids[3]);
+    this.moreSolids.setXYZW(i, ids[4], ids[5], ids[6], ids[7]);
+    this.softs.setX(i, w.soft);
   }
 
   private place(figure: { packed: THREE.Vector4[]; bounds: THREE.Box3 }, at: THREE.Vector3, low: number, high: number, radius: number): void {
@@ -259,7 +260,7 @@ export class CloudWisps {
         this.spawn(w, true);
       }
       if (w.hold <= 0) w.soft += (1 - w.soft) * (1 - Math.exp(-dt * 1.5));
-      for (let c = 0; c < 4; c++) this.centres.setXYZ(i * 4 + c, w.p.x, w.p.y, w.p.z);
+      this.centres.setXYZ(i, w.p.x, w.p.y, w.p.z);
       this.writeAlpha(i);
       this.writeSolids(i, camera);
     });

@@ -13,6 +13,10 @@ export const SOLIDS_PER_PUFF = 8;
 
 /** How far toward the lens a puff's card stands, in its radius: halfway keeps the veil over the stair as it was on the whole. */
 export const FRONT = 0.5;
+/** How many cells each card is cut into across, so the distance to a solid is found at its corners and blended between. */
+const GRID = 16;
+/** Blending the distance across a cell overstates it near a solid's edges by up to this much, so the thinning starts this far out. */
+const BLEND = 0.1;
 const SLOPE = STEP.rise / STEP.going;
 const ACROSS_SLOPE = STEP.going / Math.hypot(STEP.going, STEP.rise);
 const SIDE = STEP.width / 2 + STRING.thick / 2 - 0.01;
@@ -78,7 +82,7 @@ float solidDistance(vec3 p, int i) {
   vec3 l = vec3(dot(d.xz, vec2(b.x, -b.y)), d.y, dot(d.xz, b.yx));
   // Most of a puff is well clear of a flight it can reach somewhere; the box round all of it says so cheaply.
   float bound = boxDistance(l, vec3(min(c.x, -1.05), -0.7, -0.4), vec3(max(c.y, 1.05), b.w + 1.35, c.w)) * scale;
-  if (bound > ${f(SOLID_FADE)}) return bound;
+  if (bound > ${f(BLEND + SOLID_FADE)}) return bound;
   float flight = flightDistance(l, b.z, b.w) * scale;
   if (a.w > 1.5) return flight;
   return min(flight, landingDistance(l - vec3(0.0, b.w, 0.0), c));
@@ -97,8 +101,10 @@ export function flightSolid(fl: Flight, L: Landing | null): THREE.Vector4[] {
     L ? new THREE.Vector4(L.x0, L.x1, run, run + L.z1 - L.z0) : new THREE.Vector4(-1.05, 1.05, run, run + 0.35)];
 }
 
-const VERT = /* glsl */ `
+const VERT = (solids: number) => /* glsl */ `
 ${ATMO_GLSL}
+uniform vec4 uSolids[${solids * 3}];
+uniform vec2 uTrick;
 in vec3 aCentre;
 in vec2 aCorner;
 in float aRadius;
@@ -114,9 +120,9 @@ out float vAlpha;
 out vec4 vFog;
 out float vSun;
 out float vNear;
-flat out vec4 vSolids;
-flat out vec4 vMoreSolids;
+out float vClear;
 out float vSoft;
+${SOLID_GLSL}
 void main() {
   vec3 c = (modelMatrix * vec4(aCentre, 1.0)).xyz;
   // Right at the lens a card would fill the screen for nothing, it has faded out by then: it is not drawn at all.
@@ -137,22 +143,24 @@ void main() {
   vWorld = c + (right * vCorner.x + up * vCorner.y) * r;
   vCentre = c;
   vAlpha = aAlpha;
-  vSolids = aSolids;
-  vMoreSolids = aMoreSolids;
   vSoft = aSoft;
   // Through its middle the card would cut whatever stands in the ball, veiled behind and bare in front; drawn
   // nearer, the same on screen, what is in the ball is behind it, and where something reaches the card it thins away.
   float depth = -(viewMatrix * vec4(c, 1.0)).z;
   vDrawn = cameraPosition + (vWorld - cameraPosition) * max(depth - r * ${f(FRONT)}, min(depth, 0.6)) / depth;
   gl_Position = projectionMatrix * viewMatrix * vec4(vDrawn, 1.0);
+  vClear = ${f(BLEND + SOLID_FADE)};
+  for (int k = 0; k < ${SOLIDS_PER_PUFF}; k++) {
+    float id = k < 4 ? aSolids[k] : aMoreSolids[k - 4];
+    if (id < 0.0) break;
+    vClear = min(vClear, solidDistance(vDrawn, int(id)));
+  }
 }`;
 
 /** Lit like the top of the cloud deck: gold where the low sun reaches it, glowing at the rim against the light, lilac underneath. */
-const FRAG = (solids: number) => /* glsl */ `
+const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uPuffs;
-uniform vec4 uSolids[${solids * 3}];
-uniform vec2 uTrick;
 in vec2 vCorner;
 in vec3 vWorld;
 in vec3 vDrawn;
@@ -161,10 +169,8 @@ in float vAlpha;
 in vec4 vFog;
 in float vSun;
 in float vNear;
-flat in vec4 vSolids;
-flat in vec4 vMoreSolids;
+in float vClear;
 in float vSoft;
-${SOLID_GLSL}
 void main() {
   float d = length(vCorner);
   // The lumps reach at most 1.25 out; beyond that the ball has no body, so skip its noise.
@@ -175,16 +181,7 @@ void main() {
   // Soft all the way from the middle, so overlapping balls add up to mist rather than show as a bunch of balls.
   float body = 1.0 - smoothstep(0.0, 0.8 + 0.3 * lump, d);
   float a = body * body * vAlpha * uPuffs * vNear;
-  if (a <= 0.004) discard;
-  if (vSolids.x >= 0.0) {
-    float clear = 1e3;
-    for (int k = 0; k < ${SOLIDS_PER_PUFF}; k++) {
-      float id = k < 4 ? vSolids[k] : vMoreSolids[k - 4];
-      if (id < 0.0) break;
-      clear = min(clear, solidDistance(vDrawn, int(id)));
-    }
-    a *= mix(1.0, smoothstep(0.0, ${f(SOLID_FADE)}, clear), vSoft);
-  }
+  a *= mix(1.0, smoothstep(${f(BLEND)}, ${f(BLEND + SOLID_FADE)}, vClear), vSoft);
   if (a <= 0.004) discard;
   float k = min(d, 1.0);
   vec3 nv = vec3(vCorner / max(d, 1.0), sqrt(max(0.0, 1.0 - k * k)));
@@ -205,46 +202,42 @@ void main() {
 export function puffMaterial(amount: { value: number }, solids: THREE.Vector4[], trick: { value: THREE.Vector2 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: { ...atmo.uniforms, uPuffs: amount, uSolids: { value: solids }, uTrick: trick },
-    vertexShader: VERT,
-    fragmentShader: FRAG(solids.length / 3),
+    vertexShader: VERT(solids.length / 3),
+    fragmentShader: FRAG,
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
 }
 
-/** One camera-facing card per puff, shaded as a soft ball. */
-export function puffGeometry(puffs: readonly Puff[], offset = new THREE.Vector3()): THREE.BufferGeometry {
-  const n = puffs.length;
-  const centre = new Float32Array(n * 12);
-  const corner = new Float32Array(n * 8);
-  const radius = new Float32Array(n * 4);
-  const alpha = new Float32Array(n * 4);
-  const solids = new Float32Array(n * 16).fill(-1);
-  const more = new Float32Array(n * 16).fill(-1);
-  const soft = new Float32Array(n * 4).fill(1);
+/** One camera-facing card per puff, shaded as a soft ball: a grid drawn once for each, placed from its centre in the shader. */
+export function puffGeometry(puffs: readonly Puff[]): THREE.InstancedBufferGeometry {
+  const n = puffs.length, side = GRID + 1;
+  const corner = new Float32Array(side * side * 2);
   const index: number[] = [];
-  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-  puffs.forEach((p, i) => {
-    for (let c = 0; c < 4; c++) {
-      centre.set([p.x - offset.x, p.y - offset.y, p.z - offset.z], (i * 4 + c) * 3);
-      corner.set(corners[c], (i * 4 + c) * 2);
-      radius[i * 4 + c] = p.r;
-      alpha[i * 4 + c] = p.a;
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) corner.set([x / GRID * 2 - 1, y / GRID * 2 - 1], (y * side + x) * 2);
+  }
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      const i = y * side + x;
+      index.push(i, i + 1, i + side + 1, i, i + side + 1, i + side);
     }
-    index.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3);
-  });
-  const g = new THREE.BufferGeometry();
+  }
+  const g = new THREE.InstancedBufferGeometry();
   // Three wants a position; the cards are placed in the shader from their centres.
-  g.setAttribute('position', new THREE.BufferAttribute(centre.slice(), 3));
-  g.setAttribute('aCentre', new THREE.BufferAttribute(centre, 3));
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(side * side * 3), 3));
   g.setAttribute('aCorner', new THREE.BufferAttribute(corner, 2));
-  g.setAttribute('aRadius', new THREE.BufferAttribute(radius, 1));
-  g.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
-  g.setAttribute('aSolids', new THREE.BufferAttribute(solids, 4));
-  g.setAttribute('aMoreSolids', new THREE.BufferAttribute(more, 4));
-  g.setAttribute('aSoft', new THREE.BufferAttribute(soft, 1));
   g.setIndex(index);
+  const each = (size: number, value: (p: Puff) => number[]) =>
+    new THREE.InstancedBufferAttribute(Float32Array.from(puffs.flatMap(value)), size);
+  g.setAttribute('aCentre', each(3, p => [p.x, p.y, p.z]));
+  g.setAttribute('aRadius', each(1, p => [p.r]));
+  g.setAttribute('aAlpha', each(1, p => [p.a]));
+  g.setAttribute('aSolids', each(4, () => [-1, -1, -1, -1]));
+  g.setAttribute('aMoreSolids', each(4, () => [-1, -1, -1, -1]));
+  g.setAttribute('aSoft', each(1, () => [1]));
+  g.instanceCount = n;
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
   return g;
 }
