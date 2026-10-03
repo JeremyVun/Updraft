@@ -8,8 +8,8 @@ import { swellAt, type Swell } from '../../world/water/swell';
 
 /** Which of the little boats' toys come back: the child's own, the teal and the yellow. */
 const FLEET = [0, 1, 2];
-/** Where each sails in the loose flotilla: behind the child's own along their course, and out to either side of it. */
-const LOOSE = [[0, 0], [-2.8, 0.8], [-1.4, -0.9]];
+/** Where each sails in the loose flotilla: behind the child's own along their course, and further out than it. */
+const LOOSE = [[0, 0], [-2.8, 1.7], [-1.3, 0.9]];
 /** Each hull's own pace and its own small difference of course, so the flotilla is never quite in step. */
 const PACE = [1, 0.98, 0.985];
 const STRAY = [0, 0.012, 0];

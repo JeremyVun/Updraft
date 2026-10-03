@@ -592,10 +592,11 @@ export class CrossingChapter implements Chapter {
         this.aim.set(playmate.x + Math.sin(round) * s.swimClear, 0, playmate.z + Math.cos(round) * s.swimClear);
         /** Making for where that will be by the time it gets there, as it does for the boat. */
         this.aim.addScaledVector(toys.velocity(this.friend, this.spot), 1 / s.swimTrack);
+        /** And never across another toy's way, nor into one: they do not move for it. */
         for (let i = 0; i < 3; i++) {
-          toys.at(i, this.spot).sub(this.aim).setY(0);
-          const gap = this.spot.length();
-          if (gap < s.swimClear) this.aim.addScaledVector(this.spot, -(s.swimClear - gap) / Math.max(gap, 1e-3));
+          toys.at(i, this.spot).addScaledVector(toys.velocity(i, this.toward), s.giveWay).sub(this.aim).setY(0);
+          const gap = this.spot.length(), clear = i === this.friend ? s.swimClear : s.swimClear * 1.4;
+          if (gap < clear) this.aim.addScaledVector(this.spot, -(clear - gap) / Math.max(gap, 1e-3));
         }
         /** Never further out from the boat than it dares, whatever the toys are doing. */
         const out = (this.aim.x - seat.x) * left.x + (this.aim.z - seat.z) * left.z;

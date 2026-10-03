@@ -95,7 +95,7 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
   assert(completed,'passage reaches home');assert.equal(c.swim,'done');
   assert(swimFrames>=fps*(tuning.seaPassage.swimFor-3)-1,'keeps the authored swim after its entry');
   assert(worstGap<tuning.seaToys.reach+4,`bird strayed from the boat ${worstGap}`);
-  assert(toysSeen&&among<2,`the cygnet swims among the toys: nearest ${among}`);
+  assert(toysSeen&&among<2&&among>0.7,`the cygnet swims among the toys and never into one: nearest ${among}`);
   assert(toyClear>2.5,`the toys pass clear of the boat: nearest ${toyClear}`);
   assert(sealife.toys.idle,'the toys have sailed on out of sight by the end of the passage');
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);

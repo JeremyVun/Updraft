@@ -1247,11 +1247,13 @@ export const tuning = {
     /** The boat eases for the swim once the toy it is watching is this near. */
     easeWithin: 11,
     /** Swimming out, how close beside the child's own it swims round it, and for how long among them before it turns back. */
-    swimClear: 1.1, playFor: 4,
+    swimClear: 1.2, playFor: 4,
+    /** Seconds of a toy's way it keeps clear of, ahead of the toy. */
+    giveWay: 0.6,
     /** As near as it gets to the place it is making for beside a toy sailing on: it is among them. */
     alongside: 1.4,
     /** How eagerly it swims out to them; and once there, how fast (radians a second) and how far (radians) it swings to and fro along the toy's near side. */
-    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 1.3, roundSweep: 1.2,
+    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 1.3, roundSweep: 0.8,
     /** Its paddling speed per unit it is short of where it is making for (as `cygnet.paddling` has it). */
     swimTrack: 1.1,
     /** Seconds the boat's way stays on it after it goes in, falling away. */
@@ -1261,7 +1263,7 @@ export const tuning = {
     /** It makes for the child's own toy unless another is this much nearer. */
     preferOwn: 2.5,
     /** It turns back early if the toys have fallen this far astern of the child in the boat. */
-    turnBackAstern: 6,
+    turnBackAstern: 4.5,
   },
   seaPassage: {
     speed: 10,
