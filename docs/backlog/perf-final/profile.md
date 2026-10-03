@@ -314,3 +314,193 @@ and wisps were 13–37% of the frame in the census, so 5b shrinks that frame and
 there: ripples (8.0% Low, 8.8% Medium), cloud shadows (2.6%, 5.6%), the R11F targets (3.7%, 4.9%), the near grass
 (#3, #4) and the child's bones (2.4%, −2.1%). On top of the stairs and the sail the wisps and haze were 0–3%, so #10
 (13.3–28.2%) barely moves (it would rise slightly).
+
+## Phase 8a: the whole game against the starting commit (2026-10-03, `main` at 58f6467 against 4140eb6)
+
+**Headline.** Per frame, the finished game is **19.8% lighter at Ultra and 25.2% lighter at Low** than at 4140eb6,
+weighted by minutes (Ultra against the old High, Low against the old Low preset's settings). Graphics memory at Ultra
+fell from 285–341 MiB to 241–252 MiB (−33 to −100 MiB by room); at Low from 177–233 MiB to 159–183 MiB.
+
+Read with that: the old Low presented at 30 fps; the new Low at 60, so where a device holds 60 at Low it does about
+1.5× the old Low's GPU work per second (5.21 ms × 60 against 6.97 ms × 30), by Jeremy's ruling of 2026-10-03. And 4140eb6
+to 58f6467 also carries boot-veil (phases 1–4) and a few small fixes, so the veil numbers below are mostly boot-veil's.
+
+### Method
+
+- `tools/frame-profile.mjs` gains `PAIR_BASE`: both builds load the same fixture at once in one browser, each stopped
+  on the same frame under `FRAME=600` (stairs fixtures on frames), and the frame (`FRAME_PASS`'s frame with
+  `FRAME_SIM=1`: wind step, reflection, scene, post) is timed in ABBA order between the two pages, 40 rounds of 20
+  draws after one discarded round. The change is the median of the 40 paired ratios; each page also pairs itself with
+  `none`. `PAIR_PARTS` times component ablations inside each page (20 rounds at Ultra, 14 at Low, 10 draws).
+  `SETUP`/`PAIR_SETUP` set each build's level right after Begin. 1376×1032 at device scale 2.
+- Ultra: `RATIO=1.5 MSAA=2`; the old side gets the old High's grass reach (`grass.setQuality(1,1.15,true)`; a locked
+  4140eb6 capture otherwise draws 100%). Low: `RATIO=0.85 MSAA=2`, new `__audit.level('low')`, old
+  `applyWorldQuality({...quality.level,detail:0},true)` (grass 80%/85%, terrain 1.1, mirror alternate, 0.5).
+- **Noise.** Heavy GPU load from other projects all day (a native game, an iOS simulator, peers' captures): frame
+  milliseconds swung 2–3× between runs (the island's old Ultra frame read 29.4 ms in the morning, 15.3 in the
+  afternoon), so **read the percentages; the milliseconds are inflated and not comparable across rows.** Floors:
+  in-page `none` |median| 1.1–1.2% (Ultra), 0.8–1.3% (Low); a build against itself in two pages (`PAIR_BASE` = `BASE`)
+  read −0.2% at the island (IQR −2.2 to +1.2) and +0.9% at sea (−0.8 to +2.6). Treat under about 2% in one room as
+  noise. Five Ultra fixtures with wide spreads in the morning (island, `stairs:waiting|climb|cloud|fog`) were re-run in
+  the afternoon; the table uses the re-runs (each moved by 1–6 points in the same direction, IQRs now 3–10 points).
+- Weighted by "Minutes" above (39.5): crossings the mean of `lines` and `sea`, Meadow of `meadow` and `meadow:walk`,
+  Home of `jetty` and `summit`. Raw data: `/tmp/updraft-pf-p8a-runs/` (deleted at merge).
+
+### Per chapter (ms per frame; "now" is 4140eb6's frame less the median paired saving)
+
+| Chapter | Min | Fixture | Ultra 4140eb6 | Ultra now | Ultra change | Low 4140eb6 | Low now | Low change |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| Island | 1.9 | island | 15.28 | 12.08 | −23% | 6.72 | 5.05 | −25% |
+| Crossing to Washing | 1.6 | lines | 18.60 | 14.51 | −24% | 6.78 | 4.53 | −34% |
+| Washing | 1.8 | washing | 13.32 | 10.44 | −21% | 7.14 | 5.54 | −23% |
+| Crossing to Boats | 0.5 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Boats | 1.6 | boats | 14.74 | 11.39 | −23% | 6.52 | 4.72 | −28% |
+| Crossing to Meadow | 0.7 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Meadow | 5.1 | meadow+meadow:walk | 15.10 | 11.46 | −23% | 8.12 | 6.05 | −26% |
+| Crossing to Birches | 0.3 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Birches | 2.0 | birches | 14.24 | 11.49 | −19% | 8.56 | 6.56 | −19% |
+| Crossing to Stairs | 0.4 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Stairs: grass and puzzle | 0.9 | stairs:waiting | 17.74 | 16.27 | −8% | 8.06 | 6.52 | −19% |
+| Stairs: last flight | 0.38 | stairs:climb | 16.34 | 14.82 | −10% | 7.93 | 6.58 | −17% |
+| Stairs: loop | 0.4 | stairs:loop | 34.68 | 29.69 | −15% | 6.33 | 4.76 | −24% |
+| Stairs: in the white | 0.45 | stairs:cloud | 25.23 | 22.51 | −13% | 6.01 | 4.51 | −24% |
+| Stairs: on top | 1.25 | stairs:top | 33.83 | 30.79 | −12% | 8.90 | 7.93 | −11% |
+| Stairs: sail | 1.47 | stairs:sail | 24.31 | 21.66 | −12% | 7.44 | 6.47 | −13% |
+| Stairs: fog | 0.39 | stairs:fog | 14.35 | 11.73 | −20% | 7.78 | 6.53 | −16% |
+| Drowned (drift) | 1.8 | drowned | 11.93 | 8.98 | −22% | 10.92 | 7.45 | −34% |
+| Wood | 2.5 | wood | 13.15 | 9.70 | −26% | 6.66 | 4.98 | −25% |
+| Crossing to Sleeping | 0.6 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Sleeping | 3.3 | sleeping | 21.47 | 16.73 | −24% | 7.66 | 5.39 | −30% |
+| Open sea to Mirror | 2.5 | sea | 16.38 | 13.37 | −20% | 4.85 | 3.45 | −30% |
+| Mirror | 2.2 | mirror | 8.18 | 6.86 | −17% | 2.87 | 2.41 | −15% |
+| Crossing home | 2.0 | lines+sea | 17.49 | 13.94 | −22% | 5.82 | 3.99 | −32% |
+| Home | 3.5 | jetty+summit | 14.36 | 10.81 | −25% | 6.66 | 5.10 | −23% |
+
+Weighted: **Ultra 16.6 → 13.3 ms, −19.8%** (the milliseconds inflated by the day's load: the census of 2026-09-30
+read 10.0 ms here); **Low 6.97 → 5.21 ms, −25.2%**. Every room is lighter at both levels. The stairs gain least at
+Ultra (−8 to −15% below and in the cloud, −12% on top and the sail: their cost is the stairs room itself, kept as it
+was by ruling); the sea rooms and crossings most at Low (−30 to −34%: no reflection, no bloom, the plain sea).
+
+### Components (share of the weighted frame, ablations in each page; they overlap)
+
+| Component | Ultra 4140eb6 | Ultra now | Low 4140eb6 | Low now | Largest now |
+|---|---:|---:|---:|---:|---|
+| Sea shading (`water-frag-flat`) | 24.0% | 23.1% | 25.6% | 18.4% | drowned 58% (Ultra) |
+| Grass | 16.4% | 16.3% | 21.9% | 25.6% | Meadow walk 35% (Ultra), Meadow 46% (Low) |
+| Terrain shading (`terrain-flat`) | 10.9% | 10.8% | 11.5% | 9.6% | Meadow 21–23% |
+| Post (resolve, bloom, grade) | 10.5% | 8.0% | 8.7% | 4.1% | |
+| Bloom | 8.2% | 7.1% | 6.9% | 0.4% (off) | |
+| Stairs room (`stairs`) | 6.2% | 7.5% | 7.4% | 8.3% | on top 50% (Ultra), 58% (Low) |
+| Actors | 5.0% | 6.1% | 9.2% | 10.2% | open sea 23% (Low) |
+| Sky radiance (`sky-flat`) | 5.8% | 5.7% | 3.1% | 2.7% | mirror 15% |
+| Wind step | 8.2% | 4.8% | 13.1% | 3.2% | |
+| Reflection pass | 3.0% | 4.5% | 3.5% | 0.9% | mirror 24% |
+| Stairs cloud top | 3.1% | 3.7% | 4.4% | 5.3% | on top 35% (Ultra), sail 49% (Low) |
+
+In milliseconds (weighted) the sea's shading fell 3.98 → 3.08 at Ultra and 1.79 → 0.97 at Low, grass 2.72 → 2.18
+and 1.53 → 1.35 (Low now draws 100% grass where the old Low drew 80% at 85% reach), terrain 1.81 → 1.44 and 0.80 →
+0.51, post 1.75 → 1.07 and 0.61 → 0.22, the wind step about half (the 17-pass step; chains of small passes inflate
+most under load, so its old share is overstated). Shares that rose (actors, the stairs, the reflection at Ultra) are
+the same work in a smaller frame. The deck's presence (`deck-out`, 8.4% in the census) is no longer a component: the
+deck-free programs are the game outside the stairs.
+
+### CPU (Ultra, live play, 6 s CPU profile and 2 s census per build per fixture, builds alternated)
+
+| Fixture | Script median/p90 4140eb6 | Now | Draw calls (scene, reflection, post) | Largest items now (ms/frame) |
+|---|---:|---:|---|---|
+| island | 1.7/2.0 | 1.7/2.0 | 53 vs 53 | child 0.17, wind 0.15, grass-select 0.08 |
+| lines | 2.3/2.7 | 2.2/2.5 | 66 vs 67 | cygnet 0.18, child 0.17, wind 0.15 |
+| washing | 2.4/2.7 | 2.0/2.4 | 44 vs 44 | child 0.25, cygnet 0.22, wind 0.16 |
+| sea | 2.3/2.7 | 2.2/2.6 | 107 vs 108 | child 0.19, wind 0.17, story 0.08 |
+| boats | 2.2/2.5 | 1.9/2.4 | 106 vs 106 | child 0.19, cygnet 0.17, wind 0.14 |
+| meadow | 2.0/2.4 | 1.9/2.4 | 44 vs 44 | child 0.21, cygnet 0.20, wind 0.16 |
+| meadow:walk | 3.1/3.5 | 2.0/2.4 | 65 vs 64 | meadow-creatures 0.18, child 0.15, cygnet 0.15 |
+| birches | 3.7/4.1 | 3.4/3.9 | 65 vs 65 | story 1.53, child 0.18, cygnet 0.14 |
+| stairs:waiting | 1.8/2.1 | 1.7/2.0 | 56 vs 56 | child 0.15, cygnet 0.14, wind 0.13 |
+| stairs:climb | 1.8/2.1 | 1.7/1.9 | 46 vs 46 | cygnet 0.16, wind 0.16, child 0.16 |
+| stairs:loop | 2.0/2.5 | 1.4/1.7 | 47 vs 48 | wind 0.15, cygnet 0.14, child 0.13 |
+| stairs:cloud | 1.6/1.8 | 1.8/2.1 | 39 vs 40 | child 0.15, cygnet 0.15, wind 0.14 |
+| stairs:top | 1.9/2.3 | 2.0/2.4 | 53 vs 59 | village-update 0.21, child 0.15, wind 0.14 |
+| stairs:sail | 1.9/2.0 | 1.6/1.8 | 46 vs 46 | village-update 0.22, child 0.14, cygnet 0.13 |
+| stairs:fog | 2.2/2.9 | 2.1/2.5 | 51 vs 51 | child 0.20, cygnet 0.18, wind 0.18 |
+| drowned | 2.2/2.5 | 2.1/2.4 | 48 vs 48 | cygnet 0.21, child 0.20, village-update 0.17 |
+| wood | 1.9/2.3 | 1.8/2.1 | 48 vs 48 | child 0.17, cygnet 0.16, wind 0.15 |
+| sleeping | 2.2/2.5 | 1.8/2.1 | 72 vs 72 | child 0.17, cygnet 0.16, wind 0.13 |
+| mirror | 2.3/2.6 | 2.2/2.6 | 193 vs 193 | child 0.21, wind 0.17, bloom 0.07 |
+| jetty | 2.1/2.5 | 2.0/2.4 | 48 vs 48 | child 0.20, wind 0.18, grass-select 0.08 |
+| summit | 1.9/2.3 | 1.9/2.3 | 40 vs 40 | child 0.23, wind 0.17, grass-select 0.09 |
+
+Weighted script median 2.25 → 2.04 ms (−10%): the Meadow walk 3.1 → 2.0 (its creatures on the height memo), washing
+2.4 → 2.0, the child and the cygnet 0.13–0.25 ms each everywhere. CPU load from other processes varied through the
+run; read differences under 0.2 ms in one fixture as noise. Draw calls are unchanged at Ultra (stairs top 53 → 59);
+at Low the frozen frame draws 10–23 fewer (bloom off, the ordinary reflection off: island 54 → 31, crossing 66 → 44).
+The Birches' story script is still 1.5 ms (the scarf), and the drowned village still updates through the top and the
+sail (0.21 ms, the rest dropped in phase 1).
+
+### Graphics memory (`tools/memory-census.mjs`, MiB; textures, render targets and buffers, canvas excluded)
+
+| Fixture | Ultra 4140eb6 | Ultra now | Low 4140eb6 | Low now |
+|---|---:|---:|---:|---:|
+| Island | 341.3 | 241.2 | 233.2 | 170.2 |
+| Meadow walk | 284.9 | 252.1 | 176.8 | 181.2 |
+| Open sea | 307.2 | 250.1 | 179.5 | 159.4 |
+| Stairs sail | 338.3 | 252.4 | 232.2 | 183.3 |
+
+At Ultra the scene target is 109.7 → 73.1 MiB, `post.clean` 24.4 → 12.2, bloom 22.3 → 11.2 (the R11F_G11F_B10F
+targets) and the stairs 48.8 → 14.5 (indexed); the canvas also lost its 12 MiB depth buffer (not in these totals). At
+Low bloom's 7.2 MiB is released. The stairs' buffers are now resident from boot in every room (boot-veil draws every
+program behind the veil), so a cold start into the Meadow holds 14.5 MiB of stairs it did not before (the Meadow row
+at Low); in a played journey the old build held 48.8 MiB of them from the island on. The grass owner reads 14–39 MiB
+by room on the new build (33.2 constant on the old): what sits under `grass.lods` now varies with what has been drawn.
+
+### Frame-time spikes (frame intervals; >25 ms counted)
+
+- **Through the stairs** (`tools/frame-spikes.mjs stairs`, new: the chapter played on frames from the last flights
+  to 300 frames into the village, about 15,100 frames, Ultra settings): 4 runs now, 3 at 4140eb6, alternated. Over
+  25 ms: now 75, 80, 289 and 410 frames, 4140eb6 598, 381 and 339; worst now 33, 100, 50 and 67 ms, 4140eb6 133, 34 and
+  100 ms. The over-25 frames are GPU-bound frames under the day's load (33 ms, one missed refresh), concentrated where
+  the stairs are heaviest (hesitate, birdFirst, skein, gather); in the two runs taken back to back with the old build's
+  first two the new build missed 5–8× fewer. The single long frames (50–100 ms) fall at different moments in every
+  run on both builds (fog, `thin`, sail, `follow`, `emerge`): none repeats, read as outside load. One program is first
+  linked during the chapter on both builds (`programsAdded` 1).
+- **Meadow walk and a crossing** (`tools/window-hitch.mjs meadow|boats 90`, Ultra settings, 2 runs each): at window
+  moves the worst gap was 16.8 ms in every new run (7, 7, 11 and 9 moves); 4140eb6 16.8 ms in three runs and 50 ms in
+  one boats run. Elsewhere the worst was 16.8 / 16.8 / 16.8 / 83.4 ms now and 33.3 / 16.8 / 33.4 / 66.7 ms before
+  (load, not at moves). No new programs.
+- **Window-move bench** (`window-hitch bench`, 16 forced moves, 2 runs per build): a move 10.5–16.2 ms median from
+  submission to GPU completion now, 12.6–17.3 before; the light bake alone 5.8–7.0 ms now, 6.3–7.8 before; height
+  1.6–3.2 / 2.1–4.0; shore 1.5–3.5 / 1.4–4.5 (all inflated by load; the census measured the light bake at 2–2.4 ms).
+- **Level switches** (`tools/frame-spikes.mjs levels`, the island at rest, Ultra → Medium → Low → Ultra every 4 s, 4
+  cycles, 3 runs, 36 switches; the level applies at once, the worst interval in the 150 frames after each): 30 switches
+  no frame over 16.8 ms; 4 at 33 ms; one at 50 ms (to Low) and one at **66.7 ms** (to Medium), both in the first cycle of
+  run 1. Away from the switches the same runs read p99 16.8–33.4 ms and up to 50 ms. So a switch costs nothing
+  measurable once each level has been visited; the first switch into a level can cost one or two frames (the 50–83 ms
+  phase 5a saw), most likely its first targets (half bloom, the 0.85× and 1× sizes) being allocated. Rare (a manual
+  choice, or Auto's step) and within what the load alone produced; not chased further.
+- **Auto** (`tools/quality-budget-profile.mjs`, throttled GPU): Ultra → High → Medium → Low as the load grew (at loads
+  54, 130, 438), one failed climb to Medium during the hold, back up Low → Medium → High → Ultra in 36 s once the load
+  lifted, and at the boundary down to Low and resting there. Passed.
+
+### The veil (QA previews, cold profiles, alternated new/old/old/new, 4 loads each)
+
+| | 4140eb6 | Now |
+|---|---:|---:|
+| Worst painted veil gap (`boot-profile`, median of 8) | 667–700 ms (worst 833) | 133 ms (worst 167) |
+| Time to ready (median per block) | 4.3–4.7 s | 3.5–4.3 s |
+| Programs linked by ready | 206 | 204 |
+| `start-check` | fails: veil blocked 683 ms (its own tool; the current one 600 ms) | passes: worst gap 117 ms |
+
+Most of this is boot-veil's (merged between the two commits). With this item's variants the veil is no longer and has
+no freeze; programs are counted from `linkProgram` calls before ready.
+
+### Release checks (`docs/testing.md`, on the worktree at 58f6467 plus these tools)
+
+`npm run typecheck` and `npm run build` pass; `node tools/production-build-check.mjs` passes ("Production ignores
+all game overrides; QA retains them"). `BASE=<QA preview> npm run check:release`: 56 of 76 pass, **the full playthrough
+passes** (Begin through every chapter, completed-save reload and Play again, 41 minutes). The 20 failures are the
+preview, not the game: the 17 audio and score checks and `shader-browser` and `progress` import `/src/...` modules,
+which a built preview does not serve ("Failed to fetch dynamically imported module"), and `frame-time-browser` hooks
+the loop by its function name `frame`, which minification renames (a 90 s timeout). Against the worktree's dev server all 20 pass (the audio group 17 of 17,
+`shader-browser`, `progress`, `frame-time-browser`), so nothing fails for the game and none was re-run at 4140eb6.
+`testing.md`'s release recipe (`BASE=<preview> npm run check:release`) cannot pass as written: those checks need
+`BASE` on a dev server.
