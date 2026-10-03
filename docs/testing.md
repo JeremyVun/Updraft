@@ -116,8 +116,8 @@ edit.
 
 **Saves and lifecycle**: `progress-check`, `progress-schema-check`, `chapter-select-check` (who is offered chapters;
 a pick starts its room in place, with sound and the room's entry save, without navigating), `chapter-pick-check`
-(every room picked on a page that loaded another room's save matches a fresh `?chapter=` load 3 s in; `ONLY=wood,jetty`
-for some rooms), `analytics-check`, `analytics-browser-check`; see `docs/contracts/progress.md` and `analytics.md`.
+(every room picked on a page that loaded another room's save matches a fresh `?chapter=` load 3 s in; a room that
+differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` for some rooms), `analytics-check`, `analytics-browser-check`; see `docs/contracts/progress.md` and `analytics.md`.
 
 **Audio** (offline, through a headless dev server, no GPU)
 
