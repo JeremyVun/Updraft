@@ -98,12 +98,19 @@ void main() {
 const WEED_MEAN = 0.21;
 const CAUSTICS_MEAN = 0.11;
 
-/** The sea's effects by quality level: Medium loses the hull's wet collar, Low also the lantern, the seabed's detail and the reflection of the world. */
+/**
+ * The sea's effects by quality level: Medium loses the hull's wet collar, Low also the lantern, the seabed's detail and
+ * the reflection of the world. Each set holds the next, so whatever is still fading out keeps a registered variant.
+ */
 const SEA_EFFECTS: Record<SeaEffects, Choice> = {
   all: { HULL_COLLAR: true, LANTERN_GLINT: true, SEABED_DETAIL: true, SEA_REFLECTION: true },
   noCollar: { HULL_COLLAR: false, LANTERN_GLINT: true, SEABED_DETAIL: true, SEA_REFLECTION: true },
   plain: { HULL_COLLAR: false, LANTERN_GLINT: false, SEABED_DETAIL: false, SEA_REFLECTION: false },
 };
+/** `uSeaEffects` carries how much of each is shown, in this order. */
+const SEA_EFFECT_SLOTS = ['HULL_COLLAR', 'LANTERN_GLINT', 'SEABED_DETAIL', 'SEA_REFLECTION'] as const;
+/** A quality change fades the sea's effects over this many seconds, as the grass and the bloom change. */
+const SEA_EFFECT_FADE = 1;
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
@@ -118,6 +125,7 @@ uniform sampler2D uRipple;
 uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
 uniform float uMirrorOn;
+uniform vec4 uSeaEffects;
 uniform vec2 uBreeze;
 uniform vec3 uDeep;
 uniform vec3 uAbsorb;
@@ -365,7 +373,7 @@ void main() {
   vec3 mirror = mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0), seen);
   // Capped just above the open sky: the mirrored sun disc would bloom, and the glitter draws the sun instead.
   // The planar mirror lies at sea level; elevated pools reflect the sky rather than a displaced scene.
-  vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool));
+  vec3 refl = mix(sky, min(mirror, sky * 1.25 + 0.1), seen * (1.0 - pool) * uSeaEffects.w);
 #else
   vec3 refl = sky;
 #endif
@@ -378,7 +386,7 @@ void main() {
   float sh = cloudShadow(xz) * mix(1.0, bedN.w, inside);
   vec3 scatterLight = uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh;
 #if LANTERN_GLINT
-  scatterLight += lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5;
+  scatterLight += lanternLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.5 * uSeaEffects.y;
 #endif
   vec3 body = uDeep * scatterLight;
   if (depth < 9.0) {
@@ -388,29 +396,29 @@ void main() {
     float bedDepth = max(boatsWaterBase(bedXZ) - mix(-12.0, texture(uHeightTex, clamp(domainUv(bedXZ), 0.0, 1.0)).r, inside), 0.0);
     float path = bedDepth / tDown;
 
+    // The detail's averages, so the shallows keep their colour without its pattern.
+    vec3 bed = mix(uWetSand * 0.98, uSand * 0.874, smoothstep(0.05, 0.9, bedDepth));
+    bed = mix(bed, vec3(0.09, 0.12, 0.06), ${glsl(WEED_MEAN)} * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
 #if SEABED_DETAIL
     float grain = vnoise(bedXZ * 1.7) * 0.5 + vnoise(bedXZ * 6.0) * 0.5;
     float ripples = sin(dot(bedXZ, vec2(0.9, 0.45)) * 2.2 + vnoise(bedXZ * 0.3) * 6.0) * 0.5 + 0.5;
     vec3 sand = uSand * (0.9 + 0.12 * grain) * (0.96 + 0.06 * ripples);
-    vec3 bed = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
+    vec3 detail = mix(uWetSand * (0.92 + 0.12 * grain), sand * 0.92, smoothstep(0.05, 0.9, bedDepth));
     if (bedDepth > 0.9 && bedDepth < 4.0) {
       float weed = smoothstep(0.58, 0.72, vnoise(bedXZ * 0.08 + 3.1) * 0.75 + vnoise(bedXZ * 0.27) * 0.25);
-      bed = mix(bed, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
+      detail = mix(detail, vec3(0.09, 0.12, 0.06), weed * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
     }
-#else
-    // The detail's averages, so the shallows keep their colour without its pattern.
-    vec3 bed = mix(uWetSand * 0.98, uSand * 0.874, smoothstep(0.05, 0.9, bedDepth));
-    bed = mix(bed, vec3(0.09, 0.12, 0.06), ${glsl(WEED_MEAN)} * 0.4 * smoothstep(0.9, 1.8, bedDepth) * (1.0 - smoothstep(2.5, 4.0, bedDepth)));
+    bed = mix(bed, detail, uSeaEffects.z);
 #endif
 
     vec3 sunIn = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 0.75);
     float sunDown = max(-sunIn.y, 0.2);
     float sunVis = cloudShadow(bedXZ) * groundAt(bedXZ).w;
+    float light = ${glsl(CAUSTICS_MEAN)};
 #if SEABED_DETAIL
-    float light = caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp) * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
-#else
-    float light = ${glsl(CAUSTICS_MEAN)} * smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
+    light = mix(light, caustics(bedXZ + sunIn.xz / sunDown * bedDepth, slope * 0.6, fp), uSeaEffects.z);
 #endif
+    light *= smoothstep(0.1, 0.8, bedDepth) * exp(-bedDepth * 0.45);
     light *= (1.0 - smoothstep(60.0, 220.0, dist));
     vec3 sunBed = uSunColor * max(uSunDir.y, 0.0) * 0.8 * exp(-uAbsorb * bedDepth / sunDown) * sunVis * (0.6 + 4.0 * light);
     vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
@@ -457,7 +465,7 @@ void main() {
     float nll = max(dot(N, Ll), 0.0);
     float fl = 0.02 + 0.98 * pow(1.0 - clamp(dot(V, Hl), 0.0, 1.0), 5.0);
     float glint = min(ggx(max(dot(N, Hl), 0.0), alpha2) * smithVis(nv, nll, alpha2) * nll * fl, 40.0);
-    col += lanternLight(vWorld, Ll) * glint * ${glsl(tuning.lantern.water)};
+    col += lanternLight(vWorld, Ll) * glint * ${glsl(tuning.lantern.water)} * uSeaEffects.y;
   }
 #endif
   // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
@@ -476,7 +484,7 @@ void main() {
     float way = clamp(uHullWet.y / 5.0, 0.0, 1.0);
     float reach = 0.14 + way * (0.06 + 0.3 * smoothstep(0.55, 1.0, hull.y));
     float spread = 1.0 - smoothstep(0.0, reach, hull.x);
-    float collar = max(1.0 - smoothstep(0.0, 0.035, hull.x), spread * spread * 0.62) * smoothstep(-0.25, -0.05, hull.x) * uHullWet.x;
+    float collar = max(1.0 - smoothstep(0.0, 0.035, hull.x), spread * spread * 0.62) * smoothstep(-0.25, -0.05, hull.x) * uHullWet.x * uSeaEffects.x;
     foam = max(foam, foamLace(collar, xz * 7.0 + vec2(0.0, uTime * 0.3), Footprint(fp.dx * 7.0, fp.dy * 7.0)));
   }
 #endif
@@ -507,6 +515,7 @@ export class Water {
   /** The ordinary sea's reflection is soft and small, so it is redrawn at most every other frame; the sky mirror keeps `mirrorEvery`. */
   seaMirrorEvery = 2;
   private seaReflection = true;
+  private readonly effectsWanted = new THREE.Vector4(1, 1, 1, 1);
   private readonly renderedRooms = new THREE.Vector2();
   private readonly renderedRoom = new THREE.Vector3();
   private readonly windWaves: WindWaves;
@@ -536,6 +545,7 @@ export class Water {
         uMirror: { value: this.reflection.target.texture },
         uMirrorMatrix: { value: this.reflection.matrix },
         uMirrorOn: { value: 0 },
+        uSeaEffects: { value: new THREE.Vector4(1, 1, 1, 1) },
         uBreeze: { value: breeze },
         uDeep: { value: new THREE.Color('#0d4a66') },
         uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },
@@ -561,15 +571,42 @@ export class Water {
     return land && camera.position.y > heightAt(camera.position.x, camera.position.z);
   }
 
-  /** Without its reflection the ordinary sea mirrors only the sky, and the reflection is drawn only for the sky mirror. */
-  set effects(set: SeaEffects) {
-    select(this.mesh.material as THREE.ShaderMaterial, SEA_EFFECTS[set]);
-    this.seaReflection = !!SEA_EFFECTS[set].SEA_REFLECTION;
+  /**
+   * The quality level's effects. Without its reflection the ordinary sea mirrors only the sky, and the reflection is
+   * drawn only for the sky mirror. Unless `immediate`, what goes fades out before its variant is dropped and what
+   * comes is selected at once and fades in, so a quality change never snaps the whole sea.
+   */
+  setEffects(set: SeaEffects, immediate = false): void {
+    SEA_EFFECT_SLOTS.forEach((name, i) => this.effectsWanted.setComponent(i, SEA_EFFECTS[set][name] ? 1 : 0));
+    if (immediate) this.effectsShown.copy(this.effectsWanted);
+    this.selectEffects();
+  }
+
+  private get effectsShown(): THREE.Vector4 {
+    return (this.mesh.material as THREE.ShaderMaterial).uniforms.uSeaEffects.value;
+  }
+
+  private selectEffects(): void {
+    const shown = this.effectsShown;
+    const choice: Choice = {};
+    SEA_EFFECT_SLOTS.forEach((name, i) => { choice[name] = shown.getComponent(i) > 0 || this.effectsWanted.getComponent(i) > 0; });
+    select(this.mesh.material as THREE.ShaderMaterial, choice);
+    this.seaReflection = !!choice.SEA_REFLECTION;
   }
 
   /** Advance the water independently of the air, once per simulation frame. */
   step(dt: number): void {
     this.windWaves.update(dt);
+    const shown = this.effectsShown;
+    if (shown.equals(this.effectsWanted)) return;
+    let gone = false;
+    for (let i = 0; i < 4; i++) {
+      const from = shown.getComponent(i), to = this.effectsWanted.getComponent(i);
+      const next = to > from ? Math.min(to, from + dt / SEA_EFFECT_FADE) : Math.max(to, from - dt / SEA_EFFECT_FADE);
+      shown.setComponent(i, next);
+      gone ||= next === 0 && from > 0;
+    }
+    if (gone) this.selectEffects();
   }
 
   /** Re-measures the shoreline; call after the window's height bake. */

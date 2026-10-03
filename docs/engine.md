@@ -262,7 +262,9 @@ reflection is redrawn at most every other frame (unless the view has cut or the 
 drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
 level. The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
-the collar, none), selected only by `applyWorldQuality`.
+the collar, none), selected only by `applyWorldQuality`. A change fades them over a second (`uSeaEffects`, toward
+those averages and the sky) as the grass and bloom change: what goes keeps its variant until it has faded out, and what
+comes is selected at once and fades in.
 Every level presents at up to 60 fps ("just let it target 60 fps"), and Low is Auto's floor. Jeremy's rulings: "ultra,
 high, medium, low. dont overcomplicate this"; every level keeps full grass, and Low keeps 2× MSAA because the fading
 scenery fades by alpha to coverage (a dither breaks into coloured grain under the grade's lens fringe). A switched-off

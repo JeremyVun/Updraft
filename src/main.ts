@@ -448,7 +448,7 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   terrain.detail = world.terrainSplit;
   water.mirrorEvery = world.mirrorEvery;
   water.mirrorScale = world.mirrorScale;
-  water.effects = world.sea;
+  water.setEffects(world.sea, immediate);
   post.setBloom(world.bloom, immediate);
   controls.setQualityLevel(name);
   cloudStairs.setLevel(name, immediate);
