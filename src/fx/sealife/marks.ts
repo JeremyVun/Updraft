@@ -28,7 +28,7 @@ void main() {
   vec2 dir = vec2(cos(iA.w), sin(iA.w));
   vec2 q = position.xy;
   vec2 local = vec2(q.x * r * iC.y, q.y * r);
-  vec2 xz = iA.xy + dir * local.x + vec2(-dir.y, dir.x) * (local.y + iC.w * age);
+  vec2 xz = iA.xy + dir * local.x + vec2(-dir.y, dir.x) * local.y;
   vWorld = vec3(xz.x, seaSurfaceY(xz) + 0.035, xz.y);
   vQ = q;
   vFade = t;
@@ -133,9 +133,9 @@ export class Marks {
 
   /**
    * Leaves a mark at (x, z) for `life` seconds. It grows by `grow` units per second from `radius`; `stretch` makes it
-   * that many times longer along `angle` than across, and it drifts `drift` units per second square to `angle`.
+   * that many times longer along `angle` than across.
    */
-  add(kind: number, x: number, z: number, radius: number, life: number, time: number, strength = 1, grow = 0, angle = 0, stretch = 1, drift = 0): void {
+  add(kind: number, x: number, z: number, radius: number, life: number, time: number, strength = 1, grow = 0, angle = 0, stretch = 1): void {
     const i = this.next;
     this.next = (this.next + 1) % MAX;
     const A = this.a.array as Float32Array;
@@ -152,7 +152,6 @@ export class Marks {
     C[i * 4] = grow;
     C[i * 4 + 1] = stretch;
     C[i * 4 + 2] = strength;
-    C[i * 4 + 3] = drift;
     this.until = Math.max(this.until, time + life);
     this.a.needsUpdate = true;
     this.b.needsUpdate = true;
